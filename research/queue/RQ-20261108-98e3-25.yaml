@@ -1,7 +1,7 @@
 id: RQ-20261108-98e3-25
 title: 'Frozen ml_entry v1 replayed over its clean held-out year in 14-day windows: is the long side persistently negative, does a short-only policy beat both-sides,
   and is the current -0.13 R fortnight outside the normal band?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -93,3 +93,17 @@ related:
 population: The ml_decision_entry universe (48 Binance USD-M perps), frozen ml_decision_entry_v1 decisions at tau 0.1 over 2025-10-01..2026-09-30 (the window the
   v1 record was read on; descriptive about the incumbent, not a promotion read).
 last_dispatched_at: '2026-11-08T19:47:46+00:00'
+grading:
+  attested: RULE-RQ20261108-98e3-25-ROLLING
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261108-98e3-25-ROLLING
+  evidence:
+  - research/results/RQ-20261108-98e3-25/42516916163.jsonl
+  graded_at: '2026-11-09'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

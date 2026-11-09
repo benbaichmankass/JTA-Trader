@@ -1,7 +1,7 @@
 # Hand-authored 2026-11-05 by lane PROP-BASELINE-AND-ML (Tier 1), Manager Session 2026-11-05b. Programme node P5-MLPROP-ENTRY-ETHSOL. Gates this adds or changes: NONE. Registered BEFORE any run.
 id: RQ-20261105-d256-01
 title: 'P5-MLPROP-ENTRY-ETHSOL: prop-specific ETH/SOL ML entry (firm cost stack in the label) graded on a BACKWARD time-disjoint held-out span (2020-07..2021-12), the only ETH/SOL span this family never tested on'
-status: queued
+status: done
 unblocked_reason: '2026-11-08 ML lane, manager 2026-11-07a 21:37Z authority: UNBLOCKED. The baseline this was throttled behind is merged and deployed (#23525, row PROP-BASELINE-MIN-SIZE) and the operator named prop accounts in the weekly ML-entry priority; the operator 2026-11-05 words below say the work resumes after the baseline. Status set to queued; no rule, threshold, span or command changed.'
 previous_blocked_reason: 'THROTTLE (week_lane throttle, operator 2026-11-05 ~19:00Z via Manager Session 2026-11-05b, verbatim: "The last item is having an actual ML that does at least entries as well for props. That''s what I meant. We''re not dropping that. We''re just prioritizing getting the baseline going, and then we''re getting back on that."). NOT dropped: authored and registered, held until the surge ends. A first local start (2026-11-05 ~19:08Z) was STOPPED during the data fetch, before any model fit; the held-out span was NOT read. Unblock = set status: queued.'
 cadence: once
@@ -120,3 +120,16 @@ iteration:
   - feature_family_cut
   map_entries: []
 last_dispatched_at: '2026-11-08T22:09:58+00:00'
+grading:
+  attested: RULE-RQ20261105d25601-BACKWARD-HELDOUT
+  auto: true
+  decision_rule_id: RULE-RQ20261105d25601-BACKWARD-HELDOUT
+  evidence:
+  - research/results/RQ-20261105-d256-01/42528989784.jsonl
+  graded_at: '2026-11-09'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
