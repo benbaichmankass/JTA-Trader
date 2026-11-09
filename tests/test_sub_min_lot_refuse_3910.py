@@ -45,21 +45,25 @@ def _pkg(symbol="BTCUSDT", entry=80_000.0, sl=79_200.0, tp=82_000.0):
 
 
 class TestSubMinLotRefuses:
-    def test_wide_sl_small_balance_refuses_not_bumped(self):
-        """Wide SL ($10k) on a tiny balance → risk-based size is far below the
-        0.001 BTC lot → REFUSE (0.0), never the legacy bump-to-0.001 (which
-        would risk $10 = 10% of a $100 account at SL)."""
+    def test_wide_sl_small_balance_sizes_up_to_min_lot(self):
+        """REVERSED 2026-11-09 (operator, Tier 3: "size up - that's what trading
+        at minimum size means"). Wide SL on a tiny balance: the risk-based size is
+        below the 0.001 BTC lot -> the seam raises it to the min lot (it used to
+        refuse, 3910 Item 3). Margin/exposure clamps still apply afterwards."""
         rm = RiskManager(dict(_BYBIT2_LIKE))
         pkg = _pkg("BTCUSDT", 80_000.0, 70_000.0, 95_000.0)  # $10k risk-distance
-        assert rm.position_size(pkg, 100.0, market_type="linear") == 0.0
+        q = rm.position_size(pkg, 100.0, market_type="linear")
+        assert q in (0.0, pytest.approx(0.001))  # 0.0 only if the margin clamp refuses
+        if q:
+            assert q == pytest.approx(0.001)
 
-    def test_refused_size_would_have_over_risked(self):
-        """The refused trade's bumped min-lot would have breached the 1% budget
-        — proving the refusal protects the cap. $200 balance, $10k SL distance:
-        budget = $2; the 0.001 min lot risks 0.001*10000 = $10 = 5x the cap."""
+    def test_bumped_size_exceeds_risk_budget_by_design(self):
+        """The bumped min-lot risks more than the 1% budget (0.001*10000 = $10
+        vs $2) - the accepted cost of the operator's size-up rule."""
         rm = RiskManager(dict(_BYBIT2_LIKE))
         pkg = _pkg("BTCUSDT", 80_000.0, 70_000.0, 95_000.0)
-        assert rm.position_size(pkg, 200.0, market_type="linear") == 0.0
+        q = rm.position_size(pkg, 200.0, market_type="linear")
+        assert q in (0.0, pytest.approx(0.001))
 
     def test_normal_sl_still_sizes(self):
         """Regression guard against OVER-refusing: a normal SL where the

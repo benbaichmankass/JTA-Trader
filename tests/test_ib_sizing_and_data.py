@@ -246,7 +246,8 @@ class TestFuturesWholeContractEnforcement:
         # previously bumped UP to the 0.001 min lot; now a per-trade refusal.
         pkg = _pkg("BTCUSDT", 80000.0, 70000.0, 95000.0)
         qty = rm.position_size(pkg, 100, market_type="linear")
-        assert qty == 0.0
+        # REVERSED 2026-11-09 (operator, Tier 3): sized UP to the min lot.
+        assert qty == pytest.approx(0.001)
 
 
 # ---------------------------------------------------------------------------

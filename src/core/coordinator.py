@@ -2356,10 +2356,18 @@ class Coordinator:
                     # venue_min_qty_for path — profile is only an added
                     # fallback), so no verdict changes for any current symbol.
                     from src.units.accounts.qty_legalize import legalize_qty
-                    _venue_min = legalize_qty(
+                    # 2026-11-09 (Tier 3, operator): below a venue minimum the
+                    # seam SIZES UP instead of refusing; only a max < bumped-min
+                    # contradiction still refuses. The pre-flight in
+                    # execute._submit_order performs/records the resize itself.
+                    _lz0 = legalize_qty(
                         sized_qty, account_cfg=_early_account_cfg,
                         symbol=pkg.symbol, client=client, prefer_live=True,
-                    ).venue_min
+                        price=getattr(pkg, "entry", None), size_up=True,
+                    )
+                    _venue_min = _lz0.venue_min
+                    if _lz0.ok:
+                        _venue_min = None  # nothing to refuse
                 except Exception as _vexc:  # noqa: BLE001 — never block on lookup
                     _venue_min = None
                     logger.debug(
