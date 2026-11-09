@@ -1,0 +1,75 @@
+{
+  "unit": "RQ-20261109-98e3-34",
+  "run_id": "42569234732",
+  "commit_sha": "08db57450f2d59d627e6f94c57c636e082319e93",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/42569234732",
+  "timeout_minutes": 330,
+  "runner": {
+    "cpu_model": "AMD EPYC 9V74 80-Core Processor",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "avx512_vnni",
+      "avx512bw",
+      "avx512f",
+      "avx512vl",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 24.04.5 LTS",
+    "kernel": "7.0.0-1017-azure",
+    "image": {
+      "ImageOS": "ubuntu24",
+      "ImageVersion": "20261101.360.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "2f2185647172",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/prop_ml_leg.py",
+        "run",
+        "--profile",
+        "bv",
+        "--bar-hours",
+        "8",
+        "--taus",
+        "0.35,0.40,0.45,0.50,0.55",
+        "--arms",
+        "F0,F0+BASIS",
+        "--require-positive-sum",
+        "--heldout-span",
+        "2020-07-01:2021-12-21",
+        "--discovery-start",
+        "2022-01-01",
+        "--cache",
+        "/tmp/prop_ml_cache",
+        "--out",
+        "comms/research/RQ-20261109-98e3-34/42569234732"
+      ],
+      "log": "comms/research/RQ-20261109-98e3-34/42569234732/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 202.5
+    }
+  ],
+  "all_ok": true
+}
