@@ -157,7 +157,8 @@ def test_registry_returns_all_rows(client: TestClient, tmp_path: Path) -> None:
     assert resp.status_code == 200
     body = resp.json()
     assert body["count"] == 2
-    assert {r["model_id"] for r in body["rows"]} == {
+    # 2026-11-09: served/candidate/overlay inventory rows are appended (source != "registry"); mirror rows are unchanged.
+    assert {r["model_id"] for r in body["rows"] if r["source"] == "registry"} == {
         "trade-outcome-winrate-v1",
         "regime-classifier-v1",
     }
@@ -236,7 +237,7 @@ def test_registry_empty_mirror_returns_zero_count(client: TestClient) -> None:
     assert resp.status_code == 200
     body = resp.json()
     assert body["count"] == 0
-    assert body["rows"] == []
+    assert [r for r in body["rows"] if r["source"] == "registry"] == []
 
 
 # ---------------------------------------------------------------------------
@@ -491,6 +492,8 @@ def test_registry_enrichment_gracefully_handles_unreadable_strategies_yaml(
     resp = client.get("/api/bot/ml/registry")
     assert resp.status_code == 200
     for row in resp.json()["rows"]:
+        if row["source"] != "registry":
+            continue  # inventory rows take their bucket from config consumers, not the shadow-wiring map
         assert row["deployment_bucket"] == "OFFLINE"
         assert row["linked_strategies"] == []
 

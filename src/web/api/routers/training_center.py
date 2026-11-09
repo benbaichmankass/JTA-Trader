@@ -371,10 +371,32 @@ def get_registry() -> dict[str, Any]:
     shadow_map = _load_shadow_wiring_map()
     auto_wire_names = _auto_wire_strategy_names()
     enriched = [_enrich_registry_row(r, shadow_map, auto_wire_names) for r in rows]
+    mirror_count = len(enriched)
+    # 2026-11-09 ML-REGISTRY-CONSOLIDATE (additive): served / candidate / overlay artifacts that config consumers
+    # reference (none of which the trainer mirror holds), display_name + slot on EVERY row, and a slot -> breed -> card
+    # grouping. A failure here degrades to the mirror-only feed with read_state "error", never a 5xx.
+    inventory_state, by_slot = "ok", None
+    try:
+        from src.runtime import ml_serving_inventory as inv
+        from src.utils.paths import repo_root
+        root = Path(repo_root())
+        inv.decorate_registry_rows(enriched, root)
+        have = {r.get("model_id") for r in enriched}
+        enriched += [r for r in inv.inventory_rows(root) if r["model_id"] not in have]
+        by_slot = inv.build_by_slot(enriched, root)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: additive read path; mirror rows still served, state is explicit
+        logger.warning("training_center: serving inventory failed: %s", exc)
+        inventory_state = "error"
     return {
         **_mirror_meta(),
         "rows": enriched,
-        "count": len(enriched),
+        "count": mirror_count,  # unchanged meaning: trainer-mirror registry rows
+        "total_count": len(enriched),
+        "mirror_count": mirror_count,
+        "inventory_count": len(enriched) - mirror_count,
+        "inventory_read_state": inventory_state,
+        "population": "trainer-mirror registry rows + every model id referenced by config/strategies.yaml or config/overlay_policy.yaml",
+        "by_slot": by_slot,
     }
 
 
