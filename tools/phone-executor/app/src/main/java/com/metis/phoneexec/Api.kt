@@ -52,7 +52,7 @@ class Api(private val c: Context) {
     suspend fun pendingInfo(amends: Boolean = true): Pending? {
         // accepts=amend,cancel: this build executes trail amends (PROP-TRAIL-PHONE) and stale-entry cancels (PHONE-ENTRY-CANCEL), so either wakes it.
         // amends=false (PHONE-FGS-EXEC step 2): entry tickets only; the difference is the amend count.
-        val j = get("pending" + if (amends) "?accepts=amend,cancel" else "") ?: return null
+        val j = get("pending" + if (amends) "?accepts=amend,cancel,close" else "") ?: return null
         val n = j.optInt("pending", -1)
         if (n < 0) return null
         val drill = j.optJSONObject("drill")?.optString("id")?.takeIf { it.isNotEmpty() }

@@ -385,6 +385,12 @@ def claim_next(device: PhoneDevice, now: Optional[datetime] = None,
         c = phone_cancel.claim_cancel(device, now=now)
         if c is not None:
             return c
+    if "close" in accepts:
+        from src.prop import phone_cancel
+        phone_cancel.plan_closes(acct, now=now)
+        c = phone_cancel.claim_close(device, now=now)
+        if c is not None:
+            return c
     if "amend" not in accepts:
         return None
     from src.prop import phone_trail
@@ -420,6 +426,9 @@ def record_report(device: PhoneDevice, body: Dict[str, Any]) -> Dict[str, Any]:
     if body.get("kind") == "cancel_result":
         from src.prop import phone_cancel
         return phone_cancel.record_cancel_result(device, body)
+    if body.get("kind") == "close_result":
+        from src.prop import phone_cancel
+        return phone_cancel.record_close_result(device, body)
     if body.get("kind") == "amend_result":
         from src.prop import phone_trail
         return phone_trail.record_amend_result(device, body)
@@ -587,6 +596,10 @@ def pending_count(device: PhoneDevice, now: Optional[datetime] = None, accepts: 
         from src.prop import phone_cancel
         phone_cancel.plan_cancels(acct, now=now)
         n += phone_cancel.pending_cancels(acct, now=now)
+    if "close" in accepts:
+        from src.prop import phone_cancel
+        phone_cancel.plan_closes(acct, now=now)
+        n += phone_cancel.pending_closes(acct, now=now)
     return n + (1 if _unserved_dry_test_request(acct) else 0)
 
 

@@ -1207,6 +1207,6 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   }
   const pPos = await onHost(sheetPage().replace("</body>", good + "</body>"));
   eq(await pPos.evaluate((sp) => __ex.orderCancelClick(sp), SPEC), "positions_grid_showing", "cancel: nothing is read or clicked while the Positions grid is on screen");
-  eq(["/close|cancel|remove|delete|flatten|reverse|liquidat|discard/i", "/close|flatten|reverse|cancel|remove|delete|partial/i"].every((r) => src.includes(r.slice(1, -2))), true, "the DENY_WORDS / NOT_EDIT lists for every other click are unchanged");
+  eq(["/close|cancel|remove|delete|flatten|reverse|liquidat|discard/i", "/close|flatten|reverse|cancel|remove|delete|partial/i"].every((r) => src.includes(r.slice(1, -2))), true, "the destructive-control classifier (DENY_WORDS) and the amend-control selector (NOT_EDIT) are unchanged: they pick the control an action means; whether one is clicked is decided by the declared intent (operator 2026-11-09), covered by the intent cases above");
   await b.close(); console.log("exec_check: all passed");
 })().catch((e) => { console.error(e); process.exit(1); });

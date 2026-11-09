@@ -183,3 +183,94 @@ def test_a_stale_or_wrong_report_is_refused():
 def test_the_router_accepts_the_cancel_capability():
     from src.web.api.routers import prop as router
     assert router._accepts(["amend", "cancel", "junk"]) == ("amend", "cancel")
+
+
+# ---------------------------------------------------------------- close / reduce (the general action channel)
+def _held(tid="H1", status="filled"):
+    _t(tid, status=status, vu=NOW - timedelta(hours=1))
+
+
+def _xc(tid="H1"):
+    return (prop_journal.get_ticket(tid)["meta"] or {}).get(pc.CLOSE_KEY) or {}
+
+
+def _rx(body, now=NOW):
+    return pc.record_close_result(_dev(), body, now=now)
+
+
+def test_close_request_is_for_a_named_open_ticket_only():
+    _held()
+    r = pc.request_close("breakout_2", "H1", reason="review R1", now=NOW)
+    assert r["ok"] and r["action"] == "close" and _xc()["spec"]["side"] == "short" and _xc()["spec"]["fraction"] is None
+    assert not pc.request_close("breakout_2", "H1", now=NOW)["ok"]                 # one outstanding slot
+    assert not pc.request_close("breakout_2", "nope", now=NOW)["ok"]
+    _t("E1", status="emitted")
+    assert "no position" in pc.request_close("breakout_2", "E1", now=NOW)["why"]
+    _t("T1", status="filled", meta={"test": True})
+    assert not pc.request_close("breakout_2", "T1", now=NOW)["ok"]
+    assert not pc.request_close("breakout_2", "H1", fraction=1.5, now=NOW)["ok"]
+
+
+def test_reduce_carries_its_fraction():
+    _held()
+    r = pc.request_close("breakout_2", "H1", fraction=0.5, now=NOW)
+    assert r["action"] == "reduce" and _xc()["spec"]["fraction"] == 0.5
+
+
+def test_close_is_served_only_to_an_app_that_declares_it_and_ends_on_done():
+    _held()
+    pc.request_close("breakout_2", "H1", now=NOW)
+    assert pe.claim_next(_dev(), now=NOW, accepts=("cancel",)) is None
+    assert pe.pending_count(_dev(), now=NOW, accepts=("close",)) == 1
+    g = pe.claim_next(_dev(), now=NOW, accepts=("close",))
+    assert g["kind"] == "close" and g["action"] == "close" and g["spec"]["venue_symbol"] == "ETHUSD"
+    out = _rx({"ticket_id": "H1", "close_id": g["close_id"], "result": "done", "reason": "gone"})
+    assert out["ok"] and _xc()["status"] == "done"
+    assert pe.claim_next(_dev(), now=NOW + timedelta(hours=9), accepts=("close",)) is None
+
+
+@pytest.mark.parametrize("res", ["failed", "ambiguous"])
+def test_a_failed_close_backs_off_and_is_retried_never_dropped(res, _iso):
+    _held()
+    pc.request_close("breakout_2", "H1", now=NOW)
+    t = NOW
+    for i in range(4):
+        pc.plan_closes("breakout_2", now=t)
+        g = pe.claim_next(_dev(), now=t, accepts=("close",))
+        assert g is not None, i
+        _rx({"ticket_id": "H1", "close_id": g["close_id"], "result": res, "reason": "x"}, now=t)
+        assert pc.plan_closes("breakout_2", now=t + timedelta(minutes=1)) == 0   # backing off
+        t += timedelta(hours=7)
+    assert sum("failed 3 times" in m for m in _iso) == 1                       # ONE flag
+    assert pc.plan_closes("breakout_2", now=t) == 1                            # still trying
+
+
+def test_not_found_ends_and_asks_to_check(_iso):
+    _held()
+    pc.request_close("breakout_2", "H1", now=NOW)
+    g = pe.claim_next(_dev(), now=NOW, accepts=("close",))
+    _rx({"ticket_id": "H1", "close_id": g["close_id"], "result": "not_found"})
+    assert _xc()["status"] == "not_found" and any("NO matching position" in m for m in _iso)
+
+
+def test_unreported_close_claim_is_rearmed():
+    _held()
+    pc.request_close("breakout_2", "H1", now=NOW)
+    pe.claim_next(_dev(), now=NOW, accepts=("close",))
+    pc.plan_closes("breakout_2", now=NOW + timedelta(seconds=200))
+    assert _xc()["status"] == "failed" and _xc()["last_result"] == "unreported"
+
+
+def test_live_review_close_reaches_the_phone_like_a_vm_account():
+    from scripts.ops import live_review_apply as lra
+    from src.runtime import live_review_intent as lri
+    assert {"close", "reduce"} <= lra.ACTION_PATHS["phone"]
+    _held()
+    leg = {"row": prop_journal.get_ticket("H1")}
+    intent = lri.LiveReviewIntent.__new__(lri.LiveReviewIntent)
+    for k, v in {"action": "close", "mandate": "MD-TRADE-DESK", "review_id": "R1", "size_fraction": None}.items():
+        object.__setattr__(intent, k, v) if hasattr(intent, "__dataclass_fields__") else setattr(intent, k, v)
+    out = lra._exec_phone_close(leg, "close", intent)
+    assert out["result"] == lra.X_APPLIED and _xc()["status"] == "emitted"
+    out2 = lra._exec_phone_close(leg, "close", intent)
+    assert out2["result"] == lra.X_REFUSED                                       # not duplicated

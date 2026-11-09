@@ -26,6 +26,14 @@ the ticket becomes ``skipped``; ``not_found`` (Open orders positively read, no m
 never rested) -> ``skipped`` plus ONE alert to verify no position; ``placed`` (row still there after the attempt),
 ``ambiguous`` and ``refused`` (nothing was clicked) -> retried with backoff, ONE red flag after :data:`FLAG_AFTER`.
 
+CLOSE / REDUCE (operator 2026-11-09, "the system must be able to take whatever actions necessary"): the same channel
+carries ``kind: close`` for a named ticket's open position (``request_close``; ``fraction`` < 1 = reduce). It is
+requested by a decision point (``live_review_apply`` close / partial_close for phone accounts), claimed by an app that
+declares ``"close"``, and reported ``kind: close_result`` as ``done`` / ``not_found`` / ``failed`` / ``ambiguous``.
+``done`` and ``not_found`` end it; the rest back off with ONE flag after :data:`FLAG_AFTER`, never a stop. The phone
+closes only through the position sheet's own Close position flow and re-reads Positions; a reduce needs the close
+dialog's quantity input, which no capture has shown, so it captures that dialog and reports ``failed``.
+
 The superseded reason only WITHDRAWS the stale order; releasing the newer suppressed ticket is the existing
 ``prop_supersede`` path and is not driven from here (filed on the checklist row).
 """
@@ -269,5 +277,190 @@ def record_cancel_result(device: Any, body: Mapping[str, Any], *, now: Optional[
             _send(f"📱 phone {acct}: [{tid}] stale-entry cancel failed {n} times (last: {result}: {reason[:120]}); the "
                   f"order may STILL BE RESTING. Retrying with backoff, nothing is stopped.", send)
         return {"ok": True, "kind": "cancel_result", "result": result, "attempt": n}
+    finally:
+        conn.close()
+
+
+# ---------------------------------------------------------------- close / reduce (the general action channel)
+CLOSE_KEY = "phone_close"
+CLOSE_RESULTS = ("done", "not_found", "failed", "ambiguous")
+_CLOSE_TERMINAL = ("done", "not_found")
+
+
+def request_close(account_id: str, ticket_id: str, *, fraction: Optional[float] = None, reason: str = "",
+                  now: Optional[datetime] = None) -> Dict[str, Any]:
+    """Issue ONE close (``fraction`` None / 1) or reduce (0 < fraction < 1) of the open position of a named ticket.
+    One slot per ticket; a request already outstanding is not duplicated. Never touches the venue."""
+    now = now or _now()
+    f = None if fraction is None else _f(fraction)
+    if f is not None and not 0 < f <= 1:
+        return {"ok": False, "why": f"fraction {fraction!r} out of range (0, 1]"}
+    action = "close" if f is None or f >= 1 else "reduce"
+    conn = prop_journal._connect()
+    try:
+        prop_journal.ensure_tables(conn)
+        r = conn.execute("SELECT * FROM prop_tickets WHERE ticket_id = ? AND account_id = ?",
+                         (ticket_id, account_id)).fetchone()
+        if r is None:
+            return {"ok": False, "why": "unknown ticket for this account"}
+        m = _meta(r["meta"])
+        if m.get("test") or m.get("origin") == "exec_test":
+            return {"ok": False, "why": "test ticket"}
+        if str(r["status"] or "") not in ("placed", "filled"):
+            return {"ok": False, "why": f"ticket is {r['status']!r}: no position to act on"}
+        c = dict(m.get(CLOSE_KEY) or {})
+        if c.get("status") in ("emitted", "claimed"):
+            return {"ok": False, "why": f"a {c.get('action')} request is already {c.get('status')}", "close_id": c.get("id")}
+        from src.prop import phone_executor as pe
+        venue = pe.venue_symbol(account_id, r["symbol"])
+        side = str(r["direction"] or "").lower()
+        if not venue or side not in ("long", "short"):
+            return {"ok": False, "why": "venue symbol or side unreadable"}
+        n = int(c.get("seq") or 0) + 1
+        c = {"status": "emitted", "action": action, "id": f"{ticket_id}-x{n}", "seq": n, "attempts": 0, "reason": reason[:200],
+             "spec": {"venue_symbol": venue, "side": side, "qty": _f(_venue_qty(account_id, r["symbol"], r["qty"])),
+                      "fraction": f if action == "reduce" else None},
+             "emitted_at": now.isoformat(), "valid_until": (now + timedelta(seconds=CANCEL_VALID_S)).isoformat(),
+             "history": c.get("history") or []}
+        if not _cas(conn, ticket_id, r["meta"], {**m, CLOSE_KEY: c}):
+            return {"ok": False, "why": "lost a race"}
+        return {"ok": True, "close_id": c["id"], "action": action}
+    finally:
+        conn.close()
+
+
+def plan_closes(account_id: str, *, now: Optional[datetime] = None,
+                send: Optional[Callable[..., Any]] = None) -> int:
+    """Re-arm a close claim the phone never reported and a failed attempt after its backoff. Returns emitted count."""
+    now = now or _now()
+    emitted = 0
+    conn = prop_journal._connect()
+    try:
+        prop_journal.ensure_tables(conn)
+        for r in conn.execute("SELECT * FROM prop_tickets WHERE account_id = ?", (account_id,)).fetchall():
+            m = _meta(r["meta"])
+            c = dict(m.get(CLOSE_KEY) or {})
+            st = c.get("status")
+            if st == "emitted":
+                vu = _parse(c.get("valid_until"))
+                if vu is not None and vu > now:
+                    emitted += 1
+                    continue
+                st = "failed"
+                c["next_try_at"] = None
+            if st == "claimed":
+                at = _parse(c.get("claimed_at"))
+                if at is None or (now - at).total_seconds() < CLAIM_TIMEOUT_S:
+                    continue
+                n = int(c.get("attempts") or 0) + 1
+                c.update(status="failed", attempts=n, last_result="unreported", next_try_at=(now + _backoff(n)).isoformat())
+                _hist(c, {"at": now.isoformat(), "result": "unreported", "attempt": n})
+                if _cas(conn, r["ticket_id"], r["meta"], {**m, CLOSE_KEY: c}) and n == FLAG_AFTER:
+                    _send(f"📱 phone {account_id}: [{r['ticket_id']}] {c.get('action')} was claimed but never reported "
+                          f"({n} attempts); the position may be unchanged. Retrying with backoff.", send)
+                continue
+            if st != "failed":
+                continue
+            nt = _parse(c.get("next_try_at"))
+            if nt is not None and nt > now:
+                continue
+            n = int(c.get("seq") or 0) + 1
+            c.update(status="emitted", id=f"{r['ticket_id']}-x{n}", seq=n, emitted_at=now.isoformat(),
+                     valid_until=(now + timedelta(seconds=CANCEL_VALID_S)).isoformat())
+            if _cas(conn, r["ticket_id"], r["meta"], {**m, CLOSE_KEY: c}):
+                emitted += 1
+    finally:
+        conn.close()
+    return emitted
+
+
+def pending_closes(account_id: str, now: Optional[datetime] = None) -> int:
+    now = now or _now()
+    conn = prop_journal._connect()
+    try:
+        prop_journal.ensure_tables(conn)
+        rows = conn.execute("SELECT meta FROM prop_tickets WHERE account_id = ?", (account_id,)).fetchall()
+    finally:
+        conn.close()
+    n = 0
+    for r in rows:
+        c = (_meta(r["meta"]).get(CLOSE_KEY) or {})
+        vu = _parse(c.get("valid_until"))
+        if c.get("status") == "emitted" and vu and vu > now:
+            n += 1
+    return n
+
+
+def claim_close(device: Any, now: Optional[datetime] = None) -> Optional[Dict[str, Any]]:
+    """Atomically claim the oldest emitted close/reduce for the device's account."""
+    from src.prop import phone_executor as pe
+    now = now or _now()
+    acct = device.account_id
+    if pe.kill_switch(acct) == "off":
+        return None
+    conn = prop_journal._connect()
+    try:
+        prop_journal.ensure_tables(conn)
+        for r in conn.execute("SELECT * FROM prop_tickets WHERE account_id = ? ORDER BY created_at ASC", (acct,)).fetchall():
+            m = _meta(r["meta"])
+            c = dict(m.get(CLOSE_KEY) or {})
+            vu = _parse(c.get("valid_until"))
+            if c.get("status") != "emitted" or vu is None or vu <= now:
+                continue
+            c.update(status="claimed", claimed_at=now.isoformat(), device_id=device.device_id)
+            if not _cas(conn, r["ticket_id"], r["meta"], {**m, CLOSE_KEY: c}):
+                continue
+            return {"kind": "close", "ticket_id": r["ticket_id"], "close_id": c["id"], "action": c.get("action"),
+                    "reason": c.get("reason"), "symbol": r["symbol"], "spec": c.get("spec"),
+                    "venue_symbol": (c.get("spec") or {}).get("venue_symbol"),
+                    "submit": pe.submit_mode(acct, test=False), "claimed_at": now.isoformat()}
+        return None
+    finally:
+        conn.close()
+
+
+def record_close_result(device: Any, body: Mapping[str, Any], *, now: Optional[datetime] = None,
+                        send: Optional[Callable[..., Any]] = None) -> Dict[str, Any]:
+    """The phone's report of one claimed close/reduce: done / not_found end it; failed / ambiguous back off."""
+    now = now or _now()
+    acct = device.account_id
+    tid, cid, result = str(body.get("ticket_id") or ""), str(body.get("close_id") or ""), str(body.get("result") or "")
+    if result not in CLOSE_RESULTS:
+        raise ValueError("close_result.result invalid")
+    reason = str(body.get("reason") or "")[:300]
+    conn = prop_journal._connect()
+    try:
+        prop_journal.ensure_tables(conn)
+        r = conn.execute("SELECT * FROM prop_tickets WHERE ticket_id = ? AND account_id = ?", (tid, acct)).fetchone()
+        if r is None:
+            return {"ok": False, "kind": "close_result", "why": "unknown ticket"}
+        m = _meta(r["meta"])
+        c = dict(m.get(CLOSE_KEY) or {})
+        if c.get("id") != cid or c.get("status") != "claimed":
+            return {"ok": False, "kind": "close_result", "why": "not the claimed close"}
+        entry = {"at": now.isoformat(), "result": result, "reason": reason, "close_id": cid}
+        what = c.get("action") or "close"
+        sym = (c.get("spec") or {}).get("venue_symbol")
+        if result in _CLOSE_TERMINAL:
+            c.update(status=result, finished_at=now.isoformat(), last_result=result)
+            _hist(c, entry)
+            if not _cas(conn, tid, r["meta"], {**m, CLOSE_KEY: c}):
+                return {"ok": False, "kind": "close_result", "why": "lost a race"}
+            if result == "done":
+                _send(f"📱 phone {acct}: [{tid}] {what} of {sym} DONE on the terminal (Positions re-read: {reason[:100]}).", send)
+            else:
+                _send(f"📱 phone {acct}: [{tid}] {what} found NO matching position on the terminal's Positions "
+                      f"(already closed?). CHECK the terminal for {sym}.", send)
+            return {"ok": True, "kind": "close_result", "result": result}
+        n = int(c.get("attempts") or 0) + 1
+        c.update(status="failed", attempts=n, last_result=result, last_reason=reason,
+                 next_try_at=(now + _backoff(n)).isoformat())
+        _hist(c, {**entry, "attempt": n})
+        if not _cas(conn, tid, r["meta"], {**m, CLOSE_KEY: c}):
+            return {"ok": False, "kind": "close_result", "why": "lost a race"}
+        if n == FLAG_AFTER:
+            _send(f"📱 phone {acct}: [{tid}] {what} of {sym} failed {n} times (last: {result}: {reason[:120]}); the "
+                  f"position may be UNCHANGED. Retrying with backoff, nothing is stopped.", send)
+        return {"ok": True, "kind": "close_result", "result": result, "attempt": n}
     finally:
         conn.close()

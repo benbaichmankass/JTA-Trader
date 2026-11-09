@@ -1140,7 +1140,7 @@ class MainActivity : Activity() {
         if (now < claimBackoffUntilMs) { setStatus("logged in · VM busy (5xx); backing off ${(claimBackoffUntilMs - now) / 1000 + 1} s (no claim)"); return }
         // accepts amend: this build executes trail amends (PROP-TRAIL-PHONE); the VM serves them to no older build.
         // PHONE-FGS-EXEC step 2: the background engine claims ENTRIES only (accepts=[]); amends are claimed on the kiosk.
-        val r = api.post("claim", JSONObject().put("accepts", JSONArray().apply { if (cur === fg) { put("amend"); put("cancel") } })) ?: run { setStatus("logged in · VM unreachable (no claim, no click)"); return }
+        val r = api.post("claim", JSONObject().put("accepts", JSONArray().apply { if (cur === fg) { put("amend"); put("cancel"); put("close") } })) ?: run { setStatus("logged in · VM unreachable (no claim, no click)"); return }
         if (!r.optBoolean("ok")) {
             // 5xx (e.g. the API restarting for a deploy): ONE attempt, no in-tick retry, and no execution -- we hold no
             // ticket, so nothing can be filled or submitted. Back off 1 -> 2 -> 4 -> 5 min. If the server committed the
@@ -1162,8 +1162,18 @@ class MainActivity : Activity() {
             setStatus("logged in · waiting for a ticket (none queued) · ${java.text.DateFormat.getTimeInstance().format(Date())}"); return
         }
         // a cancel is served to the foreground only, like an amend, and counts as one for the background routing (BgTicket)
-        lastClaimKind = when (t.optString("kind")) { "amend" -> "amend"; "cancel" -> "amend"; else -> "entry" }
-        lastClaimId = when (t.optString("kind")) { "amend" -> t.optString("amend_id"); "cancel" -> t.optString("cancel_id"); else -> t.optString("ticket_id") }
+        lastClaimKind = when (t.optString("kind")) { "amend" -> "amend"; "cancel", "close" -> "amend"; else -> "entry" }
+        lastClaimId = when (t.optString("kind")) { "amend" -> t.optString("amend_id"); "cancel" -> t.optString("cancel_id"); "close" -> t.optString("close_id"); else -> t.optString("ticket_id") }
+        if (t.optString("kind") == "close") {
+            val xid = t.optString("close_id")
+            try { executeClose(t) }
+            catch (e: JsTimeout) {
+                // after the close click the position is UNKNOWN (reported ambiguous: the next attempt re-reads Positions afresh)
+                if (ledger.last(xid) == "submitted") { ledger.append(xid, "unconfirmed"); closeResult(t, "ambiguous", "page stopped answering after the close click; the position may be closed") }
+                else if (ledger.last(xid) == "intended") { ledger.append(xid, "refused"); closeResult(t, "failed", "page stopped answering before any click (nothing clicked)") }
+            }
+            return
+        }
         if (t.optString("kind") == "cancel") {
             val cid = t.optString("cancel_id")
             try { executeCancel(t) }
@@ -1517,6 +1527,72 @@ class MainActivity : Activity() {
             after?.optString("state") != "read" -> { ledger.append(cid, "unconfirmed"); cancelResult(t, "ambiguous", "clicked, but the Open orders list could not be re-read; the next attempt re-reads", cap) }
             after?.optInt("match", 0) == 0 -> { ledger.append(cid, "cancelled"); cancelResult(t, "cancelled", "row clicked${if ((ov?.optInt("n") ?: 0) > 0) ", anchored confirm pressed" else ""}; Open orders re-read: row gone", cap) }
             else -> { ledger.append(cid, "unconfirmed"); cancelResult(t, "placed", "row still on Open orders after the click", cap) }
+        }
+    }
+
+    // ---- PHONE-ENTRY-CANCEL, the general server-issued action channel: CLOSE / REDUCE a named ticket's open position
+    // (operator 2026-11-09: "the system must be able to take whatever actions necessary to ensure smooth autonomous
+    // operation"). Precision, not prohibition: Positions is read first and EXACTLY ONE row for the symbol must exist
+    // (none -> not_found, several -> ambiguous: re-read and retried with backoff, never a silent no-op, never a halt);
+    // a full close then runs the position sheet's own Close position flow (drillCloseTest: sheet, Close position,
+    // its confirmation, Positions re-read until the row is gone). A REDUCE needs the close dialog's quantity input,
+    // which no capture has shown: it opens the dialog, captures it, dismisses it and reports failed (measure first).
+    private suspend fun closeResult(t: JSONObject, result: String, why: String, cap: CaptureRun? = null) {
+        api.post("report", JSONObject().put("kind", "close_result").put("ticket_id", t.optString("ticket_id"))
+            .put("close_id", t.optString("close_id")).put("result", result).put("reason", why.take(280))
+            .put("capture_run", cap?.takeIf { it.posted > 0 }?.id ?: ""))
+        setStatus("${t.optString("action")} ${t.optString("close_id")}: $result ($why)".take(160))
+    }
+
+    private suspend fun executeClose(t: JSONObject) {
+        val xid = t.getString("close_id")
+        if (ledger.seen(xid)) return closeResult(t, "failed", "ledger already holds this request")
+        ledger.append(xid, "intended")
+        val live = t.optString("submit") == "live"
+        val spec = t.optJSONObject("spec")
+        val venue = spec?.optString("venue_symbol") ?: ""
+        if (spec == null || venue.isEmpty()) { ledger.append(xid, "refused"); return closeResult(t, "failed", "request carries no venue symbol") }
+        val baseSym = venue.uppercase().replace(Regex("(USD[TC]?|PERP)$"), "")
+        val reduce = t.optString("action") == "reduce"
+        val cap = CaptureRun("cancel", xid)
+        setStatus("${t.optString("action")} $xid: ${if (live) "LIVE" else "DRY"} $venue (${t.optString("reason")})")
+        if ((jsObj("__ex.modalsOpen()")?.optInt("n") ?: 0) > 0) { dismissModal(cur); ensure() }
+        // 1. Positions: exactly one row for the symbol
+        js("__ex.clickText('^positions$')"); delay(1500); ensure()
+        val p0 = jsObj("__ex.positionsRead()")
+        val rs0 = p0?.optJSONArray("rows") ?: JSONArray()
+        val n0 = (0 until rs0.length()).count { k ->
+            val s = rs0.optJSONObject(k)?.optString("symbol")?.uppercase() ?: ""
+            s.isNotEmpty() && (s.contains(venue.uppercase()) || (baseSym.isNotEmpty() && s.contains(baseSym)))
+        }
+        cap(cap, cur, "positions_read", p0?.optString("state") == "read", "state ${p0?.optString("state")} rows for symbol $n0")
+        if (p0?.optString("state") != "read") { ledger.append(xid, "refused"); return closeResult(t, "ambiguous", "Positions unread (${p0?.optString("state")}); nothing clicked", cap) }
+        if (n0 == 0) { ledger.append(xid, "not_found"); return closeResult(t, "not_found", "Positions read; no row for $venue", cap) }
+        if (n0 > 1) { ledger.append(xid, "refused"); return closeResult(t, "ambiguous", "$n0 Positions rows for $venue; nothing clicked", cap) }
+        if (!live) { ledger.append(xid, "refused"); return closeResult(t, "failed", "dry: one position row matched; nothing clicked", cap) }
+        if (reduce) {
+            // measure the close dialog (its quantity input is unmeasured): open it, capture it, dismiss it, change nothing
+            ledger.append(xid, "refused")
+            if (jsObj("__ex.sheetInfo(${q(venue)})")?.optBoolean("open") != true) {
+                val sd = sheetRead(cur, venue, cap)
+                if (!sd.optBoolean("ok")) return closeResult(t, "failed", "reduce: sheet not open (${sd.optString("why")})", cap)
+            }
+            cur.js("__ex.sheetTab('details')"); delay(600); ensure()
+            js("__ex.allowClose(${q(venue)})")
+            val r = js("__ex.sheetClosePosition(${q(venue)})"); delay(1200); ensure()
+            val dg = jsObj("__ex.dialog()")
+            cap(cap, cur, "reduce_dialog", null, "$r ${dg?.optString("text")?.take(120) ?: "no dialog"} ${dg?.optJSONArray("buttons") ?: ""}")
+            val dm = dismissModal(cur)
+            return closeResult(t, "failed", "reduce: the close dialog's quantity input is unmeasured; dialog captured and dismissed ($r; $dm); position unchanged", cap)
+        }
+        // 2. the full close, journaled BEFORE the click
+        ledger.append(xid, "submitted")
+        val r = drillCloseTest(venue, baseSym, cap)
+        cap(cap, cur, "close_result", r == "closed", r)
+        when {
+            r == "closed" -> { ledger.append(xid, "done"); closeResult(t, "done", "position sheet Close position confirmed; Positions re-read: no $venue row", cap) }
+            r == "still_open" -> { ledger.append(xid, "unconfirmed"); closeResult(t, "failed", "close clicked but a $venue row is still on Positions", cap) }
+            else -> { ledger.append(xid, "refused"); closeResult(t, "ambiguous", "close not completed ($r); the next attempt re-reads", cap) }
         }
     }
 
