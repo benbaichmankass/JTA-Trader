@@ -10,6 +10,12 @@
 # exit should be like a retriever ... keeping a little bit of logic behind it, but at the same time, it looks
 # good. We should definitely go with that."
 #
+# SLOT (lane ML-REGISTRY-CONSOLIDATE, operator 2026-11-09): each breed carries `slot: D<n>`, the decision slot of
+# docs/plans/ML-ROADMAP-MECE-2026-11.md section 2 (the ONE mapping; /api/bot/ml/registry `by_slot` reads it). Collie and
+# Chihuahua = D2, Foxhound = D3, Beagle = D4, Mastiff = D5, Pointer = D6, Labrador = D7 (a model may override with its own
+# `slot:`, e.g. an exit head = D8), Whippet = D9, Basset = D10. Mutt = the baseline of its slot, so a Mutt-<Slot>
+# model carries its own `slot:`; Canaan is a constraint, not a slot (no slot). A model with no entry renders slot "unassigned".
+#
 # CONVENTION
 #   - One breed per model JOB.
 #   - Name = Breed-<generation>[<variant letter>]. The generation goes up only when a version is PROMOTED.
@@ -21,17 +27,17 @@
 #     listed are candidate/OFFLINE and unnamed). `live-served` = served artifact under ml/served, not a registry row.
 #
 breeds:
-  Foxhound: {job: "Entry decision (finds the trade)", note: "scent tracker; final (operator 2026-11-03 \"let's go with Foxhound\"); future prop-specific entry = Foxhound-<n>P"}
-  Beagle: {job: "Setup filter / meta-label (take or skip a strategy signal)", note: "sniffs the signal"}
-  Pointer: {job: "Direction", note: "points the way"}
-  Collie: {job: "Market regime / volatility (Border Collie)", note: "reads and herds the field"}
-  Labrador: {job: "Exit and in-trade active management (Labrador Retriever)", note: "brings the profit home; operator 2026-11-03: Golden Retriever -> Labrador; the ML-AM-NEXT-LIVE model is the next generation"}
-  Mastiff: {job: "Conviction / sizing", note: "strength"}
-  Whippet: {job: "Execution quality", note: "fast, clean fills"}
-  Basset: {job: "Trade-outcome / post-trade review (Basset Hound)", note: "slow, thorough, after the fact"}
+  Foxhound: {slot: D3, job: "Entry decision (finds the trade)", note: "scent tracker; final (operator 2026-11-03 \"let's go with Foxhound\"); future prop-specific entry = Foxhound-<n>P"}
+  Beagle: {slot: D4, job: "Setup filter / meta-label (take or skip a strategy signal)", note: "sniffs the signal"}
+  Pointer: {slot: D6, job: "Direction", note: "points the way"}
+  Collie: {slot: D2, job: "Market regime / volatility (Border Collie)", note: "reads and herds the field"}
+  Labrador: {slot: D7, job: "Exit and in-trade active management (Labrador Retriever)", note: "brings the profit home; operator 2026-11-03: Golden Retriever -> Labrador; the ML-AM-NEXT-LIVE model is the next generation"}
+  Mastiff: {slot: D5, job: "Conviction / sizing", note: "strength"}
+  Whippet: {slot: D9, job: "Execution quality", note: "fast, clean fills"}
+  Basset: {slot: D10, job: "Trade-outcome / post-trade review (Basset Hound)", note: "slow, thorough, after the fact"}
   Canaan: {job: "Prop rule compliance / survival (Canaan Dog)", note: "Hebrew: Kelev Kna'ani, Israel's national breed; desert survivor and alert sentry, guards the account. Replaces German Shepherd (unassigned). reserved: no prop-compliance model is at shadow+ (prop-mission-policy-baseline-v0 is a candidate baseline, unnamed; a promoted one would be Mutt)"}
-  Chihuahua: {job: "Short-horizon alarm / early warning", note: "small, alert, yappy. No anomaly/drift detector exists at shadow+ (checked registry 2026-11-03), so it goes to the shortest-horizon family, the 5m regime heads; the 5m flow head is candidate/unnamed"}
-  Mutt: {job: "Baselines", note: "Mutt-Regime, Mutt-Execution, ..."}
+  Chihuahua: {slot: D2, job: "Short-horizon alarm / early warning", note: "small, alert, yappy. No anomaly/drift detector exists at shadow+ (checked registry 2026-11-03), so it goes to the shortest-horizon family, the 5m regime heads; the 5m flow head is candidate/unnamed"}
+  Mutt: {job: "Baselines (each takes the slot it baselines)", note: "Mutt-Regime, Mutt-Execution, ..."}
   # Generations in use: Collie/Chihuahua-1 lgbm v1/v2 heads, -2 yz heads, -3 cross-asset heads, -4 fc-pcv v1, -5 fc-pcv v2.
 models:
   btc-regime-5m-lgbm-v2: {name: "Chihuahua-1a", stage: shadow, asset: BTC, timeframe: "5m"}
@@ -52,13 +58,17 @@ models:
   sol-regime-15m-lgbm-fc-pcv-v1: {name: "Collie-4b", stage: shadow, asset: SOL, timeframe: "15m"}
   btc-regime-15m-lgbm-fc-pcv-v2: {name: "Collie-5a", stage: advisory, asset: BTC, timeframe: "15m"}
   sol-regime-15m-lgbm-fc-pcv-v2: {name: "Collie-5b", stage: advisory, asset: SOL, timeframe: "15m"}
-  btc-regime-5m-baseline-v1: {name: "Mutt-Regime-1a", stage: shadow, asset: BTC, timeframe: "5m"}
-  btc-regime-15m-baseline-v1: {name: "Mutt-Regime-1b", stage: shadow, asset: BTC, timeframe: "15m"}
-  mes-regime-5m-baseline-v1: {name: "Mutt-Regime-1c", stage: shadow, asset: MES, timeframe: "5m"}
-  mes-regime-15m-baseline-v1: {name: "Mutt-Regime-1d", stage: shadow, asset: MES, timeframe: "15m"}
+  btc-regime-5m-baseline-v1: {name: "Mutt-Regime-1a", slot: D2, stage: shadow, asset: BTC, timeframe: "5m"}
+  btc-regime-15m-baseline-v1: {name: "Mutt-Regime-1b", slot: D2, stage: shadow, asset: BTC, timeframe: "15m"}
+  mes-regime-5m-baseline-v1: {name: "Mutt-Regime-1c", slot: D2, stage: shadow, asset: MES, timeframe: "5m"}
+  mes-regime-15m-baseline-v1: {name: "Mutt-Regime-1d", slot: D2, stage: shadow, asset: MES, timeframe: "15m"}
   ml-decision-entry-v1: {name: "Foxhound-1", stage: live-served, asset: multi, timeframe: "1h", note: "served artifact ml/served/ml_decision_entry_v1; strategies.yaml ml_entry (not a registry row)"}
   ml-decision-entry-v2: {name: "Foxhound-2", stage: live-served, asset: multi, timeframe: "1h", note: "served artifact ml/served/ml_decision_entry_v2; strategies.yaml ml_entry_v2, bybit_1 demo only"}
   ml-entry-eq-v1: {name: "Foxhound-3", stage: live-served, asset: ETF (173-pool), timeframe: "1h", note: "candidate artifact ml/candidates/ml_entry_eq_v1; strategies.yaml ml_entry_eq, alpaca_paper only; mechanics soak, edge unproven (t 0.9 iid / 0.3 clustered)"}
   ml-entry-tp-revision-v1: {name: "Labrador-1b", stage: live-served, asset: multi, timeframe: "1h", note: "served artifact ml/served/ml_entry_tp_revision_v1; re-predicts the TP of ml_entry (in-trade). Operator named exit-policy-v1 Labrador-1; this is a sibling head of the same job"}
-  exit-policy-v1: {name: "Labrador-1", stage: designated, asset: multi, timeframe: "-", note: "operator-designated name (2026-11-03); registry stage is candidate / not registered, so no stage-gated claim"}
-  execution-quality-baseline-v0: {name: "Mutt-Execution-1a", stage: shadow, asset: multi, timeframe: "-", note: "baseline for the Whippet job"}
+  exit-policy-v1: {name: "Labrador-1", slot: D8, stage: designated, asset: multi, timeframe: "-", note: "operator-designated name (2026-11-03); registry stage is candidate / not registered, so no stage-gated claim"}
+  execution-quality-baseline-v0: {name: "Mutt-Execution-1a", slot: D9, stage: shadow, asset: multi, timeframe: "-", note: "baseline for the Whippet job"}
+  # Added 2026-11-09 (lane ML-REGISTRY-CONSOLIDATE). CONVENTION-DERIVED PROPOSALS: the operator can change any of these names.
+  ml-entry-eq-struct-ens5-v1: {name: "Foxhound-4", stage: live-served, asset: ETF (173-pool), timeframe: "1h", note: "PROPOSED name (next generation after Foxhound-3 = ml-entry-eq-v1; promoted to real money 2026-11-08). Candidate artifact ml/candidates/ml_entry_eq_v3_struct_ens5; strategies.yaml ml_entry_eq_struct on alpaca_live + alpaca_portfolio"}
+  exit-head-donchian-1h-v1: {name: "Labrador-2", slot: D8, stage: advisory, asset: multi, timeframe: "1h", note: "PROPOSED name (a second exit generation; Labrador-1 stays the designated exit-policy-v1). Trainer-mirror artifact runtime_logs/trainer_mirror/exit_head/exit-head-donchian-1h-v1.json; strategies.yaml exit_head_model"}
+  overlay-td-v1: {name: "Beagle-1", slot: D4, stage: live-served, asset: multi, timeframe: "4h", note: "PROPOSED name; the TD meta-label overlay ml/overlay/overlay_td.json (config/overlay_policy.yaml; reduce on 2 legs, annotate on 2). No model_id in the artifact, so `overlay-td-v1` is a display key derived from the file name"}

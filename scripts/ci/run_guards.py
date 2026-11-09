@@ -1685,6 +1685,20 @@ GUARDS: List[Dict[str, Any]] = [
                   ["python3", "scripts/ci/check_tp_venue_cap_single_owner.py"]],
     },
     {
+        "name": "ml-registry-consistency-guard",
+        # Repo consistency, NOT a trading gate (lane ML-REGISTRY-CONSOLIDATE, 2026-11-09): every model id a config
+        # consumer references is in GET /api/bot/ml/registry, every served/consumed model has a model_names.yaml
+        # entry and a D1..D10 slot.
+        "when": {"globs": [
+            "config/strategies.yaml", "config/overlay_policy.yaml", "config/accounts.yaml",
+            "docs/reference/model_names.yaml", "ml/served/**", "ml/candidates/**", "ml/overlay/**",
+            "src/runtime/ml_serving_inventory.py", "src/web/api/routers/training_center.py",
+            "scripts/ci/check_ml_registry_consistency.py",
+        ]},
+        "steps": [["python3", "scripts/ci/check_ml_registry_consistency.py", "--self-test"],
+                  ["python3", "scripts/ci/check_ml_registry_consistency.py"]],
+    },
+    {
         "name": "tp-doctrine-guard",
         # The TP doctrine (docs/ARCHITECTURE-CANONICAL.md § "TP doctrine",
         # operator 2026-10-06): no fictional take-profits. A RATCHET over every
