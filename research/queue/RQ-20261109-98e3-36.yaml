@@ -65,5 +65,5 @@ related:
 - scripts/research/book_depth_pit.py
 population: 'Binance USD-M perp bookDepth daily archive, ETHUSDT and SOLUSDT, 2023-01-01..2026-09-30, 30 s snapshots, +-1, 2, 5 % bands (notional), bars of 4 h and 8 h.'
 why_not_inferential: 'A data build and audit: it counts files, snapshots and bar closes and applies fixed thresholds. It estimates no effect from a sample, so an expected n and an MDE would be theatre.'
-rearmed_at: '2026-11-09T11:19:00+00:00'
-last_dispatched_at: '2026-11-09T11:39:18+00:00'   # re-armed: the only landed row (run 42603821287) died at import on the runner's Python 3.11 (f-string SyntaxError fixed in #24493); rule, thresholds and command unchanged
+rearmed_at: '2026-11-09T12:09:00+00:00'
+last_dispatched_at: null   # re-armed again: run 42603821287 died on a py3.11 SyntaxError (#24493) and run 42610949526, whose script verdict was PASS, was graded producer_failed for a malformed verdict.json (#24506); rule, thresholds and command unchanged
