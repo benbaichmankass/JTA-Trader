@@ -1,0 +1,67 @@
+id: RQ-20261109-98e3-36
+title: 'PROP-ML-NEW-DATA: can a point-in-time book-depth table (Binance USD-M perp bookDepth, ETH+SOL, 2023-01..2026-09) be built from the public archive with usable coverage and no look-ahead?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: deterministic
+practice_precedent: 'none: a data-feasibility build; follows RQ-20261108-98e3-28 (census: bookdepth is in the public archive) and RQ-20261108-98e3-29 (the lake mirror holds no bookdepth), and the manager''s 2026-11-09 09:27Z instruction to build the book_depth point-in-time builder as its own unit before any model run.'
+question: 'The census found book depth in the public Binance archive and the lake-presence unit found none in the Kaggle mirror. Build, from the public daily bookDepth archive, a table with one row per (symbol, 4h or 8h bar close) whose features use only snapshots at or before the close, for ETHUSDT and SOLUSDT over 2023-01-01..2026-09-30, and state its coverage.'
+why_this_matters: 'Weekly priority: a live ML entry on every live-money account. Price, funding/basis and open-interest families have each failed on the prop slice; book depth is the one remaining non-price family the manager wants tried. A model unit on it needs a table that is point-in-time by construction and whose holes are counted; this unit builds and audits that table and decides nothing about the model.'
+decision_rule:
+  id: RULE-RQ20261109-98e3-36-BOOKDEPTH-PIT
+  registered_at: '2026-11-09'
+  registered_before_run: true
+  statistic: 'scripts/research/book_depth_pit.py run: every daily bookDepth zip for ETHUSDT and SOLUSDT, 2023-01-01..2026-09-30 inclusive (1,369 days each), fetched from data.binance.vision; per symbol the day-file accounting (present / 404 / unreachable / unparseable), the snapshot count, and for bar sizes 4 h and 8 h the share of bar closes with a snapshot no older than 900 s; plus an audit that recomputes 1,000 sampled bar closes per symbol and bar size by brute force from the raw snapshots.'
+  rule: 'PASS iff, for BOTH symbols: (1) >= 95% of the 1,369 day-files are present and none is unparseable; (2) <= 1% of present files have non-monotone timestamps; (3) the share of bar closes with a fresh snapshot (age <= 900 s at the close) is >= 0.95 for 4 h bars AND for 8 h bars; (4) the audit checks 1,000 sampled bar closes per bar size with 0 mismatches and 0 look-ahead cases. INDETERMINATE iff more than 5% of the day-files of either symbol are unreachable (a network failure cannot be told from an absent file). FAIL otherwise, with the failed clauses named. The census, the per-month coverage table and the 300 s coverage are reported whatever the verdict. Thresholds are not changed after any result.'
+  what_it_does_not_do: 'Trains and scores nothing; says nothing about whether book depth predicts returns. A PASS makes a model unit possible, it is not evidence of edge. It assumes the CSV timestamp is the snapshot capture time (not provable from the file) and uses only the +-1, 2, 5 % bands (the +-0.2 % band appears in later files and is ignored). Day-files that exist but hold few snapshots count as present under clause (1) and are caught by clause (3).'
+  min_n: 1000 audited bar closes per symbol and bar size
+disclosure: 'A dry run on the first month (2023-01-01..2023-01-31, both symbols, 8 and 4 h) was made before this rule was registered, to check the archive parses. It showed (a) the audit passes with 0 mismatches and 0 look-ahead, (b) each day''s file ends around 23:52-23:59 and the next begins 00:00-00:04, so the 00:00 UTC bar close sees a snapshot up to ~11 minutes old, and (c) four January-2023 day-files are almost empty (e.g. 2023-01-21 holds 3 snapshots) and one has a 7-hour hole. The staleness tolerance was drafted at 300 s and set to 900 s after (b): a 15-minute-old book is a fair description of the state at a 4 h or 8 h bar close. Coverage at 300 s is reported as well. Every pass threshold (95%, 1%, 5%, 1,000 audited bars) is unchanged from the draft. The dry-run coverage for 2023-01 was 0.887 (4 h) and 0.914 (8 h) at 900 s, i.e. below 0.95: this unit may FAIL on coverage, and per-month coverage is reported so a model unit can choose a span knowingly (that choice would be its own registered design, not a retune of this rule).'
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.1
+  basis: 'stand-in: the operator goal (a live ML entry on every live-money account, prop included); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 25
+  why_runner: 'keyless public archive (data.binance.vision), reachable from the lane container and the runner; research-script-run.yml holds no secret.'
+  basis: 'ESTIMATE from the 1-month dry run: 62 day-files fetched and parsed in about 12 s cold, scaling to about 2,740 files in about 9 minutes, plus table building; est_minutes leaves headroom for a cold runner. Memory: about 3 million snapshot rows per symbol.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/book_depth_pit.py
+  - run
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --cache
+  - /tmp/book_depth_cache
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261109-98e3-36
+ml_consumer:
+  consumer: ML-PROP-ITERATE
+  decision: whether the book_depth model unit (arm F0+BOOK, time-disjoint discovery and held-out inside 2023+) can be authored, and on which span; no change from this unit
+  legs:
+  - ml_entry
+  book: money
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261108-98e3-28
+- RQ-20261108-98e3-29
+- RQ-20261109-98e3-34
+- ML-PROP-ITERATE
+- scripts/research/book_depth_pit.py
+population: 'Binance USD-M perp bookDepth daily archive, ETHUSDT and SOLUSDT, 2023-01-01..2026-09-30, 30 s snapshots, +-1, 2, 5 % bands (notional), bars of 4 h and 8 h.'
+why_not_inferential: 'A data build and audit: it counts files, snapshots and bar closes and applies fixed thresholds. It estimates no effect from a sample, so an expected n and an MDE would be theatre.'
