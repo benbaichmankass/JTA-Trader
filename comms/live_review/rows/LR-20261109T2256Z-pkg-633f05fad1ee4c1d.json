@@ -1,0 +1,220 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261109T2256Z-pkg-633f05fad1ee4c1d",
+ "reviewed_at": "2026-11-09T23:08:00Z",
+ "order_package_id": "pkg-633f05fad1ee4c1d",
+ "trade_id": null,
+ "leg": "trend_donchian_xrp_4h",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": null,
+  "l0_snapshot_at": "2026-11-09T22:56:39Z"
+ },
+ "info_cutoff_at": "2026-11-09T22:56:39Z",
+ "state": {
+  "atr_now_over_entry": 1.1662,
+  "bars_held": 6,
+  "giveback_r": 1.0526,
+  "open_r": 0.2456,
+  "peak_provenance": "estimated",
+  "peak_r": 1.2982,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1.1411,
+  "tp": 1.0271
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.1662,
+  "bars_since_peak": 2,
+  "giveback_r": 1.0526,
+  "open_r": 0.2456,
+  "peak_r": 1.2982,
+  "r_to_stop": 1.2456,
+  "r_to_target": 2.7544
+ },
+ "mechanics": {
+  "evidence": "package sl 1.1411 / tp 1.0271 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 17,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "spec": "atr:1.0",
+   "n": 17,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "spec": "atr:1.5",
+   "n": 17,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "spec": "atr:2.0",
+   "n": 17,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "spec": "r:0",
+   "n": 17,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "spec": "r:0.12",
+   "n": 17,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "spec": "close",
+   "n": 17,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261109T2256Z-pkg-633f05fad1ee4c1d.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "suggestive",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.5,
+  "reason": "HALF position short, open +0.25R (peak +1.30R est., giveback 1.05R), mark ~1.1056 DERIVED from open_r (no direct mark read). The 16:00Z 4h bar rejected at 1.1140, under the 1.1160 high and the 1.116 line I named last review, and closed 1.0938 (low 1.0833); the forming bar has bounced back to ~1.1056. Structure unchanged: 1.1691 swing high 3.4 ATR above, 4h ADX 51.6, stop 1.1411 is 1.25R away, TP 1.0271 is 2.75R away. Nothing is priced (hold n=17 < floor 20; atr:1.0/1.5 trail levels 1.0946/1.1041 are below the mark = invalid; atr:2.0 level 1.1136 is inside the 1 ATR min buffer). The nearest valid tighten is ~1.128 (mark + 1 ATR), inside the bounce range, which would convert a normal retest into a -0.5R stop-out on a trend leg built with trail_mult 4. Not defaulting to close/tighten on a thin cell. Changes my call: a 4h close above 1.116, or a 4h low above 1.0833 with a close back over 1.11. All amends advice-only.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "forecast_grade: LR-20261109T1608Z (with_trade, target 1.0756 p 0.40, invalidation 1.1411, 6 x 4h; 1 bar elapsed) -> target NOT reached (16:00Z bar low 1.0833), invalidation NOT touched (bar high 1.1140 vs 1.1411). Thesis part RIGHT: rejection below ~1.116 held (high 1.1140) and price drifted toward 1.08 (low 1.0833, close 1.0938). Since then the forming bar bounced to ~1.1056 (derived). Open R +0.16 -> +0.25. Horizon ~83% open; hold was right vs closing at 16:16Z by about +0.09R.",
+  "packet_defect: priced_options.options all_options_unpriced:insufficient_n+stop_level_not_below_price 6/6",
+  "thin_cell: hold n=17 (floor 20); no table numbers quoted",
+  "derived: mark ~1.1056 = 1.1126 - 0.2456*(1.1411-1.1126); packet carries no mark field",
+  "size: HALF position (bybit_2 53.8 left); known: venue partial SL leg carries pre-close qty 107.6 (reduce-only, protection intact); operator decided 2026-11-09 ~22:00Z to fix the partial-close mechanism after the reset; not re-raised",
+  "tighten_bias: any tighten is flattered by stop-at-price fills; valid level >= mark + 1 ATR (~1.128)",
+  "overlay: ATR now/entry 1.17; correlated open crypto shorts 11 packages incl. two other XRP shorts (xrp_adx25, e4_oi_shock_1h) and ETH/SOL/ADA/BTC; account-level, not sized here; calendar none, funding null (not readable)",
+  "live_vs_backtest: CONSISTENT both books (realMoney live_r -1.14 n=8, p36; mirror -2.75 n=5, p20)"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold changes nothing; bybit_orders SL 1.1411 / TP 1.0271 match package (SL leg qty is the known pre-partial 107.6 vs position 53.8, reduce-only)"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold changes nothing; bybit_orders SL 1.1411 / TP 1.0271 match package (same known oversized reduce-only SL leg)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_live_review_reviewer_20261109T2256Z",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_sha": "a1d4a348351fd78065e08580c24ea95e2fa21882d82e784c2217925b25f49952",
+ "packet_defects": [
+  {
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:insufficient_n+stop_level_not_below_price",
+   "count": 6,
+   "denominator": 6
+  },
+  {
+   "field": "state.mark",
+   "reason": "no_mark_field_in_packet_derived_from_open_r",
+   "count": 1,
+   "denominator": 1
+  },
+  {
+   "field": "regime.vol_now/regime.cell_entry/context.funding",
+   "reason": "missing_inputs",
+   "count": 3,
+   "denominator": 1
+  },
+  {
+   "field": "priced_options.options[tighten atr:1.0/1.5].level",
+   "reason": "trail_from_extreme_level_below_mark_for_short_invalid_by_construction",
+   "count": 2,
+   "denominator": 6
+  }
+ ],
+ "forecast": {
+  "thesis": "The 16:00Z 4h bar rejected at 1.1140 and closed 1.0938 under the 1.1691 swing high with ADX 51.6; the forming bar's bounce to ~1.1056 is a retest inside the 1.0833-1.1160 range. I expect another rejection below ~1.116 and a drift back to the 1.0756 low, with a real minority chance of a squeeze through 1.116 that tests the 1.1411 stop. TP 1.0271 is a long shot.",
+  "direction": "with_trade",
+  "target_px": 1.0756,
+  "p_target": 0.4,
+  "invalidation_px": 1.1411,
+  "horizon_bars": 6,
+  "timeframe": "4h",
+  "evidence": [
+   "chart.since_entry: low 1.0756, high 1.1160; 16:00Z bar H 1.1140 L 1.0833 C 1.0938",
+   "htf: 4h ADX 51.6, 1d ADX 20.2 transitional",
+   "swings: 4h lower high 1.1691 (3.4 ATR above)",
+   "exit_plan: SL 1.1411 TP 1.0271",
+   "packet could not price options; judgement only"
+  ]
+ }
+}
