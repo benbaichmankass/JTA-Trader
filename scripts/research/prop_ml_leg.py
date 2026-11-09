@@ -34,6 +34,7 @@ import pandas as pd
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO), str(REPO / "scripts" / "research")]
+import book_depth_pit as BD  # point-in-time book-depth table (unit RQ-20261109-98e3-36, PASS): the F0+BOOK arm reads its as-of tables
 import ml_decision_entry as E  # klines fetch, features_symbol, bracket_outcome (reused, unchanged)
 import prop_gate as G  # V3 edge clause + ACCT/SIM
 
@@ -71,7 +72,7 @@ MACRO = {"VIXCLS": "vix", "DGS10": "y10", "DTWEXBGS": "usd", "SP500": "spx"}   #
 FEATURE_SETS = {"F0": [], "F0+F1": ["F1"], "F0+F1+F2": ["F1", "F2"], "F0+F1+F2+F3": ["F1", "F2", "F3"]}
 # OPT-IN arms (2026-11-09, PROP-ML-NEW-DATA step 2): selectable ONLY by name via --arms, never part of the default arm list, so no existing unit
 # that runs without --arms changes. F1o = the open-interest / long-short / taker-flow part of F1 WITHOUT the funding columns (the census family oi_flow).
-EXTRA_ARMS = {"F0+OI": ["F1o"], "F0+BASIS": ["F1b"]}
+EXTRA_ARMS = {"F0+OI": ["F1o"], "F0+BASIS": ["F1b"], "F0+BOOK": ["F1d"]}
 F1_OI_COLS = ("oi_chg24", "oi_z", "ls_top_cnt", "ls_top_pos", "ls_all", "taker_ratio", "taker_ratio_ma24")
 # F1b (2026-11-09, PROP-ML-NEW-DATA step 2b, census RQ-20261109-98e3-30): the basis (premium index) part of the census family funding_basis. It is
 # the stream the census graded USABLE for BOTH ETH and SOL (SOL fundingRate was not), and the only family that spans the sealed backward span.
@@ -79,6 +80,11 @@ F1_OI_COLS = ("oi_chg24", "oi_z", "ls_top_cnt", "ls_top_pos", "ls_all", "taker_r
 BASIS_COLS = ("basis", "basis_ma24", "basis_z", "basis_chg24")
 BASIS_STALE_H = 6                      # a premium reading older than this at a bar close is NaN: a hole in the archive never carries a stale value forward
 NEED_BASIS = False
+# F1d (2026-11-09, PROP-ML-NEW-DATA step 3, builder unit RQ-20261109-98e3-36 PASS): the Binance USD-M perp bookDepth family (resting liquidity within +-1/2/5 % of
+# mid, from the public archive, 30 s snapshots, 2023-01 onward). Features are book_depth_pit.FEATURES, each AS OF the bar close (snapshots <= the close only; a
+# snapshot older than book_depth_pit.TOL_S at the close is NaN). Loaded and added ONLY when the F0+BOOK arm is requested (NEED_BOOK): no other unit changes.
+BOOK_COLS = tuple(BD.FEATURES)
+NEED_BOOK = False
 
 
 # ----------------------------------------------------------------------------------------------- data
@@ -218,6 +224,36 @@ def basis_features(kl: pd.DataFrame, prem: pd.DataFrame | None) -> pd.DataFrame:
     return out
 
 
+def fetch_book(cache: Path, syms: list[str]) -> tuple[dict[str, pd.DataFrame], dict[str, dict]]:
+    """Per trade symbol: the as-of table of book-depth features at every BAR_H-hour bar close (book_depth_pit.asof_table), plus the file census.
+    Day-files are cached under <cache>/book_depth; an unreachable day is never cached as an answer."""
+    tables, census = {}, {}
+    days = BD.days_in(BD.SPAN)
+    with cf.ThreadPoolExecutor(8) as ex:
+        for s in syms:
+            parts = list(ex.map(lambda d, s=s: BD.load_day(cache / "book_depth", s, d), days))
+            snaps, cen = BD.census_symbol(s, parts)
+            feat = BD.snap_features(snaps) if not snaps.empty else pd.DataFrame()
+            tables[s], census[s] = BD.asof_table(feat, BD.SPAN, BAR_H), cen
+    return tables, census
+
+
+def book_features(kl: pd.DataFrame, bt: pd.DataFrame | None) -> pd.DataFrame:
+    """Book-depth features for the bars of `kl`, as of each bar's CLOSE (bar t covers [t, t+BAR_H); the table row stamped t+BAR_H is used, and every
+    value in that row was computed from snapshots at or before that instant). NaN where the table has no row or the snapshot was stale."""
+    out = pd.DataFrame({"ts": kl["ts"]})
+    for c in BOOK_COLS:
+        out[c] = np.nan
+    if bt is None or not len(bt):
+        return out
+    ns = "datetime64[ns, UTC]"
+    b = bt.assign(_k=bt["T"].astype(ns)).drop_duplicates("_k").set_index("_k")[list(BOOK_COLS)]
+    res = b.reindex((kl["ts"] + pd.Timedelta(hours=BAR_H)).astype(ns))
+    for c in BOOK_COLS:
+        out[c] = res[c].to_numpy()
+    return out
+
+
 def load_kl(cache: Path, sym: str) -> pd.DataFrame:
     """The cached 1h klines, resampled to BAR_H-hour bars (open time = bar start; empty bars dropped) when BAR_H > 1."""
     d = pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True)
@@ -303,6 +339,7 @@ def build_table(cache: Path, profile: dict, smoke: bool, rehearsal: bool = False
     E.fetch(cache, allsyms)
     fund, met = fetch_funding(cache, allsyms), fetch_metrics(cache, allsyms)
     prem = fetch_premium(cache, trade_syms) if NEED_BASIS else {}      # trade symbols only; context symbols never reach the table
+    book, book_census = fetch_book(cache, trade_syms) if NEED_BOOK else ({}, {})
     macro = fetch_macro(cache)
     cost = make_cost(profile)
     feats, rows, cov = {}, [], {}
@@ -315,7 +352,7 @@ def build_table(cache: Path, profile: dict, smoke: bool, rehearsal: bool = False
         if s in ctx:
             continue
         lab = label_symbol(kl, cost)
-        parts = (f0, f1, f2, basis_features(kl, prem.get(s))) if NEED_BASIS else (f0, f1, f2)
+        parts = (f0, f1, f2) + ((basis_features(kl, prem.get(s)),) if NEED_BASIS else ()) + ((book_features(kl, book.get(s)),) if NEED_BOOK else ())
         for part in parts:
             lab = lab.join(part.drop(columns=["ts"]), on="i")
         lab["symbol"] = s; rows.append(lab)
@@ -342,11 +379,16 @@ def build_table(cache: Path, profile: dict, smoke: bool, rehearsal: bool = False
     fam = {"F0": f0cols, "F1": f1cols, "F2": f2cols, "F3": [], "F1o": [c for c in f1cols if c in F1_OI_COLS]}
     if NEED_BASIS:
         fam["F1b"] = [c for c in tab.columns if c in BASIS_COLS]
+    if NEED_BOOK:
+        fam["F1d"] = [c for c in tab.columns if c in BOOK_COLS]
     for k, cols in fam.items():     # coverage audit: first/last non-null and the null share at decision rows, per family and symbol
         cov[k] = {"n_features": len(cols), "columns": cols,
                   "per_symbol": {s: ({"first": str(g.loc[g[cols].notna().any(axis=1), "ts"].min()), "last": str(g.loc[g[cols].notna().any(axis=1), "ts"].max()),
                                       "null_share_any": round(float(g[cols].isna().all(axis=1).mean()), 4)} if cols else {"read_state": "no_source_in_driver"})
                                  for s, g in tab.groupby("symbol")}}
+    if NEED_BOOK:
+        cov["F1d"]["file_census"] = {s: {k: c[k] for k in ("days_expected", "days_present", "days_absent_404", "days_unreachable", "days_unparseable", "first_absent_days")}
+                                     for s, c in book_census.items()}
     cov["F3"]["note"] = "F3 text/embedding: no point-in-time history source wired in this driver -> arm UNAVAILABLE (reported, not run, not silently dropped)"
     return tab, fam, cov
 
@@ -542,10 +584,18 @@ def load_refs(extra: list[str]) -> dict[str, list[dict]]:
 
 
 # ----------------------------------------------------------------------------------------------- run
+def selectable(grid: dict, select_from: str) -> list[dict]:
+    """The eligible draws the selection may pick from. `select_from` is a comma list of arm names; "" = every arm (the default, so no existing unit changes).
+    An arm outside the list is still graded and reported (a matched control), but is never selected and so never causes the held-out to be read."""
+    allowed = {x.strip() for x in select_from.split(",") if x.strip()}
+    return [g for g in grid.values() if g["eligible"] and (not allowed or g["arm"] in allowed)]
+
+
 def run(a) -> int:
-    global HOLDOUT_START, HOLDOUT_END, N_HELD_FLOOR, H, BAR_H, TAUS, DEV_START_FOLDS, DISC_END, DISC_FLOOR_TS, NEED_BASIS
+    global HOLDOUT_START, HOLDOUT_END, N_HELD_FLOOR, H, BAR_H, TAUS, DEV_START_FOLDS, DISC_END, DISC_FLOOR_TS, NEED_BASIS, NEED_BOOK
     BAR_H = int(a.bar_hours); H = 48 // BAR_H
     NEED_BASIS = "F0+BASIS" in [x.strip() for x in (a.arms or "").split(",")]     # opt-in only: no other unit downloads or adds the basis columns
+    NEED_BOOK = "F0+BOOK" in [x.strip() for x in (a.arms or "").split(",")]       # opt-in only: no other unit downloads or adds the book-depth columns
     if a.taus:
         TAUS = tuple(float(x) for x in a.taus.split(","))
     if a.rehearsal:     # exercises the held-out/finish path on a DEV window (2023-07..2023-12); the real held-out span is never loaded
@@ -599,7 +649,7 @@ def run(a) -> int:
                                  "eligible": bool(len(led) >= N_DISC_FLOOR and usable > 0 and posf >= math.ceil(2 * usable / 3)
                                                   and (not a.require_positive_sum or (len(led) and float(led["net_r"].sum()) > 0))), "_led": led}
     table = [{k: v for k, v in g.items() if k != "_led"} for g in grid.values()]
-    elig = [g for g in grid.values() if g["eligible"]]
+    elig = selectable(grid, a.select_from)
     res = {"schema": SCHEMA, "profile": a.profile, "smoke": bool(a.smoke), "rehearsal": bool(a.rehearsal), "bar_hours": BAR_H, "taus": list(TAUS), "horizon_bars": H, "arms_run": arms, "arms_unavailable": unavailable,
            "require_positive_sum": bool(a.require_positive_sum), "arm_denominator_registered": len(arms) * len(TAUS), "arms_graded": len(grid), "discovery_table": table,
            "folds": len(folds), "data_rows": len(tab), "elapsed_s": round(time.time() - t0)}
@@ -608,7 +658,8 @@ def run(a) -> int:
         (out / "result.json").write_text(json.dumps(res, indent=1)); print(json.dumps({k: res[k] for k in ("verdict", "arms_graded", "data_rows")}))
         print(pd.DataFrame(table).to_string()); return 0
     if not elig:
-        res.update({"verdict": "FAIL", "read_state": "measured", "reason": "no arm x tau eligible on discovery (>= 100 trades and >= 2/3 of folds net-positive" + (" and discovery sum > 0)" if a.require_positive_sum else ")")})
+        res.update({"verdict": "FAIL", "read_state": "measured", "reason": "no arm x tau eligible on discovery (>= 100 trades and >= 2/3 of folds net-positive" + (" and discovery sum > 0)" if a.require_positive_sum else ")")
+                    + (f"; selection restricted to {a.select_from}" if a.select_from else "")})
         return finish(out, res, prof, None, None)
     sel = max(elig, key=lambda g: g["sum_net_r"]); name, tau = sel["arm"], sel["tau"]
     res["selected"] = {"arm": name, "tau": tau, "discovery_sum_net_r": sel["sum_net_r"], "discovery_n": sel["n"]}
@@ -779,6 +830,28 @@ def _self_test() -> int:
         check("the 24 h change is the exact difference of two readings 24 h apart when neither sits in a hole", len(ref_ok) > 0 and np.allclose(f_c.loc[ref_ok, "basis_chg24"], 0.024))
         check("no basis history before the first reading: NaN, not zero", basis_features(pd.DataFrame({"ts": pd.date_range("2021-01-01", periods=3, freq="4h", tz="UTC")}), prem0)["basis"].isna().all())
         check("no source at all: all four columns present and NaN", basis_features(kl_t, None)[list(BASIS_COLS)].isna().all().all())
+        # F0+BOOK (2026-11-09): opt-in by name; the features are exactly book_depth_pit.FEATURES and are joined as of the bar CLOSE
+        fam_d = dict(fam_t, F1d=list(BOOK_COLS))
+        check("F0+BOOK is NOT in the default arm list", "F0+BOOK" not in default_arms)
+        check("F0+BOOK = F0 + the book columns, nothing from F1", arm_cols(fam_d, "F0+BOOK") == ["a", *BOOK_COLS])
+        check("BOOK_COLS is the builder's own feature list", BOOK_COLS == tuple(BD.FEATURES))
+        T0 = pd.Timestamp("2022-03-02 04:00", tz="UTC")
+        bt = pd.DataFrame({"T": pd.date_range(T0, periods=60, freq="4h"), **{c: np.arange(60, dtype=float) + k for k, c in enumerate(BOOK_COLS)}})
+        kl_b = pd.DataFrame({"ts": pd.date_range("2022-03-02 00:00", periods=60, freq="4h", tz="UTC")})
+        f_bk = book_features(kl_b, bt)
+        check("the value for bar t is the table row stamped at t + BAR_H (the bar close)", all(f_bk[c][5] == 5.0 + k for k, c in enumerate(BOOK_COLS)))
+        bt2 = bt.copy()
+        bt2.loc[bt2["T"] > kl_b["ts"][5] + pd.Timedelta(hours=4), list(BOOK_COLS)] += 100.0   # change only rows stamped AFTER bar 5 closes
+        f_bk2 = book_features(kl_b, bt2)
+        check("changing table rows after a bar's close leaves that bar and every earlier bar unchanged (no look-ahead)",
+              np.allclose(f_bk.loc[:5, list(BOOK_COLS)].to_numpy(), f_bk2.loc[:5, list(BOOK_COLS)].to_numpy()) and not np.allclose(f_bk.loc[7:, "imb1"], f_bk2.loc[7:, "imb1"]))
+        check("a bar whose close has no table row is NaN, not zero", book_features(pd.DataFrame({"ts": pd.date_range("2021-01-01", periods=3, freq="4h", tz="UTC")}), bt)["imb1"].isna().all())
+        check("no source at all: all book columns present and NaN", book_features(kl_b, None)[list(BOOK_COLS)].isna().all().all())
+        g_t = {("F0", 0.5): {"arm": "F0", "eligible": True, "sum_net_r": 5.0}, ("F0+BOOK", 0.5): {"arm": "F0+BOOK", "eligible": False, "sum_net_r": 1.0}}
+        check("default selection: every eligible arm may be selected (no existing unit changes)", [g["arm"] for g in selectable(g_t, "")] == ["F0"])
+        check("--select-from F0+BOOK: an eligible control F0 is graded but NOT selectable, so the held-out is not read for it", selectable(g_t, "F0+BOOK") == [])
+        g_t[("F0+BOOK", 0.5)]["eligible"] = True
+        check("--select-from F0+BOOK: an eligible F0+BOOK cell is selectable", [g["arm"] for g in selectable(g_t, "F0+BOOK")] == ["F0+BOOK"])
     finally:
         BAR_H = saved_bar
     # D1-D4 on constructed ledgers
@@ -807,6 +880,7 @@ def main(argv=None) -> int:
     sub = ap.add_subparsers(dest="cmd")
     r = sub.add_parser("run"); r.add_argument("--profile", choices=sorted(PROFILES), required=True); r.add_argument("--out", required=True)
     r.add_argument("--cache", default="/tmp/prop_ml_cache"); r.add_argument("--smoke", action="store_true"); r.add_argument("--rehearsal", action="store_true"); r.add_argument("--bar-hours", type=int, default=1, choices=[1, 2, 4, 8]); r.add_argument("--taus", default=""); r.add_argument("--require-positive-sum", action="store_true"); r.add_argument("--arms", default=""); r.add_argument("--no-heldout", action="store_true"); r.add_argument("--ref-ledger", nargs="*", default=[])
+    r.add_argument("--select-from", default="", help="comma list of arms the discovery selection may pick; other arms are graded controls and never selected (default: all)")
     r.add_argument("--heldout-span", default="", help="START:END (ISO dates); default the registered 2025-10-01:2026-09-30")
     r.add_argument("--discovery-start", default="", help="rows before it are excluded from discovery; with a held-out span ending before it = backward design")
     r.add_argument("--discovery-end", default="", help="backward design only: last discovery fold edge (default 2026-10-01)")
