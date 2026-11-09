@@ -1,0 +1,154 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261109T1603Z-pkg-50f5eed272f64197",
+ "reviewed_at": "2026-11-09T16:14:00Z",
+ "order_package_id": "pkg-50f5eed272f64197",
+ "trade_id": null,
+ "leg": "trend_donchian_sol_4h",
+ "accounts": [
+  "breakout_2",
+  "tradeify_1",
+  "velotrade_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-09T16:00:00Z",
+  "l0_snapshot_at": "2026-11-09T16:03:05Z"
+ },
+ "info_cutoff_at": "2026-11-09T16:03:05Z",
+ "state": {
+  "open_r": 0.1775,
+  "peak_r": 1.7342,
+  "peak_provenance": "estimated",
+  "giveback_r": 1.5567,
+  "bars_held": null,
+  "sl": 89.10464286,
+  "tp": 78.96364,
+  "atr_now_over_entry": 1.5552,
+  "regime_cell_now": null,
+  "regime_cell_entry": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.5552,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "mechanics": {
+  "evidence": "order_packages status=emitted close_reason=prop_ticket_emitted; package sl 89.10464286 / tp 78.96364 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": "comms/live_review/tables/LR-20261109T1603Z-pkg-50f5eed272f64197.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.5,
+  "reason": "Prop SOL short, ESTIMATED +0.1775R (mark 87.38 vs entry 87.64, R 1.4646/unit, prop mark is bybit 5m close, no broker feed), peak about +1.7342R (since-entry low 85.10), giveback about 1.56R. Price retraced from 86.47 to 87.38 since the 13:12Z review, so the trade is near breakeven; closing now would bank only ~+0.18R and forfeits a TP 5.9R away, while the stop is still 1.13 ATR (4h) above the mark and the 4h high only made 88.01 (a lower high vs 88.43, below 90.02). 4h ADX 34.4 with lower highs keeps the downtrend intact; the 4h ATR is 1.55x entry so the noise is wide and every tighten sits inside it. Nothing could be priced (packet could not price), so this is judgement; I did not default to close-on-adverse. All amends are advice-only.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "forecast_grade: LR-20261109T1306Z (with_trade, target 84.94 p 0.35, invalidation 89.10, 6 x 4h to ~Nov 10 13:00Z, ~1 elapsed) -> target NOT reached (post-13:12Z low not below 85.10; target needs 84.94), stop NOT touched (post-review high 88.01 vs 89.10). Price moved against the trade: mark 86.47 -> 87.38, open R +0.80 -> +0.18 (ESTIMATED). Thesis direction unresolved, horizon open; the hold beat close only if the downtrend resumes, so far it cost about 0.6R of open profit.",
+  "estimated_state: open_r 0.1775 = (87.64-87.38)/1.46464286 using prop_open mark 87.38 (bybit last close 5m, provenance estimated, uPnL 1.78 per account matches); peak_r 1.7342 from the packet's since-entry low 85.10 (a lower bound at 4h resolution); giveback 1.5567. None are MEASURED; bars_held null (no telemetry).",
+  "packet_defect: priced_options could_not_price 1/1",
+  "packet_defect: state.open_r context_null:state.open_r 1/1",
+  "packet_defect: account_bounds empty (prop accounts not filled by the packet builder, row LTR-PROP-COVERAGE) 3/3 prop accounts",
+  "no_pricing: no priced options this session, so no table numbers quoted; the 13:12Z indicative n=9 replay is not re-quoted",
+  "tighten_bias: any tighten is flattered by stop-at-price fills; the 1 ATR min buffer puts the nearest valid stop near the mark plus 1 ATR (about 88.9), so a tighten adds little and sits inside 4h noise (ATR 1.52)",
+  "leg_record: comms/strategy_evidence says this leg failed RULE-E69-DONCHIAN-4H-RESWEEP-DEMOTE (net_r_oos -2.796, n=35); the review prices the open package, not the leg's edge",
+  "prop_dd: all three accounts carry 6.8276 qty, about $10 risk at the stop; risk 0.35%/0.50%/0.50%, daily DD switch armed on each, survival p_breach 0.127 (breakout_2) / 0.044 (tradeify_1) / 0.022 (velotrade_1); uPnL about +$1.78 each; no DD pressure",
+  "book: one crypto-beta short among many shorts; account-level, not sized here",
+  "missing: regime.vol_now, regime.cell_entry, context.funding not available"
+ ],
+ "account_reads": [
+  {
+   "account_id": "breakout_2",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "hold changes nothing; breakout_2: phone apply paths close/move_tp/reduce/tighten/widen_sl; risk 0.35% per trade, max DD 3%, daily loss 3%, daily DD switch armed, survival p_breach 0.127; mark ESTIMATED (bybit 5m close 87.38), uPnL about +$1.78"
+  },
+  {
+   "account_id": "tradeify_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "hold changes nothing; tradeify_1: prop_vm apply path tighten only; risk 0.50% per trade, max DD 6%, daily loss 3%, daily DD switch armed, survival p_breach 0.044; mark ESTIMATED (bybit 5m close 87.38), uPnL about +$1.78"
+  },
+  {
+   "account_id": "velotrade_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "hold changes nothing; velotrade_1: prop_vm apply path tighten only; risk 0.50% per trade, max DD 7%, daily loss 4%, daily DD switch armed, survival p_breach 0.022; mark ESTIMATED (bybit 5m close 87.38), uPnL about +$1.78"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuLDxWHssgnNvEyz5GH",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_sha": "01903d53e58fb8e6829453c1e968934bb183d8d79f03bc92ea85459da26c517a",
+ "packet_defects": [
+  {
+   "field": "priced_options",
+   "reason": "could_not_price",
+   "count": 1,
+   "denominator": 1
+  },
+  {
+   "field": "state.open_r",
+   "reason": "context_null:state.open_r",
+   "count": 1,
+   "denominator": 1
+  },
+  {
+   "field": "account_bounds",
+   "reason": "empty_prop_accounts_not_filled",
+   "count": 3,
+   "denominator": 3
+  }
+ ],
+ "forecast": {
+  "thesis": "4h lower highs (90.02, 88.43, 88.01) and ADX 34.4 keep the downtrend; the retrace to 87.4 failed to make a higher high, so I expect a retest of the 84.94 flush low before a reclaim of the 89.10 stop, but the wide 4h noise (ATR 1.52) makes a further squeeze toward 88.4 a real minority path.",
+  "direction": "with_trade",
+  "target_px": 84.94,
+  "p_target": 0.3,
+  "invalidation_px": 89.1,
+  "horizon_bars": 5,
+  "timeframe": "4h",
+  "evidence": [
+   "chart.since_entry: low 85.10, high 88.43, last 4h close 87.88, mark 87.38",
+   "chart.swings: lower highs 90.02/88.43/88.01, flush low 84.94",
+   "htf: 1d/4h trending, 4h ADX 34.4",
+   "exit_plan: SL 89.10 TP 78.96",
+   "packet could not price options; judgement only"
+  ]
+ }
+}
