@@ -51,7 +51,7 @@ MAX_ACCOUNT_BYTES = 400_000_000
 # one answered 400 "flow must be one of ..." and the heartbeat carried capture_err post:* 400 for days (2026-11-07 root cause,
 # MEASURED: 17 stored runs, flows positions 9 / amend 5 / entry 3, zero closed). "anomaly" = a capture taken on a terminal
 # miss / failed expectation; "periodic" = the slow view capture while the terminal is open (PHONE-SELF-SCREENSHOTS).
-FLOWS = ("entry", "amend", "drill", "positions", "login", "probe", "closed", "anomaly", "periodic")
+FLOWS = ("entry", "amend", "drill", "positions", "login", "probe", "closed", "anomaly", "periodic", "cancel")
 _RUN_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{2,79}$")
 _STEP_RE = re.compile(r"^[a-z][a-z0-9_]{1,39}$")
 _ACCT_RE = re.compile(r"^[a-z0-9_]{1,40}$")

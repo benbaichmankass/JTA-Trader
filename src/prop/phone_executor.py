@@ -378,6 +378,13 @@ def claim_next(device: PhoneDevice, now: Optional[datetime] = None,
             return t
     finally:
         conn.close()
+    if "cancel" in accepts:
+        # PHONE-ENTRY-CANCEL: a stale resting entry is withdrawn before any trail amend is served
+        from src.prop import phone_cancel
+        phone_cancel.plan_cancels(acct, now=now)
+        c = phone_cancel.claim_cancel(device, now=now)
+        if c is not None:
+            return c
     if "amend" not in accepts:
         return None
     from src.prop import phone_trail
@@ -410,6 +417,9 @@ def record_report(device: PhoneDevice, body: Dict[str, Any]) -> Dict[str, Any]:
             "form": json.loads(dump_capped(form, 20000)),
             "at": _now().isoformat()})
         return {"ok": n == 1, "kind": "ticket_result", "updated": n}
+    if body.get("kind") == "cancel_result":
+        from src.prop import phone_cancel
+        return phone_cancel.record_cancel_result(device, body)
     if body.get("kind") == "amend_result":
         from src.prop import phone_trail
         return phone_trail.record_amend_result(device, body)
@@ -573,6 +583,10 @@ def pending_count(device: PhoneDevice, now: Optional[datetime] = None, accepts: 
         from src.prop import phone_trail
         phone_trail.plan_amends(acct, now=now)
         n += phone_trail.pending_amends(acct, now=now)
+    if "cancel" in accepts:
+        from src.prop import phone_cancel
+        phone_cancel.plan_cancels(acct, now=now)
+        n += phone_cancel.pending_cancels(acct, now=now)
     return n + (1 if _unserved_dry_test_request(acct) else 0)
 
 

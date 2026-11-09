@@ -305,7 +305,7 @@ async def _json_body(request: Request) -> dict[str, Any]:
 def _accepts(raw: Any) -> tuple:
     """The app's declared capabilities (``["amend"]``); anything else is ignored."""
     items = raw if isinstance(raw, list) else str(raw or "").split(",")
-    return tuple(sorted({str(x).strip().lower() for x in items} & {"amend"}))
+    return tuple(sorted({str(x).strip().lower() for x in items} & {"amend", "cancel"}))
 
 
 @router.post("/phone/claim")
