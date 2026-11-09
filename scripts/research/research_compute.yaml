@@ -82,6 +82,19 @@ published_data:
     exporter: .github/workflows/ml-data-export-kaggle.yml
     refresh: "daily 06:40Z, after the nightly shard rebuild"
     env: ML_DATA_ROOT                      # the dir that CONTAINS datasets-out/ ; ml_bakeoff resolves relative paths from it
+  # LAKE MIRROR, MANIFEST ONLY (2026-11-08, PROP-ML-NEW-DATA step 1; manager 2026-11-07a ruling). The frozen crypto history of the HF lake
+  # (private HF storage is at its cap and returns 403) is mirrored as private Kaggle datasets metis-market-lake-pNNN
+  # (scripts/data_lake/kaggle_pilot.py, kaggle-cold-lake-copy.yml). `fetch: manifest_only` downloads ONLY each part's MANIFEST.json
+  # (never the ~7 GB shards, nothing is re-hashed) so a unit can answer "is this series in the lake, over which dates" on a
+  # GitHub runner. It does NOT make the lake's rows readable; that is the loader row HF-LAKE-KAGGLE-LOADER. Runner twin only:
+  # a Kaggle kernel route is refused (kaggle_run.py). ROLLBACK: delete this entry (units naming it are then refused by
+  # compute_router.published_problem) and revert the manifest_only branch of published_data.py::fetch; nothing else reads it.
+  metis-market-lake:
+    kaggle_dataset_prefix: metis-market-lake-p   # parts are <prefix>NNN; resolved at fetch time by listing the token user's datasets
+    fetch: manifest_only
+    exporter: .github/workflows/kaggle-cold-lake-copy.yml
+    refresh: "none: frozen closed-month history, copied once (HF-LAKE-STORAGE-403); the hot tail is not in the mirror"
+    env: LAKE_MANIFEST_ROOT                # the dir holding <slug>/MANIFEST.json for every part
 
 # Class -> ordered backend preference. The first backend that is not over capacity / quota wins.
 # A class with one backend WAITS when it is full; listing a second backend is the declared fallback.

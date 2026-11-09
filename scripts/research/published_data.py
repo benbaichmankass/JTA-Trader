@@ -19,8 +19,10 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -94,6 +96,61 @@ def download_dataset(api: Any, user: str, slug: str, dest: Path) -> str:
     return " | ".join(notes).replace(user, "<user>")
 
 
+def fetch_manifests(api: Any, user: str, spec: Dict[str, Any], dest: Path, name: str, *,
+                    out_dir: Optional[Path] = None, github_env: Optional[str] = None) -> int:
+    """`fetch: manifest_only` (the lake mirror metis-market-lake-pNNN): download ONLY each part's MANIFEST.json, never the shards.
+
+    Nothing is re-hashed (there is no shard on disk to hash). FAILS CLOSED: if any part's manifest cannot be read the step refuses,
+    because a partial read would silently undercount what the lake holds. Parts are found by listing the token user's datasets
+    and keeping slugs that match ``<prefix>NNN`` exactly, so a probe or pilot dataset with the same stem is never counted."""
+    prefix = spec["kaggle_dataset_prefix"]
+    pat = re.compile("^" + re.escape(prefix) + r"\d{3}$")
+    found: Dict[str, str] = {}
+    for page in range(1, 6):
+        batch = list(api.dataset_list(user=user, search=prefix, page=page) or [])
+        if not batch:
+            break
+        for d in batch:
+            ref = str(getattr(d, "ref", ""))
+            if pat.match(ref.split("/")[-1]):
+                found[ref.split("/")[-1]] = ref
+    got: Dict[str, Any] = {}
+    failed: Dict[str, str] = {}
+    for slug, ref in sorted(found.items()):
+        d = dest / slug
+        d.mkdir(parents=True, exist_ok=True)
+        try:
+            api.dataset_download_file(ref, "MANIFEST.json", path=str(d), force=True, quiet=True)
+        except Exception as exc:  # allow-silent: recorded in `failed`, which makes the step refuse below
+            failed[slug] = f"{type(exc).__name__}: {str(exc)[-120:]}".replace(user, "<user>")
+            continue
+        z = d / "MANIFEST.json.zip"
+        if z.is_file():
+            with zipfile.ZipFile(z) as zf:
+                zf.extract("MANIFEST.json", d)
+        mp = d / "MANIFEST.json"
+        try:
+            man = json.loads(mp.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            failed[slug] = f"unreadable manifest after download: {type(exc).__name__}"
+            continue
+        got[slug] = {"n_partitions": man.get("n_partitions"), "n_shards": len(man.get("files") or []),
+                     "generated_at": man.get("generated_at"), "schema": man.get("schema")}
+    facts = {"dataset": name, "fetch": "manifest_only", "parts": got, "failed": failed, "n_parts_found": len(found)}
+    if out_dir is not None:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / "published-data.json").write_text(json.dumps(facts, indent=1) + "\n", encoding="utf-8")
+    if not found or failed:
+        print(f"REFUSED: manifest-only fetch incomplete: {len(found)} part(s) listed, {len(got)} read, failed {sorted(failed)}", file=sys.stderr)
+        return 5
+    env = spec.get("env") or "LAKE_MANIFEST_ROOT"
+    if github_env:
+        with open(github_env, "a", encoding="utf-8") as fh:
+            fh.write(f"{env}={dest}\n")
+    print(f"{env}={dest}  ({len(got)} part manifests, {sum(v['n_partitions'] or 0 for v in got.values())} partitions)")
+    return 0
+
+
 def fetch(unit: str, dest: Path, *, out_dir: Optional[Path] = None, github_env: Optional[str] = None,
           queue_dir: Optional[Path] = None) -> int:
     entry = load_unit(unit, queue_dir)
@@ -109,7 +166,8 @@ def fetch(unit: str, dest: Path, *, out_dir: Optional[Path] = None, github_env: 
     if not os.environ.get("KAGGLE_API_TOKEN"):
         print("REFUSED: KAGGLE_API_TOKEN is not set for this step -- cannot read the private dataset", file=sys.stderr)
         return 4
-    slug = cfg["published_data"][name]["kaggle_dataset"]
+    spec = cfg["published_data"][name]
+    slug = spec.get("kaggle_dataset")
     from kaggle.api.kaggle_api_extended import KaggleApi  # noqa: PLC0415
     api = KaggleApi()
     api.authenticate()
@@ -119,6 +177,8 @@ def fetch(unit: str, dest: Path, *, out_dir: Optional[Path] = None, github_env: 
         return 4
     print(f"::add-mask::{user}")
     dest.mkdir(parents=True, exist_ok=True)
+    if spec.get("fetch") == "manifest_only":
+        return fetch_manifests(api, user, spec, dest, name, out_dir=out_dir, github_env=github_env)
     err = download_dataset(api, user, slug, dest)
     if err:
         print("download failed: " + err, file=sys.stderr)
@@ -146,6 +206,56 @@ def fetch(unit: str, dest: Path, *, out_dir: Optional[Path] = None, github_env: 
     return 0
 
 
+def _self_test_manifest_only() -> int:
+    import tempfile
+
+    class _D:
+        def __init__(self, ref: str) -> None:
+            self.ref = ref
+
+    class _Api:
+        def __init__(self, bad: Optional[str] = None, empty: bool = False) -> None:
+            self.bad = bad
+            self.empty = empty
+            self.asked: list = []
+
+        def dataset_list(self, user: str = "", search: str = "", page: int = 1):
+            assert user == "u" and search == "metis-market-lake-p", (user, search)   # the listing must be scoped to the token user + prefix
+            return [] if (page > 1 or self.empty) else [_D("u/metis-market-lake-p000"), _D("u/metis-market-lake-p001"),
+                                                        _D("u/metis-market-lake-filecount-probe"), _D("u/metis-market-lake-p0000")]
+
+        def dataset_download_file(self, ref: str, file_name: str, path: str = "", force: bool = False, quiet: bool = True) -> None:
+            assert force is True and quiet is True, (force, quiet)   # a stale cached manifest must never be reused
+            self.asked.append((ref, file_name))
+            if self.bad and ref.endswith(self.bad):
+                raise RuntimeError("404 for u")
+            man = json.dumps({"schema": "metis-market-lake-pilot/v1", "generated_at": "2026-11-06T00:00:00+00:00",
+                              "n_partitions": 10 if ref.endswith("p000") else 5, "files": [{"path": "a.tar"}, {"path": "b.tar"}]})
+            if ref.endswith("p001"):    # Kaggle sometimes serves the single file zipped
+                with zipfile.ZipFile(Path(path) / "MANIFEST.json.zip", "w") as zf:
+                    zf.writestr("MANIFEST.json", man)
+            else:
+                (Path(path) / "MANIFEST.json").write_text(man)
+
+    spec = {"kaggle_dataset_prefix": "metis-market-lake-p", "fetch": "manifest_only", "env": "LAKE_MANIFEST_ROOT"}
+    with tempfile.TemporaryDirectory() as td:
+        td = Path(td)
+        env = td / "env"
+        api = _Api()
+        assert fetch_manifests(api, "u", spec, td / "d", "metis-market-lake", out_dir=td / "o", github_env=str(env)) == 0
+        assert sorted(r for r, _ in api.asked) == ["u/metis-market-lake-p000", "u/metis-market-lake-p001"], api.asked
+        assert all(f == "MANIFEST.json" for _, f in api.asked), "only the manifest may be downloaded"
+        facts = json.loads((td / "o" / "published-data.json").read_text())
+        assert facts["parts"]["metis-market-lake-p000"]["n_partitions"] == 10 and facts["parts"]["metis-market-lake-p001"]["n_partitions"] == 5
+        assert facts["failed"] == {} and env.read_text().startswith("LAKE_MANIFEST_ROOT=")
+        bad = _Api(bad="p001")                                   # one part unreadable -> the step refuses, never a partial read
+        assert fetch_manifests(bad, "u", spec, td / "d2", "metis-market-lake", out_dir=td / "o2") == 5
+        assert "metis-market-lake-p001" in json.loads((td / "o2" / "published-data.json").read_text())["failed"]
+
+        assert fetch_manifests(_Api(empty=True), "u", spec, td / "d3", "metis-market-lake") == 5     # nothing listed is a refusal, not an empty lake
+    return 0
+
+
 def _self_test() -> int:
     import tempfile
     entry = {"routing": {"published_data": "metis-market-data"},
@@ -163,6 +273,7 @@ def _self_test() -> int:
         assert s["last_ts"] == "2026-02-01T00:00:00Z" and s["stale_days_at_export"] > 0, s
         missing = shard_facts(stage, {"ml_bakeoff": {"dataset": {"path": "datasets-out/market_features/SOLUSDT/15m/v002/data.jsonl"}}})
         assert missing["shards"]["datasets-out/market_features/SOLUSDT/15m/v002/data.jsonl"] == {"missing": True}
+    _self_test_manifest_only()
     print("published_data self-test OK")
     return 0
 

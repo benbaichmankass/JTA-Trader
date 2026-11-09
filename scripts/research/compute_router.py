@@ -165,6 +165,8 @@ def published_problem(entry: Dict[str, Any], cfg: Dict[str, Any]) -> Optional[st
     reg = cfg.get("published_data") or {}
     if str(name) not in reg:
         return f"routing.published_data {name!r} is not declared in research_compute.yaml::published_data (have {sorted(reg)})"
+    if (reg[str(name)] or {}).get("fetch") == "manifest_only":
+        return None  # reads only the parts' MANIFEST.json: no dataset path exists to check against the exporter allowlist
     paths = unit_dataset_paths(entry)
     if not paths:
         return "routing.published_data is set but the unit declares no ml_bakeoff.dataset path to check it against"
