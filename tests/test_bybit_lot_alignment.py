@@ -85,11 +85,15 @@ class TestQtyStepAlignment:
         assert client.placed_kwargs["qty"] == "12.77"
         assert order["qty"] == pytest.approx(12.77)
 
-    def test_below_min_order_qty_refused_preflight(self):
+    def test_below_min_order_qty_sized_up_preflight(self):
+        # REVERSED 2026-11-09 (operator, Tier 3): below minOrderQty the entry is
+        # sized UP to the minimum instead of refused pre-flight.
         client = _LotClient()
-        with pytest.raises(RuntimeError, match="below the exchange lot minimum"):
-            _submit_order(client, _order(0.004), _CFG)
-        assert client.placed_kwargs is None  # nothing transmitted
+        order = _order(0.004)
+        _submit_order(client, order, _CFG)
+        assert client.placed_kwargs["qty"] == "0.01"
+        assert order["qty"] == pytest.approx(0.01)
+        assert order["qty_resize"]["qty_resize"]["binding"] == "min_qty"
 
     def test_unknown_rule_submits_unmodified(self):
         """Lookup outage + no static entry → pre-fix behaviour (qty sent

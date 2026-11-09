@@ -104,12 +104,11 @@ class TestPositionSizeContract:
         # risk-distance, so $50 at 1% = $0.50 risk == exactly the 0.001 BTC lot.
         assert rm.position_size(pkg, balance_usd=50.0) > 0.0
 
-        # But a balance too small to afford the min lot at the configured risk
-        # now REFUSES (0.0) rather than being bumped UP to the min lot — the bump
-        # silently over-risked the account (#3910 Item 3, operator-approved
-        # refuse 2026-06-28). $10 / $49.99 at 1% give < the 0.001-lot's $0.50.
-        assert rm.position_size(pkg, balance_usd=49.99) == 0.0
-        assert rm.position_size(pkg, balance_usd=10.0) == 0.0
+        # A balance too small to afford the min lot at the configured risk is
+        # now SIZED UP to the min lot (operator 2026-11-09, Tier 3; reverses the
+        # #3910 Item 3 refuse). $10 / $49.99 at 1% give < the 0.001-lot's $0.50.
+        assert rm.position_size(pkg, balance_usd=49.99) == pytest.approx(0.001)
+        assert rm.position_size(pkg, balance_usd=10.0) == pytest.approx(0.001)
 
     def test_default_risk_pct_is_one_percent(self):
         """Operator-confirmed default: 1% balance per trade."""

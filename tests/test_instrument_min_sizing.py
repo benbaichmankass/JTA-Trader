@@ -60,8 +60,9 @@ class TestEthInstrumentMin:
         # → per-trade REFUSAL (0.0), not a sub-lot qty passed downstream.
         rm = self._rm()
         pkg = _pkg("ETHUSDT", entry=1725.0, sl=1685.0)  # 40-wide stop
-        # balance 20 → raw ~0.005 ETH < 0.01 → refuse.
-        assert rm.position_size(pkg, 20.0, market_type="linear") == 0.0
+        # balance 20 → raw ~0.005 ETH < 0.01 → sized UP to the 0.01 lot
+        # (operator 2026-11-09, Tier 3; reverses the per-trade refusal).
+        assert rm.position_size(pkg, 20.0, market_type="linear") == pytest.approx(0.01)
 
     def test_eth_size_aligned_to_001_step(self):
         # Larger balance → risk-sized qty floored to the 0.01 step (Phase 3),
