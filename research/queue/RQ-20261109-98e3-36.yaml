@@ -1,6 +1,6 @@
 id: RQ-20261109-98e3-36
 title: 'PROP-ML-NEW-DATA: can a point-in-time book-depth table (Binance USD-M perp bookDepth, ETH+SOL, 2023-01..2026-09) be built from the public archive with usable coverage and no look-ahead?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -74,9 +74,9 @@ grading:
   evidence:
   - research/results/RQ-20261109-98e3-36/42603821287.jsonl
   - research/results/RQ-20261109-98e3-36/42610949526.jsonl
+  - research/results/RQ-20261109-98e3-36/42617841365.jsonl
   graded_at: '2026-11-09'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
-  rows: 2
-  verdict: null
+  reason: 1 row(s), all measured, all pass (2 earlier producer_failed / re-graded wiring_only row(s) superseded)
+  rows: 1
+  verdict: pass
