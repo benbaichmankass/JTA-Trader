@@ -1,0 +1,776 @@
+{
+ "schema_version": 1,
+ "research_unit": "RQ-20261108-98e3-28",
+ "read_state": "measured",
+ "verdict": "pass",
+ "population": "Binance USD-M archive (data.binance.vision) for ETHUSDT/SOLUSDT (required) and BTCUSDT (context): fundingRate, premiumIndexKlines, metrics, bookDepth graded; aggTrades listed only; as of 2026-11-08",
+ "note": "pass: families usable on ETH+SOL = {'funding_basis': False, 'book_depth': True, 'oi_flow': True}; ETH fundingRate NOT-USABLE; ETH premiumIndexKlines NOT-USABLE; ETH metrics USABLE; ETH bookDepth USABLE-PARTIAL; SOL fundingRate NOT-USABLE; SOL premiumIndexKlines NOT-USABLE; SOL metrics USABLE; SOL bookDepth USABLE-PARTIAL",
+ "generated_at": "2026-11-09T00:52:27Z",
+ "decision_rule": {
+  "id": "RULE-RQ20261108-98e3-28-NONPRICE-USABLE",
+  "registered_at": "2026-11-08",
+  "registered_before_run": true
+ },
+ "measurement": {
+  "detail": {
+   "families_usable": {
+    "funding_basis": false,
+    "book_depth": true,
+    "oi_flow": true
+   }
+  },
+  "table": [
+   {
+    "symbol": "ETHUSDT",
+    "stream": "fundingRate",
+    "family": "funding_basis",
+    "verdict": "NOT-USABLE",
+    "why": "stale: last listed day 2026-10-31 is 8 days old",
+    "files": 82,
+    "first_day": "2020-01-01",
+    "last_day": "2026-10-31",
+    "gaps_grade_window": {
+     "window_days": 1765,
+     "missing_days": 0,
+     "missing_share": 0.0,
+     "longest_gap_days": 0,
+     "covered_share": 1.0
+    },
+    "covers": {
+     "backward_heldout_2020-07_2021-12": 1.0,
+     "discovery_2022_to_2026-09": 1.0,
+     "forward_2025-10_2026-09": 1.0
+    },
+    "samples": [
+     {
+      "key": "data/futures/um/monthly/fundingRate/ETHUSDT/ETHUSDT-fundingRate-2020-01.zip",
+      "ok": true,
+      "rows": 93,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 3.0,
+      "checksum": "ok"
+     },
+     {
+      "key": "data/futures/um/monthly/fundingRate/ETHUSDT/ETHUSDT-fundingRate-2023-06.zip",
+      "ok": true,
+      "rows": 90,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 3.0,
+      "checksum": "ok"
+     },
+     {
+      "key": "data/futures/um/monthly/fundingRate/ETHUSDT/ETHUSDT-fundingRate-2026-10.zip",
+      "ok": true,
+      "rows": 93,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 3.0,
+      "checksum": "ok"
+     }
+    ],
+    "sample_errors": [],
+    "error": null
+   },
+   {
+    "symbol": "ETHUSDT",
+    "stream": "premiumIndexKlines",
+    "family": "funding_basis",
+    "verdict": "NOT-USABLE",
+    "why": "a sample file failed the point-in-time/integrity check",
+    "files": 2554,
+    "first_day": "2019-12-24",
+    "last_day": "2026-11-07",
+    "gaps_grade_window": {
+     "window_days": 1772,
+     "missing_days": 0,
+     "missing_share": 0.0,
+     "longest_gap_days": 0,
+     "covered_share": 1.0
+    },
+    "covers": {
+     "backward_heldout_2020-07_2021-12": 1.0,
+     "discovery_2022_to_2026-09": 1.0,
+     "forward_2025-10_2026-09": 1.0
+    },
+    "samples": [
+     {
+      "key": "data/futures/um/daily/premiumIndexKlines/ETHUSDT/1m/ETHUSDT-1m-2019-12-24.zip",
+      "ok": false,
+      "rows": 1234,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 1234.0,
+      "checksum": "ok"
+     },
+     {
+      "key": "data/futures/um/daily/premiumIndexKlines/ETHUSDT/1m/ETHUSDT-1m-2023-07-30.zip",
+      "ok": true,
+      "rows": 1440,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 1440.0,
+      "checksum": "ok"
+     },
+     {
+      "key": "data/futures/um/monthly/premiumIndexKlines/ETHUSDT/1m/ETHUSDT-1m-2026-10.zip",
+      "ok": false,
+      "rows": 41760,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 1347.0967741935483,
+      "checksum": "ok"
+     }
+    ],
+    "sample_errors": [],
+    "error": null
+   },
+   {
+    "symbol": "ETHUSDT",
+    "stream": "metrics",
+    "family": "oi_flow",
+    "verdict": "USABLE",
+    "why": "span, gaps and samples pass",
+    "files": 1803,
+    "first_day": "2021-12-01",
+    "last_day": "2026-11-07",
+    "gaps_grade_window": {
+     "window_days": 1772,
+     "missing_days": 0,
+     "missing_share": 0.0,
+     "longest_gap_days": 0,
+     "covered_share": 1.0
+    },
+    "covers": {
+     "backward_heldout_2020-07_2021-12": 0.039,
+     "discovery_2022_to_2026-09": 1.0,
+     "forward_2025-10_2026-09": 1.0
+    },
+    "samples": [
+     {
+      "key": "data/futures/um/daily/metrics/ETHUSDT/ETHUSDT-metrics-2021-12-01.zip",
+      "ok": true,
+      "rows": 288,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 288.0,
+      "checksum": "ok"
+     },
+     {
+      "key": "data/futures/um/daily/metrics/ETHUSDT/ETHUSDT-metrics-2024-05-20.zip",
+      "ok": true,
+      "rows": 288,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 288.0,
+      "checksum": "ok"
+     },
+     {
+      "key": "data/futures/um/daily/metrics/ETHUSDT/ETHUSDT-metrics-2026-11-07.zip",
+      "ok": true,
+      "rows": 288,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 288.0,
+      "checksum": "ok"
+     }
+    ],
+    "sample_errors": [],
+    "error": null
+   },
+   {
+    "symbol": "ETHUSDT",
+    "stream": "bookDepth",
+    "family": "book_depth",
+    "verdict": "USABLE-PARTIAL",
+    "why": "history starts 2023-01-01, after the 2022-01-01 discovery start",
+    "files": 1404,
+    "first_day": "2023-01-01",
+    "last_day": "2026-11-07",
+    "gaps_grade_window": {
+     "window_days": 1407,
+     "missing_days": 3,
+     "missing_share": 0.0021321961620469083,
+     "longest_gap_days": 2,
+     "covered_share": 0.997867803837953
+    },
+    "covers": {
+     "backward_heldout_2020-07_2021-12": 0.0,
+     "discovery_2022_to_2026-09": 0.7884,
+     "forward_2025-10_2026-09": 1.0
+    },
+    "samples": [
+     {
+      "key": "data/futures/um/daily/bookDepth/ETHUSDT/ETHUSDT-bookDepth-2023-01-01.zip",
+      "ok": true,
+      "rows": 28560,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 28560.0,
+      "checksum": "ok"
+     },
+     {
+      "key": "data/futures/um/daily/bookDepth/ETHUSDT/ETHUSDT-bookDepth-2024-12-05.zip",
+      "ok": true,
+      "rows": 28800,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 28800.0,
+      "checksum": "ok"
+     },
+     {
+      "key": "data/futures/um/daily/bookDepth/ETHUSDT/ETHUSDT-bookDepth-2026-11-07.zip",
+      "ok": true,
+      "rows": 34560,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 34560.0,
+      "checksum": "ok"
+     }
+    ],
+    "sample_errors": [],
+    "error": null
+   },
+   {
+    "symbol": "SOLUSDT",
+    "stream": "fundingRate",
+    "family": "funding_basis",
+    "verdict": "NOT-USABLE",
+    "why": "a sample file failed the point-in-time/integrity check",
+    "files": 74,
+    "first_day": "2020-09-01",
+    "last_day": "2026-10-31",
+    "gaps_grade_window": {
+     "window_days": 1765,
+     "missing_days": 0,
+     "missing_share": 0.0,
+     "longest_gap_days": 0,
+     "covered_share": 1.0
+    },
+    "covers": {
+     "backward_heldout_2020-07_2021-12": 0.885,
+     "discovery_2022_to_2026-09": 1.0,
+     "forward_2025-10_2026-09": 1.0
+    },
+    "samples": [
+     {
+      "key": "data/futures/um/monthly/fundingRate/SOLUSDT/SOLUSDT-fundingRate-2020-09.zip",
+      "ok": false,
+      "rows": 52,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 1.7333333333333334,
+      "checksum": "ok"
+     },
+     {
+      "key": "data/futures/um/monthly/fundingRate/SOLUSDT/SOLUSDT-fundingRate-2023-10.zip",
+      "ok": true,
+      "rows": 93,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 3.0,
+      "checksum": "ok"
+     },
+     {
+      "key": "data/futures/um/monthly/fundingRate/SOLUSDT/SOLUSDT-fundingRate-2026-10.zip",
+      "ok": true,
+      "rows": 93,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 3.0,
+      "checksum": "ok"
+     }
+    ],
+    "sample_errors": [],
+    "error": null
+   },
+   {
+    "symbol": "SOLUSDT",
+    "stream": "premiumIndexKlines",
+    "family": "funding_basis",
+    "verdict": "NOT-USABLE",
+    "why": "a sample file failed the point-in-time/integrity check",
+    "files": 2288,
+    "first_day": "2020-09-01",
+    "last_day": "2026-11-07",
+    "gaps_grade_window": {
+     "window_days": 1772,
+     "missing_days": 0,
+     "missing_share": 0.0,
+     "longest_gap_days": 0,
+     "covered_share": 1.0
+    },
+    "covers": {
+     "backward_heldout_2020-07_2021-12": 0.885,
+     "discovery_2022_to_2026-09": 1.0,
+     "forward_2025-10_2026-09": 1.0
+    },
+    "samples": [
+     {
+      "key": "data/futures/um/daily/premiumIndexKlines/SOLUSDT/1m/SOLUSDT-1m-2020-09-14.zip",
+      "ok": false,
+      "rows": 1019,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 1019.0,
+      "checksum": "ok"
+     },
+     {
+      "key": "data/futures/um/daily/premiumIndexKlines/SOLUSDT/1m/SOLUSDT-1m-2023-12-02.zip",
+      "ok": true,
+      "rows": 1440,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 1440.0,
+      "checksum": "ok"
+     },
+     {
+      "key": "data/futures/um/monthly/premiumIndexKlines/SOLUSDT/1m/SOLUSDT-1m-2026-10.zip",
+      "ok": false,
+      "rows": 41760,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 1347.0967741935483,
+      "checksum": "ok"
+     }
+    ],
+    "sample_errors": [],
+    "error": null
+   },
+   {
+    "symbol": "SOLUSDT",
+    "stream": "metrics",
+    "family": "oi_flow",
+    "verdict": "USABLE",
+    "why": "span, gaps and samples pass",
+    "files": 1803,
+    "first_day": "2021-12-01",
+    "last_day": "2026-11-07",
+    "gaps_grade_window": {
+     "window_days": 1772,
+     "missing_days": 0,
+     "missing_share": 0.0,
+     "longest_gap_days": 0,
+     "covered_share": 1.0
+    },
+    "covers": {
+     "backward_heldout_2020-07_2021-12": 0.039,
+     "discovery_2022_to_2026-09": 1.0,
+     "forward_2025-10_2026-09": 1.0
+    },
+    "samples": [
+     {
+      "key": "data/futures/um/daily/metrics/SOLUSDT/SOLUSDT-metrics-2021-12-01.zip",
+      "ok": true,
+      "rows": 288,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 288.0,
+      "checksum": "ok"
+     },
+     {
+      "key": "data/futures/um/daily/metrics/SOLUSDT/SOLUSDT-metrics-2024-05-20.zip",
+      "ok": true,
+      "rows": 288,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 288.0,
+      "checksum": "ok"
+     },
+     {
+      "key": "data/futures/um/daily/metrics/SOLUSDT/SOLUSDT-metrics-2026-11-07.zip",
+      "ok": true,
+      "rows": 288,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 288.0,
+      "checksum": "ok"
+     }
+    ],
+    "sample_errors": [],
+    "error": null
+   },
+   {
+    "symbol": "SOLUSDT",
+    "stream": "bookDepth",
+    "family": "book_depth",
+    "verdict": "USABLE-PARTIAL",
+    "why": "history starts 2023-01-01, after the 2022-01-01 discovery start",
+    "files": 1401,
+    "first_day": "2023-01-01",
+    "last_day": "2026-11-07",
+    "gaps_grade_window": {
+     "window_days": 1407,
+     "missing_days": 6,
+     "missing_share": 0.0042643923240938165,
+     "longest_gap_days": 2,
+     "covered_share": 0.9957356076759062
+    },
+    "covers": {
+     "backward_heldout_2020-07_2021-12": 0.0,
+     "discovery_2022_to_2026-09": 0.7866,
+     "forward_2025-10_2026-09": 0.9973
+    },
+    "samples": [
+     {
+      "key": "data/futures/um/daily/bookDepth/SOLUSDT/SOLUSDT-bookDepth-2023-01-01.zip",
+      "ok": true,
+      "rows": 28560,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 28560.0,
+      "checksum": "ok"
+     },
+     {
+      "key": "data/futures/um/daily/bookDepth/SOLUSDT/SOLUSDT-bookDepth-2024-12-05.zip",
+      "ok": true,
+      "rows": 28800,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 28800.0,
+      "checksum": "ok"
+     },
+     {
+      "key": "data/futures/um/daily/bookDepth/SOLUSDT/SOLUSDT-bookDepth-2026-11-07.zip",
+      "ok": true,
+      "rows": 34560,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 34560.0,
+      "checksum": "ok"
+     }
+    ],
+    "sample_errors": [],
+    "error": null
+   },
+   {
+    "symbol": "BTCUSDT",
+    "stream": "fundingRate",
+    "family": "funding_basis",
+    "verdict": "NOT-USABLE",
+    "why": "stale: last listed day 2026-10-31 is 8 days old",
+    "files": 82,
+    "first_day": "2020-01-01",
+    "last_day": "2026-10-31",
+    "gaps_grade_window": {
+     "window_days": 1765,
+     "missing_days": 0,
+     "missing_share": 0.0,
+     "longest_gap_days": 0,
+     "covered_share": 1.0
+    },
+    "covers": {
+     "backward_heldout_2020-07_2021-12": 1.0,
+     "discovery_2022_to_2026-09": 1.0,
+     "forward_2025-10_2026-09": 1.0
+    },
+    "samples": [
+     {
+      "key": "data/futures/um/monthly/fundingRate/BTCUSDT/BTCUSDT-fundingRate-2020-01.zip",
+      "ok": true,
+      "rows": 93,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 3.0,
+      "checksum": "ok"
+     },
+     {
+      "key": "data/futures/um/monthly/fundingRate/BTCUSDT/BTCUSDT-fundingRate-2023-06.zip",
+      "ok": true,
+      "rows": 90,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 3.0,
+      "checksum": "ok"
+     },
+     {
+      "key": "data/futures/um/monthly/fundingRate/BTCUSDT/BTCUSDT-fundingRate-2026-10.zip",
+      "ok": true,
+      "rows": 93,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 3.0,
+      "checksum": "ok"
+     }
+    ],
+    "sample_errors": [],
+    "error": null
+   },
+   {
+    "symbol": "BTCUSDT",
+    "stream": "premiumIndexKlines",
+    "family": "funding_basis",
+    "verdict": "NOT-USABLE",
+    "why": "a sample file failed the point-in-time/integrity check",
+    "files": 2585,
+    "first_day": "2019-12-24",
+    "last_day": "2026-11-07",
+    "gaps_grade_window": {
+     "window_days": 1772,
+     "missing_days": 0,
+     "missing_share": 0.0,
+     "longest_gap_days": 0,
+     "covered_share": 1.0
+    },
+    "covers": {
+     "backward_heldout_2020-07_2021-12": 1.0,
+     "discovery_2022_to_2026-09": 1.0,
+     "forward_2025-10_2026-09": 1.0
+    },
+    "samples": [
+     {
+      "key": "data/futures/um/daily/premiumIndexKlines/BTCUSDT/1m/BTCUSDT-1m-2019-12-24.zip",
+      "ok": false,
+      "rows": 1234,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 1234.0,
+      "checksum": "ok"
+     },
+     {
+      "key": "data/futures/um/daily/premiumIndexKlines/BTCUSDT/1m/BTCUSDT-1m-2023-07-14.zip",
+      "ok": true,
+      "rows": 1440,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 1440.0,
+      "checksum": "ok"
+     },
+     {
+      "key": "data/futures/um/monthly/premiumIndexKlines/BTCUSDT/1m/BTCUSDT-1m-2026-10.zip",
+      "ok": false,
+      "rows": 41760,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 1347.0967741935483,
+      "checksum": "ok"
+     }
+    ],
+    "sample_errors": [],
+    "error": null
+   },
+   {
+    "symbol": "BTCUSDT",
+    "stream": "metrics",
+    "family": "oi_flow",
+    "verdict": "NOT-USABLE",
+    "why": "a sample file failed the point-in-time/integrity check",
+    "files": 2259,
+    "first_day": "2020-09-01",
+    "last_day": "2026-11-07",
+    "gaps_grade_window": {
+     "window_days": 1772,
+     "missing_days": 0,
+     "missing_share": 0.0,
+     "longest_gap_days": 0,
+     "covered_share": 1.0
+    },
+    "covers": {
+     "backward_heldout_2020-07_2021-12": 0.885,
+     "discovery_2022_to_2026-09": 1.0,
+     "forward_2025-10_2026-09": 1.0
+    },
+    "samples": [
+     {
+      "key": "data/futures/um/daily/metrics/BTCUSDT/BTCUSDT-metrics-2020-09-01.zip",
+      "ok": false,
+      "rows": 576,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 576.0,
+      "checksum": "ok"
+     },
+     {
+      "key": "data/futures/um/daily/metrics/BTCUSDT/BTCUSDT-metrics-2023-10-05.zip",
+      "ok": true,
+      "rows": 288,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 288.0,
+      "checksum": "ok"
+     },
+     {
+      "key": "data/futures/um/daily/metrics/BTCUSDT/BTCUSDT-metrics-2026-11-07.zip",
+      "ok": true,
+      "rows": 288,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 288.0,
+      "checksum": "ok"
+     }
+    ],
+    "sample_errors": [],
+    "error": null
+   },
+   {
+    "symbol": "BTCUSDT",
+    "stream": "bookDepth",
+    "family": "book_depth",
+    "verdict": "USABLE-PARTIAL",
+    "why": "history starts 2023-01-01, after the 2022-01-01 discovery start",
+    "files": 1403,
+    "first_day": "2023-01-01",
+    "last_day": "2026-11-07",
+    "gaps_grade_window": {
+     "window_days": 1407,
+     "missing_days": 4,
+     "missing_share": 0.0028429282160625444,
+     "longest_gap_days": 2,
+     "covered_share": 0.9971570717839374
+    },
+    "covers": {
+     "backward_heldout_2020-07_2021-12": 0.0,
+     "discovery_2022_to_2026-09": 0.7878,
+     "forward_2025-10_2026-09": 1.0
+    },
+    "samples": [
+     {
+      "key": "data/futures/um/daily/bookDepth/BTCUSDT/BTCUSDT-bookDepth-2023-01-01.zip",
+      "ok": true,
+      "rows": 28560,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 28560.0,
+      "checksum": "ok"
+     },
+     {
+      "key": "data/futures/um/daily/bookDepth/BTCUSDT/BTCUSDT-bookDepth-2024-12-05.zip",
+      "ok": true,
+      "rows": 28800,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 28800.0,
+      "checksum": "ok"
+     },
+     {
+      "key": "data/futures/um/daily/bookDepth/BTCUSDT/BTCUSDT-bookDepth-2026-11-07.zip",
+      "ok": true,
+      "rows": 34560,
+      "nonnull_share": 1.0,
+      "monotone": true,
+      "future_dated": false,
+      "rows_per_day": 34560.0,
+      "checksum": "ok"
+     }
+    ],
+    "sample_errors": [],
+    "error": null
+   }
+  ],
+  "listed_only": {
+   "ETHUSDT:aggTrades": {
+    "files": 2585,
+    "first_day": "2019-12-31",
+    "last_day": "2026-11-07",
+    "graded": false,
+    "why": "raw ticks ~130 GB zipped for the traded perps: listed only, not downloaded, not graded"
+   },
+   "SOLUSDT:aggTrades": {
+    "files": 2320,
+    "first_day": "2020-09-01",
+    "last_day": "2026-11-07",
+    "graded": false,
+    "why": "raw ticks ~130 GB zipped for the traded perps: listed only, not downloaded, not graded"
+   },
+   "BTCUSDT:aggTrades": {
+    "files": 2586,
+    "first_day": "2019-12-31",
+    "last_day": "2026-11-07",
+    "graded": false,
+    "why": "raw ticks ~130 GB zipped for the traded perps: listed only, not downloaded, not graded"
+   }
+  },
+  "lake_plan": {
+   "core_streams": {
+    "klines": "all",
+    "fundingRate": "all",
+    "metrics": "all"
+   },
+   "optional_streams": {
+    "premiumIndexKlines": {
+     "stream": "premiumIndexKlines",
+     "scope": "all"
+    },
+    "bookDepth_traded": {
+     "stream": "bookDepth",
+     "scope": "traded"
+    },
+    "markPriceKlines_traded": {
+     "stream": "markPriceKlines",
+     "scope": "traded"
+    },
+    "indexPriceKlines_traded": {
+     "stream": "indexPriceKlines",
+     "scope": "traded"
+    },
+    "aggTrades_traded": {
+     "stream": "aggTrades",
+     "scope": "traded"
+    },
+    "markPriceKlines": {
+     "stream": "markPriceKlines",
+     "scope": "all"
+    },
+    "indexPriceKlines": {
+     "stream": "indexPriceKlines",
+     "scope": "all"
+    },
+    "bookDepth": {
+     "stream": "bookDepth",
+     "scope": "all"
+    }
+   },
+   "verified": false,
+   "why_unverified": "the private HF lake returns 403 (storage cap since 2026-11-05) and the Kaggle mirror metis-market-lake-pNNN is not a routing.published_data target of the runner twin (loader row HF-LAKE-KAGGLE-LOADER is open); no runner can read the manifest today. Presence of a stream here means PLANNED, not present."
+  },
+  "rule_constants": {
+   "grade_start": "2022-01-01",
+   "max_missing_share": 0.02,
+   "max_gap_days": 3,
+   "max_stale_days": 5,
+   "min_nonnull": 0.99,
+   "min_families": 2
+  }
+ },
+ "n": 12,
+ "produced_by": {
+  "tool": "python3 scripts/research/nonprice_inventory.py run",
+  "where": "research-script-run"
+ }
+}
