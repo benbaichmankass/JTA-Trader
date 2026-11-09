@@ -272,8 +272,9 @@ def run(a) -> int:
                 tables[(sym, bh)] = t
                 cen.setdefault("audit", {})[str(bh)] = audit(snaps, t, bh) if not snaps.empty else {"checked": 0, "mismatch": 0, "lookahead": 0, "bar_hours": bh}
             res["per_symbol"][sym] = cen
-            print(f"{sym}: days present {cen['days_present']}/{cen['days_expected']} unreachable {cen['days_unreachable']} unparseable {cen['days_unparseable']} "
-                  f"bar coverage {{{', '.join(f'{k}h: {v['coverage']:.3f}' for k, v in cen['bars'].items())}}}", flush=True)
+            cov = ", ".join(f"{k}h: {v['coverage']:.3f}" for k, v in cen["bars"].items())
+            print(f"{sym}: days present {cen['days_present']}/{cen['days_expected']} unreachable {cen['days_unreachable']} "
+                  f"unparseable {cen['days_unparseable']} bar coverage {{{cov}}}", flush=True)
     verdict, why = grade(res)
     res["verdict"], res["reason"] = verdict, why
     for (sym, bh), t in tables.items():
