@@ -89,6 +89,25 @@ def _due(path: Path, pool_n: int, now: pd.Timestamp, ref_close: Optional[pd.Time
     return pd.Timestamp(snap["bar_close"]) < ref_close
 
 
+def poll_state(raw: Any, ref_df: Optional[pd.DataFrame], ref_close: Optional[pd.Timestamp], now: pd.Timestamp, path: Path) -> str:
+    """WHY this poll does or does not start a pass, as one short token (logged by ``_loop`` whenever it changes; before 2026-11-09 a poll with no
+    reference bar was completely silent -- row ML-ENTRY-EQ-REFRESHER-SILENT)."""
+    if raw is None or len(raw) == 0:
+        return "spy_fetch_none_or_empty"
+    if ref_df is None or len(ref_df) == 0:
+        return "spy_frame_empty_after_rth_filter raw_rows=%d raw_last=%s" % (len(raw), raw["timestamp"].iloc[-1] if "timestamp" in raw else "?")
+    if ref_close is None:
+        return "no_decision_close rth_rows=%d rth_last_open=%s" % (len(ref_df), ref_df["ts"].iloc[-1])
+    if now < ref_close + pd.Timedelta(seconds=SETTLE_S):
+        return "settling ref_close=%s" % ref_close
+    snap, why = F.read_snapshot(path, now, max_age_h=1e9)
+    if snap is None:
+        return "due snapshot_%s ref_close=%s" % (why, ref_close)
+    if pd.Timestamp(snap["bar_close"]) < ref_close:
+        return "due snapshot_bar_close=%s ref_close=%s" % (snap["bar_close"], ref_close)
+    return "current snapshot_bar_close=%s ref_close=%s covered=%s/%s" % (snap["bar_close"], ref_close, snap.get("covered"), snap.get("pool_size"))
+
+
 def _make_fetch() -> Callable[[str], Any]:
     from src.exchange.alpaca_connector import AlpacaMarketData
     md = AlpacaMarketData(feed="sip")
@@ -101,6 +120,7 @@ def _loop() -> None:  # pragma: no cover -- thread body; refresh_once is the tes
     fetch = _make_fetch()
     have: Dict[str, pd.DataFrame] = {}
     have_close: Optional[pd.Timestamp] = None
+    last_state: Optional[str] = None
     while True:
         try:
             now = pd.Timestamp.now(tz="UTC")
@@ -108,6 +128,10 @@ def _loop() -> None:  # pragma: no cover -- thread body; refresh_once is the tes
             ref = fetch("SPY")
             ref_df = _frame(ref)
             ref_close = F.latest_decision_close(ref_df, now) if ref_df is not None else None
+            state = poll_state(ref, ref_df, ref_close, now, snapshot_path())
+            if state != last_state:                     # one line per CHANGE of reason, never one per poll
+                logger.info("ml_entry_eq_refresher poll: %s", state)
+                last_state = state
             if ref_close != have_close:
                 have, have_close = {}, ref_close        # a new decision close: start the pass from scratch
             if _due(snapshot_path(), len(pool), now, ref_close):
