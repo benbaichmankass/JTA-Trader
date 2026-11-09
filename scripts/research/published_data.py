@@ -214,15 +214,18 @@ def _self_test_manifest_only() -> int:
             self.ref = ref
 
     class _Api:
-        def __init__(self, bad: Optional[str] = None) -> None:
+        def __init__(self, bad: Optional[str] = None, empty: bool = False) -> None:
             self.bad = bad
+            self.empty = empty
             self.asked: list = []
 
         def dataset_list(self, user: str = "", search: str = "", page: int = 1):
-            return [] if page > 1 else [_D("u/metis-market-lake-p000"), _D("u/metis-market-lake-p001"),
-                                        _D("u/metis-market-lake-filecount-probe"), _D("u/metis-market-lake-p0000")]
+            assert user == "u" and search == "metis-market-lake-p", (user, search)   # the listing must be scoped to the token user + prefix
+            return [] if (page > 1 or self.empty) else [_D("u/metis-market-lake-p000"), _D("u/metis-market-lake-p001"),
+                                                        _D("u/metis-market-lake-filecount-probe"), _D("u/metis-market-lake-p0000")]
 
         def dataset_download_file(self, ref: str, file_name: str, path: str = "", force: bool = False, quiet: bool = True) -> None:
+            assert force is True and quiet is True, (force, quiet)   # a stale cached manifest must never be reused
             self.asked.append((ref, file_name))
             if self.bad and ref.endswith(self.bad):
                 raise RuntimeError("404 for u")
@@ -249,10 +252,7 @@ def _self_test_manifest_only() -> int:
         assert fetch_manifests(bad, "u", spec, td / "d2", "metis-market-lake", out_dir=td / "o2") == 5
         assert "metis-market-lake-p001" in json.loads((td / "o2" / "published-data.json").read_text())["failed"]
 
-        class _None(_Api):
-            def dataset_list(self, user: str = "", search: str = "", page: int = 1):
-                return []
-        assert fetch_manifests(_None(), "u", spec, td / "d3", "metis-market-lake") == 5     # nothing listed is a refusal, not an empty lake
+        assert fetch_manifests(_Api(empty=True), "u", spec, td / "d3", "metis-market-lake") == 5     # nothing listed is a refusal, not an empty lake
     return 0
 
 
