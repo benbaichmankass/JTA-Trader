@@ -1,6 +1,6 @@
 id: RQ-20261108-98e3-24
 title: 'Direction head at 15m, same-asset (BTC/ETH/SOL): does default LightGBM beat the class prior at 15m, where the 1h recipe lost to it?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -148,11 +148,11 @@ grading:
   confirmatory_run: 1
   decision_rule_id: RULE-RQ2026110898e324-REG
   evidence:
-  - research/results/RQ-20261108-98e3-24/42513199234.jsonl
+  - research/results/RQ-20261108-98e3-24/42549242026.jsonl
   first_fail: 1 row(s), all measured, all fail
   graded_at: '2026-11-09'
   grader: scripts/research/queue_grade.py
-  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
   reason: 1 row(s), all measured, all fail
   rows: 1
   verdict: fail

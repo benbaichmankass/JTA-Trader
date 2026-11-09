@@ -1,7 +1,7 @@
 id: RQ-20261109-98e3-30
 title: 'PROP-ML-NEW-DATA step 1, funding_basis re-census under a monthly-aware rule: are fundingRate and premiumIndexKlines usable for ETHUSDT and SOLUSDT, and where
   exactly are the archive''s holes?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -96,3 +96,14 @@ population: Binance USD-M archive monthly files for fundingRate and premiumIndex
 why_not_inferential: 'A data census: it counts rows, files and gaps of a public archive against fixed thresholds. It estimates no effect from a sample, so an expected
   n and an MDE would be theatre.'
 last_dispatched_at: '2026-11-09T03:23:37+00:00'
+grading:
+  attested: RULE-RQ20261109-98e3-30-FUNDING-BASIS-V2
+  auto: true
+  decision_rule_id: RULE-RQ20261109-98e3-30-FUNDING-BASIS-V2
+  evidence:
+  - research/results/RQ-20261109-98e3-30/42556238405.jsonl
+  graded_at: '2026-11-09'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
