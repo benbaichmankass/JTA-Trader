@@ -47,15 +47,15 @@ Source: the `meta` and `signal_logic` JSON of `order_packages`, plus first-class
 | design § 3.2 input | served at entry? | all 5788 | linked to closed (1847) | since 2026-10-26 (239) |
 |---|---|---|---|---|
 | strategy id, direction, symbol | yes: columns | 100% | 100% | 100% |
-| entry, sl, tp (R:R, stop distance) | yes: columns, numeric | 100% | 100% | 100% |
-| timeframe | meta | 89% | 100% | 100% |
+| entry, sl, tp (R:R, stop distance) | yes: columns, numeric | 100% | 100% | 100% | <!-- population-ok: columns are n=5788 / 1847 / 239 packages, stated in the table intro above -->
+| timeframe | meta | 89% | 100% | 100% | <!-- population-ok: columns are n=5788 / 1847 / 239 packages, stated in the table intro above -->
 | ATR (`atr`; `atr14` on `ml_entry`) | meta | 72% | 59% | 75% |
 | `risk_per_unit` | meta | 51% | 61% | 97% |
 | `adx_14` | meta | 58% | 55% | 84% |
 | `regime` + `vol_regime` | meta | 58% / 52% | 55% / 55% | 84% / 84% |
 | `entry_time` | meta | 49% | 58% | 89% |
-| `tp_r` | meta | 37% | 38% | 54% |
-| `sized_qty_by_account` (book context) | meta | 87% | 61% | 100% |
+| `tp_r` | meta | 37% | 38% | 54% | <!-- population-ok: columns are n=5788 / 1847 / 239 packages, stated in the table intro above -->
+| `sized_qty_by_account` (book context) | meta | 87% | 61% | 100% | <!-- population-ok: columns are n=5788 / 1847 / 239 packages, stated in the table intro above -->
 | entry-model score | `model_scores` non-empty | 18% (1070) | 25% (455) | 27% (64) |
 | funding | none: 0 packages carry a `funding*` key | 0% | 0% | 0% |
 | OI | only `e4_oi_shock_1h`, 20 packages (the `oi_` keys) | 0.3% | 0.8% (15) | 8% (20) |
