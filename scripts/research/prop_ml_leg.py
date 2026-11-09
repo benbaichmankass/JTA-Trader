@@ -71,8 +71,14 @@ MACRO = {"VIXCLS": "vix", "DGS10": "y10", "DTWEXBGS": "usd", "SP500": "spx"}   #
 FEATURE_SETS = {"F0": [], "F0+F1": ["F1"], "F0+F1+F2": ["F1", "F2"], "F0+F1+F2+F3": ["F1", "F2", "F3"]}
 # OPT-IN arms (2026-11-09, PROP-ML-NEW-DATA step 2): selectable ONLY by name via --arms, never part of the default arm list, so no existing unit
 # that runs without --arms changes. F1o = the open-interest / long-short / taker-flow part of F1 WITHOUT the funding columns (the census family oi_flow).
-EXTRA_ARMS = {"F0+OI": ["F1o"]}
+EXTRA_ARMS = {"F0+OI": ["F1o"], "F0+BASIS": ["F1b"]}
 F1_OI_COLS = ("oi_chg24", "oi_z", "ls_top_cnt", "ls_top_pos", "ls_all", "taker_ratio", "taker_ratio_ma24")
+# F1b (2026-11-09, PROP-ML-NEW-DATA step 2b, census RQ-20261109-98e3-30): the basis (premium index) part of the census family funding_basis. It is
+# the stream the census graded USABLE for BOTH ETH and SOL (SOL fundingRate was not), and the only family that spans the sealed backward span.
+# It is loaded and added to the table ONLY when the F0+BASIS arm is requested (NEED_BASIS), so no existing unit changes: no new download, no new column.
+BASIS_COLS = ("basis", "basis_ma24", "basis_z", "basis_chg24")
+BASIS_STALE_H = 6                      # a premium reading older than this at a bar close is NaN: a hole in the archive never carries a stale value forward
+NEED_BASIS = False
 
 
 # ----------------------------------------------------------------------------------------------- data
@@ -155,6 +161,63 @@ def fetch_macro(cache: Path) -> pd.DataFrame:
 
 
 # ----------------------------------------------------------------------------------------------- bars
+def hourly_premium(m1: pd.DataFrame) -> pd.DataFrame:
+    """1m premium-index closes -> ONE row per UTC hour h: the close of the last 1m bar inside [h, h+1h), stamped h+1h, the moment the hour has closed.
+    A stamp is never earlier than the data it carries, so every downstream as-of join is point-in-time. Holes stay holes (no fill)."""
+    if not len(m1):
+        return pd.DataFrame({"ts": pd.DatetimeIndex([], tz="UTC"), "premium": np.array([], dtype=float)})
+    d = m1.drop_duplicates("ts").sort_values("ts").set_index("ts")["close"].astype(float)
+    h = d.groupby(d.index.floor("1h")).last()
+    return pd.DataFrame({"ts": h.index + pd.Timedelta(hours=1), "premium": h.to_numpy()})
+
+
+def fetch_premium(cache: Path, syms: list[str]) -> dict[str, pd.DataFrame]:
+    """Monthly 1m premiumIndexKlines from the public Binance Vision archive (no credential), reduced to hourly (see hourly_premium) and cached."""
+    from scripts.data_lake.binance_vision_lake import parse_kline_csv    # the lake's own parser: header rows and ms/us epochs handled once
+    out = {}
+    months = E._months(E.START, E.END)
+    for s in syms:
+        p = cache / f"{s}.premium.pkl"
+        if p.exists():
+            out[s] = pd.read_pickle(p); continue
+
+        def one(m, s=s):
+            b = _get(f"https://data.binance.vision/data/futures/um/monthly/premiumIndexKlines/{s}/1m/{s}-1m-{m}.zip")
+            if not b:
+                return None
+            z = zipfile.ZipFile(io.BytesIO(b))
+            return parse_kline_csv(z.read(z.namelist()[0]))[["ts", "close"]]
+        with cf.ThreadPoolExecutor(8) as ex:
+            frames = [f for f in ex.map(one, months) if f is not None and len(f)]
+        df = hourly_premium(pd.concat(frames) if frames else pd.DataFrame(columns=["ts", "close"]))
+        df.to_pickle(p); out[s] = df
+    return out
+
+
+def basis_features(kl: pd.DataFrame, prem: pd.DataFrame | None) -> pd.DataFrame:
+    """Basis (premium index) features as-of the bar CLOSE (bar t covers [t, t+BAR_H); only hourly readings stamped <= t+BAR_H are used).
+    The hourly series is put on a COMPLETE grid first, so a hole is NaN and shift(24) / the 24 h and 168 h windows are exactly that long.
+    A reading older than BASIS_STALE_H at the bar close is NaN. NaN where the source has no history."""
+    out = pd.DataFrame({"ts": kl["ts"]})
+    for c in BASIS_COLS:
+        out[c] = np.nan
+    if prem is None or not len(prem):
+        return out
+    ns = "datetime64[ns, UTC]"
+    h = prem.set_index("ts")["premium"].astype(float)
+    grid = pd.date_range(h.index.min(), h.index.max(), freq="1h")
+    h = h.reindex(grid)
+    z = (h - h.rolling(168, min_periods=48).mean()) / h.rolling(168, min_periods=48).std()
+    feat = pd.DataFrame({"avail": grid.astype(ns), "basis": h.to_numpy(), "basis_ma24": h.rolling(24, min_periods=12).mean().to_numpy(),
+                         "basis_z": z.to_numpy(), "basis_chg24": (h - h.shift(24)).to_numpy()}).dropna(subset=["basis"])
+    q = pd.DataFrame({"ts": kl["ts"].astype(ns).to_numpy(), "close_ts": (kl["ts"] + pd.Timedelta(hours=BAR_H)).astype(ns).to_numpy()}).sort_values("close_ts")
+    m = pd.merge_asof(q, feat, left_on="close_ts", right_on="avail", direction="backward", tolerance=pd.Timedelta(hours=BASIS_STALE_H))
+    res = m.set_index("ts")[list(BASIS_COLS)].reindex(kl["ts"].astype(ns))
+    for c in BASIS_COLS:
+        out[c] = res[c].to_numpy()
+    return out
+
+
 def load_kl(cache: Path, sym: str) -> pd.DataFrame:
     """The cached 1h klines, resampled to BAR_H-hour bars (open time = bar start; empty bars dropped) when BAR_H > 1."""
     d = pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True)
@@ -239,6 +302,7 @@ def build_table(cache: Path, profile: dict, smoke: bool, rehearsal: bool = False
     allsyms = trade_syms + ctx
     E.fetch(cache, allsyms)
     fund, met = fetch_funding(cache, allsyms), fetch_metrics(cache, allsyms)
+    prem = fetch_premium(cache, trade_syms) if NEED_BASIS else {}      # trade symbols only; context symbols never reach the table
     macro = fetch_macro(cache)
     cost = make_cost(profile)
     feats, rows, cov = {}, [], {}
@@ -251,7 +315,8 @@ def build_table(cache: Path, profile: dict, smoke: bool, rehearsal: bool = False
         if s in ctx:
             continue
         lab = label_symbol(kl, cost)
-        for part in (f0, f1, f2):
+        parts = (f0, f1, f2, basis_features(kl, prem.get(s))) if NEED_BASIS else (f0, f1, f2)
+        for part in parts:
             lab = lab.join(part.drop(columns=["ts"]), on="i")
         lab["symbol"] = s; rows.append(lab)
     tab = pd.concat(rows, ignore_index=True)
@@ -275,6 +340,8 @@ def build_table(cache: Path, profile: dict, smoke: bool, rehearsal: bool = False
     f1cols = [c for c in tab.columns if c in ("fund", "fund_ma3d", "fund_z", "oi_chg24", "oi_z", "ls_top_cnt", "ls_top_pos", "ls_all", "taker_ratio", "taker_ratio_ma24")]
     f2cols = [c for c in tab.columns if c.startswith("m_")]
     fam = {"F0": f0cols, "F1": f1cols, "F2": f2cols, "F3": [], "F1o": [c for c in f1cols if c in F1_OI_COLS]}
+    if NEED_BASIS:
+        fam["F1b"] = [c for c in tab.columns if c in BASIS_COLS]
     for k, cols in fam.items():     # coverage audit: first/last non-null and the null share at decision rows, per family and symbol
         cov[k] = {"n_features": len(cols), "columns": cols,
                   "per_symbol": {s: ({"first": str(g.loc[g[cols].notna().any(axis=1), "ts"].min()), "last": str(g.loc[g[cols].notna().any(axis=1), "ts"].max()),
@@ -476,8 +543,9 @@ def load_refs(extra: list[str]) -> dict[str, list[dict]]:
 
 # ----------------------------------------------------------------------------------------------- run
 def run(a) -> int:
-    global HOLDOUT_START, HOLDOUT_END, N_HELD_FLOOR, H, BAR_H, TAUS, DEV_START_FOLDS, DISC_END, DISC_FLOOR_TS
+    global HOLDOUT_START, HOLDOUT_END, N_HELD_FLOOR, H, BAR_H, TAUS, DEV_START_FOLDS, DISC_END, DISC_FLOOR_TS, NEED_BASIS
     BAR_H = int(a.bar_hours); H = 48 // BAR_H
+    NEED_BASIS = "F0+BASIS" in [x.strip() for x in (a.arms or "").split(",")]     # opt-in only: no other unit downloads or adds the basis columns
     if a.taus:
         TAUS = tuple(float(x) for x in a.taus.split(","))
     if a.rehearsal:     # exercises the held-out/finish path on a DEV window (2023-07..2023-12); the real held-out span is never loaded
@@ -676,6 +744,43 @@ def _self_test() -> int:
     check("tradeify_es is the ETH+SOL slice of tradeify with the same account, stack and leg key",
           PROFILES["tradeify_es"]["symbols"] == ["ETHUSDT", "SOLUSDT"] and all(PROFILES["tradeify_es"][k] == PROFILES["tradeify"][k]
           for k in ("accounts", "comm_bps_side", "slip_bps_side", "swap_bps_night", "leg_key", "pass_rule")))
+    # F0+BASIS (2026-11-09): opt-in by name, the basis columns only (no funding, no OI), and the loader/features are point-in-time
+    fam_b = dict(fam_t, F1b=list(BASIS_COLS))
+    check("F0+BASIS is NOT in the default arm list", "F0+BASIS" not in default_arms and default_arms == ["F0", "F0+F1", "F0+F1+F2"])
+    check("F0+BASIS = F0 + the four basis columns, nothing from F1", arm_cols(fam_b, "F0+BASIS") == ["a", *BASIS_COLS])
+    check("BASIS_COLS holds no funding or OI column", not any(c.startswith(("fund", "oi_", "ls_", "taker")) for c in BASIS_COLS))
+    m1 = pd.DataFrame({"ts": pd.date_range("2022-03-01 00:00", periods=125, freq="1min", tz="UTC"), "close": np.arange(125, dtype=float)})
+    hp = hourly_premium(m1)
+    check("hourly_premium stamps an hour when it has CLOSED and carries that hour's last 1m close",
+          list(hp["ts"][:2]) == [pd.Timestamp("2022-03-01 01:00", tz="UTC"), pd.Timestamp("2022-03-01 02:00", tz="UTC")] and list(hp["premium"][:2]) == [59.0, 119.0])
+    global BAR_H
+    saved_bar = BAR_H; BAR_H = 4
+    try:
+        hrs = pd.date_range("2022-03-01 01:00", periods=600, freq="1h", tz="UTC")           # stamps; reading k = 0.001 * k
+        prem0 = pd.DataFrame({"ts": hrs, "premium": 0.001 * np.arange(600)})
+        kl_t = pd.DataFrame({"ts": pd.date_range("2022-03-02 00:00", periods=60, freq="4h", tz="UTC")})
+        f_a = basis_features(kl_t, prem0)
+        j = 10; close_j = kl_t["ts"][j] + pd.Timedelta(hours=4)
+        want = 0.001 * (hrs <= close_j).sum() - 0.001                                       # the newest reading stamped <= the bar close
+        check("basis is the newest hourly reading stamped at or before the bar CLOSE", abs(f_a["basis"][j] - want) < 1e-12)
+        prem1 = prem0.copy(); prem1.loc[prem1.ts > close_j, "premium"] += 5.0                # change only readings AFTER bar j closes
+        f_b = basis_features(kl_t, prem1)
+        check("changing readings after a bar's close leaves that bar and every earlier bar unchanged (no look-ahead)",
+              np.allclose(f_a.loc[:j, list(BASIS_COLS)].to_numpy(), f_b.loc[:j, list(BASIS_COLS)].to_numpy(), equal_nan=True) and not np.allclose(f_a.loc[j + 3:, "basis"], f_b.loc[j + 3:, "basis"]))
+        prem2 = prem0[~((prem0.ts >= pd.Timestamp("2022-03-05 00:00", tz="UTC")) & (prem0.ts < pd.Timestamp("2022-03-05 20:00", tz="UTC")))]   # 20 h hole
+        f_c = basis_features(kl_t, prem2)
+        gap_bar = kl_t.index[(kl_t["ts"] + pd.Timedelta(hours=4) >= pd.Timestamp("2022-03-05 12:00", tz="UTC")) & (kl_t["ts"] + pd.Timedelta(hours=4) < pd.Timestamp("2022-03-05 20:00", tz="UTC"))]
+        check("a reading older than BASIS_STALE_H at the bar close is NaN (a hole never carries a stale value forward)", len(gap_bar) > 0 and f_c.loc[gap_bar, "basis"].isna().all())
+        cl = kl_t["ts"] + pd.Timedelta(hours=4)
+        day_after = kl_t.index[(cl >= pd.Timestamp("2022-03-06 02:00", tz="UTC")) & (cl < pd.Timestamp("2022-03-06 18:00", tz="UTC"))]   # own reading fresh, 24 h-ago reference inside the hole
+        check("the 24 h change is NaN while its reference hour sits in the hole, though the reading itself is fresh (exact 24 h shift on a complete grid)",
+              len(day_after) > 0 and f_c.loc[day_after, "basis"].notna().all() and f_c.loc[day_after, "basis_chg24"].isna().all())
+        ref_ok = kl_t.index[cl >= pd.Timestamp("2022-03-07 00:00", tz="UTC")][:3]
+        check("the 24 h change is the exact difference of two readings 24 h apart when neither sits in a hole", len(ref_ok) > 0 and np.allclose(f_c.loc[ref_ok, "basis_chg24"], 0.024))
+        check("no basis history before the first reading: NaN, not zero", basis_features(pd.DataFrame({"ts": pd.date_range("2021-01-01", periods=3, freq="4h", tz="UTC")}), prem0)["basis"].isna().all())
+        check("no source at all: all four columns present and NaN", basis_features(kl_t, None)[list(BASIS_COLS)].isna().all().all())
+    finally:
+        BAR_H = saved_bar
     # D1-D4 on constructed ledgers
     base = pd.Timestamp("2026-01-01", tz="UTC")
     mk = lambda d, s, dr, h, g=1.0: {"symbol": s, "direction": dr, "entry_time": str(base + pd.Timedelta(days=d)), "exit_time": str(base + pd.Timedelta(days=d, hours=h)), "gross_r": g}
