@@ -1,7 +1,7 @@
 id: RQ-20261109-98e3-31
 title: 'P5-MLPROP-OIFLOW-BV: does open-interest / long-short / taker-flow positioning (census family oi_flow) lift a prop-specific ETH+SOL ML entry over price-only
   on a time-disjoint 2025-01..2025-09 held-out, and does it clear V3 on breakout_2 and velotrade_1?'
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 1
@@ -164,3 +164,16 @@ iteration:
   - heldout_span_forward_2025
   map_entries: []
 last_dispatched_at: '2026-11-09T03:43:16+00:00'
+grading:
+  attested: RULE-RQ20261109-98e3-31-OIFLOW-V3
+  auto: true
+  decision_rule_id: RULE-RQ20261109-98e3-31-OIFLOW-V3
+  evidence:
+  - research/results/RQ-20261109-98e3-31/42558064778.jsonl
+  graded_at: '2026-11-09'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

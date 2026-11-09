@@ -1,7 +1,7 @@
 id: RQ-20261108-98e3-28
 title: 'PROP-ML-NEW-DATA step 1: which non-price sources (funding/basis, OI + long-short + taker flow, book depth) are usable as point-in-time features for ETHUSDT
   and SOLUSDT, and which time-disjoint held-out spans can each support?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -98,3 +98,14 @@ why_not_inferential: 'A data census: it counts files, days, gaps and sample rows
   effect from a sample, so an expected n and a minimum detectable effect would be theatre. The unit is graded on counts it measures, not on a statistic with sampling
   error.'
 last_dispatched_at: '2026-11-09T00:48:14+00:00'
+grading:
+  attested: RULE-RQ20261108-98e3-28-NONPRICE-USABLE
+  auto: true
+  decision_rule_id: RULE-RQ20261108-98e3-28-NONPRICE-USABLE
+  evidence:
+  - research/results/RQ-20261108-98e3-28/42542251457.jsonl
+  graded_at: '2026-11-09'
+  grader: scripts/research/queue_grade.py
+  reason: 2 row(s), all measured, all pass
+  rows: 2
+  verdict: pass
