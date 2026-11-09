@@ -6797,6 +6797,20 @@ for _b, _mu in ((ml_entry_eq_struct_signal_builder, "ml_entry_eq"),):   # monito
     _b.monitor_unit = _mu
 
 
+_REFUSAL_LOGGED: set = set()
+
+
+def _log_refusal_once(name: str, symbol: str, bar: str, reason: str) -> None:
+    """INFO-log a ml_entry_eq* builder refusal at most once per (strategy, symbol, bar, reason) -- the reason used to live only in meta.reason."""
+    key = (name, symbol, bar, reason)
+    if key in _REFUSAL_LOGGED:
+        return
+    if len(_REFUSAL_LOGGED) > 8192:
+        _REFUSAL_LOGGED.clear()
+    _REFUSAL_LOGGED.add(key)
+    logger.info("%s: refused %s bar=%s reason=%s", name, symbol, bar or "-", reason)
+
+
 def _ml_entry_eq_build(settings: dict, NAME: str, _DECIDED: set) -> Dict[str, Any]:
     """ml_entry_eq: restricted LONG per pool ETF at each decision close, scored from the POOL SNAPSHOT only.
 
@@ -6809,7 +6823,8 @@ def _ml_entry_eq_build(settings: dict, NAME: str, _DECIDED: set) -> Dict[str, An
     from src.runtime import ml_entry_eq_features as EF
     from src.runtime.ml_entry_eq_refresher import snapshot_path
 
-    def _none(reason: str, symbol: str) -> Dict[str, Any]:
+    def _none(reason: str, symbol: str, bar: str = "") -> Dict[str, Any]:
+        _log_refusal_once(NAME, symbol, bar, reason)
         return _with_signal_package(NAME, {"symbol": symbol, "side": "none", "meta": {"strategy_name": NAME, "reason": reason}})
 
     try:
@@ -6821,10 +6836,10 @@ def _ml_entry_eq_build(settings: dict, NAME: str, _DECIDED: set) -> Dict[str, An
         return _none("disabled_or_out_of_scope", symbol)
     snap, why = EF.read_snapshot(snapshot_path(), pd.Timestamp.now(tz="UTC"), max_age_h=float(vcfg.get("max_snapshot_age_h", 4.0)))
     if snap is None:
-        return _none(why or EF.REFUSE_MISSING, symbol)
+        return _none(why or EF.REFUSE_MISSING, symbol, "no_snapshot")
     memo = (symbol, snap["bar_close"])
     if memo in _DECIDED:
-        return _none("already_decided_this_bar", symbol)
+        return _none("already_decided_this_bar", symbol, str(snap["bar_close"]))
     try:
         pkg = L.order_package({"symbol": symbol, **vcfg}, snap)
     except ValueError as exc:
@@ -6832,7 +6847,7 @@ def _ml_entry_eq_build(settings: dict, NAME: str, _DECIDED: set) -> Dict[str, An
             _DECIDED.add(memo)
         if len(_DECIDED) > 4096:
             _DECIDED.clear()
-        return _none(str(exc), symbol)
+        return _none(str(exc), symbol, str(snap["bar_close"]))
     _DECIDED.add(memo)
     try:
         log_signal({"event": f"{NAME}_eval", "strategy": NAME, "symbol": symbol, "timeframe": "1h", "side": "buy", "entry": pkg["entry"],
