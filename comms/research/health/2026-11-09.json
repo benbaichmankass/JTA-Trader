@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "as_of": "2026-11-09T09:17:55Z",
+ "as_of": "2026-11-09T10:22:17Z",
  "producer": "scripts/research/research_slo.py",
  "config": "scripts/research/research_slo.yaml",
  "counts": {
@@ -69,7 +69,7 @@
    "what": "units fired in the last 24 h (sum of `dispatched` over comms/research/utilization/ records)",
    "diagnostic": true,
    "evidence": {
-    "dispatch_runs_24h": 31,
+    "dispatch_runs_24h": 32,
     "basis": "sum(len(dispatched)) over comms/research/utilization records in 24 h",
     "read_state": "measured"
    }
@@ -300,13 +300,13 @@
   {
    "slo": "dispatcher_age_h",
    "state": "ok",
-   "value": 0.37,
+   "value": 0.44,
    "op": "<=",
    "threshold": 3,
    "what": "hours since the newest dispatcher utilization record on main (one per dispatch cycle that ran; lands ~1 h late)",
    "diagnostic": true,
    "evidence": {
-    "newest": "2026-11-09T08:55:39.961892+00:00",
+    "newest": "2026-11-09T09:56:08.237662+00:00",
     "basis": "newest utilization record generated_at",
     "read_state": "measured"
    }
@@ -314,7 +314,7 @@
   {
    "slo": "collector_age_h",
    "state": "ok",
-   "value": 0.06,
+   "value": 1.13,
    "op": "<=",
    "threshold": 6,
    "what": "hours since the newest commit on main touching research/results/ (a result landed)",
@@ -328,7 +328,7 @@
   {
    "slo": "grader_age_h",
    "state": "ok",
-   "value": 1.74,
+   "value": 2.81,
    "op": "<=",
    "threshold": 14,
    "what": "hours since the last SUCCESSFUL research-queue-grade.yml run (GitHub; could_not_look without a token)",
@@ -342,7 +342,7 @@
   {
    "slo": "research_ops_age_h",
    "state": "breach",
-   "value": 47.3,
+   "value": 48.37,
    "op": "<=",
    "threshold": 8,
    "what": "hours since the newest research-ops pass record (comms/research/ops/*.json finished_at); the pass runs 4x/day",
@@ -376,14 +376,21 @@
   {
    "slo": "hold_pr_wait_h",
    "state": "ok",
-   "value": 0.0,
+   "value": 0.42,
    "op": "<=",
    "threshold": 24,
    "what": "hours the oldest open non-automation PR adding research/queue/ unit files has waited (hold PRs)",
    "diagnostic": true,
    "evidence": {
-    "open_unit_prs": 0,
-    "basis": "no open non-automation PR adds research/queue/ files",
+    "open_unit_prs": 1,
+    "oldest": [
+     {
+      "pr": 24486,
+      "hours": 0.42,
+      "title": "ML lane: book_depth point-in-time builder + pre-registered unit 98e3-36 (public bookDepth "
+     }
+    ],
+    "basis": "open non-automation PRs adding research/queue/*.yaml, age since creation",
     "read_state": "measured"
    }
   }
@@ -515,6 +522,27 @@
   },
   {
    "at": "2026-11-09T09:17:55Z",
+   "counts": {
+    "ok": 10,
+    "breach": 9,
+    "could_not_look": 0
+   },
+   "not_ok": [
+    "survivors_per_month",
+    "trials_per_survivor",
+    "runnable_floor",
+    "grade_latency_p90_d",
+    "undispositioned_24h",
+    "authoring_supply_ratio_7d",
+    "theme_share_min_ratio",
+    "research_ops_age_h",
+    "research_ops_not_run"
+   ],
+   "alert": null,
+   "delivered": null
+  },
+  {
+   "at": "2026-11-09T10:22:17Z",
    "counts": {
     "ok": 10,
     "breach": 9,
