@@ -1,0 +1,151 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261109T0626Z-pkg-952ef4e57ae3441e",
+ "reviewed_at": "2026-11-09T06:35:00Z",
+ "order_package_id": "pkg-952ef4e57ae3441e",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "adverse_r",
+  "level": -0.5,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-09T06:26:56Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 4,
+  "giveback_r": 0.9347,
+  "open_r": -0.517,
+  "peak_provenance": "estimated",
+  "peak_r": 0.4176,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.17127142857142857,
+  "tp": 0.18384285714285717
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 3,
+  "giveback_r": 0.9347,
+  "open_r": -0.517,
+  "peak_r": 0.4176,
+  "r_to_stop": 0.483,
+  "r_to_target": 2.017
+ },
+ "mechanics": {
+  "evidence": "package sl 0.17127142857142857 / tp 0.18384285714285717 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 192,
+   "mean_r": 0.6861,
+   "sd_r": 1.0781,
+   "worst_r": -1.1065,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 192,
+   "mean_r": 0.6041,
+   "sd_r": 0.861,
+   "worst_r": -0.6564,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 192,
+   "mean_r": -0.5781,
+   "sd_r": 0.024,
+   "worst_r": -0.6728,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261109T0626Z-pkg-952ef4e57ae3441e.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "suggestive",
+  "evidence_source": "table",
+  "judgement_confidence": 0.55,
+  "reason": "Prev forecast (target 0.1838 / invalid 0.1713, 1h) neither touched: price tested the 0.1783-0.1787 resistance (high 0.1787) and rolled over to ~-0.52R, below the 0.1763 entry; last 1h bars 0.1759/0.1748 are lower closes after the 0.1781 high, 4h still lower highs 0.1813/0.1897 with ADX 37 trending down, so the bounce is failing and the prior with_trade view is downgraded to flat. Stop 0.1713 is 0.48R away (~0.7 ATR) just above the 0.1710 flush low, the strategy bracket is the structure, HOLD already expresses my view. Measured table: hold +0.686R (n=192) vs close -0.578R and tighten atr:2.0 +0.604R (atr:1.0/1.5 invalid); no bracket move or reduction beats hold net of cost. My own read is near coin-flip, so confidence is modest.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "table: hold n=192 mean +0.686R sd 1.078 worst -1.107; close mean -0.578R; tighten atr:2.0 mean +0.604R; atr:1.0/1.5 invalid_level (stop_level_not_below_price)",
+  "tighten_bias: stop-at-price fills flatter any tighten",
+  "book: mostly short crypto; this ADA long and the SOL ml_entry long (open_r -0.57, reviewed same pass) are one crypto-beta bet against it, two ml_entry longs can stop out together",
+  "context: news neutral; funding unread (null)",
+  "trigger: l0_snapshot_at not given in the wake text I was handed (due ~06:26Z); recorded null rather than invented",
+  "missing: regime.atr_now_over_entry, regime.vol_now, regime.cell_entry, context.funding"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold changes nothing; bybit_orders: SL 0.1713 / TP 0.1838, position True, matched by order_id"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold changes nothing; bybit_orders: SL 0.1713 / TP 0.1838, position True, matched by order_id"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuKNF44ahL8QwxmTbuS",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_defects": [],
+ "packet_sha": "b42980a234b82f6a290f33ebb28608b6915c7494126de9454aa23c292d83d8b3",
+ "forecast": {
+  "thesis": "1h bounce stalled under 0.1787 and is printing lower closes inside a 4h lower-high downtrend; expect chop 0.1735-0.1765 with a slightly better-than-even chance of retesting entry 0.1763 before the 0.1713 stop, TP 0.1838 unlikely",
+  "direction": "flat",
+  "target_px": 0.1763,
+  "p_target": 0.4,
+  "invalidation_px": 0.1713,
+  "horizon_bars": 8,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings: high 0.1787 rejected, flush low 0.1710",
+   "chart.htf: 4h lower highs 0.1813/0.1897, ADX 37",
+   "exit_plan: SL 0.1713 TP 0.1838",
+   "book: mostly short crypto",
+   "priced_options: hold n=192 mean +0.686R"
+  ]
+ }
+}
