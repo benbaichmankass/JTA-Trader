@@ -1,0 +1,228 @@
+{
+ "account_bounds": [],
+ "assembled_by": "generator scripts/ops/live_review_packet.py",
+ "context": {
+  "calendar": {
+   "events_next_24h": [],
+   "state": "no_event_classes_for_symbol"
+  },
+  "correlated_open_packages": [],
+  "direction": null,
+  "funding": {
+   "state": "not_applicable"
+  },
+  "news": null,
+  "previous_review": {
+   "action": "hold",
+   "forecast": {
+    "direction": "with_trade",
+    "evidence": [
+     "chart.swings highs 4097/4220 overhead",
+     "htf 1w ADX 34.9 trending",
+     "state open_r 1.1178 peak 2.8619 giveback 1.7441",
+     "exit_plan stop 4160.33 locks about +0.19R, TP 3767 (2.8R)"
+    ],
+    "horizon_bars": 5,
+    "invalidation_px": 4160.3,
+    "p_target": 0.4,
+    "target_px": 3989.0,
+    "thesis": "The 1d bounce failed at the 4097-4220 supply; in a weekly downtrend (ADX 35) I expect a daily close below the 3989 swing low within five bars before price trades 4160.",
+    "timeframe": "1d"
+   },
+   "reason": "Hold. Short from 4180.9, +1.12R now after a 2.86R estimated peak (giveback 1.74R). The last closed 1d bar (4113.5, high 4156) bounced into the 4097-4220 supply and the live mark (about 4064, from open_r 1.12) has already rejected from it, so price is back under the 4097 swing high. Stop 4160.3 is 0.92R (about 1.2 ATR) away and locks about +0.19R; TP 3767 is 2.8R away; weekly ADX 35 downtrend. Clo\u2026",
+   "review_id": "LR-20261106T0321Z-pkg-011a7bf85ee54a6f",
+   "reviewed_at": "2026-11-06T03:42:00Z",
+   "route": null
+  },
+  "symbol": null
+ },
+ "context_v3": {
+  "book": [],
+  "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
+  "chart": null,
+  "exit_plan": {
+   "declared": {},
+   "entry": null,
+   "exit_plan_state": null,
+   "exit_plan_state_note": "entry-time snapshot, not updated when the stop moves; trust sl_now",
+   "sl_initial": null,
+   "sl_now": null,
+   "tp_now": null
+  },
+  "htf": null,
+  "live_vs_backtest": null
+ },
+ "cost": {
+  "basis": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "generator": {
+  "head": "0c80b20a42",
+  "state": "current"
+ },
+ "info_cutoff_at": "2026-11-09T11:57:24Z",
+ "leg": "unknown",
+ "mechanics": {
+  "evidence": "package sl None / tp None agree with every readable account",
+  "verdict": "match"
+ },
+ "missing_inputs": [
+  {
+   "field": "state.sl/tp",
+   "reason": "order_packages row not in the paged journal read; falling back to the trade row"
+  },
+  {
+   "field": "read:telemetry",
+   "reason": "diag position_telemetry?limit=300: exit 3 (ict-bot.duckdns.org -> answered_502. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web"
+  },
+  {
+   "field": "read:positions",
+   "reason": "HTTP Error 502: Bad Gateway"
+  },
+  {
+   "field": "read:prop_tickets",
+   "reason": "HTTP Error 502: Bad Gateway"
+  },
+  {
+   "field": "read:bybit_orders",
+   "reason": "diag bybit_open_orders: exit 3 (ict-bot.duckdns.org -> answered_502. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP "
+  },
+  {
+   "field": "read:alpaca_orders",
+   "reason": "diag alpaca_open_orders: exit 3 (ict-bot.duckdns.org -> answered_502. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP"
+  },
+  {
+   "field": "read:ib_orders",
+   "reason": "diag ib_open_orders: exit 3 (ict-bot.duckdns.org -> answered_502. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP and"
+  },
+  {
+   "field": "read:news",
+   "reason": "HTTP Error 502: Bad Gateway"
+  },
+  {
+   "field": "read:perf_recent",
+   "reason": "HTTP Error 502: Bad Gateway"
+  },
+  {
+   "field": "read:prop_status:breakout_2",
+   "reason": "HTTP Error 502: Bad Gateway"
+  },
+  {
+   "field": "read:prop_status:tradeify_1",
+   "reason": "HTTP Error 502: Bad Gateway"
+  },
+  {
+   "field": "read:prop_status:velotrade_1",
+   "reason": "HTTP Error 502: Bad Gateway"
+  },
+  {
+   "field": "read:order_packages@0",
+   "reason": "diag journal?table=order_packages&limit=150&offset=0: exit 3 (ict-bot.duckdns.org -> answered_502. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_con"
+  },
+  {
+   "field": "read:trades@0",
+   "reason": "diag journal?table=trades&limit=1000&offset=0: exit 3 (ict-bot.duckdns.org -> answered_502. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' m"
+  },
+  {
+   "field": "state.open_r",
+   "reason": "no position_telemetry row for this package (telemetry covers the donchian/pullback family) and no /api/bot/positions row"
+  },
+  {
+   "field": "regime.atr_now_over_entry",
+   "reason": "package timeframe not recorded in meta"
+  },
+  {
+   "field": "regime.trend_now",
+   "reason": "package timeframe not recorded in meta"
+  },
+  {
+   "field": "regime.vol_now",
+   "reason": "calm/volatile buckets use frozen edges held only in the VM model registry; not reachable read-only from a session"
+  },
+  {
+   "field": "regime.cell_entry",
+   "reason": "entry meta regime=None vol_regime=None: not both known"
+  },
+  {
+   "field": "context.news",
+   "reason": "no news decision for this symbol in the last 60 records (or news read failed)"
+  },
+  {
+   "field": "context_v3.chart",
+   "reason": "no closed candles on the leg timeframe (route unreachable or timeframe unrecorded)"
+  },
+  {
+   "field": "context_v3.htf",
+   "reason": "no higher timeframe mapped for None"
+  },
+  {
+   "field": "context_v3.live_vs_backtest",
+   "reason": "api/bot/performance/recent not read"
+  },
+  {
+   "field": "context.live_vs_backtest",
+   "reason": "per-leg live-vs-backtest read failed (api/bot/performance/recent); see context_v3"
+  }
+ ],
+ "order_package_id": "pkg-011a7bf85ee54a6f",
+ "packet_health": {
+  "defects": [
+   {
+    "count": 1,
+    "denominator": 1,
+    "field": "context_v3.chart",
+    "reason": "context_null:chart"
+   },
+   {
+    "count": 1,
+    "denominator": 1,
+    "field": "context_v3.htf",
+    "reason": "context_null:htf"
+   },
+   {
+    "count": 1,
+    "denominator": 1,
+    "field": "context_v3.live_vs_backtest",
+    "reason": "context_null:live_vs_backtest"
+   },
+   {
+    "count": 1,
+    "denominator": 1,
+    "field": "state.open_r",
+    "reason": "context_null:state.open_r"
+   }
+  ],
+  "status": "could_not_look"
+ },
+ "packet_version": 3,
+ "priced_options": null,
+ "priced_options_state": "not_priced",
+ "regime": {
+  "adx_now": null,
+  "atr_now_over_entry": null,
+  "cell_entry": null,
+  "cell_now": null,
+  "trend_now": null
+ },
+ "review_id": "LR-20261109T1157Z-pkg-011a7bf85ee54a6f",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_provenance": "unverified",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": null,
+  "tp": null
+ }
+}
