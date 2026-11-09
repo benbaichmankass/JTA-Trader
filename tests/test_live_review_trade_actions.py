@@ -167,10 +167,11 @@ def test_close_on_every_account_class(act):
     by = _by(res)
     assert by["bybit_2"]["executed"] and by["alpaca_live"]["executed"]
     assert by["tradeify_1"]["reason"] == "no_action_path:close"      # prop VM: no executor
-    assert by["breakout_2"]["reason"] == "no_action_path:close"      # phone: TP only
-    assert sorted(a[1] for a in act["actions"]) == ["alpaca_live", "bybit_2"]
+    # phone: a close reaches the phone's server-issued action channel (operator 2026-11-09; was "TP only")
+    assert by["breakout_2"]["executed"] and by["breakout_2"].get("reason") != "no_action_path:close"
+    assert sorted(a[1] for a in act["actions"]) == ["alpaca_live", "breakout_2", "bybit_2"]
     assert res["package_sl_moved"] is False                          # a close never moves the shared stop
-    assert {a for a, _ in act["alerts"]} == {"tradeify_1", "breakout_2"}   # each refusal pinged once
+    assert {a for a, _ in act["alerts"]} == {"tradeify_1"}           # the one remaining refusal pinged once
     assert res["writeback"]["action"] == "close"
     assert res["writeback"]["disposition"]["mandate"] == lri.TRADE_MANDATE_ID
 
