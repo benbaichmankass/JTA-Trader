@@ -1110,6 +1110,8 @@ Why: 2026-11-09 04:02Z `ml_entry` fired a SOL LONG against open trend SOL SHORTs
 On a netting venue a buy against the short flips the position; on a hedging venue it opens a hedge, which Tradeify forbids. Code: `_opposite_direction_block_reason` in
 `src/prop/breakout_executor.py`; tests: `tests/test_prop_opposite_direction_block.py`.
 
+**Claim-time re-check (phone accounts, manager 2026-11-09):** `phone_executor.claim_next` runs the same check just before it claims an entry ticket, because a phone ticket is claimed minutes after emission and a position another leg holds can open in between (other still-`emitted` tickets are ignored there). A blocked ticket becomes terminal `refused` with `meta.claim_block`, and is never re-offered; an unreadable journal only DEFERS the claim (the ticket stays `emitted` and is retried while valid). Server-side, so no APK change. Tests: `tests/test_phone_claim_opposite_block.py`.
+
 
 ## Operator Communication Pipeline
 

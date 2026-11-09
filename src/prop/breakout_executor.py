@@ -175,6 +175,7 @@ def _reticket_suppress_reason(
 
 def _opposite_direction_block_reason(
     account_id: str, symbol: str, direction: str, strategy: str, *, now: Optional[datetime] = None,
+    include_emitted: bool = True,
 ) -> Optional[str]:
     """Reason to BLOCK a new ticket because THIS account already holds (or has live) the OPPOSITE side of ``symbol`` from a DIFFERENT leg, or None.
 
@@ -184,7 +185,9 @@ def _opposite_direction_block_reason(
     bracket; on a hedging venue it opens a hedge, which Tradeify forbids. The existing reticket guard only looks at the SAME direction.
     Blocks on an open position (newest ``prop_fills`` row open/filled, the monitor pulse's derivation) or a live outstanding ticket
     (``_BLOCKING_UNTIL_RESOLVED``; ``_BLOCKING_WHILE_VALID`` while ``valid_until`` has not passed or cannot be read). A same-leg
-    reversal is not blocked (its owner manages its own exit). FAIL-CLOSED: an unreadable journal blocks this one entry with a named
+    reversal is not blocked (its owner manages its own exit). ``include_emitted=False`` is the CLAIM-time re-check (phone_executor.claim_next): other
+    still-``emitted`` tickets are ignored there (two fresh opposing tickets cannot both exist since emission blocks the second, and must not block each other).
+    FAIL-CLOSED: an unreadable journal blocks this one entry with a named
     reason (a hedge costs more than one lost signal); the next tick retries, nothing halts.
     """
     try:
@@ -215,7 +218,7 @@ def _opposite_direction_block_reason(
             status = str(t.get("status") or "").lower()
             if status in _BLOCKING_UNTIL_RESOLVED:
                 return f"opposite_outstanding_ticket:{status}: {t.get('ticket_id')} (leg {who or 'unknown'})"
-            if status in _BLOCKING_WHILE_VALID:
+            if include_emitted and status in _BLOCKING_WHILE_VALID:
                 vu_dt = _parse_valid_until(t.get("valid_until"))
                 if vu_dt is None or vu_dt > now:
                     return f"opposite_outstanding_ticket:{status}: {t.get('ticket_id')} (leg {who or 'unknown'})"
