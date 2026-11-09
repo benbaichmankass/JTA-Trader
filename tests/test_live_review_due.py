@@ -634,3 +634,82 @@ def test_read_venue_context_carries_the_snapshot_trades_applied_floor(tmp_path):
     out = lrd.read_venue_context(["pkg-s"], db_path=str(db))
     sn = out["pkg-s"]["snapshots"][0]
     assert sn["trade_status"] == "open" and sn["leg_floor"] == 94.5
+
+
+# ---- LTR-PROP-COVERAGE: open filled prop tickets are open packages (operator 2026-11-09) ----
+def _prop_db(tmp_path, tickets):
+    db = str(tmp_path / "p.db")
+    _journal(db, [])
+    c = sqlite3.connect(db)
+    c.execute("CREATE TABLE prop_tickets (ticket_id, account_id, strategy, symbol, direction, entry, sl, tp, "
+              "qty, status, order_package_id, created_at)")
+    for t in tickets:
+        c.execute("INSERT INTO prop_tickets VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", t)
+    c.commit()
+    c.close()
+    return db
+
+
+_ACC = {a: {"exchange": "breakout" if a == "breakout_2" else "tradeify", "mode": "live",
+            "risk": {"max_dd_pct": 0.03, "daily_loss_pct": 0.02}} for a in ("breakout_2", "tradeify_1")}
+
+
+def _tk(i, acct, status="filled", pkg="pkg-prop"):
+    return (f"t{i}", acct, "trend_donchian_sol_4h", "SOLUSDT", "short", 150.0, 155.0, 140.0, 2.0, status,
+            pkg, "2026-11-09T01:00:00+00:00")
+
+
+def test_filled_prop_ticket_is_open_with_all_accounts_and_estimated_telemetry(tmp_path):
+    db = _prop_db(tmp_path, [_tk(1, "breakout_2"), _tk(2, "tradeify_1")])
+    out = lrd.read_prop_open(db, _ACC, mark_fn=lambda s: 148.0)
+    assert out["state"] == "read" and len(out["packages"]) == 1
+    p = out["packages"][0]
+    assert p["order_package_id"] == "pkg-prop" and p["sl"] == 155.0 and p["tp"] == 140.0
+    assert [a["account_id"] for a in p["accounts"]] == ["breakout_2", "tradeify_1"]
+    tel = p["accounts"][0]["telemetry"]
+    assert tel["unrealized_pnl"] == 4.0 and tel["provenance"] == "estimated" and tel["state"] == "mark_estimate"
+    assert p["accounts"][0]["dd_context"]["risk"]["max_dd_pct"] == 0.03
+    assert p["accounts"][0]["apply_paths_state"] in ("read", "could_not_look")
+
+
+def test_closed_prop_ticket_is_not_open(tmp_path):
+    db = _prop_db(tmp_path, [_tk(1, "breakout_2", status="closed")])
+    assert lrd.read_prop_open(db, _ACC, mark_fn=lambda s: 148.0)["packages"] == []
+
+
+def test_missing_mark_is_could_not_look_not_absence(tmp_path):
+    db = _prop_db(tmp_path, [_tk(1, "breakout_2")])
+    p = lrd.read_prop_open(db, _ACC, mark_fn=lambda s: None)["packages"][0]
+    tel = p["accounts"][0]["telemetry"]
+    assert tel["state"] == "could_not_look" and tel["reason"] == "mark_unavailable"
+    assert tel["unrealized_pnl"] is None  # never 0
+
+
+def test_prop_package_in_live_review_due_payload_and_due_with_accounts(tmp_path, monkeypatch):
+    db = str(tmp_path / "j.db")
+    _db(db, [])  # telemetry table, no rows
+    _journal(db, [])
+    c = sqlite3.connect(db)
+    c.execute("CREATE TABLE prop_tickets (ticket_id, account_id, strategy, symbol, direction, entry, sl, tp, "
+              "qty, status, order_package_id, created_at)")
+    for t in (_tk(1, "breakout_2"), _tk(2, "tradeify_1")):
+        c.execute("INSERT INTO prop_tickets VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", t)
+    c.commit()
+    c.close()
+    orig = lrd.read_prop_open
+    monkeypatch.setattr(lrd, "read_prop_open", lambda p=None, mark_fn=None: orig(p, _ACC, mark_fn))
+    out = lrd.live_review_due(db_path=db, reviews_path=str(tmp_path / "none.jsonl"), now=NOW, mark_fn=lambda s: 148.0)
+    assert out["read_state"] == "looked" and out["open_count"] == 1
+    assert out["prop_open"][0]["accounts"][0]["telemetry"]["provenance"] == "estimated"
+    assert [p["order_package_id"] for p in out["prop_open"]] == ["pkg-prop"]
+    less = out["telemetry_less"][0]
+    assert less["prop"] is True and less["accounts"] == ["breakout_2", "tradeify_1"]
+    due = {d["order_package_id"]: d for d in out["due"]}
+    assert due["pkg-prop"]["accounts"] == ["breakout_2", "tradeify_1"]
+
+
+def test_prop_action_paths_mirror_live_review_apply():
+    from scripts.ops import live_review_apply as lra
+    for cls in ("phone", "prop_vm"):
+        want = sorted(set(lra.ACTION_PATHS[cls]) | {"tighten"})
+        assert sorted(lrd._PROP_ACTION_PATHS[cls]) == want

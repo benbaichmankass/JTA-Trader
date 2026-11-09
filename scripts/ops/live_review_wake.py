@@ -135,7 +135,8 @@ def plan(doc: Any, posted: List[dict], cfg: Dict[str, Any], now: datetime) -> Di
                 last_by[k] = at
     grouped: Dict[str, dict] = {}
     for d in doc.get("due") or []:
-        if str(d.get("account_id")) not in cfg["accounts"]:
+        d_accts = [a for a in (d.get("accounts") or [d.get("account_id")]) if str(a) in cfg["accounts"]]
+        if not d_accts:
             continue  # not a reviewed account: never a wake
         for ev in d.get("events") or []:
             name = ev.get("event")
@@ -151,8 +152,9 @@ def plan(doc: Any, posted: List[dict], cfg: Dict[str, Any], now: datetime) -> Di
                     and now - prev < timedelta(minutes=COOLDOWN_MIN):
                 continue
             g = grouped.setdefault(_key(e), dict(e, accounts=[]))
-            if d.get("account_id") not in g["accounts"]:
-                g["accounts"].append(d.get("account_id"))
+            for a in d_accts:
+                if a not in g["accounts"]:
+                    g["accounts"].append(a)
     entries = sorted(grouped.values(), key=_key)
     return {"kind": "wake" if entries else "quiet", "entries": entries,
             "why": f"{doc.get('due_count')} due, {len(entries)} new real-money/prop wake(s)"}
