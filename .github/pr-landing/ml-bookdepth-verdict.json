@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Research tooling only: the verdict.json that scripts/research/book_depth_pit.py writes is made valid for the harness (top-level n, population a string, measurement the full record) and a self-test pins it. No rule, threshold or command change. Revert: git revert.",
+  "why": "Run 42610949526 of unit RQ-20261109-98e3-36 ran to completion and its script verdict was PASS, but the harness graded the record producer_failed: 'verdict.json malformed: n must be present'. My bug (the same class as the lake_presence read_state word). Fixed; checked against script_run's own vocabularies and required fields."
+}

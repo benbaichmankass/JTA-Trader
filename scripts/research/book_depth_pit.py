@@ -280,15 +280,24 @@ def run(a) -> int:
     for (sym, bh), t in tables.items():
         t.assign(symbol=sym).to_pickle(out / f"book_depth_{sym}_{bh}h.pkl")
     (out / "measurement.json").write_text(json.dumps(res, indent=1, default=str))
-    row = {"schema_version": 1, "research_unit": a.unit, "verdict": {"PASS": "pass", "FAIL": "fail", "INDETERMINATE": "indeterminate"}[verdict],
-           "read_state": "measured" if verdict != "INDETERMINATE" else "no_data", "note": f"{SCHEMA}; {verdict}: {why}",
-           "population": {"description": f"Binance USD-M perp bookDepth daily archive, {'/'.join(SYMBOLS)}, {span[0]}..{span[1]}, bars {list(BAR_HOURS)} h",
-                          "n": int(sum(c["days_present"] for c in res["per_symbol"].values()))},
-           "measurement": {"per_symbol": {s: {k: c[k] for k in ("days_expected", "days_present", "days_unreachable", "days_unparseable")} | {"bars": c["bars"], "audit": c["audit"]}
-                                          for s, c in res["per_symbol"].items()}}}
+    row = verdict_row(res, a.unit, span)
     (out / "verdict.json").write_text(json.dumps(row, indent=1, default=str) + "\n")
     print(f"BOOK-DEPTH-PIT: {verdict}: {why}", flush=True)
     return 0
+
+
+def verdict_row(res: dict, unit: str, span: tuple[str, str]) -> dict:
+    """The verdict.json the harness (scripts/research/script_run.py) validates: verdict and read_state from its vocabularies,
+    `population` a non-empty STRING, `n` present (a missing `n` made run 42610949526 grade producer_failed), and `measurement`
+    the FULL record, which the harness writes out as measurement.json."""
+    verdict = res["verdict"]
+    return {"schema_version": 1, "research_unit": unit,
+            "verdict": {"PASS": "pass", "FAIL": "fail", "INDETERMINATE": "indeterminate"}[verdict],
+            "read_state": "measured" if verdict != "INDETERMINATE" else "no_data",
+            "note": f"{SCHEMA}; {verdict}: {res['reason']}",
+            "population": f"Binance USD-M perp bookDepth daily archive, {'/'.join(SYMBOLS)}, {span[0]}..{span[1]}, bars {list(BAR_HOURS)} h",
+            "n": int(sum(c["days_present"] for c in res["per_symbol"].values())),
+            "measurement": res}
 
 
 def grade(res: dict) -> tuple[str, str]:
@@ -383,6 +392,15 @@ def _self_test() -> int:
     check("grade: FAIL when bar coverage < 95%", grade(low)[0] == "FAIL")
     mis = {"per_symbol": {"ETHUSDT": dict(base, audit={"4": {"checked": 1000, "mismatch": 1, "lookahead": 0}, "8": {"checked": 1000, "mismatch": 0, "lookahead": 0}}), "SOLUSDT": dict(base)}}
     check("grade: FAIL on a single audit mismatch", grade(mis)[0] == "FAIL")
+    # the verdict row must satisfy the harness's own validation (run 42610949526 was graded producer_failed for a missing top-level n)
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import script_run as SR
+    row = verdict_row({"verdict": "PASS", "reason": "x", "per_symbol": {"ETHUSDT": {"days_present": 3}, "SOLUSDT": {"days_present": 4}}}, "U", SPAN)
+    check("verdict row: verdict and read_state are in the harness vocabularies", row["verdict"] in SR.VERDICTS and row["read_state"] in SR.READ_STATES)
+    check("verdict row: population is a non-empty string and n is present", isinstance(row["population"], str) and row["population"].strip() and row["n"] == 7)
+    check("verdict row: measurement is the full record", row["measurement"]["per_symbol"]["SOLUSDT"]["days_present"] == 4)
+    ind = verdict_row({"verdict": "INDETERMINATE", "reason": "x", "per_symbol": {}}, "U", SPAN)
+    check("verdict row: INDETERMINATE uses a harness read_state", ind["read_state"] in SR.READ_STATES and ind["verdict"] in SR.VERDICTS)
     print("book_depth_pit self-test " + ("OK" if ok else "FAILED"))
     return 0 if ok else 1
 
