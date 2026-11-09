@@ -35,10 +35,10 @@ Implication for the design: a single pooled confidence model has about 2000 labe
 
 Yes, two tables exist, with different grain; neither is a fill-level record.
 
-- `position_path_history`: append-only, one row per (order_package_id, bar_ts), written each exit-loop pass (~30 s) and upserted within a bar; carries `peak_r`, `mae_r`, `sl_r`, `tp_r`, `atr`, `adx` (source: `src/runtime/position_path_history.py`). Retention 90 days. **2295 rows** at read time. The writer shipped 2026-10-15, so it can only cover trades from then on. **Not measured here: how many distinct packages / closed trades those 2295 rows cover.** `position_path_history` is not an allowlisted `journal` table and no diag route returns per-package coverage, so the share of closed trades with a path is `could-not-look`, not zero. Filed as a follow-up.
+- `position_path_history`: append-only, one row per (order_package_id, bar_ts), written each exit-loop pass (~30 s) and upserted within a bar; carries `peak_r`, `mae_r`, `sl_r`, `tp_r`, `atr`, `adx` (source: `src/runtime/position_path_history.py`). Retention 90 days. **2295 rows** at read time. The writer's approval is dated 2026-10-15 in its module docstring; its actual deploy date and the table's earliest row were NOT verified here (git history on this tree does not show the add), so "covers trades from 2026-10-15" is an UNVERIFIED upper bound on coverage, not a measured start. **Not measured here: how many distinct packages / closed trades those 2295 rows cover.** `position_path_history` is not an allowlisted `journal` table and no diag route returns per-package coverage, so the share of closed trades with a path is `could-not-look`, not zero. Filed as a follow-up.
 - `position_telemetry`: one upserted row per package (latest pass wins), read through `/api/diag/position_telemetry` (783 rows): 465 closed (463 stamped final), 14 open, 304 `unknown_no_trade_id`; `peak_gradeable` 514; `peak_provenance` is `estimated`, and `peak_r_is_lower_bound` is flagged.
 
-So for checkpoint labels (design § 3.1 re-score sample) the live path covers at most the ~465 closed trades with a final telemetry row, and only the sub-population with path-history rows from 2026-10-15; for everything earlier (2567 closed trades), open R / peak R through time must be RECONSTRUCTED from fills plus bars, and would be `ESTIMATED` at bar-extreme granularity. The two sources must not be mixed without a provenance flag.
+So for checkpoint labels (design § 3.1 re-score sample) the live path covers at most the ~465 closed trades with a final telemetry row, and only the sub-population with path-history rows (start date unverified, see above); for everything earlier (2567 closed trades), open R / peak R through time must be RECONSTRUCTED from fills plus bars, and would be `ESTIMATED` at bar-extreme granularity. The two sources must not be mixed without a provenance flag.
 
 ## 3. Candidate inputs served at entry time on the live path
 
@@ -81,7 +81,7 @@ Reading: for `vwap` and a few others `confidence` is a strategy default, not a m
 ## 5. What this changes in the design
 
 1. Labelled samples (entry-feature join exists for 2163 closed trades, none of them `vwap`): ~2000 closed trades with a derivable gross R, ~2400 minus 161 null-`pnl` for net; `vwap` is 61% of real money. The money test must be per strategy or per class, and say so before the run.
-2. Re-score checkpoints: the live path covers ~465 closed trades (telemetry) from 2026-10-15; the rest is reconstruction (`ESTIMATED`). Item 4 (replay corpus) is where the larger sample comes from.
+2. Re-score checkpoints: the live path covers ~465 closed trades (telemetry); the rest is reconstruction (`ESTIMATED`). Item 4 (replay corpus) is where the larger sample comes from.
 3. Inputs servable today are strategy id, direction, R:R, stop distance (ATR where present), timeframe, regime/vol/ADX (84% recently), entry model score where one exists. Funding, OI and book depth are not served; including them depends on item 2.
 4. `confidence` must not be a feature or label anywhere; 40% of the table is a default.
 
