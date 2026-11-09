@@ -1064,6 +1064,7 @@ def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
             "trade_id": row.get("trade_id"),
             "leg": row.get("strategy"),
             "account_id": row.get("account_id"),
+            **({"accounts": [a.get("account_id") for a in row["accounts"]]} if row.get("accounts") else {}),
             "symbol": row.get("symbol"),
             "direction": row.get("direction"),
             "timeframe_seconds": tf,
@@ -1148,6 +1149,120 @@ def read_journal_open(db_path: Optional[str] = None) -> Dict[str, Any]:
         d["account_id"] = r["account_id"]
         d["trade_id"] = r["id"]
         d["source"] = "order_packages+trades" if d.get("source") == "order_packages" else d["source"]
+    return {"state": "read", "packages": list(out.values())}
+
+
+def _prop_dd_context(account_id: str, strategy: Any, accts_cfg: Dict[str, Any]) -> Dict[str, Any]:
+    """The firm DD context for one prop account: its own ``risk`` block (the limits the risk gate reads) and the
+    leg's ``comms/prop_survival/<leg>.json`` cell. Each part is read or ``could_not_look`` with a reason."""
+    out: Dict[str, Any] = {"account_id": account_id}
+    risk = ((accts_cfg or {}).get(account_id) or {}).get("risk")
+    if isinstance(risk, dict):
+        out["risk"] = {k: risk.get(k) for k in ("max_dd_pct", "daily_loss_pct", "risk_pct", "daily_dd_switch")
+                       if k in risk}
+        out["risk_state"] = "read"
+    else:
+        out.update(risk=None, risk_state="could_not_look", risk_reason="account_risk_block_absent")
+    try:
+        from src.utils.paths import repo_root
+        with open(os.path.join(repo_root(), "comms", "prop_survival", f"{strategy}.json"), encoding="utf-8") as fh:
+            cell = ((json.load(fh).get("accounts") or {}).get(account_id))
+        if isinstance(cell, dict):
+            out["survival"], out["survival_state"] = cell, "read"
+        else:
+            out.update(survival=None, survival_state="could_not_look", survival_reason="no_cell_for_account")
+    except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as could_not_look
+        out.update(survival=None, survival_state="could_not_look",
+                   survival_reason=f"{type(exc).__name__}: {exc}")
+    return out
+
+
+def _prop_apply_paths(account_id: str, accts_cfg: Dict[str, Any]) -> Dict[str, Any]:
+    """The live-review actions an apply can run on this prop account (``live_review_apply.ACTION_PATHS``)."""
+    try:
+        from scripts.ops import live_review_apply as lra
+        cls = lra.account_class(account_id, (accts_cfg or {}).get(account_id) or {})
+        paths = sorted(set(lra.ACTION_PATHS.get(cls, ())) | ({"tighten"} if cls in ("prop_vm", "phone") else set()))
+        return {"apply_class": cls, "apply_paths": paths, "apply_paths_state": "read"}
+    except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as could_not_look
+        return {"apply_class": None, "apply_paths": None, "apply_paths_state": "could_not_look",
+                "apply_paths_reason": f"{type(exc).__name__}: {exc}"}
+
+
+def _prop_telemetry(symbol: Any, direction: Any, entry: Any, qty: Any,
+                    mark_fn: Optional[Callable[[Any], Optional[float]]]) -> Dict[str, Any]:
+    """Prop has no broker feed: uPnL = (mark - entry) x qty from the same bot-feed mark the dashboard's prop uPnL
+    uses (``prop_overview``). ESTIMATED. A term that is missing is ``could_not_look`` with a reason, never 0."""
+    from src.runtime import provenance as prov
+    base = {"unrealized_pnl": None, "provenance": prov.UNVERIFIED, "state": "could_not_look"}
+    side = str(direction or "").lower()
+    sign = 1 if side in ("long", "buy") else -1 if side in ("short", "sell") else 0
+    miss = [n for n, v in (("entry", _f(entry)), ("qty", _f(qty))) if v is None] + ([] if sign else ["direction"])
+    if miss:
+        return dict(base, reason="missing_" + "+".join(miss), mark=None)
+    try:
+        if mark_fn is None:
+            from src.runtime.local_pnl import last_mark_price as mark_fn
+        mark = mark_fn(symbol)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as could_not_look
+        return dict(base, reason=f"mark_read_failed: {type(exc).__name__}: {exc}", mark=None)
+    if not isinstance(mark, (int, float)) or mark <= 0:
+        return dict(base, reason="mark_unavailable", mark=None)
+    try:
+        from src.prop.prop_overview import _mark_source
+        src = _mark_source(str(symbol))
+    except Exception:  # noqa: BLE001  # allow-silent: an unread profile is labelled, not guessed
+        src = "bot_feed_last_close_5m"
+    return {"unrealized_pnl": round((float(mark) - float(_f(entry))) * float(_f(qty)) * sign, 2),
+            "provenance": prov.ESTIMATED, "state": "mark_estimate", "mark": float(mark), "mark_source": src}
+
+
+def read_prop_open(db_path: Optional[str] = None, accounts_cfg: Optional[Dict[str, Any]] = None,
+                   mark_fn: Optional[Callable[[Any], Optional[float]]] = None) -> Dict[str, Any]:
+    """Open PROP packages from the prop journal: ``prop_tickets.status = 'filled'`` (a filled ticket not yet
+    closed is open at the prop venue), grouped by ``order_package_id`` so one package lists ALL its accounts.
+
+    The trade journal never holds these (no broker feed), so the journal-only open set missed them silently.
+    ``state`` read / could_not_look; an absent ``prop_tickets`` table is ``read`` with no packages only when the
+    file is readable and the table simply does not exist yet is reported ``table_absent`` (not an empty set).
+    """
+    try:
+        if db_path is None:
+            from src.utils.paths import trade_journal_db_path
+            db_path = str(trade_journal_db_path())
+        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+        try:
+            conn.row_factory = sqlite3.Row
+            if not conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='prop_tickets'").fetchone():
+                return {"state": "table_absent", "reason": "prop_tickets_table_absent", "packages": []}
+            rows = conn.execute("SELECT * FROM prop_tickets WHERE status = 'filled' "
+                                "AND order_package_id IS NOT NULL AND order_package_id != '' "
+                                "ORDER BY created_at").fetchall()
+        finally:
+            conn.close()
+    except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as could_not_look
+        return {"state": "could_not_look", "reason": f"prop_open_unreadable: {type(exc).__name__}: {exc}",
+                "packages": []}
+    if accounts_cfg is None:
+        try:
+            from src.config.accounts_loader import load_accounts_dict
+            accounts_cfg = load_accounts_dict()
+        except Exception:  # noqa: BLE001  # allow-silent: each account's context is could_not_look with a reason
+            accounts_cfg = {}
+    out: Dict[str, Dict[str, Any]] = {}
+    for r in rows:
+        t = dict(r)
+        pkg = str(t["order_package_id"])
+        d = out.setdefault(pkg, {
+            "order_package_id": pkg, "strategy": t.get("strategy"), "symbol": t.get("symbol"),
+            "direction": t.get("direction"), "entry": t.get("entry"), "sl": t.get("sl"), "tp": t.get("tp"),
+            "source": "prop_tickets", "accounts": []})
+        aid = t.get("account_id")
+        d["accounts"].append({
+            "account_id": aid, "ticket_id": t.get("ticket_id"), "qty": t.get("qty"),
+            "telemetry": _prop_telemetry(t.get("symbol"), t.get("direction"), t.get("entry"), t.get("qty"), mark_fn),
+            "dd_context": _prop_dd_context(str(aid), t.get("strategy"), accounts_cfg),
+            **_prop_apply_paths(str(aid), accounts_cfg)})
     return {"state": "read", "packages": list(out.values())}
 
 
@@ -1419,6 +1534,18 @@ def live_review_due(db_path: Optional[str] = None,
     have = {str(r.get("order_package_id")) for r in open_rows}
     less = [dict(p, telemetry_absent=True, lifecycle="open")
             for p in jo.get("packages", []) if p["order_package_id"] not in have]
+    po = read_prop_open(db_path)
+    env["prop_open_state"], env["prop_open_reason"] = po["state"], po.get("reason")
+    known = have | {p["order_package_id"] for p in less}
+    prop_less = []
+    for p in po.get("packages", []):
+        if p["order_package_id"] in known:
+            continue
+        prop_less.append(dict(
+            p, account_id=p["accounts"][0]["account_id"], trade_id=None, telemetry_absent=True,
+            lifecycle="open", prop=True))
+    less = less + prop_less
+    env["prop_open"] = po.get("packages", [])
     market = read_market_context(open_rows + less, cfg, now, db_path, funding_db_path, calendar_path)
     try:
         from src.runtime import ltr_auto_mandate
@@ -1430,12 +1557,13 @@ def live_review_due(db_path: Optional[str] = None,
                       cadence=cad)
     env.update(res)
     env["open_count"] = len(open_rows) + len(less)
-    env["open_count_complete"] = jo["state"] == "read"
+    env["open_count_complete"] = jo["state"] == "read" and po["state"] in ("read", "table_absent")
     env["telemetry_less"] = [{
         "order_package_id": r["order_package_id"], "trade_id": r.get("trade_id"),
         "leg": r.get("strategy"), "account_id": r.get("account_id"), "symbol": r.get("symbol"),
         "direction": r.get("direction"), "telemetry_state": "telemetry_absent",
         "events_could_not_look": [{"event": n, "reason": "telemetry_absent"} for n in TELEMETRY_EVENTS],
+        **({"accounts": [a["account_id"] for a in r["accounts"]], "prop": True} if r.get("prop") else {}),
     } for r in less]
     cal = next(iter(market.values()), {}).get("calendar") if market else None
     vsn = [sn for c in market.values() for sn in ((c.get("venue") or {}).get("snapshots") or [])]

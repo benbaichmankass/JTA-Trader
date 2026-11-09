@@ -115,3 +115,12 @@ def _wake_switches_all_on(tmp_path, monkeypatch):
     monkeypatch.delenv("WAKE_TOGGLES_REMOTE", raising=False)
     for _k in _wt.TOGGLES:
         _wt.set_toggle(_k, True, "test")
+
+
+def test_prop_package_carries_all_its_accounts_and_the_prop_label():
+    from src.runtime import wake_toggles as wt
+    d = pkg("pkg-prop", acct="breakout_2")
+    d["accounts"] = ["breakout_2", "tradeify_1", "velotrade_1"]
+    p = lrw.plan(due(d), [], CFG, NOW)
+    assert p["kind"] == "wake" and p["entries"][0]["accounts"] == ["breakout_2", "tradeify_1", "velotrade_1"]
+    assert wt.ltr_label(p["entries"]) == "prop"
