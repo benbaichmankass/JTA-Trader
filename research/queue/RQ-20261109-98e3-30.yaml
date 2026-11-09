@@ -1,0 +1,97 @@
+id: RQ-20261109-98e3-30
+title: 'PROP-ML-NEW-DATA step 1, funding_basis re-census under a monthly-aware rule: are fundingRate and premiumIndexKlines usable for ETHUSDT and SOLUSDT, and where
+  exactly are the archive''s holes?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: deterministic
+practice_precedent: 'none: a data-feasibility census; corrects the rule of RQ-20261108-98e3-28 (monthly-aware staleness, partial first files) and follows its design;
+  PROP-ML-NEW-DATA row brief.'
+question: 'The first census (98e3-28) graded funding_basis NOT-USABLE, largely because of its own rule: funding is published as MONTHLY files only (a 5-day staleness
+  bar can never pass) and partial FIRST files tripped a rows-per-day check. It also found that the 2026-10 premiumIndexKlines monthly file holds 41,760 rows (29 of
+  31 days). Re-measure fundingRate and premiumIndexKlines for ETHUSDT and SOLUSDT (BTCUSDT context) with a rule that fits the archive''s publication: monthly-aware
+  staleness, partial first files detected and reported not graded, and EVERY complete monthly file from 2022-01 downloaded, checksum-verified and row-counted so each
+  hole is located by timestamp and reported as a finding.'
+why_this_matters: funding_basis is the only non-price family that spans the untouched backward held-out 2020-07..2021-12 (the oi_flow and book_depth families cannot).
+  Whether it is usable decides whether a later model unit can test funding/basis on that clean span. The holes are reported, not rewritten away, because a model that
+  trains across a missing day is a model on a corrupted series.
+decision_rule:
+  id: RULE-RQ20261109-98e3-30-FUNDING-BASIS-V2
+  registered_at: '2026-11-09'
+  registered_before_run: true
+  statistic: 'scripts/research/funding_basis_census.py run: archive listing + EVERY complete monthly file from 2022-01 to the last complete month (plus the first
+    monthly file) downloaded, verified against Binance''s .CHECKSUM, parsed and row-counted, for fundingRate and premiumIndexKlines, ETHUSDT and SOLUSDT (required)
+    and BTCUSDT (context).'
+  rule: 'Per (symbol, stream): a partial FIRST file (first timestamp > 2 days after its month start) is detected from its own timestamps, reported, and NOT graded.
+    USABLE iff: the archive is reachable and every complete monthly file in [2022-01, last complete month] was read; each passes its checksum, has >= 99% non-null
+    values and no timestamp >= 1 day after its month end; monthly-aware staleness holds (fundingRate lists the last COMPLETE month; premiumIndexKlines lists a day
+    within 5 days of the run); the total missing rows over all complete files in the window are <= 1% of expected rows (premium: 1,440 per day; funding: 24 / funding_interval_hours
+    per day); and the longest in-file gap is <= 3 days (premium) or <= 24 h (funding). USABLE-PARTIAL = all of that but the first complete month is after 2022-01.
+    NOT-USABLE = any check fails. INDETERMINATE = the archive or a complete file could not be read. FINDINGS: every complete file short by more than 0.5% of its expected
+    rows is LISTED with its rows, expected rows and the from/to timestamps of each in-file gap, whatever the verdict; a USABLE cell can carry findings and they are
+    never rewritten away. Unit verdict: PASS iff at least one funding_basis stream (fundingRate or premiumIndexKlines) is USABLE or USABLE-PARTIAL for BOTH ETHUSDT
+    and SOLUSDT; INDETERMINATE iff none counts but an INDETERMINATE cell could change that; FAIL otherwise. Coverage of the three candidate held-out spans is REPORTED
+    per stream, not graded. Thresholds are not changed after any result.'
+  what_it_does_not_do: 'Trains no model, reads no label, touches no held-out price span. It supersedes only the funding_basis GRADE of RQ-20261108-98e3-28, which
+    is not edited. DISCLOSURE: before this unit was registered, a local smoke run measured two cells (ETHUSDT fundingRate and ETHUSDT premiumIndexKlines) with the
+    same script to test it against the real archive; the thresholds above were written into the script before that run and were NOT changed after it. This unit re-measures
+    all six cells. A hole is located by timestamp inside a monthly file; whether a missing day is also absent from the DAILY files is not checked here.'
+  min_n: every complete monthly file in the grade window
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: the operator goal (a live ML entry on every live-money account, prop included); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  runner_only: true
+  why_runner: needs internet (public Binance archive listing + ~290 monthly file downloads); the Kaggle kernel has no internet
+  basis: 'MEASURED on a local smoke run: ETH funding 59 files in 7 s, ETH premium 59 files in 22 s; 6 cells scale to a few minutes. est_minutes is padded for a slower
+    runner.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/funding_basis_census.py
+  - run
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --run-date
+  - '2026-11-09'
+  - --rule-id
+  - RULE-RQ20261109-98e3-30-FUNDING-BASIS-V2
+  - --registered-at
+  - '2026-11-09'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261109-98e3-30
+ml_consumer:
+  consumer: ML-PROP-ITERATE
+  decision: whether funding/basis can be tested on the untouched backward held-out 2020-07..2021-12 in a later model unit; no change from this unit
+  legs:
+  - ml_entry
+  book: money
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261108-98e3-28
+- RQ-20261108-98e3-29
+- RQ-20261105-d256-01
+- PROP-ML-NEW-DATA
+population: Binance USD-M archive monthly files for fundingRate and premiumIndexKlines, ETHUSDT and SOLUSDT (required) and BTCUSDT (context), every complete month
+  from 2022-01 to the last complete month; as of 2026-11-09. A data census, not an edge read.
+why_not_inferential: 'A data census: it counts rows, files and gaps of a public archive against fixed thresholds. It estimates no effect from a sample, so an expected
+  n and an MDE would be theatre.'
