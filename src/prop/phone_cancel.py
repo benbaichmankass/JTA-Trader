@@ -31,10 +31,9 @@ The superseded reason only WITHDRAWS the stale order; releasing the newer suppre
 """
 from __future__ import annotations
 
-import json
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Any, Callable, Dict, List, Mapping, Optional
+from typing import Any, Callable, Dict, Mapping, Optional
 
 from src.prop import prop_journal
 from src.prop.phone_trail import _cas, _f, _meta, _package_state, _parse, _price_step, _send, _venue_qty

@@ -80,7 +80,8 @@ def test_closed_package_makes_an_unexpired_entry_eligible():
     conn = prop_journal._connect()
     conn.execute("CREATE TABLE IF NOT EXISTS order_packages (order_package_id TEXT PRIMARY KEY, status TEXT, close_reason TEXT, updated_at TEXT)")
     conn.execute("INSERT INTO order_packages VALUES ('PKG1','closed','strategy_exit','2026-11-09T02:35:00Z')")
-    conn.commit(); conn.close()
+    conn.commit()
+    conn.close()
     assert pc.plan_cancels("breakout_2", now=NOW) == 1
     assert _c("P")["reason"] == "package_closed"
 
