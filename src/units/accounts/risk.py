@@ -1238,7 +1238,29 @@ class RiskManager:
             # permanent at-target freeze). Crypto/fx refuse STRICTLY — the
             # round-up-to-1 relaxation above is equity-only, where 1 share is the
             # smallest tradeable unit and its stop risk is budget-checked first.
-            return 0.0
+            #
+            # REVERSED 2026-11-09 (operator, Tier 3: "size up - that's what
+            # trading at minimum size means"): an instrument-resolved crypto
+            # size below the lot minimum is raised to the minimum by the ONE
+            # legalization seam (not a second check here). Margin / exposure
+            # clamps BELOW still apply to the bumped size. No instrument rule
+            # (or a max < min contradiction) -> refuse as before.
+            _bumped = 0.0
+            if _inst is not None:
+                try:
+                    from src.units.accounts.qty_legalize import legalize_qty
+                    _lz = legalize_qty(
+                        qty, account_cfg={"exchange": ""},
+                        symbol=getattr(package, "symbol", "") or "",
+                        price=package.entry, size_up=True,
+                    )
+                    if _lz.ok and _lz.resized_from is not None:
+                        _bumped = float(_lz.qty)
+                except Exception:  # noqa: BLE001 — never block sizing on a lookup
+                    _bumped = 0.0
+            if _bumped <= 0:
+                return 0.0
+            qty = _bumped
 
         # The S-026 G3 daily-loss-budget clamp (downsize to the remaining
         # daily budget; size 0 once it was spent) was REMOVED 2026-10-09: at
