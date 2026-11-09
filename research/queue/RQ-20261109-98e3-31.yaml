@@ -1,0 +1,165 @@
+id: RQ-20261109-98e3-31
+title: 'P5-MLPROP-OIFLOW-BV: does open-interest / long-short / taker-flow positioning (census family oi_flow) lift a prop-specific ETH+SOL ML entry over price-only
+  on a time-disjoint 2025-01..2025-09 held-out, and does it clear V3 on breakout_2 and velotrade_1?'
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+roadmap:
+- L-PROP
+- L-ML-LIVE
+practice_precedent: T3 (net of the full cost stack) + M-principles purged walk-forward with one held-out read; prop gate scripts/research/prop_gate.py RULE-P5-GATE-BRK-PER-LEG-V3
+  via ml_variant_prop_gate.py, unchanged.
+question: 'The price-only prop ML entry is closed on every route tried (pooled ETH/SOL ~40 arms; Donchian ML filter d256-02 FAIL; prop-specific d256-01 FAIL on discovery
+  with its held-out unread). The non-price census (98e3-28, PASS) found the oi_flow family (Binance 5m open interest, long/short ratios, taker flow) usable point-in-time
+  for ETH and SOL from 2021-12. Does adding that family (arm F0+OI) to the prop-specific model (scripts/research/prop_ml_leg.py, profile bv: the firm cost stack inside
+  the label) beat the price-only control (arm F0) on a forward, time-disjoint held-out 2025-01-01..2025-09-30, and does its ledger clear the V3 prop survival gate
+  on breakout_2 and velotrade_1? Manager 2026-11-07a 01:47Z, step 2 (B).'
+why_this_matters: 'Weekly priority: a live ML entry on every live-money account; the prop accounts have no candidate and the operator wants one that beats the current
+  baseline, which is now ml_entry itself. The oi_flow family is the first non-price information the prop model has been offered. The held-out 2020-07..2021-12 stays
+  UNREAD for the funding/basis test (unit 98e3-30), because oi_flow cannot cover it. The held-out here ends 2025-09-30, before the spent 2025-10..2026-09 span. book_depth
+  (history from 2023-01) is NOT an arm: the driver has no point-in-time book_depth feature builder and writing one is its own unit.'
+instrument_universe:
+  basis: 'config/accounts.yaml: breakout_2, tradeify_1 and velotrade_1 all trade ETHUSDT and SOLUSDT (exchange: breakout)'
+  tradeable_now:
+  - ETHUSDT
+  - SOLUSDT
+  population_rule: Pooled ML over both symbols (an account configures strategies, never symbols). The bv profile covers breakout_2 and velotrade_1 (shared model,
+    the stricter of their declared stacks).
+data_sources:
+  status: Binance Vision um 1h klines, resampled to 4h by the driver; daily metrics (5m OI, long/short, taker ratios) from 2021-12; reachable from the lane container
+    and the runner (data.binance.vision).
+  candidates:
+  - F0 price/volume only (the control). F0+OI = F0 + the 7 oi_flow columns, taken as-of the bar close from the daily metrics files (point-in-time). Funding columns
+    (F1) are NOT in this arm; macro (F2) and text (F3) are not arms. book_depth is deferred (no builder).
+label_and_horizon:
+  bar: 4h (--bar-hours 4); horizon as the driver sets it for 4h bars
+  entry: as RQ-20261105-fd68-05 (score each closed 4h bar per symbol; enter next bar open when score >= tau; one position per symbol; no hedging)
+  label: as RQ-20261105-fd68-05 (net R >= +0.5 after the profile cost stack; q60 MFE TP head clipped to [1.5R, 4.0R])
+  horizon_bars: driver default for bar_hours 4
+baselines:
+  cost_stack: 'bv profile: commission 4 bps/side, slippage 3 bps/side, swap 5 bps/night prorated (the stricter of Breakout''s and Velotrade''s declared stacks per
+    term).'
+  B0: flat (net R 0).
+  B1: all-bars control and matched random-selection control (2000 draws, seed 20261105) on the identical held-out span.
+  B3: 'ml_entry ETH+SOL ledger (the reference the driver registers): reported beside the candidate, see the baseline clause of the rule.'
+arms:
+  denominator: '10 registered draws: feature set {F0, F0+OI} x tau {0.30, 0.35, 0.40, 0.45, 0.50}. All graded arms are counted and reported.'
+  models: LightGBM, the driver's fixed hyperparameters (no tuning loop).
+split:
+  discovery: 2022-01-01 .. 2024-12-31 (rows before 2022-01-01 never enter discovery training or folds; --discovery-start), purged expanding walk-forward by calendar
+    quarter, a fold scored only once its training set holds >= 5000 rows (at 4h bars on two symbols that is about 14 months, so the first scored fold is in 2023).
+  held_out: '2025-01-01 .. 2025-09-30 (forward, time-disjoint), read ONCE by ONE model fit on every discovery row. Caveat registered now: the span is 9 months, so
+    n may fall below the driver''s floor of 150 and read INDETERMINATE even if an arm were eligible.'
+power:
+  expected_n: 150
+  min_detectable_effect: 0.185
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATED, not measured: the d256-01 floor of n >= 150. Basis for n: the discovery-only dry run produced 268 to 823 discovery trades per arm x tau over
+    about 21 months of folds at 4h (MEASURED, F0 tau 0.50 = 268; tau 0.30 = 823), which scales to roughly 115 to 350 over a 9-month held-out; n < 150 => INDETERMINATE,
+    never FAIL (the driver floor, unchanged).'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261109-98e3-31-OIFLOW-V3
+  registered_at: '2026-11-09'
+  registered_before_run: true
+  statistic: 'The single arm selected on discovery (highest summed walk-forward net R among arms with >= 100 discovery trades, >= 2/3 of folds with trades net-positive,
+    and discovery sum net R > 0) among 2 feature sets x 5 taus = 10 registered draws (F0 price-only control; F0+OI = F0 plus the 7 oi_flow columns oi_chg24, oi_z,
+    ls_top_cnt, ls_top_pos, ls_all, taker_ratio, taker_ratio_ma24, no funding column) x tau {0.30, 0.35, 0.40, 0.45, 0.50}, scored once on the held-out, graded by
+    the driver''s E1-E4 exactly as RQ-20261105-d256-01 (E4 = ml_variant_prop_gate.py V3, the prop survival gate scripts/research/prop_gate.py RULE-P5-GATE-BRK-PER-LEG-V3,
+    on breakout_2 and velotrade_1 (profile bv, pass rule any), both cost arms). 4h bars, forward split: discovery 2022-01-01..2024-12-31 (purged expanding walk-forward
+    from 2022-01-01, a fold scored only once its training set holds >= 5000 rows), held-out 2025-01-01..2025-09-30.'
+  rule: 'INDETERMINATE iff held-out n < 150, the ledger is missing, or a self-check fails. FAIL iff no arm is eligible on discovery, or any of E1-E4 fails. PASS iff
+    E1 (mean >= +0.10 R and block-bootstrap CI lower bound > 0) AND E2 (beats B0, B1 all-bars and the random p95) AND E3 (driver regime clause over the OOS ledger)
+    AND E4 (V3 PASS on both arms for >= 1 account of this profile). The verdict applies to whichever arm discovery selects and the record NAMES it: if the selected
+    arm is the price-only control F0 and it passes, that is a price-only candidate (not an oi_flow finding) and is flagged as such. BASELINE TO BEAT (MEASURED, comms/prop_survival/ml_entry.json
+    and docs/research/ml-entry-prop-gate-2026-11-02/RESULT.md): the deployed ml_entry, ETH+SOL, served ENTRY v1 + extend-only TP on the held-out 2025-10-01..2026-09-30,
+    n=381: edge mean net R +0.0170 (breakout_2 / tradeify_1) and +0.0223 (velotrade_1), 95% CI lower bound about -0.10 R; V3 FAIL on all three firms (EV median -13.55
+    / -83.70 / -26.75 USD for breakout_2 / tradeify_1 / velotrade_1). A candidate beats this baseline only by clearing E1 (mean >= +0.10 R, CI lower bound > 0) and
+    E4 (V3 PASS) where the baseline failed both. No common-window comparison is claimed: the baseline was read on 2025-10..2026-09, this unit on 2025-01..2025-09
+    (a different span). A PASS is NOT a roster add: it authorises ONE forward-window unit for the frozen arm (bars after 2026-10-01) and a manager proposal of a minimum-size
+    baseline variant; it adds no gate. Thresholds are not changed after any result.'
+  what_it_does_not_do: 'Promotes nothing, edits no config or roster, places no order; the held-out is read at most once and only if an arm is eligible on discovery.
+    DISCLOSURE (the discovery stage was run locally before this registration): a discovery-only dry run (--no-heldout, the identical command, held-out never loaded)
+    was run to check the pipeline and the new arm. Its first attempt crashed on a bug in my driver edit (the price-only arm F0, an empty feature list, was treated
+    as missing; fixed and covered by a self-test). The second attempt read: 12 folds, 7 with trades; NO arm x tau eligible (all 10 draws have negative summed net
+    R, -14.9 to -87.8, with 1 to 3 of 7 folds positive; F0+OI was worse than F0 at 4 of 5 taus). I did NOT change bars, taus, arms or split after seeing it (that
+    would be a garden of forking paths); this unit re-runs the same pipeline on a runner so the record is committed, and its discovery stage is expected to reproduce
+    that FAIL with the held-out unread. The 2025-01..2025-09 span was inside the TRAINING span of the served ml_entry v1 (train_end 2025-09-22) and in discovery for
+    no prop-specific model; it was never a held-out for this family. The spans 2020-07-01..2021-12-21 (reserved for the funding/basis test) and 2025-10-01..2026-09-30
+    (spent) are not touched.'
+ml_consumer:
+  not_applicable: No consumer leg exists yet; it would reach breakout_2 and velotrade_1 only by a held Tier-3 roster PR after a PASS plus the forward check.
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.1
+  basis: 'stand-in, not a P&L measurement: three live prop accounts; the family has shown no edge on any read; the operator wants a prop ML entry that beats the ml_entry
+    baseline.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 45
+  why_runner: Run in the lane container (data.binance.vision reachable; lightgbm + scikit-learn installed); the same command runs on research-script-run.yml if re-dispatched.
+  basis: 'MEASURED on the local discovery-only dry run: the 4h table and 12 folds for two arms ran in a few minutes once the data were cached; est_minutes covers
+    a cold runner fetch.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/prop_ml_leg.py
+  - run
+  - --profile
+  - bv
+  - --bar-hours
+  - '4'
+  - --taus
+  - 0.30,0.35,0.40,0.45,0.50
+  - --arms
+  - F0,F0+OI
+  - --require-positive-sum
+  - --heldout-span
+  - 2025-01-01:2025-09-30
+  - --discovery-start
+  - '2022-01-01'
+  - --cache
+  - /tmp/prop_ml_cache
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261109-98e3-31
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261105-d256-01
+- RQ-20261108-98e3-28
+- RQ-20261109-98e3-30
+- ML-PROP-ITERATE
+- comms/prop_survival/ml_entry.json
+iteration:
+  subject: bv_shared_ml_leg
+  subject_kind: ml_model
+  from_result: RQ-20261105-d256-01
+  verdict_read: fail
+  attempt: 5
+  due_by: '2026-11-11'
+  diagnosis: 'd256-01 (8h, price-only F0): FAIL on discovery, no arm x tau eligible, held-out unread. The census 98e3-28 then showed oi_flow is usable from 2021-12
+    but cannot cover the backward span. The remaining lever is the feature family on a forward, time-disjoint span.'
+  search: 'Lever family: feature family (add oi_flow as arm F0+OI) and bar size (8h to 4h so discovery folds exist inside 2022-2024); held-out forward 2025-01..2025-09;
+    everything else as d256-01.'
+  levers:
+  - feature_family_oi_flow
+  - bar_hours_4h
+  - heldout_span_forward_2025
+  map_entries: []
