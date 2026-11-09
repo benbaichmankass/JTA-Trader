@@ -1454,6 +1454,57 @@ mandates:
       change cannot be undone; a moved bracket can be moved back by the
       operator's amend-position-sl system-action.
 
+  - id: MD-LTR-XRP-PC-20261109
+    kind: ltr_auto_apply
+    grants: the live reviewer's partial_close (size_fraction 0.5) on order package pkg-633f05fad1ee4c1d (trend_donchian_xrp_4h XRPUSDT short) is applied by the VM on every account carrying the package
+    direction: de-risk
+    direction_note: >-
+      A partial close only reduces exposure; the remaining half keeps its venue
+      SL 1.1411 / TP 1.0271. Not a ladder mandate.
+    proposed_by: manager session_01AFoLuJ3yguifJsDomuAzGx (Manager Session 2026-11-07a), on the operator's ask
+    proposed_at: '2026-11-09'
+    granted_by: operator (Ben)
+    granted_at: '2026-11-09'
+    source: >-
+      Review LR-20261109T0828Z-pkg-633f05fad1ee4c1d (live-review/rows 06d109b751fc):
+      partial_close 0.5, judgement, confidence 0.55, route recommended, after a
+      0.53R giveback from a 1.09R peak. OPERATOR 2026-11-09 ~08:45Z chat, then
+      popup answer verbatim "Yes, close half" to the question "Do you want me to
+      apply the reviewer's recommendation: close HALF of the XRP short on bybit_2
+      (real money) and its bybit_portfolio mirror ... keeping the stop-loss at
+      1.1411 and take-profit at 1.0271 on the rest?".
+    parent: MD-TRADE-DESK
+    package_scope:
+      order_package_id: pkg-633f05fad1ee4c1d
+      accounts: [bybit_2, bybit_portfolio]
+      actions: [partial_close]
+    mechanism: >-
+      Manager dispatches the live-review-apply system-action for review_id
+      LR-20261109T0828Z-pkg-633f05fad1ee4c1d at the pinned rows commit; the
+      dispatcher hands the row to live_review_apply.py --mandate
+      MD-LTR-XRP-PC-20261109, each account through its own RiskManager.
+    review_cadence_minutes: 0   # single-use grant: no extra review wakes
+    expires_on_event: order_package_closed
+    on_expiry: >-
+      Single-use: once the partial close is applied (idempotent per review_id)
+      or the package closes, the closing session records expired_at here. Never
+      extended to another package or action by a session.
+    fires_when:
+      - the committed row LR-20261109T0828Z-pkg-633f05fad1ee4c1d (action partial_close, size_fraction 0.5, route recommended)
+      - MD-TRADE-DESK's package-level clauses hold (mechanics match, a reason, a judgement confidence)
+      - config/live_trade_review.yaml apply_mode == apply for the account, and the account's own approve_action returns approve or clip
+      - every bound below holds
+    bounds:
+      - both_brackets -- both brackets exist at the venue after the reduce; either unread is apply_failed
+      - idempotent_per_review_id -- the row applies at most once
+      - venue_readback -- every leg is read back from the venue; a mismatch is apply_failed
+      - one_ping_per_action -- ONE Telegram trade-update per action
+    never: [act on any other package, act on any other action, act on a read that could not look, act on a mechanics mismatch, remove or null a stop-loss or a take-profit, bypass an account's own risk manager, write mode or execution]
+    notify: ONE trade-update ping per applied action; ONE ping per refuse / apply_failed on a real-money account
+    revert: >-
+      Delete this entry (or set expired_at). An applied partial close cannot be
+      undone.
+
   # ── PER-ACCOUNT AUTO-APPLY (kind: ltr_auto_apply, account_scope; operator 2026-11-01) ──
   #
   # The same exception as MD-LTR-ADA-AUTO, scoped to ACCOUNTS instead of one package:
