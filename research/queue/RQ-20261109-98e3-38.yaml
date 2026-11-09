@@ -1,7 +1,7 @@
 id: RQ-20261109-98e3-38
 title: 'P5-MLPROP-BOOK-TRADEIFY_ES: does the order-book depth family (Binance bookDepth, builder unit RQ-20261109-98e3-36 PASS) lift a prop-specific ETH+SOL ML entry over price-only on a time-disjoint 2023
   held-out, and does it clear V3 on tradeify_1?'
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 1
@@ -161,3 +161,16 @@ iteration:
   - heldout_span_inside_2023
   map_entries: []
 last_dispatched_at: '2026-11-09T13:46:52+00:00'
+grading:
+  attested: RULE-RQ-20261109-98e3-38-BOOK-V3
+  auto: true
+  decision_rule_id: RULE-RQ-20261109-98e3-38-BOOK-V3
+  evidence:
+  - research/results/RQ-20261109-98e3-38/42628647532.jsonl
+  graded_at: '2026-11-09'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
