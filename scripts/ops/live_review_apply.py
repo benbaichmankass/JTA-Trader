@@ -802,6 +802,16 @@ def _exec_bybit_action(db, leg: Dict[str, Any], pkg: Dict[str, Any], v: lri.Amen
         qty = _f(v.qty)
         if qty is None:
             return {"result": X_REFUSED, "detail": "no size to reduce"}
+        # A fractional reduce lands between the venue's lot steps: 0.5 x 32478.5 XRP sent "16239.25" to
+        # bybit_portfolio on 2026-11-09 and Bybit refused it ("Qty invalid", ErrCode 10001) while bybit_2's
+        # 53.8 went through. Floor it to the step through the one lot-rule seam: closing a hair less than
+        # the fraction is the safe side of the intent, and the remainder stays on this leg's journal row.
+        from src.units.accounts.qty_legalize import legalize_qty
+
+        lq = legalize_qty(qty, account_cfg=cfg, symbol=sym, client=client)
+        if not lq.ok:
+            return {"result": X_REFUSED, "detail": f"reduce qty {qty:g} is not legal at the venue: {lq.reason}"}
+        qty = lq.qty
         sent = om._send_partial_close_to_exchange(t, qty)
     if not (sent or {}).get("ok"):
         return {"result": X_REFUSED, "detail": f"venue refused: {(sent or {}).get('error')}", "send": sent}
