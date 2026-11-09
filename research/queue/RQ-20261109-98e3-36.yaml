@@ -67,3 +67,16 @@ population: 'Binance USD-M perp bookDepth daily archive, ETHUSDT and SOLUSDT, 20
 why_not_inferential: 'A data build and audit: it counts files, snapshots and bar closes and applies fixed thresholds. It estimates no effect from a sample, so an expected n and an MDE would be theatre.'
 rearmed_at: '2026-11-09T12:09:00+00:00'
 last_dispatched_at: '2026-11-09T12:31:19+00:00'   # re-armed again: run 42603821287 died on a py3.11 SyntaxError (#24493) and run 42610949526, whose script verdict was PASS, was graded producer_failed for a malformed verdict.json (#24506); rule, thresholds and command unchanged
+grading:
+  attested: RULE-RQ20261109-98e3-36-BOOKDEPTH-PIT
+  auto: true
+  decision_rule_id: RULE-RQ20261109-98e3-36-BOOKDEPTH-PIT
+  evidence:
+  - research/results/RQ-20261109-98e3-36/42603821287.jsonl
+  - research/results/RQ-20261109-98e3-36/42610949526.jsonl
+  graded_at: '2026-11-09'
+  grader: scripts/research/queue_grade.py
+  needs_review: true
+  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  rows: 2
+  verdict: null
