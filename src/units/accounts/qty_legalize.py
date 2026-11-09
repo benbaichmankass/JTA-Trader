@@ -10,9 +10,12 @@ whole-unit refusals in ``risk.py`` — can be migrated onto ONE implementation
 (BL-20260611-005 / BL-20260619-ETHMIN / BL-20260622-ALPACA-FRACTIONAL /
 PR #5700) cannot resurface at a site someone forgot to update.
 
-Scope = **concern C, venue legalization only**: step-align (floor, never up —
-realised risk must not exceed the sized cap) and enforce the exchange minimum
-lot, else refuse. It does NOT do risk sizing (concern A, ``RiskManager``) and
+Scope = **concern C, venue legalization only**: step-align (floor) and enforce
+the exchange minimum lot. 2026-11-09 (operator, Tier 3 — "size up - that's what
+trading at minimum size means"): with ``size_up=True`` a qty below ``minOrderQty``
+or the minimum order VALUE is RAISED to the smallest step-aligned qty meeting
+both, instead of refused (this REVERSES the earlier "never round up" rule; the
+venue max still wins -> refuse). Default ``size_up=False`` keeps old behaviour. It does NOT do risk sizing (concern A, ``RiskManager``) and
 does NOT compute the reconciliation delta (concern B, ``intents``). The
 account-level ``risk.min_qty`` is a RISK floor, not a venue rule, so it is NOT
 folded in here — the caller keeps its own risk floor until Phase 3 unifies them.
@@ -120,6 +123,13 @@ class LegalizedQty:
     # so a caller that submits a string (the Bybit pre-flight) sends byte-for-
     # byte what it sent pre-seam. Equal to ``str(float(qty))`` on passthrough.
     qty_str: str = ""
+    # SIZE-UP report (operator 2026-11-09, Tier 3: "size up - that's what trading
+    # at minimum size means"). ``resized_from`` is the step-floored qty BEFORE the
+    # bump (None when no bump happened); ``resize_binding`` names the minimum that
+    # forced it: ``min_qty`` (minOrderQty) or ``min_notional`` (min order value).
+    resized_from: Optional[float] = None
+    resize_binding: str = ""
+    min_notional: Optional[float] = None
 
 
 # --- profile cache (instruments.yaml rarely changes at runtime; a restart
@@ -289,8 +299,21 @@ def legalize_qty(
     profiles: Optional[Dict[str, Any]] = None,
     instruments_path: Optional[str] = None,
     prefer_live: bool = False,
+    price: Optional[float] = None,
+    size_up: bool = False,
 ) -> LegalizedQty:
     """Turn *qty* into an exchange-legal quantity for *symbol* on this account.
+
+    ``size_up=True`` (ENTRY orders only; never a reduce-only close, and not the
+    pairs hedge legs) REVERSES the old "never round up, refuse below min" rule
+    (operator 2026-11-09, Tier 3): when the step-floored qty is below a venue
+    minimum — ``minOrderQty`` or, given ``price``, the minimum order VALUE —
+    the qty is raised to the smallest step-aligned qty meeting EVERY minimum
+    instead of refused. The venue ceiling still wins: if the published max floors
+    below that bumped minimum the result is refused as before
+    (``venue_max_below_min_qty``). The bump is reported on the result
+    (``resized_from`` / ``resize_binding``). Default ``False`` leaves every
+    existing caller byte-for-byte unchanged.
 
     Floors *qty* DOWN to the venue's ``qty_step`` and refuses (``ok=False``,
     ``reason="below_venue_min_qty"``) when the floored value is below the
@@ -341,6 +364,54 @@ def legalize_qty(
     min_d = Decimal(str(venue_min))
     aligned = float(aligned_d)
     aligned_str = str(aligned_d)  # step-precise wire string (keeps trailing zeros)
+    resized_from: Optional[float] = None
+    resize_binding = ""
+    notional_min: Optional[float] = None
+    if size_up:
+        needed_d = min_d
+        binding = "min_qty"
+        try:
+            px = float(price) if price is not None else 0.0
+        except (TypeError, ValueError):
+            px = 0.0
+        if px > 0:
+            notional_min = venue_min_notional(
+                account_cfg=account_cfg, symbol=symbol, client=client,
+            )
+            if notional_min is not None and notional_min > 0:
+                import math
+                steps = math.ceil(
+                    (Decimal(str(notional_min)) / Decimal(str(px))) / step_d)
+                n_d = (Decimal(steps) * step_d).quantize(step_d)
+                if n_d > needed_d:
+                    needed_d, binding = n_d, "min_notional"
+        if aligned_d < needed_d:
+            # The ceiling still wins: max < the bumped minimum -> refuse.
+            if venue_max_state == MAX_STATE_PUBLISHED and venue_max is not None:
+                try:
+                    from src.units.accounts.precision import quantize_qty
+                    cap_d = Decimal(str(quantize_qty(float(venue_max), step_d)))
+                except Exception:  # noqa: BLE001
+                    cap_d = Decimal(str(venue_max))
+                if cap_d < needed_d:
+                    return LegalizedQty(
+                        qty=float(cap_d), ok=False,
+                        reason="venue_max_below_min_qty",
+                        venue_min=venue_min, step=step, source=source,
+                        qty_str=str(cap_d), venue_max=venue_max,
+                        venue_max_state=venue_max_state,
+                        min_notional=notional_min,
+                    )
+            logger.warning(
+                "qty_legalize: %s qty %s is below the venue minimum (%s) — "
+                "SIZING UP to %s (step=%s, source=%s)",
+                symbol, aligned_str, binding, needed_d, step, source,
+            )
+            resized_from = aligned
+            resize_binding = binding
+            aligned_d = needed_d
+            aligned = float(aligned_d)
+            aligned_str = str(aligned_d)
     if aligned_d <= 0 or aligned_d < min_d:
         return LegalizedQty(
             qty=aligned, ok=False, reason="below_venue_min_qty",
@@ -417,6 +488,8 @@ def legalize_qty(
         qty=aligned, ok=True, reason="",
         venue_min=venue_min, step=step, source=source, qty_str=aligned_str,
         venue_max=venue_max, clamped=clamped, venue_max_state=venue_max_state,
+        resized_from=resized_from, resize_binding=resize_binding,
+        min_notional=notional_min,
     )
 
 
