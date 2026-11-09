@@ -918,6 +918,13 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
     ["deny_close_position", "deny_glyph", "deny_glyph", 0], "denylist: safeClick refuses all three, nothing clicked");
   const dn = await onHost(`<!doctype html><html><body><button id=a aria-label="Cancel order"><svg></svg></button><button id=b title="Close"></button><button id=c><svg><title>remove</title></svg></button><button id=d class="btn-close-icon"></button><button id=e>Confirm</button><button id=f aria-label="Edit">✎</button></body></html>`);
   eq(await dn.evaluate("['#a','#b','#c','#d','#e','#f'].map(function(s){return __ex.deniedSel(s)})"), ["deny_word", "deny_word", "deny_word", "deny_word", "", ""], "denylist: cancel/close/remove words in aria, title, svg title and class are refused; Confirm and Edit are not");
+  // INTENT-BOUND (operator 2026-11-09, no forbidden actions): the same controls are clicked when the caller DECLARES the
+  // matching action; a mismatched intent still does not click (precision), and no intent still does not click
+  eq(await ev("__ex.deniedSel('#pd > button', 'close_position')"), "", "intent close_position: 'Close position' is the target");
+  eq(await ev("__ex.deniedSel('#slrow [data-danger]', 'cancel_order')"), "", "intent cancel_order: the SL row's ⓧ is the target");
+  eq(await ev("__ex.deniedSel('#pd > button', 'cancel_order')"), "deny_close_position", "intent cancel_order: 'Close position' is not a cancel control");
+  eq(await dn.evaluate("__ex.deniedSel('#a', 'cancel_order')"), "", "intent cancel_order: 'Cancel order' word control is the target");
+  eq(await dn.evaluate("__ex.deniedSel('#a', 'close_position')"), "deny_word", "intent close_position: 'Cancel order' is not a close control");
   // 1. the CHILD row opens the sheet (never the ✕); the sheet's title is the symbol
   eq(await ev("__ex.sheetInfo('ETHUSD').open"), false, "sheet: closed at start");
   eq(await ev("__ex.sheetOpen('ETHUSD','child')"), "clicked", "sheet: the child row 'ETH 5x' tapped");

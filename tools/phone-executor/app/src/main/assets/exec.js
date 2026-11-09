@@ -237,6 +237,8 @@
   // UNMEASURED on Breakout's terminal: no capture has shown the Positions row's edit control or its dialog. So every
   // helper finds things by text/label/role only, demands exactly ONE match, and returns a dump (our own UI labels,
   // digits masked) when it cannot; the app refuses before any click it cannot verify. Never a close control.
+  // NOT_EDIT is control SELECTION for an amend (an edit control is not a close/cancel control), not a prohibition:
+  // close / cancel / reduce are their own declared intents (see INTENT-BOUND CLICKS, operator 2026-11-09).
   var NOT_EDIT = /close|flatten|reverse|cancel|remove|delete|partial/i;
   // BREAKOUT-POS-UNPARSED (2026-10-14): the live Positions view is a DIV GRID (no tr / [role=row]), so posRows found
   // nothing and every trail amend reported no_position while the ETH short was open. With no table row, the ONE
@@ -693,8 +695,8 @@
 
 
   // ---- ENTRY-ORDER CANCEL (PHONE-ENTRY-CANCEL, operator 2026-11-09): withdraw ONE stale resting ENTRY order the server
-  // issued. DENY_WORDS / NOT_EDIT below still forbid every other cancel/close: nothing in this block can be reached by
-  // them, and nothing here can click anything but a cancel control inside the ONE Open-orders row that matches the
+  // issued. Other closes / cancels are their own declared intents (INTENT-BOUND CLICKS below, operator 2026-11-09); this
+  // block clicks nothing but a cancel control inside the ONE Open-orders row that matches the
   // request's facts (venue symbol + side + quantity + limit price). UNMEASURED on Breakout: no capture has shown the
   // Open orders panel, its row, its cancel control or a confirmation, so every read demands exactly one match and
   // answers a short digit-masked reason otherwise; the app then does NOTHING (ambiguous) and captures the panel.
@@ -744,10 +746,16 @@
   // Position details: Side "Short", "Total open volume" 0.54 ETH, "Avg. opening price", "Current price", "uPnL", and a
   // RED "Close position" button. [1 TP / 1 SL]: SIDE | TYPE | TRIGGER PRICE rows ("Long | Stop l… | 2,504.25 USD | ✎ |
   // ⓧ"): that SIDE is the CLOSING order's side, never the position's. ✎ opens "Edit Stop loss"; ⓧ CANCELS the order.
-  // DENYLIST: every click goes through safeClick, which refuses "Close position", any control whose words say
-  // close / cancel / remove / delete / flatten / reverse, and the ⓧ ✕ × glyph icons (a Positions row's ✕ closes the
-  // position; an order row's ⓧ cancels the stop). The two dismissals (the modal's "Cancel" text button, the sheet's
-  // header ✕) are separate, narrower paths: dlgDismiss / sheetCloseX.
+  // INTENT-BOUND CLICKS (operator 2026-11-09 ~08:22Z, verbatim: "I never directed there to be a forbidden actions
+  // list, nor do I want one - the system must be able to take whatever actions necessary to ensure smooth autonomous
+  // operation"). This replaces the former deny-list (NOT_EDIT #16980 2026-10-08, DENY_WORDS/DENY_GLYPH #18114
+  // 2026-10-15, both session-authored, never operator-directed). Every click still goes through safeClick/safeTap, but
+  // a destructive control (close / cancel / remove / delete / flatten / reverse, "Close position", the ⓧ ✕ × glyphs)
+  // is now clicked whenever the caller DECLARES that action as its intent (cancel_order, close_position, reduce) and
+  // the control matches that intent. Without an intent (a place or amend flow) such a control is not the target, so it
+  // is reported as a mismatch rather than clicked: that is precision (click what the action means), not a prohibition.
+  // The two dismissals (the modal's "Cancel" text button, the sheet's header ✕) stay separate paths: dlgDismiss /
+  // sheetCloseX.
   var DENY_WORDS = /close|cancel|remove|delete|flatten|reverse|liquidat|discard/i;
   var DENY_GLYPH = /^[✕✖✗✘×ⓧ⊗⊘❌❎⨯☒xX]$/;
   var PENCIL_GLYPH = /^[✎✏✐\u{1f589}\u{1f58a}\u{1f58b}]$/u;
@@ -763,18 +771,25 @@
   }
   // why a control must never be clicked, or null. Words are matched in text AND attributes (class names included), so
   // a false refusal ("closeable") is possible and safe; a missed ✕ is not.
-  function denied(x) {
+  // does a destructive control match the action the caller declared? (operator 2026-11-09: no forbidden actions)
+  var INTENT_OK = {
+    cancel_order: function (w, txt) { return !/close\s*position/i.test(txt) && !/\bposition\b|flatten|reverse|liquidat/i.test(w); },
+    close_position: function (w, txt) { return !/cancel\s*order|reverse/i.test(w + " " + txt); },
+    reduce: function (w, txt) { return !/cancel\s*order|reverse/i.test(w + " " + txt); }
+  };
+  function denied(x, intent) {
     if (!x || !x.getAttribute) return "none";
-    var txt = t(x);
-    if (/close\s*position/i.test(txt)) return "deny_close_position";
-    if (DENY_GLYPH.test(txt) || DENY_GLYPH.test((x.getAttribute("aria-label") || "").trim())) return "deny_glyph";
-    if (DENY_WORDS.test(ctlWords(x))) return "deny_word";
-    return null;
+    var txt = t(x), hit = null;
+    if (/close\s*position/i.test(txt)) hit = "deny_close_position";
+    else if (DENY_GLYPH.test(txt) || DENY_GLYPH.test((x.getAttribute("aria-label") || "").trim())) hit = "deny_glyph";
+    else if (DENY_WORDS.test(ctlWords(x))) hit = "deny_word";
+    if (hit && intent && INTENT_OK[intent] && INTENT_OK[intent](ctlWords(x), txt)) return null;   // the declared action
+    return hit;
   }
-  function safeClick(x) { var d = denied(x); if (d) return d; x.click(); return "clicked"; }
+  function safeClick(x, intent) { var d = denied(x, intent); if (d) return d; x.click(); return "clicked"; }
   // a touch-style tap at the element's centre: pointer + mouse down/up, then click (BREAKOUT-SHEET-PROBE)
-  function safeTap(x) {
-    var d = denied(x); if (d) return d;
+  function safeTap(x, intent) {
+    var d = denied(x, intent); if (d) return d;
     var r = x.getBoundingClientRect(), o = {bubbles: true, cancelable: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, button: 0};
     var P = typeof PointerEvent === "function" ? PointerEvent : MouseEvent;
     x.dispatchEvent(new P("pointerdown", Object.assign({pointerType: "touch", isPrimary: true, pointerId: 1}, o)));
@@ -2238,8 +2253,8 @@
       c[0].click(); return "clicked";
     },
     // the denylist, exposed for the test: why `sel`'s ONE element must never be clicked, or "" when it may be
-    deniedSel: function (sel) { var e = document.querySelectorAll(sel); return e.length === 1 ? (denied(e[0]) || "") : "n" + e.length; },
-    safeClickSel: function (sel) { var e = document.querySelectorAll(sel); return e.length === 1 ? safeClick(e[0]) : "n" + e.length; },
+    deniedSel: function (sel, intent) { var e = document.querySelectorAll(sel); return e.length === 1 ? (denied(e[0], intent) || "") : "n" + e.length; },
+    safeClickSel: function (sel, intent) { var e = document.querySelectorAll(sel); return e.length === 1 ? safeClick(e[0], intent) : "n" + e.length; },
     // TEST-TRADE CLOSE (MD-EXEC-DEV-TEST-TRADES, operator grant 2026-10-18): the ONE deliberate exception to the denylist.
     // The app arms it for exactly one symbol right before the click (allowClose); sheetClosePosition then clicks the
     // open sheet's ONE "Close position" text button only if that sheet is titled with the armed symbol. The arm is
