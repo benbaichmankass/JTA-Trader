@@ -1,6 +1,6 @@
 # Alpaca wedged OCO — the self-healing close ladder
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-11-06` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-11-09` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
 
 **Gates this adds or changes:** none. This documents an automatic escalation inside the existing close path
 (`AlpacaClient.close`); nothing new can block a close.
@@ -60,6 +60,14 @@ pass had removed the stop (`c928eda6`) while the take-profit `2e843e04` still he
 gate sees the position still open **and** a current resting closing-side order holds the whole position, that is
 the same wedge: rung 2 runs at once, then rung 3, all in the same call (`AlpacaClient._escalate_not_flat`).
 Accepted-but-not-flat with nothing holding the shares is an ordinary retry.
+
+**A third way in: rung 2 "repriced" but the broker never acted** (live 2026-11-09 15:06Z, GLD, ALPACA-CLOSE-REPRICE-NO-RESET).
+After the flatten was refused, rung 2 reported the take-profit repriced (`result.scope = oco_target_reprice`). Alpaca
+accepted the PATCH and ignored it: the take-profit still read 461.27 and the position stayed open. The flat-confirm gate
+used to skip the escalation for that scope, so rung 3 never ran. Now `AlpacaClient._escalate_after_ineffective_reprice`
+runs when the gate sees the position still open after an `oco_target_reprice`: on **paper** it goes on to rung 3a (the
+close-all and the `account_reset` journal sweep); on **live** it raises the one red flag (`close_ladder_exhausted_live`,
+reason `reprice_not_flat`) and never closes all. Operator, 2026-11-09 ~15:12Z, popup answer "Small Tier-2 code fix now".
 
 **A cancelled stop is never the end state.** On paper the ladder ends flat (rung 2 or the rung 3 reset). On live,
 or if a paper reset fails, the failure message says `POSITION HAS NO STOP`, and the live red flag is raised as
