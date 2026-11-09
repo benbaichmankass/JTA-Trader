@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Manager Session 2026-11-09a relaying the operator popup ~15:12Z, verbatim answer 'Small Tier-2 code fix now': one short lane makes a gate change in AlpacaClient.close so that on PAPER a repriced-but-not-flat take-profit goes on to the account reset. It changes the order path (alpaca_live too, red flag only), so the manager merges and deploys.",
+  "why": "Live 2026-11-09 15:06Z, alpaca_paper GLD 39 (trade 5209): rung 2 repriced the take-profit, Alpaca accepted the PATCH and ignored it, the position stayed open, and the flat-confirm gate skipped escalation for scope oco_target_reprice so rung 3 never ran. Now paper resets via close-all + account_reset sweep; live raises one red flag and never closes all."
+}

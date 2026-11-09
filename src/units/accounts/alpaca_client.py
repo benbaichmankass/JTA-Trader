@@ -1667,6 +1667,29 @@ class AlpacaClient:
                                          f"{tried}; close-all is NOT automated on real money"
                                          f"{'; POSITION HAS NO STOP' if stopless else ''}]")}
 
+    def _escalate_after_ineffective_reprice(self, sym: str, confirm_s: float, env: Dict[str, Any]) -> Dict[str, Any]:
+        """Rung 2 said ``repriced`` yet the flat-confirm gate still sees the position open: the replace was accepted
+        and ignored (ALPACA-CLOSE-REPRICE-NO-RESET, GLD 2026-11-09). PAPER: rung 3, the documented close-all + the
+        caller's ``account_reset`` journal sweep. LIVE: close-all is never automated; one red flag, the failure stands.
+        Returns a success envelope (``retCode 0``, ``scope account_reset``) or ``{"retCode": 1, "marker": ...}``."""
+        rid = (env.get("result") or {}).get("id")
+        tried = f"oco target exit repriced ({rid}) but the position is still open"
+        if self.env == "paper":
+            reset = self._account_reset_close_all(sym)
+            if reset.get("state") == "reset":
+                flat, _ = self._await_flat(sym, confirm_s)
+                if flat:
+                    logger.warning("alpaca close %s: OCO reprice %s did not flatten; PAPER account reset closed %s",
+                                   sym, rid, reset.get("closed_symbols"))
+                    return {"retCode": 0, "result": {"id": "account_reset", "scope": "account_reset",
+                                                     "closed_symbols": reset.get("closed_symbols") or []}}
+            return {"retCode": 1, "marker": (f" [{tried}; account reset {reset.get('state')}: "
+                                             f"{reset.get('detail') or 'not flat'}]")}
+        _flag_live_ladder_exhausted(sym, "reprice_not_flat", self._open_orders_for_symbol(sym),
+                                    {"state": "repriced", "detail": "accepted but the position is still open"})
+        return {"retCode": 1, "marker": (f" [close ladder exhausted on a LIVE account: {tried}; "
+                                         "close-all is NOT automated on real money]")}
+
     def _account_reset_close_all(self, sym: str) -> Dict[str, Any]:
         """RUNG 3, PAPER ONLY: Alpaca's documented account-wide liquidation, ``DELETE /v2/positions?cancel_orders=true``
         ("If true is specified, cancel all open orders before liquidating all positions",
@@ -2126,9 +2149,16 @@ class AlpacaClient:
                 # (c928eda6) and the take-profit 2e843e04 still held every share. Classified retry-later, the
                 # ladder never ran and the position was left with NO stop. When a current resting closing-side
                 # order holds the whole position, escalate in THIS call (rung 2, then rung 3); otherwise retry.
-                esc = (self._escalate_not_flat(sym, confirm_s)
-                       if (env.get("result") or {}).get("scope") not in ("oco_target_reprice", "account_reset")
-                       else None)
+                _scope = (env.get("result") or {}).get("scope")
+                if _scope == "oco_target_reprice":
+                    # Rung 2 reported "repriced" but the broker never acted on it (live 2026-11-09 15:06Z, GLD: the
+                    # PATCH was accepted, the take-profit still read 461.27, the position stayed open). Go on to
+                    # rung 3 (paper) or the one red flag (live); never silently retry a wedge.
+                    esc = self._escalate_after_ineffective_reprice(sym, confirm_s, env)
+                elif _scope == "account_reset":
+                    esc = None
+                else:
+                    esc = self._escalate_not_flat(sym, confirm_s)
                 if esc is not None and esc.get("retCode") == 0:
                     env = esc
                 else:

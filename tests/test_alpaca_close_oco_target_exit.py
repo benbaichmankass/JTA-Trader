@@ -342,8 +342,9 @@ def test_close_open_position_runs_the_journal_sweep_on_an_account_reset(monkeypa
 class _NotFlatBroker:
     """GLD as it stood at 20:13Z: stop gone, TP `new` @461.27 holding everything, the flatten DELETE accepted."""
 
-    def __init__(self, *, reprice_ok=True, side="sell", holder_qty="39"):
+    def __init__(self, *, reprice_ok=True, side="sell", holder_qty="39", ineffective=False):
         self.side, self.reprice_ok, self.holder_qty = side, reprice_ok, holder_qty
+        self.ineffective = ineffective                     # PATCH accepted (2xx), broker never acts (GLD 2026-11-09)
         self.tp = 461.27
         self.flat = False
         self.patches: List[Dict[str, Any]] = []
@@ -386,6 +387,8 @@ def _not_flat_client(monkeypatch, b: _NotFlatBroker, *, env="paper", px=372.40):
             b.patches.append({"path": path, **(json_body or {})})
             if not b.reprice_ok:
                 return {"retCode": 422, "retMsg": "order is not replaceable"}
+            if b.ineffective:
+                return {"retCode": 0, "result": {"id": "2e843e04-r"}}
             b.tp = float(json_body["limit_price"])
             b.flat = b.tp <= px
             return {"retCode": 0, "result": {"id": "2e843e04-r"}}
@@ -438,3 +441,42 @@ def test_a_cancelled_stop_never_counts_as_the_holder(monkeypatch):
     cli, _ = _not_flat_client(monkeypatch, _NotFlatBroker())
     tp, stop, why = cli._select_oco_pair(_NotFlatBroker().residual(), "sell", 39.0)
     assert why is None and tp["id"] == "2e843e04" and stop is None
+
+
+def _ineffective_reprice_client(monkeypatch, env):
+    """GLD 2026-11-09: the flatten is refused (insufficient qty), rung 2 reprices the take-profit, Alpaca accepts the
+    PATCH and never acts: the position stays open. Only the close-all (paper) can clear it."""
+    b = Broker(**GLD_NOW)
+    cli = _client(monkeypatch, b)
+    cli.env = env
+    calls = {"close_all": 0, "flags": [], "flat": False}
+    inner = cli._request
+
+    def req(method, path, json_body=None):
+        if method == "DELETE" and path == "/v2/positions?cancel_orders=true":
+            calls["close_all"] += 1
+            calls["flat"] = True
+            return {"retCode": 207, "result": [{"symbol": "GLD", "status": 200}]}
+        return inner(method, path, json_body)
+
+    monkeypatch.setattr(cli, "_request", req)
+    monkeypatch.setattr(cli, "positions", lambda: [] if calls["flat"] else [{"symbol": "GLD", "qty": "39"}])
+    monkeypatch.setattr("src.runtime.api_reporting.report_api_failure", lambda **kw: calls["flags"].append(kw))
+    return cli, b, calls
+
+
+def test_reprice_accepted_but_ineffective_resets_a_paper_account(monkeypatch):
+    cli, b, calls = _ineffective_reprice_client(monkeypatch, "paper")
+    out = cli.close("GLD")
+    assert len(b.patches) == 1 and calls["close_all"] == 1 and calls["flags"] == []
+    assert out["retCode"] == 0 and out["result"]["scope"] == "account_reset"
+    assert out["result"]["closed_symbols"] == ["GLD"]
+
+
+def test_reprice_accepted_but_ineffective_on_live_never_closes_all_and_flags_once(monkeypatch):
+    cli, _b, calls = _ineffective_reprice_client(monkeypatch, "live")
+    out = cli.close("GLD")
+    assert calls["close_all"] == 0 and out["retCode"] == 1
+    assert "close ladder exhausted on a LIVE account" in out["retMsg"]
+    (flag,) = calls["flags"]
+    assert flag["op"] == "close_ladder_exhausted_live" and "reprice_not_flat" in flag["error"]
