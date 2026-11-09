@@ -71,7 +71,9 @@ def test_live_config_declares_no_profile_for_the_bybit_symbols():
         assert p["declared"] is False and p["conflict"] is None, (s, p)
         assert (p["reference_venue"], p["reference_universe"], p["anchor"], p["session"], p["cost_basis"],
                 p["side_filter"]) == ("bybit", None, None, None, None, "both")
-        assert set(p["accounts"]) == {"bybit_2", "bybit_portfolio"}
+        # 2026-11-08 ML-ENTRY-PROP-BASELINE: the prop books run the ETH+SOL slice (same defaults, same implementation).
+        prop = {"tradeify_1", "velotrade_1"} if s in ("ETHUSDT", "SOLUSDT") else set()
+        assert set(p["accounts"]) == {"bybit_2", "bybit_portfolio"} | prop
 
 
 @pytest.mark.parametrize("pl,ps", [(0.3, 0.1), (0.1, 0.3), (0.05, 0.02), (0.2, 0.2)])

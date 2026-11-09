@@ -1064,6 +1064,9 @@ def grade_v2(results: Dict[str, Any]) -> Tuple[str, str]:
 # eth_prop pulled from breakout_2 2026-11-05 (Tier-3, operator, row PROP-PULL-ETHPROP; RQ-20261031-422a-01 FAIL):
 # 2026-11-05 ~21:05Z (Tier-3, operator "Baseline at min size (Rec.)"): the min-size BASELINE book, eth_4h + sol_4h.
 BOOKS = {"breakout_2": ("trend_donchian_eth_4h", "trend_donchian_sol_4h")}
+# Roster legs this tool does NOT simulate (no <leg>__bt.json / __trades.jsonl pair behind the evidence record's cost_stack.source). 2026-11-08
+# ML-ENTRY-PROP-BASELINE (operator chat ~23:35Z): ml_entry runs on the prop books under comms/prop_survival/ml_entry.json (own prop gate record, FAIL, operator_exception).
+UNSIMULATED_ROSTER_LEGS = frozenset({"ml_entry"})
 # `--book breakout_1` is still named by queued research units (RQ-20260928-015). The legs'
 # evidence records are per-leg, not per-account, so the retired book scores identically on
 # breakout_2's roster; the alias keeps those units runnable.
@@ -1081,6 +1084,7 @@ def resolve_book(book: str) -> Tuple[Dict[str, Path], Dict[str, Any]]:
     from src.config.accounts_loader import load_accounts_dict
     acct = load_accounts_dict().get(book) or {}
     roster = list(acct.get("strategies") or [])
+    roster = [leg for leg in roster if leg not in UNSIMULATED_ROSTER_LEGS]
     if roster != list(BOOKS[book]):
         raise SystemExit(f"{book} roster in the canonical accounts config is {roster}, this tool's "
                          f"BOOKS entry is {list(BOOKS[book])} — update BOOKS deliberately")
