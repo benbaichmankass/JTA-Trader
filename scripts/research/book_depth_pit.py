@@ -175,7 +175,7 @@ def asof_table(feat: pd.DataFrame, span: tuple[str, str], bar_hours: int, tol_s:
     return m[["T", "age_s", *FEATURES, "n_in_bar"]]
 
 
-def audit(snaps: pd.DataFrame, feat: pd.DataFrame, table: pd.DataFrame, bar_hours: int, n: int = 1000, seed: int = 20261109) -> dict:
+def audit(snaps: pd.DataFrame, table: pd.DataFrame, bar_hours: int, n: int = 1000, seed: int = 20261109) -> dict:
     """Recompute `imb1` and `lq1` for n sampled bar closes by brute force from the RAW snapshot frame and compare."""
     rng = np.random.default_rng(seed)
     idx = rng.choice(len(table), size=min(n, len(table)), replace=False)
@@ -222,7 +222,7 @@ def load_day(cache: Path, sym: str, day: str) -> tuple[pd.DataFrame, dict]:
     return res
 
 
-def census_symbol(sym: str, parts: list[tuple[pd.DataFrame, dict]], span: tuple[str, str]) -> tuple[pd.DataFrame, dict]:
+def census_symbol(sym: str, parts: list[tuple[pd.DataFrame, dict]]) -> tuple[pd.DataFrame, dict]:
     metas = [m for _, m in parts]
     present = [m for m in metas if m["state"] == "ok"]
     bad = [m for m in metas if m["state"] not in ("ok", "absent", "error")]
@@ -253,7 +253,7 @@ def run(a) -> int:
     with ThreadPoolExecutor(8) as ex:
         for sym in SYMBOLS:
             parts = list(ex.map(lambda d, s=sym: load_day(cache, s, d), days))
-            snaps, cen = census_symbol(sym, parts, span)
+            snaps, cen = census_symbol(sym, parts)
             feat = snap_features(snaps) if not snaps.empty else pd.DataFrame()
             cen["bars"] = {}
             for bh in BAR_HOURS:
@@ -266,7 +266,7 @@ def run(a) -> int:
                 cen["bars"][str(bh)]["coverage_by_month"] = {k: round(float(v), 3) for k, v in tt.groupby("m")["f"].mean().items()}
                 cen["bars"][str(bh)]["coverage_300s"] = float((t["age_s"] <= 300).mean())
                 tables[(sym, bh)] = t
-                cen.setdefault("audit", {})[str(bh)] = audit(snaps, feat, t, bh) if not snaps.empty else {"checked": 0, "mismatch": 0, "lookahead": 0, "bar_hours": bh}
+                cen.setdefault("audit", {})[str(bh)] = audit(snaps, t, bh) if not snaps.empty else {"checked": 0, "mismatch": 0, "lookahead": 0, "bar_hours": bh}
             res["per_symbol"][sym] = cen
             print(f"{sym}: days present {cen['days_present']}/{cen['days_expected']} unreachable {cen['days_unreachable']} unparseable {cen['days_unparseable']} "
                   f"bar coverage {{{', '.join(f'{k}h: {v['coverage']:.3f}' for k, v in cen['bars'].items())}}}", flush=True)
@@ -359,8 +359,8 @@ def _self_test() -> int:
     check("a bar closing long after the last snapshot is stale -> NaN, not forward-filled", np.isnan(r8["imb1"]) and r8["age_s"] > TOL_S)
     # planted look-ahead: shift the recorded snapshot timestamps back 60 s and the audit must notice
     shifted = w.copy(); shifted.index = shifted.index - pd.Timedelta(seconds=60)
-    au_ok = audit(w, f, t, 4, n=1000)
-    au_bad = audit(shifted, f, t, 4, n=1000)
+    au_ok = audit(w, t, 4, n=1000)
+    au_bad = audit(shifted, t, 4, n=1000)
     check("audit passes on the honest table", au_ok["mismatch"] == 0 and au_ok["lookahead"] == 0)
     check("PLANTED DEFECT: a table built from different timestamps fails the audit", au_bad["mismatch"] > 0 or au_bad["lookahead"] > 0)
     check("window mean needs half the nominal snapshots", asof_table(f.iloc[:30], (day, day), 4)["imb1_mean"].isna().all())
