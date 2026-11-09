@@ -702,7 +702,8 @@ def execute_pkg(
         pkg, account_cfg, order, trade_id=trade_id, is_dry=is_dry,
         intent_reduce=reduce_only,
         # DESK-MAKER-FILLS probe (b): None on every Market entry (no notes change).
-        extra_notes=order.get("maker_probe_notes"),
+        extra_notes=({**(order.get("maker_probe_notes") or {}),
+                      **(order.get("qty_resize") or {})} or None),
         sl_order_id=sl_order_id, tp_order_id=tp_order_id,
         # MI-227 / audit F-36: only the reduce branch consumes this, to resize
         # each shrunk parent's own tracked protective leg. Every other insert
@@ -1470,7 +1471,40 @@ def _submit_order(client: Any, order: dict, account_cfg: dict,
             _legal = legalize_qty(
                 order["qty"], account_cfg=account_cfg, symbol=order["symbol"],
                 client=client, prefer_live=True,
+                # SIZE UP below a venue minimum (operator 2026-11-09, Tier 3;
+                # reverses "never round up"). Entries only: a reduce-only close
+                # is never grown.
+                price=order.get("entry"),
+                size_up=not order.get("reduce_only"),
             )
+            if _legal.resized_from is not None:
+                # Visible on the order and (via extra_notes) the journal row.
+                order["qty_resize"] = {"qty_resize": {
+                    "from": _legal.resized_from, "to": float(_legal.qty),
+                    "binding": _legal.resize_binding,
+                    "min_notional": _legal.min_notional,
+                    "venue_min_qty": _legal.venue_min,
+                }}
+                try:
+                    from src.runtime.outcomes import Level, report
+                    report(
+                        "submit_order", "qty_sized_up_to_venue_min",
+                        level=Level.WARN,
+                        reason=(
+                            f"{order['symbol']} qty {_legal.resized_from} below "
+                            f"venue {_legal.resize_binding}; order PLACED at "
+                            f"{_legal.qty}, larger than the risk model sized"
+                        ),
+                        symbol=order["symbol"],
+                        account_id=(account_cfg.get("account_id")
+                                    or account_cfg.get("id") or "unknown"),
+                        strategy=order.get("strategy"),
+                        requested_qty=_legal.resized_from,
+                        placed_qty=float(_legal.qty),
+                        binding=_legal.resize_binding,
+                    )
+                except Exception:  # noqa: BLE001
+                    logger.debug("_submit_order: resize report failed", exc_info=True)
             if not _legal.ok:
                 # Benign per-trade refusal (BL-20260716-BYBIT2-SUBMIN-QTY):
                 # typed so the handler below + the coordinator route it to the

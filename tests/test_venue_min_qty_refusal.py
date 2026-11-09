@@ -120,29 +120,28 @@ def _rejected_rows(db_path):
 
 
 class TestCoordinatorVenueMinRefusal:
-    def test_sub_min_eth_qty_clean_refusal_not_exchange_rejected(
+    def test_sub_min_eth_qty_sized_up_not_refused(
         self, coord, accounts_yaml, tmp_journal,
     ):
-        # Live (non-dry) path. Force the sizer to return a sub-venue-min qty
-        # (0.006 ETH < 0.01 minOrderQty) and stub client construction so the
-        # account is treated as live without a real exchange socket. The new
-        # venue-min guard must refuse it BEFORE _submit_order is reached.
+        # REVERSED 2026-11-09 (operator, Tier 3): a sub-venue-min qty (0.006 ETH
+        # < 0.01 minOrderQty) is no longer refused at the coordinator guard; it
+        # proceeds to dispatch, where the seam sizes it up in _submit_order.
+        seen = {}
+
+        def _fake_exec(pkg, account_cfg, *a, **kw):
+            seen["called"] = True
+            return "T-1"
+
         with patch(
             "src.units.accounts.risk.RiskManager.position_size",
             return_value=0.006,
         ), patch(
-            # Pin the account live regardless of the repo strategies.yaml
-            # execution mode — this test asserts the LIVE-path refusal.
-            "src.strategy_registry.execution_mode",
-            return_value="live",
+            "src.strategy_registry.execution_mode", return_value="live",
         ), patch(
             "src.units.accounts.clients.bybit_client_for",
             return_value=object(),
         ), patch(
-            # Defensive: if the guard regressed and the order reached
-            # dispatch, this would record an exchange_rejected row.
-            "src.units.accounts.execute.execute_pkg",
-            side_effect=AssertionError("execute_pkg must not be reached"),
+            "src.units.accounts.execute.execute_pkg", side_effect=_fake_exec,
         ):
             coord.multi_account_execute(
                 _eth_pkg(),
@@ -150,44 +149,9 @@ class TestCoordinatorVenueMinRefusal:
                 balance_fetcher=lambda _a: 100.0,
             )
 
-        rows = _rejected_rows(tmp_journal)
-        # Exactly one trade row, a clean 'rejected' (NOT 'exchange_rejected').
-        assert len(rows) == 1
-        row = rows[0]
-        assert row["account_id"] == "bybit_2"
-        assert row["status"] == "rejected"
-        assert row["status"] != "exchange_rejected"
-        assert "below_venue_min_qty" in (row["entry_reason"] or "")
-
-    def test_sized_path_submin_refusal_emits_no_failure_ping(
-        self, coord, accounts_yaml, tmp_journal,
-    ):
-        # BL-20260716-BYBIT2-SUBMIN-QTY: the sized-path pre-check refusal must
-        # be a QUIET journaled skip — it must NOT fire the ERROR-level
-        # execution-failure ping that lands on the /notifications alert banner.
-        with patch(
-            "src.units.accounts.risk.RiskManager.position_size",
-            return_value=0.006,
-        ), patch(
-            "src.strategy_registry.execution_mode",
-            return_value="live",
-        ), patch(
-            "src.units.accounts.clients.bybit_client_for",
-            return_value=object(),
-        ), patch(
-            "src.core.coordinator._emit_execution_failure_ping",
-        ) as ping:
-            coord.multi_account_execute(
-                _eth_pkg(),
-                accounts_path=accounts_yaml,
-                balance_fetcher=lambda _a: 100.0,
-            )
-
-        ping.assert_not_called()
-        rows = _rejected_rows(tmp_journal)
-        assert len(rows) == 1
-        assert rows[0]["status"] == "rejected"
-        assert "below_venue_min_qty" in (rows[0]["entry_reason"] or "")
+        assert seen.get("called") is True
+        assert not [r for r in _rejected_rows(tmp_journal)
+                    if "below_venue_min_qty" in (r["entry_reason"] or "")]
 
     def test_submit_order_leak_path_routes_benign_no_ping(
         self, coord, accounts_yaml, tmp_journal,
