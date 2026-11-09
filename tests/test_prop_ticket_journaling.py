@@ -180,14 +180,37 @@ def test_reticket_allowed_after_expiry_and_after_close(isolated_env: Path) -> No
     assert len(pushes) == 1  # emitted normally
 
 
-def test_reticket_opposite_direction_not_suppressed(isolated_env: Path) -> None:
-    """The guard is per (account, symbol, DIRECTION) — a short setup is not
-    blocked by an open long."""
+def test_reticket_opposite_direction_of_another_leg_is_blocked(isolated_env: Path) -> None:
+    """CONTRACT CHANGE 2026-11-09 (manager 04:07Z, after ml_entry fired a SOL LONG against open trend SOL SHORTs on three prop accounts):
+    the reticket guard is still per (account, symbol, DIRECTION), but a separate guard now blocks the OPPOSITE side of a symbol that
+    ANOTHER leg (or an unknown owner) holds on the account. Was: 'a short setup is not blocked by an open long' (single-leg era)."""
     from src.prop import prop_journal
     from src.prop.breakout_executor import emit_prop_ticket
 
     prop_journal.insert_fill({
         "account_id": "breakout_1", "symbol": "ETHUSDT", "direction": "long",
+        "qty": 1.9, "entry_price": 1767.71, "status": "filled",
+    })
+    pushes: list = []
+    emit_prop_ticket(_order("short", entry=1770.0, sl=1800.0, tp=1650.0),
+                     _account_cfg(), timeframe="2h",
+                     _emitter=lambda t: pushes.append(t))
+    assert pushes == []
+    rows = prop_journal.list_tickets(account_id="breakout_1", limit=10)
+    assert rows and rows[0]["status"] == "suppressed" and rows[0]["message"].startswith("opposite_direction_blocked")
+
+
+def test_reticket_opposite_direction_of_the_same_leg_is_not_blocked(isolated_env: Path) -> None:
+    """A leg reversing its OWN position is not blocked (its owner manages the exit)."""
+    from src.prop import prop_journal
+    from src.prop.breakout_executor import emit_prop_ticket
+
+    prop_journal.record_ticket({
+        "ticket_id": "prop-manual-own", "account_id": "breakout_1", "strategy": "eth_pullback_2h",
+        "symbol": "ETHUSDT", "direction": "long", "entry": 1767.71, "status": "placed",
+    })
+    prop_journal.insert_fill({
+        "account_id": "breakout_1", "ticket_id": "prop-manual-own", "symbol": "ETHUSDT", "direction": "long",
         "qty": 1.9, "entry_price": 1767.71, "status": "filled",
     })
     pushes: list = []

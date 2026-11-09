@@ -173,6 +173,59 @@ def _reticket_suppress_reason(
     return None
 
 
+def _opposite_direction_block_reason(
+    account_id: str, symbol: str, direction: str, strategy: str, *, now: Optional[datetime] = None,
+) -> Optional[str]:
+    """Reason to BLOCK a new ticket because THIS account already holds (or has live) the OPPOSITE side of ``symbol`` from a DIFFERENT leg, or None.
+
+    ONE DIRECTION PER (ACCOUNT, SYMBOL) ACROSS LEGS (manager 2026-11-09 04:07Z, after ml_entry fired a SOL LONG against open
+    trend_donchian SOL SHORTs on breakout_2 / tradeify_1 / velotrade_1; the phone filled the buy form and only the read-back
+    ``cushion_unknown`` gate stopped it). On a netting venue a buy against the short flips the position and breaks the trend leg's
+    bracket; on a hedging venue it opens a hedge, which Tradeify forbids. The existing reticket guard only looks at the SAME direction.
+    Blocks on an open position (newest ``prop_fills`` row open/filled, the monitor pulse's derivation) or a live outstanding ticket
+    (``_BLOCKING_UNTIL_RESOLVED``; ``_BLOCKING_WHILE_VALID`` while ``valid_until`` has not passed or cannot be read). A same-leg
+    reversal is not blocked (its owner manages its own exit). FAIL-CLOSED: an unreadable journal blocks this one entry with a named
+    reason (a hedge costs more than one lost signal); the next tick retries, nothing halts.
+    """
+    try:
+        from src.prop import prop_journal
+        from src.prop.prop_monitor_pulse import find_open_prop_positions
+
+        sym = str(symbol or "").upper()
+        d = str(direction or "").lower()
+        opp = "short" if d == "long" else "long"
+        me = str(strategy or "")
+        now = now or datetime.now(timezone.utc)
+        tickets = prop_journal.list_tickets(account_id=account_id, limit=500)
+        owner = {str(t.get("ticket_id")): str(t.get("strategy") or "") for t in tickets if t.get("ticket_id")}
+        for pos in find_open_prop_positions(account_id=account_id):
+            if str(pos.get("symbol") or "").upper() != sym or str(pos.get("direction") or "").lower() != opp:
+                continue
+            who = owner.get(str(pos.get("ticket_id")), "")
+            if who and who == me:
+                continue
+            return (f"opposite_open_position: {opp} {pos.get('qty')} @ {pos.get('entry_price')} "
+                    f"(ticket {pos.get('ticket_id')}, leg {who or 'unknown'})")
+        for t in tickets:
+            if str(t.get("symbol") or "").upper() != sym or str(t.get("direction") or "").lower() != opp:
+                continue
+            who = str(t.get("strategy") or "")
+            if who and who == me:
+                continue
+            status = str(t.get("status") or "").lower()
+            if status in _BLOCKING_UNTIL_RESOLVED:
+                return f"opposite_outstanding_ticket:{status}: {t.get('ticket_id')} (leg {who or 'unknown'})"
+            if status in _BLOCKING_WHILE_VALID:
+                vu_dt = _parse_valid_until(t.get("valid_until"))
+                if vu_dt is None or vu_dt > now:
+                    return f"opposite_outstanding_ticket:{status}: {t.get('ticket_id')} (leg {who or 'unknown'})"
+    except Exception as exc:  # noqa: BLE001 — fail-closed for THIS entry only; named, retried next tick
+        logger.warning("breakout_executor: opposite-direction guard unreadable for %s/%s/%s (%s) — blocking this entry",
+                       account_id, symbol, direction, exc)
+        return f"opposite_check_unreadable: {type(exc).__name__}"
+    return None
+
+
 _PLACED_BLOCKER_RE = re.compile(r"^outstanding_ticket:placed:\s*(prop-[a-z]+-[0-9a-f]+)$")
 
 
@@ -323,6 +376,26 @@ def emit_prop_ticket(
         )
 
     account_id = str(account_cfg.get("account_id") or account_cfg.get("id") or "breakout")
+
+    # ONE DIRECTION PER (ACCOUNT, SYMBOL) ACROSS LEGS: never ticket the opposite side of a symbol another leg holds here.
+    opposite = None if test_ping else _opposite_direction_block_reason(account_id, symbol, direction, strategy)
+    if opposite:
+        trade_id = f"{MANUAL_FILL_PREFIX}{uuid.uuid4().hex[:12]}"
+        logger.warning("breakout_executor: %s ticket BLOCKED for %s %s (%s) → %s", account_id, symbol, direction, opposite, trade_id)
+        try:
+            from src.prop import prop_journal
+
+            prop_journal.record_ticket({
+                "ticket_id": trade_id, "account_id": account_id, "strategy": strategy, "symbol": symbol,
+                "direction": direction, "entry": entry, "sl": sl, "tp": tp,
+                "signal_time": datetime.now(timezone.utc).isoformat(),
+                "status": "suppressed", "message": f"opposite_direction_blocked — {opposite}",
+                "order_package_id": order.get("order_package_id") or (
+                    order["meta"].get("order_package_id") if isinstance(order.get("meta"), dict) else None),
+            })
+        except Exception as exc:  # noqa: BLE001 — audit row is best-effort
+            logger.warning("breakout_executor: blocked-ticket journal write failed: %s", exc)
+        return trade_id
 
     # ONE TICKET PER TRADE: a held position or a still-live outstanding ticket
     # for this (account, symbol, direction) suppresses a fresh emission — the
