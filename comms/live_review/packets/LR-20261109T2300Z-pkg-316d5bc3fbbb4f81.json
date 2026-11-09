@@ -1,0 +1,228 @@
+{
+ "account_bounds": [],
+ "assembled_by": "generator scripts/ops/live_review_packet.py",
+ "context": {
+  "calendar": {
+   "events_next_24h": [],
+   "state": "no_event_classes_for_symbol"
+  },
+  "correlated_open_packages": [],
+  "direction": null,
+  "funding": {
+   "state": "not_applicable"
+  },
+  "news": null,
+  "previous_review": {
+   "action": "hold",
+   "forecast": {
+    "direction": "with_trade",
+    "evidence": [
+     "state.open_r 0.0, bars_held 0",
+     "chart.swings: high 90.54 (4 bars ago), lows 88.89/88.24",
+     "chart.htf: 1d ADX 34.1 trending",
+     "exit_plan: stop 94.273 (2.5 ATR), TP 81.432 (2.3R)"
+    ],
+    "horizon_bars": 6,
+    "invalidation_px": 91.3,
+    "p_target": 0.4,
+    "target_px": 88.89,
+    "thesis": "Pullback short entered into a bounce that stalled under 90.54, in a trending daily downtrend; expect a 2h low at or under 88.89 before a 2h close above 91.3.",
+    "timeframe": "2h"
+   },
+   "reason": "Hold, first review, just opened (bars_held 0, open 0.0R at 90.39 vs entry 90.38). Pullback short into a bounce that stalled under the 90.54 swing high, inside a daily downtrend (1d ADX 34); the 2h ATR is 1.63, the stop 94.27 is 2.4 ATR above and the 2.3R TP 81.43 is below the 88.24 flush low, a real predictive target. No options table: priced_options could not be priced because open_r/peak_r/atr_\u2026",
+   "review_id": "LR-20261106T1214Z-pkg-316d5bc3fbbb4f81",
+   "reviewed_at": "2026-11-06T12:30:00Z",
+   "route": null
+  },
+  "symbol": null
+ },
+ "context_v3": {
+  "book": [],
+  "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
+  "chart": null,
+  "exit_plan": {
+   "declared": {},
+   "entry": null,
+   "exit_plan_state": null,
+   "exit_plan_state_note": "entry-time snapshot, not updated when the stop moves; trust sl_now",
+   "sl_initial": null,
+   "sl_now": null,
+   "tp_now": null
+  },
+  "htf": null,
+  "live_vs_backtest": null
+ },
+ "cost": {
+  "basis": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "generator": {
+  "head": "70a742fb45",
+  "state": "current"
+ },
+ "info_cutoff_at": "2026-11-09T23:00:57Z",
+ "leg": "unknown",
+ "mechanics": {
+  "evidence": "package sl None / tp None agree with every readable account",
+  "verdict": "match"
+ },
+ "missing_inputs": [
+  {
+   "field": "state.sl/tp",
+   "reason": "order_packages row not in the paged journal read; falling back to the trade row"
+  },
+  {
+   "field": "read:telemetry",
+   "reason": "diag position_telemetry?limit=300: exit 3 (ict-bot.duckdns.org -> answered_502. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web"
+  },
+  {
+   "field": "read:positions",
+   "reason": "<urlopen error [Errno 111] Connection refused>"
+  },
+  {
+   "field": "read:prop_tickets",
+   "reason": "<urlopen error [Errno 111] Connection refused>"
+  },
+  {
+   "field": "read:bybit_orders",
+   "reason": "diag bybit_open_orders: exit 3 (ict-bot.duckdns.org -> answered_502. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP "
+  },
+  {
+   "field": "read:alpaca_orders",
+   "reason": "diag alpaca_open_orders: exit 3 (ict-bot.duckdns.org -> answered_502. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP"
+  },
+  {
+   "field": "read:ib_orders",
+   "reason": "diag ib_open_orders: exit 3 (ict-bot.duckdns.org -> answered_502. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP and"
+  },
+  {
+   "field": "read:news",
+   "reason": "<urlopen error [Errno 111] Connection refused>"
+  },
+  {
+   "field": "read:perf_recent",
+   "reason": "<urlopen error [Errno 111] Connection refused>"
+  },
+  {
+   "field": "read:prop_status:breakout_2",
+   "reason": "<urlopen error [Errno 111] Connection refused>"
+  },
+  {
+   "field": "read:prop_status:tradeify_1",
+   "reason": "<urlopen error [Errno 111] Connection refused>"
+  },
+  {
+   "field": "read:prop_status:velotrade_1",
+   "reason": "<urlopen error [Errno 111] Connection refused>"
+  },
+  {
+   "field": "read:order_packages@0",
+   "reason": "diag journal?table=order_packages&limit=150&offset=0: exit 3 (ict-bot.duckdns.org -> answered_502. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_con"
+  },
+  {
+   "field": "read:trades@0",
+   "reason": "diag journal?table=trades&limit=1000&offset=0: exit 3 (ict-bot.duckdns.org -> answered_502. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' m"
+  },
+  {
+   "field": "state.open_r",
+   "reason": "no position_telemetry row for this package (telemetry covers the donchian/pullback family) and no /api/bot/positions row"
+  },
+  {
+   "field": "regime.atr_now_over_entry",
+   "reason": "package timeframe not recorded in meta"
+  },
+  {
+   "field": "regime.trend_now",
+   "reason": "package timeframe not recorded in meta"
+  },
+  {
+   "field": "regime.vol_now",
+   "reason": "calm/volatile buckets use frozen edges held only in the VM model registry; not reachable read-only from a session"
+  },
+  {
+   "field": "regime.cell_entry",
+   "reason": "entry meta regime=None vol_regime=None: not both known"
+  },
+  {
+   "field": "context.news",
+   "reason": "no news decision for this symbol in the last 60 records (or news read failed)"
+  },
+  {
+   "field": "context_v3.chart",
+   "reason": "no closed candles on the leg timeframe (route unreachable or timeframe unrecorded)"
+  },
+  {
+   "field": "context_v3.htf",
+   "reason": "no higher timeframe mapped for None"
+  },
+  {
+   "field": "context_v3.live_vs_backtest",
+   "reason": "api/bot/performance/recent not read"
+  },
+  {
+   "field": "context.live_vs_backtest",
+   "reason": "per-leg live-vs-backtest read failed (api/bot/performance/recent); see context_v3"
+  }
+ ],
+ "order_package_id": "pkg-316d5bc3fbbb4f81",
+ "packet_health": {
+  "defects": [
+   {
+    "count": 1,
+    "denominator": 1,
+    "field": "context_v3.chart",
+    "reason": "context_null:chart"
+   },
+   {
+    "count": 1,
+    "denominator": 1,
+    "field": "context_v3.htf",
+    "reason": "context_null:htf"
+   },
+   {
+    "count": 1,
+    "denominator": 1,
+    "field": "context_v3.live_vs_backtest",
+    "reason": "context_null:live_vs_backtest"
+   },
+   {
+    "count": 1,
+    "denominator": 1,
+    "field": "state.open_r",
+    "reason": "context_null:state.open_r"
+   }
+  ],
+  "status": "could_not_look"
+ },
+ "packet_version": 3,
+ "priced_options": null,
+ "priced_options_state": "not_priced",
+ "regime": {
+  "adx_now": null,
+  "atr_now_over_entry": null,
+  "cell_entry": null,
+  "cell_now": null,
+  "trend_now": null
+ },
+ "review_id": "LR-20261109T2300Z-pkg-316d5bc3fbbb4f81",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_provenance": "unverified",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": null,
+  "tp": null
+ }
+}
