@@ -1177,13 +1177,21 @@ def _prop_dd_context(account_id: str, strategy: Any, accts_cfg: Dict[str, Any]) 
     return out
 
 
+#: Mirror of ``scripts/ops/live_review_apply.ACTION_PATHS`` for the two prop classes. Not imported: that script
+#: is the apply path and must stay out of this read path's import closure (tests/test_live_review_due.py pins equality).
+_PROP_ACTION_PATHS = {"phone": ["close", "move_tp", "reduce", "tighten", "widen_sl"], "prop_vm": ["tighten"]}
+
+
 def _prop_apply_paths(account_id: str, accts_cfg: Dict[str, Any]) -> Dict[str, Any]:
-    """The live-review actions an apply can run on this prop account (``live_review_apply.ACTION_PATHS``)."""
+    """The live-review actions an apply can run on this prop account (phone / prop_vm executors)."""
     try:
-        from scripts.ops import live_review_apply as lra
-        cls = lra.account_class(account_id, (accts_cfg or {}).get(account_id) or {})
-        paths = sorted(set(lra.ACTION_PATHS.get(cls, ())) | ({"tighten"} if cls in ("prop_vm", "phone") else set()))
-        return {"apply_class": cls, "apply_paths": paths, "apply_paths_state": "read"}
+        import yaml
+        from src.utils.paths import repo_root
+        with open(os.path.join(repo_root(), "config", "prop_platforms.yaml"), encoding="utf-8") as fh:
+            entry = ((yaml.safe_load(fh) or {}).get("phone_accounts") or {}).get(account_id) or {}
+        # phone_executor.is_phone_account's rule, read here because importing it reaches the order-path layer
+        cls = "phone" if str(entry.get("platform") or "") == "breakout_phone" else "prop_vm"
+        return {"apply_class": cls, "apply_paths": list(_PROP_ACTION_PATHS[cls]), "apply_paths_state": "read"}
     except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as could_not_look
         return {"apply_class": None, "apply_paths": None, "apply_paths_state": "could_not_look",
                 "apply_paths_reason": f"{type(exc).__name__}: {exc}"}
@@ -1201,18 +1209,19 @@ def _prop_telemetry(symbol: Any, direction: Any, entry: Any, qty: Any,
     if miss:
         return dict(base, reason="missing_" + "+".join(miss), mark=None)
     try:
-        if mark_fn is None:
-            from src.runtime.local_pnl import last_mark_price as mark_fn
+        if mark_fn is None:  # the caller supplies the feed: importing it here breaks the vwap layer contract
+            return dict(base, reason="no_mark_source_supplied", mark=None)
         mark = mark_fn(symbol)
     except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as could_not_look
         return dict(base, reason=f"mark_read_failed: {type(exc).__name__}: {exc}", mark=None)
     if not isinstance(mark, (int, float)) or mark <= 0:
         return dict(base, reason="mark_unavailable", mark=None)
-    try:
-        from src.prop.prop_overview import _mark_source
-        src = _mark_source(str(symbol))
+    try:  # the instrument profile's exchange, as prop_overview labels it (not imported: layer-guard)
+        from src.core.profile_loader import load_instrument_profiles
+        ex = getattr((load_instrument_profiles() or {}).get(str(symbol).upper()), "exchange", None)
     except Exception:  # noqa: BLE001  # allow-silent: an unread profile is labelled, not guessed
-        src = "bot_feed_last_close_5m"
+        ex = None
+    src = f"{str(ex).lower() if ex else 'bot_feed'}_last_close_5m"
     return {"unrealized_pnl": round((float(mark) - float(_f(entry))) * float(_f(qty)) * sign, 2),
             "provenance": prov.ESTIMATED, "state": "mark_estimate", "mark": float(mark), "mark_source": src}
 
@@ -1482,8 +1491,10 @@ def live_review_due(db_path: Optional[str] = None,
                     now: Optional[datetime] = None,
                     funding_db_path: Optional[str] = None,
                     calendar_path: Optional[str] = None,
-                    branch: Optional[Callable[[], Dict[str, Any]]] = None) -> Dict[str, Any]:
-    """The route payload. Never raises. With the default reviews path the prior-review index also
+                    branch: Optional[Callable[[], Dict[str, Any]]] = None,
+                    mark_fn: Optional[Callable[[Any], Optional[float]]] = None) -> Dict[str, Any]:
+    """The route payload. ``mark_fn`` = the bot-feed mark (``local_pnl.last_mark_price``) the ROUTE supplies for
+    prop uPnL estimates; None -> those fields are could_not_look ``no_mark_source_supplied``. Never raises. With the default reviews path the prior-review index also
     holds the rows on ``live-review/rows`` that main lacks (``branch`` overrides that read)."""
     now = now or datetime.now(timezone.utc)
     env: Dict[str, Any] = {
@@ -1534,7 +1545,7 @@ def live_review_due(db_path: Optional[str] = None,
     have = {str(r.get("order_package_id")) for r in open_rows}
     less = [dict(p, telemetry_absent=True, lifecycle="open")
             for p in jo.get("packages", []) if p["order_package_id"] not in have]
-    po = read_prop_open(db_path)
+    po = read_prop_open(db_path, mark_fn=mark_fn)
     env["prop_open_state"], env["prop_open_reason"] = po["state"], po.get("reason")
     known = have | {p["order_package_id"] for p in less}
     prop_less = []

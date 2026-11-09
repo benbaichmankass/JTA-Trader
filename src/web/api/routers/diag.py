@@ -4223,7 +4223,8 @@ def get_live_review_due(request: Request) -> dict[str, Any]:
     """
     _require_diag_token(request)
     from src.runtime.live_review_due import live_review_due
-    return live_review_due()
+    from src.runtime.local_pnl import last_mark_price  # prop uPnL estimate feed, same as the dashboard's
+    return live_review_due(mark_fn=last_mark_price)
 
 
 @router.get("/tick_cost")

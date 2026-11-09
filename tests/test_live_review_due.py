@@ -697,11 +697,19 @@ def test_prop_package_in_live_review_due_payload_and_due_with_accounts(tmp_path,
     c.commit()
     c.close()
     orig = lrd.read_prop_open
-    monkeypatch.setattr(lrd, "read_prop_open", lambda p=None: orig(p, _ACC, lambda s: 148.0))
-    out = lrd.live_review_due(db_path=db, reviews_path=str(tmp_path / "none.jsonl"), now=NOW)
+    monkeypatch.setattr(lrd, "read_prop_open", lambda p=None, mark_fn=None: orig(p, _ACC, mark_fn))
+    out = lrd.live_review_due(db_path=db, reviews_path=str(tmp_path / "none.jsonl"), now=NOW, mark_fn=lambda s: 148.0)
     assert out["read_state"] == "looked" and out["open_count"] == 1
+    assert out["prop_open"][0]["accounts"][0]["telemetry"]["provenance"] == "estimated"
     assert [p["order_package_id"] for p in out["prop_open"]] == ["pkg-prop"]
     less = out["telemetry_less"][0]
     assert less["prop"] is True and less["accounts"] == ["breakout_2", "tradeify_1"]
     due = {d["order_package_id"]: d for d in out["due"]}
     assert due["pkg-prop"]["accounts"] == ["breakout_2", "tradeify_1"]
+
+
+def test_prop_action_paths_mirror_live_review_apply():
+    from scripts.ops import live_review_apply as lra
+    for cls in ("phone", "prop_vm"):
+        want = sorted(set(lra.ACTION_PATHS[cls]) | {"tighten"})
+        assert sorted(lrd._PROP_ACTION_PATHS[cls]) == want
