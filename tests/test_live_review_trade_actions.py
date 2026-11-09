@@ -406,3 +406,19 @@ def test_a_venue_deferred_close_exits_deferred_and_records_the_disposition(wired
     res = _run(tla._ApplyDB([_tr(1, "bybit_2"), _tr(2, "alpaca_live")], tla.PKG), wired, _ti("close"))
     assert _by(res)["bybit_2"]["executed"] and res["exit"] == lri.EXIT_DEFERRED
     assert res["writeback"]["disposition"]["route"] == "auto_applied" or res["writeback"]["applied"]
+
+
+def test_bybit_reduce_is_floored_to_the_venue_lot_step(monkeypatch):
+    """2026-11-09: 0.5 x 32478.5 XRP sent "16239.25" to bybit_portfolio and Bybit refused it (Qty invalid,
+    ErrCode 10001). The reduce is floored to the lot step before it is sent; a sub-minimum reduce is refused."""
+    from src.units.accounts import qty_legalize as ql
+    monkeypatch.setattr(ql, "_resolve_venue_lot_rule", lambda *a, **k: (0.1, 0.1, None, None, "test"))
+    ex = _Ex(monkeypatch, after_size=5.7, venue_sl=0.22, venue_tp=0.19)
+    db = tla._ApplyDB([tla._trade(1, "bybit_2")], tla.PKG)
+    v = lri.AmendVerdict("bybit_2", "approve", None, "within_bounds", qty=4.25)
+    r = lra._exec_bybit_action(db, _leg(), tla.PKG, v, _ti("partial_close", size_fraction=0.425))
+    assert r["result"] == lra.X_APPLIED and ex.sent == [("partial", pytest.approx(4.2))]
+    ex = _Ex(monkeypatch, after_size=10.0)
+    v = lri.AmendVerdict("bybit_2", "approve", None, "within_bounds", qty=0.05)
+    r = lra._exec_bybit_action(db, _leg(), tla.PKG, v, _ti("partial_close", size_fraction=0.005))
+    assert r["result"] == lra.X_REFUSED and ex.sent == []
