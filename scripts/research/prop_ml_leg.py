@@ -59,6 +59,9 @@ PROFILES = {
     # unit RQ-20261105-fd68-01 baselines.cost_stack: commission 4 bps/side, slippage 3 bps/side, swap 3.3 bps/night
     "tradeify": {"symbols": ["ETHUSDT", "SOLUSDT", "XRPUSDT"], "accounts": ["tradeify_1"], "comm_bps_side": 4.0, "slip_bps_side": 3.0,
                  "swap_bps_night": 3.3, "leg_key": "tradeify_own_sol_cap2", "grade_distinct": True, "pass_rule": "all"},
+    # ETH+SOL slice of the tradeify profile (2026-11-09): config/accounts.yaml tradeify_1 trades ETHUSDT and SOLUSDT; same account, cost stack and leg key
+    "tradeify_es": {"symbols": ["ETHUSDT", "SOLUSDT"], "accounts": ["tradeify_1"], "comm_bps_side": 4.0, "slip_bps_side": 3.0,
+                    "swap_bps_night": 3.3, "leg_key": "tradeify_own_sol_cap2", "grade_distinct": True, "pass_rule": "all"},
     # shared Breakout/Velotrade model: the stricter of the two firms' declared stacks on each term
     "bv": {"symbols": ["ETHUSDT", "SOLUSDT"], "accounts": ["breakout_2", "velotrade_1"], "comm_bps_side": 4.0, "slip_bps_side": 3.0,
            "swap_bps_night": 5.0, "leg_key": "bv_shared_ml", "grade_distinct": False, "pass_rule": "any"},
@@ -66,6 +69,10 @@ PROFILES = {
 CONTEXT_SYMBOLS = ["BTCUSDT"]          # cross-sectional / market context only, never traded or trained on
 MACRO = {"VIXCLS": "vix", "DGS10": "y10", "DTWEXBGS": "usd", "SP500": "spx"}   # F2: market series, lagged one day (point-in-time safe)
 FEATURE_SETS = {"F0": [], "F0+F1": ["F1"], "F0+F1+F2": ["F1", "F2"], "F0+F1+F2+F3": ["F1", "F2", "F3"]}
+# OPT-IN arms (2026-11-09, PROP-ML-NEW-DATA step 2): selectable ONLY by name via --arms, never part of the default arm list, so no existing unit
+# that runs without --arms changes. F1o = the open-interest / long-short / taker-flow part of F1 WITHOUT the funding columns (the census family oi_flow).
+EXTRA_ARMS = {"F0+OI": ["F1o"]}
+F1_OI_COLS = ("oi_chg24", "oi_z", "ls_top_cnt", "ls_top_pos", "ls_all", "taker_ratio", "taker_ratio_ma24")
 
 
 # ----------------------------------------------------------------------------------------------- data
@@ -267,7 +274,7 @@ def build_table(cache: Path, profile: dict, smoke: bool, rehearsal: bool = False
     f0cols = list(E.FEATURES)
     f1cols = [c for c in tab.columns if c in ("fund", "fund_ma3d", "fund_z", "oi_chg24", "oi_z", "ls_top_cnt", "ls_top_pos", "ls_all", "taker_ratio", "taker_ratio_ma24")]
     f2cols = [c for c in tab.columns if c.startswith("m_")]
-    fam = {"F0": f0cols, "F1": f1cols, "F2": f2cols, "F3": []}
+    fam = {"F0": f0cols, "F1": f1cols, "F2": f2cols, "F3": [], "F1o": [c for c in f1cols if c in F1_OI_COLS]}
     for k, cols in fam.items():     # coverage audit: first/last non-null and the null share at decision rows, per family and symbol
         cov[k] = {"n_features": len(cols), "columns": cols,
                   "per_symbol": {s: ({"first": str(g.loc[g[cols].notna().any(axis=1), "ts"].min()), "last": str(g.loc[g[cols].notna().any(axis=1), "ts"].max()),
@@ -280,7 +287,7 @@ def build_table(cache: Path, profile: dict, smoke: bool, rehearsal: bool = False
 # ----------------------------------------------------------------------------------------------- model + policy
 def arm_cols(fam: dict, name: str) -> list[str]:
     cols = list(fam["F0"])
-    for k in FEATURE_SETS[name]:
+    for k in (FEATURE_SETS[name] if name in FEATURE_SETS else EXTRA_ARMS[name]):   # F0 maps to [] (falsy): test membership, never truthiness
         cols += fam[k]
     return cols
 
@@ -501,7 +508,7 @@ def run(a) -> int:
     arms = [n for n in FEATURE_SETS if not (n.endswith("F3") or "F3" in FEATURE_SETS[n])]
     if a.arms:
         want = [x.strip() for x in a.arms.split(",")]
-        arms = [n for n in arms if n in want]
+        arms = [n for n in [*arms, *EXTRA_ARMS] if n in want]
     unavailable = [n for n in FEATURE_SETS if n not in arms]
     grid = {}
     for name in arms:
@@ -658,6 +665,17 @@ def _self_test() -> int:
     tr = [json.loads(x) for x in (REPO / ev["source_run"]).read_text().splitlines() if x.strip()]
     check(f"B2 ledger n={len(tr)} equals the record's n_trades_oos {ev['n_trades_oos']}", len(tr) == ev["n_trades_oos"])
     check(f"B2 sum net_r {sum(float(r['net_r']) for r in tr):.4f} equals record {ev['net_r_oos']} within 0.001", abs(sum(float(r['net_r']) for r in tr) - ev["net_r_oos"]) < 0.001)
+    # opt-in arms (2026-11-09): F0+OI is selectable by name only, carries the OI/flow columns and NOT the funding columns; the default arm list is unchanged
+    fam_t = {"F0": ["a"], "F1": ["fund", "fund_z", "oi_chg24", "taker_ratio"], "F2": ["m_x"], "F3": [], "F1o": ["oi_chg24", "taker_ratio"]}
+    default_arms = [n for n in FEATURE_SETS if not (n.endswith("F3") or "F3" in FEATURE_SETS[n])]
+    check("F0+OI is NOT in the default arm list", "F0+OI" not in default_arms and default_arms == ["F0", "F0+F1", "F0+F1+F2"])
+    check("F0+OI = F0 + the OI/flow columns, no funding", arm_cols(fam_t, "F0+OI") == ["a", "oi_chg24", "taker_ratio"])
+    check("F0 (price-only control) resolves to its own columns, not a KeyError", arm_cols(fam_t, "F0") == ["a"])
+    check("F0+F1 still carries the funding columns", "fund" in arm_cols(fam_t, "F0+F1"))
+    check("F1_OI_COLS holds no funding column", not any(c.startswith("fund") for c in F1_OI_COLS))
+    check("tradeify_es is the ETH+SOL slice of tradeify with the same account, stack and leg key",
+          PROFILES["tradeify_es"]["symbols"] == ["ETHUSDT", "SOLUSDT"] and all(PROFILES["tradeify_es"][k] == PROFILES["tradeify"][k]
+          for k in ("accounts", "comm_bps_side", "slip_bps_side", "swap_bps_night", "leg_key", "pass_rule")))
     # D1-D4 on constructed ledgers
     base = pd.Timestamp("2026-01-01", tz="UTC")
     mk = lambda d, s, dr, h, g=1.0: {"symbol": s, "direction": dr, "entry_time": str(base + pd.Timedelta(days=d)), "exit_time": str(base + pd.Timedelta(days=d, hours=h)), "gross_r": g}
