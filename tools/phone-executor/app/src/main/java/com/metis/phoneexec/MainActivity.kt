@@ -1617,8 +1617,13 @@ class MainActivity : Activity() {
         // the sheet's pencil / Confirm gate is the SERVER's claim config (PHONE-EXEC-OBSERVABLE-1018), never a build constant
         val sheetEdit = cfg.optBoolean("sheet_edit", false)
         val tpChange = !tp.isNaN() && !(!fromTp.isNaN() && close(tp, fromTp, pStep))
-        // never loosen: the trail only tightens; a TP revision carries the SL unchanged
-        if (if (long) sl < fromSl - pStep / 2 else sl > fromSl + pStep / 2) return amendRefuse(t, "amend would loosen the stop", null)
+        // INTENT-BOUND (operator 2026-11-09 ~08:22Z, verbatim: "I never directed there to be a forbidden actions list, nor
+        // do I want one - the system must be able to take whatever actions necessary to ensure smooth autonomous
+        // operation"). A wider stop is applied when the SERVER declares it (action widen_sl / widen=true, e.g. a reviewed
+        // widen bounded by the account's RiskManager, widen_within_1r). A trail or TP amend that would loosen the stop
+        // did not ask for a widen, so it is reported as a mismatch rather than applied (precision, not a prohibition).
+        val widen = t.optString("action").lowercase() == "widen_sl" || t.optBoolean("widen", false)
+        if (!widen && (if (long) sl < fromSl - pStep / 2 else sl > fromSl + pStep / 2)) return amendRefuse(t, "amend would loosen the stop but did not declare widen_sl", null)
         setStatus("amend $aid: ${if (live) "LIVE" else "DRY"} $venue SL ${fmt(fromSl, pStep)} -> ${fmt(sl, pStep)}${if (tpChange) " TP -> ${fmt(tp, pStep)}" else ""}")
         // 1. the position row
         js("__ex.clickText('^positions$')"); delay(1500); ensure()
