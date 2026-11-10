@@ -218,9 +218,12 @@ def trade_decision(kind: str, *, account: Optional[str], strategy: Optional[str]
     tp = pol.get("trades") or {}
     if not tp:
         return TradeDecision(True, "no_policy", UNKNOWN)
-    if str(priority or "").lower() in {str(p).lower() for p in tp.get("bypass_priorities") or []}:
-        return TradeDecision(True, "priority_bypass", account_class(account, accounts))
     cls = account_class(account, accounts)
+    # High/urgent flags bypass the filter, EXCEPT for testing paper (operator 2026-11-10: no paper-testing
+    # trade updates; a not-applied flag on a paper leg is recorded in the ledger, never pinged).
+    if (str(priority or "").lower() in {str(p).lower() for p in tp.get("bypass_priorities") or []}
+            and not (cls == TESTING_PAPER and str(tp.get(cls) or "send") == "suppress")):
+        return TradeDecision(True, "priority_bypass", cls)
     rule = str(tp.get(cls) or "send")
     if rule == "suppress":
         return TradeDecision(False, f"{cls}_suppressed", cls)

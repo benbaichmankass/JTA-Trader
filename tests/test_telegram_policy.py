@@ -153,7 +153,7 @@ def test_unknown_account_sends(pairs):
 
 
 def test_high_priority_flag_bypasses_the_filter(pairs):
-    d = tp.trade_decision("trade-close", account="test_paper", strategy="orphan_adopt",
+    d = tp.trade_decision("trade-close", account="rm", strategy="orphan_adopt",
                           priority="high", policy=_pol(), accounts=ACCTS)
     assert d.send and d.reason == "priority_bypass"
 
@@ -298,3 +298,14 @@ def test_suppressed_rows_land_in_the_alert_ledger_and_never_wake_the_manager():
     assert not alerts_ledger.wakes_manager(alerts_ledger.build_row(
         "alert", "system", "x", delivered="suppressed_by_policy"))
     assert alerts_ledger.wakes_manager(alerts_ledger.build_row("alert", "system", "x", delivered="telegram_ok"))
+
+
+def test_high_priority_flag_on_testing_paper_is_recorded_not_sent(pairs):
+    """TELEGRAM-TRIM 2026-11-10: the priority bypass never lets a testing-paper trade update through
+    (alert ledger 2026-11-09T14:41Z: a not-applied directed close on alpaca_paper reached Telegram)."""
+    d = tp.trade_decision("trade-update", account="test_paper", strategy="leg_a",
+                          priority="high", policy=_pol(), accounts=ACCTS)
+    assert not d.send and d.reason == "testing_paper_suppressed"
+    for acct in ("rm", "prop1"):
+        assert tp.trade_decision("trade-update", account=acct, strategy="leg_a", priority="high",
+                                 policy=_pol(), accounts=ACCTS).reason == "priority_bypass"
