@@ -1,0 +1,26 @@
+Fetching BTCUSDT 120 candles 2020-06-24 -> 2026-11-10 (source=binance_vision) …
+Binance-vision fetch failed: HTTPSConnectionPool(host='data.binance.vision', port=443): Max retries exceeded with url: /data/futures/um/monthly/klines/BTCUSDT/2h/BTCUSDT-2h-2020-06.zip (Caused by NameResolutionError("HTTPSConnection(host='data.binance.vision', port=443): Failed to resolve 'data.binance.vision' ([Errno -3] Temporary failure in name resolution)"))
+Traceback (most recent call last):
+  File "/tmp/repo/scripts/research/exit_lever_ablation.py", line 1127, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/tmp/repo/scripts/research/exit_lever_ablation.py", line 828, in main
+    feed = fetch_candles(a.leg, base, a.days, csv, non_crypto_source=a.non_crypto_source)
+  File "/tmp/repo/scripts/research/exit_lever_ablation.py", line 287, in fetch_candles
+    rdm._fetch_csv(feed, days, csv)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/tmp/repo/scripts/research/regime_debt_matrix.py", line 796, in _fetch_csv
+    subprocess.run(
+    ~~~~~~~~~~~~~~^
+        [sys.executable, os.path.join(REPO, "scripts/ops/fetch_backtest_candles.py"),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+         "--symbol", feed["ticker"], "--interval", feed["interval"],
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+         "--days", str(days), "--output", out, "--source", "binance_vision"],
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        check=True, cwd=REPO)
+        ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/usr/bin/python3', '/tmp/repo/scripts/ops/fetch_backtest_candles.py', '--symbol', 'BTCUSDT', '--interval', '120', '--days', '2330', '--output', '/tmp/exit_lever_ablation_xe02ztlx/htf_pullback_trend_2h__data.csv', '--source', 'binance_vision']' returned non-zero exit status 1.

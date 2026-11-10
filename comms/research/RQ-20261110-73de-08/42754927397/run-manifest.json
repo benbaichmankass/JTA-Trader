@@ -1,0 +1,93 @@
+{
+  "unit": "RQ-20261110-73de-08",
+  "run_id": "42754927397",
+  "commit_sha": "9af863147dbb05baf55f87e767665af70ee2ded9",
+  "run_url": null,
+  "timeout_minutes": 90,
+  "runner": {
+    "cpu_model": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 24.04.5 LTS",
+    "kernel": "6.18.55+",
+    "image": {
+      "ImageOS": null,
+      "ImageVersion": null,
+      "RUNNER_OS": null,
+      "RUNNER_ARCH": null,
+      "RUNNER_ENVIRONMENT": null
+    },
+    "python": "3.13.15",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.1.3",
+      "pandas": "2.3.3",
+      "scipy": "1.16.3",
+      "scikit-learn": "1.6.1"
+    },
+    "blas": "blas=scipy-openblas 0.3.27; lapack=scipy-openblas 0.3.27",
+    "unread": [],
+    "class_id": "db1ff15f88db",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_lever_ablation.py",
+        "--leg",
+        "htf_pullback_trend_2h",
+        "--arm",
+        "A=",
+        "--arm",
+        "T3=--tp-target-r=3",
+        "--arm",
+        "T4=--tp-target-r=4",
+        "--arm",
+        "T6=--tp-target-r=6",
+        "--arm",
+        "BE=--be-floor-r=1.0",
+        "--days",
+        "2330",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-15 23:59",
+        "--grade",
+        "holdout",
+        "--baseline",
+        "A",
+        "--delta-r",
+        "0",
+        "--folds",
+        "4",
+        "--fold-majority",
+        "3",
+        "--n-floor",
+        "25",
+        "--holdout-frac",
+        "0.25",
+        "--holdout-min-trades",
+        "25",
+        "--holdout-max-frac",
+        "0.40",
+        "--research-unit",
+        "RQ-20261110-73de-08",
+        "--out",
+        "comms/research/RQ-20261110-73de-08/42754927397"
+      ],
+      "log": "comms/research/RQ-20261110-73de-08/42754927397/logs/cmd-0.log",
+      "exit_code": 1,
+      "seconds": 143.4
+    }
+  ],
+  "all_ok": false
+}
