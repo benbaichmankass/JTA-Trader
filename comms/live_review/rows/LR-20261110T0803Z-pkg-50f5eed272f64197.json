@@ -1,0 +1,163 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261110T0803Z-pkg-50f5eed272f64197",
+ "reviewed_at": "2026-11-10T08:15:00Z",
+ "order_package_id": "pkg-50f5eed272f64197",
+ "trade_id": null,
+ "leg": "trend_donchian_sol_4h",
+ "accounts": [
+  "breakout_2",
+  "tradeify_1",
+  "velotrade_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": null,
+  "l0_snapshot_at": "2026-11-10T08:02:00Z"
+ },
+ "info_cutoff_at": "2026-11-10T08:03:48Z",
+ "state": {
+  "open_r": 1.13,
+  "peak_r": 1.7342,
+  "peak_provenance": "estimated",
+  "giveback_r": 0.6,
+  "bars_held": null,
+  "sl": 89.10464286,
+  "tp": 78.96364,
+  "atr_now_over_entry": 1.665,
+  "regime_cell_now": null,
+  "regime_cell_entry": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.6854,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "mechanics": {
+  "verdict": "mismatch",
+  "evidence": "Venue reads 08:06-08:08Z (/api/bot/prop/status, MEASURED venue_terminal): tradeify_1 SL 89.105 TP 78.964 = package (89.10464286 / 78.96364). velotrade_1 SL 89.105 matches; TP 77.528 vs package 78.96364 (moving between reads: 77.774, 78.139, 77.252, 77.528; known, filed with the order-path owner, noted here only). breakout_2: positions_state=no_table, venue SL/TP unreadable; open_risk lists sl 89.1 (journal/ticket) but the operator moved the stop by hand to about 87.64 (breakeven) on 2026-11-09 ~20:25Z; treated as operator-set, not a mismatch. SL protection present on every readable account. Packet verdict 'match' compared only readable accounts."
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "Judgement hold, no table (packet could not price: open_r/peak_r null). Prior-review tighten triggers still not met: 04:00-08:00 4h bar closed 86.04 (high 86.57, low 85.71), below 87.02; ADX 38.1; 1d trending; no new low under 84.94. Mark about 85.98 (tradeify_1 upnl 11.32 / 6.82 qty), ESTIMATED open R about +1.13 (was +1.26), peak lower bound +1.73, giveback about 0.60. Breakeven tighten 87.64 is 1.02 ATR above mark (at the 1 ATR noise floor) and still sits below the 87.90/88.01 lower highs, so a normal retest of that structure stops the trade out before the trend resumes; 88.05 gives up the 88.01-89.10 zone. No priced table, so I cannot show a tighten beats holding; leg record weak (RULE-E69 demote, net_r_oos -2.796, n=35, cited not re-read) keeps it close. Hold; re-read at the 12:00 bar. Escalate to tighten (about 88.05) on a 4h close above 87.02 or ADX < 30, or on a new low under 84.94 followed by a bounce (lock breakeven 87.64).",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "forecast_grade: LR-20261110T0402Z (with_trade, target 84.94 p 0.45, invalidation 88.01, 5 x 4h from 04:15Z): ONE further bar elapsed (2 of 5 since the original 00:12Z call counted from 04:15Z: 1 of 5). Target NOT reached (bar 04-08 low 85.71; session low 85.10 earlier), invalidation NOT touched (high 86.57 vs 88.01), tighten triggers NOT met (close 86.04 < 87.02, ADX 38.1). Direction still correct but drifting: mark 85.80 -> about 85.98, open R +1.26 -> about +1.13 (ESTIMATED). 4 of 5 bars remain, no final grade; the bar printed a higher low (85.71) than the prior bar (85.42), a mild mark against the modal retest.",
+  "estimated_state: open_r about 1.13 = (87.64-85.98)/1.46464, mark from tradeify_1 upnl 11.32 / 6.82 (MEASURED upnl, R ESTIMATED); peak_r 1.7342 carried (lower bound).",
+  "overlay: ATR ratio 1.665 vs entry (>= 1.5 flag), 4h ATR 1.626: volatility elevated, argues against a tight stop. 4h/1d trending, ADX 35.4 (1d) / 38.1 (4h).",
+  "overlay: correlated open exposure: 10 other open packages listed, all short (ETH x3, SOL x1 other, XRP x2 plus one more, ADA, BTC, MHG, GLD): one crypto-beta short book; account-level, not sized here.",
+  "overlay: no calendar events for SOLUSDT, funding unreadable (no diag route), news neutral.",
+  "no_pricing: no table numbers quoted; any tighten would be flattered by fills at the stop.",
+  "breakout_2_headroom: equity 4871.87 (07:58Z, MEASURED) vs 4850 static floor = 21.87 headroom (was 24.29 at 03:59Z). Journal open risk to 89.10 is 9.96 but about 0 at the operator breakeven stop 87.64. Even a full stop at 89.10 would leave 11.91 above the floor. Daily-loss usage unreported. Stop 87.64 is about 1.02 ATR above the mark.",
+  "prop_dd: tradeify_1 equity 9679.73 vs 9400 floor = 279.73 (258.42 after open risk to stop); velotrade_1 equity 4883.48 vs 4650 = 233.48 (211.64 after open risk). Daily-loss usage unreported on all three."
+ ],
+ "account_reads": [
+  {
+   "account_id": "breakout_2",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "hold: nothing to apply. Venue stop unreadable (no_table); operator-set breakeven about 87.64, so any package tighten above 87.64 would widen this leg. Equity 4871.87 vs floor 4850 = 21.87 headroom (full stop at 89.10 would cost 9.96, leaving 11.91). Mark ESTIMATED about 85.98, R ESTIMATED about +1.13."
+  },
+  {
+   "account_id": "tradeify_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "hold: nothing to apply. Venue SL 89.105 TP 78.964 match the package; equity 9679.73, 279.73 above the 9400 floor; upnl 11.32 MEASURED; R ESTIMATED."
+  },
+  {
+   "account_id": "velotrade_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "hold: nothing to apply. Venue SL 89.105 matches; TP 77.528 vs package 78.964 (known mechanics note); equity 4883.48, 233.48 above the 4650 floor; upnl unreported; R ESTIMATED."
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuNDZkhrLuA46Pf7DtB",
+ "prompt_sha": null,
+ "skill_sha": "205a36474f5df8b7e14526ce999f8d22c84aadfc",
+ "packet_sha": "8a8c7fabf37c177227edeca536c1b9a427cdfe0e5de1f92845399a94f169e2ee",
+ "packet_defects": [
+  {
+   "field": "priced_options",
+   "reason": "could_not_price",
+   "count": 1,
+   "denominator": 1
+  },
+  {
+   "field": "state.open_r",
+   "reason": "context_null:state.open_r",
+   "count": 1,
+   "denominator": 1
+  },
+  {
+   "field": "account_bounds",
+   "reason": "empty_prop_accounts_not_filled",
+   "count": 3,
+   "denominator": 3
+  },
+  {
+   "field": "mechanics.verdict",
+   "reason": "match_contradicted_by_venue_read",
+   "count": 1,
+   "denominator": 3
+  },
+  {
+   "field": "regime.vol_now/regime.cell_entry/context.funding",
+   "reason": "missing_inputs",
+   "count": 3,
+   "denominator": 3
+  }
+ ],
+ "forecast": {
+  "thesis": "Trend intact (4h ADX 38, 1d trending, lower highs 90.02/88.43/88.01/87.90). Price 1.0 above the 84.94 flush low after two higher-low bars (85.42, 85.71); modal path a retest of 84.94 within 5 bars but less likely than before; bounce to 87.0-87.9 the main alternative; a 4h close above 88.01 unlikely.",
+  "direction": "with_trade",
+  "target_px": 84.94,
+  "p_target": 0.4,
+  "invalidation_px": 88.01,
+  "horizon_bars": 5,
+  "timeframe": "4h",
+  "evidence": [
+   "chart: lower highs 90.02/88.43/88.01/87.90, flush low 84.94, last close 86.04",
+   "htf: 1d/4h trending, ADX 35.4 (1d) / 38.1 (4h)",
+   "mark about 85.98 (tradeify_1 upnl 11.32 / 6.82)",
+   "atr 4h 1.626 (1.665x entry)",
+   "packet could not price options"
+  ]
+ }
+}
