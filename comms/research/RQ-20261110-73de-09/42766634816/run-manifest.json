@@ -1,0 +1,91 @@
+{
+  "unit": "RQ-20261110-73de-09",
+  "run_id": "42766634816",
+  "commit_sha": "859281f3068e65d524dcf034b1f654395d885c25",
+  "run_url": null,
+  "timeout_minutes": 90,
+  "runner": {
+    "cpu_model": "AMD EPYC 7B12",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 24.04.5 LTS",
+    "kernel": "6.18.55+",
+    "image": {
+      "ImageOS": null,
+      "ImageVersion": null,
+      "RUNNER_OS": null,
+      "RUNNER_ARCH": null,
+      "RUNNER_ENVIRONMENT": null
+    },
+    "python": "3.13.15",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.1.3",
+      "pandas": "2.3.3",
+      "scipy": "1.16.3",
+      "scikit-learn": "1.6.1"
+    },
+    "blas": "blas=scipy-openblas 0.3.27; lapack=scipy-openblas 0.3.27",
+    "unread": [],
+    "class_id": "d6a1124fd94a",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_lever_ablation.py",
+        "--leg",
+        "eth_pullback_prop_2h",
+        "--arm",
+        "A=",
+        "--arm",
+        "S3=--structure-exit=pivot=3;--fee-bps-roundtrip=7.5;--slippage-bps-roundtrip=5.0;--funding-bps-per-window=1.0",
+        "--arm",
+        "S5=--structure-exit=pivot=5;--fee-bps-roundtrip=7.5;--slippage-bps-roundtrip=5.0;--funding-bps-per-window=1.0",
+        "--arm",
+        "S8=--structure-exit=pivot=8;--fee-bps-roundtrip=7.5;--slippage-bps-roundtrip=5.0;--funding-bps-per-window=1.0",
+        "--days",
+        "2330",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-15 23:59",
+        "--grade",
+        "holdout",
+        "--baseline",
+        "A",
+        "--delta-r",
+        "0",
+        "--folds",
+        "4",
+        "--fold-majority",
+        "3",
+        "--n-floor",
+        "25",
+        "--holdout-frac",
+        "0.25",
+        "--holdout-min-trades",
+        "25",
+        "--holdout-max-frac",
+        "0.40",
+        "--research-unit",
+        "RQ-20261110-73de-09",
+        "--out",
+        "comms/research/RQ-20261110-73de-09/42766634816"
+      ],
+      "log": "comms/research/RQ-20261110-73de-09/42766634816/logs/cmd-0.log",
+      "exit_code": 1,
+      "seconds": 143.3
+    }
+  ],
+  "all_ok": false
+}
