@@ -187,6 +187,17 @@ def build_record(
         if entry is not None and risk and risk > 0 and px is not None:
             open_r = (px - entry) / risk if is_long else (entry - px) / risk
 
+        # PEAK-FLOOR-OPEN-R (2026-11-10): open_r uses the live price, peak_r the
+        # CLOSED-bar extremes, so a new extreme inside the forming bar left
+        # open_r > peak_r and giveback_r negative. The best price seen is at
+        # least the price now: floor the peak at open_r. peak_state is left as
+        # the window measurement reported it — an open_r-only peak is never
+        # claimed 'measured' — and provenance stays 'estimated' (lower bound).
+        # An UNMEASURABLE window keeps peak_r NULL ("we did not look"; the
+        # sentinel contract in `_UPSERT`) rather than inventing a peak.
+        if open_r is not None and peak_r is not None and open_r > peak_r:
+            peak_r = open_r
+
         ceiling = cap_r(entry, risk)
         pct_of_cap = None
         if ceiling and ceiling > 0 and open_r is not None:
