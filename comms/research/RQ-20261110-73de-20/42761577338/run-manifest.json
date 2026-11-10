@@ -1,0 +1,73 @@
+{
+  "unit": "RQ-20261110-73de-20",
+  "run_id": "42761577338",
+  "commit_sha": "dc1d19d756211c5d5ba907788cc63b512f919d73",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/42761577338",
+  "timeout_minutes": 30,
+  "runner": {
+    "cpu_model": "AMD EPYC 7763 64-Core Processor",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 24.04.5 LTS",
+    "kernel": "7.0.0-1017-azure",
+    "image": {
+      "ImageOS": "ubuntu24",
+      "ImageVersion": "20261101.360.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "d5aeef1fabd2",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/macro_event_study_run.py",
+        "--kind",
+        "core_cpi_yoy",
+        "--snapshots",
+        "comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl",
+        "--symbol",
+        "TLT",
+        "--horizons",
+        "1,3,5",
+        "--primary-horizons",
+        "1,3,5",
+        "--min-n",
+        "100",
+        "--t-bar",
+        "3.5",
+        "--expected-sign",
+        "negative",
+        "--population",
+        "core_cpi_yoy releases (live feed + survey-consensus backfill) joined to TLT daily closes",
+        "--out",
+        "comms/research/RQ-20261110-73de-20/42761577338"
+      ],
+      "log": "comms/research/RQ-20261110-73de-20/42761577338/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 1.8
+    }
+  ],
+  "all_ok": true
+}
