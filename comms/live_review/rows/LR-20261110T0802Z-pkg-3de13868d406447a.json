@@ -1,0 +1,167 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261110T0802Z-pkg-3de13868d406447a",
+ "reviewed_at": "2026-11-10T08:15:00Z",
+ "order_package_id": "pkg-3de13868d406447a",
+ "trade_id": null,
+ "leg": "ada_pullback_2h",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "stall",
+  "level": 8,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-10T08:02:50Z",
+ "state": {
+  "atr_now_over_entry": 0.7258,
+  "bars_held": 8,
+  "giveback_r": 0.5018,
+  "open_r": -0.1673,
+  "peak_provenance": "estimated",
+  "peak_r": 0.3345,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.18437857,
+  "tp": 0.1607384
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.7258,
+  "bars_since_peak": 3,
+  "giveback_r": 0.5018,
+  "open_r": -0.1673,
+  "peak_r": 0.3345,
+  "r_to_stop": 0.8327,
+  "r_to_target": 3.1214
+ },
+ "mechanics": {
+  "evidence": "package sl 0.18437857 / tp 0.1607384 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 154,
+   "mean_r": 0.8866,
+   "sd_r": 2.0855,
+   "worst_r": -1.1996,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 154,
+   "mean_r": 0.3425,
+   "sd_r": 0.7105,
+   "worst_r": -0.4645,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 154,
+   "mean_r": 0.3854,
+   "sd_r": 1.0228,
+   "worst_r": -0.7978,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 154,
+   "mean_r": 0.6076,
+   "sd_r": 1.482,
+   "worst_r": -1.0204,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 154,
+   "mean_r": -0.2199,
+   "sd_r": 0.0245,
+   "worst_r": -0.3172,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261110T0802Z-pkg-3de13868d406447a.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "reason": "Priced (154 comparable of 406, short): HOLD n=154 mean +0.887R sd 2.09 worst -1.20R beats every alternative (tighten atr:2.0 +0.608, atr:1.5 +0.385, atr:1.0 +0.343, close -0.220); cheapest tighten costs 0.279R (se 0.126), outside the 0.25R apply bound. Stall trigger fires at peak 0.33R but the 2h grind stays under 0.1798 (0.21 ATR above) and well below 0.1834 invalidation; daily ADX 30 downtrend intact.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": false,
+  "tighten_r": 0.279
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": true,
+  "would_apply": false,
+  "tighten_r": 0.279
+ },
+ "context_flags": [
+  "priced: hold n=154 mean +0.887R worst -1.20R; atr:2.0 tighten mean +0.608R worst -1.02R cost 0.279R, inside shadow 0.5R only",
+  "tighten_bias: stops fill at the stop price, which flatters every tighten",
+  "correlated: 10 open crypto/metal shorts incl. ETH x3, SOL x2, XRP x2, BTC (one crypto-beta bet)",
+  "regime: atr_now/entry 0.73, trend trending (ADX 30.4); cell_entry/vol unknown (missing input)",
+  "missing_inputs: funding (geo-blocked), vol cell frozen edges",
+  "live_vs_backtest: CONSISTENT (real_money 18 closed, percentile 10.8; mirror 12, 21.6)",
+  "prior_forecast_grade: LR-20261110T0601Z target 0.1713 not hit, invalidation 0.1834 not hit; since-entry low 0.1764, high 0.1798; horizon 6x2h not elapsed -> PENDING"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold changes nothing; SL 0.1844 / TP 0.1607 match package, position True"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold changes nothing; SL/TP match, position True (Stage-2 mirror)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuJMeoyAMKuCJ95gnyQ",
+ "prompt_sha": null,
+ "skill_sha": "205a36474f5df8b7e14526ce999f8d22c84aadfc",
+ "packet_sha": "2703cb428959dac26a64007300997e2e0bf0b240d00023b91b78526237da2c1a",
+ "forecast": {
+  "thesis": "Daily downtrend (ADX ~30) and repeated failures below 0.1798 favour a leg down to the 0.1713 flush low before a 2h close above 0.1834.",
+  "direction": "with_trade",
+  "target_px": 0.1713,
+  "p_target": 0.35,
+  "invalidation_px": 0.1834,
+  "horizon_bars": 6,
+  "timeframe": "2h",
+  "evidence": [
+   "priced_options hold cell n=154 mean +0.887R",
+   "context_v3.chart.since_entry high 0.1798 (0.21 ATR), swings",
+   "context_v3.htf trending ADX 30.4",
+   "context.previous_review.forecast target unresolved"
+  ]
+ }
+}
