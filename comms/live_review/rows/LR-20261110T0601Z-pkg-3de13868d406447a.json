@@ -1,0 +1,121 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261110T0601Z-pkg-3de13868d406447a",
+ "reviewed_at": "2026-11-10T06:10:00Z",
+ "order_package_id": "pkg-3de13868d406447a",
+ "trade_id": null,
+ "leg": "ada_pullback_2h",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "structure_break",
+  "level": null,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-10T06:01:46Z",
+ "state": {
+  "atr_now_over_entry": 0.7527,
+  "bars_held": 7,
+  "giveback_r": 0.4014,
+  "open_r": -0.0669,
+  "peak_provenance": "estimated",
+  "peak_r": 0.3345,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.18437857,
+  "tp": 0.1607384
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.7527,
+  "bars_since_peak": 2,
+  "giveback_r": 0.4014,
+  "open_r": -0.0669,
+  "peak_r": 0.3345,
+  "r_to_stop": 0.9331,
+  "r_to_target": 3.0211
+ },
+ "mechanics": {
+  "evidence": "package sl 0.18437857 / tp 0.1607384 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": "comms/live_review/tables/LR-20261110T0601Z-pkg-3de13868d406447a.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Tool (packet priced, 154 comparable of 406 corpus trades, short): HOLD from open -0.07R, peak 0.33R, 7 bars: n=154 mean +0.887R sd 2.09 worst -1.20R, beating every measured alternative (tighten atr:1.0 +0.343, atr:1.5 +0.385, atr:2.0 +0.608, close -0.120). The structure break is marginal: the 04:00 2h close 0.1788 exceeds the prior since-entry high close 0.1783 by 0.0005 (~0.17 ATR), the since-entry high 0.1798 is 0.33 ATR above and the prior 0.1834 invalidation is 1.5 ATR away, SL 0.1844 about 0.93R. Daily ADX 33.7 downtrend intact (1d close 0.1773 under 0.1775 swing low). ATR now/entry 0.75, calm. Wrong if a 2h close above 0.1834. Not close-on-adverse."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "table: HOLD n=154 mean +0.8866R sd 2.0855 worst -1.1996R p05 -1.1034R; tighten atr:2.0 ev_cost 0.279R (+/-0.126) worst gain 0.179, atr:1.5 ev_cost 0.501, atr:1.0 ev_cost 0.544, none within 0.25R apply bound; tighten flattered by stop-price fills (tool biases)",
+  "forecast_grade: LR-20261109T1803Z (with_trade, target 0.1713 p 0.55, invalidation 0.1834, 6 x 2h from 18:25Z): UNRESOLVED, ~6 bars elapsed, horizon ends ~06:25Z. Target NOT reached (low since entry 0.1764), invalidation NOT touched (high 0.1798 vs 0.1834). Direction mixed: open R +0.02 -> -0.07R, peak 0.33R then giveback 0.40R. Trending down on daily but no flush; leaning partial miss unless a leg down prints in the remaining bar.",
+  "overlay: correlated open exposure: 10 other open shorts (ETH x3, SOL x2, XRP x2, BTC, MHG, GLD): crypto-beta short book, account-level, not sized here",
+  "overlay: ATR now/entry 0.75 (calm), news neutral, no calendar events; vol_now, cell_entry, funding unreadable (packet missing_inputs)",
+  "live_vs_backtest not read this session",
+  "trigger_level: structure_break bar 2026-11-10T04:00:00+00:00 (marker level is a timestamp; schema wants number|null)"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold changes nothing; bybit_orders SL 0.1844 / TP 0.1607 match package, position present"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold changes nothing; bybit_orders SL 0.1844 / TP 0.1607 match package, position present"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuFZ-reviewer-lane",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "128e158f1341d5a49cffa596e6226bd623937420b49683181cbbb4d8c374fbad",
+ "packet_defects": [],
+ "forecast": {
+  "thesis": "Daily downtrend (ADX 33.7) and a failed push above 0.1798 favour a leg down to the 0.1713 flush low before a 2h close above 0.1834.",
+  "direction": "with_trade",
+  "target_px": 0.1713,
+  "p_target": 0.4,
+  "invalidation_px": 0.1834,
+  "horizon_bars": 6,
+  "timeframe": "2h",
+  "evidence": [
+   "context_v3.chart.swings",
+   "context_v3.htf",
+   "priced_options"
+  ]
+ }
+}
