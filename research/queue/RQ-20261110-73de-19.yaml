@@ -1,0 +1,89 @@
+cadence: once
+compute: cpu_light
+decision_rule:
+  id: RULERQ2026111073de19
+  min_n: 100 joined releases per horizon.
+  registered_at: '2026-11-10'
+  registered_before_run: true
+  rule: 'PASS IF at some horizon in {1,3,5} with n >= 100, |ic_t_eff| >= 3.5 (sign reported). FAIL IF every horizon has n >= 100 and none reaches the bar. INDETERMINATE IF any horizon has n < 100. no_data/producer_failed
+    IF the price panel is empty or no release has a defined surprise: a route fault, not a verdict. Thresholds are not changed after any result.'
+  statistic: Overlap-corrected Spearman t (ic_t_eff) of surprise vs forward ES=F return at horizons 1, 3, 5 trading days (scripts/macro/econ_event_study.py event_study, merged live+survey snapshots), graded
+    by scripts/research/macro_event_study_run.py grade() with the CLI flags below.
+  what_it_does_not_do: A PASS is evidence for a weight-setting proposal (Tier 3, operator-gated; costs, a placebo, a sub-period split and the naive-floor check still owed), not a weight. Sets no weight,
+    touches no config or order path. Daily closes cannot see the intraday reaction.
+id: RQ-20261110-73de-19
+kind: experiment
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+power:
+  alpha: 0.01
+  basis: 'Unit = one distinct release with a defined survey surprise (138, MEASURED 2026-11-03). Fisher-z: detecting rho at the registered |t| bar 3.5 with power 0.8 needs atanh(rho) >= (3.5+0.8416)/sqrt(n-3),
+    i.e. rho >= 0.36 at n=138. A FAIL therefore means "no effect >= ~0.37 sd at daily-close resolution", not "no effect". The queue power gate only tabulates alpha 0.01, so power.alpha is declared 0.01
+    (looser than the registered bar); min_detectable_effect is computed at the STRICTER t bar.'
+  design: one_sample
+  effect_units: sd
+  expected_n: 138
+  feasibility:
+    accrual_basis: n is a fixed historical backfill, not an accrual; the run prints releases, releases_with_value and price_bars so the bound is MEASURED and a short join lands INDETERMINATE, never padded.
+    source: none
+  min_detectable_effect: 0.36
+  power: 0.8
+practice_precedent: 'T1 (docs/reference/trading-and-model-practice-principles.md): net-of-cost economic read follows only a PASS here; the multiple-testing denominator (studies registered to date) is stated
+  in the rule'
+priority: 3
+programme: P4
+question: Does the ppi_yoy surprise vs the PIT survey consensus predict ES=F forward returns at 1-5 trading days? (bar |t_eff| >= 3.5, either sign pre-registered as reported with its sign)
+related:
+- scripts/macro/econ_event_study.py
+- .claude/skills/macro-research/SKILL.md
+- docs/claude/work/checklist/CALENDAR-EVENT-TYPES.json
+- RQ-20261101-e5b1-01
+- RQ-20261031-d5dd-14
+- RQ-20261101-e5b1-01
+roadmap:
+- M28
+routing:
+  basis: 'Estimate, NOT measured: one daily-close fetch and a rank correlation per horizon, comparable to RQ-20261101-e5b1-01.'
+  est_minutes: 10
+  needs_gpu: false
+  needs_trainer_resident_data: false
+  peak_memory_gb: 1.0
+run:
+  command:
+  - python3
+  - scripts/research/macro_event_study_run.py
+  - --kind
+  - ppi_yoy
+  - --snapshots
+  - comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl
+  - --symbol
+  - ES=F
+  - --horizons
+  - 1,3,5
+  - --primary-horizons
+  - 1,3,5
+  - --min-n
+  - '100'
+  - --t-bar
+  - '3.5'
+  - --expected-sign
+  - negative
+  - --population
+  - ppi_yoy releases (live feed + survey-consensus backfill) joined to ES=F daily closes
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261110-73de-19
+  timeout_minutes: 30
+status: queued
+theme: macro
+title: 'Calendar event study (ppi_yoy): does the PPI y/y surprise vs the PIT survey consensus predict ES forward returns at 1-5 trading days?'
+value:
+  basis: 'stand-in: a measured event-class effect decides whether the `export_price_index_mom` calendar class earns a non-zero news-layer weight; information value, not a P&L claim'
+  bucket: information
+  confidence: 0.2
+  usd_at_stake_per_month: 50
+why_this_matters: 'Operator 2026-11-10 throttle: keep the queue filled from the authoring queue (node P4-Q2-ppi-rty-econ). Look-before-you-re-test: no unit on (ppi_yoy, ES=F) in research/queue/ (grep of
+  macro_event_study_run units, 2026-11-10). MULTIPLE-TESTING DENOMINATOR: >= 80 (kind, symbol) cells already read; the t bar 3.5 is set against that count, so a pass is a lead only.'

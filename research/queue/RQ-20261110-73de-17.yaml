@@ -1,0 +1,100 @@
+id: RQ-20261110-73de-17
+title: 4h squeeze (volatility-compression breakout) on twelve perps at declared defaults, pooled Stage-0, net of cost
+status: queued
+cadence: once
+roadmap:
+- L-TIMEFRAMES
+theme: timeframes
+priority: 3
+kind: experiment
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 90
+  basis: Estimate from comparable harness_stage0 runs of 2026-10-18..29 scaled by cells x arms x bars; the first run replaces it.
+  why_runner: harness_stage0.py fetches keyless public candles and runs the repo harnesses; these symbols/bars are not in the metis-market-data allowlist, so no idle published-data backend can hold it;
+    CPU only.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+question: Does the squeeze family at 4h clear the pooled Stage-0 rule on twelve perps (the 1h read failed, the 1d read was indeterminate)?
+why_this_matters: 'Operator 2026-11-10 throttle: keep the queue filled from the authoring queue (node P7-Q2-frontier-pass, programme 07). Look-before-you-re-test: no unit on this family x timeframe on these
+  twelve perps (grep of harness_stage0 units, 2026-11-10); neighbours ef5d-08 (squeeze 1h), 4b82-18 (fade 4h), b3c9-10 (squeeze 1d).'
+power:
+  expected_n: 100
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo standing floor) = the pooled floor 39; expected_n is an ESTIMATE from comparable runs, NOT a measurement for these arms; below the floor
+    the unit grades indeterminate, never FAIL. The 0.10 R/trade delta over the baseline is a materiality bar, so a PASS is a LEAD.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+practice_precedent: 'T1 (docs/reference/trading-and-model-practice-principles.md): one setting tested once; operator 2026-10-18 FRONTIER-TIMEFRAMES.'
+intervention_controls:
+  not_applicable: a Stage-0 parameter/horizon arm comparison through the harness, not an in-trade action or active-management intervention
+decision_rule:
+  id: RULE-RQ2026111073de17
+  registered_at: '2026-11-10'
+  registered_before_run: true
+  statistic: 'harness_stage0.py --family squeeze --timeframe 4h on 12 perps, 2020-06-01..2026-11-02; ONE arm B = the family declared defaults; net of the harness venue-aware fee + slippage + funding stack
+    (execution_costs.resolve_cost_policy). Regime-robustness clause (default template): per-year table read; a PASS with one year above 50% of net gain or a net-negative long or short side is a LEAD with
+    that caveat.'
+  rule: 'PASS iff the pooled Stage-0 rule holds for B: pooled n >= 39, pooled net_r > 0, >= 4 of 6 calendar folds net positive, >= half of the powered cells pass (Holm across cells as the harness grades).
+    INDETERMINATE IF pooled n < 39. FAIL IF pooled n >= 39 and not passed: this family x timeframe at declared defaults is closed on this basket and window; the family stays open. A PASS is a LEAD: ONE
+    confirmation on a symbol-disjoint basket or later window, never a roster edit. Thresholds are not changed after any result.'
+  what_it_does_not_do: Edits no config or roster and places no order; a pass on one basket and one window is a lead, not edge; not a Tier-3 case.
+value:
+  usd_at_stake_per_month: 60
+  confidence: 0.3
+  bucket: frontier
+  basis: stand-in planning weight for the programme node this question belongs to; an estimate, not a measurement.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - squeeze
+  - --symbols
+  - BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT,BNBUSDT,DOGEUSDT,LINKUSDT,LTCUSDT,BCHUSDT,DOTUSDT
+  - --timeframe
+  - 4h
+  - --days
+  - '2500'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-11-02'
+  - --arm
+  - B=
+  - --baseline
+  - B
+  - --delta-r-per-trade
+  - '0.1'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '20'
+  - --pooled-n-floor
+  - '39'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ2026111073de17
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261110-73de-17
+related:
+- RQ-20261029-a538-03
+- RQ-20261029-a538-04

@@ -1,0 +1,117 @@
+id: RQ-20261110-73de-04
+title: 'HOLDOUT-SELECTED exit levers on tlt_pullback_1d (Stage-1 paper/mirror book): be-floor 1R, bank 50% at 1.5R, cooldown 4, structure/ADX-trail extras, net of cost'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+theme: live_strategy
+priority: 2
+kind: experiment
+question: tlt_pullback_1d trades Stage-1 paper/mirror book. Its exit-lever cells be_floor / bank / cooldown (and the extras named in the arms) have no unit. Does any arm, selected on the earliest ~75% of
+  2018-03..2026-10 and read once on the held-back latest span, hold up net of the full cost stack?
+why_this_matters: 'Operator 2026-11-10 (throttle to the 11-11 reset): keep the queue filled from the authoring queue; drawn from node live-strategy exit-lever coverage (programme 03/01, untested cells on
+  the 1d equity legs). Look-before-you-re-test: the cell below has no unit in research/queue/ (grep of every exit_lever_ablation arm token per leg, 2026-11-10); prior units on the leg: RQ-20261016-018/-077e-08/-0142-*,
+  each on a different lever family (the cells here -- be-floor, bank, cooldown, structure -- are untested on this leg). MULTIPLE-TESTING DENOMINATOR: 4 arms on this leg, selected on discovery only, read
+  once on the holdout.'
+power:
+  expected_n: 25
+  min_detectable_effect: 0.57
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: expected_n is the HELD-BACK trade count, an ESTIMATE (no measurement for these arms); the held-back floor is 25 trades, below which the unit grades INDETERMINATE/underpowered, never FAIL. At n=25
+    a one-sample test detects d = 0.57 sd (alpha 0.05, power 0.8); a PASS is a LEAD.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ2026111073de04-LIVE_STRATEGY
+  statistic: 'scripts/research/exit_lever_ablation.py --grade holdout on tlt_pullback_1d, window 2018-03-01 .. 2026-10-15 23:59, every arm ONE continuous harness pass (argv via regime_debt_matrix.build_harness_cmd),
+    net of the full cost stack the harness resolves for the venue (fee + slippage + funding where applicable); per-trade net_r from --emit-trades. Arms fixed now: A = the leg as declared; C1: --be-floor-r=1.0;
+    C2: --bank-at-r=1.5;--bank-frac=0.5; C3: --cooldown-bars=4; C4: --structure-exit=pivot=5. BOUNDARY, fixed before any outcome is read: the latest 25% of the calendar window, grown in 1% steps until it
+    holds 25 of arm A''s entries, capped at 40%. DISCOVERY = trades whose entry AND exit precede the boundary; 4 equal calendar folds. HOLDOUT = the selected arm''s trades entered on/after the boundary.
+    Regime-robustness clause (default template): the per-year table is read in the result; a PASS with one calendar year above 50% of net gain, or a net-negative long or short side, is reported as a LEAD
+    with that caveat.'
+  rule: 'SELECTION (discovery only): an arm is eligible iff discovery n >= 25 AND discovery net R > 0 AND >= 3 of 4 discovery folds net-positive; the eligible arm with the highest discovery net R is selected
+    (a tie goes to A). HOLDOUT (read once): INDETERMINATE/insufficient_discovery IF every arm holds < 25 discovery trades; FAIL/no_discovery IF no arm is eligible otherwise; INDETERMINATE/underpowered IF
+    the selected arm holds < 25 held-back trades; PASS/confirmed IF held-back net R > 0; FAIL/not_replicated otherwise (closes THAT configuration on THIS window, never the lever family). A PASS with a non-A
+    arm is a LEAD for a Tier-3 proposal NOTE on the owning checklist row, never a config edit. Thresholds are not changed after any result.'
+  what_it_does_not_do: Edits no config, roster or record and places no order. A backtest of a few levers on one leg is not edge and not a P&L claim; not a Tier-3 case; does not deflate (one configuration
+    is read once on the holdout).
+  registered_before_run: true
+  registered_at: '2026-11-10'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.25
+  basis: stand-in planning weight from the programme node live-strategy exit-lever coverage (programme 03/01, untested cells on the 1d equity legs); an estimate, not a measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 40
+  why_runner: Fetches keyless public candles (Binance Vision / dukascopy) for a pinned window; Kaggle CPU runs with the internet off and metis-market-data carries no 2h/4h/1d candles for these legs; reads
+    no trainer data.
+  basis: 'Runner. One exit_lever_ablation.py invocation: one keyless candle fetch + 5 harness passes; same shape as RQ-20261016-077e-08 (estimate, not measured).'
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - tlt_pullback_1d
+  - --arm
+  - A=
+  - --arm
+  - C1=--be-floor-r=1.0
+  - --arm
+  - C2=--bank-at-r=1.5;--bank-frac=0.5
+  - --arm
+  - C3=--cooldown-bars=4
+  - --arm
+  - C4=--structure-exit=pivot=5
+  - --days
+  - '3180'
+  - --start
+  - '2018-03-01'
+  - --end
+  - 2026-10-15 23:59
+  - --non-crypto-source
+  - dukascopy
+  - --grade
+  - holdout
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '25'
+  - --holdout-frac
+  - '0.25'
+  - --holdout-min-trades
+  - '25'
+  - --holdout-max-frac
+  - '0.40'
+  - --research-unit
+  - RQ-20261110-73de-04
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261110-73de-04
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/exit_lever_ablation.py
+- RQ-20261016-077e-08
+programme: P1
+practice_precedent: 'T1/M13 (docs/reference/trading-and-model-practice-principles.md): select on discovery, read a held-back span once; operator 2026-11-05 RESEARCH-NO-WAIT.'
+intervention_controls:
+  not_applicable: lever sweep against the declared config on the same trades over the harness (A/B arms), not an active-management action on live check-ins; hold_to_bracket is arm A itself

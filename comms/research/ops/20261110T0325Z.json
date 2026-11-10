@@ -1,0 +1,82 @@
+{
+ "run": "RESEARCH-OPS-AUTHOR-20261110-0320",
+ "finished_at": "2026-11-10T03:25:00Z",
+ "by": "small ML lane (step E only), dispatched by Manager Session 2026-11-09a (session_01AFoLuKgeM4bM8AQqUfQZjE)",
+ "mode": "step E only (authoring); no builds, no CHECKS/ANALYSIS, no step C/D",
+ "floor": 25,
+ "floor_basis": "computed_floor (queue-dispatch run 42743906879: runnable 4 of 2148)",
+ "authoring_queue_depth": 49,
+ "idle_backends": [
+  "github_runner",
+  "github_runner_data",
+  "kaggle",
+  "kaggle_cpu",
+  "trainer"
+ ],
+ "throughput": {
+  "runnable_before": 4,
+  "runnable_after": 25,
+  "basis": "dispatch_queue.py --json dry run on this branch: would_dispatch 21 (all new) + 4 pre-existing infra"
+ },
+ "units_authored": [
+  "RQ-20261110-73de-01",
+  "RQ-20261110-73de-02",
+  "RQ-20261110-73de-03",
+  "RQ-20261110-73de-04",
+  "RQ-20261110-73de-05",
+  "RQ-20261110-73de-08",
+  "RQ-20261110-73de-09",
+  "RQ-20261110-73de-10",
+  "RQ-20261110-73de-11",
+  "RQ-20261110-73de-14",
+  "RQ-20261110-73de-15",
+  "RQ-20261110-73de-16",
+  "RQ-20261110-73de-17",
+  "RQ-20261110-73de-18",
+  "RQ-20261110-73de-19",
+  "RQ-20261110-73de-20",
+  "RQ-20261110-73de-21",
+  "RQ-20261110-73de-22",
+  "RQ-20261110-73de-23",
+  "RQ-20261110-73de-24",
+  "RQ-20261110-73de-25"
+ ],
+ "authoring": {
+  "queue_depth": 49,
+  "nodes_drafted": 0,
+  "nodes": [],
+  "theme_shortfall": {
+   "ml_health": 4,
+   "macro": 0,
+   "timeframes": 0
+  },
+  "note": "nodes_drafted is 0 on purpose and honest: 44 of the 49 ready nodes only follow an existing unit's verdict, are build-gated, or name no instrument (P3-Q1 needs LIVE-BT-STAGE-B; P2-Q4 needs an ml_bakeoff feature block; the Q6 declare nodes are Tier-3 packets). Units were authored as hand units against the node families (P1-Q15/L-ATM exit levers, P5 TP doctrine, P7/07 timeframes, P4 macro, P2 regime) and the lever-coverage matrix, each with its node named in why_this_matters. The needs_authoring lines were left in place: none was replaced by a unit: body."
+ },
+ "theme_authored": {
+  "live_strategy": 7,
+  "new_strategy_prop": 7,
+  "regime": 3,
+  "timeframes": 2,
+  "macro": 2,
+  "ml_health": 0,
+  "infra": 0
+ },
+ "backend_authored": {
+  "github_runner(cpu_light)": 19,
+  "github_runner(cpu_long)": 2,
+  "trainer": 0,
+  "kaggle": 0,
+  "kaggle_cpu": 0
+ },
+ "not_run": [
+  "ml_health: 0 units. Every ML unit needs a named consumer + a driver that exists; the only runnable drivers (ml_bakeoff / ml_entry_equity / regime_cell_walkforward) take a dataset or manifest design that a hand unit written in a budget lane would invent. Filed to handoff.",
+  "squeeze_breakout_4h / fade_breakout_4h: exit_lever_ablation.py refuses the squeeze and fade harnesses (verified: ValueError, 2026-11-10). Four drafted units were dropped, not shipped. Those legs need a harness_stage0 or own-harness route.",
+  "kaggle / kaggle_cpu / trainer: every drafted unit fetches keyless public candles (needs internet; Kaggle CPU has none; metis-market-data carries no 2h/4h/1d candles), so each says why_runner. No trainer units, per the 1-2 trainer-hour budget."
+ ],
+ "handoff": [
+  "Authoring-queue nodes P1-Q15-c2/c3/c5/c7/c8 (SL widen, structure re-anchor, TP pull-in, partial, full close) need a harness that applies a mid-trade action; exit_lever_ablation covers entry/exit-lever arms only. Needs a build row, not a unit.",
+  "ml_health supply is 0 (weight 4): next programme-review lane should draft ml units from the P2 MECE nodes with a named consumer.",
+  "Dukascopy-lane units (73de-01..05, -16, -21, -22) fail the local fetch without dukascopy_python; they are meant for research-script-run.yml, which installs it (precedent RQ-20261016-077e-08). If the first dispatch of one fails on the fetch, that is an infra row, not a verdict."
+ ],
+ "preflight_note": "The 10 crypto-leg commands were run once locally as a does-it-execute check before landing (arms and rules were fixed before, not changed after); their local verdicts are not recorded and not used. The 11 dukascopy-lane commands could not fetch locally."
+}
