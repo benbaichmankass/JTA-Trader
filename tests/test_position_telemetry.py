@@ -79,6 +79,36 @@ class TestTheMotivatingTrade:
         assert r["peak_provenance"] == "estimated"
 
 
+class TestPeakFlooredAtOpenR:
+    """PEAK-FLOOR-OPEN-R: a forming-bar extreme past the closed-bar extreme."""
+
+    def test_forming_bar_extreme_floors_peak_at_open_r(self):
+        # Closed-bar lows bottom at 1.02; live price 1.002 is beyond them.
+        r = pt.build_record(
+            open_pkg=_pkg(), meta=_meta(), window=_window([1.06, 1.03, 1.02]),
+            direction="short", current_price=XRP["price"], stop=XRP["stop"],
+            target=XRP["tp"], strategy="xrp_pullback_2h")
+        assert r["peak_r"] == r["open_r"]
+        assert r["giveback_r"] == 0
+        assert r["peak_state"] == PEAK_MEASURED
+        assert r["peak_provenance"] == "estimated"
+
+    def test_giveback_never_negative_when_peak_exceeds_open(self):
+        r = pt.build_record(
+            open_pkg=_pkg(), meta=_meta(), window=_window([1.06, 0.99, 1.0021]),
+            direction="short", current_price=XRP["price"], stop=XRP["stop"],
+            target=XRP["tp"], strategy="xrp_pullback_2h")
+        assert r["peak_r"] > r["open_r"] and r["giveback_r"] > 0
+
+    def test_unmeasurable_window_keeps_peak_null_not_open_r(self):
+        r = pt.build_record(
+            open_pkg=_pkg(), meta=_meta(entry_time=None), window=_window([1.06, 1.0]),
+            direction="short", current_price=XRP["price"], stop=XRP["stop"],
+            target=XRP["tp"], strategy="xrp_pullback_2h")
+        assert r["peak_state"] != PEAK_MEASURED
+        assert r["peak_r"] is None and r["giveback_r"] is None
+
+
 class TestAbsentMfeIsNeverZero:
     def test_unanchored_window_reports_why_not_a_flat_trade(self):
         r = pt.build_record(open_pkg=_pkg(), meta=_meta(entry_time=None),
