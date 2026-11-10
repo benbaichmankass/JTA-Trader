@@ -1,6 +1,6 @@
 id: RQ-20261110-73de-17
 title: 4h squeeze (volatility-compression breakout) on twelve perps at declared defaults, pooled Stage-0, net of cost
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-TIMEFRAMES
@@ -99,3 +99,16 @@ related:
 - RQ-20261029-a538-03
 - RQ-20261029-a538-04
 last_dispatched_at: '2026-11-10T06:08:35+00:00'
+grading:
+  attested: RULE-RQ2026111073de17
+  auto: true
+  decision_rule_id: RULE-RQ2026111073de17
+  evidence:
+  - research/results/RQ-20261110-73de-17/42766621003.jsonl
+  graded_at: '2026-11-10'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
