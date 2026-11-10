@@ -1,0 +1,152 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261110T1334Z-pkg-633f05fad1ee4c1d",
+ "reviewed_at": "2026-11-10T13:50:00Z",
+ "order_package_id": "pkg-633f05fad1ee4c1d",
+ "trade_id": null,
+ "leg": "trend_donchian_xrp_4h",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": 8,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-10T13:34:13Z",
+ "state": {
+  "atr_now_over_entry": 1.238,
+  "bars_held": 10,
+  "giveback_r": -0.4211,
+  "open_r": 1.7719,
+  "peak_provenance": "estimated",
+  "peak_r": 1.3509,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1.1411,
+  "tp": 1.0271
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.238,
+  "bars_since_peak": 0,
+  "giveback_r": -0.4211,
+  "open_r": 1.7719,
+  "peak_r": 1.3509,
+  "r_to_stop": 2.7719,
+  "r_to_target": 1.2281
+ },
+ "mechanics": {
+  "evidence": "package sl 1.1411 / tp 1.0271 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 21,
+   "mean_r": 1.2041,
+   "sd_r": 1.24,
+   "worst_r": -0.9952,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261110T1334Z-pkg-633f05fad1ee4c1d.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "suggestive",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.6,
+  "reason": "HALF position short, open ~+1.77R ESTIMATED (derived from open_r; mark ~1.062 vs entry 1.1126, no direct mark read), peak ~+1.35R est. (lower bound). Hold cell measured n=21 mean +1.204R, but every tighten/close is unpriced (no_candles, 7/7), so no measured alternative: JUDGEMENT. 4h ADX 53.9 downtrend, 4h closed 1.0787 after low 1.0741; nearest swing high 1.116 is 1.6 ATR above; 1.1411 SL 2.8R away. Profit is rising, not adverse; no close. Tightening here is unpriced and would cut a trend leg.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": false,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "packet DEGRADED: all_options_unpriced:no_candles 7/7; candles_missing 7/7. R figures are ESTIMATED (judgement basis)",
+  "thin cell: hold n=21 mean +1.204R sd 1.24 worst -0.995R (quoted from tool, not measured vs alternatives); tighten/close cells null = could not look, not 0",
+  "regime: atr_now/entry 1.24, 4h ADX 53.9 trending, 1d ADX 21.5 transitional; cell_entry/vol unknown",
+  "correlated: crypto shorts ADA, SOL, ETH x3, BTC, XRP adx25 -- one crypto-beta bet",
+  "live_vs_backtest: CONSISTENT (real_money 8 closed, pct 36.3; mirror 5, pct 19.6)",
+  "prior_forecast_grade: LR-20261109T2256Z-pkg-633f05fad1ee4c1d target 1.0756 HIT (4h low 1.0741, within horizon), invalidation 1.1411 not hit; soft flag 4h close>1.116 not hit (high 1.116 touch only) -> HIT",
+  "mechanics_note: post-partial-close SL leg NOT resized (bybit_2 pos 53.8 vs SL leg 107.6; bybit_portfolio 16239.3 vs 32478.5; bybit_over_cover hourly). Reduce-only, closes at most the position, cannot flip. Known gap on row TRADE-ACTION-FAST-PATH; post-reset build; not a flag_mechanics here",
+  "no_close_on_adverse default (#22151): position favourable; no close considered"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold changes nothing; SL 1.1411 / TP 1.0271 match package; SL leg 107.6 vs position 53.8 (reduce-only, filed gap)"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold changes nothing; SL/TP match package; SL leg 32478.5 vs position 16239.3 (reduce-only, filed gap)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuHord9Vhz8D2ja6zi3",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_sha": "1aef75a178fd8cfa606a94c3db392dcfa1dd907bf400c8e11371efa4b3869539",
+ "packet_defects": [
+  {
+   "count": 7,
+   "denominator": 7,
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:no_candles"
+  },
+  {
+   "count": 7,
+   "denominator": 7,
+   "field": "priced_options.candles",
+   "reason": "candles_missing"
+  }
+ ],
+ "forecast": {
+  "thesis": "4h ADX ~54 downtrend after the 1.0756 target hit; expect continuation toward TP 1.0271 before a 4h close above 1.116.",
+  "direction": "with_trade",
+  "target_px": 1.0271,
+  "p_target": 0.3,
+  "invalidation_px": 1.116,
+  "horizon_bars": 6,
+  "timeframe": "4h",
+  "evidence": [
+   "priced_options hold cell n=21 mean +1.204R (thin)",
+   "context_v3.chart since-entry high 1.116 (1.59 ATR), last close 1.0787",
+   "context_v3.htf 1d transitional ADX 21.5; 4h ADX 53.9"
+  ]
+ },
+ "handoff": {
+  "prior_decision_id": "LR-20261109T2256Z-pkg-633f05fad1ee4c1d",
+  "verdict": "confirm",
+  "reason": "Prior hold with target 1.0756 now hit (low 1.0741); no invalidation; open_r rose to ~+1.77R est. On track.",
+  "read_state": "read"
+ }
+}
