@@ -137,3 +137,49 @@ def test_demo_ping_for_testing_paper_is_suppressed(tmp_path, monkeypatch):
     assert ed.enqueue_demo_trade_notification(account="bybit_1", strategy="s", symbol="X", side="buy",
                                               qty=1.0, status="submitted", detail="d") is None
     assert not list(tmp_path.glob("*.json"))
+
+
+# ── muting is operator-only: the manager wake (TELEGRAM-TRIM 2026-11-10) ────
+def test_suppressed_high_paper_flag_wakes_the_manager_and_routine_does_not(tmp_path, monkeypatch):
+    from src.runtime import alerts_ledger as al
+    monkeypatch.setenv("ALERTS_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
+    accts = {"p": {"account_class": "paper"}}
+    pol = {"trades": {"testing_paper": "suppress", "bypass_priorities": ["high", "urgent"]}}
+    for prio, kind in (("high", "trade-update"), ("normal", "trade-open"), ("normal", "trade-update")):
+        d = tp.should_send_trade(kind, f"{prio} {kind}", account="p", strategy="s", symbol="X",
+                                 priority=prio, policy=pol, accounts=accts)
+        assert not d.send
+    rows = al.read()["rows"]
+    woke = {(r["kind"], r["priority"]): al.wakes_manager(r) for r in rows}
+    assert woke[("trade-update", "high")] is True      # the flag reaches the manager path
+    assert woke[("trade-open", "normal")] is False     # routine paper noise does not
+    assert woke[("trade-update", "normal")] is False
+
+
+def test_other_suppressed_rows_wake_rules():
+    from src.runtime import alerts_ledger as al
+    sup = "suppressed_by_policy"
+    assert not al.wakes_manager(al.build_row("prop_monitor", "trades", "x", delivered=sup))
+    assert not al.wakes_manager(al.build_row("trades_snapshot", "system", "x", delivered=sup))
+    assert not al.wakes_manager(al.build_row("pr_merged", "manager", "x", delivered=sup))
+    # a testing-paper rejection that went ledger_only (execution_alert, system, high) wakes
+    assert al.wakes_manager(al.build_row("execution_alert", "system", "x", delivered=sup))
+    # delivered trades rows still never wake
+    assert not al.wakes_manager(al.build_row("trade-update", "trades", "x", priority="high", delivered="telegram_ok"))
+
+
+def test_end_to_end_plan_alert_comment_includes_the_suppressed_high_paper_flag(tmp_path, monkeypatch):
+    """The real consumer (attention_watch.plan_alert_comment) posts the suppressed high flag, not routine rows."""
+    from datetime import datetime, timezone
+    from scripts.ops import attention_watch as aw
+    from src.runtime import alerts_ledger as al
+    monkeypatch.setenv("ALERTS_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
+    accts = {"p": {"account_class": "paper"}}
+    pol = {"trades": {"testing_paper": "suppress", "bypass_priorities": ["high"]}}
+    tp.should_send_trade("trade-update", "FLAG not_applied", account="p", strategy="s", symbol="X",
+                         priority="high", policy=pol, accounts=accts)
+    tp.should_send_trade("trade-open", "ROUTINE open", account="p", strategy="s", symbol="Y",
+                         priority="normal", policy=pol, accounts=accts)
+    body, _state, summary = aw.plan_alert_comment(al.read()["rows"], {}, datetime.now(timezone.utc))
+    assert body and "FLAG not_applied" in body and "ROUTINE open" not in body
+    assert summary["posted_kinds"] == ["trade-update"]

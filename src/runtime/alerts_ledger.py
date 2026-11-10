@@ -47,7 +47,7 @@ READ_MAX_LINES = 20000
 DELIVERED_VALUES = ("telegram_ok", "skipped_no_creds", "raised", "unknown",
                     # TELEGRAM-TRIM (operator 2026-11-04): kept OFF Telegram by
                     # config/telegram_policy.yaml — recorded here so the UI and the
-                    # manager still see it. Never wakes the manager (wakes_manager).
+                    # manager still see it. Wakes the manager only for a high flag or non-routine system kind (wakes_manager).
                     "suppressed_by_policy")
 #: Kinds that are replies inside a conversation, not alerts: never ledgered.
 SKIP_KINDS = frozenset({"reply", "command_reply"})
@@ -230,11 +230,16 @@ def read(since: Any = None, kind: Optional[str] = None, channel: Optional[str] =
 def wakes_manager(row: Dict[str, Any]) -> bool:
     """The wake rule: ``channel == system`` (non-routine kinds) or ``priority ==
     high``. The trades channel never wakes the manager."""
-    ch, kind, prio = row.get("channel"), str(row.get("kind")), row.get("priority")
-    if row.get("delivered") == "suppressed_by_policy":   # TELEGRAM-TRIM: recorded, not an alert
-        return False
+    ch, kind = row.get("channel"), str(row.get("kind"))
+    prio = str(row.get("priority") or "").lower()
+    high = prio in ("high", "urgent", "critical")
+    # TELEGRAM-TRIM (operator 2026-11-10): muting is OPERATOR-ONLY. A row kept off Telegram by policy
+    # still wakes the manager when it would have woken it delivered (a high/urgent flag, or a
+    # non-routine system kind), so a stuck paper action is still seen and fixed. A ROUTINE
+    # suppressed row (normal trade open/close/update, prop_monitor, snapshots) does not wake.
     if ch == "trades":
-        return False
-    if prio == "high":
+        # delivered trades rows never wake; a SUPPRESSED high flag does (it never reached the operator)
+        return row.get("delivered") == "suppressed_by_policy" and high
+    if high:
         return True
     return ch == "system" and kind not in ROUTINE_KINDS

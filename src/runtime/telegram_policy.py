@@ -307,7 +307,8 @@ def should_send_trade(kind: str, text: str = "", **kw) -> TradeDecision:
             d = TradeDecision(False, "duplicate_package_event", d.account_class,
                               d.note, d.dedupe_key)
         if not d.send:
-            record_suppressed(kind, text, reason=d.reason, account=kw.get("account"),
+            record_suppressed(kind, text, reason=d.reason, priority=kw.get("priority"),
+                              account=kw.get("account"),
                               strategy=kw.get("strategy"), symbol=kw.get("symbol"),
                               package_id=kw.get("package_id"), account_class=d.account_class,
                               **({"source": source} if source else {}))
@@ -338,7 +339,8 @@ def suppressed_log_path() -> Path:
 
 
 def record_suppressed(kind: str, text: str, *, reason: str, path: Optional[Path] = None,
-                      channel: Optional[str] = None, **fields: Any) -> bool:
+                      channel: Optional[str] = None, priority: Optional[str] = None,
+                      **fields: Any) -> bool:
     """Append one ``delivered: suppressed_by_policy`` row to the alert ledger.
     Best-effort (the ledger's own contract): never raises."""
     try:
@@ -346,7 +348,7 @@ def record_suppressed(kind: str, text: str, *, reason: str, path: Optional[Path]
         from src.runtime.telegram_channels import channel_for
 
         ch = channel or channel_for(kind)
-        return alerts_ledger.append(kind, ch, text, delivered=SUPPRESSED, path=path,
+        return alerts_ledger.append(kind, ch, text, delivered=SUPPRESSED, path=path, priority=priority,
                                     extra={"reason": str(reason), **fields})
     except Exception as exc:  # noqa: BLE001
         logger.warning("telegram_policy: suppressed-ledger append failed: %s", exc)

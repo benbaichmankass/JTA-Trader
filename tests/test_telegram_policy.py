@@ -294,8 +294,8 @@ def test_suppressed_rows_land_in_the_alert_ledger_and_never_wake_the_manager():
     assert {r["channel"] for r in rows} == {"system", "trades"}
     assert rows[-1]["account"] == "a" and rows[-1]["package_id"] == "p"
     assert not any(alerts_ledger.wakes_manager(r) for r in rows)
-    # a high-priority kind suppressed still does not wake
-    assert not alerts_ledger.wakes_manager(alerts_ledger.build_row(
+    # muting is operator-only (2026-11-10): a suppressed high-priority system kind still wakes
+    assert alerts_ledger.wakes_manager(alerts_ledger.build_row(
         "alert", "system", "x", delivered="suppressed_by_policy"))
     assert alerts_ledger.wakes_manager(alerts_ledger.build_row("alert", "system", "x", delivered="telegram_ok"))
 
