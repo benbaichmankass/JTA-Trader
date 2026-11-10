@@ -1,0 +1,143 @@
+id: RQ-20261110-c4f1-11
+title: 'Regime head at 1h, ExtraTrees: does adding HAR-RV lift the ExtraTrees regime head on BTC, ETH and SOL?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 2
+kind: experiment
+programme: P2
+roadmap:
+- M25
+question: ExtraTrees was tested alone at 1h (a4e7-05); its HAR-RV composition is untested. et_har vs et on BTC, ETH, SOL 1h, purged 5-fold CV embargo 24, tail 60000 rows.
+why_this_matters: 'A bagged-tree (non-boosted) family on the HAR-RV lever: the one family where a variance-feature lift would not be a boosting artefact.'
+ml_consumer:
+  consumer: src/runtime/regime_shadow.py
+  decision: whether HAR-RV is carried into the 1h regime head regardless of learner family
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - xrp_pullback_2h
+  - ada_pullback_2h
+  book: money
+power:
+  expected_n: 26280
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'tail_rows 60000 with min_train_frac 0.4 leaves ~26280 out-of-sample rows over 5 folds per symbol; d=0.1 paired needs ~785 rows; bars are autocorrelated so effective n is lower: the rule
+    requires the same-direction CV mean on EVERY listed symbol. expected_n is an ESTIMATE, not a measurement.'
+  feasibility:
+    source: none
+    accrual_basis: 'Fixed by construction (tail_rows of a nightly-rebuilt shard): n does not grow with waiting, so an underpowered result is reported as such and the follow-up is a different dataset,
+      not a re-run.'
+decision_rule:
+  id: RULE-RQ20261110c4f111
+  registered_at: '2026-11-10'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_bakeoff.py: per-group (BTCUSDT_1h, ETHUSDT_1h, SOLUSDT_1h) paired CV mean logloss delta of et_har vs et (positive = et_har better), 5 folds, embargo 24, tail
+    60000 rows.'
+  rule: 'PASS IF et_har beats et by >= +0.001 nats on the CV mean on ALL of BTCUSDT_1h, ETHUSDT_1h, SOLUSDT_1h. FAIL IF it does not beat it by >= 0 on ANY group. INDETERMINATE otherwise, or if
+    folds < 3 or a shard is stale/unavailable. Stated n: ~60,000 tail rows per group (about 26280 out-of-sample), 5 folds. Thresholds are not changed after any result.'
+  what_it_does_not_do: 'No served model, roster or config is read or changed; a research bake-off recipe, not any deployed head. A log-loss PASS is not edge and not a P&L figure; a FAIL closes
+    this configuration only, never the lever family. Costs: none apply (a model-quality score, no trades); the full cost stack applies to any later P&L read of a head built from a PASS.'
+  min_n: 5 purged CV folds on the tail shard, >= 3 folds
+intervention_controls:
+  not_applicable: a model-quality bake-off on a static published shard, not an in-trade action or active-management intervention
+compute: auto
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  published_data: metis-market-data
+  peak_memory_gb: 3.0
+  est_minutes: 30
+  basis: 'Estimate, NOT measured: 3 shard(s) x 2 arms x 5 folds on published shards, comparable to RQ-20261030-41cc-26; compute: auto routes it to the Kaggle CPU kernel or the runner by the router.'
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.15
+  basis: 'stand-in planning weight: gates whether a regime/direction head recipe is worth advancing on the money legs; an estimate, not a measured P&L'
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261110-c4f1-11
+ml_bakeoff:
+  task: classification
+  metric: logloss
+  higher_is_better: false
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT_1h:
+        path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+      ETHUSDT_1h:
+        path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+      SOLUSDT_1h:
+        path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 60000
+  cv:
+    folds: 5
+    embargo_rows: 24
+    min_train_frac: 0.4
+  baseline: et
+  controls:
+  - prior
+  candidates:
+  - et_har
+  learners:
+    prior:
+      kind: prior
+    et:
+      kind: sklearn_extratrees
+      params: {}
+    et_har:
+      kind: sklearn_extratrees
+      params: {}
+      feature_blocks:
+      - kind: har_rv
+        return_col: log_return
+        bars_per_unit: 24
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - BTCUSDT_1h
+      - ETHUSDT_1h
+      - SOLUSDT_1h
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.001
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.0
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+practice_precedent: 'M6 (docs/reference/trading-and-model-practice-principles.md): purged, embargoed walk-forward CV; a log-loss lift is reported per symbol, never pooled; the control arm is the
+  strongest classical feature set, not only the class prior.'
+related:
+- RQ-20261031-a4e7-05
+- RQ-20261103-b3c9-18
+- ML-LEVER-PLAN
