@@ -77,7 +77,7 @@ run:
   inputs:
     research_unit: RQ-20261110-73de-20
   timeout_minutes: 30
-status: queued
+status: done
 theme: macro
 title: 'Calendar event study (core_cpi_yoy): does the core CPI y/y surprise vs the PIT survey consensus predict TLT forward returns at 1-5 trading days?'
 value:
@@ -88,3 +88,16 @@ value:
 why_this_matters: 'Operator 2026-11-10 throttle: keep the queue filled from the authoring queue (node P4-Q4-g2-rerun). Look-before-you-re-test: no unit on (core_cpi_yoy, TLT) in research/queue/ (grep of
   macro_event_study_run units, 2026-11-10). MULTIPLE-TESTING DENOMINATOR: >= 80 (kind, symbol) cells already read; the t bar 3.5 is set against that count, so a pass is a lead only.'
 last_dispatched_at: '2026-11-10T05:19:20+00:00'
+grading:
+  attested: RULERQ2026111073de20
+  auto: true
+  decision_rule_id: RULERQ2026111073de20
+  evidence:
+  - research/results/RQ-20261110-73de-20/42761577338.jsonl
+  graded_at: '2026-11-10'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
