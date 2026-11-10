@@ -199,7 +199,8 @@ def _ping(leg: dict[str, Any], new_sl: float, n_legs: int) -> None:
         enqueue_trade_update(symbol=leg.get("symbol") or "?",
                              account=leg.get("account_id"),
                              strategy=leg.get("strategy_name") or leg.get("setup_type"),
-                             changes=changes)
+                             changes=changes,
+                             source=f"manual ({PROVENANCE})")
     except Exception as exc:  # noqa: BLE001 — the amend already landed
         print(f">>> amend-position-sl: trade-update ping failed (amend stands): {exc}")
 

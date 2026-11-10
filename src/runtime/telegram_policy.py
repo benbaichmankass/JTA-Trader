@@ -298,6 +298,7 @@ def should_send_trade(kind: str, text: str = "", **kw) -> TradeDecision:
     Returns the decision; when it is not sent, the message is already recorded
     in the suppressed ledger. Never raises (fails open)."""
     try:
+        source = kw.pop("source", None)   # the trade-update mechanism label: ledger field only
         d = trade_decision(kind, **kw)
         if d.send and d.dedupe_key and not claim(d.dedupe_key):
             d = TradeDecision(False, "duplicate_package_event", d.account_class,
@@ -305,7 +306,8 @@ def should_send_trade(kind: str, text: str = "", **kw) -> TradeDecision:
         if not d.send:
             record_suppressed(kind, text, reason=d.reason, account=kw.get("account"),
                               strategy=kw.get("strategy"), symbol=kw.get("symbol"),
-                              package_id=kw.get("package_id"), account_class=d.account_class)
+                              package_id=kw.get("package_id"), account_class=d.account_class,
+                              **({"source": source} if source else {}))
         return d
     except Exception as exc:  # noqa: BLE001
         logger.warning("telegram_policy: trade decision failed (%s) — sending", exc)

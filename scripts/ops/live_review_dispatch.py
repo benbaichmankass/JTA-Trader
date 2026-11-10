@@ -198,7 +198,8 @@ def _ping(row: Dict[str, Any], line: str) -> None:
                              account=",".join(row.get("accounts") or []) or None,
                              strategy=row.get("leg"), priority="high",
                              changes=[f"⚠️ live-review apply NOT dispatched: {line}",
-                                      f"review {row.get('review_id')} · mandate {MANDATE_ID}"])
+                                      f"review {row.get('review_id')} · mandate {MANDATE_ID}"],
+                             source=f"Claude live review ({row.get('review_id') or '?'})")
     except Exception as exc:  # noqa: BLE001 — a ping failure never blocks the record
         print(f">>> live-review-apply: refusal ping failed: {exc}")
 

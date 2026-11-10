@@ -45,7 +45,7 @@ def test_policy_file_loads_and_names_the_recurring_posts():
     pol = _pol()
     assert set(pol["recurring_off"]) == {
         "system_health", "trades_snapshot", "hourly_report", "daily_heartbeat", "manager_update",
-        "pr_merged"}
+        "pr_merged", "prop_monitor"}
     assert pol["trades"]["testing_paper"] == "suppress"
     assert pol["trades"]["real_money"] == "send" and pol["trades"]["prop"] == "send"
     assert pol["trades"]["unknown_account"] == "send"

@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "TELEGRAM-TRIM notification routing only, NO trading behaviour change. Operator approval, popup 2026-11-10 ~09:00Z, verbatim choice \"All three now (Recommended)\", covering build + deploy. (1) prop_monitor added to config/telegram_policy.yaml recurring_off (recorded to the alert ledger as suppressed_by_policy, not sent; prop fills/closes/tickets/alerts unchanged). (2) enqueue_trade_update takes a `source`, rendered as a 'Source: <label>' line and stored as a ledger field on suppressed rows; every caller passes its mechanism. (3) the demotrade producer now obeys the trades policy (testing_paper suppress). Revert: git revert; ict-git-sync picks it up in ~5 min, no restart needed for scripts, the trader re-reads the policy within reload_s and the new code on its next restart.",
+  "why": "Operator ask 2026-11-10 ~08:55Z: no paper-testing Telegram updates, no PROP MONITOR pings, and every TRADE UPDATED message must say what mechanism made the change."
+}

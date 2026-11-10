@@ -166,7 +166,8 @@ def _ping(record: Dict[str, Any], res: Dict[str, Any], verdict: str) -> None:
                                       f"{da.summary_line(record, res.get('accounts') or [])}",
                                       f"{res.get('detail') or ''}".strip() or f"record {record.get('id')}",
                                       f"operator: \"{str(record.get('operator_quote') or '')[:200]}\"",
-                                      f"record {record.get('id')}"])
+                                      f"record {record.get('id')}"],
+                             source=f"manual ({record.get('directed_by') or 'unknown'})")
     except Exception as exc:  # noqa: BLE001 -- the action already stands
         print(f">>> directed-action: ping failed: {exc}")
 
