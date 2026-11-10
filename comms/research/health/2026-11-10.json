@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "as_of": "2026-11-10T07:44:06Z",
+ "as_of": "2026-11-10T09:44:41Z",
  "producer": "scripts/research/research_slo.py",
  "config": "scripts/research/research_slo.yaml",
  "counts": {
@@ -48,14 +48,14 @@
   {
    "slo": "runnable_floor",
    "state": "breach",
-   "value": 10,
+   "value": 6,
    "op": ">=",
    "threshold": 31,
    "what": "runnable units >= the computed floor (queue_throughput.computed_floor: max(25, ceil(fired_24h x 19/24)))",
    "diagnostic": true,
    "evidence": {
-    "fired_24h_stamps": 38,
-    "queued": 283,
+    "fired_24h_stamps": 39,
+    "queued": 275,
     "basis": "queue_replenish.runnable(); floor = queue_throughput.computed_floor(fired_24h)",
     "read_state": "measured"
    }
@@ -63,13 +63,13 @@
   {
    "slo": "fires_24h",
    "state": "ok",
-   "value": 40,
+   "value": 41,
    "op": ">=",
    "threshold": 24,
    "what": "units fired in the last 24 h (sum of `dispatched` over comms/research/utilization/ records)",
    "diagnostic": true,
    "evidence": {
-    "dispatch_runs_24h": 24,
+    "dispatch_runs_24h": 22,
     "basis": "sum(len(dispatched)) over comms/research/utilization records in 24 h",
     "read_state": "measured"
    }
@@ -77,14 +77,14 @@
   {
    "slo": "lands_24h",
    "state": "ok",
-   "value": 31,
+   "value": 29,
    "op": ">=",
    "threshold": 12,
    "what": "result rows landed in the last 24 h whose read_state is a verdict (not producer_failed / no_data)",
    "diagnostic": true,
    "evidence": {
-    "non_verdict_rows_24h": 5,
-    "producer_failed_rows_24h": 5,
+    "non_verdict_rows_24h": 6,
+    "producer_failed_rows_24h": 6,
     "result_files_unreadable": 0,
     "basis": "research/results/*/*.jsonl rows by generated_at",
     "read_state": "measured"
@@ -93,14 +93,14 @@
   {
    "slo": "producer_failed_rate_24h",
    "state": "ok",
-   "value": 0.139,
+   "value": 0.171,
    "op": "<=",
    "threshold": 0.25,
    "what": "share of result rows landed in the last 24 h that are read_state=producer_failed (a run that completed but graded nothing, or whose command failed). Alerts through the same ops-flags path as every SLO; no gate, no halt.",
    "diagnostic": false,
    "evidence": {
-    "producer_failed_rows": 5,
-    "rows_24h": 36,
+    "producer_failed_rows": 6,
+    "rows_24h": 35,
     "basis": "producer_failed rows / all rows landed in 24 h",
     "read_state": "measured"
    }
@@ -116,8 +116,8 @@
    "evidence": {
     "p50": 0.0,
     "p90": 5.0,
-    "n": 369,
-    "ungraded_fresh": 34,
+    "n": 370,
+    "ungraded_fresh": 29,
     "basis": "whole days (graded_at is a date); units whose newest result landed in 7 d, newest result -> grading on or after it",
     "read_state": "measured"
    }
@@ -133,8 +133,8 @@
    "evidence": {
     "p50": 0.0,
     "p90": 5.0,
-    "n": 369,
-    "ungraded_fresh": 34,
+    "n": 370,
+    "ungraded_fresh": 29,
     "basis": "whole days (graded_at is a date); units whose newest result landed in 7 d, newest result -> grading on or after it",
     "read_state": "measured"
    }
@@ -142,32 +142,32 @@
   {
    "slo": "undispositioned_24h",
    "state": "breach",
-   "value": 16,
+   "value": 19,
    "op": "<=",
    "threshold": 5,
    "what": "units with a landed result older than 24 h and no verdict / no owned needs_review (result_disposition_check findings)",
    "diagnostic": true,
    "evidence": {
     "counts": {
-     "graded": 1665,
-     "in_grace": 14,
+     "graded": 1673,
+     "in_grace": 9,
      "legacy_prose": 130,
      "needs_review": 78,
-     "needs_review_unowned": 2,
-     "non_verdict_only": 3,
+     "needs_review_unowned": 4,
+     "non_verdict_only": 2,
      "retired": 11,
-     "ungraded": 14
+     "ungraded": 15
     },
-    "with_results": 1917,
+    "with_results": 1922,
     "sample": [
+     "RQ-20261024-0142-18",
      "RQ-20261107-98e3-04",
      "RQ-20261107-98e3-05",
      "RQ-20261107-98e3-06",
      "RQ-20261107-98e3-07",
      "RQ-20261107-98e3-08",
      "RQ-20261107-98e3-09",
-     "RQ-20261107-98e3-10",
-     "RQ-20261108-98e3-11"
+     "RQ-20261107-98e3-10"
     ],
     "basis": "result_disposition_check.census findings (ungraded + needs_review_unowned; 24 h grace)",
     "read_state": "measured"
@@ -176,14 +176,14 @@
   {
    "slo": "authoring_supply_ratio_7d",
    "state": "breach",
-   "value": 0.77,
+   "value": 0.76,
    "op": ">=",
    "threshold": 1.0,
    "what": "authored (non-generated) units created in 7 d / authored units first-or-re-fired in 7 d",
    "diagnostic": true,
    "evidence": {
     "authored_7d": 178,
-    "consumed_7d": 230,
+    "consumed_7d": 233,
     "authored_since_yesterday": 29,
     "basis": "non-generated units: id date in 7 d / last_dispatched_at in 7 d",
     "read_state": "measured"
@@ -216,7 +216,7 @@
   {
    "slo": "theme_share_min_ratio",
    "state": "breach",
-   "value": 0.26,
+   "value": 0.25,
    "op": ">=",
    "threshold": 0.5,
    "what": "worst theme's (fire share over 7 d) / (weight share in research/THEMES.yaml)",
@@ -225,27 +225,27 @@
     "per_theme": {
      "regime": {
       "fires": 32,
-      "share": 0.075,
+      "share": 0.074,
       "weight_share": 0.227,
       "ratio": 0.33
      },
      "live_strategy": {
       "fires": 176,
-      "share": 0.41,
+      "share": 0.407,
       "weight_share": 0.182,
-      "ratio": 2.26
+      "ratio": 2.24
      },
      "ml_health": {
-      "fires": 40,
-      "share": 0.093,
+      "fires": 39,
+      "share": 0.09,
       "weight_share": 0.136,
-      "ratio": 0.68
+      "ratio": 0.66
      },
      "new_strategy_prop": {
-      "fires": 73,
-      "share": 0.17,
+      "fires": 77,
+      "share": 0.178,
       "weight_share": 0.273,
-      "ratio": 0.62
+      "ratio": 0.65
      },
      "macro": {
       "fires": 8,
@@ -255,18 +255,18 @@
      },
      "infra": {
       "fires": 95,
-      "share": 0.221,
+      "share": 0.22,
       "weight_share": 0.091,
-      "ratio": 2.44
+      "ratio": 2.42
      },
      "timeframes": {
       "fires": 5,
       "share": 0.012,
       "weight_share": 0.045,
-      "ratio": 0.26
+      "ratio": 0.25
      }
     },
-    "fires_themed": 429,
+    "fires_themed": 432,
     "fires_untheme_or_unknown": 0,
     "basis": "7 d of utilization `dispatched` ids joined to unit theme vs THEMES.yaml weight share",
     "read_state": "measured"
@@ -300,13 +300,13 @@
   {
    "slo": "dispatcher_age_h",
    "state": "ok",
-   "value": 1.59,
+   "value": 2.01,
    "op": "<=",
    "threshold": 3,
    "what": "hours since the newest dispatcher utilization record on main (one per dispatch cycle that ran; lands ~1 h late)",
    "diagnostic": true,
    "evidence": {
-    "newest": "2026-11-10T06:08:35.610746+00:00",
+    "newest": "2026-11-10T07:44:20.038193+00:00",
     "basis": "newest utilization record generated_at",
     "read_state": "measured"
    }
@@ -314,13 +314,13 @@
   {
    "slo": "collector_age_h",
    "state": "ok",
-   "value": 1.12,
+   "value": 1.58,
    "op": "<=",
    "threshold": 6,
    "what": "hours since the newest commit on main touching research/results/ (a result landed)",
    "diagnostic": true,
    "evidence": {
-    "newest": "2026-11-10T06:36:47+00:00",
+    "newest": "2026-11-10T08:10:10+00:00",
     "basis": "git log -1 -- research/results (commit time)",
     "read_state": "measured"
    }
@@ -328,13 +328,13 @@
   {
    "slo": "grader_age_h",
    "state": "ok",
-   "value": 5.88,
+   "value": 1.74,
    "op": "<=",
    "threshold": 14,
    "what": "hours since the last SUCCESSFUL research-queue-grade.yml run (GitHub; could_not_look without a token)",
    "diagnostic": true,
    "evidence": {
-    "newest": "2026-11-10T01:51:20+00:00",
+    "newest": "2026-11-10T08:00:01+00:00",
     "basis": "last successful research-queue-grade.yml run",
     "read_state": "measured"
    }
@@ -342,7 +342,7 @@
   {
    "slo": "research_ops_age_h",
    "state": "ok",
-   "value": 4.32,
+   "value": 6.33,
    "op": "<=",
    "threshold": 8,
    "what": "hours since the newest research-ops pass record (comms/research/ops/*.json finished_at); the pass runs 4x/day",
@@ -376,7 +376,7 @@
   {
    "slo": "hold_pr_wait_h",
    "state": "ok",
-   "value": 4.32,
+   "value": 6.33,
    "op": "<=",
    "threshold": 24,
    "what": "hours the oldest open non-automation PR adding research/queue/ unit files has waited (hold PRs)",
@@ -386,7 +386,7 @@
     "oldest": [
      {
       "pr": 24626,
-      "hours": 4.32,
+      "hours": 6.33,
       "title": "research: step E authoring - 21 pre-registered units (live_strategy 7, new_strategy_prop 7"
      }
     ],
@@ -497,6 +497,26 @@
   },
   {
    "at": "2026-11-10T07:44:06Z",
+   "counts": {
+    "ok": 11,
+    "breach": 8,
+    "could_not_look": 0
+   },
+   "not_ok": [
+    "survivors_per_month",
+    "trials_per_survivor",
+    "runnable_floor",
+    "grade_latency_p90_d",
+    "undispositioned_24h",
+    "authoring_supply_ratio_7d",
+    "theme_share_min_ratio",
+    "research_ops_not_run"
+   ],
+   "alert": null,
+   "delivered": null
+  },
+  {
+   "at": "2026-11-10T09:44:41Z",
    "counts": {
     "ok": 11,
     "breach": 8,
