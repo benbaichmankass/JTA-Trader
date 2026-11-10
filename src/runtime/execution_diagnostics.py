@@ -802,6 +802,17 @@ def enqueue_demo_trade_notification(
             f"Symbol: {symbol} | Side: {side} | Qty: {qty_str}\n"
             f"Detail: {detail}"
         )[:1024]
+        # TELEGRAM-TRIM (2026-11-10): this producer used to bypass the trades policy, so a paper
+        # account's demo ping reached Telegram even with testing_paper: suppress. Fail-open.
+        try:
+            from src.runtime import telegram_policy
+
+            d = telegram_policy.should_send_trade("demotrade", body, priority=priority, account=account,
+                                                  strategy=strategy, symbol=symbol)
+            if not d.send:
+                return None
+        except Exception as exc:  # noqa: BLE001 — a broken policy sends
+            logger.warning("execution_diagnostics: demo ping policy failed (%s) — sending", exc)
         payload = {"priority": priority, "body": body,
                    "kind": "demotrade", "channel": _channel_for("demotrade")}
         PENDING_PINGS_DIR.mkdir(parents=True, exist_ok=True)
@@ -1452,22 +1463,30 @@ def enqueue_trade_update(
     strategy: Optional[str] = None,
     priority: str = "normal",
     package_id: Optional[str] = None,
+    source: Optional[str] = None,
 ) -> Optional[Path]:
-    """``✏️ TRADE UPDATED — <symbol>`` + collapsible "what changed" details."""
+    """``✏️ TRADE UPDATED — <symbol>`` + collapsible "what changed" details.
+
+    ``source`` (TELEGRAM-TRIM, operator 2026-11-10) names WHAT MECHANISM made the change
+    (``src/runtime/trade_update_source.py``); rendered as ``Source: <label>`` and carried in the
+    ledger policy fields. Missing -> ``source unknown`` (never blank)."""
     try:
+        from src.runtime.trade_update_source import normalize
         from src.units.ui.telegram_format import Section, kv_block, render_html
 
+        source = normalize(source)
         title = f"✏️ TRADE UPDATED — {symbol}"
         change_lines = "\n".join(str(c) for c in (changes or [])) or "(no detail)"
         body = render_html(
             header=title,
             sections=[Section(summary="Details", body=(
-                kv_block([("Account", account), ("Strategy", strategy)])
+                kv_block([("Account", account), ("Strategy", strategy), ("Source", source)])
                 + f"\n\nChanged:\n{change_lines}"
             ))],
         )
         return _enqueue_html_ping(body, kind="trade-update", priority=priority, policy={
-            "account": account, "strategy": strategy, "symbol": symbol, "package_id": package_id})
+            "account": account, "strategy": strategy, "symbol": symbol, "package_id": package_id,
+            "source": source})
     except Exception as exc:  # noqa: BLE001
         logger.warning(
             "execution_diagnostics: trade-update ping build failed "

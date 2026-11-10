@@ -39,6 +39,7 @@ recurring_off:
   - hourly_report      # legacy combined hourly report (outcomes.send_scheduled fallback)
   - daily_heartbeat    # ict-heartbeat 13:00Z daily status (scripts/daily_heartbeat.py)
   - manager_update     # ict-work-digest hourly digest; NEW actionable items still go (see below)
+  - prop_monitor       # prop position monitoring pings (pulse / consolidated), src/prop/breakout_notify.py (operator 2026-11-10 ~08:55Z, popup "All three now (Recommended)": they mattered under the old manual flow, not now the system manages prop trades). Prop fills / closes / tickets / alerts keep sending.
   - pr_merged          # scripts/notify_on_pull.py rolled-up "N PRs merged to main" ping (operator popup 2026-11-05 ~05:35Z, "Turn them off (Recommended)")
 
 # The hourly work digest also carries edge-triggered ATTENTION items. Those are event pings, so

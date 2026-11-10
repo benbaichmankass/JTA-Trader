@@ -719,6 +719,7 @@ def _apply_partial_close(
             strategy=trade.get("strategy_name") or trade.get("setup_type"),
             changes=changes,
             package_id=pkg_id,
+            source=_update_source(verdict, trade.get("strategy_name") or trade.get("setup_type")),
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning(
@@ -1017,6 +1018,16 @@ def _finish_package_after_leg_close(db, open_pkg: dict, matched_trade: dict,
 
     summary.closed_count += 1
     return
+
+
+def _update_source(verdict: Any, strategy: Any) -> str:
+    """TRADE UPDATED ``Source:`` label (TELEGRAM-TRIM). Never raises."""
+    try:
+        from src.runtime.trade_update_source import from_monitor_verdict
+
+        return from_monitor_verdict(verdict, strategy)
+    except Exception:  # noqa: BLE001 — a label must never break the ping
+        return "source unknown"
 
 
 def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
@@ -1900,6 +1911,8 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
             or matched_trade.get("setup_type"),
             changes=changes,
             package_id=pkg_id,
+            source=_update_source(verdict, matched_trade.get("strategy_name")
+                                  or matched_trade.get("setup_type")),
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning(

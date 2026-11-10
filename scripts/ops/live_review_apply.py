@@ -535,7 +535,8 @@ def _ping(pkg: Dict[str, Any], account_id: str, level: Optional[float], intent: 
         enqueue_trade_update(symbol=pkg.get("symbol") or "?", account=account_id,
                              strategy=pkg.get("strategy_name"),
                              changes=[f"{what} ({lri.PROVENANCE})",
-                                      f"mandate {intent.mandate} · review {intent.review_id}"])
+                                      f"mandate {intent.mandate} · review {intent.review_id}"],
+                             source=f"Claude live review ({intent.review_id or '?'})")
     except Exception as exc:  # noqa: BLE001 — the amend already landed
         print(f">>> live-review-apply: trade-update ping failed (amend stands): {exc}")
 
@@ -588,7 +589,8 @@ def _alert(pkg: Dict[str, Any], account_id: str, line: str) -> None:
 
         enqueue_trade_update(symbol=pkg.get("symbol") or "?", account=account_id,
                              strategy=pkg.get("strategy_name"), priority="high",
-                             changes=[f"⚠️ live-review amend NOT applied: {line}"])
+                             changes=[f"⚠️ live-review amend NOT applied: {line}"],
+                             source="Claude live review (amend refused)")
     except Exception as exc:  # noqa: BLE001
         print(f">>> live-review-apply: alert ping failed: {exc}")
 

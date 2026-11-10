@@ -218,9 +218,12 @@ def trade_decision(kind: str, *, account: Optional[str], strategy: Optional[str]
     tp = pol.get("trades") or {}
     if not tp:
         return TradeDecision(True, "no_policy", UNKNOWN)
-    if str(priority or "").lower() in {str(p).lower() for p in tp.get("bypass_priorities") or []}:
-        return TradeDecision(True, "priority_bypass", account_class(account, accounts))
     cls = account_class(account, accounts)
+    # High/urgent flags bypass the filter, EXCEPT for testing paper (operator 2026-11-10: no paper-testing
+    # trade updates; a not-applied flag on a paper leg is recorded in the ledger, never pinged).
+    if (str(priority or "").lower() in {str(p).lower() for p in tp.get("bypass_priorities") or []}
+            and not (cls == TESTING_PAPER and str(tp.get(cls) or "send") == "suppress")):
+        return TradeDecision(True, "priority_bypass", cls)
     rule = str(tp.get(cls) or "send")
     if rule == "suppress":
         return TradeDecision(False, f"{cls}_suppressed", cls)
@@ -298,14 +301,17 @@ def should_send_trade(kind: str, text: str = "", **kw) -> TradeDecision:
     Returns the decision; when it is not sent, the message is already recorded
     in the suppressed ledger. Never raises (fails open)."""
     try:
+        source = kw.pop("source", None)   # the trade-update mechanism label: ledger field only
         d = trade_decision(kind, **kw)
         if d.send and d.dedupe_key and not claim(d.dedupe_key):
             d = TradeDecision(False, "duplicate_package_event", d.account_class,
                               d.note, d.dedupe_key)
         if not d.send:
-            record_suppressed(kind, text, reason=d.reason, account=kw.get("account"),
+            record_suppressed(kind, text, reason=d.reason, priority=kw.get("priority"),
+                              account=kw.get("account"),
                               strategy=kw.get("strategy"), symbol=kw.get("symbol"),
-                              package_id=kw.get("package_id"), account_class=d.account_class)
+                              package_id=kw.get("package_id"), account_class=d.account_class,
+                              **({"source": source} if source else {}))
         return d
     except Exception as exc:  # noqa: BLE001
         logger.warning("telegram_policy: trade decision failed (%s) — sending", exc)
@@ -333,7 +339,8 @@ def suppressed_log_path() -> Path:
 
 
 def record_suppressed(kind: str, text: str, *, reason: str, path: Optional[Path] = None,
-                      channel: Optional[str] = None, **fields: Any) -> bool:
+                      channel: Optional[str] = None, priority: Optional[str] = None,
+                      **fields: Any) -> bool:
     """Append one ``delivered: suppressed_by_policy`` row to the alert ledger.
     Best-effort (the ledger's own contract): never raises."""
     try:
@@ -341,7 +348,7 @@ def record_suppressed(kind: str, text: str, *, reason: str, path: Optional[Path]
         from src.runtime.telegram_channels import channel_for
 
         ch = channel or channel_for(kind)
-        return alerts_ledger.append(kind, ch, text, delivered=SUPPRESSED, path=path,
+        return alerts_ledger.append(kind, ch, text, delivered=SUPPRESSED, path=path, priority=priority,
                                     extra={"reason": str(reason), **fields})
     except Exception as exc:  # noqa: BLE001
         logger.warning("telegram_policy: suppressed-ledger append failed: %s", exc)

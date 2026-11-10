@@ -289,7 +289,7 @@ def _flag(line: str) -> None:
     try:
         from src.runtime.execution_diagnostics import enqueue_trade_update
         enqueue_trade_update(symbol="desk", account="desk-intake", strategy=DESK_LEG, priority="high",
-                             changes=[f"⚠️ desk intake: {line}"])
+                             changes=[f"⚠️ desk intake: {line}"], source="desk")
     except Exception as exc:  # noqa: BLE001
         print(f">>> desk-intake: flag ping failed: {exc}")
 
