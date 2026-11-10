@@ -1,0 +1,192 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261110T1506Z-pkg-3de13868d406447a",
+ "reviewed_at": "2026-11-10T15:10:00Z",
+ "order_package_id": "pkg-3de13868d406447a",
+ "trade_id": null,
+ "leg": "ada_pullback_2h",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "manual",
+  "level": null,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-10T15:06:36Z",
+ "state": {
+  "atr_now_over_entry": 0.6774,
+  "bars_held": 11,
+  "giveback_r": 0.6523,
+  "open_r": 0.0836,
+  "peak_provenance": "estimated",
+  "peak_r": 0.736,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.18437857,
+  "tp": 0.1607384
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.6774,
+  "bars_since_peak": 0,
+  "giveback_r": 0.6523,
+  "open_r": 0.0836,
+  "peak_r": 0.736,
+  "r_to_stop": 1.0836,
+  "r_to_target": 2.8705
+ },
+ "mechanics": {
+  "evidence": "package sl 0.18437857 / tp 0.1607384 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 139,
+   "mean_r": 1.3344,
+   "sd_r": 2.0474,
+   "worst_r": -1.1996,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 139,
+   "mean_r": 0.6931,
+   "sd_r": 0.764,
+   "worst_r": -0.5003,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 139,
+   "mean_r": 0.7521,
+   "sd_r": 1.067,
+   "worst_r": -0.5003,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 139,
+   "mean_r": 0.9549,
+   "sd_r": 1.3967,
+   "worst_r": -0.6801,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 139,
+   "mean_r": 0.9803,
+   "sd_r": 1.5471,
+   "worst_r": -0.5003,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 139,
+   "mean_r": 0.9006,
+   "sd_r": 1.4706,
+   "worst_r": -0.5003,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 139,
+   "mean_r": 0.028,
+   "sd_r": 0.0253,
+   "worst_r": -0.0747,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261110T1506Z-pkg-3de13868d406447a.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "reason": "Corrected state after PEAK-FLOOR-OPEN-R deploy (bb0127194): open +0.084R, peak +0.736R (since-entry low 0.1740), giveback +0.652R, never negative. Priced (139 comparable of 406, short, ADAUSDT): HOLD n=139 mean +1.334R sd 2.05 worst -1.20R beats every alternative (tighten atr:1.0 +0.693, atr:1.5 +0.752, atr:2.0 +0.955, r:0 +0.980, r:0.04 +0.901, close +0.028). Cheapest tighten (r:0) costs 0.354R, outside the 0.25R apply bound; tighten is advice-only (SKILL 0.0) and this package is not covered by MD-LTR-ADA-AUTO (names pkg-465a5d7d27644027). Not adverse (open >0): no close.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": false,
+  "tighten_r": 0.354
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": true,
+  "would_apply": false,
+  "tighten_r": 0.354
+ },
+ "context_flags": [
+  "priced: hold n=139 mean +1.334R worst -1.20R; tighten r:0 +0.980R worst -0.50R cost 0.354R (inside shadow 0.5R only); atr:2.0 +0.955R cost 0.380R; close +0.028R (tool, net)",
+  "tighten_bias: stops fill at the stop price, flattering every tighten",
+  "correction: row LR-20261110T1333Z priced options on a stale peak (peak 0.3345 < open 0.6356, giveback -0.3011); this row uses the floored peak, hold cell moved n=154 mean +0.887R to n=139 mean +1.334R and still wins",
+  "regime: atr_now/entry 0.68, 1d trending ADX 27.3 (cell_entry/vol unknown: frozen edges not readable)",
+  "correlated: many other open crypto/metal shorts (ETH x3, SOL, XRP x2, BTC, MGC); one crypto-beta bet",
+  "missing_inputs: funding, vol cell frozen edges",
+  "live_vs_backtest: CONSISTENT (real_money 18 closed, pct 10.8)",
+  "no_close_on_adverse default (#22151): position not adverse (open +0.08R); no close considered"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold changes nothing; SL 0.1844 / TP 0.1607 match package"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold changes nothing; SL/TP match package (Stage-2 mirror)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuNM8vNioywvTZZbxjT",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_sha": "9ede3e95a460da2f4e483dd294b0ced3640de1ed4ace2967dba81c19bd9b0c0f",
+ "forecast": {
+  "thesis": "Daily downtrend (ADX ~27-34) and 2h closes under 0.1798 favour a push below the 0.1740 since-entry low toward 0.1713 before a 2h close above 0.1834.",
+  "direction": "with_trade",
+  "target_px": 0.1713,
+  "p_target": 0.35,
+  "invalidation_px": 0.1834,
+  "horizon_bars": 6,
+  "timeframe": "2h",
+  "evidence": [
+   "priced_options hold cell n=139 mean +1.334R",
+   "context_v3.chart last close 0.1762, since-entry low 0.1740 high 0.1798",
+   "context_v3.htf ADX 33.7"
+  ]
+ },
+ "packet_defects": [],
+ "handoff": {
+  "prior_decision_id": "LR-20261110T1333Z-pkg-3de13868d406447a",
+  "verdict": "confirm",
+  "reason": "Prior hold stands on the corrected peak; hold still beats every tighten and close.",
+  "read_state": "read"
+ }
+}
