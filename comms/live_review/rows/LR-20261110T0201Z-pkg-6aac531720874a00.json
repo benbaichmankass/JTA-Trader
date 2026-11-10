@@ -1,0 +1,143 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261110T0201Z-pkg-6aac531720874a00",
+ "reviewed_at": "2026-11-10T02:12:00Z",
+ "order_package_id": "pkg-6aac531720874a00",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "stall",
+  "level": 24,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-10T02:01:51Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 24,
+  "giveback_r": 0.826,
+  "open_r": -0.545,
+  "peak_provenance": "estimated",
+  "peak_r": 0.281,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 85.79642857,
+  "tp": 90.95285714285716
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 23,
+  "giveback_r": 0.826,
+  "open_r": -0.545,
+  "peak_r": 0.281,
+  "r_to_stop": 0.1505,
+  "r_to_target": 2.045
+ },
+ "mechanics": {
+  "evidence": "package sl 85.79642857 / tp 90.95285714285716 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 221,
+   "mean_r": 0.4883,
+   "sd_r": 1.1366,
+   "worst_r": -1.1269,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "spec": "close",
+   "n": 221,
+   "mean_r": -0.6062,
+   "sd_r": 0.0241,
+   "worst_r": -0.7008,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261110T0201Z-pkg-6aac531720874a00.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "suggestive",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "reason": "Stall rule fired (24 bars, peak +0.28R est.) but it is not an exit by itself. Long at -0.545R (entry 87.43, last close 86.26), trailed stop 85.80 is 0.15R / 0.57 ATR below price, TP 90.95. Measured HOLD cell (n=221, +0.488R, sd 1.14, worst -1.127) vs measured close -0.606R (ev cost of closing 1.09R +/-0.08): holding is far better in this leg's own history. All three tool tightens are invalid_level (atr:1.0/1.5 stops above price, atr:2.0 below the existing stop), and the existing stop is already tighter than any priced one, so there is nothing to tighten. Honest caveat: the hold cell was priced against the original -1R stop path; the live stop is now -0.69R, which truncates the worst case (good) and will cut some paths that would have recovered (bad), so +0.49R is flattered; even at a 65% chance of the stop being hit (-0.7R) with the rest near +1.5R, EV stays ~0 vs a certain -0.55R from closing. 1h ADX 12.5 chop, 4h ADX 36 with lower highs lean against the long. Wrong if a 1h close below 85.80 prints (stop does the work) or price fails to reclaim 87.07 by ~04Z."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "forecast_grade: LR-20261109T2003Z (against_trade, target 85.77 p 0.5, invalidation 88.01, 8 x 1h from 20:00Z) -> PARTIAL: ~6 of 8 bars elapsed; lowest low since 20:03Z is 86.20 (target 85.77 NOT reached), high since is 86.98 (invalidation 88.01 NOT hit); price ground lower 86.49 -> 86.26 and open R -0.426 -> -0.545, so direction right but slowly; the trailed stop (85.08 -> 85.80 at 00:00Z) is now the binding level; horizon open until ~04Z.",
+  "table: packet hold n=221 mean +0.488R sd 1.137 worst -1.127 p05 -1.08 (peak-conditioned, not full-state matched); close -0.606R worst -0.701; tighten atr:1.0/1.5/2.0 all invalid_level; quoted from the packet table",
+  "table_bias: hold cell does not model the already-trailed stop (-0.69R vs original -1R); stop-at-price fills flatter any tighten; peak_r is a lower bound on true MFE",
+  "noise_floor: last close 86.26, ATR 0.806; stop 85.80 is 0.46 below (0.57 ATR); no tighten is possible without crossing price or the 1 ATR buffer",
+  "regime: 1h ADX 12.5 chop; 4h ADX 36.0 trending, highs 91.55/90.02/88.01 lower; cells/ATR ratio not available",
+  "correlated: other open longs BTC, AVAX, GDX, SLV, IWM, TLT (broad risk-on beta); SOL also short on sol_pullback_2h (+1.06R) and trend_donchian_sol_4h, partly offsetting on SOL at book scale, not sized here",
+  "missing: regime.atr_now_over_entry, regime.cell_entry, regime.cell_now, funding (packet missing_inputs)",
+  "live_vs_backtest: ml_entry NO_BACKTEST (evidence source_run not a committed file); live realMoney 9 closed +6.09R, mirror 9 closed +7.14R"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold changes nothing; bybit_orders SL 85.80 / TP 90.95 match package"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold changes nothing; bybit_orders SL 85.80 / TP 90.95 match package"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuKgeM4bM8AQqUfQZjE-reviewer",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "2208fa3f5488a86357cbef24a8c2fcd1fc55edd6d76b118a5a92667d7e4133c1",
+ "packet_defects": [],
+ "forecast": {
+  "thesis": "1h chop (ADX 12.5) under a 4h downtrend with lower highs: I expect SOL to keep grinding under 87 and probe the 85.77 swing low, which takes out the 85.80 trailed stop; a reclaim of 87.07 then 88.01 is the minority path that revives the long.",
+  "direction": "against_trade",
+  "target_px": 85.77,
+  "p_target": 0.6,
+  "invalidation_px": 87.07,
+  "horizon_bars": 8,
+  "timeframe": "1h",
+  "evidence": [
+   "chart: closes 86.26 last, highs 87.07/86.98 capping, since-entry low 85.10",
+   "htf 4h ADX 36.0 trending, lower highs 91.55/90.02/88.01",
+   "1h ADX 12.5 chop",
+   "exit_plan: SL 85.80 (trailed) TP 90.95, stop 0.57 ATR away",
+   "priced_options: hold +0.488R vs close -0.606R, all tightens invalid"
+  ]
+ }
+}
