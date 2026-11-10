@@ -1,0 +1,91 @@
+{
+  "unit": "RQ-20261110-73de-18",
+  "run_id": "42766625016",
+  "commit_sha": "859281f3068e65d524dcf034b1f654395d885c25",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/42766625016",
+  "timeout_minutes": 330,
+  "runner": {
+    "cpu_model": "AMD EPYC 9V74 80-Core Processor",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "avx512_vnni",
+      "avx512bw",
+      "avx512f",
+      "avx512vl",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 24.04.5 LTS",
+    "kernel": "7.0.0-1017-azure",
+    "image": {
+      "ImageOS": "ubuntu24",
+      "ImageVersion": "20261101.360.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "2f2185647172",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/harness_stage0.py",
+        "--family",
+        "pullback",
+        "--symbols",
+        "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT,BNBUSDT,DOGEUSDT,LINKUSDT,LTCUSDT,BCHUSDT,DOTUSDT",
+        "--timeframe",
+        "4h",
+        "--days",
+        "2500",
+        "--start",
+        "2020-06-01",
+        "--end",
+        "2026-11-02",
+        "--arm",
+        "B=",
+        "--baseline",
+        "B",
+        "--delta-r-per-trade",
+        "0.1",
+        "--folds",
+        "6",
+        "--fold-majority",
+        "4",
+        "--n-floor",
+        "20",
+        "--pooled-n-floor",
+        "39",
+        "--breadth-frac",
+        "0.5",
+        "--rule-id",
+        "RULE-RQ2026111073de18",
+        "--data-dir",
+        "comms/research/RQ-20261110-73de-18/42766625016/data",
+        "--out",
+        "comms/research/RQ-20261110-73de-18/42766625016"
+      ],
+      "log": "comms/research/RQ-20261110-73de-18/42766625016/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 481.7
+    }
+  ],
+  "all_ok": true
+}
