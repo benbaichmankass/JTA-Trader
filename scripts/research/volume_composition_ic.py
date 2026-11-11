@@ -336,7 +336,10 @@ def run(a: argparse.Namespace) -> dict[str, Any]:
     read_state = "measured" if measured else "no_data"
     verdict = res["verdict"] if measured else "indeterminate"
     h, dd = res["held_out"], res["discovery"]
-    fmt = lambda v, p=4: "—" if v is None else f"{v:+.{p}f}"
+
+    def fmt(v: Optional[float], p: int = 4) -> str:
+        return "—" if v is None else f"{v:+.{p}f}"
+
     note = (f"{verdict.upper()}: {res['why']}. target={a.target}, bar={a.bar}, h={a.horizon} bar(s). "
             f"Held-out {a.heldout_start}..{a.end}: mean partial rank IC {fmt(h.get('mean_ic'))}, t {fmt(h.get('t'), 2)}, "
             f"{h.get('months')} months. Discovery {a.start}..{a.discovery_end}: {fmt(dd.get('mean_ic'))}, t {fmt(dd.get('t'), 2)}. "
