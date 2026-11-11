@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
 
 from src.core.profile_loader import contract_value_usd_for
+from src.prop.prop_identity import is_prop_account, is_retired_account
 from src.runtime.provenance import MEASURED, classify_pnl
 from src.runtime.r_provenance import r_multiple_provenanced
 
@@ -26,8 +27,8 @@ PROP_PNL_BUCKET = "ESTIMATED"  # prop pnl is phone/sheet-reported, not a venue-A
 def category_of(cfg: Mapping[str, Any]) -> Optional[str]:
     if not isinstance(cfg, Mapping):
         return None
-    if str(cfg.get("type") or "").lower() == "prop" or str(cfg.get("account_class") or "").lower() == "prop":
-        return None if cfg.get("retired") else "prop"
+    if is_prop_account(cfg):  # the ONE home of "is this account prop" (src/prop/prop_identity.py; prop-identity-guard)
+        return None if is_retired_account(cfg) else "prop"
     cls = str(cfg.get("account_class") or "").lower()
     if cls == "real_money":
         return "live"
