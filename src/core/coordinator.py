@@ -3020,6 +3020,44 @@ class Coordinator:
                     # min — byte-for-byte the pre-fix behaviour. prefer_live=True
                     # keeps the live lot rule authoritative (strict superset of
                     # the prior venue_min_qty_for path).
+                    # SIZE UP AN OPENING TOP-UP (MIRROR-QTY-DIVERGE; operator popup
+                    # 2026-11-10 ~06:45Z "Size up top-ups too", Tier 3, extending the
+                    # 2026-11-09 entry rule "size up - that's what trading at minimum
+                    # size means", #24596). An ``open`` / ``increase`` delta below the
+                    # venue minimum (qty, or order value at pkg.entry) is raised to the
+                    # smallest step-aligned qty meeting every minimum, through the one
+                    # seam, accepting a slight overshoot of the combined target. Case:
+                    # 2026-11-10 04:02Z bybit_2 ml_entry ADA short top-up dropped as
+                    # intent_sub_min_qty_delta. reduce / close / flip deltas and pairs
+                    # legs are untouched: they fall through to the noop guards below.
+                    if delta.action in ("open", "increase"):
+                        try:
+                            from src.units.accounts.qty_legalize import legalize_qty
+                            _lz_up = legalize_qty(
+                                delta.qty_delta, account_cfg=account_cfg,
+                                symbol=pkg.symbol, client=client, prefer_live=True,
+                                price=(pkg.entry or None), size_up=True,
+                            )
+                        except Exception:  # noqa: BLE001 — never block on a lookup
+                            _lz_up = None
+                        if (_lz_up is not None and _lz_up.ok
+                                and getattr(_lz_up, "resized_from", None) is not None
+                                and float(_lz_up.qty) > float(delta.qty_delta)):
+                            logger.warning(
+                                "[coordinator] intent-mode top-up %s/%s delta=%s is below "
+                                "the venue minimum (%s) — SIZING UP to %s "
+                                "(qty_sized_up_to_venue_min)",
+                                account.name, pkg.symbol, delta.qty_delta,
+                                getattr(_lz_up, "resize_binding", ""), _lz_up.qty,
+                            )
+                            _ed = (pkg.meta or {}).get("execution_delta")
+                            if isinstance(_ed, dict):
+                                _ed["qty_resize"] = {
+                                    "from": float(delta.qty_delta), "to": float(_lz_up.qty),
+                                    "binding": getattr(_lz_up, "resize_binding", ""),
+                                    "outcome": "qty_sized_up_to_venue_min",
+                                }
+                            delta = dataclasses.replace(delta, qty_delta=float(_lz_up.qty))
                     try:
                         from src.units.accounts.qty_legalize import legalize_qty
                         _delta_venue_min = legalize_qty(
