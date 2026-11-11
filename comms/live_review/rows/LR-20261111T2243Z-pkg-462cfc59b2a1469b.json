@@ -1,0 +1,202 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261111T2243Z-pkg-462cfc59b2a1469b",
+ "reviewed_at": "2026-11-11T22:52:00Z",
+ "order_package_id": "pkg-462cfc59b2a1469b",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "adverse_r",
+  "level": -0.5,
+  "l0_snapshot_at": "2026-11-11T22:42:19Z"
+ },
+ "info_cutoff_at": "2026-11-11T22:43:27Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 4,
+  "giveback_r": 0.7774,
+  "open_r": -0.5701,
+  "peak_provenance": "estimated",
+  "peak_r": 0.2073,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 2043.7014285714288,
+  "tp": 2128.3728571428574
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 2,
+  "giveback_r": 0.7774,
+  "open_r": -0.5701,
+  "peak_r": 0.2073,
+  "r_to_stop": 0.4299,
+  "r_to_target": 2.0701
+ },
+ "mechanics": {
+  "evidence": "package sl 2043.7014285714288 / tp 2128.3728571428574 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "ev_cost_r": null,
+   "level": null,
+   "mean_r": -0.9861,
+   "n": 75,
+   "net": true,
+   "p05_r": -1.0932,
+   "sd_r": 0.3203,
+   "spec": null,
+   "state": "measured",
+   "stop_at_r_now": null,
+   "worst_case_gain_r": null,
+   "worst_r": -1.1269
+  },
+  {
+   "action": "tighten_sl",
+   "ev_cost_r": null,
+   "level": null,
+   "mean_r": null,
+   "n": 75,
+   "net": true,
+   "p05_r": null,
+   "sd_r": null,
+   "spec": "atr:1.5",
+   "state": "invalid_level",
+   "stop_at_r_now": -0.5427,
+   "worst_case_gain_r": null,
+   "worst_r": null
+  },
+  {
+   "action": "tighten_sl",
+   "ev_cost_r": -0.1183,
+   "level": null,
+   "mean_r": -0.8678,
+   "n": 75,
+   "net": true,
+   "p05_r": -1.3179,
+   "sd_r": 0.2578,
+   "spec": "atr:2.0",
+   "state": "measured",
+   "stop_at_r_now": -0.7927,
+   "worst_case_gain_r": -0.6572,
+   "worst_r": -1.7841
+  },
+  {
+   "action": "tighten_sl",
+   "ev_cost_r": -0.0336,
+   "level": null,
+   "mean_r": -0.9525,
+   "n": 75,
+   "net": true,
+   "p05_r": -1.3179,
+   "sd_r": 0.2565,
+   "spec": "atr:2.5",
+   "state": "measured",
+   "stop_at_r_now": -1.0427,
+   "worst_case_gain_r": -0.6572,
+   "worst_r": -1.7841
+  },
+  {
+   "action": "close",
+   "ev_cost_r": -0.3574,
+   "level": null,
+   "mean_r": -0.6287,
+   "n": 75,
+   "net": true,
+   "p05_r": -0.6688,
+   "sd_r": 0.0221,
+   "spec": "close",
+   "state": "measured",
+   "stop_at_r_now": null,
+   "worst_case_gain_r": 0.431,
+   "worst_r": -0.6959
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261111T2243Z-pkg-462cfc59b2a1469b.pullback.json",
+ "recommendation": {
+  "action": "close",
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "ev_delta_r": 0.3574,
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "level": null,
+  "level_atr": null,
+  "reason": "Live state is a PULLBACK: peak +0.21R est, now -0.57R (adverse_r -0.5R crossed), SL 0.43R away. ml_entry's own Stage-0 history at that state (condition pullback, long, 5 symbols, n=75, net of full cost): hold -0.986R (sd 0.320, worst -1.127) vs close -0.629R (sd 0.022, worst -0.696): close beats hold by +0.357R (SE 0.037), worst case +0.431R better; ETH-only subset n=14 is below floor and not quoted. The packet's peak-condition cell (hold +0.357R, n=243) does not condition on the retrace and is not this state. Previous 20:11Z hold forecast (with_trade, TP 2128.37) failed: price never exceeded 2084.59 and is now ~2058. Package-level call: close the long on every account carrying it. ADVICE ONLY: close is not graduated (skill 0.0), so nothing applies it; operator_ask.",
+  "size_fraction": null,
+  "size_multiplier": null,
+  "worst_case_delta_r": 0.431
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "tighten_r": null,
+  "within_bound": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "tighten_r": null,
+  "within_bound": null,
+  "would_apply": null
+ },
+ "context_flags": [
+  "table_condition: packet table is condition peak (hold +0.3568R n=243); this row cites a condition-pullback run of the same tool on ml_entry_trades corpus, committed byte-for-byte as the .pullback.json; pullback cell n=75 (comparable) after 168 no_pullback_after_peak, 61 never_reached_peak, 7 mfe_replay_mismatch",
+  "close_vs_tighten: atr:2.0 tighten -0.868R (n=75, cost -0.118R SE 0.045) and atr:2.5 -0.953R both beat hold but close -0.629R dominates; atr:1.0/1.5 invalid (stop not below price); tightens advice-only and flattered by stop-fill bias",
+  "correlated_book: same ml_entry 1h entry wave is long SOL (-0.576R), XRP (-0.192R), BTC donchian 1h (-0.361R), AVAX (+0.225R), all crypto beta and mostly underwater; the SOL long is reviewed by lane CONFLICTING-EXPOSURE (not reviewed here)",
+  "book_hedge: ETH is also held SHORT by eth_pullback_2h (+0.595R) and eth_pullback_prop_2h (+0.845R); closing this long makes net ETH exposure more short, a hedge unwind, not a new directional bet",
+  "htf: 4h ADX 52.4 trending with lower highs (2151.3, 2245.0), 4h last close 2077.57 below the 2151 swing; the 1h long is counter-trend to the 4h structure; 1h spike high 2103.37 faded, since-entry high 2082.89",
+  "overlay: regime cell entry/now null, atr_now_over_entry null, funding null (packet missing_inputs); open_r -0.57 is est, price ~2058.3 implied by open_r, last closed 1h bar 2069.81",
+  "mechanics_ok: venue SL 2043.7 / TP 2128.37 equal package on bybit_2 and bybit_portfolio",
+  "live_vs_backtest: NO_BACKTEST (evidence source_run not a committed file); live realMoney 12 closed +4.96R, mirror +5.87R, not used for the call",
+  "packet_defects: none (packet_health ok)"
+ ],
+ "account_reads": [
+  {
+   "account_class": "real_money",
+   "account_id": "bybit_2",
+   "read": "unknown",
+   "evidence": "executor path close exists (packet apply_paths) but close is advice_only (ADVICE_ONLY_ACTIONS): the dispatcher refuses it; no apply"
+  },
+  {
+   "account_class": "paper",
+   "account_id": "bybit_portfolio",
+   "read": "unknown",
+   "evidence": "mirror, not in MD-LTR-PAPER-AUTO account_scope; close advice_only; no apply"
+  }
+ ],
+ "disposition": {
+  "action_issue": null,
+  "applied_at": null,
+  "mandate": null,
+  "route": "operator_ask",
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (LIVE-REVIEW lane)",
+ "session": "session_01AFoLuJKmT3UNAX3XkRaexb",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_defects": [],
+ "packet_sha": "73b4cc13773368972fd44d6192b066a2233bc8ce95e7328718e4ed14a9f952cb",
+ "handoff": null,
+ "forecast": {
+  "thesis": "The 1h long (a model bounce call into a 4h downtrend) has already failed: spike to 2103 faded, price is below entry at ~2058 and the 4h lower-high structure dominates; expect price to trade down to the 2043.70 stop before the 2128.37 TP, as the pullback cell's hold mean -0.99R (sd 0.32) implies.",
+  "direction": "against_trade",
+  "target_px": 2043.7,
+  "p_target": 0.65,
+  "invalidation_px": 2082.89,
+  "horizon_bars": 6,
+  "timeframe": "1h",
+  "evidence": [
+   "pullback cell n=75 hold -0.986R vs close -0.629R (tool table)",
+   "context_v3.chart.since_entry high 2082.89, 1h swing low 2043.00",
+   "chart.htf 4h trending ADX 52.44, lower highs 2151.3/2245.04",
+   "context.previous_review forecast with_trade TP 2128.37 not reached"
+  ]
+ }
+}
