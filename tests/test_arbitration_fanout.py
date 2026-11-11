@@ -453,3 +453,18 @@ def test_record_swallows_its_own_internal_failure(monkeypatch, tmp_path):
     assert sk.record(["trend_donchian_sol", "trend_donchian_sol_prop"],
                      "trend_donchian_sol_prop", symbol="SOLUSDT",
                      accounts=_ACCOUNTS, plan=_plan()) is None
+
+
+# M18-ALLOCATOR-REEVALUATE (2026-11-11): a slice account's `allocated` row grades `routed`, not `unknown`.
+def test_a_slice_accounts_allocated_row_grades_routed_and_a_missing_round_is_starved():
+    from src.runtime import arbitration_fanout as af
+    from src.runtime.arbitration_fanout_soak import grade_plan
+
+    assert "allocated" in af.PLAN_STATES
+    plan = {"rounds": [{"strategy": "trend_donchian_eth", "accounts": ["bybit_1"]}],
+            "per_account": {"bybit_1": {"candidates": ["trend_donchian_eth"], "elected": "trend_donchian_eth",
+                                        "state": "allocated"},
+                            "bybit_2": {"candidates": ["x"], "elected": "x", "state": "allocated"}}}
+    g = grade_plan(plan, {"per_account": {}})
+    assert g["routed_accounts"] == ["bybit_1"] and g["unknown_accounts"] == []
+    assert g["starved_accounts"] == ["bybit_2"]        # allocated yet in no round: the defect the tripwire exists for
