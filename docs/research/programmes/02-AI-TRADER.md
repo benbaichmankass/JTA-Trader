@@ -8,6 +8,24 @@
 
 ---
 
+## M23 update 2026-11-11 (ML standing lane, row M23-SIGNALS-CATALOG-METALABEL)
+
+- **Q0.2 signals catalog: covers every model on disk.** `docs/reference/signal-catalog.yaml` now has `ml_models` entries for
+  the 7 `ml/served` + `ml/candidates` `model.json` artifacts and `ml_feature` entries for their 28 features (definitions and
+  file:line from `src/runtime/ml_decision_features.py`, `ml_entry_eq_features.py`, `ml_entry_tp_policy.py`). The coverage
+  function from PR #24854, re-run on this tree: models missing 7 -> 0, features missing 28 -> 0. Still open: 27 catalog
+  inputs with no consumer, and the 20 review questions in `docs/reference/signal-catalog-review.md` (row SIGNAL-CATALOG).
+- **Q2.2 emit lever: met for crypto trend + pullback.** 1,825 d `--research-emits` ledgers for the 19 crypto trend/pullback
+  legs: 6,214 trades, every `f_*` column non-null on >= 99.28% of rows (`comms/strategy_evidence/research_emits/2026-11-11/`).
+  Equity legs and the squeeze/fade/ict_scalp harnesses are not covered (row METALABEL-EMIT-REMAINING-FAMILIES).
+- **Q2.3 within-family meta-label test: `RQ-20261111-3a23-01`** (re-authored 9d20-04), rule registered and pushed before
+  the run. Sandbox read (the runner row grades it): **INDETERMINATE.** On trend_donchian (n = 4,047) the widened columns
+  separate won/lost a little (AUC gain +0.048, CI +0.007..+0.089), but the take/skip lift is +0.001 R against +0.039 R for
+  the confidence-only control, whose AUC gain (+0.054) is at least as high. On pullback (n = 2,167) both are null. Reading:
+  **the catalog's decision-time columns add no take/skip value over `confidence` on these families.** The control's
+  family-level AUC can come from leg base rates through the leg one-hots (the M23 P1 trap), so it is not evidence of a
+  within-leg confidence signal (9d20-02 found none within leg).
+
 ## Programme review 2026-11-04 (lane PROGRAMME-REVIEW-20261104) — MODEL track
 
 Population: units with a result row generated 2026-10-28T19:41Z..2026-11-04T19:41Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,932 units read, 0 unreadable, 662 result rows): **447 units with rows** — 107 pass, 210 fail, 25 indeterminate, 11 no_action_warranted, 94 with no unit verdict yet (76 ungraded + 18 needs_review/null). 302 carry a programme field (P1 53, P2 54, P3 95, P4 24, P5 48, P6 18, P7 10), 145 do not (live_strategy 70, new_strategy_prop 32, infra 13, ml_health 13, timeframes 6, macro 5, regime 5, none 1) — assigned below by what they ask. Every PASS is a discovery until its confirmation passes.

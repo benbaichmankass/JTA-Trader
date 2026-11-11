@@ -309,3 +309,73 @@ def test_high_priority_flag_on_testing_paper_is_recorded_not_sent(pairs):
     for acct in ("rm", "prop1"):
         assert tp.trade_decision("trade-update", account=acct, strategy="leg_a", priority="high",
                                  policy=_pol(), accounts=ACCTS).reason == "priority_bypass"
+
+
+# ── TELEGRAM-TRIM phase 3 (operator popups 2026-11-10 "Keep b, trim c" / "Only me; you if unfixed") ──
+
+def test_the_digest_drops_paper_soak_messages_but_keeps_events_and_non_paper_soaks():
+    msgs = ["🧪 1 soak(s) changed state:\n• SOAK-stage1-test_paper-leg_a → passed clean",
+            "🧪 Soaks at deploy: 2 passed · 0 mechanical_fail",
+            "🧪 1 soak(s) changed state:\n• SOAK-rm-leg_a → mechanical_fail",
+            "❓ new operator decision: X", "📋 ranked summary"]
+    out = tp.digest_event_lines(msgs, policy=_pol(), accounts=ACCTS)
+    assert out == ["🧪 1 soak(s) changed state:\n• SOAK-rm-leg_a → mechanical_fail", "❓ new operator decision: X"]
+
+
+def _route(text, *, kind="alert", channel="system", now=0.0, d=None):
+    return tp.paper_alert_route(kind, text, channel, now=now, policy=_pol(), accounts=ACCTS, directory=d)
+
+
+def test_a_paper_only_alert_goes_to_the_manager_then_escalates_once_if_still_firing(tmp_path):
+    a = "🟡 [WARN] test_paper has lost money on 4 consecutive trading days, totalling $44,033.99"
+    b = "🟡 [WARN] test_paper has lost money on 5 consecutive trading days, totalling $1,200.00"   # same alert
+    after = _pol()["paper_alerts"]["escalate_after_minutes"] * 60
+    assert _route(a, now=0, d=tmp_path) == tp.PAPER_ALERT_MANAGER
+    assert _route(b, now=after - 60, d=tmp_path) == tp.PAPER_ALERT_MANAGER       # the manager's window
+    assert _route(b, now=after + 1, d=tmp_path) == tp.PAPER_ALERT_ESCALATE       # still firing: ONE flag
+    assert _route(b, now=after + 600, d=tmp_path) == tp.PAPER_ALERT_MANAGER      # never a second flag
+    quiet = after + 600 + _pol()["paper_alerts"]["reset_after_hours"] * 3600 + 1
+    assert _route(a, now=quiet, d=tmp_path) == tp.PAPER_ALERT_MANAGER            # a fresh episode after quiet
+
+
+@pytest.mark.parametrize("text,kind,channel", [
+    ("🔴 [ERROR] rm order failed", "alert", "system"),                          # real money
+    ("🔴 [ERROR] rm_mirror order failed", "alert", "system"),                   # portfolio mirror keeps pinging
+    ("🔴 [ERROR] prop1 stop missing", "alert", "system"),                       # prop
+    ("🔴 [ERROR] test_paper and rm diverge", "alert", "system"),                # mixed: over-send
+    ("🔴 [ERROR] the trainer is unreachable", "alert", "system"),               # no account named
+    ("🔴 [ERROR] test_paper order failed", "trade_opened", "trades"),           # trades channel has its own filter
+    ("🔴 [ERROR] test_paper needs you", "decision", "system"),                  # an operator ask
+    ("test_paper: weekly note, no alert marker", "alert", "system"),             # not an alert
+])
+def test_everything_but_a_paper_only_alert_is_sent_as_before(tmp_path, text, kind, channel):
+    assert _route(text, kind=kind, channel=channel, d=tmp_path) == tp.PAPER_ALERT_SEND
+
+
+def test_the_route_fails_open_and_honours_route_send(tmp_path, monkeypatch):
+    pol = {**_pol(), "paper_alerts": {"route": "send"}}
+    assert tp.paper_alert_route("alert", "🔴 test_paper x", "system", policy=pol, accounts=ACCTS,
+                                directory=tmp_path) == tp.PAPER_ALERT_SEND
+    monkeypatch.setattr(tp, "load_policy", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("bad yaml")))
+    assert tp.paper_alert_route("alert", "🔴 test_paper x", "system", accounts=ACCTS,
+                                directory=tmp_path) == tp.PAPER_ALERT_SEND
+
+
+def test_notify_records_a_paper_alert_for_the_manager_and_returns_handled(monkeypatch):
+    from src.runtime import notify
+    sent, recorded = [], []
+    monkeypatch.setattr(notify, "_send_telegram_direct", lambda m, **k: sent.append(m) or True)
+    monkeypatch.setattr(notify, "_ledger_record", lambda *a, **k: None)
+    monkeypatch.setattr(tp, "paper_alert_route", lambda *a, **k: tp.PAPER_ALERT_MANAGER)
+    monkeypatch.setattr(tp, "record_suppressed", lambda kind, text, **k: recorded.append((kind, k)) or True)
+    assert notify.send_telegram_direct("🔴 test_paper x", kind="alert", channel="system") is True   # handled
+    assert sent == [] and recorded[0][1]["priority"] == "high" and recorded[0][1]["reason"] == "paper_alert_to_manager"
+    monkeypatch.setattr(tp, "paper_alert_route", lambda *a, **k: tp.PAPER_ALERT_ESCALATE)
+    assert notify.send_telegram_direct("🔴 test_paper x", kind="alert", channel="system") is True
+    assert sent and sent[0].startswith("🚩 STILL FAILING") and sent[0].endswith("🔴 test_paper x")
+
+
+def test_a_suppressed_paper_alert_wakes_the_manager():
+    from src.runtime import alerts_ledger
+    assert alerts_ledger.wakes_manager({"channel": "system", "kind": "unclassified", "priority": "high",
+                                        "delivered": "suppressed_by_policy"})
