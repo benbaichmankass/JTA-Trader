@@ -1,0 +1,137 @@
+id: RQ-20261111-f5c8-02
+title: 'Volume composition (volatility): does a SIZE-led volume surprise carry held-out rank information on the SIZE of the next 4h move beyond plain volume
+  and the current bar''s range? (crypto core, held-out 2024-07..2026-09)'
+status: queued
+cadence: once
+roadmap:
+- L-DATA
+theme: ml_health
+priority: 2
+kind: experiment
+question: 'Operator 2026-11-11 ~08:15Z (row VOLUME-COMPOSITION-RESEARCH): are volume spikes driven by bigger trades or more trades, and does that predict
+  moves? Bar volume V = trade count N x average trade size S, so log V = log N + log S exactly. Each is taken as a SURPRISE against its own seasonal norm
+  (mean over the same slot-of-day on the previous 20 days, strictly before the bar), so volume surprise sv = count surprise sn + size surprise ss. Conditioning
+  on sv, the size surprise ss and the composition ss - sn carry the same information, so the unit tests ss GIVEN plain volume. Population: Binance USD-M
+  perps BTC/ETH/SOL/XRP/ADA/AVAX USDT (the crypto core the books trade; Bybit linear PROXIED by Binance because Bybit klines carry no trade count), 1h klines
+  2021-01 .. 2026-09 resampled to 4h; discovery 2021-01 .. 2024-06, HELD-OUT 2024-07 .. 2026-09. VOLATILITY arm: feature x = ss_t, baseline B = {sv_t, |r_t|},
+  target y = |log return| over the next 4h bar. A feature for vol/sizing/exit heads, not a directional signal, so it carries no trading rule (claim: model
+  quality).'
+why_this_matters: 'Plain volume is already in most feature sets. If WHO trades (few large vs many small prints) adds information beyond HOW MUCH trades,
+  it is a cheap feature family (the trade count is in the free kline archive) for the entry/exit/vol heads. If it adds nothing at the kline grain, the block-share
+  question needs tick data (aggTrades / Bybit public trades, not in the lake: RQ-20261108-98e3-29 found orderflow_1m ABSENT-FROM-MANIFESTS) and this unit
+  says whether that is worth building.'
+evidence_class:
+  holdout: holdout_window
+  claim: model_quality
+power:
+  expected_n: 27
+  min_detectable_effect: 0.02
+  effect_units: rank_ic
+  design: one_sample
+  alpha: 0.01
+  power: 0.8
+  basis: 'ESTIMATE: n = held-out calendar months (2024-07 .. 2026-09 = 27), the independent unit. Per (symbol, month) ~180 4h bars -> per-month IC noise
+    ~1/sqrt(180) = 0.075, ~0.03 after pooling 6 symbols if independent (crypto symbols are correlated, so worse). SE of the 27-month mean ~0.03/sqrt(27)
+    = 0.0058; t >= 2.5 needs |mean IC| >= ~0.015, so the --ic-min 0.02 floor binds. Fewer than 18 measured held-out months or 4 symbols is INDETERMINATE.'
+  feasibility:
+    source: none
+    accrual_basis: Replays the public Binance archive for pinned months; nothing accrues.
+decision_rule:
+  id: RULE-VOLCOMP-VOLATILITY-01
+  registered_at: '2026-11-11'
+  registered_before_run: true
+  statistic: 'Per (symbol, calendar month): partial rank IC = Pearson(residual of rank(x) on ranks of B by OLS, rank(y)). Months averaged across measured
+    symbols; t = mean / (sd / sqrt(M)) over months, separately for discovery and held-out.'
+  rule: 'INDETERMINATE IF fewer than 4 symbols or 18 held-out months are measured. PASS iff ALL: held-out mean IC has the discovery sign; |held-out mean
+    IC| >= 0.02; |held-out t| >= 2.5; |discovery t| >= 2.0. FAIL otherwise. Thresholds, spans, bar and horizon are not changed after any result.'
+  what_it_does_not_do: 'Edits no config, trains no model, places no order. Kline grain only: the large-trade (block) share needs per-trade sizes and is
+    NOT measured here. No look at either span was taken before registration; the runner was smoke-tested on 2020-06 .. 2020-12 (outside both spans) for
+    fetch/cost mechanics only, and its IC was not read.'
+  proposal_mapping: PASS -> author an ML feature-add unit (ss, sn into the regime-vol / exit head feature sets, judged by that head's own purged-CV bake-off,
+    net of cost where the head feeds an order); FAIL -> composition adds no vol information beyond volume and range at kline grain; INDETERMINATE -> re-run
+    when coverage allows.
+practice_precedent: Trade-size composition of volume is a standard market-microstructure variable (average trade size and large-trade share as informed-flow
+  proxies); in-repo, plain volume and taker imbalance are already features, trade count is not.
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.1
+  basis: 'stand-in: a new feature family for the ML heads; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.5
+  est_minutes: 15
+  why_runner: Fetches keyless public Binance Vision monthly 1h klines (~414 small zips); reads no trainer data.
+  basis: 'Smoke run: 2 symbols x 7 months fetched and graded in 11 s on a session container.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/volume_composition_ic.py
+  - --target
+  - volatility
+  - --bar
+  - 4h
+  - --horizon
+  - '1'
+  - --symbols
+  - BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT
+  - --start
+  - 2021-01
+  - --discovery-end
+  - 2024-06
+  - --heldout-start
+  - 2024-07
+  - --end
+  - 2026-09
+  - --season-days
+  - '20'
+  - --trigger-q
+  - '0.8'
+  - --trigger-days
+  - '90'
+  - --ic-min
+  - '0.02'
+  - --t-heldout
+  - '2.5'
+  - --t-discovery
+  - '2.0'
+  - --min-trades
+  - '200'
+  - --min-symbols
+  - '4'
+  - --min-months
+  - '18'
+  - --rule-id
+  - RULE-VOLCOMP-VOLATILITY-01
+  - --registered-at
+  - '2026-11-11'
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261111-f5c8-02
+ml_consumer:
+  book: money
+  consumer: VOLUME-COMPOSITION-RESEARCH
+  decision: PASS -> author an ML feature-add unit (ss, sn into the regime-vol / exit head feature sets, judged by that head's own purged-CV bake-off, net
+    of cost where the head feeds an order); FAIL -> composition adds no vol information beyond volume and range at kline grain; INDETERMINATE -> re-run
+    when coverage allows.
+  legs:
+  - ml_entry
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/volume_composition_ic.py
+- research/queue/RQ-20261108-98e3-29.yaml
+- scripts/research/timeframe_breakeven.py
+- scripts/data_lake/binance_vision_lake.py
+grading:
+  auto: true
+  decision_rule_id: RULE-VOLCOMP-VOLATILITY-01
