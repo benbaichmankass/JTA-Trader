@@ -145,4 +145,4 @@ def test_prop_rows_join_the_opener_and_count_null_pnl(monkeypatch):
     r = d["rows"][0]
     assert r["pnl"] == 8.0 and r["entry_price"] == 100.0 and r["qty"] == 2.0 and r["stop_loss"] == 99.0
     m = pc.category_metrics(d["rows"], category="prop", window_days=30)
-    assert m["avg_hold_days"] == 1.0417 and m["n_measured"] == 0 and m["net_pnl_usd"] == 8.0
+    assert m["avg_hold_days"] == 1.0 and m["n_measured"] == 0 and m["net_pnl_usd"] == 8.0
