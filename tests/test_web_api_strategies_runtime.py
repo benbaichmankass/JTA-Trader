@@ -101,3 +101,32 @@ def test_missing_status_file_degrades(setup):
     assert all(s["running"] is False for s in body["strategies"])
     # endpoint still returns the configured strategies
     assert {s["name"] for s in body["strategies"]} == {"vwap", "ict_scalp_5m"}
+
+
+def test_strategies_carry_derived_status_and_books(setup):
+    """UI-MODELS-STRATEGIES-TABLES: status is DERIVED (strategy_status rule), books = rosters carrying the leg."""
+    client, tmp_path = setup
+    (tmp_path / "strategies.yaml").write_text(yaml.safe_dump({"strategies": {
+        "vwap": {"enabled": True}, "ict_scalp_5m": {"enabled": True}, "old_leg": {"enabled": False},
+        "orphan_leg": {"enabled": True}}}), encoding="utf-8")
+    (tmp_path / "accounts.yaml").write_text(yaml.safe_dump({"accounts": {
+        "bybit_1": {"strategies": ["vwap", "ict_scalp_5m", "old_leg"]},
+        "bybit_2": {"strategies": ["vwap"]}, "bybit_portfolio": {"strategies": ["vwap"]}}}), encoding="utf-8")
+    rows = {s["name"]: s for s in client.get("/api/bot/strategies").json()["strategies"]}
+    assert rows["vwap"]["status"] == "production" and rows["vwap"]["books"] == ["bybit_1", "bybit_2", "bybit_portfolio"]
+    assert rows["ict_scalp_5m"]["status"] == "testing" and rows["ict_scalp_5m"]["books"] == ["bybit_1"]
+    assert rows["old_leg"]["status"] == "inactive"                       # retirement marker wins over a roster entry
+    assert rows["orphan_leg"]["status"] == "testing" and rows["orphan_leg"]["books"] == []
+    assert all(r["status_read_state"] == "measured" for r in rows.values())
+    from scripts.ops import strategy_status as ss                          # the cross-check: same rule, same answers
+    ros = ss.rosters(yaml.safe_load((tmp_path / "accounts.yaml").read_text())["accounts"])
+    cfg = yaml.safe_load((tmp_path / "strategies.yaml").read_text())["strategies"]
+    assert {n: r["status"] for n, r in rows.items()} == {n: ss.status_of(n, ros, cfg) for n in cfg}
+
+
+def test_strategies_status_unreadable_is_null_not_a_guess(setup, monkeypatch):
+    client, _tmp = setup
+    from scripts.ops import strategy_status as ss
+    monkeypatch.setattr(ss, "rosters", lambda a: (_ for _ in ()).throw(RuntimeError("boom")))
+    rows = client.get("/api/bot/strategies").json()["strategies"]
+    assert rows and all(r["status"] is None and r["books"] is None and r["status_read_state"] == "unreadable" for r in rows)

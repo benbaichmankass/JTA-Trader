@@ -179,3 +179,36 @@ through system-actions). All three steps can be reverted.
 | unassigned | `trade-outcome-global-baseline-v0` | trade-outcome-global-baseline-v0 | OFFLINE | — | — | — |
 | unassigned | `trade-outcome-lgbm-v1` | trade-outcome-lgbm-v1 | OFFLINE | — | — | yes |
 | unassigned | `trade-outcome-winrate-baseline-v0` | trade-outcome-winrate-baseline-v0 | OFFLINE | — | — | — |
+
+## Addendum 2026-11-11: the REVIEW read against the Mutt baselines (wave 2 input)
+
+**Population:** the 19 REVIEW rows, using the registry's own `metrics` (re-read `GET /api/bot/ml/registry` 2026-11-11 ~19:15Z).
+Each head is compared with the Mutt baseline for the same (symbol, timeframe) on macro F1, the metric where the
+minority `volatile` class counts.
+
+**What the read can and cannot say.**
+- **The Mutt baselines are majority-class predictors.** Every one has `f1_volatile` = 0.0 and macro F1 of 0.36-0.50
+  (btc 15m 0.4929, btc 5m 0.4991, mes 15m 0.3626, mes 5m 0.3554). Beating one is a floor, not evidence of value.
+- **Every head with a matched Mutt clears it on the SAME shard and split** (v002, `time_aware_holdout`, same `n_eval`):
+  - btc-15m-lgbm-v2: 0.5874
+  - btc-15m-lgbm-yz-v1: 0.6046
+  - btc-5m-lgbm-v2: 0.5564
+  - btc-5m-lgbm-yz-v1: 0.5564
+- **11 of the 15 non-baseline REVIEW heads have no Mutt** on their (symbol, timeframe): all ETH and SOL heads, BTC 1h,
+  and MES 1d. The rule cannot be applied to them as written.
+- **No cost-net metric exists for these heads** (`cost_gate_applicable` = 0.0 on every row read). The rule "beats its
+  slot baseline net of cost" is therefore unevaluable for D2 from registry metrics. A regime head's value is whether it
+  improves the decision of the leg it gates, net of cost, and that needs a consumer test, not a classifier score.
+- **Champions and challengers are not on one shard.** The LIVE `btc-regime-15m-lgbm-fc-pcv-v2` reads macro F1 0.582
+  (`purged_walk_forward`, n 87,636). Shadow `btc-15m-lgbm-yz-v1` reads 0.6046 on a different split (`time_aware_holdout`,
+  n 35,054), and shadow `fc-pcv-v1` reads 0.6031 on a different shard (v520). None of these numbers is comparable with the others.
+
+**Wave-2 proposal (each one can be reverted; retiring stays Tier 2 and is the plan's call):**
+
+| model | proposal | evidence |
+|---|---|---|
+| `btc-regime-15m-lgbm-fc-pcv-v1`, `sol-regime-15m-lgbm-fc-pcv-v1` | RETIRE (superseded) | same lineage as the LIVE `-v2`; nothing consumes v1 and no open unit names it |
+| `btc-regime-5m-lgbm-yz-v1` | RETIRE (duplicate) | macro F1 0.5564 = `btc-regime-5m-lgbm-v2` 0.5564, f1_vol 0.1191 vs 0.1193 on the same shard and split: the YZ estimator adds nothing at 5m |
+| `execution-quality-baseline-v0` | RETIRE | n_eval 65, regression MAE 3.26 with no reference, flagged a constant shadow scorer (ML-HYGIENE, PI-20261009-01FXMMUG-0001) |
+| 4 Mutt baselines | KEEP as slot references | cheap, and they are the floor every D2 head must clear |
+| the other 11 heads | HOLD for one D2 bake-off | one pre-registered unit per (symbol, timeframe): every head on ONE shard and ONE purged split, then the winner's consumer test (does gating the leg improve its net R). A head that loses both is retired. |

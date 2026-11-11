@@ -75,6 +75,9 @@ HEAVY_ENTRYPOINTS = [
 # `.fit(`/`lgb.train(` it belongs above, and the reason recorded here is what
 # makes that reviewable.
 DECLARED_LIGHT = {
+    "scripts/research/feature_impact.py":
+        "FEATURE-IMPACT-MAP v0: loads 7 committed LightGBM model texts to read their split/gain importances (no training, no data), "
+        "seconds of CPU on a GitHub runner (feature-impact.yml), never needs_vm_data, never routed to the trainer.",
     "scripts/research/donchian_meta_filter.py":
         "PROP-BASELINE-AND-ML meta-label filter (unit RQ-20261105-d256-02): a scikit-learn logistic regression on ~250 committed ledger rows, seconds of CPU "
         "in a lane container or a GitHub runner, never needs_vm_data, never routed to the trainer.",

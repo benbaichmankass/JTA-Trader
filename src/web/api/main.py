@@ -49,6 +49,7 @@ from src.web.api.routers import pnl_history as pnl_history_router
 from src.web.api.routers import prop as prop_router
 from src.web.api.routers import reports as reports_router
 from src.web.api.routers import research_catalog as research_catalog_router
+from src.web.api.routers import catalog_features as catalog_features_router
 from src.web.api.routers import roadmap as roadmap_router
 from src.web.api.routers import runtime_config as runtime_config_router
 from src.web.api.routers import shadow as shadow_router
@@ -140,6 +141,7 @@ app.include_router(prop_router.router)
 app.include_router(reports_router.router)
 app.include_router(roadmap_router.router)
 app.include_router(research_catalog_router.router)
+app.include_router(catalog_features_router.router)
 app.include_router(runtime_config_router.router)
 app.include_router(learning_router.router)
 app.include_router(market_ws_router.router)
