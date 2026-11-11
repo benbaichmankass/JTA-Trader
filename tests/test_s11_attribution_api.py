@@ -78,9 +78,15 @@ def _insert_trade(
 # ---------------------------------------------------------------------------
 
 class TestNetPositionsEndpoint:
+    @pytest.fixture(autouse=True)
+    def _mp(self, monkeypatch):
+        self._monkeypatch = monkeypatch
+
     def _call(self, db_path: str):
-        from src.web.api.routers.attribution import get_net_positions
-        return get_net_positions(db_path=db_path)
+        from pathlib import Path
+        from src.web.api.routers import attribution
+        self._monkeypatch.setattr(attribution, "_DB_PATH", Path(db_path))
+        return attribution.get_net_positions()
 
     def test_missing_db_returns_empty(self, tmp_path):
         data = self._call(str(tmp_path / "nonexistent.db"))
@@ -150,9 +156,15 @@ class TestNetPositionsEndpoint:
 # ---------------------------------------------------------------------------
 
 class TestStrategyAttributionEndpoint:
+    @pytest.fixture(autouse=True)
+    def _mp(self, monkeypatch):
+        self._monkeypatch = monkeypatch
+
     def _call(self, db_path: str):
-        from src.web.api.routers.attribution import get_strategy_attribution
-        return get_strategy_attribution(db_path=db_path)
+        from pathlib import Path
+        from src.web.api.routers import attribution
+        self._monkeypatch.setattr(attribution, "_DB_PATH", Path(db_path))
+        return attribution.get_strategy_attribution()
 
     def test_missing_db_returns_empty_strategies(self, tmp_path):
         data = self._call(str(tmp_path / "nonexistent.db"))
@@ -255,3 +267,66 @@ class TestStrategyAttributionEndpoint:
         s = data["strategies"][0]
         assert s["losing_trades"] == 1
         assert s["winning_trades"] == 0
+
+
+# ---------------------------------------------------------------------------
+# SEC-API-DBPATH-PARAM: no caller-supplied DB path, read-only open
+# ---------------------------------------------------------------------------
+
+
+class TestNoDbPathOverride:
+    def test_handlers_take_no_db_path(self):
+        import inspect
+        from src.web.api.routers import attribution
+        for fn in (attribution.get_net_positions, attribution.get_strategy_attribution):
+            assert "db_path" not in inspect.signature(fn).parameters
+
+    def test_routes_ignore_db_path_query(self, tmp_path, monkeypatch):
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        from pathlib import Path
+        from src.web.api.routers import attribution
+
+        canonical = str(tmp_path / "canonical.db")
+        _init_db(canonical)
+        _insert_trade(canonical, symbol="BTCUSDT", position_size=1.0)
+        other = str(tmp_path / "other.db")
+        _init_db(other)
+        _insert_trade(other, symbol="EVILUSDT", position_size=9.0)
+        monkeypatch.setattr(attribution, "_DB_PATH", Path(canonical))
+
+        app = FastAPI()
+        app.include_router(attribution.router)
+        client = TestClient(app)
+        r = client.get("/api/bot/positions/net", params={"db_path": other})
+        assert r.status_code == 200
+        assert [p["symbol"] for p in r.json()["positions"]] == ["BTCUSDT"]
+        r = client.get("/api/bot/strategy/attribution", params={"db_path": other})
+        assert r.status_code == 200
+        assert r.json()["strategies"][0]["open_trades"] == 1
+
+    def test_attribution_opens_read_only(self, tmp_path, monkeypatch):
+        """A write through the attribution connection must fail."""
+        import sqlite3 as _sq
+        from src.web.api.routers import attribution
+
+        db = tmp_path / "j.db"
+        _init_db(str(db))
+        seen = {}
+        real_connect = _sq.connect
+
+        def spy(target, *a, **kw):
+            seen["target"] = target
+            seen["uri"] = kw.get("uri")
+            return real_connect(target, *a, **kw)
+
+        monkeypatch.setattr(attribution.sqlite3, "connect", spy)
+        attribution._query_attribution(db)
+        assert seen["uri"] is True and seen["target"].endswith("?mode=ro")
+
+    def test_net_positions_read_only_mode(self, tmp_path):
+        from src.runtime.positions import net_positions_by_symbol
+        db = str(tmp_path / "j.db")
+        _init_db(db)
+        _insert_trade(db, symbol="ETHUSDT", position_size=2.0)
+        assert net_positions_by_symbol(db_path=db, read_only=True) == {"ETHUSDT": 2.0}

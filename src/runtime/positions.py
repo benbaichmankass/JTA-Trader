@@ -306,7 +306,9 @@ def current_net_position_qty(
     return net
 
 
-def net_positions_by_symbol(*, db_path: Optional[str] = None) -> dict[str, float]:
+def net_positions_by_symbol(
+    *, db_path: Optional[str] = None, read_only: bool = False,
+) -> dict[str, float]:
     """Return signed net qty per symbol aggregated across all live accounts.
 
     Queries all open, non-backtest trades in the trade journal, summing
@@ -316,6 +318,8 @@ def net_positions_by_symbol(*, db_path: Optional[str] = None) -> dict[str, float
     ----------
     db_path : str, optional
         Override the default ``trade_journal.db`` path.
+    read_only : bool
+        Open the journal with ``mode=ro`` (the web API passes True).
 
     Returns
     -------
@@ -328,7 +332,14 @@ def net_positions_by_symbol(*, db_path: Optional[str] = None) -> dict[str, float
         return {}
 
     try:
-        with sqlite3.connect(path) as conn:
+        if read_only:
+            from pathlib import Path as _Path
+            conn_ctx = sqlite3.connect(
+                f"{_Path(path).resolve().as_uri()}?mode=ro", uri=True,
+            )
+        else:
+            conn_ctx = sqlite3.connect(path)
+        with conn_ctx as conn:
             rows = conn.execute(
                 "SELECT symbol, direction, position_size "
                 "FROM trades "

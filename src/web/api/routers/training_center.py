@@ -47,7 +47,9 @@ _MIRROR_SUBPATH = "trainer_mirror"
 # Whitelist of (model_id, run_id) characters — guards against path traversal
 # on the runs/{model_id}/{run_id} endpoint. Mirror keys are produced by the
 # trainer and follow a predictable shape, so this is permissive but bounded.
-_SAFE_ID = re.compile(r"^[A-Za-z0-9._\-]{1,128}$")
+# Must not be "." or "..": those match the character class but walk out of
+# the run directory (SEC-API-DBPATH-PARAM sweep, 2026-11-11).
+_SAFE_ID = re.compile(r"^(?!\.{1,2}$)[A-Za-z0-9._\-]{1,128}$")
 
 # Three-bucket deployment view (per operator directive 2026-05-18). The
 # registry has 3 canonical stages; from a runtime-impact perspective:

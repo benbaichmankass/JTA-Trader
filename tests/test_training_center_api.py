@@ -562,3 +562,12 @@ def test_registry_enrichment_live_bucket_for_influence_stage(
     assert rows["approved-model-v1"]["deployment_bucket"] == "LIVE"
     assert rows["shadow-model-v1"]["deployment_bucket"] == "SHADOW"
     assert rows["research-model-v1"]["deployment_bucket"] == "OFFLINE"
+
+
+def test_safe_id_rejects_dot_segments():
+    """SEC-API-DBPATH-PARAM sweep: '.' and '..' must not pass as ids."""
+    from src.web.api.routers.training_center import _SAFE_ID
+    assert not _SAFE_ID.match("..")
+    assert not _SAFE_ID.match(".")
+    assert _SAFE_ID.match("model_v1.2-a")
+    assert _SAFE_ID.match("..x")  # a name, not a traversal segment

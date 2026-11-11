@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "SEC-API-DBPATH-PARAM, Tier 2 (web-api). The operator approved building it (popup 2026-11-11 22:20Z, 'Yes, all four (Recommended)'). The lane cannot merge; the manager merges, then deploys ict-web-api and verifies the post-state.",
+  "why": "Removes the hidden ?db_path= query override from GET /api/bot/positions/net and GET /api/bot/strategy/attribution. Both routes are unauthenticated while the site gate is off, and the override let a caller point sqlite3 at any file the web-api user could open. Both routes now open only the canonical trade_journal.db, with mode=ro. Also closes the '.'/'..' id gap in training_center._SAFE_ID found in the same sweep. No order path, strategy, risk cap or config change."
+}
