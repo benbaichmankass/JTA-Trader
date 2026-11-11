@@ -1,0 +1,195 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "n": 26280,
+  "population": "1 group(s) ['SOLUSDT_1h']; baseline lgbm; candidates ['lgbm_xbe']; metric logloss; n = baseline OOS test rows summed over groups; cv folds per group >= 5",
+  "note": "no candidate reaches the registered floor on any clause",
+  "measurement": {
+    "engine": "scripts/research/ml_bakeoff.py",
+    "metric": "logloss",
+    "higher_is_better": false,
+    "metric_caveats": [],
+    "delta_sign": "positive = learner better than reference",
+    "baseline": "lgbm",
+    "controls": [
+      "prior"
+    ],
+    "candidates": [
+      "lgbm_xbe"
+    ],
+    "arm_status": {
+      "prior": "ok",
+      "lgbm": "ok",
+      "lgbm_xbe": "ok"
+    },
+    "groups": {
+      "SOLUSDT_1h": {
+        "n_rows": 43800,
+        "classes": [
+          "range",
+          "volatile"
+        ],
+        "arms": {
+          "prior": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.5838366022239662,
+                  0.6722739379324848,
+                  0.6749178226797261,
+                  0.7514749533745562,
+                  0.8406701443679108
+                ],
+                "n_test_rows": 26280
+              }
+            }
+          },
+          "lgbm": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.5016271228203947,
+                  0.6054516531344153,
+                  0.6014220873462185,
+                  0.629818172262898,
+                  0.5835790624766308
+                ],
+                "n_test_rows": 26280
+              }
+            }
+          },
+          "lgbm_xbe": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek",
+              "btc_log_return",
+              "btc_rolling_log_return_vol",
+              "eth_log_return",
+              "eth_rolling_log_return_vol"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.5028726341371306,
+                  0.6123263606466505,
+                  0.6099462955797142,
+                  0.631576833315492,
+                  0.5898075011032224
+                ],
+                "n_test_rows": 26280
+              }
+            }
+          }
+        }
+      }
+    },
+    "deltas": {
+      "SOLUSDT_1h": {
+        "cv": {
+          "prior": {
+            "lgbm": {
+              "n_folds": 5,
+              "mean": -0.12025507250761733,
+              "ci95": [
+                -0.21882266642401654,
+                -0.021687478591218112
+              ],
+              "sign_consistent": true
+            },
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sign_consistent": false
+            }
+          },
+          "lgbm_xbe": {
+            "lgbm": {
+              "n_folds": 5,
+              "mean": -0.004926305348330473,
+              "ci95": [
+                -0.008950018589174725,
+                -0.0009025921074862202
+              ],
+              "sign_consistent": true
+            },
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.11532876715928686,
+              "ci95": [
+                0.016841040838438903,
+                0.21381649348013482
+              ],
+              "sign_consistent": true
+            }
+          }
+        }
+      }
+    },
+    "rule_evaluation": {
+      "verdict": "fail",
+      "why": "no candidate reaches the registered floor on any clause",
+      "candidates": {
+        "lgbm_xbe": {
+          "evaluated": true,
+          "passes_all": false,
+          "clauses": [
+            {
+              "holds": false,
+              "what": "['SOLUSDT_1h'] >= 0.002 vs lgbm/cv"
+            }
+          ]
+        }
+      }
+    },
+    "headline_checks": [],
+    "licences": {
+      "prior": {
+        "kind": "prior",
+        "licence": "n/a",
+        "research_only": false,
+        "weights": ""
+      },
+      "lgbm": {
+        "kind": "lightgbm",
+        "licence": "MIT",
+        "research_only": false,
+        "weights": ""
+      },
+      "lgbm_xbe": {
+        "kind": "lightgbm",
+        "licence": "MIT",
+        "research_only": false,
+        "weights": ""
+      }
+    },
+    "n_folds_cv_min_over_groups": 5,
+    "seconds": 20.1
+  }
+}
