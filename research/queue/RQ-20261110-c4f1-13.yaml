@@ -1,6 +1,6 @@
 id: RQ-20261110-c4f1-13
 title: 'Regime head at 1h, HAR-RV window one-factor sweep: does a 3x longer monthly window (m=66) beat the default HAR-RV (m=22) on BTC, ETH and SOL?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -162,3 +162,17 @@ related:
 - RQ-20261025-001
 - ML-LEVER-PLAN
 last_dispatched_at: '2026-11-11T06:36:51+00:00'
+grading:
+  attested: RULE-RQ20261110c4f113
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261110c4f113
+  evidence:
+  - research/results/RQ-20261110-c4f1-13/42973802811.jsonl
+  graded_at: '2026-11-11'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate
