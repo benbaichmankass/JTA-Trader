@@ -537,7 +537,34 @@ class FixtureProbe:
 
 
 # ── facts about the queue (local checkout) ───────────────────────────────────────────────────────────────
-def queue_facts(root: Path, now: datetime) -> Optional[dict]:
+def dispatcher_pending(units: dict, now: datetime, *, stamp_fn: Optional[Callable] = None,
+                       runs_fn: Optional[Callable] = None) -> set:
+    """Unit ids the dispatcher treats as ALREADY DISPATCHED (open stamp PR, or a fired run with no stamp/result yet).
+    `_is_due` does not see these, but the dispatcher skips them ("already dispatched"), so a unit in this set is
+    not stranded work. Uses the dispatcher's own functions. Unreadable (None) contributes nothing: the unit then
+    counts as due, the old and louder behaviour (RESEARCH-WATCHDOG-FIX, 2026-11-11, incident backend:github_runner@20261111T1059Z)."""
+    from scripts.research import dispatch_queue as dq
+    out: set = set()
+    try:
+        stamps = (stamp_fn or dq.pending_stamp_units)()
+    except Exception:  # allow-silent: unreadable pending set falls back to counting the unit as due
+        stamps = None
+    out.update((stamps or {}).keys())
+    try:
+        runs = (runs_fn or (lambda: dq.fired_run_units(now)))()
+    except Exception:  # allow-silent: same fallback
+        runs = None
+    if runs:
+        for uid, u in units.items():
+            if uid in out:
+                continue
+            res_at, _ = dq.latest_result_at(uid)
+            if dq.unit_pending_by_run(u, runs.get(uid), res_at):
+                out.add(uid)
+    return out
+
+
+def queue_facts(root: Path, now: datetime, *, pending_fn: Optional[Callable] = None) -> Optional[dict]:
     """runnable count (queue_replenish.runnable -> dispatchable()), per-backend split, and what dispatchable()
     does NOT count. None = could not read the queue."""
     try:
@@ -555,6 +582,7 @@ def queue_facts(root: Path, now: datetime) -> Optional[dict]:
         due_now_be: Dict[str, int] = {}
         min_need: Dict[str, float] = {}
         unplaceable = 0
+        pend = (pending_fn or dispatcher_pending)(units, now)
         wfs = {str(b["workflow"]).split("/")[-1] for b in cfg["backends"].values() if b.get("workflow")}
         for uid in run_ids:
             res = cr.plan(units[uid], cfg)
@@ -564,7 +592,7 @@ def queue_facts(root: Path, now: datetime) -> Optional[dict]:
             if res.workflow:
                 wfs.add(str(res.workflow).split("/")[-1])
             by_be[str(res.backend)] = by_be.get(str(res.backend), 0) + 1
-            if due_within(units[uid], now, 0.0):
+            if due_within(units[uid], now, 0.0) and uid not in pend:
                 due_now_be[str(res.backend)] = due_now_be.get(str(res.backend), 0) + 1
             q = (cfg["backends"].get(str(res.backend)) or {}).get("queue") or {}
             if q.get("windows_utc"):    # the fit rule: est_minutes x safety_factor must fit before the window closes

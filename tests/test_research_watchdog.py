@@ -396,3 +396,38 @@ def test_pr_merge_state_rereads_github_lazy_unknown():
     p._api = lambda path, key=None: None
     calls = []
     assert p.pr_merge_state(3, sleep=calls.append) is None and calls == []  # API failure -> None at once
+
+
+# ── RESEARCH-WATCHDOG-FIX (2026-11-11, incident backend:github_runner@20261111T1059Z) ──
+def _due_now(monkeypatch, due, pending):
+    from scripts.research import dispatch_queue as dq
+    monkeypatch.setattr(dq, "due_within", lambda entry, now, hours=0.0: due if not hours else True)
+    return _REAL_QUEUE_FACTS(w._REPO, datetime.now(timezone.utc), pending_fn=lambda units, now: pending(units))
+
+
+def test_not_yet_due_unit_raises_no_backend_alarm(monkeypatch):
+    f = _due_now(monkeypatch, False, lambda u: set())
+    assert f["by_backend"] and f["by_backend_due_now"] == {}
+    be = next(iter(f["by_backend"]))
+    v = w.check_backend(be, f["by_backend_due_now"].get(be, 0), [], NOW, TH, due_later=f["by_backend"][be])
+    assert v["state"] == w.OK
+
+
+def test_dispatcher_pending_unit_is_not_counted_as_stranded(monkeypatch):
+    f = _due_now(monkeypatch, True, lambda u: set(u))        # due by cadence, but the dispatcher says "already dispatched"
+    assert f["by_backend"] and f["by_backend_due_now"] == {}
+
+
+def test_due_but_unstarted_unit_still_alarms(monkeypatch):
+    f = _due_now(monkeypatch, True, lambda u: set())
+    be = next(iter(f["by_backend"]))
+    n = f["by_backend_due_now"][be]
+    assert n == f["by_backend"][be] > 0
+    assert w.check_backend(be, n, [], NOW, TH)["state"] == w.BAD
+
+
+def test_dispatcher_pending_uses_open_stamp_prs_and_in_flight_runs():
+    units = {"A": {"id": "A"}, "B": {"id": "B"}, "C": {"id": "C"}}
+    got = w.dispatcher_pending(units, NOW, stamp_fn=lambda: {"A": "PR #1"}, runs_fn=lambda: {"B": NOW})
+    assert "A" in got and "C" not in got
+    assert w.dispatcher_pending(units, NOW, stamp_fn=lambda: None, runs_fn=lambda: None) == set()
