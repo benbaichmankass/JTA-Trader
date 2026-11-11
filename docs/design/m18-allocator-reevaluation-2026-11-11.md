@@ -1,6 +1,6 @@
 # M18 allocator — re-evaluation (proposal)
 
-> PROPOSAL, written 2026-11-11 by the GENERAL lane for row `M18-ALLOCATOR-REEVALUATE`. It decides nothing; the operator or the manager chooses.
+> **Doc status:** `unknown` · category `architecture` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · row `M18-ALLOCATOR-REEVALUATE` · GENERAL lane · 2026-11-11 · PROPOSAL: decides nothing; the operator or the manager chooses.
 
 **Gates this adds or changes:** none (proposal). The one code change shipped with it is a grading fix in an observe-only record (below).
 
