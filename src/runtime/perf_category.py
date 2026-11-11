@@ -164,3 +164,47 @@ def category_metrics(rows: Iterable[Mapping[str, Any]], *, category: str, window
                        "return_on_time_in_trade": "ESTIMATED when any row's pnl is not MEASURED",
                        "max_drawdown_usd": "closed-trade basis, all rows with pnl, close order"},
     }
+
+
+def _row_bucket(r: Mapping[str, Any], category: str) -> str:
+    return PROP_PNL_BUCKET if category == "prop" else classify_pnl(r)[0]
+
+
+def pnl_series(rows: Iterable[Mapping[str, Any]], *, category: str, per_trade: bool, measured_only: bool,
+               start_capital: Optional[float]) -> List[Dict[str, Any]]:
+    """Cumulative P&L points for one category (PERF-PAGE-PNL-CHART).
+
+    Points are per trade (``per_trade``) or per UTC day. ``pnl_usd`` / ``cum_pnl_usd`` follow ``measured_only`` (rows whose
+    pnl is not MEASURED are skipped); ``cum_pnl_all_rows_usd`` is ALWAYS the all-rows curve so the gap is visible.
+    ``cum_pct`` = cum / ``start_capital`` and is ``None`` (never 0) when the capital base is unknown or non-positive.
+    ``n`` counts the rows behind the point on the same basis as ``pnl_usd``."""
+    pts: List[Dict[str, Any]] = []
+    cum = cum_all = 0.0
+    for r in sorted(rows, key=lambda x: str(x.get("closed_at") or "")):
+        pnl = _f(r.get("pnl"))
+        c = _dt(r.get("closed_at"))
+        if pnl is None or c is None:
+            continue
+        counted = (not measured_only) or _row_bucket(r, category) == MEASURED
+        cum_all += pnl
+        if counted:
+            cum += pnl
+        key = c.isoformat() if per_trade else c.astimezone(timezone.utc).date().isoformat()
+        if not per_trade and pts and pts[-1]["date"] == key:
+            p = pts[-1]
+        else:
+            p = {"date": key, "pnl_usd": 0.0, "n": 0}
+            pts.append(p)
+        if counted:
+            p["pnl_usd"] += pnl
+            p["n"] += 1
+        p["cum_pnl_usd"] = cum
+        p["cum_pnl_all_rows_usd"] = cum_all
+    ok = start_capital is not None and start_capital > 0
+    for p in pts:
+        p["pnl_usd"] = round(p["pnl_usd"], 4)
+        p["cum_pnl_usd"] = round(p["cum_pnl_usd"], 4)
+        p["cum_pnl_all_rows_usd"] = round(p["cum_pnl_all_rows_usd"], 4)
+        p["cum_pct"] = round(p["cum_pnl_usd"] / start_capital * 100.0, 4) if ok else None
+        p["cum_pct_all_rows"] = round(p["cum_pnl_all_rows_usd"] / start_capital * 100.0, 4) if ok else None
+    return pts

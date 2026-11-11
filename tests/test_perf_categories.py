@@ -146,3 +146,79 @@ def test_prop_rows_join_the_opener_and_count_null_pnl(monkeypatch):
     assert r["pnl"] == 8.0 and r["entry_price"] == 100.0 and r["qty"] == 2.0 and r["stop_loss"] == 99.0
     m = pc.category_metrics(d["rows"], category="prop", window_days=30)
     assert m["avg_hold_days"] == 1.0 and m["n_measured"] == 0 and m["net_pnl_usd"] == 8.0
+
+
+# ---- PERF-PAGE-PNL-CHART: /performance/pnl-series ----
+
+FAB = '{"pnl_source":"local_compute","exit_price_source":"local_markprice"}'
+
+
+def _snap(db, account_id, balance, days_ago, n=1):
+    import sqlite3 as _s
+    c = _s.connect(str(db))
+    for i in range(n):
+        ts = (datetime.now(timezone.utc) - timedelta(days=days_ago, minutes=i)).isoformat()
+        c.execute("INSERT INTO balance_snapshots (account_id, balance, api_ok, ts) VALUES (?,?,1,?)", (account_id, balance, ts))
+    c.commit()
+    c.close()
+
+
+def _series(client, **p):
+    return client.get("/api/bot/performance/pnl-series", params=p)
+
+
+def test_series_last_point_equals_category_table_and_split_is_visible(env, client):
+    now = datetime.now(timezone.utc)
+    d1, d2 = (now - timedelta(days=3)).isoformat(), (now - timedelta(days=1)).isoformat()
+    _trade(env, pnl=10.0, closed_at=d1, timestamp=d1)
+    _trade(env, pnl=-4.0, closed_at=d2, timestamp=d2)
+    _trade(env, pnl=6.0, closed_at=d2, timestamp=d2, notes=FAB)
+    _snap(env, "a_live", 1000.0, days_ago=40)
+    tab = {c["category"]: c for c in client.get("/api/bot/performance/categories", params={"window": "30d"}).json()["categories"]}
+    for mo, key in ((True, "measured_usd"), (False, "net_pnl_usd")):
+        s = _series(client, window="30d", category="live", measured_only=str(mo).lower()).json()["series"][0]
+        assert s["points"][-1]["cum_pnl_usd"] == tab["live"][key]          # the cross-check
+    s = _series(client, window="30d", category="live").json()["series"][0]
+    assert [p["pnl_usd"] for p in s["points"]] == [10.0, -4.0]               # measured-only; the fabricated +6 is skipped
+    assert s["points"][-1]["cum_pnl_all_rows_usd"] == 12.0 and s["points"][-1]["n"] == 1
+    assert s["start_capital_usd"] == 1000.0 and s["capital_read_state"] == "measured"
+    assert s["points"][-1]["cum_pct"] == 0.6 and s["points"][-1]["cum_pct_all_rows"] == 1.2
+
+
+def test_series_no_capital_record_is_null_pct_not_zero(env, client):
+    _trade(env, pnl=10.0)
+    s = _series(client, window="30d", category="live").json()["series"][0]
+    assert s["start_capital_usd"] is None and s["capital_read_state"] == "no_capital_record"
+    assert s["points"][-1]["cum_pnl_usd"] == 10.0 and s["points"][-1]["cum_pct"] is None
+
+
+def test_series_first_snapshot_after_start_is_flagged_and_7d_is_per_trade(env, client):
+    _trade(env, pnl=3.0)
+    _trade(env, pnl=2.0)
+    _snap(env, "a_live", 500.0, days_ago=1)                                   # nothing at/before the 7d start
+    d = _series(client, window="7d", category="live").json()
+    s = d["series"][0]
+    assert s["capital_read_state"] == "first_snapshot_after_start" and d["bucket"] == "trade" and len(s["points"]) == 2
+
+
+def test_series_filters_and_errors(env, client):
+    _trade(env, pnl=1.0, strategy_name="s1", symbol="BTCUSDT")
+    _trade(env, pnl=2.0, strategy_name="s2", symbol="ETHUSDT")
+    one = _series(client, window="30d", category="live", strategy="s2").json()
+    assert one["series"][0]["points"][-1]["cum_pnl_usd"] == 2.0 and one["population"]["filters"]["strategy"] == "s2"
+    assert _series(client, window="30d", category="live", symbol="BTCUSDT").json()["series"][0]["n_rows"] == 1
+    assert _series(client, window="30d", category="live", account_id="a_paper").json()["series"][0]["n_rows"] == 0
+    assert len(_series(client, window="30d").json()["series"]) == 4
+    assert _series(client, window="zz").status_code == 400
+    assert _series(client, window="30d", category="nope").status_code == 400
+    assert _series(client, window="all", category="live").status_code == 200
+
+
+def test_pnl_series_pure_daily_bucketing_and_nonpositive_capital():
+    rows = [_row(5.0, closed="2026-11-08T01:00:00+00:00"), _row(-2.0, closed="2026-11-08T23:00:00+00:00"),
+            _row(4.0, closed="2026-11-09T01:00:00+00:00")]
+    pts = pc.pnl_series(rows, category="live", per_trade=False, measured_only=True, start_capital=100.0)
+    assert [(p["date"], p["pnl_usd"], p["cum_pnl_usd"], p["n"], p["cum_pct"]) for p in pts] == [
+        ("2026-11-08", 3.0, 3.0, 2, 3.0), ("2026-11-09", 4.0, 7.0, 1, 7.0)]
+    assert pc.pnl_series(rows, category="live", per_trade=False, measured_only=True, start_capital=0.0)[0]["cum_pct"] is None
+    assert pc.pnl_series([], category="live", per_trade=True, measured_only=True, start_capital=None) == []
