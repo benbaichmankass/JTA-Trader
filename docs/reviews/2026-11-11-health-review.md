@@ -106,5 +106,5 @@
 - `system_invariants.py`, the audit tail, the ssh sweep and `check_db_integrity.py`: blocked by relay truncation and the diag 401.
 - The trainer relay (#24923) had not returned. H11 and H12 use the `/api/bot/ml/status` mirror instead.
 - The open-set walk (§ 3c) was cut. The gate set is computed from a stale export (C2).
-- The ping system-action was not opened, to spare the Actions queue (80 queued). The manager is reported to directly instead.
+- The ping went out as system-action #24957 (delivery not confirmed when this page was written).
 - H16 soak grading was not done.
