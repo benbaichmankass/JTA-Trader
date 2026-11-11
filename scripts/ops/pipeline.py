@@ -385,7 +385,45 @@ def validate(item: dict) -> dict:
             "routed_to: required in state 'routed' — routed to WHAT? A routing "
             "with no destination is how an item stops being anyone's."
         )
+    if item.get("kind") == "insight":
+        _validate_insight(item)
     return item
+
+
+#: INSIGHTS-LEDGER (operator 2026-11-11; docs/design/ui-workplan-2026-11.md § 6). An insight is NOT a new register: it is
+#: an ordinary pipeline item carrying ``kind: "insight"`` plus the additive fields below, read back by
+#: ``GET /api/bot/work/ledger``. Same rules as every item (due_when, origin.rerun, terminal_reason to close).
+INSIGHT_PROVENANCE = ("MEASURED", "ESTIMATED", "UNVERIFIED")
+INSIGHT_OUTCOMES = ("acted", "filed", "killed", "open")
+INSIGHT_LINK_TYPES = ("row", "unit", "pr")
+
+
+def _validate_insight(item: dict) -> None:
+    """``kind: "insight"``: a claim with its POPULATION (RULE: always state it), provenance, evidence, an outcome and typed links.
+
+    ``topic`` / ``subtopic`` / ``roadmap`` are optional (a missing topic reads "Unmapped" in the ledger, visibly). An
+    ``acted`` insight must name at least one link: "we did something about it" with nothing to point at is the claim
+    the ledger exists to make checkable. A link id that does not resolve is reported live by the route, not refused here."""
+    for key in ("claim", "population", "evidence"):
+        if not isinstance(item.get(key), str) or not item[key].strip():
+            raise PipelineError(f"insight.{key}: required and non-empty — an insight states what, over what population, "
+                                f"and where the evidence lives")
+    if item.get("provenance") not in INSIGHT_PROVENANCE:
+        raise PipelineError(f"insight.provenance: must be one of {INSIGHT_PROVENANCE}, got {item.get('provenance')!r}")
+    if item.get("outcome") not in INSIGHT_OUTCOMES:
+        raise PipelineError(f"insight.outcome: must be one of {INSIGHT_OUTCOMES}, got {item.get('outcome')!r}")
+    links = item.get("links", [])
+    if not isinstance(links, list):
+        raise PipelineError("insight.links: must be a list of {type, id}")
+    for lk in links:
+        if not isinstance(lk, dict) or lk.get("type") not in INSIGHT_LINK_TYPES \
+                or not isinstance(lk.get("id"), str) or not lk["id"].strip():
+            raise PipelineError(f"insight.links: each link needs type in {INSIGHT_LINK_TYPES} and a non-empty id, got {lk!r}")
+    if item["outcome"] == "acted" and not links:
+        raise PipelineError("insight.outcome 'acted' needs at least one link (the row, unit or PR it became)")
+    for key in ("topic", "subtopic", "roadmap"):
+        if item.get(key) is not None and (not isinstance(item[key], str) or not item[key].strip()):
+            raise PipelineError(f"insight.{key}: must be a non-empty string when present")
 
 
 def _identity_mismatches(prior: dict, new: dict) -> list[str]:
