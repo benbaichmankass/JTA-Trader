@@ -58,7 +58,7 @@ import sys
 import time
 import zipfile
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
@@ -73,7 +73,7 @@ def _warn(msg: str) -> None:
 
 
 # ---- data ------------------------------------------------------------------------------------------------------
-def _months(start: str, end: str) -> List[str]:
+def _months(start: str, end: str) -> list[str]:
     y, m = int(start[:4]), int(start[5:7])
     ey, em = int(end[:4]), int(end[5:7])
     out = []
@@ -103,7 +103,7 @@ def parse_kline_csv(text: str):
     return df
 
 
-def fetch_symbol(symbol: str, start: str, end: str) -> Tuple[Any, Dict[str, Any]]:
+def fetch_symbol(symbol: str, start: str, end: str) -> tuple[Any, dict[str, Any]]:
     """Monthly 1h zips for [start, end] (YYYY-MM). Returns (frame, coverage)."""
     import pandas as pd
     import requests
@@ -130,7 +130,7 @@ def fetch_symbol(symbol: str, start: str, end: str) -> Tuple[Any, Dict[str, Any]
     if not parts:
         return pd.DataFrame(), {"months_requested": len(_months(start, end)), "months_missing": missing}
     df = pd.concat(parts).drop_duplicates("ts").sort_values("ts").reset_index(drop=True)
-    return df, {"months_requested": len(_months(start, end)), "months_missing": missing, "bars_1h": int(len(df)),
+    return df, {"months_requested": len(_months(start, end)), "months_missing": missing, "bars_1h": len(df),
                 "first_ts": str(df["ts"].iloc[0]), "last_ts": str(df["ts"].iloc[-1])}
 
 
@@ -169,7 +169,7 @@ def _rank(a):
     return pd.Series(a).rank(method="average").to_numpy()
 
 
-def partial_rank_ic(x, base: List[Any], y) -> Optional[float]:
+def partial_rank_ic(x, base: list[Any], y) -> float | None:
     """Pearson(resid(rank x | ranks of base), rank y). None when degenerate."""
     import numpy as np
     n = len(x)
@@ -192,7 +192,7 @@ def target_arrays(d, target: str):
     return d["ss"].to_numpy(), [d["sv"].to_numpy(), np.abs(d["r"].to_numpy())], np.abs(d["y_fwd"].to_numpy())
 
 
-def monthly_ic(d, target: str) -> Dict[str, float]:
+def monthly_ic(d, target: str) -> dict[str, float]:
     out = {}
     for ym, g in d.groupby(d["ts"].dt.strftime("%Y-%m")):
         x, base, y = target_arrays(g, target)
@@ -202,7 +202,7 @@ def monthly_ic(d, target: str) -> Dict[str, float]:
     return out
 
 
-def summarise(pooled: Dict[str, float]) -> Dict[str, Any]:
+def summarise(pooled: dict[str, float]) -> dict[str, Any]:
     import numpy as np
     v = np.array([pooled[k] for k in sorted(pooled)], dtype=float)
     m = len(v)
@@ -226,8 +226,8 @@ def trades(d, *, col: str, q: float, trigger_days: int, bar: str, side_sign: flo
 
 
 # ---- run ---------------------------------------------------------------------------------------------------------
-def grade(target: str, disc: Dict[str, Any], held: Dict[str, Any], rule: Optional[Dict[str, Any]], *, n_symbols: int,
-          a: argparse.Namespace) -> Tuple[str, str]:
+def grade(target: str, disc: dict[str, Any], held: dict[str, Any], rule: dict[str, Any] | None, *, n_symbols: int,
+          a: argparse.Namespace) -> tuple[str, str]:
     if n_symbols < a.min_symbols:
         return "indeterminate", f"{n_symbols} symbols measured < {a.min_symbols}"
     if (held.get("months") or 0) < a.min_months:
@@ -263,19 +263,19 @@ def grade(target: str, disc: Dict[str, Any], held: Dict[str, Any], rule: Optiona
     return ("pass", "every clause holds") if ok else ("fail", "; ".join(why))
 
 
-def _stats(arr) -> Dict[str, Any]:
+def _stats(arr) -> dict[str, Any]:
     import numpy as np
-    n = int(len(arr))
+    n = len(arr)
     if n == 0:
         return {"n": 0, "mean_net_bps": None, "se_bps": None, "share_positive": None}
     return {"n": n, "mean_net_bps": float(np.mean(arr)), "se_bps": float(np.std(arr, ddof=1) / math.sqrt(n)) if n > 1 else None,
             "share_positive": float((arr > 0).mean())}
 
 
-def run_frames(frames: Dict[str, Any], a: argparse.Namespace, coverage: Dict[str, Any]) -> Dict[str, Any]:
+def run_frames(frames: dict[str, Any], a: argparse.Namespace, coverage: dict[str, Any]) -> dict[str, Any]:
     import numpy as np
-    per_symbol: Dict[str, Dict[str, float]] = {}
-    feats: Dict[str, Any] = {}
+    per_symbol: dict[str, dict[str, float]] = {}
+    feats: dict[str, Any] = {}
     for sym, raw in frames.items():
         if raw is None or len(raw) == 0:
             continue
@@ -296,7 +296,7 @@ def run_frames(frames: Dict[str, Any], a: argparse.Namespace, coverage: Dict[str
                        for s, v in per_symbol.items()}
     rule = None
     if a.target == "direction" and feats:
-        from scripts.research.timeframe_breakeven import cost_stack, cost_bps_for_hold
+        from scripts.research.timeframe_breakeven import cost_bps_for_hold, cost_stack
         side_sign = 1.0 if (disc.get("mean_ic") or 0.0) >= 0 else -1.0
         hold_h = a.horizon * BAR_HOURS[a.bar]
         acc = {"discovery": {"composition": [], "baseline": []}, "held_out": {"composition": [], "baseline": []}}
@@ -318,10 +318,10 @@ def run_frames(frames: Dict[str, Any], a: argparse.Namespace, coverage: Dict[str
     verdict, why = grade(a.target, disc, held, rule, n_symbols=len(feats), a=a)
     return {"verdict": verdict, "why": why, "discovery": disc, "held_out": held, "per_symbol": per_sym_summary,
             "trading_rule": rule, "n_symbols": len(feats), "pooled_monthly_ic": pooled,
-            "bars_used": {s: int(len(d)) for s, d in feats.items()}}
+            "bars_used": {s: len(d) for s, d in feats.items()}}
 
 
-def run(a: argparse.Namespace) -> Dict[str, Any]:
+def run(a: argparse.Namespace) -> dict[str, Any]:
     symbols = tuple(s for s in a.symbols.split(",") if s)
     frames, coverage = {}, {}
     for sym in symbols:
@@ -336,7 +336,7 @@ def run(a: argparse.Namespace) -> Dict[str, Any]:
     read_state = "measured" if measured else "no_data"
     verdict = res["verdict"] if measured else "indeterminate"
     h, dd = res["held_out"], res["discovery"]
-    fmt = lambda v, p=4: "—" if v is None else f"{v:+.{p}f}"  # noqa: E731
+    fmt = lambda v, p=4: "—" if v is None else f"{v:+.{p}f}"
     note = (f"{verdict.upper()}: {res['why']}. target={a.target}, bar={a.bar}, h={a.horizon} bar(s). "
             f"Held-out {a.heldout_start}..{a.end}: mean partial rank IC {fmt(h.get('mean_ic'))}, t {fmt(h.get('t'), 2)}, "
             f"{h.get('months')} months. Discovery {a.start}..{a.discovery_end}: {fmt(dd.get('mean_ic'))}, t {fmt(dd.get('t'), 2)}. "
@@ -409,8 +409,8 @@ def _self_test() -> int:
     txt = "open_time,o,h,l,c,v,ct,qv,count,tbb,tbq,ig\n1735689600000000,1,2,0.5,1.5,10,0,0,7,4,0,0\n"
     p = parse_kline_csv(txt)
     assert len(p) == 1 and p["trades"].iloc[0] == 7 and str(p["ts"].iloc[0]).startswith("2025-01-01")
-    print("self-test ok: planted effect found (IC %.3f, t %.1f); null %.3f -> %s"
-          % (planted["held_out"]["mean_ic"], planted["held_out"]["t"], null["held_out"]["mean_ic"], null["verdict"]))
+    h, z = planted["held_out"], null["held_out"]
+    print(f"self-test ok: planted effect found (IC {h['mean_ic']:.3f}, t {h['t']:.1f}); null {z['mean_ic']:.3f} -> {null['verdict']}")
     return 0
 
 
@@ -441,7 +441,7 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     a = build_parser().parse_args(argv)
     if a.self_test:
         return _self_test()

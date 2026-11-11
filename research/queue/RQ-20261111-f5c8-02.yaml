@@ -50,8 +50,10 @@ decision_rule:
   proposal_mapping: PASS -> author an ML feature-add unit (ss, sn into the regime-vol / exit head feature sets, judged by that head's own purged-CV bake-off,
     net of cost where the head feeds an order); FAIL -> composition adds no vol information beyond volume and range at kline grain; INDETERMINATE -> re-run
     when coverage allows.
-practice_precedent: Trade-size composition of volume is a standard market-microstructure variable (average trade size and large-trade share as informed-flow
-  proxies); in-repo, plain volume and taker imbalance are already features, trade count is not.
+practice_precedent: 'M4 (rule and analysis plan registered before the run), M5 (confirm on a holdout after the discovery span),
+  M6 (beat the simple baseline, plain volume, at the same decision points, net of cost) in docs/reference/trading-and-model-practice-principles.md.
+  Average trade size and large-trade share are standard microstructure proxies for informed flow; in-repo, plain volume and taker imbalance
+  are already features, trade count is not.'
 compute: cpu_light
 value:
   bucket: ai_trader
@@ -117,7 +119,7 @@ run:
     research_unit: RQ-20261111-f5c8-02
 ml_consumer:
   book: money
-  consumer: VOLUME-COMPOSITION-RESEARCH
+  consumer: ml/datasets/families/market_features.py
   decision: PASS -> author an ML feature-add unit (ss, sn into the regime-vol / exit head feature sets, judged by that head's own purged-CV bake-off, net
     of cost where the head feeds an order); FAIL -> composition adds no vol information beyond volume and range at kline grain; INDETERMINATE -> re-run
     when coverage allows.
