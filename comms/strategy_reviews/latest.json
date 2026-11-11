@@ -1,13 +1,15 @@
 {
  "schema": "stage_aware_v1",
- "generated_at": "2026-11-10T05:20:15.105074+00:00",
- "utc_date": "2026-11-10",
+ "generated_at": "2026-11-11T06:07:00.256102+00:00",
+ "utc_date": "2026-11-11",
  "generated_by": "scripts/ops/strategy_review_stage_aware.py",
  "graded": 53,
- "verdict_reached": 0,
- "actionable": 0,
+ "verdict_reached": 4,
+ "actionable": 1,
  "by_action": {
-  "S1:insufficient-data": 47,
+  "S1:healthy": 3,
+  "S1:insufficient-data": 43,
+  "S1:tweak": 1,
   "S2:abstain": 6
  },
  "question": "Per leg, graded with the instrument its STAGE calls for: Stage 2 (bybit_2/alpaca_live + mirrors) on MONEY via R4's demotion verdict; Stage 1 (bybit_1, alpaca_paper) on MECHANICS + COST FIDELITY via R5 -- never expectancy, per root CLAUDE.md's promotion ladder ('a live or paper book never establishes edge').",
@@ -32,12 +34,26 @@
   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
   "window_hours": 168,
   "n_legs": 47,
-  "verdict_reached": 0,
-  "actionable": 0,
+  "verdict_reached": 4,
+  "actionable": 1,
   "mechanics_read_state": "measured",
-  "cost_fidelity_read_state": "producer_failed"
+  "cost_fidelity_read_state": "measured"
  },
  "rows": [
+  {
+   "stage": "S1",
+   "account": "bybit_1",
+   "strategy": "e4_oi_shock_1h",
+   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
+   "proposed_action": "S1:tweak",
+   "verdict_reached": true,
+   "actionable": true,
+   "disposition": "tweak",
+   "execution": "live",
+   "n_needed": null,
+   "eta": null,
+   "reason": "flowing, but no Stage-0 evidence record exists for this leg at all, so cost fidelity cannot be graded. HYPOTHESIS: author comms/strategy_evidence/<leg>.json so this leg's cost assumption becomes checkable."
+  },
   {
    "stage": "S1",
    "account": "bybit_1",
@@ -48,9 +64,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "needs 7 more entry fill(s) and 6 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=3, exit=4); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=3, exit n=4; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -63,8 +79,8 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
@@ -77,22 +93,8 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
-  },
-  {
-   "stage": "S1",
-   "account": "bybit_1",
-   "strategy": "e4_oi_shock_1h",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
@@ -104,9 +106,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "needs 0 more entry fill(s) and 5 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=14, exit=5); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=14, exit n=5; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -118,9 +120,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "needs 6 more entry fill(s) and 7 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=4, exit=3); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=4, exit n=3; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -133,8 +135,8 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
@@ -147,8 +149,8 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
@@ -160,9 +162,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "needs 6 more entry fill(s) and 7 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=4, exit=3); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=4, exit n=3; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -174,9 +176,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "a per-tick account-election read (e.g. the conviction_arbitration/arbitration_fanout_soak log, or a live dispatch trace) showing this leg either winning at least once, or never winning across a large contested-tick sample",
+   "eta": "re-check next scheduled pass",
+   "reason": "starved (519 intent(s), 0 received, no open position) but contends its symbol on this SAME account against live sibling(s) ['claude_desk', 'e4_oi_shock_1h', 'fade_breakout_4h', 'fvg_range_15m', 'ict_scalp_5m', 'ml_entry_v2', 'squeeze_breakout_4h', 'trend_donchian', 'trend_donchian_1h', 'turtle_soup'] — src/runtime/intents.py elects only ONE strategy per (account, symbol) per tick, so losing that election every time produces this exact shape without the leg ever being mechanically dead. Cannot be graded kill without a live per-tick election trace."
   },
   {
    "stage": "S1",
@@ -188,9 +190,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "needs 7 more entry fill(s) and 8 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=3, exit=2); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=3, exit n=2; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -203,22 +205,22 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
    "account": "bybit_1",
    "strategy": "ict_scalp_avax_5m",
    "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
+   "proposed_action": "S1:healthy",
+   "verdict_reached": true,
    "actionable": false,
-   "disposition": "insufficient-data",
+   "disposition": "healthy",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": null,
+   "reason": "flowing (intents=25, received=5); cost fidelity consistent (n=61, roundtrip_mean=-0.365bps vs modelled 3.0bps)"
   },
   {
    "stage": "S1",
@@ -230,23 +232,23 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "a per-tick account-election read (e.g. the conviction_arbitration/arbitration_fanout_soak log, or a live dispatch trace) showing this leg either winning at least once, or never winning across a large contested-tick sample",
+   "eta": "re-check next scheduled pass",
+   "reason": "starved (8 intent(s), 0 received, no open position) but contends its symbol on this SAME account against live sibling(s) ['claude_desk', 'e4_oi_shock_1h', 'eth_pullback_2h', 'eth_pullback_prop_2h', 'ml_entry_v2', 'trend_donchian_eth', 'trend_donchian_eth_4h', 'trend_donchian_eth_prop'] — src/runtime/intents.py elects only ONE strategy per (account, symbol) per tick, so losing that election every time produces this exact shape without the leg ever being mechanically dead. Cannot be graded kill without a live per-tick election trace."
   },
   {
    "stage": "S1",
    "account": "bybit_1",
    "strategy": "ict_scalp_sol_15m",
    "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
+   "proposed_action": "S1:healthy",
+   "verdict_reached": true,
    "actionable": false,
-   "disposition": "insufficient-data",
+   "disposition": "healthy",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": null,
+   "reason": "flowing (intents=20, received=2); cost fidelity consistent (n=16, roundtrip_mean=1.106bps vs modelled 3.0bps)"
   },
   {
    "stage": "S1",
@@ -259,22 +261,22 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
    "account": "bybit_1",
    "strategy": "ict_scalp_xrp_15m",
    "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
+   "proposed_action": "S1:healthy",
+   "verdict_reached": true,
    "actionable": false,
-   "disposition": "insufficient-data",
+   "disposition": "healthy",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": null,
+   "reason": "flowing (intents=16, received=2); cost fidelity consistent (n=15, roundtrip_mean=-1.672bps vs modelled 3.0bps)"
   },
   {
    "stage": "S1",
@@ -287,8 +289,8 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
@@ -301,8 +303,8 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
@@ -315,8 +317,8 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
@@ -328,9 +330,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "needs 4 more entry fill(s) and 8 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=6, exit=2); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=6, exit n=2; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -342,9 +344,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "needs 8 more entry fill(s) and 8 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=2, exit=2); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=2, exit n=2; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -356,9 +358,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "needs 7 more entry fill(s) and 8 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=3, exit=2); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=3, exit n=2; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -371,8 +373,8 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
@@ -385,8 +387,8 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
@@ -398,9 +400,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "needs 8 more entry fill(s) and 8 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=2, exit=2); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=2, exit n=2; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -413,8 +415,8 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
@@ -426,9 +428,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "needs 5 more entry fill(s) and 5 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=5, exit=5); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=5, exit n=5; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -440,9 +442,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "needs 6 more entry fill(s) and 8 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=4, exit=2); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=4, exit n=2; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -455,8 +457,8 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
@@ -469,8 +471,8 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
@@ -482,9 +484,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "a per-tick account-election read (e.g. the conviction_arbitration/arbitration_fanout_soak log, or a live dispatch trace) showing this leg either winning at least once, or never winning across a large contested-tick sample",
+   "eta": "re-check next scheduled pass",
+   "reason": "starved (101 intent(s), 0 received, no open position) but contends its symbol on this SAME account against live sibling(s) ['claude_desk', 'e4_oi_shock_1h', 'fade_breakout_4h', 'fvg_range_15m', 'htf_pullback_trend_2h', 'ict_scalp_5m', 'ml_entry_v2', 'trend_donchian', 'trend_donchian_1h', 'turtle_soup'] — src/runtime/intents.py elects only ONE strategy per (account, symbol) per tick, so losing that election every time produces this exact shape without the leg ever being mechanically dead. Cannot be graded kill without a live per-tick election trace."
   },
   {
    "stage": "S1",
@@ -496,9 +498,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "needs 7 more entry fill(s) and 8 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=3, exit=2); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=3, exit n=2; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -511,8 +513,8 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
@@ -524,9 +526,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "a per-tick account-election read (e.g. the conviction_arbitration/arbitration_fanout_soak log, or a live dispatch trace) showing this leg either winning at least once, or never winning across a large contested-tick sample",
+   "eta": "re-check next scheduled pass",
+   "reason": "starved (10 intent(s), 0 received, no open position) but contends its symbol on this SAME account against live sibling(s) ['claude_desk', 'e4_oi_shock_1h', 'fade_breakout_4h', 'fvg_range_15m', 'htf_pullback_trend_2h', 'ict_scalp_5m', 'ml_entry_v2', 'squeeze_breakout_4h', 'trend_donchian_1h', 'turtle_soup'] — src/runtime/intents.py elects only ONE strategy per (account, symbol) per tick, so losing that election every time produces this exact shape without the leg ever being mechanically dead. Cannot be graded kill without a live per-tick election trace."
   },
   {
    "stage": "S1",
@@ -538,9 +540,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "needs 5 more entry fill(s) and 7 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=5, exit=3); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=5, exit n=3; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -552,9 +554,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "needs 0 more entry fill(s) and 8 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=10, exit=2); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=10, exit n=2; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -566,9 +568,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "needs 0 more entry fill(s) and 5 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=17, exit=5); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=17, exit n=5; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -580,9 +582,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "more fills on both sides than currently measured (n=12); no fixed floor for this state",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity inconclusive: CI95 [-3.442, 9.062] straddles the 5.0bps threshold over n=12 — more fills would resolve it"
   },
   {
    "stage": "S1",
@@ -594,9 +596,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "needs 0 more entry fill(s) and 6 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=13, exit=4); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=13, exit n=4; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -608,9 +610,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "more fills on both sides than currently measured (n=11); no fixed floor for this state",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity inconclusive: CI95 [-6.286, 7.063] straddles the 5.0bps threshold over n=11 — more fills would resolve it"
   },
   {
    "stage": "S1",
@@ -623,8 +625,8 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
@@ -636,9 +638,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "needs 0 more entry fill(s) and 9 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=13, exit=1); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=13, exit n=1; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -650,9 +652,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "needs 8 more entry fill(s) and 9 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=2, exit=1); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=2, exit n=1; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -665,8 +667,8 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
@@ -679,8 +681,8 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
@@ -692,9 +694,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "needs 0 more entry fill(s) and 4 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=14, exit=6); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=14, exit n=6; need >= 10 each)"
   },
   {
    "stage": "S2",
@@ -816,17 +818,17 @@
    "actionable": false,
    "r4_status": "abstain_thin",
    "chosen_source": "real_money",
-   "n_closed": 8,
-   "pnl_coverage_measured": 0.625,
+   "n_closed": 9,
+   "pnl_coverage_measured": 0.6667,
    "coverage_floor": 0.6,
    "min_trades": 40,
-   "net_usd_measured": -8.1141,
-   "net_r_net_of_full_cost": -1.1438,
-   "r_population": 8,
+   "net_usd_measured": -5.6599,
+   "net_r_net_of_full_cost": 0.4568,
+   "r_population": 9,
    "t3_windows_r": [],
    "t3_p10": -6.58778,
    "abstain": "thin",
-   "reason": "fewer than 40 closed trades on either book: 8 closed rows < min_trades 40"
+   "reason": "fewer than 40 closed trades on either book: 9 closed rows < min_trades 40"
   }
  ]
 }
