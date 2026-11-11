@@ -278,3 +278,89 @@ The dispatch asks for `checklist.py note <ID> --append …` on each row. **MEASU
 4. **Prop TP/SL history:** prop levels move through the phone bridge; if an amend does not reach `prop_journal`, it is invisible — is it acceptable that the chart shows "no record" there, or do you want the phone executor to report every amend (Tier-2)?
 5. **Category set:** are `real_mirror` (bybit_portfolio / alpaca_portfolio) and `prop` separate categories from `real_money` on the Performance page, or merged?
 6. **Also — the nine row ids were not on `main`:** were they meant to carry operator wording I should have read (e.g. in an unpushed manager commit)?
+
+---
+
+## 14. FEATURES-CATALOG-UI-VERIFY (addendum 2026-11-11, manager request)
+
+**Reading limits (stated first):** the SPA repo is unreachable, and the row `FEATURES-CATALOG-UI-VERIFY` is **not on `origin/main`** (`git ls-tree`: absent; same for `FEATURE-IMPACT-MAP`). So "what the Features sub-tab shows today" **could not be observed**. What follows is what the **API and data behind it** can and cannot support, MEASURED in this repo on 2026-11-11.
+
+**The API route behind a Features catalog (MEASURED):** none. `grep -rn -i 'signal.catalog|signal_catalog' src/web src/runtime` finds **no consumer**; no router in `src/web/api/routers/` serves `docs/reference/signal-catalog.yaml`. The only `catalog` route is `GET /api/bot/research/catalog` (`research_catalog.py:56`) — research **units**, not features. Model data comes from `GET /api/bot/training/registry` (`training_center.py:334`: registry rows + `linked_strategies`). **So if the SPA shows a Features sub-tab today it is either static/bundled data or empty — UNVERIFIED; the first build step is to open the live SPA and note which request it makes (browser network tab) and from what path.** Do not assume it is fed by the API.
+
+**The best existing data source (MEASURED):** `docs/reference/signal-catalog.yaml` (generated 2026-10-08; guard `scripts/ci/check_signal_catalog.py`, `signal-catalog-guard`): **335 inputs** (regime_macro 157 · ml 105 · strategy 73) and **76 `ml_models`** entries (manifest, family, dataset, stage, `features` list). Each input has `id, name, family, kind, definition, source (file:line), read_at, timeframe, freshness (prose), used_by, health{state,detail}`. Population of `health.state`: **unmeasured 241 · build_time_only 67 · batch_level_only 17 · measured 10** (so **only 10 of 335** have any freshness/null-rate metric).
+
+**Does it cover every feature every live and candidate ML uses? NO — measured gaps:**
+1. **The catalog is a hand-edited static YAML, generated 2026-10-08.** It predates the 2026-11 ENTRY models. `ml/served/` now holds `ml_decision_entry_v1`, `…v1r20261106`, `…v2`, `ml_entry_tp_revision_v1`; `ml/candidates/` holds `ml_entry_eq_v1`, `ml_entry_eq_v2_struct`, `ml_entry_eq_v3_struct_ens5`. The manifests-keyed guard does not see them: `ml-feature-inventory-2026-11-01.md` § 1a measured **0 matches** for ENTRY's 20 features (`xs_rank_ret24`, `ret_168`, `btc_vol24`, `breadth_up24`, `rel_vol`) in the catalog — ENTRY is a standalone harness. **Re-measure before building:** diff `ml/served/*/model.json::features` and `ml/candidates/*/model.json::features` against the catalog `inputs[].id`/`ml_models[].features` (a 20-line script; the diff *is* the gap list).
+2. **Its own `unguarded_surfaces` says so:** entry/exit **head** feature lists live in VM artifact JSON, not git; hand-built live feature rows (`vwap.py`, `ict_scalp.py`, `turtle_soup.py`, `advisory_sizing.py`); hardcoded regime constants.
+3. **Source:** present for every row (`source`, `read_at` file:line) — but code-location, not **data** source (vendor/stream/store/history depth/symbols covered). The operator's "catalog of what we store/have available" is the retired-then-reopened row `DATA-CATALOG` (ml-feature-inventory § 1a); not delivered.
+4. **Freshness:** prose only, and `measured` for **10/335**; no live "last value at / age" field. A freshness cell cannot be truthful for 325 rows — render **"—"** with `read_state: unmeasured`, never "fresh".
+5. **Consuming models:** `used_by` exists for **305 of 335** inputs (MEASURED) but it names **strategies and some model ids**, not the registry's model ids for models trained after 2026-10-08; the inverse (model → features) is `ml_models[].features`. 30 inputs have no consumer (unused) — a useful view, not a bug.
+6. **Staleness of the catalog itself:** no field says how old the file is in the UI. Show `generated` and `guard` status.
+
+**Gaps to fix (build rows, Tier-1 unless noted):**
+- **G1 route:** `GET /api/bot/catalog/features` → `{as_of, catalog_generated, read_state, features:[{id, family, kind, definition, source_code, data_source|null, freshness:{state, last_value_at|null, age_s|null}, used_by_strategies, used_by_models:[{model_id, stage}], health_state}], coverage:{n_features, n_with_consumer, n_models_in_registry, n_models_missing_from_catalog}}` — joins the YAML with the registry rows (stage, `linked_strategies`) and the `model.json`/manifest feature lists. `n_models_missing_from_catalog` must be **computed and shown**, not asserted.
+- **G2 coverage test:** `signal-catalog-guard` extended (or a sibling) to key on `ml/served` and `ml/candidates` `model.json::features` so a new model with unlisted features fails CI. **Gates this adds: a CI guard — needs the operator's OK (No-new-gates rule).** Alternative with no gate: the route's `n_models_missing_from_catalog` plus a weekly review line.
+- **G3 freshness:** only for streams with a measurable timestamp (funding, OI, macro) — a per-stream `last_value_at` from the stores' existing `max(ts)`; others stay "—".
+- **SPA:** read the sub-tab first; render from G1; "—" for nulls; filter by family/stage/consumer; a row for "unused (no consumer)".
+**Acceptance:** model count in the tab == registry count (re-parsed, not quoted); the three `ml_entry_eq_*` candidates appear with their 21-feature lists (the `v1` file lists 21 features, not 20 — **MEASURED** from `booster_txt.feature_importances`); a feature with no freshness metric shows "—".
+
+---
+
+## 15. FEATURE-IMPACT-MAP (addendum 2026-11-11, manager request)
+
+**Ask (operator, per the dispatch):** for every ML and feature, a measure of impact **per asset / market / timeframe**, rolled up into a **drill-down heat map** (feature family × asset class or ML type → drill to feature × symbol × timeframe), plus a **"where to invest in data collection"** view.
+
+### 15.1 What already holds importances (MEASURED, grep of `ml/` and artifacts)
+| artifact | what | limits |
+|---|---|---|
+| `ml/candidates/*/model.json::booster_txt.<side>` → trailing `feature_importances:` block | LightGBM **split counts** per feature (e.g. `ml_entry_eq_v1`: `breadth_up24=2037 … xs_rank_volz=31`) | **split count only**, no gain; biased toward high-cardinality/continuous features; per model, pooled over the whole training population (no per-symbol breakdown) |
+| `ml/offload-inbox/*/…/model_state.json::feature_importance_gain` + `feature_importance_split` (+ `feature_columns`) | **gain and split** for the regime LGBMs | trainer-VM offload artifacts; per model, one symbol/timeframe each (the model *is* per symbol) |
+| `ml/trainers/lightgbm_multiclass.py`, `lightgbm_regression.py`, `regime_classifier.py`, `per_strategy_winrate.py`, `torch_sequence.py` | write the above at train time | the sequence/HMM/ONNX models have **no** native importance |
+| `docs/research/e2-feature-information-2026-08-20.md`, `cross-asset-feature-probe-2026-06-18.md` | earlier model-free information probes | one-off reports, not a store |
+| `src/runtime/entry_head_pwin.py`, `exit_head_shadow.py`, `ml_entry_tp_policy.py` | load head artifacts | head feature lists are on the VM (catalog `unguarded_surfaces`) |
+**There is no store of importances over time and none keyed by (feature, symbol, timeframe).** The registry (`ml/registry/model_registry.py`, mirrored `registry.jsonl`) holds model metadata; whether it carries importances is **UNVERIFIED** (grep `feature` in it: no hits).
+
+### 15.2 Measures (three, kept separate — never blended into one score)
+1. **M1 model-internal importance** — **gain** (preferred) and permutation importance / **SHAP** computed on **each model's own out-of-fold (OOF) data**, never the training fit and never the held-out read (ML-BAR-ONE-READ governs held-out; this uses dev folds only). Per model, per feature; normalised **within model** to a share of total (so models are comparable by *share*, not raw gain). Models without native importance (HMM/seq): permutation on OOF, or "—".
+2. **M2 model-free rank IC** — Spearman rank correlation between the feature (as-of, point-in-time) and the **forward return at the ML's own label horizon** (after the ML's cost/label transform where the label is cost-adjusted), computed **cross-sectionally per timestamp then averaged** (so it measures ranking of symbols, not the market's trend), reported as **mean IC, IC t-stat/ICIR, and stability: IC by calendar quarter, sign-consistency %, and rolling-window decay**. Population stated per cell (n timestamps × n symbols).
+3. **M3 ablation (optional, expensive)** — retrain the ML without the feature **family** (not each feature) on the dev walk-forward and report Δ in the registered metric; the only measure that answers "does it add edge **given the others**". Pre-registered per `RQ-20261101-fs01-01`-style units; reuse its results rather than recompute.
+
+### 15.3 What raw correlation with price gets wrong (call-out)
+- **Non-stationary, trending series:** correlating a level (price, OI, a moving average) with price level produces spurious correlation; features must be differenced/normalised and the target a **forward return**, not price.
+- **Contemporaneous ≠ predictive:** corr(feature_t, return_t) includes the bar that built the feature (look-ahead by construction); impact must use **forward** returns at the horizon.
+- **Overlapping labels & autocorrelation** inflate significance — the effective n is far below the row count; use non-overlapping or block-bootstrap CIs.
+- **Pooled sign flips (Simpson's):** a feature can be +IC in one asset class and −IC in another; pooled correlation can be ~0 while each class is strong — hence the per-class heat map.
+- **Linear only:** misses non-linear/threshold/interaction effects a tree model uses (M1 catches them, M2 does not); **redundant features** share credit (M1 splits it arbitrarily among collinear columns; M3 is the fair test).
+- **Cost and regime blind:** a feature can predict gross return but not net of the full cost stack; and be regime-specific. Show IC **by regime/vol bucket** and mark ESTIMATED where costs are not applied.
+- **Provenance:** every cell carries `provenance` (`src/runtime/provenance.py`) and `n`; a cell with n below a registered floor shows "—" (`insufficient_n`), never 0.
+
+### 15.4 Long-table schema and store (PROPOSED)
+One append-only long table, **`feature_impact`**, a new table → **needs the operator's OK for the new store** (data-wiring declaration, `new-table-wiring-guard`; Tier-2 per the db-wiring rule). Cheaper alternative with no new table: Parquet/JSONL under `comms/feature_impact/<run_id>.parquet` published by the job and read by the route (file-based, like `runtime_logs/insights/`); recommended for v1.
+```
+run_id, computed_at, feature_id (= catalog id), feature_family, model_id|null, ml_type,
+asset_class, symbol, timeframe, horizon_bars, regime|"all",
+measure ("gain_share"|"perm_importance"|"shap_abs"|"rank_ic"|"ic_ir"|"ic_sign_consistency"|"ablation_delta"),
+value, ci_low, ci_high, n_obs, n_symbols, window_start, window_end,
+provenance, read_state ("measured"|"insufficient_n"|"not_computed"|"no_importance_native"), source_artifact (path/sha)
+```
+Key = (run_id, feature_id, model_id, symbol, timeframe, regime, measure). Roll-ups (feature family × asset class / ML type) are **views computed on read**, never stored (so they cannot drift from the leaf rows).
+
+### 15.5 The off-VM scheduled job (no Claude, no live-VM load)
+New `scripts/ml/feature_impact.py`, run as a **GitHub Actions scheduled workflow (weekly, off-peak) or on the trainer VM's existing cycle** — never on `ict-bot-arm`, never an Anthropic API call (rule: *nothing spends API credits*; this is pure pandas/lightgbm/sklearn). Inputs: (a) every registered model's `model_state.json`/`model.json` (M1, from the artifacts above; SHAP/permutation recomputed on stored OOF predictions where the manifest keeps them — **UNVERIFIED which manifests persist OOF**: if not, the job rebuilds OOF from the dataset family with the model's own splitter `ml/experiments/splitters.py`); (b) the dataset families `ml/datasets/families/market_features.py` + the pooled feature store (L-DATA) for M2 over the 60-perp universe and equity pools; (c) the catalog for ids/families. Idempotent per `run_id`; a failed model is recorded `read_state:"not_computed"` with the reason and the run continues (**no halting**); one red flag if a model fails 3 runs running.
+**Tier:** Tier-1 (offline research tooling, no live path). Needs the data stores readable off-VM (the trainer mirror / data lake).
+
+### 15.6 API route and SPA view
+**Route:** `GET /api/bot/feature-impact/heatmap?group=family|ml_type&by=asset_class|ml_type&measure=&run=latest` → cells `{row, col, value, n, provenance, read_state}`; `GET …/feature-impact/detail?family=&asset_class=&measure=` → drill-down feature × symbol × timeframe cells; `GET …/feature-impact/invest` → ranked list for the data-collection view. Reads the file/table above; GET only; behind the site gate; null → "—".
+**SPA:** heat map (diverging scale for IC sign, sequential for importance share; `dataviz` skill), click a cell → feature × symbol × timeframe grid; toggles: measure, regime, "stable only" (sign-consistency ≥ a registered floor); hover shows value, CI, n, provenance. Empty/insufficient cells are hatched "—", not colour-0.
+**"Where to invest in data collection" view (PROPOSED rule, flagged — registers before use, § 16 Q7):** rank **families** by `(proxy for edge: stable positive IC-IR or ablation Δ, shrunk by CI)` × `coverage gap` (fraction of the universe/timeframes where the family is **absent or stale** — from § 14's catalog coverage/freshness) ÷ `collection cost` (from `ml-feature-inventory` § 7 backfill hours / COLLECT class). Output is a **ranked list with each factor visible**, not a single opaque score; a family with no coverage record shows "—" in the gap column. This view **recommends**; it authorises nothing (roadmap-loop rule).
+
+### 15.7 Build split and order
+1. **ML lane (Tier-1, off-VM):** § 14 G1-input diff script → `scripts/ml/feature_impact.py` v0 with **M1 only** from existing artifacts (cheapest, most of the data already exists — `model.json`/`model_state.json`) → write `comms/feature_impact/*` → add **M2** (needs pooled dataset) → weekly workflow → **M3** reuse from `fs01` results.
+2. **Backend lane (Tier-1):** § 14 G1 route (also gives M1/M2 a stable feature id), then the three heat-map routes reading the published artifacts.
+3. **UI lane:** Features sub-tab (§ 14) → heat map + drill-down → invest view. The UI can start against a **fixture** of the long-table schema (committed sample) the moment the schema is agreed, in parallel with the ML lane.
+**Depends on:** § 14 (stable feature ids and the catalog↔registry join); L-DATA pooled store for M2 breadth. **Acceptance:** for `ml_entry_eq_v1` the heat map's `gain_share`/split share for `breadth_up24` equals the artifact's `2037/Σ` to rounding (the cross-check, arithmetic not re-read); a model with no native importance shows `no_importance_native`; M2 for a feature recomputed by hand on one symbol/quarter matches; no cell shows 0 where n is insufficient; the job runs with no network to Anthropic and no ssh to the live VM.
+
+## 16. Added operator questions (addenda)
+7. **Invest-view rule:** is "stable edge proxy × coverage gap ÷ collection cost, all factors shown" the ranking you want, or a different priority (e.g. by asset class you intend to trade next)?
+8. **Store:** file-based `comms/feature_impact/` (no new table, recommended for v1) vs a `feature_impact` table in a DB (needs your OK)?
+9. **CI guard:** may the catalog guard be extended to fail when a served/candidate model has features missing from the catalog (adds a gate), or keep it as a route-computed coverage number only?
