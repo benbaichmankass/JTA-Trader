@@ -421,6 +421,19 @@ if [ -f "${_DATADIR_DROPIN_SRC}" ]; then
     fi
 fi
 
+# ict-security-watch (SEC-DETECTORS D1) keeps its state and cooldown latch under
+# runtime_logs_dir() (DATA_DIR-aware); same generic data-dir drop-in.
+_SECWATCH_DROPIN_DST="${SYSTEMD_DIR}/ict-security-watch.service.d/data-dir.conf"
+if [ -f "${_DATADIR_DROPIN_SRC}" ]; then
+    if [ ! -e "${_SECWATCH_DROPIN_DST}" ] || ! cmp -s "${_DATADIR_DROPIN_SRC}" "${_SECWATCH_DROPIN_DST}"; then
+        echo ">>> install_systemd_units: dropin data-dir.conf → ${_SECWATCH_DROPIN_DST}"
+        "${SUDO[@]}" mkdir -p "$(dirname "${_SECWATCH_DROPIN_DST}")"
+        "${SUDO[@]}" cp "${_DATADIR_DROPIN_SRC}" "${_SECWATCH_DROPIN_DST}"
+        "${SUDO[@]}" chmod 0644 "${_SECWATCH_DROPIN_DST}"
+        changed=1
+    fi
+fi
+
 # ict-trainer-disk-alarm (FIX-SA-12) resolves runtime_logs_dir() (DATA_DIR-aware)
 # to read the trainer mirror the publisher rsyncs into $DATA_DIR/runtime_logs.
 # Without the generic data-dir drop-in it would read <repo>/runtime_logs -- a
