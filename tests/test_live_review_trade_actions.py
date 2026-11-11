@@ -249,6 +249,10 @@ class _Ex:
         monkeypatch.setattr(om, "_send_close_to_exchange", lambda t: self.sent.append(("close",)) or {"ok": ok})
         monkeypatch.setattr(om, "_send_partial_close_to_exchange",
                             lambda t, q: self.sent.append(("partial", q)) or {"ok": ok})
+        self.resized = []
+        monkeypatch.setattr(lra, "resize_legs_after_reduce",
+                            lambda c, cfg, t, rem: self.resized.append(rem) or
+                            {"legs": {}, "readback": {}, "ok": True, "detail": "resized and read back"})
 
 
 def _leg():
@@ -423,3 +427,88 @@ def test_bybit_reduce_is_floored_to_the_venue_lot_step(monkeypatch):
     v = lri.AmendVerdict("bybit_2", "approve", None, "within_bounds", qty=0.05)
     r = lra._exec_bybit_action(db, _leg(), tla.PKG, v, _ti("partial_close", size_fraction=0.005))
     assert r["result"] == lra.X_REFUSED and ex.sent == []
+
+
+# --------------------------------------------------------------- partial close resizes the protective legs
+# TRADE-ACTION-FAST-PATH follow-up (operator 2026-11-09 "we just need to fix the partial close mechanism"): the XRP
+# 50% partial left a 107.6 SL leg on bybit_2's 53.8 position; the reduce now resizes THIS row's legs and reads back.
+
+def test_a_partial_close_resizes_the_rows_legs_to_the_remaining_size(monkeypatch):
+    ex = _Ex(monkeypatch, after_size=6.0, venue_sl=0.22, venue_tp=0.19)
+    db = tla._ApplyDB([tla._trade(1, "bybit_2")], tla.PKG)
+    v = lri.AmendVerdict("bybit_2", "approve", None, "within_bounds", qty=4.0)
+    r = lra._exec_bybit_action(db, _leg(), tla.PKG, v, _ti("partial_close", size_fraction=0.4))
+    assert r["result"] == lra.X_APPLIED and ex.resized == [pytest.approx(6.0)]
+    audit = json.loads(db.trade_writes[0][1]["notes"])["live_review_actions"][0]
+    assert audit["leg_resize"]["ok"] is True
+
+
+def test_a_failed_leg_resize_keeps_the_reduce_applied_and_alerts_once(monkeypatch):
+    _Ex(monkeypatch, after_size=6.0, venue_sl=0.22, venue_tp=0.19)
+    monkeypatch.setattr(lra, "resize_legs_after_reduce",
+                        lambda *a: {"legs": {"sl": {"state": "failed"}}, "readback": None, "ok": False,
+                                    "detail": "sl:failed(Qty invalid)"})
+    alerts = []
+    monkeypatch.setattr(lra, "_alert", lambda pkg, aid, line: alerts.append((aid, line)))
+    db = tla._ApplyDB([tla._trade(1, "bybit_2")], tla.PKG)
+    v = lri.AmendVerdict("bybit_2", "approve", None, "within_bounds", qty=4.0)
+    r = lra._exec_bybit_action(db, _leg(), tla.PKG, v, _ti("partial_close", size_fraction=0.4))
+    assert r["result"] == lra.X_APPLIED            # the reduce happened: never retried as a failure
+    assert db.trade_writes[0][1]["position_size"] == pytest.approx(6.0)
+    assert len(alerts) == 1 and "not resized to 6" in alerts[0][1]
+
+
+class _Book:
+    """A Bybit open-orders book: {orderId: qty}."""
+    def __init__(self, legs):
+        self.legs = dict(legs)
+
+    def get_open_orders(self, **kw):
+        return {"result": {"list": [{"orderId": k, "qty": str(v)} for k, v in self.legs.items()]}}
+
+
+def _seam(book, states=None):
+    def f(client, cfg, *, symbol, new_qty, sl_order_id=None, tp_order_id=None, trade_id=None):
+        out = {}
+        for k, oid in (("sl", sl_order_id), ("tp", tp_order_id)):
+            st = (states or {}).get(k, "resized")
+            if oid is None:
+                out[k] = {"state": "no_tracked_id", "order_id": None, "qty_sent": None, "error": None}
+                continue
+            if st == "resized":
+                book.legs[oid] = new_qty
+            out[k] = {"state": st, "order_id": oid, "qty_sent": str(new_qty) if st == "resized" else None,
+                      "error": None if st == "resized" else "Qty invalid"}
+        return out
+    return f
+
+
+def _xrp_row(**kw):
+    return {"id": 7, "symbol": "XRPUSDT", "sl_order_id": "S1", "tp_order_id": "T1", **kw}
+
+
+def test_resize_legs_reads_back_each_resized_leg(monkeypatch):
+    from src.units.accounts import execute
+    book = _Book({"S1": 107.6, "T1": 107.6})
+    monkeypatch.setattr(execute, "resize_tracked_protective_legs", _seam(book))
+    monkeypatch.setattr(execute, "_bybit_category", lambda cfg: "linear")
+    rz = lra.resize_legs_after_reduce(book, {"exchange": "bybit"}, _xrp_row(), 53.8)
+    assert rz["ok"] is True and rz["readback"] == {"S1": 53.8, "T1": 53.8}
+
+
+def test_resize_legs_flags_a_venue_refusal_and_a_readback_mismatch(monkeypatch):
+    from src.units.accounts import execute
+    monkeypatch.setattr(execute, "_bybit_category", lambda cfg: "linear")
+    book = _Book({"S1": 107.6, "T1": 107.6})
+    monkeypatch.setattr(execute, "resize_tracked_protective_legs", _seam(book, {"sl": "failed"}))
+    rz = lra.resize_legs_after_reduce(book, {}, _xrp_row(), 53.8)
+    assert rz["ok"] is False and "sl:failed" in rz["detail"]
+    # accepted, but the venue still shows the old size: a mismatch, never "resized"
+    book2 = _Book({"S1": 107.6})
+
+    def lying(client, cfg, **kw):
+        return {"sl": {"state": "resized", "order_id": "S1", "qty_sent": "53.8", "error": None},
+                "tp": {"state": "no_tracked_id", "order_id": None, "qty_sent": None, "error": None}}
+    monkeypatch.setattr(execute, "resize_tracked_protective_legs", lying)
+    rz2 = lra.resize_legs_after_reduce(book2, {}, _xrp_row(tp_order_id=None), 53.8)
+    assert rz2["ok"] is False and "readback:S1 reads 107.6" in rz2["detail"]
