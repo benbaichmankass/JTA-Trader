@@ -1,6 +1,6 @@
 # ML consolidation — inventory and keep/retire proposal (2026-11-11)
 
-> **Doc status:** `live` · category `plan-input` · last verified `2026-11-11` · input to the Thursday plan for row ML-PROGRAMME-CONSOLIDATION
+> **Doc status:** `unknown` · category `plan` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · input to the Thursday plan for row ML-PROGRAMME-CONSOLIDATION
 
 **Gates this adds or changes:** none. This is a proposal; nothing is retired by this file.
 
