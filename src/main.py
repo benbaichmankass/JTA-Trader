@@ -200,7 +200,18 @@ def _apply_per_account_leverage() -> None:
             )
             continue
 
-        for symbol in symbols:
+        # HEALTH-20261104-LEVERAGE-PREFLIGHT-EQUITY: the roster union carries every leg's symbols, and a Bybit
+        # linear account's roster may hold multi-venue legs (ml_entry, claude_desk) whose symbols include equities
+        # / futures (SPY, QQQ, TLT, MES...). Bybit lists none of them: each one was a wasted REST call and a
+        # 'symbol invalid' WARNING on every boot (68 in one boot window, 11-04). Only venue symbols are sent.
+        venue_syms = [s for s in symbols if _is_bybit_linear_symbol(s)]
+        if len(venue_syms) < len(symbols):
+            logger.info(
+                "set_leverage pre-flight: account=%s skipped %d non-Bybit-linear roster symbol(s) (%s)",
+                account.name, len(symbols) - len(venue_syms),
+                ", ".join(sorted(set(symbols) - set(venue_syms)))[:200],
+            )
+        for symbol in venue_syms:
             try:
                 resp = client.set_leverage(
                     category="linear",
@@ -270,6 +281,13 @@ def _resolve_account_leverage(account) -> int:
         if value > 0:
             return value
     return 0
+
+
+def _is_bybit_linear_symbol(symbol: str) -> bool:
+    """A symbol a Bybit linear (USDT/USDC-settled perpetual) account can list: ``BTCUSDT``, ``BTCPERP``/``BTCUSDC``
+    style. Equity / ETF / futures roots (``SPY``, ``MES``) and slash pairs are not."""
+    s = str(symbol or "").upper()
+    return s.isalnum() and len(s) > 4 and s.endswith(("USDT", "USDC", "PERP"))
 
 
 def _symbols_for_account(account, strategies_cfg: dict) -> list:
