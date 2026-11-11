@@ -80,6 +80,11 @@ def request_bracket(ticket_id: str, *, account_id: str, tp: Optional[float] = No
         return _refuse("clear_tp and tp are mutually exclusive")
     if tp is None and sl is None and not clear_tp:
         return _refuse("nothing to do: give tp and/or sl (or clear_tp)")
+    cap = amend_capability(account_id, platforms_path)
+    if (tp is not None or clear_tp) and not cap["tp"]:
+        return _refuse(f"{account_id} cannot amend a TP: {cap['why']}", capability=cap)
+    if sl is not None and not cap["sl"]:
+        return _refuse(f"{account_id} cannot amend an SL: {cap['why']}", capability=cap)
     tk = prop_journal.get_ticket(ticket_id)
     if tk is None:
         return _refuse(f"ticket {ticket_id!r} not readable in the prop journal")
@@ -87,11 +92,6 @@ def request_bracket(ticket_id: str, *, account_id: str, tp: Optional[float] = No
         return _refuse(f"ticket {ticket_id} belongs to {tk.get('account_id')!r}, not {account_id!r}")
     if str(tk.get("status")) not in _LIVE_STATUS:
         return _refuse(f"ticket is {tk.get('status')!r}, not placed/filled")
-    cap = amend_capability(account_id, platforms_path)
-    if (tp is not None or clear_tp) and not cap["tp"]:
-        return _refuse(f"{account_id} cannot amend a TP: {cap['why']}", capability=cap)
-    if sl is not None and not cap["sl"]:
-        return _refuse(f"{account_id} cannot amend an SL: {cap['why']}", capability=cap)
     direction, entry, t_sl = str(tk.get("direction") or ""), _f(tk.get("entry")), _f(tk.get("sl"))
     if direction not in ("long", "short") or entry is None:
         return _refuse("ticket has no readable direction/entry")
