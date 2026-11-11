@@ -224,7 +224,7 @@ def get_pnl_series(window: str = "30d", category: Optional[str] = None, account_
                                "read_state": "measured" if ids else "no_accounts"})
         finally:
             conn.close()
-    except sqlite3.Error:
+    except sqlite3.Error:  # allow-silent: logs the stack and answers read_state journal_unreadable with no series, never an empty chart that reads as "no P&L"
         logger.warning("performance/pnl-series: journal read failed", exc_info=True)
         return {"as_of": as_of, "window": window, "read_state": "journal_unreadable", "series": [], "population": None}
     return {"as_of": as_of, "window": window, "read_state": "measured", "measured_only": measured_only,
