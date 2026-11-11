@@ -1,10 +1,10 @@
 {
  "request_id": "HEALTH-REVIEW-20261111",
- "reviewed_at": "2026-11-11T20:05:00+00:00",
+ "reviewed_at": "2026-11-11T20:00:00+00:00",
  "reviewer": "lane HEALTH-REVIEW-20261111 (session_01AFoLuLK6atheaCCZ33wjBJ), dispatched by Manager Session 2026-11-11a (session_01AFoLuLyarNRcy3nziCep2U), reset job health-review",
  "lane": "HEALTH-REVIEW-20261111",
  "window_start": "2026-11-04T19:45:00+00:00",
- "window_end": "2026-11-11T20:05:00+00:00",
+ "window_end": "2026-11-11T20:00:00+00:00",
  "window": {
   "this": "2026-11-04T19:45Z (reviewed_at of 2026-11-04 record) -> 2026-11-11T20:05Z",
   "medium": "2026-10-21, 10-24, 10-28, 11-04 records",
@@ -280,7 +280,7 @@
   {
    "id": "H12",
    "status": "concern",
-   "value": "LIVE VM root 76.1% used / 24.0% free (12.3 GB) vs 35.6% free on 11-04: -11.6 pts in 7 d; at that rate 10% free on ~2026-11-19. Memory 17.5%. Trainer 81.8% (flat). Cause: not named: disk-usage-report (system-action #24935) had not returned when this record was written",
+   "value": "LIVE VM root 76.1% used / 24.0% free (12.3 GB) vs 35.6% free on 11-04: -11.6 pts in 7 d; at that rate 10% free on ~2026-11-19. Memory 17.5%. Trainer 81.8% (flat). Cause: MEASURED (disk-usage-report #24935, 19:57Z): two trade_journal.db backups written by Tier-2 helpers in the window, .bak-prop-report-skip (2026-11-05, 2.37 GB) and .bak-prop-report-close (2026-11-10, 2.57 GB) = 4.9 GB, about 80% of the ~6 GB regrowth (11.6 pts of 52 GB); plus /var/log/syslog + syslog.1 1.7 GB, trade_journal.db 2.61 GB, runtime_logs 11 GB (unchanged class), a 1.35 GB .git pack. Fix: prune-db-backups (existing Tier-2 action, dry-run first) and have the prop-report helpers prune their own backup",
    "population": "both VMs",
    "window": "4 reviews: 26.7% free (10-24), 22.5% (10-28), 35.6% (11-04, after prune), 24.0% (11-11)",
    "evidence": "relay status vm_health; health/latest disk ctx; ml/status",
@@ -368,8 +368,8 @@
      "H-c noise: a one-off backup that will be pruned"
     ],
     "test": "system-action disk-usage-report #24935 (per-directory breakdown)",
-    "survivor": "not named: disk-usage-report (system-action #24935) had not returned when this record was written",
-    "p": "—"
+    "survivor": "MEASURED (disk-usage-report #24935, 19:57Z): two trade_journal.db backups written by Tier-2 helpers in the window, .bak-prop-report-skip (2026-11-05, 2.37 GB) and .bak-prop-report-close (2026-11-10, 2.57 GB) = 4.9 GB, about 80% of the ~6 GB regrowth (11.6 pts of 52 GB); plus /var/log/syslog + syslog.1 1.7 GB, trade_journal.db 2.61 GB, runtime_logs 11 GB (unchanged class), a 1.35 GB .git pack. Fix: prune-db-backups (existing Tier-2 action, dry-run first) and have the prop-report helpers prune their own backup",
+    "p": "0.85 MEASURED (byte sizes); the regrowth split is INFERRED"
    },
    {
     "q": "Are the register numbers this review reports real?",
@@ -421,13 +421,13 @@
    "evidence": "vm_health disk 76.1 (relay #24922); health/latest free 24.0% 12.3 GB; 11-04 record 35.6% free",
    "population": "live VM root fs",
    "trend": "-11.6 pts free / 7 d",
-   "cause": "not named: disk-usage-report (system-action #24935) had not returned when this record was written",
-   "p": "0.7 INFERRED (linear projection from 2 post-prune points)",
+   "cause": "MEASURED (disk-usage-report #24935, 19:57Z): two trade_journal.db backups written by Tier-2 helpers in the window, .bak-prop-report-skip (2026-11-05, 2.37 GB) and .bak-prop-report-close (2026-11-10, 2.57 GB) = 4.9 GB, about 80% of the ~6 GB regrowth (11.6 pts of 52 GB); plus /var/log/syslog + syslog.1 1.7 GB, trade_journal.db 2.61 GB, runtime_logs 11 GB (unchanged class), a 1.35 GB .git pack. Fix: prune-db-backups (existing Tier-2 action, dry-run first) and have the prop-report helpers prune their own backup",
+   "p": "0.7 INFERRED (linear projection); cause MEASURED",
    "blast_radius": "trader DB writes, git-sync, logs on the real-money VM",
    "tier": 2,
    "check": {
     "command": "curl /api/bot/health/latest | .snapshot.checks.disk.ctx.free_pct",
-    "rule": ">= 20 on 2026-11-18 and the grower named with a cap merged",
+    "rule": ">= 20 on 2026-11-18, the two window backups pruned, and the helpers prune their own backup",
     "resolves_when": "2026-11-18"
    },
    "ending": "row HEALTH-20261111-LIVE-DISK-REGROWTH due 2026-11-15"

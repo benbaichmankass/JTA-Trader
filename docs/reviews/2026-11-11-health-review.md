@@ -1,6 +1,6 @@
 # Health review 2026-11-11 — the live trader VM's disk is refilling (24% free, about −11.6 points a week); real money is clean
 
-> **Doc status:** `unknown` · category `evidence` · last verified `2026-11-11` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · lane `HEALTH-REVIEW-20261111` (session_01AFoLuLK6atheaCCZ33wjBJ, dispatched by Manager Session 2026-11-11a under the 2026-11-11 weekly reset) · window 2026-11-04 19:45Z → 2026-11-11 20:05Z · record [`comms/reviews/health/2026-11-11-health-review.json`](../../comms/reviews/health/2026-11-11-health-review.json)
+> **Doc status:** `unknown` · category `evidence` · last verified `2026-11-11` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · lane `HEALTH-REVIEW-20261111` (session_01AFoLuLK6atheaCCZ33wjBJ, dispatched by Manager Session 2026-11-11a under the 2026-11-11 weekly reset) · window 2026-11-04 19:45Z → 2026-11-11 20:00Z · record [`comms/reviews/health/2026-11-11-health-review.json`](../../comms/reviews/health/2026-11-11-health-review.json)
 
 **Grade: investigate.** 3 concerns (H10, H12, H15), 7 watches, 1 could_not_look (H16), 3 stalled calls. Live reads were partial. `DIAG_READ_TOKEN` was rotated (direct diag returns 401), the relay cut each of 14 paths to about 4 KB, and 63–80 Actions runs were queued. So `system_invariants.py`, the audit tail and the ssh sweep did not run. That gap is owned by AUD-20261111-RELAY-INVARIANTS-BRIDGE and is not re-filed here.
 
@@ -68,7 +68,7 @@
 1. **Why is the live disk refilling?**
    - Hypotheses: (a) an uncapped writer; (b) journald growth (its cap needs a sudoers line); (c) noise, i.e. a one-off backup.
    - Test: the disk-usage-report (#24935).
-   - Survivor: see C1 in the record. If the report had not returned when this was written, the row asks for the grower first.
+   - Survivor: (a), MEASURED by the report at 19:57Z. Two journal backups left by the Tier-2 prop-report helpers (11-05: 2.37 GB; 11-10: 2.57 GB) total 4.9 GB, about 80% of the ~6 GB regrowth. Syslog adds 1.7 GB; the journal DB itself is 2.61 GB.
 2. **Are the register numbers real?**
    - Hypotheses: (a) the export has been stale since the WSD-S4 freeze; (b) the export is current.
    - Evidence: the newest pipeline file is from 11-06 22:02Z, no workflow runs `export --to-files`, and the store holds 4,211 items against 4,098 in the files.
@@ -89,7 +89,7 @@
 
 | call | decision | tier | check | ending · due_by |
 |---|---|---|---|---|
-| C1 live disk refilling | Name the grower, cap it at the writer | 2 | `free_pct` ≥ 20 on 11-18 | HEALTH-20261111-LIVE-DISK-REGROWTH · 11-15 |
+| C1 live disk refilling | Run `prune-db-backups` (dry-run first) on the two window backups (4.9 GB); make the prop-report helpers prune their own backup; cap syslog | 2 | `free_pct` ≥ 20 on 11-18 | HEALTH-20261111-LIVE-DISK-REGROWTH · 11-15 |
 | C2 off-VM register reads are stale | Read the store off-VM, or print the export's age | 1 | `--stats` equals the store or names the age | HEALTH-20261111-EXPORT-READS-STALE · 11-18 |
 | C3 research SLOs at 9 a day | Existing rows; re-scope proposal on the stalled one | 1 | breaches ≤ 6 on 11-18 | AUD-20261111-RESEARCH-OPS-NO-RECORD · 11-13; AUD-20261019-RESEARCH-SLO-RED |
 | C4 trainer trains nothing | `/ml-review` answers it | 1 | registry > 98 or "no new labels" shown | HEALTH-20261111-TRAINER-NO-NEW-MODELS · 11-18 |
