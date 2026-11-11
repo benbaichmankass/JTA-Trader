@@ -342,6 +342,10 @@ names that file; read it before running or changing the planning.** What binds, 
   protocol): `config/reset_protocol.yaml` and `list_triggers` are the source; the moved doc carries the table as agreed 2026-10-14. Unchanged:
   research-ops 4×/day, the daily review ONCE a day at 05:52Z, lane check-ins.
 
+## The insights ledger (operator, 2026-11-11, row INSIGHTS-LEDGER) — gates this adds or changes: none
+
+A finding that changed how we trade (a performance/trading insight, a research-infra or pipeline-restructure finding such as a sizing result; **not** a plain infra bug) is logged as a `kind: "insight"` item in the pipeline every time it is made: `claim`, `population`, `provenance` (MEASURED / ESTIMATED / UNVERIFIED), `evidence`, `outcome` (`acted|filed|killed|open`), `links` to the row / unit / PR it became (`acted` needs one), optional `topic`/`roadmap` — validated by `scripts/ops/pipeline.py`, shown by `GET /api/bot/work/ledger`. Not a new register; performance-review sessions file theirs the same way. A dangling link is reported by the route, never a CI gate.
+
 ## Standing authorizations — the ladder is fully automated
 
 **`config/mandates.yaml` is the source for what is granted and armed** (field beats comment); CLAUDE.md § "The daily sync, and standing
