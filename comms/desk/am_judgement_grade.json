@@ -10,24 +10,24 @@
   },
   "hold": {
    "mean_d_hold": 0.0,
-   "n_rows": 147
+   "n_rows": 142
   },
   "partial_close": {
-   "mean_d_hold": 0.9042,
-   "n_rows": 1
+   "mean_d_hold": null,
+   "n_rows": 0
   },
   "tighten_sl": {
    "mean_d_hold": null,
    "n_rows": 0
   }
  },
- "computed_at": "2026-11-11T10:28:35Z",
+ "computed_at": "2026-11-11T12:19:24Z",
  "forecast": {
-  "brier": 0.2249,
+  "brier": 0.2235,
   "brier_ref_constant_0_5": 0.25,
-  "hits": 51,
-  "n_scored": 174,
-  "unresolved": 83
+  "hits": 50,
+  "n_scored": 169,
+  "unresolved": 88
  },
  "population": "live-review rows with a forecast reviewed from 2026-10-31T00:00:00Z: 257 rows, 77 packages",
  "rows": [
@@ -57,13 +57,13 @@
   },
   {
    "action": "partial_close",
-   "d_hold": 0.90418737,
-   "d_mech": 0.90418737,
-   "forecast_outcome": "hit",
+   "d_hold": null,
+   "d_mech": null,
+   "forecast_outcome": null,
    "order_package_id": "pkg-64d4fa5ab0c34305",
    "p_target": 0.5,
-   "price_reason": null,
-   "price_state": "priced",
+   "price_reason": "no_package_row",
+   "price_state": "could_not_price",
    "review_id": "LR-20261031T0015Z-pkg-64d4fa5ab0c34305",
    "trigger": "judgement_cadence"
   },
@@ -477,12 +477,12 @@
   },
   {
    "action": "hold",
-   "d_hold": 0.0,
-   "d_mech": 0.0,
-   "forecast_outcome": "miss",
+   "d_hold": null,
+   "d_mech": null,
+   "forecast_outcome": null,
    "order_package_id": "pkg-64d4fa5ab0c34305",
    "p_target": 0.55,
-   "price_reason": "no_path_change",
+   "price_reason": "no_path_change_trade_open_or_unjoined",
    "price_state": "not_a_call",
    "review_id": "LR-20261101T1432Z-pkg-64d4fa5ab0c34305",
    "trigger": "swing"
@@ -885,12 +885,12 @@
   },
   {
    "action": "hold",
-   "d_hold": 0.0,
+   "d_hold": null,
    "d_mech": null,
-   "forecast_outcome": "expired",
+   "forecast_outcome": null,
    "order_package_id": "pkg-3245fc73e2f64536",
    "p_target": 0.55,
-   "price_reason": "no_path_change",
+   "price_reason": "no_path_change_trade_open_or_unjoined",
    "price_state": "not_a_call",
    "review_id": "LR-20261104T1808Z-pkg-3245fc73e2f64536",
    "trigger": "daily_floor"
@@ -945,12 +945,12 @@
   },
   {
    "action": "hold",
-   "d_hold": 0.0,
-   "d_mech": 0.0,
-   "forecast_outcome": "miss",
+   "d_hold": null,
+   "d_mech": null,
+   "forecast_outcome": null,
    "order_package_id": "pkg-64d4fa5ab0c34305",
    "p_target": 0.45,
-   "price_reason": "no_path_change",
+   "price_reason": "no_path_change_trade_open_or_unjoined",
    "price_state": "not_a_call",
    "review_id": "LR-20261104T1808Z-pkg-64d4fa5ab0c34305",
    "trigger": "giveback"
@@ -1041,24 +1041,24 @@
   },
   {
    "action": "hold",
-   "d_hold": 0.0,
+   "d_hold": null,
    "d_mech": null,
-   "forecast_outcome": "expired",
+   "forecast_outcome": null,
    "order_package_id": "pkg-3245fc73e2f64536",
    "p_target": 0.55,
-   "price_reason": "no_path_change",
+   "price_reason": "no_path_change_trade_open_or_unjoined",
    "price_state": "not_a_call",
    "review_id": "LR-20261104T1856Z-pkg-3245fc73e2f64536",
    "trigger": "giveback"
   },
   {
    "action": "hold",
-   "d_hold": 0.0,
-   "d_mech": 0.0,
-   "forecast_outcome": "miss",
+   "d_hold": null,
+   "d_mech": null,
+   "forecast_outcome": null,
    "order_package_id": "pkg-64d4fa5ab0c34305",
    "p_target": 0.4,
-   "price_reason": "no_path_change",
+   "price_reason": "no_path_change_trade_open_or_unjoined",
    "price_state": "not_a_call",
    "review_id": "LR-20261105T0021Z-pkg-64d4fa5ab0c34305",
    "trigger": "swing"
@@ -2879,7 +2879,7 @@
    "action": "hold",
    "d_hold": null,
    "d_mech": null,
-   "forecast_outcome": null,
+   "forecast_outcome": "expired",
    "order_package_id": "pkg-50f5eed272f64197",
    "p_target": 0.4,
    "price_reason": "no_path_change_trade_open_or_unjoined",
@@ -3120,13 +3120,13 @@
  "verdict": {
   "ci95_d_hold": [
    0.0,
-   0.0252
+   0.016
   ],
-  "mean_d_hold": 0.01,
-  "mean_d_mech": 0.0276,
+  "mean_d_hold": 0.0053,
+  "mean_d_mech": 0.0229,
   "min_packages": 30,
-  "n_packages": 46,
-  "n_packages_mech": 43,
+  "n_packages": 44,
+  "n_packages_mech": 42,
   "rule": "RULE-DESK-AM-JUDGEMENT-V1",
   "verdict": "indeterminate"
  }
