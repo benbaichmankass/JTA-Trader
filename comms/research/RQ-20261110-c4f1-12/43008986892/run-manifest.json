@@ -1,0 +1,57 @@
+{
+  "unit": "RQ-20261110-c4f1-12",
+  "run_id": "43008986892",
+  "commit_sha": "a5cb85cc64f62b6ab4d61d3614b5085571830b07",
+  "run_url": null,
+  "timeout_minutes": 60,
+  "runner": {
+    "cpu_model": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 24.04.5 LTS",
+    "kernel": "6.18.55+",
+    "image": {
+      "ImageOS": null,
+      "ImageVersion": null,
+      "RUNNER_OS": null,
+      "RUNNER_ARCH": null,
+      "RUNNER_ENVIRONMENT": null
+    },
+    "python": "3.13.15",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.1.3",
+      "pandas": "2.3.3",
+      "scipy": "1.16.3",
+      "scikit-learn": "1.6.1"
+    },
+    "blas": "blas=scipy-openblas 0.3.27; lapack=scipy-openblas 0.3.27",
+    "unread": [],
+    "class_id": "db1ff15f88db",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/ml_bakeoff.py",
+        "--unit",
+        "RQ-20261110-c4f1-12",
+        "--out",
+        "comms/research/RQ-20261110-c4f1-12/43008986892"
+      ],
+      "log": "comms/research/RQ-20261110-c4f1-12/43008986892/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 31.5
+    }
+  ],
+  "all_ok": true
+}
