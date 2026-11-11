@@ -145,8 +145,36 @@ levers:
         max_drawdown_r: 10.3443
         verdict: indeterminate
         joint_change: false
-      shape: noisy
-      points: 3
+      - value: '0.625'
+        baseline_value: '0.5'
+        arm: pullback_frac_hi
+        unit: RQ-20261106-011
+        window: 2021-11-02..2026-11-05
+        n: 167
+        net_r: -2.4634
+        baseline_n: 137
+        baseline_net_r: -1.5152
+        delta_net_r: -0.9482
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 9.687
+        verdict: fail
+        joint_change: false
+      - value: '0.375'
+        baseline_value: '0.5'
+        arm: pullback_frac_lo
+        unit: RQ-20261106-011
+        window: 2021-11-02..2026-11-05
+        n: 115
+        net_r: 0.9429
+        baseline_n: 137
+        baseline_net_r: -1.5152
+        delta_net_r: 2.4581
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 6.3652
+        verdict: fail
+        joint_change: false
+      shape: peaked
+      points: 5
       best_delta_r_per_trade: 0.1206
       fold_stability: 0.5
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
@@ -1597,11 +1625,39 @@ levers:
         max_drawdown_r: 13.8334
         verdict: fail
         joint_change: false
-      shape: single_point
-      points: 1
+      - value: pivot=3
+        baseline_value: pivot=5
+        arm: S3
+        unit: RQ-20261110-73de-23
+        window: 2020-07-01..2026-10-15
+        n: 205
+        net_r: 0.1
+        baseline_n: 159
+        baseline_net_r: -2.1959
+        delta_net_r: 2.2959
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 10.3696
+        verdict: fail
+        joint_change: false
+      - value: pivot=8
+        baseline_value: pivot=5
+        arm: S8
+        unit: RQ-20261110-73de-23
+        window: 2020-07-01..2026-10-15
+        n: 132
+        net_r: 1.6387
+        baseline_n: 159
+        baseline_net_r: -2.1959
+        delta_net_r: 3.8346
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 6.3039
+        verdict: fail
+        joint_change: false
+      shape: monotone
+      points: 3
       best_delta_r_per_trade: 0.0591
-      fold_stability: 0.667
-      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
+      fold_stability: 0.722
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
     momentum_stale_bars:
       tests:
       - value: '12'

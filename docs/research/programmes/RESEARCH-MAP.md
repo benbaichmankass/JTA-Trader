@@ -6,6 +6,29 @@
 
 How this fits the work system: a programme is a *plan*, not a third category of work (CLAUDE.md § "Two categories"). Each question below becomes a `research/queue/` unit and each build a checklist row, every one carrying a `roadmap` milestone ref. Full plan per programme: `01-ACTIVE-TRADE-MANAGEMENT.md`, `02-AI-TRADER.md`, `03-STRATEGY-IMPROVEMENT.md` (lane P3-STRATEGY-PROGRAMME), `04-MACRO-SLEEVE.md` (lane P4-MACRO-PROGRAMME) and `05-PROP.md` (lane P5-PROP-PROGRAMME) are all landed (2026-10-14); none is owed.
 
+## Programme review 2026-11-11 (lane PROGRAMME-REVIEW-20261111)
+
+Population: units with a result row generated 2026-11-04T19:30Z..2026-11-11T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`; 2,183 units read, 0 unreadable; 455 result rows): **311 units with rows** — 72 pass, 134 fail, 42 indeterminate, 5 no_action_warranted, 1 not_applicable, 57 with no unit verdict yet (28 ungraded). 119 carry a programme field (P1 38, P2 50, P3 14, P4 2, P5 9, P6 6, P7 0); **192 do not** (live_strategy 110, new_strategy_prop 37, ml_health 31, infra 11, timeframes 2, none 1) and are assigned below by what they ask. Every PASS is a discovery until its confirmation passes; batch denominators are from the packet's `batches`.
+
+**Two-track summary.**
+- **TRADING:** the week's money result is an exit result. The structure exit was the drag on 16 of 17 legs, it came off 9 legs on 2026-11-05 (#23485), and two losing legs (trend_donchian_1h, htf_pullback_trend_2h) turn positive without it. A fourth 1h ETF survivor confirmed (tlt_pullback_1h). **None of the four survivors has a promotion proposal yet, and qqq/tlt 1h are `testing` on no book.** Runnable TRADING units were **0** at review time, a supply gap that the three P3 iteration-3 nodes partly close.
+- **MODEL:** answers, not edge. The regime head is skilful but has no consumer. Direction heads sit at the prior. ML SL revision is a dev-stage artefact. ML ENTRY lives at 1h only. Prop ML found no signal in three new data families. 8 of 9 ml_model iteration units are blocked past due. The consolidation (#24897) is the right place to schedule or kill them.
+
+**Iteration loop.** Orphans at review time (`iteration_orphans.py --legacy`): strategy_leg 8, ml_model 0 (8 overdue), ltr_class 5 (2 overdue). Strategy-leg dispositions: spy_pullback_1h authored (P3-ITER3, counts as covered once the replenisher emits it); qqq_pullback_1h and tlt_pullback_1h are CONFIRMED survivors whose next step is a Tier-3 promotion proposal (handoff, manager); tsmom-crypto, xsec-crypto, tsmom-etf, movement-capture and vol-premium-proxy go to research-ops in handoff, each with its top untested lever from its own 58e4 record (their harness `edge_portfolio_discovery.py` takes a scratch data root, so they are not runner-ready from a node). trend_donchian_1h and htf_pullback_trend_2h were covered and got their iteration-3 holdouts. ml_model 0 orphans / 8 overdue-blocked. ltr_class 5 orphans (no driver, PI-20261104-SVCWDSDX-0002; awaiting lane LTR-CLASS-GRADE).
+
+**Feed table (updated)**
+
+| from | to | what | destination | state |
+|---|---|---|---|---|
+| P1 | P2 | 5e05 structure-OFF + 47b6 tighten fails as MANAGE negative class | MANAGE head labels (ML lane) | open |
+| P1 | P5 | structure-OFF on prop pullback legs | eth_pullback_prop_2h (5e05-10) | landed by #23485 |
+| P3 | P1 | exit-process every survivor before promotion | tlt/qqq/slv/uso 1h | open (manager) |
+| P3 | P2 | survivor legs as labelled rows; spy 1h holdout as a regime-change example | P2-MECE-D2 | open |
+| P2 | P3/P1 | no head passed a money gate: no Tier-3 candidate | — | none |
+| P5 | P2 | oi_flow / basis / book 0 of 6: negative for new feature families | P2 feature backlog | recorded |
+| P4 | P2 | PPI surprise as an event feature | after the ES placebo | waiting |
+| P6 | all | needs_review 97 and the research-ops record gap | manager | open |
+
 ## Programme review 2026-11-04 (lane PROGRAMME-REVIEW-20261104)
 
 Population: units with a result row generated 2026-10-28T19:41Z..2026-11-04T19:41Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,932 units read, 0 unreadable, 662 result rows): **447 units with rows** — 107 pass, 210 fail, 25 indeterminate, 11 no_action_warranted, 94 with no unit verdict yet (76 ungraded + 18 needs_review/null). 302 carry a programme field (P1 53, P2 54, P3 95, P4 24, P5 48, P6 18, P7 10), 145 do not (live_strategy 70, new_strategy_prop 32, infra 13, ml_health 13, timeframes 6, macro 5, regime 5, none 1) — assigned below by what they ask. Every PASS is a discovery until its confirmation passes.
