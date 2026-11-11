@@ -1,0 +1,134 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261111T0002Z-pkg-50f5eed272f64197",
+ "reviewed_at": "2026-11-11T00:20:00Z",
+ "order_package_id": "pkg-50f5eed272f64197",
+ "trade_id": null,
+ "leg": "trend_donchian_sol_4h",
+ "accounts": [
+  "tradeify_1",
+  "velotrade_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-11T00:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-11T00:02:33Z",
+ "state": {
+  "atr_now_over_entry": 2.0775,
+  "bars_held": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_provenance": "unverified",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 89.10464286,
+  "tp": 78.96364
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 2.0775,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "mechanics": {
+  "evidence": "order_packages status=emitted close_reason=prop_ticket_emitted; package sl 89.10464286 / tp 78.96364 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "tighten_sl",
+  "level": 85.3,
+  "level_atr": 0.98,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.5,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Prop package SOLUSDT SHORT, entry 87.64, risk 1.465. State not measured (open_r null, could_not_price); mark 83.32 (last 4h close) = about +2.95R DERIVED ((87.64-83.32)/1.465), not read. Last bar 82.90-83.32 high 83.63, flush low 81.27 intact, breakdown zone 84.66-85.26 not reclaimed. Advice only, unchanged from 2002Z: stop no looser than 85.30 on tradeify_1 and velotrade_1 (0.98 ATR above mark, above the 85.26 bar high, locks about +1.6R). Tighter than 85.30 would sit inside the 1 ATR noise floor (85.35), so no further tighten. Never loosen: an already-tighter hand-set stop stays. The 83.22 level is below the mark and 83.63 traded through it, so if it was hand-set that leg has likely already stopped out; the -0.201R trend_donchian_sol_4h in the book is probably the separate SOL package pkg-992bb20c689640f1, not a re-entry here (not verified). TP 78.96 unchanged; velotrade_1 TP drift (76.262) is a mechanics note. breakout_2 closed at 82.5, not reviewed."
+ },
+ "forecast": {
+  "direction": "with_trade",
+  "timeframe": "4h",
+  "horizon_bars": 4,
+  "target_px": 78.96,
+  "p_target": 0.4,
+  "invalidation_px": 85.3,
+  "thesis": "4h ADX 45, ATR 2.08x entry; flush low 81.27, bounce capped at 83.63 below the 84.66-85.26 breakdown zone; continuation toward TP 78.96 is the base case while 85.3 holds.",
+  "evidence": [
+   "last 4h close 83.32, bounce high 83.63",
+   "since-entry low 81.27, high 88.43",
+   "adx_now 45.4, atr_now_over_entry 2.08"
+  ]
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "stops: tradeify_1 and velotrade_1 hand-set status unknown (SL 89.105 / TP 78.964 unless operator hand-set 83.22 or 85.30); velotrade_1 TP drift 76.262 not readable here",
+  "noise_floor: 1 ATR above mark is 85.35; 85.30 is at it, 83.22 is below the mark",
+  "atr_ratio: now/entry 2.08",
+  "packet_defect: priced_options could_not_price 1/1; state.open_r context_null 1/1",
+  "book: trend_donchian_sol_4h open_r -0.201 likely pkg-992bb20c689640f1 (unverified)",
+  "correlated: 14 other open shorts; funding not readable; no calendar events"
+ ],
+ "account_reads": [
+  {
+   "account_id": "tradeify_1",
+   "account_class": "prop",
+   "read": "unknown",
+   "evidence": "prop account has no apply path for an amend (LTR-8); packet account_bounds empty; hand-set status not readable from this lane"
+  },
+  {
+   "account_id": "velotrade_1",
+   "account_class": "prop",
+   "read": "unknown",
+   "evidence": "prop account has no apply path for an amend (LTR-8); packet account_bounds empty; hand-set status not readable from this lane"
+  }
+ ],
+ "disposition": {
+  "route": "recommended",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuKgeM4bM8AQqUfQZjE",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_defects": [
+  {
+   "count": 1,
+   "denominator": 1,
+   "field": "priced_options",
+   "reason": "could_not_price"
+  },
+  {
+   "count": 1,
+   "denominator": 1,
+   "field": "state.open_r",
+   "reason": "context_null:state.open_r"
+  }
+ ],
+ "packet_sha": "9551b55ad71c2fe531b53c0287a3a2dc56da43eaddafad929ba3b390852230df"
+}
