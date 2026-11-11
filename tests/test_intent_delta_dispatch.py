@@ -679,6 +679,61 @@ class TestIntentModeDispatchBranch:
         assert pkg.meta["execution_delta"]["qty_resize"]["outcome"] == "qty_sized_up_to_venue_min"
         assert "intent_sub_min_qty_delta" not in (results[0]["error"] or "")
 
+    def test_size_up_past_one_venue_lot_is_capped_and_dropped(
+        self, coord, accounts_yaml, trade_db, monkeypatch,
+    ):
+        """CAP (operator popup 2026-11-11 "Approve with a cap (Recommended)"): a raised
+        top-up may never overshoot the target by more than ONE venue minimum lot. A
+        size-up that would (forced here: the legalizer answers 0.005 for a 0.0001 delta
+        on a 0.001 lot) is refused and the top-up drops as before."""
+        import dataclasses as _dc
+
+        from src.units.accounts import qty_legalize as ql
+        captured = []
+        _patch_dispatch_deps(monkeypatch, captured)
+        real = ql.legalize_qty
+
+        def inflated(qty, **kw):
+            r = real(qty, **kw)
+            if kw.get("size_up"):
+                return _dc.replace(r, qty=0.005, ok=True, resized_from=float(qty) or 0.0,
+                                   resize_binding="min_qty", venue_min=0.001, step=0.001)
+            return r
+        monkeypatch.setattr(ql, "legalize_qty", inflated)
+        _insert_trade(
+            trade_db, account_id="bybit_2", symbol="BTCUSDT",
+            direction="long", position_size=0.1999,
+        )
+        pkg = _intent_pkg(direction="long")
+        results = coord.multi_account_execute(
+            pkg, accounts_path=accounts_yaml,
+            balance_fetcher=self._balance_fetcher,
+        )
+        assert captured == []
+        assert "intent_sub_min_qty_delta" in (results[0]["error"] or "")
+        assert "qty_resize" not in pkg.meta["execution_delta"]
+
+
+class TestTopupMinLot:
+    """One venue minimum lot = max(min qty, min order value / price), step-aligned up."""
+
+    def _lz(self, vmin, step, notional=None):
+        from types import SimpleNamespace
+        return SimpleNamespace(venue_min=vmin, step=step, min_notional=notional)
+
+    def test_min_qty_binds(self):
+        from src.core.coordinator import topup_min_lot
+        assert topup_min_lot(self._lz(0.01, 0.01, 5.0), 2077.57) == pytest.approx(0.01)
+
+    def test_min_notional_binds_and_rounds_up_to_the_step(self):
+        from src.core.coordinator import topup_min_lot
+        # 5 USDT / 0.18 = 27.78 ADA -> 28 at step 1, above min qty 1
+        assert topup_min_lot(self._lz(1.0, 1.0, 5.0), 0.18) == pytest.approx(28.0)
+
+    def test_unknown_minimum_is_none(self):
+        from src.core.coordinator import topup_min_lot
+        assert topup_min_lot(self._lz(None, None, None), 100.0) is None
+
 
 class TestIntentModeReduceClose:
     """S-MSE-2 — reduce-only / close / flip wiring for the dispatcher."""

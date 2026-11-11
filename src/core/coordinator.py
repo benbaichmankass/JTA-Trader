@@ -314,6 +314,26 @@ def _journal_synced(fn):
     return _wrapped
 
 
+
+def topup_min_lot(lz: Any, price: Any) -> Optional[float]:
+    """One venue minimum lot for a sized-up top-up (MIRROR-QTY-DIVERGE cap, operator 2026-11-11):
+    the smallest legal order at ``price`` = max(min qty, min order value / price), rounded UP to the
+    qty step. ``None`` when the minimum is unknown (the caller then refuses the size-up)."""
+    import math
+    try:
+        vmin = float(getattr(lz, "venue_min", None) or 0.0)
+        step = float(getattr(lz, "step", None) or 0.0)
+        notional = getattr(lz, "min_notional", None)
+        lot = vmin
+        if notional and price:
+            need = float(notional) / float(price)
+            if step > 0:
+                need = math.ceil(need / step - 1e-9) * step
+            lot = max(lot, need)
+        return lot if lot > 0 else None
+    except (TypeError, ValueError, ZeroDivisionError):
+        return None
+
 class Coordinator:
     """TRANSLATOR: routes data between the 9 units.
 
@@ -3040,7 +3060,25 @@ class Coordinator:
                             )
                         except Exception:  # noqa: BLE001 — never block on a lookup
                             _lz_up = None
+                        # CAP (operator popup 2026-11-11 ~22:25Z, verbatim "Approve with a cap
+                        # (Recommended)"): a raised top-up may never leave the account more than
+                        # ONE venue minimum lot above its target. One lot = the smallest legal
+                        # order at this price: max(min qty, min order value / price), step-aligned.
+                        # A raise past that is refused and the top-up drops exactly as before
+                        # (intent_sub_min_qty_delta below).
+                        _cap_ok = True
                         if (_lz_up is not None and _lz_up.ok
+                                and getattr(_lz_up, "resized_from", None) is not None):
+                            _lot = topup_min_lot(_lz_up, pkg.entry)
+                            _over = float(_lz_up.qty) - float(delta.qty_delta)
+                            if _lot is None or _over > _lot * (1 + 1e-9):
+                                _cap_ok = False
+                                logger.warning(
+                                    "[coordinator] intent-mode top-up %s/%s delta=%s: size-up to %s "
+                                    "would overshoot the target by %s, more than one venue minimum lot "
+                                    "(%s) -- NOT sized up (qty_size_up_capped)",
+                                    account.name, pkg.symbol, delta.qty_delta, _lz_up.qty, _over, _lot)
+                        if (_cap_ok and _lz_up is not None and _lz_up.ok
                                 and getattr(_lz_up, "resized_from", None) is not None
                                 and float(_lz_up.qty) > float(delta.qty_delta)):
                             logger.warning(
