@@ -791,6 +791,28 @@ def list_fills(
         conn.close()
 
 
+def get_opening_fill(
+    account_id: Optional[str], ticket_id: Optional[str] = None, external_order_id: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    """The OPENING row (``status`` open/filled, lowest id) of one trade, or None. Used to carry an opener's stop/target
+    onto a closing row whose opener is outside the page the caller read (PROP-UI-BRACKETS-CLOSED)."""
+    if not account_id or not (ticket_id or external_order_id) or not tables_present():
+        return None
+    conn = _connect(read_only=True)
+    try:
+        for col, val in (("external_order_id", external_order_id), ("ticket_id", ticket_id)):
+            if not val:
+                continue
+            row = conn.execute(
+                f"SELECT * FROM prop_fills WHERE account_id = ? AND {col} = ? "
+                "AND lower(status) IN ('open','filled') ORDER BY id ASC LIMIT 1", (account_id, str(val))).fetchone()
+            if row is not None:
+                return dict(row)
+        return None
+    finally:
+        conn.close()
+
+
 # ── Inbound account-status snapshots ──────────────────────────────────
 
 def insert_account_status(status: Dict[str, Any]) -> int:

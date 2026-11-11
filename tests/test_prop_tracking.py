@@ -204,6 +204,68 @@ def test_fills_route_carries_trade_state_and_the_open_trade_count():
     assert out["trade_open_count"] == 1 and out["fills"][0]["trade_state"] == "open"
 
 
+def _close(tid: str, **extra):
+    from src.prop.prop_report import ingest_report
+    body = {"kind": "fill", "status": "closed", "account_id": "breakout_2", "ticket_id": tid, "symbol": "ETHUSDT",
+            "direction": "long", "qty": 1.1758, "entry_price": 2527.8, "exit_price": 2600.0,
+            "closed_at": datetime.now(timezone.utc).isoformat(), "reason": "tp"}
+    body.update(extra)
+    return ingest_report(body)["id"]
+
+
+def test_closed_trade_carries_the_opening_rows_final_and_entry_brackets():
+    # PROP-UI-BRACKETS-CLOSED: the closing row has sl/tp NULL live (tradeify_1/velotrade_1 14/14); the levels are on the opener
+    a = _open("prop-manual-br1", sl=2506.54, tp=2655.38)
+    prop_journal.amend_fill_levels(a, sl=2520.0, source={"reason": "trail"})
+    prop_journal.amend_fill_levels(a, sl=2530.0, tp=2700.0, source={"reason": "trail2"})
+    c = _close("prop-manual-br1")
+    fills = prop_journal.list_fills(account_id="breakout_2", limit=500)
+    po.annotate_trade_state(fills)
+    po.attach_trade_brackets(fills)
+    by = {f["id"]: f for f in fills}
+    assert by[c]["sl"] is None and by[c]["tp"] is None          # the premise: the closing row is bare
+    b = by[c]["bracket"]
+    assert (b["final_sl"], b["final_tp"], b["entry_sl"], b["entry_tp"]) == (2530.0, 2700.0, 2506.54, 2655.38)
+    assert b["n_amendments"] == 2 and len(b["amendments"]) == 2 and b["source_fill_id"] == a and b["read_state"] == "measured"
+    assert by[a]["bracket"]["final_sl"] == 2530.0                # the opening row reads the same trade
+
+
+def test_bracket_null_levels_are_no_record_not_zero_and_no_amendments_is_none_not_empty():
+    _open("prop-manual-br2", sl=None, tp=None)
+    c = _close("prop-manual-br2")
+    fills = prop_journal.list_fills(account_id="breakout_2", limit=500)
+    po.annotate_trade_state(fills)
+    po.attach_trade_brackets(fills)
+    b = {f["id"]: f for f in fills}[c]["bracket"]
+    assert b["read_state"] == "no_record" and b["final_sl"] is None and b["final_tp"] is None
+    assert b["amendments"] is None and b["n_amendments"] is None and b["entry_sl"] is None
+
+
+def test_bracket_partial_and_opener_outside_the_page_is_looked_up():
+    a = _open("prop-manual-br3", sl=2506.54, tp=None)
+    c = _close("prop-manual-br3")
+    fills = [f for f in prop_journal.list_fills(account_id="breakout_2", limit=500) if f["id"] == c]   # opener NOT in the page
+    po.annotate_trade_state(fills)
+    po.attach_trade_brackets(fills, opener_lookup=lambda acct, tkt, ext: prop_journal.get_opening_fill(acct, tkt, ext))
+    b = fills[0]["bracket"]
+    assert b["source_fill_id"] == a and b["final_sl"] == 2506.54 and b["final_tp"] is None and b["read_state"] == "partial"
+    fills2 = [dict(fills[0])]
+    po.attach_trade_brackets(fills2)                             # no lookup -> degrades to its own (bare) levels, no crash
+    assert fills2[0]["bracket"]["read_state"] == "no_record"
+
+
+def test_non_trade_rows_get_no_bracket_and_route_returns_it():
+    from src.web.api.routers import prop as prop_router
+    _open("prop-manual-br4", status="placed")
+    _open("prop-manual-br5")
+    _close("prop-manual-br5")
+    out = prop_router.get_fills(account_id="breakout_2", limit=50)
+    placed = [f for f in out["fills"] if f["status"] == "placed"]
+    assert placed and all("bracket" not in f for f in placed)
+    closed = [f for f in out["fills"] if f["status"] == "closed"]
+    assert closed and closed[0]["bracket"]["final_sl"] == 2506.54
+
+
 # ---- reconcile ----
 
 def test_matching_positions_change_nothing():
