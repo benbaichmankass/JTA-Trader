@@ -1,0 +1,134 @@
+id: RQ-20261111-3a23-01
+title: 'M23 meta-labeling on test results, widened emits: does a WITHIN-FAMILY take/skip head on the signals catalog''s decision-time
+  features beat take-all AND a confidence-only control, net of the full cost stack, on the crypto trend_donchian and pullback families?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+kind: experiment
+programme: P2
+roadmap:
+- M23
+question: 'Re-authors RQ-20261014-9d20-04 (retired 2026-11-06 as not dispatchable: no driver, lever open) now that the lever exists.
+  Corpus = fresh 5-year (1,825 d) evidence ledgers built 2026-11-11 by scripts/ops/build_strategy_evidence.py --research-emits for
+  the 19 crypto trend_donchian / pullback legs (committed at comms/strategy_evidence/research_emits/2026-11-11/), every row carrying
+  features_schema harness_decision_v1 (f_adx_14, f_atr_pct, f_atr_pctl, f_rlr_vol_20, f_ret_20, f_hour_utc, f_dow_utc, f_regime).
+  Per family (rows in entry-time order across the family''s legs, leg one-hots as controls, never pooled across families), does a
+  numpy_logit take/skip head on the WIDE set beat the class prior on AUC and lift mean net_r over take-all, and does its lift exceed
+  the same head on the CONTROL set (confidence + direction only)?'
+why_this_matters: 'Operator 2026-10-14: meta-labeling merges with the signals catalog and is fed all test results. RQ-20261014-9d20-02
+  FAILED on the thin columns (confidence/direction/hour/dow/adx/regime_weight, within leg). This is the first test of whether the
+  catalog''s decision-time signals add a take/skip edge; the control arm makes "the features add something" the claim, not "a
+  model beats the prior". A PASS is the first M23 result that could reach a shadow head; a FAIL closes the test-results route for
+  these two families on these columns and leaves the live-label route (ML-LABEL-WALL).'
+ml_consumer:
+  consumer: AI-TRADER-PROGRAMME
+  decision: whether a within-family meta-label head on catalog features is worth a shadow registration (M23 P4 proposal, Tier-3); nothing serves a take/skip head today
+  legs:
+  - trend_donchian
+  - trend_donchian_eth
+  - trend_donchian_sol
+  - ada_pullback_2h
+  - xrp_pullback_2h
+  book: money
+power:
+  expected_n: 3000
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Unit = out-of-sample test trade within a family. ESTIMATE before the run, from corpus SIZE only (no outcome read): the 365 d
+    build of the same legs gave 72-157 trades per trend leg and 19 per 2h pullback leg; the 1,825 d build logged ada_pullback_2h n=333
+    and avax_pullback_2h n=379. ~60% of a family''s rows fall in test folds at min_train_frac 0.4. d=0.1 needs 785 test trades per
+    family; trend_donchian (12 legs) should clear it, pullback (7 legs) is borderline. A family under 300 rows reads INDETERMINATE.'
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Fixed history (binance_vision 2021-11 to 2026-11); nothing accrues. Equity / futures legs are NOT in the corpus: their
+      harness fetch failed in the authoring sandbox (no broker data source), so this unit says nothing about them.
+decision_rule:
+  id: RULE-RQ20261111-3A23-01-M23-WIDE-WITHIN-FAMILY
+  registered_at: '2026-11-11'
+  registered_before_run: true
+  statistic: 'scripts/research/ledger_metalabel.py --mode classify --group-by family: per family, numpy_logit arm (prior as reference),
+    4 purged expanding walk-forward folds, embargo 5 trades, min_train_frac 0.4. auc_minus_prior = fold-mean AUC on won (net_r > 0)
+    minus 0.5 with a paired t-interval over folds; selection_lift_r = mean net_r of test trades scored above the TRAIN-fold 20th
+    percentile minus mean net_r of all test trades (net of fee + slippage + funding, harness value); control_lift_r = the same lift
+    from the same arm on the control set (confidence, direction_long, + the same leg one-hots).'
+  rule: 'PASS IF for at least one family: auc_minus_prior mean >= 0.05 with its 95% interval lower bound > 0, AND selection_lift_r
+    mean >= 0.05 R, AND selection_lift_r > control_lift_r. Action on PASS: file the M23 P4 shadow-registration proposal (Tier-3 note
+    on the owning row) plus a backtest-vs-live parity check for that family. FAIL IF every evaluated arm''s AUC interval contains 0.5
+    on every family: the catalog''s decision-time columns carry no within-family take/skip signal for crypto trend/pullback; close the
+    test-results route for these families on these columns. INDETERMINATE otherwise, or when a family has n < 300 (it is then not
+    evaluated) or an arm is unavailable. Thresholds are not changed after any result.'
+  min_n: 300 trades per family; 3 usable folds.
+  what_it_does_not_do: 'Trains or registers no served model; touches no config, roster or sizing (Tier-3). Uses harness net_r, not
+    live fills. mae_r and mfe_r are post-entry and are NOT features. Drops 9d20-04''s max-drawdown leg of the rule (the driver does
+    not compute it); the lift is the net-of-cost criterion. Says nothing about equity/futures families or squeeze/fade/ict_scalp
+    (their harnesses do not emit the f_* columns yet).'
+intervention_controls:
+  not_applicable: an offline meta-label test on committed backtest ledgers, not an in-trade action
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 5
+  basis: 'Estimate from RQ-20261014-9d20-02 (~90 s, 12 legs, logit arm) times two arms (wide + control).'
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.25
+  basis: 'stand-in carried from 9d20-04: a 0.05 R per-trade skip lift across the real-money crypto books; not a measured P&L'
+run:
+  command:
+  - python3
+  - scripts/research/ledger_metalabel.py
+  - --mode
+  - classify
+  - --group-by
+  - family
+  - --ledgers
+  - comms/strategy_evidence/research_emits/2026-11-11/*__trades.jsonl
+  - --target
+  - won
+  - --features
+  - wide
+  - --control-features
+  - confidence,direction_long
+  - --learners
+  - prior,numpy_logit
+  - --min-leg-n
+  - '300'
+  - --folds
+  - '4'
+  - --embargo
+  - '5'
+  - --min-train-frac
+  - '0.4'
+  - --skip-quantile
+  - '0.2'
+  - --auc-gain
+  - '0.05'
+  - --lift-r
+  - '0.05'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261111-3a23-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+practice_precedent: 'M6 (docs/reference/trading-and-model-practice-principles.md): purged, embargoed walk-forward CV; the control arm
+  is the strongest simple feature set (confidence), not only the class prior.'
+related:
+- RQ-20261014-9d20-04
+- RQ-20261014-9d20-02
+- METALABEL-EMIT-FEATURES
+- SIGNAL-CATALOG
+- docs/research/M23-meta-labeling-DESIGN.md
+- docs/reference/signal-catalog.yaml
+last_dispatched_at: null
