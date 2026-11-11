@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Edits 284 EXISTING research/queue units (a 3-line evidence_class block inserted before decision_rule:, no other byte changed: 880 insertions, 0 deletions across 291 files). R5 vouches only the dispatch stamp on existing units, so the manager merges. Every stamp is derived from a structured field by scripts/research/backfill_evidence_class.py (rules T1-T6, E1-E2, H1-H2, M1, P1 in its docstring); nothing was read from a result. Revert: git revert.",
+  "why": "EVIDENCE-CLASS-BACKFILL: templates carry evidence_class for new units (queue_replenish.render copies it); past passes since 2026-10-12 stamped where the design is fixed by argv/workflow. Census after: 382 registered passes, 55 unknown (14.4%, was 314 = 82%), held-out 83. No gate, runtime or config change."
+}

@@ -15,6 +15,8 @@ from src.web.api.routers import accounts as accounts_router
 from src.web.api.routers import alerts as alerts_router
 from src.web.api.routers import wake_toggles as wake_toggles_router
 from src.web.api.routers import allocator as allocator_router
+from src.web.api.routers import brackets_history as brackets_history_router
+from src.web.api.routers import performance_categories as performance_categories_router
 from src.web.api.routers import attribution as attribution_router
 from src.web.api.routers import auth as auth_router
 from src.web.api.routers import auth_google as auth_google_router
@@ -60,6 +62,7 @@ from src.web.api.routers import trade_scores as trade_scores_router
 from src.web.api.routers import trades_closed as trades_closed_router
 from src.web.api.routers import training_center as training_center_router
 from src.web.api.routers import work as work_router
+from src.web.api.routers import work_ledger as work_ledger_router
 from src.web.api.routers import work_items as work_items_router
 
 # UI-UPGRADE-1-AUTH: the whole-site gate is an APP-LEVEL dependency (so it covers
@@ -136,6 +139,8 @@ app.include_router(exit_interval_router.router)
 app.include_router(exposure_router.router)
 app.include_router(pairs_router.router)
 app.include_router(prop_router.router)
+app.include_router(brackets_history_router.router)
+app.include_router(performance_categories_router.router)
 app.include_router(reports_router.router)
 app.include_router(roadmap_router.router)
 app.include_router(research_catalog_router.router)
@@ -144,6 +149,7 @@ app.include_router(runtime_config_router.router)
 app.include_router(learning_router.router)
 app.include_router(market_ws_router.router)
 app.include_router(work_router.router)
+app.include_router(work_ledger_router.router)
 app.include_router(work_items_router.router)
 
 

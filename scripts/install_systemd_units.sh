@@ -122,6 +122,20 @@ for unit_path in deploy/*.service deploy/*.timer; do
 
     target="$SYSTEMD_DIR/$unit_name"
 
+    # A MASKED unit is a symlink to /dev/null (`systemctl mask`). cmp then
+    # always differs, so every deploy ran `cp` + `chmod 0644` THROUGH the
+    # symlink, i.e. `chmod 0644 /dev/null`: non-root loses write on /dev/null
+    # and every `>/dev/null` fails until ict-devnull-guard heals it (<= 60 s).
+    # MEASURED 2026-11-11 (ict-git-sync journal, 18 deploys in ~23 h): the two
+    # gateway timers masked at the Ampere cutover were re-copied on 18 of 18,
+    # 17 followed within 2 s by "/dev/null not writable"; the guard logged
+    # "chmod 0666 /dev/null (was 644)". Row VM-DEVNULL-PERM. A masked unit is
+    # an operator decision: leave it alone.
+    if [ -L "$target" ] && [ "$(readlink "$target")" = "/dev/null" ]; then
+        echo ">>> install_systemd_units: skip $unit_name (masked: symlink to /dev/null)"
+        continue
+    fi
+
     if [ ! -e "$target" ] || ! cmp -s "$unit_path" "$target"; then
         echo ">>> install_systemd_units: $unit_name → $target"
         "${SUDO[@]}" cp "$unit_path" "$target"
