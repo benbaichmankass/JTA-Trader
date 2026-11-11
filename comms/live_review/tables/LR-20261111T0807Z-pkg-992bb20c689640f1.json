@@ -1,0 +1,127 @@
+{
+  "biases": [
+    "stop fills at the stop price (a gap fills at the open): flatters every tighten, so the real cost of tightening is, if anything, larger",
+    "the original trail path is not recorded: on the recorded exit bar a touched tightened stop is taken as hit (SL-first)",
+    "live peak_r is a lower bound on true MFE",
+    "one leg, one window, i.i.d. trades; parameter selection on the window is not undone"
+  ],
+  "bounds_r": {
+    "auto_apply": 0.25,
+    "shadow": 0.5
+  },
+  "candles": "/data/bot-data/data/ltr_candles/SOLUSDT_4h.csv",
+  "corpus": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_sol_4h__trades.jsonl",
+  "leg": "trend_donchian_sol_4h",
+  "n_floor": 20,
+  "options": [
+    {
+      "action": "hold",
+      "mean_r": 1.0533,
+      "n": 32,
+      "n_floor": 20,
+      "p05_r": -1.1105,
+      "p_giveback_gt_half": 0.4375,
+      "sd_r": 2.063,
+      "state": "measured",
+      "worst_r": -1.1852
+    },
+    {
+      "action": "tighten",
+      "ev_cost_r": 0.8247,
+      "ev_cost_se_r": 0.3251,
+      "mean_r": 0.2287,
+      "n": 32,
+      "n_floor": 20,
+      "p05_r": -0.4495,
+      "p_giveback_gt_half": 0.6875,
+      "sd_r": 0.6064,
+      "spec": "atr:1.0",
+      "state": "measured",
+      "stop_at_r_now": -0.1223,
+      "within_auto_bound": false,
+      "within_shadow_bound": false,
+      "worst_case_gain_r": 0.4506,
+      "worst_r": -0.7346
+    },
+    {
+      "action": "tighten",
+      "ev_cost_r": 0.797,
+      "ev_cost_se_r": 0.3054,
+      "mean_r": 0.2563,
+      "n": 32,
+      "n_floor": 20,
+      "p05_r": -0.5649,
+      "p_giveback_gt_half": 0.5938,
+      "sd_r": 0.7409,
+      "spec": "atr:1.5",
+      "state": "measured",
+      "stop_at_r_now": -0.4556,
+      "within_auto_bound": false,
+      "within_shadow_bound": false,
+      "worst_case_gain_r": 0.4506,
+      "worst_r": -0.7346
+    },
+    {
+      "action": "tighten",
+      "ev_cost_r": 0.5899,
+      "ev_cost_se_r": 0.2773,
+      "mean_r": 0.4635,
+      "n": 32,
+      "n_floor": 20,
+      "p05_r": -0.7113,
+      "p_giveback_gt_half": 0.5312,
+      "sd_r": 1.1336,
+      "spec": "atr:2.0",
+      "state": "measured",
+      "stop_at_r_now": -0.7889,
+      "within_auto_bound": false,
+      "within_shadow_bound": false,
+      "worst_case_gain_r": 0.4354,
+      "worst_r": -0.7498
+    },
+    {
+      "action": "close",
+      "ev_cost_r": 1.2097,
+      "ev_cost_se_r": 0.3651,
+      "mean_r": -0.1563,
+      "n": 32,
+      "n_floor": 20,
+      "p05_r": -0.1868,
+      "p_giveback_gt_half": 1.0,
+      "sd_r": 0.016,
+      "spec": "close",
+      "state": "measured",
+      "within_auto_bound": false,
+      "within_shadow_bound": false,
+      "worst_case_gain_r": 0.9807,
+      "worst_r": -0.2045
+    }
+  ],
+  "population": {
+    "beyond_bars_slack": 0,
+    "comparable": 32,
+    "corpus_trades": 116,
+    "mfe_replay_mismatch": 0,
+    "never_reached_peak": 13,
+    "no_candles": 0,
+    "no_pullback_after_peak": 0,
+    "side_excluded": 71,
+    "side_filter": "short",
+    "symbol_excluded": 0,
+    "symbol_filter": null,
+    "symbols": [
+      "SOLUSDT"
+    ]
+  },
+  "read_state": "measured",
+  "state": {
+    "atr_stop_mult": 1.5,
+    "bars_held": 5,
+    "condition": "peak",
+    "dist_to_stop_atr": null,
+    "dist_to_target_atr": null,
+    "open_r": -0.1146,
+    "peak_r": 0.5444,
+    "side": "short"
+  }
+}
