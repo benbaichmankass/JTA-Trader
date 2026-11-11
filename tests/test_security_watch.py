@@ -59,7 +59,9 @@ def test_failure_burst_threshold():
 
 def test_unreadable_journal_is_not_zero_and_alerts_after_three_runs():
     s, _ = w.run_ssh({}, 1e9, _reader([OK]), _admit_all, "vm")
-    blind = lambda since: (None, "could_not_look: rc=1")
+    def blind(since):
+        return None, "could_not_look: rc=1"
+
     out = []
     for i in range(w.BLIND_AFTER):
         s, alerts = w.run_ssh(s, 1e9 + 300 * (i + 1), blind, _admit_all, "vm")
