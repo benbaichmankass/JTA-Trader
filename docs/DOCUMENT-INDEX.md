@@ -549,6 +549,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/design/alpaca-trade-scoped-close-PROPOSAL.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/b6-split-packet-2026-08-29.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/boot-read-size-PROPOSAL.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
+| `docs/design/site-auth-consumer-inventory-2026-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/ui-workplan-2026-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | UI workplan 2026-11: design for OAuth sign-in enforcement, prop/chart bracket history, performance table + P&L chart, insights ledger, models/strategies tables, sidebar, topic map |
 | `docs/design/close-confirmation-scope-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/design/d1b-live-time-stop-PROPOSAL.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
