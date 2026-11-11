@@ -337,7 +337,7 @@ def run(a: argparse.Namespace) -> dict[str, Any]:
     verdict = res["verdict"] if measured else "indeterminate"
     h, dd = res["held_out"], res["discovery"]
 
-    def fmt(v: Optional[float], p: int = 4) -> str:
+    def fmt(v: float | None, p: int = 4) -> str:
         return "—" if v is None else f"{v:+.{p}f}"
 
     note = (f"{verdict.upper()}: {res['why']}. target={a.target}, bar={a.bar}, h={a.horizon} bar(s). "
