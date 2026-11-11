@@ -1,0 +1,126 @@
+# Hand-authored 2026-11-11 by lane ALPACA-LIVE-BOOK-PLAN (Manager Session 2026-11-11a dispatch; operator ask 2026-11-11 ~22:40Z). Programme P8
+# (research/programmes/08-alpaca-live-book.yaml). Rule registered before any run; thresholds never change after a result.
+id: RQ-20261111-207f-02
+title: 'ALPACA-LIVE BOOK / Foxhound-4 DIAGNOSE + ITERATE (P8-Q2): is tau 0.25 calibrated to the score distribution, and does a registered selection policy (tau 0.15/0.20/0.30,
+  top-1 or top-3 per close, a causal adaptive tau) earn more per month on the live book?'
+status: queued
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml_health
+priority: 1
+kind: experiment
+programme: P8
+question: 'Live, Foxhound-4 has never produced a package: today''s max pool score is +0.016 against tau 0.25 (manager dispatch 2026-11-11). On its own history the selected
+  tau''s trade rate fell ~4x from dev to confirm (dev tau 0.25: 1691 trades / ~30 months; confirm: 207 / ~15.5 months, 75 in 2026-03), while the confirm mean (+0.49 R) is ~3.7x
+  the dev mean (+0.132 R): the score LEVEL moves with the regime, so a fixed tau trades in clusters. On the dev walk-forward: (a) per fold, the score quantiles and the share
+  of decisions and of trading days whose max score clears each tau in {0..0.40}; (b) on the live book, does any of 6 registered alternatives -- tau 0.15, 0.20, 0.30, top-1
+  per close with score > 0, top-3 per close with score > 0, and a causal adaptive tau (99.5th pct of the prior 30 days'' pool scores, floored at 0) -- beat tau 0.25?'
+why_this_matters: 'The account holds one position; what it needs from the model is the BEST candidate when the slot is free, which a fixed absolute threshold on a drifting
+  score does not deliver. A rank or adaptive rule is invariant to the score level. Prior tau reads on this family (98e3-03 single-seed: tau 0.20 +0.083 n 3191, 0.25 +0.109
+  n 1943, 0.30 +0.197 n 1122, 0.40 +0.204 n 342; fold 3 negative at every tau) were per-trade, never per book-month.'
+power:
+  expected_n: 30
+  min_detectable_effect: 0.5
+  effect_units: sd
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: Unit = dev month (paired book-month difference vs tau 0.25, ~30 months 2023-01..2025-06). 30 pairs detect ~0.5 sd of the monthly difference; the 6 draws deflate the
+    bar (holdout_lock.bar_for(6).point_t_min = 1.3001).
+  feasibility:
+    source: none
+    accrual_basis: Replays Alpaca 1h RTH history 2021-01-01..2025-06-30; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261111-207f-02-CALIB-POLICY
+  registered_at: '2026-11-11'
+  registered_before_run: true
+  statistic: 'scripts/research/alpaca_live_book.py foxhound --section calib: dev OOF scores of the 5-seed ensemble; per fold q50/q90/q99/q99.9/max and share > tau for tau in
+    {0,.05,...,.40}; share of dev trading days whose max score <= 0.25; per policy (the 9-tau grid + the 6 alternatives) trade_stats and the live-book replay; per alternative
+    the paired monthly return difference vs tau 0.25 (mean, se, t).'
+  rule: 'INDETERMINATE IF the tau-0.25 book n_taken < 30 AND no alternative clears. PASS IF at least one of the 6 registered alternatives has book n_taken >= 30 AND paired
+    mean monthly return difference vs tau 0.25 >= +0.25 %/month AND paired t >= holdout_lock.bar_for(6).point_t_min (1.3001) AND trade-level dev mean net R > 0 in >= 3 of 5
+    folds; the best clearing alternative is the lead. FAIL otherwise. Report-only: the score distribution and the share of dev days with max score <= 0.25 (if >= 0.5, a no-package
+    week live is inside the model''s own dev behaviour, not a fault).'
+  on_pass: 'The lead policy is a LEAD, not a change: author its confirmation on in-hand data not yet used for selection (node P8-Q2-pass: the frozen ensemble''s forward bars
+    after 2026-10-31 with the policy fixed, plus a disjoint pre-2023 window) before any Tier-3 proposal.'
+  on_fail: tau 0.25 is not beaten by these 6 selection rules on the book; selection is not the lever. The iteration moves to the label (207f-03) and the feature/pool families
+    (nodes P8-Q5, P8-Q6), not to more taus.
+  what_it_does_not_do: No config change; tau 0.25 stays live. Loads no confirming-window row. The 9-tau grid outside the 6 registered alternatives is descriptive and never
+    selects.
+  min_n: 30 trades on the tau-0.25 book or on the clearing alternative
+evidence_class:
+  holdout: walk_forward
+  claim: edge
+practice_precedent: M13, M6 (beat simple-rule baselines at the same decision points); count every comparison (6 registered draws, deflated bar) -- docs/reference/trading-and-model-practice-principles.md
+intervention_controls:
+  not_applicable: a selection / label / sizing replay of entry decisions on history, not an active-management action on live check-ins; the declared live leg (tau 0.25 on the
+    net-R label) is the control arm
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 130
+  why_runner: Alpaca 1h bars (read-only paper key, research-script-run) + LightGBM 5-seed ensemble fits; 4 vCPU / 16 GB runner; no trainer data.
+  basis: 'INFERRED from RQ-20261107-98e3-03 (dev table + 4 single-seed grid draws: runtime 6166 s) and 98e3-06 (ensemble dev + confirm, est 150 min).'
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 70
+  confidence: 0.4
+  basis: stand-in decision value for the real-money leg's selection rule (account $194.52).
+run:
+  command:
+  - python3
+  - scripts/research/alpaca_live_book.py
+  - foxhound
+  - --cache
+  - /tmp/ml_entry_equity
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --section
+  - calib
+  - --rule-id
+  - RULE-RQ20261111-207f-02-CALIB-POLICY
+  - --registered-at
+  - '2026-11-11'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261111-207f-02
+ml_consumer:
+  consumer: src/runtime/ml_pool_scoring.py
+  decision: (the pool picks that feed ml_entry_eq_struct, config/strategies.yaml) whether ml_entry_eq_struct's selection rule (tau / top-k / adaptive), training label or book
+    filter is changed (Tier 3, operator) on alpaca_live + alpaca_portfolio, or a challenger replaces it
+  legs:
+  - ml_entry_eq_struct
+  book: money
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+population: 'The registered POOL_RULE of scripts/research/ml_entry_alpaca_score.py, UNCHANGED (sha256 e9702661...; the module refuses to run if it differs): active, tradable
+  us_equity ETFs with median daily dollar volume >= 50M USD over 2019-2020 (173 at the 98e3-06 run). DEV rows only (<= 2025-06-30); bars are fetched only to 2025-06-30, so
+  no confirming-window row (2025-07-15.., read 3x in ledger family ENTRY-EQ) is loaded.'
+related:
+- RQ-20261107-98e3-03
+- RQ-20261107-98e3-06
+- RQ-20261111-207f-01
+iteration:
+  subject: ml-entry-eq-struct
+  subject_kind: ml_model
+  from_result: RQ-20261107-98e3-06
+  verdict_read: pass_unconfirmed
+  diagnosis: 'The live score sits far below tau (max +0.016 vs 0.25) and the confirm window traded 4x less often than dev at a 3.7x higher mean: the score level drifts with
+    regime and a fixed tau turns a ranking model into a clustered on/off switch. Selection on a one-slot book is the untested lever family.'
+  search: 'selection rule: tau grid, top-k per decision close, causal adaptive threshold -- scored per book-month on the live account'
+  levers:
+  - threshold
+  - calibration
+  map_entries:
+  - research/levers/ml-entry-eq-struct.yaml
+  attempt: 1
+  due_by: '2026-11-18'
