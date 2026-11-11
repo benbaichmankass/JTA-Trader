@@ -1333,6 +1333,11 @@ accounts:
                                        # (needs risk_pct→~1.5% + real-venue revalidation).
       # 2026-10-27 DEMO-FLOOR RULE (Tier-3, operator "Yes, that's the rule"): only uso_trend_1h is added: qqq/spy/tlt_pullback_1h share a symbol with a 1d leg on this non-slice account and stay off until an allocation record or slices exist.
       - uso_trend_1h
+      # 2026-11-11 THURSDAY-PLANNING b1 (Tier-3; OPERATOR, decision doc 21:28-21:41Z, verbatim choice "Put qqq and tlt on the paper floor now;
+      # promote tlt to real money"): qqq_pullback_1h back on the demo floor. QQQ is shared with qqq_trend_long_1d + ml_entry_eq: the split is the
+      # allocation record comms/same_symbol_allocation/qqq-alpaca_paper.json (refreshed). tlt_pullback_1h's real-money promotion is row
+      # PROMOTE-TLT-1H-REAL-MONEY (its Stage-0 record must carry the holdout confirmation first); it stays off general paper (three statuses). ROLLBACK: delete the next line and restore the record's 2-leg form.
+      - qqq_pullback_1h
       # 2026-10-27 DESK-PAPER-ACCOUNTS (Tier-3, PAPER; operator verbatim, chat ~15:58Z: "I do want to have the desk
       # live on the other paper accounts as well, so Alpaca and IB."): the Claude desk leg, scoped to
       # strategies.yaml::claude_desk.account_symbols.alpaca_paper (SPY, QQQ, IWM, GLD, TLT). This account has no slice

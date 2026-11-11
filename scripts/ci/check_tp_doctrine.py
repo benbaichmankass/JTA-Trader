@@ -268,6 +268,10 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     "alpaca_paper/gdx_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "alpaca_paper/ief_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "alpaca_paper/iwm_trend_long_1d": R,
+    # 2026-11-11 THURSDAY-PLANNING b1 (operator "Put qqq and tlt on the paper floor now"): qqq_pullback_1h returns to the demo
+    # floor with the debt it carried before its 10-05 cut (tp_r 50 sentinel, tp_intent none). A visible, deliberate line; the real-TP
+    # test is RQ-20261104-7fdb-01 (tp_r 2/3/4/6) and a PASS replaces this line.
+    "alpaca_paper/qqq_pullback_1h": ER,
     "alpaca_paper/qld_trend_long_1d": ER,
     "alpaca_paper/qqq_trend_long_1d": R,
     "alpaca_paper/scha_trend_long_1d": R,
