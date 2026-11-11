@@ -22,6 +22,17 @@ must satisfy comms/schema/live_review.schema.json. The rules the schema cannot s
   to bound); a `tighten_sl` row names its `evidence_source`; an `auto_applied` row needs
   `mechanics.verdict == match`. `insufficient_n` + `no_recommendation` stays valid (the
   reviewer may decline to make a call), and is still never hold.
+* trigger (operator 2026-10-26, GLD re-reviewed ten times): from 2026-10-27 a row whose trigger names a due
+  event carries that event's level (a string for mechanics/swing/...), and `manual` carries none.
+* the `review_id` ends with the row's own `order_package_id` (a row whose id names another package is
+  a corrupted write).
+* LTR-ALL-ACTIONS (operator 2026-10-26, MD-TRADE-DESK, verbatim "as long as they have
+  reasoning and confidence attached"): a trade action (close / partial_close / move_tp /
+  widen_sl / change_size / add_entry) carries a non-empty `reason`, an `evidence_source` of
+  `table` (with `ev_delta_r`) or `judgement` (with `judgement_confidence`), and its own target --
+  move_tp / widen_sl a `level`, partial_close a `size_fraction` in (0, 1), change_size a
+  `size_multiplier` > 0 and != 1, add_entry a `size_fraction` > 0 -- and no target it does not
+  use. A trade action that names no target is refused: there is nothing to apply or to grade.
 
 Canonical source: trade_journal.db order_packages / trades, joined on `order_package_id`.
 Files are append-only and start empty; a leading {"_meta": ...} line is skipped.
@@ -93,11 +104,169 @@ def _check(v, spec: dict, enums: dict, path: str, out: list) -> None:
             _check(x, spec["items"], enums, f"{path}[{i}]", out)
 
 
+#: Manager 2026-10-26 ~12:37Z (finding #20322): every real-money review that day
+#: ended no_recommendation + insufficient_n, so the operator's 06:30Z "Claude's
+#: judgement applies" produced no graded calls. From this instant a real-money or
+#: prop row must carry a call (hold / tighten_sl, judgement-backed on a thin cell);
+#: earlier rows are history and are not re-graded.
+MONEY_CLASSES = ("real_money", "prop")
+MONEY_CALL_RULE_FROM = "2026-10-26T12:40:00Z"
+
+
+def money_call_problems(row: dict) -> list[str]:
+    """The no-silent-escape rule for real-money / prop rows (empty for paper or older rows)."""
+    money = any(str((a or {}).get("account_class") or "").lower() in MONEY_CLASSES
+                for a in row.get("account_reads") or [])
+    if not money or str(row.get("reviewed_at") or "") < MONEY_CALL_RULE_FROM:
+        return []
+    rec = row.get("recommendation") or {}
+    basis, action = rec.get("basis"), rec.get("action")
+    reason = str(rec.get("reason") or "").strip()
+    out = []
+    if basis in ("insufficient_n", "default_hold"):
+        out.append(f"real-money/prop row: basis {basis} is refused; make a call (hold / tighten_sl with "
+                   "basis judgement + judgement_confidence + reason) or record could_not_look")
+    if action == "no_recommendation" and not (basis == "could_not_look" and reason):
+        out.append("real-money/prop row: no_recommendation requires basis could_not_look and a reason")
+    if action == "hold" and basis not in ("ev_positive", "judgement"):
+        out.append("real-money/prop row: hold requires basis ev_positive (measured cell) or judgement")
+    return out
+
+
+#: LTR-ALL-ACTIONS (MD-TRADE-DESK, operator 2026-10-26): the trade actions beyond a tighten.
+#: ``tp_revise`` stays the legacy (operator-ask) spelling and is not graded here as a trade action.
+TRADE_ACTIONS = ("close", "partial_close", "move_tp", "widen_sl", "change_size", "add_entry")
+_TARGETS = {"close": (), "partial_close": ("size_fraction",), "move_tp": ("level",), "widen_sl": ("level",),
+            "change_size": ("size_multiplier",), "add_entry": ("size_fraction",)}
+
+
+def trade_action_problems(rec: dict) -> list[str]:
+    """Reason + confidence (or table basis) + the action's own target, for every trade action."""
+    act = rec.get("action")
+    if act not in TRADE_ACTIONS:
+        return [f"{k} is set but {act} takes no {k}" for k in ("size_fraction", "size_multiplier")
+                if rec.get(k) is not None]
+    out = []
+    if not str(rec.get("reason") or "").strip():
+        out.append(f"{act} requires a reason (operator: reasoning and confidence attached)")
+    src = rec.get("evidence_source")
+    if src == "judgement":
+        if not _is_num(rec.get("judgement_confidence")):
+            out.append(f"{act} on judgement requires a judgement_confidence in [0, 1]")
+    elif src == "table":
+        if not _is_num(rec.get("ev_delta_r")):
+            out.append(f"{act} on a table basis requires ev_delta_r")
+    else:
+        out.append(f"{act} requires evidence_source table or judgement (got {src!r})")
+    want = _TARGETS[act]
+    for k in ("level", "size_fraction", "size_multiplier"):
+        v = rec.get(k)
+        if k in want:
+            if not _is_num(v) or v <= 0:
+                out.append(f"{act} requires {k} > 0")
+        elif v is not None and k != "level":
+            out.append(f"{k} is set but {act} takes no {k}")
+    sf, sm = rec.get("size_fraction"), rec.get("size_multiplier")
+    if act == "partial_close" and _is_num(sf) and not 0 < sf < 1:
+        out.append("partial_close size_fraction must be in (0, 1) (a full exit is close)")
+    if act == "change_size" and _is_num(sm) and sm == 1:
+        out.append("change_size size_multiplier 1 changes nothing")
+    if act == "close" and rec.get("level") is not None:
+        out.append("close takes no level (it exits at market)")
+    return out
+
+
+#: Operator 2026-10-26 (a wedged GLD package was re-reviewed ten times): the due dedupe keys on
+#: the trigger's (event, level), so a row that answers a due event must carry the level the due
+#: packet gave. Earlier rows are history (they carry a null level and the due side infers it).
+DUE_EVENTS = ("r_milestone", "new_peak", "giveback", "near_target", "daily_floor",
+              "swing", "vol_regime", "funding", "calendar", "mechanics",
+              "adverse_r", "stall", "momentum_flip", "structure_break", "mandate_cadence",
+              "judgement_cadence")
+TRIGGER_LEVEL_RULE_FROM = "2026-10-27T00:00:00Z"
+
+
+def trigger_problems(row: dict) -> list[str]:
+    if str(row.get("reviewed_at") or "") < TRIGGER_LEVEL_RULE_FROM:
+        return []
+    trig = row.get("trigger") or {}
+    event, level = trig.get("event"), trig.get("level")
+    if event in DUE_EVENTS and level is None:
+        return [f"trigger.event {event} names a due event but no level (copy event AND level from the wake entry)"]
+    if event == "mechanics" and not isinstance(level, str):
+        return ["trigger.event mechanics needs its string level (venue_sl_diverges / journal_trade_absent)"]
+    if event == "manual" and level is not None:
+        return ["trigger.event manual takes no level (a level means this answers a due event: name that event)"]
+    return []
+
+
+#: DESK-AM-REFOCUS (2026-10-30, docs/research/desk-am-refocus-diagnosis-2026-10-30.md): over the 240
+#: rows to 2026-10-30 no reason stated an expectation ("expect" 0, "will" 0), so no call could be
+#: falsified on its own terms. From this instant a JUDGED row (a call argued from the market, i.e. basis
+#: judgement / ev_positive / preference_within_bound) carries a ``forecast``: thesis, direction relative
+#: to the trade, target and invalidation prices, p_target and a horizon. The short-hold lane
+#: (trigger.event short_hold, its own 5m-bar brief) is exempt; it may still carry one.
+FORECAST_RULE_FROM = "2026-10-31T00:00:00Z"
+FORECAST_BASES = ("judgement", "ev_positive", "preference_within_bound")
+
+
+def forecast_problems(row: dict) -> list[str]:
+    fc = row.get("forecast")
+    rec = row.get("recommendation") or {}
+    out: list[str] = []
+    if fc is None:
+        if (str(row.get("reviewed_at") or "") >= FORECAST_RULE_FROM
+                and rec.get("basis") in FORECAST_BASES
+                and (row.get("trigger") or {}).get("event") != "short_hold"):
+            out.append(f"a judged row (basis {rec.get('basis')}) needs a forecast: thesis, direction, target_px, "
+                       "p_target, invalidation_px, horizon_bars, timeframe (REVIEWER-BRIEF section 2b)")
+        return out
+    if not isinstance(fc, dict):
+        return out  # the schema check already named the type
+    tgt, inv = fc.get("target_px"), fc.get("invalidation_px")
+    if _is_num(tgt) and _is_num(inv) and tgt == inv:
+        out.append("forecast.target_px equals forecast.invalidation_px (a forecast needs two different prices)")
+    return out
+
+
+#: PACKET-HEALTH (operator 2026-11-05 ~08:25Z, "we need to make sure the lanes know how to report when something is wrong with
+#: the review packet, like missing live data"). Precedent failure: LR-20261105T0700Z-pkg-b76b0655d305485e, every tighten option
+#: unpriced (no_candles / invalid_level), recorded `hold`, and the packet defect never reported. Keyed on the COMMITTED PACKET's
+#: computed ``packet_health`` (a packet from an older generator has none and is not checked) and grandfathered by reviewed_at,
+#: so the ~120 older rows are untouched. The defect is REPORTED, never a reason to withhold the call.
+PACKET_DEFECTS_RULE_FROM = "2026-11-05T12:00:00Z"
+
+
+def packet_defect_problems(row: dict, packet: dict) -> list[str]:
+    if str(row.get("reviewed_at") or "") < PACKET_DEFECTS_RULE_FROM:
+        return []
+    ph = packet.get("packet_health") if isinstance(packet, dict) else None
+    if not isinstance(ph, dict) or ph.get("status") == "ok":
+        return []
+    flags = [str(f) for f in row.get("context_flags") or []]
+    listed = [d for d in row.get("packet_defects") or [] if isinstance(d, dict)]
+    out = []
+    for d in ph.get("defects") or []:
+        f = str(d.get("field"))
+        named = any(x.get("field") == f for x in listed) or any(f in fl and "packet_defect" in fl for fl in flags)
+        if not named:
+            out.append(f"packet_health is {ph.get('status')} and defect {d.get('reason')!r} at {f!r} "
+                       f"({d.get('count')}/{d.get('denominator')}) is not reported: add it to `packet_defects` or a "
+                       f"context_flags entry 'packet_defect: {f} ...' (REVIEWER-BRIEF section 2d); the call is still made")
+    if not (ph.get("defects") or []) and not listed and not any("packet_defect" in fl for fl in flags):
+        out.append(f"packet_health is {ph.get('status')} with no defect listed: record `packet_defects` or a "
+                   "'packet_defect: ...' context_flags entry")
+    return out
+
+
 def row_problems(row: dict, kind: str, schema: dict) -> list[str]:
     out: list[str] = []
     _check(row, schema[kind], schema["enums"], kind, out)
     if out or kind != "reviews":
         return out
+    # 2026-10-26: LR-...-pkg-6a8e... was written carrying pkg-465a...'s body; the id must name its own package.
+    if not str(row["review_id"]).endswith("-" + str(row["order_package_id"])):
+        out.append(f"review_id {row['review_id']} does not end with its order_package_id {row['order_package_id']}")
     st, ap, sh, rec, disp = row["state"], row["apply_policy"], row["shadow_policy"], row["recommendation"], row["disposition"]
     if st["peak_provenance"] in ("unverified", "fabricated") and st["peak_r"] == 0:
         out.append("state.peak_r: 0 with unverified/fabricated provenance (unmeasured must be null)")
@@ -137,6 +306,12 @@ def row_problems(row: dict, kind: str, schema: dict) -> list[str]:
         out.append("evidence_source judgement requires basis judgement")
     if src == "table" and rec["basis"] == "insufficient_n":
         out.append("evidence_source table contradicts basis insufficient_n")
+    if rec["basis"] == "could_not_look" and not str(rec.get("reason") or "").strip():
+        out.append("basis could_not_look requires a reason")
+    out += trade_action_problems(rec)
+    out += money_call_problems(row)
+    out += trigger_problems(row)
+    out += forecast_problems(row)
     accts = [a["account_id"] for a in row["account_reads"]]
     if len(accts) != len(set(accts)):
         out.append("account_reads names an account more than once")
@@ -154,8 +329,54 @@ def packet_problems(row: dict, packets: Path) -> list[str]:
     f = packets / f"{row.get('review_id')}.json"
     if not f.exists():
         return [f"packet_sha set but {f.name} is missing from comms/live_review/packets/"]
-    got = hashlib.sha256(json.dumps(json.loads(f.read_text()), sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-    return [] if got == sha else [f"packet_sha does not match {f.name}"]
+    return packet_blob_problems(row, f.read_bytes())
+
+
+def packet_blob_problems(row: dict, blob: bytes) -> list[str]:
+    """packet_sha against the packet's bytes (the mirror reads them from the rows branch)."""
+    sha = row.get("packet_sha")
+    if not sha:
+        return []
+    try:
+        packet = json.loads(blob)
+        got = hashlib.sha256(json.dumps(packet, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    except ValueError:
+        return [f"packet for {row.get('review_id')} is not JSON"]
+    if got != sha:
+        return [f"packet_sha does not match {row.get('review_id')}.json"]
+    return handoff_problems(row, packet) + packet_defect_problems(row, packet)
+
+
+#: DESK-HANDOFF-PROTOCOL (operator 2026-10-30 ~22:30Z, verbatim "We can lift it completely if we have a protocol
+#: for trade desk hand-offs"). Keyed on the COMMITTED PACKET, not a date: a packet the generator built with a
+#: ``desk_handoff`` block (a desk-opened package) needs a row that confirms / revises / exits the position and
+#: links to the newest record in its chain, so the chain is checked by machine against what the reviewer saw.
+HANDOFF_VERDICTS = ("confirm", "revise", "exit")
+
+
+def handoff_problems(row: dict, packet: dict) -> list[str]:
+    dh = packet.get("desk_handoff") if isinstance(packet, dict) else None
+    if not isinstance(dh, dict):
+        return []
+    ho = row.get("handoff")
+    if not isinstance(ho, dict):
+        return ["a desk-opened package (packet carries desk_handoff) needs `handoff`: {prior_decision_id, verdict "
+                "confirm|revise|exit, reason, read_state} (REVIEWER-BRIEF section 2c)"]
+    out: list[str] = []
+    verdict, action = ho.get("verdict"), (row.get("recommendation") or {}).get("action")
+    if verdict == "revise" and not str(ho.get("reason") or "").strip():
+        out.append("handoff verdict revise needs a reason (what changed against the prior view)")
+    if (verdict == "exit") != (action == "close"):
+        out.append(f"handoff verdict {verdict!r} with action {action!r}: exit <=> close")
+    if dh.get("read_state") == "read":
+        if ho.get("read_state") != "read":
+            out.append("handoff.read_state must copy the packet's desk_handoff.read_state (read)")
+        if ho.get("prior_decision_id") != dh.get("prior_decision_id"):
+            out.append(f"handoff.prior_decision_id {ho.get('prior_decision_id')!r} != the packet's "
+                       f"desk_handoff.prior_decision_id {dh.get('prior_decision_id')!r} (one chain per position)")
+    elif ho.get("read_state") != "could_not_look":
+        out.append("the packet's desk_handoff could not be read: handoff.read_state is could_not_look")
+    return out
 
 
 def _rows(path: Path):
@@ -285,6 +506,66 @@ def _self_test() -> int:
            mut(GOOD_REVIEW, lambda r: r["recommendation"].pop("evidence_source")), "reviews", True)
     expect("table basis applied outside 0.25R is still refused (table path unchanged)",
            mut(GOOD_REVIEW, lambda r: (r["disposition"].update(route="auto_applied"), r.update(applied=True))), "reviews", True)
+    def action(act, **kw):
+        def f(r):
+            judged(r)
+            r["recommendation"].update({"action": act, "level": None, **kw})
+        return f
+    expect("close with reason + confidence passes", mut(GOOD_REVIEW, action("close")), "reviews", False)
+    expect("close without a reason is refused",
+           mut(GOOD_REVIEW, lambda r: (action("close")(r), r["recommendation"].update(reason=" "))), "reviews", True)
+    expect("close without a confidence is refused",
+           mut(GOOD_REVIEW, lambda r: (action("close")(r), r["recommendation"].pop("judgement_confidence"))), "reviews", True)
+    expect("close with no evidence_source is refused",
+           mut(GOOD_REVIEW, lambda r: (action("close")(r), r["recommendation"].update(evidence_source="none"))), "reviews", True)
+    expect("partial_close 0.5 passes", mut(GOOD_REVIEW, action("partial_close", size_fraction=0.5)), "reviews", False)
+    expect("partial_close of 1.0 is refused (that is close)",
+           mut(GOOD_REVIEW, action("partial_close", size_fraction=1.0)), "reviews", True)
+    expect("partial_close without a size is refused", mut(GOOD_REVIEW, action("partial_close")), "reviews", True)
+    expect("move_tp with a level passes", mut(GOOD_REVIEW, action("move_tp", level=2.5)), "reviews", False)
+    expect("move_tp without a level is refused", mut(GOOD_REVIEW, action("move_tp")), "reviews", True)
+    expect("widen_sl with a level passes", mut(GOOD_REVIEW, action("widen_sl", level=0.9)), "reviews", False)
+    expect("change_size 0.5 passes", mut(GOOD_REVIEW, action("change_size", size_multiplier=0.5)), "reviews", False)
+    expect("change_size 1.0 is refused", mut(GOOD_REVIEW, action("change_size", size_multiplier=1.0)), "reviews", True)
+    expect("add_entry 0.5 passes", mut(GOOD_REVIEW, action("add_entry", size_fraction=0.5)), "reviews", False)
+    expect("add_entry with a size_multiplier is refused",
+           mut(GOOD_REVIEW, action("add_entry", size_fraction=0.5, size_multiplier=1.5)), "reviews", True)
+    expect("a size_fraction on a tighten is refused",
+           mut(GOOD_REVIEW, lambda r: r["recommendation"].update(size_fraction=0.5)), "reviews", True)
+    expect("a table-basis close needs ev_delta_r",
+           mut(GOOD_REVIEW, lambda r: r["recommendation"].update(action="close", level=None, reason="x",
+                                                                 evidence_source="table", ev_delta_r=None)), "reviews", True)
+    expect("a table-basis close with ev_delta_r passes",
+           mut(GOOD_REVIEW, lambda r: r["recommendation"].update(action="close", level=None, reason="x",
+                                                                 evidence_source="table", ev_delta_r=0.3)), "reviews", False)
+    def trig(event, level, at="2026-10-27T01:00:00Z"):
+        return lambda r: (r["trigger"].update(event=event, level=level), r.update(reviewed_at=at))
+    expect("a due event with no level is refused", mut(GOOD_REVIEW, trig("mechanics", None)), "reviews", True)
+    expect("a mechanics event with its string level passes",
+           mut(GOOD_REVIEW, trig("mechanics", "venue_sl_diverges")), "reviews", False)
+    expect("a swing event with no level is refused", mut(GOOD_REVIEW, trig("swing", None)), "reviews", True)
+    expect("a manual row naming a level is refused", mut(GOOD_REVIEW, trig("manual", 1)), "reviews", True)
+    expect("a manual row with no level passes", mut(GOOD_REVIEW, trig("manual", None)), "reviews", False)
+    expect("a pre-rule due event with a null level is history, not refused",
+           mut(GOOD_REVIEW, trig("mechanics", None, "2026-10-26T22:16:00Z")), "reviews", False)
+    FC = {"thesis": "4h higher low holds; momentum resumes into the prior swing high", "direction": "with_trade",
+          "target_px": 105.0, "p_target": 0.55, "invalidation_px": 98.5, "horizon_bars": 6, "timeframe": "2h"}
+    def fc_rule(fc, at="2026-10-31T01:00:00Z", event="judgement_cadence", level="2026-10-31T00:00:00+00:00"):
+        return lambda r: (judged(r), r["trigger"].update(event=event, level=level), r.update(reviewed_at=at),
+                          (r.update(forecast=dict(fc)) if fc is not None else None))
+    expect("a judged row after the forecast rule with no forecast is refused",
+           mut(GOOD_REVIEW, fc_rule(None)), "reviews", True)
+    expect("a judged row after the forecast rule with a forecast passes", mut(GOOD_REVIEW, fc_rule(FC)), "reviews", False)
+    expect("a forecast missing p_target is refused",
+           mut(GOOD_REVIEW, fc_rule({k: v for k, v in FC.items() if k != "p_target"})), "reviews", True)
+    expect("a forecast whose target equals its invalidation is refused",
+           mut(GOOD_REVIEW, fc_rule(dict(FC, invalidation_px=105.0))), "reviews", True)
+    expect("a short-hold judged row is exempt from the forecast rule",
+           mut(GOOD_REVIEW, fc_rule(None, event="short_hold", level=1)), "reviews", False)
+    expect("a judged row before the forecast rule needs no forecast",
+           mut(GOOD_REVIEW, fc_rule(None, at="2026-10-30T23:00:00Z")), "reviews", False)
+    expect("a review_id naming another package than the row's is refused",
+           mut(GOOD_REVIEW, lambda r: r.update(order_package_id="pkg-2")), "reviews", True)
     expect("missing account_reads is refused", mut(GOOD_REVIEW, lambda r: r.pop("account_reads")), "reviews", True)
     expect("an account read outside the enum is refused",
            mut(GOOD_REVIEW, lambda r: r["account_reads"][0].update(read="approved")), "reviews", True)
@@ -316,6 +597,26 @@ def _self_test() -> int:
         c = bool(findings(rv, oc))
         print(f"  {'PASS' if c else 'FAIL'}  a bad line is refused")
         ok &= c
+    # PACKET-HEALTH planted controls: degraded + unflagged FAILS; degraded + flagged PASSES; ok PASSES; pre-rule row PASSES.
+    deg = {"packet_health": {"status": "degraded", "defects": [
+        {"field": "priced_options.candles", "reason": "candles_missing", "count": 3, "denominator": 5}]}}
+    late = mut(GOOD_REVIEW, lambda r: r.update(reviewed_at="2026-11-05T13:00:00Z"))
+    for label, rw, pk, bad in (
+            ("a degraded packet with no reported defect is refused", late, deg, True),
+            ("a degraded packet with packet_defects passes",
+             mut(late, lambda r: r.update(packet_defects=[{"field": "priced_options.candles", "reason": "candles_missing",
+                                                           "count": 3, "denominator": 5}])), deg, False),
+            ("a degraded packet with a packet_defect context flag passes",
+             mut(late, lambda r: r.update(context_flags=["packet_defect: priced_options.candles candles_missing 3/5"])), deg, False),
+            ("an ok packet passes", late, {"packet_health": {"status": "ok", "defects": []}}, False),
+            ("a degraded packet on a pre-rule row passes (grandfathered)", GOOD_REVIEW, deg, False)):
+        c = bool(packet_defect_problems(rw, pk)) == bad
+        print(f"  {'PASS' if c else 'FAIL'}  {label}")
+        ok &= c
+    c = not row_problems(mut(GOOD_REVIEW, lambda r: r.update(packet_defects=[{"field": "x", "reason": "y", "count": 1, "denominator": 1}])),
+                         "reviews", schema)
+    print(f"  {'PASS' if c else 'FAIL'}  the schema accepts packet_defects")
+    ok &= c
     print("live-review-records-guard self-test:", "PASS" if ok else "FAIL")
     return 0 if ok else 1
 
