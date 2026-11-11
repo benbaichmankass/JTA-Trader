@@ -290,6 +290,11 @@ CADENCE_REGISTRY: dict[str, dict] = {
         "why": "every run writes the dated SLO status file and lands it through commit-to-main; the last commit "
                "touching comms/research/health/ IS the receipt",
     },
+    "feature-impact.yml": {
+        "receipt": "comms/feature_impact/latest.json",
+        "why": "every weekly run rewrites latest.json and lands it through commit-to-main; the last commit "
+               "touching it IS the receipt",
+    },
     "compute-util-telemetry.yml": {
         "receipt": "comms/cloud/compute_util_ledger.jsonl",
         "why": "the workflow rewrites the ledger every day and lands it through "

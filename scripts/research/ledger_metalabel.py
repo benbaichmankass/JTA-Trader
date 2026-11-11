@@ -69,6 +69,9 @@ RESAMPLE_RE = re.compile(r"__B\d+$|__M$")
 BASE_FEATURES = ["confidence", "direction_long", "hour_of_day", "dayofweek", "adx_at_entry", "regime_weight"]
 #: Leg -> strategy unit module (the family a meta-head would be scoped to). Equity/futures legs are named
 #: <ticker>_<family>_<tf>; crypto legs carry the module name or a `pullback_`/`squeeze_` prefix.
+#: The widened decision-time columns (scripts/research/harness_emit.py, features_schema harness_decision_v1).
+WIDE_NUMERIC = ["f_adx_14", "f_atr_pct", "f_atr_pctl", "f_rlr_vol_20", "f_ret_20", "f_hour_utc", "f_dow_utc"]
+WIDE_FEATURES = ["confidence", "direction_long"] + WIDE_NUMERIC + ["f_regime_trending", "f_regime_ranging"]
 FAMILY_RE = re.compile(r"^(trend_donchian|htf_pullback|ict_scalp|squeeze|fade|fvg_range|turtle_soup|pullback)")
 FAMILY_ALIAS = {"htf_pullback": "pullback", "trend": "trend_donchian"}
 
@@ -117,6 +120,16 @@ def load_corpus(glob_pat: str, leg_re: Optional[str], include_resamples: bool):
         if c not in df.columns:
             df[c] = np.nan
         df[c] = pd.to_numeric(df[c], errors="coerce")
+    # METALABEL-EMIT-FEATURES (harness_decision_v1): numeric f_* columns as floats; the string regime label as
+    # one-hots. mae_r is POST-entry and is never a decision-time feature (leakage) -- it is not coerced here.
+    for c in WIDE_NUMERIC:
+        if c in df.columns:
+            df[c] = pd.to_numeric(df[c], errors="coerce")
+    if "f_regime" in df.columns:
+        reg = df["f_regime"].astype(str)
+        known = df["f_regime"].notna()
+        for lab in ("trending", "ranging"):
+            df[f"f_regime_{lab}"] = np.where(known, (reg == lab).astype(float), np.nan)
     df["direction_long"] = (df.get("direction", "long").astype(str).str.lower() == "long").astype(float)
     df["hour_of_day"] = df["entry_time"].dt.hour.astype(float)
     df["dayofweek"] = df["entry_time"].dt.dayofweek.astype(float)
@@ -237,7 +250,12 @@ def classify_leg(g, *, target: str, features: List[str], learners: Dict[str, str
 
 def run_classify(df, *, target: str, threshold: float, features: List[str], learner_kinds: List[str], folds: int,
                  embargo: int, min_train_frac: float, min_leg_n: int, skip_q: float,
-                 auc_gain: float, lift_r: float) -> Dict[str, Any]:
+                 auc_gain: float, lift_r: float, group_by: str = "leg",
+                 control_features: Optional[List[str]] = None) -> Dict[str, Any]:
+    """``group_by="leg"`` (default, unchanged): one head per leg. ``group_by="family"``: one head per strategy family,
+    rows in entry-time order across the family's legs, leg one-hots added as controls (never pooled ACROSS families).
+    ``control_features``: the same arms re-run on a control column set; a group passes only if its selection lift also
+    beats the control arm's lift (the widened columns must add something over the control)."""
     if target == "giveback_gt":
         df = df[df["mfe_r"] > 0].copy()
         df["giveback_gt"] = (df["giveback_frac"] > threshold).astype(int)
@@ -245,11 +263,34 @@ def run_classify(df, *, target: str, threshold: float, features: List[str], lear
     learners = {k: k for k in learner_kinds}
     status = {k: probe_learner(k, {}) for k in learners}
     legs: Dict[str, Any] = {}
-    for leg, g in df.groupby("leg"):
+    for leg, g in df.groupby(group_by):
         if len(g) < min_leg_n:
             continue
-        legs[str(leg)] = classify_leg(g, target=tcol, features=features, learners=learners, folds=folds, embargo=embargo,
-                                      min_train_frac=min_train_frac, skip_q=skip_q, status=status)
+        feats_g, ctrl_g = list(features), list(control_features or [])
+        if group_by == "family":
+            g = g.sort_values("entry_time").reset_index(drop=True)
+            leg_names = sorted(g["leg"].unique())
+            if len(leg_names) > 1:
+                g = g.copy()
+                for ln_ in leg_names[1:]:
+                    g[f"_leg_{ln_}"] = (g["leg"] == ln_).astype(float)
+                onehots = [f"_leg_{ln_}" for ln_ in leg_names[1:]]
+                feats_g += onehots
+                ctrl_g += onehots if ctrl_g else []
+        missing = [c for c in feats_g + ctrl_g if c not in g.columns]
+        if missing:
+            g = g.copy()
+            for c in missing:
+                g[c] = np.nan
+        r = classify_leg(g, target=tcol, features=feats_g, learners=learners, folds=folds, embargo=embargo,
+                         min_train_frac=min_train_frac, skip_q=skip_q, status=status)
+        if group_by == "family":
+            r["legs"] = {str(k): int(v) for k, v in g["leg"].value_counts().items()}
+        r["feature_non_null_frac"] = {c: float(g[c].notna().mean()) for c in feats_g if not c.startswith("_leg_")}
+        if ctrl_g:
+            r["control"] = classify_leg(g, target=tcol, features=ctrl_g, learners=learners, folds=folds, embargo=embargo,
+                                        min_train_frac=min_train_frac, skip_q=skip_q, status=status)
+        legs[str(leg)] = r
     passing, evaluated = [], 0
     all_null = True
     for leg, r in legs.items():
@@ -259,9 +300,15 @@ def run_classify(df, *, target: str, threshold: float, features: List[str], lear
             evaluated += 1
             ad, ld = arm["auc_minus_prior"], arm["selection_lift_r"]
             ci = ad.get("ci95")
+            ctrl_lift = None
+            if "control" in r:
+                carm = r["control"].get("arms", {}).get(name, {})
+                ctrl_lift = (carm.get("selection_lift_r") or {}).get("mean") if carm.get("status") == "ok" else None
+            beats_ctrl = "control" not in r or (ctrl_lift is not None and ld.get("mean") is not None and ld["mean"] > ctrl_lift)
+            arm["control_lift_r"] = ctrl_lift
             if ad.get("mean") is not None and ad["mean"] >= auc_gain and ci and ci[0] > 0 \
-                    and ld.get("mean") is not None and ld["mean"] >= lift_r:
-                passing.append({"leg": leg, "arm": name, "auc_gain": ad["mean"], "lift_r": ld["mean"]})
+                    and ld.get("mean") is not None and ld["mean"] >= lift_r and beats_ctrl:
+                passing.append({"leg": leg, "arm": name, "auc_gain": ad["mean"], "lift_r": ld["mean"], "control_lift_r": ctrl_lift})
             if ci and ci[0] > 0:
                 all_null = False
     unavailable = {k: v for k, v in status.items() if v}
@@ -275,7 +322,7 @@ def run_classify(df, *, target: str, threshold: float, features: List[str], lear
         v, label = "fail", "every evaluated arm's AUC interval contains the class prior on every leg"
     else:
         v, label = "indeterminate", "no arm clears both bars; some AUC intervals exclude the prior"
-    return {"verdict": v, "label": label, "target": tcol, "threshold": threshold if tcol == "giveback_gt" else None,
+    return {"verdict": v, "label": label, "group_by": group_by, "control_features": control_features or [], "target": tcol, "threshold": threshold if tcol == "giveback_gt" else None,
             "features": features, "learners": learner_kinds, "arm_status": status, "legs": legs, "passing": passing,
             "n_test_trades": int(sum(sum(len(te) for _, te in purged_folds(r["n"], folds, embargo, min_train_frac)) for r in legs.values()))}
 
@@ -309,6 +356,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--skip-quantile", type=float, default=0.2)
     ap.add_argument("--auc-gain", type=float, default=0.05)
     ap.add_argument("--lift-r", type=float, default=0.05)
+    ap.add_argument("--group-by", choices=("leg", "family"), default="leg")
+    ap.add_argument("--control-features", default="", help="comma list; a pass must also beat this arm's lift")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
@@ -337,10 +386,12 @@ def main(argv: Optional[List[str]] = None) -> int:
                         f"({m['pooled'].get('mfe_lower_bound_rows')} rows have gross_r > mfe_r), so headroom is understated. "
                         "The oracle-peak bound is unattainable by construction; it sizes the prize an exit model could chase.")}
     else:
-        feats = [f for f in a.features.split(",") if f]
+        feats = [f for f in (",".join(WIDE_FEATURES) if a.features == "wide" else a.features).split(",") if f]
+        ctrl = [f for f in a.control_features.split(",") if f] or None
         m = run_classify(df, target=a.target, threshold=a.threshold, features=feats, learner_kinds=a.learners.split(","),
                          folds=a.folds, embargo=a.embargo, min_train_frac=a.min_train_frac, min_leg_n=a.min_leg_n,
-                         skip_q=a.skip_quantile, auc_gain=a.auc_gain, lift_r=a.lift_r)
+                         skip_q=a.skip_quantile, auc_gain=a.auc_gain, lift_r=a.lift_r, group_by=a.group_by,
+                         control_features=ctrl)
         measured = bool(m["legs"])
         rec = {"verdict": m["verdict"] if measured else "not_applicable", "read_state": "measured" if measured else "no_data",
                "n": m["n_test_trades"] if measured else 0, "population": pop_base + f"; legs with n >= {a.min_leg_n}: {len(m['legs'])}",
@@ -357,6 +408,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
 # ── self-test ─────────────────────────────────────────────────────────────────
 def _self_test() -> int:
+    import pandas as pd
     rng = np.random.default_rng(3)
     with tempfile.TemporaryDirectory() as td:
         run = Path(td) / "runs" / "2026-01-01"
@@ -414,6 +466,19 @@ def _self_test() -> int:
             print(f"  PASS  classify does not pass the null leg alone ({null_only['verdict']})")
         else:
             print(f"  FAIL  null leg graded {null_only['verdict']}")
+            ok = False
+        # family mode: both planted legs pooled into one trend_donchian family head (leg one-hot as a control);
+        # the control arm sees only direction, so the confidence signal must beat it.
+        sig = df[df["leg"] == "trend_donchian_sig_4h"]
+        fam_df = pd.concat([sig, sig.assign(leg="trend_donchian_sig2_4h")], ignore_index=True)
+        fam = run_classify(fam_df, target="won", threshold=0.5, features=["confidence", "direction_long"],
+                           learner_kinds=["prior", "numpy_logit"], folds=4, embargo=5, min_train_frac=0.4, min_leg_n=100,
+                           skip_q=0.2, auc_gain=0.02, lift_r=0.02, group_by="family", control_features=["direction_long"])
+        fr = fam["legs"].get("trend_donchian", {})
+        if set(fam["legs"]) == {"trend_donchian"} and fr.get("n") == 800 and "control" in fr and fam["verdict"] == "pass":
+            print("  PASS  family mode pools the family's legs, adds the control arm and finds the planted signal")
+        else:
+            print(f"  FAIL  family mode: {fam['verdict']} groups={list(fam['legs'])} n={fr.get('n')}")
             ok = False
         out = Path(td) / "out"
         rc = main(["--out", str(out), "--mode", "census", "--ledgers", pat])

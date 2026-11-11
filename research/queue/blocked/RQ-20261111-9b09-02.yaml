@@ -1,0 +1,99 @@
+id: RQ-20261111-9b09-02
+title: 'VENUE-SCOPE-HYPERLIQUID #1: do the four hourly commodity/index legs (slv_trend_1h, gld_pullback_1h, uso_trend_1h, qqq_pullback_1h), replayed
+  config-exact on NATIVE trade[XYZ] 24/7 perp bars (xyz:SILVER, xyz:GOLD, xyz:CL, xyz:XYZ100) net of the xyz cost stack, keep a pooled net edge,
+  and does trading all hours beat trading the US cash session only?'
+status: blocked
+cadence: once
+kind: experiment
+theme: new_venue
+priority: 3
+roadmap:
+- L-LADDER
+question: 'A new venue enters only through a Stage-0 question (OPERATING-PLAN § 2). The only thing trade[XYZ] offers that Alpaca does not, for
+  legs we already run, is 24/7 trading of index and commodity exposure: the oracle is internally priced outside the underlying session (EMA, tau
+  30 min; equities closed Fri 20:00 -> Sun 20:05 ET; docs.trade.xyz oracle-price.md). On native xyz 1h bars, pooled over the four legs (params
+  re-parsed from config/strategies.yaml at run time, each leg mapped to its xyz perp), arm H24 trades every bar and arm RTH trades only bars inside
+  the US cash session (13:30-20:00 UTC weekdays, the live builder''s market_hours gate). Is the pooled per-trade net R of H24 > 0, and is H24
+  >= RTH? PRIOR, stated before the run: the legs'' ETF evidence windows (2025-04 .. 2026-06+, comms/strategy_evidence/) overlap the xyz history,
+  so RTH is expected to reproduce their sign; whether H24 helps or hurts is open.'
+why_this_matters: 'Decides whether HL/xyz is worth a venue build (VENUE-SCOPE-HYPERLIQUID, operator 2026-10-27: "if it would be worth building
+  the infra"). If H24 does not beat RTH net of cost, xyz adds nothing over Alpaca for these legs and the 8-11 lane-day build is not justified
+  by them. Fee/spread at 2026-11-11 19:10Z: growth-mode taker 0.009%/side (1.8 bps RT) on SILVER/CL/XYZ100, standard 0.090%/side (18 bps RT) on
+  GOLD (not growth-mode); top-of-book spread 0.19 / 0.25 / 0.58 / 0.35 bps (one RTH snapshot; overnight/weekend unmeasured).'
+power:
+  expected_n: 120
+  min_detectable_effect: 0.25
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Floor (1.645 + 0.8416)^2 / 0.25^2 = 98.9 -> 99 pooled trades (one-sided). expected_n is a GUESS from the legs'' ETF OOS cadence (comms/strategy_evidence:
+    slv 68, gld 90, uso 56 OOS trades over ~14 months; qqq_pullback_1h not read) scaled to ~7 months of native 1h bars (candleSnapshot returns
+    at most ~5000 recent 1h bars; xyz:CL starts 2026-01-06, xyz:SP500 2026-03-18) and to 24/7 bar density; NOT a measurement. Below 99 the unit
+    grades UNDERPOWERED (indeterminate), never FAIL.'
+  feasibility:
+    source: accrual
+    accrual_basis: Native 1h history is capped at ~5000 bars by the public API (data/history/history_coverage.json, pulled 2026-11-11). Unless
+      an archive source is found (unverified), n grows only by accrual from the date a fetcher starts persisting bars; at ~7 months of bars the
+      pool may be underpowered.
+decision_rule:
+  id: RULE-DRAFT-HL-01
+  registered_at: '2026-11-11'
+  registered_before_run: true
+  statistic: 'Per arm (H24, RTH): pooled trades across the four legs, each from its own evidence harness (scripts/backtest_trend.py for slv_trend_1h
+    and uso_trend_1h; scripts/backtest_pullback.py for gld_pullback_1h and qqq_pullback_1h), config-exact params, on native xyz 1h bars; n, mean
+    net R/trade, one-sided t, net_total_r, maxDD_r, per-leg net R. Cost stack: fee = venue taker RT (1.8 bps; GOLD 18.0 bps), slippage 3.0 bps
+    RT (PERP default; measured RTH spreads are below it), funding = EXACT hourly settled rate from fundingHistory, signed by side (if the harness
+    can only take a flat magnitude: the 180-day p95 |hourly rate| per symbol from data/funding_180d_summary.json, window 1h).'
+  rule: INDETERMINATE (UNDERPOWERED) IF pooled n(H24) < 99. PASS IF mean net R/trade(H24) > 0 with one-sided t >= 1.645 AND net_total_r(H24) >=
+    net_total_r(RTH) AND no single leg contributes > 60% of H24 net_total_r. FAIL IF mean net R/trade(H24) <= 0, OR IF net_total_r(H24) < net_total_r(RTH)
+    (then xyz adds nothing over cash-session venues for these legs). Anything else (positive but t < 1.645) is INDETERMINATE (NULL). Thresholds
+    and the leg list are not changed after any result.
+  what_it_does_not_do: 'Opens no account, places no order, edits no config. A PASS is a discovery on one window: it earns a disjoint-window confirmation
+    and then a build proposal (new-broker), never a roster edit. The xyz fee is a deployer parameter that can change (meta.lastFeeScaleChangeTime);
+    the result is valid only at the growth-mode fee recorded here. Weekend fills are priced off the native book: the backtest cannot model a weekend
+    gap against the internal oracle''s +-50 bps relayer clamp beyond what the bars show.'
+practice_precedent: 'docs/research/d1-cost-stack-verification-2026-09-25.md (a leg is judged net of the venue''s own full cost stack) and https://docs.trade.xyz
+  (oracle-price.md: outside the underlying session the oracle is an internal EMA, so ETF-proxy bars cannot stand in for weekend xyz prices).'
+compute: cpu_light
+value:
+  bucket: structural
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  basis: 'stand-in, not a measurement: decides an 8-11 lane-day build; the legs are TESTING on alpaca_paper, so no real-money P&L moves on this
+    unit alone.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 20
+  why_runner: Keyless public Hyperliquid info API (api.hyperliquid.xyz/info, verified reachable 2026-11-11); reads no trainer data.
+  basis: Four single-symbol harness runs x 2 arms on ~5000 bars each.
+run:
+  workflow: research-script-run.yml
+  command: []
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261111-9b09-02
+blocked_on:
+- what: 'NO HYPERLIQUID DATA FETCHER. scripts/ops/ has fetch_binance_vision*.py, fetch_bybit_funding.py, fetch_dukascopy_ohlcv.py, fetch_etf_history.py
+    and others, but nothing for Hyperliquid (a repo grep for "hyperliquid" finds only research docs and prop rulesets). Needed: a Tier-1 keyless
+    fetcher writing <dex:coin>_1h.csv (timestamp,open,high,low,close,volume) from candleSnapshot and <coin>_funding.csv (timestamp,funding_rate
+    per 1h) from fundingHistory, resolvable by scripts/ops/backtest_data_source.py; plus a CSV filter for the RTH arm (the trend/pullback harnesses
+    have no session gate). Estimate ~0.5 lane-day.'
+- what: HISTORY DEPTH. The public API caps 1h candles at ~5000 bars (~7 months). If n < 99 after the fetcher lands, the unit waits on accrual
+    (the fetcher must persist bars daily) or an archive source, which is unverified.
+- what: FUNDING TERM. backtest_trend.py / backtest_pullback.py take a flat --funding-bps-per-window magnitude, not the signed hourly series; the
+    rule falls back to the p95 magnitude unless a signed-funding input is added.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- docs/claude/work/checklist/VENUE-SCOPE-HYPERLIQUID.json
+- comms/strategy_evidence/slv_trend_1h.json
+- comms/strategy_evidence/gld_pullback_1h.json
+- comms/strategy_evidence/uso_trend_1h.json
+- comms/strategy_evidence/qqq_pullback_1h.json
+- research/queue/RQ-20261015-24ca-02.yaml
+- research/queue/RQ-20261015-24ca-05.yaml
