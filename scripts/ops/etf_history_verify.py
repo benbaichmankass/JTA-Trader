@@ -7,8 +7,9 @@ consecutive bars), age. The expected set is config/data_universe.yaml -- so a sy
 ``MISSING``, not silently absent.
 
 Verdicts (one flag, never a halt):
-  * STALE     : status ok, last bar older than ``--stale-days`` (default 5) -- EXCEPT delisted S&P 500 names, whose series
-                legitimately end (``ended``).
+  * STALE     : status ok, last bar older than ``--stale-days`` (default 5) -- EXCEPT delisted S&P 500 names and symbols the
+                manifest's corporate-actions record shows renamed / merged / removed, whose series legitimately end (``ended``,
+                reported, not red). A live symbol with no such action stays STALE.
   * NO_DATA   : the vendor serves nothing for it (typo / delisted / not listed on the feed). Red for a symbol we expect to be live
                 (core / ETFs / current S&P 500 members) so the config can be edited; informational for removed S&P 500 names.
   * MISSING   : in the universe but not in the manifest. Red, except with ``--progress`` (a backfill still running).
@@ -40,6 +41,8 @@ def classify(u: Dict[str, Any], manifest: Dict[str, Any], tfs: List[str], now: d
     syms = du.equity_symbols(u)
     removed = set(du.delisted_symbols(u))
     etf_like = set(syms) - removed
+    # Symbols a corporate action ended (renamed / merged / removed), recorded in the manifest by the fetch. Data, not a hand list.
+    ca_ended = (manifest.get("corporate_actions") or {}).get("ended") or {}
     rows = []
     for tf in tfs:
         for sym in syms:
@@ -51,7 +54,9 @@ def classify(u: Dict[str, Any], manifest: Dict[str, Any], tfs: List[str], now: d
                 r.update(verdict="NO_DATA", red=sym in etf_like)
             else:
                 age = _age_days(m["last"], now)
-                ended = sym in removed
+                ended = sym in removed or sym in ca_ended
+                if sym in ca_ended and age > stale_days:
+                    r["ended_by"] = ca_ended[sym].get("kind")
                 stale = age > stale_days and not ended
                 r.update(rows=m["rows"], first=m["first"], last=m["last"], years=round(
                     (datetime.fromisoformat(m["last"].replace("Z", "+00:00")) - datetime.fromisoformat(m["first"].replace("Z", "+00:00"))).days / 365.25, 2),
