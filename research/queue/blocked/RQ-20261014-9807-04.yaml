@@ -39,6 +39,9 @@ power:
       Grounded on m20 because the run is an m20 exit-lever sweep; min_per_leg over the three legs with n >= 39 reads 49 on the
       2026-10-08 rows -> cleared for those legs. trend_donchian_xrp_4h (31) and the alpaca 1d legs (4-7) are scoped into the rule
       as below_floor strata rather than certified on these legs' n.
+evidence_class:  # EVIDENCE-CLASS-BACKFILL 2026-11-11, rule M1 (scripts/research/backfill_evidence_class.py)
+  holdout: holdout_window
+  claim: edge
 decision_rule:
   id: RULE-RQ20261014-9807-04-CENSUS-KEYED-STOP
   registered_at: '2026-10-14'
