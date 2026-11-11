@@ -27,15 +27,16 @@ power:
   expected_n: 27
   min_detectable_effect: 0.02
   effect_units: rank_ic
+  sd: 0.03
   design: one_sample
   alpha: 0.01
   power: 0.8
-  basis: 'ESTIMATE: n = held-out calendar months (2024-07 .. 2026-09 = 27), the independent unit. Per (symbol, month) ~180 4h bars -> per-month IC noise
+  basis: 'ESTIMATE (sd 0.03 = the per-month pooled IC noise below, a LOWER bound if symbols are correlated): n = held-out calendar months (2024-07 .. 2026-09 = 27), the independent unit. Per (symbol, month) ~180 4h bars -> per-month IC noise
     ~1/sqrt(180) = 0.075, ~0.03 after pooling 6 symbols if independent (crypto symbols are correlated, so worse). SE of the 27-month mean ~0.03/sqrt(27)
     = 0.0058; t >= 2.5 needs |mean IC| >= ~0.015, so the --ic-min 0.02 floor binds. Fewer than 18 measured held-out months or 4 symbols is INDETERMINATE.'
   feasibility:
     source: none
-    accrual_basis: Replays the public Binance archive for pinned months; nothing accrues.
+    accrual_basis: 'Replays the public Binance archive for pinned months; nothing accrues. The 27 held-out months already exist (2024-07 .. 2026-09 published), so n is fixed, not accruing; source none only because no per-leg trade corpus applies to market-data features.'
 decision_rule:
   id: RULE-VOLCOMP-DIRECTION-01
   registered_at: '2026-11-11'
