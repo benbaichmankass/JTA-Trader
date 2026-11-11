@@ -36,13 +36,13 @@ def test_package_with_one_move_old_level_subtle_new_level_main_one_marker(db, cl
     insert_order_package(db, order_package_id="pkg-1", symbol="ADAUSDT", direction="long", entry=0.19, sl=0.186646,
                          tp=0.2, created_at="2026-11-06T06:10:00Z", status="open", meta=json.dumps(meta))
     d = client.get("/api/bot/brackets/history", params={"order_package_id": "pkg-1", "interval": "1h"}).json()
-    sl = [l for l in d["levels"] if l["kind"] == "sl"]
-    assert [(l["price"], l["to_ts"] is None) for l in sl] == [(0.18747, False), (0.186646, True)]
+    sl = [lv for lv in d["levels"] if lv["kind"] == "sl"]
+    assert [(lv["price"], lv["to_ts"] is None) for lv in sl] == [(0.18747, False), (0.186646, True)]
     assert sl[0]["to_ts"] == sl[1]["from_ts"] == "2026-11-06T08:00:00+00:00"
     assert len(d["updates"]) == 1 and d["updates"][0]["bar_ts"] == "2026-11-06T08:00:00+00:00"
     assert (d["updates"][0]["from"], d["updates"][0]["to"]) == (0.18747, 0.186646)
     assert d["read_state"] == "measured" and d["tp_history"] == "unrecorded"
-    tp = [l for l in d["levels"] if l["kind"] == "tp"]
+    tp = [lv for lv in d["levels"] if lv["kind"] == "tp"]
     assert len(tp) == 1 and tp[0]["price"] == 0.2 and tp[0]["to_ts"] is None
 
 
@@ -61,7 +61,7 @@ def test_old_package_without_record_is_partial_main_lines_only_no_markers(db, cl
     d = client.get("/api/bot/brackets/history", params={"order_package_id": "pkg-old"}).json()
     assert d["updates"] == [] and d["read_state"] == "partial"
     assert "predates_sl_move_stamp_2026-11-06" in d["partial_reasons"]
-    assert sorted(l["kind"] for l in d["levels"]) == ["sl", "tp"]
+    assert sorted(lv["kind"] for lv in d["levels"]) == ["sl", "tp"]
 
 
 def test_post_stamp_package_with_no_moves_is_measured_not_partial(db, client):
@@ -78,7 +78,7 @@ def test_capped_trail_is_partial_and_first_level_is_estimated(db, client):
     insert_order_package(db, order_package_id="pkg-cap", created_at="2026-11-07T00:00:00Z", meta=json.dumps(meta))
     d = client.get("/api/bot/brackets/history", params={"order_package_id": "pkg-cap"}).json()
     assert d["read_state"] == "partial" and any(r.startswith("sl_moves_capped") for r in d["partial_reasons"])
-    assert [l for l in d["levels"] if l["kind"] == "sl"][0]["provenance"] == "ESTIMATED"
+    assert [lv for lv in d["levels"] if lv["kind"] == "sl"][0]["provenance"] == "ESTIMATED"
     assert len(d["updates"]) == 20
 
 
@@ -97,15 +97,15 @@ def test_prop_amendments_give_sl_and_tp_steps_and_null_amendments_say_so():
     op = {"id": 5, "account_id": "tradeify_1", "ticket_id": "t", "symbol": "ETHUSDT", "direction": "long",
           "opened_at": "2026-11-04T10:00:00+00:00", "sl": 2386.4, "tp": 2600.0, "amendments": json.dumps(am)}
     d = bh.build_prop_history(op, "1h")
-    sl = [l for l in d["levels"] if l["kind"] == "sl"]
-    tp = [l for l in d["levels"] if l["kind"] == "tp"]
-    assert [l["price"] for l in sl] == [2356.86, 2373.4, 2386.4] and [l["price"] for l in tp] == [2666.4, 2600.0]
+    sl = [lv for lv in d["levels"] if lv["kind"] == "sl"]
+    tp = [lv for lv in d["levels"] if lv["kind"] == "tp"]
+    assert [lv["price"] for lv in sl] == [2356.86, 2373.4, 2386.4] and [lv["price"] for lv in tp] == [2666.4, 2600.0]
     assert [(u["kind"], u["to"]) for u in d["updates"]] == [("sl", 2373.4), ("sl", 2386.4), ("tp", 2600.0)]
     assert d["tp_history"] == "recorded" and d["read_state"] == "measured"
     bare = bh.build_prop_history({"id": 6, "opened_at": "2026-11-04T10:00:00+00:00", "sl": None, "tp": None,
                                   "amendments": None})
     assert bare["read_state"] == "no_record" and bare["updates"] == [] and bare["tp_history"] == "unrecorded"
-    assert all(l["price"] is None for l in bare["levels"])
+    assert all(lv["price"] is None for lv in bare["levels"])
 
 
 def test_prop_route_resolves_a_closing_row_to_its_opener(monkeypatch, client):

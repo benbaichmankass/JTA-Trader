@@ -60,7 +60,7 @@ def get_brackets_history(order_package_id: Optional[str] = None, prop_fill_id: O
             out = bh.build_prop_history(row, interval)
     except HTTPException:
         raise
-    except sqlite3.Error:
+    except sqlite3.Error:  # allow-silent: logs the stack and answers read_state no_record + journal_unreadable, never an empty line that reads as 'no moves'
         logger.warning("brackets history: read failed", exc_info=True)
         return {"as_of": as_of, "read_state": "no_record", "partial_reasons": ["journal_unreadable"],
                 "levels": [], "updates": []}
