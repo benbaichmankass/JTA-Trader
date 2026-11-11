@@ -100,7 +100,7 @@
   "C6": {
    "state": "finding",
    "population": "cost-gated heads; same-replay results",
-   "reading": "advisory-head cost-gate packets re-pulled in #24947. ENTRY 98e3-23/25/26 on one replay + cost stack, none decision-grade; Foxhound-1r has no cost-gate packet."
+   "reading": "advisory packets #24947: btc fc-pcv-v2 ready false (drift_clean KS 0.226 + beats_baseline max-proba artefact only; live_parity 24/24, live regime AUC 0.690, oos_edge +0.254); sol-15m + mes-5m ready true; cost_net not applicable on all three. ENTRY 98e3-23/25/26 on one replay + cost stack, none decision-grade; Foxhound-1r has no cost-gate packet."
   },
   "C7": {
    "state": "finding",
@@ -300,7 +300,7 @@
   }
  ],
  "trainer_findings": [
-  "stage-guard DEMOTE btc-regime-15m-lgbm-fc-pcv-v2 (advisory)",
+  "stage-guard DEMOTE btc-regime-15m-lgbm-fc-pcv-v2 (advisory): reason drift-only (#24947)",
   "serve_parity lifecycle_red_flag x4 (BTC-5m shadow heads)",
   "0 OOM red flags",
   "3 manifests built 0 rows",
@@ -377,7 +377,7 @@
  ],
  "model_status_summary": "106 registry/inventory rows: advisory 3, shadow 20, candidate 74, research_only 1 (98 registry) + 8 served; gbdt 77; candidate-only and shadow regime heads change no order (ML-CONSOLIDATION #24897 proposes 72 retirements).",
  "promotion_recommendations": [],
- "promotion_note": "No promote or demote. P1 asks for the mirror demotion read on ml_entry (Tier-3 read). Trainer stage-guard DEMOTE on btc-regime-15m-lgbm-fc-pcv-v2 -> P8 soft-off proposal; recommendation HOLD one weekly read.",
+ "promotion_note": "No promote or demote. P1 asks for the mirror demotion read on ml_entry (Tier-3 read). Trainer stage-guard DEMOTE on btc-regime-15m-lgbm-fc-pcv-v2, reason drift verdict significant only (#24947) -> P8 soft-off proposal; recommendation HOLD one weekly read.",
  "experiments_proposed": [
   {
    "id": "P1",
