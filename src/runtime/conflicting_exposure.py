@@ -28,12 +28,14 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import math
 import os
 import re
 import sqlite3
+from collections.abc import Callable, Iterable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +47,7 @@ _LONG = ("long", "buy")
 _SHORT = ("short", "sell")
 
 
-def side_of(direction: Any) -> Optional[str]:
+def side_of(direction: Any) -> str | None:
     d = str(direction or "").strip().lower()
     return "long" if d in _LONG else "short" if d in _SHORT else None
 
@@ -57,18 +59,18 @@ def normalize_symbol(symbol: Any) -> str:
     return re.sub(r"[^A-Z0-9]", "", s)
 
 
-def _f(v: Any) -> Optional[float]:
+def _f(v: Any) -> float | None:
     try:
         x = float(v)
     except (TypeError, ValueError):
         return None
-    return x if x == x else None
+    return None if math.isnan(x) else x
 
 
 _TF_SUFFIX = re.compile(r"_(\d+)(m|h|d)$")
 
 
-def leg_timeframes(path: Optional[str] = None) -> Dict[str, str]:
+def leg_timeframes(path: str | None = None) -> dict[str, str]:
     """strategy -> its declared ``timeframe`` from ``config/strategies.yaml`` ({} when unreadable)."""
     try:
         import yaml
@@ -84,7 +86,7 @@ def leg_timeframes(path: Optional[str] = None) -> Dict[str, str]:
         return {}
 
 
-def timeframe_of(strategy: Any, declared: Dict[str, str]) -> Optional[str]:
+def timeframe_of(strategy: Any, declared: dict[str, str]) -> str | None:
     s = str(strategy or "")
     if s in declared:
         return declared[s]
@@ -92,7 +94,7 @@ def timeframe_of(strategy: Any, declared: Dict[str, str]) -> Optional[str]:
     return f"{m.group(1)}{m.group(2)}" if m else None
 
 
-def open_r(direction: Any, entry: Any, sl: Any, mark: Any) -> Optional[float]:
+def open_r(direction: Any, entry: Any, sl: Any, mark: Any) -> float | None:
     """Open R from a mark: (mark - entry) x side / |entry - sl|. None when any input is missing."""
     side = side_of(direction)
     e, s, m = _f(entry), _f(sl), _f(mark)
@@ -102,9 +104,9 @@ def open_r(direction: Any, entry: Any, sl: Any, mark: Any) -> Optional[float]:
     return round((m - e) * sign / abs(e - s), 2)
 
 
-def read_open_legs(db_path: Optional[str] = None,
-                   mark_fn: Optional[Callable[[Any], Optional[float]]] = None,
-                   strategies_path: Optional[str] = None) -> Dict[str, Any]:
+def read_open_legs(db_path: str | None = None,
+                   mark_fn: Callable[[Any], float | None] | None = None,
+                   strategies_path: str | None = None) -> dict[str, Any]:
     """Open legs on every book, one record per order package (its accounts listed).
 
     ``books`` keeps the two reads apart (``journal`` / ``prop``), each ``read`` or ``could_not_look``; the
@@ -117,10 +119,10 @@ def read_open_legs(db_path: Optional[str] = None,
         except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as could_not_look
             return {"state": "could_not_look", "reason": f"db_path_unresolved: {exc}", "books": {}, "legs": []}
     declared = leg_timeframes(strategies_path)
-    pkgs: Dict[str, Dict[str, Any]] = {}
-    books: Dict[str, Dict[str, Any]] = {}
+    pkgs: dict[str, dict[str, Any]] = {}
+    books: dict[str, dict[str, Any]] = {}
 
-    def _pkg(pkg: str, strategy: Any, symbol: Any, direction: Any, entry: Any, sl: Any) -> Dict[str, Any]:
+    def _pkg(pkg: str, strategy: Any, symbol: Any, direction: Any, entry: Any, sl: Any) -> dict[str, Any]:
         return pkgs.setdefault(pkg, {
             "order_package_id": pkg, "leg": strategy, "symbol": normalize_symbol(symbol),
             "direction": side_of(direction), "entry": _f(entry), "sl": _f(sl),
@@ -160,7 +162,7 @@ def read_open_legs(db_path: Optional[str] = None,
         if aid not in d["accounts"]:
             d["accounts"].append(aid)
             d["account_classes"][aid] = "prop"
-    marks: Dict[str, Optional[float]] = {}
+    marks: dict[str, float | None] = {}
     for d in pkgs.values():
         d["open_r"], d["open_r_state"] = None, "could_not_look"
         if mark_fn is None:
@@ -181,7 +183,7 @@ def read_open_legs(db_path: Optional[str] = None,
     return {"state": "read", "reason": None, "books": books, "legs": list(pkgs.values())}
 
 
-def conflict_key(symbol: str, legs: Iterable[Dict[str, Any]]) -> str:
+def conflict_key(symbol: str, legs: Iterable[dict[str, Any]]) -> str:
     """``<SYMBOL>#<sha1 of the sorted long and short package ids>``: one key per distinct conflict."""
     longs = sorted(str(x["order_package_id"]) for x in legs if x.get("direction") == "long")
     shorts = sorted(str(x["order_package_id"]) for x in legs if x.get("direction") == "short")
@@ -189,9 +191,9 @@ def conflict_key(symbol: str, legs: Iterable[Dict[str, Any]]) -> str:
     return f"{symbol}#{h}"
 
 
-def find_conflicts(legs: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def find_conflicts(legs: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     """Symbols with an open LONG package and an open SHORT package. Pure."""
-    by_sym: Dict[str, List[Dict[str, Any]]] = {}
+    by_sym: dict[str, list[dict[str, Any]]] = {}
     for leg in legs:
         if leg.get("direction") in ("long", "short") and leg.get("symbol"):
             by_sym.setdefault(leg["symbol"], []).append(leg)
@@ -207,7 +209,7 @@ def find_conflicts(legs: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return out
 
 
-def why(conflict: Dict[str, Any], pkg: str) -> str:
+def why(conflict: dict[str, Any], pkg: str) -> str:
     other = [x for x in conflict["legs"] if x["order_package_id"] != pkg]
     me = next((x for x in conflict["legs"] if x["order_package_id"] == pkg), {})
     opp = [x for x in other if x.get("direction") != me.get("direction")]
@@ -220,7 +222,7 @@ def _fmt_r(v: Any) -> str:
     return "—" if v is None else f"{v:+.2f}R"
 
 
-def render_alert(conflict: Dict[str, Any]) -> str:
+def render_alert(conflict: dict[str, Any]) -> str:
     """The Telegram text. Open R is ESTIMATED from the bot's mark; a missing one reads "—"."""
     lines = [f"⚠️ CONFLICTING EXPOSURE: {conflict['symbol']} is held LONG and SHORT at once",
              "Alert only: nothing is closed or blocked. A live review is queued for the package set."]
@@ -239,7 +241,7 @@ def state_path() -> Path:
     return Path(runtime_logs_dir()) / STATE_FILENAME
 
 
-def _read_state(path: Path) -> Dict[str, Any]:
+def _read_state(path: Path) -> dict[str, Any]:
     try:
         doc = json.loads(path.read_text())
         return doc if isinstance(doc, dict) else {}
@@ -255,9 +257,9 @@ def _default_send(text: str) -> bool:
     return bool(telegram_channels.send(ALERT_KIND, text))
 
 
-def fill_open_r(found: Dict[str, Any], mark_fn: Callable[[Any], Optional[float]]) -> None:
+def fill_open_r(found: dict[str, Any], mark_fn: Callable[[Any], float | None]) -> None:
     """Estimate open R for the legs of each conflict that lack one (only the conflicting symbols are marked)."""
-    marks: Dict[str, Optional[float]] = {}
+    marks: dict[str, float | None] = {}
     for c in found.get("conflicts") or []:
         for x in c.get("legs") or []:
             if x.get("open_r") is not None:
@@ -275,9 +277,9 @@ def fill_open_r(found: Dict[str, Any], mark_fn: Callable[[Any], Optional[float]]
                 x.pop("open_r_reason", None)
 
 
-def alert(found: Dict[str, Any], *, path: Optional[Path] = None,
-          send: Optional[Callable[[str], bool]] = None,
-          now: Optional[datetime] = None) -> Dict[str, Any]:
+def alert(found: dict[str, Any], *, path: Path | None = None,
+          send: Callable[[str], bool] | None = None,
+          now: datetime | None = None) -> dict[str, Any]:
     """ONE send per NEW conflict key; resolved keys are forgotten so a recurrence alerts again.
 
     ``found`` = ``{"state", "conflicts"}``. On ``could_not_look`` nothing is sent and the state is untouched
@@ -285,7 +287,7 @@ def alert(found: Dict[str, Any], *, path: Optional[Path] = None,
     pass retries it. Never raises.
     """
     now = now or datetime.now(timezone.utc)
-    rec: Dict[str, Any] = {"at": now.isoformat(), "state": found.get("state"), "sent": [], "standing": [],
+    rec: dict[str, Any] = {"at": now.isoformat(), "state": found.get("state"), "sent": [], "standing": [],
                            "failed": []}
     if found.get("state") != "read":
         rec["reason"] = found.get("reason")
@@ -294,7 +296,7 @@ def alert(found: Dict[str, Any], *, path: Optional[Path] = None,
         path = path or state_path()
         send = send or _default_send
         st = _read_state(path)
-        known: Dict[str, Any] = st.get("alerted") or {}
+        known: dict[str, Any] = st.get("alerted") or {}
         live = {c["key"]: c for c in found.get("conflicts") or []}
         kept = {k: v for k, v in known.items() if k in live}
         for k, c in live.items():
@@ -321,8 +323,8 @@ def alert(found: Dict[str, Any], *, path: Optional[Path] = None,
     return rec
 
 
-def detect(db_path: Optional[str] = None,
-           mark_fn: Optional[Callable[[Any], Optional[float]]] = None) -> Dict[str, Any]:
+def detect(db_path: str | None = None,
+           mark_fn: Callable[[Any], float | None] | None = None) -> dict[str, Any]:
     """Read every book and return ``{state, reason, books, conflicts}``. Never raises."""
     try:
         legs = read_open_legs(db_path, mark_fn)

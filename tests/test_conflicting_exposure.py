@@ -206,7 +206,8 @@ def test_wake_poster_never_imports_the_market_feed():
 
 
 def test_config_exempts_the_event_from_the_bar_cooldown():
-    import yaml
     from pathlib import Path
+
+    import yaml
     due = yaml.safe_load(Path("config/live_trade_review.yaml").read_text())["due"]
     assert ce.EVENT in due["cooldown_exempt"]

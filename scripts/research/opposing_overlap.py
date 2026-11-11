@@ -40,7 +40,7 @@ import sys
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
@@ -49,14 +49,14 @@ sys.path.insert(0, str(REPO / "scripts" / "research"))
 _TF_S = {"m": 60, "h": 3600, "d": 86400}
 
 
-def tf_seconds(tf: Any) -> Optional[int]:
+def tf_seconds(tf: Any) -> int | None:
     s = str(tf or "").strip().lower()
     if len(s) >= 2 and s[:-1].isdigit() and s[-1] in _TF_S:
         return int(s[:-1]) * _TF_S[s[-1]]
     return None
 
 
-def _ts(v: Any) -> Optional[float]:
+def _ts(v: Any) -> float | None:
     if v is None:
         return None
     try:
@@ -66,13 +66,13 @@ def _ts(v: Any) -> Optional[float]:
 
 
 def load_universe(strategies_path: Path = REPO / "config" / "strategies.yaml",
-                  legs: Optional[List[str]] = None) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
-    import yaml
+                  legs: list[str] | None = None) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     import live_review_outcomes as lro
+    import yaml
     cfg = (yaml.safe_load(strategies_path.read_text()) or {}).get("strategies") or {}
     names = legs or [k for k, v in cfg.items() if isinstance(v, dict)]
-    trades: List[Dict[str, Any]] = []
-    sources: Dict[str, Any] = {}
+    trades: list[dict[str, Any]] = []
+    sources: dict[str, Any] = {}
     for leg in names:
         tf = tf_seconds((cfg.get(leg) or {}).get("timeframe"))
         try:
@@ -94,16 +94,16 @@ def load_universe(strategies_path: Path = REPO / "config" / "strategies.yaml",
     return trades, sources
 
 
-def gap_bucket(a: Optional[int], b: Optional[int]) -> str:
+def gap_bucket(a: int | None, b: int | None) -> str:
     if not a or not b:
         return "unknown_tf"
     r = max(a, b) / min(a, b)
     return "same" if r == 1 else "2-4x" if r <= 4 else ">4x"
 
 
-def find_pairs(trades: List[Dict[str, Any]]) -> List[Tuple[Dict[str, Any], Dict[str, Any]]]:
+def find_pairs(trades: list[dict[str, Any]]) -> list[tuple[dict[str, Any], dict[str, Any]]]:
     """(incumbent, newcomer) for every overlapping opposite-direction pair from different legs."""
-    by_sym: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    by_sym: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for t in trades:
         by_sym[t["symbol"]].append(t)
     out = []
@@ -118,7 +118,7 @@ def find_pairs(trades: List[Dict[str, Any]]) -> List[Tuple[Dict[str, Any], Dict[
     return out
 
 
-def _stats(xs: List[float]) -> Dict[str, Any]:
+def _stats(xs: list[float]) -> dict[str, Any]:
     n = len(xs)
     if n == 0:
         return {"n": 0, "mean_r": None, "ci95": None}
@@ -130,23 +130,23 @@ def _stats(xs: List[float]) -> Dict[str, Any]:
             "ci95": [round(m - 1.96 * se, 4), round(m + 1.96 * se, 4)], "p_pos": round(sum(x > 0 for x in xs) / n, 3)}
 
 
-def verdict(st: Dict[str, Any], n_floor: int) -> str:
+def verdict(st: dict[str, Any], n_floor: int) -> str:
     if st["n"] < n_floor or not st.get("ci95"):
         return "INDETERMINATE"
     lo, hi = st["ci95"]
     return "KEEP_BOTH_OK" if lo > 0 else "CLOSE_NEWCOMER" if hi < 0 else "INDETERMINATE"
 
 
-def analyse(trades: List[Dict[str, Any]], n_floor: int = 30) -> Dict[str, Any]:
+def analyse(trades: list[dict[str, Any]], n_floor: int = 30) -> dict[str, Any]:
     pairs = find_pairs(trades)
-    med: Dict[str, float] = {}
-    by_leg: Dict[str, List[float]] = defaultdict(list)
+    med: dict[str, float] = {}
+    by_leg: dict[str, list[float]] = defaultdict(list)
     for t in trades:
         if t["stop_pct"]:
             by_leg[t["leg"]].append(t["stop_pct"])
     med = {k: statistics.median(v) for k, v in by_leg.items() if v}
-    buckets: Dict[str, Dict[int, Dict[str, Any]]] = defaultdict(dict)
-    inc: Dict[str, Dict[int, float]] = defaultdict(dict)
+    buckets: dict[str, dict[int, dict[str, Any]]] = defaultdict(dict)
+    inc: dict[str, dict[int, float]] = defaultdict(dict)
     opposed = set()
     for a, b in pairs:
         opposed.add(id(a))
@@ -195,7 +195,7 @@ def self_test() -> int:
     return 0 if ok else 1
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--unit")
     ap.add_argument("--out")
