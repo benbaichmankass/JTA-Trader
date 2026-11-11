@@ -1,0 +1,129 @@
+id: RQ-20261111-203c-01
+title: HOLDOUT-SELECTED side filter (long only) and be-floor/structure exit on spy_pullback_1h (iteration from its own last result), net of cost
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+theme: live_strategy
+priority: 2
+kind: experiment
+question: 'spy_pullback_1h: does any arm of side filter (long only) and be-floor/structure exit, selected on the earliest ~75% of 2020-07..2026-10 and read once on the held-back latest span, hold up net
+  of the full cost stack?'
+why_this_matters: 'ITERATION (research-ops 2026-11-11 2049Z; orphan leg). Diagnosis: Shorts lose (n=27, net -12.4 R, gross -10.2 R) while longs earn (n=48, +3.8 R); 51 stop exits carry -56 R; 18 losers
+  reached 1R MFE; gross is negative so the loss is entry/exit, not cost (research/levers/spy_pullback_1h.yaml attribution). MULTIPLE-TESTING DENOMINATOR: 4 arms (A + 3 levers), selected on discovery only,
+  read once on the holdout.'
+power:
+  expected_n: 25
+  min_detectable_effect: 0.57
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: expected_n is the HELD-BACK trade count, an ESTIMATE (no measurement for these arms); the held-back floor is 25 trades, below which the unit grades INDETERMINATE/underpowered, never FAIL. At n=25
+    a one-sample test detects d = 0.57 sd (alpha 0.05, power 0.8); a PASS is a LEAD.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261111203c01-ITERATION
+  statistic: 'scripts/research/exit_lever_ablation.py --grade holdout on spy_pullback_1h, window 2020-07-01 .. 2026-10-15 23:59, every arm ONE continuous harness pass (argv via regime_debt_matrix.build_harness_cmd),
+    net of the full cost stack the harness resolves for the venue (fee + slippage + funding where applicable); per-trade net_r from --emit-trades. Arms fixed now: A: the leg as declared; S1: --side-filter=long;
+    C1: --be-floor-r=1.0; C4: --structure-exit=pivot=5. BOUNDARY, fixed before any outcome is read: the latest 25% of the calendar window, grown in 1% steps until it holds 25 of arm A''s entries, capped
+    at 40%. DISCOVERY = trades whose entry AND exit precede the boundary; 4 equal calendar folds. HOLDOUT = the selected arm''s trades entered on/after the boundary. Regime-robustness clause (default template):
+    the per-year table is read in the result; a PASS with one calendar year above 50% of net gain, or a net-negative long or short side, is reported as a LEAD with that caveat.'
+  rule: 'SELECTION (discovery only): an arm is eligible iff discovery n >= 25 AND discovery net R > 0 AND >= 3 of 4 discovery folds net-positive; the eligible arm with the highest discovery net R is selected
+    (a tie goes to A). HOLDOUT (read once): INDETERMINATE/insufficient_discovery IF every arm holds < 25 discovery trades; FAIL/no_discovery IF no arm is eligible otherwise; INDETERMINATE/underpowered IF
+    the selected arm holds < 25 held-back trades; PASS/confirmed IF held-back net R > 0; FAIL/not_replicated otherwise (closes THAT configuration on THIS window, never the lever family). A PASS with a non-A
+    arm is a LEAD for a Tier-3 proposal NOTE on the owning checklist row, never a config edit. Thresholds are not changed after any result.'
+  what_it_does_not_do: Edits no config, roster or record and places no order. A backtest of a few levers on one leg is not edge and not a P&L claim; not a Tier-3 case; does not deflate (one configuration
+    is read once on the holdout).
+  registered_before_run: true
+  registered_at: '2026-11-11'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.25
+  basis: stand-in planning weight from an orphan-leg iteration (iteration_orphans.py); an estimate, not a measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 40
+  why_runner: Fetches keyless public candles (Binance Vision / dukascopy) for a pinned window; Kaggle CPU runs with the internet off and metis-market-data carries no 2h/4h/1d candles for these legs; reads
+    no trainer data.
+  basis: 'Runner. One exit_lever_ablation.py invocation: one keyless candle fetch + 6 harness passes; same shape as RQ-20261016-077e-08 (estimate, not measured).'
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - spy_pullback_1h
+  - --arm
+  - A=
+  - --arm
+  - S1=--side-filter=long
+  - --arm
+  - C1=--be-floor-r=1.0
+  - --arm
+  - C4=--structure-exit=pivot=5
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --non-crypto-source
+  - dukascopy
+  - --grade
+  - holdout
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '25'
+  - --holdout-frac
+  - '0.25'
+  - --holdout-min-trades
+  - '25'
+  - --holdout-max-frac
+  - '0.40'
+  - --research-unit
+  - RQ-20261111-203c-01
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261111-203c-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/exit_lever_ablation.py
+- RQ-20261016-077e-08
+- research/levers/spy_pullback_1h.yaml
+programme: P1
+practice_precedent: 'T1/M13 (docs/reference/trading-and-model-practice-principles.md): select on discovery, read a held-back span once; operator 2026-11-05 RESEARCH-NO-WAIT.'
+intervention_controls:
+  not_applicable: lever sweep against the declared config on the same trades over the harness (A/B arms), not an active-management action on live check-ins; hold_to_bracket is arm A itself
+iteration:
+  subject: spy_pullback_1h
+  subject_kind: strategy_leg
+  from_result: research/levers/spy_pullback_1h.yaml#attribution
+  verdict_read: fail
+  diagnosis: Shorts lose (n=27, net -12.4 R, gross -10.2 R) while longs earn (n=48, +3.8 R); 51 stop exits carry -56 R; 18 losers reached 1R MFE; gross is negative so the loss is entry/exit, not cost (research/levers/spy_pullback_1h.yaml
+    attribution).
+  search: side filter (long only) and be-floor/structure exit; arms fixed below
+  levers:
+  - filter
+  - exit
+  map_entries:
+  - research/levers/spy_pullback_1h.yaml#attribution
+  attempt: 1
+  due_by: '2026-11-18'
