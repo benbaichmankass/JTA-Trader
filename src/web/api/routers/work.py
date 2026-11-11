@@ -908,8 +908,20 @@ def _checklist_item(
                 eff.basis, f"unrecognised basis {eff.basis!r}"),
         },
         "sectioned": eff.value in manager_status._SECTIONED_STATES,
+        # WORK-TOPIC-TAXONOMY: the row's subject, COMPUTED from its roadmap ref (docs/roadmap/topics.yaml);
+        # basis roadmap | unmapped | could_not_look (topic null, render "—").
+        "topic": _topic_of(item),
         "fields": _jsonable(item),
     }
+
+
+def _topic_of(item: dict[str, Any]) -> dict[str, Any]:
+    try:
+        from src.runtime import work_topics
+
+        return work_topics.topic_for(item.get("roadmap"))
+    except Exception:  # noqa: BLE001  # allow-silent: a presentation facet; could_not_look is stated, never a guess
+        return {"topic": None, "subtopic": None, "topics": [], "basis": "could_not_look"}
 
 
 #: Why a lane's state may or may not be trusted, per observation grade. The
@@ -1150,7 +1162,11 @@ def _checklist_summary(rows: list[dict[str, Any]], dropped: int) -> dict[str, An
     by_basis = {b: 0 for b in manager_status.STATUS_BASES}
     off_vocabulary = 0
     unsectioned = 0
+    by_topic: dict[str, int] = {}
     for row in rows:
+        t = row.get("topic") or {}
+        tkey = t.get("topic") if t.get("topic") is not None else "—"
+        by_topic[tkey] = by_topic.get(tkey, 0) + 1
         status = row["status"]
         key = status["value"] or "(no status declared)"
         by_status[key] = by_status.get(key, 0) + 1
@@ -1163,6 +1179,8 @@ def _checklist_summary(rows: list[dict[str, Any]], dropped: int) -> dict[str, An
         "total": len(rows),
         "byStatus": by_status,
         "byBasis": by_basis,
+        # WORK-TOPIC-TAXONOMY: sums to `total`; "Unmapped" = no roadmap ref, "—" = the topic map was unreadable.
+        "byTopic": by_topic,
         # The finding the page must not bury: measured 2026-09-10 over the real
         # 244-item file, 13 rows declare a `state` and a `status` that
         # DISAGREE, and 18 carry a status no `/status` section covers.

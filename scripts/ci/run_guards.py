@@ -1453,6 +1453,13 @@ GUARDS: List[Dict[str, Any]] = [
         ],
     },
     {
+        # WORK-TOPIC-TAXONOMY (operator 2026-11-11): every milestone has a Work-page topic, and only milestones do.
+        "name": "topic-map-guard",
+        "when": {"globs": ["docs/roadmap/**", "scripts/ci/check_topic_map.py", "src/runtime/work_topics.py"]},
+        "steps": [["python3", "scripts/ci/check_topic_map.py", "--self-test"],
+                  ["python3", "scripts/ci/check_topic_map.py"]],
+    },
+    {
         # PI-20261005-RQ-ID-RACE-0001: generated units mint 001-899, hand-authored 900-999, and a
         # PR may not add a unit whose id is taken or sits in the wrong band.
         "name": "research-queue-id-bands",

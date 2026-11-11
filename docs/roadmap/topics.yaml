@@ -1,0 +1,136 @@
+# Work topic map (WORK-TOPIC-TAXONOMY; operator 2026-11-11 ~08:15Z, design docs/design/ui-workplan-2026-11.md § 10).
+#
+# Gates this adds or changes: none. A PRESENTATION facet: the Work page groups rows by subject. Every row already
+# carries a `roadmap` ref; the topic is COMPUTED from it through this map (src/runtime/work_topics.py), never typed
+# on a row. A row whose ref is `unmapped` or absent shows under UNMAPPED_TOPIC, visible so the gap is a to-do.
+# Closed / retired milestones keep their topic so history groups correctly.
+# Guard: scripts/ci/check_topic_map.py (topic-map-guard) fails when a milestone id in docs/roadmap/milestones.yaml
+# has no entry here, an entry names no known milestone, or a topic is not in `topics`.
+# Open call (design § 10): Regime and Data could fold under ML; kept separate until the operator says otherwise.
+
+unmapped_topic: Unmapped
+topics:
+- Trade management
+- Strategy lifecycle
+- Strategies
+- Portfolio & risk
+- Markets & venues
+- Prop accounts
+- Plumbing & integrity
+- ML
+- Regime
+- Data
+- Trading desk
+- Research
+- Operations
+- Macro & value
+- Operator surfaces
+milestones:
+  L-AM-STANDARD:
+    topic: Trade management
+    subtopic: active management standard
+  L-ATM:
+    topic: Trade management
+    subtopic: brackets as predictions
+  M20:
+    topic: Trade management
+    subtopic: exits & TP doctrine (merged into L-ATM)
+  M31:
+    topic: Trade management
+    subtopic: position telemetry (merged into L-ATM)
+  L-LADDER:
+    topic: Strategy lifecycle
+    subtopic: promotion ladder
+  M21:
+    topic: Strategy lifecycle
+    subtopic: entry refinement
+  M22:
+    topic: Strategies
+    subtopic: pairs & small-timeframe
+  M27:
+    topic: Strategies
+    subtopic: scalp family
+  L-TIMEFRAMES:
+    topic: Strategies
+    subtopic: horizon frontier
+  M18:
+    topic: Portfolio & risk
+    subtopic: allocator & arbitration
+  M16:
+    topic: Portfolio & risk
+    subtopic: confidence risk architecture
+  M24:
+    topic: Portfolio & risk
+    subtopic: net-R / cost-aware modelling (retired)
+  M15:
+    topic: Markets & venues
+    subtopic: platform migration (retired)
+  L-PROP:
+    topic: Prop accounts
+    subtopic: automate, protect, qualify
+  M39:
+    topic: Plumbing & integrity
+    subtopic: measurement invariants
+  L-ALERT-INTEGRATION:
+    topic: Plumbing & integrity
+    subtopic: alerts & venue state
+  L-ML-LIVE:
+    topic: ML
+    subtopic: ML in live loops
+  L-ML-MECE:
+    topic: ML
+    subtopic: one owner per decision
+  L-ML-AGGREGATOR:
+    topic: ML
+    subtopic: position aggregator (offline)
+  M25:
+    topic: ML
+    subtopic: promotion & consolidation
+  M23:
+    topic: ML
+    subtopic: meta-labelling & signals catalog
+  M14:
+    topic: ML
+    subtopic: optimisation program
+  M9:
+    topic: ML
+    subtopic: AI traders & HF/data pipeline
+  M26:
+    topic: ML
+    subtopic: regime-transition intelligence (retired)
+  M41:
+    topic: ML
+    subtopic: local LLM
+  L-REGIME:
+    topic: Regime
+    subtopic: regime program
+  L-DATA:
+    topic: Data
+    subtopic: ingest/process/label/learn
+  L-DESK-V1:
+    topic: Trading desk
+    subtopic: V1 production-ready
+  L-DESK:
+    topic: Trading desk
+    subtopic: Claude desk over lanes
+  L-PROGRAMMES:
+    topic: Research
+    subtopic: programmes
+  M40:
+    topic: Research
+    subtopic: testing workflow & throughput
+  L-OPS:
+    topic: Operations
+    subtopic: manager loop & cost discipline
+  M28:
+    topic: Macro & value
+    subtopic: value sleeve
+  M29:
+    topic: Macro & value
+    subtopic: system dynamics
+  M36:
+    topic: Macro & value
+    subtopic: consolidation umbrella (retired)
+  M6:
+    topic: Operator surfaces
+    subtopic: web app & Telegram
