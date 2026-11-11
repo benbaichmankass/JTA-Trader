@@ -173,7 +173,12 @@ def checklist_records(data: dict, today: date | None = None) -> list[dict]:
         state = r.get("state")
         is_open = state in _ROW_OPEN
         upd = _d(r.get("updated_at"))
-        due_by = _d((r.get("observation") or {}).get("due_by")) if isinstance(r.get("observation"), dict) else None
+        # A row's due date lives at top-level ``due_by`` (checklist.py add --due-by; the work store's
+        # due_rule.due_date projects back to it); ``observation.due_by`` is the landed_unproven
+        # observation's. Reading only the latter reported 0 % due over 12 past-due AUD rows
+        # (WEEKLY-AUDIT-2026-11-11).
+        obs = r.get("observation") if isinstance(r.get("observation"), dict) else {}
+        due_by = _d(obs.get("due_by")) or _d(r.get("due_by"))
         out.append({
             "store": "checklist", "id": rid, "source": src, "state": state, "open": is_open,
             "filed": pipeline.filed_date({"id": rid}) or upd,
@@ -355,12 +360,18 @@ def _selftest() -> int:
          "owner": "manager", "updated_at": "2026-10-20T00:00:00Z"},
         {"id": "Z", "title": "t", "note": "", "state": "queued", "owner": "unassigned"},
         {"id": "Y", "title": "landed", "note": "", "state": "landed_unproven", "owner": "lane",
-         "updated_at": "2026-10-01T00:00:00Z", "observation": {"due_by": "2026-10-10"}}]}, today)
+         "updated_at": "2026-10-01T00:00:00Z", "observation": {"due_by": "2026-10-10"}},
+        {"id": "AUD-20261104-Q", "title": "dated", "note": "", "state": "queued", "owner": "manager",
+         "due_by": "2026-10-10"},
+        {"id": "AUD-20261104-R", "title": "future", "note": "", "state": "queued", "owner": "manager",
+         "due_by": "2999-01-01"}]}, today)
     check(rows[0]["source"] == "weekly-audit" and rows[0]["open"] and not rows[0]["owned"]
           and rows[0]["filed"] == date(2026, 10, 19), f"row 0 wrong: {rows[0]}")
     check(rows[1]["source"] == "performance-review" and rows[1]["closed"] == date(2026, 10, 20), "row 1")
     check(not rows[2]["owned"], "owner 'unassigned' is no owner")
     check(rows[3]["due"] and rows[3]["open"], "landed_unproven past due_by is open and due")
+    check(rows[4]["due"], "an open row past its top-level due_by is due (WEEKLY-AUDIT-2026-11-11)")
+    check(not rows[5]["due"], "an open row with a future due_by is not due")
 
     # Smoke run against the live stores: must read, and sources must sum to total.
     try:

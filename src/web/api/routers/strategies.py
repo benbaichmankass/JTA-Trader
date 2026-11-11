@@ -361,6 +361,22 @@ def _tick_age_seconds(last_tick_utc: Any) -> Optional[float]:
     return (datetime.now(timezone.utc) - ts).total_seconds()
 
 
+def _strategy_status_table(strategies_cfg: Dict[str, Any]) -> tuple[Dict[str, Dict[str, Any]], str]:
+    """``({leg: {status, books}}, read_state)`` from the SAME yaml data this route already read, using
+    ``scripts/ops/strategy_status`` for the rule. ``read_state`` is ``measured`` or ``unreadable`` (never a silent {})."""
+    try:
+        from scripts.ops import strategy_status as ss
+        ros = ss.rosters(load_accounts_dict(_ACCOUNTS_YAML, errors=[]) or {})
+        if not strategies_cfg:
+            return {}, "unreadable"
+        return ({leg: {"status": ss.status_of(leg, ros, strategies_cfg),
+                       "books": sorted(a for a, legs in ros.items() if leg in legs)}
+                 for leg, cfg in strategies_cfg.items() if isinstance(cfg, dict)}, "measured")
+    except Exception:  # noqa: BLE001  # allow-silent: additive field; the row then reads status null + unreadable
+        logger.warning("strategies: status derivation failed", exc_info=True)
+        return {}, "unreadable"
+
+
 @router.get("/strategies")
 def get_strategies() -> Dict[str, Any]:
     """Return config, runtime status, stats, descriptions, and changelog.
@@ -389,6 +405,7 @@ def get_strategies() -> Dict[str, Any]:
     Full mapping: ``docs/reference/verifying-what-is-trading.md``; the
     dedicated surface is ``GET /api/bot/runtime-config``."""
     strategies_cfg = _load_strategies_yaml()
+    status_table, status_state = _strategy_status_table(strategies_cfg)
     changelog = _load_changelog()
     descriptions = _load_descriptions()
     stats_by_name = _query_stats(_DB_PATH)
@@ -418,6 +435,13 @@ def get_strategies() -> Dict[str, Any]:
         ]
         out.append({
             "name": name,
+            # UI-MODELS-STRATEGIES-TABLES: testing | production | inactive, DERIVED from roster membership + the
+            # retirement marker (scripts/ops/strategy_status.py) -- never stored. `None` + status_read_state says
+            # "could not derive", never a guessed status. `books` = the accounts whose roster carries the leg.
+            "status": (status_table.get(name) or {}).get("status"),
+            "books": (status_table.get(name) or {}).get("books"),
+            "status_read_state": ("unreadable" if status_state == "unreadable"
+                                  else "measured" if name in status_table else "not_in_table"),
             "enabled": bool(cfg.get("enabled", True)),
             # Strategy-level execution gate (config/strategies.yaml::execution).
             # Default-permissive: omitted → "live" (the canonical gate — what's

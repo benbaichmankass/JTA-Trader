@@ -549,6 +549,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/design/alpaca-trade-scoped-close-PROPOSAL.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/b6-split-packet-2026-08-29.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/boot-read-size-PROPOSAL.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
+| `docs/design/desk-entry-review-redesign-2026-11-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/site-auth-consumer-inventory-2026-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/ui-workplan-2026-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | UI workplan 2026-11: design for OAuth sign-in enforcement, prop/chart bracket history, performance table + P&L chart, insights ledger, models/strategies tables, sidebar, topic map |
 | `docs/design/close-confirmation-scope-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
@@ -608,6 +609,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/DATA-EXPLORER-SPA-HANDOFF.md` | history | historical | — | 2026-10-13 | `name:record-of-a-past-state / dir:record-of-a-completed-session` | — |
 | `docs/plans/ENGINEERING-PLAN-2026-09-21.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/ML-PROGRAMME-2026-10-28.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | ONE consolidated ML programme: models that manage trades, TM-BENCH, 8 tracks, proposed infra rows, learning ledger. |
+| `docs/plans/ML-CONSOLIDATION-2026-11-11.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | ML registry inventory (106 rows) by slot with a keep/review/retire proposal; Thursday input for ML-PROGRAMME-CONSOLIDATION. |
 | `docs/plans/ML-ROADMAP-MECE-2026-11.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | MECE map of ML model families onto the ten trade-lifecycle decisions (D1-D10): per-slot question/baseline/label/harness, position aggregator (Mastiff) design, research dependency graph, compute demand, ranked proposals for Thursday planning. Propose-only. |
 | `docs/plans/WATCHDOG-CONSOLIDATION-DESIGN-2026-11-06.md` | plan | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/counterfactual-everywhere-DESIGN-2026-10-29.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
@@ -1198,6 +1200,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/reviews/2026-11-04-roadmap-rebaseline.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/reviews/2026-11-04-weekly-audit.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/reviews/2026-11-04-weekly-walkthrough.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/reviews/2026-11-11-weekly-audit.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/runbooks/alpaca-integration.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/backfill-orphan-pnl.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/devnull-guard.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |

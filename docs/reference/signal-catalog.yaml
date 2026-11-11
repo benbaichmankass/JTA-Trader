@@ -35,9 +35,9 @@ health_vocabulary:
   batch_level_only: producer-level liveness/vacuity, not per input
   unmeasured: no null-rate or staleness metric exists for this input today (provenance.UNMEASURED_MARKER = "unmeasured"; never read as healthy)
 population:
-  inputs: 335
+  inputs: 363
   by_family_kind:
-    ml/ml_feature: 105
+    ml/ml_feature: 133
     regime_macro/cross_asset: 6
     regime_macro/crowding: 1
     regime_macro/event_calendar: 20
@@ -55,7 +55,7 @@ population:
   health_by_family_state:
     ml/build_time_only: 67
     ml/measured: 6
-    ml/unmeasured: 32
+    ml/unmeasured: 60
     regime_macro/batch_level_only: 17
     regime_macro/unmeasured: 139
     strategy/measured: 4
@@ -1882,6 +1882,242 @@ ml_models:
   - daily_equity_high_at_signal
   - daily_drawdown_pct_at_signal
   - open_trades_count_at_signal
+- model_id: ENTRY-EQ-v1-B-tau0.2
+  manifest: null
+  artifact: ml/candidates/ml_entry_eq_v1/model.json
+  model_family: lightgbm
+  dataset:
+    family: ml_decision_entry
+    symbol_scope: etf_pool
+    timeframe: 1h
+    version: artifact
+  target_deployment_stage: candidate
+  feature_ref: ml/candidates/ml_entry_eq_v1/model.json:features
+  features:
+  - ret_1
+  - ret_4
+  - ret_12
+  - ret_24
+  - ret_72
+  - ret_168
+  - vol24
+  - vol_ratio
+  - atr_pct
+  - range_pos_24
+  - range_pos_168
+  - vol_z
+  - rsi14
+  - hour
+  - dow
+  - xs_rank_ret24
+  - xs_rank_ret168
+  - xs_rank_vol24
+  - xs_rank_volz
+  - breadth_up24
+  - rel_vol
+- model_id: ENTRY-EQ-v1-B-tau0.2-STRUCT-pivot5-sl_only
+  manifest: null
+  artifact: ml/candidates/ml_entry_eq_v2_struct/model.json
+  model_family: lightgbm
+  dataset:
+    family: ml_decision_entry
+    symbol_scope: etf_pool
+    timeframe: 1h
+    version: artifact
+  target_deployment_stage: candidate
+  feature_ref: ml/candidates/ml_entry_eq_v2_struct/model.json:features
+  features:
+  - ret_1
+  - ret_4
+  - ret_12
+  - ret_24
+  - ret_72
+  - ret_168
+  - vol24
+  - vol_ratio
+  - atr_pct
+  - range_pos_24
+  - range_pos_168
+  - vol_z
+  - rsi14
+  - hour
+  - dow
+  - xs_rank_ret24
+  - xs_rank_ret168
+  - xs_rank_vol24
+  - xs_rank_volz
+  - breadth_up24
+  - rel_vol
+- model_id: ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5
+  manifest: null
+  artifact: ml/candidates/ml_entry_eq_v3_struct_ens5/model.json
+  model_family: lightgbm
+  dataset:
+    family: ml_decision_entry
+    symbol_scope: etf_pool
+    timeframe: 1h
+    version: artifact
+  target_deployment_stage: candidate
+  feature_ref: ml/candidates/ml_entry_eq_v3_struct_ens5/model.json:features
+  features:
+  - ret_1
+  - ret_4
+  - ret_12
+  - ret_24
+  - ret_72
+  - ret_168
+  - vol24
+  - vol_ratio
+  - atr_pct
+  - range_pos_24
+  - range_pos_168
+  - vol_z
+  - rsi14
+  - hour
+  - dow
+  - xs_rank_ret24
+  - xs_rank_ret168
+  - xs_rank_vol24
+  - xs_rank_volz
+  - breadth_up24
+  - rel_vol
+- model_id: ml-decision-entry-v1
+  manifest: null
+  artifact: ml/served/ml_decision_entry_v1/model.json
+  model_family: lightgbm
+  dataset:
+    family: ml_decision_entry
+    symbol_scope: xs_reference
+    timeframe: 1h
+    version: artifact
+  target_deployment_stage: served
+  feature_ref: ml/served/ml_decision_entry_v1/model.json:features
+  features:
+  - ret_1
+  - ret_4
+  - ret_12
+  - ret_24
+  - ret_72
+  - ret_168
+  - vol24
+  - vol_ratio
+  - atr_pct
+  - range_pos_24
+  - range_pos_168
+  - vol_z
+  - rsi14
+  - hour
+  - dow
+  - xs_rank_ret24
+  - btc_ret24
+  - btc_vol24
+  - breadth_up24
+  - rel_vol
+- model_id: ml-decision-entry-v1r20261106
+  manifest: null
+  artifact: ml/served/ml_decision_entry_v1r20261106/model.json
+  model_family: lightgbm
+  dataset:
+    family: ml_decision_entry
+    symbol_scope: xs_reference
+    timeframe: 1h
+    version: artifact
+  target_deployment_stage: served
+  feature_ref: ml/served/ml_decision_entry_v1r20261106/model.json:features
+  features:
+  - ret_1
+  - ret_4
+  - ret_12
+  - ret_24
+  - ret_72
+  - ret_168
+  - vol24
+  - vol_ratio
+  - atr_pct
+  - range_pos_24
+  - range_pos_168
+  - vol_z
+  - rsi14
+  - hour
+  - dow
+  - xs_rank_ret24
+  - btc_ret24
+  - btc_vol24
+  - breadth_up24
+  - rel_vol
+- model_id: ml-decision-entry-v2
+  manifest: null
+  artifact: ml/served/ml_decision_entry_v2/model.json
+  model_family: lightgbm
+  dataset:
+    family: ml_decision_entry
+    symbol_scope: xs_reference
+    timeframe: 1h
+    version: artifact
+  target_deployment_stage: served
+  feature_ref: ml/served/ml_decision_entry_v2/model.json:features
+  features:
+  - ret_1
+  - ret_4
+  - ret_12
+  - ret_24
+  - ret_72
+  - ret_168
+  - vol24
+  - vol_ratio
+  - atr_pct
+  - range_pos_24
+  - range_pos_168
+  - vol_z
+  - rsi14
+  - hour
+  - dow
+  - xs_rank_ret24
+  - btc_ret24
+  - btc_vol24
+  - breadth_up24
+  - rel_vol
+- model_id: ml-entry-tp-revision-v1
+  manifest: null
+  artifact: ml/served/ml_entry_tp_revision_v1/model.json
+  model_family: lightgbm
+  dataset:
+    family: ml_decision_entry
+    symbol_scope: xs_reference
+    timeframe: 1h
+    version: artifact
+  target_deployment_stage: served
+  feature_ref: ml/served/ml_entry_tp_revision_v1/model.json:features
+  features:
+  - ret_1
+  - ret_4
+  - ret_12
+  - ret_24
+  - ret_72
+  - ret_168
+  - vol24
+  - vol_ratio
+  - atr_pct
+  - range_pos_24
+  - range_pos_168
+  - vol_z
+  - rsi14
+  - hour
+  - dow
+  - xs_rank_ret24
+  - btc_ret24
+  - btc_vol24
+  - breadth_up24
+  - rel_vol
+  - side
+  - bars_held
+  - open_r
+  - mfe_r
+  - mae_r
+  - dist_sl_atr
+  - atr_ratio
+  - sret_4
+  - sret_24
 inputs:
 - id: candle.open
   name: open
@@ -8494,3 +8730,599 @@ inputs:
     state: unmeasured
     detail: unmeasured (no null-rate or staleness metric served)
   keying: hand-catalogued (scripts/macro producers are an unguarded surface)
+- id: ml_feature.ret_1
+  name: ret_1
+  family: ml
+  kind: ml_feature
+  definition: "vol-scaled 1-bar log return: (ln c[t] - ln c[t-1]) / (vol24 * sqrt(1))"
+  source: "1h closed bars of the symbol (bybit perps for ml_entry/v2; Alpaca RTH 1Hour bars for ml_entry_eq)"
+  read_at:
+  - src/runtime/ml_decision_features.py:35
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_decision_features.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ENTRY-EQ-v1-B-tau0.2
+  - ENTRY-EQ-v1-B-tau0.2-STRUCT-pivot5-sl_only
+  - ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5
+  - ml-decision-entry-v1
+  - ml-decision-entry-v1r20261106
+  - ml-decision-entry-v2
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.ret_4
+  name: ret_4
+  family: ml
+  kind: ml_feature
+  definition: "vol-scaled 4-bar log return: (ln c[t] - ln c[t-4]) / (vol24 * sqrt(4))"
+  source: "1h closed bars of the symbol (bybit perps for ml_entry/v2; Alpaca RTH 1Hour bars for ml_entry_eq)"
+  read_at:
+  - src/runtime/ml_decision_features.py:35
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_decision_features.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ENTRY-EQ-v1-B-tau0.2
+  - ENTRY-EQ-v1-B-tau0.2-STRUCT-pivot5-sl_only
+  - ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5
+  - ml-decision-entry-v1
+  - ml-decision-entry-v1r20261106
+  - ml-decision-entry-v2
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.ret_12
+  name: ret_12
+  family: ml
+  kind: ml_feature
+  definition: "vol-scaled 12-bar log return: (ln c[t] - ln c[t-12]) / (vol24 * sqrt(12))"
+  source: "1h closed bars of the symbol (bybit perps for ml_entry/v2; Alpaca RTH 1Hour bars for ml_entry_eq)"
+  read_at:
+  - src/runtime/ml_decision_features.py:35
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_decision_features.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ENTRY-EQ-v1-B-tau0.2
+  - ENTRY-EQ-v1-B-tau0.2-STRUCT-pivot5-sl_only
+  - ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5
+  - ml-decision-entry-v1
+  - ml-decision-entry-v1r20261106
+  - ml-decision-entry-v2
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.ret_24
+  name: ret_24
+  family: ml
+  kind: ml_feature
+  definition: "vol-scaled 24-bar log return: (ln c[t] - ln c[t-24]) / (vol24 * sqrt(24))"
+  source: "1h closed bars of the symbol (bybit perps for ml_entry/v2; Alpaca RTH 1Hour bars for ml_entry_eq)"
+  read_at:
+  - src/runtime/ml_decision_features.py:35
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_decision_features.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ENTRY-EQ-v1-B-tau0.2
+  - ENTRY-EQ-v1-B-tau0.2-STRUCT-pivot5-sl_only
+  - ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5
+  - ml-decision-entry-v1
+  - ml-decision-entry-v1r20261106
+  - ml-decision-entry-v2
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.ret_72
+  name: ret_72
+  family: ml
+  kind: ml_feature
+  definition: "vol-scaled 72-bar log return: (ln c[t] - ln c[t-72]) / (vol24 * sqrt(72))"
+  source: "1h closed bars of the symbol (bybit perps for ml_entry/v2; Alpaca RTH 1Hour bars for ml_entry_eq)"
+  read_at:
+  - src/runtime/ml_decision_features.py:35
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_decision_features.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ENTRY-EQ-v1-B-tau0.2
+  - ENTRY-EQ-v1-B-tau0.2-STRUCT-pivot5-sl_only
+  - ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5
+  - ml-decision-entry-v1
+  - ml-decision-entry-v1r20261106
+  - ml-decision-entry-v2
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.ret_168
+  name: ret_168
+  family: ml
+  kind: ml_feature
+  definition: "vol-scaled 168-bar log return: (ln c[t] - ln c[t-168]) / (vol24 * sqrt(168))"
+  source: "1h closed bars of the symbol (bybit perps for ml_entry/v2; Alpaca RTH 1Hour bars for ml_entry_eq)"
+  read_at:
+  - src/runtime/ml_decision_features.py:35
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_decision_features.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ENTRY-EQ-v1-B-tau0.2
+  - ENTRY-EQ-v1-B-tau0.2-STRUCT-pivot5-sl_only
+  - ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5
+  - ml-decision-entry-v1
+  - ml-decision-entry-v1r20261106
+  - ml-decision-entry-v2
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.vol24
+  name: vol24
+  family: ml
+  kind: ml_feature
+  definition: "rolling 24-bar std of 1-bar log returns"
+  source: "1h closed bars of the symbol (bybit perps for ml_entry/v2; Alpaca RTH 1Hour bars for ml_entry_eq)"
+  read_at:
+  - src/runtime/ml_decision_features.py:36
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_decision_features.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ENTRY-EQ-v1-B-tau0.2
+  - ENTRY-EQ-v1-B-tau0.2-STRUCT-pivot5-sl_only
+  - ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5
+  - ml-decision-entry-v1
+  - ml-decision-entry-v1r20261106
+  - ml-decision-entry-v2
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.vol_ratio
+  name: vol_ratio
+  family: ml
+  kind: ml_feature
+  definition: "vol24 / rolling 168-bar std of 1-bar log returns"
+  source: "1h closed bars of the symbol (bybit perps for ml_entry/v2; Alpaca RTH 1Hour bars for ml_entry_eq)"
+  read_at:
+  - src/runtime/ml_decision_features.py:37
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_decision_features.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ENTRY-EQ-v1-B-tau0.2
+  - ENTRY-EQ-v1-B-tau0.2-STRUCT-pivot5-sl_only
+  - ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5
+  - ml-decision-entry-v1
+  - ml-decision-entry-v1r20261106
+  - ml-decision-entry-v2
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.atr_pct
+  name: atr_pct
+  family: ml
+  kind: ml_feature
+  definition: "ATR14 (simple mean of true range) / close"
+  source: "1h closed bars of the symbol (bybit perps for ml_entry/v2; Alpaca RTH 1Hour bars for ml_entry_eq)"
+  read_at:
+  - src/runtime/ml_decision_features.py:40
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_decision_features.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ENTRY-EQ-v1-B-tau0.2
+  - ENTRY-EQ-v1-B-tau0.2-STRUCT-pivot5-sl_only
+  - ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5
+  - ml-decision-entry-v1
+  - ml-decision-entry-v1r20261106
+  - ml-decision-entry-v2
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.range_pos_24
+  name: range_pos_24
+  family: ml
+  kind: ml_feature
+  definition: "(close - 24-bar low) / (24-bar high - 24-bar low); NaN when the range is 0"
+  source: "1h closed bars of the symbol (bybit perps for ml_entry/v2; Alpaca RTH 1Hour bars for ml_entry_eq)"
+  read_at:
+  - src/runtime/ml_decision_features.py:43
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_decision_features.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ENTRY-EQ-v1-B-tau0.2
+  - ENTRY-EQ-v1-B-tau0.2-STRUCT-pivot5-sl_only
+  - ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5
+  - ml-decision-entry-v1
+  - ml-decision-entry-v1r20261106
+  - ml-decision-entry-v2
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.range_pos_168
+  name: range_pos_168
+  family: ml
+  kind: ml_feature
+  definition: "(close - 168-bar low) / (168-bar high - 168-bar low); NaN when the range is 0"
+  source: "1h closed bars of the symbol (bybit perps for ml_entry/v2; Alpaca RTH 1Hour bars for ml_entry_eq)"
+  read_at:
+  - src/runtime/ml_decision_features.py:43
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_decision_features.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ENTRY-EQ-v1-B-tau0.2
+  - ENTRY-EQ-v1-B-tau0.2-STRUCT-pivot5-sl_only
+  - ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5
+  - ml-decision-entry-v1
+  - ml-decision-entry-v1r20261106
+  - ml-decision-entry-v2
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.vol_z
+  name: vol_z
+  family: ml
+  kind: ml_feature
+  definition: "z-score of log1p(volume) vs its rolling 168-bar mean/std"
+  source: "1h closed bars of the symbol (bybit perps for ml_entry/v2; Alpaca RTH 1Hour bars for ml_entry_eq)"
+  read_at:
+  - src/runtime/ml_decision_features.py:45
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_decision_features.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ENTRY-EQ-v1-B-tau0.2
+  - ENTRY-EQ-v1-B-tau0.2-STRUCT-pivot5-sl_only
+  - ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5
+  - ml-decision-entry-v1
+  - ml-decision-entry-v1r20261106
+  - ml-decision-entry-v2
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.rsi14
+  name: rsi14
+  family: ml
+  kind: ml_feature
+  definition: "RSI-style ratio in [0,1]: 14-bar mean of positive log returns / (mean positive + mean |negative|)"
+  source: "1h closed bars of the symbol (bybit perps for ml_entry/v2; Alpaca RTH 1Hour bars for ml_entry_eq)"
+  read_at:
+  - src/runtime/ml_decision_features.py:48
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_decision_features.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ENTRY-EQ-v1-B-tau0.2
+  - ENTRY-EQ-v1-B-tau0.2-STRUCT-pivot5-sl_only
+  - ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5
+  - ml-decision-entry-v1
+  - ml-decision-entry-v1r20261106
+  - ml-decision-entry-v2
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.hour
+  name: hour
+  family: ml
+  kind: ml_feature
+  definition: "UTC hour of the decision bar CLOSE (ml_entry_eq: RTH close capped at 16:00 ET)"
+  source: "bar timestamp"
+  read_at:
+  - src/runtime/ml_decision_features.py:50
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_decision_features.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ENTRY-EQ-v1-B-tau0.2
+  - ENTRY-EQ-v1-B-tau0.2-STRUCT-pivot5-sl_only
+  - ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5
+  - ml-decision-entry-v1
+  - ml-decision-entry-v1r20261106
+  - ml-decision-entry-v2
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.dow
+  name: dow
+  family: ml
+  kind: ml_feature
+  definition: "UTC day-of-week (Mon=0) of the decision bar CLOSE"
+  source: "bar timestamp"
+  read_at:
+  - src/runtime/ml_decision_features.py:51
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_decision_features.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ENTRY-EQ-v1-B-tau0.2
+  - ENTRY-EQ-v1-B-tau0.2-STRUCT-pivot5-sl_only
+  - ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5
+  - ml-decision-entry-v1
+  - ml-decision-entry-v1r20261106
+  - ml-decision-entry-v2
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.xs_rank_ret24
+  name: xs_rank_ret24
+  family: ml
+  kind: ml_feature
+  definition: "percentile rank of the symbol's raw 24-bar log return across the cross-section at the decision close"
+  source: "cross-section of 1h closed bars at the same decision close (ml_entry: the model's xs_reference bybit perps; ml_entry_eq: the 173-ETF pool snapshot)"
+  read_at:
+  - src/runtime/ml_decision_features.py:90
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_decision_features.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ENTRY-EQ-v1-B-tau0.2
+  - ENTRY-EQ-v1-B-tau0.2-STRUCT-pivot5-sl_only
+  - ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5
+  - ml-decision-entry-v1
+  - ml-decision-entry-v1r20261106
+  - ml-decision-entry-v2
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.btc_ret24
+  name: btc_ret24
+  family: ml
+  kind: ml_feature
+  definition: "raw 24-bar log return of the cross-sectional anchor (default BTCUSDT; per-account anchor via src/runtime/ml_entry_profile.py)"
+  source: "cross-section of 1h closed bars at the same decision close (ml_entry: the model's xs_reference bybit perps; ml_entry_eq: the 173-ETF pool snapshot)"
+  read_at:
+  - src/runtime/ml_decision_features.py:91
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_decision_features.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ml-decision-entry-v1
+  - ml-decision-entry-v1r20261106
+  - ml-decision-entry-v2
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.btc_vol24
+  name: btc_vol24
+  family: ml
+  kind: ml_feature
+  definition: "vol24 of the cross-sectional anchor (default BTCUSDT)"
+  source: "cross-section of 1h closed bars at the same decision close (ml_entry: the model's xs_reference bybit perps; ml_entry_eq: the 173-ETF pool snapshot)"
+  read_at:
+  - src/runtime/ml_decision_features.py:92
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_decision_features.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ml-decision-entry-v1
+  - ml-decision-entry-v1r20261106
+  - ml-decision-entry-v2
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.breadth_up24
+  name: breadth_up24
+  family: ml
+  kind: ml_feature
+  definition: "share of the cross-section with a positive raw 24-bar log return"
+  source: "cross-section of 1h closed bars at the same decision close (ml_entry: the model's xs_reference bybit perps; ml_entry_eq: the 173-ETF pool snapshot)"
+  read_at:
+  - src/runtime/ml_decision_features.py:93
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_decision_features.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ENTRY-EQ-v1-B-tau0.2
+  - ENTRY-EQ-v1-B-tau0.2-STRUCT-pivot5-sl_only
+  - ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5
+  - ml-decision-entry-v1
+  - ml-decision-entry-v1r20261106
+  - ml-decision-entry-v2
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.rel_vol
+  name: rel_vol
+  family: ml
+  kind: ml_feature
+  definition: "symbol vol24 / median vol24 of the cross-section"
+  source: "cross-section of 1h closed bars at the same decision close (ml_entry: the model's xs_reference bybit perps; ml_entry_eq: the 173-ETF pool snapshot)"
+  read_at:
+  - src/runtime/ml_decision_features.py:94
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_decision_features.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ENTRY-EQ-v1-B-tau0.2
+  - ENTRY-EQ-v1-B-tau0.2-STRUCT-pivot5-sl_only
+  - ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5
+  - ml-decision-entry-v1
+  - ml-decision-entry-v1r20261106
+  - ml-decision-entry-v2
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.xs_rank_ret168
+  name: xs_rank_ret168
+  family: ml
+  kind: ml_feature
+  definition: "percentile rank of the raw 168-bar log return across the 173-ETF pool at the decision close"
+  source: "cross-section of 1h closed bars at the same decision close (ml_entry: the model's xs_reference bybit perps; ml_entry_eq: the 173-ETF pool snapshot)"
+  read_at:
+  - src/runtime/ml_entry_eq_features.py:99
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_entry_eq_features.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ENTRY-EQ-v1-B-tau0.2
+  - ENTRY-EQ-v1-B-tau0.2-STRUCT-pivot5-sl_only
+  - ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.xs_rank_vol24
+  name: xs_rank_vol24
+  family: ml
+  kind: ml_feature
+  definition: "percentile rank of vol24 across the 173-ETF pool at the decision close"
+  source: "cross-section of 1h closed bars at the same decision close (ml_entry: the model's xs_reference bybit perps; ml_entry_eq: the 173-ETF pool snapshot)"
+  read_at:
+  - src/runtime/ml_entry_eq_features.py:100
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_entry_eq_features.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ENTRY-EQ-v1-B-tau0.2
+  - ENTRY-EQ-v1-B-tau0.2-STRUCT-pivot5-sl_only
+  - ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.xs_rank_volz
+  name: xs_rank_volz
+  family: ml
+  kind: ml_feature
+  definition: "percentile rank of vol_z across the 173-ETF pool at the decision close"
+  source: "cross-section of 1h closed bars at the same decision close (ml_entry: the model's xs_reference bybit perps; ml_entry_eq: the 173-ETF pool snapshot)"
+  read_at:
+  - src/runtime/ml_entry_eq_features.py:101
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_entry_eq_features.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ENTRY-EQ-v1-B-tau0.2
+  - ENTRY-EQ-v1-B-tau0.2-STRUCT-pivot5-sl_only
+  - ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.side
+  name: side
+  family: ml
+  kind: ml_feature
+  definition: "position side at a TP check-in: +1 long, -1 short"
+  source: "open position state"
+  read_at:
+  - src/runtime/ml_entry_tp_policy.py:101
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_entry_tp_policy.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.dist_sl_atr
+  name: dist_sl_atr
+  family: ml
+  kind: ml_feature
+  definition: "side * (close_now - stop) / ATR at entry"
+  source: "open position state + 1h closed bars"
+  read_at:
+  - src/runtime/ml_entry_tp_policy.py:102
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_entry_tp_policy.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.atr_ratio
+  name: atr_ratio
+  family: ml
+  kind: ml_feature
+  definition: "ATR now / ATR at entry"
+  source: "open position state + 1h closed bars"
+  read_at:
+  - src/runtime/ml_entry_tp_policy.py:103
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_entry_tp_policy.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.sret_4
+  name: sret_4
+  family: ml
+  kind: ml_feature
+  definition: "side-signed ret_4 at the check-in bar"
+  source: "open position state + 1h closed bars"
+  read_at:
+  - src/runtime/ml_entry_tp_policy.py:103
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_entry_tp_policy.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
+- id: ml_feature.sret_24
+  name: sret_24
+  family: ml
+  kind: ml_feature
+  definition: "side-signed ret_24 at the check-in bar"
+  source: "open position state + 1h closed bars"
+  read_at:
+  - src/runtime/ml_entry_tp_policy.py:103
+  timeframe: 1h
+  freshness: computed at each decision from CLOSED bars (forming bar dropped)
+  live_scored: "yes, by the serving module at src/runtime/ml_entry_tp_policy.py (parity pinned by tests); artifact model.json features list, not an ml/configs manifest"
+  used_by:
+  - ml-entry-tp-revision-v1
+  health:
+    state: unmeasured
+    detail: no per-input null-rate or staleness metric served; a row that cannot be formed is refused by the serving module (decision_row returns None)
+  keying: hand-catalogued (ml/served + ml/candidates model.json is not a guard surface; coverage diff scripts/ops/feature_catalog_coverage.py, PR #24854)
