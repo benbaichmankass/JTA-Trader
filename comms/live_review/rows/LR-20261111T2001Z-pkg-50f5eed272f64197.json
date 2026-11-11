@@ -1,0 +1,171 @@
+{
+ "account_reads": [
+  {
+   "account_class": "prop",
+   "account_id": "tradeify_1",
+   "evidence": "flag only; venue SL 89.105 / TP 78.964 match the package",
+   "read": "no_action"
+  },
+  {
+   "account_class": "prop",
+   "account_id": "velotrade_1",
+   "evidence": "flag only; SL 89.105 matches, venue TP 76.535 differs from package 78.96364",
+   "read": "no_action"
+  }
+ ],
+ "accounts": [
+  "tradeify_1",
+  "velotrade_1"
+ ],
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "tighten_r": null,
+  "within_bound": null
+ },
+ "context_flags": [
+  "state: open_r ESTIMATED ~+1.93-1.94R (tradeify upnl 19.43/10.0; mark ~84.79-84.81); not broker-measured R",
+  "priced_options: could_not_price - no table, judgement only",
+  "mechanics: velotrade_1 TP 76.535 != package TP 78.96364",
+  "prior_advice_grade: 85.35 hit by 85.36 high; 85.70 hit by 85.84 high; 86.20 not reached (B)",
+  "tighten_bias: tightens flattered by stop fills; hand-set prop stop, gap risk",
+  "atr_ratio: 4h ATR 1.62 vs entry 0.976 = 1.66 (>=1.5, volatility elevated)",
+  "correlated: other open shorts ETH x2, ADA, XRP, SOL(sol_pullback_2h) plus metals; one crypto-beta bet",
+  "packet_defect: priced_options could_not_price (1/1)",
+  "packet_defect: state.open_r context_null:state.open_r (1/1)",
+  "packet_defect: generator_unverified origin/main unreadable (1/1)",
+  "packet_defect: diag reads telemetry/orders unreachable (DIAG_READ_TOKEN rotated); prop reads via /api/bot worked"
+ ],
+ "disposition": {
+  "action_issue": null,
+  "applied_at": null,
+  "mandate": null,
+  "route": "operator_ask",
+  "verified_readback": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.6584,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "forecast": {
+  "direction": "with_trade",
+  "evidence": [
+   "4h 16:00Z bar O84.80 H85.84 L84.45 C84.81",
+   "tradeify_1 upnl 19.43 USD at 20:06Z, 6.82 SOL, risk 10 USD -> ~1.94R",
+   "86.20 prior advice not touched by the 85.84 high"
+  ],
+  "horizon_bars": 3,
+  "invalidation_px": 86.2,
+  "p_target": 0.15,
+  "target_px": 78.96,
+  "thesis": "Downtrend intact (4h ADX 44, 1d ADX 37), flush low 81.27 held as support-turned-floor; bounce retested 85.84 (16:00Z bar) and failed below the 86.13 pre-flush high. A 4h close above 86.2 would invalidate.",
+  "timeframe": "4h"
+ },
+ "handoff": {
+  "prior_decision_id": "LR-20261111T1558Z-pkg-50f5eed272f64197",
+  "read_state": "read",
+  "reason": "prior 86.20 lock-in advice graded B (clear of 85.84 retest high, 0.36 margin; never applied by hand); superseded here only by a mechanics flag, not retracted",
+  "verdict": "carry"
+ },
+ "info_cutoff_at": "2026-11-11T20:06:37Z",
+ "judge_prior": null,
+ "leg": "trend_donchian_sol_4h",
+ "mechanics": {
+  "evidence": "SL agrees on both props (89.105 vs package 89.10464, to the tick). TP does NOT: tradeify_1 position TP 78.964 = package TP 78.96364, but velotrade_1 position/resting limit TP 76.535 vs package TP 78.96364 (2.43 wider, ~7.6R vs ~5.9R). Source: /api/bot/prop/status velotrade_1 raw positions + open_orders (prop-manual-507568d434f5-T) at 20:06:10Z, positions_provenance MEASURED. Packet verdict 'match' compared only readable package fields and did not read the venue TP. Wider TP adds no risk and the stop is unaffected, but Step 1 requires a flag before any exit judgement.",
+  "verdict": "mismatch"
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "options": [],
+ "order_package_id": "pkg-50f5eed272f64197",
+ "outcome_table_source": null,
+ "packet_defects": [
+  {
+   "count": 1,
+   "denominator": 1,
+   "field": "priced_options",
+   "reason": "could_not_price"
+  },
+  {
+   "count": 1,
+   "denominator": 1,
+   "field": "state.open_r",
+   "reason": "context_null:state.open_r"
+  },
+  {
+   "count": 1,
+   "denominator": 1,
+   "field": "generator",
+   "reason": "generator_unverified"
+  },
+  {
+   "count": 1,
+   "denominator": 1,
+   "field": "mechanics",
+   "reason": "verdict_match_did_not_read_venue_tp"
+  }
+ ],
+ "packet_sha": "150a78fa552557788ef9b2a2674a27ce4813e84442aaac90239e221121daaab5",
+ "prompt_sha": null,
+ "recommendation": {
+  "action": "flag_mechanics",
+  "basis": "mechanics",
+  "confidence": "anecdote",
+  "ev_delta_r": null,
+  "evidence_source": "none",
+  "forecast": {
+   "direction": "with_trade",
+   "evidence": [
+    "4h 16:00Z bar O84.80 H85.84 L84.45 C84.81",
+    "tradeify_1 upnl 19.43 USD at 20:06Z, 6.82 SOL, risk 10 USD -> ~1.94R",
+    "86.20 prior advice not touched by the 85.84 high"
+   ],
+   "horizon_bars": 3,
+   "invalidation_px": 86.2,
+   "p_target": 0.15,
+   "target_px": 78.96,
+   "thesis": "Downtrend intact (4h ADX 44, 1d ADX 37), flush low 81.27 held as support-turned-floor; bounce retested 85.84 (16:00Z bar) and failed below the 86.13 pre-flush high. A 4h close above 86.2 would invalidate.",
+   "timeframe": "4h"
+  },
+  "judgement_confidence": null,
+  "level": null,
+  "level_atr": null,
+  "reason": "flag_mechanics (Step 1), low severity: velotrade_1 resting TP 76.535 differs from package/ticket TP 78.96364 (tradeify_1 matches at 78.964). SL matches on both (89.105); no risk impact, but the operator should confirm whether the wider velotrade TP is deliberate or a typo and fix it to 78.964 if not. No new exit judgement is made on this row (skill Step 1). Prior lock-in advice (LR-20261111T1558Z, hand-set 86.20) is NOT retracted: the recorded stop on both props is still 89.105 (not moved), and the 16:00Z 4h bar high 85.84 stayed 0.36 below 86.20. Open R ESTIMATED ~+1.93 to +1.94R: tradeify_1 venue upnl 19.43 USD / 10.0 USD risk = 1.94R; mark ~84.79-84.81 (entry 87.64, risk 1.465; 20:03Z ml_entry ticket quotes 84.81). Not table-priced (could_not_price). Both accounts well clear of DD floors (tradeify 285.58 USD to floor, velotrade 240.61 USD; loss-to-stop ~9.9 USD each).",
+  "size_fraction": null,
+  "size_multiplier": null,
+  "worst_case_delta_r": null
+ },
+ "review_id": "LR-20261111T2001Z-pkg-50f5eed272f64197",
+ "reviewed_at": "2026-11-11T20:12:00Z",
+ "schema_version": 1,
+ "session": "session_01AFoLuN62pjgJ66FefWRRmT",
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "tighten_r": null,
+  "within_bound": null,
+  "would_apply": null
+ },
+ "skill_sha": null,
+ "state": {
+  "atr_now_over_entry": 1.6584,
+  "bars_held": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_provenance": "unverified",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 89.10464286,
+  "tp": 78.96364
+ },
+ "trade_id": null,
+ "trigger": {
+  "event": "judgement_cadence",
+  "l0_snapshot_at": "2026-11-11T20:00:00Z",
+  "level": null
+ }
+}
