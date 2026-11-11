@@ -1,0 +1,587 @@
+{
+ "request_id": "PERF-REVIEW-PREP-20261111",
+ "reviewed_at": "2026-11-11T20:00:00Z",
+ "reviewer": "claude",
+ "window_start": "2026-10-12T19:00:00Z",
+ "window_end": "2026-11-11T19:20:00Z",
+ "_scope_note": "Main window 30d (operator 2026-11-02) with lifetime/90d/7d beside it. Live API + diag workflow_dispatch artifacts read 2026-11-11 18:57-19:20Z. Section of docs/reviews/2026-11-11-weekly-walkthrough.md.",
+ "overall_assessment": "investigate",
+ "prior_calls_scorecard": {
+  "n_calls": 7,
+  "hit": 2,
+  "miss": 0,
+  "unresolved": 4,
+  "void": 1,
+  "brier": "INDETERMINATE",
+  "note": "E1 void (NO_BACKTEST), E2/E3/E6/E7 unresolved, E4/E5 hit. E6 action happened under AUD-20261104-FLATTEN-LABEL.",
+  "series": [
+   {
+    "review": "2026-10-28",
+    "n_resolved": 1,
+    "brier": "INDETERMINATE"
+   },
+   {
+    "review": "2026-11-04",
+    "n_resolved": 1,
+    "brier": "INDETERMINATE"
+   },
+   {
+    "review": "2026-11-11",
+    "n_resolved": 2,
+    "brier": "INDETERMINATE"
+   }
+  ]
+ },
+ "checks": {
+  "C1": {
+   "status": "ok",
+   "population": "/api/bot/performance perStrategy 7d/30d/all; real money, mirror, paper never pooled",
+   "result": "real 7d +3.81R/10, 30d -2.57R/31, life -152.1R/486; ml_entry 30d +5.00R/11; R/cap-day real 30d +0.051 (n=20), paper 30d +0.003 (n=119); 90d per leg could_not_look on API (no 90d window)"
+  },
+  "C2": {
+   "status": "ok",
+   "population": "live_vs_backtest.py Stage-2 legs, whole history per book",
+   "result": "0 of 6 real-money legs have a valid read: ml_entry + ml_entry_eq_struct NO_BACKTEST; tqqq NO_LIVE_TRADES; ada/xrp_4h/sol_prop banded on 30 of 31 pre-11-06-config closes"
+  },
+  "C3": {
+   "status": "ok",
+   "population": "interim: C1 windows vs C2 bands",
+   "result": "no valid band this week; paper expR flat at -0.04..-0.08"
+  },
+  "C4": {
+   "status": "ok",
+   "population": "108 real-money closes 07-27..11-11 joinable to diag dump (of 506); decision set 101",
+   "result": "strategy exits 87.1%, not-strategy 6.9%, unknown 5.9% (all ml_entry max_hold); 7d 0 not-strategy exits"
+  },
+  "C5": {
+   "status": "could_not_look",
+   "population": "realized_slippage.py",
+   "result": "pull fails at diag (401); analyze fix (E7) not landed"
+  },
+  "C6": {
+   "status": "ok",
+   "population": "desk 27 decisions since 11-04 (4 priced); live review could_not_look (diag 401, no relay fallback)",
+   "result": "desk +0.90R mean n=4 INDETERMINATE; vs random +0.23R; gate NOT_YET"
+  },
+  "C7": {
+   "status": "ok",
+   "population": "check_tp_doctrine.py re-run: 82 routings / 56 legs",
+   "result": "compliant real 1/6, mirror 1/6, prop 1/9, paper 4/61"
+  },
+  "C8": {
+   "status": "ok",
+   "population": "classify_paper_records.py, 30d journal rows n=266",
+   "result": "A 183, B 5, C 37, P 41; journalTrust read, divergent bybit_2, unrecorded alpaca_live"
+  },
+  "C9": {
+   "status": "ok",
+   "population": "90d, 1433 graded trades joined to journal",
+   "result": "A 10 (100%), B 420 (37.4%), C 875 (44.3%), D 128 (32.0%): grade_drift 4th review; freshness 0.6d"
+  },
+  "C10": {
+   "status": "ok",
+   "population": "research_disposition.py --unread-only",
+   "result": "unread 19 (e35, 18 accruing, 1 infeasible), dispositioned 154, superseded_unread 298, corpus_unreadable 0"
+  },
+  "C11": {
+   "status": "ok",
+   "population": "paper_book_tracker bybit_1 cohort 210; prop breakout_1 24 fills",
+   "result": "book +$2,865, recent30d -$3,398 (DECAY FLAG 3rd); trend -$6,498 / pullback +$3,100 recent; prop -$205.11, 21.7% WR; allocation benchmark not computable (candidates 0 closes)"
+  },
+  "C12": {
+   "status": "ok",
+   "population": "32 open performance-review items (23 work-store pipeline + 9 checklist) + 2 SRQ",
+   "result": "count_untriaged 0"
+  },
+  "C13": {
+   "status": "ok",
+   "population": "dsr_probation.py, 6 production legs",
+   "result": "probation: xrp_4h 0.023, ada 0.254, sol_prop 0.332, tqqq 0.533; not_computed: ml_entry, ml_entry_eq_struct (NO LIVE UNIT)"
+  }
+ },
+ "analysis": {
+  "questions": [
+   {
+    "question": "Can the review tell when a real-money leg stops working?",
+    "money_at_stake": "all real-money R",
+    "hypotheses": [
+     {
+      "name": "noise (reads fill in with n)",
+      "predicts": "reads become valid as trades accrue",
+      "test": "read evidence records + d8d60fa84 diff",
+      "result": "eliminated"
+     },
+     {
+      "name": "measurement gap",
+      "predicts": "no per-trade rows for ML legs; pre-change trades in re-promoted bands",
+      "test": "same",
+      "result": "survived"
+     }
+    ],
+    "conclusion": "no valid demotion signal on any of 6 real-money legs",
+    "p": 0.9
+   },
+   {
+    "question": "ml_entry +5.0R/11 vs record +0.037: edge or luck?",
+    "money_at_stake": "~+1.3R/month expected",
+    "hypotheses": [
+     {
+      "name": "noise + clustering",
+      "predicts": "one correlated move carries the total",
+      "test": "journal pnl of the 11-08 three-short cluster",
+      "result": "survived"
+     },
+     {
+      "name": "regime (short tailwind)",
+      "predicts": "long/short split",
+      "test": "9 shorts, 3 longs all negative",
+      "result": "untested"
+     },
+     {
+      "name": "R measurement",
+      "predicts": "journal-stop R inflated",
+      "test": "API declaredInitial +3.65R vs journal-stop +6.46R (7d)",
+      "result": "survived"
+     }
+    ],
+    "conclusion": "luck-sized; quote API R only",
+    "p": 0.75
+   },
+   {
+    "question": "paper -$37k at -3.3R in 7d",
+    "money_at_stake": "paper only; invalidates $ reads across 11-09",
+    "hypotheses": [
+     {
+      "name": "strategy",
+      "predicts": "losses spread in R",
+      "test": "paper 7d R",
+      "result": "eliminated"
+     },
+     {
+      "name": "sizing step at 11-09 reset",
+      "predicts": "risk$ step",
+      "test": "alpaca_paper risk$ before (median $740 n=47) vs after ($1.7k-18.8k n=6)",
+      "result": "survived"
+     },
+     {
+      "name": "mechanics",
+      "predicts": "one outlier",
+      "test": "trade 5209 -9.68R",
+      "result": "survived"
+     }
+    ],
+    "conclusion": "sizing step + one mechanics failure",
+    "p": 0.9
+   },
+   {
+    "question": "demo-floor family swap: decay or regime?",
+    "money_at_stake": "paper book; context for re-promoted legs",
+    "hypotheses": [
+     {
+      "name": "family decay",
+      "predicts": "losing family keeps losing",
+      "test": "tracker family split recent 30d",
+      "result": "eliminated"
+     },
+     {
+      "name": "complementary regime",
+      "predicts": "families alternate",
+      "test": "same",
+      "result": "survived"
+     },
+     {
+      "name": "noise",
+      "predicts": "flat-edge book flags often",
+      "test": "2026-YTD backtest -1.7R",
+      "result": "survived"
+     }
+    ],
+    "conclusion": "regime/noise",
+    "p": 0.6
+   }
+  ],
+  "surprises": [
+   "trade 5209 alpaca_paper GLD open 72d past stop, -9.68R, closed by 11-09 sweep (#24547)",
+   "alpaca_paper risk per trade x10-20 after 11-09 account reset",
+   "E6 action done under AUD-20261104-FLATTEN-LABEL",
+   "realized_slippage.py prints bearer in CalledProcessError argv (dead token seen; filed PI-20261111-PREP1111-0002)",
+   "tqqq_trend_long_1d and ml_entry_eq_struct: 0 order packages since rostering (expected at their rates)",
+   "issue relay curl exit 7 once (#24904), fine on retry (#24907)"
+  ]
+ },
+ "calls": [
+  {
+   "id": "F1",
+   "claim": "No real-money leg has a valid C2 read: ML harnesses commit no per-trade rows (ml_entry, ml_entry_eq_struct) and C2 has no config-date cut (ada_pullback_2h, trend_donchian_xrp_4h, trend_donchian_sol_prop re-promoted on new configs 11-06)",
+   "p": 0.9,
+   "money_at_stake": "all real-money R; ~41 closes/month x record expectancy ~ +1-2R/month expected; risk is unseen decay",
+   "decision": "tooling fixes",
+   "tier": 1,
+   "check": {
+    "command": "python3 scripts/research/live_vs_backtest.py",
+    "rule": ">=4 of 6 real-money legs return a verdict computed only on post-config closes or committed per-trade rows = hit; <=1 = miss",
+    "resolves_when": "2026-11-25"
+   },
+   "ending": "PI-20261104-PREP1104-0001 (widened; perf-followup; L-ML-LIVE) + PI-20261111-PREP1111-0001 (perf-followup; L-LADDER)"
+  },
+  {
+   "id": "F2",
+   "claim": "ml_entry live R is inside its Stage-0 band once the band exists",
+   "p": 0.75,
+   "money_at_stake": "~36 closes/month x +0.037R = ~+1.3R/month expected; live run-rate +15R/month is one market move (11-08 cluster, +$11.31 of +$9.79 30d)",
+   "decision": "no action until F1 lands",
+   "tier": null,
+   "check": {
+    "command": "python3 scripts/research/live_vs_backtest.py --leg ml_entry",
+    "rule": "CONSISTENT or INSUFFICIENT_N hit; BELOW_BACKTEST miss; NO_BACKTEST void",
+    "resolves_when": "per-trade net_r rows committed"
+   },
+   "ending": "carried on PI-20261104-PREP1104-0001"
+  },
+  {
+   "id": "F3",
+   "claim": "the week paper $ loss (-$37,078) is the 11-09 alpaca_paper reset sizing step plus trade 5209, not strategy",
+   "p": 0.9,
+   "money_at_stake": "none real; invalidates any $-denominated paper/portfolio read spanning 11-09",
+   "decision": "no action, because paper is never a decision surface; read paper in R",
+   "tier": null,
+   "check": {
+    "command": "journal risk$ per new alpaca_paper trade (|entry-stop| x qty)",
+    "rule": "median >= 5x pre-reset median ($740, n=47) over next 7d = hit (step persists); < 2x = miss",
+    "resolves_when": "2026-11-18"
+   },
+   "ending": "none (check only)"
+  },
+  {
+   "id": "F4",
+   "claim": "the demo-floor family swap (pullback +$3,100, trend -$6,498 recent 30d) is regime/noise, not decay",
+   "p": 0.6,
+   "money_at_stake": "paper book +$2,865 lifetime; feeds real-money ada/xrp_4h/sol_prop judgement",
+   "decision": "no action",
+   "tier": null,
+   "check": {
+    "command": "python3 scripts/ops/paper_book_tracker.py --trades-json <bybit_1 full book> --no-append",
+    "rule": "book recent-30d net > $0 hit; < 0 miss",
+    "resolves_when": "2026-12-02"
+   },
+   "ending": "none (check only)"
+  },
+  {
+   "id": "F5",
+   "claim": "the 72-day stop-less alpaca position class (trade 5209) is fixed by #24547",
+   "p": 0.7,
+   "money_at_stake": "-9.68R on one paper trade; on alpaca_live the same path raises one red flag",
+   "decision": "route to health (deploy + observe)",
+   "tier": 2,
+   "check": {
+    "command": "journal read of open alpaca_* trades vs stop",
+    "rule": "no alpaca position open > 7d past its stop = hit",
+    "resolves_when": "next health-review"
+   },
+   "ending": "health-review (fix commit b401164ff names it)"
+  },
+  {
+   "id": "F6",
+   "claim": "realized_slippage.py prints the diag bearer in a CalledProcessError argv and could leak a live token into a public Actions log",
+   "p": 0.95,
+   "money_at_stake": "credential exposure",
+   "decision": "tooling/security fix",
+   "tier": 1,
+   "check": {
+    "command": "grep -rn Authorization scripts/ for argv headers",
+    "rule": "0 argv bearer headers + a test = hit",
+    "resolves_when": "2026-11-18"
+   },
+   "ending": "PI-20261111-PREP1111-0002 (health-review; L-OPS)"
+  },
+  {
+   "id": "F7",
+   "claim": "rubric grades carry no outcome information (C beats B, 4th review)",
+   "p": 0.9,
+   "money_at_stake": "none directly; the grade is not a decision input",
+   "decision": "no action, because the rubric is the documented fallback and CJ-3 blind grading is the replacement producer",
+   "tier": null,
+   "check": {
+    "command": "C9 grade-vs-outcome table over comms/claude_strategy_scores.jsonl x journal, 90d",
+    "rule": "B win% > C win% at n>=300 each = miss of this call",
+    "resolves_when": "next review"
+   },
+   "ending": "none (check only)"
+  }
+ ],
+ "strategy_performance": [],
+ "_strategy_performance_note": "per-leg table is in the markdown C1; source /api/bot/performance perStrategy",
+ "trade_decision_grades": [],
+ "_trade_decision_grades_note": "per-trade rubric grades are written daily by grade-closed-trades (C9); this lane wrote none",
+ "insights_review": [],
+ "_insights_note": "M13 insights not pulled this run",
+ "proposed_tweaks": [],
+ "backlog_drain": [
+  {
+   "id": "SRQ-20260715-REALMONEY-ALLOC-BENCHMARK",
+   "disposition": "kept_open",
+   "store": "work_store",
+   "written": true
+  },
+  {
+   "id": "PRB-20260720-OPTIONS-PORTFOLIO-GRADUATION",
+   "disposition": "kept_open",
+   "store": "work_store",
+   "written": true
+  },
+  {
+   "id": "PB-20260822-AVAX-SCALP-SIZED-OFF-MARGIN-NOT-RISK",
+   "disposition": "kept_open",
+   "store": "work_store",
+   "written": true
+  },
+  {
+   "id": "PB-20260906-R-CONTAMINATION-QUANTIFIED-AND-THE-HEADLINE-SIGN-IS-WRONG",
+   "disposition": "kept_open",
+   "store": "work_store",
+   "written": true
+  },
+  {
+   "id": "BL-20260908-THE-GLD-COMPAT-MATRIX-GRADES-RISK-PCT-NOT-THE-ACCOUNT-SO-ITS-11-UNREAD-UNITS-CANNOT-BE-TERMINALLY-DISPOSITIONED",
+   "disposition": "kept_open",
+   "store": "work_store",
+   "written": true
+  },
+  {
+   "id": "BL-20260911-LOSING-STREAK-SIZE-GATE-IS-A-FLEET-WIDE-ABSOLUTE-SO-IT-UNDER-SERVES-A-SMALL-REAL-MONEY-ACCOUNT",
+   "disposition": "kept_open",
+   "store": "work_store",
+   "written": true
+  },
+  {
+   "id": "BL-20260912-THE-NETTING-ATTRIBUTED-PATH-CARRIES-THE-LARGEST-SHARE-OF-THE-WINNER-COLLAPSE-AND-IS-100-PERCENT-ESTIMATED",
+   "disposition": "kept_open",
+   "store": "work_store",
+   "written": true
+  },
+  {
+   "id": "BL-20260913-NETTING-ATTRIBUTION-REWRITES-POSITION-SIZE-ON-A-ROW-THAT-STAYS-OPEN-SO-THE-EXIT-REASON-FILTER-EVERY-ANALYSIS-USES-CANNOT-SEE-IT",
+   "disposition": "kept_open",
+   "store": "work_store",
+   "written": true
+  },
+  {
+   "id": "BL-20260913-EVERY-PROFITABLE-LEG-IS-SIZED-SMALLER-PER-UNIT-OF-RISK-THAN-EVERY-LOSING-ONE-ON-REAL-MONEY",
+   "disposition": "kept_open",
+   "store": "work_store",
+   "written": true
+  },
+  {
+   "id": "PI-20261004-ZBHFJG6X-0001",
+   "disposition": "kept_open",
+   "store": "work_store",
+   "written": true
+  },
+  {
+   "id": "PI-20261004-ZBHFJG6X-0002",
+   "disposition": "kept_open",
+   "store": "work_store",
+   "written": true
+  },
+  {
+   "id": "PI-20261004-ZBHFJG6X-0006",
+   "disposition": "kept_open",
+   "store": "work_store",
+   "written": true
+  },
+  {
+   "id": "PI-20261010-WQAPZD8B-0001",
+   "disposition": "kept_open",
+   "store": "work_store",
+   "written": true
+  },
+  {
+   "id": "PI-20261010-WQAPZD8B-0003",
+   "disposition": "kept_open",
+   "store": "work_store",
+   "written": true
+  },
+  {
+   "id": "PI-20261021-4ZLRFEV1-0002",
+   "disposition": "kept_open",
+   "store": "work_store",
+   "written": true
+  },
+  {
+   "id": "PI-20261104-PREP1104-0001",
+   "disposition": "kept_open",
+   "store": "work_store",
+   "written": true
+  },
+  {
+   "id": "PI-20261104-PREP1104-0002",
+   "disposition": "kept_open",
+   "store": "work_store",
+   "written": true
+  },
+  {
+   "id": "PI-20261104-PREP1104-0003",
+   "disposition": "kept_open",
+   "store": "work_store",
+   "written": true
+  },
+  {
+   "id": "PI-20261104-PREP1104-0004",
+   "disposition": "kept_open",
+   "store": "work_store",
+   "written": true
+  },
+  {
+   "id": "PB-20260830-XRP-4H-FIRST-CLOSE-UNDER-NEW-BRACKET-UNVERIFIED",
+   "disposition": "closed_stale",
+   "store": "work_store",
+   "written": true
+  },
+  {
+   "id": "PI-20261028-PVRNY2JI-0001",
+   "disposition": "closed_stale",
+   "store": "work_store",
+   "written": true
+  },
+  {
+   "id": "PI-20261028-PVRNY2JI-0004",
+   "disposition": "resolved",
+   "store": "work_store",
+   "written": true
+  },
+  {
+   "id": "PI-20261028-PVRNY2JI-0005",
+   "disposition": "closed_stale",
+   "store": "work_store",
+   "written": true
+  },
+  {
+   "id": "CJ-6-REVIEW-HOOKS",
+   "disposition": "kept_open",
+   "store": "checklist",
+   "note": "manager register; read, not written by a lane"
+  },
+  {
+   "id": "CLAUDE-GRADE-LOOP",
+   "disposition": "kept_open",
+   "store": "checklist",
+   "note": "manager register; read, not written by a lane"
+  },
+  {
+   "id": "RISK-OBJECTIVE-AUDIT",
+   "disposition": "kept_open",
+   "store": "checklist",
+   "note": "manager register; read, not written by a lane"
+  },
+  {
+   "id": "REVIEW-COUNT-BY-DECISION",
+   "disposition": "kept_open",
+   "store": "checklist",
+   "note": "manager register; read, not written by a lane"
+  },
+  {
+   "id": "CJ-3-BLIND-GRADE-PILOT",
+   "disposition": "kept_open",
+   "store": "checklist",
+   "note": "manager register; read, not written by a lane"
+  },
+  {
+   "id": "SIGNAL-CATALOG",
+   "disposition": "kept_open",
+   "store": "checklist",
+   "note": "manager register; read, not written by a lane"
+  },
+  {
+   "id": "PERF-REVIEW-W41",
+   "disposition": "kept_open",
+   "store": "checklist",
+   "note": "manager register; read, not written by a lane"
+  },
+  {
+   "id": "CF-D4-PERFREVIEW-TABLE",
+   "disposition": "kept_open",
+   "store": "checklist",
+   "note": "manager register; read, not written by a lane"
+  },
+  {
+   "id": "RESET-JOBS-20261104",
+   "disposition": "kept_open",
+   "store": "checklist",
+   "note": "manager register; read, not written by a lane"
+  },
+  {
+   "id": "SRQ-20260618-001",
+   "disposition": "kept_open",
+   "store": "strategy-refinement-queue",
+   "note": "drain note appended"
+  },
+  {
+   "id": "SRQ-20260618-002",
+   "disposition": "kept_open",
+   "store": "strategy-refinement-queue",
+   "note": "drain note appended"
+  }
+ ],
+ "backlog_coverage": {
+  "open_at_start": 32,
+  "triaged": 32,
+  "resolved": 1,
+  "fixed_now": 0,
+  "closed_stale": 3,
+  "kept_open": 28,
+  "count_untriaged": 0
+ },
+ "paper_book_tracker": {
+  "n": 210,
+  "net_usd": 2864.76,
+  "win_rate": 38.1,
+  "recent_30d": {
+   "n": 29,
+   "net_usd": -3398.09
+  },
+  "prior": {
+   "n": 181,
+   "net_usd": 6262.86
+  },
+  "families": {
+   "trend": 10566.56,
+   "pullback": -7701.8
+  },
+  "decay_flag": true,
+  "delta_since": "2026-10-28 (+18 trades, +$2,559.77)",
+  "assessment": "noise/regime: families alternate (F4)"
+ },
+ "real_money_allocation_benchmark": {
+  "incumbent": "bybit_2",
+  "candidate": "alpaca_live (tqqq_trend_long_1d, ml_entry_eq_struct)",
+  "incumbent_expectancy_r": -0.083,
+  "candidate_expectancy_r": null,
+  "incumbent_max_dd": null,
+  "candidate_max_dd": null,
+  "correlation_estimate": null,
+  "diversifies": null,
+  "verdict": "neutral",
+  "proposed_action": "none; candidates have 0 closes",
+  "note": "not computable: candidate legs rostered 11-06/11-08 with no closed trade; paper-proxy caveat applies"
+ },
+ "live_review": null,
+ "desk": {
+  "n_decisions": 27,
+  "proposals": 6,
+  "priced": 4,
+  "mean_r": 0.8951,
+  "vs_random_mean_r": 0.2291,
+  "verdict": "INDETERMINATE (n=4 < 30)",
+  "gate": "NOT_YET",
+  "system_leg": "could_not_look"
+ },
+ "anomalies": [
+  "live_review grader could_not_look: live_review_counterfactual.fetch_diag has no relay fallback and direct diag is 401 since the 11-11 token rotation",
+  "alpaca_paper sizing step at 11-09 account reset: paper $ not comparable across that date",
+  "grade_drift (C beats B) 4th review",
+  "C2 invalid on all 6 real-money legs (F1)"
+ ],
+ "recommended_action": "Land F1 (ML per-trade evidence + C2 config-date cut) before the next re-promotion; manager to own or kill the 15 no-owner performance items.",
+ "operator_attention_required": false,
+ "claude_channel_ping": "not sent by this lane; the manager carries the result in its brief"
+}
