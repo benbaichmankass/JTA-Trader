@@ -38,7 +38,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import numpy as np
 import pandas as pd
@@ -61,7 +61,7 @@ def _live_sizer_constants() -> Dict[str, Any]:
     try:
         from src.units.accounts import risk as R
         out.update(wall=float(R._MARGIN_SAFETY_BUFFER), roundup=float(R._ROUND_UP_BUDGET_MULT), source="src/units/accounts/risk.py")
-    except Exception as exc:  # noqa: BLE001 -- the research runner may lack a runtime dependency; say so in the row
+    except Exception as exc:  # noqa: BLE001  # allow-silent: falls back to the documented literals AND records the import failure in the result row's sizer.source
         out.update(wall=0.9, roundup=1.5, source=f"fallback literals (risk.py import failed: {type(exc).__name__})")
     try:
         import yaml
@@ -69,7 +69,7 @@ def _live_sizer_constants() -> Dict[str, Any]:
         accs = acc.get("accounts", acc)
         out["risk_pct"] = float(accs["alpaca_live"]["risk"]["risk_pct"])
         out["side_filter"] = accs["alpaca_live"].get("side_filter")
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # allow-silent: falls back to 0.02 AND records the read failure in sizer.risk_pct_source
         out.update(risk_pct=0.02, side_filter="long", risk_pct_source=f"fallback (accounts.yaml read failed: {type(exc).__name__})")
     return out
 
@@ -87,6 +87,7 @@ def replay(trades: List[Dict[str, Any]], cash0: float = CASH0, risk_pct: float =
     """Walk a trade list through the alpaca_live cash book. A trade is {symbol, entry_time, exit_time, entry, sl, net_r,
     direction?, score?}; net_r is NET of the full cost stack, in R of |entry - sl|. Simultaneous candidates are taken in the
     live pick order: predicted score descending (src/runtime/ml_pool_scoring.picks), then symbol."""
+    # provenance: picks -- `score` is the regressed net R the live pick order sorts on (ml_pool_scoring.picks), not a probability
     rows = sorted(trades, key=lambda t: (pd.Timestamp(t["entry_time"]), -float(t.get("score") or 0.0), str(t["symbol"])))
     equity, busy_until, settled_from = float(cash0), None, None
     refused: Dict[str, int] = {}
@@ -124,6 +125,7 @@ def replay(trades: List[Dict[str, Any]], cash0: float = CASH0, risk_pct: float =
         equity += pnl
         taken.append({"symbol": t["symbol"], "entry_time": str(et), "exit_time": str(xt), "qty": q, "risk_usd": round(q * rps, 4),
                       "notional_usd": round(q * float(t["entry"]), 2), "net_r": float(t["net_r"]), "pnl_usd": round(pnl, 4),
+                      # provenance: picks -- the regressed net R carried through for the record, not a probability
                       "equity_after": round(equity, 4), "score": t.get("score")})
         busy_until = xt
         settled_from = (_ny_date(xt) + pd.offsets.BDay(settle_bdays)).normalize() if settle_bdays else None
@@ -442,7 +444,7 @@ def leg_trades(name: str, workdir: Path, days: int) -> tuple:
     err = None
     try:
         err = json.loads(ev.read_text()).get("error") if ev.exists() else "no evidence record written"
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # allow-silent: the unreadable record is reported per leg in harness_runs.evidence_error
         err = f"evidence record unreadable: {type(exc).__name__}"
     return out, {"returncode": p.returncode, "rows": len(rows), "usable": len(out), "evidence_error": err, "stderr_tail": p.stderr[-600:]}
 
