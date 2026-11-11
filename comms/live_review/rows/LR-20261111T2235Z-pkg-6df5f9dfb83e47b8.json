@@ -1,0 +1,212 @@
+{
+ "account_reads": [
+  {
+   "account_class": "real_money",
+   "account_id": "bybit_2",
+   "evidence": "executor path close exists (packet apply_paths) but close is advice_only (ADVICE_ONLY_ACTIONS): the dispatcher refuses it; no apply",
+   "read": "unknown"
+  },
+  {
+   "account_class": "paper",
+   "account_id": "bybit_portfolio",
+   "evidence": "mirror, not in MD-LTR-PAPER-AUTO account_scope; close advice_only; no apply",
+   "read": "unknown"
+  },
+  {
+   "account_class": "prop",
+   "account_id": "breakout_2",
+   "evidence": "prop phone path; no in-trade close apply path (LTR-8 open); advice_only regardless",
+   "read": "unknown"
+  }
+ ],
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio",
+  "breakout_2"
+ ],
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "tighten_r": null,
+  "within_bound": null
+ },
+ "context_flags": [
+  "conflict: SOL net-opposing book across accounts: LONG ml_entry 1h (this pkg: bybit_2 real money, bybit_portfolio mirror, breakout_2 prop) vs SHORT trend_donchian_sol_4h (velotrade_1, tradeify_1, pkg-50f5eed272f64197) and SHORT sol_pullback_2h (bybit_1 paper, pkg-68dd17c36d014251)",
+  "timeframe_separation: long TP 87.36 sits below the shorts' entry 87.64 and SL 89.105, so the long's whole win range is inside the shorts' profit zone; both CAN be right sequentially, the conflict is a hedge not a contradiction",
+  "guard: the existing per-account opposite_direction_blocked guard (#24402) suppressed this long on velotrade_1 and tradeify_1; breakout_2 filled because it held no SOL short then",
+  "close_vs_tighten: atr:1.5 tighten -0.637 (n=102) also beats hold but close dominates every tighten; tightens advice-only and flattered by stop-fill bias",
+  "packet_defect: account_bounds breakout_2 missing (prop leg not in packet account_bounds) 1/3",
+  "packet_condition: packet table uses condition peak; this row cites a condition-pullback tool run of the same script, committed byte-for-byte"
+ ],
+ "disposition": {
+  "action_issue": null,
+  "applied_at": null,
+  "mandate": null,
+  "route": "operator_ask",
+  "verified_readback": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": null,
+  "giveback_r": 0.576,
+  "open_r": -0.3879,
+  "peak_r": 0.1881,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "forecast": {
+  "direction": "against_trade",
+  "evidence": [
+   "pullback cell n=102 hold -0.766R vs close -0.420R (table above)",
+   "price 84.16-84.24 at 22:31Z (spot ref) vs entry 84.81; 1h highs since entry 85.12",
+   "SOL 4h trend_donchian short re-signalled at 82.33 on 2026-11-10 12:00Z"
+  ],
+  "horizon_bars": 20,
+  "invalidation_px": 85.79,
+  "p_target": 0.6,
+  "target_px": 83.11,
+  "thesis": "The 1h model's 24h bounce call (p_long 0.168 vs tau 0.10, 19:00Z bar) already failed its first leg: high 85.12 then back below entry; the 4h downtrend (donchian re-break 11-10, ADX ~42) dominates. Expect the stop 83.11 to be hit before the 87.36 TP within the 24h max hold.",
+  "timeframe": "1h"
+ },
+ "handoff": null,
+ "info_cutoff_at": "2026-11-11T22:36:00Z",
+ "judge_prior": null,
+ "leg": "ml_entry",
+ "mechanics": {
+  "evidence": "package sl 83.10857142857142 / tp 87.36214285714286 agree with every readable account",
+  "verdict": "match"
+ },
+ "model": "opus-tier (CONFLICTING-EXPOSURE lane)",
+ "options": [
+  {
+   "action": "hold",
+   "ev_cost_r": null,
+   "level": null,
+   "mean_r": -0.7664,
+   "n": 102,
+   "net": true,
+   "p05_r": -1.0981,
+   "sd_r": 0.659,
+   "spec": null,
+   "state": "measured",
+   "stop_at_r_now": null,
+   "worst_case_gain_r": null,
+   "worst_r": -1.1269
+  },
+  {
+   "action": "tighten_sl",
+   "ev_cost_r": null,
+   "level": null,
+   "mean_r": null,
+   "n": 102,
+   "net": true,
+   "p05_r": null,
+   "sd_r": null,
+   "spec": "atr:1.0",
+   "state": "invalid_level",
+   "stop_at_r_now": -0.32,
+   "worst_case_gain_r": null,
+   "worst_r": null
+  },
+  {
+   "action": "tighten_sl",
+   "ev_cost_r": -0.1298,
+   "level": null,
+   "mean_r": -0.6366,
+   "n": 102,
+   "net": true,
+   "p05_r": -1.0851,
+   "sd_r": 0.2351,
+   "spec": "atr:1.5",
+   "state": "measured",
+   "stop_at_r_now": -0.57,
+   "worst_case_gain_r": -0.2198,
+   "worst_r": -1.3467
+  },
+  {
+   "action": "tighten_sl",
+   "ev_cost_r": -0.1007,
+   "level": null,
+   "mean_r": -0.6657,
+   "n": 102,
+   "net": true,
+   "p05_r": -1.0851,
+   "sd_r": 0.3406,
+   "spec": "atr:2.0",
+   "state": "measured",
+   "stop_at_r_now": -0.82,
+   "worst_case_gain_r": -0.2198,
+   "worst_r": -1.3467
+  },
+  {
+   "action": "close",
+   "ev_cost_r": -0.3466,
+   "level": null,
+   "mean_r": -0.4198,
+   "n": 102,
+   "net": true,
+   "p05_r": -0.4605,
+   "sd_r": 0.0223,
+   "spec": "close",
+   "state": "measured",
+   "stop_at_r_now": null,
+   "worst_case_gain_r": 0.6422,
+   "worst_r": -0.4847
+  }
+ ],
+ "order_package_id": "pkg-6df5f9dfb83e47b8",
+ "outcome_table_source": "comms/live_review/tables/LR-20261111T2235Z-pkg-6df5f9dfb83e47b8.pullback.json",
+ "packet_defects": [
+  {
+   "count": 1,
+   "denominator": 3,
+   "field": "account_bounds",
+   "reason": "prop_leg_missing:breakout_2"
+  }
+ ],
+ "packet_sha": "4e50c2673c35ab4f791b99e6707846ef78f006eac7be6ecf0148ca44cd184a39",
+ "prompt_sha": null,
+ "recommendation": {
+  "action": "close",
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "ev_delta_r": 0.3466,
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "level": null,
+  "level_atr": null,
+  "reason": "Live state is a PULLBACK (peaked +0.19R est, now -0.39R after 4 1h bars). ml_entry's own Stage-0 history at that state (condition pullback, long side, 5 symbols, n=102, net of full cost): hold -0.766R (sd 0.659, worst -1.127) vs close -0.420R (sd 0.022): close beats hold by +0.347R (SE 0.066). SOL-only subset n=23: hold -0.906 vs close -0.419 (+0.49R). The peak-condition cell in the packet (hold +0.33, n=247) does not condition on the retrace and is not the live state. Package-level call: close the long on every account carrying it. ADVICE ONLY: close is not graduated (skill 0.0), so nothing applies it; operator_ask.",
+  "size_fraction": null,
+  "size_multiplier": null,
+  "worst_case_delta_r": 0.6422
+ },
+ "review_id": "LR-20261111T2235Z-pkg-6df5f9dfb83e47b8",
+ "reviewed_at": "2026-11-11T22:45:00Z",
+ "schema_version": 1,
+ "session": "session_01AFoLuJryBQULGadW87rB4U",
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "tighten_r": null,
+  "within_bound": null,
+  "would_apply": null
+ },
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 4,
+  "giveback_r": 0.576,
+  "open_r": -0.3879,
+  "peak_provenance": "estimated",
+  "peak_r": 0.1881,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 83.10857142857142,
+  "tp": 87.36214285714286
+ },
+ "trade_id": 7077,
+ "trigger": {
+  "event": "manual",
+  "l0_snapshot_at": null,
+  "level": null
+ }
+}

@@ -1,0 +1,280 @@
+{
+ "account_reads": [
+  {
+   "account_class": "prop",
+   "account_id": "tradeify_1",
+   "evidence": "hold: nothing to apply; status SL 89.105 matches package",
+   "read": "no_action"
+  },
+  {
+   "account_class": "prop",
+   "account_id": "velotrade_1",
+   "evidence": "hold: nothing to apply; status SL 89.105 matches package",
+   "read": "no_action"
+  }
+ ],
+ "accounts": [
+  "tradeify_1",
+  "velotrade_1"
+ ],
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "tighten_r": null,
+  "within_bound": null
+ },
+ "context_flags": [
+  "conflict: SOL net-opposing book: this SHORT vs LONG ml_entry 1h (pkg-6df5f9dfb83e47b8 on bybit_2/bybit_portfolio/breakout_2); timeframe separation, the long's TP 87.36 < this entry 87.64",
+  "state: open_r/peak_r ESTIMATED from OKX SOL-USDT-SWAP 1h candles and Coinbase spot, not broker-measured; packet state.open_r null",
+  "table_scope: cited table is condition peak at +2.35R pooled both sides (side short alone n=8 insufficient); it does not condition on the 46% giveback from peak",
+  "prop_bracket: static hand-set SL 89.105 (-1.0R) on both props; no trail reaches the venue; giveback to stop is ~3.35R; tighten advice-only; velotrade TP apply under PROP-BRACKET-APPLY",
+  "mechanics_carry: velotrade_1 TP 76.535 vs package 78.96364 (flagged LR-20261111T2001Z), not re-read here",
+  "packet_defect: priced_options could_not_price 1/1",
+  "packet_defect: state.open_r context_null:state.open_r 1/1",
+  "packet_defect: account_bounds empty (prop legs velotrade_1/tradeify_1 not listed) 2/2",
+  "prior_review: LR-20261111T2001Z-pkg-50f5eed272f64197 (flag_mechanics velotrade TP; 86.20 lock-in advice from LR-20261111T1558Z) carried"
+ ],
+ "disposition": {
+  "action_issue": null,
+  "applied_at": null,
+  "mandate": null,
+  "route": "none",
+  "verified_readback": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.6584,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "forecast": {
+  "direction": "with_trade",
+  "evidence": [
+   "reached-2.35R cell n=27: hold +2.13R, close +2.28R, SE of difference 0.45",
+   "1h high 85.79 (17:00Z) then 84.2 at 22:31Z",
+   "fresh 4h donchian short signal 2026-11-10 12:00Z at 82.33 (pkg-a2dbcaef4d434eaf, reticket-suppressed)"
+  ],
+  "horizon_bars": 18,
+  "invalidation_px": 86.2,
+  "p_target": 0.45,
+  "target_px": 81.25,
+  "thesis": "4h downtrend intact; the 11-11 bounce failed at 85.79-85.84 below the 86.13 pre-flush high. A 4h close above 86.20 invalidates; continuation targets a retest of the 81.25 low within ~3 days.",
+  "timeframe": "4h"
+ },
+ "handoff": null,
+ "info_cutoff_at": "2026-11-11T22:36:00Z",
+ "judge_prior": null,
+ "leg": "trend_donchian_sol_4h",
+ "mechanics": {
+  "evidence": "order_packages status=emitted close_reason=prop_ticket_emitted; package sl 89.10464286 / tp 78.96364 agree with every readable account",
+  "verdict": "match"
+ },
+ "model": "opus-tier (CONFLICTING-EXPOSURE lane)",
+ "options": [
+  {
+   "action": "hold",
+   "ev_cost_r": null,
+   "level": null,
+   "mean_r": 2.1299,
+   "n": 27,
+   "net": true,
+   "p05_r": -1.0658,
+   "sd_r": 2.3177,
+   "spec": null,
+   "state": "measured",
+   "stop_at_r_now": null,
+   "worst_case_gain_r": null,
+   "worst_r": -1.088
+  },
+  {
+   "action": "tighten_sl",
+   "ev_cost_r": 0.1756,
+   "level": null,
+   "mean_r": 1.9543,
+   "n": 27,
+   "net": true,
+   "p05_r": 1.4467,
+   "sd_r": 0.6288,
+   "spec": "atr:1.0",
+   "state": "measured",
+   "stop_at_r_now": 1.6833,
+   "worst_case_gain_r": 1.2528,
+   "worst_r": 0.1648
+  },
+  {
+   "action": "tighten_sl",
+   "ev_cost_r": 0.2092,
+   "level": null,
+   "mean_r": 1.9207,
+   "n": 27,
+   "net": true,
+   "p05_r": 1.2829,
+   "sd_r": 0.7824,
+   "spec": "atr:1.5",
+   "state": "measured",
+   "stop_at_r_now": 1.35,
+   "worst_case_gain_r": 1.2528,
+   "worst_r": 0.1648
+  },
+  {
+   "action": "tighten_sl",
+   "ev_cost_r": 0.131,
+   "level": null,
+   "mean_r": 1.9989,
+   "n": 27,
+   "net": true,
+   "p05_r": 0.947,
+   "sd_r": 1.046,
+   "spec": "atr:2.0",
+   "state": "measured",
+   "stop_at_r_now": 1.0167,
+   "worst_case_gain_r": 1.2528,
+   "worst_r": 0.1648
+  },
+  {
+   "action": "tighten_sl",
+   "ev_cost_r": 0.0619,
+   "level": null,
+   "mean_r": 2.068,
+   "n": 27,
+   "net": true,
+   "p05_r": -0.127,
+   "sd_r": 2.0736,
+   "spec": "r:0",
+   "state": "measured",
+   "stop_at_r_now": 0.0,
+   "worst_case_gain_r": 0.9477,
+   "worst_r": -0.1403
+  },
+  {
+   "action": "tighten_sl",
+   "ev_cost_r": 0.115,
+   "level": null,
+   "mean_r": 2.0149,
+   "n": 27,
+   "net": true,
+   "p05_r": 0.8611,
+   "sd_r": 1.6897,
+   "spec": "r:1",
+   "state": "measured",
+   "stop_at_r_now": 1.0,
+   "worst_case_gain_r": 1.2528,
+   "worst_r": 0.1648
+  },
+  {
+   "action": "tighten_sl",
+   "ev_cost_r": 0.1575,
+   "level": null,
+   "mean_r": 1.9724,
+   "n": 27,
+   "net": true,
+   "p05_r": 1.0424,
+   "sd_r": 1.512,
+   "spec": "r:1.18",
+   "state": "measured",
+   "stop_at_r_now": 1.18,
+   "worst_case_gain_r": 1.2528,
+   "worst_r": 0.1648
+  },
+  {
+   "action": "tighten_sl",
+   "ev_cost_r": 0.0552,
+   "level": null,
+   "mean_r": 2.0747,
+   "n": 27,
+   "net": true,
+   "p05_r": 1.4467,
+   "sd_r": 1.0061,
+   "spec": "r:2",
+   "state": "measured",
+   "stop_at_r_now": 2.0,
+   "worst_case_gain_r": 1.2528,
+   "worst_r": 0.1648
+  },
+  {
+   "action": "close",
+   "ev_cost_r": -0.1463,
+   "level": null,
+   "mean_r": 2.2762,
+   "n": 27,
+   "net": true,
+   "p05_r": 2.2361,
+   "sd_r": 0.021,
+   "spec": "close",
+   "state": "measured",
+   "stop_at_r_now": null,
+   "worst_case_gain_r": 3.3053,
+   "worst_r": 2.2173
+  }
+ ],
+ "order_package_id": "pkg-50f5eed272f64197",
+ "outcome_table_source": "comms/live_review/tables/LR-20261111T2235Z-pkg-50f5eed272f64197.json",
+ "packet_defects": [
+  {
+   "count": 1,
+   "denominator": 1,
+   "field": "priced_options",
+   "reason": "could_not_price"
+  },
+  {
+   "count": 1,
+   "denominator": 1,
+   "field": "state.open_r",
+   "reason": "context_null:state.open_r"
+  },
+  {
+   "count": 2,
+   "denominator": 2,
+   "field": "account_bounds",
+   "reason": "prop_legs_missing"
+  }
+ ],
+ "packet_sha": "76649f880ade8478246d5458134e3865e97a3650d422ee18ab12730facee0794",
+ "prompt_sha": null,
+ "recommendation": {
+  "action": "hold",
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "ev_delta_r": null,
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "level": null,
+  "level_atr": null,
+  "reason": "Hold the 4h shorts; the ml_entry 1h long does NOT invalidate them. Open ~+2.35R ESTIMATED (mark ~84.2 vs entry 87.64, risk 1.4646), peak ~+4.36R ESTIMATED (1h low 81.25). Live-state cell (peak 4.36 then retrace to 2.35) has n=0, so judgement. Loosest measured cell (both sides, reached +2.35R, n=27, net): hold +2.13R (sd 2.32, worst -1.09) vs close +2.28R (worst +2.22): close +0.15R with SE 0.45, inside noise, and every tighten < hold. The 4h strategy re-signalled short on 11-10 (82.33 break, ADX 41.9); the long's TP 87.36 is below this entry. Prior lock-in advice LR-20261111T1558Z (stop to 86.20, carried at 20:01Z) stands, unapplied: tighten is advice-only.",
+  "size_fraction": null,
+  "size_multiplier": null,
+  "worst_case_delta_r": null
+ },
+ "review_id": "LR-20261111T2235Z-pkg-50f5eed272f64197",
+ "reviewed_at": "2026-11-11T22:45:00Z",
+ "schema_version": 1,
+ "session": "session_01AFoLuJryBQULGadW87rB4U",
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "tighten_r": null,
+  "within_bound": null,
+  "would_apply": null
+ },
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "state": {
+  "atr_now_over_entry": 1.6584,
+  "bars_held": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_provenance": "unverified",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 89.10464286,
+  "tp": 78.96364
+ },
+ "trade_id": null,
+ "trigger": {
+  "event": "manual",
+  "l0_snapshot_at": null,
+  "level": null
+ }
+}
