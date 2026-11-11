@@ -19,7 +19,7 @@
 > checks it in CI (diff-scoped, in the `guards` job); `--all` is the standing
 > audit and `--list` prints measured coverage.
 >
-> **Coverage, computed rather than counted: 174 of 174 routes documented (100%).**
+> **Coverage, computed rather than counted: 175 of 175 routes documented (100%).**
 > *Population — every `@router.<verb>("...")` under `src/web/api/routers/`
 > joined to its `APIRouter(prefix=...)`. Verified against the live FastAPI
 > route table (`app.routes`): the enumerator finds exactly those 96 with no
@@ -163,6 +163,7 @@ the same staleness this paragraph was already written to complain about.
 | `GET /api/bot/prop/fills` | `routers/prop.py` | Inbound prop fill/close reports, newest-first. **Read half of the prop bridge — the write half is Tier 2 (below).** |
 | `GET /api/bot/prop/tickets` | `routers/prop.py` | Outbound prop tickets the bot emitted, newest-first. |
 | `GET /api/bot/prop/status` | `routers/prop.py` | Latest account-status snapshot + computed rule-distance (daily-loss limit, static-DD floor) from the account's prop ruleset. Nulls anything not derivable from the snapshot. `phone_diag`: a phone account's latest `terminal_miss` control dump (null = none posted). `phone_heartbeat`: the phone's latest heartbeat — status line + allowlisted gate/pause/touch-hold state (null = none posted). |
+| `GET /api/bot/prop/phone_steps` | `routers/prop.py` | **Added 2026-11-11 (PHONE-SELF-DIAGNOSE).** A phone account's step captures, lane view: newest runs (or `run_id`), each step's seq/step/ok/note/page and `image_blank` (device pre-redaction luma std, else the server's check; null + `image_check.read_state` when not checked). No image bytes, no DOM — those stay on the diag tier (`/api/diag/phone_capture_file`). 404 for a non-phone account. |
 | `GET /api/bot/prop/overview` | `routers/prop.py` | Whole prop book in one read for the SPA Overview: equity over fresh accounts (stale listed, excluded), open trades, windowed realized P&L. DASH-PROP-OVERVIEW. Since 2026-10-11 (UI-UPGRADE-1) also unrealized P&L, projected from the executors' venue-reported `prop_account_status.unrealized` — per-account state, null book total when any account is unknown, never 0 for "could not look". |
 | `GET /api/bot/prop/reconcile` | `routers/prop.py` | Un-acted tickets (emitted, past `valid_until`, no fill reported back) — the P3 drift alert. |
 | `GET /api/bot/reports` | `routers/reports.py` | **Added 2026-06-22.** Newest-first index of consolidated system reports from `comms/reports/index.json`. `limit` clamped 1..500; `window` filters. File-backed, no DB table. |
