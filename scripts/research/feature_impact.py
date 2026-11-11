@@ -26,15 +26,14 @@ in latest.json so a reader cannot mistake absence for zero impact.
 No halting: a model whose artifact cannot be parsed gets one ``read_state: "not_computed"`` row with the reason
 and the run continues. Exit 0 unless NO model could be read (then exit 1: a run over nothing is not a pass).
 
-    python3 scripts/ml/feature_impact.py --out-dir comms/feature_impact
-    python3 scripts/ml/feature_impact.py --self-test
+    python3 scripts/research/feature_impact.py --out-dir comms/feature_impact
+    python3 scripts/research/feature_impact.py --self-test
 """
 from __future__ import annotations
 
 import argparse
 import json
 import re
-import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -194,7 +193,8 @@ def _self_test() -> int:
     ok = True
     txt = "tree\nfeature_importances:\na=3\nb=1\n\nparameters:\n[boosting: gbdt]\n"
     if parse_split_counts(txt) != {"a": 3, "b": 1}:
-        print("  FAIL  parse_split_counts", parse_split_counts(txt)); ok = False
+        print("  FAIL  parse_split_counts", parse_split_counts(txt))
+        ok = False
     else:
         print("  PASS  split block parsed and stops at the blank line")
     with tempfile.TemporaryDirectory() as td:
@@ -207,26 +207,30 @@ def _self_test() -> int:
         bad.mkdir(parents=True)
         (bad / "model.json").write_text(json.dumps({"model_id": "bad", "features": ["a"]}))
         s = run(root, root / "out", run_id="T")
-        rows = [json.loads(l) for l in (root / "out/T.jsonl").read_text().splitlines()]
+        rows = [json.loads(x) for x in (root / "out/T.jsonl").read_text().splitlines()]
         sp = {r["feature"]: r["value"] for r in rows if r.get("measure") == "split_share" and r.get("feature")}
         if abs(sp["a"] - 0.75) < 1e-9 and abs(sp["b"] - 0.25) < 1e-9 and sp["c"] == 0.0:
             print("  PASS  ensemble split shares sum members; an unsplit listed feature is a measured 0")
         else:
-            print("  FAIL  shares", sp); ok = False
+            print("  FAIL  shares", sp)
+            ok = False
         if s["models"].get("ml/served/bad/model.json", "").startswith("not_computed") and s["read_state"] == "measured":
             print("  PASS  an unreadable artifact is a not_computed row and the run continues")
         else:
-            print("  FAIL  bad artifact handling", s["models"]); ok = False
+            print("  FAIL  bad artifact handling", s["models"])
+            ok = False
         gains = [r for r in rows if r.get("measure") == "gain_share" and r.get("feature")]
         if all((r["value"] is None) == (r["read_state"] == "not_computed") for r in gains):
             print("  PASS  a gain row is null exactly when not_computed (never a silent 0)")
         else:
-            print("  FAIL  gain null/read_state mismatch"); ok = False
+            print("  FAIL  gain null/read_state mismatch")
+            ok = False
         empty = run(root / "nothing", root / "out2", run_id="E")
         if empty["read_state"] == "no_data":
             print("  PASS  a run over no artifacts reads no_data")
         else:
-            print("  FAIL  empty run", empty["read_state"]); ok = False
+            print("  FAIL  empty run", empty["read_state"])
+            ok = False
     print("feature_impact self-test:", "OK" if ok else "FAILED")
     return 0 if ok else 1
 

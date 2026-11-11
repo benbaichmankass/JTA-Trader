@@ -2,7 +2,7 @@ name: feature-impact
 
 # FEATURE-IMPACT-MAP v0 (docs/design/ui-workplan-2026-11.md section 15): the weekly long table of per-feature
 # impact, M1 (model-internal split/gain share) from the committed ml/served + ml/candidates artifacts.
-# Off-VM, no Claude, no network beyond pip: scripts/ml/feature_impact.py reads repo files and writes
+# Off-VM, no Claude, no network beyond pip: scripts/research/feature_impact.py reads repo files and writes
 # comms/feature_impact/<run_id>.jsonl + latest.json, landed on main by commit-to-main.
 
 on:
@@ -39,8 +39,8 @@ jobs:
       - name: Compute the M1 long table
         run: |
           set -euo pipefail
-          python3 scripts/ml/feature_impact.py --self-test
-          python3 scripts/ml/feature_impact.py --out-dir comms/feature_impact
+          python3 scripts/research/feature_impact.py --self-test
+          python3 scripts/research/feature_impact.py --out-dir comms/feature_impact
           { echo '## feature-impact'; echo '```json'; cat comms/feature_impact/latest.json; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Land the run on main
@@ -50,5 +50,5 @@ jobs:
           paths: comms/feature_impact
           message: "feature-impact: weekly M1 long table"
           pr-title: "feature-impact: weekly M1 long table"
-          pr-body: "Automated weekly data commit (auto-merge): comms/feature_impact/<run_id>.jsonl + latest.json from scripts/ml/feature_impact.py (row FEATURE-IMPACT-MAP)."
+          pr-body: "Automated weekly data commit (auto-merge): comms/feature_impact/<run_id>.jsonl + latest.json from scripts/research/feature_impact.py (row FEATURE-IMPACT-MAP)."
           verify-merged: "true"
