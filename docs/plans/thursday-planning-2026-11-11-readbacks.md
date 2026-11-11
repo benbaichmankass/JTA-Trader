@@ -1,6 +1,6 @@
 # Thursday planning 2026-11-11: read-backs for the manager's decision docs
 
-> **Doc status:** `live` · category `evidence` · last verified `2026-11-11` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
+> **Doc status:** `unknown` · category `evidence` · last verified `2026-11-11` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
 > **Gates this adds or changes: none.** Read-only evidence for decisions the operator asked to see before deciding.
 
 The operator answered the 2026-11-11 Thursday-planning decision doc between 21:28Z and 21:41Z. Four answers asked for evidence before deciding,

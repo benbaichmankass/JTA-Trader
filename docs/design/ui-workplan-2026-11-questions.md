@@ -1,6 +1,6 @@
 # UI workplan 2026-11 — the eight operator questions, in plain words
 
-> **Doc status:** `live` · category `plan` · last verified `2026-11-11` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
+> **Doc status:** `unknown` · category `plan` · last verified `2026-11-11` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
 > **Gates this adds or changes: none.** This file only restates questions; Q8 asks whether to add one CI guard and recommends against it.
 
 The source is [`ui-workplan-2026-11.md`](ui-workplan-2026-11.md) § 13 (questions 1 to 6) and § 16 (questions 7 to 9). That is nine numbered items. Item 6 is not a design question: it asks whether the nine row ids that were missing from `main` were meant to carry your wording. It is a process note for the manager, so it is left out here. The other eight are below, renumbered Q1 to Q8, with the source number in brackets. Each says what is asked, why it matters, the options, a recommendation, and what the UI lane does until you answer. Nothing here authorizes anything; a flip or a new store still needs its own approval.
