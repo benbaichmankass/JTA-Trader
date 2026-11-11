@@ -418,7 +418,7 @@ def capacity(log: LoadResult, *, reset_at: str | None = None,
     """The sustainable rate and the lane count it supports, net of the live-review reserve.
     ``live_open`` is the count of open live/prop packages; ``None`` means it could not be read,
     which sizes the reserve at the roster bound and reads ``exposure_unknown`` -- never 0. ``state`` is one of
-    ``ok`` / ``never_recorded`` / ``reset_unknown`` / ``reading_from_past_week``; only
+    ``ok`` / ``never_recorded`` / ``reset_unknown`` / ``reading_from_past_week`` / ``reset_passed``; only
     ``ok`` carries numbers -- a missing input is named, never filled with a guess."""
     now = now or datetime.now(timezone.utc)
     rec = latest_by_window(log.records)["weekly"]
@@ -434,6 +434,11 @@ def capacity(log: LoadResult, *, reset_at: str | None = None,
     reset = _parse_ts(raw_reset, "reset_at")
     if reset <= read_at:
         return {**out, "state": "reading_from_past_week", "reset_at": raw_reset, "lanes": None}
+    if reset <= now:
+        # The reset the reading names has already happened, so the reading describes a finished
+        # week. Flooring days_left at 1 h here once turned a 117-h-old 68 % reading into
+        # "768 pp/day -> KEEP 5 LANES" 41 min after the reset (WEEKLY-AUDIT-2026-11-11).
+        return {**out, "state": "reset_passed", "reset_at": raw_reset, "lanes": None}
     days_left = max((reset - now).total_seconds() / 86400, 1 / 24)
     # usage since the reading is unknown; spreading the remainder over the time left from NOW
     # is the conservative reading of a dated observation
@@ -471,6 +476,8 @@ def render_capacity(c: dict) -> list[str]:
                              "the reading with --note \"reset <Day> YYYY-MM-DD HH:MMZ\")",
             "reading_from_past_week": f"the latest reading ({c.get('read_at')}) predates the reset "
                                       f"it names ({c.get('reset_at')}) -- record this week's reading",
+            "reset_passed": f"the reset the latest reading names ({c.get('reset_at')}) has passed, so "
+                            f"the reading ({c.get('read_at')}) describes last week -- record this week's reading",
         }[c["state"]]
         return [f"CAPACITY: could not compute -- {why}. Record a reading first; meanwhile run "
                 f"ONE lane (the floor), never zero and never a guessed count."]
@@ -957,6 +964,12 @@ def _selftest() -> int:
     check("a reading older than its own reset is from a past week",
           capacity(LoadResult(records=[wk]), reset_at="2026-10-14T18:00:00Z",
                    now=cap_now)["state"] == "reading_from_past_week")
+    check("a reading whose named reset has already passed computes nothing (reset_passed)",
+          capacity(LoadResult(records=[wk]), now=datetime(2026, 10, 21, 18, 41, tzinfo=timezone.utc))
+          ["state"] == "reset_passed")
+    check("reset_passed renders as could-not-compute",
+          "has passed" in "\n".join(render_capacity(capacity(
+              LoadResult(records=[wk]), now=datetime(2026, 10, 21, 18, 41, tzinfo=timezone.utc)))))
     check("render names the formula", "(100 - 73)" in "\n".join(render_capacity(c)))
 
     print("— calibration: pp per lane-hour from readings —")
