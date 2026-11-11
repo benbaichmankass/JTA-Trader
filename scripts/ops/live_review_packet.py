@@ -799,6 +799,34 @@ def _compare_levels(aid: str, symbol: str, exchange: str, sl: Optional[float], t
     return bad, ev, compared
 
 
+def _compare_prop_levels(aid: str, symbol: str, direction: str, sl: Optional[float], tp: Optional[float],
+                         pos: List[dict]) -> Tuple[int, List[str], int]:
+    """Compare the package's SL/TP with the prop venue's position row (phone Positions read).
+
+    Returns ``(mismatches, evidence, levels_compared)``. Only ONE venue position on this symbol + side can be
+    attributed; a netted or missing row, or a row whose SL/TP cells were not read, compares nothing -- and
+    ``levels_compared == 0`` makes the caller count the account as not looked at, never as ``match``.
+    """
+    d = str(direction or "").lower()
+    rows = [p for p in pos if not d or str(p.get("direction") or "").lower() == d]
+    if len(rows) != 1:
+        return 0, [f"{aid}: {len(rows)} venue {symbol} {d or ''} position row(s); levels not attributable "
+                   f"(levels not compared)"], 0
+    row, bad, ev, compared = rows[0], 0, [], 0
+    for name, key, pkg in (("SL", "sl", sl), ("TP", "tp", tp)):
+        if pkg is None:
+            continue
+        got = _f(row.get(key))
+        if got is None:
+            ev.append(f"{aid}: venue {name} not in the Positions read (not compared)")
+            continue
+        compared += 1
+        if not _close(got, pkg):
+            bad += 1
+            ev.append(f"{aid}: venue {name} {got} != package {name} {pkg}")
+    return bad, ev, compared
+
+
 def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], tp: Optional[float],
                direction: str, symbol: str) -> Tuple[dict, List[dict]]:
     """Venue vs journal vs package for every account; one verdict plus the evidence, and the per-account reads."""
@@ -829,6 +857,15 @@ def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], 
                 if pos is None:
                     looked_fail += 1
                     ev.append(f"{aid}: ticket filled, positions field absent in status")
+                elif pkg_status != "closed":
+                    # LTR-PACKET-READ-REACH (2026-11-11): the prop venue's own SL/TP, from the phone's Positions read,
+                    # compared with the package -- TP as well as SL. Before this a prop account was never compared, so
+                    # velotrade_1 SOL TP 76.535 vs package 78.964 read "match".
+                    bad_i, ev_i, compared = _compare_prop_levels(aid, symbol, direction, sl, tp, pos)
+                    bad += bad_i
+                    ev.extend(ev_i)
+                    if not compared:
+                        looked_fail += 1
                 elif pos and pkg_status == "closed" and _siblings(s, pkg_id, aid, symbol):
                     ev.append(f"{aid}: package {pkg_status}; the open {symbol} position belongs to sibling package(s) "
                               f"{', '.join(_siblings(s, pkg_id, aid, symbol))}, not read as an orphan")
@@ -944,10 +981,14 @@ def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], 
                     item["evidence"] += (f"; apply paths {', '.join(paths)}; would_apply = an executor reaches this leg, "
                                          "NOT that its RiskManager approved (LTR-6 gap)")
         bounds.append(item)
-    verdict = "mismatch" if bad else ("could_not_look" if looked_fail and not accts else "match")
+    verdict = "mismatch" if bad else "match"
     if not bad and looked_fail:
         verdict = "match" if looked_fail < len(accts) else "could_not_look"
         ev.append(f"{looked_fail} account(s) could not be read")
+    if not accts:
+        # nothing was compared: "agree with every readable account" over zero accounts is not a match
+        verdict = "could_not_look"
+        ev.append("no account carries this package in the reads (no trade / ticket row): nothing compared")
     if not ev:
         ev.append(f"package sl {sl} / tp {tp} agree with every readable account")
     return {"verdict": verdict, "evidence": "; ".join(ev)}, bounds
