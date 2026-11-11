@@ -65,7 +65,7 @@ attribution:
       net_r: 5.297
       gross_r: 5.44
 manifest:
-  entry: untested
+  entry: tested
   exit: tested
   filter: tested
   regime_gating: untested
@@ -75,7 +75,64 @@ manifest:
   session: untested
   sizing_vs_cost: untested
 levers:
+  entry:
+    donchian:
+      tests:
+      - value: '38'
+        baseline_value: '30'
+        arm: donchian_hi
+        unit: RQ-20261106-007
+        window: 2019-07-30..2026-11-06
+        n: 37
+        net_r: 23.8587
+        baseline_n: 38
+        baseline_net_r: 24.7899
+        delta_net_r: -0.9312
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 4.3975
+        verdict: indeterminate
+        joint_change: false
+      - value: '22'
+        baseline_value: '30'
+        arm: donchian_lo
+        unit: RQ-20261106-007
+        window: 2019-07-30..2026-11-06
+        n: 39
+        net_r: 33.66
+        baseline_n: 38
+        baseline_net_r: 24.7899
+        delta_net_r: 8.8701
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 3.0837
+        verdict: indeterminate
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: 0.2334
+      fold_stability: 0.75
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
   exit:
+    be_floor_r:
+      tests:
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: BE
+        unit: RQ-20261110-73de-16
+        window: 2018-03-01..2026-10-15
+        n: 43
+        net_r: 29.2219
+        baseline_n: 42
+        baseline_net_r: 27.1614
+        delta_net_r: 2.0605
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 3.7502
+        verdict: fail
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: 0.0491
+      fold_stability: 0.75
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
     trail_decay_tight_mult:
       tests:
       - value: '2'
@@ -149,8 +206,43 @@ levers:
         max_drawdown_r: 5.5615
         verdict: pass
         joint_change: false
+      - value: '40'
+        baseline_value: 'off'
+        arm: AX40
+        unit: RQ-20261110-73de-16
+        window: 2018-03-01..2026-10-15
+        n: 41
+        net_r: 28.6068
+        baseline_n: 42
+        baseline_net_r: 27.1614
+        delta_net_r: 1.4454
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 4.694
+        verdict: fail
+        joint_change: false
       shape: monotone
-      points: 2
-      best_delta_r_per_trade: 0.009
-      fold_stability: 0.5
+      points: 3
+      best_delta_r_per_trade: 0.0344
+      fold_stability: 0.667
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+    vol_skip_above_pctl:
+      tests:
+      - value: '0.9'
+        baseline_value: 'off'
+        arm: VH90
+        unit: RQ-20261110-73de-16
+        window: 2018-03-01..2026-10-15
+        n: 43
+        net_r: 25.4252
+        baseline_n: 42
+        baseline_net_r: 27.1614
+        delta_net_r: -1.7362
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 4.694
+        verdict: fail
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: -0.0413
+      fold_stability: 0.75
+      reading: every tested value is worse than the baseline

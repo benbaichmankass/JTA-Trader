@@ -121,7 +121,7 @@ log "Capturing venue evidence from ${DIAG_URL} …"
 http_code=""
 set +e
 http_code="$(curl -sS --max-time 45 -o "${VENUE_JSON}" -w '%{http_code}' \
-    -H "Authorization: Bearer ${DIAG_TOKEN}" "${DIAG_URL}")"
+    -H @- "${DIAG_URL}" <<<"Authorization: Bearer ${DIAG_TOKEN}")"   # header via stdin: never in argv / ps
 curl_rc=$?
 set -e
 

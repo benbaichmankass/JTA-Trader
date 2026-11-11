@@ -114,6 +114,38 @@ def _num(cfg: Mapping[str, Any], key: str, default: float = 0.0) -> float:
     return default if v is None else v
 
 
+#: PROP-TRAIL-BAD-CANDLE-EXT (MEASURED 2026-11-11 18:03Z, ict-prop-executor@tradeify_1 / @velotrade_1): the live replay
+#: of the SOL short (entry 87.64) logged ext 22.93 / mfe_r 44.18 / structure_tp 74.19, while the SAME code on the web
+#: API's candles for SOLUSDT 4h (min low 81.27 over 300 bars, read via /api/bot/candles) gives ext 81.27 / mfe_r 4.35 /
+#: structure_tp 84.94. A bar below half or above twice the ticket's entry since the signal is not a real move for a
+#: managed trade; the plan SKIPS (no SL step, no TP step) and says why. Bounds are deliberately wide: they catch a wrong
+#: feed, never a real trend.
+IMPLAUSIBLE_FEED = "candle feed implausible"
+FEED_LOW_FRAC, FEED_HIGH_MULT = 0.5, 2.0
+
+
+def implausible_feed(bars: pd.DataFrame, entry: float) -> Optional[str]:
+    """None when every bar since the signal sits inside [0.5 x entry, 2 x entry]; else why (pure)."""
+    if bars is None or len(bars) == 0 or not entry or entry <= 0:
+        return None
+    lo, hi = float(bars["low"].min()), float(bars["high"].max())
+    if lo < FEED_LOW_FRAC * entry:
+        return f"bar low {lo:g} < {FEED_LOW_FRAC:g} x entry {entry:g}"
+    if hi > FEED_HIGH_MULT * entry:
+        return f"bar high {hi:g} > {FEED_HIGH_MULT:g} x entry {entry:g}"
+    return None
+
+
+def feed_summary(bars: pd.DataFrame) -> Dict[str, Any]:
+    """Provenance for a skipped plan: how many bars, their span, the extremes (so the bad bar is findable)."""
+    try:
+        return {"n": int(len(bars)), "first": str(bars["timestamp"].iloc[0]), "last": str(bars["timestamp"].iloc[-1]),
+                "min_low": float(bars["low"].min()), "max_high": float(bars["high"].max()),
+                "min_low_at": str(bars.loc[bars["low"].idxmin(), "timestamp"])}
+    except Exception:  # noqa: BLE001
+        return {"n": None}
+
+
 def _closed_bars(candles: pd.DataFrame, start: datetime, tf_min: int, now: datetime) -> pd.DataFrame:
     """Rows whose bar OPENED at/after ``start`` and has CLOSED by ``now``."""
     ts = candles["timestamp"]
@@ -235,6 +267,10 @@ def plan_trail(*, leg: Mapping[str, Any], direction: str, entry: float, initial_
     if str(leg.get("decision_bar") or "forming").lower() != "closed":
         start = start + timedelta(minutes=tf_min)
     bars = _closed_bars(candles, start, tf_min, now)
+    bad = implausible_feed(bars, entry)
+    if bad:
+        # PROP-TRAIL-BAD-CANDLE-EXT: never step a stop or a target from a feed that cannot be this symbol's.
+        return TrailPlan("skip", f"{IMPLAUSIBLE_FEED}: {bad}", detail={"feed": feed_summary(bars)})
     long_ = direction == "long"
 
     decay_tight = _num(leg, "trail_decay_tight_mult")
@@ -530,6 +566,14 @@ def run_trail_step(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mo
         res.log("trail_plan", ticket_id=tid, venue=venue, action=plan.action, why=plan.why,
                 resting_sl=p.stop_loss, new_sl=plan.sl, replay_sl=plan.replay_sl, bars=plan.bars,
                 close_lever=plan.close_lever, **plan.detail)
+        if plan.action == "skip" and plan.why.startswith(IMPLAUSIBLE_FEED):
+            # No SL step AND no TP step from this feed (the TP step below would read the same bars).
+            if not tst.get("feed_alerted"):
+                res.alerts.append(f"{tid}: {venue} trail skipped: {plan.why} (feed {plan.detail.get('feed')}); "
+                                  "stops and targets stay as they rest until the feed is sane")
+                tst["feed_alerted"] = True
+            return
+        tst.pop("feed_alerted", None)
         if plan.close_lever and not tst.get("close_lever_alerted"):
             res.alerts.append(
                 f"{tid}: {venue} declared close lever `{plan.close_lever}` WOULD exit now "

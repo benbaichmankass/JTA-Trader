@@ -4,77 +4,78 @@ subject: trend_donchian_xrp_4h
 kind: strategy_leg
 status: production
 books:
-- bybit_1
+- bybit_2
+- bybit_portfolio
 baseline:
   record: comms/strategy_evidence/trend_donchian_xrp_4h.json
-  net_r: 7.712
+  net_r: 3.4812
   n: 46
   fidelity: faithful
   rule_verdict: pass
 attribution:
   read_state: measured
   n: 46
-  net_r: 7.712
-  gross_r: 9.96
-  cost_r: 2.248
-  cost_share_of_gross: 0.226
+  net_r: 3.481
+  gross_r: 6.382
+  cost_r: 2.901
+  cost_share_of_gross: 0.455
   verdict_hint: gross edge survives cost
   entry_quality:
-    mean_mfe_r: 0.901
-    share_mfe_ge_1r: 0.326
+    mean_mfe_r: 0.999
+    share_mfe_ge_1r: 0.413
     n_with_mfe: 46
   exit_capture:
-    median_net_over_mfe_winners: 1.191
+    median_net_over_mfe_winners: 1.2
     n_winners: 14
-    losers_that_reached_1r_mfe: 5
+    losers_that_reached_1r_mfe: 8
   by_year:
     '2022':
-      n: 3
-      net_r: 1.223
-      gross_r: 1.347
+      n: 2
+      net_r: 1.862
+      gross_r: 2.0
     '2023':
       n: 10
-      net_r: -0.794
-      gross_r: -0.258
+      net_r: -0.461
+      gross_r: 0.228
     '2024':
       n: 9
-      net_r: 1.028
-      gross_r: 1.439
+      net_r: -2.149
+      gross_r: -1.636
     '2025':
       n: 12
-      net_r: 1.541
-      gross_r: 2.081
+      net_r: 2.508
+      gross_r: 3.194
     '2026':
-      n: 12
-      net_r: 4.715
-      gross_r: 5.351
+      n: 13
+      net_r: 1.72
+      gross_r: 2.596
   by_direction:
     short:
       n: 46
-      net_r: 7.712
-      gross_r: 9.96
+      net_r: 3.481
+      gross_r: 6.382
   by_exit_reason:
     stale_stop:
-      n: 19
-      net_r: -6.448
-      gross_r: -5.428
-    stop:
-      n: 13
-      net_r: -13.547
-      gross_r: -13.0
-    take_profit:
       n: 11
-      net_r: 24.475
-      gross_r: 24.961
+      net_r: -3.235
+      gross_r: -2.441
+    stop:
+      n: 20
+      net_r: -21.146
+      gross_r: -20.0
+    take_profit:
+      n: 10
+      net_r: 26.461
+      gross_r: 27.1
     trail_stop:
-      n: 3
-      net_r: 3.231
-      gross_r: 3.427
+      n: 5
+      net_r: 1.401
+      gross_r: 1.723
   by_adx_at_entry:
     unknown:
       n: 46
-      net_r: 7.712
-      gross_r: 9.96
+      net_r: 3.481
+      gross_r: 6.382
 manifest:
   entry: tested
   exit: tested
@@ -87,6 +88,41 @@ manifest:
   sizing_vs_cost: untested
 levers:
   entry:
+    donchian:
+      tests:
+      - value: '25'
+        baseline_value: '20'
+        arm: donchian_hi
+        unit: RQ-20261106-033
+        window: 2021-11-03..2026-11-05
+        n: 50
+        net_r: 10.344
+        baseline_n: 60
+        baseline_net_r: 10.7659
+        delta_net_r: -0.4219
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 7.6634
+        verdict: pass
+        joint_change: false
+      - value: '15'
+        baseline_value: '20'
+        arm: donchian_lo
+        unit: RQ-20261106-033
+        window: 2021-11-03..2026-11-05
+        n: 69
+        net_r: 17.2827
+        baseline_n: 60
+        baseline_net_r: 10.7659
+        delta_net_r: 6.5168
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 6.2779
+        verdict: pass
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: 0.1086
+      fold_stability: 0.5
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
     min_confidence:
       tests:
       - value: '0.6'
@@ -131,10 +167,38 @@ levers:
         max_drawdown_r: 4.5808
         verdict: fail
         joint_change: false
+      - value: '1.0'
+        baseline_value: '0.8'
+        arm: min_confidence_hi
+        unit: RQ-20261106-033
+        window: 2021-11-03..2026-11-05
+        n: 45
+        net_r: 15.3716
+        baseline_n: 60
+        baseline_net_r: 10.7659
+        delta_net_r: 4.6057
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 5.0971
+        verdict: pass
+        joint_change: false
+      - value: '0.6'
+        baseline_value: '0.8'
+        arm: min_confidence_lo
+        unit: RQ-20261106-033
+        window: 2021-11-03..2026-11-05
+        n: 85
+        net_r: 8.1404
+        baseline_n: 60
+        baseline_net_r: 10.7659
+        delta_net_r: -2.6255
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 7.6686
+        verdict: pass
+        joint_change: false
       shape: monotone
-      points: 3
-      best_delta_r_per_trade: 0.0635
-      fold_stability: 0.583
+      points: 5
+      best_delta_r_per_trade: 0.0768
+      fold_stability: 0.65
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
   exit:
     tp_target_r:
