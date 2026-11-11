@@ -18,6 +18,29 @@
 	# Pin Let's Encrypt so cert issuance never needs an ACME account email
 	# (ZeroSSL, Caddy's other default issuer, requires one). No PII committed.
 	acme_ca https://acme-v02.api.letsencrypt.org/directory
+
+	# Credential redaction for EVERY log line that carries a request (the
+	# default logger also receives the reverse_proxy warnings such as
+	# "aborting with incomplete response", which embed the request headers).
+	# Caddy redacts Authorization/Cookie on its own, but NOT X-Diag-Token (the
+	# diag credential) or X-Work-Store-Token, which were readable in plaintext
+	# through the journal relay. Delete, not replace: no value, no length hint.
+	# Record: docs/design/site-auth-consumer-inventory-2026-11.md section 3.
+	log {
+		format filter {
+			wrap json
+			fields {
+				request>headers>X-Diag-Token delete
+				request>headers>X-Work-Store-Token delete
+				request>headers>Authorization delete
+				request>headers>Proxy-Authorization delete
+				request>headers>Cookie delete
+				request>headers>X-Api-Key delete
+				request>headers>X-Goog-Api-Key delete
+				resp_headers>Set-Cookie delete
+			}
+		}
+	}
 }
 
 ict-bot.duckdns.org {
