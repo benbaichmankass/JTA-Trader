@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from src.runtime.feature_catalog_coverage import (
+from src.runtime.feature_catalog_coverage import (  # noqa: E402
     compute_coverage,
     load_catalog,
     load_disk_models,
