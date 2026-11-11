@@ -1,5 +1,38 @@
-{"checks": [
-  {"call": "__ex.ordersRead({venue_symbol:'ETHUSD',side:'sell',qty:0.3936,price:2193.86,price_step:0.01})", "expect": {"state": "unread", "match": 0}, "note": "PHONE-ENTRY-CANCEL: the REAL page with no Open orders list showing reads UNREAD (never 'read, no match' = never not_found)"},
-  {"call": "__ex.orderCancelClick({venue_symbol:'ETHUSD',side:'sell',qty:0.3936,price:2193.86,price_step:0.01})", "expect": "rows_0", "note": "nothing to click: zero matching rows, nothing is clicked"},
-  {"call": "__ex.cancelConfirm()", "expect": "no_overlay", "note": "no confirmation open: nothing is pressed"}
-]}
+{
+ "checks": [
+  {
+   "call": "__ex.ordersRead({venue_symbol:'ETHUSD',side:'sell',qty:0.3936,price:2193.86,price_step:0.01})",
+   "expect": {
+    "state": "unread",
+    "match": 0
+   },
+   "note": "PHONE-ENTRY-CANCEL: the REAL page with no Open orders list showing reads UNREAD (never 'read, no match' = never not_found)"
+  },
+  {
+   "call": "__ex.orderCancelClick({venue_symbol:'ETHUSD',side:'sell',qty:0.3936,price:2193.86,price_step:0.01})",
+   "expect": "rows_0",
+   "note": "nothing to click: zero matching rows, nothing is clicked"
+  },
+  {
+   "call": "__ex.cancelConfirm()",
+   "expect": "no_overlay",
+   "note": "no confirmation open: nothing is pressed"
+  },
+  {
+   "call": "__ex.positionsRead()",
+   "expect": {
+    "state": "read",
+    "rows": [],
+    "empty_by": "region"
+   },
+   "note": "PHONE-LIVE-ACCOUNT-FEED: the REAL empty Positions view (region aria-label Positions + role=status 'No positions.') reads flat, not no_table"
+  },
+  {
+   "call": "(function(){var r=document.querySelector('[role=region][aria-label=Positions]');r.setAttribute('aria-label','Markets');var x=__ex.positionsRead();r.setAttribute('aria-label','Positions');return x;})()",
+   "expect": {
+    "state": "no_table"
+   },
+   "note": "the same empty text in a region NOT labelled Positions is page text, never flat"
+  }
+ ]
+}
