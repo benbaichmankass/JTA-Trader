@@ -1,0 +1,79 @@
+id: RQ-20261111-9b09-03
+title: 'VENUE-SCOPE-HYPERLIQUID #2: does a market-neutral differential-funding carry (receive on the higher-funding venue, pay on the lower, Hyperliquid
+  hourly vs Bybit 8h) on BTC/ETH/SOL/XRP/ADA/AVAX clear zero net of BOTH venues'' fees and slippage?'
+status: blocked
+cadence: once
+kind: experiment
+theme: new_venue
+priority: 4
+roadmap:
+- L-LADDER
+question: 'Hyperliquid settles funding hourly; Bybit every 8h. On overlapping majors, when the trailing difference (HL minus Bybit, normalised
+  per hour, lagged >= 1 settlement on each venue) exceeds a threshold, short the higher-funding venue''s perp and long the other''s; exit when
+  the gap closes or after max hold. Is the pooled per-trade net (funding collected minus funding paid minus 2 x (fee + slippage) on each venue)
+  > 0? PRIOR, stated before the run: AGAINST. Both venues use the same baseline (0.00125%/h vs 0.01%/8h, both ~10.95%/yr); HL BTC/ETH funding
+  sat exactly at baseline in 60% / 63% of 4,320 hours (2026-05-15 .. 2026-11-11, data/funding_180d_summary.json); the single-venue funding_carry
+  harness FAILED on BNBUSDT (RQ-20260929-104).'
+why_this_matters: The one crypto-overlap edge that could justify wiring HL beyond a ~2 bps RT fee saving (HL base taker 9.0 bps RT vs Bybit measured
+  11.0 bps RT, config/instruments.yaml). Settling it on paper avoids building a venue on a hunch.
+power:
+  expected_n: 100
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Floor (1.645 + 0.8416)^2 / 0.3^2 = 68.7 -> 69 pooled trades. expected_n is a GUESS (gap episodes over 6 symbols x ~2.5 years of overlapping
+    funding history); not measured. Below 69: UNDERPOWERED (indeterminate).'
+  feasibility:
+    source: none
+    accrual_basis: 'Fixed historical backfill: HL fundingHistory is public from 2023-05-12 (BTC) / 2023-10 (ADA); Bybit funding via scripts/ops/fetch_bybit_funding.py
+      (exists). Nothing accrues.'
+decision_rule:
+  id: RULE-DRAFT-HL-02
+  registered_at: '2026-11-11'
+  registered_before_run: true
+  statistic: 'Pooled over 6 symbols, window 2023-11-01 .. 2026-10-31, 6 equal calendar folds: n, mean net bps per trade, one-sided t, folds with
+    net > 0. Costs: HL taker 4.5 bps/side, Bybit 5.5 bps/side (measured), slippage 1.5 bps/side/venue, both legs entered and exited (4 fills per
+    trade). Threshold grid fixed now: entry |gap| in {0.5, 1.0, 2.0} bps/hour, exit at gap < 0.25 bps/hour or 72 h.'
+  rule: INDETERMINATE IF pooled n < 69 at every threshold. PASS IF at the BEST-of-3 threshold mean net > 0 with one-sided t >= 2.13 (Bonferroni
+    for 3 arms) AND net > 0 in >= 5 of 6 folds. FAIL otherwise. Grid and costs not changed after any result.
+  what_it_does_not_do: No account, no order, no config edit. Ignores HL-side capacity limits, margin transfer between venues, and liquidation
+    risk on either leg; a PASS needs a capacity/margin study before any build proposal.
+practice_precedent: Cross-venue funding-rate differential trading is a standard perp-desk practice; the in-repo prior against it is RQ-20260929-104
+  (single-venue funding_carry on BNBUSDT, verdict fail) and docs/research/d1-cost-stack-verification-2026-09-25.md.
+compute: cpu_light
+value:
+  bucket: structural
+  usd_at_stake_per_month: 100
+  confidence: 0.05
+  basis: stand-in; prior against (same baseline on both venues; single-venue carry failed).
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 20
+  why_runner: 'Public funding endpoints only. Note: api.bybit.com returned HTTP 403 (geo-block) from the scoping sandbox on 2026-11-11; a runner
+    must be checked for reachability.'
+  basis: Funding-series arithmetic over ~6 x 26k hourly rows.
+run:
+  workflow: research-script-run.yml
+  command: []
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261111-9b09-03
+blocked_on:
+- what: 'NO TWO-VENUE HARNESS. scripts/backtest_funding_carry.py is single-venue: its --hedge neutral variant assumes the hedge pays a flat --hedge-cost-bps
+    and receives no funding of its own, so it cannot price the funding differential between two venues. A two-venue funding-spread harness (or
+    a --hedge-funding-data input on the existing one) is needed.'
+- what: NO HYPERLIQUID FUNDING FETCHER (same gap as RQ-20261111-9b09-02; one fetcher unblocks both).
+- what: BYBIT REACHABILITY from the runner must be confirmed (403 from the scoping sandbox; fetch_bybit_funding.py exists).
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- docs/claude/work/checklist/VENUE-SCOPE-HYPERLIQUID.json
+- research/queue/RQ-20260929-104.yaml
+- scripts/backtest_funding_carry.py
+- scripts/ops/fetch_bybit_funding.py

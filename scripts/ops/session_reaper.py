@@ -155,7 +155,11 @@ BRANCH_SOURCE_STATES = (
 #: why grading on a proxy is safe here.
 DEFAULT_STALE_AFTER_MIN = 90
 
-REPO_PREFIX = "Metis-Insights:"
+# RENAME-SLUG-FUNCTIONAL-AUDIT: was the literal prefix "Metis-Insights:", which stopped matching at the rename.
+try:
+    from scripts.ops.repo_slug import is_this_repo as _is_this_repo
+except ImportError:  # run as a script from scripts/ops
+    from repo_slug import is_this_repo as _is_this_repo  # type: ignore
 
 
 # ---------------------------------------------------------------- git reads
@@ -260,7 +264,7 @@ def _branch_names(row: Dict) -> List[str]:
     for raw in row.get("branches") or []:
         b = str(raw)
         if ":" in b:
-            if not b.startswith(REPO_PREFIX):
+            if not _is_this_repo(b.split(":", 1)[0]):
                 continue
             b = b.split(":", 1)[1]
         out.append(b.strip())
