@@ -76,7 +76,30 @@ def refresh_once(pool: list, fetch: Callable[[str], Any], now: pd.Timestamp, pat
     snap["feed"] = "sip"
     snap["built_at"] = pd.Timestamp(now).isoformat()
     F.write_snapshot(path, snap)
+    archive_snapshot(path, snap)
     return {"bar_close": snap["bar_close"], "covered": snap["covered"], "missing": [s for s in pool if s not in snap["symbols"]], "wrote": True}
+
+
+HISTORY_KEEP = 120           # dated snapshot copies kept (~60 RTH days at 2 decision closes a day)
+
+
+def archive_snapshot(path: Path, snap: Dict[str, Any], keep: int = HISTORY_KEEP) -> Optional[Path]:
+    """Keep a DATED copy of each decision close's snapshot beside the live one (``history/<bar_close>.json``) so a live-vs-replay parity check can
+    re-score the exact inputs the live decision saw (row ML-ENTRY-EQ-STRUCT-FULL-POOL: the 2026-11-11 weekly parity could not check the ML legs).
+    A later pass of the same close overwrites its copy (the most complete one wins). Bounded: the oldest beyond ``keep`` are deleted. Never raises."""
+    try:
+        bc = snap.get("bar_close")
+        if not bc:
+            return None
+        hist = Path(path).parent / "history"
+        dest = hist / (pd.Timestamp(bc).strftime("%Y%m%dT%H%MZ") + ".json")
+        F.write_snapshot(dest, snap)
+        for old in sorted(hist.glob("*.json"))[:-keep]:
+            old.unlink(missing_ok=True)
+        return dest
+    except Exception:  # noqa: BLE001 -- the archive is observability; it must never break the live snapshot
+        logger.exception("ml_entry_eq_refresher: snapshot archive failed")
+        return None
 
 
 def _due(path: Path, pool_n: int, now: pd.Timestamp, ref_close: Optional[pd.Timestamp]) -> bool:

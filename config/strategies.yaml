@@ -1541,9 +1541,23 @@ strategies:
     max_snapshot_age_h: 4.0
     structure_exit: "pivot=5;sl_only"
     artifact: ml/candidates/ml_entry_eq_v3_struct_ens5/model.json
-    # The tick-cost rollout stage of ml_entry_eq MINUS TQQQ: tqqq_trend_long_1d already owns TQQQ's net position on alpaca_live + its mirror and the account has no
-    # slice support (same-symbol-allocation-guard). The model's tested population is the 173-ETF pool; widening is a later staged step, not a narrowing of the test.
-    symbols: [SPY, QQQ, IWM, TLT, IEF, SLV, USO, GDX, QLD]
+    # FULL POOL (row ML-ENTRY-EQ-STRUCT-FULL-POOL; operator 2026-11-11 ~09:20Z verbatim "regarding Alpaca, yes, we want it to be trading everything it was
+    # trained on."): symbols = the artifact's pool_symbols (173-ETF POOL_RULE, the population RQ-20261107-98e3-06 passed on, pooled) MINUS pool_exclude.
+    # pool_scored: the pool is scored ONCE per decision close from the snapshot (src/runtime/ml_pool_scoring.py) and only symbols with a package get a tick
+    # pass, so 171 symbols cost one batched predict, not 171 pipeline passes per tick (#23619). Pinned: tests/test_ml_entry_eq_full_pool.py.
+    # ROLLBACK to the rollout stage: symbols: [SPY, QQQ, IWM, TLT, IEF, SLV, USO, GDX, QLD] (pool_scored can stay; it is a dispatch mode, not a gate).
+    pool_scored: true
+    pool_exclude:
+      TQQQ: "tqqq_trend_long_1d owns TQQQ's net position on alpaca_live + its mirror; no slice support (same-symbol-allocation-guard)"
+      GLD: "the operator-kept zombie OCO (PI-20261025-ALQWWPXT-0001), as ml_entry / ml_entry_eq"
+    symbols: [
+      AAXJ, ACWI, ACWX, AGG, AMLP, ASHR, BIL, BIV, BKLN, BND, BNDX, BSV, DGRO, DIA, DUST, DVY, EEM, EFA, EFAV, EMB, EMLC, EWC, EWG, EWH, EWJ, EWT,
+      EWU, EWW, EWY, EWZ, EZU, FAS, FB, FDN, FEZ, FLOT, FXI, GDX, GDXJ, GOVT, GUSH, HYG, IAU, IBB, IEF, IEFA, IEI, IEMG, IGIB, IGSB, IGV, IJH, IJR,
+      INDA, INFO, ITB, ITOT, IVE, IVV, IVW, IWB, IWD, IWF, IWM, IWN, IWO, IWR, IXUS, IYR, JDST, JNK, JNUG, JPST, KBE, KRE, KWEB, LABU, LQD, MBB,
+      MCHI, MDY, MINT, MTUM, MUB, NFX, NUGT, OIH, PFF, PSQ, QID, QLD, QQQ, QUAL, RSP, SCHB, SCHD, SCHF, SCHX, SCZ, SDOW, SDS, SDY, SH, SHV, SHY, SIX,
+      SJNK, SLV, SMH, SOXL, SOXS, SOXX, SPLV, SPXL, SPXS, SPXU, SPY, SPYG, SQQQ, SSO, SVXY, TECL, TIP, TLT, TNA, TZA, UCO, UDOW, ULTI, UN, UNG, UPRO,
+      USMV, USO, UVXY, VB, VCIT, VCSH, VEA, VEU, VGK, VGSH, VGT, VIG, VIXY, VNQ, VO, VOO, VT, VTI, VTV, VUG, VWO, VXUS, VYM, XBI, XHB, XLB, XLC, XLE,
+      XLF, XLI, XLK, XLP, XLRE, XLU, XLV, XLY, XME, XOP, XRT]
     atr_period: 14
     atr_stop_mult: 2.0
     tp_r: 1.5                  # 3 ATR on a 2 ATR stop, the arm that was scored

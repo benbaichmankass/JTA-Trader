@@ -163,6 +163,32 @@ offer me multiple choice answers instead of just free text."*
   concrete options, recommended first, with free text still available. Free text alone is only for genuinely open questions.
 - Console reorder drags (`item_kind: reorder`) are applied the same check-in as `priority_rank = to_rank` on the named rows.
 
+## Decision docs — how the operator decides (operator, 2026-11-11, binding) — gates this adds or changes: none
+
+Operator, 2026-11-11 ~21:10Z, verbatim: *"I do very much like that format. I think this could be a good way for us to work, because it helps keep
+things a little bit more organized instead of having everything in the chat when I want you to keep running ... You create the artifact with the
+explanations of the decisions ... And then, like, you can send a link on Telegram, you can put the link on the UI, and when I get a chance, I'll go
+in there ... Certainly for big things like weekly planning and, like, you know, design decisions, like design docs that need to be approved ...
+Plus, then I can also, like, if there's artifacts, I can leave you comments and we can go back and forth."*
+- **What goes in one.** Any decision that needs more than a one-line choice goes into a **decision doc**: weekly planning, design-doc approvals,
+  Tier-3 proposals that need context, retirements, and any batch of 3+ open questions. A one-shot choice can still be asked in chat or as a
+  popup, after § "Before any operator popup" classifies it.
+- **The format** (precedent: the 2026-11-11 Thursday-planning page). It is a private Artifact page with:
+  - a short context box;
+  - a "Do now" box for any operator-only physical step (credentials, terminal checks), never containing a secret value;
+  - each question with plain-language evidence and 2–4 options, recommended first, plus a note field;
+  - answers saved in the page (the `db` capability, collection `answers`);
+  - a "copy my answers" summary.
+  Write for reading away from the chat: no unexplained ids, and every question stands on its own.
+- **Delivery.** Send the link once via `send-ping`, put it in the console inbox (until the UI lists decision docs, the brief's "decisions for
+  you" carries the link), and keep updating **the same artifact** (same URL) as items resolve or new ones join. Do not spawn a new page per
+  question.
+- **The manager keeps running.** A decision doc never blocks other work (§ "Five things", item 4): state the assumption, carry on, and pick
+  the answers up at the next check-in or when the operator says they are done.
+- **Reading and recording.** Read answers with `ArtifactData` (collection `answers`) and comments with `ArtifactComments`; answer a comment in
+  its thread. The artifact is the *input*; the register stays the *record*. Each answer is recorded verbatim on its row (`work.py note`), then
+  acted on, with tier rules unchanged. Mark answered questions as answered in the page.
+
 ## The budget
 
 The pace is loop step 2. Retired 2026-10-18 (kept out by `manager-pacing-guard`): "10% a day, and spend it" and mass parallel launches with hourly

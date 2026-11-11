@@ -4,77 +4,74 @@ subject: ada_pullback_2h
 kind: strategy_leg
 status: production
 books:
-- bybit_1
+- bybit_2
+- bybit_portfolio
 baseline:
   record: comms/strategy_evidence/ada_pullback_2h.json
-  net_r: 31.4579
-  n: 61
+  net_r: 27.0889
+  n: 67
   fidelity: faithful
   rule_verdict: pass
 attribution:
   read_state: measured
-  n: 61
-  net_r: 31.458
-  gross_r: 35.968
-  cost_r: 4.51
-  cost_share_of_gross: 0.125
+  n: 67
+  net_r: 27.089
+  gross_r: 31.843
+  cost_r: 4.755
+  cost_share_of_gross: 0.149
   verdict_hint: gross edge survives cost
   entry_quality:
-    mean_mfe_r: 1.601
-    share_mfe_ge_1r: 0.508
-    n_with_mfe: 61
+    mean_mfe_r: 1.514
+    share_mfe_ge_1r: 0.493
+    n_with_mfe: 67
   exit_capture:
-    median_net_over_mfe_winners: 1.033
+    median_net_over_mfe_winners: 1.06
     n_winners: 23
-    losers_that_reached_1r_mfe: 8
+    losers_that_reached_1r_mfe: 10
   by_year:
     '2025':
-      n: 10
-      net_r: 7.553
-      gross_r: 8.202
+      n: 8
+      net_r: 4.692
+      gross_r: 5.202
     '2026':
-      n: 51
-      net_r: 23.905
-      gross_r: 27.766
+      n: 59
+      net_r: 22.397
+      gross_r: 26.641
   by_direction:
     long:
-      n: 25
-      net_r: 4.022
-      gross_r: 5.639
+      n: 30
+      net_r: -1.186
+      gross_r: 0.639
     short:
-      n: 36
-      net_r: 27.436
-      gross_r: 30.329
+      n: 37
+      net_r: 28.275
+      gross_r: 31.204
   by_exit_reason:
     stop:
-      n: 36
-      net_r: -38.203
-      gross_r: -36.0
+      n: 42
+      net_r: -44.465
+      gross_r: -42.0
     take_profit:
-      n: 21
-      net_r: 69.759
-      gross_r: 71.667
-    timeout:
-      n: 1
-      net_r: 1.019
-      gross_r: 1.124
+      n: 22
+      net_r: 72.671
+      gross_r: 74.666
     trail_stop:
       n: 3
       net_r: -1.117
       gross_r: -0.823
   by_adx_at_entry:
     20-30:
-      n: 15
-      net_r: 0.118
-      gross_r: 1.275
+      n: 14
+      net_r: 1.179
+      gross_r: 2.275
     30-40:
-      n: 27
-      net_r: 17.557
-      gross_r: 19.697
+      n: 32
+      net_r: 15.116
+      gross_r: 17.573
     '>=40':
-      n: 19
-      net_r: 13.783
-      gross_r: 14.995
+      n: 21
+      net_r: 10.794
+      gross_r: 11.995
 manifest:
   entry: tested
   exit: tested
