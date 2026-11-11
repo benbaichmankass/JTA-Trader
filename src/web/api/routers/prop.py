@@ -116,12 +116,14 @@ def get_fills(account_id: str | None = None, limit: int = 100) -> dict[str, Any]
 
     limit = max(1, min(int(limit), 500))
     try:
-        from src.prop.prop_overview import annotate_trade_state
+        from src.prop.prop_overview import annotate_trade_state, attach_trade_brackets
 
         rows = prop_journal.list_fills(account_id=account_id, limit=limit)
         # rows are fill EVENTS: an opening row keeps status "open" after its trade closes (BREAKOUT-UNRECORDED-1101);
         # trade_state / trade_open_count say what the TRADE is, so a reader never counts a closed trade as open
         n_open = annotate_trade_state(rows)
+        # PROP-UI-BRACKETS-CLOSED: a closing row's own sl/tp is usually NULL; join the opening row's levels + amendments
+        attach_trade_brackets(rows, opener_lookup=lambda a, t, e: prop_journal.get_opening_fill(a, t, e))
         return {"present": bool(prop_journal.tables_present()), "count": len(rows),
                 "trade_open_count": n_open, "fills": rows}
     except Exception:  # noqa: BLE001  # allow-silent: degrade to present:false, not a 500

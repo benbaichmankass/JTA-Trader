@@ -585,3 +585,2119 @@ instruments:
     max_leverage: 4
     display_name: "Schwab U.S. Small-Cap ETF (Alpaca)"
     ib: { sec_type: STK, exchange: SMART, primary_exchange: ARCA, currency: USD }
+
+  # ------------------------------------------------------------------
+  # ml_entry_eq pool (row ML-ENTRY-EQ-STRUCT-FULL-POOL, 2026-11-11; operator verbatim ~09:20Z "we want it to be trading everything it was
+  # trained on"). The 162 pool symbols (ml/candidates/ml_entry_eq_v3_struct_ens5/model.json::pool_symbols, 173-ETF POOL_RULE sha e9702661...)
+  # that had no profile, so they route to Alpaca instead of falling back to the process EXCHANGE (connector_for_symbol). Mechanical: whole-share
+  # Alpaca spot, the same shape as GDX/SCHA; asset_class is the coarse news/reporting bucket (bond = rates ETFs, commodity = physical gold / oil /
+  # gas trackers, everything else equity incl. sector, country, levered and inverse ETFs). Pinned by tests/test_ml_entry_eq_full_pool.py.
+  # ------------------------------------------------------------------
+  AAXJ:
+    exchange: alpaca
+    category: spot
+    base_asset: AAXJ
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "AAXJ (Alpaca, ml_entry_eq pool)"
+  ACWI:
+    exchange: alpaca
+    category: spot
+    base_asset: ACWI
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "ACWI (Alpaca, ml_entry_eq pool)"
+  ACWX:
+    exchange: alpaca
+    category: spot
+    base_asset: ACWX
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "ACWX (Alpaca, ml_entry_eq pool)"
+  AGG:
+    exchange: alpaca
+    category: spot
+    base_asset: AGG
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "AGG (Alpaca, ml_entry_eq pool)"
+  AMLP:
+    exchange: alpaca
+    category: spot
+    base_asset: AMLP
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "AMLP (Alpaca, ml_entry_eq pool)"
+  ASHR:
+    exchange: alpaca
+    category: spot
+    base_asset: ASHR
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "ASHR (Alpaca, ml_entry_eq pool)"
+  BIL:
+    exchange: alpaca
+    category: spot
+    base_asset: BIL
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "BIL (Alpaca, ml_entry_eq pool)"
+  BIV:
+    exchange: alpaca
+    category: spot
+    base_asset: BIV
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "BIV (Alpaca, ml_entry_eq pool)"
+  BKLN:
+    exchange: alpaca
+    category: spot
+    base_asset: BKLN
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "BKLN (Alpaca, ml_entry_eq pool)"
+  BND:
+    exchange: alpaca
+    category: spot
+    base_asset: BND
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "BND (Alpaca, ml_entry_eq pool)"
+  BNDX:
+    exchange: alpaca
+    category: spot
+    base_asset: BNDX
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "BNDX (Alpaca, ml_entry_eq pool)"
+  BSV:
+    exchange: alpaca
+    category: spot
+    base_asset: BSV
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "BSV (Alpaca, ml_entry_eq pool)"
+  DGRO:
+    exchange: alpaca
+    category: spot
+    base_asset: DGRO
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "DGRO (Alpaca, ml_entry_eq pool)"
+  DIA:
+    exchange: alpaca
+    category: spot
+    base_asset: DIA
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "DIA (Alpaca, ml_entry_eq pool)"
+  DUST:
+    exchange: alpaca
+    category: spot
+    base_asset: DUST
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "DUST (Alpaca, ml_entry_eq pool)"
+  DVY:
+    exchange: alpaca
+    category: spot
+    base_asset: DVY
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "DVY (Alpaca, ml_entry_eq pool)"
+  EEM:
+    exchange: alpaca
+    category: spot
+    base_asset: EEM
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "EEM (Alpaca, ml_entry_eq pool)"
+  EFA:
+    exchange: alpaca
+    category: spot
+    base_asset: EFA
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "EFA (Alpaca, ml_entry_eq pool)"
+  EFAV:
+    exchange: alpaca
+    category: spot
+    base_asset: EFAV
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "EFAV (Alpaca, ml_entry_eq pool)"
+  EMB:
+    exchange: alpaca
+    category: spot
+    base_asset: EMB
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "EMB (Alpaca, ml_entry_eq pool)"
+  EMLC:
+    exchange: alpaca
+    category: spot
+    base_asset: EMLC
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "EMLC (Alpaca, ml_entry_eq pool)"
+  EWC:
+    exchange: alpaca
+    category: spot
+    base_asset: EWC
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "EWC (Alpaca, ml_entry_eq pool)"
+  EWG:
+    exchange: alpaca
+    category: spot
+    base_asset: EWG
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "EWG (Alpaca, ml_entry_eq pool)"
+  EWH:
+    exchange: alpaca
+    category: spot
+    base_asset: EWH
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "EWH (Alpaca, ml_entry_eq pool)"
+  EWJ:
+    exchange: alpaca
+    category: spot
+    base_asset: EWJ
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "EWJ (Alpaca, ml_entry_eq pool)"
+  EWT:
+    exchange: alpaca
+    category: spot
+    base_asset: EWT
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "EWT (Alpaca, ml_entry_eq pool)"
+  EWU:
+    exchange: alpaca
+    category: spot
+    base_asset: EWU
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "EWU (Alpaca, ml_entry_eq pool)"
+  EWW:
+    exchange: alpaca
+    category: spot
+    base_asset: EWW
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "EWW (Alpaca, ml_entry_eq pool)"
+  EWY:
+    exchange: alpaca
+    category: spot
+    base_asset: EWY
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "EWY (Alpaca, ml_entry_eq pool)"
+  EWZ:
+    exchange: alpaca
+    category: spot
+    base_asset: EWZ
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "EWZ (Alpaca, ml_entry_eq pool)"
+  EZU:
+    exchange: alpaca
+    category: spot
+    base_asset: EZU
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "EZU (Alpaca, ml_entry_eq pool)"
+  FAS:
+    exchange: alpaca
+    category: spot
+    base_asset: FAS
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "FAS (Alpaca, ml_entry_eq pool)"
+  FB:
+    exchange: alpaca
+    category: spot
+    base_asset: FB
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "FB (Alpaca, ml_entry_eq pool)"
+  FDN:
+    exchange: alpaca
+    category: spot
+    base_asset: FDN
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "FDN (Alpaca, ml_entry_eq pool)"
+  FEZ:
+    exchange: alpaca
+    category: spot
+    base_asset: FEZ
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "FEZ (Alpaca, ml_entry_eq pool)"
+  FLOT:
+    exchange: alpaca
+    category: spot
+    base_asset: FLOT
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "FLOT (Alpaca, ml_entry_eq pool)"
+  FXI:
+    exchange: alpaca
+    category: spot
+    base_asset: FXI
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "FXI (Alpaca, ml_entry_eq pool)"
+  GDXJ:
+    exchange: alpaca
+    category: spot
+    base_asset: GDXJ
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "GDXJ (Alpaca, ml_entry_eq pool)"
+  GOVT:
+    exchange: alpaca
+    category: spot
+    base_asset: GOVT
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "GOVT (Alpaca, ml_entry_eq pool)"
+  GUSH:
+    exchange: alpaca
+    category: spot
+    base_asset: GUSH
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "GUSH (Alpaca, ml_entry_eq pool)"
+  HYG:
+    exchange: alpaca
+    category: spot
+    base_asset: HYG
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "HYG (Alpaca, ml_entry_eq pool)"
+  IAU:
+    exchange: alpaca
+    category: spot
+    base_asset: IAU
+    asset_class: commodity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "IAU (Alpaca, ml_entry_eq pool)"
+  IBB:
+    exchange: alpaca
+    category: spot
+    base_asset: IBB
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "IBB (Alpaca, ml_entry_eq pool)"
+  IEFA:
+    exchange: alpaca
+    category: spot
+    base_asset: IEFA
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "IEFA (Alpaca, ml_entry_eq pool)"
+  IEI:
+    exchange: alpaca
+    category: spot
+    base_asset: IEI
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "IEI (Alpaca, ml_entry_eq pool)"
+  IEMG:
+    exchange: alpaca
+    category: spot
+    base_asset: IEMG
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "IEMG (Alpaca, ml_entry_eq pool)"
+  IGIB:
+    exchange: alpaca
+    category: spot
+    base_asset: IGIB
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "IGIB (Alpaca, ml_entry_eq pool)"
+  IGSB:
+    exchange: alpaca
+    category: spot
+    base_asset: IGSB
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "IGSB (Alpaca, ml_entry_eq pool)"
+  IGV:
+    exchange: alpaca
+    category: spot
+    base_asset: IGV
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "IGV (Alpaca, ml_entry_eq pool)"
+  IJH:
+    exchange: alpaca
+    category: spot
+    base_asset: IJH
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "IJH (Alpaca, ml_entry_eq pool)"
+  IJR:
+    exchange: alpaca
+    category: spot
+    base_asset: IJR
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "IJR (Alpaca, ml_entry_eq pool)"
+  INDA:
+    exchange: alpaca
+    category: spot
+    base_asset: INDA
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "INDA (Alpaca, ml_entry_eq pool)"
+  INFO:
+    exchange: alpaca
+    category: spot
+    base_asset: INFO
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "INFO (Alpaca, ml_entry_eq pool)"
+  ITB:
+    exchange: alpaca
+    category: spot
+    base_asset: ITB
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "ITB (Alpaca, ml_entry_eq pool)"
+  ITOT:
+    exchange: alpaca
+    category: spot
+    base_asset: ITOT
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "ITOT (Alpaca, ml_entry_eq pool)"
+  IVE:
+    exchange: alpaca
+    category: spot
+    base_asset: IVE
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "IVE (Alpaca, ml_entry_eq pool)"
+  IVV:
+    exchange: alpaca
+    category: spot
+    base_asset: IVV
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "IVV (Alpaca, ml_entry_eq pool)"
+  IVW:
+    exchange: alpaca
+    category: spot
+    base_asset: IVW
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "IVW (Alpaca, ml_entry_eq pool)"
+  IWB:
+    exchange: alpaca
+    category: spot
+    base_asset: IWB
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "IWB (Alpaca, ml_entry_eq pool)"
+  IWD:
+    exchange: alpaca
+    category: spot
+    base_asset: IWD
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "IWD (Alpaca, ml_entry_eq pool)"
+  IWF:
+    exchange: alpaca
+    category: spot
+    base_asset: IWF
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "IWF (Alpaca, ml_entry_eq pool)"
+  IWN:
+    exchange: alpaca
+    category: spot
+    base_asset: IWN
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "IWN (Alpaca, ml_entry_eq pool)"
+  IWO:
+    exchange: alpaca
+    category: spot
+    base_asset: IWO
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "IWO (Alpaca, ml_entry_eq pool)"
+  IWR:
+    exchange: alpaca
+    category: spot
+    base_asset: IWR
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "IWR (Alpaca, ml_entry_eq pool)"
+  IXUS:
+    exchange: alpaca
+    category: spot
+    base_asset: IXUS
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "IXUS (Alpaca, ml_entry_eq pool)"
+  IYR:
+    exchange: alpaca
+    category: spot
+    base_asset: IYR
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "IYR (Alpaca, ml_entry_eq pool)"
+  JDST:
+    exchange: alpaca
+    category: spot
+    base_asset: JDST
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "JDST (Alpaca, ml_entry_eq pool)"
+  JNK:
+    exchange: alpaca
+    category: spot
+    base_asset: JNK
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "JNK (Alpaca, ml_entry_eq pool)"
+  JNUG:
+    exchange: alpaca
+    category: spot
+    base_asset: JNUG
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "JNUG (Alpaca, ml_entry_eq pool)"
+  JPST:
+    exchange: alpaca
+    category: spot
+    base_asset: JPST
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "JPST (Alpaca, ml_entry_eq pool)"
+  KBE:
+    exchange: alpaca
+    category: spot
+    base_asset: KBE
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "KBE (Alpaca, ml_entry_eq pool)"
+  KRE:
+    exchange: alpaca
+    category: spot
+    base_asset: KRE
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "KRE (Alpaca, ml_entry_eq pool)"
+  KWEB:
+    exchange: alpaca
+    category: spot
+    base_asset: KWEB
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "KWEB (Alpaca, ml_entry_eq pool)"
+  LABU:
+    exchange: alpaca
+    category: spot
+    base_asset: LABU
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "LABU (Alpaca, ml_entry_eq pool)"
+  LQD:
+    exchange: alpaca
+    category: spot
+    base_asset: LQD
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "LQD (Alpaca, ml_entry_eq pool)"
+  MBB:
+    exchange: alpaca
+    category: spot
+    base_asset: MBB
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "MBB (Alpaca, ml_entry_eq pool)"
+  MCHI:
+    exchange: alpaca
+    category: spot
+    base_asset: MCHI
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "MCHI (Alpaca, ml_entry_eq pool)"
+  MDY:
+    exchange: alpaca
+    category: spot
+    base_asset: MDY
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "MDY (Alpaca, ml_entry_eq pool)"
+  MINT:
+    exchange: alpaca
+    category: spot
+    base_asset: MINT
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "MINT (Alpaca, ml_entry_eq pool)"
+  MTUM:
+    exchange: alpaca
+    category: spot
+    base_asset: MTUM
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "MTUM (Alpaca, ml_entry_eq pool)"
+  MUB:
+    exchange: alpaca
+    category: spot
+    base_asset: MUB
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "MUB (Alpaca, ml_entry_eq pool)"
+  NFX:
+    exchange: alpaca
+    category: spot
+    base_asset: NFX
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "NFX (Alpaca, ml_entry_eq pool)"
+  NUGT:
+    exchange: alpaca
+    category: spot
+    base_asset: NUGT
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "NUGT (Alpaca, ml_entry_eq pool)"
+  OIH:
+    exchange: alpaca
+    category: spot
+    base_asset: OIH
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "OIH (Alpaca, ml_entry_eq pool)"
+  PFF:
+    exchange: alpaca
+    category: spot
+    base_asset: PFF
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "PFF (Alpaca, ml_entry_eq pool)"
+  PSQ:
+    exchange: alpaca
+    category: spot
+    base_asset: PSQ
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "PSQ (Alpaca, ml_entry_eq pool)"
+  QID:
+    exchange: alpaca
+    category: spot
+    base_asset: QID
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "QID (Alpaca, ml_entry_eq pool)"
+  QUAL:
+    exchange: alpaca
+    category: spot
+    base_asset: QUAL
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "QUAL (Alpaca, ml_entry_eq pool)"
+  RSP:
+    exchange: alpaca
+    category: spot
+    base_asset: RSP
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "RSP (Alpaca, ml_entry_eq pool)"
+  SCHB:
+    exchange: alpaca
+    category: spot
+    base_asset: SCHB
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SCHB (Alpaca, ml_entry_eq pool)"
+  SCHD:
+    exchange: alpaca
+    category: spot
+    base_asset: SCHD
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SCHD (Alpaca, ml_entry_eq pool)"
+  SCHF:
+    exchange: alpaca
+    category: spot
+    base_asset: SCHF
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SCHF (Alpaca, ml_entry_eq pool)"
+  SCHX:
+    exchange: alpaca
+    category: spot
+    base_asset: SCHX
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SCHX (Alpaca, ml_entry_eq pool)"
+  SCZ:
+    exchange: alpaca
+    category: spot
+    base_asset: SCZ
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SCZ (Alpaca, ml_entry_eq pool)"
+  SDOW:
+    exchange: alpaca
+    category: spot
+    base_asset: SDOW
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SDOW (Alpaca, ml_entry_eq pool)"
+  SDS:
+    exchange: alpaca
+    category: spot
+    base_asset: SDS
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SDS (Alpaca, ml_entry_eq pool)"
+  SDY:
+    exchange: alpaca
+    category: spot
+    base_asset: SDY
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SDY (Alpaca, ml_entry_eq pool)"
+  SH:
+    exchange: alpaca
+    category: spot
+    base_asset: SH
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SH (Alpaca, ml_entry_eq pool)"
+  SHV:
+    exchange: alpaca
+    category: spot
+    base_asset: SHV
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SHV (Alpaca, ml_entry_eq pool)"
+  SHY:
+    exchange: alpaca
+    category: spot
+    base_asset: SHY
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SHY (Alpaca, ml_entry_eq pool)"
+  SIX:
+    exchange: alpaca
+    category: spot
+    base_asset: SIX
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SIX (Alpaca, ml_entry_eq pool)"
+  SJNK:
+    exchange: alpaca
+    category: spot
+    base_asset: SJNK
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SJNK (Alpaca, ml_entry_eq pool)"
+  SMH:
+    exchange: alpaca
+    category: spot
+    base_asset: SMH
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SMH (Alpaca, ml_entry_eq pool)"
+  SOXL:
+    exchange: alpaca
+    category: spot
+    base_asset: SOXL
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SOXL (Alpaca, ml_entry_eq pool)"
+  SOXS:
+    exchange: alpaca
+    category: spot
+    base_asset: SOXS
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SOXS (Alpaca, ml_entry_eq pool)"
+  SOXX:
+    exchange: alpaca
+    category: spot
+    base_asset: SOXX
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SOXX (Alpaca, ml_entry_eq pool)"
+  SPLV:
+    exchange: alpaca
+    category: spot
+    base_asset: SPLV
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SPLV (Alpaca, ml_entry_eq pool)"
+  SPXL:
+    exchange: alpaca
+    category: spot
+    base_asset: SPXL
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SPXL (Alpaca, ml_entry_eq pool)"
+  SPXS:
+    exchange: alpaca
+    category: spot
+    base_asset: SPXS
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SPXS (Alpaca, ml_entry_eq pool)"
+  SPXU:
+    exchange: alpaca
+    category: spot
+    base_asset: SPXU
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SPXU (Alpaca, ml_entry_eq pool)"
+  SPYG:
+    exchange: alpaca
+    category: spot
+    base_asset: SPYG
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SPYG (Alpaca, ml_entry_eq pool)"
+  SQQQ:
+    exchange: alpaca
+    category: spot
+    base_asset: SQQQ
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SQQQ (Alpaca, ml_entry_eq pool)"
+  SSO:
+    exchange: alpaca
+    category: spot
+    base_asset: SSO
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SSO (Alpaca, ml_entry_eq pool)"
+  SVXY:
+    exchange: alpaca
+    category: spot
+    base_asset: SVXY
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "SVXY (Alpaca, ml_entry_eq pool)"
+  TECL:
+    exchange: alpaca
+    category: spot
+    base_asset: TECL
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "TECL (Alpaca, ml_entry_eq pool)"
+  TIP:
+    exchange: alpaca
+    category: spot
+    base_asset: TIP
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "TIP (Alpaca, ml_entry_eq pool)"
+  TNA:
+    exchange: alpaca
+    category: spot
+    base_asset: TNA
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "TNA (Alpaca, ml_entry_eq pool)"
+  TZA:
+    exchange: alpaca
+    category: spot
+    base_asset: TZA
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "TZA (Alpaca, ml_entry_eq pool)"
+  UCO:
+    exchange: alpaca
+    category: spot
+    base_asset: UCO
+    asset_class: commodity
+    news_group: energy
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "UCO (Alpaca, ml_entry_eq pool)"
+  UDOW:
+    exchange: alpaca
+    category: spot
+    base_asset: UDOW
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "UDOW (Alpaca, ml_entry_eq pool)"
+  ULTI:
+    exchange: alpaca
+    category: spot
+    base_asset: ULTI
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "ULTI (Alpaca, ml_entry_eq pool)"
+  UN:
+    exchange: alpaca
+    category: spot
+    base_asset: UN
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "UN (Alpaca, ml_entry_eq pool)"
+  UNG:
+    exchange: alpaca
+    category: spot
+    base_asset: UNG
+    asset_class: commodity
+    news_group: energy
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "UNG (Alpaca, ml_entry_eq pool)"
+  UPRO:
+    exchange: alpaca
+    category: spot
+    base_asset: UPRO
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "UPRO (Alpaca, ml_entry_eq pool)"
+  USMV:
+    exchange: alpaca
+    category: spot
+    base_asset: USMV
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "USMV (Alpaca, ml_entry_eq pool)"
+  UVXY:
+    exchange: alpaca
+    category: spot
+    base_asset: UVXY
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "UVXY (Alpaca, ml_entry_eq pool)"
+  VB:
+    exchange: alpaca
+    category: spot
+    base_asset: VB
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "VB (Alpaca, ml_entry_eq pool)"
+  VCIT:
+    exchange: alpaca
+    category: spot
+    base_asset: VCIT
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "VCIT (Alpaca, ml_entry_eq pool)"
+  VCSH:
+    exchange: alpaca
+    category: spot
+    base_asset: VCSH
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "VCSH (Alpaca, ml_entry_eq pool)"
+  VEA:
+    exchange: alpaca
+    category: spot
+    base_asset: VEA
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "VEA (Alpaca, ml_entry_eq pool)"
+  VEU:
+    exchange: alpaca
+    category: spot
+    base_asset: VEU
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "VEU (Alpaca, ml_entry_eq pool)"
+  VGK:
+    exchange: alpaca
+    category: spot
+    base_asset: VGK
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "VGK (Alpaca, ml_entry_eq pool)"
+  VGSH:
+    exchange: alpaca
+    category: spot
+    base_asset: VGSH
+    asset_class: bond
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "VGSH (Alpaca, ml_entry_eq pool)"
+  VGT:
+    exchange: alpaca
+    category: spot
+    base_asset: VGT
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "VGT (Alpaca, ml_entry_eq pool)"
+  VIG:
+    exchange: alpaca
+    category: spot
+    base_asset: VIG
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "VIG (Alpaca, ml_entry_eq pool)"
+  VIXY:
+    exchange: alpaca
+    category: spot
+    base_asset: VIXY
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "VIXY (Alpaca, ml_entry_eq pool)"
+  VNQ:
+    exchange: alpaca
+    category: spot
+    base_asset: VNQ
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "VNQ (Alpaca, ml_entry_eq pool)"
+  VO:
+    exchange: alpaca
+    category: spot
+    base_asset: VO
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "VO (Alpaca, ml_entry_eq pool)"
+  VOO:
+    exchange: alpaca
+    category: spot
+    base_asset: VOO
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "VOO (Alpaca, ml_entry_eq pool)"
+  VT:
+    exchange: alpaca
+    category: spot
+    base_asset: VT
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "VT (Alpaca, ml_entry_eq pool)"
+  VTI:
+    exchange: alpaca
+    category: spot
+    base_asset: VTI
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "VTI (Alpaca, ml_entry_eq pool)"
+  VTV:
+    exchange: alpaca
+    category: spot
+    base_asset: VTV
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "VTV (Alpaca, ml_entry_eq pool)"
+  VUG:
+    exchange: alpaca
+    category: spot
+    base_asset: VUG
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "VUG (Alpaca, ml_entry_eq pool)"
+  VWO:
+    exchange: alpaca
+    category: spot
+    base_asset: VWO
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "VWO (Alpaca, ml_entry_eq pool)"
+  VXUS:
+    exchange: alpaca
+    category: spot
+    base_asset: VXUS
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "VXUS (Alpaca, ml_entry_eq pool)"
+  VYM:
+    exchange: alpaca
+    category: spot
+    base_asset: VYM
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "VYM (Alpaca, ml_entry_eq pool)"
+  XBI:
+    exchange: alpaca
+    category: spot
+    base_asset: XBI
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "XBI (Alpaca, ml_entry_eq pool)"
+  XHB:
+    exchange: alpaca
+    category: spot
+    base_asset: XHB
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "XHB (Alpaca, ml_entry_eq pool)"
+  XLB:
+    exchange: alpaca
+    category: spot
+    base_asset: XLB
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "XLB (Alpaca, ml_entry_eq pool)"
+  XLC:
+    exchange: alpaca
+    category: spot
+    base_asset: XLC
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "XLC (Alpaca, ml_entry_eq pool)"
+  XLE:
+    exchange: alpaca
+    category: spot
+    base_asset: XLE
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "XLE (Alpaca, ml_entry_eq pool)"
+  XLF:
+    exchange: alpaca
+    category: spot
+    base_asset: XLF
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "XLF (Alpaca, ml_entry_eq pool)"
+  XLI:
+    exchange: alpaca
+    category: spot
+    base_asset: XLI
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "XLI (Alpaca, ml_entry_eq pool)"
+  XLK:
+    exchange: alpaca
+    category: spot
+    base_asset: XLK
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "XLK (Alpaca, ml_entry_eq pool)"
+  XLP:
+    exchange: alpaca
+    category: spot
+    base_asset: XLP
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "XLP (Alpaca, ml_entry_eq pool)"
+  XLRE:
+    exchange: alpaca
+    category: spot
+    base_asset: XLRE
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "XLRE (Alpaca, ml_entry_eq pool)"
+  XLU:
+    exchange: alpaca
+    category: spot
+    base_asset: XLU
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "XLU (Alpaca, ml_entry_eq pool)"
+  XLV:
+    exchange: alpaca
+    category: spot
+    base_asset: XLV
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "XLV (Alpaca, ml_entry_eq pool)"
+  XLY:
+    exchange: alpaca
+    category: spot
+    base_asset: XLY
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "XLY (Alpaca, ml_entry_eq pool)"
+  XME:
+    exchange: alpaca
+    category: spot
+    base_asset: XME
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "XME (Alpaca, ml_entry_eq pool)"
+  XOP:
+    exchange: alpaca
+    category: spot
+    base_asset: XOP
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "XOP (Alpaca, ml_entry_eq pool)"
+  XRT:
+    exchange: alpaca
+    category: spot
+    base_asset: XRT
+    asset_class: equity
+    quote_currency: USD
+    settlement_currency: USD
+    tick_size: 0.01
+    min_qty: 1
+    qty_step: 1
+    contract_value_usd: 1.0
+    max_leverage: 4
+    display_name: "XRT (Alpaca, ml_entry_eq pool)"
