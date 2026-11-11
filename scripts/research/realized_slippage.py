@@ -85,9 +85,23 @@ MIN_N = 20  # below this a venue side is reported unmeasurable, not given a numb
 
 
 # ---------------------------------------------------------------- pull ----
+def _redact(text: str, tok: str) -> str:
+    return text.replace(tok, "***") if tok else text
+
+
 def _curl_json(url: str) -> Any:
+    """GET a diag/bot JSON route.
+
+    PI-20261111-PREP1111-0002 (2026-11-11): the token used to ride in curl's
+    ARGV (``-H "Authorization: Bearer <tok>"``) with ``check=True``, so a curl
+    failure raised CalledProcessError whose message IS the command line -- the
+    bearer printed into the run's output. The header now goes through a curl
+    config on STDIN (``-K -``; never argv, never a file), and a failure raises a
+    message carrying the url, exit code and curl's stderr tail, redacted.
+    """
     tok = os.environ["DIAG_READ_TOKEN"]
-    out = subprocess.run(
+    cfg = f'header = "Authorization: Bearer {tok}"\nheader = "X-Diag-Token: {tok}"\n'
+    proc = subprocess.run(
         # --retry: MEASURED 2026-10-04 (soak-book-grade run 37220805619) one
         # transient HTTP error on ONE symbol's fills page (curl exit 22; the
         # same URL answered 200 in <1s minutes later) failed the whole pull,
@@ -95,10 +109,13 @@ def _curl_json(url: str) -> Any:
         # --retry-all-errors retries an HTTP >=400 too; a persistent error
         # still fails after the retries, never silently.
         ["curl", "-sS", "-f", "-m", "90", "--retry", "3", "--retry-delay", "5",
-         "--retry-all-errors", url, "-H", f"Authorization: Bearer {tok}"],
-        capture_output=True, text=True, check=True,
-    ).stdout
-    return json.loads(out)
+         "--retry-all-errors", "-K", "-", url],
+        input=cfg, capture_output=True, text=True,
+    )
+    if proc.returncode != 0:
+        tail = _redact((proc.stderr or "").strip(), tok)[-300:]
+        raise RuntimeError(f"diag GET failed: {url} (curl exit {proc.returncode}): {tail or 'no stderr'}")
+    return json.loads(proc.stdout)
 
 
 def pull(out_dir: Path) -> None:

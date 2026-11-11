@@ -532,9 +532,13 @@ milestones:
     next: >-
       Decided on evidence (operator, 2026-10-22, popup "Apply all"): no build. A cheap scoping item rides Sunday's frontier scan
       (pipeline PI-20261022-J9X7ACR3-0001, due 2026-10-26): what a local LLM would do for us, what it costs, can it run on our VMs.
-    no_rows_reason: scoping only -- the frontier-scan question is pipeline item PI-20261022-J9X7ACR3-0001, not a build row
+      2026-11-11 frontier scan (lane ML-FRONTIER-PREP-20261111, docs/research/frontier-scan-2026-11-11.md section 4): ANSWERED, kill as
+      scoped -- fails compute on both VMs (trainer 1 vCPU / ~6 GB; zero torch on the money box) and no consumer needs per-call LLM
+      inference (desk and reviews run on the plan). Re-entry test: a named consumer needing offline text inference at a volume the plan
+      cannot carry, plus a host with >= 16 GB RAM. Pipeline item closed killed.
+    no_rows_reason: scoping answered 2026-11-11 (kill as scoped; re-entry test in next) -- no build row
     owner: ML-ROADMAP-LOOP lane
-    reviewed: 2026-10-22
+    reviewed: 2026-11-11
   - id: L-DESK
     goal: G4
     name: Claude trading desk -- desk-manager session over specialist lanes, package intents through per-account risk
