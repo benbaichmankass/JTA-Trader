@@ -35,8 +35,8 @@ import socket
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
@@ -54,14 +54,14 @@ MAX_LOOKBACK_S = 6 * 3600           # after a long gap, never rescan more than t
 
 _ACCEPTED = re.compile(r"Accepted (?P<method>\S+) for (?P<user>\S+) from (?P<src>\S+) port \d+")
 _FP = re.compile(r"SHA256:[A-Za-z0-9+/=]+")
-_FAILED = re.compile(r"Failed password|Invalid user|authentication failure", re.I)
+_FAILED = re.compile(r"Failed password|Invalid user|authentication failure", re.IGNORECASE)
 
 
-def identity(user: str, method: str, fp: Optional[str]) -> str:
+def identity(user: str, method: str, fp: str | None) -> str:
     return f"{user}|{method}|{fp or '-'}"
 
 
-def parse(lines: List[str]) -> Tuple[List[dict], int]:
+def parse(lines: list[str]) -> tuple[list[dict], int]:
     """Accepted logins and the count of failed-attempt lines."""
     accepted, failed = [], 0
     for ln in lines:
@@ -78,12 +78,12 @@ def parse(lines: List[str]) -> Tuple[List[dict], int]:
     return accepted, failed
 
 
-def read_journal(since_epoch: float) -> Tuple[Optional[List[str]], str]:
+def read_journal(since_epoch: float) -> tuple[list[str] | None, str]:
     """(lines, read_state). ``None`` lines means we could not look."""
     cmd = ["journalctl", "-u", "ssh", "-u", "sshd", "--no-pager", "-o", "short-iso",
            "--since", f"@{int(since_epoch)}"]
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=60, check=False)
     except Exception as exc:  # noqa: BLE001
         return None, f"could_not_look: {type(exc).__name__}"
     if r.returncode != 0:
@@ -99,15 +99,15 @@ def _load(path: Path) -> dict:
         return {}
 
 
-def _short(fp: Optional[str]) -> str:
+def _short(fp: str | None) -> str:
     return (fp[:19] + "...") if fp else "none"
 
 
-def run_ssh(state: dict, now: float, reader: Callable[[float], Tuple[Optional[List[str]], str]],
-            admit: Callable[..., bool], host: str) -> Tuple[dict, List[str]]:
+def run_ssh(state: dict, now: float, reader: Callable[[float], tuple[list[str] | None, str]],
+            admit: Callable[..., bool], host: str) -> tuple[dict, list[str]]:
     """One pass. Returns (new ssh state, alert texts). Pure but for *reader*/*admit*."""
     s = dict(state or {})
-    alerts: List[str] = []
+    alerts: list[str] = []
     first = "known" not in s
     last = float(s.get("last_ts") or 0)
     since = now - FIRST_RUN_LOOKBACK_S if first else max(last, now - MAX_LOOKBACK_S)
@@ -122,7 +122,7 @@ def run_ssh(state: dict, now: float, reader: Callable[[float], Tuple[Optional[Li
         return s, alerts
     s["blind_runs"] = 0
     accepted, _ = parse(lines)
-    seen: Dict[str, dict] = {}
+    seen: dict[str, dict] = {}
     for a in accepted:
         seen.setdefault(a["id"], {**a, "n": 0})["n"] += 1
     s["window"] = {"since": since, "accepted": len(accepted), "identities": len(seen)}
@@ -165,7 +165,7 @@ def run_ssh(state: dict, now: float, reader: Callable[[float], Tuple[Optional[Li
     return s, alerts
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--dry-run", action="store_true", help="print alerts; send nothing, write nothing")
     ap.add_argument("--trust-current", action="store_true",
