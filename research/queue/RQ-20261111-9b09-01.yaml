@@ -56,6 +56,12 @@ decision_rule:
     was taken before registration.'
 practice_precedent: 'Volatility- or momentum-conditioned trailing (tightening after an outsized range bar) is a common discretionary-desk practice;
   in-repo priors: RQ-20261022-b7e1-06 / -08 and docs/research/exit-path-metrics-2026-10-22.md.'
+intervention_controls:
+  not_applicable: 'a deterministic, state-gated trail rule replayed by the harness over EVERY trade of the leg (scripts/research/exit_lever_ablation.py),
+    not a discretionary in-trade action at chosen check-ins. Its controls are arm A (the declared exit = hold-to-bracket) and arm U3 (the same
+    2.0 tighten applied unconditionally at peak >= 1 R: the action without the selection condition, which a PASS must beat). The harness emits
+    no per-check-in paths, so no matched-random draw (B2) or leave-one-fold-out best-static (B3) is computed; that limit is stated, not papered
+    over.'
 compute: cpu_light
 value:
   bucket: own_losses
