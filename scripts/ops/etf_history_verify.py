@@ -42,12 +42,14 @@ def classify(u: Dict[str, Any], manifest: Dict[str, Any], tfs: List[str], now: d
     removed = set(du.delisted_symbols(u))
     etf_like = set(syms) - removed
     # Symbols a corporate action ended (renamed / merged / removed), recorded in the manifest by the fetch. Data, not a hand list.
-    ca_ended = (manifest.get("corporate_actions") or {}).get("ended") or {}
+    ca = manifest.get("corporate_actions") or {}
+    ca_ended = ca.get("ended") or {}
+    ca_unavailable = bool(ca.get("error")) or not ca.get("rows") or bool(ca.get("failed_batches"))
     rows = []
     for tf in tfs:
         for sym in syms:
             m = (manifest.get("series") or {}).get(f"{sym}/{tf}")
-            r: Dict[str, Any] = {"symbol": sym, "tf": tf, "removed": sym in removed}
+            r: Dict[str, Any] = {"symbol": sym, "tf": tf, "removed": sym in removed, "ca_unavailable": ca_unavailable}
             if not m:
                 r.update(verdict="PENDING" if progress else "MISSING", red=not progress)
             elif m.get("status") == "no_data":
@@ -142,6 +144,10 @@ def main(argv: List[str] | None = None) -> int:
     red = [f"{r['symbol']}/{r['tf']}:{r['verdict']}" for r in rows if r["red"]]
     run = manifest.get("run") or {}
     print(f"manifest run={run} corporate_actions={manifest.get('corporate_actions')}")
+    _ca = manifest.get("corporate_actions") or {}
+    if _ca.get("error") or not _ca.get("rows") or _ca.get("failed_batches"):
+        print("WARNING: corporate actions unavailable (error / 0 rows / failed batches): 'ended' could not be derived, "
+              "so STALE below may be corporate-action-ended symbols, not live ones.")
     for m in extra[:50]:
         print(m)
     print(f"red={len(red)} {red[:60]}{' ...' if len(red) > 60 else ''}")
