@@ -115,7 +115,11 @@ def _apply_record(record: Dict[str, Any]) -> Dict[str, Any]:
 
         db = lra._open_db()
         pkg = lra._get_package(db, record["order_package_id"])
-        if not pkg or pkg.get("status") != "open":
+        live_state = lra.package_live_state(pkg)   # `open`, or a prop-only `emitted` package with a live ticket
+        if live_state == lra.PKG_COULD_NOT_LOOK:
+            return {"exit": EXIT_UNREADABLE, "accounts": [],
+                    "detail": f"package {record['order_package_id']}: prop tickets unreadable"}
+        if live_state != lra.PKG_LIVE:
             return {"exit": EXIT_REFUSED, "detail": f"package {record['order_package_id']} not open", "accounts": []}
         direction = str(pkg.get("direction") or "").lower()
         action = da.resolve_action(record, pkg.get("sl"), direction)
