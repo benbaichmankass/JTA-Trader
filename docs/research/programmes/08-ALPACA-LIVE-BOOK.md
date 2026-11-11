@@ -1,6 +1,6 @@
 # Programme 08 — The alpaca_live book: find something that earns more on the account we actually have
 
-> **Doc status:** `live` · category `evidence` · last verified `2026-11-11` · registered in [`../../DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · lane `ALPACA-LIVE-BOOK-PLAN` (Manager Session 2026-11-11a, `session_01AFoLuLyarNRcy3nziCep2U`) · map: [`RESEARCH-MAP.md`](RESEARCH-MAP.md) · roadmap **`L-ML-LIVE`**, **`L-LADDER`** (G1) · track TRADING
+> **Doc status:** `unknown` · category `evidence` · last verified `2026-11-11` · registered in [`../../DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · lane `ALPACA-LIVE-BOOK-PLAN` (Manager Session 2026-11-11a, `session_01AFoLuLyarNRcy3nziCep2U`) · map: [`RESEARCH-MAP.md`](RESEARCH-MAP.md) · roadmap **`L-ML-LIVE`**, **`L-LADDER`** (G1) · track TRADING
 
 Machine tree: [`research/programmes/08-alpaca-live-book.yaml`](../../../research/programmes/08-alpaca-live-book.yaml). Units: `RQ-20261111-207f-01..04` (runnable on merge). Instrument (this lane): [`scripts/research/alpaca_live_book.py`](../../../scripts/research/alpaca_live_book.py). Iteration subject: `ml-entry-eq-struct` ([`scripts/research/iteration_subjects.yaml`](../../../scripts/research/iteration_subjects.yaml), lever map [`research/levers/ml-entry-eq-struct.yaml`](../../../research/levers/ml-entry-eq-struct.yaml)). Every number below is marked MEASURED (with where it was read, this session, 2026-11-11), RELAYED (from the manager's dispatch, not re-verified here) or INFERRED.
 

@@ -64,9 +64,8 @@ def _live_sizer_constants() -> Dict[str, Any]:
     except Exception as exc:  # noqa: BLE001  # allow-silent: falls back to the documented literals AND records the import failure in the result row's sizer.source
         out.update(wall=0.9, roundup=1.5, source=f"fallback literals (risk.py import failed: {type(exc).__name__})")
     try:
-        import yaml
-        acc = yaml.safe_load((REPO / "config" / "accounts.yaml").read_text())
-        accs = acc.get("accounts", acc)
+        from src.config.accounts_loader import load_accounts_dict
+        accs = load_accounts_dict()
         out["risk_pct"] = float(accs["alpaca_live"]["risk"]["risk_pct"])
         out["side_filter"] = accs["alpaca_live"].get("side_filter")
     except Exception as exc:  # noqa: BLE001  # allow-silent: falls back to 0.02 AND records the read failure in sizer.risk_pct_source
