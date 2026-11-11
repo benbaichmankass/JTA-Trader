@@ -1,6 +1,6 @@
 # Site-auth consumer inventory — who calls the API before `SITE_AUTH_ENFORCE=1`
 
-> **Doc status:** `live` · category `design` · row `UI-OAUTH-SIGNIN` · lane `OAUTH-INVENTORY` · 2026-11-11 · READ-ONLY analysis, nothing flipped, nothing deployed.
+> **Doc status:** `unknown` · category `architecture` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · row `UI-OAUTH-SIGNIN` · lane `OAUTH-INVENTORY` · 2026-11-11 · READ-ONLY analysis, nothing flipped, nothing deployed.
 > **Gates this adds or changes:** none. It lists what the existing gate (`src/web/api/auth.py::require_site_session`) would break and the retrofit needed first.
 
 Method (MEASURED unless marked): the gate source (`auth.py:216-300`), the routers' own token checks, `grep` over `.github/workflows scripts src tools deploy`
