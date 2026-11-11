@@ -230,6 +230,32 @@ SITE_PUBLIC_PREFIXES: tuple[str, ...] = (
 )
 _SAFE_METHODS = frozenset({"GET", "HEAD"})
 
+# POST-only carve-outs (SITE-AUTH step (i), 2026-11-11). Each of these routes
+# checks its OWN service token inside the router and fails CLOSED (503 when the
+# token is unset, 401 when it is missing or wrong):
+#   POST /api/bot/alerts, /api/bot/wake-toggles -> prop._require_write_token
+#   POST /api/bot/work/decision                 -> work._require_decision_write_token
+#   POST /api/bot/work/items[/<id>/set|note|close] -> work_items._require_work_store_token
+# Their callers are non-browser services (alert posters, the Telegram decision
+# bot, the console MCP, work.py) that hold that token and no ws_ session. The gate
+# lets the service bearer through on GET/HEAD only, so without this list arming
+# SITE_AUTH_ENFORCE would 401 them all. POST ONLY: the GET reads on the same
+# paths stay behind the gate. Do not add a route here unless its router fails
+# closed on its own credential (``tests/test_web_site_auth_write_carveouts.py``).
+SITE_PUBLIC_POST_PATHS: frozenset[str] = frozenset({
+    "/api/bot/alerts",
+    "/api/bot/wake-toggles",
+    "/api/bot/work/decision",
+    "/api/bot/work/items",
+})
+SITE_PUBLIC_POST_PREFIXES: tuple[str, ...] = (
+    "/api/bot/work/items/",
+)
+
+
+def _is_site_public_post(path: str) -> bool:
+    return path in SITE_PUBLIC_POST_PATHS or path.startswith(SITE_PUBLIC_POST_PREFIXES)
+
 
 def site_auth_enforced() -> bool:
     """``SITE_AUTH_ENFORCE`` — default OFF; only an explicit truthy value arms it."""
@@ -267,6 +293,8 @@ def require_site_session(conn: HTTPConnection) -> None:
     method = scope.get("method", "")
     if method == "OPTIONS" or _is_site_public(conn.url.path):
         return
+    if method == "POST" and _is_site_public_post(conn.url.path):
+        return      # the router's own fail-closed token check decides
 
     token = _bearer(conn)
     if scope["type"] == "websocket":
