@@ -304,7 +304,8 @@ def test_lane_view_checks_old_metas_on_read_and_says_absent():
     pc.store_capture("breakout_2", _body(png_b64=base64.b64encode(_jpeg(True)).decode(), png_type="image/jpeg"))
     meta_p = next((pc.captures_root() / "breakout_2").glob("*/003-sheet_open.json"))
     meta = json.loads(meta_p.read_text())
-    meta.pop("image_check"); meta.pop("device_img_std")
+    meta.pop("image_check")
+    meta.pop("device_img_std")
     meta_p.write_text(json.dumps(meta))  # an older meta, written before the check existed
     s = pc.step_view("breakout_2")["runs"][0]["steps_detail"][0]
     assert s["image_check"]["read_state"] == "measured" and s["image_blank"] is True
