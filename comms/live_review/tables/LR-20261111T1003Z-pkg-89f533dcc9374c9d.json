@@ -1,0 +1,138 @@
+{
+  "biases": [
+    "stop fills at the stop price (a gap fills at the open): flatters every tighten, so the real cost of tightening is, if anything, larger",
+    "the original trail path is not recorded: on the recorded exit bar a touched tightened stop is taken as hit (SL-first)",
+    "live peak_r is a lower bound on true MFE",
+    "one leg, one window, i.i.d. trades; parameter selection on the window is not undone"
+  ],
+  "bounds_r": {
+    "auto_apply": 0.25,
+    "shadow": 0.5
+  },
+  "candles": {
+    "ADAUSDT": "/data/bot-data/data/ltr_candles/ADAUSDT_1h.csv",
+    "BTCUSDT": "/data/bot-data/data/ltr_candles/BTCUSDT_1h.csv",
+    "ETHUSDT": "/data/bot-data/data/ltr_candles/ETHUSDT_1h.csv",
+    "SOLUSDT": "/data/bot-data/data/ltr_candles/SOLUSDT_1h.csv",
+    "XRPUSDT": "/data/bot-data/data/ltr_candles/XRPUSDT_1h.csv"
+  },
+  "corpus": "comms/strategy_evidence/ltr_corpus/ml_entry__trades.jsonl",
+  "corpus_note": "ml_entry pooled Stage-0 held-out ledger (2025-10-01..2026-09-30, the 5 bybit_2 symbols; c692-06 population, extend-only TP arm = arm A of RQ-20261103-5e04-01, which reproduces the record's 0.0271). The committed record's current arm F adds the structure SL (pivot=5, mean 0.0371 over the same 907 decisions); this corpus does NOT model that SL, so HOLD here is the extend-only exit. Row ML-ENTRY-LTR-OUTCOME-TABLE.",
+  "leg": "ml_entry",
+  "n_floor": 20,
+  "options": [
+    {
+      "action": "hold",
+      "mean_r": 0.4088,
+      "n": 234,
+      "n_floor": 20,
+      "p05_r": -1.0812,
+      "p_giveback_gt_half": 0.4145,
+      "sd_r": 1.1545,
+      "state": "measured",
+      "worst_r": -1.1269
+    },
+    {
+      "action": "tighten",
+      "ev_cost_r": 0.1185,
+      "ev_cost_se_r": 0.062,
+      "mean_r": 0.2904,
+      "n": 234,
+      "n_floor": 20,
+      "p05_r": -0.2914,
+      "p_giveback_gt_half": 0.4829,
+      "sd_r": 0.6014,
+      "spec": "atr:1.0",
+      "state": "measured",
+      "stop_at_r_now": -0.2574,
+      "within_auto_bound": true,
+      "within_shadow_bound": true,
+      "worst_case_gain_r": -0.2319,
+      "worst_r": -1.3588
+    },
+    {
+      "action": "tighten",
+      "ev_cost_r": 0.0772,
+      "ev_cost_se_r": 0.0515,
+      "mean_r": 0.3316,
+      "n": 234,
+      "n_floor": 20,
+      "p05_r": -0.5394,
+      "p_giveback_gt_half": 0.5085,
+      "sd_r": 0.7987,
+      "spec": "atr:1.5",
+      "state": "measured",
+      "stop_at_r_now": -0.5074,
+      "within_auto_bound": true,
+      "within_shadow_bound": true,
+      "worst_case_gain_r": -0.2319,
+      "worst_r": -1.3588
+    },
+    {
+      "action": "tighten",
+      "ev_cost_r": null,
+      "ev_cost_se_r": null,
+      "mean_r": null,
+      "n": 234,
+      "p05_r": null,
+      "p_giveback_gt_half": null,
+      "reason": "stop_level_not_above_current_stop",
+      "sd_r": null,
+      "spec": "atr:2.0",
+      "state": "invalid_level",
+      "stop_at_r_now": -0.7574,
+      "within_auto_bound": null,
+      "within_shadow_bound": null,
+      "worst_case_gain_r": null,
+      "worst_r": null
+    },
+    {
+      "action": "close",
+      "ev_cost_r": 0.664,
+      "ev_cost_se_r": 0.0757,
+      "mean_r": -0.2552,
+      "n": 234,
+      "n_floor": 20,
+      "p05_r": -0.2969,
+      "p_giveback_gt_half": 1.0,
+      "sd_r": 0.0241,
+      "spec": "close",
+      "state": "measured",
+      "within_auto_bound": false,
+      "within_shadow_bound": false,
+      "worst_case_gain_r": 0.777,
+      "worst_r": -0.3499
+    }
+  ],
+  "population": {
+    "beyond_bars_slack": 0,
+    "comparable": 234,
+    "corpus_trades": 907,
+    "mfe_replay_mismatch": 9,
+    "never_reached_peak": 68,
+    "no_candles": 0,
+    "no_pullback_after_peak": 0,
+    "side_excluded": 596,
+    "side_filter": "long",
+    "symbol_excluded": 0,
+    "symbol_filter": null,
+    "symbols": [
+      "ADAUSDT",
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ]
+  },
+  "read_state": "measured",
+  "state": {
+    "atr_stop_mult": 2.0,
+    "bars_held": 16,
+    "condition": "peak",
+    "dist_to_stop_atr": null,
+    "dist_to_target_atr": null,
+    "open_r": -0.1941,
+    "peak_r": 0.2426,
+    "side": "long"
+  }
+}
