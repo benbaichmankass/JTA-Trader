@@ -201,6 +201,16 @@ case "${action}" in
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;
+    prop-report-open)
+        # Journals ONE prop ticket as an OPEN position (filled) (PHONE-LIVE-ACCOUNT-FEED 2026-11-11).
+        # Exit 3 is a guarded REFUSAL, nothing written; exit 4 = ticket not filled after the write.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok — ticket filled, open fill journaled (or dry-run plan printed; see run log)"; priority="normal" ;;
+            3) result="refused — nothing written (see run log for the reason)"; priority="high" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
     prop-report-skip)
         # Journals ONE never-filled prop ticket as `skipped` (BREAKOUT-UNRECORDED-1101).
         # Exit 3 is a guarded REFUSAL, nothing written.

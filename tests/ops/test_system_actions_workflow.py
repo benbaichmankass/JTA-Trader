@@ -310,6 +310,7 @@ EXPECTED_ACTIONS = {
     # 2026-11-05 — BREAKOUT-UNRECORDED-1101: journal ONE never-filled prop ticket
     # as `skipped` via ingest_report. DRY-RUN by default; apply needs confirm: <ticket_id>.
     "prop-report-skip": "prop_report_skip_action.sh",
+    "prop-report-open": "prop_report_open_action.sh",
     # 2026-08-20 — prop-journal hygiene for fills admitted with NO direction
     # (BL-20260820-PROP-FILL-DIRECTION-ADMISSION-GAP). _position_key needs
     # (account, symbol, direction) but ingest_report only validates the first
@@ -495,6 +496,7 @@ TIER_2_ACTIONS = {
     "prop-ticket-reissue",
     "prop-report-close",
     "prop-report-skip",
+    "prop-report-open",
     "repair-prop-fill-direction",
     "breakout-login-check",
     "breakout-terminal-probe",
