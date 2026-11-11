@@ -1,8 +1,27 @@
 # JTA Trader rename — operator steps and follow-ups
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-10-28` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-11-11` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
 
 Operator decision 2026-10-28: the project is **JTA Trader** (scope: docs + UI + GitHub repo). Runtime identifiers do **not** change.
+
+## A rename breaks STRING matches first (RENAME-SLUG-FUNCTIONAL-AUDIT, 2026-11-11)
+
+GitHub's redirects cover URLs and API calls, so prose, labels and links need no sweep. They do **not** cover anything that
+compares the name as a STRING. After the 2026-10-28 rename these silently stopped matching:
+
+- the manager's merge permission rules in `.claude/settings.json` (pinned `repos/benbaichmankass/Metis-Insights`): every held
+  PR needed an operator window for about 11 days (fixed by #24221);
+- `scripts/ops/manager_view.py` `DEFAULT_REPO` (PR refs `JTA-Trader#n` read as another repo's);
+- `scripts/ops/session_reaper.py` `REPO_PREFIX` (branch refs `JTA-Trader:…` were dropped);
+- `scripts/ops/lane_reconcile.py` `PROJECT_REPOS` (no `jta-trader`, so sessions on the renamed repo read as foreign).
+
+All four now read the name through `scripts/ops/repo_slug.py` (`GITHUB_REPOSITORY`, else the git remote) or list the new
+name. **On the next rename, do this first:**
+1. `git grep -n -i "<old-name>" -- '*.py' '*.yml' '*.yaml' '*.json' '*.sh'`, and classify each hit as a string match (a
+   permission pattern, an `==` / `startswith` / set membership) or a label (prose, a User-Agent, a fixture).
+2. Fix every string match to read the slug (`repo_slug.current_name()` / `is_this_repo()`), and add the OLD name to
+   `repo_slug.HISTORICAL_NAMES` so register rows written before the rename still match.
+3. Add the new name next to the old one in `.claude/settings.json` permission patterns.
 
 ## Do NOT rename (identifiers)
 
