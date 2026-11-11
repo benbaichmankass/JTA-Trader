@@ -740,3 +740,15 @@ def test_row_side_read_off_the_expanded_child_row_is_measured(env):
     raw = json.loads(prop_journal.latest_account_status("breakout_2")["raw"])
     assert (raw["positions_state"], raw["positions_side_source"], raw["positions_provenance"]) == ("read", "row", "MEASURED")
     assert raw["positions"][0]["side_source"] == "row" and "upnl_signed" not in raw["positions"][0]
+
+
+def test_clean_positions_keeps_the_venue_sl_tp_cells_and_never_invents_them():
+    """PHONE-LIVE-ACCOUNT-FEED 2026-11-11: the row's own resting SL / TP (a hand-moved stop included) reaches the
+    server; an absent, zero or non-numeric cell stays absent -- never 0, never the ticket's level."""
+    rows = rc.clean_positions("breakout_2", [
+        {"symbol": "SOL", "side": "short", "qty": 1.0, "entry": 87.0, "sl": 89.105, "tp": 76.535},
+        {"symbol": "ETH", "side": "long", "qty": 0.5, "entry": 2100.0, "sl": 0, "tp": "2300"},
+        {"symbol": "XRP", "side": "long", "qty": 10.0, "entry": 0.5}])
+    assert (rows[0]["sl"], rows[0]["tp"]) == (89.105, 76.535)
+    assert "sl" not in rows[1] and "tp" not in rows[1]
+    assert "sl" not in rows[2] and "tp" not in rows[2]
