@@ -2,7 +2,7 @@ id: RQ-20261014-9807-04
 title: 'Programme 01 Q4, stop waiting: do giveback-stop and trail_decay cells KEYED TO THE MEASURED GIVEBACK (RQ-20261014-9807-01)
   beat the fixed gb1R_afterMFE1R cell on net R per capital-day on the real-money legs? BLOCKED: the m20 sweep has no `cells`
   input (fixed giveback cells only)'
-status: blocked
+status: retired
 cadence: once
 theme: live_strategy
 priority: 1
@@ -121,8 +121,8 @@ related:
 - src/runtime/trail_decay.py (the live lever; declared per leg, Tier-3)
 last_dispatched_at: null
 blocked_review:
-  by: RESEARCH-OPS-20261101-0940
-  disposition: kept
-  due_by: '2026-11-15'
-  note: 'kept: blocker still live (RQ-20261014-9807-01=unit:queued); re-dated, not dropped'
-  reviewed: '2026-11-01'
+  by: RESEARCH-OPS-20261111-2049
+  disposition: retired
+  reviewed: '2026-11-11'
+  note: 'retired at config level; reason in retired_reason'
+retired_reason: '2026-11-11 RESEARCH-OPS-20261111-2049 (blocked_over_age UNBLOCK-OR-RETIRE): retired at CONFIG level. The cells are keyed to the per-leg giveback census, which cannot be derived: RQ-20261014-9807-01 landed insufficient_n (7 real-money closes < 20) and the harness-ledger fallback reads negative givebacks (mfe_r is a lagged lower bound), so no per-leg giveback_r / bars_since_peak exists to key a cell. The giveback_stop / trail_decay lever families are NOT closed or retired: they stay open and re-enter as a new unit once per-bar paths exist (EXIT-PATH-EMIT-OFFLINE landed_unproven; its observation is the re-entry test). Unit-level decision only.'

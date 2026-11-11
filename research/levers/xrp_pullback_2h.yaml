@@ -2436,10 +2436,38 @@ levers:
         max_drawdown_r: 13.8886
         verdict: pass
         joint_change: true
-      shape: noisy
-      points: 6
+      - value: '3.125'
+        baseline_value: '2.5'
+        arm: atr_stop_mult_hi
+        unit: RQ-20261106-036
+        window: 2021-11-03..2026-11-05
+        n: 263
+        net_r: 12.376
+        baseline_n: 289
+        baseline_net_r: 24.5535
+        delta_net_r: -12.1775
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 14.2202
+        verdict: fail
+        joint_change: false
+      - value: '1.875'
+        baseline_value: '2.5'
+        arm: atr_stop_mult_lo
+        unit: RQ-20261106-036
+        window: 2021-11-03..2026-11-05
+        n: 341
+        net_r: 4.1576
+        baseline_n: 289
+        baseline_net_r: 24.5535
+        delta_net_r: -20.3959
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 26.3518
+        verdict: fail
+        joint_change: false
+      shape: peaked
+      points: 8
       best_delta_r_per_trade: -0.0048
-      fold_stability: 0.375
+      fold_stability: 0.344
       reading: every tested value is worse than the baseline
     giveback_frac:
       tests:
@@ -3785,6 +3813,41 @@ levers:
       best_delta_r_per_trade: 0.0013
       fold_stability: 0.5
       reading: no response at the tested values
+    trail_mult:
+      tests:
+      - value: '7.5'
+        baseline_value: '6.0'
+        arm: trail_mult_hi
+        unit: RQ-20261106-036
+        window: 2021-11-03..2026-11-05
+        n: 282
+        net_r: 18.5262
+        baseline_n: 289
+        baseline_net_r: 24.5535
+        delta_net_r: -6.0273
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 15.0066
+        verdict: fail
+        joint_change: false
+      - value: '4.5'
+        baseline_value: '6.0'
+        arm: trail_mult_lo
+        unit: RQ-20261106-036
+        window: 2021-11-03..2026-11-05
+        n: 302
+        net_r: 8.2874
+        baseline_n: 289
+        baseline_net_r: 24.5535
+        delta_net_r: -16.2661
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 25.0286
+        verdict: fail
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: -0.0209
+      fold_stability: 0.25
+      reading: every tested value is worse than the baseline
   filter:
     adx_min:
       tests:
