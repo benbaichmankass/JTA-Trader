@@ -4,121 +4,123 @@ subject: tqqq_trend_long_1d
 kind: strategy_leg
 status: testing
 books:
+- alpaca_live
 - alpaca_paper
+- alpaca_portfolio
 baseline:
   record: comms/strategy_evidence/tqqq_trend_long_1d.json
-  net_r: 26.2831
-  n: 118
+  net_r: 24.762
+  n: 120
   fidelity: faithful
   rule_verdict: pass
 attribution:
   read_state: measured
-  n: 118
-  net_r: 26.283
-  gross_r: 26.979
-  cost_r: 0.696
-  cost_share_of_gross: 0.026
+  n: 120
+  net_r: 24.762
+  gross_r: 25.478
+  cost_r: 0.716
+  cost_share_of_gross: 0.028
   verdict_hint: gross edge survives cost
   entry_quality:
-    mean_mfe_r: 0.754
-    share_mfe_ge_1r: 0.246
-    n_with_mfe: 118
+    mean_mfe_r: 0.73
+    share_mfe_ge_1r: 0.242
+    n_with_mfe: 120
   exit_capture:
-    median_net_over_mfe_winners: 1.123
-    n_winners: 66
-    losers_that_reached_1r_mfe: 4
+    median_net_over_mfe_winners: 1.157
+    n_winners: 67
+    losers_that_reached_1r_mfe: 3
   by_year:
     '2010':
       n: 6
-      net_r: 2.164
-      gross_r: 2.196
+      net_r: 2.279
+      gross_r: 2.311
     '2011':
       n: 6
-      net_r: -5.875
-      gross_r: -5.845
+      net_r: -6.035
+      gross_r: -6.005
     '2012':
       n: 8
-      net_r: 5.166
-      gross_r: 5.214
+      net_r: 5.212
+      gross_r: 5.26
     '2013':
       n: 8
-      net_r: 3.849
-      gross_r: 3.901
+      net_r: 3.89
+      gross_r: 3.942
     '2014':
-      n: 6
-      net_r: 1.308
-      gross_r: 1.348
+      n: 7
+      net_r: -0.155
+      gross_r: -0.108
     '2015':
       n: 4
-      net_r: 0.204
-      gross_r: 0.226
+      net_r: 0.38
+      gross_r: 0.402
     '2016':
       n: 6
-      net_r: -0.004
-      gross_r: 0.033
+      net_r: -0.026
+      gross_r: 0.011
     '2017':
-      n: 7
-      net_r: 5.063
-      gross_r: 5.128
+      n: 8
+      net_r: 5.013
+      gross_r: 5.091
     '2018':
       n: 6
-      net_r: 0.638
-      gross_r: 0.676
+      net_r: 0.403
+      gross_r: 0.44
     '2019':
       n: 8
-      net_r: 5.066
-      gross_r: 5.118
+      net_r: 5.129
+      gross_r: 5.181
     '2020':
       n: 13
-      net_r: 2.763
-      gross_r: 2.828
+      net_r: 2.317
+      gross_r: 2.382
     '2021':
       n: 8
-      net_r: 0.951
-      gross_r: 0.998
+      net_r: 0.784
+      gross_r: 0.831
     '2022':
       n: 3
       net_r: -1.429
       gross_r: -1.419
     '2023':
       n: 8
-      net_r: 4.007
-      gross_r: 4.05
+      net_r: 4.215
+      gross_r: 4.258
     '2024':
       n: 7
-      net_r: 1.758
-      gross_r: 1.799
+      net_r: 1.991
+      gross_r: 2.031
     '2025':
       n: 8
-      net_r: 0.482
-      gross_r: 0.526
+      net_r: 0.589
+      gross_r: 0.633
     '2026':
       n: 6
-      net_r: 0.172
-      gross_r: 0.203
+      net_r: 0.206
+      gross_r: 0.237
   by_direction:
     long:
-      n: 118
-      net_r: 26.283
-      gross_r: 26.979
+      n: 120
+      net_r: 24.762
+      gross_r: 25.478
   by_exit_reason:
     stop:
-      n: 34
-      net_r: -34.192
-      gross_r: -34.0
+      n: 36
+      net_r: -36.878
+      gross_r: -36.666
     take_profit:
-      n: 66
-      net_r: 73.766
-      gross_r: 74.159
+      n: 67
+      net_r: 74.646
+      gross_r: 75.05
     trail_stop:
-      n: 18
-      net_r: -13.29
-      gross_r: -13.18
+      n: 17
+      net_r: -13.006
+      gross_r: -12.906
   by_adx_at_entry:
     unknown:
-      n: 118
-      net_r: 26.283
-      gross_r: 26.979
+      n: 120
+      net_r: 24.762
+      gross_r: 25.478
 manifest:
   entry: tested
   exit: tested
@@ -161,11 +163,39 @@ levers:
         max_drawdown_r: 4.8705
         verdict: pass
         joint_change: false
-      shape: flat
-      points: 2
-      best_delta_r_per_trade: -0.0124
-      fold_stability: 0.375
-      reading: no response at the tested values
+      - value: '38'
+        baseline_value: '30'
+        arm: donchian_hi
+        unit: RQ-20261106-016
+        window: 2019-07-30..2026-11-06
+        n: 52
+        net_r: 11.3389
+        baseline_n: 56
+        baseline_net_r: 10.6078
+        delta_net_r: 0.7311
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 2.1826
+        verdict: fail
+        joint_change: false
+      - value: '22'
+        baseline_value: '30'
+        arm: donchian_lo
+        unit: RQ-20261106-016
+        window: 2019-07-30..2026-11-06
+        n: 63
+        net_r: 15.7119
+        baseline_n: 56
+        baseline_net_r: 10.6078
+        delta_net_r: 5.1041
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 3.654
+        verdict: fail
+        joint_change: false
+      shape: peaked
+      points: 4
+      best_delta_r_per_trade: 0.0911
+      fold_stability: 0.5
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
   exit:
     atr_stop_mult:
       tests:

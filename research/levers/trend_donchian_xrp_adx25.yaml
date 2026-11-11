@@ -76,7 +76,7 @@ attribution:
       net_r: 9.718
       gross_r: 11.954
 manifest:
-  entry: untested
+  entry: tested
   exit: untested
   filter: untested
   regime_gating: untested
@@ -85,4 +85,75 @@ manifest:
   direction: untested
   session: untested
   sizing_vs_cost: untested
-levers: {}
+levers:
+  entry:
+    donchian:
+      tests:
+      - value: '25'
+        baseline_value: '20'
+        arm: donchian_hi
+        unit: RQ-20261106-034
+        window: 2021-11-03..2026-11-05
+        n: 50
+        net_r: 12.3869
+        baseline_n: 60
+        baseline_net_r: 13.511
+        delta_net_r: -1.1241
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 5.017
+        verdict: fail
+        joint_change: false
+      - value: '15'
+        baseline_value: '20'
+        arm: donchian_lo
+        unit: RQ-20261106-034
+        window: 2021-11-03..2026-11-05
+        n: 69
+        net_r: 16.6536
+        baseline_n: 60
+        baseline_net_r: 13.511
+        delta_net_r: 3.1426
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 5.6308
+        verdict: fail
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: 0.0524
+      fold_stability: 0.375
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
+    min_confidence:
+      tests:
+      - value: '1.0'
+        baseline_value: '0.8'
+        arm: min_confidence_hi
+        unit: RQ-20261106-034
+        window: 2021-11-03..2026-11-05
+        n: 45
+        net_r: 17.2861
+        baseline_n: 60
+        baseline_net_r: 13.511
+        delta_net_r: 3.7751
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 3.8361
+        verdict: fail
+        joint_change: false
+      - value: '0.6'
+        baseline_value: '0.8'
+        arm: min_confidence_lo
+        unit: RQ-20261106-034
+        window: 2021-11-03..2026-11-05
+        n: 84
+        net_r: 9.5692
+        baseline_n: 60
+        baseline_net_r: 13.511
+        delta_net_r: -3.9418
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 6.1185
+        verdict: fail
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: 0.0629
+      fold_stability: 0.625
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
