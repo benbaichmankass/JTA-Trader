@@ -16,7 +16,11 @@ sys.path.insert(0, str(ROOT))
 
 
 def build(root: Path = ROOT) -> dict:
-    from src.runtime.feature_catalog_coverage import compute_coverage, load_catalog, load_disk_models
+    from src.runtime.feature_catalog_coverage import (
+        compute_coverage,
+        load_catalog,
+        load_disk_models,
+    )
 
     catalog = load_catalog(root)
     disk, errors = load_disk_models(root)
