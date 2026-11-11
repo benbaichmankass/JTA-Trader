@@ -182,19 +182,34 @@ def fetch_bars(get: Getter, sym: str, tf: str, start: datetime, end: datetime, f
     return bars_to_frame(rows)
 
 
+ENDING_KINDS = ("name_change", "merger", "worthless_removal")
+
+
+def ended_symbols(ca: pd.DataFrame) -> Dict[str, Dict[str, Any]]:
+    """symbol -> {kind, date} for symbols a corporate action ENDED (renamed / merged / removed). Recorded in the manifest so the
+    verify step can class a stale series ``ended`` from data instead of a hand list."""
+    out: Dict[str, Dict[str, Any]] = {}
+    if ca is None or not len(ca):
+        return out
+    for r in ca[ca["kind"].isin(ENDING_KINDS)].itertuples():
+        if r.symbol:
+            out[str(r.symbol)] = {"kind": r.kind, "date": None if pd.isna(r.ex_date) else str(r.ex_date)}
+    return out
+
+
 def fetch_corporate_actions(get: Getter, syms: List[str], start: datetime, end: datetime) -> pd.DataFrame:
     """Cash dividends + splits, one row each. Batches fail independently (a bad ticker in a batch drops that batch only)."""
     out: List[Dict[str, Any]] = []
     cols = ["kind", "symbol", "ex_date", "rate", "new_rate", "old_rate", "record_date", "payable_date"]
     for i in range(0, len(syms), 20):
-        params: Dict[str, Any] = {"symbols": ",".join(syms[i:i + 20]), "types": "cash_dividend,forward_split,reverse_split",
+        params: Dict[str, Any] = {"symbols": ",".join(syms[i:i + 20]), "types": "cash_dividend,forward_split,reverse_split,name_change,merger,worthless_removal",
                                   "start": start.strftime("%Y-%m-%d"), "end": end.strftime("%Y-%m-%d"), "limit": 1000}
         try:
             while True:
                 j = get("/v1/corporate-actions", params)
                 for kind, recs in (j.get("corporate_actions") or {}).items():
                     for r in recs or []:
-                        out.append({"kind": kind, "symbol": r.get("symbol"), "ex_date": r.get("ex_date") or r.get("process_date"),
+                        out.append({"kind": kind, "symbol": r.get("symbol") or r.get("old_symbol") or r.get("acquiree_symbol"), "ex_date": r.get("ex_date") or r.get("process_date"),
                                     "rate": r.get("rate"), "new_rate": r.get("new_rate"), "old_rate": r.get("old_rate"),
                                     "record_date": r.get("record_date"), "payable_date": r.get("payable_date")})
                 tok = j.get("next_page_token")
@@ -493,7 +508,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             ca = fetch_corporate_actions(get, syms, start, end)
             root.mkdir(parents=True, exist_ok=True)
             ca.to_csv(root / "corporate_actions.csv", index=False)
-            manifest["corporate_actions"] = {"rows": int(len(ca)), "fetched_at": _iso(now)}
+            manifest["corporate_actions"] = {"rows": int(len(ca)), "fetched_at": _iso(now), "ended": ended_symbols(ca)}
         except Exception as e:
             failures.append(f"corporate_actions: {str(e)[:140]}")
             manifest["corporate_actions"] = {"error": str(e)[:140]}
