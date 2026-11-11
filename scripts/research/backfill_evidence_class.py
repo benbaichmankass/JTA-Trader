@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: row EVIDENCE-CLASS-BACKFILL (2026-11-11); one-shot + re-runnable, reads research/queue/*.yaml, prints a report
+# wiring: manual-only - one-shot backfill for row EVIDENCE-CLASS-BACKFILL, re-run by hand by the programme review after authoring units; no schedule by design
 """Backfill ``evidence_class`` on research units whose evidence DESIGN is fixed by structured fields.
 
 WHY (row EVIDENCE-CLASS-BACKFILL, split from RESEARCH-SLO-HELDOUT-SURVIVORS / PR #24983). The diagnostic
