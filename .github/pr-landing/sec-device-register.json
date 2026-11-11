@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "SEC-API-DEVICE-REGISTER-OPEN, Tier 2 (web-api). The operator approved building it (popup 2026-11-11 22:20Z, 'Yes, all four (Recommended)'). The lane cannot merge; the manager merges, then deploys ict-web-api and verifies the post-state.",
+  "why": "POST /api/bot/devices/register was unauthenticated and writes device_tokens, which decides who receives the operator's push notifications. It now needs a live ws_ site session or the DASHBOARD_API_TOKEN bearer (hmac.compare_digest), and fails closed with 503 when the token is unset and no session is sent. Callers read 2026-11-11: the Android companion app sends the bearer at all three call sites; the SPA and phone executor do not call this route. No order path, strategy, risk cap or config change."
+}

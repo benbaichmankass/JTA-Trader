@@ -8,8 +8,9 @@ Key invariants:
 - Token is unique → re-registering an existing token UPDATES rather
   than creating a duplicate row.
 - Response never echoes the full FCM token (only its last-8 suffix).
-- ``DASHBOARD_API_TOKEN`` gates list / delete / patch when set;
-  register stays open so a fresh app can register on first launch.
+- ``DASHBOARD_API_TOKEN`` gates list / delete / patch when set.
+- Register needs the service bearer or a ws_ session and fails closed
+  when the token is unset (SEC-API-DEVICE-REGISTER-OPEN, 2026-11-11).
 - Subscription value validation (list / dict / null only).
 """
 from __future__ import annotations
@@ -32,13 +33,27 @@ def isolated_db(
     touch."""
     db = tmp_path / "trade_journal.db"
     monkeypatch.setenv("TRADE_JOURNAL_DB", str(db))
+    monkeypatch.setenv("DASHBOARD_API_TOKEN", _SVC)
     # Reset the module-level path cache if one exists (it doesn't, but
     # defence-in-depth in case a sibling test caches).
     return db
 
 
+_SVC = "test-service-token"
+
+
 @pytest.fixture
 def client() -> TestClient:
+    # Sends the service bearer by default, the way the Android app does.
+    return TestClient(
+        api_main.app,
+        raise_server_exceptions=False,
+        headers={"Authorization": f"Bearer {_SVC}"},
+    )
+
+
+@pytest.fixture
+def anon_client() -> TestClient:
     return TestClient(api_main.app, raise_server_exceptions=False)
 
 
@@ -178,7 +193,7 @@ def test_list_devices_enforces_dashboard_token_when_set(
     client: TestClient, isolated_db: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("DASHBOARD_API_TOKEN", "s3cr3t")
-    resp = client.get("/api/bot/devices")
+    resp = client.get("/api/bot/devices", headers={"Authorization": ""})
     assert resp.status_code == 401
     resp = client.get(
         "/api/bot/devices", headers={"Authorization": "Bearer s3cr3t"}
@@ -313,3 +328,62 @@ def test_get_event_kinds_marks_in_flight_kinds_correctly(
     assert by_kind["telegram"]["in_flight"] is True
     # Reserved kinds are not in-flight yet.
     assert by_kind["health_concern"]["in_flight"] is False
+
+
+# ---------------------------------------------------------------------------
+# SEC-API-DEVICE-REGISTER-OPEN: /register needs a credential
+# ---------------------------------------------------------------------------
+
+
+def test_register_without_credential_is_401(
+    anon_client: TestClient, isolated_db: Path
+) -> None:
+    resp = anon_client.post("/api/bot/devices/register", json={"token": "a" * 40})
+    assert resp.status_code == 401
+    listed = anon_client.get(
+        "/api/bot/devices", headers={"Authorization": f"Bearer {_SVC}"}
+    ).json()
+    assert listed["count"] == 0
+
+
+def test_register_with_wrong_bearer_is_401(
+    anon_client: TestClient, isolated_db: Path
+) -> None:
+    resp = anon_client.post(
+        "/api/bot/devices/register",
+        json={"token": "a" * 40},
+        headers={"Authorization": "Bearer nope"},
+    )
+    assert resp.status_code == 401
+
+
+def test_register_fails_closed_when_token_unset(
+    client: TestClient, isolated_db: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("DASHBOARD_API_TOKEN", raising=False)
+    resp = client.post("/api/bot/devices/register", json={"token": "a" * 40})
+    assert resp.status_code == 503
+
+
+def test_register_accepts_live_site_session(
+    anon_client: TestClient, isolated_db: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from src.web.api import auth as site_auth
+    from src.web.api import web_sessions
+
+    tok = web_sessions.SESSION_TOKEN_PREFIX + "abc"
+    monkeypatch.setattr(web_sessions, "validate_session",
+                        lambda t: {"email": "op@example.com"} if t == tok else None)
+    monkeypatch.setattr(site_auth, "_allowed_email", lambda: "op@example.com")
+    resp = anon_client.post(
+        "/api/bot/devices/register",
+        json={"token": "b" * 40},
+        headers={"Authorization": f"Bearer {tok}"},
+    )
+    assert resp.status_code == 200, resp.text
+    bad = anon_client.post(
+        "/api/bot/devices/register",
+        json={"token": "c" * 40},
+        headers={"Authorization": f"Bearer {web_sessions.SESSION_TOKEN_PREFIX}dead"},
+    )
+    assert bad.status_code == 401

@@ -7,7 +7,10 @@ push notifications to the operator's phone(s).
 Endpoints:
 
 - ``POST /api/bot/devices/register`` — upsert a device by its FCM
-  token. Idempotent on token: re-registering an existing token updates
+  token. **Authenticated** (SEC-API-DEVICE-REGISTER-OPEN, 2026-11-11):
+  a signed-in ``ws_`` site session or the ``DASHBOARD_API_TOKEN`` service
+  bearer; fails closed (503) when the token is unset and no session is
+  presented. Idempotent on token: re-registering an existing token updates
   ``last_seen_at`` + label/platform/subscriptions but does NOT create a
   duplicate row.
 - ``GET /api/bot/devices`` — list registered devices (without exposing
@@ -28,6 +31,7 @@ tables.
 from __future__ import annotations
 
 import asyncio
+import hmac
 import json
 import logging
 import os
@@ -80,6 +84,48 @@ def _check_admin_token(authorization: str | None) -> None:
         raise HTTPException(status_code=401, detail="bearer scheme required")
     presented = authorization[7:].strip()
     if presented != expected:
+        raise HTTPException(status_code=401, detail="bad token")
+
+
+def _require_register_auth(authorization: str | None) -> None:
+    """Gate ``POST /register`` (SEC-API-DEVICE-REGISTER-OPEN).
+
+    It used to be open so a fresh app could enrol before holding any
+    credential, which let anyone on the internet add an FCM token and
+    receive the operator's pushes. The legitimate callers, read
+    2026-11-11: the Android companion app (``ict-trader-android``,
+    three call sites, all via ``BotApiFactory.build(botUrl, apiToken)``,
+    which sends ``Authorization: Bearer <apiToken>``). The SPA does not
+    call this route; the phone executor does not either (it uses
+    ``/api/bot/prop/phone/*``).
+
+    Accepted: a live, allowlisted ``ws_`` site session, or the
+    ``DASHBOARD_API_TOKEN`` bearer (constant-time compare). Unlike
+    ``_check_admin_token`` this fails CLOSED when the token is unset.
+    """
+    presented = ""
+    if authorization and authorization.lower().startswith("bearer "):
+        presented = authorization[7:].strip()
+
+    from src.web.api import auth as site_auth
+    from src.web.api import web_sessions
+
+    if presented.startswith(web_sessions.SESSION_TOKEN_PREFIX):
+        if site_auth._session_row_allowed(web_sessions.validate_session(presented)):
+            return
+        raise HTTPException(status_code=401, detail="invalid session")
+
+    expected = os.environ.get("DASHBOARD_API_TOKEN", "").strip()
+    if not expected:
+        raise HTTPException(
+            status_code=503,
+            detail="device registration is not configured to accept writes",
+        )
+    if not authorization:
+        raise HTTPException(status_code=401, detail="missing authorization")
+    if not presented:
+        raise HTTPException(status_code=401, detail="bearer scheme required")
+    if not hmac.compare_digest(presented.encode(), expected.encode()):
         raise HTTPException(status_code=401, detail="bad token")
 
 
@@ -198,7 +244,10 @@ def _upsert_device_row(
 
 
 @router.post("/register")
-async def register_device(request: Request) -> dict[str, Any]:
+async def register_device(
+    request: Request,
+    authorization: str | None = Header(default=None),
+) -> dict[str, Any]:
     """Upsert a device by FCM token.
 
     Request JSON: ``{token, platform?, label?, subscriptions?}``.
@@ -208,6 +257,8 @@ async def register_device(request: Request) -> dict[str, Any]:
     last 8 chars of the token (full token is never echoed back; the
     caller already has it).
     """
+    # Off the event loop: a ws_ session check reads the sessions store.
+    await asyncio.to_thread(_require_register_auth, authorization)
     try:
         body = await request.json()
     except (ValueError, TypeError) as exc:

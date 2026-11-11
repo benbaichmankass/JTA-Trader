@@ -82,12 +82,13 @@ copy of it is exactly what went stale. Same lesson as the coverage banner above:
 
 **Adding a route here is a code change reviewed in a PR.** The route must be:
 
-1. **Read-only — never mutates state, never triggers an order.** Two routes
-   are a deliberate, narrow exception (`POST /api/bot/devices/register`,
-   `POST /api/bot/learning/progress`): both are *unauthenticated client
-   self-service writes* to an observability table — no trading impact, no
-   order path, no notification, no secret in the store. They are marked in
-   the table. **A write that touches money, an order, config, or a
+1. **Read-only — never mutates state, never triggers an order.** One route
+   is a deliberate, narrow exception (`POST /api/bot/learning/progress`): an
+   *unauthenticated client self-service write* to an observability table — no trading impact, no
+   order path, no notification, no secret in the store. It is marked in
+   the table. (`POST /api/bot/devices/register` was the second exception
+   until 2026-11-11: it decides who receives the operator's push
+   notifications, so it moved to § 2b — SEC-API-DEVICE-REGISTER-OPEN.) **A write that touches money, an order, config, or a
    notification does not qualify** and belongs in Tier 2.
 2. Cheap — no expensive joins, no full-table scans without a window.
 3. Safe to expose to anyone who can reach the API. Treat the threat model as
@@ -114,7 +115,6 @@ the same staleness this paragraph was already written to complain about.
 | `GET /api/bot/candles` | `routers/candles.py` | OHLCV from the same exchange the strategies trade the symbol on (Bybit / IBKR), via the signal builders' own fetcher. **The one Tier-1 route that reaches an external venue** — bounded by a short in-process cache and a shared single-worker executor that serialises IB access. Best-effort: empty `candles` + `error` on any failure. |
 | `GET /api/bot/config` | `routers/bot_config.py` | **Added S-064 (2026-05-09).** Effective config view (accounts, strategies, risk caps, halt flag, live/dry per account). Allowlist for accounts; recursive secret-key denylist for strategy params. **Never echoes `api_key_env` / `api_secret_env` values** — the redaction is what keeps this Tier 1. |
 | `GET /api/bot/devices/event-kinds` | `routers/devices.py` | The canonical push event-kind taxonomy (`src.runtime.mobile_push.event_kinds`), so the (retired 2026-09-01) Android Notifications screen needn't mirror the list. Static data, no device rows, **ungated** — unlike its siblings in the Tier-2 token table below. |
-| `POST /api/bot/devices/register` | `routers/devices.py` | ⚠️ **WRITE — Tier-1 carve-out (1) above.** Upsert a device by its FCM token; idempotent on token. **No gate** (`_check_admin_token` is not called here): a device must be able to enrol itself before it holds any credential. The raw token is never echoed back — only `token_suffix` (last 8 chars). Unknown subscription kinds → 400. |
 | `GET /api/bot/exit-ladder/soak` | `routers/exit_ladder.py` | ExitPlan laddered-vs-single-target shadow soak (dynamic-take-profit P3). Observe-only — nothing reads it back to drive an exit. |
 | `GET /api/bot/exposure/soak` | `routers/exposure.py` | **Added 2026-08-09 (#8684).** Gross-exposure observation soak + a per-account `max_multiple` roll-up (read it beside `measured_n`). Observe-only; connection-free. |
 | `GET /api/bot/exit-interval/soak` | `routers/exit_interval.py` | **Added 2026-08-16.** The M20 exit-loop's **cross-process** inter-evaluation intervals — `summary.max_interval_ms` beside `intervals_measured` **and** `processes_seen`. Exists because `exit_loop_health`'s max lives in a module global that resets every deploy, so a max over one process is systematically LOW (measured 2026-08-16: 50044.3 ms across 5 processes vs 40648.6 ms on the newest alone — a 15.7 pp understatement). `processes_seen == 1` means you are reading the per-process number again under a cross-process label. Observe-only; reads a file the exit loop appends. |
@@ -290,6 +290,7 @@ is missing" is exactly what a tier inventory is for.
 
 | Endpoint | Source | Gate when `DASHBOARD_API_TOKEN` is **unset** | Notes |
 |---|---|---|---|
+| `POST /api/bot/devices/register` | `routers/devices.py` | **503 — fail-CLOSED** (unless a live `ws_` site session is presented) | **Moved from Tier 1 on 2026-11-11 (SEC-API-DEVICE-REGISTER-OPEN, operator popup 22:20Z).** Upsert a device by its FCM token; idempotent on token. Open, it let anyone register a token and receive the operator's pushes. `_require_register_auth` accepts a live allowlisted `ws_` session or the `DASHBOARD_API_TOKEN` bearer (constant-time); otherwise 401. Caller read 2026-11-11: the Android companion app sends `Authorization: Bearer <apiToken>` on all three call sites; the SPA does not call it. The raw token is never echoed back, only `token_suffix`. Unknown subscription kinds → 400. |
 | `POST /api/bot/prop/report` | `routers/prop.py` | **503 — fail-CLOSED** | Ingests an inbound prop fill/close or account-status report-back. **A genuine Tier-2 mutation: DB write + operator notification.** `_require_write_token` refuses with 503 when the token is unset rather than accepting anonymous writes, so a dropped `.env` value (e.g. a VM migration) can never reopen an anonymous write hole (BL-20260705-DASHBOARD-API-TOKEN-UNSET). Missing / wrong-scheme / wrong bearer → 401. |
 | `POST /api/bot/prop/phone/exec-js-signature` | `routers/prop.py` | **503 — fail-CLOSED** | **Added 2026-10-18 (PHONE-EXEC-OBSERVABLE-1018, piece 4).** `phone-exec-js-sign.yml` publishes `{version, sha256, sig}` for the exec.js it signed on `main`; stored beside the journal, shape-validated (64-byte ed25519 signature, 64-hex sha, `YYYY-MM-DD.N` version), never verified here (no public key on the server: a wrong record only means "serve nothing"). Same `_require_write_token` gate as `/prop/report`. Answers `match` (the VM tree carries those bytes already, or not yet — git-sync lag, not an error). |
 | `POST /api/bot/prop/phone/claim` | `routers/prop.py` | **n/a — per-DEVICE bearer, 401 unless a fingerprint in `config/prop_phone_devices.yaml` matches** | Phone executor (PHONE-EXEC-1B). Atomically claims the next valid ticket (`emitted → claimed`) for the ONE account the device is pinned to; runs the claim watchdog (unreported claims → `skipped` + ping). Never accepts `DASHBOARD_API_TOKEN`. 409 when the account is not declared `breakout_phone` in `config/prop_platforms.yaml::phone_accounts`. |
