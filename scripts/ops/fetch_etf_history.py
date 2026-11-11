@@ -182,7 +182,17 @@ def fetch_bars(get: Getter, sym: str, tf: str, start: datetime, end: datetime, f
     return bars_to_frame(rows)
 
 
-ENDING_KINDS = ("name_change", "merger", "worthless_removal")
+ENDING_KINDS = ("name_change", "cash_merger", "stock_merger", "stock_and_cash_merger", "worthless_removal")
+# Alpaca /v1/corporate-actions: request types are singular and the response groups them under PLURAL keys. "merger" is NOT a
+# valid type (the whole request is rejected), so the types list must be exactly these.
+CA_TYPES = ("cash_dividend", "forward_split", "reverse_split", "name_change", "cash_merger", "stock_merger",
+            "stock_and_cash_merger", "worthless_removal")
+_CA_KEY_TO_KIND = {k + "s": k for k in CA_TYPES}
+
+
+def _ca_symbol(r: Dict[str, Any]) -> Any:
+    """The symbol whose series a record concerns: the OLD symbol of a name change, the acquiree of a merger."""
+    return r.get("symbol") or r.get("old_symbol") or r.get("acquiree_symbol")
 
 
 def ended_symbols(ca: pd.DataFrame) -> Dict[str, Dict[str, Any]]:
@@ -197,19 +207,24 @@ def ended_symbols(ca: pd.DataFrame) -> Dict[str, Dict[str, Any]]:
     return out
 
 
+FETCH_CA_FAILED_BATCHES: List[int] = []
+
+
 def fetch_corporate_actions(get: Getter, syms: List[str], start: datetime, end: datetime) -> pd.DataFrame:
     """Cash dividends + splits, one row each. Batches fail independently (a bad ticker in a batch drops that batch only)."""
     out: List[Dict[str, Any]] = []
     cols = ["kind", "symbol", "ex_date", "rate", "new_rate", "old_rate", "record_date", "payable_date"]
     for i in range(0, len(syms), 20):
-        params: Dict[str, Any] = {"symbols": ",".join(syms[i:i + 20]), "types": "cash_dividend,forward_split,reverse_split,name_change,merger,worthless_removal",
+        params: Dict[str, Any] = {"symbols": ",".join(syms[i:i + 20]), "types": ",".join(CA_TYPES),
                                   "start": start.strftime("%Y-%m-%d"), "end": end.strftime("%Y-%m-%d"), "limit": 1000}
         try:
             while True:
                 j = get("/v1/corporate-actions", params)
-                for kind, recs in (j.get("corporate_actions") or {}).items():
+                for key, recs in (j.get("corporate_actions") or {}).items():
+                    kind = _CA_KEY_TO_KIND.get(key, key)
                     for r in recs or []:
-                        out.append({"kind": kind, "symbol": r.get("symbol") or r.get("old_symbol") or r.get("acquiree_symbol"), "ex_date": r.get("ex_date") or r.get("process_date"),
+                        out.append({"kind": kind, "symbol": _ca_symbol(r),
+                                    "ex_date": r.get("ex_date") or r.get("effective_date") or r.get("process_date"),
                                     "rate": r.get("rate"), "new_rate": r.get("new_rate"), "old_rate": r.get("old_rate"),
                                     "record_date": r.get("record_date"), "payable_date": r.get("payable_date")})
                 tok = j.get("next_page_token")
@@ -217,6 +232,7 @@ def fetch_corporate_actions(get: Getter, syms: List[str], start: datetime, end: 
                     break
                 params["page_token"] = tok
         except RuntimeError as e:
+            FETCH_CA_FAILED_BATCHES.append(i // 20)
             print(f"corporate actions batch {i // 20} failed: {str(e)[:120]}", file=sys.stderr)
     if not out:
         return pd.DataFrame(columns=cols)
@@ -505,10 +521,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"[rate] workers={a.workers} stats={json.dumps(gate.stats)} declared_per_min={gate.declared_per_min} final_rps={gate.rps:.2f}", flush=True)
     if not stopped:
         try:
+            FETCH_CA_FAILED_BATCHES.clear()
             ca = fetch_corporate_actions(get, syms, start, end)
             root.mkdir(parents=True, exist_ok=True)
             ca.to_csv(root / "corporate_actions.csv", index=False)
-            manifest["corporate_actions"] = {"rows": int(len(ca)), "fetched_at": _iso(now), "ended": ended_symbols(ca)}
+            manifest["corporate_actions"] = {"rows": int(len(ca)), "fetched_at": _iso(now), "ended": ended_symbols(ca),
+                                         "failed_batches": len(FETCH_CA_FAILED_BATCHES)}
         except Exception as e:
             failures.append(f"corporate_actions: {str(e)[:140]}")
             manifest["corporate_actions"] = {"error": str(e)[:140]}
