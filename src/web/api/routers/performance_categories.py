@@ -146,7 +146,7 @@ def get_performance_categories(window: str = "30d") -> Dict[str, Any]:
                 out.append(m)
         finally:
             conn.close()
-    except sqlite3.Error:
+    except sqlite3.Error:  # allow-silent: logs the stack and answers read_state journal_unreadable with population null, never an empty table that reads as "no trades"
         logger.warning("performance/categories: journal read failed", exc_info=True)
         return {"as_of": as_of, "window": window, "read_state": "journal_unreadable", "categories": [], "excluded": excluded,
                 "population": None}
