@@ -1973,7 +1973,7 @@ def _require_decision_write_token(authorization: str | None) -> None:
         raise HTTPException(status_code=401, detail="missing authorization")
     if not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=401, detail="bearer scheme required")
-    if not hmac.compare_digest(authorization[7:].strip(), expected):
+    if not hmac.compare_digest(authorization[7:].strip().encode(), expected.encode()):
         raise HTTPException(status_code=401, detail="bad token")
 
 

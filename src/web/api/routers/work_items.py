@@ -64,14 +64,14 @@ def _require_work_store_token(authorization: str | None, x_work_store_token: str
     if x_work_store_token is not None:
         if not x_work_store_token.strip():
             raise HTTPException(status_code=401, detail=f"empty {WORK_STORE_HEADER}")
-        if not hmac.compare_digest(x_work_store_token.strip(), expected):
+        if not hmac.compare_digest(x_work_store_token.strip().encode(), expected.encode()):
             raise HTTPException(status_code=401, detail="bad token")
         return
     if not authorization:
         raise HTTPException(status_code=401, detail="missing authorization")
     if not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=401, detail="bearer scheme required")
-    if not hmac.compare_digest(authorization[7:].strip(), expected):
+    if not hmac.compare_digest(authorization[7:].strip().encode(), expected.encode()):
         raise HTTPException(status_code=401, detail="bad token")
 
 

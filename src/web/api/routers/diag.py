@@ -1417,7 +1417,7 @@ def _require_diag_token(request: Request) -> None:
     # When present it alone decides, so the two carriers can never disagree silently.
     header_tok = request.headers.get(DIAG_TOKEN_HEADER)
     if header_tok is not None:
-        if not header_tok.strip() or not hmac.compare_digest(header_tok.strip(), expected):
+        if not header_tok.strip() or not hmac.compare_digest(header_tok.strip().encode(), expected.encode()):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail={"error": "invalid_token"},
@@ -1431,7 +1431,7 @@ def _require_diag_token(request: Request) -> None:
             headers={"WWW-Authenticate": "Bearer"},
         )
     presented = auth[len("Bearer "):].strip()
-    if not presented or not hmac.compare_digest(presented, expected):
+    if not presented or not hmac.compare_digest(presented.encode(), expected.encode()):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail={"error": "invalid_token"},

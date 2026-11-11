@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "SEC hardening (c), Tier 2 (web-api auth). The operator approved building it (popup 2026-11-11 22:20Z, 'Yes, all four (Recommended)'). The lane cannot merge; the manager merges, then deploys ict-web-api.",
+  "why": "prop._require_write_token (which also guards POST /api/bot/alerts and /api/bot/wake-toggles) and devices._check_admin_token compared the service token with !=, which leaks timing. Both now use hmac.compare_digest. Every web-api compare_digest also moves to bytes, because with str a non-ASCII header byte raised TypeError and returned 500 instead of 401. Behaviour for valid and invalid ASCII tokens is unchanged. No order path, strategy, risk cap or config change."
+}

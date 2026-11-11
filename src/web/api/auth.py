@@ -249,7 +249,7 @@ def _service_token_ok(token: str) -> bool:
     """``DASHBOARD_API_TOKEN`` as a READ-ONLY service credential for the
     non-browser consumers inventoried in design §2b."""
     expected = os.environ.get("DASHBOARD_API_TOKEN", "").strip()
-    return bool(expected) and bool(token) and hmac.compare_digest(token, expected)
+    return bool(expected) and bool(token) and hmac.compare_digest(token.encode(), expected.encode())
 
 
 def require_site_session(conn: HTTPConnection) -> None:

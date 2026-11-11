@@ -37,6 +37,7 @@ The read endpoints are Tier-1; the POST is Tier-2 (a DB write + notification).
 from __future__ import annotations
 
 import asyncio
+import hmac
 import logging
 import os
 from typing import Any
@@ -74,7 +75,7 @@ def _require_write_token(authorization: str | None) -> None:
         raise HTTPException(status_code=401, detail="missing authorization")
     if not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=401, detail="bearer scheme required")
-    if authorization[7:].strip() != expected:
+    if not hmac.compare_digest(authorization[7:].strip().encode(), expected.encode()):
         raise HTTPException(status_code=401, detail="bad token")
 
 

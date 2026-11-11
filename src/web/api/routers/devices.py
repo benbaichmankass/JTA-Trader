@@ -28,6 +28,7 @@ tables.
 from __future__ import annotations
 
 import asyncio
+import hmac
 import json
 import logging
 import os
@@ -79,7 +80,7 @@ def _check_admin_token(authorization: str | None) -> None:
     if not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=401, detail="bearer scheme required")
     presented = authorization[7:].strip()
-    if presented != expected:
+    if not hmac.compare_digest(presented.encode(), expected.encode()):
         raise HTTPException(status_code=401, detail="bad token")
 
 
