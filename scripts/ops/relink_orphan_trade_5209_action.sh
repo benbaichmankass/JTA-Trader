@@ -45,7 +45,7 @@ VENUE_JSON="$(mktemp -t relink5209_venue.XXXXXX.json)"
 trap 'rm -f "${VENUE_JSON}"' EXIT
 set +e
 http_code="$(curl -sS --max-time 60 -o "${VENUE_JSON}" -w '%{http_code}' \
-    -H "Authorization: Bearer ${DIAG_TOKEN}" "${DIAG_URL}")"
+    -H @- "${DIAG_URL}" <<<"Authorization: Bearer ${DIAG_TOKEN}")"   # header via stdin: never in argv / ps
 curl_rc=$?
 set -e
 if [ "${curl_rc}" -ne 0 ] || [ "${http_code}" != "200" ]; then

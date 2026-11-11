@@ -800,6 +800,18 @@ def list_fills(
         conn.close()
 
 
+def get_fill(fill_id: int) -> Optional[Dict[str, Any]]:
+    """One ``prop_fills`` row by id, or None."""
+    if not tables_present():
+        return None
+    conn = _connect(read_only=True)
+    try:
+        row = conn.execute("SELECT * FROM prop_fills WHERE id = ?", (int(fill_id),)).fetchone()
+        return dict(row) if row is not None else None
+    finally:
+        conn.close()
+
+
 def get_opening_fill(
     account_id: Optional[str], ticket_id: Optional[str] = None, external_order_id: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
