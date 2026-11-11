@@ -391,6 +391,8 @@ EXPECTED_ACTIONS = {
     # 2026-10-24 — AMEND-SL-ACTION: tighten one live Bybit stop, venue +
     # journal (order_packages.sl + trades.stop_loss) together; refuses looser.
     "amend-position-sl": "amend_position_sl_action.sh",
+    # 2026-11-11 — PROP-BRACKET-APPLY: record a TP/SL request on a VM-prop ticket; the executor applies it.
+    "amend-prop-bracket": "amend_prop_bracket_action.sh",
     # 2026-10-25 — LTR-6R-APPLY-PATH: READ-ONLY per-account dry-run of the
     # live-review apply path (scripts/ops/live_review_apply.py --dry-run).
     "live-review-dry-run": "live_review_dry_run_action.sh",
@@ -517,6 +519,7 @@ TIER_2_ACTIONS = {
     "backfill-package-risk-meta",
     "relink-orphan-trade-5209",
     "amend-position-sl",
+    "amend-prop-bracket",
     "live-review-dry-run",
     "live-review-apply",
     "run-desk-judge",

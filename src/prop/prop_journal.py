@@ -394,6 +394,12 @@ def _supersede_meta(meta: Any) -> Optional[Dict[str, Any]]:
     return cand if isinstance(cand, dict) else None
 
 
+def _tp_target_meta(meta: Any) -> Optional[float]:
+    """``prop_tickets.meta.tp_target.level`` (PROP-BRACKET-APPLY), None when absent or unreadable (never 0)."""
+    from src.runtime.live_review_intent import tp_target_from
+    return tp_target_from(meta)
+
+
 def _sl_floor_meta(meta: Any) -> Optional[float]:
     """``prop_tickets.meta.sl_floor.level`` (LTR-6R), None when absent or unreadable (never 0)."""
     from src.runtime.live_review_intent import sl_floor_from
@@ -558,6 +564,9 @@ def list_outbound_tickets(
             # LTR-6R: the live-review stop floor this account approved for the ticket (``meta.sl_floor``);
             # the VM executor's trail tightens to it and never plans looser. None = no floor.
             "sl_floor": _sl_floor_meta(tk.get("meta")),
+            # PROP-BRACKET-APPLY: the TP the system asked this ticket to rest at; the VM executor's trail applies it
+            # through its own amend code. None = no pin.
+            "tp_target": _tp_target_meta(tk.get("meta")),
         }
 
     for r in op_rows:
