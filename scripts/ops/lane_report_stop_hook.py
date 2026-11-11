@@ -21,6 +21,13 @@ import sys
 
 LANE_MARKERS = re.compile(r"You are lane\b|dispatched by Manager Session|From Manager\b|lane:[A-Z0-9-]{3,}", re.IGNORECASE)
 MANAGER_ID = re.compile(r"(?:Manager[^\n]{0,80}?|manager:)(session_[A-Za-z0-9]{16,})")
+#: The manager itself (a fresh start or a rotation), never a lane. STOP-HOOK-ROTATION-MANAGER (2026-11-11):
+#: the rotation brief opens "You are the JTA Trader manager (rotation)", which the old pattern missed, so the hook
+#: blocked the manager's own stop with lane wording.
+MANAGER_SELF = re.compile(
+    r"\bYou are Manager Session\b|^\s*Manager Session \d{4}-\d{2}-\d{2}[a-z]|^\s*Run the operating loop"
+    r"|\bYou are the (?:JTA[ -]Trader |Metis(?: Insights)? |ICT(?: bot)? )?manager\b(?!['’]s)",
+    re.IGNORECASE)
 REPORT_TOOLS = re.compile(r"fire_trigger|send_later|add_issue_comment|add_reply_to_pull_request_comment|send_message", re.IGNORECASE)
 WAITING = re.compile(
     r"\b(awaits?|awaiting|waiting (?:on|for)|go[- ]ahead|needs? (?:your|the manager'?s?|an? operator|operator)|"
@@ -59,7 +66,7 @@ def decide(entries: list[dict]) -> str | None:
     all_user = "\n".join(_text_of((u.get("message") or {}).get("content")) for u in users)
     if not LANE_MARKERS.search(first) and not LANE_MARKERS.search(all_user):
         return None
-    if re.search(r"\bYou are Manager Session\b|^\s*Manager Session \d{4}-\d{2}-\d{2}[a-z]|^\s*Run the operating loop", first) \
+    if MANAGER_SELF.search(first) \
             and not re.search(r"\bYou are lane\b", first):
         return None                                  # the manager itself, not a lane
     last_user_idx = max(i for i, e in enumerate(entries) if _is_real_user(e))
@@ -149,6 +156,15 @@ def self_test() -> int:
         ("the manager itself never blocks", [_u("Run the operating loop (manager SKILL.md). From Manager lane:X"), _a("Should I merge #5?")], False),
         ("a rotation manager never blocks", [_u("You are Manager Session 2026-11-07a for JTA Trader. Dispatch lane:ML-X via From Manager triggers."),
                                              _a("Waiting on the operator's go-ahead?")], False),
+        ("a rotation manager brief ('You are the JTA Trader manager (rotation)') never blocks",
+         [_u("You are the JTA Trader manager (rotation). Dispatch lane:GENERAL via From Manager triggers."),
+          _a("Waiting on the operator's go-ahead?")], False),
+        ("a lane brief that QUOTES the manager is still a lane",
+         [_u("You are lane GENERAL, dispatched by Manager Session 2026-11-11a (session_01AFoLuLyarNRcy3nziCep2U). "
+             "The manager said: 'You are the JTA Trader manager'."), _a("Blocked; awaiting your go-ahead.")], True),
+        ("'You are the manager's lane' is a lane, not the manager",
+         [_u("You are the manager's GENERAL lane (session_01AFoLuLyarNRcy3nziCep2U); lane:GENERAL."),
+          _a("Blocked; awaiting your go-ahead.")], True),
         ("a report in an EARLIER turn does not count", [lane, _a(None, "fire_trigger"), _tr(), _a("reported"),
                                                          _u("From Manager: GO. re-export."), _a("Re-export failed again; awaiting your go-ahead.")], True),
         ("empty transcript passes", [], False),
