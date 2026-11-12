@@ -21,10 +21,11 @@ import textwrap
 import pytest
 
 from tests.test_intent_delta_dispatch import _patch_dispatch_deps
-from tests.test_slice_coordinator_dispatch import (  # noqa: F401 (fixtures)
+from tests.test_slice_coordinator_dispatch import (  # noqa: F401 (pytest fixtures)
     SLICE_ACCOUNTS,
     _pkg,
     _run,
+    _seed,
     coord,
     slice_yaml,
     trade_db,
@@ -33,7 +34,7 @@ from tests.test_slice_coordinator_dispatch import (  # noqa: F401 (fixtures)
 
 
 def test_weighted_slice_places_less_than_sized_and_meta_says_so(
-        coord, slice_yaml, trade_db, venue, monkeypatch):
+        coord, slice_yaml, trade_db, venue, monkeypatch):  # noqa: F811 (pytest fixture params)
     captured = []
     _patch_dispatch_deps(monkeypatch, captured)
     pkg = _pkg("trend_donchian_eth_4h", weight=0.5,
@@ -49,8 +50,7 @@ def test_weighted_slice_places_less_than_sized_and_meta_says_so(
     assert pkg.meta["slice_admission_by_account"]["bybit_2"]["qty"] == pytest.approx(placed)
 
 
-def test_refused_slice_records_no_placed_qty(coord, slice_yaml, trade_db, venue, monkeypatch):
-    from tests.test_slice_coordinator_dispatch import _seed
+def test_refused_slice_records_no_placed_qty(coord, slice_yaml, trade_db, venue, monkeypatch):  # noqa: F811 (pytest fixture params)
     captured = []
     _patch_dispatch_deps(monkeypatch, captured)
     _seed(trade_db, "trend_donchian_eth_4h", 0.2, sl=49_500.0)  # budget fully at risk
@@ -62,7 +62,7 @@ def test_refused_slice_records_no_placed_qty(coord, slice_yaml, trade_db, venue,
     assert pkg.meta["slice_admission_by_account"]["bybit_2"]["ok"] is False
 
 
-def test_dry_account_records_no_placed_qty(coord, tmp_path, trade_db, venue, monkeypatch):
+def test_dry_account_records_no_placed_qty(coord, tmp_path, trade_db, venue, monkeypatch):  # noqa: F811 (pytest fixture params)
     captured = []
     _patch_dispatch_deps(monkeypatch, captured)
     p = tmp_path / "dry.yaml"
@@ -73,7 +73,7 @@ def test_dry_account_records_no_placed_qty(coord, tmp_path, trade_db, venue, mon
     assert pkg.meta["placed_qty_by_account"] == {}
 
 
-def test_two_slice_accounts_each_keep_their_admission(coord, tmp_path, trade_db, venue, monkeypatch):
+def test_two_slice_accounts_each_keep_their_admission(coord, tmp_path, trade_db, venue, monkeypatch):  # noqa: F811 (pytest fixture params)
     captured = []
     _patch_dispatch_deps(monkeypatch, captured)
     monkeypatch.setenv("BYBIT_API_KEY_9", "k")
