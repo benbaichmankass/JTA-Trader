@@ -225,3 +225,20 @@ def test_validator_knows_the_new_events():
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
     assert set(lrd.PRESCREEN_EVENTS) <= set(m.DUE_EVENTS)
+
+
+# -- stall: thin_window is youth, said so (AM-TRADING OK 2026-11-12 14:32Z) -----------------------------------
+
+def test_stall_thin_window_is_labelled_as_youth_and_matches_the_done_bar_regex():
+    import re
+    _, cnl, _ = ps(row(bars_held=1, peak_r=None, peak_state="thin_window"))
+    reasons = [c["reason"] for c in cnl if c["event"] == "stall"]
+    assert reasons == ["peak_r thin_window: 1 bar(s) since entry; need 2"]
+    youth = re.compile(r"^\d+ (closed history bar\(s\)|history bar\(s\) with a price); need \d+$"
+                       r"|^peak_r thin_window: \d+ bar\(s\) since entry; need \d+$")
+    assert youth.match(reasons[0])
+    # any other unknown keeps the old, non-youth reason
+    _, cnl, _ = ps(row(bars_held=None, peak_r=None, peak_state="thin_window"))
+    assert [c["reason"] for c in cnl if c["event"] == "stall"] == ["bars_held / peak_r unknown"]
+    _, cnl, _ = ps(row(bars_held=3, peak_r=None, peak_state="unanchored"))
+    assert [c["reason"] for c in cnl if c["event"] == "stall"] == ["bars_held / peak_r unknown"]

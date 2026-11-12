@@ -291,6 +291,7 @@ SITE_PUBLIC_POST_PREFIXES: tuple[str, ...] = (
 # fails closed on its own credential (tests/test_web_site_auth_write_carveouts.py).
 SITE_TOKEN_GET_PREFIXES: tuple[str, ...] = (
     "/api/bot/ops/jobs/",
+    "/api/bot/ops/ledger",   # VM-CHANGE-LEDGER: same router, same fail-closed X-Work-Store-Token
 )
 
 

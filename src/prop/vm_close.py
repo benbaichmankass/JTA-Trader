@@ -102,6 +102,8 @@ def close_capability(account_id: str, platforms_path: Optional[Path] = None) -> 
     return {"close": False, "partial": False, "why": f"platform {platform!r} has no executor close path"}
 
 
+# Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PROP-VM-CLOSE-REFUSALS: KEEP
+# (now operator-authorized). Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
 def _refuse(why: str, **kw: Any) -> Dict[str, Any]:
     return {"result": R_REFUSED, "detail": why, **kw}
 
@@ -219,6 +221,21 @@ def round_down(x: float, step: Optional[float]) -> float:
     return math.floor(x / step + 1e-9) * step
 
 
+def _shared_fraction(adapter: Any, req: Mapping[str, Any], pos: Any, sym_cfg: Mapping[str, Any]) -> Optional[float]:
+    """This ticket's own share of a SHARED venue position as a fraction of it, or None when it cannot be closed alone
+    (no partial close on the adapter, the ticket qty unreadable, or the share is the whole position)."""
+    if not getattr(adapter, "PARTIAL_CLOSE_SUPPORTED", False):
+        return None
+    own, size = _f(req.get("own_qty")), _f(getattr(pos, "quantity", None))
+    units = _f(sym_cfg.get("lot_units")) or 1.0
+    if own is None or size is None:
+        return None
+    frac = (own / units) / size
+    return frac if 0 < frac < 1 else None
+
+
+# Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PROP-VM-CLOSE-REFUSALS: KEEP
+# (now operator-authorized). Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
 def run_close_step(*, adapter: Any, page: Any, api: Any, cfg: Any, mode: str, state_dir: Path, res: Any,
                    sleep: Callable[[float], None], reads: int = 10) -> Any:
     """One pass over this account's pending close requests. Never raises past one ticket."""
@@ -228,26 +245,50 @@ def run_close_step(*, adapter: Any, page: Any, api: Any, cfg: Any, mode: str, st
         return res
     live = mode == "live"
     try:
-        tickets = [t for t in api.all_tickets(cfg.account_id) if t.get(KEY)]
+        from src.prop import strategy_exit_close as sec
+
+        tickets = []
+        all_t = list(api.all_tickets(cfg.account_id))
+        for t in all_t:
+            if t.get(KEY):
+                tickets.append(t)
+                continue
+            # PROP-VM-STRATEGY-EXIT-CLOSE (operator 2026-11-12): the ticket's ORDER PACKAGE closed -> a close with the
+            # deterministic id pkgexit-<ticket> (idempotent per package + ticket); attributed to THIS ticket's own
+            # share when other open packages hold the same venue position (sec.sharers).
+            synth = sec.vm_synth_request(t, all_t)
+            if synth is not None:
+                tickets.append({**t, KEY: synth})
     except Exception as exc:  # noqa: BLE001
         res.alerts.append(f"close: ticket read failed ({type(exc).__name__}); no close this tick")
         return res
     if not tickets:
         return res
     done = _load_done(state_dir)
-    final = ("closed", "reduced", "refused", "apply_failed")
+    final = ("closed", "reduced", "refused", "apply_failed", "needs_call")
     pending = [t for t in tickets if (t.get(KEY) or {}).get("id")
                and (done.get(t[KEY]["id"]) or {}).get("result") not in final]
     if not pending:
         return res
     try:
-        positions = adapter.read_positions(page)
         journal = api.open_fills(cfg.account_id)
     except Exception as exc:  # noqa: BLE001
-        res.alerts.append(f"close: venue/journal read failed ({type(exc).__name__}); {len(pending)} close request(s)"
+        res.alerts.append(f"close: journal read failed ({type(exc).__name__}); {len(pending)} close request(s)"
                           " retried next tick")
         return res
     by_tid = {str(j.get("ticket_id")): j for j in journal if j.get("ticket_id")}
+    # A strategy-exit request on a ticket with no open journal row (closed long ago, never filled) is dropped here,
+    # before any venue read, so old tickets never cost a terminal read.
+    pending = [t for t in pending if not t[KEY].get("synthetic") or str(t.get("ticket_id")) in by_tid
+               or int((done.get(t[KEY]["id"]) or {}).get("attempts") or 0) > 0]
+    if not pending:
+        return res
+    try:
+        positions = adapter.read_positions(page)
+    except Exception as exc:  # noqa: BLE001
+        res.alerts.append(f"close: venue read failed ({type(exc).__name__}); {len(pending)} close request(s)"
+                          " retried next tick")
+        return res
     for t in pending:
         tid, req = str(t.get("ticket_id")), dict(t[KEY])
         rid, frac = req["id"], _f(req.get("fraction"))
@@ -261,6 +302,10 @@ def run_close_step(*, adapter: Any, page: Any, api: Any, cfg: Any, mode: str, st
             side = pe._dir((j or {}).get("direction") or t.get("direction"))
             mine = [p for p in positions if venue and p.symbol.upper() == venue and p.side == side]
             prev = done.get(rid) or {}
+            if req.get("synthetic") and (j is None or not mine) and not int(prev.get("attempts") or 0):
+                # A strategy exit whose venue is already flat: nothing to close, no alert, no record -- the reconcile
+                # journals a flat venue on its own.
+                continue
             if j is None and frac is None and int(prev.get("attempts") or 0) > 0:
                 outcome.update(result="closed", why="journal row closed since the last attempt (venue flat)")
             elif j is None:
@@ -269,7 +314,15 @@ def run_close_step(*, adapter: Any, page: Any, api: Any, cfg: Any, mode: str, st
                 outcome.update(result="closed", why="position gone since the last attempt (venue flat)")
             elif len(mine) != 1:
                 outcome.update(result="refused", why=f"{len(mine)} {venue or bot_sym} {side} positions (need 1)")
-            elif frac is None:
+            elif req.get("shared_with") and frac is None and not _shared_fraction(adapter, req, mine[0], sym_cfg):
+                # ATTRIBUTION: another open package owns part of this venue position and this ticket's own share
+                # cannot be closed alone (no partial close on this adapter, or its qty unreadable): ONE alert asks for
+                # the call; another package's position is never closed.
+                outcome.update(result="needs_call", why=(
+                    f"venue position shared with open ticket(s) {req['shared_with']}; this package's own share "
+                    f"({req.get('own_qty')}) cannot be closed alone on {type(adapter).__name__} -- nothing closed, "
+                    "your call"))
+            elif frac is None and not req.get("shared_with"):
                 pos = mine[0]
                 if not live:
                     r = adapter.flatten(page, venue, arm=False, side=pos.side, quantity=pos.quantity,
@@ -281,6 +334,9 @@ def run_close_step(*, adapter: Any, page: Any, api: Any, cfg: Any, mode: str, st
                 outcome.update(result="closed" if ok else "retrying", why=why or "flat, no orphan order", attempts=n)
             else:
                 pos = mine[0]
+                if frac is None:   # shared: reduce by THIS ticket's own qty
+                    frac = _shared_fraction(adapter, req, pos, sym_cfg)
+                    outcome["fraction"] = frac
                 step = _f(sym_cfg.get("lot_step"))
                 qty = round_down(float(pos.quantity or 0) * frac, step)
                 min_q = _f(sym_cfg.get("min_lots")) or step or 0.0

@@ -166,12 +166,25 @@ def test_a_real_slow_count_is_interrupted_and_reported_not_zeroed(tmp_path: Path
         conn.close()
 
 
-def test_timed_out_table_row_keeps_null_vs_zero_honesty(tmp_path: Path, monkeypatch):
+class _CountAlwaysInterrupted(sqlite3.Connection):
+    """A connection whose COUNT(*) is always interrupted -- exactly what the budget timer's
+    Connection.interrupt() produces -- so the timed-out branch runs deterministically. The real timer
+    racing a real COUNT is covered by test_a_real_slow_count_is_interrupted_and_reported_not_zeroed;
+    a 0.5 ms budget against 300k rows lost that race on fast CI runners (count finished first:
+    'assert (300000 is None)', #25216 runs 43254089052 x2 and #25205-era run 43250084800, 2026-11-12)."""
+
+    def execute(self, sql, *args):
+        if "SELECT COUNT(*)" in str(sql).upper():
+            raise sqlite3.OperationalError("interrupted")
+        return super().execute(sql, *args)
+
+
+def test_timed_out_table_row_keeps_null_vs_zero_honesty(tmp_path: Path):
     import datetime
     from src.web.api.routers import db_explorer as dbx
-    conn = _big_db(tmp_path / "big.db", rows=300_000)
+    _big_db(tmp_path / "big.db", rows=300_000).close()
+    conn = sqlite3.connect(str(tmp_path / "big.db"), factory=_CountAlwaysInterrupted)
     conn.row_factory = sqlite3.Row
-    monkeypatch.setattr(dbx, "_COUNT_BUDGET_S", 0.0005)
     try:
         t = dbx._table_overview(conn, "big", "trade_journal", datetime.datetime.now(datetime.timezone.utc))
     finally:

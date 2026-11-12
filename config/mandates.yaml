@@ -534,6 +534,18 @@ mandates:
       soak_passed: true
       # 2026-11-01 (PROMOTION-NO-SOAK): soak_passed is satisfied by mechanics_proven (see amended_at above).
       mechanics_proven: true
+      # 2026-11-12 (lane ML-STAGE-RETIRE, HELD Tier-3 PR for the manager/operator). The operator, chat
+      # 2026-11-12 ~16:35Z, verbatim: "you're going to retire the step from the ML. Everything goes through
+      # the new flow, back testing, live money, and then if it gets demoted, it soaks to still generate data
+      # while we iterate on it. That is the only acceptable flow. There is nothing in between proving edge on
+      # back testing and real money. Absolutely no steps. Make sure that nothing in the repo is going to keep
+      # on holding us back from operating correctly, and make sure again that nothing is soaking right now
+      # according to the old rules when it's not relevant anymore."
+      # `soak_step: retired` makes mandate_resolver decide S1 -> S2 on the Stage-0 record alone: soak_passed
+      # and mechanics_proven above are no longer preconditions (mechanics are still RECORDED as evidence).
+      # Every Stage-0 clause (n, folds, fidelity, holdout, cost stack, venue cost, affordability, 25% cap,
+      # prop superset, mirror equality) is unchanged. Revert = delete this line.
+      soak_step: retired
       cost_basis: venue_symbol
       # OPERATOR DECISION 2026-10-16 (popup "Require holdout", relayed by Manager
       # Session 2026-10-16 session_01VduHYzdaXe27wTDBLSu8ao; verbatim on checklist
@@ -1624,7 +1636,7 @@ mandates:
   # (ltr_auto_mandate.account_scope; live_review_apply.run filters the legs).
   - id: MD-LTR-PROP-AUTO
     kind: ltr_auto_apply
-    grants: every live-review close, partial close or stop-tighten call on a package carried by a live prop account (breakout_2, tradeify_1, velotrade_1) is applied automatically by the VM, on that account's leg only, and reported after it is applied; real money and the mirrors stay advice-only
+    grants: every live-review close, partial close or stop-tighten call on a package carried by a live prop account (tradeify_1, velotrade_1; breakout_2 dropped 2026-11-12, account on ice) is applied automatically by the VM, on that account's leg only, and reported after it is applied; real money and the mirrors stay advice-only
     direction: derisk_only
     direction_note: >-
       close / partial_close / tighten_sl all reduce risk on the prop leg. widen_sl,
@@ -1651,7 +1663,10 @@ mandates:
       No calendar expiry: the operator's words name none.
     parent: MD-TRADE-DESK
     account_scope:
-      accounts: [breakout_2, tradeify_1, velotrade_1]
+      # breakout_2 dropped 2026-11-12: account breached and ON ICE (operator chat ~11:56Z via Manager Session
+      # 2026-11-11a, verbatim: "Breakout is breached - we're going to keep it on ice for now"). Narrows scope only.
+      # REVERT on operator reactivation: add breakout_2 back.
+      accounts: [tradeify_1, velotrade_1]
       actions: [tighten_sl, partial_close, close]
     executor_note: >-
       Each account still needs an existing executor per action

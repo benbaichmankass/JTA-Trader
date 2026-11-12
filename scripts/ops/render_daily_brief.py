@@ -642,15 +642,29 @@ def build(*, today: date | None = None, root: Path | None = None) -> dict[str, A
     except Exception:  # noqa: BLE001 — unreadable is a state, not a crash
         bw = None
 
+    try:  # UNBLOCK-WATCH: every blocked/waiting item and the condition that clears it
+        from scripts.ops import unblock_watch  # noqa: PLC0415
+        uw = unblock_watch.brief_lines(root)
+    except Exception:  # noqa: BLE001 — unreadable is a state, not a crash
+        uw = None
+
     try:  # SCOREBOARD-PNL-FIRST: unreadable is a state (renders "we could not look"), never a crash or a zero
         from scripts.ops import scoreboard  # noqa: PLC0415
         sb = scoreboard.build(root=root, source="db")
     except Exception as exc:  # noqa: BLE001
         sb = {"readState": "unreadable", "reason": f"scoreboard build failed: {exc!r}"}
 
+    try:  # VM-CHANGE-LEDGER: direct VM changes still awaiting a fold-back into the repo (due via pipeline.py)
+        from src.runtime import ops_actions  # noqa: PLC0415
+        vml = ops_actions.ledger_view()
+    except Exception as exc:  # noqa: BLE001 — unreadable is a state, not a crash
+        vml = {"read_state": "unreadable", "reason": repr(exc)}
+
     return {
+        "vmLedger": vml,
         "scoreboard": sb,
         "blockerWatch": bw,
+        "unblockWatch": uw,
         "schemaVersion": 1,
         "forDate": today.isoformat(),
         "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
@@ -696,6 +710,34 @@ def _section0(b: dict) -> list[str]:
         L += blocker_watch.render_lines(bw)
     elif "blockerWatch" in b:
         L += ["### 🧱 BLOCKER-WATCH — COULD NOT BE RUN (we did not look; this is not zero)", ""]
+    # UNBLOCK-WATCH (operator 2026-11-12): the daily BLOCKED section -- counts, unconditioned, stale manual,
+    # could_not_look and money waits > 7 days. Repo-only per request + the newest VM receipt.
+    if "unblockWatch" in b:
+        L += list(b["unblockWatch"] or ["### ⛓️ BLOCKED — COULD NOT BE EVALUATED (we did not look; this is not zero)", ""])
+    if "vmLedger" in b:
+        L += vm_ledger_lines(b["vmLedger"])
+    return L
+
+
+def vm_ledger_lines(view: dict | None) -> list[str]:
+    """§0 block: VM changes made through the direct ops channel that are not yet expressed in the repo
+    (VM-CHANGE-LEDGER). Due-ness is ``pipeline.vm_ledger_due``; a ledger we could not read says so, never 0."""
+    st = (view or {}).get("read_state")
+    if st not in ("measured", "absent"):
+        return [f"### 🧾 VM CHANGES AWAITING FOLD-BACK — COULD NOT LOOK (ledger `{st}`; this is not zero)", ""]
+    c = (view or {}).get("counts") or {}
+    due = pipeline.vm_ledger_due(view)
+    L = [f"### 🧾 VM CHANGES AWAITING FOLD-BACK — {len(due)} due",
+         "",
+         f"Ledger (`GET /api/bot/ops/ledger`): {c.get('entries', 0)} change(s) recorded · pending "
+         f"{c.get('pending', 0)} · folded {c.get('folded', 0)} · not_needed {c.get('not_needed', 0)}. "
+         f"Population: {(view or {}).get('population', 'the VM change ledger')}.", ""]
+    for it in due[:TOP_DUE]:
+        L.append(f"- **{it['id']}** [{_clip(it.get('age_h'), 8)} h] {_clip(it.get('what'), _LINE)} · `fold_back`")
+    if len(due) > TOP_DUE:
+        L.append(f"- … {len(due) - TOP_DUE} more: `GET /api/bot/ops/ledger?pending=1`")
+    if due:
+        L.append("")
     return L
 
 

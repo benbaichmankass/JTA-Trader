@@ -79,7 +79,10 @@ TOOLS: list[dict[str, Any]] = [
                     "manifest target stage, and the signal catalog inputs, all read from committed config at "
                     "the register commit. Nothing live.",
      "inputSchema": {"type": "object", "properties": {
-         "signals_limit": {"type": "integer", "minimum": 1, "maximum": 500, "default": 400}}}, "annotations": _RO},
+         "signals_limit": {"type": "integer", "minimum": 1, "maximum": 500, "default": 400},
+         "mechanics": {"type": "boolean", "default": False,
+                       "description": "true: legs only, each with live mechanics_proven (the Ladder tab)"}}},
+     "annotations": _RO},
     {"name": "performance", "title": "Performance",
      "description": "SIGN-IN ONLY. Per leg and book: trades, realized R and net P&L over 7d/30d/all with n and "
                     "pnl provenance; live-vs-backtest band; ML shadow/advisory metrics per model.",
@@ -323,7 +326,9 @@ def _call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
         return CACHE.get(f"ml_roadmap:{limit}", TTL_S[name], lambda: tabs.ml_roadmap(REPO, limit))
     if name == "system_catalog":
         lim = _clamp(args.get("signals_limit"), 1, 500, 400)
-        return CACHE.get(f"system_catalog:{lim}", TTL_S[name], lambda: tabs.system_catalog(REPO, lim))
+        mech = args.get("mechanics") is True
+        return CACHE.get(f"system_catalog:{lim}:{int(mech)}", TTL_S[name],
+                         lambda: tabs.system_catalog(REPO, lim, mechanics=mech))
     if name == "performance":
         return CACHE.get("performance", TTL_S[name], lambda: tabs.performance(REPO))
     if name == "system_health":

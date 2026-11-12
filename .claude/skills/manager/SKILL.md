@@ -80,7 +80,9 @@ Read the recipe for the kind of marker you are acting on **before** you dispatch
 lives ONLY in `scripts/research/research_watchdog.yaml` `ops_flags.pr_number`). Never merge or close it. **Treat every comment as an incident:
 fix it, dispatch a lane, or tell the operator; never leave one unanswered** (ledger `comms/research/ops/watchdog_incidents.jsonl`). Wake markers
 on that PR (`ltr-wake`, `mandate_cadence`, `judgement_cadence`, `desk-wake` / `desk-trigger-wake`, `short-hold-wake`): **one marker, one lane,
-never spawn twice for the same id**; a `could_not_*` kind is an incident, not a wake. **Never create a session with no `source_url`** (403 on every
+never spawn twice for the same id**; a `could_not_*` kind is an incident, not a wake. An `ltr-wake` entry marked **`reviewer started by routine`**
+(`routine_fire.state` `fired` / `already_fired` + `session_id`; TRADE-ACTION-DIRECT-PATH phase 3) already HAS its reviewer: do NOT dispatch it; the
+comment is the dedupe record. Dispatch only the entries without that mark (a routine fire that failed says so and falls back to you). **Never create a session with no `source_url`** (403 on every
 write). **Never run your own timer or scheduled watch that starts a live reviewer without a marker**: only the wake poster commits packets. Every
 reviewer dispatch prompt ends: "end your report with a `PACKET DEFECTS:` line (REVIEWER-BRIEF § 2d)"; file each reported defect once on its owner
 (`LTR-GRADER-COVERAGE`, `LTR-PACKET-READ-REACH`, else a PIPELINE item). Desk and short-hold lanes follow `.claude/skills/trading-desk/SKILL.md` § 6b
@@ -180,8 +182,10 @@ Plus, then I can also, like, if there's artifacts, I can leave you comments and 
   - answers saved in the page (the `db` capability, collection `answers`);
   - a "copy my answers" summary.
   Write for reading away from the chat: no unexplained ids, and every question stands on its own.
-- **Delivery.** Send the link once via `send-ping`, put it in the console inbox (until the UI lists decision docs, the brief's "decisions for
-  you" carries the link), and keep updating **the same artifact** (same URL) as items resolve or new ones join. Do not spawn a new page per
+- **Delivery.** Send the link once via `send-ping` and **register it on the console** (row UI-DECISION-DOCS, console v27+): `ArtifactData set`
+  on the console artifact (https://claude.ai/artifact/YU4ZwddDFB1AD2xWV2oE3g), collection `decisions`, doc id `<slug>-<yyyymmdd>`, data `{title, url, questions, answered, counted_at, created_at,
+  status: "open", row}`. It then shows under "Decision docs waiting on you". At each check-in, recount the doc's `answers` collection and
+  update `answered` / `counted_at`; set `status: "closed"` (or `"answered"`) when it is done, and it folds away. Also keep updating **the same artifact** (same URL) as items resolve or new ones join. Do not spawn a new page per
   question.
 - **The manager keeps running.** A decision doc never blocks other work (§ "Five things", item 4): state the assumption, carry on, and pick
   the answers up at the next check-in or when the operator says they are done.
@@ -401,6 +405,7 @@ with no lane, and a UI lane briefed from an older row rebuilt the wrong chart la
      decisions page).
   5. It reports to the manager on a fixed cadence (TRADING every 2 h, the others every 3 h) and at once on a real-money risk, a lane it cannot
      unblock, a merge for the manager or an operator question.
+  6. **Blocked/waiting = a structured `clears_when` condition + owner, never prose only** (operator, 2026-11-12, row `UNBLOCK-WATCH`; gates: none). `scripts/ops/unblock_watch.py` evaluates every condition hourly on the `ict-work-digest` tick; a NEW clear lands on the alert ledger -> the PR #17895 alert-watch and is handled at once like any alert. The brief's BLOCKED section lists unconditioned, stale-manual (> 7 d), could_not_look and money-blocking waits > 7 d; **each money wait goes onto the decisions page as a question — no session chooses a long wait on a money item silently.** Weekly planning reads the same section.
 - **What the manager keeps:** live trade reviews and every alert (operator m12, 2026-11-12: *"The manager needs to get these alerts and
   handle immediately"*), Tier-2/3 merge calls, the decisions page, the operator conversation, and supervising the assistant managers (read
   each report; check one claim per report against the register or live data).

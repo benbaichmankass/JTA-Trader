@@ -25,6 +25,10 @@ question: 'Spec docs/research/ml-decision-models-2026-11-01/TP-REVISION.md (regi
 why_this_matters: 'Operator 2026-11-01 ~09:05Z on PR #22079, verbatim "1, but a moving to needs to be the be t work item": the fixed tested 1.5R
   TP ships now; a MOVING take-profit is the next work item. TP doctrine clause 2 (docs/ARCHITECTURE-CANONICAL.md "TP doctrine"): the TP is a live
   prediction re-estimated through the trade; the two ml_entry baseline lines in scripts/ci/check_tp_doctrine.py exit only through this row.'
+evidence_class:  # RESEARCH-SLO-SURVIVOR-CONVERSION 2026-11-12: the rule reads a held-out window once (see decision_rule)
+  holdout: holdout_window
+  claim: edge
+  subject: new
 decision_rule:
   id: RULE-RQ20261101-383f-01-ML-ENTRY-TP-REVISION
   registered_at: '2026-11-01'

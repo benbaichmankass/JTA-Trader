@@ -200,7 +200,7 @@ def test_public_set_is_exactly_the_declared_one():
                      and not p.startswith(("/api/diag/", "/api/bot/prop/phone/", "/api/auth/"))})
     assert public == sorted([
         "/api/bot/alerts", "/api/bot/devices/register", "/api/bot/live-review/rows",
-        "/api/bot/ops/actions", "/api/bot/ops/jobs/{job_id}",
+        "/api/bot/ops/actions", "/api/bot/ops/jobs/{job_id}", "/api/bot/ops/ledger",
         "/api/bot/prop/report", "/api/bot/wake-toggles", "/api/bot/work/decision",
         "/api/bot/work/items", "/api/bot/work/items/{item_id}/close",
         "/api/bot/work/items/{item_id}/note", "/api/bot/work/items/{item_id}/set",
