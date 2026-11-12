@@ -55,9 +55,9 @@ compute: cpu_long
 routing:
   needs_trainer_resident_data: true
   needs_gpu: false
-  peak_memory_gb: 8.0
+  peak_memory_gb: 2.5
   est_minutes: 120
-  basis: Estimate; the first run replaces it.
+  basis: 'Estimate; the first run replaces it. peak_memory_gb 8.0 -> 2.5 (2026-11-12): RQ-20260927-002 ran the same rows.jsonl walk-forward on the trainer at 2.5 GB; the trainer route refuses > 6 GB.'
   why_runner: 'The exit-head training rows (datasets-out/exit_head/1h/donchian/rows.jsonl) live only on the trainer (RQ-20260927-002 routing).'
 value:
   usd_at_stake_per_month: 120
