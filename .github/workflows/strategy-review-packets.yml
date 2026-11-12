@@ -66,8 +66,8 @@ on:
   workflow_dispatch:
   # Issue-driven so a Claude Code on the web session can fire it. Mirrors
   # health-snapshot.yml / vm-diag-snapshot.yml / system-actions.yml.
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [strategy-review-packets]
 
 permissions:
   contents: write
@@ -111,10 +111,10 @@ jobs:
     needs: dedupe
     if: |
       !cancelled() && needs.dedupe.outputs.skip != 'true' && (
-      github.event_name != 'issues' ||
-      ((github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'strategy-review-packets'))
+      github.event_name != 'repository_dispatch' ||
+      ((github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'strategy-review-packets'))
       )
     runs-on: ubuntu-latest
     # 45, not 25: `commit-to-main` with verify-merged waits up to its own
@@ -303,7 +303,7 @@ jobs:
           verify-merged: "true"
 
       - name: Comment + close issue (issue-driven path)
-        if: github.event_name == 'issues'
+        if: github.event_name == 'repository_dispatch'
         uses: actions/github-script@v7
         env:
           GRADED: ${{ steps.select.outputs.graded }}
@@ -328,9 +328,9 @@ jobs:
             ].join('\n'),
             await github.rest.issues.createComment({
               owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number, body,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), body,
             });
             await github.rest.issues.update({
               owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number, state: 'closed',
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), state: 'closed',
             });

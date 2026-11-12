@@ -23,8 +23,8 @@ on:
         description: "Port to probe (default 8001)"
         required: false
         default: "8001"
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [vm-net-diag-request]
 
 permissions:
   contents: read
@@ -38,10 +38,10 @@ jobs:
   diag:
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       (github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'vm-net-diag-request'))
+      (github.event_name == 'repository_dispatch' &&
+       (github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'vm-net-diag-request'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -197,7 +197,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Reply to issue with combined diag
-        if: github.event_name == 'issues'
+        if: github.event_name == 'repository_dispatch'
         uses: actions/github-script@v7
         with:
           script: |
@@ -228,19 +228,19 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               body,
             });
             await github.rest.issues.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               state: 'closed',
               state_reason: 'completed',
             });
 
       - name: Reply to issue with failure note
-        if: github.event_name == 'issues' && failure()
+        if: github.event_name == 'repository_dispatch' && failure()
         uses: actions/github-script@v7
         with:
           script: |
@@ -248,13 +248,13 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               body: `vm-net-diag run failed. Run: ${runUrl}\nCheck the run logs.`,
             });
             await github.rest.issues.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               state: 'closed',
               state_reason: 'not_planned',
             });

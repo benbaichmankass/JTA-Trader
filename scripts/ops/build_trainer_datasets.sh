@@ -1061,7 +1061,7 @@ build_microstructure
 # ---- Cross-symbol joint setup_candidates (S-MLOPT-S8 / M14 Phase 1.4) -----
 # OPT-IN (default OFF): set ICT_BUILD_XSYM=1 to build the JOINT BTC+MES
 # setup_candidates/all/all/v001 dataset that the cross-symbol meta-label
-# (ml/configs/setup-candidates-metalabel-xsym-v1.yaml, research_only) trains
+# (ml/configs/retired/setup-candidates-metalabel-xsym-v1.yaml, research_only) trains
 # on. Default off keeps the daily cycle byte-identical — the xsym manifest then
 # skips cleanly (`ml train` exit 78 / reason=dataset_absent, PR #2886), zero
 # cycle harm. Flip ICT_BUILD_XSYM=1 on the trainer unit once the operator

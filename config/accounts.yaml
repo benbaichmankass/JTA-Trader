@@ -227,7 +227,7 @@ accounts:
                                        # pick-one. bybit_1 first; bybit_2 + bybit_portfolio
                                        # together after 1-2 clean multi-slice trades here
                                        # (mirror equality test). ROLLBACK: delete this line.
-    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_1h, trend_donchian_xrp_adx25, trend_donchian_eth_prop, claude_desk, ict_scalp_eth_15m, ict_scalp_xrp_15m, avax_pullback_2h, eth_pullback_2h, eth_pullback_prop_2h, sol_pullback_2h, fade_breakout_4h, fvg_range_15m, htf_pullback_trend_2h, ict_scalp_5m, ict_scalp_avax_5m, ict_scalp_sol_5m, ict_scalp_sol_15m, ict_scalp_xrp_5m, squeeze_breakout_4h, trend_donchian, trend_donchian_ada_4h, trend_donchian_avax_4h, trend_donchian_eth, trend_donchian_sol, trend_donchian_sol_4h, turtle_soup, e4_oi_shock_1h, ml_entry_v2]
+    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_1h, trend_donchian_eth_prop, claude_desk, ict_scalp_eth_15m, ict_scalp_xrp_15m, avax_pullback_2h, eth_pullback_2h, eth_pullback_prop_2h, sol_pullback_2h, fade_breakout_4h, fvg_range_15m, htf_pullback_trend_2h, ict_scalp_5m, ict_scalp_avax_5m, ict_scalp_sol_5m, ict_scalp_sol_15m, ict_scalp_xrp_5m, squeeze_breakout_4h, trend_donchian, trend_donchian_ada_4h, trend_donchian_avax_4h, trend_donchian_eth, trend_donchian_sol, trend_donchian_sol_4h, turtle_soup, e4_oi_shock_1h, ml_entry_v2]
                                         # 2026-11-06 HOLDOUT-GOVERNS RE-PROMOTION (Tier-3, operator option 3 "Holdout governs; promote"): trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop MOVED to bybit_2 + bybit_portfolio (production is not on general paper). REVERT per leg: re-add here and remove from both Stage-2 accounts.
                                         # 2026-11-06 PROD-LEGS-DSR-DECISION (Tier-3; OPERATOR popup ~00:30Z verbatim "Re-measure, then move (Rec.)" -- "Any leg that fails moves to the demo floor (paper)"):
                                         # the five bybit_2 + bybit_portfolio legs (xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop) RE-ENTER this demo floor as TESTING legs:
@@ -480,7 +480,11 @@ accounts:
                                        # symbol's risk. Follows bybit_1 (live since 2026-10-18). MUST match
                                        # bybit_portfolio (test_mirror_carries_the_same_position_model_as_live).
                                        # ROLLBACK: delete this line here AND on bybit_portfolio.
-    strategies: [trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop, ml_entry]
+    strategies: [trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop, ml_entry, trend_donchian_xrp_adx25]
+                                       # 2026-11-11 THURSDAY-PLANNING b2 (Tier-3; OPERATOR, decision doc answered 21:28-21:41Z, verbatim choice "Promote to real money"):
+                                       # ADDED trend_donchian_xrp_adx25 (Stage-1 mechanics passed on bybit_1, trades 6796 and 6984; Stage-0 record comms/strategy_evidence/trend_donchian_xrp_adx25.json,
+                                       # expectancy_r_oos +0.2113 net of fee 11 + slip 3 + funding 1 bps). Removed from bybit_1 in the same PR (promotion moves a leg off general paper).
+                                       # REVERT: delete it here AND on the other Stage-2 account, and add it back to bybit_1.
                                        # 2026-11-06 HOLDOUT-GOVERNS RE-PROMOTION (Tier-3; OPERATOR popups via Manager 2026-11-06a: ~19:22Z "Yes, rebuild and promote (Recommended)"; ~19:35Z option 3 "Holdout governs; promote",
                                        # verbatim: "3, but we need to use DSR as a metric ongoing performance review and iteration - non-dsr passing legs can trade live, but are sort of on probation ...").
                                        # ADDED trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop (supersedes their PROD-LEGS-DSR-DECISION removal below). Each runs its HOLDOUT-CONFIRMED config, a rebuilt Stage-0 record
@@ -888,7 +892,11 @@ accounts:
                                        # bybit_2); set-leverage fires at boot.
     position_model: slices             # mirrors bybit_2 (operator 2026-11-01 "Slices on bybit_2 (Rec.)");
                                        # mirror equality. ROLLBACK: with bybit_2's line.
-    strategies: [trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop, ml_entry]
+    strategies: [trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop, ml_entry, trend_donchian_xrp_adx25]
+                                       # 2026-11-11 THURSDAY-PLANNING b2 (Tier-3; OPERATOR, decision doc answered 21:28-21:41Z, verbatim choice "Promote to real money"):
+                                       # ADDED trend_donchian_xrp_adx25 (Stage-1 mechanics passed on bybit_1, trades 6796 and 6984; Stage-0 record comms/strategy_evidence/trend_donchian_xrp_adx25.json,
+                                       # expectancy_r_oos +0.2113 net of fee 11 + slip 3 + funding 1 bps). Removed from bybit_1 in the same PR (promotion moves a leg off general paper).
+                                       # REVERT: delete it here AND on the other Stage-2 account, and add it back to bybit_1.
                                        # 2026-11-06 HOLDOUT-GOVERNS RE-PROMOTION (Tier-3; OPERATOR popups via Manager 2026-11-06a: ~19:22Z "Yes, rebuild and promote (Recommended)"; ~19:35Z option 3 "Holdout governs; promote",
                                        # verbatim: "3, but we need to use DSR as a metric ongoing performance review and iteration - non-dsr passing legs can trade live, but are sort of on probation ...").
                                        # ADDED trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop (supersedes their PROD-LEGS-DSR-DECISION removal below). Each runs its HOLDOUT-CONFIRMED config, a rebuilt Stage-0 record
@@ -1333,6 +1341,11 @@ accounts:
                                        # (needs risk_pct→~1.5% + real-venue revalidation).
       # 2026-10-27 DEMO-FLOOR RULE (Tier-3, operator "Yes, that's the rule"): only uso_trend_1h is added: qqq/spy/tlt_pullback_1h share a symbol with a 1d leg on this non-slice account and stay off until an allocation record or slices exist.
       - uso_trend_1h
+      # 2026-11-11 THURSDAY-PLANNING b1 (Tier-3; OPERATOR, decision doc 21:28-21:41Z, verbatim choice "Put qqq and tlt on the paper floor now;
+      # promote tlt to real money"): qqq_pullback_1h back on the demo floor. QQQ is shared with qqq_trend_long_1d + ml_entry_eq: the split is the
+      # allocation record comms/same_symbol_allocation/qqq-alpaca_paper.json (refreshed). tlt_pullback_1h's real-money promotion is row
+      # PROMOTE-TLT-1H-REAL-MONEY (its Stage-0 record must carry the holdout confirmation first); it stays off general paper (three statuses). ROLLBACK: delete the next line and restore the record's 2-leg form.
+      - qqq_pullback_1h
       # 2026-10-27 DESK-PAPER-ACCOUNTS (Tier-3, PAPER; operator verbatim, chat ~15:58Z: "I do want to have the desk
       # live on the other paper accounts as well, so Alpaca and IB."): the Claude desk leg, scoped to
       # strategies.yaml::claude_desk.account_symbols.alpaca_paper (SPY, QQQ, IWM, GLD, TLT). This account has no slice

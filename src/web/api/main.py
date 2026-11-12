@@ -15,6 +15,8 @@ from src.web.api.routers import accounts as accounts_router
 from src.web.api.routers import alerts as alerts_router
 from src.web.api.routers import wake_toggles as wake_toggles_router
 from src.web.api.routers import allocator as allocator_router
+from src.web.api.routers import brackets_history as brackets_history_router
+from src.web.api.routers import performance_categories as performance_categories_router
 from src.web.api.routers import attribution as attribution_router
 from src.web.api.routers import auth as auth_router
 from src.web.api.routers import auth_google as auth_google_router
@@ -29,6 +31,7 @@ from src.web.api.routers import research_runs as research_runs_router
 from src.web.api.routers import exit_interval as exit_interval_router
 from src.web.api.routers import exit_ladder as exit_ladder_router
 from src.web.api.routers import exposure as exposure_router
+from src.web.api.routers import feature_impact as feature_impact_router
 from src.web.api.routers import fc_geometry as fc_geometry_router
 from src.web.api.routers import gpu_spend as gpu_spend_router
 from src.web.api.routers import health_snapshots as health_snapshots_router
@@ -48,6 +51,7 @@ from src.web.api.routers import pnl_history as pnl_history_router
 from src.web.api.routers import prop as prop_router
 from src.web.api.routers import reports as reports_router
 from src.web.api.routers import research_catalog as research_catalog_router
+from src.web.api.routers import catalog_features as catalog_features_router
 from src.web.api.routers import roadmap as roadmap_router
 from src.web.api.routers import runtime_config as runtime_config_router
 from src.web.api.routers import shadow as shadow_router
@@ -59,6 +63,8 @@ from src.web.api.routers import trade_scores as trade_scores_router
 from src.web.api.routers import trades_closed as trades_closed_router
 from src.web.api.routers import training_center as training_center_router
 from src.web.api.routers import work as work_router
+from src.web.api.routers import work_ledger as work_ledger_router
+from src.web.api.routers import work_topics as work_topics_router
 from src.web.api.routers import work_items as work_items_router
 
 # UI-UPGRADE-1-AUTH: the whole-site gate is an APP-LEVEL dependency (so it covers
@@ -133,15 +139,21 @@ app.include_router(fc_geometry_router.router)
 app.include_router(allocator_router.router)
 app.include_router(exit_interval_router.router)
 app.include_router(exposure_router.router)
+app.include_router(feature_impact_router.router)
 app.include_router(pairs_router.router)
 app.include_router(prop_router.router)
+app.include_router(brackets_history_router.router)
+app.include_router(performance_categories_router.router)
 app.include_router(reports_router.router)
 app.include_router(roadmap_router.router)
 app.include_router(research_catalog_router.router)
+app.include_router(catalog_features_router.router)
 app.include_router(runtime_config_router.router)
 app.include_router(learning_router.router)
 app.include_router(market_ws_router.router)
 app.include_router(work_router.router)
+app.include_router(work_ledger_router.router)
+app.include_router(work_topics_router.router)
 app.include_router(work_items_router.router)
 
 

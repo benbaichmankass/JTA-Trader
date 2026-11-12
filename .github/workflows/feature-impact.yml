@@ -1,8 +1,8 @@
 name: feature-impact
 
 # FEATURE-IMPACT-MAP v0 (docs/design/ui-workplan-2026-11.md section 15): the weekly long table of per-feature
-# impact, M1 (model-internal split/gain share) from the committed ml/served + ml/candidates artifacts.
-# Off-VM, no Claude, no network beyond pip: scripts/research/feature_impact.py reads repo files and writes
+# impact, M1 (model-internal split/gain share) from the committed ml/served + ml/candidates artifacts, and M2
+# (model-free rank IC, crypto decision-entry family). Off-VM, no Claude; network: pip + keyless data.binance.vision (M2 only); scripts/research/feature_impact.py reads repo files and writes
 # comms/feature_impact/<run_id>.jsonl + latest.json, landed on main by commit-to-main.
 
 on:
@@ -33,14 +33,18 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install lightgbm (the repo pin; gain shares need it)
-        run: pip install --quiet "lightgbm==4.6.0"
+      - name: Install lightgbm (the repo pin; gain shares need it) + M2 deps (pandas, numpy, requests; requirements.txt floors)
+        # M2 imports these lazily, so a missing one only showed at run time: the 2026-11-11 23:25Z dispatch
+        # failed its self-test on `No module named 'pandas'` and landed nothing (M1 included).
+        run: pip install --quiet "lightgbm==4.6.0" "pandas>=2.0.0" "numpy>=1.24.0" "requests>=2.31.0"
 
       - name: Compute the M1 long table
         run: |
           set -euo pipefail
           python3 scripts/research/feature_impact.py --self-test
-          python3 scripts/research/feature_impact.py --out-dir comms/feature_impact
+          # --m2: model-free rank IC for the crypto decision-entry family (keyless Binance Vision klines, ~5 min).
+          # An M2 failure is recorded in latest.json coverage.m2 and M1 still lands (no halting).
+          python3 scripts/research/feature_impact.py --out-dir comms/feature_impact --m2 --m2-cache "$RUNNER_TEMP/fi_klines"
           { echo '## feature-impact'; echo '```json'; cat comms/feature_impact/latest.json; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Land the run on main

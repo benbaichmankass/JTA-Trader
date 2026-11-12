@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "CI-only fix: feature-impact.yml installs pandas/numpy/requests (requirements.txt floors) that M2 (#24996) imports lazily. The 23:25Z dispatch failed its self-test on 'No module named pandas' and landed nothing; without this the Thursday 05:23Z scheduled run fails the same way (M1 included). No runtime, config or gate change."
+}

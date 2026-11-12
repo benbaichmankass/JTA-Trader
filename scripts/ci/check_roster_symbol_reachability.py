@@ -268,9 +268,12 @@ def findings(accounts: Dict[str, Any], strategies: Dict[str, Any],
                     "detail": f"`{ACCOUNT_SYMBOLS_KEY}` names no symbol of the leg for {name}",
                 })
                 continue
+            # A `pool_scored` leg (row ML-ENTRY-EQ-STRUCT-FULL-POOL) gets its data from its own pool-snapshot refresher and a tick pass for each
+            # symbol holding a package (src/runtime/ml_pool_scoring.py), so the PULL-LIST axis does not apply; the venue axis still does.
+            pool_scored = bool(scfg.get("pool_scored", False))
             for sym in syms:
                 n = _norm(sym)
-                if n not in declared:
+                if n not in declared and not pool_scored:
                     out.append({"kind": "pull_list_stale", "account": name,
                                 "strategy": str(strat), "symbol": n,
                                 "detail": ""})
@@ -399,6 +402,13 @@ def _self_test() -> int:
     kinds8 = sorted(f["kind"] for f in findings(a7, s7, frozenset()))
     check("8 (profiles unreadable -> venue axis silent, other axes still run)",
           kinds8 == ["pull_list_stale"])
+
+    # 8b. A pool_scored leg: no pull_list_stale (its refresher fetches the pool), but an unprofiled symbol is STILL flagged.
+    s8b = {"pool_leg": {"symbols": ["ZZZUSDT", "BTCUSDT"], "pool_scored": True}}
+    a8b = {"x": {"strategies": ["pool_leg"], "symbols": ["ETHUSDT"]}}
+    kinds8b = sorted(f["kind"] for f in findings(a8b, s8b, profiled))
+    check("8b (pool_scored leg -> pull-list axis exempt, venue axis still flags the unprofiled symbol)",
+          kinds8b == ["no_instrument_profile"])
 
     # 9. Normalisation: a case/slash difference is the SAME symbol, not a
     #    finding. Flagging it would send someone to 'fix' a correct pull list.

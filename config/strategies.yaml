@@ -1541,9 +1541,23 @@ strategies:
     max_snapshot_age_h: 4.0
     structure_exit: "pivot=5;sl_only"
     artifact: ml/candidates/ml_entry_eq_v3_struct_ens5/model.json
-    # The tick-cost rollout stage of ml_entry_eq MINUS TQQQ: tqqq_trend_long_1d already owns TQQQ's net position on alpaca_live + its mirror and the account has no
-    # slice support (same-symbol-allocation-guard). The model's tested population is the 173-ETF pool; widening is a later staged step, not a narrowing of the test.
-    symbols: [SPY, QQQ, IWM, TLT, IEF, SLV, USO, GDX, QLD]
+    # FULL POOL (row ML-ENTRY-EQ-STRUCT-FULL-POOL; operator 2026-11-11 ~09:20Z verbatim "regarding Alpaca, yes, we want it to be trading everything it was
+    # trained on."): symbols = the artifact's pool_symbols (173-ETF POOL_RULE, the population RQ-20261107-98e3-06 passed on, pooled) MINUS pool_exclude.
+    # pool_scored: the pool is scored ONCE per decision close from the snapshot (src/runtime/ml_pool_scoring.py) and only symbols with a package get a tick
+    # pass, so 171 symbols cost one batched predict, not 171 pipeline passes per tick (#23619). Pinned: tests/test_ml_entry_eq_full_pool.py.
+    # ROLLBACK to the rollout stage: symbols: [SPY, QQQ, IWM, TLT, IEF, SLV, USO, GDX, QLD] (pool_scored can stay; it is a dispatch mode, not a gate).
+    pool_scored: true
+    pool_exclude:
+      TQQQ: "tqqq_trend_long_1d owns TQQQ's net position on alpaca_live + its mirror; no slice support (same-symbol-allocation-guard)"
+      GLD: "the operator-kept zombie OCO (PI-20261025-ALQWWPXT-0001), as ml_entry / ml_entry_eq"
+    symbols: [
+      AAXJ, ACWI, ACWX, AGG, AMLP, ASHR, BIL, BIV, BKLN, BND, BNDX, BSV, DGRO, DIA, DUST, DVY, EEM, EFA, EFAV, EMB, EMLC, EWC, EWG, EWH, EWJ, EWT,
+      EWU, EWW, EWY, EWZ, EZU, FAS, FB, FDN, FEZ, FLOT, FXI, GDX, GDXJ, GOVT, GUSH, HYG, IAU, IBB, IEF, IEFA, IEI, IEMG, IGIB, IGSB, IGV, IJH, IJR,
+      INDA, INFO, ITB, ITOT, IVE, IVV, IVW, IWB, IWD, IWF, IWM, IWN, IWO, IWR, IXUS, IYR, JDST, JNK, JNUG, JPST, KBE, KRE, KWEB, LABU, LQD, MBB,
+      MCHI, MDY, MINT, MTUM, MUB, NFX, NUGT, OIH, PFF, PSQ, QID, QLD, QQQ, QUAL, RSP, SCHB, SCHD, SCHF, SCHX, SCZ, SDOW, SDS, SDY, SH, SHV, SHY, SIX,
+      SJNK, SLV, SMH, SOXL, SOXS, SOXX, SPLV, SPXL, SPXS, SPXU, SPY, SPYG, SQQQ, SSO, SVXY, TECL, TIP, TLT, TNA, TZA, UCO, UDOW, ULTI, UN, UNG, UPRO,
+      USMV, USO, UVXY, VB, VCIT, VCSH, VEA, VEU, VGK, VGSH, VGT, VIG, VIXY, VNQ, VO, VOO, VT, VTI, VTV, VUG, VWO, VXUS, VYM, XBI, XHB, XLB, XLC, XLE,
+      XLF, XLI, XLK, XLP, XLRE, XLU, XLV, XLY, XME, XOP, XRT]
     atr_period: 14
     atr_stop_mult: 2.0
     tp_r: 1.5                  # 3 ATR on a 2 ATR stop, the arm that was scored
@@ -1626,8 +1640,7 @@ strategies:
                              # trend_donchian_sol_4h.json). bybit_1 only (paper);
                              # confirmed not on any real-money roster.
     timeframe: "4h"
-    # STRUCTURE-EXITS-DEFAULT (Tier 3, manager 2026-11-03 on the operator rule "the new default until we prove something else works better"): pivot 5 = middle arm of the measured S3/S5/S8 grid. Revert: delete this line.
-    structure_exit: "pivot=5"
+    # STRUCTURE-EXITS-DEFAULT OFF (Tier 3, 2026-11-11): structure_exit "pivot=5" removed on operator decision (chat 2026-11-11, verbatim: "For Velo Trade, yeah, let's go with one, and you can turn that off like the other strategies"; row PROP-VELOTRADE-TP-MISMATCH). Why: its structure TP (74.19) sits beyond the 9.9% venue cap, so prop_trail re-amended velotrade_1's resting TP to ref*0.901 about every 5 min (612 amendments on one ticket). Revert: re-add structure_exit: "pivot=5".
     symbols:
       - SOLUSDT
     donchian: 20
@@ -1765,7 +1778,7 @@ strategies:
                              # confirmed not on any real-money roster.
     timeframe: "4h"
     # STRUCTURE-EXITS-DEFAULT (Tier 3, manager 2026-11-03 on the operator rule "the new default until we prove something else works better"): pivot 5 = middle arm of the measured S3/S5/S8 grid. Revert: delete this line.
-    structure_exit: "pivot=5"
+    # STRUCTURE-EXITS OFF (Tier 3, 2026-11-11, Thursday-planning b4; OPERATOR verbatim "Turn it off on the remaining legs", note "We need to keep iterating on this idea though"): structure_exit "pivot=5" removed. Evidence: the structure exit cost money on 16 of 17 tested legs (~+587R summed if off); this leg: RQ-20261105-5e05-07 read (RULE-STRUCTURE-EXITS-REVERSE-V1). Iteration unit: row STRUCTURE-EXIT-ITERATE. Revert: re-add structure_exit: "pivot=5".
     symbols:
       - ADAUSDT
     donchian: 20
@@ -1799,7 +1812,7 @@ strategies:
                              # (paper); confirmed not on any real-money roster.
     timeframe: "4h"
     # STRUCTURE-EXITS-DEFAULT (Tier 3, manager 2026-11-03 on the operator rule "the new default until we prove something else works better"): pivot 5 = middle arm of the measured S3/S5/S8 grid. Revert: delete this line.
-    structure_exit: "pivot=5"
+    # STRUCTURE-EXITS OFF (Tier 3, 2026-11-11, Thursday-planning b4; OPERATOR verbatim "Turn it off on the remaining legs", note "We need to keep iterating on this idea though"): structure_exit "pivot=5" removed. Evidence: the structure exit cost money on 16 of 17 tested legs (~+587R summed if off); this leg: RQ-20261105-5e05-08 read (RULE-STRUCTURE-EXITS-REVERSE-V1). Iteration unit: row STRUCTURE-EXIT-ITERATE. Revert: re-add structure_exit: "pivot=5".
     symbols:
       - AVAXUSDT
     donchian: 20
@@ -1929,7 +1942,7 @@ strategies:
                              # stays a separate Tier-3 gate.
     timeframe: "1d"          # the daily timeframe the WS-A metals edge lives on.
     # STRUCTURE-EXITS-DEFAULT (Tier 3, manager 2026-11-03 on the operator rule "the new default until we prove something else works better"): pivot 5 = middle arm of the measured S3/S5/S8 grid. Revert: delete this line.
-    structure_exit: "pivot=5"
+    # STRUCTURE-EXITS OFF (Tier 3, 2026-11-11, Thursday-planning b4; OPERATOR verbatim "Turn it off on the remaining legs", note "We need to keep iterating on this idea though"): structure_exit "pivot=5" removed. Evidence: the structure exit cost money on 16 of 17 tested legs (~+587R summed if off); this leg: RQ-20261105-5e05-13 read (RULE-STRUCTURE-EXITS-REVERSE-V1). Iteration unit: row STRUCTURE-EXIT-ITERATE. Revert: re-add structure_exit: "pivot=5".
     symbols:
       - MGC                  # Micro Gold future (COMEX/IBKR). NOT BTCUSDT.
     # Strategy params — the WS-A-validated config, set explicitly (do not rely on
@@ -1969,7 +1982,7 @@ strategies:
                              # stays a separate Tier-3 gate.
     timeframe: "1d"          # the daily timeframe the WS-A metals edge lives on.
     # STRUCTURE-EXITS-DEFAULT (Tier 3, manager 2026-11-03 on the operator rule "the new default until we prove something else works better"): pivot 5 = middle arm of the measured S3/S5/S8 grid. Revert: delete this line.
-    structure_exit: "pivot=5"
+    # STRUCTURE-EXITS OFF (Tier 3, 2026-11-11, Thursday-planning b4; OPERATOR verbatim "Turn it off on the remaining legs", note "We need to keep iterating on this idea though"): structure_exit "pivot=5" removed. Evidence: the structure exit cost money on 16 of 17 tested legs (~+587R summed if off); this leg: not in the 17-leg 5e05 test; turned off with the family. Iteration unit: row STRUCTURE-EXIT-ITERATE. Revert: re-add structure_exit: "pivot=5".
     symbols:
       - MHG                  # Micro Copper future (COMEX/IBKR). NOT BTCUSDT.
     # Strategy params — the WS-A-validated config, set explicitly (do not rely on
@@ -2366,7 +2379,7 @@ strategies:
     execution: live
     timeframe: "1d"
     # STRUCTURE-EXITS-DEFAULT (Tier 3, manager 2026-11-03 on the operator rule "the new default until we prove something else works better"): pivot 5 = middle arm of the measured S3/S5/S8 grid. Revert: delete this line.
-    structure_exit: "pivot=5"
+    # STRUCTURE-EXITS OFF (Tier 3, 2026-11-11, Thursday-planning b4; OPERATOR verbatim "Turn it off on the remaining legs", note "We need to keep iterating on this idea though"): structure_exit "pivot=5" removed. Evidence: the structure exit cost money on 16 of 17 tested legs (~+587R summed if off); this leg: RQ-20261105-5e05-14 read (RULE-STRUCTURE-EXITS-REVERSE-V1). Iteration unit: row STRUCTURE-EXIT-ITERATE. Revert: re-add structure_exit: "pivot=5".
     symbols:
       - TLT
     trend_lookback: 40
@@ -2409,7 +2422,7 @@ strategies:
     execution: live
     timeframe: "1d"
     # STRUCTURE-EXITS-DEFAULT (Tier 3, manager 2026-11-03 on the operator rule "the new default until we prove something else works better"): pivot 5 = middle arm of the measured S3/S5/S8 grid. Revert: delete this line.
-    structure_exit: "pivot=5"
+    # STRUCTURE-EXITS OFF (Tier 3, 2026-11-11, Thursday-planning b4; OPERATOR verbatim "Turn it off on the remaining legs", note "We need to keep iterating on this idea though"): structure_exit "pivot=5" removed. Evidence: the structure exit cost money on 16 of 17 tested legs (~+587R summed if off); this leg: RQ-20261105-5e05-15 read (RULE-STRUCTURE-EXITS-REVERSE-V1). Iteration unit: row STRUCTURE-EXIT-ITERATE. Revert: re-add structure_exit: "pivot=5".
     symbols:
       - IEF
     trend_lookback: 30
@@ -2764,7 +2777,7 @@ strategies:
     execution: live
     timeframe: "1d"
     # STRUCTURE-EXITS-DEFAULT (Tier 3, manager 2026-11-03 on the operator rule "the new default until we prove something else works better"): pivot 5 = middle arm of the measured S3/S5/S8 grid. Revert: delete this line.
-    structure_exit: "pivot=5"
+    # STRUCTURE-EXITS OFF (Tier 3, 2026-11-11, Thursday-planning b4; OPERATOR verbatim "Turn it off on the remaining legs", note "We need to keep iterating on this idea though"): structure_exit "pivot=5" removed. Evidence: the structure exit cost money on 16 of 17 tested legs (~+587R summed if off); this leg: RQ-20261105-5e05-16 read (RULE-STRUCTURE-EXITS-REVERSE-V1). Iteration unit: row STRUCTURE-EXIT-ITERATE. Revert: re-add structure_exit: "pivot=5".
     symbols:
       - SLV
     trend_lookback: 40
@@ -3172,7 +3185,7 @@ strategies:
                              # ROLLBACK: delete this line (reverts to two-sided).
     timeframe: "2h"          # served as Bybit 120m via CCXT.
     # STRUCTURE-EXITS-DEFAULT (Tier 3, manager 2026-11-03 on the operator rule "the new default until we prove something else works better"): pivot 5 = middle arm of the measured S3/S5/S8 grid. Revert: delete this line.
-    structure_exit: "pivot=5"
+    # STRUCTURE-EXITS OFF (Tier 3, 2026-11-11, Thursday-planning b4; OPERATOR verbatim "Turn it off on the remaining legs", note "We need to keep iterating on this idea though"): structure_exit "pivot=5" removed. Evidence: the structure exit cost money on 16 of 17 tested legs (~+587R summed if off); this leg: RQ-20261105-5e05-11 read (RULE-STRUCTURE-EXITS-REVERSE-V1). Iteration unit: row STRUCTURE-EXIT-ITERATE. Revert: re-add structure_exit: "pivot=5".
     symbols:
       - SOLUSDT              # Bybit USDT linear perp.
     # Params — eth_pullback_2h's exact (== live BTC htf_pullback_trend_2h) values.

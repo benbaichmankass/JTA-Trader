@@ -223,9 +223,20 @@ def _append(path: Path, doc: Dict[str, Any]) -> None:
         fh.write(json.dumps(doc, default=str, separators=(",", ":")) + "\n")
 
 
+def _offer(row: Dict[str, Any], vm_verdict: Optional[str]) -> Dict[str, Any]:
+    """TRADE-ACTION-DIRECT-PATH phase 1: a row that needs the operator -> ONE Telegram ask with Approve / Reject
+    (``src/runtime/trade_approvals.py``). Never raises."""
+    try:
+        from src.runtime import trade_approvals
+        return trade_approvals.offer(row, vm_verdict=vm_verdict)
+    except Exception as exc:  # noqa: BLE001
+        return {"state": "error", "detail": f"{type(exc).__name__}: {exc}"[:200]}
+
+
 def run_pass(git: Git = _git, dispatch: Callable[[str, str], Dict[str, Any]] = _dispatch,
              now_fn: Callable[[], datetime] = _now, logs: Optional[Path] = None,
-             alert: Callable[[str], bool] = _alert) -> Dict[str, Any]:
+             alert: Callable[[str], bool] = _alert,
+             offer: Callable[[Dict[str, Any], Optional[str]], Dict[str, Any]] = _offer) -> Dict[str, Any]:
     """One fetch -> zero or more dispatches. Returns the status it wrote."""
     d = logs or log_dir()
     state_path, status_path, log_path = d / "rows_watch_state.json", d / "rows_watch_status.json", d / "rows_watch.jsonl"
@@ -298,6 +309,11 @@ def run_pass(git: Git = _git, dispatch: Callable[[str, str], Dict[str, Any]] = _
                                            f"level {(row.get('recommendation') or {}).get('level')} not executed")
         elif why:
             rec.update(verdict="not_dispatchable", detail=why)
+        if why:
+            # Not executed by the VM: if it needs the operator, ask with a one-tap Approve (phase 1).
+            ap = offer(row, rec.get("verdict"))
+            if ap.get("state") not in (None, "not_offered"):
+                rec["approval"] = ap
         else:
             res = dispatch(rid, tip)
             done = now_fn()
@@ -468,13 +484,58 @@ def run_directed_pass(git: Git = _git, vm_pass: Callable[[str], Dict[str, Any]] 
     return status
 
 
+SPOOL_TICK_S = 2
+
+
+def _spool_files() -> Tuple[str, ...]:
+    try:
+        from src.runtime import trade_approvals
+        d = trade_approvals.spool_root() / directed_actions.RECORDS_DIR
+        return tuple(sorted(p.name for p in d.glob("*.json"))) if d.is_dir() else ()
+    except Exception:  # noqa: BLE001
+        return ()
+
+
+def _spool_pass() -> Dict[str, Any]:
+    """Run the operator-approval spool pass (directed_action.py spool-pass) as a subprocess. Never raises."""
+    try:
+        r = subprocess.run([sys.executable, str(DIRECTED), "spool-pass"],
+                           cwd=ROOT, capture_output=True, text=True, timeout=DISPATCH_TIMEOUT_S)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {"exit": 3, "detail": f"spool pass did not run: {type(exc).__name__}"}
+    return {"exit": r.returncode}
+
+
+def spool_due(files: Tuple[str, ...], last_files: Tuple[str, ...], since_last_s: float) -> bool:
+    """A spool pass is due when a NEW approval landed, or records are still waiting (a retry / venue deferral)
+    and a full directed poll interval has passed (so a pending record does not respawn a pass every tick)."""
+    if not files:
+        return False
+    return files != last_files or since_last_s >= directed_actions.POLL_S
+
+
 def _directed_loop() -> None:
+    """Every SPOOL_TICK_S: the local operator-approval spool (TRADE-ACTION-DIRECT-PATH phase 1, cheap stat);
+    every directed_actions.POLL_S: the directed/actions git fetch. Sequential in ONE thread, so the two never
+    write the directed state file at the same time."""
+    last_git = 0.0
+    last_spool, last_files = 0.0, ()
     while True:
-        try:
-            run_directed_pass()
-        except Exception:  # noqa: BLE001 — contained; the next pass tries again (no halting)
-            logger.warning("rows-watch: run_directed_pass failed", exc_info=True)
-        time.sleep(directed_actions.POLL_S)
+        now = time.monotonic()
+        files = _spool_files()
+        if spool_due(files, last_files, now - last_spool):
+            try:
+                _spool_pass()
+            except Exception:  # noqa: BLE001 — contained (no halting)
+                logger.warning("rows-watch: spool pass failed", exc_info=True)
+            last_spool, last_files = time.monotonic(), _spool_files()
+        if now - last_git >= directed_actions.POLL_S:
+            try:
+                run_directed_pass()
+            except Exception:  # noqa: BLE001 — contained; the next pass tries again (no halting)
+                logger.warning("rows-watch: run_directed_pass failed", exc_info=True)
+            last_git = time.monotonic()
+        time.sleep(SPOOL_TICK_S)
 
 
 def _loop() -> None:

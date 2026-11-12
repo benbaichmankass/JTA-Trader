@@ -245,7 +245,7 @@ def test_exchange_rejected_row_records_the_sent_qty(env, monkeypatch):
     assert row[0]["extra_notes"]["risk_sized_qty"] > sent[0]
 
 
-def test_sub_min_notional_delta_is_noop_not_a_venue_reject(env, monkeypatch):
+def test_sub_min_notional_top_up_sizes_up_not_a_venue_reject(env, monkeypatch):
     """The 6544 shape: a delta above the 0.1 XRP lot but worth < $5."""
     calls, rej, alerts = [], [], []
     _patch(monkeypatch, calls=calls, rejections=rej, alerts=alerts)
@@ -261,7 +261,12 @@ def test_sub_min_notional_delta_is_noop_not_a_venue_reject(env, monkeypatch):
                   strategy_name="trend_donchian_xrp_4h")
     results = _run(env)
     by = {r["name"]: r for r in results}
-    assert by["bybit_2"]["error"] == "intent_sub_min_notional_delta"
-    assert "bybit_2" not in [c[0] for c in calls]
-    # ...and the mirror follows the primary's noop instead of diverging.
-    assert by["bybit_portfolio"]["error"].startswith("mirror_primary_not_placed")
+    # Operator popup 2026-11-10 "Size up top-ups too" (MIRROR-QTY-DIVERGE): the
+    # 0.4 XRP top-up worth < $5 is SIZED UP to the venue's minimum order value
+    # (a legal order), never sent as a venue reject and no longer dropped.
+    sent = [q for name, q in calls if name == "bybit_2"]
+    assert len(sent) == 1 and sent[0] > 0.4
+    assert sent[0] * _xrp_short_pkg().entry >= 5.0 - 1e-9
+    assert by["bybit_2"]["error"] in (None, "")
+    # ...and the mirror is not left behind by a primary that did place.
+    assert not str(by["bybit_portfolio"].get("error") or "").startswith("mirror_primary_not_placed")
