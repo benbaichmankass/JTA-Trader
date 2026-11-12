@@ -1,5 +1,7 @@
 {
   "tier": 2,
   "landing": "hold",
-  "why": "Mostly Tier-1 tooling and read paths, but it carries ONE operator-approved writer-side gate (decision: 2026-11-12 operator popup \"Yes: refuse it (Recommended)\"): checklist.py/pipeline.py refuse a NEW or CHANGED blocked/waiting item with no machine-checkable clears_when and no explicit manual:<text>. It also touches Tier-2-by-name paths (config/unblock_watch.yaml, src/runtime/unblock_conditions.py, src/web/api/routers/diag.py: one log_file allowlist entry) and three research unit files (a structured blocked: block; two units closed as consumed). Held for the manager's merge."
+  "why": "Mostly Tier-1 tooling and read paths, but it carries ONE operator-approved writer-side gate (decision: 2026-11-12 operator popup \"Yes: refuse it (Recommended)\"): checklist.py/pipeline.py refuse a NEW or CHANGED blocked/waiting item with no machine-checkable clears_when and no explicit manual:<text>. It also touches Tier-2-by-name paths (config/unblock_watch.yaml, src/runtime/unblock_conditions.py, src/web/api/routers/diag.py: one log_file allowlist entry) and three research unit files (a structured blocked: block; two units closed as consumed). Held for the manager's merge.",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "touches Tier-2 paths (config/unblock_watch.yaml, src/runtime/unblock_conditions.py, src/web/api/routers/diag.py); AM-DEVOPS merges"
 }
