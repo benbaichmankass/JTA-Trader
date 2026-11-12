@@ -395,6 +395,13 @@ def probe_desk_row_missing(now: datetime) -> dict:
                     "detail": f"newest desk packet {pid} is on a bar skipped_by_cadence (scan_wake_every_h {scan_wake_every_h()}): no wake, no row, by design"}
     except Exception:  # noqa: BLE001,S110 — cadence unreadable: fall through to the strict check
         pass
+    try:
+        from src.runtime import wake_toggles as wt  # noqa: PLC0415
+        if not wt.is_on("desk_wake"):  # unreadable state => True => falls through to the strict check
+            return {"status": OK, "read_state": "read",
+                    "detail": f"newest desk packet {pid}: the desk_wake console switch is off (suppressed_by_wake_toggle): no wake, no row, by design"}
+    except Exception:  # noqa: BLE001,S110
+        pass
     if age_min <= DESK_ROW_MISSING_MIN:
         return {"status": OK, "read_state": "read",
                 "detail": f"newest desk packet {pid} is {age_min:.0f} min old, inside the {DESK_ROW_MISSING_MIN} min wake window"}

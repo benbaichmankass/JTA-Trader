@@ -183,6 +183,13 @@ def clean_positions(account_id: str, rows: Any) -> List[Dict[str, Any]]:
             out[-1]["upnl"] = _num(r.get("netpnl"))
             if out[-1]["upnl"] is not None:
                 out[-1]["upnl_basis"] = "net"
+        # PHONE-LIVE-ACCOUNT-FEED (2026-11-11): the venue's own resting SL / TP cells when the row carries them, so a
+        # hand-moved stop is visible to the apply (live_review_apply.venue_prop_stop) and the live-review packet can
+        # compare TP as well as SL. Absent / unparseable stays absent (None) -- never 0, never the ticket's level.
+        for k in ("sl", "tp"):
+            v = _num(r.get(k), signed=False)
+            if v is not None and v > 0:
+                out[-1][k] = v
         if r.get("side_source") in ("journal", "sheet", "row"):
             out[-1]["side_source"] = r["side_source"]
         if r.get("side_source") == "sheet":
