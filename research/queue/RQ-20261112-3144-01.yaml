@@ -3,7 +3,7 @@
 id: RQ-20261112-3144-01
 title: 'ITERATION 2 of ml-tm-action-value (fail): with a SHORT-HORIZON per-action label (the action''s value censored at 12 bars), is the
   per-action advantage predictable out of fold?'
-status: blocked
+status: queued
 cadence: once
 theme: ml_health
 priority: 1
@@ -79,14 +79,6 @@ related:
 - RQ-20261030-c7a1-01
 - RQ-20261029-7294-01
 what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
-blocked_on:
-- kind: work_item
-  ref: TMBENCH-HORIZON-LABEL
-  what: 'tm_bench `--label horizon --horizon N`: label_H as defined in the question (both arms force-closed at bar t+1+N through the same
-    engine replay), plus selfcheck rows: label_H == the full label when N >= the remaining bars; planted corpus passes stage_a_folds, driftless
-    null does not.'
-  clears_when: lands on main with those selfcheck rows passing; then git-mv to research/queue/ with run.command (78fc-04's plus --label horizon
-    --horizon 12), rule unchanged
 intervention_controls:
   not_applicable: an offline Stage-A calibration read; the consumer's own gate applies any action
 ml_consumer:
@@ -100,3 +92,46 @@ ml_consumer:
   - trend_donchian_eth_prop
   - trend_donchian_sol_prop
   book: money
+registration_addendum:
+  at: '2026-11-12T11:55Z'
+  rule_changed: false
+  by: lane ML-AM-NEXT-LIVE (session_01AFoLuKUkUmhzEzkiXTb9tG), per AM-ML 11:33Z
+  note: 'blocked_on TMBENCH-HORIZON-LABEL cleared in the same PR (#25250): tm_bench --label horizon --horizon N (both arms force-closed
+    at bar s+1+N through the same engine replay), selfcheck rows PASS: horizon label == full label when N >= remaining bars (max diff 0),
+    differs at N=2 (45/45 trades, positive control), stage_a_folds at N=12 reads pass on the planted corpus and not on the driftless null.
+    The planted positive control needs the 900-trade corpus (150 per fold); at 300 trades (50 per fold) per-fold CIs were too wide although
+    pooled rho was 0.60. v1 has ~430 trades per fold. Registered rule and H=12 unchanged.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/tm_bench.py
+  - score
+  - --test-corpus
+  - comms/research/RQ-20261030-c7a1-01/41134401720/tm_bench_v1_4t7ondlz/*__paths.jsonl
+  - --rule
+  - stage_a_folds
+  - --feature-block
+  - path_state
+  - --label
+  - horizon
+  - --horizon
+  - '12'
+  - --learners
+  - lgbm_action_value
+  - --checkins
+  - every_bar
+  - --calibration
+  - --folds
+  - '6'
+  - --n-boot
+  - '2000'
+  - --n-perm
+  - '200'
+  - --random-draws
+  - '50'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261112-3144-01
