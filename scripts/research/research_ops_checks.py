@@ -58,7 +58,7 @@ REVIEW_DIR = Path("comms/research/programme_review")
 #: `power.expected_n`) is not computed by any producer yet (row RESEARCH-POWER-CHECK).
 UNPOWERED = {"underpowered", "insufficient_n"}
 MODEL_PROGRAMMES = {"P2", "P6"}
-TRADING_PROGRAMMES = {"P1", "P3", "P4", "P5", "P7"}
+TRADING_PROGRAMMES = {"P1", "P3", "P4", "P5", "P7", "P8"}   # P8 the alpaca_live book (2026-11-11)
 BATCH_RE = re.compile(r"^(RQ-\d{8}-[0-9a-f]{4})-\d+$")
 RANGE_RE = re.compile(r"^(RQ-\d{8}-(?:[0-9a-f]{4}-)?)(\d+)\.\.(\d+)$")
 ID_RE = re.compile(r"^(RQ-\d{8}-[0-9A-Za-z-]+|P\d+-[A-Za-z0-9-]+)$")

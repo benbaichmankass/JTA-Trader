@@ -1,0 +1,10 @@
+[Unit]
+Description=Security watch every 5 min (SSH logins)
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+RandomizedDelaySec=30s
+
+[Install]
+WantedBy=timers.target

@@ -181,7 +181,30 @@ run_test_missing_role_file_is_silent() {
     rm -rf "$tmp"
 }
 
+# ---------------------------------------------------------------------------
+# A masked unit (symlink -> /dev/null) is left alone. Before the fix the
+# installer ran cp + `chmod 0644` through the symlink, which chmods /dev/null
+# itself (VM-DEVNULL-PERM, measured 2026-11-11 on the live VM).
+# ---------------------------------------------------------------------------
+run_test_masked_unit_is_skipped() {
+    local tmp; tmp=$(setup_temp_systemd)
+    local unit="ict-ib-gateway-reset.timer"
+    ln -s /dev/null "$tmp/systemd/$unit"
+    local mode_before; mode_before=$(stat -c %a /dev/null)
+    local out
+    out=$(REPO_DIR="$tmp" SYSTEMD_DIR="$tmp/systemd" bash "$tmp/install.sh" 2>&1 || true)
+    assert_eq "masked unit stays a symlink to /dev/null" \
+        "$(readlink "$tmp/systemd/$unit" 2>&1)" "/dev/null"
+    assert_eq "masked unit is reported as skipped" \
+        "$(echo "$out" | grep -c "skip $unit (masked")" 1
+    assert_eq "masked unit is never copied" \
+        "$(echo "$out" | grep -c "$unit → ")" 0
+    assert_eq "/dev/null mode is untouched" "$(stat -c %a /dev/null)" "$mode_before"
+    rm -rf "$tmp"
+}
+
 run_test_missing_role_file_is_silent
+run_test_masked_unit_is_skipped
 run_test_fresh
 run_test_idempotent
 run_test_refresh_on_change

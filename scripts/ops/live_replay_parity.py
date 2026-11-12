@@ -487,6 +487,13 @@ class Fetcher:
                 return {"rows": rows, "error": None}
             offset += page
 
+    def allocator(self, symbol: str) -> dict:
+        """The per-symbol election record (``/api/bot/allocator/soak``, newest-first, <= 500
+        rows): every tick with >= 2 actionable candidates, its candidates and the executed winner."""
+        d = self.get("/api/bot/allocator/soak", {"symbol": symbol, "limit": 500})
+        return {"rows": d.get("records") or [], "error": d.get("error"),
+                "present": d.get("present", True)}
+
     def journal(self, table: str, stop_before: float, time_keys: tuple[str, ...],
                 page: int = 500, max_pages: int = 40) -> dict:
         rows: list = []
@@ -508,7 +515,7 @@ def fetch_bundle(f: Fetcher, legs: list[Leg], since: float, until: float) -> dic
     b: dict = {"fetched_at": iso(datetime.now(timezone.utc).timestamp()),
                "since": iso(since), "until": iso(until),
                "candles": {}, "signals": {}, "order_packages": None, "trades": None,
-               "errors": []}
+               "allocator": {}, "errors": []}
     need = set()
     for lg in legs:
         if lg.skip_reason:
@@ -531,6 +538,13 @@ def fetch_bundle(f: Fetcher, legs: list[Leg], since: float, until: float) -> dic
             b["signals"][lg.name] = f.audit(lg.name, s_since, iso(audit_until))
         except Exception as exc:  # noqa: BLE001
             b["signals"][lg.name] = {"rows": [], "error": f"fetch_failed: {exc}"}
+    # the per-symbol election: a leg that LOST it has no package by design (PI-20261111-LRP-C5F97202)
+    for sym in sorted({lg.symbol for lg in legs if not lg.skip_reason}):
+        try:
+            b["allocator"][sym] = f.allocator(sym) if hasattr(f, "allocator") else \
+                {"rows": [], "error": "fetcher_has_no_allocator_read"}
+        except Exception as exc:  # noqa: BLE001 — recorded, never read as "no election"
+            b["allocator"][sym] = {"rows": [], "error": f"fetch_failed: {exc}"}
     for table, keys in (("order_packages", ("updated_at", "created_at")),
                         ("trades", ("timestamp", "created_at"))):
         try:
@@ -1119,6 +1133,24 @@ def _none_windows(cache: dict) -> list[str]:
                   and {v["side"] for v in vs} == {"none"})
 
 
+def _lost_election(leg: Leg, bundle: dict, t0: float, t1: float) -> dict | None:
+    """The allocator-soak election row in [t0-120, t1] on this leg's symbol where this leg was a
+    candidate and another strategy was executed, or None (no such row, or the read failed)."""
+    rows = ((bundle.get("allocator") or {}).get(leg.symbol) or {}).get("rows") or []
+    for r in sorted(rows, key=lambda x: to_epoch(x.get("logged_at_utc")) or 0):
+        t = to_epoch(r.get("logged_at_utc"))
+        if t is None or not (t0 - 120 <= t <= t1):
+            continue
+        cands = r.get("candidates") or []
+        mine = next((c for c in cands if c.get("strategy_id") == leg.name), None)
+        winner = r.get("executed_strategy_id")
+        if mine is not None and winner and winner != leg.name:
+            return {"t": iso(t), "winner": winner, "winner_side": r.get("executed_side"),
+                    "leg_side": mine.get("side"), "leg_confidence": mine.get("confidence"),
+                    "n_candidates": r.get("n_candidates") or len(cands)}
+    return None
+
+
 def _downstream(leg: Leg, bundle: dict, signal_evals: list[EvalRow], b_end: float,
                 events_between, *, packages_override: list[dict] | None = None) -> dict:
     t0 = signal_evals[0].t
@@ -1132,6 +1164,13 @@ def _downstream(leg: Leg, bundle: dict, signal_evals: list[EvalRow], b_end: floa
     res: dict = {"class": None, "packages": [p.get("order_package_id") for p in pkgs],
                  "gates": sorted({g["event"] for g in gates})}
     if not pkgs:
+        lost = _lost_election(leg, bundle, t0, t1)
+        if lost:
+            # a NAMED outcome: another leg's intent won this symbol's election (by design,
+            # src/runtime/intents.py aggregate_intents), so this leg has no package of its own
+            res["gates"].append(f"lost_election ({lost['winner']} {lost['winner_side']})")
+            res["election"] = lost
+            return res
         # Until 2026-09-30 the open-package gate wrote no audit row (pipeline.py
         # "_monocle_gate"), so read the gate's own input instead: a package of
         # this leg that was open at the first signal explains the block.

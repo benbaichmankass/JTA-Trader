@@ -1,0 +1,1411 @@
+{
+ "schema_version": 1,
+ "research_unit": "RQ-20261112-3c8f-02",
+ "read_state": "measured",
+ "verdict": "fail",
+ "note": "FAIL: L: net_r/trade 0.0234 beats the baseline's 0.017 by 0.0064 < the 0.05 materiality bar",
+ "n": 3069,
+ "decision_rule": {
+  "id": "RULE-RQ202611123c8f02",
+  "registered_at": "2026-11-12",
+  "registered_before_run": true
+ },
+ "population": {
+  "n": 3069,
+  "description": "frozen IBS arms C/L on SPY,QQQ,IWM,DIA,TLT,IEF,GLD,SLV,GDX 1d 2010-01-01..2020-05-29, yfinance, fee 0 + slippage 5 bps rt, no funding"
+ },
+ "measurement": {
+  "unit": "RULE-RQ202611123c8f02",
+  "harness": "scripts/research/ibs_reversion_stage0.py",
+  "verdict": "fail",
+  "read_state": "measured",
+  "note": "FAIL: L: net_r/trade 0.0234 beats the baseline's 0.017 by 0.0064 < the 0.05 materiality bar",
+  "population": {
+   "symbols": [
+    "SPY",
+    "QQQ",
+    "IWM",
+    "DIA",
+    "TLT",
+    "IEF",
+    "GLD",
+    "SLV",
+    "GDX"
+   ],
+   "timeframe": "1d",
+   "start": "2010-01-01",
+   "end": "2020-05-29"
+  },
+  "thresholds": {
+   "n_floor": 39,
+   "pooled_n_floor": 39,
+   "folds": 6,
+   "fold_majority": 4,
+   "breadth_frac": 0.5,
+   "min_powered_cells": 2,
+   "baseline": "C",
+   "delta_r_per_trade": 0.05
+  },
+  "arms": {
+   "C": {
+    "cfg": {
+     "side": "long",
+     "ibs_lo": 1.01,
+     "ibs_hi": 0.8,
+     "trend_filter": 0,
+     "max_hold": 3,
+     "stop_atr": 2.0
+    },
+    "cells": {
+     "SPY": {
+      "state": "measured",
+      "n": 865,
+      "net_r": 36.6948,
+      "net_r_per_trade": 0.0424,
+      "gross_r": 59.2167,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2010-01-04 00:00:00+00:00",
+        "end": "2011-09-29 00:00:00+00:00",
+        "trades": 137,
+        "net_r": -1.4992
+       },
+       {
+        "fold": 2,
+        "start": "2011-09-29 00:00:00+00:00",
+        "end": "2013-06-23 00:00:00+00:00",
+        "trades": 146,
+        "net_r": 10.422
+       },
+       {
+        "fold": 3,
+        "start": "2013-06-23 00:00:00+00:00",
+        "end": "2015-03-18 00:00:00+00:00",
+        "trades": 151,
+        "net_r": 9.5687
+       },
+       {
+        "fold": 4,
+        "start": "2015-03-18 00:00:00+00:00",
+        "end": "2016-12-10 00:00:00+00:00",
+        "trades": 143,
+        "net_r": 2.9333
+       },
+       {
+        "fold": 5,
+        "start": "2016-12-10 00:00:00+00:00",
+        "end": "2018-09-04 00:00:00+00:00",
+        "trades": 145,
+        "net_r": 11.9585
+       },
+       {
+        "fold": 6,
+        "start": "2018-09-04 00:00:00+00:00",
+        "end": "2020-05-29 00:00:00+00:00",
+        "trades": 143,
+        "net_r": 3.3115
+       }
+      ],
+      "folds_pos": 5,
+      "t_one_sided_p": 0.011391148537853968,
+      "mean_bars_held": 2.012,
+      "by_outcome": {
+       "ibs_exit": 580,
+       "max_hold": 187,
+       "stop": 86,
+       "stop_gap": 12
+      },
+      "series_cut": null,
+      "grade": "pass"
+     },
+     "QQQ": {
+      "state": "measured",
+      "n": 862,
+      "net_r": 40.5148,
+      "net_r_per_trade": 0.047,
+      "gross_r": 58.3051,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2010-01-04 00:00:00+00:00",
+        "end": "2011-09-29 00:00:00+00:00",
+        "trades": 143,
+        "net_r": 1.1312
+       },
+       {
+        "fold": 2,
+        "start": "2011-09-29 00:00:00+00:00",
+        "end": "2013-06-23 00:00:00+00:00",
+        "trades": 140,
+        "net_r": 7.4485
+       },
+       {
+        "fold": 3,
+        "start": "2013-06-23 00:00:00+00:00",
+        "end": "2015-03-18 00:00:00+00:00",
+        "trades": 146,
+        "net_r": 9.4579
+       },
+       {
+        "fold": 4,
+        "start": "2015-03-18 00:00:00+00:00",
+        "end": "2016-12-10 00:00:00+00:00",
+        "trades": 143,
+        "net_r": 1.105
+       },
+       {
+        "fold": 5,
+        "start": "2016-12-10 00:00:00+00:00",
+        "end": "2018-09-04 00:00:00+00:00",
+        "trades": 146,
+        "net_r": 16.1036
+       },
+       {
+        "fold": 6,
+        "start": "2018-09-04 00:00:00+00:00",
+        "end": "2020-05-29 00:00:00+00:00",
+        "trades": 144,
+        "net_r": 5.2685
+       }
+      ],
+      "folds_pos": 6,
+      "t_one_sided_p": 0.004802061450203499,
+      "mean_bars_held": 2.022,
+      "by_outcome": {
+       "ibs_exit": 570,
+       "max_hold": 199,
+       "stop": 76,
+       "stop_gap": 17
+      },
+      "series_cut": null,
+      "grade": "pass"
+     },
+     "IWM": {
+      "state": "measured",
+      "n": 844,
+      "net_r": 1.7677,
+      "net_r_per_trade": 0.0021,
+      "gross_r": 16.5135,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2010-01-04 00:00:00+00:00",
+        "end": "2011-09-29 00:00:00+00:00",
+        "trades": 136,
+        "net_r": -6.4918
+       },
+       {
+        "fold": 2,
+        "start": "2011-09-29 00:00:00+00:00",
+        "end": "2013-06-23 00:00:00+00:00",
+        "trades": 142,
+        "net_r": 8.963
+       },
+       {
+        "fold": 3,
+        "start": "2013-06-23 00:00:00+00:00",
+        "end": "2015-03-18 00:00:00+00:00",
+        "trades": 145,
+        "net_r": 3.2959
+       },
+       {
+        "fold": 4,
+        "start": "2015-03-18 00:00:00+00:00",
+        "end": "2016-12-10 00:00:00+00:00",
+        "trades": 143,
+        "net_r": -7.9789
+       },
+       {
+        "fold": 5,
+        "start": "2016-12-10 00:00:00+00:00",
+        "end": "2018-09-04 00:00:00+00:00",
+        "trades": 141,
+        "net_r": 5.2043
+       },
+       {
+        "fold": 6,
+        "start": "2018-09-04 00:00:00+00:00",
+        "end": "2020-05-29 00:00:00+00:00",
+        "trades": 137,
+        "net_r": -1.2249
+       }
+      ],
+      "folds_pos": 3,
+      "t_one_sided_p": 0.4543275079430882,
+      "mean_bars_held": 2.086,
+      "by_outcome": {
+       "ibs_exit": 525,
+       "max_hold": 216,
+       "stop": 92,
+       "stop_gap": 11
+      },
+      "series_cut": null,
+      "grade": "fail"
+     },
+     "DIA": {
+      "state": "measured",
+      "n": 871,
+      "net_r": 23.6868,
+      "net_r_per_trade": 0.0272,
+      "gross_r": 47.3292,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2010-01-04 00:00:00+00:00",
+        "end": "2011-09-29 00:00:00+00:00",
+        "trades": 142,
+        "net_r": -2.588
+       },
+       {
+        "fold": 2,
+        "start": "2011-09-29 00:00:00+00:00",
+        "end": "2013-06-23 00:00:00+00:00",
+        "trades": 144,
+        "net_r": 3.3758
+       },
+       {
+        "fold": 3,
+        "start": "2013-06-23 00:00:00+00:00",
+        "end": "2015-03-18 00:00:00+00:00",
+        "trades": 148,
+        "net_r": 9.9351
+       },
+       {
+        "fold": 4,
+        "start": "2015-03-18 00:00:00+00:00",
+        "end": "2016-12-10 00:00:00+00:00",
+        "trades": 142,
+        "net_r": 3.8649
+       },
+       {
+        "fold": 5,
+        "start": "2016-12-10 00:00:00+00:00",
+        "end": "2018-09-04 00:00:00+00:00",
+        "trades": 149,
+        "net_r": 11.651
+       },
+       {
+        "fold": 6,
+        "start": "2018-09-04 00:00:00+00:00",
+        "end": "2020-05-29 00:00:00+00:00",
+        "trades": 146,
+        "net_r": -2.5519
+       }
+      ],
+      "folds_pos": 4,
+      "t_one_sided_p": 0.07258806904352039,
+      "mean_bars_held": 1.991,
+      "by_outcome": {
+       "ibs_exit": 570,
+       "max_hold": 203,
+       "stop": 81,
+       "stop_gap": 17
+      },
+      "series_cut": null,
+      "grade": "pass"
+     },
+     "TLT": {
+      "state": "measured",
+      "n": 864,
+      "net_r": 28.4523,
+      "net_r_per_trade": 0.0329,
+      "gross_r": 50.5107,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2010-01-04 00:00:00+00:00",
+        "end": "2011-09-29 00:00:00+00:00",
+        "trades": 140,
+        "net_r": 5.6702
+       },
+       {
+        "fold": 2,
+        "start": "2011-09-29 00:00:00+00:00",
+        "end": "2013-06-23 00:00:00+00:00",
+        "trades": 145,
+        "net_r": -0.3681
+       },
+       {
+        "fold": 3,
+        "start": "2013-06-23 00:00:00+00:00",
+        "end": "2015-03-18 00:00:00+00:00",
+        "trades": 145,
+        "net_r": 7.4527
+       },
+       {
+        "fold": 4,
+        "start": "2015-03-18 00:00:00+00:00",
+        "end": "2016-12-10 00:00:00+00:00",
+        "trades": 141,
+        "net_r": 2.8907
+       },
+       {
+        "fold": 5,
+        "start": "2016-12-10 00:00:00+00:00",
+        "end": "2018-09-04 00:00:00+00:00",
+        "trades": 147,
+        "net_r": 2.5205
+       },
+       {
+        "fold": 6,
+        "start": "2018-09-04 00:00:00+00:00",
+        "end": "2020-05-29 00:00:00+00:00",
+        "trades": 146,
+        "net_r": 10.2863
+       }
+      ],
+      "folds_pos": 5,
+      "t_one_sided_p": 0.037759273156722055,
+      "mean_bars_held": 2.015,
+      "by_outcome": {
+       "ibs_exit": 595,
+       "max_hold": 173,
+       "stop": 62,
+       "stop_gap": 34
+      },
+      "series_cut": null,
+      "grade": "pass"
+     },
+     "IEF": {
+      "state": "measured",
+      "n": 867,
+      "net_r": -11.8673,
+      "net_r_per_trade": -0.0137,
+      "gross_r": 39.4053,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2010-01-04 00:00:00+00:00",
+        "end": "2011-09-29 00:00:00+00:00",
+        "trades": 138,
+        "net_r": 2.5879
+       },
+       {
+        "fold": 2,
+        "start": "2011-09-29 00:00:00+00:00",
+        "end": "2013-06-23 00:00:00+00:00",
+        "trades": 144,
+        "net_r": -8.7109
+       },
+       {
+        "fold": 3,
+        "start": "2013-06-23 00:00:00+00:00",
+        "end": "2015-03-18 00:00:00+00:00",
+        "trades": 144,
+        "net_r": -2.2319
+       },
+       {
+        "fold": 4,
+        "start": "2015-03-18 00:00:00+00:00",
+        "end": "2016-12-10 00:00:00+00:00",
+        "trades": 145,
+        "net_r": -5.8958
+       },
+       {
+        "fold": 5,
+        "start": "2016-12-10 00:00:00+00:00",
+        "end": "2018-09-04 00:00:00+00:00",
+        "trades": 147,
+        "net_r": -5.8774
+       },
+       {
+        "fold": 6,
+        "start": "2018-09-04 00:00:00+00:00",
+        "end": "2020-05-29 00:00:00+00:00",
+        "trades": 149,
+        "net_r": 8.2608
+       }
+      ],
+      "folds_pos": 2,
+      "t_one_sided_p": 0.765285699083365,
+      "mean_bars_held": 2.005,
+      "by_outcome": {
+       "ibs_exit": 586,
+       "max_hold": 175,
+       "stop": 68,
+       "stop_gap": 38
+      },
+      "series_cut": null,
+      "grade": "fail"
+     },
+     "GLD": {
+      "state": "measured",
+      "n": 844,
+      "net_r": -4.6331,
+      "net_r_per_trade": -0.0055,
+      "gross_r": 15.515,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2010-01-04 00:00:00+00:00",
+        "end": "2011-09-29 00:00:00+00:00",
+        "trades": 141,
+        "net_r": 14.0425
+       },
+       {
+        "fold": 2,
+        "start": "2011-09-29 00:00:00+00:00",
+        "end": "2013-06-23 00:00:00+00:00",
+        "trades": 141,
+        "net_r": -11.3182
+       },
+       {
+        "fold": 3,
+        "start": "2013-06-23 00:00:00+00:00",
+        "end": "2015-03-18 00:00:00+00:00",
+        "trades": 137,
+        "net_r": -10.6578
+       },
+       {
+        "fold": 4,
+        "start": "2015-03-18 00:00:00+00:00",
+        "end": "2016-12-10 00:00:00+00:00",
+        "trades": 137,
+        "net_r": -4.3349
+       },
+       {
+        "fold": 5,
+        "start": "2016-12-10 00:00:00+00:00",
+        "end": "2018-09-04 00:00:00+00:00",
+        "trades": 142,
+        "net_r": -3.0382
+       },
+       {
+        "fold": 6,
+        "start": "2018-09-04 00:00:00+00:00",
+        "end": "2020-05-29 00:00:00+00:00",
+        "trades": 146,
+        "net_r": 10.6734
+       }
+      ],
+      "folds_pos": 2,
+      "t_one_sided_p": 0.6086520379404605,
+      "mean_bars_held": 2.086,
+      "by_outcome": {
+       "ibs_exit": 536,
+       "max_hold": 207,
+       "stop": 73,
+       "stop_gap": 28
+      },
+      "series_cut": null,
+      "grade": "fail"
+     },
+     "SLV": {
+      "state": "measured",
+      "n": 833,
+      "net_r": -0.2645,
+      "net_r_per_trade": -0.0003,
+      "gross_r": 11.3673,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2010-01-04 00:00:00+00:00",
+        "end": "2011-09-29 00:00:00+00:00",
+        "trades": 146,
+        "net_r": 8.3581
+       },
+       {
+        "fold": 2,
+        "start": "2011-09-29 00:00:00+00:00",
+        "end": "2013-06-23 00:00:00+00:00",
+        "trades": 137,
+        "net_r": -6.5218
+       },
+       {
+        "fold": 3,
+        "start": "2013-06-23 00:00:00+00:00",
+        "end": "2015-03-18 00:00:00+00:00",
+        "trades": 134,
+        "net_r": -5.057
+       },
+       {
+        "fold": 4,
+        "start": "2015-03-18 00:00:00+00:00",
+        "end": "2016-12-10 00:00:00+00:00",
+        "trades": 135,
+        "net_r": 2.641
+       },
+       {
+        "fold": 5,
+        "start": "2016-12-10 00:00:00+00:00",
+        "end": "2018-09-04 00:00:00+00:00",
+        "trades": 138,
+        "net_r": -8.314
+       },
+       {
+        "fold": 6,
+        "start": "2018-09-04 00:00:00+00:00",
+        "end": "2020-05-29 00:00:00+00:00",
+        "trades": 143,
+        "net_r": 8.6292
+       }
+      ],
+      "folds_pos": 3,
+      "t_one_sided_p": 0.5063542020098308,
+      "mean_bars_held": 2.127,
+      "by_outcome": {
+       "ibs_exit": 498,
+       "max_hold": 225,
+       "stop": 80,
+       "stop_gap": 30
+      },
+      "series_cut": null,
+      "grade": "fail"
+     },
+     "GDX": {
+      "state": "measured",
+      "n": 812,
+      "net_r": 15.7606,
+      "net_r_per_trade": 0.0194,
+      "gross_r": 23.3672,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2010-01-04 00:00:00+00:00",
+        "end": "2011-09-29 00:00:00+00:00",
+        "trades": 133,
+        "net_r": 2.5954
+       },
+       {
+        "fold": 2,
+        "start": "2011-09-29 00:00:00+00:00",
+        "end": "2013-06-23 00:00:00+00:00",
+        "trades": 136,
+        "net_r": -3.7401
+       },
+       {
+        "fold": 3,
+        "start": "2013-06-23 00:00:00+00:00",
+        "end": "2015-03-18 00:00:00+00:00",
+        "trades": 133,
+        "net_r": 2.4008
+       },
+       {
+        "fold": 4,
+        "start": "2015-03-18 00:00:00+00:00",
+        "end": "2016-12-10 00:00:00+00:00",
+        "trades": 137,
+        "net_r": 2.1157
+       },
+       {
+        "fold": 5,
+        "start": "2016-12-10 00:00:00+00:00",
+        "end": "2018-09-04 00:00:00+00:00",
+        "trades": 132,
+        "net_r": 3.5187
+       },
+       {
+        "fold": 6,
+        "start": "2018-09-04 00:00:00+00:00",
+        "end": "2020-05-29 00:00:00+00:00",
+        "trades": 141,
+        "net_r": 8.8701
+       }
+      ],
+      "folds_pos": 5,
+      "t_one_sided_p": 0.15565517958882263,
+      "mean_bars_held": 2.207,
+      "by_outcome": {
+       "ibs_exit": 478,
+       "max_hold": 254,
+       "stop": 74,
+       "stop_gap": 6
+      },
+      "series_cut": null,
+      "grade": "pass"
+     }
+    },
+    "pooled": {
+     "n": 7662,
+     "net_r": 130.1121,
+     "folds": [
+      {
+       "fold": 1,
+       "start": "2010-01-04 00:00:00+00:00",
+       "end": "2011-09-29 00:00:00+00:00",
+       "trades": 1256,
+       "net_r": 23.8062
+      },
+      {
+       "fold": 2,
+       "start": "2011-09-29 00:00:00+00:00",
+       "end": "2013-06-23 00:00:00+00:00",
+       "trades": 1275,
+       "net_r": -0.4497
+      },
+      {
+       "fold": 3,
+       "start": "2013-06-23 00:00:00+00:00",
+       "end": "2015-03-18 00:00:00+00:00",
+       "trades": 1283,
+       "net_r": 24.1644
+      },
+      {
+       "fold": 4,
+       "start": "2015-03-18 00:00:00+00:00",
+       "end": "2016-12-10 00:00:00+00:00",
+       "trades": 1266,
+       "net_r": -2.6591
+      },
+      {
+       "fold": 5,
+       "start": "2016-12-10 00:00:00+00:00",
+       "end": "2018-09-04 00:00:00+00:00",
+       "trades": 1287,
+       "net_r": 33.727
+      },
+      {
+       "fold": 6,
+       "start": "2018-09-04 00:00:00+00:00",
+       "end": "2020-05-29 00:00:00+00:00",
+       "trades": 1295,
+       "net_r": 51.5233
+      }
+     ],
+     "folds_pos": 4,
+     "net_r_per_trade": 0.017,
+     "t_one_sided_p": 0.0035127329641002907,
+     "max_drawdown_r_sequential": 36.0659
+    },
+    "holm_survivors": [
+     "QQQ"
+    ],
+    "grade": {
+     "verdict": "pass",
+     "cells_pass": 5,
+     "need": 5,
+     "delta_r_per_trade_vs_baseline": null,
+     "why": "pooled net_r 130.1121 > 0 with 4 folds positive and 5 of 9 powered cells pass (breadth floor 5)"
+    }
+   },
+   "L": {
+    "cfg": {
+     "side": "long",
+     "ibs_lo": 0.2,
+     "ibs_hi": 0.8,
+     "trend_filter": 0,
+     "max_hold": 3,
+     "stop_atr": 2.0
+    },
+    "cells": {
+     "SPY": {
+      "state": "measured",
+      "n": 301,
+      "net_r": 9.2049,
+      "net_r_per_trade": 0.0306,
+      "gross_r": 16.3516,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2010-01-04 00:00:00+00:00",
+        "end": "2011-09-29 00:00:00+00:00",
+        "trades": 51,
+        "net_r": 1.5599
+       },
+       {
+        "fold": 2,
+        "start": "2011-09-29 00:00:00+00:00",
+        "end": "2013-06-23 00:00:00+00:00",
+        "trades": 53,
+        "net_r": 3.8498
+       },
+       {
+        "fold": 3,
+        "start": "2013-06-23 00:00:00+00:00",
+        "end": "2015-03-18 00:00:00+00:00",
+        "trades": 45,
+        "net_r": 5.3301
+       },
+       {
+        "fold": 4,
+        "start": "2015-03-18 00:00:00+00:00",
+        "end": "2016-12-10 00:00:00+00:00",
+        "trades": 54,
+        "net_r": 4.5258
+       },
+       {
+        "fold": 5,
+        "start": "2016-12-10 00:00:00+00:00",
+        "end": "2018-09-04 00:00:00+00:00",
+        "trades": 43,
+        "net_r": 0.1613
+       },
+       {
+        "fold": 6,
+        "start": "2018-09-04 00:00:00+00:00",
+        "end": "2020-05-29 00:00:00+00:00",
+        "trades": 55,
+        "net_r": -6.222
+       }
+      ],
+      "folds_pos": 5,
+      "t_one_sided_p": 0.2011013048392597,
+      "mean_bars_held": 2.296,
+      "by_outcome": {
+       "ibs_exit": 167,
+       "max_hold": 88,
+       "stop": 40,
+       "stop_gap": 6
+      },
+      "series_cut": null,
+      "grade": "pass"
+     },
+     "QQQ": {
+      "state": "measured",
+      "n": 300,
+      "net_r": 22.5099,
+      "net_r_per_trade": 0.075,
+      "gross_r": 28.0646,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2010-01-04 00:00:00+00:00",
+        "end": "2011-09-29 00:00:00+00:00",
+        "trades": 51,
+        "net_r": 3.5592
+       },
+       {
+        "fold": 2,
+        "start": "2011-09-29 00:00:00+00:00",
+        "end": "2013-06-23 00:00:00+00:00",
+        "trades": 53,
+        "net_r": 3.5723
+       },
+       {
+        "fold": 3,
+        "start": "2013-06-23 00:00:00+00:00",
+        "end": "2015-03-18 00:00:00+00:00",
+        "trades": 43,
+        "net_r": 4.8691
+       },
+       {
+        "fold": 4,
+        "start": "2015-03-18 00:00:00+00:00",
+        "end": "2016-12-10 00:00:00+00:00",
+        "trades": 58,
+        "net_r": 4.2094
+       },
+       {
+        "fold": 5,
+        "start": "2016-12-10 00:00:00+00:00",
+        "end": "2018-09-04 00:00:00+00:00",
+        "trades": 42,
+        "net_r": 6.0582
+       },
+       {
+        "fold": 6,
+        "start": "2018-09-04 00:00:00+00:00",
+        "end": "2020-05-29 00:00:00+00:00",
+        "trades": 53,
+        "net_r": 0.2416
+       }
+      ],
+      "folds_pos": 6,
+      "t_one_sided_p": 0.015583753788136426,
+      "mean_bars_held": 2.34,
+      "by_outcome": {
+       "ibs_exit": 169,
+       "max_hold": 89,
+       "stop": 37,
+       "stop_gap": 5
+      },
+      "series_cut": null,
+      "grade": "pass"
+     },
+     "IWM": {
+      "state": "measured",
+      "n": 325,
+      "net_r": 6.3824,
+      "net_r_per_trade": 0.0196,
+      "gross_r": 11.8361,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2010-01-04 00:00:00+00:00",
+        "end": "2011-09-29 00:00:00+00:00",
+        "trades": 53,
+        "net_r": 0.1232
+       },
+       {
+        "fold": 2,
+        "start": "2011-09-29 00:00:00+00:00",
+        "end": "2013-06-23 00:00:00+00:00",
+        "trades": 50,
+        "net_r": 3.1401
+       },
+       {
+        "fold": 3,
+        "start": "2013-06-23 00:00:00+00:00",
+        "end": "2015-03-18 00:00:00+00:00",
+        "trades": 53,
+        "net_r": -0.0095
+       },
+       {
+        "fold": 4,
+        "start": "2015-03-18 00:00:00+00:00",
+        "end": "2016-12-10 00:00:00+00:00",
+        "trades": 55,
+        "net_r": 0.7543
+       },
+       {
+        "fold": 5,
+        "start": "2016-12-10 00:00:00+00:00",
+        "end": "2018-09-04 00:00:00+00:00",
+        "trades": 55,
+        "net_r": 5.5102
+       },
+       {
+        "fold": 6,
+        "start": "2018-09-04 00:00:00+00:00",
+        "end": "2020-05-29 00:00:00+00:00",
+        "trades": 59,
+        "net_r": -3.1358
+       }
+      ],
+      "folds_pos": 4,
+      "t_one_sided_p": 0.2699143966580886,
+      "mean_bars_held": 2.412,
+      "by_outcome": {
+       "ibs_exit": 175,
+       "max_hold": 106,
+       "stop": 40,
+       "stop_gap": 4
+      },
+      "series_cut": null,
+      "grade": "pass"
+     },
+     "DIA": {
+      "state": "measured",
+      "n": 316,
+      "net_r": 11.5154,
+      "net_r_per_trade": 0.0364,
+      "gross_r": 19.4717,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2010-01-04 00:00:00+00:00",
+        "end": "2011-09-29 00:00:00+00:00",
+        "trades": 50,
+        "net_r": 1.9685
+       },
+       {
+        "fold": 2,
+        "start": "2011-09-29 00:00:00+00:00",
+        "end": "2013-06-23 00:00:00+00:00",
+        "trades": 56,
+        "net_r": 6.8023
+       },
+       {
+        "fold": 3,
+        "start": "2013-06-23 00:00:00+00:00",
+        "end": "2015-03-18 00:00:00+00:00",
+        "trades": 46,
+        "net_r": 3.4682
+       },
+       {
+        "fold": 4,
+        "start": "2015-03-18 00:00:00+00:00",
+        "end": "2016-12-10 00:00:00+00:00",
+        "trades": 56,
+        "net_r": 6.9369
+       },
+       {
+        "fold": 5,
+        "start": "2016-12-10 00:00:00+00:00",
+        "end": "2018-09-04 00:00:00+00:00",
+        "trades": 49,
+        "net_r": 0.4108
+       },
+       {
+        "fold": 6,
+        "start": "2018-09-04 00:00:00+00:00",
+        "end": "2020-05-29 00:00:00+00:00",
+        "trades": 59,
+        "net_r": -8.0713
+       }
+      ],
+      "folds_pos": 5,
+      "t_one_sided_p": 0.15328620615115734,
+      "mean_bars_held": 2.354,
+      "by_outcome": {
+       "ibs_exit": 175,
+       "max_hold": 96,
+       "stop": 35,
+       "stop_gap": 10
+      },
+      "series_cut": null,
+      "grade": "pass"
+     },
+     "TLT": {
+      "state": "measured",
+      "n": 387,
+      "net_r": 12.1291,
+      "net_r_per_trade": 0.0313,
+      "gross_r": 21.7008,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2010-01-04 00:00:00+00:00",
+        "end": "2011-09-29 00:00:00+00:00",
+        "trades": 64,
+        "net_r": 4.9127
+       },
+       {
+        "fold": 2,
+        "start": "2011-09-29 00:00:00+00:00",
+        "end": "2013-06-23 00:00:00+00:00",
+        "trades": 75,
+        "net_r": -5.2287
+       },
+       {
+        "fold": 3,
+        "start": "2013-06-23 00:00:00+00:00",
+        "end": "2015-03-18 00:00:00+00:00",
+        "trades": 67,
+        "net_r": 3.956
+       },
+       {
+        "fold": 4,
+        "start": "2015-03-18 00:00:00+00:00",
+        "end": "2016-12-10 00:00:00+00:00",
+        "trades": 61,
+        "net_r": -0.9802
+       },
+       {
+        "fold": 5,
+        "start": "2016-12-10 00:00:00+00:00",
+        "end": "2018-09-04 00:00:00+00:00",
+        "trades": 57,
+        "net_r": 1.3174
+       },
+       {
+        "fold": 6,
+        "start": "2018-09-04 00:00:00+00:00",
+        "end": "2020-05-29 00:00:00+00:00",
+        "trades": 63,
+        "net_r": 8.1519
+       }
+      ],
+      "folds_pos": 4,
+      "t_one_sided_p": 0.13353970103205431,
+      "mean_bars_held": 2.261,
+      "by_outcome": {
+       "ibs_exit": 233,
+       "max_hold": 114,
+       "stop": 32,
+       "stop_gap": 8
+      },
+      "series_cut": null,
+      "grade": "pass"
+     },
+     "IEF": {
+      "state": "measured",
+      "n": 388,
+      "net_r": -2.0491,
+      "net_r_per_trade": -0.0053,
+      "gross_r": 20.5469,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2010-01-04 00:00:00+00:00",
+        "end": "2011-09-29 00:00:00+00:00",
+        "trades": 69,
+        "net_r": 2.1543
+       },
+       {
+        "fold": 2,
+        "start": "2011-09-29 00:00:00+00:00",
+        "end": "2013-06-23 00:00:00+00:00",
+        "trades": 73,
+        "net_r": -5.0807
+       },
+       {
+        "fold": 3,
+        "start": "2013-06-23 00:00:00+00:00",
+        "end": "2015-03-18 00:00:00+00:00",
+        "trades": 66,
+        "net_r": -3.4494
+       },
+       {
+        "fold": 4,
+        "start": "2015-03-18 00:00:00+00:00",
+        "end": "2016-12-10 00:00:00+00:00",
+        "trades": 59,
+        "net_r": 0.6422
+       },
+       {
+        "fold": 5,
+        "start": "2016-12-10 00:00:00+00:00",
+        "end": "2018-09-04 00:00:00+00:00",
+        "trades": 59,
+        "net_r": -6.401
+       },
+       {
+        "fold": 6,
+        "start": "2018-09-04 00:00:00+00:00",
+        "end": "2020-05-29 00:00:00+00:00",
+        "trades": 62,
+        "net_r": 10.0854
+       }
+      ],
+      "folds_pos": 3,
+      "t_one_sided_p": 0.5684304044576134,
+      "mean_bars_held": 2.242,
+      "by_outcome": {
+       "ibs_exit": 239,
+       "max_hold": 104,
+       "stop": 34,
+       "stop_gap": 11
+      },
+      "series_cut": null,
+      "grade": "fail"
+     },
+     "GLD": {
+      "state": "measured",
+      "n": 331,
+      "net_r": 11.8971,
+      "net_r_per_trade": 0.0359,
+      "gross_r": 19.7167,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2010-01-04 00:00:00+00:00",
+        "end": "2011-09-29 00:00:00+00:00",
+        "trades": 50,
+        "net_r": 3.7893
+       },
+       {
+        "fold": 2,
+        "start": "2011-09-29 00:00:00+00:00",
+        "end": "2013-06-23 00:00:00+00:00",
+        "trades": 53,
+        "net_r": -3.5655
+       },
+       {
+        "fold": 3,
+        "start": "2013-06-23 00:00:00+00:00",
+        "end": "2015-03-18 00:00:00+00:00",
+        "trades": 62,
+        "net_r": 1.2288
+       },
+       {
+        "fold": 4,
+        "start": "2015-03-18 00:00:00+00:00",
+        "end": "2016-12-10 00:00:00+00:00",
+        "trades": 65,
+        "net_r": 3.6729
+       },
+       {
+        "fold": 5,
+        "start": "2016-12-10 00:00:00+00:00",
+        "end": "2018-09-04 00:00:00+00:00",
+        "trades": 55,
+        "net_r": 1.1164
+       },
+       {
+        "fold": 6,
+        "start": "2018-09-04 00:00:00+00:00",
+        "end": "2020-05-29 00:00:00+00:00",
+        "trades": 46,
+        "net_r": 5.6553
+       }
+      ],
+      "folds_pos": 5,
+      "t_one_sided_p": 0.15109878282596256,
+      "mean_bars_held": 2.272,
+      "by_outcome": {
+       "ibs_exit": 195,
+       "max_hold": 96,
+       "stop": 32,
+       "stop_gap": 8
+      },
+      "series_cut": null,
+      "grade": "pass"
+     },
+     "SLV": {
+      "state": "measured",
+      "n": 314,
+      "net_r": -16.2417,
+      "net_r_per_trade": -0.0517,
+      "gross_r": -11.8492,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2010-01-04 00:00:00+00:00",
+        "end": "2011-09-29 00:00:00+00:00",
+        "trades": 45,
+        "net_r": 3.8182
+       },
+       {
+        "fold": 2,
+        "start": "2011-09-29 00:00:00+00:00",
+        "end": "2013-06-23 00:00:00+00:00",
+        "trades": 48,
+        "net_r": -9.285
+       },
+       {
+        "fold": 3,
+        "start": "2013-06-23 00:00:00+00:00",
+        "end": "2015-03-18 00:00:00+00:00",
+        "trades": 63,
+        "net_r": -4.0899
+       },
+       {
+        "fold": 4,
+        "start": "2015-03-18 00:00:00+00:00",
+        "end": "2016-12-10 00:00:00+00:00",
+        "trades": 59,
+        "net_r": -4.038
+       },
+       {
+        "fold": 5,
+        "start": "2016-12-10 00:00:00+00:00",
+        "end": "2018-09-04 00:00:00+00:00",
+        "trades": 53,
+        "net_r": -3.326
+       },
+       {
+        "fold": 6,
+        "start": "2018-09-04 00:00:00+00:00",
+        "end": "2020-05-29 00:00:00+00:00",
+        "trades": 46,
+        "net_r": 0.679
+       }
+      ],
+      "folds_pos": 2,
+      "t_one_sided_p": 0.9303268646499847,
+      "mean_bars_held": 2.334,
+      "by_outcome": {
+       "ibs_exit": 159,
+       "max_hold": 99,
+       "stop": 44,
+       "stop_gap": 12
+      },
+      "series_cut": null,
+      "grade": "fail"
+     },
+     "GDX": {
+      "state": "measured",
+      "n": 407,
+      "net_r": 16.3228,
+      "net_r_per_trade": 0.0401,
+      "gross_r": 20.0728,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2010-01-04 00:00:00+00:00",
+        "end": "2011-09-29 00:00:00+00:00",
+        "trades": 51,
+        "net_r": 2.4072
+       },
+       {
+        "fold": 2,
+        "start": "2011-09-29 00:00:00+00:00",
+        "end": "2013-06-23 00:00:00+00:00",
+        "trades": 71,
+        "net_r": -2.4515
+       },
+       {
+        "fold": 3,
+        "start": "2013-06-23 00:00:00+00:00",
+        "end": "2015-03-18 00:00:00+00:00",
+        "trades": 82,
+        "net_r": 3.3705
+       },
+       {
+        "fold": 4,
+        "start": "2015-03-18 00:00:00+00:00",
+        "end": "2016-12-10 00:00:00+00:00",
+        "trades": 73,
+        "net_r": 3.3302
+       },
+       {
+        "fold": 5,
+        "start": "2016-12-10 00:00:00+00:00",
+        "end": "2018-09-04 00:00:00+00:00",
+        "trades": 65,
+        "net_r": 3.4339
+       },
+       {
+        "fold": 6,
+        "start": "2018-09-04 00:00:00+00:00",
+        "end": "2020-05-29 00:00:00+00:00",
+        "trades": 65,
+        "net_r": 6.2325
+       }
+      ],
+      "folds_pos": 5,
+      "t_one_sided_p": 0.0811812336561143,
+      "mean_bars_held": 2.378,
+      "by_outcome": {
+       "ibs_exit": 213,
+       "max_hold": 150,
+       "stop": 38,
+       "stop_gap": 6
+      },
+      "series_cut": null,
+      "grade": "pass"
+     }
+    },
+    "pooled": {
+     "n": 3069,
+     "net_r": 71.6709,
+     "folds": [
+      {
+       "fold": 1,
+       "start": "2010-01-04 00:00:00+00:00",
+       "end": "2011-09-29 00:00:00+00:00",
+       "trades": 484,
+       "net_r": 24.2925
+      },
+      {
+       "fold": 2,
+       "start": "2011-09-29 00:00:00+00:00",
+       "end": "2013-06-23 00:00:00+00:00",
+       "trades": 532,
+       "net_r": -8.2469
+      },
+      {
+       "fold": 3,
+       "start": "2013-06-23 00:00:00+00:00",
+       "end": "2015-03-18 00:00:00+00:00",
+       "trades": 527,
+       "net_r": 14.6739
+      },
+      {
+       "fold": 4,
+       "start": "2015-03-18 00:00:00+00:00",
+       "end": "2016-12-10 00:00:00+00:00",
+       "trades": 540,
+       "net_r": 19.0535
+      },
+      {
+       "fold": 5,
+       "start": "2016-12-10 00:00:00+00:00",
+       "end": "2018-09-04 00:00:00+00:00",
+       "trades": 478,
+       "net_r": 8.2811
+      },
+      {
+       "fold": 6,
+       "start": "2018-09-04 00:00:00+00:00",
+       "end": "2020-05-29 00:00:00+00:00",
+       "trades": 508,
+       "net_r": 13.6168
+      }
+     ],
+     "folds_pos": 5,
+     "net_r_per_trade": 0.0234,
+     "t_one_sided_p": 0.015852568644893737,
+     "max_drawdown_r_sequential": 31.493
+    },
+    "holm_survivors": [],
+    "grade": {
+     "verdict": "fail",
+     "cells_pass": 7,
+     "need": 5,
+     "delta_r_per_trade_vs_baseline": 0.0064,
+     "why": "net_r/trade 0.0234 beats the baseline's 0.017 by 0.0064 < the 0.05 materiality bar"
+    }
+   }
+  }
+ },
+ "local_overlay_disclosure": "Run on origin/main c06ea9f9 PLUS a LOCAL overlay of ml/datasets/adapters/yf_symbols.py = PR #25135's diff (blob 0b299593: pass-through entries DIA, XLB, XLF, XLI, XLP, XLU, XLV, XLY), because #25135 is held for the operator (file is in the trader import closure) and without it the registered basket is refused. Manager instruction 06:25Z: 'run locally with a local ticker override and disclose it'. All 9 cells measured; no series cut.",
+ "joint_reading": "JOINT (registered in both units): 3c8f-01 FAIL and 3c8f-02 FAIL -> IBS arm L at these parameters is CLOSED for US ETFs. Nothing is re-run with other thresholds under these ids. The IBS meta-label draft (branch claude/ml-lane-p4-ibs-meta-label-draft) is therefore not authored.",
+ "generated_at": "2026-11-12T06:47:16Z",
+ "produced_by": {
+  "tool": "python3 scripts/research/ibs_reversion_stage0.py",
+  "where": "local (ML standing lane p4 session container)"
+ }
+}

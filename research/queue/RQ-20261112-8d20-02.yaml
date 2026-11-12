@@ -1,0 +1,94 @@
+# Hand-authored 2026-11-12 by lane ML-ENTRY-HTF-COUNTERTREND (Tier 1), dispatched by Manager Session 2026-11-11a. Rule registered before any run.
+# Gates this adds or changes: none.
+id: RQ-20261112-8d20-02
+title: 'ml_entry_eq_struct HTF trend: do the equity structure-ensemble LONG decisions taken AGAINST a strong daily downtrend (daily ADX14 > 40, daily
+  -DI > +DI) lose money net of cost on its confirming window?'
+status: queued
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml_health
+priority: 2
+kind: experiment
+question: 'Sibling of RQ-20261112-8d20-01 for the equity real-money leg ml_entry_eq_struct (alpaca_live + alpaca_portfolio; 1h decisions, long only,
+  tau 0.25, 5-seed structure ensemble of RQ-20261107-98e3-06). Split its taken decisions on the confirming window 2025-07-15..2026-10-31 by the DAILY
+  trend at the decision: daily bars = the RTH 1h bars of each completed session BEFORE the decision day (point in time); direction D = sign(+DI14 -
+  -DI14), strength ADX14 (Wilder). A long is AGAINST when D = -1. ADX buckets < 25, 25..40, > 40. Robustness (reported): daily EMA20 vs EMA50.'
+why_this_matters: 'The crypto leg question applied to the equity real-money leg the dispatch named ("check ml_entry_eq_struct the same way if its data
+  allows"). The data needs the Alpaca read-only keys, which only the research runner holds.'
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+power:
+  expected_n: 30
+  min_detectable_effect: 0.3
+  effect_units: metric
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: the confirming read took n 207 decisions in total; strong daily downtrends in a long-only liquid-ETF pool are rare, so the primary
+    cell is expected to be small (tens). An INDETERMINATE is the likely outcome and is a first-class result. power 0.5 -> 0.8 on unblocking (2026-11-12): research_queue.required_n has no 0.5 floor, so the gate read the unit as unverifiable; at 0.8 the floor exceeds expected_n and the unit grades ACCRUING via its own feasibility.source none + accrual_basis. The decision rule (CT40 n >= 40) is unchanged.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Alpaca history on the runner; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261112-8d20-02-HTF-CT-EQ
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'Per cell: n, mean net R per decision (the ml_entry_equity.py cost stack: fee 0 + slip 5 bps + regulatory 0.5 bps, structure exit pivot=5
+    sl_only), iid and decision-date-clustered t (gating).'
+  rule: 'Primary cell CT40 = AGAINST and daily ADX14 > 40. INDETERMINATE IF CT40 n < 40. PASS IF CT40 mean net R < 0 AND date-clustered t <= -2.0 AND
+    the WITH, ADX > 40 cell mean >= CT40 mean. FAIL otherwise. Thresholds are not changed after any result.'
+  proposal_mapping: PASS -> Tier-3 proposal held for the manager (skip ml_entry_eq_struct longs in CT40). FAIL / INDETERMINATE -> no change.
+  what_it_does_not_do: Changes no config, trains no new model beyond refitting the graded ensemble deterministically, places no order.
+  min_n: 40 decisions in the primary cell
+practice_precedent: M4 / M5 / M6 in docs/reference/trading-and-model-practice-principles.md; same design as RQ-20261112-8d20-01.
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 50
+  confidence: 0.1
+  basis: 'stand-in: one possible losing slice of a real-money leg; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 150
+  why_runner: Alpaca read-only keys live only in the runner's secrets (scripts/research/ml_entry_equity.py::_pool_and_bars).
+  basis: INFERRED from RQ-20261107-98e3-06 (same data and fits).
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_eq_htf_split.py
+  - --cache
+  - /tmp/ml_entry_equity
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261112-8d20-02
+unblocked:
+  at: '2026-11-12'
+  by: ML standing lane part 3 (session_01AFoLuMDTXRAaebDXhfn3Wu)
+  how: 'scripts/research/ml_entry_eq_htf_split.py is the decision-level dump the blocked_on named: it imports the graded ml_entry_equity.py pool, table, purge, pinned ensemble, session gate and take rule, refits config B seeds 1-5, refuses to read the cells unless the refit sha starts with the graded 0afc49948a41671a, and splits by the daily DMI/ADX of the last session before the decision day. The runner path already existed: research-script-run.yml carries the read-only Alpaca keys ml_entry_equity._pool_and_bars uses. The decision rule is unchanged.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-ENTRY-HTF-COUNTERTREND
+- RQ-20261112-8d20-01
+- RQ-20261107-98e3-06
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order.
+ml_consumer:
+  consumer: ml/candidates/ml_entry_eq_v3_struct_ens5/model.json
+  decision: whether ml_entry_eq_struct skips longs taken against a strong daily downtrend on alpaca_live + alpaca_portfolio
+  legs:
+  - ml_entry_eq_struct
+  book: money

@@ -78,7 +78,8 @@ pinged once on a real-money or prop account:
 * phone: move_tp (``phone_trail.request_tp_amend``, the one-slot amend channel); widen_sl
   (``phone_trail.request_sl_widen``, declared so the app applies a looser stop); close / reduce
   (``phone_cancel.request_close``, the server-issued action channel, operator 2026-11-09);
-* prop_vm: none yet (the VM executor reads only ``meta.sl_floor``); other / IB: none;
+* prop_vm: move_tp (PROP-BRACKET-APPLY: ``meta.tp_target`` on the ticket, applied by the account's own trail through
+  its amend code; refused for an adapter that cannot amend a TP, e.g. browser dxtrade); other / IB: none;
 * any account: add_entry / change_size > 1 -- none: no add-to-an-open-position executor exists yet
   (``no_action_path:add_size``); the account's decision is still computed and recorded.
 
@@ -624,7 +625,7 @@ ACTION_PATHS: Dict[str, frozenset] = {
     "bybit": frozenset({"close", "reduce", "move_tp", "widen_sl"}),
     "alpaca": frozenset({"close", "move_tp"}),
     "phone": frozenset({"move_tp", "close", "reduce", "widen_sl"}),
-    "prop_vm": frozenset(),
+    "prop_vm": frozenset({"move_tp"}),
     "other": frozenset(),
 }
 LIVE_REVIEW_CLOSE = "live_review_close"
@@ -732,6 +733,52 @@ def _venue_tp(client, cfg: Dict[str, Any], symbol: str, direction: str, tp_order
     except Exception as exc:  # noqa: BLE001
         out["error"] = f"{type(exc).__name__}: {exc}"
         return out
+
+
+def _venue_leg_qtys(client, cfg: Dict[str, Any], symbol: str, order_ids: List[str]) -> Optional[Dict[str, Optional[float]]]:
+    """The resting qty of each named Bybit Partial-tpsl leg (``None`` = not resting); ``None`` overall = could not read."""
+    try:
+        from src.units.accounts.execute import _bybit_category
+
+        orders = (((client.get_open_orders(category=_bybit_category(cfg), symbol=symbol, orderFilter="StopOrder")
+                    or {}).get("result") or {}).get("list"))
+        if orders is None:
+            return None
+        by = {str(o.get("orderId")): _f(o.get("qty")) for o in orders}
+        return {str(i): by.get(str(i)) for i in order_ids}
+    except Exception:  # noqa: BLE001 -- an unread book is could-not-look, never "resized"
+        return None
+
+
+def resize_legs_after_reduce(client, cfg: Dict[str, Any], t: Dict[str, Any], remaining: float) -> Dict[str, Any]:
+    """TRADE-ACTION-FAST-PATH follow-up (operator 2026-11-09: "we just need to fix the partial close mechanism"):
+    after a partial close, amend THIS row's own tracked Partial-tpsl legs (``sl_order_id`` / ``tp_order_id``) IN PLACE
+    to the remaining size, through the existing per-row seam (``execute.resize_tracked_protective_legs``, never a
+    cancel), then read each leg's qty back from the venue. Case: the 2026-11-09 XRP 50% partial close left a 107.6 SL
+    leg on bybit_2's 53.8 position (and 32478.5 on bybit_portfolio's 16239.3); bybit_over_cover then fired hourly.
+    Returns ``{"legs": <seam result>, "readback": {id: qty}, "ok": bool, "detail": str}``. Never raises."""
+    from src.units.accounts.execute import resize_tracked_protective_legs
+
+    sym = str(t.get("symbol") or "").upper()
+    try:
+        legs = resize_tracked_protective_legs(client, cfg, symbol=sym, new_qty=remaining,
+                                              sl_order_id=t.get("sl_order_id"), tp_order_id=t.get("tp_order_id"),
+                                              trade_id=t.get("id"))
+    except Exception as exc:  # noqa: BLE001
+        return {"legs": None, "readback": None, "ok": False, "detail": f"resize raised {type(exc).__name__}: {exc}"}
+    sent = {str(v.get("order_id")): _f(v.get("qty_sent")) for v in legs.values()
+            if v.get("state") == "resized" and v.get("order_id")}
+    bad = [f"{k}:{v.get('state')}" + (f"({v.get('error')})" if v.get("error") else "")
+           for k, v in legs.items() if v.get("state") in ("failed", "no_tracked_id", "not_attempted")
+           and (v.get("order_id") or v.get("state") != "no_tracked_id")]
+    back = _venue_leg_qtys(client, cfg, sym, list(sent)) if sent else {}
+    if sent and back is None:
+        bad.append("readback:could_not_read")
+    for oid, q in sent.items():
+        got = (back or {}).get(oid)
+        if back is not None and (got is None or q is None or abs(got - q) > max(abs(q) * 1e-6, 1e-9)):
+            bad.append(f"readback:{oid} reads {got!r}, sent {q!r}")
+    return {"legs": legs, "readback": back, "ok": not bad, "detail": "; ".join(bad) or "resized and read back"}
 
 
 def _journal_action(db, t: Dict[str, Any], intent: lri.LiveReviewIntent, fields: Dict[str, Any],
@@ -848,9 +895,19 @@ def _exec_bybit_action(db, leg: Dict[str, Any], pkg: Dict[str, Any], v: lri.Amen
         if not open_left:
             db.update_order_package(pkg["order_package_id"], {"status": "closed", "close_reason": reason})
     else:
+        # The reduce is DONE at the venue: whatever the leg resize says, this action is applied (a retry would reduce
+        # twice). A resize that fails or does not read back is ONE alert; the legs are reduce-only, so an oversized
+        # one can close at most what is held.
+        rz = resize_legs_after_reduce(client, cfg, t, remaining)
         _journal_action(db, t, intent, {"position_size": remaining},
                         {"qty": qty, "exit_price": mark, "exit_price_source": "venue_mark_at_apply (ESTIMATED)",
-                         "venue_size_after": size1, "close_reason": reason})
+                         "venue_size_after": size1, "close_reason": reason,
+                         "leg_resize": {"ok": rz["ok"], "detail": rz["detail"], "readback": rz["readback"],
+                                        "states": {k: v.get("state") for k, v in (rz["legs"] or {}).items()}}})
+        if not rz["ok"]:
+            _alert(pkg, aid, f"partial close {sym}: reduce applied ({size0}->{size1}) but the protective legs were not "
+                             f"resized to {remaining:g}: {rz['detail']}")
+        return {"result": X_APPLIED, "venue_size_after": size1, "qty": qty, "leg_resize": rz["detail"]}
     return {"result": X_APPLIED, "venue_size_after": size1, "qty": qty}
 
 
@@ -933,6 +990,19 @@ def _exec_alpaca_tp(db, leg: Dict[str, Any], pkg: Dict[str, Any], v: lri.AmendVe
     return {"result": X_APPLIED, "venue_after": got}
 
 
+def _exec_prop_vm_tp(leg: Dict[str, Any], v: lri.AmendVerdict, intent: lri.LiveReviewIntent) -> Dict[str, Any]:
+    """Record a TP request on THIS prop ticket (``meta.tp_target``); the account's trail applies it through its own
+    amend code and the executor's ``amend`` report is the venue confirmation (PROP-BRACKET-APPLY)."""
+    from src.prop.bracket_request import R_QUEUED, R_REFUSED, request_bracket
+
+    tk = leg["row"]
+    r = request_bracket(tk["ticket_id"], account_id=tk["account_id"], tp=v.level, apply=True,
+                        source=lri.PROVENANCE, reason=f"mandate {intent.mandate} review {intent.review_id}")
+    if r["result"] == R_QUEUED:
+        return {"result": X_APPLIED, "tp": v.level, "detail": r["detail"]}
+    return {"result": X_REFUSED if r["result"] == R_REFUSED else X_APPLY_FAILED, "detail": r["detail"]}
+
+
 def _exec_phone_tp(leg: Dict[str, Any], v: lri.AmendVerdict, intent: lri.LiveReviewIntent) -> Dict[str, Any]:
     """Publish a TP revision through the phone's one-slot amend channel; read back the emitted amend."""
     from src.prop.phone_trail import KEY, request_tp_amend
@@ -1001,6 +1071,8 @@ def _exec_trade_action(db, leg: Dict[str, Any], pkg: Dict[str, Any], cls: str, v
         return _exec_alpaca_tp(db, leg, pkg, v, intent)
     if cls == "phone" and key == "move_tp":
         return _exec_phone_tp(leg, v, intent)
+    if cls == "prop_vm" and key == "move_tp":
+        return _exec_prop_vm_tp(leg, v, intent)
     if cls == "phone" and key == "widen_sl":
         return _exec_phone_sl_widen(leg, v, intent)
     if cls == "phone" and key in ("close", "reduce"):

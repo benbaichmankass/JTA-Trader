@@ -38,8 +38,8 @@ on:
         description: "Mechanics measurement window, hours. Empty = 168 (weekly)."
         required: false
         default: "168"
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [soak-book-grade-now]
 
 permissions:
   contents: read
@@ -80,10 +80,10 @@ jobs:
       !cancelled() && needs.dedupe.outputs.skip != 'true' && (
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       (github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'soak-book-grade-now'))
+      (github.event_name == 'repository_dispatch' &&
+       (github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'soak-book-grade-now'))
       )
     runs-on: ubuntu-latest
     timeout-minutes: 110  # was 45: commit-to-main verify-merged waits up to 80 min (W41 raised callers; this one was missed, 2026-10-11 RQ-353c-11/13)

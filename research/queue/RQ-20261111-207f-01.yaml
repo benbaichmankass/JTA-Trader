@@ -1,0 +1,128 @@
+# Hand-authored 2026-11-11 by lane ALPACA-LIVE-BOOK-PLAN (Manager Session 2026-11-11a dispatch; operator ask 2026-11-11 ~22:40Z). Programme P8
+# (research/programmes/08-alpaca-live-book.yaml). Rule registered before any run; thresholds never change after a result.
+id: RQ-20261111-207f-01
+title: 'ALPACA-LIVE BOOK / Foxhound-4 DIAGNOSE (P8-Q1): does the live leg''s edge survive the account it trades -- $194.52 cash, long only, whole shares, one slot, T+1 settlement,
+  the live sizer -- on its own dev walk-forward?'
+status: queued
+cadence: once
+roadmap:
+- L-ML-LIVE
+- L-LADDER
+theme: live_strategy
+priority: 1
+kind: experiment
+programme: P8
+question: 'Foxhound-4 (ml_entry_eq_struct, ml-entry-eq-struct-ens5-v1) is the only ML leg on real money. Its evidence (RQ-20261107-98e3-06: +0.49 R/trade, n 207, 113 symbols;
+  dev OOF at tau 0.25 +0.132 R over n 1691) is in R per trade with ONE POSITION PER SYMBOL and unlimited cash (ml_entry_alpaca_score.take), and the record lists ''live whole-share
+  cash-book sizing on alpaca_live is not modelled'' under known_gaps. The account is a cash book (MEASURED /api/diag/broker_account_status 2026-11-11T22:44Z: multiplier 1,
+  cash = equity = 194.52, shorting_enabled false), long only, whole-share brackets, sized by RiskManager.position_size (risk qty floored, rounded up to one share if its risk
+  <= 1.5 x the 2% budget, capped at 0.9 x cash), T+1 settlement armed, in practice one position at a time, picks ordered by predicted net R (ml_pool_scoring.picks). Re-fit
+  the same recipe (config B, structure exit pivot=5;sl_only, 5-seed pinned ensemble) on the purged dev walk-forward and replay its tau-0.25 OOF trades through that book: what
+  share of the trades and of the per-trade edge survives, and what does the book earn per month?'
+why_this_matters: 'The operator asked for a plan to find something better than the live leg; ''better'' has to be measured on what the account can actually hold. If the edge
+  does not survive the account, the evidence record overstates the live leg and every challenger must be scored on the same book, not on R per trade. Arms (report-only) split
+  the loss: cash x10, no T+1, multi-slot.'
+power:
+  expected_n: 100
+  min_detectable_effect: 0.28
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Unit = trade taken on the simulated book. ESTIMATE: 30 dev months x ~21 sessions / (~3.7-day hold + T+1) = ~100-130 slot turns, fewer when no candidate clears tau;
+    the 30-trade floor grades INDETERMINATE, never FAIL on thin n.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Alpaca 1h RTH history 2021-01-01..2025-06-30; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261111-207f-01-BOOK-SURVIVAL
+  registered_at: '2026-11-11'
+  registered_before_run: true
+  statistic: 'scripts/research/alpaca_live_book.py foxhound --section book: dev OOF restricted-LONG trades of the 5-seed ensemble at tau 0.25; unconstrained n and mean net
+    R (trade_stats); live-book replay (cash 194.52, accounts.yaml risk_pct, risk.py wall + round-up, one slot, T+1, score-ordered) n_taken, taken mean net R, refusals by reason,
+    return %/month (month-clustered se), max drawdown $; arms cash_x10_one_slot, no_t1_one_slot, multi_slot_cash_x100_no_t1 reported.'
+  rule: 'INDETERMINATE IF live-book n_taken < 30. PASS IF live-book taken mean net R > 0 AND >= 0.5 x the unconstrained tau-0.25 mean net R (the edge survives the account).
+    FAIL otherwise. Report-only, never gating: return %/month and its month-clustered t, refusal mix, the three arms.'
+  on_pass: Foxhound-4's record describes this account; its live-book return %/month on the dev window becomes the BASELINE every P8 challenger and lever must beat (programme
+    P8 promotion rule). No config change.
+  on_fail: 'The record overstates the live account. Tell the manager (one line for the operator''s brief); the next lever is the book itself: selection policy (207f-02 top-1)
+    and an affordable / slot-aware filter (node P8-Q1-fail). No config change by this unit.'
+  what_it_does_not_do: No config, roster or artifact change; no order. Loads no confirming-window row. Does not re-grade the 98e3-06 pass. Slippage stays the PROVISIONAL 5
+    bps (E62).
+  min_n: 30 trades taken on the simulated book
+evidence_class:
+  holdout: walk_forward
+  claim: edge
+practice_precedent: M13 (iterate on the training-period walk-forward; the confirming window is not loaded); T1 (score a strategy on the book it trades, net of the full cost
+  stack) -- docs/reference/trading-and-model-practice-principles.md
+intervention_controls:
+  not_applicable: a selection / label / sizing replay of entry decisions on history, not an active-management action on live check-ins; the declared live leg (tau 0.25 on the
+    net-R label) is the control arm
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 130
+  why_runner: Alpaca 1h bars (read-only paper key, research-script-run) + LightGBM 5-seed ensemble fits; 4 vCPU / 16 GB runner; no trainer data.
+  basis: 'INFERRED from RQ-20261107-98e3-03 (dev table + 4 single-seed grid draws: runtime 6166 s) and 98e3-06 (ensemble dev + confirm, est 150 min).'
+value:
+  bucket: structural
+  usd_at_stake_per_month: 80
+  confidence: 0.5
+  basis: 'stand-in: the account is $194.52, so the dollar figure is the DECISION''s value (which strategy carries the real-money book as it grows), not this month''s P&L.'
+run:
+  command:
+  - python3
+  - scripts/research/alpaca_live_book.py
+  - foxhound
+  - --cache
+  - /tmp/ml_entry_equity
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --section
+  - book
+  - --rule-id
+  - RULE-RQ20261111-207f-01-BOOK-SURVIVAL
+  - --registered-at
+  - '2026-11-11'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261111-207f-01
+ml_consumer:
+  consumer: src/runtime/ml_pool_scoring.py
+  decision: (the pool picks that feed ml_entry_eq_struct, config/strategies.yaml) whether ml_entry_eq_struct's selection rule (tau / top-k / adaptive), training label or book
+    filter is changed (Tier 3, operator) on alpaca_live + alpaca_portfolio, or a challenger replaces it
+  legs:
+  - ml_entry_eq_struct
+  book: money
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+population: 'The registered POOL_RULE of scripts/research/ml_entry_alpaca_score.py, UNCHANGED (sha256 e9702661...; the module refuses to run if it differs): active, tradable
+  us_equity ETFs with median daily dollar volume >= 50M USD over 2019-2020 (173 at the 98e3-06 run). DEV rows only (<= 2025-06-30); bars are fetched only to 2025-06-30, so
+  no confirming-window row (2025-07-15.., read 3x in ledger family ENTRY-EQ) is loaded.'
+related:
+- RQ-20261107-98e3-06
+- RQ-20261108-98e3-13
+- ML-ENTRY-EQ-STRUCT-FULL-POOL
+- PI-20261111-TX7TX2ZN-0001
+iteration:
+  subject: ml-entry-eq-struct
+  subject_kind: ml_model
+  from_result: RQ-20261107-98e3-06
+  verdict_read: pass_unconfirmed
+  diagnosis: '98e3-06 passed in R per trade with one position per SYMBOL and unlimited cash; the live account is a $194.52 cash book with one slot, whole shares and T+1, and
+    the live leg has produced no package since the full-pool widening. The untested lever is the book itself: how much of 1691 dev trades and +0.132 R survive the account.'
+  search: 'the account''s execution constraints (cash wall, whole-share affordability, one slot, T+1, pick order) against the declared leg: the reachable universe'
+  levers:
+  - universe
+  map_entries:
+  - research/levers/ml-entry-eq-struct.yaml
+  attempt: 1
+  due_by: '2026-11-18'

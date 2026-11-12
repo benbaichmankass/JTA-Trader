@@ -977,8 +977,13 @@ def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
                 cfg: Dict[str, Any], now: Optional[datetime] = None,
                 market: Optional[Dict[str, Dict[str, Any]]] = None,
                 mechanics_rows: Optional[List[Dict[str, Any]]] = None,
-                cadence: Optional[Dict[str, Dict[str, Any]]] = None) -> Dict[str, Any]:
+                cadence: Optional[Dict[str, Dict[str, Any]]] = None,
+                conflicts: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
     """Due packages from OPEN telemetry rows. Pure; no I/O.
+
+    ``conflicts`` = ``conflicting_exposure.find_conflicts`` output (row CONFLICTING-EXPOSURE-ALERT): every
+    package in a conflict gets the event ``conflicting_exposure``, level = the conflict key, so the review of
+    "keep both vs close one side" is queued once per distinct conflict (deduped like every event).
 
     ``cadence`` maps order_package_id -> {mandate, minutes} for packages a per-package auto mandate
     scopes (``ltr_auto_mandate.cadence``; MD-LTR-ADA-AUTO, operator 2026-10-29). Each such OPEN package
@@ -1023,6 +1028,10 @@ def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
         if cnl:
             cnl_total += 1
         coverage.append(_coverage_entry(row, tf, cnl, ps_names))
+        for c in conflicts or []:
+            if pkg in c.get("packages", []):
+                from src.runtime.conflicting_exposure import EVENT as _CE, why as _ce_why
+                mk = mk + [(_CE, c["key"], _ce_why(c, pkg))]
         cad = (cadence or {}).get(pkg)
         if cad:
             slot = bar_start(now, int(cad["minutes"]) * 60).isoformat()
@@ -1179,7 +1188,7 @@ def _prop_dd_context(account_id: str, strategy: Any, accts_cfg: Dict[str, Any]) 
 
 #: Mirror of ``scripts/ops/live_review_apply.ACTION_PATHS`` for the two prop classes. Not imported: that script
 #: is the apply path and must stay out of this read path's import closure (tests/test_live_review_due.py pins equality).
-_PROP_ACTION_PATHS = {"phone": ["close", "move_tp", "reduce", "tighten", "widen_sl"], "prop_vm": ["tighten"]}
+_PROP_ACTION_PATHS = {"phone": ["close", "move_tp", "reduce", "tighten", "widen_sl"], "prop_vm": ["move_tp", "tighten"]}   # move_tp: PROP-BRACKET-APPLY (operator 2026-11-11)
 
 
 def _prop_apply_paths(account_id: str, accts_cfg: Dict[str, Any]) -> Dict[str, Any]:
@@ -1564,8 +1573,20 @@ def live_review_due(db_path: Optional[str] = None,
     except Exception:  # noqa: BLE001  # allow-silent: no cadence = no auto-mandate wake; every other event stands
         cad = {}
     env["mandate_cadence"] = cad
+    try:  # CONFLICTING-EXPOSURE-ALERT: a symbol held both ways across the books queues a review (never a gate)
+        from src.runtime import conflicting_exposure
+        tel_marks: Dict[str, float] = {}
+        for r in sorted(open_rows, key=lambda r: str(r.get("updated_at") or "")):
+            if _f(r.get("last_price")):
+                tel_marks[conflicting_exposure.normalize_symbol(r.get("symbol"))] = float(r["last_price"])
+        ce = conflicting_exposure.detect(
+            db_path, mark_fn=mark_fn or (lambda s: tel_marks.get(conflicting_exposure.normalize_symbol(s))))
+        ce["mark_source"] = "route_mark_fn" if mark_fn else "telemetry_last_price"
+    except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as could_not_look
+        ce = {"state": "could_not_look", "reason": f"{type(exc).__name__}: {exc}", "conflicts": []}
+    env["conflicting_exposure"] = ce
     res = compute_due(open_rows + less, rv["rows"], cfg, now, market=market, mechanics_rows=mech_rows,
-                      cadence=cad)
+                      cadence=cad, conflicts=ce.get("conflicts") or [])
     env.update(res)
     env["open_count"] = len(open_rows) + len(less)
     env["open_count_complete"] = jo["state"] == "read" and po["state"] in ("read", "table_absent")

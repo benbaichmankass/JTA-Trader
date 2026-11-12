@@ -41,6 +41,9 @@ power:
   feasibility:
     source: none
     accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+evidence_class:  # EVIDENCE-CLASS-BACKFILL 2026-11-11, rule E2 (scripts/research/backfill_evidence_class.py)
+  holdout: in_sample
+  claim: edge
 decision_rule:
   id: RULE-W43-ETHPULLBACK2H-TPX-SIBLING-COMPLIANCE
   statistic: 'From scripts/research/exit_lever_ablation.py --grade replace on eth_pullback_2h, window 2020-07-01

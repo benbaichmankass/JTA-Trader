@@ -208,7 +208,9 @@ def _sessions_from(payload: Any) -> Dict[str, dict]:
 # manager's logs). Other sessions should be left alone." The same day a bulk cleanup archived 9 of
 # the operator's sustainable-finance-venture sessions (since restored): `list_sessions(mine=true)`
 # lists the ACCOUNT's sessions, not the project's.
-PROJECT_REPOS = frozenset({"metis-insights", "ict-trading-bot", "ict-trader-dashboard",
+# "jta-trader" is the repo's name since the 2026-10-28 rename (RENAME-SLUG-FUNCTIONAL-AUDIT): without it every session
+# on the renamed repo read as FOREIGN here. The old names stay so sessions created before the rename still match.
+PROJECT_REPOS = frozenset({"jta-trader", "metis-insights", "ict-trading-bot", "ict-trader-dashboard",
                            "ict-trader-android"})
 PROJECT_ENV = "env_01A9rfUVrcEo1i5pKP1kWnp3"
 

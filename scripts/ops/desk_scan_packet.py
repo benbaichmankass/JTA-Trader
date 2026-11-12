@@ -98,7 +98,8 @@ def _r6(x: Optional[float]) -> Optional[float]:
 
 def pulled_universe(accounts_cfg: Dict[str, dict], strategies_cfg: Dict[str, Any]) -> List[dict]:
     """[{symbol, venue, classes}] in accounts.yaml order: the UNION fetch set the tick uses."""
-    from src.config.symbol_sets import UNION, resolve_symbols
+    from src.config.symbol_sets import UNION, resolve_symbols, tick_strategies_cfg
+    strategies_cfg = tick_strategies_cfg(strategies_cfg)   # the tick's STATIC set: pool_scored legs' populations are scored from their snapshot
 
     rows: Dict[str, dict] = {}
     try:

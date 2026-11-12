@@ -1,0 +1,96 @@
+id: RQ-20261111-ce01-01
+title: 'Conflicting exposure: when one leg opens AGAINST another leg already open on the same symbol (opposite direction, different
+  strategy), does the newcomer keep positive expectancy net of the full cost stack, split by timeframe gap and vol regime? (operator 2026-11-11
+  ''we should understand what circumstances justify doing that'')'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+theme: live_strategy
+priority: 1
+kind: experiment
+question: 'On 2026-11-11 the book held SOL SHORT (trend_donchian_sol_4h on two prop accounts; sol_pullback_2h on bybit_1) and SOL LONG
+  (ml_entry 1h on bybit_2, bybit_portfolio and breakout_2) at once. The live review called it timeframe separation (the long''s TP sat
+  inside the shorts'' profit zone) and priced each leg alone, but nothing measures the PAIR: across every leg with a committed Stage-0
+  per-trade corpus, find each opposed pair (two different legs, same symbol, opposite directions, overlapping [entry, exit)); the later
+  entry is the NEWCOMER (the moment the CONFLICTING-EXPOSURE alert fires). Per bucket (timeframe gap same / 2-4x / >4x; newcomer on the
+  shorter or longer timeframe; newcomer vol high / low vs its leg''s median stop width), is the newcomer''s mean net_r > 0 with its 95% CI
+  above 0 (keep both is fine), below 0 (close / skip the newcomer side), or neither? PRIOR, stated before the run: none on direction; the
+  SOL case suggests a shorter-TF counter-trend newcomer inside a longer-TF trend is the common shape.'
+why_this_matters: 'The CONFLICTING-EXPOSURE alert (row CONFLICTING-EXPOSURE-ALERT) queues a live review whenever a symbol is held both
+  ways across real-money, prop and paper books. This unit''s per-bucket verdicts become that review''s rule of thumb for "keep both" vs
+  "close one side", so the call rests on a committed record instead of each reviewer''s hunch.'
+power:
+  expected_n: 120
+  min_detectable_effect: 0.51
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Floor (1.96 + 0.8416)^2 / 0.51^2 = 30.2 -> the registered n floor of 30 unique newcomer trades per bucket detects ~0.51 sd.
+    expected_n is an ESTIMATE (not measured, no look taken): the crypto legs overlap on BTC/ETH/SOL/XRP/ADA over 2020-2026 and ml_entry
+    alone has 907 trades on five symbols; buckets below 30 read INDETERMINATE by rule.'
+  feasibility:
+    source: none
+    accrual_basis: 'Fixed by construction: committed corpora; n does not grow with waiting. An underpowered bucket is reported as such;
+      the follow-up is more corpora (build_ltr_corpus.py for legs without one), not a re-run.'
+decision_rule:
+  id: RULE-CE-OPPOSED-NEWCOMER-01
+  registered_at: '2026-11-11'
+  registered_before_run: true
+  statistic: 'scripts/research/opposing_overlap.py --n-floor 30: unique newcomer trades per bucket, mean net_r (each corpus''s own net_r,
+    fee + slippage + funding) with a 95% normal CI. Buckets: ALL; gap=<same|2-4x|>4x>; gap|role (newcomer_shorter_tf / newcomer_longer_tf
+    / same_tf); gap|role|vol (high_vol / low_vol = newcomer stop width vs its leg''s median, an ATR% proxy known at entry); vol. Baseline
+    (context only, not graded): the never-opposed trades of the same legs.'
+  rule: 'Per bucket: KEEP_BOTH_OK IF n >= 30 AND CI95 lower bound > 0. CLOSE_NEWCOMER IF n >= 30 AND CI95 upper bound < 0. INDETERMINATE
+    otherwise. The live-review rule of thumb is written ONLY from KEEP_BOTH_OK / CLOSE_NEWCOMER buckets at the gap|role level; an
+    INDETERMINATE bucket leaves that case to the reviewer''s priced judgement (live_review_outcomes per leg). A verdict at the gap|role|vol
+    level is a discovery, confirmed on a disjoint window before it becomes a rule. Thresholds and buckets are not changed after any result.'
+  what_it_does_not_do: 'Reads only committed corpora; edits no config, places no order, adds no gate (the alert stays an alert). The
+    INCUMBENT side is reported but NOT graded: its whole-trade net_r includes R accrued before the newcomer opened (look-ahead for a
+    decision at the newcomer''s entry); pricing "close the incumbent" from that moment needs a candle replay of its remaining path and is
+    a follow-up unit if this one finds an effect. Regime here is the stop-width vol proxy only, not the (trend, vol) cell of
+    config/regime_policy.yaml. Pairs from the same leg are excluded. Corpora windows differ by leg; a pair exists only where both
+    overlap. No look at any bucket was taken before registration (the harness self-test runs on synthetic rows).'
+practice_precedent: 'T2 (docs/reference/trading-and-model-practice-principles.md): a rule''s value depends on the return process,
+  so judge it per leg and per regime, never pooled; T3: net of the full cost stack. Desk practice nets or ring-fences opposing sleeves
+  on one instrument and allows both only when the horizons differ enough that both theses can be right in sequence.'
+intervention_controls:
+  not_applicable: 'a whole-history measurement of opposed vs never-opposed trades across committed Stage-0 corpora, not an in-trade action
+    at chosen check-ins; the never-opposed baseline is reported as context.'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.15
+  basis: 'stand-in: SOL opposed on real money (bybit_2) and three prop accounts on 2026-11-11; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 5
+  why_runner: Reads committed per-trade corpora only; no fetch.
+  basis: 'Estimate: ~40 legs x <= 1200 trades, a sorted sweep per symbol.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/opposing_overlap.py
+  - --unit
+  - '{unit}'
+  - --n-floor
+  - '30'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261111-ce01-01
+lands:
+  store: research/results/
+  assert_field: verdict
+  min_rows: 1
+related:
+- src/runtime/conflicting_exposure.py
+- scripts/research/live_review_outcomes.py
+- comms/live_review/rows/LR-20261111T2235Z-pkg-6df5f9dfb83e47b8.json
+last_dispatched_at: '2026-11-12T07:06:02+00:00'

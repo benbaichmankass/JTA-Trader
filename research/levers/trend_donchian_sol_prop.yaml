@@ -4,83 +4,88 @@ subject: trend_donchian_sol_prop
 kind: strategy_leg
 status: production
 books:
-- bybit_1
+- bybit_2
+- bybit_portfolio
 baseline:
   record: comms/strategy_evidence/trend_donchian_sol_prop.json
-  net_r: 48.0322
-  n: 395
+  net_r: 52.3713
+  n: 380
   fidelity: faithful
   rule_verdict: pass
 attribution:
   read_state: measured
-  n: 395
-  net_r: 48.032
-  gross_r: 69.811
-  cost_r: 21.779
-  cost_share_of_gross: 0.312
+  n: 380
+  net_r: 52.371
+  gross_r: 74.127
+  cost_r: 21.756
+  cost_share_of_gross: 0.293
   verdict_hint: gross edge survives cost
   entry_quality:
-    mean_mfe_r: 1.19
-    share_mfe_ge_1r: 0.486
-    n_with_mfe: 395
+    mean_mfe_r: 1.304
+    share_mfe_ge_1r: 0.516
+    n_with_mfe: 380
   exit_capture:
-    median_net_over_mfe_winners: 0.515
-    n_winners: 159
-    losers_that_reached_1r_mfe: 49
+    median_net_over_mfe_winners: 1.011
+    n_winners: 136
+    losers_that_reached_1r_mfe: 76
   by_year:
     '2020':
-      n: 6
-      net_r: 2.533
-      gross_r: 2.771
+      n: 5
+      net_r: 3.945
+      gross_r: 4.166
     '2021':
-      n: 76
-      net_r: 20.198
-      gross_r: 22.624
+      n: 75
+      net_r: 20.841
+      gross_r: 23.322
     '2022':
-      n: 58
-      net_r: 1.832
-      gross_r: 4.821
+      n: 56
+      net_r: 0.457
+      gross_r: 3.48
     '2023':
-      n: 74
-      net_r: 17.121
-      gross_r: 20.993
+      n: 72
+      net_r: 17.537
+      gross_r: 21.42
     '2024':
-      n: 62
-      net_r: 3.016
-      gross_r: 6.571
+      n: 59
+      net_r: 1.903
+      gross_r: 5.426
     '2025':
-      n: 67
-      net_r: 3.458
-      gross_r: 8.017
+      n: 62
+      net_r: 8.866
+      gross_r: 13.295
     '2026':
-      n: 52
-      net_r: -0.125
-      gross_r: 4.014
+      n: 51
+      net_r: -1.176
+      gross_r: 3.018
   by_direction:
     long:
-      n: 395
-      net_r: 48.032
-      gross_r: 69.811
+      n: 380
+      net_r: 52.371
+      gross_r: 74.127
   by_exit_reason:
     stop:
-      n: 105
-      net_r: -110.34
-      gross_r: -105.0
+      n: 147
+      net_r: -154.34
+      gross_r: -147.0
     take_profit:
-      n: 70
-      net_r: 163.086
-      gross_r: 166.095
+      n: 86
+      net_r: 210.454
+      gross_r: 214.613
+    timeout:
+      n: 1
+      net_r: 0.481
+      gross_r: 0.581
     trail_stop:
-      n: 220
-      net_r: -4.714
-      gross_r: 8.716
+      n: 146
+      net_r: -4.224
+      gross_r: 5.933
   by_adx_at_entry:
     unknown:
-      n: 395
-      net_r: 48.032
-      gross_r: 69.811
+      n: 380
+      net_r: 52.371
+      gross_r: 74.127
 manifest:
-  entry: untested
+  entry: tested
   exit: tested
   filter: tested
   regime_gating: untested
@@ -90,6 +95,77 @@ manifest:
   session: tested
   sizing_vs_cost: untested
 levers:
+  entry:
+    donchian:
+      tests:
+      - value: '25'
+        baseline_value: '20'
+        arm: donchian_hi
+        unit: RQ-20261106-032
+        window: 2021-11-02..2026-11-05
+        n: 267
+        net_r: 16.8625
+        baseline_n: 305
+        baseline_net_r: 28.9053
+        delta_net_r: -12.0428
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 11.3123
+        verdict: fail
+        joint_change: false
+      - value: '15'
+        baseline_value: '20'
+        arm: donchian_lo
+        unit: RQ-20261106-032
+        window: 2021-11-02..2026-11-05
+        n: 336
+        net_r: 20.2498
+        baseline_n: 305
+        baseline_net_r: 28.9053
+        delta_net_r: -8.6555
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 13.2552
+        verdict: fail
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: -0.0284
+      fold_stability: 0.25
+      reading: every tested value is worse than the baseline
+    min_confidence:
+      tests:
+      - value: '1.0'
+        baseline_value: '0.8'
+        arm: min_confidence_hi
+        unit: RQ-20261106-032
+        window: 2021-11-02..2026-11-05
+        n: 234
+        net_r: 29.0746
+        baseline_n: 305
+        baseline_net_r: 28.9053
+        delta_net_r: 0.1693
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 12.9888
+        verdict: fail
+        joint_change: false
+      - value: '0.6'
+        baseline_value: '0.8'
+        arm: min_confidence_lo
+        unit: RQ-20261106-032
+        window: 2021-11-02..2026-11-05
+        n: 385
+        net_r: 21.2086
+        baseline_n: 305
+        baseline_net_r: 28.9053
+        delta_net_r: -7.6967
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 15.1608
+        verdict: fail
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: 0.0006
+      fold_stability: 0.25
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
   exit:
     tp_target_r:
       tests:
@@ -2046,10 +2122,24 @@ levers:
         max_drawdown_r: 12.3722
         verdict: fail
         joint_change: false
+      - value: '3.0'
+        baseline_value: '6.0'
+        arm: T3
+        unit: RQ-20261107-47b6-10
+        window: 2021-09-24..2023-09-23
+        n: 118
+        net_r: 16.219
+        baseline_n: 117
+        baseline_net_r: 15.3948
+        delta_net_r: 0.8242
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 9.0949
+        verdict: fail
+        joint_change: false
       shape: noisy
-      points: 6
+      points: 7
       best_delta_r_per_trade: 0.0223
-      fold_stability: 0.347
+      fold_stability: 0.369
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
     tp_revision:
       tests:
@@ -2207,10 +2297,24 @@ levers:
         max_drawdown_r: 9.9592
         verdict: fail
         joint_change: false
+      - value: '120'
+        baseline_value: 'off'
+        arm: GTD120
+        unit: RQ-20261107-47b6-12
+        window: 2021-09-24..2023-09-23
+        n: 117
+        net_r: 15.3717
+        baseline_n: 117
+        baseline_net_r: 15.3948
+        delta_net_r: -0.0231
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 9.0949
+        verdict: fail
+        joint_change: false
       shape: flat
-      points: 3
+      points: 4
       best_delta_r_per_trade: 0.0111
-      fold_stability: 0.833
+      fold_stability: 0.812
       reading: no response at the tested values
     trail_decay_stall_bars:
       tests:

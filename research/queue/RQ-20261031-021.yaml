@@ -35,6 +35,9 @@ power:
     source: none
     accrual_basis: Replays history through config-exact harness runs on keyless public candles; nothing
       accrues.
+evidence_class:  # EVIDENCE-CLASS-BACKFILL 2026-11-11, rule T3 (scripts/research/backfill_evidence_class.py)
+  holdout: none
+  claim: other
 decision_rule:
   id: RULE-TPL-LEG-CORPUS-S1-COVERAGE
   statistic: 'verdict.json measurement: coverage (family money legs with a corpus <= 7 days old, trades
@@ -86,7 +89,7 @@ grading:
   discovery: unconfirmed
   evidence:
   - research/results/RQ-20261031-021/41958727452.jsonl
-  graded_at: '2026-11-11'
+  graded_at: '2026-11-12'
   grader: scripts/research/queue_grade.py
   latest: true
   needs_review: false

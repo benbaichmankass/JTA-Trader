@@ -28,6 +28,9 @@ power:
     source: none
     accrual_basis: Forward daily bars from 2026-11-03; the harness replays fetched candles and the trade count accrues with calendar time (~8/yr
       ESTIMATE).
+evidence_class:  # EVIDENCE-CLASS-BACKFILL 2026-11-11, rule E2 (scripts/research/backfill_evidence_class.py)
+  holdout: in_sample
+  claim: edge
 decision_rule:
   id: RULE-RQ-20261103-5a03-03-TQQQ-D20-FORWARD
   registered_at: '2026-11-03'

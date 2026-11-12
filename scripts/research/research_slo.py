@@ -41,7 +41,7 @@ import subprocess
 import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 _REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_REPO))
@@ -180,6 +180,11 @@ def gather_facts(root: Path, now: datetime, cfg: Dict[str, Any], gh: Optional["G
                      ledger=name, ledger_generated_at=at.strftime("%Y-%m-%dT%H:%M:%SZ"),
                      basis="sum(legs.*.n_configs) / max(survivors, 1) from the newest trial_ledger.json")
     f["trials_per_survivor"] = _safe(trials_per_survivor, "trials_per_survivor")
+
+    def heldout_registered_passes_30d():
+        c = heldout_pass_census(units, now, days=30)
+        return _fact(c["held_out"], **{k: v for k, v in c.items() if k != "held_out"})
+    f["heldout_registered_passes_30d"] = _safe(heldout_registered_passes_30d, "heldout_registered_passes_30d")
 
     util = _util_records(root)
     since24 = now - timedelta(hours=24)
@@ -399,6 +404,64 @@ def gather_facts(root: Path, now: datetime, cfg: Dict[str, Any], gh: Optional["G
 
 
 # ── evaluation (pure) ────────────────────────────────────────────────────────────────────────────────────
+#: RESEARCH-SLO-HELDOUT-SURVIVORS. The operator's survivor definition (2026-11-04) is "a registered-rule PASS on
+#: held-out data"; survivors_per_month measures a proxy (trial-ledger Stage-0 + DSR + BHY). This census counts the
+#: definition itself, from STRUCTURED unit fields only -- never from free text.
+#:   explicit: ``evidence_class: {holdout: <HOLDOUT_KINDS>, claim: <CLAIM_KINDS>}`` on the unit (optional, author-declared);
+#:   inferred: an ``ml_bakeoff`` block (purged-CV bake-off) -> holdout walk_forward, claim model_quality;
+#:             ``kind: deterministic`` -> holdout none, claim other (a computation, not a test);
+#:   otherwise ``unknown`` -- counted and shown, never folded into held_out.
+HELDOUT_KINDS = ("walk_forward", "final_fold", "holdout_window")
+NOT_HELDOUT_KINDS = ("in_sample", "none")
+CLAIM_KINDS = ("edge", "model_quality", "mechanics", "other")
+
+
+def classify_evidence(unit: Dict[str, Any]) -> Tuple[str, str, str]:
+    """(holdout, claim, source) for one unit; source is explicit | inferred | unknown."""
+    ec = unit.get("evidence_class")
+    if isinstance(ec, dict):
+        h = str(ec.get("holdout") or "unknown")
+        c = str(ec.get("claim") or "unknown")
+        h = h if h in HELDOUT_KINDS + NOT_HELDOUT_KINDS else "unknown"
+        c = c if c in CLAIM_KINDS else "unknown"
+        return h, c, "explicit"
+    if isinstance(unit.get("ml_bakeoff"), dict):
+        return "walk_forward", "model_quality", "inferred"
+    if str(unit.get("kind") or "") == "deterministic":
+        return "none", "other", "inferred"
+    return "unknown", "unknown", "unknown"
+
+
+def heldout_pass_census(units: Dict[str, Dict[str, Any]], now: datetime, days: int = 30) -> Dict[str, Any]:
+    """Graded PASSes with a rule registered before the run, in the last ``days``, by held-out class and claim."""
+    since = (now - timedelta(days=days)).strftime("%Y-%m-%d")
+    by_holdout: Dict[str, int] = {}
+    by_claim_heldout: Dict[str, int] = {}
+    by_source: Dict[str, int] = {}
+    n_pass = n_graded = 0
+    for u in units.values():
+        g = u.get("grading")
+        if not isinstance(g, dict) or str(g.get("graded_at") or "") < since:
+            continue
+        n_graded += 1
+        if str(g.get("verdict")) != "pass" or (u.get("decision_rule") or {}).get("registered_before_run") is not True:
+            continue
+        n_pass += 1
+        h, c, src = classify_evidence(u)
+        by_holdout[h] = by_holdout.get(h, 0) + 1
+        by_source[src] = by_source.get(src, 0) + 1
+        if h in HELDOUT_KINDS:
+            by_claim_heldout[c] = by_claim_heldout.get(c, 0) + 1
+    held = sum(by_holdout.get(k, 0) for k in HELDOUT_KINDS)
+    return {"held_out": held, "held_out_edge": by_claim_heldout.get("edge", 0),
+            "held_out_model_quality": by_claim_heldout.get("model_quality", 0),
+            "registered_passes": n_pass, "graded_in_window": n_graded, "unknown_holdout": by_holdout.get("unknown", 0),
+            "by_holdout": by_holdout, "by_claim_held_out": by_claim_heldout, "by_source": by_source,
+            "window_days": days, "since": since,
+            "basis": ("research/queue grading: verdict pass AND decision_rule.registered_before_run true, graded_at >= since; "
+                      "held-out class from evidence_class (explicit) or ml_bakeoff/kind (inferred); unknown is NOT held-out")}
+
+
 def evaluate(facts: Dict[str, Dict[str, Any]], cfg: Dict[str, Any]) -> List[Dict[str, Any]]:
     out = []
     for name, spec in cfg["slos"].items():
@@ -577,7 +640,7 @@ def deliver(alert: Dict[str, Any], state: Dict[str, Any], now: datetime, cfg: Di
 
 # ── self-test: a planted starved queue must fire, a healthy pipeline must not ───────────────────────────────
 def _fixture(**over: Any) -> Dict[str, Dict[str, Any]]:
-    healthy = {"survivors_per_month": _fact(2.0), "trials_per_survivor": _fact(120.0), "runnable_floor": _fact(60, threshold=50), "fires_24h": _fact(60), "lands_24h": _fact(40), "producer_failed_rate_24h": _fact(0.05),
+    healthy = {"survivors_per_month": _fact(2.0), "heldout_registered_passes_30d": _fact(3), "trials_per_survivor": _fact(120.0), "runnable_floor": _fact(60, threshold=50), "fires_24h": _fact(60), "lands_24h": _fact(40), "producer_failed_rate_24h": _fact(0.05),
                "grade_latency_p50_d": _fact(0.0), "grade_latency_p90_d": _fact(1.0), "undispositioned_24h": _fact(0),
                "authoring_supply_ratio_7d": _fact(1.3), "programme_coverage_pct": _fact(90.0),
                "theme_share_min_ratio": _fact(0.8), "blocked_over_age": _fact(2), "dispatcher_age_h": _fact(1.0),

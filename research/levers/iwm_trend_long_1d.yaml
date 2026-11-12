@@ -62,7 +62,7 @@ attribution:
       gross_r: 2.232
 manifest:
   entry: tested
-  exit: untested
+  exit: tested
   filter: tested
   regime_gating: untested
   timeframe: untested
@@ -105,6 +105,77 @@ levers:
       shape: monotone
       points: 2
       best_delta_r_per_trade: -0.0509
+      fold_stability: 0.25
+      reading: every tested value is worse than the baseline
+  exit:
+    atr_stop_mult:
+      tests:
+      - value: '2.5'
+        baseline_value: '2.0'
+        arm: atr_stop_mult_hi
+        unit: RQ-20261106-021
+        window: 2019-07-30..2026-11-06
+        n: 33
+        net_r: 5.2888
+        baseline_n: 34
+        baseline_net_r: 10.4135
+        delta_net_r: -5.1247
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 4.3411
+        verdict: indeterminate
+        joint_change: false
+      - value: '1.5'
+        baseline_value: '2.0'
+        arm: atr_stop_mult_lo
+        unit: RQ-20261106-021
+        window: 2019-07-30..2026-11-06
+        n: 42
+        net_r: 0.7492
+        baseline_n: 34
+        baseline_net_r: 10.4135
+        delta_net_r: -9.6643
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 8.4012
+        verdict: indeterminate
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: -0.1507
+      fold_stability: 0.25
+      reading: every tested value is worse than the baseline
+    tp_r:
+      tests:
+      - value: '3.75'
+        baseline_value: '3.0'
+        arm: tp_r_hi
+        unit: RQ-20261106-021
+        window: 2019-07-30..2026-11-06
+        n: 34
+        net_r: 6.8058
+        baseline_n: 34
+        baseline_net_r: 10.4135
+        delta_net_r: -3.6077
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 5.4345
+        verdict: indeterminate
+        joint_change: false
+      - value: '2.25'
+        baseline_value: '3.0'
+        arm: tp_r_lo
+        unit: RQ-20261106-021
+        window: 2019-07-30..2026-11-06
+        n: 37
+        net_r: 6.9729
+        baseline_n: 34
+        baseline_net_r: 10.4135
+        delta_net_r: -3.4406
+        folds_ge_baseline: 0/4
+        max_drawdown_r: 5.4345
+        verdict: indeterminate
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: -0.1012
       fold_stability: 0.25
       reading: every tested value is worse than the baseline
   filter:

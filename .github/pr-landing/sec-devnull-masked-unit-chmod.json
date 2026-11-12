@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "VM-DEVNULL-PERM root cause (SECURITY-HARDENING-AUDIT). scripts/install_systemd_units.sh skips a MASKED unit (symlink to /dev/null) instead of running cp + chmod 0644 through the symlink, which chmods /dev/null itself. Deploy-path script, so Tier 2 by path. Changes no unit, restarts nothing, adds no gate.",
+  "hold_text": "Tier-2 (deploy script): manager merges. Post-merge check: on the next HEAD-advancing deploy the ict-git-sync journal shows 'skip ict-ib-gateway-reset.timer (masked' and no '/dev/null not writable' line; ict-devnull-guard logs no new 'chmod 0666 /dev/null (was 644)'."
+}

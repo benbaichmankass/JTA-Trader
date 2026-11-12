@@ -43,10 +43,10 @@ def test_non_decision_close_and_unknown_symbol_are_named_refusals():
 
 
 def test_a_prediction_above_tau_builds_the_fixed_bracket(monkeypatch):
-    monkeypatch.setattr(L, "score", lambda row, model: 0.5)
+    monkeypatch.setattr(L, "score_rows", lambda rows, model: [0.5] * len(rows))
     pkg = L.order_package({"symbol": "E0", "session": None}, _snap())
     assert pkg["direction"] == "long" and pkg["sl"] == 98.0 and pkg["tp"] == 103.0 and pkg["meta"]["max_hold_min"] == 24 * 60
-    monkeypatch.setattr(L, "score", lambda row, model: 0.1)
+    monkeypatch.setattr(L, "score_rows", lambda rows, model: [0.1] * len(rows))
     with pytest.raises(ValueError, match="below_tau"):
         L.order_package({"symbol": "E0", "session": None}, _snap())
 
