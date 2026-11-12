@@ -2,7 +2,7 @@
 id: RQ-20261101-78fc-03
 title: 'ITERATION 1 of ml-exit-head-donchian-1h (fail): does exit-head-donchian-1h-v1 add value OUT OF SAMPLE on trend_donchian_eth (the one leg
   it still closes), and on the transitional/volatile cell where B3 refused it?'
-status: blocked
+status: queued
 cadence: once
 theme: ml_health
 priority: 1
@@ -32,10 +32,10 @@ power:
   min_detectable_effect: 0.02
   effect_units: metric
   sd: 1.0
-  design: paired
+  design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: INFERRED from the source result's population; the rule's own INDETERMINATE floor governs.
+  basis: 'INFERRED from the source result''s population; the rule''s own INDETERMINATE floor governs. power.design paired -> one_sample on unblocking (2026-11-12, before any run): the power gate accepts only one_sample / two_sample; the head-vs-B0 comparison is a one-sample test on per-trade dR. Rule unchanged.'
   feasibility:
     source: none
     accrual_basis: Replays existing corpora; nothing accrues.
@@ -53,12 +53,12 @@ practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principle
   read.'
 compute: cpu_long
 routing:
-  needs_trainer_resident_data: false
+  needs_trainer_resident_data: true
   needs_gpu: false
-  peak_memory_gb: 8.0
+  peak_memory_gb: 2.5
   est_minutes: 120
-  basis: Estimate; the first run replaces it.
-  why_runner: Replays committed or public corpora on CPU.
+  basis: 'Estimate; the first run replaces it. peak_memory_gb 8.0 -> 2.5 (2026-11-12): RQ-20260927-002 ran the same rows.jsonl walk-forward on the trainer at 2.5 GB; the trainer route refuses > 6 GB.'
+  why_runner: 'The exit-head training rows (datasets-out/exit_head/1h/donchian/rows.jsonl) live only on the trainer (RQ-20260927-002 routing).'
 value:
   usd_at_stake_per_month: 120
   confidence: 0.15
@@ -72,11 +72,15 @@ related:
 - RESEARCH-ITERATE
 - ML-VOLGATE-EXITHEAD-REPLAY
 what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
-blocked_on:
-- kind: work_item
-  ref: ML-VOLGATE-EXITHEAD-REPLAY
-  what: 'PI-20261029-IFMPNGJK-0004: the ETH OOS walk-forward replay of the exit head on the B4 corpus'
-  clears_when: the replay command lands (row ML-VOLGATE-EXITHEAD-REPLAY); then git-mv to research/queue/ (rule unchanged)
+unblocked:
+  at: '2026-11-12'
+  by: ML standing lane part 3 (session_01AFoLuMDTXRAaebDXhfn3Wu), manager 2026-11-11a instruction 04:00Z
+  how: 'The replay command the blocked_on named is scripts/research/exit_head_eth_oos_control.py: the RQ-20260927-002 method (exit_head_walkforward_multifold._fold_boundaries, train_exit_head.train_model, exit_head_replay.replay_trade, all imported) on trend_donchian_eth ETHUSDT 1h, 5 sequential folds, 7-day embargo, plus the 78fc-03 statistic (per-trade dR, trade-clustered 95% CI LB) and a REPORTED, non-gating matched random-truncation control (operator 2026-11-11 b6 "Confirm: run the control test"). The rule is unchanged.'
+run:
+  workflow: trainer-vm-diag (issue label trainer-vm-diag-request)
+  inputs:
+    research_unit: RQ-20261101-78fc-03
+  note: 'One relay dispatch: a temporary git worktree of the committed driver at its commit, ETHUSDT 1h candles fetched from Binance Vision (--days 2320, covering 2020-07..2026-11), BACKTEST_DATA_PATH pointed at them, rows from the trainer-resident datasets-out/exit_head/1h/donchian/rows.jsonl; the RESULT_JSON block in the relay comment is landed under research/results/.'
 intervention_controls:
   not_applicable: an offline model evaluation; the consumer's own gate applies any action
 ml_consumer:
