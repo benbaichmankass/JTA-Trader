@@ -1,6 +1,6 @@
 # Gate audit — every gate in the system (2026-11-12)
 
-> **Doc status:** `live` · category `evidence` · last verified `2026-11-12` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
+> **Doc status:** `unknown` · category `evidence` · last verified `2026-11-12` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
 
 **Gates this adds or changes: none.** This audit is read-only: it removes, loosens and tightens nothing. The operator decides each row. Lane `GATE-AUDIT`, Tier 1, dispatched by Manager Session 2026-11-11a.
 
@@ -27,17 +27,17 @@
 
 | Category | Rows | Can block real money | No operator authorization | KEEP | REMOVE | MAKE-REPORT-ONLY | OPERATOR-PREFERENCE |
 |---|---|---|---|---|---|---|---|
-| Runtime order path | 46 | 38 | 10 | 24 | 2 | 8 | 12 |
-| Active management (close / reduce / amend) | 36 | 34 | 10 | 18 | 5 | 7 | 6 |
+| Runtime order path | 49 | 41 | 11 | 26 | 2 | 9 | 12 |
+| Active management (close / reduce / amend) | 41 | 39 | 13 | 22 | 5 | 7 | 7 |
 | VM and services | 11 | 7 | 5 | 7 | 0 | 1 | 3 |
-| Writers, research queue, soak/status | 19 | 3 | 3 | 13 | 0 | 4 | 2 |
-| CI landing machinery | 32 | 21 | 13 | 13 | 6 | 3 | 10 |
+| Writers, research queue, soak/status | 20 | 4 | 4 | 13 | 0 | 4 | 3 |
+| CI landing machinery | 33 | 22 | 14 | 14 | 6 | 3 | 10 |
 | run_guards.py guards (one blocking `guards` check) | 132 | 30 | 102 | 10 | 0 | 111 | 11 |
 | Proposed by the w9 lane (report-only, unmerged) | 4 | 3 | 0 | 0 | 0 | 4 | 0 |
 | Platform (not repo code) | 7 | 2 | 0 | 0 | 0 | 0 | 7 |
-| **Total** | **287** | **138** | **143** | 85 | 13 | 138 | 51 |
+| **Total** | **297** | **148** | **149** | 92 | 13 | 139 | 53 |
 
-**46 rows can block real money AND have no operator authorization on record.** They head the inventory below.
+**52 rows can block real money AND have no operator authorization on record.** They head the inventory below.
 
 **All 132 `run_guards.py` guards are merge-blocking.** They run inside the one required `guards` check. Only one guard, `infra-workflows-single-owner`, runs its detector as a report; even there, its self-test blocks. Branch protection requires `pytest-collect`, `pytest-run` and `guards` with `enforce_admins: true`. That is set in `.github/workflows/branch-protection-sync.yml:153,208`; the live GitHub state was not read by this lane.
 
@@ -45,12 +45,12 @@
 
 Each cause maps to a row below; every one of them can refuse or prevent a **close** on a prop account.
 
-1. **Close is advice-only everywhere without an auto mandate** (`AM-ADVICE-ONLY-ALL-CLASSES`, `src/runtime/live_review_rows.py:35`).
-   - `ADVICE_ONLY_ACTIONS` covers every in-trade class: `close`, `partial_close`, `tighten_sl`, and the rest.
-   - The operator's popups ("Advice-only tightens (Recommended)", "Advice-only until tested", 2026-10-28) were given on *tighten* evidence. They were extended to close without a close-specific test.
-   - Measured over 524 review rows, 2026-10-29..11-12: 56 carried an in-trade action (31 of them `close`), and **0 of 56 were applied**.
-   - No real-money or prop account has an auto path. `MD-LTR-PAPER-AUTO` covers `bybit_1`, `alpaca_paper` and `ib_paper` only.
-   - The breakout_2 close fell back to an operator Telegram tap (`AM-OPERATOR-TAP-FALLBACK`).
+1. **Close was advice-only on every prop and real-money account until 10:59Z today** (`AM-ADVICE-ONLY-ALL-CLASSES`, `src/runtime/live_review_rows.py:35`).
+   - `ADVICE_ONLY_ACTIONS` covers every in-trade class. The operator's popups ("Advice-only tightens (Recommended)", "Advice-only until tested", 2026-10-28) were given on *tighten* evidence and extended to close without a close-specific test.
+   - Measured over 524 review rows, 2026-10-29..11-12, all before today's grant: 56 carried an in-trade action (31 of them `close`), and **0 of 56 were applied**.
+   - **MD-LTR-PROP-AUTO** (operator 2026-11-12 ~09:26Z, "Standing permission granted"; merged #25222 at 10:59Z) now auto-applies close, partial close and tighten on breakout_2, tradeify_1 and velotrade_1 (`AM-AUTO-MANDATE-SCOPE`, `AM-MD-LTR-PROP-AUTO-BOUNDS`).
+   - **Real money and the mirrors** (`bybit_2`, `bybit_portfolio`, `alpaca_live`, `alpaca_portfolio`, `ib_live`) still have no auto path; every review call there is advice-only.
+   - Even with the grant, the breakout_2 close still could not execute: the phone could not read the card layout (cause 3), and `prop_vm` had no close executor (cause 4, fixed by open PR #25230).
 2. **Neither prop trail ever closes** (`AM-PHONE-TRAIL-NEVER-CLOSES` `src/prop/phone_trail.py:540`, `AM-PROP-VM-TRAIL-NEVER-CLOSES` `src/prop/prop_trail.py:359`).
    - When the strategy's own harness has exited, the trail moves the stop to price + buffer: *"Tighten-only; no close"*.
    - Close levers (`stale_exit_bars`, `giveback_*`) only alert.
@@ -74,9 +74,25 @@ A contrary operator quote is on file in the phone app (`MainActivity.kt:1668`, 2
 
 ## Inventory
 
+**Prevents a wrong action, or blocks a right one?** Every row now carries `effect`, which is one of:
+- `PREVENTS-WRONG`: e.g. closing more than intended, wrong side, a double order, a mis-tap.
+- `BLOCKS-RIGHT`: e.g. refusing to close a losing position, a missing executor.
+- `BOTH`: one part prevents a wrong action and another blocks a right one; `effect_why` says which.
+- `NEITHER`: it refuses nothing in practice.
+- `MERGE-TIME`: CI guards, which block a merge, never a trading action directly; not assessed guard by guard.
+
+Over the 165 non-CI rows: NOT-ASSESSED 146, PREVENTS-WRONG 7, BLOCKS-RIGHT 6, BOTH 4, NEITHER 2. Real-money rows that BLOCK A RIGHT ACTION: **10** (BLOCKS-RIGHT or BOTH).
+
+**Rows from the account managers' PR reviews (manager list, 11:52Z).** PR states were read on GitHub at ~12:20Z.
+- **New rows:** `AM-PROP-INFLIGHT-RESERVE` (#25223), `AM-PROP-VM-CLOSE-REFUSALS` (#25230), `AM-TRADEIFY-TP-MOVE-CONDITIONS` (#25272), `GATE-LIVE-MAXQTY-COULD-NOT-LOOK` (#25233), `GATE-DDSWITCH-AWAITING-DAY-START` (#25181), `POLICY-DEMOTION-KEEP-OPEN-BLOCK-NEW` (#25251), `AM-PHONE-SHEET-DENYLIST-RECHECK` (#25226/#25287), `AM-MD-LTR-PROP-AUTO-BOUNDS` (#25222, merged), `ML-R4-DEMOTION-GATE-ML-ENTRY` (#25263), `CI-TEST-SHADOW-NEVER-ORDERS` (#25260).
+- **Mapped onto existing rows:** #25227 (merged) is `AM-PHONE-REDUCE-CAPABILITY`; the prop trail is `AM-PHONE-TRAIL-NEVER-CLOSES` / `AM-PROP-VM-TRAIL-NEVER-CLOSES` (being removed by PROP-VM-STRATEGY-EXIT-CLOSE); ML-ADVISORY-SCOPE-GUARD is `W9-ML-ADVISORY-SCOPE-GUARD` (not built as a gate).
+- **Not on main:** all the new rows except #25222 are open draft PRs.
+- **#25181 is not a gate:** `awaiting_day_start` cannot trip, so it blocks no trade in that window.
+- **#25223 tightens an existing gate without saying so:** it adds refusals inside the prop cushion gate while declaring "Gates: none". Under the no-new-gates rule, tightening needs the operator's permission.
+
 Each row ends with the decisions-page question. `RM` = can block or narrow a real-money action. Auth: `VERBATIM` / `PARAPHRASE` / **`NONE`**.
 
-### Runtime order path (46)
+### Runtime order path (49)
 
 #### `GATE-BAR-DEBOUNCE` (RM) — ⚠️ **NO OPERATOR AUTHORIZATION FOUND**
 
@@ -86,6 +102,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND (PERF-20260601-001 in comment; no operator quote)
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** It was added for PERF-20260601-001 (2026-06-01, #2548): repeat entry dispatches within one bar stacked positions. The reader judged that the open-package gate and the netting guard now cover that case; the lane did not re-verify it.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: REMOVE.** Duplicate of open-package + netting guards, unauthorized; risk of stacking is covered by those.
 - **Question:** No operator authorization found. Keep this gate? One entry attempt per strategy+symbol per closed timeframe bar; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -97,6 +114,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** Anti-spam; the re-emission is harmless once refusals are journalled.
 - **Question:** No operator authorization found. Keep this gate? A signal that already sized to an empty map is not re-dispatched (refused once with a named cause). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -108,8 +126,21 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND as quote; physics
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Venue/physics limits, not policy.
 - **Question:** No operator authorization found. Keep this gate? Last-line refusals: qty<=0 on a live order; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
+
+#### `GATE-LIVE-MAXQTY-COULD-NOT-LOOK` (RM) — ⚠️ **NO OPERATOR AUTHORIZATION FOUND**
+
+- **Where:** `config/instruments.yaml max_qty_venue + src qty_legalize.py (PR #25233, OPEN draft, Tier 2 held)`
+- **Blocks:** PROPOSED: the AVAX 22000 max_qty ceiling (measured on the demo venue) is scoped to demo accounts; a non-demo account whose live max_qty lookup misses gets could_not_look, which may refuse sizing for that order.
+- **Added:** not on main (PR #25233)
+- **Operator authorization (NONE):** NONE FOUND (PR says "Adds no gate").
+- **Hits, last 14 days:** not live
+- **Cost of removing it:** Without it, a demo-measured ceiling is applied to a live account (wrong size limit).
+- **Effect: BOTH.** Prevents a demo-only limit being applied to live; but a lookup miss refuses an otherwise valid live order.
+- **Recommendation: MAKE-REPORT-ONLY.** Applying the demo ceiling to live is wrong, but refusing the order when the live lookup misses blocks a valid trade; fall back to the exchange's own reject instead.
+- **Question:** No operator authorization found. Keep this gate? PROPOSED: the AVAX 22000 max_qty ceiling (measured on the demo venue) is scoped to demo accounts; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
 #### `GATE-MARKET-HOURS` (RM) — ⚠️ **NO OPERATOR AUTHORIZATION FOUND**
 
@@ -119,6 +150,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND as quote (M15 comment); venue closed anyway
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Mirrors venue physics; approximation can err conservative at DST edges (comment).
 - **Question:** No operator authorization found. Keep this gate? Signal builders for us_equity/fx/cme symbols return side=none when the market is closed (US 14:30-21:00 UTC, no holiday calendar); *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -130,6 +162,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND (a default-ON env switch; 'third gate' pattern in kind, though default permissive)
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** E1-F1 audit 2026-07-09: legacy path could send naked un-sized orders; the sltp refusal (not the env flag) guards that
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** Default-on env switch that can disable all trading is exactly the forbidden shape; delete the flag, keep the missing-SL/TP refusal (naked-order incident E1-F1).
 - **Question:** No operator authorization found. Keep this gate? If env MULTI_ACCOUNT_DISPATCH is false (default true), actionable signals are refused (multi_account_dispatch_disabled) instead of dispatching. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -141,6 +174,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND as quote; docstring cites measured incident 2026-08-25 only. Note risk.py has breach_guards_mode (enforce/accept) -- accounts can already set it to report.
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Strong money evidence (terminal prop breach); but flag operator to confirm since no quote found. Owned partly by another auditor (prop lane).
 - **Question:** No operator authorization found. Keep this gate? Prop ticket whose risk_usd exceeds remaining drawdown cushion (or cushion unknown) is capped/refused per breach_guards mode (enforce\|report). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -152,6 +186,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: REMOVE.** Unauthorized time-delay gate that can drop a valid real-money entry; refusals are already journalled.
 - **Question:** No operator authorization found. Keep this gate? After a strategy's package was refused, further dispatches for that strategy are skipped for 300 seconds. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -163,6 +198,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Manual pause by a human act, not automatic; useful but unauthorized by a quote.
 - **Question:** No operator authorization found. Keep this gate? A strategy with a runtime pause flag file is skipped at signal-build time (no new entry; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -174,6 +210,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** OPERATOR-DECLARED GATE (task: list, rec KEEP). Code comment risk.py/coordinator.py: 'operator directive 2026-05-03' (paraphrase); accounts.yaml:2011 breakout_1: verbatim 'Set it to dry_run (Recommended)' 2026-10-05 popup; CLAUDE.md 'The two execution gates'.
 - **Hits, last 14 days:** not measured; static config read 2026-11-12: 3 of 14 accounts mode=dry_run (ib_live, oanda_practice, breakout_1)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Operator-declared execution gate; only the set-account-mode system action writes it.
 - **Question:** Keep this gate? Account-level execution gate: mode: dry_run turns every package for that account into a dry would-be row (no order). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -185,6 +222,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM: 'alpaca long only for real money, everything else stays the same.' operator 2026-08-23 (src/runtime/account_side_filter.py docstring; accounts.yaml:1540). Recorded in file, not in a checklist row.
 - **Hits, last 14 days:** not measured; static: 1 of 14 accounts declares side_filter
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Operator quote on record, scoped to alpaca_live; operator may still revisit.
 - **Question:** Keep this gate? Per-account direction suppression: a suppressed short is demoted to dry (journalled as would-be). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -196,6 +234,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM: 'Build the gate now', 2026-09-28, with 'Refuse short signals, with a logged reason, on any account whose broker reports shorting disabled' (coordinator.py comment ~1760, attributed to operator).
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** Authorized, but the venue rejects anyway so it adds nothing but a cleaner reason; operator approved it so KEEP is defensible.
 - **Question:** Keep this gate? Refuses (with journal row broker_shorting_disabled) a short that would open/add short exposure on an account whose broker reports shorting_enabled false (cached 600s, fail-permissi *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -207,8 +246,21 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM (2026-10-09, daily_dd_switch.py docstring + CLAUDE.md): 'the daily drawdown on at the account level. That's the only place I want there to be like a automatic off switch ... We'll arm all of them' ; popup 'Keep open, block new'. Disarm of paper accounts: accounts.yaml 'DISARMED 2026-10-29 (operator)'.
 - **Hits, last 14 days:** not measured; static: 8 of 14 accounts armed (accounts.yaml 2026-11-12)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** The ONE sanctioned exception, verbatim operator quote.
 - **Question:** Keep this gate? Armed account: once day loss >= limit (3% or 0.8x firm limit), NEW entries refused until next day boundary. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
+
+#### `GATE-DDSWITCH-AWAITING-DAY-START` (RM)
+
+- **Where:** `src DailyDDSwitch.observe (PR #25181, OPEN draft, Tier 3 HOLD: manager merges)`
+- **Blocks:** CHECKED, NOT A GATE: after the daily reset the switch reads awaiting_day_start until the first post-boundary equity reading; per the PR it is "not ok, no unreadable streak, and it cannot trip", so it refuses nothing. The PR also adds a one-time operator override (a loosening).
+- **Added:** not on main (PR #25181)
+- **Operator authorization (VERBATIM):** VERBATIM for the PR: operator decisions page 2026-11-12 m7 "Build the one-time override button and fix the day-start reading first".
+- **Hits, last 14 days:** not live. The bug it fixes was MEASURED: 11-12 00:05Z bybit_2 46% / bybit_portfolio 44% of the limit charged from the prior day's last hour.
+- **Cost of removing it:** n/a: awaiting_day_start blocks nothing.
+- **Effect: NEITHER.** awaiting_day_start does not refuse an entry (cannot trip per the PR); recorded so the question is answered.
+- **Recommendation: KEEP.** It cannot trip, so it does not block trades in that window; the parent daily_dd_switch is operator-sanctioned (2026-10-09).
+- **Question:** Keep this gate? CHECKED, NOT A GATE: after the daily reset the switch reads awaiting_day_start until the first post-boundary equity reading; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
 #### `GATE-EXCLUSION-PRELOOP` (RM)
 
@@ -218,6 +270,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** Roster rule is operator doctrine: CLAUDE.md 'the strategies: roster decides what trades' (operator, 2026-09-22) and 'An account configures strategies, never symbols' (operator, 2026-11-04, binding). Symbol->exchange routing: PARAPHRASE ONLY (code comment multi-symbol M11).
 - **Hits, last 14 days:** not measured; excluded_by_account is stamped in pkg.meta.dispatch_exclusions_by_account (journal, VM)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Roster routing is the operator's declared mechanism, not a limitation added on top.
 - **Question:** Keep this gate? Per-account pre-sizing eligibility: not_configured; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -229,6 +282,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARTIAL: TP doctrine 'Every leg's bracket carries a REAL predictive take-profit at entry' (operator, 2026-10-06, binding, CLAUDE.md) supports it; the refusal itself has no quote.
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Prevents unprotected real-money positions; consistent with binding TP doctrine.
 - **Question:** Keep this gate? A live OPEN order without positive SL and TP is refused. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -240,6 +294,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: 'The DEFAULT IS hold (2026-05-31, operator-approved)'; walk-forward evidence docs/audits/walkforward-flip-policy-2026-05-30.md
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Evidence-backed default, journalled; blocks opposing entry/reversal only.
 - **Question:** Keep this gate? Under default hold policy an opposite-direction signal on a held position is a NOOP (no close, no reverse) unless a confidence override fires; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -251,6 +306,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM (accounts.yaml:1173,1218): 'operator 2026-10-24 "1.5× equity (Recommended)"', MGC-SIZING-OVERSIZE. No quote for the mechanism before that.
 - **Hits, last 14 days:** not measured; static: 2 of 14 accounts declare a ceiling
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Value chosen by operator popup; only 2 accounts, one real-money-but-dry.
 - **Question:** Keep this gate? Refuses new entries when account gross notional is already at/over declared multiple of equity; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -262,6 +318,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: Prime Directive rule 7 'There is no halting' exists; the manual halt flag is a human-created file, whose authorization I did not find as a quote. Searched halt flag/halt_flag/'/halt' in docs/CLAUDE-RULES-CANONICAL.md (0 hits for an operator quote)
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Manual operator stop switch, not an automatic gate; keep/remove is his call.
 - **Question:** Keep this gate? If the halt flag file exists, every ENTRY package is refused for all accounts (returns []). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -273,6 +330,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: 'BL-20260622-ALPACA-REDUCE-HOLD; operator-approved 2026-06-22' (comment); no quote
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Blocks strategy-driven reduce/close on equity/futures accounts; operator should confirm his view of 'a strategy can't resize a bracketed position'.
 - **Question:** Keep this gate? On non-derivative accounts (alpaca/ib) a reduce/close/flip delta is held (no order); *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -284,6 +342,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: commit subject 'operator-approved'; code comment 'R2, Tier-2, 2026-09-10'; no verbatim quote found in canonical docs
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Delays closes on IB; protects exit loop latency; operator-approved by commit subject only.
 - **Question:** Keep this gate? In the exit-evaluation pass, after one IB queue timeout the remaining IB-routed packages are skipped for that pass (candles=None, retried next pass). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -295,6 +354,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARTIAL: opening top-ups now sized up by operator popups 2026-11-10 / 11-11 (see GATE-TOPUP-SIZEUP-CAP); the residual drop is physics (venue rejects 110094).
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Venue-minimum physics.
 - **Question:** Keep this gate? A netting delta smaller than the venue min lot (or opening delta under min notional, e.g. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -306,6 +366,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARTIAL: 2026-10-29 operator approved 'ML-consumer refusal' to stay (NO-NEW-GATES-RULE row note: 'the 4 gates that had no operator record are all APPROVED TO STAY: ... ML-consumer refusal ...'). Unclear whether that names these ml_entry refusals; cost_gate/session were added AFTER 2026-10-29.
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** cost_gate and session refusal postdate the 2026-10-29 approval; ask whether it covers them; tau/insufficient_bars are mechanics.
 - **Question:** Keep this gate? The ML entry leg refuses to emit a package: cost gate (est cost R above artifact max), decision threshold tau, session/close-before-hold, too few reference symbols, side_filter pro *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -317,6 +378,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: FIX-CA-07 comment; Prime Directive 'could not look is not flat' (canonical)
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Fail-closed on unreadable money state; one red flag after 3 consecutive (NO-HALT).
 - **Question:** Keep this gate? If the journal net position cannot be read the package is refused for that account (not treated as flat); *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -328,6 +390,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: comment BL-20260608-DEMOPNL, 'Prime Directive: a required correctness fix'; no quote
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Documented correctness hazard (SL/TP overwrite); entry-only.
 - **Question:** Keep this gate? Blocks a same-direction ADD (open/increase) for a strategy/account/symbol that already holds an open trade (no pyramiding); *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -339,6 +402,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARTIAL: docs/reference/env-vars.md:74 records 'operator-confirmed intended, 2026-06-28: "selecting rss is the deliberate activation"' -- that authorizes arming by activation, not the veto thresholds. Also docs/CLAUDE-RULES-CANONICAL.md:1293 allows default-ON blocking gates by name.
 - **Hits, last 14 days:** not measured: news_decisions log is VM-side; env-vars.md says inert unless source active
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Quote covers activation only; a taste/risk call whether a news refusal should block money.
 - **Question:** Keep this gate? Refuses the whole signal for EVERY account incl. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -350,6 +414,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: pipeline.py:731 'Per the operator directive 2026-05-03: a strategy that already has an open package focuses on monitoring + updating that package' (no verbatim quote)
 - **Hits, last 14 days:** comms/live_parity/latest.json (window 2026-11-05..11-12) contains 123 textual 'open_package_blocked' matches -- text count, not a verified distinct hit count; 2026-09-30 comment cites 92 of 121 live-leg emissions blocked (outside window)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Operator directive paraphrase with an incident; but confirm if operator wants it kept; blocks entries only (closes unaffected).
 - **Question:** Keep this gate? One open order package per strategy (per account since E35, with pair-coupled narrowing): a new entry for a strategy that already has an open package is skipped; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -361,6 +426,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: none; justified by Bybit 110007 refusals ('9 refusals across 3 strategies, 30%' in comment)
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** Bybit 110007 refusals cited in risk.py comments
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** Venue enforces the same limit; our own buffer (_MARGIN_SAFETY_BUFFER) is extra narrowing.
 - **Question:** Keep this gate? Qty is clamped to available margin x leverage x safety buffer; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -372,6 +438,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: ARCHITECTURE-CANONICAL row 2026-09-25 E35; priority tuning comments cite 'operator's stated risk preference'
 - **Hits, last 14 days:** not measured; conviction_arbitration soak rows on VM
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Which signal wins when two collide is a design call; loser is simply not traded.
 - **Question:** Keep this gate? One winner per symbol per account: losing strategies' intents produce no package on that account for the tick; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -383,6 +450,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM: 'Fix it', operator 2026-09-28 (coordinator.py comment ~1941, PI-20260921-E16...). Narrow: authorizes applying the existing refusal on every path.
 - **Hits, last 14 days:** not measured; prop_balance_absent measured 7 refusals 2026-10-07..08 on breakout_2 (coordinator comment, outside window)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Prop floor breach is terminal; operator quote on record.
 - **Question:** Keep this gate? Refuses sizing/dispatch for a declared prop account when its balance snapshot is stale/absent/error (phone-flow bridge exempt: still pages but emits). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -394,6 +462,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: 'Design-A vol-gate go-live, 2026-06-28' and 'Editing a cell is Tier-3, operator-gated' (regime_policy.yaml header); cell rec #5 2026-07-29 cites docs/research/regime-cell-walkforward-2026-07-29.md; no verbatim quote found. Skill regime-selectivity governs cell authoring.
 - **Hits, last 14 days:** not measured: regime_hard_gate rows live in signals log on VM (no copy in repo)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Evidence per cell exists but no verbatim authorization; a walk-forward-backed filter is a risk-appetite call.
 - **Question:** Keep this gate? Drops candidate intents whose (trend, vol) regime cell is off before arbitration: 20 trend off-cells and 8 trend_vol off-cells in config/regime_policy.yaml (parsed 2026-11-12). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -405,6 +474,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: 'PI-20260927-ECILBBVH-0007, ORDER-AUDIT-3 -- TIER 3' in comment; no quote
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Narrows entries below one share after a reducer; taste call whether to round up instead.
 - **Question:** Keep this gate? After reductive multipliers (conviction/advisory/news/overlay), on whole-unit venues the qty is floored to whole units; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -416,6 +486,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** Overlay: Tier-3 packet evidence RQ-20261029-5785-02 (code comment) -- no quote. Conviction: 'operator-blessed 2026-06-27' (paraphrase, runtime_flags.py:215). Others none.
 - **Hits, last 14 days:** not measured (annotate/apply decisions in runtime_logs on VM)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Size narrowing is a risk-appetite call; the tri-state *_MODE flags are default-off so inert unless operator flips.
 - **Question:** Keep this gate? Reductive/narrowing size multipliers applied before the risk gate: conviction apply (mode off default), advisory downsize (model stage advisory+), overlay reduce (mode: reduce per *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -427,6 +498,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM: 'size up - that's what trading at minimum size means' operator 2026-11-09 (risk.py comment ~1247, Tier 3); 'Size up top-ups too' popup 2026-11-10; refuse-sub-1-contract: PARAPHRASE ONLY 'operator-approved refuse 2026-06-28 (#3910 Item 3)'
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Mostly physics; the remaining refusals follow venue limits.
 - **Question:** Keep this gate? Risk-based qty below venue lot minimum: crypto is now SIZED UP to min (operator 2026-11-09); *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -438,6 +510,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: risk.py comment 'operator directive 2026-06-24' (this one REMOVED the floor; zero balance is 'physics')
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Physics, not policy.
 - **Question:** Keep this gate? Non-positive balance sizes to 0 and the order is refused (zero_balance / sizing_failed). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -449,6 +522,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARTIAL: accounts.yaml/coordinator cite 'NETTED-SLICES (operator 2026-10-15)' -- paraphrase, no verbatim quote found
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Several distinct refusals incl. slice_budget_exhausted narrows a real-money entry; budget policy is a risk call.
 - **Question:** Keep this gate? On position_model: slices accounts (bybit_1, bybit_2, bybit_portfolio) refuses an add the slice ledger cannot carry: ledger unreadable/divergent, opposite slice on one-way book, re *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -460,6 +534,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: commit subject says 'operator approval'; docs/research/crypto-finetune-proposals-2026-07-30.md; 'enabled' is permissive per-strategy config (no quote needed).
 - **Hits, last 14 days:** not measured; static config counts above
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Per-leg risk-appetite config; evidence in research doc.
 - **Question:** Keep this gate? Builder-level: enabled:false returns side=none; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -471,6 +546,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** OPERATOR-DECLARED GATE (rec KEEP). Code comment: 'Strategy-level execution gate (S9, operator-approved 2026-05-24)' (paraphrase, no quote); CLAUDE.md 'The two execution gates'.
 - **Hits, last 14 days:** not measured; static config: 1 shadow leg of 62
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Operator-declared execution gate.
 - **Question:** Keep this gate? Strategy-level gate: execution: shadow runs and logs packages but never sends a live order on any account (demotes to dry). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -482,6 +558,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: CLAUDE.md 'accounts.yaml::symbols is NOT a gate' (operator, 2026-09-22) cuts against narrowing; the union is built to widen, not narrow.
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** Whitelist union is fail-safe, but a symbol whitelist is a gate by the operator's 2026-09-22 rule; log instead.
 - **Question:** Keep this gate? An intent for a symbol not in the static base set unioned with accounts' symbols and rostered strategies' symbols is rejected at construction. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -493,8 +570,21 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM: 'Approve with a cap (Recommended)', operator popup 2026-11-11 ~22:25Z (coordinator.py comment).
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Authorized cap with quote.
 - **Question:** Keep this gate? A raised opening top-up may not exceed the target by more than one venue minimum lot; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
+
+#### `ML-R4-DEMOTION-GATE-ML-ENTRY` (RM)
+
+- **Where:** `scripts/ops/r4_demotion_gate.py (existing) + comms/strategy_evidence/ml_entry.json source_run (PR #25263, OPEN draft)`
+- **Blocks:** Makes the existing R4 demotion gate able to grade ml_entry on bybit_2 (it abstained no_evidence on every run): when the last-40-trade window falls below the Stage-0 p10, it proposes demoting the real-money leg.
+- **Added:** r4_demotion_gate existing; the ml_entry widening not on main (PR #25263)
+- **Operator authorization (PARAPHRASE):** r4 gate: VERBATIM "Last 20 + strict test (Recommended)" (r4_demotion_gate.py:16). Widening onto ml_entry: PARAPHRASE (manager relay: operator asked 2026-11-11; quote not located by this lane).
+- **Hits, last 14 days:** MEASURED in PR: ml_entry now abstains thin (15 closed rows < 40), p10 -5.65, 40-trade totalR +1.824: no demotion would fire.
+- **Cost of removing it:** Without it a decaying real-money ML leg is never demoted by the rule (it abstained no_evidence on every run).
+- **Effect: BOTH.** Prevents a decaying leg staying on real money; can demote on noise (thin window), though it abstains below 40 trades.
+- **Recommendation: KEEP.** Demotion on a pre-registered evidence floor is the ladder's own demotion signal; widening it to a leg it could not see fixes a gap.
+- **Question:** Keep this gate? Makes the existing R4 demotion gate able to grade ml_entry on bybit_2 (it abstained no_evidence on every run): when the last-40-trade window falls below the Stage-0 p10, it propose *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
 #### `GATE-OPTIONS-EXPRESSION-REFUSAL` — ⚠️ **NO OPERATOR AUTHORIZATION FOUND**
 
@@ -504,6 +594,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND (paper account)
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** alpaca_options_paper only.
 - **Question:** No operator authorization found. Keep this gate? On accounts with an options: block, an open with no chain/no fit/over budget places nothing (options_expression:<reason>). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -515,6 +606,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND (comment 'operator-gated PR' for Phase 2)
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** Default-off env mode is inert; remove or keep as shadow, no live effect today.
 - **Question:** No operator authorization found. Keep this gate? Default-off mode letting an ML vol verdict drive regime gating; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -526,6 +618,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: comments DESK-PAPER-ACCOUNTS, ALPACA-LIVE-ACTIVITY-ML 2026-11-01; no quote found
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Paper accounts only; has mechanical reason.
 - **Question:** Keep this gate? On a non-slice account rostering claude_desk or other exclusive-hold legs (ml_entry on alpaca_paper), a strategy leg and the exclusive leg never share one symbol's net position; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -537,6 +630,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** n/a (probe finding)
 - **Hits, last 14 days:** n/a
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** Informational; legacy REGIME_ROUTER_ENABLED=0 still disables regime router (intents.py:1233) -- the only live-path default-permissive flag; positive control: grep found NEWS_VETO_ENABLED and COMMS_PUSH_ENABLED.
 - **Question:** Keep this gate? Result of the 'third gate' probe: no default-off *_ENABLED env gate found on the entry path. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -548,6 +642,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: code comments 'operator-approved rollback kill-switch 2026-08-12' (main.py:1166)
 - **Hits, last 14 days:** not measured; env values live on VM only
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** Inert unless set; observe-only ones gate nothing that trades.
 - **Question:** Keep this gate? Default-ON capabilities each with a *_DISABLED env rollback; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -559,6 +654,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** Derived from operator rule 'Stage 2 is one stage' (operator, 2026-09-21; CLAUDE.md, OPERATING-PLAN s2 line 308 'mirror and live carry the IDENTICAL trades'). No verbatim quote on the gate itself.
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** Incident pkg-63b56da53bfe4d64: bybit_2 top-up refused by venue while bybit_portfolio filled 160.9
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Enforces operator-declared identical-trades rule with incident evidence; affects paper mirror, and Alpaca superset rule noted.
 - **Question:** Keep this gate? A Stage-2 mirror (bybit_portfolio etc.) places a package only if its real-money primary placed it in the same call; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -570,6 +666,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** Covered by DD-switch operator quote (see GATE-DAILY-DD-SWITCH) for the dd part; halt part: PARAPHRASE ONLY: comment 'AUD-20260927-CA-A02, ORDER-AUDIT-2 item 1' in file
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Mirrors the authorized entry-side DD switch; closes unaffected.
 - **Question:** Keep this gate? Refuses NEW pair opens (not closes) when the account daily-DD switch is tripped or the trader halt flag is present. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -581,10 +678,11 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** OPERATOR-DECLARED (task: M22 gate config/pairs.yaml, rec KEEP). Header: 'PAPER-ONLY, edge-gated (operator directive 2026-07-16): "if it's not negative, trade it on paper, but not on real money."' (config/pairs.yaml header)
 - **Hits, last 14 days:** not measured; static read: config/pairs.yaml pairs list is EMPTY (pairs: []) on 2026-11-12, so the gate currently has nothing to gate
 - **Cost of removing it:** no evidence found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Declared sleeve gate, quote on record; naked-leg protection has incident evidence.
 - **Question:** Keep this gate? M22 pairs sleeve gate: per pair execution shadow places nothing; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
-### Active management (close / reduce / amend) (36)
+### Active management (close / reduce / amend) (41)
 
 #### `AM-ALPACA-CLOSE-SIBLING-REFUSE` (RM) — ⚠️ **NO OPERATOR AUTHORIZATION FOUND**
 
@@ -594,6 +692,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND (executor correctness)
 - **Hits, last 14 days:** Evidence: bybit_portfolio refused off-step reduce qty 16239.25 on 2026-11-09 (mandates.yaml expired_reason, issue #24484). Counts otherwise not measured: not measured: runtime_logs/live_review/applied.jsonl, prop_tickets meta and phone logs live on the VM, not in the repo
 - **Cost of removing it:** A whole-symbol flatten would close a leg the review did not target.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Prevents closing the wrong leg; fix by scoped close not by removal.
 - **Question:** No operator authorization found. Keep this gate? An Alpaca close is refused when another open trade exists on the same symbol (the venue flatten would close it too); *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -605,6 +704,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND for the Bybit-only scope (row AMEND-SL-ACTION); operator ask for the capability is the 2026-10-29 note about #21186/#21193 ADA moves.
 - **Hits, last 14 days:** not measured: not measured: runtime_logs/live_review/applied.jsonl, prop_tickets meta and phone logs live on the VM, not in the repo
 - **Cost of removing it:** none found beyond mechanics
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** Prop amends already go through bracket_request / phone_trail; this just narrows a tool to the account it was built for.
 - **Question:** No operator authorization found. Keep this gate? The operator's manual amend system-action refuses non-Bybit, non-live accounts, ambiguous or non-open trades, a looser stop, wrong-side stop; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -616,6 +716,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND (a correctness filter; its history is the bug fix)
 - **Hits, last 14 days:** Evidence of prior hits: SOL short pkg-50f5eed272f64197 refused three directed tightens (2026-11-09 20:15Z, 11-10 15:51Z/15:52Z) before the fix (comment at line 242). Post-fix count not measured.
 - **Cost of removing it:** Prevents applying to a closed package.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Mechanical; the prop false-negative was fixed 2026-11-12.
 - **Question:** No operator authorization found. Keep this gate? Whole apply is refused 'package not open' unless status open, or emitted with a placed/filled prop ticket; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -627,6 +728,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND for these refusals. Contrary quote: 2026-11-09 ~08:22Z 'I never directed there to be a forbidden actions list, nor do I want one - the system must be able to take whatever actions necessary to ensure smooth autonomous operation' (MainActivity.kt:1669 comment).
 - **Hits, last 14 days:** Window not measured: not measured: runtime_logs/live_review/applied.jsonl, prop_tickets meta and phone logs live on the VM, not in the repo. In-repo pre-window evidence: checklist BREAKOUT-POS-UNPARSED, PHONE-AMEND-REFUSED-1025 (sheet_not_open) and 4 pipeline items dated 2026-10-15..26.
 - **Cost of removing it:** Each check guards a misclick on a live venue UI (wrong row, multi-row). They are fail-closed read guards, not policy.
+- **Effect: PREVENTS-WRONG.** Read-before-click: no click when the sheet or the position row cannot be read (sheet_not_open). It stopped the 11-12 close because the reader could not see the card layout; the fix is the reader (#25226/#25287).
 - **Recommendation: KEEP.** These are mechanical read-before-click guards; fix the sheet reader/reduce dialog (PHONE-CLOSE-CARDS) instead of loosening them. Dry-mode refusal is the only policy-like one.
 - **Question:** No operator authorization found. Keep this gate? App-side executeClose fails/refuses before any click on: ledger already holds the request id, no venue symbol, Positions unread, 0 or >1 position rows, dry submit mode, reduce when *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -638,8 +740,21 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND (session-authored capability negotiation, commit f85ed296bb; no quote)
 - **Hits, last 14 days:** 2026-11-12 only (change merged that day): count of refused reduces not measured: not measured: runtime_logs/live_review/applied.jsonl, prop_tickets meta and phone logs live on the VM, not in the repo
 - **Cost of removing it:** Commit message: on a one-tap-Close venue a reduce would close the WHOLE position while reporting failed. Real mechanism, evidence in the commit.
+- **Effect: PREVENTS-WRONG.** #25227 (merged): per #25226, an app that cannot reduce reports failed, the server retries, and the position is reduced twice; refusing at claim prevents that.
 - **Recommendation: KEEP.** Prevents a partial close becoming an unintended full close; the cause is the app not executing reduce, so build that rather than remove the check.
 - **Question:** No operator authorization found. Keep this gate? A phone REDUCE (partial close) is refused at claim, with one ping, unless the app declares 'reduce' in its claim; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
+
+#### `AM-PHONE-SHEET-DENYLIST-RECHECK` (RM) — ⚠️ **NO OPERATOR AUTHORIZATION FOUND**
+
+- **Where:** `tools/phone-executor/app/src/main/assets/exec.js sheetHit/sheetTarget (existing denylist + elementFromPoint re-check; extended to the card [Details] opener by PR #25226 / #25287, both OPEN)`
+- **Blocks:** Every native touch the phone makes, including the new card [Details] sheet opener, is refused if the target is on the denylist or elementFromPoint does not confirm the intended control; Close is refused without a declared close intent.
+- **Added:** existing on main; extension not on main (#25226 stacked; #25287 PARKED)
+- **Operator authorization (NONE):** NONE FOUND (session design). Contrary operator quote 2026-11-09 against a "forbidden actions list" (MainActivity.kt:1668) concerns actions, not mis-taps.
+- **Hits, last 14 days:** not measured (phone step captures live on the VM)
+- **Cost of removing it:** Without it the phone can tap the wrong control on a live prop account (e.g. a different position's Close).
+- **Effect: PREVENTS-WRONG.** Tapping the wrong control or closing without intent.
+- **Recommendation: KEEP.** It stops mis-taps, not decisions; the operator's objection was to forbidden ACTIONS.
+- **Question:** No operator authorization found. Keep this gate? Every native touch the phone makes, including the new card [Details] sheet opener, is refused if the target is on the denylist or elementFromPoint does not confirm the intended con *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
 #### `AM-PHONE-TRAIL-PLAN-GUARDS` (RM) — ⚠️ **NO OPERATOR AUTHORIZATION FOUND**
 
@@ -649,6 +764,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND for the quoted limits; no-halting quote 2026-10-09 'There is no halting.' is why failures back off instead of latching (phone_trail.py docstring).
 - **Hits, last 14 days:** not measured: not measured: runtime_logs/live_review/applied.jsonl, prop_tickets meta and phone logs live on the VM, not in the repo
 - **Cost of removing it:** human_hold prevents the system fighting a stop a human set by hand; backoff prevents click loops.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** Keep as warnings; the 14-day age cut and human_hold should not silently stop protection of an open position.
 - **Question:** No operator authorization found. Keep this gate? Phone trail planning skips a ticket: older than 14 days, test ticket, no declared leg, a human_hold (a human's stop is 'never fought'), one amend already outstanding, in backoff (u *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -660,6 +776,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND (manager 2026-11-09 comment only).
 - **Hits, last 14 days:** not measured: not measured: runtime_logs/live_review/applied.jsonl, prop_tickets meta and phone logs live on the VM, not in the repo
 - **Cost of removing it:** Prevents an opposite-side ticket netting a position at an exchange.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Entry-side but affects what the phone serves; unquoted design choice.
 - **Question:** No operator authorization found. Keep this gate? At claim a phone ticket is refused if it opposes a symbol the account now holds (opposite_direction_blocked), and an exec_test ticket is refused when its bounds fail; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -671,8 +788,21 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND (manager/lane design, DESK-2-RISK-GATE row 'phone human_hold refused at the gate')
 - **Hits, last 14 days:** not measured: not measured: runtime_logs/live_review/applied.jsonl, prop_tickets meta and phone logs live on the VM, not in the repo; 0 prop_human_hold reasons visible in reviews.jsonl account_reads (reasons are null there).
 - **Cost of removing it:** Stops the system overwriting a stop a human placed; but the same hold blocks a CLOSE amend? Close is not blocked by base verdict, yet decide_prop returns refuse before the reduce-only check.
+- **Effect: BLOCKS-RIGHT.** Refuses a de-risking close because a human stop is held.
 - **Recommendation: REMOVE.** The hold sits ahead of the reduce-only check, so it can refuse a close of a losing position; a human's stop is not a reason to refuse a de-risking action.
 - **Question:** No operator authorization found. Keep this gate? A live-review/desk amend of a phone prop ticket is refused (prop_human_hold) when a human_hold is on the ticket; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
+
+#### `AM-PROP-INFLIGHT-RESERVE` (RM) — ⚠️ **NO OPERATOR AUTHORIZATION FOUND**
+
+- **Where:** `src/prop/prop_risk_gate.py grade_account_ticket_risk + new prop_reconcile.compute_inflight_risk (PR #25223, OPEN draft, Tier 2 held)`
+- **Blocks:** PROPOSED tightening of an existing gate: tickets verified or placed but not yet filled reserve their stop risk against the prop DD cushion, so a later ticket on an enforce account is refused sooner; an unreadable reserve grades cushion_unknown.
+- **Added:** not on main (PR #25223 opened 2026-11-12)
+- **Operator authorization (NONE):** NONE FOUND for the tightening; the PR declares "Gates: none" although it adds refusals inside an existing gate (rule (a): tightening a gate needs permission).
+- **Hits, last 14 days:** not live. Motivating incident MEASURED in the PR: 2026-11-12 breakout_2, two ml_entry tickets 80 s apart were each graded against the whole ~$20.9 cushion and filled with $34.86 at the stops vs $20.93 to the static floor.
+- **Cost of removing it:** Without it, back-to-back tickets can jointly exceed the firm DD floor (the 11-12 incident).
+- **Effect: PREVENTS-WRONG.** Stops two pending tickets jointly risking more than the cushion (measured 11-12).
+- **Recommendation: OPERATOR-PREFERENCE.** It prevents a measured over-commitment, but it is a gate tightening the PR did not disclose as one; the operator decides.
+- **Question:** No operator authorization found. Keep this gate? PROPOSED tightening of an existing gate: tickets verified or placed but not yet filled reserve their stop risk against the prop DD cushion, so a later ticket on an enforce account *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
 #### `AM-PROP-TICKET-EXPIRE-REFUSALS` (RM) — ⚠️ **NO OPERATOR AUTHORIZATION FOUND**
 
@@ -682,6 +812,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND (fail-closed data-integrity guard on a Tier-2 action)
 - **Hits, last 14 days:** not measured: not measured: runtime_logs/live_review/applied.jsonl, prop_tickets meta and phone logs live on the VM, not in the repo
 - **Cost of removing it:** A ticket with fills may be a live position; expiring it would hide it.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Data-integrity guard; does not affect closing.
 - **Question:** No operator authorization found. Keep this gate? prop-ticket-expire refuses any ticket not on a REST account, not expiry_prompted/emitted-past-validity, or referenced by a prop_fills row. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -693,8 +824,21 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND (a missing executor, not a quoted limit). Row LTR-ACTION-EXECUTOR-GAPS says 'Not built ... blocked CLIENT-SIDE'; related operator quote 2026-11-09 ~08:22Z against forbidden-action lists is in MainActivity.kt:1669.
 - **Hits, last 14 days:** 2026-10-29..2026-11-12: 4 tighten_sl rows on tradeify_1+velotrade_1 (pkg-50f5eed272f64197); tighten maps to a different path (meta.sl_floor). Closes on prop_vm: VM close_position exists (run_close_position) but live_review_apply never calls it. Refusal counts: not measured: not measured: runtime_logs/live_review/applied.jsonl, prop_tickets meta and phone logs live on the VM, not in the repo
 - **Cost of removing it:** None for the matrix itself (it reflects absent executors); VM prop already has run_close_position (prop_executor.py:1902) that is not wired.
+- **Effect: BLOCKS-RIGHT.** A missing executor, not a safety rule; #25230 (open) adds close/reduce for prop_vm.
 - **Recommendation: REMOVE.** A refusal for a missing executor is a gap, not a safety rule: wire close/reduce for prop_vm to run_close_position and drop the refusal.
 - **Question:** No operator authorization found. Keep this gate? Executor matrix: a prop_vm account (tradeify_1, velotrade_1) can only move_tp; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
+
+#### `AM-PROP-VM-CLOSE-REFUSALS` (RM) — ⚠️ **NO OPERATOR AUTHORIZATION FOUND**
+
+- **Where:** `src/prop/vm_close.py request_close / run_close_step (PR #25230, OPEN draft, Tier 2 held)`
+- **Blocks:** PROPOSED with the new prop_vm close executor (which itself REMOVES the no_action_path refusal for close/reduce): tradeify_1 partial_close refused at request time (its Close Position modal closes full size only, lots field unmeasured); a partial is apply_failed unless the size dropped AND both SL and TP still rest; a partial is sent once, never resent; tighten_sl stays tighten-only.
+- **Added:** not on main (PR #25230)
+- **Operator authorization (NONE):** NONE FOUND for the refusals; the PR cites operator 2026-11-12 "The system needs to be able to do that on its own. I'm not doing it manually anymore." for the capability.
+- **Hits, last 14 days:** not live
+- **Cost of removing it:** Removing the tradeify partial refusal turns a partial into a FULL close (modal closes full size). Removing the readback lets a partial that lost a bracket pass as applied.
+- **Effect: PREVENTS-WRONG.** Closing more than intended (full instead of partial) and leaving a position without a bracket.
+- **Recommendation: KEEP.** These are readback/correctness checks on a capability the operator ordered; the tradeify partial needs a measured lots field, not a looser rule.
+- **Question:** No operator authorization found. Keep this gate? PROPOSED with the new prop_vm close executor (which itself REMOVES the no_action_path refusal for close/reduce): tradeify_1 partial_close refused at request time (its Close Positio *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
 #### `AM-ADVICE-ONLY-ALL-CLASSES` (RM) · trigger case
 
@@ -702,8 +846,9 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Blocks:** Every in-trade class (tighten_sl, widen_sl, move_tp, partial_close, close, change_size, add_entry) from the reviewer or desk is recorded and graded but never executed, on every account including prop, unless a per-package/per-account auto mandate scopes it.
 - **Added:** 2026-10-29 8615a8f0bb LTR: tighten_sl is ADVICE ONLY (#21024); extended to every class 2026-10-28 per mandate comment (row DESK-V1-MGMT-ADVICE-ONLY, PR 21026)
 - **Operator authorization (VERBATIM):** VERBATIM 'Advice-only tightens (Recommended)' (popup 2026-10-28 ~20:35Z) and 'Advice-only until tested' (popup ~21:07Z), config/mandates.yaml:1262-1275 comments, row DESK-V1-MGMT-ADVICE-ONLY. Both are popup option picks following manager-proposed options; operator also said 2026-10-28 'SL tightening is just one lever' (ARCHITECTURE-CANONICAL.md:736) and 2026-11-12 ~00:00Z 'if it needs me, then it needs to ping me so that I can immediately do that' (trade_approvals.py:3).
-- **Hits, last 14 days:** 2026-10-29..2026-11-12, population = 524 rows in comms/live_review/reviews.jsonl: 56 carry an in-trade action (31 close, 23 tighten_sl, 2 partial_close); 0 of 56 have disposition.applied_at set; 53 route=recommended, 2 operator_ask, 1 none. 8 of the 56 sit on a package carried by a real-money/prop account (bybit_2, bybit_portfolio, breakout_2, tradeify_1, velotrade_1), 5 of those on prop. Rows written by directed actions or the paper auto mandate are not in this ledger, so 0 applied is a floor on blocking, not on executions.
+- **Hits, last 14 days:** 2026-10-29..2026-11-12, population = 524 rows in comms/live_review/reviews.jsonl: 56 carry an in-trade action (31 close, 23 tighten_sl, 2 partial_close); 0 of 56 have disposition.applied_at set; 8 of the 56 sit on real-money/prop packages, 5 on prop. All 56 predate MD-LTR-PROP-AUTO (merged 2026-11-12 10:59Z), which now auto-applies close/partial/tighten on the three prop accounts. Directed actions and the paper auto mandate are not in this ledger, so 0 applied is a floor on blocking.
 - **Cost of removing it:** Reviewer evidence on file: DESK-LIFECYCLE-S0 (#20967) 981 tightens -0.097R net; whole-trade management -0.159/-0.124R vs hold; RQ-20261029-1f39-02 no class passes RULE-AM-RISK-ADJUSTED-V1. No evidence covers a CLOSE of a position already deep in loss on prop: the evidence is per-trade mean R, not book drawdown. Trigger case: two losing breakout_2 positions could not be closed because close is advice-only.
+- **Effect: BLOCKS-RIGHT.** Holds back closes/tightens the review called; on prop this is now lifted for close/partial/tighten by MD-LTR-PROP-AUTO (11-12 10:59Z); real money and mirrors stay advice-only.
 - **Recommendation: OPERATOR-PREFERENCE.** Authorized by popup picks, but the picks were made on tighten evidence and extended to close/partial_close/move_tp without a close-specific test; the operator should decide whether a close with a stated reason and confidence on a LOSING prop position stays advice-only.
 - **Question:** Keep this gate? Every in-trade class (tighten_sl, widen_sl, move_tp, partial_close, close, change_size, add_entry) from the reviewer or desk is recorded and graded but never executed, on every acc *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -715,6 +860,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM 2026-11-09 ~08:22Z 'I never directed there to be a forbidden actions list, nor do I want one - the system must be able to take whatever actions necessary to ensure smooth autonomous operation' (MainActivity.kt:1669) loosened the widen refusal to intent-bound. Others: no quote.
 - **Hits, last 14 days:** not measured: not measured: runtime_logs/live_review/applied.jsonl, prop_tickets meta and phone logs live on the VM, not in the repo
 - **Cost of removing it:** Read guards stop a click on a misread row.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Mechanical misclick guards; the widen/forbidden-list part already relaxed per operator quote.
 - **Question:** Keep this gate? App refuses an amend before any click: loosening the stop unless the server declares widen_sl, TP change on the sheet path ('a TP revision is not built'), non-foreground view, new *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -726,18 +872,20 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: mandate bounds list in mandates.yaml:1440-1450 written by lane; operator quote only for the grant ('Every action').
 - **Hits, last 14 days:** Window: mandates expired; 0 active-grant applies after 2026-11-09T09:51Z (mandates.yaml). XRP partial: bybit_portfolio refused off-step qty 16239.25 (mandates.yaml expired_reason).
 - **Cost of removing it:** The widen-within-1R bound limits added loss on an automatic widen.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Risk-appetite bounds on a grant; only the operator should size them.
 - **Question:** Keep this gate? Under a per-package auto mandate: refuse a repeated review_id, a package with no TP (both_brackets), a TP not beyond the mark (tp_live_target), and a widen beyond -1R or with entry *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
 #### `AM-AUTO-MANDATE-SCOPE` (RM)
 
 - **Where:** `config/mandates.yaml:1376` · also `src/runtime/ltr_auto_mandate.py`, `config/mandates.yaml:1518-1540`
-- **Blocks:** Auto-apply exists only for ONE package (MD-LTR-ADA-AUTO, expired), a single-use XRP partial (expired) and the paper demo-floor accounts (MD-LTR-PAPER-AUTO: bybit_1, alpaca_paper, ib_paper). Real money, mirrors and prop have NO auto path; every other package is advice-only.
+- **Blocks:** Auto-apply exists only where a mandate scopes it: MD-LTR-PAPER-AUTO (bybit_1, alpaca_paper, ib_paper), and since 2026-11-12 10:59Z MD-LTR-PROP-AUTO (#25222: close / partial_close / tighten_sl on breakout_2, tradeify_1, velotrade_1). Real money and the mirrors (bybit_2, bybit_portfolio, alpaca_live, alpaca_portfolio, ib_live) have NO auto path: every review call there is advice-only. (MD-LTR-ADA-AUTO and the single-use XRP partial are expired.) CORRECTED by the lane: the first reader missed MD-LTR-PROP-AUTO.
 - **Added:** 2026-10-29 cfb15c257a MD-LTR-ADA-AUTO (#21203); paper scope 2026-11-01
 - **Operator authorization (VERBATIM):** VERBATIM 2026-10-29 ~07:40Z 'I want to put a standing mandate for ltr lanes recommendations on this trade to be applied automatically'; MD-LTR-PAPER-AUTO source 2026-11-01 popup (mandates.yaml ~1520). Scoping to that one package/paper is the lane's design, not a quoted limit.
 - **Hits, last 14 days:** Population: mandates.yaml at HEAD; MD-LTR-ADA-AUTO expired 2026-10-29T10:47:53Z, MD-LTR-XRP-PC-20261109 expired 2026-11-09T09:51:52Z; so 0 real-money or prop packages had an active auto grant for most of 2026-10-30..2026-11-12.
 - **Cost of removing it:** Auto-applying every class on real money would execute classes the evidence says lose (-0.1R/trade) without a per-class pass.
-- **Recommendation: OPERATOR-PREFERENCE.** A standing real-money/prop mandate for CLOSE only is a grant only the operator can make; propose it.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
+- **Recommendation: OPERATOR-PREFERENCE.** A standing real-money/mirror mandate (e.g. close only) is a grant only the operator can make.
 - **Question:** Keep this gate? Auto-apply exists only for ONE package (MD-LTR-ADA-AUTO, expired), a single-use XRP partial (expired) and the paper demo-floor accounts (MD-LTR-PAPER-AUTO: bybit_1, alpaca_paper, i *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
 #### `AM-BOTH-BRACKETS-TP-DOCTRINE` (RM)
@@ -748,6 +896,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM 2026-10-26 ~19:02Z 'in general, every trade always must have BOTH brackets, not related to this skill. Claude can move the brackets, but nothing is supposed to remove brackets' (mandates.yaml:1244, rows LTR-ALL-ACTIONS, BRACKETS-ALWAYS).
 - **Hits, last 14 days:** not measured: reasons absent from reviews.jsonl; not measured: runtime_logs/live_review/applied.jsonl, prop_tickets meta and phone logs live on the VM, not in the repo
 - **Cost of removing it:** Operator rule; a missing bracket leaves unprotected exposure.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Directly authorized by the operator's verbatim bracket rule.
 - **Question:** Keep this gate? Refuses move_tp/widen/reduce/size actions that would leave a leg without BOTH brackets (both_brackets_required:sl\|tp) or a TP through the mark, not beyond entry, or the 50R sentine *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -759,6 +908,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM 2026-11-11 'PROP-BRACKET-APPLY, operator 2026-11-11' asks for the capability (amend_prop_bracket.py:2); the never-loosen rule: no quote; contrary 2026-11-09 'I never directed there to be a forbidden actions list' (MainActivity.kt:1669).
 - **Hits, last 14 days:** not measured: not measured: runtime_logs/live_review/applied.jsonl, prop_tickets meta and phone logs live on the VM, not in the repo
 - **Cost of removing it:** Executors are tighten-only by construction (dxtrade ModifyRollout).
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** A prop widen is a risk-appetite call and the executors would need changing.
 - **Question:** Keep this gate? request_bracket (amend_prop_bracket.py) refuses a VM-prop TP amend for an adapter that cannot amend a TP, an SL looser than the ticket's ('a prop executor never loosens a stop'), T *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -770,6 +920,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: 'operator-approved 2026-10-25' design docs/plans/live-trade-review-DESIGN.md; operator 2026-10-29 verbatim kept the noise floor ('a distance, not a count', ARCHITECTURE-CANONICAL.md:1741 describing REMOVE-PER-BAR-CAP) .
 - **Hits, last 14 days:** Window: 23 tighten_sl rows; account_reads show 0 explicit refusal reasons stored; would_apply 2/2/2/35 for bybit_2/portfolio/alpaca_paper/bybit_1 across all reads.
 - **Cost of removing it:** Wrong-side stop fires at once; loosen would reverse a tighten.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Mechanical correctness of a stop move; the noise floor is operator-sanctioned as a distance.
 - **Question:** Keep this gate? A tighten is refused when: wrong side of mark, would loosen against the journal OR venue stop, already at/tighter, inside the min_buffer_atr noise floor (clipped when still a real *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -781,6 +932,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM 2026-10-29 ~08:20Z 'the action needs to be immediate' (directed_actions.py:3-5, row TRADE-ACTION-FAST-PATH); the quote requirement and the 900 s stale rule: lane design, no quote.
 - **Hits, last 14 days:** comms/directed_actions/ is not on main (lives on branch directed/actions): not measured. Pre-window: 3 directed tightens refused 'not open' 2026-11-09/10 (live_review_apply.py:242).
 - **Cost of removing it:** Stale rule stops a replayed close at a changed price.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** Quote requirement is cheap provenance; the stale-expiry should warn and let the operator re-confirm, not discard.
 - **Question:** Keep this gate? A directed operator action is refused without a verbatim operator_quote, directed_by, schema, id, valid action in {tighten_sl, move_sl, move_tp, close, partial_close} (no change_si *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -792,6 +944,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: 'the operator promotion gate' (module docstring); promotion to advisory is a Tier-3 operator act.
 - **Hits, last 14 days:** not measured: exit_head decisions are in VM logs; prop legs do not consume the exit head.
 - **Cost of removing it:** docstring: 'A spurious close is the expensive failure here'.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Standard promotion ladder for an ML decision; not a refusal of a human close.
 - **Question:** Keep this gate? The ML exit head closes a trade only when exit_head_action: close is declared, the artifact stage is advisory, an optional model pin matches and the policy fires; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -803,6 +956,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM 2026-10-26 (mandates.yaml:1300 via lane relay) 'every trade action ... as long as they have reasoning and confidence attached' plus the guardrail clause that a widened stop 'must pass the same risk check a fresh entry would' is the lane's reading; operator's own sentence for the second half: not found.
 - **Hits, last 14 days:** Window: no widen/add rows in the 56 in-trade rows, so 0 hits measured in reviews.jsonl.
 - **Cost of removing it:** Prevents a widen from being an entry that bypasses caps.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Applies only to risk-adding actions and mirrors the entry path.
 - **Question:** Keep this gate? widen_sl / add / size-up must pass the account's own fresh-entry check (mode, daily-DD switch block on new risk, gross exposure cap, and the size a fresh entry would get); *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -814,6 +968,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM 2026-10-26 operator popups relayed in mandates.yaml:1235 ('as long as they have reasoning and confidence attached'); apply_mode 'ONLY A COMMIT CHANGES THIS ... the operator's act (Tier 3)' (live_trade_review.yaml:194).
 - **Hits, last 14 days:** apply_mode is apply globally with accounts: {} (no per-account off) at HEAD; no refusals attributable. Window not measured.
 - **Cost of removing it:** Prevents unauthorized order paths; mandate is the authorization record.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Authorized structure; but it is the layer that makes every advice-only class need a separate grant.
 - **Question:** Keep this gate? An apply is refused unless the intent names MD-TRADE-DESK (trade actions) or a tighten-granted id, the mandate is in mandates.yaml, and config/live_trade_review.yaml apply_mode is *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -825,8 +980,21 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM 2026-10-26 'we also need to expand the desks mandate so include all trade actions, as long as they have reasoning and confidence attached' (mandates.yaml:1235 source, row LTR-ALL-ACTIONS); mechanics=match clause: no quote found. 2026-10-26 operator dropped the n>=20 clause (LTR-JUDGEMENT-APPLY).
 - **Hits, last 14 days:** Window: 48 flag_mechanics rows in reviews.jsonl 2026-10-29..11-12 (population 524); mechanics mismatch refusal count for in-trade rows not separable.
 - **Cost of removing it:** A mismatch means journal and venue disagree; acting on it could close the wrong leg.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Reasoning+confidence is operator-authorized; mechanics=match is a data-integrity check, but a mismatch should not stop a DE-RISKING close.
 - **Question:** Keep this gate? Before any execute: mechanics_verdict must be match, a non-empty reason, basis judgement with confidence in [0,1] or table with EV, and the action's own target; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
+
+#### `AM-MD-LTR-PROP-AUTO-BOUNDS` (RM)
+
+- **Where:** `config/mandates.yaml MD-LTR-PROP-AUTO (line ~1625; merged #25222 d00b23153d 2026-11-12 10:59Z)`
+- **Blocks:** The prop auto mandate applies close / partial_close / tighten_sl on breakout_2, tradeify_1, velotrade_1, with direction derisk_only and bounds: never widen a stop, move a TP or add size under this entry; both brackets must exist after every action (both_brackets); every leg read back (venue_readback); refuse a could-not-look read or a mechanics mismatch; at most once per review_id.
+- **Added:** 2026-11-12 d00b23153d (#25222)
+- **Operator authorization (PARAPHRASE):** VERBATIM for the grant: operator 2026-11-12 ~09:26Z "Standing permission granted" (also ~09:24Z "This has to happen automatically without me having to..."). PARAPHRASE for the bounds: written by Manager Session 2026-11-11a.
+- **Hits, last 14 days:** not measured (granted 10:59Z today)
+- **Cost of removing it:** Without both_brackets/readback an action can leave a prop position naked; without derisk_only the mandate could widen or move TP on prop, which the operator did not grant.
+- **Effect: BOTH.** both_brackets / readback / could-not-look prevent wrong actions; never-widen and never-move-TP block actions the review may rightly call (e.g. a TP move) on prop.
+- **Recommendation: KEEP.** The grant is verbatim and names only de-risking actions; the never-widen / never-move-TP lines block right actions only if the operator wants them, which is a separate grant.
+- **Question:** Keep this gate? The prop auto mandate applies close / partial_close / tighten_sl on breakout_2, tradeify_1, velotrade_1, with direction derisk_only and bounds: never widen a stop, move a TP or add *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
 #### `AM-OPERATOR-TAP-FALLBACK` (RM) · trigger case
 
@@ -836,6 +1004,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM 2026-11-12 ~00:00Z 'if it needs me, then it needs to ping me so that I can immediately do that, right? ... a button that I press to accept a recommendation, and that directly executes that action.' src/runtime/trade_approvals.py:3-6, row TRADE-ACTION-DIRECT-PATH. File states 'GATES: none added'; the 15-min expiry and chat check are the unquoted parts.
 - **Hits, last 14 days:** 2026-10-29..2026-11-12: 2 rows with route=operator_ask carried an in-trade action (reviews.jsonl); how many buttons were sent or tapped is not measured: runtime_logs/trade_approvals/journal.jsonl is on the VM. Operator-ask close LR-20261111T2235Z-pkg-6df5f9dfb83e47b8 covered breakout_2.
 - **Cost of removing it:** The expiry stops a stale button executing a close at a changed price (comment cites ETH/SOL stops that hit 22.5/27 min after an advice_only row).
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** Keep the button; the 15-min expiry and 'mechanics must be match/could_not_look' should degrade to a warning on the button, not remove it, so a late tap still works.
 - **Question:** Keep this gate? When a recommendation is advice-only or operator_ask, the only way to execute it is the operator tapping Approve in Telegram within 15 min; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -847,6 +1016,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: design doc docs/integrations/breakout-phone-executor-DESIGN.md calls it the executor kill switch; no verbatim quote found. Sits close to the 2026-10-09 'There is no halting' rule (an off switch that also stops CLOSES).
 - **Hits, last 14 days:** Current value not measured: env on VM (default live).
 - **Cost of removing it:** Off stops a runaway executor clicking; but it also stops closes and stop amends, leaving positions unmanaged.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** Let 'off' stop ENTRIES only; closes and protective amends should stay served.
 - **Question:** Keep this gate? PROP_PHONE_MODE_<ACCOUNT>=off makes claim_next, claim_close, pending_count return nothing, so no entry, amend, cancel or close is served; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -858,6 +1028,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM 2026-10-15 'Yes' to option (ii) of PI-20261015-JWMGXOTH-0004 for reconcile: write (config/prop_platforms.yaml:332-338); the 2-read rule: no quote.
 - **Hits, last 14 days:** breakout_2 declares reconcile: write; counts not measured: not measured: runtime_logs/live_review/applied.jsonl, prop_tickets meta and phone logs live on the VM, not in the repo
 - **Cost of removing it:** A single glitched read must not close a live row (comment).
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Journal accuracy, delays only bookkeeping not the venue close.
 - **Question:** Keep this gate? The journal marks a phone prop position closed only after it is absent from 2 clean Positions reads at least 60 s apart; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -869,6 +1040,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: 'operator decision 2026-10-18' in the row note and title; no verbatim quote (checklist/PHONE-EXEC-OBSERVABLE-1018.json). Observed armed 2026-10-18 20:53:59Z.
 - **Hits, last 14 days:** breakout_2 gate state now not measured: drill history is server state on the VM. config/prop_platforms.yaml has no sheet_edit pin for breakout_2 (grep returns no sheet_edit key), so it relies on drills >= 3.
 - **Cost of removing it:** Before the gate the app refused every amend and each refusal burned the ticket's backoff (measured 2026-10-18).
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** Emit the amend regardless and report the drill state; a gate that blocks a protective stop move on a losing position is the wrong default.
 - **Question:** Keep this gate? No stop amend is emitted to a phone account until phone_accounts.<acct>.sheet_edit is pinned true or 3 consecutive rehearsal drills passed; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -880,6 +1052,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: operator 2026-10-01 popup 'Build the trail instead' (docs/claude/work/checklist/PROP-TRAIL.json) authorizes building the trail; the manager's note says 'tighten-only'; no verbatim quote for 'never close'. PHONE-AMEND-REFUSED-1025 note says 'no close control on the phone path'.
 - **Hits, last 14 days:** Evidence in repo: breakout_2 ETH short left open after strategy exit (row PHONE-AMEND-REFUSED-1025, 2026-10-25, six refusals). Window count not measured: not measured: runtime_logs/live_review/applied.jsonl, prop_tickets meta and phone logs live on the VM, not in the repo
 - **Cost of removing it:** A resting-SL amend cannot reproduce a bar-close exit; the author chose alert over approximating. Cost of removal: closing via the phone is the riskiest click path (reduce/close unmeasured).
+- **Effect: BLOCKS-RIGHT.** The strategy has already exited; holding the position open is the wrong state. Being removed by PROP-VM-STRATEGY-EXIT-CLOSE (manager 11:52Z).
 - **Recommendation: REMOVE.** The trail already knows when the strategy has exited; it should emit request_close (the existing server-issued close channel) instead of only alerting.
 - **Question:** Keep this gate? The phone trail only TIGHTENS the stop; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -891,6 +1064,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM 'in general, every trade always must have BOTH brackets...' is a different gate; for the cushion: mandates.yaml MD-TRADE-DESK never: 'bypass an account's per-trade risk limit / sizing cap / exposure cap / daily-DD switch' (mandates.yaml:1313) from lane transcription of the 2026-10-26 popup; operator's own words on the cushion not found. Operator 2026-10-09 daily DD switch 'keep open, block new' (CLAUDE.md).
 - **Hits, last 14 days:** Window: 0 prop widen/add rows recommended (56 in-trade rows, none widen/add); the gate is also unreachable today because prop_vm and phone have no add executor.
 - **Cost of removing it:** A widened stop on a prop account can breach the firm's drawdown and void the account (prop survival tests).
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** It only binds actions that add risk, protects a hard external limit, and never blocks a reduce.
 - **Question:** Keep this gate? On a prop account an action that ADDS risk (widen_sl, add_entry, change_size>1) must fit the firm's static-DD/daily-loss cushion (exceeds -> refuse; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -902,6 +1076,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: 'manager 2026-10-02 23:30Z, DIALOG-MEASURE #15693/#15705' (prop_trail.py docstring); the latch was retired on the operator's 2026-10-09 'There is no halting.' The step cap stayed.
 - **Hits, last 14 days:** not measured: not measured: runtime_logs/live_review/applied.jsonl, prop_tickets meta and phone logs live on the VM, not in the repo
 - **Cost of removing it:** Bounded steps limit a bad modify to 25% of the stop distance during early rollout; a wrong price on a live prop account is unrecoverable.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** A pure rollout-caution cap by the manager; a stale rollout limit that slows tightening toward a stop on a losing leg is the operator's call to keep or lift.
 - **Question:** Keep this gate? Each armed VM stop amend moves at most 25% of the stop's distance from the venue price (ModifyRollout / rollout_tighten_mismatch), SL-only, tighten-only, must be re-read; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -913,6 +1088,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM 2026-10-15 operator rule 'prop clears everything real money clears, PLUS this' (comms/prop_survival/README.md:5; CLAUDE.md 'Prop legs clear a SUPERSET').
 - **Hits, last 14 days:** Not an exit gate; 2 records exist (ml_entry, mlv_movingtp) plus 4 grandfathered legs; refusal counts not measured.
 - **Cost of removing it:** Prevents unproven legs on funded accounts.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Authorized by the operator's 2026-10-15 rule and outside the exit path.
 - **Question:** Keep this gate? CI refuses a PR that adds a leg to a prop roster without comms/prop_survival/<leg>.json passing the EV/survival rule (V3 edge clause). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -924,6 +1100,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM 2026-11-06 'Yes, non-blocking OK' for non-blocking report detectors (brief); not a gate.
 - **Hits, last 14 days:** not measured: alert deliveries are on Telegram/VM.
 - **Cost of removing it:** none; observation only
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Non-blocking detector, covered by the 2026-11-06 approval.
 - **Question:** Keep this gate? Report-only probes (ok/breached/unknown) for prop silence and trail pause (prop_trail_watch.py); *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -935,6 +1112,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: 'manager 2026-09-29' (docstring); 'close_position_* ... closing a position is never deferred' (prop_executor_tick.py:97).
 - **Hits, last 14 days:** not measured: not measured: runtime_logs/live_review/applied.jsonl, prop_tickets meta and phone logs live on the VM, not in the repo
 - **Cost of removing it:** Exactly-one-position rule prevents closing the wrong row.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Correctness checks; the gap is that nothing calls it for strategy exits or reviews.
 - **Question:** Keep this gate? The VM prop watched close refuses unless the symbol is in enabled_venue_symbols, exactly ONE position matches, side/size parse, close confirmed flat with no orphan order; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -946,6 +1124,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: 2026-10-01 popup 'Build the trail instead' (PROP-TRAIL.json) + manager note 'tighten-only'. The close-lever alert text 'operator decides' is the author's.
 - **Hits, last 14 days:** not measured: not measured: runtime_logs/live_review/applied.jsonl, prop_tickets meta and phone logs live on the VM, not in the repo (alerts via Telegram, not in repo)
 - **Cost of removing it:** Same as the phone trail; run_close_position exists on this path (prop_executor.py:1902) so a close is mechanically available.
+- **Effect: BLOCKS-RIGHT.** Same as the phone trail; being removed by PROP-VM-STRATEGY-EXIT-CLOSE (manager 11:52Z).
 - **Recommendation: REMOVE.** Same as phone: when the harness exit fires, close through the existing watched close instead of alerting.
 - **Question:** Keep this gate? VM prop trail (tradeify_1, velotrade_1, breakout_1): stop never loosened, never removed, 'no close control is clicked'; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -957,8 +1136,21 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM: CLAUDE.md 'The two execution gates' (operator rule that shadow never sends an order). Applying it to closing an existing position is not quoted. Search: mandates.yaml never lists.
 - **Hits, last 14 days:** Window: reasons not recorded in reviews.jsonl (account_reads.reason null for all 650+ reads); not measured: not measured: runtime_logs/live_review/applied.jsonl, prop_tickets meta and phone logs live on the VM, not in the repo
 - **Cost of removing it:** If a strategy is flipped to shadow while holding a live position, the position can no longer be reduced by the review.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** A shadow/dry flag should stop new orders, not the closing of an existing real position.
 - **Question:** Keep this gate? decide_action refuses ANY action, including close/reduce of an already open position, when the leg's strategy is execution: shadow (R_SHADOW) or the account mode is dry_run (R_DRY) *(KEEP / REMOVE / MAKE REPORT-ONLY)*
+
+#### `AM-TRADEIFY-TP-MOVE-CONDITIONS` (RM)
+
+- **Where:** `src/prop browser DXtrade adapter rollout_tp_mismatch / rollout_verify_tp_mismatch (PR #25272, OPEN draft, Tier 3 held, stacked on #25230)`
+- **Blocks:** PROPOSED with the new tradeify_1 TP move (which REMOVES the TP_AMEND_SUPPORTED=False block): a TP move is refused unless the SL is untouched and resting, a TP already rests (a TP is moved, never added or removed), and the new TP is profit-side of the live quote; verify must show the new TP with SL and size unchanged.
+- **Added:** not on main (PR #25272; decision line: operator decisions page w12 "Build it")
+- **Operator authorization (PARAPHRASE):** PARAPHRASE: operator w12 "Build it" authorizes the capability; the refusal conditions are lane-written.
+- **Hits, last 14 days:** not live
+- **Cost of removing it:** Without profit-side: a TP through the price acts as an immediate close. Without "a TP rests": the adapter would ADD a TP where none exists, a flow nobody has measured.
+- **Effect: BOTH.** Profit-side / SL-untouched prevent an accidental close; "a TP must already rest" blocks adding a missing TP (a right action under the TP doctrine).
+- **Recommendation: KEEP.** Profit-side and SL-untouched prevent wrong actions; "a TP must already rest" also blocks ADDING a missing TP, which the TP doctrine wants, so that clause is the operator's call.
+- **Question:** Keep this gate? PROPOSED with the new tradeify_1 TP move (which REMOVES the TP_AMEND_SUPPORTED=False block): a TP move is refused unless the SL is untouched and resting, a TP already rests (a TP i *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
 #### `AM-CLOSE-WEDGE-STANDING`
 
@@ -968,6 +1160,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM-adjacent: 'Operator decision 2026-09-02: downgrade that one class to the daily digest' (close_wedge_standing.py:20) and OPERATOR-DECISIONS-20261028 item 4.
 - **Hits, last 14 days:** alpaca_paper GLD only; count not measured.
 - **Cost of removing it:** Silence on a provably unclearable wedge; evidence-keyed, not repetition-keyed.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Authorized and affects alerts only, not any action.
 - **Question:** Keep this gate? Downgrades the PAGE (not the close) for an Alpaca close failure proven unclearable (share_hold broker_cancel_wedged) to the daily digest; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -979,6 +1172,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: 'design § 2.4: a wider stop and a size change are in no desk enum' (trading-desk design); no verbatim quote found.
 - **Hits, last 14 days:** Desk leg trades only demo accounts (mandates.yaml entry_generation demo_accounts); count not measured.
 - **Cost of removing it:** none found
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: REMOVE.** Unquoted never-list on a demo-only leg; keep only if the operator wants it.
 - **Question:** Keep this gate? widen_sl and size adds on a claude_desk trade are refused desk_leg_never:<action> before any read. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -992,6 +1186,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND as an operator quote; justification cited is docs/security/intrusion-surface-audit-2026-06-28.md (session-authored security audit)
 - **Hits, last 14 days:** not measured: ignored issues leave no trace
 - **Cost of removing it:** A triager or external user could be induced to apply the label and make the live VM run an allowlisted action (the 2026-06-03 #2688 probe cited at system-actions.yml:366).
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Authentication of who may mutate the live VM; removal is a security hole, not a friction cut.
 - **Question:** No operator authorization found. Keep this gate? Issue-driven system actions only run when the issue author is the repo owner or automation AND it has the `system-action` label and is `opened` (not `labeled`); *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1003,6 +1198,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND (session-authored after losing #16251 and #16263; manager review of #16289 chose never to re-queue)
 - **Hits, last 14 days:** not measured: cancelled runs/issue comments not in repo
 - **Cost of removing it:** Two concurrent VM mutations (e.g. set-env and restart) could race; the measured cost of the present design is that two de-risk steps (#16251, #16263) were dropped silently on 2026-10-04.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Serialization prevents VM-state races but its one-pending limit drops requests; whether to queue them instead is a design call.
 - **Question:** No operator authorization found. Keep this gate? All non-read-only system-actions serialize in ONE group so two VM mutations never overlap; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1014,6 +1210,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: 'the ONLY hold is an explicit operator signal: TRADER_STOP_MARKER ... written by stop-bot-service' (scripts/deploy_pull_restart.sh:744-747); the operator stop itself is the operator's act. Runner-deferral and DEFAULT_SKIP have no operator quote.
 - **Hits, last 14 days:** not measured: deferral/hold lines are in the VM ict-git-sync journal
 - **Cost of removing it:** Stop marker: a revive would undo an operator's explicit stop-bot-service (the race noted at :870). Runner deferral: killing an in-flight /vm invocation.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Stop-marker hold only honours an explicit operator stop; the other deferrals protect running work and delay by one tick.
 - **Question:** Keep this gate? A deploy is postponed to the next 5-min tick while an in-flight /vm session runs, never starts a trader the operator stopped via stop-bot-service, never restarts the listed units, *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1025,6 +1222,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: BL-20260529-002 and RESTART-SAFE PI-20261003-OJTPWGCC-0001 comments (scripts/deploy_pull_restart.sh:351,374). It narrows restarts (never blocks a deploy of runtime code); no operator verbatim found for the safe-set itself. Fail-safe: any unreadable/unknown path restarts.
 - **Hits, last 14 days:** not measured: ict-git-sync journal is on the VM; the row TRADER-RESTART-GATE measured 879 merges 2026-10-08..10-15 (711 non-runtime) as a replay, not a 14d count
 - **Cost of removing it:** Every docs/CI merge would restart the live trader (21 restarts on 11-04 after data-only merges per deploy_pull_restart.sh:407), each landing inside an open-position window.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** It REDUCES interruptions to the live trader and is fail-safe toward restart.
 - **Question:** Keep this gate? ict-git-sync pulls code but restarts NO services when every changed path is in the safe set (docs/, tests/, .github/, research/, scripts/research\|ci, listed comms/ trees, deploy/tr *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1036,6 +1234,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY / DOC RULE: CLAUDE.md Permission tiers table ('Tier 2 ... get one operator OK in chat') and docs/CLAUDE-RULES-CANONICAL.md Permission Tiers; the `reason` requirement is session-authored for the audit trail (system-actions.yml:25-28).
 - **Hits, last 14 days:** not measured: workflow run logs not in repo; no ledger of refused actions found
 - **Cost of removing it:** Allowlist is the safety boundary for shelling into the live VM from a GitHub issue/label (security audit 2026-06-28 cited at system-actions.yml:364); a reason-less run would just lose the audit text.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** The allowlist is a security boundary (keep); the mandatory `reason` is a small friction the operator could drop since reasons are free text.
 - **Question:** Keep this gate? Any action not on a hard-coded allowlist is refused (exit 2); *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1047,6 +1246,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: 'apply gates dry-run-vs-execute' design in workflow comments (:1181,1300,2314); confirm_account echo is session-designed. unset-env allowlist: 'reviewed one-line edit, the same doctrine' (scripts/ops/unset_env.sh:36). No operator verbatim found.
 - **Hits, last 14 days:** not measured: no refusal ledger; only visible in Actions logs
 - **Cost of removing it:** Typos in a flatten/cancel on a live account (wrong account/symbol) with no dry-run preview; confirm_account echo prevents venue position-mode switch on the wrong account.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Dry-run-by-default and charset checks are safety (keep); confirm_account echoes and the verb-list allowlists are extra friction the operator may not want on his own actions.
 - **Question:** Keep this gate? Flatten/amend/cancel/backfill wrappers default to dry-run unless apply:true; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1058,6 +1258,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM: operator popup ~2026-10-15T10:10Z "Build it (Recommended)" (docs/claude/work/checklist/TRADER-RESTART-GATE.json note), SPEC = Phase 1 exactly as in TELEGRAM-RESTART-MSG.
 - **Hits, last 14 days:** not measured: gate lines are in the VM ict-git-sync journal ('Trader restart gate:'); row note says first gate run was NOT yet observed at last write
 - **Cost of removing it:** Trader would restart on every runtime commit that does not touch its code (e.g. web-api only), interrupting real-money management; the gate's own fail-safe restarts when unsure, so removal only adds restarts.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Operator-approved and fail-safe toward restart; it narrows restarts, not trading.
 - **Question:** Keep this gate? A runtime diff restarts every unit except ict-trader-live when none of the changed files is in src.main's import closure, no non-.py runtime path changed and no .py outside src/scr *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1069,6 +1270,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND as an operator quote (evidence-driven: target_naked alert was 202 of 376 rows = 53.7% of the operator ERROR+/CRITICAL feed, alert_cooldown.py:11-14)
 - **Hits, last 14 days:** not measured: runtime_logs/*_alert_state.json latch files are on the VM, not in the repo
 - **Cost of removing it:** Alert flood (53.7% of the feed in the measured incident) desensitizing the operator; no trade effect.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** It only throttles notifications; keep it but it is an operator-taste call about page volume (severity-escalation already lets worsening through).
 - **Question:** No operator authorization found. Keep this gate? Repeat alerts for the same standing condition are suppressed for a cooldown window (an unreadable latch alerts rather than suppresses); *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1080,6 +1282,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND (infrastructure cadence; CLAUDE.md states 'ict-git-sync pulls main every ~5 min' as fact; green Tier-1/2 deploys 'are automatic' per the 2026-10-29 rule)
 - **Hits, last 14 days:** not measured: VM journal not in repo
 - **Cost of removing it:** No gate in the blocking sense; shortening the interval only speeds deploys.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** A polling interval is a latency, not a refusal; listed for completeness.
 - **Question:** No operator authorization found. Keep this gate? Code reaches the VMs only on a 5-minute poll of origin/main; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1091,6 +1294,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND (default-on soft kill switch; does not violate 'never hide a capability behind a default-off flag')
 - **Hits, last 14 days:** not measured: needs VM .env
 - **Cost of removing it:** Operator loses the soft kill for a cost-bearing LLM generator ('monthly cost gate' referenced in the script header); no trade-path effect.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Default-on, operator-controlled off switch for a non-trade, cost-bearing timer.
 - **Question:** No operator authorization found. Keep this gate? An opt-out env flag (default ON) that makes the insights generator timer exit without work; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1102,10 +1306,23 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM (rate-cap guard): operator 2026-10-29 ~10:45Z "Why is there a cap for the reviewer? ... we need to make sure this isn't being implemented anywhere" (scripts/ci/check_no_action_rate_cap.py:4-7). Env-gate guard: operator directive 2026-05-03 BUG-039 'per-account RiskManager.dry_run is the only live/dry switch' (scripts/check_env_gate_in_diff.py header) -- paraphrase.
 - **Hits, last 14 days:** not measured: CI-only; no flag blocks anything at runtime (both flags are ignored by code)
 - **Cost of removing it:** These guards REMOVE gates; dropping them would let default-off flags (the MES-stranding pattern) back in.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** They enforce the operator's anti-gate rules; the two vestigial flags are dead config worth deleting (no behaviour change).
 - **Question:** Keep this gate? Two retired *_ENABLED flags linger (set but unread) and two CI guards refuse NEW env-flag gates and NEW in-trade action caps. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
-### Writers, research queue, soak/status (19)
+### Writers, research queue, soak/status (20)
+
+#### `POLICY-DEMOTION-KEEP-OPEN-BLOCK-NEW` (RM) — ⚠️ **NO OPERATOR AUTHORIZATION FOUND**
+
+- **Where:** `docs/plans/OPERATING-PLAN-2026-09-21.md § 2 "Open positions on a book move" (PR #25251, OPEN draft, Tier 2 HELD: operator confirms)`
+- **Blocks:** PROPOSED policy text: on demotion the real-money and mirror copies run to their own exits and no new real-money entries are taken (keep open, block new).
+- **Added:** not on main (PR #25251)
+- **Operator authorization (NONE):** NONE FOUND for the demotion half: the PR itself says "No operator quote covers this half" (modelled on the daily-DD switch). Promotion half quotes operator 2026-10-29 "There shouldn't be three versions of this trade."
+- **Hits, last 14 days:** not live
+- **Cost of removing it:** Alternatives (force-close on demotion, or keep trading) each change real-money exposure; no evidence either way.
+- **Effect: NEITHER.** A policy definition of demotion, not a refusal of a specific right or wrong action; "keep open" avoids a forced close, "block new" is what demotion means.
+- **Recommendation: OPERATOR-PREFERENCE.** Decisions-page x3 already asks this; a pure policy preference.
+- **Question:** No operator authorization found. Keep this gate? PROPOSED policy text: on demotion the real-money and mirror copies run to their own exits and no new real-money entries are taken (keep open, block new). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
 #### `MANDATE-RESOLVER-CLAUSES` (RM)
 
@@ -1115,6 +1332,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM: operator grants in config/mandates.yaml ('granted_by: operator (Ben)', e.g. lines 139,163,189,280,330) and "either we have enough data to decide, or we don't and then getting that data becomes a task" (mandate_resolver.py:30-32, 2026-09-29); R-HOLDOUT 'operator decision 2026-10-16, "Require holdout"' (mandate_resolver.py:69); mechanics_proven 'Yes, merge it (Rec.)' (row PROMOTION-NO-SOAK).
 - **Hits, last 14 days:** not measured: resolver verdicts live in comms/mandate_evidence/ but I did not enumerate them for the window
 - **Cost of removing it:** The resolver is what makes automated promotion possible at all; removing REFUSE clauses would let a real-money promotion fire without an evidence record. It adds no gate on running trades.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Each clause maps to a recorded operator rule and the resolver only restricts auto-action, never manual operator decisions.
 - **Question:** Keep this gate? Decides whether a ladder transition (promote S0->S1, S1->S2, demote) may fire WITHOUT asking the operator; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1126,6 +1344,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM: C5 popup "Add it, re-measure the 3 now" 2026-10-11; prop gate chat "Yes, 1, 2 and 3a" 2026-10-15 with "if anything, the prop accounts should have a higher bar to clear because of the DD limits" (scripts/ci/check_roster_promotion_evidence.py:35-41; check_prop_roster_gate.py:3-6); five-clause bar 'DECIDED BY THE OPERATOR 2026-09-21' (no verbatim for C1-C4).
 - **Hits, last 14 days:** not measured: CI results not in repo
 - **Cost of removing it:** Real-money leg promoted on fee-only or unfaithful evidence (guard cites the roster growing 36->55 while memos said cut).
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Operator-decided and recorded in CLAUDE.md as binding for real-money promotion.
 - **Question:** Keep this gate? CI refuses a diff that puts a strategy leg on a real-money or prop roster without a committed evidence record (named harness, n, net of full cost stack, pre-registered rule, faithf *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1137,6 +1356,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM-LABELLED: operator 2026-10-28 decision "Adopt; build it this week" (scripts/ci/check_strategy_status.py:3-4; CLAUDE.md 'THREE STRATEGY STATUSES'); popup 2026-10-27 "Yes, that's the rule" for the demo-floor rule.
 - **Hits, last 14 days:** not measured: CI results not in repo
 - **Cost of removing it:** A leg could sit on both books, double-counting positions across paper and real money; guard exists because CI is asymmetric on roster edits (check_strategy_status.py:8-12).
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Operator adopted the three-status rule that this guard mechanically enforces.
 - **Question:** Keep this gate? CI refuses a PR that leaves a strategy leg on both general paper and a real-money+mirror roster at once (or violates the three-status derivation). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1148,6 +1368,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND (security/integrity hygiene, not an operator-decided gate)
 - **Hits, last 14 days:** not measured: no refusal ledger
 - **Cost of removing it:** Path-traversal write (a row id like ../../x) from a script argument; self-test ck 'a path-shaped id is refused' scripts/ops/checklist.py:262.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Cheap path-traversal/data-integrity protection on a file writer, blocks nothing the operator wants done.
 - **Question:** No operator authorization found. Keep this gate? Refuses to write or read a checklist row whose id is path-shaped or disagrees with its filename. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1159,6 +1380,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND (session-authored concurrency + anti-rubber-stamp rules; cites incidents PI-20261004-4GA8WQPA-0002, PI-20260921-0002, ROUTE-20261012, not an operator quote)
 - **Hits, last 14 days:** not measured: no refusal ledger
 - **Cost of removing it:** Evidence in code comments: BACKLOG-BURNDOWN-2 took 358 due items to 19 by moving dates only and left 553 open (pipeline.py:921-924); stale read reverted a newer update (PI-20261004-4GA8WQPA-0002). The redate rule specifically blocks 'moving a date' unless an observation is typed.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Stale-snapshot/identity checks protect append-only data integrity (keep), but the redate-needs-observation refusal is friction the operator never authorized and could become a warning.
 - **Question:** No operator authorization found. Keep this gate? Refuses a second filing under an existing id, an update with no/stale based_on version, an update that is a different finding, routed_to on a non-routed state, and a bare re-date w *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1170,6 +1392,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND (mirrors checklist.py/pipeline.py validators; 'fill, never refuse' comments at work_store.py:23,270,293 show intent to narrow refusals)
 - **Hits, last 14 days:** not measured: refusals return an HTTP/API error, not stored
 - **Cost of removing it:** Invalid rows in the live API store would break renderers (the 2026-11-05 500 IntegrityError referenced at work_store.py:270). Bookkeeping only.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** Duplicate of the CLI validators; schema constraints are fine but the vocabulary refusals should fill/normalize per the file's own 'fill, never refuse' stance.
 - **Question:** No operator authorization found. Keep this gate? work_store.db (the post-freeze canonical store for pipeline observations / checklist rows) refuses writes with an invalid kind/state/next_action, a missing title, a patch with a no *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1181,6 +1404,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: 'a bad row is refused at the keyboard instead of at CI' (scripts/ops/checklist.py:71-72); vocabulary guard MI-257 'checklist the operator reads may not carry two competing status fields' (scripts/ci/check_manager_checklist_vocabulary.py:1-3). No operator verbatim found.
 - **Hits, last 14 days:** not measured: a refusal exits non-zero and writes nothing; no ledger of refused checklist writes in the repo
 - **Cost of removing it:** Data-integrity only: an out-of-vocabulary state would render wrong on /api/bot/work/checklist (collapsed-state class). Evidence: self-test planted cases scripts/ops/checklist.py:285-308. No money path.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** It is a self-service typo catch on a bookkeeping file; warn-and-write (or let the existing CI vocabulary check report) rather than refuse.
 - **Question:** Keep this gate? Refuses to write a checklist row whose `state` is missing, not in the file's declared `states`, disagrees with the legacy `status` field, or whose priority_rank is not a positive n *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1192,6 +1416,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY of an operator-binding line: 'Process, not gates (operator, 2026-11-01, binding; lane CHECKLIST-OWNER-DUE). ... Only a DELIBERATE clearing errors' (docs/plans/manager-runbooks.md:83; code comment scripts/ops/checklist.py:118,134). The lane chose to ERROR on deliberate clearing; the verbatim operator words on that specific refusal were not found.
 - **Hits, last 14 days:** not measured: refusals leave no record
 - **Cost of removing it:** A session could silently blank due_by/owner, losing the manager's follow-up date; no evidence of an incident, the rule was designed alongside fill-defaults.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** The operator's own stance for this file is 'process, not gates'; clearing could just be allowed and re-filled by fill_defaults.
 - **Question:** Keep this gate? `checklist.py set` refuses to blank an existing owner / due_by / roadmap (must re-date instead); *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1203,6 +1428,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM: operator popup answer 'Narrow the gate (Recommended)' 2026-10-24T14:45Z (docs/claude/work/checklist/HEALTH-GATE-NARROW.json note; code comment scripts/ops/pipeline.py:1077). It NARROWED an existing gate; the original per-item gate itself has no separate verbatim.
 - **Hits, last 14 days:** MEASURED today on the current tree (not a 14d count): `python3 scripts/ops/pipeline.py --gate` -> gate 449 of 737 due (excluded 288); the row note recorded 306 of 604 on 2026-11-05
 - **Cost of removing it:** No money path; the gate only decides whether a review's backlog_coverage is satisfied. Row note says 'a review cannot meet it' at 306, i.e. it is a gate that is currently unmeetable.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** Authorized only as a narrowing; at 449 items it cannot be met, so report the number rather than hold the review on it.
 - **Question:** Keep this gate? Defines the set of due pipeline items (unrouted, owner-row-closed, high-severity) the weekly /health-review must triage before it counts as complete. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1214,6 +1440,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM-LABELLED: operator popup 2026-10-29 ~22:10Z approved 'lane $ ceilings + 2-build-lane cap' to stay (row NO-NEW-GATES-RULE). The 2-build-lane cap is a manager-skill/doc rule only; I found it in no code.
 - **Hits, last 14 days:** not measured: lane_reconcile output is not committed
 - **Cost of removing it:** Spend overrun: E20 measured a ~$1,142 day against ~$250 of ceilings (lane_reconcile.py:46) -- but that was with ceilings NOT read, i.e. the 'gate' is a human-read report.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Operator-approved to stay, and in code it is only a report so it blocks nothing.
 - **Question:** Keep this gate? Lane $ ceilings are only REPORTED by lane_reconcile (over-ceiling lanes flagged, exit 1); *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1225,6 +1452,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM-ADJACENT: operator 2026-09-21 'there's too many things here that get just dropped halfway through ... actually creating infra that has a pipeline that pulls things through to the finish' (scripts/ops/pipeline.py:6-12, docs/plans/OPERATING-PLAN-2026-09-21.md 3b). The specific refusals are in CLAUDE.md ('Refused without due_when, origin.rerun and (to close) terminal_reason', checked-in operator-instruction file).
 - **Hits, last 14 days:** not measured: a refusal prints 'pipeline: refused --' and writes nothing; no refusal ledger (PIPELINE store has 7326 files incl. accepted only)
 - **Cost of removing it:** Items could be filed with no due condition (the measured 'filing was free, pick-up voluntary' failure). The refusal is the operator's stated acceptance criterion.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Directly implements the operator's 2026-09-21 ask and is recorded in CLAUDE.md; it gates only the writer's own bookkeeping.
 - **Question:** Keep this gate? `pipeline.py append` refuses any follow-through item missing due_when (or clears_when), origin.rerun, a valid next_action/state, a terminal_reason on done/killed, or routed_to on r *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1236,6 +1464,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: 'E58 vouches pre-registered points, never whatever a branch says' (queue_replenish.py:1137); pre-registration is CLAUDE.md doctrine ('clearing a rule REGISTERED BEFORE THE RUN')
 - **Hits, last 14 days:** not measured: workflow verify results not in repo
 - **Cost of removing it:** Generated units could embed unregistered parameters, defeating the pre-registration property that promotion evidence relies on.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Mechanical enforcement of the standing 'registered before the run' rule; only affects auto-landing, a human can still land.
 - **Question:** Keep this gate? A generated research unit lands itself only if it re-renders byte-for-byte from a committed template point and an unlocked programme node; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1247,6 +1476,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM-LABELLED: operator popup 2026-10-29 ~22:10Z approved 'research dispatcher per-tick caps' to stay (checklist row NO-NEW-GATES-RULE note); plus 'OPERATOR 2026-11-03 D5-A' on the 8-run cap and 'operator 2026-10-15' on infra yield (scripts/research/research_compute.yaml:132,135) -- those two carry no verbatim text.
 - **Hits, last 14 days:** not measured: 'deferred' outcomes are in Actions run logs, not the repo (utilization record is written to an artifact dir, dispatch_queue.py:1497)
 - **Cost of removing it:** Runner pool starvation of infra workflows (CI, deploy) -- measured 2026-11-12: 8 research runs in flight blocked dispatch ~7h (dispatch_queue.py:1062-1067).
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Explicitly operator-approved on 2026-10-29 to stay.
 - **Question:** Keep this gate? Each dispatcher cycle fires at most N units (in-flight cap 8, 1 per workflow file, 1 GPU burst per run) and defers everything while infra runs are queued or repo-queued runs exceed *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1258,6 +1488,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM: operator 2026-11-05 ~19:05Z: "We can't just, like, give up on a certain line of research because we've already trained a model on all the data that we have. That's ridiculous." popup 'Adopt (Rec.)' (scripts/research/holdout_lock.py:3-5; row HOLDOUT-DEFLATED-REUSE). The row note says 'Gates added: none; this REMOVES the one-read block'. Overlap refusal: PI-20261105-GEXSLEAK-0001, no separate verbatim.
 - **Hits, last 14 days:** MEASURED: comms/research/holdout_reads.jsonl has 24 recorded reads, all with read_at in 2026-11-05..2026-11-12 (population: that ledger, all rows); refusals append nothing so refusal count is NOT measurable
 - **Cost of removing it:** Overlap refusal is a leakage check (train/holdout date overlap invalidates the test; PI-20261105-GEXSLEAK-0001); deflation is the multiple-testing correction. Removal weakens the promotion evidence behind real-money legs.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Operator adopted the deflated-bar design by name; the overlap check is a validity (not preference) check.
 - **Question:** Keep this gate? Refuses to record a holdout read whose window starts on/before the training end; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1269,6 +1500,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM (decision_rule): C1 operator note "Decide before you measure: the result IS the decision, removing the interpretation step where everything currently dies" (scripts/ci/check_research_queue_decision_rule.py:6). ML-consumer refusal: operator popup 2026-10-29 ~22:10Z approved to stay (NO-NEW-GATES-RULE). design_fields: 'Operator 2026-10-28: designs must rest on real-world practice' (check_research_queue_design_fields.py header) -- paraphrase. id_bands: none.
 - **Hits, last 14 days:** not measured: PR-time CI results are not in the repo (population would be research/queue-touching PRs 2026-10-29..11-12)
 - **Cost of removing it:** Units authored without a pre-registered rule land and wait for interpretation (404 'dead' dispositions measured per the guard header); ML units proliferate as learner variants (43 of 50 in the week of 2026-10-22).
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** decision_rule and ml_consumer carry operator quotes/approval; design_fields and id_bands are lighter and could be report-only but are grandfather-graded.
 - **Question:** Keep this gate? A PR that adds a research/queue unit without decision_rule / practice_precedent / ml_consumer (or in the wrong id band) fails CI; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1280,6 +1512,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: 'RESEARCH-CONFIRM-FRESH-WINDOW (operator 2026-10-16)' (scripts/research/dispatch_queue.py:452) -- no verbatim quote there. Retry cap: no operator reference.
 - **Hits, last 14 days:** not measured: dispatcher decisions not committed
 - **Cost of removing it:** not_before: a confirmation unit would run on the same data its PASS saw (invalid confirmation). Retry cap: an always-failing unit would loop and consume runners (the b62x producer_failed x3 case, dispatch_queue.py:491).
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Both protect compute/validity of research, are not on the trade path, and the retry cap is annotated 'needs a human' rather than a halt.
 - **Question:** Keep this gate? A queue unit with a future `not_before` is not fired until that time; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1291,6 +1524,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: 'This module is R4 (pre-registration with a BLOCKING power gate) ... Operator-decided 2026-08-27: the queue is one file per job' (scripts/research/research_queue.py:6-10). The 'blocking power gate' wording is the session's; no operator verbatim found.
 - **Hits, last 14 days:** not measured: dispatcher decisions (blocked_power) are emitted to the Actions run output, not committed to the repo
 - **Cost of removing it:** Underpowered experiments would run and burn compute; evidence cited in-code: RQ-20260830-002 declared n=50 vs floor 49.06 with 5 legs achieving 4-8 OOS trades (research_queue.py:420-430).
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Prevents wasted compute but is a blocking gate with no verbatim operator authorization found; could be a report-only 'underpowered' flag on the result.
 - **Question:** Keep this gate? Dispatcher will not fire a queue unit with no `power:` block, missing expected_n / min_detectable_effect, empty basis, infeasible declared n, or a deterministic-kind exemption with *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1302,6 +1536,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: 'the dispatcher does not infer where a job can run' (research_queue.py:615); R5 'scheduler's routing' operator-decided 2026-08-27 (research_queue.py:7)
 - **Hits, last 14 days:** not measured: outcomes in Actions logs only
 - **Cost of removing it:** A malformed unit would fail at dispatch (HTTP 422) or die in `plan`; it would burn a retry (MAX_NONVERDICT_RETRIES=2) and one runner slot. No money path.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Refuses only units that provably cannot run; no operator-wanted work is blocked.
 - **Question:** Keep this gate? Dispatcher will not fire a unit with no routing block, a malformed config, a workflow input GitHub would 422, a failing preflight, or a leg the e35 planner refuses. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1313,10 +1548,11 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM: operator 2026-10-04 "we can't set something to soak if we don't know when it's done. It has to have a definition of done so that it knows to create an alert … that is basic." and 2026-10-15 "A soak is a mechanical verification that was already proven in backtesting, and nothing needs to soak for more than one or two trades." (scripts/ci/check_soak_contracts.py:3-6; scripts/ops/soak_state.py:10-12)
 - **Hits, last 14 days:** not measured: CI results not in repo
 - **Cost of removing it:** Legs could sit in soak with no exit condition (the operator's stated worry) or be given long calendar soaks the operator banned.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Backed by two verbatim operator statements.
 - **Question:** Keep this gate? CI refuses a new Stage-1 roster leg or shadow strategy with no soak contract in SOAKS.json, a contract with n_needed >2 or an end date, a checklist row entering landed_unproven wit *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
-### CI landing machinery (32)
+### CI landing machinery (33)
 
 #### `AUTOMERGE-ARMING-CHECK-ATTACHED` (RM) — ⚠️ **NO OPERATOR AUTHORIZATION FOUND**
 
@@ -1326,6 +1562,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND
 - **Hits, last 14 days:** not measured: only in workflow run logs.
 - **Cost of removing it:** Six instances 2026-09-08 and one 2026-09-12 dropped a commit carrying a live lane's registry row (file docstring).
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Prevents arming a merge no check measures; delays by up to 4 min only.
 - **Question:** No operator authorization found. Keep this gate? Auto-merge is not armed until at least one check run other than the workflow's own job exists on the head (waits up to 240 s for a PAT-opened PR). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1337,6 +1574,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND (incident-derived: #10788 un-drafted by a merge of main)
 - **Hits, last 14 days:** measured: 3243 new .github/pr-landing/*.json declarations were added on origin/main 2026-10-29..2026-11-12 (population: files added under .github/pr-landing in 3250 main commits; `git log --diff-filter=A`): 2810 self/tier1, 432 hold (160 t2 needs_approval, 106 t1 unvouchable_paths, 75 t3 needs_approval, 52 operator_asked_to_hold, 15 t1 changes_landing_machinery, 11 t1 tier_2_3, 7 awaiting_evidence, 6 depends_on_unmerged). 2813 arming files added in window.
 - **Cost of removing it:** Incident 2026-08-22 (README armed itself) and 2026-09-02 (#10788 un-drafted and armed having asked for nothing).
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** It only prevents arming a merge nobody requested.
 - **Question:** No operator authorization found. Keep this gate? The auto-merge workflow does nothing unless the pushed branch's OWN .github/pr-automerge-requests/<slug>.txt is added/changed since the merge-base (a merge of main or stale carry-o *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1348,8 +1586,21 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND (comment only describes an 'emergency-merge escape hatch: temporarily set this to false')
 - **Hits, last 14 days:** not measured: CI check outcomes are in GitHub Actions run history, not committed to the repo; see LANDING-DECLARATION-VOLUME row for declaration counts
 - **Cost of removing it:** Without it every merge in this repo (all via admin-scoped API) bypasses required checks, per the file's own comment.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Makes the required checks real; flipping it off is a one-line change but removes the only hard merge gate, so the operator should choose.
 - **Question:** No operator authorization found. Keep this gate? enforce_admins=true: repo admins and admin-token API merges cannot bypass the required checks (set unconditionally, overriding any live value). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
+
+#### `CI-TEST-SHADOW-NEVER-ORDERS` (RM) — ⚠️ **NO OPERATOR AUTHORIZATION FOUND**
+
+- **Where:** `tests/runtime/test_shadow_never_orders.py (existing; planted cases added by PR #25260, OPEN draft)`
+- **Blocks:** pytest-run (a required check) fails a PR in which a shadow-stage ML conviction stamp changes an order's size; #25260 adds a planted regression so the test cannot go inert.
+- **Added:** existing test; planted cases not on main (PR #25260)
+- **Operator authorization (NONE):** NONE FOUND for a blocking test; it enforces the declared shadow gate (strategies.yaml execution: shadow never sends a live order).
+- **Hits, last 14 days:** not measured (Actions history)
+- **Cost of removing it:** Without it a change could let a shadow model resize live orders unnoticed.
+- **Effect: PREVENTS-WRONG.** A shadow model resizing a real order.
+- **Recommendation: KEEP.** It enforces the operator-declared shadow execution gate rather than adding a new limit.
+- **Question:** No operator authorization found. Keep this gate? pytest-run (a required check) fails a PR in which a shadow-stage ML conviction stamp changes an order's size; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
 #### `PRL-R10-ARMED-BUT-HOLD` (RM) · trigger case — ⚠️ **NO OPERATOR AUTHORIZATION FOUND**
 
@@ -1359,6 +1610,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND
 - **Hits, last 14 days:** measured: 3243 new .github/pr-landing/*.json declarations were added on origin/main 2026-10-29..2026-11-12 (population: files added under .github/pr-landing in 3250 main commits; `git log --diff-filter=A`): 2810 self/tier1, 432 hold (160 t2 needs_approval, 106 t1 unvouchable_paths, 75 t3 needs_approval, 52 operator_asked_to_hold, 15 t1 changes_landing_machinery, 11 t1 tier_2_3, 7 awaiting_evidence, 6 depends_on_unmerged). Per-rule refusal counts are NOT in any repo ledger (CI run results live in GitHub Actions, not committed). 203 of 3250 main-commit subjects since 2026-10-29 contain the word HOLD (all are PR titles declaring a deliberate hold, not refusals).
 - **Cost of removing it:** Real incident: PR #12858 armed + merged despite declaring hold (E63) -- but that is now also stopped by AUTOMERGE-LANDING-GATE.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Prevents a held PR being auto-merged against its own declaration (E63 incident).
 - **Question:** No operator authorization found. Keep this gate? Arming auto-merge (request file) while declaring landing:hold, or while having no declaration at all, fails guards (not grandfathered by branch age). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1370,6 +1622,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND (mechanism requirement, derived from 2026-09-03 stranded PRs)
 - **Hits, last 14 days:** measured (proxy): 2813 arming request files added 2026-10-29..11-12 (population: files added under .github/pr-automerge-requests).
 - **Cost of removing it:** Without arming, self-land PRs sit open; it is a consistency check, not a restriction on landing.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** It only checks that the author asked for the thing they declared; failing the PR over a missing arming file adds friction.
 - **Question:** No operator authorization found. Keep this gate? landing:self without an added/modified .github/pr-automerge-requests/<slug>.txt fails (declaring ready lands nothing). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1381,6 +1634,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND
 - **Hits, last 14 days:** measured (proxy): 432 hold declarations added 2026-10-29..11-12 all passed this shape (they exist on main).
 - **Cost of removing it:** No evidence found.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: REMOVE.** A typed-vocabulary check on a free-text field is bookkeeping friction on PRs that are already held.
 - **Question:** No operator authorization found. Keep this gate? landing:hold must carry hold_reason from a closed 6-word vocabulary and hold_text >= 20 chars, else guards fails. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1392,6 +1646,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND
 - **Hits, last 14 days:** not measured per rule; 15 changes_landing_machinery + 106 unvouchable_paths + 6 depends_on holds declared 2026-10-29..11-12 (new pr-landing files).
 - **Cost of removing it:** No evidence found; it was added so a hold reason cannot be an unverified excuse (a self-imposed anti-lying check).
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: REMOVE.** It polices the wording of an optional hold; a false reason on a hold harms nothing because a human merges it anyway.
 - **Question:** No operator authorization found. Keep this gate? A hold's stated reason must be TRUE against the diff: changes_landing_machinery needs a machinery path in the diff (R8); *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1403,6 +1658,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND
 - **Hits, last 14 days:** not measured: CI check outcomes are in GitHub Actions run history, not committed to the repo; see LANDING-DECLARATION-VOLUME row for declaration counts
 - **Cost of removing it:** Subsumed largely by pytest-run (which imports everything it runs); low independent value.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: REMOVE.** pytest-run already imports the whole tree, so the separate required collect-only context adds delay without extra protection.
 - **Question:** No operator authorization found. Keep this gate? Test tree must import/collect cleanly before merge. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1414,6 +1670,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND (history comment only)
 - **Hits, last 14 days:** not measured: CI check outcomes are in GitHub Actions run history, not committed to the repo; see LANDING-DECLARATION-VOLUME row for declaration counts
 - **Cost of removing it:** Header cites regressions that passed collect-only (allowlist drift 14/30, shadow wiring gap) that only execution caught.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Ordinary test CI; blocks every PR on any test failure including unrelated flakes, operator has not explicitly ruled on it.
 - **Question:** No operator authorization found. Keep this gate? Full test suite must pass (tests/ minus test_main_loop.py) before any PR merges; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1425,6 +1682,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARTIAL: related operator quote loosens drafts: "Going into github to marke drafts ready is not something we can include in the workflow" 2026-09-03, .github/workflows/pr-opener.yml:20. The refusal itself: NONE FOUND
 - **Hits, last 14 days:** not measured: refusals appear as workflow notices 'REFUSING -- ... is a DRAFT' in run logs only.
 - **Cost of removing it:** Incident: #10788 and #10764 un-drafted despite being held draft on explicit operator instruction (2026-09-02).
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Operator said un-drafting by hand cannot be part of the workflow, yet the refusal keeps drafts as holds; hold-by-declaration already exists (R7/R10).
 - **Question:** Keep this gate? Workflow refuses to un-draft or arm a draft PR it did not itself open. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1436,6 +1694,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: commit c7cae3f4dd subject "(R12 read delegated to manager by operator 2026-09-...)" authorizes the manager read, not the refusal
 - **Hits, last 14 days:** not measured: refusals only in workflow run logs ('NOT ARMING #N').
 - **Cost of removing it:** Incidents: #12858 (armed+merged while hold, 2026-09-24) and #17038 (hold, deleted request, disabled auto-merge ignored, merged 2026-10-08).
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Honors a PR's own hold; two incidents merged held PRs.
 - **Question:** Keep this gate? Never arm (and never direct-merge) a PR whose declaration reads anything but self (hold, unreadable, mandate unchecked); *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1447,6 +1706,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: docs/CLAUDE-RULES-CANONICAL.md:2404-2406 "The hard safety net is GitHub branch-protection -- required status checks (pytest-collect / pytest-run / guards) with enforce_admins, so no merge lands red" (describes, no operator quote)
 - **Hits, last 14 days:** not measured: required-check failures live in GitHub Actions run history; `guards` also runs on push to main. No committed ledger.
 - **Cost of removing it:** Removing would let red code merge to main, which deploys to the live trader within ~5 min via ict-git-sync (CLAUDE.md). Evidence: comment in branch-protection-sync.yml 2026-05-21 that without enforcement 'checks gate merges' was cosmetic.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** This is the core CI safety net for a live-money repo and is operator-described as the safety net, but no verbatim authorization of the specific list exists; the operator should confirm which of the 3 contexts stay required.
 - **Question:** Keep this gate? GitHub refuses to merge any PR (including admin API merges) to main until pytest-collect, pytest-run and guards are all green. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1458,6 +1718,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: settings.json:58 "MERGE-SLOT GUARD (operator-directed 2026-07-27)"; canonical:2400 "operator decision, 2026-06-28" ("not a new CI gate")
 - **Hits, last 14 days:** not measured: hook denials are not logged in repo; settings comment says it fires nowhere on web sessions.
 - **Cost of removing it:** Comment cites a session auto-merging without protocol causing behind-rebase churn; strict is now off so that churn cause is gone.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: REMOVE.** Speed-bump with a marker file, serializes nothing (R13 doc), and does not run on the web runtime.
 - **Question:** Keep this gate? PreToolUse hook DENIES mcp__github__merge_pull_request / enable_pr_auto_merge until the session makes the merge-slot claim and touches a fresh (<20 min) /tmp marker. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1469,6 +1730,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: docs/CLAUDE-RULES-CANONICAL.md Permission Tiers + check_pr_landing.py docstring "Every PR declares its TIER and how it intends to LAND"; no verbatim operator quote
 - **Hits, last 14 days:** measured: 3243 new .github/pr-landing/*.json declarations were added on origin/main 2026-10-29..2026-11-12 (population: files added under .github/pr-landing in 3250 main commits; `git log --diff-filter=A`): 2810 self/tier1, 432 hold (160 t2 needs_approval, 106 t1 unvouchable_paths, 75 t3 needs_approval, 52 operator_asked_to_hold, 15 t1 changes_landing_machinery, 11 t1 tier_2_3, 7 awaiting_evidence, 6 depends_on_unmerged). Per-rule refusal counts are NOT in any repo ledger (CI run results live in GitHub Actions, not committed). 203 of 3250 main-commit subjects since 2026-10-29 contain the word HOLD (all are PR titles declaring a deliberate hold, not refusals).
 - **Cost of removing it:** No evidence found; the declaration is the input that later rules and auto-merge read.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Schema validation of paperwork the system itself requires; a typo blocks merge, but the paperwork drives landing.
 - **Question:** Keep this gate? Landing declaration .github/pr-landing/<slug>.json must parse as an object (R0), tier must be 1/2/3 (R1), landing must be self\|hold\|mandate (R2), and `why` must be >= 20 chars (R3, *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1480,6 +1742,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: check_pr_landing.py docstring 'Every PR declares its TIER' -- no verbatim quote
 - **Hits, last 14 days:** measured: 3243 new .github/pr-landing/*.json declarations were added on origin/main 2026-10-29..2026-11-12 (population: files added under .github/pr-landing in 3250 main commits; `git log --diff-filter=A`): 2810 self/tier1, 432 hold (160 t2 needs_approval, 106 t1 unvouchable_paths, 75 t3 needs_approval, 52 operator_asked_to_hold, 15 t1 changes_landing_machinery, 11 t1 tier_2_3, 7 awaiting_evidence, 6 depends_on_unmerged). Per-rule refusal counts are NOT in any repo ledger (CI run results live in GitHub Actions, not committed). 203 of 3250 main-commit subjects since 2026-10-29 contain the word HOLD (all are PR titles declaring a deliberate hold, not refusals).
 - **Cost of removing it:** No evidence found; without declarations R5/R12 and auto-merge arming cannot grade anything.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** Failing a PR for lacking paperwork is friction; the declaration could be auto-generated or the check made informational.
 - **Question:** Keep this gate? A PR branch cut after 2026-09-03 with NO .github/pr-landing/<slug>.json fails guards (filename must equal branch slug exactly). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1491,6 +1754,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: check_pr_landing.py docstring "This file's own PR is the first instance"; E63 delegated read: automerge_landing_gate commit message "R12 read delegated to manager by operator 2026-09-..."
 - **Hits, last 14 days:** measured (proxy): 15 tier-1 + 3 tier-2/3 changes_landing_machinery holds declared 2026-10-29..11-12 (new pr-landing files).
 - **Cost of removing it:** Guards the merge machinery that can land real-money changes; a bad edit can disarm every other landing check. Treated as design principle in docstring; no incident of removal.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Protects the landing route from self-edit but forces a human on every edit of 20 files incl. research templates; operator should say whether that is wanted.
 - **Question:** Keep this gate? A landing:self PR whose diff edits the landing machinery (listed workflows/scripts, templates, programmes, approvals) fails; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1502,6 +1766,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: settings.json:58 "MERGE-SLOT GUARD (operator-directed 2026-07-27)" for the hook; no operator quote for the CI rule R13
 - **Hits, last 14 days:** measured (proxy): 3121 per-branch merge-slot claim files added 2026-10-29..11-12 (population: files added under .github/merge-slots in main). Refusals not recorded.
 - **Cost of removing it:** Its own docstring: 'R13 DOES NOT SERIALIZE' -- concurrent-merge safety rests on required checks. Cost of removal: none beyond losing attribution.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: REMOVE.** A check that by its own docstring serializes nothing and costs a file per PR (3121 in 14 days).
 - **Question:** Keep this gate? An armed landing:self branch must add/modify its own .github/merge-slots/<slug>.json (branch, held_by, claimed_at) or the legacy merge_slot field, else guards fails. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1513,6 +1778,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM (loosening, which created the route): "the operator does not click things." 2026-09-11, check_pr_landing.py:100. The restriction itself: PARAPHRASE ONLY (tier table)
 - **Hits, last 14 days:** not measured: no per-rule ledger; 160 tier-2 hold declarations added 2026-10-29..11-12 (these chose hold, not R15).
 - **Cost of removing it:** Without it a session could self-approve Tier-2 runtime changes; Tier-2 touches runtime/deploy/order-path. Docstring documents the two-PR forgery chain.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Mechanism that lets Tier-2 land on a recorded approval; separation-of-approval is the operator's tier policy but the strictness (10 clauses) was not specified by him.
 - **Question:** Keep this gate? A Tier-2 landing:self PR is refused unless a committed approval record (docs/claude/work/approvals/<slug>.json) exists at the merge-base, byte-identical at HEAD, names this branch, *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1524,6 +1790,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM: operator decision 2026-09-25 "Build auto-land route" (check_pr_landing.py:158)
 - **Hits, last 14 days:** not measured: route unarmed; 0 mandate-landing declarations among the 3243 added in window (counter above shows none).
 - **Cost of removing it:** Route can only REMOVE legs from real-money rosters; removing the check would remove the only guard on that route (it is unarmed so nothing lands today).
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Operator-requested route whose clauses protect a real-money roster edit; currently inert.
 - **Question:** Keep this gate? landing:mandate (Tier-3 Stage-2 roster removal only) is admitted only if every clause of check_mandate_autoland holds, incl. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1535,6 +1802,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY (the tier table that defines it is an operator-set permission policy): docs/CLAUDE-RULES-CANONICAL.md:1820-1822 "Tier 3 ... Explicit product approval required before merge" -- but no verbatim operator quote naming this check; also operator 2026-09-27 verbatim at canonical:1826 only loosens: "make tier 2 and 3 decisions autonomously as long as they are backed by data"
 - **Hits, last 14 days:** measured (proxy): 75 tier-3 hold declarations + 2 tier-3 depends_on added 2026-10-29..11-12 (population: new pr-landing files); refusals of landing:self at tier 3 not recorded.
 - **Cost of removing it:** Tier-3 paths are order/risk code on the live trader; deploy follows merge in ~5 minutes. Operator-defined tier table exists.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Tier-3 human merge is the operator's own tier definition and protects live strategy/risk code.
 - **Question:** Keep this gate? A declaration of tier 3 with landing:self fails; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1546,6 +1814,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM widenings only: "You shouldn't need me to merge a change on the dashboard" (2026-11-07, check_pr_landing.py:~331 comment) and "Apply my recommendations (Recommended)" (2026-09-28 popup, ~:347 comment). The restriction itself: PARAPHRASE ONLY (canonical tier table :1820)
 - **Hits, last 14 days:** measured (proxy): 106 tier-1 'unvouchable_paths' holds + 11 tier-1 tier_2_3 holds + 38 tier-1 operator_asked_to_hold declared 2026-10-29..11-12 (population: new pr-landing files); each unvouchable_paths hold is a PR whose only blocker was R5 and waited for a manager merge.
 - **Cost of removing it:** Allowlist keeps src/**, config/**, deploy/** (live runtime, Tier-2/3) from auto-merging. For paths like scripts/*.py outside src, cost of removal is low; 106 PRs in 14 days needed a human only because of path polarity.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Protects runtime paths (keep for src/config/deploy) but its fail-closed polarity forced ~106 hold PRs in 14 days for paths that are not live code; narrowing to a Tier-2/3 denylist is a taste call.
 - **Question:** Keep this gate? A tier-1 landing:self PR fails if its diff touches any path outside the TIER1_SURFACE allowlist (docs, tests, comms, .github, scripts/ci\|ops\|research\|reports, scripts/backtest_*.py *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1557,6 +1826,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND
 - **Hits, last 14 days:** not measured: no enforcing code
 - **Cost of removing it:** n/a
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Convention-level only; the dispatcher per-tick caps are operator-approved (2026-10-29).
 - **Question:** No operator authorization found. Keep this gate? No code enforces an Actions-minutes budget cap that I could find: docs/claude/actions-budget.md lists conventions (7-day artifact retention, no forever-cron, dedupe triggers). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1568,6 +1838,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND
 - **Hits, last 14 days:** not measured: CI check outcomes are in GitHub Actions run history, not committed to the repo; see LANDING-DECLARATION-VOLUME row for declaration counts
 - **Cost of removing it:** Cost only: duplicate ~9-minute pytest runs per push (comment: GH-CAPACITY-INFRA-FIRST). Does not refuse anything, just supersedes.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Pure efficiency; refuses nothing a human wants and losing it wastes runner minutes.
 - **Question:** No operator authorization found. Keep this gate? 8 workflows (grep 'cancel-in-progress: true' = 8 of 168) cancel an older in-flight run when a newer one for the same PR/ref starts; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1579,6 +1850,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND
 - **Hits, last 14 days:** measured (proxy): 3121 per-branch claim files added in window.
 - **Cost of removing it:** Only R13 consumes them.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: REMOVE.** Tooling for R13, which serializes nothing; refusals are of malformed input only.
 - **Question:** No operator authorization found. Keep this gate? Writes the claim; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1590,6 +1862,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (NONE):** NONE FOUND
 - **Hits, last 14 days:** not measured: step failures in Actions history; 27 workflows call this action.
 - **Cost of removing it:** These refuse to open PRs that would fail their own required guard; they surface rather than create stranded PRs.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Fail-loud checks on the data-landing path; removal hides stranded data.
 - **Question:** No operator authorization found. Keep this gate? Fails the calling data workflow when: PAT token empty, claim_merge_slot.py missing, no R13 claim written, PR cannot be opened in 3 attempts, PR closed unmerged, or PR not merged wi *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1601,6 +1874,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: E57 quote in TIER1 comment: "this is a serious gap that needs to be fully resolved - not only rerunning tests whose results were lost, but ensuring we have a mechanism in place to prevent research from being lost" (2026-09-24, check_pr_landing.py ~:340) -- fits the intent, not this guard by name
 - **Hits, last 14 days:** not measured: guard outcomes in Actions history.
 - **Cost of removing it:** Prevents research results existing only in 90-day-expiring artifacts.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** Protects data not money; a report listing unwired workflows would serve without failing PRs that add an artifact upload.
 - **Question:** Keep this gate? CI (guards) fails if any workflow that uploads an artifact neither calls research-result, nor carries # landed-by:, nor # no-durable-result: <reason>, nor is in a shrink-only BASEL *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1612,6 +1886,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: branch-protection-sync.yml:211 "Set to FALSE on 2026-08-10 (operator-directed)"; canonical doc:2410-2420 "Correction 2026-08-10 ... strict: false, operator-directed"
 - **Hits, last 14 days:** not measured: CI check outcomes are in GitHub Actions run history, not committed to the repo; see LANDING-DECLARATION-VOLUME row for declaration counts
 - **Cost of removing it:** n/a (it is already loosened; re-enabling caused CI livelock per comment, 3 re-syncs on #8698).
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** It is the loosened state; keep it off.
 - **Question:** Keep this gate? Not a gate: STRICT=false means PRs need NOT be up to date with main (require-up-to-date is OFF). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1623,6 +1898,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** PARAPHRASE ONLY: plan docs/plans/OPS-AUTOMATION-INVENTORY-2026-10-13.md act M-a (not checked for a verbatim quote)
 - **Hits, last 14 days:** not measured: only in workflow logs ('#N skip: why').
 - **Cost of removing it:** Updating a hold or Tier-2/3 PR restarts its CI and may mutate a branch a human is reviewing.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Narrows an optional convenience automation, never blocks a merge.
 - **Question:** Keep this gate? Auto-update of behind PRs is skipped for drafts, forks, non-claude/* branches, landing:hold label, non-tier1-self declarations and any Tier-2/3 path touched. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1634,6 +1910,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM: operator decision 2026-09-28 "Post-merge alarm", option B only (pr_landing_hold_alarm.py:3); "Accept recorded decisions" 2026-10-09 (:20-ish)
 - **Hits, last 14 days:** not measured: the alarm issues are GitHub issues, not committed; runs once per push to main (1,610 runs/wk per workflow comment).
 - **Cost of removing it:** Detector, so none; operator chose option B over blocking.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Non-blocking detector the operator explicitly chose; report-only already.
 - **Question:** Keep this gate? Nothing blocked: post-merge page when a tier 2/3 hold PR merged with no APPROVED review, resolving recorded_decision, PR-body citation or operator-approved label. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1645,6 +1922,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (PARAPHRASE):** n/a
 - **Hits, last 14 days:** measured: 3243 new .github/pr-landing/*.json declarations were added on origin/main 2026-10-29..2026-11-12 (population: files added under .github/pr-landing in 3250 main commits; `git log --diff-filter=A`): 2810 self/tier1, 432 hold (160 t2 needs_approval, 106 t1 unvouchable_paths, 75 t3 needs_approval, 52 operator_asked_to_hold, 15 t1 changes_landing_machinery, 11 t1 tier_2_3, 7 awaiting_evidence, 6 depends_on_unmerged). Per-rule refusal counts are NOT in any repo ledger (CI run results live in GitHub Actions, not committed). 203 of 3250 main-commit subjects since 2026-10-29 contain the word HOLD (all are PR titles declaring a deliberate hold, not refusals).
 - **Cost of removing it:** n/a
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Context for deciding how much of the R-rule friction is still wanted.
 - **Question:** Keep this gate? Not a gate: population record. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1656,6 +1934,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM (loosening): "Going into github to marke drafts ready is not something we can include in the workflow" 2026-09-03 (pr-opener.yml:20)
 - **Hits, last 14 days:** not measured
 - **Cost of removing it:** none
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Records that the draft default was loosened by the operator; nothing to remove.
 - **Question:** Keep this gate? Not a gate on merging: pr-opener opens draft only if request says draft:true (default false since 2026-09-03). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1667,6 +1946,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Operator authorization (VERBATIM):** VERBATIM: operator 2026-10-29 ~22:10Z popup, "the 4 gates that had no operator record are all APPROVED TO STAY: E57 research-queue merge hold ..." -- docs/claude/work/checklist/NO-NEW-GATES-RULE.json note (that wording is the checklist row's transcription of the popup)
 - **Hits, last 14 days:** not measured: queue-edit PRs refused by this rule are not logged; research-queue PRs exist (e.g. main subjects 'research queue: disposition 14 done-but-ungraded ... [Tier 1, hold]' #25186).
 - **Cost of removing it:** Docstring: a rewritable decision_rule defeats pre-registration, the promotion ladder's safety property; also unstamped dispatch re-fires and bills GPU spend.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: KEEP.** Explicitly approved to stay by the operator on 2026-10-29.
 - **Question:** Keep this gate? research/queue/*.yaml may self-land only as a last_dispatched_at stamp, a new pre-run unit registration, or a producer-verified (E58 replenish/grade) edit; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1819,6 +2099,7 @@ Every guard here blocks a merge through the required `guards` check unless state
 - **Operator authorization (VERBATIM):** VERBATIM (report form only): operator, decisions page w9, 2026-11-12: "Build them as reports only (no gate)"; "I want a break down of each one so that I can decide on each gate if its necessary or not." No authorization to make it blocking.
 - **Hits, last 14 days:** 0 of 9 risk-bearing legs at HEAD; 0 of 33 config commits 2026-10-29..11-12 (measured by the w9 lane, report_w9_gates.py --history 60)
 - **Cost of removing it:** As a report it blocks nothing; per-check false-block cost is in the w9 breakdown doc.
+- **Effect: PREVENTS-WRONG.** Would catch ML influence on a real-money leg without evidence; 0 hits at HEAD and over 33 commits. Not built as a gate (report only on the w9 branch).
 - **Recommendation: MAKE-REPORT-ONLY.** It is already a report; the operator decides only whether it should ever become blocking (w9 lane owns the breakdown).
 - **Question:** Keep this gate? PROPOSED, built as a REPORT ONLY (never exits 1). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1830,6 +2111,7 @@ Every guard here blocks a merge through the required `guards` check unless state
 - **Operator authorization (VERBATIM):** VERBATIM (report form only): operator, decisions page w9, 2026-11-12: "Build them as reports only (no gate)"; "I want a break down of each one so that I can decide on each gate if its necessary or not." No authorization to make it blocking.
 - **Hits, last 14 days:** 3 of 9 prop routings at HEAD (all ml_entry, all carry the operator baseline exception 2026-11-08); 24 of 33 commits had >=1 hit (measured by the w9 lane, report_w9_gates.py --history 60)
 - **Cost of removing it:** As a report it blocks nothing; per-check false-block cost is in the w9 breakdown doc.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** It is already a report; the operator decides only whether it should ever become blocking (w9 lane owns the breakdown).
 - **Question:** Keep this gate? PROPOSED, built as a REPORT ONLY (never exits 1). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1841,6 +2123,7 @@ Every guard here blocks a merge through the required `guards` check unless state
 - **Operator authorization (VERBATIM):** VERBATIM (report form only): operator, decisions page w9, 2026-11-12: "Build them as reports only (no gate)"; "I want a break down of each one so that I can decide on each gate if its necessary or not." No authorization to make it blocking.
 - **Hits, last 14 days:** 2 of 9 legs at HEAD (ml_entry, ml_entry_eq_struct: no trail by design); 25 of 33 commits had >=1 hit (measured by the w9 lane, report_w9_gates.py --history 60)
 - **Cost of removing it:** As a report it blocks nothing; per-check false-block cost is in the w9 breakdown doc.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** It is already a report; the operator decides only whether it should ever become blocking (w9 lane owns the breakdown).
 - **Question:** Keep this gate? PROPOSED, built as a REPORT ONLY (never exits 1). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1852,6 +2135,7 @@ Every guard here blocks a merge through the required `guards` check unless state
 - **Operator authorization (VERBATIM):** VERBATIM (report form only): operator, decisions page w9, 2026-11-12: "Build them as reports only (no gate)"; "I want a break down of each one so that I can decide on each gate if its necessary or not." No authorization to make it blocking.
 - **Hits, last 14 days:** 3 of 30 lever keys at HEAD (2 probably false positives); history not replayed (measured by the w9 lane, report_w9_gates.py --history 60)
 - **Cost of removing it:** As a report it blocks nothing; per-check false-block cost is in the w9 breakdown doc.
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: MAKE-REPORT-ONLY.** It is already a report; the operator decides only whether it should ever become blocking (w9 lane owns the breakdown).
 - **Question:** Keep this gate? PROPOSED, built as a REPORT ONLY (never exits 1). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1865,6 +2149,7 @@ Every guard here blocks a merge through the required `guards` check unless state
 - **Operator authorization (PLATFORM):** n/a -- platform-owned. Earlier operator-added allow rules exist for related refusals: merge-claim touch (2026-10-26 ~19:40Z), gh api merge/ready_for_review ("Make sure it's in the general settings, not just for this session", 2026-10-27 ~11:40Z), manager merges ("Allow manager merges (Recommended)", 2026-11-08); recorded in .claude/settings.json permissions._comment.
 - **Hits, last 14 days:** hit on 2026-11-12 per the manager dispatch; not otherwise measured
 - **Cost of removing it:** Not removable from the repo. Narrowing it is done by an operator-written allow rule for the exact command; a session cannot write that rule itself (editing .claude/settings.json is itself refused as Self-Modification).
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** The operator decides which exact commands get an allow rule in .claude/settings.json; no repo change can remove the classifier.
 - **Question:** Keep this gate? Claude Code auto-mode safety classifier (PLATFORM-OWNED, not repo code) category "Interfere With Workloads": refuses restarting, stopping or altering running services/jobs. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1876,6 +2161,7 @@ Every guard here blocks a merge through the required `guards` check unless state
 - **Operator authorization (PLATFORM):** n/a -- platform-owned. Earlier operator-added allow rules exist for related refusals: merge-claim touch (2026-10-26 ~19:40Z), gh api merge/ready_for_review ("Make sure it's in the general settings, not just for this session", 2026-10-27 ~11:40Z), manager merges ("Allow manager merges (Recommended)", 2026-11-08); recorded in .claude/settings.json permissions._comment.
 - **Hits, last 14 days:** at least 1 on 2026-11-12 (trigger case, manager report); not otherwise measured: refusals are not logged to the repo
 - **Cost of removing it:** Not removable from the repo. Narrowing it is done by an operator-written allow rule for the exact command; a session cannot write that rule itself (editing .claude/settings.json is itself refused as Self-Modification).
+- **Effect: BLOCKS-RIGHT.** In the trigger case it refused writes the operator wanted made.
 - **Recommendation: OPERATOR-PREFERENCE.** The operator decides which exact commands get an allow rule in .claude/settings.json; no repo change can remove the classifier.
 - **Question:** Keep this gate? Claude Code auto-mode safety classifier (PLATFORM-OWNED, not repo code) category "Real-World Transactions": refuses tool calls a session makes that place, change or close real trad *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1887,6 +2173,7 @@ Every guard here blocks a merge through the required `guards` check unless state
 - **Operator authorization (PLATFORM):** n/a -- platform-owned. Earlier operator-added allow rules exist for related refusals: merge-claim touch (2026-10-26 ~19:40Z), gh api merge/ready_for_review ("Make sure it's in the general settings, not just for this session", 2026-10-27 ~11:40Z), manager merges ("Allow manager merges (Recommended)", 2026-11-08); recorded in .claude/settings.json permissions._comment.
 - **Hits, last 14 days:** hit on 2026-11-12 per the manager dispatch; not otherwise measured
 - **Cost of removing it:** Not removable from the repo. Narrowing it is done by an operator-written allow rule for the exact command; a session cannot write that rule itself (editing .claude/settings.json is itself refused as Self-Modification).
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** The operator decides which exact commands get an allow rule in .claude/settings.json; no repo change can remove the classifier.
 - **Question:** Keep this gate? Claude Code auto-mode safety classifier (PLATFORM-OWNED, not repo code) category "External System Writes": refuses writes to external services (APIs, other repos, messaging). *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1898,6 +2185,7 @@ Every guard here blocks a merge through the required `guards` check unless state
 - **Operator authorization (PLATFORM):** n/a -- platform-owned. Earlier operator-added allow rules exist for related refusals: merge-claim touch (2026-10-26 ~19:40Z), gh api merge/ready_for_review ("Make sure it's in the general settings, not just for this session", 2026-10-27 ~11:40Z), manager merges ("Allow manager merges (Recommended)", 2026-11-08); recorded in .claude/settings.json permissions._comment.
 - **Hits, last 14 days:** hit on 2026-11-12 per the manager dispatch; not otherwise measured
 - **Cost of removing it:** Not removable from the repo. Narrowing it is done by an operator-written allow rule for the exact command; a session cannot write that rule itself (editing .claude/settings.json is itself refused as Self-Modification).
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** The operator decides which exact commands get an allow rule in .claude/settings.json; no repo change can remove the classifier.
 - **Question:** Keep this gate? Claude Code auto-mode safety classifier (PLATFORM-OWNED, not repo code) category "Irreversible Deletion": refuses deleting data, branches or files that cannot be recovered. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1909,6 +2197,7 @@ Every guard here blocks a merge through the required `guards` check unless state
 - **Operator authorization (PLATFORM):** n/a -- platform-owned. Earlier operator-added allow rules exist for related refusals: merge-claim touch (2026-10-26 ~19:40Z), gh api merge/ready_for_review ("Make sure it's in the general settings, not just for this session", 2026-10-27 ~11:40Z), manager merges ("Allow manager merges (Recommended)", 2026-11-08); recorded in .claude/settings.json permissions._comment.
 - **Hits, last 14 days:** not measured; already narrowed by operator allow rules
 - **Cost of removing it:** Not removable from the repo. Narrowing it is done by an operator-written allow rule for the exact command; a session cannot write that rule itself (editing .claude/settings.json is itself refused as Self-Modification).
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** The operator decides which exact commands get an allow rule in .claude/settings.json; no repo change can remove the classifier.
 - **Question:** Keep this gate? Claude Code auto-mode safety classifier (PLATFORM-OWNED, not repo code) category "Merge Without Review": refuses a session squash-merging a PR it did not have reviewed; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1920,6 +2209,7 @@ Every guard here blocks a merge through the required `guards` check unless state
 - **Operator authorization (PLATFORM):** n/a -- platform-owned. Earlier operator-added allow rules exist for related refusals: merge-claim touch (2026-10-26 ~19:40Z), gh api merge/ready_for_review ("Make sure it's in the general settings, not just for this session", 2026-10-27 ~11:40Z), manager merges ("Allow manager merges (Recommended)", 2026-11-08); recorded in .claude/settings.json permissions._comment.
 - **Hits, last 14 days:** hit on 2026-11-12 per the manager dispatch; not otherwise measured
 - **Cost of removing it:** Not removable from the repo. Narrowing it is done by an operator-written allow rule for the exact command; a session cannot write that rule itself (editing .claude/settings.json is itself refused as Self-Modification).
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** The operator decides which exact commands get an allow rule in .claude/settings.json; no repo change can remove the classifier.
 - **Question:** Keep this gate? Claude Code auto-mode safety classifier (PLATFORM-OWNED, not repo code) category "Self-Modification": refuses a session editing its own permissions/settings/hooks (e.g. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
@@ -1931,6 +2221,7 @@ Every guard here blocks a merge through the required `guards` check unless state
 - **Operator authorization (PLATFORM):** n/a -- platform-owned
 - **Hits, last 14 days:** not measured
 - **Cost of removing it:** Not removable from the repo; the platform names a per-project override ("some projects allow shorter").
+- **Effect: NOT-ASSESSED.** not assessed in this pass
 - **Recommendation: OPERATOR-PREFERENCE.** Only the operator can ask for a shorter per-project minimum.
 - **Question:** Keep this gate? A recurring scheduled task cannot fire more often than hourly, so a wake/poll loop (e.g. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 
