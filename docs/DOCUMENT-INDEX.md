@@ -551,6 +551,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/design/boot-read-size-PROPOSAL.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/desk-entry-review-redesign-2026-11-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/site-auth-consumer-inventory-2026-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
+| `docs/design/trade-action-direct-path-2026-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/ui-workplan-2026-11-questions.md` | plan | unknown | — | never | `name:workplan-is-a-forward-commitment / not-assessed` | — |
 | `docs/design/ui-workplan-2026-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | UI workplan 2026-11: design for OAuth sign-in enforcement, prop/chart bracket history, performance table + P&L chart, insights ledger, models/strategies tables, sidebar, topic map |
 | `docs/design/close-confirmation-scope-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
@@ -1212,6 +1213,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/runbooks/gpu-burst.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/health-check.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/alpaca-wedged-oco.md` | instruction | live | — | 2026-11-06 | `read:ALPACA-LIVE-MECHANICS-lane-authored-it-2026-11-06-against-live-broker-reads` | the self-healing Alpaca close ladder for a wedged OCO (paper reset / live red flag) |
+| `docs/runbooks/phone-executor-action-coverage.md` | instruction | live | — | 2026-11-11 | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/phone-executor-anomaly.md` | instruction | live | — | 2026-11-07 | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/jta-trader-rename.md` | instruction | live | — | 2026-10-28 | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/hourly-snapshot.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |

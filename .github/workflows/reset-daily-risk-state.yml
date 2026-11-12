@@ -10,8 +10,8 @@ name: reset-daily-risk-state
 #   account: bybit_1    # optional — omit to reset ALL accounts today
 
 on:
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [reset-daily-risk-state]
 
 # FIX-SA-13 (audit 2026-09-29): least privilege. Every step read: the only
 # GitHub API use is actions/github-script issues.createComment / issues.update,
@@ -31,9 +31,9 @@ jobs:
     # vm-ib-gateway-live-login-test.yml). Found by
     # scripts/ci/check_workflow_actor_guard.py while landing FIX-CA-16.
     if: |
-      contains(github.event.issue.labels.*.name, 'reset-daily-risk-state') &&
-      (github.event.issue.user.login == github.repository_owner ||
-       github.event.issue.user.login == 'github-actions[bot]')
+      contains(github.event.client_payload.issue.labels.*.name, 'reset-daily-risk-state') &&
+      (github.event.client_payload.issue.user.login == github.repository_owner ||
+       github.event.client_payload.issue.user.login == 'github-actions[bot]')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -51,7 +51,7 @@ jobs:
       - name: Parse issue body
         id: parse
         env:
-          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_BODY: ${{ github.event.client_payload.issue.body }}
         run: |
           ACCOUNT_ID="$(printf '%s\n' "${ISSUE_BODY}" \
             | grep -i -m1 '^[[:space:]]*account[[:space:]]*:' \
@@ -107,13 +107,13 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo:  context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               body: `## reset-daily-risk-state ${status}\n\n**Account:** \`${account}\`\n\n\`\`\`\n${output}\n\`\`\`\n`,
             });
             await github.rest.issues.update({
               owner: context.repo.owner,
               repo:  context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               state: isSuccess ? 'closed' : 'open',
               state_reason: isSuccess ? 'completed' : 'not_planned',
             });

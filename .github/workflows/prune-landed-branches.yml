@@ -42,8 +42,8 @@ on:
         options:
           - "true"
           - "false"
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [prune-landed-branches]
 
 permissions:
   contents: write
@@ -57,10 +57,10 @@ jobs:
   prune:
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       (github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'prune-landed-branches'))
+      (github.event_name == 'repository_dispatch' &&
+       (github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'prune-landed-branches'))
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -69,7 +69,7 @@ jobs:
       - name: Prune landed branches
         uses: actions/github-script@v7
         env:
-          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_BODY: ${{ github.event.client_payload.issue.body }}
         with:
           script: |
             const fs = require('fs');
@@ -149,7 +149,7 @@ jobs:
             core.summary.addRaw(md).write();
 
             if (context.eventName === 'issues') {
-              const n = context.issue.number;
+              const n = (context.payload.client_payload?.issue?.number ?? context.issue.number);
               await github.rest.issues.createComment({ owner, repo, issue_number: n, body: md });
               await github.rest.issues.update({ owner, repo, issue_number: n, state: 'closed' });
             }

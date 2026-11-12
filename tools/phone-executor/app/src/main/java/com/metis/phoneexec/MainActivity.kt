@@ -309,9 +309,10 @@ class MainActivity : Activity() {
 
     override fun onPause() { resumed = false; super.onPause() }
 
-    /** FLAG_SECURE (blank screenshots / recents) is ON for every credential-bearing screen -- login, code step,
-     *  challenge, unread state, the Setup dialog (which sets its own flag) -- and OFF only on the logged-in trading
-     *  terminal, which shows balances and positions but never a credential (operator 2026-10-06: screenshots of the app). */
+    /** FLAG_SECURE (blank screenshots / recents) is ON for every credential-bearing screen -- off the trade host, a
+     *  password / e-mail field, the code step, a challenge, the page before its first read, the Setup dialog (which sets
+     *  its own flag) -- and OFF on every other trade-host page, which shows balances and positions but never a credential
+     *  (operator 2026-10-06 and 2026-11-11: screenshots of the app; PHONE-SELF-DIAGNOSE). */
     private var secureOn = false
     private fun setSecure(on: Boolean) {
         if (on == secureOn) return
@@ -437,7 +438,14 @@ class MainActivity : Activity() {
                 s.optBoolean("pw") || s.optBoolean("email") || s.optBoolean("codeWait") -> "login"
                 else -> "other"
             }
-            setSecure(st != "logged_in")
+            // PHONE-SELF-DIAGNOSE (operator 2026-11-11, "me being able to take screenshots"): FLAG_SECURE follows the SAME
+            // credential predicate as the capture gate (Capture.credentialScreen: off the trade host, a password / e-mail
+            // field, a code step or a challenge), not "the terminal read logged_in". A trade-host page that read "other"
+            // (a new layout, a terminal_miss, a half-loaded view) carries no credential and is exactly the screen the
+            // operator needs to screenshot. An unreadable page returns above and keeps the previous state (fail closed
+            // from onCreate / onPageStarted).
+            setSecure(Capture.credentialScreen(s.optString("host"), s.optBoolean("pw"), s.optBoolean("email"),
+                s.optBoolean("codeWait"), s.optBoolean("challenged")))
             lastPageReadMs = System.currentTimeMillis()
             if (paused()) {
                 if (st == "logged_in") { pausedUntilMs = 0L; pauseBtn.text = "Pause"; setStatus("logged in: pause lifted") }

@@ -40,8 +40,8 @@ on:
         description: "Window length in days"
         required: false
         default: "7"
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [live-replay-parity]
 
 permissions:
   contents: write
@@ -56,8 +56,8 @@ concurrency:
   # run (GitHub keeps one pending run per group) — observed 2026-10-03, runs
   # 6/7/8. Only labelled / scheduled / dispatched runs share the group.
   group: >-
-    ${{ (github.event_name == 'issues' &&
-         !contains(github.event.issue.labels.*.name, 'live-replay-parity'))
+    ${{ (github.event_name == 'repository_dispatch' &&
+         !contains(github.event.client_payload.issue.labels.*.name, 'live-replay-parity'))
         && format('live-replay-parity-noop-{0}', github.run_id)
         || 'live-replay-parity' }}
   cancel-in-progress: false
@@ -91,10 +91,10 @@ jobs:
     needs: dedupe
     if: |
       !cancelled() && needs.dedupe.outputs.skip != 'true' && (
-      github.event_name != 'issues' ||
-      ((github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'live-replay-parity'))
+      github.event_name != 'repository_dispatch' ||
+      ((github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'live-replay-parity'))
       )
     runs-on: ubuntu-latest
     # the commit-to-main step owns its own merge wait (shared default — callers
@@ -126,7 +126,7 @@ jobs:
       - name: Resolve inputs (days, optional script ref)
         id: inp
         env:
-          BODY: ${{ github.event.issue.body }}
+          BODY: ${{ github.event.client_payload.issue.body }}
           DAYS_IN: ${{ github.event.inputs.days }}
         run: |
           set -euo pipefail
@@ -234,7 +234,7 @@ jobs:
             -f priority=high -f target=claude
 
       - name: Comment + close issue (issue-driven path)
-        if: always() && github.event_name == 'issues'
+        if: always() && github.event_name == 'repository_dispatch'
         uses: actions/github-script@v7
         env:
           OUT: ${{ steps.run.outputs.out }}
@@ -256,9 +256,9 @@ jobs:
             ].join('\n');
             await github.rest.issues.createComment({
               owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number, body,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), body,
             });
             await github.rest.issues.update({
               owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number, state: 'closed',
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), state: 'closed',
             });

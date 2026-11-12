@@ -23,13 +23,33 @@ and every GitHub Actions runner log in with the SAME key, the runners from
 rotating public addresses (31 distinct in 5 h), so every run would alert. It
 becomes possible once the keys are split (row SEC-SSH-SINGLE-KEY).
 
+Detector ``files`` (row SEC-DETECTORS, D3): sha256 of every watched file, compared
+with the previous run. Watched: ``authorized_keys``/``authorized_keys2`` of every
+account with a home under /home plus /root, /etc/sudoers and /etc/sudoers.d/*,
+regular files under /etc/systemd/system (units and drop-ins; ``*.wants`` symlinks
+are skipped, an enable needs a unit file and that file is watched), /etc/crontab,
+/etc/cron.d/* and /var/spool/cron/crontabs/*.
+
+* ``changed`` / ``added`` / ``removed``: ONE alert per (path, new hash), naming the
+  PATH only, never the content. The baseline then moves on, so a change alerts once.
+* EXPECTED, silent: a file under /etc/systemd/system whose bytes equal
+  ``deploy/<same name>`` in this checkout, or a drop-in (``*.d/*.conf``) whose bytes
+  equal any file under ``deploy/``. That is what ``scripts/install_systemd_units.sh``
+  writes (plain ``cp``), so a deploy never alerts. A removed unit is counted, not
+  alerted (deploys retire units); a removed key, sudoers or cron file alerts.
+* Root-only paths are read with ``sudo -n``. A path that cannot be read keeps its
+  previous hash (unreadable is not "removed") and is counted in ``unreadable``; when
+  that set grows, ONE alert says which paths are not being checked.
+
 State: ``runtime_logs/security_watch_state.json`` (on the VM, never committed).
 Run by ``ict-security-watch.timer`` every 5 min on the live VM.
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import os
 import re
 import socket
 import subprocess
@@ -165,11 +185,188 @@ def run_ssh(state: dict, now: float, reader: Callable[[float], tuple[list[str] |
     return s, alerts
 
 
+# ---------------------------------------------------------------------------
+# Detector D3: file integrity
+# ---------------------------------------------------------------------------
+
+FILES_COOLDOWN_S = 24 * 3600
+FILES_BLIND_COOLDOWN_S = 24 * 3600
+_SYSTEMD_DIR = "/etc/systemd/system"
+_UNIT_SUFFIXES = (".service", ".timer", ".socket", ".path", ".mount", ".target", ".conf")
+
+
+def _sudo(args: list[str]) -> bytes | None:
+    try:
+        r = subprocess.run(["sudo", "-n", *args], capture_output=True, timeout=30, check=False)
+    except Exception:  # noqa: BLE001
+        return None
+    return r.stdout if r.returncode == 0 else None
+
+
+def read_file(path: str) -> bytes | None:
+    """File bytes, via ``sudo -n cat`` when the service user cannot read it."""
+    try:
+        with open(path, "rb") as fh:
+            return fh.read()
+    except PermissionError:
+        return _sudo(["cat", "--", path])
+    except OSError:
+        return None
+
+
+def list_files(directory: str) -> list[str] | None:
+    """Regular files directly in *directory* ([] if absent, None if unlistable)."""
+    if not os.path.isdir(directory):
+        return []
+    try:
+        return sorted(os.path.join(directory, n) for n in os.listdir(directory)
+                      if os.path.isfile(os.path.join(directory, n))
+                      and not os.path.islink(os.path.join(directory, n)))
+    except PermissionError:
+        out = _sudo(["find", directory, "-maxdepth", "1", "-type", "f", "-print0"])
+        if out is None:
+            return None
+        return sorted(p for p in out.decode("utf-8", "replace").split("\0") if p)
+
+
+def watched_paths(lister: Callable[[str], list[str] | None] = list_files,
+                  home_root: str = "/home") -> tuple[dict[str, str], list[str]]:
+    """{path: category} to hash, and the directories that could not be listed."""
+    paths: dict[str, str] = {}
+    blind_dirs: list[str] = []
+    homes = ["/root"]
+    try:
+        homes += sorted(os.path.join(home_root, d) for d in os.listdir(home_root))
+    except OSError:
+        blind_dirs.append(home_root)
+    for h in homes:
+        for name in ("authorized_keys", "authorized_keys2"):
+            paths[os.path.join(h, ".ssh", name)] = "ssh_keys"
+    paths["/etc/sudoers"] = "sudoers"
+    paths["/etc/crontab"] = "cron"
+    for d, cat in (("/etc/sudoers.d", "sudoers"), ("/etc/cron.d", "cron"),
+                   ("/var/spool/cron/crontabs", "cron")):
+        listed = lister(d)
+        if listed is None:
+            blind_dirs.append(d)
+            continue
+        for p in listed:
+            paths[p] = cat
+    for dirpath, dirnames, filenames in os.walk(_SYSTEMD_DIR):
+        dirnames[:] = [x for x in dirnames if not x.endswith((".wants", ".requires"))]
+        for n in filenames:
+            p = os.path.join(dirpath, n)
+            if n.endswith(_UNIT_SUFFIXES) and not os.path.islink(p):
+                paths[p] = "systemd"
+    return paths, blind_dirs
+
+
+def deploy_index(deploy_dir: Path) -> tuple[dict[str, str], set[str]]:
+    """({file name: sha256} for top-level deploy units, {sha256 of every deploy file})."""
+    by_name: dict[str, str] = {}
+    every: set[str] = set()
+    if not deploy_dir.is_dir():
+        return by_name, every
+    for p in deploy_dir.rglob("*"):
+        if p.is_file():
+            try:
+                h = hashlib.sha256(p.read_bytes()).hexdigest()
+            except OSError:
+                continue
+            every.add(h)
+            if p.parent == deploy_dir:
+                by_name[p.name] = h
+    return by_name, every
+
+
+def _expected_systemd(path: str, digest: str, deploy: tuple[dict[str, str], set[str]]) -> bool:
+    by_name, every = deploy
+    name = os.path.basename(path)
+    if by_name.get(name) == digest:
+        return True
+    return os.path.basename(os.path.dirname(path)).endswith(".d") and digest in every
+
+
+def run_files(state: dict, now: float, host: str,
+              admit: Callable[..., bool],
+              collect: Callable[[], tuple[dict[str, str], list[str]]] = watched_paths,
+              reader: Callable[[str], bytes | None] = read_file,
+              deploy: tuple[dict[str, str], set[str]] | None = None) -> tuple[dict, list[str]]:
+    """One pass of D3. Returns (new files state, alert texts)."""
+    s = dict(state or {})
+    alerts: list[str] = []
+    first = "hashes" not in s
+    old: dict[str, str] = dict(s.get("hashes") or {})
+    deploy = deploy if deploy is not None else deploy_index(REPO_ROOT / "deploy")
+    paths, blind_dirs = collect()
+    new: dict[str, str] = {}
+    unreadable: list[str] = list(blind_dirs)
+    for p in sorted(paths):
+        data = reader(p)
+        if data is None:
+            if os.path.lexists(p):
+                unreadable.append(p)
+                if p in old:
+                    new[p] = old[p]          # cannot look: keep, never "removed"
+            continue
+        new[p] = hashlib.sha256(data).hexdigest()
+    # A blind directory hides its files: keep their old hashes too.
+    for p, h in old.items():
+        if p not in new and any(p.startswith(d.rstrip("/") + "/") for d in blind_dirs):
+            new[p] = h
+    expected = changed = 0
+    if not first:
+        for p in sorted(set(old) | set(new)):
+            o, n = old.get(p), new.get(p)
+            if o == n:
+                continue
+            cat = paths.get(p) or ("systemd" if p.startswith(_SYSTEMD_DIR + "/") else "file")
+            if n is None:
+                if cat == "systemd":
+                    expected += 1             # deploys retire units
+                    continue
+                what = "REMOVED"
+            elif cat == "systemd" and _expected_systemd(p, n, deploy):
+                expected += 1
+                continue
+            else:
+                what = "ADDED" if o is None else "CHANGED"
+            changed += 1
+            if admit(COOLDOWN_KIND, f"files:{p}:{n or 'gone'}", FILES_COOLDOWN_S):
+                alerts.append(f"[RED FLAG] {cat} file {what} on {host}: {p} "
+                              f"(not a deploy/ copy). Content is not shown. "
+                              f"Check who changed it. Nothing was stopped.")
+    prev_blind = set(s.get("unreadable") or [])
+    if set(unreadable) - prev_blind and admit(
+            COOLDOWN_KIND, "files:blind:" + ",".join(sorted(unreadable)), FILES_BLIND_COOLDOWN_S):
+        alerts.append(f"[RED FLAG] security watch on {host} cannot read {len(unreadable)} "
+                      f"watched path(s), so they are not being checked: "
+                      + ", ".join(sorted(unreadable)[:10])
+                      + (" ..." if len(unreadable) > 10 else "")
+                      + ". Likely missing passwordless sudo for cat/find. Nothing was stopped.")
+    if first:
+        cats: dict[str, int] = {}
+        for p in new:
+            cats[paths.get(p, "file")] = cats.get(paths.get(p, "file"), 0) + 1
+        alerts.append(f"[INFO] security watch on {host}: file baseline recorded: "
+                      + ", ".join(f"{k}={v}" for k, v in sorted(cats.items()))
+                      + f"; unreadable={len(unreadable)}. Any change that is not a deploy/ "
+                        f"copy alerts from now on.")
+    s.update({"hashes": new, "unreadable": sorted(unreadable), "checked_ts": now,
+              "last": {"watched": len(new), "changed": changed, "expected": expected,
+                       "unreadable": len(unreadable)}})
+    if first:
+        s["baseline_ts"] = now
+    return s, alerts
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--dry-run", action="store_true", help="print alerts; send nothing, write nothing")
     ap.add_argument("--trust-current", action="store_true",
                     help="re-record the SSH baseline from the last 24 h")
+    ap.add_argument("--trust-current-files", action="store_true",
+                    help="re-record the file-integrity baseline (D3)")
     args = ap.parse_args(argv)
     try:
         from src.runtime.alert_cooldown import cooldown_admits
@@ -180,8 +377,18 @@ def main(argv: list[str] | None = None) -> int:
             state.pop("ssh", None)
         now = time.time()
         admit = (lambda *a, **k: True) if args.dry_run else cooldown_admits
-        ssh, alerts = run_ssh(state.get("ssh") or {}, now, read_journal, admit, socket.gethostname())
+        host = socket.gethostname()
+        ssh, alerts = run_ssh(state.get("ssh") or {}, now, read_journal, admit, host)
         state["ssh"] = ssh
+        if args.trust_current_files:
+            state.pop("files", None)
+        try:
+            files, file_alerts = run_files(state.get("files") or {}, now, host, admit)
+            state["files"] = files
+            alerts += file_alerts
+        except Exception as exc:  # noqa: BLE001  # one detector failing never stops the other
+            print(f"security_watch: files detector failed: {type(exc).__name__}: {exc}",
+                  file=sys.stderr)
         for text in alerts:
             print(text)
             if args.dry_run:
@@ -197,7 +404,8 @@ def main(argv: list[str] | None = None) -> int:
             tmp.write_text(json.dumps(state, sort_keys=True), encoding="utf-8")
             tmp.replace(path)
         print(json.dumps({"ssh": {k: ssh.get(k) for k in
-                                  ("read_state", "window", "failed_last_hour", "blind_runs")}}))
+                                  ("read_state", "window", "failed_last_hour", "blind_runs")},
+                          "files": (state.get("files") or {}).get("last")}))
     except Exception as exc:  # noqa: BLE001
         print(f"security_watch: failed: {type(exc).__name__}: {exc}", file=sys.stderr)
     return 0
