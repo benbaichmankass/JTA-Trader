@@ -222,8 +222,8 @@ def test_snapshot_route_not_built_then_built(db, client):
     payload = _build()
     conn = sqlite3.connect(str(db))
     conn.execute(store.DDL)
-    conn.execute(f"INSERT INTO {store.TABLE} (trade_id, state, payload) VALUES (?, 'built', ?)",
-                 (tid, json.dumps(payload)))
+    conn.execute(f"INSERT INTO {store.TABLE} (snapshot_key, trade_id, state, payload) VALUES (?, ?, 'built', ?)",
+                 (store.trade_key(tid), tid, json.dumps(payload)))
     conn.commit()
     conn.close()
     d = client.get(f"/api/bot/trades/{tid}/snapshot").json()
@@ -256,9 +256,100 @@ def test_stored_form_is_compressed_and_route_recomputes_indicators(db, client):
     assert len(blob) < len(json.dumps(payload)) / 3
     conn = sqlite3.connect(str(db))
     conn.execute(store.DDL)
-    conn.execute(f"INSERT INTO {store.TABLE} (trade_id, state, payload) VALUES (?, 'built', ?)", (tid, blob))
+    conn.execute(f"INSERT INTO {store.TABLE} (snapshot_key, trade_id, state, payload) VALUES (?, ?, 'built', ?)",
+                 (store.trade_key(tid), tid, blob))
     conn.commit()
     conn.close()
     d = client.get(f"/api/bot/trades/{tid}/snapshot").json()
     assert d["snapshot"]["indicators"] == payload["indicators"]
     assert d["snapshot"]["candles"] == payload["candles"]
+
+
+# ── prop trades (prop_fills + prop_tickets), keyed by the opening fill id
+
+PROP_AMENDS = json.dumps([{"at": "2026-11-12T03:00:00+00:00", "sl_before": 90.0, "sl": 89.0, "tp_before": 80.0,
+                           "tp": 80.0, "source": {"reason": "live review tighten"}}])
+
+
+def insert_prop_trade(db, closed=True):
+    from src.prop import prop_journal
+    conn = sqlite3.connect(str(db))
+    prop_journal.ensure_tables(conn)
+    conn.execute("INSERT INTO prop_tickets (ticket_id, account_id, strategy, symbol, direction, order_package_id, meta,"
+                 " created_at) VALUES ('tk-1', 'breakout_2', 'ml_entry', 'SOLUSDT', 'short', ?, ?, ?)",
+                 (PKG, json.dumps({"sl_floor": {"level": 89.0, "review_id": "LR-tight"}}), OPEN))
+    cur = conn.execute("INSERT INTO prop_fills (account_id, ticket_id, external_order_id, symbol, direction, qty,"
+                       " entry_price, sl, tp, status, opened_at, reported_at, amendments, created_at) VALUES"
+                       " ('breakout_2', 'tk-1', 'ext-1', 'SOLUSDT', 'SELL', 6.82, 87.64, 89.0, 80.0, 'filled', ?, ?, ?, ?)",
+                       (OPEN, OPEN, PROP_AMENDS, OPEN))
+    opener = cur.lastrowid
+    closer = None
+    if closed:
+        cur = conn.execute("INSERT INTO prop_fills (account_id, ticket_id, external_order_id, symbol, direction, qty,"
+                           " entry_price, exit_price, pnl, status, reason, closed_at, reported_at, created_at) VALUES"
+                           " ('breakout_2', 'tk-1', 'ext-1', 'SOLUSDT', 'SELL', 6.82, 87.64, 86.0, 11.2, 'closed',"
+                           " 'tp', ?, ?, ?)", (CLOSE, CLOSE, CLOSE))
+        closer = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return opener, closer
+
+
+def test_prop_resolves_from_either_row_and_builds(db):
+    opener, closer = insert_prop_trade(db)
+    conn = sqlite3.connect(str(db))
+    for fid in (opener, closer):
+        o, c, tk = store.resolve_prop(conn, fid)
+        assert o["id"] == opener and c["id"] == closer and tk["ticket_id"] == "tk-1"
+    t = tcs.prop_trade(o, c, tk)
+    conn.close()
+    assert t["direction"] == "short" and t["status"] == "closed" and t["prop_fill_id"] == opener
+    s = tcs.build_snapshot(t, _pkg(), _candles(int(datetime(2026, 11, 12, tzinfo=timezone.utc).timestamp()), 100),
+                           "x", REVIEWS, RECEIPTS, datetime(2026, 11, 12, 9, tzinfo=timezone.utc))
+    assert s["trade"]["prop_fill_id"] == opener and s["trade"]["trade_id"] is None
+    assert s["brackets"]["tp_history"] == "recorded"
+    assert [(u["from"], u["to"], u["scope"]) for u in s["brackets"]["updates"]] == [(90.0, 89.0, "account")]
+    m = {x["id"]: x for x in s["decisions"]["markers"]}
+    assert m["LR-tight"]["disposition"] == "applied"      # ticket meta.sl_floor names it
+    assert "DA-1" not in m                                 # receipt scoped to an exchange trade id
+
+
+def test_prop_routes(db, client):
+    opener, closer = insert_prop_trade(db)
+    d = client.get(f"/api/bot/prop-trades/{closer}/snapshot").json()
+    assert d["read_state"] == "not_built" and d["prop_fill_id"] == opener and d["trade_id"] is None
+    conn = sqlite3.connect(str(db))
+    o, c, tk = store.resolve_prop(conn, opener)
+    payload = tcs.build_snapshot(tcs.prop_trade(o, c, tk), None, [], "x", REVIEWS, RECEIPTS,
+                                 datetime(2026, 11, 12, 9, tzinfo=timezone.utc))
+    conn.execute(store.DDL)
+    conn.execute(f"INSERT INTO {store.TABLE} (snapshot_key, prop_fill_id, state, payload) VALUES (?, ?, 'built', ?)",
+                 (store.prop_key(opener), opener, store.encode(payload)))
+    conn.commit()
+    conn.close()
+    d = client.get(f"/api/bot/prop-trades/{opener}/snapshot").json()
+    assert d["snapshot"]["trade"]["account_class"] == "prop"
+    mk = client.get(f"/api/bot/prop-trades/{opener}/markers").json()
+    assert mk["prop_fill_id"] == opener and mk["brackets"]["tp_history"] == "recorded"
+    assert client.get("/api/bot/prop-trades/999999/snapshot").status_code == 404
+
+
+def test_open_prop_trade_snapshot_404_markers_ok(db, client):
+    opener, _ = insert_prop_trade(db, closed=False)
+    assert client.get(f"/api/bot/prop-trades/{opener}/snapshot").status_code == 404
+    mk = client.get(f"/api/bot/prop-trades/{opener}/markers").json()
+    assert mk["status"] == "open" and mk["entry"]["price"] == 87.64
+
+
+def test_prop_fixture_shape_matches_builder(db):
+    opener, closer = insert_prop_trade(db)
+    conn = sqlite3.connect(str(db))
+    o, c, tk = store.resolve_prop(conn, opener)
+    conn.close()
+    built = tcs.build_snapshot(tcs.prop_trade(o, c, tk), _pkg(),
+                               _candles(int(datetime(2026, 11, 12, tzinfo=timezone.utc).timestamp()), 100),
+                               "x", REVIEWS, RECEIPTS, datetime(2026, 11, 12, 9, tzinfo=timezone.utc))
+    fx = json.loads((FIX / "trade_chart_snapshot_prop_v1.json").read_text())["snapshot"]
+    strip = lambda ks: {k for k in ks if ".features." not in k and ".model_scores" not in k}  # noqa: E731
+    missing = strip(_keys(fx)) - strip(_keys(built))
+    assert not missing, missing

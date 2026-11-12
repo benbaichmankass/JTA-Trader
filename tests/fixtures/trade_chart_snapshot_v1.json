@@ -2,13 +2,18 @@
   "_comment": "Wire-shape fixture for GET /api/bot/trades/{trade_id}/snapshot (CLOSED-TRADE-SNAPSHOT-ROUTE, parent UI-REDESIGN-2026-11). Illustrative values, not a real trade. Contract: docs/reference/bot-api-reference.md section 'Trade chart snapshot + decision markers'. Pinned by tests/test_trade_chart_snapshot.py.",
   "as_of": "2026-11-12T10:00:00+00:00",
   "trade_id": 7001,
+  "prop_fill_id": null,
   "read_state": "partial",
-  "partial_reasons": ["tp_history_unrecorded"],
+  "partial_reasons": [
+    "tp_history_unrecorded"
+  ],
   "snapshot": {
     "schema": "trade_chart_snapshot/v1",
     "built_at": "2026-11-12T09:40:12+00:00",
     "trade": {
       "trade_id": 7001,
+      "prop_fill_id": null,
+      "ticket_id": null,
       "order_package_id": "pkg-0000000000000001",
       "account_id": "bybit_1",
       "account_class": "paper",
@@ -18,8 +23,8 @@
       "qty": 100.0,
       "opened_at": "2026-11-12T01:00:00+00:00",
       "closed_at": "2026-11-12T07:00:00+00:00",
-      "entry_price": 1.0400,
-      "exit_price": 1.0520,
+      "entry_price": 1.04,
+      "exit_price": 1.052,
       "exit_reason": "tp_hit",
       "pnl": 1.2,
       "pnl_provenance": "MEASURED"
@@ -28,40 +33,105 @@
       "interval": "5m",
       "time_from": "2026-11-12T00:06:00+00:00",
       "time_to": "2026-11-12T07:54:00+00:00",
-      "price_low": 1.0340,
-      "price_high": 1.0560,
+      "price_low": 1.034,
+      "price_high": 1.056,
       "basis": {
         "open_close_span_s": 21600,
         "time_pad_frac": 0.15,
-        "price_pad_frac": 0.10,
-        "high": 1.0540,
-        "low": 1.0360,
+        "price_pad_frac": 0.1,
+        "high": 1.054,
+        "low": 1.036,
         "high_low_over": "candles between opened_at and closed_at"
       },
       "levels_outside_frame": [
-        {"kind": "sl", "price": 1.0300, "from_ts": "2026-11-12T01:00:00+00:00"}
+        {
+          "kind": "sl",
+          "price": 1.03,
+          "from_ts": "2026-11-12T01:00:00+00:00"
+        }
       ]
     },
     "candles": {
       "state": "measured",
       "source": "bot-exchange",
       "rows": [
-        {"time": 1762905960, "open": 1.0390, "high": 1.0395, "low": 1.0385, "close": 1.0392, "volume": 1200.0},
-        {"time": 1762906260, "open": 1.0392, "high": 1.0401, "low": 1.0388, "close": 1.0399, "volume": 980.0}
+        {
+          "time": 1762905960,
+          "open": 1.039,
+          "high": 1.0395,
+          "low": 1.0385,
+          "close": 1.0392,
+          "volume": 1200.0
+        },
+        {
+          "time": 1762906260,
+          "open": 1.0392,
+          "high": 1.0401,
+          "low": 1.0388,
+          "close": 1.0399,
+          "volume": 980.0
+        }
       ]
     },
     "indicators": {
       "state": "measured",
       "source": "computed_from_candles",
       "series": [
-        {"name": "ema_20", "pane": "price", "points": [{"time": 1762906260, "value": 1.0391}]},
-        {"name": "ema_50", "pane": "price", "points": [{"time": 1762906260, "value": null}]},
-        {"name": "rsi_14", "pane": "rsi", "points": [{"time": 1762906260, "value": null}]},
-        {"name": "atr_14", "pane": "atr", "points": [{"time": 1762906260, "value": null}]}
+        {
+          "name": "ema_20",
+          "pane": "price",
+          "points": [
+            {
+              "time": 1762906260,
+              "value": 1.0391
+            }
+          ]
+        },
+        {
+          "name": "ema_50",
+          "pane": "price",
+          "points": [
+            {
+              "time": 1762906260,
+              "value": null
+            }
+          ]
+        },
+        {
+          "name": "rsi_14",
+          "pane": "rsi",
+          "points": [
+            {
+              "time": 1762906260,
+              "value": null
+            }
+          ]
+        },
+        {
+          "name": "atr_14",
+          "pane": "atr",
+          "points": [
+            {
+              "time": 1762906260,
+              "value": null
+            }
+          ]
+        }
       ]
     },
-    "entry": {"ts": "2026-11-12T01:00:00+00:00", "bar_ts": "2026-11-12T01:00:00+00:00", "price": 1.0400, "provenance": "MEASURED"},
-    "exit": {"ts": "2026-11-12T07:00:00+00:00", "bar_ts": "2026-11-12T07:00:00+00:00", "price": 1.0520, "reason": "tp_hit", "provenance": "MEASURED"},
+    "entry": {
+      "ts": "2026-11-12T01:00:00+00:00",
+      "bar_ts": "2026-11-12T01:00:00+00:00",
+      "price": 1.04,
+      "provenance": "MEASURED"
+    },
+    "exit": {
+      "ts": "2026-11-12T07:00:00+00:00",
+      "bar_ts": "2026-11-12T07:00:00+00:00",
+      "price": 1.052,
+      "reason": "tp_hit",
+      "provenance": "MEASURED"
+    },
     "entry_signal": {
       "state": "measured",
       "decision_bar": "2026-11-12T00:00:00+00:00",
@@ -73,8 +143,14 @@
       "p_short": -0.02,
       "tp_intent": "predictive",
       "tp_basis": "3 x ATR14 first-passage target",
-      "contributing_strategies": ["ml_entry"],
-      "features": {"rsi14": 0.29, "atr_pct": 0.0095, "ret_24": -0.60},
+      "contributing_strategies": [
+        "ml_entry"
+      ],
+      "features": {
+        "rsi14": 0.29,
+        "atr_pct": 0.0095,
+        "ret_24": -0.6
+      },
       "model_scores": null
     },
     "brackets": {
@@ -82,21 +158,93 @@
       "partial_reasons": [],
       "tp_history": "unrecorded",
       "levels": [
-        {"kind": "sl", "price": 1.0300, "from_ts": "2026-11-12T01:00:00+00:00", "to_ts": "2026-11-12T04:10:00+00:00", "source": "open", "detail": "", "provenance": "MEASURED"},
-        {"kind": "sl", "price": 1.0400, "from_ts": "2026-11-12T04:10:00+00:00", "to_ts": null, "source": "live_review_mandate", "detail": "LR-20261112T0400Z-pkg-0000000000000001", "provenance": "MEASURED"},
-        {"kind": "tp", "price": 1.0520, "from_ts": "2026-11-12T01:00:00+00:00", "to_ts": null, "source": "open", "detail": "", "provenance": "MEASURED"}
+        {
+          "kind": "sl",
+          "price": 1.03,
+          "from_ts": "2026-11-12T01:00:00+00:00",
+          "to_ts": "2026-11-12T04:10:00+00:00",
+          "source": "open",
+          "detail": "",
+          "provenance": "MEASURED"
+        },
+        {
+          "kind": "sl",
+          "price": 1.04,
+          "from_ts": "2026-11-12T04:10:00+00:00",
+          "to_ts": null,
+          "source": "live_review_mandate",
+          "detail": "LR-20261112T0400Z-pkg-0000000000000001",
+          "provenance": "MEASURED"
+        },
+        {
+          "kind": "tp",
+          "price": 1.052,
+          "from_ts": "2026-11-12T01:00:00+00:00",
+          "to_ts": null,
+          "source": "open",
+          "detail": "",
+          "provenance": "MEASURED"
+        }
       ],
       "updates": [
-        {"ts": "2026-11-12T04:10:00+00:00", "kind": "sl", "from": 1.0300, "to": 1.0400, "source": "live_review_mandate", "detail": "LR-20261112T0400Z-pkg-0000000000000001", "bar_ts": "2026-11-12T04:10:00+00:00", "scope": "package"}
+        {
+          "ts": "2026-11-12T04:10:00+00:00",
+          "kind": "sl",
+          "from": 1.03,
+          "to": 1.04,
+          "source": "live_review_mandate",
+          "detail": "LR-20261112T0400Z-pkg-0000000000000001",
+          "bar_ts": "2026-11-12T04:10:00+00:00",
+          "scope": "package"
+        }
       ]
     },
     "decisions": {
       "read_state": "measured",
-      "sources": {"reviews": "read", "receipts": "read"},
+      "sources": {
+        "reviews": "read",
+        "receipts": "read"
+      },
       "markers": [
-        {"kind": "ltr_review", "id": "LR-20261112T0200Z-pkg-0000000000000001", "ts": "2026-11-12T02:05:00+00:00", "bar_ts": "2026-11-12T02:05:00+00:00", "action": "hold", "level": null, "confidence": 0.6, "summary": "hold: structure intact", "route": "none", "disposition": "no_action", "account_read": "no_action"},
-        {"kind": "ltr_review", "id": "LR-20261112T0400Z-pkg-0000000000000001", "ts": "2026-11-12T04:05:00+00:00", "bar_ts": "2026-11-12T04:05:00+00:00", "action": "tighten_sl", "level": 1.0400, "confidence": 0.7, "summary": "tighten to breakeven", "route": "recommended", "disposition": "advice_only", "account_read": "would_apply"},
-        {"kind": "directed_action", "id": "DA-20261112T040900Z-tighten_sl-abcdef", "ts": "2026-11-12T04:09:00+00:00", "bar_ts": "2026-11-12T04:05:00+00:00", "action": "tighten_sl", "level": 1.0400, "confidence": null, "summary": "operator-directed tighten", "route": "directed", "disposition": "applied", "account_read": "applied"}
+        {
+          "kind": "ltr_review",
+          "id": "LR-20261112T0200Z-pkg-0000000000000001",
+          "ts": "2026-11-12T02:05:00+00:00",
+          "bar_ts": "2026-11-12T02:05:00+00:00",
+          "action": "hold",
+          "level": null,
+          "confidence": 0.6,
+          "summary": "hold: structure intact",
+          "route": "none",
+          "disposition": "no_action",
+          "account_read": "no_action"
+        },
+        {
+          "kind": "ltr_review",
+          "id": "LR-20261112T0400Z-pkg-0000000000000001",
+          "ts": "2026-11-12T04:05:00+00:00",
+          "bar_ts": "2026-11-12T04:05:00+00:00",
+          "action": "tighten_sl",
+          "level": 1.04,
+          "confidence": 0.7,
+          "summary": "tighten to breakeven",
+          "route": "recommended",
+          "disposition": "advice_only",
+          "account_read": "would_apply"
+        },
+        {
+          "kind": "directed_action",
+          "id": "DA-20261112T040900Z-tighten_sl-abcdef",
+          "ts": "2026-11-12T04:09:00+00:00",
+          "bar_ts": "2026-11-12T04:05:00+00:00",
+          "action": "tighten_sl",
+          "level": 1.04,
+          "confidence": null,
+          "summary": "operator-directed tighten",
+          "route": "directed",
+          "disposition": "applied",
+          "account_read": "applied"
+        }
       ]
     }
   }

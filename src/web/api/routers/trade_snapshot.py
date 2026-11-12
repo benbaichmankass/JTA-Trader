@@ -1,6 +1,8 @@
 """Tier-1 read routes: closed-trade chart snapshot + open-trade decision markers (UI-REDESIGN-2026-11).
 
 ``GET /api/bot/trades/{trade_id}/snapshot``  -- the STORED snapshot (``trade_chart_snapshots``); never fetches candles.
+``GET /api/bot/prop-trades/{fill_id}/snapshot`` / ``/markers`` -- the same for a PROP trade, keyed by a
+``prop_fills`` id (the opening or the closing row; both resolve to the trade, stored as ``prop:<opener id>``).
 ``GET /api/bot/trades/{trade_id}/markers?interval=1h`` -- entry, entry signal, bracket history and every LTR review /
 directed action on the trade, computed per request from the journal + local review files (no network).
 
@@ -63,26 +65,31 @@ def get_trade_snapshot(trade_id: int) -> Dict[str, Any]:
                 raise HTTPException(status_code=404, detail="no such trade")
             if str(trade.get("status")) != "closed":
                 raise HTTPException(status_code=404, detail="trade is not closed; use /markers for an open trade")
-            got = store.read(conn, trade_id)
+            got = store.read(conn, store.trade_key(trade_id))
         finally:
             conn.close()
     except HTTPException:
         raise
     except sqlite3.Error:  # allow-silent: logs the stack and answers read_state no_record + journal_unreadable
         logger.warning("trade snapshot: read failed", exc_info=True)
-        return {"as_of": as_of, "trade_id": trade_id, "read_state": "no_record",
+        return {"as_of": as_of, "trade_id": trade_id, "prop_fill_id": None, "read_state": "no_record",
                 "partial_reasons": ["journal_unreadable"], "snapshot": None}
+    return _snapshot_envelope(as_of, got, trade_id=trade_id, prop_fill_id=None)
+
+
+def _snapshot_envelope(as_of: str, got: Dict[str, Any], trade_id: Optional[int],
+                       prop_fill_id: Optional[int]) -> Dict[str, Any]:
+    ids = {"trade_id": trade_id, "prop_fill_id": prop_fill_id}
     payload = got.get("payload")
     if payload is None:
         reasons = ["snapshot_not_built"]
         if got.get("state") == "retrying":
             reasons.append(f"build_retrying:{got.get('attempts')}")
-        return {"as_of": as_of, "trade_id": trade_id, "read_state": "not_built", "partial_reasons": reasons,
-                "snapshot": None}
+        return {"as_of": as_of, **ids, "read_state": "not_built", "partial_reasons": reasons, "snapshot": None}
     if "indicators" not in payload:   # stored without them (store.encode); recomputed from the stored candles
         payload["indicators"] = tcs.indicators(((payload.get("candles") or {}).get("rows")) or [])
     rs, reasons = tcs.snapshot_read_state(payload)
-    return {"as_of": as_of, "trade_id": trade_id, "read_state": rs, "partial_reasons": reasons, "snapshot": payload}
+    return {"as_of": as_of, **ids, "read_state": rs, "partial_reasons": reasons, "snapshot": payload}
 
 
 @router.get("/trades/{trade_id}/markers")
@@ -103,7 +110,59 @@ def get_trade_markers(trade_id: int, interval: str = "1h") -> Dict[str, Any]:
         raise
     except sqlite3.Error:  # allow-silent: logs the stack and answers read_state no_record + journal_unreadable
         logger.warning("trade markers: read failed", exc_info=True)
-        return {"as_of": as_of, "trade_id": trade_id, "interval": interval, "read_state": "no_record",
+        return {"as_of": as_of, "trade_id": trade_id, "prop_fill_id": None, "interval": interval,
+                "read_state": "no_record",
                 "partial_reasons": ["journal_unreadable"], "entry": None, "entry_signal": None,
                 "brackets": None, "decisions": None}
+    return tcs.build_markers(trade, pkg, srcs.load_reviews(), srcs.load_receipts(), interval, as_of)
+
+
+def _prop(conn: sqlite3.Connection, fill_id: int):
+    got = store.resolve_prop(conn, fill_id)
+    if got is None:
+        raise HTTPException(status_code=404, detail="no such prop fill")
+    opener, closer, ticket = got
+    pkg = load_package(conn, (ticket or {}).get("order_package_id"))
+    return tcs.prop_trade(opener, closer, ticket), pkg
+
+
+@router.get("/prop-trades/{fill_id}/snapshot")
+def get_prop_trade_snapshot(fill_id: int) -> Dict[str, Any]:
+    as_of = _now()
+    try:
+        conn = _connect()
+        try:
+            trade, _pkg = _prop(conn, fill_id)
+            if trade["status"] != "closed":
+                raise HTTPException(status_code=404, detail="prop trade is not closed; use /markers for an open trade")
+            got = store.read(conn, store.prop_key(trade["prop_fill_id"]))
+        finally:
+            conn.close()
+    except HTTPException:
+        raise
+    except sqlite3.Error:  # allow-silent: logs the stack and answers read_state no_record + journal_unreadable
+        logger.warning("prop trade snapshot: read failed", exc_info=True)
+        return {"as_of": as_of, "trade_id": None, "prop_fill_id": fill_id, "read_state": "no_record",
+                "partial_reasons": ["journal_unreadable"], "snapshot": None}
+    return _snapshot_envelope(as_of, got, trade_id=None, prop_fill_id=trade["prop_fill_id"])
+
+
+@router.get("/prop-trades/{fill_id}/markers")
+def get_prop_trade_markers(fill_id: int, interval: str = "1h") -> Dict[str, Any]:
+    if interval not in bh._INTERVAL_S:
+        raise HTTPException(status_code=400, detail=f"unknown interval {interval!r}; one of {sorted(bh._INTERVAL_S)}")
+    as_of = _now()
+    try:
+        conn = _connect()
+        try:
+            trade, pkg = _prop(conn, fill_id)
+        finally:
+            conn.close()
+    except HTTPException:
+        raise
+    except sqlite3.Error:  # allow-silent: logs the stack and answers read_state no_record + journal_unreadable
+        logger.warning("prop trade markers: read failed", exc_info=True)
+        return {"as_of": as_of, "trade_id": None, "prop_fill_id": fill_id, "interval": interval,
+                "read_state": "no_record", "partial_reasons": ["journal_unreadable"], "entry": None,
+                "entry_signal": None, "brackets": None, "decisions": None}
     return tcs.build_markers(trade, pkg, srcs.load_reviews(), srcs.load_receipts(), interval, as_of)
