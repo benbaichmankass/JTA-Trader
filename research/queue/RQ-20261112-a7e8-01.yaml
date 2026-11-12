@@ -1,0 +1,100 @@
+# Hand-authored 2026-11-12 by the ML standing lane part 3 (FRONTIER-STATIC-MARKETS, Tier 1), dispatched by Manager Session 2026-11-11a. Decision rule registered BEFORE any run; no arm of this unit has been run on real data. Gates: none.
+id: RQ-20261112-a7e8-01
+title: 'Static-market frontier #1: daily internal-bar-strength (IBS) mean reversion on nine liquid ETFs, LONG / trend-filtered LONG / SHORT vs an every-day-long control, net of cost'
+status: queued
+cadence: once
+origin: new_hypothesis
+roadmap:
+- M22
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 15
+  basis: 'Estimate: 9 symbols x ~1,620 daily bars x 4 arms of a pure-Python loop plus 9 yfinance fetches; the first run replaces it.'
+  why_runner: ibs_reversion_stage0.py fetches keyless public daily candles (yfinance, installed by research-script-run.yml) and runs on CPU; no trainer data.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+question: 'On nine liquid US ETFs (SPY QQQ IWM DIA TLT IEF GLD SLV GDX) at the 1d bar, 2020-06-01..2026-11-11, does buying a close in the bottom fifth of its day''s range (IBS < 0.2), or selling one in the top fifth (IBS > 0.8), held until the classic IBS exit or 3 days with a 2 ATR stop, clear the pooled Stage-0 rule net of fee + slippage AND beat an every-day-long control under the same exits by >= 0.05 R/trade?'
+why_this_matters: 'Row FRONTIER-STATIC-MARKETS (operator 2026-11-11, retiring M22 pairs: "frontier research on strategies or MLs that are geared towards profiting from static markets"). The repo''s only cost-complete mean-reversion family is the Donchian-pierce fade, and range-gated fade FAILED nine registered units on crypto perps (RQ-20261022-4b82-04, RQ-20261023-1d5c-12/-13, RQ-20261026-f679-01, RQ-20261028-2a2e-05/-08, ...). IBS is a different mechanism on a different asset class with primary outside evidence: Pandey & Joshi, arXiv:2306.12434 (primary; IBS predicts next-day close-to-close returns on equity ETFs, 2009-2019, re-checked on recent data); Pagonidis 2013 "The IBS Effect" (secondary citation). Equity indices mean-revert at the daily horizon where crypto trends, so the prior is materially better than another crypto fade variant. Consumer if it passes: a new equities leg on the Stage-1 floor (alpaca_paper), through MD-PROMOTE-S0-S1 after a confirmation unit; nothing here changes an order.'
+power:
+  expected_n: 1500
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd = 0.1 at alpha 0.05 / power 0.8 needs ~620 trades pooled; expected_n is an ESTIMATE (IBS < 0.2 fires on roughly a fifth of days; ~1,620 bars x 9 symbols with holds of 1-3 bars gives on the order of 1,500 long trades), NOT a measurement. Per-cell floor 39 and pooled floor 39 are the repo standing floors; below them the unit grades indeterminate, never FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered rule, a control arm that carries the drift, a PASS across 3 candidate arms is a LEAD that needs one confirmation'
+intervention_controls:
+  not_applicable: a Stage-0 harness comparison of fixed arms, not an in-trade action or active-management intervention
+decision_rule:
+  id: RULE-RQ20261112a7e801
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'scripts/research/ibs_reversion_stage0.py on SPY,QQQ,IWM,DIA,TLT,IEF,GLD,SLV,GDX, 1d, 2020-06-01..2026-11-11. Arms fixed now (all: max_hold 3, stop 2.0 x ATR14, exit at the first close beyond the prior bar''s high/low): C = control, long EVERY day (ibs_lo 1.01); L = long IBS < 0.2; LT = long IBS < 0.2 AND close > SMA200; S = short IBS > 0.8. Baseline C. Net of the venue fee (execution_costs.resolve_fee_bps_roundtrip) + the venue slippage default (resolve_cost_policy; 5 bps round trip for ETFs); ETFs pay no funding.'
+  rule: 'A candidate (L, LT, S) PASSES iff pooled n >= 39, pooled net_r > 0, >= 4 of 6 calendar folds net positive, >= half of the powered cells (n >= 39) pass (at least 2 powered cells), AND its pooled net R/trade beats C''s by >= 0.05. PASS IF one or more pass: the best by pooled net R is named; it is a LEAD and the follow-up is ONE confirmation unit on a symbol-disjoint ETF basket (sector SPDRs) with the arm frozen, never a roster edit. FAIL IF every candidate fails with pooled n >= 39: IBS at these thresholds is closed on this basket and window (other thresholds, intraday entries and other asset classes are NOT closed). INDETERMINATE otherwise; thin cells are named and floors are never lowered. Arms, thresholds and the window are not changed after any result.'
+  what_it_does_not_do: 'Edits no config, roster or risk; is not a promotion case. Unadjusted yfinance closes (dividends not added back: biases LONG arms slightly DOWN); a > 25 % close jump cuts that symbol''s series and is recorded. A market-on-close fill at the signal bar''s close is assumed (the slippage term prices it; a live leg would need an MOC order type or a close-proximate entry, measured separately). No borrow cost on the S arm (liquid ETFs; recorded as an omission).'
+value:
+  usd_at_stake_per_month: 80
+  confidence: 0.3
+  bucket: frontier
+  basis: 'p(PASS) ~0.3: strong outside evidence on equity ETFs, but published daily anomalies decay and 2020-2026 includes a strong trend; an estimate, not a measurement.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ibs_reversion_stage0.py
+  - --symbols
+  - SPY,QQQ,IWM,DIA,TLT,IEF,GLD,SLV,GDX
+  - --days
+  - '2500'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-11-11'
+  - --arm
+  - C=ibs_lo=1.01
+  - --arm
+  - L=
+  - --arm
+  - LT=trend_filter=1
+  - --arm
+  - S=side=short
+  - --baseline
+  - C
+  - --delta-r-per-trade
+  - '0.05'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '39'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ20261112a7e801
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261112-a7e8-01
+grading:
+  auto: true
+related:
+- RQ-20261112-a7e8-02
+- RQ-20261103-b3c9-11
