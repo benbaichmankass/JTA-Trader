@@ -633,7 +633,8 @@ def test_override_expires_at_the_next_boundary_and_the_switch_rearms(tmp_path):
 def test_override_refused_writes_nothing(tmp_path, case):
     if case == "not_armed":
         sw, alerts = _switch(tmp_path, armed=False)
-        sw.observe(10_000.0, _ts(12, 1)); sw.observe(9_000.0, _ts(12, 2))
+        sw.observe(10_000.0, _ts(12, 1))
+        sw.observe(9_000.0, _ts(12, 2))
         expected, now = dd.OVERRIDE_NOT_ARMED, _ts(12, 3)
     elif case == "not_tripped":
         sw, alerts = _switch(tmp_path)
