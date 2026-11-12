@@ -908,7 +908,7 @@ def universe_costed(args) -> int:
         taken_flag = np.maximum(pl, ps) > tau
         from ml.promotion.cost_gate import evaluate_cost_gate
         g = evaluate_cost_gate(list(zip(taken_flag.tolist(), net.astype(float).tolist())),
-                               eval_cost_bases={"net_of_cost": len(fw)}, value_column="net_r", threshold=tau,
+                               eval_cost_bases={"net": len(fw)}, value_column="net_r", threshold=tau,
                                enforced=False, n_trials=UC_N_TRIALS)
         gate = g.to_dict()
         # reported, never gating

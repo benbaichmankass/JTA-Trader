@@ -5,7 +5,7 @@ id: RQ-20261101-a24c-01
 title: 'ENTRY universe, tested properly: with each symbol charged its OWN historical spread + square-root impact (not a flat 3 bps), and a liquidity
   rule chosen on the dev folds only, does the frozen ENTRY model clear the bar on that rule''s Bybit-listed universe on a FRESH forward window --
   under both the c692-01 tau policy and the v2 cost gate (ml/promotion/cost_gate.py)?'
-status: blocked
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -185,3 +185,7 @@ amendments:
   - 'WINDOW (supersedes the 2026-11 forward window AND the 2026-11-05 symbol-holdout window): 2025-10-01..2026-10-31, the in-hand window every date of which is after the frozen artifact train_end (ml/served/ml_decision_entry_v1 train_end_exclusive 2025-09-22; claim train_end 2025-09-30). Reason: (a) operator 2026-11-05 ~17:08Z, verbatim: "we iterate in the data we have till we find what works, we don''t wait for new months of data" and operator 2026-11-12 (p3): "things get promoted to real money based on backtesting"; (b) the symbol holdout over 2022-01-01..2026-10-31 would be REFUSED by holdout_lock (M13 rule 4, PI-20261105-GEXSLEAK-0001: a symbol holdout over training dates is refused); (c) the operator rule of 2026-11-04 fixes the tested population as the ML''s own passed population (the Bybit-listed 60-perp reference), not a different symbol set.'
   - 'DEFLATION (HOLDOUT-DEFLATED-REUSE, M13): the read is claimed through holdout_lock.claim_read BEFORE any outcome is touched and is graded against the N-th-read point bar it returns (the ENTRY family has read this window many times; arm A passes only if mean/se >= that hurdle, not merely mean >= 0). Arm B (cost_gate) is unchanged. No new gate is added: this is the already-adopted ledger rule applied to the unit.'
   - 'Run: python3 scripts/research/ml_decision_entry.py universe-costed --spread-source quoted --fwd-start 2025-10-01 --fwd-end 2026-10-31 (the run.command above is edited to match). Universe-costed harness and its planted-illiquid / one-tick-floor self-test are on main since 2026-11-05 (#23236); self-test re-run green 2026-11-12.'
+result:
+  verdict: fail
+  evidence: comms/research/RQ-20261101-a24c-01/local-20261112/RESULT.md
+  graded_at: '2026-11-12'
