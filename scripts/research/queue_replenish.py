@@ -419,6 +419,10 @@ def render(tpl: Dict[str, Any], tpl_path: str, tpl_sha: str, params: Dict[str, A
     if tpl.get("ml_consumer"):
         # research-queue-ml-consumer-guard (PLANNING.md § 1c): an ML template names its consumer
         unit["ml_consumer"] = _fill(tpl["ml_consumer"], p)
+    if tpl.get("evidence_class"):
+        # EVIDENCE-CLASS-BACKFILL (2026-11-11): what kind of evidence a PASS is (holdout x claim), read by
+        # scripts/research/research_slo.py::classify_evidence for heldout_registered_passes_30d. Optional; no guard requires it.
+        unit["evidence_class"] = _fill(tpl["evidence_class"], p)
     unit["question"] = _fill(tpl["question"], p)
     unit["why_this_matters"] = _fill(tpl.get("why_this_matters", ""), p)
     power = _fill(tpl["power"], p)

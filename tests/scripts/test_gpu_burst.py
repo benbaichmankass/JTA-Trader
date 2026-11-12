@@ -249,7 +249,7 @@ def test_artifact_extract_missing_markers_raises():
 
 def test_remote_script_embeds_symbol_timeframe_version():
     script = _remote.build_remote_train_script(
-        repo_sha="deadbeef", manifest_path="ml/configs/eth-regime-15m-lgbm-v1.yaml",
+        repo_sha="deadbeef", manifest_path="ml/configs/retired/eth-regime-15m-lgbm-v1.yaml",
         symbol="ETHUSDT", timeframe="15m", version="v002",
     )
     # the built dataset path is symbol/timeframe/version-scoped

@@ -1,0 +1,71 @@
+{
+ "verdict": "fail",
+ "read_state": "measured",
+ "n": 1028,
+ "note": "(1) A mean -0.0421 t_cl -0.42 n 1028 -> False; (2) A with_gt40 -0.0245 >= -0.0421 -> True; (3) B mean 0.0199 n 4573 < 0 -> False",
+ "population": "frozen ml_decision_entry_v1 (tau 0.1) decisions, 60-perp bp2 universe, reference bracket 2/3 ATR 24h, net of fee 11 + slip 3 bps + funding 1 bps/8h; A held-out 2025-10-01..2026-09-29, B dev walk-forward OOS 2022-01..2025-09, C forward 2026-10; split by 4h DMI direction x 4h ADX14 bucket",
+ "measurement": {
+  "ct40_A": {
+   "n": 1028,
+   "mean_net_r": -0.0421,
+   "sum_net_r": -43.28,
+   "n_ts_clusters": 310,
+   "n_symbols": 53,
+   "se_iid": 0.0329,
+   "t_iid": -1.28,
+   "se_ts_clustered": 0.0995,
+   "t_ts_clustered": -0.42
+  },
+  "ct40_B": {
+   "n": 4573,
+   "mean_net_r": 0.0199,
+   "sum_net_r": 90.92,
+   "n_ts_clusters": 1501,
+   "n_symbols": 60,
+   "se_iid": 0.016,
+   "t_iid": 1.24,
+   "se_ts_clustered": 0.0425,
+   "t_ts_clustered": 0.47
+  },
+  "ct40_C": {
+   "n": 35,
+   "mean_net_r": 0.0185,
+   "sum_net_r": 0.65,
+   "n_ts_clusters": 21,
+   "n_symbols": 16,
+   "se_iid": 0.1258,
+   "t_iid": 0.15,
+   "se_ts_clustered": 0.1163,
+   "t_ts_clustered": 0.16
+  },
+  "with_gt40_A": {
+   "n": 764,
+   "mean_net_r": -0.0245,
+   "sum_net_r": -18.7,
+   "n_ts_clusters": 249,
+   "n_symbols": 53,
+   "se_iid": 0.0399,
+   "t_iid": -0.61,
+   "se_ts_clustered": 0.1189,
+   "t_ts_clustered": -0.21
+  },
+  "judge_ct40": {
+   "verdict": "fail",
+   "why": "(1) A mean -0.0421 t_cl -0.42 n 1028 -> False; (2) A with_gt40 -0.0245 >= -0.0421 -> True; (3) B mean 0.0199 n 4573 < 0 -> False",
+   "clauses": [
+    false,
+    true,
+    false
+   ]
+  },
+  "judge_ct25": {
+   "verdict": "fail",
+   "why": "(1) A mean 0.0247 t_cl 0.42 n 1657 -> False; (2) A with_gt40 -0.0245 >= 0.0247 -> False; (3) B mean 0.0181 n 11546 < 0 -> False",
+   "clauses": [
+    false,
+    false,
+    false
+   ]
+  }
+ }
+}

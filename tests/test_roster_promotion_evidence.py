@@ -384,10 +384,27 @@ def test_population_census_is_computable_and_reports_its_denominator():
 REAL_PAIRS = (REPO / "config/pairs.yaml").read_text(encoding="utf-8")
 
 
+def _base_pairs() -> str:
+    """The real pairs config, plus a synthetic shadow `pairs_sol_eth` when the real one carries no pairs.
+
+    The M22 sleeve was retired by record 2026-11-11 (operator, Thursday-planning b3: `pairs: []`), but the guard's
+    per-pair-override routing must stay tested, so the repoint fixtures below start from this base. The synthetic
+    pair copies the retired entry's shape and inherits the top-level account (no `account_id`)."""
+    data = yaml.safe_load(REAL_PAIRS) or {}
+    if not data.get("pairs"):
+        data["pairs"] = [{"name": "pairs_sol_eth", "symbol_a": "SOLUSDT", "symbol_b": "ETHUSDT",
+                          "execution": "shadow", "timeframe": "1h", "lookback": 15, "entry_z": 2.0,
+                          "exit_z": 0.5, "stop_z": 2.0, "max_hold_bars": 20, "hedge_beta": "rolling"}]
+    return yaml.safe_dump(data)
+
+
+BASE_PAIRS = _base_pairs()
+
+
 def _pairs_with_override(pair_name: str, account: str, execution: str | None = None) -> str:
-    data = yaml.safe_load(REAL_PAIRS)
+    data = yaml.safe_load(BASE_PAIRS)
     hit = [p for p in data["pairs"] if p.get("name") == pair_name]
-    assert hit, f"{pair_name} must exist in the real config/pairs.yaml"
+    assert hit, f"{pair_name} must exist in the base pairs config"
     hit[0]["account_id"] = account
     if execution is not None:
         hit[0]["execution"] = execution
@@ -405,7 +422,7 @@ def test_per_pair_account_override_onto_real_money_is_caught():
     (operator "Fix + shadow", PAIRS-R-SCALE) no Bybit pair is live in the real
     config, and a shadow pair places nothing wherever it points."""
     head = _pairs_with_override("pairs_sol_eth", "bybit_2", execution="live")
-    found = G.promotions(REAL_ACCOUNTS, REAL_ACCOUNTS, REAL_PAIRS, head)
+    found = G.promotions(REAL_ACCOUNTS, REAL_ACCOUNTS, BASE_PAIRS, head)
     assert [(f["kind"], f["leg"], f["account"]) for f in found] == [
         ("pairs_repoint", "pairs_sol_eth", "bybit_2")]
     # and it is REFUSED: no pairs leg carries a committed evidence record today
@@ -416,4 +433,4 @@ def test_per_pair_account_override_onto_real_money_is_caught():
 
 def test_per_pair_override_onto_paper_is_free():
     head = _pairs_with_override("pairs_sol_eth", "bybit_1")
-    assert G.promotions(REAL_ACCOUNTS, REAL_ACCOUNTS, REAL_PAIRS, head) == []
+    assert G.promotions(REAL_ACCOUNTS, REAL_ACCOUNTS, BASE_PAIRS, head) == []

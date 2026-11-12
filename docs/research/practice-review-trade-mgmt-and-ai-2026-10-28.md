@@ -1259,3 +1259,287 @@ Housekeeping for the manager (no decision needed):
 - [S71] Benhenda, "Look-Ahead-Bench", arXiv 2601.13770. https://arxiv.org/abs/2601.13770 [ACAD preprint; abstract]
 - [S72] Yu, Li & You, "LiveTradeBench", arXiv 2511.03628. https://arxiv.org/abs/2511.03628 [ACAD preprint; abstract]
 - [S73] Qian et al., "When Agents Trade (Agent Market Arena)", arXiv 2510.11695. https://arxiv.org/abs/2510.11695 [ACAD preprint; search summary]
+
+## 12. Weekly practice refresh — 2026-11-11 (lane `PRACTICE-REFRESH-20261111`)
+
+> Tier 1, read-only on production. Dispatched by Manager Session 2026-11-11a under the weekly reset protocol
+> (`config/reset_protocol.yaml` job `practice-refresh`; receipt `comms/ops/reset_receipts.jsonl` reset 2026-11-11). **No units
+> queued and no rows added** (dispatch: propose, do not queue). No config, src or Tier-2/3 change. Deltas only: new sources
+> `[S74]`–`[S78]`, the re-check of live designs, and the two measurements. Read 2026-11-11 18:50–19:20Z on `main` `9ae7cd9a5`.
+> Direct `/api/diag/*` reads return 401 this week (token rotated 2026-11-11 ~18:16Z), so diag reads went through the issue
+> relays and the read-only console data source; each read names its route.
+
+### 12.1 Previous refresh read (the gaps of § 11.7 and their state)
+
+State read from the work store (`scripts/ops/work.py get`), the checklist export (frozen at 2026-11-06 since WSD-S4), the
+pipeline store and `research/queue/`. Thursday 11-05 planning (row `WEEKLY-PLANNING` note) dispositioned only #2 and #12 of § 11.7;
+the operator then set an ML-entry focus and a one-lane throttle (2026-11-06), so the rest got no decision.
+
+| # (§ 11.7) | Gap | State 2026-11-11 | Evidence |
+|---|---|---|---|
+| 1 | `VIRTUAL-LEG-LEDGER` (floor rejections leave no outcome) | **not filed** (work store: `404 no item`) | Still large: 41 of 63 floor rejections this week are netting/slice refusals with no priced outcome (§ 12.6 a; last week 47 of 57) |
+| 2 | Exit head wired to `close` outside the registry | **Split.** Planning chose "Register + gate now" → `EXIT-HEAD-ETH-REGISTER` **done** 11-05: `RQ-20261104-e4a1-01` **FAIL** (held-out 15.45 R vs random-truncation control p95 29.14 R). But that unit tested `trend_donchian_eth_4h` (real money, no head wired). The leg that still runs `exit_head_action: close` is **`trend_donchian_eth`** (1h, bybit_1, `config/strategies.yaml:1287`, head `exit-head-donchian-1h-v1`), kept on an in-sample-only +0.0215 R/trade read; its OOS walk-forward `PI-20261029-IFMPNGJK-0004` is **`queued`** since 10-29 | 0 exit-head closes this week (its 3 closes were `tp`); the head is still not a registry row (`/api/bot/shadow/stats`, 98 registry files) |
+| 3 | Desk/LTR repeatability (k = 3 reruns) | **not filed** | probe `repeatab|flip rate` in `trading-desk` SKILL.md: 0 |
+| 4 | Trade-level families never score | **unchanged** | 0 of 27 scoring heads are trade-level (§ 12.6 b) |
+| 5 | Per-leg × floor liveness CHECK in health-review | **not filed** | health-review SKILL.md names the floor once (L164, a ranking tier); this section is hand-classified for the third week |
+| 6 | Pooled-gross / own-cost re-grade (T3) | not filed | — |
+| 7 | Left-tail quantile in verdicts (T14) | not filed | probe `quantile|left tail|p10|p25`: 0 in performance-review, perf-followup, ml-review, live-trade-review, trading-desk; 2 in exit-refinement |
+| 8 | Advisory regime heads vs HAR-RV per asset (M12) | not filed | probe `\bHAR\b|har_rv` (case-sensitive): 0 in ml-review and model-training SKILL.md and in `ml/evaluators`, `ml/promotion`; hits in `scripts/research/ml_bakeoff.py`, so the probe can find a positive |
+| 9 | Deflation in perf-followup (M5) | not filed | probe `deflat|DSR|PSR|PBO`: perf-followup 0 |
+| 10 | LTR triggers in R units (T4/T12) | **partly met in config** | `config/live_trade_review.yaml` now carries ATR-denominated triggers (`momentum_flip` `min_atr: 1.0`, the vol-change `atr_multiple: 2.0`, `min_move_atr` cadence skip); `adverse_r`, `stall`, `giveback` and `r_milestone` stay in R. Whether these blocks predate 11-04 was not checked (shallow clone) |
+| 11 | Desk on alpaca_paper / ib_paper produces no row | **unchanged, third week** | 0 rows on either account in 7 days (§ 12.6 a); `DESK-PAPER-ACCOUNTS` `landed_unproven` since 11-05 |
+| 12 | `ML-LEARNING-LEDGER` | `queued`, due 2026-11-11 (planning re-dated it) | **Third refresh queued**; raised again |
+
+### 12.2 Sources checked this pass (what was actually read)
+
+**TRADING** (5 searches, 3 fetches):
+- [S74] Jia, Moallemi, Wang & Zeng, "Who Loses and Why? Market Microstructure of Perpetual Futures", AFT 2026 (LIPIcs vol. 395,
+  art. 36), full version SSRN 7270041. https://drops.dagstuhl.de/storage/00lipics/lipics-vol395-aft2026/LIPIcs.AFT.2026.36/LIPIcs.AFT.2026.36.pdf
+  [ACAD; **read: the extended abstract in full**, via pdftotext]. Full Hyperliquid order and trade record, 2025-03-27 → 2026-06-30,
+  ten most-traded contracts, 729,540 wallets. P&L per trade is valued against the **midprice two hours later, minus fees**. On that
+  measure manual traders lose $1.11 B, market makers gain $208 M, and algorithmic takers about break even. Three channels carry the
+  whole transfer: immediacy (large aggressive orders whose size scales little with displayed liquidity pay the highest execution
+  cost), **forced exits** (liquidations exit far worse than any voluntary trade), and fees (crossing the spread, highest tiers).
+- [S75] Li, Laryea & Ihlamur, "Optimal Stop-Loss and Take-Profit Parameterization for Autonomous Trading Agent Swarm", arXiv
+  2604.27150 (2026-04). https://arxiv.org/abs/2604.27150 [ACAD preprint; **abstract** + a secondary review]. 900+ historical crypto
+  trades replayed under many alternative exits; tighter loss limits, earlier profit capture and closer trails scored better. The
+  chronological split was abandoned because the newest trades fell in an unusual regime, and the main comparison used a
+  **randomised** split; the review notes no deflated-Sharpe correction. Costs are not mentioned in the abstract.
+- Checked, nothing new kept:
+  - qoppac (Carver): no post after 2026-11-04 (index page fetched); the left-tail and costs posts are already S65/S66.
+  - arXiv 2606.08232 (hour-aware memecoin exits): 190 trades, search snippet only, too small to weigh.
+  - Hyperliquid 10-10-2025 liquidation-cascade liquidity study (JFDA 2026): search snippet only. It says spread-only metrics
+    understate post-event liquidity impairment, which points the same way as S74.
+  - CXO trailing-stop summaries, setup4alpha 56-exit test, the preprints.org ATR-multiplier paper: as in § 11.2.
+  - Volatility targeting for crypto, 2026: no primary source found (only vendor pages and arXiv 2511.13239 with a 30-day live test).
+
+**MODEL** (4 searches, 3 fetches):
+- [S76] Wan et al., "Forecast Collapse in Time-Series Foundation Models", arXiv 2608.14106 (2026-08). https://arxiv.org/abs/2608.14106
+  [ACAD preprint; **abstract**]. Hourly returns for 1,000 US equities. TSFM forecasts go near-flat with weak cross-sectional
+  correlation; the collapse mostly disappears on volume, so it tracks target predictability. Per-series metrics "can hide failures
+  in cross-series structure needed by downstream decisions". Squared-error objectives give flat forecasts; optimising ranking
+  alone inflates amplitude.
+- [S77] Noguer i Alonso & Franklin, "Pretrained Time-Series Foundation Models for Financial Return Forecasting", arXiv 2606.27100
+  (2026-06). https://arxiv.org/abs/2606.27100 [ACAD preprint; **abstract**]. Five TSFMs vs five train-from-scratch nets on 5 stocks,
+  rolling origin, random-walk benchmark, one-sided Diebold–Mariano. TSFMs win 8 of 10 task comparisons, but beat the random walk
+  significantly in only 2 of the tasks. "Not universal engines for statistically reliable alpha."
+- [S78] Ye et al., "The Alpha Illusion: Reported Alpha from LLM Trading Agents Should Not Be Treated as Deployment Evidence", arXiv
+  2605.16895 (2026-05). https://arxiv.org/abs/2605.16895 [ACAD position preprint; **abstract**]. Public evidence cannot separate
+  real predictive ability from temporal contamination, unmodelled frictions, short-window Sharpe noise, narrative fitting and model
+  priors. Six validity tests (temporal integrity, real frictions, counterfactual robustness, predictive calibration, numerical
+  execution, multi-agent disaggregation), a reporting protocol scaled to claim strength, and a recommended design: the LLM as an
+  auditable information interface **upstream** of independent calibration, risk and execution modules.
+- [S59, re-read] Khatchadourian, arXiv 2601.15322 [ACAD preprint; **search summary only**]: decision determinism and task accuracy
+  "not detectably correlated" (r = −0.11, 95% CI [−0.49, 0.31], n = 21). Recorded as consistent with M11, not as a new source.
+- Checked, nothing new kept: triple-barrier / meta-labelling / purged CV 2026 (tutorials and the 2018 book only); ML drift
+  monitoring in finance 2026 (vendor blogs only); arXiv 2511.18578 TSFMs-in-finance (snippet: negative OOS R², portfolios gross of
+  cost — already the S69/S77 direction); StockBench and AI-Trader (already S53).
+
+### 12.3 Deltas (each is now in the canonical list, dated 2026-11-11)
+
+| Track | Principle | Delta | Source |
+|---|---|---|---|
+| TRADING | T3 strengthened | Measure execution cost as a **markout** (fill vs a later midprice, net of fees), not spread or fee alone; treat order size vs displayed depth and **forced exits** as cost channels | S74 |
+| TRADING | T8 strengthened (cautionary) | Replaying a leg's own trades under alternative exits is the right instrument, but a randomised split or an undeflated grid makes it an in-sample fit; the split stays chronological even when the last regime is awkward | S75 |
+| MODEL | M12 strengthened + scope note | Also check forecast **amplitude** and **cross-series ranking**; per-series loss hides collapse. Gains over a random walk are sparse under DM tests. Scope: under the operator rule of 2026-11-04 per-asset scores are reported, not gating (tension already stated in `docs/plans/ML-ROADMAP-MECE-2026-11.md`) | S76, S77 |
+| MODEL | **M14 (new)** | An LLM's own trading returns are a claim, not evidence; prefer the LLM upstream of deterministic calibration, sizing, risk and execution; six validity tests before any deployment claim | S78 (with S53, S72, S73) |
+| MODEL | M11 note | Repeatability is necessary but is not skill: determinism and accuracy were uncorrelated | S59 re-read (summary) |
+
+No principle was removed.
+
+### 12.4 Our live designs vs the list (every gap names its principle)
+
+Population: designs on `main` `9ae7cd9a5`; `check_tp_doctrine.py` re-run; the SKILL.md of `performance-review`, `perf-followup`,
+`health-review`, `ml-review`, `live-trade-review`, `trading-desk`, `exit-refinement`, `model-training`, `research-ops` keyword-probed
+(each probe hits somewhere, so it can find a positive); `config/live_trade_review.yaml`; `config/strategies.yaml` `exit_head_action`.
+
+**TRADING**
+- **T-G1 · T9 / TP doctrine: 7 of 82 routings compliant (was 3 of 75).** Population 82 routings / 56 legs. Compliant by class:
+  real money 1 of 6, prop 1 of 9, mirror 1 of 6, paper 4 of 61. TP-REACH-FLOOR over 50 declared targets: 4 below floor, 5 reachable,
+  **41 unmeasured** (was 34 of 47). Baseline debt 75 lines (was 72) because the roster grew. T9's "measure that cost" is still mostly unmeasured.
+- **T-G2 · T3 (new, S74): no review measures execution cost as a markout.** Probe `markout|mark-out|implementation shortfall`: 0 in all
+  nine skills. Floor rows carry `cost_source: estimate` (bybit_1 paper) and real-money rows `broker`; neither is a markout. The
+  forced-exit channel maps to our liquidation buffer, which the journal names only inside `risk_refused` text.
+- **T-G3 · T12 / R3: netting and slices still discard floor data.** 41 of 63 floor rejections this week (§ 12.6 a) leave no priced
+  outcome: `slice_budget_exhausted` 24, `opposite_slice_one_way_book` 7, `flip_suppressed_hold_policy` 6,
+  `hold_to_bracket_reduce_non_derivative` 3, `symbol_held_by_ml_entry_leg` 1 (§ 11.4 T-G4 counted 47 of 57).
+- **T-G4 · T1 / M10: a live `close` head on an in-sample-only read** (`trend_donchian_eth`, § 12.1 #2). The real-money sibling's head
+  failed its matched-random control; this one has never faced one.
+- **T-G5 · T14: no left-tail quantile** in any management or sizing review (§ 12.1 #7). *Unchanged.*
+- **T-G6 · T7: per-trade `giveback` still not graded against the account-level switch.** *Unchanged.*
+
+**MODEL**
+- **M-G1 · M14 / R3 (new, S78): `claude_desk` is an end-to-end LLM trader on the floor.** That is allowed as Stage-1 mechanics, and
+  `DESK-LIFECYCLE-S0` already registered a FAIL against HOLD. M14 adds that any desk edge claim must pass the six tests, and that the
+  practice-preferred role is upstream of deterministic sizing/risk (which the desk's `RiskManager` path already partly is).
+- **M-G2 · M11: desk/LTR repeatability unmeasured.** *Unchanged* (§ 12.1 #3).
+- **M-G3 · M1 / M10: trade-level families retrain, never score** (§ 12.6 b). setup_candidates is **frozen again** (48,445 rows, newest 10-29).
+- **M-G4 · M12 (S76): the regime heads are graded per series only.** No check of forecast amplitude or cross-series ranking; probe for
+  HAR finds nothing in the promotion path (§ 12.1 #8). Per the scope note this is a reporting gap, not a gating one.
+- **M-G5 · M5: no deflation in perf-followup.** *Unchanged.*
+- **M-G6 · data quality: a dataset audit now refuses `setup-candidates-metalabel-xsym-yz-v1`** (dead feature / degenerate label, 13.7 d
+  untrained) and `btc-regime-15m-lgbm-base-vt003-pcv-v1` (107.8 d). The refusal is correct (M1); nobody owns the fix (§ 12.6 b).
+
+**Review skills (both tracks)**
+- **R-G1 · R6: health-review still has no per-leg × floor CHECK** (third hand classification).
+- **R-G2 · R6 (process): the practice refresh has no intake.** Two weeks of proposals: 2 of 12 got a disposition. Proposal: Thursday
+  planning takes the refresh's top 3 as an agenda item, decided keep / kill each.
+
+### 12.5 Filed this lane
+
+None (dispatch: propose, do not queue). Findings for the manager or other lanes are in § 12.6 and § 12.7.
+
+### 12.6 Measurements
+
+**(a) DEMO-FLOOR DATA GENERATION.**
+- **Population: 58 leg × floor cells**, re-parsed from `config/accounts.yaml`: bybit_1 30, alpaca_paper 17, ib_paper 11 (was 55;
+  `e4_oi_shock_1h`, `trend_donchian_eth_prop`, `slv_trend_1h`, `uso_trend_1h`, `scha_trend_long_1d`, `ml_entry_eq` and others joined).
+  `alpaca_options_paper` exists but is outside the dispatch's three floor accounts and was not counted.
+- **Window:** trades with entry `timestamp` ≥ 2026-11-04T19:00Z. Counted by account, then by leg.
+- **Sources (direct `/api/diag/journal` returns 401):**
+  - Bulk: the read-only console data source over `trade_journal` (`data_query`, table `trades`), as_of 2026-11-11 ~18:59Z. Its
+    `db_file_age_s` was ~39,400 s, so it covers rows up to ~08:00Z 11-11 (newest row id 7051). Per account: bybit_1 79 rows (ids
+    6896–7051), alpaca_paper 18, ib_paper 24; none truncated.
+  - Gap: the `vm-diag-request` relay, #24906 (`journal?table=trades&limit=25`, offsets 0 and 25; live `total_rows` 7070). It read
+    ids 7056–7070. **Ids 7052–7055 were cut by the comment-size truncation and are unread.**
+- **Counting:** "fills" are `open` + `closed`. `rejected` and `exchange_rejected` are not fills. The arithmetic was cross-checked:
+  the per-leg cells sum to each account total.
+
+| Account | Cells | Cells with ≥1 row | Fills (open + closed) | Rejected | vs 11-04 (fills / rejected) |
+|---|---|---|---|---|---|
+| bybit_1 | 30 | 23 | 58 | 32 | 42 / 30 |
+| alpaca_paper | 17 | 6 | 13 | 6 (incl. 1 exchange) | 5 / 2 |
+| ib_paper | 11 | 3 | 1 | 25 | 2 / 25 |
+
+(Status is as read: a row open at the snapshot may have closed since, e.g. id 7042 closed `max_hold` at 15:00Z per the relay.)
+
+Rejection causes on the floor (63): `slice_budget_exhausted` 24 (bybit_1; 9 of them in the last 11 h, on the 5m scalps and
+`sol_pullback_2h`) · `risk_refused sized_qty=0` 20 (ib_paper `mgc_trend_1h` 16, alpaca_paper `ml_entry` 4) · `opposite_slice_one_way_book`
+7 · `flip_suppressed_hold_policy` 6 · `hold_to_bracket_reduce_non_derivative` 3 · exchange min-notional (Bybit 110094, < 5 USDT) 1 ·
+Alpaca "only day orders are allowed for hard-to-borrow asset USO" 1 · `symbol_held_by_ml_entry_leg` 1.
+
+Quiet or zero-fill cells, classified. Eval reasons come from `/api/diag/audit_query?strategy=<leg>&since=2026-11-10T00:00Z&limit=2`
+via the relay (#24910, #24911). The audit is per strategy, not per account.
+- **BLOCKED** (signals exist; the book refuses them):
+  - ib_paper **`mgc_trend_1h`**: 24 rejected, 0 fills. 16 `risk_refused sized_qty=0` rows since 2026-11-09 01:11Z (14 in a row to 11-10 18:00Z, then 2 more today) say
+    `available_usd=n/a` and "check daily-loss budget / liquidation buffer / max_borrow"; **cause not established**. The earlier 5
+    `flip_suppressed` rows are the netted MGC book: `mgc_pullback_1d` holds an 11-lot short opened 10-19. `ict_scalp_mgc_15m`: 1 rejected
+    (`flip_suppressed`).
+  - bybit_1 slice budget: `ict_scalp_avax_5m` (11 of 14 refused: 6 slice, 4 opposite-slice, 1 min-notional), `ict_scalp_sol_5m`,
+    `ict_scalp_sol_15m`, `sol_pullback_2h`, `ict_scalp_5m`, `ict_scalp_xrp_15m`, `avax_pullback_2h`, `ict_scalp_eth_15m`. These are
+    **blocked by design** (risk), and each one costs a priced outcome (T-G3).
+  - alpaca_paper **`ml_entry`**: 4 `risk_refused sized_qty=0` at 11-05 ~16:03Z with near-zero available buying power (the paper account
+    was reset on 11-09, per that day's `sync-vm-secrets` run title), and 1 exchange reject: a short on hard-to-borrow USO was sent with a non-day TIF.
+    That is a **mechanics** bug, and Stage 1 exists to find exactly this.
+  - **`claude_desk` on alpaca_paper and ib_paper**: 0 trade rows for the **third week**, and 0 audit rows for `claude_desk` since 11-10
+    on any account (the bybit_1 desk traded 4 times in the window). `DESK-PAPER-ACCOUNTS` is `landed_unproven`. **Cause not established.**
+  - bybit_1 **`htf_pullback_trend_2h`**: **new, unexplained.** The audit shows a complete sell setup on BTCUSDT (entry, stop and target
+    set, confidence 0.27, `reason: null`) on the 19:05–19:06Z evals, yet the leg has no journal row in 7 days. It may be a confidence or
+    route filter that writes no row, or an order that never reached the journal. **Not established**; listed as blocked until a later read
+    shows which.
+- **QUIET-BY-DESIGN** (the eval reason is "no breakout / no setup / no squeeze release"; no error reason was seen):
+  - bybit_1: `squeeze_breakout_4h`, `trend_donchian` (BTC, chop, ADX 15), `turtle_soup`.
+  - alpaca_paper: `spy/qqq/iwm/tqqq/qld/scha_trend_long_1d`, `splg_trend_long_1d` (trading SPYM), `uso_trend_1h` ("no breakout");
+    `ief_pullback_1d` and `slv_pullback_1d` ("no trend-pullback-confirmation setup").
+  - ib_paper: `spy/qqq/iwm_trend_long_1d` (same strategy evals as alpaca_paper).
+- **QUIET-IN-POSITION** (the leg holds a position opened before the window): ib_paper `mgc_pullback_1d` (short since 10-19),
+  `mhg_pullback_1d` (short since **09-17**, 55 days), `tlt_pullback_1d` (long since 11-04 14:49Z).
+- **COULD-NOT-LOOK** (relay curl timeout, exit 28): bybit_1 `fade_breakout_4h`, `fvg_range_15m`, `trend_donchian_sol`; ib_paper
+  `mes_trend_long_1d`. All four were quiet-by-design on 11-04; that was not re-checked.
+- **Changed since 11-04:** alpaca_paper fills rose from 5 to 13, mostly the new `ml_entry` / `ml_entry_eq` legs. alpaca_paper
+  `tlt_pullback_1d` has its first row (id 7068, 17:48Z today). `trend_donchian_1h` keeps trading (2 rows + id 7069).
+- **Outside this lane's scope, flagged once:**
+  - `exchange_flat_reconciled` (alpaca_paper `ml_entry`) and `sl_cross` (2) are not TP / SL / strategy-close; the session contract
+    treats such close reasons as a bug class. They belong to HEALTH-REVIEW.
+  - The 55-day MHG short and 4 ib_paper `orphaned` rows (before the window) suggest a journal-vs-venue check (the 11-04 weekly audit's
+    INV-JOURNAL-EXCHANGE failed on ib_paper MGC). Not root-caused here.
+
+**(b) IS IT LEARNING?**
+- **Registry and datasets:** `trainer-vm-diag` relay #24905 (run 43082763584, 19:02Z) over `ml/registry-store/*.json` (98 files) and
+  `datasets-out/*` (24 directories). "Runs 7 d" counts `runs[].at` ≥ 2026-11-04T18:58Z.
+- **Scoring:** `/api/bot/shadow/stats` (direct read, 19:05Z). The retained window is 2026-10-24 → 11-11, with 75,831 records over 27 heads.
+
+| Family | Models | Stages | Retrained 7 d (models / runs) | New 7 d | Scored live | Changes an order |
+|---|---|---|---|---|---|---|
+| market_features | 72 | 49 cand · 19 shadow · 3 advisory · 1 research | 52 / 364 | 0 | 22 heads, varying | 3 advisory (mes-5m-v2, btc-15m-fc-pcv-v2, sol-15m-fc-pcv-v2) |
+| setup_candidates | 10 | 10 cand | 9 / 63 | 0 (was 1) | 0 | no |
+| conviction_meta | 4 | 4 cand | 3 / 21 | 0 | 0 | no |
+| trade_outcomes | 4 | 4 cand | 1 / 7 | 0 | 0 | no |
+| execution_quality | 1 | 1 shadow | 1 / 7 | 0 | 1 head, 9,686 preds, **constant** (`score_read_state: constant`) | no |
+| setup_labels · setup_labels_audit | 3 · 1 | cand | 0 (last 10-21) · 1 / 7 | 0 | 0 | no |
+| account_context · corpus_panel · market_sequences | 1 · 1 · 1 | cand | 0 (last July) | 0 | 0 | no |
+| *(not in registry)* exit heads | 4 | — | — | — | 4 heads, 3,628 preds | `trend_donchian_eth`: `close` declared, 0 observed this week |
+
+| Dataset | Rows (11-04 → 11-11) | Newest | Reading |
+|---|---|---|---|
+| setup_candidates | 48,445 → 48,445 | **2026-10-29** | **frozen again** (one week of growth, then stopped) |
+| claude_judgments | 883 → 1,203 | 11-11 | growing; still no family trains on it |
+| trade_outcomes | 2,967 → 3,056 | 11-11 | growing slowly; no model scores |
+| conviction_meta | 1,707 → 1,799 | 11-11 | same |
+| **review_journal** | **0 → 0** | 11-11 | the LTR rows still reach no dataset (**third week**) |
+| **exit_head** | 166,793 | **2026-09-07** | frozen 9 weeks |
+| market_features / market_raw | 4,329,271 / 6,459,608 | 11-11 | flat vs 11-04 at this precision while the newest file is today; probably a rolling window, **not checked** |
+
+Trainer cycle 2026-11-11 01:53Z: 67 trained, 6 skipped, 3 refusals (outcome `trained_with_refusals`). The staleness scan found 5 stale,
+2 never trained and 1 awaiting source. Never trained: `exit-policy-v1` (manifest 107.6 d old) and `setup-candidates-metalabel-paper-v1`.
+**New this week:** the dataset audit now refuses `setup-candidates-metalabel-xsym-yz-v1` (dead feature or degenerate label; 13.7 d
+untrained) and `btc-regime-15m-lgbm-base-vt003-pcv-v1` (107.8 d).
+
+**Reading:** the chain is unchanged in shape. market_features runs end to end. Every trade-level family breaks at **H5 (scored)**. The
+LTR breaks at **H2/H3** (`review_journal` 0, third week), the desk at **H4** (1,203 judgments, no trainer), and the exit heads at **H3**
+(frozen). Last week's one improvement, the unfrozen setup_candidates dataset, did not hold.
+
+### 12.7 Gaps for Thursday (proposed; nothing queued by this lane)
+
+Ranked by value per cost. "Again" marks an item proposed on 11-04 that got no disposition.
+
+| # | Track | Gap | Principle | Evidence this week | Proposed disposition |
+|---|---|---|---|---|---|
+| 1 | MODEL | `trend_donchian_eth` (bybit_1) still closes trades on an exit head that has only an in-sample read; its real-money sibling's head failed a matched-random control on 11-04 | T1, M10 | § 12.1 #2; `PI-20261029-IFMPNGJK-0004` queued 13 days | Dispatch the queued OOS walk-forward, **with the `RQ-20261104-e4a1-01` random-truncation control added**; until it reads, propose `annotate` (Tier 3, one line) to the operator via the manager |
+| 2 | TRADING | 41 of 63 floor rejections leave no priced outcome | T12, R3 | § 12.6 a | **Again:** build row `VIRTUAL-LEG-LEDGER`: price every netting or slice refusal as a virtual position |
+| 3 | TRADING | Floor mechanics faults found this week: ib_paper `mgc_trend_1h` refused 16 in a row (`sized_qty=0`, cause unknown); USO hard-to-borrow short sent with a non-day TIF; a Bybit min-notional reject; `htf_pullback_trend_2h` emits setups with no journal row | Stage 1 = mechanics (OPERATING-PLAN § 2) | § 12.6 a | Hand to the soak-fault intake (`SOAK-FAULT-INTAKE`) as four items; each is a mechanics bug, not research |
+| 4 | MODEL | Desk on alpaca_paper / ib_paper: no row and no audit row for three weeks | demo floor; M14 | § 12.6 a | Manager: diagnose before anything else on `DESK-PAPER-ACCOUNTS`; it should not stay `landed_unproven` |
+| 5 | TRADING | No markout measurement of execution cost | T3 (S74) | probe 0 in 9 skills | Research unit: 1 h / 4 h markouts of every floor and real-money fill against the venue mid, by leg and order type, net of fees. Compare with `cost_source: estimate` |
+| 6 | MODEL | Trade-level families never score; setup_candidates frozen again; `review_journal` 0 | M1, M10 | § 12.6 b | Fold into the ML consolidation plan (PR #24897's slot inventory): name the first trade-level family to reach shadow scoring, plus a fix-or-kill for `exit-policy-v1` and the audit-refused xsym manifest |
+| 7 | BOTH | No per-leg × floor liveness CHECK; hand-classified three weeks running | R6 | § 12.6 a, 58 cells | **Again:** a health-review CHECK, with every rostered leg × floor account classified from its eval reason |
+| 8 | MODEL | Desk/LTR repeatability unmeasured | M11, M14 | § 12.1 #3 | **Again:** research unit with k = 3 reruns on stored snapshots, reporting the decision flip rate |
+| 9 | TRADING | No left-tail quantile in verdicts | T14 | probe | **Again:** a skill edit so performance-review and the AM grader report p10/p25 R and max DD |
+| 10 | MODEL | Regime heads graded per series only: no amplitude, ranking or HAR check | M12 (S76, S77) | probe | Research unit through `ml_bakeoff.py` `har_rv_control`, adding a forecast-amplitude and a cross-symbol rank IC column; **reporting only** (scope note) |
+| 11 | MODEL | `ML-LEARNING-LEDGER` queued through three refreshes | R6 | § 12.1 #12 | **Raised** to the manager again; this section is still computed by hand |
+| 12 | RESEARCH-OPS | The practice refresh has no intake: 2 of 12 proposals got a disposition | R6 | § 12.1 | Thursday planning takes the top 3 of this list as a fixed agenda item: keep or kill each |
+
+### 12.8 Run record (`practice` block; the ML-FRONTIER-PREP lane owns `comms/ml-plan/<stamp>.json` and may copy it)
+
+```json
+{"practice": {
+  "run": "PRACTICE-REFRESH-20261111", "finished_at": "2026-11-11",
+  "previous_refresh_read": [
+    {"gap": "VIRTUAL-LEG-LEDGER", "state": "not filed (work store 404)"},
+    {"gap": "EXIT-HEAD-ETH-REGISTER", "state": "done 11-05; RQ-20261104-e4a1-01 FAIL, but on trend_donchian_eth_4h; trend_donchian_eth still close, PI-20261029-IFMPNGJK-0004 queued"},
+    {"gap": "DESK-PAPER-ACCOUNTS", "state": "landed_unproven; 0 rows third week"},
+    {"gap": "ML-LEARNING-LEDGER", "state": "queued, due 11-11; raised (third refresh)"},
+    {"gap": "11.7 #3,#5-#10", "state": "not filed; no disposition"}],
+  "trading": {"sources_checked": [
+      {"url": "https://drops.dagstuhl.de/storage/00lipics/lipics-vol395-aft2026/LIPIcs.AFT.2026.36/LIPIcs.AFT.2026.36.pdf", "tag": "ACAD", "read": "full (extended abstract)"},
+      {"url": "https://arxiv.org/abs/2604.27150", "tag": "ACAD", "read": "abstract"},
+      {"url": "https://qoppac.blogspot.com/", "tag": "PRAC", "read": "index (no new post)"},
+      {"url": "https://arxiv.org/pdf/2606.08232", "tag": "ACAD", "read": "summary"}],
+    "deltas": ["T3 strengthened (markout, forced exits)", "T8 strengthened (chronological replay, deflate the grid)"],
+    "gaps_filed": [], "none_because": null},
+  "model": {"sources_checked": [
+      {"url": "https://arxiv.org/abs/2608.14106", "tag": "ACAD", "read": "abstract"},
+      {"url": "https://arxiv.org/abs/2606.27100", "tag": "ACAD", "read": "abstract"},
+      {"url": "https://arxiv.org/abs/2605.16895", "tag": "ACAD", "read": "abstract"},
+      {"url": "https://arxiv.org/abs/2601.15322", "tag": "ACAD", "read": "summary"}],
+    "deltas": ["M12 strengthened + scope note", "M14 added (LLM returns are a claim; LLM upstream of deterministic modules)", "M11 note"],
+    "gaps_filed": [], "none_because": null},
+  "principles_revised": ["T3: strengthened", "T8: strengthened", "M11: noted", "M12: strengthened + scope note", "M14: new"]}}
+```
+
+### 12.9 Sources added by this refresh
+
+- [S74] Jia, Moallemi, Wang & Zeng, "Who Loses and Why? Market Microstructure of Perpetual Futures", AFT 2026, LIPIcs 395:36 (full version SSRN 7270041). https://drops.dagstuhl.de/storage/00lipics/lipics-vol395-aft2026/LIPIcs.AFT.2026.36/LIPIcs.AFT.2026.36.pdf [ACAD; extended abstract, full]
+- [S75] Li, Laryea & Ihlamur, "Optimal Stop-Loss and Take-Profit Parameterization for Autonomous Trading Agent Swarm", arXiv 2604.27150. https://arxiv.org/abs/2604.27150 [ACAD preprint; abstract]
+- [S76] Wan et al., "Forecast Collapse in Time-Series Foundation Models", arXiv 2608.14106. https://arxiv.org/abs/2608.14106 [ACAD preprint; abstract]
+- [S77] Noguer i Alonso & Franklin, "Pretrained Time-Series Foundation Models for Financial Return Forecasting", arXiv 2606.27100. https://arxiv.org/abs/2606.27100 [ACAD preprint; abstract]
+- [S78] Ye et al., "The Alpha Illusion: Reported Alpha from LLM Trading Agents Should Not Be Treated as Deployment Evidence", arXiv 2605.16895. https://arxiv.org/abs/2605.16895 [ACAD position preprint; abstract]

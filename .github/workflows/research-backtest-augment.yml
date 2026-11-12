@@ -38,8 +38,8 @@ on:
       run_tag:
         description: "notes tag on every recorded row (blank = a1-crypto-<UTC-date>)"
         default: ""
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [research-backtest-augment-request]
   # DURABILITY (BL-20260731-BACKTEST-AUGMENTATION-NEVER-FED follow-up, 2026-08-04):
   # weekly refresh so the standing backtest_trades.db the trainer nightly build
   # merges (build_trainer_datasets.sh, include_backtest) is never a one-shot that
@@ -53,7 +53,7 @@ permissions:
   issues: write
 
 concurrency:
-  group: research-backtest-augment-${{ github.event_name }}-${{ github.event.issue.number || github.run_id }}
+  group: research-backtest-augment-${{ github.event_name }}-${{ github.event.client_payload.issue.number || github.run_id }}
   cancel-in-progress: false
 
 jobs:
@@ -61,10 +61,10 @@ jobs:
     if: |
       github.event_name == 'workflow_dispatch' ||
       github.event_name == 'schedule' ||
-      (github.event_name == 'issues' &&
-       (github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'research-backtest-augment-request'))
+      (github.event_name == 'repository_dispatch' &&
+       (github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'research-backtest-augment-request'))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -78,9 +78,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Parse issue body
-        if: github.event_name == 'issues'
+        if: github.event_name == 'repository_dispatch'
         env:
-          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_BODY: ${{ github.event.client_payload.issue.body }}
         run: |
           only=$(printf '%s' "$ISSUE_BODY" | grep -iE '^only:' | head -1 | cut -d: -f2- | xargs || true)
           symbols=$(printf '%s' "$ISSUE_BODY" | grep -iE '^symbols:' | head -1 | cut -d: -f2- | xargs || true)
@@ -194,7 +194,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Comment summary on issue
-        if: github.event_name == 'issues' && success()
+        if: github.event_name == 'repository_dispatch' && success()
         uses: actions/github-script@v7
         with:
           script: |
@@ -206,6 +206,6 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               body: body.slice(0, 60000) + footer,
             });

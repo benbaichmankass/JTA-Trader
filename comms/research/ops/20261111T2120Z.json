@@ -1,0 +1,348 @@
+{
+  "run": "RESEARCH-OPS-20261111-2049",
+  "finished_at": "2026-11-11T21:20:00Z",
+  "by": "research-ops lane dispatched by manager session_01AFoLuLyarNRcy3nziCep2U",
+  "floor": 26,
+  "floor_basis": "computed_floor(fired_24h 32), diagnostic only",
+  "authoring_queue_depth": null,
+  "idle_backends": [],
+  "needs_review_triaged": 8,
+  "needs_review_left": null,
+  "throughput": {
+    "runnable_before": 6,
+    "runnable_after": 21,
+    "queued": 269,
+    "fired_24h": 32,
+    "results_landed_24h": 31,
+    "hours_since_last_dispatch": 1.8,
+    "idle_alarm": false
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok (hours_since_last_dispatch 1.8)",
+    "collector": "ok (collector_age_h 1.49)",
+    "stranded_stamp_prs": [],
+    "incident": "none open: watchdog stamps@20261111T0309Z and backend:github_runner@20261111T1059Z both resolved",
+    "read_state": "tree_only for workflow runs (github-actions MCP down; watchdog_incidents.jsonl + SLO ages read)"
+  },
+  "results_read": {
+    "pass": 8,
+    "fail": 15,
+    "indeterminate": 6,
+    "producer_failed": 5,
+    "units": [
+      "RQ-20261110-73de-*",
+      "RQ-20261110-c4f1-*"
+    ],
+    "note": "window = batches 73de (n=16 graded) and c4f1 (n=13); 5 more 73de units producer_failed"
+  },
+  "unlocked": [
+    {
+      "unit": "RQ-20261110-73de-08/09/10/14/15",
+      "how": "pinned routing.runner_only, last_dispatched_at null"
+    },
+    {
+      "unit": "RQ-20261108-98e3-12/15",
+      "how": "re-queued after producer_failed, owner = this row"
+    }
+  ],
+  "retired": [
+    {
+      "unit": "RQ-20261014-9807-04",
+      "reason": "config-level: giveback census cells cannot be keyed (census insufficient_n 7<20, ledger mfe_r lagged); giveback_stop/trail_decay families stay open, re-entry on per-bar paths (EXIT-PATH-EMIT-OFFLINE)"
+    },
+    {
+      "unit": "RQ-20261016-65ff-29",
+      "reason": "config-level: fetch lever cleared by --non-crypto-source dukascopy; regime question re-asked as RQ-20261111-203c-04/05/06"
+    }
+  ],
+  "blocked_over_age": {
+    "before": 7,
+    "after": 5,
+    "kept_redated_2026-11-25": [
+      "RQ-20261009-900",
+      "RQ-20261009-901",
+      "RQ-20261017-9582-01",
+      "RQ-20261018-ef5d-10",
+      "RQ-20261018-ef5d-11"
+    ],
+    "note": "all 5 kept have a named lever and owner; 900/901 owner TP-PREDICT-GRADER is still 'unassigned' (handoff); 9582-01 re-pointed to new row PAIRS-FIXED-BETA-ENTRY-TRIGGER; ef5d-10/11 levers unstarted since 2026-10-18"
+  },
+  "levers_filed": [
+    {
+      "lever": "Kaggle covered-feed candle serve path (kernel CANDLE_DATA_ROOT)",
+      "ref": "PI-20261111-RO2049-0001"
+    },
+    {
+      "lever": "backtest_pairs.py --entry-trigger fixed_beta",
+      "ref": "PAIRS-FIXED-BETA-ENTRY-TRIGGER"
+    }
+  ],
+  "units_authored": [
+    "RQ-20261111-203c-01",
+    "RQ-20261111-203c-02",
+    "RQ-20261111-203c-03",
+    "RQ-20261111-203c-04",
+    "RQ-20261111-203c-05",
+    "RQ-20261111-203c-06"
+  ],
+  "followups_filed": [
+    "PI-20261111-RO2049-0001",
+    "PAIRS-FIXED-BETA-ENTRY-TRIGGER"
+  ],
+  "authoring": {
+    "queue_depth": null,
+    "nodes_drafted": 0,
+    "skipped_on_purpose": true,
+    "reason": "no programme node drafted; the budget went to the iteration loop (orphan legs) and the blocked audit"
+  },
+  "iteration": {
+    "results_attributed": {
+      "count": 8,
+      "of": 29,
+      "note": "opened rows for 73de-01/02/11/22/23/25, c4f1-06 and the 5 producer_failed logs; the remaining graded results were read at verdict level only"
+    },
+    "map_entries_added": 0,
+    "map_entries_note": "lever_map.py --backfill rebuilt research/levers/* (generated); no hand-written map entry",
+    "next_tests_from_map": 6,
+    "lever_coverage": {
+      "strategy_leg": "see iteration_orphans.py --levers; avax/eth/htf have exit,filter tested, regime_gating untested on most legs"
+    },
+    "orphans_before": {
+      "strategy_leg": 3,
+      "ltr_class": 5,
+      "other_subjects": 5
+    },
+    "orphans_after": {
+      "strategy_leg": 0,
+      "ltr_class": 5,
+      "other_subjects": 5
+    },
+    "results_iterated": [
+      {
+        "result": "comms/strategy_evidence/spy_pullback_1h.json",
+        "verdict": "fail",
+        "subject": "spy_pullback_1h",
+        "next": "RQ-20261111-203c-01",
+        "attempt": 1
+      },
+      {
+        "result": "comms/strategy_evidence/tlt_pullback_1h.json",
+        "verdict": "fail",
+        "subject": "tlt_pullback_1h",
+        "next": "RQ-20261111-203c-02",
+        "attempt": 1
+      },
+      {
+        "result": "comms/strategy_evidence/qqq_pullback_1h.json",
+        "verdict": "pass_unconfirmed",
+        "subject": "qqq_pullback_1h",
+        "next": "RQ-20261111-203c-03",
+        "attempt": 1
+      },
+      {
+        "result": "RQ-20261110-73de-02",
+        "verdict": "fail",
+        "subject": "ief_pullback_1d",
+        "next": "RQ-20261111-203c-04",
+        "attempt": 1
+      },
+      {
+        "result": "RQ-20261110-73de-01",
+        "verdict": "fail",
+        "subject": "slv_pullback_1d",
+        "next": "RQ-20261111-203c-05",
+        "attempt": 1
+      },
+      {
+        "result": "RQ-20261110-73de-03",
+        "verdict": "indeterminate",
+        "subject": "iaum_pullback_1d",
+        "next": "RQ-20261111-203c-06",
+        "attempt": 1
+      }
+    ],
+    "advanced": 6,
+    "survivors": [],
+    "overdue": [
+      "claude_desk",
+      "e4_oi_shock_1h",
+      "and 10 RQ-20261101-78fc-* units named by iteration_orphans.py (OVERDUE)"
+    ],
+    "retired_by_review": []
+  },
+  "prior_calls_scorecard": [],
+  "checks": {
+    "packet_as_of": "2026-11-11T20:51:04Z",
+    "since": "2026-11-10T03:25:00Z",
+    "runnable_by_track": {
+      "TRADING": 1,
+      "MODEL": 5,
+      "INFRA": 0
+    },
+    "graded_by_window": {},
+    "fails_without_next": "see packet (73de-01/02/16 were among them; 01/02 now have 203c-05/04)",
+    "followups": {},
+    "needs_review": 97,
+    "disposition_census": "UNOWNED 0 after this pass; UNGRADED 16 (98e3 batch, grader runs 6-hourly)",
+    "slo_not_ok": [
+      "survivors_per_month 0",
+      "trials_per_survivor 3457",
+      "runnable_floor 6 (21 after re-queue)",
+      "grade_latency_p90_d 5",
+      "undispositioned_24h 23",
+      "theme_share_min_ratio 0.12",
+      "research_ops_age_h 41",
+      "research_ops_not_run 3"
+    ],
+    "could_not_look": [
+      "github-actions workflow run list (MCP down)",
+      "hold_pr_wait_h"
+    ]
+  },
+  "analysis": {
+    "rows_opened": [
+      "RQ-20261110-73de-01",
+      "RQ-20261110-73de-02",
+      "RQ-20261110-73de-11",
+      "RQ-20261110-73de-22",
+      "RQ-20261110-73de-23",
+      "RQ-20261110-73de-25",
+      "RQ-20261110-c4f1-06"
+    ],
+    "trading": {
+      "meaning": [
+        "Equity 1d exit-lever units on the real-money legs (73de-01 slv, 73de-02 ief) FAILed at SELECTION, not at the holdout: arm A itself is not discovery-eligible (slv A expectancy -0.20 R; folds hold ~10 trades each), so no lever was ever read on the holdout. So these say the 1d legs are trade-starved against the n>=25 floor, not that be-floor/bank/structure exits fail; the regime family (203c-04/05/06) is the next untested family.",
+        "The three holdout PASSes (73de-11 ADA 4h Donchian, 73de-22 SPY trend long, 73de-25 ETH pullback 2h): where the selected arm was read (22 and 25) it is A, the leg as declared, so those PASSes confirm the declared leg on its held-back span (SPY +0.40 R n=26, ETH +0.11 R n=109), not any lever. 73de-11's holdout is +0.0057 R over 51 trades: indistinguishable from zero, a pass by the rule's sign test only. None is a promotion case; batch denominator: 73de PASS 4 of 16 (one is a macro event study), c4f1 PASS 4 of 13.",
+        "5 of the 73de units producer_failed (08/09/10/14/15): all five are exit_lever_ablation crypto units whose feed the candle dataset 'covers', so the router sent them to the no-internet Kaggle kernel, which never served the dataset (no 'candle dataset: served' line) and fell through to data.binance.vision. So this was a routing/harness defect, not 5 failed ideas; the lever families on those legs are unread."
+      ],
+      "fail_diagnoses": [
+        {
+          "cluster": "73de exit-lever / regime FAILs on 1d equity legs",
+          "hypotheses": [
+            "noise",
+            "power / n (discovery folds ~10 trades)",
+            "the idea is wrong"
+          ],
+          "test": "203c-04/05/06 regime-gate arms; n floor stated",
+          "survivor": "power",
+          "next": "RQ-20261111-203c-04/05/06"
+        },
+        {
+          "cluster": "pullback 1h orphan legs (spy/tlt/qqq)",
+          "hypotheses": [
+            "noise",
+            "direction asymmetry (spy shorts -12.4 R n=27 vs longs +3.8 R)",
+            "cost drag (tlt cost 9.4 R vs gross 2.7 R)"
+          ],
+          "test": "203c-01/02/03 side-filter / frequency filters / be-floor",
+          "survivor": "design",
+          "next": "RQ-20261111-203c-01/02/03"
+        },
+        {
+          "cluster": "producer_failed 73de-08/09/10/14/15",
+          "hypotheses": [
+            "harness defect",
+            "transient network"
+          ],
+          "test": "re-run pinned runner_only",
+          "survivor": "harness",
+          "next": "PI-20261111-RO2049-0001"
+        }
+      ],
+      "next_tests": [
+        {
+          "id_or_node": "RQ-20261111-203c-01",
+          "decision_changed": "whether spy_pullback_1h (testing leg, negative gross) gets a long-only variant or is left to lever exhaustion",
+          "on_pass": "Tier-3 proposal NOTE for a side_filter change after one in-hand confirmation window",
+          "on_fail": "direction family tested; next family timeframe/regime",
+          "premortem": "1h dukascopy history may be shorter than 2020-07 -> discovery n < 25 -> INDETERMINATE (not FAIL)"
+        },
+        {
+          "id_or_node": "RQ-20261111-203c-02",
+          "decision_changed": "whether tlt_pullback_1h cost drag is fixable by trading less",
+          "on_pass": "confirmation unit",
+          "on_fail": "sizing_vs_cost / timeframe families next",
+          "premortem": "same dukascopy 1h depth risk"
+        },
+        {
+          "id_or_node": "RQ-20261111-203c-03",
+          "decision_changed": "whether qqq_pullback_1h's long-only edge is real on a held-back span",
+          "on_pass": "confirmation then promotion proposal",
+          "on_fail": "the +10.8 R was in-sample luck at n=55",
+          "premortem": "holdout n < 25 -> INDETERMINATE"
+        },
+        {
+          "id_or_node": "RQ-20261111-203c-04/05/06",
+          "decision_changed": "whether a vol/ADX gate helps the three real-money alpaca_live 1d legs",
+          "on_pass": "LEAD note on the owning row",
+          "on_fail": "regime family tested on the leg",
+          "premortem": "1d legs may hold < 25 discovery trades per arm -> INDETERMINATE again"
+        }
+      ]
+    },
+    "model": {
+      "meaning": [
+        "Batch c4f1 (13 units, P2 ml_health): 4 pass, 6 fail, 3 indeterminate. c4f1-06 PASS: lgbm_xa_har beats lgbm_xa by +0.0133 nats (CI [0.0081,0.0184], 5 sign-consistent folds) on ETHUSDT_1h, so the HAR feature adds on the ETH 1h group; the unit's rule needs BOTH ETH and SOL, SOL not re-read by me. Not opened beyond c4f1-06, so the other 12 stand at verdict level only."
+      ],
+      "fail_diagnoses": [],
+      "next_tests": []
+    },
+    "cross_track": [
+      {
+        "from": "TRADING",
+        "finding": "1d equity legs are trade-starved (discovery folds ~10 trades): a lever test on them cannot reach the n>=25 floor",
+        "feeds": "future ML units on those legs should pool (population test), not per-leg; named in handoff to the programme review"
+      }
+    ],
+    "surprises": [
+      "The three PASSes selected the baseline arm A, so 'pass' did not mean a lever worked",
+      "Covered-feed units were routed to Kaggle although the unit declares why_runner: the router's candle_dataset_covers() override is correct by design but the kernel did not serve the data"
+    ]
+  },
+  "calls": [
+    {
+      "call": "the 5 re-queued 73de units land read_state measured (not producer_failed) on the next dispatch",
+      "p": 0.8,
+      "check": {
+        "command": "python3 scripts/research/research_disposition.py --report",
+        "rule": "no producer_failed row for RQ-20261110-73de-08/09/10/14/15 after 2026-11-12",
+        "resolves_when": "2026-11-13"
+      }
+    },
+    {
+      "call": "203c-01/02/03 (1h equity legs) land INDETERMINATE or FAIL, not PASS",
+      "p": 0.7,
+      "check": {
+        "command": "python3 scripts/research/research_ops_checks.py --since 3d",
+        "rule": "verdict of RQ-20261111-203c-01..03",
+        "resolves_when": "2026-11-14"
+      }
+    },
+    {
+      "call": "SLO blocked_over_age stays <= 10 and orphans(strategy_leg) stays 0",
+      "p": 0.85,
+      "check": {
+        "command": "python3 scripts/research/iteration_orphans.py --levers | grep -c '^orphan strategy_leg'",
+        "rule": "== 0",
+        "resolves_when": "2026-11-14"
+      }
+    }
+  ],
+  "not_run": [
+    "A (workflow run list): github-actions MCP down; recorded tree_only (read_state), not skipped",
+    "E programme plan-node authoring (nodes_drafted 0, skipped_on_purpose)"
+  ],
+  "limits": [
+    "lever_map backfill modified research/levers/* (generated)",
+    "16 UNGRADED units (98e3 batch) left to the 6-hourly grader",
+    "10 other orphans (5 ltr classes, tsmom/xsec/movement/vol-premium subjects) NOT iterated this pass"
+  ],
+  "handoff": [
+    "TP-PREDICT-GRADER (queued, owner 'unassigned' since 2026-11-03) is the only thing blocking RQ-20261009-900 (requires_result met): manager to assign",
+    "TF-ORB-COST-STACK and TF-IGNITION-HARNESS unstarted since 2026-10-18 -> blocked units ef5d-10/11 aging",
+    "5 ltr_class orphans (ltr-partial-close, -widen-sl, -sl-to-structure, -tp-extend, -tp-pull-in) need their harness (authoring-queue nodes P1-Q15-c2..c8 noted last pass as a build row)",
+    "other orphan subjects tsmom-crypto, xsec-crypto, tsmom-etf, movement-capture, vol-premium-proxy not iterated",
+    "PASS confirmation on a disjoint in-hand window for 73de-22 (SPY trend long) not authored; it is a leg confirmation, not a lever",
+    "PI-20261111-RO2049-0001: Kaggle candle-dataset serve path, then drop runner_only from 73de-08/09/10/14/15"
+  ]
+}

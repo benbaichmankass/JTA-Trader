@@ -33,6 +33,9 @@ power:
     accrual_basis: 'First observation of trend on UNIUSDT 1h in this repo (research/queue/ and research/results/ hold no such
       cell; checked 2026-10-10). Data: binance_vision, window declared in scripts/ops/fetch_backtest_corpus.py. Below the
       floor the unit grades indeterminate, never FAIL.'
+evidence_class:  # EVIDENCE-CLASS-BACKFILL 2026-11-11, rule H2 (scripts/research/backfill_evidence_class.py)
+  holdout: in_sample
+  claim: edge
 decision_rule:
   id: RULE-RQ-20261010-353c-02-TREND-UNIUSDT-1h-STAGE0
   registered_at: '2026-10-10'

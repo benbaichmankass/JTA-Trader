@@ -27,6 +27,7 @@ tables.
 """
 from __future__ import annotations
 
+import hmac
 import asyncio
 import json
 import logging
@@ -79,7 +80,8 @@ def _check_admin_token(authorization: str | None) -> None:
     if not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=401, detail="bearer scheme required")
     presented = authorization[7:].strip()
-    if presented != expected:
+    # Constant-time: != leaks how many leading characters matched.
+    if not hmac.compare_digest(presented.encode(), expected.encode()):
         raise HTTPException(status_code=401, detail="bad token")
 
 
@@ -198,8 +200,17 @@ def _upsert_device_row(
 
 
 @router.post("/register")
-async def register_device(request: Request) -> dict[str, Any]:
+async def register_device(
+    request: Request,
+    authorization: str | None = Header(default=None),
+) -> dict[str, Any]:
     """Upsert a device by FCM token.
+
+    Requires ``Authorization: Bearer <DASHBOARD_API_TOKEN>`` and fails CLOSED
+    (503) when that token is unset, the same check ``POST /api/bot/prop/report``
+    and ``POST /api/bot/alerts`` use (SEC-API-DEVICE-REGISTER-OPEN, operator OK
+    2026-11-11). Until then this was an unauthenticated write: anyone who could
+    reach the API could add a push target to ``device_tokens``.
 
     Request JSON: ``{token, platform?, label?, subscriptions?}``.
 
@@ -208,6 +219,9 @@ async def register_device(request: Request) -> dict[str, Any]:
     last 8 chars of the token (full token is never echoed back; the
     caller already has it).
     """
+    from src.web.api.routers.prop import _require_write_token
+
+    _require_write_token(authorization)
     try:
         body = await request.json()
     except (ValueError, TypeError) as exc:

@@ -4,6 +4,16 @@
 
 Machine tree: [`research/programmes/07-timeframes.yaml`](../../../research/programmes/07-timeframes.yaml). Units: `RQ-20261018-ef5d-01..09` (runnable), `blocked/RQ-20261018-ef5d-10/-11`. Instruments (this lane): `scripts/research/timeframe_breakeven.py`, `scripts/research/harness_stage0.py`. Numbers marked MEASURED were measured in this lane on 2026-10-18 from the file or command named beside them; re-run the command rather than quoting the figure.
 
+## Programme review 2026-11-11 (lane PROGRAMME-REVIEW-20261111) — TRADING track
+
+Population: units with a result row generated 2026-11-04T19:30Z..2026-11-11T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`; 2,183 units read, 0 unreadable; 455 result rows): **311 units with rows** — 72 pass, 134 fail, 42 indeterminate, 5 no_action_warranted, 1 not_applicable, 57 with no unit verdict yet (28 ungraded). 119 carry a programme field (P1 38, P2 50, P3 14, P4 2, P5 9, P6 6, P7 0); **192 do not** (live_strategy 110, new_strategy_prop 37, ml_health 31, infra 11, timeframes 2, none 1) and are assigned below by what they ask. Every PASS is a discovery until its confirmation passes; batch denominators are from the packet's `batches`.
+
+**P7 in the window:** 0 programmed units. Two unprogrammed `timeframes` units are P7 by what they ask: **4h squeeze (73de-17) and 4h pullback (73de-18) on twelve perps at declared defaults, pooled Stage 0, both FAIL.** From P2, ML ENTRY at 15m and 4h failed 4 of 4 and the harness reproduction precondition passed (b620-01), so the timeframe reads stand.
+
+**Learned.** Moving a 2h/1h design to 4h at declared defaults does not carry edge on a 12-perp pool, and the ML ENTRY head does not scale to 15m or 4h. Belief: our edges are timeframe-specific to the parameterisation they were fitted at, and "same rule, other bar" is not a cheap source of new legs. Noise is not the explanation: these are pooled reads over twelve symbols.
+
+**Answered / retired.** Answered: "do the declared squeeze/pullback rules transfer to 4h on a perp pool" (no). The P7 frontier nodes in the authoring queue (P7-Q2-frontier-pass, P7-Q5-confirm, P7-Q6-weekly-etf) stay with research-ops. Their parents closed earlier, and none outranks the P3 iteration-3 holdouts this week.
+
 ## Programme review 2026-11-04 (lane PROGRAMME-REVIEW-20261104) — TRADING track
 
 Population: units with a result row generated 2026-10-28T19:41Z..2026-11-04T19:41Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,932 units read, 0 unreadable, 662 result rows): **447 units with rows** — 107 pass, 210 fail, 25 indeterminate, 11 no_action_warranted, 94 with no unit verdict yet (76 ungraded + 18 needs_review/null). 302 carry a programme field (P1 53, P2 54, P3 95, P4 24, P5 48, P6 18, P7 10), 145 do not (live_strategy 70, new_strategy_prop 32, infra 13, ml_health 13, timeframes 6, macro 5, regime 5, none 1) — assigned below by what they ask. Every PASS is a discovery until its confirmation passes.

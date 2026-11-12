@@ -18,7 +18,7 @@ import scripts.ml.backtest_augment_runner as runner
 
 
 def test_default_roster_matches_pinned_manifest():
-    # Verified against ml/configs/setup-candidates-metalabel-p2pool-v1.yaml.
+    # Verified against ml/configs/retired/setup-candidates-metalabel-p2pool-v1.yaml.
     assert runner.DEFAULT_ROSTER == (
         "trend_donchian", "squeeze_breakout_4h", "htf_pullback_trend_2h")
     assert runner.DEFAULT_SYMBOLS == ("BTCUSDT", "ETHUSDT", "SOLUSDT")

@@ -141,6 +141,12 @@ limits:
   # RESEARCH-FLOW 2026-11-02 (manager 21:25Z): research may fire while at most 1 infra run is queued and defers at 2 or more
   # (was: defer at 1, which deferred every fire on cycle 41521258380). --max-repo-queued still bounds the whole pool.
   infra_yield_at: 2
+  # RESEARCH-DISPATCH-STALL-1112: an infra run QUEUED longer than this is stuck, not waiting -- it no longer counts toward
+  # infra_yield_at (dispatch_queue.INFRA_STUCK_HOURS). 2026-11-11 frozen 3-6 h infra runs deferred every fire for 5 h+.
+  infra_stuck_hours: 1.0
+  # RESEARCH-DISPATCH-STALL-1112 (manager 2026-11-12): a research run QUEUED longer than this holds no runner -- it no longer counts
+  # toward max_total_inflight (dispatch_queue.RESEARCH_STUCK_HOURS); in_progress research runs always count.
+  research_stuck_hours: 1.0
   # THE ONE OWNER of "which workflows are money-path ops" (B13). Any workflow reading vars.INFRA_RUNS_ON must be here
   # (runner-admin infra-runner-* aside); no research-* workflow may read it. Report: scripts/ci/check_infra_workflows_single_owner.py
   infra_workflows:

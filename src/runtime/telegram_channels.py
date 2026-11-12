@@ -153,6 +153,7 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     "src/runtime/ltr_first_proof.py": ("alert",),   # LTR first-proof pings, one per stage, once ever (operator 2026-10-26)
     "src/runtime/live_review_rows_watch.py": ("alert",),   # LTR-ROWS-SWAP-TRUNCATION: ONE flag per incident when the rows branch shrank (tip refused)
     "src/runtime/losing_streak_alert.py": ("alert",),
+    "src/runtime/conflicting_exposure.py": ("alert",),   # CONFLICTING-EXPOSURE-ALERT: ONE flag per symbol held long+short across the books
     "src/runtime/ml_entry_live_monitor.py": ("alert",),   # ML-ENTRY-LIVE-MONITOR: report-only flag per account per checkpoint
     "src/runtime/silent_refusal_alert.py": ("alert",),
     "src/runtime/starved_account_alert.py": ("alert",),
@@ -177,6 +178,7 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     "src/units/accounts/daily_dd_switch.py": ("execution_alert",),
     "src/runtime/liveness_watchdog.py": ("alert",),
     "scripts/ops/notify_unit_failure.py": ("alert",),
+    "scripts/ops/security_watch.py": ("alert",),   # SEC-DETECTORS: ONE red flag per suspicious SSH event (new identity / failure burst / journal unreadable), deduped by alert_cooldown
     "scripts/ops/trainer_disk_alarm.py": ("alert",),
     "scripts/ops/prop_executor_tick.sh": ("red_flag",),
     "scripts/ops/prop_feed_tick.sh": ("red_flag",),
@@ -198,6 +200,7 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     "scripts/notify_session.py": ("session",),
     "scripts/ops/work_digest_now.py": ("manager_update",),
     "src/runtime/telegram_decisions.py": ("decision",),
+    "src/runtime/trade_approvals.py": ("decision", "alert"),   # TRADE-ACTION-DIRECT-PATH: the Approve/Reject ask (decision); the no-answerable-bot fallback (alert)
     "src/runtime/manager_status.py": ("command_reply",),
     # REPLY (polled bots answering the operator in-conversation)
     "src/bot/telegram_query_bot.py": ("command_reply",),

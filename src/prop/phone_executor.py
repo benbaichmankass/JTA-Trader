@@ -870,7 +870,10 @@ _HB_KEYS = {"st", "paused", "hold", "host", "onAccount", "path_depth", "ready", 
             "exec_js", "exec_src", "js_refresh", "captures", "capture_err", "drills", "drill_last",
             # PHONE-BG-MISS (2026-11-07): is FLAG_SECURE on right now (blank screenshots), and minutes since the background
             # engine last posted a terminal_miss for a page it did not recognise
-            "secure", "bg_miss_min"}
+            "secure", "bg_miss_min",
+            # PHONE-SECURE-ONRESUME (2026-11-12): WHY FLAG_SECURE is in its state (boot | nav_offhost | unread:<src> |
+            # credential:<predicate>:<src> | clear:<src>) and minutes since that reason was set
+            "secure_why", "secure_min"}
 
 
 def _write_heartbeat(account_id: str, reason: str, state: Any) -> None:

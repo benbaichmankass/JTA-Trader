@@ -6,6 +6,16 @@
 
 ---
 
+## Programme review 2026-11-11 (lane PROGRAMME-REVIEW-20261111) — INFRA / MODEL plumbing
+
+Population: units with a result row generated 2026-11-04T19:30Z..2026-11-11T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`; 2,183 units read, 0 unreadable; 455 result rows): **311 units with rows** — 72 pass, 134 fail, 42 indeterminate, 5 no_action_warranted, 1 not_applicable, 57 with no unit verdict yet (28 ungraded). 119 carry a programme field (P1 38, P2 50, P3 14, P4 2, P5 9, P6 6, P7 0); **192 do not** (live_strategy 110, new_strategy_prop 37, ml_health 31, infra 11, timeframes 2, none 1) and are assigned below by what they ask. Every PASS is a discovery until its confirmation passes; batch denominators are from the packet's `batches`.
+
+**P6 in the window:** 6 programmed units (3 pass, 3 ungraded) plus 11 unprogrammed `infra`. The ae17 machinery probes went 5 of 6 PASS. The one FAIL is **the disposition census (ae17-43)**: `needs_review` stands at **97** (owners: 46 on PI-20261105-WDWYHZCN-0001, 18 on PI-20261030-20261030-0001, 16 with no owner), up from 72 a week ago. Ungraded rows: 28.
+
+**Learned.** The queue machinery is healthy: runner deps, result readability, queue integrity, programme coverage and self-tests all pass, and dispatch ran 0.5 h before this review (303 units fired in 7 d). **Disposition is not keeping pace with landing.** Only 17% of this window's result dirs are in a lever map (38 of 220). The packet notes holdout and stage-0 reads carry no lever, so this is an upper bound on the gap, not a measurement of it. The weekly audit's RESEARCH-OPS-NO-RECORD (no research-ops record for 38 h) is the cause on the disposition side: the 4×/day pass is where needs_review is triaged.
+
+**Next.** (1) Restore the research-ops record cadence (manager; audit finding). (2) The needs_review owner with 46 items closes or re-owns them. (3) Programme coverage stays at 0 uncovered questions across P1–P7 (`programme_coverage.py`).
+
 ## Programme review 2026-11-04 (lane PROGRAMME-REVIEW-20261104) — INFRA / MODEL plumbing
 
 Population: units with a result row generated 2026-10-28T19:41Z..2026-11-04T19:41Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,932 units read, 0 unreadable, 662 result rows): **447 units with rows** — 107 pass, 210 fail, 25 indeterminate, 11 no_action_warranted, 94 with no unit verdict yet (76 ungraded + 18 needs_review/null). 302 carry a programme field (P1 53, P2 54, P3 95, P4 24, P5 48, P6 18, P7 10), 145 do not (live_strategy 70, new_strategy_prop 32, infra 13, ml_health 13, timeframes 6, macro 5, regime 5, none 1) — assigned below by what they ask. Every PASS is a discovery until its confirmation passes.
