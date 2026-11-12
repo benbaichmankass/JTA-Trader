@@ -467,7 +467,7 @@ def _artifact_scorer(path):
     feats = art["features"]
 
     def predict(df):
-        return np.mean([b.predict(df[feats]) for b in boosters], axis=0)
+        return np.mean([b.predict(df[feats]) for b in boosters], axis=0)   # provenance: predict -- mean regressed LONG net R (a regressor, not a probability)
     return feats, float(art["tau"]), predict, art["model_id"]
 
 
