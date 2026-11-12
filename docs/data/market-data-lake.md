@@ -81,8 +81,17 @@ the fetch time.
 - **Futures.** The Yahoo `=F` fronts are raw front-month series with roll jumps (`roll: raw_front`).
 
 **Kaggle.** Kaggle kernels are the training compute for the general models. They read the lake either straight from HF (a
-kernel with internet on and a read token stored as a Kaggle secret) or from a private Kaggle mirror `metis-market-lake`
-mounted at `LAKE_LOCAL_DIR`. Both routes use the same loader and layout. The mirror job is follow-up (d2) below.
+kernel with internet on and a read token stored as a Kaggle secret) or from the private Kaggle mirror `metis-market-lake-p000..p010`
+(frozen crypto history, 33,058 partitions, built by `scripts/data_lake/kaggle_pilot.py copy-part`). The mirror is **not** in the lake
+layout: it is shard folders with a per-member SHA-256 in each dataset's `MANIFEST.json`, so it is not a `LAKE_LOCAL_DIR`. The same
+loader reads it through [`ml/datasets/lake_mirror.py`](../../ml/datasets/lake_mirror.py): a frozen partition (closed month or year) comes
+from the mirror, hash-verified; the hot tail (open and previous month) comes from HF. With the HF manifest unreachable (a kernel with
+internet off, or HF at its cap) the manifest is rebuilt from the mirror, the hot tail is reported `could_not_look`, and 5m..1d are
+derived from the 1m mirror on read. A read that cannot see a needed partition raises `LakeReadError` (or, with
+`on_unreadable="state"`, returns the rest with `df.attrs["lake_read"]`), never an empty frame. Proven 2026-11-12 on a Kaggle CPU kernel
+with internet off and on a GitHub runner (row HF-LAKE-KAGGLE-LOADER, PR #25341, run 43302530493). Set `HF_HUB_OFFLINE=1` in a
+no-internet kernel, or the failed HF manifest read costs minutes of client retries. `LAKE_MIRROR_DIR` points the loader at a mirror
+folder elsewhere (a runner download, a test fixture).
 
 ## 3. Depth, per asset class
 
@@ -300,7 +309,7 @@ The first run of each new year compacts the previous year automatically and prun
 - (b2) import `CryptoSpartan/stocks_bars_1m` (ungated; Alpaca terms).
 - (b3) ETF-HISTORY-PIPELINE reads the universe snapshot (done in its code; wiring pending its PR).
 - (c2) ALFRED vintages for the revised FRED series (true PIT macro).
-- (d2) a Kaggle read path for the lake.
+- (d2) a Kaggle read path for the lake: **done** 2026-11-12 (`ml/datasets/lake_mirror.py`, see § 2 "Kaggle"). The HF delete of the frozen copy is row HF-LAKE-FROZEN-DELETE.
 - (f) paid-gap quotes (PI-20261101-WTFTWTFP-0006).
 
 ## 7. Feed automation and health (no Claude in the loop)
