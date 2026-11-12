@@ -1,5 +1,7 @@
 {
-  "tier": 1,
-  "landing": "self",
-  "why": "UI-OAUTH-SIGNIN prep (lane dispatched by AM-UI for Manager Session 2026-11-11a). Tests + client-side retrofits only, nothing in src/web/api or deploy. (1) tests/test_web_site_auth_route_walk.py walks app.routes with SITE_AUTH_ENFORCE on: every /api/diag/* and /api/bot/prop/phone/* route refuses an anonymous caller (401/403/503), every other route gets the gate's own 401, and a gate 401 still carries CORS headers. (2) The GET callers named in docs/design/site-auth-consumer-inventory-2026-11.md send the DASHBOARD_API_TOKEN bearer when it is in their environment (the gate ignores it while off, so behaviour is unchanged today). trader_import_closure decide = SKIP on this file set."
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "UI-OAUTH-SIGNIN prep. Dispatch from AM-UI for Manager Session 2026-11-11a: 'everything touching src/web/api or deploy is Tier 2 -> landing: hold (manager merges)'. Operator text 2026-11-11 on row UI-OAUTH-SIGNIN: 'Tier 2 (touches the web API)'. SITE_AUTH_ENFORCE is NOT flipped here; the gate stays off, so request handling is unchanged except: /api/auth passkey hardening (step-up, enrol code burned at finish, challenge bound to its ticket), two new /api/auth/passkeys routes, and the FastAPI docs routes re-added as app routes. MEASURED: trader_import_closure decide = RESTART (in_closure: src/runtime/wake_toggles.py, src/web/api/auth.py, src/web/api/web_sessions.py), so the deploy restarts ict-trader-live once as well as ict-web-api. Revert: git revert of the merge commit.",
+  "why": "Prep for enforcing the operator-requested site sign-in: anonymous route walk test, UI-UPGRADE-1-AUTH-HARDEN (a)-(h), the devices/register POST carve-out, gating the FastAPI docs routes, and the DASHBOARD_API_TOKEN bearer on the GET callers the consumer inventory names."
 }

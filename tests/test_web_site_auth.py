@@ -254,10 +254,16 @@ def test_enrol_code_is_single_use_and_hashed_at_rest(client, google):
     from src.utils.paths import trade_journal_db_path
     raw = sqlite3.connect(trade_journal_db_path()).execute("SELECT id FROM web_sessions").fetchall()
     assert all(code not in r[0] for r in raw)
-    assert client.post("/api/auth/passkey/register/begin",
-                       json={"preauth_ticket": pre, "enrol_code": code}).status_code == 200
+    key = SoftKey()
+    b = client.post("/api/auth/passkey/register/begin",
+                    json={"preauth_ticket": pre, "enrol_code": code})
+    assert b.status_code == 200
+    f = client.post("/api/auth/passkey/register/finish",
+                    json={"challenge_id": b.json()["challenge_id"],
+                          "credential": key.register(b.json()["options"])})
+    assert f.status_code == 200, f.text
     again = client.post("/api/auth/passkey/register/begin",
-                        json={"preauth_ticket": pre, "enrol_code": code})
+                        json={"preauth_ticket": signin(client, google), "enrol_code": code})
     assert again.status_code == 403
 
 
@@ -457,19 +463,24 @@ def _ws_conn(path, query="", headers=()):
                            "scheme": "ws", "server": ("t", 80)})
 
 
+def _gate(conn):
+    import asyncio
+    return asyncio.run(auth_module.require_site_session(conn))
+
+
 def test_ws_gate_consumes_ticket_once(client, google, monkeypatch):
     monkeypatch.setenv("SITE_AUTH_ENFORCE", "1")
     a = enrol(client, google, SoftKey())
     t = client.post("/api/auth/ws-ticket", headers=bearer(a["session_token"])).json()["ticket"]
-    auth_module.require_site_session(_ws_conn("/ws/market", f"ticket={t}"))
+    _gate(_ws_conn("/ws/market", f"ticket={t}"))
     with pytest.raises(Exception) as e:
-        auth_module.require_site_session(_ws_conn("/ws/market", f"ticket={t}"))
+        _gate(_ws_conn("/ws/market", f"ticket={t}"))
     assert getattr(e.value, "status_code", None) == 403
     # ticket for a since-revoked session is refused
     t2 = client.post("/api/auth/ws-ticket", headers=bearer(a["session_token"])).json()["ticket"]
     ws.revoke_session(a["session_handle"])
     with pytest.raises(Exception):
-        auth_module.require_site_session(_ws_conn("/ws/market", f"ticket={t2}"))
+        _gate(_ws_conn("/ws/market", f"ticket={t2}"))
 
 
 def test_ws_market_refused_without_ticket_when_enforced(client, monkeypatch):

@@ -32,12 +32,9 @@ EXEMPT_PREFIXES = ("/api/diag/", "/api/bot/prop/phone/")
 EXEMPT_EXACT = ("/api/bot/prop/report",)
 # FastAPI's own docs routes are not part of the API surface the SPA calls; the
 # gate still covers them (they are on the app, not a router), see the walk below.
-# KNOWN GAP (UI-OAUTH-SIGNIN, found by this walk 2026-11-12): these are added by
-# FastAPI itself, outside every router, so the app-level gate dependency does not
-# run on them -- anonymous GET /openapi.json returns the full API schema even with
-# the gate ON. Fixed in the held Tier-2 PR (gate them); until it lands they are
-# listed here and pinned as-is by test_docs_routes_known_gap, so the fix flips
-# one assertion instead of silently widening anything.
+# FastAPI's built-in docs routes. Found open by this walk 2026-11-12 (FastAPI
+# added them outside the app-level gate dependency); main.py now re-adds them as
+# ordinary app routes. Pinned separately so a regression names itself.
 _DOC_PATHS = {"/openapi.json", "/docs", "/docs/oauth2-redirect", "/redoc"}
 _PARAM = re.compile(r"\{[^}]+\}")
 _REFUSED = (401, 403, 503)
@@ -180,7 +177,7 @@ def test_exempt_route_refuses_a_wrong_token(enforced_client, monkeypatch, method
 # Everything else: default-deny at the gate.
 # ---------------------------------------------------------------------------
 
-GATED = [(m, p) for m, p in ROUTES if not _is_public(m, p) and p not in _DOC_PATHS]
+GATED = [(m, p) for m, p in ROUTES if not _is_public(m, p)]
 
 
 @pytest.mark.parametrize("method,path", GATED, ids=[f"{m} {p}" for m, p in GATED])
@@ -195,7 +192,7 @@ def test_public_set_is_exactly_the_declared_one():
     public = sorted({p for m, p in ROUTES if _is_public(m, p)
                      and not p.startswith(("/api/diag/", "/api/bot/prop/phone/", "/api/auth/"))})
     assert public == sorted([
-        "/api/bot/alerts", "/api/bot/live-review/rows",
+        "/api/bot/alerts", "/api/bot/devices/register", "/api/bot/live-review/rows",
         "/api/bot/prop/report", "/api/bot/wake-toggles", "/api/bot/work/decision",
         "/api/bot/work/items", "/api/bot/work/items/{item_id}/close",
         "/api/bot/work/items/{item_id}/note", "/api/bot/work/items/{item_id}/set",
@@ -203,12 +200,19 @@ def test_public_set_is_exactly_the_declared_one():
     ]), public
 
 
-def test_docs_routes_known_gap(enforced_client):
-    """Pins the gap named at ``_DOC_PATHS``: today these answer anonymously with
-    the gate on. The held fix flips this to ``_gate_401`` for each."""
+def test_docs_routes_are_gated(enforced_client):
+    paths = {p for _, p in ROUTES}
     for p in sorted(_DOC_PATHS):
-        r = enforced_client.get(p)
-        assert r.status_code == 200 and not _gate_401(r), (p, r.status_code)
+        assert p in paths, p                                  # still served ...
+        assert _gate_401(enforced_client.get(p)), p           # ... but behind the gate
+
+
+def test_docs_routes_still_serve_with_the_gate_off(monkeypatch):
+    monkeypatch.delenv("SITE_AUTH_ENFORCE", raising=False)
+    c = TestClient(api_main.app, raise_server_exceptions=False)
+    assert c.get("/openapi.json").json()["info"]["title"] == api_main.app.title
+    for p in ("/docs", "/redoc", "/docs/oauth2-redirect"):
+        assert c.get(p).status_code == 200, p
 
 
 # ---------------------------------------------------------------------------

@@ -233,7 +233,8 @@ _SAFE_METHODS = frozenset({"GET", "HEAD"})
 # POST-only carve-outs (SITE-AUTH step (i), 2026-11-11). Each of these routes
 # checks its OWN service token inside the router and fails CLOSED (503 when the
 # token is unset, 401 when it is missing or wrong):
-#   POST /api/bot/alerts, /api/bot/wake-toggles -> prop._require_write_token
+#   POST /api/bot/alerts, /api/bot/wake-toggles,
+#        /api/bot/devices/register              -> prop._require_write_token
 #   POST /api/bot/work/decision                 -> work._require_decision_write_token
 #   POST /api/bot/work/items[/<id>/set|note|close] -> work_items._require_work_store_token
 #   POST /api/bot/live-review/rows               -> live_review_direct (work-store token)
@@ -245,6 +246,7 @@ _SAFE_METHODS = frozenset({"GET", "HEAD"})
 # closed on its own credential (``tests/test_web_site_auth_write_carveouts.py``).
 SITE_PUBLIC_POST_PATHS: frozenset[str] = frozenset({
     "/api/bot/alerts",
+    "/api/bot/devices/register",   # -> prop._require_write_token (SEC-API-DEVICE-REGISTER-OPEN, #25007)
     "/api/bot/wake-toggles",
     "/api/bot/work/decision",
     "/api/bot/work/items",
@@ -280,7 +282,7 @@ def _service_token_ok(token: str) -> bool:
     return bool(expected) and bool(token) and hmac.compare_digest(token, expected)
 
 
-def require_site_session(conn: HTTPConnection) -> None:
+async def require_site_session(conn: HTTPConnection) -> None:
     """App-level gate. No-op unless ``SITE_AUTH_ENFORCE`` is on.
 
     On: public paths and CORS preflight pass; otherwise a live device session
@@ -288,6 +290,10 @@ def require_site_session(conn: HTTPConnection) -> None:
     ``DASHBOARD_API_TOKEN`` as a service credential. ``WS /ws/market`` takes a
     single-use ``?ticket=`` from ``POST /api/auth/ws-ticket`` (a browser
     WebSocket cannot send an Authorization header).
+
+    ``async`` (HARDEN b): with the gate off this returns on the event loop with
+    no threadpool hop per request; with it on, the sqlite session lookups run on
+    a worker thread, never on the event loop.
     """
     if not site_auth_enforced():
         return
@@ -301,21 +307,35 @@ def require_site_session(conn: HTTPConnection) -> None:
     token = _bearer(conn)
     if scope["type"] == "websocket":
         ticket = conn.query_params.get("ticket", "")
-        sid = web_sessions.mem_take("wsticket", ticket) if ticket else None
-        if sid is not None and web_sessions.session_alive(sid):
+        if ticket and await run_in_threadpool(ws_ticket_ok, ticket):
             return
-        if token.startswith(web_sessions.SESSION_TOKEN_PREFIX) and _session_row_allowed(
-                web_sessions.validate_session(token)):
+        if token.startswith(web_sessions.SESSION_TOKEN_PREFIX) and await run_in_threadpool(
+                _token_allowed, token):
             return
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail={"error": "invalid_session"})
 
     if token.startswith(web_sessions.SESSION_TOKEN_PREFIX):
-        if _session_row_allowed(web_sessions.validate_session(token)):
+        if await run_in_threadpool(_token_allowed, token):
             return
         raise _UNAUTH
     if method in _SAFE_METHODS and _service_token_ok(token):
         return
     raise _UNAUTH
+
+
+def ws_ticket_ok(ticket: str) -> bool:
+    """Consume a single-use ws ticket; True iff it named a session that is still
+    live AND still belongs to ``ALLOWED_EMAIL`` (HARDEN e: the ticket path used to
+    check liveness only, so de-allowlisting did not stop an issued ticket's
+    session from opening a socket). Sync: call it off the event loop."""
+    handle = web_sessions.mem_take("wsticket", ticket) if ticket else None
+    if handle is None:
+        return False
+    return _session_row_allowed(web_sessions.session_by_handle(handle))
+
+
+def _token_allowed(token: str) -> bool:
+    return _session_row_allowed(web_sessions.validate_session(token))
 
 
 def _session_row_allowed(row: Optional[dict]) -> bool:
