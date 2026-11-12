@@ -19,7 +19,7 @@
 > checks it in CI (diff-scoped, in the `guards` job); `--all` is the standing
 > audit and `--list` prints measured coverage.
 >
-> **Coverage, computed rather than counted: 187 of 187 routes documented (100%).**
+> **Coverage, computed rather than counted: 189 of 189 routes documented (100%).**
 > *Population — every `@router.<verb>("...")` under `src/web/api/routers/`
 > joined to its `APIRouter(prefix=...)`. Verified against the live FastAPI
 > route table (`app.routes`): the enumerator finds exactly those 96 with no
@@ -147,6 +147,8 @@ the same staleness this paragraph was already written to complain about.
 | `GET /api/bot/ml/runs/{model_id}/{run_id}` | `routers/training_center.py` | Per-run metrics. Both ids are path-validated before the artifact read. |
 | `GET /api/bot/news/recent` | `routers/news.py` | M9 news-layer shadow-soak tail (per-signal decision / adjustment / veto + the top source articles read). `present:false` until the layer is active. |
 | `GET /api/bot/alerts` | `routers/alerts.py` | The alert ledger (`runtime_logs/alerts_ledger.jsonl`, an EVENT LOG on the VM, ALERT-LEDGER-TO-MANAGER): `?since=&kind=&channel=&limit=`. **`read_state` first** (`read \| absent \| could_not_look`) — a ledger that cannot be read is `could_not_look`, never 0 alerts; carries counts by kind, newest `ts` and the population (lines scanned, truncated). Mirrored at `GET /api/diag/alerts` (`DIAG_READ_TOKEN`). |
+| `GET /api/bot/stream` | `routers/stream.py` | **Server-Sent Events push stream for the trading dashboard** (UI-TRADING-PUSH T1). ONE broadcaster task reads the alert ledger, `trade_journal.db` (`trades`, `order_packages`, `mode=ro`, by primary key / status index) and the health doc once per second and fans the same frames to every client, so load is O(1) in viewers; frames `alert \| package \| trade \| bracket \| position \| health \| hello`; `Last-Event-ID` replays a 10-min ring, `hello.gap` tells the client to re-snapshot via REST. Access tier 1 (read-only GET); with `SITE_AUTH_ENFORCE` on it also takes the single-use `?ticket=` from `POST /api/auth/ws-ticket` (EventSource cannot set headers), like `WS /ws/market`. Deploy tier 2. |
+| `GET /api/bot/stream/status` | `routers/stream.py` | The broadcaster's state: seq, connected clients, ring size, each source's `read_state` (`could_not_look` with the error when a source cannot be read). |
 | `GET /api/bot/wake-toggles` | `routers/wake_toggles.py` | The wake-notification switches (VM runtime state `runtime_state/wake_toggles.json`): `read_state` first (`read \| defaults \| could_not_look`), per-switch `on`/`changed_at`/`changed_by`, recent flips. Read-only; read by the console connector. Gates this adds: none. |
 | `POST /api/bot/wake-toggles` | `routers/wake_toggles.py` | **Tier-2 write, fail-closed `DASHBOARD_API_TOKEN` bearer** (503 unset, 401 bad). `{key, on, by?}`; every flip logged who/when/old/new. |
 | `POST /api/bot/alerts` | `routers/alerts.py` | **Tier-2 write, fail-closed `DASHBOARD_API_TOKEN` bearer** (the `exec-js-signature` pattern; 503 when unset, 401 otherwise). Shell / workflow senders that curl Telegram directly record what they sent (`scripts/ops/post_alert.sh`); the sender ignores a failed POST, so this route never gates a send. |

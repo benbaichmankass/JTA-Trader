@@ -68,7 +68,7 @@ The operator, relayed by the manager on 2026-10-25 at about 16:15Z, said that th
    |---|---|
    | `would_apply` | this account has an apply path for this action, and nothing you can read refuses it |
    | `refused_by_account_risk` | a read-only check of this account's own rules refuses it (e.g. the new stop is beyond a prop daily-loss distance, or the executor refused the amend) |
-   | `unknown` | we could not look, or the account has no apply path for this action yet. Prop accounts are `unknown` until LTR-8, Alpaca until LTR-9 |
+   | `unknown` | we could not look, or the account has no apply path for this action yet. **Prop accounts HAVE a tighten path** (VM: `meta.sl_floor`, which the executor's trail steps the venue stop to; phone: the amend channel), including a prop-only package whose status is `emitted` (PHONE-LIVE-ACCOUNT-FEED, 2026-11-11). Read it with `python3 scripts/ops/live_review_apply.py --package <id> --new-sl <level> --dry-run`, never from this table; the matrix of other actions is `ACTION_PATHS` in that script |
    | `no_action` | the package intent changes nothing (hold / no_recommendation), so there is nothing to apply |
 
    Compute it read-only, or write `unknown` and say why. Never fabricate `would_apply`.
