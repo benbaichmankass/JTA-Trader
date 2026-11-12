@@ -67,8 +67,10 @@ runs that account's own ``fresh_entry_check`` -- the check a fresh entry at the 
 pass (mode, the daily-DD switch's block on new risk, the gross-exposure cap, and the size a fresh
 entry there would be given). The account's existing executor then acts on THAT leg only, and every
 apply is READ BACK from the venue (``apply_failed`` on a mismatch). The executor matrix
-(:data:`ACTION_PATHS`) -- anything not listed refuses ``no_action_path:<action>``, named, and is
-pinged once on a real-money or prop account:
+(:data:`ACTION_PATHS`) routes an APPROVED action to its executor; since 2026-11-12 (AM-PROP-VM-ACTION-MATRIX:
+REMOVE) it is no longer a decision refusal -- every account decides every action, and an approved action with
+no executor wired reports ``no_action_path:<action> (no executor wired for <class>)``, pinged once on a
+real-money or prop account:
 
 * bybit: close (reduce-only close of the leg), partial_close / change_size < 1 (reduce-only
   partial), move_tp and widen_sl (the monitor's own modify seam on this leg);
@@ -242,6 +244,7 @@ def _prop_tickets(pkg_id: str) -> List[Dict[str, Any]]:
 #: (2026-11-11) every apply refused such a package as "not open" before any account was asked: the SOL
 #: short pkg-50f5eed272f64197 on tradeify_1 + velotrade_1 refused three directed tightens
 #: (2026-11-09 20:15Z, 2026-11-10 15:51Z / 15:52Z) and its stop stayed at the entry stop 89.105.
+# Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PACKAGE-LIVE-STATE: KEEP. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
 PKG_LIVE, PKG_NOT_LIVE, PKG_COULD_NOT_LOOK = "live", "not_live", "could_not_look"
 
 
@@ -697,10 +700,15 @@ def _save_state(st: Dict[str, Any]) -> None:
 # Trade actions (LTR-ALL-ACTIONS, MD-TRADE-DESK)
 # --------------------------------------------------------------------------
 
+# Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PROP-VM-ACTION-MATRIX: REMOVE. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
 #: The executor matrix: which account class has an EXISTING executor for which
-#: trade action. ``reduce`` = partial_close and change_size < 1. Anything not
-#: listed refuses ``no_action_path:<action>``. ``add_size`` (add_entry,
+#: trade action. ``reduce`` = partial_close and change_size < 1. ``add_size`` (add_entry,
 #: change_size > 1) is in no row: no add-to-an-open-position executor exists.
+#: Since 2026-11-12 this table is NOT a decision gate: every account's own ``approve_action`` decides
+#: every action. It is read only at EXECUTION time (:func:`_exec_trade_action`) to route an approved
+#: action to the executor that can carry it; an approved action with no executor wired is reported
+#: ``no_action_path:<action> (no executor wired for <class>)`` and pinged, never a policy refusal.
+#: Routing through this table is also what stops an approved add from reaching the Bybit reduce branch.
 ACTION_PATHS: Dict[str, frozenset] = {
     "bybit": frozenset({"close", "reduce", "move_tp", "widen_sl"}),
     "alpaca": frozenset({"close", "move_tp"}),
@@ -752,16 +760,18 @@ def _fresh_entry(aid: str, cfg: Dict[str, Any], pkg: Dict[str, Any], intent: lri
 
 def _decide_trade_action(intent: lri.LiveReviewIntent, leg: Dict[str, Any], pkg: Dict[str, Any],
                          cfg: Dict[str, Any], cls: str, execution: str) -> lri.AmendVerdict:
-    """No executor for this action on this account -> refuse ``no_action_path:<action>`` before any
-    read (so an account that can never act raises no could-not-look streak). Else this account's
-    ``approve_action`` on a view of THIS leg, with its fresh-entry check when the action adds risk."""
+    """This account's ``approve_action`` on a view of THIS leg, with its fresh-entry check when the action
+    adds risk. Since 2026-11-12 (AM-PROP-VM-ACTION-MATRIX: REMOVE) there is no executor-matrix refusal
+    here: every account decides every action; whether an executor is wired is answered (and reported) at
+    execution time by :func:`_exec_trade_action`."""
     aid = leg["account_id"]
     key = action_path_key(intent)
     if str(pkg.get("strategy_name") or "") == DESK_LEG and key in ("widen_sl", "add_size"):
         return lri.AmendVerdict(aid, lri.V_REFUSE, None, f"{R_DESK_LEG_NEVER}:{key}")
-    if key not in ACTION_PATHS.get(cls, frozenset()) or (cls in ("bybit", "alpaca") and leg["kind"] != "trade") \
-            or (cls == "phone" and leg["kind"] != "ticket"):
-        return lri.AmendVerdict(aid, lri.V_REFUSE, None, f"{lri.R_NO_ACTION_PATH}:{key}")
+    # Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PROP-VM-ACTION-MATRIX: REMOVE. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+    if not _executor_wired(cls, key, leg):
+        print(f">>> live-review-apply: {aid} ({cls}) has no executor wired for {key}; deciding it anyway "
+              "(reported at execution, AM-PROP-VM-ACTION-MATRIX removed)")
     row = leg["row"]
     if leg["kind"] == "trade":
         entry, size = _f(row.get("entry_price")), _f(row.get("position_size"))
@@ -999,6 +1009,7 @@ def _exec_alpaca_close(db, leg: Dict[str, Any], pkg: Dict[str, Any], intent: lri
 
     t = leg["row"]
     aid, sym = t["account_id"], str(t.get("symbol") or "").upper()
+    # Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-ALPACA-CLOSE-SIBLING-REFUSE: KEEP. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
     siblings = [x for x in db.get_trades(filters={"account_id": aid, "symbol": t.get("symbol"), "status": "open"})
                 if not x.get("is_backtest") and x.get("id") != t.get("id")]
     if siblings:
@@ -1140,9 +1151,24 @@ def _exec_phone_close(leg: Dict[str, Any], key: str, intent: lri.LiveReviewInten
             "detail": f"{r.get('action')} request emitted; the phone verifies it on the terminal and reports"}
 
 
+def _executor_wired(cls: str, key: str, leg: Dict[str, Any]) -> bool:
+    """True when an executor exists that can carry ``key`` on this leg (class row + leg kind)."""
+    if key not in ACTION_PATHS.get(cls, frozenset()):
+        return False
+    if cls in ("bybit", "alpaca") and leg.get("kind") != "trade":
+        return False
+    if cls == "phone" and leg.get("kind") != "ticket":
+        return False
+    return True
+
+
 def _exec_trade_action(db, leg: Dict[str, Any], pkg: Dict[str, Any], cls: str, v: lri.AmendVerdict,
                        intent: lri.LiveReviewIntent) -> Dict[str, Any]:
     key = action_path_key(intent)
+    if not _executor_wired(cls, key, leg):
+        # Physical, not policy (AM-PROP-VM-ACTION-MATRIX removed 2026-11-12): the account approved, and no executor
+        # exists that can carry this action on this leg. Reported (and pinged once on a money account by run()).
+        return {"result": X_REFUSED, "detail": f"{lri.R_NO_ACTION_PATH}:{key} (no executor wired for {cls})"}
     if cls == "bybit":
         return _exec_bybit_action(db, leg, pkg, v, intent)
     if cls == "alpaca" and key == "close":
