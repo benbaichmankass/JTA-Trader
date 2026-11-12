@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "CI only (.github/workflows/pytest-run.yml, the two mirror workflows, their tests). (1) pytest-run: -n auto -> -n logical; with psutil installed xdist `auto` counts physical cores (2 on the 4-vCPU runner, measured: 3 pytest processes on jobs 131070147506/131060816113), so the suite used half the runner. Same tests, nothing skipped or deselected. (2) live-review-rows-mirror + desk-decisions-mirror no longer hold a runner up to 80 min in verify-merged for their own PR: deferred verification (existing DEFERRED_VERIFY pattern), next run skips while its PR is <4 h old, closes + reds a stranded one and re-lands (idempotent by id); job timeout 110 -> 30. Dispatched by Manager Session 2026-11-11a, lane CI-SUITE-SLOWDOWN. No src/, config/ or order path. Gates this adds or changes: none."
+}
