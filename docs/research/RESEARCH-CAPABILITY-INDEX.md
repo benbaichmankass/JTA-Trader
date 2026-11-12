@@ -106,6 +106,7 @@ routing layer, not a replacement for reading it.
 | Does that replay actually reproduce the LIVE label? | `scripts/research/ml_vol_label_replay.py verify` |
 | The same, driven per-strategy off live config, with a fidelity label? | `scripts/research/regime_debt_matrix.py` |
 | Is ONE (regime, direction) cell **temporally stable** (the #7915 gate)? | `scripts/research/regime_cell_walkforward.py` |
+| Would the authored regime OFF-cells, applied to a strategy FAMILY pooled, have added net R out of sample and beaten a matched-random drop? | `scripts/research/regime_gate_family_consumer.py` |
 | Are ALL six `(trend, vol)` cells of a leg temporally stable under ONE head's vol labels, plus the gated-vs-ungated **book** rule (yearly folds, maxDD), on the full cost stack? (B3, ML-VOLGATE-WF-ETH-BTC) | `scripts/research/ml_volgate_b3.py` |
 | Turn those B3 walk-forward results into one evidence record per `(head, strategy, cell)` plus the per-leg verdicts (re-verify of the authored `trend_vol` cells, redundancy vs the 1-D table)? | `scripts/research/ml_volgate_b3_records.py` |
 | Does an `approximate` Stage-0 evidence record still clear its rule once the omitted levers are SIMULATED? Two arms over the record's own window + cost stack: the record's argv (control — must reproduce the record) and the same argv plus every omitted lever the harness can model (pullback `trail_decay_*`); grades the faithful arm against RULE-D1. Backs the C5 `FIDELITY_BASELINE` in check_roster_promotion_evidence.py (RQ-20261011-6707-01) | `scripts/research/fidelity_remeasure.py` |
