@@ -1,6 +1,6 @@
 id: RQ-20261112-e4a7-01
 title: 'Desk event-driven packet arm (DESK-18H): does Claude, judging a masked packet opened ONLY when an open-interest shock (E4) fires, beat a same-geometry random entry by S3 >= +0.25 R (95% weekly-cluster CI lower bound > 0), net of the full cost stack, on the DEV window?'
-status: blocked
+status: queued
 cadence: once
 theme: live_strategy
 priority: 1
@@ -135,12 +135,3 @@ related:
 - scripts/research/desk_event_packet_replay.py
 - docs/design/desk-entry-review-redesign-2026-11-11.md
 last_dispatched_at: null
-blocked_on:
-- kind: work_item
-  ref: DESK-18D-JUDGE-2
-  what: >-
-    The judged file does not exist yet. The DESK-18D-JUDGE-2 lane judges the schedule (Sonnet plan subagents, ceiling 15 USD) and commits
-    comms/research/desk_event_packet/judged/{proposals.jsonl,mask-key.json}.
-  clears_when: >-
-    Both files are on main. Then git mv this file to research/queue/, remove blocked_on and set status: queued; the dispatcher's run is the registered landing.
-  due_by: '2026-11-19'
