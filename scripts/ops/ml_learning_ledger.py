@@ -43,8 +43,8 @@ import yaml
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
-from src.config.accounts_loader import load_accounts_dict
-from src.runtime import provenance as P
+from src.config.accounts_loader import load_accounts_dict  # noqa: E402
+from src.runtime import provenance as P  # noqa: E402
 
 API = "https://ict-bot.duckdns.org/api/bot"
 LABEL_KINDS_EXCLUDED = {"not_computable", "pending"}
