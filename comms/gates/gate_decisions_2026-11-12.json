@@ -1,0 +1,385 @@
+{
+ "schema": 1,
+ "decided_at": "2026-11-12",
+ "decided_by": "operator",
+ "source": "decisions page (Gates tab), artifact db gate_answers; inventory = comms/gates/gate_inventory.json from GATE-AUDIT PR #25300",
+ "population": "the 53 rows the operator answered: every gate that can block real money AND had no operator authorization on record (52) plus proposed G1. The other 246 audited rows were not answered and stay as they are.",
+ "meaning": {
+  "KEEP": "stays, now operator-authorized",
+  "REMOVE": "delete the gate (proposed G1: not added)",
+  "MAKE REPORT-ONLY": "keep the check, but it reports/logs/alerts and never refuses, blocks or delays"
+ },
+ "decisions": [
+  {
+   "id": "AM-ALPACA-CLOSE-SIBLING-REFUSE",
+   "choice": "KEEP",
+   "note": "",
+   "cat": "active-management",
+   "where": "scripts/ops/live_review_apply.py:1005"
+  },
+  {
+   "id": "AM-PACKAGE-LIVE-STATE",
+   "choice": "KEEP",
+   "note": "",
+   "cat": "active-management",
+   "where": "scripts/ops/live_review_apply.py:248"
+  },
+  {
+   "id": "AM-PHONE-APP-CLOSE-REFUSALS",
+   "choice": "KEEP",
+   "note": "",
+   "cat": "active-management",
+   "where": "tools/phone-executor/app/src/main/java/com/metis/phoneexec/MainActivity.kt:1595"
+  },
+  {
+   "id": "AM-PROP-TICKET-EXPIRE-REFUSALS",
+   "choice": "KEEP",
+   "note": "",
+   "cat": "active-management",
+   "where": "scripts/ops/prop_ticket_expire.py:100"
+  },
+  {
+   "id": "AM-PROP-VM-CLOSE-REFUSALS",
+   "choice": "KEEP",
+   "note": "",
+   "cat": "active-management",
+   "where": "src/prop/vm_close.py request_close / run_close_step (PR #25230, OPEN draft, Tier 2 held)"
+  },
+  {
+   "id": "AUTOMERGE-ARMING-CHECK-ATTACHED",
+   "choice": "KEEP",
+   "note": "",
+   "cat": "ci-landing",
+   "where": "scripts/ci/automerge_arming.py:85"
+  },
+  {
+   "id": "AUTOMERGE-REQUEST-GATE",
+   "choice": "KEEP",
+   "note": "",
+   "cat": "ci-landing",
+   "where": ".github/workflows/claude-pr-automerge.yml:294"
+  },
+  {
+   "id": "BP-ENFORCE-ADMINS",
+   "choice": "KEEP",
+   "note": "",
+   "cat": "ci-landing",
+   "where": ".github/workflows/branch-protection-sync.yml:208"
+  },
+  {
+   "id": "CI-env-gate-guard",
+   "choice": "KEEP",
+   "note": "",
+   "cat": "ci-guard",
+   "where": "scripts/ci/run_guards.py:1337"
+  },
+  {
+   "id": "GATE-EXECUTE-ZEROQTY-WHOLEUNIT",
+   "choice": "KEEP",
+   "note": "",
+   "cat": "runtime-order-path",
+   "where": "src/units/accounts/execute.py:394 (qty=0 refusal), :411 whole_unit_qty; _submit_order BelowVenueMinQtyRefusal ~1521"
+  },
+  {
+   "id": "POLICY-DEMOTION-KEEP-OPEN-BLOCK-NEW",
+   "choice": "KEEP",
+   "note": "",
+   "cat": "writers",
+   "where": "docs/plans/OPERATING-PLAN-2026-09-21.md \u00a7 2 \"Open positions on a book move\" (PR #25251, OPEN draft, Tier 2 HELD: operator confirms)"
+  },
+  {
+   "id": "PRL-R10-ARMED-BUT-HOLD",
+   "choice": "KEEP",
+   "note": "",
+   "cat": "ci-landing",
+   "where": "scripts/ci/check_pr_landing.py:1737"
+  },
+  {
+   "id": "SYSTEM-ACTION-ACTOR-AND-LABEL-GUARD",
+   "choice": "KEEP",
+   "note": "",
+   "cat": "vm-services",
+   "where": ".github/workflows/system-actions.yml:369-373 (job `if`: repo owner or github-actions[bot] opened an issue carrying label `system-action`)"
+  },
+  {
+   "id": "AM-AMEND-POSITION-SL-BYBIT-ONLY",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "active-management",
+   "where": "scripts/ops/amend_position_sl.py:267"
+  },
+  {
+   "id": "AM-PHONE-REDUCE-CAPABILITY",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "active-management",
+   "where": "src/prop/phone_cancel.py:654"
+  },
+  {
+   "id": "AM-PHONE-TRAIL-PLAN-GUARDS",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "active-management",
+   "where": "src/prop/phone_trail.py:397"
+  },
+  {
+   "id": "AM-PROP-INFLIGHT-RESERVE",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "active-management",
+   "where": "src/prop/prop_risk_gate.py grade_account_ticket_risk + new prop_reconcile.compute_inflight_risk (PR #25223, OPEN draft, Tier 2 held)"
+  },
+  {
+   "id": "CI-TEST-SHADOW-NEVER-ORDERS",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "This should be handled through structuring the functionality correctly, not with a gate",
+   "cat": "ci-landing",
+   "where": "tests/runtime/test_shadow_never_orders.py (existing; planted cases added by PR #25260, OPEN draft)"
+  },
+  {
+   "id": "CI-account-class-guard",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "ci-guard",
+   "where": "scripts/ci/run_guards.py:133"
+  },
+  {
+   "id": "CI-canonical-config-loaders",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "ci-guard",
+   "where": "scripts/ci/run_guards.py:1033"
+  },
+  {
+   "id": "CI-cost-model-single-owner",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "ci-guard",
+   "where": "scripts/ci/run_guards.py:1643"
+  },
+  {
+   "id": "CI-exit-coverage-matrix-guard",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "ci-guard",
+   "where": "scripts/ci/run_guards.py:1050"
+  },
+  {
+   "id": "CI-matrix-bracket-values",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "ci-guard",
+   "where": "scripts/ci/run_guards.py:1131"
+  },
+  {
+   "id": "CI-matrix-config-agreement",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "ci-guard",
+   "where": "scripts/ci/run_guards.py:1102"
+  },
+  {
+   "id": "CI-pairs-sizing-basis-guard",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "ci-guard",
+   "where": "scripts/ci/run_guards.py:1581"
+  },
+  {
+   "id": "CI-prop-identity-guard",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "ci-guard",
+   "where": "scripts/ci/run_guards.py:1595"
+  },
+  {
+   "id": "CI-qty-legalization-guard",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "ci-guard",
+   "where": "scripts/ci/run_guards.py:2480"
+  },
+  {
+   "id": "CI-risk-basis-agreement",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "ci-guard",
+   "where": "scripts/ci/run_guards.py:1625"
+  },
+  {
+   "id": "CI-roster-promotion-evidence-guard",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "ci-guard",
+   "where": "scripts/ci/run_guards.py:2185"
+  },
+  {
+   "id": "CI-roster-symbol-reachability",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "ci-guard",
+   "where": "scripts/ci/run_guards.py:160"
+  },
+  {
+   "id": "CI-strategy-coverage-guard",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "ci-guard",
+   "where": "scripts/ci/run_guards.py:2531"
+  },
+  {
+   "id": "CI-strategy-decision-record",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "ci-guard",
+   "where": "scripts/ci/run_guards.py:2146"
+  },
+  {
+   "id": "CI-strategy-risk-guard",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "ci-guard",
+   "where": "scripts/ci/run_guards.py:2544"
+  },
+  {
+   "id": "CI-tp-venue-cap-single-owner",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "ci-guard",
+   "where": "scripts/ci/run_guards.py:1672"
+  },
+  {
+   "id": "GATE-EMPTY-SIZING-BRAKE",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "runtime-order-path",
+   "where": "src/runtime/strategy_monocle.py:565-575; pipeline.py:927 (empty_sizing_refused); env STRATEGY_EMPTY_SIZING_BRAKE_DISABLED"
+  },
+  {
+   "id": "GATE-LIVE-MAXQTY-COULD-NOT-LOOK",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "runtime-order-path",
+   "where": "config/instruments.yaml max_qty_venue + src qty_legalize.py (PR #25233, OPEN draft, Tier 2 held)"
+  },
+  {
+   "id": "GATE-MARKET-HOURS",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "If the market is closed the trade won't go through, it can exist as a check but not a gate.",
+   "cat": "runtime-order-path",
+   "where": "src/runtime/market_hours.py:is_market_open; src/runtime/strategy_signal_builders.py (19 us_market_closed + 1 fx_market_closed return sites, e.g. :2919)"
+  },
+  {
+   "id": "GATE-MULTI-ACCOUNT-DISPATCH-ENV",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "runtime-order-path",
+   "where": "src/runtime/pipeline.py:382 _multi_account_dispatch_enabled; refusal reason at pipeline.py:1474"
+  },
+  {
+   "id": "GATE-PROP-RISK-CUSHION",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "runtime-order-path",
+   "where": "src/prop/prop_risk_gate.py (grade_ticket_risk, enforce_ticket_cap, mode()); used by src/units/accounts/prop_risk.py:350, src/prop/breakout_executor.py:510"
+  },
+  {
+   "id": "PRL-R6-ARMING-REQUIRED",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "ci-landing",
+   "where": "scripts/ci/check_pr_landing.py:1665"
+  },
+  {
+   "id": "PYTEST-RUN-REQUIRED",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "ci-landing",
+   "where": ".github/workflows/pytest-run.yml:126"
+  },
+  {
+   "id": "SYSTEM-ACTION-CONCURRENCY-LANES",
+   "choice": "MAKE REPORT-ONLY",
+   "note": "",
+   "cat": "vm-services",
+   "where": "scripts/ops/system_action_route.py:36 (READ_ONLY allowlist; concurrency_group)"
+  },
+  {
+   "id": "AM-PHONE-SHEET-DENYLIST-RECHECK",
+   "choice": "REMOVE",
+   "note": "i have told several managers over the past week to remove this blcoker, the fact that it still exists is entirely out of the scope of what is acceptable manager behavior",
+   "cat": "active-management",
+   "where": "tools/phone-executor/app/src/main/assets/exec.js sheetHit/sheetTarget (existing denylist + elementFromPoint re-check; extended to the card [Details] opener by \u2026"
+  },
+  {
+   "id": "AM-PROP-CLAIM-TIME-BLOCKS",
+   "choice": "REMOVE",
+   "note": "this is managed at the startgey/ risk manager level, adding another gate at the app level is exactly the kind of mistake that lead us to have to do a gate audit now\n",
+   "cat": "active-management",
+   "where": "src/prop/phone_executor.py:353"
+  },
+  {
+   "id": "AM-PROP-HUMAN-HOLD",
+   "choice": "REMOVE",
+   "note": "",
+   "cat": "active-management",
+   "where": "src/prop/prop_amend_gate.py:102"
+  },
+  {
+   "id": "AM-PROP-VM-ACTION-MATRIX",
+   "choice": "REMOVE",
+   "note": "",
+   "cat": "active-management",
+   "where": "scripts/ops/live_review_apply.py:704"
+  },
+  {
+   "id": "GATE-BAR-DEBOUNCE",
+   "choice": "REMOVE",
+   "note": "",
+   "cat": "runtime-order-path",
+   "where": "src/runtime/strategy_monocle.py:466,476; pipeline.py:~830 (bar_debounce_blocked); env STRATEGY_BAR_DEBOUNCE_DISABLED"
+  },
+  {
+   "id": "GATE-REFUSAL-COOLDOWN",
+   "choice": "REMOVE",
+   "note": "",
+   "cat": "runtime-order-path",
+   "where": "src/runtime/strategy_monocle.py:34,321; pipeline.py:867 (recent_refusal_cooldown); env STRATEGY_REFUSAL_COOLDOWN_SECONDS (default 300s)"
+  },
+  {
+   "id": "GATE-STRATEGY-PAUSED-FLAG",
+   "choice": "REMOVE",
+   "note": "",
+   "cat": "runtime-order-path",
+   "where": "src/runtime/pipeline.py:604 (multiplexed_signal_builder) + src/runtime/runtime_flags.py:85 is_strategy_paused"
+  },
+  {
+   "id": "PRL-R7-HOLD-VOCAB",
+   "choice": "REMOVE",
+   "note": "",
+   "cat": "ci-landing",
+   "where": "scripts/ci/check_pr_landing.py:1746"
+  },
+  {
+   "id": "PRL-R8-R9-R14-HOLD-VERIFY",
+   "choice": "REMOVE",
+   "note": "",
+   "cat": "ci-landing",
+   "where": "scripts/ci/check_pr_landing.py:1764"
+  },
+  {
+   "id": "PROPOSED-G1-ML-REAL-MONEY-BAR",
+   "choice": "REMOVE",
+   "note": "",
+   "cat": "proposed-w9",
+   "where": "not in place: proposal from AM-ML (docs/research/ml-deep-audit-2026-11-12.md \u00a7 1.1, \u00a7 3.1)"
+  },
+  {
+   "id": "PYTEST-COLLECT-REQUIRED",
+   "choice": "REMOVE",
+   "note": "",
+   "cat": "ci-landing",
+   "where": ".github/workflows/pytest-collect.yml:91"
+  }
+ ]
+}
