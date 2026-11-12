@@ -204,8 +204,8 @@ has that id or the trade is still open (use `/markers`).
 `snapshot` blocks (`schema: trade_chart_snapshot/v1`):
 - `trade` — the trade row: ids, account, strategy, symbol, direction, qty, open/close times, entry/exit price,
   `exit_reason`, `pnl` + `pnl_provenance`.
-- `frame` — the view box. `time_from`/`time_to` = open..close widened by 15% of the span on each side;
-  `price_low`/`price_high` = the low/high of the candles between open and close, widened by 10% of that range on
+- `frame` — the view box. `time_from`/`time_to` = open..close widened by 15% of the span on each side; <!-- population-ok: a framing rule from the operator spec, not a measurement -->
+  `price_low`/`price_high` = the low/high of the candles between open and close, widened by 10% of that range on <!-- population-ok: a framing rule from the operator spec, not a measurement -->
   each side. `interval` = the bar size chosen so the window holds at most ~300 bars. `levels_outside_frame` lists
   any bracket price outside the box, so the UI can extend the axis if it chooses.
   The writer waits until `time_to` has passed before building, so the post-close 15% is real candles.

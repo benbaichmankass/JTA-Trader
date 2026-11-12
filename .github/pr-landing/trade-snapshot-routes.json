@@ -1,5 +1,7 @@
 {
   "tier": 1,
-  "landing": "self",
-  "why": "Tier-1 read routes GET /api/bot/trades/{id}/snapshot (reads a stored row; returns not_built until the Tier-2 writer lands) and /trades/{id}/markers (journal + local review files, no network), with pure builders and tests. No writes, no order-path or runtime change."
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Read-only Tier-1 routes by CLAUDE.md's definition (observability / read paths: two GETs, no writes, no order path), but src/web/api/* is Tier-2 by name to pr-landing-guard (R5), so the manager reads and lands it.",
+  "why": "GET /api/bot/trades/{id}/snapshot reads a stored row (not_built until the Tier-2 writer lands) and /trades/{id}/markers reads the journal + local review files (no network), with pure builders and tests (UI-REDESIGN-2026-11)."
 }
