@@ -959,6 +959,14 @@ def _resolve_tick_symbols(settings: dict) -> list:
         from src.units.accounts import load_accounts
 
         strategies_cfg = load_strategies_cfg()
+        # POOL-SCORED legs (src/runtime/ml_pool_scoring.py, row ML-ENTRY-EQ-STRUCT-FULL-POOL): their declared population is scored ONCE per decision
+        # close from the pool snapshot, so a symbol only such a leg declares gets a pass only when it holds a package (``pool_picks`` below). Every
+        # other source -- other legs, the declared pull lists -- is unchanged, so a symbol any of them names is still ticked every tick.
+        from src.runtime import ml_pool_scoring as _ps
+        from src.config.symbol_sets import tick_strategies_cfg
+        pool_legs = {n for n, c in (strategies_cfg or {}).items() if isinstance(c, dict) and _ps.is_pool_scored(c)}
+        tick_cfg = tick_strategies_cfg(strategies_cfg) if pool_legs else strategies_cfg
+        rostered_pool_legs: set = set()
         seen: set = set()
         out: list = []
         if primary:
@@ -981,17 +989,23 @@ def _resolve_tick_symbols(settings: dict) -> list:
             # would turn 'the leg does not trade' into 'the leg TRADES while
             # the naked-position cross-check cannot see it', which is the
             # window the operator explicitly declined.
+            rostered_pool_legs.update(pool_legs & set(strategies or []))
             syms = resolve_symbols(
                 declared=getattr(acct, "symbols", None),
                 roster=getattr(acct, "strategies", None),
                 mode=UNION,
-                strategies_cfg=strategies_cfg,
+                strategies_cfg=tick_cfg,
                 exchange=getattr(acct, "exchange", None),
                 account_id=getattr(acct, "name", None),
             )
             for s in syms:
                 s = str(s).strip()
                 if s and s not in seen:
+                    seen.add(s)
+                    out.append(s)
+        if rostered_pool_legs:
+            for s in _ps.picks(strategies_cfg, legs=sorted(rostered_pool_legs)):   # strongest predicted net R first: cash goes to the best pick
+                if s not in seen:
                     seen.add(s)
                     out.append(s)
         return out or [primary]

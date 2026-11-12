@@ -223,9 +223,94 @@ def _append(path: Path, doc: Dict[str, Any]) -> None:
         fh.write(json.dumps(doc, default=str, separators=(",", ":")) + "\n")
 
 
+def _offer(row: Dict[str, Any], vm_verdict: Optional[str]) -> Dict[str, Any]:
+    """TRADE-ACTION-DIRECT-PATH phase 1: a row that needs the operator -> ONE Telegram ask with Approve / Reject
+    (``src/runtime/trade_approvals.py``). Never raises."""
+    try:
+        from src.runtime import trade_approvals
+        return trade_approvals.offer(row, vm_verdict=vm_verdict)
+    except Exception as exc:  # noqa: BLE001
+        return {"state": "error", "detail": f"{type(exc).__name__}: {exc}"[:200]}
+
+
+def process_row(row: Dict[str, Any], *, ref: str, seen_at: datetime, pending: Dict[str, Any],
+                dispatch: Callable[[str], Dict[str, Any]],
+                offer: Callable[[Dict[str, Any], Optional[str]], Dict[str, Any]],
+                alert: Callable[[str], bool], now_fn: Callable[[], datetime], d: Path, log_path: Path,
+                source: Optional[str] = None) -> bool:
+    """ONE new row: classify -> offer (needs the operator) or dispatch (a mandate covers it), with the retry and
+    venue-deferral bookkeeping in ``pending``. Returns True when the row is finished (log it seen), False while it
+    is pending a retry. Shared by the rows-branch pass and the direct-submit pass (TRADE-ACTION-DIRECT-PATH)."""
+    rid = row["review_id"]
+    first = _ts((pending.get(rid) or {}).get("first_seen_at")) or seen_at
+    if (pending.get(rid) or {}).get("deferred") and lri.deferred_step(pending[rid], first, seen_at) == "wait":
+        return False                                    # a venue-deferred close: not due again yet
+    rec: Dict[str, Any] = {"review_id": rid, "order_package_id": row.get("order_package_id"),
+                           "ref": ref, "reviewed_at": row.get("reviewed_at"),
+                           "seen_at": first.isoformat()}
+    if source:
+        rec["source"] = source
+        rv0 = _ts(row.get("reviewed_at"))
+        if rv0:
+            rec["reviewed_to_seen_s"] = round((first - rv0).total_seconds(), 1)
+    _proof(lambda fp: fp.record_row(row, at=first))
+    why = dispatchable(row)
+    auto_id = ltr_auto_mandate.exception_for(row) if why is None else None
+    if auto_id:
+        rec["auto_mandate"] = auto_id
+    if why == rows_lib.ADVICE_ONLY_VERDICT:
+        rec.update(verdict=why, detail=f"advice only: {(row.get('recommendation') or {}).get('action')} "
+                                       f"level {(row.get('recommendation') or {}).get('level')} not executed")
+    elif why:
+        rec.update(verdict="not_dispatchable", detail=why)
+    if why:
+        # Not executed by the VM: if it needs the operator, ask with a one-tap Approve (phase 1).
+        ap = offer(row, rec.get("verdict"))
+        if ap.get("state") not in (None, "not_offered"):
+            rec["approval"] = ap
+    else:
+        res = dispatch(rid)
+        done = now_fn()
+        rec.update(exit=res.get("exit"), verdict=res.get("verdict"), detail=res.get("detail"),
+                   lines=res.get("lines"), done_at=done.isoformat(),
+                   seen_to_done_s=round((done - first).total_seconds(), 1))
+        rv = _ts(row.get("reviewed_at"))
+        if rv:
+            rec["reviewed_to_done_s"] = round((done - rv).total_seconds(), 1)
+        if res.get("exit") in (0, 1, 2) and res.get("verdict") == "dispatched":
+            _proof(lambda fp: fp.record("S4_pickup", at=done, review_id=rid, leg=row.get("leg"),
+                                        accounts=list(row.get("accounts") or [])))
+            entry = _applied_entry(d / "applied.jsonl", rid)
+            _proof(lambda fp: fp.record_writeback(row, entry, at=_ts((entry or {}).get("at")) or done))
+        if res.get("exit") == lri.EXIT_DEFERRED:
+            # The venue deferred (ALPACA-LIVE-MECHANICS 2026-11-06: us_equity closed). Keep the row and
+            # re-dispatch it every DEFERRED_RETRY_S until the venue answers; never mark it seen on a deferral.
+            if lri.deferred_step(pending.get(rid), first, done) != "expired":
+                att = int((pending.get(rid) or {}).get("attempts") or 0) + 1
+                pending[rid] = lri.deferred_pending(first, done, att, res.get("detail"))
+                if att == 1 or att % 10 == 0:
+                    _append(log_path, dict(rec, deferred=True, attempts=att))
+                return False
+            rec["verdict"] = "expired"
+            alert(f"⚠️ live-review {rid} ({row.get('order_package_id')}): the venue deferred this action for "
+                  f"{lri.DEFERRED_MAX_S // 3600} h; expired without applying ({res.get('detail')})")
+        if res.get("exit") == 3:
+            if (done - first).total_seconds() < RETRY_WINDOW_S:
+                att = int((pending.get(rid) or {}).get("attempts") or 0) + 1
+                pending[rid] = {"first_seen_at": first.isoformat(), "attempts": att}
+                if att == 1 or att % 10 == 0:
+                    _append(log_path, dict(rec, retrying=True, attempts=att))
+                return False
+            rec["verdict"] = "expired"
+    pending.pop(rid, None)
+    _append(log_path, rec)
+    return True
+
+
 def run_pass(git: Git = _git, dispatch: Callable[[str, str], Dict[str, Any]] = _dispatch,
              now_fn: Callable[[], datetime] = _now, logs: Optional[Path] = None,
-             alert: Callable[[str], bool] = _alert) -> Dict[str, Any]:
+             alert: Callable[[str], bool] = _alert,
+             offer: Callable[[Dict[str, Any], Optional[str]], Dict[str, Any]] = _offer) -> Dict[str, Any]:
     """One fetch -> zero or more dispatches. Returns the status it wrote."""
     d = logs or log_dir()
     state_path, status_path, log_path = d / "rows_watch_state.json", d / "rows_watch_status.json", d / "rows_watch.jsonl"
@@ -278,67 +363,122 @@ def run_pass(git: Git = _git, dispatch: Callable[[str, str], Dict[str, Any]] = _
     if state.pop("shrink_alerted", None):
         status["shrink_cleared"] = True
     pending: Dict[str, Any] = state.get("pending") or {}
+    direct_seen = set((_load(d / DIRECT_STATE) or {}).get("seen") or [])
+    for r in rows:                                   # handled already via the direct submit (its git LOG copy)
+        if r["review_id"] in direct_seen:
+            seen.add(r["review_id"])
     new = [r for r in rows if r["review_id"] not in seen]
     status["new"] = len(new)
     for row in new:
-        rid = row["review_id"]
-        first = _ts((pending.get(rid) or {}).get("first_seen_at")) or seen_at
-        if (pending.get(rid) or {}).get("deferred") and lri.deferred_step(pending[rid], first, seen_at) == "wait":
-            continue                                    # a venue-deferred close: not due again yet
-        rec: Dict[str, Any] = {"review_id": rid, "order_package_id": row.get("order_package_id"),
-                               "ref": tip, "reviewed_at": row.get("reviewed_at"),
-                               "seen_at": first.isoformat()}
-        _proof(lambda fp: fp.record_row(row, at=first))
-        why = dispatchable(row)
-        auto_id = ltr_auto_mandate.exception_for(row) if why is None else None
-        if auto_id:
-            rec["auto_mandate"] = auto_id
-        if why == rows_lib.ADVICE_ONLY_VERDICT:
-            rec.update(verdict=why, detail=f"advice only: {(row.get('recommendation') or {}).get('action')} "
-                                           f"level {(row.get('recommendation') or {}).get('level')} not executed")
-        elif why:
-            rec.update(verdict="not_dispatchable", detail=why)
-        else:
-            res = dispatch(rid, tip)
-            done = now_fn()
-            rec.update(exit=res.get("exit"), verdict=res.get("verdict"), detail=res.get("detail"),
-                       lines=res.get("lines"), done_at=done.isoformat(),
-                       seen_to_done_s=round((done - first).total_seconds(), 1))
-            rv = _ts(row.get("reviewed_at"))
-            if rv:
-                rec["reviewed_to_done_s"] = round((done - rv).total_seconds(), 1)
-            if res.get("exit") in (0, 1, 2) and res.get("verdict") == "dispatched":
-                _proof(lambda fp: fp.record("S4_pickup", at=done, review_id=rid, leg=row.get("leg"),
-                                            accounts=list(row.get("accounts") or [])))
-                entry = _applied_entry(d / "applied.jsonl", rid)
-                _proof(lambda fp: fp.record_writeback(row, entry, at=_ts((entry or {}).get("at")) or done))
-            if res.get("exit") == lri.EXIT_DEFERRED:
-                # The venue deferred (ALPACA-LIVE-MECHANICS 2026-11-06: us_equity closed). Keep the row and
-                # re-dispatch it every DEFERRED_RETRY_S until the venue answers; never mark it seen on a deferral.
-                if lri.deferred_step(pending.get(rid), first, done) != "expired":
-                    att = int((pending.get(rid) or {}).get("attempts") or 0) + 1
-                    pending[rid] = lri.deferred_pending(first, done, att, res.get("detail"))
-                    if att == 1 or att % 10 == 0:
-                        _append(log_path, dict(rec, deferred=True, attempts=att))
-                    continue
-                rec["verdict"] = "expired"
-                alert(f"⚠️ live-review {rid} ({row.get('order_package_id')}): the venue deferred this action for "
-                      f"{lri.DEFERRED_MAX_S // 3600} h; expired without applying ({res.get('detail')})")
-            if res.get("exit") == 3:
-                if (done - first).total_seconds() < RETRY_WINDOW_S:
-                    att = int((pending.get(rid) or {}).get("attempts") or 0) + 1
-                    pending[rid] = {"first_seen_at": first.isoformat(), "attempts": att}
-                    if att == 1 or att % 10 == 0:
-                        _append(log_path, dict(rec, retrying=True, attempts=att))
-                    continue
-                rec["verdict"] = "expired"
-        pending.pop(rid, None)
-        seen.add(rid)
-        _append(log_path, rec)
+        if process_row(row, ref=tip, seen_at=seen_at, pending=pending, dispatch=lambda rid: dispatch(rid, tip),
+                       offer=offer, alert=alert, now_fn=now_fn, d=d, log_path=log_path):
+            seen.add(row["review_id"])
     state.update(seen=sorted(seen), pending=pending, tip_rows=len(rows))
     _write_json(state_path, state)
     _write_json(status_path, status)
     return status
+
+
+# ─────────────────────────── TRADE-ACTION-DIRECT-PATH phase 2: rows submitted DIRECTLY to the VM (no git)
+#: ``POST /api/bot/live-review/rows`` writes ``<DIRECT_ROOT>/comms/live_review/rows/<review_id>.json`` (create-only).
+DIRECT_STATE = "direct_rows_state.json"
+DIRECT_TICK_S = 2
+
+
+def direct_root() -> Path:
+    from src.utils.paths import repo_root
+    return Path(repo_root()) / "runtime_logs" / "live_review" / "direct"
+
+
+def _direct_files(root: Optional[Path] = None) -> Tuple[str, ...]:
+    d = (root or direct_root()) / rows_lib.ROWS_DIR
+    try:
+        return tuple(sorted(p.name for p in d.glob("*.json"))) if d.is_dir() else ()
+    except OSError:
+        return ()
+
+
+def _dispatch_direct(review_id: str) -> Dict[str, Any]:
+    """The dispatcher with --apply, reading the row from the direct tree and its evidence from the wake poster's
+    local copy (git only as the fallback for evidence). Never raises."""
+    from src.runtime.live_review_wake_post import local_evidence_root
+    try:
+        r = subprocess.run([sys.executable, str(DISPATCH), "--review-id", review_id, "--apply",
+                            "--local-root", str(direct_root()), "--local-root", str(local_evidence_root())],
+                           cwd=ROOT, capture_output=True, text=True, timeout=DISPATCH_TIMEOUT_S)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {"exit": 3, "verdict": "could_not_look", "detail": f"dispatcher did not run: {type(exc).__name__}",
+                "lines": []}
+    lines = [ln for ln in (r.stdout or "").splitlines() if ln.startswith(">>>")]
+    summary: Dict[str, Any] = {}
+    for ln in (r.stdout or "").splitlines():
+        if ln.startswith("{"):
+            try:
+                summary = json.loads(ln)
+            except ValueError:
+                pass
+    return {"exit": r.returncode, "verdict": summary.get("verdict"), "detail": summary.get("detail"),
+            "lines": lines[-20:]}
+
+
+def run_direct_pass(dispatch: Callable[[str], Dict[str, Any]] = _dispatch_direct,
+                    now_fn: Callable[[], datetime] = _now, logs: Optional[Path] = None,
+                    root: Optional[Path] = None, alert: Callable[[str], bool] = _alert,
+                    offer: Callable[[Dict[str, Any], Optional[str]], Dict[str, Any]] = _offer) -> Dict[str, Any]:
+    """Every new direct row -> :func:`process_row` (the SAME classification, offer, dispatch and retries as a
+    rows-branch row). A review_id the branch pass already handled is skipped (and vice versa in run_pass), so a
+    row submitted both ways, or exported to the branch later, is acted on once. Receipts go to the same
+    ``rows_watch.jsonl`` with ``source: direct``."""
+    d, base = logs or log_dir(), root or direct_root()
+    state_path, log_path = d / DIRECT_STATE, d / "rows_watch.jsonl"
+    seen_at = now_fn()
+    state = _load(state_path) or {"seen": [], "pending": {}}
+    seen = set(state.get("seen") or [])
+    branch_seen = set((_load(d / "rows_watch_state.json") or {}).get("seen") or [])
+    pending: Dict[str, Any] = state.get("pending") or {}
+    handled, bad = 0, []
+    for name in _direct_files(base):
+        rid = name[:-5]
+        if rid in seen:
+            continue
+        if rid in branch_seen:
+            seen.add(rid)
+            continue
+        rel = f"{rows_lib.ROWS_DIR}/{name}"
+        try:
+            text = (base / rel).read_text()
+        except OSError:
+            continue
+        row, why = rows_lib.parse_row_file(rel, text)
+        if row is None:
+            bad.append(name)
+            seen.add(rid)
+            _append(log_path, {"review_id": rid, "source": "direct", "verdict": "refused", "detail": why,
+                               "seen_at": seen_at.isoformat()})
+            continue
+        if process_row(row, ref="direct", seen_at=seen_at, pending=pending, dispatch=dispatch, offer=offer,
+                       alert=alert, now_fn=now_fn, d=d, log_path=log_path, source="direct"):
+            seen.add(rid)
+            handled += 1
+    state.update(seen=sorted(seen), pending=pending)
+    _write_json(state_path, state)
+    return {"pass_at": seen_at.isoformat(), "handled": handled, "pending": sorted(pending), "bad": bad}
+
+
+def _direct_loop() -> None:
+    """Every DIRECT_TICK_S: a cheap listing; a pass when a new direct row landed, or rows are pending a retry and
+    a full POLL_S has passed. Its own thread, so a 45-s rows-branch fetch never delays a direct row."""
+    last_pass, last_files = 0.0, ()
+    while True:
+        files = _direct_files()
+        pending = bool((_load(log_dir() / DIRECT_STATE) or {}).get("pending"))
+        if files != last_files or (pending and time.monotonic() - last_pass >= POLL_S):
+            try:
+                run_direct_pass()
+            except Exception:  # noqa: BLE001 — contained (no halting)
+                logger.warning("rows-watch: run_direct_pass failed", exc_info=True)
+            last_pass, last_files = time.monotonic(), files
+        time.sleep(DIRECT_TICK_S)
 
 
 def _proof(fn: Callable[[Any], Any]) -> None:
@@ -468,13 +608,58 @@ def run_directed_pass(git: Git = _git, vm_pass: Callable[[str], Dict[str, Any]] 
     return status
 
 
+SPOOL_TICK_S = 2
+
+
+def _spool_files() -> Tuple[str, ...]:
+    try:
+        from src.runtime import trade_approvals
+        d = trade_approvals.spool_root() / directed_actions.RECORDS_DIR
+        return tuple(sorted(p.name for p in d.glob("*.json"))) if d.is_dir() else ()
+    except Exception:  # noqa: BLE001
+        return ()
+
+
+def _spool_pass() -> Dict[str, Any]:
+    """Run the operator-approval spool pass (directed_action.py spool-pass) as a subprocess. Never raises."""
+    try:
+        r = subprocess.run([sys.executable, str(DIRECTED), "spool-pass"],
+                           cwd=ROOT, capture_output=True, text=True, timeout=DISPATCH_TIMEOUT_S)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {"exit": 3, "detail": f"spool pass did not run: {type(exc).__name__}"}
+    return {"exit": r.returncode}
+
+
+def spool_due(files: Tuple[str, ...], last_files: Tuple[str, ...], since_last_s: float) -> bool:
+    """A spool pass is due when a NEW approval landed, or records are still waiting (a retry / venue deferral)
+    and a full directed poll interval has passed (so a pending record does not respawn a pass every tick)."""
+    if not files:
+        return False
+    return files != last_files or since_last_s >= directed_actions.POLL_S
+
+
 def _directed_loop() -> None:
+    """Every SPOOL_TICK_S: the local operator-approval spool (TRADE-ACTION-DIRECT-PATH phase 1, cheap stat);
+    every directed_actions.POLL_S: the directed/actions git fetch. Sequential in ONE thread, so the two never
+    write the directed state file at the same time."""
+    last_git = 0.0
+    last_spool, last_files = 0.0, ()
     while True:
-        try:
-            run_directed_pass()
-        except Exception:  # noqa: BLE001 — contained; the next pass tries again (no halting)
-            logger.warning("rows-watch: run_directed_pass failed", exc_info=True)
-        time.sleep(directed_actions.POLL_S)
+        now = time.monotonic()
+        files = _spool_files()
+        if spool_due(files, last_files, now - last_spool):
+            try:
+                _spool_pass()
+            except Exception:  # noqa: BLE001 — contained (no halting)
+                logger.warning("rows-watch: spool pass failed", exc_info=True)
+            last_spool, last_files = time.monotonic(), _spool_files()
+        if now - last_git >= directed_actions.POLL_S:
+            try:
+                run_directed_pass()
+            except Exception:  # noqa: BLE001 — contained; the next pass tries again (no halting)
+                logger.warning("rows-watch: run_directed_pass failed", exc_info=True)
+            last_git = time.monotonic()
+        time.sleep(SPOOL_TICK_S)
 
 
 def _loop() -> None:
@@ -501,6 +686,7 @@ def ensure_started(force: bool = False) -> bool:
                 return False
             threading.Thread(target=_loop, name="ltr-rows-watch", daemon=True).start()
             threading.Thread(target=_directed_loop, name="directed-actions-watch", daemon=True).start()
+            threading.Thread(target=_direct_loop, name="ltr-direct-rows", daemon=True).start()
             _started = True
             return True
         finally:

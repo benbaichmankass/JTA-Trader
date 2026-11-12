@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "SITE-AUTH step (iii), Tier 2 by path (deploy/caddy/Caddyfile, deployed by vm-caddy-deploy). The manager dispatched it at 22:26Z. The manager merges, then deploys with vm-caddy-deploy, whose install_caddy.sh runs `caddy validate` and refuses to reload on failure. NOT validated locally: running a downloaded caddy binary was denied in this sandbox. Post-deploy check: /api/diag/journalctl?unit=caddy.service shows http.log.access JSON lines with no Authorization, X-Diag-Token, X-Work-Store-Token or Cookie values, and no ticket= or token= query values.",
+  "why": "Adds an access log to the ict-bot.duckdns.org site block, written to the caddy.service journal. Without it no API consumer can be inventoried from evidence before SITE_AUTH_ENFORCE is armed. A site log is its own logger, so it repeats the global filter's credential-header deletes and also strips the ticket/token/access_token/key query values. No order path, strategy or config change."
+}

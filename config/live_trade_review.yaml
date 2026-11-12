@@ -163,7 +163,9 @@ due:
   # Per-package cooldown: at most one review per closed bar of the leg's
   # timeframe, except for these events. adverse_r (2026-10-28): a slide from
   # -0.5R to -0.75R inside one bar is reviewed, not held for the next bar.
-  cooldown_exempt: [giveback, mechanics, adverse_r]
+  # conflicting_exposure (2026-11-11, row CONFLICTING-EXPOSURE-ALERT): a symbol held long AND short across the
+  # books is reviewed when it appears, not held for the next bar; it fires once per conflict key.
+  cooldown_exempt: [giveback, mechanics, adverse_r, conflicting_exposure]
 
 # -- attention watch (LTR-1B-ATTENTION-PROBE, 2026-10-27) ----------------------
 # Read by scripts/ops/attention_watch.py::probe_live_review_due_stale ONLY; the due

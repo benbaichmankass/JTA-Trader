@@ -181,7 +181,9 @@ def test_account_routing_and_descriptions():
     # DEMO-FLOOR RULE 2026-10-27 (operator rule relayed by the manager; Tier-3, held PR): uso_trend_1h is back on its demo floor (alpaca_paper);
     # the three pullback cells stay off (same-symbol with a 1d leg, no slice support on this account).
     for name in _BUILDERS:
-        assert (name in acct["strategies"]) == (name == "uso_trend_1h"), name
+        # THURSDAY-PLANNING b1 2026-11-11 (operator verbatim "Put qqq and tlt on the paper floor now; promote tlt to real
+        # money"): qqq_pullback_1h is back too, its QQQ share set by comms/same_symbol_allocation/qqq-alpaca_paper.json.
+        assert (name in acct["strategies"]) == (name in ("uso_trend_1h", "qqq_pullback_1h")), name
     assert "USO" in acct["symbols"]
     # SPY/QQQ/TLT already routed; the 1h pullback cells reuse them.
     for sym in ("SPY", "QQQ", "TLT"):

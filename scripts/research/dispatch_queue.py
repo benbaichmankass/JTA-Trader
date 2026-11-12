@@ -1050,6 +1050,22 @@ STALE_PRESSURE_HOURS = 24.0
 #: a listener AND infra) -- this only narrows the saturation count.
 NON_COMPETING_EVENTS = frozenset({"workflow_run"})
 
+#: An INFRA run still `queued` this long after creation is STUCK for the infra-yield decision (lane
+#: RESEARCH-DISPATCH-STALL-1112). The 24 h STALE_PRESSURE_HOURS window is right for the saturation caps but far too
+#: long for the yield: MEASURED 2026-11-11, runs 43108391534 (22:19Z) and 43116747477 (23:59Z) deferred every fire on
+#: "33 / 29 infra run(s) queued" -- system-actions / vm-* runs frozen 3-6 h in a ~490-run backlog (three send-ping
+#: fan-outs before #25035), with 16-18 github_runner units due, capacity 4 and 0 in flight. The starvation floor lifts
+#: only a repo_queued block, so nothing lifted it: a halt (Prime Directive 7). A queued infra run waiting longer than
+#: this is not helped by research holding off; a FRESH one still makes research yield exactly as before.
+INFRA_STUCK_HOURS = 1.0
+
+#: A RESEARCH run still `queued` this long after creation is STUCK for the in-flight cap (lane RESEARCH-DISPATCH-STALL-1112,
+#: manager 2026-11-12 03:41Z). MEASURED run 43148249357 (03:30Z): "research compute in flight 8 (cap 8)" with research-script-run
+#: holding 0 queued runs; the counted runs included gpu-burst-train runs created by `issues` events at 20:30-20:34Z and still
+#: queued ~7 h later. The cap exists to bound research load on the runner pool; a run that has waited this long holds no
+#: runner. A run actually in_progress always counts in full.
+RESEARCH_STUCK_HOURS = 1.0
+
 
 def _run_age_hours(row: Dict[str, Any], now: datetime) -> Optional[float]:
     """Hours since the run was created, or None when createdAt is unreadable."""
@@ -1068,7 +1084,9 @@ def _run_age_hours(row: Dict[str, Any], now: datetime) -> Optional[float]:
 def backpressure(research_names: Dict[str, str], *, max_inflight: int, max_queued: int,
                  runs_by_status: Optional[Dict[str, Optional[List[Dict[str, Any]]]]] = None,
                  now: Optional[datetime] = None, stale_after_hours: float = STALE_PRESSURE_HOURS,
-                 infra_names: Optional[List[str]] = None, infra_yield_at: int = 1) -> Dict[str, Any]:
+                 infra_names: Optional[List[str]] = None, infra_yield_at: int = 1,
+                 infra_stuck_after_hours: float = INFRA_STUCK_HOURS,
+                 research_stuck_after_hours: float = RESEARCH_STUCK_HOURS) -> Dict[str, Any]:
     """What the runner pool looks like before this cycle fires anything.
 
     Returns {inflight_research, repo_queued, stale_ignored, block, detail}.
@@ -1087,7 +1105,14 @@ def backpressure(research_names: Dict[str, str], *, max_inflight: int, max_queue
     deferred -- including fires to trainer/Kaggle, because each of those backends' workflows also holds a
     GitHub runner while it polls the remote job (measured: research-script-run-trainer/-kaggle loop on
     ubuntu-latest up to their 360-min timeouts). GitHub has no job priority, so not adding a job while
-    infra waits is the only yield available on a shared runner pool."""
+    infra waits is the only yield available on a shared runner pool.
+
+    A queued infra run older than `infra_stuck_after_hours` is STUCK for the yield (INFRA_STUCK_HOURS): it is
+    reported in `infra_stuck_ignored` and does not count toward `infra_yield_at`. It still counts toward the
+    repo-queued cap until `stale_after_hours`. An unreadable `createdAt` counts as fresh.
+
+    Likewise a QUEUED research run older than `research_stuck_after_hours` (RESEARCH_STUCK_HOURS) does not count toward
+    `inflight_research` / `by_name` (reported as `research_stuck_ignored`); an in_progress research run always counts."""
     if runs_by_status is None:
         runs_by_status = {st: gh_runs(st) for st in ("queued", "in_progress")}
     now = now or datetime.now(timezone.utc)
@@ -1109,21 +1134,36 @@ def backpressure(research_names: Dict[str, str], *, max_inflight: int, max_queue
     inprog_all = list(runs_by_status.get("in_progress") or [])
     queued, inprog = fresh(queued_all), fresh(inprog_all)
     stale = (len(queued_all) - len(queued)) + (len(inprog_all) - len(inprog))
-    inflight = sum(1 for r in queued + inprog if str(r.get("workflowName")) in names)
+    research_queued = [r for r in queued if str(r.get("workflowName")) in names]
+    research_live = [r for r in research_queued
+                     if (_run_age_hours(r, now) is None or _run_age_hours(r, now) <= research_stuck_after_hours)]
+    research_stuck = len(research_queued) - len(research_live)
+    counted = research_live + [r for r in inprog if str(r.get("workflowName")) in names]
+    inflight = len(counted)
     by_name: Dict[str, int] = {}
-    for r in queued + inprog:
-        if str(r.get("workflowName")) in names:
-            by_name[str(r["workflowName"])] = by_name.get(str(r["workflowName"]), 0) + 1
+    for r in counted:
+        by_name[str(r["workflowName"])] = by_name.get(str(r["workflowName"]), 0) + 1
     competing = [r for r in queued if str(r.get("event") or "") not in NON_COMPETING_EVENTS]
     listeners = len(queued) - len(competing)
     infra = set(infra_names or [])
-    infra_waiting = sorted({str(r.get("workflowName")) for r in queued if str(r.get("workflowName")) in infra})
-    infra_queued = sum(1 for r in queued if str(r.get("workflowName")) in infra)
+    infra_rows = [r for r in queued if str(r.get("workflowName")) in infra]
+    infra_fresh = []
+    for r in infra_rows:
+        age = _run_age_hours(r, now)
+        if age is None or age <= infra_stuck_after_hours:
+            infra_fresh.append(r)
+    infra_stuck = len(infra_rows) - len(infra_fresh)
+    infra_waiting = sorted({str(r.get("workflowName")) for r in infra_fresh})
+    infra_queued = len(infra_fresh)
     out = {"inflight_research": inflight, "by_name": by_name, "repo_queued": len(competing), "stale_ignored": stale, "block": None,
-           "infra_queued": infra_queued, "listener_queued_ignored": listeners,
-           "detail": f"research compute in flight {inflight} (cap {max_inflight}); repo runs queued "
+           "infra_queued": infra_queued, "infra_stuck_ignored": infra_stuck, "listener_queued_ignored": listeners,
+           "research_stuck_ignored": research_stuck,
+           "detail": f"research compute in flight {inflight} (cap {max_inflight}; {research_stuck} research run(s) queued "
+                     f"> {research_stuck_after_hours:g} h not counted); repo runs queued "
                      f"{len(competing)} (cap {max_queued}; {listeners} workflow_run listener run(s) not counted); "
-                     f"{stale} stuck run(s) older than {stale_after_hours:g} h ignored"}
+                     f"{stale} stuck run(s) older than {stale_after_hours:g} h ignored; infra queued {infra_queued} "
+                     f"fresh (yield at {max(1, int(infra_yield_at))}; {infra_stuck} stuck > {infra_stuck_after_hours:g} h "
+                     "not yielded to)"}
     # RESEARCH-FLOW 2026-11-02 (manager, relaying the operator's "get research flowing"): defer only when infra_yield_at or more
     # infra runs are queued (config limits.infra_yield_at; default 1 = the original rule). --max-repo-queued is untouched.
     if infra_queued >= max(1, int(infra_yield_at)):
@@ -1515,7 +1555,11 @@ def main(argv: Optional[List[str]] = None) -> int:
                                 max_queued=args.max_repo_queued,
                                 stale_after_hours=args.pressure_stale_hours,
                                 infra_names=list((cfg or {}).get("limits", {}).get("infra_workflows") or []),
-                                infra_yield_at=int((cfg or {}).get("limits", {}).get("infra_yield_at", 1)))
+                                infra_yield_at=int((cfg or {}).get("limits", {}).get("infra_yield_at", 1)),
+                                infra_stuck_after_hours=float((cfg or {}).get("limits", {}).get(
+                                    "infra_stuck_hours", INFRA_STUCK_HOURS)),
+                                research_stuck_after_hours=float((cfg or {}).get("limits", {}).get(
+                                    "research_stuck_hours", RESEARCH_STUCK_HOURS)))
         print(f"backpressure: {pressure.get('detail') or pressure.get('block')}", file=sys.stderr)
         _starve_h = args.starvation_hours if args.starvation_hours is not None else \
             float((cfg or {}).get("limits", {}).get("starvation_hours", STARVATION_HOURS))

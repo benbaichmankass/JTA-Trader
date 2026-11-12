@@ -65,7 +65,7 @@ attribution:
       gross_r: 4.088
 manifest:
   entry: tested
-  exit: untested
+  exit: tested
   filter: untested
   regime_gating: untested
   timeframe: untested
@@ -110,6 +110,77 @@ levers:
       best_delta_r_per_trade: -0.2593
       fold_stability: 0.125
       reading: every tested value is worse than the baseline
+  exit:
+    atr_stop_mult:
+      tests:
+      - value: '1.875'
+        baseline_value: '1.5'
+        arm: atr_stop_mult_hi
+        unit: RQ-20261106-023
+        window: 2020-11-02..2026-11-06
+        n: 45
+        net_r: 15.3976
+        baseline_n: 46
+        baseline_net_r: 16.0541
+        delta_net_r: -0.6565
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 2.8819
+        verdict: fail
+        joint_change: false
+      - value: '1.125'
+        baseline_value: '1.5'
+        arm: atr_stop_mult_lo
+        unit: RQ-20261106-023
+        window: 2020-11-02..2026-11-06
+        n: 47
+        net_r: 18.7045
+        baseline_n: 46
+        baseline_net_r: 16.0541
+        delta_net_r: 2.6504
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 2.979
+        verdict: fail
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: 0.0576
+      fold_stability: 0.875
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+    tp_r:
+      tests:
+      - value: '7.5'
+        baseline_value: '6.0'
+        arm: tp_r_hi
+        unit: RQ-20261106-023
+        window: 2020-11-02..2026-11-06
+        n: 46
+        net_r: 16.0541
+        baseline_n: 46
+        baseline_net_r: 16.0541
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 2.9715
+        verdict: fail
+        joint_change: false
+      - value: '4.5'
+        baseline_value: '6.0'
+        arm: tp_r_lo
+        unit: RQ-20261106-023
+        window: 2020-11-02..2026-11-06
+        n: 46
+        net_r: 16.0541
+        baseline_n: 46
+        baseline_net_r: 16.0541
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 2.9715
+        verdict: fail
+        joint_change: false
+      shape: flat
+      points: 2
+      best_delta_r_per_trade: 0.0
+      fold_stability: 1.0
+      reading: no response at the tested values
   other:
     structure_exit:
       tests:

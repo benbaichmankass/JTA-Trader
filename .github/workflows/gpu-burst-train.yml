@@ -38,8 +38,8 @@ name: gpu-burst-train
 # gates safely is to ask this workflow to report on itself without proceeding to
 # spend (PI-20260924-5V6UVR9J-0002).
 on:
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [gpu-burst-train]
 
 permissions:
   contents: write   # commit the updated ledger
@@ -55,7 +55,7 @@ permissions:
 # still can't run at once); every other issue gets a unique throwaway group
 # (its own run id) and can never touch a queued burst.
 concurrency:
-  group: ${{ contains(github.event.issue.labels.*.name, 'gpu-burst-train') && 'gpu-burst-train' || format('gpu-burst-skip-{0}', github.run_id) }}
+  group: ${{ contains(github.event.client_payload.issue.labels.*.name, 'gpu-burst-train') && 'gpu-burst-train' || format('gpu-burst-skip-{0}', github.run_id) }}
   cancel-in-progress: false
 
 jobs:
@@ -68,12 +68,12 @@ jobs:
     # convention every other issues-triggered secret-holding workflow in this
     # repo already uses (system-actions.yml, vm-ib-gateway-live-login-test.yml).
     if: |
-      contains(github.event.issue.labels.*.name, 'gpu-burst-train') &&
-      (github.event.issue.user.login == github.repository_owner ||
-       github.event.issue.user.login == 'github-actions[bot]')
+      contains(github.event.client_payload.issue.labels.*.name, 'gpu-burst-train') &&
+      (github.event.client_payload.issue.user.login == github.repository_owner ||
+       github.event.client_payload.issue.user.login == 'github-actions[bot]')
     runs-on: ubuntu-latest
     env:
-      ISSUE_BODY: ${{ github.event.issue.body }}
+      ISSUE_BODY: ${{ github.event.client_payload.issue.body }}
       GPU_PROVIDER: ${{ vars.GPU_PROVIDER }}
       GPU_BURST_ARMED: ${{ vars.GPU_BURST_ARMED }}
     steps:
@@ -302,7 +302,7 @@ jobs:
             } else {
               body = `🧮 **GPU burst — dry preflight only** for \`${exp}\` (est $${est}).\nBudget gate passed; **no pod launched, no spend** (GPU_BURST_ARMED≠1 or GPU_PROVIDER unset). Arm it once a provider adapter is verified.`;
             }
-            await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
-            await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, state: "closed" });
+            await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), body });
+            await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), state: "closed" });
 
 # no-durable-result: ML training run tracked by the model registry/gpu spend ledger, not the research/results queue

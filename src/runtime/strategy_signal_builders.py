@@ -6780,8 +6780,9 @@ def ml_entry_v2_signal_builder(settings: dict) -> Dict[str, Any]:
 
 
 # ── ml_entry_eq — the EQUITY-NATIVE entry model, alpaca_paper testing leg (row ML-ENTRY-EQUITY-NATIVE, Tier 2) ──
-_ML_ENTRY_EQ_DECIDED: set = set()
-_ML_ENTRY_EQ_STRUCT_DECIDED: set = set()
+from src.runtime.ml_pool_scoring import decided_set as _pool_decided_set   # noqa: E402 -- the memo is shared with the tick's pool picker
+_ML_ENTRY_EQ_DECIDED: set = _pool_decided_set("ml_entry_eq")
+_ML_ENTRY_EQ_STRUCT_DECIDED: set = _pool_decided_set("ml_entry_eq_struct")
 
 
 def ml_entry_eq_signal_builder(settings: dict) -> Dict[str, Any]:
@@ -6840,13 +6841,22 @@ def _ml_entry_eq_build(settings: dict, NAME: str, _DECIDED: set) -> Dict[str, An
     memo = (symbol, snap["bar_close"])
     if memo in _DECIDED:
         return _none("already_decided_this_bar", symbol, str(snap["bar_close"]))
+    # The WHOLE pool is scored once per decision close (src/runtime/ml_pool_scoring.py, row ML-ENTRY-EQ-STRUCT-FULL-POOL); this tick only looks its
+    # symbol up. A symbol outside the leg's declared list falls back to the one-symbol path (same function, same answer).
+    from src.runtime import ml_pool_scoring as PS
     try:
-        pkg = L.order_package({"symbol": symbol, **vcfg}, snap)
+        res = PS.batch(NAME, vcfg, snap)
+        pkg = res.get(symbol)
+        if pkg is None:
+            pkg = L.order_package({"symbol": symbol, **vcfg}, snap)
+        elif isinstance(pkg, str):
+            raise ValueError(pkg)
     except ValueError as exc:
         if str(exc) != "not_a_decision_bar":
             _DECIDED.add(memo)
-        if len(_DECIDED) > 4096:
-            _DECIDED.clear()
+        if len(_DECIDED) > 4096:   # prune OLDER bars only: clearing the current bar's memo could re-emit a package already sent this bar
+            for _m in [m for m in _DECIDED if m[1] != snap["bar_close"]]:
+                _DECIDED.discard(_m)
         return _none(str(exc), symbol, str(snap["bar_close"]))
     _DECIDED.add(memo)
     try:

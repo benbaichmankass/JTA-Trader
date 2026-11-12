@@ -1,0 +1,92 @@
+# Hand-authored 2026-11-12 by the ML standing lane part 3 (row ML-QUEUE-DIVERSIFY, Tier 1), dispatched by Manager Session 2026-11-11a (04:00Z instruction b). Decision rule registered BEFORE any run; pushed before the run. Gates this adds or changes: none.
+id: RQ-20261112-a7e8-04
+title: 'SIZING, not direction: does risking more on ml_decision_entry decisions it scores higher (w = clip(pred/0.2, 0.5, 2)) beat flat sizing per unit of risk, net of cost, on its held-out year?'
+status: queued
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml_health
+priority: 2
+kind: experiment
+compute: cpu_light
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 40
+  basis: INFERRED from RQ-20261112-a7e8-03 (same fetch, table and frozen scoring; the bootstrap is 2000 resamples of ~4,000 clusters).
+  why_runner: Keyless public Binance Vision klines and the committed served booster; CPU. Runs in the dispatched lane's session container (as 8d20-01 / a7e8-03), reproducible on research-script-run.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+question: 'Holding the served ml_decision_entry_v1''s held-out decision set fixed (tau 0.1, 2025-10-01..2026-09-29), does weighting each decision''s risk by w = clip(pred / 0.2, 0.5, 2.0), where pred is the model''s own predicted net R, earn more net R per unit of risk than flat sizing?'
+why_this_matters: 'Row ML-QUEUE-DIVERSIFY (operator 2026-11-11 a6, "Accept, and diversify the queue"): all queued ML units were regime or direction work. This is a SIZING question on a real-money ENTRY model: the model''s score is used today only as a take/skip threshold, and every decision is sized the same. If the score carries magnitude, score-proportional risk is a cheaper lever than a better direction model (and a7e8-03 just read the direction selection as not significant). Consumer if it passes: ml_entry''s per-decision risk weight, a Tier-3 sizing proposal held for the manager.'
+power:
+  expected_n: 11000
+  min_detectable_effect: 0.02
+  effect_units: metric
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'The decision set is a7e8-03''s (n = 11,240 on the same window, MEASURED there; this unit does not read outcomes until its own run). A per-unit-risk delta of 0.02 R with per-decision sd ~1 R and ~4,000 decision-time clusters is detectable; the cluster bootstrap is the interval that gates. Below 100 decisions INDETERMINATE. DISCLOSED EDIT (2026-11-12, after the local read at 04:08:30Z): power.design relabelled paired -> one_sample because the power gate (research_queue.required_n) accepts only one_sample / two_sample; a paired re-weighting of the same trades is a one-sample test on the per-decision difference. The decision_rule, statistic, weight map and thresholds are unchanged.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on public candles over a pinned, already-claimed window; nothing accrues.
+practice_precedent: 'T2 / M4 (docs/reference/trading-and-model-practice-principles.md): a fixed, pre-declared sizing map against the flat baseline on the same trades; one held-out read'
+intervention_controls:
+  not_applicable: an offline sizing replay of a frozen model's held-out decisions; no live action
+decision_rule:
+  id: RULE-RQ20261112-a7e8-04-SIZE-BY-SCORE
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_decision_sizing_by_score.py: delta = sum(w * net_r) / sum(w) - mean(net_r) over the taken decisions, w = clip(pred / 0.2, 0.5, 2.0) (fixed now, point in time); 95% interval by a decision-time cluster bootstrap (2000 resamples, seed 20261112). net_r is the harness R net of fee 11 + slippage 3 bps + funding (the a7e8-03 / 8d20-01 table).'
+  rule: 'INDETERMINATE if n < 100. PASS iff delta > 0 AND the bootstrap 95% lower bound > 0. FAIL iff delta <= 0. INDETERMINATE otherwise (delta > 0, interval spans 0). The weight map, window and thresholds are not changed after any result; reported-only measures (Spearman, gross delta, by side, drawdown) gate nothing.'
+  proposal_mapping: 'PASS -> a Tier-3 sizing proposal for ml_entry (score-proportional risk within the existing per-trade cap), held for the manager, with a forward read on new decisions before any change; FAIL -> the score is a sign, not a magnitude, for sizing: no change, recorded; INDETERMINATE -> recorded, no change.'
+  what_it_does_not_do: 'Changes no config, roster, risk cap or model; does not test a different decision set (only re-weights the same trades); per-unit-risk comparison, so a PASS is not a claim about total risk taken; a re-read of a held-out window already read by 8d20-01 and a7e8-03 (recorded in the holdout ledger).'
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 120
+  confidence: 0.25
+  basis: 'stand-in: a sizing lever on a real-money leg; p(PASS) ~0.25 given a7e8-03''s non-significant selection; an estimate, not a measurement.'
+ml_consumer:
+  consumer: ml/served/ml_decision_entry_v1/model.json
+  decision: whether ml_entry sizes each decision by its predicted net R instead of flat, on bybit_2, bybit_portfolio and its prop copies
+  legs:
+  - ml_entry
+  book: money
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_decision_sizing_by_score.py
+  - --cache
+  - /tmp/ml_decision_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261112-a7e8-04
+related:
+- ML-QUEUE-DIVERSIFY
+- RQ-20261112-a7e8-03
+last_dispatched_at: null
+grading:
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ20261112-a7e8-04-SIZE-BY-SCORE
+  evidence:
+  - research/results/RQ-20261112-a7e8-04/local-20261112T0408Z.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-11-12'
+  grader: scripts/research/queue_grade.py
+  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

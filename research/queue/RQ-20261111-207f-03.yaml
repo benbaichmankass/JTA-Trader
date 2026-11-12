@@ -1,0 +1,121 @@
+# Hand-authored 2026-11-11 by lane ALPACA-LIVE-BOOK-PLAN (Manager Session 2026-11-11a dispatch; operator ask 2026-11-11 ~22:40Z). Programme P8
+# (research/programmes/08-alpaca-live-book.yaml). Rule registered before any run; thresholds never change after a result.
+id: RQ-20261111-207f-03
+title: 'ALPACA-LIVE BOOK / Foxhound-4 DIAGNOSE + ITERATE (P8-Q3): does the net-R label rank by cost-per-R instead of direction on the equity pool, and does a direction-only
+  label (gross R, or raw return) select better trades at the same count?'
+status: queued
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml_health
+priority: 2
+kind: experiment
+programme: P8
+question: 'PR #24996 (feature-impact M2, open) found on the CRYPTO decision-entry family that the net-R label ranks partly through cost per R (atr_pct IC +0.49 vs net_long,
+  -0.08 vs raw 24h return); its body says M2 for the equity ENTRY-EQ pool is NOT measured. Foxhound-4 uses the same construction (net_long = gross R - (5.5 bps x price / (2
+  ATR14))). On its dev walk-forward: (a) per-close Spearman IC of the ensemble score and of each feature against net_long, gross_long, raw label-window return and cost_long;
+  the score''s IC with raw return WITHIN atr_pct quintiles (direction beyond volatility); (b) re-fit the same recipe on gross_long (L1) and on raw return (L2); at the SAME
+  number of above-threshold rows as the live tau 0.25, does either select trades with higher dev OOF mean net R?'
+why_this_matters: If the score mostly reads cost per R, the model buys the highest-volatility ETF on each close (cheap stops in R), which explains clustering in volatile months
+  and silence in calm ones, and its 'edge' is a volatility tilt; a direction-only label is then the main iteration lever, and no tau fixes it.
+power:
+  expected_n: 1600
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Unit = dev OOF trade. Count-matched to the tau-0.25 baseline (n 1691 in 98e3-06): ~1600 per arm detects ~0.1 sd; 2 draws (L1, L2) deflate the bar (bar_for(2)).'
+  feasibility:
+    source: none
+    accrual_basis: Replays Alpaca 1h RTH history 2021-01-01..2025-06-30; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261111-207f-03-LABEL
+  registered_at: '2026-11-11'
+  registered_before_run: true
+  statistic: 'scripts/research/alpaca_live_book.py foxhound --section label: per-close Spearman IC (mean, overlap-adjusted se with n_ts/6, t) of pred and the config-B features
+    vs net_long, gross_long, raw_ret, cost_long; atr_pct-quintile-neutral IC of pred vs raw_ret; L1 (target gross_long) and L2 (target raw_ret) 5-seed walk-forward OOF, threshold
+    = the score of the N-th row where N = baseline rows above tau 0.25; trade_stats and live-book replay per arm; diff vs baseline mean net R with se sqrt(se_a^2 + se_b^2).'
+  rule: 'INDETERMINATE IF the baseline n < 30. PASS IF L1 or L2 has n >= 30 AND dev OOF mean net R >= baseline + 0.03 R AND diff t >= holdout_lock.bar_for(2).point_t_min AND
+    mean net R > 0 in >= 3 of 5 folds. FAIL otherwise. Registered DIAGNOSTIC (reported beside the verdict, never gating): reads_cost_per_r = true IF IC(pred, cost_long) <=
+    -0.2 AND the atr-neutral IC t of pred vs raw_ret < 2; false otherwise; null when either IC cannot be computed (never folded into false).'
+  on_pass: 'The direction-only label is the lead: author its confirmation (node P8-Q3-pass: forward bars after 2026-10-31 + a disjoint pre-2023 window, label fixed) and its
+    export parity unit before any Tier-3 proposal to retrain the live artifact.'
+  on_fail: 'With reads_cost_per_r true: the label is the diagnosis but neither L1 nor L2 fixes it at this count; next is a cost-neutral target (net R per unit of notional,
+    node P8-Q3-fail). With it false: the label is not the problem; the iteration moves to features / pooling (P8-Q5, P8-Q6).'
+  what_it_does_not_do: No artifact change, no retrain of the live model, no config change. Loads no confirming-window row. Does not test holding period or the bracket.
+  min_n: 30 trades per arm
+evidence_class:
+  holdout: walk_forward
+  claim: edge
+practice_precedent: 'M1, M2 (cost-net labels; check what the label rewards), M6; PR #24996 (crypto M2 finding) -- docs/reference/trading-and-model-practice-principles.md'
+intervention_controls:
+  not_applicable: a selection / label / sizing replay of entry decisions on history, not an active-management action on live check-ins; the declared live leg (tau 0.25 on the
+    net-R label) is the control arm
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 240
+  why_runner: Alpaca 1h bars (read-only paper key, research-script-run) + LightGBM 5-seed ensemble fits; 4 vCPU / 16 GB runner; no trainer data.
+  basis: 'INFERRED from RQ-20261107-98e3-03 (dev table + 4 single-seed grid draws: runtime 6166 s) and 98e3-06 (ensemble dev + confirm, est 150 min).'
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.35
+  basis: 'stand-in decision value: whether the real-money model is retrained on a different label (account $194.52).'
+run:
+  command:
+  - python3
+  - scripts/research/alpaca_live_book.py
+  - foxhound
+  - --cache
+  - /tmp/ml_entry_equity
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --section
+  - label
+  - --rule-id
+  - RULE-RQ20261111-207f-03-LABEL
+  - --registered-at
+  - '2026-11-11'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261111-207f-03
+ml_consumer:
+  consumer: src/runtime/ml_pool_scoring.py
+  decision: (the pool picks that feed ml_entry_eq_struct, config/strategies.yaml) whether ml_entry_eq_struct's selection rule (tau / top-k / adaptive), training label or book
+    filter is changed (Tier 3, operator) on alpaca_live + alpaca_portfolio, or a challenger replaces it
+  legs:
+  - ml_entry_eq_struct
+  book: money
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+population: 'The registered POOL_RULE of scripts/research/ml_entry_alpaca_score.py, UNCHANGED (sha256 e9702661...; the module refuses to run if it differs): active, tradable
+  us_equity ETFs with median daily dollar volume >= 50M USD over 2019-2020 (173 at the 98e3-06 run). DEV rows only (<= 2025-06-30); bars are fetched only to 2025-06-30, so
+  no confirming-window row (2025-07-15.., read 3x in ledger family ENTRY-EQ) is loaded.'
+related:
+- RQ-20261107-98e3-06
+- RQ-20261108-98e3-14
+- FEATURE-IMPACT-MAP
+iteration:
+  subject: ml-entry-eq-struct
+  subject_kind: ml_model
+  from_result: RQ-20261107-98e3-06
+  verdict_read: pass_unconfirmed
+  diagnosis: 'The crypto sibling''s net-R label was measured to rank by cost per R (PR #24996, atr_pct IC +0.49 vs net_long, -0.08 vs raw return); Foxhound-4 uses the same
+    label construction, trades in volatile-month clusters (75 of 207 confirm trades in 2026-03) and is silent in calm ones. The label family is untested on this leg.'
+  search: 'training target: net R (live) vs gross R vs raw return, count-matched, plus the IC decomposition'
+  levers:
+  - labels
+  map_entries:
+  - research/levers/ml-entry-eq-struct.yaml
+  attempt: 1
+  due_by: '2026-11-18'

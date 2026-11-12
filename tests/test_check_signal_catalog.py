@@ -22,10 +22,16 @@ def test_committed_catalog_passes_with_nonzero_denominators():
 
 
 def test_uncatalogued_ml_feature_fails():
+    # Drop the exact catalog entry of a feature a live manifest actually reads (picked from the guard's own scan, so
+    # retiring a manifest cannot silently empty this control the way retiring the vpin readers did on 2026-11-11).
     cat = _cat()
-    cat["inputs"] = [e for e in cat["inputs"] if e.get("name") != "vpin"]
+    exact = {e["name"] for e in cat["inputs"] if e.get("kind") == "ml_feature" and "name" in e}
+    read = sorted(exact & g.ml_features())
+    assert read, "probe found no exactly-catalogued feature that a manifest reads; the check would be vacuous"
+    victim = read[0]
+    cat["inputs"] = [e for e in cat["inputs"] if e.get("name") != victim]
     fails, _ = g.check(cat)
-    assert "F1 uncatalogued ml_feature: vpin" in fails
+    assert f"F1 uncatalogued ml_feature: {victim}" in fails
 
 
 def test_new_candle_column_or_feed_import_fails():

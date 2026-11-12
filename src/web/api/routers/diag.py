@@ -274,6 +274,10 @@ _CANONICAL_UNITS: tuple[str, ...] = (
     # from the published mirror. Queryable so a session can confirm it is firing.
     "ict-trainer-disk-alarm.service",
     "ict-trainer-disk-alarm.timer",
+    # SEC-DETECTORS D1 (2026-11-11): SSH login watch. Queryable so a session can
+    # confirm it is firing and read what it counted.
+    "ict-security-watch.service",
+    "ict-security-watch.timer",
     # MI-83 (2026-09-02). The hourly work digest, moved off GitHub Actions
     # cron onto the VM's own clock: work-digest.yml declares `20 * * * *` and
     # fired 5 times in a day at :19/:10/:33/:47 over its complete run history.
@@ -638,6 +642,9 @@ _DESK_WATCH_STATUS = Path(repo_root()) / "runtime_logs" / "live_review" / "desk_
 _DIRECTED_ACTIONS_LOG = Path(repo_root()) / "runtime_logs" / "directed_actions" / "receipts.jsonl"
 _DIRECTED_ACTIONS_STATUS = Path(repo_root()) / "runtime_logs" / "directed_actions" / "pass_status.json"
 _DIRECTED_ACTIONS_WATCH_STATUS = Path(repo_root()) / "runtime_logs" / "directed_actions" / "watch_status.json"
+# TRADE-ACTION-DIRECT-PATH phase 1: every Telegram Approve/Reject ask and decision.
+_TRADE_APPROVALS_LOG = Path(repo_root()) / "runtime_logs" / "trade_approvals" / "journal.jsonl"
+_TRADE_APPROVALS_PENDING = Path(repo_root()) / "runtime_logs" / "trade_approvals" / "pending.json"
 # DESK-PAPER-ACCOUNTS (2026-10-27): the claude_desk leg's own ledger -- one line per accepted proposal that ended
 # without a package (expired_unfilled, e.g. waiting on a closed ETF/CME market; a refused bracket). Written by
 # src/units/strategies/claude_desk.py::record (ledger_path()).
@@ -707,6 +714,8 @@ _LOG_FILES: dict[str, Path] = {
     "directed_actions": _DIRECTED_ACTIONS_LOG,
     "directed_actions_status": _DIRECTED_ACTIONS_STATUS,
     "directed_actions_watch_status": _DIRECTED_ACTIONS_WATCH_STATUS,
+    "trade_approvals": _TRADE_APPROVALS_LOG,
+    "trade_approvals_pending": _TRADE_APPROVALS_PENDING,
     "desk_leg": _DESK_LEG_LEDGER,
     "oi_feed_status": _OI_FEED_STATUS,
     "e4_decisions": _E4_DECISIONS_LOG,

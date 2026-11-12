@@ -63,8 +63,8 @@ on:
         description: "Audit note; REQUIRED when force is true."
         required: false
         default: ""
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [prune-merged-branch]
 
 permissions:
   contents: write   # the one elevated permission: deleting a ref
@@ -78,10 +78,10 @@ jobs:
   prune:
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       (github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'prune-merged-branch'))
+      (github.event_name == 'repository_dispatch' &&
+       (github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'prune-merged-branch'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -96,7 +96,7 @@ jobs:
         id: parse
         env:
           # Through the environment, never inline — the body is untrusted.
-          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_BODY: ${{ github.event.client_payload.issue.body }}
           IN_BRANCH: ${{ inputs.branch }}
           IN_APPLY: ${{ inputs.apply }}
           IN_FORCE: ${{ inputs.force }}
@@ -189,7 +189,7 @@ jobs:
           echo "result=deleted" >> "$GITHUB_OUTPUT"
 
       - name: Report back on the issue
-        if: always() && github.event_name == 'issues'
+        if: always() && github.event_name == 'repository_dispatch'
         uses: actions/github-script@v7
         env:
           BRANCH: ${{ steps.parse.outputs.branch }}
@@ -211,7 +211,7 @@ jobs:
             ].join('\n');
             await github.rest.issues.createComment({
               owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number, body });
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), body });
             await github.rest.issues.update({
               owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number, state: 'closed' });
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), state: 'closed' });

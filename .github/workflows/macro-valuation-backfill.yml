@@ -46,8 +46,8 @@ on:
         description: "P4 gate per-day carry/roll drag as a fraction of notional. Default 0.0."
         required: false
         default: "0.0"
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [macro-valuation-backfill-now]
 
 permissions:
   contents: write
@@ -61,9 +61,9 @@ jobs:
   backfill:
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       github.event.issue.user.login == github.repository_owner &&
-       contains(github.event.issue.labels.*.name, 'macro-valuation-backfill-now'))
+      (github.event_name == 'repository_dispatch' &&
+       github.event.client_payload.issue.user.login == github.repository_owner &&
+       contains(github.event.client_payload.issue.labels.*.name, 'macro-valuation-backfill-now'))
     runs-on: ubuntu-latest
     timeout-minutes: 105  # was 75: shared commit-to-main wait 50->80 (W41)
     steps:
@@ -177,7 +177,7 @@ jobs:
           verify-merged: "true"
 
       - name: Comment + close issue (issue-driven path)
-        if: github.event_name == 'issues'
+        if: github.event_name == 'repository_dispatch'
         uses: actions/github-script@v7
         env:
           PR: ${{ steps.commit.outputs.pr }}
@@ -199,9 +199,9 @@ jobs:
             ].join('\n');
             await github.rest.issues.createComment({
               owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number, body,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), body,
             });
             await github.rest.issues.update({
               owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number, state: 'closed',
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), state: 'closed',
             });

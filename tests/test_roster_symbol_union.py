@@ -244,7 +244,9 @@ class TestLiveConfigIsUnchangedByThisPR:
                 syms = [d] if d else []
             a = _A()
             a.strategies = roster
-            implied = _symbols_for_account(a, strategies)
+            # POOL-SCORED legs (row ML-ENTRY-EQ-STRUCT-FULL-POOL, src/runtime/ml_pool_scoring.py) are NOT in the static fetch set: their pool-only
+            # symbols get a pass only when they hold a package at a decision close (src/main.py::_resolve_tick_symbols), so they are excluded here too.
+            implied = _symbols_for_account(a, {n: (dict(c, symbols=[]) if (c or {}).get("pool_scored") else c) for n, c in strategies.items()})
             for s in syms:
                 if s not in before:
                     before.append(s)

@@ -26,6 +26,37 @@
   family-level AUC can come from leg base rates through the leg one-hots (the M23 P1 trap), so it is not evidence of a
   within-leg confidence signal (9d20-02 found none within leg).
 
+## Programme review 2026-11-11 (lane PROGRAMME-REVIEW-20261111) — MODEL track
+
+Population: units with a result row generated 2026-11-04T19:30Z..2026-11-11T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`; 2,183 units read, 0 unreadable; 455 result rows): **311 units with rows** — 72 pass, 134 fail, 42 indeterminate, 5 no_action_warranted, 1 not_applicable, 57 with no unit verdict yet (28 ungraded). 119 carry a programme field (P1 38, P2 50, P3 14, P4 2, P5 9, P6 6, P7 0); **192 do not** (live_strategy 110, new_strategy_prop 37, ml_health 31, infra 11, timeframes 2, none 1) and are assigned below by what they ask. Every PASS is a discovery until its confirmation passes; batch denominators are from the packet's `batches`.
+
+**P2 in the window:** 50 programmed units (12 pass, 21 fail, 5 indeterminate, 12 ungraded) plus 31 unprogrammed `ml_health` (the c692 dynamic-SL / MANAGE batch, the e9a1/98e3 equity-native ENTRY line, the served ml_entry decay reads). Those are P2 by what they ask. **Runnable MODEL units: 5, TRADING 0** (`runnable_by_track`), so this week the thin track is TRADING, not MODEL.
+
+**What was learned (beliefs, with evidence)**
+- **The regime head's skill is same-asset volatility persistence; cross-asset context adds nothing.** ETH-led and BTC+ETH context failed 4 of 4 (c4f1-01..-04), and BTC context failed last week. HAR-RV adds at 1h on top of BTC context (c4f1-06) and on ExtraTrees (c4f1-11), but not on HGB at 15m (c4f1-10). The 15m/CatBoost and 15m BTC+HAR-RV reads are indeterminate. The purge-robustness reads at 1h and 15m held (c4f1-07/-08). Batch c4f1: 4 pass, 6 fail, 3 indeterminate of 13. The skill is real and still has **no consumer**: P2-MECE-D2 was not authored this week (last week's call 5 missed).
+- **Direction heads are at the class prior from price features**: 1h BTC (98e3-21), 15m same-asset (98e3-24) and 1h ETH-led cross-asset (c4f1-12) all FAIL. Belief: there is no direction signal at 1h or 15m in these features. Stop spending direction-head units until a new feature family exists (the P5 census below says positioning data did not add either).
+- **ML stop-loss revision is a dev-stage artefact.** c692-12 dev: +0.0029 R/trade, selected at the margin-grid EDGE (0.40). Its held-out re-read (c692-15) gave +0.0005 R/trade, CI [-0.0007, +0.0018], n 10,641, and both cross-sectional confirmations failed (c692-13/-14). The one-factor BE / trail / time-decay arms failed (c692-08/-09/-10), and so did the MANAGE head (c692-03). Belief: dynamic SL management on ml_entry adds nothing at a size that matters (0.003 R is below any cost-stack error). Selection at a grid edge followed by a failed held-out read is the overfit signature (pre-mortem class "design").
+- **The ENTRY timeframe question is now answered**: the 1h harness reproduces round 1 (b620-01 PASS, the precondition that was open last week), and 15m and 4h fail 4 of 4 (b621/-622/-625/-626). 5m is indeterminate. ML ENTRY lives at 1h.
+- **The equity-native ENTRY "confirm" PASS is a non-negative read, not edge**: e9a1-02 has +0.039 R/decision with se 0.042 at n 858 (t ≈ 0.93), passing a `t_min 0.0` rule. Treat the rule bar as permissive. The served ml_entry decay is **not age, not regime, not cadence** (98e3-26). The decline is unexplained, and that is now the most valuable open MODEL question on a live consumer.
+
+**Failed first tests — diagnosis.** Cross-asset regime: *idea* (the vol process is local). Direction: *idea / features*. ML SL: *design* (grid-edge selection; a re-run at a wider grid would only re-select noise). No variant is proposed: the tested c692 CONFIGURATIONS (BE/BE1/TRAIL/TRAIL15 heads, margins 0.15 and 0.40) failed, and capacity moves to the consumer question. No family review exists, so the family is not retired. Timeframe: answered, not a fail.
+
+**Answered / unlocked / retired.** Answered: "does cross-asset context lift the regime head" (no), "which timeframe for ML ENTRY" (1h), "does ML SL revision beat hold" (not materially). Unlocked: nothing new. Retired: further regime-head feature/learner units and direction-head units on price features (moot by answer). **ML-PROGRAMME-CONSOLIDATION (#24897) proposes 15 keep / 19 review / 72 retire of 106 models.** Once it merges, P2 nodes that point at a retired head are moot. This review does not pre-empt that merge.
+
+**Iteration loop (MODEL).** 8 of 9 ml_model subjects are OVERDUE: every iteration unit RQ-20261101-78fc-01..08 is `blocked` (due 2026-11-05..11-08) on a build row. That is the loop's largest stall. Each one is a schedule-or-kill call for the manager and the consolidation lane, not a re-file (handoff).
+
+**Next 3–4 weeks (value-ranked)**
+
+| node / unit | decision it changes | on PASS | on FAIL | cost | pre-mortem |
+|---|---|---|---|---|---|
+| served ml_entry decline decomposition (98e3-23/-25 indeterminate; ML lane) | whether ml_entry keeps its live slot | keep + fix the named cause | demote to the demo floor (Tier 3) | runner | the decline is small-n noise on 5 live closes |
+| P2-MECE-D2-regime-real-money | whether the skilful regime head changes a real-money leg's trades | Tier-3 regime cell packet | head stays advisory | runner | the off-cells gate too few trades on these legs |
+| RQ-20261111-3a23-01 (M23 catalog metalabel, merged today) grade | whether the M23 catalog head has a consumer worth building | M23 row continues | M23 metalabel closed as configured | runner | label leakage through catalog timestamps |
+| P2-MECE-D6-pointer-v0 | first learned bracket-at-entry | shadow candidate | bar-0 first-passage variant | runner + $5 | an in-trade revision model has no bar-0 signal |
+| 78fc-01..08 blocked iterations | whether each blocked ML subject is built or retired | build lands → unit runs | killed with reason in the consolidation | manager | the consolidation retires most of them, which is the right outcome |
+
+**Feeds.** MODEL → TRADING: no head passed a money gate this week, so nothing is a Tier-3 candidate. TRADING → MODEL: the 5e05 structure-OFF results change ml_entry's own exit labels (ml_entry still declares `pivot=5;sl_only`), so the ENTRY-EQ structure-label line (98e3-14..-16) must be read against an exit the trading track just found harmful.
+
 ## Programme review 2026-11-04 (lane PROGRAMME-REVIEW-20261104) — MODEL track
 
 Population: units with a result row generated 2026-10-28T19:41Z..2026-11-04T19:41Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,932 units read, 0 unreadable, 662 result rows): **447 units with rows** — 107 pass, 210 fail, 25 indeterminate, 11 no_action_warranted, 94 with no unit verdict yet (76 ungraded + 18 needs_review/null). 302 carry a programme field (P1 53, P2 54, P3 95, P4 24, P5 48, P6 18, P7 10), 145 do not (live_strategy 70, new_strategy_prop 32, infra 13, ml_health 13, timeframes 6, macro 5, regime 5, none 1) — assigned below by what they ask. Every PASS is a discovery until its confirmation passes.

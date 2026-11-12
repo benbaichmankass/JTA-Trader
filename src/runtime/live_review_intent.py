@@ -551,6 +551,26 @@ def min_buffer_atr_from(cfg: Optional[Mapping[str, Any]] = None) -> float:
 
 # -- per-leg floor (respected by the order monitor and the prop trail) --------
 
+#: ``prop_tickets.meta`` key: a TP the system asked this VM-prop ticket to rest at (PROP-BRACKET-APPLY).
+TP_TARGET_KEY = "tp_target"
+
+
+def tp_target_from(meta: Any) -> Optional[float]:
+    """The pinned TP level on a prop ticket's ``meta.tp_target``; None when absent or unreadable (never 0)."""
+    import json
+
+    m = meta
+    if isinstance(m, str):
+        try:
+            m = json.loads(m)
+        except (TypeError, ValueError):
+            return None
+    if not isinstance(m, Mapping):
+        return None
+    t = m.get(TP_TARGET_KEY)
+    return _f(t.get("level")) if isinstance(t, Mapping) else _f(t)
+
+
 def sl_floor_from(notes_or_meta: Any) -> Optional[float]:
     """The ``sl_floor`` level a leg carries in ``trades.notes`` or a prop
     ticket's ``meta``; None when absent or unreadable."""
