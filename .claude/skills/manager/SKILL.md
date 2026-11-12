@@ -80,7 +80,9 @@ Read the recipe for the kind of marker you are acting on **before** you dispatch
 lives ONLY in `scripts/research/research_watchdog.yaml` `ops_flags.pr_number`). Never merge or close it. **Treat every comment as an incident:
 fix it, dispatch a lane, or tell the operator; never leave one unanswered** (ledger `comms/research/ops/watchdog_incidents.jsonl`). Wake markers
 on that PR (`ltr-wake`, `mandate_cadence`, `judgement_cadence`, `desk-wake` / `desk-trigger-wake`, `short-hold-wake`): **one marker, one lane,
-never spawn twice for the same id**; a `could_not_*` kind is an incident, not a wake. **Never create a session with no `source_url`** (403 on every
+never spawn twice for the same id**; a `could_not_*` kind is an incident, not a wake. An `ltr-wake` entry marked **`reviewer started by routine`**
+(`routine_fire.state` `fired` / `already_fired` + `session_id`; TRADE-ACTION-DIRECT-PATH phase 3) already HAS its reviewer: do NOT dispatch it; the
+comment is the dedupe record. Dispatch only the entries without that mark (a routine fire that failed says so and falls back to you). **Never create a session with no `source_url`** (403 on every
 write). **Never run your own timer or scheduled watch that starts a live reviewer without a marker**: only the wake poster commits packets. Every
 reviewer dispatch prompt ends: "end your report with a `PACKET DEFECTS:` line (REVIEWER-BRIEF § 2d)"; file each reported defect once on its owner
 (`LTR-GRADER-COVERAGE`, `LTR-PACKET-READ-REACH`, else a PIPELINE item). Desk and short-hold lanes follow `.claude/skills/trading-desk/SKILL.md` § 6b
