@@ -1,0 +1,57 @@
+{
+ "research_unit": "RQ-20261112-09d2-03",
+ "generated_at": "2026-11-12T08:25:42+00:00",
+ "produced_by": "scripts/research/tradeify_futures_fit.py",
+ "stage": "ml",
+ "population": {
+  "MES_OR15": 1945,
+  "MES_OR30": 1927,
+  "MNQ_OR15": 1944,
+  "MNQ_OR30": 1898,
+  "MGC_OR15": 1976,
+  "MGC_OR30": 1911
+ },
+ "window": {
+  "discovery": [
+   "2019-01-01",
+   "2024-12-31"
+  ],
+  "holdout": [
+   "2025-01-01",
+   "2026-10-31"
+  ]
+ },
+ "data": "dukascopy 5m bid proxies (see module doc)",
+ "ml": {
+  "n_hold_all": 2725,
+  "n_hold_kept": 1437,
+  "mean_r_hold_all": 0.01302,
+  "mean_r_hold_kept": -0.00084,
+  "net_r_hold_kept": -1.208,
+  "uplift_ci95_lo": -0.05202,
+  "disc_by_year": {
+   "2021": {
+    "n_kept": 684,
+    "mean_kept": 0.05471,
+    "mean_all": 0.0129
+   },
+   "2022": {
+    "n_kept": 578,
+    "mean_kept": 0.08571,
+    "mean_all": 0.02674
+   },
+   "2023": {
+    "n_kept": 664,
+    "mean_kept": 0.05562,
+    "mean_all": 0.02846
+   },
+   "2024": {
+    "n_kept": 676,
+    "mean_kept": 0.00804,
+    "mean_all": -0.01451
+   }
+  },
+  "verdict": "fail"
+ },
+ "verdict": "fail"
+}

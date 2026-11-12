@@ -50,15 +50,26 @@ def test_builders_disabled_gate(monkeypatch):
 
 
 def test_builders_us_session_gate(monkeypatch):
+    """GATE-MARKET-HOURS: MAKE REPORT-ONLY (operator 2026-11-12 decisions page,
+    Gates tab; comms/gates/gate_decisions_2026-11-12.json). A closed US market
+    no longer returns ``side=none``/``us_market_closed``: the builder carries on
+    to its candle fetch (stubbed empty here, so it raises its own no-data
+    error), and the closed state is reported, not returned."""
+    import pytest
     monkeypatch.setattr(
         "src.units.strategies.load_strategy_config",
         lambda: {name: {"enabled": True} for name in _BUILDERS},
     )
     monkeypatch.setattr("src.runtime.market_hours.is_market_open", lambda cls: False)
+    monkeypatch.setattr("src.runtime.market_data.fetch_candles", lambda *a, **k: None)
+    reports = []
+    monkeypatch.setattr("src.runtime.strategy_signal_builders.log_signal",
+                        lambda r: reports.append(r))
     for name, builder in _BUILDERS.items():
-        out = builder({})
-        assert out["side"] == "none"
-        assert out["meta"]["reason"] == "us_market_closed"
+        with pytest.raises(RuntimeError, match="no candle data"):
+            builder({})
+        assert reports and reports[-1]["event"] == "market_closed_report_only"
+        assert reports[-1]["cause"] == "us_market_closed"
 
 
 def test_intent_roster_and_priorities_registered():
