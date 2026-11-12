@@ -1,0 +1,313 @@
+{
+ "account_bounds": [
+  {
+   "account_class": "paper",
+   "account_id": "alpaca_paper",
+   "apply_paths": [
+    "close",
+    "move_tp",
+    "tighten"
+   ],
+   "evidence": "alpaca_orders: SL 79.97 / TP 85.85, position True, matched by sl:order_id,tp:qty; apply paths close, move_tp, tighten; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
+   "own_position": true,
+   "read": null,
+   "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
+   "read_if_amend": "would_apply"
+  }
+ ],
+ "assembled_by": "generator scripts/ops/live_review_packet.py",
+ "context": {
+  "calendar": {
+   "events_next_24h": [],
+   "state": "no_event_classes_for_symbol"
+  },
+  "correlated_open_packages": [],
+  "direction": "long",
+  "funding": {
+   "state": "not_applicable"
+  },
+  "news": null,
+  "previous_review": null,
+  "symbol": "QLD"
+ },
+ "context_v3": {
+  "book": [
+   [
+    "MGC",
+    "short",
+    "mgc_pullback_1d",
+    2.27
+   ],
+   [
+    "BTCUSDT",
+    "short",
+    "e4_oi_shock_1h",
+    0.2
+   ],
+   [
+    "ADAUSDT",
+    "short",
+    "ada_pullback_2h",
+    1.25
+   ],
+   [
+    null,
+    null,
+    null,
+    null
+   ],
+   [
+    "TLT",
+    "long",
+    "tlt_pullback_1d",
+    0.0143
+   ],
+   [
+    "SOLUSDT",
+    "short",
+    "e4_oi_shock_1h",
+    0.133
+   ],
+   [
+    "ETHUSDT",
+    "short",
+    "trend_donchian_eth",
+    0.2
+   ],
+   [
+    "ETHUSDT",
+    "short",
+    "eth_pullback_prop_2h",
+    1.33
+   ],
+   [
+    "TQQQ",
+    "long",
+    "ml_entry",
+    -1.13
+   ],
+   [
+    "AVAXUSDT",
+    "long",
+    "avax_pullback_2h",
+    -0.0787
+   ],
+   [
+    "ETHUSDT",
+    "short",
+    "eth_pullback_2h",
+    1.05
+   ],
+   [
+    "MHG",
+    "short",
+    "mhg_pullback_1d",
+    1.26
+   ],
+   [
+    "QQQ",
+    "long",
+    "ml_entry",
+    -1.15
+   ],
+   [
+    "XRPUSDT",
+    "short",
+    "xrp_pullback_2h",
+    0.532
+   ],
+   [
+    "GLD",
+    "short",
+    "gld_pullback_1d",
+    0.323
+   ],
+   [
+    "BTCUSDT",
+    "short",
+    "trend_donchian_1h",
+    0.523
+   ],
+   [
+    "IAUM",
+    "short",
+    "iaum_pullback_1d",
+    0.452
+   ],
+   [
+    "USO",
+    "long",
+    "ml_entry",
+    0.345
+   ],
+   [
+    "GDX",
+    "short",
+    "gdx_pullback_1d",
+    0.232
+   ],
+   [
+    "TLT",
+    "long",
+    "tlt_pullback_1d",
+    -0.16
+   ]
+  ],
+  "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
+  "chart": null,
+  "exit_plan": {
+   "declared": {},
+   "entry": 82.325,
+   "exit_plan_state": null,
+   "exit_plan_state_note": "entry-time snapshot, not updated when the stop moves; trust sl_now",
+   "sl_initial": null,
+   "sl_now": 79.9729,
+   "tp_now": 85.8532
+  },
+  "htf": null,
+  "live_vs_backtest": {
+   "read_state": "read",
+   "rows": [
+    {
+     "backtest_expectancy_r": 0.0371320193248974,
+     "backtest_n": 907,
+     "book": "realMoney",
+     "closed": 18,
+     "live_percentile": 43.8,
+     "live_r": -0.2638,
+     "p5": -7.1568,
+     "p50": 0.4989,
+     "p95": 8.9307,
+     "r_trades": 18,
+     "verdict": "CONSISTENT",
+     "why": null
+    },
+    {
+     "backtest_expectancy_r": 0.0371320193248974,
+     "backtest_n": 907,
+     "book": "mirror",
+     "closed": 18,
+     "live_percentile": 55.6,
+     "live_r": 1.1919,
+     "p5": -7.1568,
+     "p50": 0.4989,
+     "p95": 8.9307,
+     "r_trades": 18,
+     "verdict": "CONSISTENT",
+     "why": null
+    }
+   ]
+  }
+ },
+ "cost": {
+  "basis": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 2,
+  "giveback_r": 1.1819,
+  "open_r": -0.9715,
+  "peak_r": 0.2104,
+  "r_to_stop": 0.0285,
+  "r_to_target": 2.4715
+ },
+ "generator": {
+  "head": "820e659d26",
+  "state": "current"
+ },
+ "info_cutoff_at": "2026-11-12T13:12:48Z",
+ "leg": "ml_entry",
+ "mechanics": {
+  "evidence": "package sl 79.97285714285715 / tp 85.85321428571429 agree with every readable account",
+  "verdict": "match"
+ },
+ "missing_inputs": [
+  {
+   "field": "state.sl/tp",
+   "reason": "order_packages row not in the paged journal read; falling back to the trade row"
+  },
+  {
+   "field": "read:order_packages@0",
+   "reason": "diag journal?table=order_packages&limit=150&offset=0: exit 3 (kdns.org -> timed_out_after_connect. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_con"
+  },
+  {
+   "field": "regime.atr_now_over_entry",
+   "reason": "package timeframe not recorded in meta"
+  },
+  {
+   "field": "regime.trend_now",
+   "reason": "package timeframe not recorded in meta"
+  },
+  {
+   "field": "regime.vol_now",
+   "reason": "calm/volatile buckets use frozen edges held only in the VM model registry; not reachable read-only from a session"
+  },
+  {
+   "field": "regime.cell_entry",
+   "reason": "entry meta regime=None vol_regime=None: not both known"
+  },
+  {
+   "field": "priced_options",
+   "reason": "open_r/peak_r/atr_stop_mult not available for this package"
+  },
+  {
+   "field": "context.news",
+   "reason": "no news decision for this symbol in the last 60 records (or news read failed)"
+  },
+  {
+   "field": "context_v3.chart",
+   "reason": "no closed candles on the leg timeframe (route unreachable or timeframe unrecorded)"
+  },
+  {
+   "field": "context_v3.htf",
+   "reason": "no higher timeframe mapped for None"
+  }
+ ],
+ "order_package_id": "pkg-3d98328a3d7e4608",
+ "packet_health": {
+  "defects": [
+   {
+    "count": 1,
+    "denominator": 1,
+    "field": "priced_options",
+    "reason": "could_not_price"
+   },
+   {
+    "count": 1,
+    "denominator": 1,
+    "field": "context_v3.chart",
+    "reason": "context_null:chart"
+   },
+   {
+    "count": 1,
+    "denominator": 1,
+    "field": "context_v3.htf",
+    "reason": "context_null:htf"
+   }
+  ],
+  "status": "degraded"
+ },
+ "packet_version": 3,
+ "priced_options": null,
+ "priced_options_state": "could_not_price",
+ "regime": {
+  "adx_now": null,
+  "atr_now_over_entry": null,
+  "cell_entry": null,
+  "cell_now": null,
+  "trend_now": null
+ },
+ "review_id": "LR-20261112T1312Z-pkg-3d98328a3d7e4608",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 3,
+  "giveback_r": 1.1819,
+  "open_r": -0.9715,
+  "peak_provenance": "estimated",
+  "peak_r": 0.2104,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 79.97285714285715,
+  "tp": 85.85321428571429
+ }
+}
