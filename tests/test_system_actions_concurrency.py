@@ -2,8 +2,9 @@
 
 Pins both halves of the fix:
   (a) system-actions.yml has NO workflow-level single shared group; the
-      system-action job takes its group from the route job, read-only actions
-      get a group of their own, mutating ones keep the shared serial lane.
+      system-action job takes its group from the route job; since 2026-11-12
+      (operator, SYSTEM-ACTION-CONCURRENCY-LANES: report-only) EVERY action gets a
+      group of its own and overlap is reported, not prevented.
   (b) system-actions-cancel-guard.yml fires on cancelled runs and the guard
       comments + alerts and NEVER re-queues (re-queue inverts request order).
 A regression to one workflow-level "system-actions" group fails here.
@@ -44,13 +45,39 @@ def test_main_job_takes_group_from_route():
     assert any((s.get("with") or {}).get("name") == "system-action-request" for s in steps)
 
 
-def test_read_only_actions_get_their_own_group_mutations_share_one():
+def test_every_action_gets_a_group_of_its_own_nothing_queues():
+    """decision: operator 2026-11-12 decisions page, Gates tab —
+    SYSTEM-ACTION-CONCURRENCY-LANES: MAKE REPORT-ONLY. No run waits behind
+    another; overlap is reported (route job), not prevented."""
     for a in route.READ_ONLY:
         assert route.concurrency_group(a, "123") == "system-actions-ro-123"
     assert route.concurrency_group("get-env", "1") != route.concurrency_group("get-env", "2")
     for a in ("set-env", "breakout-login-check", "pull-and-deploy", "flatten-bybit-position",
               "set-account-mode", "send-ping", "", "unknown-new-action"):
-        assert route.concurrency_group(a, "123") == route.SHARED_GROUP, a
+        assert route.concurrency_group(a, "123") == "system-actions-123", a
+        assert route.concurrency_group(a, "123") != route.concurrency_group(a, "124"), a
+
+
+def test_overlap_report_names_other_in_flight_runs_only():
+    runs = [
+        {"id": 1, "status": "in_progress", "display_title": "set-env x", "html_url": "u1"},
+        {"id": 2, "status": "queued", "display_title": "restart", "html_url": "u2"},
+        {"id": 3, "status": "completed", "display_title": "done", "html_url": "u3"},
+        {"id": 9, "status": "in_progress", "display_title": "me", "html_url": "u9"},
+    ]
+    lines = route.overlap_report(runs, "9")
+    assert len(lines) == 2 and "run 1" in lines[0] and "run 2" in lines[1]
+    assert route.overlap_report([], "9") == []
+
+
+def test_route_reports_overlap_and_outcome_comment_carries_it():
+    jobs = _wf("system-actions.yml")["jobs"]
+    step = next(s for s in jobs["route"]["steps"] if s.get("id") == "ov")
+    assert step.get("continue-on-error") is True, "the overlap report must never fail the run"
+    assert jobs["route"]["outputs"]["overlap"] == "${{ steps.ov.outputs.overlap }}"
+    reply = next(s for s in jobs["system-action"]["steps"]
+                 if s.get("name") == "Reply to issue with outcome")
+    assert reply["env"]["OVERLAP"] == "${{ needs.route.outputs.overlap }}"
 
 
 def test_read_only_allowlist_is_documented_read_only():
