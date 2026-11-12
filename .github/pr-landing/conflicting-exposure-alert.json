@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "CONFLICTING-EXPOSURE-ALERT (operator 2026-11-11): a symbol held LONG and SHORT at once across any books (journal open trades on every account + filled prop tickets) raises ONE deduped Telegram alert through telegram_channels (lands in the alert ledger) naming each leg, its timeframe, accounts and estimated open R, and queues a live review via a new due event `conflicting_exposure` (level = conflict key) in live_review_due. Plus the pre-registered research unit RQ-20261111-ce01-01 and its harness scripts/research/opposing_overlap.py. Gates this adds or changes: none -- an alert, never a gate; nothing is closed, blocked or halted.",
+  "hold_text": "Tier-2 runtime change (src/runtime/live_review_due.py, live_review_wake_post.py on the live trader; config/live_trade_review.yaml cooldown_exempt). Approved in scope by the operator's instruction relayed by Manager Session 2026-11-11a; the lane cannot merge. The manager merges on green, lets ict-git-sync + deploy restart ict-trader-live, then verifies: /api/diag/live_review_due carries `conflicting_exposure.state: read` with the SOL conflict while it is open, and log_file?name=ltr_wake_post_receipt shows `conflicting_exposure.sent` once (then `standing`). Revert: git revert."
+}

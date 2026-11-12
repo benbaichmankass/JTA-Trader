@@ -1,0 +1,135 @@
+# Hand-authored 2026-11-11 by lane ALPACA-LIVE-BOOK-PLAN (Manager Session 2026-11-11a dispatch; operator ask 2026-11-11 ~22:40Z). Programme P8
+# (research/programmes/08-alpaca-live-book.yaml). Rule registered before any run; thresholds never change after a result.
+id: RQ-20261111-207f-04
+title: 'ALPACA-LIVE BOOK / CHALLENGERS (P8-Q4): which rostered equity legs earn on the alpaca_live cash book -- $194.52, long only, whole shares, one slot, T+1, the live sizer
+  -- one at a time and all competing for the slot?'
+status: queued
+cadence: once
+roadmap:
+- L-LADDER
+- L-ML-LIVE
+theme: live_strategy
+priority: 1
+kind: experiment
+programme: P8
+question: 'The equity legs on alpaca_paper (testing) and tqqq_trend_long_1d (production, on alpaca_live beside Foxhound-4) have Stage-0 records in R per trade (comms/strategy_evidence/:
+  e.g. tqqq_trend_long_1d +0.206 R n 120, slv_trend_1h +0.78 R n 68, tlt_pullback_1d +0.095 R n 134, tlt_pullback_1h -0.071 R n 94 FAIL) with no cash, no slot and no whole-share
+  limit. Run each leg''s config-exact Stage-0 harness (scripts/ops/build_strategy_evidence.py, last 700 days, its cost stack) and replay its trade list through the alpaca_live
+  book: n taken, refusals by reason, taken mean net R, return %/month and month-clustered t; then all 16 legs competing for the one slot.'
+why_this_matters: 'Challengers must be scored on the account, not on R per trade: a 1d ETF leg that fires a few times a year and always fits in cash can out-earn a 1h model
+  that cannot afford most of its picks. This is the first common-book ranking; legs that qualify go to the head-to-head with Foxhound-4 (node P8-Q4-h2h).'
+power:
+  expected_n: 40
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Unit = trade taken on the simulated book, per leg. ESTIMATE: 1d legs take ~5-60 trades in 700 days, 1h legs more but slot- and T+1-limited; a leg under 30 taken trades
+    cannot qualify (the rule''s floor).'
+  feasibility:
+    source: none
+    accrual_basis: 'Yahoo candles (yfinance==1.7.0 on the runner: 1d uncapped, 1h ~730 d); nothing accrues.'
+decision_rule:
+  id: RULE-RQ20261111-207f-04-CHALLENGER-BOOK
+  registered_at: '2026-11-11'
+  registered_before_run: true
+  statistic: 'scripts/research/alpaca_live_book.py legs: per leg, the build_strategy_evidence trade list (entry_time, exit_time, entry, sl, net_r, direction) replayed through
+    the alpaca_live book (cash 194.52, accounts.yaml risk_pct, risk.py wall + round-up, one slot, T+1, long only): n_candidates, n_taken, refusals, taken mean net R, return
+    %/month with month-clustered t, max drawdown $; plus the combined one-slot book of all listed legs (entry-time order).'
+  rule: 'INDETERMINATE IF no leg reaches n_taken >= 30. PASS IF at least one leg has n_taken >= 30 AND book taken mean net R > 0 AND month-clustered t of book return >= 1.0;
+    those legs QUALIFY for the head-to-head with Foxhound-4 (node P8-Q4-h2h). FAIL otherwise. A qualification is not a promotion: the P8 promotion rule (docs/research/programmes/08-ALPACA-LIVE-BOOK.md
+    s 5) still applies.'
+  on_pass: 'Author the head-to-head (P8-Q4-h2h): each qualifying leg vs Foxhound-4''s live-book baseline (207f-01) on their common window, paired by month, deflated for the
+    number of qualifiers.'
+  on_fail: No existing equity leg earns on this book at power; the challenger search moves to new families built for a one-slot cash book (ETF rotation / dual momentum, node
+    P8-Q7) and the Foxhound-4 levers. No leg is retired by this unit.
+  what_it_does_not_do: No roster or config change. Does not re-grade any leg's Stage-0 verdict. uso_trend_1h is excluded on the operator's standing non-financial constraint
+    (config/accounts.yaml USO block). GLD legs are scored, but GLD on alpaca_live also carries the operator-kept zombie OCO (PI-20261025-ALQWWPXT-0001); IAUM is the declared
+    affordability proxy. 1h legs cover ~730 days only (yfinance), so their window is shorter than the 1d legs'.
+  min_n: 30 trades taken per leg
+evidence_class:
+  holdout: in_sample
+  claim: edge
+practice_precedent: T1 (score on the book that trades it, net of the full cost stack); the operating plan's ladder (Stage 0 first) -- docs/plans/OPERATING-PLAN-2026-09-21.md
+  s 2
+intervention_controls:
+  not_applicable: a selection / label / sizing replay of entry decisions on history, not an active-management action on live check-ins; the declared live leg (tau 0.25 on the
+    net-R label) is the control arm
+ml_consumer:
+  not_applicable: rule-based equity legs replayed through the account's cash book; no model, learner or head is trained or scored
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 70
+  why_runner: Yahoo candles via yfinance (installed on research-script-run) + the config-exact harnesses; Kaggle CPU runs with the internet off; no trainer data.
+  basis: 'INFERRED: build_strategy_evidence runs one fetch + one harness pass per leg (eth_pullback_2h measured 21.7 s); 16 legs plus Yahoo throttling.'
+value:
+  bucket: structural
+  usd_at_stake_per_month: 80
+  confidence: 0.45
+  basis: 'stand-in decision value: which strategy carries the real-money alpaca book (account $194.52).'
+run:
+  command:
+  - python3
+  - scripts/research/alpaca_live_book.py
+  - legs
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --rule-id
+  - RULE-RQ20261111-207f-04-CHALLENGER-BOOK
+  - --registered-at
+  - '2026-11-11'
+  - --days
+  - '700'
+  - --strategy
+  - tqqq_trend_long_1d
+  - --strategy
+  - spy_trend_long_1d
+  - --strategy
+  - qqq_trend_long_1d
+  - --strategy
+  - iwm_trend_long_1d
+  - --strategy
+  - qld_trend_long_1d
+  - --strategy
+  - splg_trend_long_1d
+  - --strategy
+  - scha_trend_long_1d
+  - --strategy
+  - tlt_pullback_1d
+  - --strategy
+  - tlt_pullback_1h
+  - --strategy
+  - ief_pullback_1d
+  - --strategy
+  - gdx_pullback_1d
+  - --strategy
+  - gld_pullback_1d
+  - --strategy
+  - iaum_pullback_1d
+  - --strategy
+  - slv_pullback_1d
+  - --strategy
+  - slv_trend_1h
+  - --strategy
+  - qqq_pullback_1h
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261111-207f-04
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+population: 16 rostered equity legs (tqqq_trend_long_1d, spy_trend_long_1d, qqq_trend_long_1d, iwm_trend_long_1d, qld_trend_long_1d, splg_trend_long_1d, scha_trend_long_1d,
+  tlt_pullback_1d, tlt_pullback_1h, ief_pullback_1d, gdx_pullback_1d, gld_pullback_1d, iaum_pullback_1d, slv_pullback_1d, slv_trend_1h, qqq_pullback_1h), each at its live config,
+  last 700 days of Yahoo candles, replayed through the alpaca_live cash book.
+related:
+- RQ-20261111-207f-01
+- PI-20261111-TX7TX2ZN-0001

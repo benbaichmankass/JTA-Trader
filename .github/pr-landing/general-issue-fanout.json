@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Changes how 56 operational workflows are triggered (VM recover/deploy/diag among them): issues:[opened] -> repository_dispatch routed by the new issue-router.yml. Tier-1 by path, but service/deploy plumbing in effect; needs the manager's OK (manager 23:50Z task, row PI-20260927-W6OPSR-0004). Revert: git revert (one commit).",
+  "why": "Stop every opened issue creating ~89 workflow runs (82+ of which can never run a job) that pile up in the Actions queue."
+}

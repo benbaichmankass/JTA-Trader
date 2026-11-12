@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "SEC-API-DBPATH-PARAM. Removes the unauthenticated db_path query parameter from GET /api/bot/positions/net and GET /api/bot/strategy/attribution; both read the canonical journal only, and the attribution read opens it read-only. Operator OK relayed by the manager 2026-11-11 22:20Z, popup verbatim 'Yes, all four (Recommended)'. Web-api change, so the service restarts on deploy. No gate added.",
+  "hold_text": "Tier-2: manager merges and deploys ict-web-api. Post-merge check: GET /api/bot/strategy/attribution?db_path=/nonexistent returns the same strategies as without the parameter."
+}

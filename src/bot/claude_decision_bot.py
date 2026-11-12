@@ -77,6 +77,7 @@ from telegram.ext import (
 from src.bot.operator_commands import OPERATOR_COMMANDS, install_operator_commands
 from src.bot.telegram_routes import claude_route
 from src.runtime.telegram_decisions import CB_PREFIX, handle_decision_callback
+from src.runtime.trade_approvals import CB_PREFIX as TAPV_PREFIX  # TRADE-ACTION-DIRECT-PATH phase 1
 from src.runtime.telegram_poll_registry import (
     heartbeat_interval_seconds,
     log_poll_banner,
@@ -105,7 +106,7 @@ EX_CONFIG = 78
 #: them below does not widen this tuple. Widening it would make the poll claim
 #: assert a tap this bot does not handle, which is the exact failure the
 #: registry exists to catch.
-HANDLED_PREFIXES: tuple[str, ...] = (CB_PREFIX, "ns")  # ns: settings menu (part C)
+HANDLED_PREFIXES: tuple[str, ...] = (CB_PREFIX, "ns", TAPV_PREFIX)  # ns: settings menu (part C); tapv: trade approvals
 
 #: This bot's operator-facing slash surface: `/start` plus the two operator
 #: PULLS. A command absent from `set_my_commands` is one the operator has to
@@ -178,6 +179,25 @@ async def on_callback(update: Update, _: ContextTypes.DEFAULT_TYPE) -> None:
         return
     if result is not None:
         await query.edit_message_text(result["reply"])
+
+
+async def on_trade_approval(update: Update, _: ContextTypes.DEFAULT_TYPE) -> None:
+    """A ``tapv`` tap: Approve / Reject a live-review recommendation (TRADE-ACTION-DIRECT-PATH phase 1).
+    Approve EXECUTES (through the live trader's directed-action spool and each account's RiskManager), so the
+    chat check is fail-closed exactly as for ``wdec``."""
+    from src.runtime import trade_approvals
+
+    query = update.callback_query
+    await query.answer()
+    try:
+        result = await asyncio.to_thread(trade_approvals.handle_callback, query.data or "",
+                                         authorised=_is_authorised(update))
+    except Exception as exc:  # noqa: BLE001 — a tap bug must not kill the bot
+        logger.warning("claude_decision_bot: trade approval %s failed: %s", query.data, exc)
+        await query.edit_message_text(f"⚠️ Approval failed before anything was executed: {exc}")
+        return
+    if result is not None:
+        await query.edit_message_text(f"{query.message.text if query.message else ''}\n\n{result['reply']}"[-4000:])
 
 
 async def publish_command_surface(bot: Any) -> dict[str, Any]:
@@ -375,6 +395,7 @@ def main() -> None:
     # Pattern-scoped: this bot claims the `wdec` prefix and nothing else, so the
     # poll claim it registers below is true of exactly what it handles.
     app.add_handler(CallbackQueryHandler(on_callback, pattern=rf"^{CB_PREFIX}:"))
+    app.add_handler(CallbackQueryHandler(on_trade_approval, pattern=rf"^{TAPV_PREFIX}:"))
     # TELEGRAM-CHANNELS part C: the ONE settings menu, MANAGER channel.
     from src.bot.notification_settings_menu import register as _register_settings
 

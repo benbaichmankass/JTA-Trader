@@ -3,13 +3,11 @@
   "strategy": "trend_donchian_sol_4h",
   "symbol": "SOLUSDT",
   "timeframe": "4h",
-  "config_fingerprint": "sha256:dae1fdfc868b321bad035439cd6d4922",
+  "config_fingerprint": "sha256:745a2f7a20a3f221eaacf38189954f1e",
   "basis": "harness_timefolds",
   "coverage_state": "measured",
   "fidelity": "approximate",
-  "omitted_levers": [
-    "structure_exit"
-  ],
+  "omitted_levers": [],
   "net_r_oos": 36.8572,
   "expectancy_r_oos": 0.3177,
   "n_trades_oos": 116,
@@ -106,5 +104,5 @@
       "folds_positive": 3
     }
   ],
-  "fidelity_basis": "2026-11-03 STRUCTURE-EXITS-ENABLE (PR #22626): the leg now declares structure_exit 'pivot=5' (live structure SL+TP replacing the chandelier). This record was measured WITHOUT it, so structure_exit is listed in omitted_levers and fidelity is downgraded faithful -> approximate. No measured field was changed; config_fingerprint refreshed to the current config so the record is tied to it as an APPROXIMATE measurement. Re-measure: PI-20261103-MB3OAWAX-0002."
+  "fidelity_basis": "2026-11-03 STRUCTURE-EXITS-ENABLE (PR #22626): the leg now declares structure_exit 'pivot=5' (live structure SL+TP replacing the chandelier). This record was measured WITHOUT it, so structure_exit is listed in omitted_levers and fidelity is downgraded faithful -> approximate. No measured field was changed; config_fingerprint refreshed to the current config so the record is tied to it as an APPROXIMATE measurement. Re-measure: PI-20261103-MB3OAWAX-0002. | 2026-11-11 STRUCTURE-EXITS-DEFAULT OFF (PROP-VELOTRADE-TP-MISMATCH, operator decision in chat 2026-11-11: \"For Velo Trade, yeah, let's go with one, and you can turn that off like the other strategies\"): structure_exit removed from the leg. The leg again trades the exit this record measured, so structure_exit is no longer an omitted lever; no measured field changed; config_fingerprint refreshed to the current config."
 }

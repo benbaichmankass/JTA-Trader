@@ -18,8 +18,8 @@
 # PREREQ (run first, on the trainer): register-train BOTH matched-sibling heads as
 # candidates (no --no-register -> lands candidate). scripts/ml/gate4_vol_threshold_run.sh
 # does this then calls this harness:
-#   python -m ml train ml/configs/btc-regime-15m-lgbm-vt005-pin-v1.yaml --datasets-root datasets-out
-#   python -m ml train ml/configs/btc-regime-15m-lgbm-vt004-pin-v1.yaml --datasets-root datasets-out
+#   python -m ml train ml/configs/retired/btc-regime-15m-lgbm-vt005-pin-v1.yaml --datasets-root datasets-out
+#   python -m ml train ml/configs/retired/btc-regime-15m-lgbm-vt004-pin-v1.yaml --datasets-root datasets-out
 #
 # Usage:
 #   bash scripts/ml/walkforward_vol_threshold.sh [DATA_CSV] [CANDIDATE_POLICY_YAML]

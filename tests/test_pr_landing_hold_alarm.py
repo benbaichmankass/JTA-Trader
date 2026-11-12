@@ -181,3 +181,58 @@ def test_standing_authorization_needs_the_date_and_an_existing_evidence_record()
 def test_uncited_hold_still_alarms():
     assert pla.grade({"tier": 2, "landing": "hold"}, decl_unreadable=False, reviews=[],
                      reviews_unreadable=False, resolve=pla.make_resolver(_ROOT)).state == pla.ALARM
+
+
+# --- 2026-11-12 (PI-20261112-BOTPING-0001, manager option (b)): a recorded approval on the PR itself ---
+# The four tier-2/3 holds merged on the night the ping was first delivered. Bodies are verbatim excerpts.
+_HOLD3 = {"tier": 3, "landing": "hold"}
+_TONIGHT = {
+    25001: ("**Operator decisions**, 2026-11-11 Thursday-planning doc, verbatim:\n"
+            "- **a1:** *\"Retire the 28 with no active manifest now; the 44 after their manifests are removed\"*.\n"
+            "- **a2:** *\"Accept as proposed\"*.", True),
+    24988: ("**Operator decision**, 2026-11-11 Thursday-planning doc, question b1, verbatim choice: "
+            "*\"Put qqq and tlt on the paper floor now; promote tlt to real money\"*.", True),
+    24991: ("**Operator decision**, 2026-11-11 Thursday-planning doc, question b3, verbatim choice: "
+            "*\"Retire it\"*. Operator's note: *\"We can retire it\"*", True),
+    # #24926 cites no operator decision anywhere: it must still page unless one is recorded.
+    24926: ("## What\nThree read routes over the ML lane's M1 long table ... Tier-2 by path; declared hold "
+            "(`tier_2_3_needs_approval`).", False),
+}
+
+
+def test_tonights_merges_read_as_expected():
+    for n, (body, approved) in _TONIGHT.items():
+        v = pla.grade(_HOLD3, decl_unreadable=False, reviews=[], reviews_unreadable=False,
+                      resolve=lambda t: False, pr_body=body, pr_number=n)
+        assert (v.state == pla.CLEAN) is approved, (n, v.state, v.reason)
+
+
+def test_label_and_meta_unreadable(tmp_path):
+    v = pla.grade(_HOLD3, decl_unreadable=False, reviews=[], reviews_unreadable=False,
+                  resolve=lambda t: False, pr_labels=[pla.APPROVED_LABEL])
+    assert v.state == pla.CLEAN
+    v = pla.grade(_HOLD3, decl_unreadable=False, reviews=[], reviews_unreadable=False,
+                  resolve=lambda t: False, pr_meta_unreadable=True)
+    assert v.state == pla.UNREADABLE
+
+
+def test_cli_reads_body_and_labels_from_pr_json(tmp_path, capsys):
+    decl = tmp_path / "d.json"
+    decl.write_text(json.dumps(_HOLD3))
+    rev = tmp_path / "r.json"
+    rev.write_text("[]")
+    pr = tmp_path / "pr.json"
+    pr.write_text(json.dumps({"body": _TONIGHT[24991][0], "labels": []}))
+    assert pla.main(["--decl-json", str(decl), "--reviews-json", str(rev), "--pr-json", str(pr)]) == 0
+    pr.write_text(json.dumps({"body": "no citation", "labels": [{"name": "operator-approved"}]}))
+    assert pla.main(["--decl-json", str(decl), "--reviews-json", str(rev), "--pr-json", str(pr)]) == 0
+    pr.write_text(json.dumps({"body": "no citation", "labels": []}))
+    assert pla.main(["--decl-json", str(decl), "--reviews-json", str(rev), "--pr-json", str(pr)]) == 2
+    assert pla.main(["--decl-json", str(decl), "--reviews-json", str(rev), "--pr-json", "UNREADABLE"]) == 3
+
+
+def test_ping_issue_is_opened_with_a_pat_not_github_token():
+    wf = (Path(__file__).resolve().parents[1] / ".github/workflows/pr-landing-hold-merge-alarm.yml").read_text()
+    assert "PING_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}" in wf
+    assert 'GH_TOKEN="${PING_TOKEN:-$GH_TOKEN}" gh issue create' in wf
+    assert '--pr-json "$pr_arg"' in wf

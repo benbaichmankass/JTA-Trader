@@ -77,8 +77,8 @@ on:
         description: 'Prop report-back JSON object (a single {...}).'
         required: true
         default: ''
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [prop-report]
 
 permissions:
   contents: read
@@ -98,10 +98,10 @@ jobs:
     # combine `types` with an `if`-style label gate).
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       (github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'prop-report'))
+      (github.event_name == 'repository_dispatch' &&
+       (github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'prop-report'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -119,7 +119,7 @@ jobs:
         # On the issue path, short-circuit cleanly if a github-actions[bot]
         # comment already exists (re-run after the issue was answered, or
         # a double-fire). Mirrors vm-diag-snapshot's dedup guard.
-        if: github.event_name == 'issues'
+        if: github.event_name == 'repository_dispatch'
         id: dedup
         uses: actions/github-script@v7
         with:
@@ -127,7 +127,7 @@ jobs:
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               per_page: 100,
             });
             const hasBotComment = comments.some(
@@ -135,7 +135,7 @@ jobs:
             );
             if (hasBotComment) {
               core.notice(
-                `Issue #${context.issue.number} already has a github-actions[bot] ` +
+                `Issue #${(context.payload.client_payload?.issue?.number ?? context.issue.number)} already has a github-actions[bot] ` +
                 `comment — skipping cleanly.`
               );
               core.setOutput('skip', 'true');
@@ -150,7 +150,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           # Untrusted issue body / dispatch input pass through env only —
           # never inline-interpolated into a shell command.
-          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_BODY: ${{ github.event.client_payload.issue.body }}
           DISPATCH_JSON: ${{ inputs.report_json }}
         run: |
           set -euo pipefail
@@ -325,7 +325,7 @@ jobs:
       # ────────────────────────────────────────────────────────────
 
       - name: Reply to issue with success
-        if: github.event_name == 'issues' && success() && steps.dedup.outputs.skip != 'true'
+        if: github.event_name == 'repository_dispatch' && success() && steps.dedup.outputs.skip != 'true'
         uses: actions/github-script@v7
         env:
           HTTP_CODE: ${{ steps.post.outputs.http_code }}
@@ -349,19 +349,19 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               body
             });
             await github.rest.issues.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               state: 'closed',
               state_reason: 'completed'
             });
 
       - name: Reply to issue with failure
-        if: github.event_name == 'issues' && failure() && steps.dedup.outputs.skip != 'true'
+        if: github.event_name == 'repository_dispatch' && failure() && steps.dedup.outputs.skip != 'true'
         uses: actions/github-script@v7
         env:
           HTTP_CODE: ${{ steps.post.outputs.http_code }}
@@ -387,13 +387,13 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               body
             });
             await github.rest.issues.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               state: 'closed',
               state_reason: 'not_planned'
             });

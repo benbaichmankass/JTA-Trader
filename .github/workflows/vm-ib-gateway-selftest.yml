@@ -32,8 +32,8 @@ on:
         description: "Why this run is happening (audit only)."
         required: false
         default: "manual operator dispatch"
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [vm-ib-gateway-selftest]
 
 permissions:
   contents: read
@@ -47,10 +47,10 @@ jobs:
   selftest:
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       (github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'vm-ib-gateway-selftest'))
+      (github.event_name == 'repository_dispatch' &&
+       (github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'vm-ib-gateway-selftest'))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -187,7 +187,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Reply to issue with result
-        if: github.event_name == 'issues' && always()
+        if: github.event_name == 'repository_dispatch' && always()
         uses: actions/github-script@v7
         env:
           EXIT_CODE: ${{ steps.exec.outputs.exit_code }}
@@ -205,11 +205,11 @@ jobs:
               ? `✅ **vm-ib-gateway-selftest** completed.`
               : `⚠️ **vm-ib-gateway-selftest** finished with a non-zero status — check the log (the safety net still recovers the container).`;
             await github.rest.issues.createComment({
-              owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number,
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               body: `${head}\nRun: ${runUrl}\nExit code: ${process.env.EXIT_CODE || '(setup failed)'}\n\n\`\`\`\n${tail}\n\`\`\``
             });
             await github.rest.issues.update({
-              owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number,
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               state: 'closed', state_reason: ok ? 'completed' : 'not_planned'
             });
 

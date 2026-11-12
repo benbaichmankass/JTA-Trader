@@ -778,6 +778,8 @@ def test_anomaly_steps_and_quiet_while_status_fresh(monkeypatch):
 # PHONE-BG-MISS: the heartbeat keeps the FLAG_SECURE state and the minutes since the background terminal_miss.
 def test_heartbeat_keeps_secure_and_bg_miss_fields(_iso):
     pe.record_event(_dev(), {"event": "heartbeat", "reason": "background: no ticket waiting",
-                             "state": {"secure": True, "bg_miss_min": 12, "not_allowlisted": "x"}})
+                             "state": {"secure": True, "bg_miss_min": 12, "secure_why": "unread:resume", "secure_min": 3,
+                                       "not_allowlisted": "x"}})
     st = pe.last_heartbeat("breakout_2")["state"]
     assert st["secure"] is True and st["bg_miss_min"] == 12 and "not_allowlisted" not in st
+    assert st["secure_why"] == "unread:resume" and st["secure_min"] == 3, "the reason the flag is on is reported"

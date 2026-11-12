@@ -74,7 +74,7 @@ narrowing one can strand a leg or blind a position check.
 
 from __future__ import annotations
 
-from typing import Any, Iterable, Mapping, Optional, Sequence
+from typing import Any, Dict, Iterable, Mapping, Optional, Sequence
 
 #: Declared ``symbols:`` only — the pre-E42 behaviour.
 DECLARED = "declared"
@@ -145,6 +145,19 @@ def leg_symbols(strategy_cfg: Optional[Mapping[str, Any]],
     if account_id is None:   # the union the builder evaluates: configured plus every passed population, any venue
         return out + [s for s in _mu.passed_symbols(rec) if s not in out]
     return _mu.apply(out, rec, _mu.account_venue(account_id))
+
+
+#: A leg declaring ``pool_scored: true`` (row ML-ENTRY-EQ-STRUCT-FULL-POOL, src/runtime/ml_pool_scoring.py) has its population scored ONCE per
+#: decision close from a pool snapshot its own refresher fetches; its symbols are NOT part of the STATIC per-tick fetch set (a 171-symbol population
+#: would otherwise add ~171 pipeline passes to every tick). The tick adds back only the symbols that hold a package. Not a gate.
+POOL_SCORED_KEY = "pool_scored"
+
+
+def tick_strategies_cfg(strategies_cfg: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
+    """``strategies_cfg`` with every ``pool_scored`` leg's ``symbols`` emptied -- the input for the STATIC tick fetch set (and the readers that
+    mirror it). The one definition: src/main.py::_resolve_tick_symbols, the desk scan packet and the resolver/union guards all call this."""
+    cfgs = strategies_cfg or {}
+    return {n: (dict(c, symbols=[]) if isinstance(c, Mapping) and bool(c.get(POOL_SCORED_KEY, False)) else c) for n, c in cfgs.items()}
 
 
 def roster_symbols(roster: Optional[Sequence[Any]],

@@ -1,0 +1,139 @@
+id: RQ-20261111-9b09-01
+title: 'LTR fast-move lock-in: after an IMPULSE (> 1.0 / 1.5 R in the last 2-3 closes, peak >= 1 R) does tightening the trail to 2.0 ATR beat
+  the declared exit AND the same tighten taken on every trade at peak >= 1 R, on ada_pullback_2h / trend_donchian_xrp_4h / trend_donchian_sol_4h,
+  net of the full cost stack? (operator 2026-11-10 ''these seem like good points to be locking in'')'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 1
+kind: experiment
+question: 'The operator asked on 2026-11-10 ~15:25Z for ''quicker and more aggressive action on an SL moving'' when a move is fast and ''they''ll
+  probably end up bouncing back fast''. Live cases: ADA bybit_2 +0.8 R in ~17 min then a peak of +1.37 R given back 0.52 R within minutes (2026-11-10
+  16:11Z) and to ~0 on 2026-11-11; XRP half locked at 1.0629 under a one-time pre-approval and stopped out keeping ~+1.74 R of a +2.89 R peak;
+  SOL prop +2 R with the entry stop unmoved. No unit conditions an exit lever on the SPEED of the move: the live-review outcome table conditions
+  on peak / open R / bars, and the path-state gate had no velocity feature until this unit''s build (feature `vel` = R gained over the last w
+  closes, src/research/path_state_gate.py). On each of the three legs, do arms V3_10 / V3_15 / V2_10 (trail mult -> 2.0 once peak >= 1 R AND vel
+  over 3 / 3 / 2 closes > 1.0 / 1.5 / 1.0 R at the previous close) beat A by >= 0.02 R/trade in >= 5 of 6 folds within the drawdown bar AND beat
+  U3 (the same 2.0 tighten on EVERY bar at peak >= 1 R: the unconditional control, so a PASS is the impulse condition, not any early tighten)?
+  PRIOR, stated before the run: level-triggered tightening failed vs the declared exit on the Bybit money legs on 2026-10-22, and RQ-20261022-b7e1-06
+  read higher ATR-vs-entry -> LESS further giveback; an impulse is not the same state as either, so no direction is predicted.'
+why_this_matters: Three live legs (bybit_2 real money + mirror, and the prop SOL leg on tradeify_1 / velotrade_1). The operator wants the system
+  to act on fast moves without a chat round-trip; the Active-management doctrine keeps every action class advice-only until its own net-of-cost
+  test passes, so this record is what a 'fast-move lock-in' advice class or a proposed impulse mandate would stand on.
+power:
+  expected_n: 400
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: Floor (1.96 + 0.8416)^2 / 0.45^2 = 38.76 -> 39 incumbent trades per leg; ada_pullback_2h n=402 MEASURED in RQ-20261029-5121-01's basis;
+    the 4h trend legs are expected lower and the rule makes n(A) < 39 INDETERMINATE.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-LTR-FAST-MOVE-LOCKIN-VEL-01
+  registered_at: '2026-11-11'
+  registered_before_run: true
+  statistic: 'Per leg, from scripts/research/exit_lever_ablation.py --grade replace, window 2020-07-01 .. 2026-11-10 23:59, 6 equal calendar folds
+    by entry time, net of the full cost stack (resolve_cost_policy, recorded per arm). Per arm: n, net_total_r, max_drawdown_r, net R per fold.
+    A = the leg as declared. Candidates V3_10, V3_15, V2_10; control U3. The gate reads the feature at bar t''s close and binds from bar t+1 (PATHSTATE-TRAIL-GATE
+    contract), and composes by MINIMUM with the leg''s own tighteners.'
+  rule: 'Per leg: INDETERMINATE IF n(A) < 39, or IF every candidate arm is byte-identical to A (the gate never changed a stop, e.g. a structure-exit
+    leg whose chandelier the trail mult does not reach: trend_donchian_sol_4h declares structure_exit pivot=5). A candidate C PASSES iff net_r(C)
+    > net_r(A) AND delta >= 0.02 R x n(A) AND folds_ge(A) >= 5 of 6 AND maxDD(C) <= maxDD(A) x 1.35 AND net_r(C) > net_r(U3). PASS on a leg IF
+    one or more candidates pass there: ONE confirmation unit on a disjoint partition (a PASS on one window is a discovery), then live parity (the
+    live trail must see the same feature) and a Tier-3 proposal / an advice-class record; never a config edit from this unit. FAIL on a leg IF
+    none passes: the impulse-gated tighten is closed on that leg at these thresholds. Thresholds and the arm grid are not changed after any result.'
+  what_it_does_not_do: 'Edits no config and places no order. Bar-close resolution: an intrabar impulse (the ADA +0.8 R in 17 min on a 2h leg)
+    is seen only at the bar''s close, so this measures the bar-scale effect; an intrabar trigger is the separate build row LTR-FAST-MOVE-WAKE
+    (a live wake, not an exit rule). TP moves on an impulse (the operator''s 2026-11-10 addition: extend the TP while locking, or pull it in to
+    bank) are NOT in this unit: every arm keeps the leg''s declared TP; the TP side needs its own unit under the TP doctrine. No look at any arm
+    was taken before registration.'
+practice_precedent: 'Volatility- or momentum-conditioned trailing (tightening after an outsized range bar) is a common discretionary-desk practice;
+  in-repo priors: RQ-20261022-b7e1-06 / -08 and docs/research/exit-path-metrics-2026-10-22.md.'
+intervention_controls:
+  not_applicable: 'a deterministic, state-gated trail rule replayed by the harness over EVERY trade of the leg (scripts/research/exit_lever_ablation.py),
+    not a discretionary in-trade action at chosen check-ins. Its controls are arm A (the declared exit = hold-to-bracket) and arm U3 (the same
+    2.0 tighten applied unconditionally at peak >= 1 R: the action without the selection condition, which a PASS must beat). The harness emits
+    no per-check-in paths, so no matched-random draw (B2) or leave-one-fold-out best-static (B3) is computed; that limit is stated, not papered
+    over.'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 500
+  confidence: 0.1
+  basis: 'stand-in: real-money and prop legs; the operator named fast-move lock-in a priority; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 60
+  why_runner: Fetches keyless public candles (Binance Vision) for a pinned window; reads no trainer data.
+  basis: One harness invocation per arm per leg; RQ-20261029-5121-01 ran 7 arms on one 2h leg within its 120 min budget.
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - ada_pullback_2h
+  - --arm
+  - A=
+  - --arm
+  - V3_10=--trail-state-feature=vel;--trail-state-window=3;--trail-state-op=gt;--trail-state-thr=1.0;--trail-state-arm-r=1.0;--trail-state-tight-mult=2.0
+  - --arm
+  - V3_15=--trail-state-feature=vel;--trail-state-window=3;--trail-state-op=gt;--trail-state-thr=1.5;--trail-state-arm-r=1.0;--trail-state-tight-mult=2.0
+  - --arm
+  - V2_10=--trail-state-feature=vel;--trail-state-window=2;--trail-state-op=gt;--trail-state-thr=1.0;--trail-state-arm-r=1.0;--trail-state-tight-mult=2.0
+  - --arm
+  - U3=--trail-state-feature=vel;--trail-state-window=3;--trail-state-op=gt;--trail-state-thr=-99;--trail-state-arm-r=1.0;--trail-state-tight-mult=2.0
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-11-10 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '5'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}/ada_pullback_2h'
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261111-9b09-01
+    gate_flags_contract: PATHSTATE-TRAIL-GATE
+    also_run_legs:
+    - trend_donchian_xrp_4h
+    - trend_donchian_sol_4h
+    also_run_note: the same argv with --leg replaced (and --out {out_dir}/<leg>); each leg is graded on its own
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261029-5121-01.yaml
+- research/queue/RQ-20261022-b7e1-06.yaml
+- research/queue/RQ-20261022-b7e1-08.yaml
+- scripts/research/live_review_outcomes.py
+- src/research/path_state_gate.py
+grading:
+  auto: true
+  decision_rule_id: RULE-LTR-FAST-MOVE-LOCKIN-VEL-01

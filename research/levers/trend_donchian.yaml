@@ -91,10 +91,38 @@ levers:
         max_drawdown_r: 25.5218
         verdict: pass
         joint_change: false
-      shape: single_point
-      points: 1
+      - value: '25'
+        baseline_value: '20'
+        arm: donchian_hi
+        unit: RQ-20261106-017
+        window: 2021-11-02..2026-11-05
+        n: 318
+        net_r: 25.6055
+        baseline_n: 356
+        baseline_net_r: 21.6493
+        delta_net_r: 3.9562
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 23.0311
+        verdict: fail
+        joint_change: false
+      - value: '15'
+        baseline_value: '20'
+        arm: donchian_lo
+        unit: RQ-20261106-017
+        window: 2021-11-02..2026-11-05
+        n: 389
+        net_r: 2.31
+        baseline_n: 356
+        baseline_net_r: 21.6493
+        delta_net_r: -19.3393
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 41.1663
+        verdict: fail
+        joint_change: false
+      shape: monotone
+      points: 3
       best_delta_r_per_trade: 0.0252
-      fold_stability: 0.667
+      fold_stability: 0.472
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
     min_confidence:
       tests:
@@ -112,11 +140,39 @@ levers:
         max_drawdown_r: 33.2162
         verdict: pass
         joint_change: false
-      shape: flat
-      points: 1
-      best_delta_r_per_trade: 0.0097
-      fold_stability: 0.667
-      reading: no response at the tested values
+      - value: '0.875'
+        baseline_value: '0.7'
+        arm: min_confidence_hi
+        unit: RQ-20261106-017
+        window: 2021-11-02..2026-11-05
+        n: 310
+        net_r: 36.5598
+        baseline_n: 356
+        baseline_net_r: 21.6493
+        delta_net_r: 14.9105
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 19.4944
+        verdict: fail
+        joint_change: false
+      - value: '0.525'
+        baseline_value: '0.7'
+        arm: min_confidence_lo
+        unit: RQ-20261106-017
+        window: 2021-11-02..2026-11-05
+        n: 409
+        net_r: 27.1043
+        baseline_n: 356
+        baseline_net_r: 21.6493
+        delta_net_r: 5.455
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 24.1077
+        verdict: fail
+        joint_change: false
+      shape: noisy
+      points: 3
+      best_delta_r_per_trade: 0.0419
+      fold_stability: 0.472
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
   exit:
     trail_state_feature:
       tests:

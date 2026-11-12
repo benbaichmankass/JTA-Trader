@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "#25000 (D1) merged as 9b7091101 and main is merged in, so this diff is D3 only. Tier 2: it changes what ict-security-watch.service does on the live VM. Manager merges after #25000. Post-merge checks: journalctl?unit=ict-security-watch shows a 'files' object in each run's JSON line with unreadable=0 (or the alert ledger holds ONE 'cannot read' flag naming the paths), and the alert ledger holds ONE '[INFO] ... file baseline recorded' row and no file '[RED FLAG]' rows across the next pull-and-deploy.",
+  "why": "SEC-DETECTORS D3: adds a 'files' detector to scripts/ops/security_watch.py. It hashes authorized_keys (every home plus /root), /etc/sudoers and sudoers.d, unit files and drop-ins under /etc/systemd/system, /etc/crontab, /etc/cron.d and the user crontabs, and alerts once per change through telegram_channels.send('alert') and the alert ledger, deduplicated by alert_cooldown. Alerts name the path only, never the content. A unit equal to deploy/<name>, or a drop-in equal to a deploy/ file, is expected and silent. Unreadable paths keep their old hash and raise one alert when the set grows. Reads only; no gate, no halt; always exits 0."
+}

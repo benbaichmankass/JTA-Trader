@@ -28,6 +28,11 @@ slos:
     what: "configs tried (newest ledger, cumulative) / max(survivors, 1) -- zero survivors is divided by 1, the most generous reading, and the evidence names survivors: 0"
     op: max
     threshold: 500
+  heldout_registered_passes_30d:
+    what: "graded registered-rule PASSes on HELD-OUT data in the last 30 d (the operator's 2026-11-04 survivor definition, measured directly; row RESEARCH-SLO-HELDOUT-SURVIVORS). Held-out class comes from structured unit fields only (evidence_class, or ml_bakeoff / kind inferred); passes with no class are shown as unknown_holdout and NOT counted. Split edge vs model_quality in the evidence. DIAGNOSTIC: shown beside the proxy; whether it replaces survivors_per_month as the alerting SLO is the operator's call (Gates this adds or changes: none)."
+    diagnostic: true
+    op: min
+    threshold: 1
   # ── VOLUME SLOs, demoted to DIAGNOSTICS (2026-11-01): still measured and shown, no longer alert. The 15-minute
   # research_watchdog keeps escalating a dead dispatcher / collector / starved queue on its own. ──
   runnable_floor:

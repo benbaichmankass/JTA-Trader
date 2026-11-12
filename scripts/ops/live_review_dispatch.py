@@ -139,8 +139,28 @@ PINNED_BRANCHES = ("main", "live-review/rows")
 # Seams (monkeypatched in tests)
 # --------------------------------------------------------------------------
 
+#: TRADE-ACTION-DIRECT-PATH phase 2: VM-local roots searched BEFORE git (``--local-root``): the direct-rows tree
+#: (``POST /api/bot/live-review/rows``) and the wake poster's local evidence copy. Each holds files at their repo
+#: paths. Empty = the git-only behaviour every existing path uses.
+LOCAL_ROOTS: List[Path] = []
+
+
+def _local_text(path: str) -> Optional[str]:
+    if ".." in path or path.startswith("/"):
+        return None
+    for root in LOCAL_ROOTS:
+        try:
+            return (root / path).read_text()
+        except OSError:
+            continue
+    return None
+
+
 def _committed_text(path: str, ref: str = "HEAD") -> Optional[str]:
-    """``path`` as committed at ``ref``; None when git cannot show it."""
+    """``path`` from a ``--local-root`` (when given), else as committed at ``ref``; None when neither has it."""
+    local = _local_text(path) if LOCAL_ROOTS else None
+    if local is not None:
+        return local
     try:
         r = subprocess.run(["git", "-C", _REPO_ROOT, "show", f"{ref}:{path}"],
                            capture_output=True, text=True, timeout=30)
@@ -561,7 +581,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--review-id", required=True, help="the committed review row's review_id (LR-…)")
     ap.add_argument("--apply", action="store_true", help="execute; without it the apply runs --dry-run")
     ap.add_argument("--ref", help="pinned 40-hex commit on main or live-review/rows to read the row at")
+    ap.add_argument("--local-root", action="append", default=[],
+                    help="(direct path) a VM-local tree searched before git for the row and its evidence")
     a = ap.parse_args(argv)
+    LOCAL_ROOTS[:] = [Path(r) for r in a.local_root]
     res = dispatch(a.review_id, apply=a.apply, ref=a.ref)
     for line in res.get("accounts") or []:
         print(line)
