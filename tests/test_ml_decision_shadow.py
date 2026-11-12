@@ -234,3 +234,33 @@ def test_health_check_grades_each_state(tmp_path):
     p.write_text(json.dumps({"logged_at": "2020-01-01T00:00:00+00:00", "bar_close": "x"}) + "\n")
     r = check_ml_decision_shadow(path=p)
     assert r.status == "warn" and r.detail.startswith("STALE")
+
+
+def test_run_once_retries_a_rate_limited_symbol_once(tmp_path):
+    """PI-20261103-SHADOWFETCH-0001 / row VENUE-KLINE-RATE-LIMIT: a transient fetch_failed (Bybit retCode 10006) is
+    retried ONCE after a pause, so one venue hiccup no longer shrinks every symbol's reference set for the bar; a
+    symbol that keeps failing costs exactly one extra call (bounded, never a loop)."""
+    pytest.importorskip("lightgbm")
+    b = B4 + pd.Timedelta(minutes=30)
+    store = {s: _bars_15m(20 + i, b + M.STEP, n=2100) for i, s in enumerate(SYMS)}
+    models = _models()
+    for m in models.values():
+        m["meta"] = dict(m["meta"], xs_reference=list(SYMS))
+    inner = _fake_get(store, [])
+    flaky, stuck = SYMS[0], SYMS[1]
+    seen: dict = {}
+
+    def get(url, params=None, timeout=None):
+        s = params["symbol"]
+        seen[s] = seen.get(s, 0) + 1
+        if s == stuck or (s == flaky and seen[s] == 1):
+            return _Resp({"retCode": 10006, "retMsg": "Too many visits. Exceeded the API Rate Limit.", "result": {}})
+        return inner(url, params=params, timeout=timeout)
+
+    out = M.run_once(now=b + pd.Timedelta(seconds=200), log_path=tmp_path / "log.jsonl", cache_dir=tmp_path / "c",
+                     get=get, models=models, retry_pause_s=0.0)
+    assert out["retried"] == sorted([flaky, stuck]) and out["retry_recovered"] == [flaky]
+    assert seen[stuck] == 2                                      # one retry, not a loop
+    rows = [json.loads(x) for x in (tmp_path / "log.jsonl").read_text().splitlines()]
+    by_sym = {r["symbol"]: r["read_state"] for r in rows}
+    assert by_sym[flaky] == "ok" and by_sym[stuck] == "fetch_failed"

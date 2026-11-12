@@ -54,7 +54,6 @@ import os
 import re
 import sqlite3
 import sys
-import time
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -165,8 +164,9 @@ def rebuild_fields(row: dict[str, Any], account_cfg: dict[str, Any], now: dateti
         if cap["action"] == prop_risk_gate.CAP_RESIZED:
             gate_cap = cap
             leg = build_account_leg(sig, unit, risk_usd_override=cap["risk_usd"], **kw)
-        elif cap["action"] == prop_risk_gate.CAP_REFUSED:
-            return None, f"risk gate refuses: {cap['cause']}"
+        elif cap["action"] == prop_risk_gate.CAP_UNBOUNDED_REPORTED:
+            # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-PROP-RISK-CUSHION: MAKE REPORT-ONLY. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d). (reported on the ticket meta, never a refusal)
+            gate_cap = cap
     if leg.decision != "place" or leg.ticket is None:
         return None, f"leg skips: {leg.reason}"
     lev = be._leverage_refusal(account_id, unit, symbol, leg.ticket.qty_units, sig.entry, cvpp)
@@ -276,19 +276,18 @@ def apply(conn: sqlite3.Connection, decision: dict[str, Any]) -> dict[str, Any]:
     conn.commit()
     return _row(conn, b["ticket_id"]) or {}
 
+def _take_backup():
+    """The shared pre-APPLY backup with per-tag retention (scripts/ops/journal_backup.py)."""
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    from scripts.ops.journal_backup import take_backup
+    return take_backup
+
 
 def _backup(db_path: str) -> str:
-    dest = f"{db_path}.bak-prop-ticket-reissue-{int(time.time())}"
-    src = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
-    try:
-        dst = sqlite3.connect(dest)
-        try:
-            src.backup(dst)
-        finally:
-            dst.close()
-    finally:
-        src.close()
-    return dest
+    """Pre-APPLY copy to <db>.bak-prop-ticket-reissue-<stamp>; keeps only the newest per tag (journal_backup.py)."""
+    return _take_backup()(db_path, "prop-ticket-reissue", method="online", stamp_style="epoch")
 
 
 def main(argv: list | None = None, *, guard: GuardCheck | None = None,

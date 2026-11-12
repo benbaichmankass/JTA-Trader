@@ -419,17 +419,22 @@ def test_every_elected_account_gets_exactly_one_package(run):
 def test_the_global_winners_gate_no_longer_drops_another_accounts_round(run):
     """The XRPUSDT 2026-09-24T15:09Z shape: the headline strategy had already
     acted this bar, and the pre-E35 pipeline skipped the WHOLE tick — taking
-    bybit_2 + bybit_portfolio's own winner with it. (Live, that round also
-    held its own open package, so no order was lost that tick; here it does
-    not, which is the case the old code got wrong.)"""
+    bybit_2 + bybit_portfolio's own winner with it.
+
+    GATE-BAR-DEBOUNCE was REMOVED by the operator on 2026-11-12 (decisions
+    page, Gates tab; comms/gates/gate_decisions_2026-11-12.json): a same-bar
+    repeat is now observed and logged, never skipped, so BOTH rounds dispatch.
+    The per-round gating this test was written for is still pinned by the
+    open-package test below."""
     run.gates["same_bar"].add("ict_scalp_eth_15m")
     result, venue = run(_tick())
     assert result["status"] == "multi_account_dispatched"
-    assert sorted(venue.placed) == [("bybit_2", "trend_donchian_eth_4h"),
-                                    ("bybit_portfolio", "trend_donchian_eth_4h")]
-    skipped = [o for o in result["round_outcomes"] if o["status"] == "skipped"]
-    assert skipped == [{"strategy": "ict_scalp_eth_15m", "accounts": ["bybit_1"],
-                        "status": "skipped", "reason": "same_bar_reentry_debounce"}]
+    assert sorted(venue.placed) == [
+        ("bybit_1", "ict_scalp_eth_15m"),
+        ("bybit_2", "trend_donchian_eth_4h"),
+        ("bybit_portfolio", "trend_donchian_eth_4h"),
+    ]
+    assert [o for o in result["round_outcomes"] if o["status"] == "skipped"] == []
 
 
 def test_a_rounds_own_open_package_gates_it_cross_tick_double_place(run):
@@ -480,3 +485,49 @@ def test_no_account_elected_is_reported_not_silent(run):
     result, venue = run(signal)
     assert venue.calls == []
     assert result["status"] == "skipped" and result["reason"] == "no_account_elected"
+
+
+# ── Gate decisions 2026-11-12 (operator decisions page, Gates tab) ──────────
+# Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions).
+
+def test_multi_account_dispatch_env_off_no_longer_refuses(run, monkeypatch):
+    """GATE-MULTI-ACCOUNT-DISPATCH-ENV: MAKE REPORT-ONLY. MULTI_ACCOUNT_DISPATCH
+    pinned off used to refuse every actionable signal
+    (``multi_account_dispatch_disabled``). It is now logged and the signal goes
+    down the one sanctioned order path."""
+    monkeypatch.setenv("MULTI_ACCOUNT_DISPATCH", "false")
+    result, venue = run(_tick())
+    assert result["status"] == "multi_account_dispatched"
+    assert sorted(venue.placed) == [
+        ("bybit_1", "ict_scalp_eth_15m"),
+        ("bybit_2", "trend_donchian_eth_4h"),
+        ("bybit_portfolio", "trend_donchian_eth_4h"),
+    ]
+
+
+def test_recent_refusal_and_empty_sizing_no_longer_skip_a_round(run, monkeypatch):
+    """GATE-REFUSAL-COOLDOWN: REMOVE and GATE-EMPTY-SIZING-BRAKE: MAKE
+    REPORT-ONLY, end to end: both helpers report a hit for every strategy and
+    every round still dispatches."""
+    monkeypatch.setattr(pipeline, "_recent_refusal_for_strategy", lambda *a, **k: {
+        "order_package_id": "r", "age_seconds": 5.0, "cooldown_seconds": 300})
+    monkeypatch.setattr(pipeline, "_empty_sizing_refusal_for_signal", lambda *a, **k: {
+        "order_package_id": "e", "cause": "no_account_reached_sizer",
+        "signal_key": "k", "refused_at": "t"})
+    result, venue = run(_tick())
+    assert result["status"] == "multi_account_dispatched"
+    assert len(venue.placed) == 3
+    assert [o for o in result["round_outcomes"] if o["status"] == "skipped"] == []
+
+
+def test_positive_control_open_package_still_gates_with_the_others_hit(run, monkeypatch):
+    """Positive control: the open-package gate (not part of these decisions)
+    still skips its round even while the removed checks also report hits."""
+    monkeypatch.setattr(pipeline, "_recent_refusal_for_strategy", lambda *a, **k: {
+        "order_package_id": "r", "age_seconds": 5.0, "cooldown_seconds": 300})
+    run.gates["same_bar"].add("ict_scalp_eth_15m")
+    run.gates["open"].add("trend_donchian_eth_4h")
+    result, venue = run(_tick())
+    assert venue.placed == [("bybit_1", "ict_scalp_eth_15m")]
+    assert {o["strategy"]: o["reason"] for o in result["round_outcomes"]
+            if o["status"] == "skipped"} == {"trend_donchian_eth_4h": "open_package_exists"}

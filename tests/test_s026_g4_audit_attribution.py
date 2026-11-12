@@ -115,10 +115,18 @@ def _stub_runtime(monkeypatch):
         "src.runtime.pipeline.inject_per_strategy_counters",
         lambda settings, _name: settings,
     )
-    # Force the multi-account dispatch fast-path off so safe_place_order
-    # runs the legacy single-client path (clean status without a real
-    # Coordinator). The audit-log site is the same in both branches.
-    monkeypatch.setenv("MULTI_ACCOUNT_DISPATCH", "false")
+    # The audit-log site is the same on every branch. These tests used to pin
+    # MULTI_ACCOUNT_DISPATCH=false to avoid a real Coordinator; that env no
+    # longer refuses anything (GATE-MULTI-ACCOUNT-DISPATCH-ENV: MAKE REPORT-ONLY,
+    # operator 2026-11-12 decisions page, Gates tab), so the Coordinator and the
+    # journal-reading open-package gate are stubbed instead.
+    class _NoVenue:
+        def multi_account_execute(self, pkg, account_scope=None, **_kw):
+            return []
+    monkeypatch.setattr("src.core.coordinator.Coordinator", lambda: _NoVenue())
+    monkeypatch.setattr("src.runtime.pipeline._monocle_gate", lambda *a, **k: None)
+    monkeypatch.setattr("src.runtime.pipeline._open_package_round",
+                        lambda signal, scope: (None, scope))
     monkeypatch.setenv("DRY_RUN", "true")
 
 

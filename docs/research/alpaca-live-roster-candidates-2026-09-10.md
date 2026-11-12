@@ -46,7 +46,7 @@ live `git_sha 55c52392f` = `git_sha_on_disk`, `restart_pending: false`):
 |---|---|
 | `status` | `ACTIVE` · `trading_blocked: false` · `account_blocked: false` |
 | `capacity.multiplier` | **`"1"`** — a CASH account, verified rather than inherited |
-| `buying_power` / `regt_buying_power` / `cash` / `equity` | **all `200.22`** |
+| `buying_power` / `regt_buying_power` / `cash` / `equity` | **all `[balance removed]`** |
 | **`shorting_enabled`** | **`false`** |
 | open positions (`/api/diag/exchange_positions`) | **0** |
 
@@ -56,7 +56,7 @@ From `src/units/accounts/risk.py` at `55c52392f`, with `alpaca_live.risk` carryi
 `risk_pct: 0.02` and **no `confidence_sizing` key** (so `_confidence_scalar`
 returns the flat `1.0` — I read the field, not the prose about it):
 
-| term | source | value at `equity = 200.22` |
+| term | source | value at `equity = [balance removed]` |
 |---|---|---|
 | per-trade risk budget | `balance × risk_pct × conf_scalar` | **$4.0044** |
 | risk-per-share ceiling | `_ROUND_UP_BUDGET_MULT = 1.5` × budget | **$6.0066** |
@@ -122,13 +122,13 @@ against `order_packages` through a different route — records **33 long** over
 ### 1.4 The sizer's own verdict on every long setup this fleet has produced
 
 **MEASURED** by running `RiskManager.position_size` (`whole_units=True`,
-`market_type="spot"`, `available_usd = total_account_usd = balance = 200.22`,
+`market_type="spot"`, `available_usd = total_account_usd = balance = [balance removed]`,
 `risk_pct 0.02`, `confidence 0.5`) over **every distinct `(entry, stop_loss)`
 pair** on the buy side of each leg's `<strategy>_eval` rows since 2026-06-01
 (`/api/diag/audit_query`, read 2026-09-10; none of the pulls hit the 1000-row
 cap, so each is a complete population of that leg's long setups in the window).
 
-| leg | long setups | **sized > 0** | median risk/share | qty | risk $ | notional (% of $200.22) |
+| leg | long setups | **sized > 0** | median risk/share | qty | risk $ | notional (% of [balance removed]) |
 |---|--:|--:|--:|--:|---|---|
 | `tlt_pullback_1h` | 240 | **240 (100%)** | 0.368 | 2 | 0.55–1.76 | 164–175 (**82–87%**) |
 | `slv_pullback_1d` | 217 | **217 (100%)** | 3.766 | 1 | 3.54–3.90 | 59–62 (29–31%) |
@@ -389,13 +389,13 @@ TLT's. **Diversification of WHEN a long is available, not of position count.**
 **Risk added,** over the same population as §1.4 (every distinct observed long
 setup per leg; n = 44 / 67 / 217 / 79 for `tlt_pullback_1d` / `ief_pullback_1d` /
 `slv_pullback_1d` / `iaum_pullback_1d`): each added leg risks **$0.89–$3.90** at
-its declared stop — **0.4–1.9% of the $200.22 equity read on 2026-09-10**, and
+its declared stop — **0.4–1.9% of the [balance removed] equity read on 2026-09-10**, and
 that range is the min and max across all 407 of those setups, not a central
 estimate. The structural ceiling is unchanged and is the round-up bound:
-`1.5 × $4.0044 = $6.01`, i.e. **3.0% of that same $200.22**, in one trade. It is
+`1.5 × $4.0044 = $6.01`, i.e. **3.0% of that same [balance removed]**, in one trade. <!-- population-ok: arithmetic bound on the sizer, not a measured rate --> It is
 an arithmetic bound on the sizer, not a measurement — no leg in Option A
 approaches it (widest observed is `slv_pullback_1d` at $3.90, over its 217
-setups). The daily-loss cap is `daily_loss_pct 0.10 × 200.22 = $20.02`, so it
+setups). The daily-loss cap is `daily_loss_pct 0.10 × [balance removed] = $20.02`, so it
 takes ~5 full stop-outs at that widest observed risk to trip it. Contention: at most one position at a time (§2), and the added legs are
 all 1d, so the incumbent's slot is rarely taken.
 
@@ -474,7 +474,7 @@ distinguish *"this account is alerting"* from *"this account's alarm is switched
 off and this is what it last said three weeks ago"*.
 
 It is also **wrong on its face now**: the latched cause is `risk_refused` from a
-zero-balance era; the account holds $200.22 and its three refusals since arming
+zero-balance era; the account holds [balance removed] and its three refusals since arming
 are `side_filter` suppressions, a different cause entirely.
 
 ⚠️ **The skip itself is CORRECT and must not be removed.** `docs/claude/system-actions.md`

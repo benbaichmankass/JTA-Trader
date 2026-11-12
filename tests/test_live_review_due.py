@@ -489,10 +489,11 @@ def test_trigger_first_unreadable_inputs_and_unknown_class_fire_with_a_reason():
 
 def test_trigger_first_unknown_asset_class_reads_open_and_says_why(monkeypatch):
     import src.runtime.market_hours as mh
-    monkeypatch.setattr(mh, "asset_class_for_symbol", lambda s: "weird_class")
+    # the seam is the memoized profile exchange -> market_hours.asset_class_for_exchange (RM-AM-DUE-COULDNOTLOOK)
+    monkeypatch.setattr(mh, "asset_class_for_exchange", lambda e: "weird_class")
     ok, cls, why = lrd.package_market_state("X", TF_NOW)
     assert ok and cls == "weird_class" and "not modelled" in why
-    monkeypatch.setattr(mh, "asset_class_for_symbol", lambda s: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setattr(lrd, "profile_exchange", lambda s: (_ for _ in ()).throw(RuntimeError("boom")))
     ok, cls, why = lrd.package_market_state("X", TF_NOW)
     assert ok and "market_hours_unreadable" in why
 
