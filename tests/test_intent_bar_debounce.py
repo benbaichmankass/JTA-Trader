@@ -68,40 +68,45 @@ def test_first_emission_passes_through():
     assert _names(kept) == [_STRAT]
 
 
-def test_repeat_within_same_bar_is_debounced():
-    """Same 2h bucket → only the first tick passes; later ticks drop."""
+# GATE-BAR-DEBOUNCE was REMOVED by the operator on 2026-11-12 (decisions page,
+# Gates tab; comms/gates/gate_decisions_2026-11-12.json). The emission-side
+# debounce shares that gate's STRATEGY_BAR_DEBOUNCE_DISABLED switch, so it no
+# longer drops anything: a same-bar repeat is logged and passed on. The four
+# tests below used to assert the drop; they now assert pass-through.
+
+def test_repeat_within_same_bar_now_passes():
+    """Same 2h bucket → every tick passes (was: only the first)."""
     assert _names(im._debounce_emissions([_intent()], now=_T0)) == [_STRAT]
-    assert im._debounce_emissions([_intent()], now=_T0 + 60) == []
-    assert im._debounce_emissions([_intent()], now=_T0 + 7199) == []
+    assert _names(im._debounce_emissions([_intent()], now=_T0 + 60)) == [_STRAT]
+    assert _names(im._debounce_emissions([_intent()], now=_T0 + 7199)) == [_STRAT]
 
 
-def test_new_bar_re_arms_emission():
+def test_repeat_is_logged(caplog):
+    """The observation is kept: the repeat is logged with the gate's name."""
+    import logging
+    caplog.set_level(logging.DEBUG, logger=im.logger.name)
+    im._debounce_emissions([_intent()], now=_T0)
+    im._debounce_emissions([_intent()], now=_T0 + 60)
+    assert any("GATE-BAR-DEBOUNCE removed" in r.getMessage() for r in caplog.records)
+
+
+def test_new_bar_still_passes():
     assert _names(im._debounce_emissions([_intent()], now=_T0)) == [_STRAT]
-    assert im._debounce_emissions([_intent()], now=_T0 + 60) == []
-    # Next 2h bucket → emits once more, then debounces again within it.
     assert _names(im._debounce_emissions([_intent()], now=_T0 + _BAR_SECONDS)) == [_STRAT]
-    assert im._debounce_emissions([_intent()], now=_T0 + _BAR_SECONDS + 60) == []
+    assert _names(im._debounce_emissions([_intent()], now=_T0 + _BAR_SECONDS + 60)) == [_STRAT]
 
 
-def test_distinct_symbols_are_independent():
-    """Debounce is per (strategy, symbol) — ETH and BTC don't shadow each other."""
-    kept = im._debounce_emissions(
-        [_intent(symbol="BTCUSDT"), _intent(symbol="ETHUSDT")], now=_T0
-    )
-    assert {i.symbol for i in kept} == {"BTCUSDT", "ETHUSDT"}
-    # Same bar, both already emitted → both drop.
-    assert im._debounce_emissions(
-        [_intent(symbol="BTCUSDT"), _intent(symbol="ETHUSDT")], now=_T0 + 60
-    ) == []
+def test_distinct_symbols_both_pass_on_repeat():
+    both = [_intent(symbol="BTCUSDT"), _intent(symbol="ETHUSDT")]
+    assert {i.symbol for i in im._debounce_emissions(both, now=_T0)} == {"BTCUSDT", "ETHUSDT"}
+    assert {i.symbol for i in im._debounce_emissions(both, now=_T0 + 60)} == {"BTCUSDT", "ETHUSDT"}
 
 
-def test_gated_intent_is_still_debounced():
-    """The whole point: an intent that will be regime-gated downstream is still
-    collapsed to one-per-bar at emission. _debounce_emissions runs BEFORE the
-    regime gate, so a perpetually-gated short can't flood the audit every tick."""
-    short = _intent(side="short")  # the htf_pullback transitional-short case
-    assert _names(im._debounce_emissions([short], now=_T0)) == [_STRAT]
-    assert im._debounce_emissions([_intent(side="short")], now=_T0 + 60) == []
+def test_gated_intent_repeat_passes():
+    """An intent the regime gate will drop downstream is no longer collapsed
+    here; the regime gate (a separate, inventoried gate) decides on its own."""
+    assert _names(im._debounce_emissions([_intent(side="short")], now=_T0)) == [_STRAT]
+    assert _names(im._debounce_emissions([_intent(side="short")], now=_T0 + 60)) == [_STRAT]
 
 
 def test_kill_switch_disables_debounce(monkeypatch):

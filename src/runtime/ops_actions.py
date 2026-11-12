@@ -234,6 +234,61 @@ def _v_prop_bracket(p: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
             "apply": bool(apply)}, errs
 
 
+#: set-env (OPS-SET-ENV, operator 2026-11-12: "Go directly using your token to the VM and turn it off ... Do not try
+#: going through the repo"): the direct channel's env flip, so a kill switch never waits on an Actions runner. Keys
+#: are an explicit pattern allowlist with per-key value sets; the write goes through the SAME scripts/ops/set_env.sh
+#: the system-actions set-env arm runs (byte-preserving upsert, symbolic env_file, its own service allowlist).
+SET_ENV_KEYS = ((re.compile(r"^PROP_PHONE_MODE_[A-Z0-9_]+$"), ("off", "dry", "live")),)
+SET_ENV_FILES = ("shared", "web-api")
+
+
+def _v_set_env(p: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
+    keys = ("key", "value", "service", "env_file")
+    errs = [f"unknown param {k}" for k in p if k not in keys]
+    key = str(p.get("key") or "").strip()
+    val = str(p.get("value") if p.get("value") is not None else "").strip()
+    env_file = str(p.get("env_file") or "shared").strip()
+    svc = str(p.get("service") or "").strip()
+    if svc and svc != "none" and not svc.endswith(".service"):
+        svc += ".service"
+    allowed = next((vals for rx, vals in SET_ENV_KEYS if rx.match(key)), None)
+    if allowed is None:
+        errs.append(f"key {key!r} is not in the set-env allowlist")
+    elif val not in allowed:
+        errs.append(f"value for {key} must be one of {', '.join(allowed)}")
+    if env_file not in SET_ENV_FILES:
+        errs.append(f"env_file must be one of {', '.join(SET_ENV_FILES)}")
+    if svc not in RESTARTABLE_SERVICES and svc != "none":
+        errs.append(f"service must be one of {', '.join(RESTARTABLE_SERVICES)} or none")
+    return {"key": key, "value": val, "service": svc, "env_file": env_file}, errs
+
+
+#: exec (OPS-EXEC). Operator 2026-11-12, verbatim: "The channel itself is open to any command, and Claude can do
+#: anything that either there's a preset mandate for ... or that I tell you to do, or that he asks permissions from me
+#: and gets explicit permission from me ... once you get permission, you execute it through the channel without
+#: changing configurations or settings or permissions lists". One shell command on the live VM, run by the ops runner
+#: as its own user (sudo -n available), cwd = the trader tree, stdout/stderr tail journaled. Tier 2: it runs only with
+#: the authority attached (operator_quote = the operator's words or the mandate), otherwise it waits on the Telegram
+#: approve card. The permission model between the operator and Claude is unchanged; this only removes the repo/runner
+#: hop for actions and configuration.
+EXEC_MAX_TIMEOUT_S = 3600
+
+
+def _v_exec(p: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
+    errs = [f"unknown param {k}" for k in p if k not in ("cmd", "timeout_s")]
+    cmd = p.get("cmd")
+    if not isinstance(cmd, str) or not cmd.strip():
+        errs.append("cmd: a non-empty shell command is required")
+        cmd = ""
+    try:
+        t = int(p.get("timeout_s") or 600)
+    except (TypeError, ValueError):
+        t = 600
+        errs.append("timeout_s must be an integer")
+    t = max(5, min(t, EXEC_MAX_TIMEOUT_S))
+    return {"cmd": cmd, "timeout_s": t}, errs
+
+
 def _v_directed(p: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
     """A directed_action/v1 record minus id / created_at / directed_by / operator_quote (filled at run time, so a
     record approved minutes later is not born stale). Validated with the VM's own ``directed_actions.problems``."""
@@ -300,6 +355,10 @@ REGISTRY: Dict[str, OpsAction] = {a.name: a for a in (
               "starts ict-git-sync.service once: it deploys exactly what the timer would within ~5 min"),
     OpsAction("restart-service", 2, "restart-bot-service", _v_restart, "run_restart_service", 180,
               "the trader goes through scripts/ops/restart_bot.sh; the other units are set-env's allowlist"),
+    OpsAction("set-env", 2, "set-env", _v_set_env, "run_set_env", 240,
+              "scripts/ops/set_env.sh: one allowlisted key, then restart the named service"),
+    OpsAction("exec", 2, "any command on the live VM (actions and configuration, never through the repo)",
+              _v_exec, "run_exec", EXEC_MAX_TIMEOUT_S, "bash -lc <cmd> as the ops runner, cwd = the trader tree"),
 )}
 
 
@@ -525,6 +584,18 @@ def run_restart_service(job: Dict[str, Any]) -> Dict[str, Any]:
     return res
 
 
+def run_exec(job: Dict[str, Any]) -> Dict[str, Any]:
+    p = job["params"]
+    return _script(["bash", "-lc", p["cmd"]], {}, int(p["timeout_s"]))
+
+
+def run_set_env(job: Dict[str, Any]) -> Dict[str, Any]:
+    p = job["params"]
+    env = {"ENV_KEY": p["key"], "ENV_VALUE": p["value"], "ENV_SERVICE": p["service"],
+           "ENV_FILE_TARGET": p["env_file"]}
+    return _script(["bash", str(ROOT / "scripts" / "ops" / "set_env.sh")], env, REGISTRY["set-env"].timeout_s)
+
+
 def run_live_review_row(job: Dict[str, Any], *, direct_root: Optional[Path] = None,
                         logs: Optional[Path] = None) -> Dict[str, Any]:
     """Delegate to the direct row submit (TRADE-ACTION-DIRECT-PATH phase 2, PR #25045): the SAME validation,
@@ -608,6 +679,8 @@ RUNNERS: Dict[str, Runner] = {
     "run_amend_prop_bracket": run_amend_prop_bracket,
     "run_sync_now": run_sync_now,
     "run_restart_service": run_restart_service,
+    "run_set_env": run_set_env,
+    "run_exec": run_exec,
 }
 
 

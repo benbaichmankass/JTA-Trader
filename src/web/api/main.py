@@ -16,6 +16,7 @@ from src.web.api.routers import alerts as alerts_router
 from src.web.api.routers import wake_toggles as wake_toggles_router
 from src.web.api.routers import allocator as allocator_router
 from src.web.api.routers import brackets_history as brackets_history_router
+from src.web.api.routers import trade_snapshot as trade_snapshot_router
 from src.web.api.routers import performance_categories as performance_categories_router
 from src.web.api.routers import attribution as attribution_router
 from src.web.api.routers import auth as auth_router
@@ -148,6 +149,7 @@ app.include_router(feature_impact_router.router)
 app.include_router(pairs_router.router)
 app.include_router(prop_router.router)
 app.include_router(brackets_history_router.router)
+app.include_router(trade_snapshot_router.router)
 app.include_router(performance_categories_router.router)
 app.include_router(reports_router.router)
 app.include_router(roadmap_router.router)

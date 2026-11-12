@@ -523,25 +523,13 @@ def emit_prop_ticket(
                 ttl_bars=float(routing.get("ttl_bars") or 1.0),
                 risk_usd_override=cap["risk_usd"],
             )
-        elif cap["action"] == prop_risk_gate.CAP_REFUSED:
-            logger.warning("breakout_executor: %s %s %s REFUSED — %s → %s",
-                           account_id, symbol, direction, cap["cause"], trade_id)
-            try:
-                from src.prop import prop_journal
-
-                prop_journal.record_ticket({
-                    "ticket_id": trade_id, "account_id": account_id,
-                    "strategy": strategy, "symbol": symbol, "direction": direction,
-                    "entry": entry, "sl": sl, "tp": tp,
-                    "signal_time": sig.signal_time.isoformat(),
-                    "status": "skipped", "message": cap["cause"],
-                    "order_package_id": (order.get("order_package_id")
-                                         or (order.get("meta") or {}).get("order_package_id")),
-                    "meta": {"risk_gate": cap},
-                })
-            except Exception as exc:  # noqa: BLE001 — audit row is best-effort
-                logger.warning("breakout_executor: gate-refusal journal write failed: %s", exc)
-            return trade_id
+        elif cap["action"] == prop_risk_gate.CAP_UNBOUNDED_REPORTED:
+            # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-PROP-RISK-CUSHION: MAKE REPORT-ONLY. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+            # No configured cap: reported (logged + carried on the ticket meta), and the ticket is emitted at its
+            # requested size. Before 2026-11-12 this was a refusal (journaled skipped, nothing emitted).
+            logger.warning("breakout_executor: %s %s %s — %s (report-only, emitting)",
+                           account_id, symbol, direction, cap["cause"])
+            gate_cap = cap
 
     if leg.decision != "place" or leg.ticket is None:
         logger.info(

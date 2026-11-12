@@ -202,3 +202,36 @@ def _wake_switches_all_on(tmp_path, monkeypatch):
     monkeypatch.delenv("WAKE_TOGGLES_REMOTE", raising=False)
     for _k in _wt.TOGGLES:
         _wt.set_toggle(_k, True, "test")
+
+
+def test_receipt_carries_build_wall_and_stages_and_failed_build_label_carries_them(tmp_path):
+    http = _Http()
+    res, labels, _ = _run(tmp_path, bars(last={"open": 100.0, "high": 104.0, "low": 99.8, "close": 103.9}), http)
+    assert res["state"] == "posted" and isinstance(res["build_wall_s"], float) and "stages" in res
+    assert not (tmp_path / "logs" / det.INFLIGHT).exists()  # a finished pass leaves no in-flight mark
+
+
+def test_build_packet_records_which_stage_timed_out(tmp_path, monkeypatch):
+    import subprocess
+    monkeypatch.setattr(det.dpw, "BUILD_TIMEOUT_S", 7)
+    def boom(cmd, **kw):
+        raise subprocess.TimeoutExpired(cmd, kw["timeout"])
+    monkeypatch.setattr(det.subprocess, "run", boom)
+    f = {"kind": "atr_burst", "symbol": "ETHUSDT", "bar": "b", "detail": {}}
+    stage, why = det.build_packet(f, CFG, "")
+    assert stage is None and why.startswith("TimeoutExpired")
+    assert [(s["stage"], s["outcome"]) for s in det.LAST_STAGES] == [("builder", "timeout")]
+
+
+def test_a_pass_cut_off_mid_build_is_labelled_interrupted_on_the_next_pass(tmp_path):
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    fired = {"kind": "atr_burst", "symbol": "ETHUSDT", "bar": "b", "key": "k", "detail": {}}
+    (logs / det.INFLIGHT).write_text(json.dumps({"started_at": (NOW - timedelta(seconds=300)).isoformat(), "fired": fired}))
+    det.run_once(cfg=CFG, now_fn=lambda: NOW, bars_fn=lambda s, tf, n: {"AVAXUSDT": bars()},
+                       auth_fn=lambda: "tok", fetch=lambda url, auth: (404, None), http=_Http(), pr_fn=lambda: 7,
+                       commit_fn=lambda *a, **k: ("c" * 40, None), calendar_fn=None, logs=logs, receipt=tmp_path / "r.json")
+    labels = [json.loads(x) for x in (logs / "trigger_labels.jsonl").read_text().splitlines()]
+    cut = [x for x in labels if x["disposition"] == "interrupted"]
+    assert len(cut) == 1 and cut[0]["fired"] == fired and cut[0]["after_s"] == 300.0
+    assert not (logs / det.INFLIGHT).exists()

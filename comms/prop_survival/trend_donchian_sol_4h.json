@@ -1,41 +1,50 @@
 {
   "leg": "trend_donchian_sol_4h",
-  "harness": "prop_ev_sim (path mode), 5 seeds x 1000 lives, current-stack cost arm; edge regrade docs/research/prop-gate-edge-regrade-2026-10-31",
+  "harness": "prop_ev_sim (path mode), 5 seeds x 1000 lives, current-stack cost arm; re-test docs/research/prop-retest-2026-11-06 (prop_gate.aggregate_v2 + edge_ci + grade_v3)",
   "ruleset": "breakout_turbo_1step",
   "account_scope": "breakout_2 primary; per-account cells below (one-leg book, configured risk_pct, dd switch 0.8)",
-  "ev_net_usd": 67.46,
-  "p_breach": 0.127,
-  "n_trades": 115,
+  "ev_net_usd": -20.0,
+  "p_breach": 0.05,
+  "n_trades": 103,
   "decision_rule": {
     "id": "RULE-P5-GATE-BRK-PER-LEG-V3",
     "registered_at": "2026-10-31",
-    "verdict": "contested"
+    "verdict": "fail"
   },
   "grades": {
-    "3y": "PASS on all 3 firms (edge +0.365 R, CI95 [+0.011, +0.718], n=115)",
-    "365d": "INDETERMINATE (n=34, edge -0.080 R, CI95 [-0.747, +0.588]); net negative trailing year => the V2 rule names the 3y PASS CONTESTED (de-risk, not an add)"
+    "3y": "V2 FAIL and V3 FAIL on all 3 accounts x both cost arms (6/6 cells): EV = minus the eval fee on every account, p(pass eval) <= 0.002; edge +0.067 R, CI95 [-0.086, +0.219], n=103 (window 2023-11-05 .. 2026-11-05 20:00)",
+    "365d": "INDETERMINATE (n=31, -0.01 R; below the rule's n floor of 88, not simulated)"
   },
   "accounts": {
     "breakout_2": {
       "ruleset": "breakout_turbo_1step",
-      "ev_net_usd_median": 67.46,
-      "ev_net_usd_worst": 63.16,
-      "p_breach": 0.127,
-      "ceiling": 0.889
+      "ev_net_usd_median": -20.0,
+      "ev_net_usd_worst": -20.0,
+      "p_breach": 0.05,
+      "p_pass_eval_median": 0.001,
+      "ceiling": 0.889,
+      "verdict_v2": "FAIL",
+      "verdict_v3": "FAIL"
     },
     "tradeify_1": {
       "ruleset": "tradeify_247_1step",
-      "ev_net_usd_median": 188.64,
-      "ev_net_usd_worst": 185.76,
-      "p_breach": 0.044,
-      "ceiling": 0.75
+      "ev_net_usd_median": -120.0,
+      "ev_net_usd_worst": -120.0,
+      "p_breach": 0.01,
+      "p_pass_eval_median": 0.002,
+      "ceiling": 0.75,
+      "verdict_v2": "FAIL",
+      "verdict_v3": "FAIL"
     },
     "velotrade_1": {
       "ruleset": "velotrade_classic_1step",
-      "ev_net_usd_median": 132.76,
-      "ev_net_usd_worst": 120.06,
-      "p_breach": 0.022,
-      "ceiling": 0.73
+      "ev_net_usd_median": -54.0,
+      "ev_net_usd_worst": -54.0,
+      "p_breach": 0.003,
+      "p_pass_eval_median": 0.0,
+      "ceiling": 0.73,
+      "verdict_v2": "FAIL",
+      "verdict_v3": "FAIL"
     }
   },
   "operator_exception": {
@@ -54,8 +63,8 @@
     "reconfirmed": "2026-11-05 ~20:50Z popup 'Proceed, I'll approve (Rec.)' after being told the trailing-12-month baseline is -0.15 R/trade (n=83) and the ML filter failed",
     "record": "PR #23460 (decisions on ML-PROP-ITERATE)"
   },
-  "source": "docs/research/prop-replacement-2026-10-30 (summary) + docs/research/prop-gate-edge-regrade-2026-10-31/table.txt; supersedes the V1 record (RULE-P5-GATE-BRK-PER-LEG, 2026-10-16, verdict pass, EV 195.0 / p 0.4823)",
-  "note": "Truthful grade under the current rule; admitted to the prop rosters ONLY via operator_exception (baseline). Gate record only: a roster add is Tier-3.",
+  "source": "docs/research/prop-retest-2026-11-06/RESULT.md + docs/research/prop-retest-2026-11-06/summary_v3.json (cur arm, 3y window; headline = breakout_2 primary cell). Supersedes the 2026-10-31 V3 'contested' headline (kept verbatim under superseded_headline_2026_10_31) and the V1 record (RULE-P5-GATE-BRK-PER-LEG, 2026-10-16, verdict pass, EV 195.0 / p 0.4823)",
+  "note": "Truthful grade under the current rule (FAIL, re-test 2026-11-06). Admitted to the prop rosters ONLY via operator_exception (baseline); the verdict is never rewritten to pass. Gate record only: a roster add or removal is Tier-3.",
   "retest_2026_11_06": {
     "decision_rule": "RULE-P5-GATE-BRK-PER-LEG-V3",
     "verdict": "fail",
@@ -70,5 +79,49 @@
     "doc": "docs/research/prop-retest-2026-11-06/RESULT.md",
     "by": "lane SOAK-BACKLOG-REVIEW, Manager Session 2026-11-06a (operator popup \"Keep both for now\": stay rostered while re-tested)",
     "note": "operator_exception above still governs roster membership; this block reports the fresh grade only"
+  },
+  "superseded_headline_2026_10_31": {
+    "harness": "prop_ev_sim (path mode), 5 seeds x 1000 lives, current-stack cost arm; edge regrade docs/research/prop-gate-edge-regrade-2026-10-31",
+    "account_scope": "breakout_2 primary; per-account cells below (one-leg book, configured risk_pct, dd switch 0.8)",
+    "ev_net_usd": 67.46,
+    "p_breach": 0.127,
+    "n_trades": 115,
+    "decision_rule": {
+      "id": "RULE-P5-GATE-BRK-PER-LEG-V3",
+      "registered_at": "2026-10-31",
+      "verdict": "contested"
+    },
+    "grades": {
+      "3y": "PASS on all 3 firms (edge +0.365 R, CI95 [+0.011, +0.718], n=115)",
+      "365d": "INDETERMINATE (n=34, edge -0.080 R, CI95 [-0.747, +0.588]); net negative trailing year => the V2 rule names the 3y PASS CONTESTED (de-risk, not an add)"
+    },
+    "accounts": {
+      "breakout_2": {
+        "ruleset": "breakout_turbo_1step",
+        "ev_net_usd_median": 67.46,
+        "ev_net_usd_worst": 63.16,
+        "p_breach": 0.127,
+        "ceiling": 0.889
+      },
+      "tradeify_1": {
+        "ruleset": "tradeify_247_1step",
+        "ev_net_usd_median": 188.64,
+        "ev_net_usd_worst": 185.76,
+        "p_breach": 0.044,
+        "ceiling": 0.75
+      },
+      "velotrade_1": {
+        "ruleset": "velotrade_classic_1step",
+        "ev_net_usd_median": 132.76,
+        "ev_net_usd_worst": 120.06,
+        "p_breach": 0.022,
+        "ceiling": 0.73
+      }
+    },
+    "source": "docs/research/prop-replacement-2026-10-30 (summary) + docs/research/prop-gate-edge-regrade-2026-10-31/table.txt; supersedes the V1 record (RULE-P5-GATE-BRK-PER-LEG, 2026-10-16, verdict pass, EV 195.0 / p 0.4823)",
+    "note": "Truthful grade under the current rule; admitted to the prop rosters ONLY via operator_exception (baseline). Gate record only: a roster add is Tier-3.",
+    "superseded_at": "2026-11-12",
+    "superseded_by": "retest_2026_11_06 (docs/research/prop-retest-2026-11-06/RESULT.md)",
+    "why": "the headline still carried the 2026-10-31 regrade (verdict contested, EV 67.46, p 0.127, n 115) after the 2026-11-06 re-test graded the leg FAIL on all 6 cells"
   }
 }

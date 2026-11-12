@@ -4,7 +4,7 @@ TIGHTENING action (AMEND-SL-ACTION, 2026-10-24).
 All broker and journal I/O is faked: a fake Bybit client holds the position and
 the resting stop legs, and the patched monitor modify seam moves the fake leg
 the way ``modify_open_order``'s in-place amend would. These pin the decision
-logic: refuse looser, refuse wrong-side, refuse missing row/position/non-live,
+logic: looser / wrong-side / non-live are report-only (AM-AMEND-POSITION-SL-BYBIT-ONLY, operator 2026-11-12), missing row/position refuse,
 the happy path, venue + journal consistency, idempotency, and that the
 monitor's trail respects the tighter package stop afterwards.
 """
@@ -109,20 +109,21 @@ def _run(**kw):
     return amend_mod.amend("bybit_2", **args)
 
 
-# ---- refusals -----------------------------------------------------------
+# ---- AM-AMEND-POSITION-SL-BYBIT-ONLY: MAKE REPORT-ONLY (operator 2026-11-12) ----------------------------
+# looser / wrong-side / non-live / non-open are REPORTED (r["report_only"]) and the amend proceeds; the venue answers.
 
-def test_refuses_looser_stop_on_a_short(world):
+def test_looser_stop_on_a_short_is_reported_and_applied(world):
     r = _run(new_sl=0.2200)
-    assert r["exit"] == amend_mod.EXIT_REFUSED and r["action"] == "refuse_looser"
-    assert world["sent"] == [] and world["db"].trade_writes == [] and world["db"].pkg_writes == []
+    assert r["action"] == "applied" and r["exit"] == 0, r
+    assert any("LOOSER" in c for c in r["report_only"])
+    assert world["clients"]["bybit_2"].legs["SL-A"] == 0.2200 and world["db"].pkg["sl"] == 0.2200
 
 
-def test_refuses_looser_than_the_resting_venue_stop(world):
+def test_looser_than_the_resting_venue_stop_is_reported(world):
     # journal says 0.2154 but the venue already rests tighter at 0.2040
     world["clients"]["bybit_2"].legs["SL-A"] = 0.2040
     r = _run()
-    assert r["action"] == "refuse_looser" and "venue" in r["detail"]
-    assert world["sent"] == []
+    assert r["action"] == "applied" and any("venue" in c for c in r["report_only"])
 
 
 def test_refuses_looser_stop_on_a_long(world):
@@ -133,14 +134,12 @@ def test_refuses_looser_stop_on_a_long(world):
     for c in world["clients"].values():
         c.side, c.legs = "Buy", {k: 0.19 for k in c.legs}
     r = _run(new_sl=0.185)
-    assert r["action"] == "refuse_looser"
+    assert r["action"] == "applied" and any("LOOSER" in c for c in r["report_only"])
 
 
-def test_refuses_wrong_side_of_mark_unless_allowed(world):
+def test_wrong_side_of_mark_is_reported_and_sent(world):
     r = _run(new_sl=0.2010)  # short stop BELOW the 0.2022 mark fires at once
-    assert r["action"] == "refuse_wrong_side" and world["sent"] == []
-    r2 = _run(new_sl=0.2010, allow_immediate=True)
-    assert r2["action"] == "applied"
+    assert r["action"] == "applied" and any("wrong side" in c for c in r["report_only"]) and world["sent"]
 
 
 def test_refuses_missing_trade_row(world):
@@ -154,10 +153,18 @@ def test_refuses_missing_position(world):
     assert r["action"] == "refuse_no_position" and world["sent"] == []
 
 
-def test_refuses_non_live_account(world):
+def test_non_live_account_is_reported_not_refused(world):
     world["modes"]["bybit_2"] = "dry_run"
     r = _run()
-    assert r["action"] == "refuse_not_live"
+    assert r["action"] != "refuse_not_live" and any("not live" in c for c in r["report_only"])
+
+
+def test_non_bybit_target_has_no_executor_here(world, monkeypatch):
+    # positive control: what physically cannot be done here still stops, with its cause
+    monkeypatch.setattr(amend_mod, "_build_client",
+                        lambda aid: (object(), {"account_id": aid, "exchange": "alpaca", "mode": "live"}))
+    r = _run()
+    assert r["action"] == "no_executor_not_bybit" and r["exit"] == amend_mod.EXIT_REFUSED
 
 
 def test_refuses_trade_on_another_account(world):
