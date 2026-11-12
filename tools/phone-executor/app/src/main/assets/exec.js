@@ -6,7 +6,7 @@
   // PHONE-EXEC-OBSERVABLE-1018: this file is also served SIGNED by our own API and swapped in at runtime
   // (RemoteJs.kt): a newer version replaces the installed helpers on the next ensure(); the same version is
   // never injected twice. Bump on every change (CI signs the file; the app pins by version).
-  var EXEC_VERSION = "2026-11-12.1";
+  var EXEC_VERSION = "2026-11-12.2";
   if (window.__ex && window.__ex.version === EXEC_VERSION) return;
   function hostOk() { return /(^|\.)breakoutprop\.com$/.test(location.hostname || ""); }
   function vis(el) { if (!el) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }
@@ -897,7 +897,31 @@
   // element was. Other cells of the SAME child row are tapped: "Opening price" (a plain value cell, reaches a row-level
   // handler) and the "n TP / n SL" text of the TP / SL cell (the operator's own sheet, 2026-10-15 12:43Z, was showing
   // that tab). The TP / SL target is only the element whose text IS "n TP / n SL" -- never an empty cell or an icon.
+  // PHONE-CLOSE-CARDS (2026-11-12, capture positions-no_table-20261112T082111Z, fixture breakout-positions-cards-two-longs):
+  // with positions open the Trade view shows CARDS, not a grid, inside the ONE region labelled "Positions"; each card
+  // carries its own [TP/SL] [Close] [Details] buttons with exact aria-labels ("Manage TP/SL for SOL/USD", "Close SOL/USD
+  // long position", "Open position details for SOL/USD"). cardCtl returns the ONE button of that kind for `sym`, or
+  // why not: no_cards (no Positions region / no card controls: the grid path decides) | none | cards_<n>.
+  var CARD_CTL = {details: "open position details for ", tpsl: "manage tp\\/sl for ", close: "close "};
+  function cardCtl(sym, kind) {
+    var rg = all("[role=region]").filter(function (r) { return /^positions$/i.test((r.getAttribute("aria-label") || "").trim()); });
+    if (rg.length !== 1) return "no_cards";
+    var bs = Array.prototype.slice.call(rg[0].querySelectorAll("button,[role=button]")).filter(vis);
+    var any = bs.some(function (x) { return /\b[A-Z0-9]{2,12}\/[A-Z]{2,5}\b/.test(x.getAttribute("aria-label") || ""); });
+    if (!any) return "no_cards";
+    var b = base(sym).replace(/[^A-Z0-9]/g, "");
+    var re = new RegExp("^" + CARD_CTL[kind] + b + "\\/USD[TC]?" + (kind === "close" ? "\\s+(long|short)\\s+position" : "") + "$", "i");
+    var hits = bs.filter(function (x) { return re.test((x.getAttribute("aria-label") || "").trim()); });
+    if (!hits.length) return "none"; if (hits.length > 1) return "cards_" + hits.length;
+    return hits[0];
+  }
   function sheetHit(sym, which) {
+    // cards layout (no grid): the card's [Details] button is the ONE sheet opener, offered once per read (as
+    // "child_entry", the first target the app tries); every other target answers no_grid, which ends the app's loop
+    if (!gridHeaders(POS_COLS).length) {
+      var cd = cardCtl(sym, "details");
+      if (cd !== "no_cards") return which === "child_entry" ? cd : "no_grid";
+    }
     if (which === "child_entry" || which === "child_tpsl") return rowCell(sym, which.slice(6));
     var g = gridHeaders(POS_COLS); if (g.length !== 1) return "no_grid";
     var panel = gridPanel(g[0]); if (!panel) return "no_panel";
@@ -2079,6 +2103,8 @@
     // elementFromPoint: the topmost element there must be that cell or inside it (never a row ✕ or an overlay), and
     // nothing from it up to the cell may be denied. scroll=true centres the cell first (the caller waits, then asks
     // again without scrolling, right before it touches). {ok, x, y, vw, vh} in CSS px, or {ok:false, why}.
+    // PHONE-CLOSE-CARDS read-only probe: which card control `kind` (details | tpsl | close) resolves to for `sym`, or why not
+    cardCtl: function (sym, kind) { var c = cardCtl(sym, kind); return typeof c === "string" ? {ok: false, why: c} : {ok: true, label: (c.getAttribute("aria-label") || "").slice(0, 60), denied: denied(c) || ""}; },
     sheetTarget: function (sym, which, scroll) {
       if (!hostOk()) return {ok: false, why: "bad_host"};
       if (sheetRoots().length) return {ok: false, why: "sheet_open"};
@@ -2333,6 +2359,9 @@
       var b = base(sym).replace(/[^A-Z0-9]/g, "");
       if (!textEls(r, new RegExp("^" + b + "(USD[TC]?|PERP)?$", "i"), 16).length) return "sheet_symbol_mismatch";
       var btns = Array.prototype.slice.call(r.querySelectorAll("button,[role=button]")).filter(function (x) { return vis(x) && /^close\s*position$/i.test(t(x)); });
+      // PHONE-CLOSE-CARDS: the cards-era sheet may label its close by aria-label only ("Close SOL/USD long position")
+      if (!btns.length) btns = Array.prototype.slice.call(r.querySelectorAll("button,[role=button]")).filter(function (x) {
+        return vis(x) && new RegExp("^close " + b + "\\/USD[TC]?\\s+(long|short)\\s+position$", "i").test((x.getAttribute("aria-label") || "").trim()); });
       if (btns.length !== 1) return "n" + btns.length;
       btns[0].click(); return "clicked";
     },

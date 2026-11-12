@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "PHONE-DRILL-TP-CLOSE / CAP-PROP-LIVE-DRILL: exec.js (served to the phone at /api/bot/prop/phone/exec.js, no APK) opens the position sheet on Breakout's Positions CARDS layout through the card's own [Details] button. On the cards layout sheetTarget answered no_grid, so every tighten (amend runs 2026-11-12 09:00Z, 09:05Z: target_child_entry no_grid, sheet_not_open) and every close stopped before the sheet. The armed close also accepts a sheet close button labelled by aria-label only. Stacked on PR #25197 (Positions cards read). Fixture spec from the real capture. Adds no gate.",
+  "hold_text": "Tier-2 per AM-TRADING (phone sheet/close path on a live prop account). Merge AFTER #25197. The manager merges and deploys; the lane then fires ONE Tier-1 phone-drill rehearsal (account breakout_2, no symbol, no order change) and reads its steps on /api/bot/prop/phone_steps: sheet opened_by child_entry/native, details_match, stop_row, modal_open."
+}
