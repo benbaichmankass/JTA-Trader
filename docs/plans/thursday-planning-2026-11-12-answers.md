@@ -115,6 +115,27 @@ operator confirmed it: `decision: 2026-11-12 operator decisions page m6 "Confirm
   2026-10-08) and `FEATURES-CATALOG-UI-VERIFY` (the UI). No API route serves the catalog today (`docs/design/ui-workplan-2026-11.md` § 14).
   Handed to lane UI-SPA.
 
-## Dispatch
+## Dispatch (2026-11-12 08:13Z)
 
-Filled from the lane reports; see the manager report for the live table.
+All lanes were created by this lane with `create_session` on JTA-Trader and report to the manager. PRs are filled in as lanes report.
+
+| item | row(s) | lane | session | model |
+|---|---|---|---|---|
+| m1 | `ACTIONS-FROZEN-RUNS-CANCEL` | **not started**: `create_session` refused by the auto-mode classifier ("Interfere With Workloads"); no workaround | — | — |
+| m3 | `SEC-8001-LOCKDOWN` | **not started**: `create_session` refused by the auto-mode classifier ("Production Deploy"); no workaround | — | — |
+| m4 | `SEC-HOST-CHANGES-1112` | OPDEC-M4-HOSTS | session_01AFoLuN6jjQHLuQvRkmroCe | Opus |
+| m7 | `DD-SWITCH-OVERRIDE` | OPDEC-M7-DD (button → UI-SPA) | session_01AFoLuJD1uLtmKbpHNi6gX5 | Opus |
+| m9 + p8 | `PROMOTE-TLT-1H-REAL-MONEY`, `PR1111-SURVIVOR-PROMOTIONS` | OPDEC-SURVIVORS | session_01AFoLuLWn3eMSsJGMn4UYXX | Opus |
+| m10 | #24881, #24952, #24961, #24962 | OPDEC-M10 | session_01AFoLuJU4X573xpt2K2gKkv | Sonnet |
+| m11 | `PHONE-CANCEL-FILLED-AS-SKIPPED` | OPDEC-M11 | session_01AFoLuK7LNskMkynxgJmJ5s | Opus |
+| m12 | `WORK-GAP-ALERTS` | OPDEC-M12 | session_01AFoLuLZUmLfdYeDbi7nMEF | Sonnet |
+| m13 | `CLOSE-CLASS-NOC-TEST` | OPDEC-M13 | session_01AFoLuMsaUDHEBnFNj8WppB | Sonnet |
+| p2 rule | `DEMOTE-OPERATOR-LOOKS` | OPDEC-P2-DEMOTE-RULE (Tier 3 HOLD PR) | session_01AFoLuN1M3mPZin4zDKrmH9 | Opus |
+| p2 F1 | `PERF-F1-DEMOTION-SIGNAL` | OPDEC-P2-F1 (/perf-followup) | session_01AFoLuKGivxba8N7Mss11en | Opus |
+| p4 | `HEALTH-20261111-EXPORT-READS-STALE` → `BACKLOG-DRAIN-20261112` | OPDEC-P4 | session_01AFoLuHsrjCGGba7eop8Qev | Opus |
+| p7 | TABULAR/TSFM kill data, `FRONTIER-LEVER-HARNESS-COSTS` | OPDEC-P7-LEVERS | session_01AFoLuMaNct18F1jYBq2Ry4 | Sonnet |
+| p7 | `AUD-20261019-RESEARCH-SLO-RED` | OPDEC-P7-RESEARCH-SLO | session_01AFoLuKDJYVZsxPtE74wG5z | Opus |
+| p7 | `ML-LEARNING-LEDGER` | scheduled, due 2026-11-16, ML standing lane (owner on the row) | — | — |
+| p5 | `FEATURE-IMPACT-MAP`, `FEATURES-CATALOG-UI-VERIFY` | UI-SPA (create_trigger + fire_trigger) | session_01AFoLuK7JPLuVHFGNKbcoqt | — |
+| m5 | `MANAGER-VM-DIRECT-OPS`, `TRADE-ACTION-DIRECT-PATH` | the manager merges #25052 on green; the operator creates the routine + token | — | — |
+| m6 | — | recorded here | — | — |
