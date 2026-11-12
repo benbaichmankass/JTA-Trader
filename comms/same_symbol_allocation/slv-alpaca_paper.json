@@ -8,19 +8,17 @@
   ],
   "legs": [
     "ml_entry_eq",
-    "slv_pullback_1d",
-    "slv_trend_1h"
+    "slv_pullback_1d"
   ],
   "weights": {
-    "ml_entry_eq": 0.230492,
-    "slv_pullback_1d": 0.342075,
-    "slv_trend_1h": 0.427433
+    "ml_entry_eq": 0.402538,
+    "slv_pullback_1d": 0.597462
   },
   "inputs": [
     "src/runtime/allocator_ev.py backtest_input (c_bt = 0.5 + expectancy_r_oos, comms/strategy_evidence/<leg>.json, coverage_state measured) -> compute_conviction -> allocation_weights (score_i / sum score); ml_entry_eq c_bt from comms/research/RQ-20261105-e9a1-02/42143223941/measurement.json (no comms/strategy_evidence file)"
   ],
-  "recorded_at": "2026-11-06",
-  "basis": "Operator decision 2026-11-06 (popups: allocation 'Shared ETFs + weights'; weights method 'Allocator score (Recommended)'), the same method as xrpusdt-bybit_2-bybit_portfolio.json: the allocator's score blend evaluated over the only factor available offline, c_bt. c_bt = ml_entry_eq 0.5392 (expectancy_r_oos 0.0392), slv_pullback_1d 0.8003 (expectancy_r_oos 0.3003), slv_trend_1h 1.0000 (expectancy_r_oos 0.5). Legs other than ml_entry_eq: expectancy_r_oos from comms/strategy_evidence/<leg>.json, net of the full cost stack. ml_entry_eq has no strategy_evidence file: its figure is the registered pooled confirming-window mean net R +0.0392 (n 858, 147 symbols, se 0.0423, verdict pass vs deflated bar t_min 0.0, net of the Alpaca cost stack, slippage 5 bps PROVISIONAL), committed in comms/research/RQ-20261105-e9a1-02/42143223941/measurement.json. compute_conviction renormalises over present inputs, so each score equals c_bt; weights = score / sum.",
+  "recorded_at": "2026-11-12",
+  "basis": "Refreshed 2026-11-12 (SLV-1H-PROMOTE, operator \"I answer that I do want to promote silver.\"): slv_trend_1h LEFT alpaca_paper for alpaca_live + alpaca_portfolio (three statuses), so the group is now 2 legs. Same method: c_bt = ml_entry_eq 0.5392, slv_pullback_1d 0.8003 (expectancy_r_oos +0.3003, measured); weights = score / sum. PRIOR BASIS (2026-11-06): Operator decision 2026-11-06 (popups: allocation 'Shared ETFs + weights'; weights method 'Allocator score (Recommended)'), the same method as xrpusdt-bybit_2-bybit_portfolio.json: the allocator's score blend evaluated over the only factor available offline, c_bt. c_bt = ml_entry_eq 0.5392 (expectancy_r_oos 0.0392), slv_pullback_1d 0.8003 (expectancy_r_oos 0.3003), slv_trend_1h 1.0000 (expectancy_r_oos 0.5). Legs other than ml_entry_eq: expectancy_r_oos from comms/strategy_evidence/<leg>.json, net of the full cost stack. ml_entry_eq has no strategy_evidence file: its figure is the registered pooled confirming-window mean net R +0.0392 (n 858, 147 symbols, se 0.0423, verdict pass vs deflated bar t_min 0.0, net of the Alpaca cost stack, slippage 5 bps PROVISIONAL), committed in comms/research/RQ-20261105-e9a1-02/42143223941/measurement.json. compute_conviction renormalises over present inputs, so each score equals c_bt; weights = score / sum.",
   "population": "Per leg: its own OOS record (comms/strategy_evidence). ml_entry_eq: pooled over the 173-ETF liquidity pool (n 858 trades on 147 symbols, 2025-07-15..2026-10-31), NOT a per-SLV figure; that run graded booster af4835e2\u2026, the shipped artifact is the pinned-deterministic refit ceeb8698\u2026 (decision agreement 0.9885 at tau).",
   "not_in_basis": "c_strat, c_setup, c_wr, c_reg are stamped per intent at runtime and c_live reads runtime trade_journal.db (VM only), so none was available here. Not read, not invented. ml_entry_eq's expectancy is a mechanics-soak figure (iid t 0.9), pooled not per-symbol; it is not an edge claim. Paper only (Stage 1); real money not decided.",
   "applies_to_runtime": "no. This is the record the guard reads. Live allocation on alpaca_paper is unchanged (election in src/runtime/intents.py); the record changes no config, roster or sizing.",

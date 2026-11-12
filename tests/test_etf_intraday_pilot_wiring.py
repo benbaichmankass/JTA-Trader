@@ -128,7 +128,8 @@ def test_yaml_entries_pin_validated_params():
     assert slv["symbols"] == ["SLV"]
     assert slv["signal_prefixes"] == ["slv_trend"]
     assert (slv["donchian"], slv["atr_period"], slv["atr_stop_mult"]) == (24, 14, 1.5)  # M20 B4 (supersedes the earlier sweep's pin)
-    assert (slv["trail_mult"], slv["tp_r"]) == (4.0, 50.0)
+    # tp_r 50.0 (sentinel) -> 6.0 on 2026-11-12 (SLV-1H-PROMOTE): RQ-20261112-5ab1-03 selected T6 on discovery and confirmed it on the holdout.
+    assert (slv["trail_mult"], slv["tp_r"]) == (4.0, 6.0)
     assert slv["timeframe"] == "1h"
     # 0.0 -> 0.3 floor (2026-08-01, PB-20260801-SLV-TREND-DEGENERATE-CONFIDENCE):
     # 2 consecutive reviews of should_skip-grade entries (conf 0.04-0.15), all
@@ -153,8 +154,13 @@ def test_instrument_profiles_route_to_alpaca():
 
 
 def test_account_routing_and_descriptions():
-    acct = yaml.safe_load(open("config/accounts.yaml"))["accounts"]["alpaca_paper"]
-    assert "slv_trend_1h" in acct["strategies"]
+    accounts = yaml.safe_load(open("config/accounts.yaml"))["accounts"]
+    acct = accounts["alpaca_paper"]
+    # 2026-11-12 SLV-1H-PROMOTE (operator "I answer that I do want to promote silver."): slv_trend_1h is PRODUCTION on
+    # alpaca_live + its mirror alpaca_portfolio, and therefore OFF general paper (three statuses, OPERATING-PLAN § 2).
+    assert "slv_trend_1h" not in acct["strategies"]
+    assert "slv_trend_1h" in accounts["alpaca_live"]["strategies"]
+    assert "slv_trend_1h" in accounts["alpaca_portfolio"]["strategies"]
     # 2026-10-05 MD-S1-CUT-ON-STAGE0-FAIL (#16548 grant) removed gld_pullback_1h
     # from alpaca_paper (R-CUT-AFFORD); a re-add is a MD-PROMOTE-S0-S1 act.
     assert "gld_pullback_1h" not in acct["strategies"]
