@@ -1,0 +1,670 @@
+{
+ "rule_id": "RULE-VELO-CFD-STAGE0-20261112",
+ "rule_file": "comms/research/velo_cfd_stage0/rule.json",
+ "run_at": "2026-11-12T13:41:54+00:00",
+ "series": {
+  "WTI": {
+   "rows": 46273,
+   "first": "2019-01-01 23:00:00+00:00",
+   "last": "2026-10-30 20:00:00+00:00",
+   "sha256": "42392b9f3279d2fbf21d7f80030491caabf91f9eaf0e983092b76866c5471aa5",
+   "dukascopy_instrument": "INSTRUMENT_CMD_ENERGY_E_LIGHT"
+  },
+  "XAG_USD": {
+   "rows": 46317,
+   "first": "2019-01-01 23:00:00+00:00",
+   "last": "2026-10-30 20:00:00+00:00",
+   "sha256": "c7d9db5a4d2b9173df434dbe13df29e704c926cf84222efe0c6d8e0fee6c2bf5",
+   "dukascopy_instrument": "INSTRUMENT_FX_METALS_XAG_USD"
+  },
+  "XAU_USD": {
+   "rows": 46326,
+   "first": "2019-01-01 23:00:00+00:00",
+   "last": "2026-10-30 20:00:00+00:00",
+   "sha256": "567fb85e3b81ab2b5eed9b8b854fbfa031432ef8ee4fe98cdf0dfddebfe97383",
+   "dukascopy_instrument": "INSTRUMENT_FX_METALS_XAU_USD"
+  }
+ },
+ "legs": {
+  "slv_trend_1h": {
+   "instrument": "XAG_USD",
+   "harness": "trend",
+   "fidelity": "faithful",
+   "omitted_levers": [],
+   "harness_argv": [
+    "/home/user/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "24",
+    "--data",
+    "/tmp/claude-0/-home-user-JTA-Trader/b7e5979b-7e64-5c8c-9b78-ecd2346379c9/scratchpad/run/XAG_USD_1h_clip.csv",
+    "--symbol",
+    "SLV",
+    "--resample",
+    "1h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "1.5",
+    "--trail-mult",
+    "4.0",
+    "--min-confidence",
+    "0.3",
+    "--fee-bps-roundtrip",
+    "0.0",
+    "--emit-trades",
+    "/tmp/claude-0/-home-user-JTA-Trader/b7e5979b-7e64-5c8c-9b78-ecd2346379c9/scratchpad/run/slv_trend_1h__trades.jsonl",
+    "--json",
+    "/tmp/claude-0/-home-user-JTA-Trader/b7e5979b-7e64-5c8c-9b78-ecd2346379c9/scratchpad/run/slv_trend_1h__bt.json",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0"
+   ],
+   "n": 944,
+   "primary": {
+    "net_r_total": -33.468,
+    "mean_r": -0.03545,
+    "folds_net_r": [
+     17.085,
+     -47.0826,
+     -32.3016,
+     28.8312
+    ],
+    "n": 944,
+    "se_r": 0.07022,
+    "ci_lo": -0.17309,
+    "ci_hi": 0.10218,
+    "z": 1.96,
+    "read_state": "ok"
+   },
+   "stress_ev6m_commission": {
+    "net_r_total": -85.9244,
+    "mean_r": -0.09102,
+    "folds_net_r": [
+     0.7831,
+     -59.9383,
+     -45.3273,
+     18.5581
+    ],
+    "n": 944,
+    "se_r": 0.07025,
+    "ci_lo": -0.22871,
+    "ci_hi": 0.04667,
+    "z": 1.96,
+    "read_state": "ok"
+   },
+   "stress_wide_spread": {
+    "net_r_total": -125.2667,
+    "mean_r": -0.1327,
+    "folds_net_r": [
+     -11.4432,
+     -69.5801,
+     -55.0966,
+     10.8533
+    ],
+    "n": 944,
+    "se_r": 0.07028,
+    "ci_lo": -0.27044,
+    "ci_hi": 0.00504,
+    "z": 1.96,
+    "read_state": "ok"
+   },
+   "folds_positive_primary": 2,
+   "verdict": "FAIL",
+   "robust": false
+  },
+  "uso_trend_1h": {
+   "instrument": "WTI",
+   "harness": "trend",
+   "fidelity": "faithful",
+   "omitted_levers": [],
+   "harness_argv": [
+    "/home/user/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "24",
+    "--data",
+    "/tmp/claude-0/-home-user-JTA-Trader/b7e5979b-7e64-5c8c-9b78-ecd2346379c9/scratchpad/run/WTI_1h_clip.csv",
+    "--symbol",
+    "USO",
+    "--resample",
+    "1h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.0",
+    "--trail-mult",
+    "4.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "0.0",
+    "--emit-trades",
+    "/tmp/claude-0/-home-user-JTA-Trader/b7e5979b-7e64-5c8c-9b78-ecd2346379c9/scratchpad/run/uso_trend_1h__trades.jsonl",
+    "--json",
+    "/tmp/claude-0/-home-user-JTA-Trader/b7e5979b-7e64-5c8c-9b78-ecd2346379c9/scratchpad/run/uso_trend_1h__bt.json",
+    "--long-only",
+    "--giveback-min-mfe-r",
+    "1.0",
+    "--giveback-r",
+    "1.0",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "4.0"
+   ],
+   "n": 797,
+   "primary": {
+    "net_r_total": -54.5722,
+    "mean_r": -0.06847,
+    "folds_net_r": [
+     0.1508,
+     0.5111,
+     -41.9192,
+     -13.3149
+    ],
+    "n": 797,
+    "se_r": 0.04694,
+    "ci_lo": -0.16048,
+    "ci_hi": 0.02354,
+    "z": 1.96,
+    "read_state": "ok"
+   },
+   "stress_ev6m_commission": {
+    "net_r_total": -83.9082,
+    "mean_r": -0.10528,
+    "folds_net_r": [
+     -7.1604,
+     -6.2178,
+     -50.3426,
+     -20.1874
+    ],
+    "n": 797,
+    "se_r": 0.04694,
+    "ci_lo": -0.19729,
+    "ci_hi": -0.01327,
+    "z": 1.96,
+    "read_state": "ok"
+   },
+   "stress_wide_spread": {
+    "net_r_total": -105.9103,
+    "mean_r": -0.13289,
+    "folds_net_r": [
+     -12.6438,
+     -11.2645,
+     -56.6601,
+     -25.3419
+    ],
+    "n": 797,
+    "se_r": 0.04695,
+    "ci_lo": -0.2249,
+    "ci_hi": -0.04087,
+    "z": 1.96,
+    "read_state": "ok"
+   },
+   "folds_positive_primary": 2,
+   "verdict": "FAIL",
+   "robust": false
+  },
+  "gld_pullback_1h": {
+   "instrument": "XAU_USD",
+   "harness": "pullback",
+   "fidelity": "faithful",
+   "omitted_levers": [],
+   "harness_argv": [
+    "/home/user/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "60",
+    "--pullback-lookback",
+    "12",
+    "--pullback-frac",
+    "0.5",
+    "--data",
+    "/tmp/claude-0/-home-user-JTA-Trader/b7e5979b-7e64-5c8c-9b78-ecd2346379c9/scratchpad/run/XAU_USD_1h_clip.csv",
+    "--symbol",
+    "GLD",
+    "--resample",
+    "1h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "1.5",
+    "--trail-mult",
+    "4.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "0.0",
+    "--emit-trades",
+    "/tmp/claude-0/-home-user-JTA-Trader/b7e5979b-7e64-5c8c-9b78-ecd2346379c9/scratchpad/run/gld_pullback_1h__trades.jsonl",
+    "--json",
+    "/tmp/claude-0/-home-user-JTA-Trader/b7e5979b-7e64-5c8c-9b78-ecd2346379c9/scratchpad/run/gld_pullback_1h__bt.json",
+    "--stale-exit-bars",
+    "24",
+    "--stale-exit-below-r",
+    "1000000000.0",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "6.0"
+   ],
+   "n": 1655,
+   "primary": {
+    "net_r_total": -442.2578,
+    "mean_r": -0.26723,
+    "folds_net_r": [
+     -123.8221,
+     -124.2014,
+     -150.824,
+     -43.4103
+    ],
+    "n": 1655,
+    "se_r": 0.03825,
+    "ci_lo": -0.3422,
+    "ci_hi": -0.19225,
+    "z": 1.96,
+    "read_state": "ok"
+   },
+   "stress_ev6m_commission": {
+    "net_r_total": -628.5667,
+    "mean_r": -0.3798,
+    "folds_net_r": [
+     -176.4873,
+     -171.8149,
+     -203.0558,
+     -77.2086
+    ],
+    "n": 1655,
+    "se_r": 0.03834,
+    "ci_lo": -0.45494,
+    "ci_hi": -0.30465,
+    "z": 1.96,
+    "read_state": "ok"
+   },
+   "stress_wide_spread": {
+    "net_r_total": -768.2983,
+    "mean_r": -0.46423,
+    "folds_net_r": [
+     -215.9862,
+     -207.5251,
+     -242.2296,
+     -102.5574
+    ],
+    "n": 1655,
+    "se_r": 0.03843,
+    "ci_lo": -0.53955,
+    "ci_hi": -0.38891,
+    "z": 1.96,
+    "read_state": "ok"
+   },
+   "folds_positive_primary": 0,
+   "verdict": "FAIL",
+   "robust": false
+  },
+  "gld_pullback_1d": {
+   "instrument": "XAU_USD",
+   "harness": "pullback",
+   "fidelity": "faithful",
+   "omitted_levers": [],
+   "harness_argv": [
+    "/home/user/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "40",
+    "--pullback-lookback",
+    "15",
+    "--pullback-frac",
+    "0.618",
+    "--data",
+    "/tmp/claude-0/-home-user-JTA-Trader/b7e5979b-7e64-5c8c-9b78-ecd2346379c9/scratchpad/run/XAU_USD_1h_clip.csv",
+    "--symbol",
+    "GLD",
+    "--resample",
+    "1d",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.0",
+    "--trail-mult",
+    "4.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "0.0",
+    "--emit-trades",
+    "/tmp/claude-0/-home-user-JTA-Trader/b7e5979b-7e64-5c8c-9b78-ecd2346379c9/scratchpad/run/gld_pullback_1d__trades.jsonl",
+    "--json",
+    "/tmp/claude-0/-home-user-JTA-Trader/b7e5979b-7e64-5c8c-9b78-ecd2346379c9/scratchpad/run/gld_pullback_1d__bt.json",
+    "--trail-decay-stall-bars",
+    "10",
+    "--trail-decay-tight-mult",
+    "2.0",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "3.5",
+    "--tp-target-r",
+    "3.5",
+    "--tp-extend-r",
+    "1.0",
+    "--tp-approach-frac",
+    "0.85",
+    "--tp-max-extends",
+    "3",
+    "--tp-thesis",
+    "native"
+   ],
+   "n": 71,
+   "primary": {
+    "net_r_total": -6.6313,
+    "mean_r": -0.0934,
+    "folds_net_r": [
+     -13.0682,
+     -0.3175,
+     3.5809,
+     3.1734
+    ],
+    "n": 71,
+    "se_r": 0.16995,
+    "ci_lo": -0.42649,
+    "ci_hi": 0.23969,
+    "z": 1.96,
+    "read_state": "ok"
+   },
+   "stress_ev6m_commission": {
+    "net_r_total": -7.8004,
+    "mean_r": -0.10987,
+    "folds_net_r": [
+     -13.3854,
+     -0.6057,
+     3.2534,
+     2.9373
+    ],
+    "n": 71,
+    "se_r": 0.16996,
+    "ci_lo": -0.44299,
+    "ci_hi": 0.22326,
+    "z": 1.96,
+    "read_state": "ok"
+   },
+   "stress_wide_spread": {
+    "net_r_total": -8.6772,
+    "mean_r": -0.12221,
+    "folds_net_r": [
+     -13.6232,
+     -0.8218,
+     3.0077,
+     2.7602
+    ],
+    "n": 71,
+    "se_r": 0.16998,
+    "ci_lo": -0.45537,
+    "ci_hi": 0.21094,
+    "z": 1.96,
+    "read_state": "ok"
+   },
+   "folds_positive_primary": 2,
+   "verdict": "FAIL",
+   "robust": false
+  },
+  "slv_pullback_1d": {
+   "instrument": "XAG_USD",
+   "harness": "pullback",
+   "fidelity": "faithful",
+   "omitted_levers": [],
+   "harness_argv": [
+    "/home/user/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "40",
+    "--pullback-lookback",
+    "15",
+    "--pullback-frac",
+    "0.618",
+    "--data",
+    "/tmp/claude-0/-home-user-JTA-Trader/b7e5979b-7e64-5c8c-9b78-ecd2346379c9/scratchpad/run/XAG_USD_1h_clip.csv",
+    "--symbol",
+    "SLV",
+    "--resample",
+    "1d",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.0",
+    "--trail-mult",
+    "4.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "0.0",
+    "--emit-trades",
+    "/tmp/claude-0/-home-user-JTA-Trader/b7e5979b-7e64-5c8c-9b78-ecd2346379c9/scratchpad/run/slv_pullback_1d__trades.jsonl",
+    "--json",
+    "/tmp/claude-0/-home-user-JTA-Trader/b7e5979b-7e64-5c8c-9b78-ecd2346379c9/scratchpad/run/slv_pullback_1d__bt.json",
+    "--trail-decay-stall-bars",
+    "6",
+    "--trail-decay-tight-mult",
+    "2.0",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "3.5"
+   ],
+   "n": 88,
+   "primary": {
+    "net_r_total": 1.3028,
+    "mean_r": 0.0148,
+    "folds_net_r": [
+     -3.1024,
+     2.042,
+     -4.0017,
+     6.3647
+    ],
+    "n": 88,
+    "se_r": 0.12616,
+    "ci_lo": -0.23247,
+    "ci_hi": 0.26208,
+    "z": 1.96,
+    "read_state": "ok"
+   },
+   "stress_ev6m_commission": {
+    "net_r_total": 0.5469,
+    "mean_r": 0.00621,
+    "folds_net_r": [
+     -3.3127,
+     1.8466,
+     -4.1935,
+     6.2065
+    ],
+    "n": 88,
+    "se_r": 0.12616,
+    "ci_lo": -0.24105,
+    "ci_hi": 0.25348,
+    "z": 1.96,
+    "read_state": "ok"
+   },
+   "stress_wide_spread": {
+    "net_r_total": -0.02,
+    "mean_r": -0.00023,
+    "folds_net_r": [
+     -3.4705,
+     1.7,
+     -4.3374,
+     6.0879
+    ],
+    "n": 88,
+    "se_r": 0.12616,
+    "ci_lo": -0.24749,
+    "ci_hi": 0.24703,
+    "z": 1.96,
+    "read_state": "ok"
+   },
+   "folds_positive_primary": 2,
+   "verdict": "FAIL",
+   "robust": false
+  }
+ },
+ "books": {
+  "VELO_CFD": [],
+  "VELO_CFD_ROBUST": [],
+  "ALL5": [],
+  "UNFILTERED_5": [
+   "slv_trend_1h",
+   "uso_trend_1h",
+   "gld_pullback_1h",
+   "gld_pullback_1d",
+   "slv_pullback_1d"
+  ]
+ },
+ "book_edges": {
+  "VELO_CFD": {
+   "n": 0
+  },
+  "VELO_CFD_ROBUST": {
+   "n": 0
+  },
+  "ALL5": {
+   "n": 0
+  },
+  "UNFILTERED_5": {
+   "n": 3555,
+   "mean_r": -0.15067,
+   "se_r": 0.02828,
+   "ci_lo": -0.20609,
+   "ci_hi": -0.09525,
+   "z": 1.96,
+   "read_state": "ok"
+  }
+ },
+ "book_cells": [
+  {
+   "cell": "posthoc_unfiltered5_classic",
+   "book": "UNFILTERED_5",
+   "window": "full",
+   "risk_pct": 0.005,
+   "legs": [
+    "slv_trend_1h",
+    "uso_trend_1h",
+    "gld_pullback_1h",
+    "gld_pullback_1d",
+    "slv_pullback_1d"
+   ],
+   "fee_usd": 54.0,
+   "ev_mean": -47.14,
+   "ev_min": -47.67,
+   "ev_null_mean": -0.87,
+   "p_pass_eval": 0.087,
+   "p_breach_any_mean": 0.9697,
+   "trades_per_life": 68.7,
+   "death_causes_seed1": {
+    "eval:daily_loss": 6,
+    "eval:static_drawdown": 898,
+    "funded:static_drawdown": 68
+   }
+  },
+  {
+   "cell": "posthoc_unfiltered5_classic_w2025",
+   "book": "UNFILTERED_5",
+   "window": "w2025",
+   "risk_pct": 0.005,
+   "legs": [
+    "slv_trend_1h",
+    "uso_trend_1h",
+    "gld_pullback_1h",
+    "gld_pullback_1d",
+    "slv_pullback_1d"
+   ],
+   "fee_usd": 54.0,
+   "ev_mean": 8.14,
+   "ev_min": 5.4,
+   "ev_null_mean": -11.91,
+   "p_pass_eval": 0.4127,
+   "p_breach_any_mean": 0.7963,
+   "trades_per_life": 116.9,
+   "death_causes_seed1": {
+    "eval:daily_loss": 12,
+    "eval:static_drawdown": 504,
+    "funded:daily_loss": 2,
+    "funded:static_drawdown": 292
+   }
+  },
+  {
+   "cell": "whatif_UNFILTERED_5_closed_trailing",
+   "book": "UNFILTERED_5",
+   "window": "full",
+   "risk_pct": 0.005,
+   "legs": [
+    "slv_trend_1h",
+    "uso_trend_1h",
+    "gld_pullback_1h",
+    "gld_pullback_1d",
+    "slv_pullback_1d"
+   ],
+   "fee_usd": 54.0,
+   "ev_mean": -50.55,
+   "ev_min": -51.15,
+   "ev_null_mean": -25.72,
+   "p_pass_eval": 0.0613,
+   "p_breach_any_mean": 0.999,
+   "trades_per_life": 50.9,
+   "death_causes_seed1": {
+    "eval:daily_loss": 3,
+    "eval:trailing_drawdown": 926,
+    "funded:trailing_drawdown": 71
+   }
+  },
+  {
+   "cell": "whatif_UNFILTERED_5_eod_trailing",
+   "book": "UNFILTERED_5",
+   "window": "full",
+   "risk_pct": 0.005,
+   "legs": [
+    "slv_trend_1h",
+    "uso_trend_1h",
+    "gld_pullback_1h",
+    "gld_pullback_1d",
+    "slv_pullback_1d"
+   ],
+   "fee_usd": 54.0,
+   "ev_mean": -50.73,
+   "ev_min": -51.35,
+   "ev_null_mean": -24.45,
+   "p_pass_eval": 0.06,
+   "p_breach_any_mean": 0.9987,
+   "trades_per_life": 47.9,
+   "death_causes_seed1": {
+    "eval:daily_loss": 11,
+    "eval:trailing_drawdown": 925,
+    "funded:trailing_drawdown": 62
+   }
+  },
+  {
+   "cell": "whatif_UNFILTERED_5_intraday_trailing",
+   "book": "UNFILTERED_5",
+   "window": "full",
+   "risk_pct": 0.005,
+   "legs": [
+    "slv_trend_1h",
+    "uso_trend_1h",
+    "gld_pullback_1h",
+    "gld_pullback_1d",
+    "slv_pullback_1d"
+   ],
+   "fee_usd": 54.0,
+   "ev_mean": -51.15,
+   "ev_min": -52.13,
+   "ev_null_mean": -31.78,
+   "p_pass_eval": 0.0583,
+   "p_breach_any_mean": 0.9983,
+   "trades_per_life": 40.5,
+   "death_causes_seed1": {
+    "eval:daily_loss": 6,
+    "eval:trailing_drawdown": 937,
+    "funded:trailing_drawdown": 55
+   }
+  }
+ ],
+ "buy_verdict": "NOT_BUYABLE",
+ "buy_conditions": {
+  "(1)_ge2_pass_legs": false,
+  "note": "no decisive leg PASSed Stage 0 on the CFD series; the registered book is empty"
+ },
+ "graded_cell": null
+}

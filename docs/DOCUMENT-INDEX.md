@@ -1098,6 +1098,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/prop-dxtrade-firms-2026-09-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/prop-firm-scan-2026-10-04.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/prop-firm-deepdive-2026-10-04.md` | evidence | unknown | — | 2026-10-04 | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/velo-cfd-stage0-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/relative-value-families-2026-10-07.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/research-loop-audit-2026-10-15.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Research loop as built vs intended: why results go ungraded, why intake reads exhausted, compute use, root causes and the proposed build (lane RESEARCH-LOOP-AUDIT-AND-DRIVER). |
 | `docs/research/research-ops-redesign-2026-10-28.md` | evidence | unknown | — | 2026-10-28 | `dir:research-is-measurement / read:SKILL-DESIGN-RESEARCH-lane-authored-and-measured-it-2026-10-28` | Diagnosis of the research-ops passes 2026-10-27..28 and the 2026-10-21 programme review, practice sources, and the two-layer (CHECKS + ANALYSIS) redesign of research-ops and the programme review (lane SKILL-DESIGN-RESEARCH). |
