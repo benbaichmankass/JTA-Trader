@@ -707,3 +707,40 @@ def test_override_route_needs_a_session(tmp_path, monkeypatch):
     client = TestClient(main.app, raise_server_exceptions=False)
     r = client.post("/api/bot/accounts/bybit_2/daily-dd-switch/override", json={})
     assert r.status_code in (401, 403, 500, 503)
+
+
+def test_awaiting_day_start_never_blocks_a_trade(tick_env, monkeypatch):
+    """AM-TRADING 2026-11-12 (no new gates): awaiting_day_start is a label only.
+    An ARMED switch in that state lets RiskManager.evaluate and check_dd_switch
+    (the pairs path) pass; only a trip past the limit blocks new entries."""
+    fixed = _ts(12, 0, 20)
+
+    class _Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return fixed if tz else fixed.replace(tzinfo=None)
+
+    monkeypatch.setattr(dd, "datetime", _Clock)
+    rm = RiskManager({"daily_dd_switch": {"armed": True}}, account_id="acct_tick")
+    # The 11th: trips at -10%, last reading at 23:00Z.
+    rm.dd_switch.observe(10_000.0, _ts(11, 21), reading_ts=_ts(11, 21))
+    rm.dd_switch.observe(9_000.0, _ts(11, 23), reading_ts=_ts(11, 23))
+    # 00:00:20Z on the 12th: only the 23:00Z snapshot exists -> awaiting.
+    tick_env["snap"]({"acct_tick": 9_000.0}, _ts(11, 23))
+    assert rm.check_dd_switch() is False
+    row = dd.load_state()["acct_tick"]
+    assert row["read_state"] == dd.READ_AWAITING and row["day"] == "2026-10-12"
+    assert rm.evaluate(_pkg())[1] != "DAILY_DD_SWITCH"
+    assert rm.dd_switch.status(row, now=fixed)["tripped"] is False
+
+
+@pytest.mark.parametrize("minute", [0, 1, 30, 119])
+def test_awaiting_day_start_never_blocks_fixed_clock(tmp_path, minute):
+    sw, alerts = _switch(tmp_path)
+    sw.observe(10_000.0, _ts(11, 21), reading_ts=_ts(11, 21))
+    sw.observe(9_000.0, _ts(11, 23), reading_ts=_ts(11, 23))       # -10%: tripped on the 11th
+    assert alerts == ["trip"]
+    now = _ts(12, 0) + timedelta(minutes=minute)
+    row = sw.observe(9_000.0, now, reading_ts=_ts(11, 23))
+    assert row["read_state"] == dd.READ_AWAITING
+    assert sw.blocks_new_entries(row, now) is False                  # label only, never a refusal
