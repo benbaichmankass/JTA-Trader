@@ -44,7 +44,7 @@ def test_registry_equals_the_doc_table_name_and_tier():
 
 def test_wave_one_is_exactly_the_design_list():
     assert set(ops.REGISTRY) == {"live-review-row", "directed-action", "amend-prop-bracket", "sync-now",
-                                 "restart-service"}
+                                 "restart-service", "set-env", "send-ping"}
 
 
 def test_a_ported_allowlist_action_keeps_its_tier():
