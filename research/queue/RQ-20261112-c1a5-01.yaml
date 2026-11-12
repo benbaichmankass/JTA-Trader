@@ -11,7 +11,7 @@ roadmap:
 theme: live_strategy
 priority: 1
 kind: experiment
-compute: cpu_short
+compute: cpu_light
 not_before: '2026-12-01T00:00:00Z'
 routing:
   needs_trainer_resident_data: false
@@ -101,7 +101,7 @@ decision_rule:
 value:
   usd_at_stake_per_month: 100
   confidence: 0.3
-  bucket: live_strategy
+  bucket: own_losses
   basis: 'p(PASS) ~0.3: +0.79 R/package on 4 packages, but the offline trigger test (n=552) found no close trigger better than random; an estimate, not a measurement.'
 run:
   workflow: 'lane session: a lane dispatched by the manager at or after not_before runs the command below with diag and git read access'
