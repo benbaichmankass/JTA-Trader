@@ -66,7 +66,10 @@ def test_live_observations_block_payload_oldest_first_and_no_complete_block_is_n
 def test_coverage_lists_prop_legs_and_names_why_a_leg_is_not_monitorable():
     rows = {r["leg"]: r for r in d.coverage(REPO)}
     assert "prop" in rows["trend_donchian_eth_4h"]["classes"] and not rows["trend_donchian_eth_4h"]["monitorable"]
-    assert rows["ml_entry"]["stage0_state"] == "no_series" and rows["ml_entry"]["stage0_why"]
+    for r in rows.values():   # structural, not pinned to one leg: a missing series is named and never monitorable
+        assert (r["stage0_state"] == "series") == (r["stage0_n"] > 0)
+        if r["stage0_state"] == "no_series":
+            assert r["stage0_why"] and not r["monitorable"]
     assert all(r["stage0_n"] > 0 for r in rows.values() if r["monitorable"])
 
 
