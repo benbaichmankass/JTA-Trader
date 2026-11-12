@@ -152,7 +152,7 @@ which matches today's one-lane-per-review model and removes the manager hop. It 
 - **The token** is a per-routine credential: the operator creates it in the web UI (it is shown once) and it is written to the VM `.env` by
   the env workflow. It is never committed.
 - **Dedupe on the VM** (no idempotency key): one fire per `(package, due level)`, recorded in `runtime_logs/live_review/fires.jsonl`.
-- **Budget**: 30/h per routine. The 2026-11-11 evening ran ~7 packages per ~10-min round (≈ 40/h at peak), so the fire batches every package
+- **Budget**: 30/h per routine. The 2026-11-11 evening ran up to 7 packages per round, about every 10 min (ESTIMATED from the `live-review/rows` commit subjects 23:15-23:58Z, not from a fire count: ≈ 40/h at peak), so the fire batches every package
   due in one minute into one fire, and two routines (real-money+prop / paper) split the load.
 - **Fallback**: the PR-comment wake stays as the fallback on a 429 or a failed fire. One red flag goes out per incident. There is no halting.
 - **Not recommended**: `claude -p` on the VM. It puts a long-lived claude.ai login on the live trader's box, the docs leave subscription
