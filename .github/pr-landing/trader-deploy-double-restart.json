@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Deploy path (scripts/deploy_pull_restart.sh, run by both ict-git-sync and the pull-and-deploy system action). decision: 2026-11-12 manager — AM-OPS restart accounting; remove duplicate deploy restart, no delay added. AM-DEVOPS merges. Revert: git revert.",
+  "why": "One deploy batch restarts the trader at most once: non-blocking lock + re-read of the trader sha marker before the restart (dedupe on deployed sha; no delay, wait or gate)."
+}

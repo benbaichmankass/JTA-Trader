@@ -7,8 +7,9 @@ better" than the live alpaca_live strategy (Foxhound-4, ml_entry_eq_struct, arti
 
 WHY THIS EXISTS. Every number behind Foxhound-4 (RQ-20261107-98e3-06: +0.49 R/trade, n 207) is measured in R per trade with
 ONE POSITION PER SYMBOL and no cash (scripts/research/ml_entry_alpaca_score.py::take; the evidence record lists "live whole-share
-cash-book sizing on alpaca_live is not modelled" under known_gaps). The account it trades is a $194.52 CASH book (MEASURED
-/api/diag/broker_account_status 2026-11-11T22:44Z: multiplier 1, cash = equity = buying power 194.52, shorting_enabled false),
+cash-book sizing on alpaca_live is not modelled" under known_gaps). The account it trades is a small CASH book (MEASURED
+/api/diag/broker_account_status 2026-11-11T22:44Z: multiplier 1, cash = equity = buying power, shorting_enabled false; the balance is
+NEVER committed, supply it at run time via ALPACA_LIVE_CASH0 -- the default below is SYNTHETIC),
 long only (config/accounts.yaml side_filter: long), bracket orders in WHOLE shares (alpaca_client.place), the live sizer
 (RiskManager.position_size: risk qty floored, rounded UP to one share when that share's risk <= 1.5 x the budget, then capped at
 0.9 x available cash), T+1 settlement armed (ALPACA_CASH_SETTLEMENT_MODE=apply, so the whole balance recycles every trade), and
@@ -33,6 +34,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import subprocess
 import sys
 import tempfile
@@ -47,7 +49,8 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO), str(REPO / "scripts" / "research")]
 
 SCHEMA = "alpaca_live_book/1"
-CASH0 = 194.52            # MEASURED 2026-11-11T22:44Z, /api/diag/broker_account_status, alpaca_live capacity.cash (flat book)
+CASH0_SOURCE = "env" if os.environ.get("ALPACA_LIVE_CASH0") else "synthetic-default"
+CASH0 = float(os.environ.get("ALPACA_LIVE_CASH0") or 200.0)  # alpaca_live capacity.cash, read at run time; 200.0 is SYNTHETIC, not the account
 TAU_LIVE = 0.25           # config/strategies.yaml ml_entry_eq_struct (artifact tau; evidence record fidelity_basis)
 ENS_SEEDS = [1, 2, 3, 4, 5]
 OVERLAP = 6               # 24-bar label on a 4-bar decision step: consecutive decisions share 5/6 of a label window
@@ -418,7 +421,7 @@ def main_foxhound(a) -> Dict[str, Any]:
         r = section_calib(o, sizer)
     else:
         r = section_label(tab, o, sizer)
-    r.update({"sizer": sizer, "cash0": CASH0, "costs": {"slippage_bps": slip, "fee_bps": fee, "regulatory_bps": S.REGULATORY_BPS},
+    r.update({"sizer": sizer, "cash0_source": CASH0_SOURCE, "costs": {"slippage_bps": slip, "fee_bps": fee, "regulatory_bps": S.REGULATORY_BPS},
               "n_pool": len(pool), "pool": {k: v for k, v in prep.items() if k != "excluded"}, "train_end": M.TRAIN_END,
               "structure_exit": M.STRUCT_SPEC, "ensemble_seeds": ENS_SEEDS, "alpaca_calls": client.calls,
               "population": f"DEV walk-forward OOF restricted-LONG decisions of the Foxhound-4 recipe on the {len(pool)}-ETF pool, "
@@ -468,7 +471,7 @@ def main_legs(a) -> Dict[str, Any]:
     else:
         v, why = "fail", "no leg reaches n_taken >= 30 with book mean net R > 0 and month-clustered t >= 1.0"
     return {"verdict": v, "note": why, "per_leg": per, "combined_one_slot": combined, "harness_runs": runs, "sizer": sizer,
-            "cash0": CASH0, "days": a.days,
+            "cash0_source": CASH0_SOURCE, "days": a.days,
             "population": f"Stage-0 trade lists of {len(a.strategy)} rostered equity legs (build_strategy_evidence, last {a.days} days, "
                           f"config-exact harness, net of its cost stack) replayed through the alpaca_live cash book"}
 
@@ -484,7 +487,7 @@ def _self_test() -> int:
 
     T = pd.Timestamp
     base = dict(direction="long", score=0.0)
-    # 1 share of a $100 ETF with $1 stop: budget 194.52*0.02=3.89 -> q=3, cap floor(0.9*194.52/100)=1 -> 1 share
+    # 1 share of a $100 ETF with $1 stop: budget cash0*0.02 -> q=3, cap floor(0.9*cash0/100)=1 -> 1 share
     r = replay([{**base, "symbol": "A", "entry_time": T("2025-01-06 15:30Z"), "exit_time": T("2025-01-07 20:00Z"), "entry": 100, "sl": 99, "net_r": 1.0}])
     check("cash wall clamps to 1 share", r["n_taken"] == 1 and r["taken_head"][0]["qty"] == 1 and abs(r["pnl_usd"] - 1.0) < 1e-9)
     # unaffordable: $250 share

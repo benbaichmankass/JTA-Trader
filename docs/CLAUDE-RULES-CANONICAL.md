@@ -2063,9 +2063,17 @@ backtest, not more soak time.
 This is **mechanically guarded**: `tests/ml/test_gates.py` asserts that no
 required gate under the regime-classifier profile is a calendar-time edge gate
 (the `shadow_soak` calendar gate stays `required=False` there). A future edit
-that re-requires it fails CI. Promotion past shadow remains the operator-gated
-Tier-3 switch regardless — this rule governs *what counts as evidence*, never
-*who* approves the live promotion.
+that re-requires it fails CI.
+
+⚠️ **The ML stage step is RETIRED** (operator, chat 2026-11-12 ~16:35Z, verbatim:
+*"you're going to retire the step from the ML. Everything goes through the new flow, back testing, live money, and then if it gets demoted, it soaks to still generate data while we iterate on it. That is the only acceptable flow. There is nothing in between proving edge on back testing and real money. Absolutely no steps."*). There is no `shadow → advisory` step: a model whose committed OFFLINE
+evidence clears the gates goes to `advisory` (real money) directly from
+`candidate` or `shadow`; every live-row gate (`shadow_soak`, `live_parity`,
+`labels_accruing`, `drift_clean`, live AUC/brier) is reported, never required
+before real money, and feeds demotion. A demoted model soaks in `shadow` to keep
+generating data while it is iterated on. The promotion itself is Tier-3 under
+§ "Data-backed Tier-2/3 decisions" (a committed evidence record settles it:
+ship, then notify the operator).
 
 ## Documentation Hygiene & Premise Verification (2026-05-17)
 

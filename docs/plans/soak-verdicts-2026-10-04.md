@@ -43,7 +43,7 @@
 | bybit_1 `trend_donchian_eth` | 20/10 | **REFUSE R-FOLDS** | S1→OFF NEEDS-DATA | **REFUSE.** |
 | bybit_1 `trend_donchian_sol` | 10/10 | **REFUSE R-FOLDS** | S1→OFF NEEDS-DATA | **REFUSE.** |
 | bybit_1 `sol_pullback_2h` | 27/10 | **NEEDS-DATA R-N**: Stage-0 n_trades_oos=18 < 30 | — | **NEEDS_DATA**, filed `PI-20261004-JC8KDKLF-0004` (re-run the harness over a longer window). |
-| alpaca_paper `gld_pullback_1h` | 10/10 | **REFUSE R-AFFORD**: 0 of 54 setups size above zero on alpaca_live (equity $193.56) | — | **REFUSE.** It cannot trade the live book at its size, whatever its edge. |
+| alpaca_paper `gld_pullback_1h` | 10/10 | **REFUSE R-AFFORD**: 0 of 54 setups size above zero on alpaca_live (equity [balance removed]) | — | **REFUSE.** It cannot trade the live book at its size, whatever its edge. |
 | alpaca_paper `qqq_pullback_1h` | 15/10 | **REFUSE R-FOLDS** (2/4) | — | **REFUSE.** |
 | alpaca_paper `uso_trend_1h` | 11/10 | **REFUSE R-FOLDS** (2/4) | — | **REFUSE.** |
 | shadow `slv_trend_1h` | 22 pkgs | NEEDS-DATA R-EXECUTION-SHADOW. Stage-0 **passes**: +0.78R, n=68, 4/4 folds | — | **NEEDS_DATA**, filed `PI-20261004-JC8KDKLF-0010`: needs a real Stage-1 soak as `execution: live` on alpaca_paper. That is a Tier-3 flip, backed by a passing Stage-0 record. **Only this one is a promotion candidate.** |

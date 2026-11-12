@@ -203,7 +203,9 @@ FIDELITY_BASELINE: Dict[Tuple[str, str], str] = {}
 #: your baseline exception to sol_4h's approximate evidence."). Record: ML-PROP-ITERATE.
 #: The faithful re-measure (structure_exit modelled) is owed on that row.
 FIDELITY_OPERATOR_WAIVER: Dict[Tuple[str, str], str] = {
-    ("breakout_2", "trend_donchian_sol_4h"): "operator 2026-11-05 ~21:05Z 'Both now, waive both' (prop baseline)",
+    # ("breakout_2", "trend_donchian_sol_4h") removed 2026-11-12: breakout_2 is ON ICE (operator) and its roster is
+    # empty (#25306), so the slot no longer exists and the exactness test refuses a waiver that outlives it.
+    # Re-entry: if breakout_2 is re-rostered with this leg, restore this exact line (same operator quote).
     ("tradeify_1", "trend_donchian_sol_4h"): "operator 2026-11-05 ~21:05Z 'Both now, waive both' (prop baseline)",
     ("velotrade_1", "trend_donchian_sol_4h"): "operator 2026-11-05 ~21:05Z 'Both now, waive both' (prop baseline)",
 }
@@ -801,7 +803,8 @@ def self_test() -> int:
         # P9: OPERATOR WAIVER (operator 2026-11-05 ~21:05Z "Both now, waive both") is SLOT-keyed too:
         #     the named prop slot passes C5 with an "OPERATOR WAIVER" message; the same leg on an
         #     unnamed account still FAILS C5.
-        c5 = dict((c, (o, m)) for c, o, m in clause_verdicts(approx, "breakout_2", "trend_donchian_sol_4h"))["C5"]
+        #     (Probe slot moved from breakout_2 to tradeify_1 on 2026-11-12: breakout_2 is on ice and its waiver line is gone.)
+        c5 = dict((c, (o, m)) for c, o, m in clause_verdicts(approx, "tradeify_1", "trend_donchian_sol_4h"))["C5"]
         check("P9 waived slot passes C5", c5[0], True)
         check("P9 ...and says OPERATOR WAIVER", "OPERATOR WAIVER" in c5[1], True)
         check("P9b waived leg on an unnamed account fails C5",

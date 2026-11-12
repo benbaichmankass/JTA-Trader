@@ -1,11 +1,13 @@
 ---
 name: model-training
-description: Trigger, monitor, and analyze ML model training for the ICT bot. The actual training RUNS on the trainer VM (ict-trainer.service → scripts/ops/run_training_cycle.sh); Claude drives it autonomously through the trainer-vm-diag relay — kick a cycle, watch the journal, read the registry, analyze the result. Covers the `python -m ml ...` CLI (train, list-models, promote-stage, shadow-*, build-dataset), the manifests in ml/configs/, dataset families, and the 3-stage deployment ladder (candidate→shadow→advisory). Use when the operator says "train the models", "run a training cycle", "check the trainer", "what's in the registry", or "promote model X". NOT for live promotion past shadow (Tier-3, operator-gated).
+description: Trigger, monitor, and analyze ML model training for the ICT bot. The actual training RUNS on the trainer VM (ict-trainer.service → scripts/ops/run_training_cycle.sh); Claude drives it autonomously through the trainer-vm-diag relay — kick a cycle, watch the journal, read the registry, analyze the result. Covers the `python -m ml ...` CLI (train, list-models, promote-stage, shadow-*, build-dataset), the manifests in ml/configs/, dataset families, and the registry stage labels (candidate→shadow→advisory, housekeeping). Use when the operator says "train the models", "run a training cycle", "check the trainer", "what's in the registry", or "promote model X". Promotion to real money is decided on committed backtest evidence (no shadow step; retired 2026-11-12) — that decision follows OPERATING-PLAN § 2, not this skill.
 ---
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-09-07` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
 > **The research loop (binding, 2026-11-01):** [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow" -- a model is BUILT parameterised: its levers (features, labels, recipe, universe, horizon, threshold, calibration) are declared in `research/levers/<model>.yaml` and the first evaluation is a structured design (one-factor ablations against the base recipe), never one configuration; a model whose evidence does not pass iterates from its map, never parked in shadow.
+
+> **One ladder (operator, 2026-11-12, binding; row `ML-ONE-LADDER`).** A model reaches a book the way a strategy does -- [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 (the ladder, the soak, three strategy statuses); this skill points at it and restates none of it. The registry `stage` (`candidate`/`shadow`/`advisory`) is a trainer-housekeeping label, never a step to real money; shadow on paper is only for something demoted and in iteration. Operator, verbatim: *"We already said that things get promoted to real money based on backtesting, shadow on paper is only for something that is demoted and in iteration, not a step on the way to real money"*. Gates this adds or changes: none.
 
 # /model-training — drive the ICT bot's ML training lifecycle
 
@@ -14,10 +16,19 @@ description: Trigger, monitor, and analyze ML model training for the ICT bot. Th
 
 Training is **autonomous trainer-VM territory** (CLAUDE.md § VM authority
 split). Claude provisions, kicks cycles, reads the registry, and analyzes
-results without operator-in-the-loop — up to `advisory` in the registry
-(autonomous only up to `shadow`; `shadow → advisory` is the operator gate).
-The one gate Claude does NOT cross alone is **promotion past `shadow`**
-(shadow → advisory is the operator-approved live-influence switch).
+results without operator-in-the-loop.
+
+**There is no stage step** (operator, chat 2026-11-12, verbatim: *"you're going to retire the step from the ML. Everything goes through the new flow, back testing, live money, and then if it gets demoted, it soaks to still generate data while we iterate on it. That is the only acceptable flow. There is nothing in between proving edge on back testing and real money. Absolutely no steps."*).
+A model whose committed backtest evidence clears the offline gates
+(`ml.promotion.gates`: `oos_edge`, `cost_net`, `non_degenerate`, offline
+`sample_sufficiency`, `cross_run_stability`) goes to `advisory` (real money)
+directly — from `candidate` or `shadow`. That move is a data-backed Tier-3
+decision (canonical § "Data-backed Tier-2/3 decisions": ship on the record,
+then notify the operator); a real-money promotion on a fee-only corpus stays
+blocked. A model demoted from `advisory` goes to `shadow`, where it soaks to
+keep generating data while it is iterated on. Live-row gates (`shadow_soak`,
+`live_parity`, `labels_accruing`, `drift_clean`, live AUC/brier) are
+monitoring and demote triggers, never a step before real money.
 
 **The training run happens on the trainer VM, never in this session.** The
 sandbox has no SSH and no GPU; it drives the trainer through the
@@ -95,13 +106,13 @@ Routed through `ml/__main__.py` → `ml/cli.py`. Subcommands (verified):
 | `list-models [--status S] [--registry-root]` | Enumerate registry entries |
 | `list-trainers` / `list-evaluators` / `list-families` | Discover available trainer / evaluator / dataset-family classes |
 | `promote <model_id> <status> --by --reason [--gates-acknowledged]` | Legacy WS4 status transition |
-| `promote-stage [model_id] --new-stage <stage> --by --reason [--all-pre-shadow]` | WS7 deployment-stage transition (the live ladder) |
+| `promote-stage [model_id] --new-stage <stage> --by --reason [--all-pre-shadow]` | WS7 deployment-stage transition (housekeeping label; candidate → advisory is one legal move) |
 | `compare <model_a> <model_b>` | Side-by-side metric diff |
 | `shadow-inspect` / `shadow-stats` / `shadow-drift` | Read `runtime_logs/shadow_predictions.jsonl` (tail / aggregate / KS+PSI drift) |
 | `backfill-shadow-predictions --db <path> [--registry-root --output --limit]` | Retroactive-decision replay scoring every historical trade |
 | `model-attribution --db <path> [--shadow-log --backfill-log --model-id]` | Per-model live attribution: joins shadow scores to realized trade outcomes (AUC + brier vs base-rate). Go-live decision-support; read-only |
-| `gate-check <model_id> [--target-stage --db --shadow-log]` | Computed shadow→advisory promotion gates (go/no-go evidence packet). Reports only; never promotes |
-| `stage-guard [--db --shadow-log --registry-root]` | Proposes promote/demote/hold for every model from gates + drift + attribution. Read-only — operator runs `promote-stage` to act |
+| `gate-check <model_id> [--target-stage --db --shadow-log]` | Computed promotion gates into `advisory` — offline evidence decides; live gates reported, not required (no shadow step). Reports only; never promotes |
+| `stage-guard [--db --shadow-log --registry-root]` | Proposes promote (candidate/shadow → advisory on offline evidence) / demote (advisory → shadow) / hold for every model. Read-only — `promote-stage` acts, under the data-backed Tier-3 rule |
 | `build-dataset …` / `validate-dataset <path>` | Passthrough to `ml.datasets` |
 
 > **There is no `python -m ml.registry list`.** `ml/registry/` has no
@@ -149,14 +160,16 @@ the full cost stack plus an enforced cost gate on model promotion; revert is one
   refuses a forward move on a failed/missing evaluation. Families with no net-R value column
   (regime / direction / execution heads) are `not_applicable` — a gap, not a pass.
 - **Revert:** `config/ml_training.yaml::cost_net_labels: false` (labels gross, gate report-only).
-- **Soak:** the `shadow_soak` gate is mechanical — 1–2 clean scored shadow predictions, no
-  calendar term (operator 2026-10-28, *"Same as trades: 1-2 clean"*).
+- **Soak:** none before real money. The `shadow_soak` gate is still computed and reported
+  (`required: false`) — the shadow step was retired 2026-11-12; see the top of this skill.
 
 **Naming:** a model promoted to shadow or above gets a display alias (breed = its job, `Breed-<gen><variant>`) in `docs/reference/model_names.yaml` in the same PR as the `promote-stage` record. Aliases are display only; ids never change.
 
-## The 3-stage deployment ladder
+## The registry stage labels (housekeeping, not a ladder to real money)
 
-`candidate → shadow → advisory`
+`candidate` · `shadow` · `advisory` — three labels, no ladder: `candidate → advisory` is
+one move on offline evidence; `advisory → shadow` is a demotion (soak for data while
+iterating).
 
 (Stage ladder collapsed 7→3 on 2026-06-16; legacy names alias via
 `ml.manifest.canonical_stage`: `research_only`/`backtest_approved` →
@@ -168,10 +181,11 @@ still resolve.)
   A `shadow` model auto-wires onto every strategy whose YAML omits
   `shadow_model_ids` — shadow logging is enabled-by-default for newly
   trained models, so Claude does not hand-wire it.
-- `advisory`: model output influences the order package. The
-  **`shadow → advisory` transition is the live switch — operator-approved
-  (Tier-3) only.** Claude prepares the `promote-stage` call and the
-  evidence; the operator authorizes.
+- `advisory`: model output influences the order package through the registry
+  consumers. A stage label does not by itself put a model on a book; that
+  follows the strategy ladder (OPERATING-PLAN § 2). A change to
+  `promote-stage` / `gate-check` / `stage-guard` code is a separate Tier-2
+  proposal, not an edit to this skill.
 
 ## What to analyze / report
 

@@ -6,6 +6,8 @@
 
 You are a **fresh** live-review reviewer. The manager started you with THIS brief plus ONE ltr-wake comment's packet block(s), on a shallow, sparse checkout of `live-review/rows` (`comms/live_review` only). That checkout exists **only so your GitHub writes are authorized** (a session with no repo gets 403 on every write). You do **not** read, search or run anything from it or from the repo, you do not clone anything else, and you do not read diag routes. Everything you judge is in the packet. Your one output is ONE row on the `live-review/rows` branch, written as ONE new create-only file (§ 4). The live VM picks it up within ~45 s and runs the apply itself (`src/runtime/live_review_rows_watch.py` → `scripts/ops/live_review_dispatch.py --ref`). Every mandate clause, `approve_amend` and the venue read-back stay on the VM. **You never move a stop, place, amend or cancel an order, write `config/`, or open an issue.**
 
+> **Started by the routine (TRADE-ACTION-DIRECT-PATH phase 3, operator decision page m5, 2026-11-12):** the live VM now fires the live-review routine the minute a review is due, so you may be started by a routine fire instead of the manager. Your input is then the fire `text`: ONE JSON document `{"kind": "ltr-routine-fire", "entries": [...], "packets": {<order_package_id>: {"packet", "packet_sha", "table_path", "table"}}, "packet_omitted": [...]}`. Each `packets` value is exactly the block § 1 describes; a package in `packet_omitted` (too large for the 65,536-char payload) is read from `comms/live_review/packets/<review_id>.json` on `live-review/rows` (the entry's `review_id`; it was committed before the fire). Review ONE row per package, then report in the session (there is no manager message to reply to; the VM receipt is the record).
+
 ## 1. Your input
 
 Each package block in the comment is:
@@ -351,7 +353,16 @@ On a non-`ok` packet, the row repeats the defects: `packet_defects: [{"field", "
 }
 ```
 
-## 4. The write: ONE new file per row on `live-review/rows`, create-only, no clone
+## 4a. The submit: the direct POST first (TRADE-ACTION-DIRECT-PATH, operator 2026-11-12)
+
+**Submit your row straight to the live VM**: `POST https://ict-bot.duckdns.org/api/bot/live-review/rows` with the row as the JSON body (`Content-Type: application/json`). The session's environment proxy injects the credential; you add no token, and you never print one. The VM runs the SAME checks as a branch row (every mandate clause, per-account `RiskManager`, both brackets, read-back) within ~2 s. Route added by #25045 (merged 2026-11-12 03:39Z).
+
+- **`201`** `{"state": "accepted", "receipt": "/api/bot/live-review/rows/<review_id>"}` → done. `GET` the receipt once after ~5 s and put its `state` in your report (`handled` / `pending`). **Do NOT also write the branch file** (§ 4): the direct row is the decision.
+- **`409`** ("already handled" / "already submitted") → it is already in; report it and stop. Never resubmit under another `review_id`.
+- **`400`** → your row failed the shape check; the `detail` says why. Fix the row and POST again (counts as a try).
+- **Anything else** (401/403/503, 5xx, a timeout, no network access to the host) → retry once after ~10 s, then fall back to **§ 4, the branch write**, unchanged. Say in your report `submit: branch (direct failed: <status>)`.
+
+## 4. The write (the FALLBACK): ONE new file per row on `live-review/rows`, create-only, no clone
 
 > **Why one file per row** (LTR-ROWS-SWAP-TRUNCATION, 2026-10-27): the old write re-sent the WHOLE growing `reviews.jsonl` to append one line. On 2026-10-27 15:22Z a reviewer's generation stopped mid-file: its sha-guarded swap replaced 26 rows (71,121 B) with 4 rows plus a cut-off line, and its own row was lost. The sha guard proved the base was right, not the body. A per-row file is the same small size whatever the branch holds, and a create can never overwrite anyone else's row.
 

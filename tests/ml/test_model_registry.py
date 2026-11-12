@@ -317,6 +317,24 @@ class TestDeploymentStage:
         assert rolled.target_deployment_stage == "shadow"
         assert len(rolled.stage_history) == 3
 
+    def test_promote_stage_candidate_direct_to_advisory(self, tmp_path: Path):
+        # Stage step RETIRED (operator, chat 2026-11-12, verbatim: "There is
+        # nothing in between proving edge on back testing and real money.
+        # Absolutely no steps."): candidate -> advisory is ONE legal move, and a
+        # demoted model can go back to shadow (soak for data) or to candidate.
+        reg = ModelRegistry(tmp_path)
+        reg.register(
+            model_id="m-1",
+            manifest={"manifest_version": "v1", "target_deployment_stage": "candidate"},
+            model_state_path="/tmp/s.json", metrics={}, code_revision="x",
+        )
+        up = reg.promote_stage("m-1", "advisory", by="op", reason="offline evidence")
+        assert up.target_deployment_stage == "advisory"
+        assert len(up.stage_history) == 1
+        assert up.stage_history[-1].from_stage == "candidate"
+        down = reg.promote_stage("m-1", "candidate", by="op", reason="retired")
+        assert down.target_deployment_stage == "candidate"
+
     def test_promote_stage_alias_research_only_normalizes_to_candidate(
         self, tmp_path: Path
     ):

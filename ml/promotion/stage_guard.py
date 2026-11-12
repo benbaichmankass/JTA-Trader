@@ -2,19 +2,27 @@
 
 Walks every model in the registry and emits a **proposal** for each:
 
-- ``promote`` — a ``shadow`` model that clears every promotion gate
-  (``ml.promotion.gates``) is proposed for ``advisory``.
-- ``demote`` — a live-influencing model (``advisory`` and above) that
-  trips a demote trigger (drift, degeneracy, live underperformance) is
-  proposed for the next step down the ladder.
+- ``promote`` — a pre-production model (``candidate`` OR ``shadow``) that
+  clears every REQUIRED gate (``ml.promotion.gates`` — offline evidence only)
+  is proposed for ``advisory`` (production) DIRECTLY.
+- ``demote`` — a production model (``advisory``) that trips a demote trigger
+  (drift, degeneracy, live underperformance) is proposed for ``shadow``,
+  where it soaks to keep generating data while it is iterated on.
 - ``hold`` — everything else, with the blocking reasons attached.
 
+⚠️ THE STAGE STEP IS RETIRED (operator, chat 2026-11-12 ~16:35Z, verbatim:
+"you're going to retire the step from the ML. Everything goes through the new
+flow, back testing, live money, and then if it gets demoted, it soaks to still
+generate data while we iterate on it. That is the only acceptable flow. There
+is nothing in between proving edge on back testing and real money. Absolutely
+no steps."). Before 2026-11-12 only a ``shadow`` model could be proposed, so a
+backtest-passed ``candidate`` had to sit in shadow first — that step is gone.
+
 **This module never mutates the registry and never touches the order
-path.** Both promotion and demotion are operator-gated (the operator's
-explicit policy, 2026-05-25): the guard produces evidence and a
-recommendation; a human runs ``python -m ml promote-stage`` to act. The
-intended deployment is a daily job that prints this report and, when WS8
-alerting lands, pings the operator on any non-``hold`` proposal.
+path.** It produces evidence and a proposal; acting on it is
+``python -m ml promote-stage``, under the data-backed Tier-2/3 rule
+(docs/CLAUDE-RULES-CANONICAL.md § "Data-backed Tier-2/3 decisions": a
+committed evidence record settles it, ship, then notify the operator).
 """
 from __future__ import annotations
 
@@ -37,10 +45,9 @@ from .gates import (
     thresholds_for,
 )
 
-# One-step rollback toward shadow (mirrors the registry's rollback edges).
-# 3-stage collapse (2026-06-16): the only canonical influence stage is
-# `advisory`, which demotes to `shadow`. Legacy `limited_live` /
-# `live_approved` normalize to `advisory` before the lookup.
+# Demotion target: production (`advisory`) demotes to `shadow`, where the model
+# soaks to keep generating data while it is iterated on (operator 2026-11-12).
+# Legacy `limited_live` / `live_approved` normalize to `advisory` first.
 _DEMOTE_TARGET: dict[str, str] = {
     "advisory": "shadow",
 }
@@ -56,6 +63,11 @@ DEMOTE_EVIDENCE_PARTIAL = "partial"              # exactly one measured
 DEMOTE_EVIDENCE_NOT_EVALUABLE = "not_evaluable"  # neither measured
 
 _LIVE_STAGES = frozenset(_DEMOTE_TARGET)
+
+# Pre-production stages a model may be promoted FROM, straight to advisory
+# (stage step retired 2026-11-12 — candidate no longer has to pass through
+# shadow first).
+_PROMOTABLE_STAGES = frozenset({"candidate", "shadow"})
 
 
 @dataclass(frozen=True)
@@ -174,7 +186,7 @@ def propose_for_model(
     # or the compute returned insufficient_data.
     offline = oos_edge.to_dict() if oos_edge is not None else None
 
-    if stage == "shadow":
+    if stage in _PROMOTABLE_STAGES:
         report: GateReport = evaluate_gates(
             entry, target_stage="advisory",
             attribution=attribution, drift=drift, oos_edge=oos_edge,
@@ -240,12 +252,11 @@ def propose_for_model(
             },
         )
 
-    # Pre-shadow stage (canonical `candidate`; legacy research_only /
-    # backtest_approved normalize to it): off the live evaluation path —
-    # nothing to propose.
+    # Unrecognised stage string (not canonical, not an alias): nothing to
+    # propose — report it rather than guess.
     return Proposal(
         entry.model_id, stage, "hold", None,
-        reasons=("pre-shadow stage; not in the live influence path",),
+        reasons=(f"unrecognised stage {stage!r}; nothing to propose",),
     )
 
 
@@ -368,8 +379,8 @@ def run_stage_guard(
 
     When ``datasets_root`` is supplied (the trainer VM, where the datasets
     live), the offline purged-WF-CV OOS edge is computed for every
-    ``shadow``-stage model so the promote gate has its champion-challenger
-    evidence; without it those models hold on ``oos_edge`` insufficient
+    pre-production (``candidate`` or ``shadow``) model so the promote gate has
+    its champion-challenger evidence (stage step retired 2026-11-12); without it those models hold on ``oos_edge`` insufficient
     data — you cannot certify readiness without the OOS evidence.
 
     ``isolate_oos_edge`` (default ``True``) runs each model's OOS-edge
@@ -402,7 +413,11 @@ def run_stage_guard(
             reference_days=reference_days, current_days=current_days,
         )
         oos_edge = None
-        if datasets_root is not None and entry.target_deployment_stage == "shadow":
+        try:
+            _stage = canonical_stage(entry.target_deployment_stage)
+        except ValueError:
+            _stage = entry.target_deployment_stage
+        if datasets_root is not None and _stage in _PROMOTABLE_STAGES:
             oos_edge = _oos_edge_for_entry(
                 entry,
                 registry_root=registry_root,

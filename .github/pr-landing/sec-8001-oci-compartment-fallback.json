@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "SEC-8001-LOCKDOWN follow-up to #25219 (operator decisions page m3). The first oci-close-api-port dry run (run 43211799160) exited 2 before any OCI API call: the OCI_COMPARTMENT_OCID secret is empty. This PR adds the same compartment fallback scripts/ops/oci_inventory.py already uses: COMPARTMENT_ID, then the tenancy OCID (root compartment). It uses the same configured key; no new credential. Tier-2 PRs route through AM-OPS to AM-DEVOPS.",
+  "why": "Let the oci-close-api-port dry run resolve its compartment the way oci-inventory does, so it reaches the API."
+}
