@@ -36,8 +36,8 @@ Output is one JSON object with ``before`` / ``after`` rows.
 from __future__ import annotations
 
 import argparse
-import os
 import json
+import os
 import sqlite3
 import sys
 from datetime import datetime, timezone

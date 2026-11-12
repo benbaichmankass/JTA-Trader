@@ -32,11 +32,12 @@ writing. ``--apply`` commits (the wrapper takes a DB backup first).
 from __future__ import annotations
 
 import argparse
-import os
 import json
+import os
 import sqlite3
 import sys
 from typing import Any, Dict, List, Optional
+
 
 def _take_backup():
     """The shared pre-APPLY backup with per-tag retention (scripts/ops/journal_backup.py)."""
