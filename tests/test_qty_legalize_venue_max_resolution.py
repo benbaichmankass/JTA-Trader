@@ -281,3 +281,31 @@ def test_production_scoped_ceiling_is_not_served_to_demo():
 def test_the_yaml_states_the_avax_measurement_venue():
     from src.core.profile_loader import load_instrument_profiles
     assert load_instrument_profiles()["AVAXUSDT"].max_qty_venue == "demo"
+
+
+# --- a missed ceiling lookup never refuses (no-new-gates; AM 2026-11-12) ----
+
+def test_missing_max_qty_still_places_the_order_at_normal_size():
+    """A live production account whose ceiling lookup misses AND whose profile
+    ceiling does not apply must still get an order at the risk-sized qty."""
+    normal = 22_995.1
+    r = legalize_qty(normal, account_cfg=BYBIT_PROD, symbol="AVAXUSDT",
+                     client=_DeadInstrumentsClient(), prefer_live=True)
+    assert r.ok is True
+    assert r.qty == normal and float(r.qty_str) == normal
+    assert r.clamped is False
+    assert r.venue_max_state == "could_not_look"
+
+
+def test_could_not_look_is_recorded_as_an_unverified_label_only():
+    from src.runtime.provenance import UNVERIFIED
+    from src.units.accounts.execute import venue_max_label
+    r = legalize_qty(100.0, account_cfg=BYBIT_PROD, symbol="AVAXUSDT",
+                     client=_DeadInstrumentsClient(), prefer_live=True)
+    assert r.ok is True and r.qty == 100.0
+    assert venue_max_label(r) == {"venue_max": {
+        "state": "could_not_look", "provenance": UNVERIFIED,
+        "source": "instrument_profile"}}
+    published = legalize_qty(100.0, account_cfg=BYBIT_1, symbol="AVAXUSDT",
+                             client=_DeadInstrumentsClient(), prefer_live=True)
+    assert venue_max_label(published) is None

@@ -703,7 +703,8 @@ def execute_pkg(
         intent_reduce=reduce_only,
         # DESK-MAKER-FILLS probe (b): None on every Market entry (no notes change).
         extra_notes=({**(order.get("maker_probe_notes") or {}),
-                      **(order.get("qty_resize") or {})} or None),
+                      **(order.get("qty_resize") or {}),
+                      **(order.get("venue_max_label") or {})} or None),
         sl_order_id=sl_order_id, tp_order_id=tp_order_id,
         # MI-227 / audit F-36: only the reduce branch consumes this, to resize
         # each shrunk parent's own tracked protective leg. Every other insert
@@ -1257,6 +1258,27 @@ def _fetch_linear_total_equity(client: Any) -> Optional[float]:
         return None
 
 
+def venue_max_label(legal: Any) -> Optional[dict]:
+    """Journal-notes label for an order whose venue per-order ceiling could
+    not be resolved (``venue_max_state == could_not_look``), else ``None``.
+
+    LABEL ONLY: ``legalize_qty`` already places such an order at its normal
+    size, unclamped, and nothing here may turn that into a refusal (operator
+    no-new-gates rule). Provenance is ``UNVERIFIED`` (src/runtime/provenance.py):
+    we neither measured a ceiling nor established that there is none.
+    """
+    from src.runtime.provenance import UNVERIFIED
+    from src.units.accounts.qty_legalize import MAX_STATE_COULD_NOT_LOOK
+
+    if getattr(legal, "venue_max_state", None) != MAX_STATE_COULD_NOT_LOOK:
+        return None
+    return {"venue_max": {
+        "state": MAX_STATE_COULD_NOT_LOOK,
+        "provenance": UNVERIFIED,
+        "source": getattr(legal, "source", None),
+    }}
+
+
 def _submit_order(client: Any, order: dict, account_cfg: dict,
                   *, observed: Optional[dict] = None) -> str:
     """Place the order via the exchange client and return a trade_id.
@@ -1547,6 +1569,13 @@ def _submit_order(client: Any, order: dict, account_cfg: dict,
             #                     would block orders that are legal today, a far
             #                     larger blast radius than the bug), but never
             #                     SILENTLY: this is the state that was invisible.
+            _vm_label = venue_max_label(_legal)
+            if _vm_label is not None:
+                # A LABEL, never a refusal (operator no-new-gates rule; AM
+                # directive 2026-11-12 11:52Z): the order is sized and sent as
+                # normal, and the journal row records that its ceiling was not
+                # verified. Rides extra_notes like ``qty_resize``.
+                order["venue_max_label"] = _vm_label
             if _legal.venue_max_state == MAX_STATE_COULD_NOT_LOOK:
                 logger.warning(
                     "_submit_order: %s venue maxOrderQty UNRESOLVED (source=%s) "
