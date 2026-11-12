@@ -605,7 +605,7 @@ Each row stays in its state with `week_lane` cleared and due 2026-11-18 for the 
 
 - **LIVE-DECAY-MONITOR** — Second carry-over (11-04 → 11-11 → now): schedule it as a surge row, date it to W48, or kill it?
 - **PROMOTE-TLT-1H-REAL-MONEY** — tlt_pullback_1h earns only short-side; alpaca_live is long-only: keep it on paper, or open a shortable real-money path?
-- **PR1111-SURVIVOR-PROMOTIONS** — slv_pullback_1h passes (365d +44.71R n69; holdout +35.99R n104) but the operator said on 2026-08-24 it 'MUST NOT BE PROPOSED BACK': keep the ban or lift it?
+- **PR1111-SURVIVOR-PROMOTIONS** — ~~slv_pullback_1h passes (365d +44.71R n69; holdout +35.99R n104) but the operator said on 2026-08-24 it 'MUST NOT BE PROPOSED BACK': keep the ban or lift it?~~ **ANSWERED, not open (corrected 2026-11-12 by lane DEMOTION-NOT-BAN):** the leg is `slv_trend_1h` (no `slv_pullback_1h` exists in `config/strategies.yaml`; holdout +35.99R n=104 is RQ-20261101-78fc-18). The operator never said "must not be proposed back": a session wrote that comment in `config/accounts.yaml` about an evidence-based 2026-08-24 demotion. The operator lifted it 2026-11-04 ~22:05Z, verbatim *"Reopen, promote if it clears (Recommended)"* (row PROMOTE-1H-SURVIVORS-20261104). The open item is the evidence, not a decision: RQ-20261104-7fdb-02 (real TP + clean holdout), owned by the survivors lane.
 - **TPX-XRP-DECLARE** — b5 read-back: keep X31 on the demo floor and watch the first extend (recommended), paired test first, or remove?
 - **DESK-18D-JUDGE-2** — Desk entry generation: event-driven entries, a universe change, or keep parked?
 - **DESK-ENTRY-REVIEW-REDESIGN** — The 4 questions in docs/design/desk-entry-review-redesign-2026-11-11.md § 6.

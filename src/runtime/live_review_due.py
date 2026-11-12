@@ -89,13 +89,40 @@ SKIPPED_CLOSED = "skipped_closed_market"
 SKIPPED_NOTHING_NEW = "skipped_nothing_new"
 
 
+# RM-AM-DUE-COULDNOTLOOK (measured 2026-11-12 on the VM after #25234): compute_due took 8-20 s of the route's
+# 9-30 s because every package_market_state call went through market_hours.asset_class_for_symbol, which re-parses
+# config/instruments.yaml (load_instrument_profiles is not memoized): 41 parses = 13.7 s of a 13.8 s compute_due on
+# 20 packages, profiled locally. The exchange per symbol is now read once per PROFILE_TTL_S and shared by every call
+# in the process. Same mapping as asset_class_for_symbol (profile exchange -> asset class; unprofiled -> crypto); a
+# failed profile read is not cached, so the next call retries.
+PROFILE_TTL_S = 300.0
+_PROFILE_EXCHANGE: Dict[str, Optional[str]] = {}
+_PROFILE_LOADED_AT: Optional[float] = None
+_PROFILE_LOCK = threading.Lock()
+
+
+def profile_exchange(symbol: Any) -> Optional[str]:
+    """The instrument profile's ``exchange`` for *symbol* (``config/instruments.yaml``), None when unprofiled.
+    Raises when the profiles cannot be read (callers already treat that as could-not-read)."""
+    global _PROFILE_LOADED_AT
+    now = time.monotonic()
+    with _PROFILE_LOCK:
+        if _PROFILE_LOADED_AT is None or now - _PROFILE_LOADED_AT > PROFILE_TTL_S:
+            from src.core.profile_loader import load_instrument_profiles
+            profs = load_instrument_profiles() or {}
+            _PROFILE_EXCHANGE.clear()
+            _PROFILE_EXCHANGE.update({str(k).upper(): getattr(v, "exchange", None) for k, v in profs.items()})
+            _PROFILE_LOADED_AT = now
+        return _PROFILE_EXCHANGE.get(str(symbol or "").strip().upper())
+
+
 def package_market_state(symbol: Any, now: datetime) -> Tuple[bool, str, str]:
     """``(open, asset_class, why)`` for the package's instrument at *now*, from the one session helper
     (``src.runtime.market_hours``). Crypto perps are always open. An unreadable helper or an asset class it
     does not model reads OPEN, with the reason: a review that fires is the safe side (Prime Directive)."""
     try:
-        from src.runtime.market_hours import ASSET_CLASSES, asset_class_for_symbol, is_market_open
-        cls = asset_class_for_symbol(str(symbol or ""))
+        from src.runtime.market_hours import ASSET_CLASSES, asset_class_for_exchange, is_market_open
+        cls = asset_class_for_exchange(profile_exchange(symbol) or "")
         if cls not in ASSET_CLASSES:
             return True, str(cls), f"asset class {cls!r} not modelled: treated as open"
         return bool(is_market_open(cls, now)), cls, f"{cls} market {'open' if is_market_open(cls, now) else 'closed'}"
@@ -590,6 +617,23 @@ def _base_of(symbol: Any) -> str:
     return base
 
 
+def review_calendar_classes(symbol: Any, base: str, cc: Dict[str, Any], now: datetime) -> Set[str]:
+    """LTR-CALENDAR-CLASSES (b): the REVIEW-ONLY event classes for *symbol* from ``events.calendar`` in
+    config/live_trade_review.yaml -- ``review_classes_by_base[base]``, else
+    ``review_classes_by_asset_class[<asset class of its instrument profile>]``. An unprofiled symbol (or an
+    unreadable profile) gets none, so it stays could_not_look. The trader's event risk never reads this."""
+    by_base = cc.get("review_classes_by_base") or {}
+    if base in by_base:
+        return {str(c).lower() for c in by_base.get(base) or []}
+    try:
+        if profile_exchange(symbol) is None:
+            return set()
+    except Exception:  # noqa: BLE001  # allow-silent: no default; the event stays could_not_look with its reason
+        return set()
+    _, cls, _ = package_market_state(symbol, now)
+    return {str(c).lower() for c in (cc.get("review_classes_by_asset_class") or {}).get(cls) or []}
+
+
 def _is_perp(symbol: Any) -> bool:
     try:
         from src.runtime.execution_costs import is_perp
@@ -698,6 +742,7 @@ def market_events(row: Dict[str, Any], ctx: Optional[Dict[str, Any]],
     else:
         base = _base_of(sym)
         classes = {str(c).lower() for c in (cal.get("classes") or {}).get(base) or []}
+        classes |= review_calendar_classes(sym, base, cc, now)
         if not classes:
             miss("calendar", f"no event classes declared for {base}")
         else:
@@ -1317,8 +1362,7 @@ def _prop_telemetry(symbol: Any, direction: Any, entry: Any, qty: Any,
     if not isinstance(mark, (int, float)) or mark <= 0:
         return dict(base, reason="mark_unavailable", mark=None)
     try:  # the instrument profile's exchange, as prop_overview labels it (not imported: layer-guard)
-        from src.core.profile_loader import load_instrument_profiles
-        ex = getattr((load_instrument_profiles() or {}).get(str(symbol).upper()), "exchange", None)
+        ex = profile_exchange(symbol)
     except Exception:  # noqa: BLE001  # allow-silent: an unread profile is labelled, not guessed
         ex = None
     src = f"{str(ex).lower() if ex else 'bot_feed'}_last_close_5m"

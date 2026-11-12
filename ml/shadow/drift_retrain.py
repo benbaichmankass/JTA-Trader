@@ -25,9 +25,9 @@ manifest considered, drift or not), and there is no per-head retrain
 cooldown other than the daily trainer-cycle timer that runs alongside.
 Auto-firing a retrain on the trainer is fine (trainer is autonomous),
 but the trainer can ONLY write into the registry up to ``advisory``
-(``live_approved`` is its retired alias) — it never auto-promotes past
-``shadow``, which is the operator-gated
-flip. So this loop is bounded: more retrains → more candidate runs in
+(``live_approved`` is its retired alias) — it never changes a stage itself;
+promotion into ``advisory`` is decided on offline evidence by
+``promotion-readiness`` (the shadow step was retired 2026-11-12). So this loop is bounded: more retrains → more candidate runs in
 the registry → ``/ml-review`` and ``promotion-readiness`` decide what
 clears the bar.
 

@@ -465,6 +465,13 @@ def main(argv: list[str] | None = None) -> int:
         return _self_test()
     # ALERT-LEDGER-TO-MANAGER: the unit fires every 5 min; the alert pass runs on EVERY firing, the hourly
     # digest below keeps its own hour latch + _cadence_gate. The alert pass never raises and never gates the digest.
+    # UNBLOCK-WATCH (operator 2026-11-12): evaluate every blocked/waiting item's clears_when (hourly latch inside) and
+    # append one ledger row per NEW clear, BEFORE the alert pass below reads the ledger -> same-tick delivery to the manager.
+    try:
+        from scripts.ops import unblock_watch  # noqa: PLC0415
+        print(f"work-digest-now: unblock_watch {unblock_watch.tick(dry_run=a.dry_run)}")
+    except Exception as exc:  # noqa: BLE001
+        print(f"work-digest-now: unblock_watch failed (digest unaffected): {exc}")
     try:
         from scripts.ops import attention_watch  # noqa: PLC0415
         attention_watch.alert_watch(dry_run=a.dry_run)

@@ -42,8 +42,9 @@ construction** — which is the single most important reason MI-150 wires
   evaluated once per bar, matching the trained policy's cadence).
 - ``exit_head_action: close`` declared in meta (new packages) or cfg (live
   YAML — covers already-open packages via the monitor's live-cfg default).
-- artifact ``stage == "advisory"`` — the operator promotion gate; a
-  shadow-stage artifact NEVER closes anything.
+- artifact ``stage == "advisory"`` — the production label (reached on
+  offline evidence; no shadow step since 2026-11-12); a shadow-stage
+  artifact NEVER closes anything.
 - optional ``exit_head_model`` pin must match the artifact's model_id.
 - the conditional policy fires, per the artifact's declared SHAPE.
 

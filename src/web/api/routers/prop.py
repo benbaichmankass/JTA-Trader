@@ -368,6 +368,11 @@ async def phone_pending(accepts: str = "",
     if expired:
         await asyncio.to_thread(pe.alert_expired, dev.account_id, expired)
     from src.prop import phone_drill
+    if pe.kill_switch(dev.account_id) == "off":
+        # PHONE-OFF-QUIET (operator 2026-11-12: "it keeps on popping up in the middle of me trying to record a
+        # message"): with the kill switch off the app has nothing to do, so it is told nothing that would bring it
+        # forward -- no tickets, no stale-status age (the login-check wake), no drill -- and is told the switch is off.
+        return {"ok": True, "pending": 0, "status_age_hours": None, "drill": None, "kill_switch": "off"}
     return {"ok": True, "pending": await asyncio.to_thread(pe.pending_count, dev, None, _accepts(accepts)),
             "status_age_hours": await asyncio.to_thread(pe.account_status_age_hours, dev.account_id),
             # PHONE-EXEC-OBSERVABLE-1018: a REHEARSAL drill waiting for this device's account ({id} or null)

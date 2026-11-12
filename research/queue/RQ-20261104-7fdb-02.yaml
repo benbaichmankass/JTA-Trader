@@ -148,3 +148,14 @@ related:
 - comms/strategy_evidence/slv_trend_1h.json
 - scripts/ci/check_tp_doctrine.py
 what_it_does_not_do: Edits no config, roster or rule; places no order; a PASS is an input to a Tier-3 proposal, not a promotion.
+blocked:
+  reason: 'Data accrual, not a defect: the clean fresh span (~2026-08-30..2027-03-15) must hold enough held-back trades to reach
+    the power floor (see power.basis). The operator lifted the demote 2026-11-04 ("Reopen, promote if it clears"); a real TP test
+    is the only remaining blocker to the slv_trend_1h promotion. A 4-month wait on a money item is the operator''s call, not a
+    session''s (UNBLOCK-WATCH money_wait -> decisions page); the date itself is under review by lane DEMOTION-NOT-BAN.'
+  owner: ML assistant manager (am:ML)
+  money: true
+  since: '2026-11-04'
+  set_by: unit author 2026-11-04 (RQ-20261104-7fdb authoring session); structured 2026-11-12 by lane UNBLOCK-WATCH
+  clears_when:
+  - date:2027-03-16T00:00:00Z

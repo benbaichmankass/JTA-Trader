@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "Manager dispatch for lane AM-TRADING C1+C2 (acting with the operator's authority), verbatim: \"Open a DRAFT PR ... Do not merge.\" Every changed path is inside TIER1_SURFACE, so the manager can flip this to landing self and arm it, or merge it, once read. The lane's attempt to arm self-landing was also refused by this session's permission classifier as a merge without review.",
+  "why": "Tier-1 data-truth only. C1: comms/prop_survival/trend_donchian_sol_4h.json headline now matches its own 2026-11-06 re-test (verdict fail, EV = minus the eval fee per account; docs/research/prop-retest-2026-11-06/RESULT.md + summary_v3.json); the 2026-10-31 'contested' headline is kept verbatim under superseded_headline_2026_10_31. operator_exception (baseline) untouched, so the leg stays on its prop rosters; config/accounts.yaml untouched; prop-roster-gate already reads operator_exception and is unchanged. C2: docs/reference/account-capability-matrix.md prop columns re-read from code on main (ACTION_PATHS, dxtrade.py, dxtrade_api.py, bracket_request.py), merged vs open PR distinguished; one STATUS_EXPLICIT entry in scripts/ops/document_index.py + its DOCUMENT-INDEX row. No src/, no config/, no order path. Gates this adds or changes: none."
+}
