@@ -21,7 +21,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from src.runtime import rd_registry
+from src.runtime import rd_registry  # noqa: E402 -- after the sys.path insert above
 
 OUT_REL = "comms/research/rd_registry.json"
 
