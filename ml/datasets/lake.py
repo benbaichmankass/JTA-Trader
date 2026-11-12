@@ -203,7 +203,8 @@ def frozen_end(now=None) -> str:
 def _flag_unlisted_tail(e: Dict, start, end, log: _ReadLog) -> None:
     """Mirror-only manifest: the HF listing was unreadable, so every month after the last listed one is UNKNOWN, not absent. A window that
     reaches past it gets an explicit could_not_look entry instead of silently returning fewer rows."""
-    last_month = max(e["partitions"])  # YYYY-MM (the mirror holds monthly partitions)
+    last_key = max(e["partitions"], key=lambda k: (k[:4], k[5:7] if len(k) == 7 else "13"))  # YYYY or YYYY-MM; a year ends in December
+    last_month = last_key if len(last_key) == 7 else last_key + "-12"
     if last_month < (lake_mirror.last_month() or last_month):
         return  # the series stopped before the copy reached its end (delisted): nothing is known to be missing after it
     tail_from = pd.Timestamp(last_month + "-01", tz="UTC") + pd.offsets.MonthBegin(1)
@@ -226,8 +227,13 @@ def _read(e: Dict, start=None, end=None, columns: Optional[Sequence[str]] = None
         filters.append(("ts", "<", pd.Timestamp(end, tz="UTC")))
     if e.get("tf_col"):  # derived timeframes share one file per partition; select this series' tf
         filters.append((e["tf_col"], "==", e["tf"]))
-    # a loader-derived timeframe reads whole base months (a bar never straddles a month) and filters after resampling
-    pq_filters = None if derive else (filters or None)
+    if derive:  # widen to whole UTC days (every derived bar, 5m..1d, sits inside one day), resample, then cut to the exact window
+        filters = []
+        if start is not None:
+            filters.append(("ts", ">=", pd.Timestamp(start, tz="UTC").floor("D")))
+        if end is not None:
+            filters.append(("ts", "<", pd.Timestamp(end, tz="UTC").ceil("D")))
+    pq_filters = filters or None
     pq_cols = None if derive else (list(columns) if columns else None)
     frames = []
     if e.get("synthetic"):  # manifest rebuilt from the mirror alone: months after the last listed one were never looked at

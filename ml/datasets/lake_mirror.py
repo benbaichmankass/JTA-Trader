@@ -168,29 +168,45 @@ def fetch(lake_path: str, verify: Optional[bool] = None) -> Path:
     return p
 
 
-def _month_bounds(stem: str) -> Tuple[pd.Timestamp, pd.Timestamp]:
+def _bounds(stem: str) -> Tuple[pd.Timestamp, pd.Timestamp]:
+    """First and last minute of a ``YYYY-MM`` month or a ``YYYY`` year partition."""
+    if len(stem) == 4:
+        first = pd.Timestamp(year=int(stem), month=1, day=1, tz="UTC")
+        return first, pd.Timestamp(year=int(stem), month=12, day=31, hour=23, minute=59, tz="UTC")
     y, mo = int(stem[:4]), int(stem[5:7])
     first = pd.Timestamp(year=y, month=mo, day=1, tz="UTC")
     return first, first + pd.Timedelta(days=calendar.monthrange(y, mo)[1]) - pd.Timedelta(minutes=1)
 
 
+def _is_partition_name(fn: str) -> bool:
+    stem = fn[:-len(".parquet")] if fn.endswith(".parquet") else ""
+    return (len(stem) == 7 and stem[4] == "-" and stem[:4].isdigit() and stem[5:].isdigit()) or (len(stem) == 4 and stem.isdigit())
+
+
 def synth_entries() -> List[Dict]:
     """Manifest entries rebuilt from the mirror alone (used when the HF MANIFEST cannot be read). ``rows`` is an ESTIMATED upper bound
-    (days x bars/day), flagged ``rows_provenance``; first/last are the month bounds, not the first/last bar."""
-    groups: Dict[Tuple[str, str, str], Dict[str, Dict]] = {}
+    (days x bars/day), flagged ``rows_provenance``; first/last are the partition bounds, not the first/last bar.
+
+    The mirror holds closed YEARS as ``YYYY.parquet`` and recent months as ``YYYY-MM.parquet`` (the lake's own layout). Both are listed; a
+    year partition supersedes any month of that year, as hf_publish.merge_manifests does. (First version of this function accepted months
+    only and silently dropped every yearly file: found by the first real Kaggle proof, run 43279047106 + its diagnostics.)"""
+    groups: Dict[Tuple[str, str, str, str], Dict[str, Dict]] = {}
     for path in index()[0]:
         parts = path.split("/")
-        if len(parts) != 5 or not parts[4].endswith(".parquet") or len(parts[4]) != len("YYYY-MM.parquet"):
+        if len(parts) != 5 or not _is_partition_name(parts[4]):
             continue
         asset, market, label, sym, fn = parts
         stem = fn[:-len(".parquet")]
-        first, last = _month_bounds(stem)
+        first, last = _bounds(stem)
         days = (last - first).days + 1
         rows = days * _ROWS_PER_DAY.get(label, 1440)
         groups.setdefault((asset, market, label, sym), {})[stem] = {"path": path, "rows": rows, "first": first.isoformat(),
                                                                     "last": last.isoformat(), "src": "kaggle_mirror"}
     out: List[Dict] = []
     for (asset, market, label, sym), parts_ in sorted(groups.items()):
+        for yk in [k for k in parts_ if len(k) == 4]:   # a year partition supersedes its months
+            for mk in [k for k in parts_ if len(k) == 7 and k[:4] == yk]:
+                del parts_[mk]
         ks = sorted(parts_)
         base = {"asset_class": asset, "market": market, "symbol": sym, "partitions": parts_, "n_partitions": len(ks),
                 "first": parts_[ks[0]]["first"], "last": parts_[ks[-1]]["last"], "source": "kaggle_mirror",

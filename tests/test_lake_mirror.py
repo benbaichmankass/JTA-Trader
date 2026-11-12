@@ -174,3 +174,37 @@ def test_planted_unknown_symbol_is_not_a_silent_empty_frame(tmp_path, monkeypatc
     assert len(df) and df.attrs["lake_read"]["n_could_not_look"] == 1
     twin = lake.load("crypto", "um_perp", "1h", ["AAAUSDT"], end="2025-03-01")      # clean twin
     assert twin.attrs["lake_read"]["n_could_not_look"] == 0 and twin.attrs["lake_read"]["partitions_selected"] == 2
+
+
+def _yearly_mirror(tmp_path: Path) -> Path:
+    """The real mirror's shape: closed years as YYYY.parquet, recent months as YYYY-MM.parquet (BTCUSDT: 2020..2025 + 2026-01..09)."""
+    ds = tmp_path / "metis-market-lake-p002"
+    shard = ds / "p002-b000-000"
+    members = [_member(shard, "crypto/um_perp/1m/YYYUSDT/2024.parquet", "2024"),            # holds only Jan 1-2 (a test-sized year)
+               _member(shard, "crypto/um_perp/1m/YYYUSDT/2024-03.parquet", "2024-03", 7.0),  # a month the year supersedes
+               _member(shard, "crypto/um_perp/1m/YYYUSDT/2026-09.parquet", "2026-09", 3.0)]
+    (ds / "MANIFEST.json").write_text(json.dumps({"part": "p002", "plan_id": "plan2", "files": [
+        {"path": "p002-b000-000.tar", "members": members, "n_partitions": len(members)}]}))
+    return ds
+
+
+def test_yearly_partitions_are_listed_and_read(tmp_path, monkeypatch):
+    """Regression for run 43279047106: synth_entries dropped YYYY.parquet, so a symbol looked as if it only had its monthly files."""
+    monkeypatch.setenv("LAKE_MIRROR_DIR", str(_yearly_mirror(tmp_path)))
+    _hf_down(monkeypatch)
+    ent = next(e for e in lake.entries("crypto", "um_perp", "1h") if e["symbol"] == "YYYUSDT")
+    assert set(ent["partitions"]) == {"2024", "2026-09"}                       # the year superseded 2024-03
+    df = lake.load("crypto", "um_perp", "1h", ["YYYUSDT"], start="2024-01-01", end="2024-01-02")
+    assert len(df) == 24 and df["complete"].all()
+    assert df.attrs["lake_read"]["from_kaggle_mirror"] == 1 and df.attrs["lake_read"]["partitions_selected"] == 1
+    m = lake.load("crypto", "um_perp", "1m", ["YYYUSDT"], start="2026-09-01", end=lake.frozen_end())
+    assert len(m) == 2 * 24 * 60 and (m["open"] == 3.0).all()
+
+
+def test_window_before_the_first_partition_is_no_data_not_a_read_problem(tmp_path, monkeypatch):
+    """A window before the first partition selects nothing: an empty frame that says partitions_selected=0 with nothing unreadable, so a
+    consumer can tell 'the manifest holds no data here' from 'could not look' (the latter raises or carries could_not_look entries)."""
+    monkeypatch.setenv("LAKE_MIRROR_DIR", str(_yearly_mirror(tmp_path)))
+    _hf_down(monkeypatch)
+    df = lake.load("crypto", "um_perp", "1h", ["YYYUSDT"], start="2019-01-01", end="2019-02-01")
+    assert df.empty and df.attrs["lake_read"]["partitions_selected"] == 0 and df.attrs["lake_read"]["n_could_not_look"] == 0

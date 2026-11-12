@@ -19,6 +19,9 @@ import tarfile
 import time
 import traceback
 
+# internet is OFF in this kernel: tell huggingface_hub so the (expected) failed HF manifest read is immediate. Without this the first
+# symbols() call took 282 s in runs 43279047106 / 43285614561 (index build alone: 3.6 s), most likely the hub client's connection retries.
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
 WORK = os.environ.get("KERNEL_WORK_DIR", "/kaggle/working")  # env override only for the local rehearsal
 OUT = os.path.join(WORK, "result.json")
 res = {"ok": False, "checks": {}}
@@ -61,7 +64,9 @@ try:
         ms = sorted(p for p in members if f"/um_perp/1m/{sym}/" in p)
         diag[sym] = {"um_perp_1m_members": len(ms), "first": ms[0].rsplit("/", 1)[-1] if ms else None,
                      "last": ms[-1].rsplit("/", 1)[-1] if ms else None,
-                     "has_2023_01_03": [f"crypto/um_perp/1m/{sym}/2023-0{m}.parquet" in members for m in (1, 2, 3)]}
+                     "has_2023": f"crypto/um_perp/1m/{sym}/2023.parquet" in members,
+                     "yearly_files": sum(1 for p in ms if len(p.rsplit("/", 1)[-1]) == len("2023.parquet")),
+                     "monthly_files": sum(1 for p in ms if len(p.rsplit("/", 1)[-1]) == len("2023-01.parquet"))}
     res["diag_members"] = diag
 
     # 1. the call the row names
@@ -75,7 +80,11 @@ try:
                                 sorted(ents[s_]["partitions"])[-2:]} for s_ in ("BTCUSDT", "ETHUSDT") if s_ in ents}
 
     # 2. a closed-month window, derived 1h from the 1m mirror, hash-verified
-    cover = [s_ for s_, e in ents.items() if {"2023-01", "2023-02", "2023-03"} <= set(e["partitions"])]
+    def covers(e, year, months):  # a closed year is one YYYY partition; recent history is monthly
+        ks = set(e["partitions"])
+        return year in ks or all(f"{year}-{m:02d}" in ks for m in months)
+
+    cover = [s_ for s_, e in ents.items() if covers(e, "2023", (1, 2, 3))]
     pick = [s_ for s_ in ("BTCUSDT", "ETHUSDT") if s_ in cover] or cover[:2]
     res["checks"]["window_symbols_covering_2023_Q1"] = {"n_covering": len(cover), "picked": pick}
     assert pick, "no symbol in the mirror manifest covers 2023-01..03; see diag_members / diag_entries"  # an empty list would mean ALL symbols
@@ -90,7 +99,7 @@ try:
     # 3. a streaming read over many series (bounded memory), still no network
     t2 = time.time()
     n_series, n_rows, bad = 0, 0, []
-    cover22 = [s_ for s_, e in ents.items() if "2022-06" in e["partitions"]][:25]
+    cover22 = [s_ for s_, e in ents.items() if covers(e, "2022", (6,))][:25]
     for sym, d in lake.iter_series("crypto", "um_perp", "1h", cover22, start="2022-06-01", end="2022-07-01"):
         n_series += 1
         n_rows += len(d)
