@@ -1060,7 +1060,7 @@ def vm_ledger_due(view: dict | None) -> list[dict]:
                        "rerun": "GET /api/bot/ops/ledger?pending=1"},
             "due_when": {"kind": "observation",
                          "clears_when": "ledger-fold sets durable_in_repo to folded (with the PR/path) or not_needed"},
-            "next_action": "fold_back",
+            "next_action": "dispatch_lane",   # a fold-back is lane work (NEXT_ACTIONS); the brief prints `fold_back`
             "age_h": e.get("age_h"), "session": e.get("session"), "touched": e.get("touched") or [],
         })
     return out

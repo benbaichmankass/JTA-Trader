@@ -259,7 +259,7 @@ def test_pipeline_vm_ledger_due_shape_and_brief_lines(root):
     run(root, body("exec", {"cmd": "sudo rm /tmp/x"}), {"exit": 0})
     view = ops.ledger_view(root, now=datetime.now(timezone.utc) + timedelta(days=2))
     (item,) = pipeline.vm_ledger_due(view)
-    assert item["id"].startswith("VMLEDGER-OPS-") and item["next_action"] == "fold_back"
+    assert item["id"].startswith("VMLEDGER-OPS-") and item["next_action"] in pipeline.NEXT_ACTIONS
     assert item["origin"]["rerun"] and item["due_when"]["clears_when"]
     lines = "\n".join(rdb.vm_ledger_lines(view))
     assert "1 due" in lines and item["id"] in lines

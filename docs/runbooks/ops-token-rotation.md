@@ -54,9 +54,14 @@ needs cleaning up: the old value just stops working.
 If step 2 or 3 does not happen, nothing breaks. The old token stays valid for 72 h and keeps the current value
 working as `WORK_STORE_TOKEN`. To undo before step 3, do nothing: PREV expires.
 
-## Proposed cadence (operator to confirm)
+## Cadence: every 90 days (operator decision)
 
-Every **90 days**, plus at once after any suspected exposure. On the schedule, a scheduled task (fresh session)
-runs steps 1–2, and the operator gets the one form prompt. Steps 3–4 follow when the session sees the form saved.
-No schedule is created until the operator confirms the cadence. Choosing a cadence is a preference that no data
-settles.
+**The operator chose by popup at ~21:44Z on 2026-11-12, verbatim: *"Every 90 days"*.** The Manager Session
+2026-11-11a relayed it. It also applies at once after any suspected exposure.
+
+The schedule is the pipeline item **`PI-20261112-B8YKRFCY-0001`**: `due_when.check_every_days: 90`,
+`last_checked: 2026-11-12`, `next_action: dispatch_lane`, routed to VM-CHANGE-LEDGER. Its due date is computed, not
+declared. It surfaces in the daily brief §0, and the manager dispatches ONE lane to run steps 1–4 above; step 2 is
+the operator's one prompt. When a rotation completes, the lane re-dates the item
+(`python3 scripts/ops/pipeline.py --redate PI-20261112-B8YKRFCY-0001 --observation ... --next-due <+90 d>`). It
+never closes the item. **There is no cron, by design** (manager instruction 2026-11-12).
