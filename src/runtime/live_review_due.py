@@ -1179,7 +1179,7 @@ def _prop_dd_context(account_id: str, strategy: Any, accts_cfg: Dict[str, Any]) 
 
 #: Mirror of ``scripts/ops/live_review_apply.ACTION_PATHS`` for the two prop classes. Not imported: that script
 #: is the apply path and must stay out of this read path's import closure (tests/test_live_review_due.py pins equality).
-_PROP_ACTION_PATHS = {"phone": ["close", "move_tp", "reduce", "tighten", "widen_sl"], "prop_vm": ["tighten"]}
+_PROP_ACTION_PATHS = {"phone": ["close", "move_tp", "reduce", "tighten", "widen_sl"], "prop_vm": ["move_tp", "tighten"]}   # move_tp: PROP-BRACKET-APPLY (operator 2026-11-11)
 
 
 def _prop_apply_paths(account_id: str, accts_cfg: Dict[str, Any]) -> Dict[str, Any]:

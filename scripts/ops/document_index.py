@@ -363,6 +363,11 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
         "read:PHONE-BREAKOUT-NEW-LAYOUT-lane-authored-it-2026-11-07-from-operator-decision",
         "Phone executor anomaly: capture, diagnose-first causes, exec.js-only vs APK ship path, verification",
     ),
+    "docs/runbooks/phone-executor-action-coverage.md": (
+        "live",
+        "read:PHONE-SELF-DIAGNOSE-lane-authored-it-2026-11-11-from-live-bot-reads",
+        "Phone executor: action coverage (proof or blocker per venue action), lane diagnosis routes, one-APK bundle",
+    ),
     "docs/runbooks/jta-trader-rename.md": (
         "live",
         "read:RENAME-lane-authored-it-2026-10-28-from-operator-decision",

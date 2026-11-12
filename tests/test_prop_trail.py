@@ -532,3 +532,36 @@ def test_trail_crossed_without_a_quote_does_nothing(tmp_path):
     a.quote = None
     run(a, api, "live", tmp_path, c=CROSSED)
     assert a.calls == []
+
+
+# ---------------------------------------------- PROP-TRAIL-BAD-CANDLE-EXT: an implausible feed moves nothing
+
+def test_implausible_feed_bounds_are_wide_and_pure():
+    ok = bars([(104, 99, 103), (130, 60, 120)])                       # a big real move stays inside [0.5x, 2x]
+    assert pt.implausible_feed(ok, 100.0) is None
+    assert "bar low 22.93" in pt.implausible_feed(bars([(104, 99, 103), (90, 22.93, 85)]), 87.64)
+    assert "bar high 250" in pt.implausible_feed(bars([(250, 99, 103)]), 100.0)
+    assert pt.implausible_feed(bars([]), 100.0) is None
+
+
+def test_a_corrupt_bar_skips_the_plan_and_names_the_bar():
+    # the 2026-11-11 shape: a short at 87.64 whose feed carries a 22.93 low (real low 81.27)
+    c = bars([(88, 86, 87), (87, 22.93, 85), (86, 84, 85)], forming=(86, 84, 85))
+    p = pt.plan_trail(leg=SOL, direction="short", entry=87.64, initial_sl=89.10464286, signal_time=T0,
+                      resting_sl=89.105, candles=c, now=now_after(3), price_step=0.001)
+    assert p.action == "skip" and p.why.startswith(pt.IMPLAUSIBLE_FEED)
+    assert p.detail["feed"]["min_low"] == pytest.approx(22.93) and p.detail["feed"]["n"] == 3
+    clean = bars([(88, 86, 87), (87, 81.27, 85), (86, 84, 85)], forming=(86, 84, 85))
+    assert pt.plan_trail(leg=SOL, direction="short", entry=87.64, initial_sl=89.10464286, signal_time=T0,
+                         resting_sl=89.105, candles=clean, now=now_after(3), price_step=0.001).action != "skip"
+
+
+def test_a_corrupt_feed_amends_nothing_sl_or_tp_and_alerts_once(tmp_path):
+    a, api = Adapter([pos()]), Api()
+    bad = bars([(110, 30, 109)], forming=(109, 108, 108.5))          # a 30 low on a long entered at 100
+    first = run(a, api, "live", tmp_path, c=bad)
+    second = run(a, api, "live", tmp_path, c=bad)
+    assert a.calls == [] and api.posted == []                         # no SL step, no TP step, nothing reported
+    assert len(first.alerts) == 1 and pt.IMPLAUSIBLE_FEED in first.alerts[0] and second.alerts == []
+    good = run(a, api, "live", tmp_path)                              # a sane feed: trailing resumes
+    assert a.calls and not good.alerts

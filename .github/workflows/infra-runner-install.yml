@@ -18,8 +18,8 @@ on:
       count:
         description: "Runner instances to install (one unprivileged user each)"
         default: "2"
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [infra-runner-install]
 
 permissions:
   contents: read
@@ -33,9 +33,9 @@ jobs:
   install:
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       github.event.issue.user.login == github.repository_owner &&
-       contains(github.event.issue.labels.*.name, 'infra-runner-install'))
+      (github.event_name == 'repository_dispatch' &&
+       github.event.client_payload.issue.user.login == github.repository_owner &&
+       contains(github.event.client_payload.issue.labels.*.name, 'infra-runner-install'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -94,7 +94,7 @@ jobs:
             "https://api.github.com/repos/${GH_REPO}/actions/permissions/fork-pr-contributor-approval" \
             | jq -c '{fork_pr_approval_policy: .approval_policy, message}' | tee -a /tmp/runners.txt || true
       - name: Comment result
-        if: always() && github.event_name == 'issues'
+        if: always() && github.event_name == 'repository_dispatch'
         uses: actions/github-script@v7
         with:
           script: |
@@ -103,5 +103,5 @@ jobs:
             const log = rd('/tmp/install.log').split('\n').filter(l => !/token/i.test(l)).slice(-40).join('\n');
             const body = `**infra-runner-install** run [${context.runId}](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})\n\n` +
               '```\n' + log + '\n```\n\n```\n' + rd('/tmp/runners.txt') + '\n```';
-            await github.rest.issues.createComment({...context.repo, issue_number: context.issue.number, body});
-            await github.rest.issues.update({...context.repo, issue_number: context.issue.number, state: 'closed'});
+            await github.rest.issues.createComment({...context.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), body});
+            await github.rest.issues.update({...context.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), state: 'closed'});

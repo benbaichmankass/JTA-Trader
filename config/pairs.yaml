@@ -68,85 +68,96 @@ correlation_haircut_factor: 0.5     # per already-open correlated pair (shares a
 backstop_mult: 3.0                  # per-leg catastrophe SL/TP at 3x risk_spread in log-price (wide of the spread exit); the displacement is CLAMPED to +/-100%/-50% so a degenerate risk_spread can't explode the level (BL-20260716-PAIRS-BACKSTOP-EXPLODE, #6549). See pairs_sizing.leg_protective_levels.
 min_leg_notional_usd: 10.0          # skip a pair whose sized leg notional is below this $ (would be sub-min / break the hedge if rounded up)
 
-pairs:
-  - name: pairs_sol_btc
-    symbol_a: SOLUSDT
-    symbol_b: BTCUSDT
-    execution: shadow    # shadow-guard: allow — OPERATOR DECISION 2026-10-16 "Fix + shadow" (popup answer to the manager; checklist row PAIRS-R-SCALE): honest fixed-β R re-run is NET-NEGATIVE (−0.112 R/trade, n=267; was already shadow on the G2 2026-07-16 no-edge hold). Shadow so PR #18648 (β frozen at entry) cannot size this pair up ~87x on an uncapped sleeve. Rollback: back to live only on a passing fixed-β entry-trigger test.
-    timeframe: 1h
-    lookback: 15
-    entry_z: 2.0
-    exit_z: 0.5
-    stop_z: 2.0
-    max_hold_bars: 20
-    hedge_beta: rolling
+# ══ M22 PAIRS SLEEVE RETIRED BY RECORD, 2026-11-11 (Tier 3) ═══════════════════════════════════════
+# OPERATOR, Thursday-planning decision doc (answered 21:28-21:41Z), b3 "Pairs strategy (M22)", verbatim choice:
+# "Retire it". Note, verbatim: "We can retire it, but I want us to do some frontier research on strategies or MLs
+# that are geared towards profiting from static markets".
+# Evidence: the honest-R-scale re-measure FAILED 4 of 4 pairs (row PR1111-M22-PAIRS-RETIRE-CASE; Bybit fixed-beta
+# re-runs -0.112 / -0.376 / -0.526 / -0.383 R/trade, n 254-271, already shadow since 2026-10-16).
+# Pre-merge state, MEASURED 2026-11-11 ~22:30Z via /api/diag/exchange_positions: no GLD leg on alpaca_paper (so no open
+# GLD/GDX pair to strand); the four Bybit pairs were execution: shadow (place nothing).
+# `pairs: []` makes run_pairs_tick a no-op (src/units/strategies/pairs_executor.py: `if not pairs: return`).
+# The former entries are kept below, commented, as the record. Follow-up research: row FRONTIER-STATIC-MARKETS.
+# REVERT: restore the entries (uncomment) and replace `pairs: []`.
+pairs: []
+#   - name: pairs_sol_btc
+#     symbol_a: SOLUSDT
+#     symbol_b: BTCUSDT
+#     execution: shadow    # shadow-guard: allow — OPERATOR DECISION 2026-10-16 "Fix + shadow" (popup answer to the manager; checklist row PAIRS-R-SCALE): honest fixed-β R re-run is NET-NEGATIVE (−0.112 R/trade, n=267; was already shadow on the G2 2026-07-16 no-edge hold). Shadow so PR #18648 (β frozen at entry) cannot size this pair up ~87x on an uncapped sleeve. Rollback: back to live only on a passing fixed-β entry-trigger test.
+#     timeframe: 1h
+#     lookback: 15
+#     entry_z: 2.0
+#     exit_z: 0.5
+#     stop_z: 2.0
+#     max_hold_bars: 20
+#     hedge_beta: rolling
 
-  - name: pairs_bnb_btc
-    symbol_a: BNBUSDT
-    symbol_b: BTCUSDT
-    execution: shadow    # shadow-guard: allow — OPERATOR DECISION 2026-10-16 "Fix + shadow" (popup answer to the manager; checklist row PAIRS-R-SCALE): honest fixed-β R re-run is NET-NEGATIVE (−0.376 R/trade, n=254), and PR #18648 (β frozen at entry) would grow its legs by up to ~87x with no notional cap on the Bybit pairs path. Was live on paper since 2026-07-16. Rollback: set back to live (one line) — only on a passing fixed-β entry-trigger test.
-    timeframe: 1h
-    lookback: 15
-    entry_z: 2.0
-    exit_z: 0.5
-    stop_z: 2.0
-    max_hold_bars: 20
-    hedge_beta: rolling
+#   - name: pairs_bnb_btc
+#     symbol_a: BNBUSDT
+#     symbol_b: BTCUSDT
+#     execution: shadow    # shadow-guard: allow — OPERATOR DECISION 2026-10-16 "Fix + shadow" (popup answer to the manager; checklist row PAIRS-R-SCALE): honest fixed-β R re-run is NET-NEGATIVE (−0.376 R/trade, n=254), and PR #18648 (β frozen at entry) would grow its legs by up to ~87x with no notional cap on the Bybit pairs path. Was live on paper since 2026-07-16. Rollback: set back to live (one line) — only on a passing fixed-β entry-trigger test.
+#     timeframe: 1h
+#     lookback: 15
+#     entry_z: 2.0
+#     exit_z: 0.5
+#     stop_z: 2.0
+#     max_hold_bars: 20
+#     hedge_beta: rolling
 
-  - name: pairs_eth_btc
-    symbol_a: ETHUSDT
-    symbol_b: BTCUSDT
-    execution: shadow    # shadow-guard: allow — OPERATOR DECISION 2026-10-16 "Fix + shadow" (popup answer to the manager; checklist row PAIRS-R-SCALE): honest fixed-β R re-run is NET-NEGATIVE (−0.526 R/trade, n=270; was already shadow on the G2 2026-07-16 no-edge hold). Shadow so PR #18648 (β frozen at entry) cannot size this pair up ~87x on an uncapped sleeve. Rollback: back to live only on a passing fixed-β entry-trigger test.
-    timeframe: 1h
-    lookback: 15
-    entry_z: 2.0
-    exit_z: 0.5
-    stop_z: 2.0
-    max_hold_bars: 20
-    hedge_beta: rolling
+#   - name: pairs_eth_btc
+#     symbol_a: ETHUSDT
+#     symbol_b: BTCUSDT
+#     execution: shadow    # shadow-guard: allow — OPERATOR DECISION 2026-10-16 "Fix + shadow" (popup answer to the manager; checklist row PAIRS-R-SCALE): honest fixed-β R re-run is NET-NEGATIVE (−0.526 R/trade, n=270; was already shadow on the G2 2026-07-16 no-edge hold). Shadow so PR #18648 (β frozen at entry) cannot size this pair up ~87x on an uncapped sleeve. Rollback: back to live only on a passing fixed-β entry-trigger test.
+#     timeframe: 1h
+#     lookback: 15
+#     entry_z: 2.0
+#     exit_z: 0.5
+#     stop_z: 2.0
+#     max_hold_bars: 20
+#     hedge_beta: rolling
 
-  - name: pairs_sol_eth
-    symbol_a: SOLUSDT
-    symbol_b: ETHUSDT
-    execution: shadow    # shadow-guard: allow — OPERATOR DECISION 2026-10-16 "Fix + shadow" (popup answer to the manager; checklist row PAIRS-R-SCALE): honest fixed-β R re-run is NET-NEGATIVE (−0.383 R/trade, n=271), and PR #18648 (β frozen at entry) would grow its legs by up to ~87x with no notional cap on the Bybit pairs path. Was live on paper since 2026-07-16. Rollback: set back to live (one line) — only on a passing fixed-β entry-trigger test.
-    timeframe: 1h
-    lookback: 15
-    entry_z: 2.0
-    exit_z: 0.5
-    stop_z: 2.0
-    max_hold_bars: 20
-    hedge_beta: rolling
+#   - name: pairs_sol_eth
+#     symbol_a: SOLUSDT
+#     symbol_b: ETHUSDT
+#     execution: shadow    # shadow-guard: allow — OPERATOR DECISION 2026-10-16 "Fix + shadow" (popup answer to the manager; checklist row PAIRS-R-SCALE): honest fixed-β R re-run is NET-NEGATIVE (−0.383 R/trade, n=271), and PR #18648 (β frozen at entry) would grow its legs by up to ~87x with no notional cap on the Bybit pairs path. Was live on paper since 2026-07-16. Rollback: set back to live (one line) — only on a passing fixed-β entry-trigger test.
+#     timeframe: 1h
+#     lookback: 15
+#     entry_z: 2.0
+#     exit_z: 0.5
+#     stop_z: 2.0
+#     max_hold_bars: 20
+#     hedge_beta: rolling
 
-  # ── GLD/GDX daily — Alpaca, Stage-1 SOAK on alpaca_paper (PAPER money) ──────
-  # OPERATOR DECISION 2026-10-12 (popup "Build, paper soak"; checklist row
-  # PAIRS-ALPACA-BUILD, roadmap M22). Evidence: RQ-20261007-025 PASS
-  # (research/results/RQ-20261007-025/ro0847-RQ-20261007-025.jsonl): OOS
-  # 2022-01..2026-10 n=69 net +5.25R; 8/10 years positive; 8/9 neighbourhood
-  # cells positive; costs fee 7.5 + slip 5.0 bps round-trip per leg. The params
-  # below are EXACTLY the registered defaults that run used (scripts/
-  # backtest_pairs.py: lookback 20, entry_z 2.0, exit_z 0.5, stop_z 2.0,
-  # max_hold_bars 20, hedge_beta one, cooldown_bars 1). Not on any real-money or
-  # mirror account; promotion follows the ladder (Gate 2 = realized cost vs the
-  # 12.5 bps/leg the backtest assumed).
-  # Session venue (src/units/strategies/pairs_venue.py): decides in the last
-  # `decision_window_minutes` of the RTH session on the forming daily bar (the
-  # harness fills at the close), counts max_hold/cooldown in TRADING bars,
-  # whole shares, short-borrow + buying-power + directional-netting checks
-  # before any leg is sent. leg_tp: spread_target = each leg's TP is the price
-  # that closes the predicted reversion gap, re-estimated every bar (TP doctrine).
-  # Rollback: set execution: shadow (or delete this entry).
-  - name: pairs_gld_gdx
-    account_id: alpaca_paper
-    symbol_a: GLD
-    symbol_b: GDX
-    execution: live      # PAPER (operator decision 2026-10-12, Tier-3): alpaca_paper is paper money.
-    timeframe: 1d
-    lookback: 20
-    entry_z: 2.0
-    exit_z: 0.5
-    stop_z: 2.0
-    max_hold_bars: 20
-    hedge_beta: one
-    cooldown_bars: 1
-    leg_tp: spread_target
-    decision_window_minutes: 10
+#   # ── GLD/GDX daily — Alpaca, Stage-1 SOAK on alpaca_paper (PAPER money) ──────
+#   # OPERATOR DECISION 2026-10-12 (popup "Build, paper soak"; checklist row
+#   # PAIRS-ALPACA-BUILD, roadmap M22). Evidence: RQ-20261007-025 PASS
+#   # (research/results/RQ-20261007-025/ro0847-RQ-20261007-025.jsonl): OOS
+#   # 2022-01..2026-10 n=69 net +5.25R; 8/10 years positive; 8/9 neighbourhood
+#   # cells positive; costs fee 7.5 + slip 5.0 bps round-trip per leg. The params
+#   # below are EXACTLY the registered defaults that run used (scripts/
+#   # backtest_pairs.py: lookback 20, entry_z 2.0, exit_z 0.5, stop_z 2.0,
+#   # max_hold_bars 20, hedge_beta one, cooldown_bars 1). Not on any real-money or
+#   # mirror account; promotion follows the ladder (Gate 2 = realized cost vs the
+#   # 12.5 bps/leg the backtest assumed).
+#   # Session venue (src/units/strategies/pairs_venue.py): decides in the last
+#   # `decision_window_minutes` of the RTH session on the forming daily bar (the
+#   # harness fills at the close), counts max_hold/cooldown in TRADING bars,
+#   # whole shares, short-borrow + buying-power + directional-netting checks
+#   # before any leg is sent. leg_tp: spread_target = each leg's TP is the price
+#   # that closes the predicted reversion gap, re-estimated every bar (TP doctrine).
+#   # Rollback: set execution: shadow (or delete this entry).
+#   - name: pairs_gld_gdx
+#     account_id: alpaca_paper
+#     symbol_a: GLD
+#     symbol_b: GDX
+#     execution: live      # PAPER (operator decision 2026-10-12, Tier-3): alpaca_paper is paper money.
+#     timeframe: 1d
+#     lookback: 20
+#     entry_z: 2.0
+#     exit_z: 0.5
+#     stop_z: 2.0
+#     max_hold_bars: 20
+#     hedge_beta: one
+#     cooldown_bars: 1
+#     leg_tp: spread_target
+#     decision_window_minutes: 10

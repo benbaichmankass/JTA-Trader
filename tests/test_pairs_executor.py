@@ -141,9 +141,9 @@ def test_load_pairs_config_missing_is_noop():
 def test_load_real_pairs_config_on_bybit_1():
     cfg = px._load_pairs_config("config/pairs.yaml")
     pairs = cfg.get("pairs") or []
-    # 4 Bybit crypto pairs + pairs_gld_gdx on alpaca_paper (operator decision
-    # 2026-10-12, checklist PAIRS-ALPACA-BUILD).
-    assert len(pairs) == 5
+    # M22 retired by record 2026-11-11 (operator, Thursday-planning b3, verbatim "Retire it"): `pairs: []`.
+    # The paper-account invariant below still binds any pair that is ever re-added.
+    assert len(pairs) == 0
     # Every pair resolves (per-pair account_id, else the top-level default) to a
     # PAPER account: "not on real money" stays structural.
     import yaml
