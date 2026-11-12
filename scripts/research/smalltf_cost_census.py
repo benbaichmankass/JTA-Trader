@@ -44,7 +44,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from src.runtime.execution_costs import roundtrip_cost_r  # noqa: E402
+from src.runtime.execution_costs import roundtrip_cost_r
 
 SYMBOLS = ["ADAUSDT", "AVAXUSDT", "BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT"]
 MONTHS = ["2025-11", "2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09"]
@@ -107,7 +107,7 @@ def simulate(d: pd.DataFrame, a: np.ndarray, nbars: int, k: float, m: float, chu
     idx = np.arange(ATR_N, n - nbars - 1)
     idx = idx[np.isfinite(a[idx])]
     out = {x: [] for x in ("entry", "risk", "exit", "kind", "bars", "gross_r")}
-    sw = lambda arr: np.lib.stride_tricks.sliding_window_view(arr, nbars)  # noqa: E731
+    sw = lambda arr: np.lib.stride_tricks.sliding_window_view(arr, nbars)
     H, L, O = sw(h), sw(lo), sw(o)
     for s0 in range(0, len(idx), chunk):
         ii = idx[s0 : s0 + chunk]
@@ -217,7 +217,7 @@ def main() -> None:
                         sc = scenario_bps(p_tp, hold_h)
                         cost_r = {n_: float(b * 1e-4 * ((s["entry"] + s["exit"]) / 2 / s["risk"]).mean()) for n_, b in sc.items()}
                         cells.append({
-                            "symbol": sym, "tf": tf, "hold_min": hold_min, "k": k, "m": m, "n_rows": int(len(kind)),
+                            "symbol": sym, "tf": tf, "hold_min": hold_min, "k": k, "m": m, "n_rows": len(kind),
                             "p_tp": p_tp, "p_stop": p_st, "p_time": p_tm, "mean_hold_min": float(bars.mean()) * tf,
                             "stop_bps": stop_bps, "random_gross_r": float(s["gross_r"].mean()),
                             "random_gross_bps": float(s["gross_r"].mean() * stop_bps),

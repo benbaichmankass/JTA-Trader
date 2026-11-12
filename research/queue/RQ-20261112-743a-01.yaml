@@ -34,6 +34,11 @@ decision_rule:
   what_it_does_not_do: 'Selects, trains and promotes nothing; not a promotion case; changes no config. The ACHIEVED side is ONE learner family (ridge/logit/GBDT on desk features, best-of-three, DEV window, selected: its point is optimistic, its lower bound conservative) pooled over symbols and rescaled per symbol by move size (an assumption: lift proportional to move size); a FAIL closes only "this learner ceiling clears measured cost at these holds", not small-TF ML or other information (order book, flow). The maker saving is from hourly random-direction entries on 6 symbols over 40 days with the PUBLISHED, UNVERIFIED 2.0 bps maker fee; the upper-bound scenarios assume fills on touch with no queue or adverse selection and are not evidence a recipe works. The 432-cell grid is not a deflation-corrected selection: a PASS would be a discovery needing a confirmation on a disjoint in-hand window (pre-dev history or another venue), not a promotion.'
   proposal_mapping: 'PASS -> author a pre-registered ML entry/filter unit for the clearing (tf, H, k, m) cell(s), VWAP / breakout / scalp setup, baseline = the net-negative HTF-ON ict_scalp leg (RQ-20260928-001), on a disjoint in-hand window. FAIL -> no small-TF cell clears under measured costs; the next unit is the cost lever (a maker-fill model for entries AND resting TP exits at 1m-5m, with the break-even cost from this census as its bar), not another entry learner. INDETERMINATE -> read which clause missed and register the narrower cell unit.'
 practice_precedent: 'M4 (rule and analysis plan registered before the run), M6 (compare with a simple baseline: here the cost), M13 (no holdout is consumed: no model is fit). Cost-aware scalping practice: required hit rate / edge per trade from fee + spread over a stop distance (in-repo precedent: scripts/research/desk_edge_levers.py cost_over_sd, RQ-20261027-fe57-02).'
+ml_consumer:
+  book: demo_floor
+  consumer: SMALL-TF-ML-RESEARCH
+  decision: 'whether a small-TF (1m-15m) ML entry/filter unit is authored for a cell, or the cost lever (maker-fill model) is built first; no live order is changed'
+  legs: [ict_scalp_5m]
 compute: cpu_light
 value:
   bucket: ai_trader
