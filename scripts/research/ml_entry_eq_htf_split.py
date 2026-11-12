@@ -150,17 +150,20 @@ def score(tab: pd.DataFrame) -> tuple[pd.DataFrame, str, int]:
     test = tab[(tab.ts >= hs) & (tab.ts < he)].dropna(subset=feats + ["net_long"])
     test = test[Q.session_mask(test.ts)]
     pred = m.predict(test[feats])  # provenance: predict -- the regressed LONG net R, not a probability
-    return Q.taken_trades(test, pred, TAU), sha, int(len(tr))
+    return Q.taken_trades(test, pred, TAU), sha, len(tr)
 
 
 def run(a) -> int:
-    from src.runtime.execution_costs import resolve_cost_policy, resolve_fee_bps_roundtrip
+    from src.runtime.execution_costs import (
+        resolve_cost_policy,
+        resolve_fee_bps_roundtrip,
+    )
     t0 = time.time()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     slip, _ = resolve_cost_policy("SPY")
     fee = resolve_fee_bps_roundtrip("SPY")
-    pool, prep, bars, client = Q._pool_and_bars(a, END)
+    pool, _prep, bars, client = Q._pool_and_bars(a, END)
     tab = Q.build_table(bars, pool, slip, fee, struct=Q.STRUCT_SPEC)
     print(f"[table] {len(tab)} rows, {tab.symbol.nunique()} symbols t={time.time() - t0:.0f}s", flush=True)
     claim = None
