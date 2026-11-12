@@ -2,7 +2,7 @@
 id: RQ-20261101-78fc-04
 title: 'ITERATION 1 of ml-tm-action-value (fail): with path-state features the R1 state lacks, is the per-action advantage predictable out of
   fold at all?'
-status: blocked
+status: queued
 cadence: once
 theme: ml_health
 priority: 1
@@ -72,11 +72,6 @@ related:
 - RESEARCH-ITERATE
 - TMBENCH-QTM1B-BUILD
 what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
-blocked_on:
-- kind: work_item
-  ref: TMBENCH-QTM1B-BUILD
-  what: a path-state feature block in tm_bench (the four features named in the question), causal at each check-in
-  clears_when: lands on main with a truncation-invariance self-test; then git-mv to research/queue/ (rule unchanged)
 intervention_controls:
   not_applicable: an offline model evaluation; the consumer's own gate applies any action
 ml_consumer:
@@ -89,3 +84,59 @@ ml_consumer:
   - ada_pullback_2h
   - trend_donchian_sol_prop
   book: money
+pre_run_amendment:
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  by: lane ML-AM-NEXT-LIVE (session_01AFoLuKUkUmhzEzkiXTb9tG), dispatched by AM-ML for Manager Session 2026-11-11a
+  unblocked: 'blocked_on TMBENCH-QTM1B-BUILD is done (#21700) but that build shipped Stage A only, never this path-state block, so the
+    unit could not clear. The block is built in the same PR as this amendment: scripts/research/tm_bench.py path_state_features +
+    --feature-block path_state + --rule stage_a_folds, with a truncation-invariance self-test and a leaky-feature positive control
+    (selfcheck PASS).'
+  why: 'MEASURED before any real-data read (comms/research/RQ-20261101-78fc-04/null-calibration-20261112.txt, 8 seeds per corpus):
+    the literal comparison "OOS Spearman beats the within-trade-shuffle p95" passes the DRIFTLESS NULL on 6/6 folds in 8/8 seeds. The
+    within-trade shuffle keeps each label in its trade, so its spread (perm sd ~0.0015 on v1) omits the between-trade sampling variance
+    of rho; a point estimate clears it about half the time with no signal. That rule cannot fail. The trade-clustered bootstrap CI lower
+    bound per fold (the statistic Q-TM1b used pooled) gives null max 0-2 folds (never >= 4) and planted 4-6 (always >= 4).'
+  binds:
+  - 'A fold "beats the shuffled control" iff its trade-clustered bootstrap 95% CI LOWER bound of the OOS Spearman (2,000 resamples) >
+    that fold''s within-trade permutation p95 (200 permutations). Stricter than the literal reading, never looser. The point-estimate
+    count is reported beside it, never graded.'
+  - 'Unchanged: PASS needs >= 4 of 6 purged calendar folds for at least one non-hold action; INDETERMINATE if any fold has < 200
+    check-ins (every-bar OOS states); FAIL otherwise, and iteration 2 changes the label per the registered FAIL branch.'
+  - 'Corpus: TM-BENCH v1 as Q-TM1b ran it, read from the committed emit comms/research/RQ-20261030-c7a1-01/41134401720/tm_bench_v1_4t7ondlz
+    (corpus_id tmb-73f5c3660014, 2,627 trades, 50,926 states, all 6 legs pass parity), so the only change against Q-TM1b''s Stage A
+    is the feature block.'
+  - 'Features: fpp R1 (R0 already carries MFE so far = peak_r and bars since MFE = log_since_peak) + leg fixed effects + mae_r,
+    atr_ratio_entry, swing_hi_dist_atr, swing_lo_dist_atr. Swings are IN-TRADE 5-bar fractal pivots confirmed 2 bars later (the emit
+    starts at entry; pre-entry structure is not available). Learner, folds, purge, seeds: Q-TM1b''s (lgbm per action, 6 folds, seed 11).'
+  - 'Reported, not graded: the same per-fold statistic on R1 alone (no block), same run settings, as the control for what the block adds.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/tm_bench.py
+  - score
+  - --test-corpus
+  - comms/research/RQ-20261030-c7a1-01/41134401720/tm_bench_v1_4t7ondlz/*__paths.jsonl
+  - --rule
+  - stage_a_folds
+  - --feature-block
+  - path_state
+  - --learners
+  - lgbm_action_value
+  - --checkins
+  - every_bar
+  - --calibration
+  - --folds
+  - '6'
+  - --n-boot
+  - '2000'
+  - --n-perm
+  - '200'
+  - --random-draws
+  - '50'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261101-78fc-04
