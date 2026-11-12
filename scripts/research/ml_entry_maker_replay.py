@@ -177,14 +177,19 @@ def run(a) -> int:
     for r in taken.itertuples(index=False):
         d = frames.get((r.symbol, r.day))
         res = None
+        opp = None
         if d is not None and len(d) > 100:
-            res = delta_f(d, int(r.T), 1 if r.side == "long" else -1, tick_of(d))
+            tk = tick_of(d)
+            res = delta_f(d, int(r.T), 1 if r.side == "long" else -1, tk)
+            opp = delta_f(d, int(r.T), -1 if r.side == "long" else 1, tk)
         rows.append({"symbol": r.symbol, "day": str(r.day), "side": r.side, "net_r_taker": r.net_r,
+                     "delta_bps_opp": (opp or {}).get("delta_bps", np.nan),
                      "per_r": (r.entry / (2.0 * r.atr)) if r.atr and r.atr > 0 else np.nan,
                      **(res or {"delta_bps": np.nan, "filled": None, "mid": np.nan, "tick_bps": np.nan})})
     df = pd.DataFrame(rows)
     df["delta_r"] = df.delta_bps / 1e4 * df.per_r
-    ok = df.dropna(subset=["delta_r"])
+    df["delta_r_opp"] = df.delta_bps_opp / 1e4 * df.per_r
+    ok = df.dropna(subset=["delta_r", "delta_r_opp"])
     mean, lo, hi = DMF.day_block_ci(ok.delta_r.to_numpy(), ok.day.to_numpy())
     mb, lob, hib = DMF.day_block_ci(ok.delta_bps.to_numpy(), ok.day.to_numpy())
     n, ns = len(ok), int(ok.symbol.nunique())
@@ -197,6 +202,15 @@ def run(a) -> int:
     else:
         v, why = "fail", f"maker entry delta {mean:+.4f} R/decision (day-block CI95 [{lo:+.4f}, {hi:+.4f}]) does not clear 0, n={n}"
     fl = ok.filled.astype(bool)
+    # matched random (reported): same (symbol, T), side drawn at random with v1's long share
+    p_long = float((ok.side == "long").mean())
+    is_long = (ok.side == "long").to_numpy()
+    own, opp_r = ok.delta_r.to_numpy(), ok.delta_r_opp.to_numpy()
+    long_d, short_d = np.where(is_long, own, opp_r), np.where(is_long, opp_r, own)
+    rng = np.random.default_rng(DMF.BOOT_SEED)
+    draws = [float(np.where(rng.random(len(ok)) < p_long, long_d, short_d).mean()) for _ in range(200)]
+    matched = {"draws": 200, "p_long": p_long, "mean_of_means": float(np.mean(draws)), "p05": float(np.percentile(draws, 5)),
+               "p95": float(np.percentile(draws, 95))}
     res = {"unit": UNIT, "verdict": v, "why": why, "calibration": cal, "n_decisions": len(df), "n_measured": n, "n_symbols": ns,
            "mean_delta_r": mean, "ci95_delta_r": [lo, hi], "mean_delta_bps": mb, "ci95_delta_bps": [lob, hib],
            "fill_rate": float(fl.mean()), "delta_bps_if_filled": float(ok.delta_bps[fl].mean()) if fl.any() else None,
@@ -205,7 +219,7 @@ def run(a) -> int:
            "taker_mean_net_r_on_measured": float(ok.net_r_taker.mean()), "implied_maker_mean_net_r": float(ok.net_r_taker.mean() + mean),
            "traded5": {"n": int(ok.symbol.isin(["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"]).sum()),
                        "mean_delta_r": float(ok.delta_r[ok.symbol.isin(["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"])].mean())},
-           "median_tick_bps": float(ok.tick_bps.median()), "holdout_lock": claim, "git_sha": E._git_sha(), "elapsed_s": round(time.time() - t0)}
+           "median_tick_bps": float(ok.tick_bps.median()), "matched_random_direction": matched, "holdout_lock": claim, "git_sha": E._git_sha(), "elapsed_s": round(time.time() - t0)}
     (out / "result.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
     df.to_csv(out / "decisions.csv.gz", index=False)
     print(json.dumps({"verdict": v, "why": why}), flush=True)

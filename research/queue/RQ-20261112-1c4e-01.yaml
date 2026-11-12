@@ -94,11 +94,22 @@ power:
     source: none
     accrual_basis: Replays public history; nothing accrues.
 intervention_controls:
-  hold_to_bracket: false
+  hold_to_bracket: true
+  hold_to_bracket_note: 'both arms hold the identical v1 bracket to the identical exit; only the entry price and fee differ (the delta is
+    entry-only, as in a3f1-01 policy F)'
   matched_random:
-    draws: 0
-    note: 'paired by construction (same decision, two entry rules); the random-direction control is the calibration arm (a3f1-01 sample)'
+    draws: 200
+    note: 'same (symbol, T) as each v1 decision, side drawn at random (p_long = v1''s long share): does v1''s DIRECTION change the maker
+      benefit vs a random direction at the same moments? Reported, never gating.'
+  best_static:
+    grid:
+    - market_entry
+    - post_only_touch_w5_k0
+    excludes_test_folds: true
+    note: nothing is chosen on the test window; the maker arm is a3f1-01's registered primary (W 5, k 0)
   bootstrap_group: day
 ml_consumer:
-  consumer: ml_entry (bybit_2 + bybit_portfolio) entry order type
-  decision: whether ml_entry should enter post-only at the touch with a 5-min market fallback
+  consumer: src/units/accounts/maker_entry.py
+  decision: whether ml_entry should enter post-only at the touch with a 5-min market fallback (entry_order; fenced to demo/paper today)
+  legs:
+  - ml_entry
