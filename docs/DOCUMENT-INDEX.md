@@ -1101,6 +1101,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/prop-platform-automation-survey-2026-09-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/prop-dxtrade-firms-2026-09-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/prop-firm-scan-2026-10-04.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/prop-frontier-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/prop-firm-deepdive-2026-10-04.md` | evidence | unknown | — | 2026-10-04 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/relative-value-families-2026-10-07.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/research-loop-audit-2026-10-15.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Research loop as built vs intended: why results go ungraded, why intake reads exhausted, compute use, root causes and the proposed build (lane RESEARCH-LOOP-AUDIT-AND-DRIVER). |
