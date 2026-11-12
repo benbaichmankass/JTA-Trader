@@ -297,7 +297,11 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     "bybit_1/trend_donchian_eth_prop": ER,
     # 2026-10-22 OPERATOR-DECISIONS-1022: the incumbent leaves bybit_1 for its soak alias (same tp_r 3,
     # plus the declared ADX trail); tp_revision is still undeclared, so the debt is unchanged.
-    "bybit_1/trend_donchian_xrp_adx25": R,
+    # 2026-11-11 THURSDAY-PLANNING b2 (operator "Promote to real money"): the leg moves bybit_1 -> bybit_2 + mirror with
+    # the SAME debt (entry TP tp_r 3 declared; tp_revision undeclared), as trend_donchian_xrp_4h carries above.
+    # Not new debt, a moved line. Row TPX-XRP-ADX25-REVISION owns declaring the revision producer.
+    "bybit_2/trend_donchian_xrp_adx25": R,
+    "bybit_portfolio/trend_donchian_xrp_adx25": R,
     # 2026-10-27 DESK-8-SHORT-HOLD-S0 (operator-approved bybit_1 Stage-1 mechanics re-roster): both carry a real
     # declared entry TP (tp_at_r 1.5, ATR-buffered SL); tp_revision is undeclared (ict_scalp.monitor() returns no
     # TP verdict; eth_15m's stale-exit is a close, not a TP move). A visible, deliberate line; exit-refinement owns it.
