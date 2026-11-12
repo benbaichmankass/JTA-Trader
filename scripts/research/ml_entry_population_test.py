@@ -316,7 +316,8 @@ def run(args) -> int:
                       "random_matched_mean_of_50": float(np.mean(rand)), "random_matched_p95": float(np.percentile(rand, 95))},
         "per_symbol_reported_never_gating": {k: {"n": len(g), "mean_net_r": round(float(g.net_r.mean()), 4)} for k, g in tk.groupby("symbol")},
         "cost_per_symbol_mean_rt_bps_ex_funding": {k: round(FEE_BPS + float(v.var_bps.mean()), 2) for k, v in costs.items()},
-        "funding_months_defaulted": int(sum(int(v.fund_defaulted.sum()) for v in costs.values())),
+        "funding_months_defaulted_in_window": int(sum(int(v[v.month.isin(months(WIN_START[:7], WIN_END[:7]))].fund_defaulted.sum())
+                                                      for v in costs.values())),
     }
     res = {"schema": "ml_entry_population_test/1", "unit": UNIT, "rule_id": RULE_ID, "verdict": v, "why": why, "tau": tau,
            "window": [WIN_START, WIN_END], "population_frozen": len(pop), "population_scored": len(pop_ok),
