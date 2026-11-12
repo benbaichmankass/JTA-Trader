@@ -988,7 +988,9 @@ class Coordinator:
         S-026 G2: per-account sizing happens here. Each account's
         ``risk_manager.position_size(pkg, balance)`` is called before the
         package is forwarded; the resulting qty is recorded under
-        ``pkg.meta['sized_qty_by_account'][account.name]``. Accounts with a
+        ``pkg.meta['sized_qty_by_account'][account.name]`` (the RiskManager
+        size, BEFORE slice admission / intent delta; the qty actually sent is
+        ``pkg.meta['placed_qty_by_account']``). Accounts with a
         non-positive balance produce ``qty=0.0`` and a ``zero_balance`` skip
         result instead of being routed (there is no arbitrary minimum-balance
         floor — ``min_balance_usd`` was removed 2026-06-24).
@@ -1097,6 +1099,21 @@ class Coordinator:
         if pkg.meta is None:
             pkg.meta = {}
         pkg.meta["sized_qty_by_account"] = sized_qty_by_account
+        # SIZED-QTY-META-MISMATCH (2026-11-12): ``sized_qty_by_account`` is the
+        # RiskManager's per-trade size, stamped BEFORE the slice admission
+        # (``positions.admit_slice``) and the intent delta resize it. On a
+        # ``position_model: slices`` account a declared slice of 0.5 (bybit_1
+        # claude_desk / e4_oi_shock_1h) places HALF of it, so readers taking the
+        # sized figure as the placed size were 2x wrong. The qty actually handed
+        # to ``execute_pkg`` for the opening leg(s) is recorded here, per
+        # account, on live dispatches only; the journal row's position_size
+        # should equal it (modulo venue step alignment / a venue-min size-up).
+        placed_qty_by_account: Dict[str, float] = {}
+        pkg.meta["placed_qty_by_account"] = placed_qty_by_account
+        # ``slice_admission`` is a single key overwritten by every slice
+        # account in the loop (the last one wins); this map keeps each one.
+        slice_admission_by_account: Dict[str, Any] = {}
+        pkg.meta["slice_admission_by_account"] = slice_admission_by_account
 
         # S-026 G3: live balance fetcher. Pull every account's USDT
         # balance once at the top of the dispatch round and cache the
@@ -2589,6 +2606,9 @@ class Coordinator:
                             "ok": _adm["ok"], "reason": _adm["reason"],
                             "qty": _adm["qty"], **(_adm.get("detail") or {}),
                         }
+                        slice_admission_by_account[account.name] = (
+                            pkg.meta["slice_admission"]
+                        )
                         if not _adm["ok"]:
                             logger.info(
                                 "[coordinator] slice refused for %s/%s/%s: %s",
@@ -3278,6 +3298,13 @@ class Coordinator:
                         trade_id=_leg_trade_id,
                         sized_qty=_leg["qty"],
                     )
+                if not exec_dry_run:
+                    _opened = sum(
+                        float(_l["qty"]) for _l in intent_legs
+                        if not _l.get("reduce_only")
+                    )
+                    if _opened > 0:
+                        placed_qty_by_account[account.name] = _opened
                 trade_id = leg_trade_ids[-1] if leg_trade_ids else None
                 results.append({
                     "name": account.name,
