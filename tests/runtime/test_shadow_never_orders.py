@@ -95,8 +95,15 @@ def test_the_same_model_at_advisory_does_downsize(monkeypatch):
 # ---- 2. conviction apply path -----------------------------------------------
 
 def _pkg_with_stamp(stamp):
+    # As the emitter stamps it: the observe-only blend under "conviction" and the order-path block
+    # (advisory+ inputs only) under "conviction_influencing" (ML-SHADOW-NO-ORDER-HANDLE). A legacy
+    # stamp without "influencing" gets no order-path block, so the apply path has nothing to act on.
+    meta = {"conviction": stamp}
+    if "influencing" in stamp:
+        meta["conviction_influencing"] = {"conviction": stamp["influencing"],
+                                          "provenance": stamp.get("influencing_provenance")}
     return SimpleNamespace(entry=100.0, sl=90.0, symbol="BTCUSDT", direction="long",
-                           strategy="trend_donchian", meta={"conviction": stamp})
+                           strategy="trend_donchian", meta=meta)
 
 
 def _apply(monkeypatch, tmp_path, stamp):

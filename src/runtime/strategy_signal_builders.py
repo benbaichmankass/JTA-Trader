@@ -297,6 +297,35 @@ def _resolve_shadow_predictors(strategy_name: str, strat_cfg: dict) -> list:
         return []
 
 
+def influencing_conviction_block(
+    strategy_name: str,
+    confidence: float,
+    captured: Dict[str, Any],
+    *,
+    direction: str,
+    calibrators: Any = None,
+    regime_alignment: Any = None,
+) -> Dict[str, Any]:
+    """The ``meta["conviction_influencing"]`` block: the ONLY conviction the order path reads.
+
+    ML-SHADOW-NO-ORDER-HANDLE (operator 2026-11-12, "handled through structuring the functionality
+    correctly, not with a gate"): built from ``influencing_scores(captured)`` -- the advisory+ subset --
+    so a shadow-stage score is never an input to it. ``conviction_sizing`` (apply and annotate) and
+    ``allocator_ev.intent_allocation_score`` (slice allocation) read this block and nothing else; the
+    observe-only blend that includes shadow scores stays in ``meta["conviction"]`` for the soak and
+    analytics, where no order-path reader looks.
+    """
+    from src.runtime.conviction import compute_conviction
+    from src.runtime.conviction_inputs import build_conviction_inputs, influencing_scores
+
+    inputs, prov = build_conviction_inputs(
+        strategy_name, confidence, influencing_scores(captured),
+        calibrators=calibrators, direction=direction,
+        regime_alignment=regime_alignment,
+    )
+    return {**compute_conviction(inputs).to_dict(), "provenance": prov}
+
+
 def conviction_stamp(
     strategy_name: str,
     confidence: float,
@@ -306,14 +335,12 @@ def conviction_stamp(
     calibrators: Any = None,
     regime_alignment: Any = None,
 ) -> Dict[str, Any]:
-    """The ``meta["conviction"]`` block stamped at signal time.
+    """The OBSERVE-ONLY ``meta["conviction"]`` block stamped at signal time.
 
-    ``conviction`` blends every captured score, SHADOW-stage included: it is the
-    observe-only soak number. ``influencing`` is the same blend over advisory+
-    models only (I7, ML-SHADOW-NEVER-ORDERS, plan
-    docs/plans/ml-live-promotion-plan-2026-10-29.md § 6): the order-changing
-    apply path (``conviction_sizing.apply_conviction_sizing``) reads it, so a
-    shadow promotion can never resize an order through conviction.
+    ``conviction`` blends every captured score, SHADOW-stage included: it is the soak number and is
+    read by analytics only. ``influencing`` repeats the advisory+-only conviction for those readers.
+    No order-path function reads this block: they read ``meta["conviction_influencing"]``
+    (``influencing_conviction_block``), which is built without shadow inputs.
     """
     from src.runtime.conviction import compute_conviction
     from src.runtime.conviction_inputs import build_conviction_inputs
@@ -323,17 +350,15 @@ def conviction_stamp(
         calibrators=calibrators, direction=direction,
         regime_alignment=regime_alignment,
     )
-    infl_inputs, infl_prov = build_conviction_inputs(
-        strategy_name, confidence, captured,
-        calibrators=calibrators, direction=direction,
-        regime_alignment=regime_alignment, influencing_only=True,
-    )
     conv = compute_conviction(conv_inputs)
-    infl = compute_conviction(infl_inputs)
+    infl = influencing_conviction_block(
+        strategy_name, confidence, captured, direction=direction,
+        calibrators=calibrators, regime_alignment=regime_alignment,
+    )
     return {
         **conv.to_dict(), "provenance": conv_prov,
-        "influencing": infl.conviction,
-        "influencing_provenance": infl_prov,
+        "influencing": infl["conviction"],
+        "influencing_provenance": infl["provenance"],
     }
 
 
@@ -457,8 +482,8 @@ def _emit_shadow_preds(
         # strategy's calibrated signal confidence with the captured model scores
         # (each gated by its own stage) into a single conviction, stamped on meta
         # alongside model_scores. The observed blend is never read back into an
-        # order; only its advisory+-only ``influencing`` view feeds the
-        # CONVICTION_SIZING_MODE=apply path (I7, ``conviction_stamp``).
+        # order; the order path reads ``conviction_influencing``, built from
+        # advisory+ scores only (ML-SHADOW-NO-ORDER-HANDLE).
         try:
             from src.runtime.conviction_inputs import (
                 load_calibrators_cached,
@@ -467,11 +492,17 @@ def _emit_shadow_preds(
 
             sig_meta2 = sig.get("meta")
             if isinstance(sig_meta2, dict):
+                _cals, _ra = load_calibrators_cached(), load_regime_alignment_cached()
                 sig_meta2["conviction"] = conviction_stamp(
                     strategy_name, base_row["confidence"], captured,
                     direction=base_row["direction"],
-                    calibrators=load_calibrators_cached(),
-                    regime_alignment=load_regime_alignment_cached(),
+                    calibrators=_cals, regime_alignment=_ra,
+                )
+                # The order path's conviction: built from advisory+ scores only.
+                sig_meta2["conviction_influencing"] = influencing_conviction_block(
+                    strategy_name, base_row["confidence"], captured,
+                    direction=base_row["direction"],
+                    calibrators=_cals, regime_alignment=_ra,
                 )
         except Exception:  # noqa: BLE001 — observe-only, never strand a signal
             pass
