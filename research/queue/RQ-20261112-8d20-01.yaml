@@ -3,7 +3,8 @@
 id: RQ-20261112-8d20-01
 title: 'ml_entry HTF counter-trend: do the frozen crypto ENTRY v1 decisions taken AGAINST a strong 4h trend (4h ADX14 > 40, side opposite the 4h DMI
   direction) lose money net of the full cost stack, out of sample?'
-status: queued
+status: done
+last_dispatched_at: '2026-11-12T00:09:41+00:00'
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -102,3 +103,16 @@ ml_consumer:
   legs:
   - ml_entry
   book: money
+grading:
+  attested: RULE-RQ20261112-8d20-01-HTF-CT
+  auto: true
+  decision_rule_id: RULE-RQ20261112-8d20-01-HTF-CT
+  evidence:
+  - research/results/RQ-20261112-8d20-01/local-20261112T0009Z.jsonl
+  graded_at: '2026-11-12'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
