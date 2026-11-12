@@ -392,7 +392,7 @@ setup per leg; n = 44 / 67 / 217 / 79 for `tlt_pullback_1d` / `ief_pullback_1d` 
 its declared stop — **0.4–1.9% of the [balance removed] equity read on 2026-09-10**, and
 that range is the min and max across all 407 of those setups, not a central
 estimate. The structural ceiling is unchanged and is the round-up bound:
-`1.5 × $4.0044 = $6.01`, i.e. **3.0% of that same [balance removed]**, in one trade. It is
+`1.5 × $4.0044 = $6.01`, i.e. **3.0% of that same [balance removed]**, in one trade. <!-- population-ok: arithmetic bound on the sizer, not a measured rate --> It is
 an arithmetic bound on the sizer, not a measurement — no leg in Option A
 approaches it (widest observed is `slv_pullback_1d` at $3.90, over its 217
 setups). The daily-loss cap is `daily_loss_pct 0.10 × [balance removed] = $20.02`, so it
