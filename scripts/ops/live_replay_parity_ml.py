@@ -162,6 +162,19 @@ def _entry_replay(cfg: Mapping, symbol: str, bar: float, frames: Mapping[str, An
         "feat": None, "head": "package"}}
 
 
+def _rep_cached(bundle: Mapping, cfg: Mapping, sym: str, bar: float, frames: Mapping, model: Mapping, PR: Any,
+                use_cache: bool = True) -> dict:
+    """One replay is ~0.5 s (60 reference frames of features); the controls re-analyse the same bars several times, so the
+    decision is memoised on the bundle (its frames never change within a run)."""
+    if not use_cache or not isinstance(bundle, dict):
+        return _entry_replay(cfg, sym, bar, frames, model, PR)
+    cache = bundle.setdefault("_ml_rep_cache", {})
+    k = (sym, bar)
+    if k not in cache:
+        cache[k] = _entry_replay(cfg, sym, bar, frames, model, PR)
+    return cache[k]
+
+
 def compare_entry(live: Mapping, rep: Mapping) -> tuple[str | None, dict]:
     """(class | None, detail) for one (symbol, bar): the first level that differs wins."""
     lp = parse_reason(live.get("reason"))
@@ -257,7 +270,7 @@ def analyse_ml_entry(leg: Any, bundle: Mapping, since: float, until: float, *,
         per: list[dict] = []
         for sym in replayable:
             lv = live.get((sym, bar))
-            rep = _entry_replay(cfg, sym, bar, frames, model, PR)
+            rep = _rep_cached(bundle, cfg, sym, bar, frames, model, PR, use_cache=frames_override is None)
             if rep.get("error"):
                 nc += 1
                 continue
@@ -497,7 +510,7 @@ def _clean_entry(lg: Any, bundle: Mapping, since: float, until: float, rows: lis
     for (sym, bar), v in _live_decisions(rows, lg.name).items():
         if sym not in frames:
             continue
-        rep = _entry_replay(dict(lg.cfg), sym, bar, frames, model, PR)
+        rep = _rep_cached(bundle, dict(lg.cfg), sym, bar, frames, model, PR)
         if rep.get("error"):
             continue
         row = {"event": f"{lg.name}_eval", "strategy": lg.name, "symbol": sym, "logged_at_utc": v.get("logged_at_utc"),
