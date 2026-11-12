@@ -179,3 +179,65 @@ def test_from_placed_needs_a_placed_ticket(db, platforms, capsys):
     _add_placed(db, ticket_status="emitted")
     rc, out = _run(db, platforms, capsys, tid=PLACED, apply=True, extra=["--from-placed"])
     assert rc == 3 and "no open/filled" in out["why"]
+
+
+# BREAKOUT2-ETH-RISKBOOK-GAP (2026-11-12): fill 244 is a phone-confirmed `placed` row with
+# entry_price NULL (the phone sent "entry") on a ticket that reads `skipped`.
+SKIPPED = "prop-manual-c54b2229aa1c"
+
+
+def _add_skipped_with_placed(db: Path, ticket_status: str = "skipped", entry=None) -> None:
+    c = sqlite3.connect(db)
+    c.execute("INSERT INTO prop_tickets (ticket_id, account_id, strategy, symbol, direction, status, created_at) "
+              "VALUES (?,?,?,?,?,?,?)", (SKIPPED, "breakout_2", "s", "ETHUSDT", "long", ticket_status,
+                                         "2026-11-11T20:00:00+00:00"))
+    c.execute("INSERT INTO prop_fills (account_id, ticket_id, symbol, direction, qty, entry_price, sl, tp, status, "
+              "reported_at, created_at) VALUES ('breakout_2',?,'ETHUSDT','long',0.51,?,2043.7,2128.37,"
+              "'placed','2026-11-11T20:04:54+00:00','2026-11-11T20:04:54+00:00')", (SKIPPED, entry))
+    c.commit()
+    c.close()
+
+
+def test_from_placed_closes_skipped_ticket_with_entry_override(db, platforms, capsys):
+    _add_skipped_with_placed(db)
+    rc, out = _run(db, platforms, capsys, tid=SKIPPED, apply=True,
+                   extra=["--from-placed", "--exit-price", "2043.70", "--entry-price", "2077.57",
+                          "--closed-at", "2026-11-11T23:10:00Z"])
+    assert rc == 0, out
+    r = _q(db, "SELECT * FROM prop_fills WHERE ticket_id=? AND status='closed'", SKIPPED)[0]
+    assert r["entry_price"] == 2077.57 and r["exit_price"] == 2043.70
+    assert r["pnl"] == pytest.approx((2043.70 - 2077.57) * 0.51, abs=1e-3)
+    raw = json.loads(r["raw"])
+    assert raw["provenance"] == "ESTIMATED" and raw["entry_price_source"] == "override"
+    assert raw["entry_price_journaled"] is None
+    assert _q(db, "SELECT status FROM prop_tickets WHERE ticket_id=?", SKIPPED)[0]["status"] == "closed"
+
+
+def test_skipped_ticket_refused_without_flag(db, platforms, capsys):
+    _add_skipped_with_placed(db)
+    rc, out = _run(db, platforms, capsys, tid=SKIPPED, apply=True, extra=["--entry-price", "2077.57"])
+    assert rc == 3 and "no open/filled" in out["why"]
+
+
+def test_without_override_null_entry_closes_unpriced(db, platforms, capsys):
+    _add_skipped_with_placed(db)
+    rc, out = _run(db, platforms, capsys, tid=SKIPPED, extra=["--from-placed", "--exit-price", "2043.70"])
+    assert rc == 0
+    rep = out["after"]["would_insert_close_fill"]
+    assert rep["pnl"] is None and rep["provenance"] == "UNVERIFIED" and "entry_price_source" not in rep
+
+
+@pytest.mark.parametrize("status", ["emitted", "filled", "closed", "expiry_prompted", "awaiting_report"])
+def test_from_placed_refuses_every_other_ticket_status(db, platforms, capsys, status):
+    _add_skipped_with_placed(db, ticket_status=status)
+    rc, out = _run(db, platforms, capsys, tid=SKIPPED, apply=True,
+                   extra=["--from-placed", "--entry-price", "2077.57"])
+    assert rc == 3 and "no open/filled" in out["why"]
+    assert not _q(db, "SELECT id FROM prop_fills WHERE ticket_id=? AND status='closed'", SKIPPED)
+
+
+@pytest.mark.parametrize("bad", ["abc", "-1", "0", "nan", "inf"])
+def test_bad_entry_price_refused(db, platforms, capsys, bad):
+    _add_skipped_with_placed(db)
+    rc, out = _run(db, platforms, capsys, tid=SKIPPED, apply=True, extra=["--from-placed", "--entry-price", bad])
+    assert rc == 3 and "entry_price" in out["why"]

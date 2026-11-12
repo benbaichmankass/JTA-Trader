@@ -257,6 +257,24 @@ def log_prescreen(doc: Any, path: Optional[Path] = None) -> int:
         return 0
 
 
+def conflict_alert(doc: Dict[str, Any], send: Optional[Callable[[str], bool]] = None,
+                   path: Optional[Path] = None, mark_fn: Any = None) -> Dict[str, Any]:
+    """CONFLICTING-EXPOSURE-ALERT: ONE deduped Telegram alert per symbol held both ways (an alert, never a gate).
+    The due computation already found the conflicts; this only sends. Contained: never raises."""
+    try:
+        from src.runtime import conflicting_exposure
+        found = doc.get("conflicting_exposure") or {"state": "absent"}
+        # Marks come from the due computation (telemetry last_price); a caller may supply one for legs still
+        # lacking it. Never imported here: the market feed would pull the order path into this module's closure.
+        if found.get("conflicts") and callable(mark_fn):
+            conflicting_exposure.fill_open_r(found, mark_fn)
+        r = conflicting_exposure.alert(found, send=send, path=path)
+        return {k: r.get(k) for k in ("state", "sent", "standing", "failed", "error", "reason") if r.get(k)}
+    except Exception as exc:  # noqa: BLE001 — contained: the wake pass continues
+        logger.warning("ltr-wake-post: conflicting-exposure alert failed", exc_info=True)
+        return {"state": "error", "error": f"{type(exc).__name__}: {exc}"}
+
+
 def run_once(due_fn: Optional[Callable[[], Any]] = None,
              auth_fn: Callable[[], Optional[str]] = read_auth_header,
              http: Http = _http,
@@ -279,6 +297,7 @@ def run_once(due_fn: Optional[Callable[[], Any]] = None,
         return rec
     rec["due_count"] = doc.get("due_count")
     rec["prescreen_logged"] = log_prescreen(doc, prescreen_log)
+    rec["conflicting_exposure"] = conflict_alert(doc)
     cfg = wake.load_cfg()
     if wake.plan(doc, [], cfg, computed_at)["kind"] != "wake":
         rec["state"] = "nothing_due"

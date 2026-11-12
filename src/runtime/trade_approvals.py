@@ -233,11 +233,13 @@ def _route():
     when it does. Same poll-evidence rule as telegram_decisions.answerable_route (a deliverable but unpolled bot
     would ship dead buttons)."""
     from src.runtime.telegram_poll_registry import poll_state
+    # collapsed-state: unknown — only `.answerable` matters for sending a button: not polled and could-not-look
+    # both mean "no button here" (the same rule as telegram_decisions.answerable_route), and offer() then falls back
+    # to a plain alert, so neither state is silent.
     from src.bot.telegram_routes import claude_route
 
     trader_chat = (os.environ.get("TELEGRAM_CHAT_ID") or "").strip() or None
     claude = claude_route()
-    # collapsed-state: unknown — not polled and could-not-look both mean NO button (fail-closed, a dead button is the failure); the ask then goes to the alert channel via _fallback_alert
     if claude.isolated and claude.token and claude.chat_id and poll_state(claude.token_from, prefix=CB_PREFIX).answerable:
         return claude.token, claude.chat_id, claude.token_from
     trader = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip() or None

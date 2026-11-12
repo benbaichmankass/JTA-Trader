@@ -455,3 +455,32 @@ def test_bars_before_a_legs_join_are_not_lost_bars():
     res = P.analyse_leg(leg, _bundle([]), SINCE, UNTIL)
     lost = [d for d in res["divergence_detail"] if d["class"] == "lost_bar"]
     assert lost and all(P.to_epoch(d["bar"]) >= UNTIL - 2 * TF_S for d in lost)
+
+
+def test_a_lost_election_is_a_named_outcome_not_dropped_no_package():
+    """PI-20261111-LRP-C5F97202 (ADA 2026-11-09 04:03Z): ada_pullback_2h short lost ADAUSDT's
+    per-symbol election to ml_entry long (allocator soak row); parity read it as a silent
+    dropped_no_package because it never looked at the election."""
+    leg = _leg()
+    rows, _ = _consistent_evals(leg)
+    sig_t = [r["logged_at_utc"] for r in rows if r["side"] != "none"]
+    assert sig_t
+    elections = [{"logged_at_utc": t, "symbol": "ETHUSDT", "n_candidates": 2,
+                  "executed_strategy_id": "ml_entry", "executed_side": "sell",
+                  "candidates": [{"strategy_id": "ml_entry", "side": "short", "confidence": 1.0},
+                                 {"strategy_id": leg.name, "side": "long", "confidence": 0.47}]}
+                 for t in sig_t]
+    b = _bundle(rows)
+    b["allocator"] = {"ETHUSDT": {"rows": elections, "error": None}}
+    res = P.analyse_leg(leg, b, SINCE, UNTIL)
+    assert res["by_class"]["dropped_no_package"] == 0
+    named = [d for d in res["divergence_detail"] if d.get("class") == "dropped_no_package"]
+    assert not named
+    # control: an election this leg WON (or was not in) does not excuse the drop
+    for e in elections:
+        e["executed_strategy_id"] = leg.name
+    res2 = P.analyse_leg(leg, b, SINCE, UNTIL)
+    assert res2["by_class"]["dropped_no_package"] > 0
+    # control: a failed allocator read never reads as "lost the election"
+    b["allocator"] = {"ETHUSDT": {"rows": [], "error": "fetch_failed: x"}}
+    assert P.analyse_leg(leg, b, SINCE, UNTIL)["by_class"]["dropped_no_package"] > 0

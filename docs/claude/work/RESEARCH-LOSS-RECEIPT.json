@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-11-11T20:03:58Z",
+  "generated_at": "2026-11-12T07:28:11Z",
   "overall": "findings",
   "produced_by": {
-    "run_id": "43089887473",
+    "run_id": "43175184624",
     "workflow": "research-loss-detector"
   },
   "questions": {
     "A_stuck_research_prs": {
       "findings": [],
-      "population": "38 open PRs; 7 automation/*; 1 carry research; 6 automation/* carry none (not graded here)",
+      "population": "30 open PRs; 10 automation/*; 2 carry research; 8 automation/* carry none (not graded here)",
       "state": "clean",
       "threshold_hours": 6.0
     },
@@ -218,22 +218,14 @@
         }
       ],
       "pending_merge": [],
-      "population": "108 completed run(s) of 7 workflow(s) calling ./.github/actions/research-result since 2026-10-28 (dukascopy-span-probe.yml, ict-scalp-exit-sweep.yml, m20-exit-lever-sweep.yml, research-exit-head-build.yml, research-exit-head-replay-trainer.yml, research-harness-dispatch.yml, soak-book-grade-weekly.yml); 1093 produced no result by design (skipped); 2651 result file(s) on origin/main",
+      "population": "108 completed run(s) of 7 workflow(s) calling ./.github/actions/research-result since 2026-10-29 (dukascopy-span-probe.yml, ict-scalp-exit-sweep.yml, m20-exit-lever-sweep.yml, research-exit-head-build.yml, research-exit-head-replay-trainer.yml, research-harness-dispatch.yml, soak-book-grade-weekly.yml); 1093 produced no result by design (skipped); 2661 result file(s) on origin/main",
       "state": "findings"
     },
     "C_expiring_unlanded_artifacts": {
-      "findings": [
-        {
-          "artifact": "research-store-bundle",
-          "artifact_id": 13888482601,
-          "expires_at": "2026-11-14T19:52:29Z",
-          "run_id": "43087020583",
-          "workflow": "research-queue-grade.yml"
-        }
-      ],
-      "population": "[bulk] 1201 artifact(s) listed, 1201 unexpired, 284 expire within 72.0h across 170 run(s); 20 of those from research workflows (research-queue-grade.yml, research-watchdog.yml); a landed copy = run id named on origin/main in research/results, a commit message, or a file under research/**, docs/research/**, runtime_logs/replay_pregate/**",
+      "findings": [],
+      "population": "[bulk] 1243 artifact(s) listed, 1242 unexpired, 231 expire within 72.0h across 142 run(s); 18 of those from research workflows (research-queue-grade.yml, research-watchdog.yml); a landed copy = run id named on origin/main in research/results, a commit message, or a file under research/**, docs/research/**, runtime_logs/replay_pregate/**",
       "read_via": "bulk",
-      "state": "findings"
+      "state": "clean"
     }
   },
   "ref": "origin/main",

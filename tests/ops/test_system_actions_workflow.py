@@ -395,6 +395,8 @@ EXPECTED_ACTIONS = {
     # 2026-10-24 — AMEND-SL-ACTION: tighten one live Bybit stop, venue +
     # journal (order_packages.sl + trades.stop_loss) together; refuses looser.
     "amend-position-sl": "amend_position_sl_action.sh",
+    # 2026-11-11 — PROP-BRACKET-APPLY: record a TP/SL request on a VM-prop ticket; the executor applies it.
+    "amend-prop-bracket": "amend_prop_bracket_action.sh",
     # 2026-10-25 — LTR-6R-APPLY-PATH: READ-ONLY per-account dry-run of the
     # live-review apply path (scripts/ops/live_review_apply.py --dry-run).
     "live-review-dry-run": "live_review_dry_run_action.sh",
@@ -522,6 +524,7 @@ TIER_2_ACTIONS = {
     "backfill-package-risk-meta",
     "relink-orphan-trade-5209",
     "amend-position-sl",
+    "amend-prop-bracket",
     "live-review-dry-run",
     "live-review-apply",
     "run-desk-judge",
@@ -1210,3 +1213,29 @@ def test_security_posture_report_is_read_only_and_never_prints_key_material():
     assert "awk '{print $1, $2, $NF}'" in code  # bits, fingerprint, (TYPE)
     assert "} 2>&1 | mask" in code
     assert "Banned IP list" not in code
+
+
+def test_security_posture_mask_keeps_wildcard_and_loopback_only():
+    """First run (#25070): masking 0.0.0.0/127.0.0.1 hid whether a port is public."""
+    import re
+    import subprocess
+    from pathlib import Path
+
+    src = (Path(__file__).resolve().parents[2]
+           / "scripts/ops/security_posture_report.sh").read_text()
+    fn = re.search(r"^mask\(\) \{.*?^\}", src, re.S | re.M).group(0)
+    sample = ("tcp 0.0.0.0:8001 python\ntcp 127.0.0.1:2019 caddy\n"
+              "tcp 10.0.0.251:4002 docker-proxy\nfrom 141.145.193.91 port 22\nacct DU1234567\n")
+    out = subprocess.run(["bash", "-c", fn + "\nmask"], input=sample,
+                         capture_output=True, text=True, check=True).stdout
+    assert "0.0.0.0:8001" in out and "127.0.0.1:2019" in out
+    assert "10.0.0.251" not in out and "141.145.193.91" not in out and "DU1234567" not in out
+    assert out.count("<ip>") == 2 and "<acct>" in out
+
+
+def test_security_posture_gateway_ssh_is_quiet():
+    """The client's known-hosts warning leaked the gateway address (#25070)."""
+    text = WORKFLOW.read_text()
+    seg = text[text.index('elif [ "${ACTION}" = "security-posture-report" ]'):]
+    seg = seg[: seg.index("action-output.txt")]
+    assert "LogLevel=ERROR" in seg

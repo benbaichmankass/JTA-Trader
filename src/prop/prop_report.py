@@ -175,7 +175,13 @@ def ingest_report(report: Dict[str, Any]) -> Dict[str, Any]:
         "symbol": symbol,
         "direction": report.get("direction"),
         "qty": report.get("qty"),
-        "entry_price": report.get("entry_price"),
+        # The phone executor reports a confirmed placed fill with key "entry"
+        # (tools/phone-executor MainActivity.kt), not "entry_price"; reading
+        # only "entry_price" stored every such fill unpriced, so fill
+        # inference could never price it (BREAKOUT2-ETH-RISKBOOK-GAP, fill 244).
+        "entry_price": (report.get("entry_price")
+                        if report.get("entry_price") is not None
+                        else report.get("entry")),
         "exit_price": report.get("exit_price"),
         "sl": report.get("sl"),
         "tp": report.get("tp"),

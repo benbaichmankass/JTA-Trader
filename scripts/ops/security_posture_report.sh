@@ -36,7 +36,12 @@ fi
 set +e
 
 mask() {
-  sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/<ip>/g; s/\b(DU|DF|U)[0-9]{5,}\b/<acct>/g'
+  # Wildcard and loopback binds are kept: whether a port listens on every
+  # interface or only locally IS the finding, and neither address identifies
+  # a host. Every other IPv4 address is masked (public repo).
+  sed -E 's/(^|[^0-9.])0\.0\.0\.0([^0-9]|$)/\1@ANY4@\2/g; s/(^|[^0-9.])127\.0\.0\.(1|53|54)([^0-9]|$)/\1@LO4\2@\3/g' \
+    | sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/<ip>/g; s/\b(DU|DF|U)[0-9]{5,}\b/<acct>/g' \
+    | sed -E 's/@ANY4@/0.0.0.0/g; s/@LO4([0-9]+)@/127.0.0.\1/g'
 }
 hdr() { printf '\n===== %s =====\n' "$1"; }
 SUDO="sudo -n"
@@ -116,9 +121,12 @@ echo "uid 0 accounts: $(awk -F: '$3==0{print $1}' /etc/passwd | tr '\n' ' ')"
 echo "accounts with a usable password hash: $($SUDO awk -F: '$2 ~ /^\$/ {n++} END{print n+0}' /etc/shadow 2>/dev/null || echo UNREADABLE)"
 
 hdr "sudoers summary (comments and Defaults dropped)"
-for f in /etc/sudoers /etc/sudoers.d/*; do
-  [ -e "$f" ] || continue
-  echo "-- $f ($(stat -c '%a %U:%G' "$f" 2>/dev/null))"
+# /etc/sudoers.d is 0750 root: a plain glob cannot list it as the service
+# user, so list it with sudo (the D3 file watch counts 5 files there).
+sudoers_d=$($SUDO find /etc/sudoers.d -maxdepth 1 -type f 2>/dev/null | sort)
+for f in /etc/sudoers $sudoers_d; do
+  $SUDO test -e "$f" 2>/dev/null || continue
+  echo "-- $f ($($SUDO stat -c '%a %U:%G' "$f" 2>/dev/null))"
   if body=$($SUDO cat "$f" 2>/dev/null); then
     echo "$body" | grep -Ev '^\s*(#|$|Defaults)' | sed 's/^/  /'
   else
@@ -171,6 +179,11 @@ if command -v ufw >/dev/null 2>&1; then
 fi
 echo "iptables INPUT policy: $($SUDO iptables -S INPUT 2>/dev/null | head -n1 || echo UNREADABLE)"
 echo "iptables INPUT rules: $($SUDO iptables -S INPUT 2>/dev/null | grep -c '^-A' || true)"
+# The rules themselves (proto, port, target). Source addresses go through mask():
+# 0.0.0.0/0 stays readable, every other address is masked.
+echo "iptables INPUT rules (in order):"
+$SUDO iptables -S INPUT 2>/dev/null | grep '^-A' | sed 's/^/  /' || echo "  UNREADABLE"
+echo "ip6tables INPUT policy: $($SUDO ip6tables -S INPUT 2>/dev/null | head -n1 || echo UNREADABLE)"
 
 hdr "end"
 } 2>&1 | mask

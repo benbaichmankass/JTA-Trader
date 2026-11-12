@@ -1,0 +1,577 @@
+{
+ "request_id": "HEALTH-REVIEW-20261111",
+ "reviewed_at": "2026-11-11T20:00:00+00:00",
+ "reviewer": "lane HEALTH-REVIEW-20261111 (session_01AFoLuLK6atheaCCZ33wjBJ), dispatched by Manager Session 2026-11-11a (session_01AFoLuLyarNRcy3nziCep2U), reset job health-review",
+ "lane": "HEALTH-REVIEW-20261111",
+ "window_start": "2026-11-04T19:45:00+00:00",
+ "window_end": "2026-11-11T20:00:00+00:00",
+ "window": {
+  "this": "2026-11-04T19:45Z (reviewed_at of 2026-11-04 record) -> 2026-11-11T20:05Z",
+  "medium": "2026-10-21, 10-24, 10-28, 11-04 records",
+  "lifetime": "health/history 168 h; comms/research/health/*; /api/bot/performance window=all"
+ },
+ "overall_assessment": "investigate",
+ "operator_attention_required": false,
+ "scoreboard": {
+  "source": "/api/bot/performance?window=7d (since 2026-11-04T19:21:46Z) and window=all; journalTrust carried per book",
+  "real_money_7d": {
+   "n": 11,
+   "net_usd": 3.82,
+   "net_r": 3.77,
+   "exp_r": 0.3429,
+   "pnl_coverage": 1.0,
+   "journal_trust": "bybit_2 knownDivergent",
+   "read_state": "read"
+  },
+  "real_money_lifetime": {
+   "n": 487,
+   "net_usd": -137.79,
+   "net_r": -152.12,
+   "profit_factor": 0.63,
+   "pnl_coverage": 0.7844,
+   "read_state": "read"
+  },
+  "mirror_7d": {
+   "n": 10,
+   "net_usd": 1280.81,
+   "net_r": 3.94,
+   "pnl_coverage": 1.0,
+   "journal_trust": "bybit_portfolio unrecorded",
+   "read_state": "read"
+  },
+  "paper_7d": {
+   "n": 83,
+   "net_usd": -36749.85,
+   "net_r": -2.43,
+   "pnl_coverage": 0.9518,
+   "journal_trust": "alpaca_paper, bybit_1, bybit_portfolio unrecorded",
+   "read_state": "read",
+   "note": "$ dominated by alpaca_paper SLV 7005 (-$28,137, 26,615 sh, sl) and IWM 7011 (-$9,622, sl); R is -2.43 over 83 trades"
+  },
+  "pct": "— (no balance read; public repo)",
+  "sceptical_quant": "ml_entry carries 8 of 11 real-money closes (+3.62 R). Offline record comms/strategy_evidence/ml_entry.json: expR +0.0271 on n=907 held-out, fixed-TP CI95 [-0.042,+0.099] (as quoted in PI-20261104-PREP1104-0001, not re-run here). The interval spans zero: a sceptic would not yet believe the edge, and the leg has no live-vs-backtest band (NO_BACKTEST, owned by PI-20261104-PREP1104-0001). One week of +3.6 R says nothing either way."
+ },
+ "prior_calls_scorecard": {
+  "source_record": "comms/reviews/health/2026-11-04-health-review.json",
+  "n_calls": 8,
+  "hit": 5,
+  "miss": 1,
+  "unresolved": 1,
+  "void": 1,
+  "brier": "INDETERMINATE (n<10 resolved with probabilities)",
+  "followthrough": "review_followthrough.py --source health-review --window-days 7: cohort 8 filed / 2 done / 0 killed / 6 open; backlog 87 open, 90% due, median age 73 d, 46 no-owner. Population = the frozen file export (HEALTH-20261111-EXPORT-READS-STALE).",
+  "calls": [
+   {
+    "id": "HR-20261104-C1",
+    "result": "hit",
+    "action_state": "closed-no-detector",
+    "note": "ib_paper TLT 7443 now rests ONE group oca-protect-t6879 (STP 1234 7443@79.41 + LMT 1235 7443@83.59), diag ib_open_orders 19:42Z; row done"
+   },
+   {
+    "id": "HR-20261104-C2",
+    "result": "hit",
+    "action_state": "closed+detector",
+    "note": "trainer 81.8% used (ml/status) < 90; no retention change; growth plateaued; ict-trainer-disk-alarm.timer active; row set done"
+   },
+   {
+    "id": "HR-20261104-C3",
+    "result": "miss",
+    "action_state": "closed-no-detector",
+    "note": "MGC journal 11 = venue 11 (did not widen); repair path not identified; row set done"
+   },
+   {
+    "id": "HR-20261104-C4",
+    "result": "hit",
+    "action_state": "stalled",
+    "note": "18:11:38Z boot still logs symbol invalid for SPY/QQQ/IWM/GLD; row untouched since 11-05, due 11-13"
+   },
+   {
+    "id": "HR-20261104-C5",
+    "result": "unresolved",
+    "action_state": "closed-no-detector",
+    "note": "max snapshot gap 15 min (rule met); the 11-02/11-03 cause was never found; row closed as not reconstructable"
+   },
+   {
+    "id": "HR-20261104-C6",
+    "result": "void",
+    "action_state": "closed-no-detector",
+    "note": "operator decided 11-04 'Keep it, stop re-raising'; GLD 5209 closed sl 2026-11-09 18:32Z; GLD-WEDGE-RETRO due 11-18 owns prevention"
+   },
+   {
+    "id": "HR-20261104-C7",
+    "result": "hit",
+    "action_state": "stalled",
+    "note": "breaches 9/day on 11-09..11-11 (rule <=3); AUD-20261019-RESEARCH-SLO-RED stalled 3 reviews"
+   },
+   {
+    "id": "HR-20261104-C8",
+    "result": "hit",
+    "action_state": "stalled",
+    "note": "export unrouted 166 -> 311; row stalled 3 reviews -> dropped, superseded by WSD-DRAIN-W2"
+   }
+  ]
+ },
+ "checks": [
+  {
+   "id": "H1",
+   "status": "watch",
+   "value": "all canonical trader-VM units active (ib-gateway-watchdog.timer inactive by design on this VM, IB-GATEWAY-DOWN); heartbeat 3 s; 760 snapshots in 168 h: 741 ok / 17 watch / 2 concern; max gap 15 min. Two ict-web-api outages 11-11 (~18:16-18:18Z, ~18:58-18:59Z) are invisible at 15-min cadence; accounts_api warn 8 snapshots 11-07 22:11-23:45Z (account not recorded in history)",
+   "population": "diag services list + _CANONICAL_UNITS; health/history 168 h",
+   "window": "11-04 19:17Z..11-11 19:12Z",
+   "evidence": "relay #24922 services/status; /api/bot/health/history?hours=168",
+   "prior": [
+    "watch",
+    "watch",
+    "—",
+    "—"
+   ],
+   "coverage": "full"
+  },
+  {
+   "id": "H2",
+   "status": "ok",
+   "value": "running 9d6112782, on disk 6c2dc8741, origin/main daf89412d; 0 src/ or config/ files differ 9d61127..origin/main",
+   "population": "src/ + config/ files changed since the running SHA",
+   "window": "at 19:29Z",
+   "evidence": "relay #24922 status; git diff --name-only",
+   "prior": [
+    "ok",
+    "—",
+    "—",
+    "—"
+   ],
+   "coverage": "full; verify_running_roster.py not run (status payload truncated)"
+  },
+  {
+   "id": "H3",
+   "status": "ok",
+   "value": "8/8 recorded broker-API accounts api_ok (health/latest 19:12Z); not probed: breakout_1/2, tradeify_1, velotrade_1 (manual bridge) and ib_live, oanda_practice (shelved)",
+   "population": "accounts in the live block of status: 11 live of 14",
+   "window": "19:12Z",
+   "evidence": "/api/bot/health/latest; /api/bot/accounts/balances",
+   "prior": [
+    "ok",
+    "—",
+    "—",
+    "—"
+   ],
+   "coverage": "prop accounts could_not_look"
+  },
+  {
+   "id": "H4",
+   "status": "watch",
+   "value": "journal = venue qty on all 15 open positions read (bybit_1 5 symbols incl. ETH 2.35+2.89=5.24; bybit_2 ADA 506; bybit_portfolio ADA 153220; ib_paper 4; alpaca_paper 3). ib_paper: each of 4 positions has exactly 1 STP + 1 LMT, same qty, one OCA group; alpaca_paper: each of 3 has 1 stop + 1 limit at full qty. Bybit venue orders NOT read (relay truncation); naked sweeps: equity 3/3 covered, IB 4/4 covered",
+   "population": "15 open positions x 6 accounts",
+   "window": "19:29-19:42Z",
+   "evidence": "relays #24922, #24934; /api/bot/positions?include_paper=true",
+   "prior": [
+    "concern",
+    "—",
+    "—",
+    "—"
+   ],
+   "coverage": "partial: Bybit protection not venue-read; system_invariants.py not run (AUD-20261111-RELAY-INVARIANTS-BRIDGE)"
+  },
+  {
+   "id": "H5",
+   "status": "watch",
+   "value": "96 closes in window (85 paper, 11 real money); exit loop fresh, 64 passes, 0 interval breaches since 18:58Z restart; signal->package audit not readable (audit?limit=600 truncated to ~4 KB)",
+   "population": "closed trades since 11-04 19:45Z (trades/closed, include_paper)",
+   "window": "full for closes; audit could_not_look",
+   "evidence": "/api/bot/trades/closed; relay exit_loop_health",
+   "prior": [
+    "watch",
+    "—",
+    "—",
+    "—"
+   ],
+   "coverage": "partial"
+  },
+  {
+   "id": "H6",
+   "status": "watch",
+   "value": "real money 11: sl 4, max_hold 4, tp 3 (all clean). paper 83 (perf 7d): sl 44, tp 17, max_hold 6, live_review_close 5, sl_cross 4, strategy_close 3, exchange_flat_reconciled 2, e4_time_stop_24h 1, stale_stop 1. 0 closed rows missing exitPrice; 1 missing pnl (7042 bybit_1 ETH). journalctl grep 'exchange_flat_reconciled' 0 of 641,887 lines (complete) - the label is written without that string, so the grep is not a positive control. Orphan log: newest orphan_created 2026-09-16 (61 lines, complete) - 0 new orphans in window",
+   "population": "closed rows in window by account class",
+   "window": "full",
+   "evidence": "/api/bot/performance?window=7d perExitPath; trades/closed; relay #24934",
+   "prior": [
+    "watch",
+    "—",
+    "—",
+    "—"
+   ],
+   "coverage": "full for labels; 2 reconciled rows not individually identified"
+  },
+  {
+   "id": "H7",
+   "status": "ok",
+   "value": "0 closed rows with closed_at < opened_at; 0 missing exitPrice; 1 missing pnl (7042); db check ok (health/latest SELECT 1)",
+   "population": "96 closes in window",
+   "window": "full",
+   "evidence": "trades/closed; health/latest",
+   "prior": [
+    "ok",
+    "—",
+    "—",
+    "—"
+   ],
+   "coverage": "check_db_integrity.py not run (no live-VM shell)"
+  },
+  {
+   "id": "H8",
+   "status": "watch",
+   "value": "5/5 producer ledgers fresh + non-vacuous; news_decisions could_not_look (3rd review; AUD-20261104-PRODUCER-OK-OVER-CNL owns)",
+   "population": "6 consumed inputs",
+   "window": "at run",
+   "evidence": "check_producer_liveness.py",
+   "prior": [
+    "watch",
+    "watch",
+    "—",
+    "—"
+   ],
+   "coverage": "5/6"
+  },
+  {
+   "id": "H9",
+   "status": "ok",
+   "value": "7 research-health alert runs in window, 7 delivered.telegram true",
+   "population": "alert runs in 89 monitor runs",
+   "window": "full",
+   "evidence": "comms/research/health/2026-11-0[4-9],1[01].json",
+   "prior": [
+    "ok",
+    "—",
+    "—",
+    "—"
+   ],
+   "coverage": "VM AlertsQueue drain not read (audit truncated)"
+  },
+  {
+   "id": "H10",
+   "status": "concern",
+   "value": "89 runs, max gap 4.14 h (> 4 h once); breach SLOs/day 6,7,8,8,8,9,9,9 (rising); top: survivors_per_month 89/89, trials_per_survivor 89/89, runnable_floor 88, grade_latency_p90_d 83, theme_share_min_ratio 79, research_ops_age_h 66, undispositioned_24h 63, research_ops_not_run 52",
+   "population": "89 monitor runs x 19 SLOs",
+   "window": "full",
+   "evidence": "comms/research/health/*.json",
+   "prior": [
+    "concern",
+    "concern",
+    "—",
+    "—"
+   ],
+   "coverage": "full"
+  },
+  {
+   "id": "H11",
+   "status": "watch",
+   "value": "timer active+enabled, next 11-12 00:20Z; 2 cycles/24h; last cycle 08:05Z rc 0 complete_with_refusals (already_done 73, trained 0, refusals 6); dataset builds 24h ok 49 failed 0; registry 98 rows (98 on 11-04): no new model in the window",
+   "population": "cycles in 24 h; registry rows",
+   "window": "24 h + week-over-week registry",
+   "evidence": "/api/bot/ml/status (trainer mirror, 38 s old)",
+   "prior": [
+    "watch",
+    "—",
+    "—",
+    "—"
+   ],
+   "coverage": "trainer relay #24923 not returned"
+  },
+  {
+   "id": "H12",
+   "status": "concern",
+   "value": "LIVE VM root 76.1% used / 24.0% free (12.3 GB) vs 35.6% free on 11-04: -11.6 pts in 7 d; at that rate 10% free on ~2026-11-19. Memory 17.5%. Trainer 81.8% (flat). Cause: MEASURED (disk-usage-report #24935, 19:57Z): two trade_journal.db backups written by Tier-2 helpers in the window, .bak-prop-report-skip (2026-11-05, 2.37 GB) and .bak-prop-report-close (2026-11-10, 2.57 GB) = 4.9 GB, about 80% of the ~6 GB regrowth (11.6 pts of 52 GB); plus /var/log/syslog + syslog.1 1.7 GB, trade_journal.db 2.61 GB, runtime_logs 11 GB (unchanged class), a 1.35 GB .git pack. Fix: prune-db-backups (existing Tier-2 action, dry-run first) and have the prop-report helpers prune their own backup",
+   "population": "both VMs",
+   "window": "4 reviews: 26.7% free (10-24), 22.5% (10-28), 35.6% (11-04, after prune), 24.0% (11-11)",
+   "evidence": "relay status vm_health; health/latest disk ctx; ml/status",
+   "prior": [
+    "concern",
+    "concern",
+    "watch",
+    "—"
+   ],
+   "coverage": "full"
+  },
+  {
+   "id": "H13",
+   "status": "watch",
+   "value": "no literal secret in 113 changed config/deploy/workflow files (keyword grep over 3,187 added lines; one public Google OAuth client id); collaborators: 1 (owner, admin); 33 workflow-path commits, all one actor. run_secret_scanning could_not_look (GitHub Advanced Security not enabled). ssh_auth_sweep not run. NEW: diag ib_open_orders relay replies publish the IB paper account id unmasked in public issue comments",
+   "population": "window diff of .github/workflows, config, deploy",
+   "window": "full for the diff; ssh 0%",
+   "evidence": "git diff a858e1222..origin/main; relay #24934",
+   "prior": [
+    "watch",
+    "—",
+    "—",
+    "—"
+   ],
+   "coverage": "partial"
+  },
+  {
+   "id": "H14",
+   "status": "ok",
+   "value": "111 of 1,640 commits touched Tier-2/3 paths; 4 sampled untitled (#23857, #23570, #24684, #22908): each carries a landing hold / manager-merge record. #23570 declared tier 1 for a funding-store write with a one-shot sign migration (a DB writeback); held for the manager - noted, no row",
+   "population": "commits touching config/, src/runtime, src/core, src/units/accounts, deploy, workflows, scripts/ops/*.sh",
+   "window": "full",
+   "evidence": "git log --since",
+   "prior": [
+    "ok",
+    "—",
+    "—",
+    "—"
+   ],
+   "coverage": "sampled"
+  },
+  {
+   "id": "H15",
+   "status": "concern",
+   "value": "store (work_store.db via /api/bot/work/items): 4,211 items, 812 open observations (all owned), 402 queued + 279 landed_unproven builds. Off-VM pipeline.py --gate reads the frozen export: gate 444 (unrouted 322, owner_closed 119, high 3), due 730, unrouted alarm breached (311, oldest 163 d) - figures as of 11-06",
+   "population": "store items; export files",
+   "window": "at run",
+   "evidence": "/api/bot/work/items paged; pipeline.py --gate/--stats; /api/bot/work/parity",
+   "prior": [
+    "concern",
+    "concern",
+    "—",
+    "—"
+   ],
+   "coverage": "store full; gate computed on stale export"
+  },
+  {
+   "id": "H16",
+   "status": "could_not_look",
+   "value": "SOAKS.json as_of 2026-11-06, 73 soaks, no state field (2nd review). Soak state now lives in PI-SOAK-20261108-* store items (queued); gates not graded",
+   "population": "73 soak contracts",
+   "window": "—",
+   "evidence": "docs/claude/work/SOAKS.json; store",
+   "prior": [
+    "could_not_look",
+    "—",
+    "—",
+    "—"
+   ],
+   "coverage": "none"
+  }
+ ],
+ "analysis": {
+  "trend": [
+   "Live VM free disk: 26.7 -> 22.5 -> 35.6 (prune) -> 24.0 % over 4 reviews; regrowth ~11.6 pts/week projects 10 % free about 11-19 and the 85%-used line about 11-15.",
+   "Research SLO breaches/day rose every day 6 -> 9 across the window; the same rows have been red since 10-19.",
+   "Real-money closes stay clean for the 3rd review running (no reconciler/watchdog/orphan exit)."
+  ],
+  "questions": [
+   {
+    "q": "Why is the live disk refilling after the 11-04 prune?",
+    "hypotheses": [
+     "H-a a writer with no cap (runtime_logs jsonl, journal backups from Tier-2 helpers, research cache on the VM tree)",
+     "H-b journald growth (cap needs a sudoers line; cap-vm-logs journald may never have applied)",
+     "H-c noise: a one-off backup that will be pruned"
+    ],
+    "test": "system-action disk-usage-report #24935 (per-directory breakdown)",
+    "survivor": "MEASURED (disk-usage-report #24935, 19:57Z): two trade_journal.db backups written by Tier-2 helpers in the window, .bak-prop-report-skip (2026-11-05, 2.37 GB) and .bak-prop-report-close (2026-11-10, 2.57 GB) = 4.9 GB, about 80% of the ~6 GB regrowth (11.6 pts of 52 GB); plus /var/log/syslog + syslog.1 1.7 GB, trade_journal.db 2.61 GB, runtime_logs 11 GB (unchanged class), a 1.35 GB .git pack. Fix: prune-db-backups (existing Tier-2 action, dry-run first) and have the prop-report helpers prune their own backup",
+    "p": "0.85 MEASURED (byte sizes); the regrowth split is INFERRED"
+   },
+   {
+    "q": "Are the register numbers this review reports real?",
+    "hypotheses": [
+     "H-a the export is stale since the WSD-S4 freeze and nothing regenerates it",
+     "H-b the export is current and the store merely has newer probes"
+    ],
+    "test": "newest docs/claude/work/pipeline record 20261106T220235Z; no workflow runs work.py export --to-files (grep of .github/workflows); store 4,211 vs files 4,098; /work/parity equal:false",
+    "survivor": "H-a, p 0.9 MEASURED: every off-VM gate/stats/follow-through read since 11-06 reports a 5-day-old register with no read-state",
+    "p": 0.9
+   },
+   {
+    "q": "Is the learning pipeline producing anything?",
+    "hypotheses": [
+     "H-a correct idle: no new labels, so already_done",
+     "H-b rows recorded but never trained (the skill's red flag)"
+    ],
+    "test": "registry 98 -> 98, trained 0, dataset builds ok 49; the discriminating read (new labelled rows per manifest since 11-04) is /ml-review's",
+    "survivor": "open, p 0.5 each; HEALTH-20261111-TRAINER-NO-NEW-MODELS to /ml-review",
+    "p": 0.5
+   },
+   {
+    "q": "Did any paper close come from a reconciler rather than the bracket?",
+    "hypotheses": [
+     "H-a alpaca_paper TLT 6880 (632 sh, exit 81.90 at 16:46Z 11-09, not TP 83.59 nor SL) was a venue child fill booked by the position-snapshot reconciler",
+     "H-b a strategy exit mislabelled 'other'"
+    ],
+    "test": "perExitPath paper exchange_flat_reconciled 2; trades/closed collapses the label to 'other'; only 6880 is an Alpaca/IB 'other' close in the window",
+    "survivor": "H-a INFERRED p 0.6 for one of the two; PAPER-MECHANICS-20261104 (TLT second bracket) already owns the mechanism",
+    "p": 0.6
+   }
+  ],
+  "correlations": [
+   "The 11-11 18:16Z DIAG_READ_TOKEN rotation, the diag relay's per-path 4 KB truncation and the Actions queue (63-80 queued runs at 19:25-19:50Z) are one observability failure: this review could not run system_invariants, the audit tail or the ssh sweep. AUD-20261111-RELAY-INVARIANTS-BRIDGE + DIAG-TOKEN-LOG-REDACT own it; not re-filed.",
+   "The ict-web-api outages coincide with the two trader restarts (18:11Z, 18:58Z); the 15-min snapshot cadence sees neither."
+  ],
+  "hunt": "Looked at what the register readers actually read after the WSD-S4 freeze (a surface that reports ok with no input that could falsify it): pipeline.py --stats/--gate and review_followthrough.py fall back to files when work_store.db is absent and print no staleness. Found HEALTH-20261111-EXPORT-READS-STALE. Also found the IB paper account id published by relay replies.",
+  "surprises": [
+   "alpaca_paper books one-trade dollar losses of -$28k (SLV 26,615 sh) at about -1.5 to -2 R: a sizing question for /performance-review, not a health fault.",
+   "PI-20261105-IAGTOKEN-0001 recorded diag 401s on 11-05, six days before today's rotation; it is overdue (due 11-06) - the manager holds the token thread."
+  ]
+ },
+ "calls": [
+  {
+   "id": "HR-20261111-C1",
+   "rank": 1,
+   "class": "real money (the live trader VM)",
+   "claim": "Live VM root disk crosses 85% used by ~11-15 and 90% by ~11-19 unless the grower is capped",
+   "evidence": "vm_health disk 76.1 (relay #24922); health/latest free 24.0% 12.3 GB; 11-04 record 35.6% free",
+   "population": "live VM root fs",
+   "trend": "-11.6 pts free / 7 d",
+   "cause": "MEASURED (disk-usage-report #24935, 19:57Z): two trade_journal.db backups written by Tier-2 helpers in the window, .bak-prop-report-skip (2026-11-05, 2.37 GB) and .bak-prop-report-close (2026-11-10, 2.57 GB) = 4.9 GB, about 80% of the ~6 GB regrowth (11.6 pts of 52 GB); plus /var/log/syslog + syslog.1 1.7 GB, trade_journal.db 2.61 GB, runtime_logs 11 GB (unchanged class), a 1.35 GB .git pack. Fix: prune-db-backups (existing Tier-2 action, dry-run first) and have the prop-report helpers prune their own backup",
+   "p": "0.7 INFERRED (linear projection); cause MEASURED",
+   "blast_radius": "trader DB writes, git-sync, logs on the real-money VM",
+   "tier": 2,
+   "check": {
+    "command": "curl /api/bot/health/latest | .snapshot.checks.disk.ctx.free_pct",
+    "rule": ">= 20 on 2026-11-18, the two window backups pruned, and the helpers prune their own backup",
+    "resolves_when": "2026-11-18"
+   },
+   "ending": "row HEALTH-20261111-LIVE-DISK-REGROWTH due 2026-11-15"
+  },
+  {
+   "id": "HR-20261111-C2",
+   "rank": 2,
+   "class": "observability",
+   "claim": "Off-VM register reads (pipeline --gate/--stats, review_followthrough) keep reporting the 11-06 export as current until they read the store or print its age",
+   "evidence": "newest pipeline file 20261106T220235Z; store 4,211 vs export 4,098; no export workflow",
+   "population": "every off-VM reader of docs/claude/work/{pipeline,checklist}",
+   "trend": "export ages 1 day per day",
+   "cause": "src/runtime/work_read.py::_store_for_read returns None off-VM, so pipeline.read_log falls back to read_files with no read-state",
+   "p": "0.9 MEASURED",
+   "blast_radius": "every review and brief that counts open/due/unrouted work",
+   "tier": 1,
+   "check": {
+    "command": "python3 scripts/ops/pipeline.py --stats off-VM",
+    "rule": "either items == store count or the output names the export age",
+    "resolves_when": "2026-11-18"
+   },
+   "ending": "row HEALTH-20261111-EXPORT-READS-STALE due 2026-11-18"
+  },
+  {
+   "id": "HR-20261111-C3",
+   "rank": 3,
+   "class": "research and learning liveness",
+   "claim": "Research SLO breaches stay >= 8/day through 11-18",
+   "evidence": "comms/research/health 11-09..11-11 max 9",
+   "population": "monitor runs",
+   "trend": "6 -> 9 in 7 d",
+   "cause": "research-ops passes not landing (AUD-20261111-RESEARCH-OPS-NO-RECORD) plus 5 structural SLOs (survivors, trials/survivor, runnable floor, grade latency, theme share)",
+   "p": "0.8",
+   "blast_radius": "research pipeline",
+   "tier": 1,
+   "check": {
+    "command": "latest comms/research/health/<date>.json last run counts.breach",
+    "rule": "<= 6 on 2026-11-18",
+    "resolves_when": "2026-11-18"
+   },
+   "ending": "existing rows AUD-20261111-RESEARCH-OPS-NO-RECORD (due 11-13) + AUD-20261019-RESEARCH-SLO-RED (stalled 3 reviews: note filed asking the manager to re-scope it to the 5 structural SLOs under programme-review, due 11-18)"
+  },
+  {
+   "id": "HR-20261111-C4",
+   "rank": 4,
+   "class": "research and learning liveness",
+   "claim": "The trainer trains nothing new: registry stays 98 rows through 11-18",
+   "evidence": "ml/status registry 98 (11-04: 98), last cycle trained 0",
+   "population": "registry rows; cycles",
+   "trend": "flat 7 d",
+   "cause": "open: idle-correct vs never-trained",
+   "p": "0.5",
+   "blast_radius": "ML models feeding real-money ml_entry",
+   "tier": 1,
+   "check": {
+    "command": "curl /api/bot/ml/status | .status.registry.rows",
+    "rule": "> 98, or /ml-review shows no new labels",
+    "resolves_when": "2026-11-18"
+   },
+   "ending": "row HEALTH-20261111-TRAINER-NO-NEW-MODELS (owner ml-review) due 2026-11-18"
+  },
+  {
+   "id": "HR-20261111-C5",
+   "rank": 5,
+   "class": "observability / public repo",
+   "claim": "Every diag ib_open_orders relay reply publishes the IB paper account id in a public issue comment",
+   "evidence": "relay #24934 comment, 8 occurrences",
+   "population": "ib_open_orders relay replies",
+   "trend": "every call",
+   "cause": "the route and the relay do not mask DU account ids (gateway-forensics does)",
+   "p": "0.95 MEASURED",
+   "blast_radius": "paper account identifier only; no credential",
+   "tier": 1,
+   "check": {
+    "command": "relay ib_open_orders?account_id=ib_paper",
+    "rule": "0 unmasked DU ids in the reply",
+    "resolves_when": "2026-11-18"
+   },
+   "ending": "row HEALTH-20261111-IB-ACCTID-PUBLIC due 2026-11-18"
+  },
+  {
+   "id": "HR-20261111-C6",
+   "rank": 6,
+   "class": "demo floor",
+   "claim": "set_leverage pre-flight keeps sending equity/futures symbols to Bybit on every boot",
+   "evidence": "18:11:38Z boot lines",
+   "population": "boots",
+   "trend": "unchanged",
+   "cause": "symbol lists not filtered by venue",
+   "p": "0.9",
+   "blast_radius": "boot log noise; venue error rate",
+   "tier": 2,
+   "check": {
+    "command": "journalctl grep 'set_leverage pre-flight' over one boot",
+    "rule": "0 symbol invalid",
+    "resolves_when": "2026-11-13"
+   },
+   "ending": "existing row HEALTH-20261104-LEVERAGE-PREFLIGHT-EQUITY due 2026-11-13 (stalled; note added)"
+  },
+  {
+   "id": "HR-20261111-C7",
+   "rank": 7,
+   "class": "demo floor",
+   "claim": "Paper closes booked by the position-snapshot reconciler continue (2 this window)",
+   "evidence": "perExitPath paper exchange_flat_reconciled 2; candidate alpaca_paper TLT 6880",
+   "population": "83 paper closes",
+   "trend": "2 (11-04 window: netting/operator rows 3+)",
+   "cause": "INFERRED: TLT second bracket (PAPER-MECHANICS-20261104)",
+   "p": "0.6",
+   "blast_radius": "paper exit labels feeding exit research",
+   "tier": 2,
+   "check": {
+    "command": "/api/bot/performance?window=7d paper.perExitPath",
+    "rule": "exchange_flat_reconciled 0",
+    "resolves_when": "2026-11-18"
+   },
+   "ending": "existing row PAPER-MECHANICS-20261104 (landed_unproven; note added)"
+  }
+ ],
+ "backlog_coverage": {
+  "open_at_start": "gate 444 on the export (unrouted 322, owner_closed 119, high_severity 3)",
+  "due_total": 730,
+  "excluded": 286,
+  "sources": [
+   "pipeline.py --gate (export as of 11-06)",
+   "/api/bot/work/items (store)"
+  ],
+  "count_untriaged": "444 - 3 (walk not run beyond the 3 high-severity ids, which were listed only)",
+  "note": "The open-set walk was cut for budget (skill § 3c). The gate set is computed from a stale export; WSD-DRAIN-W1..W3 own the register drain."
+ },
+ "security_check": {
+  "secret_scan": "could_not_look (GitHub Advanced Security not enabled); manual keyword grep of the window diff: no literal secret",
+  "collaborators": "1 (owner)",
+  "ssh_sweep": "not run (relay cost and queue)",
+  "new_exposure": "IB paper account id in relay replies (C5)"
+ },
+ "new_work_compliance": {
+  "tier23_commits": 111,
+  "total_commits": 1640,
+  "sampled": 4,
+  "violations": 0
+ },
+ "soak_decisions_due": [],
+ "findings": [],
+ "recommended_action": "Manager: dispatch the live-disk row (Tier 2 retention, name the grower first) and the export-read fix before WSD-S7 archives the files; /ml-review answers the trainer question today.",
+ "claude_channel_ping": "/health-review — investigate: 3 concerns, 7 watches, 3 stalled calls; live VM disk 24% free and falling ~11.6 pts/wk"
+}

@@ -42,7 +42,7 @@ moving, not a report: edits to `research/programmes/<NN>-*.yaml` and the "Progra
 machinery); never self-land them. Never edit `config/*`, `THEMES.yaml` or a unit's registered rule.
 
 **The programmes** (`research/programmes/`): P1 active trade management · P2 AI trader · P3 strategy improvement ·
-P4 macro sleeve · P5 prop · P6 data infra · P7 timeframes. **Tracks:** MODEL = P2, P6 and any unit with an `ml_bakeoff:`
+P4 macro sleeve · P5 prop · P6 data infra · P7 timeframes · P8 the alpaca_live book (added 2026-11-11, lane ALPACA-LIVE-BOOK-PLAN: every candidate scored on the cash book the account can hold). **Tracks:** MODEL = P2, P6 and any unit with an `ml_bakeoff:`
 block or theme `ml_health`; INFRA = theme `infra`; everything else TRADING (`research_ops_checks.track`).
 
 ## Step 0 — read
