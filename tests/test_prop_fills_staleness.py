@@ -34,8 +34,8 @@ class TestBalanceMove:
     def test_the_live_incident_reproduces(self):
         """The real 2026-08-20 -> 2026-08-23 pair: -$111.86, zero fills."""
         snaps = [
-            _snap(11, 4871.0, datetime(2026, 8, 23, 8, 11, tzinfo=timezone.utc)),
-            _snap(10, 4982.86, datetime(2026, 8, 20, 18, 57, tzinfo=timezone.utc)),
+            _snap(11, 4924.37, datetime(2026, 8, 23, 8, 11, tzinfo=timezone.utc)),
+            _snap(10, 5036.23, datetime(2026, 8, 20, 18, 57, tzinfo=timezone.utc)),
         ]
         a = fs.assess_balance_move(snaps, [], delta_threshold=25.0)
         assert a["balance_state"] == "unreported"
@@ -45,7 +45,7 @@ class TestBalanceMove:
     def test_a_reported_fill_in_the_window_explains_the_move(self):
         start = datetime(2026, 8, 19, 12, 52, tzinfo=timezone.utc)
         end = datetime(2026, 8, 19, 22, 21, tzinfo=timezone.utc)
-        snaps = [_snap(9, 4983.0, end), _snap(8, 4738.0, start)]
+        snaps = [_snap(9, 5036.37, end), _snap(8, 4791.37, start)]
         a = fs.assess_balance_move(
             snaps, [_fill(datetime(2026, 8, 19, 21, 31, tzinfo=timezone.utc))],
             delta_threshold=25.0,
@@ -61,7 +61,7 @@ class TestBalanceMove:
         """
         start = datetime(2026, 8, 19, 12, 52, tzinfo=timezone.utc)
         end = datetime(2026, 8, 19, 22, 21, tzinfo=timezone.utc)
-        snaps = [_snap(9, 4983.0, end), _snap(8, 4738.0, start)]
+        snaps = [_snap(9, 5036.37, end), _snap(8, 4791.37, start)]
         fill = _fill(datetime(2026, 8, 19, 21, 31, tzinfo=timezone.utc))
         fill["pnl"] = 235.97          # deliberately != the 245.00 delta
         a = fs.assess_balance_move(snaps, [fill], delta_threshold=25.0)
@@ -70,8 +70,8 @@ class TestBalanceMove:
     def test_a_move_under_the_threshold_is_within_noise_not_a_finding(self):
         """The live -0.14 pair. Real, tiny, and not worth an alarm."""
         snaps = [
-            _snap(10, 4982.86, datetime(2026, 8, 20, 18, 57, tzinfo=timezone.utc)),
-            _snap(9, 4983.0, datetime(2026, 8, 19, 22, 21, tzinfo=timezone.utc)),
+            _snap(10, 5036.23, datetime(2026, 8, 20, 18, 57, tzinfo=timezone.utc)),
+            _snap(9, 5036.37, datetime(2026, 8, 19, 22, 21, tzinfo=timezone.utc)),
         ]
         a = fs.assess_balance_move(snaps, [], delta_threshold=25.0)
         assert a["balance_state"] == "within_noise"
@@ -106,13 +106,13 @@ class TestBalanceMove:
         is half-open (prev, latest] precisely so this explains rather than
         alarms."""
         end = datetime(2026, 7, 17, 22, 14, 19, tzinfo=timezone.utc)
-        snaps = [_snap(5, 4928.0, end),
-                 _snap(4, 4990.0, datetime(2026, 7, 17, 8, 42, tzinfo=timezone.utc))]
+        snaps = [_snap(5, 4981.37, end),
+                 _snap(4, 5043.37, datetime(2026, 7, 17, 8, 42, tzinfo=timezone.utc))]
         a = fs.assess_balance_move(snaps, [_fill(end)], delta_threshold=25.0)
         assert a["balance_state"] == "explained"
 
     def test_a_fill_from_ANOTHER_account_does_not_explain_this_one(self):
-        snaps = [_snap(11, 4871.0, NOW), _snap(10, 4982.86, NOW - timedelta(days=2))]
+        snaps = [_snap(11, 4924.37, NOW), _snap(10, 5036.23, NOW - timedelta(days=2))]
         other = _fill(NOW - timedelta(hours=1), account="breakout_2")
         # the caller pre-filters by account; assert the pre-filter is required
         a = fs.assess_balance_move(snaps, [], delta_threshold=25.0)
@@ -180,7 +180,7 @@ class TestReReportCannotManufactureAFinding:
     CORRECTION = datetime(2026, 8, 30, 19, 39, 0, 972519, tzinfo=timezone.utc)
 
     def _snaps(self):
-        return [_snap(19, 4787.34, self.END), _snap(18, 4754.0, self.START)]
+        return [_snap(19, 4840.71, self.END), _snap(18, 4807.37, self.START)]
 
     def test_the_live_false_positive_is_now_explained(self):
         """`prop_fills` id 41: first reported 12.1s INSIDE, corrected 5m31s outside."""
@@ -226,8 +226,8 @@ class TestTheGenuineGapStillFires:
 
     def test_the_2026_08_20_gap_is_still_a_finding(self):
         snaps = [
-            _snap(11, 4871.0, datetime(2026, 8, 23, 8, 11, tzinfo=timezone.utc)),
-            _snap(10, 4982.86, datetime(2026, 8, 20, 18, 57, tzinfo=timezone.utc)),
+            _snap(11, 4924.37, datetime(2026, 8, 23, 8, 11, tzinfo=timezone.utc)),
+            _snap(10, 5036.23, datetime(2026, 8, 20, 18, 57, tzinfo=timezone.utc)),
         ]
         # The repair that exists for this gap (live fill id 33) carries its
         # close time only in prose, so NO instant it holds lands in the window.
@@ -420,8 +420,8 @@ class TestRunPath:
 
     def test_an_unexplained_move_alerts_ONCE_then_latches(self, monkeypatch):
         self._wire(monkeypatch,
-                   snapshots=[_snap(11, 4871.0, NOW),
-                              _snap(10, 4982.86, NOW - timedelta(days=2))],
+                   snapshots=[_snap(11, 4924.37, NOW),
+                              _snap(10, 5036.23, NOW - timedelta(days=2))],
                    fills=[])
         sent = []
         out = fs.run_prop_fills_staleness(now=NOW, force=True, alerter=sent.append)
@@ -458,8 +458,8 @@ class TestRunPath:
         """A newer snapshot supersedes the evidence; it does not repair the
         journal, so an '[OK]' there would be a false statement."""
         self._wire(monkeypatch,
-                   snapshots=[_snap(11, 4871.0, NOW),
-                              _snap(10, 4982.86, NOW - timedelta(days=2))],
+                   snapshots=[_snap(11, 4924.37, NOW),
+                              _snap(10, 5036.23, NOW - timedelta(days=2))],
                    fills=[])
         sent = []
         fs.run_prop_fills_staleness(now=NOW, force=True, alerter=sent.append)
@@ -467,7 +467,7 @@ class TestRunPath:
 
         later = NOW + timedelta(days=1)
         self._wire(monkeypatch,
-                   snapshots=[_snap(12, 4871.0, later), _snap(11, 4871.0, NOW)],
+                   snapshots=[_snap(12, 4924.37, later), _snap(11, 4924.37, NOW)],
                    fills=[])
         out = fs.run_prop_fills_staleness(now=later, force=True,
                                           alerter=sent.append)
@@ -494,8 +494,8 @@ class TestRunPath:
     def test_the_skip_list_excludes_an_account(self, monkeypatch):
         monkeypatch.setenv("PROP_FILLS_STALENESS_SKIP", "breakout_1")
         self._wire(monkeypatch,
-                   snapshots=[_snap(11, 4871.0, NOW),
-                              _snap(10, 4982.86, NOW - timedelta(days=2))],
+                   snapshots=[_snap(11, 4924.37, NOW),
+                              _snap(10, 5036.23, NOW - timedelta(days=2))],
                    fills=[])
         sent = []
         out = fs.run_prop_fills_staleness(now=NOW, force=True, alerter=sent.append)
@@ -529,17 +529,17 @@ class TestOrderIndependence:
         """The real prop_account_status table, 2026-08-23, newest first."""
         d = lambda *a: datetime(*a, tzinfo=timezone.utc)  # noqa: E731
         return [
-            _snap(11, 4871.0, d(2026, 8, 23, 8, 11)),
-            _snap(10, 4982.86, d(2026, 8, 20, 18, 57)),
-            _snap(9, 4983.0, d(2026, 8, 19, 22, 21)),
-            _snap(8, 4738.0, d(2026, 8, 19, 12, 52)),
-            _snap(7, 4747.0, d(2026, 8, 18, 6, 53)),
-            _snap(6, 4825.61, d(2026, 7, 20, 8, 28)),
-            _snap(5, 4928.0, d(2026, 7, 17, 22, 14)),
-            _snap(4, 4929.28, d(2026, 7, 17, 8, 42)),
-            _snap(3, 5116.0, d(2026, 7, 7, 8, 37)),
-            _snap(2, 5188.0, d(2026, 7, 6, 8, 22)),
-            _snap(1, 5215.27, d(2026, 7, 4, 6, 2)),
+            _snap(11, 4924.37, d(2026, 8, 23, 8, 11)),
+            _snap(10, 5036.23, d(2026, 8, 20, 18, 57)),
+            _snap(9, 5036.37, d(2026, 8, 19, 22, 21)),
+            _snap(8, 4791.37, d(2026, 8, 19, 12, 52)),
+            _snap(7, 4800.37, d(2026, 8, 18, 6, 53)),
+            _snap(6, 4878.98, d(2026, 7, 20, 8, 28)),
+            _snap(5, 4981.37, d(2026, 7, 17, 22, 14)),
+            _snap(4, 4982.65, d(2026, 7, 17, 8, 42)),
+            _snap(3, 5169.37, d(2026, 7, 7, 8, 37)),
+            _snap(2, 5241.37, d(2026, 7, 6, 8, 22)),
+            _snap(1, 5268.64, d(2026, 7, 4, 6, 2)),
         ]
 
     def test_reversed_input_grades_identically(self):
