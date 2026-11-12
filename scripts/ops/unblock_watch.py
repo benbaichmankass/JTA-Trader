@@ -379,6 +379,8 @@ def _live_register(repo: Path):
                 items = w._all_items(None)
                 break
             except Exception:  # noqa: BLE001  # allow-silent: retried, then the export fallback is labelled
+                import time  # noqa: PLC0415
+                time.sleep(2 * (_attempt + 1))
                 continue
         if items is None:
             return None
@@ -582,8 +584,13 @@ def tick(*, repo: Path = REPO_ROOT, now: datetime | None = None, force: bool = F
             if appended == len(rows):   # state advances only when every alert reached the ledger
                 _write_json(STATE, new_state)
         rep["alerts"] = {"planned": len(rows), "appended": appended, "dry_run": dry_run}
-        if not dry_run:
-            _write_json(RECEIPT, rep)
+        if not dry_run:   # slim, one line: readable whole through /api/diag/log_file?name=unblock_watch_receipt
+            slim = {k: rep[k] for k in ("generated_at", "sources", "readable", "population", "counts", "alerts")}
+            slim["items"] = [r for r in rep["items"] if r["status"] in (CLEARED, CNL) or "money_wait" in r["flags"]]
+            RECEIPT.parent.mkdir(parents=True, exist_ok=True)
+            tmp = RECEIPT.with_suffix(".tmp")
+            tmp.write_text(json.dumps(slim, separators=(",", ":"), default=str) + "\n", encoding="utf-8")
+            tmp.replace(RECEIPT)
         return {"state": "ran", "alerts": rep["alerts"], "counts": rep["counts"]}
     except Exception as exc:  # noqa: BLE001  # allow-silent: the receipt is not written, so the brief shows it stale; the digest proceeds
         return {"state": "error", "error": f"{type(exc).__name__}: {exc}"}
