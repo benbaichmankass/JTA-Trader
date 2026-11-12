@@ -94,6 +94,9 @@ _DEFAULT_PROTECTED: tuple[str, ...] = (
     # protected key must be SMALL: protecting a large value only moves the
     # overflow into the envelope, where it takes `closed_at` down with it.
     "operator_flatten_intent",
+    # PARTIAL-CLOSE-PNL-NOT-JOURNALED: a partial-close child row's link to its
+    # parent and its pricing state. Short strings a reader branches on.
+    "parent_trade_id", "partial_close_source", "partial_close_state",
 )
 _ELLIPSIS = "…"
 # Hard stop on the trim loop so a pathological payload can never spin.
