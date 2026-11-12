@@ -2,7 +2,7 @@
 id: RQ-20261101-78fc-03
 title: 'ITERATION 1 of ml-exit-head-donchian-1h (fail): does exit-head-donchian-1h-v1 add value OUT OF SAMPLE on trend_donchian_eth (the one leg
   it still closes), and on the transitional/volatile cell where B3 refused it?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -90,3 +90,16 @@ ml_consumer:
   - trend_donchian_eth
   book: demo_floor
 last_dispatched_at: '2026-11-12T04:08:37+00:00'
+grading:
+  attested: RULE-RQ-20261101-78fc-03
+  auto: true
+  decision_rule_id: RULE-RQ-20261101-78fc-03
+  evidence:
+  - research/results/RQ-20261101-78fc-03/43152387165.jsonl
+  graded_at: '2026-11-12'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
