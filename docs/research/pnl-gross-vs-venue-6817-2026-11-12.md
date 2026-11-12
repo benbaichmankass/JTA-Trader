@@ -43,6 +43,10 @@ positions, so the venue's `avg_entry_price`, and with it `closed_pnl`, is a posi
    from `bybit_closed_pnl` (newest 600 rows): mean net R as computed today is **0.2193**, and with costs counted once it is **0.2994**, about
    0.08 R per trade understated. `src/runtime/ml_entry_live_monitor.py::assess` consumes exactly this, against a dev band of −0.041 R.
 
+## DECIDED 2026-11-12 (operator decisions page w11)
+
+The operator chose **"Yes: store the venue's net closed P&L where trusted"**, with the binding note *"Store the venue's always, it is the single source of truth and if we have a gap we need to understand why"*. That is NOT the own-fill-net recommendation below. `pnl` becomes the venue's net figure on every account (demo books included), our computed figure is kept beside it, and every gap is a diagnosis item. Built in PR #25270. The section below is kept as the proposal the decision answered.
+
 ## Proposal (Tier 3: the operator decides; nothing is changed by this document)
 
 **Store `pnl` as NET on every account, computed per row as gross from the row's own fills − the row's own `fee_taker_usd` + `fee_maker_usd`
