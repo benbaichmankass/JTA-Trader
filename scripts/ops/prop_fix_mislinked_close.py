@@ -32,19 +32,24 @@ writing. ``--apply`` commits (the wrapper takes a DB backup first).
 from __future__ import annotations
 
 import argparse
+import os
 import json
-import shutil
 import sqlite3
 import sys
-import time
 from typing import Any, Dict, List, Optional
+
+def _take_backup():
+    """The shared pre-APPLY backup with per-tag retention (scripts/ops/journal_backup.py)."""
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    from scripts.ops.journal_backup import take_backup
+    return take_backup
 
 
 def _backup_db(db_path: str) -> str:
-    """Timestamped ``cp`` backup taken before any ``--apply`` write."""
-    dest = f"{db_path}.bak-prop-mislinked-close-{int(time.time())}"
-    shutil.copy2(db_path, dest)
-    return dest
+    """Pre-APPLY copy to <db>.bak-prop-mislinked-close-<stamp>; keeps only the newest per tag (journal_backup.py)."""
+    return _take_backup()(db_path, "prop-mislinked-close", method="copy", stamp_style="epoch")
 
 
 def _connect(db_path: str, read_only: bool) -> sqlite3.Connection:

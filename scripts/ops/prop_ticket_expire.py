@@ -36,10 +36,10 @@ Output is one JSON object with ``before`` / ``after`` rows.
 from __future__ import annotations
 
 import argparse
+import os
 import json
 import sqlite3
 import sys
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional, Set
@@ -140,19 +140,18 @@ def apply(conn: sqlite3.Connection, decision: Dict[str, Any]) -> Dict[str, Any]:
     conn.commit()
     return _row(conn, before["ticket_id"]) or {}
 
+def _take_backup():
+    """The shared pre-APPLY backup with per-tag retention (scripts/ops/journal_backup.py)."""
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    from scripts.ops.journal_backup import take_backup
+    return take_backup
+
 
 def _backup(db_path: str) -> str:
-    dest = f"{db_path}.bak-prop-ticket-expire-{int(time.time())}"
-    src = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
-    try:
-        dst = sqlite3.connect(dest)
-        try:
-            src.backup(dst)
-        finally:
-            dst.close()
-    finally:
-        src.close()
-    return dest
+    """Pre-APPLY copy to <db>.bak-prop-ticket-expire-<stamp>; keeps only the newest per tag (journal_backup.py)."""
+    return _take_backup()(db_path, "prop-ticket-expire", method="online", stamp_style="epoch")
 
 
 def main(argv: Optional[list] = None) -> int:
