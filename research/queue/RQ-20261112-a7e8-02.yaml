@@ -1,0 +1,96 @@
+# Hand-authored 2026-11-12 by the ML standing lane part 3 (FRONTIER-STATIC-MARKETS, Tier 1), dispatched by Manager Session 2026-11-11a. Decision rule registered BEFORE any run; no arm of this unit has been run on real data. Gates: none.
+id: RQ-20261112-a7e8-02
+title: 'Static-market frontier #2: the repo''s fade (failed-breakout reversion) family at the 1d bar on nine liquid ETFs, base vs a 5-day channel, net of cost'
+status: queued
+cadence: once
+origin: new_hypothesis
+roadmap:
+- M22
+theme: new_strategy_prop
+priority: 2
+kind: experiment
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 40
+  basis: Estimate from comparable harness_stage0 runs (RQ-20261103-b3c9-11, 12 cells x 3 arms at 1d) scaled to 9 cells x 2 arms; the first run replaces it.
+  why_runner: harness_stage0.py fetches keyless public candles (yfinance lane for ETFs) and runs the repo harnesses on CPU; no trainer data.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+question: 'On nine liquid US ETFs (SPY QQQ IWM DIA TLT IEF GLD SLV GDX) at the 1d bar, 2020-06-01..2026-11-11, does the fade family (fade a close beyond the Donchian channel) at its declared base params (20-bar channel) or with a 5-bar channel clear the pooled Stage-0 rule net of the full cost stack?'
+why_this_matters: 'Row FRONTIER-STATIC-MARKETS. The fade family has 10 registered units, every one on crypto perps or SLV 1h; scan of research/queue 2026-11-12: harness_stage0 --family fade on equity-index / bond ETFs at 1d appears in 0 units. Equity indices mean-revert at short daily horizons where crypto trends (see RQ-20261112-a7e8-01 sources), so this asks whether the existing, already-wired family works on the asset class the reversion literature is about, at zero build cost. Pairs with a7e8-01 (a different entry mechanism on the same population and window): if both pass, the confirmation unit tests them together; if only one passes, the mechanism is identified.'
+power:
+  expected_n: 300
+  min_detectable_effect: 0.2
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd = 0.2 at alpha 0.05 / power 0.8 needs ~155 trades pooled; expected_n is an ESTIMATE from b3c9-11 (12 perps at 1d) scaled to 9 ETFs, NOT a measurement. Per-cell floor 20 (the b3c9-11 precedent for 1d) and pooled floor 39; below them the unit grades indeterminate, never FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered rule; best-of-2 arms is a LEAD needing one confirmation'
+intervention_controls:
+  not_applicable: a Stage-0 harness comparison of fixed arms, not an in-trade action or active-management intervention
+decision_rule:
+  id: RULE-RQ20261112a7e802
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'harness_stage0.py --family fade --timeframe 1d on SPY,QQQ,IWM,DIA,TLT,IEF,GLD,SLV,GDX, 2020-06-01..2026-11-11; arms fixed now: B = declared base (donchian 20); D5 = donchian=5. No baseline arm (the family has no ETF history to beat). Net of the harness venue-aware fee + slippage + funding stack (execution_costs.resolve_cost_policy; ETFs pay no funding).'
+  rule: 'An arm PASSES iff pooled n >= 39, pooled net_r > 0, >= 4 of 6 calendar folds net positive, and >= half of the powered cells (n >= 20, at least 2) pass. PASS IF one or both pass: the best by pooled net R is named; it is a LEAD and the follow-up is ONE confirmation unit on a symbol-disjoint ETF basket (sector SPDRs), never a roster edit. FAIL IF both fail with pooled n >= 39: the fade family at these params is closed on this ETF basket and window (other params, horizons and bars are NOT closed). INDETERMINATE otherwise; thin cells are named and floors are never lowered. Arms and thresholds are not changed after any result.'
+  what_it_does_not_do: 'Edits no config, roster or risk; is not a promotion case. yfinance unadjusted daily candles (dividends not added back). Each R is net of the harness''s own cost stack.'
+value:
+  usd_at_stake_per_month: 50
+  confidence: 0.25
+  bucket: frontier
+  basis: 'p(PASS) ~0.25: the family failed everywhere it ran, but never on this asset class at this bar; an estimate, not a measurement.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - fade
+  - --symbols
+  - SPY,QQQ,IWM,DIA,TLT,IEF,GLD,SLV,GDX
+  - --timeframe
+  - 1d
+  - --days
+  - '2500'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-11-11'
+  - --arm
+  - B=
+  - --arm
+  - D5=donchian=5
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '20'
+  - --pooled-n-floor
+  - '39'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ20261112a7e802
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261112-a7e8-02
+grading:
+  auto: true
+related:
+- RQ-20261112-a7e8-01
+- RQ-20261103-b3c9-11
