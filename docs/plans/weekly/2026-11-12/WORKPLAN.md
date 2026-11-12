@@ -10,7 +10,7 @@ Lane WEEKLY-PLANNING (session_01AFoLuJYH2DegJNK1DRonR4), dispatched by Manager S
 
 ## Population and method
 
-- **Population:** every `kind=build` item in state queued / in_flight / blocked in the store snapshot of 2026-11-12 09:05Z: **518** (470 queued, 23 in_flight, 25 blocked; 4,353 items total), plus 2 rows filed at 08:59Z after the triage snapshot (CLOSED-TRADE-SNAPSHOT-ROUTE/-WRITER). `WEEKLY-PLANNING` itself is excluded (this lane records on it). One triage row, TRADEIFY-FUTURES-FRONTIER, is not in the store and was skipped.
+- **Population:** every `kind=build` item in state queued / in_flight / blocked in the store snapshot of 2026-11-12 09:05Z: **518** (470 queued, 23 in_flight, 25 blocked; 4,353 items total). 517 of them are dispositioned here; the 518th is `WEEKLY-PLANNING` itself (this lane records on it). One more row, BACKLOG-DRAIN-20261112 (landed_unproven in the snapshot, in triage file D), was also given its slot, so the decision set is 518. Two snapshot rows filed at 08:59Z (CLOSED-TRADE-SNAPSHOT-ROUTE/-WRITER) were missing from the triage files and were dispositioned by this lane directly. One triage row, TRADEIFY-FUTURES-FRONTIER, is not in the store and was skipped.
 - **Triage input:** six read-only agents (files A–F under `triage/`, folded into this PR). This lane verified samples in every file (≥10 per file; all close/superseded/duplicate/kill claims in A–E were read, PR merges checked on GitHub for #24942, #25022, #23200) and corrected what was wrong (§ Corrections).
 - **Assistant managers** (Manager 2026-11-11a, 09:03Z): UI `session_01AFoLuMr5RixbuwJtqED344` · ML `session_01AFoLuJkXEM1EigH9mSfz1F` · TRADING `session_01AFoLuMroLtrU2biw4ZDoBk` · OPS `session_01AFoLuJUGfpon2bNgwFbFmx`. A row spanning classes went to the class owning its money risk first (TRADING > ML > UI > OPS).
 - **Writes:** 518 dispositions + 337 slot sets + 120 carry-over re-slots + 731 observation routings; **0 write failures** (each retried up to 3×).
@@ -58,7 +58,7 @@ desk               |                 7    2    0    5  29% |                72  
 
 ## 0b. BACKLOG
 
-**BACKLOG (store, 09:05Z):** 731 queued observations — **due 637**, no due date 36, **unrouted (no parent row) 88**; oldest BL-20260525-005 (filed 2026-05-25, 171 d); opened in 7 d **65** (by the filing date in the id, 730 of 731 ids carry one), closed in 7 d **≥119** (terminal records updated since 11-05, excluding the 11-05 import minute; INFERRED, the store's `created_at` is the import time). File export (`checklist_daily_measure.py`, stale export, see HEALTH-20261111-EXPORT-READS-STALE): pipeline due 737, unrouted 315, open 800 — population differs from the store; the store is the record. Last week's drain: BACKLOG-DRAIN-20261105 b1–b3 ran (merge slots on main); BACKLOG-DRAIN-20261112 is this week's lane (operator p4: *"Accept: start after the export fix"*).
+**BACKLOG (store, 09:05Z):** 731 queued observations — **due 637**, no due date 36, **unrouted (no parent row) 88**; oldest BL-20260525-005 (filed 2026-05-25, 171 d); opened in 7 d **65** (by the filing date in the id, 730 of 731 ids carry one), closed in 7 d **≥119** (terminal records updated since 11-05, excluding the 11-05 import minute; INFERRED, the store's `created_at` is the import time). File export (`checklist_daily_measure.py`, stale export, see HEALTH-20261111-EXPORT-READS-STALE): pipeline due 737, unrouted 315, open 800 — population differs from the store; the store is the record. Last week's drain: merge-slot files `backlog-drain-20261105-b1..b3` exist on main, so three drain batches were claimed; their outcome was NOT re-read by this lane (UNVERIFIED); BACKLOG-DRAIN-20261112 is this week's lane (operator p4: *"Accept: start after the export fix"*).
 
 **Routing applied (never bulk-dropped):** all 731 queued observations got an owner + lane: to their parent row's assistant manager when the parent is an open row planned today (TRADING 154, ML 66, UI 8), otherwise to the OPS drain (503: parent closed today, parent landed_unproven/not in today's set, or no parent). The drain may be deferred to the throttle-down if surge needs the capacity (protocol item 5; record the deferral on WEEKLY-PLANNING). Every drop carries its own reason and supporting data (operator p7).
 
@@ -140,7 +140,7 @@ Unfinished carry-overs were re-slotted **first** in their class (right after row
 | OPS | 19 | 61 | 1 | 1 | 9 | 24 | 3 | 503 |
 | **all** | 134 | 203 | 7 | 6 | 55 | 100 | 13 | 731 |
 
-Sum check: 518 dispositions = 518 rows (46 F + 263 A/C/D + 111 B + 98 E, incl. the 2 post-snapshot rows; 2 snapshot rows excluded: WEEKLY-PLANNING, plus TRADEIFY-FUTURES-FRONTIER absent from the store).
+Sum check: 518 dispositions = 46 (F) + 263 (A/C/D) + 111 (B) + 98 (E, incl. the 2 CLOSED-TRADE-SNAPSHOT rows) = 517 snapshot rows + BACKLOG-DRAIN-20261112; the snapshot's 518th row is WEEKLY-PLANNING.
 
 ## 3. Day-by-day schedule per assistant manager (surge)
 
