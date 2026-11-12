@@ -46,12 +46,12 @@ intervention_controls:
   not_applicable: a model-quality bake-off on a static published shard, not an in-trade action or active-management intervention
 compute: auto
 routing:
-  needs_trainer_resident_data: false
+  needs_trainer_resident_data: true
   needs_gpu: false
-  published_data: metis-market-data
+  published_data: null
   peak_memory_gb: 3.0
   est_minutes: 30
-  basis: 'Estimate, NOT measured: 2 shard(s) x 2 arms x 5 folds on published shards, comparable to RQ-20261030-41cc-26; compute: auto routes it to the Kaggle CPU kernel or the runner by the router.'
+  basis: The MES 1d shard is not in the published allowlist; the group reads the trainer-resident v002 shard. Estimate, NOT measured.
 value:
   bucket: ai_trader
   usd_at_stake_per_month: 100
