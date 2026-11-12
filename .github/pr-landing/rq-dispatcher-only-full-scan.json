@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Dispatcher perf only: memoize the config/strategies.yaml parse in candle_dataset._strategies (keyed on file mtime+size) and skip per-unit compute planning for non-selected units under --only. Single-unit dry run 71 s -> ~2 s; --fire path unchanged (no --only). No runtime/order-path/config change."
+}
