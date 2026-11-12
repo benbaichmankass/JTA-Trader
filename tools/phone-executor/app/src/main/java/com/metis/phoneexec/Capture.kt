@@ -23,7 +23,8 @@ import java.util.TimeZone
  * At each step of a flow (positions read, row find, tap, sheet open, field set, confirm / abort) the app records
  *   (a) an OFF-SCREEN bitmap of its own WebView -- the view is drawn to a Canvas; no MediaProjection, no system
  *       screenshot, nothing shown or asked on screen. Never on a credential screen (the caller passes allowBitmap
- *       from [credentialScreen]; FLAG_SECURE does not block this off-screen draw and is not the gate). The redaction rectangles exec.js returns
+ *       from [credentialScreen]; this guards what the APP sends off the phone and is not a screenshot block -- the app
+ *       sets no FLAG_SECURE since 2026-11-12, operator). The redaction rectangles exec.js returns
  *       with the snapshot (account ids, balances, equity, P&L: every masked text) are painted BLACK on the device
  *       before the image is encoded -- the operator's decision is that nothing of that kind leaves the phone;
  *   (b) a sanitized DOM snapshot (exec.js __ex.snapshot: visible elements with geometry, attributes, React
@@ -57,10 +58,10 @@ object Capture {
     }
 
     /** A page that must NEVER be captured as an image: any page off the trade host (the portal / login) and any page with a
-     *  password or e-mail field, a code / number-matching step or a challenge. This is the ONLY bitmap gate now
-     *  (PHONE-SELF-SCREENSHOTS, operator 2026-11-07): FLAG_SECURE (system screenshots / recents) and "the terminal reads ready"
-     *  no longer decide it, because the off-screen draw is not a system screenshot and an unrecognised layout is exactly
-     *  when the image is needed. Pure (CaptureTest). */
+     *  password or e-mail field, a code / number-matching step or a challenge. This is the ONLY gate on the app's OWN
+     *  self-captures uploaded to the VM (PHONE-SELF-SCREENSHOTS, operator 2026-11-07): "the terminal reads ready" no longer
+     *  decides it, because an unrecognised layout is exactly when the image is needed. It is NOT a screenshot block: the
+     *  operator's own system screenshots are never blocked (FLAG_SECURE removed, operator 2026-11-12). Pure (CaptureTest). */
     fun credentialScreen(host: String, pw: Boolean, email: Boolean, codeWait: Boolean, challenged: Boolean): Boolean =
         !(host == "trade.breakoutprop.com" || host.endsWith(".trade.breakoutprop.com")) || pw || email || codeWait || challenged
 

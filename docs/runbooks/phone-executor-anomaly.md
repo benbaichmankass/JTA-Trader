@@ -41,7 +41,7 @@ Only then fix. **A layout adaptation is one possible fix among several, not the 
 ## 5. Ship path
 
 - **`exec.js` only (the normal case):** merge to `main` -> `phone-exec-js-sign` signs it -> the phone fetches and verifies it (every 30 min, or on restart) -> heartbeat `exec_js` shows the new version, `exec_src: remote`. No APK.
-- **APK + operator install** only when Kotlin must change (call sites in `MainActivity.kt`, `FLAG_SECURE` handling, `Api.kt` payloads, a native masked screenshot). Build with workflow `phone-executor-apk`; the operator installs it (physical): open the APK artifact on the phone, install over the app, reopen once so it logs in. State exactly that in the report.
+- **APK + operator install** only when Kotlin must change (call sites in `MainActivity.kt`, `Api.kt` payloads, a native masked screenshot). Build with workflow `phone-executor-apk`; the operator installs it (physical): open the APK artifact on the phone, install over the app, reopen once so it logs in. State exactly that in the report.
 
 ## 6. Verification
 
@@ -66,7 +66,7 @@ Symptom: `terminal_miss "tabs=4 inputs=0 probe=false"` every minute from 2026-11
 
 ## 7b. Screenshots the app takes itself (PHONE-SELF-SCREENSHOTS, operator 2026-11-07)
 
-The app draws its OWN WebView to an off-screen bitmap (no system screenshot, nothing on screen), paints black boxes over every masked value, and POSTs it with a sanitised DOM snapshot to `POST /api/bot/prop/phone/capture` (stored on the VM only, 7-day TTL, never in git). **The only gate is "is this a credential screen"** (`Capture.credentialScreen`: off the trade host, a password / e-mail field, a code step, a challenge). `FLAG_SECURE` (system screenshots / recents) and "the terminal reads ready" do **not** gate it, and no image is taken without its redaction list (the snapshot of the same page).
+The app draws its OWN WebView to an off-screen bitmap (no system screenshot, nothing on screen), paints black boxes over every masked value, and POSTs it with a sanitised DOM snapshot to `POST /api/bot/prop/phone/capture` (stored on the VM only, 7-day TTL, never in git). **The only gate is "is this a credential screen"** (`Capture.credentialScreen`: off the trade host, a password / e-mail field, a code step, a challenge). "the terminal reads ready" does **not** gate it (and the app sets no `FLAG_SECURE` since 2026-11-12), and no image is taken without its redaction list (the snapshot of the same page).
 
 When it captures: **(a)** on every `terminal_miss`, foreground and background, flow `anomaly` step `terminal_miss`, once per new page shape (`shape:<hash>`) then at most every 30 min; **(b)** every 10 min while the terminal is open, flow `periodic` step `view` (one run holds 60 steps); **(c)** at each step of the existing flows (`entry`, `amend`, `drill`, `positions`, `closed`).
 
@@ -98,6 +98,6 @@ Never copy a capture image into git or a PR (public repo): describe what it show
 
 ## 8. Known limits
 
-- Images are redacted on the device by exec.js's mask list (account ids, balances, equity, P&L): a value the masker does not know is NOT hidden, so check an image before quoting it. The operator's own system screenshots are a different path (`FLAG_SECURE`, on until a tick reads `logged_in`, `MainActivity.setSecure`); the app's own captures do not depend on it.
+- Images are redacted on the device by exec.js's mask list (account ids, balances, equity, P&L): a value the masker does not know is NOT hidden, so check an image before quoting it. The operator's own system screenshots are never blocked: the app sets no `FLAG_SECURE` (removed 2026-11-12, operator: "There is no blocking of screenshots").
 - Expectation failures the page script cannot see (a Kotlin exception) arrive only as `error` events with a short reason.
 - `ready` stays strict by design: after an unrecognised page the app reads nothing until a lane adapts it, which is what the alert is for.

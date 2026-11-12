@@ -775,11 +775,12 @@ def test_anomaly_steps_and_quiet_while_status_fresh(monkeypatch):
     assert len(calls) == 1                                                                # digits masked: same signature
 
 
-# PHONE-BG-MISS: the heartbeat keeps the FLAG_SECURE state and the minutes since the background terminal_miss.
-def test_heartbeat_keeps_secure_and_bg_miss_fields(_iso):
+# PHONE-BG-MISS: the heartbeat keeps the minutes since the background terminal_miss. PHONE-NO-FLAG-SECURE (2026-11-12):
+# the app sets no FLAG_SECURE any more, so an older build's secure / secure_why / secure_min fields are dropped, not stored.
+def test_heartbeat_keeps_bg_miss_and_drops_secure_fields(_iso):
     pe.record_event(_dev(), {"event": "heartbeat", "reason": "background: no ticket waiting",
                              "state": {"secure": True, "bg_miss_min": 12, "secure_why": "unread:resume", "secure_min": 3,
                                        "not_allowlisted": "x"}})
     st = pe.last_heartbeat("breakout_2")["state"]
-    assert st["secure"] is True and st["bg_miss_min"] == 12 and "not_allowlisted" not in st
-    assert st["secure_why"] == "unread:resume" and st["secure_min"] == 3, "the reason the flag is on is reported"
+    assert st["bg_miss_min"] == 12 and "not_allowlisted" not in st
+    assert not ({"secure", "secure_why", "secure_min"} & set(st)), "the removed screenshot-block fields are not reported"

@@ -868,12 +868,10 @@ _HB_KEYS = {"st", "paused", "hold", "host", "onAccount", "path_depth", "ready", 
             # PHONE-EXEC-OBSERVABLE-1018: which page-side script runs (version, bundled|remote, last refresh answer),
             # captures posted this process + the last capture error, drills run + the last drill's outcome
             "exec_js", "exec_src", "js_refresh", "captures", "capture_err", "drills", "drill_last",
-            # PHONE-BG-MISS (2026-11-07): is FLAG_SECURE on right now (blank screenshots), and minutes since the background
-            # engine last posted a terminal_miss for a page it did not recognise
-            "secure", "bg_miss_min",
-            # PHONE-SECURE-ONRESUME (2026-11-12): WHY FLAG_SECURE is in its state (boot | nav_offhost | unread:<src> |
-            # credential:<predicate>:<src> | clear:<src>) and minutes since that reason was set
-            "secure_why", "secure_min"}
+            # PHONE-BG-MISS (2026-11-07): minutes since the background engine last posted a terminal_miss for a page it did
+            # not recognise. (The FLAG_SECURE fields secure / secure_why / secure_min were dropped 2026-11-12 with the flag:
+            # operator, "There is no blocking of screenshots".)
+            "bg_miss_min"}
 
 
 def _write_heartbeat(account_id: str, reason: str, state: Any) -> None:

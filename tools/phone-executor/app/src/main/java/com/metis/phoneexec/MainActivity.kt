@@ -214,7 +214,7 @@ class MainActivity : Activity() {
         super.onCreate(b)
         instance = this
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        setSecure(true, "boot")   // fail closed until the first page read (secureCheck, onResume / onPageFinished / tick)
+        // PHONE-NO-FLAG-SECURE (operator 2026-11-12): the app never blocks screenshots or recents (no FLAG_SECURE anywhere).
         api = Api(this); ledger = Ledger(this)
         Store.setFlag(this, Store.RELOGIN_LATCHED, false)   // an older build's latch must not survive the update
         execSrc = assets.open("exec.js").bufferedReader().readText()
@@ -236,18 +236,9 @@ class MainActivity : Activity() {
         web.settings.allowFileAccess = false; web.settings.allowContentAccess = false
         web.settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
         // Same WebView setup as the 1a probe, whose login worked (stock UA, default navigation handling):
-        // no shouldOverrideUrlLoading filter, every navigation stays in THIS WebView and cookie store.
-        // Fail closed on navigation: any page off the trade host (the portal / login / code step) is secure at once;
-        // the terminal itself is cleared only by tick() after it read state == logged_in.
-        web.webViewClient = object : WebViewClient() {
-            override fun onPageStarted(v: WebView?, url: String?, f: android.graphics.Bitmap?) {
-                if (url == null || !url.startsWith("https://trade.breakoutprop.com/")) setSecure(true, "nav_offhost")
-            }
-            // PHONE-SECURE-ONRESUME: a trade-host page that finished loading is read at once (not on the next tick)
-            override fun onPageFinished(v: WebView?, url: String?) {
-                if (url != null && url.startsWith("https://trade.breakoutprop.com/")) secureCheckSoon("page_finished")
-            }
-        }
+        // no shouldOverrideUrlLoading filter, every navigation stays in THIS WebView and cookie store (a WebView with
+        // no client would hand navigations to the system browser, so the plain client stays).
+        web.webViewClient = WebViewClient()
         status = TextView(this).apply { setPadding(16, 8, 16, 8); setBackgroundColor(Color.parseColor("#202833")); setTextColor(Color.WHITE); textSize = 12f }
         val bar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -306,59 +297,12 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume(); resumed = true
-        // PHONE-SECURE-ONRESUME (operator 2026-11-12 06:37Z on 1b.373: "I still can't take a screenshot"): the flag was
-        // cleared only by tick(), which waits up to 30 s and returns while a background job holds `busy` (2-4 min,
-        // MEASURED 06:26:26 -> 06:30:01). Opening the app now re-reads the page at once, independent of `busy`.
-        secureCheckSoon("resume")
         // the background engine logged in while we were away: reload the kiosk once so it picks up the shared session
         if (bgLoginAtMs > fgReloadMs) { fgReloadMs = System.currentTimeMillis(); web.loadUrl(home()) }
         if (bgWakeUntilMs > System.currentTimeMillis()) { wokeAtMs = System.currentTimeMillis(); scope.launch { delay(3000); tick() } }
     }
 
     override fun onPause() { resumed = false; super.onPause() }
-
-    /** FLAG_SECURE (blank screenshots / recents) is ON for every credential-bearing screen -- off the trade host, a
-     *  password / e-mail field, the code step, a challenge, the page before its first read, the Setup dialog (which sets
-     *  its own flag) -- and OFF on every other trade-host page, which shows balances and positions but never a credential
-     *  (operator 2026-10-06 and 2026-11-11: screenshots of the app; PHONE-SELF-DIAGNOSE). */
-    private var secureOn = false
-    /** Why the flag is in its current state, for the heartbeat (secure_why): boot | nav_offhost | unread:<src> |
-     *  credential:<host|pw|email|code|challenge>:<src> | clear:<src>. One read answers "why is my screenshot black". */
-    private var secureWhy = "init"
-    private var secureAtMs = 0L
-    private fun setSecure(on: Boolean, why: String) {
-        if (why != secureWhy) { secureWhy = why; secureAtMs = System.currentTimeMillis() }
-        if (on == secureOn) return
-        secureOn = on
-        if (on) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE) else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
-    }
-
-    /** Apply the credential predicate (Capture.credentialScreen) to a kiosk-page state read; names the predicate held. */
-    private fun applySecure(s: JSONObject, src: String) {
-        val host = s.optString("host")
-        val onTrade = host == "trade.breakoutprop.com" || host.endsWith(".trade.breakoutprop.com")
-        val held = listOfNotNull(if (!onTrade) "host=" + host.take(40) else null, if (s.optBoolean("pw")) "pw" else null,
-            if (s.optBoolean("email")) "email" else null, if (s.optBoolean("codeWait")) "code" else null,
-            if (s.optBoolean("challenged")) "challenge" else null)
-        val on = Capture.credentialScreen(host, s.optBoolean("pw"), s.optBoolean("email"), s.optBoolean("codeWait"), s.optBoolean("challenged"))
-        setSecure(on, if (on) "credential:" + held.joinToString("+") + ":" + src else "clear:$src")
-    }
-
-    /** Read the KIOSK page now (not the background engine's), independent of `busy`; up to 8 tries 2 s apart while the
-     *  page does not answer. Reading only -- never a click, a claim or a navigation. */
-    private var secureJob: Job? = null
-    private fun secureCheckSoon(src: String) {
-        secureJob?.cancel()
-        secureJob = scope.launch {
-            for (i in 0 until 8) {
-                delay(if (i == 0) 800L else 2_000L)
-                if (!resumed) return@launch
-                val s = try { fg.ensure(); fg.obj("__ex.state()") } catch (e: Exception) { null }
-                if (s != null) { applySecure(s, src); return@launch }
-                if (secureOn) secureWhy = "unread:$src"
-            }
-        }
-    }
 
     private fun setStatus(s: String) { status.text = s; lastStatus = s }
     /** The touch-hold protects a HUMAN LOGIN only (operator 2026-10-06 09:06Z): once logged in it never blocks claim,
@@ -414,7 +358,6 @@ class MainActivity : Activity() {
                 val pm = getSystemService(PowerManager::class.java)
                 setStatus("saved. overlay=${Settings.canDrawOverlays(this)} battery_exempt=${pm.isIgnoringBatteryOptimizations(packageName)}")
             }.setNegativeButton("Cancel", null).create()
-        dlg.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         dlg.show()
     }
 
@@ -478,13 +421,6 @@ class MainActivity : Activity() {
                 s.optBoolean("pw") || s.optBoolean("email") || s.optBoolean("codeWait") -> "login"
                 else -> "other"
             }
-            // PHONE-SELF-DIAGNOSE (operator 2026-11-11, "me being able to take screenshots"): FLAG_SECURE follows the SAME
-            // credential predicate as the capture gate (Capture.credentialScreen: off the trade host, a password / e-mail
-            // field, a code step or a challenge), not "the terminal read logged_in". A trade-host page that read "other"
-            // (a new layout, a terminal_miss, a half-loaded view) carries no credential and is exactly the screen the
-            // operator needs to screenshot. An unreadable page returns above and keeps the previous state (fail closed
-            // from onCreate / onPageStarted).
-            applySecure(s, "tick")
             lastPageReadMs = System.currentTimeMillis()
             if (paused()) {
                 if (st == "logged_in") { pausedUntilMs = 0L; pauseBtn.text = "Pause"; setStatus("logged in: pause lifted") }
@@ -735,9 +671,8 @@ class MainActivity : Activity() {
             .put("exec_js", ExecJs.version).put("exec_src", ExecJs.source).put("js_refresh", jsRefresh.take(30))
             .put("captures", Capture.posted).put("capture_err", Capture.lastError.take(40))
             .put("drills", drillsRun).put("drill_last", drillLast.take(40))
-            // PHONE-BG-MISS: FLAG_SECURE state (why a screenshot is blank) and minutes since the background terminal_miss
-            .put("secure", secureOn).put("secure_why", secureWhy.take(60))
-                .put("secure_min", if (secureAtMs > 0L) (now - secureAtMs) / 60_000 else -1L).put("bg_miss_min", if (lastBgMissMs > 0L) (now - lastBgMissMs) / 60_000 else -1L)
+            // PHONE-BG-MISS: minutes since the background terminal_miss (the FLAG_SECURE fields went with the flag, 2026-11-12)
+            .put("bg_miss_min", if (lastBgMissMs > 0L) (now - lastBgMissMs) / 60_000 else -1L)
         // never touch the WebView while backgrounded (jsObj is bounded anyway and yields null on a timeout)
         if (resumed) jsObj("__ex.terminal()")?.let { tm ->
             for (k in listOf("ready", "probe", "panels", "orderControl", "ticketOpen", "buySell")) state.put(k, tm.optBoolean(k))
@@ -2150,15 +2085,15 @@ class MainActivity : Activity() {
     }
 
     // ---------------- observable + testable (PHONE-EXEC-OBSERVABLE-1018) ----------------
-    /** One step capture on [p] (Capture.kt), quietly; a bitmap only while the terminal reads logged in and FLAG_SECURE is off
-     *  (never a credential screen). Never throws into the flow. */
+    /** One step capture on [p] (Capture.kt), quietly; a bitmap only when the page is not a credential screen
+     *  (Capture.credentialScreen). Never throws into the flow. */
     private suspend fun cap(run: CaptureRun?, p: Page, step: String, ok: Boolean?, note: String = "", scope: String = "page") {
         if (run == null) return
         try {
             // PHONE-SELF-SCREENSHOTS (operator 2026-11-07, "the app can take the screenshots itself"): the image is taken whenever the
             // page is NOT a credential screen (off the trade host, password / e-mail field, code step, challenge). It no longer
             // waits for lastState == logged_in or the terminal reading ready (neither holds on an unrecognised layout, which is when
-            // the image is needed) and FLAG_SECURE does not matter (the off-screen draw is not a system screenshot). The redaction
+            // the image is needed). The app sets no FLAG_SECURE (removed 2026-11-12) and this off-screen draw never depended on it. The redaction
             // boxes stay (Capture.step refuses the image when the snapshot that carries them is missing).
             val st = try { p.obj("__ex.state()") } catch (e: Exception) { null }
             val credential = st == null || Capture.credentialScreen(st.optString("host"), st.optBoolean("pw"), st.optBoolean("email"),
