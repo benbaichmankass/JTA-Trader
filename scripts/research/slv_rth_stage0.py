@@ -171,7 +171,7 @@ def main(argv: list[str] | None = None) -> int:
                "--fold-majority", str(a.fold_majority), "--n-floor", str(a.n_floor), "--out", str(abl)]
         for arm in a.arm:
             cmd += ["--arm", arm]
-        rc = subprocess.run(cmd, cwd=str(REPO)).returncode
+        rc = subprocess.run(cmd, cwd=str(REPO), check=False).returncode
         tp = abl / "arms" / f"{primary_arm}__trades.jsonl"
         if rc != 0 or not tp.exists():
             records.append({"verdict": "indeterminate", "read_state": "producer_failed", "population": f"{a.leg} {label}",
