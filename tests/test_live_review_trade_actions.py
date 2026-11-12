@@ -166,12 +166,13 @@ def test_close_on_every_account_class(act):
     res = _run(db, act, _ti("close"))
     by = _by(res)
     assert by["bybit_2"]["executed"] and by["alpaca_live"]["executed"]
-    assert by["tradeify_1"]["reason"] == "no_action_path:close"      # prop VM: no executor
+    # prop VM: a close reaches the account's executor (CAP-PROP-VM-CLOSE, operator 2026-11-12; was no_action_path)
+    assert by["tradeify_1"]["executed"] and by["tradeify_1"]["account_class"] == "prop_vm"
     # phone: a close reaches the phone's server-issued action channel (operator 2026-11-09; was "TP only")
     assert by["breakout_2"]["executed"] and by["breakout_2"].get("reason") != "no_action_path:close"
-    assert sorted(a[1] for a in act["actions"]) == ["alpaca_live", "breakout_2", "bybit_2"]
+    assert sorted(a[1] for a in act["actions"]) == ["alpaca_live", "breakout_2", "bybit_2", "tradeify_1"]
     assert res["package_sl_moved"] is False                          # a close never moves the shared stop
-    assert {a for a, _ in act["alerts"]} == {"tradeify_1"}           # the one remaining refusal pinged once
+    assert act["alerts"] == []                                       # every account class has a close path now
     assert res["writeback"]["action"] == "close"
     assert res["writeback"]["disposition"]["mandate"] == lri.TRADE_MANDATE_ID
 

@@ -1,0 +1,185 @@
+id: RQ-20261112-0bc8-01
+title: 'Volume composition -> regime-vol head (feature add): does adding the size/count surprise (ss, sn) to the shipped 15m regime-head
+  recipe lift its out-of-sample volatile-AUC over the champion AND over a plain-volume control? (BTC/ETH/SOL 15m, held-out 2025-10..2026-10)'
+status: queued
+cadence: once
+roadmap:
+- L-DATA
+theme: ml_health
+priority: 2
+kind: experiment
+question: 'Registered consequence of RQ-20261111-f5c8-02 PASS (row VOLUME-COMPOSITION-RESEARCH; evidence PR #25155): at the 4h bar on 6 crypto
+  perps a SIZE-led volume surprise carried held-out rank information on the size of the next move beyond plain volume and range (partial rank
+  IC -0.069, t -8.19, 27 months). That is ONE passing univariate unit, not a feature; this bake-off decides. CONSUMER: the 15m regime head that
+  supplies the router''s vol axis (ml_vol_regime_for_symbol reads P(volatile) of the advisory head for the SYMBOL; BTC''s 15m head labels the 1h/4h
+  cells too). CHAMPION = the shipped btc-regime-15m-lgbm-v2 recipe (same feature columns minus the string categorical vol_bucket, same LightGBM
+  params and 28x volatile class weight, same frozen regime_label: forward 5-bar vol > 0.005). CONTROL vol = champion + plain volume surprise
+  (sv15, sv4h). CANDIDATE comp = champion + sv15, ss15, sn15, sv4h, ss4h, sn4h (the composition split at the 15m grain and the trailing-4h grain
+  f5c8-02 measured). Since sv = ss + sn exactly, comp vs vol isolates WHO trades from HOW MUCH trades. Data: Binance USD-M 15m klines (trade
+  count field) 2021-01..2026-10, fed through the REAL MarketFeaturesBuilder for the champion columns and label; Binance PROXIES Bybit linear.
+  Prior work: RQ-20261012-75b2-16/-17 (BTC/ETH 15m head vs class prior, both FAIL on macro-F1 lift: the champion is weak, so the bar here is
+  improvement over it, not absolute skill).'
+why_this_matters: 'The regime head''s vol label vetoes entries through the trend_vol OFF-cells in config/regime_policy.yaml (trend_donchian,
+  ict_scalp_5m, squeeze_breakout_4h on BTC). Its features are price-only (returns + rolling vol + calendar); no volume or trade-count column is in
+  market_features today. If composition lifts the head beyond plain volume, it is a cheap new side-stream (trade count is in the free kline
+  archive; live serving would need a Binance kline read because Bybit klines carry no count, which is a parity build of its own). If it does not,
+  the f5c8-02 signal does not survive contact with the consuming head and the family moves to the exit head or tick data.'
+evidence_class:
+  holdout: holdout_window
+  claim: model_quality
+power:
+  expected_n: 37000
+  min_detectable_effect: 0.005
+  effect_units: auc
+  sd: 0.4
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, not a measurement: n = held-out 15m bars per symbol (2025-10-01..2026-10-31, ~13 months x 2,880 = ~37,000), of which ~2-4%
+    are volatile (smoke on 2020-06..09 BTC, outside every span: 2.2%), so ~750-1,500 positives per symbol. A single AUC on that many positives has
+    SE ~0.008, but comp/vol/champion are nested models scored on IDENTICAL rows, so the paired delta is far tighter; 0.005 AUC is set as the
+    smallest lift worth a new side-stream, not as the detectable floor. Bars are autocorrelated, so the CV leg (5 purged folds, embargo 96 bars)
+    is required too, and the rule needs all 3 symbols. sd 0.4 is the implied per-row sd of the paired AUC delta if its SE at 37,000
+    rows is ~0.002 (0.002 x sqrt(37,000)); at that guess the one-sample floor for 0.005 is ~50,000 rows, ABOVE the 37,000 holdout rows per
+    symbol, so the holdout leg alone is under-powered for the bar: a real lift near 0.005 can miss, and the CV leg (~120,000 OOS rows per
+    symbol) carries more of the power. The rule''s FAIL needs comp - vol < +0.001 on every symbol''s holdout, so under-power reads
+    INDETERMINATE more often than a false FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: 'Replays the public Binance archive for pinned months (2021-01..2026-10 all published; 2026-10 checked HTTP 200 on
+      2026-11-12); nothing accrues.'
+decision_rule:
+  id: RULE-VOLCOMP-REGIMEHEAD-01
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'Per symbol (group), ml_bakeoff.py paired difference in AUC (auc_ovr; binary volatile vs range) of an arm minus a reference on
+    identical purged expanding walk-forward folds (5 folds, embargo 96 rows, min_train_frac 0.4) = cv window, and on the single holdout window
+    (train strictly before 2025-10-01 less the embargo, test 2025-10-01..2026-10-31) = holdout window. Positive = arm better.'
+  rule: 'PASS IF candidate comp, in EVERY one of BTCUSDT, ETHUSDT, SOLUSDT: (a) comp - champion >= +0.005 on the cv mean AND on the holdout, AND
+    (b) comp - vol >= +0.001 on the cv mean AND on the holdout. FAIL IF comp - vol < +0.001 on the holdout in every symbol (composition adds
+    nothing to the head beyond plain volume). INDETERMINATE otherwise (e.g. comp beats vol but not champion by 0.005), or if fewer than 3 usable
+    folds, an arm is unavailable or errors, or a symbol''s holdout window is empty. Thresholds, spans, build parameters and arms are not changed
+    after any result.'
+  min_n: 3 usable CV folds per symbol; holdout >= 20 rows (ml_bakeoff floor); all 3 symbols built.
+  what_it_does_not_do: 'Trains no registered model, touches no registry, manifest, stage, dataset version or config; promotes nothing (a head
+    change is Tier-3 and would follow its own shadow soak). Grades model quality on the regime LABEL only, not trade P&L: the money test of a
+    better head is the router-cell walk-forward (regime-selectivity skill), authored only on PASS. Does not test the EXIT head (exit-policy-v1): that arm is its own unit, registered in parallel (operator 2026-11-12 07:46Z). Does not reproduce
+    vol_bucket or the 60-day recency sample weight (ml_bakeoff has neither; identical for every arm). HOLDOUT HONESTY: f5c8-02, which selected
+    this feature, read 2024-07..2026-09, so the 2025-10..2026-09 part of this holdout is NOT independent of the feature''s discovery; only
+    2026-10 is unread by it. First read of a REGIME-VOL-HEAD family window: claimed via holdout_lock.py at run time (n_tries 1, no deflation).
+    No look at either window was taken before registration; the builder was smoke-tested on BTC 2020-06..2020-09 (outside every span) for
+    fetch/build mechanics only, and no arm was fitted.'
+  proposal_mapping: 'The registered rule decides (OPERATING-PLAN section 2: edge is decided offline against a rule registered before the
+    run; operator 2026-11-12 07:46Z, planning page p3: shadow on paper is only for a demoted leg in iteration, never a step to real money;
+    this withdraws a pre-run shadow-first clause the manager added at 07:36Z and reversed at 07:55Z). The holdout overlap with f5c8-02 is a
+    stated caveat on the reading (what_it_does_not_do), not a promotion stage. PASS -> (1) author the router-cell walk-forward with the comp head''s vol label vs the champion''s (money, net of cost,
+    regime-selectivity rules); (2) [the exit-head arm is registered SEPARATELY and in parallel, operator 07:46Z, graded by its own rule, not conditioned on this one]; (3) file the live-serving parity
+    build (Binance kline trade-count read beside the Bybit bars). FAIL -> composition adds nothing to the 15m regime head beyond plain volume
+    (this configuration closed, not the family); record whether plain volume itself helped (headline check vol_vs_champion) as its own finding.
+    INDETERMINATE -> read which clause missed and file the narrower follow-up.'
+practice_precedent: 'M4 (rule and analysis plan registered before the run), M5 (holdout after the CV span), M6 (beat the simple baseline, here the
+  shipped champion AND plain volume, on the same rows) in docs/reference/trading-and-model-practice-principles.md; M13 (holdout reuse declared,
+  not hidden). Average trade size as an informed-flow proxy is standard microstructure practice; in-repo precedent RQ-20261111-f5c8-02.'
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  basis: 'stand-in: the head vetoes entries on 3 BTC legs through router cells; the dollar figure is not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 30
+  why_runner: Fetches keyless public Binance Vision 15m klines (trade count is not in metis-market-data's market_features/market_raw); reads no trainer
+    data.
+  basis: 'Smoke run: BTC 4 months fetched and built in 8 s on a session container; full span ~3 x 70 months ~ 7 min build, 3 arms x 6 fits x 3
+    symbols of 200-tree LightGBM on ~200k rows each. ESTIMATE.'
+run:
+  command:
+  - python3
+  - scripts/research/volcomp_regime_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --symbols
+  - BTCUSDT,ETHUSDT,SOLUSDT
+  - --start
+  - 2021-01
+  - --end
+  - 2026-10
+  - --season-days
+  - '20'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261112-0bc8-01
+ml_consumer:
+  book: demo_floor
+  consumer: src/runtime/regime/ml_vol_verdict.py
+  decision: the vol axis of the router's trend_vol OFF-cells (config/regime_policy.yaml) that veto BTC entries on trend_donchian, ict_scalp_5m and
+    squeeze_breakout_4h
+  legs:
+  - trend_donchian
+  - ict_scalp_5m
+  - squeeze_breakout_4h
+ml_bakeoff:
+  task: classification
+  metric: auc_ovr
+  dataset:
+    kind: csv
+    groups:
+      BTCUSDT: {path: BTCUSDT_15m.csv}
+      ETHUSDT: {path: ETHUSDT_15m.csv}
+      SOLUSDT: {path: SOLUSDT_15m.csv}
+    ts_col: ts
+    target: regime_label
+    features: [rolling_log_return_vol, log_return, log_return_lag_1, log_return_lag_2, hour_of_day, dayofweek]
+    extra_columns: [sv15, sn15, ss15, sv4h, sn4h, ss4h]
+    holdout_after: '2025-10-01'
+  cv: {folds: 5, embargo_rows: 96, min_train_frac: 0.4}
+  baseline: champion
+  controls: [vol]
+  candidates: [comp]
+  learners:
+    champion:
+      kind: lightgbm
+      params: &champ {n_estimators: 200, learning_rate: 0.05, num_leaves: 31, min_child_samples: 50, colsample_bytree: 0.9, subsample: 0.9,
+        subsample_freq: 5, random_state: 42, class_weight: {0: 1.0, 1: 28.0}}
+    vol:
+      kind: lightgbm
+      params: *champ
+      feature_blocks:
+      - {kind: df_columns, columns: [sv15, sv4h]}
+    comp:
+      kind: lightgbm
+      params: *champ
+      feature_blocks:
+      - {kind: df_columns, columns: [sv15, ss15, sn15, sv4h, ss4h, sn4h]}
+  rule:
+    min_folds: 3
+    pass_if:
+    - {group: [BTCUSDT, ETHUSDT, SOLUSDT], vs: baseline, window: cv, op: '>=', value: 0.005}
+    - {group: [BTCUSDT, ETHUSDT, SOLUSDT], vs: baseline, window: holdout, op: '>=', value: 0.005}
+    - {group: [BTCUSDT, ETHUSDT, SOLUSDT], vs: vol, window: cv, op: '>=', value: 0.001}
+    - {group: [BTCUSDT, ETHUSDT, SOLUSDT], vs: vol, window: holdout, op: '>=', value: 0.001}
+    fail_if_no_candidate_reaches:
+    - {group: any, vs: vol, window: holdout, op: '>=', value: 0.001}
+    headline_checks:
+    - {name: vol_vs_champion_holdout, learner: vol, group: [BTCUSDT, ETHUSDT, SOLUSDT], vs: baseline, window: holdout, op: '>=', value: 0.005}
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261111-f5c8-02.yaml
+- research/queue/RQ-20261012-75b2-16.yaml
+- research/queue/RQ-20261012-75b2-17.yaml
+- scripts/research/volcomp_regime_bakeoff.py
+- scripts/research/ml_bakeoff.py
+- ml/configs/btc-regime-15m-lgbm-v2.yaml
+- src/runtime/regime/ml_vol_verdict.py
+grading:
+  auto: true
+  decision_rule_id: RULE-VOLCOMP-REGIMEHEAD-01
+last_dispatched_at: '2026-11-12T09:08:35+00:00'

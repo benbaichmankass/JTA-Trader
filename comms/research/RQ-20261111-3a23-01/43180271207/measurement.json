@@ -1,0 +1,457 @@
+{
+  "mode": "classify",
+  "bars": {
+    "auc_gain": 0.05,
+    "lift_r": 0.05,
+    "min_leg_n": 300,
+    "skip_quantile": 0.2,
+    "folds": 4,
+    "embargo": 5
+  },
+  "files": [
+    "comms/strategy_evidence/research_emits/2026-11-11/ada_pullback_2h__trades.jsonl",
+    "comms/strategy_evidence/research_emits/2026-11-11/avax_pullback_2h__trades.jsonl",
+    "comms/strategy_evidence/research_emits/2026-11-11/eth_pullback_2h__trades.jsonl",
+    "comms/strategy_evidence/research_emits/2026-11-11/eth_pullback_prop_2h__trades.jsonl",
+    "comms/strategy_evidence/research_emits/2026-11-11/htf_pullback_trend_2h__trades.jsonl",
+    "comms/strategy_evidence/research_emits/2026-11-11/sol_pullback_2h__trades.jsonl",
+    "comms/strategy_evidence/research_emits/2026-11-11/trend_donchian_1h__trades.jsonl",
+    "comms/strategy_evidence/research_emits/2026-11-11/trend_donchian__trades.jsonl",
+    "comms/strategy_evidence/research_emits/2026-11-11/trend_donchian_ada_4h__trades.jsonl",
+    "comms/strategy_evidence/research_emits/2026-11-11/trend_donchian_avax_4h__trades.jsonl",
+    "comms/strategy_evidence/research_emits/2026-11-11/trend_donchian_eth_4h__trades.jsonl",
+    "comms/strategy_evidence/research_emits/2026-11-11/trend_donchian_eth__trades.jsonl",
+    "comms/strategy_evidence/research_emits/2026-11-11/trend_donchian_eth_prop__trades.jsonl",
+    "comms/strategy_evidence/research_emits/2026-11-11/trend_donchian_sol_4h__trades.jsonl",
+    "comms/strategy_evidence/research_emits/2026-11-11/trend_donchian_sol__trades.jsonl",
+    "comms/strategy_evidence/research_emits/2026-11-11/trend_donchian_sol_prop__trades.jsonl",
+    "comms/strategy_evidence/research_emits/2026-11-11/trend_donchian_xrp_4h__trades.jsonl",
+    "comms/strategy_evidence/research_emits/2026-11-11/trend_donchian_xrp_adx25__trades.jsonl",
+    "comms/strategy_evidence/research_emits/2026-11-11/xrp_pullback_2h__trades.jsonl"
+  ],
+  "verdict": "indeterminate",
+  "label": "no arm clears both bars; some AUC intervals exclude the prior",
+  "group_by": "family",
+  "control_features": [
+    "confidence",
+    "direction_long"
+  ],
+  "target": "won",
+  "threshold": null,
+  "features": [
+    "confidence",
+    "direction_long",
+    "f_adx_14",
+    "f_atr_pct",
+    "f_atr_pctl",
+    "f_rlr_vol_20",
+    "f_ret_20",
+    "f_hour_utc",
+    "f_dow_utc",
+    "f_regime_trending",
+    "f_regime_ranging"
+  ],
+  "learners": [
+    "prior",
+    "numpy_logit"
+  ],
+  "arm_status": {
+    "prior": null,
+    "numpy_logit": null
+  },
+  "legs": {
+    "pullback": {
+      "n": 2167,
+      "base_rate": 0.36640516843562526,
+      "folds": 4,
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "kind": "prior",
+          "fold_auc": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "auc_minus_prior": {
+            "n_folds": 4,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            NaN,
+            NaN,
+            NaN,
+            NaN
+          ],
+          "selection_lift_r": {
+            "n_folds": 0,
+            "mean": null,
+            "ci95": null
+          },
+          "kept_test_trades": 0,
+          "take_all_fold_mean_net_r": [
+            0.019863384615384613,
+            0.06539600000000001,
+            0.1721486153846154,
+            -0.007063803680981582
+          ]
+        },
+        "numpy_logit": {
+          "status": "ok",
+          "kind": "numpy_logit",
+          "fold_auc": [
+            0.5387303191041509,
+            0.49193165638348363,
+            0.50956,
+            0.5113045738045738
+          ],
+          "auc_minus_prior": {
+            "n_folds": 4,
+            "mean": 0.0128816373230521,
+            "ci95": [
+              -0.01786731328061339,
+              0.04363058792671759
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            0.016579815384615375,
+            -0.02140147445255474,
+            0.008933057922157484,
+            0.01824733309274629
+          ],
+          "selection_lift_r": {
+            "n_folds": 4,
+            "mean": 0.005589682986741102,
+            "ci95": [
+              -0.023756970102256372,
+              0.03493633607573858
+            ],
+            "sign_consistent": false
+          },
+          "kept_test_trades": 1030,
+          "take_all_fold_mean_net_r": [
+            0.019863384615384613,
+            0.06539600000000001,
+            0.1721486153846154,
+            -0.007063803680981582
+          ],
+          "control_lift_r": 0.0017823607843983655
+        }
+      },
+      "legs": {
+        "avax_pullback_2h": 379,
+        "htf_pullback_trend_2h": 368,
+        "eth_pullback_2h": 340,
+        "ada_pullback_2h": 333,
+        "eth_pullback_prop_2h": 324,
+        "xrp_pullback_2h": 287,
+        "sol_pullback_2h": 136
+      },
+      "feature_non_null_frac": {
+        "confidence": 1.0,
+        "direction_long": 1.0,
+        "f_adx_14": 1.0,
+        "f_atr_pct": 1.0,
+        "f_atr_pctl": 0.9926165205353022,
+        "f_rlr_vol_20": 1.0,
+        "f_ret_20": 1.0,
+        "f_hour_utc": 1.0,
+        "f_dow_utc": 1.0,
+        "f_regime_trending": 1.0,
+        "f_regime_ranging": 1.0
+      },
+      "control": {
+        "n": 2167,
+        "base_rate": 0.36640516843562526,
+        "folds": 4,
+        "arms": {
+          "prior": {
+            "status": "ok",
+            "kind": "prior",
+            "fold_auc": [
+              0.5,
+              0.5,
+              0.5,
+              0.5
+            ],
+            "auc_minus_prior": {
+              "n_folds": 4,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sign_consistent": false
+            },
+            "fold_selection_lift_r": [
+              NaN,
+              NaN,
+              NaN,
+              NaN
+            ],
+            "selection_lift_r": {
+              "n_folds": 0,
+              "mean": null,
+              "ci95": null
+            },
+            "kept_test_trades": 0,
+            "take_all_fold_mean_net_r": [
+              0.019863384615384613,
+              0.06539600000000001,
+              0.1721486153846154,
+              -0.007063803680981582
+            ]
+          },
+          "numpy_logit": {
+            "status": "ok",
+            "kind": "numpy_logit",
+            "fold_auc": [
+              0.4795402879515029,
+              0.5126957759848125,
+              0.51082,
+              0.5483584546084546
+            ],
+            "auc_minus_prior": {
+              "n_folds": 4,
+              "mean": 0.012853629636192507,
+              "ci95": [
+                -0.03190724418889172,
+                0.057614503461276736
+              ],
+              "sign_consistent": false
+            },
+            "fold_selection_lift_r": [
+              -0.033944107506950885,
+              0.010152846153846151,
+              0.016488884615384614,
+              0.014431819875313582
+            ],
+            "selection_lift_r": {
+              "n_folds": 4,
+              "mean": 0.0017823607843983655,
+              "ci95": [
+                -0.036343437404632736,
+                0.03990815897342946
+              ],
+              "sign_consistent": false
+            },
+            "kept_test_trades": 1012,
+            "take_all_fold_mean_net_r": [
+              0.019863384615384613,
+              0.06539600000000001,
+              0.1721486153846154,
+              -0.007063803680981582
+            ]
+          }
+        }
+      }
+    },
+    "trend_donchian": {
+      "n": 4047,
+      "base_rate": 0.3338275265628861,
+      "folds": 4,
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "kind": "prior",
+          "fold_auc": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "auc_minus_prior": {
+            "n_folds": 4,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            NaN,
+            NaN,
+            NaN,
+            NaN
+          ],
+          "selection_lift_r": {
+            "n_folds": 0,
+            "mean": null,
+            "ci95": null
+          },
+          "kept_test_trades": 0,
+          "take_all_fold_mean_net_r": [
+            0.0987528830313015,
+            0.06018945634266883,
+            0.10855930807248765,
+            -0.11235476973684211
+          ]
+        },
+        "numpy_logit": {
+          "status": "ok",
+          "kind": "numpy_logit",
+          "fold_auc": [
+            0.5512916737283006,
+            0.5722812627731961,
+            0.5565201815142107,
+            0.5119762454635434
+          ],
+          "auc_minus_prior": {
+            "n_folds": 4,
+            "mean": 0.048017340869812686,
+            "ci95": [
+              0.007239728230754416,
+              0.08879495350887096
+            ],
+            "sign_consistent": true
+          },
+          "fold_selection_lift_r": [
+            -0.04267878536675797,
+            0.025565801389289926,
+            0.01036535474061448,
+            0.0087770130828497
+          ],
+          "selection_lift_r": {
+            "n_folds": 4,
+            "mean": 0.0005073459614990342,
+            "ci95": [
+              -0.046854739111867744,
+              0.04786943103486581
+            ],
+            "sign_consistent": false
+          },
+          "kept_test_trades": 2001,
+          "take_all_fold_mean_net_r": [
+            0.0987528830313015,
+            0.06018945634266883,
+            0.10855930807248765,
+            -0.11235476973684211
+          ],
+          "control_lift_r": 0.039403271687227584
+        }
+      },
+      "legs": {
+        "trend_donchian_eth_prop": 869,
+        "trend_donchian_1h": 766,
+        "trend_donchian_eth": 590,
+        "trend_donchian": 355,
+        "trend_donchian_sol_prop": 305,
+        "trend_donchian_sol": 299,
+        "trend_donchian_eth_4h": 220,
+        "trend_donchian_sol_4h": 177,
+        "trend_donchian_avax_4h": 173,
+        "trend_donchian_ada_4h": 171,
+        "trend_donchian_xrp_4h": 61,
+        "trend_donchian_xrp_adx25": 61
+      },
+      "feature_non_null_frac": {
+        "confidence": 1.0,
+        "direction_long": 1.0,
+        "f_adx_14": 1.0,
+        "f_atr_pct": 1.0,
+        "f_atr_pctl": 0.9928341981714851,
+        "f_rlr_vol_20": 1.0,
+        "f_ret_20": 1.0,
+        "f_hour_utc": 1.0,
+        "f_dow_utc": 1.0,
+        "f_regime_trending": 1.0,
+        "f_regime_ranging": 1.0
+      },
+      "control": {
+        "n": 4047,
+        "base_rate": 0.3338275265628861,
+        "folds": 4,
+        "arms": {
+          "prior": {
+            "status": "ok",
+            "kind": "prior",
+            "fold_auc": [
+              0.5,
+              0.5,
+              0.5,
+              0.5
+            ],
+            "auc_minus_prior": {
+              "n_folds": 4,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sign_consistent": false
+            },
+            "fold_selection_lift_r": [
+              NaN,
+              NaN,
+              NaN,
+              NaN
+            ],
+            "selection_lift_r": {
+              "n_folds": 0,
+              "mean": null,
+              "ci95": null
+            },
+            "kept_test_trades": 0,
+            "take_all_fold_mean_net_r": [
+              0.0987528830313015,
+              0.06018945634266883,
+              0.10855930807248765,
+              -0.11235476973684211
+            ]
+          },
+          "numpy_logit": {
+            "status": "ok",
+            "kind": "numpy_logit",
+            "fold_auc": [
+              0.5600138004503304,
+              0.5826320598206343,
+              0.5389539049438739,
+              0.5332497525569119
+            ],
+            "auc_minus_prior": {
+              "n_folds": 4,
+              "mean": 0.05371237944293761,
+              "ci95": [
+                0.017987579604828177,
+                0.08943717928104704
+              ],
+              "sign_consistent": true
+            },
+            "fold_selection_lift_r": [
+              0.033967896189477736,
+              0.046439204745197256,
+              0.048423849822249204,
+              0.028782135991986146
+            ],
+            "selection_lift_r": {
+              "n_folds": 4,
+              "mean": 0.039403271687227584,
+              "ci95": [
+                0.02421978998735843,
+                0.05458675338709674
+              ],
+              "sign_consistent": true
+            },
+            "kept_test_trades": 1901,
+            "take_all_fold_mean_net_r": [
+              0.0987528830313015,
+              0.06018945634266883,
+              0.10855930807248765,
+              -0.11235476973684211
+            ]
+          }
+        }
+      }
+    }
+  },
+  "passing": [],
+  "n_test_trades": 3730
+}

@@ -111,7 +111,7 @@ else
 fi
 
 shopt -s nullglob
-for unit_path in deploy/*.service deploy/*.timer; do
+for unit_path in deploy/*.service deploy/*.timer deploy/*.path; do
     unit_name=$(basename "$unit_path")
     # Skip systemd template units (e.g. claude-vm-runner@.service) —
     # those are installed once by the bootstrap script and don't get
@@ -170,6 +170,25 @@ if [ -f "${_WATCHDOG_DROPIN_SRC}" ]; then
         "${SUDO[@]}" chmod 0644 "${_WATCHDOG_DROPIN_DST}"
         changed=1
     fi
+fi
+
+# SEC-8001-LOCKDOWN (operator decisions page m3, 2026-11-12): ict-web-api binds
+# 127.0.0.1:8001 only; Caddy's HTTPS front is the one public way in. The base
+# unit (deploy/ict-web-api.service) carries --host 127.0.0.1, but a box built by
+# deploy-candidate.yml also has an ExecStart override in
+# ict-web-api.service.d/venv.conf that still says --host 0.0.0.0, and a drop-in
+# ExecStart wins over the unit's. Rewrite exactly that flag on uvicorn ExecStart
+# lines in existing ict-web-api drop-ins; nothing else in them changes. Idempotent.
+_WEBAPI_DROPIN_DIR="${SYSTEMD_DIR}/ict-web-api.service.d"
+if [ -d "${_WEBAPI_DROPIN_DIR}" ]; then
+    for _webapi_conf in "${_WEBAPI_DROPIN_DIR}"/*.conf; do
+        [ -f "${_webapi_conf}" ] || continue
+        if grep -qE '^ExecStart=.*uvicorn src\.web\.api\.main:app.*--host 0\.0\.0\.0' "${_webapi_conf}"; then
+            echo ">>> install_systemd_units: ${_webapi_conf}: uvicorn --host 0.0.0.0 -> 127.0.0.1 (SEC-8001-LOCKDOWN)"
+            "${SUDO[@]}" sed -i -E '/^ExecStart=.*uvicorn src\.web\.api\.main:app/ s/--host 0\.0\.0\.0/--host 127.0.0.1/' "${_webapi_conf}"
+            changed=1
+        fi
+    done
 fi
 
 # Why ict-telegram-bot needs the data-dir drop-in:
@@ -685,6 +704,24 @@ if [ "$_VM_ROLE" != "gateway" ] && [ -f deploy/ict-claude-decision-bot.service ]
         echo ">>> install_systemd_units: enable --now ict-claude-decision-bot.service (core always-on)"
         if ! "${SUDO[@]}" systemctl enable --now ict-claude-decision-bot.service 2>&1; then
             echo ">>> install_systemd_units: WARN could not enable ict-claude-decision-bot.service (no systemd? TELEGRAM_CLAUDE_BOT_SECRET unset?)"
+        fi
+        changed=1
+    fi
+fi
+
+# ict-ops-runner.path (MANAGER-VM-DIRECT-OPS) starts the direct ops channel's runner whenever the web API leaves
+# a job in the queue dir. A path unit is not a timer, so the timer loop above never enables it; without this block
+# a submitted job would sit "queued" forever (GET /api/bot/ops/jobs/<id> then reads runner_not_picking_up).
+# Trader box only, idempotent, tolerant of a failed enable (never fails the deploy).
+if [ "$_VM_ROLE" != "gateway" ] && [ -f deploy/ict-ops-runner.path ]; then
+    heal_devnull || true
+    if "${SUDO[@]}" systemctl is-enabled ict-ops-runner.path >/dev/null 2>&1 \
+        && "${SUDO[@]}" systemctl is-active ict-ops-runner.path >/dev/null 2>&1; then
+        :  # already enabled + watching
+    else
+        echo ">>> install_systemd_units: enable --now ict-ops-runner.path (ops channel queue watch)"
+        if ! "${SUDO[@]}" systemctl enable --now ict-ops-runner.path 2>&1; then
+            echo ">>> install_systemd_units: WARN could not enable ict-ops-runner.path"
         fi
         changed=1
     fi

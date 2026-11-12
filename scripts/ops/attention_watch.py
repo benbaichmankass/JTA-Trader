@@ -109,6 +109,7 @@ MANAGER_SILENT_HOURS = 30    # one daily review + 6h grace
 DESK_WAKE_POST_MAX_HOURS = 3  # the VM producer writes its receipt every pass (~2 min); 3 h silent = it stopped
 DESK_ROW_MISSING_MIN = 15    # a desk packet this old with no decision row: the wake did not run (G1, MEASURED 7 h on 2026-10-28)
 REALERT_HOURS = 24
+AWAITING_REALERT_HOURS = 48  # a row still waiting on the operator is re-raised this often (PROPOSAL-ALERT-ROUTING)
 TOP_N = 8
 #: The mechanical soak (operator 2026-10-15): ``passed`` is a promotion candidate,
 #: ``mechanical_fail`` is a fault to fix (HIGH). ``awaiting_first_trade`` /
@@ -193,6 +194,24 @@ def _ranked(res: Any, items: list[dict], today: date) -> list[dict]:
     except Exception as exc:  # noqa: BLE001 — fall back, loudly
         print(f"attention-watch: render_daily_brief.ranked_items failed, using fallback: {exc}")
     return rank_attention(items, today)
+
+
+def read_awaiting_operator(today: date, doc: dict | None = None) -> tuple[str, list[dict]]:
+    """``(read_state, rows)`` of checklist rows waiting on the operator, by the ONE shared predicate
+    ``checklist_store.awaits_operator`` (structured fields only). Reads the live register through
+    ``checklist_store.load()`` (the work store wherever it exists, i.e. the VM). read_state is
+    read / unreadable -- an unreadable register is never "nothing awaits you"."""
+    from src.runtime import checklist_store as cs  # noqa: PLC0415
+    try:
+        doc = doc if doc is not None else cs.load()
+    except (OSError, ValueError, UnicodeDecodeError) as exc:
+        return f"unreadable: {type(exc).__name__}", []
+    out = []
+    for r in (doc.get("items") or []):
+        why = cs.awaits_operator(r, today)
+        if why:
+            out.append({"id": r.get("id"), "title": r.get("title"), "why": why, "tier": r.get("tier")})
+    return "read", sorted(out, key=lambda x: str(x["id"]))
 
 
 def open_ask_operator(items: list[dict]) -> list[dict]:
@@ -394,6 +413,13 @@ def probe_desk_row_missing(now: datetime) -> dict:
             return {"status": OK, "read_state": "read",
                     "detail": f"newest desk packet {pid} is on a bar skipped_by_cadence (scan_wake_every_h {scan_wake_every_h()}): no wake, no row, by design"}
     except Exception:  # noqa: BLE001,S110 — cadence unreadable: fall through to the strict check
+        pass
+    try:
+        from src.runtime import wake_toggles as wt  # noqa: PLC0415
+        if not wt.is_on("desk_wake"):  # unreadable state => True => falls through to the strict check
+            return {"status": OK, "read_state": "read",
+                    "detail": f"newest desk packet {pid}: the desk_wake console switch is off (suppressed_by_wake_toggle): no wake, no row, by design"}
+    except Exception:  # noqa: BLE001,S110
         pass
     if age_min <= DESK_ROW_MISSING_MIN:
         return {"status": OK, "read_state": "read",
@@ -862,7 +888,9 @@ def build(now: datetime | None = None, persist_seen: bool = True) -> dict:
     soak_read, soaks = read_soak_states()
     nr_read, nr_rows = read_needs_review()
     bw_read, bw_rows = read_blocker_watch()
+    aw_read, aw_rows = read_awaiting_operator(today)
     return {
+        "awaiting_read": aw_read, "awaiting_operator": aw_rows,
         "blocker_read": bw_read, "blocker_findings": bw_rows,
         "needs_review_read": nr_read, "needs_review": nr_rows,
         "now": now, "today": today, "pipeline_readable": res.healthy,
@@ -977,6 +1005,30 @@ def plan_messages(v: dict, state: dict, digest_now: bool = False) -> tuple[list[
                              f"see the report (GET /api/bot/work/report)"))
         new["seed_ask_sent_at"] = now.isoformat()
     new["seen_ask_operator"] = sorted(seen | set(cur))
+
+    # (b1b) checklist rows waiting on the operator -- edge-triggered, re-alerted every
+    # AWAITING_REALERT_HOURS while still waiting (PROPOSAL-ALERT-ROUTING, operator 2026-11-11: a ready
+    # proposal must not sit unactioned). An unreadable register keeps the prior state: "could not look"
+    # never reads as "nothing awaits you".
+    if v.get("awaiting_read") == "read":
+        prior = dict(state.get("awaiting_operator_sent", {}))
+        cur_aw = {r["id"]: r for r in v.get("awaiting_operator", [])}
+        due_aw = [cur_aw[k] for k in sorted(cur_aw)
+                  if k not in prior or now - datetime.fromisoformat(prior[k]) >= timedelta(hours=AWAITING_REALERT_HOURS)]
+        if due_aw:
+            n_new = sum(1 for r in due_aw if r["id"] not in prior)
+            L = [f"❓ {len(due_aw)} checklist row(s) waiting on you ({n_new} new, "
+                 f"{len(cur_aw)} open in total; re-raised every {AWAITING_REALERT_HOURS}h):"]
+            for r in due_aw[:6]:
+                L.append(f"• {r['id']} ({r['why']}): {_short(r.get('title'), 120)}")
+            if len(due_aw) > 6:
+                L.append(f"…and {len(due_aw) - 6} more — brief §2 lists every one.")
+            msgs.append(("high", "\n".join(L)))
+        new["awaiting_operator_sent"] = {k: (prior[k] if k in prior and k not in {r["id"] for r in due_aw}
+                                              else now.isoformat()) for k in cur_aw}
+    elif v.get("awaiting_read") is not None:
+        msgs.append(("normal", f"❔ could not read the checklist for rows waiting on you ({v['awaiting_read']}) — "
+                               "not zero; not measured"))
 
     # (b2) soak transitions into passed / mechanical_fail.
     if v["soak_read"] == "read":
@@ -1496,6 +1548,27 @@ def _self_test() -> int:
         (Path(td) / "RQ-7.yaml").write_text("id: [unclosed\nneeds_review: true\n")
         check("a corrupt unit makes the read UNREADABLE, never a shorter list",
               read_needs_review(Path(td))[0] == "unreadable", "")
+    # PROPOSAL-ALERT-ROUTING: the REAL PROMOTE-1H-SURVIVORS-20261104 row (tier 3, owner manager, due 2026-11-06,
+    # a decision parked as note prose) is the positive control; a probe is only trusted if it finds it.
+    promote_row = {"id": "PROMOTE-1H-SURVIVORS-20261104", "state": "queued", "owner": "manager", "tier": 3,
+                   "blocked_on": [], "due_by": "2026-11-06", "roadmap": ["L-LADDER"],
+                   "title": "Promote slv_trend_1h, uso_trend_1h, qqq_pullback_1h to production if each clears every check"}
+    quiet = {**promote_row, "id": "QUIET", "tier": 1}
+    rd_aw, rows_aw = read_awaiting_operator(date(2026, 11, 12), {"items": [promote_row, quiet]})
+    check("awaiting: the real PROMOTE-1H row is found (tier 3, past due_by); a tier-1 overdue row is not",
+          rd_aw == "read" and [r["id"] for r in rows_aw] == [promote_row["id"]], rows_aw)
+    maw, saw = plan_messages(view(awaiting_read="read", awaiting_operator=rows_aw), st)
+    check("awaiting: a new waiting row alerts once, high, by id",
+          any(p == "high" and promote_row["id"] in b for p, b in maw), maw)
+    maw2, saw2 = plan_messages(view(awaiting_read="read", awaiting_operator=rows_aw), saw)
+    check("awaiting: edge-triggered -- the next pass is quiet", not any(promote_row["id"] in b for _, b in maw2), maw2)
+    later = now + timedelta(hours=AWAITING_REALERT_HOURS + 1)
+    maw3, saw3 = plan_messages(view(now=later, awaiting_read="read", awaiting_operator=rows_aw), saw2)
+    check("awaiting: still waiting after 48h re-alerts", any(promote_row["id"] in b for _, b in maw3), maw3)
+    maw4, saw4 = plan_messages(view(awaiting_read="unreadable: OSError", awaiting_operator=[]), saw3)
+    check("awaiting: an unreadable register says so and keeps the sent-state",
+          any("could not read the checklist" in b for _, b in maw4)
+          and promote_row["id"] in saw4.get("awaiting_operator_sent", {}), maw4)
     blk, pri, new_items = compose_block(view(), [])
     check("nothing new → ONE quiet line", blk.startswith("🟢") and "\n" not in blk and not new_items, blk)
     blk2, pri2, _ = compose_block(view(), [("high", "❓ 1 new decision"), ("normal", "📋 Daily")])

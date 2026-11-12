@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "PERF-F1-DEMOTION-SIGNAL (perf review 2026-11-11 F1; operator decisions page p2 2026-11-12): give every real-money leg a working demotion signal. (1) ml_entry per-trade Stage-0 rows committed (907, reproduce runner run 41823438321 exactly) and its evidence record repointed, so r4_demotion_gate reads a p10 (row ML-ENTRY-EVIDENCE-SOURCE); (2) ml_entry_eq_struct reproduction unit RQ-20261112-d9c0-01 (new, pre-registered, no holdout claim) + the harness flags it needs; (3) a config-date cut in scripts/research/live_vs_backtest.py (the route's since= read path is split into its own HELD PR, Tier 2 by name). No config, roster, risk, mode or order-path change; demotes nothing. Revert: git revert."
+}

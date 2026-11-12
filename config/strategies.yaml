@@ -1465,6 +1465,10 @@ strategies:
     # OCO there, PI-20261025-ALQWWPXT-0001). Evidence context, not a gate: frozen v1 on alpaca_live's ETFs FAILED its
     # one read (RQ-20261101-bdc2-01, -0.308 R/decision long-only, n=128). ROLLBACK: drop alpaca_paper here, the ETFs
     # from symbols:, and ml_entry from alpaca_paper's roster.
+    # ⚠️ OPERATOR RULE 2026-11-04 (binding; canonical § "An account configures strategies, never symbols"): a per-account
+    # symbol map like this one is account configuration placed on the leg, which the rule says should not exist. It is a
+    # known open item, NOT a sanctioned pattern: owner row ML-UNIVERSE-RULE. Removing it is a Tier-3 FIELD change; do
+    # not extend it on precedent. (Comment added 2026-11-12, lane DEMOTION-NOT-BAN; no field changed.)
     account_symbols:
       bybit_2: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]
       bybit_portfolio: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]
@@ -3433,6 +3437,10 @@ strategies:
                              # rostering account trades (src/config/symbol_sets.py::leg_symbols; the coordinator refuses
                              # a desk package on any other account x symbol as leg_account_scope). Each venue's set is
                              # instruments that account ALREADY pulls and has an instrument profile for.
+    # ⚠️ OPERATOR RULE 2026-11-04 (binding; canonical § "An account configures strategies, never symbols"): a per-account
+    # symbol map like this one is account configuration placed on the leg, which the rule says should not exist. It is a
+    # known open item, NOT a sanctioned pattern: owner row ML-UNIVERSE-RULE. Removing it is a Tier-3 FIELD change; do
+    # not extend it on precedent. (Comment added 2026-11-12, lane DEMOTION-NOT-BAN; no field changed.)
     account_symbols:
       bybit_1: [BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, ADAUSDT, AVAXUSDT]  # the DESK-WIDEN six (declared slice)
       alpaca_paper: [SPY, QQQ, IWM, GLD, TLT]  # broad US index, small caps, gold, long rates: the most liquid
