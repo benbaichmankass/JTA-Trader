@@ -1,0 +1,48 @@
+{
+ "rule_id": "RULE-VELO-CFD-STAGE0-20261112",
+ "registered_at": "2026-11-12",
+ "registered_by": "lane VELO-CFD-STAGE0 (research lane of Manager Session 2026-11-11a), pipeline PI-20261112-D6UC5YT4-0001",
+ "registered_before_run": "This file is committed and pushed BEFORE scripts/research/velo_cfd_stage0.py is run for the first time and before the harness is run on any CFD series. Only the data fetch (Dukascopy 1h bars) preceded it; no trade ledger had been produced. The runner refuses to run without this file; the verdict names it.",
+ "question": "Do the commodity legs that passed Stage 0 on ETF series (slv_trend_1h, uso_trend_1h, gld_pullback_1h, gld_pullback_1d) still have positive edge NET OF Velotrade's full cost stack when re-run on the SPOT/CFD price series of the same underlying, and does the surviving book clear the prop EV + survival bar on Velotrade CLASSIC 1-Step $5k?",
+ "series": {
+  "source": "Dukascopy 1h bid candles (dukascopy-python==4.0.1 via scripts/ops/fetch_dukascopy_ohlcv.py), 2019-01-01 .. 2026-10-31 UTC. PROXIES for Velotrade's CFDs (spot metal / WTI front-month CFD): Velotrade's own bar feed is not readable until VELO-INSTR-READ.",
+  "instruments": {
+   "XAG_USD": "INSTRUMENT_FX_METALS_XAG_USD (silver spot) -> slv_trend_1h, slv_pullback_1d",
+   "XAU_USD": "INSTRUMENT_FX_METALS_XAU_USD (gold spot) -> gld_pullback_1h, gld_pullback_1d",
+   "WTI": "INSTRUMENT_CMD_ENERGY_E_LIGHT (WTI light crude CFD) -> uso_trend_1h"
+  },
+  "daily_legs": "gld_pullback_1d and slv_pullback_1d run the 1d harness on the 1h series resampled to 1d by the harness (--resample 1d). The day boundary is the harness's (UTC), not a vendor daily bar.",
+  "not_modelled": "Velotrade's own quotes, session hours and spreads; DXtrade fill model; the CFD's overnight roll vs the spot series. R-multiples transfer, price paths are not identical."
+ },
+ "legs": {
+  "decisive": ["slv_trend_1h", "uso_trend_1h", "gld_pullback_1h", "gld_pullback_1d"],
+  "descriptive": ["slv_pullback_1d"],
+  "not_run": "Equity-ETF legs (spy_trend_long_1d, qqq_trend_long_1d, qqq_pullback_1h, iwm_trend_long_1d). On the ETF proxies they were negative or inside noise at Velotrade's overnight fee (memo prop-frontier-2026-11-12 section 4: -0.43/-0.19/-0.19R, qqq_trend_long_1d +0.55R on n=5). They need their own unit; this unit is the commodity-first screen PI-0001 asked for.",
+  "params": "Each leg's EXACT config/strategies.yaml parameters, translated to harness flags by scripts/research/regime_debt_matrix.py::build_harness_cmd (the same call scripts/ops/build_strategy_evidence.py makes). Nothing is tuned. param_selection_provenance stays not_established. A leg whose cfg the harness cannot route is INDETERMINATE (producer_failed), never PASS.",
+  "status_note": "gld_pullback_1h is enabled:false (INACTIVE, retired 2026-10-28). Its Stage-0 result here is evidence for a re-entry test only; nothing in this unit re-rosters it."
+ },
+ "harness_run": "Harness runs with --fee-bps-roundtrip 0 and emits per-trade gross_r / mfe_r / entry_time / exit_time; costs are then applied once, by scripts/research/prop_ev_sim.py::build_trades with the CostConfig below, exactly as RULE-PROP-FRONTIER-EV6M-20261112 did. The harness's own slippage constant is NOT double counted: the ledger's gross_r is used.",
+ "costs": {
+  "primary": {"commission_bps_rt": 2.0, "slippage_bps_rt": 3.0, "swap_daily": 0.0005, "swap_model": "dxtrade"},
+  "stress_ev6m_commission": {"commission_bps_rt": 6.0, "slippage_bps_rt": 3.0, "swap_daily": 0.0005, "swap_model": "dxtrade"},
+  "stress_wide_spread": {"commission_bps_rt": 2.0, "slippage_bps_rt": 10.0, "swap_daily": 0.0005, "swap_model": "dxtrade"},
+  "source": "Velotrade 1P (velotrade.com/blog/velotrade-review, fetched 2026-11-12, quoted in docs/research/prop-frontier-2026-11-12.md section 3): commission 0.01% per side on commodities = 2 bps round trip, no spread markup; overnight fee 0.05% of notional at 00:30 UTC on commodities including weekends. The CFD spread is NOT published: slippage_bps_rt 3 stands in for spread + slippage (as in RQ-20261112-09d2-06) and the wide arm (10 bps) stresses it. The 6 bps commission arm is the ev6m screen's deliberately conservative figure.",
+  "graded_arm": "primary. The two stress arms are reported and never grade a leg."
+ },
+ "folds": "The leg's trades, ordered by entry_time, are cut into 4 equal-count time folds (the harness_timefolds convention of the evidence records).",
+ "leg_rule": {
+  "id": "RULE-VELO-CFD-STAGE0-LEG",
+  "statement": "A leg PASSES Stage 0 on the CFD series iff, at the PRIMARY cost arm: (a) pooled net R over all its trades > 0 (restates RULE-D1-STAGE0-NET-OF-FULL-COST); AND (b) at least 3 of the 4 time folds have net R > 0; AND (c) n >= 30. n < 30 or a harness failure is INDETERMINATE. Any other outcome is FAIL. The pooled net-R 95% CI (prop_gate.edge_ci, z 1.96) is reported for every leg and is NOT a leg criterion; it is a book criterion below.",
+  "robust_flag": "A leg that PASSES is additionally marked ROBUST iff its pooled net R is also > 0 on both stress arms. Reported; it does not change the verdict."
+ },
+ "book_rule": {
+  "id": "RULE-VELO-CFD-STAGE0-BOOK",
+  "book": "VELO_CFD = the decisive legs whose leg verdict is PASS. descriptive-only books: VELO_CFD_ROBUST (the ROBUST subset); ALL5 (decisive + slv_pullback_1d).",
+  "simulator": "scripts/research/prop_ev_sim.py path mode (with the drawdown_type generalisation of PROP-TRAILING-DD-SIM), ruleset config/prop_rulesets/velotrade_classic_1step.yaml (static 7% drawdown, 4% daily). Settings fixed as RULE-PROP-FRONTIER-EV6M-20261112: horizon 182 days, seeds 1,2,3, 1000 lives, risk 0.5% of start, sizing start, daily-DD switch 0.8, lev cap 5, fresh funded start. Ledger window for the graded cell: the whole 2019-01-01..2026-10-31 ledger (blocks resampled from it). The 2025-06-01.. window is descriptive, for comparability with the ev6m screen.",
+  "buyable_iff": "ALL of: (1) the book has >= 2 PASS legs; (2) min over seeds of ev_net_usd_per_life > 0; (3) mean over seeds EV > the mean zero-edge-null EV (same ledgers re-centred to mean net R 0 under the same costs); (4) the book's pooled net-R 95% CI lower bound > 0; (5) SURVIVAL: mean over seeds of p_breach_max_dd + p_breach_daily_loss (any phase) <= 0.25. Threshold 0.25 is fixed here, before the run (the ev6m screen's CLASSIC cell read 0.143 breach on a 17-month ledger).",
+  "descriptive_only": "PRO 1-Step $5k (3% static, 3% daily, a much tighter plan), the 1% risk arm, the stress cost arms, the 2025-06+ window and the trailing-DD what-if arms below. None can make the plan buyable.",
+  "trailing_what_if": "Descriptive: the same book/ledger/settings on CLASSIC with the 7% drawdown made closed_trailing, eod_trailing and intraday_trailing (lock buffer 1%, lock at start), to show how much of the survival rests on Velotrade's static floor. This is the sensitivity PROP-TRAILING-DD-SIM exists for (Blue Guardian, Tradeify futures). It is not a Velotrade rule: Velotrade's drawdown is static (1P rules page, read 2026-10-04 and in the memo)."
+ },
+ "what_a_result_does_not_do": "Changes no roster, risk, sizing or config; places no order; reads no account id or balance. A BUYABLE verdict is information for the operator's purchase decision and does not satisfy the remaining buy-point conditions of the memo (VELO-INSTR-READ symbols on our login; each leg's comms/prop_survival/<leg>.json under the SUPERSET gate; then the operator chooses a second account or the Tier-3 roster add). A leg PASS is a Stage-0 pass on a PROXY series, not on Velotrade's own feed.",
+ "thresholds_fixed": "No threshold, arm, window or leg set above is changed after any result is read. A runner defect found after the run is fixed and the run repeated under the same rule, and the defect is recorded."
+}
