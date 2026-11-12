@@ -172,7 +172,7 @@ Then buy the cheapest plan the survival result favours. Today's descriptive numb
 
 **When.** Today 0 legs meet condition 1, so there is no date. The critical path is two queued rows:
 - **FUT-INTRADAY-DUKA-LANE** (tier 1). This wires 5m/15m into `exit_lever_ablation` and unblocks 09d2-04 and 78fc-13. It is small: likely a day of a lane's work.
-- **FUT-CME-INTRADAY-HIST.** This adds real CME intraday history and unblocks 09d2-05. If IB's gateway serves it, that is a few days. If it needs Databento, it is a spend decision for the operator.
+- **FUT-CME-INTRADAY-HIST.** This adds real CME intraday history and unblocks 09d2-05. **Operator decision (about 09:17Z on 2026-11-12, relayed by AM-TRADING):** *"use IB's free history ... always free, if there's an option for free"*. So the source is IB `reqHistoricalData` through `ict-ib-gateway`, and paid feeds are out of the plan. It is likely a few days of work. One risk to the depth: IB is generally understood to serve intraday bars for expired futures only for a limited time after expiry, perhaps about 2 years (UNVERIFIED). The span may therefore be shorter than 2019+, and 09d2-05's window was amended before any run to fit whatever span IB serves.
 
 If one of those units then passes, conditions 2–4 take about 2–4 more weeks, mostly the executor. **The earliest plausible buy is therefore early-to-mid December 2026.** That is an estimate that holds only if a leg passes. The current promotion (code "NOV", ending 13 Nov) is not a reason to buy before condition 1.
 

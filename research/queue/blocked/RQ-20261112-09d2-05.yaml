@@ -11,7 +11,7 @@ programme: P5
 kind: experiment
 origin: new_hypothesis
 question: Using the engine and Tradeify costs of RQ-20261112-09d2-01 unchanged, on a real CME MNQ 5m continuous series (rolled on volume,
-  2019-01-01..2026-10-31), does the 15-minute opening-range breakout on MNQ clear Stage 0 at the 6-cell Bonferroni bar?
+  from IB's free historical data, the operator's 2026-11-12 decision; whatever span IB serves), does the 15-minute opening-range breakout on MNQ clear Stage 0 at the 6-cell Bonferroni bar?
 why_this_matters: MNQ_OR15 was the closest cell on proxies. Discovery net +89.3R on n=1488 with 5/6 folds; holdout +11.3R. Its per-trade
   mean of +0.060R missed only the multiplicity-deflated edge clause (CI lower bound -0.020). The proxy (a Dukascopy CFD) differs from the
   futures in session hours, the close and microstructure; the real contract is the instrument Tradeify trades.
@@ -40,9 +40,11 @@ decision_rule:
   id: RULE-RQ-20261112-09d2-05
   registered_at: '2026-11-12'
   registered_before_run: true
-  statistic: scripts/research/tradeify_futures_fit.py's ORB engine and costs, MNQ, OR15, on the real-contract series; discovery 2019-2024 in
-    6 yearly folds, holdout 2025-01..2026-10.
-  rule: 'PASS iff discovery n >= 100 AND net R > 0 AND >= 4 of 6 folds positive AND the per-trade CI lower bound > 0 at z = 2.638 (the
+  statistic: scripts/research/tradeify_futures_fit.py's ORB engine and costs, MNQ, OR15, on the real-contract series from IB's free history.
+    The window is set by IB's depth, so it is not fixed to calendar years. Discovery = the first 75% of RTH sessions served, in 6 equal
+    folds; holdout = the last 25%. (Amended 2026-11-12, BEFORE any run, after the operator's decision to use IB's free history. The
+    2019-2024 calendar window may not be servable.)
+  rule: 'PASS iff discovery n >= 100 AND net R > 0 AND >= 4 of 6 equal folds positive AND the per-trade CI lower bound > 0 at z = 2.638 (the
     6-cell bar is kept although only one cell runs, because the cell was chosen after the proxy read: M13, re-reading raises the bar) AND
     holdout n >= 30 AND holdout net R > 0. FAIL if discovery n >= 100 and a clause fails. INDETERMINATE if n < 100. A PASS goes to the
     survival rule of RQ-20261112-09d2-02 (unchanged) in a new unit. Fixed now.'
@@ -75,5 +77,5 @@ what_it_does_not_do: Serves, promotes or applies nothing; changes no config; pla
 blocked_on:
 - kind: work_item
   ref: FUT-CME-INTRADAY-HIST
-  what: a real CME MNQ 5m continuous series 2019+ and a --source flag on tradeify_futures_fit.py that reads it
+  what: a real CME MNQ 5m continuous series from IB's free historical data (reqHistoricalData via ict-ib-gateway; operator 2026-11-12, free sources only) and a --source flag on tradeify_futures_fit.py that reads it
   clears_when: the series lands; then git-mv to research/queue/ with run.command (rule unchanged)
