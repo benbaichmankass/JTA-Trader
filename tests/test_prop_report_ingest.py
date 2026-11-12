@@ -226,6 +226,41 @@ def test_ingest_placed_advances_to_placed_not_filled(
     assert len(no_notify) == 1 and no_notify[0]["status"] == "open"
 
 
+def test_ingest_phone_placed_report_entry_key_is_priced(
+    isolated_db: Path, no_notify: list
+) -> None:
+    """BREAKOUT2-ETH-RISKBOOK-GAP: the phone executor reports a confirmed placed
+    fill with key "entry" (MainActivity.kt), not "entry_price". The journal row
+    must carry it, or fill inference can never price the fill (fill 244)."""
+    from src.prop import prop_journal, prop_report
+
+    prop_journal.record_ticket({
+        "ticket_id": "prop-manual-c54b2229aa1c", "account_id": "breakout_2",
+        "symbol": "ETHUSDT", "direction": "long", "entry": 2077.57,
+    })
+    # Exactly the phone's payload shape (kind/status/ticket_id/symbol/direction/
+    # entry/sl/tp/qty/source) plus the account the relay adds.
+    out = prop_report.ingest_report({
+        "kind": "fill", "status": "placed", "ticket_id": "prop-manual-c54b2229aa1c",
+        "symbol": "ETHUSDT", "direction": "long", "entry": 2077.57, "sl": 2043.7,
+        "tp": 2128.37, "qty": 0.51, "source": "phone_executor", "account_id": "breakout_2",
+    })
+    assert out["ok"] and out["status"] == "placed"
+    fill = prop_journal.list_fills(account_id="breakout_2")[0]
+    assert fill["entry_price"] == 2077.57
+    assert fill["sl"] == 2043.7 and fill["tp"] == 2128.37 and fill["qty"] == 0.51
+
+
+def test_ingest_entry_price_wins_over_entry(isolated_db: Path, no_notify: list) -> None:
+    from src.prop import prop_journal, prop_report
+
+    prop_report.ingest_report({
+        "account_id": "breakout_2", "symbol": "ETHUSDT", "direction": "long",
+        "status": "placed", "entry_price": 2000.0, "entry": 1999.0, "qty": 1.0,
+    })
+    assert prop_journal.list_fills(account_id="breakout_2")[0]["entry_price"] == 2000.0
+
+
 def test_ingest_fill_requires_symbol(isolated_db: Path, no_notify: list) -> None:
     from src.prop import prop_report
 
