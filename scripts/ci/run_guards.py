@@ -2847,6 +2847,11 @@ def _child_env() -> dict:
     """
     env = dict(os.environ)
     env["DIRTY_TREE_NOTICE"] = "0"
+    # The guards check the COMMITTED register export (work-store design § 7), not the live store:
+    # say so explicitly (src/runtime/work_read.py, HEALTH-20261111-EXPORT-READS-STALE), so the
+    # off-VM default (the live API) never makes a PR's guard run depend on reaching the VM.
+    # setdefault: a local audit can still run them over the live store with WORK_READ_SOURCE=api.
+    env.setdefault("WORK_READ_SOURCE", "export")
     return env
 
 
