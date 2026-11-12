@@ -1,0 +1,83 @@
+# Hand-authored 2026-11-12 by lane ML-SLOT-MAP (Tier 1), dispatched by AM-ML for Manager Session 2026-11-11a. ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered before any run.
+id: RQ-20261112-0f87-02
+title: 'ITERATION 1 of overlay-td-v1 (D4): on the live-served reduce decisions, is the mean net R of the reduced trades <= the take-all mean (the
+  overlay cuts winners no more than losers) at n_reduced >= 30?'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+question: Over closed trades on the 4 TD gate legs (trend_donchian_eth_4h, trend_donchian_xrp_4h, trend_donchian_eth_prop, trend_donchian_sol_prop)
+  that carried an overlay multiplier < 1, is the mean net R of the reduced trades <= the mean net R of the unreduced trades from the same legs
+  and window?
+why_this_matters: overlay-td-v1 is listed KEEP (consumer) on 6 books with no declared live read; this unit is the first live read of the slot
+  baseline (the unreduced book) declared in docs/reference/ml-order-changers-power.yaml (row ML-SLOT-BASELINES-DECLARE).
+practice_precedent: 'M1, M6 (docs/reference/trading-and-model-practice-principles.md): judge a live overlay against the unmodified book on the
+  same trades'
+iteration:
+  subject: ml-overlay-td-v1
+  subject_kind: ml_model
+  from_result: RQ-20261029-5785-02 (RULE-ML-OVERLAY-NONINFERIOR-V2, TD PASS)
+  verdict_read: pass_unconfirmed
+  diagnosis: 'RQ-20261029-5785-02 graded TD PASS on a non-inferiority rule (one-sided 95% LB of delta > -0.02 R) plus a blind 2017-2020 holdout:
+    the overlay is shown not to hurt, not shown to help, and it is read only offline. Nothing yet reads the live-served reduce decisions against
+    what the same trades earned unreduced. A pass on a non-inferiority bar can still cut winners in live because the live bars, costs and legs
+    differ from the corpus. The record carries no live mean R (power table: n 1830, mean null).'
+  hypothesis: the live-served reduced trades earn no more than the unreduced mean (the overlay is not reducing winners); if they earn more, the
+    demotion read in docs/reference/ml-order-changers-power.yaml fires as a manager proposal
+  attempt: 1
+  due_by: '2026-11-26'
+power:
+  expected_n: 30
+  min_detectable_effect: 0.05
+  effect_units: metric
+  sd: 1.0
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATED: the n >= 30 floor is the rule own; the effect floor is a minimum worth reporting, not a power target.'
+  feasibility:
+    source: none
+    accrual_basis: Replays existing corpora or reads the VM journal; see blocked_on.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+decision_rule:
+  id: RULE-RQ202611120f8702
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: Per closed trade net R (full cost stack) grouped by overlay multiplier < 1 vs = 1 across the gate legs in the real-money and mirror
+    journals; difference of means with a trade-clustered CI.
+  rule: PASS iff n_reduced >= 30 AND mean net R of reduced trades <= mean net R of unreduced trades (point estimate; one read of a count-closed
+    window, no variant after the result). FAIL iff n_reduced >= 30 and the reduced trades mean exceeds the unreduced mean with a trade-clustered
+    90% LB > 0 on the difference. INDETERMINATE otherwise or n_reduced < 30.
+  what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order. A result is a data-backed proposal for the manager,
+    never an action.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: Estimate; the first run replaces it.
+  why_runner: CPU replay or a journal read.
+intervention_controls:
+  not_applicable: an offline model evaluation; the consumer own gate applies any action
+blocked_on:
+- kind: work_item
+  ref: ML-SLOT-BASELINES-DECLARE
+  what: 'the journal join of runtime_logs/overlay_shadow.jsonl multipliers to closed trades; UNVERIFIED that the multiplier is persisted per trade
+    (overlay_shadow.py docstring says annotate-only while the registry shows the overlay LIVE: the first step of this unit is to read which)'
+  clears_when: a read-only diag pull of overlay_shadow.jsonl joined to trade closes shows >= 30 closed reduced trades; then git-mv to research/queue/
+    (rule unchanged)
+ml_consumer:
+  consumer: src/runtime/overlay_shadow.py
+  decision: reduce qty x0.5 below tau
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - trend_donchian_eth_prop
+  - trend_donchian_sol_prop
+  book: money

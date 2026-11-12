@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Follow-up to #25294 in src/core/coordinator.py (order-path file), meta only: placed_qty_by_account now skips legs whose execute_pkg id is a non-placement (dry-, opt-norfit-, rejected*, exchange_rejected*) and skips options-expression accounts (they place contracts). No qty, gate, order or journal change. Evidence: live pkg-59f612ef793840bb/pkg-fdbe7976e667411d/pkg-1fcbb159a2e047b7 (alpaca_options_paper, 2026-11-12 19:22-19:36Z) recorded placed 201 while the journal row is rejected qty 0 (options_expression:no_selection); 3 new tests fail without the fix; 969 dispatch tests pass. AM-TRADING merges. Revert: git revert.",
+  "why": "PKG-SIZED-QTY-2X-PLACED-BYBIT1 post-deploy finding: placed_qty_by_account must not record a qty for an order that was never sent."
+}

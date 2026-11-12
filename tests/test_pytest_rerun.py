@@ -109,3 +109,12 @@ def test_workflow_file_is_wired_safely():
             assert "head_branch" not in str(step.get("env", {})), step.get("name")
     assert "github.event.workflow_run.head_branch" in str(doc["concurrency"]["group"])
     assert doc["concurrency"]["cancel-in-progress"] is True
+
+
+def test_main_backstop_runs_never_take_a_runner_for_a_rerun_decision():
+    """CI-SUITE-SLOWDOWN: the job-level `if:` admits only PR / merge-queue runs; main's backstop retries itself."""
+    import yaml
+    doc = yaml.safe_load(open(".github/workflows/pytest-rerun.yml"))
+    cond = doc["jobs"]["rerun"]["if"]
+    assert "github.event.workflow_run.event == 'pull_request'" in cond
+    assert "'schedule'" not in cond and "'workflow_dispatch'" not in cond and "'push'" not in cond

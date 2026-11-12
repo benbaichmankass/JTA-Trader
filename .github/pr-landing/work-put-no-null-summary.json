@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "why": "Work-store write shim fix: work_read._put writes only keys the item carries, so a checklist.py note/set round-trip no longer sends summary:null (from_row maps no summary). src/runtime/work_read.py is outside the guard's Tier-1 surface, so the manager lands it. One planted/clean test pair (fails on the old code with summary:None). No new gate.",
+  "hold_text": "src/runtime/work_read.py is a register write path the landing guard cannot vouch for; the manager reads and lands it."
+}

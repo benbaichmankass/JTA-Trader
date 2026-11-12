@@ -398,6 +398,21 @@ def run_cycle_and_trail(*, adapter, page, api, cfg, mode, args, state_dir, secre
     if save_session is not None:
         save_session()
     if not (args.watched_click or args.ticket_id):
+        # CAP-PROP-VM-CLOSE: the system's close / partial-close requests (``meta.close_request``), BEFORE the trail
+        # so a position being closed is not amended first. Same mode; fully contained like the trail step.
+        n_act, n_rep, n_al = len(res.actions), len(res.reports), len(res.alerts)
+        try:
+            from src.prop import vm_close
+            vm_close.run_close_step(adapter=adapter, page=page, api=api, cfg=cfg, mode=res.mode,
+                                    state_dir=state_dir, res=res, sleep=sleep)
+        except Exception as exc:  # noqa: BLE001
+            res.alerts.append(f"close: step failed ({type(exc).__name__}); retried next tick")
+        for a in res.actions[n_act:]:
+            emit({"action": a}, *secrets)
+        for r in res.reports[n_rep:]:
+            emit({"report": r}, *secrets)
+        for al in res.alerts[n_al:]:
+            emit({"alert": al}, *secrets)
         # PROP-TRAIL: the leg's declared trail, by amending the resting
         # SL. AFTER the cycle and its output, so it never delays a
         # ticket or an alert; same mode (read_only walks to the edit

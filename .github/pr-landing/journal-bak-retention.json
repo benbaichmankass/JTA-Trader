@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "Tier 2 (money-DB helpers + a daily on-VM delete step). Lane HEALTH-20261111-LIVE-DISK-REGROWTH dispatch: 'Tier 2 = landing: hold; the manager merges after the OPS AM forwards it.' Revert: git revert (helpers go back to uncapped copies; the workflow prune step disappears).",
+  "why": "Cap the journal-backup regrowth on the live VM: every pre-APPLY writer keeps only its newest backup per tag, and the daily off-VM backup prunes old on-VM backups only after it verified. Fixes journal-offvm-backup's mode/comment handling for issue-routed runs."
+}
