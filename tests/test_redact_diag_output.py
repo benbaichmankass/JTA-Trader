@@ -30,6 +30,9 @@ SECRETS = {
     "pem_block": f"k {PEM_BEGIN}OPENSSH PRIVATE KEY-----\\nb3BlbnNzaC1rZXk\\n{PEM_END}OPENSSH PRIVATE KEY----- end",
     "pem_truncated": f"k {PEM_BEGIN}RSA PRIVATE KEY-----\nMIIEow",
     "bearer": "Authorization: Bearer abcdef0123456789ABCDEF.xyz-_~+/=",
+    "ib_account_id": "account: " + "DU" + "1234567" + " end",
+    "ib_account_id_letter": '"account": "' + "DU" + "Q123456" + '"',
+    "ib_account_id_live": '"account": "' + "U" + "7654321" + '"',
     "long_hex": "tok " + "0123456789abcdef" * 4 + " end",
     "long_hex_upper": "tok " + "ABCDEF0123456789" * 5 + " end",
 }
@@ -43,7 +46,7 @@ def test_each_secret_shape_redacted(name, text):
     # the secret body must be gone, the surrounding context preserved
     for frag in (AWS_KEY, "ghp_a1B2", "github_pat_A1b2", "b3BlbnNzaC1rZXk",
                  "MIIEow", "abcdef0123456789ABCDEF", "0123456789abcdef0123456789abcdef",
-                 "ABCDEF0123456789ABCDEF", FAKE_TG):
+                 "ABCDEF0123456789ABCDEF", FAKE_TG, "DU1234567", "DUQ123456", "U7654321"):
         assert frag not in out, (name, frag)
 
 
@@ -58,6 +61,7 @@ NORMAL = {
                          "order_package_id": "op-20260929-abc123", "strategy": "trend_long_1d"}],
                "total": 1, "limit": 5},
     "journalctl": "Sep 29 10:00:01 ict-bot-arm python[123]: tick ok in 0.42s 12345678901234",
+    "ib_words": "DURATION DUPLICATE DF-gap U12 order DU12 id",
     "numbers": {"a": 1234567890123456789012345678901234567890, "b": "3.14159265358979"},
 }
 

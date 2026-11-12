@@ -23,7 +23,7 @@ _ID_OK = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
 __all__ = ["ChecklistError", "HEADER", "MONOLITH", "MONOLITH_NAME", "RANK", "REPO", "SEQ", "STORE",
-           "HISTORY_PATHS", "TERMINAL", "UNMAPPED", "DEFAULT_OWNER", "filing_problems", "fill_defaults", "effective_due", "is_overdue", "check", "queue", "rank_problem", "exists", "is_checklist_path", "load", "load_at", "load_path", "read_row", "render", "seeded", "seed", "write_header", "write_row"]
+           "HISTORY_PATHS", "TERMINAL", "UNMAPPED", "DEFAULT_OWNER", "filing_problems", "fill_defaults", "effective_due", "is_overdue", "awaits_operator", "check", "queue", "rank_problem", "exists", "is_checklist_path", "load", "load_at", "load_path", "read_row", "render", "seeded", "seed", "write_header", "write_row"]
 
 
 class ChecklistError(ValueError):
@@ -128,6 +128,33 @@ def effective_due(row: dict) -> date | None:
 def is_overdue(row: dict, today: date) -> bool:
     d = effective_due(row)
     return bool(d and d < today and row.get("state") not in TERMINAL)
+
+
+def awaits_operator(row: dict, today: date | None = None) -> str | None:
+    """Why this row is waiting on the OPERATOR (a short reason), else None. ROUTES AND ALERTS ONLY: it
+    refuses nothing. Structured fields only, never note prose (PROPOSAL-ALERT-ROUTING, 2026-11-12;
+    root cause: a ready tier-3 decision lived as prose in a row note and no reader saw it).
+    Any one of: ``ask_operator`` truthy; owner contains "operator"; a ``blocked_on`` edge of kind
+    "operator"; ``tier`` >= 3 and past ``due_by``; ``hand_back`` set (a lane's "operator must decide").
+    Terminal rows never wait."""
+    if not isinstance(row, dict) or row.get("state") in TERMINAL:
+        return None
+    if row.get("ask_operator"):
+        return "ask_operator"
+    if "operator" in str(row.get("owner") or "").lower():
+        return "owner operator"
+    edges = row.get("blocked_on")
+    for e in edges if isinstance(edges, list) else [edges]:
+        if isinstance(e, dict) and str(e.get("kind") or "").lower() == "operator":
+            return "blocked on operator"
+    if row.get("hand_back"):
+        return "lane hand-back"
+    tier = row.get("tier")
+    if isinstance(tier, (int, float)) and not isinstance(tier, bool) and tier >= 3:
+        today = today or datetime.now().astimezone().date()
+        if is_overdue(row, today):
+            return "tier-3 past due_by"
+    return None
 
 
 #: THE RANKED QUEUE IS A REGISTER FIELD (MANAGER-PACING-STRUCTURAL, 2026-10-18): the manager's

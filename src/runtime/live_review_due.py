@@ -52,12 +52,17 @@ from __future__ import annotations
 
 import ast
 import json
+import logging
 import math
 import os
 import re
 import sqlite3
+import threading
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
+
+logger = logging.getLogger(__name__)
 
 CONFIG_REL = os.path.join("config", "live_trade_review.yaml")
 REVIEWS_REL = os.path.join("comms", "live_review", "reviews.jsonl")
@@ -233,6 +238,92 @@ def _f(v: Any) -> Optional[float]:
     except (TypeError, ValueError):
         return None
 
+
+# DIAG-LIVE-REVIEW-DUE-SLOW / RM-AM-DUE-COULDNOTLOOK (2026-11-12): the route's only network reads are the bot-feed
+# marks (``local_pnl.last_mark_price``: a Bybit / IB / Alpaca candle fetch per symbol). Run serially inside the
+# request they summed past the callers' budgets (19.1 s on 11-12 01:46Z; a 502 after ~31 s from 09:19Z once
+# CONFLICTING-EXPOSURE-ALERT marked every open symbol), so the wake read could_not_look while packages were due.
+# Marks are now fetched in parallel under ONE wall-clock budget; a mark not back in time is labelled
+# (could_not_look with the reason), never 0, and never holds the due list hostage.
+MARK_BUDGET_S = 4.0
+_MARK_INFLIGHT: Set[str] = set()
+_MARK_INFLIGHT_LOCK = threading.Lock()
+
+
+def _ms(t0: float) -> int:
+    return int(round((time.monotonic() - t0) * 1000))
+
+
+class MarkTimeout(Exception):
+    """A bot-feed mark that was not back inside the route's mark budget (or is still in flight from an earlier call)."""
+
+
+def bounded_marks(symbols: Iterable[Any], mark_fn: Optional[Callable[[Any], Optional[float]]],
+                  budget_s: Optional[float] = None) -> Tuple[Dict[str, Optional[float]], Dict[str, str]]:
+    """Fetch ``mark_fn(sym)`` for each distinct symbol in parallel, waiting at most ``budget_s`` in total.
+
+    Returns ``(marks, misses)``: ``marks[sym]`` is the float mark; ``misses[sym]`` is why there is none
+    (``timeout``, ``in_flight`` -- a read for that symbol from an earlier request has not returned, so a hung feed
+    is not stacked one thread per request -- ``error: ...`` or ``unavailable``). Daemon threads: a hung read can
+    never hold the request or the process's shutdown. Never raises.
+    """
+    syms = sorted({str(s) for s in symbols if s not in (None, "")})
+    marks: Dict[str, Optional[float]] = {}
+    misses: Dict[str, str] = {}
+    if mark_fn is None:
+        return marks, {s: "no_mark_source_supplied" for s in syms}
+    out: Dict[str, Any] = {}
+
+    def run(sym: str) -> None:
+        try:
+            out[sym] = ("ok", mark_fn(sym))
+        except Exception as exc:  # noqa: BLE001  # allow-silent: returned as misses[sym]
+            out[sym] = ("error", f"{type(exc).__name__}: {exc}")
+        finally:
+            with _MARK_INFLIGHT_LOCK:
+                _MARK_INFLIGHT.discard(sym)
+
+    threads: List[Tuple[str, threading.Thread]] = []
+    for sym in syms:
+        with _MARK_INFLIGHT_LOCK:
+            if sym in _MARK_INFLIGHT:
+                misses[sym] = "in_flight"
+                continue
+            _MARK_INFLIGHT.add(sym)
+        t = threading.Thread(target=run, args=(sym,), name=f"ltr-mark-{sym}", daemon=True)
+        t.start()
+        threads.append((sym, t))
+    deadline = time.monotonic() + max(0.0, float(MARK_BUDGET_S if budget_s is None else budget_s))
+    for sym, t in threads:
+        t.join(max(0.0, deadline - time.monotonic()))
+    for sym, _t in threads:
+        got = out.get(sym)
+        if got is None:
+            misses[sym] = "timeout"
+        elif got[0] == "error":
+            misses[sym] = f"error: {got[1]}"
+        else:
+            v = _f(got[1])
+            if v is not None and v > 0:
+                marks[sym] = v
+            else:
+                misses[sym] = "unavailable"
+    return marks, misses
+
+
+def _memo_mark_fn(marks: Dict[str, Optional[float]], misses: Dict[str, str],
+                  budget_s: float) -> Callable[[Any], Optional[float]]:
+    """A ``mark_fn`` over pre-fetched marks: a timed-out / in-flight symbol raises :class:`MarkTimeout` so the
+    caller labels it ``mark_read_failed: MarkTimeout: ...``; an unknown symbol is ``None`` (no network here)."""
+    def fn(sym: Any) -> Optional[float]:
+        k = str(sym)
+        if k in marks:
+            return marks[k]
+        why = misses.get(k)
+        if why in ("timeout", "in_flight"):
+            raise MarkTimeout(f"mark {why} (route mark budget {budget_s:g}s)")
+        return None
+    return fn
 
 def _parse_ts(v: Any) -> Optional[datetime]:
     if not v:
@@ -1506,11 +1597,14 @@ def live_review_due(db_path: Optional[str] = None,
     prop uPnL estimates; None -> those fields are could_not_look ``no_mark_source_supplied``. Never raises. With the default reviews path the prior-review index also
     holds the rows on ``live-review/rows`` that main lacks (``branch`` overrides that read)."""
     now = now or datetime.now(timezone.utc)
+    t0 = time.monotonic()
+    timings: Dict[str, int] = {}
     env: Dict[str, Any] = {
         "generated_at": now.isoformat(), "read_state": "could_not_look",
         "reason": None, "open_count": None, "due_count": None, "due": [],
         "reviews_state": None, "events_not_evaluated": [],
         "open_count_complete": False, "telemetry_less": [],
+        "timings_ms": timings, "mark_budget_s": float(MARK_BUDGET_S),
     }
     try:
         cfg = load_config(config_path)
@@ -1520,12 +1614,14 @@ def live_review_due(db_path: Optional[str] = None,
     env["events_not_evaluated"] = list(cfg.get("not_evaluated") or [])
     env["thresholds_source"] = CONFIG_REL.replace(os.sep, "/")
 
+    t_rv = time.monotonic()
     if reviews_path is None or branch is not None:
         rv = read_reviews_merged(reviews_path, branch)
         env["branch_state"], env["branch_reason"] = rv["branch_state"], rv["branch_reason"]
         env["branch_rows_added"] = rv["branch_added"]
     else:
         rv = read_reviews(reviews_path)
+    timings["reviews"] = _ms(t_rv)
     env["reviews_state"] = rv["state"]
     env["review_bad_lines"] = rv["bad_lines"]
     if rv["state"] == "unreadable":
@@ -1533,6 +1629,7 @@ def live_review_due(db_path: Optional[str] = None,
         env["reason"] = f"reviews_unreadable: {rv.get('error')}"
         return env
 
+    t_tel = time.monotonic()
     try:
         from src.runtime.position_telemetry import read_records
         tel = read_records(db_path=db_path, limit=1000)
@@ -1546,6 +1643,7 @@ def live_review_due(db_path: Optional[str] = None,
         env["reason"] = "telemetry_table_absent"
         return env
 
+    timings["telemetry"] = _ms(t_tel)
     open_rows = [r for r in tel.get("rows", []) if r.get("lifecycle") == "open"]
     mech_rows = [r for r in tel.get("rows", []) if r.get("lifecycle") == "unknown_trade_absent"]
     jo = read_journal_open(db_path)
@@ -1554,7 +1652,15 @@ def live_review_due(db_path: Optional[str] = None,
     have = {str(r.get("order_package_id")) for r in open_rows}
     less = [dict(p, telemetry_absent=True, lifecycle="open")
             for p in jo.get("packages", []) if p["order_package_id"] not in have]
-    po = read_prop_open(db_path, mark_fn=mark_fn)
+    t_marks = time.monotonic()
+    po = read_prop_open(db_path, mark_fn=None)  # rows first; the marks are fetched below under one budget
+    prop_syms = {p.get("symbol") for p in po.get("packages", [])}
+    pre_marks, pre_miss = bounded_marks(prop_syms, mark_fn) if mark_fn is not None else ({}, {})
+    memo = _memo_mark_fn(pre_marks, pre_miss, float(MARK_BUDGET_S)) if mark_fn is not None else None
+    for p in po.get("packages", []):
+        for a in p.get("accounts") or []:
+            a["telemetry"] = _prop_telemetry(p.get("symbol"), p.get("direction"), p.get("entry"), a.get("qty"), memo)
+    timings["prop_marks"] = _ms(t_marks)
     env["prop_open_state"], env["prop_open_reason"] = po["state"], po.get("reason")
     known = have | {p["order_package_id"] for p in less}
     prop_less = []
@@ -1566,7 +1672,9 @@ def live_review_due(db_path: Optional[str] = None,
             lifecycle="open", prop=True))
     less = less + prop_less
     env["prop_open"] = po.get("packages", [])
+    t_mk = time.monotonic()
     market = read_market_context(open_rows + less, cfg, now, db_path, funding_db_path, calendar_path)
+    timings["market_context"] = _ms(t_mk)
     try:
         from src.runtime import ltr_auto_mandate
         cad = ltr_auto_mandate.cadence(now=now)
@@ -1579,14 +1687,29 @@ def live_review_due(db_path: Optional[str] = None,
         for r in sorted(open_rows, key=lambda r: str(r.get("updated_at") or "")):
             if _f(r.get("last_price")):
                 tel_marks[conflicting_exposure.normalize_symbol(r.get("symbol"))] = float(r["last_price"])
-        ce = conflicting_exposure.detect(
-            db_path, mark_fn=mark_fn or (lambda s: tel_marks.get(conflicting_exposure.normalize_symbol(s))))
-        ce["mark_source"] = "route_mark_fn" if mark_fn else "telemetry_last_price"
+        # Telemetry's last_price first (the trader's own mark, no network), then the prop marks already fetched;
+        # only the legs of an ACTUAL conflict that still lack a mark get a bounded bot-feed read.
+        def _ce_mark(sym: Any) -> Optional[float]:
+            m = tel_marks.get(conflicting_exposure.normalize_symbol(sym))
+            return m if m is not None else pre_marks.get(str(sym))
+        t_ce = time.monotonic()
+        ce = conflicting_exposure.detect(db_path, mark_fn=_ce_mark)
+        need = {x.get("symbol") for c in ce.get("conflicts") or [] for x in c.get("legs") or []
+                if x.get("open_r") is None}
+        if need and mark_fn is not None:
+            got, miss = bounded_marks(need, mark_fn)
+            conflicting_exposure.fill_open_r(ce, lambda s: got.get(str(s)))
+            if miss:
+                ce["mark_misses"] = miss
+        ce["mark_source"] = "telemetry_last_price+route_mark_fn" if mark_fn else "telemetry_last_price"
+        timings["conflicting_exposure"] = _ms(t_ce)
     except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as could_not_look
         ce = {"state": "could_not_look", "reason": f"{type(exc).__name__}: {exc}", "conflicts": []}
     env["conflicting_exposure"] = ce
+    t_cd = time.monotonic()
     res = compute_due(open_rows + less, rv["rows"], cfg, now, market=market, mechanics_rows=mech_rows,
                       cadence=cad, conflicts=ce.get("conflicts") or [])
+    timings["compute_due"] = _ms(t_cd)
     env.update(res)
     env["open_count"] = len(open_rows) + len(less)
     env["open_count_complete"] = jo["state"] == "read" and po["state"] in ("read", "table_absent")
@@ -1614,4 +1737,6 @@ def live_review_due(db_path: Optional[str] = None,
     env["read_state"] = "looked"
     env["oldest_due_bar_start"] = min(
         (d["bar_start"] for d in res["due"]), default=None)
+    timings["total"] = _ms(t0)
+    logger.info("live_review_due: open=%s due=%s timings_ms=%s", env["open_count"], env.get("due_count"), timings)
     return env
