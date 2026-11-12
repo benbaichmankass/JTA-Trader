@@ -129,7 +129,7 @@ def test_resets_at_utc_midnight_with_one_alert(tmp_path):
     row = sw.observe(9_000.0, _ts(10, 0, 5))
     assert alerts == ["trip", "reset"]
     assert row["tripped"] is False and not sw.blocks_new_entries(row, _ts(10, 0, 5))
-    # Day-start equity re-anchors to the last reading within 2h of the boundary.
+    # Day-start equity re-anchors to the first reading at/after the boundary.
     assert row["day_start_equity"] == pytest.approx(9_000.0)
 
 
@@ -343,7 +343,15 @@ def test_reset_alert_fires_at_the_boundary_with_no_signal(tick_env):
     assert tick_env["alerts"] == [("trip", "acct_tick"), ("reset", "acct_tick")]
     row = tick_env["state"]()["acct_tick"]
     assert row["day"] == "2026-10-10" and row["tripped"] is False
-    assert row["day_start_equity"] == 9_600.0            # carried: read 30 min before the boundary
+    # A reading taken BEFORE the boundary is yesterday's equity: today awaits its
+    # first post-boundary reading (DD-SWITCH-OVERRIDE, 2026-11-12) -- not ok, no
+    # streak, cannot trip.
+    assert row["day_start_equity"] is None and row["read_state"] == dd.READ_AWAITING
+    assert row["unreadable_streak"] == 0
+    tick_env["snap"]({"acct_tick": 9_550.0}, _ts(10, 0, 1))
+    tick_env["tick"](_ts(10, 0, 2))
+    row = tick_env["state"]()["acct_tick"]
+    assert row["day_start_equity"] == 9_550.0 and row["read_state"] == "ok"
 
 
 @pytest.mark.parametrize("case", ["absent", "stale"])
@@ -518,3 +526,183 @@ def test_prop_risk_manager_carries_quiescent_reading(monkeypatch, tmp_path):
     rm.dd_switch = dd.switch_for_account("breakout_2", accounts["breakout_2"])
     assert rm.check_dd_switch() is False
     assert dd.load_state()["breakout_2"]["read_state"] == dd.READ_CARRIED
+
+
+# ── DD-SWITCH-OVERRIDE (operator 2026-11-12, m7) ────────────────────────────
+# 1) The day-start reading. On 2026-11-12 the switch fired on bybit_2 and
+#    bybit_portfolio on 11-11, auto-reset at 00:00Z, and at 00:05Z showed ~45%
+#    of the limit already used. MEASURED (trade_journal.db::balance_snapshots):
+#    bybit_2 23:00Z 197.157 -> 00:01Z 194.428; the state row anchored
+#    day_start_equity = 197.157 (the 23:00Z snapshot, carried from inside the
+#    old 2h pre-boundary window), so 11-11's 23:00-00:00Z loss (2.73) was
+#    charged to 11-12: 2.73 / 5.91 = 46%. bybit_portfolio 59313.87 -> 58523.66:
+#    790.21 / 1779.42 = 44%.
+
+def _bybit2_env(tick_env):
+    tick_env["write_accounts"]({"bybit_2_like": {
+        "exchange": "bybit", "risk": {"daily_dd_switch": {"armed": True, "limit_pct": 0.03}}}})
+
+
+def test_0005z_case_yesterdays_late_loss_is_not_charged_to_today(tick_env):
+    _bybit2_env(tick_env)
+    tick_env["snap"]({"bybit_2_like": 203.0}, _ts(11, 10, 0))
+    tick_env["tick"](_ts(11, 10, 1))
+    tick_env["snap"]({"bybit_2_like": 196.0}, _ts(11, 21, 0))        # -3.4%: trips on the 11th
+    tick_env["tick"](_ts(11, 21, 1))
+    tick_env["snap"]({"bybit_2_like": 197.157}, _ts(11, 23, 0))
+    tick_env["tick"](_ts(11, 23, 1))
+    assert ("trip", "bybit_2_like") in tick_env["alerts"]
+    # 00:00:30Z: new day, the newest snapshot is still 23:00Z -> awaiting, cannot trip.
+    assert tick_env["tick"](_ts(12, 0, 0))["bybit_2_like"] == dd.READ_AWAITING
+    assert ("reset", "bybit_2_like") in tick_env["alerts"]
+    # 00:01Z snapshot lands; 00:05Z tick, account flat.
+    tick_env["snap"]({"bybit_2_like": 194.428}, _ts(12, 0, 1))
+    assert tick_env["tick"](_ts(12, 0, 5))["bybit_2_like"] == "ok"
+    row = tick_env["state"]()["bybit_2_like"]
+    assert row["day_start_equity"] == pytest.approx(194.428)
+    assert row["loss_usd"] == 0.0                                    # was 2.73 = 46% of 5.91
+    assert row["limit_usd"] == pytest.approx(0.03 * 194.428, abs=0.01)
+    assert row["tripped"] is False
+
+
+def test_awaiting_day_start_never_counts_toward_the_red_flag(tick_env):
+    _bybit2_env(tick_env)
+    tick_env["snap"]({"bybit_2_like": 200.0}, _ts(11, 23, 0))
+    tick_env["tick"](_ts(11, 23, 1))
+    for s_ in range(10):
+        assert tick_env["tick"](_ts(12, 0, 0) + timedelta(seconds=s_ * 5))["bybit_2_like"] == dd.READ_AWAITING
+    assert tick_env["state"]()["bybit_2_like"]["unreadable_streak"] == 0
+    assert ("unreadable", "bybit_2_like") not in tick_env["alerts"]
+
+
+def test_live_equity_after_the_boundary_anchors_the_day(tmp_path):
+    sw, _ = _switch(tmp_path)
+    sw.observe(197.157, _ts(11, 23, 1), reading_ts=_ts(11, 23, 0))
+    row = sw.observe(197.157, _ts(12, 0, 0), reading_ts=_ts(11, 23, 0))
+    assert row["read_state"] == dd.READ_AWAITING and row["day_start_equity"] is None
+    row = sw.observe(194.43, _ts(12, 0, 2))                           # a dispatch's live read
+    assert row["day_start_equity"] == pytest.approx(194.43) and row["loss_usd"] == 0.0
+
+
+# 2) The one-time override.
+
+def _tripped(tmp_path, now_day=12):
+    sw, alerts = _switch(tmp_path)
+    sw.observe(10_000.0, _ts(now_day, 1))
+    sw.observe(9_600.0, _ts(now_day, 2))
+    assert alerts == ["trip"]
+    return sw, alerts
+
+
+def test_override_clears_todays_trip_once_journaled_and_alerted(tmp_path):
+    sw, alerts = _tripped(tmp_path)
+    assert sw.blocks_new_entries(None, _ts(12, 3))
+    st = sw.status(now=_ts(12, 3))
+    assert st["tripped"] is True and st["override_available"] is True and st["override"] is None
+    outcome, payload = sw.override(by="op@x", reason="manual check", now=_ts(12, 3))
+    assert outcome == dd.OVERRIDE_OK and alerts == ["trip", "override"]
+    rec = payload["override"]
+    assert rec["account"] == "acct" and rec["day"] == "2026-10-12" and rec["by"] == "op@x"
+    assert rec["loss_usd"] == pytest.approx(400.0) and rec["limit_usd"] == pytest.approx(300.0)
+    assert not sw.blocks_new_entries(None, _ts(12, 3))
+    st = sw.status(now=_ts(12, 3))
+    assert st["tripped"] is False and st["trip_latched"] is True
+    assert st["override"]["by"] == "op@x" and st["override_available"] is False
+    # Deeper loss the same day: no re-trip, no second alert, still allowed.
+    row = sw.observe(9_000.0, _ts(12, 4))
+    assert not sw.blocks_new_entries(row, _ts(12, 4)) and alerts == ["trip", "override"]
+    # One-time: a second override the same day is refused and writes nothing.
+    outcome, payload = sw.override(by="op@x", now=_ts(12, 5))
+    assert outcome == dd.OVERRIDE_ALREADY
+    assert len(dd.load_overrides(tmp_path / "daily_dd_switch_overrides.jsonl")) == 1
+    # The journal survives the trader's per-tick state writes (separate file).
+    sw.observe(9_100.0, _ts(12, 6))
+    assert sw.override_for_day("2026-10-12")["by"] == "op@x"
+
+
+def test_override_expires_at_the_next_boundary_and_the_switch_rearms(tmp_path):
+    sw, alerts = _tripped(tmp_path)
+    sw.override(by="op", now=_ts(12, 3))
+    sw.observe(9_000.0, _ts(13, 0, 5))                                # new day anchors at 9,000
+    row = sw.observe(8_700.0, _ts(13, 1))                             # -3.3%: trips again
+    assert sw.blocks_new_entries(row, _ts(13, 1)) and alerts[-1] == "trip"
+    assert sw.status(now=_ts(13, 1))["override_available"] is True    # a fresh one-time for the new day
+
+
+@pytest.mark.parametrize("case", ["not_tripped", "not_armed", "yesterday"])
+def test_override_refused_writes_nothing(tmp_path, case):
+    if case == "not_armed":
+        sw, alerts = _switch(tmp_path, armed=False)
+        sw.observe(10_000.0, _ts(12, 1)); sw.observe(9_000.0, _ts(12, 2))
+        expected, now = dd.OVERRIDE_NOT_ARMED, _ts(12, 3)
+    elif case == "not_tripped":
+        sw, alerts = _switch(tmp_path)
+        sw.observe(10_000.0, _ts(12, 1))
+        expected, now = dd.OVERRIDE_NOT_TRIPPED, _ts(12, 3)
+    else:   # tripped yesterday: the boundary already cleared it
+        sw, alerts = _tripped(tmp_path, now_day=11)
+        expected, now = dd.OVERRIDE_NOT_TRIPPED, _ts(12, 3)
+    outcome, _ = sw.override(by="op", now=now)
+    assert outcome == expected and "override" not in alerts
+    assert dd.load_overrides(tmp_path / "daily_dd_switch_overrides.jsonl") == []
+
+
+def test_risk_manager_honours_the_override_and_reduce_only_still_passes(tmp_path):
+    rm = RiskManager({"daily_dd_switch": {"armed": True}}, account_id="acct_rm")
+    rm.note_live_equity(10_000.0)
+    rm.evaluate(_pkg())
+    rm.note_live_equity(9_600.0)
+    assert rm.evaluate(_pkg()) == (False, "DAILY_DD_SWITCH")
+    outcome, _ = rm.dd_switch.override(by="op")
+    assert outcome == dd.OVERRIDE_OK
+    ok, reason = rm.evaluate(_pkg())
+    assert reason != "DAILY_DD_SWITCH"
+    assert rm.evaluate(_pkg(), opening=False)[1] != "DAILY_DD_SWITCH"
+
+
+@pytest.fixture
+def api_env(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    from src.web.api import main
+    from src.web.api.auth import require_session
+    from src.web.api.routers import dd_switch as route
+    acc = tmp_path / "accounts.yaml"
+    acc.write_text(yaml.safe_dump({"accounts": {
+        "acct_api": {"exchange": "bybit", "risk": {"daily_dd_switch": {"armed": True}}},
+        "acct_old": {"exchange": "bybit", "retired": True},
+    }}))
+    monkeypatch.setattr(route, "_ACCOUNTS_YAML", acc)
+    monkeypatch.setattr(dd, "_default_alert", lambda *a, **k: None)
+    main.app.dependency_overrides[require_session] = lambda: {"email": "operator@example"}
+    yield TestClient(main.app, raise_server_exceptions=False)
+    main.app.dependency_overrides.pop(require_session, None)
+
+
+def test_override_route_contract(api_env):
+    client = api_env
+    now = datetime.now(timezone.utc)
+    sw = dd.DailyDDSwitch("acct_api", dd.parse_config({"armed": True}))
+    r = client.post("/api/bot/accounts/acct_api/daily-dd-switch/override", json={"reason": "x"})
+    assert r.status_code == 409 and r.json()["outcome"] == "not_tripped"
+    sw.observe(10_000.0, now - timedelta(seconds=2))
+    sw.observe(9_600.0, now - timedelta(seconds=1))
+    g = client.get("/api/bot/accounts/acct_api/daily-dd-switch").json()
+    assert g["status"]["tripped"] is True and g["status"]["override_available"] is True
+    r = client.post("/api/bot/accounts/acct_api/daily-dd-switch/override", json={"reason": "checked"})
+    body = r.json()
+    assert r.status_code == 200 and body["outcome"] == "overridden"
+    assert body["override"]["by"] == "operator@example" and body["override"]["reason"] == "checked"
+    assert body["status"]["tripped"] is False and body["status"]["override"]["by"] == "operator@example"
+    r = client.post("/api/bot/accounts/acct_api/daily-dd-switch/override")
+    assert r.status_code == 409 and r.json()["outcome"] == "already_overridden"
+    assert client.post("/api/bot/accounts/acct_old/daily-dd-switch/override").status_code == 404
+    assert client.post("/api/bot/accounts/nope/daily-dd-switch/override").status_code == 404
+    assert client.post("/api/bot/accounts/a%20b/daily-dd-switch/override").status_code == 400
+
+
+def test_override_route_needs_a_session(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    from src.web.api import main
+    client = TestClient(main.app, raise_server_exceptions=False)
+    r = client.post("/api/bot/accounts/bybit_2/daily-dd-switch/override", json={})
+    assert r.status_code in (401, 403, 500, 503)

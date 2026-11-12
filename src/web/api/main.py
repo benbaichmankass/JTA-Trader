@@ -67,6 +67,7 @@ from src.web.api.routers import work_ledger as work_ledger_router
 from src.web.api.routers import work_topics as work_topics_router
 from src.web.api.routers import work_items as work_items_router
 from src.web.api.routers import live_review_direct as live_review_direct_router
+from src.web.api.routers import dd_switch as dd_switch_router
 
 # UI-UPGRADE-1-AUTH: the whole-site gate is an APP-LEVEL dependency (so it covers
 # every router and WS /ws/market) that is a no-op until SITE_AUTH_ENFORCE is set.
@@ -157,6 +158,7 @@ app.include_router(work_ledger_router.router)
 app.include_router(work_topics_router.router)
 app.include_router(work_items_router.router)
 app.include_router(live_review_direct_router.router)
+app.include_router(dd_switch_router.router)
 
 
 @app.get("/api/health", tags=["health"])
