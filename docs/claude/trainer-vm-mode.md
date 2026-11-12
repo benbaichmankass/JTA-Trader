@@ -20,8 +20,9 @@ in the same chain of actions.
 The live trader's trust contract is conservative because every
 mutation has direct money-at-risk consequences. The trainer VM has
 **no path to live order influence on its own**. As of the 2026-05-19
-shadow-default flip the boundary is the **stage gate**, not the
-YAML wire-up:
+shadow-default flip the boundary is the **stage label** (`advisory`
+influences; since 2026-11-12 it is reached on offline evidence with no
+shadow step), not the YAML wire-up:
 
 - Models registered at `target_deployment_stage: shadow` (the
   current default) auto-wire onto every strategy via
@@ -144,9 +145,9 @@ artifact in the same PR / pushes the JSONL line in the same step.
   (the single live-influence stage), Claude additionally writes
   a sprint-log entry under `docs/sprint-logs/S-AI-WS5-PROMOTION-*`
   with: model id, dataset hash, eval metrics, the decision rule
-  that justified the promotion, and a "still operator-gated"
-  reminder (the `shadow → advisory` edge is where live influence
-  begins, per the 2026-05-19 default flip). The former
+  that justified the promotion, and the operator notification
+  (the move into `advisory` is where live influence begins; since
+  2026-11-12 it is decided on offline evidence with no shadow step). The former
   `limited_live` / `live_approved` tiers were collapsed into
   `advisory` on 2026-06-16.
 - **Workflow dispatch:** when Claude fires
@@ -204,24 +205,27 @@ The trainer's autonomous authority **does not** extend to:
 
 ## 5. Promotion-to-live workflow (the one place autonomy meets caution)
 
-Updated 2026-05-19 (shadow-default flip). The promotion ladder is
-Claude's to manage end-to-end on the registry side up to `shadow`.
-The `shadow → advisory` transition (and every step beyond) is the
-operator-approved gate where autonomy ends.
+⚠️ **Updated 2026-11-12: the stage step is RETIRED** (operator, chat, verbatim:
+*"you're going to retire the step from the ML. Everything goes through the new flow, back testing, live money, and then if it gets demoted, it soaks to still generate data while we iterate on it. That is the only acceptable flow. There is nothing in between proving edge on back testing and real money. Absolutely no steps."*). A model whose committed OFFLINE evidence clears `ml.promotion.gates`
+moves to `advisory` directly from `candidate` or `shadow`; that is a Tier-3
+change made under canonical § "Data-backed Tier-2/3 decisions" (ship on the
+record, then notify the operator). `shadow` holds data-collecting models and
+models DEMOTED from `advisory` while they are iterated on — never a step.
 
 | Step | Actor | Why |
 |---|---|---|
 | Train + eval a model | Claude (trainer) | Pure trainer workload. |
 | Register at `shadow` (the default since 2026-05-19) | Claude (trainer) | Auto-wired onto every strategy via `Coordinator._get_shadow_predictors` on the next reload; predictions log but never influence the order package. |
 | Register at `candidate` (the pre-shadow park; only when explicitly demoted) | Claude (trainer) | Operator-park stage — refused by the shadow factory; predictions don't log. (Legacy `research_only`/`backtest_approved` alias to `candidate`.) |
-| Promote `shadow → advisory` | Operator-approved (Claude proposes via PR + sprint-log entry) | **This is the live-trading switch.** `advisory` is the single influence stage (the former `limited_live`/`live_approved` tiers collapsed into it 2026-06-16). Sprint-log entry mandatory (§ 3.b). |
+| Promote to `advisory` (from `candidate` or `shadow` — no shadow step) | Claude, data-backed Tier-3 on the committed offline evidence record; operator notified at once | **This is the live-trading switch.** `advisory` is the single influence stage (the former `limited_live`/`live_approved` tiers collapsed into it 2026-06-16). Sprint-log entry mandatory (§ 3.b). |
+| Demote `advisory → shadow` | Claude, data-backed Tier-3 (demote trigger fired); operator notified | The model soaks in `shadow` to keep generating data while it is iterated on. |
 | (Optional) Pin or opt-out via `shadow_model_ids` in a strategy YAML | Operator (live VM) | Override the auto-wire default for a specific strategy. PR proposing the edit is fine; merging it requires operator approval per § 4. |
 | Reload the live `Coordinator` to pick up registry or YAML changes | Operator (Telegram `/vm_write` or `system-actions.yml` `restart-bot-service` / `pull-and-deploy`) | Live-VM action, Tier 2. |
 
 The boundary is the stage, not the YAML. A `shadow` model
 auto-wires onto every strategy with no manual YAML edit; a model
-at `candidate` is refused even if pinned. Operator approval lives at
-the `shadow → advisory` transition.
+at `candidate` is refused even if pinned. The move into `advisory` is
+decided on offline evidence (no shadow step since 2026-11-12).
 
 ---
 
