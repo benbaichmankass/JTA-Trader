@@ -264,3 +264,44 @@ def test_review_map_is_not_the_trade_path_map():
     from pathlib import Path
     assert "review_classes" not in Path("src/news/news_events.py").read_text()
     assert "review_classes" not in Path("config/economic_calendar.yaml").read_text()
+
+
+# ---- LTR-VOLREGIME-ENTRY-ATR: entry ATR from the package when the path history lacks the entry bar ----
+def _late_hist(atr_now):
+    # 3 bars of history, but the package has been held 10 bars: history starts ~7 bars after entry
+    return hist([1.0, 1.0, 1.0], [atr_now] * 3)
+
+
+def _vctx(history, meta_atr=None, state="read"):
+    c = ctx(history)
+    c["venue"] = {"state": state, "snapshots": [], "meta_atr": meta_atr}
+    return c
+
+
+def test_vol_regime_uses_package_entry_atr_when_history_starts_late_and_labels_it():
+    ev, c = mkt(row(bars_held=10), _vctx(_late_hist(2.0), meta_atr=1.0))
+    assert "vol_regime" not in cnl_names(c)
+    vr = [e for e in ev if e[0] == "vol_regime"]
+    assert vr and vr[0][1] == "expand" and "entry_atr_source=package_meta" in vr[0][2]
+    assert "not path-measured" in vr[0][2]
+
+
+def test_vol_regime_late_history_without_package_atr_stays_could_not_look():
+    _, c = mkt(row(bars_held=10), _vctx(_late_hist(2.0), meta_atr=None))
+    assert any(x["event"] == "vol_regime" and "no entry ATR" in x["reason"] for x in c)
+    _, c = mkt(row(bars_held=10), _vctx(_late_hist(2.0), meta_atr=1.0, state="could_not_look"))
+    assert "vol_regime" in cnl_names(c)
+
+
+def test_vol_regime_prefers_the_path_measured_entry_atr_when_history_covers_entry():
+    h = hist([1.0, 1.0, 1.0], [1.0, 1.0, 2.0])
+    ev, _ = mkt(row(bars_held=2), _vctx(h, meta_atr=100.0))   # meta ignored: history has the entry bar
+    vr = [e for e in ev if e[0] == "vol_regime"]
+    assert vr and vr[0][1] == "expand" and "package_meta" not in vr[0][2]
+
+
+def test_entry_atr_fallback_is_review_path_only():
+    """The trader never reads live_review_due (the fallback lives only there)."""
+    from pathlib import Path
+    for f in ("src/runtime/pipeline.py", "src/news/news_events.py", "src/core/coordinator.py"):
+        assert "live_review_due" not in Path(f).read_text(), f
