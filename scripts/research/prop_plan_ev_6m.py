@@ -26,7 +26,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import prop_gate as pg  # noqa: E402
+import prop_gate as pg
 
 RULESETS = ["breakout_turbo_1step", "breakout", "velotrade_classic_1step", "velotrade_pro_1step", "tradeify_247_1step",
             "propr_classic_1step", "propr_turbo_1step", "hyrotrader", "hyrotrader_lenient"]
@@ -59,7 +59,7 @@ def cell(rs: str, legs: dict[str, Path], seed: int, out: Path) -> dict:
             "--funded-start", "fresh", "--sizing", "start", "--risk-pct", str(RISK), "--dd-switch-frac", "0.8",
             "--horizon-days", str(HORIZON), "--seed", str(seed), "--lives", "1000", "--outer", "2", "--lives-per-outer", "100",
             "--modes", "path", "--out", str(out)]
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=1800, check=False)
     if r.returncode != 0 or not out.exists():
         return {"error": (r.stderr or r.stdout)[-400:]}
     p = json.loads(out.read_text())["results"]["path"]

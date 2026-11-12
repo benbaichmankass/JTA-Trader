@@ -1,6 +1,6 @@
 # Tradeify FUTURES: account facts, fit, ML, execution path, buy-point (2026-11-12)
 
-> **Doc status:** `unknown` · category `evidence` · last verified `2026-11-12` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · lane TRADEIFY-FUTURES-FRONTIER (row of the same name, roadmap L-PROP) · dispatched by Manager Session 2026-11-11a · read-only research; no account, credential, order or config touched.
+> **Doc status:** `unknown` · category `evidence` · last verified `2026-11-12` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · rows **TRADEIFY-FUTURES-EVAL** (the operator's 2026-11-10 row; TRADEIFY-FUTURES-FRONTIER folded into it as a duplicate) and **PROP-PLAN-EV-6M** · lane session_01AFoLuLwRU7eg9KzpMcxWu · dispatched by Manager Session 2026-11-11a · read-only research; no account, credential, order or config touched.
 
 **Gates this adds or changes: none.**
 
