@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# wiring: manual-only - the manager runs it by hand from a session with issue-comment edit permission, once, for operator decisions w17/x4 (IB account ids in old bot comments)
 """Scrub sensitive values out of this repo's existing issue/PR comments (HEALTH-20261111-IB-ACCTID-PUBLIC).
 
 Operator decisions w17 / x4 (2026-11-12): clean the bot comments that carry IBKR account ids. This tool
