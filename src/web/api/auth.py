@@ -236,6 +236,7 @@ _SAFE_METHODS = frozenset({"GET", "HEAD"})
 #   POST /api/bot/alerts, /api/bot/wake-toggles -> prop._require_write_token
 #   POST /api/bot/work/decision                 -> work._require_decision_write_token
 #   POST /api/bot/work/items[/<id>/set|note|close] -> work_items._require_work_store_token
+#   POST /api/bot/live-review/rows               -> live_review_direct (work-store token)
 # Their callers are non-browser services (alert posters, the Telegram decision
 # bot, the console MCP, work.py) that hold that token and no ws_ session. The gate
 # lets the service bearer through on GET/HEAD only, so without this list arming
@@ -247,6 +248,7 @@ SITE_PUBLIC_POST_PATHS: frozenset[str] = frozenset({
     "/api/bot/wake-toggles",
     "/api/bot/work/decision",
     "/api/bot/work/items",
+    "/api/bot/live-review/rows",   # -> live_review_direct: work-store token (TRADE-ACTION-DIRECT-PATH)
 })
 SITE_PUBLIC_POST_PREFIXES: tuple[str, ...] = (
     "/api/bot/work/items/",

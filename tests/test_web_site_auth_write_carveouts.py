@@ -21,6 +21,7 @@ POSTS = [
     "/api/bot/work/decision",
     "/api/bot/work/items",
     "/api/bot/work/items/SOME-ID/note",
+    "/api/bot/live-review/rows",
 ]
 
 
