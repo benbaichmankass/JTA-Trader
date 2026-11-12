@@ -554,7 +554,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/design/desk-entry-review-redesign-2026-11-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/site-auth-consumer-inventory-2026-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/trade-action-direct-path-2026-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
-| `docs/design/ui-redesign-2026-11-reconciliation.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | Reconciles ui-workplan-2026-11 (superseded) against operator spec row UI-REDESIGN-2026-11 and each row's operator note |
+| `docs/design/ui-redesign-2026-11-reconciliation.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | Reconciles ui-workplan-2026-11 (superseded) against operator spec row UI-REDESIGN-2026-11 and each row's operator note; designs the SPA Work queue tabs (Decisions, This week, R&D registry, Gates, Plans) |
 | `docs/design/ui-workplan-2026-11-questions.md` | plan | superseded | `docs/design/ui-redesign-2026-11-reconciliation.md` | 2026-11-12 | `name:workplan-is-a-forward-commitment / mi159:plan-status-header:superseded` | — |
 | `docs/design/ui-workplan-2026-11.md` | architecture | superseded | `docs/design/ui-redesign-2026-11-reconciliation.md` | 2026-11-12 | `dir:design-declares-contracts / mi159:plan-status-header:superseded` | UI workplan 2026-11: design for OAuth sign-in enforcement, prop/chart bracket history, performance table + P&L chart, insights ledger, models/strategies tables, sidebar, topic map |
 | `docs/design/close-confirmation-scope-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
@@ -1237,6 +1237,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/runbooks/gpu-burst.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/health-check.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/alpaca-wedged-oco.md` | instruction | live | — | 2026-11-06 | `read:ALPACA-LIVE-MECHANICS-lane-authored-it-2026-11-06-against-live-broker-reads` | the self-healing Alpaca close ladder for a wedged OCO (paper reset / live red flag) |
+| `docs/runbooks/ops-token-rotation.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/phone-executor-action-coverage.md` | instruction | live | — | 2026-11-11 | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/phone-executor-anomaly.md` | instruction | live | — | 2026-11-07 | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/jta-trader-rename.md` | instruction | live | — | 2026-10-28 | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |

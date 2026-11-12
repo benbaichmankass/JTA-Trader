@@ -587,6 +587,13 @@ else
     echo ">>> WARNING: install_systemd_units.sh exited nonzero — see journal."
 fi
 
+# VM-CHANGE-LEDGER fold-back: host config that lives in deploy/ (not a unit) converges here, so a rebuilt VM
+# matches. Best-effort and idempotent (a VM that already matches is a no-op); a failure is printed, never fatal.
+if [ -x "${REPO_DIR}/scripts/ops/install_syslog_cap.sh" ]; then
+    REPO_DIR="${REPO_DIR}" bash "${REPO_DIR}/scripts/ops/install_syslog_cap.sh" \
+        || echo ">>> WARN: install_syslog_cap.sh failed (non-fatal; the deploy continues)"
+fi
+
 heal_devnull || true  # re-heal before the unit enumeration (its 2>/dev/null degraded to the 3-unit fallback on 2026-08-02)
 if "${SYSTEMCTL[@]}" list-units 'claude-vm-runner@*.service' --state=active --no-legend 2>/dev/null | grep -q .; then
     echo ">>> A claude-vm-runner unit is active — deferring service restart to the next sync tick to avoid killing an in-flight /vm invocation."
