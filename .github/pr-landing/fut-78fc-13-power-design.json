@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "One queue edit R5 cannot vouch for: research/queue/RQ-20261101-78fc-13.yaml power.design paired -> one_sample (plus the reason in power.basis). The unit has not run; the decision_rule is untouched. 'paired' is not a design research_queue.py can grade, so the queued unit reads power=unverifiable and fails tests/test_research_queue.py::test_every_committed_job_is_both_powered_and_routable on main. This was commit 8734ba0ac on #25303, which merged at the earlier head 46ea4e1f9 without it. Revert: git revert.",
+  "why": "Make the queued RQ-20261101-78fc-13 gradeable for power so the research-queue test on main stops failing on it and the unit can be dispatched."
+}
