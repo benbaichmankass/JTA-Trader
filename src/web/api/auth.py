@@ -229,6 +229,9 @@ SITE_PUBLIC_PREFIXES: tuple[str, ...] = (
     "/api/bot/prop/phone/",
 )
 _SAFE_METHODS = frozenset({"GET", "HEAD"})
+#: The SSE push stream (routers/stream.py). With the gate on it also takes ``?ticket=`` (an EventSource
+#: cannot set headers), exactly as ``WS /ws/market`` does.
+STREAM_PATH = "/api/bot/stream"
 
 # POST-only carve-outs (SITE-AUTH step (i), 2026-11-11). Each of these routes
 # checks its OWN service token inside the router and fails CLOSED (503 when the
@@ -308,6 +311,15 @@ def require_site_session(conn: HTTPConnection) -> None:
                 web_sessions.validate_session(token)):
             return
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail={"error": "invalid_session"})
+
+    if method == "GET" and conn.url.path == STREAM_PATH and not token:
+        # A browser EventSource cannot send Authorization: it passes the same single-use ws-ticket
+        # /ws/market takes (UI-TRADING-PUSH T1). Same check, same store, GET on this one path only.
+        ticket = conn.query_params.get("ticket", "")
+        sid = web_sessions.mem_take("wsticket", ticket) if ticket else None
+        if sid is not None and web_sessions.session_alive(sid):
+            return
+        raise _UNAUTH
 
     if token.startswith(web_sessions.SESSION_TOKEN_PREFIX):
         if _session_row_allowed(web_sessions.validate_session(token)):
