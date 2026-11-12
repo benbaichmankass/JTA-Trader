@@ -1,6 +1,7 @@
 # w9 gate breakdown — four candidate gates, built as reports (2026-11-12)
 
-> **Doc status:** `live` · category `review` · lane `ML-ADVISORY-SCOPE-GUARD` (w9 bundle) · Tier 1 · **Gates this adds or changes: none.**
+**Gates this adds or changes: none.** Lane `ML-ADVISORY-SCOPE-GUARD` (w9 bundle), Tier 1.
+
 
 **Decision this serves.** Operator, decisions page w9, 2026-11-12: *"Build them as reports only (no gate)"*; note: *"I want a break down of each one so that I can decide on each gate if its necessary or not."* The manager turns each check below into its own decisions-page question.
 
