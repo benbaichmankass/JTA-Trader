@@ -234,6 +234,61 @@ def _v_prop_bracket(p: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
             "apply": bool(apply)}, errs
 
 
+#: set-env (OPS-SET-ENV, operator 2026-11-12: "Go directly using your token to the VM and turn it off ... Do not try
+#: going through the repo"): the direct channel's env flip, so a kill switch never waits on an Actions runner. Keys
+#: are an explicit pattern allowlist with per-key value sets; the write goes through the SAME scripts/ops/set_env.sh
+#: the system-actions set-env arm runs (byte-preserving upsert, symbolic env_file, its own service allowlist).
+SET_ENV_KEYS = ((re.compile(r"^PROP_PHONE_MODE_[A-Z0-9_]+$"), ("off", "dry", "live")),)
+SET_ENV_FILES = ("shared", "web-api")
+
+
+def _v_set_env(p: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
+    keys = ("key", "value", "service", "env_file")
+    errs = [f"unknown param {k}" for k in p if k not in keys]
+    key = str(p.get("key") or "").strip()
+    val = str(p.get("value") if p.get("value") is not None else "").strip()
+    env_file = str(p.get("env_file") or "shared").strip()
+    svc = str(p.get("service") or "").strip()
+    if svc and svc != "none" and not svc.endswith(".service"):
+        svc += ".service"
+    allowed = next((vals for rx, vals in SET_ENV_KEYS if rx.match(key)), None)
+    if allowed is None:
+        errs.append(f"key {key!r} is not in the set-env allowlist")
+    elif val not in allowed:
+        errs.append(f"value for {key} must be one of {', '.join(allowed)}")
+    if env_file not in SET_ENV_FILES:
+        errs.append(f"env_file must be one of {', '.join(SET_ENV_FILES)}")
+    if svc not in RESTARTABLE_SERVICES and svc != "none":
+        errs.append(f"service must be one of {', '.join(RESTARTABLE_SERVICES)} or none")
+    return {"key": key, "value": val, "service": svc, "env_file": env_file}, errs
+
+
+#: exec (OPS-EXEC). Operator 2026-11-12, verbatim: "The channel itself is open to any command, and Claude can do
+#: anything that either there's a preset mandate for ... or that I tell you to do, or that he asks permissions from me
+#: and gets explicit permission from me ... once you get permission, you execute it through the channel without
+#: changing configurations or settings or permissions lists". One shell command on the live VM, run by the ops runner
+#: as its own user (sudo -n available), cwd = the trader tree, stdout/stderr tail journaled. Tier 2: it runs only with
+#: the authority attached (operator_quote = the operator's words or the mandate), otherwise it waits on the Telegram
+#: approve card. The permission model between the operator and Claude is unchanged; this only removes the repo/runner
+#: hop for actions and configuration.
+EXEC_MAX_TIMEOUT_S = 3600
+
+
+def _v_exec(p: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
+    errs = [f"unknown param {k}" for k in p if k not in ("cmd", "timeout_s")]
+    cmd = p.get("cmd")
+    if not isinstance(cmd, str) or not cmd.strip():
+        errs.append("cmd: a non-empty shell command is required")
+        cmd = ""
+    try:
+        t = int(p.get("timeout_s") or 600)
+    except (TypeError, ValueError):
+        t = 600
+        errs.append("timeout_s must be an integer")
+    t = max(5, min(t, EXEC_MAX_TIMEOUT_S))
+    return {"cmd": cmd, "timeout_s": t}, errs
+
+
 def _v_directed(p: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
     """A directed_action/v1 record minus id / created_at / directed_by / operator_quote (filled at run time, so a
     record approved minutes later is not born stale). Validated with the VM's own ``directed_actions.problems``."""
@@ -268,6 +323,41 @@ def _v_row(p: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
     return ({"row": row} if isinstance(row, dict) else {}), errs
 
 
+_PING_PRIORITIES = ("urgent", "high", "normal", "low")
+_PING_TARGETS = ("claude", "trader")
+_PING_KINDS = ("decision", "state_change", "lifecycle")
+PING_MAX_CHARS = 3500
+
+
+def _v_ping(p: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
+    """The send-ping § 2 row's params, checked HERE instead of warned-and-defaulted in the wrapper: a direct call
+    gets a 400 for a bad priority / target rather than a silently different ping. ``kind`` stays blank =
+    passthrough (the operator's own words; ``send_ping_action.sh`` header), and a kind needs ``why``."""
+    keys = ("message", "priority", "target", "kind", "why", "unproven")
+    errs = [f"unknown param {k}" for k in p if k not in keys]
+    vals = {k: ("" if p.get(k) is None else str(p.get(k))) for k in keys}
+    msg = vals["message"].strip()
+    pri = vals["priority"].strip() or "normal"
+    tgt = vals["target"].strip() or "claude"
+    kind = vals["kind"].strip()
+    if not msg:
+        errs.append("message: a non-empty message is required")
+    elif len(msg) > PING_MAX_CHARS:
+        errs.append(f"message: at most {PING_MAX_CHARS} chars (got {len(msg)})")
+    if pri not in _PING_PRIORITIES:
+        errs.append(f"priority must be one of {', '.join(_PING_PRIORITIES)}")
+    if tgt not in _PING_TARGETS:
+        errs.append(f"target must be one of {', '.join(_PING_TARGETS)}")
+    if kind and kind not in _PING_KINDS:
+        errs.append(f"kind must be blank (passthrough) or one of {', '.join(_PING_KINDS)}")
+    if kind and not vals["why"].strip():
+        errs.append("why: required when kind is set")
+    if vals["unproven"].strip() and not kind:
+        errs.append("unproven: needs kind")
+    return {"message": msg, "priority": pri, "target": tgt, "kind": kind, "why": vals["why"].strip(),
+            "unproven": vals["unproven"].strip()}, errs
+
+
 # ─────────────────────────────────────────────────────────────────────────── the registry
 
 Runner = Callable[[Dict[str, Any]], Dict[str, Any]]
@@ -300,6 +390,18 @@ REGISTRY: Dict[str, OpsAction] = {a.name: a for a in (
               "starts ict-git-sync.service once: it deploys exactly what the timer would within ~5 min"),
     OpsAction("restart-service", 2, "restart-bot-service", _v_restart, "run_restart_service", 180,
               "the trader goes through scripts/ops/restart_bot.sh; the other units are set-env's allowlist"),
+    OpsAction("set-env", 2, "set-env", _v_set_env, "run_set_env", 240,
+              "scripts/ops/set_env.sh: one allowlisted key, then restart the named service"),
+    OpsAction("send-ping", 1, "send-ping", _v_ping, "run_send_ping", 60,
+              "scripts/ops/send_ping_action.sh with the § 2 row's params: one Telegram message, no mutation; "
+              "a class-limited ping that was withheld reads verdict withheld, never sent"),
+    *(OpsAction(name, 1, name, _v_none, "run_report", 120,
+                f"scripts/ops/{script}: read-only, no params; the § 2 row's own wrapper, stdout is the result",
+                {"script": script})
+      for name, script in (("status-check", "status_check.sh"), ("disk-usage-report", "disk_usage_report.sh"),
+                           ("list-listening-ports", "list_listening_ports.sh"))),
+    OpsAction("exec", 2, "any command on the live VM (actions and configuration, never through the repo)",
+              _v_exec, "run_exec", EXEC_MAX_TIMEOUT_S, "bash -lc <cmd> as the ops runner, cwd = the trader tree"),
 )}
 
 
@@ -525,6 +627,39 @@ def run_restart_service(job: Dict[str, Any]) -> Dict[str, Any]:
     return res
 
 
+def run_exec(job: Dict[str, Any]) -> Dict[str, Any]:
+    p = job["params"]
+    return _script(["bash", "-lc", p["cmd"]], {}, int(p["timeout_s"]))
+
+
+def run_set_env(job: Dict[str, Any]) -> Dict[str, Any]:
+    p = job["params"]
+    env = {"ENV_KEY": p["key"], "ENV_VALUE": p["value"], "ENV_SERVICE": p["service"],
+           "ENV_FILE_TARGET": p["env_file"]}
+    return _script(["bash", str(ROOT / "scripts" / "ops" / "set_env.sh")], env, REGISTRY["set-env"].timeout_s)
+def run_send_ping(job: Dict[str, Any]) -> Dict[str, Any]:
+    """The send-ping system-action's own wrapper (audit row, DATA_DIR inbox, withheld marker), env-threaded exactly
+    as ``system-actions.yml`` does. ``verdict`` separates a queued ping from one the class limiter withheld."""
+    wrapper = ROOT / "scripts" / "ops" / "send_ping_action.sh"
+    p = job["params"]
+    env = {"ACTION_MESSAGE": p["message"], "ACTION_PRIORITY": p["priority"], "ACTION_TARGET": p["target"],
+           "ACTION_KIND": p["kind"], "ACTION_WHY": p["why"], "ACTION_UNPROVEN": p["unproven"]}
+    res = _script(["bash", str(wrapper)], env, REGISTRY["send-ping"].timeout_s)
+    out = res.get("stdout_tail") or ""
+    if res.get("exit") == 0:
+        res["verdict"] = "withheld" if "WITHHELD" in out else "queued"
+    return res
+
+
+def run_report(job: Dict[str, Any]) -> Dict[str, Any]:
+    """A parameterless, read-only § 2 wrapper (the script is fixed by the registry entry, never by the caller)."""
+    spec = REGISTRY[job["action"]]
+    wrapper = ROOT / "scripts" / "ops" / spec.extra["script"]
+    if not wrapper.is_file():
+        return {"exit": 3, "detail": f"not_deployed: scripts/ops/{spec.extra['script']} is not on this VM"}
+    return _script(["bash", str(wrapper)], {}, spec.timeout_s)
+
+
 def run_live_review_row(job: Dict[str, Any], *, direct_root: Optional[Path] = None,
                         logs: Optional[Path] = None) -> Dict[str, Any]:
     """Delegate to the direct row submit (TRADE-ACTION-DIRECT-PATH phase 2, PR #25045): the SAME validation,
@@ -608,6 +743,10 @@ RUNNERS: Dict[str, Runner] = {
     "run_amend_prop_bracket": run_amend_prop_bracket,
     "run_sync_now": run_sync_now,
     "run_restart_service": run_restart_service,
+    "run_set_env": run_set_env,
+    "run_send_ping": run_send_ping,
+    "run_report": run_report,
+    "run_exec": run_exec,
 }
 
 

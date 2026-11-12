@@ -1532,6 +1532,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         for _j in jobs:
             if not _j.valid:
                 continue
+            if args.only and _j.id != args.only:
+                # --only: every other unit is reported NOT_DUE at the decision loop and never reads its plan,
+                # so planning it is wasted work (RQ-DISPATCHER-ONLY-FULL-SCAN). The --fire path passes no --only.
+                continue
             _p = cr.plan(_j.raw, cfg)
             _j.raw["_plan"] = _p
             if _p.ok and not str((_j.raw.get("run") or {}).get("workflow") or "").strip():

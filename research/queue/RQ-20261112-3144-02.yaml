@@ -1,0 +1,145 @@
+# Hand-authored 2026-11-12 by lane ML-AM-NEXT-LIVE (session_01AFoLuKUkUmhzEzkiXTb9tG, Tier 1), dispatched by AM-ML for Manager Session 2026-11-11a.
+# ITERATION unit from a written diagnosis. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261112-3144-02
+title: 'ITERATION 3 of ml-tm-action-value (fail): trained on the six money-leg configs run across the 60-perp universe (corpus v2) as well as
+  the money legs, is the per-action advantage on the money legs predictable out of fold?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+- L-ATM
+programme: P2
+kind: experiment
+question: 'Test rows: TM-BENCH v1 (tmb-73f5c3660014, the committed Q-TM1b emit), the six money legs as traded, 6 purged calendar folds by
+  entry. Training rows per fold: the v1 train trades PLUS a seeded (seed 11), trade-grouped random sample of corpus v2 (bp2-f4271084b120: the
+  same six configs run config-exact on the frozen 60-perp list, 146,158 trades) of size 4 x the v1 train-fold trade count (all of v2 if
+  smaller), any train trade of either corpus purged when [entry, exit + embargo] overlaps the test fold window (tm_bench cross-symbol purge),
+  trade_keys in v1 dropped from v2. Features R1 + path-state block; label = the 12-bar per-action label (RQ-20261112-3144-01); learner, seed,
+  bootstrap and permutation settings as 3144-01. Does Stage-A OOS rank calibration on the v1 test rows beat the within-trade shuffled control?'
+why_this_matters: 'Three iterations on the six-leg v1 population (R1 state, + path state, + short label) leave every per-fold CI straddling the
+  null. Six legs give ~2,200 train trades per fold; the hindsight action-value ceiling (0.86 R/trade OOS) says the value exists, so the next
+  registered lever is the amount of training data, not another state or label change.'
+iteration:
+  subject: ml-tm-action-value
+  subject_kind: ml_model
+  from_result: RQ-20261112-3144-01
+  verdict_read: fail
+  diagnosis: 'Iteration 1 (path state) moved pooled rho from negative to positive; iteration 2 (12-bar label) narrowed the CIs to ~+-0.02 and
+    left the closest class (tighten_sl_atr1) at CI lower -0.0005 vs p95 +0.005: small, consistent, under-powered. The registered FAIL branch
+    of 3144-01 names the training population next. The 12-bar label is kept (it gave the tightest intervals); the A400 arm of
+    RQ-20261029-7294-01 is used alone (one arm, no multiplicity).'
+  hypothesis: 4x more training trades of the same configs on other symbols lets the learner resolve the small within-trade signal on the money legs
+  attempt: 3
+  due_by: '2026-11-19'
+power:
+  expected_n: 2627
+  min_detectable_effect: 0.03
+  effect_units: metric
+  sd: 0.45
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: test n MEASURED (v1, 2,627 trades); training n grows, test n does not. sd carried from RQ-20261030-c7a1-01.
+  feasibility:
+    source: none
+    accrual_basis: Replays committed / regenerable corpora; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261112-3144-02
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: Per fold and per non-hold action on the v1 TEST rows, the OOS Spearman between the lgbm predicted 12-bar label and the realised one,
+    its trade-clustered bootstrap 95% CI (2,000 resamples) and the within-trade permutation p95 (200 permutations); tm_bench --rule stage_a_folds.
+  rule: 'PASS iff at least one non-hold action has CI lower > permutation p95 on >= 4 of 6 purged folds. INDETERMINATE if any fold has < 200
+    check-ins, the test corpus is not tmb-73f5c3660014, the train corpus is not bp2-f4271084b120 (fewer than 10,000 de-duplicated trades
+    after purge), or the selfcheck fails. FAIL otherwise: the R1+path-state model class does not resolve in-trade action value on these legs
+    even with 4x data; the next unit is authored from a new diagnosis (model class or a different decision, e.g. TP-extend / widen classes
+    from ML-EXIT-ACTIONGRID-LABELS), not another run of this configuration. Sample size, label and features are fixed now and not changed
+    after any result. A PASS opens a Stage-B policy unit (inner-fold margin, passing classes only, net of cost vs hold, B1, causal matched
+    random), never a promotion.'
+  what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+practice_precedent: 'M6 + T1 (docs/reference/trading-and-model-practice-principles.md): purged, embargoed walk-forward grouped by trade; only
+  the training data differs from 3144-01.'
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 12.0
+  est_minutes: 60
+  basis: 3144-01 took 3 min for 50,926 states on 4 cores; training labels grow ~4x per fold (about 10,000 v2 trades / ~200,000 states).
+  why_runner: corpus v2 is an Actions artifact / regenerable on a runner; CPU only.
+value:
+  usd_at_stake_per_month: 250
+  confidence: 0.1
+  bucket: ai_trader
+  basis: planning weight carried from RQ-20261101-78fc-04; an estimate, not a measurement
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/tm_bench.py
+  - score
+  - --test-corpus
+  - comms/research/RQ-20261030-c7a1-01/41134401720/tm_bench_v1_4t7ondlz/*__paths.jsonl
+  - --train-corpus
+  - corpus_v2
+  - --train-sample-mult
+  - '4'
+  - --seed
+  - '11'
+  - --rule
+  - stage_a_folds
+  - --feature-block
+  - path_state
+  - --label
+  - horizon
+  - --horizon
+  - '12'
+  - --learners
+  - lgbm_action_value
+  - --checkins
+  - every_bar
+  - --calibration
+  - --folds
+  - '6'
+  - --n-boot
+  - '2000'
+  - --n-perm
+  - '200'
+  - --random-draws
+  - '50'
+  - --expect-test-corpus
+  - tmb-73f5c3660014
+  - --expect-train-corpus
+  - bp2-f4271084b120
+  - --min-train-trades
+  - '10000'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261112-3144-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-AM-NEXT-LIVE
+- RQ-20261112-3144-01
+- RQ-20261029-7294-01
+- ML-DATA-BROAD-PATHS
+what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+intervention_controls:
+  not_applicable: an offline Stage-A calibration read; the consumer's own gate applies any action
+ml_consumer:
+  consumer: scripts/ops/live_review_apply.py
+  decision: which in-trade action the management model advises on the real-money legs (advice-only per class until graduation)
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - xrp_pullback_2h
+  - ada_pullback_2h
+  - trend_donchian_eth_prop
+  - trend_donchian_sol_prop
+  book: money

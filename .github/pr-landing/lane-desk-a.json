@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Adds a systemd template unit (deploy/ict-desk-build@.service, installed by install_systemd_units.sh) that the trader starts via the already-allowed `sudo -n systemctl start` to run the desk trigger build in its own cgroup, plus the trader-side call (src/runtime/desk_event_trigger.py) with an automatic in-process fallback. Lane policy: landing: hold; AM-DEVOPS merges and verifies the post-state.",
+  "why": "DESK-TRIGGER-SCAN-TIMEOUT: every 'exit -15' desk build is killed by a deploy restart of ict-trader-live (29 stops on 2026-11-12; the builder is a trader child, default KillMode=control-group)."
+}

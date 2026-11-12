@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Hand edits to 3 research/queue units (E57 hold; AM-ML merges). RQ-20261016-d37f-04 / -13: last_dispatched_at cleared so the dispatcher re-fires them; their only runs (38967815725, 39015656806) failed with no verdicts.json and wrote no E5 row. RQ-20261026-e535-04: grading.needs_review true, owner RESEARCH-OPS; its re-run 40658829510 failed on candle drift (1498 of 1498 re-derived packets differ from the judged export). Revert: git revert.",
+  "why": "AUD-20261019-RESEARCH-SLO-RED stuck-units scope (AM-ML, 2026-11-12): re-dispatch the runs that were lost; hand the unreproducible one to an owner instead of leaving it queued and ungraded."
+}
