@@ -470,3 +470,121 @@ def test_rearmed_at_lifts_the_retry_cap_for_rows_older_than_the_fix(tmp_path, mo
     monkeypatch.setattr(dq, "nonverdict_attempts", lambda uid, root=None: 5)
     due, why = dq._is_due({**base, "rearmed_at": "2026-11-02T22:30:00+00:00"}, now)
     assert not due and dq.RETRY_CAP_MARK in why
+
+
+# ── a FROZEN infra backlog is stuck, not waiting (lane RESEARCH-DISPATCH-STALL-1112) ──
+def _aged(pairs, now, age_h):
+    from datetime import timedelta
+    ts = (now - timedelta(hours=age_h)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return [{"databaseId": i, "workflowName": n, "status": "queued", "createdAt": ts, "event": ev}
+            for i, (n, ev) in enumerate(pairs)]
+
+
+def test_the_measured_frozen_infra_backlog_of_2026_11_11_no_longer_holds_the_infra_block():
+    """Run 43116747477 (23:59Z): 29 infra runs queued, all frozen 3-6 h in a ~490-run backlog, deferred every fire
+    with 18 github_runner units due and 0 in flight; the starvation floor lifts only repo_queued, so nothing lifted it.
+    Now the infra runs are stuck for the yield; the repo-queued block remains and the floor lifts it for ONE fire."""
+    from datetime import datetime, timezone
+    now = datetime(2026, 11, 11, 23, 59, tzinfo=timezone.utc)
+    infra = ["system-actions", "deploy-candidate", "phone-executor-apk", "vm-net-diag"]
+    queued = (_aged([("system-actions", "workflow_dispatch")] * 20 + [("vm-net-diag", "issues")] * 9, now, 4.5)
+              + _aged([("pytest-run", "pull_request")] * 145, now, 3.0)
+              + _aged([("claude-run-failure-alert", "workflow_run")] * 26, now, 2.0))
+    r = dq.backpressure(RESEARCH, max_inflight=8, max_queued=10, infra_names=infra, infra_yield_at=2, now=now,
+                        runs_by_status={"queued": queued, "in_progress": []})
+    assert r["infra_queued"] == 0 and r["infra_stuck_ignored"] == 29, r
+    assert r["block_kind"] == "repo_queued", r          # the frozen runs still count toward saturation (< 24 h)
+    assert "29 stuck > 1 h not yielded to" in r["detail"]
+    jobs = _jobs_with_stamp("2026-11-11T18:59:16+00:00")
+    assert dq.starvation_override(r, jobs, now, 0.75) and r["block"] is None
+
+
+def test_the_same_backlog_under_the_old_rule_held_the_infra_block_the_floor_cannot_lift():
+    """Pins the failure mode: with the stuck window at 24 h (the pre-fix behaviour) the block is infra and stays."""
+    from datetime import datetime, timezone
+    now = datetime(2026, 11, 11, 23, 59, tzinfo=timezone.utc)
+    queued = _aged([("system-actions", "workflow_dispatch")] * 29, now, 4.5)
+    r = dq.backpressure(RESEARCH, max_inflight=8, max_queued=10, infra_names=["system-actions"], infra_yield_at=2,
+                        now=now, infra_stuck_after_hours=24.0, runs_by_status={"queued": queued, "in_progress": []})
+    assert r["block_kind"] == "infra"
+    assert dq.starvation_override(r, _jobs_with_stamp("2026-11-11T18:59:16+00:00"), now, 0.75) is None
+
+
+def test_fresh_infra_runs_still_make_research_yield_beside_a_stuck_backlog():
+    from datetime import datetime, timezone
+    now = datetime(2026, 11, 12, 1, 0, tzinfo=timezone.utc)
+    queued = _aged([("system-actions", "workflow_dispatch")] * 30, now, 5.0) + \
+        _aged([("system-actions", "workflow_dispatch")] * 2, now, 0.2)
+    r = dq.backpressure(RESEARCH, max_inflight=8, max_queued=100, infra_names=INFRA, infra_yield_at=2, now=now,
+                        runs_by_status={"queued": queued, "in_progress": []})
+    assert r["block_kind"] == "infra" and r["infra_queued"] == 2 and r["infra_stuck_ignored"] == 30
+    assert dq.starvation_override(r, _jobs_with_stamp(None), now, 0.75) is None   # a fresh infra yield is never lifted
+
+
+def test_the_infra_stuck_window_boundary_and_unreadable_age():
+    from datetime import datetime, timezone
+    now = datetime(2026, 11, 12, 1, 0, tzinfo=timezone.utc)
+    at = _aged([("system-actions", "x")] * 2, now, 1.0)          # exactly the window: still waiting
+    over = _aged([("system-actions", "x")] * 2, now, 1.01)
+    blank = _runs(["system-actions", "system-actions"])           # createdAt "" -> fresh (conservative)
+    for rows, blocked in ((at, True), (over, False), (blank, True)):
+        r = dq.backpressure(RESEARCH, max_inflight=8, max_queued=100, infra_names=INFRA, infra_yield_at=2, now=now,
+                            runs_by_status={"queued": rows, "in_progress": []})
+        assert (r.get("block_kind") == "infra") is blocked, (rows[0]["createdAt"], r)
+
+
+def test_the_infra_stuck_window_is_configured_and_read():
+    import yaml
+    cfg = yaml.safe_load((REPO / "scripts/research/research_compute.yaml").read_text())
+    assert float(cfg["limits"]["infra_stuck_hours"]) == dq.INFRA_STUCK_HOURS == 1.0
+    src = (REPO / "scripts/research/dispatch_queue.py").read_text()
+    assert '"infra_stuck_hours"' in src
+
+
+# ── research runs frozen QUEUED in the backlog do not hold the in-flight cap (RESEARCH-DISPATCH-STALL-1112, 03:41Z) ──
+def test_the_measured_frozen_research_runs_of_2026_11_12_no_longer_fill_the_inflight_cap():
+    """Run 43148249357 (03:30Z): 'research compute in flight 8 (cap 8)' while research-script-run held 0 queued runs; the
+    counted runs included gpu-burst-train runs created by `issues` events at ~20:30Z, still queued ~7 h later."""
+    from datetime import datetime, timezone
+    now = datetime(2026, 11, 12, 3, 30, tzinfo=timezone.utc)
+    names = dict(RESEARCH, **{"gpu-burst-train.yml": "gpu-burst-train"})
+    queued = (_aged([("gpu-burst-train", "issues")] * 5 + [("research-script-run", "workflow_dispatch")] * 3, now, 7.0)
+              + _aged([("system-actions", "workflow_dispatch")] * 37, now, 4.0))
+    r = dq.backpressure(names, max_inflight=8, max_queued=10_000, infra_names=["system-actions"], infra_yield_at=2,
+                        now=now, runs_by_status={"queued": queued, "in_progress": []})
+    assert r["inflight_research"] == 0 and r["research_stuck_ignored"] == 8 and r["by_name"] == {}, r
+    assert r["block"] is None, r                                        # a fire is allowed
+    assert "8 research run(s) queued > 1 h not counted" in r["detail"]
+    old = dq.backpressure(names, max_inflight=8, max_queued=10_000, infra_names=["system-actions"], infra_yield_at=2,
+                          now=now, research_stuck_after_hours=24.0, infra_stuck_after_hours=24.0,
+                          runs_by_status={"queued": queued, "in_progress": []})
+    assert old["inflight_research"] == 8 and old["block"]              # the pre-fix reading blocked
+
+
+def test_in_progress_research_runs_always_count_however_old():
+    from datetime import datetime, timezone
+    now = datetime(2026, 11, 12, 3, 30, tzinfo=timezone.utc)
+    inprog = _aged([("research-script-run", "workflow_dispatch")] * 8, now, 5.0)
+    r = dq.backpressure(RESEARCH, max_inflight=8, max_queued=10_000, now=now,
+                        runs_by_status={"queued": [], "in_progress": inprog})
+    assert r["inflight_research"] == 8 and r["block_kind"] == "inflight" and r["research_stuck_ignored"] == 0
+
+
+def test_fresh_queued_research_runs_still_count_and_the_boundary_holds():
+    from datetime import datetime, timezone
+    now = datetime(2026, 11, 12, 3, 30, tzinfo=timezone.utc)
+    fresh = _aged([("research-script-run", "x")] * 4, now, 0.5)
+    at = _aged([("e35-bracket-sweep", "x")] * 2, now, 1.0)              # exactly the window: still counted
+    over = _aged([("e35-bracket-sweep", "x")] * 3, now, 1.01)
+    blank = _runs(["research-script-run"])                              # unreadable age -> counted (conservative)
+    r = dq.backpressure(RESEARCH, max_inflight=8, max_queued=10_000, now=now,
+                        runs_by_status={"queued": fresh + at + over + blank, "in_progress": []})
+    assert r["inflight_research"] == 7 and r["research_stuck_ignored"] == 3, r
+    assert r["by_name"] == {"research-script-run": 5, "e35-bracket-sweep": 2}
+
+
+def test_the_research_stuck_window_is_configured_and_read():
+    import yaml
+    cfg = yaml.safe_load((REPO / "scripts/research/research_compute.yaml").read_text())
+    assert float(cfg["limits"]["research_stuck_hours"]) == dq.RESEARCH_STUCK_HOURS == 1.0
+    assert '"research_stuck_hours"' in (REPO / "scripts/research/dispatch_queue.py").read_text()

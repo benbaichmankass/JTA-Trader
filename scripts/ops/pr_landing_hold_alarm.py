@@ -32,6 +32,21 @@ in one week). A landing declaration may therefore carry::
         "evidence": "<repo path of the evidence record>"   # required for standing_authorization
     }
 
+**A recorded approval on the PR itself is accepted too (manager 2026-11-12, option (b) of
+PI-20261112-BOTPING-0001).** Until 2026-11-12 the ping this alarm opens never ran (the issue was
+opened with GITHUB_TOKEN, which starts no workflow), so nobody noticed that it would page on every
+legitimate manager merge: the operator's approvals are recorded in decision docs and popups, quoted
+in the PR body, never as a GitHub review. Two machine-checkable forms are accepted, never free text:
+
+  * a PR-body citation: a line ``Operator decision[s], <YYYY-MM-DD> <source> ...`` (bold allowed)
+    whose line or next six lines say ``verbatim`` and quote the operator's words in quotes, or a line
+    ``decision: <YYYY-MM-DD> <source> "<verbatim words>"``. Date, source and a quoted verbatim
+    choice are all required; a line missing any one of them is not a citation;
+  * the PR label ``operator-approved`` (applying a label needs repo write access, as merging does).
+
+A held PR merged with none of these, no resolving ``recorded_decision`` and no human APPROVED review
+still pages.
+
 It is accepted only if it RESOLVES -- a presence-only field would be cheaper
 to lie to than to satisfy (docs/CLAUDE-RULES-CANONICAL.md § "WHAT ENFORCES THIS
 RULE"). ``ref`` must contain at least one token naming a checklist row, a
@@ -182,6 +197,28 @@ def _recorded_decision(decl: Dict[str, Any],
     return True, f"{rd['kind']} {ref.strip()!r}"
 
 
+APPROVED_LABEL = "operator-approved"
+_DATE = r"\d{4}-\d{2}-\d{2}"
+_QUOTE = r"[\"\u201c]([^\"\u201d\n]{3,})[\"\u201d]"
+_BODY_HEADER = re.compile(r"(?im)^[ \t>*_-]*operator decisions?[*_]*\s*[,:]?\s*(" + _DATE + r")\s+([^\n,]{3,120})")
+_BODY_DECISION_LINE = re.compile(r"(?im)^[ \t>*_-]*decision:\s*(" + _DATE + r")\s+(\S[^\n\"\u201c]{2,120}?)\s*" + _QUOTE)
+
+
+def body_decision(body: Optional[str]) -> "tuple[bool, str]":
+    """(accepted, citation). A PR-body operator-decision citation: date + source + quoted verbatim choice."""
+    if not body:
+        return False, ""
+    m = _BODY_DECISION_LINE.search(body)
+    if m:
+        return True, f"decision: {m.group(1)} {m.group(2).strip()} \"{m.group(3)[:60]}\""
+    for h in _BODY_HEADER.finditer(body):
+        window = "\n".join(body[h.start():].splitlines()[:7])
+        q = re.search(_QUOTE, window)
+        if "verbatim" in window.lower() and q:
+            return True, f"operator decision {h.group(1)} {h.group(2).strip()[:60]} \"{q.group(1)[:60]}\""
+    return False, ""
+
+
 def grade(
     decl: Optional[Dict[str, Any]],
     *,
@@ -191,6 +228,9 @@ def grade(
     pr_number: Optional[int] = None,
     pr_title: Optional[str] = None,
     resolve: Optional[Callable[[str], bool]] = None,
+    pr_body: Optional[str] = None,
+    pr_labels: Optional[List[str]] = None,
+    pr_meta_unreadable: bool = False,
 ) -> Verdict:
     """The whole policy. Pure — every input is already fetched.
 
@@ -230,8 +270,16 @@ def grade(
         return Verdict(CLEAN, f"tier {tier} landing=hold, merged under a recorded {why}",
                        pr_number, pr_title)
     reject = why  # "" when no recorded_decision was supplied
-    if reviews_unreadable:
-        return Verdict(UNREADABLE, "could not read the merged PR's reviews list",
+    if APPROVED_LABEL in (pr_labels or []):
+        return Verdict(CLEAN, f"tier {tier} landing=hold, merged with the {APPROVED_LABEL!r} label",
+                       pr_number, pr_title)
+    ok_body, cite = body_decision(pr_body)
+    if ok_body:
+        return Verdict(CLEAN, f"tier {tier} landing=hold, merged under a PR-body {cite}",
+                       pr_number, pr_title)
+    if reviews_unreadable or pr_meta_unreadable:
+        return Verdict(UNREADABLE, "could not read the merged PR's "
+                        + ("reviews list" if reviews_unreadable else "body/labels"),
                         pr_number, pr_title)
     if reviews is None:
         return Verdict(UNREADABLE, "no reviews payload supplied", pr_number, pr_title)
@@ -246,7 +294,8 @@ def grade(
         f"tier {tier} PR declared landing: \"hold\" merged with no human "
         "APPROVED review recorded"
         + (f" and its recorded_decision was rejected: {reject}" if reject else
-           " and no resolving recorded_decision"),
+           " and no resolving recorded_decision")
+        + " (nor an operator-decision citation in the PR body or an 'operator-approved' label)",
         pr_number, pr_title,
     )
 
@@ -373,6 +422,40 @@ def _self_test(quiet: bool = False) -> "tuple[bool, List[str]]":
     v = grade(hold3, decl_unreadable=False, reviews=no_reviews, reviews_unreadable=False, resolve=rs)
     check("uncited hold + zero reviews still ALARMS (the detector is intact)", v.state == ALARM)
 
+    # --- recorded approval on the PR (2026-11-12): body citation or label ----
+    cite = ('**Operator decision**, 2026-11-11 Thursday-planning doc, question b3, verbatim choice: '
+            '*"Retire it"*.')
+    v = grade(hold3, decl_unreadable=False, reviews=no_reviews, reviews_unreadable=False,
+              resolve=rs, pr_body=cite)
+    check("body citation (date + source + verbatim quote) -> CLEAN", v.state == CLEAN)
+    multi = ('**Operator decisions**, 2026-11-11 Thursday-planning doc, verbatim:\n'
+             '- **a1:** *"Retire the 28 now"*.\n')
+    v = grade(hold3, decl_unreadable=False, reviews=no_reviews, reviews_unreadable=False,
+              resolve=rs, pr_body=multi)
+    check("body citation with the quote on the next line -> CLEAN", v.state == CLEAN)
+    v = grade(hold3, decl_unreadable=False, reviews=no_reviews, reviews_unreadable=False,
+              resolve=rs, pr_body='decision: 2026-11-11 popup "Approve with a cap (Recommended)"')
+    check("decision: line with date + source + quote -> CLEAN", v.state == CLEAN)
+    for label, body in (
+            ("no date", '**Operator decision**, Thursday doc, verbatim: "Retire it"'),
+            ("no quote", "**Operator decision**, 2026-11-11 Thursday-planning doc, verbatim: retire it"),
+            ("no verbatim", '**Operator decision**, 2026-11-11 Thursday-planning doc: "Retire it"'),
+            ("free text", "The operator approved this in chat."),
+            ("decision: no quote", "decision: 2026-11-11 popup approve")):
+        v = grade(hold3, decl_unreadable=False, reviews=no_reviews, reviews_unreadable=False,
+                  resolve=rs, pr_body=body)
+        check(f"body citation missing a part ({label}) -> still ALARM", v.state == ALARM)
+    v = grade(hold3, decl_unreadable=False, reviews=no_reviews, reviews_unreadable=False,
+              resolve=rs, pr_labels=["tier-3", APPROVED_LABEL])
+    check("operator-approved label -> CLEAN", v.state == CLEAN)
+    v = grade(hold3, decl_unreadable=False, reviews=no_reviews, reviews_unreadable=False,
+              resolve=rs, pr_labels=["approved"])
+    check("some other label -> still ALARM", v.state == ALARM)
+    v = grade(hold3, decl_unreadable=False, reviews=no_reviews, reviews_unreadable=False,
+              resolve=rs, pr_meta_unreadable=True)
+    check("body/labels unreadable and nothing else clears it -> UNREADABLE, never CLEAN",
+          v.state == UNREADABLE)
+
     # --- the ping message names the PR and the reason -----------------------
     v = grade({"tier": 3, "landing": "hold"}, decl_unreadable=False,
               reviews=no_reviews, reviews_unreadable=False,
@@ -417,6 +500,23 @@ def _load_reviews(raw: str) -> "tuple[Optional[List[Dict[str, Any]]], bool]":
     return data, False
 
 
+def _load_pr(raw: Optional[str]) -> "tuple[Optional[str], List[str], bool]":
+    """(body, label names, unreadable) from a fetched PR object."""
+    if raw is None:
+        return None, [], False
+    if raw == "UNREADABLE":
+        return None, [], True
+    try:
+        with open(raw, "r", encoding="utf-8") as fh:
+            pr = json.load(fh)
+    except (OSError, json.JSONDecodeError):
+        return None, [], True
+    if not isinstance(pr, dict):
+        return None, [], True
+    labels = [str(lab.get("name")) for lab in pr.get("labels") or [] if isinstance(lab, dict)]
+    return pr.get("body") or "", labels, False
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--self-test", action="store_true")
@@ -426,6 +526,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                      "array, or the literal UNREADABLE")
     ap.add_argument("--repo-root", default=".", help="tree the recorded_decision "
                      "citation is resolved against (default: cwd)")
+    ap.add_argument("--pr-json", default=None, help="path to the fetched PR object (GET /pulls/N) for its "
+                     "body and labels, or the literal UNREADABLE; omitted = not supplied")
     ap.add_argument("--pr-number", type=int, default=None)
     ap.add_argument("--pr-title", default=None)
     args = ap.parse_args(argv)
@@ -439,11 +541,13 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     decl, decl_unreadable = _load_decl(args.decl_json)
     reviews, reviews_unreadable = _load_reviews(args.reviews_json)
+    pr_body, pr_labels, pr_meta_unreadable = _load_pr(args.pr_json)
     verdict = grade(
         decl, decl_unreadable=decl_unreadable,
         reviews=reviews, reviews_unreadable=reviews_unreadable,
         pr_number=args.pr_number, pr_title=args.pr_title,
         resolve=make_resolver(args.repo_root),
+        pr_body=pr_body, pr_labels=pr_labels, pr_meta_unreadable=pr_meta_unreadable,
     )
     print(f"pr-landing-hold-merge-alarm: state={verdict.state} reason={verdict.reason}")
     if verdict.state == ALARM:

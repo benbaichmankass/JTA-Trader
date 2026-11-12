@@ -1,0 +1,168 @@
+# Programme P8 -- THE ALPACA_LIVE BOOK: the machine-readable question tree for docs/research/programmes/08-ALPACA-LIVE-BOOK.md
+# (s3 questions Q1-Q10, s6 backlog W1-W4). Same contract as research/programmes/01-active-trade-management.yaml (read by
+# scripts/research/queue_replenish.py; every edit holds for a human merge; `value` figures are INFERRED planning weights).
+#
+# Authored 2026-11-11 by lane ALPACA-LIVE-BOOK-PLAN (Manager Session 2026-11-11a dispatch). Operator, 2026-11-11 ~22:40Z, verbatim:
+# "what's the research and iteration plan for that Alpaca Live strategy so that we can try and get something that's going to work better
+# on that account? Like, it's good that we have this live, and we should keep it that way until we find something better, but we need to
+# make sure we have a plan for finding something better."
+#
+# The incumbent is Foxhound-4 (ml_entry_eq_struct, ml-entry-eq-struct-ens5-v1); tqqq_trend_long_1d also sits on alpaca_live. Every
+# candidate here -- a Foxhound-4 lever or a challenger leg -- is scored on THE BOOK THE ACCOUNT CAN HOLD ($194.52 cash, long only, whole
+# shares, one slot, T+1, the live sizer) by scripts/research/alpaca_live_book.py, net of the full cost stack. Units registered directly
+# (they dispatch on merge): RQ-20261111-207f-01..04. The nodes below are what follows each verdict, plus the questions the plan holds
+# that no unit asks yet. Iteration subject: ml-entry-eq-struct (scripts/research/iteration_subjects.yaml; research/levers/ml-entry-eq-struct.yaml).
+programme: P8
+plan: docs/research/programmes/08-ALPACA-LIVE-BOOK.md
+questions:
+  Q1:
+    state: carried
+    by: RQ-20261111-207f-01
+    why: Does Foxhound-4's dev edge survive the account (cash wall, whole shares, one slot, T+1, live sizer)? Registered and runnable; its live-book return per month is the baseline every P8 candidate must beat. Follow-on node P8-Q1-fail.
+  Q2:
+    state: carried
+    by: RQ-20261111-207f-02
+    why: Is tau 0.25 calibrated to the score distribution, and does a registered selection rule (3 taus, top-1/top-3, causal adaptive) beat it on the live book? Registered and runnable. Follow-on node P8-Q2-pass.
+  Q3:
+    state: carried
+    by: RQ-20261111-207f-03
+    why: Does the net-R label rank by cost per R on the equity pool, and does a direction-only label select better at the same count? Registered and runnable. Follow-on nodes P8-Q3-pass / P8-Q3-fail.
+  Q4:
+    state: carried
+    by: RQ-20261111-207f-04
+    why: Which rostered equity legs earn on the alpaca_live book? Registered and runnable. Follow-on node P8-Q4-h2h (head-to-head with Foxhound-4) on a PASS.
+  Q10:
+    state: carried
+    by: RQ-20261108-98e3-13
+    why: The forward read of the frozen ensemble (bars after 2026-10-31, tau 0.25) is registered, not before 2027-04-01. P8 adds no second forward read of an overlapping window; a P8 lead policy or label is confirmed on the SAME forward bars inside its own node (P8-Q2-pass, P8-Q3-pass), registered before the bars exist.
+unit_defaults:
+  practice_precedent: "T1 (score a strategy on the book that trades it, net of the full cost stack), M13 (iterate on the dev walk-forward; confirm once on data not used for selection) -- docs/reference/trading-and-model-practice-principles.md"
+
+nodes:
+  # ── Q1 -- does the edge survive the account ────────────────────────────────────────────────────────────────────────────
+  - id: P8-Q1-fail
+    goal: G1
+    roadmap: [L-ML-LIVE, L-LADDER]
+    value: {usd_at_stake_per_month: 80, confidence: 0.4}
+    after:
+    - {unit: RQ-20261111-207f-01, verdict: fail}
+    needs_authoring: >-
+      207f-01 FAILED: the dev edge does not survive the $194.52 cash book. Read the refusal mix first. If unaffordable_whole_share
+      dominates, author ONE unit: the same recipe re-scored on the AFFORDABLE sub-pool only (ETFs whose 1-share price <= 0.9 x cash at
+      each decision, a causal filter) vs the full pool, on the live book. If slot_busy / unsettled_t1 dominate, the lever is selection
+      (already registered as 207f-02 top-1) -- author nothing new, read 207f-02. Either way, tell the manager in one line that the
+      evidence record (98e3-06) overstates this account's edge, with the live-book number. No config change.
+  # ── Q2 -- calibration / selection ───────────────────────────────────────────────────────────────────────────────────
+  - id: P8-Q2-pass
+    goal: G1
+    roadmap: [L-ML-LIVE]
+    value: {usd_at_stake_per_month: 70, confidence: 0.35}
+    after:
+    - {unit: RQ-20261111-207f-02, verdict: pass}
+    needs_authoring: >-
+      207f-02 PASSED: a selection rule beat tau 0.25 on the live book (dev). It is a LEAD. Register its confirmation BEFORE reading any
+      new data: the frozen served ensemble (ml/candidates/ml_entry_eq_v3_struct_ens5/model.json, no refit) with the lead rule fixed,
+      paired by month against tau 0.25 on the live book, read ONCE on 2025-07-15..2026-10-31 as ledger read N=4 of family ENTRY-EQ
+      (holdout_lock claim; the deflated bar it returns; PLANNING s 1d) -- the fast confirmation -- and again on bars after 2026-10-31
+      when >= 3 months exist (the slow check). Report trades/month beside the mean so a rule that only trades more at the same
+      per-trade mean is visible. A PASS on the N=4 read lets the manager carry a Tier-3 proposal to change the leg's rule.
+  # ── Q3 -- the label ─────────────────────────────────────────────────────────────────────────────────────────────────
+  - id: P8-Q3-pass
+    goal: G1
+    roadmap: [L-ML-LIVE]
+    value: {usd_at_stake_per_month: 60, confidence: 0.3}
+    after:
+    - {unit: RQ-20261111-207f-03, verdict: pass}
+    needs_authoring: >-
+      207f-03 PASSED: a direction-only label (gross R or raw return) selects better at matched count. Register (a) its walk-forward
+      re-read through the live book (selection per 207f-02's outcome) and (b) a deterministic export of the new label's 5-seed ensemble
+      with a parity fixture (as RQ-20261108-a7d3-01 did for the live artifact), then (c) its confirming read on 2025-07-15..2026-10-31
+      (ledger read N=4, deflated bar) and its forward read on bars after 2026-10-31 once >= 3 months exist.
+      The live artifact is not retrained by any unit; the swap is a Tier-3 proposal after (c).
+  - id: P8-Q3-fail
+    goal: G1
+    roadmap: [L-ML-LIVE]
+    value: {usd_at_stake_per_month: 50, confidence: 0.3}
+    after:
+    - {unit: RQ-20261111-207f-03, verdict: fail}
+    needs_authoring: >-
+      207f-03 FAILED. Branch on its registered diagnostic. reads_cost_per_r = true: the label is the diagnosis but L1/L2 did not fix it;
+      author ONE cost-neutral target (net return per unit of NOTIONAL, i.e. net_long x 2 ATR / entry, which removes the stop-width
+      tilt while keeping costs) on the same harness, count-matched, same bar. reads_cost_per_r = false or null: the label is not the
+      problem; move the iteration to P8-Q5 (features) and P8-Q6 (pool), and record the labels family as tested on the lever map.
+  # ── Q4 -- challengers already on the books ──────────────────────────────────────────────────────────────────────────
+  - id: P8-Q4-h2h
+    goal: G1
+    roadmap: [L-LADDER]
+    value: {usd_at_stake_per_month: 90, confidence: 0.35}
+    after:
+    - {unit: RQ-20261111-207f-04, verdict: pass}
+    - {unit: RQ-20261111-207f-01, verdict: any}
+    needs_authoring: >-
+      Challengers qualified on the live book (207f-04 PASS) and Foxhound-4's live-book baseline exists (207f-01). Author THE
+      HEAD-TO-HEAD under the P8 promotion rule (08-ALPACA-LIVE-BOOK.md s 5): each qualifying leg and the combined (qualifiers +
+      Foxhound-4 competing for the slot, Foxhound-4's picks first) book vs Foxhound-4 alone, on their COMMON window, paired by month,
+      bar = holdout_lock.bar_for(number of qualifiers + 1), +0.25 %/month materiality, max drawdown no worse than 1.5x the incumbent's.
+      Instrument gap to close in the same unit: alpaca_live_book.py needs a `--trades-from <result json>` input so Foxhound-4's
+      replayed trades (from 207f-01's artifact) and the legs' trades share one replay; add it in the unit's PR (Tier 1).
+  # ── Q5 -- features (after the label is settled) ─────────────────────────────────────────────────────────────────────
+  - id: P8-Q5-features
+    goal: G1
+    roadmap: [L-ML-LIVE]
+    value: {usd_at_stake_per_month: 40, confidence: 0.25}
+    after:
+    - {unit: RQ-20261111-207f-03, verdict: any}
+    needs_authoring: >-
+      Feature families for the equity ENTRY on the label 207f-03 leaves standing. Config A vs B read flat (98e3-14, indeterminate).
+      Untested families: volatility-regime context (VIXY term proxy, realised-vol percentile of the pool), ETF-family-relative strength
+      (rank within the same asset class, not the whole pool), and calendar/macro-event flags (FOMC/CPI day). Author ONE unit with the
+      families as pre-declared arms vs config B, scored on the live book, LOFO plus a 9-pure-noise-column control (the ml-entry fs01
+      lesson: a recipe that gains from noise columns is overfitting). Pull the family list from the week's frontier scan if it names better.
+  # ── Q6 -- the pool: family pooling / an affordable sub-pool ─────────────────────────────────────────────────────────
+  - id: P8-Q6-pool
+    goal: G1
+    roadmap: [L-ML-LIVE]
+    value: {usd_at_stake_per_month: 50, confidence: 0.3}
+    after:
+    - {unit: RQ-20261111-207f-01, verdict: any}
+    needs_authoring: >-
+      ETF-family pooling. The model trains on one pool of ~173 ETFs (equity index, bonds, sector, leveraged and inverse, commodity
+      miners). Author ONE unit: per-family models (equity-beta / rates-credit / commodity / leveraged-inverse) vs the pooled model,
+      and the pooled model trained on the affordable sub-pool only, each on the live book, count-matched. Per-symbol results never
+      gate (operator 2026-11-04); a family split is a population redefinition and needs its own pooled test, stated in the unit.
+  # ── Q7 -- a challenger built for a one-slot cash book ───────────────────────────────────────────────────────────────
+  - id: P8-Q7-rotation
+    goal: G1
+    roadmap: [L-LADDER]
+    value: {usd_at_stake_per_month: 70, confidence: 0.3}
+    needs_authoring: >-
+      ETF rotation / dual momentum as a NEW strategy family sized for this account: hold the single affordable ETF with the best
+      trailing 6-month (126-day) total return among a fixed, pre-declared list (equity index, bonds, gold proxy IAUM, cash BIL),
+      only if it beats BIL (absolute momentum), else hold cash; rebalance on the first session of each month; whole shares; no stop
+      beyond the monthly rebalance. Parameters fixed before the run (no lookback grid in the first unit). Build: a Stage-0 harness
+      (daily Yahoo bars, uncapped) writing build_strategy_evidence-shaped trades so alpaca_live_book.py legs-style replay scores it on
+      the same book; Stage 0 on 2010-2023, confirm 2024-2026 once. Ready now; owner research-ops / the next lane the manager assigns.
+  # ── Q8 -- horizon and exit plan ─────────────────────────────────────────────────────────────────────────────────────
+  - id: P8-Q8-horizon
+    goal: G1
+    roadmap: [L-ML-LIVE]
+    value: {usd_at_stake_per_month: 40, confidence: 0.25}
+    after:
+    - {unit: RQ-20261108-98e3-15, verdict: any}
+    needs_authoring: >-
+      Holding period and exit plan. Pivot 8 read +0.109 vs pivot 5 +0.132 (98e3-16, dev, one point); pivot 3 (98e3-15) is queued after
+      a producer failure. Untested: the 24-bar time stop vs 48 / 72 bars, and a DAILY decision bar (one decision per session at the
+      close; fewer, longer trades suit a T+1 cash book). Author ONE unit with those arms on the live book. The structure exit stays
+      SL-only (TP doctrine: the 3-ATR TP is the real predictive target at entry); the time-stop arms do not remove the TP.
+  # ── Q9 -- options on the account ────────────────────────────────────────────────────────────────────────────────────
+  - id: P8-Q9-options
+    goal: G1
+    roadmap: [L-LADDER]
+    value: {usd_at_stake_per_month: 30, confidence: 0.15}
+    needs_authoring: >-
+      SCOPING, not a strategy test: can alpaca_live trade options at all, and would any defined-risk structure fit $194.52? Step 1 is
+      a read (UNVERIFIED today: /api/diag/broker_account_status does not expose options_approved_level / options_trading_level):
+      add the two fields to the diag read (Tier 1) or read GET /v2/account once via the diag relay. Only if the account is approved:
+      author a scoping unit -- which long call / put or debit-spread structures on the pool cost <= 0.9 x cash per contract, and what
+      the macro sleeve's alpaca_options_paper record (P4) says they earn net of the options cost stack. The options executor has no
+      cancel / open-orders read today (docs/reference/account-capability-matrix.md), a build gap before any live use.
