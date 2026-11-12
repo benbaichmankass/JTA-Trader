@@ -8,9 +8,9 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO / "scripts/ops"))
-
-import ml_dev_plan
+_SPEC = importlib.util.spec_from_file_location("ml_dev_plan", REPO / "scripts/ops/ml_dev_plan.py")
+ml_dev_plan = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(ml_dev_plan)
 
 
 def test_self_test():
