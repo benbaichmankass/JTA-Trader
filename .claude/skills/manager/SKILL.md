@@ -405,6 +405,7 @@ with no lane, and a UI lane briefed from an older row rebuilt the wrong chart la
      decisions page).
   5. It reports to the manager on a fixed cadence (TRADING every 2 h, the others every 3 h) and at once on a real-money risk, a lane it cannot
      unblock, a merge for the manager or an operator question.
+  6. **Blocked/waiting = a structured `clears_when` condition + owner, never prose only** (operator, 2026-11-12, row `UNBLOCK-WATCH`; gates: none). `scripts/ops/unblock_watch.py` evaluates every condition hourly on the `ict-work-digest` tick; a NEW clear lands on the alert ledger -> the PR #17895 alert-watch and is handled at once like any alert. The brief's BLOCKED section lists unconditioned, stale-manual (> 7 d), could_not_look and money-blocking waits > 7 d; **each money wait goes onto the decisions page as a question — no session chooses a long wait on a money item silently.** Weekly planning reads the same section.
 - **What the manager keeps:** live trade reviews and every alert (operator m12, 2026-11-12: *"The manager needs to get these alerts and
   handle immediately"*), Tier-2/3 merge calls, the decisions page, the operator conversation, and supervising the assistant managers (read
   each report; check one claim per report against the register or live data).

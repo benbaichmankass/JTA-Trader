@@ -102,6 +102,8 @@ def close_capability(account_id: str, platforms_path: Optional[Path] = None) -> 
     return {"close": False, "partial": False, "why": f"platform {platform!r} has no executor close path"}
 
 
+# Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PROP-VM-CLOSE-REFUSALS: KEEP
+# (now operator-authorized). Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
 def _refuse(why: str, **kw: Any) -> Dict[str, Any]:
     return {"result": R_REFUSED, "detail": why, **kw}
 
@@ -219,6 +221,8 @@ def round_down(x: float, step: Optional[float]) -> float:
     return math.floor(x / step + 1e-9) * step
 
 
+# Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PROP-VM-CLOSE-REFUSALS: KEEP
+# (now operator-authorized). Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
 def run_close_step(*, adapter: Any, page: Any, api: Any, cfg: Any, mode: str, state_dir: Path, res: Any,
                    sleep: Callable[[float], None], reads: int = 10) -> Any:
     """One pass over this account's pending close requests. Never raises past one ticket."""

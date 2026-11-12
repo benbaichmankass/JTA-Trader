@@ -226,14 +226,15 @@ def test_gate_off_and_annotate_never_touch_size(gm):
     assert (r["action"], r["risk_usd"]) == (gate.CAP_NOT_ENFORCED, 75.0)
 
 
-def test_gate_enforce_flat_at_cap_unchanged_above_cap_resized_no_cap_refused():
+def test_gate_enforce_flat_at_cap_unchanged_above_cap_resized_no_cap_reported():
     r = gate.enforce_ticket_cap(risk_usd=75.0, cap_usd=75.0, gate_mode="enforce", sizing_mode="flat")
     assert (r["action"], r["risk_usd"], r["cause"]) == (gate.CAP_UNCHANGED, 75.0, None)
     r = gate.enforce_ticket_cap(risk_usd=90.0, cap_usd=75.0, gate_mode="enforce", sizing_mode="flat")
     assert (r["action"], r["risk_usd"]) == (gate.CAP_RESIZED, 75.0)
     assert "exceeds the flat-mode cap $75.00" in r["cause"]
+    # GATE-PROP-RISK-CUSHION: MAKE REPORT-ONLY (operator 2026-11-12): an unknown cap is reported, never a refusal
     r = gate.enforce_ticket_cap(risk_usd=75.0, cap_usd=None, gate_mode="enforce", sizing_mode="flat")
-    assert (r["action"], r["risk_usd"]) == (gate.CAP_REFUSED, None) and r["cause"]
+    assert (r["action"], r["risk_usd"]) == (gate.CAP_UNBOUNDED_REPORTED, 75.0) and "report-only" in r["cause"]
 
 
 def test_gate_enforce_room_caps_at_room_formula():
@@ -281,7 +282,8 @@ def test_executor_flat_ticket_over_its_cap_is_resized_only_under_enforce(tmp_pat
         assert "meta" not in emitted[0]
 
 
-def test_executor_enforce_refuses_when_no_cap_is_declared(tmp_path, monkeypatch):
+def test_executor_enforce_emits_and_reports_when_no_cap_is_declared(tmp_path, monkeypatch):
+    # GATE-PROP-RISK-CUSHION: MAKE REPORT-ONLY (operator 2026-11-12); before: refused (journaled skipped).
     monkeypatch.setenv("PROP_TICKET_RISK_GATE_MODE", "enforce")
     data = yaml.safe_load(_RULESET.read_text())
     data["sizing"].pop("flat")
@@ -294,9 +296,8 @@ def test_executor_enforce_refuses_when_no_cap_is_declared(tmp_path, monkeypatch)
     acct = _breakout_1_cfg()
     acct["backtest_ruleset"] = str(p)
     tid, t = _emit(dict(_SOL), acct)
-    assert t is None and be.is_manual_fill_id(tid)
-    assert [r["status"] for r in rows] == ["skipped"]
-    assert rows[0]["meta"]["risk_gate"]["action"] == "refused"
+    assert t is not None and be.is_manual_fill_id(tid)
+    assert "skipped" not in [r.get("status") for r in rows]
 
 
 def test_executor_room_mode_under_enforce_emits_room_size(tmp_path, monkeypatch):

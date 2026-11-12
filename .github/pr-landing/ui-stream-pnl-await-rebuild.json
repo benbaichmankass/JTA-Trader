@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Follow-up to #25271: the stream's 15 s keep-warm awaits a real /positions rebuild (SWRCache.arefresh, sharing aget's single-flight) instead of aget's stale return, so the snapshot age is bounded by max(15 s, build) instead of 15 s + build. Live before: snapshot_age_s 36.9 / 10.4 / 25.8 / 2.7 s. No venue call beyond the existing /positions build, no order path, no new gate.",
+  "hold_text": "Tier 2 (ict-web-api). The manager merges. After deploy: with one client on /api/bot/stream for 2 min, sample /stream/status sources.pnl.snapshot_age_s every 15 s; every sample <= max(15, the current build time from a cold /positions read) + ~2 s."
+}
