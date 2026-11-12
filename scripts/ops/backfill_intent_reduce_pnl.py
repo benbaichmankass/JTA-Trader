@@ -31,7 +31,6 @@ from __future__ import annotations
 
 import argparse
 import os
-import shutil
 import sqlite3
 import sys
 from collections import defaultdict
@@ -70,6 +69,14 @@ class _Db:
 
 def _account_class(row: Dict[str, Any]) -> str:
     return str(row.get("account_class") or "real_money")
+
+def _take_backup():
+    """The shared pre-APPLY backup with per-tag retention (scripts/ops/journal_backup.py)."""
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    from scripts.ops.journal_backup import take_backup
+    return take_backup
 
 
 def run(db_path: str, *, apply: bool, ids: Optional[List[int]] = None,
@@ -139,9 +146,8 @@ def run(db_path: str, *, apply: bool, ids: Optional[List[int]] = None,
     if not plans:
         print("nothing to do.")
         return 0
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    backup = f"{db_path}.bak-reduce-pnl-{stamp}"
-    shutil.copy2(db_path, backup)
+    # Pre-APPLY copy; keeps only the newest per tag (scripts/ops/journal_backup.py).
+    backup = _take_backup()(db_path, "reduce-pnl", method="copy", stamp_style="iso")
     print(f"\nbackup: {backup}")
     db = _Db(db_path)
     now_iso = datetime.now(timezone.utc).isoformat()
