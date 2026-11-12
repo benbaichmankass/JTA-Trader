@@ -39,6 +39,7 @@ from src.web.api.routers import insights as insights_router
 from src.web.api.routers import learning as learning_router
 from src.web.api.routers import liquidity as liquidity_router
 from src.web.api.routers import market_ws as market_ws_router
+from src.web.api.routers import stream as stream_router
 from src.web.api.routers import news as news_router
 from src.web.api.routers import notifications as notifications_router
 from src.web.api.routers import order_packages as order_packages_router
@@ -152,6 +153,7 @@ app.include_router(catalog_features_router.router)
 app.include_router(runtime_config_router.router)
 app.include_router(learning_router.router)
 app.include_router(market_ws_router.router)
+app.include_router(stream_router.router)
 app.include_router(work_router.router)
 app.include_router(work_ledger_router.router)
 app.include_router(work_topics_router.router)
