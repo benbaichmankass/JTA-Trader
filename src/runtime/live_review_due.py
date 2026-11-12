@@ -993,7 +993,13 @@ def prescreen(row: Dict[str, Any], prior: Dict[str, Any], ctx: Optional[Dict[str
         need = stall_bars(sc, tf_seconds)
         max_peak = float(sc.get("max_peak_r", 0.5))
         if held is None or peak_r is None:
-            miss("stall", tel_reason or "bars_held / peak_r unknown")
+            # thin_window = fewer than 2 bars since entry (trail_decay): a YOUNG package, said so, so the
+            # done bar counts it as youth (AM-TRADING OK 2026-11-12 14:32Z; honest label, no new behaviour).
+            if tel_reason is None and peak_r is None and held is not None \
+                    and row.get("peak_state") == "thin_window":
+                miss("stall", f"peak_r thin_window: {int(held)} bar(s) since entry; need 2")
+            else:
+                miss("stall", tel_reason or "bars_held / peak_r unknown")
         else:
             hit = held >= need and peak_r < max_peak
             lvl = int(held // need) * need if hit else None
