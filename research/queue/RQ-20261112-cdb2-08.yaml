@@ -1,0 +1,148 @@
+# Hand-authored 2026-11-12 by lane SLV-ITERATION: the held-out confirmation that RQ-20261112-cdb2-03's registered on_pass calls for.
+# Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261112-cdb2-08
+title: 'SLV-ITERATION confirmation of the cdb2-03 LEAD: does donchian 32 replace the live 24 for slv_trend_1h (tp_r 6.0) on 2016..2018 SLV CFD
+  bars, which the D32 selection never saw?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+kind: experiment
+question: 'RQ-20261112-cdb2-03 graded PASS (a LEAD): D32 beat A by +12.92 R over 2019-01..2026-10 SLV CFD (n 273 vs 307), maxDD 20.76 vs 29.81
+  R, 3 of 4 folds. That is a best-of-4 pick on that window. On 2016-01-01..2018-12-31, which the pick never saw, does D32 still replace A at tp_r
+  6.0, net of the full cost stack?'
+why_this_matters: 'cdb2-03''s registered on_pass: author ONE held-out confirmation unit before any Tier-3 proposal. A fold-stable, drawdown-reducing
+  channel length on a live real-money leg is worth a proposal only if it holds out of sample.'
+iteration:
+  subject: slv_trend_1h
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261112-cdb2-03/43293804819.jsonl
+  verdict_read: pass_lead
+  diagnosis: 'cdb2-03: response across 16/20/24/32/40 = 60.2 / 63.0 / 73.8 / 86.7 / 66.1 R. That peaks at 32, with 40 falling back, so it is not
+    monotone. Earlier evidence: RQ-20261103-5a03-02 C4 (donchian 32) +2.46 R, 1 of 4 folds on 2025-04..2026-10. The gain is therefore window-dependent
+    until a holdout says otherwise.'
+  hypothesis: D32 out-earns A on 2016..2018 in >= 3 of 4 folds without a materially deeper drawdown
+  attempt: 1
+  due_by: '2026-11-26'
+  design:
+    control: 'A (declared: donchian 24, tp_r 6.0)'
+    kind: two-arm replace test on a disjoint earlier span
+    levers:
+      slv_trend_1h: entry
+    lever_basis:
+      slv_trend_1h: sweep_lead
+    why_this_lever:
+      slv_trend_1h: cdb2-03 PASS (D32) needs a held-out read
+    arms:
+      slv_trend_1h:
+      - - A
+        - tp_r=6.0
+      - - D32
+        - tp_r=6.0;donchian=32
+  multiple_testing:
+    arms_counted: 2
+    variants_vs_control: 1
+    correction: none (one candidate, chosen before this run from cdb2-03's 4)
+    note: D32 was the best of 4 on 2019..2026; this span is disjoint from that selection
+design: structured
+levers_declared:
+- entry
+power:
+  expected_n: 100
+  min_detectable_effect: 0.83
+  effect_units: r_per_trade
+  sd: 2.94
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: SLV CFD Dukascopy history starts ~2017 (2026-06-20 sweep: ''~9yr 2017->2026''), so ~2 years at ~45-55 trades/yr is ~100 per
+    arm, if the 2016 bars exist at all. MDE for an arm''s own mean: 2.80 x 2.94 / sqrt(100) = 0.82 -> 0.83. That is LOW power. The replace rule
+    (net R, folds, drawdown) is the grade, and an underpowered read is reported as such. Floor 60: below it the unit grades INDETERMINATE.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public Dukascopy candles over a pinned window; nothing accrues. The true start of the CFD
+      history is unverified until the run.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+decision_rule:
+  id: RULE-RQ-20261112-cdb2-08
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --grade replace on slv_trend_1h, Dukascopy SLV CFD 1h, window 2016-01-01..2018-12-31 23:59
+    (whatever the venue serves inside it), one continuous harness pass per arm, net of the full cost stack for an Alpaca equity (fee 0 + 5 bps
+    RT slippage + 0 funding). Arms: A = tp_r 6.0, all else declared (donchian 24); D32 = the same with donchian 32.'
+  rule: INDETERMINATE IF n(A) < 60 or the producer failed. PASS (D32 confirmed) IF net_r(D32) > net_r(A) AND D32 >= A in >= 3 of 4 folds AND maxDD(D32)
+    <= 1.10 x maxDD(A). FAIL otherwise (the cdb2-03 lead does not replicate; donchian 24 stands). Thresholds are not changed after any result.
+  on_pass: Report to AM-TRADING as the evidence for a Tier-3 proposal to set donchian 32 on slv_trend_1h. This lane edits no config.
+  on_fail: Record the non-replication on the lever map; donchian 24 stands.
+  what_it_does_not_do: 'Edits no config, roster or record; places no order. A is not out-of-sample here: donchian 24 was chosen in the 2026-06-20
+    sweep on ~2017..2026-06, which covers this span. That favours A and biases the test against D32. Bars: the SLV CFD is a proxy for the ETF
+    tape.'
+intervention_controls:
+  not_applicable: a config-exact harness comparison of two parameter settings on history, not an in-trade action
+practice_precedent: 'M2, M10 (docs/reference/trading-and-model-practice-principles.md): a best-of-k lead is confirmed once on a span it was not
+  selected on before any change is proposed.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 40
+  why_runner: Fetches keyless public Dukascopy candles for a pinned window; reads no trainer data; CPU only.
+  basis: 2 harness passes over ~3 years of 1h bars.
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  bucket: structural
+  basis: 'stand-in: an entry setting of a leg trading real money; not a P&L measurement.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - slv_trend_1h
+  - --arm
+  - A=tp_r=6.0
+  - --arm
+  - D32=tp_r=6.0;donchian=32
+  - --days
+  - '3700'
+  - --start
+  - '2016-01-01'
+  - --end
+  - 2018-12-31 23:59
+  - --non-crypto-source
+  - dukascopy
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0'
+  - --dd-tol-frac
+  - '0.10'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '60'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261112-cdb2-08
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261112-cdb2-03
+- RQ-20261103-5a03-02
+- SLV-ITERATION
