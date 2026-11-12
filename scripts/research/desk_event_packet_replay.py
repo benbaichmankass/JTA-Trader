@@ -23,8 +23,9 @@ THE ARM (registered in research/queue/RQ-20261112-e4a7-01.yaml before any packet
                seeded random ORDER (seed 20261112); judged in schedule-prefix batches.
   packet       the live builder's masked scan packet at the event's decision cutoff, universe = the EVENT symbol only (one
                alias), plus two blocks the 1h price packet cannot see:
-                 event            {type open_interest_shock, oi_change_1h_pct, oi_change_z, known_bars_before_cutoff}
-                 trigger_history  the same trigger's net-of-cost outcomes per structure (continuation / fade x six reference
+                 event            {type open_interest_shock, oi_change_1h_pct, oi_change_z, known_minutes_before_cutoff,
+                                  last_closed_bar_return_pct / _atr, continuation_side}
+                 trigger_history  (in JUDGE-PROTOCOL.md, identical for every packet) the same trigger's net-of-cost outcomes per structure (continuation / fade x six reference
                                   brackets), pooled over the six symbols, from the HOLDOUT window 2024-11-01 .. 2025-10-25,
                                   which ENDS BEFORE DEV STARTS (point-in-time valid at every DEV cutoff). No DEV outcome is in it.
   proposal     at most one propose_entry (the event alias) or no_trade; the driver's guard refuses a bad row (scored no_trade).
@@ -176,11 +177,24 @@ EVENT_ADDENDUM = """
 
 This packet was opened because an open-interest shock fired on the one alias it shows: the 1h change in that asset's
 open interest is at least 3 standard deviations above its previous 7 days of 1h changes. The `event` block gives the
-change and its z-score. `trigger_history` gives what entering on this same trigger did on an EARLIER period, per
+change, its z-score, and the last closed 1h bar's return. `trigger_history` (below) gives what entering on this same trigger did on an EARLIER period, per
 structure (side rule x stop / target in ATR x horizon), net of all costs: `continuation` means the side of the last
-closed 1h bar, `fade` the opposite. ATR is the packet's own ATR14. Use it as the base rate; decide whether THIS instance,
+closed 1h bar (given as `event.continuation_side`), `fade` the opposite. ATR is the packet's own ATR14. The
+table is at the end of this protocol. Use it as the base rate; decide whether THIS instance,
 given the packet, is worth a trade, and which structure. `no_trade` remains a real answer. At most one proposal.
 """
+
+
+def history_table(hist: dict) -> str:
+    """The trigger_history as a table in the protocol (identical for every packet, so it is stated once)."""
+    lines = ["", f"### trigger_history ({hist['events']} earlier events of this trigger, pooled over six assets; {hist['note']})", "",
+             "| structure | side | stop (ATR) | target (ATR) | horizon (1h bars) | n | mean net R | P(target first) |",
+             "|---|---|---|---|---|---|---|---|"]
+    for r in hist["rows"]:
+        lines.append(f"| {r['structure']} | {r['side_rule']} | {r['stop_atr']} | {r['target_atr']} | {r['horizon_bars']} | {r['n']} | "
+                     f"{r['mean_net_r']:+.3f} | {r['p_target_first']:.3f} |")
+    lines += ["", "`continuation` = the packet's `event.continuation_side` (the side of the last closed 1h bar); `fade` = the other side.", ""]
+    return "\n".join(lines)
 
 
 def build_event_packet(mkt: Dict[str, gr.Series], classes: Dict[str, List[str]], ev: dict, root: Path, hist: dict) -> Tuple[dict, dict]:
@@ -188,12 +202,17 @@ def build_event_packet(mkt: Dict[str, gr.Series], classes: Dict[str, List[str]],
     m, key = gr.build_masked_packet({s: mkt[s]}, classes, ev["cutoff"], ev["index"], SEED)
     ch, z = oi_stats(root, ev)
     alias = next(iter(key["alias"]))
+    ser = mkt[s]
+    j = ser.last_closed(ev["cutoff"])
+    bar_ret = float(ser.c[j] / ser.c[j - 1] - 1)          # the bar that closes AT the cutoff (dee.detect's side source)
     m["event"] = {"type": "open_interest_shock", "alias": alias,
                   "oi_change_1h_pct": None if ch is None else round(100 * ch, 3),
                   "oi_change_z": None if z is None else round(z, 2),
                   "known_minutes_before_cutoff": int((ev["cutoff"] - ev["known"]) // 60),
+                  "last_closed_bar_return_pct": round(100 * bar_ret, 3),
+                  "last_closed_bar_return_atr": round((ser.c[j] - ser.c[j - 1]) / ser.atr[j], 3) if ser.atr[j] > 0 else None,
+                  "continuation_side": "long" if ev["side"] > 0 else "short",
                   "read_state": "read" if z is not None else "could_not_look"}
-    m["trigger_history"] = {k: hist[k] for k in ("note", "events", "rows")}
     key.update(event_side=ev["side"], event_known=ev["known"], arm="E4_packet")
     return m, key
 
@@ -245,7 +264,7 @@ def cmd_packets(a) -> int:
                                                    "note": "NEVER given to the judging session", "keys": keys}, indent=1) + "\n")
     proto = gr.JUDGE_PROTOCOL % {"cap": MAX_PER_PACKET, "sent": cdr.SENTINEL_R_FLOOR, "cap_pct": cdr.TP_VENUE_CAP_PCT * 100,
                                  "reach": cdr.REACH_FLOOR, "minrisk": gr.MIN_RISK_ATR}
-    (out / "JUDGE-PROTOCOL.md").write_text(proto + EVENT_ADDENDUM)
+    (out / "JUDGE-PROTOCOL.md").write_text(proto + EVENT_ADDENDUM + history_table(hist))
     print(json.dumps({"packets": len(keys), "withheld_for_leak": leaked, "schedule_len": len(evs),
                       "median_packet_chars": int(np.median(sizes)) if sizes else None}))
     return 0

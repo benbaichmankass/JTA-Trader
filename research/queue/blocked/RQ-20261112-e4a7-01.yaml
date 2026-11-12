@@ -13,8 +13,9 @@ question: >-
   known_at = metrics row + 5 min, decision cutoff = the next 1h boundary) whose cutoff lies in DEV and has its cutoff bar: 763 events (MEASURED 2026-11-12 by
   the packets mode; DESK-18G's DEV n was also 763). Each event opens ONE masked packet: the live builder's scan packet (desk_gen_replay_driver.build_masked_packet,
   aliases re-drawn, prices rebased to 100, year-2000 time) with the EVENT symbol only, plus an `event` block (OI 1h change %, its z, minutes known before the
-  cutoff) and a `trigger_history` block (the same trigger's net-of-cost outcomes per structure, continuation / fade x the driver's six reference brackets,
-  pooled over the six symbols, from the HOLDOUT window 2024-11-01 .. 2025-10-25, which ends before DEV starts). A Sonnet-tier judge with no repo, no tools beyond
+  cutoff, the last closed 1h bar's return in % and in ATR, and the continuation side = that bar's sign) and, stated once in JUDGE-PROTOCOL.md because it is
+  identical for every packet, a `trigger_history` table (the same trigger's net-of-cost outcomes per structure, continuation / fade x the driver's six reference
+  brackets, pooled over the six symbols, from the HOLDOUT window 2024-11-01 .. 2025-10-25, which ends before DEV starts). A Sonnet-tier judge with no repo, no tools beyond
   reading its own batch file, and no web proposes at most one entry or no_trade. Do the filled proposals beat their own geometry at random same-symbol,
   same-ATR%-decile DEV cutoffs more than 24 bars from any E4 event of that symbol by S3 >= +0.25 R with the 95% weekly-cluster CI lower bound above 0?
 why_this_matters: >-
@@ -50,6 +51,11 @@ decision_rule:
   id: RULE-RQ20261112-E4A7-01-DESK-EVENT-PACKET-ARM
   registered_at: '2026-11-12'
   registered_before_run: true
+  pre_judging_correction: >-
+    2026-11-12 ~11:25Z, after the 11:19Z registration push and BEFORE any packet was judged or any outcome computed: the mode-A packet carries no bars, so the
+    judge could not see the last closed bar's direction that the continuation / fade structures are defined by. The event block now carries it
+    (last_closed_bar_return_pct / _atr, continuation_side), and the static trigger_history moved from each packet into JUDGE-PROTOCOL.md (same content). No
+    rule, threshold, population, baseline or seed changed.
   statistic: >-
     Schedule: the 763 DEV E4 events in the seeded order of `desk_event_packet_replay.py packets` (seed 20261112; index = position). Judged in whole batches of
     100 packets in schedule order (the last batch is 63). STOPPING: the whole schedule is judged unless the 15 USD ceiling would be crossed, in which case judging
