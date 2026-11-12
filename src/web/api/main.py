@@ -39,6 +39,7 @@ from src.web.api.routers import insights as insights_router
 from src.web.api.routers import learning as learning_router
 from src.web.api.routers import liquidity as liquidity_router
 from src.web.api.routers import market_ws as market_ws_router
+from src.web.api.routers import stream as stream_router
 from src.web.api.routers import news as news_router
 from src.web.api.routers import notifications as notifications_router
 from src.web.api.routers import order_packages as order_packages_router
@@ -52,6 +53,7 @@ from src.web.api.routers import prop as prop_router
 from src.web.api.routers import reports as reports_router
 from src.web.api.routers import research_catalog as research_catalog_router
 from src.web.api.routers import catalog_features as catalog_features_router
+from src.web.api.routers import signals_catalog as signals_catalog_router
 from src.web.api.routers import roadmap as roadmap_router
 from src.web.api.routers import runtime_config as runtime_config_router
 from src.web.api.routers import shadow as shadow_router
@@ -67,6 +69,7 @@ from src.web.api.routers import work_ledger as work_ledger_router
 from src.web.api.routers import work_topics as work_topics_router
 from src.web.api.routers import work_items as work_items_router
 from src.web.api.routers import live_review_direct as live_review_direct_router
+from src.web.api.routers import ops_channel as ops_channel_router
 
 # UI-UPGRADE-1-AUTH: the whole-site gate is an APP-LEVEL dependency (so it covers
 # every router and WS /ws/market) that is a no-op until SITE_AUTH_ENFORCE is set.
@@ -149,14 +152,17 @@ app.include_router(reports_router.router)
 app.include_router(roadmap_router.router)
 app.include_router(research_catalog_router.router)
 app.include_router(catalog_features_router.router)
+app.include_router(signals_catalog_router.router)
 app.include_router(runtime_config_router.router)
 app.include_router(learning_router.router)
 app.include_router(market_ws_router.router)
+app.include_router(stream_router.router)
 app.include_router(work_router.router)
 app.include_router(work_ledger_router.router)
 app.include_router(work_topics_router.router)
 app.include_router(work_items_router.router)
 app.include_router(live_review_direct_router.router)
+app.include_router(ops_channel_router.router)  # MANAGER-VM-DIRECT-OPS (X-Work-Store-Token, fail-closed)
 
 
 @app.get("/api/health", tags=["health"])
