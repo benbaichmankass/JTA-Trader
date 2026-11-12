@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "FUT-CME-INTRADAY-HIST. (1) system-actions pull-ibkr-history: allow symbol MNQ (read-only IB history; same wrapper, clientId 450, 20s pacing, heartbeat guard). (2) ibkr_offvm adapter: MNQ -> CME in _SYMBOL_EXCHANGE. (3) sync_trainer_data.sh: also rsync market_raw_percontract/ to the trainer, non-fatal on absence, so per-contract shards can be roll-adjusted there. No order path, no config, no service restart. Revert: git revert.",
+  "why": "Real CME MNQ intraday history from IB's free data (operator 2026-11-12) for RQ-20261112-09d2-05."
+}
