@@ -246,7 +246,6 @@ def record_ages(
     raw: List[Dict[str, Any]],
     ids: List[str],
     now: Optional[_dt.datetime] = None,
-    store_updated_at: Optional[Dict[str, str]] = None,
 ) -> Tuple[Dict[str, Optional[float]], Dict[str, int]]:
     """CONTENT AGE IN DAYS, and an observed-record count, per id.
 
@@ -313,13 +312,6 @@ def record_ages(
             ages[row_id] = None
             continue
 
-        # WORK-EXPORT-GUARDS-FROZEN (2026-11-12): read from the work store, an item has no record
-        # file; its content age is the store's own updated_at (every write bumps it).
-        if src.startswith("work_store:"):
-            iso = (store_updated_at or {}).get(row_id)
-            ages[row_id] = (max(0.0, _age_days(iso.replace("Z", "+00:00"), now)) if iso else None)
-            continue
-
         fname_ts = _filename_timestamp(src)
         if fname_ts is not None:
             ages[row_id] = max(0.0, (now - fname_ts).total_seconds() / 86400.0)
@@ -340,43 +332,6 @@ def record_ages(
     transitions = {row_id: max(0, record_counts.get(row_id, 1) - 1)
                    for row_id in ids}
     return ages, transitions
-
-
-def _read_register(pipeline, register_path: pathlib.Path):
-    """The register as the LIVE work store holds it, wherever it can be reached.
-
-    WORK-EXPORT-GUARDS-FROZEN (2026-11-12): since the WSD-S4 freeze the files under
-    ``docs/claude/work/pipeline`` are an export (newest record 2026-11-06T22:02Z on that day), so a
-    row the store closed still read as owed and stale: this guard was red on main and on every
-    pipeline-touching PR over PI-20261106-01AFOLUJ-0009, which the store had killed with evidence.
-    ``main()`` asks ``src/runtime/work_read`` for the live store (``WORK_READ_SOURCE=api``: the VM
-    db when present, else ``GET /api/bot/work/items``, an open read). When the store cannot be
-    reached the export is graded exactly as before, under a loud warning naming the export's
-    newest record -- the limit and the verdict are unchanged; only the population is fresher."""
-    try:
-        res = pipeline.read_log(register_path)
-    except OSError as exc:  # work_read.WorkReadError: the live store was not reached
-        prior = os.environ.get("WORK_READ_SOURCE")
-        os.environ["WORK_READ_SOURCE"] = "export"
-        try:
-            res = pipeline.read_log(register_path)
-        finally:
-            if prior is None:
-                os.environ.pop("WORK_READ_SOURCE", None)
-            else:
-                os.environ["WORK_READ_SOURCE"] = prior
-        print(f"::warning::operator-owed: the live work store could not be read ({exc}); "
-              f"grading the frozen export instead, which may show a row the store already moved.")
-    try:
-        sys.path.insert(0, str(REPO))
-        from src.runtime import work_read  # noqa: PLC0415
-        st = work_read.read_state().get("pipeline")
-        if st:
-            print(f"operator-owed: read from {st.get('source')}"
-                  + (f" (FROZEN EXPORT, newest {st.get('export_newest')})" if st.get("source") == "export" else ""))
-    except Exception:  # noqa: BLE001 -- the stamp is context; the verdict does not depend on it
-        pass
-    return res
 
 
 def owed_rows(rows: Dict[str, Any], pipeline) -> Dict[str, Any]:
@@ -406,7 +361,7 @@ def check(
               f"2026-09-21 until the E45 re-point.")
         return 2
 
-    res = _read_register(pipeline, register_path)
+    res = pipeline.read_log(register_path)
     if not res.healthy:
         locs = ", ".join(f"{loc} ({why})" for loc, why in res.unreadable[:5])
         print(f"operator-owed: COULD NOT LOOK — {path} has {len(res.unreadable)} "
@@ -421,8 +376,7 @@ def check(
 
     commits_total = len(register_commits(repo, path))
     ages, transitions = record_ages(repo, path, res.sources, res.raw,
-                                     list(due), now,
-                                     getattr(res, "store_updated_at", None))
+                                     list(due), now)
 
     print(f"operator-owed: {len(rows)} row(s) in {path} · {len(owed)} owed to "
           f"the operator · {len(due)} of those DUE now")
@@ -689,9 +643,6 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     if args.self_test:
         return _self_test()
-    # Grade the LIVE register (WORK-EXPORT-GUARDS-FROZEN); run_guards defaults its children to the
-    # committed export, which this guard must not grade while the store can be reached.
-    os.environ["WORK_READ_SOURCE"] = "api"
     return check(REPO, verbose=args.verbose)
 
 

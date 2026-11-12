@@ -12,7 +12,6 @@ from __future__ import annotations
 import datetime as _dt
 import json
 import os
-import pathlib
 import subprocess
 
 import pytest
@@ -606,17 +605,3 @@ def test_the_shipped_selftest_plants_its_own_violations():
     from scripts.ci.check_operator_owed import _self_test
 
     assert _self_test() == 0
-
-
-def test_store_read_ages_come_from_the_store_updated_at():
-    """WORK-EXPORT-GUARDS-FROZEN: a row read from the work store is dated by the store's own
-    updated_at (no record file exists), so a store-side close is seen and a stale row still trips."""
-    import datetime as dt
-    now = dt.datetime(2026, 11, 12, 10, 0, tzinfo=dt.timezone.utc)
-    sources = {"OLD": "work_store:v4", "FRESH": "work_store:v9", "NODATE": "work_store:v1"}
-    upd = {"OLD": "2026-11-02T10:00:00Z", "FRESH": "2026-11-12T09:00:00Z"}
-    ages, _ = record_ages(pathlib.Path("."), "docs/claude/work/pipeline", sources, [], ["OLD", "FRESH", "NODATE"],
-                          now, upd)
-    assert round(ages["OLD"], 2) == 10.0      # past a 6-day limit -> the guard still escalates
-    assert ages["FRESH"] < 0.1
-    assert ages["NODATE"] is None             # not measurable, never zero

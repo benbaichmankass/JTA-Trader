@@ -271,9 +271,6 @@ class LoadResult:
     #: rows). ``None`` means "read from the files" (the export), never "nothing due".
     due_now: list[str] | None = None
     due_now_builds: list[str] | None = None
-    #: Set only when read from the work store (db or API): id -> the item's ``updated_at``, the
-    #: store's own "when did this content last change" (a store item has no record filename).
-    store_updated_at: dict[str, str] = field(default_factory=dict)
 
     @property
     def healthy(self) -> bool:
