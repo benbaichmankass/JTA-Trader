@@ -627,3 +627,27 @@ async def test_existing_require_session_also_accepts_a_device_session(client, go
 def test_web_sessions_table_is_invisible_to_the_data_explorer():
     from src.web.api.routers import db_explorer
     assert "web_sessions" not in db_explorer._TABLE_ALLOWLIST
+
+
+def _http_conn(path, query="", method="GET", headers=()):
+    from starlette.requests import HTTPConnection
+    return HTTPConnection({"type": "http", "method": method, "path": path, "query_string": query.encode(),
+                           "headers": [(k.lower().encode(), v.encode()) for k, v in headers],
+                           "scheme": "https", "server": ("t", 443)})
+
+
+def test_stream_gate_takes_ticket_once_and_only_on_the_stream(client, google, monkeypatch):
+    """UI-TRADING-PUSH T1: an EventSource cannot set Authorization, so GET /api/bot/stream takes the
+    same single-use ws-ticket /ws/market takes -- and no other HTTP path does."""
+    monkeypatch.setenv("SITE_AUTH_ENFORCE", "1")
+    a = enrol(client, google, SoftKey())
+    t = client.post("/api/auth/ws-ticket", headers=bearer(a["session_token"])).json()["ticket"]
+    auth_module.require_site_session(_http_conn("/api/bot/stream", f"ticket={t}"))
+    with pytest.raises(Exception) as e:
+        auth_module.require_site_session(_http_conn("/api/bot/stream", f"ticket={t}"))   # burned
+    assert getattr(e.value, "status_code", None) == 401
+    with pytest.raises(Exception):
+        auth_module.require_site_session(_http_conn("/api/bot/stream"))                  # no ticket
+    t2 = client.post("/api/auth/ws-ticket", headers=bearer(a["session_token"])).json()["ticket"]
+    with pytest.raises(Exception):
+        auth_module.require_site_session(_http_conn("/api/bot/positions", f"ticket={t2}"))  # not a stream
