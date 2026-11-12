@@ -71,12 +71,13 @@ class RowsUnreadable(Exception):
     """The register could not be read from its canonical source (never read as "no rows")."""
 
 
-def _store_rows(repo: Path) -> list[dict]:
+def _store_rows() -> list[dict]:
     """Every checklist row as the WORK STORE holds it, or raise. On the VM that is the local
     work_store.db (via checklist_store); off the VM it is the live API (scripts/ops/work.py)."""
     sys.path.insert(0, str(REPO))
     sys.path.insert(0, str(REPO / "scripts/ops"))
-    from src.runtime import work_read, work_store_import as wi
+    from src.runtime import work_read
+    from src.runtime import work_store_import as wi
 
     local = work_read.local_store()
     if local is not None:
@@ -99,10 +100,10 @@ def rows(repo: Path = REPO, allow_export: bool = False, fetch=None) -> dict:
 
     try:
         if work_read.frozen(repo) and not allow_export:
-            items = (fetch or _store_rows)(repo)
+            items = fetch(repo) if fetch else _store_rows()
         else:
             items = checklist_store.load(repo)["items"]
-    except Exception as e:  # noqa: BLE001 -- every failure is "could not look", not "empty"
+    except Exception as e:  # every failure is "could not look", not "empty"
         raise RowsUnreadable(f"{type(e).__name__}: {e}") from e
     return {r["id"]: r for r in items if isinstance(r, dict) and r.get("id")}
 
