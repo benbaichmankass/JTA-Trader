@@ -1,5 +1,7 @@
 {
   "tier": 1,
-  "landing": "self",
-  "why": "Row ML-DECISION-LABEL-VOL-CONFOUND, Tier 1 research: a NEW pre-registered unit RQ-20261112-a7e8-03 (rule registered before any run; no result in this PR), its read-only instrument scripts/research/ml_decision_vol_decomp.py (public candles + the committed served booster, writes only under --out) with a test, and a capability-index row. No config, src/, order path or deploy. Gates this adds or changes: none."
+  "landing": "hold",
+  "why": "Pre-registration of RQ-20261112-a7e8-03 + its read-only instrument (Tier 1 research). HELD because the unit's evidence record (#25111) auto-merged at 04:21Z BEFORE this registration landed, so R5 can no longer vouch the unit as pre-run. The pre-registration is verifiable from git: the rule commit a7b26a663341f9c4673bc8fc8c5cf9025b48d774 on this branch is dated 2026-11-12T03:49:23Z, and the holdout read in the evidence record is read_at 2026-11-12T03:56:43Z; the decision_rule text is unchanged since that commit (git diff a7b26a66 HEAD -- research/queue/RQ-20261112-a7e8-03.yaml touches no decision_rule line). Gates this adds or changes: none.",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "R5 refuses research/queue/RQ-20261112-a7e8-03.yaml because a result for it is already on main (#25111, merged before this registration by a claude-pr-automerge sequencing slip). The rule predates the read (a7b26a66 03:49:23Z < read 03:56:43Z); the manager merges."
 }
