@@ -1,7 +1,7 @@
 # Hand-authored 2026-11-12 by lane ML-D2-CONSUMER-TEST (Tier 1), dispatched by the ML assistant manager. Decision rule registered BEFORE any run. Gates: none.
 id: RQ-20261112-bcd2-01
 title: 'CONSUMER TEST of the D2 regime gate on the trend_donchian family, pooled: applied to every TD leg whose symbol has an advisory vol head, would the dropped trades have lost money, out of sample, more than the same number dropped at random?'
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 1
@@ -68,3 +68,12 @@ ml_consumer:
   - trend_donchian_sol_4h
   - trend_donchian_eth_4h
   book: money
+grading:
+  graded_at: '2026-11-12'
+  graded_by: lane ML-D2-CONSUMER-TEST (session_01AFoLuKCrFovuJgq5cZq8BX)
+  verdict: fail
+  decision_rule_id: RULE-RQ-20261112-d2ct-01
+  record: research/results/RQ-20261112-bcd2-01/43304656810.jsonl
+  disposition: >-
+    Registered rule applied mechanically, primary window. The BTC-authored trend_donchian OFF-cells (chop/calm long, transitional/calm long, trending/volatile long) applied to the SOL TD legs (sol_prop 1h + sol_4h; the only TD legs whose symbol has an advisory head): dropped 91 of 195 trades (>=25), added_r -11.69 R (<0), positive in 3 of 6 folds (<4), control_p 0.815 vs a matched random drop (>0.05) => FAIL. Since 2026-07-01: 14 dropped, indeterminate_underpowered. ETH legs inert (no advisory ETH head; heads are BTC, MES, SOL); both XRP legs inert (no xrp-regime head config). So at most one real-money TD leg (sol_prop on bybit_2) could ever be touched by this gate, and the result says the gate would have cost it. Label verify NOT run (no live audit rows on the trainer): provisional; SOL head labels 48.75% of bars volatile vs BTC 7.53%. Holdout claim refused (WindowOverlapsTraining), in-sample caveat stands. Fidelity approximate (decision_bar omitted).
+  evidence: 'trainer-vm-diag issues #25470 (preflight), #25473 (launch), #25482 (read)'

@@ -306,3 +306,113 @@ def test_a_pass_cut_off_mid_build_is_labelled_interrupted_on_the_next_pass(tmp_p
     cut = [x for x in labels if x["disposition"] == "interrupted"]
     assert len(cut) == 1 and cut[0]["fired"] == fired and cut[0]["after_s"] == 300.0
     assert not (logs / det.INFLIGHT).exists()
+
+
+def _survivor(tmp_path, monkeypatch, *, bar_age_s, state="ok", key="k1"):
+    """A pass cut off by a restart whose build finished in its own unit: in-flight mark + job dir with a complete stage."""
+    import shutil
+    monkeypatch.setattr(det, "_jobs_dir", lambda: tmp_path / "jobs")
+    st, _ = _stage(tmp_path)
+    job = tmp_path / "jobs" / "j1"
+    job.mkdir(parents=True)
+    shutil.copytree(st, job / "stage")
+    (job / "result.json").write_text(json.dumps({"state": state, "stages": []}))
+    logs = tmp_path / "logs"
+    logs.mkdir(exist_ok=True)
+    bar = (NOW - timedelta(seconds=bar_age_s)).strftime("%Y-%m-%dT%H:%MZ")
+    fired = {"kind": "atr_burst", "symbol": "AVAXUSDT", "bar": bar, "key": key, "detail": {}}
+    (logs / det.INFLIGHT).write_text(json.dumps({"started_at": (NOW - timedelta(seconds=240)).isoformat(),
+                                                 "fired": fired, "job": "j1"}))
+    return logs, fired
+
+
+def _pass(tmp_path, logs, http, commit=("c" * 40, None)):
+    return det.run_once(cfg=CFG, now_fn=lambda: NOW, bars_fn=lambda s, tf, n: {"AVAXUSDT": bars()},
+                        auth_fn=lambda: "tok", fetch=lambda url, auth: (404, None), http=http, pr_fn=lambda: 7,
+                        build_fn=lambda f, cfg, text: (None, "must not rebuild"),
+                        commit_fn=lambda *a, **k: commit, calendar_fn=None, logs=logs, receipt=tmp_path / "r.json")
+
+
+def _labels(logs):
+    return [json.loads(x) for x in (logs / "trigger_labels.jsonl").read_text().splitlines()]
+
+
+def test_a_finished_survivor_is_adopted_committed_and_posted(tmp_path, monkeypatch):
+    logs, fired = _survivor(tmp_path, monkeypatch, bar_age_s=420)
+    http = _Http()
+    res = _pass(tmp_path, logs, http)
+    assert res["state"] == "posted" and res["adopted_job"] == "j1" and len(http.posts) == 1
+    lab = _labels(logs)
+    assert [x["disposition"] for x in lab] == ["posted"] and lab[0]["adopted_job"] == "j1" and lab[0]["fired"] == fired
+    assert not (logs / det.INFLIGHT).exists()
+    res2 = _pass(tmp_path, logs, _Http())  # the mark is consumed: no second adoption
+    assert "adopted_job" not in res2
+
+
+def test_a_survivor_for_a_stale_bar_is_not_adopted(tmp_path, monkeypatch):
+    logs, _ = _survivor(tmp_path, monkeypatch, bar_age_s=3600)
+    http = _Http()
+    res = _pass(tmp_path, logs, http)
+    assert "adopted_job" not in res and http.posts == [] and _labels(logs)[0]["disposition"] == "interrupted"
+
+
+def test_an_unfinished_or_already_handled_survivor_is_not_adopted(tmp_path, monkeypatch):
+    logs, _ = _survivor(tmp_path, monkeypatch, bar_age_s=420, state="timeout")
+    assert "adopted_job" not in _pass(tmp_path, logs, _Http()) and _labels(logs)[0]["disposition"] == "interrupted"
+
+
+def test_a_survivor_whose_key_was_already_handled_is_not_posted_twice(tmp_path, monkeypatch):
+    logs, _ = _survivor(tmp_path, monkeypatch, bar_age_s=420, key="dup")
+    (logs / "trigger_state.json").write_text(json.dumps({"seen_keys": ["dup"], "wakes": []}))
+    http = _Http()
+    assert "adopted_job" not in _pass(tmp_path, logs, http) and http.posts == []
+
+
+def test_an_incomplete_survivor_stage_is_not_adopted(tmp_path, monkeypatch):
+    import shutil
+    logs, _ = _survivor(tmp_path, monkeypatch, bar_age_s=420)
+    shutil.rmtree(tmp_path / "jobs" / "j1" / "stage" / "comms" / "desk" / "packets")
+    http = _Http()
+    assert "adopted_job" not in _pass(tmp_path, logs, http) and http.posts == []
+
+def _run_timed(tmp_path, http, commit=("c" * 40, None), toggle_on=True, monkeypatch=None):
+    logs = tmp_path / "logs"
+    st, _ = _stage(tmp_path)
+
+    def build(f, cfg, text):
+        det.LAST_STAGES[:] = [{"stage": "builder", "outcome": "exit 0", "wall_s": 41.5},
+                              {"stage": "publisher", "outcome": "exit 0", "wall_s": 2.5}]
+        det.LAST_PATH = "unit"
+        return st, None
+    res = det.run_once(cfg=CFG, now_fn=lambda: NOW, bars_fn=lambda s, tf, n: {"AVAXUSDT": bars(last={"open": 100.0, "high": 104.0, "low": 99.8, "close": 103.9})},
+                       auth_fn=lambda: "tok", fetch=lambda url, auth: (404, None), http=http, pr_fn=lambda: 7,
+                       build_fn=build, commit_fn=lambda *a, **k: commit, calendar_fn=None, logs=logs, receipt=tmp_path / "r.json")
+    lab = [json.loads(x) for x in (logs / "trigger_labels.jsonl").read_text().splitlines()]
+    return res, [x for x in lab if x["disposition"] != "not_strongest"]
+
+
+def test_a_posted_label_carries_the_build_timing(tmp_path):
+    res, lab = _run_timed(tmp_path, _Http())
+    (x,) = lab
+    assert x["disposition"] == "posted" and x["stages"][0]["wall_s"] == 41.5 and x["isolation"] == "unit"
+    assert isinstance(x["build_wall_s"], float) and res["stages"] == x["stages"]
+
+
+def test_a_refused_commit_and_a_failed_post_labels_carry_the_build_timing_too(tmp_path):
+    _, lab = _run_timed(tmp_path, _Http(), commit=(None, 403))
+    (x,) = lab
+    assert x["disposition"] == "could_not_commit" and x["stages"][1]["stage"] == "publisher" and "build_wall_s" in x
+    _, lab2 = _run_timed(tmp_path / "b", _Http(code=500))
+    (y,) = lab2
+    assert y["disposition"] == "could_not_post" and y["stages"] and y["isolation"] == "unit"
+
+
+def test_a_label_written_before_any_build_carries_no_timing(tmp_path):
+    logs = tmp_path / "logs"
+    det.run_once(cfg=CFG, now_fn=lambda: NOW, bars_fn=lambda s, tf, n: {"AVAXUSDT": bars(last={"open": 100.0, "high": 104.0, "low": 99.8, "close": 103.9})},
+                 auth_fn=lambda: None, fetch=lambda url, auth: (404, None), http=_Http(), pr_fn=lambda: 7,
+                 build_fn=lambda *a: (None, "must not build"), commit_fn=lambda *a, **k: ("c" * 40, None), calendar_fn=None,
+                 logs=logs, receipt=tmp_path / "r.json")
+    lab = [json.loads(x) for x in (logs / "trigger_labels.jsonl").read_text().splitlines()]
+    nc = [x for x in lab if x["disposition"] == "could_not_commit"]
+    assert len(nc) == 1 and "build_wall_s" not in nc[0] and "stages" not in nc[0]

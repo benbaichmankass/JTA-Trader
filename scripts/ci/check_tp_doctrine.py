@@ -238,6 +238,12 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # 2026-11-08 ML-ENTRY-EQ-STRUCT-LIVE (Tier-3): real predictive 3 ATR entry TP it was SCORED with (fixed at entry, no revision producer); the SL-only structure stop moves.
     "alpaca_live/ml_entry_eq_struct": R,
     "alpaca_portfolio/ml_entry_eq_struct": R,
+    # 2026-11-12 SLV-1H-PROMOTE (Tier 3; OPERATOR chat ~10:32Z, verbatim "I answer that I do want to promote silver.", relayed by Manager
+    # Session 2026-11-11a): slv_trend_1h moves alpaca_paper -> alpaca_live + its mirror with the SAME debt it carried on paper (50 R sentinel,
+    # no revision rule) MINUS the entry debt: tp_r 50 -> 6.0 in the same PR (RQ-20261112-5ab1-03 PASS: T6 selected on discovery, holdout
+    # +33.37 R n 108; corroborated by RQ-20261112-5ab1-02 K* 6 R, calibrated). Only tp_revision is owed (no revision rule tested on this leg).
+    "alpaca_live/slv_trend_1h": R,
+    "alpaca_portfolio/slv_trend_1h": R,
     # 2026-11-08 ML-ENTRY-PROP-BASELINE (Tier-3, operator chat ~23:35Z): ml_entry on the prop books as a measured baseline. The ENTRY bracket is compliant (real predictive 3 ATR TP,
     # declared); the extend-only TP revision cannot reach a phone / manual-ticket venue (revision path absent), so only the revision is owed. velotrade_1 (VM executor) is plumbed and
     # passes. The SL-only structure stop does propagate through the prop trail (src/prop/prop_trail.py structure_exit). Follow-up row ML-ENTRY-PROP-BASELINE.
@@ -263,7 +269,7 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # ── paper ───────────────────────────────────────────────────────────────
     "alpaca_options_paper/gdx_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "alpaca_options_paper/slv_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
-    "alpaca_options_paper/slv_trend_1h": ER,
+    "alpaca_options_paper/slv_trend_1h": R,   # ER -> R 2026-11-12: tp_r 6.0 declared (RQ-20261112-5ab1-03, SLV-1H-PROMOTE)
     "alpaca_paper/gdx_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "alpaca_paper/ief_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "alpaca_paper/iwm_trend_long_1d": R,
@@ -275,7 +281,7 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     "alpaca_paper/qqq_trend_long_1d": R,
     "alpaca_paper/scha_trend_long_1d": R,
     "alpaca_paper/slv_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
-    "alpaca_paper/slv_trend_1h": ER,
+    # alpaca_paper/slv_trend_1h ER REMOVED 2026-11-12: the leg left alpaca_paper for real money (SLV-1H-PROMOTE; its R lines are under real_money).
     "alpaca_paper/splg_trend_long_1d": ER,
     "alpaca_paper/spy_trend_long_1d": R,
     "alpaca_paper/tlt_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
