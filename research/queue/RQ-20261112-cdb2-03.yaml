@@ -55,14 +55,15 @@ levers_declared:
 - entry
 power:
   expected_n: 380
-  min_detectable_effect: 0.37
+  min_detectable_effect: 0.43
   effect_units: r_per_trade
-  design: paired
+  sd: 2.94
+  design: one_sample
   alpha: 0.05
   power: 0.8
   basis: 'Paired variant-vs-control on the same calendar; control n ESTIMATED ~380 (RQ-20261112-5ab1-03 T6: n 438 over 2018-06..2026-10, scaled
     to 2019-01). The 8.0 R materiality bar plus the 3-of-4 fold clause is the gate, not a significance test. MDE stated for the CONTROL''s own
-    per-trade mean at sd ~2.9 R: 2.486 x 2.9 / sqrt(380) = 0.37 R/trade. Floor 100.'
+    per-trade mean at sd ~2.9 R: two-sided alpha 0.05, power 0.8: 2.80 x 2.94 / sqrt(380) = 0.42 R/trade, declared 0.43 (gate floor 362 <= 380). Floor 100.'
   feasibility:
     source: none
     accrual_basis: Replays history on freshly fetched public Dukascopy candles over a pinned window; nothing accrues.

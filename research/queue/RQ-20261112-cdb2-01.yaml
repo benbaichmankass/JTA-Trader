@@ -32,14 +32,15 @@ iteration:
   due_by: '2026-11-19'
 power:
   expected_n: 320
-  min_detectable_effect: 0.41
+  min_detectable_effect: 0.47
   effect_units: r_per_trade
+  sd: 2.94
   design: one_sample
   alpha: 0.05
   power: 0.8
   basis: 'ESTIMATED from the dispatch''s reconcile figures (n 321, mean +0.255, CI lower -0.067, so se ~0.164 and per-trade sd ~2.94 R).
-    At n 320: MDE (one-sided alpha 0.05, power 0.8) = 2.486 x 0.164 = 0.41 R/trade. For the PASS clause (two-sided 95% lower bound > 0) it
-    is 2.80 x 0.164 = 0.46 R/trade. STATED BEFORE THE RUN: if the true effect is the reconcile''s +0.255 R, the chance that the CI clears zero
+    At n 320 the MDE for the PASS clause (two-sided 95% lower bound > 0, power 0.8) is 2.80 x 0.164 = 0.46 R/trade; declared 0.47
+    (gate floor (2.80 x 2.94 / 0.47)^2 = 307 <= 320). A one-sided reading would detect 0.41 R/trade. STATED BEFORE THE RUN: if the true effect is the reconcile''s +0.255 R, the chance that the CI clears zero
     is only ~0.34, and resolving 0.255 R at power 0.8 needs ~1,040 trades. So the likely outcome is INDETERMINATE/positive_unresolved,
     which is a finding about POWER, not evidence against the leg. Floor 100: below it the unit grades INDETERMINATE/underpowered.'
   feasibility:

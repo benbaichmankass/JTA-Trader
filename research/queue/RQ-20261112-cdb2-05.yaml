@@ -56,12 +56,13 @@ levers_declared:
 - sizing_vs_cost
 power:
   expected_n: 380
-  min_detectable_effect: 0.37
+  min_detectable_effect: 0.43
   effect_units: r_per_trade
+  sd: 2.94
   design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: 'One-sample on C10''s own trades; n ESTIMATED ~380 (as cdb2-02). MDE at sd ~2.9 R: 0.37 R/trade. The grade is the Stage-0 sign-and-folds
+  basis: 'One-sample on C10''s own trades; n ESTIMATED ~380 (as cdb2-02). MDE at sd ~2.94 R, two-sided alpha 0.05, power 0.8: 0.43 R/trade (gate floor 362 <= 380). The grade is the Stage-0 sign-and-folds
     bar at 2x cost, not a significance test. Floor 100.'
   feasibility:
     source: none
