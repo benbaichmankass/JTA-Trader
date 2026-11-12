@@ -137,8 +137,8 @@ def _rsi(closes: List[float], n: int = 14) -> List[Optional[float]]:
     losses = [max(closes[i - 1] - closes[i], 0.0) for i in range(1, len(closes))]
     ag, al = sum(gains[:n]) / n, sum(losses[:n]) / n
 
-    def val(g: float, l: float) -> float:
-        return 100.0 if l == 0 else 100.0 - 100.0 / (1.0 + g / l)
+    def val(gain: float, loss: float) -> float:
+        return 100.0 if loss == 0 else 100.0 - 100.0 / (1.0 + gain / loss)
 
     out[n] = val(ag, al)
     for i in range(n + 1, len(closes)):
@@ -154,8 +154,8 @@ def _atr(candles: List[Dict[str, Any]], n: int = 14) -> List[Optional[float]]:
         return out
     trs = [candles[0]["high"] - candles[0]["low"]]
     for i in range(1, len(candles)):
-        h, l, pc = candles[i]["high"], candles[i]["low"], candles[i - 1]["close"]
-        trs.append(max(h - l, abs(h - pc), abs(l - pc)))
+        hi, lo, pc = candles[i]["high"], candles[i]["low"], candles[i - 1]["close"]
+        trs.append(max(hi - lo, abs(hi - pc), abs(lo - pc)))
     a = sum(trs[1:n + 1]) / n
     out[n] = a
     for i in range(n + 1, len(candles)):

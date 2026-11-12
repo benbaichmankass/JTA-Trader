@@ -25,6 +25,11 @@ import zlib
 from typing import Any, Dict, Optional, Tuple
 
 TABLE = "trade_chart_snapshots"
+# data-wiring: derived enrichment sidecar, NOT a source of truth. The truth stays in trade_journal.db (trades,
+# order_packages, prop_fills/prop_tickets) + the review/receipt logs + venue candles; this table only caches a framed
+# projection of them per closed trade, in its own file (trade_chart_snapshots.db). History is backfilled by the same
+# builder loop (src/runtime/trade_snapshot_builder.py: every closed trade with no row, newest first), and any row can
+# be deleted and rebuilt.
 DDL = f"""
 CREATE TABLE IF NOT EXISTS {TABLE} (
     snapshot_key TEXT PRIMARY KEY,
