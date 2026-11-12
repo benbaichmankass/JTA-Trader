@@ -285,3 +285,38 @@ def test_category_cross_check_against_a_raw_query(env, client):
     assert live["n_closed"] == n == 3 and live["net_pnl_usd"] == round(tot, 4) == 12.5
     assert round(live["measured_usd"] + (live["not_measured_usd"] or 0.0), 4) == live["net_pnl_usd"]
     assert live["max_drawdown_usd"] == 4.0                                            # 10 -> 6 off the peak
+
+
+# ---- operator 2026-11-12 (u5, u3): four rows + computed total; capital flows stated, never silent -------------------------------
+
+def test_total_row_is_the_sum_of_the_four_rows(env, client):
+    _trade(env, pnl=10.0)
+    _trade(env, pnl=-4.0)
+    _trade(env, pnl=6.0, account_id="a_paper", account_class="paper")
+    _trade(env, pnl=-2.0, account_id="a_mirror", account_class="paper", notes=FAB)
+    d = client.get("/api/bot/performance/categories", params={"window": "30d"}).json()
+    rows, tot = d["categories"], d["total"]
+    assert len(rows) == 4 and tot["category"] == "total" and tot["label"] == "Total"
+    for k in pc.ADDITIVE_FIELDS:                                   # additive integers: total == sum of the rows
+        assert tot[k] == sum(r[k] or 0 for r in rows), k
+    for k in pc.ADDITIVE_USD:                                      # additive dollars (None only if every row is None)
+        vals = [r[k] for r in rows if r[k] is not None]
+        assert tot[k] == (round(sum(vals), 4) if vals else None), k
+    assert tot["n_closed"] == 4 and tot["net_pnl_usd"] == 10.0
+    assert round(tot["measured_usd"] + tot["not_measured_usd"], 4) == tot["net_pnl_usd"]   # split kept, never folded
+    # ratios are recomputed from summed blocks: 2 wins (10, 6) of 3 measured rows
+    assert tot["n_priced"] == 3 and tot["win_rate"] == round(2 / 3, 4)
+    assert tot["profit_factor"] == round(16.0 / 4.0, 4)
+    assert tot["max_drawdown_usd"] is None and tot["max_drawdown_read_state"] == "not_additive"
+    assert tot["capital_utilisation"] is None                      # no equity record anywhere: null, not 0
+
+
+def test_total_of_nothing_is_null_not_zero(env, client):
+    tot = client.get("/api/bot/performance/categories").json()["total"]
+    assert tot["n_closed"] == 0 and tot["net_pnl_usd"] is None and tot["win_rate"] is None and tot["profit_factor"] is None
+
+
+def test_capital_flows_could_not_look_is_published(env, client):
+    d = client.get("/api/bot/performance/categories").json()
+    assert d["capital_flows"]["read_state"] == "could_not_look" and "deposit" in d["capital_flows"]["effect"]
+    assert client.get("/api/bot/performance/pnl-series").json()["capital_flows"]["read_state"] == "could_not_look"

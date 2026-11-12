@@ -193,8 +193,10 @@ def get_performance_categories(window: str = "30d", start: Optional[str] = None,
         return {"as_of": as_of, **echo, "read_state": "journal_unreadable", "categories": [], "excluded": excluded,
                 "population": None}
     n_closed = sum(c["n_closed"] for c in out)
+    total = pc.total_row(out)
     span = (f"{rng['start']}..{rng['end']}" if rng["window"] is None else rng["window"])
-    return {"as_of": as_of, **echo, "read_state": "measured", "categories": out, "excluded": excluded,
+    return {"as_of": as_of, **echo, "read_state": "measured", "categories": out, "total": total,
+            "capital_flows": pc.CAPITAL_FLOWS, "excluded": excluded,
             "population": {"window": rng["window"], "since": since, "until": until,
                            "accounts": {c: cats[c] for c in pc.CATEGORIES},
                            "n_closed": n_closed,
@@ -277,6 +279,7 @@ def get_pnl_series(window: str = "30d", category: Optional[str] = None, account_
         return {"as_of": as_of, "window": window, "read_state": "journal_unreadable", "series": [], "population": None}
     return {"as_of": as_of, "window": window, "read_state": "measured", "measured_only": measured_only,
             "bucket": "trade" if window == "7d" else "utc_day", "series": series,
+            "capital_flows": pc.CAPITAL_FLOWS,
             "population": {"window": window, "since": since, "categories": wanted, "n_rows": n_rows,
                            "filters": {"account_id": account_id, "strategy": strategy, "symbol": symbol,
                                        "asset_class": asset_class},
