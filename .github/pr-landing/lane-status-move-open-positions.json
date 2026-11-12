@@ -1,5 +1,5 @@
 {
   "tier": 1,
   "landing": "self",
-  "why": "Defines what happens to positions already open when a leg changes book (OPERATING-PLAN § 2 subsection, applying the operator's 2026-10-29 'at most two' and 2026-11-12 p3 words) and adds a READ-ONLY positions classifier (src/runtime/status_move.py, scripts/ops/status_move_positions.py) with tests. No config, roster, order-path, service or broker change; places nothing; adds no gate."
+  "why": "READ-ONLY positions classifier for row STATUS-MOVE-OPEN-POSITIONS (scripts/ops/status_move.py, scripts/ops/status_move_positions.py, tests/test_status_move.py). Places nothing, writes nothing, no config/roster/src/order-path change, no gate. The OPERATING-PLAN policy text was split out to a separate held PR at the AM's direction."
 }

@@ -1,8 +1,8 @@
 """What happens to OPEN positions when a leg changes book: the status-move read (row STATUS-MOVE-OPEN-POSITIONS).
 
-The rule is stated ONCE in docs/plans/OPERATING-PLAN-2026-09-21.md § 2 "Open positions on a book move". This module
-is its runtime read. It classifies every open position against the CURRENT rosters, so a status change that moved
-the roster but left a position behind shows up as a named row instead of an anonymous extra copy of a trade.
+The rule is PROPOSED for docs/plans/OPERATING-PLAN-2026-09-21.md § 2 "Open positions on a book move" (held for the
+operator's confirmation; until it lands, the verdicts below are a classification, not policy). This module is its
+runtime read. It classifies every open position against the CURRENT rosters, so a status change that moved the roster but left a position behind shows up as a named row instead of an anonymous extra copy of a trade.
 
 Operator, 2026-10-29 (ADA trade 6734 left on bybit_1 after #21038 promoted ada_pullback_2h): *"There shouldn't be
 three versions of this trade. There should be at most two."* Operator, 2026-11-12 (planning page p3): *"We already

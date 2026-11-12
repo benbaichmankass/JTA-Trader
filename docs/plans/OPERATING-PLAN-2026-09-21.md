@@ -184,33 +184,6 @@ help by cleaning up duplicate trades in the books and creating a more integrated
 5. **Inactive legs** — *"No shadow logging (Recommended)"*. Market-data collection continues under "Off the trade path is not off the
    data path".
 
-#### Open positions on a book move (row `STATUS-MOVE-OPEN-POSITIONS`, 2026-11-12)
-
-**Gates this adds or changes:** none. A status move changes what OPENS. This rule says what happens to positions that are
-ALREADY open. It decides no entry, and it adds no switch.
-
-The operator's words, which this applies. 2026-10-29, on ADA trade 6734, left open on `bybit_1` after #21038 promoted
-`ada_pullback_2h`: *"There shouldn't be three versions of this trade. There should be at most two."* 2026-11-12, planning page p3:
-*"We already said that things get promoted to real money based on backtesting, shadow on paper is only for something that is demoted and
-in iteration, not a step on the way to real money"*.
-
-| move | positions open at the merge | what happens |
-|---|---|---|
-| **promotion** (testing → production) | the leg's general-paper copy, where the same trade is also open on real money or the mirror | **closed on the paper book.** It is the third version, and the mirror already carries the same trade, so no record is lost. Use the paper account's `flatten-<venue>-position` system-action, then `mark-operator-flattened` so exit analyses exclude it. If another open position shares that account and symbol, a whole-symbol flatten would close it too, so the close is per row instead. |
-| promotion | a general-paper copy with no real-money or mirror sibling | **runs to its own exit.** It is the only copy of that trade. Closing it would cut a record short, and a status change is not a market signal. |
-| **demotion** (production → testing) | the real-money and mirror copies | **run to their own exits.** They keep open, block new: SL/TP stay resting and the exit monitor keeps managing them (E21, `order_monitor.exit_population`). New entries go to the floor only. The trade desk can still act on any of them on its own merits (`MD-TRADE-DESK`). A status change does not choose an exit time on real money. |
-| **retirement** (→ inactive) | any copy | **runs to its own exit** (E21). |
-
-That is at most two copies of any trade on the judged books (general paper, real money, mirror). Prop and options accounts sit outside
-the status model and are reported, not judged.
-
-**The positions read** is `python3 scripts/ops/status_move_positions.py`, logic in `scripts/ops/status_move.py`. It is the runtime half of
-`strategy-status-guard`: the guard reads rosters in CI, where positions cannot be read. It classifies every open position as `on_book` ·
-`not_judged` · `close_duplicate` · `close_netted` · `run_out` · `unexplained`, and it lists any trade open more than twice. It reads
-`/api/bot/positions?include_paper=true`, which carries no order-package id, so siblings are matched on leg + symbol + side and labelled
-ESTIMATED. A journal `trades` export, with `order_package_id`, matches exactly (MEASURED). **Whoever merges a roster PR runs it after the
-merge** and handles each `close_*` row as in the table.
-
 ### Stage 1 is the DEMO FLOOR: every non-retired leg trades there (operator, 2026-10-27, binding)
 
 ⚠️ **AMENDED 2026-10-28 by "Three strategy statuses" above:** the floor is the home of every TESTING leg. A PRODUCTION leg
@@ -234,6 +207,7 @@ mechanical bugs while we're still improving the actual function."*
 - **`execution: shadow` is not a holding stage.** Shadow is no longer used for non-retired legs. A mechanism still being built (the desk leg, the short-hold lane, a new ML head) goes on the floor early, so mechanical bugs show up while the function is still improving.
 - **Demotion stops at the floor** (and, since 2026-10-28, a demoted production leg is put back ON it). The operator's popup answer, 2026-10-27, verbatim, was *"Demote stops at the floor (Recommended)"*. A leg that fails Stage 0 or underperforms is demoted out of real money and the mirror and stays on its demo floor. `MD-S1-CUT-ON-STAGE0-FAIL` and `MD-DEMOTE-S1-OFF` are rewritten to match. **Only an explicit retirement record removes a leg from its floor.**
 - **Real money is promotion only.** Gate 2 (`MD-PROMOTE-S1-S2`, manager-merged PR on the data-backed rule, CLAUDE-RULES-CANONICAL § "Data-backed Tier-2/3 decisions"; no operator merge, 2026-11-03) and the prop superset gate are unchanged.
+- **Shadow is not a step on the way to real money — for strategies, ML heads and features alike** (operator, 2026-11-12, decisions page p3, verbatim): *"We already said that things get promoted to real money based on backtesting, shadow on paper is only for something that is demoted and in iteration, not a step on the way to real money "*. A Stage-0 pass on a registered rule, net of the full cost stack, is what promotes. A paper or shadow run is for a demoted leg or model while it iterates; it is never a stage a passing candidate must clear first. Record: [`thursday-planning-2026-11-12-answers.md`](thursday-planning-2026-11-12-answers.md).
 - **Exceptions are named, never silent.** A leg no demo venue can serve (e.g. `xauusd_trend_1h`: OANDA practice is `dry_run` and OANDA US cannot trade XAU_USD) or one blocked by a guard (same-symbol allocation without slices on alpaca_paper) is listed with the reason on its checklist row until the blocker is fixed.
 
 ### The soak is MECHANICAL — and a leg with proven mechanics skips it (operator, 2026-10-15 and 2026-11-01, binding)

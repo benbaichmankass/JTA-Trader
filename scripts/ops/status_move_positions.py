@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Status-move positions read: which OPEN positions a book move left behind (row STATUS-MOVE-OPEN-POSITIONS).
 
-Rule: docs/plans/OPERATING-PLAN-2026-09-21.md § 2 "Open positions on a book move". Logic: scripts/ops/status_move.py.
+Rule: proposed for docs/plans/OPERATING-PLAN-2026-09-21.md § 2 "Open positions on a book move" (held PR). Logic: scripts/ops/status_move.py.
 This is the runtime half of strategy-status-guard: that guard reads the rosters in CI; this reads the positions.
 
 Read-only. Places nothing, writes nothing. A ``close_duplicate`` row is closed through the existing
@@ -14,7 +14,7 @@ Usage:
     python3 scripts/ops/status_move_positions.py --json
 Exit: 0 clean · 1 a close is due, a version breach, or an unexplained row · 2 could not look.
 """
-# wiring: manual-only - run by whoever merges a roster PR, after the merge (OPERATING-PLAN § 2 "Open positions on a book move")
+# wiring: manual-only - run after a roster PR merges (row STATUS-MOVE-OPEN-POSITIONS); no runner until the rule lands
 from __future__ import annotations
 
 import argparse
