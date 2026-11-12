@@ -17,6 +17,13 @@ versioned private bucket, integrity + restore test on every run), so a second on
 ~2.7 GB each buys little against a disk with ~15 GB free (11-12), where a burst of applies
 across several tags at N=2 could fill the disk the live trader writes to.
 
+TOTAL cap across tags (``KEEP_TOTAL = 2``; AM-OPS review of #25239, 2026-11-12): N=1 per tag alone
+still lets copies from DIFFERENT helpers pile up until the daily prune (13 tags x ~2.7 GB = ~35 GB
+worst case vs ~15 GB free). So after the per-tag prune, every journal backup next to the DB (both
+spellings, any tag) beyond the newest ``KEEP_TOTAL`` is deleted, the fresh copy always protected:
+the fresh copy plus at most ONE other, i.e. at most ~5.5 GB of backups at any moment. An apply is
+never refused for disk (no new gate); the cap only removes OLDER copies after a new one succeeded.
+
 Safety order:
   * the new backup is written FIRST; pruning runs only after it succeeded, so a failed
     backup never removes the previous one;
@@ -38,6 +45,7 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 KEEP_PER_PREFIX = 1
+KEEP_TOTAL = 2
 
 _STAMP_RE = r"(?:\d+|\d{8}T\d{6}Z)"
 
@@ -90,6 +98,40 @@ def same_tag_backups(db_path: str, tag: str, *, tag_first: bool = False) -> List
     return out
 
 
+def all_backups(db_path: str) -> List[str]:
+    """Every journal backup next to the DB (any tag, both spellings), newest first."""
+    d = os.path.dirname(os.path.abspath(db_path))
+    base = os.path.basename(db_path)
+    pat = re.compile(rf"^{re.escape(base)}\.(?:bak-[A-Za-z0-9_-]+|[A-Za-z0-9_-]+-bak)-{_STAMP_RE}$")
+    live = {base, f"{base}-wal", f"{base}-shm"}
+    out = []
+    for name in os.listdir(d):
+        if name in live or not pat.match(name):
+            continue
+        p = os.path.join(d, name)
+        if os.path.isfile(p) and not os.path.islink(p):
+            out.append(p)
+    out.sort(key=lambda p: (os.path.getmtime(p), p), reverse=True)
+    return out
+
+
+def prune_total(db_path: str, *, keep: int = KEEP_TOTAL, protect: Optional[str] = None) -> List[str]:
+    """Delete journal backups of ANY tag beyond the newest ``keep``; never ``protect``."""
+    keep = max(1, int(keep))
+    found = all_backups(db_path)
+    if protect:
+        prot = os.path.abspath(protect)
+        found = [prot] + [p for p in found if os.path.abspath(p) != prot]
+    deleted = []
+    for p in found[keep:]:
+        try:
+            os.remove(p)
+            deleted.append(p)
+        except OSError as e:  # no-halt: report, never fail the apply
+            print(f"journal_backup: could not prune {p}: {e}", file=sys.stderr)
+    return deleted
+
+
 def prune_tag(db_path: str, tag: str, *, keep: int = KEEP_PER_PREFIX,
               protect: Optional[str] = None, tag_first: bool = False) -> List[str]:
     """Delete same-tag backups beyond the newest ``keep``; never ``protect``. Returns deleted paths."""
@@ -109,7 +151,8 @@ def prune_tag(db_path: str, tag: str, *, keep: int = KEEP_PER_PREFIX,
 
 
 def take_backup(db_path: str, tag: str, *, method: str = "online", stamp_style: str = "epoch",
-                read_only: bool = True, keep: int = KEEP_PER_PREFIX, tag_first: bool = False) -> str:
+                read_only: bool = True, keep: int = KEEP_PER_PREFIX, keep_total: int = KEEP_TOTAL,
+                tag_first: bool = False) -> str:
     """Back up ``db_path`` to ``<db>.bak-<tag>-<stamp>`` then prune older same-tag copies.
 
     ``method``: ``online`` (sqlite backup API; consistent under a live writer) or ``copy``
@@ -125,6 +168,7 @@ def take_backup(db_path: str, tag: str, *, method: str = "online", stamp_style: 
         raise ValueError(f"unknown backup method {method!r}")
     try:
         deleted = prune_tag(db_path, tag, keep=keep, protect=dest, tag_first=tag_first)
+        deleted += prune_total(db_path, keep=keep_total, protect=dest)
     except Exception as e:  # noqa: BLE001 - no-halt: the backup exists, the apply may proceed
         print(f"journal_backup: prune of tag {tag!r} failed: {e}", file=sys.stderr)
         deleted = []

@@ -29,8 +29,26 @@ def _touch(p: Path, mtime: int) -> Path:
     return p
 
 
-def test_default_keep_is_one():
+def test_default_keep_is_one_per_tag_and_two_in_total():
     assert jb.KEEP_PER_PREFIX == 1
+    assert jb.KEEP_TOTAL == 2
+
+
+def test_total_cap_across_tags_keeps_fresh_plus_newest_other(db: Path):
+    """AM-OPS review: per-tag N=1 alone lets 13 tags x 2.7 GB pile up; cap the total."""
+    d = db.parent
+    olds = [_touch(d / f"trade_journal.db.bak-{t}-1794330728", 1_000 + i)
+            for i, t in enumerate(["prop-report-open", "prop-ticket-expire", "reduce-pnl", "own-fill-exits"])]
+    tag_first = _touch(d / "trade_journal.db.reconcile-orphan-bak-20261101T000000Z", 5_000)  # newest other
+    unrelated = _touch(d / "trade_journal.db.bak-prop-report-open-notastamp", 1_000)
+    other_db = _touch(d / "trainer_store.db.bak-x-1794330728", 1_000)
+    dest = jb.take_backup(str(db), "prop-report-close")
+    assert Path(dest).exists() and tag_first.exists()
+    assert not any(p.exists() for p in olds)
+    assert unrelated.exists() and other_db.exists()
+    for live in ("trade_journal.db", "trade_journal.db-wal", "trade_journal.db-shm"):
+        assert (d / live).exists()
+    assert len(jb.all_backups(str(db))) == 2
 
 
 @pytest.mark.parametrize("method", ["online", "copy"])
@@ -48,7 +66,7 @@ def test_prunes_older_same_tag_only(db: Path):
     # a tag that EXTENDS ours must never match ours
     ext = _touch(d / "trade_journal.db.bak-prop-report-close-extra-1794330728", 1_000)
     odd = _touch(d / "trade_journal.db.bak-prop-report-close-notastamp", 1_000)
-    dest = jb.take_backup(str(db), "prop-report-close")
+    dest = jb.take_backup(str(db), "prop-report-close", keep_total=99)  # isolate the per-tag rule
     assert Path(dest).exists()
     assert not old1.exists() and not old2.exists()
     for keep in (other_tag, ext, odd):
