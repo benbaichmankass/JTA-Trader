@@ -412,11 +412,18 @@ jobs:
         if: steps.changed.outputs.relevant == 'true' && steps.changed.outputs.mode == 'data'
         env:
           PYTHONPATH: ${{ github.workspace }}
+          # CI-SUITE-SLOWDOWN (2026-11-12): one native thread per xdist worker. LightGBM / OpenMP / BLAS default to
+          # every core, so N workers x N threads oversubscribe the runner and OpenMP spin-waits: MEASURED
+          # tests/test_tm_bench.py::test_transfer_end_to_end 21 s alone vs 1424 s inside a 4-worker run.
+          # Inherited by the scripts tests run as subprocesses (--self-test). Changes scheduling, not results.
+          OMP_NUM_THREADS: "1"
+          OPENBLAS_NUM_THREADS: "1"
+          MKL_NUM_THREADS: "1"
         run: |
           # CI-STREAMLINE (2026-11-03): only the readers of the data trees THIS diff touches (.github/ci-change-classes.json).
           python3 scripts/ci/pytest_run_scope.py --select-tests --changed /tmp/changed-files.txt > /tmp/data-tests.txt
           echo "selected $(wc -l < /tmp/data-tests.txt) test files"
-          pytest -q -n auto --dist loadfile $(cat /tmp/data-tests.txt) \
+          pytest -q -n logical --dist loadfile $(cat /tmp/data-tests.txt) \
             --ignore=tests/test_main_loop.py \
             --junitxml=pytest-report.xml
 
@@ -424,9 +431,16 @@ jobs:
         if: steps.changed.outputs.relevant == 'true' && steps.changed.outputs.mode == 'affected'
         env:
           PYTHONPATH: ${{ github.workspace }}
+          # CI-SUITE-SLOWDOWN (2026-11-12): one native thread per xdist worker. LightGBM / OpenMP / BLAS default to
+          # every core, so N workers x N threads oversubscribe the runner and OpenMP spin-waits: MEASURED
+          # tests/test_tm_bench.py::test_transfer_end_to_end 21 s alone vs 1424 s inside a 4-worker run.
+          # Inherited by the scripts tests run as subprocesses (--self-test). Changes scheduling, not results.
+          OMP_NUM_THREADS: "1"
+          OPENBLAS_NUM_THREADS: "1"
+          MKL_NUM_THREADS: "1"
         run: |
           echo "selected $(wc -l < /tmp/affected-tests.txt) test files"
-          pytest -q -n auto --dist loadfile $(cat /tmp/affected-tests.txt) \
+          pytest -q -n logical --dist loadfile $(cat /tmp/affected-tests.txt) \
             --ignore=tests/test_main_loop.py \
             --junitxml=pytest-report.xml
 
@@ -434,6 +448,13 @@ jobs:
         if: steps.changed.outputs.relevant == 'true' && steps.changed.outputs.mode != 'data' && steps.changed.outputs.mode != 'affected'
         env:
           PYTHONPATH: ${{ github.workspace }}
+          # CI-SUITE-SLOWDOWN (2026-11-12): one native thread per xdist worker. LightGBM / OpenMP / BLAS default to
+          # every core, so N workers x N threads oversubscribe the runner and OpenMP spin-waits: MEASURED
+          # tests/test_tm_bench.py::test_transfer_end_to_end 21 s alone vs 1424 s inside a 4-worker run.
+          # Inherited by the scripts tests run as subprocesses (--self-test). Changes scheduling, not results.
+          OMP_NUM_THREADS: "1"
+          OPENBLAS_NUM_THREADS: "1"
+          MKL_NUM_THREADS: "1"
         run: |
           # Real execution (no --collect-only, no `|| true`): the job
           # reports honest pass/fail so the advisory signal is truthful.
@@ -452,7 +473,13 @@ jobs:
           # the failure summary below work unchanged. Cross-file order dependencies surfaced by
           # parallel scheduling are fixed in the tests (tests/conftest.py autouse resets), never
           # by deselecting.
-          pytest -q -n auto --dist loadfile tests/ \
+          # -n auto -> -n logical (CI-SUITE-SLOWDOWN, 2026-11-12). With psutil installed (it is a runtime dep,
+          # requirements.txt) pytest-xdist's `auto` counts PHYSICAL cores, which on the 4-vCPU runner is 2:
+          # MEASURED on jobs 131070147506 and 131060816113 (2026-11-12, ubuntu-26.04 20261101.186.1), 3
+          # pytest processes started (controller + 2 workers), full suite 2397 s / 3209 s. `logical` uses all
+          # 4 vCPUs. Same tests, same --dist loadfile; the worker count is printed below so it is checkable.
+          python3 -c "import os, psutil; print(f'cpus: os={os.cpu_count()} logical={psutil.cpu_count()} physical={psutil.cpu_count(logical=False)}')" || true
+          pytest -q -n logical --dist loadfile tests/ \
             --ignore=tests/test_main_loop.py \
             --junitxml=pytest-report.xml
 
