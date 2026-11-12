@@ -116,6 +116,9 @@ DECLARED_LIGHT = {
     "scripts/research/ml_entry_tp_revision.py":
         "ML-ENTRY-TP-REVISION moving-TP harness: same data and route as ml_decision_entry.py (units RQ-20261101-383f-01/"
         "-03, compute cpu_long, github_runner); fits LightGBM in a lane container or a runner, never routed to the trainer.",
+    "scripts/research/ml_entry_v2_symholdout.py":
+        "ML-DECISION-MODELS b610-01 symbol-holdout read: scores the committed frozen ENTRY v2 / v1 boosters (no fit) on public "
+        "Binance Vision klines (unit RQ-20261101-b610-01, compute cpu_long, github_runner or a lane container); never routed to the trainer.",
     "scripts/research/compute_smoke.py":
         "RESEARCH-ROUTER plumbing smoke: one 4096x4096 fp16 matmul loop (GPU, on a Kaggle kernel) or one "
         "1024x1024 fp32 numpy loop (CPU, on a runner) for a few seconds. It is never routed to the trainer "
