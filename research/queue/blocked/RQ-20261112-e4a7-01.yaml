@@ -1,0 +1,140 @@
+id: RQ-20261112-e4a7-01
+title: 'Desk event-driven packet arm (DESK-18H): does Claude, judging a masked packet opened ONLY when an open-interest shock (E4) fires, beat a same-geometry random entry by S3 >= +0.25 R (95% weekly-cluster CI lower bound > 0), net of the full cost stack, on the DEV window?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-DESK
+kind: experiment
+question: >-
+  DEV window 2025-11-01 .. 2026-09-15, six crypto USDT perps ADA AVAX BTC ETH SOL XRP, Binance Vision 1h candles. Population: every E4 event of the frozen
+  detector (scripts/research/desk_event_entry_replay.py::detect, unchanged: 1h open-interest change z >= 3 vs the previous 7 days, one per symbol per 6 h,
+  known_at = metrics row + 5 min, decision cutoff = the next 1h boundary) whose cutoff lies in DEV and has its cutoff bar: 763 events (MEASURED 2026-11-12 by
+  the packets mode; DESK-18G's DEV n was also 763). Each event opens ONE masked packet: the live builder's scan packet (desk_gen_replay_driver.build_masked_packet,
+  aliases re-drawn, prices rebased to 100, year-2000 time) with the EVENT symbol only, plus an `event` block (OI 1h change %, its z, minutes known before the
+  cutoff) and a `trigger_history` block (the same trigger's net-of-cost outcomes per structure, continuation / fade x the driver's six reference brackets,
+  pooled over the six symbols, from the HOLDOUT window 2024-11-01 .. 2025-10-25, which ends before DEV starts). A Sonnet-tier judge with no repo, no tools beyond
+  reading its own batch file, and no web proposes at most one entry or no_trade. Do the filled proposals beat their own geometry at random same-symbol,
+  same-ATR%-decile DEV cutoffs more than 24 bars from any E4 event of that symbol by S3 >= +0.25 R with the 95% weekly-cluster CI lower bound above 0?
+why_this_matters: >-
+  Operator 2026-11-12 decisions page w6, verbatim: "Event-driven entries; lane keeps its defaults on the 4 small questions" (row DESK-18D-JUDGE-2, whose
+  re-open condition is a packet arm clearing S3 >= +0.25 R with CI lower > 0 on DEV). DESK-18G scored the MECHANICAL E4 rule: DEV S3 +0.157 R (97.5% CI
+  [+0.044, +0.276]), held-out +0.184 R, absolute net about 0 R per trade; its report names "E4 combined with the desk's own judgement" as the open option. This
+  unit is that option: the trigger supplies information the 1h packet lacks, and the judge supplies selection and structure. Lane defaults on the design doc
+  docs/design/desk-entry-review-redesign-2026-11-11.md section 6: (1) graded by OUTCOME, not by the desk's own past choices; (2) the periodic scan is untouched
+  (this unit changes nothing live); (3) the six crypto perps only; (4) the four 0-of-72 detectors are kept as labelled negatives, not retired and not scored here.
+  PRIOR STATED NOW: P(clear) about 10-15%. The judged-1 judge was close to a linear function of the base-rate rows (R^2 0.87-1.00, DESK-EDGE-PROGRAM); if it
+  follows trigger_history it reproduces the rule (+0.16 R) and misses the bar; a clear needs the judge to add about +0.1 R of selection on top.
+power:
+  expected_n: 450
+  min_detectable_effect: 0.29
+  effect_units: R
+  sd: 1.6
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    expected_n = 763 scheduled packets x about 0.6 filled proposals per packet (INFERRED: a single-alias, event-opened packet with a positive base-rate row
+    should be taken more often than judged-1's 0.49 propose_entry per 6-alias scan; the actual take rate is reported). sd 1.6 R of the paired difference
+    = DESK-18F / judged-1 C1 MEASURED 1.55-1.66. MDE = 2.8 x 1.6 / sqrt(450) = 0.21 R iid; at a weekly-cluster design effect of 2.0 about 0.30 R. POWER IS
+    STATED LOW: at a true S3 of +0.25 R power is about 0.6-0.8; at +0.16 R (the rule's own DEV size) about 0.3-0.5. A FAIL does not rule out +0.10 R.
+    If judging stops early for budget (below), n shrinks in proportion and the MDE grows; the verdict reports the observed sd and MDE.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Not accrual-bound: the n is bought with judging on a historical window. Judging runs only on the plan (Sonnet subagents, no API credits). Ceiling 15 USD
+      API-equivalent (operator w6). INFERRED cost: about 1.8k tokens per packet plus about 15k per subagent of about 30 packets, about 2-3M tokens in total,
+      about 7-12 USD at Sonnet list price.
+decision_rule:
+  id: RULE-RQ20261112-E4A7-01-DESK-EVENT-PACKET-ARM
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: >-
+    Schedule: the 763 DEV E4 events in the seeded order of `desk_event_packet_replay.py packets` (seed 20261112; index = position). Judged in whole batches of
+    100 packets in schedule order (the last batch is 63). STOPPING: the whole schedule is judged unless the 15 USD ceiling would be crossed, in which case judging
+    stops at the last whole batch inside it; the decision is taken on spend alone, and NO replay, outcome or score is computed before judging ends (the intake
+    mode counts proposals without replaying). Each packet goes to a judge that sees JUDGE-PROTOCOL.md (the driver's protocol plus the DESK-18H addendum) and its
+    batch's packets only; a judge that used any tool other than reading its own two files is rejected and its batch re-judged, counted. Proposals pass the
+    driver's guard (read_proposals; a refused row is no_trade, counted). Per filled proposal: net R on the real candles (driver simulate, full cost stack), and
+    b_i = mean net R of 200 transplants of its OWN geometry (driver random_baseline) to random cutoffs of the same symbol in DEV, same ATR%-decile
+    (vol_matched_pool), more than 24 bars from any E4 event of that symbol (DESK-18G's B3 pool), seed 20261112+7. S3 = mean of (net_i - b_i); ISO-week cluster
+    bootstrap, 10,000 draws, seed 20261112, 95% interval (one decisive arm). Reported, not decisive: S1 (mean net R), take rate, side mix, by symbol, the
+    MECHANICAL E4 rule's S3 on the SAME judged events (its bracket 1.5 / 3.0 ATR, 24 bars, same pool), and judge minus rule per judged event (a desk pass or
+    refusal = 0 R; the rule's non-fill = 0 R).
+  rule: >-
+    VERDICT S3_CLEARED IF n_filled >= 30 AND S3 >= +0.25 R AND the 95% cluster CI lower bound > 0 AND the controls hold AND the judged packets are a schedule
+    prefix in whole batches. Controls (RULE ONE, same scorer path, no LLM): a planted ORACLE proposal (realised 24-bar forward sign, the rule's bracket) on every
+    judged event must clear the same bar; the planted ANTI-ORACLE must read S3 < 0. A failed control or a broken prefix is INDETERMINATE_INSTRUMENT.
+    INDETERMINATE IF n_filled < 30. S3_NOT_CLEARED otherwise, reported with n, S3, CI, the distance from the bar, the rule-on-same-events S3 and judge-minus-rule.
+    A clear is a DEV discovery, not an edge: it re-opens DESK-18D-JUDGE-2's structural-lever condition and licenses ONE held-out run of this arm, which needs a
+    trigger_history taken from a window before ITS start (a new registration, rule unchanged). It never touches a roster, config, order or mode. The registered
+    numbers (0.25, 30, 95%, 200 draws, 24 bars, batch 100, the seed, the history window) are not changed after any result.
+  what_it_does_not_do: >-
+    No config, roster, order, mode or sizing change; nothing live. Does not test the other desk_triggers detectors, funding-shock (E3, a clean DESK-18G negative),
+    macro or news triggers, or a judge other than Sonnet tier. Binance candles stand in for Bybit. Entry is at least one 1h bar after the event is known. Part or
+    all of the DEV window may precede the judge model's knowledge cutoff (not verified here): masking is the leak control, and a clear still needs the
+    held-out run.
+masked_replay:
+  population: the 763 DEV E4 event packets, single alias each.
+  construction: >-
+    `python3 scripts/research/desk_event_packet_replay.py packets --root <cache> --out <dir> --n 763` writes packets.jsonl, JUDGE-PROTOCOL.md and mask-key.json.
+    The scorer re-derives every judged packet from the candles and refuses on a sha mismatch.
+  unmask_key: comms/research/desk_event_packet/judged/mask-key.json, committed only after judging ends (a judge that could read it is not a valid judge).
+  leak_controls: >-
+    The driver's per-packet alias draw, rebasing, year-2000 time and leak scan (a leaking packet is withheld and counted); trigger_history is pooled over the
+    six symbols and carries no date or symbol; the random-entry baseline with the proposal's own geometry; the oracle / anti-oracle controls.
+  novelty: not scored.
+practice_precedent: >-
+  docs/research/desk-18g-event-entries-2026-10-30.md (the E4 detector, the B3 pool, the S3 bar), docs/research/desk-18f-maker-fills-2026-10-30.md (the paired
+  same-model baseline), docs/research/desk-edge-program-2026-10-27.md (Sonnet plan subagents as masked judges, the isolation audit).
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 500
+  confidence: 0.1
+  bucket: ai_trader
+  basis: 'stand-in, not a measurement: as RQ-20261030-e18g-01; prior P(clear) about 10-15%.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 40
+  basis: 'estimate: fetch about 2,100 public files, then about 450 proposals x 200 transplants plus 2 control passes at 40.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/desk_event_packet_replay.py
+  - score
+  - --fetch
+  - --root
+  - /tmp/desk_event_packet_cache
+  - --proposals
+  - comms/research/desk_event_packet/judged/proposals.jsonl
+  - --mask-key
+  - comms/research/desk_event_packet/judged/mask-key.json
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261112-e4a7-01
+  timeout_minutes: 120
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261030-e18g-01
+- RQ-20261030-e18g-02
+- RQ-20261027-e72b-01
+- scripts/research/desk_event_packet_replay.py
+- docs/design/desk-entry-review-redesign-2026-11-11.md
+last_dispatched_at: null
+blocked_on:
+- kind: work_item
+  ref: DESK-18D-JUDGE-2
+  what: >-
+    The judged file does not exist yet. The DESK-18D-JUDGE-2 lane judges the schedule (Sonnet plan subagents, ceiling 15 USD) and commits
+    comms/research/desk_event_packet/judged/{proposals.jsonl,mask-key.json}.
+  clears_when: >-
+    Both files are on main. Then git mv this file to research/queue/, remove blocked_on and set status: queued; the dispatcher's run is the registered landing.
+  due_by: '2026-11-19'
