@@ -37,7 +37,7 @@ import pandas as pd
 REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO), str(REPO / "scripts" / "research")]
 
-import ml_decision_entry as E  # noqa: E402
+import ml_decision_entry as E
 
 SCHEMA = "ml_entry_htf_trend_split/1"
 RULE_ID = "RULE-RQ20261112-8d20-01-HTF-CT"
