@@ -28,9 +28,10 @@ never delays a ticket:
    current prediction (``src/runtime/tp_revision.py::plan_tp_revision`` -- the
    same function the exchange ``monitor()`` and the harness use), as a TP-only
    ``modify_bracket(page, p, None, tp)``, then re-read and confirmed. Only an
-   adapter declaring ``TP_AMEND_SUPPORTED`` is asked (``dxtrade_api``); the
-   browser ``dxtrade`` adapter's rollout guard admits SL-only tightens, so it
-   is skipped with a logged reason. The phone path (breakout_2) receives the
+   adapter declaring ``TP_AMEND_SUPPORTED`` is asked: ``dxtrade_api`` and,
+   since CAP-TRADEIFY-TP-AMEND (operator 2026-11-12), the browser ``dxtrade``
+   adapter, whose rollout guard takes a TP-only step (``rollout_tp_mismatch``,
+   SL untouched, next-read verified). The phone path (breakout_2) receives the
    same ``plan_tp_revision`` output through its own amend channel (lane
    PROP-TRAIL-PHONE), never through this function.
 
@@ -710,9 +711,8 @@ def run_trail_step(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mo
         if declared_rule(leg) is None and _sx_params is None and tp_target is None:
             return
         if not getattr(adapter, "TP_AMEND_SUPPORTED", False):
-            # dxtrade (browser): the rollout guard admits SL-only tightens, so a
-            # TP amend would be refused before any click. Logged, never alerted:
-            # it is a known path limit, measured by tp-doctrine-guard.
+            # An adapter without a TP amend (none of the VM adapters since CAP-TRADEIFY-TP-AMEND): logged, never
+            # alerted -- a known path limit, measured by tp-doctrine-guard.
             res.log("trail_tp_skip", ticket_id=tid, venue=venue,
                     why=f"adapter {getattr(adapter, 'platform', '?')!r} cannot amend a TP")
             return

@@ -242,7 +242,7 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # declared); the extend-only TP revision cannot reach a phone / manual-ticket venue (revision path absent), so only the revision is owed. velotrade_1 (VM executor) is plumbed and
     # passes. The SL-only structure stop does propagate through the prop trail (src/prop/prop_trail.py structure_exit). Follow-up row ML-ENTRY-PROP-BASELINE.
     "breakout_2/ml_entry": R,
-    "tradeify_1/ml_entry": R,
+    # tradeify_1/ml_entry removed 2026-11-12: CAP-TRADEIFY-TP-AMEND plumbed the TP revision on the browser adapter.
     # ── prop ────────────────────────────────────────────────────────────────
     # breakout_1 legs removed 2026-10-07 (account retired, roster cleared).
     # R -> ER on 2026-10-15 (TP-REACH-FLOOR, operator-approved 2026-10-14): the
@@ -373,7 +373,7 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # velotrade_1 it is plumbed. Same exit recipe as bybit_2/eth_4h (E) and bybit_1/sol_4h (ER). Record: ML-PROP-ITERATE.
     "breakout_2/trend_donchian_eth_4h": ER,
     "breakout_2/trend_donchian_sol_4h": ER,
-    "tradeify_1/trend_donchian_eth_4h": ER,
+    "tradeify_1/trend_donchian_eth_4h": E,    # ER -> E 2026-11-12: TP revision plumbed (CAP-TRADEIFY-TP-AMEND)
     "tradeify_1/trend_donchian_sol_4h": ER,
     "velotrade_1/trend_donchian_eth_4h": E,
     "velotrade_1/trend_donchian_sol_4h": ER,
