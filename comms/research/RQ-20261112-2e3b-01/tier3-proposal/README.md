@@ -1,7 +1,7 @@
 # Tier-3 proposal: ml_entry `account_symbols` → population record (row ML-ENTRY-POPULATION-TEST)
 
 **Not applied. AM-ML decides and merges.** Patch: `remove-bybit-account-symbols.patch`. It applies cleanly to this
-branch at `75d8049` (`git apply --check`).
+branch at `cefd2fa`, after merging `main` (`git apply --check`). Regenerated after #25306 put breakout_2 on ice.
 
 Gates this adds or changes: none. It leaves the traded set of every rostered account unchanged. It removes per-account
 configuration; it adds no switch and no refusal.
@@ -53,12 +53,12 @@ c692-06 pooled pass, BTC/ETH/XRP/ADA/SOL.
      unchanged".
    - A new coordinator test proves `leg_account_scope('ml_entry')` still contains bybit_2 and bybit_portfolio with the
      5 coins.
-   - Two tests move to the record-aware runtime call.
+   - Two tests move to the record-aware runtime call. One of them also had a stale `breakout_2` expectation from #25306, which is red on `main` too; it is corrected.
 
 ## How it was verified (scratch worktree with the patch applied)
 
 - **Traded sets:** for every account that rosters ml_entry (bybit_2, bybit_portfolio, breakout_2, tradeify_1,
-  velotrade_1, alpaca_paper), the set from `leg_symbols(cfg, acct, leg="ml_entry")` is identical before and after.
+  velotrade_1, alpaca_paper; breakout_2 is on ice since #25306 with an empty roster), the set from `leg_symbols(cfg, acct, leg="ml_entry")` is identical before and after.
   bybit_1 now resolves to the 5 coins, but ml_entry is not on its roster, so the roster still decides.
 - **Tests:** `pytest` on `test_ml_universe_record`, `test_ml_entry_all_accounts`, `test_ml_entry_adapter`,
   `test_ml_entry_alpaca_pool`, `test_paper_portfolio_accounts`, `test_coordinator_flow`,
@@ -70,7 +70,7 @@ c692-06 pooled pass, BTC/ETH/XRP/ADA/SOL.
 
 ## Not covered by this patch (still on the map, and still against the 11-04 rule)
 
-- **Prop books** (`breakout_2`, `tradeify_1`, `velotrade_1`: ETH+SOL). The prop superset gate scored only that slice
+- **Prop books** (`tradeify_1`, `velotrade_1`: ETH+SOL; `breakout_2` is on ice). The prop superset gate scored only that slice
   (`comms/prop_survival/ml_entry.json`). Their venue is `breakout`, so a Bybit-venue record would not reach them anyway.
   Removing their lines needs a prop-venue population record that the prop survival gate has scored. Owner row:
   `ML-UNIVERSE-RULE`.

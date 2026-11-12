@@ -307,7 +307,7 @@ index 0000000000..8f11faa057
 + "schema": "ml_universe/1"
 +}
 diff --git a/config/strategies.yaml b/config/strategies.yaml
-index 048acdc18c..0ba85f2d45 100644
+index 46f02c90b4..25c24b3379 100644
 --- a/config/strategies.yaml
 +++ b/config/strategies.yaml
 @@ -1470,8 +1470,11 @@ strategies:
@@ -323,7 +323,7 @@ index 048acdc18c..0ba85f2d45 100644
 +      # nothing widens (canonical rule point 4). Still on this map: the prop books (prop superset gate) and alpaca_paper.
        # 2026-11-08 ML-ENTRY-PROP-BASELINE: the prop books trade the ETH+SOL slice (the population comms/prop_survival/ml_entry.json scored; the venue routing
        # files also list BTC/ADA/XRP for some firms, unconfirmed in-terminal). Other symbols drop with the named exclusion leg_account_scope. Widening = one line.
-       breakout_2: [ETHUSDT, SOLUSDT]
+       # breakout_2 removed 2026-11-12: account ON ICE (operator), roster emptied in accounts.yaml.
 diff --git a/scripts/ci/check_roster_symbol_reachability.py b/scripts/ci/check_roster_symbol_reachability.py
 index ea75461674..5834396ee2 100755
 --- a/scripts/ci/check_roster_symbol_reachability.py
@@ -392,7 +392,7 @@ index 6f404d7ed3..f0a6e917f9 100644
  #: decision close from a pool snapshot its own refresher fetches; its symbols are NOT part of the STATIC per-tick fetch set (a 171-symbol population
  #: would otherwise add ~171 pipeline passes to every tick). The tick adds back only the symbols that hold a package. Not a gate.
 diff --git a/src/core/coordinator.py b/src/core/coordinator.py
-index 4a37d5ec7e..8f7df7a491 100644
+index 742950a468..73319180a5 100644
 --- a/src/core/coordinator.py
 +++ b/src/core/coordinator.py
 @@ -202,7 +202,7 @@ def _is_ib_stk(symbol: str) -> bool:
@@ -460,10 +460,10 @@ index 410b7fc0b7..94f7166164 100644
      assert "ml_entry" in accts["alpaca_paper"]["strategies"]
      assert "ml_entry" not in (accts["alpaca_live"].get("strategies") or [])        # no real-money ML on Alpaca
 diff --git a/tests/test_ml_entry_all_accounts.py b/tests/test_ml_entry_all_accounts.py
-index fa0afb303b..1f0fa3bab0 100644
+index fa0afb303b..cd9cc6657a 100644
 --- a/tests/test_ml_entry_all_accounts.py
 +++ b/tests/test_ml_entry_all_accounts.py
-@@ -67,7 +67,7 @@ def test_live_config_declares_no_profile_for_the_bybit_symbols():
+@@ -67,12 +67,12 @@ def test_live_config_declares_no_profile_for_the_bybit_symbols():
      """The real-money path: bybit_2 / bybit_portfolio's symbols resolve to the defaults, undeclared."""
      leg = _leg()
      for s in BYBIT_SYMS:
@@ -472,6 +472,12 @@ index fa0afb303b..1f0fa3bab0 100644
          assert p["declared"] is False and p["conflict"] is None, (s, p)
          assert (p["reference_venue"], p["reference_universe"], p["anchor"], p["session"], p["cost_basis"],
                  p["side_filter"]) == ("bybit", None, None, None, None, "both")
+         # 2026-11-08 ML-ENTRY-PROP-BASELINE: the prop books run the ETH+SOL slice (same defaults, same implementation).
+-        prop = {"breakout_2", "tradeify_1", "velotrade_1"} if s in ("ETHUSDT", "SOLUSDT") else set()
++        prop = {"tradeify_1", "velotrade_1"} if s in ("ETHUSDT", "SOLUSDT") else set()   # breakout_2 on ice 2026-11-12 (#25306)
+         assert set(p["accounts"]) == {"bybit_2", "bybit_portfolio"} | prop
+ 
+ 
 diff --git a/tests/test_ml_universe_record.py b/tests/test_ml_universe_record.py
 index 739e06496b..8f0b2c2b6e 100644
 --- a/tests/test_ml_universe_record.py
