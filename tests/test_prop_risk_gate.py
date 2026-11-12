@@ -105,10 +105,10 @@ def test_the_2026_08_25_incident_suggested_risk_exceeded_the_whole_cushion():
 
 def test_the_2026_08_25_incident_the_recompute_instruction_ALSO_overshoots():
     """The ticket told the executor to recompute at 1.5% of the live balance.
-    1.5% x $4,764 = $71.46 — still more than the $64.00 cushion. Fixing the
+    1.5% x a $4,800 balance = $72.00 — still more than the $64.00 cushion. Fixing the
     SUGGESTED size alone would not have saved the account."""
-    recomputed = round(0.015 * 4764.0, 2)
-    assert recomputed == 71.46
+    recomputed = round(0.015 * 4800.0, 2)
+    assert recomputed == 72.0
     v = G.grade_ticket_risk(
         risk_usd=recomputed, distance_to_dd_floor_usd=64.0,
         status_freshness="ok")
