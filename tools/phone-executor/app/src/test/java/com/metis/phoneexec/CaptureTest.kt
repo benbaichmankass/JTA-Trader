@@ -61,4 +61,13 @@ class CaptureTest {
         assertEquals("", Capture.shapeOf("shape:zzzzzzzz"))
         assertEquals("", Capture.shapeOf(""))
     }
+
+    @Test fun lumaStdSeparatesABlankDrawFromAPage() {
+        assertEquals(0.0, Capture.lumaStd(IntArray(500) { 0xFFFFFFFF.toInt() }), 1e-9)
+        assertEquals(0.0, Capture.lumaStd(IntArray(500) { 0xFF000000.toInt() }), 1e-9)
+        assertEquals(0.0, Capture.lumaStd(IntArray(0)), 1e-9)
+        // half dark, half light: a real page has text and panels
+        val page = IntArray(500) { if (it % 2 == 0) 0xFF202833.toInt() else 0xFFE0E0E0.toInt() }
+        assertTrue(Capture.lumaStd(page) > Capture.BLANK_STD)
+    }
 }
