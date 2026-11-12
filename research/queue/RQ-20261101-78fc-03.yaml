@@ -78,6 +78,8 @@ unblocked:
   how: 'The replay command the blocked_on named is scripts/research/exit_head_eth_oos_control.py: the RQ-20260927-002 method (exit_head_walkforward_multifold._fold_boundaries, train_exit_head.train_model, exit_head_replay.replay_trade, all imported) on trend_donchian_eth ETHUSDT 1h, 5 sequential folds, 7-day embargo, plus the 78fc-03 statistic (per-trade dR, trade-clustered 95% CI LB) and a REPORTED, non-gating matched random-truncation control (operator 2026-11-11 b6 "Confirm: run the control test"). The rule is unchanged.'
 run:
   workflow: trainer-vm-diag (issue label trainer-vm-diag-request)
+  inputs:
+    research_unit: RQ-20261101-78fc-03
   note: 'One relay dispatch: a temporary git worktree of the committed driver at its commit, ETHUSDT 1h candles fetched from Binance Vision (--days 2320, covering 2020-07..2026-11), BACKTEST_DATA_PATH pointed at them, rows from the trainer-resident datasets-out/exit_head/1h/donchian/rows.jsonl; the RESULT_JSON block in the relay comment is landed under research/results/.'
 intervention_controls:
   not_applicable: an offline model evaluation; the consumer's own gate applies any action
