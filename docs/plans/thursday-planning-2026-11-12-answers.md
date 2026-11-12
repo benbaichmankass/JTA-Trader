@@ -1,8 +1,7 @@
 # Thursday planning 2026-11-12: the operator's 21 answers and where each landed
 
 > **Doc status:** `unknown` · category `evidence` · last verified `2026-11-12` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
-> **Gates this adds or changes: none.** This is a record. p2 is a one-off instruction for this week's batch only (§ p2); it is not a rule
-> and is written into no rule file. The existing demotion ladder is unchanged.
+> **Gates this adds or changes: none.** This is a record; it changes no automatic path. p2 is a one-off for this week's batch only (§ p2).
 
 **Source of truth:** the decisions page https://claude.ai/artifact/3YvSRcb5eMSbTL8zmD9Bwt, database collection `answers`, documents p1–p9 and
 m1–m13 (there is no m8). The operator saved them on 2026-11-12 between 07:45:24Z (p1) and 07:51:18Z (m13). This lane, OPDEC-20261112
@@ -48,16 +47,13 @@ The dispatch table (row → lane session → PR) is in the lane's report to the 
 
 Operator, verbatim (p2 note): *"And don't let anything get demoted without me looking at it first "*.
 
-**Correction from the operator, relayed by the manager at ~08:05Z (chat, verbatim):** *"I didn't mean to create a forever binding rule
+**Correction from the operator, 2026-11-12 ~08:03Z, relayed by the manager (chat, verbatim):** *"I didn't mean to create a forever binding rule
 about the demotions. I meant specifically this batch. Don't put it in Claude, in any Claude docs. Don't. I want to keep the demotion ladder
 that we already have. I just, in this specific case, I want you to run them by me before demoting them automatically."*
 
-**Scope:** this week's batch of demotion candidates coming out of the planning: the real-money demotion-signal work F1/P1, including the
-ml_entry Stage-2 read, and any demotion it proposes this week. Those go to the operator before any automatic demotion. **The existing
-demotion ladder is unchanged.** Nothing about p2 is written into `config/mandates.yaml`, `docs/CLAUDE-RULES-CANONICAL.md`, the operating
-plan, any skill, `CLAUDE.md` or any other doc or rule file. The lane started at 08:13Z to write it as a rule (OPDEC-P2-DEMOTE-RULE,
-session_01AFoLuN1M3mPZin4zDKrmH9) was archived at 08:15:29Z and pushed no branch and no PR (`git ls-remote`, checked 2026-11-12). Row
-`DEMOTE-OPERATOR-LOOKS` is dropped with this correction as its reason.
+**Scope:** this week's demotion candidates coming out of the planning (the PERF-F1 demotion-signal work incl. the ml_entry Stage-2
+read, and any demotion it proposes this week) go to the operator before any automatic demotion. **The demotion ladder, MD-DEMOTE-S2-S1 and
+the data-backed Tier-2/3 rule are UNCHANGED.** This is not a rule and is written into no rule or instruction file.
 
 ### p3 — shadow is not a step to real money
 
@@ -132,7 +128,6 @@ All lanes were created by this lane with `create_session` on JTA-Trader and repo
 | m11 | `PHONE-CANCEL-FILLED-AS-SKIPPED` | OPDEC-M11 | session_01AFoLuK7LNskMkynxgJmJ5s | Opus |
 | m12 | `WORK-GAP-ALERTS` | OPDEC-M12 | session_01AFoLuLZUmLfdYeDbi7nMEF | Sonnet |
 | m13 | `CLOSE-CLASS-NOC-TEST` | OPDEC-M13 | session_01AFoLuMsaUDHEBnFNj8WppB | Sonnet |
-| p2 rule | `DEMOTE-OPERATOR-LOOKS` (dropped) | **withdrawn**: operator correction ~08:05Z, p2 is batch-only; lane archived, nothing pushed | session_01AFoLuN1M3mPZin4zDKrmH9 | — |
 | p2 F1 | `PERF-F1-DEMOTION-SIGNAL` | OPDEC-P2-F1 (/perf-followup; its demotion proposals go to the operator this week) | session_01AFoLuKGivxba8N7Mss11en | Opus |
 | p4 | `HEALTH-20261111-EXPORT-READS-STALE` → `BACKLOG-DRAIN-20261112` | OPDEC-P4 | session_01AFoLuHsrjCGGba7eop8Qev | Opus |
 | p7 | TABULAR/TSFM kill data, `FRONTIER-LEVER-HARNESS-COSTS` | OPDEC-P7-LEVERS | session_01AFoLuMaNct18F1jYBq2Ry4 | Sonnet |
