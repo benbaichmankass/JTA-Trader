@@ -1960,6 +1960,11 @@ jobs:
           # Consumed by the set-mobile-push-secrets action (and by set-env
           # when env_key=FCM_SERVICE_ACCOUNT_JSON + env_value blank).
           SECRET_FCM_SERVICE_ACCOUNT_JSON: ${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}
+          # LIVE_REVIEW_ROUTINE_TOKEN is the per-routine bearer token of the live-review
+          # reviewer routine (TRADE-ACTION-DIRECT-PATH phase 3, operator decision page m5
+          # 2026-11-12). set-env env_key=LIVE_REVIEW_ROUTINE_TOKEN with env_value blank
+          # installs it in the VM .env without it reaching the issue body or run log.
+          SECRET_LIVE_REVIEW_ROUTINE_TOKEN: ${{ secrets.LIVE_REVIEW_ROUTINE_TOKEN }}
           # init-diag-token ONLY (resolved empty for every other action): the
           # CURRENT diag bearer, to prove it dies (old -> 401), and the repo PAT
           # that can write Actions secrets (same one init-actions-secrets.yml
@@ -3057,6 +3062,15 @@ jobs:
       # is the authoritative success signal; job-level success()/failure()
       # are not used here because they can't survive post-exec step failures.
       # ────────────────────────────────────────────────────────────
+      - name: Redact secrets and balances from the action output (DIAG-RELAY-EQUITY-LEAK)
+        if: always() && github.event_name == 'issues'
+        # Before the reply below posts action-output.txt into a PUBLIC issue. Shared redactor; prints rule=count only.
+        continue-on-error: true
+        run: |
+          for f in action-output.txt mode-pr.txt; do
+            [ -f "$f" ] && python3 scripts/ops/redact_diag_output.py "$f" || true
+          done
+
       - name: Reply to issue with outcome
         if: always() && github.event_name == 'issues'
         uses: actions/github-script@v7

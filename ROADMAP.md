@@ -369,6 +369,13 @@ no blank verdicts here, deliberately.
 
 ### AI trader (ML) — build plan (ML-ROADMAP-LOOP, written 2026-10-11)
 
+> **⇢ THE ITERATIVE ML DEV PLAN (2026-11-12, row `ML-DEV-PLAN`; operator: *"We also need to have the full iterative dev plan built
+> out, should be visibile to so i can monitor/track/edit"*):** [`docs/plans/ml-dev-plan.yaml`](docs/plans/ml-dev-plan.yaml) -- one line per
+> ML model, idea and slot (D1-D10, every KEEP model, every open track), each with consumer, one-ladder stage, state + evidence, levers ahead
+> (unit/row, baseline net of cost, PASS ->, FAIL ->), the next 3-4 weeks, the exhaustion condition and the owner, mirrored to a work-store row.
+> Read it with `python3 scripts/ops/ml_dev_plan.py` (`--json` is the operator page's payload). It supersedes the 10-22 snapshot below
+> as the plan of record; `ml-plan-items.yaml` stays as the item list it absorbs (every item maps to a line). Gates this adds: none.
+
 > **What this is.** The one place the ML / AI-trader work is laid out end to end — research *and* infra — with
 > measured current state, the milestones, and the row or queue unit that carries each. **Machine-readable form:**
 > [`docs/plans/ml-plan-items.yaml`](docs/plans/ml-plan-items.yaml) (28 items; every one names its checklist row or

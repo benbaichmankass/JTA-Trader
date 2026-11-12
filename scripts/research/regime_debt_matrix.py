@@ -164,8 +164,10 @@ _TREND_PLAIN = {"model", "signal_prefixes", "enabled", "execution", "timeframe",
                 "tp_r", "min_confidence", "long_only", "adx_min", "adx_max",
                 "adx_period", "shadow_model_ids", "description", "tp_intent",
                 # decision_bar: closed == what THIS harness does by construction (it
-                # decides on the closed bar, i.e. Stage 0). An explicit `forming` is
-                # NOT modelled and is added to the omitted set in build_harness_cmd.
+                # decides on the closed bar, i.e. Stage 0). `forming` -- explicit OR ABSENT
+                # (the runtime default, src/runtime/intent_multiplexer.py:
+                # `vcfg.get("decision_bar") or "forming"`) -- is NOT modelled and is
+                # added to the omitted set in build_harness_cmd.
                 "decision_bar",
                 # tp_revision (TP doctrine B1): modelled via `_tp_revision_flags`
                 # (--tp-revision / --tp-revision-width-mult), the same flags
@@ -258,8 +260,8 @@ _PB_PLAIN = {"model", "signal_prefixes", "enabled", "execution", "timeframe", "s
              "atr_stop_mult", "trail_mult", "tp_r", "min_confidence", "adx_min",
              "adx_max", "adx_period", "shadow_model_ids", "description", "tp_intent",
              # decision_bar: closed == what the pullback harness does by construction
-             # (closed bar, Stage 0), as for _TREND_PLAIN; an explicit `forming` is NOT
-             # modelled and is added to the omitted set in build_harness_cmd. Without
+             # (closed bar, Stage 0), as for _TREND_PLAIN; `forming` (explicit or ABSENT = the
+             # runtime default) is NOT modelled and is added to the omitted set in build_harness_cmd. Without
              # this, xrp/ada_pullback_2h's operator-approved `decision_bar: closed`
              # (DECISION-BAR-MATCH, 2026-10-22) graded their records `approximate`.
              "decision_bar",
@@ -1011,7 +1013,7 @@ def build_harness_cmd(name: str, cfg: dict, harness: str, csv: str, resample: st
                              if k not in _TREND_PLAIN and k not in _TREND_LEVER_FLAG)
                          | set(conditional_omissions("trend", cfg, argv))
                          | ({"decision_bar"}
-                            if str(cfg.get("decision_bar") or "").lower() == "forming" else set()))
+                            if str(cfg.get("decision_bar") or "forming").lower() != "closed" else set()))
         faithful = not omitted
     elif harness == "fade":
         # Deliberately does NOT reuse `common`: that list hard-codes
@@ -1148,7 +1150,7 @@ def build_harness_cmd(name: str, cfg: dict, harness: str, csv: str, resample: st
                             else set())
                          | set(conditional_omissions("pullback", cfg, argv))
                          | ({"decision_bar"}
-                            if str(cfg.get("decision_bar") or "").lower() == "forming" else set()))
+                            if str(cfg.get("decision_bar") or "forming").lower() != "closed" else set()))
         faithful = not omitted
     # EXIT-PATH-EMIT-OFFLINE / METALABEL-EMIT-FEATURES (opt-in, default False =
     # byte-identical argv): ask the trend/pullback harnesses for the per-bar path
