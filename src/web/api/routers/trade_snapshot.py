@@ -79,6 +79,8 @@ def get_trade_snapshot(trade_id: int) -> Dict[str, Any]:
             reasons.append(f"build_retrying:{got.get('attempts')}")
         return {"as_of": as_of, "trade_id": trade_id, "read_state": "not_built", "partial_reasons": reasons,
                 "snapshot": None}
+    if "indicators" not in payload:   # stored without them (store.encode); recomputed from the stored candles
+        payload["indicators"] = tcs.indicators(((payload.get("candles") or {}).get("rows")) or [])
     rs, reasons = tcs.snapshot_read_state(payload)
     return {"as_of": as_of, "trade_id": trade_id, "read_state": rs, "partial_reasons": reasons, "snapshot": payload}
 

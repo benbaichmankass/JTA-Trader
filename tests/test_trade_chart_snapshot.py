@@ -246,3 +246,19 @@ def test_markers_route_open_trade(db, client):
     ids = [m["id"] for m in d["decisions"]["markers"]]
     assert "LR-tight" in ids and "LR-after-close" in ids   # open trade: no upper bound
     assert client.get(f"/api/bot/trades/{tid}/markers", params={"interval": "7m"}).status_code == 400
+
+
+def test_stored_form_is_compressed_and_route_recomputes_indicators(db, client):
+    insert_order_package(db, order_package_id=PKG, created_at=OPEN, status="closed", meta="{}")
+    tid = _insert(db)
+    payload = _build()
+    blob = store.encode(payload)
+    assert len(blob) < len(json.dumps(payload)) / 3
+    conn = sqlite3.connect(str(db))
+    conn.execute(store.DDL)
+    conn.execute(f"INSERT INTO {store.TABLE} (trade_id, state, payload) VALUES (?, 'built', ?)", (tid, blob))
+    conn.commit()
+    conn.close()
+    d = client.get(f"/api/bot/trades/{tid}/snapshot").json()
+    assert d["snapshot"]["indicators"] == payload["indicators"]
+    assert d["snapshot"]["candles"] == payload["candles"]

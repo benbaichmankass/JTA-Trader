@@ -1,7 +1,8 @@
 """Store for the closed-trade chart snapshot (UI-REDESIGN-2026-11 addendum 3): table ``trade_chart_snapshots``.
 
 One row per closed ``trades.id``. The payload is the framed DATA (``src.web.api.trade_chart_snapshot.build_snapshot``),
-not an image. The table lives in ``trade_journal.db`` next to the trade it describes; it is derived data (it can
+not an image, stored zlib-compressed (``payload`` BLOB) and WITHOUT the indicator series, which the read route
+recomputes from the stored candles (deterministic), so ~2,600 backfilled trades stay small. The table lives in ``trade_journal.db`` next to the trade it describes; it is derived data (it can
 always be rebuilt from the journal + candles), so a lost row is a rebuild, never lost truth.
 
 ``state``: ``built`` (payload present) · ``retrying`` (a build failed; ``attempts``/``last_error``/``next_attempt_at``
@@ -12,6 +13,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import zlib
 from typing import Any, Dict, Optional
 
 TABLE = "trade_chart_snapshots"
@@ -46,9 +48,16 @@ def read(conn: sqlite3.Connection, trade_id: int) -> Dict[str, Any]:
     payload: Optional[Dict[str, Any]] = None
     if row[5]:
         try:
-            p = json.loads(row[5])
+            raw = row[5]
+            p = json.loads(zlib.decompress(raw).decode("utf-8") if isinstance(raw, (bytes, bytearray)) else raw)
             payload = p if isinstance(p, dict) else None
-        except ValueError:
+        except (ValueError, zlib.error):
             payload = None
     return {"state": row[0], "read_state": row[1], "attempts": row[2], "last_error": row[3], "built_at": row[4],
             "payload": payload}
+
+
+def encode(payload: Dict[str, Any]) -> bytes:
+    """The stored form: the payload minus ``indicators`` (recomputed on read), compact JSON, zlib level 6."""
+    slim = {k: v for k, v in payload.items() if k != "indicators"}
+    return zlib.compress(json.dumps(slim, separators=(",", ":")).encode("utf-8"), 6)
