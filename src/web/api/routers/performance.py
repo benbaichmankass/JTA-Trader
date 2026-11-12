@@ -65,10 +65,11 @@ keeps the tab usable. Tier 1 — no auth, no secrets in the response.
 from __future__ import annotations
 
 import logging
+import re
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -83,6 +84,7 @@ from src.web.api._clean_trades import (
     paper_predicate,
 )
 from src.web.api._closed_at import close_time_sql
+from src.web.api._since import parse_since
 from src.runtime.broker_truth import journal_trust_for, journal_trust_map
 from src.runtime.bracket_outcome import (  # did the close reach its DECLARED bracket?
     BRACKET_MID,
@@ -254,8 +256,13 @@ def _query(
     since: Optional[str],
     demo: bool = False,
     account_ids: Optional[List[str]] = None,
+    until: Optional[str] = None,
 ) -> List[sqlite3.Row]:
     """Closed (non-backtest) trades within *since*, oldest→newest.
+
+    ``until`` (optional, UI-SPA-BACKEND-ROUTES) is an EXCLUSIVE upper bound on
+    the close time, in the same ``YYYY-MM-DD HH:MM:SS`` form as ``since``;
+    ``None`` leaves the SQL byte-identical to the pre-range query.
 
     ``demo=False`` (default) → real-money rows only.
     ``demo=True``            → paper-account rows only.
@@ -464,6 +471,9 @@ def _query(
         if since:
             sql += f" AND {_CLOSE_TIME_SQL} >= datetime(?)"
             params.append(since)
+        if until:
+            sql += f" AND {_CLOSE_TIME_SQL} < datetime(?)"
+            params.append(until)
         # `t.id` breaks ties: the close-time basis is second-precision, so two
         # trades closing in the same second had no defined order, and a
         # consumer slicing the last N (/performance/recent) could move a trade
@@ -1236,6 +1246,8 @@ def _portfolio_paper_account_ids() -> List[str]:
 @router.get("/performance")
 def get_performance(
     window: str = Query("all", max_length=8),
+    since: Optional[str] = Query(None, max_length=64),
+    until: Optional[str] = Query(None, max_length=64),
 ) -> Dict[str, Any]:
     """Aggregate trade performance for the requested *window*.
 
@@ -1260,16 +1272,78 @@ def get_performance(
     figures back labelled ``"window": "all"`` -- a DIFFERENT population from the
     one requested, answered with HTTP 200. A reader that did not re-check the
     echoed label (the R4 demotion gate is one) would act on the wrong window.
+    ``since`` / ``until`` (additive, UI-SPA-BACKEND-ROUTES) select an explicit
+    calendar range instead of a rolling window; see ``_parse_range``.
     Every valid token's response is unchanged byte-for-byte
     (``tests/test_performance_recent_blocks.py`` pins it against a golden
     captured from the pre-change code).
     """
-    if window not in _WINDOWS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"unknown window {window!r}; valid: {sorted(_WINDOWS)}",
-        )
-    since = _window_since(window)
+    # Direct (non-HTTP) callers get FastAPI's ``Query`` default object here.
+    since = since if isinstance(since, str) else None
+    until = until if isinstance(until, str) else None
+    if since is None and until is None:
+        if window not in _WINDOWS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"unknown window {window!r}; valid: {sorted(_WINDOWS)}",
+            )
+        return _performance_envelope(window, _window_since(window), None)
+    # Explicit calendar range (date-range picker). ``window`` is ignored and
+    # the response says so (``window: "range"``) -- the range IS the window.
+    since_sql, until_sql, since_echo, until_echo = _parse_range(since, until)
+    env = _performance_envelope("range", since_echo, until_sql)
+    env["until"] = until_echo
+    env["filterState"] = "parsed"
+    return env
+
+
+def _parse_range(
+    since: Optional[str], until: Optional[str],
+) -> Tuple[Optional[str], Optional[str], Optional[str], Optional[str]]:
+    """``(since_sql, until_exclusive_sql, since_echo, until_echo)``.
+
+    Unparseable or inverted input is HTTP **400** with ``filter_state`` -- never
+    an empty window. A date-only ``until`` (``2026-11-12``) is INCLUSIVE of that
+    whole UTC day (the picker's end date); a datetime ``until`` is inclusive of
+    that second. Echoes are ISO-8601 UTC, ``null`` for a bound not supplied.
+    """
+    def _p(raw: Optional[str], name: str) -> Optional[str]:
+        try:
+            return parse_since(raw)[0]
+        except HTTPException as exc:
+            detail = dict(exc.detail) if isinstance(exc.detail, dict) else {}
+            detail.update(error=f"invalid_{name}", filter_state="unparsed")
+            raise HTTPException(status_code=400, detail=detail) from None
+
+    since_sql = _p(since, "since")
+    until_sql = _p(until, "until")
+    if until_sql is not None:
+        step = (timedelta(days=1)
+                if re.fullmatch(r"\d{4}-\d{2}-\d{2}", (until or "").strip())
+                else timedelta(seconds=1))
+        until_dt = datetime.strptime(until_sql, "%Y-%m-%d %H:%M:%S") + step
+        if since_sql is not None and until_dt <= datetime.strptime(
+                since_sql, "%Y-%m-%d %H:%M:%S"):
+            raise HTTPException(status_code=400, detail={
+                "error": "inverted_range", "filter_state": "inverted",
+                "since": since_sql.replace(" ", "T") + "Z",
+                "until": until_sql.replace(" ", "T") + "Z",
+            })
+        until_excl = until_dt.strftime("%Y-%m-%d %H:%M:%S")
+    else:
+        until_excl = None
+
+    def _iso(v: Optional[str]) -> Optional[str]:
+        return v.replace(" ", "T") + "Z" if v else None
+
+    return since_sql, until_excl, _iso(since_sql), _iso(until_sql)
+
+
+def _performance_envelope(
+    window: str, since: Optional[str], until: Optional[str],
+) -> Dict[str, Any]:
+    """The ``/performance`` body for *window*/*since* (+ optional exclusive
+    *until*). Identical to the pre-range route body when ``until`` is None."""
     if not _DB_PATH.exists():
         env = _empty(window, since)
         empty_sub = _strip_envelope(_empty(window, since))
@@ -1278,9 +1352,9 @@ def get_performance(
         env["paperPortfolio"] = empty_sub
         return env
     try:
-        live_rows = _query(_DB_PATH, since, demo=False)
+        live_rows = _query(_DB_PATH, since, demo=False, until=until)
         live = _aggregate(live_rows, window, since)
-        paper_rows = _query(_DB_PATH, since, demo=True)
+        paper_rows = _query(_DB_PATH, since, demo=True, until=until)
         paper = _strip_envelope(_aggregate(paper_rows, window, since))
         live["demo"] = paper   # back-compat alias
         live["paper"] = paper
@@ -1292,7 +1366,7 @@ def get_performance(
         # present (never a misleadingly-empty block on an older config).
         portfolio_ids = _portfolio_paper_account_ids()
         if portfolio_ids:
-            pp_rows = _query(_DB_PATH, since, demo=True, account_ids=portfolio_ids)
+            pp_rows = _query(_DB_PATH, since, demo=True, account_ids=portfolio_ids, until=until)
             live["paperPortfolio"] = _strip_envelope(_aggregate(pp_rows, window, since))
         else:
             live["paperPortfolio"] = paper

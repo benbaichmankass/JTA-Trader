@@ -204,6 +204,8 @@ def test_positions_returns_open_trade_against_canonical_schema(
     assert len(body) == 1
     assert body[0] == {
         "id": "1",
+        # Additive (POSITIONS-ORDER-PACKAGE-ID): null when no package ties to the trade.
+        "orderPackageId": None,
         "account": "bybit_2",
         "symbol": "BTCUSDT",
         "side": "buy",  # direction='long' normalises to wire-side 'buy'

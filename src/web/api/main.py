@@ -18,6 +18,8 @@ from src.web.api.routers import allocator as allocator_router
 from src.web.api.routers import brackets_history as brackets_history_router
 from src.web.api.routers import trade_snapshot as trade_snapshot_router
 from src.web.api.routers import performance_categories as performance_categories_router
+from src.web.api.routers import performance_reviews as performance_reviews_router
+from src.web.api.routers import infra_status as infra_status_router
 from src.web.api.routers import attribution as attribution_router
 from src.web.api.routers import auth as auth_router
 from src.web.api.routers import auth_google as auth_google_router
@@ -152,6 +154,9 @@ app.include_router(prop_router.router)
 app.include_router(brackets_history_router.router)
 app.include_router(trade_snapshot_router.router)
 app.include_router(performance_categories_router.router)
+app.include_router(performance_reviews_router.router)
+app.include_router(infra_status_router.health_router)
+app.include_router(infra_status_router.work_router)
 app.include_router(reports_router.router)
 app.include_router(roadmap_router.router)
 app.include_router(research_catalog_router.router)
