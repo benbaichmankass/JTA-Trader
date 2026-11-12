@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Order path (intents._hard_regime_gate, the trend_vol router): the enforcing gate's vol input is now the ADVISORY head's ML label or 'unknown', never the frozen shadow-head label. Measured behaviour-preserving: signal_audit full scan (658,989 lines, read 2026-11-12 ~09:40Z, rows 2026-11-03..2026-11-12): 82 regime_hard_gate rows, all vol_label_source=ml, 9 vol-enforced drops all ML-sourced, 0 frozen-sourced; 788 regime_ml_vol_shadow candidates, 29 on strategies with live trend_vol cells, all with a concrete ML label -> 0 gate-label changes and 0 decision changes on the live-cell population. Manager makes the merge call. Revert: git revert <merge sha>.",
+  "why": "Closes PI-20261029-Q17QWHDZ-0003: a candidate->shadow promotion can no longer feed the enforcing trend_vol gate (operator 2026-11-05: structural fix, no exception)."
+}

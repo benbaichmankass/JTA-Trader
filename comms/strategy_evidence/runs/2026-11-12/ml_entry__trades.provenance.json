@@ -1,0 +1,35 @@
+{
+ "what": "per-trade arm-F rows of RQ-20261103-5e04-01 (the LIVE ml_entry exit), one row per held-out decision; net_r is net of the full cost stack the harness applies (fee 11 + slippage 3 bps round trip + funding 1 bps/8h)",
+ "produced_by": "python3 scripts/research/ml_entry_tp_revision.py evidence-extend-only --structure-sl pivot=5 --trades-jsonl <path> (lane PERF-F1-DEMOTION-SIGNAL, 2026-11-12, session-local re-run on public data.binance.vision klines)",
+ "code_commit_parent": "30b5cd919baa7ae6f3a25dc98f788b1df1869c05",
+ "env": {
+  "python": "3.13.18",
+  "lightgbm": "4.6.0",
+  "scikit_learn": "1.7.2",
+  "pandas": "3.0.5",
+  "numpy": "2.5.3"
+ },
+ "reproduces": {
+  "record": "research/results/RQ-20261103-5e04-01/41823438321.jsonl (runner run 41823438321)",
+  "checked": {
+   "n": [
+    907,
+    907
+   ],
+   "arm_F_sum_net_r": [
+    33.67874152768196,
+    33.67874152768196
+   ],
+   "arm_F_mean_net_r": [
+    0.03713201932489742,
+    0.03713201932489742
+   ],
+   "exit_reasons": "identical {time 204, sl 523, tp 180}",
+   "per_symbol": "identical (5 symbols)",
+   "arm_A_extend_only_mean_net_r": "identical 0.02712995887700275"
+  },
+  "verdict": "exact (every compared field equal to full float precision)"
+ },
+ "sha256": "c0a006edcf869766e9d63cf3fda2733bfa43ce94263036ed10d90dffb8d9b49b",
+ "rows": 907
+}

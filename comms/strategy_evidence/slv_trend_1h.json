@@ -3,45 +3,45 @@
   "strategy": "slv_trend_1h",
   "symbol": "SLV",
   "timeframe": "1h",
-  "config_fingerprint": "sha256:8d50ba1b7f1e6ed0ccd1a8487cbaf3b4",
+  "config_fingerprint": "sha256:eab5e2b837006499c757a8d8335fa810",
   "basis": "harness_timefolds",
   "coverage_state": "measured",
   "fidelity": "faithful",
   "omitted_levers": [],
-  "net_r_oos": 44.7138,
-  "expectancy_r_oos": 0.648,
-  "n_trades_oos": 69,
+  "net_r_oos": 39.0855,
+  "expectancy_r_oos": 0.5354,
+  "n_trades_oos": 73,
   "folds": 4,
   "fold_detail": [
     {
       "fold": 1,
-      "trades": 17,
-      "net_r": 5.0038,
-      "expectancy_r": 0.2943,
+      "trades": 18,
+      "net_r": 3.3047,
+      "expectancy_r": 0.1836,
       "start": "2025-06-17 14:00:00+00:00",
-      "end": "2025-10-03 15:00:00+00:00"
+      "end": "2025-10-01 14:00:00+00:00"
     },
     {
       "fold": 2,
-      "trades": 17,
-      "net_r": 19.9069,
-      "expectancy_r": 1.171,
-      "start": "2025-10-08 14:00:00+00:00",
-      "end": "2026-02-17 15:00:00+00:00"
+      "trades": 18,
+      "net_r": 17.874,
+      "expectancy_r": 0.993,
+      "start": "2025-10-03 15:00:00+00:00",
+      "end": "2026-02-05 15:00:00+00:00"
     },
     {
       "fold": 3,
-      "trades": 17,
-      "net_r": 18.6965,
-      "expectancy_r": 1.0998,
-      "start": "2026-02-20 15:00:00+00:00",
+      "trades": 18,
+      "net_r": 17.4706,
+      "expectancy_r": 0.9706,
+      "start": "2026-02-17 15:00:00+00:00",
       "end": "2026-06-24 17:00:00+00:00"
     },
     {
       "fold": 4,
-      "trades": 18,
-      "net_r": 1.1066,
-      "expectancy_r": 0.0615,
+      "trades": 19,
+      "net_r": 0.4362,
+      "expectancy_r": 0.023,
       "start": "2026-06-30 14:00:00+00:00",
       "end": "2026-11-09 20:00:00+00:00"
     }
@@ -51,11 +51,11 @@
   "fee_bps_roundtrip": 0.0,
   "path_stats": {
     "series_location": "source_run (the per-trade rows, in order, with net_r)",
-    "n": 69,
+    "n": 73,
     "max_drawdown_r": 9.0195,
     "max_drawdown_at_trade": 5,
-    "final_equity_r": 44.7138,
-    "max_equity_r": 47.3645,
+    "final_equity_r": 39.0855,
+    "max_equity_r": 41.7362,
     "worst_trade_r": -4.1144,
     "best_trade_r": 10.0082,
     "worst_day_r": -4.1144,
@@ -71,7 +71,7 @@
     "unit": "bps_roundtrip (funding: bps per funding window)",
     "source": "comms/strategy_evidence/runs/2026-11-12/slv_trend_1h__bt.json"
   },
-  "net_r_oos_fee_only": 47.4528,
+  "net_r_oos_fee_only": 41.995,
   "decision_rule": {
     "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
     "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
@@ -79,7 +79,7 @@
     "verdict": "pass"
   },
   "param_selection_provenance": "not_established",
-  "generated_at": "2026-11-12T08:21:35.318435+00:00",
+  "generated_at": "2026-11-12T10:54:46.910890+00:00",
   "generated_by": "scripts/ops/build_strategy_evidence.py",
   "source_run": "comms/strategy_evidence/runs/2026-11-12/slv_trend_1h__trades.jsonl",
   "error": null,
@@ -90,7 +90,7 @@
     "folds": 4,
     "data_start": "2025-06-02 15:00:00+00:00",
     "data_end": "2026-11-11 21:00:00+00:00",
-    "git_sha": "5a83952251af9b5f37b32a19482d45c726fca697",
+    "git_sha": "0c783de9e4521e3016122ef36cf302635d802d3f",
     "argv": [
       "python3",
       "scripts/ops/build_strategy_evidence.py",
@@ -109,36 +109,36 @@
   "venue_bracket_arm": null,
   "holdout_confirmation": {
     "verdict": "confirmed",
-    "research_unit": "RQ-20261101-78fc-18",
+    "research_unit": "RQ-20261112-5ab1-03",
     "decision_rule": {
-      "id": "RULE-RQ-20261101-78fc-18",
+      "id": "RULE-RQ-20261112-5ab1-03",
       "registered_before_run": true,
-      "registered_at": "2026-11-01"
+      "registered_at": "2026-11-12"
     },
-    "selected_label": "A",
-    "selected_config_fingerprint": "sha256:8d50ba1b7f1e6ed0ccd1a8487cbaf3b4",
-    "selected_from": 1,
+    "selected_label": "T6",
+    "selected_config_fingerprint": "sha256:eab5e2b837006499c757a8d8335fa810",
+    "selected_from": 4,
     "evaluations_on_holdout": 1,
     "discovery": {
-      "start": "2018-06-18 13:00:00+00:00",
-      "end": "2024-09-15 15:14:14+00:00"
+      "start": "2018-06-27 13:00:00+00:00",
+      "end": "2024-09-17 21:14:14+00:00"
     },
     "holdout": {
-      "start": "2024-09-15 15:14:15+00:00",
+      "start": "2024-09-17 21:14:15+00:00",
       "end": "2026-10-15 23:59:00+00:00",
       "share": 0.25,
       "short_at_cap": false
     },
-    "n_holdout": 104,
-    "net_r_holdout": 35.9867,
-    "expectancy_r_holdout": 0.346,
+    "n_holdout": 108,
+    "net_r_holdout": 33.366,
+    "expectancy_r_holdout": 0.3089,
     "cost_stack": {
       "fees": 0.0,
       "slippage": 5.0,
       "funding": 0.0,
       "unit": "bps_roundtrip (funding: bps per funding window)"
     },
-    "source_run": "comms/research/RQ-20261101-78fc-18/41486192593/verdict.json",
-    "provenance": "Copied 2026-11-12 (lane OPDEC-20261112, operator decisions page p8 'Yes: evidence check, then a proposal per leg') from RQ-20261101-78fc-18's committed verdict, unchanged; the leg's config is unchanged since that run (selected_config_fingerprint == this record's config_fingerprint). By side on the held-back trades (A__trades.jsonl): long n 65 net +27.640 R, short n 39 net +8.346 R."
+    "source_run": "comms/research/RQ-20261112-5ab1-03/local-20261112/verdict.json",
+    "provenance": "RQ-20261112-5ab1-03 (registered + pushed before the run, lane OPDEC-SURVIVORS, 2026-11-12): T6 (tp_r 6.0) selected from {T2,T3,T4,T6} on discovery (n 329, +30.83 R, 3/4 folds), read once on the held-back span. By side on the held-back trades: {'long': (69, 20.118), 'short': (39, 13.248)}. DISCLOSED: this held-back span (from 2024-09-17) was read before for arm A (the tp_r 50 sentinel, RQ-20261101-78fc-18) and contains the data the declared parameters were chosen on (to 2026-08-26); a fresh-span confirmation is RQ-20261104-7fdb-02."
   }
 }

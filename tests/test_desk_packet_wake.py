@@ -74,6 +74,15 @@ def test_no_marker_inside_the_grace_is_awaiting_not_missing(tmp_path):
     assert run(tmp_path, Net(built_ago=timedelta(minutes=dw.WAKE_GRACE_MIN - 1)))["state"] == "awaiting_wake"
 
 
+def test_observe_with_desk_wake_switch_off_is_by_design_not_wake_missing(tmp_path):
+    """DESK-WAKE-SILENT-1112: the switch defaults OFF; an old packet with no marker must read
+    suppressed_by_wake_toggle on the observe pass, not wake_missing (which pages the manager)."""
+    from src.runtime import wake_toggles as _wt
+    _wt.set_toggle("desk_wake", False, "test")
+    rec = run(tmp_path, Net(built_ago=timedelta(minutes=dw.WAKE_GRACE_MIN + 5)))
+    assert rec["state"] == "suppressed_by_wake_toggle" and rec["packet_id"] == PID
+
+
 def test_no_marker_past_the_grace_is_a_named_missing_wake(tmp_path):
     rec = run(tmp_path, Net(built_ago=timedelta(minutes=dw.WAKE_GRACE_MIN + 5)))
     assert rec["state"] == "wake_missing" and PID in rec["reason"]
@@ -418,3 +427,4 @@ def test_desk_wake_switch_off_withholds_the_comment_but_lands_the_packet(tmp_pat
     rec = produce(tmp_path, net)
     assert rec["state"] == "suppressed_by_wake_toggle" and rec["commit"] == "c" * 40
     assert net.posts == []
+

@@ -1316,8 +1316,9 @@ accounts:
       - iwm_trend_long_1d              # ETF-breadth daily sweep (2026-06-20,
       - tlt_pullback_1d                # Tier-3): IWM small-cap trend +
       - ief_pullback_1d                # TLT/IEF bond pullback (paper money).
-      - slv_trend_1h                   # Intraday ETF pilot (2026-06-20 § 0e,
-                                       # Tier-3): SLV 1h bidirectional trend.
+      # slv_trend_1h REMOVED 2026-11-12 (SLV-1H-PROMOTE, operator "I answer that I do want to promote silver."): promoted to
+      # alpaca_live + alpaca_portfolio, and production is not general paper (OPERATING-PLAN § 2 "Three strategy statuses").
+      # ROLLBACK with alpaca_live's line. Was: Intraday ETF pilot (2026-06-20 § 0e, Tier-3): SLV 1h bidirectional trend.
                                        # 2026-10-05 MD-S1-CUT-ON-STAGE0-FAIL (operator
                                        # grant 2026-10-04, PR #16548) REMOVED 5 legs:
                                        # gld_pullback_1h (R-CUT-AFFORD: alpaca_live
@@ -1345,6 +1346,12 @@ accounts:
       # promote tlt to real money"): qqq_pullback_1h back on the demo floor. QQQ is shared with qqq_trend_long_1d + ml_entry_eq: the split is the
       # allocation record comms/same_symbol_allocation/qqq-alpaca_paper.json (refreshed). tlt_pullback_1h's real-money promotion is row
       # PROMOTE-TLT-1H-REAL-MONEY (its Stage-0 record must carry the holdout confirmation first); it stays off general paper (three statuses). ROLLBACK: delete the next line and restore the record's 2-leg form.
+      # ⚠️ CORRECTION 2026-11-12 (lane DEMOTION-NOT-BAN, comment only, no field changed): "stays off general paper (three statuses)"
+      # misreads the rule. Until its promotion lands tlt_pullback_1h is TESTING, not production (strategy_status.py reads it
+      # `testing` on NO book), and a testing leg belongs ON its demo floor (OPERATING-PLAN § 2). The operator's verbatim choice
+      # above also says "Put qqq and tlt on the paper floor now". The roster line and scripts/ci/check_strategy_status.py
+      # UNHOMED entry that would follow are a Tier-3 FIELD change, proposed to AM-TRADING, not made here. Also: no checklist
+      # row PROMOTE-TLT-1H-REAL-MONEY exists on main (2026-11-12); this comment and that CI entry cite it anyway.
       - qqq_pullback_1h
       # 2026-10-27 DESK-PAPER-ACCOUNTS (Tier-3, PAPER; operator verbatim, chat ~15:58Z: "I do want to have the desk
       # live on the other paper accounts as well, so Alpaca and IB."): the Claude desk leg, scoped to
@@ -1433,6 +1440,9 @@ accounts:
     # enabled (MEASURED 2026-11-01 broker_account_status: ACTIVE, shorting_enabled true, multiplier 4, flat).
     # ROLLBACK: add `side_filter: long` back (Tier 3).
     # 2026-11-08 ML-ENTRY-EQ-STRUCT-LIVE (Tier-3): ml_entry_eq_struct mirrors alpaca_live (superset rule; see alpaca_live's roster comment). ROLLBACK with alpaca_live's line.
+    # 2026-11-12 SLV-1H-PROMOTE (Tier 3; OPERATOR chat ~10:32Z, relayed by Manager Session 2026-11-11a / AM-TRADING, verbatim "I answer that I do want to promote silver."): slv_trend_1h mirrors alpaca_live
+    # (superset rule). THIS book trades its SHORT side too (no side_filter, shorting enabled); alpaca_live is a long-only cash book and refuses
+    # shorts. ROLLBACK with alpaca_live's line.
     # 2026-11-12 PROMOTE-TLT-1H-REAL-MONEY (Tier 3; operator decisions page w5, verbatim "Enable shorting on alpaca_live for it (Tier 3)",
     # note "I'm not sure we can do this as I don't think I'm allowed margins there yet, but lets try"; AM-TRADING call (b)/(c)):
     # tlt_pullback_1h SHORT-ONLY (strategies.yaml side_filter: short) on THIS mirror only, which can short (superset rule: the mirror
@@ -1440,7 +1450,7 @@ accounts:
     # 2026-11-12 08:24Z, $194.52, multiplier 1), so a short-only leg there would only journal refusals. Add it to alpaca_live the day
     # shorting is enabled there. Evidence: comms/strategy_evidence/tlt_pullback_1h.json (short-only, +4.11 R n 55, faithful, RULE-D1
     # pass) + holdout RQ-20261104-003 short subset +9.43 R n 86 (approximate). ROLLBACK: delete `tlt_pullback_1h` from this list.
-    strategies: [tqqq_trend_long_1d, ml_entry_eq_struct, tlt_pullback_1h]   # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3; OPERATOR popup ~11:10Z, relayed by Manager Session 2026-11-06a, verbatim "Probe with tqqq_trend_long (Recommended)"):
+    strategies: [tqqq_trend_long_1d, ml_entry_eq_struct, slv_trend_1h, tlt_pullback_1h]   # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3; OPERATOR popup ~11:10Z, relayed by Manager Session 2026-11-06a, verbatim "Probe with tqqq_trend_long (Recommended)"):
                                        # MECHANICS-ONLY EXCEPTION (kind=mechanics), NOT an edge bet and NOT a promotion (no committed DSR/trial-ledger record for tqqq_trend_long_1d; PROD-LEGS-DSR-DECISION did not measure it). Mirror of alpaca_live (superset rule: alpaca_portfolio carries every alpaca_live leg).
                                        # Purpose: ONE real-money GTC-bracket trade on alpaca_live (entry booked at the venue fill once #23777 lands, bracket at
                                        # the broker, venue exit, correct close reason, graded). REMOVE after that ONE trade closes and is graded: set this back
@@ -1569,7 +1579,16 @@ accounts:
     # 5-seed structure-exit ensemble that PASSED RQ-20261107-98e3-06 (evidence docs/research/ml-entry-eq-structure-ensemble-evidence-and-proposal-2026-11-08.md), on REAL MONEY + its
     # mirror (alpaca_portfolio). NOT alpaca_paper. New mechanics (5-booster serve + SL-only structure stop) prove themselves on ONE small trade: sizing is the account's existing risk_pct
     # on a cash book (whole shares, 0.9 cash wall), no new knob. ROLLBACK: delete `ml_entry_eq_struct` from this list AND alpaca_portfolio's (strict equality) and `enabled: false` on the leg.
-    strategies: [tqqq_trend_long_1d, ml_entry_eq_struct]   # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3; OPERATOR popup ~11:10Z, relayed by Manager Session 2026-11-06a, verbatim "Probe with tqqq_trend_long (Recommended)"):
+    # 2026-11-12 SLV-1H-PROMOTE (Tier 3; OPERATOR chat ~10:32Z, relayed by Manager Session 2026-11-11a / AM-TRADING, verbatim "I answer that I do want to promote silver."): slv_trend_1h on REAL MONEY + its
+    # mirror. Lifts the 2026-08-24 standing demote (see the rewritten block below). Evidence: comms/strategy_evidence/slv_trend_1h.json (rebuilt
+    # 2026-11-12 at tp_r 6.0, faithful, net_r_oos +39.09 R over n 73, 4/4 folds, net of fee 0 / slippage 5 bps PLACEHOLDER / funding 0; RULE-D1 pass) +
+    # holdout RQ-20261101-78fc-18 CONFIRMED (+35.99 R over n 104; long side +27.64 R / 65). LONG side only here (side_filter long, venue
+    # shorting_enabled false); the short side trades on alpaca_portfolio. Mechanics proven (config/mechanics_paths.yaml, alpaca_equity_bracket_v1):
+    # no paper soak; the first live fill is the one-trade check. TP: tp_r 6.0 (was the 50 R sentinel), RQ-20261112-5ab1-03 PASS (T6
+    # selected on discovery, holdout +33.37 R n 108, contamination disclosed); the record above is regenerated at that config (+39.09 R n 73,
+    # 4/4). Also decided 2026-11-04 ~22:05Z (operator popup, verbatim "Reopen, promote if it clears (Recommended)").
+    # ROLLBACK: delete `slv_trend_1h` here AND on alpaca_portfolio, and restore `- slv_trend_1h` on alpaca_paper.
+    strategies: [tqqq_trend_long_1d, ml_entry_eq_struct, slv_trend_1h]   # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3; OPERATOR popup ~11:10Z, relayed by Manager Session 2026-11-06a, verbatim "Probe with tqqq_trend_long (Recommended)"):
                                        # MECHANICS-ONLY EXCEPTION (kind=mechanics), NOT an edge bet and NOT a promotion (no committed DSR/trial-ledger record for tqqq_trend_long_1d; PROD-LEGS-DSR-DECISION did not measure it). Long-only via side_filter; existing risk_pct sizing; no new knob.
                                        # Purpose: ONE real-money GTC-bracket trade on alpaca_live (entry booked at the venue fill once #23777 lands, bracket at
                                        # the broker, venue exit, correct close reason, graded). REMOVE after that ONE trade closes and is graded: set this back
@@ -1779,13 +1798,16 @@ accounts:
       # lists under strict ordered equality). Re-adding it is a fresh Tier-3
       # decision, not an extension of this one.
       #
-      # ⚠️ slv_trend_1h IS NOT HERE AND MUST NOT BE PROPOSED BACK, and it is the
-      # trap in this set: it has the BEST long-flow profile of any affordable
-      # candidate (longs in every month including September, 116/116 sizing), so
-      # ranking by activity puts it near the top. Its blocker is a standing
-      # Tier-3 DEMOTE (operator, 2026-08-24: 0 wins in 13 closed, -$5,375), taken
-      # specifically to keep the fleet's worst leg off the account being funded.
-      # Same shape as the USO constraint recorded above, and it holds the same way.
+      # slv_trend_1h WAS OFF THIS ROSTER BECAUSE OF A LADDER MOVE, NEVER A BAN. Demoted off real money 2026-08-24 on stated
+      # evidence (0 wins in 13 closed, -$5,375 on the paper book; EXIT-CLUSTER later found all 6 of its packages closed via
+      # exchange_flat_reconciled, the close-path defect class). A comment written here afterwards called it "MUST NOT BE
+      # PROPOSED BACK ... same shape as the USO constraint". That was wrong: USO is the operator's VALUES exclusion (block
+      # above, UNCHANGED); slv's was an evidence-based demotion. REVERSED by the operator 2026-11-04 ~22:05Z (popup, verbatim):
+      # "Reopen, promote if it clears (Recommended)" (row PROMOTE-1H-SURVIVORS-20261104); confirmed 2026-11-12 ~10:32Z ("I
+      # answer that I do want to promote silver.") and 16:10Z ("Promote it and get it into an iteration plan ... Just get it
+      # live."). It is now ON this roster (see the roster comment above): tp_r 6.0 from RQ-20261112-5ab1-03, iteration lane
+      # SLV-ITERATION carries the full-history test. Operator 2026-11-12: "The whole point of an iterative system is that we
+      # fix things that aren't working and then get them back on real money." (lanes DEMOTION-NOT-BAN + SLV-1H-PROMOTE)
       #
       # ⚠️ NO `symbols:` EDIT IS REQUIRED. This paragraph has now been wrong
       # TWICE in opposite directions, so read the dates.
@@ -2192,13 +2214,17 @@ accounts:
       min_active_days: 0
     backtest_ruleset: prop_rulesets/breakout_turbo_1step.yaml
     account_size_usd: 5000
-    strategies:                        # OPERATOR BASELINE 2026-11-05 ~18:55Z (Tier-3, popup "Baseline at min size (Rec.)", relayed by
-                                       # Manager Session 2026-11-05b; row ML-PROP-ITERATE): a MEASURED BASELINE at minimum size, not a
-                                       # prop-gate pass. Exception recorded in comms/prop_survival/<leg>.json `operator_exception`.
-                                       # Size: sizing.flat.per_leg_risk_usd 10 in the ruleset. REVERT: `strategies: []`.
-      - trend_donchian_eth_4h          # 2026-11-06 PROBATION (operator "Pull sol_4h, keep eth_4h (Recommended)"): stays under the 11-05 baseline exception; V3 re-test FAIL_EDGE (n=136 trades 2023-11-05..2026-11-05, edge +0.212 R CI [-0.127,+0.551]; docs/research/prop-retest-2026-11-06/RESULT.md); iteration unit RQ-20261106-028.
-      - trend_donchian_sol_4h          # 2026-11-06 PROBATION (operator ~20:18Z, verbatim "Keep sol_4h on all prop books (Recommended)", via Manager 2026-11-06a; SUPERSEDES the ~19:40Z "Pull sol_4h, keep eth_4h"): V3 FAIL alone (n=103 trades 2023-11-05..2026-11-05, docs/research/prop-retest-2026-11-06/RESULT.md), but the book sim shows it raises every book's p(pass) and EV (docs/research/prop-retest-2026-11-06/velotrade_book/RESULT.md); iteration unit RQ-20261106-031.
-      - ml_entry                       # 2026-11-08 ML-ENTRY-PROP-BASELINE (Tier-3 + deploy, OPERATOR chat ~23:35Z verbatim: "I want the same ml entry model on bybit to be set live on the prop accounts until we build something that beats it"): the SAME served ml_entry leg as bybit_2 (one implementation), ETHUSDT+SOLUSDT only (strategies.yaml::ml_entry.account_symbols). Gate exception: comms/prop_survival/ml_entry.json operator_exception. Size: this account's risk_pct, daily_dd_switch armed. ROLLBACK: delete this line.
+    strategies: []                     # 2026-11-12 ON ICE (Tier-3, OPERATOR chat ~11:56Z, relayed by Manager Session 2026-11-11a,
+                                       # verbatim: "Breakout is breached - we're going to keep it on ice for now, so we shouldn't keep
+                                       # building fixes for the phone app"; "Prop accounts we now have active are velotrade and tradeify 1").
+                                       # Roster emptied (the account's documented revert) instead of a mode flip: mode is written only by
+                                       # the set-account-mode system-action, and a breached account takes no fills either way. The two
+                                       # open positions (ETH, SOL) stay as the venue holds them. Saved state: work row PHONE-EXECUTOR-ICE.
+                                       # REVERT (on operator reactivation): restore the three legs below.
+      # WAS (until 2026-11-12):
+      # - trend_donchian_eth_4h          # 2026-11-05 baseline exception, 2026-11-06 probation (RQ-20261106-028).
+      # - trend_donchian_sol_4h          # 2026-11-06 probation, operator "Keep sol_4h on all prop books (Recommended)" (RQ-20261106-031).
+      # - ml_entry                       # 2026-11-08 ML-ENTRY-PROP-BASELINE, operator "I want the same ml entry model on bybit to be set live on the prop accounts until we build something that beats it".
       # was `strategies: []` 2026-11-05 (PROP-PULL-ETHPROP).
       # breakout_1's legs, each kept only if its Turbo fit did not FAIL
       # PULLED 2026-11-05 (Tier-3, OPERATOR-APPROVED; popup ~06:25Z verbatim "Pull from prop (Recommended)", relayed by

@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "SEC-8001-LOCKDOWN step 2. Dispatch instruction from Manager Session 2026-11-11a: 'Landing hold; the manager merges.' Tier-2 OK: operator decisions page m3, saved 2026-11-12 07:49:12Z, \"Lock it down: move those three clients to HTTPS, then bind 8001 to localhost and drop its firewall rule (one Tier-2 change, one web-API restart, live-money path unaffected)\". MEASURED: with this file set, scripts/ops/trader_import_closure.py decide returns RESTART (non_py_runtime: deploy/ict-web-api.service, scripts/install_systemd_units.sh), so the deploy also restarts ict-trader-live once, not only ict-web-api. Revert: git revert, which restores --host 0.0.0.0 in the base unit; a rewritten venv.conf drop-in needs a manual sed back.",
+  "why": "Bind ict-web-api (uvicorn) to 127.0.0.1:8001 so the API is reachable only through Caddy's HTTPS front; on-box callers already use 127.0.0.1:8001."
+}

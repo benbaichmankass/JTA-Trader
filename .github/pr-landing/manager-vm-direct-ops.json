@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "MANAGER-VM-DIRECT-OPS (TRADE-ACTION-DIRECT-PATH design 2.3, phase 2 wave 1), stacked on #25046: POST /api/bot/ops/actions + GET /api/bot/ops/jobs/<id> on the existing X-Work-Store-Token, src/runtime/ops_actions.py (live-review-row delegating to #25045's direct submit, directed-action via #25039's spool, amend-prop-bracket, sync-now, restart-service), Tier-2 approval through #25039's trade_approvals, a CI parity test against docs/claude/system-actions.md 2.3, and the path-activated ict-ops-runner unit. Adds no gate and no secret; nothing talks to a broker.",
+  "hold_text": "Tier-2 runtime/service change: new API routes on ict-web-api, a new systemd path+service unit (installed by install_systemd_units.sh, in DEFAULT_SKIP), and an ops ask kind in trade_approvals (decided by the existing tapv handlers in both bots and the SPA route). Merge after #25039/#25045/#25046. The manager merges and deploys, then runs the post-deploy observations in the PR body."
+}

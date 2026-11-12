@@ -16447,6 +16447,340 @@ def _sweep_correct_closed_at_from_own_fill(
     return summary
 
 
+# ── ALPACA-CLOSE-BROKER-TRUTH (2026-11-12) ──────────────────────────────────
+#: Exit reasons a broker-leg read may replace: the two FLAT DETECTORS (how the
+#: close was noticed, never why) and the generic reconciler labels. A row a
+#: price sweep already relabelled ``sl``/``tp`` off a detector is also eligible
+#: (selected by its ``pre_label_exit_reason``), so the inferred label is upgraded
+#: to the broker's own.
+_BROKER_LEG_REPLACEABLE_REASONS = (
+    _SNAPSHOT_FLAT_REASON, "stuck_strategy_watchdog", "", "reconciler_filled",
+)
+#: `exit_reason_source` / `exit_price_source` / `closed_by` stamp for a close
+#: taken from the filled bracket leg of the row's own Alpaca parent order.
+#: MEASURED: the venue says which leg filled, at what price and when.
+BROKER_LEG_FILL_SOURCE = "broker_leg_fill"
+#: Notes key saying this row's parent order WAS read (value = outcome), which
+#: also makes it ineligible for another read. A transient ``could_not_look``
+#: writes nothing, so the next tick retries (NO-HALT).
+_BROKER_LEG_READ_KEY = "broker_leg_read"
+_BROKER_LEG_READ_NOTES_LIKE = '%"broker_leg_read"%'
+#: Broker reads per monitor tick (one parent read, plus one per REPLACED leg
+#: hop). Small on purpose: this runs on the live trader's tick.
+_BROKER_LEG_READS_PER_TICK = 6
+_BROKER_LEG_MAX_REPLACE_HOPS = 3
+#: A leg fill later than the detected close by more than this is not the event
+#: that closed the row.
+_BROKER_LEG_CLOSE_SKEW_MS = 120_000
+_ALPACA_STOP_LEG_TYPES = frozenset({"stop", "stop_limit", "trailing_stop"})
+
+
+def _pick_alpaca_exit_leg(
+    parent: Optional[Dict[str, Any]], *, direction: Any, qty: Any,
+    opened_ms: Optional[int], closed_ms: Optional[int],
+    replaced_reader: Optional[Callable[[str], Optional[Dict[str, Any]]]] = None,
+) -> Tuple[Optional[Dict[str, Any]], str]:
+    """Return ``(exit, state)`` from an Alpaca parent order's nested legs.
+
+    ``exit`` is ``{"reason": "sl"|"tp", "exit_price", "filled_at",
+    "leg_order_id", "leg_type"}`` when exactly one exit-side leg filled the
+    whole position inside ``[opened, closed + skew]``; otherwise ``None`` and
+    ``state`` names why (``no_filled_leg`` / ``ambiguous`` / ``qty_mismatch`` /
+    ``fill_outside_window`` / ``could_not_look``). A leg Alpaca REPLACED (an
+    amended stop) is followed through ``replaced_by`` with ``replaced_reader``,
+    at most ``_BROKER_LEG_MAX_REPLACE_HOPS`` hops; a hop that cannot be read
+    returns ``could_not_look`` so the caller retries. Pure apart from that
+    reader; never raises.
+    """
+    if not isinstance(parent, dict):
+        return None, "could_not_look"
+    exit_side = {"long": "sell", "short": "buy"}.get(
+        str(direction or "").strip().lower())
+    want_qty = _safe_float(qty)
+    if not exit_side or not want_qty:
+        return None, "no_filled_leg"
+
+    legs: List[Dict[str, Any]] = []
+    for leg in parent.get("legs") or []:
+        cur = leg
+        hops = 0
+        while (
+            isinstance(cur, dict)
+            and str(cur.get("status") or "").lower() == "replaced"
+            and cur.get("replaced_by")
+        ):
+            if replaced_reader is None or hops >= _BROKER_LEG_MAX_REPLACE_HOPS:
+                break
+            nxt = replaced_reader(str(cur["replaced_by"]))
+            hops += 1
+            if nxt is None:
+                return None, "could_not_look"
+            cur = nxt
+        if isinstance(cur, dict):
+            legs.append(cur)
+
+    filled = [
+        lg for lg in legs
+        if str(lg.get("status") or "").lower() == "filled"
+        and str(lg.get("side") or "").lower() == exit_side
+        and (_safe_float(lg.get("filled_qty")) or 0.0) > 0
+    ]
+    if not filled:
+        return None, "no_filled_leg"
+    if len(filled) > 1:
+        return None, "ambiguous"
+    leg = filled[0]
+    fqty = _safe_float(leg.get("filled_qty")) or 0.0
+    if abs(fqty - want_qty) > max(1e-6, 1e-3 * want_qty):
+        return None, "qty_mismatch"
+    px = _safe_float(leg.get("filled_avg_price"))
+    fill_iso = normalize_closed_at_value(leg.get("filled_at"))
+    fill_ms = _isoformat_to_ms(fill_iso)
+    if not px or px <= 0 or fill_ms is None:
+        return None, "no_filled_leg"
+    if (opened_ms is not None and fill_ms < opened_ms) or (
+        closed_ms is not None and fill_ms > closed_ms + _BROKER_LEG_CLOSE_SKEW_MS
+    ):
+        return None, "fill_outside_window"
+    ltype = str(leg.get("order_type") or "").lower()
+    if ltype in _ALPACA_STOP_LEG_TYPES:
+        reason = "sl"
+    elif ltype == "limit":
+        reason = "tp"
+    else:
+        return None, "no_filled_leg"
+    return {
+        "reason": reason, "exit_price": float(px), "filled_at": fill_iso,
+        "leg_order_id": leg.get("order_id"), "leg_type": ltype,
+    }, "filled_leg"
+
+
+def _sweep_alpaca_close_from_broker_leg(
+    db, *, history_reader: Optional[Callable[..., Optional[Dict[str, Any]]]] = None,
+    cfgs: Optional[Dict[str, Dict[str, Any]]] = None,
+) -> Dict[str, int]:
+    """Close an Alpaca row with the BROKER's own exit reason, price and time.
+
+    ALPACA-CLOSE-BROKER-TRUTH. On Alpaca the bracket rests AT THE BROKER, so a
+    stop or target that fills there is only ever noticed by a flat detector
+    (``position_snapshot_reconciler`` → ``exchange_flat_reconciled``, or the
+    ``stuck_strategy_watchdog``). Those write the DETECTION time and no reason;
+    a later price sweep infers ``sl``/``tp`` from price vs the package bracket
+    (``price_vs_pkg_bracket``, ESTIMATED). MEASURED 2026-11-12 (/api/diag/
+    alpaca_order_history, by id): trades 7011 IWM and 7012 GDX were journal-
+    closed 14:36:00Z, while their stop legs filled at 14:33:31Z / 14:33:39Z at
+    279.450338 / 88.706208 -- the venue had the answer all along under
+    ``/v2/orders/{broker_order_id}?nested=true``.
+
+    Rule: a closed, non-backtest Alpaca row (account ``exchange: alpaca``) with
+    a ``broker_order_id``, closed in the last 14 days, whose reason is a
+    detector / generic label (or ``sl``/``tp`` relabelled off a detector), and
+    whose parent order has not been read yet. Read the parent with its legs;
+    when exactly one exit-side leg filled the whole position
+    (:func:`_pick_alpaca_exit_leg`), set ``exit_reason`` = sl/tp by leg type,
+    ``exit_price`` = the leg's ``filled_avg_price``, ``closed_at`` = its
+    ``filled_at``, and ``pnl`` from that price (Alpaca equity fills carry no
+    fee); stamp ``exit_reason_source`` / ``exit_price_source`` / ``closed_by``
+    = ``broker_leg_fill`` and keep the detector in ``pre_label_exit_reason``,
+    the detection time in ``closed_at_detected`` and the leg in ``exit_leg_id``. Otherwise record the outcome
+    in ``broker_leg_read`` and leave the row to the existing inference. A
+    failed read writes nothing and is retried next tick. Best-effort; never
+    raises.
+    """
+    summary: Dict[str, int] = {
+        "scanned": 0, "closed_from_leg": 0, "no_leg": 0,
+        "could_not_look": 0, "budget_deferred": 0, "lost_race": 0, "errors": 0,
+    }
+    try:
+        if cfgs is None:
+            cfgs = _load_account_cfgs_for_reconcile()
+        alpaca_ids = sorted(
+            aid for aid, c in (cfgs or {}).items()
+            if str((c or {}).get("exchange") or "").lower() == "alpaca"
+        )
+        if not alpaca_ids:
+            return summary
+        if history_reader is None:
+            from src.units.accounts.clients import account_alpaca_order_history
+            history_reader = account_alpaca_order_history
+        from src.runtime.local_pnl import (
+            compute_pnl_percent, compute_realized_pnl, contract_value_usd_for,
+        )
+        relabelled_like = [
+            f'%"pre_label_exit_reason": "{r}"%'
+            for r in (_SNAPSHOT_FLAT_REASON, "stuck_strategy_watchdog")
+        ]
+        marks = ",".join("?" for _ in alpaca_ids)
+        rmarks = ",".join("?" for _ in _BROKER_LEG_REPLACEABLE_REASONS)
+        conn = db.connect()
+        try:
+            conn.row_factory = __import__("sqlite3").Row
+            rows = [dict(r) for r in conn.execute(
+                "SELECT id, account_id, symbol, direction, position_size, "
+                "       entry_price, created_at, closed_at, exit_reason, notes, "
+                "       broker_order_id "
+                "  FROM trades "
+                " WHERE status = 'closed' "
+                "   AND COALESCE(is_backtest, 0) = 0 "
+                f"  AND account_id IN ({marks}) "
+                "   AND COALESCE(broker_order_id, '') != '' "
+                "   AND COALESCE(setup_type, '') != 'intent_reduce' "
+                "   AND COALESCE(notes, '') NOT LIKE '%\"intent_reduce\": true%' "
+                "   AND COALESCE(notes, '') NOT LIKE ? "
+                f"  AND (COALESCE(exit_reason, '') IN ({rmarks}) "
+                "        OR (exit_reason IN ('sl', 'tp') "
+                "            AND (COALESCE(notes, '') LIKE ? "
+                "                 OR COALESCE(notes, '') LIKE ?))) "
+                "   AND datetime(COALESCE(closed_at, created_at)) "
+                "       >= datetime('now', '-14 days') "
+                " ORDER BY datetime(COALESCE(closed_at, created_at)) DESC "
+                " LIMIT 50",
+                (*alpaca_ids, _BROKER_LEG_READ_NOTES_LIKE,
+                 *_BROKER_LEG_REPLACEABLE_REASONS, *relabelled_like),
+            ).fetchall()]
+        finally:
+            conn.close()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("_sweep_alpaca_close_from_broker_leg: scan failed: %s", exc)
+        summary["errors"] += 1
+        return summary
+    if not rows:
+        return summary
+    summary["scanned"] = len(rows)
+    budget = [_BROKER_LEG_READS_PER_TICK]
+
+    def _read_one(cfg: Dict[str, Any], oid: str) -> Tuple[Optional[Dict[str, Any]], str]:
+        budget[0] -= 1
+        try:
+            res = history_reader(cfg, order_ids=[oid])
+        except ValueError:
+            return None, "bad_order_id"
+        if not isinstance(res, dict):
+            return None, "could_not_look"
+        ent = (res.get("by_id") or {}).get(oid) or {}
+        state = str(ent.get("read_state") or "could_not_look")
+        if state == "order_read" and isinstance(ent.get("order"), dict):
+            return ent["order"], "order_read"
+        return None, state
+
+    for row in rows:
+        if budget[0] <= 0:
+            summary["budget_deferred"] += 1
+            continue
+        try:
+            cfg = cfgs.get(row["account_id"]) or {}
+            oid = str(row.get("broker_order_id") or "").strip()
+            parent, pstate = _read_one(cfg, oid)
+            outcome: Optional[Dict[str, Any]] = None
+            if parent is not None:
+
+                def _hop(rid: str, _cfg=cfg) -> Optional[Dict[str, Any]]:
+                    if budget[0] <= 0:
+                        return None
+                    o, _s = _read_one(_cfg, rid)
+                    return o
+
+                outcome, pstate = _pick_alpaca_exit_leg(
+                    parent, direction=row.get("direction"),
+                    qty=row.get("position_size"),
+                    opened_ms=_isoformat_to_ms(row.get("created_at")),
+                    closed_ms=_isoformat_to_ms(row.get("closed_at")),
+                    replaced_reader=_hop,
+                )
+            if pstate == "could_not_look":
+                summary["could_not_look"] += 1
+                continue
+
+            prior_reason = row.get("exit_reason")
+            prior_closed_at = row.get("closed_at")
+            notes = _decode_notes(row.get("notes"))
+            notes[_BROKER_LEG_READ_KEY] = pstate
+            updates: Dict[str, Any] = {}
+            if outcome is not None:
+                symbol = str(row.get("symbol") or "")
+                entry = _safe_float(row.get("entry_price"))
+                qty = _safe_float(row.get("position_size"))
+                cvu = contract_value_usd_for(symbol)
+                exit_px = outcome["exit_price"]
+                pnl = compute_realized_pnl(
+                    entry_price=entry, exit_price=exit_px, qty=qty,
+                    direction=row.get("direction"), contract_value_usd=cvu,
+                )
+                detector = str(prior_reason or "").strip()
+                if detector in ("sl", "tp"):
+                    detector = str(notes.get("pre_label_exit_reason") or detector)
+                # The detector stays readable from `pre_label_exit_reason`
+                # (protected); notes are capped at 500 chars, so nothing here
+                # repeats what another key already says.
+                notes["pre_label_exit_reason"] = detector
+                # The detector's long prose (protected, so never shed) is
+                # replaced by a short statement of what actually happened; that
+                # is what leaves room for the detection time and the leg id
+                # (the detector itself is in `pre_label_exit_reason`).
+                notes["closed_reason"] = f"{outcome.get('leg_type')} leg filled at broker"
+                notes["closed_by"] = BROKER_LEG_FILL_SOURCE
+                notes["exit_reason_source"] = BROKER_LEG_FILL_SOURCE
+                notes["exit_price_source"] = BROKER_LEG_FILL_SOURCE
+                notes.pop("exit_reason_price_basis", None)
+                notes.pop("unmeasured_reason", None)
+                notes["closed_at_detected"] = notes.get("closed_at") or prior_closed_at
+                notes["closed_at"] = outcome["filled_at"]
+                notes["exit_leg_id"] = str(outcome.get("leg_order_id") or "")
+                updates = {
+                    "exit_reason": outcome["reason"],
+                    "exit_price": exit_px,
+                    "closed_at": outcome["filled_at"],
+                }
+                if pnl is not None:
+                    notes["pnl_source"] = "local_compute"
+                    notes["contract_value_usd"] = cvu
+                    updates["pnl"] = pnl
+                    pct = compute_pnl_percent(
+                        pnl=pnl, entry_price=entry, qty=qty,
+                        contract_value_usd=cvu,
+                    )
+                    if pct is not None:
+                        updates["pnl_percent"] = pct
+            updates["notes"] = dump_capped(notes, 500)
+            cols = sorted(updates)
+            wconn = db.connect()
+            try:
+                cur = wconn.execute(
+                    "UPDATE trades SET " + ", ".join(f"{c} = ?" for c in cols) +  # writer-conformance: allow conditional broker-leg close correction; guarded on the prior reason/closed_at so a concurrent close path wins, and must not fire a second close notification
+                    " WHERE id = ? AND status = 'closed' "
+                    "   AND COALESCE(exit_reason, '') = ? "
+                    "   AND closed_at IS ? "
+                    "   AND COALESCE(notes, '') NOT LIKE ?",
+                    (*[updates[c] for c in cols], int(row["id"]),
+                     str(prior_reason or ""), prior_closed_at,
+                     _BROKER_LEG_READ_NOTES_LIKE),
+                )
+                wconn.commit()
+                changed = cur.rowcount
+            finally:
+                wconn.close()
+            if not changed:
+                summary["lost_race"] += 1
+            elif outcome is not None:
+                summary["closed_from_leg"] += 1
+                logger.info(
+                    "_sweep_alpaca_close_from_broker_leg: trade %s %s -> %s @ %s "
+                    "(leg %s filled %s; detected %s)",
+                    row["id"], prior_reason, outcome["reason"],
+                    outcome["exit_price"], outcome.get("leg_order_id"),
+                    outcome["filled_at"], prior_closed_at,
+                )
+            else:
+                summary["no_leg"] += 1
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "_sweep_alpaca_close_from_broker_leg: row %s: %s", row.get("id"), exc)
+            summary["errors"] += 1
+    if summary["closed_from_leg"] or summary["errors"]:
+        logger.info("_sweep_alpaca_close_from_broker_leg: %s", summary)
+    return summary
+
+
 def _options_executor_for(account_cfg: Dict[str, Any]):
     """Build an :class:`AlpacaOptionsExecutor` for an options-expressing account.
 
@@ -17023,6 +17357,19 @@ def run_reconciliation_tick(
     except Exception as exc:  # noqa: BLE001
         logger.warning(
             "run_monitor_tick: reverse reconciler raised: %s", exc,
+        )
+
+    # ALPACA-CLOSE-BROKER-TRUTH: an Alpaca row a flat detector just closed
+    # takes the broker's own filled bracket leg (reason, price, time) before
+    # either PnL sweep infers one. A failed read falls back to that inference.
+    try:
+        with _phase("sweep_alpaca_close_from_broker_leg"):
+            leg_close = _sweep_alpaca_close_from_broker_leg(db)
+        if leg_close.get("closed_from_leg") or leg_close.get("errors"):
+            summaries["__alpaca_broker_leg_close__"] = leg_close
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "run_monitor_tick: alpaca broker-leg close sweep raised: %s", exc,
         )
 
     # 2026-05-18 SSOT PnL refactor: pending-pnl sweep. Picks up any

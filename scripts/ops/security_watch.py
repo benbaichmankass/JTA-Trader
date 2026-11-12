@@ -37,6 +37,14 @@ are skipped, an enable needs a unit file and that file is watched), /etc/crontab
   equal any file under ``deploy/``. That is what ``scripts/install_systemd_units.sh``
   writes (plain ``cp``), so a deploy never alerts. A removed unit is counted, not
   alerted (deploys retire units); a removed key, sudoers or cron file alerts.
+* EXPECTED, silent (SYSTEMD-WATCH-KNOWS-INSTALLER): a file under /etc/systemd/system
+  whose sha256 equals its line in the installer receipt (``SYSTEMD_RECEIPT``,
+  default ``/var/lib/ict-systemd-install/receipt.tsv``, root-owned, lines
+  ``<sha256>\t<path>``). ``install_systemd_units.sh`` writes that line for every
+  file it EDITS in place rather than copies (e.g. the SEC-8001 ``--host`` rewrite of
+  ``ict-web-api.service.d/venv.conf``). Any other bytes at that path still alert, so
+  a foreign edit to an installer-edited file is caught. A missing or unreadable
+  receipt only means such an edit alerts, as it did before the receipt existed.
 * Root-only paths are read with ``sudo -n``. A path that cannot be read keeps its
   previous hash (unreadable is not "removed") and is counted in ``unreadable``; when
   that set grows, ONE alert says which paths are not being checked.
@@ -193,6 +201,8 @@ FILES_COOLDOWN_S = 24 * 3600
 FILES_BLIND_COOLDOWN_S = 24 * 3600
 _SYSTEMD_DIR = "/etc/systemd/system"
 _UNIT_SUFFIXES = (".service", ".timer", ".socket", ".path", ".mount", ".target", ".conf")
+_RECEIPT = "/var/lib/ict-systemd-install/receipt.tsv"
+_SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
 
 def _sudo(args: list[str]) -> bytes | None:
@@ -279,10 +289,31 @@ def deploy_index(deploy_dir: Path) -> tuple[dict[str, str], set[str]]:
     return by_name, every
 
 
-def _expected_systemd(path: str, digest: str, deploy: tuple[dict[str, str], set[str]]) -> bool:
+def load_receipt(reader: Callable[[str], bytes | None] | None = None,
+                 path: str | None = None) -> dict[str, str]:
+    """{systemd path: sha256} the installer recorded for files it edited in place.
+
+    Malformed lines are ignored; an absent or unreadable receipt is {} (the
+    affected edits then alert, which is the safe direction)."""
+    reader = reader or read_file
+    data = reader(path or os.environ.get("SYSTEMD_RECEIPT") or _RECEIPT)
+    out: dict[str, str] = {}
+    if not data:
+        return out
+    for line in data.decode("utf-8", "replace").splitlines():
+        digest, _, p = line.partition("\t")
+        if _SHA256.match(digest.strip()) and p.startswith(_SYSTEMD_DIR + "/"):
+            out[p.strip()] = digest.strip()
+    return out
+
+
+def _expected_systemd(path: str, digest: str, deploy: tuple[dict[str, str], set[str]],
+                      receipt: dict[str, str] | None = None) -> bool:
     by_name, every = deploy
     name = os.path.basename(path)
     if by_name.get(name) == digest:
+        return True
+    if receipt and receipt.get(path) == digest:
         return True
     return os.path.basename(os.path.dirname(path)).endswith(".d") and digest in every
 
@@ -291,13 +322,15 @@ def run_files(state: dict, now: float, host: str,
               admit: Callable[..., bool],
               collect: Callable[[], tuple[dict[str, str], list[str]]] = watched_paths,
               reader: Callable[[str], bytes | None] = read_file,
-              deploy: tuple[dict[str, str], set[str]] | None = None) -> tuple[dict, list[str]]:
+              deploy: tuple[dict[str, str], set[str]] | None = None,
+              receipt: dict[str, str] | None = None) -> tuple[dict, list[str]]:
     """One pass of D3. Returns (new files state, alert texts)."""
     s = dict(state or {})
     alerts: list[str] = []
     first = "hashes" not in s
     old: dict[str, str] = dict(s.get("hashes") or {})
     deploy = deploy if deploy is not None else deploy_index(REPO_ROOT / "deploy")
+    receipt = receipt if receipt is not None else load_receipt(reader)
     paths, blind_dirs = collect()
     new: dict[str, str] = {}
     unreadable: list[str] = list(blind_dirs)
@@ -326,7 +359,7 @@ def run_files(state: dict, now: float, host: str,
                     expected += 1             # deploys retire units
                     continue
                 what = "REMOVED"
-            elif cat == "systemd" and _expected_systemd(p, n, deploy):
+            elif cat == "systemd" and _expected_systemd(p, n, deploy, receipt):
                 expected += 1
                 continue
             else:
@@ -334,7 +367,7 @@ def run_files(state: dict, now: float, host: str,
             changed += 1
             if admit(COOLDOWN_KIND, f"files:{p}:{n or 'gone'}", FILES_COOLDOWN_S):
                 alerts.append(f"[RED FLAG] {cat} file {what} on {host}: {p} "
-                              f"(not a deploy/ copy). Content is not shown. "
+                              f"(not a deploy/ copy or an installer receipt). Content is not shown. "
                               f"Check who changed it. Nothing was stopped.")
     prev_blind = set(s.get("unreadable") or [])
     if set(unreadable) - prev_blind and admit(
