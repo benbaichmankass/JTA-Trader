@@ -472,6 +472,7 @@ CADENCE_REGISTRY: dict[str, dict] = {
     "ict-hourly-snapshot.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
     "ict-ib-executions-pull.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
     "ict-trainer-disk-alarm.timer": {"receipt": None, "why": "VM-side (FIX-SA-12); it writes runtime_logs/trainer_disk_alarm_state.json on the live VM, which is not in the repo; the surface is the diag relay (unit state + journal)"},
+    "ict-security-watch.timer": {"receipt": None, "why": "VM-side (SEC-DETECTORS D1); it writes runtime_logs/security_watch_state.json on the live VM, which is not in the repo; the surface is the diag relay (unit state + journal) and the alert ledger"},
     "ict-prop-feed.timer": {"receipt": None, "why": "VM-side; its receipt is prop_account_status rows (source=breakout_login_check) read via GET /api/bot/prop/status"},
     "ict-ib-gateway-reset.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
     "ict-ib-gateway-watchdog.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},

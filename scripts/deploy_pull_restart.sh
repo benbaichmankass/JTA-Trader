@@ -649,11 +649,12 @@ fi
 # ict-trainer-disk-alarm.service (FIX-SA-12) is a oneshot owned by
 # ict-trainer-disk-alarm.timer (hourly). A deploy restart would only fire an
 # unscheduled extra check; let the timer own it.
+# ict-security-watch.service (SEC-DETECTORS D1): same shape, 5-min timer.
 # ict-notify-failure@<unit>.service instances (FIX-SA-08) are NOT listed here
 # because instance names vary: the restart loop below skips every `@` unit
 # outright, since restarting one would send a bogus "unit FAILED" ping.
 # ---------------------------------------------------------------------------
-DEFAULT_SKIP="ict-smoke-once.service ict-env-check.service ict-hourly-snapshot.service ict-heartbeat.service ict-git-sync.service ict-mes-ibkr-pull.service ict-exchange-fills-pull.service ict-alpaca-fills-pull.service ict-ib-executions-pull.service ict-prop-feed.service ict-prop-executor.service ict-trainer-disk-alarm.service ict-phone-capture-purge.service ict-ml-decision-shadow.service"
+DEFAULT_SKIP="ict-smoke-once.service ict-env-check.service ict-hourly-snapshot.service ict-heartbeat.service ict-git-sync.service ict-mes-ibkr-pull.service ict-exchange-fills-pull.service ict-alpaca-fills-pull.service ict-ib-executions-pull.service ict-prop-feed.service ict-prop-executor.service ict-trainer-disk-alarm.service ict-security-watch.service ict-phone-capture-purge.service ict-ml-decision-shadow.service"
 SKIP_LIST="${DEPLOY_RESTART_SKIP:-${DEFAULT_SKIP}}"
 
 # list-units --all surfaces inactive units too; --type=service excludes

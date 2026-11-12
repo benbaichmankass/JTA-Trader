@@ -1640,8 +1640,7 @@ strategies:
                              # trend_donchian_sol_4h.json). bybit_1 only (paper);
                              # confirmed not on any real-money roster.
     timeframe: "4h"
-    # STRUCTURE-EXITS-DEFAULT (Tier 3, manager 2026-11-03 on the operator rule "the new default until we prove something else works better"): pivot 5 = middle arm of the measured S3/S5/S8 grid. Revert: delete this line.
-    structure_exit: "pivot=5"
+    # STRUCTURE-EXITS-DEFAULT OFF (Tier 3, 2026-11-11): structure_exit "pivot=5" removed on operator decision (chat 2026-11-11, verbatim: "For Velo Trade, yeah, let's go with one, and you can turn that off like the other strategies"; row PROP-VELOTRADE-TP-MISMATCH). Why: its structure TP (74.19) sits beyond the 9.9% venue cap, so prop_trail re-amended velotrade_1's resting TP to ref*0.901 about every 5 min (612 amendments on one ticket). Revert: re-add structure_exit: "pivot=5".
     symbols:
       - SOLUSDT
     donchian: 20

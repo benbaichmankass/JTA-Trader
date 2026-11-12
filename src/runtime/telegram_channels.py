@@ -177,6 +177,7 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     "src/units/accounts/daily_dd_switch.py": ("execution_alert",),
     "src/runtime/liveness_watchdog.py": ("alert",),
     "scripts/ops/notify_unit_failure.py": ("alert",),
+    "scripts/ops/security_watch.py": ("alert",),   # SEC-DETECTORS: ONE red flag per suspicious SSH event (new identity / failure burst / journal unreadable), deduped by alert_cooldown
     "scripts/ops/trainer_disk_alarm.py": ("alert",),
     "scripts/ops/prop_executor_tick.sh": ("red_flag",),
     "scripts/ops/prop_feed_tick.sh": ("red_flag",),
