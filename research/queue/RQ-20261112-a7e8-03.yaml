@@ -1,0 +1,79 @@
+# Hand-authored 2026-11-12 by the ML standing lane part 3 (row ML-DECISION-LABEL-VOL-CONFOUND, Tier 1), dispatched by Manager Session 2026-11-11a. Decision rule registered BEFORE any run; pushed before the run. Gates this adds or changes: none.
+id: RQ-20261112-a7e8-03
+title: 'ml_decision_entry v1: is its held-out selection a volatility (cost-per-R) tilt or a within-bucket directional pick? Brinson split of net and gross R'
+status: queued
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml_health
+priority: 1
+kind: experiment
+compute: cpu_light
+evidence_class:
+  holdout: holdout_window
+  claim: model_quality
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 40
+  basis: INFERRED from RQ-20261112-8d20-01 (same fetch, table and frozen scoring; the decomposition is a groupby).
+  why_runner: Keyless public Binance Vision klines and the committed served booster; CPU. Runs in the dispatched lane's session container (as 8d20-01), reproducible on research-script-run.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+question: 'Row ML-DECISION-LABEL-VOL-CONFOUND (FEATURE-IMPACT M2: net_long ranks on atr_pct +0.486 while raw 24h return ranks -0.084). On the served ml_decision_entry_v1 (tau 0.1) taken decisions in the held-out window 2025-10-01..2026-09-29, how much of the excess net R over the same-time, same-side candidate pool comes from WHICH atr_pct tercile it picked (tilt) vs WHICH symbol within that tercile (selection), and is the within-tercile selection positive in GROSS R (cost removed)?'
+why_this_matters: 'net R = gross R - cost_bps / stop distance, so wide-ATR symbols pay less cost per R. If the served model''s edge is mostly that tilt, its "direction" claim is wrong and the right lever is sizing / cost-aware selection, not a better direction model; the ML programme''s next ENTRY iterations (label choice) depend on which it is. The row is due 2026-11-18.'
+power:
+  expected_n: 600
+  min_detectable_effect: 0.15
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: d = 0.15 at alpha 0.05 / power 0.8 needs ~350 decisions; the served model takes several hundred decisions in a held-out year (8d20-01 window A). Below 100 taken decisions the unit is INDETERMINATE.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on public candles over a pinned, already-claimed window; nothing accrues.
+practice_precedent: 'M4 / M6 (docs/reference/trading-and-model-practice-principles.md): attribution before a model claim; Brinson-style exact decomposition with a pre-registered share threshold'
+intervention_controls:
+  not_applicable: an attribution read of a frozen model's held-out decisions, not an in-trade action
+decision_rule:
+  id: RULE-RQ20261112-a7e8-03-VOL-DECOMP
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_decision_vol_decomp.py: per taken decision k (side s, time ts): excess = r - mean(pool) = tilt + select, tilt = mean(pool in k''s atr_pct tercile) - mean(pool), select = r - mean(pool in tercile); pool = every candidate row at ts with a side-s label. In net R and gross R; means over k; t clustered on ts (CR1).'
+  rule: 'INDETERMINATE if n taken < 100 or mean net excess <= 0 (nothing to attribute). CONFOUND (verdict pass = the row''s hypothesis holds) iff net tilt share = mean tilt / mean excess >= 0.5 AND the gross within-tercile selection is NOT (mean > 0 with ts-clustered t >= 2.0). DIRECTION (verdict fail) iff the gross within-tercile selection mean > 0 with ts-clustered t >= 2.0. INDETERMINATE otherwise. Thresholds are not changed after any result.'
+  proposal_mapping: 'CONFOUND -> the row closes with the read; ml-review authors the label iteration (gross-R or cost-aware label, or cost-per-R as an explicit sizing term) as a new pre-registered unit; no config change. DIRECTION -> the row closes; the direction claim stands; no change. INDETERMINATE -> the row records why and stays with ml-review.'
+  what_it_does_not_do: 'Changes no config, roster or model; the pool includes symbols the policy could not take (busy), so tilt/select are relative to the whole universe at that time, not to the free set; a re-read of a held-out window already read by 8d20-01 (recorded in the holdout ledger).'
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.4
+  basis: 'stand-in: decides which lever the ENTRY model''s next iteration pulls on a real-money leg; not a P&L measurement.'
+ml_consumer:
+  consumer: ml/served/ml_decision_entry_v1/model.json
+  decision: whether the next ml_entry ENTRY iteration changes its label (gross / cost-aware) or sizing instead of its direction model, for ml_entry on bybit_2, bybit_portfolio and its prop copies
+  legs:
+  - ml_entry
+  book: money
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_decision_vol_decomp.py
+  - --cache
+  - /tmp/ml_decision_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261112-a7e8-03
+grading:
+  auto: true
+related:
+- ML-DECISION-LABEL-VOL-CONFOUND
+- RQ-20261112-8d20-01
