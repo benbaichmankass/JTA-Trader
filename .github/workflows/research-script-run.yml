@@ -69,6 +69,9 @@ on:
 
 permissions:
   contents: read
+  # actions: read -- ONLY so the "Materialise corpus v2" step can list/download a broad-paths corpus artifact of another run of
+  # this repo with the ambient token (read-only). The unit's own step never sees the token.
+  actions: read
 
 concurrency:
   # One run per unit at a time: two runs of the same unit would race on the
@@ -131,6 +134,39 @@ jobs:
           else
             echo "unit does not run ml_bakeoff: learners not installed"
           fi
+      - name: Materialise corpus v2 (only for a unit whose command reads corpus_v2/)
+        # TMBENCH-V2-TRAIN-INPUT (2026-11-12). Corpus v2 (comms/research/broad_paths/<id>/manifest.json) is an Actions artifact,
+        # and the artifact of the run that built it expired/was deleted. scripts/research/corpus_v2_materialise.py FETCHES the
+        # newest unexpired `broad-paths-<id>-data` artifact of this repo, else REGENERATES it from the manifest (worktree at the
+        # manifest git_sha, six shards, same merge), and writes corpus_v2/materialise.json with the manifest trade_key hash check.
+        # A mismatch is recorded, never fatal: tm_bench --expect-train-corpus reads it and the unit's own rule says INDETERMINATE.
+        # The token is for THIS step only; the unit's step below never holds it. Not a gate: it adds data, refuses nothing.
+        id: corpus_v2
+        continue-on-error: true
+        timeout-minutes: 230
+        env:
+          UNIT: ${{ inputs.research_unit }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          if grep -qs "corpus_v2" "research/queue/${UNIT}.yaml"; then
+            CID=$(grep -oE "bp2-[0-9a-f]{12}" "research/queue/${UNIT}.yaml" | head -n 1)   # the corpus the unit names
+            MAN="comms/research/broad_paths/${CID}/manifest.json"
+            test -s "$MAN" || { echo "no manifest at ${MAN}"; exit 0; }
+            SHA=$(python3 -c "import json,sys;print(json.load(open(sys.argv[1])).get('git_sha',''))" "$MAN")
+            # fetch the manifest's commit for the regenerate path (checkout is shallow and holds no credential)
+            git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w0)" \
+              fetch --no-tags --depth 1 origin "$SHA" || echo "could not fetch ${SHA}; the materialiser will say which tree it used"
+            python3 scripts/research/corpus_v2_materialise.py --self-test
+            python3 scripts/research/corpus_v2_materialise.py --manifest "$MAN" --out corpus_v2 --shards 6 --parallel 3   # exits 0 by design (verdict in materialise.json); step is continue-on-error
+            if [ -s corpus_v2/materialise.json ]; then
+              echo "state=$(python3 -c "import json;print(json.load(open('corpus_v2/materialise.json')).get('state'))")" >> "$GITHUB_OUTPUT"
+              echo "corpus_id=$(python3 -c "import json;print(json.load(open('corpus_v2/materialise.json'))['corpus_id'])")" >> "$GITHUB_OUTPUT"
+              { echo "### corpus v2 materialise"; echo '```'; head -c 4000 corpus_v2/materialise.json; echo; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            echo "unit does not read corpus_v2/: nothing to materialise"
+          fi
       - name: Check the unit's declared command against the allowlist
         env:
           UNIT: ${{ inputs.research_unit }}
@@ -171,6 +207,17 @@ jobs:
           name: research-script-run-${{ inputs.research_unit }}-${{ github.run_id }}
           path: comms/research/${{ inputs.research_unit }}/${{ github.run_id }}
           retention-days: 14
+          if-no-files-found: error
+      - name: Keep a regenerated corpus v2 as an artifact (the next unit fetches it instead of regenerating)
+        if: steps.corpus_v2.outputs.state == 'regenerated'
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: broad-paths-${{ steps.corpus_v2.outputs.corpus_id }}-data
+          path: |
+            corpus_v2/trades.jsonl.gz
+            corpus_v2/paths.jsonl.gz
+          retention-days: 90
           if-no-files-found: error
       - name: Summarize
         if: always()
