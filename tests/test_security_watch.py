@@ -180,3 +180,45 @@ def test_deploy_index_matches_real_deploy_dir():
     by_name, every = w.deploy_index(w.REPO_ROOT / "deploy")
     assert "ict-security-watch.service" in by_name
     assert by_name["ict-security-watch.service"] in every
+
+
+# SYSTEMD-WATCH-KNOWS-INSTALLER: install_systemd_units.sh records the sha256 of every
+# file it edits in place; a matching receipt line is an expected deploy change.
+VENV = "/etc/systemd/system/ict-web-api.service.d/venv.conf"
+
+
+def _pass_r(state, fs, receipt):
+    return w.run_files(state, 1000.0, "vm", lambda *a, **k: True, collect=fs.collect,
+                       reader=fs.read, deploy=DEPLOY, receipt=receipt)
+
+
+def test_files_installer_receipt_edit_is_silent_foreign_edit_still_alerts():
+    fs = _FS({VENV: b"ExecStart=uvicorn --host 0.0.0.0"})
+    st, _ = _pass_r({}, fs, {})
+    rewritten = b"ExecStart=uvicorn --host 127.0.0.1"      # the installer's sed rewrite
+    fs.files[VENV] = rewritten
+    st, alerts = _pass_r(st, fs, {VENV: _h(rewritten)})
+    assert alerts == [] and st["last"]["expected"] == 1
+    # positive control: a foreign edit to the same drop-in still pages
+    fs.files[VENV] = rewritten + b"\nExecStartPre=/tmp/x"
+    st, alerts = _pass_r(st, fs, {VENV: _h(rewritten)})
+    assert len(alerts) == 1 and "CHANGED" in alerts[0] and VENV in alerts[0]
+
+
+def test_files_receipt_for_another_path_does_not_cover_this_one():
+    fs = _FS({VENV: b"v1", UNIT: b"unit v1"})
+    st, _ = _pass_r({}, fs, {})
+    fs.files[UNIT] = b"unit edited"
+    _, alerts = _pass_r(st, fs, {VENV: _h(b"unit edited")})
+    assert len(alerts) == 1 and UNIT in alerts[0]
+
+
+def test_load_receipt_parses_and_ignores_junk():
+    good = _h(b"x")
+    data = (f"{good}\t{VENV}\n"
+            f"nothex\t{VENV}.bad\n"
+            f"{good}\t/etc/passwd\n"                  # outside /etc/systemd/system
+            "\n").encode()
+    got = w.load_receipt(reader=lambda p: data, path="/r")
+    assert got == {VENV: good}
+    assert w.load_receipt(reader=lambda p: None, path="/r") == {}

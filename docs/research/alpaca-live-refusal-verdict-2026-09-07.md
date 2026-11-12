@@ -221,9 +221,9 @@ Measured three ways, all agreeing:
 
 - **Live log, twice in the last few minutes** (`journalctl`, `ict-trader-live`):
   `account_open_positions(alpaca_live): alpaca empty snapshot verified via
-  balance()=200.22` at 16:51:32Z and 16:53:24Z.
+  balance()=[balance removed]` at 16:51:32Z and 16:53:24Z.
 - **`/api/diag/broker_account_status`**: `status: ACTIVE`, `trading_blocked: false`,
-  `account_blocked: false`, `error: null`, `cash / equity / buying_power = 200.22`.
+  `account_blocked: false`, `error: null`, `cash / equity / buying_power = [balance removed]`.
 - **The journal itself**: `balance = float(fetcher(account))` runs *unconditionally*,
   before and regardless of the dry short-circuit, and both post-arm rows carry
   `position_size: 2.0` — a size that cannot be produced from a `None` balance.
@@ -239,7 +239,7 @@ refusal. Measured on row 5415's own numbers:
 
 | term | value |
 |---|---|
-| balance | $200.22 |
+| balance | [balance removed] |
 | `risk_pct` | 2% | <!-- population-ok: a CONFIGURED parameter, not a sample statistic — alpaca_live risk.risk_pct: 0.02 is read from config/accounts.yaml:1111 (operator-directed 2026-08-29). The table's population is stated in the sentence above it: row 5415's own numbers, n=1 by construction. -->
 | per-trade risk budget | **$4.00** |
 | TLT entry | $82.34 |

@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "edits scripts/ops/vm_sparse_bootstrap.sh (VM mutation script run by a system action); AM-OPS merges on green guards",
+  "why": "CI-SPARSE-BOOTSTRAP-FLAKE: tests/ops/test_vm_sparse_bootstrap.py::test_apply_frees_caches_syncs_and_restores_timer failed in CI (job 131426446843) when its idempotent second apply refused with patterns present. The pattern check used printf|grep -q under pipefail; it is now three distinct bash checks (missing / undecodable / no '/*' line) with no pipe. Behaviour for valid patterns unchanged; three new tests."
+}

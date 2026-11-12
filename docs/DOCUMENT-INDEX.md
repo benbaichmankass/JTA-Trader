@@ -643,6 +643,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/decision-brief-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/soak-decisions-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/soak-verdicts-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/plans/1h-survivor-promotion-proposals-2026-11-12.md` | evidence | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/thursday-planning-2026-11-11-readbacks.md` | evidence | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/thursday-planning-2026-11-12-answers.md` | evidence | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/ui-upgrade-1-auth-and-keys-design.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
@@ -695,6 +696,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/desk-maker-fills-2026-10-27.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/e4-prop-sim-2026-10-30/PLAN.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/e4-prop-sim-2026-10-30/RESULT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/entry-grade-42473814600-repro-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-18g-event-entries-2026-10-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-18h-event-packet-arm-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-event-calendar-scope-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
