@@ -21,8 +21,8 @@ sys.modules.setdefault("pandas", MagicMock())
 sys.modules.setdefault("src.runtime.signal_notifications", MagicMock())
 sys.modules.setdefault("src.runtime.signal_writer", MagicMock())
 
-from src.runtime import order_monitor as _om
-from src.units.accounts import execute as _ex
+from src.runtime import order_monitor as _om  # noqa: E402
+from src.units.accounts import execute as _ex  # noqa: E402
 
 _SENTINEL = object()
 
