@@ -859,3 +859,52 @@ def test_wake_build_bundle_keeps_the_traceback_frame_not_just_the_exception(monk
     out = W.build_bundle("pkg-x")
     assert out["state"] == "could_not_build"
     assert "live_review_packet.py" in out["reason"] and "line 994" in out["reason"] and "column 2" in out["reason"]
+
+
+def _prop_mech(positions, sl=89.10464286, tp=78.96364, direction="short", status_read=True):
+    """LTR-PACKET-READ-REACH 2026-11-11: one prop account (velotrade_1, SOL short, filled ticket) against an
+    emitted (live) prop-only package."""
+    pkg = "pkg-propcmp"
+    s = L.Snapshot()
+    if status_read:
+        s.reads["prop_status:velotrade_1"] = {"status": {"raw": json.dumps({"positions": positions})}}
+    view = {"package": {"order_package_id": pkg, "status": "emitted"}, "trades": [], "telemetry": [], "tickets": []}
+    accts = [{"account_id": "velotrade_1", "account_class": "prop", "exchange": "velotrade",
+              "ticket": {"order_package_id": pkg, "account_id": "velotrade_1", "status": "filled"}}]
+    return L._mechanics(s, view, accts, sl, tp, direction, "SOLUSDT")[0]
+
+
+def test_prop_venue_tp_off_the_package_is_a_mismatch():
+    """The live miss: velotrade_1 SOL TP 76.535 at the venue vs package 78.964 read "match"."""
+    m = _prop_mech([{"symbol": "SOLUSDT", "direction": "short", "sl": 89.105, "tp": 76.535}])
+    assert m["verdict"] == "mismatch"
+    assert "venue TP 76.535 != package TP 78.96364" in m["evidence"]
+    assert "venue SL" not in m["evidence"]          # the SL agrees within tolerance
+
+
+def test_prop_venue_levels_agreeing_is_a_match():
+    m = _prop_mech([{"symbol": "SOLUSDT", "direction": "short", "sl": 89.1046, "tp": 78.9636}])
+    assert m["verdict"] == "match"
+
+
+def test_prop_position_without_sl_tp_cells_is_could_not_look_not_match():
+    m = _prop_mech([{"symbol": "SOLUSDT", "direction": "short", "qty": 1.0}])
+    assert m["verdict"] == "could_not_look"
+    assert "venue SL not in the Positions read" in m["evidence"]
+    assert "venue TP not in the Positions read" in m["evidence"]
+
+
+def test_prop_netted_rows_are_not_attributed():
+    rows = [{"symbol": "SOLUSDT", "direction": "short", "sl": 89.1, "tp": 78.9}] * 2
+    m = _prop_mech(rows)
+    assert m["verdict"] == "could_not_look" and "not attributable" in m["evidence"]
+
+
+def test_no_carrying_account_is_could_not_look_not_a_vacuous_match():
+    """LR-20261111T0002Z-pkg-50f5eed272f64197: zero account_bounds, verdict "match" ("agree with every readable
+    account" over zero accounts)."""
+    s = L.Snapshot()
+    view = {"package": {"order_package_id": "pkg-x", "status": "emitted"}, "trades": [], "telemetry": [], "tickets": []}
+    m = L._mechanics(s, view, [], 89.1, 78.96, "short", "SOLUSDT")[0]
+    assert m["verdict"] == "could_not_look"
+    assert "nothing compared" in m["evidence"]

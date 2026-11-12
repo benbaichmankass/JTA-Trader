@@ -1,0 +1,14 @@
+# Security watch (SEC-DETECTORS D1 + D3): one red-flag ping per suspicious SSH event
+# on this VM (login with an identity not in the baseline, failed-login burst,
+# journal unreadable). Reads only; blocks nothing; always exits 0. Live VM;
+# oneshot behind ict-security-watch.timer. State:
+# runtime_logs/security_watch_state.json. See scripts/ops/security_watch.py.
+[Unit]
+Description=ICT — security watch (SSH logins + file integrity)
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/ict-trading-bot
+EnvironmentFile=/home/ubuntu/ict-trading-bot/.env
+ExecStart=/home/ubuntu/ict-trading-bot/.venv/bin/python -u scripts/ops/security_watch.py

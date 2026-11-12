@@ -62,14 +62,18 @@ def _on_block(doc: Dict[str, Any]) -> Any:
     return doc.get("on") if "on" in doc else doc.get(True)
 
 
+#: `repository_dispatch` counts as issue-reachable: `issue-router.yml` (PI-20260927-W6OPSR-0004) forwards every
+#: opened issue's labels as repository_dispatch events, whoever opened the issue, so a routed workflow needs the
+#: same actor clause (it reads `github.event.client_payload.issue.user.login`, which matches `issue.user.login`).
+_ISSUE_REACHABLE = ("issues", "repository_dispatch")
+
+
 def has_issues_trigger(doc: Dict[str, Any]) -> bool:
     on = _on_block(doc) or {}
     if isinstance(on, str):
-        return on == "issues"
-    if isinstance(on, list):
-        return "issues" in on
-    if isinstance(on, dict):
-        return "issues" in on
+        return on in _ISSUE_REACHABLE
+    if isinstance(on, (list, dict)):
+        return any(ev in on for ev in _ISSUE_REACHABLE)
     return False
 
 

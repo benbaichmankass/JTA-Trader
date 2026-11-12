@@ -241,6 +241,76 @@ levers:
       best_delta_r_per_trade: -0.0081
       fold_stability: 0.417
       reading: every tested value is worse than the baseline
+    atr_stop_mult:
+      tests:
+      - value: '3.125'
+        baseline_value: '2.5'
+        arm: atr_stop_mult_hi
+        unit: RQ-20261106-024
+        window: 2021-11-02..2026-11-05
+        n: 691
+        net_r: 9.6959
+        baseline_n: 770
+        baseline_net_r: -6.8307
+        delta_net_r: 16.5266
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 22.5604
+        verdict: pass
+        joint_change: false
+      - value: '1.875'
+        baseline_value: '2.5'
+        arm: atr_stop_mult_lo
+        unit: RQ-20261106-024
+        window: 2021-11-02..2026-11-05
+        n: 919
+        net_r: -24.1156
+        baseline_n: 770
+        baseline_net_r: -6.8307
+        delta_net_r: -17.2849
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 52.7756
+        verdict: pass
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: 0.0215
+      fold_stability: 0.625
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+    tp_r:
+      tests:
+      - value: '62.5'
+        baseline_value: '50.0'
+        arm: tp_r_hi
+        unit: RQ-20261106-024
+        window: 2021-11-02..2026-11-05
+        n: 770
+        net_r: -6.8307
+        baseline_n: 770
+        baseline_net_r: -6.8307
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 28.1334
+        verdict: pass
+        joint_change: false
+      - value: '37.5'
+        baseline_value: '50.0'
+        arm: tp_r_lo
+        unit: RQ-20261106-024
+        window: 2021-11-02..2026-11-05
+        n: 770
+        net_r: -6.8307
+        baseline_n: 770
+        baseline_net_r: -6.8307
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 28.1334
+        verdict: pass
+        joint_change: false
+      shape: flat
+      points: 2
+      best_delta_r_per_trade: 0.0
+      fold_stability: 1.0
+      reading: no response at the tested values
     trail_state_feature:
       tests:
       - value: chop

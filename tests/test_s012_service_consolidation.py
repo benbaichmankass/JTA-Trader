@@ -187,6 +187,9 @@ EXPECTED_SERVICES = {
     # used, read from the published trainer_status.json mirror. Live-trader-box
     # only; in deploy_pull_restart.sh DEFAULT_SKIP.
     "ict-trainer-disk-alarm.service",
+    # 2026-11-11 (SEC-DETECTORS D1): 5-min oneshot (ict-security-watch.timer),
+    # one red-flag ping per suspicious SSH event. Reads only. In DEFAULT_SKIP.
+    "ict-security-watch.service",
     # 2026-10-18 (PHONE-EXEC-OBSERVABLE-1018): daily oneshot
     # (ict-phone-capture-purge.timer) that deletes phone step captures older
     # than 7 days under <trade_journal.db dir>/phone_captures (operator: stored

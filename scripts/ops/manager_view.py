@@ -143,7 +143,12 @@ REPO_ROOT = sr.REPO_ROOT
 
 #: The repository these PR numbers belong to. A reference qualified with any
 #: OTHER repo is reported `other_repo`, never compared. See the docstring.
-DEFAULT_REPO = "Metis-Insights"
+# RENAME-SLUG-FUNCTIONAL-AUDIT: the name is READ (repo_slug), never a literal; old names still match (repo_slug).
+try:
+    from scripts.ops import repo_slug as _repo_slug
+except ImportError:  # run as a script from scripts/ops
+    import repo_slug as _repo_slug  # type: ignore
+DEFAULT_REPO = _repo_slug.current_name()
 
 #: Cell sentinels. ⚠️ Two distinct facts, deliberately never one value.
 NOT_OBSERVED = "not_observed"
@@ -393,7 +398,8 @@ def parse_pr_ref(ref: Any, repo: str = DEFAULT_REPO) -> Tuple[Optional[int], boo
     if not m:
         return None, False
     owner, num = m.group(1), int(m.group(2))
-    return num, (owner is None or owner == repo)
+    ours = owner is None or owner == repo or (repo == DEFAULT_REPO and _repo_slug.is_this_repo(owner))
+    return num, ours
 
 
 def checklist_items_for(ck_doc: Optional[Any], session_id: str) -> List[Dict[str, Any]]:

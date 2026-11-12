@@ -116,10 +116,19 @@ def test_main_is_green():
 
 
 def test_the_probe_sees_the_armed_consumers():
-    """A negative needs a denominator: the real config arms consumers today."""
+    """A negative needs a denominator: the real config arms consumers today.
+
+    trend_vol is armed in the real config. exit_head_close no longer is: the last
+    `exit_head_action: close` leg (trend_donchian_eth) went to annotate on 2026-11-12
+    (PR #25120, RQ-20261101-78fc-03 FAIL), so the probe is shown it can find one by
+    planting it on a copy of the real config."""
     _, strategies, rp = _real()
     seen = set().union(*ml_consumers(strategies, rp).values())
-    assert {"trend_vol", "exit_head_close"} <= seen
+    assert "trend_vol" in seen
+    if "exit_head_close" not in seen:
+        strategies["trend_donchian_eth"]["exit_head_action"] = "close"
+        seen = set().union(*ml_consumers(strategies, rp).values())
+    assert "exit_head_close" in seen
 
 
 def _a_real_money_account(accounts):
@@ -134,6 +143,10 @@ def test_rostering_an_ml_leg_on_real_money_goes_red(consumer):
     if consumer == "advisory_downsize":
         leg = "trend_donchian"
         strategies[leg]["advisory_policy"] = {"mode": "downsize", "size_floor": 0.0}
+    elif consumer == "exit_head_close" and not any(consumer in cs for cs in armed.values()):
+        # no real leg arms it since 2026-11-12 (PR #25120): plant it, as advisory_downsize is planted
+        leg = "trend_donchian_eth"
+        strategies[leg]["exit_head_action"] = "close"
     else:
         leg = next(lg for lg, cs in sorted(armed.items()) if consumer in cs)
     acct = _a_real_money_account(accounts)

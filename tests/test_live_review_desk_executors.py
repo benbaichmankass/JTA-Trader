@@ -43,7 +43,9 @@ def test_the_cell_table():
     assert lra.ACTION_PATHS["bybit"] == frozenset({"close", "reduce", "move_tp", "widen_sl"})
     # phone: the amend channel (move_tp, widen_sl) plus the server-issued action channel (close, reduce), operator 2026-11-09
     assert lra.ACTION_PATHS["phone"] == frozenset({"move_tp", "close", "reduce", "widen_sl"})
-    assert lra.ACTION_PATHS["prop_vm"] == frozenset() and lra.ACTION_PATHS["other"] == frozenset()
+    # prop_vm: move_tp since PROP-BRACKET-APPLY (operator 2026-11-11, "it has to be able to do it on its own"):
+    # a ticket-meta TP request the account's own trail applies; refused per account that cannot amend a TP.
+    assert lra.ACTION_PATHS["prop_vm"] == frozenset({"move_tp"}) and lra.ACTION_PATHS["other"] == frozenset()
     assert lra.close_reason_for(DESK_PKG) == "strategy_close"
     assert lra.close_reason_for(tla.PKG) == lra.LIVE_REVIEW_CLOSE
 
