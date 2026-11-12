@@ -185,7 +185,7 @@ def run(a: argparse.Namespace) -> dict[str, Any]:
             fee = ec.resolve_fee_bps_roundtrip(sym, a.fee_bps_roundtrip)
             slip, fund = ec.resolve_cost_policy(sym, slippage_bps_roundtrip=a.slippage_bps_roundtrip)
             series[sym] = {"bars": bars, "cut": cut, "fee": fee, "slip": slip, "funding": fund}
-        except Exception as exc:  # noqa: BLE001 - a fetch fault is RECORDED per cell, never dropped
+        except Exception as exc:  # noqa: BLE001  # allow-silent: a fetch fault is RECORDED per cell as producer_failed with the error text, never dropped
             series[sym] = {"error": f"{type(exc).__name__}: {exc}"}
 
     arms_out: dict[str, Any] = {}
@@ -279,8 +279,8 @@ def _self_test() -> int:
     for i in range(800):
         o = px
         c = 100.0 + 0.6 * (o - 100.0) + random.gauss(0, 1.0)  # strong pull to 100
-        h, l = max(o, c) + abs(random.gauss(0, 0.3)), min(o, c) - abs(random.gauss(0, 0.3))
-        bars.append({"ts": t0 + dt.timedelta(days=i), "o": o, "h": h, "l": l, "c": c})
+        h, lo = max(o, c) + abs(random.gauss(0, 0.3)), min(o, c) - abs(random.gauss(0, 0.3))
+        bars.append({"ts": t0 + dt.timedelta(days=i), "o": o, "h": h, "l": lo, "c": c})
         px = c
     tr = simulate(bars, dict(DEFAULT_ARM), cost_bps=5.0, atr_period=14, sma=200)
     assert len(tr) > 50, len(tr)

@@ -15,7 +15,7 @@ def test_self_test_passes():
 
 def _bars(rows):
     t0 = dt.datetime(2022, 1, 3, tzinfo=dt.timezone.utc)
-    return [{"ts": t0 + dt.timedelta(days=i), "o": o, "h": h, "l": l, "c": c} for i, (o, h, l, c) in enumerate(rows)]
+    return [{"ts": t0 + dt.timedelta(days=i), "o": o, "h": h, "l": lo, "c": c} for i, (o, h, lo, c) in enumerate(rows)]
 
 
 def test_long_entry_at_signal_close_and_ibs_exit():
