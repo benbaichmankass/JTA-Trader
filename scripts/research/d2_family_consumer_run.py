@@ -77,8 +77,8 @@ def main() -> int:
         print("NO LEGS GRADABLE", file=sys.stderr)
         return 1
     base = [sys.executable, os.path.join(REPO, "scripts/research/regime_gate_family_consumer.py")]
-    for l in legs.items():
-        base += ["--leg", f"{l[0]}={l[1]}"]
+    for leg_name, leg_file in legs.items():
+        base += ["--leg", f"{leg_name}={leg_file}"]
     for tag, extra in (("PRIMARY", []), ("SINCE", ["--since", a.since])):
         print(f"=== GRADE {tag}")
         subprocess.run(base + extra, cwd=REPO, check=True)
