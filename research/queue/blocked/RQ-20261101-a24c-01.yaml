@@ -118,9 +118,9 @@ run:
   - --spread-source
   - quoted
   - --fwd-start
-  - '2026-11-01'
+  - '2025-10-01'
   - --fwd-end
-  - '2026-11-30'
+  - '2026-10-31'
   - --bybit-specs
   - comms/research/ML-ENTRY-UNIVERSE/local-20261101T1830Z/bybit_specs_20261101.json
   - --cache
@@ -154,10 +154,9 @@ blocked_on:
     floors the estimate); the lane git-mvs this file to research/queue/ with status queued, rule unchanged'
   cleared: '2026-11-05 lane ML-WEEK-1105: universe-costed landed with its self-test; dry run INDETERMINATE (window clause)'
 - kind: harness
-  ref: scripts/research/ml_decision_entry.py universe-costed --window symbol-holdout
-  what: universe-costed reads window S with per-symbol Corwin-Schultz spread + square-root impact
-  clears_when: lands with the unit's own planted-illiquid self-test
-  owner: lane ML-DECISION-MODELS (or the unit's owning ML lane)
+  ref: scripts/research/ml_decision_entry.py universe-costed (window = --fwd-start/--fwd-end)
+  what: window option; the symbol-holdout window is withdrawn by the 2026-11-12 amendment, so no new option is needed
+  cleared: '2026-11-12 lane ML-ENTRY-UNIVERSE-LEVER: the existing --fwd-start/--fwd-end read the amended in-hand window; the unit is run locally by the lane (kept in blocked/ so the runner does not double-claim the ledger)'
 ml_consumer:
   consumer: ML-ENTRY-ALL-ACCOUNTS
   decision: 'whether ml_entry on bybit_2 + bybit_portfolio widens from BTC/ETH/XRP/ADA/SOL to the rule''s universe U(C) beside the rostered legs
@@ -178,3 +177,11 @@ amendments:
   - 'RESEARCH-NO-WAIT (lane of Manager Session 2026-11-05b). Operator 2026-11-05 ~17:08Z, verbatim: "Why does it need to wait for November? That''s not the workflow - we iterate in the data we have till we find what works, we don''t wait for new months of data". Window registered BEFORE any run; no outcome inside it was read by this lane; the rule text and every threshold are NOT edited.'
   - 'WINDOW CHANGE: the read registered on the "forward window" / "fresh window" (2026-11) is REPLACED by the in-hand window below. S = symbol holdout: the 20 lexicographically first Binance USDT-M perps NOT in manifest bp2-f4271084b120 that have >= 3 years of 1h bars, over 2022-01-01..2026-10-31; list frozen by the driver and written to the result before any outcome is read; claimed through holdout_lock.py with an explicit symbols list (a disjoint symbol claim: correlated with the 60-perp windows, reported as such).'
   - 'The data/accrual blocker is removed: nothing here waits for a month to elapse. What remains is the driver option that reads this window (named in blocked_on, owner lane ML-DECISION-MODELS / the unit''s own lane).'
+- at: '2026-11-12'
+  before_any_run: true
+  by: lane ML-ENTRY-UNIVERSE-LEVER (session_01AFoLuMMg8vLQ8uZRMhBr68), dispatched by ML assistant manager session_01AFoLuJkXEM1EigH9mSfz1F
+  text:
+  - 'No outcome of THIS unit has been read: the only graded-style reads before this amendment are the 2026-11-05 INDETERMINATE dry run (no forward outcome read) and the one-snapshot re-cost in comms/research/ML-ENTRY-UNIVERSE/local-20261101T1830Z (pooled -0.0050 R/decision at the Sunday Bybit quoted spreads on the 51 listed symbols, 2025-10..2026-09). That prior look is disclosed; the ledger deflation below is what answers it. The rule text, C grid, arms A and B, floors, Q and n_trials are NOT edited.'
+  - 'WINDOW (supersedes the 2026-11 forward window AND the 2026-11-05 symbol-holdout window): 2025-10-01..2026-10-31, the in-hand window every date of which is after the frozen artifact train_end (ml/served/ml_decision_entry_v1 train_end_exclusive 2025-09-22; claim train_end 2025-09-30). Reason: (a) operator 2026-11-05 ~17:08Z, verbatim: "we iterate in the data we have till we find what works, we don''t wait for new months of data" and operator 2026-11-12 (p3): "things get promoted to real money based on backtesting"; (b) the symbol holdout over 2022-01-01..2026-10-31 would be REFUSED by holdout_lock (M13 rule 4, PI-20261105-GEXSLEAK-0001: a symbol holdout over training dates is refused); (c) the operator rule of 2026-11-04 fixes the tested population as the ML''s own passed population (the Bybit-listed 60-perp reference), not a different symbol set.'
+  - 'DEFLATION (HOLDOUT-DEFLATED-REUSE, M13): the read is claimed through holdout_lock.claim_read BEFORE any outcome is touched and is graded against the N-th-read point bar it returns (the ENTRY family has read this window many times; arm A passes only if mean/se >= that hurdle, not merely mean >= 0). Arm B (cost_gate) is unchanged. No new gate is added: this is the already-adopted ledger rule applied to the unit.'
+  - 'Run: python3 scripts/research/ml_decision_entry.py universe-costed --spread-source quoted --fwd-start 2025-10-01 --fwd-end 2026-10-31 (the run.command above is edited to match). Universe-costed harness and its planted-illiquid / one-tick-floor self-test are on main since 2026-11-05 (#23236); self-test re-run green 2026-11-12.'
