@@ -61,7 +61,7 @@ attribution:
 manifest:
   entry: tested
   exit: tested
-  filter: untested
+  filter: tested
   regime_gating: untested
   timeframe: untested
   symbol_set: untested
@@ -112,4 +112,68 @@ levers:
       points: 1
       best_delta_r_per_trade: -0.0562
       fold_stability: 0.167
+      reading: every tested value is worse than the baseline
+    be_floor_r:
+      tests:
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: C1
+        unit: RQ-20261111-203c-02
+        window: 2020-07-01..2026-10-15
+        n: 438
+        net_r: 76.1194
+        baseline_n: 434
+        baseline_net_r: 79.8676
+        delta_net_r: -3.7482
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 17.8415
+        verdict: pass
+        joint_change: false
+      shape: flat
+      points: 1
+      best_delta_r_per_trade: -0.0086
+      fold_stability: 0.5
+      reading: no response at the tested values
+  filter:
+    adx_min:
+      tests:
+      - value: '25'
+        baseline_value: 'off'
+        arm: F1
+        unit: RQ-20261111-203c-02
+        window: 2020-07-01..2026-10-15
+        n: 214
+        net_r: 20.2586
+        baseline_n: 434
+        baseline_net_r: 79.8676
+        delta_net_r: -59.609
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 18.1447
+        verdict: pass
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: -0.1373
+      fold_stability: 0.25
+      reading: every tested value is worse than the baseline
+    cooldown_bars:
+      tests:
+      - value: '4'
+        baseline_value: 'off'
+        arm: F2
+        unit: RQ-20261111-203c-02
+        window: 2020-07-01..2026-10-15
+        n: 376
+        net_r: 54.8398
+        baseline_n: 434
+        baseline_net_r: 79.8676
+        delta_net_r: -25.0278
+        folds_ge_baseline: 0/4
+        max_drawdown_r: 19.3851
+        verdict: pass
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: -0.0577
+      fold_stability: 0.0
       reading: every tested value is worse than the baseline

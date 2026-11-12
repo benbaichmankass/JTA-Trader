@@ -3,7 +3,8 @@
 subject: qqq_pullback_1h
 kind: strategy_leg
 status: testing
-books: []
+books:
+- alpaca_paper
 baseline:
   record: comms/strategy_evidence/qqq_pullback_1h.json
   net_r: 10.8351
@@ -68,12 +69,56 @@ attribution:
       gross_r: 13.09
 manifest:
   entry: untested
-  exit: untested
+  exit: tested
   filter: untested
   regime_gating: untested
   timeframe: untested
   symbol_set: untested
-  direction: untested
+  direction: tested
   session: untested
   sizing_vs_cost: untested
-levers: {}
+levers:
+  direction:
+    side_filter:
+      tests:
+      - value: long
+        baseline_value: 'off'
+        arm: S1
+        unit: RQ-20261111-203c-03
+        window: 2020-07-01..2026-10-15
+        n: 131
+        net_r: 47.3465
+        baseline_n: 214
+        baseline_net_r: 31.0315
+        delta_net_r: 16.315
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 12.4753
+        verdict: pass
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: 0.0762
+      fold_stability: 1.0
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
+  exit:
+    be_floor_r:
+      tests:
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: C1
+        unit: RQ-20261111-203c-03
+        window: 2020-07-01..2026-10-15
+        n: 247
+        net_r: 31.8611
+        baseline_n: 214
+        baseline_net_r: 31.0315
+        delta_net_r: 0.8296
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 14.881
+        verdict: pass
+        joint_change: false
+      shape: flat
+      points: 1
+      best_delta_r_per_trade: 0.0039
+      fold_stability: 0.5
+      reading: no response at the tested values
