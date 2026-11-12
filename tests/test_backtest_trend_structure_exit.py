@@ -55,3 +55,18 @@ def test_pullback_default_off_identical_and_structure_arm_live():
     assert st.returncode == 0 and "take_profit" in st.stdout
     assert _net_line(a.stdout) != _net_line(st.stdout)
     assert _run_pb("--structure-exit", "x").returncode == 2
+
+
+# STRUCTURE-EXIT-ITERATE: --structure-sl-only keeps the structure STOP and the declared capped TP (live pivot=N;sl_only).
+@pytest.mark.skipif(not CSV.exists(), reason="sample candles absent")
+@pytest.mark.parametrize("runner", [_run, _run_pb])
+def test_structure_sl_only_is_a_distinct_arm_and_default_off_identical(runner):
+    st = runner("--structure-exit", "pivot=3")
+    st_again = runner("--structure-exit", "pivot=3")
+    sl = runner("--structure-exit", "pivot=3", "--structure-sl-only")
+    assert st.returncode == 0 and sl.returncode == 0
+    assert _net_line(st.stdout) == _net_line(st_again.stdout)          # the flag absent = the existing arm, unchanged
+    assert "structure_sl_only" not in st.stdout and "'structure_sl_only': True" in sl.stdout
+    assert _net_line(sl.stdout) != _net_line(st.stdout)                 # dropping the structure TP changes the book
+    capped = runner("--structure-exit", "pivot=3", "--structure-sl-only", "--tp-cap-pct", "0.099", "--tp-r", "3.0")
+    assert capped.returncode == 0 and "take_profit" in capped.stdout    # the declared capped TP is what takes profit
