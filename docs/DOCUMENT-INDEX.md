@@ -643,6 +643,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/decision-brief-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/soak-decisions-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/soak-verdicts-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/plans/1h-survivor-promotion-proposals-2026-11-12.md` | evidence | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/thursday-planning-2026-11-11-readbacks.md` | evidence | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/thursday-planning-2026-11-12-answers.md` | evidence | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/ui-upgrade-1-auth-and-keys-design.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
