@@ -278,6 +278,12 @@ _CANONICAL_UNITS: tuple[str, ...] = (
     # confirm it is firing and read what it counted.
     "ict-security-watch.service",
     "ict-security-watch.timer",
+    # MANAGER-VM-DIRECT-OPS (2026-11-12): the direct ops channel's runner and
+    # its queue watch. Queryable so a session can confirm the path unit is
+    # watching and read the runner's journal when a job reads
+    # runner_not_picking_up.
+    "ict-ops-runner.service",
+    "ict-ops-runner.path",
     # MI-83 (2026-09-02). The hourly work digest, moved off GitHub Actions
     # cron onto the VM's own clock: work-digest.yml declares `20 * * * *` and
     # fired 5 times in a day at :19/:10/:33/:47 over its complete run history.
