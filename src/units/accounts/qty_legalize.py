@@ -234,6 +234,11 @@ def _resolve_venue_lot_rule(
             # SCOPED). A ceiling measured on Bybit's demo venue says nothing
             # about production, and vice versa: for an account on the other
             # venue this source cannot speak to a ceiling -> could_not_look.
+            # Gate decision: operator 2026-11-12 decisions page, Gates tab —
+            # GATE-LIVE-MAXQTY-COULD-NOT-LOOK: MAKE REPORT-ONLY. Record:
+            # comms/gates/gate_decisions_2026-11-12.json. `could_not_look` here
+            # never refuses: _submit_order labels the row (venue_max_label) and
+            # sends the qty unclamped, and the venue answers.
             measured_on = str(getattr(prof, "max_qty_venue", None) or "").strip().lower()
             if vmax is not None and measured_on in ("demo", "production"):
                 demo_flag = account_cfg.get("demo")

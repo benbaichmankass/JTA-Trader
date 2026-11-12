@@ -1571,6 +1571,9 @@ def _submit_order(client: Any, order: dict, account_cfg: dict,
             #                     SILENTLY: this is the state that was invisible.
             _vm_label = venue_max_label(_legal)
             if _vm_label is not None:
+                # Gate decision: operator 2026-11-12 decisions page, Gates tab —
+                # GATE-LIVE-MAXQTY-COULD-NOT-LOOK: MAKE REPORT-ONLY. Record:
+                # comms/gates/gate_decisions_2026-11-12.json.
                 # A LABEL, never a refusal (operator no-new-gates rule; AM
                 # directive 2026-11-12 11:52Z): the order is sized and sent as
                 # normal, and the journal row records that its ceiling was not
