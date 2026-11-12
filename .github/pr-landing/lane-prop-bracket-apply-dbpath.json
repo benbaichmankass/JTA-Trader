@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 2 system-action wrapper (scripts/ops/amend_prop_bracket_action.sh). Fixes a defect in #25016 found by its first dry run (#25083 refused: ticket not readable in the prop journal, because the wrapper never resolved the runtime DB path). The manager merges and deploys, then re-dispatches the dry run. The operator's PROP-BRACKET-APPLY decision (2026-11-11) stands behind it.",
+  "why": "The wrapper must load the runtime env (runtime_db_path, exported as TRADE_JOURNAL_DB) like every sibling wrapper, or prop_journal opens a default path on the VM."
+}

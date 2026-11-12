@@ -22,6 +22,16 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/_lib.sh"
 
 cd "${REPO_DIR}"
+# The prop journal lives in the canonical trade_journal.db. A system-action wrapper runs from a fresh SSH shell and does
+# NOT inherit the systemd services' DATA_DIR / TRADE_JOURNAL_DB, so resolve them exactly as every sibling wrapper does
+# (src.utils.paths then opens the same file the executor and the web API use). Without this the first dry run read an
+# empty default path: "ticket ... not readable in the prop journal" (issue #25083).
+DB_PATH="$(runtime_db_path)"
+export TRADE_JOURNAL_DB="${DB_PATH}"
+if [ ! -f "${DB_PATH}" ]; then
+    log "ERROR: trade_journal.db not present at ${DB_PATH}."
+    exit 1
+fi
 ACCOUNT_ID="${ACCOUNT_ID:?ACCOUNT_ID required}"
 ACTION_TICKET_ID="${ACTION_TICKET_ID:?ACTION_TICKET_ID required}"
 ACTION_REASON="${ACTION_REASON:?ACTION_REASON required}"
