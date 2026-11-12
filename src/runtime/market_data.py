@@ -662,34 +662,10 @@ def _candle_cache_put(key: Optional[tuple], df, limit: Optional[int] = None) -> 
         _CANDLE_CACHE[key] = (time.monotonic(), time.time(), df.copy(), ttl, stored_limit)
 
 
-#: SINGLE-FLIGHT (VENUE-KLINE-RATE-LIMIT): one lock per cache key, so when the main loop, the exit-evaluation loop and
-#: the per-account fan-out ask for the same frame in the same second, ONE venue call is made and the others read its
-#: result. Bounded by the key space (venue x symbol x timeframe); a waiter gives up after
-#: ``_INFLIGHT_WAIT_S`` and fetches itself, so a hung venue call can never stall another leg past its bar.
-_INFLIGHT: Dict[Any, threading.Lock] = {}
-_INFLIGHT_LOCK = threading.Lock()
-_INFLIGHT_WAIT_S = 20.0
-
-
-def _inflight_lock(key: tuple) -> threading.Lock:
-    with _INFLIGHT_LOCK:
-        lk = _INFLIGHT.get(key)
-        if lk is None:
-            if len(_INFLIGHT) > 4096:
-                # Drop only idle locks; a held one is somebody's in-flight fetch.
-                for k in [k for k, v in _INFLIGHT.items() if not v.locked()]:
-                    _INFLIGHT.pop(k, None)
-            lk = threading.Lock()
-            _INFLIGHT[key] = lk
-        return lk
-
-
 def reset_candle_cache() -> None:
     """Drop every cached frame. For tests and for a forced refresh."""
     with _CANDLE_CACHE_LOCK:
         _CANDLE_CACHE.clear()
-    with _INFLIGHT_LOCK:
-        _INFLIGHT.clear()
 
 
 def _fetch_phase(name: str, venue: str = "unknown"):
@@ -898,37 +874,24 @@ def fetch_candles(
     # bar closed", which an entry stored after the latest close already satisfies (VENUE-KLINE-RATE-LIMIT). Every
     # closed-bar leg asks with bypass at the same boundary, so this is where the duplicate burst was.
     venue = _venue_of_client(exchange_client)
-
-    def _hit():
-        return _candle_cache_get(cache_key, limit, post_close=bypass_cache)
-
-    cached = _hit()
-    lock = None
-    if cached is None and cache_key is not None:
-        lock = _inflight_lock(cache_key)
-        acquired = lock.acquire(timeout=_INFLIGHT_WAIT_S)
-        if not acquired:
-            lock = None          # waited long enough: fetch ourselves, never stall a leg on another's call
-        else:
-            cached = _hit()      # the call we waited on may have just stored it
-    try:
-        if cached is not None:
-            # Counted for its `n` (see _fetch_phase): hits vs misses is the empirical
-            # test of whether the cache reaches across ticks at all.
-            with _fetch_phase("cache_hit", venue):
-                pass
-            # .copy() is load-bearing: a builder that mutates the frame (adds an
-            # indicator column) must not corrupt the copy the next builder sees.
-            frame = cached.copy()
-        else:
-            _tf_label = str(timeframe).strip().lower() or "unknown"
-            with _fetch_phase(_tf_label, venue):
-                frame = _fetch_candles_uncached(
-                    exchange_client, symbol, timeframe, limit, since, cache_key
-                )
-    finally:
-        if lock is not None:
-            lock.release()
+    # Only an ALREADY-COMPLETED frame is shared. A fetch never waits on another caller's in-flight fetch (AM-OPS
+    # ruling 2026-11-12 on #25256: no wait on the trade path), so two callers missing in the same instant each call
+    # the venue, exactly as before this row.
+    cached = _candle_cache_get(cache_key, limit, post_close=bypass_cache)
+    if cached is not None:
+        # Counted for its `n` (see _fetch_phase): hits vs misses is the empirical
+        # test of whether the cache reaches across ticks at all.
+        with _fetch_phase("cache_hit", venue):
+            pass
+        # .copy() is load-bearing: a builder that mutates the frame (adds an
+        # indicator column) must not corrupt the copy the next builder sees.
+        frame = cached.copy()
+    else:
+        _tf_label = str(timeframe).strip().lower() or "unknown"
+        with _fetch_phase(_tf_label, venue):
+            frame = _fetch_candles_uncached(
+                exchange_client, symbol, timeframe, limit, since, cache_key
+            )
     return trim_to_asof(frame, symbol, timeframe, _asof) if _asof is not None else frame
 
 

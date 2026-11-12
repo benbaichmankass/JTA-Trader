@@ -227,28 +227,36 @@ def test_non_bybit_client_post_close_read_always_calls_venue(monkeypatch):
     assert _Stub.calls == 2
 
 
-# ------------------------------------------------------------------------------------------------- single-flight
+# --------------------------------------------------------------------------------------- no wait on the trade path
 
 
-def test_concurrent_readers_share_one_in_flight_fetch(monkeypatch):
+def test_a_fetch_never_waits_on_another_in_flight_fetch(monkeypatch):
+    """AM-OPS ruling 2026-11-12 (#25256): only a COMPLETED frame is shared. Two callers missing at the same instant
+    each call the venue in parallel; neither blocks on the other."""
     close = _now_after_close(monkeypatch, 30)
-    v = _Venue(monkeypatch, lambda s, tf, n: _frame(close, n), delay=0.2)
-    clients = [_bybit(monkeypatch, key=f"acct{i}") for i in range(6)]
+    v = _Venue(monkeypatch, lambda s, tf, n: _frame(close, n), delay=0.3)
+    clients = [_bybit(monkeypatch, key=f"acct{i}") for i in range(4)]
     out = []
 
     def run(c):
         out.append(md.fetch_candles("BTCUSDT", "1h", exchange_client=c, limit=200, bypass_cache=True))
 
     threads = [threading.Thread(target=run, args=(c,)) for c in clients]
+    t0 = time.monotonic()
     for t in threads:
         t.start()
     for t in threads:
         t.join(5)
-    assert len(v.calls) == 1
-    assert len(out) == 6 and all(f is not None and len(f) == 200 for f in out)
+    wall = time.monotonic() - t0
+    assert len(out) == 4 and all(f is not None and len(f) == 200 for f in out)
+    assert len(v.calls) == 4                # nobody waited for the in-flight call
+    assert wall < 0.9                       # parallel, not serialized (4 x 0.3 s = 1.2 s if they queued)
+    # once completed, the frame IS shared
+    md.fetch_candles("BTCUSDT", "1h", exchange_client=clients[0], limit=200, bypass_cache=True)
+    assert len(v.calls) == 4
 
 
-def test_failed_fetch_is_not_cached_and_waiters_retry(monkeypatch):
+def test_failed_fetch_is_not_cached(monkeypatch):
     close = _now_after_close(monkeypatch, 30)
     answers = [None, _frame(close, 200)]
     v = _Venue(monkeypatch, lambda s, tf, n: answers[min(len(v.calls) - 1, 1)])
@@ -256,18 +264,3 @@ def test_failed_fetch_is_not_cached_and_waiters_retry(monkeypatch):
     assert md.fetch_candles("BTCUSDT", "1h", exchange_client=c, limit=200) is None
     assert md.fetch_candles("BTCUSDT", "1h", exchange_client=c, limit=200) is not None
     assert len(v.calls) == 2
-
-
-def test_waiter_gives_up_and_fetches_itself(monkeypatch):
-    close = _now_after_close(monkeypatch, 30)
-    monkeypatch.setattr(md, "_INFLIGHT_WAIT_S", 0.05)
-    v = _Venue(monkeypatch, lambda s, tf, n: _frame(close, n))
-    c = _bybit(monkeypatch)
-    key = md._candle_cache_key(c, "BTCUSDT", "1h", 200, None)
-    lk = md._inflight_lock(key)
-    lk.acquire()                         # somebody else's hung call
-    try:
-        out = md.fetch_candles("BTCUSDT", "1h", exchange_client=c, limit=200)
-    finally:
-        lk.release()
-    assert out is not None and len(v.calls) == 1
