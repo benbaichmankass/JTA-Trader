@@ -1,5 +1,7 @@
 {
   "tier": 1,
-  "landing": "self",
-  "why": "Tier-1 research only: a pre-registered research/queue unit (RQ-20261112-8d20-01) with its committed evidence record and mechanical grade (FAIL, no config proposal), a sibling unit filed blocked (RQ-20261112-8d20-02), a new read-only research script, and the holdout-ledger lines recording the two reads. No config, no src/, no order path, no deploy. Gates this adds or changes: none."
+  "landing": "hold",
+  "why": "HELD for the manager's merge (Tier 1 research): pr-landing R5 self-lands a NEW unit only as a pre-run registration in a PR with no result, and never a new research/queue/blocked/ unit. This PR carries the registration (pushed to the branch before the run, commit 99c858fd1), the run's evidence record + mechanical grade (FAIL, no proposal), a blocked sibling unit, a read-only research script + capability-index row, and two holdout-ledger lines. No config, src/, order path or deploy. Gates this adds or changes: none.",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "R5 vouches a new unit only as a pre-run registration with no result in the PR, and never a new research/queue/blocked/ unit; this PR carries both a graded result and a blocked sibling, so the manager merges it."
 }
