@@ -28,13 +28,24 @@ time window (``breakout_executor`` reticket guard); supersede needs a resting
 order, which no longer exists. Without the flag a ``placed`` row is refused as
 before: closing the record of an order that is still resting would hide its fill.
 
+``--from-placed`` also accepts a ``skipped`` ticket that carries a ``placed`` fill
+row (BREAKOUT2-ETH-RISKBOOK-GAP 2026-11-12): breakout_2 ETHUSDT long
+``prop-manual-c54b2229aa1c`` has a phone-confirmed ``placed`` fill (244) while its
+ticket reads ``skipped``; the position filled and stopped out at the venue. Every
+other ticket status is still refused.
+
+``--entry-price`` (optional, positive) overrides the entry the close row carries
+when the fill row's own ``entry_price`` is NULL or wrong (fill 244 was stored NULL
+because the phone reports the key ``entry``). The fill row's own value is kept in
+the report as ``entry_price_journaled``, and ``entry_price_source`` says which won.
+
 Refused (exit 3, nothing written), fail-closed:
   * ``account`` is not configured in ``config/prop_platforms.yaml``;
   * the ticket is missing or belongs to another account;
   * the ticket has no ``open``/``filled`` fill row (nor, with ``--from-placed``, a
-    ``placed`` row on a ``placed`` ticket), or already has a ``closed`` one;
+    ``placed`` row on a ``placed``/``skipped`` ticket), or already has a ``closed`` one;
   * a NEWER fill row exists for the same position key (the open row is stale);
-  * ``exit_price`` is not a positive number, ``closed_at`` is not ISO-8601.
+  * ``exit_price`` / ``entry_price`` is not a positive number, ``closed_at`` is not ISO-8601.
 
 The close notification (push + Telegram) is suppressed: this is journal repair
 after the fact, not a live trade event. The row stays visible in the audit.
@@ -58,6 +69,8 @@ if str(_REPO_ROOT) not in sys.path:
 
 OPEN_STATUSES = ("open", "filled")
 PLACED_STATUS = "placed"
+# Ticket statuses on which --from-placed may close a `placed` fill row.
+FROM_PLACED_TICKET_STATUSES = ("placed", "skipped")
 SOURCE = "prop_report_close_action"
 
 
@@ -101,7 +114,8 @@ def _canon_dir(d: Any) -> str:
 
 def plan(conn: sqlite3.Connection, *, account_id: str, ticket_id: str,
          exit_price: Optional[str], closed_at: Optional[str], reason: str,
-         accounts: Set[str], now: datetime, from_placed: bool = False) -> Dict[str, Any]:
+         accounts: Set[str], now: datetime, from_placed: bool = False,
+         entry_price: Optional[str] = None) -> Dict[str, Any]:
     """The decision, without writing: ``{"ok", "why", "ticket", "open_fill", "report"}``."""
     out: Dict[str, Any] = {"ok": False, "account_id": account_id, "ticket_id": ticket_id,
                            "ticket": None, "open_fill": None, "report": None}
@@ -116,6 +130,16 @@ def plan(conn: sqlite3.Connection, *, account_id: str, ticket_id: str,
             px = None
         if px is None or not px > 0 or px != px or px == float("inf"):
             out["why"] = f"exit_price {exit_price!r} must be a positive number"
+            return out
+    entry_override: Optional[float] = None
+    if entry_price not in (None, ""):
+        try:
+            entry_override = float(entry_price)
+        except (TypeError, ValueError):
+            entry_override = None
+        if (entry_override is None or not entry_override > 0 or entry_override != entry_override
+                or entry_override == float("inf")):
+            out["why"] = f"entry_price {entry_price!r} must be a positive number"
             return out
     closed_dt = now
     if closed_at not in (None, ""):
@@ -139,7 +163,7 @@ def plan(conn: sqlite3.Connection, *, account_id: str, ticket_id: str,
         out["why"] = "ticket already has a closed prop_fills row -- already closed"
         return out
     opens = [f for f in fills if str(f.get("status") or "").lower() in OPEN_STATUSES]
-    if not opens and from_placed and str(tk.get("status") or "").lower() == PLACED_STATUS:
+    if not opens and from_placed and str(tk.get("status") or "").lower() in FROM_PLACED_TICKET_STATUSES:
         opens = [f for f in fills if str(f.get("status") or "").lower() == PLACED_STATUS]
     if not opens:
         out["why"] = ("no open/filled prop_fills row references this ticket "
@@ -156,6 +180,9 @@ def plan(conn: sqlite3.Connection, *, account_id: str, ticket_id: str,
                       f"fill {of['id']} is not the position's latest state -- refused")
         return out
     qty, entry = of.get("qty"), of.get("entry_price")
+    journaled_entry = entry
+    if entry_override is not None:
+        entry = entry_override
     report: Dict[str, Any] = {
         "kind": "fill", "status": "closed", "account_id": account_id, "ticket_id": ticket_id,
         "symbol": of.get("symbol"), "direction": of.get("direction"), "qty": qty,
@@ -163,6 +190,9 @@ def plan(conn: sqlite3.Connection, *, account_id: str, ticket_id: str,
         "closed_at": closed_dt.isoformat(), "source": SOURCE,
         "provenance": "UNVERIFIED", "reason": reason or "closed on the terminal; journaled by prop-report-close",
     }
+    if entry_override is not None:
+        report["entry_price_source"] = "override"
+        report["entry_price_journaled"] = journaled_entry
     if px is not None and isinstance(qty, (int, float)) and isinstance(entry, (int, float)):
         sign = -1.0 if _canon_dir(of.get("direction")) == "short" else 1.0
         report["pnl"] = round((px - entry) * qty * sign, 4)
@@ -226,7 +256,10 @@ def main(argv: Optional[list] = None) -> int:
     ap.add_argument("--reason", default="")
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--from-placed", action="store_true",
-                    help="also close a `placed` fill row on a `placed` ticket (filled + closed off-journal)")
+                    help="also close a `placed` fill row on a `placed` or `skipped` ticket "
+                         "(filled + closed off-journal)")
+    ap.add_argument("--entry-price", default=None,
+                    help="override the entry the close row carries (fill row's entry_price NULL or wrong)")
     ap.add_argument("--platforms", default=None, help="prop_platforms.yaml (tests)")
     ap.add_argument("--now", default=None, help="ISO time (tests)")
     a = ap.parse_args(argv)
@@ -238,7 +271,7 @@ def main(argv: Optional[list] = None) -> int:
         decision = plan(conn, account_id=a.account, ticket_id=a.ticket_id,
                         exit_price=a.exit_price, closed_at=a.closed_at, reason=a.reason,
                         accounts=configured_accounts(Path(a.platforms) if a.platforms else None), now=now,
-                        from_placed=a.from_placed)
+                        from_placed=a.from_placed, entry_price=a.entry_price)
     finally:
         conn.close()
     decision["mode"] = "apply" if a.apply else "dry_run"

@@ -179,6 +179,11 @@ if command -v ufw >/dev/null 2>&1; then
 fi
 echo "iptables INPUT policy: $($SUDO iptables -S INPUT 2>/dev/null | head -n1 || echo UNREADABLE)"
 echo "iptables INPUT rules: $($SUDO iptables -S INPUT 2>/dev/null | grep -c '^-A' || true)"
+# The rules themselves (proto, port, target). Source addresses go through mask():
+# 0.0.0.0/0 stays readable, every other address is masked.
+echo "iptables INPUT rules (in order):"
+$SUDO iptables -S INPUT 2>/dev/null | grep '^-A' | sed 's/^/  /' || echo "  UNREADABLE"
+echo "ip6tables INPUT policy: $($SUDO ip6tables -S INPUT 2>/dev/null | head -n1 || echo UNREADABLE)"
 
 hdr "end"
 } 2>&1 | mask
