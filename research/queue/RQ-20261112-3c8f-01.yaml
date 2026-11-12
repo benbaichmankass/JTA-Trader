@@ -110,3 +110,10 @@ related:
 - RQ-20261112-a7e8-01
 - RQ-20261112-3c8f-02
 blocked_reason: 'research-script-run cannot fetch the registered basket until PR #25135 (yfinance map for DIA + 7 sector SPDRs) is on main: a runner would grade a wrong-population run. Unblock (status queued) when #25135 merges, unless a local run has already landed a result row (then the unit is consumed). Owner: ML standing lane, row FRONTIER-STATIC-MARKETS.'
+blocked:
+  reason: research-script-run cannot fetch the registered basket until PR #25135 (yfinance map for DIA + 7 sector SPDRs) is on main.
+  owner: ML standing lane (row FRONTIER-STATIC-MARKETS)
+  since: '2026-11-12'
+  set_by: unit author; structured 2026-11-12 by lane UNBLOCK-WATCH (PR #25135 is MERGED, 8692fce3f, and results landed in #25146)
+  clears_when:
+  - pr_merged:25135

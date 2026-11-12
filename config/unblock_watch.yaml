@@ -1,0 +1,10 @@
+# UNBLOCK-WATCH writer switch (row UNBLOCK-WATCH; grammar src/runtime/unblock_conditions.py).
+#
+# Gates this adds or changes: NONE while false.
+#   false (default): scripts/ops/checklist.py and scripts/ops/pipeline.py WARN when a blocked/waiting item has no
+#                    machine-checkable clears_when, and the daily brief lists it as `unconditioned`.
+#   true:            the same two writers REFUSE that write (a writer-side gate). Only the OPERATOR flips this
+#                    (canonical § "No new gates without the operator's permission"); the manager asked 2026-11-12.
+#                    Closing an item (done/dropped/killed) is never refused either way.
+# How to remove: leave false, or delete this file (unreadable reads as false).
+refuse_unconditioned: false
