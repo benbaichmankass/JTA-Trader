@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "SEC-VM-POSTURE-READ, approved by the manager at 03:32Z. Two read-only additions to security-posture-report: (1) an outside-in probe run on the GitHub runner, scripts/ops/external_port_probe.py: TCP connect then close to 22 (control), 111, 8001 and 2019 on the trader's public address, plus one portmapper NULL call on UDP 111; it prints a label, never the address; (2) the report prints the iptables INPUT rules, with sources masked except 0.0.0.0/0, and the ip6tables policy. This answers whether rpcbind :111 and :8001, both bound to 0.0.0.0, are reachable from outside. No host mutation, no order path, strategy, config or service change."
+}
