@@ -1,0 +1,91 @@
+{
+ "schema_version": 1,
+ "research_unit": "RQ-20261112-0bc8-02",
+ "read_state": "measured",
+ "verdict": "fail",
+ "note": "comp - champion CI UB +0.0053 < +0.01: cannot reach the bar",
+ "n": 901,
+ "population": {
+  "n": 901,
+  "description": "OOS harness trades of ['trend_donchian', 'trend_donchian_eth', 'trend_donchian_sol'] (1h), 5-fold sequential walk-forward per leg, 3 heads retrained per fold on pooled rows.jsonl (n 34919) bar_t <= fold start - 7.0 d; paired per-trade replayed R, comp vs champion and comp vs vol"
+ },
+ "decision_rule": {
+  "id": "RULE-VOLCOMP-EXITHEAD-01",
+  "registered_at": "2026-11-12",
+  "registered_before_run": true
+ },
+ "measurement": {
+  "judge": {
+   "verdict": "fail",
+   "why": "comp - champion CI UB +0.0053 < +0.01: cannot reach the bar",
+   "comp_vs_champion": {"n": 901, "mean": -0.00032, "se": 0.00284, "ci95": [-0.0059, 0.00525]},
+   "comp_vs_vol": {"n": 901, "mean": 0.00255, "se": 0.00333, "ci95": [-0.00398, 0.00908]}
+  },
+  "per_leg_comp_vs_champion": {
+   "trend_donchian": {"n": 296, "mean": -0.00093, "se": 0.00304, "ci95": [-0.00688, 0.00503]},
+   "trend_donchian_eth": {"n": 605, "mean": -3e-05, "se": 0.00397, "ci95": [-0.0078, 0.00775]},
+   "trend_donchian_sol": {"n": 0, "mean": null, "se": null, "ci95": null}
+  },
+  "arm_dr_vs_hold_context": {
+   "champion": {"n": 901, "mean": -0.10552, "se": 0.06095, "ci95": [-0.22497, 0.01393]},
+   "vol": {"n": 901, "mean": -0.10839, "se": 0.06107, "ci95": [-0.22809, 0.0113]},
+   "comp": {"n": 901, "mean": -0.10584, "se": 0.06097, "ci95": [-0.22535, 0.01367]}
+  },
+  "rows_joined_share": 0.9985,
+  "kline_coverage": {
+   "BTCUSDT": {"state": "fetched", "bars": 59660, "months_missing": ["2019-09", "2019-10", "2019-11", "2019-12"]},
+   "ETHUSDT": {"state": "fetched", "bars": 59660, "months_missing": ["2019-09", "2019-10", "2019-11", "2019-12"]},
+   "SOLUSDT": {"state": "fetched", "bars": 53365, "months_missing": ["2019-09", "2019-10", "2019-11", "2019-12", "2020-01", "2020-02", "2020-03", "2020-04", "2020-05", "2020-06", "2020-07", "2020-08"]}
+  },
+  "cost_basis": {
+   "BTCUSDT": {"fee_bps_roundtrip": 7.5, "slippage_bps_roundtrip": 3.0, "funding_bps_per_window": 1.0, "funding_window_hours": 8.0},
+   "ETHUSDT": {"fee_bps_roundtrip": 7.5, "slippage_bps_roundtrip": 3.0, "funding_bps_per_window": 1.0, "funding_window_hours": 8.0},
+   "SOLUSDT": {"fee_bps_roundtrip": 7.5, "slippage_bps_roundtrip": 3.0, "funding_bps_per_window": 1.0, "funding_window_hours": 8.0}
+  },
+  "legs": [
+   {
+    "leg": "trend_donchian", "symbol": "BTCUSDT", "read_state": "measured", "n_total_trades": 445, "block_n": 74,
+    "folds": [
+     {"fold_index": 1, "n_test_trades": 74, "train_rows_n": 0, "test_start": "2021-07-11T21:00:00+00:00", "read_state": "unestablishable", "reason": "test n 74 / train rows 0 under floor"},
+     {"fold_index": 2, "n_test_trades": 74, "train_rows_n": 9159, "test_start": "2022-11-04T05:00:00+00:00", "read_state": "measured", "n_fired": {"champion": 55, "vol": 56, "comp": 56}},
+     {"fold_index": 3, "n_test_trades": 74, "train_rows_n": 14751, "test_start": "2023-10-20T08:00:00+00:00", "read_state": "measured", "n_fired": {"champion": 61, "vol": 61, "comp": 61}},
+     {"fold_index": 4, "n_test_trades": 74, "train_rows_n": 21690, "test_start": "2024-10-06T14:00:00+00:00", "read_state": "measured", "n_fired": {"champion": 66, "vol": 66, "comp": 66}},
+     {"fold_index": 5, "n_test_trades": 74, "train_rows_n": 29559, "test_start": "2025-10-23T17:00:00+00:00", "read_state": "measured", "n_fired": {"champion": 60, "vol": 60, "comp": 60}}
+    ],
+    "baseline_net_total_r": 65.4045, "data_start": "2020-07-06 00:00:00+00:00", "data_end": "2026-11-11 23:00:00+00:00"
+   },
+   {
+    "leg": "trend_donchian_eth", "symbol": "ETHUSDT", "read_state": "measured", "n_total_trades": 726, "block_n": 121,
+    "folds": [
+     {"fold_index": 1, "n_test_trades": 121, "train_rows_n": 889, "test_start": "2021-08-25T08:00:00+00:00", "read_state": "measured", "n_fired": {"champion": 113, "vol": 112, "comp": 112}},
+     {"fold_index": 2, "n_test_trades": 121, "train_rows_n": 8653, "test_start": "2022-10-07T12:00:00+00:00", "read_state": "measured", "n_fired": {"champion": 109, "vol": 109, "comp": 109}},
+     {"fold_index": 3, "n_test_trades": 121, "train_rows_n": 14496, "test_start": "2023-10-02T18:00:00+00:00", "read_state": "measured", "n_fired": {"champion": 115, "vol": 115, "comp": 115}},
+     {"fold_index": 4, "n_test_trades": 121, "train_rows_n": 21263, "test_start": "2024-09-19T00:00:00+00:00", "read_state": "measured", "n_fired": {"champion": 110, "vol": 110, "comp": 110}},
+     {"fold_index": 5, "n_test_trades": 121, "train_rows_n": 28669, "test_start": "2025-09-17T22:00:00+00:00", "read_state": "measured", "n_fired": {"champion": 107, "vol": 108, "comp": 108}}
+    ],
+    "baseline_net_total_r": 70.6405, "data_start": "2020-07-06 00:00:00+00:00", "data_end": "2026-11-11 23:00:00+00:00"
+   },
+   {
+    "leg": "trend_donchian_sol", "symbol": "SOLUSDT", "read_state": "unestablishable", "n_total_trades": 361, "block_n": 60,
+    "folds": [
+     {"fold_index": 1, "n_test_trades": 60, "train_rows_n": 376, "test_start": "2021-08-03T12:00:00+00:00", "read_state": "unestablishable", "reason": "test n 60 / train rows 376 under floor"},
+     {"fold_index": 2, "n_test_trades": 60, "train_rows_n": 8807, "test_start": "2022-10-16T19:00:00+00:00", "read_state": "unestablishable", "reason": "test n 60 / train rows 8807 under floor"},
+     {"fold_index": 3, "n_test_trades": 60, "train_rows_n": 14743, "test_start": "2023-10-19T15:00:00+00:00", "read_state": "unestablishable", "reason": "test n 60 / train rows 14743 under floor"},
+     {"fold_index": 4, "n_test_trades": 60, "train_rows_n": 21690, "test_start": "2024-10-06T14:00:00+00:00", "read_state": "unestablishable", "reason": "test n 60 / train rows 21690 under floor"},
+     {"fold_index": 5, "n_test_trades": 60, "train_rows_n": 29138, "test_start": "2025-10-08T17:00:00+00:00", "read_state": "unestablishable", "reason": "test n 60 / train rows 29138 under floor"}
+    ],
+    "baseline_net_total_r": 26.7766, "data_start": "2020-09-14 07:00:00+00:00", "data_end": "2026-11-11 23:00:00+00:00"
+   }
+  ],
+  "lookback": 500
+ },
+ "caveats": [
+  "Binance USD-M 1h klines PROXY the venue's trade count (Bybit klines carry none); composition columns are NaN for rows.jsonl symbols Binance does not list (rows_joined_share).",
+  "Walk-forward spans overlap the window f5c8-02 read (2021-01..2026-09) when it selected the feature."
+ ],
+ "generated_at": "2026-11-12T10:01:35Z",
+ "produced_by": {
+  "tool": "python3 scripts/research/volcomp_exit_head_bakeoff.py"
+ },
+ "transcription_note": "Copied from the VERDICT_JSON block of the trainer-vm-diag relay comment (issue #25202, comment 6820559492, run 43187689666) at harness commit bb48f60347917821b757832566d359cc50ba0bfb; values unchanged, whitespace compacted."
+}

@@ -118,6 +118,8 @@ def simulate(bars: Sequence[dict], *, side: str, entry_ref: float, r_dist: float
             a = todo.pop(0)
             if a["kind"] == "set_stop" and tight(a["level"], stop):
                 stop = a["level"]
+            elif a["kind"] == "widen_stop":                        # CF-D3: a deliberate LOOSENING (``set_stop`` only ever tightens)
+                stop = a["level"]
             elif a["kind"] == "set_tp":
                 cur_tp = a["level"]
             elif a["kind"] == "close":
