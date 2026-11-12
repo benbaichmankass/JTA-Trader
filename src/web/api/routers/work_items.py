@@ -294,7 +294,7 @@ def lanes(next_n: int = Query(default=5, ge=1, le=50), list_cap: int = Query(def
     ``stuck`` (``blocked``, or open with ``blocked_on`` set) and ``next`` (queued, by ``priority_rank``
     then ``due_at``). Each list is ``{read_state, count, items[{id, title, state, updated_at}]}``;
     ``count`` is the full count, ``items`` capped at ``list_cap`` (``next`` at ``next_n``).
-    ``week_lanes`` reuses ``console_connector.data.week_lane_totals``. ``headline`` is null with
+    ``week_lanes`` reuses ``work_read.week_lane_totals`` (the console's function). ``headline`` is null with
     ``headline_read_state: absent`` until the AM writes one (prose, never derived here)."""
     now = datetime.now(timezone.utc)
     midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -331,7 +331,7 @@ def lanes(next_n: int = Query(default=5, ge=1, le=50), list_cap: int = Query(def
         out_lanes.append({"am": am, "open": len(open_rows), "headline": None, "headline_read_state": "absent",
                           "moved_today": block(moved, list_cap), "working_now": block(working, list_cap),
                           "stuck": block(stuck, list_cap), "next": block(queued, next_n)})
-    from src.console_connector.data import week_lane_totals
+    from src.runtime.work_read import week_lane_totals
     wl = week_lane_totals([{"week_lane": _week_lane(it), "state": it.get("state")} for it in items])
     return {"read_state": "read", "as_of": now.isoformat(timespec="seconds").replace("+00:00", "Z"),
             "moved_since": since, "lanes": out_lanes, "week_lanes": wl,
