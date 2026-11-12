@@ -73,6 +73,15 @@ class SWRCache:
             ent = self._data.get(key)
         return ent, (self.clock() - ent.at) if ent else float("inf")
 
+    def peek(self, key: Hashable) -> tuple[Any, float]:
+        """The cached value and its age in seconds, WITHOUT building or refreshing anything.
+
+        ``(None, inf)`` when nothing is cached. For passive readers (the SSE broadcaster) that must
+        add no load of their own: they reuse whatever the routes already computed, with its age.
+        """
+        ent, age = self._peek(key)
+        return (ent.value if ent is not None else None), age
+
     def clear(self) -> None:
         with self._lock:
             self._data.clear()

@@ -234,6 +234,13 @@ MEASURED_SOURCES = frozenset({
     # level) this is not a derivation. Written by
     # order_monitor._sweep_exit_label_from_bracket_order (EXIT-CLUSTER).
     "venue_bracket_order",
+    # `exit_reason_source` / `exit_price_source`: the exit read from the FILLED
+    # bracket leg of the row's own Alpaca parent order
+    # (`/v2/orders/{broker_order_id}?nested=true`). The venue says which leg
+    # (stop or limit) filled, at what average price and when, so both the
+    # reason and the price are measurements, not derivations. Written by
+    # order_monitor._sweep_alpaca_close_from_broker_leg (ALPACA-CLOSE-BROKER-TRUTH).
+    "broker_leg_fill",
 })
 
 ESTIMATED_SOURCES = frozenset({
