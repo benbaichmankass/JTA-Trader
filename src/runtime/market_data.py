@@ -504,6 +504,43 @@ def _client_identity_token(client: Any) -> Optional[int]:
     return token
 
 
+def _shared_market_identity(client: Any) -> Optional[tuple]:
+    """A KEY-INDEPENDENT identity for venues whose candles are PUBLIC, or ``None``.
+
+    VENUE-KLINE-RATE-LIMIT (PI-20261106-5A1BGFHC-0003, PI-20261104-GEVRW4ZM-0001). Bybit klines are public market
+    data: the API key on the connector does not change a single candle, but the client cache builds one connector per
+    ``settings`` (one per account key, plus a keyless one), so the per-client token below gave every account its own
+    cache slot and the bar-close burst fetched the same (symbol, timeframe) once per account. Bybit's retCode 10006
+    ("Too many visits") is answered per IP, so those duplicates spend the one budget every consumer shares. Measured
+    2026-11-11T14:59Z..2026-11-12T09:30Z (ict-trader-live journal, complete scans): 30 cooldown starts, every one in
+    the first ~65 s after a 15m/1h boundary, and 380 strategy ``no candle data`` raises behind them.
+
+    Only the REAL ``BybitConnector`` qualifies (an exact class check, so a test stub or a subclass that might serve
+    different data keeps its own per-client slot). Testnet vs mainnet and the account's ``market_type`` (linear vs
+    spot: different candles) stay in the key."""
+    if client is None:
+        return None
+    try:
+        from src.exchange.bybit_connector import BybitConnector
+    except Exception:  # noqa: BLE001 -- connector unimportable (no ccxt): fall back to per-client identity
+        return None
+    if type(client) is not BybitConnector:
+        return None
+    market_type = str(getattr(client, "market_type", "linear") or "linear").strip().lower()
+    return ("bybit-public", bool(getattr(client, "testnet", False)), market_type)
+
+
+def _shared_symbol(identity: tuple, symbol: str) -> str:
+    """The symbol as the venue will actually be ASKED for it, so ``SOLUSDT`` and ``SOL/USDT:USDT`` (both spellings
+    are in use: ml_entry asks the unified one, most legs the bare id) share one slot. Uses the connector's own
+    resolver, so the key can never drift from the request (``bybit_connector.market_symbol``)."""
+    try:
+        from src.exchange.bybit_connector import market_symbol
+        return str(market_symbol(symbol, identity[2]))
+    except Exception:  # noqa: BLE001
+        return str(symbol)
+
+
 def _candle_cache_key(client: Any, symbol: str, timeframe: str,
                       limit: int, since: Optional[int]) -> Optional[tuple]:
     """Cache identity. ``since`` requests are NEVER cached.
@@ -511,11 +548,19 @@ def _candle_cache_key(client: Any, symbol: str, timeframe: str,
     A ``since=`` read is a historical-range reconstruction (the M30 exit
     panel); it is rare, large, and its correctness matters more than its
     speed, so it always goes to the venue.
+
+    ``limit`` is deliberately NOT in the key (VENUE-KLINE-RATE-LIMIT): every request without ``since`` asks for the
+    venue's most recent ``limit`` bars, so the last N rows of a frame fetched with ``limit >= N`` ARE the answer a
+    fresh N-bar fetch would give at that moment. The entry remembers the limit it was fetched with and serves only
+    requests at or below it (``_candle_cache_get``); a larger request misses and refetches.
     """
     if since is not None:
         return None
     if _candle_cache_ttl(timeframe) <= 0:
         return None
+    shared = _shared_market_identity(client)
+    if shared is not None:
+        return (shared, _shared_symbol(shared, symbol), str(timeframe))
     # Key on the CLIENT INSTANCE, not the symbol alone: two connectors may be
     # different venues (or testnet vs mainnet) serving the same symbol string,
     # and their candles are not interchangeable.
@@ -529,40 +574,122 @@ def _candle_cache_key(client: Any, symbol: str, timeframe: str,
         # two clients are the same client. REFUSING to cache is always safe;
         # guessing is what this fix exists to stop.
         return None
-    return (token, str(symbol), str(timeframe), int(limit))
+    return (token, str(symbol), str(timeframe))
 
 
-def _candle_cache_get(key: Optional[tuple]):
+def _last_close_epoch(timeframe: str, now: Optional[float] = None) -> Optional[float]:
+    """Epoch seconds of the most recent close of a ``timeframe`` bar (venue bars are UTC-epoch aligned), or ``None``
+    for a timeframe we cannot place (then a post-close read is never served from cache)."""
+    base = _TF_SECONDS.get(str(timeframe).strip().lower())
+    if not base:
+        return None
+    t = time.time() if now is None else float(now)
+    return float(int(t // base) * base)
+
+
+#: A frame fetched this soon after a close is not reused for a post-close read: the venue may not have folded the
+#: bar's last trades in yet. The same value as ``strategy_signal_builders._CLOSED_DECISION_SETTLE_SECONDS`` (closed-
+#: bar legs never fetch earlier than this), so a reused frame was fetched no earlier than the leg itself would have.
+_POST_CLOSE_SETTLE_S = 5.0
+
+
+def _serves_post_close(key: tuple, stored_wall: float, df: Any) -> bool:
+    """May this cached entry answer a ``bypass_cache`` (post-close) read? All three must hold:
+
+    1. the slot is a SHARED public-venue slot (Bybit, epoch-aligned bars). Per-client slots (IB, Alpaca, Oanda,
+       test stubs: session bars, not epoch-aligned) keep the original rule -- a post-close read always calls the
+       venue -- so nothing changes for them;
+    2. it was stored at least ``_POST_CLOSE_SETTLE_S`` after the latest close of its timeframe;
+    3. its last row is the just-closed bar or the bar after it, i.e. the venue had already PUBLISHED the closed bar
+       when it was fetched. A frame that came back without it must not be served again: the leg that reads it
+       retries on its next tick and needs a fresh call (``session_bar_not_published`` / ``_decision_frame``)."""
+    if not (isinstance(key[0], tuple) and key[0] and key[0][0] == "bybit-public"):
+        return False
+    tf_s = _TF_SECONDS.get(str(key[2]).strip().lower())
+    close = _last_close_epoch(key[2])
+    if not tf_s or close is None or stored_wall < close + _POST_CLOSE_SETTLE_S:
+        return False
+    try:
+        from src.runtime.closed_bars import _epoch_seconds, _last_timestamp
+        last_open = _epoch_seconds(_last_timestamp(df))
+    except Exception:  # noqa: BLE001
+        return False
+    return last_open is not None and last_open >= close - tf_s
+
+
+def _candle_cache_get(key: Optional[tuple], limit: Optional[int] = None, *,
+                      post_close: bool = False):
+    """The cached frame cut to the last ``limit`` rows, or ``None``.
+
+    ``post_close=True`` (a ``bypass_cache`` caller: its decision needs the frame fetched AFTER the bar closed) is
+    served only under ``_serves_post_close`` -- the guarantee a fresh fetch at this moment gives, without a second
+    venue call for the same bar (VENUE-KLINE-RATE-LIMIT). A frame fetched before that close (it may carry the
+    then-forming bar, PI-20260930-GQPT6PQF-0002) is never served."""
     if key is None:
         return None
     with _CANDLE_CACHE_LOCK:
         hit = _CANDLE_CACHE.get(key)
     if not hit:
         return None
-    stored_at, df, ttl = hit
+    stored_at, stored_wall, df, ttl, stored_limit = hit
     if (time.monotonic() - stored_at) > ttl:
         return None
+    if limit is not None and int(limit) > int(stored_limit):
+        return None
+    if post_close and not _serves_post_close(key, stored_wall, df):
+        return None
+    if limit is not None and len(df) > int(limit):
+        return df.iloc[-int(limit):].reset_index(drop=True)
     return df
 
 
-def _candle_cache_put(key: Optional[tuple], df) -> None:
+def _candle_cache_put(key: Optional[tuple], df, limit: Optional[int] = None) -> None:
     if key is None or df is None:
         return
     ttl = _candle_cache_ttl(key[2])
     if ttl <= 0:
         return
+    stored_limit = int(limit) if limit is not None else len(df)
     with _CANDLE_CACHE_LOCK:
+        prev = _CANDLE_CACHE.get(key)
+        # Never let a SMALLER fresh frame evict a larger live one: the larger one still answers both requests.
+        if prev is not None and prev[4] > stored_limit and (time.monotonic() - prev[0]) <= prev[3]:
+            return
         # Bound the map so a long-lived process can't accumulate entries for
-        # every (symbol, timeframe, limit) ever requested.
+        # every (symbol, timeframe) ever requested.
         if len(_CANDLE_CACHE) > 512:
             _CANDLE_CACHE.clear()
-        _CANDLE_CACHE[key] = (time.monotonic(), df.copy(), ttl)
+        _CANDLE_CACHE[key] = (time.monotonic(), time.time(), df.copy(), ttl, stored_limit)
+
+
+#: SINGLE-FLIGHT (VENUE-KLINE-RATE-LIMIT): one lock per cache key, so when the main loop, the exit-evaluation loop and
+#: the per-account fan-out ask for the same frame in the same second, ONE venue call is made and the others read its
+#: result. Bounded by the key space (venue x symbol x timeframe); a waiter gives up after
+#: ``_INFLIGHT_WAIT_S`` and fetches itself, so a hung venue call can never stall another leg past its bar.
+_INFLIGHT: Dict[Any, threading.Lock] = {}
+_INFLIGHT_LOCK = threading.Lock()
+_INFLIGHT_WAIT_S = 20.0
+
+
+def _inflight_lock(key: tuple) -> threading.Lock:
+    with _INFLIGHT_LOCK:
+        lk = _INFLIGHT.get(key)
+        if lk is None:
+            if len(_INFLIGHT) > 4096:
+                # Drop only idle locks; a held one is somebody's in-flight fetch.
+                for k in [k for k, v in _INFLIGHT.items() if not v.locked()]:
+                    _INFLIGHT.pop(k, None)
+            lk = threading.Lock()
+            _INFLIGHT[key] = lk
+        return lk
 
 
 def reset_candle_cache() -> None:
     """Drop every cached frame. For tests and for a forced refresh."""
     with _CANDLE_CACHE_LOCK:
         _CANDLE_CACHE.clear()
+    with _INFLIGHT_LOCK:
+        _INFLIGHT.clear()
 
 
 def _fetch_phase(name: str, venue: str = "unknown"):
@@ -713,12 +840,16 @@ def fetch_candles(
     limit : int
         Number of candles to fetch.
     bypass_cache : bool
-        ``True`` skips the cache READ and goes to the venue (the fresh frame is
-        still written back). For a caller whose decision needs a bar to have
-        CLOSED before the frame was fetched: a cached frame (TTL up to
+        ``True`` = the frame must have been fetched AFTER the latest close of
+        ``timeframe``. For a caller whose decision needs a bar to have CLOSED
+        before the frame was fetched: a cached frame (TTL up to
         ``CANDLE_CACHE_TTL_MAX_S``, 300 s on the live VM) can predate the close
         and carry the then-forming bar as its last row
-        (PI-20260930-GQPT6PQF-0002). Default ``False`` = unchanged.
+        (PI-20260930-GQPT6PQF-0002), so such a frame is never served. A frame
+        another caller already fetched after that close IS served (same
+        guarantee, no second venue call -- VENUE-KLINE-RATE-LIMIT); otherwise
+        this goes to the venue and writes the fresh frame back. Default
+        ``False`` = any frame inside the TTL.
     since : int, optional
         Epoch MILLISECONDS (CCXT convention) to fetch candles FORWARD from —
         the historical-range read the M30 P5 exit panel uses to reconstruct
@@ -763,21 +894,41 @@ def fetch_candles(
         bypass_cache = True
 
     cache_key = _candle_cache_key(exchange_client, symbol, timeframe, limit, since)
-    cached = None if bypass_cache else _candle_cache_get(cache_key)
-    if cached is not None:
-        # Counted for its `n` (see _fetch_phase): hits vs misses is the empirical
-        # test of whether the cache reaches across ticks at all.
-        with _fetch_phase("cache_hit", _venue_of_client(exchange_client)):
-            pass
-        # .copy() is load-bearing: a builder that mutates the frame (adds an
-        # indicator column) must not corrupt the copy the next builder sees.
-        return cached.copy()
+    # ``bypass_cache`` no longer means "always call the venue": it means "the frame must have been fetched after the
+    # bar closed", which an entry stored after the latest close already satisfies (VENUE-KLINE-RATE-LIMIT). Every
+    # closed-bar leg asks with bypass at the same boundary, so this is where the duplicate burst was.
+    venue = _venue_of_client(exchange_client)
 
-    _tf_label = str(timeframe).strip().lower() or "unknown"
-    with _fetch_phase(_tf_label, _venue_of_client(exchange_client)):
-        frame = _fetch_candles_uncached(
-            exchange_client, symbol, timeframe, limit, since, cache_key
-        )
+    def _hit():
+        return _candle_cache_get(cache_key, limit, post_close=bypass_cache)
+
+    cached = _hit()
+    lock = None
+    if cached is None and cache_key is not None:
+        lock = _inflight_lock(cache_key)
+        acquired = lock.acquire(timeout=_INFLIGHT_WAIT_S)
+        if not acquired:
+            lock = None          # waited long enough: fetch ourselves, never stall a leg on another's call
+        else:
+            cached = _hit()      # the call we waited on may have just stored it
+    try:
+        if cached is not None:
+            # Counted for its `n` (see _fetch_phase): hits vs misses is the empirical
+            # test of whether the cache reaches across ticks at all.
+            with _fetch_phase("cache_hit", venue):
+                pass
+            # .copy() is load-bearing: a builder that mutates the frame (adds an
+            # indicator column) must not corrupt the copy the next builder sees.
+            frame = cached.copy()
+        else:
+            _tf_label = str(timeframe).strip().lower() or "unknown"
+            with _fetch_phase(_tf_label, venue):
+                frame = _fetch_candles_uncached(
+                    exchange_client, symbol, timeframe, limit, since, cache_key
+                )
+    finally:
+        if lock is not None:
+            lock.release()
     return trim_to_asof(frame, symbol, timeframe, _asof) if _asof is not None else frame
 
 
@@ -829,5 +980,5 @@ def _fetch_candles_uncached(
         if col in candles_df.columns:
             candles_df[col] = pd.to_numeric(candles_df[col], errors="coerce")
 
-    _candle_cache_put(cache_key, candles_df)
+    _candle_cache_put(cache_key, candles_df, limit)
     return candles_df.copy()
