@@ -1503,7 +1503,7 @@ def run(bundle: dict, legs: list[Leg], since: float, until: float, *,
     divs_all = sum(r["divergences"] or 0 for r in results if r["state"] == "checked")
     controls = {
         "planted_defect": planted_defect(legs, results, bundle, since, until),
-        "ml_controls": _ml_controls(legs, results, bundle, since, until),
+        **({"ml_controls": _ml_controls(legs, results, bundle, since, until)} if any(lg.unit in ML_UNITS for lg in legs) else {}),
         "historical_positive": historical_positive(results, bundle),
         "liveness": liveness(bundle, since),
     }
