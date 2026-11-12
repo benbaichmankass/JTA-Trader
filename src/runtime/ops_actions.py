@@ -369,6 +369,11 @@ REGISTRY: Dict[str, OpsAction] = {a.name: a for a in (
     OpsAction("send-ping", 1, "send-ping", _v_ping, "run_send_ping", 60,
               "scripts/ops/send_ping_action.sh with the § 2 row's params: one Telegram message, no mutation; "
               "a class-limited ping that was withheld reads verdict withheld, never sent"),
+    *(OpsAction(name, 1, name, _v_none, "run_report", 120,
+                f"scripts/ops/{script}: read-only, no params; the § 2 row's own wrapper, stdout is the result",
+                {"script": script})
+      for name, script in (("status-check", "status_check.sh"), ("disk-usage-report", "disk_usage_report.sh"),
+                           ("list-listening-ports", "list_listening_ports.sh"))),
 )}
 
 
@@ -613,6 +618,15 @@ def run_send_ping(job: Dict[str, Any]) -> Dict[str, Any]:
     return res
 
 
+def run_report(job: Dict[str, Any]) -> Dict[str, Any]:
+    """A parameterless, read-only § 2 wrapper (the script is fixed by the registry entry, never by the caller)."""
+    spec = REGISTRY[job["action"]]
+    wrapper = ROOT / "scripts" / "ops" / spec.extra["script"]
+    if not wrapper.is_file():
+        return {"exit": 3, "detail": f"not_deployed: scripts/ops/{spec.extra['script']} is not on this VM"}
+    return _script(["bash", str(wrapper)], {}, spec.timeout_s)
+
+
 def run_live_review_row(job: Dict[str, Any], *, direct_root: Optional[Path] = None,
                         logs: Optional[Path] = None) -> Dict[str, Any]:
     """Delegate to the direct row submit (TRADE-ACTION-DIRECT-PATH phase 2, PR #25045): the SAME validation,
@@ -698,6 +712,7 @@ RUNNERS: Dict[str, Runner] = {
     "run_restart_service": run_restart_service,
     "run_set_env": run_set_env,
     "run_send_ping": run_send_ping,
+    "run_report": run_report,
 }
 
 
