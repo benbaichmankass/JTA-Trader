@@ -3,7 +3,7 @@
 > **Doc status:** `unknown` · category `architecture` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../docs/DOCUMENT-INDEX.md)
 >
 > Row: `TRADE-ACTION-DIRECT-PATH` (Tier 2). Lane session_01AFoLuJRcgEM7nWVNbrYHgx, dispatched by Manager Session 2026-11-11a.
-> This is a design. Phase 1 is being built in a separate Tier-2 PR. Every other phase is unbuilt until its own PR merges, deploys and is observed.
+> This is a design. Built so far, each as its own Tier-2 PR held for the manager's merge: phase 1 (#25039), phase 2's row submit (#25045) and phase 1b (#25046). Every other phase is unbuilt until its own PR merges, deploys and is observed.
 
 ## Gates this adds or changes
 
@@ -152,7 +152,7 @@ Nothing reaches a broker except through those scripts and the per-account execut
   `work_items._require_work_store_token`, and is listed in `SITE_PUBLIC_POST_PATHS` like the other service-token POSTs. **So no new secret is
   needed and no token ever appears in a prompt, a row or the repo.** Every job records the calling `session`. The token authenticates the
   environment; the tier rules above decide what it may do.
-- **The row submit** is the action `live-review-row`. The VM validates the row exactly as the watcher validates a branch row
+- **The row submit shipped first, as its own route** `POST /api/bot/live-review/rows` (PR #25045; same token, same create-only file, `GET /api/bot/live-review/rows/{id}` for the receipt). The ops channel wraps it as the action `live-review-row`. The VM validates the row exactly as the watcher validates a branch row
   (`live_review_rows.py`, `packet_sha` against the wake poster's local packet), then runs the same `run_pass` classification in process:
   mandate → dispatch, operator → phase-1 ask. A duplicate review_id returns 409. The rows-branch push stays valid as the fallback, and
   phase 4 copies direct rows onto the branch as a log; the watcher seeds them as seen, so the copy never replays.
@@ -228,7 +228,7 @@ to git for audit. Git is **never** read on the action path.
 | # | PR | observation that closes it |
 |---|---|---|
 | 1 | Telegram Approve/Reject + spool execution (`trade_approvals.py`, watcher hook, both bots, `spool-pass`, diag `trade_approvals`) | the first `operator_ask` row after deploy produces ONE Telegram ask (`trade_approvals` journal `sent: true`); a tap produces a `directed_actions` receipt with `verdict: applied` (or a named refusal) and `tap_to_done_s` < 15 |
-| 1b | SPA routes `GET/POST /api/bot/trade-approvals` + dashboard button | one approval from the console, read back in the journal with `source: spa` |
+| 1b | SPA routes `GET/POST /api/bot/trade-approvals` (PR #25046) + dashboard button (dashboard repo) | one approval from the console, read back in the journal with `source: spa` |
 | 2 | the direct ops channel (`/api/bot/ops/actions` + `ict-ops-runner` + `ops_actions.py` wave 1 incl. `live-review-row`) + lane brief | (a) a Tier-1 job from a session returns `done` in `/api/bot/ops/jobs/<id>` with no GitHub issue; (b) one review row lands via `live-review-row` and appears in `rows_watch.jsonl` with `source: direct`, `reviewed_to_seen_s` < 5; (c) a Tier-2 job without a quote produces a Telegram card, and Approve runs it |
 | 3 | routine fire from `live_review_due` + dedupe + fallback | a due event → `fires.jsonl` 2xx → a row from that session; trigger → row measured against today's ~7 min |
 | 4 | exporter of the journals to a git log branch | the log branch carries the day's receipts; no action read from it |
