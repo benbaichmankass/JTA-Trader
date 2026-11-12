@@ -1,0 +1,123 @@
+# Hand-authored 2026-11-12 by lane CLOSE-CLASS-NOC-TEST (Tier 1), dispatched by lane OPDEC-20261112 of Manager Session 2026-11-11a.
+# Operator decision 2026-11-12 (decisions page m13): "Register the net-of-cost test for the close class now".
+# The decision rule is fixed BEFORE any result is read (only a population count and a crash check were looked at). Gates this adds or changes: none.
+id: RQ-20261112-c1a5-01
+title: 'Live-review CLOSE class on a window disjoint from W44: does the first close call per order package beat holding, and beat a random-time close, net of the full cost stack?'
+status: queued
+cadence: once
+origin: new_hypothesis
+roadmap:
+- L-AM-STANDARD
+theme: live_strategy
+priority: 1
+kind: experiment
+compute: cpu_short
+not_before: '2026-12-01T00:00:00Z'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  basis: Estimate. A 20-draw smoke over 12 packages finished well inside 2 minutes against the live diag and candle APIs; the first full run replaces this.
+  why_runner: Reads the VM journal through scripts/ops/diag_fetch.sh and origin/live-review/rows; the research-script-run runner holds neither, so a lane runs it on the manager's dispatch (run.workflow is prose by design).
+lands:
+  store: comms/research/ltr_close_class_noc/
+  assert_field: verdict
+  min_rows: 1
+question: 'On live-review reviews written after 2026-11-01T11:47Z (the window the close class was found on, W44, ends 2026-11-01T11:46:42Z), take the FIRST close recommendation on each order package. Net of the full cost stack, does closing at the review bar beat the realised hold, and beat closing at a random bar of the same trade, by enough, across enough packages, weeks and legs, that the class can execute without the Approve button?'
+why_this_matters: >-
+  Operator 2026-11-12 (decisions page m13): register the net-of-cost test for the close class now; until it passes the class stays advice-only
+  behind the Approve button (docs/ARCHITECTURE-CANONICAL.md § "Active management" clause 4). WHY THE PRIOR ROW WAS DROPPED, from the record:
+  LTR-CLOSE-CLASS-TEST (dropped 2026-11-06) was the audit's +15.15R over 18 priced closes. Re-measured by LTR-CLASS-GRADE on 2026-11-01
+  (comms/research/ltr_class_grade/VERDICT.md): 21 priced close calls were only 4 PACKAGES (the reviewer re-issued close each cycle: 12 calls
+  on one package, 7 on another), +3.16R total, +0.79 R/package, one leg family, one ISO week (W44), INDETERMINATE under its pre-registered
+  rule (P5). The row's "disjoint-window test" was then superseded by LTR-TRIGGER-CLOSE-S0 (comms/research/ltr_trigger_close_s0/VERDICT.md),
+  but that tested mechanical TRIGGERS (adverse_r, stall, near_target ...) on 552 offline packages, and none passed (adverse_r -0.5 is 0.41 R
+  worse than a random-time close). It does not test the REVIEWER's judged close, which carries overlay a trigger cannot (news, structure,
+  the leg's outcome table). So the reviewer's close class has never been graded on a window it was not found on, which is the gap this unit
+  fills. AUD-20261028-LTR-CLOSE-REPLAY-MISMATCH (applied closes unpriceable) is designed around: a not-applied close is priced ANCHORED ON THE
+  REALISED EXIT (close-at-review-open net minus realised net R, no hold replay needed), an applied close (exit_reason live_review_close) by the
+  harness's own paired replay, and every unpriced package stays in the denominator with its reason.
+  MEASURED 2026-11-12 (population count only, no deltas read): reviews.jsonl on origin/main (648 rows) plus origin/live-review/rows (202) hold
+  13 close calls on 12 packages after the cut-off; 11 priced, 1 unpriced (candles_start_after_review); 3 applied, 8 not applied. At about 11
+  priced packages per 11 days the 30-package floor arrives about 2026-12-01, hence not_before.
+power:
+  expected_n: 30
+  min_detectable_effect: 0.5
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    Unit of analysis = one priced order package (first close call), NOT a call. d = 0.5 sd at alpha 0.05 / power 0.8 needs
+    (1.96+0.8416)^2 / 0.25 = 31.4 packages, so the floor is rounded to 30 and expected_n = 30 is the floor itself, an ESTIMATE of what accrues by
+    not_before (11 priced in the 11 days since the cut-off, MEASURED as a count; the rate is not assumed constant). d = 0.5 sd is the effect the
+    earlier record hinted at (+0.79 R/package on 4 packages) divided by an ASSUMED per-package sd near 1.5 R (UNVERIFIED: 4 packages cannot
+    estimate it), so the floor is NECESSARY, NOT SUFFICIENT. Below the floor the unit grades INDETERMINATE (accruing), never FAIL; the random
+    control has its own floor of 20 packages (only not-applied closes can carry one; an applied close already exited at the review).
+  feasibility:
+    source: none
+    accrual_basis: >-
+      DECLARED. Close recommendations accrue with live review activity (12 first-close packages in the 11 days after the cut-off, MEASURED). Nothing
+      is replayed from history because the reviewer's judgement cannot be re-run offline; the window is the live record after 2026-11-01T11:47Z.
+      A run below the floor lands INDETERMINATE and a successor unit with the SAME rule and the SAME --since is registered with not_before 14 days
+      on; the floor is never lowered.
+practice_precedent: 'T1, T2, T8, M4 (docs/reference/trading-and-model-practice-principles.md): pre-registered rule; judge an intervention against hold AND a matched random intervention; independent unit (the package) as the bootstrap group; a window disjoint from the one the effect was found on'
+intervention_controls:
+  hold_to_bracket: true
+  # matched random = the SAME package closed at the open of a uniformly random bar between the review bar and the realised exit, 200 seeded draws
+  # per package (seed 20261112), priced by the same cost stack. Built in scripts/research/ltr_close_class_noc.py (--draws 200).
+  matched_random: {draws: 200}
+  # there is one action (close at the review bar), so the grid is that single cell; no parameter is tuned on the window
+  best_static: {grid: [close_at_review_bar_open], excludes_test_folds: true}
+  bootstrap_group: package
+decision_rule:
+  id: RULE-RQ20261112C1A501-CLOSE-NOC
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: >-
+    scripts/research/ltr_close_class_noc.py --since 2026-11-01T11:47:00Z (exclusive; --until left at run time) --draws 200: reviews are the union of
+    comms/live_review/reviews.jsonl on origin/main and origin/live-review/rows, de-duplicated by review_id; keep action == close, reviewed_at > since;
+    keep the FIRST such review per order package. Per package: delta_R = net R of closing at the open of the review bar minus the realised net R,
+    through live_review_counterfactual.price_all (recorded fee and funding legs plus policy slippage, cost_legs / net_of_costs); a not-applied close is
+    anchored on the realised exit, an applied close uses the harness's paired replay. Control: mean delta_R over 200 seeded random-bar closes of the
+    same trade (not-applied only). edge = delta_R minus that mean. Package bootstrap, 10,000 resamples, seed 20261112, 95% interval. Reported, never a
+    pass clause: per account, per leg, applied vs not applied, R giveback, RULE-AM-RISK-ADJUSTED-V1 screen via scripts/research/am_risk_adjusted.py.
+  rule: >-
+    Let n = priced packages. PASS iff ALL of: C1 n >= 30; C2 mean delta_R > 0; C3 bootstrap CI95 lower bound of mean delta_R > 0; C4 at least 20
+    packages carry a random control AND mean edge > 0 AND the CI95 lower bound of the edge > 0; C5 at least 3 ISO weeks hold >= 3 priced packages, a
+    majority of those weeks have mean > 0, and the mean stays > 0 after dropping the single best week; C6 no single leg holds more than 50% of the
+    priced packages. FAIL iff n >= 30 and (mean delta_R <= 0 or the CI95 upper bound < 0). INDETERMINATE otherwise (n < 30 is accruing, never FAIL; a
+    failed C4 to C6 with C1 to C3 holding is a LEAD, not a pass). A PASS is a DISCOVERY: it opens ONE confirmation unit on reviews after this run's last
+    row (same rule, fresh window) and, once that also passes, a Tier-3 mandate PROPOSAL for the close class, graded under
+    RULE-AM-RISK-ADJUSTED-V1 on the book (per the 2026-10-29 dated exception and row BOOK-SIM-REAL-SIZER, the per-trade-R figure here is a screen,
+    not the graduation). A FAIL closes the reviewer's close class as advice-only on this window; other classes and other windows stay open.
+    Window, floors, draws, seed and thresholds are not changed after any result.
+  what_it_does_not_do: >-
+    Edits no config, mandate, roster or live-review policy and places no order; the close class stays advice-only behind the Approve button until a
+    separate Tier-3 act. Does not grade tighten, partial close, move_tp or widen_sl (each needs its own unit). Candles are the last 1,000 bars the bot API
+    serves, so an old package can be unpriced (candles_start_after_review); the reason is counted. The harness fills a close at the review-bar open, which
+    flatters closing equally in the close arm and its random control (R4-style contrast cancels it). Real-money share is reported, not weighted.
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.3
+  bucket: live_strategy
+  basis: 'p(PASS) ~0.3: +0.79 R/package on 4 packages, but the offline trigger test (n=552) found no close trigger better than random; an estimate, not a measurement.'
+run:
+  workflow: 'lane session: a lane dispatched by the manager at or after not_before runs the command below with diag and git read access'
+  command:
+  - python3
+  - scripts/research/ltr_close_class_noc.py
+  - --since
+  - '2026-11-01T11:47:00Z'
+  - --draws
+  - '200'
+  - --out
+  - comms/research/ltr_close_class_noc/verdict.json
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261112-c1a5-01
+grading:
+  auto: false
+related:
+- RQ-20261029-1f39-01
