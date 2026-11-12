@@ -59,7 +59,6 @@ FIRES_LOG_REL = Path("runtime_logs") / "live_review" / "fires.jsonl"
 STATE_REL = Path("runtime_logs") / "live_review" / "fire_state.json"
 FIRES_LOG_MAX_BYTES = 16 * 1024 * 1024
 EVIDENCE_OK = ("committed", "exists")
-FLAG_KIND = "live_review_routine_fire_failed"
 
 #: (status, parsed JSON body or None, headers). status None = transport error.
 Post = Callable[[str, bytes, Dict[str, str]], Tuple[Optional[int], Any, Dict[str, str]]]
@@ -209,8 +208,8 @@ def _flag(text: str, send: Optional[Callable[[str], Any]]) -> bool:
     try:
         if send is not None:
             return bool(send(text))
-        from src.runtime import notify
-        return bool(notify.send_telegram_direct(text, parse_mode=None, kind=FLAG_KIND, priority="high"))
+        from src.runtime import telegram_channels
+        return bool(telegram_channels.send("red_flag", text))
     except Exception:  # noqa: BLE001
         logger.warning("ltr-routine-fire: red flag send failed", exc_info=True)
         return False
