@@ -57,10 +57,10 @@ for _p in (REPO, REPO / "scripts" / "ops", REPO / "scripts" / "ci", REPO / "scri
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
-import check_desk_records as cdr
-import desk_event_calendar_study as ecs
-import desk_event_entry_replay as dee
-import desk_gen_replay_driver as gr
+import check_desk_records as cdr  # noqa: E402
+import desk_event_calendar_study as ecs  # noqa: E402
+import desk_event_entry_replay as dee  # noqa: E402
+import desk_gen_replay_driver as gr  # noqa: E402
 
 UNIT_ID = "RQ-20261112-e4a7-01"
 RULE_ID = "RULE-RQ20261112-E4A7-01-DESK-EVENT-PACKET-ARM"

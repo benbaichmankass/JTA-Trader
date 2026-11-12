@@ -12,7 +12,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "scripts" / "research"))
 
-import desk_event_packet_replay as m
+import desk_event_packet_replay as m  # noqa: E402
 
 
 def _keys(indices):
