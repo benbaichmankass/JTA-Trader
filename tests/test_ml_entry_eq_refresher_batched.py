@@ -145,7 +145,9 @@ def test_replay_snapshots_are_byte_identical_and_decisions_equal(tmp_path):
     assert diverged == [], diverged[:3]
     # the cache really was used: after the seed, a pass is one multi-symbol call plus the few per-symbol fallbacks (split, flaky)
     assert venue.multi_calls <= 2 * n + 2
-    assert venue.single_calls - n * len(POOL) <= 6, venue.single_calls - n * len(POOL)
+    # the initial seed is per symbol (len(POOL) calls, the old path); after it only the split / flaky fallbacks are per symbol
+    assert venue.single_calls - n * len(POOL) <= len(POOL) + 6, venue.single_calls - n * len(POOL)
+    assert venue.multi_calls >= n - 1                     # every later pass went through ONE incremental multi-symbol read
 
     # decisions: the real struct artifact scores the last close's snapshots identically (they are the same bytes; scored anyway)
     from src.units.strategies import ml_entry_eq as L
@@ -187,6 +189,7 @@ def test_cache_falls_back_per_symbol_when_the_batch_fails(tmp_path):
             self.single = []
 
         def get_bars_multi(self, symbols, timeframe, start, chunk=100):
+            self.multi = getattr(self, "multi", 0) + 1
             return {}, {s: "rate_limited" for s in symbols}
 
         def get_ohlcv(self, s, timeframe="1h", limit=100):
@@ -198,6 +201,7 @@ def test_cache_falls_back_per_symbol_when_the_batch_fails(tmp_path):
     st = c.update(["A", "B", "GONE"], pd.Timestamp("2026-11-12T16:02:30Z"))
     assert md.single == ["A", "B", "GONE"] and st["per_symbol"] == 3 and st["covered"] == 2
     assert c.get("GONE") is None and c.get("A") is not None
+    assert getattr(md, "multi", 0) == 0          # a seed never goes through the multi-symbol endpoint (MEASURED: >200 pages for 100 ETFs)
 
 
 def test_a_bad_cache_file_is_a_reseed_not_a_crash(tmp_path):
@@ -227,3 +231,10 @@ def test_aligned_wake_lands_exactly_on_close_plus_settle():
         if t >= pd.Timestamp("2026-11-12T20:00:00Z"):
             break
     assert t == pd.Timestamp("2026-11-12T20:00:00Z") + pd.Timedelta(seconds=R.SETTLE_S)
+
+
+def test_reseed_waits_for_a_quiet_window_before_a_close():
+    assert R.secs_to_next_candidate_close(pd.Timestamp("2026-11-12T19:45:00Z")) == 15 * 60     # 20:00Z is 15 min away: no re-seed
+    assert R.secs_to_next_candidate_close(pd.Timestamp("2026-11-12T20:05:00Z")) == 235 * 60    # just after a close: quiet
+    assert R.secs_to_next_candidate_close(pd.Timestamp("2026-11-12T20:05:00Z")) > R.RESEED_QUIET_S
+    assert R.secs_to_next_candidate_close(pd.Timestamp("2026-11-12T19:45:00Z")) < R.RESEED_QUIET_S
