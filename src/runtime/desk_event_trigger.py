@@ -411,13 +411,54 @@ def run_once(*, cfg: Optional[Dict[str, Any]] = None, now_fn: Callable[[], datet
     state_path, labels_path = d / "trigger_state.json", d / "trigger_labels.jsonl"
     rec: Dict[str, Any] = {"computed_at": now.isoformat(), "watcher": "vm"}
     state = _read_json(state_path) or {"seen_keys": [], "wakes": []}
-    _reconcile_inflight(d, labels_path, now)
+    adopt: Optional[Tuple[Dict[str, Any], Path, str]] = None
 
     def done(st: str, **kw: Any) -> Dict[str, Any]:
         rec.update(state=st, **kw)
         rec["cost"] = cost_line(state, cfg or {}, now)
         ltr_post.write_receipt(rec, receipt or receipt_path())
         return rec
+
+    chosen: Optional[Dict[str, Any]] = None
+
+    def label(disp: str, **kw: Any) -> None:
+        # Every label written AFTER a build carries that build's wall time, per-stage outcome and isolation path, so
+        # the successful-build distribution accrues (before this only could_not_build did; the receipt is overwritten
+        # each pass). Labels written before a build (no credential) carry none.
+        timing = {k: rec[k] for k in ("build_wall_s", "stages", "isolation") if k in rec}
+        _append(labels_path, {**{"at": now.isoformat(), "fired": chosen, "disposition": disp}, **timing, **kw})
+        state["seen_keys"] = (state["seen_keys"] + [chosen["key"]])[-500:]
+        _write_state(state_path, state)
+
+    def land(stage: Path, adopted_job: Optional[str] = None) -> Dict[str, Any]:
+        extra = {"adopted_job": adopted_job} if adopted_job else {}
+        ptr = json.loads((stage / TRIGGER_POINTER).read_text())
+        sha, ccode = (commit_fn or dpw.commit_packet)(stage, ptr["packet_id"], auth, http, pointer_path=TRIGGER_POINTER)
+        if sha is None:
+            label("could_not_commit", packet_id=ptr["packet_id"], http_code=ccode, **extra)
+            return done("could_not_commit", fired=chosen["key"], http_code=ccode)
+        try:
+            pr = pr_fn() if pr_fn else ltr_post.wake_module().ops_flags_pr()
+        except Exception as exc:  # noqa: BLE001
+            label("could_not_post", packet_id=ptr["packet_id"], reason=type(exc).__name__, **extra)
+            return done("could_not_post", fired=chosen["key"], packet_id=ptr["packet_id"])
+        if not wake_toggles.is_on("desk_trigger_wake"):  # packet is landed above (data path untouched); only the comment is withheld
+            wake_toggles.log_suppressed("desk_trigger_wake", ptr["packet_id"], commit=sha)
+            label("suppressed_by_wake_toggle", packet_id=ptr["packet_id"], commit=sha, **extra)
+            return done("suppressed_by_wake_toggle", fired=chosen["key"], packet_id=ptr["packet_id"], commit=sha)
+        entry = {"packet_id": ptr["packet_id"], "packet_sha": ptr["packet_sha"], "path": ptr["path"],
+                 "built_at": ptr["built_at"], "commit": sha, "poster": "vm",
+                 "trigger": {k: chosen[k] for k in ("kind", "symbol", "bar", "detail")}}
+        pcode, _ = http("POST", f"{dpw.API}/repos/{dpw.REPO}/issues/{pr}/comments",
+                        json.dumps({"body": render_marker(entry, now)}).encode(), auth)
+        if pcode != 201:
+            label("could_not_post", packet_id=ptr["packet_id"], http_code=pcode, **extra)
+            return done("could_not_post", fired=chosen["key"], packet_id=ptr["packet_id"], http_code=pcode)
+        state["wakes"] = ([w for w in state.get("wakes") or [] if (_parse(w.get("at")) or now) > now - timedelta(days=2)]
+                          + [{"at": now.isoformat(), "symbol": chosen["symbol"], "packet_id": ptr["packet_id"]}])
+        label("posted", packet_id=ptr["packet_id"], commit=sha, **extra)
+        return done("posted", fired=chosen["key"], packet_id=ptr["packet_id"], commit=sha,
+                    latency_s=round((now_fn() - now).total_seconds(), 1), **extra)
 
     try:
         cfg = cfg if cfg is not None else load_config()
@@ -429,6 +470,14 @@ def run_once(*, cfg: Optional[Dict[str, Any]] = None, now_fn: Callable[[], datet
         return done("no_symbols")
     tf = str(cfg.get("timeframe", "5m"))
     auth = auth_fn()
+    adopt = _reconcile_inflight(d, labels_path, now, cfg, list(state.get("seen_keys") or []))
+    if adopt is not None:  # a finished survivor build: land it instead of detecting afresh this pass
+        chosen = adopt[0]
+        rec["adopted_job"] = adopt[2]
+        if not auth:
+            label("could_not_commit", packet_id=None, reason="no_credential_in_git_extraheader", adopted_job=adopt[2])
+            return done("could_not_commit", fired=chosen["key"])
+        return land(adopt[1], adopted_job=adopt[2])
     bars = bars_fn(symbols, tf, int(cfg.get("candles", 120)))
     hourly = fetch_hourly_packet(auth, fetch)
     firings: List[Dict[str, Any]] = []
@@ -453,15 +502,6 @@ def run_once(*, cfg: Optional[Dict[str, Any]] = None, now_fn: Callable[[], datet
         _write_state(state_path, state)
         return done("quiet" if not firings else "limited", limited=[w for _, w in limited])
 
-    def label(disp: str, **kw: Any) -> None:
-        # Every label written AFTER a build carries that build's wall time, per-stage outcome and isolation path, so
-        # the successful-build distribution accrues (before this only could_not_build did; the receipt is overwritten
-        # each pass). Labels written before a build (no credential) carry none.
-        timing = {k: rec[k] for k in ("build_wall_s", "stages", "isolation") if k in rec}
-        _append(labels_path, {**{"at": now.isoformat(), "fired": chosen, "disposition": disp}, **timing, **kw})
-        state["seen_keys"] = (state["seen_keys"] + [chosen["key"]])[-500:]
-        _write_state(state_path, state)
-
     if not auth:
         label("could_not_commit", packet_id=None, reason="no_credential_in_git_extraheader")
         return done("could_not_commit", fired=chosen["key"])
@@ -479,54 +519,63 @@ def run_once(*, cfg: Optional[Dict[str, Any]] = None, now_fn: Callable[[], datet
     if stage is None:
         label("could_not_build", packet_id=None, reason=why, build_wall_s=rec["build_wall_s"], stages=rec["stages"])
         return done("could_not_build", fired=chosen["key"], reason=why)
-    ptr = json.loads((stage / TRIGGER_POINTER).read_text())
-    sha, ccode = (commit_fn or dpw.commit_packet)(stage, ptr["packet_id"], auth, http, pointer_path=TRIGGER_POINTER)
-    if sha is None:
-        label("could_not_commit", packet_id=ptr["packet_id"], http_code=ccode)
-        return done("could_not_commit", fired=chosen["key"], http_code=ccode)
+    return land(stage)
+
+
+#: A survivor's packet is adopted only while its bar is still current: at most this many bars after the bar closed.
+ADOPT_MAX_BARS = 3
+
+
+def _adoptable(mark: Dict[str, Any], surv: Optional[Dict[str, Any]], now: datetime, cfg: Dict[str, Any],
+               seen: List[str]) -> Optional[Path]:
+    """The survivor's stage dir when its build FINISHED (state ok), is COMPLETE (pointer + the packet it names),
+    is for a bar not yet handled and still current. None otherwise (then it is labelled `interrupted`)."""
     try:
-        pr = pr_fn() if pr_fn else ltr_post.wake_module().ops_flags_pr()
-    except Exception as exc:  # noqa: BLE001
-        label("could_not_post", packet_id=ptr["packet_id"], reason=type(exc).__name__)
-        return done("could_not_post", fired=chosen["key"], packet_id=ptr["packet_id"])
-    if not wake_toggles.is_on("desk_trigger_wake"):  # packet is landed above (data path untouched); only the comment is withheld
-        wake_toggles.log_suppressed("desk_trigger_wake", ptr["packet_id"], commit=sha)
-        label("suppressed_by_wake_toggle", packet_id=ptr["packet_id"], commit=sha)
-        return done("suppressed_by_wake_toggle", fired=chosen["key"], packet_id=ptr["packet_id"], commit=sha)
-    entry = {"packet_id": ptr["packet_id"], "packet_sha": ptr["packet_sha"], "path": ptr["path"],
-             "built_at": ptr["built_at"], "commit": sha, "poster": "vm",
-             "trigger": {k: chosen[k] for k in ("kind", "symbol", "bar", "detail")}}
-    pcode, _ = http("POST", f"{dpw.API}/repos/{dpw.REPO}/issues/{pr}/comments",
-                    json.dumps({"body": render_marker(entry, now)}).encode(), auth)
-    if pcode != 201:
-        label("could_not_post", packet_id=ptr["packet_id"], http_code=pcode)
-        return done("could_not_post", fired=chosen["key"], packet_id=ptr["packet_id"], http_code=pcode)
-    state["wakes"] = ([w for w in state.get("wakes") or [] if (_parse(w.get("at")) or now) > now - timedelta(days=2)]
-                      + [{"at": now.isoformat(), "symbol": chosen["symbol"], "packet_id": ptr["packet_id"]}])
-    label("posted", packet_id=ptr["packet_id"], commit=sha)
-    return done("posted", fired=chosen["key"], packet_id=ptr["packet_id"], commit=sha,
-                latency_s=round((now_fn() - now).total_seconds(), 1))
+        if not mark.get("job") or not surv or surv.get("state") != "ok":
+            return None
+        fired = mark.get("fired") or {}
+        if fired.get("key") in seen:
+            return None
+        bar_start = _parse(str(fired.get("bar", "")).replace("Z", "+00:00"))
+        tf_s = TF_S.get(str(cfg.get("timeframe", "5m")))
+        if bar_start is None or tf_s is None or now > bar_start + timedelta(seconds=tf_s * (1 + ADOPT_MAX_BARS)):
+            return None
+        stage = _jobs_dir() / str(mark["job"]) / "stage"
+        ptr = json.loads((stage / TRIGGER_POINTER).read_text())
+        if not (stage / str(ptr["path"])).is_file() or not ptr.get("packet_id") or not ptr.get("packet_sha"):
+            return None
+        return stage
+    except Exception:  # noqa: BLE001 -- anything unreadable is "not adoptable", and gets the interrupted label
+        return None
 
 
-def _reconcile_inflight(d: Path, labels_path: Path, now: datetime) -> None:
-    """A pass that started a build and never reached its label was cut off (a deploy restart SIGTERMs the whole
-    cgroup, builder child included) -- before this it left NO record. Label it, once, on the next pass."""
+def _reconcile_inflight(d: Path, labels_path: Path, now: datetime, cfg: Optional[Dict[str, Any]] = None,
+                        seen: Optional[List[str]] = None) -> Optional[Tuple[Dict[str, Any], Path, str]]:
+    """A pass that started a build and never reached its label was cut off (a deploy restart SIGTERMs the trader's
+    cgroup). Before this it left NO record. If its build ran in its own unit and FINISHED a complete packet for a
+    still-current bar, return (fired, stage, job) so the caller commits + posts it (DESK-BUILD-SURVIVOR-ADOPT); else
+    label it `interrupted`, once, with the survivor's result when there is one."""
     p = d / INFLIGHT
     mark = _read_json(p)
     if not mark:
-        return
-    started = _parse(mark.get("started_at"))
+        return None
+    try:
+        p.unlink()
+    except OSError:
+        pass
     surv = _read_json(_jobs_dir() / str(mark["job"]) / "result.json") if mark.get("job") else None
-    why = ("build outlived the trader and finished (" + str(surv.get("state")) + "), but the pass was not posted"
+    stage = _adoptable(mark, surv, now, cfg or {}, list(seen or []))
+    if stage is not None:
+        return mark["fired"], stage, str(mark["job"])
+    started = _parse(mark.get("started_at"))
+    why = ("build outlived the trader and finished (" + str(surv.get("state")) + "), but its packet could not be adopted "
+           "(unfinished, incomplete, already handled, or its bar is no longer current)"
            if surv else "build never finished: process ended mid-build (restart/kill)")
     _append(labels_path, {"at": mark.get("started_at"), "fired": mark.get("fired"), "disposition": "interrupted",
                           "packet_id": None, "reason": why, "survivor": surv,
                           "noticed_at": now.isoformat(),
                           "after_s": round((now - started).total_seconds(), 1) if started else None})
-    try:
-        p.unlink()
-    except OSError:
-        pass
+    return None
 
 
 def _write_state(p: Path, state: Dict[str, Any]) -> None:
