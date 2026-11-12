@@ -1,7 +1,7 @@
 {
   "tier": 1,
   "landing": "hold",
-  "hold_reason": "depends_on_unmerged_pr",
-  "hold_text": "Stacked on #25203 (TRADEIFY-FUTURES-FRONTIER, held for the manager): adds --source ibkr / --ibkr-percontract / --cells to scripts/research/tradeify_futures_fit.py (real CME bars from IB's free history, per-session volume roll, RULE-RQ-20261112-09d2-05's session-fraction window). Offline research only; the dukascopy path is unchanged. Merge after #25203. Revert: git revert.",
-  "why": "The --source flag RQ-20261112-09d2-05's blocked_on names (row FUT-CME-INTRADAY-HIST)."
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "AM-TRADING (acting for Manager Session 2026-11-11a) asked to land this itself once guards is green (relay 2026-11-12 17:37Z). #25203 merged (1e7ebc907); this is rebased onto main. Adds --source ibkr / --ibkr-percontract / --cells to scripts/research/tradeify_futures_fit.py: real CME bars from IB's free history, rolled per session on volume, graded on RULE-RQ-20261112-09d2-05's session-fraction window. Offline research only; the dukascopy path is unchanged. Revert: git revert.",
+  "why": "The --source flag named in RQ-20261112-09d2-05's blocked_on (row FUT-CME-INTRADAY-HIST)."
 }
