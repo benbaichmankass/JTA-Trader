@@ -324,7 +324,7 @@ def test_prop_routes(db, client):
                                  datetime(2026, 11, 12, 9, tzinfo=timezone.utc))
     conn.execute(store.DDL)
     conn.execute(f"INSERT INTO {store.TABLE} (snapshot_key, prop_fill_id, state, payload) VALUES (?, ?, 'built', ?)",
-                 (store.prop_key(opener), opener, store.encode(payload)))
+                 (store.prop_key(closer), opener, store.encode(payload)))
     conn.commit()
     conn.close()
     d = client.get(f"/api/bot/prop-trades/{opener}/snapshot").json()

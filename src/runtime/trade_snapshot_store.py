@@ -2,8 +2,9 @@
 
 One row per closed trade, keyed by ``snapshot_key``:
   * ``trade:<trades.id>``            -- exchange / paper accounts (the ``trades`` table);
-  * ``prop:<opening prop_fills.id>`` -- prop accounts (``prop_fills``; a trade with no journaled opening row is
-    keyed by its closing row's id).
+  * ``prop:<closing prop_fills.id>`` -- prop accounts (``prop_fills``; only a CLOSED trade has a snapshot, and its
+    closing row is what the backfill scans for, so it is the key; the payload still reports ``prop_fill_id`` = the
+    opening row, which is what the routes take).
 The payload is the framed DATA (``src.web.api.trade_chart_snapshot.build_snapshot``), not an image, stored
 zlib-compressed (``payload`` BLOB) and WITHOUT the indicator series, which the read route recomputes from the
 stored candles (deterministic), so ~2,600 backfilled trades stay small. The table lives in ``trade_journal.db``

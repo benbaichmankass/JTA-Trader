@@ -2,7 +2,7 @@
 
 ``GET /api/bot/trades/{trade_id}/snapshot``  -- the STORED snapshot (``trade_chart_snapshots``); never fetches candles.
 ``GET /api/bot/prop-trades/{fill_id}/snapshot`` / ``/markers`` -- the same for a PROP trade, keyed by a
-``prop_fills`` id (the opening or the closing row; both resolve to the trade, stored as ``prop:<opener id>``).
+``prop_fills`` id (the opening or the closing row; both resolve to the trade, stored as ``prop:<closing row id>``).
 ``GET /api/bot/trades/{trade_id}/markers?interval=1h`` -- entry, entry signal, bracket history and every LTR review /
 directed action on the trade, computed per request from the journal + local review files (no network).
 
@@ -123,7 +123,7 @@ def _prop(conn: sqlite3.Connection, fill_id: int):
         raise HTTPException(status_code=404, detail="no such prop fill")
     opener, closer, ticket = got
     pkg = load_package(conn, (ticket or {}).get("order_package_id"))
-    return tcs.prop_trade(opener, closer, ticket), pkg
+    return tcs.prop_trade(opener, closer, ticket), pkg, closer
 
 
 @router.get("/prop-trades/{fill_id}/snapshot")
@@ -132,10 +132,10 @@ def get_prop_trade_snapshot(fill_id: int) -> Dict[str, Any]:
     try:
         conn = _connect()
         try:
-            trade, _pkg = _prop(conn, fill_id)
-            if trade["status"] != "closed":
+            trade, _pkg, closer = _prop(conn, fill_id)
+            if closer is None:
                 raise HTTPException(status_code=404, detail="prop trade is not closed; use /markers for an open trade")
-            got = store.read(conn, store.prop_key(trade["prop_fill_id"]))
+            got = store.read(conn, store.prop_key(closer["id"]))
         finally:
             conn.close()
     except HTTPException:
@@ -155,7 +155,7 @@ def get_prop_trade_markers(fill_id: int, interval: str = "1h") -> Dict[str, Any]
     try:
         conn = _connect()
         try:
-            trade, pkg = _prop(conn, fill_id)
+            trade, pkg, _closer = _prop(conn, fill_id)
         finally:
             conn.close()
     except HTTPException:

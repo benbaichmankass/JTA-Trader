@@ -10,7 +10,7 @@ import pytest
 from src.runtime import trade_snapshot_builder as b
 from src.runtime import trade_snapshot_store as store
 from tests.fixtures.real_schema_db import insert_order_package, insert_trade, make_canonical_db
-from tests.test_trade_chart_snapshot import PKG, RECEIPTS, REVIEWS, _candles
+from tests.test_trade_chart_snapshot import PKG, RECEIPTS, REVIEWS, _candles, insert_prop_trade
 
 NOW = datetime(2026, 11, 12, 12, 0, tzinfo=timezone.utc)
 EMPTY = {"state": "read", "rows": []}
@@ -44,7 +44,7 @@ def _fetch_ok(calls=None):
 def _row(db, tid):
     conn = sqlite3.connect(str(db))
     try:
-        return store.read(conn, tid)
+        return store.read(conn, tid if isinstance(tid, str) else store.trade_key(tid))
     finally:
         conn.close()
 
@@ -134,3 +134,29 @@ def test_startup_hook_does_not_spawn_under_pytest():
     from src.web.api import main as api_main
     api_main._start_trade_snapshot_builder()
     assert b._thread is None
+
+
+def test_prop_closed_trade_is_built_keyed_by_closing_row(db):
+    opener, closer = insert_prop_trade(db)
+    out = b.run_batch(db, _fetch_ok(), NOW, reviews=REVIEWS, receipts=RECEIPTS)
+    assert sum(out.values()) == 1 and out["retrying"] == 0
+    got = _row(db, store.prop_key(closer))
+    assert got["state"] == "built"
+    assert got["payload"]["trade"]["prop_fill_id"] == opener and got["payload"]["trade"]["account_class"] == "prop"
+    assert got["payload"]["brackets"]["tp_history"] == "recorded"
+    assert sum(b.run_batch(db, _fetch_ok(), NOW, reviews=REVIEWS, receipts=RECEIPTS).values()) == 0
+
+
+def test_open_prop_trade_not_built(db):
+    insert_prop_trade(db, closed=False)
+    assert sum(b.run_batch(db, _fetch_ok(), NOW, reviews=EMPTY, receipts=EMPTY).values()) == 0
+
+
+def test_no_prop_tables_is_not_an_error(tmp_path):
+    p = tmp_path / "j.db"
+    make_canonical_db(p)
+    conn = sqlite3.connect(str(p))
+    conn.execute("DROP TABLE IF EXISTS prop_fills")
+    conn.commit()
+    conn.close()
+    assert sum(b.run_batch(p, _fetch_ok(), NOW, reviews=EMPTY, receipts=EMPTY).values()) == 0

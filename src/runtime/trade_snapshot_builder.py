@@ -1,5 +1,8 @@
 """Closed-trade chart snapshot WRITER + BACKFILL (UI-REDESIGN-2026-11 addendum 3; row CLOSED-TRADE-SNAPSHOT-WRITER).
 
+Covers ``trades`` rows (exchange / paper accounts) AND prop trades (closed ``prop_fills`` rows), operator
+direction relayed by AM-UI 2026-11-12 (PROP-UI-BRACKETS-CLOSED).
+
 ONE loop does both jobs: every ``POLL_S`` it builds up to ``BATCH`` closed trades that have no snapshot yet and
 whose framed window (close + 15% of the span) has ended, newest first. A new close is therefore built within one
 poll of its window ending; the backlog of already-closed trades drains ``BATCH`` per poll. Idempotent per
@@ -52,17 +55,46 @@ def _iso(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).isoformat()
 
 
+def _due_sql(alias: str) -> str:
+    return (f"({alias}.snapshot_key IS NULL OR ({alias}.state = 'retrying' AND "
+            f"({alias}.next_attempt_at IS NULL OR {alias}.next_attempt_at <= ?)))")
+
+
 def pending(conn: sqlite3.Connection, now: datetime, limit: int) -> List[Dict[str, Any]]:
-    """Closed live trades with no built snapshot (or a retry that is due) whose framed window has ended."""
+    """Closed trades with no built snapshot (or a retry that is due) whose framed window has ended, newest close
+    first: ``trades`` rows (closed, not backtest) and prop trades (closed ``prop_fills`` rows). Each item carries
+    ``_key`` (the store key), ``_attempts`` and, for prop, the resolved trade."""
     conn.execute(store.DDL)
-    rows = conn.execute(
-        f"SELECT t.*, s.attempts AS _attempts FROM trades t LEFT JOIN {store.TABLE} s ON s.trade_id = t.id "
-        "WHERE t.status = 'closed' AND t.closed_at IS NOT NULL AND COALESCE(t.is_backtest, 0) = 0 "
-        "AND (s.trade_id IS NULL OR (s.state = 'retrying' AND (s.next_attempt_at IS NULL OR s.next_attempt_at <= ?))) "
-        "ORDER BY t.id DESC LIMIT ?", (_iso(now), limit * 3)).fetchall()
-    out = []
-    for r in rows:
+    items: List[Dict[str, Any]] = []
+    for r in conn.execute(
+            f"SELECT t.*, s.attempts AS _attempts FROM trades t LEFT JOIN {store.TABLE} s "
+            "ON s.snapshot_key = 'trade:' || t.id "
+            "WHERE t.status = 'closed' AND t.closed_at IS NOT NULL AND COALESCE(t.is_backtest, 0) = 0 "
+            f"AND {_due_sql('s')} ORDER BY t.id DESC LIMIT ?", (_iso(now), limit * 3)).fetchall():
         d = dict(r)
+        d["_key"] = store.trade_key(d["id"])
+        items.append(d)
+    try:
+        prop_rows = conn.execute(
+            f"SELECT f.id AS fill_id, s.attempts AS _attempts FROM prop_fills f LEFT JOIN {store.TABLE} s "
+            "ON s.snapshot_key = 'prop:' || f.id WHERE lower(f.status) = 'closed' "
+            f"AND {_due_sql('s')} ORDER BY f.id DESC LIMIT ?", (_iso(now), limit * 3)).fetchall()
+    except sqlite3.OperationalError as exc:   # no prop tables on this box: nothing to build, not an error
+        if "no such table" not in str(exc):
+            raise
+        prop_rows = []
+    for r in prop_rows:
+        got = store.resolve_prop(conn, r[0])
+        if got is None:
+            continue
+        opener, closer, ticket = got
+        t = tcs.prop_trade(opener, closer or opener, ticket)
+        t["_key"] = store.prop_key(r[0])
+        t["_attempts"] = r[1]
+        items.append(t)
+    items.sort(key=lambda d: str(d.get("closed_at") or ""), reverse=True)
+    out = []
+    for d in items:
         end = tcs.window_end(d)
         if end is None or end <= now:   # no usable times -> built as a failure below, never skipped silently
             out.append(d)
@@ -97,8 +129,8 @@ def candles_for(trade: Dict[str, Any], fetch: Fetch, now: datetime) -> Tuple[Opt
 
 
 def _upsert(conn: sqlite3.Connection, trade: Dict[str, Any], **cols: Any) -> None:
-    cols = {"trade_id": trade["id"], "order_package_id": trade.get("order_package_id"),
-            "account_id": trade.get("account_id"), **cols}
+    cols = {"snapshot_key": trade["_key"], "trade_id": trade.get("id"), "prop_fill_id": trade.get("prop_fill_id"),
+            "order_package_id": trade.get("order_package_id"), "account_id": trade.get("account_id"), **cols}
     names = ", ".join(cols)
     marks = ", ".join("?" for _ in cols)
     conn.execute(f"INSERT OR REPLACE INTO {store.TABLE} ({names}) VALUES ({marks})", list(cols.values()))
@@ -126,12 +158,12 @@ def build_one(conn: sqlite3.Connection, trade: Dict[str, Any], fetch: Fetch, rev
             _upsert(conn, trade, schema=tcs.SCHEMA, state="retrying", read_state=None, attempts=attempts,
                     last_error=err, next_attempt_at=_iso(now + timedelta(seconds=wait)), built_at=None, payload=None)
         except sqlite3.Error:
-            logger.warning("trade snapshot: could not record retry for trade %s", trade.get("id"), exc_info=True)
+            logger.warning("trade snapshot: could not record retry for %s", trade.get("_key"), exc_info=True)
         if attempts == FLAG_AFTER:
-            logger.error("trade snapshot: trade %s still failing after %d attempts (%s); retrying every %ds",
-                         trade.get("id"), attempts, err, BACKOFF_S[-1])
+            logger.error("trade snapshot: %s still failing after %d attempts (%s); retrying every %ds",
+                         trade.get("_key"), attempts, err, BACKOFF_S[-1])
         else:
-            logger.warning("trade snapshot: trade %s attempt %d failed: %s", trade.get("id"), attempts, err)
+            logger.warning("trade snapshot: %s attempt %d failed: %s", trade.get("_key"), attempts, err)
         return "retrying"
 
 

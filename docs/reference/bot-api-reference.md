@@ -188,7 +188,7 @@ Unauthenticated GET routes — Tier 1 read surface. See
 Tier-1 GET routes keyed by `trades.id` (the `id` that `/api/bot/positions` and `/api/bot/trades/closed`
 already return), and for PROP trades by a `prop_fills` id (`/prop-trades/{fill_id}/...`): either the opening or the
 closing row's id resolves to the same trade, reported as `prop_fill_id` = the opening row (stored as
-`prop:<opening id>`; `trade:<id>` for the rest). A prop trade's brackets come from its ticket's SL+TP `amendments`
+`prop:<closing row id>`; `trade:<id>` for the rest). A prop trade's brackets come from its ticket's SL+TP `amendments`
 (`tp_history: recorded`); its ticket's `meta.sl_floor` marks the review it names `applied`. CORS like every `/api/bot` GET. `null` = not recorded: render a dash, never `0`.
 
 | Route | Shape | Fixture |
