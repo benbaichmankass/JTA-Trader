@@ -94,6 +94,7 @@ routing layer, not a replacement for reading it.
 | Time-series momentum / MA-cross (new-idea harness)? | `scripts/research/research_momentum.py` |
 | A roll-adjusted continuous futures series to test on? | `scripts/research/build_continuous_contract.py` |
 | Convert raw `market_raw` jsonl candles to harness CSV? | `scripts/research/market_raw_to_csv.py` |
+| **Does a 1h ETF leg hold its edge over the FULL history on bars restricted to the US cash session, at its live parameters held fixed, graded on the per-trade mean and its 95% CI (not just net R > 0)?** Fetches Dukascopy 1h bars per declared source (e.g. spot XAG as an SLV proxy, plus the ETF CFD), keeps RTH bars (weekdays; start hour 13..19 UTC Apr-Oct, 14..20 otherwise), runs `exit_lever_ablation.py --grade stage0 --data-csv` (the committed-record argv builder, the harness's own cost stack), then writes n, mean, t-CI, trade-bootstrap CI, 4 calendar folds, by-year/direction/exit and a verdict per source (`PASS` needs CI lower > 0 and 3/4 folds) | `scripts/research/slv_rth_stage0.py` (RQ-20261112-cdb2-01) |
 
 ## 2. Regime conditioning — when is a leg strong vs weak?
 
