@@ -71,6 +71,7 @@ container costs the work.
   If that observation can be produced on demand and cheaply, produce it now
   (canonical § "Validate early when it is cheap").
 - `killed` needs a reason. So does `dropped`.
+- **Blocked/waiting = a structured `clears_when` condition + owner, never prose only** (operator, 2026-11-12, row `UNBLOCK-WATCH`; gates this adds or changes: none). Every `blocked_on` edge, research `blocked:` block or event pipeline item you leave waiting names a reason, an owner and a machine-checkable condition (`pr_merged:<n>`, `deployed:<#pr|sha>`, `row_state:<ID>=<state>`, `unit_result:<RQ>`, `operator_answer:<qid>`, `date:<iso>`, `data_n:<query>>=<k>`; `manual:<text>` last). `python3 scripts/ops/unblock_watch.py` shows what it reads.
 
 ### 4. Every finding is fixed, filed, or flagged — and *filed* means the pipeline
 

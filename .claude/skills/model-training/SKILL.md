@@ -1,6 +1,6 @@
 ---
 name: model-training
-description: Trigger, monitor, and analyze ML model training for the ICT bot. The actual training RUNS on the trainer VM (ict-trainer.service → scripts/ops/run_training_cycle.sh); Claude drives it autonomously through the trainer-vm-diag relay — kick a cycle, watch the journal, read the registry, analyze the result. Covers the `python -m ml ...` CLI (train, list-models, promote-stage, shadow-*, build-dataset), the manifests in ml/configs/, dataset families, and the registry stage labels (candidate→shadow→advisory, housekeeping). Use when the operator says "train the models", "run a training cycle", "check the trainer", "what's in the registry", or "promote model X". NOT for live promotion past shadow (Tier-3, operator-gated).
+description: Trigger, monitor, and analyze ML model training for the ICT bot. The actual training RUNS on the trainer VM (ict-trainer.service → scripts/ops/run_training_cycle.sh); Claude drives it autonomously through the trainer-vm-diag relay — kick a cycle, watch the journal, read the registry, analyze the result. Covers the `python -m ml ...` CLI (train, list-models, promote-stage, shadow-*, build-dataset), the manifests in ml/configs/, dataset families, and the registry stage labels (candidate→shadow→advisory, housekeeping). Use when the operator says "train the models", "run a training cycle", "check the trainer", "what's in the registry", or "promote model X". A model reaches real money on its backtest evidence, with no stage step in between (operator 2026-11-12).
 ---
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-09-07` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
@@ -16,10 +16,11 @@ description: Trigger, monitor, and analyze ML model training for the ICT bot. Th
 
 Training is **autonomous trainer-VM territory** (CLAUDE.md § VM authority
 split). Claude provisions, kicks cycles, reads the registry, and analyzes
-results without operator-in-the-loop — up to `advisory` in the registry
-(autonomous only up to `shadow`; `shadow → advisory` is the operator gate).
-The one gate Claude does NOT cross alone is **promotion past `shadow`**
-(shadow → advisory is the operator-approved live-influence switch).
+results without operator-in-the-loop. The registry `stage` is a housekeeping
+label, never a step: a model reaches real money by the one flow, backtest →
+real money → (if demoted) soak on the demo floor while it iterates. Operator,
+2026-11-12, verbatim: *"There is nothing in between proving edge on back testing
+and real money. Absolutely no steps."*
 
 **The training run happens on the trainer VM, never in this session.** The
 sandbox has no SSH and no GPU; it drives the trainer through the

@@ -69,7 +69,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import shutil
 import sqlite3
 import sys
 from datetime import datetime, timezone
@@ -133,12 +132,18 @@ def _candidate_rows(
     sql += " ORDER BY id ASC"
     return conn.execute(sql, params).fetchall()
 
+def _take_backup():
+    """The shared pre-APPLY backup with per-tag retention (scripts/ops/journal_backup.py)."""
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    from scripts.ops.journal_backup import take_backup
+    return take_backup
+
 
 def _backup_db(db_path: str) -> str:
-    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    dest = f"{db_path}.bak-supersede-intent-reduce-phantom-pnl-{ts}"
-    shutil.copy2(db_path, dest)
-    return dest
+    """Pre-APPLY copy to <db>.bak-supersede-intent-reduce-phantom-pnl-<stamp>; keeps only the newest per tag (journal_backup.py)."""
+    return _take_backup()(db_path, "supersede-intent-reduce-phantom-pnl", method="copy", stamp_style="iso")
 
 
 def _is_real_money(row: sqlite3.Row) -> bool:

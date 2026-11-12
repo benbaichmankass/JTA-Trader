@@ -16,7 +16,7 @@ Subcommands:
   shadow-drift                — window-over-window drift report for one model_id (WS8-PART-3)
   backfill-shadow-predictions — retroactive-decision replay of every historical trade (2026-05-19)
   model-attribution           — per-model live attribution: shadow scores vs realized outcomes (go-live)
-  gate-check <id>             — computed shadow→advisory promotion gates (go/no-go packet; go-live)
+  gate-check <id>             — computed promotion gates into advisory (offline evidence; no shadow step)
   stage-guard                 — propose promote/demote/hold for every model (read-only; go-live)
   promotion-readiness         — sweep the whole registry + render the operator's promote/hold/demote report (S-MLOPT-S18)
   drift-retrain               — ADWIN-scan each deployed head's shadow scores + propose drift-triggered retrains (S-MLOPT-S16)
@@ -950,7 +950,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p_gate = sub.add_parser(
         "gate-check",
         help=(
-            "computed shadow→advisory promotion gates for one model "
+            "computed promotion gates into advisory (offline evidence; no shadow step) for one model "
             "(go/no-go evidence packet). Reports only; never promotes."
         ),
     )
@@ -1066,7 +1066,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "S-MLOPT-S18: sweep the whole registry and write the operator's "
             "promote/hold/demote report (JSON + Markdown). Reports only — "
-            "never auto-promotes; the shadow→advisory flip stays Tier-3."
+            "never auto-promotes; promotion is decided on offline evidence, no shadow step."
         ),
     )
     p_ready.add_argument("--registry-root", default="./ml/registry-store")
