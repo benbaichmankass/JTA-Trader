@@ -3298,10 +3298,17 @@ class Coordinator:
                         trade_id=_leg_trade_id,
                         sized_qty=_leg["qty"],
                     )
-                if not exec_dry_run:
+                # Only legs execute_pkg actually PLACED count: it returns an id
+                # rather than raising for some refusals (an options-expression
+                # no-fit returns ``opt-norfit-*`` and journals a qty-0 rejection;
+                # measured 2026-11-12 on pkg-59f612ef793840bb, which recorded a
+                # placed 201 for an order that never left). An options-expression
+                # account places CONTRACTS, not this share qty, so it is left out.
+                if not exec_dry_run and not _account_expresses_options(account_cfg):
                     _opened = sum(
-                        float(_l["qty"]) for _l in intent_legs
-                        if not _l.get("reduce_only")
+                        float(_l["qty"])
+                        for _l, _tid in zip(intent_legs, leg_trade_ids)
+                        if not _l.get("reduce_only") and _is_placement_id(_tid)
                     )
                     if _opened > 0:
                         placed_qty_by_account[account.name] = _opened
@@ -4731,3 +4738,25 @@ def _log_smoke_to_journal(
         except Exception:  # noqa: BLE001
             pass
         return False
+
+
+#: Trade-id prefixes ``execute_pkg`` returns when it placed NOTHING (a dry
+#: run, a journalled refusal). ``placed_qty_by_account`` skips these legs.
+_NON_PLACEMENT_ID_PREFIXES = ("dry-", "opt-norfit-", "rejected", "exchange_rejected")
+
+
+def _is_placement_id(trade_id: Any) -> bool:
+    """True when *trade_id* names an order execute_pkg actually sent."""
+    return isinstance(trade_id, str) and bool(trade_id) and not trade_id.startswith(
+        _NON_PLACEMENT_ID_PREFIXES
+    )
+
+
+def _account_expresses_options(account_cfg: Any) -> bool:
+    """True for an options-expression account (it places contracts, not shares)."""
+    try:
+        from src.units.accounts.options_overlay import account_expresses_options
+        return account_expresses_options(account_cfg or {}) is not None
+    except Exception:  # noqa: BLE001 -- observability only; unknown -> not options
+        return False
+

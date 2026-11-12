@@ -74,7 +74,7 @@ def test_connector_attaches_mechanics_per_leg(monkeypatch):
         return {"read_state": "read", "legs": {"tlt_pullback_1d": {"proven": True, "reason": "x passed"}},
                 "population": {"legs": 1}}
     monkeypatch.setattr(tabs, "FETCH", fake)
-    legs = tabs.system_catalog(REPO, 1)["sections"]["legs"]
+    legs = tabs.system_catalog(REPO, 1, mechanics=True)["sections"]["legs"]
     assert legs["mechanics"]["read_state"] == "read"
     by = {r["leg"]: r for r in legs["items"]}
     if "tlt_pullback_1d" in by:
@@ -86,7 +86,33 @@ def test_connector_unreadable_route_is_none_not_false(monkeypatch):
     def boom(path, token):
         raise TimeoutError("502")
     monkeypatch.setattr(tabs, "FETCH", boom)
-    legs = tabs.system_catalog(REPO, 1)["sections"]["legs"]
+    legs = tabs.system_catalog(REPO, 1, mechanics=True)["sections"]["legs"]
     assert legs["read_state"] == "read"                      # the roster itself still reads
     assert legs["mechanics"]["read_state"] == "could_not_look"
     assert all(r["mechanics_proven"] is None for r in legs["items"])
+
+
+def test_default_call_reads_nothing_live_and_carries_no_mechanics(monkeypatch):
+    def boom(path, token):
+        raise AssertionError("the default system_catalog call must not read the live VM")
+    monkeypatch.setattr(tabs, "FETCH", boom)
+    out = tabs.system_catalog(REPO, 10)
+    legs = out["sections"]["legs"]
+    assert "mechanics" not in legs and all("mechanics_proven" not in r for r in legs["items"])
+    assert {"ml_models", "signals"} <= set(out["sections"])
+
+
+def test_ladder_mechanics_call_fits_the_reply_budget(monkeypatch):
+    """Per-leg detail for EVERY leg, with long reasons, still fits: the call drops models + signals."""
+    import json
+
+    from src.console_connector import server as srv
+    legs_all = [r["leg"] for r in tabs.system_catalog(REPO, 1)["sections"]["legs"]["items"]]
+    detail = {leg: {"proven": False, "basis": None, "path": "alpaca_equity_bracket_v1", "delta": "new_code",
+                    "reason": f"{leg} has no own passed soak and is not registered in config/mechanics_paths.yaml"}
+              for leg in legs_all}
+    monkeypatch.setattr(tabs, "FETCH", lambda path, token: {"read_state": "read", "legs": detail,
+                                                            "population": {"legs": len(detail)}})
+    out = tabs.system_catalog(REPO, 1, mechanics=True)
+    assert set(out["sections"]) == {"legs"}
+    assert len(json.dumps(out, default=str)) <= srv.REPLY_BUDGET

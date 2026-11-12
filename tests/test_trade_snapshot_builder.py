@@ -191,3 +191,41 @@ def test_attached_journal_rejects_writes(db, tmp_path):
     with pytest.raises(sqlite3.OperationalError, match="readonly"):
         store.journal_ro(str(db)).execute("CREATE TABLE x (a)")
     conn.close()
+
+
+# ── GET /api/bot/trades/snapshots/status: backfill progress on a read route (INFO logs never reach the journal)
+
+def test_flag_threshold_matches_builder():
+    assert store.FLAG_AFTER_ATTEMPTS == b.FLAG_AFTER
+
+
+def _status(db, monkeypatch):
+    from fastapi.testclient import TestClient
+    from src.web.api import main as api_main
+    from src.web.api.routers import trade_snapshot as router
+    monkeypatch.setattr(router, "_DB_PATH", db)
+    monkeypatch.setattr(router, "_SNAP_PATH", db.parent / "trade_chart_snapshots.db")
+    return TestClient(api_main.app).get("/api/bot/trades/snapshots/status").json()
+
+
+def test_status_counts_built_retrying_pending(db, monkeypatch):
+    insert_prop_trade(db)
+    built_id = _trade(db)
+    bad = _trade(db, closed="not-a-time")            # fails -> retrying
+    _trade(db, opened="2026-11-12T11:00:00+00:00", closed="2026-11-12T11:58:00+00:00")  # window not passed -> pending
+    b.run_batch(db, _fetch_ok(), NOW, reviews=EMPTY, receipts=EMPTY)
+    d = _status(db, monkeypatch)
+    assert d["total_closed"] == 4 and d["total_closed_trades"] == 3 and d["total_closed_prop"] == 1
+    assert d["built"] == 2 and d["built_trade"] == 1 and d["built_prop"] == 1
+    assert d["failing"] == 1 and d["failing_max_attempts"] == 1 and d["last_error_key"] == store.trade_key(bad)
+    assert d["pending"] == 1
+    assert d["writer"]["running"] is False and "writer_not_running" in d["partial_reasons"]   # not started under pytest
+    assert _row(db, built_id)["state"] == "built"
+
+
+def test_status_before_the_builder_ran_is_null_not_zero(db, monkeypatch):
+    _trade(db)
+    d = _status(db, monkeypatch)
+    assert d["built"] is None and d["failing"] is None and d["pending"] is None
+    assert d["total_closed"] == 1 and "snapshot_db_no_table" in d["partial_reasons"]
+    assert d["read_state"] == "partial"
