@@ -31,7 +31,9 @@ What it does
    package stop would leave the siblings' venue stops diverged.
 3. Reads the venue: the position (side, size, mark) and the resting stop of
    each live leg.
-4. REFUSES (exit 2) — never guesses:
+4. REFUSES (exit 2) — never guesses. SINCE 2026-11-12 (AM-AMEND-POSITION-SL-BYBIT-ONLY: MAKE REPORT-ONLY)
+   the looser / wrong-side / non-live / non-open / non-Bybit-sibling items below are REPORTED in
+   ``report_only`` and the amend proceeds; a non-Bybit TARGET has no executor here:
      * a LOOSER stop than the package stop, any leg's ``trades.stop_loss``, or
        any leg's resting venue stop (short: new_sl must be BELOW; long: ABOVE);
      * a stop on the wrong side of the mark (would trigger at once) unless
@@ -245,7 +247,17 @@ def amend(account_id: str, *, new_sl: float, reason: str,
     out: dict[str, Any] = {"account_id": account_id, "new_sl": new_sl,
                            "apply": apply, "action": None, "ok": False,
                            "exit": EXIT_REFUSED, "detail": None,
-                           "before": {}, "after": {}}
+                           "before": {}, "after": {}, "report_only": []}
+    # Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-AMEND-POSITION-SL-BYBIT-ONLY: MAKE REPORT-ONLY. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+    # The checks below that used to refuse -- a non-live account, a non-open trade / package, a LOOSER stop, a stop
+    # on the wrong side of the mark, a non-Bybit sibling leg -- now append a named cause to ``report_only`` and the
+    # amend proceeds; the venue answers it. What physically cannot be done still stops with its cause: a non-Bybit
+    # TARGET account (this action has no executor for it), no matching / an ambiguous trade row, no venue position,
+    # and every could-not-look (exit 3).
+
+    def _report(cause: str) -> None:
+        out["report_only"].append(cause)
+        print(f">>> amend-position-sl: report-only (AM-AMEND-POSITION-SL-BYBIT-ONLY): {cause}")
 
     def _done(action: str, code: int, detail: str) -> dict[str, Any]:
         out.update(action=action, exit=code, ok=code == EXIT_OK, detail=detail)
@@ -264,9 +276,12 @@ def amend(account_id: str, *, new_sl: float, reason: str,
     if not cfg:
         return _done("refuse_no_account", EXIT_REFUSED, f"account {account_id!r} not found in accounts.yaml")
     if str(cfg.get("exchange") or "").lower() != "bybit":
-        return _done("refuse_not_bybit", EXIT_REFUSED, f"account {account_id!r} is exchange={cfg.get('exchange')!r}, not Bybit")
+        # Physical, not policy: this action's executor is the Bybit monitor modify seam.
+        return _done("no_executor_not_bybit", EXIT_REFUSED,
+                     f"account {account_id!r} is exchange={cfg.get('exchange')!r}: no executor wired here for it "
+                     "(this action amends Bybit stops; Alpaca / prop go through scripts/ops/live_review_apply.py)")
     if cfg.get("mode") != "live":
-        return _done("refuse_not_live", EXIT_REFUSED, f"account {account_id!r} is mode={cfg.get('mode')!r}, not live")
+        _report(f"account {account_id!r} is mode={cfg.get('mode')!r}, not live")
     if client is None:
         return _done("unreadable_no_client", EXIT_UNREADABLE, f"no exchange client for {account_id!r} (missing creds?)")
 
@@ -292,7 +307,7 @@ def amend(account_id: str, *, new_sl: float, reason: str,
         return _done("refuse_wrong_account", EXIT_REFUSED,
                      f"trade {trade.get('id')} belongs to {trade.get('account_id')!r}, not {account_id!r}")
     if trade.get("status") != "open":
-        return _done("refuse_not_open", EXIT_REFUSED, f"trade {trade.get('id')} is status={trade.get('status')!r}")
+        _report(f"trade {trade.get('id')} is status={trade.get('status')!r}")
     direction = str(trade.get("direction") or "").lower()
     if direction not in ("long", "short"):
         return _done("refuse_bad_direction", EXIT_REFUSED, f"trade {trade.get('id')} direction={direction!r}")
@@ -310,7 +325,7 @@ def amend(account_id: str, *, new_sl: float, reason: str,
         return _done("refuse_no_package", EXIT_REFUSED,
                      f"trade {trade.get('id')} has no order package ({pkg_id!r}) — the monitor holds no stop to keep in sync")
     if pkg.get("status") != "open":
-        return _done("refuse_package_not_open", EXIT_REFUSED, f"package {pkg_id} is status={pkg.get('status')!r}")
+        _report(f"package {pkg_id} is status={pkg.get('status')!r}")
     if not any(str(r.get("id")) == str(trade.get("id")) for r in legs):
         legs.insert(0, trade)
     legs.sort(key=lambda r: str(r.get("id")) != str(trade.get("id")))  # target first
@@ -322,9 +337,7 @@ def amend(account_id: str, *, new_sl: float, reason: str,
     if pkg_sl is None:
         return _done("unreadable_package_sl", EXIT_UNREADABLE, f"package {pkg_id} sl={pkg.get('sl')!r} unreadable")
     if is_looser(direction, new_sl, pkg_sl, tol):
-        return _done("refuse_looser", EXIT_REFUSED,
-                     f"new_sl {new_sl:g} is LOOSER than the journal stop {pkg_sl:g} for a {direction} "
-                     f"(a {direction} stop may only move {'down' if direction == 'short' else 'up'})")
+        _report(f"new_sl {new_sl:g} is LOOSER than the journal stop {pkg_sl:g} for a {direction}")
 
     # ---- venue ------------------------------------------------------------
     leg_states: list[dict[str, Any]] = []
@@ -335,14 +348,14 @@ def amend(account_id: str, *, new_sl: float, reason: str,
         else:
             lc, lcfg = _build_client(aid)
         if not lcfg or str(lcfg.get("exchange") or "").lower() != "bybit":
-            return _done("refuse_non_bybit_leg", EXIT_REFUSED,
-                         f"package leg {leg.get('id')} is on {aid!r} (not Bybit) — out of scope")
+            # no executor here for a non-Bybit sibling: skipped (its own account moves it), reported
+            _report(f"package leg {leg.get('id')} is on {aid!r} (not Bybit): skipped, no executor here")
+            continue
         live = lcfg.get("mode") == "live"
         st: dict[str, Any] = {"trade_id": leg.get("id"), "account_id": aid, "live": live,
                               "stop_loss": _f(leg.get("stop_loss")), "leg": leg}
         if is_looser(direction, new_sl, st["stop_loss"] or new_sl, tol):
-            return _done("refuse_looser", EXIT_REFUSED,
-                         f"new_sl {new_sl:g} is LOOSER than trade {leg.get('id')}'s stop_loss {st['stop_loss']:g}")
+            _report(f"new_sl {new_sl:g} is LOOSER than trade {leg.get('id')}'s stop_loss {st['stop_loss']:g}")
         if live:
             if lc is None:
                 return _done("unreadable_no_client", EXIT_UNREADABLE, f"no exchange client for leg account {aid!r}")
@@ -358,19 +371,20 @@ def amend(account_id: str, *, new_sl: float, reason: str,
                 return _done("unreadable_venue_sl", EXIT_UNREADABLE,
                              f"cannot identify the resting stop on {aid}/{sym} (sl_order_id={leg.get('sl_order_id')!r})")
             if is_looser(direction, new_sl, vs["venue_sl"], tol):
-                return _done("refuse_looser", EXIT_REFUSED,
-                             f"new_sl {new_sl:g} is LOOSER than the resting venue stop {vs['venue_sl']:g} on {aid}")
+                _report(f"new_sl {new_sl:g} is LOOSER than the resting venue stop {vs['venue_sl']:g} on {aid}")
         leg_states.append(st)
+    if not leg_states:
+        return _done("no_executor_no_bybit_leg", EXIT_REFUSED, "no Bybit leg in the package to amend")
 
     out["before"]["legs"] = [{k: v for k, v in s.items() if k != "leg"} for s in leg_states]
     mark = (leg_states[0].get("venue") or {}).get("mark")
-    if mark is None:
-        return _done("unreadable_mark", EXIT_UNREADABLE, f"no mark price for {account_id}/{sym}")
     out["before"]["mark"] = mark
-    if would_trigger(direction, new_sl, mark) and not allow_immediate:
-        return _done("refuse_wrong_side", EXIT_REFUSED,
-                     f"new_sl {new_sl:g} is on the wrong side of mark {mark:g} for a {direction} — it would "
-                     f"trigger immediately (pass allow_immediate: true to do it anyway)")
+    if mark is None:
+        # the mark only feeds the (report-only) wrong-side check below
+        _report(f"no mark price for {account_id}/{sym}: wrong-side check not run")
+    elif would_trigger(direction, new_sl, mark) and not allow_immediate:
+        _report(f"new_sl {new_sl:g} is on the wrong side of mark {mark:g} for a {direction}: it may trigger "
+                "immediately; sent, the venue answers")
 
     need_venue = [s for s in leg_states if s["live"] and not same_level(s["venue"]["venue_sl"], new_sl, tol)]
     need_db = [s for s in leg_states if not same_level(s["stop_loss"], new_sl, tol)]
