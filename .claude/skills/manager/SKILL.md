@@ -180,8 +180,10 @@ Plus, then I can also, like, if there's artifacts, I can leave you comments and 
   - answers saved in the page (the `db` capability, collection `answers`);
   - a "copy my answers" summary.
   Write for reading away from the chat: no unexplained ids, and every question stands on its own.
-- **Delivery.** Send the link once via `send-ping`, put it in the console inbox (until the UI lists decision docs, the brief's "decisions for
-  you" carries the link), and keep updating **the same artifact** (same URL) as items resolve or new ones join. Do not spawn a new page per
+- **Delivery.** Send the link once via `send-ping` and **register it on the console** (row UI-DECISION-DOCS, console v27+): `ArtifactData set`
+  on the console artifact (https://claude.ai/artifact/YU4ZwddDFB1AD2xWV2oE3g), collection `decisions`, doc id `<slug>-<yyyymmdd>`, data `{title, url, questions, answered, counted_at, created_at,
+  status: "open", row}`. It then shows under "Decision docs waiting on you". At each check-in, recount the doc's `answers` collection and
+  update `answered` / `counted_at`; set `status: "closed"` (or `"answered"`) when it is done, and it folds away. Also keep updating **the same artifact** (same URL) as items resolve or new ones join. Do not spawn a new page per
   question.
 - **The manager keeps running.** A decision doc never blocks other work (§ "Five things", item 4): state the assumption, carry on, and pick
   the answers up at the next check-in or when the operator says they are done.
