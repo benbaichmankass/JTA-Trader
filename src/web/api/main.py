@@ -177,3 +177,19 @@ app.include_router(ops_channel_router.router)  # MANAGER-VM-DIRECT-OPS (X-Work-S
 @app.get("/api/health", tags=["health"])
 def health() -> dict:
     return {"ok": True}
+
+
+@app.on_event("startup")
+def _start_trade_snapshot_builder() -> None:
+    """UI-REDESIGN-2026-11 / CLOSED-TRADE-SNAPSHOT-WRITER: build each closed trade's chart snapshot once, in a
+    daemon thread of THIS process (off the trader and the close path; src/runtime/trade_snapshot_builder.py).
+    Not started under pytest so a TestClient context never spawns a candle-fetching thread."""
+    import sys
+    if "pytest" in sys.modules:
+        return
+    try:
+        from src.runtime import trade_snapshot_builder
+        trade_snapshot_builder.start()
+    except Exception:  # noqa: BLE001  # allow-silent: the API serves without the builder; logged, next restart retries
+        import logging
+        logging.getLogger(__name__).warning("trade snapshot builder did not start", exc_info=True)

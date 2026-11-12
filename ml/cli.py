@@ -705,7 +705,8 @@ def _cmd_promotion_readiness(args: argparse.Namespace) -> int:
 
 def _cmd_stage_guard(args: argparse.Namespace) -> int:
     # Evaluate every model: propose promote / demote / hold. Read-only —
-    # the operator runs `promote-stage` to act on a proposal.
+    # `promote-stage` acts on a proposal (data-backed Tier-3; no shadow step
+    # since 2026-11-12, ML-STAGE-RETIRE).
     from .promotion.stage_guard import run_stage_guard
 
     proposals = run_stage_guard(
@@ -1083,7 +1084,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--datasets-root", default=None,
         help=(
             "datasets-out root (trainer VM). When set, computes the offline "
-            "OOS-edge gate for every shadow-stage model so promote proposals "
+            "OOS-edge gate for every pre-production (candidate or shadow) model so promote proposals "
             "carry champion-challenger evidence."
         ),
     )
@@ -1109,7 +1110,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "stage-guard",
         help=(
             "evaluate every model and propose promote / demote / hold. "
-            "Read-only — the operator runs promote-stage to act."
+            "Read-only — promote-stage acts on a proposal (no shadow step)."
         ),
     )
     p_guard.add_argument("--registry-root", default="./ml/registry-store")
@@ -1126,7 +1127,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--datasets-root", default=None,
         help=(
             "datasets-out root (trainer VM). When set, computes the offline "
-            "OOS-edge gate for every shadow-stage model so promote proposals "
+            "OOS-edge gate for every pre-production (candidate or shadow) model so promote proposals "
             "carry champion-challenger evidence."
         ),
     )

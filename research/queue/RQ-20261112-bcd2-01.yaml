@@ -1,5 +1,5 @@
 # Hand-authored 2026-11-12 by lane ML-D2-CONSUMER-TEST (Tier 1), dispatched by the ML assistant manager. Decision rule registered BEFORE any run. Gates: none.
-id: RQ-20261112-d2ct-01
+id: RQ-20261112-bcd2-01
 title: 'CONSUMER TEST of the D2 regime gate on the trend_donchian family, pooled: applied to every TD leg whose symbol has an advisory vol head, would the dropped trades have lost money, out of sample, more than the same number dropped at random?'
 status: queued
 cadence: once
@@ -25,7 +25,7 @@ power:
     source: none
     accrual_basis: Replays fixed history; nothing accrues.
 decision_rule:
-  id: RULE-RQ-20261112-d2ct-01
+  id: RULE-RQ-20261112-bcd2-01
   registered_at: '2026-11-12'
   registered_before_run: true
   statistic: 'scripts/research/regime_gate_family_consumer.py over per-leg fully tagged trades (regime_cell_walkforward harness emit, fully tagged by regime_tag_emitted --emit-tagged --vol-labels with no --only filter; net_r already net of fee + resolved slippage + funding via execution_costs.resolve_cost_policy). Legs: trend_donchian_sol_prop, trend_donchian_eth_prop, trend_donchian_sol_4h, trend_donchian_eth_4h, each only if its symbol resolves an advisory vol head at run time (else listed as inert and excluded). Cells: read from config/regime_policy.yaml trend_vol for strategy trend_donchian at run time (not chosen after seeing trades). added_r = -(sum net_r of dropped trades) pooled over legs; fold_wins over 6 equal-width calendar folds of the pooled trades; control = per leg and side, drop the same count of same-side trades uniformly at random, 5000 draws, seed 20261112, p = share of draws with added_r >= actual.'
@@ -47,7 +47,7 @@ run:
     - 'ml_vol_label_replay replay+verify per symbol (BTC, ETH, SOL; BTC doubles as the verify step blocking RQ-20261101-78fc-08)'
     - 'regime_cell_walkforward harness trades per leg, fully tagged'
     - 'regime_gate_family_consumer.py --leg LEG=file ... ; again with --since 2026-07-01'
-    research_unit: RQ-20261112-d2ct-01
+    research_unit: RQ-20261112-bcd2-01
   note: 'Trainer registry + built datasets required for the labels. Local compute cannot replay labels (no lightgbm, no registry). Refuse to grade on a failed verify.'
 lands:
   store: research/results/

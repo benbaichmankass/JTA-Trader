@@ -242,6 +242,11 @@ has that id or the trade is still open (use `/markers`).
   refused it) · `operator_ask` · `dry_run` · `no_action` (hold / no recommendation) · `unknown`.
   `sources.reviews` / `sources.receipts` = `read` or `could_not_look` (then `read_state` is `partial`).
 
+**Writer progress.** `GET /api/bot/trades/snapshots/status` -> `{as_of, read_state, partial_reasons[], total_closed,
+total_closed_trades, total_closed_prop, built, built_partial, built_trade, built_prop, pending, failing, failing_flagged,
+failing_max_attempts, last_built_at, last_error, last_error_key, writer{running, started_at, last_batch_at, last_batch,
+loop_errors}}`. Counts are `null` (not 0) when the snapshot DB or the journal could not be read.
+
 **Markers (open trades).** Computed per request (cheap: journal + review files, no candle fetch): the same
 `entry`, `entry_signal`, `brackets`, `decisions` blocks, floored to the requested `interval`. 404 for an unknown id.
 
