@@ -218,6 +218,7 @@ async def test_snapshot_kept_warm_o1_in_viewers(monkeypatch, n_clients, max_buil
     """3 clients for 60 s -> at most ~4 snapshot builds (one per 15 s, total); 0 clients -> 0 builds.
     Goes through the REAL route path (dashboard.get_positions -> SWRCache.aget) with a counted build."""
     import asyncio
+
     from src.web.api import _swr
     from src.web.api.routers import dashboard
     t = [0.0]
@@ -250,6 +251,7 @@ async def test_snapshot_kept_warm_o1_in_viewers(monkeypatch, n_clients, max_buil
 async def test_refresh_single_flight_with_rest_read(monkeypatch):
     """A REST /positions read and the broadcaster's refresh in the same moment build ONCE."""
     import asyncio
+
     from src.web.api import _swr
     from src.web.api.routers import dashboard
     t = [100.0]
