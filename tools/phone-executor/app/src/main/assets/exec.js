@@ -6,7 +6,7 @@
   // PHONE-EXEC-OBSERVABLE-1018: this file is also served SIGNED by our own API and swapped in at runtime
   // (RemoteJs.kt): a newer version replaces the installed helpers on the next ensure(); the same version is
   // never injected twice. Bump on every change (CI signs the file; the app pins by version).
-  var EXEC_VERSION = "2026-11-11.1";
+  var EXEC_VERSION = "2026-11-12.1";
   if (window.__ex && window.__ex.version === EXEC_VERSION) return;
   function hostOk() { return /(^|\.)breakoutprop\.com$/.test(location.hostname || ""); }
   function vis(el) { if (!el) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }
