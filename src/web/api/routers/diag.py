@@ -4236,6 +4236,57 @@ def get_live_review_due(request: Request) -> dict[str, Any]:
     return live_review_due(mark_fn=last_mark_price)
 
 
+def _ml_pool_snapshot_dir() -> Path:
+    """Where the ml_entry_eq* pool snapshots live (``ML_ENTRY_EQ_SNAPSHOT`` overrides the live file, as in the refresher; the archive sits beside it)."""
+    env = os.environ.get("ML_ENTRY_EQ_SNAPSHOT")
+    if env:
+        return Path(env).parent
+    from src.utils.paths import data_dir
+    return Path(data_dir()) / "ml_entry_eq"
+
+
+_ML_POOL_BAR_RE = re.compile(r"^\d{8}T\d{4}Z$")
+
+
+@router.get("/ml_pool_snapshots")
+def get_ml_pool_snapshots(request: Request, bar: str | None = None, limit: int = 40) -> dict[str, Any]:
+    """The ARCHIVED ml_entry_eq* pool snapshots (row ML-LIVE-PARITY-ML-LEGS), the input the live-vs-replay parity job re-scores.
+
+    No ``bar``: the index, newest first -- ``{bar, bytes, bar_close, built_at, covered, pool_size}`` per ``history/<bar>.json`` (``limit`` <= 200).
+    ``bar=20261111T1900Z``: that one snapshot, verbatim. ``read_state`` is ``looked`` / ``could_not_look``; ``snapshots`` is ``null`` -- not ``[]`` --
+    when the directory could not be read, and ``present: false`` says the archive does not exist (yet). Pure file read, no socket, no order path. Tier 1.
+    """
+    _require_diag_token(request)
+    hist = _ml_pool_snapshot_dir() / "history"
+    if bar is not None:
+        if not _ML_POOL_BAR_RE.match(bar):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error": "bad_bar", "want": "YYYYMMDDTHHMMZ"})
+        f = hist / f"{bar}.json"
+        try:
+            return {"read_state": "looked", "bar": bar, "snapshot": json.loads(f.read_text(encoding="utf-8"))}
+        except FileNotFoundError:
+            return {"read_state": "looked", "bar": bar, "snapshot": None, "present": False}
+        except (OSError, ValueError) as exc:
+            return {"read_state": "could_not_look", "bar": bar, "snapshot": None, "error": f"{type(exc).__name__}: {exc}"}
+    n = _clamp(limit, 40, 200)
+    if not hist.is_dir():
+        return {"read_state": "looked", "present": False, "snapshots": [], "count": 0}
+    try:
+        files = sorted(hist.glob("*.json"), reverse=True)
+    except OSError as exc:
+        return {"read_state": "could_not_look", "present": None, "snapshots": None, "error": f"{type(exc).__name__}: {exc}"}
+    rows: list[dict[str, Any]] = []
+    for f in files[:n]:
+        row: dict[str, Any] = {"bar": f.stem, "bytes": f.stat().st_size}
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+            row.update({k: d.get(k) for k in ("bar_close", "built_at", "covered", "pool_size")})
+        except (OSError, ValueError) as exc:
+            row["error"] = f"{type(exc).__name__}: {exc}"
+        rows.append(row)
+    return {"read_state": "looked", "present": True, "snapshots": rows, "count": len(rows), "total_in_archive": len(files)}
+
+
 @router.get("/tick_cost")
 def get_tick_cost(request: Request) -> dict[str, Any]:
     """Per-tick wall-clock cost of the trader's hook chain (2026-08-09).
