@@ -154,7 +154,7 @@ def _log_market_closed_report_only(strategy_id: str, symbol: Any, reason: str) -
             "symbol": symbol,
             "cause": reason,
         })
-    except Exception:  # noqa: BLE001 — a report never changes the signal
+    except Exception:  # a report never changes the signal
         logger.exception("%s: market-closed report emit failed", strategy_id)
 
 

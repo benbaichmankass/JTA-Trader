@@ -29,10 +29,12 @@ if "matplotlib" not in sys.modules:
     sys.modules["matplotlib"] = _mpl_stub
     sys.modules["matplotlib.pyplot"] = mock.MagicMock()
 
-import src.runtime.pipeline as pipeline  # noqa: E402
-import src.runtime.intent_multiplexer as im  # noqa: E402
-import src.runtime.strategy_signal_builders as ssb  # noqa: E402
-from src.runtime import runtime_flags  # noqa: E402
+import src.runtime.intent_multiplexer as im
+import src.runtime.strategy_signal_builders as ssb
+from src.runtime import (
+    pipeline,
+    runtime_flags,
+)
 
 REPO = Path(__file__).resolve().parents[1]
 SIG = {"symbol": "ETHUSDT", "side": "buy", "entry_price": 100.0, "stop_loss": 95.0,
@@ -159,6 +161,7 @@ def test_closed_us_market_builder_carries_on_to_its_data(monkeypatch):
 def test_market_hours_check_itself_still_reads_closed():
     """Positive control: the check still runs and still says closed on a Saturday."""
     from datetime import datetime, timezone
+
     from src.runtime.market_hours import is_market_open
     sat = datetime(2026, 11, 14, 15, 0, tzinfo=timezone.utc)
     assert is_market_open("us_equity", sat) is False
