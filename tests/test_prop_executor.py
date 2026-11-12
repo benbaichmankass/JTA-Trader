@@ -5150,3 +5150,32 @@ def test_the_posted_positions_grade_in_inv_prop_positions(env):
                                                       "direction": "long", "status": "open", "qty": 0.5}]}}
     r = si.inv_prop_positions_reconcile(ctx)
     assert r.verdict == si.PASS and r.n == 1, r
+
+
+def test_velotrade_unreadable_snapshot_cushion_unknown_is_placed_and_labelled(env):
+    """PROP-TICKET-TRUTH / ML-ENTRY-PROP-BASELINE, live 2026-11-11 20:03Z and 11-12 08:02Z: velotrade_1 SKIPPED
+    both ml_entry ETH long tickets on the risk gate (cushion_unknown + open risk unrealized_unreported) because
+    the account-status snapshot was unreadable, while the same tickets FILLED on tradeify_1.
+
+    GATE-PROP-RISK-CUSHION: MAKE REPORT-ONLY (operator 2026-11-12 13:08Z decisions page, Gates tab): a
+    could-not-look cushion labels and alerts; the ticket is placed."""
+    # Snapshot unreadable: no balance/equity, no unrealized P&L reported.
+    ad = FakeAdapter(account=AccountSnapshot(balance=None, equity=None, unrealized=None, realized_today=None),
+                     after_submit=([], [_o(quantity=10.0)]))
+    api = FakeApi([ticket(qty=10.0)])
+    res = run(ad, api, env)
+    assert ("place_bracket", "prop-manual-aaa", True) in ad.calls          # placed, not skipped
+    assert not [p for p in api.posts if p.get("status") == "skipped"]
+    alerts = " ".join(res.alerts)
+    assert "placing anyway" in alerts
+    assert "cushion_unknown" in alerts and "could not look" in alerts      # the named label
+
+
+def test_velotrade_unreadable_snapshot_guard_level_label():
+    """Guard-level twin: an unreadable account plus open risk ``unrealized_unreported`` fits, and carries the
+    ``cushion_unknown`` grade and both could-not-look causes as report-only findings."""
+    v = guards(account=AccountSnapshot(balance=None, equity=None, unrealized=None, realized_today=None),
+               orisk=None, ostate="unrealized_unreported")
+    assert v.fits and not v.reasons
+    rep = " ".join(v.breach_reports)
+    assert "cushion_unknown" in rep and "unrealized_unreported" in rep and "account:" in rep
