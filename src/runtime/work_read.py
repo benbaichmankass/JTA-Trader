@@ -240,6 +240,8 @@ def pipeline_result(store):
         res.items[rec["id"]] = rec
         res.raw.append(rec)
         res.sources[rec["id"]] = f"work_store:v{it['version']}"
+        if it.get("updated_at"):
+            res.store_updated_at[rec["id"]] = it["updated_at"]
     res.records = len(res.raw)
     obs, builds = due_now_split(store)
     res.due_now = obs
