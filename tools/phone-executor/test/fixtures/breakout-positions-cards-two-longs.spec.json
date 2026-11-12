@@ -63,6 +63,14 @@
     "state": "no_table"
    },
    "note": "the same cards in a region NOT labelled Positions are not read as positions"
+  },
+  {
+   "call": "(function(){var c=__ex.clickTab('^(closed orders|trades)\\\\b');var r=__ex.closedRead();return {c:c,state:r.state};})()",
+   "expect": {
+    "c": "clicked",
+    "state": "no_table"
+   },
+   "note": "the channel on a page whose Open orders list has not rendered yet answers no_table (the app re-reads), never rows"
   }
  ]
 }

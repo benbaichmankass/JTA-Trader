@@ -87,8 +87,7 @@ class Api(private val c: Context) {
      *  (state + rows: symbol, side, qty, entry, mark, uPnL) and the Closed orders read. The server owns every derivation
      *  (account uPnL, journal reconcile); the phone only reports what the page showed and the state of each read. */
     suspend fun accountStatus(balance: Double?, equity: Double?, equityLabel: String,
-                              unrealized: Double? = null, positions: JSONObject? = null, closed: JSONObject? = null,
-                              brackets: JSONObject? = null) =
+                              unrealized: Double? = null, positions: JSONObject? = null, closed: JSONObject? = null) =
         post("report", JSONObject().put("kind", "account_status").put("source", "phone_executor")
             .put("provenance", "MEASURED").put("equity_label", equityLabel)
             .put("balance", balance ?: JSONObject.NULL).put("equity", equity ?: JSONObject.NULL)
@@ -105,10 +104,6 @@ class Api(private val c: Context) {
                 // BREAKOUT-UNRECORDED-1101: the Closed orders read's own state, so an exit-less close can say whether the
                 // venue list was read at all (the server records it beside the rows and on every unpriced close)
                 put("closed_state", closed?.optString("state")?.ifEmpty { null } ?: "not_read")
-                // PHONE-LIVE-ACCOUNT-FEED: the venue's working orders (each TP / SL leg) off the Open orders view; rows only
-                // on a clean read, the read's own state always (not_read when no position was open to read them for)
-                put("brackets_state", brackets?.optString("state")?.ifEmpty { null } ?: "not_read")
-                if (brackets != null && brackets.optString("state") == "read") put("brackets", brackets.optJSONArray("rows") ?: JSONArray())
             })
 
     /** Positions read that was NOT "read": the state + digit-masked headers / control texts (no value), so the next

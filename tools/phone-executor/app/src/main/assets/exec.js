@@ -1702,7 +1702,19 @@
     // Like clickText, but also finds a chip that is a plain div/span/li (no button/role): the LEAF element whose
     // whole text is the label. Read-only view switch, same as clickText.
     clickTab: function (re) {
+      window.__exBracketsVia = false;
       if (window.__ex.clickText(re) === "clicked") return "clicked";
+      // PHONE-LIVE-ACCOUNT-FEED, NO-REINSTALL CHANNEL (operator 2026-11-12 ~09:17Z: "as much as it's going to be done
+      // without me having to reinstall the app every time, it's better"). The new Trade view has NO Closed orders tab
+      // (chips: Order form / Positions / Open orders), so the app's existing "show Closed orders, then closedRead()"
+      // step found nothing every pass. With no Closed tab on the page, that step now shows OPEN ORDERS instead and
+      // closedRead() answers with the venue's working orders (brackets) behind a marker row; the server splits them
+      // off as venue_brackets and records the Closed orders read as no_tab (src/prop/phone_executor.py). The app is
+      // unchanged: it already shows Positions again after this step.
+      // only on the NEW layout (its lists sit in role=region panels labelled Positions / Open orders); a legacy page
+      // without a Closed chip stays a miss ("none"), never a silent stand-in
+      if (/closed orders/i.test(re) && all("[role=region]").some(function (rg) { return /^(positions|open orders)$/i.test((rg.getAttribute("aria-label") || "").trim()); }) && !all("button,[role=tab],[role=button],a").some(function (x) { return /^(closed orders|trades)\b/i.test(tabText(t(x))); }) &&
+          window.__ex.clickText("^open orders\\b") === "clicked") { window.__exBracketsVia = true; return "clicked"; }
       var rx = new RegExp(re, "i");
       var b = all("div,span,li").filter(function (x) { var s = t(x); return s.length > 0 && s.length <= 30 && tabMatch(rx, s) && TAB_LABEL.test(s); })
         .filter(function (x, i, a) { return !a.some(function (y) { return y !== x && x.contains(y); }); })[0];
@@ -2144,6 +2156,15 @@
     },
     closedRead: function () {
       if (!hostOk()) return {state: "bad_host"};
+      if (window.__exBracketsVia) {
+        // the Open orders view stands in for the absent Closed tab (see clickTab): the venue's working orders, behind
+        // ONE marker row the server keys on; a read that is not clean says so ("brackets_<state>"), never rows
+        var b = window.__ex.bracketsRead();
+        if (b.state === "no_table" || b.state === "empty_unconfirmed") return {state: b.state, headers: [], controls: b.controls || []};
+        if (b.state !== "read") return {state: ("brackets_" + b.state).slice(0, 24), headers: [], cells: b.cells || [], controls: []};
+        return {state: "read", via: "open_orders", count: b.count,
+          rows: [{venue_brackets_read: true, n: b.rows.length}].concat(b.rows.map(function (r) { var o = {venue_bracket: true}; for (var k in r) o[k] = r[k]; return o; }))};
+      }
       return readTable(CLOSED_COLS, ["symbol", "side"], /no (closed )?orders|no (trades|history)/i, /^(closed orders|trades)\b/i, false);
     },
     // ---- POSITION SHEET (BREAKOUT-SL-AMEND-CLICK) ----

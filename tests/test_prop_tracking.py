@@ -898,3 +898,30 @@ def test_an_old_app_without_brackets_reads_not_reported():
 def test_a_stop_row_without_a_trigger_refuses_the_report():
     with pytest.raises(ValueError):
         _status([SOLP], brackets_state="read", brackets=[_brk(trig=None)])
+
+
+# ---- the NO-REINSTALL channel (operator 2026-11-12): brackets arrive behind a marker row in closed_orders ----
+
+def test_brackets_behind_the_closed_orders_marker_row_sync_and_closed_reads_no_tab():
+    _open_sol()
+    rows = [{"venue_brackets_read": True, "n": 2}, {**_brk(trig=82.7), "venue_bracket": True},
+            {**_brk(typ="tp", trig=85.18), "venue_bracket": True}]
+    r = _status([SOLP], closed=rows, closed_state="read")
+    assert r["brackets_sync"]["amended"] == ["SOLUSDT long sl=82.7"] and _sol_fill()["fill_sl"] == 82.7
+    raw = json.loads(prop_journal.latest_account_status("breakout_2")["raw"])
+    assert raw["brackets_state"] == "read" and raw["brackets_via"] == "closed_tab_channel"
+    assert raw["closed_orders_state"] == "no_tab" and raw["closed_orders"] == []
+
+
+def test_an_unclean_bracket_read_through_the_channel_is_a_label_only():
+    _open_sol()
+    r = _status([SOLP], closed_state="brackets_unparsed")
+    raw = json.loads(prop_journal.latest_account_status("breakout_2")["raw"])
+    assert "brackets_sync" not in r and raw["brackets_state"] == "unparsed" and raw["closed_orders_state"] == "no_tab"
+
+
+def test_a_real_closed_orders_read_is_untouched_by_the_channel():
+    _status([], closed=[{"symbol": "ETH", "side": "long", "type": "Stop loss", "status": "Filled", "price": 2535.25}],
+            closed_state="read")
+    raw = json.loads(prop_journal.latest_account_status("breakout_2")["raw"])
+    assert raw["closed_orders_state"] == "read" and raw["brackets_state"] == "not_reported"

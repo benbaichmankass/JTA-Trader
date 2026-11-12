@@ -479,6 +479,20 @@ def record_report(device: PhoneDevice, body: Dict[str, Any]) -> Dict[str, Any]:
         # whether that [] was the venue's empty list or a read that never got its rows (the app posted rows only on a
         # clean read and dropped the state). An app that predates `closed_state` reads `read` when it sent rows (it
         # only ever sent them on a clean read) and `not_reported` otherwise -- never a guessed clean.
+        # PHONE-LIVE-ACCOUNT-FEED, NO-REINSTALL CHANNEL (operator 2026-11-12: no app reinstall where avoidable). With no
+        # Closed orders tab on the new Trade view, exec.js shows Open orders in its place and its closedRead() answers
+        # the venue's working orders behind ONE marker row ({venue_brackets_read: true}); an unclean bracket read
+        # arrives as closed_state "brackets_<state>". Either way the Closed orders list itself was NOT read: no_tab.
+        cl_in, cs_raw = body_in.get("closed_orders"), str(body_in.get("closed_state") or "")
+        if (isinstance(cl_in, list) and cl_in and isinstance(cl_in[0], dict)
+                and cl_in[0].get("venue_brackets_read") is True):
+            body_in = {**body_in, "brackets_state": "read", "brackets": cl_in[1:], "closed_orders": None,
+                       "closed_state": "no_tab"}
+            body["brackets_via"] = "closed_tab_channel"
+        elif cs_raw.startswith("brackets_"):
+            body_in = {**body_in, "brackets_state": cs_raw[len("brackets_"):], "closed_orders": None,
+                       "closed_state": "no_tab"}
+            body["brackets_via"] = "closed_tab_channel"
         cs_in = body_in.get("closed_state")
         if cs_in is not None:
             body["closed_orders_state"] = re.sub(r"[^a-z_]", "", str(cs_in))[:24] or "not_read"
