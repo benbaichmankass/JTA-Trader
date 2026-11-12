@@ -1,6 +1,6 @@
 # Risk-objective audit — which rules still grade on mean net R alone (2026-11-12)
 
-> **Doc status:** `live` · category `research` · lane `RISK-OBJECTIVE-AUDIT` (Tier-1 doc; its proposals are Tier-3, see
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · lane `RISK-OBJECTIVE-AUDIT` (Tier-1 doc; its proposals are Tier-3, see
 > [`docs/proposals/risk-objective-tier3-proposals-2026-11-12.md`](../proposals/risk-objective-tier3-proposals-2026-11-12.md)).
 > **Gates this adds or changes: none.** Nothing here edits a config, mandate, bar or workflow. Provenance of every figure: `MEASURED`
 > unless a line says otherwise.

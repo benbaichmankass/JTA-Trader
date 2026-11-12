@@ -1,6 +1,6 @@
 # Tier-3 proposals — risk-adjusted forms for mean-R-only rules (2026-11-12)
 
-> **Doc status:** `proposal` · lane `RISK-OBJECTIVE-AUDIT` · evidence: [`docs/research/risk-objective-audit-2026-11-12.md`](../research/risk-objective-audit-2026-11-12.md)
+> **Doc status:** `unknown` · category `unknown` · last verified `never` · lane `RISK-OBJECTIVE-AUDIT` · evidence: [`docs/research/risk-objective-audit-2026-11-12.md`](../research/risk-objective-audit-2026-11-12.md)
 >
 > **Gates this adds or changes:** P1 changes a promotion bar (adds a clause to `MD-PROMOTE-S1-S2` only). P2 changes the exit-lever
 > gate's primary clause. P3 changes an LTR auto-mandate bound. P4 is a research-template change. P5 is a reporting change (no gate).

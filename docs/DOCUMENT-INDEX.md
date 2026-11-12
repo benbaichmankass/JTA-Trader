@@ -61,8 +61,6 @@ was read as an *instruction*.
 | category | rows | meaning |
 |---|---|---|
 | `docs/archive/2026-11-06-skills-prune/manager-SKILL.md.pre-prune` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
-| `docs/proposals/risk-objective-tier3-proposals-2026-11-12.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
-| `docs/research/risk-objective-audit-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `instruction` | 44 | A session must OBEY it. Binding. |
 | `architecture` | 91 | A declared contract about how the system is built; read as truth about the system. |
 | `plan` | 64 | A forward commitment -- what we intend to do next. NEVER obeyed as instruction. |
@@ -651,6 +649,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/weekly/2026-11-12/triage/BRIEF.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/work-system-2026-10-04.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/WORK-STORE-DESIGN-2026-11.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | WORK-STORE-DESIGN: one register (items+events SQLite on the VM behind the API) replacing checklist+pipeline files; bot-output ledgers off the repo; measured repo-flow inventory; deploy path (keep ict-git-sync); migration dry-run; build order; operator decisions D1-D9. Design only. |
+| `docs/proposals/risk-objective-tier3-proposals-2026-11-12.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/proposals/sizer-margin-base-2026-10-28.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/proposals/tier2-sweep-candle-anchoring-2026-07-30.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reference/account-capability-matrix.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
@@ -1105,6 +1104,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/research-ops-benchmark-2026-10-16.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Research loop benchmarked against published research-ops practice (quant multiple testing, MLOps tracking, pre-registration, stage-gate, SRE): gap table, filed rows and operator decisions (lane RESEARCH-OPS-BENCHMARK-1016). |
 | `docs/research/prop-retest-2026-11-06/velotrade_book/RESULT.md` | evidence | live | — | 2026-11-06 | `dir:research-is-measurement / read:SOAK-BACKLOG-REVIEW-lane-measured-it-2026-11-06` | sol_4h prop book sim: keep on velotrade_1 (p(pass) 0.138 vs 0.076 at $10/leg); goes historical on the manager's merge |
 | `docs/research/restart-gap-exit-first-2026-11-05.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/risk-objective-audit-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/strategy-status-model-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/structure-exits-default-scope-2026-11-01.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/prop-retest-2026-11-06/RESULT.md` | evidence | live | — | 2026-11-06 | `dir:research-is-measurement / read:SOAK-BACKLOG-REVIEW-lane-measured-it-2026-11-06` | Prop V3 re-test of trend_donchian_eth_4h (FAIL_EDGE) and trend_donchian_sol_4h (FAIL); goes historical on the operator's keep/pull decision |
