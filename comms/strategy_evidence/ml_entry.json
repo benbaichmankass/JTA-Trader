@@ -99,7 +99,7 @@
   "param_selection_provenance": "tau 0.10 chosen on 8 purged + embargoed dev folds 2022-01..2025-09 only (c692-01); model frozen; held-out 2025-10-01..2026-09-30 scored once; c692-06 re-scores the same frozen model on the traded symbols",
   "generated_at": "2026-11-04T13:27:08Z",
   "generated_by": "hand-assembled 2026-11-01 by lane ML-ENTRY-GOLIVE-UNBLOCK from the two committed result records (fields copied, not re-derived); producer scripts/research/ml_decision_entry.py ; updated 2026-11-01 by lane ML-ENTRY-TP-REVISION (extend-only TP lever modelled, fingerprint re-stamped from config/strategies.yaml) ; REGENERATED 2026-11-04 by lane STRUCTURE-EXITS-ENABLE from the GRADED row research/results/RQ-20261103-5e04-01/41823438321.jsonl (fields copied, not re-derived): the live exit since #22708 (structure_exit \"pivot=5;sl_only\" + ml_first_passage extend-only TP). Operator 2026-11-04 ~19:12Z: \"Apply on_pass (Recommended)\".",
-  "source_run": "research/results/RQ-20261103-5e04-01/41823438321.jsonl (run https://github.com/benbaichmankass/JTA-Trader/actions/runs/41823438321)",
+  "source_run": "comms/strategy_evidence/runs/2026-11-12/ml_entry__trades.jsonl",
   "error": null,
   "harness": "ml_entry_tp_revision evidence-extend-only --structure-sl pivot=5 (on ml_decision_entry)",
   "venue_bracket_arm": null,
@@ -212,5 +212,13 @@
       "structure_exit"
     ],
     "note": "Arm A (pre-override exit: ATR 2.0 stop + extend-only ml_first_passage TP) on the same population; reproduced by RQ-20261103-5e04-01 run 41823438321 (+0.02713 vs 0.0271)."
+  },
+  "source_run_provenance": {
+    "changed_at": "2026-11-12",
+    "row": "ML-ENTRY-EVIDENCE-SOURCE / PERF-F1-DEMOTION-SIGNAL",
+    "previous": "research/results/RQ-20261103-5e04-01/41823438321.jsonl (run https://github.com/benbaichmankass/JTA-Trader/actions/runs/41823438321)",
+    "why": "the previous value was a summary result line plus a run URL suffix, so mandate_resolver.stage0_block_p10 read it as an uncommitted file and found no per-trade net_r: the MD-DEMOTE-S2-S1 gate could never read ml_entry. The new file is the same run's 907 per-trade rows, re-derived and checked equal to the runner record field by field.",
+    "summary_record": "research/results/RQ-20261103-5e04-01/41823438321.jsonl",
+    "provenance": "comms/strategy_evidence/runs/2026-11-12/ml_entry__trades.provenance.json"
   }
 }

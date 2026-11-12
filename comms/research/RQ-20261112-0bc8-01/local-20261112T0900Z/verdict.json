@@ -1,0 +1,680 @@
+{
+  "verdict": "indeterminate",
+  "read_state": "measured",
+  "n": 365991,
+  "population": "3 group(s) ['BTCUSDT', 'ETHUSDT', 'SOLUSDT']; baseline champion; candidates ['comp']; metric auc_ovr; n = baseline OOS test rows summed over groups; cv folds per group >= 5",
+  "note": "between the pass bar and the fail floor",
+  "measurement": {
+    "engine": "scripts/research/ml_bakeoff.py",
+    "metric": "auc_ovr",
+    "higher_is_better": true,
+    "metric_caveats": [],
+    "delta_sign": "positive = learner better than reference",
+    "baseline": "champion",
+    "controls": [
+      "vol"
+    ],
+    "candidates": [
+      "comp"
+    ],
+    "arm_status": {
+      "champion": "ok",
+      "vol": "ok",
+      "comp": "ok"
+    },
+    "groups": {
+      "BTCUSDT": {
+        "n_rows": 203485,
+        "classes": [
+          "range",
+          "volatile"
+        ],
+        "arms": {
+          "champion": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.7802830703007471,
+                  0.8373352710410299,
+                  0.8674690907092321,
+                  0.8628104726462003,
+                  0.8002182575798362
+                ],
+                "n_test_rows": 122091
+              },
+              "holdout": {
+                "fold_metric": [
+                  0.8276221147056902
+                ],
+                "n_test_rows": 38011
+              }
+            }
+          },
+          "vol": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek",
+              "sv15",
+              "sv4h"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.7932844560753668,
+                  0.8418538514519318,
+                  0.8576953287369776,
+                  0.8656372500193484,
+                  0.8048850729419567
+                ],
+                "n_test_rows": 122091
+              },
+              "holdout": {
+                "fold_metric": [
+                  0.8322723080692066
+                ],
+                "n_test_rows": 38011
+              }
+            }
+          },
+          "comp": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek",
+              "sv15",
+              "ss15",
+              "sn15",
+              "sv4h",
+              "ss4h",
+              "sn4h"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.7887247404205172,
+                  0.8412000933146704,
+                  0.8602786404134245,
+                  0.8634112279111382,
+                  0.8086072448868846
+                ],
+                "n_test_rows": 122091
+              },
+              "holdout": {
+                "fold_metric": [
+                  0.8345560659351117
+                ],
+                "n_test_rows": 38011
+              }
+            }
+          }
+        }
+      },
+      "ETHUSDT": {
+        "n_rows": 203490,
+        "classes": [
+          "range",
+          "volatile"
+        ],
+        "arms": {
+          "champion": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.782397429651283,
+                  0.8064462052660827,
+                  0.8023036206229754,
+                  0.7988036758279317,
+                  0.7917007694061979
+                ],
+                "n_test_rows": 122094
+              },
+              "holdout": {
+                "fold_metric": [
+                  0.8160523894348221
+                ],
+                "n_test_rows": 38011
+              }
+            }
+          },
+          "vol": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek",
+              "sv15",
+              "sv4h"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.7895390055215992,
+                  0.806114170732778,
+                  0.7940897918544156,
+                  0.7929481328006363,
+                  0.7925422223674046
+                ],
+                "n_test_rows": 122094
+              },
+              "holdout": {
+                "fold_metric": [
+                  0.815316616912732
+                ],
+                "n_test_rows": 38011
+              }
+            }
+          },
+          "comp": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek",
+              "sv15",
+              "ss15",
+              "sn15",
+              "sv4h",
+              "ss4h",
+              "sn4h"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.7893650160923613,
+                  0.8056490172270352,
+                  0.7917706906869804,
+                  0.7918909066868359,
+                  0.7982312927947792
+                ],
+                "n_test_rows": 122094
+              },
+              "holdout": {
+                "fold_metric": [
+                  0.8116681828387865
+                ],
+                "n_test_rows": 38011
+              }
+            }
+          }
+        }
+      },
+      "SOLUSDT": {
+        "n_rows": 203010,
+        "classes": [
+          "range",
+          "volatile"
+        ],
+        "arms": {
+          "champion": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.8231700539257657,
+                  0.806935180184235,
+                  0.8308937965507434,
+                  0.8119335587690738,
+                  0.8116428216761328
+                ],
+                "n_test_rows": 121806
+              },
+              "holdout": {
+                "fold_metric": [
+                  0.8290632767688614
+                ],
+                "n_test_rows": 38011
+              }
+            }
+          },
+          "vol": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek",
+              "sv15",
+              "sv4h"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.8219540244584181,
+                  0.806003883595026,
+                  0.8278781212057515,
+                  0.815883699139457,
+                  0.8139691324779156
+                ],
+                "n_test_rows": 121806
+              },
+              "holdout": {
+                "fold_metric": [
+                  0.8312462494202923
+                ],
+                "n_test_rows": 38011
+              }
+            }
+          },
+          "comp": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek",
+              "sv15",
+              "ss15",
+              "sn15",
+              "sv4h",
+              "ss4h",
+              "sn4h"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.8256793497566784,
+                  0.8099658792313397,
+                  0.8287702863674582,
+                  0.8171919239651954,
+                  0.8137579337901223
+                ],
+                "n_test_rows": 121806
+              },
+              "holdout": {
+                "fold_metric": [
+                  0.8323032238093765
+                ],
+                "n_test_rows": 38011
+              }
+            }
+          }
+        }
+      }
+    },
+    "deltas": {
+      "BTCUSDT": {
+        "cv": {
+          "vol": {
+            "champion": {
+              "n_folds": 5,
+              "mean": 0.0030479593897071665,
+              "ci95": [
+                -0.007119547107394181,
+                0.013215465886808515
+              ],
+              "sign_consistent": false
+            },
+            "vol": {
+              "n_folds": 5,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sign_consistent": false
+            }
+          },
+          "comp": {
+            "champion": {
+              "n_folds": 5,
+              "mean": 0.00282115693391789,
+              "ci95": [
+                -0.005244606579109526,
+                0.010886920446945305
+              ],
+              "sign_consistent": false
+            },
+            "vol": {
+              "n_folds": 5,
+              "mean": -0.00022680245578927672,
+              "ci95": [
+                -0.004457104371830023,
+                0.0040034994602514695
+              ],
+              "sign_consistent": false
+            }
+          }
+        },
+        "holdout": {
+          "vol": {
+            "champion": {
+              "n_folds": 1,
+              "mean": 0.004650193363516353,
+              "ci95": null,
+              "note": "single fold: no interval"
+            },
+            "vol": {
+              "n_folds": 1,
+              "mean": 0.0,
+              "ci95": null,
+              "note": "single fold: no interval"
+            }
+          },
+          "comp": {
+            "champion": {
+              "n_folds": 1,
+              "mean": 0.00693395122942142,
+              "ci95": null,
+              "note": "single fold: no interval"
+            },
+            "vol": {
+              "n_folds": 1,
+              "mean": 0.0022837578659050672,
+              "ci95": null,
+              "note": "single fold: no interval"
+            }
+          }
+        }
+      },
+      "ETHUSDT": {
+        "cv": {
+          "vol": {
+            "champion": {
+              "n_folds": 5,
+              "mean": -0.0012836754995274146,
+              "ci95": [
+                -0.008766930445049894,
+                0.006199579445995065
+              ],
+              "sign_consistent": false
+            },
+            "vol": {
+              "n_folds": 5,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sign_consistent": false
+            }
+          },
+          "comp": {
+            "champion": {
+              "n_folds": 5,
+              "mean": -0.0009489554572957414,
+              "ci95": [
+                -0.010685889983881989,
+                0.008787979069290507
+              ],
+              "sign_consistent": false
+            },
+            "vol": {
+              "n_folds": 5,
+              "mean": 0.0003347200422316732,
+              "ci95": [
+                -0.0035192204724649556,
+                0.004188660556928302
+              ],
+              "sign_consistent": false
+            }
+          }
+        },
+        "holdout": {
+          "vol": {
+            "champion": {
+              "n_folds": 1,
+              "mean": -0.0007357725220900058,
+              "ci95": null,
+              "note": "single fold: no interval"
+            },
+            "vol": {
+              "n_folds": 1,
+              "mean": 0.0,
+              "ci95": null,
+              "note": "single fold: no interval"
+            }
+          },
+          "comp": {
+            "champion": {
+              "n_folds": 1,
+              "mean": -0.004384206596035556,
+              "ci95": null,
+              "note": "single fold: no interval"
+            },
+            "vol": {
+              "n_folds": 1,
+              "mean": -0.00364843407394555,
+              "ci95": null,
+              "note": "single fold: no interval"
+            }
+          }
+        }
+      },
+      "SOLUSDT": {
+        "cv": {
+          "vol": {
+            "champion": {
+              "n_folds": 5,
+              "mean": 0.00022268995412351168,
+              "ci95": [
+                -0.0033000811496609285,
+                0.003745461057907952
+              ],
+              "sign_consistent": false
+            },
+            "vol": {
+              "n_folds": 5,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sign_consistent": false
+            }
+          },
+          "comp": {
+            "champion": {
+              "n_folds": 5,
+              "mean": 0.002157992400968656,
+              "ci95": [
+                -0.0011749679019806766,
+                0.0054909527039179885
+              ],
+              "sign_consistent": false
+            },
+            "vol": {
+              "n_folds": 5,
+              "mean": 0.001935302446845144,
+              "ci95": [
+                -0.00033699353185404806,
+                0.004207598425544336
+              ],
+              "sign_consistent": false
+            }
+          }
+        },
+        "holdout": {
+          "vol": {
+            "champion": {
+              "n_folds": 1,
+              "mean": 0.00218297265143097,
+              "ci95": null,
+              "note": "single fold: no interval"
+            },
+            "vol": {
+              "n_folds": 1,
+              "mean": 0.0,
+              "ci95": null,
+              "note": "single fold: no interval"
+            }
+          },
+          "comp": {
+            "champion": {
+              "n_folds": 1,
+              "mean": 0.003239947040515112,
+              "ci95": null,
+              "note": "single fold: no interval"
+            },
+            "vol": {
+              "n_folds": 1,
+              "mean": 0.001056974389084142,
+              "ci95": null,
+              "note": "single fold: no interval"
+            }
+          }
+        }
+      }
+    },
+    "rule_evaluation": {
+      "verdict": "indeterminate",
+      "why": "between the pass bar and the fail floor",
+      "candidates": {
+        "comp": {
+          "evaluated": true,
+          "passes_all": false,
+          "clauses": [
+            {
+              "holds": false,
+              "what": "['BTCUSDT', 'ETHUSDT', 'SOLUSDT'] >= 0.005 vs champion/cv"
+            },
+            {
+              "holds": false,
+              "what": "['BTCUSDT', 'ETHUSDT', 'SOLUSDT'] >= 0.005 vs champion/holdout"
+            },
+            {
+              "holds": false,
+              "what": "['BTCUSDT', 'ETHUSDT', 'SOLUSDT'] >= 0.001 vs vol/cv"
+            },
+            {
+              "holds": false,
+              "what": "['BTCUSDT', 'ETHUSDT', 'SOLUSDT'] >= 0.001 vs vol/holdout"
+            }
+          ]
+        }
+      }
+    },
+    "headline_checks": [
+      {
+        "name": "vol_vs_champion_holdout",
+        "holds": false,
+        "what": "vol: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'] >= 0.005 vs champion/holdout"
+      }
+    ],
+    "licences": {
+      "champion": {
+        "kind": "lightgbm",
+        "licence": "MIT",
+        "research_only": false,
+        "weights": ""
+      },
+      "vol": {
+        "kind": "lightgbm",
+        "licence": "MIT",
+        "research_only": false,
+        "weights": ""
+      },
+      "comp": {
+        "kind": "lightgbm",
+        "licence": "MIT",
+        "research_only": false,
+        "weights": ""
+      }
+    },
+    "n_folds_cv_min_over_groups": 5,
+    "seconds": 61.4
+  },
+  "dataset_build": [
+    {
+      "symbol": "BTCUSDT",
+      "state": "built",
+      "rows": 203485,
+      "coverage": {
+        "months_requested": 70,
+        "months_missing": [],
+        "bars_15m": 204480,
+        "first_ts": "2021-01-01 00:00:00+00:00",
+        "last_ts": "2026-10-31 23:45:00+00:00"
+      },
+      "first_ts": "2021-01-11T03:45:00Z",
+      "last_ts": "2026-10-31T22:30:00Z",
+      "label_share": {
+        "range": 0.9392,
+        "volatile": 0.0608
+      }
+    },
+    {
+      "symbol": "ETHUSDT",
+      "state": "built",
+      "rows": 203490,
+      "coverage": {
+        "months_requested": 70,
+        "months_missing": [],
+        "bars_15m": 204480,
+        "first_ts": "2021-01-01 00:00:00+00:00",
+        "last_ts": "2026-10-31 23:45:00+00:00"
+      },
+      "first_ts": "2021-01-11T03:45:00Z",
+      "last_ts": "2026-10-31T22:30:00Z",
+      "label_share": {
+        "range": 0.8865,
+        "volatile": 0.1135
+      }
+    },
+    {
+      "symbol": "SOLUSDT",
+      "state": "built",
+      "rows": 203010,
+      "coverage": {
+        "months_requested": 70,
+        "months_missing": [],
+        "bars_15m": 204000,
+        "first_ts": "2021-01-01 00:00:00+00:00",
+        "last_ts": "2026-10-31 23:45:00+00:00"
+      },
+      "first_ts": "2021-01-11T03:45:00Z",
+      "last_ts": "2026-10-31T22:30:00Z",
+      "label_share": {
+        "range": 0.7533,
+        "volatile": 0.2467
+      }
+    }
+  ],
+  "caveats": [
+    "Binance USD-M 15m klines PROXY Bybit linear (Bybit klines carry no trade count); champion columns and regime_label come from the real MarketFeaturesBuilder over those bars; vol_bucket (string categorical) and the 60-day recency sample weight are not reproduced by ml_bakeoff (identical for every arm)."
+  ]
+}

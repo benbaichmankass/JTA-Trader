@@ -388,7 +388,7 @@ def claim_next(device: PhoneDevice, now: Optional[datetime] = None,
     if "close" in accepts:
         from src.prop import phone_cancel
         phone_cancel.plan_closes(acct, now=now)
-        c = phone_cancel.claim_close(device, now=now)
+        c = phone_cancel.claim_close(device, now=now, accepts_reduce="reduce" in accepts)
         if c is not None:
             return c
     if "amend" not in accepts:

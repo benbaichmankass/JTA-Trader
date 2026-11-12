@@ -1832,6 +1832,45 @@ _CLOSED_DECISION_SETTLE_SECONDS = 5.0
 _CLOSED_BAR_INFO_LOGGED: dict[str, float] = {}
 
 
+#: Closed-bar skip reasons that are NORMAL every-tick states (the bar was already
+#: decided, or the boundary is a few seconds old) and stay out of the audit.
+_CLOSED_SKIP_QUIET = frozenset({"closed_bar_already_evaluated", "closed_bar_settling"})
+#: (leg key, reason, bar open) already written to the audit by this process.
+_CLOSED_SKIP_AUDITED: set = set()
+
+
+def _audit_closed_skip(name: str, timeframe: str, reason: str | None,
+                       bar_open: float | None) -> None:
+    """Write ONE ``<strategy>_eval`` side=none audit row when a closed-bar leg
+    leaves its bar undecided for a non-routine reason (stale_skipped,
+    unconfirmed, unreadable).
+
+    Before this, those exits returned without any audit row, so a bar the leg
+    never decided was indistinguishable from a bar it never saw: live-vs-replay
+    parity could only say ``dropped_no_package`` (PI-20261111-LRP-C5F97202,
+    ADA 2026-11-09 02:00Z-open bar). Logging only; never changes a decision.
+    De-duplicated per (leg, reason, bar) within the process.
+    """
+    if not reason or reason in _CLOSED_SKIP_QUIET:
+        return
+    key = (name, reason, bar_open)
+    if key in _CLOSED_SKIP_AUDITED:
+        return
+    _CLOSED_SKIP_AUDITED.add(key)
+    strategy, _, symbol = str(name).partition(":")
+    payload: Dict[str, Any] = {
+        "event": f"{strategy}_eval", "strategy": strategy, "timeframe": timeframe,
+        "side": "none", "reason": reason, "closed_bar_skip": True,
+        "bar_open_ts": bar_open,
+    }
+    if symbol:
+        payload["symbol"] = symbol
+    try:
+        log_signal(payload)
+    except Exception:  # noqa: BLE001 — an audit hiccup must never break a tick
+        logger.exception("%s: closed-bar skip audit emit failed", name)
+
+
 def _utc_iso(ts: Any) -> str:
     from datetime import datetime, timezone
     try:
@@ -1911,7 +1950,9 @@ def _closed_window_skip(timeframe: str, vcfg: dict, *, name: str = "",
     boundary = (now_s // tf_s) * tf_s
     if now_s - boundary < _CLOSED_DECISION_SETTLE_SECONDS:
         return "closed_bar_settling"
-    return _closed_bar_disposition(name, boundary - tf_s, tf_s, vcfg, now_s)
+    skip = _closed_bar_disposition(name, boundary - tf_s, tf_s, vcfg, now_s)
+    _audit_closed_skip(name, str(timeframe), skip, boundary - tf_s)
+    return skip
 
 
 def _closed_catchup_age(frame: Any, timeframe: str, vcfg: dict,
@@ -1959,9 +2000,11 @@ def _decision_frame(candles_df: Any, timeframe: str, vcfg: dict, *,
     tf_s = TF_SECONDS.get(str(timeframe))
     open_s = _epoch_seconds(_last_timestamp(frame))
     if tf_s is None or open_s is None:
+        _audit_closed_skip(name, str(timeframe), "closed_bar_unreadable", open_s)
         return frame, "closed_bar_unreadable"
     skip = _closed_bar_disposition(name, open_s, tf_s, vcfg, now_s)
     if skip is not None:
+        _audit_closed_skip(name, str(timeframe), skip, open_s)
         return frame, skip
     # The bar may only be decided on once the VENUE has opened the next one: a
     # frame whose last row is not forming (no next bar yet — a fresh response a
@@ -1970,6 +2013,7 @@ def _decision_frame(candles_df: Any, timeframe: str, vcfg: dict, *,
     # drop_forming_bar (which reads only the clock) would keep it. Not recorded:
     # the next tick retries.
     if not last_bar_is_forming(candles_df, timeframe, now=now_s):
+        _audit_closed_skip(name, str(timeframe), "closed_bar_unconfirmed", open_s)
         return frame, "closed_bar_unconfirmed"
     if record:
         _record_closed_decision(name, frame, timeframe, vcfg, now_s)

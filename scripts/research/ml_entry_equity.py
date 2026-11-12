@@ -244,7 +244,7 @@ def _fold_of(ts: pd.Series, bounds) -> np.ndarray:
 def confirm_stage(tab: pd.DataFrame, config: str, tau: float, dev_oof_mean: float, unit: str, ledger_dir: Path,
                   train_end: str = TRAIN_END, start: str = CONFIRM_START, end: str = "2026-10-31", symbols=None,
                   configs: dict = CONFIGS, claim: bool = True, model_tag: str = "", min_mean: float = 0.0,
-                  min_n: int = 0, lb_z: float = 0.0) -> dict:
+                  min_n: int = 0, lb_z: float = 0.0, return_taken: bool = False) -> dict:
     """Refit on rows <= train_end, score [start, end] ONCE, grade against the deflated bar. The read is recorded in the ledger."""
     HL.check_window_disjoint(train_end, start)
     if pd.Timestamp(start) < pd.Timestamp(train_end) + pd.Timedelta(days=EMBARGO_DAYS):
@@ -298,7 +298,8 @@ def confirm_stage(tab: pd.DataFrame, config: str, tau: float, dev_oof_mean: floa
             "month_clustered_se_reported": clustered_se,
             "by_symbol_top": {} if n == 0 else tk.groupby("symbol").net_r.agg(["count", "mean"]).sort_values("count", ascending=False)
             .head(10).round(4).to_dict("index"),
-            "window": {"train_end": train_end, "start": start, "end": end, "embargo_days": EMBARGO_DAYS}}
+            "window": {"train_end": train_end, "start": start, "end": end, "embargo_days": EMBARGO_DAYS},
+            **({"_taken": tk} if return_taken else {})}   # popped by main_run (per-trade rows, PERF-F1-DEMOTION-SIGNAL); never serialised
 
 
 PINNED = {"deterministic": True, "force_row_wise": True, "n_jobs": 1, "bagging_seed": 20261105, "feature_fraction_seed": 20261105,
@@ -430,7 +431,7 @@ def structure_stage(tab: pd.DataFrame, unit: str, ledger_dir: Path, end: str, sy
     if sel is None:
         return {"verdict": "indeterminate", "note": "dev stage selected nothing (no tau with >= %d OOF trades)" % min_oof_n, "dev": d}
     c = confirm_stage(tab, sel["config"], float(sel["tau"]), float(sel["mean_net_r"]), unit, ledger_dir, train_end=train_end,
-                      start=start, end=end, symbols=symbols, configs=configs, claim=claim, model_tag="-STRUCT-" + spec.replace(";", "-").replace("=", "") + (f"-ENS{len(ens_seeds)}" if ens_seeds else ""), min_mean=min_mean)
+                      start=start, end=end, symbols=symbols, configs=configs, claim=claim, model_tag="-STRUCT-" + spec.replace(";", "-").replace("=", "") + (f"-ENS{len(ens_seeds)}" if ens_seeds else ""), min_mean=min_mean, return_taken=True)
     c["dev"] = d
     c["structure_exit"] = spec
     return c
@@ -469,6 +470,40 @@ def dev_row(d: dict, unit: str, where: str) -> dict:
             "produced_by": {"tool": "python3 scripts/research/ml_entry_equity.py dev", "where": where}}
 
 
+def _write_taken(c: dict, a, repro: str) -> None:
+    """PERF-F1-DEMOTION-SIGNAL (2026-11-12): per-trade Stage-0 rows for the r4 demotion gate and live_vs_backtest.
+
+    ``--reproduce-sha`` makes the run a REPRODUCTION of an already-graded confirm read: the ledger read is not claimed
+    (the decision was taken by the graded run; this one re-derives its trades) and the refit must hash to the graded
+    booster, else ``reproduces`` is false and the rows must not be cited as that run's population."""
+    tk = c.pop("_taken", None)
+    if repro:
+        sha = str(c.get("booster_sha256") or "")
+        st = c.get("stats", {}) or {}
+        exp_n, exp_mean = getattr(a, "expect_n", ""), getattr(a, "expect_mean", "")
+        n_ok = (not exp_n) or st.get("n") == int(exp_n)
+        mean_ok = (not exp_mean) or (st.get("mean_net_r") is not None and abs(float(st["mean_net_r"]) - float(exp_mean)) <= 1e-6)
+        c["reproduction"] = {"expect_sha": repro, "booster_sha256": sha, "sha_match": bool(sha) and sha.startswith(repro),
+                             "expect_n": exp_n or None, "n_match": n_ok, "expect_mean": exp_mean or None, "mean_match": mean_ok,
+                             "ledger_claimed": False}
+        c["reproduction"]["reproduces"] = c["reproduction"]["sha_match"] and n_ok and mean_ok
+        c["verdict"] = "pass" if c["reproduction"]["reproduces"] else "fail"
+        c["note"] = (f"reproduction of booster {repro[:16]}: refit sha {sha[:16]} "
+                     f"{'MATCHES' if c['reproduction']['sha_match'] else 'DOES NOT MATCH'}; n={c.get('stats', {}).get('n')} "
+                     f"mean net R {c.get('stats', {}).get('mean_net_r')} (n {'ok' if n_ok else 'MISMATCH'}, mean {'ok' if mean_ok else 'MISMATCH'}); "
+                     f"reproduces={c['reproduction']['reproduces']}; no holdout read claimed")
+    path = getattr(a, "trades_out", "")
+    if path and tk is not None:
+        p = Path(path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        cols = [x for x in ("symbol", "ts", "net_r", "gross_r", "cost_r") if x in tk.columns]
+        with p.open("w") as fh:
+            for _, r in tk[cols].iterrows():
+                fh.write(json.dumps({"leg": "ml_entry_eq_struct", **{k: (str(r[k]) if k in ("symbol", "ts") else float(r[k])) for k in cols}}) + "\n")
+        c["trades_jsonl"] = {"path": str(p), "rows": int(len(tk)), "sum_net_r": float(tk.net_r.sum()) if len(tk) else 0.0}
+        print(f"[trades-out] {len(tk)} rows -> {p}", flush=True)
+
+
 def main_run(a) -> int:
     from src.runtime.execution_costs import resolve_cost_policy, resolve_fee_bps_roundtrip
     t0 = time.time()
@@ -498,9 +533,12 @@ def main_run(a) -> int:
                   "alpaca_calls": client.calls, "runtime_s": round(time.time() - t0, 1)})
         row = dev_row(d, a.unit, a.where)
     elif a.cmd == "structure":
+        repro = getattr(a, "reproduce_sha", "")
         c = structure_stage(tab, a.unit, out / "ledger", end_day, pool,
                             taus=[float(x) for x in a.taus.split(",")] if a.taus else TAUS,
-                            ens_seeds=a.ensemble_seeds.split(",") if a.ensemble_seeds else None, min_mean=float(a.min_mean))
+                            ens_seeds=a.ensemble_seeds.split(",") if a.ensemble_seeds else None, min_mean=float(a.min_mean),
+                            claim=not repro)
+        _write_taken(c, a, repro)
         row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": c["verdict"], "note": c["note"],
                "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
                "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True},
@@ -545,6 +583,8 @@ def main_run(a) -> int:
                "measurement": {**c, "pool": {k: v for k, v in prep.items() if k != "excluded"}, "n_pool": len(pool),
                                "alpaca_calls": client.calls, "runtime_s": round(time.time() - t0, 1)},
                "n": c["stats"]["n"], "produced_by": {"tool": "python3 scripts/research/ml_entry_equity.py confirm", "where": a.where}}
+    if isinstance(row.get("measurement"), dict):
+        row["measurement"].pop("_taken", None)
     (out / f"{a.unit}.json").write_text(json.dumps(row, indent=1, default=str))
     (out / "verdict.json").write_text(json.dumps(row, indent=1, default=str) + "\n")
     print(f"{a.cmd.upper()} {row['verdict']}: {row['note']}", flush=True)
@@ -688,6 +728,10 @@ def main(argv=None) -> int:
             p.add_argument("--taus", default="", help="comma list overriding the tau grid (registered in the unit)")
             p.add_argument("--ensemble-seeds", dest="ensemble_seeds", default="", help="serve ONE model = mean of pinned fits at these seeds")
             p.add_argument("--min-mean", dest="min_mean", default="0", help="extra registered floor on the confirm mean (seed-noise margin)")
+            p.add_argument("--reproduce-sha", dest="reproduce_sha", default="", help="REPRODUCE an already-graded confirm read: claim no holdout read; verdict = refit booster sha matches this (prefix ok)")
+            p.add_argument("--expect-n", dest="expect_n", default="", help="with --reproduce-sha: the graded confirm n")
+            p.add_argument("--expect-mean", dest="expect_mean", default="", help="with --reproduce-sha: the graded confirm mean net R (|d| <= 1e-6)")
+            p.add_argument("--trades-out", dest="trades_out", default="", help="write one JSONL row per confirm-window trade (net_r) to this path")
             p.add_argument("--rule-id", required=True)
             p.add_argument("--registered-at", required=True)
         if name == "confirm":
