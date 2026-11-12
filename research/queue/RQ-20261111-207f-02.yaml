@@ -23,10 +23,10 @@ power:
   expected_n: 30
   min_detectable_effect: 0.5
   effect_units: sd
-  design: paired
+  design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: Unit = dev month (paired book-month difference vs tau 0.25, ~30 months 2023-01..2025-06). 30 pairs detect ~0.5 sd of the monthly difference; the 6 draws deflate the
+  basis: Unit = dev month; the test is ONE-SAMPLE on the paired book-month differences vs tau 0.25, ~30 months 2023-01..2025-06. 30 pairs detect ~0.5 sd of the monthly difference; the 6 draws deflate the
     bar (holdout_lock.bar_for(6).point_t_min = 1.3001).
   feasibility:
     source: none
