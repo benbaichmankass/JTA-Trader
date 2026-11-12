@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 import sys
-from typing import Any, Dict, List
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -21,17 +21,17 @@ sys.modules.setdefault("pandas", MagicMock())
 sys.modules.setdefault("src.runtime.signal_notifications", MagicMock())
 sys.modules.setdefault("src.runtime.signal_writer", MagicMock())
 
-from src.runtime import order_monitor as _om  # noqa: E402
-from src.units.accounts import execute as _ex  # noqa: E402
+from src.runtime import order_monitor as _om
+from src.units.accounts import execute as _ex
 
 _SENTINEL = object()
 
 
 class _DB:
-    def __init__(self, row: Dict[str, Any]):
+    def __init__(self, row: dict[str, Any]):
         self.row = row
-        self.events: List[str] = []
-        self.trade_updates: List[tuple] = []
+        self.events: list[str] = []
+        self.trade_updates: list[tuple] = []
 
     def get_trades(self, filters=None, limit=None):
         f = filters or {}
@@ -73,7 +73,7 @@ def _pkg():
 
 @pytest.fixture
 def wire(monkeypatch):
-    calls: List[Dict[str, Any]] = []
+    calls: list[dict[str, Any]] = []
     state = {"send": {"ok": True, "exchange_order_id": "X1", "error": None},
              "raise": False, "db": None}
 
@@ -157,7 +157,7 @@ def test_failed_venue_reduce_amends_nothing(wire):
 
 
 def test_resize_exception_never_unbooks_the_partial(wire):
-    calls, state = wire
+    _calls, state = wire
     state["raise"] = True
     db = _DB(_row())
     s = _run(db, 0.5)
