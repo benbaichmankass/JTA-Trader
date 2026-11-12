@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "manager_merges",
+  "hold_text": "COMMENT-ONLY edit to config/accounts.yaml (alpaca_live risk block). The parsed YAML is byte-for-byte identical to origin/main (checked with yaml.safe_load equality), so no key or value changes. It relabels the 2026-08-25 reachable-set list as a stale snapshot and points readers at scripts/ops/account_reachable_set.py, which closes BL-20260910 option (a). Allowed by AM-TRADING 2026-11-12 10:48Z: separate PR, landing hold, the manager merges. Revert: git revert.",
+  "why": "Stop sessions quoting a decayed reachable-set constant; read it on demand instead."
+}
