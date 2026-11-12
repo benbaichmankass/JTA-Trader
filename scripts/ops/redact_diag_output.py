@@ -14,6 +14,9 @@ Rules (each is a named class so the counts say WHAT matched, never the value):
   pem_block                      -- BEGIN..END, or BEGIN..end-of-text if the
                                     output was cut before END
   bearer                         -- ``Bearer <20+ chars>``
+  ib_account_id                  -- IBKR account ids: DU/DF + 5+ alnum incl. a digit (paper /
+                                    advisor) or U + 7+ digits (live). Never put
+                                    account ids in the public repo (2026-11-12).
   long_hex                       -- >=64 contiguous hex chars (sha256-length
                                     and up: token_hex(32) secrets). 40-char git
                                     shas are deliberately NOT matched — they
@@ -41,6 +44,7 @@ RULES = (
     ("aws_access_key", re.compile(r"(?<![A-Za-z0-9])(?:AKIA|ASIA)[0-9A-Z]{16}(?![A-Za-z0-9])")),
     ("github_token", re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,})")),
     ("bearer", re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._~+/=-]{20,}")),
+    ("ib_account_id", re.compile(r"(?<![A-Za-z0-9])(?:(?:DU|DF)(?=[A-Z0-9]*[0-9])[A-Z0-9]{5,}|U[0-9]{7,})(?![A-Za-z0-9])")),
     ("long_hex", re.compile(r"(?<![0-9A-Fa-f])[0-9A-Fa-f]{64,}(?![0-9A-Fa-f])")),
 )
 

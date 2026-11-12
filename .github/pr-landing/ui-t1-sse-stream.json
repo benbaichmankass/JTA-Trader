@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "UI-TRADING-PUSH step T1: GET /api/bot/stream (SSE) + /stream/status on ict-web-api. One broadcaster reads the alert ledger, trade_journal.db (mode=ro, PK/status index) and the health doc once per second and fans frames to every client. Read-only; no order path, no trader change, no new gate. Auth: the existing gate covers it; with SITE_AUTH_ENFORCE on it also takes the existing single-use ws-ticket (EventSource cannot set headers).",
+  "hold_text": "Tier 2: new code in the live web API service plus a small auth.py branch (GET /api/bot/stream only). The manager merges, deploys ict-web-api, then runs the closing check: two curl -N clients on /api/bot/stream receive the same frames, /stream/status shows clients=2 with one read per second, and a send_route_test_ping alert reaches both within 2 s."
+}
