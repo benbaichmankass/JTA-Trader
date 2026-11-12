@@ -47,9 +47,8 @@ import datetime as dt
 import json
 import math
 import sys
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
@@ -58,10 +57,10 @@ for _p in (REPO, REPO / "scripts" / "ops", REPO / "scripts" / "ci", REPO / "scri
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
-import check_desk_records as cdr  # noqa: E402
-import desk_gen_replay_driver as gr  # noqa: E402
-import desk_event_entry_replay as dee  # noqa: E402
-import desk_event_calendar_study as ecs  # noqa: E402
+import check_desk_records as cdr
+import desk_event_calendar_study as ecs
+import desk_event_entry_replay as dee
+import desk_gen_replay_driver as gr
 
 UNIT_ID = "RQ-20261112-e4a7-01"
 RULE_ID = "RULE-RQ20261112-E4A7-01-DESK-EVENT-PACKET-ARM"
@@ -84,10 +83,10 @@ HISTORY_FILE = REPO / "comms" / "research" / "desk_event_packet" / "trigger_hist
 
 
 # ----------------------------------------------------------------------------- events
-_OI_CACHE: Dict[Tuple[str, str], Tuple[np.ndarray, np.ndarray]] = {}
+_OI_CACHE: dict[tuple[str, str], tuple[np.ndarray, np.ndarray]] = {}
 
 
-def _oi_rows(root: Path, sym: str) -> Tuple[np.ndarray, np.ndarray]:
+def _oi_rows(root: Path, sym: str) -> tuple[np.ndarray, np.ndarray]:
     k = (str(root), sym)
     if k not in _OI_CACHE:
         rows = sorted((dt.datetime.strptime(r[0], "%Y-%m-%d %H:%M:%S").replace(tzinfo=dt.timezone.utc).timestamp(), float(r[2]))
@@ -96,7 +95,7 @@ def _oi_rows(root: Path, sym: str) -> Tuple[np.ndarray, np.ndarray]:
     return _OI_CACHE[k]
 
 
-def oi_stats(root: Path, ev: dict) -> Tuple[Optional[float], Optional[float]]:
+def oi_stats(root: Path, ev: dict) -> tuple[float | None, float | None]:
     """(1h OI change, its z vs the previous 2016 5-minute-grid 1h changes) at the event's detection row (known - 300 s).
     The same arithmetic as dee.detect, reading only rows at or before that row."""
     t_ev = ev["known"] - 300
@@ -115,7 +114,7 @@ def oi_stats(root: Path, ev: dict) -> Tuple[Optional[float], Optional[float]]:
     return float(ch[i]), (float((ch[i] - w.mean()) / sd) if sd > 0 else None)
 
 
-def dev_events(root: Path, mkt: Dict[str, gr.Series], window=DEV) -> List[dict]:
+def dev_events(root: Path, mkt: dict[str, gr.Series], window=DEV) -> list[dict]:
     """E4 events with a cutoff bar inside the window, in the registered seeded order (index = schedule position)."""
     lo, hi = gr._epoch(window[0]), gr._epoch(window[1])
     evs = []
@@ -133,7 +132,7 @@ def dev_events(root: Path, mkt: Dict[str, gr.Series], window=DEV) -> List[dict]:
 
 
 # ----------------------------------------------------------------------------- trigger history (holdout window only)
-def trigger_history(root: Path) -> Dict[str, Any]:
+def trigger_history(root: Path) -> dict[str, Any]:
     """Per structure (rule side continuation / fade x reference bracket): the E4 trigger's outcomes on the HOLDOUT window,
     pooled over the six symbols, market entry at the next open, full cost stack. A refused slot is excluded and counted."""
     mkt, missing = gr.load_market(root / "candles", list(SYMS))
@@ -197,7 +196,7 @@ def history_table(hist: dict) -> str:
     return "\n".join(lines)
 
 
-def build_event_packet(mkt: Dict[str, gr.Series], classes: Dict[str, List[str]], ev: dict, root: Path, hist: dict) -> Tuple[dict, dict]:
+def build_event_packet(mkt: dict[str, gr.Series], classes: dict[str, list[str]], ev: dict, root: Path) -> tuple[dict, dict]:
     s = ev["sym"]
     m, key = gr.build_masked_packet({s: mkt[s]}, classes, ev["cutoff"], ev["index"], SEED)
     ch, z = oi_stats(root, ev)
@@ -217,7 +216,7 @@ def build_event_packet(mkt: Dict[str, gr.Series], classes: Dict[str, List[str]],
     return m, key
 
 
-def _market(a) -> Tuple[Dict[str, gr.Series], Dict[str, List[str]]]:
+def _market(a) -> tuple[dict[str, gr.Series], dict[str, list[str]]]:
     if getattr(a, "fetch", False):
         dee.fetch(Path(a.root), "dev")          # the runner route: public Binance Vision files, skipped when cached
     mkt, missing = gr.load_market(Path(a.root) / "candles", list(SYMS))
@@ -251,7 +250,7 @@ def cmd_packets(a) -> int:
     keys, leaked, sizes = [], 0, []
     with (out / "packets.jsonl").open("w") as fh:
         for ev in sel:
-            m, key = build_event_packet(mkt, classes, ev, root, hist)
+            m, key = build_event_packet(mkt, classes, ev, root)
             txt = json.dumps(m, sort_keys=True)
             if gr.leak_scan(txt, key, list(SYMS)):
                 leaked += 1
@@ -270,11 +269,11 @@ def cmd_packets(a) -> int:
     return 0
 
 
-def _load(a, mkt, classes) -> Tuple[Dict[str, dict], Dict[str, dict], Dict[str, List[dict]], Dict[str, Any]]:
+def _load(a, mkt, classes) -> tuple[dict[str, dict], dict[str, dict], dict[str, list[dict]], dict[str, Any]]:
     """keys, packets (re-derived from the candles and sha-verified), proposals by packet, intake accounting."""
     keyf = json.loads(Path(a.mask_key).read_text())
     keys = {k["packet_id"]: k for k in keyf["keys"]}
-    root, hist = Path(a.root), _hist(a)
+    root = Path(a.root)
     evs = {e["index"]: e for e in dev_events(root, mkt)}
     want = {json.loads(ln)["packet_id"] for ln in Path(a.proposals).read_text().splitlines() if ln.strip()}
     packets, drift = {}, []
@@ -282,7 +281,7 @@ def _load(a, mkt, classes) -> Tuple[Dict[str, dict], Dict[str, dict], Dict[str, 
         if pid not in keys:
             raise SystemExit(f"proposal packet_id {pid!r} is not in the mask key")
         k = keys[pid]
-        m, _ = build_event_packet(mkt, classes, evs[k["index"]], root, hist)
+        m, _ = build_event_packet(mkt, classes, evs[k["index"]], root)
         if m["meta"]["packet_id"] != pid or cdr.packet_sha(m) != k["packet_sha"]:
             drift.append(pid)
         packets[pid] = m
@@ -292,13 +291,13 @@ def _load(a, mkt, classes) -> Tuple[Dict[str, dict], Dict[str, dict], Dict[str, 
     return keys, packets, by, intake
 
 
-def prefix_design(keys: Dict[str, dict], by: Dict[str, List[dict]], schedule_len: int) -> Dict[str, Any]:
+def prefix_design(keys: dict[str, dict], by: dict[str, list[dict]], schedule_len: int) -> dict[str, Any]:
     """Judged packets must be exactly the KEYED schedule indices below a batch boundary (a packet withheld for a mask leak has
     no key and was never offered, so its hole is not a skip)."""
     idx = sorted(int(keys[p]["index"]) for p in by)
     keyed = sorted(int(k["index"]) for k in keys.values())
     prefix_ok = bool(idx) and idx == [k for k in keyed if k <= idx[-1]]
-    end = min(schedule_len, int(math.ceil((idx[-1] + 1) / BATCH)) * BATCH) if idx else 0
+    end = min(schedule_len, math.ceil((idx[-1] + 1) / BATCH) * BATCH) if idx else 0
     whole_batches = bool(idx) and idx == [k for k in keyed if k < end]
     return {"packets_judged": len(idx), "is_schedule_prefix": prefix_ok, "whole_batches": whole_batches, "batch": BATCH,
             "schedule_len": schedule_len, "last_index": idx[-1] if idx else None, "batch_end": end}
@@ -306,7 +305,7 @@ def prefix_design(keys: Dict[str, dict], by: Dict[str, List[dict]], schedule_len
 
 def cmd_intake(a) -> int:
     mkt, classes = _market(a)
-    keys, packets, by, intake = _load(a, mkt, classes)
+    keys, _packets, by, intake = _load(a, mkt, classes)
     sl = json.loads(Path(a.mask_key).read_text()).get("schedule_len")
     d = prefix_design(keys, by, sl)
     print(json.dumps({**d, "valid_proposals": sum(len(v) for v in by.values()), "intake": intake}))
@@ -314,17 +313,17 @@ def cmd_intake(a) -> int:
 
 
 # ----------------------------------------------------------------------------- scoring
-def _excl_mask(ser: gr.Series, idxs: List[int]) -> np.ndarray:
+def _excl_mask(ser: gr.Series, idxs: list[int]) -> np.ndarray:
     near = np.zeros(len(ser.t), bool)
     for j in idxs:
         near[max(0, j - EXCL_BARS): j + EXCL_BARS + 1] = True
     return near
 
 
-def score_rows(mkt, items: List[Tuple[dict, dict]], ev_idx: Dict[str, List[int]], seed: int, draws: int = B_DRAWS) -> List[dict]:
+def score_rows(mkt, items: list[tuple[dict, dict]], ev_idx: dict[str, list[int]], seed: int, draws: int = B_DRAWS) -> list[dict]:
     """items = [(key, proposal-dict in REAL prices with side +/-1)], scored against the B3 pool with the proposal's own geometry."""
     rng = np.random.default_rng(seed)
-    pools: Dict[str, np.ndarray] = {}
+    pools: dict[str, np.ndarray] = {}
     near = {s: _excl_mask(mkt[s], ev_idx.get(s, [])) for s in mkt}
     out = []
     for key, p in items:
@@ -347,7 +346,7 @@ def score_rows(mkt, items: List[Tuple[dict, dict]], ev_idx: Dict[str, List[int]]
     return out
 
 
-def _stat(rows: List[dict], field: str = "d", seed: int = SEED) -> Dict[str, Any]:
+def _stat(rows: list[dict], field: str = "d", seed: int = SEED) -> dict[str, Any]:
     r = [x for x in rows if x.get(field) is not None]
     return dee.cluster_mean([x[field] for x in r], [x["week"] for x in r], ALPHA, seed=seed, draws=BOOT)
 
@@ -367,12 +366,12 @@ def _rule_prop(ser: gr.Series, i: int, side: float) -> dict:
 
 def cmd_score(a) -> int:
     mkt, classes = _market(a)
-    keys, packets, by, intake = _load(a, mkt, classes)
+    keys, _packets, by, intake = _load(a, mkt, classes)
     keyf = json.loads(Path(a.mask_key).read_text())
     design = prefix_design(keys, by, keyf.get("schedule_len"))
     root = Path(a.root)
     evs = dev_events(root, mkt)
-    ev_idx: Dict[str, List[int]] = {s: [] for s in SYMS}
+    ev_idx: dict[str, list[int]] = {s: [] for s in SYMS}
     for e in evs:
         ev_idx[e["sym"]].append(mkt[e["sym"]].last_closed(e["cutoff"]))
     judged = [keys[p] for p in by]
@@ -445,7 +444,7 @@ def cmd_score(a) -> int:
     return 0
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="mode", required=True)
     for name, fn in (("history", cmd_history), ("packets", cmd_packets), ("intake", cmd_intake), ("score", cmd_score)):
