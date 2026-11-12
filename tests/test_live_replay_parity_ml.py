@@ -13,11 +13,11 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
-import scripts.ops.live_replay_parity as P  # noqa: E402
-import scripts.ops.live_replay_parity_ml as M  # noqa: E402
-from src.runtime import ml_entry_eq_features as F  # noqa: E402
-from src.units.strategies import ml_entry as ME  # noqa: E402
-from src.units.strategies import ml_entry_eq as L  # noqa: E402
+import scripts.ops.live_replay_parity as P
+import scripts.ops.live_replay_parity_ml as M
+from src.runtime import ml_entry_eq_features as F
+from src.units.strategies import ml_entry as ME
+from src.units.strategies import ml_entry_eq as L
 
 
 def _ep(s: str) -> float:
@@ -134,7 +134,7 @@ def test_lost_decision_is_flagged_not_ignored(entry):
 
 
 def test_unreadable_inputs_are_could_not_check_never_zero(entry):
-    leg, bundle, rows = entry
+    leg, bundle, _rows = entry
     for b in (dict(bundle, ml_candles={}), dict(bundle, signals={"ml_entry": {"rows": [], "error": "boom"}}),
               dict(bundle, ml_candles={s: {"candles": [], "error": "fetch_failed"} for s in bundle["ml_candles"]})):
         r = M.analyse_ml_entry(leg, b, SINCE, UNTIL)
@@ -185,7 +185,7 @@ EQ_SINCE, EQ_UNTIL = _ep("2026-11-10T00:00:00+00:00"), _ep("2026-11-11T00:00:00+
 
 
 def test_clean_eq_control_checks_and_reports_zero():
-    leg, bundle, rows, pk = _eq_setup()
+    leg, bundle, _rows, pk = _eq_setup()
     r = M.analyse_ml_eq(leg, bundle, EQ_SINCE, EQ_UNTIL)
     assert r["state"] == "checked" and r["divergences"] == 0 and r["snapshots_replayed"] == 1
     assert r["evals_checked"] == len(pk)
@@ -214,7 +214,7 @@ def test_planted_geometry_difference_is_flagged_on_the_same_symbol():
 
 
 def test_eq_unreadable_or_empty_archive_is_could_not_check_never_zero():
-    leg, bundle, rows, _ = _eq_setup()
+    leg, bundle, _rows, _ = _eq_setup()
     for blob in ({"snapshots": None, "error": "boom"}, {"snapshots": {}, "error": None, "present": False, "index_count": 0}):
         r = M.analyse_ml_eq(leg, dict(bundle, ml_pool_snapshots=blob), EQ_SINCE, EQ_UNTIL)
         assert r["state"] == "could_not_check" and r["divergences"] is None and r["reason"]
@@ -233,7 +233,7 @@ def test_resolve_legs_covers_both_ml_legs_not_could_not_check():
 
 
 def test_run_dispatches_the_ml_legs_and_the_controls_gate_the_status(entry, monkeypatch):
-    leg, bundle, rows = entry
+    leg, bundle, _rows = entry
     bundle = dict(bundle, candles={}, order_packages={"rows": [], "complete": True}, trades={"rows": [], "complete": True},
                   allocator={}, since=M._iso(SINCE), until=M._iso(UNTIL), fetched_at=M._iso(UNTIL))
     doc = P.run(bundle, [leg], SINCE, UNTIL)

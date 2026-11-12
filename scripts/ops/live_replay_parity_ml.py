@@ -32,8 +32,9 @@ null`` -- an empty / unreadable fetch is never ``0 divergences``.
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from datetime import datetime, timezone
-from typing import Any, Mapping
+from typing import Any
 
 ML_UNITS = {"ml_entry": "ml_entry", "ml_entry_eq": "ml_entry_eq"}   # builder monitor_unit (or leg name) -> replay kind
 ML_LEGS = ("ml_entry", "ml_entry_eq_struct")
@@ -131,7 +132,7 @@ def _live_decisions(rows: list[dict], strategy: str) -> dict[tuple[str, float], 
         if t is None:
             continue
         p = parse_reason(r.get("reason"))
-        bar = _epoch((p["own_bar"] + ":00+00:00")) if p.get("own_bar") else None
+        bar = _epoch(p["own_bar"] + ":00+00:00") if p.get("own_bar") else None
         if bar is None:
             bar = float((int(t) // BAR_S) * BAR_S - BAR_S)
         out.setdefault((str(r.get("symbol")), bar), r)
@@ -150,7 +151,7 @@ def served_epoch(repo: Any = None) -> float | None:
     root = Path(repo) if repo else Path(__file__).resolve().parents[2]
     try:
         out = subprocess.run(["git", "-C", str(root), "log", "-1", "--format=%ct", "--", "ml/served/ENTRY_SERVED.json"],
-                             capture_output=True, text=True, timeout=30).stdout.strip()
+                             capture_output=True, text=True, timeout=30, check=False).stdout.strip()
         return float(out) if out else None
     except (OSError, ValueError, subprocess.SubprocessError):
         return None
@@ -159,6 +160,7 @@ def served_epoch(repo: Any = None) -> float | None:
 def _entry_replay(cfg: Mapping, symbol: str, bar: float, frames: Mapping[str, Any], model: Mapping, PR: Any) -> dict:
     """The LIVE ml_entry.order_package on the frame cut at ``bar``; returns {side, reason|pkg, ...}."""
     import pandas as pd
+
     from src.units.strategies import ml_entry as ME
     T = pd.Timestamp(bar, unit="s", tz="UTC")
     own = frames.get(symbol)
@@ -487,10 +489,10 @@ def ml_planted_defect(legs: list, results: list[dict], bundle: Mapping, since: f
         rows = list(((bundle.get("signals") or {}).get(lg.name) or {}).get("rows") or [])
         if ML_UNITS.get(str(lg.unit)) == "ml_entry":
             plants += _plant_entry(lg, bundle, since, until, rows)
-            clean += _clean_entry(lg, bundle, since, until, rows)
+            clean += _clean_entry(lg, bundle, since, until)
         else:
             plants += _plant_eq(lg, bundle, since, until, rows)
-            clean += _clean_eq(lg, bundle, since, until, rows)
+            clean += _clean_eq(lg, bundle, since, until)
     return {"plants": plants, "clean": clean}
 
 
@@ -537,7 +539,7 @@ def _as_row(r: Mapping) -> dict:
     return dict(r)
 
 
-def _clean_entry(lg: Any, bundle: Mapping, since: float, until: float, rows: list[dict]) -> list[dict]:
+def _clean_entry(lg: Any, bundle: Mapping, since: float, until: float) -> list[dict]:
     """Regenerate every live record from the replay and re-run the comparison: an exact live must read 0 divergences."""
     from src.runtime import ml_entry_profile as PR
     from src.units.strategies import ml_entry as ME
@@ -609,7 +611,7 @@ def _plant_eq(lg: Any, bundle: Mapping, since: float, until: float, rows: list[d
     return out
 
 
-def _clean_eq(lg: Any, bundle: Mapping, since: float, until: float, rows: list[dict]) -> list[dict]:
+def _clean_eq(lg: Any, bundle: Mapping, since: float, until: float) -> list[dict]:
     from src.units.strategies import ml_entry_eq as L
     cfg = dict(lg.cfg)
     model = L.load_model(L.artifact_path(cfg))
