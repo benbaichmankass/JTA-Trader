@@ -1,6 +1,6 @@
 # UI redesign 2026-11: reconciliation of the 11-11 design doc against the operator's text
 
-> **Doc status:** `live` · category `architecture` · last verified `2026-11-12` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
+> **Doc status:** `unknown` · category `architecture` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
 > **Gates this adds or changes: none.** It removes two guards that the 11-11 doc proposed (`insight-link-guard`, `topic-map-guard`). Both are
 > reported as numbers instead (operator 2026-10-29, "no new gates").
 
