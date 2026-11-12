@@ -10,7 +10,10 @@
   "registered_at": "2026-11-12",
   "registered_before_run": true
  },
- "population": "served ml_decision_entry_v1r20261106 (S) and frozen ml_decision_entry_v1 (V) taken decisions, tau 0.1, 60-perp universe, windows A 2025-10-01..2026-09-29 (V), B 2026-10-25..2026-11-07 (S,V), F 2026-11-08..2026-11-10 (descriptive); pool = every candidate row at the same ts and side",
+ "population": {
+  "n": 375,
+  "description": "served ml_decision_entry_v1r20261106 (S) and frozen ml_decision_entry_v1 (V) taken decisions, tau 0.1, 60-perp universe, windows A 2025-10-01..2026-09-29 (V), B 2026-10-25..2026-11-07 (S,V), F 2026-11-08..2026-11-10 (descriptive); pool = every candidate row at the same ts and side"
+ },
  "measurement": {
   "R1": {
    "gap": -0.2113,
@@ -861,7 +864,17 @@
   }
  },
  "produced_by": {
-  "tool": "python3 scripts/research/ml_entry_regime_split.py",
-  "where": "local (CRYPTO-ENTRY-DIAG lane container)"
- }
+  "run_id": "local-20261112T1500Z",
+  "commit_sha": "5aaf124f254b11f8e5e93d7d24ea437126572422",
+  "where": "CRYPTO-ENTRY-DIAG lane container (session_01AFoLuN3NqAyN57d4J8H7fH); registration pushed first (5fe2b3fdf), holdout reads claimed before outcomes were read",
+  "tool": "python3 scripts/research/ml_entry_regime_split.py --no-fetch --cache <scratch>/klines --out <scratch>/out",
+  "workflow": "local (reproducible on research-script-run)"
+ },
+ "generated_at": "2026-11-12T15:00:00Z",
+ "artifact": {
+  "locator": "comms/research/RQ-20261112-cd01-01/local-20261112T1500Z/verdict.json",
+  "rows_landed": null,
+  "store": "comms/research/RQ-20261112-cd01-01/local-20261112T1500Z"
+ },
+ "power_state": null
 }

@@ -25,8 +25,8 @@ import pandas as pd
 REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO), str(REPO / "scripts" / "research")]
 
-import ml_decision_entry as E  # noqa: E402
-import ml_decision_vol_decomp as VD  # noqa: E402
+import ml_decision_entry as E
+import ml_decision_vol_decomp as VD
 
 RULE_ID = "RULE-RQ20261112-cd01-01-REGIME-SELECT-COST"
 TAU = 0.1
@@ -72,7 +72,7 @@ def summarise(k: pd.DataFrame) -> dict:
     """Net / gross / cost taken mean, the pool (regime) mean over the same decisions, excess, tilt, select; by side too."""
     if k.empty:
         return {"n": 0}
-    out = {"n": int(len(k)), "by_side": {s: int((k.side == s).sum()) for s in ("long", "short")}}
+    out = {"n": len(k), "by_side": {s: int((k.side == s).sum()) for s in ("long", "short")}}
     net, gross = k.net_r.to_numpy(float), k.gross_r.to_numpy(float)
     out["net"] = {"taken": _cl(net, k), "pool": _cl(k.all_net.to_numpy(float), k), "excess": _cl(net - k.all_net.to_numpy(float), k),
                   "tilt": _cl(k.b_net.to_numpy(float) - k.all_net.to_numpy(float), k),
@@ -131,7 +131,7 @@ def boot_diff(kS: pd.DataFrame, kV: pd.DataFrame) -> dict:
     diffs = diffs[np.isfinite(diffs)]
     point = float(sS.sum() / nS.sum() - sV.sum() / nV.sum())
     lo, hi = (float(np.percentile(diffs, 2.5)), float(np.percentile(diffs, 97.5))) if len(diffs) else (None, None)
-    return {"point": point, "ci95_lo": lo, "ci95_hi": hi, "n_days": int(len(days)), "n_S": int(nS.sum()), "n_V": int(nV.sum())}
+    return {"point": point, "ci95_lo": lo, "ci95_hi": hi, "n_days": len(days), "n_S": int(nS.sum()), "n_V": int(nV.sum())}
 
 
 def judge_r2(kS: pd.DataFrame, kV: pd.DataFrame) -> dict:
@@ -196,6 +196,7 @@ def run(a) -> int:
     out.mkdir(parents=True, exist_ok=True)
     syms = E.universe()
     from datetime import date
+
     import ml_entry_retrain as RT
     if a.no_fetch:   # cache already holds the through-run-date archives (same fetch_through output)
         rep = {s_: {"last_bar": str(pd.read_pickle(cache / f"{s_}.pkl").ts.max())} for s_ in syms}
@@ -247,6 +248,7 @@ def run(a) -> int:
 
 def self_test() -> int:
     import tempfile
+
     import ml_entry_crypto_struct as C
     root = Path(tempfile.mkdtemp())
     syms = C._synthetic_cache(root)
