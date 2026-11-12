@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "LTR-LATENCY (PI-20261112-MK2UZULF): the VM wake pass builds, lands and fires real-money/prop entries before any paper-only entry, and persists the suppressed markers across restarts. Runtime change to ict-trader-live; manager merges and deploys.",
+  "why": "On 11-12 a live-review event took ~10.7 min inside the wake pass because every paper packet (suppressed by ltr_paper OFF) was built before the fire, and was rebuilt after each trader restart. No new switch or refusal; console wake switches govern exactly as before."
+}
