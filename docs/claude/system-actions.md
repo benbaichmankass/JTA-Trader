@@ -1167,6 +1167,7 @@ its guards in a tested script:
 | `trainer-boot-volume.yml` (`trainer-boot-volume`) | 1 measure / 2 resize | `scripts/ops/oci_trainer_boot_volume.py` | resize: grows the TRAINER boot volume only (pinned OCID; refused past Always Free 200 GB) |
 | `oci-retire-orphan-volume.yml` (`oci-retire-orphan-volume`) | 1 plan / 2 execute | `scripts/ops/oci_retire_orphan_volume.py` | execute: FULL backup of `ict-bot-data-vol` (must reach AVAILABLE), then **deletes that volume** |
 | `oci-grow-boot-volume.yml` (`oci-grow-boot-volume`) | 1 plan / 2 execute | `scripts/ops/oci_grow_boot_volume.py` + `scripts/ops/vm_grow_root_fs.sh` | execute: FULL backup of the LIVE VM boot volume, grows it to 53 GB max, then growpart + resize2fs/xfs_growfs on the VM (no reboot, no restart) |
+| `oci-resize-a1.yml` (`oci-resize-a1`) | 1 plan / 2 execute | `scripts/ops/oci_resize_a1.py` | execute: memory-only resize of `ict-trainer-vm` or `ict-ib-gateway` (pinned by name; trader refused) — SOFTSTOP, update shape, START; refused if post-change A1 total exceeds 4 OCPU / 24 GB, so shrink one VM before growing the other. Body: `target_name` `ocpus` `memory_gbs` `mode` `confirm: yes`. Added 2026-11-06 for FREE-CAPACITY-PLAN (operator popup "Next CME daily break"). Tests: `tests/ops/test_oci_resize_a1.py`. |
 
 `oci-retire-orphan-volume` exists for ONE operator decision (2026-09-29, "Back up,
 then delete (Recommended)", PI-20260929-CMXYTHSP-0002). How it finds and checks
