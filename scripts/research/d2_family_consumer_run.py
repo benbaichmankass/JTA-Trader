@@ -8,6 +8,7 @@ through regime_gate_family_consumer.py. A leg whose symbol has no labels file is
     python scripts/research/d2_family_consumer_run.py --out DIR \
         --leg trend_donchian_sol_prop=DIR/SOLUSDT_labels.jsonl --leg trend_donchian_eth_prop=DIR/ETHUSDT_labels.jsonl ...
 """
+# wiring: manual-only - run through the trainer-vm-diag issue relay by the research unit that names it (RQ-20261112-bcd2-01), not by a workflow or caller
 from __future__ import annotations
 
 import argparse
@@ -17,7 +18,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import regime_debt_matrix as rdm  # type: ignore
+import regime_debt_matrix as rdm  # type: ignore  # noqa: E402
 
 REPO = rdm.REPO
 
@@ -56,7 +57,7 @@ def main() -> int:
     ap.add_argument("--since", default="2026-07-01")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
-    legs, report = {}, []
+    legs, report, failed = {}, [], False
     for spec in a.leg:
         name, labels = spec.split("=", 1)
         if not os.path.exists(labels) or os.path.getsize(labels) == 0:
@@ -64,22 +65,24 @@ def main() -> int:
             continue
         try:
             r = tag_leg(name, labels, a.out, a.days)
-        except Exception as e:  # noqa: BLE001  one leg failing never hides the others
+        except (subprocess.CalledProcessError, OSError, KeyError, ValueError) as e:
+            # one leg failing never hides the others: the error is written into the report and the exit says so
             r = {"strategy": name, "error": f"{type(e).__name__}: {str(e)[-300:]}"}
+            failed = True
         report.append(r)
         if r.get("tagged"):
             legs[name] = r["tagged"]
     print(json.dumps({"legs": report}, indent=1))
     if not legs:
         print("NO LEGS GRADABLE", file=sys.stderr)
-        return 0
+        return 1
     base = [sys.executable, os.path.join(REPO, "scripts/research/regime_gate_family_consumer.py")]
     for l in legs.items():
         base += ["--leg", f"{l[0]}={l[1]}"]
     for tag, extra in (("PRIMARY", []), ("SINCE", ["--since", a.since])):
         print(f"=== GRADE {tag}")
-        subprocess.run(base + extra, cwd=REPO, check=False)
-    return 0
+        subprocess.run(base + extra, cwd=REPO, check=True)
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":
