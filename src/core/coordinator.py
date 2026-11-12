@@ -2464,6 +2464,8 @@ class Coordinator:
                     market_type=str(
                         getattr(account, "market_type", "spot") or "spot"
                     ).lower(),
+                    entry_price=getattr(pkg, "entry", None),
+                    symbol=getattr(pkg, "symbol", None),
                 )
                 # An effective-dry account (shelved ``mode: dry_run``,
                 # execution:shadow strategy, or process-level override)
@@ -4516,6 +4518,8 @@ def _explain_zero_sized_qty(
     risk_manager: Any,
     direction: str,
     market_type: str,
+    entry_price: Optional[float] = None,
+    symbol: Optional[str] = None,
 ) -> str:
     """Synthesise an operator-actionable reason string for a
     ``sized_qty <= 0`` outcome.
@@ -4534,6 +4538,12 @@ def _explain_zero_sized_qty(
         (non-positive balance). There is NO arbitrary minimum-balance
         floor anymore — ``min_balance_usd`` was removed 2026-06-24;
         the only floor is physics (you can't risk a fraction of zero).
+      * ``exposure_ceiling:`` — the gross-exposure headroom clamp
+        (``RiskManager.position_size`` -> ``exposure_headroom_usd``) left
+        less than ONE unit's notional, so the size floored to 0. Carries
+        notional / cap / headroom / unit notional (ZERO-QTY-EXPOSURE-EXPLAIN,
+        PI-20261104-KKPOFDJQ-0004: four ib_paper MGC refusals read as the
+        generic catch-all below while this clamp was the cause).
       * ``risk_refused:`` — generic catch-all (daily-loss budget or
         any other RiskManager rule). Includes balance +
         total_account_usd so the operator can reproduce.
@@ -4553,7 +4563,21 @@ def _explain_zero_sized_qty(
             f"(no funds available to size against)"
         )
 
-    # 2. Generic refusal — daily-loss budget or any future
+    # 2. Gross-exposure ceiling. Named only when the clamp is MEASURED to
+    #    bind: a headroom exists (CLAMP/REFUSE verdict; ``None`` means no
+    #    ceiling or unmeasurable, and is never read as zero) and it is below
+    #    one unit's notional. Read-only and best-effort: any failure falls
+    #    through to the generic reason, never raises into the order path.
+    try:
+        exposure_token = _exposure_ceiling_reason(
+            risk_manager, entry_price=entry_price, symbol=symbol,
+        )
+    except Exception:  # noqa: BLE001 -- explanation only, never blocks
+        exposure_token = None
+    if exposure_token:
+        return exposure_token
+
+    # 3. Generic refusal — daily-loss budget or any future
     #    RiskManager rule. Surface the inputs the operator needs
     #    to reproduce.
     avail_str = (
@@ -4568,6 +4592,60 @@ def _explain_zero_sized_qty(
         f"direction={direction} "
         f"market_type={market_type} — check daily-loss budget / "
         f"liquidation buffer / max_borrow"
+    )
+
+
+def _exposure_ceiling_reason(
+    risk_manager: Any, *, entry_price: Optional[float], symbol: Optional[str],
+) -> Optional[str]:
+    """``exposure_ceiling: ...`` when the gross-exposure headroom is below one
+    unit's notional, else ``None``. Pure read of the RiskManager's own
+    exposure surfaces (the same ``exposure_headroom_usd`` the sizer clamps
+    on); never consults or changes policy."""
+    headroom_fn = getattr(risk_manager, "exposure_headroom_usd", None)
+    if not callable(headroom_fn):
+        return None
+    headroom = headroom_fn()
+    if headroom is None:
+        return None
+    headroom = float(headroom)
+    unit_notional: Optional[float] = None
+    if entry_price:
+        from src.units.accounts.risk import contract_value_usd_for
+        unit_notional = abs(float(entry_price)) * float(
+            contract_value_usd_for(symbol or "") or 1.0
+        )
+        if headroom >= unit_notional:
+            return None  # the clamp leaves room for a unit; not the cause
+    elif headroom > 0:
+        return None  # no entry to price a unit: only a zero headroom is proof
+    notional = equity = None
+    try:
+        obs = risk_manager.observe_exposure()
+        if getattr(obs, "notional", None) is not None:
+            notional = float(obs.notional)
+        if getattr(obs, "equity", None) is not None:
+            equity = float(obs.equity)
+    except Exception:  # noqa: BLE001
+        pass
+    cap_mult = None
+    try:
+        cap_mult = risk_manager.exposure_policy()
+    except Exception:  # noqa: BLE001
+        pass
+    cap_usd = (
+        float(cap_mult) * equity
+        if cap_mult is not None and equity is not None else None
+    )
+
+    def _f(v: Optional[float]) -> str:
+        return f"{v:.2f}" if v is not None else "n/a"
+
+    return (
+        f"exposure_ceiling: sized_qty=0 -- gross notional={_f(notional)} USD "
+        f"cap={_f(cap_usd)} USD (max_gross_exposure_pct="
+        f"{cap_mult if cap_mult is not None else 'n/a'} x equity={_f(equity)}) "
+        f"headroom={_f(headroom)} USD < one unit={_f(unit_notional)} USD"
     )
 
 
