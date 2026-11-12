@@ -1,0 +1,80 @@
+{
+ "generated_at": "2026-11-12T11:00Z",
+ "by": "lane JOURNAL-TRUTH (session_01AFoLuLaFeiQpKFjyffLkxw)",
+ "source": "diag bybit_raw_order_history per account/symbol over [open-1m, close+5m], 7-day chunks; journal + order_packages diag reads 2026-11-12",
+ "population": "29 bybit packages in the newest 400 order_packages (2026-08-03..11-12) whose sized_qty_by_account is exactly 2x the single journal row's position_size",
+ "rule": "a TRUE partial close needs (a) the entry order filled the full sized qty AND (b) exactly one Filled reduce-only order on the closing side, not the row's own sl/tp, for sized-minus-journal qty (5%)",
+ "partial_children": [
+  {
+   "trade_id": 6982,
+   "account": "bybit_2",
+   "pkg": "pkg-633f05fad1ee4c1d",
+   "symbol": "XRPUSDT",
+   "direction": "short",
+   "close_order_id": "ac3c1ec8-bd06-4715-87a4-8e06c727dfdf",
+   "fill_qty": 53.8,
+   "fill_price": 1.0893,
+   "filled_at": "2026-11-09T09:51:51.691000+00:00",
+   "entry_price": 1.1126,
+   "sized_qty": 107.6,
+   "journal_size": 53.8
+  },
+  {
+   "trade_id": 6983,
+   "account": "bybit_portfolio",
+   "pkg": "pkg-633f05fad1ee4c1d",
+   "symbol": "XRPUSDT",
+   "direction": "short",
+   "close_order_id": "9178f2b1-69e1-441f-8ad4-25d207c42ff5",
+   "fill_qty": 16239.2,
+   "fill_price": 1.0836,
+   "filled_at": "2026-11-09T10:52:17.655000+00:00",
+   "entry_price": 1.1126,
+   "sized_qty": 32478.5,
+   "journal_size": 16239.3
+  }
+ ],
+ "exit_corrections": [
+  {
+   "trade_id": 6983,
+   "account": "bybit_portfolio",
+   "from_exit_price": 1.0836,
+   "to_exit_price": 1.0629,
+   "own_order_id": "bd8d3a72-fbf9-4966-aaee-a3fc8a64e8b3",
+   "close_fees_usd": 9.49341359,
+   "why": "the demo pending-pnl read took the partial close's fill 9178f2b1 as this row's exit; its own stop bd8d3a72 filled 16239.3 @ 1.0629"
+  }
+ ],
+ "excluded": {
+  "entry_filled_half_not_a_partial": [
+   6771,
+   6791,
+   6810,
+   6816,
+   6823,
+   6837,
+   6846,
+   6851,
+   6852,
+   6857,
+   6858,
+   6890,
+   6905,
+   6917,
+   6929,
+   6930,
+   6938,
+   6940,
+   6945,
+   6954,
+   6959,
+   6964,
+   6988,
+   6995,
+   6996,
+   7025,
+   7047
+  ],
+  "note": "27 bybit_1 packages: the entry order filled the journal size (half of sized_qty_by_account), so there was no larger position to partially close; 7 of them show a reduce-only order for the WHOLE position, i.e. a non-bracket full close, not a partial. The 2x sized-vs-placed metadata is a separate observation."
+ }
+}

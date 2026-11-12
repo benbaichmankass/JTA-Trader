@@ -289,6 +289,9 @@ EXPECTED_ACTIONS = {
     "supersede-intent-reduce-phantom-pnl": "supersede_intent_reduce_phantom_pnl_action.sh",
     "backfill-intent-reduce-pnl": "backfill_intent_reduce_pnl_action.sh",
     "backfill-own-fill-exits": "backfill_own_fill_exits_action.sh",
+    # 2026-11-12 — PARTIAL-CLOSE-PNL-NOT-JOURNALED: venue-verified partial-close child rows
+    # + the exit they corrupted (6982/6983). DRY-RUN by default; apply gated + online backup.
+    "backfill-partial-close-children": "backfill_partial_close_children_action.sh",
     "prune-db-backups": "prune_db_backups.sh",
     # 2026-11-07 — delete NAMED phone capture runs of one account (operator: purge images that showed an unmasked amount). Tier 2, dry-run default.
     "purge-phone-captures": "purge_phone_captures_action.sh",
@@ -496,6 +499,7 @@ TIER_2_ACTIONS = {
     "supersede-intent-reduce-phantom-pnl",
     "backfill-intent-reduce-pnl",
     "backfill-own-fill-exits",
+    "backfill-partial-close-children",
     "prune-db-backups",
     "purge-phone-captures",
     "close-api-port",
