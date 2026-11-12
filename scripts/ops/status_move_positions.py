@@ -27,8 +27,8 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "scripts" / "ops"))
 
-import status_move as sm
-import strategy_status as st
+import status_move as sm  # noqa: E402
+import strategy_status as st  # noqa: E402
 
 LIVE_URL = "https://ict-bot.duckdns.org/api/bot/positions?include_paper=true"
 
