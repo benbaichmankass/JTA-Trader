@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "GET /api/bot/signals/catalog for the SPA Signals Catalog tab (manager request 2026-11-12 08:51Z; dashboard PR ict-trader-dashboard#238 calls it and gets 404). Access tier 1: public repo files only (signal-catalog.yaml + model.json feature lists), ungated like /catalog/features, CORS via the app middleware. Deploy tier 2 only because it is new code in ict-web-api.",
+  "hold_text": "The manager merges (the access tier is 1; the path is src/**). After the ict-web-api deploy: GET https://ict-bot.duckdns.org/api/bot/signals/catalog?limit=3 returns 200, read_state read, population.inputs = 363 (2026-11-12), and Access-Control-Allow-Origin for the SPA origin."
+}
