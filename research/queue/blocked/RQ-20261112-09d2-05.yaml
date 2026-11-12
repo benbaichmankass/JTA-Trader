@@ -25,17 +25,24 @@ iteration:
   hypothesis: on the real contract the MNQ_OR15 edge is at least as large and clears the deflated bar
   attempt: 1
 power:
-  expected_n: 1450
-  min_detectable_effect: 0.08
+  expected_n: 345
+  min_detectable_effect: 0.22
   effect_units: R per trade
   sd: 1.2
   design: one-sample
   alpha: 0.00833
   power: 0.8
-  basis: INFERRED from the proxy run's n and dispersion.
+  basis: 'MEASURED 2026-11-12 (amended BEFORE any run, AM-TRADING decision (b); power block only, decision_rule
+    unchanged): IB serves MNQ contracts 20241220..20270319 and nothing older (contract_span lines, issue #25422), so
+    real front-month coverage is ~2024-09-12..2026-11-11 (~540 RTH sessions). At the proxy trade rate (~213/yr) that is
+    ~460 trades, ~345 in the 75% discovery window. MDE = (2.638 + 0.842) x 1.2 / sqrt(345) = 0.22 R per trade at the
+    unit''s own alpha 0.00833 (the 6-cell bar). THIS RUN CAN DETECT ONLY AN EDGE >= ~0.22 R/trade, ~3.7x the proxy
+    mean (+0.060): a PASS means a large edge; a FAIL or INDETERMINATE says little about a smaller one. No new power
+    target is registered.'
   feasibility:
     source: none
-    accrual_basis: Replays a corpus that does not exist yet (row FUT-CME-INTRADAY-HIST).
+    accrual_basis: Replays IB's free per-contract history (market_raw_percontract/MNQ/5m/v020, pulled 2026-11-12, row
+      FUT-CME-INTRADAY-HIST); the corpus is fixed, nothing accrues.
 decision_rule:
   id: RULE-RQ-20261112-09d2-05
   registered_at: '2026-11-12'
@@ -64,13 +71,15 @@ value:
   usd_at_stake_per_month: 1500
   confidence: 0.1
   bucket: structural
-  basis: as RQ-20261112-09d2-01; an estimate, not a measurement
+  basis: 'as RQ-20261112-09d2-01; an estimate, not a measurement. Re-scoped 2026-11-12 (AM-TRADING): the Tradeify
+    futures plan is dropped, so the value is for the IB books ib_paper (MES/MNQ), not a Tradeify account.'
 lands:
   store: research/results/
   assert_field: read_state
   min_rows: 1
 related:
 - TRADEIFY-FUTURES-FRONTIER
+- ib_paper
 - RQ-20261112-09d2-01
 - FUT-CME-INTRADAY-HIST
 what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
