@@ -925,3 +925,13 @@ def test_a_real_closed_orders_read_is_untouched_by_the_channel():
             closed_state="read")
     raw = json.loads(prop_journal.latest_account_status("breakout_2")["raw"])
     assert raw["closed_orders_state"] == "read" and raw["brackets_state"] == "not_reported"
+
+
+def test_a_venue_read_move_is_appended_to_prop_fills_amendments():
+    # PROP-PHONE-AMEND-REPORT (operator u4): every SL/TP move must land in prop_fills.amendments (amend_fill_levels)
+    fid = _open_sol()
+    _status([SOLP], brackets_state="read", brackets=[_brk(trig=85.5), _brk(typ="tp", trig=85.18)])
+    row = [f for f in prop_journal.list_fills(account_id="breakout_2", limit=50) if f["id"] == fid][0]
+    am = row["amendments"] if isinstance(row["amendments"], list) else json.loads(row["amendments"] or "[]")
+    assert len(am) == 1 and am[0]["sl_before"] == 81.48 and am[0]["sl"] == 85.5
+    assert "phone_venue_read" in json.dumps(am[0])
