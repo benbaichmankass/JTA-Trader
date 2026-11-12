@@ -5,7 +5,7 @@ name: hf-lake-kaggle-loader-proof
 #   (1) a Kaggle CPU kernel with internet OFF that mounts all 11 mirror datasets and calls lake.symbols('crypto','um_perp','1h') (1h is
 #       derived on read from the 1m mirror), a hash-verified 1h window, a streaming read, and a hot-tail window that must report
 #       could_not_look rather than an empty frame;
-#   (2) the GitHub runner: downloads a few mirror members as single files (the kaggle CLI route that works; whole-dataset DownloadDataset
+#   (2) the GitHub runner: downloads one mirror member (BTCUSDT 2023.parquet) as a single file (the kaggle CLI route that works; whole-dataset DownloadDataset
 #       404s for private datasets, row ML-DATA-RUNNER-FETCH) and loads them through the same loader. That is the observation row
 #       ML-DATA-OFF-TRAINER owes for "a GitHub-runner download of the private Kaggle export".
 #
@@ -93,45 +93,44 @@ jobs:
           scrub < kout/result.json > /tmp/kernel.json
           python3 -c "import json;d=json.load(open('/tmp/kernel.json'));print(json.dumps({k:v for k,v in d.items() if k!='trace'}, indent=1)[:3500]);print(d.get('trace',''))"
           python3 -c "import json,sys;sys.exit(0 if json.load(open('/tmp/kernel.json')).get('ok') else 1)"
-      - name: (2) Runner downloads a few mirror members (single-file route) and loads them through the loader
+      - name: (2) Runner downloads a mirror member (single-file route) and loads it through the loader
         run: |
           set -uo pipefail
           echo "::add-mask::${KAGGLE_API_TOKEN}"
           USERNAME=$(cat /tmp/username); echo "::add-mask::$USERNAME"
-          scrub() { sed "s|$USERNAME|<user>|g"; }
-          SLUG=metis-market-lake-p001
-          D=/tmp/mir/$SLUG; mkdir -p "$D"
-          kaggle datasets download -d "$USERNAME/$SLUG" -f MANIFEST.json -p "$D" --unzip 2>&1 | scrub | tail -1
-          python3 - "$USERNAME/$SLUG" "$D" <<'PY' | tee /tmp/runner.json
+          python3 - "$USERNAME" <<'PY' | tee /tmp/runner.json
           import json, os, subprocess, sys
-          ds, d = sys.argv[1:3]
-          user = ds.split("/")[0]
-          man = json.load(open(os.path.join(d, "MANIFEST.json")))
-          want = None
-          for f in man["files"]:
-              for m in f.get("members", []):
-                  p = m["path"].split("/")
-                  if p[3] == "BTCUSDT" and p[4] in ("2023-01.parquet", "2023-02.parquet", "2023-03.parquet"):
-                      want = want or {"sym": "BTCUSDT", "members": []}
-                      want["members"].append((f["path"][:-4], m))
-          assert want and len(want["members"]) == 3, "BTCUSDT 2023-01..03 not found in p001 MANIFEST"
-          got = []
-          for shard, m in want["members"]:
-              rel = f"{shard}/{m['path']}"
-              dst = os.path.join(d, shard, os.path.dirname(m["path"]))
-              os.makedirs(dst, exist_ok=True)
-              r = subprocess.run(["kaggle", "datasets", "download", "-d", ds, "-f", rel, "-p", dst, "--unzip"], capture_output=True, text=True)
-              got.append({"member": m["path"], "rc": r.returncode, "present": os.path.isfile(os.path.join(d, shard, m["path"]))})
+          user = sys.argv[1]
+          # BTCUSDT um_perp 1m for closed year 2023 is ONE yearly member (YYYY.parquet) in p001 or p002 (the 1m klines are split by symbol across them)
+          want = "crypto/um_perp/1m/BTCUSDT/2023.parquet"
+          found = None
+          for slug in ("metis-market-lake-p001", "metis-market-lake-p002"):
+              d = f"/tmp/mir/{slug}"
+              os.makedirs(d, exist_ok=True)
+              subprocess.run(["kaggle", "datasets", "download", "-d", f"{user}/{slug}", "-f", "MANIFEST.json", "-p", d, "--unzip"], capture_output=True, text=True)
+              man = json.load(open(os.path.join(d, "MANIFEST.json")))
+              for f in man["files"]:
+                  for m in f.get("members", []):
+                      if m["path"] == want:
+                          found = (slug, d, f["path"][:-4], m)
+              if found:
+                  break
+          assert found, f"{want} not found in the p001/p002 manifests"
+          slug, d, shard, m = found
+          rel = f"{shard}/{m['path']}"
+          dst = os.path.join(d, shard, os.path.dirname(m["path"]))
+          os.makedirs(dst, exist_ok=True)
+          r = subprocess.run(["kaggle", "datasets", "download", "-d", f"{user}/{slug}", "-f", rel, "-p", dst, "--unzip"], capture_output=True, text=True)
+          present = os.path.isfile(os.path.join(d, shard, m["path"]))
           os.environ["LAKE_MIRROR_DIR"] = os.path.dirname(d)
           os.environ["HF_HUB_OFFLINE"] = "1"
           sys.path.insert(0, ".")
           from ml.datasets import lake
-          st = lake.symbols("crypto", "um_perp", "1h")
           df = lake.load("crypto", "um_perp", "1h", ["BTCUSDT"], start="2023-01-01", end="2023-04-01")
-          ok = bool(len(df) == 90 * 24 and df["complete"].all() and df.attrs["lake_read"]["from_kaggle_mirror"] == 3
-                    and df.attrs["lake_read"]["n_could_not_look"] == 0 and all(g["present"] for g in got))
-          print(json.dumps({"ok": ok, "downloaded": got, "symbols_listed_p001": len(st), "rows": int(len(df)),
-                            "read": df.attrs["lake_read"]}).replace(user, "<user>"))
+          rd = df.attrs["lake_read"]
+          ok = bool(present and len(df) == 90 * 24 and df["complete"].all() and rd["from_kaggle_mirror"] == 1 and rd["n_could_not_look"] == 0)
+          print(json.dumps({"ok": ok, "dataset": slug, "member": m["path"], "member_bytes": m.get("bytes"), "download_rc": r.returncode,
+                            "present": present, "rows": int(len(df)), "read": rd}).replace(user, "<user>"))
           sys.exit(0 if ok else 1)
           PY
       - uses: actions/upload-artifact@v4
