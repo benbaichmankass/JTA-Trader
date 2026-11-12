@@ -47,11 +47,11 @@ _COST_KEYS = ("fee_bps_rt", "slippage_bps_rt", "funding_bps_per_8h", "artifact_b
 
 
 def _accounts_for(leg_cfg: Mapping[str, Any], symbol: str, leg: Optional[str] = None) -> List[str]:
-    from src.config.symbol_sets import ACCOUNT_SYMBOLS_KEY, leg_symbols
+    from src.config.symbol_sets import ACCOUNT_SYMBOLS_KEY, leg_symbols, scoped_leg_accounts
     scope = leg_cfg.get(ACCOUNT_SYMBOLS_KEY)
     if not isinstance(scope, Mapping):
         return []
-    return [str(a) for a in scope if symbol in leg_symbols(leg_cfg, str(a), leg=leg)]
+    return [a for a in scoped_leg_accounts(leg, scope) if symbol in leg_symbols(leg_cfg, a, leg=leg)]
 
 
 def _norm_cost(raw: Any) -> Optional[Dict[str, float]]:

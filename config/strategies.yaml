@@ -1470,8 +1470,11 @@ strategies:
     # known open item, NOT a sanctioned pattern: owner row ML-UNIVERSE-RULE. Removing it is a Tier-3 FIELD change; do
     # not extend it on precedent. (Comment added 2026-11-12, lane DEMOTION-NOT-BAN; no field changed.)
     account_symbols:
-      bybit_2: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]
-      bybit_portfolio: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]
+      # 2026-11-12 ML-ENTRY-POPULATION-TEST (Tier 3): bybit_2 / bybit_portfolio are NO LONGER on this map. They trade the
+      # population record comms/ml_universe/ml_entry.json on venue bybit (src/config/ml_universe.py): the c692-06 pooled pass
+      # (BTC/ETH/XRP/ADA/SOL, unchanged). The registered population test RQ-20261112-2e3b-01 (51 Bybit USDT perps, each its own
+      # costs, filter fixed pre-run) FAILED: pooled -0.0680 R/decision, n=12,746 (research/results/RQ-20261112-2e3b-01/), so
+      # nothing widens (canonical rule point 4). Still on this map: the prop books (prop superset gate) and alpaca_paper.
       # 2026-11-08 ML-ENTRY-PROP-BASELINE: the prop books trade the ETH+SOL slice (the population comms/prop_survival/ml_entry.json scored; the venue routing
       # files also list BTC/ADA/XRP for some firms, unconfirmed in-terminal). Other symbols drop with the named exclusion leg_account_scope. Widening = one line.
       # breakout_2 removed 2026-11-12: account ON ICE (operator), roster emptied in accounts.yaml.

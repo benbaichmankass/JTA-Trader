@@ -202,7 +202,7 @@ def _is_ib_stk(symbol: str) -> bool:
         return False
 
 
-_LEG_SCOPE_CACHE: Optional[tuple] = None  # (strategies.yaml mtime, {leg: {account: [symbols]}})
+_LEG_SCOPE_CACHE: Optional[tuple] = None  # ((strategies.yaml mtime, population-record mtimes), {leg: {account: [symbols]}})
 
 
 def _leg_account_scope(strategy: Optional[str]) -> Optional[Dict[str, List[str]]]:
@@ -221,16 +221,19 @@ def _leg_account_scope(strategy: Optional[str]) -> Optional[Dict[str, List[str]]
     if not strategy:
         return None
     try:
-        from src.config.symbol_sets import ACCOUNT_SYMBOLS_KEY, leg_symbols
+        from src.config import ml_universe as _mu
+        from src.config.symbol_sets import ACCOUNT_SYMBOLS_KEY, leg_symbols, scoped_leg_accounts
         from src.units.strategies import _DEFAULT_STRATEGIES_YAML, load_strategy_config
-        mtime = os.path.getmtime(_DEFAULT_STRATEGIES_YAML)
+        # the population records (comms/ml_universe/*.json) change a scoped ML leg's per-account set too
+        mtime = (os.path.getmtime(_DEFAULT_STRATEGIES_YAML),
+                 tuple((p.name, p.stat().st_mtime) for p in sorted(_mu.RECORD_DIR.glob("*.json"))))
         if _LEG_SCOPE_CACHE is None or _LEG_SCOPE_CACHE[0] != mtime:
             # strategies.yaml is ~150 ms to parse: re-read only when it changes.
             scopes: Dict[str, Dict[str, List[str]]] = {}
             for name, scfg in (load_strategy_config() or {}).items():
                 sc = scfg.get(ACCOUNT_SYMBOLS_KEY) if isinstance(scfg, dict) else None
                 if isinstance(sc, dict):
-                    scopes[str(name)] = {str(a): leg_symbols(scfg, str(a), leg=str(name)) for a in sc}
+                    scopes[str(name)] = {a: leg_symbols(scfg, a, leg=str(name)) for a in scoped_leg_accounts(str(name), sc)}
             _LEG_SCOPE_CACHE = (mtime, scopes)
     except Exception as exc:  # noqa: BLE001
         logger.warning("[coordinator] leg account scope unreadable for %s: %s", strategy, exc)
