@@ -225,7 +225,7 @@ def _self_test() -> int:
         # order: a found, matching artifact is used and nothing is regenerated; a missing one falls through to regeneration
         calls = []
 
-        def fetch_ok(cid, out, repo, token):
+        def fetch_ok(cid, out, repo, token):  # inert: cid, repo, token — test stub mirroring fetch_artifact's signature
             shutil.copytree(td / "o", out, dirs_exist_ok=True)
             return {"found": True, "downloaded": True}
 

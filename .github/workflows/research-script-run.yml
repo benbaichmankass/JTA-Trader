@@ -158,7 +158,7 @@ jobs:
             git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w0)" \
               fetch --no-tags --depth 1 origin "$SHA" || echo "could not fetch ${SHA}; the materialiser will say which tree it used"
             python3 scripts/research/corpus_v2_materialise.py --self-test
-            python3 scripts/research/corpus_v2_materialise.py --manifest "$MAN" --out corpus_v2 --shards 6 --parallel 3 || true
+            python3 scripts/research/corpus_v2_materialise.py --manifest "$MAN" --out corpus_v2 --shards 6 --parallel 3   # exits 0 by design (verdict in materialise.json); step is continue-on-error
             if [ -s corpus_v2/materialise.json ]; then
               echo "state=$(python3 -c "import json;print(json.load(open('corpus_v2/materialise.json')).get('state'))")" >> "$GITHUB_OUTPUT"
               echo "corpus_id=$(python3 -c "import json;print(json.load(open('corpus_v2/materialise.json'))['corpus_id'])")" >> "$GITHUB_OUTPUT"
