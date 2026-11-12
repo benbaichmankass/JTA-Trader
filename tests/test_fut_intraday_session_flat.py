@@ -176,3 +176,41 @@ class TestStage0Split:
 def test_dukascopy_interval_map_covers_intraday_and_drops_unservable_2h():
     assert ela._DUKA_INTERVAL["15m"] == "15" and ela._DUKA_INTERVAL["5m"] == "5"
     assert "2h" not in ela._DUKA_INTERVAL
+
+
+class TestDefaultStage0Unchanged:
+    """Operator rule (no new gates): the extended clauses are OPT-IN. Without --stage0-holdout-start the
+    stage0 grade is the pre-existing grade_stage0, and its verdicts on planted arms are pinned here."""
+
+    @staticmethod
+    def _arm(n, net, folds):
+        return {"n": n, "net_r": net, "max_drawdown_r": 1.0, "folds": [{"net_r": f} for f in folds]}
+
+    def setup_method(self):
+        self._nf = ela.N_FOLDS
+        ela.N_FOLDS = 4
+
+    def teardown_method(self):
+        ela.N_FOLDS = self._nf
+
+    @pytest.mark.parametrize("arm,verdict,label", [
+        ((50, 3.0, [1, 1, 1, -1]), "pass", "stage0_edge"),
+        ((50, 3.0, [1, 1, -1, -1]), "fail", "stage0_no_edge"),
+        ((50, -1.0, [1, 1, 1, -4]), "fail", "stage0_no_edge"),
+        ((10, 3.0, [1, 1, 1, 1]), "indeterminate", "underpowered"),
+    ])
+    def test_pinned_default_verdicts(self, arm, verdict, label):
+        g = ela.grade_stage0({"B": self._arm(*arm)}, baseline="B", fold_majority=3, n_floor=30, control=None)
+        assert (g["verdict"], g["label"]) == (verdict, label)
+        assert "discovery_ci_lower_r_per_trade" not in g and "holdout" not in g
+
+    def test_new_flags_default_off(self):
+        src = Path(ela.__file__).read_text(encoding="utf-8")
+        assert 'split = a.grade == "stage0" and a.stage0_holdout_start is not None' in src
+
+    @pytest.mark.parametrize("flag", [["--stage0-ci-z", "2"], ["--stage0-yearly-folds"]])
+    def test_extended_clause_without_holdout_start_is_refused(self, flag, tmp_path):
+        rc = ela.main(["--leg", "ict_scalp_mgc_15m", "--arm", "W=", "--data-csv", "data/backtest_candles.csv",
+                       "--grade", "stage0", "--baseline", "W", "--delta-r", "0", "--fold-majority", "2",
+                       "--n-floor", "1", "--out", str(tmp_path), *flag])
+        assert rc == 2
