@@ -16447,6 +16447,184 @@ def _sweep_correct_closed_at_from_own_fill(
     return summary
 
 
+# ── PNL-GROSS-VS-VENUE-6817: the venue's net closed P&L is ``pnl`` ───────────
+#: Bybit closed-pnl reads per monitor tick. Small: this runs on the live tick.
+_VENUE_PNL_READS_PER_TICK = 4
+#: A Bybit row still unmatched this long after its close is recorded
+#: ``venue_unmatched`` (a diagnosis item) instead of being re-asked every tick.
+_VENUE_PNL_UNMATCHED_AFTER_MS = 24 * 3600 * 1000
+_VENUE_FILL_EXIT_SOURCES = frozenset({"exchange_fill", "exchange", "broker_leg_fill"})
+
+
+def _sweep_venue_net_pnl(
+    db, *, cfgs: Optional[Dict[str, Dict[str, Any]]] = None,
+    bybit_reader: Optional[Callable[..., Optional[Dict[str, Any]]]] = None,
+) -> Dict[str, int]:
+    """Store the venue's net closed P&L as ``pnl`` and our own figure beside it.
+
+    Operator decision w11 (2026-11-12): "Store the venue's always, it is the single
+    source of truth and if we have a gap we need to understand why". Rules and
+    population are in :mod:`src.runtime.venue_pnl`. For each closed, priced,
+    non-backtest row closed in the last 7 days (Bybit's closed-pnl retention) with
+    no ``pnl_basis`` yet:
+
+    * Bybit (real AND demo): read the raw closed-pnl records around the close,
+      match this row's own record (own close order id first, then a unique qty +
+      side + 15-min match), write ``pnl`` = its ``closed_pnl``,
+      ``pnl_basis='venue_net'``. Unmatched after 24 h -> ``venue_unmatched``;
+      a failed read writes nothing and retries.
+    * IBKR rows priced from ``ib_execution``: already the venue's realised P&L ->
+      ``venue_net``. Alpaca and other fills-only venues with a venue-fill exit ->
+      ``venue_fills_net`` (``pnl`` unchanged). Anything else ->
+      ``computed_estimate``.
+
+    Every classified row also gets ``pnl_computed`` (journal entry/exit x qty minus
+    the row's own costs) and ``pnl_gap_usd``. Best-effort; never raises.
+    """
+    from src.runtime import venue_pnl as vp
+    from src.runtime.local_pnl import compute_pnl_percent, contract_value_usd_for
+
+    summary: Dict[str, int] = {"scanned": 0, "venue_net": 0, "venue_fills_net": 0,
+                               "computed_estimate": 0, "unmatched": 0, "gaps": 0,
+                               "retry": 0, "budget_deferred": 0, "errors": 0}
+    try:
+        if cfgs is None:
+            cfgs = _load_account_cfgs_for_reconcile()
+        conn = db.connect()
+        try:
+            conn.row_factory = __import__("sqlite3").Row
+            rows = [dict(r) for r in conn.execute(
+                "SELECT id, account_id, symbol, direction, position_size, entry_price, "
+                "       exit_price, pnl, notes, setup_type, closed_at, created_at, "
+                "       sl_order_id, tp_order_id, broker_order_id, "
+                "       fee_taker_usd, fee_maker_usd, funding_paid_usd "
+                "  FROM trades "
+                " WHERE status = 'closed' AND COALESCE(is_backtest, 0) = 0 "
+                "   AND pnl IS NOT NULL AND pnl_basis IS NULL "
+                "   AND COALESCE(setup_type, '') != 'intent_reduce' "
+                "   AND datetime(COALESCE(closed_at, created_at)) >= datetime('now', '-7 days') "
+                " ORDER BY datetime(COALESCE(closed_at, created_at)) DESC LIMIT 50"
+            ).fetchall()]
+        finally:
+            conn.close()
+    except Exception as exc:  # noqa: BLE001 — incl. a DB without the pnl_basis column yet
+        logger.warning("_sweep_venue_net_pnl: scan failed: %s", exc)
+        summary["errors"] += 1
+        return summary
+    if not rows:
+        return summary
+    summary["scanned"] = len(rows)
+    if bybit_reader is None:
+        from src.units.accounts.clients import account_bybit_raw_closed_pnl
+        bybit_reader = account_bybit_raw_closed_pnl
+    budget = [_VENUE_PNL_READS_PER_TICK]
+    cache: Dict[Tuple[str, str, int], Optional[Dict[str, Any]]] = {}
+    now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+
+    for row in rows:
+        try:
+            cfg = (cfgs or {}).get(str(row.get("account_id") or "")) or {}
+            ex = str(cfg.get("exchange") or "").lower()
+            notes = _decode_notes(row.get("notes"))
+            exit_src = str(notes.get("exit_price_source") or "")
+            computed = vp.computed_net(row)
+            updates: Dict[str, Any] = {}
+            basis: Optional[str] = None
+            if ex == "bybit":
+                closed_ms = _isoformat_to_ms(row.get("closed_at") or row.get("created_at"))
+                if closed_ms is None:
+                    summary["retry"] += 1
+                    continue
+                hour = int(closed_ms // 3_600_000)
+                key = (str(row["account_id"]), str(row.get("symbol") or ""), hour)
+                if key not in cache:
+                    if budget[0] <= 0:
+                        summary["budget_deferred"] += 1
+                        continue
+                    budget[0] -= 1
+                    try:
+                        cache[key] = bybit_reader(
+                            cfg, symbol=str(row.get("symbol") or ""),
+                            start_ms=(hour - 2) * 3_600_000, end_ms=(hour + 3) * 3_600_000)
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning("_sweep_venue_net_pnl: read %s: %s", key, exc)
+                        cache[key] = None
+                got = cache[key]
+                if not isinstance(got, dict) or got.get("query_state") == "could_not_look":
+                    summary["retry"] += 1
+                    continue
+                own = [row.get("sl_order_id"), row.get("tp_order_id")]
+                if str(row.get("setup_type") or "") == "partial_close":
+                    own.append(row.get("broker_order_id"))
+                for k in ("own_leg_fill", "exit_fill"):
+                    if isinstance(notes.get(k), dict):
+                        own.append(notes[k].get("order_id"))
+                rec, how = vp.match_venue_record(
+                    got.get("records") or [], own_order_ids=own,
+                    qty=row.get("position_size"), closed_at_ms=closed_ms,
+                    close_side={"long": "sell", "short": "buy"}.get(
+                        str(row.get("direction") or "").lower()),
+                )
+                if rec is None or _safe_float(rec.get("closed_pnl")) is None:
+                    if now_ms - closed_ms < _VENUE_PNL_UNMATCHED_AFTER_MS:
+                        summary["retry"] += 1
+                        continue
+                    basis = vp.BASIS_VENUE_UNMATCHED
+                    notes["venue_pnl_match"] = how
+                    summary["unmatched"] += 1
+                else:
+                    venue = float(rec["closed_pnl"])
+                    basis = vp.BASIS_VENUE_NET
+                    updates["pnl"] = venue
+                    notes["venue_pnl_match"] = how
+                    if "pnl_source" in notes and notes.get("pnl_source") != "bybit_closed_pnl":
+                        notes["pnl_source_prior"] = notes.get("pnl_source")
+                    notes["pnl_source"] = "bybit_closed_pnl"
+                    pct = compute_pnl_percent(
+                        pnl=venue, entry_price=_safe_float(row.get("entry_price")),
+                        qty=_safe_float(row.get("position_size")),
+                        contract_value_usd=contract_value_usd_for(row.get("symbol")))
+                    if pct is not None:
+                        updates["pnl_percent"] = pct
+            elif exit_src == "ib_execution":
+                basis = vp.BASIS_VENUE_NET
+            elif exit_src in _VENUE_FILL_EXIT_SOURCES:
+                # Each of these is a venue fill (exchange_fill / exchange are MEASURED in
+                # provenance; broker_leg_fill is the Alpaca filled-leg read, PR #25240).
+                basis = vp.BASIS_VENUE_FILLS_NET
+            else:
+                basis = vp.BASIS_COMPUTED_ESTIMATE
+            updates["pnl_basis"] = basis
+            if computed is not None:
+                updates["pnl_computed"] = computed
+                stored = _safe_float(updates.get("pnl", row.get("pnl")))
+                if stored is not None and basis in vp.NET_BASES:
+                    updates["pnl_gap_usd"] = round(stored - computed, 8)
+                    if vp.is_gap(stored, computed):
+                        summary["gaps"] += 1
+            if notes:
+                updates["notes"] = dump_capped(notes, 500)
+            wconn = db.connect()
+            try:
+                cols = sorted(updates)
+                cur = wconn.execute(
+                    "UPDATE trades SET " + ", ".join(f"{c} = ?" for c in cols) +  # writer-conformance: allow guarded venue-P&L classification; WHERE pins pnl_basis IS NULL so it runs once, and update_trade cannot guard on a prior value
+                    " WHERE id = ? AND pnl_basis IS NULL",
+                    (*[updates[c] for c in cols], int(row["id"])))
+                wconn.commit()
+                changed = cur.rowcount
+            finally:
+                wconn.close()
+            if changed and basis != vp.BASIS_VENUE_UNMATCHED:
+                summary[basis] = summary.get(basis, 0) + 1
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("_sweep_venue_net_pnl: row %s: %s", row.get("id"), exc)
+            summary["errors"] += 1
+    if summary["venue_net"] or summary["gaps"] or summary["errors"] or summary["unmatched"]:
+        logger.info("_sweep_venue_net_pnl: %s", summary)
+    return summary
+
+
 def _options_executor_for(account_cfg: Dict[str, Any]):
     """Build an :class:`AlpacaOptionsExecutor` for an options-expressing account.
 
@@ -17062,6 +17240,17 @@ def run_reconciliation_tick(
         logger.warning(
             "run_monitor_tick: local-pnl sweep raised: %s", exc,
         )
+
+    # PNL-GROSS-VS-VENUE-6817 (operator w11): the venue's net closed P&L becomes
+    # ``pnl`` (our own figure kept in ``pnl_computed``, the gap in ``pnl_gap_usd``).
+    # Runs after both PnL sweeps, so it classifies a row the tick after it is priced.
+    try:
+        with _phase("sweep_venue_net_pnl"):
+            venue_pnl = _sweep_venue_net_pnl(db)
+        if venue_pnl.get("venue_net") or venue_pnl.get("gaps") or venue_pnl.get("errors"):
+            summaries["__venue_net_pnl__"] = venue_pnl
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("run_monitor_tick: venue net-pnl sweep raised: %s", exc)
 
     # PERF-FU-REDUCE-PNL: settle intent_reduce legs' realised PnL from venue
     # fills (a partially-consumed parent is shrunk, so nothing else books it).

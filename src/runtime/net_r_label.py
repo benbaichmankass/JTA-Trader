@@ -92,6 +92,11 @@ def _trade_id(trade: Mapping) -> Any:
     return tid
 
 
+#: Mirrors ``src.runtime.venue_pnl.NET_BASES`` (kept literal so this pure module stays
+#: import-light; a test pins the two together).
+_NET_PNL_BASES = frozenset({"venue_net", "venue_fills_net"})
+
+
 def net_r_for_trade(trade: Mapping) -> Optional[dict]:
     """Compute the net-of-cost R label for one resolved closed-trade row.
 
@@ -127,7 +132,15 @@ def net_r_for_trade(trade: Mapping) -> Optional[dict]:
     fee_maker = _cost(trade.get("fee_maker_usd"))
     funding = _cost(trade.get("funding_paid_usd"))
 
-    net_pnl = gross - fee_taker - fee_maker - funding
+    # PNL-GROSS-VS-VENUE-6817 (operator decision w11, 2026-11-12): where ``pnl`` is
+    # the venue's NET figure (``pnl_basis`` in venue_pnl.NET_BASES) its costs are
+    # already in it, so they are not subtracted a second time. MEASURED before the
+    # fix: bybit_2 ml_entry mean net R 0.2193 against 0.2994 with costs counted once
+    # (15 closes). A row with no basis (or a gross basis) keeps gross - costs.
+    if trade.get("gross_pnl") is None and str(trade.get("pnl_basis") or "") in _NET_PNL_BASES:
+        net_pnl = gross
+    else:
+        net_pnl = gross - fee_taker - fee_maker - funding
     net_r = net_pnl / risk_usd
 
     return {
