@@ -417,16 +417,28 @@ def test_live_review_close_reaches_the_phone_like_a_vm_account():
 
 
 # ---------------------------------------------------------------- reduce capability (PHONE-CLOSE-CARDS, 2026-11-12)
-def test_a_reduce_is_refused_not_served_to_an_app_that_does_not_declare_it(_iso):
+def test_a_reduce_is_served_and_reported_to_an_app_that_does_not_declare_it(_iso):
+    # AM-PHONE-REDUCE-CAPABILITY: MAKE REPORT-ONLY (operator 2026-11-12). The capability check runs and is reported
+    # (recorded on the request + ONE ping), and the reduce is SERVED; the app's own report settles it.
     _held()
     pc.request_close("breakout_2", "H1", fraction=0.5, reason="review R2", now=NOW)
-    assert pe.claim_next(_dev(), now=NOW, accepts=("amend", "cancel", "close")) is None
+    g = pe.claim_next(_dev(), now=NOW, accepts=("amend", "cancel", "close"))
+    assert g is not None and g["action"] == "reduce" and g["spec"]["fraction"] == 0.5
     x = _xc()
-    assert x["status"] == "refused" and "does not execute a reduce" in x["last_reason"]
-    assert sum("REFUSED, not executed" in m for m in _iso) == 1                  # ONE ping, says why
-    assert pc.plan_closes("breakout_2", now=NOW + timedelta(hours=9)) == 0      # never re-armed into the old app
-    assert pe.claim_next(_dev(), now=NOW + timedelta(hours=9), accepts=("close",)) is None
-    assert pc.request_close("breakout_2", "H1", fraction=0.5, now=NOW + timedelta(hours=9))["ok"]  # a new request may follow
+    assert x["status"] == "claimed" and x["capability_observed"]["reduce_declared"] is False
+    assert sum("did not declare 'reduce'" in m for m in _iso) == 1               # ONE ping, says why
+    # positive control: the app's own answer (an older build reports failed) is what settles it, with backoff
+    r = _rx({"ticket_id": "H1", "close_id": g["close_id"], "result": "failed", "reason": "reduce dialog measured"})
+    assert r["ok"] and _xc()["status"] == "failed"
+
+
+def test_an_aged_close_request_is_still_served_at_claim():
+    # AM-PROP-CLAIM-TIME-BLOCKS: REMOVE (operator 2026-11-12). CANCEL_VALID_S no longer withholds a request at claim.
+    _held()
+    pc.request_close("breakout_2", "H1", now=NOW)
+    late = NOW + timedelta(seconds=pc.CANCEL_VALID_S + 60)
+    g = pc.claim_close(_dev(), now=late, accepts_reduce=True)
+    assert g is not None and g["close_id"] == "H1-x1" and g["action"] == "close"
 
 
 def test_a_reduce_is_served_to_an_app_that_declares_it_with_its_fraction():

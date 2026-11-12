@@ -70,6 +70,9 @@ from src.prop.phone_trail import _cas, _f, _meta, _package_state, _parse, _price
 logger = logging.getLogger(__name__)
 
 KEY = "phone_cancel"
+# Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PROP-CLAIM-TIME-BLOCKS: REMOVE. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+# ``valid_until`` (CANCEL_VALID_S) is now a re-plan marker only: an emitted close/cancel past it is STILL served at claim
+# (the claim no longer skips it); the planner re-stamps it on its next pass.
 CANCEL_VALID_S = 6 * 3600        # an emitted request not claimed in time is re-planned (the reason is re-checked)
 CLAIM_TIMEOUT_S = 180            # same watchdog as an entry / amend claim
 FLAG_AFTER = 3                   # consecutive failed attempts on one ticket -> ONE red flag (never a stop)
@@ -225,8 +228,7 @@ def pending_cancels(account_id: str, now: Optional[datetime] = None) -> int:
     n = 0
     for r in rows:
         c = _load(_meta(r["meta"]))
-        vu = _parse(c.get("valid_until"))
-        if c.get("status") == "emitted" and vu and vu > now:
+        if c.get("status") == "emitted":   # served regardless of age (AM-PROP-CLAIM-TIME-BLOCKS removed)
             n += 1
     return n
 
@@ -246,8 +248,7 @@ def claim_cancel(device: Any, now: Optional[datetime] = None) -> Optional[Dict[s
         for r in rows:
             m = _meta(r["meta"])
             c = _load(m)
-            vu = _parse(c.get("valid_until"))
-            if c.get("status") != "emitted" or vu is None or vu <= now:
+            if c.get("status") != "emitted":   # AM-PROP-CLAIM-TIME-BLOCKS removed: an aged request is still served
                 continue
             reason = _reason(conn, r, m, now)
             if reason is None:
@@ -622,8 +623,7 @@ def pending_closes(account_id: str, now: Optional[datetime] = None) -> int:
     n = 0
     for r in rows:
         c = (_meta(r["meta"]).get(CLOSE_KEY) or {})
-        vu = _parse(c.get("valid_until"))
-        if c.get("status") == "emitted" and vu and vu > now:
+        if c.get("status") == "emitted":   # served regardless of age (AM-PROP-CLAIM-TIME-BLOCKS removed)
             n += 1
     return n
 
@@ -636,7 +636,10 @@ def claim_close(device: Any, now: Optional[datetime] = None, *, accepts_reduce: 
     up to 1b.380 do not execute one -- their reduce branch clicks the armed Close position to MEASURE the dialog, then
     dismisses it and reports ``failed`` -- so serving them a reduce changes nothing at best and, on a venue whose Close
     is one tap, closes the WHOLE position while reporting failed. Such a reduce ends ``refused`` with ONE ping naming
-    why (capability negotiation, the same pattern as ``amend`` / ``cancel`` / ``close``); a full close is unaffected."""
+    why (capability negotiation, the same pattern as ``amend`` / ``cancel`` / ``close``); a full close is unaffected.
+
+    Since 2026-11-12 (AM-PHONE-REDUCE-CAPABILITY: MAKE REPORT-ONLY) the capability check only REPORTS: the reduce is
+    served with ONE ping naming the missing declaration, and the app's own report settles it."""
     from src.prop import phone_executor as pe
     now = now or _now()
     acct = device.account_id
@@ -648,22 +651,25 @@ def claim_close(device: Any, now: Optional[datetime] = None, *, accepts_reduce: 
         for r in conn.execute("SELECT * FROM prop_tickets WHERE account_id = ? ORDER BY created_at ASC", (acct,)).fetchall():
             m = _meta(r["meta"])
             c = dict(m.get(CLOSE_KEY) or {})
-            vu = _parse(c.get("valid_until"))
-            if c.get("status") != "emitted" or vu is None or vu <= now:
+            # Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PROP-CLAIM-TIME-BLOCKS: REMOVE. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+            if c.get("status") != "emitted":   # an aged (past valid_until) request is still served
                 continue
-            if c.get("action") == "reduce" and not accepts_reduce:
-                c.update(status="refused", finished_at=now.isoformat(), last_result="refused",
-                         last_reason="app build does not execute a reduce (claim lacks 'reduce')")
-                _hist(c, {"at": now.isoformat(), "result": "refused", "close_id": c.get("id"),
-                          "reason": "app build does not execute a reduce"})
-                if _cas(conn, r["ticket_id"], r["meta"], {**m, CLOSE_KEY: c}):
-                    _send(f"📱 phone {acct}: [{r['ticket_id']}] reduce of {(c.get('spec') or {}).get('venue_symbol')} "
-                          f"REFUSED, not executed: this phone app build does not execute a partial close. The position is "
-                          f"unchanged.", send)
-                continue
+            reduce_unsupported = c.get("action") == "reduce" and not accepts_reduce
+            if reduce_unsupported:
+                # Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PHONE-REDUCE-CAPABILITY: MAKE REPORT-ONLY. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+                # The capability check runs and is reported (recorded on the request + ONE ping), but the reduce is
+                # SERVED: the app (and the venue) answer it. An older build reports ``failed`` after measuring the
+                # dialog; the risk named in the ping is the operator's to weigh, not a server refusal.
+                c["capability_observed"] = {"at": now.isoformat(), "reduce_declared": False,
+                                            "note": "app build did not declare 'reduce' in its claim; served anyway"}
             c.update(status="claimed", claimed_at=now.isoformat(), device_id=device.device_id)
             if not _cas(conn, r["ticket_id"], r["meta"], {**m, CLOSE_KEY: c}):
                 continue
+            if reduce_unsupported:
+                _send(f"📱 phone {acct}: [{r['ticket_id']}] reduce of {(c.get('spec') or {}).get('venue_symbol')} "
+                      f"SERVED to an app build that did not declare 'reduce' (builds up to 1b.380 measure the dialog and "
+                      f"report failed; on a one-tap Close venue it may close the WHOLE position). Report-only since "
+                      f"2026-11-12 (AM-PHONE-REDUCE-CAPABILITY). CHECK the terminal after its report.", send)
             return {"kind": "close", "ticket_id": r["ticket_id"], "close_id": c["id"], "action": c.get("action"),
                     "reason": c.get("reason"), "symbol": r["symbol"], "spec": c.get("spec"),
                     "venue_symbol": (c.get("spec") or {}).get("venue_symbol"),

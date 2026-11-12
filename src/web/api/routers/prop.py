@@ -326,7 +326,8 @@ async def _json_body(request: Request) -> dict[str, Any]:
 
 def _accepts(raw: Any) -> tuple:
     """The app's declared capabilities (``["amend"]``); anything else is ignored. ``reduce`` = the build executes a
-    partial close (PHONE-CLOSE-CARDS); without it a reduce is refused at claim, never served."""
+    partial close (PHONE-CLOSE-CARDS); without it a reduce is still served and the missing declaration is reported
+    (AM-PHONE-REDUCE-CAPABILITY: MAKE REPORT-ONLY, operator 2026-11-12)."""
     items = raw if isinstance(raw, list) else str(raw or "").split(",")
     return tuple(sorted({str(x).strip().lower() for x in items} & {"amend", "cancel", "close", "reduce"}))
 
