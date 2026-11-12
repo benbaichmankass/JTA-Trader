@@ -1,5 +1,5 @@
 {
-  "tier": 2,
+  "tier": 1,
   "landing": "hold",
   "why": "One pass-through entry (DIA) in ml/datasets/adapters/yf_symbols.py::_DEFAULT_TICKER_MAP so research fetches of DIA stop being refused. The guard names the path Tier-2; the change only lets the research fetcher retrieve DIA daily candles. No src/ import (grep: none), no roster, config or order path. Needed so RQ-20261112-a7e8-01/-02 reproduce on research-script-run (they were run locally with this map). Gates this adds or changes: none.",
   "hold_text": "Tier-2 path by name (ml/datasets/adapters); manager merges. One research-only ticker map entry, no live effect.",
