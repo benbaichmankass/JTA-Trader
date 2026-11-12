@@ -1,6 +1,6 @@
 # Direct-ops migration list (lane DIRECT-OPS-SWEEP, 2026-11-12)
 
-> **Doc status:** `live` · category `plan` · last verified `2026-11-12` · registered in [`docs/DOCUMENT-INDEX.md`](../../../DOCUMENT-INDEX.md) · owning row `DIRECT-OPS-MIGRATION` · lane DIRECT-OPS-SWEEP
+> **Doc status:** `unknown` · category `plan` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../../DOCUMENT-INDEX.md) · owning row `DIRECT-OPS-MIGRATION` · lane DIRECT-OPS-SWEEP
 
 **Gates this adds or changes: none.** Each direct replacement keeps its § 2 tier. Only the pipe changes.
 
