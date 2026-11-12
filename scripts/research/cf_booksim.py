@@ -187,10 +187,9 @@ def package_outcomes(ctxs: List[dict], k: int) -> Dict[str, Dict[str, Tuple[floa
 
 # --------------------------------------------------------------------------- the book
 def make_sizer(account_id: str):
-    import yaml
+    from src.config.accounts_loader import load_accounts_dict
     from src.units.accounts.risk import RiskManager
-    cfg = yaml.safe_load((REPO / "config" / "accounts.yaml").read_text()) or {}
-    a = (cfg.get("accounts") or cfg)[account_id]
+    a = load_accounts_dict()[account_id]
     risk = a.get("risk") or {}
     return RiskManager(risk, dry_run=False, account_id=account_id), str(a.get("market_type") or "linear"), risk
 
@@ -213,7 +212,7 @@ def run_book(ctxs: List[dict], outcomes: Dict[str, Dict[str, Tuple[float, float]
     done: List[Tuple[float, float]] = []                            # heap of (exit_ts, pnl)
     realised = 0.0
     book: List[dict] = []
-    day_key, day_start, day_pnl = None, start, 0.0
+    day_key, day_start = None, start
     realised_events: List[Tuple[float, float]] = []                 # (exit_ts, pnl) for the daily switch
     for c in sorted(ctxs, key=lambda c: c["t_entry"]):                 # ``ctxs`` is already this account's packages
         while done and done[0][0] <= c["t_entry"]:

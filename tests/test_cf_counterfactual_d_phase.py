@@ -100,7 +100,7 @@ def test_summary_point_estimate_sits_inside_its_ci_and_states_sum_to_the_grid():
 
 def test_engine_widen_stop_loosens_where_set_stop_only_tightens():
     bars = _bars([(100, 100.5, 99.5, 100.2), (100.2, 100.4, 98.7, 99.0), (99.0, 99.2, 98.0, 98.2), (98.2, 98.4, 96.0, 96.5)])
-    kw = dict(side="long", entry_ref=100.0, r_dist=2.0, t_entry=T0, stop0=99.0, tp=110.0)
+    kw = {"side": "long", "entry_ref": 100.0, "r_dist": 2.0, "t_entry": T0, "stop0": 99.0, "tp": 110.0}
     tight = cf_core.simulate(bars, actions=[{"ts": T0, "kind": "set_stop", "level": 97.0}], **kw)
     wide = cf_core.simulate(bars, actions=[{"ts": T0, "kind": "widen_stop", "level": 97.0}], **kw)
     assert tight["fills"][0]["px"] == 99.0                              # set_stop refused to loosen: the 99 stop in force fills

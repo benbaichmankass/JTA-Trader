@@ -68,7 +68,7 @@ def fetch_pages(table: str, page: int, *, retries: int = 5, fetch: Optional[Call
                 d = fetch(f"journal?table={table}&limit={page}&offset={off}")
                 got = d.get("rows", d) if isinstance(d, dict) else d
                 break
-            except Exception:                                    # noqa: BLE001 - a bad page is a recorded state, retried
+            except (RuntimeError, ValueError, OSError, subprocess.SubprocessError):   # a bad page is a recorded state (``failed``), retried
                 time.sleep(1 + 2 * k)
         if got is None:
             failed.append(off)
@@ -84,7 +84,7 @@ def fetch_pages(table: str, page: int, *, retries: int = 5, fetch: Optional[Call
 
 
 def _diag(path: str) -> Any:
-    o = subprocess.run([str(REPO / "scripts/ops/diag_fetch.sh"), path], capture_output=True, text=True, timeout=180)
+    o = subprocess.run([str(REPO / "scripts/ops/diag_fetch.sh"), path], capture_output=True, text=True, timeout=180, check=False)
     if o.returncode != 0:
         raise RuntimeError(f"diag_fetch {path}: exit {o.returncode}")
     return json.loads(o.stdout)
