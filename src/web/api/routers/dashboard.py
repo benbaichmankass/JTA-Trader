@@ -798,11 +798,24 @@ def _fetch_open_position_rows(effective_include: bool) -> list:
             # (Bybit/IB unrealised_pnl), with ``None`` as the honest
             # fallback when the broker call fails or there is no
             # matching position.
-            sql = """
+            # ``orderPackageId`` (additive, UI-SPA-BACKEND-ROUTES): the trade's
+            # own ``order_package_id`` pointer, else the package that names
+            # this trade via ``linked_trade_id`` (MIN = deterministic). NULL
+            # stays NULL; a schema without the columns degrades to NULL.
+            t_cols = {c[1] for c in cur.execute("PRAGMA table_info(trades)")}
+            p_cols = {c[1] for c in cur.execute("PRAGMA table_info(order_packages)")}
+            pkg_fallback = (
+                "(SELECT MIN(op.order_package_id) FROM order_packages op "
+                "WHERE op.linked_trade_id = trades.id)"
+                if {"linked_trade_id", "order_package_id"} <= p_cols else "NULL")
+            pkg_expr = (f"COALESCE(order_package_id, {pkg_fallback})"
+                        if "order_package_id" in t_cols else pkg_fallback)
+            sql = f"""
                 SELECT id, account_id, symbol, direction, position_size,
                        entry_price, created_at,
                        stop_loss, take_profit_1, strategy_name,
-                       COALESCE(is_demo, 0), account_class, notes
+                       COALESCE(is_demo, 0), account_class, notes,
+                       {pkg_expr}
                 FROM trades
                 WHERE status = 'open'
                   AND COALESCE(is_backtest, 0) = 0
@@ -951,6 +964,9 @@ async def _build_positions(effective_include: bool) -> list[dict[str, Any]]:
             options_block = None
         out.append({
             "id": str(r[0]),
+            # Additive: null when no package can be tied to this trade.
+            "orderPackageId": (str(r[13]) if len(r) > 13 and r[13] is not None
+                               else None),
             "account": r[1],
             "symbol": r[2],
             "side": _normalise_side(r[3]),
