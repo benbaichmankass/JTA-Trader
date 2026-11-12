@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: research/queue/RQ-20261112-09d2-04 via .github/workflows/research-script-run.yml
+# wiring: manual-only - the runner for RQ-20261112-09d2-04, whose unit file is on PR #25203 until it lands; its run.command will name this script
 """Stage 0 of ONE declared intraday leg, config-exact, on several futures instruments at a
 session-flat prop venue's per-contract costs (FUT-INTRADAY-DUKA-LANE, 2026-11-12).
 
@@ -87,10 +87,10 @@ def _self_test() -> int:
         nonlocal ok
         ok &= bool(cond)
         print(f"  self-test {'ok  ' if cond else 'FAIL'}: {name}")
-    P, F, I = {"verdict": "pass"}, {"verdict": "fail"}, {"verdict": "indeterminate"}
-    ck("one pass -> pass", roll_up({"A": P, "B": F, "C": I})[0] == "pass")
+    P, F, U = {"verdict": "pass"}, {"verdict": "fail"}, {"verdict": "indeterminate"}
+    ck("one pass -> pass", roll_up({"A": P, "B": F, "C": U})[0] == "pass")
     ck("all fail -> fail", roll_up({"A": F, "B": F})[0] == "fail")
-    ck("fail + indeterminate -> indeterminate", roll_up({"A": F, "B": I})[0] == "indeterminate")
+    ck("fail + indeterminate -> indeterminate", roll_up({"A": F, "B": U})[0] == "indeterminate")
     ck("a missing run -> producer_failed, even beside a pass", roll_up({"A": P, "B": None})[1] == "producer_failed")
     ck("instrument spec parses", parse_instrument("mgc:2.12:10:0.1")["symbol"] == "MGC")
     try:
