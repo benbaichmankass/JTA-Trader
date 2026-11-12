@@ -223,3 +223,26 @@ def test_gap_report_check_exit_codes(tmp_path):
     assert main(["--journal-json", str(f), "--mode", "demo", "--check"]) == 1
     assert main(["--journal-json", str(f), "--mode", "demo", "--account", "bybit_portfolio",
                  "--check"]) == 0
+
+
+def test_could_not_look_retries_and_leaves_the_row_untouched(tmp_path):
+    # The venue read failed: "we did not look" must never read as "no record".
+    db, path = _db(tmp_path)
+    _add(path)
+    before, _ = _get(path, 6817)
+    s = om._sweep_venue_net_pnl(db, cfgs=CFGS, bybit_reader=_reader([], state="could_not_look"))
+    assert s["retry"] == 1 and s["venue_net"] == 0 and s["unmatched"] == 0
+    r, _ = _get(path, 6817)
+    assert r["pnl"] == before["pnl"] and r["pnl_basis"] != "venue_net"
+
+
+def test_no_rows_is_a_real_answer_not_a_retry_of_the_read(tmp_path):
+    # The venue answered with no records: that is "we looked and found nothing",
+    # handled by the match step (retry inside the unmatched window, never a venue figure).
+    db, path = _db(tmp_path)
+    _add(path)
+    s = om._sweep_venue_net_pnl(db, cfgs=CFGS, bybit_reader=_reader([], state="no_rows"))
+    assert s["venue_net"] == 0
+    assert s["retry"] + s["unmatched"] == 1
+    r, _ = _get(path, 6817)
+    assert r["pnl_basis"] != "venue_net"
