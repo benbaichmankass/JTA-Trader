@@ -1592,6 +1592,8 @@ class MainActivity : Activity() {
         setStatus("${t.optString("action")} ${t.optString("close_id")}: $result ($why)".take(160))
     }
 
+    // Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PHONE-APP-CLOSE-REFUSALS: KEEP.
+    // Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
     private suspend fun executeClose(t: JSONObject) {
         val xid = t.getString("close_id")
         if (ledger.seen(xid)) return closeResult(t, "failed", "ledger already holds this request")
