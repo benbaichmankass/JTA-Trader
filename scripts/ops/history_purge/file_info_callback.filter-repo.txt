@@ -1,41 +1,63 @@
 # wiring: manual-only — OPS + manager run it inside the merge freeze in docs/runbooks/account-balance-history-purge.md (filter-repo callback body; holds no balance values)
 # git filter-repo --file-info-callback body. filter-repo calls
 #   file_info_callback(filename, mode, blob_id, value) -> (filename, mode, blob_id)
-# Scope (ACCOUNT-SNAPSHOT-BALANCE-HISTORY purge plan): drop balance-valued JSON keys
-# from the named path families ONLY. Every other path passes through untouched,
-# so trees outside these paths (and the main tip, once the writers are fixed)
-# are byte-identical.
-import json as _json, re as _re
-_SCOPES = [
-    # (path regex, keys to drop wherever they occur in the JSON document)
-    (rb"^comms/mandate_evidence/account_snapshot/[^/]+\.json$", {"equity_usd", "buying_power_usd", "cash_usd"}),
-    (rb"^comms/research/counterfactual_grades/[^/]+\.json$",    {"equity_pre_usd"}),
-    (rb"^comms/research/RQ-20261106-d5a1-01/.+\.json$",          {"equity_usd"}),
-]
-def _strip(o, keys):
+# TWO passes per file, both path-scoped; every other path passes through byte-identical.
+#   A. KEY NULLING (JSON): a named balance key is set to null in a named path family (null, never delete, so readers' schemas stay valid).
+#   B. LITERAL SCRUB: each exact balance literal from PURGE_STRONG_FILE (a local file, never committed) is replaced in the text of the
+#      allow-listed paths. A bare JSON number becomes null; a literal inside a string or prose becomes "[balance removed]".
+#      Allow-listed paths exclude market-data and backtest-path files: 5-digit literals collide with prices there (measured).
+import json as _json, os as _os, re as _re
+_S = globals().setdefault("_PURGE_STATE", {})
+if "lits" not in _S:
+    _S["lits"] = [l.strip().encode() for l in open(_os.environ["PURGE_STRONG_FILE"]) if l.strip()]
+    _S["rx"] = _re.compile(rb"(?<![0-9.])(?:" + b"|".join(_re.escape(l) for l in _S["lits"]) + rb")(?![0-9])")
+    _S["num"] = _re.compile(rb"(?<=[:\[,])(\s*)(?:" + b"|".join(_re.escape(l) for l in _S["lits"]) + rb")(?=\s*(?:[,}\]]|$))", _re.M)
+    _S["s3"] = _os.environ.get("PURGE_INCLUDE_S3", "1") == "1"
+    _S["keys"] = [  # (path regex, keys nulled wherever they occur, subtree the keys must sit under or None)
+        (rb"^comms/mandate_evidence/account_snapshot/[^/]+\.json$", {"equity_usd", "buying_power_usd", "cash_usd"}, None),
+        (rb"^comms/research/counterfactual_grades/[^/]+\.json$",    {"equity_pre_usd", "pct_of_account"}, None),
+        (rb"^comms/research/RQ-20261106-d5a1-01/.+\.json$",          {"equity_usd", "budget_usd"}, None),
+    ]
+    if _S["s3"]:
+        _S["keys"].append((rb"^comms/reports/.+/report\.json$", {"equity", "balance", "account_equity"}, "pnl_by_class"))
+    _S["allow"] = _re.compile(rb"^(docs|research|scripts|tests|config|\.github|src)/|^comms/(claude_strategy_scores\.jsonl|follow_ups\.json|reports/|mandate_evidence/|research/(RQ-20261106-d5a1-01/|rd_registry\.json))")
+    _S["deny"] = _re.compile(rb"\.(csv|png|pkl|gz|zip|bin|lock)$|trades\.jsonl$|paths\.jsonl$|/(data|cells|sims|arms|candles|corpus|runs)/")
+def _null(o, keys, under, inside):
     n = 0
     if isinstance(o, dict):
         for k in list(o):
-            if k in keys and o[k] is not None:
+            ins = inside or under is None or k == under
+            if k in keys and ins and isinstance(o[k], (int, float)) and not isinstance(o[k], bool):
                 o[k] = None; n += 1
             else:
-                n += _strip(o[k], keys)
+                n += _null(o[k], keys, under, ins)
     elif isinstance(o, list):
         for x in o:
-            n += _strip(x, keys)
+            n += _null(x, keys, under, inside)
     return n
-for _rx, _keys in _SCOPES:
+_raw = None
+for _rx, _keys, _under in _S["keys"]:
     if _re.match(_rx, filename):
         _raw = value.get_contents_by_identifier(blob_id)
         try:
             _doc = _json.loads(_raw)
         except ValueError:
-            value.data.setdefault("unparsed", []).append(filename)
-            break
-        if _strip(_doc, _keys):
+            value.data.setdefault("unparsed", []).append(filename); break
+        if _null(_doc, _keys, _under, False):
             _indent = 2 if b"\n  " in _raw[:200] else None
-            _new = _json.dumps(_doc, indent=_indent, ensure_ascii=False).encode() + (b"\n" if _raw.endswith(b"\n") else b"")
-            blob_id = value.insert_file_with_contents(_new)
-            value.data["rewritten"] = value.data.get("rewritten", 0) + 1
+            _raw = _json.dumps(_doc, indent=_indent, ensure_ascii=False).encode() + (b"\n" if _raw.endswith(b"\n") else b"")
+            blob_id = value.insert_file_with_contents(_raw)
+            value.data["nulled"] = value.data.get("nulled", 0) + 1
         break
+if _S["allow"].match(filename) and not _S["deny"].search(filename):
+    if _raw is None:
+        _raw = value.get_contents_by_identifier(blob_id)
+    if len(_raw) < 3000000 and any(l in _raw for l in _S["lits"]):
+        _new = _raw
+        if filename.endswith((b".json", b".jsonl")):
+            _new = _S["num"].sub(lambda m: m.group(1) + b"null", _new)
+        _new = _S["rx"].sub(b"[balance removed]", _new)
+        if _new != _raw:
+            blob_id = value.insert_file_with_contents(_new)
+            value.data["scrubbed"] = value.data.get("scrubbed", 0) + 1
 return (filename, mode, blob_id)

@@ -7,12 +7,94 @@
 Session 2026-11-11a for AM-OPS. **Status: PLAN ONLY.** Nothing has been pushed or rewritten. The manager schedules the
 freeze and runs it with OPS. **Nobody force-pushes alone.**
 
+**Scope widened (rev 2, 2026-11-12).** Decision: 2026-11-12 operator decisions page x5 *"Real-money and prop and paper balances"*.
+The purge now covers **every account balance**: real-money, prop and paper. Rev 1 covered the two snapshot files (S1) plus the
+counterfactual grades and RQ-20261106-d5a1-01 (S2). Rev 2 adds the report balances (S3, real + paper + prop) and the balance
+literals quoted in code, docs, registers and research queue files (S4), and re-runs the scan and dry run at that scope. Author of
+rev 2: lane of Manager Session 2026-11-11a. **Still PLAN ONLY**: nothing rewritten, nothing pushed to `main`; the purge runs after
+PR #25305 (EQUITY-LEAK-STOP) merges.
+
 **Gates this adds or changes:** no permanent gate. It adds one **temporary merge freeze**, scheduled by the manager, and one
 **temporary branch-protection relaxation** on `main`, flipped by the operator and reverted in the same window. §8 offers an
 optional detector, but it is off the merge path, so it is not a gate.
 
 This plan quotes no balance values. Each value is identified by an index (`value#1..#4`) into a sandbox-only file that
 is never committed.
+
+---
+
+## OPERATOR: what you do, what you file, what you will see (plain words)
+
+You do three things on purge day. The manager runs everything else with you on a call. **Nothing here happens until PR #25305 is merged
+and the manager has announced the freeze window.** The window is about **2 hours** (section 3).
+
+### A. Allow force-push on `main`, then put it back (exact clicks)
+
+Do these in order, with the manager and OPS on the call. Write down what each setting says **before** you change it, so you can put it back.
+
+**Turn it on (just before the push):**
+1. Open <https://github.com/benbaichmankass/JTA-Trader/settings/actions> → **Actions permissions** → choose **Disable actions** → **Save**.
+   (Write down which option was selected before. This stops every bot that commits while the history is being replaced.)
+2. Open <https://github.com/benbaichmankass/JTA-Trader/settings/branches> → under **Branch protection rules** click **Edit** next to `main`.
+3. Scroll to **Allow force pushes** → tick it → choose **Specify who can force push** → add **yourself only**.
+4. Scroll to **Do not allow bypassing the above settings** → **untick** it. If **Require signed commits** is ticked, untick it too and write
+   that down: the rewritten commits are unsigned.
+5. Click **Save changes** at the bottom (enter your password if GitHub asks).
+6. Tell OPS "protection is open". **You** then run the one push command OPS gives you
+   (`git push --force origin 'refs/heads/*:refs/heads/*'`, from the checked mirror). A session cannot make this push for you.
+
+**Put it back (immediately after the push; do not wait for the checks):**
+1. Same page → **Edit** next to `main` → **untick Allow force pushes** → **tick Do not allow bypassing the above settings**
+   (and re-tick **Require signed commits** if it was on) → **Save changes**.
+2. Open <https://github.com/benbaichmankass/JTA-Trader/settings/actions> → set **Actions permissions** back to what you wrote down → **Save**.
+3. Open <https://github.com/benbaichmankass/JTA-Trader/actions> → **branch-protection-sync** → **Run workflow** → **Run workflow**.
+   It re-applies the three required checks.
+4. Tell the manager "protection is back". The manager confirms with the `[bp-report]` issue: `allow_force_pushes: false`, `enforce_admins: true`.
+
+If a setting is not where this says, **stop and tell the manager**. Do not look for another route.
+
+### B. The GitHub Support request (you file it; paste this)
+
+Go to <https://support.github.com/contact> and pick **Remove sensitive data** (if there is no such choice, pick **Something else** and paste
+the same text). OPS gives you the two things for the brackets: the push date, and `first-changed-commits.txt` from the rewrite to attach.
+**The text holds no balance value.**
+
+> **Subject:** Sensitive data removal: benbaichmankass/JTA-Trader (rewritten history; please dereference pull-request refs, clear cached views, run garbage collection)
+>
+> I am the owner of the public repository benbaichmankass/JTA-Trader. It had committed private financial account information (account
+> balances of real-money, paper and prop-firm accounts) in JSON, Markdown and HTML files, in source code and test fixtures, and in
+> commit messages. On [DATE, UTC] I rewrote the full history with `git filter-repo --sensitive-data-removal` and force-pushed every
+> branch. The repository has no forks and no tags.
+>
+> filter-repo reported [N] first-changed commits (list attached as `first-changed-commits.txt`).
+>
+> Please:
+> 1. Dereference or remove the **pull-request refs** (`refs/pull/*`) that still point at the old commits, so the old commits are no longer reachable.
+> 2. Clear the **cached views** of the old commits, and the **cached pull-request diffs and file views** that still show the old content,
+>    including through direct commit URLs.
+> 3. Run **garbage collection** on the repository so the old objects cannot be fetched by SHA.
+>
+> I understand some old pull requests may lose their diff views. Please confirm when this is complete so that I can check that the old
+> commit URLs return 404.
+
+**Before you file:** the manager hands you the list of issue and pull-request bodies that quote a balance (section 0.3). Edit each one
+(replace the number with `[balance removed]`), then open the **edited** menu on it and **Delete** the older revisions. GitHub Support
+does not touch issue or PR text. After PR #25305 merges, the diag and system-action output is redacted, so that list stops growing.
+
+### C. What will visibly change
+
+- **Every commit gets a new ID**, on `main` and on every branch. Commit links and SHAs quoted anywhere (old PR comments, notes, docs)
+  stop matching. A committed old-to-new map (`commit-map.txt`) translates them.
+- **The green "Verified" badge disappears from every commit.** The rewrite cannot keep signatures. Authors and commit dates stay.
+- **Open pull requests stay open with the same numbers.** Their branches are rewritten with the rest, so they keep working; a few may need
+  a rebase (OPS lists them). After Support finishes, **old pull-request diff views may go blank or return 404**.
+- **99 files on `main` change content** (paths in `scripts/ops/history_purge/tip-prescrub-paths.txt`, measured on the dry run): they stop
+  showing a balance. Normal PRs fix them **before** the freeze, so on purge day the files on `main` come out identical.
+- **The live trader restarts once** (converging onto the new history). The trainer and the IB gateway just re-sync. You get **one large
+  "N PRs merged" Telegram ping**.
+- **For about 2 hours nothing merges and the bots that commit are off.** Trading is not affected: open positions keep their SL/TP.
+- **Every working copy of the repo** (yours and each lane's) must be re-cloned; the manager tells the lanes.
+- **Edited issue and PR bodies** show an "edited" mark where a balance was removed.
 
 ---
 
@@ -89,6 +171,33 @@ text-match fragments confirming an **exact** match in the body:
 These need PR and issue body edits. The owner must then delete the edit-history revisions. GitHub Support does not scrub
 issue text. See §6 and §8.
 
+### 0.2b Rev 2: the wider scan (every account balance; MEASURED 2026-11-12 on a second fresh mirror, 12:38Z)
+
+**Population.** 2,058 `refs/heads/*`, 15,892 `refs/pull/*`, **52,848 commits** across all refs, no tags. Method: take every balance
+value the committed files carry (read from the blobs; kept in a sandbox-only file, never printed), then search **all 156,469 reachable
+text blobs under 3 MB, every ref** for each exact value (whole number, not inside a longer one), plus a key-name probe
+(`equity|balance|buying_power|net_liq|wallet|cash` followed by a number of 3+ digits) outside `comms/research`. **Positive control:** the
+probe finds the 4 known S1 blobs and the known S2 files. **Caveat (RULE ONE):** this finds values I could read from the files. A balance
+that sits only in a form I did not extract (a rounded figure in prose, an image, a value under another key) is not proven absent.
+
+What rev 1 missed, by family:
+
+| family | what | on the tip of main? | verdict |
+|---|---|---|---|
+| **S2, more keys** | `counterfactual_grades/*.json` `per_account.*.pct_of_account` (with the same file's `pnl_usd` it back-solves the balance); RQ-20261106-d5a1-01 `budget_usd` (= risk % x balance); the balance inside RQ `note` / population strings, `run-manifest.json`, `record-inputs.json`, and the run command line in `logs/cmd-0.log` | yes (17 grade files, 9 RQ files) | real money. Key nulling alone leaves the literal in the strings and the log |
+| **S3 reports, real money too** | `comms/reports/{since-last,weekly}/*/report.json` under `consolidated.pnl_by_class`: `real.account_equity`, `real.per_asset_class[].equity`, `paper.per_asset_class[].equity`, `prop.balance`, `prop.equity`, `prop.per_account[].balance/equity`, `prop.rule_distance.balance` | yes (25 paths: 20 `since-last` and 4 `weekly` files as `.json`/`.md`/`.html`, plus `reports/index.json`) | **real + paper + prop.** Rev 1 saw only the prop aggregate |
+| **S4, balance literals quoted in text** | the S1 and RQ values written into prose or code: `scripts/ops/mandate_resolver.py`, `scripts/research/{alpaca_baseline_affordability,alpaca_live_book}.py`, `tests/test_mandate_resolver.py`, `config/accounts.yaml` (a comment), the `.github/pr-landing/*.json`, 24 `docs/**` files (10 in `docs/research`, 4 in the archive, 4 checklist rows (`STAGE2-MIRROR`, `DAILY-DD-SWITCH`, `PROD-LEGS-DSR-DECISION`, `SCOREBOARD-PNL-FIRST`; 4 `docs/claude/work/pipeline/*.json` items), 7 `tests/`, 3 `src/` (prop reconcile and parse, a refusal alert), 5 `research/queue/*.yaml`, `research/results/RQ-20261106-d5a1-01/*.jsonl`, `research/programmes/08-alpaca-live-book.yaml`, `comms/claude_strategy_scores.jsonl`; and older versions of `docs/claude/work/MANAGER-CHECKLIST.json` (233 blob versions hold an S1 or RQ value) | yes, 99 tip files in all with S2 and S3 (list: `scripts/ops/history_purge/tip-prescrub-paths.txt`) | real money (alpaca_live, bybit_2); some prose sites are paper/IB |
+| **Prose, one-off** | a paper-equity sentence in `docs/research/alpaca-live-refusal-verdict-2026-09-07.md`, a net-liquidation figure in `docs/sprint-logs/S-MES-AUTOHEAL-2026-05-28.md`, `comms/follow_ups.json`, `.../report.html` | yes | paper / IB paper. Added by hand to the literal list |
+
+**Not balances (verified collisions, left alone).** The same 5-digit figures also occur as ordinary numbers in backtest and market-data
+files: 277 blobs under `comms/research/*/{data,cells,sims,arms,candles,corpus}`, `*.csv`, `*trades.jsonl` and `*paths.jsonl` hold a
+numeric match. I did not check each one; the paths and the shape (price series, simulated equity paths) say they are not account
+balances, and a literal scrub there would corrupt market data. **Two literals had to be dropped by a specificity rule:** a zero and a
+round figure matched **4,079** unrelated tip files in the first dry run. The rule is in §2.1.
+
+**Outside git (§0.3 stands).** The PR and issue bodies listed there. Nothing new turned up in this scan, because it searched git, not
+GitHub text; **re-run the GitHub search for the S3 and RQ values too** before filing (not done in rev 2).
+
 ### 0.4 Re-run on freeze day (every count above is dated)
 
 The counts move every day: branches come and go, and S2 keeps growing until its writer is fixed. On freeze day, run
@@ -96,26 +205,31 @@ The counts move every day: branches come and go, and S2 keeps growing until its 
 
 ---
 
-## 1. Scope and order. The recommendation is to fix the writers first, then rewrite ONCE
+## 1. Scope and order. Fix the writers and the tip first, then rewrite ONCE
 
-The operator decided on S1, the row. The scan shows that **S2 is real-money equity that is still being committed today**
-(bybit_2 through the counterfactual grader, alpaca_live through RQ-20261106-d5a1-01). Rewriting history for S1 alone and
-then needing a second rewrite for S2 would break every clone and PR twice. Recommended order:
+The operator decided (2026-11-12) to purge **every account balance**: S1 snapshots, S2 grades and RQ, S3 reports, S4 quoted literals.
+Several writers still commit balances today, so a rewrite done now would need a second one. Order:
 
-1. **Writers first (Tier 1/2, normal PRs, no freeze):**
-   - (a) `scripts/research/cf_core.py` must stop committing `equity_pre_usd`. Keep it in memory for sizing, or commit
-     only a ratio such as `risk_pct_of_equity`. Null the 17 tip files. Add a test like
-     `test_committed_snapshots_carry_no_balance` for `comms/research/counterfactual_grades/`.
-   - (b) The RQ-20261106-d5a1-01 runner must stop committing `equity_usd`. Null the 4 tip files.
-   - (c) The diag and system-action relays should mask account equity in the journal and config output they post. The
-     redactor shared with `lane/ib-acctid-mask` (#25244) is the natural home.
-2. **Operator decides S3** (prop-class aggregate and paper prose). The default is to leave S3 out: no operator money, and
-   the S3 files are not account-identifying.
-3. **One rewrite** covering S1 + S2 (+ S3 if chosen) in the commit messages and the files, in the single freeze window
-   below.
-
-If the operator wants S1 rewritten now regardless, §2 has the S1-only command and its measured dry run. The rest of the
-plan is the same either way.
+1. **Writers first (Tier 1/2, normal PRs, no freeze).** PR **#25305** (EQUITY-LEAK-STOP, open; **merge is the precondition for the
+   purge**) already covers, per its diff:
+   - `scripts/research/cf_core.py` and `counterfactual_grader.py`: `equity_pre_usd` and `per_account.*.pct_of_account` are no longer
+     written; the 17 tip grade files are nulled; the equity is kept in memory only.
+   - `scripts/research/alpaca_baseline_affordability.py` (RQ-20261106-d5a1-01): no `equity_usd`, no `budget_usd`, no balance in `note` /
+     population strings; the 9 tip run files are scrubbed; its docstring and self-test constants are synthetic.
+   - `scripts/ops/redact_diag_output.py` + `.github/workflows/system-actions.yml`: an `account_balance` redaction on the text the relay
+     posts into public issues (the leak channel in §0.3).
+   - `tests/test_no_balance_in_committed_research.py`: positive/negative controls and a scan of the committed grade and RQ files.
+   **#25305 does NOT cover** (found in rev 2, each needs its own writer or scrub): `comms/reports/**/report.json` balances (the report
+   generator), the report `.md`/`.html`, `comms/claude_strategy_scores.jsonl`, `config/accounts.yaml` (a comment), and every S4 text
+   site. **Filed as the pre-scrub work below.**
+2. **Tip pre-scrub PRs (Tier 1/2; list in `scripts/ops/history_purge/tip-prescrub-paths.txt`, 99 paths).** Remove the balance from each
+   tip file by a normal commit, with semantics decided by the file's owner: a code or test file needs a synthetic fixture, **not** the
+   purge token (the dry run replaced a literal inside `round(0.015 * <literal>, 2)` with text, which is a syntax error at the tip).
+   Add the report generator's no-balance test and extend the `test_no_balance_in_committed_research.py` scan to `comms/reports/`.
+   **Goal: the tip tree of `main` is unchanged by the rewrite** (§7 check 4); until it is, the purge is not ready.
+3. **S3 paper/prop scope is decided: all balances** (decision line above). The keys are nulled and the literals scrubbed, for real, paper
+   and prop alike. `PURGE_INCLUDE_S3=0` and `build_purge_values.py --no-s3` still exist to narrow it.
+4. **One rewrite** in the single freeze window below.
 
 ---
 
@@ -123,65 +237,68 @@ plan is the same either way.
 
 ### 2.1 Callbacks (`scripts/ops/history_purge/`; they hold no values)
 
-- **File-info callback** (S1 + S2): for paths matching
-  `^comms/mandate_evidence/account_snapshot/[^/]+\.json$`, `^comms/research/counterfactual_grades/[^/]+\.json$` and
-  `^comms/research/RQ-20261106-d5a1-01/.+\.json$`, parse the JSON and set every `equity_usd` / `buying_power_usd` /
-  `cash_usd` / `equity_pre_usd` key to `null`. Setting them to `null` rather than deleting them keeps the readers'
-  schemas valid. Every other path passes through byte-identical. Once the §1 writer fixes land, the **tip tree of
-  `main` is unchanged**. That matters for §4: the VM sees a new HEAD with the same tree.
-- **Message callback:** replace each exact balance literal with `[balance removed]`. The literals are read at run time
-  from `PURGE_VALUES_FILE`, a local file built from the four blobs that is never committed. Only the exact literals are
-  used. The scan showed that the rounded 3-digit forms appear in 300–445 unrelated commit messages each, so they are not
-  safe to replace.
+- **`build_purge_values.py`** reads the blobs of every committed version of the balance files and writes the exact numeric values, one per
+  line, to a local file **outside the repo** (`PURGE_STRONG_FILE`). Specificity filter, from the dry run: drop zero and any figure with
+  fewer than 4 significant digits. Without it, one round figure matched 4,079 tip files. OPS adds the two prose-only figures (§0.2b) by hand.
+- **File-info callback** (`file_info_callback.filter-repo.txt`), two path-scoped passes; everything else passes byte-identical:
+  1. **Key nulling** (JSON): `account_snapshot/*.json` → `equity_usd`, `buying_power_usd`, `cash_usd`; `counterfactual_grades/*.json` →
+     `equity_pre_usd`, `pct_of_account`; `RQ-20261106-d5a1-01/**.json` → `equity_usd`, `budget_usd`; `comms/reports/**/report.json` →
+     `equity`, `balance`, `account_equity` **only under `pnl_by_class`**. Set to `null` (not deleted) so readers' schemas stay valid.
+  2. **Literal scrub**: each exact literal in `PURGE_STRONG_FILE`, in the **allow-listed paths** (`docs/ research/ scripts/ tests/ config/
+     .github/ src/`, plus named `comms/` files), skipping `*.csv`, `*trades.jsonl`, `*paths.jsonl` and `data|cells|sims|arms|candles|corpus|runs`
+     directories. A bare JSON number becomes `null`; a literal inside a string, Markdown, YAML or code becomes `[balance removed]`.
+- **Message callback:** the same literals in commit messages become `[balance removed]` (whole-number match; rounded forms are not touched,
+  they collide). The dry run found 18 commit messages with a literal, and 0 afterwards.
+- **Removed:** `strip_balance_blobs.filter-repo.txt` (the S1-only blob variant). It cannot reach S2 to S4. For an S1-only purge, use the
+  callbacks with a values file built from S1 only.
 
-Both callbacks were tested on a synthetic repo. Balance keys came out `null`, the commit message was scrubbed, an
-out-of-scope `equity_usd` under `other/` was untouched, and `git log --all -p` showed 0 remaining occurrences of the
-test values.
+⚠️ **Code at the tip.** The literal scrub is for **history**. A code or test file at the tip that still holds a literal comes out with
+`[balance removed]` in the middle of an expression and no longer parses. That is why §1 step 2 pre-scrubs the tip first.
 
 ### 2.2 Exact commands (run by OPS with the manager, inside the freeze, on a fresh mirror)
 
 ```bash
-# (callback paths are relative to a JTA-Trader checkout; copy them beside jta.git or use absolute paths)
 # 0. fresh mirror AFTER the freeze starts (so nothing lands mid-rewrite)
-git clone --mirror https://github.com/benbaichmankass/JTA-Trader jta.git && cd jta.git
-git show-ref > ../pre-refs.txt                      # rollback position (§7)
-git bundle create ../pre-rewrite.bundle --all       # full offline backup, kept off-repo
-# 1. build the literal file from the 4 known blobs (never committed, never printed)
-for b in cb6e9154 d7990439 dc27f6d0 fec468e7; do git cat-file -p $b | python3 -c \
- 'import json,sys;d=json.load(sys.stdin);[print(repr(d[k])) for k in ("equity_usd","buying_power_usd","cash_usd") if d.get(k) is not None]'; \
- done | sort -u > ../.purge-values
-# 2. rewrite
-PURGE_VALUES_FILE=../.purge-values git filter-repo --sensitive-data-removal --no-fetch \
-  --file-info-callback "$(cat scripts/ops/history_purge/file_info_callback.filter-repo.txt)" \
-  --message-callback  "$(cat scripts/ops/history_purge/message_callback.filter-repo.txt)"
-# S1-only variant (the row as decided, if the operator overrides §1): replace the file-info callback with
-#   --blob-callback "$(cat scripts/ops/history_purge/strip_balance_blobs.filter-repo.txt)"   # rewrites exactly the 4 blob ids above
-# 3. verify (§7) BEFORE any push
-# 4. push only branch heads (GitHub refuses writes to refs/pull/*; tags: none exist)
+git clone --mirror https://github.com/benbaichmankass/JTA-Trader jta.git
+git -C jta.git show-ref > pre-refs.txt                    # rollback position (section 7)
+git -C jta.git bundle create pre-rewrite.bundle --all     # full offline backup, kept off-repo
+# 1. build the literal file (never committed, never printed); add the two prose-only figures by hand (section 0.2b)
+python3 -I scripts/ops/history_purge/build_purge_values.py jta.git .purge-strong
+# 2. rewrite (callback paths relative to a JTA-Trader checkout)
+cd jta.git && PURGE_STRONG_FILE=../.purge-strong git filter-repo --sensitive-data-removal --no-fetch \
+  --file-info-callback "$(cat ../scripts/ops/history_purge/file_info_callback.filter-repo.txt)" \
+  --message-callback  "$(cat ../scripts/ops/history_purge/message_callback.filter-repo.txt)"
+# 3. verify (section 7) BEFORE any push
+# 4. push only branch heads (GitHub refuses writes to refs/pull/*; no tags exist). The OPERATOR runs this (OPERATOR section A)
 git push --force origin 'refs/heads/*:refs/heads/*'
 ```
 
-`--sensitive-data-removal` makes filter-repo record the **first changed commits** and the **orphaned refs**, which the
-Support request in §6 needs. filter-repo also writes `filter-repo/commit-map` (old→new SHA). **Commit that map** under
-`docs/archive/2026-11-history-purge/commit-map.txt` after the push. Evidence records, PR bodies, checklist notes and
-pipeline rows cite SHAs from after 2026-09-30, and once GitHub garbage-collects the old commits those citations stop
-resolving. The map translates them. The map holds SHAs only, no values.
+`--sensitive-data-removal` records the **first changed commits** and the orphaned refs, which the Support request needs
+(`filter-repo/first-changed-commits`; attach it). filter-repo also writes `filter-repo/commit-map` (old to new SHA). **Commit that map**
+under `docs/archive/2026-11-history-purge/commit-map.txt` after the push: evidence records, PR bodies, checklist notes and pipeline rows
+cite SHAs, and once GitHub garbage-collects the old commits those citations stop resolving. The map holds SHAs only, no values.
 
-### 2.3 Dry-run counts (sandbox mirror, 2026-11-12)
+### 2.3 Dry-run results (full scope, sandbox mirror, 2026-11-12; 4 vCPU)
 
-The S1-only run (`--sensitive-data-removal --no-fetch --blob-callback`, 4 blob ids) on the full mirror (2,040 heads,
-15,850 PR refs, 52,687 commits; 4 vCPU sandbox) **ran in 16 min 28 s** (906 s writing, then repack). Results:
+Run on a copy of the 12:38Z mirror (2,058 heads, 15,892 PR refs, 52,848 commits), with the callbacks as committed here, S3 on.
 
 | measure | result |
 |---|---|
-| commits rewritten | **52,663 of 52,687** (all refs); `main` 15,569 → 15,569 commits, **all with new SHAs** |
-| refs changed | 17,888 = 2,038 `refs/heads/*` + 15,850 `refs/pull/*` (the latter cannot be pushed; Support handles them, §6) |
+| **time** | **21 min 14 s** end to end on a warm disk cache (1,180 s writing, then repack). The first run, cold cache and an unfiltered literal list, took **40 min 39 s** (2,328 s writing). **Plan for 40 minutes** |
+| commits rewritten | **52,824 of 52,848** (all refs); all of `main` gets new SHAs |
 | "first changed commit" entries | 49 |
-| the 4 balance blobs reachable (`rev-list --all --objects`) | **0** each (was 1 each) |
-| old `43e844e3cd` / old `main` tip in the rewritten repo | absent (`merge-base` exit 128: object gone after the repack) |
-| tip tree of `main`, old vs new | **identical** |
-| balance literals in the snapshot path's full `git log --all -p` | **2**, down from 42 (positive control on the old mirror). Both are the **commit message** of #14543 (squash + branch), which the blob callback cannot reach. **The message callback in §2.1 is therefore required, S1-only included.** |
-| `filter-repo/suboptimal-issues` | 17 abbreviated references in messages to commits that no longer exist (left as-is; harmless) |
+| refs changed | 2,056 of 2,058 `refs/heads/*`; 15,892 of 15,892 `refs/pull/*` (cannot be pushed; Support handles them, §6) |
+| old S1 blobs, old `43e844e3cd` | **gone** (not a valid object in the rewritten repo) |
+| commit messages with a literal | **18 before, 0 after** (of 52,848) |
+| text blobs in the allow-list still holding a literal | **0** (of 156,469 reachable blobs scanned) |
+| JSON blobs in the key-nulled families with a non-null balance key | **0** (319 blob versions parsed, 0 unparseable) |
+| out-of-scope blobs with a numeric collision, left unchanged | 277 (market data and backtest files, §0.2b) |
+| **tip tree of `main`, old vs new** | **NOT identical: 99 files differ** (S2 26, S3 25, S4 and prose 48; `tip-prescrub-paths.txt`). The tip pre-scrub (§1 step 2) must bring this to 0 |
+| `filter-repo/suboptimal-issues` | 3,369 lines, not examined (references to commits that no longer exist; rev 1 saw 17) |
+
+**Not tested:** that the rewritten tip builds and its tests pass. It cannot, until the pre-scrub is done (a code literal becomes a
+syntax error at the tip). Run `pytest` on the rewritten mirror's `main` as §7 check 5 once the pre-scrub has landed.
+
 
 ⚠️ **Why every SHA changes, not only those after 2026-09-30.** Every commit sampled on `main` (2,000 of 2,000) carries
 a signature (`gpgsig`): GitHub's PGP on squash merges, SSH on session commits. filter-repo 2.47 / git 2.43 **strip
@@ -202,8 +319,8 @@ filter-repo rewrites abbreviated SHAs inside commit messages. It does **not** re
 **Why:** every branch and every clone made before the push is based on the old history. If anyone pushes a branch from
 an old clone after the rewrite, GitHub accepts it, and a merge would bring the old commits back, balance blobs included.
 
-**Window:** about 2 hours: a fresh mirror (~4 min), the rewrite (~17 min measured, §2.3), verification (~20 min,
-because `log -S` over all refs is slow), the push of ~2,040 heads, VM convergence and the post-push checks. Pick a slot that avoids **05:17Z Monday** (`gitleaks-history-weekly`) and **05:23Z daily**
+**Window:** about 2 hours: a fresh mirror (~4 min measured), the rewrite (21 to 41 min measured, §2.3; plan 40), verification (~20 min,
+because scans over all refs are slow), the push of ~2,040 heads, VM convergence and the post-push checks. Pick a slot that avoids **05:17Z Monday** (`gitleaks-history-weekly`) and **05:23Z daily**
 (`branch-protection-sync`, which re-PUTs protection, although it preserves `allow_force_pushes`). Choose a low-activity
 trading hour, because §4 restarts the live trader once.
 
@@ -294,30 +411,11 @@ by the required checks. To let the push through for the window:
 
 ## 6. GitHub Support request: the operator must file it
 
-**Yes, the repo owner must file it.** GitHub keeps the old commits reachable through `refs/pull/*` (15,850 PR refs, which
-are read-only to us), cached PR diff views and commit URLs, until Support dereferences them and runs gc. Only the owner
-can request that, at <https://support.github.com/contact> → "Remove sensitive data". `filter-repo --sensitive-data-removal`
-prints the first changed commit(s) and the orphaned-ref count to attach.
-
-**Draft (operator fills in the bracketed lines from the filter-repo output; no values in it):**
-
-> Subject: Sensitive data removal: benbaichmankass/JTA-Trader (rewritten history, request PR-ref dereference and GC)
->
-> I am the owner of the public repository benbaichmankass/JTA-Trader. Committed JSON files exposed private financial
-> account information (account balances) under `comms/mandate_evidence/account_snapshot/` and
-> `comms/research/counterfactual_grades/` (and `comms/research/RQ-20261106-d5a1-01/`), plus two commit messages. I rewrote
-> the history with `git filter-repo --sensitive-data-removal` and force-pushed all branches on [DATE, UTC].
->
-> - First changed commit(s) reported by filter-repo: [LIST]
-> - Number of orphaned/affected refs reported: [N]
-> - The repository has no forks.
->
-> Please (1) dereference or remove the pull-request refs and cached views that still point at the old commits, and (2)
-> run garbage collection so the old objects are no longer reachable by SHA. I understand affected PRs may lose their diff
-> views. Thank you.
-
-Before filing, edit the **PR and issue bodies listed in §0.3**: replace the value with `[balance removed]`, then delete
-each body's earlier revisions from its "edited" history menu (owner/admin only). Support does not touch issue or PR text.
+**Yes, the repo owner must file it.** GitHub keeps the old commits reachable through `refs/pull/*` (15,892 PR refs on 2026-11-12, read-only
+to us), cached PR diff views and commit URLs, until Support dereferences them and runs gc. Only the owner can request that, at
+<https://support.github.com/contact> → "Remove sensitive data". `filter-repo --sensitive-data-removal` writes the first changed commits
+(`filter-repo/first-changed-commits`) to attach. **The ready-to-paste request text is in the OPERATOR section, part B** (kept in one place).
+Order: edit the PR and issue bodies (§0.3) first, delete their older revisions, then file.
 
 ---
 
@@ -334,11 +432,14 @@ the commit-map cannot fix (for example, the VM cannot converge).
 1. `git merge-base --is-ancestor 43e844e3cd refs/heads/main` → **exit 1**: the old first-touched commit is not in main.
    Same for the old `main` tip from `pre-refs.txt`.
 2. For each of the four blob ids in §0.1: `git rev-list --all --objects | grep -c <blob>` → **0**.
-3. Every `PURGE_VALUES_FILE` literal: `git log --all -S"<literal>" --oneline | wc -l` → **0**, and
-   `git log --all --format=%B | grep -cF "<literal>"` → **0**. Print counts only, never the literal.
-4. `git rev-parse <old main tip>^{tree}` equals `git rev-parse refs/heads/main^{tree}` (same tip tree, once the §1
-   writer fixes landed).
-5. `pytest tests/test_mandate_resolver.py -k no_balance` and the new counterfactual-grades no-balance test pass.
+3. Every literal in `PURGE_STRONG_FILE`: a scan of all reachable text blobs in the allow-listed paths (§2.1) finds **0**, and
+   `git log --all --format=%B` finds **0** whole-number matches. (`git log --all -S` per literal is too slow on this repo; the scan used
+   `git cat-file --batch` over the reachable blobs, ~10 min.) Print counts only, never the literal. Also confirm every rewritten JSON
+   blob in the key-nulled families parses and carries no non-null balance key (dry run: 319 parsed, 0 bad, 0 non-null).
+4. `git rev-parse <old main tip>^{tree}` equals `git rev-parse refs/heads/main^{tree}` (same tip tree, once the §1 writer fixes **and the
+   tip pre-scrub** landed). **Dry run: 99 files differ today**; the purge is not ready until this is 0.
+5. `pytest tests/test_mandate_resolver.py -k no_balance`, `tests/test_no_balance_in_committed_research.py` (from #25305) and the full `pytest-run`
+   suite pass on the rewritten tip, and `python3 -m compileall -q src scripts tests` is clean (a stray purge token in code fails here).
 6. After the push: §4 HEAD checks on all three VMs, and §5's `[bp-report]` shows protection restored.
 7. After Support confirms: `curl -s -o /dev/null -w '%{http_code}' https://github.com/benbaichmankass/JTA-Trader/commit/43e844e3cd`
    → **404**.
@@ -347,8 +448,11 @@ the commit-map cannot fix (for example, the VM cannot converge).
 
 ## 8. Findings filed separately (outside the rewrite)
 
-- **The counterfactual grader commits real-money equity (active).** `cf_core.py:351` writes `equity_pre_usd` per leg.
-  Filed as row `CF-GRADES-EQUITY-COMMITTED` (it also covers the 4 RQ-20261106-d5a1-01 files).
+- **The counterfactual grader and the RQ-20261106-d5a1-01 runner committed real-money equity.** Fixed going forward by PR #25305
+  (row `CF-GRADES-EQUITY-COMMITTED`); merge it before the purge.
+- **The report generator commits real, paper and prop balances** into `comms/reports/**/report.json` (and `.md`/`.html`), and ~48 other
+  tip files quote a balance in prose or code (§0.2b). #25305 does not cover them. Filed as row `BALANCE-TIP-PRESCRUB`, which
+  gates the purge.
 - **Diag and system-action issues publish alpaca_live equity** in journal and config output (13 issues found for one
   value). Filed as row `DIAG-RELAY-EQUITY-LEAK`.
 - **Optional detector, not a gate:** add the four old blob ids to the weekly `gitleaks-history-weekly` run as a
