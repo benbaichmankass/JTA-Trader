@@ -2807,13 +2807,15 @@ def _unit_config_pending(units: list[str],
     return out
 
 
-def _either_pending(a: bool | None, b: bool | None) -> bool | None:
-    """True if either says pending; False only when both looked and said no."""
-    if a is True or b is True:
+def _either_pending(code: bool | None, config: bool | None) -> bool | None:
+    """The code verdict, escalated to True when the launch config says pending.
+
+    A config check that could not look (``None``, e.g. no systemctl) never
+    downgrades a known code verdict -- it is reported on its own in
+    ``unit_config_pending_by_unit`` -- so the per-unit flag keeps its meaning."""
+    if config is True:
         return True
-    if a is None or b is None:
-        return None
-    return False
+    return code
 
 
 @router.get("/version")

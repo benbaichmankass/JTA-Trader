@@ -55,11 +55,12 @@ def test_could_not_look_is_none_never_false():
     assert diag._unit_config_pending([U], show=_show(), mtime=gone)[U] is None
 
 
-def test_either_pending_is_three_way():
+def test_config_escalates_but_never_downgrades_the_code_verdict():
     e = diag._either_pending
-    assert e(True, None) is True and e(None, True) is True and e(False, True) is True
-    assert e(False, False) is False
-    assert e(False, None) is None and e(None, False) is None
+    assert e(False, True) is True and e(None, True) is True and e(True, None) is True
+    assert e(False, False) is False and e(True, False) is True
+    # config could not look (no systemctl): the code verdict stands, not None
+    assert e(False, None) is False and e(None, None) is None
 
 
 def test_version_folds_config_into_restart_pending_by_unit(monkeypatch):
