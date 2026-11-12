@@ -192,13 +192,13 @@ def test_series_no_capital_record_is_null_pct_not_zero(env, client):
     assert s["points"][-1]["cum_pnl_usd"] == 10.0 and s["points"][-1]["cum_pct"] is None
 
 
-def test_series_first_snapshot_after_start_is_flagged_and_7d_is_per_trade(env, client):
+def test_series_first_after_start_is_flagged_and_7d_is_per_trade(env, client):
     _trade(env, pnl=3.0)
     _trade(env, pnl=2.0)
     _snap(env, "a_live", 500.0, days_ago=1)                                   # nothing at/before the 7d start
     d = _series(client, window="7d", category="live").json()
     s = d["series"][0]
-    assert s["capital_read_state"] == "first_snapshot_after_start" and d["bucket"] == "trade" and len(s["points"]) == 2
+    assert s["capital_read_state"] == "first_after_start" and d["bucket"] == "trade" and len(s["points"]) == 2
 
 
 def test_series_filters_and_errors(env, client):
@@ -320,3 +320,72 @@ def test_capital_flows_could_not_look_is_published(env, client):
     d = client.get("/api/bot/performance/categories").json()
     assert d["capital_flows"]["read_state"] == "could_not_look" and "deposit" in d["capital_flows"]["effect"]
     assert client.get("/api/bot/performance/pnl-series").json()["capital_flows"]["read_state"] == "could_not_look"
+
+
+# ---- operator u3 (2026-11-12): capital at the START of the chosen window; series takes start/end ------------------------------
+
+def _live(client, **p):
+    d = client.get("/api/bot/performance/categories", params=p).json()
+    return d, {c["category"]: c for c in d["categories"]}["live"]
+
+
+def test_series_takes_start_end_same_rules_as_categories(env, client):
+    inside, before = _day(5), _day(20)
+    _trade(env, pnl=3.0, closed_at=inside, timestamp=inside)
+    _trade(env, pnl=8.0, closed_at=before, timestamp=before)
+    d = _series(client, start=inside[:10], end=inside[:10], category="live").json()
+    assert d["start"] == inside[:10] and d["end"] == inside[:10] and d["window"] is None       # echoed, not "30d"
+    assert d["population"]["window"] is None and d["series"][0]["n_rows"] == 1
+    assert d["series"][0]["points"][-1]["cum_pnl_usd"] == 3.0
+    wide = _series(client, start=before[:10], end=inside[:10], category="live").json()["series"][0]
+    assert wide["n_rows"] == 2 and wide["points"][-1]["cum_pnl_usd"] == 11.0
+    for bad in ({"start": "2026-02-30"}, {"start": "2026-03-02", "end": "2026-03-01"}, {"end": "2026-03-01"}, {"window": "zz"}):
+        assert _series(client, **bad).status_code == 400, bad
+
+
+def test_start_capital_each_read_state_on_both_routes(env, client):
+    _trade(env, pnl=10.0, closed_at=_day(3), timestamp=_day(3))
+    start = _day(10)[:10]                                          # window start = midnight UTC ten days ago
+    # (1) none at all -> null + no_capital_record, pct null, never 0
+    d, live = _live(client, start=start, end=_day(0)[:10])
+    assert live["start_capital_usd"] is None and live["capital_read_state"] == "no_capital_record"
+    assert live["pct"] is None and live["measured_pct"] is None and d["total"]["pct"] is None
+    s = _series(client, start=start, end=_day(0)[:10], category="live").json()["series"][0]
+    assert s["start_capital_usd"] is None and s["capital_read_state"] == "no_capital_record"
+    # (2) only a reading AFTER start -> first_after_start, with that reading's timestamp
+    _snap(env, "a_live", 1000.0, days_ago=6)
+    d, live = _live(client, start=start, end=_day(0)[:10])
+    assert live["start_capital_usd"] == 1000.0 and live["capital_read_state"] == "first_after_start"
+    assert live["capital_as_of"] and live["capital_accounts"][0]["state"] == "first_after_start"
+    assert live["pct"] == 1.0 and live["measured_pct"] == 1.0                                    # 10 / 1000 * 100
+    assert _series(client, start=start, end=_day(0)[:10], category="live").json()["series"][0]["capital_read_state"] == "first_after_start"
+    # (3) a reading AT/BEFORE start wins over a later one -> measured, source states the rule
+    _snap(env, "a_live", 500.0, days_ago=12)
+    _snap(env, "a_live", 700.0, days_ago=11)                       # nearest before start (10d midnight) is this one
+    d, live = _live(client, start=start, end=_day(0)[:10])
+    assert live["start_capital_usd"] == 700.0 and live["capital_read_state"] == "measured"
+    assert "at or before start" in live["capital_source"] and live["pct"] == round(10.0 / 700.0 * 100, 4)
+    assert d["total"]["start_capital_usd"] is None                 # other books hold accounts with no reading: no partial sum
+    # (4) a book with no accounts / prop with no readings stays null
+    by = {c["category"]: c for c in d["categories"]}
+    assert by["prop"]["start_capital_usd"] is None and by["paper_testing"]["capital_read_state"] == "no_capital_record"
+
+
+def test_start_capital_raw_sql_cross_check_and_multi_account_needs_every_account(env, client, monkeypatch):
+    import sqlite3
+    accts = dict(ACCOUNTS, a_live2={"account_class": "real_money"})
+    monkeypatch.setattr(router, "_accounts", lambda: accts)
+    _snap(env, "a_live", 400.0, days_ago=15)
+    _snap(env, "a_live", 450.0, days_ago=12)
+    start = _day(10)[:10]
+    _, live = _live(client, start=start, end=_day(0)[:10])
+    assert live["start_capital_usd"] is None and live["capital_read_state"] == "no_capital_record"  # a_live2 has none
+    _snap(env, "a_live2", 250.0, days_ago=13)
+    _, live = _live(client, start=start, end=_day(0)[:10])
+    con = sqlite3.connect(str(env))
+    raw = sum(con.execute("SELECT balance FROM balance_snapshots WHERE account_id=? AND api_ok=1 AND datetime(ts) <= datetime(?) "
+                          "ORDER BY datetime(ts) DESC LIMIT 1", (a, start + "T00:00:00+00:00")).fetchone()[0]
+              for a in ("a_live", "a_live2"))
+    con.close()
+    assert live["start_capital_usd"] == raw == 700.0 and live["capital_read_state"] == "measured"
+    assert {x["account_id"]: x["balance"] for x in live["capital_accounts"]} == {"a_live": 450.0, "a_live2": 250.0}
