@@ -74,9 +74,9 @@ the allowlist entry + the test in the same PR — don't punt it to a manual step
 
 Anything on the trainer (install deps, run `python -m ml ...`, manage
 `ict-trainer.service`, build datasets) goes through the `trainer-vm-diag`
-relay's arbitrary-bash `cmd:` block. No operator approval. Full charter +
-the stage gate (shadow → advisory is the operator-approved live switch):
-`docs/claude/trainer-vm-mode.md`.
+relay's arbitrary-bash `cmd:` block. No operator approval. Full charter:
+`docs/claude/trainer-vm-mode.md`. (There is no shadow → advisory stage step —
+retired 2026-11-12; promotion to real money is decided on offline evidence.)
 
 ## Self-heal
 
