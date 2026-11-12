@@ -74,6 +74,10 @@ TELEMETRY_EVENTS = ("r_milestone", "new_peak", "giveback", "near_target")
 #: Events computed from market inputs (history / funding / calendar).
 MARKET_EVENTS = ("swing", "vol_regime", "funding", "calendar")
 
+#: vol_regime's entry ATR when the path history lacks the entry bar: the strategy's signal-time ATR stamped on the
+#: package (order_packages.meta.atr). Always named in the event's ``why`` so it never reads as path-measured.
+ENTRY_ATR_PACKAGE_META = "package_meta"
+
 #: Pre-screen events (LTR-PRACTICE-REDESIGN): evaluated only when configured.
 #: The per-package auto mandate's review cadence (src/runtime/ltr_auto_mandate.py::CADENCE_EVENT).
 CADENCE_EVENT = "mandate_cadence"
@@ -701,16 +705,29 @@ def market_events(row: Dict[str, Any], ctx: Optional[Dict[str, Any]],
         else:
             entry_bar = last_ts - timedelta(seconds=bars_held * tf_seconds)
             late = (first_ts - entry_bar).total_seconds()
-            if late > tf_seconds + 60:
-                miss("vol_regime", f"history starts {late / tf_seconds:.1f} bars after entry")
+            a1 = _f(atrs[-1]["atr"])
+            a0, src = None, None
+            if late <= tf_seconds + 60:
+                a0, src = _f(atrs[0]["atr"]), "path_history"
             else:
-                a0, a1 = _f(atrs[0]["atr"]), _f(atrs[-1]["atr"])
+                # LTR-VOLREGIME-ENTRY-ATR (AM-TRADING decision 2026-11-12 13:50Z): the path history lacks the
+                # entry bar, so take the entry ATR the strategy stamped on the package (order_packages.meta.atr,
+                # computed at signal time), LABELLED as such so it never reads as path-measured. Review path only.
+                venue = ctx.get("venue") or {}
+                m = _f(venue.get("meta_atr")) if venue.get("state") == "read" else None
+                if m is not None and m > 0:
+                    a0, src = m, ENTRY_ATR_PACKAGE_META
+                else:
+                    miss("vol_regime", f"history starts {late / tf_seconds:.1f} bars after entry "
+                                       "and the package carries no entry ATR")
+            if a0 is not None and a0 > 0 and a1 is not None:
                 ratio = a1 / a0
+                tag = "" if src == "path_history" else f" (entry_atr_source={src}: not path-measured)"
                 up, dn = float(vr.get("expand_ratio", 1.5)), float(vr.get("contract_ratio", 0.67))
                 if ratio >= up:
-                    out.append(("vol_regime", "expand", f"ATR now/entry {ratio:.2f} >= {up:g}"))
+                    out.append(("vol_regime", "expand", f"ATR now/entry {ratio:.2f} >= {up:g}{tag}"))
                 elif ratio <= dn:
-                    out.append(("vol_regime", "contract", f"ATR now/entry {ratio:.2f} <= {dn:g}"))
+                    out.append(("vol_regime", "contract", f"ATR now/entry {ratio:.2f} <= {dn:g}{tag}"))
 
     # -- funding: crypto perps only ------------------------------------------
     sym = row.get("symbol")
