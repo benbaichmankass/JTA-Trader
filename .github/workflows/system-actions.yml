@@ -2808,7 +2808,10 @@ jobs:
               rc_t=$?
               echo
               echo "################ IB gateway VM ################"
-              GW_ARGS=( "${SSH_ARGS[@]}" )
+              # LogLevel=ERROR: the client's "Permanently added '<addr>'" known-hosts
+              # warning is printed outside the masked script and leaked the
+              # gateway's address into the public issue on the first run (#25070).
+              GW_ARGS=( "${SSH_ARGS[@]}" -o LogLevel=ERROR )
               if [ "${GATEWAY_HOST}" != "${VM_SSH_HOST}" ]; then
                 GW_ARGS+=( -o "ProxyJump=${VM_SSH_USER}@${VM_SSH_HOST}" )
               fi
