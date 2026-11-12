@@ -303,7 +303,7 @@
     ["upnl", /^u\.?\s*p\s*&\s*l|u\.?\s*pnl|unreali[sz]ed|^p\s*&\s*l|^pnl/i], ["mark", /^mark(?!et)|^last|^current/i],
     ["entry", /entry|avg|average|open(ing)? price/i],
     ["sl", /^(sl|s\/l|stop)/i], ["tp", /^(tp|t\/p|take)/i], ["side", /^(side|direction|dir)$/i],
-    ["qty", /^(size|qty|quantity|amount|position|contracts?)\b/i], ["lev", /^lev/i],
+    ["qty", /^(open )?(size|qty|quantity|amount|position|contracts?)\b/i], ["lev", /^lev/i],
     ["symbol", /^(symbol|market|instrument|contract|asset|pair|coin|name)$/i], ["time", /time|date|opened/i]];
   // Closed orders: UNMEASURED layout (no live capture yet); the div-grid reader below is generic, and a miss posts
   // its digit-masked headers (closed_ prefix) exactly like Positions.
@@ -556,6 +556,63 @@
     });
     return out;
   }
+  // ---- CARDS (PHONE-POSITIONS-CARDS, 2026-11-12): with positions open, Breakout's Trade view draws NO table and NO
+  // header row. The ONE <div role="region" aria-label="Positions"> holds one CARD per position: the base symbol as a
+  // heading ("ETH"), the side as a word ("Long"), "Net P&L", then a <dl> of <dt>/<dd> pairs ("Open quantity" "0.61 ETH",
+  // "Notional value", "Opening price", "Current price") and the buttons "Manage TP/SL for ETH/USD" / "Close ETH/USD long
+  // position" / "Open position details for ETH/USD" (capture positions-no_table-20261112T082111Z, app 1b.373, fixture
+  // breakout-positions-cards-two-longs). Until this, every read with a position open posted no_table from 08:21Z, so the
+  // venue could not confirm the two journal tickets. Each <dt> label is mapped with the same column map as a header;
+  // the symbol is the card's FIRST ticker word and the side its own Long / Short word, cross-checked against the
+  // card's control labels (a disagreement makes the card unparsed, never guessed). A card is the highest ancestor of
+  // its <dl> inside the region that holds no other <dl>. Only inside a region labelled by THIS tab's name.
+  function readCards(cols, need, emptyRe, tabRe, count, strict) {
+    var regions = all("[role=region]").filter(function (rg) { return tabRe.test((rg.getAttribute("aria-label") || "").trim()); });
+    if (regions.length !== 1) return null;
+    var rg = regions[0], dls = Array.prototype.slice.call(rg.querySelectorAll("dl")).filter(vis);
+    if (!dls.length) return null;
+    var cards = [];
+    dls.forEach(function (dl) {
+      var c = dl;
+      for (var a = dl.parentElement; a && a !== rg && rg.contains(a); a = a.parentElement) {
+        if (Array.prototype.slice.call(a.querySelectorAll("dl")).filter(vis).length > 1) break;
+        c = a;
+      }
+      if (cards.indexOf(c) < 0) cards.push(c);
+    });
+    var keys = ["symbol", "side"], seen = {}, raw = [], els = [], out = [], bad = 0, hs = [];
+    var parsed = cards.map(function (c) {
+      var dl = Array.prototype.slice.call(c.querySelectorAll("dl")).filter(vis)[0], f = {};
+      Array.prototype.slice.call(dl.querySelectorAll("dt")).filter(vis).forEach(function (dt) {
+        var dd = dt.nextElementSibling; if (!dd || dd.tagName !== "DD") return;
+        var k = colKey(t(dt), cols); if (hs.indexOf(t(dt)) < 0) hs.push(t(dt));
+        if (!k || k === "skip" || f[k] !== undefined) return;
+        f[k] = dd; if (!seen[k]) { seen[k] = 1; keys.push(k); }
+      });
+      // the leaves BEFORE the <dl> (the card's head): the ticker word and the side word
+      var head = Array.prototype.slice.call(c.querySelectorAll("*")).filter(function (x) {
+        return !x.children.length && vis(x) && !dl.contains(x) && before(x, dl) && !x.closest("button,[role=button]");
+      }).map(t).filter(Boolean);
+      var sym = head.filter(function (x) { return /^[A-Z0-9]{2,12}(\/[A-Z]{2,5})?$/.test(x); }), sd = head.filter(function (x) { return /^(long|short)$/i.test(x); });
+      var lab = Array.prototype.slice.call(c.querySelectorAll("button,[role=button]")).map(function (b) { return b.getAttribute("aria-label") || ""; }).join(" | ");
+      // every BASE/QUOTE pair the controls name ("for ETH/USD", "Close ETH/USD long position"); "TP/SL" is a button word
+      var pairs = (lab.match(/\b[A-Z0-9]{2,12}\/[A-Z]{2,5}\b/g) || []).filter(function (x) { return !/^(TP\/SL|SL\/TP)$/.test(x); }).map(function (x) { return x.split("/")[0]; });
+      var lsym = pairs.length ? pairs[0] : null, lmix = pairs.some(function (x) { return x !== lsym; }), lside = (/\b(long|short) position\b/i.exec(lab) || [])[1] || null;
+      // the FIRST ticker leaf is the heading (a later "USD" is the Net P&L unit)
+      var s0 = sym.length ? sym[0].split("/")[0] : null, d0 = sd.length === 1 ? sd[0].toLowerCase() : null;
+      if (s0 && (lmix || (lsym && s0 !== lsym))) s0 = null;
+      if (d0 && lside && d0 !== lside.toLowerCase()) d0 = null;
+      return {f: f, sym: s0, side: d0};
+    });
+    parsed.forEach(function (p) {
+      var cells = keys.map(function (k) { return k === "symbol" ? (p.sym || "") : k === "side" ? (p.side || "") : (p.f[k] ? t(p.f[k]) : ""); });
+      var ce = keys.map(function (k) { return p.f[k] || null; });
+      raw.push(cells); els.push(ce); out.push(parseRow(cells, keys, cells, keys.map(function () { return ""; })));
+    });
+    var r = finishRead(out, bad, hs, count, need, strict, emptyRe.test(t(rg)) && !out.length, raw, keys, els);
+    r.layout = "cards";
+    return r;
+  }
   function readTable(cols, need, emptyRe, tabRe, strict) {   // need: the keys every row must carry; a table is ours when it has a symbol column and a qty/price/entry column
     var hits = [];
     all("table,[role=table],[role=grid]").forEach(function (tb) {
@@ -568,6 +625,7 @@
       var g = gridHeaders(cols);
       if (g.length === 1) return readGrid(cols, need, emptyRe, count, strict, g);
       if (g.length > 1) return {state: "ambiguous", tables: g.length, count: count, headers: masked(g[0] ? kids(g[0]).map(t) : []), controls: controlsDump()};
+      var cr = readCards(cols, need, emptyRe, tabRe, count, strict); if (cr) return cr;
     }
     if (hits.length !== 1) {
       // No table: flat ONLY on the panel's own evidence -- the tab's count says 0, or the ONE visible tab panel says
