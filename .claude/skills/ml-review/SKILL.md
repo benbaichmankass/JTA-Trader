@@ -185,7 +185,7 @@ is always noise / expected variation), run the discriminating test, and record w
   - Cite the gate packet (`ready`, `blocking[]`) **and** the C3 decision value.
   - A head that changes no order is a wiring-or-retire question, not a promotion question.
   - Never `promote` on `ready: false`.
-  - A model whose backtest evidence passes goes to real money; there is no `shadow → advisory` step (operator 2026-11-12, "Absolutely no steps"). Demotions go to the operator first this week.
+  - A model whose backtest evidence passes goes to real money; there is no `shadow → advisory` step (operator 2026-11-12, "Absolutely no steps").
 
 ## Layer 3 — DECISIONS
 
