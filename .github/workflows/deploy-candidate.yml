@@ -150,7 +150,7 @@ jobs:
           sudo mkdir -p /etc/systemd/system/ict-trader-live.service.d /etc/systemd/system/ict-web-api.service.d
           printf '[Service]\nExecStart=\nExecStart=%s -u -B -m src.main\n' "$VENV" \
             | sudo tee /etc/systemd/system/ict-trader-live.service.d/venv.conf >/dev/null
-          printf '[Service]\nExecStart=\nExecStart=%s -m uvicorn src.web.api.main:app --host 0.0.0.0 --port 8001\n' "$VENV" \
+          printf '[Service]\nExecStart=\nExecStart=%s -m uvicorn src.web.api.main:app --host 127.0.0.1 --port 8001\n' "$VENV" \
             | sudo tee /etc/systemd/system/ict-web-api.service.d/venv.conf >/dev/null
           sudo systemctl daemon-reload
           sudo systemctl enable --now ict-trader-live.service ict-web-api.service

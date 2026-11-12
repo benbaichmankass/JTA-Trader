@@ -1008,6 +1008,24 @@ def entry_forward(args) -> int:
     return 0
 
 
+def _write_trades_jsonl(path: Path, trades: pd.DataFrame, scored: list, v: np.ndarray, leg: str, arm: str) -> None:
+    """Per-trade Stage-0 rows: ``net_r`` (net of the full cost stack this harness applies) plus enough identity to
+    audit each row. Refuses to write if the rows would not reproduce ``v`` exactly."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    reason = {0: "time", 1: "sl", 2: "tp"}
+    rows = []
+    for k, (net, rsn, moves) in zip(trades.index, scored):
+        t = trades.loc[k]
+        rows.append({"leg": leg, "arm": arm, "symbol": str(t.symbol), "side": str(t.side),
+                     "decision_ts": str(t.ts), "net_r": float(net), "exit_reason": reason.get(int(rsn), str(rsn)),
+                     "n_tp_moves": len(moves)})
+    tot = sum(r["net_r"] for r in rows)
+    if len(rows) != len(v) or abs(tot - float(v.sum())) > 1e-9:
+        raise RuntimeError(f"per-trade rows do not reproduce the summary: n {len(rows)} vs {len(v)}, sum {tot} vs {v.sum()}")
+    path.write_text("".join(json.dumps(r) + "\n" for r in rows))
+    print(f"[trades-jsonl] {len(rows)} rows -> {path} (sum net_r {tot:.6f})", flush=True)
+
+
 def evidence_extend_only(args) -> int:
     """The faithful re-measure for comms/strategy_evidence/ml_entry.json once the leg declares the extend-only TP
     revision: the record's own population (the served ENTRY model's held-out trades 2025-10-01..2026-09-30 on the
@@ -1065,6 +1083,13 @@ def evidence_extend_only(args) -> int:
                            for s in traded if (trades.symbol == s).any()},
             "rule": "RULE-RQ20261103-5E04-01-ML-SLONLY: PASS if mean_net_r >= 0 (parent RULE-RQ20261101-c692-06-TRADED-SUBSET)",
             "verdict": "pass" if vf.mean() >= 0 else "fail"}
+        if getattr(args, "trades_jsonl", ""):
+            # PERF-F1-DEMOTION-SIGNAL (2026-11-12): one row per arm-F trade (the LIVE exit), so
+            # mandate_resolver.stage0_block_p10 / r4_demotion_gate.py and live_vs_backtest.py can bootstrap the
+            # leg's own per-trade net R. Same trades, same order, same numbers as the summary above (the row
+            # count and sum are asserted against it); exit_reason: 0 time, 1 sl, 2 tp (walk()).
+            _write_trades_jsonl(Path(args.trades_jsonl), trades, polf, vf, "ml_entry",
+                                "RQ-20261103-5e04-01 arm F (SL-only structure pivot=5 + extend-only ml_first_passage TP + 24h)")
         # RQ-20261103-5e04-01 grading: the runner pipeline reads <out>/verdict.json (run 41783308121 measured
         # arm F but wrote no verdict.json -> producer_failed). The registered INDETERMINATE clause: arm A
         # (extend_only, the pre-override exit) must reproduce the committed record within 0.005 R/decision.
@@ -1112,6 +1137,8 @@ def main(argv=None) -> int:
     ap.add_argument("--summary", default="", help="export: the run summary.json whose final fit is reproduced")
     ap.add_argument("--structure-sl", default="",
                     help="evidence-extend-only: add arm F = SL-only structure stop pivot=N (RQ-20261103-5e04-01)")
+    ap.add_argument("--trades-jsonl", dest="trades_jsonl", default="",
+                    help="evidence-extend-only with --structure-sl: write one row per arm-F trade (net_r) to this path")
     ap.add_argument("--artifact", default=str(REPO / "ml" / "served" / "ml_entry_tp_revision_v1" / "model.json"))
     a = ap.parse_args(argv)
     if a.self_test:
