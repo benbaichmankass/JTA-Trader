@@ -325,3 +325,72 @@ def test_a_read_failure_latches_nothing_and_clears_nothing(monkeypatch, tmp_path
                         lambda *a, **k: (_ for _ in ()).throw(OSError("boom")))
     out = L.run_losing_streak_check(force=True)
     assert out == {"checked": False, "reason": "read_failed"}
+
+
+# ── per-account floor: min($500, 5% of equity) (operator 2026-11-12 x2) ─────
+
+_FOUR = ["2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04"]
+
+
+@pytest.mark.parametrize("cls, equity, floor, basis", [
+    ("real_money small", 200.0, 10.0, L.FLOOR_BASIS_EQUITY),
+    ("real_money mid", 4000.0, 200.0, L.FLOOR_BASIS_EQUITY),
+    ("prop 50k", 50_000.0, 500.0, L.FLOOR_BASIS_EQUITY),
+    ("paper large", 1_000_000.0, 500.0, L.FLOOR_BASIS_EQUITY),
+    ("equity unreadable", None, 500.0, L.FLOOR_BASIS_UNREADABLE),
+    ("equity non-positive", 0.0, 500.0, L.FLOOR_BASIS_UNREADABLE),
+    ("equity NaN", float("nan"), 500.0, L.FLOOR_BASIS_UNREADABLE),
+])
+def test_account_floor_per_class(cls, equity, floor, basis):
+    got, b = L.account_floor_usd(500.0, equity)
+    assert got == pytest.approx(floor), cls
+    assert b == basis, cls
+
+
+def test_floor_never_exceeds_the_fleet_value_so_it_only_adds_alerting():
+    for eq in (1.0, 99.0, 10_000.0, 1e9, None):
+        assert L.account_floor_usd(500.0, eq)[0] <= 500.0
+
+
+def test_small_real_money_bleed_below_500_now_alerts():
+    rows = _losing("small", _FOUR, per_day=-5.0)                     # -$20 over 4 days
+    floors = L.account_floors(["small"], 500.0, equities={"small": 200.0})
+    g = L.assess(rows, min_days=4, min_loss_usd=500.0, max_gap_days=3, floors=floors)
+    assert g["small"]["state"] == L.STREAK_ACTIVE
+    assert g["small"]["min_loss_usd_applied"] == pytest.approx(10.0)
+    assert g["small"]["floor_basis"] == L.FLOOR_BASIS_EQUITY
+    # without the per-account floor the same bleed is invisible (the BL-20260911 defect)
+    assert L.assess(rows, min_days=4, min_loss_usd=500.0, max_gap_days=3)["small"]["state"] == L.STREAK_NONE
+
+
+def test_large_account_keeps_the_fleet_floor():
+    rows = _losing("big", _FOUR, per_day=-100.0)                     # -$400 < $500
+    floors = L.account_floors(["big"], 500.0, equities={"big": 1_000_000.0})
+    g = L.assess(rows, min_days=4, min_loss_usd=500.0, max_gap_days=3, floors=floors)
+    assert g["big"]["state"] == L.STREAK_NONE and g["big"]["below_min_loss"] is True
+
+
+def test_unreadable_equity_is_a_label_not_a_refusal_or_a_skip():
+    rows = _losing("x", _FOUR, per_day=-1000.0)
+    floors = L.account_floors(["x"], 500.0, equities={})
+    assert floors["x"] == {"floor_usd": 500.0, "basis": L.FLOOR_BASIS_UNREADABLE, "equity_usd": None}
+    g = L.assess(rows, min_days=4, min_loss_usd=500.0, max_gap_days=3, floors=floors)
+    assert g["x"]["state"] == L.STREAK_ACTIVE                       # still graded, still alerts
+    assert g["x"]["floor_basis"] == L.FLOOR_BASIS_UNREADABLE
+
+
+def test_equities_are_read_from_the_risk_managers_snapshot(monkeypatch, tmp_path):
+    (tmp_path / "balance_snapshots.json").write_text(json.dumps(
+        {"a": {"balance": 300.0}, "b": {"balance": None}, "c": "junk"}))
+    monkeypatch.setattr(L, "runtime_logs_dir", lambda: tmp_path)
+    assert L._read_equities() == {"a": 300.0}
+    fl = L.account_floors(["a", "b", "zz"], 500.0)
+    assert fl["a"]["floor_usd"] == pytest.approx(15.0)
+    assert fl["b"]["basis"] == fl["zz"]["basis"] == L.FLOOR_BASIS_UNREADABLE
+
+
+def test_the_alert_body_names_the_floor_it_was_graded_against():
+    rows = _losing("small", _FOUR, per_day=-5.0)
+    floors = L.account_floors(["small"], 500.0, equities={"small": 200.0})
+    a = L.assess(rows, min_days=4, min_loss_usd=500.0, max_gap_days=3, floors=floors)["small"]
+    assert "Size floor $10.00" in L.describe("small", a)
