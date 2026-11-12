@@ -1,0 +1,75 @@
+family: live-decay
+weight: 5
+kind: experiment
+cadence: weekly
+theme: live_strategy
+priority: 2
+compute: cpu_light
+# LIVE-DECAY-MONITOR (operator decisions page w3, 2026-11-12). A sequential monitor: the leg's LIVE per-trade R against its committed
+# Stage-0 per-trade mean, so a decaying leg opens a cause-naming re-research unit BEFORE R4's demotion rule (two 20-trade windows, abstains
+# below 40) can fire. Statistic, K, false-alarm rate, horizon and grading are fixed in scripts/research/live_decay_cusum.py and restated below;
+# a trip is a demotion CANDIDATE for the operator, never a demotion and never a config edit (OPERATING-PLAN: the demotion signal is the mirror's window).
+# Gates this adds or changes: none (a monitor that files research; it refuses nothing and edits nothing).
+title: "Live-decay CUSUM of {leg} vs its Stage-0 per-trade mean (generated, weekly)"
+practice_precedent: "M2, M4 (docs/reference/trading-and-model-practice-principles.md): sequential monitoring of a live strategy against its registered backtest, at a declared false-alarm rate"
+question: >-
+  Has the live per-trade net R of {leg} ({symbol} {timeframe}, Stage-2 real-money book) drifted below its committed Stage-0 per-trade mean far
+  enough that a lower-sided CUSUM (K=0.25 sd0, false-alarm 5% per leg over 100 trades, h calibrated on the leg's own Stage-0 trades) has tripped?
+why_this_matters: >-
+  R4 demotes on two 20-trade windows and abstains below 40 trades; live_vs_backtest answers one cumulative question at one n. Neither watches
+  the sequence. Real money is at risk while a leg decays, so the cheap move is to start the cause-naming research at the first CUSUM trip,
+  not at the demotion. DISCLOSED: i.i.d. resampling ignores regime clustering; across the monitored legs the chance that SOME healthy leg
+  trips is well above 5% (about 1-0.95^k for k legs) -- a trip is a trigger to look, never a verdict.
+power:
+  expected_n: 20
+  min_detectable_effect: 0.5
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    Lower CUSUM tuned (K=0.25) to a drop of 0.5 sd0 per trade; h is the 95th percentile of max_t S_t over 100 trades resampled from the leg's
+    own Stage-0 net_r (scripts/research/live_decay_cusum.calibrate_h). Detection delay of a 0.5 sd0 drop is on the order of 30-40 trades, so the
+    declared one_sample MDE/power are a stand-in (as in RQ-20261015-8bbc-01), not the CUSUM's operating characteristic, and
+    detection is within the live window, not at n=20; below 5 live trades the unit is indeterminate.
+  feasibility:
+    source: none
+    accrual_basis: Live closes on the leg; the weekly run reads whatever has accrued (GET /api/bot/performance/trade-series, falling back to 20-trade blocks).
+why_not_inferential: >-
+  A standing monitor with a pre-registered false-alarm rate, not a test of an edge claim: its FAIL opens research, it establishes nothing about edge.
+evidence_class:
+  holdout: out_of_sample
+  claim: monitoring
+decision_rule:
+  id: "RULE-TPL-LIVE-DECAY-CUSUM"
+  statistic: >-
+    live_decay_cusum.py: lower CUSUM S_t = max(0, S_(t-1) + (mu0 - R_t)/sd0 - 0.25) over the leg's live realMoney closed trades with an R basis
+    (oldest to newest), mu0/sd0 from the committed Stage-0 net_r series; trip when S_t > h (false-alarm 0.05 over 100 trades, h calibrated per leg).
+  rule: >-
+    FAIL (a trip, a demotion CANDIDATE reported to the operator, NEVER a demotion) IF the CUSUM tripped at any point in the live window with >= 5
+    live trades: open the registered cause-naming unit (regime-cell / cost / fill-and-fidelity / config drift, and a venue-net re-read when the
+    book is journal-known-divergent), no roster or config change. PASS IF no trip with >= 5 live trades. INDETERMINATE IF fewer than 5 live
+    trades. not_applicable (could not look: no Stage-0 series, route unreadable, no live series) is never a pass.
+  min_n: "5"
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 0.5
+  est_minutes: 3
+  basis: One GET plus a 4000-path CUSUM calibration over the leg's Stage-0 trades, a few seconds.
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 20
+  command:
+    - python3
+    - scripts/research/live_decay_cusum.py
+    - --leg
+    - "{leg}"
+    - --out
+    - "{out_dir}"
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+grid:
+  legs: live_decay_legs

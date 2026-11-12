@@ -211,3 +211,46 @@ def test_missing_db_reads_absent(tmp_path, monkeypatch):
     monkeypatch.setattr(P, "_DB_PATH", tmp_path / "nope.db")
     out = P.get_performance_recent(n=40)
     assert out["realMoney"]["readState"] == "absent" and out["error"] is False
+
+
+# ── /performance/trade-series (LIVE-DECAY-MONITOR): one row per trade, oldest first ──────────────
+def test_trade_series_is_one_row_per_trade_oldest_first_and_sums_to_the_aggregate(db):
+    db()
+    out = P.get_performance_trade_series(n=200)
+    assert out["error"] is False and out["realMoney"]["readState"] == "ok"
+    ent = out["realMoney"]["perStrategy"]["leg_a"]
+    assert ent["nUsed"] == len(ent["series"]) > 1
+    ids = [s["tradeId"] for s in ent["series"]]
+    closed = [s["closedAt"] for s in ent["series"]]
+    assert closed == sorted(closed)
+    assert len(set(ids)) == len(ids)
+    # no second R implementation: per-trade R sums to the aggregate over the same rows (rows with an R basis only)
+    agg = P.get_performance_recent(n=ent["nUsed"] - ent["nUsed"] % 20 or 20)["realMoney"]["perStrategy"]["leg_a"]
+    if agg["complete"]:
+        tail = ent["series"][-agg["nUsed"]:]
+        assert round(sum(s["r"] for s in tail if s["r"] is not None), 4) == round(agg["last"]["totalR"], 4)
+
+
+def test_trade_series_n_limits_the_window_per_leg(db):
+    db()
+    full = P.get_performance_trade_series(n=200)["realMoney"]["perStrategy"]["leg_a"]["series"]
+    two = P.get_performance_trade_series(n=2)["realMoney"]["perStrategy"]["leg_a"]["series"]
+    assert two == full[-2:]
+
+
+def test_trade_series_rostered_leg_with_no_close_is_present_empty(db):
+    db()
+    ent = P.get_performance_trade_series(n=50)["realMoney"]["perStrategy"]["leg_never_closed"]
+    assert ent["closedAvailable"] == 0 and ent["series"] == [] and ent["journalTrust"] is None
+
+
+def test_trade_series_db_error_is_explicit_not_empty(db, monkeypatch):
+    db()
+    monkeypatch.setattr(P, "_query", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
+    out = P.get_performance_trade_series(n=10)
+    assert out["error"] is True and out["realMoney"]["readState"] == "error"
+
+
+def test_trade_series_missing_db_reads_absent(tmp_path, monkeypatch):
+    monkeypatch.setattr(P, "_DB_PATH", tmp_path / "nope.db")
+    assert P.get_performance_trade_series(n=5)["realMoney"]["readState"] == "absent"
