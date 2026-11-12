@@ -185,13 +185,18 @@ Unauthenticated GET routes — Tier 1 read surface. See
 
 ### Trade chart snapshot + decision markers (UI-REDESIGN-2026-11, addenda 2, 3, 5)
 
-Two Tier-1 GET routes keyed by `trades.id` (the `id` that `/api/bot/positions` and `/api/bot/trades/closed`
-already return). CORS like every `/api/bot` GET. `null` = not recorded: render a dash, never `0`.
+Tier-1 GET routes keyed by `trades.id` (the `id` that `/api/bot/positions` and `/api/bot/trades/closed`
+already return), and for PROP trades by a `prop_fills` id (`/prop-trades/{fill_id}/...`): either the opening or the
+closing row's id resolves to the same trade, reported as `prop_fill_id` = the opening row (stored as
+`prop:<opening id>`; `trade:<id>` for the rest). A prop trade's brackets come from its ticket's SL+TP `amendments`
+(`tp_history: recorded`); its ticket's `meta.sl_floor` marks the review it names `applied`. CORS like every `/api/bot` GET. `null` = not recorded: render a dash, never `0`.
 
 | Route | Shape | Fixture |
 |---|---|---|
-| `GET /api/bot/trades/{trade_id}/snapshot` | `{as_of, trade_id, read_state, partial_reasons[], snapshot\|null}` | `tests/fixtures/trade_chart_snapshot_v1.json` |
-| `GET /api/bot/trades/{trade_id}/markers?interval=1h` | `{as_of, trade_id, order_package_id, account_id, symbol, direction, status, interval, read_state, partial_reasons[], entry, entry_signal, brackets, decisions}` | `tests/fixtures/trade_markers_v1.json` |
+| `GET /api/bot/trades/{trade_id}/snapshot` | `{as_of, trade_id, prop_fill_id, read_state, partial_reasons[], snapshot\|null}` | `tests/fixtures/trade_chart_snapshot_v1.json` |
+| `GET /api/bot/trades/{trade_id}/markers?interval=1h` | `{as_of, trade_id, prop_fill_id, order_package_id, account_id, symbol, direction, status, interval, read_state, partial_reasons[], entry, entry_signal, brackets, decisions}` | `tests/fixtures/trade_markers_v1.json` |
+| `GET /api/bot/prop-trades/{fill_id}/snapshot` | same envelope, `trade_id: null`, `prop_fill_id` = the opening fill | `tests/fixtures/trade_chart_snapshot_prop_v1.json` |
+| `GET /api/bot/prop-trades/{fill_id}/markers?interval=1h` | same as `/trades/{id}/markers`, `trade_id: null` | (shape of `trade_markers_v1.json`) |
 
 **Snapshot (closed trades).** Built ONCE per closed trade by a background writer and STORED (table
 `trade_chart_snapshots` in `trade_journal.db`, one zlib-compressed JSON payload per trade, stored without the
@@ -202,7 +207,7 @@ names it) · `not_built` (trade closed, snapshot not written yet: `snapshot` is 
 has that id or the trade is still open (use `/markers`).
 
 `snapshot` blocks (`schema: trade_chart_snapshot/v1`):
-- `trade` — the trade row: ids, account, strategy, symbol, direction, qty, open/close times, entry/exit price,
+- `trade` — the trade row: ids (`trade_id`, `prop_fill_id`, `ticket_id`; the ones that do not apply are `null`), account, strategy, symbol, direction, qty, open/close times, entry/exit price,
   `exit_reason`, `pnl` + `pnl_provenance`.
 - `frame` — the view box. `time_from`/`time_to` = open..close widened by 15% of the span on each side; <!-- population-ok: a framing rule from the operator spec, not a measurement -->
   `price_low`/`price_high` = the low/high of the candles between open and close, widened by 10% of that range on <!-- population-ok: a framing rule from the operator spec, not a measurement -->
