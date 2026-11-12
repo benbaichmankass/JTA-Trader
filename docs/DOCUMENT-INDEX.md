@@ -653,7 +653,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/WORK-STORE-DESIGN-2026-11.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | WORK-STORE-DESIGN: one register (items+events SQLite on the VM behind the API) replacing checklist+pipeline files; bot-output ledgers off the repo; measured repo-flow inventory; deploy path (keep ict-git-sync); migration dry-run; build order; operator decisions D1-D9. Design only. |
 | `docs/proposals/sizer-margin-base-2026-10-28.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/proposals/tier2-sweep-candle-anchoring-2026-07-30.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
-| `docs/reference/account-capability-matrix.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
+| `docs/reference/account-capability-matrix.md` | lookup | live | — | 2026-11-12 | `dir:reference-is-lookup / read:AM-TRADING-C2-prop-columns-reread-from-code-2026-11-12` | prop columns re-read from code at ca16a2781b; non-prop columns carried from f0b9698bbf; re-read when #25230/#25272/#25295 merge |
 | `docs/reference/backtest-data-loading.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
 | `docs/reference/bot-api-reference.md` | lookup | live | — | 2026-09-07 | `dir:reference-is-lookup / ci:canonical-doc-coherence-ACTIVE_DOCS` | — |
 | `docs/reference/data-model.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
