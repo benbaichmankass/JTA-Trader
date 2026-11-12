@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Changes .github/workflows/branch-protection-sync.yml (outside TIER1_SURFACE): REQUIRED_CONTEXTS goes from [pytest-collect, pytest-run, guards] to [guards] per the operator's 2026-11-12 gate decisions (PYTEST-COLLECT-REQUIRED: REMOVE; PYTEST-RUN-REQUIRED: MAKE REPORT-ONLY). It changes what can merge, so AM-DEVOPS merges it per the GATE-CI-LANDING dispatch. Revert: git revert (the workflow re-applies the old list on push).",
+  "why": "Apply the operator's 2026-11-12 decision to drop pytest-collect and pytest-run from the required checks on main."
+}
