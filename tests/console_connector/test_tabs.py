@@ -392,7 +392,7 @@ def test_work_items_recent_passes_since_and_slims(monkeypatch):
     assert "since=" in seen[0] and "limit=5" in seen[0] and seen[0].startswith("/api/bot/work/items?")
     assert out["items"][0]["by"] == "Manager Session 2026-11-11a" and out["items"][0]["source"] == "store"
     assert out["items"][1]["source"] == "checklist" and out["items"][1]["blocked_on"] == ["Y"]
-    assert out["population"]["store_items_total"] == 2700 and out["canonical"] is False
+    assert out["population"]["store_items_total"] == 2700 and out["canonical"] is True  # S4 freeze is committed
 
 
 def test_work_items_open_merges_states_newest_first(monkeypatch):
@@ -424,3 +424,35 @@ def test_work_items_sends_service_bearer_when_present(monkeypatch):
     monkeypatch.setenv("DASHBOARD_API_TOKEN", "x")
     tabs.work_items({"view": "due"})
     assert toks == ["x"]
+
+
+# ── after the S4 freeze: register reads come from the live store, not the frozen export ──
+@pytest.mark.store_register
+def test_frozen_register_reads_live_store(monkeypatch):
+    from src.console_connector import data as D
+    monkeypatch.setattr(D, "register_source", lambda repo: "work_store")
+    item = {"id": "LIVE-ROW", "kind": "build", "title": "from the store", "state": "in_flight", "owner": "m",
+            "lane": None, "tier": 1, "roadmap": ["L-OPS"], "due_rule": None, "due_at": None, "prs": [],
+            "blocked_on": [], "updated_at": "2026-11-12T07:49:35Z", "updated_by": "UI lane", "version": 3,
+            "priority_rank": None, "extra": {"_seq": 5, "_source": "checklist", "note": "n"}}
+    calls = []
+
+    def fake(url):
+        calls.append(url)
+        return {"readState": "read", "items": [item] if "kind=build" in url else []}
+    monkeypatch.setattr(D, "STORE_FETCH", fake)
+    out = D.work_rows(REPO, "in_flight", 5)
+    assert out["read_state"] == "read" and out["provenance"]["register_source"] == "work_store"
+    assert [r["id"] for r in out["sections"]["in_flight"]] == ["LIVE-ROW"]
+    n = len(calls)
+    D.work_rows(REPO, "all", 5)
+    assert len(calls) == n, "second read inside the TTL must come from the shared cache"
+
+
+@pytest.mark.store_register
+def test_frozen_register_store_down_is_could_not_look(monkeypatch):
+    from src.console_connector import data as D
+    monkeypatch.setattr(D, "register_source", lambda repo: "work_store")
+    monkeypatch.setattr(D, "STORE_FETCH", lambda url: {"readState": "could_not_look", "items": None, "error": "db"})
+    out = D.work_rows(REPO, "all", 5)
+    assert out["read_state"] == "could_not_look" and out["population"]["rows_scanned"] is None

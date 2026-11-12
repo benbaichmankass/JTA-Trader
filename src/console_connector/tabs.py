@@ -44,7 +44,7 @@ def _now() -> datetime:
 
 
 def _env(repo: Path, read_state: str, population: dict, provenance: dict | None = None, **rest: Any) -> dict:
-    prov = {"register": D.git_provenance(repo)}
+    prov = {"register": D.register_provenance(repo)}
     prov.update(provenance or {})
     return {"as_of": D._iso(_now()), "read_state": read_state, "population": population,
             "provenance": prov, **rest}
@@ -680,6 +680,14 @@ WORK_VIEWS = ("recent", "due", "open", "state")
 OPEN_ITEM_STATES = ("queued", "in_flight", "blocked", "routed", "landed_unproven")
 
 
+def _frozen() -> bool:
+    try:
+        from src.runtime import work_read
+        return work_read.frozen()
+    except Exception:  # noqa: BLE001  # allow-silent: unknown freeze state reports the route's own field
+        return False
+
+
 def _work_get(path: str) -> Any:
     tok = (os.environ.get("DASHBOARD_API_TOKEN") or "").strip() or None
     return FETCH(path, tok) if tok else _public(path)
@@ -769,6 +777,9 @@ def work_items(args: dict[str, Any]) -> dict[str, Any]:
             "population": {"store_items_total": doc.get("total"), "returned": len(slim), "offset": offset,
                            "limit": limit, "per_state": per_state,
                            "next_offset": offset + limit if len(slim) == limit else None},
-            "canonical": doc.get("canonical"),
-            "canonical_note": doc.get("note") or "the checklist + pipeline files stay canonical until WORK-STORE S4",
+            # the route still prints its S1-era "canonical": false; the committed S4 freeze is the fact
+            "canonical": True if _frozen() else doc.get("canonical"),
+            "canonical_note": ("register of record since the WORK-STORE S4 freeze (docs/claude/work/checklist/"
+                               "_header.json frozen_into_work_store); the repo row files are its export")
+            if _frozen() else (doc.get("note") or "the checklist + pipeline files are canonical until WORK-STORE S4"),
             "upstream": f"{LIVE_BASE}/api/bot/work/items"}
