@@ -7,14 +7,19 @@ back as an empty list (canonical § "Collapsed states").
 Sources, all PUBLIC repo files on the host's git checkout (``ict-git-sync`` keeps it at main):
   * checklist rows: ``docs/claude/work/checklist/`` via ``src.runtime.checklist_store``
   * pipeline items: ``docs/claude/work/pipeline/`` via ``scripts.ops.pipeline``
-Live-VM sources (alert ledger, work store ``/api/bot/work/items``) are NOT read here until the
+After the WORK-STORE S4 freeze both registers are read from the live work store (GET /api/bot/work/items,
+see _load_checklist). The alert ledger is NOT read here until the
 connector's sign-in (G1) is live; their sections report ``could_not_look`` with the reason.
 """
 from __future__ import annotations
 
+import json
+import os
 import subprocess
 import threading
 import time
+import urllib.parse
+import urllib.request
 from collections.abc import Callable
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -151,9 +156,109 @@ class TTLCache:
         return value
 
 
+# ── the register after the WORK-STORE S4 freeze ─────────────────────────────────────────────
+# Since S4 (#23962, 2026-11-06) the register lives in work_store.db on the trader VM, and the repo's
+# row files are a FROZEN EXPORT. This host has no work_store.db, so checklist_store.load() here reads that
+# 6-day-old export. When the header says frozen, read the live store through its open read route instead,
+# mapped to rows by the repo's own lossless mapping (work_read.checklist_rows / pipeline_result).
+WORK_ITEMS_URL = ((os.environ.get("CONSOLE_LIVE_BASE") or "https://ict-bot.duckdns.org").rstrip("/")
+                  + "/api/bot/work/items")
+STORE_TTL_S = 20.0
+_PAGE = 1000
+
+
+def _http_json(url: str) -> Any:
+    req = urllib.request.Request(url, method="GET")
+    tok = (os.environ.get("DASHBOARD_API_TOKEN") or "").strip()
+    if tok:
+        req.add_header("Authorization", f"Bearer {tok}")
+    with urllib.request.urlopen(req, timeout=25) as resp:  # read-only GET
+        return json.loads(resp.read().decode("utf-8"))
+
+
+#: Injectable for tests: url -> parsed JSON.
+STORE_FETCH: Callable[[str], Any] = _http_json
+
+
+def _fresh(item: dict) -> dict:
+    """The row's own updated_at/by live in ``extra`` and are refreshed only when a writer sets them; the
+    store's item-level stamp moves on every write. Keep the newer one, so row ages are not days stale."""
+    ex = item.get("extra")
+    if isinstance(ex, dict) and str(item.get("updated_at") or "") > str(ex.get("updated_at") or ""):
+        item = {**item, "extra": {**ex, "updated_at": item.get("updated_at"), "updated_by": item.get("updated_by")}}
+    return item
+
+
+class RemoteWorkStore:
+    """The slice of ``WorkStore`` that work_read's mappers use (``list_items``), over GET /api/bot/work/items."""
+
+    def list_items(self, *, kind: str | None = None, due: bool = False, limit: int = 10 ** 7, **_: Any) -> list[dict]:
+        out: list[dict] = []
+        offset = 0
+        while len(out) < limit:
+            q = {"limit": _PAGE, "offset": offset}
+            if kind:
+                q["kind"] = kind
+            if due:
+                q["due"] = 1
+            doc = STORE_FETCH(WORK_ITEMS_URL + "?" + urllib.parse.urlencode(q))
+            page = doc.get("items") if isinstance(doc, dict) else None
+            if page is None or doc.get("readState") == "could_not_look":
+                raise RuntimeError(f"work store read failed: {(doc or {}).get('error') if isinstance(doc, dict) else doc}")
+            out.extend(_fresh(i) for i in page)
+            if len(page) < _PAGE:
+                break
+            offset += _PAGE
+        return out[:limit]
+
+
+_STORE_CACHE: TTLCache | None = None
+
+
+def register_source(repo: Path) -> str:
+    """``work_store`` when the register is frozen into the store (S4), else ``files``."""
+    from src.runtime import work_read
+    return "work_store" if work_read.frozen(repo) and work_read.local_store() is None else "files"
+
+
 def _load_checklist(repo: Path) -> dict:
     from src.runtime import checklist_store as cs
-    return cs.load(repo=repo)
+    if register_source(repo) != "work_store":
+        return cs.load(repo=repo)
+
+    def build() -> dict:
+        from src.runtime import work_read
+        head = json.loads((repo / work_read.CHECKLIST_STORE / work_read.HEADER).read_text(encoding="utf-8"))
+        return {**head, "items": work_read.checklist_rows(RemoteWorkStore()), "_source": "work_store"}
+    return _store_cache().get("checklist", STORE_TTL_S, build)
+
+
+def load_pipeline(repo: Path):
+    """``pipeline.LoadResult`` from the live store after the freeze, else from the files."""
+    from scripts.ops import pipeline as pl
+    if register_source(repo) != "work_store":
+        return pl.read_log(repo / pl.STORE)
+
+    def build():
+        from src.runtime import work_read
+        return work_read.pipeline_result(RemoteWorkStore())
+    return _store_cache().get("pipeline", STORE_TTL_S, build)
+
+
+def _store_cache() -> TTLCache:
+    global _STORE_CACHE
+    if _STORE_CACHE is None:
+        _STORE_CACHE = TTLCache()
+    return _STORE_CACHE
+
+
+def register_provenance(repo: Path) -> dict[str, Any]:
+    prov = git_provenance(repo)
+    src = register_source(repo)
+    prov["register_source"] = src
+    if src == "work_store":
+        prov["register_url"] = WORK_ITEMS_URL
+    return prov
 
 
 def _slim(row: dict, today: date, now: datetime) -> dict:
@@ -178,7 +283,7 @@ def work_rows(repo: Path, view: str = "all", limit: int = 25, today: date | None
     now = _now()
     today = today or now.date()
     base: dict[str, Any] = {"as_of": _iso(now), "source": "checklist", "view": view,
-                            "provenance": git_provenance(repo)}
+                            "provenance": register_provenance(repo)}
     try:
         data = _load_checklist(repo)
     except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as could_not_look with the error
@@ -222,7 +327,7 @@ def inbox(repo: Path, limit: int = 25, today: date | None = None) -> dict[str, A
     """The Inbox tab: decisions waiting on the operator (checklist edges + pipeline asks) and alerts."""
     now = _now()
     today = today or now.date()
-    out: dict[str, Any] = {"as_of": _iso(now), "provenance": git_provenance(repo), "sections": {}}
+    out: dict[str, Any] = {"as_of": _iso(now), "provenance": register_provenance(repo), "sections": {}}
 
     # 1. checklist rows blocked on an operator decision
     try:
@@ -247,7 +352,7 @@ def inbox(repo: Path, limit: int = 25, today: date | None = None) -> dict[str, A
     # 2. pipeline items that declare next_action: ask_operator
     try:
         from scripts.ops import pipeline as pl
-        res = pl.read_log(repo / pl.STORE)
+        res = load_pipeline(repo)
         asks = []
         for item in res.items.values():
             if item.get("next_action") != "ask_operator" or item.get("state") in pl.TERMINAL_STATES:
@@ -275,11 +380,3 @@ def inbox(repo: Path, limit: int = 25, today: date | None = None) -> dict[str, A
                                  "population": {"rows_scanned": None},
                                  "reason": "alert ledger is on the live VM; served once the connector's sign-in (G1) is live"}
     return out
-
-
-def work_items() -> dict[str, Any]:
-    """Work-store items (WORK-STORE S1, /api/bot/work/items). Not built yet: say so, never return []."""
-    return {"as_of": _iso(_now()), "read_state": "could_not_look", "count": None, "items": [],
-            "population": {"rows_scanned": None},
-            "reason": "the work store route /api/bot/work/items (WORK-STORE S1) is not live yet; "
-                      "the Work tab reads checklist rows (work_rows) meanwhile"}
