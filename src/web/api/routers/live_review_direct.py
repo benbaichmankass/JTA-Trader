@@ -139,3 +139,40 @@ def row_receipt(review_id: str) -> Any:
         "pending" if submitted or found else "unknown")
     return {"readState": read_state, "review_id": review_id, "submitted_direct": submitted, "state": state,
             "receipt": found or None}
+
+
+# ─────────────────────────── TRADE-ACTION-DIRECT-PATH phase 1b: the SPA console's Approve (second surface)
+# The SAME state machine as the Telegram button (src/runtime/trade_approvals.decide): whichever surface decides
+# first wins; the other reads ``already_<state>``. Behind the operator's SPA session (require_session, the
+# default-deny dependency), never a service token: only the signed-in operator may execute an approval.
+
+from fastapi import Depends  # noqa: E402
+
+from src.web.api.auth import require_session  # noqa: E402
+
+
+@router.get("/api/bot/trade-approvals")
+def list_trade_approvals(state: Optional[str] = None, _session: dict = Depends(require_session)) -> Any:
+    from src.runtime import trade_approvals
+    store = trade_approvals.read_pending()
+    asks = sorted((store.get("asks") or {}).values(), key=lambda a: str(a.get("created_at")), reverse=True)
+    if state:
+        asks = [a for a in asks if a.get("state") == state]
+    return {"readState": "read", "count": len(asks), "asks": asks[:200]}
+
+
+@router.post("/api/bot/trade-approvals/{token}")
+async def decide_trade_approval(token: str, request: Request, session: dict = Depends(require_session)) -> Any:
+    from src.runtime import trade_approvals
+    if not re.fullmatch(r"[0-9a-f]{10}", token):
+        raise HTTPException(status_code=400, detail="bad token")
+    try:
+        body = await request.json()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="body is not JSON")
+    choice = (body or {}).get("choice") if isinstance(body, dict) else None
+    if choice not in ("approve", "reject"):
+        raise HTTPException(status_code=400, detail="choice must be approve or reject")
+    res = trade_approvals.decide(token, choice, authorised=True, source="spa")
+    code = {"approved": 200, "rejected": 200, "unknown": 404, "expired": 410}.get(res["outcome"], 409)
+    return JSONResponse(status_code=code, content=res)
