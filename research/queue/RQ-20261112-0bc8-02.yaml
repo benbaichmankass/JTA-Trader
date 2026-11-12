@@ -23,7 +23,7 @@ question: 'Operator 2026-11-12 07:46Z (planning page p3, verbatim choice "Also t
   walk-forward, the head FAILS B4 KEEP: -0.0141 R/trade pooled) and RQ-20261101-78fc-03 (ETH OOS control). The champion is weak, so this
   measures improvement over its recipe, not absolute skill.'
 why_this_matters: 'The exit head closes or annotates live trend_donchian trades (src/runtime/exit_head_apply.py; trend_donchian and
-  trend_donchian_eth and trend_donchian_sol are all at annotate on main; corrected 2026-11-12 after the run, the field was misread from a stale config comment). Its features are price/position-only; no volume-composition column
+  trend_donchian_eth are at annotate, trend_donchian_sol at close). Its features are price/position-only; no volume-composition column
   exists. A composition lift that beats plain volume would be the first new feature family with a mechanism for this head; a null closes
   this configuration and says the f5c8-02 signal does not reach exit decisions at the 1h grain.'
 evidence_class:
@@ -81,7 +81,7 @@ value:
   bucket: ai_trader
   usd_at_stake_per_month: 150
   confidence: 0.15
-  basis: 'stand-in: the head is scored on 3 trend_donchian legs, all at exit_head_action annotate (no order changed); not a P&L measurement.'
+  basis: 'stand-in: the head acts on 3 trend_donchian legs (close on _sol, annotate on BTC/_eth); not a P&L measurement.'
 routing:
   needs_trainer_resident_data: true
   needs_gpu: false
