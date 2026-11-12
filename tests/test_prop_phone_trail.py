@@ -3,7 +3,8 @@
 Plan computation reuses prop_trail.plan_trail; the claim channel serves ONE amend per ticket, only to an app
 that declares it. An unverifiable result fails THAT attempt only: backoff, retry, ONE red flag after
 FLAG_AFTER in a row, recovery announced once (operator directive 2026-10-09: "There is no halting.").
-Only a human-moved stop holds the trail, until the human's levels are on record."""
+A human-moved stop is RECORDED, never held (AM-PROP-HUMAN-HOLD removed, operator 2026-11-12); trail-plan guards are
+report-only (AM-PHONE-TRAIL-PLAN-GUARDS)."""
 from __future__ import annotations
 
 import hashlib
@@ -110,15 +111,58 @@ def test_no_amend_when_not_tighter_or_through_price():
     ptr.plan_amends("breakout_2", now=NOW, candles_fn=lambda s, tf: _candles([2505, 2508, 2510]))
     assert not _trail().get("amend")  # trail 2440 < resting 2450
     _parent("T2")
-    ptr.plan_amends("breakout_2", now=NOW, candles_fn=lambda s, tf: _candles([2520, 2560, 2600], last_close=2531))
-    assert not _trail("T2").get("amend")  # 2530 within the buffer of the price 2531
+    out = ptr.plan_amends("breakout_2", now=NOW,
+                          candles_fn=lambda s, tf: _candles([2520, 2560, 2600], last_close=2531))
+    # AM-PHONE-TRAIL-PLAN-GUARDS: MAKE REPORT-ONLY (operator 2026-11-12). 2530 is within the buffer of the feed price
+    # 2531: the amend is emitted anyway and the cause is logged; the phone's venue-mark check / the venue answers.
+    am = _trail("T2")["amend"]
+    assert am["status"] == "emitted" and am["sl"] == pytest.approx(2530.0)
+    assert any("within" in str(x.get("report_only", "")) for x in out["log"])
 
 
-def test_test_tickets_and_unplaced_tickets_are_not_planned():
+def test_test_tickets_are_planned_report_only_and_unplaced_tickets_are_not():
+    # AM-PHONE-TRAIL-PLAN-GUARDS: MAKE REPORT-ONLY. A test ticket is logged and planned; an `emitted` ticket (never
+    # placed: there is no position to amend) is still not read at all.
     _parent("TT", meta={"test": True})
     _parent("TE", status="emitted")
     out = ptr.plan_amends("breakout_2", now=NOW, candles_fn=lambda s, tf: UP)
-    assert out["emitted"] == []
+    assert out["emitted"] == ["TT#a1"]
+    assert any(x.get("ticket_id") == "TT" and "test ticket" in str(x.get("report_only")) for x in out["log"])
+
+
+def test_old_tickets_are_planned_report_only():
+    _parent()
+    conn = prop_journal._connect()
+    try:
+        conn.execute("UPDATE prop_tickets SET created_at = ? WHERE ticket_id = 'T1'",
+                     ((NOW - timedelta(days=ptr.MAX_AGE_DAYS + 1)).isoformat(),))
+        conn.commit()
+    finally:
+        conn.close()
+    out = ptr.plan_amends("breakout_2", now=NOW, candles_fn=lambda s, tf: UP)
+    assert any("older than" in str(x.get("report_only")) for x in out["log"])
+    assert out["emitted"] == ["T1#a1"]   # it was planned, not skipped
+
+
+def test_no_declared_leg_is_logged_with_its_cause():
+    prop_journal.record_ticket({
+        "ticket_id": "NL", "account_id": "breakout_2", "strategy": "no_such_leg", "symbol": "ETHUSDT",
+        "direction": "long", "entry": 2500.0, "sl": 2450.0, "tp": 2800.0, "qty": 0.5,
+        "signal_time": SIG.isoformat(), "valid_until": (SIG + timedelta(minutes=10)).isoformat(), "status": "placed"})
+    out = ptr.plan_amends("breakout_2", now=NOW, candles_fn=lambda s, tf: UP)
+    assert out["emitted"] == [] and any("no declared trail leg" in str(x.get("why")) for x in out["log"])
+
+
+def test_an_unclaimed_outstanding_amend_is_superseded_by_a_different_plan():
+    # Report-only: an outstanding (emitted, unclaimed) amend no longer stops the next bar's plan.
+    _parent()
+    ptr.plan_amends("breakout_2", now=NOW + timedelta(minutes=54), candles_fn=lambda s, tf: UP)   # 14:55, valid 20 min
+    assert _trail()["amend"]["id"] == "T1#a1"
+    later = _candles([2520, 2560, 2600, 2650])
+    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=1), candles_fn=lambda s, tf: later)  # 15:01
+    tr = _trail()
+    assert out["emitted"] == ["T1#a2"] and tr["amend"]["sl"] == pytest.approx(2580.0)
+    assert tr["history"][-1]["status"] == "superseded" and tr["history"][-1]["id"] == "T1#a1"
 
 
 def test_close_lever_alerts_once_never_acts(_iso):
@@ -279,15 +323,17 @@ def test_dry_refusal_pings_once_per_streak_without_a_hand_set_ask(_iso, monkeypa
     assert not any("SET THE STOP BY HAND" in m for m in _iso), "nothing to set by hand when no live amend was due"
 
 
-def test_backoff_then_retry():
+def test_backoff_is_report_only_every_closed_bar_retries():
+    # AM-PHONE-TRAIL-PLAN-GUARDS: MAKE REPORT-ONLY (operator 2026-11-12). The 1/2/4/8-bar backoff is logged, never
+    # waited: each closed bar after a failure re-plans and re-emits. The streak counter still counts.
     a = _claimed()
-    _report(a, "refused", reason="x")                      # fail 1 -> wait 1 bar
-    assert _attempt(1) is not None                         # fail 2 -> wait 2 bars (from NOW+1h)
-    assert _attempt(2) is None                             # inside the backoff: no plan, no claim
-    assert _trail()["amend"]["id"] == "T1#a2"
-    assert _attempt(3) is not None                         # wait passed: retried (fail 3 -> wait 4 bars)
-    assert _attempt(5) is None and _attempt(6) is None
-    assert _attempt(7)["amend_id"] == "T1#a4"              # fail 4 -> wait 8 bars (cap)
+    _report(a, "refused", reason="x")
+    got = [_attempt(h) for h in range(1, 7)]
+    assert all(g is not None for g in got), [g and g["amend_id"] for g in got]
+    assert _trail()["amend"]["id"] == "T1#a7" and _trail()["fails"] == 7
+    t = NOW + timedelta(hours=7)
+    out = ptr.plan_amends("breakout_2", now=t, candles_fn=lambda s, tf: _rising(7))
+    assert out["emitted"] == ["T1#a8"] and any("not applied" in str(x.get("report_only")) for x in out["log"])
     assert ptr._backoff_bars(4) == ptr._backoff_bars(50) == ptr.BACKOFF_CAP_BARS
 
 
@@ -306,21 +352,27 @@ def test_repeated_failures_raise_one_red_flag_and_keep_trying_then_recover(_iso)
     assert sum("RECOVERED" in m for m in _iso) == 1 and not _trail().get("flagged") and _trail()["fails"] == 0
 
 
-def test_human_moved_still_defers_until_the_human_stop_is_on_record(_iso):
+def test_human_moved_is_recorded_and_no_longer_holds_the_trail(_iso):
+    # AM-PROP-HUMAN-HOLD: REMOVE (operator 2026-11-12). human_moved is RECORDED (human_hold kept as a record and an
+    # alert names it) but planning, claiming and a reviewed TP amend all go through.
     a = _claimed()
     _report(a, "human_moved", reason="terminal SL 2470 != 2450")
     assert "human" in _trail()["human_hold"]
+    assert sum("trail is NOT held" in m for m in _iso) == 1
+    assert ptr.request_tp_amend("breakout_2", "T1", 2900.0, reason="x", now=NOW)["ok"] is True
     later = _candles([2520, 2560, 2600, 2700], last_close=2690)
-    for h in (1, 5, 30):  # the trail never fights a human's stop, whatever the price does
-        ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=h), candles_fn=lambda s, tf: later)
-        assert ptr.claim_amend(_dev(), now=NOW + timedelta(hours=h)) is None
-    assert ptr.request_tp_amend("breakout_2", "T1", 2900.0, reason="x", now=NOW)["ok"] is False
-    assert sum("will not override a human" in m for m in _iso) == 1
-    # the human {kind: amend} report puts the human's stop on record and the trail resumes from it
+    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=1), candles_fn=lambda s, tf: later)
+    assert any("human_hold on record" in str(x.get("report_only")) for x in out["log"])
+    c = ptr.claim_amend(_dev(), now=NOW + timedelta(hours=1))
+    assert c is not None
+    # positive control: the amend still carries the server's resting stop, so the phone's own pre-click check (the
+    # venue-side answer) compares the terminal before any click; the human {kind: amend} report still updates it
+    assert c["from_sl"] == 2450.0
+    _report(c, "refused", reason="terminal stop 2470.0 != expected 2450.0")
     assert ptr.note_human_amend("breakout_2", "T1", sl=2470.0)
     assert not _trail().get("human_hold") and _trail()["resting_sl"] == 2470.0
-    ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=31), candles_fn=lambda s, tf: later)
-    assert ptr.claim_amend(_dev(), now=NOW + timedelta(hours=31))["from_sl"] == 2470.0
+    ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=2), candles_fn=lambda s, tf: later)
+    assert ptr.claim_amend(_dev(), now=NOW + timedelta(hours=2))["from_sl"] == 2470.0
 
 
 def test_stop_is_never_loosened_after_failures():
@@ -350,11 +402,12 @@ def test_stale_lock_from_the_old_code_is_ignored(caplog):
     _parent("T4", meta={ptr.KEY: {"locked": "the terminal's stop differs from the server's: a human moved it"}})
     with caplog.at_level("INFO", logger="src.prop.phone_trail"):
         out = ptr.plan_amends("breakout_2", now=NOW, candles_fn=lambda s, tf: UP)
-    assert sorted(out["emitted"]) == ["T1#a1", "T2#a1", "T3#a1"]
+    # T4's old human-moved lock is carried over as a human_hold RECORD; since AM-PROP-HUMAN-HOLD was removed
+    # (operator 2026-11-12) it no longer holds the trail, so T4 is planned too.
+    assert sorted(out["emitted"]) == ["T1#a1", "T2#a1", "T3#a1", "T4#a1"]
     assert sum("ignoring stale" in r.getMessage() for r in caplog.records) == 3
     assert "locked" not in _trail("T1") and "ended" not in _trail("T3")
-    # an old human-moved lock is carried over as the human hold: a human's stop stays held
-    assert "human" in ptr._load_trail({ptr.KEY: _trail("T4")}, "T4")["human_hold"] and not _trail("T4").get("amend")
+    assert "human" in ptr._load_trail({ptr.KEY: _trail("T4")}, "T4")["human_hold"]
 
 
 def test_no_position_never_ends_the_trail(_iso):
@@ -512,11 +565,12 @@ def test_failed_exit_amend_retries_every_closed_bar_not_with_backoff():
     assert _trail()["fails"] == 6 and _trail()["flagged"]          # still ONE red flag at FLAG_AFTER, never a latch
 
 
-def test_non_exit_amend_keeps_its_backoff():
+def test_non_exit_amend_backoff_is_report_only():
+    # AM-PHONE-TRAIL-PLAN-GUARDS: MAKE REPORT-ONLY. Before 2026-11-12 the third attempt waited 2 bars.
     _parent()
     assert _attempt(0) is not None
-    assert _attempt(1) is not None       # backoff 1 bar after the first failure
-    assert _attempt(2) is None           # backoff 2 bars after the second
+    assert _attempt(1) is not None
+    assert _attempt(2) is not None
 
 
 def _order_package(opid, status, close_reason=None):
@@ -609,12 +663,12 @@ def test_unread_is_decided_by_the_evidence_not_the_word_human(_iso):
                             {"rows": [{"type": "stop", "trigger": 2470.0, "n_px": 1}]}) is None
 
 
-def test_a_genuine_human_move_still_holds(_iso):
+def test_a_genuine_human_move_is_recorded_not_held(_iso):
     a = _claimed()
     _report(a, "human_moved", reason="terminal stop 2470.0 != expected 2450.0 (sheet close: escape)",
             form={"ok": True, "n_stop": 1, "rows": [{"type": "stop", "trigger": 2470.0, "n_px": 1}]})
-    assert "human" in _trail()["human_hold"]
-    assert sum("will not override a human" in m for m in _iso) == 1
+    assert "human" in _trail()["human_hold"]          # the record stays (AM-PROP-HUMAN-HOLD: REMOVE, 2026-11-12)
+    assert sum("trail is NOT held" in m for m in _iso) == 1
 
 
 def _held_meta(reason: str, *, trigger=None, n_px=2):
@@ -641,42 +695,30 @@ def test_hold_written_from_an_unread_report_is_released_on_the_next_plan(_iso):
     assert ptr.claim_amend(_dev(), now=NOW + timedelta(hours=1))["amend_id"] == "T1#a2"
 
 
-def test_hold_from_a_genuine_human_move_is_never_released_by_the_planner(_iso):
+def test_hold_from_a_genuine_human_move_no_longer_blocks_the_plan(_iso):
+    # The record is never released by the planner (a genuine move), but since AM-PROP-HUMAN-HOLD was removed
+    # (operator 2026-11-12) it no longer stops the plan or the claim.
     _parent(meta=_held_meta("terminal stop 2470.0 != expected 2450.0 (sheet close: escape)", trigger=2470.0, n_px=1))
     later = _candles([2520, 2560, 2600, 2640])
     out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=1), candles_fn=lambda s, tf: later)
-    assert "human" in _trail()["human_hold"] and out["emitted"] == []
-    assert ptr.claim_amend(_dev(), now=NOW + timedelta(hours=1)) is None
+    assert "human" in _trail()["human_hold"] and out["emitted"] == ["T1#a2"]
+    assert ptr.claim_amend(_dev(), now=NOW + timedelta(hours=1))["amend_id"] == "T1#a2"
 
 
 # ---------------------------------------------------------------------------------------------------------------
-# A NEW signed exec.js waives a running backoff ONCE (operator 2026-10-18: breakout_2 #a8 sat at fails=7 = an 8-bar
-# wait while the reader fix shipped signed; the fix is tried on the next plan, not tomorrow).
+# AM-PHONE-TRAIL-PLAN-GUARDS: MAKE REPORT-ONLY (operator 2026-11-12). The backoff no longer delays a retry, so the
+# one-time exec.js waiver of it is moot: each failure still records the served exec.js on the backoff record, and
+# the next closed bar re-plans whatever script is served.
 # ---------------------------------------------------------------------------------------------------------------
-def test_new_served_exec_js_waives_the_backoff_once(_iso, monkeypatch):
+def test_failure_records_the_served_exec_js_and_the_next_bar_replans(_iso, monkeypatch):
     monkeypatch.setattr(ptr, "_served_exec_js", lambda: "2026-10-18.3")
     a = _claimed()
     _report(a, "refused", reason="sheet volume 0.5 != ticket qty 0.52")
     assert _trail()["backoff"] == {"n": 1, "since": a["claimed_at"], "exec_js": "2026-10-18.3"}
-    # a second failure one bar later: 2 closed bars of backoff (until NOW+3h), recorded against the same script
-    b = _attempt(2, "refused", reason="sheet volume 0.5 != ticket qty 0.52")
-    assert b is not None and _trail()["fails"] == 2 and _trail()["backoff"]["exec_js"] == "2026-10-18.3"
-    later = _rising(6)
-    # same script, next closed bar, still inside the 2-bar wait (until NOW+4h): nothing emitted
-    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=3, minutes=5), candles_fn=lambda s, tf: later)
-    assert out["emitted"] == []
-    # a NEWER served script: the wait is waived once, the plan emits from the server's resting stop
-    monkeypatch.setattr(ptr, "_served_exec_js", lambda: "2026-10-18.4")
-    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=3, minutes=6), candles_fn=lambda s, tf: later)
-    assert out["emitted"] == ["T1#a3"], out["log"]
-    assert any("backoff waived once" in x.get("why", "") for x in out["log"])
-    assert _trail()["backoff"]["exec_js"] == "2026-10-18.4"
-    # ... and only once per version: a failure on the new script backs off normally (4 bars now)
-    c = ptr.claim_amend(_dev(), now=NOW + timedelta(hours=3, minutes=6))
-    _report(c, "refused", reason="sheet volume 0.5 != ticket qty 0.52")
-    assert _trail()["fails"] == 3
-    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=4, minutes=5), candles_fn=lambda s, tf: later)
-    assert out["emitted"] == []
+    b = _attempt(1, "refused", reason="sheet volume 0.5 != ticket qty 0.52")
+    assert b is not None and _trail()["fails"] == 2
+    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=2, minutes=5), candles_fn=lambda s, tf: _rising(2))
+    assert out["emitted"] == ["T1#a3"]
 
 
 def test_backoff_without_a_served_script_keeps_its_clock(_iso, monkeypatch):
@@ -711,22 +753,18 @@ def test_closed_sheet_edit_gate_emits_nothing_and_alerts_once(_iso, monkeypatch)
     assert ptr.claim_amend(_dev(), now=NOW + timedelta(minutes=6))["from_sl"] == 2450.0
 
 
-def test_gated_plans_do_not_consume_the_exec_js_waiver(_iso, monkeypatch):
-    monkeypatch.setattr(ptr, "_served_exec_js", lambda: "2026-10-18.3")
+def test_closed_gate_then_open_gate_emits_on_the_next_plan_after_failures(_iso, monkeypatch):
+    # The sheet_edit gate (AM-PHONE-SHEET-EDIT-GATE, not decided 2026-11-12) is untouched; the backoff it used to
+    # interact with is report-only now, so the first plan after the gate opens emits.
     a = _claimed()
     _report(a, "refused", reason="sheet read verified; the pencil click waits for the server's sheet_edit")
-    b = _attempt(2, "refused", reason="sheet read verified; the pencil click waits for the server's sheet_edit")
-    assert b is not None and _trail()["backoff"]["n"] == 2   # 2 closed bars: until NOW+4h
     later = _rising(6)
-    # the gate closes; a newer script is served; gated plans return before the backoff check (waiver untouched)
     monkeypatch.setattr(ptr, "_sheet_edit_gate", lambda acct: {"enabled": False, "source": "drills", "passes": 2, "needed": 3})
-    monkeypatch.setattr(ptr, "_served_exec_js", lambda: "2026-10-18.4")
-    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=2, minutes=10), candles_fn=lambda s, tf: later)
-    assert out["emitted"] == [] and _trail()["backoff"]["exec_js"] == "2026-10-18.3"
-    # the gate opens inside the wait: the waiver fires now and the amend emits
+    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=1, minutes=10), candles_fn=lambda s, tf: later)
+    assert out["emitted"] == []
     monkeypatch.setattr(ptr, "_sheet_edit_gate", lambda acct: {"enabled": True, "source": "drills", "passes": 3, "needed": 3})
-    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=3, minutes=5), candles_fn=lambda s, tf: later)
-    assert out["emitted"] == ["T1#a3"] and _trail()["backoff"]["exec_js"] == "2026-10-18.4"
+    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=1, minutes=11), candles_fn=lambda s, tf: later)
+    assert out["emitted"] == ["T1#a2"]
 
 
 def test_a_declared_widen_is_emitted_and_served_with_its_intent():

@@ -36,7 +36,8 @@ Contract (every rule fails closed):
   ONE red flag; the first success after a flag announces recovery once. A ``no_position``
   read is a miss, never an end: it backs off and re-checks (a position that is really gone
   is simply never amended again; the ticket ages out after :data:`MAX_AGE_DAYS`).
-* **A human's stop is never fought.** ``human_moved`` holds the ticket's trail
+* ~~A human's stop is never fought~~ REMOVED 2026-11-12 (AM-PROP-HUMAN-HOLD): ``human_moved`` is RECORDED as
+  ``human_hold`` and no longer stops planning, claiming or a reviewed amend. Historical text: ``human_moved`` held the ticket's trail
   (``human_hold``) until the human's levels are on record (a ``{kind: amend}`` report,
   :func:`note_human_amend`); the trail then resumes from them. That is the operator acting,
   not a self-halt. A ``locked``/``ended`` state persisted by the pre-2026-10-09 code is
@@ -400,13 +401,21 @@ def _plan_one(conn: Any, r: Any, account_id: str, now: datetime, legs: Mapping[s
 
     tid, raw = r["ticket_id"], r["meta"]
     m = _meta(raw)
+    # Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PHONE-TRAIL-PLAN-GUARDS: MAKE REPORT-ONLY. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+    # The test-ticket and age checks below used to skip the ticket; they now only log a named cause and the
+    # trail plans it. Only what physically cannot be computed (no declared leg, no timeframe, no entry/sl,
+    # a claimed amend the phone is executing right now) still ends this ticket's plan, with the cause logged.
     if m.get("test"):
-        return
+        out["log"].append({"ticket_id": tid, "report_only": "test ticket (planned; AM-PHONE-TRAIL-PLAN-GUARDS)"})
     created = _parse(r["created_at"])
     if created and (now - created) > timedelta(days=MAX_AGE_DAYS):
-        return
+        out["log"].append({"ticket_id": tid, "report_only": f"ticket older than {MAX_AGE_DAYS} days (planned; "
+                                                            "AM-PHONE-TRAIL-PLAN-GUARDS)"})
     leg = legs.get(str(r["strategy"] or ""))
     if not leg:
+        # Cannot be computed, not a policy: the trail geometry lives on the declared leg.
+        out["log"].append({"ticket_id": tid, "why": f"no declared trail leg for strategy {r['strategy']!r}: "
+                                                    "nothing to compute"})
         return
     tr = _load_trail(m, tid)
     raw, m = _note_divergence(conn, r, raw, m, tr, now, out)
@@ -428,15 +437,20 @@ def _plan_one(conn: Any, r: Any, account_id: str, now: datetime, legs: Mapping[s
                                      "operator's phone_accounts.<acct>.sheet_edit pin")
         return
     if tr.get("human_hold"):
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PROP-HUMAN-HOLD: REMOVE. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+        # A human_hold no longer stops the plan: it is logged and the trail plans from the server's resting stop.
+        # The phone's own pre-click check still compares the terminal with ``from_sl`` before any click.
         released = _release_unread_hold(tr, tid, now)
         if released is None:
-            return  # a human's stop is on the terminal: never fought; resumes on their {kind: amend} report
-        m2 = {**m, KEY: tr}
-        if not _cas(conn, tid, raw, m2):
-            return
-        raw, m = json.dumps(m2), m2
-        out["alerts"].append(f"{tid}: hold RELEASED — the 'human_moved' on record was an unread stop, not a human "
-                             f"move ({released}); the trail re-plans from the server's resting stop")
+            out["log"].append({"ticket_id": tid, "report_only": f"human_hold on record ({tr.get('human_hold')}); "
+                                                                "planned anyway (AM-PROP-HUMAN-HOLD removed)"})
+        else:
+            m2 = {**m, KEY: tr}
+            if not _cas(conn, tid, raw, m2):
+                return
+            raw, m = json.dumps(m2), m2
+            out["alerts"].append(f"{tid}: hold RELEASED — the 'human_moved' on record was an unread stop, not a "
+                                 f"human move ({released}); the trail re-plans from the server's resting stop")
     am = dict(tr.get("amend") or {})
     st = am.get("status")
     # Watchdog: a CLAIMED amend with no report means the stop on the terminal is UNKNOWN. That attempt
@@ -453,11 +467,20 @@ def _plan_one(conn: Any, r: Any, account_id: str, now: datetime, legs: Mapping[s
                         "the terminal is UNKNOWN until the next attempt reads it. Retrying with backoff")
             if _cas(conn, tid, raw, {**m, KEY: tr}):
                 out["alerts"].extend(wd_alerts)
+            return
+        # Physical, not policy: the phone holds this claimed amend and is executing it now; its report settles it.
+        out["log"].append({"ticket_id": tid, "why": f"amend {am.get('id')} claimed by the phone and in flight"})
         return
+    outstanding: Optional[Dict[str, Any]] = None
     if st == "emitted":
         vu = _parse(am.get("valid_until"))
         if vu and vu > now:
-            return  # one outstanding per ticket
+            # Report-only (AM-PHONE-TRAIL-PLAN-GUARDS): an unclaimed amend no longer stops the plan. The plan runs;
+            # a different amend supersedes the unclaimed one, an identical one leaves it in place.
+            outstanding = am
+            out["log"].append({"ticket_id": tid, "report_only": f"amend {am.get('id')} outstanding (unclaimed); "
+                                                                "planned anyway"})
+    if st == "emitted" and outstanding is None:
         am["status"] = "expired"
         tr["amend"] = am
         _hist(tr, {**am, "at": now.isoformat()})
@@ -476,18 +499,16 @@ def _plan_one(conn: Any, r: Any, account_id: str, now: datetime, legs: Mapping[s
     # attempts in ~24h on breakout_2 prop-manual-2e786ef17c05). Still per-attempt, never a latch.
     wait_bars = 1 if (tr.get("exit_alerted") or tr.get("diverged")) else _backoff_bars(int(bo.get("n") or 1))
     if since is not None and now < since + timedelta(minutes=tf_min * wait_bars):
-        # backing off after a failed attempt: retried once the wait has passed, never dropped. ONE exception
-        # (operator 2026-10-18, breakout_2 #a8 at fails=7 = an 8-bar wait): a NEW signed exec.js is a new reader,
-        # so the wait is waived ONCE per served version — the fix is tried on the next plan, not tomorrow.
-        served = _served_exec_js()
-        if not served or bo.get("exec_js") == served:
-            return
-        was = bo.get("exec_js") or "unknown"
-        tr["backoff"] = {**bo, "exec_js": served, "waived_at": now.isoformat()}
-        out["log"].append({"ticket_id": tid, "why": f"backoff waived once: exec.js {served} is newer than the "
-                                                    f"script the last attempt ran ({was})"})
+        # Report-only (AM-PHONE-TRAIL-PLAN-GUARDS): the 1/2/4/8-bar backoff after a failed attempt no longer delays
+        # the retry. It is logged (the wait it would have imposed, and the failure streak) and the ticket re-plans on
+        # the next closed bar like any other. The streak counter, first-failure ping and red flag are unchanged.
+        out["log"].append({"ticket_id": tid, "report_only": f"backoff of {wait_bars} bar(s) after {bo.get('n')} "
+                                                            "failed attempt(s) not applied; retried this bar"})
     bar = _closed_bar_start(now, tf_min)
     if tr.get("last_bar") == bar:
+        # The trail's compute clock, not a refusal: the replay runs on CLOSED bars, so a second plan inside the same
+        # bar recomputes the same answer from the same candles (an uncached fetch on every phone poll). Logged.
+        out["log"].append({"ticket_id": tid, "why": f"already planned on the bar closing {bar}"})
         return
     step = _price_step(account_id, r["symbol"])
     resting_sl, resting_tp = _levels(r, tr, step)
@@ -522,10 +543,13 @@ def _plan_one(conn: Any, r: Any, account_id: str, now: datetime, legs: Mapping[s
         # the new stop clears it by max(2 steps, QUOTE_BUFFER_ATR x entry ATR), as prop_trail does on the venue.
         px = float(candles["close"].iloc[-1])
         buf = max(2 * (step or 0.0), QUOTE_BUFFER_ATR * float(plan.detail.get("atr") or 0.0))
-        if (direction == "long" and plan.sl <= px - buf) or (direction == "short" and plan.sl >= px + buf):
-            new = plan.sl
-        else:
-            tr["last_plan"]["why"] = f"new stop {plan.sl} within {buf:.4g} of the price {px}: not amended"
+        new = plan.sl
+        if not ((direction == "long" and plan.sl <= px - buf) or (direction == "short" and plan.sl >= px + buf)):
+            # Report-only (AM-PHONE-TRAIL-PLAN-GUARDS): the feed-price buffer no longer withholds the amend. It is
+            # emitted and the phone's pre-click check against the VENUE mark (and the venue itself) answers.
+            tr["last_plan"]["why"] = (f"new stop {plan.sl} within {buf:.4g} of the feed price {px}: amended anyway "
+                                      "(report-only); the venue answers")
+            out["log"].append({"ticket_id": tid, "report_only": tr["last_plan"]["why"]})
     exit_ = False
     if plan.action == "exit" and candles is not None and len(candles):
         # TRAIL CROSSED (PI-20261015-JWMGXOTH-0002): the harness has exited (prop_trail.plan_trail); the stop goes
@@ -541,7 +565,12 @@ def _plan_one(conn: Any, r: Any, account_id: str, now: datetime, legs: Mapping[s
                 tr["exit_alerted"] = True
         else:
             tr["last_plan"]["why"] = f"{plan.why}; the resting SL {resting_sl} is already at or inside {tgt}"
+    if new is not None and outstanding is not None and _f(outstanding.get("sl")) == new \
+            and outstanding.get("kind") == "sl":
+        new = None   # the identical amend is already outstanding: nothing to supersede
     if new is not None:
+        if outstanding is not None:
+            _hist(tr, {**outstanding, "status": "superseded", "at": now.isoformat()})
         seq = int(tr.get("seq") or 0) + 1
         tr["seq"] = seq
         tr["amend"] = {"id": f"{tid}#a{seq}", "status": "emitted", "kind": "sl", "from_sl": resting_sl,
@@ -558,8 +587,9 @@ def _plan_one(conn: Any, r: Any, account_id: str, now: datetime, legs: Mapping[s
 def request_tp_amend(account_id: str, ticket_id: str, tp: float, *, reason: str,
                      now: Optional[datetime] = None) -> Dict[str, Any]:
     """Publish a TP revision for one open phone ticket through the amend slot (for lane
-    TP-DOCTRINE's revision verdicts). Refused, never queued, when an amend is outstanding or a
-    human's stop is held; the SL is carried unchanged and the phone verifies it."""
+    TP-DOCTRINE's revision verdicts). Refused, never queued, when an amend is outstanding (one slot); a
+    human_hold is logged, not refused (AM-PROP-HUMAN-HOLD removed 2026-11-12). The SL is carried
+    unchanged and the phone verifies it."""
     now = now or _now()
     tpf = _f(tp)
     if tpf is None or tpf <= 0:
@@ -576,7 +606,9 @@ def request_tp_amend(account_id: str, ticket_id: str, tp: float, *, reason: str,
             return {"ok": False, "why": "test ticket"}
         tr = _load_trail(m, ticket_id)
         if tr.get("human_hold"):
-            return {"ok": False, "why": f"a human's stop is held: {tr['human_hold']}"}
+            # Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PROP-HUMAN-HOLD: REMOVE. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+            logger.info("phone_trail: %s carries human_hold (%s); not refused (AM-PROP-HUMAN-HOLD removed)",
+                        ticket_id, tr["human_hold"])
         if (tr.get("amend") or {}).get("status") in ("emitted", "claimed"):
             return {"ok": False, "why": "an amend is outstanding for this ticket"}
         step = _price_step(account_id, r["symbol"])
@@ -604,7 +636,7 @@ def request_sl_tighten(account_id: str, ticket_id: str, sl: float, *, reason: st
     (LTR-6R / design § 4 "Prop, phone account"), as :func:`request_tp_amend` does for a TP. The caller has
     already run this account's ``RiskManager.approve_amend``. It also records ``meta.sl_floor`` so the phone
     trail's next plans tighten TO the floor and re-emit it if this attempt fails (the retry rides the trail's own
-    cadence; nothing latches). Refused, never queued, when an amend is outstanding, a human's stop is held, or
+    cadence; nothing latches). Refused, never queued, when an amend is outstanding (a human_hold is logged, not refused: AM-PROP-HUMAN-HOLD removed 2026-11-12), or
     the stop would not tighten the resting SL. The TP is carried unchanged and the phone verifies both before
     any click (its pre-click check and the ``human_moved`` rules apply unchanged)."""
     from src.prop import prop_trail
@@ -625,7 +657,9 @@ def request_sl_tighten(account_id: str, ticket_id: str, sl: float, *, reason: st
             return {"ok": False, "why": "test ticket"}
         tr = _load_trail(m, ticket_id)
         if tr.get("human_hold"):
-            return {"ok": False, "why": f"a human's stop is held: {tr['human_hold']}"}
+            # Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PROP-HUMAN-HOLD: REMOVE. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+            logger.info("phone_trail: %s carries human_hold (%s); not refused (AM-PROP-HUMAN-HOLD removed)",
+                        ticket_id, tr["human_hold"])
         step = _price_step(account_id, r["symbol"])
         cur_sl, cur_tp = _levels(r, tr, step)
         direction = str(r["direction"] or "").lower()
@@ -662,7 +696,7 @@ def request_sl_widen(account_id: str, ticket_id: str, sl: float, *, reason: str,
     2026-11-09: no forbidden actions; the account's own ``RiskManager`` bound, ``widen_within_1r``, has already
     approved the level and stays the policy). The amend declares ``action: widen_sl`` / ``widen: true`` so the app
     applies a looser stop (an undeclared loosen is reported as a mismatch). No ``sl_floor`` is recorded (a floor is
-    a tighten-to level). Refused, never queued, when an amend is outstanding, a human's stop is held, or the level
+    a tighten-to level). Refused, never queued, when an amend is outstanding (a human_hold is logged, not refused: AM-PROP-HUMAN-HOLD removed 2026-11-12), or the level
     would not loosen the resting SL. Stated limit: a widened stop on a trailing leg can be re-tightened by the
     trail's next plan, which ratchets from the running extreme."""
     from src.prop import prop_trail
@@ -683,7 +717,9 @@ def request_sl_widen(account_id: str, ticket_id: str, sl: float, *, reason: str,
             return {"ok": False, "why": "test ticket"}
         tr = _load_trail(m, ticket_id)
         if tr.get("human_hold"):
-            return {"ok": False, "why": f"a human's stop is held: {tr['human_hold']}"}
+            # Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PROP-HUMAN-HOLD: REMOVE. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+            logger.info("phone_trail: %s carries human_hold (%s); not refused (AM-PROP-HUMAN-HOLD removed)",
+                        ticket_id, tr["human_hold"])
         if (tr.get("amend") or {}).get("status") in ("emitted", "claimed"):
             return {"ok": False, "why": "an amend is outstanding for this ticket"}
         step = _price_step(account_id, r["symbol"])
@@ -747,7 +783,8 @@ def claim_amend(device: Any, now: Optional[datetime] = None) -> Optional[Dict[st
             tr = _load_trail(m, r["ticket_id"])
             am = dict(tr.get("amend") or {})
             vu = _parse(am.get("valid_until"))
-            if am.get("status") != "emitted" or vu is None or vu <= now or tr.get("human_hold"):
+            # Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PROP-HUMAN-HOLD: REMOVE. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d). (a human_hold no longer withholds the claim)
+            if am.get("status") != "emitted" or vu is None or vu <= now:
                 continue
             am.update(status="claimed", claimed_at=now.isoformat(), device_id=device.device_id)
             tr["amend"] = am
@@ -866,10 +903,13 @@ def record_amend_result(device: Any, body: Mapping[str, Any], *, now: Optional[d
                               f"did NOT READ on the terminal ({unread}; the app reported '{reason[:100]}'). Not a "
                               "human move, nothing held: the trail retries with backoff. Step captures: " + link)
         elif result == "human_moved":
+            # Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PROP-HUMAN-HOLD: REMOVE. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+            # Recorded (``human_hold`` is kept as a record), never a hold: the trail keeps planning every closed bar.
             tr["human_hold"] = f"{_HUMAN_LOCK_PREFIX} from the server's: a human moved it"
-            alerts.append(f"{tid}: the terminal shows a stop/target other than the server's ({reason[:120]}); "
-                          "the trail will not override a human: HELD for this ticket. Report the move with "
-                          "{kind: amend} so the journal holds it and the trail resumes from it")
+            alerts.append(f"{tid}: the terminal shows a stop/target other than the server's ({reason[:120]}). "
+                          "Recorded; the trail is NOT held (AM-PROP-HUMAN-HOLD removed 2026-11-12) and re-plans next "
+                          "bar from the server's resting stop. Report the move with {kind: amend} so the trail "
+                          "plans from the human's levels")
         else:  # mismatch: the click did not verify. A stop the terminal showed after it is now the truth.
             if sl_read is not None:
                 tr["resting_sl"] = sl_read
