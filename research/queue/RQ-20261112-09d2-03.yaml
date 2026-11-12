@@ -47,6 +47,8 @@ practice_precedent: 'M9 + M2 + M6 (docs/reference/trading-and-model-practice-pri
   time (train strictly before score).'
 intervention_controls:
   not_applicable: an offline model evaluation; nothing is applied
+ml_consumer:
+  not_applicable: 'The consumer leg does not exist yet, so it cannot be on a mode: live roster. It would be a session-flat ORB leg on a Tradeify futures account that has not been bought (docs/research/tradeify-futures-frontier-2026-11-12.md section 5). Decision it would change: whether the operator buys a Tradeify futures account and which leg it runs. A PASS goes through the survival rule of RQ-20261112-09d2-02 in a new unit and a held Tier-3 roster PR. Not a false keyword hit; the guard has no pending-account state.'
 compute: cpu_light
 routing:
   needs_trainer_resident_data: false

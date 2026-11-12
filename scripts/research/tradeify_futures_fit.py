@@ -24,8 +24,8 @@ import json
 import math
 import statistics as st
 import sys
-from dataclasses import dataclass, asdict
-from datetime import datetime, time, timedelta, timezone
+from dataclasses import asdict, dataclass
+from datetime import datetime, time, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -67,7 +67,7 @@ def load_bars(sym: str, corpus: Path, start: str, end: str) -> pd.DataFrame:
         p = corpus / f"{sym}_{y}.csv"
         if not p.exists():
             sys.path.insert(0, str(REPO / "scripts" / "ops"))
-            from fetch_dukascopy_ohlcv import fetch  # noqa: E402
+            from fetch_dukascopy_ohlcv import fetch
             s = datetime(y, 1, 1, tzinfo=timezone.utc)
             e = min(datetime(y + 1, 1, 1, tzinfo=timezone.utc), datetime.now(timezone.utc))
             df = fetch(inst, s, e, "5m")
@@ -106,10 +106,16 @@ class Trade:
     feats: dict
 
 
+def _mins(t: time) -> int:
+    """Minutes after midnight of a wall-clock time."""
+    return t.hour * 60 + t.minute
+
+
 def orb_trades(df: pd.DataFrame, sym: str, or_min: int) -> list[Trade]:
     _, mult, tick, comm = INSTR[sym]
     out: list[Trade] = []
-    or_end = (datetime.combine(datetime(2000, 1, 1), RTH_OPEN) + timedelta(minutes=or_min)).time()
+    m_end = _mins(RTH_OPEN) + or_min
+    or_end = time(m_end // 60, m_end % 60)
     days = sorted(df["d"].unique())
     by_day = {d: g for d, g in df.groupby("d")}
     prev_close = None
@@ -172,7 +178,7 @@ def orb_trades(df: pd.DataFrame, sym: str, or_min: int) -> list[Trade]:
             feats = {
                 "or_width_atr": (hi - lo) / atr20 if atr20 else None,
                 "gap_atr": ((float(rth["open"].iloc[0]) - prev_close) / atr20) if (atr20 and prev_close) else None,
-                "breakout_min": (datetime.combine(datetime(2000, 1, 1), bar["t"]) - datetime.combine(datetime(2000, 1, 1), RTH_OPEN)).seconds / 60,
+                "breakout_min": float(_mins(bar["t"]) - _mins(RTH_OPEN)),
                 "dow": pd.Timestamp(d).dayofweek,
                 "dir": direction,
                 "atr_pct": (atr20 / entry) if atr20 else None,
@@ -414,7 +420,7 @@ def ml_filter(trades: list[Trade]) -> dict:
     lo = float(np.percentile(diffs, 2.5)) if diffs else None
     disc = s[s["fold"] != "hold"]
     res = {
-        "n_hold_all": int(len(allr)), "n_hold_kept": int(len(kept)),
+        "n_hold_all": len(allr), "n_hold_kept": len(kept),
         "mean_r_hold_all": round(float(allr.mean()), 5), "mean_r_hold_kept": round(float(kept.mean()), 5) if len(kept) else None,
         "net_r_hold_kept": round(float(kept.sum()), 3), "uplift_ci95_lo": round(lo, 5) if lo is not None else None,
         "disc_by_year": {f: {"n_kept": int(g["keep"].sum()), "mean_kept": round(float(g[g["keep"]]["net_r"].mean()), 5),
@@ -452,8 +458,7 @@ def main(argv=None) -> int:
     days_sorted = sorted(all_days)
     with open(out / "trades.jsonl", "w") as f:
         for k, v in cells.items():
-            for t in v:
-                f.write(json.dumps({"cell": k, **asdict(t)}, default=str) + "\n")
+            f.writelines(json.dumps({"cell": k, **asdict(t)}, default=str) + "\n" for t in v)
     rec = {"research_unit": a.unit, "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
            "produced_by": "scripts/research/tradeify_futures_fit.py", "stage": a.stage,
            "population": {k: len(v) for k, v in cells.items()},

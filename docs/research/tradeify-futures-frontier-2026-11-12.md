@@ -180,7 +180,7 @@ If one of those units then passes, conditions 2–4 take about 2–4 more weeks,
 | Id | What | Status |
 |---|---|---|
 | RQ-20261112-09d2-01 | ORB Stage 0, 6 cells, Tradeify costs | done: **fail** |
-| RQ-20261112-09d2-02 | EOD-trailing survival, Growth/Select/Lightning 50K | done: **not_applicable** |
+| RQ-20261112-09d2-02 | EOD-trailing survival, Growth/Select/Lightning 50K | done: **no_action_warranted** (the rule's NOT_APPLICABLE branch) |
 | RQ-20261112-09d2-03 | gbdt meta-label ML filter | done: **fail** |
 | RQ-20261112-09d2-04 | `ict_scalp_mgc_15m` session-flat transfer | blocked on FUT-INTRADAY-DUKA-LANE |
 | RQ-20261112-09d2-05 | Iteration: MNQ_OR15 on real CME MNQ | blocked on FUT-CME-INTRADAY-HIST |
