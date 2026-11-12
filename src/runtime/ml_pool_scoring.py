@@ -16,8 +16,11 @@ whether a leg with a package trades. A failure here is contained (logged, ``pick
 """
 from __future__ import annotations
 
+import json
 import logging
+import os
 import threading
+from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional
 
 logger = logging.getLogger(__name__)
@@ -28,11 +31,128 @@ SCORERS = ("ml_entry_eq", "ml_entry_eq_struct")
 
 _lock = threading.Lock()
 _CACHE: Dict[str, tuple] = {}          # leg -> (key, results)
-_DECIDED: Dict[str, set] = {n: set() for n in SCORERS}   # leg -> {(symbol, bar_close)} already emitted / decided (shared with the builder)
+
+#: The decided memo is PERSISTED (row ML-ENTRY-EQ-RESTART-REDECIDE, Tier 2): it used to live only in memory, so every trader restart within
+#: ``max_snapshot_age_h`` of a decision close re-decided that close (MEASURED 2026-11-11 journal: ``pool_scored bar=2026-11-11T20:00`` logged by four
+#: processes at 21:11, 21:24, 22:01, 22:22Z). A close is now decided exactly once across restarts. This restores the intended behaviour; it adds no
+#: refusal (a symbol that was never decided at a close decides normally).
+DECIDED_DIR_ENV = "ML_POOL_DECIDED_DIR"
+#: How many distinct decision closes the memo keeps per leg (memory and file). 16 closes x ~173 symbols stays under the builder's 4096 prune.
+KEEP_CLOSES = 16
 
 
-def decided_set(name: str) -> set:
-    return _DECIDED.setdefault(str(name), set())
+def decided_path(name: str) -> Path:
+    env = os.environ.get(DECIDED_DIR_ENV)
+    if env:
+        return Path(env) / f"decided_{name}.json"
+    from src.utils.paths import data_dir
+    return Path(data_dir()) / "ml_entry_eq" / f"decided_{name}.json"
+
+
+def _close_key(bar_close: Any) -> Any:
+    try:
+        import pandas as pd
+        return (0, pd.Timestamp(str(bar_close)).value)
+    except Exception:  # noqa: BLE001 -- an unparseable close sorts first (pruned first), never raises
+        return (-1, str(bar_close))
+
+
+class DecidedMemo(set):
+    """``{(symbol, bar_close)}`` already emitted / decided for one leg, loaded from and written to ``decided_path(name)``.
+
+    Lazy: the file is read on first use (so the path resolves in the running process's environment). Every mutation rewrites the file atomically.
+    A read or write failure is logged and contained: the memo keeps working in memory (never a halt, never a refusal)."""
+
+    def __init__(self, name: str):
+        super().__init__()
+        self.name = str(name)
+        self._loaded = False
+
+    def _ensure(self) -> None:
+        if self._loaded:
+            return
+        self._loaded = True
+        p = decided_path(self.name)
+        try:
+            if p.exists():
+                raw = json.loads(p.read_text())
+                for row in raw.get("decided") or []:
+                    if isinstance(row, (list, tuple)) and len(row) == 2:
+                        set.add(self, (str(row[0]), str(row[1])))
+                logger.info("%s decided memo loaded: %d entries over %d closes from %s", self.name, set.__len__(self),
+                            len({m[1] for m in set.__iter__(self)}), p)
+        except Exception:  # noqa: BLE001
+            logger.exception("%s decided memo: could not read %s (memory-only until the next write)", self.name, p)
+
+    def _persist(self) -> None:
+        closes = sorted({m[1] for m in set.__iter__(self)}, key=_close_key)
+        if len(closes) > KEEP_CLOSES:
+            old = set(closes[:-KEEP_CLOSES])
+            for m in [m for m in set.__iter__(self) if m[1] in old]:
+                set.discard(self, m)
+        p = decided_path(self.name)
+        try:
+            p.parent.mkdir(parents=True, exist_ok=True)
+            tmp = p.with_suffix(p.suffix + ".tmp")
+            tmp.write_text(json.dumps({"leg": self.name, "decided": sorted([list(m) for m in set.__iter__(self)])}))
+            os.replace(tmp, p)
+        except Exception:  # noqa: BLE001
+            logger.exception("%s decided memo: could not write %s (kept in memory)", self.name, p)
+
+    def __contains__(self, item: object) -> bool:
+        self._ensure()
+        return set.__contains__(self, item)
+
+    def __iter__(self):
+        self._ensure()
+        return set.__iter__(self)
+
+    def __len__(self) -> int:
+        self._ensure()
+        return set.__len__(self)
+
+    def add(self, item) -> None:
+        self.update((item,))
+
+    def update(self, *items) -> None:
+        self._ensure()
+        before = set.__len__(self)
+        for it in items:
+            for m in it:
+                set.add(self, (str(m[0]), str(m[1])))
+        if set.__len__(self) != before:
+            self._persist()
+
+    def discard(self, item) -> None:
+        self._ensure()
+        if set.__contains__(self, item):
+            set.discard(self, item)
+            self._persist()
+
+    def clear(self) -> None:
+        self._loaded = True
+        set.clear(self)
+        self._persist()
+
+    def forget_in_memory(self) -> None:
+        """Drop the in-memory state WITHOUT touching the file: what a process restart does (tests use it to simulate one)."""
+        set.clear(self)
+        self._loaded = False
+
+
+_DECIDED: Dict[str, DecidedMemo] = {n: DecidedMemo(n) for n in SCORERS}   # shared with the builder
+#: ``{(symbol, bar_close)}`` the POOL refused when it was first scored at that close (persisted the same way). Kept apart from ``_DECIDED`` so a
+#: refused symbol's pass still reports its own refusal reason; it only stops a restarted process (e.g. on a new artifact) from turning an
+#: already-refused close into a late package.
+_REFUSED: Dict[str, DecidedMemo] = {n: DecidedMemo(f"{n}_refused") for n in SCORERS}
+
+
+def decided_set(name: str) -> DecidedMemo:
+    return _DECIDED.setdefault(str(name), DecidedMemo(str(name)))
+
+
+def refused_set(name: str) -> DecidedMemo:
+    return _REFUSED.setdefault(str(name), DecidedMemo(f"{name}_refused"))
 
 
 def is_pool_scored(cfg: Optional[Mapping[str, Any]]) -> bool:
@@ -62,6 +182,12 @@ def batch(name: str, vcfg: Mapping[str, Any], snap: Mapping[str, Any], symbols: 
             reasons[r] = reasons.get(r, 0) + 1
     logger.info("%s pool_scored bar=%s scored=%d packages=%d top=%s refusals=%s", name, snap.get("bar_close"), len(res), n_pkg,
                 ",".join(f"{s}:{p:.3f}" for p, s in top) or "-", reasons or "-")
+    # Every symbol REFUSED at this close was decided at this close; recording it (persisted) means a restart -- possibly with a new artifact --
+    # cannot turn an already-decided close into a late package. A close first scored after a restart records nothing new for symbols already
+    # recorded, and packages are recorded in ``_DECIDED`` when the builder emits them.
+    refused = refused_set(name)
+    bc = str(snap.get("bar_close"))
+    refused.update((s, bc) for s, v in res.items() if isinstance(v, str) and (s, bc) not in refused and (s, bc) not in decided_set(name))
     with _lock:
         _CACHE[name] = (key, res)
     return res
@@ -88,9 +214,10 @@ def picks(strategies_cfg: Mapping[str, Any], legs: Optional[List[str]] = None) -
                 res = batch(name, vcfg, snap)
             except ValueError:
                 continue                                  # not a decision bar (or an unreadable artifact): no picks this tick
-            done = decided_set(name)
+            done, refused = decided_set(name), refused_set(name)
             for s, v in res.items():
-                if isinstance(v, dict) and (s, snap["bar_close"]) not in done:
+                m = (s, snap["bar_close"])
+                if isinstance(v, dict) and m not in done and m not in refused:
                     scored[s] = max(scored.get(s, float("-inf")), float(v["meta"]["pred_net_r"]))
         return [s for s, _p in sorted(scored.items(), key=lambda kv: -kv[1])]
     except Exception:  # noqa: BLE001 -- a scoring fault must never break the tick; the leg just gets no extra passes this tick

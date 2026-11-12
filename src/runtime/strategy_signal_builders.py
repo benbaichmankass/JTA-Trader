@@ -6861,7 +6861,8 @@ def _ml_entry_eq_build(settings: dict, NAME: str, _DECIDED: set) -> Dict[str, An
 
     NO network and no candle fetch on this tick: the 173-symbol pass is the refresher thread's job (src/runtime/ml_entry_eq_refresher.py, MEASURED
     #23619: an unpaced pass = 104 x 429). A stale / incomplete / missing snapshot is a named per-trade refusal, never a halt. One decision per
-    (symbol, snapshot bar_close): an in-process memo, so a repeated tick on the same bar cannot re-emit the same package."""
+    (symbol, snapshot bar_close): a memo PERSISTED to data_dir (src/runtime/ml_pool_scoring.py::DecidedMemo, row ML-ENTRY-EQ-RESTART-REDECIDE), so
+    neither a repeated tick on the same bar nor a trader restart can re-emit the same package."""
     import pandas as pd
     from src.units.strategies import load_strategy_config
     from src.units.strategies import ml_entry_eq as L
@@ -6895,6 +6896,11 @@ def _ml_entry_eq_build(settings: dict, NAME: str, _DECIDED: set) -> Dict[str, An
             pkg = L.order_package({"symbol": symbol, **vcfg}, snap)
         elif isinstance(pkg, str):
             raise ValueError(pkg)
+        elif memo in PS.refused_set(NAME):
+            # the pool refused this symbol when it first scored this close (before a restart): the close is already decided
+            # (row ML-ENTRY-EQ-RESTART-REDECIDE) -- a restarted process's new answer is not entered late
+            _DECIDED.add(memo)
+            return _none("already_decided_this_bar", symbol, str(snap["bar_close"]))
     except ValueError as exc:
         if str(exc) != "not_a_decision_bar":
             _DECIDED.add(memo)
