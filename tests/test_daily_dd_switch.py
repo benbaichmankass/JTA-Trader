@@ -555,7 +555,7 @@ def test_0005z_case_yesterdays_late_loss_is_not_charged_to_today(tick_env):
     # 00:00:30Z: new day, the newest snapshot is still 23:00Z -> awaiting, cannot trip.
     assert tick_env["tick"](_ts(12, 0, 0))["bybit_2_like"] == dd.READ_AWAITING
     assert ("reset", "bybit_2_like") in tick_env["alerts"]
-    # 00:01Z snapshot lands; 00:05Z tick, account flat.
+    # 00:01Z snapshot lands; 00:05Z tick (the live 00:01Z snapshot showed open_positions=1, so "flat" in the report is unverified).
     tick_env["snap"]({"bybit_2_like": 194.428}, _ts(12, 0, 1))
     assert tick_env["tick"](_ts(12, 0, 5))["bybit_2_like"] == "ok"
     row = tick_env["state"]()["bybit_2_like"]
