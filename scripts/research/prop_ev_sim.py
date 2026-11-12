@@ -234,6 +234,10 @@ def _hhmm_to_day_fraction(v: Any) -> float:
     return (int(hh) + int(mm) / 60.0) / 24.0
 
 
+_DD_CAUSES = ("static_drawdown", "trailing_drawdown")
+DRAWDOWN_TYPES = ("static", "eod_trailing", "closed_trailing", "intraday_trailing")
+
+
 @dataclass
 class PropRules:
     start: float = 5000.0
@@ -273,6 +277,19 @@ class PropRules:
     # "max_balance_equity" (Velotrade: "whichever is higher, your balance or your
     # equity" at 00:30 UTC -- the STRICTER basis whenever a position is in profit).
     day_reset_basis: str = "balance"
+    # ── Trailing drawdown (lane VELO-CFD-STAGE0 / PROP-TRAILING-DD-SIM, 2026-11-12). DEFAULT
+    # "static" is bit-identical to every earlier result. Other values:
+    #   eod_trailing       floor = max(floor, peak_EOD_balance - max_dd), peak taken from the
+    #                      REALISED balance at each daily reset (Tradeify futures; the floor is
+    #                      still ENFORCED INTRADAY against equity)
+    #   closed_trailing    peak = highest realised balance after any closed trade (Blue Guardian
+    #                      "highest closed-trade watermark")
+    #   intraday_trailing  peak = highest equity (open marks included) at any event (the strictest)
+    # trailing_lock_buffer_pct: once peak >= start x (1 + max_dd + buffer) the floor LOCKS at
+    # start + trailing_lock_offset_usd and never moves again (None => never locks).
+    drawdown_type: str = "static"
+    trailing_lock_buffer_pct: Optional[float] = None
+    trailing_lock_offset_usd: float = 0.0
 
     @classmethod
     def from_yaml(cls, path: Path) -> "PropRules":
@@ -282,8 +299,10 @@ class PropRules:
         pay = econ.get("payout") or {}
         wp = econ.get("withdrawal_policy") or {}
         lim = d.get("limits") or {}
-        if (lim.get("drawdown_type") or "static") != "static":
-            raise ValueError("only a STATIC drawdown ruleset is modelled")
+        dd_type = str(lim.get("drawdown_type") or "static")
+        if dd_type not in DRAWDOWN_TYPES:
+            raise ValueError(f"limits.drawdown_type must be one of {DRAWDOWN_TYPES}, got {dd_type!r}")
+        lock_buf = lim.get("trailing_lock_buffer_pct")
         if wp.get("mode", "above_start") != "above_start":
             raise ValueError("only withdrawal_policy.mode above_start is modelled")
         ev = d["phases"]["evaluation"]
@@ -312,6 +331,9 @@ class PropRules:
             payout_cap_first_n=int(pay.get("first_payouts_capped") or 0),
             payout_cap_mult_fee=float(pay.get("first_payout_cap_multiple_of_fee") or 0.0),
             day_reset_basis=basis,
+            drawdown_type=dd_type,
+            trailing_lock_buffer_pct=(float(lock_buf) if lock_buf is not None else None),
+            trailing_lock_offset_usd=float(lim.get("trailing_lock_offset_usd") or 0.0),
         )
 
 
@@ -695,6 +717,30 @@ def simulate_life(hist: History, rules: PropRules, cfg: SimConfig, mode: str,
     pending = next(src, None)
 
     dd_tripped = False
+    dd_cause = "static_drawdown" if rules.drawdown_type == "static" else "trailing_drawdown"
+    peak = bal
+    locked = False
+
+    def trail_update(*, eod: bool = False, closed: bool = False) -> None:
+        """Advance the trailing peak/floor. No-op for a static ruleset (floor never moves)."""
+        nonlocal peak, floor, locked
+        dt = rules.drawdown_type
+        if dt == "static" or locked:
+            return
+        if dt == "eod_trailing" and eod:
+            peak = max(peak, bal)
+        elif dt == "closed_trailing" and closed:
+            peak = max(peak, bal)
+        elif dt == "intraday_trailing":
+            peak = max(peak, bal + marks_sum)
+        else:
+            return
+        lb = rules.trailing_lock_buffer_pct
+        if lb is not None and peak >= start * (1.0 + rules.max_dd_pct + lb) - 1e-9:
+            locked = True
+            floor = start + rules.trailing_lock_offset_usd
+        else:
+            floor = max(floor, peak - start * rules.max_dd_pct)
 
     def dd_switch_hit() -> bool:
         if cfg.dd_switch_frac is None:
@@ -704,7 +750,7 @@ def simulate_life(hist: History, rules: PropRules, cfg: SimConfig, mode: str,
     def breached() -> Optional[str]:
         eq = bal + marks_sum
         if eq <= floor + 1e-9:
-            return "static_drawdown"
+            return dd_cause
         if eq <= day_start * (1.0 - dl) + 1e-9:
             return "daily_loss"
         return None
@@ -752,6 +798,7 @@ def simulate_life(hist: History, rules: PropRules, cfg: SimConfig, mode: str,
             day_start = (max(bal, bal + marks_sum) if rules.day_reset_basis == "max_balance_equity"
                          else bal)
             dd_tripped = False              # the switch latches until the day boundary, then clears
+            trail_update(eod=True)
             next_reset += 1.0
             # Velotrade: "If you hit your profit target before completing 5 minimum
             # trading days, your phase is not passed yet" -- so the pass can land at a
@@ -796,6 +843,7 @@ def simulate_life(hist: History, rules: PropRules, cfg: SimConfig, mode: str,
             bal += pnl
             day_realized += pnl
             day_closed += 1
+            trail_update(closed=True)
             if phase == "eval" and bal >= target - 1e-9:
                 if life.target_first_reached_days is None:
                     life.target_first_reached_days = now
@@ -819,6 +867,7 @@ def simulate_life(hist: History, rules: PropRules, cfg: SimConfig, mode: str,
             marks_sum = 0.0
             if cfg.funded_start == "fresh":
                 bal = start
+                peak, floor, locked = start, start * (1.0 - rules.max_dd_pct), False   # re-issued account
             day_start = bal
             continue
         elif kind == "entry":
@@ -875,6 +924,8 @@ def simulate_life(hist: History, rules: PropRules, cfg: SimConfig, mode: str,
         if cfg.dd_switch_frac is not None and not dd_tripped and dd_switch_hit():
             dd_tripped = True
             counters["dd_switch_trips"] = counters.get("dd_switch_trips", 0) + 1
+        if rules.drawdown_type == "intraday_trailing":
+            trail_update()
         cause = breached()
         if cause:
             life.died = True
@@ -982,10 +1033,10 @@ def summarize(lives: Sequence[Life], rules: PropRules) -> Dict[str, Any]:
         # per-life breach probabilities, any phase (the gate the operator re-scoped to on
         # 2026-10-06: "strategies that we know meet the risk requirements")
         "p_breach_daily_loss": round(sum(1 for lf in lives if lf.died and lf.death_cause == "daily_loss") / n, 4),
-        "p_breach_max_dd": round(sum(1 for lf in lives if lf.died and lf.death_cause == "static_drawdown") / n, 4),
+        "p_breach_max_dd": round(sum(1 for lf in lives if lf.died and lf.death_cause in _DD_CAUSES) / n, 4),
         "p_breach_daily_loss_in_eval": round(sum(1 for lf in lives if lf.died and lf.death_cause == "daily_loss"
                                                  and lf.death_phase == "eval") / n, 4),
-        "p_breach_max_dd_in_eval": round(sum(1 for lf in lives if lf.died and lf.death_cause == "static_drawdown"
+        "p_breach_max_dd_in_eval": round(sum(1 for lf in lives if lf.died and lf.death_cause in _DD_CAUSES
                                              and lf.death_phase == "eval") / n, 4),
         "ev_net_usd_per_365d_with_rebuy": (
             round(365.0 * mean_net / mean_life, 2) if mean_life > 0 else None),
@@ -1457,6 +1508,81 @@ def _self_test() -> int:
         taken[frac] = (lf.trades_taken, cnt.get("dd_switch_blocked", 0), lf.died)
     check(taken[None] == (4, 0, False) and taken[0.5] == (2, 2, False),
           f"dd switch: disarmed takes 4, armed@0.5 takes 2 and refuses 2 then clears at reset (got {taken})")
+
+    # --- 12. TRAILING DRAWDOWN (PROP-TRAILING-DD-SIM, 2026-11-12) -------------------
+    # Planted cases, one leg, sequential 1h trades at 2% of START ($100) per trade, daily limit out of
+    # reach, target out of reach. DD 6% = $300. Every expected outcome is worked by hand.
+    def _seq(outcomes, day_of):
+        rows = []
+        for i, (r, d) in enumerate(zip(outcomes, day_of)):
+            rows.append({"entry_time": f"2025-01-{d:02d}T{2 + (i % 6) * 2:02d}:00:00+00:00",
+                         "exit_time": f"2025-01-{d:02d}T{3 + (i % 6) * 2:02d}:00:00+00:00", "net_r": r})
+        return rows
+
+    def _life(outcomes, day_of, **rk):
+        tr, _, dd = build_trades({"t": _seq(outcomes, day_of)}, as_given)
+        rl = PropRules(daily_loss_pct=0.50, target_pct=0.50, max_dd_pct=0.06, **rk)
+        cf = SimConfig(risk_pct=0.02, sizing="start", horizon_days=dd + 1, block_days=dd)
+        lf = simulate_life(History(tr, dd), rl, cf, "realized", np.random.default_rng(0), counters={},
+                           stream=((t.entry, t.exit, t) for t in tr))
+        return lf
+
+    # (a) day 1 +1R,+1R (EOD balance 5200); day 2 -1R,-1R,-1R -> 4900. EOD floor after day 1 = 5200-300 = 4900:
+    #     the 3rd loss TOUCHES it (breach). STATIC floor is 4700: survives with 4 of 5 trades... all 5 taken.
+    o, dy = [1, 1, -1, -1, -1], [1, 1, 2, 2, 2]
+    lf_s = _life(o, dy)
+    lf_e = _life(o, dy, drawdown_type="eod_trailing")
+    check((not lf_s.died) and lf_e.died and lf_e.death_cause == "trailing_drawdown" and lf_e.trades_taken == 5,
+          f"trailing (a): static survives, EOD-trailing dies on the 3rd loss touching 4900 "
+          f"(static died={lf_s.died}; eod died={lf_e.died}, cause={lf_e.death_cause}, trades={lf_e.trades_taken})")
+    # (b) SAME ledger on ONE day: EOD peak never advances (no reset between) -> floor stays 4700 -> survives;
+    #     closed- and intraday-trailing see the 5200 watermark at once -> floor 4900 -> die.
+    dy1 = [1, 1, 1, 1, 1]
+    r_eod = _life(o, dy1, drawdown_type="eod_trailing")
+    r_cl = _life(o, dy1, drawdown_type="closed_trailing")
+    r_in = _life(o, dy1, drawdown_type="intraday_trailing")
+    check((not r_eod.died) and r_cl.died and r_in.died,
+          f"trailing (b): same-day ledger, EOD survives (peak only moves at a reset), closed + intraday die "
+          f"(eod={r_eod.died}, closed={r_cl.died}, intraday={r_in.died})")
+    # (c) NEGATIVE CONTROL: a ledger that never makes a new high -> every trailing type == static (dies on the
+    #     3rd loss at 4700 in both, since $5,000 - 3 x $100 = $4,700 touches the $4,700 floor).
+    lo = [-1, -1, -1, 1]
+    st_ = _life(lo, [1, 1, 2, 2])
+    same = all(_life(lo, [1, 1, 2, 2], drawdown_type=k).trades_taken == st_.trades_taken
+               and _life(lo, [1, 1, 2, 2], drawdown_type=k).died == st_.died
+               for k in ("eod_trailing", "closed_trailing", "intraday_trailing"))
+    check(st_.died and st_.trades_taken == 3 and same,
+          f"trailing (c): no new high => every trailing type matches static (static died={st_.died} after "
+          f"{st_.trades_taken} trades)")
+    # (d) LOCK. 7 wins -> 5700 (peak 5700 >= 5000 x (1 + 6% + 1%) = 5350 => floor locks at the START, 5000).
+    #     Then 3 losses -> 5400: an UNLOCKED trailing floor (5700-300 = 5400) is touched and dies; the
+    #     LOCKED floor 5000 survives; and it dies only when balance touches 5000 (7 losses).
+    w7 = [1] * 7
+    dy7 = [1, 1, 1, 2, 2, 2, 3]
+    unl = _life(w7 + [-1] * 3, dy7 + [4, 4, 4], drawdown_type="closed_trailing")
+    lck3 = _life(w7 + [-1] * 3, dy7 + [4, 4, 4], drawdown_type="closed_trailing", trailing_lock_buffer_pct=0.01)
+    lck7 = _life(w7 + [-1] * 7, dy7 + [4, 4, 4, 5, 5, 5, 5], drawdown_type="closed_trailing",
+                 trailing_lock_buffer_pct=0.01)
+    check(unl.died and (not lck3.died) and lck7.died and lck7.trades_taken == 14,
+          f"trailing (d): lock at start once peak >= +7%: unlocked dies at 5400, locked survives it and dies "
+          f"only at 5000 (unlocked died={unl.died}; locked-3 died={lck3.died}; locked-7 died={lck7.died} "
+          f"after {lck7.trades_taken} trades)")
+    # (e) PIN: a ruleset with no drawdown_type behaves exactly as before the generalisation.
+    check(PropRules().drawdown_type == "static" and PropRules().trailing_lock_buffer_pct is None,
+          "trailing (e): default ruleset is static with no lock (back-compat pin)")
+    # (f) a typo in drawdown_type is refused, never silently static
+    import tempfile as _tf, yaml as _y
+    bad = {"account_size_usd": 5000, "profit_split": 0.8, "phases": {"evaluation": {"profit_target_pct": 0.1}},
+           "limits": {"daily_loss_pct": 0.04, "max_drawdown_pct": 0.06, "drawdown_type": "eod_trailng"},
+           "economics": {"account_fee_usd": 50, "payout": {"first_payout_after_days": 14, "payout_frequency_days": 7}}}
+    with _tf.NamedTemporaryFile("w", suffix=".yaml", delete=False) as fh:
+        _y.safe_dump(bad, fh)
+    try:
+        PropRules.from_yaml(Path(fh.name))
+        refused = False
+    except ValueError:
+        refused = True
+    check(refused, "trailing (f): an unknown drawdown_type is refused, not read as static")
 
     print(f"\nself-test: {'PASS' if not fails else 'FAIL'} ({len(fails)} failure(s))")
     return 0 if not fails else 1
