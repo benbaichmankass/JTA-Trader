@@ -199,6 +199,9 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     "scripts/notify_session.py": ("session",),
     "scripts/ops/work_digest_now.py": ("manager_update",),
     "src/runtime/telegram_decisions.py": ("decision",),
+    # TRADE-ACTION-DIRECT-PATH phase 1 (+ MANAGER-VM-DIRECT-OPS ops_job asks): the Approve/Reject ask with tapv
+    # buttons, sent to the bot that polls the prefix; with no answerable bot, ONE alert without a button.
+    "src/runtime/trade_approvals.py": ("decision", "alert"),
     "src/runtime/manager_status.py": ("command_reply",),
     # REPLY (polled bots answering the operator in-conversation)
     "src/bot/telegram_query_bot.py": ("command_reply",),
