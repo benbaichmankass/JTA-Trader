@@ -141,6 +141,10 @@ limits:
   # RESEARCH-FLOW 2026-11-02 (manager 21:25Z): research may fire while at most 1 infra run is queued and defers at 2 or more
   # (was: defer at 1, which deferred every fire on cycle 41521258380). --max-repo-queued still bounds the whole pool.
   infra_yield_at: 2
+  # INFRA STARVATION FLOOR (manager 2026-11-12 22:33Z): nothing dispatched this long -> the infra-yield block is lifted for ONE
+  # fire/cycle (the top-scored unit), whatever infra is queued (dispatch_queue.starvation_override). 0 disables. MEASURED
+  # 2026-11-12: the yield deferred every fire 17:43Z..22:33Z (0 units, ~5 h) -- a halt shape (Prime Directive 7).
+  infra_starvation_hours: 2.0
   # RESEARCH-DISPATCH-STALL-1112: an infra run QUEUED longer than this is stuck, not waiting -- it no longer counts toward
   # infra_yield_at (dispatch_queue.INFRA_STUCK_HOURS). 2026-11-11 frozen 3-6 h infra runs deferred every fire for 5 h+.
   infra_stuck_hours: 1.0
@@ -153,7 +157,6 @@ limits:
     - system-actions
     - system-actions-cancel-guard
     - deploy-candidate
-    - phone-executor-apk
     - trainer-vm-diag
     - trainer-diag-relay
     - arm-candidate-diag

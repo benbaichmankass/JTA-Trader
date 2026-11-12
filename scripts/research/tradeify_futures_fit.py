@@ -83,7 +83,7 @@ def load_bars(sym: str, corpus: Path, start: str, end: str) -> pd.DataFrame:
     return df[(df["d"] >= lo) & (df["d"] <= hi)].reset_index(drop=True)
 
 
-def load_ibkr_percontract(path: Path) -> tuple[pd.DataFrame, dict]:
+def load_ibkr_percontract(path: Path, front_days: int = 100) -> tuple[pd.DataFrame, dict]:
     """Real CME bars from IB's free history (FUT-CME-INTRADAY-HIST): a per-contract jsonl written by
     ``pull-ibkr-history per_contract: 1`` (``market_raw_percontract/<SYM>/<tf>/<ver>/data.jsonl``; each bar
     carries ``contract`` = expiry YYYYMMDD and cross-contract overlaps are kept).
@@ -92,6 +92,11 @@ def load_ibkr_percontract(path: Path) -> tuple[pd.DataFrame, dict]:
     never stepping back to an older expiry once rolled. The splice is at a session boundary, so no intraday bar
     mixes contracts. No back-adjustment: every trade opens and closes inside one session, the result is in R
     (level-free) and the ATR feature uses day ranges, so a constant level shift changes nothing.
+    FRONT-MONTH WINDOW (front_days, default 100): a session is kept only if its chosen contract expires within
+    ``front_days`` calendar days of it. IB serves expired contracts for ~2 years only (MEASURED 2026-11-12: the
+    oldest MNQ/MES contract served was the Dec-2024 expiry), so before the oldest contract became the front month
+    it is the only contract on file and would be "highest volume" while still a thin back month. The quarterly
+    CME equity micros are front for ~91 days plus a ~8-day roll week, hence 100. Dropped sessions are counted.
     Returns (bars, provenance) where provenance states the span actually served and the roll calendar.
     """
     rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
@@ -111,7 +116,12 @@ def load_ibkr_percontract(path: Path) -> tuple[pd.DataFrame, dict]:
         c = str(g.sort_values(["volume", "contract"], ascending=[False, True]).iloc[0]["contract"])
         chosen[d] = c
         floor = c
-    df = df[df.apply(lambda r: chosen.get(r["d"]) == r["contract"], axis=1)]
+    n_before = len(chosen)
+    chosen = {d: c for d, c in chosen.items()
+              if (datetime.strptime(c[:8] + "+0000", "%Y%m%d%z").date() - d).days <= front_days}
+    dropped_not_front = n_before - len(chosen)
+    keep = pd.DataFrame({"d": list(chosen), "contract": list(chosen.values())})
+    df = df.merge(keep, on=["d", "contract"], how="inner")
     df = df.drop_duplicates("timestamp").sort_values("timestamp").reset_index(drop=True)
     df["t"] = df["et"].dt.time
     rolls, prev = [], None
@@ -125,7 +135,9 @@ def load_ibkr_percontract(path: Path) -> tuple[pd.DataFrame, dict]:
     prov = {"path": str(path), "bars_raw": len(rows), "bars_continuous": len(df),
             "first_ts": str(df["timestamp"].min()), "last_ts": str(df["timestamp"].max()),
             "contracts_served": per_contract, "roll_calendar": rolls,
-            "roll_rule": "per ET session, max-volume contract, monotonic; no back-adjustment"}
+            "roll_rule": "per ET session, max-volume contract, monotonic; no back-adjustment",
+            "front_days": front_days, "sessions_dropped_not_front": dropped_not_front,
+            "first_session_kept": str(min(chosen)) if chosen else None}
     return df[["timestamp", "open", "high", "low", "close", "volume", "et", "d", "t"]], prov
 
 
@@ -532,6 +544,8 @@ def main(argv=None) -> int:
                     help="ibkr = real CME bars from IB's free history (per-contract jsonl, --ibkr-percontract); stage0 only")
     ap.add_argument("--ibkr-percontract", action="append", default=[], metavar="SYM=PATH",
                     help="with --source ibkr: a per-contract jsonl per symbol (repeatable)")
+    ap.add_argument("--front-days", type=int, default=100,
+                    help="with --source ibkr: keep a session only if its chosen contract expires within N days (front month)")
     ap.add_argument("--cells", default="", help="comma list of cells to run, e.g. MNQ_OR15 (default: all)")
     a = ap.parse_args(argv)
     out = Path(a.out)
@@ -546,7 +560,7 @@ def main(argv=None) -> int:
         paths = dict(x.split("=", 1) for x in a.ibkr_percontract)
         provs, sess_by_sym = {}, {}
         for sym, pth in paths.items():
-            df, provs[sym] = load_ibkr_percontract(Path(pth))
+            df, provs[sym] = load_ibkr_percontract(Path(pth), front_days=a.front_days)
             rth_days = {str(d) for d, g in df[(df["t"] >= RTH_OPEN) & (df["t"] < FLAT_AT)].groupby("d") if len(g) >= 60}
             sess_by_sym[sym] = sorted(rth_days)
             for orm in OR_MINUTES:
