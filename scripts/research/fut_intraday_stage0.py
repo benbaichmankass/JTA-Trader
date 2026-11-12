@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: manual-only - the runner for RQ-20261112-09d2-04, whose unit file is on PR #25203 until it lands; its run.command will name this script
+# wiring: research/queue/RQ-20261112-09d2-04 via .github/workflows/research-script-run.yml
 """Stage 0 of ONE declared intraday leg, config-exact, on several futures instruments at a
 session-flat prop venue's per-contract costs (FUT-INTRADAY-DUKA-LANE, 2026-11-12).
 
