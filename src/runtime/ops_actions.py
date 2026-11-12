@@ -263,6 +263,32 @@ def _v_set_env(p: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
     return {"key": key, "value": val, "service": svc, "env_file": env_file}, errs
 
 
+#: exec (OPS-EXEC). Operator 2026-11-12, verbatim: "The channel itself is open to any command, and Claude can do
+#: anything that either there's a preset mandate for ... or that I tell you to do, or that he asks permissions from me
+#: and gets explicit permission from me ... once you get permission, you execute it through the channel without
+#: changing configurations or settings or permissions lists". One shell command on the live VM, run by the ops runner
+#: as its own user (sudo -n available), cwd = the trader tree, stdout/stderr tail journaled. Tier 2: it runs only with
+#: the authority attached (operator_quote = the operator's words or the mandate), otherwise it waits on the Telegram
+#: approve card. The permission model between the operator and Claude is unchanged; this only removes the repo/runner
+#: hop for actions and configuration.
+EXEC_MAX_TIMEOUT_S = 3600
+
+
+def _v_exec(p: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
+    errs = [f"unknown param {k}" for k in p if k not in ("cmd", "timeout_s")]
+    cmd = p.get("cmd")
+    if not isinstance(cmd, str) or not cmd.strip():
+        errs.append("cmd: a non-empty shell command is required")
+        cmd = ""
+    try:
+        t = int(p.get("timeout_s") or 600)
+    except (TypeError, ValueError):
+        t = 600
+        errs.append("timeout_s must be an integer")
+    t = max(5, min(t, EXEC_MAX_TIMEOUT_S))
+    return {"cmd": cmd, "timeout_s": t}, errs
+
+
 def _v_directed(p: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
     """A directed_action/v1 record minus id / created_at / directed_by / operator_quote (filled at run time, so a
     record approved minutes later is not born stale). Validated with the VM's own ``directed_actions.problems``."""
@@ -374,6 +400,8 @@ REGISTRY: Dict[str, OpsAction] = {a.name: a for a in (
                 {"script": script})
       for name, script in (("status-check", "status_check.sh"), ("disk-usage-report", "disk_usage_report.sh"),
                            ("list-listening-ports", "list_listening_ports.sh"))),
+    OpsAction("exec", 2, "any command on the live VM (actions and configuration, never through the repo)",
+              _v_exec, "run_exec", EXEC_MAX_TIMEOUT_S, "bash -lc <cmd> as the ops runner, cwd = the trader tree"),
 )}
 
 
@@ -599,6 +627,11 @@ def run_restart_service(job: Dict[str, Any]) -> Dict[str, Any]:
     return res
 
 
+def run_exec(job: Dict[str, Any]) -> Dict[str, Any]:
+    p = job["params"]
+    return _script(["bash", "-lc", p["cmd"]], {}, int(p["timeout_s"]))
+
+
 def run_set_env(job: Dict[str, Any]) -> Dict[str, Any]:
     p = job["params"]
     env = {"ENV_KEY": p["key"], "ENV_VALUE": p["value"], "ENV_SERVICE": p["service"],
@@ -713,6 +746,7 @@ RUNNERS: Dict[str, Runner] = {
     "run_set_env": run_set_env,
     "run_send_ping": run_send_ping,
     "run_report": run_report,
+    "run_exec": run_exec,
 }
 
 

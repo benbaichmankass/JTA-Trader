@@ -1,0 +1,277 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "ict_scalp_mgc_15m: 524 trades in the baseline arm 'T' on MGC 15m candles 2019-01-01 .. 2026-10-31 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['T']",
+  "n": 524,
+  "measurement": {
+    "leg": "ict_scalp_mgc_15m",
+    "label": "stage0_no_edge",
+    "grade": {
+      "verdict": "fail",
+      "label": "stage0_no_edge",
+      "boundary": "2025-01-01 00:00:00+00:00",
+      "end": "2026-10-31 23:59:00+00:00",
+      "discovery": {
+        "n": 348,
+        "net_r": -6.0105,
+        "expectancy_r": -0.0173,
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2019-01-01 00:00:00+00:00",
+            "end": "2020-01-01 00:00:00+00:00",
+            "trades": 33,
+            "net_r": 1.9337
+          },
+          {
+            "fold": 2,
+            "start": "2020-01-01 00:00:00+00:00",
+            "end": "2021-01-01 00:00:00+00:00",
+            "trades": 79,
+            "net_r": -3.1354
+          },
+          {
+            "fold": 3,
+            "start": "2021-01-01 00:00:00+00:00",
+            "end": "2022-01-01 00:00:00+00:00",
+            "trades": 61,
+            "net_r": -8.23
+          },
+          {
+            "fold": 4,
+            "start": "2022-01-01 00:00:00+00:00",
+            "end": "2023-01-01 00:00:00+00:00",
+            "trades": 62,
+            "net_r": -1.0777
+          },
+          {
+            "fold": 5,
+            "start": "2023-01-01 00:00:00+00:00",
+            "end": "2024-01-01 00:00:00+00:00",
+            "trades": 53,
+            "net_r": 8.8352
+          },
+          {
+            "fold": 6,
+            "start": "2024-01-01 00:00:00+00:00",
+            "end": "2025-01-01 00:00:00+00:00",
+            "trades": 60,
+            "net_r": -4.3363
+          }
+        ],
+        "folds_positive": 2
+      },
+      "holdout": {
+        "n": 176,
+        "net_r": -10.4449,
+        "expectancy_r": -0.0593
+      },
+      "ci_z": 2.394,
+      "discovery_ci_lower_r_per_trade": -0.13129,
+      "n_floor": 30,
+      "fold_majority": 4,
+      "n_folds": 6,
+      "holdout_min_n": 15,
+      "n_straddling_boundary": 0,
+      "control": null,
+      "why": "discovery net_r=-6.0105 <= 0; 2/6 folds positive < 4; discovery CI lower bound -0.13129 <= 0 at z=2.394"
+    },
+    "arms": {
+      "T": {
+        "reach_ge_6r": 0.0038,
+        "n": 524,
+        "net_r": -16.4563,
+        "net_r_fee_only": -4.4546,
+        "max_drawdown_r": 24.2938,
+        "by_outcome": {
+          "sl_hit": 146,
+          "session_flat": 109,
+          "timeout": 168,
+          "tp_hit": 77,
+          "be_stop": 24
+        },
+        "mean_bars_held": 17.113,
+        "net_r_per_capital_day": -0.1762,
+        "cost_stack": {
+          "fee_bps_roundtrip": null,
+          "slippage_bps_roundtrip": null,
+          "funding_bps_per_window": 0.0,
+          "cost_model": "per_contract",
+          "contract_cost": {
+            "commission_usd_rt": 2.12,
+            "point_value": 10.0,
+            "tick_size": 0.1,
+            "slip_ticks_per_fill": 1.0
+          }
+        },
+        "session_flat": {
+          "flat_et": "16:35",
+          "reopen_et": "18:00",
+          "n_session_flat_exits": 109,
+          "rule": "close at the last bar whose close <= flat_et ET (after its own SL/TP test); no entry on that bar or on a bar closing in [flat_et, 18:00) ET"
+        },
+        "params": null,
+        "data_start": "2019-01-01 23:00:00",
+        "data_end": "2026-10-30 20:45:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2019-01-01 00:00:00+00:00",
+            "end": "2020-01-01 00:00:00+00:00",
+            "trades": 33,
+            "net_r": 1.9337
+          },
+          {
+            "fold": 2,
+            "start": "2020-01-01 00:00:00+00:00",
+            "end": "2021-01-01 00:00:00+00:00",
+            "trades": 79,
+            "net_r": -3.1354
+          },
+          {
+            "fold": 3,
+            "start": "2021-01-01 00:00:00+00:00",
+            "end": "2022-01-01 00:00:00+00:00",
+            "trades": 61,
+            "net_r": -8.23
+          },
+          {
+            "fold": 4,
+            "start": "2022-01-01 00:00:00+00:00",
+            "end": "2023-01-01 00:00:00+00:00",
+            "trades": 62,
+            "net_r": -1.0777
+          },
+          {
+            "fold": 5,
+            "start": "2023-01-01 00:00:00+00:00",
+            "end": "2024-01-01 00:00:00+00:00",
+            "trades": 53,
+            "net_r": 8.8352
+          },
+          {
+            "fold": 6,
+            "start": "2024-01-01 00:00:00+00:00",
+            "end": "2025-01-01 00:00:00+00:00",
+            "trades": 60,
+            "net_r": -4.3363
+          }
+        ],
+        "argv": [
+          "/usr/local/bin/python3",
+          "/home/user/JTA-Trader/scripts/backtest_ict_scalp.py",
+          "--data",
+          "<data>",
+          "--symbol",
+          "MGC",
+          "--timeframe",
+          "15m",
+          "--strategy-name",
+          "ict_scalp_mgc_15m",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "/tmp/claude-0/-home-user-JTA-Trader/87d2309a-201f-50c2-ad8e-3f51748cb7d0/scratchpad/run0904/MGC/arms/T__trades.jsonl",
+          "--json",
+          "/tmp/claude-0/-home-user-JTA-Trader/87d2309a-201f-50c2-ad8e-3f51748cb7d0/scratchpad/run0904/MGC/arms/T__bt.json",
+          "--htf-rule",
+          "1h",
+          "--htf-ema-period",
+          "20",
+          "--sim-breakeven",
+          "--session-flat-et",
+          "16:35",
+          "--contract-cost-usd-rt",
+          "2.12",
+          "--point-value",
+          "10.0",
+          "--tick-size",
+          "0.1",
+          "--slip-ticks-per-fill",
+          "1.0",
+          "--start",
+          "2019-01-01",
+          "--end",
+          "2026-10-31 23:59"
+        ]
+      }
+    },
+    "window": {
+      "start": "2019-01-01",
+      "end": "2026-10-31 23:59",
+      "fetch_days": 2900,
+      "feed": {
+        "source": "dukascopy",
+        "ticker": "MGC",
+        "interval": "15m",
+        "resample": "15m"
+      },
+      "fold_edges": [
+        "2019-01-01 00:00:00+00:00",
+        "2020-01-01 00:00:00+00:00",
+        "2021-01-01 00:00:00+00:00",
+        "2022-01-01 00:00:00+00:00",
+        "2023-01-01 00:00:00+00:00",
+        "2024-01-01 00:00:00+00:00",
+        "2025-01-01 00:00:00+00:00"
+      ]
+    },
+    "argv": {
+      "T": {
+        "argv": [
+          "/usr/local/bin/python3",
+          "/home/user/JTA-Trader/scripts/backtest_ict_scalp.py",
+          "--data",
+          "<data>",
+          "--symbol",
+          "MGC",
+          "--timeframe",
+          "15m",
+          "--strategy-name",
+          "ict_scalp_mgc_15m",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "/tmp/claude-0/-home-user-JTA-Trader/87d2309a-201f-50c2-ad8e-3f51748cb7d0/scratchpad/run0904/MGC/arms/T__trades.jsonl",
+          "--json",
+          "/tmp/claude-0/-home-user-JTA-Trader/87d2309a-201f-50c2-ad8e-3f51748cb7d0/scratchpad/run0904/MGC/arms/T__bt.json",
+          "--htf-rule",
+          "1h",
+          "--htf-ema-period",
+          "20",
+          "--sim-breakeven",
+          "--session-flat-et",
+          "16:35",
+          "--contract-cost-usd-rt",
+          "2.12",
+          "--point-value",
+          "10.0",
+          "--tick-size",
+          "0.1",
+          "--slip-ticks-per-fill",
+          "1.0",
+          "--start",
+          "2019-01-01",
+          "--end",
+          "2026-10-31 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [
+          "--session-flat-et",
+          "16:35",
+          "--contract-cost-usd-rt",
+          "2.12",
+          "--point-value",
+          "10.0",
+          "--tick-size",
+          "0.1",
+          "--slip-ticks-per-fill",
+          "1.0"
+        ],
+        "omitted_levers_per_builder": []
+      }
+    }
+  },
+  "note": "FAIL / stage0_no_edge: discovery net_r=-6.0105 <= 0; 2/6 folds positive < 4; discovery CI lower bound -0.13129 <= 0 at z=2.394"
+}

@@ -454,6 +454,95 @@ def forward_stage(tab: pd.DataFrame, unit: str, ledger_dir: Path, end: str, symb
     return c
 
 
+H2H_FAMILY = "ENTRY-EQ-H2H"
+H2H_V1 = "ml/candidates/ml_entry_eq_v1/model.json"                  # ENTRY-EQ-v1, tau 0.20, fixed bracket (ml_entry_eq, alpaca_paper)
+H2H_STRUCT = "ml/candidates/ml_entry_eq_v3_struct_ens5/model.json"  # ens5, tau 0.25, pivot=5;sl_only (ml_entry_eq_struct, alpaca_live + alpaca_portfolio)
+
+
+def _artifact_scorer(path):
+    """Frozen artifact -> (features, tau, predict_fn). The boosters are the shipped texts: nothing is refit."""
+    import lightgbm as lgb
+    art = json.loads((REPO / path).read_text()) if not Path(path).is_absolute() else json.loads(Path(path).read_text())
+    bt = art["booster_txt"]["long"]
+    boosters = [lgb.Booster(model_str=t) for t in (bt if isinstance(bt, list) else [bt])]
+    feats = art["features"]
+
+    def predict(df):
+        return np.mean([b.predict(df[feats]) for b in boosters], axis=0)   # provenance: predict -- mean regressed LONG net R (a regressor, not a probability)
+    return feats, float(art["tau"]), predict, art["model_id"]
+
+
+def _cluster_t(day_sum: pd.Series):
+    k = len(day_sum)
+    if k < 3 or day_sum.std(ddof=1) == 0:
+        return None
+    return float(day_sum.mean() / (day_sum.std(ddof=1) / np.sqrt(k)))
+
+
+def h2h_stage(tab_fixed: pd.DataFrame, tab_struct: pd.DataFrame, v1: tuple, st: tuple, unit: str, ledger_dir: Path, start: str, end: str,
+              symbols=None, train_end: str = TRAIN_END, claim: bool = True, min_n_union: int = 100, t_min: float = 1.3) -> dict:
+    """HEAD-TO-HEAD of two FROZEN equity ENTRY artifacts on the SAME decision bars (symbol, ts) of one window. Each model trades under its OWN live
+    exit (v1: fixed SL2/TP3 ATR bracket; struct: pivot=5;sl_only), net of the same cost stack. Nothing is refit and nothing is tuned here.
+    Per decision bar in the UNION of the two models' trades: c_m = net R of model m's trade there (0 if m does not trade the bar);
+    d = c_struct - c_v1. The statistic is mean(d) with a calendar-DAY-clustered t. Reported, never gating: v1-only / struct-only / both-fire means
+    (the consensus arm), and the same-exit control (both models' trades scored under the struct exit)."""
+    HL.check_window_disjoint(train_end, start)
+    if pd.Timestamp(start) < pd.Timestamp(train_end) + pd.Timedelta(days=EMBARGO_DAYS):
+        raise RuntimeError(f"h2h start {start} is inside the {EMBARGO_DAYS}-day embargo after train_end {train_end}")
+    hs, he = pd.Timestamp(start, tz="UTC"), pd.Timestamp(end, tz="UTC") + pd.Timedelta(days=1)
+    rec = None
+    if claim:
+        ledger_dir.mkdir(parents=True, exist_ok=True)
+        ledger = ledger_dir / "holdout_reads.jsonl"
+        if HL.LEDGER.exists() and not ledger.exists():
+            shutil.copy(HL.LEDGER, ledger)
+        rec = HL.claim_read(f"{H2H_FAMILY}-{v1[3]}-vs-{st[3]}", start, end, unit, "lane ML-PROGRAMME-CONSOLIDATION (research-script-run)", ledger=ledger,
+                            symbols=symbols, train_end=train_end, family=H2H_FAMILY)
+
+    def trades(tab, scorer):
+        feats, tau, predict, _ = scorer
+        w = tab[(tab.ts >= hs) & (tab.ts < he)].dropna(subset=feats + ["net_long"])
+        w = w[session_mask(w.ts)]
+        return w, taken_trades(w, predict(w[feats]), tau)
+
+    wf, tk1 = trades(tab_fixed, v1)
+    ws, tk2 = trades(tab_struct, st)
+    k = ["symbol", "ts"]
+    a = tk1[k + ["net_r"]].rename(columns={"net_r": "c_v1"}) if len(tk1) else pd.DataFrame(columns=k + ["c_v1"])
+    b = tk2[k + ["net_r"]].rename(columns={"net_r": "c_st"}) if len(tk2) else pd.DataFrame(columns=k + ["c_st"])
+    u = a.merge(b, on=k, how="outer")
+    u["fire_v1"], u["fire_st"] = u.c_v1.notna(), u.c_st.notna()
+    u[["c_v1", "c_st"]] = u[["c_v1", "c_st"]].fillna(0.0)
+    u["d"] = u.c_st - u.c_v1
+    # same-exit control: BOTH models' trades valued with the struct-exit outcome of that bar
+    nl = tab_struct.set_index(k)["net_long"]
+    u["same_v1"] = [float(nl.get((r.symbol, r.ts), np.nan)) if r.fire_v1 else 0.0 for r in u.itertuples()]
+    u["same_st"] = [float(nl.get((r.symbol, r.ts), np.nan)) if r.fire_st else 0.0 for r in u.itertuples()]
+    u["day"] = pd.to_datetime(u.ts, utc=True).dt.strftime("%Y-%m-%d")
+    n_union = int(len(u))
+
+    def arm(mask, col):
+        x = u.loc[mask, col]
+        return {"n": int(len(x)), "mean_net_r": None if len(x) == 0 else round(float(x.mean()), 4)}
+    mean_d = float(u.d.mean()) if n_union else None
+    t = _cluster_t(u.groupby("day").d.sum()) if n_union else None
+    same_d = float((u.same_st - u.same_v1).mean()) if n_union else None
+    st_stats = _stats(tk2)
+    if n_union < min_n_union:
+        v, why = "indeterminate", f"union decision bars n={n_union} < {min_n_union}"
+    else:
+        ok = mean_d > 0 and t is not None and t >= t_min and st_stats["mean_net_r"] is not None and st_stats["mean_net_r"] > 0
+        v = "pass" if ok else "fail"
+        why = (f"mean d (struct - v1, per union bar) {mean_d:+.4f} R, day-clustered t {None if t is None else round(t, 2)} (bar {t_min}), "
+               f"struct own mean net R {st_stats['mean_net_r']}, n_union {n_union}")
+    return {"verdict": v, "note": why, "n_union": n_union, "mean_d": mean_d, "day_clustered_t": t, "same_exit_mean_d": same_d,
+            "v1": {"model_id": v1[3], "tau": v1[1], "stats": _stats(tk1)}, "struct": {"model_id": st[3], "tau": st[1], "stats": st_stats},
+            "arms": {"v1_only": arm(u.fire_v1 & ~u.fire_st, "c_v1"), "struct_only": arm(~u.fire_v1 & u.fire_st, "c_st"),
+                     "both_fire_v1_exit": arm(u.fire_v1 & u.fire_st, "c_v1"), "both_fire_struct_exit": arm(u.fire_v1 & u.fire_st, "c_st")},
+            "window": {"train_end": train_end, "start": start, "end": end, "embargo_days": EMBARGO_DAYS},
+            "decision_rows": {"fixed": int(len(wf)), "struct": int(len(ws))}, "ledger_record": rec}
+
+
 def dev_row(d: dict, unit: str, where: str) -> dict:
     """The dev record in the runner's verdict.json contract (script_run.VERDICTS / READ_STATES): a descriptive stage carries
     verdict 'indeterminate' (run 42119511272 wrote 'descriptive' -> malformed; run 42166322024 wrote 'not_applicable' with read_state measured ->
@@ -558,6 +647,18 @@ def main_run(a) -> int:
                "measurement": {**c, "pool": {k: v for k, v in prep.items() if k != "excluded"}, "n_pool": len(pool),
                                "alpaca_calls": client.calls, "runtime_s": round(time.time() - t0, 1)},
                "n": c.get("stats", {}).get("n"), "produced_by": {"tool": "python3 scripts/research/ml_entry_equity.py forward", "where": a.where}}
+    elif a.cmd == "h2h":
+        tab_s = build_table(bars, pool, slip, fee, struct=STRUCT_SPEC)
+        c = h2h_stage(tab, tab_s, _artifact_scorer(H2H_V1), _artifact_scorer(H2H_STRUCT), a.unit, out / "ledger", a.start, a.end or end_day, pool,
+                      min_n_union=int(a.min_n_union), t_min=float(a.t_min))
+        row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": c["verdict"], "note": c["note"],
+               "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
+               "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True},
+               "population": {"n": c["n_union"], "description": f"frozen ml_entry_eq (v1, tau 0.20) vs ml_entry_eq_struct (ens5, tau 0.25) on the SAME decision bars of the "
+                              f"{len(pool)}-ETF Alpaca liquidity pool, window {a.start}..{a.end or end_day}, each under its own live exit, net of the Alpaca cost stack"},
+               "measurement": {**c, "pool": {k: v for k, v in prep.items() if k != "excluded"}, "n_pool": len(pool), "alpaca_calls": client.calls,
+                               "runtime_s": round(time.time() - t0, 1)},
+               "n": c["n_union"], "produced_by": {"tool": "python3 scripts/research/ml_entry_equity.py h2h", "where": a.where}}
     elif a.cmd == "export":
         if a.ensemble_seeds:
             e = export_ensemble(tab, a.config, float(a.tau), pool, a.expect_sha, out, a.ensemble_seeds.split(","), struct=STRUCT_SPEC if a.structure else "")
@@ -685,6 +786,27 @@ def self_test() -> int:
         r2 = forward_stage(ts_tab, "RQ-T", Path(td), "2023-08-31", pool, 0.0, 0.01, ["1", "2"], configs=sm, train_end="2023-04-30", start="2023-05-20",
                            min_mean=0.0, min_n=5, lb_z=1.2816)
         assert r2["verdict"] in ("pass", "fail") and r2["ledger_record"]["model_id"].endswith("-ENS2-FWD") and "lower bound" in r2["note"], r2["note"]
+    with tempfile.TemporaryDirectory() as td:   # head-to-head: two frozen artifacts, same bars, own exits
+        import lightgbm as lgb
+        def _fake(td_, name, tau, struct):
+            tr_ = ts_tab if struct else tab
+            f_ = OWN + XS
+            trn = purge(tr_[tr_.ts < pd.Timestamp("2023-05-01", tz="UTC")], pd.Timestamp("2023-05-01", tz="UTC")).dropna(subset=f_ + ["net_long"])
+            m_ = _lgb({"n_estimators": 20, "min_child_samples": 20}).fit(trn[f_], trn["net_long"])
+            pth = Path(td_) / f"{name}.json"
+            pth.write_text(json.dumps({"model_id": name, "features": f_, "tau": tau, "booster_txt": {"long": m_.booster_.model_to_string()}}))
+            return _artifact_scorer(str(pth))
+        s1, s2 = _fake(td, "fake-v1", 0.0, False), _fake(td, "fake-struct", 0.0, True)
+        r = h2h_stage(tab, ts_tab, s1, s2, "RQ-T", Path(td), "2023-05-20", "2023-08-31", pool, train_end="2023-04-30", min_n_union=5)
+        assert r["verdict"] in ("pass", "fail") and r["n_union"] >= 5 and r["ledger_record"]["family"] == H2H_FAMILY, r["note"]
+        n_both = r["arms"]["both_fire_v1_exit"]["n"]
+        assert r["n_union"] == r["arms"]["v1_only"]["n"] + r["arms"]["struct_only"]["n"] + n_both, "union must partition into three arms"
+        assert abs(r["mean_d"] - ((r["arms"]["struct_only"]["n"] and r["arms"]["struct_only"]["mean_net_r"] * r["arms"]["struct_only"]["n"] or 0)
+                                  + (n_both and r["arms"]["both_fire_struct_exit"]["mean_net_r"] * n_both or 0)
+                                  - (r["arms"]["v1_only"]["n"] and r["arms"]["v1_only"]["mean_net_r"] * r["arms"]["v1_only"]["n"] or 0)
+                                  - (n_both and r["arms"]["both_fire_v1_exit"]["mean_net_r"] * n_both or 0)) / r["n_union"]) < 1e-3, "mean d must equal the arm decomposition"
+        r0 = h2h_stage(tab, ts_tab, s1, s2, "RQ-T", Path(td), "2023-05-20", "2023-08-31", pool, train_end="2023-04-30", min_n_union=10**6, claim=False)
+        assert r0["verdict"] == "indeterminate", r0
     print("self-test ok")
     return 0
 
@@ -693,7 +815,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--self-test", action="store_true")
     sub = ap.add_subparsers(dest="cmd")
-    for name in ("dev", "confirm", "export", "structure", "forward"):
+    for name in ("dev", "confirm", "export", "structure", "forward", "h2h"):
         p = sub.add_parser(name)
         p.add_argument("--cache", required=True)
         p.add_argument("--out", required=True)
@@ -724,6 +846,13 @@ def main(argv=None) -> int:
             p.add_argument("--lb-z", dest="lb_z", default="0")
             p.add_argument("--rule-id", required=True)
             p.add_argument("--registered-at", required=True)
+        if name == "h2h":
+            p.add_argument("--start", default=CONFIRM_START)
+            p.add_argument("--end", default="", help="default: the last complete month")
+            p.add_argument("--min-n-union", dest="min_n_union", default="100")
+            p.add_argument("--t-min", dest="t_min", default="1.3")
+            p.add_argument("--rule-id", required=True)
+            p.add_argument("--registered-at", required=True)
         if name == "structure":
             p.add_argument("--taus", default="", help="comma list overriding the tau grid (registered in the unit)")
             p.add_argument("--ensemble-seeds", dest="ensemble_seeds", default="", help="serve ONE model = mean of pinned fits at these seeds")
@@ -741,7 +870,7 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
     if a.self_test:
         return self_test()
-    return main_run(a) if a.cmd in ("dev", "confirm", "export", "structure", "forward") else 2
+    return main_run(a) if a.cmd in ("dev", "confirm", "export", "structure", "forward", "h2h") else 2
 
 
 if __name__ == "__main__":
