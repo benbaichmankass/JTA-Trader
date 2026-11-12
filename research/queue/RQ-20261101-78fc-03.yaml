@@ -32,10 +32,10 @@ power:
   min_detectable_effect: 0.02
   effect_units: metric
   sd: 1.0
-  design: paired
+  design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: INFERRED from the source result's population; the rule's own INDETERMINATE floor governs.
+  basis: 'INFERRED from the source result''s population; the rule''s own INDETERMINATE floor governs. power.design paired -> one_sample on unblocking (2026-11-12, before any run): the power gate accepts only one_sample / two_sample; the head-vs-B0 comparison is a one-sample test on per-trade dR. Rule unchanged.'
   feasibility:
     source: none
     accrual_basis: Replays existing corpora; nothing accrues.
