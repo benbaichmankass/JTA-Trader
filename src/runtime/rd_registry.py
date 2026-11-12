@@ -37,6 +37,7 @@ from typing import Any
 import yaml
 
 from src.runtime import research_catalog as rc
+from src.runtime.provenance import MEASURED, UNVERIFIED
 
 SCHEMA = 1
 REPO_BLOB = rc.REPO_BLOB
@@ -240,6 +241,7 @@ def _result(u: dict | None) -> dict | None:
     du = u.get("dataUsed") or {}
     metrics = {k: v for k, v in (u.get("metrics") or {}).items() if isinstance(v, (int, float)) and not isinstance(v, bool)}
     return {"unit": u["id"], "verdict": _verdict(u), "verdict_raw": _raw_verdict(u),
+            "provenance": MEASURED if u.get("resultSource") == "results_dir" else UNVERIFIED,
             "confirmation": u.get("confirmation"), "date": u.get("latestResultAt"),
             "metrics": dict(list(metrics.items())[:4]) or None,
             "population": du.get("population"), "n": du.get("n"),
@@ -252,6 +254,40 @@ def _counts(units: list[dict]) -> dict[str, int]:
             "indeterminate": v.count("indeterminate"),
             "open": sum(1 for u in units if u["status"] in OPEN),
             "blocked": sum(1 for u in units if u["status"] == "blocked")}
+
+
+def _survivor_tools():
+    """research_slo's OWN definitions (row RESEARCH-SLO-SURVIVOR-CONVERSION) -- reused, never forked.
+    (classify_evidence, heldout_kinds, classify_subject or None, read_state)."""
+    try:
+        from scripts.research import research_slo as slo
+    except Exception as exc:  # noqa: BLE001 -- surfaced as read_state
+        return None, (), None, f"unavailable: research_slo import failed ({type(exc).__name__})"
+    cs = getattr(slo, "classify_subject", None)
+    return (slo.classify_evidence, tuple(slo.HELDOUT_KINDS), cs,
+            "ok" if cs else "partial: research_slo.classify_subject not on main yet (PR #25307); survivor class = null")
+
+
+def survivors_of(us: list[dict], docs: dict[str, dict], tools) -> dict | None:
+    """A survivor (operator 2026-11-04): a registered-rule PASS on held-out data. Here: EFFECTIVE verdict pass
+    (confirmation not not_replicated/underpowered) AND decision_rule.registered_before_run true AND research_slo
+    classify_evidence holdout in its HELDOUT_KINDS. Split by research_slo.classify_subject when it exists."""
+    classify_evidence, heldout, classify_subject, _st = tools
+    if classify_evidence is None:
+        return None
+    ids, by_class = [], {}
+    for u in us:
+        d = docs.get(u["id"]) or {}
+        rule = d.get("decision_rule") if isinstance(d.get("decision_rule"), dict) else {}
+        if _verdict(u) != "pass" or rule.get("registered_before_run") is not True:
+            continue
+        if classify_evidence(d)[0] not in heldout:
+            continue
+        ids.append(u["id"])
+        if classify_subject:
+            k = classify_subject(d, docs)
+            by_class[k] = by_class.get(k, 0) + 1
+    return {"count": len(ids), "units": ids[:10] or None, "by_class": by_class if classify_subject else None}
 
 
 # ── build ────────────────────────────────────────────────────────────────────────────────────
@@ -321,6 +357,8 @@ def build_registry(root: Path, *, now: datetime | None = None, catalog: dict | N
         read_state["checklist"] = {"state": f"unreadable: {type(exc).__name__}", "n": None}
     open_rows = [r for r in rows if str(r.get("state") or "").lower() not in CLOSED_ROW_STATES]
 
+    surv_tools = _survivor_tools()
+    read_state["survivor_definitions"] = {"state": surv_tools[3], "source": "scripts/research/research_slo.py"}
     ev_dir = root / "comms" / "strategy_evidence"
     read_state["strategy_evidence"] = {"state": "ok" if ev_dir.is_dir() else "missing",
                                        "n": len(list(ev_dir.glob("*.json"))) if ev_dir.is_dir() else None,
@@ -399,6 +437,7 @@ def build_registry(root: Path, *, now: datetime | None = None, catalog: dict | N
             "latest_result": _result(latest),
             "counts": _counts(us) if us else {"units": 0, "passed": 0, "failed": 0, "indeterminate": 0, "open": 0, "blocked": 0},
             "open_units": [u["id"] for u in us if u["status"] in OPEN][:5] or None,
+            "survivors": survivors_of(us, docs, surv_tools),
             "next_step": next_step, "owner_rows": owner or None,
             "last_activity": max(acts) if acts else None, "links": links, **(extra or {}),
         })
@@ -560,6 +599,28 @@ def build_registry(root: Path, *, now: datetime | None = None, catalog: dict | N
         s = units[uid]["status"]
         un_by_status[s] = un_by_status.get(s, 0) + 1
     n_attr = sum(len(v) for v in attributed.values())
+    slots: dict[str, dict[str, Any]] = {}
+    for i in ideas:
+        if i["track"] != ML:
+            continue
+        sl = i.get("slot") or "unassigned"
+        e = slots.setdefault(sl, {"ideas": 0, "units": 0, "models_production": 0, "models_testing_book": 0,
+                                  "survivors": 0 if surv_tools[0] else None})
+        e["ideas"] += 1
+        e["units"] += i["counts"]["units"]
+        e["models_production"] += int(i["kind"] == "ml_model" and i["stage"] == "production")
+        e["models_testing_book"] += int(i["kind"] == "ml_model" and i["stage"] == "testing_book")
+        if e["survivors"] is not None and i["survivors"]:
+            e["survivors"] += i["survivors"]["count"]
+    surv_total = None
+    surv_class: dict[str, int] | None = None
+    if surv_tools[0]:
+        surv_total = {t: sum((i["survivors"] or {}).get("count", 0) for i in ideas if i["track"] == t) for t in (STRATEGY, ML)}
+        if surv_tools[2]:
+            surv_class = {}
+            for i in ideas:
+                for k, v in ((i["survivors"] or {}).get("by_class") or {}).items():
+                    surv_class[k] = surv_class.get(k, 0) + v
     summary = {
         "ideas": len(ideas),
         "per_track": {t: sum(per_stage[t].values()) for t in per_stage},
@@ -577,6 +638,14 @@ def build_registry(root: Path, *, now: datetime | None = None, catalog: dict | N
                                "by_status": un_by_status,
                                "note": "units no rule could tie to one strategy/ML idea (cross-cutting infra, macro event "
                                        "studies, prop book compositions...). Counted, never dropped; still in /api/bot/research/catalog"},
+        "ml_per_slot": {"basis": "ML ideas by registry slot (docs/reference/model_names.yaml breed slot via the registry); "
+                                 "plan items and hypotheses carry no slot -> unassigned. units = units attributed to those ideas; "
+                                 "models_production = models with a real-money order consumer", "provenance": MEASURED,
+                        "slots": dict(sorted(slots.items()))},
+        "survivors": {"definition": "effective pass AND registered_before_run AND research_slo.classify_evidence holdout "
+                                    "in HELDOUT_KINDS (attributed units only, all time)",
+                      "per_track": surv_total, "by_class": surv_class,
+                      "read_state": surv_tools[3], "provenance": MEASURED if surv_total is not None else None},
         "excluded": {"ml_plan_build_items": excluded_plan_builds, "data_infra_programme_nodes": excluded_infra_nodes},
     }
     return {

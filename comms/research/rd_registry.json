@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "generated_at": "2026-11-12T12:55:04Z",
+ "generated_at": "2026-11-12T12:58:38Z",
  "population": "every strategy leg in config/strategies.yaml; every ML registry row in bucket LIVE/SHADOW (plus OFFLINE rows with an attributed unit); every unit-subject that is neither; every ML plan item that is an idea; every programme question node with attributed units or an open needs_authoring",
  "decision": "operator 2026-11-12 chat \u2014 idea-level ML + strategy testing registry for visibility",
  "gates": "none: a read projection; it refuses and blocks nothing",
@@ -159,6 +159,10 @@
    "state": "ok",
    "n": 1398
   },
+  "survivor_definitions": {
+   "state": "partial: research_slo.classify_subject not on main yet (PR #25307); survivor class = null",
+   "source": "scripts/research/research_slo.py"
+  },
   "strategy_evidence": {
    "state": "ok",
    "n": 58,
@@ -200,7 +204,7 @@
    }
   },
   "changed_last_7d": {
-   "basis": "idea's newest attributed-unit activity (result, dispatch or grading) on/after 2026-11-05T12:55:04Z",
+   "basis": "idea's newest attributed-unit activity (result, dispatch or grading) on/after 2026-11-05T12:58:38Z",
    "count": 66,
    "items": [
     {
@@ -561,6 +565,64 @@
    },
    "note": "units no rule could tie to one strategy/ML idea (cross-cutting infra, macro event studies, prop book compositions...). Counted, never dropped; still in /api/bot/research/catalog"
   },
+  "ml_per_slot": {
+   "basis": "ML ideas by registry slot (docs/reference/model_names.yaml breed slot via the registry); plan items and hypotheses carry no slot -> unassigned. units = units attributed to those ideas; models_production = models with a real-money order consumer",
+   "provenance": "measured",
+   "slots": {
+    "D2": {
+     "ideas": 20,
+     "units": 8,
+     "models_production": 0,
+     "models_testing_book": 0,
+     "survivors": 0
+    },
+    "D3": {
+     "ideas": 5,
+     "units": 2,
+     "models_production": 3,
+     "models_testing_book": 2,
+     "survivors": 0
+    },
+    "D4": {
+     "ideas": 1,
+     "units": 0,
+     "models_production": 1,
+     "models_testing_book": 0,
+     "survivors": 0
+    },
+    "D7": {
+     "ideas": 1,
+     "units": 0,
+     "models_production": 1,
+     "models_testing_book": 0,
+     "survivors": 0
+    },
+    "D8": {
+     "ideas": 1,
+     "units": 1,
+     "models_production": 0,
+     "models_testing_book": 1,
+     "survivors": 0
+    },
+    "unassigned": {
+     "ideas": 111,
+     "units": 89,
+     "models_production": 0,
+     "models_testing_book": 0,
+     "survivors": 3
+    }
+   }
+  },
+  "survivors": {
+   "definition": "effective pass AND registered_before_run AND research_slo.classify_evidence holdout in HELDOUT_KINDS (attributed units only, all time)",
+   "per_track": {
+    "STRATEGY": 35,
+    "ML": 3
+   },
+   "by_class": null,
+   "read_state": "partial: research_slo.classify_subject not on main yet (PR #25307); survivor class = null",
+   "provenance": "measured"
+  },
   "excluded": {
    "ml_plan_build_items": 26,
    "data_infra_programme_nodes": 5
@@ -586,6 +648,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "build row ML-DATA-OFF-TRAINER",
    "owner_rows": [
     "ML-DATA-OFF-TRAINER"
@@ -617,6 +684,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "build row ML-RUNPOD-RESULT-LANDING",
    "owner_rows": [
     "ML-RUNPOD-RESULT-LANDING"
@@ -648,6 +720,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "build row ML-FRONTIER-W42",
    "owner_rows": [
     "ML-FRONTIER-W42"
@@ -679,6 +756,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "build row ML-READ-1025",
    "owner_rows": [
     "ML-READ-1025"
@@ -710,6 +792,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "build row FRONTIER-LEVER-HARNESS-COSTS",
    "owner_rows": [
     "FRONTIER-LEVER-HARNESS-COSTS"
@@ -741,6 +828,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "build row ML-RQ-RUNNER",
    "owner_rows": [
     "ML-RQ-RUNNER"
@@ -772,6 +864,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "build row ML-HEAD-AGREEMENT-JOIN",
    "owner_rows": [
     "ML-HEAD-AGREEMENT-JOIN"
@@ -803,6 +900,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "build row ML-DRIFT-SPLIT-INSTRUMENT",
    "owner_rows": [
     "ML-DRIFT-SPLIT-INSTRUMENT"
@@ -834,6 +936,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "build row REGIME-PROGRAM",
    "owner_rows": [
     "REGIME-PROGRAM"
@@ -865,6 +972,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "build row REGIME-WEIGHT-VARIANTS",
    "owner_rows": [
     "REGIME-WEIGHT-VARIANTS"
@@ -896,6 +1008,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "build row FUNDING-OI-DATASETS-ETH-SOL",
    "owner_rows": [
     "FUNDING-OI-DATASETS-ETH-SOL"
@@ -927,6 +1044,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "build row REGIME-SCOPE",
    "owner_rows": [
     "REGIME-SCOPE"
@@ -958,6 +1080,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "build row REGIME-VOL-LABELS-EXPORT",
    "owner_rows": [
     "REGIME-VOL-LABELS-EXPORT"
@@ -989,6 +1116,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "build row REGIME-EQUITY-LEG-FETCH",
    "owner_rows": [
     "REGIME-EQUITY-LEG-FETCH"
@@ -1020,6 +1152,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "build row REGIME-WF-VERDICT-WRAPPER",
    "owner_rows": [
     "REGIME-WF-VERDICT-WRAPPER"
@@ -1051,6 +1188,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "build row ML-LEG-CORPUS",
    "owner_rows": [
     "ML-LEG-CORPUS"
@@ -1082,6 +1224,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "build row TP-PREDICT-HEAD",
    "owner_rows": [
     "TP-PREDICT-HEAD"
@@ -1113,6 +1260,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "build row EXIT-HEAD-PULLBACK-DRIVER",
    "owner_rows": [
     "EXIT-HEAD-PULLBACK-DRIVER"
@@ -1144,6 +1296,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "ML-ROADMAP-MECE (PR #22892) proposal 6 (unit RQ-20261105-mece-04, draft id): the advisory regime heads (Collie, slot D2) on a REAL-MONEY leg -- regime_cell_walkforward.py on the real-money roster legs (xrp/eth Donchian, ada/xrp pullbacks) on the advisory vol label where it exists, rule label elsewh\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -1176,6 +1333,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "ML-ROADMAP-MECE (PR #22892) proposal 2 (unit RQ-20261105-mece-01, draft id): VALUE-OF-INFORMATION census before any position-aggregator (Mastiff, slot D5) build -- 14-day refusal counts by reason per slices account (real vs demo) plus a Stage-0 count of concurrent same-symbol episodes per symbol. D\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -1207,6 +1369,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "ML-ROADMAP-MECE (PR #22892) proposal 4 (unit RQ-20261105-mece-02, draft id): POINTER v0 (slot D6, bracket at entry) -- score the SERVED Labrador-1b TP-revision model at bar 0 of Foxhound-1 entries vs the fixed 3-ATR TP, on the frozen held-out window, one read, net of the full cost stack, pooled ove\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -1239,6 +1406,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "1h regime skill does not hold on the last 90 days for at least one symbol (persistent at 1h). Per the drift-remediation skill: register the feature/label fix test for that symbol (e.g. HAR-RV horizons, recency-weighted training, a vol-target re-definition) as an off-trainer bake-off; demotion only \u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -1270,6 +1442,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "The persistent drift flag is mostly an instrument artifact or input-mix shift. Not a research question: file the scan fix on ML-DRIFT-SPLIT-INSTRUMENT (version-pure scoring) and close PI-20261016-P3PFA1GK-0001 with the per-head reading; author a research unit only for the heads read DECAY.",
    "owner_rows": null,
    "last_activity": null,
@@ -1301,6 +1478,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": ">= 4 of the 9 flagged heads read DECAY. Register one drift-remediation bake-off per decayed family (features, label, training window), off the trainer where the data is published; the advisory sol-regime-15m-lgbm-fc-pcv-v2 first.",
    "owner_rows": null,
    "last_activity": null,
@@ -1332,6 +1514,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "BUILD-GATED (programme review 2026-10-28). PR #20869 (cost-net labels + an enforced cost gate) refuses all 9 setup-candidates metalabel heads, but the refusal reason is eval_not_cost_net: the 7 setup_candidates datasets are frozen GROSS builds (triple-barrier-v1, 2026-06-06..08-04) and the cycle ne\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -1363,6 +1550,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "M23 P3 PASSED for at least one family on the widened emits. Register (a) the disjoint-window confirmation of the passing family's take/skip head, and (b) the shadow-registration proposal (P4, Tier-3 note on AI-TRADER-PROGRAMME) only after (a) and the pooling-parity read (RQ-20261016-65ff-26) for th\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -1394,6 +1586,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Pooling parity FAILED (net R or features differ live vs backtest): do NOT pool. Register the backtest-fidelity unit for the legs whose net R rejects (cost or fill model gap) and keep M23 on live labels per GO cell from the label census.",
    "owner_rows": null,
    "last_activity": null,
@@ -1425,6 +1622,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "CatBoost's 1h regime log-loss win confirmed out of time and on SOL. Not another bake-off: the Tier-3 candidate-manifest note on FRONTIER-RESEARCH; then register the net-of-cost question -- does the CatBoost head's vol label separate trades better than LightGBM's (an arm of the RQ-20261016-65ff-28 c\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -1456,6 +1658,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "OPERATOR IDEA (IDEAS.md 2026-10-21): cross-symbol and cross-asset CORRELATION features beyond FRONTIER-LEVER-LEADLAG (which covers only BTC->alt 5m lead-lag). Candidates, each fixed before the run: rolling 1h correlation of the symbol to BTC and to the alt basket (24 / 168 bars), its change, the ba\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -1487,6 +1694,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "The small-n tabular bake-off (TabICL / TabPFN / CatBoost vs LightGBM on the meta-label dataset) closed. Write the verdict to families.tabular_foundation_model.history and register the next rung per the frontier skill table (PASS -> candidate note + per-cell live-label head for the GO cells of the l\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -1518,6 +1730,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "The TSFM forecaster bake-off for the vol head closed (with the HAR-RV control). PASS -> the LoRA rung (blocked/RQ-20261013-1414-08) and a serve-parity row; FAIL -> families.ts_foundation_model.history; the covariate-native rung (1414-09) waits on FUNDING-OI-DATASETS-ETH-SOL either way.",
    "owner_rows": null,
    "last_activity": null,
@@ -1550,6 +1767,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Off-VM training parity FAILED for the HMM class on identical rows. Register the root-cause measurement (library version / platform float drift / an unseeded path) as a unit before the class is moved; it stays on the trainer.",
    "owner_rows": null,
    "last_activity": null,
@@ -1581,6 +1803,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Off-VM training parity PASSED for the HMM class. Not a research question: note it on KAGGLE-TRAIN-RUNNER-FIRST and PI-20261016-P3PFA1GK-0002 (one class cleared); the one operator-gated off-VM registry write for this class is a Tier-2 ask.",
    "owner_rows": null,
    "last_activity": null,
@@ -1612,6 +1839,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Off-VM training parity FAILED for the RegimeClassifier class on identical rows. Register the root-cause measurement (library version / platform float drift / an unseeded path) as a unit before the class is moved; it stays on the trainer.",
    "owner_rows": null,
    "last_activity": null,
@@ -1643,6 +1875,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Off-VM training parity PASSED for the RegimeClassifier class. Not a research question: note it on KAGGLE-TRAIN-RUNNER-FIRST and PI-20261016-P3PFA1GK-0002 (one class cleared); the one operator-gated off-VM registry write for this class is a Tier-2 ask.",
    "owner_rows": null,
    "last_activity": null,
@@ -1674,6 +1911,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "The two vol-axis SOFT-weight variants (advisory-head predict_proba, realised-vol percentile) closed. Compare them to the HARD vol skips the per-leg units measured (65ff-06..08 and the 407c/f0e2/470a skips): a soft weight that beats the hard skip on the same leg and window is the sizing-side regime \u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -1705,6 +1947,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "The offline parity re-check of the three volatile-keyed trend_vol OFF-cells closed. A cell that is not *_stable_drag is a cosmetic cell (regime-selectivity Rule 1): register its removal packet (Tier-3) on REGIME-PROGRAM; a cell that holds stays and is noted.",
    "owner_rows": null,
    "last_activity": null,
@@ -1736,6 +1983,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "No classifier label (ML vol head, HMM, ATR control) separates trades on the vol axis. With the trend axis already null (75b2-01..15), register the remaining regime-program question: per-LEG (not pooled) conditions only -- the per-leg pullback units RQ-20261016-65ff-06..08 and the vol-target sizing \u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -1767,6 +2019,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "A regime classifier's label separates money-losing entries out of sample. Per regime-selectivity Rule 2: register the regime_cell_walkforward.py run on the actual 2-D (trend, vol) cell with --vol-labels from THAT classifier (*_stable_drag under FOLD_PANEL 3/4/5, both directions read), via the REGIM\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -1798,6 +2055,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "The real-money equity legs' vol-axis read closed. Per passing leg/arm register a fresh-window confirmation (2006-2016 daily); a FAIL records the axis honest_negative for alpaca_live.",
    "owner_rows": null,
    "last_activity": null,
@@ -1829,6 +2091,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-65ff-01 CONFIRMED the first-window regime gate on xrp_pullback_2h on a disjoint window. Not another backtest: prepare the regime-selectivity Tier-3 PACKET as a note on REGIME-PROGRAM (both windows' numbers, the account_compat_matrix, the exact strategies.yaml line it would change) for t\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -1860,6 +2127,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-65ff-02 CONFIRMED the first-window regime gate on ada_pullback_2h on a disjoint window. Not another backtest: prepare the regime-selectivity Tier-3 PACKET as a note on REGIME-PROGRAM (both windows' numbers, the account_compat_matrix, the exact strategies.yaml line it would change) for t\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -1891,6 +2163,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-65ff-03 CONFIRMED the first-window regime gate on eth_pullback_2h on a disjoint window. Not another backtest: prepare the regime-selectivity Tier-3 PACKET as a note on REGIME-PROGRAM (both windows' numbers, the account_compat_matrix, the exact strategies.yaml line it would change) for t\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -1922,6 +2199,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-65ff-04 CONFIRMED the first-window regime gate on trend_donchian_sol on a disjoint window. Not another backtest: prepare the regime-selectivity Tier-3 PACKET as a note on REGIME-PROGRAM (both windows' numbers, the account_compat_matrix, the exact strategies.yaml line it would change) fo\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -1953,6 +2235,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-65ff-07 (ada_pullback_2h, volcold axis) PASSED on 2024-10-05..2026-10-04 (or its pinned window). Register the fresh-window CONFIRMATION exactly like RQ-20261016-65ff-01..04: the single chosen arm only, B vs that arm, on the disjoint preceding 730 days, same bar / drawdown clause / 3-of-\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -1984,6 +2271,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-65ff-08 (xrp_pullback_2h, volcold axis) PASSED on 2024-10-05..2026-10-04 (or its pinned window). Register the fresh-window CONFIRMATION exactly like RQ-20261016-65ff-01..04: the single chosen arm only, B vs that arm, on the disjoint preceding 730 days, same bar / drawdown clause / 3-of-\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -2015,6 +2307,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "REGIME-PROGRAM deliverable 4 (a baseline structure + momentum direction model). On PRICE-ONLY inputs it is answered: RQ-20261014-4591-02 FAIL (no learner beats the class prior on the 1h direction label), 1414-03 / 4591-05 INDETERMINATE -- so no further price-only direction unit (manager audit 2026-\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -2047,6 +2344,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Per-leg continuous vol-TARGET SIZING on the real-money trend legs is the regime question the skip units cannot answer. Its build is row IR-VOL-TARGET-SIZING-STAGE0 (vol_target_verdict.py over backtest_vol_target.py; rule PASS iff dSharpe >= +0.10 net AND maxDD no worse AND dSharpe > 0 in >= 3/4 blo\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -2078,6 +2380,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "GATED on VOL-WINDOW stage A (RQ-20261031-28bf-01) naming >= 1 qualifying cell. Author ONE ml_bakeoff unit: a direction classifier for the qualifying windows (target = sign of the return from the entry bar to the window end, net-of-cost win label; features available at the window start ONLY: the pri\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -2110,6 +2417,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "MODEL feed from P1 (programme review 2026-10-28). PR #20967 commits 12,500 per-check-in priced labels (comms/research/desk_lifecycle/full-c4e/, for the F.2 ML target): at each check-in the R value of hold vs close vs tighten, net of the full cost stack, on 938 walked trades from two entry sources. \u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -2137,6 +2449,7 @@
     "unit": "RQ-20261101-b623-01",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-06T08:00:11Z",
     "metrics": null,
@@ -2160,6 +2473,11 @@
     "RQ-20261101-b604-01",
     "RQ-20261101-b606-01"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261101-a508-01 (queued): ENTRY v1 traded-slice test: is the five-symbol dev shortfall (-0.041 net R/decision vs +0.007 pooled) a coin effect, a cost-share effect or a cadence effect, and which traded symbols does the live go/no-go rest",
    "owner_rows": [
     "ML-LEVER-PLAN"
@@ -2192,6 +2510,11 @@
     "RQ-20261111-207f-02",
     "RQ-20261111-207f-03"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261111-207f-01 (due): ALPACA-LIVE BOOK / Foxhound-4 DIAGNOSE (P8-Q1): does the live leg's edge survive the account it trades -- $194.52 cash, long only, whole shares, one slot, T+1 settlement, the live sizer -- on its own dev walk-forw",
    "owner_rows": null,
    "last_activity": "2026-11-11T00:00:00Z",
@@ -2210,6 +2533,7 @@
     "unit": "RQ-20261109-98e3-37",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-09T13:46:47Z",
     "metrics": {
@@ -2229,6 +2553,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-11-09T13:46:47Z",
@@ -2249,6 +2578,7 @@
     "unit": "RQ-20261101-78fc-03",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-12T04:08:37Z",
     "metrics": {
@@ -2270,6 +2600,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-11-12T04:08:37Z",
@@ -2288,6 +2623,7 @@
     "unit": "RQ-20261109-98e3-38",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-09T14:25:07Z",
     "metrics": {
@@ -2307,6 +2643,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": [
     "TRADEIFY-OWN-LEG-DRIVER"
@@ -2327,6 +2668,7 @@
     "unit": "RQ-20261011-17f4-02",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-25T11:41:15Z",
     "metrics": {
@@ -2349,6 +2691,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-10-25T11:41:15Z",
@@ -2372,6 +2719,7 @@
     "unit": "RQ-20261011-9da8-01",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-24T08:23:48Z",
     "metrics": {
@@ -2392,6 +2740,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-10-24T08:23:48Z",
@@ -2415,6 +2768,7 @@
     "unit": "RQ-20261018-ff8f-03",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-20T11:30:46Z",
     "metrics": {
@@ -2435,6 +2789,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-10-20T11:30:46Z",
@@ -2458,6 +2817,7 @@
     "unit": "RQ-20261016-65ff-25",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-18T14:40:13Z",
     "metrics": {
@@ -2477,6 +2837,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-10-20T00:00:00Z",
@@ -2500,6 +2865,7 @@
     "unit": "RQ-20261014-9d20-02",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-16T11:01:29Z",
     "metrics": {
@@ -2519,6 +2885,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-10-16T11:01:29Z",
@@ -2542,6 +2913,7 @@
     "unit": "RQ-20261014-9d20-03",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-16T11:01:28Z",
     "metrics": {
@@ -2562,6 +2934,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-10-16T11:01:28Z",
@@ -2585,6 +2962,7 @@
     "unit": "RQ-20261009-902",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-12T11:08:41Z",
     "metrics": null,
@@ -2602,6 +2980,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-10-16T00:00:00Z",
@@ -2625,6 +3008,7 @@
     "unit": "RQ-20261009-903",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-13T20:15:25Z",
     "metrics": null,
@@ -2642,6 +3026,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-10-15T00:00:00Z",
@@ -2665,6 +3054,7 @@
     "unit": "RQ-20261025-004",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-25T12:41:04Z",
     "metrics": null,
@@ -2682,6 +3072,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-10-25T12:41:04Z",
@@ -2707,6 +3102,7 @@
     "unit": "RQ-20261024-001",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-24T15:21:34Z",
     "metrics": {
@@ -2726,6 +3122,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-10-24T15:21:34Z",
@@ -2751,6 +3152,7 @@
     "unit": "RQ-20261025-008",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-25T15:59:52Z",
     "metrics": {
@@ -2771,6 +3173,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-10-25T15:59:52Z",
@@ -2796,6 +3203,7 @@
     "unit": "RQ-20261025-001",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-25T15:21:45Z",
     "metrics": {
@@ -2816,6 +3224,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-10-25T15:21:45Z",
@@ -2841,6 +3254,7 @@
     "unit": "RQ-20261027-006",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-27T16:48:19Z",
     "metrics": {
@@ -2861,6 +3275,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-10-27T16:48:19Z",
@@ -2886,6 +3305,7 @@
     "unit": "RQ-20261105-fd68-06",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-05T19:21:03Z",
     "metrics": {
@@ -2907,6 +3327,11 @@
    "open_units": [
     "RQ-20261105-fd68-03"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261105-fd68-03 (queued): 4h-bar iteration of RQ-20261105-fd68-01: Tradeify-only ML leg: can a pooled ETH/SOL/XRP ML entry model, trained on its own declared feature families, beat the declared baselines NET OF Tradeify's full cost stac",
    "owner_rows": null,
    "last_activity": "2026-11-07T00:00:00Z",
@@ -2925,6 +3350,7 @@
     "unit": "RQ-20261013-1414-05",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-14T13:54:20Z",
     "metrics": {
@@ -2945,6 +3371,13 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 1,
+    "units": [
+     "RQ-20261013-1414-05"
+    ],
+    "by_class": null
+   },
    "next_step": "promotion decision on the passing record (Gate 1 / Stage-1 roster)",
    "owner_rows": null,
    "last_activity": "2026-10-14T13:54:20Z",
@@ -2968,6 +3401,7 @@
     "unit": "RQ-20261015-eda2-01",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-15T17:57:47Z",
     "metrics": {
@@ -2988,6 +3422,13 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 1,
+    "units": [
+     "RQ-20261015-eda2-01"
+    ],
+    "by_class": null
+   },
    "next_step": "promotion decision on the passing record (Gate 1 / Stage-1 roster)",
    "owner_rows": null,
    "last_activity": "2026-10-15T17:57:47Z",
@@ -3011,6 +3452,7 @@
     "unit": "RQ-20261014-9d20-01",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-14T13:11:24Z",
     "metrics": null,
@@ -3028,6 +3470,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "promotion decision on the passing record (Gate 1 / Stage-1 roster)",
    "owner_rows": null,
    "last_activity": "2026-10-14T13:11:24Z",
@@ -3051,6 +3498,7 @@
     "unit": "RQ-20261024-002",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-24T08:23:49Z",
     "metrics": {
@@ -3071,6 +3519,13 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 1,
+    "units": [
+     "RQ-20261024-002"
+    ],
+    "by_class": null
+   },
    "next_step": "promotion decision on the passing record (Gate 1 / Stage-1 roster)",
    "owner_rows": null,
    "last_activity": "2026-10-24T08:23:49Z",
@@ -3104,6 +3559,11 @@
    "open_units": [
     "RQ-20261112-0bc8-02"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261112-0bc8-02 (due): Volume composition -> EXIT head (feature add): does adding the size/count surprise (ss, sn) to exit-head-donchian-1h-v1's recipe improve its out-of-sample replayed R per trade over the champion recipe AND over a p",
    "owner_rows": [
     "ML-EXITHEAD-VALUE",
@@ -3154,6 +3614,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": null,
@@ -3191,6 +3656,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": null,
@@ -3222,6 +3692,7 @@
     "unit": "RQ-20261104-a41f-01",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-05T20:03:14Z",
     "metrics": {
@@ -3244,6 +3715,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": "2026-11-07T00:00:00Z",
@@ -3306,6 +3782,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": null,
@@ -3368,6 +3849,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": null,
@@ -3410,6 +3896,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": null,
@@ -3472,6 +3963,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": null,
@@ -3549,6 +4045,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": null,
@@ -3574,6 +4075,7 @@
     "unit": "RQ-20261008-902",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-10T15:17:40Z",
     "metrics": null,
@@ -3591,6 +4093,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": "2026-10-10T15:17:40Z",
@@ -3622,6 +4129,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": null,
@@ -3653,6 +4165,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": null,
@@ -3684,6 +4201,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": null,
@@ -3715,6 +4237,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": null,
@@ -3746,6 +4273,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": null,
@@ -3777,6 +4309,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": null,
@@ -3808,6 +4345,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": null,
@@ -3839,6 +4381,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": null,
@@ -3864,6 +4411,7 @@
     "unit": "RQ-20261016-8b93-01",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-16T04:03:13Z",
     "metrics": {
@@ -3883,6 +4431,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": "2026-10-16T04:03:13Z",
@@ -3914,6 +4467,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": null,
@@ -3945,6 +4503,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": null,
@@ -3976,6 +4539,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": null,
@@ -4007,6 +4575,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": [
     "ML-MES-REGIME-1D-SILENCE"
@@ -4040,6 +4613,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": null,
@@ -4071,6 +4649,11 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": "2026-10-08T00:00:00Z",
@@ -4096,6 +4679,7 @@
     "unit": "RQ-20261008-903",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-10T15:44:52Z",
     "metrics": null,
@@ -4113,6 +4697,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": "2026-10-10T15:44:52Z",
@@ -4144,6 +4733,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": null,
@@ -4177,6 +4771,11 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "unblock RQ-20261101-78fc-01: ML-DECISION-MODELS: a `brackets-forward` subcommand in scripts/research/ml_entry_v2.py scoring the learned and static brackets on one forward window (dev and held-out sealed); scripts/research/ml_entry_v2.py bra",
    "owner_rows": null,
    "last_activity": "2026-11-01T00:00:00Z",
@@ -4203,6 +4802,11 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "unblock RQ-20261101-78fc-08: ML-REGIME-15M-DRIFT: scripts/research/regime_cell_walkforward.py over the current head's shadow scores (row ML-VOL-LABEL-LIVE-VERIFY verifies the replayed vol labels first)",
    "owner_rows": null,
    "last_activity": "2026-11-01T00:00:00Z",
@@ -4229,6 +4833,11 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "unblock RQ-20261101-78fc-06: ML-P4-CONVICTION-REGATE: the conviction_meta rebuild + retrain on the trainer (scripts/ml/p1_extras.sh STEP 2)",
    "owner_rows": null,
    "last_activity": "2026-11-01T00:00:00Z",
@@ -4255,6 +4864,11 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "unblock RQ-20261101-78fc-07: ML-REGIME-15M-DRIFT: scripts/research/regime_cell_walkforward.py run with the ETH head's shadow scores joined to the two legs' trades (row ML-HEAD-AGREEMENT-JOIN supplies the join)",
    "owner_rows": null,
    "last_activity": "2026-11-01T00:00:00Z",
@@ -4281,6 +4895,11 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "unblock RQ-20261101-78fc-05: ML-EXIT-ACTIONGRID-LABELS: the action-grid labels (desk_lifecycle_driver.py --action-grid) the model trains on",
    "owner_rows": null,
    "last_activity": "2026-11-01T00:00:00Z",
@@ -4307,6 +4926,11 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "unblock RQ-20261101-78fc-02: ML-P1-COSTNET-REBUILD: PI-20261029-MLP1-0001: backfill the declared initial risk for the BTC/ETH/SOL live closed trades (245 of 307 BTC trades lack it)",
    "owner_rows": null,
    "last_activity": "2026-11-01T00:00:00Z",
@@ -4333,6 +4957,11 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "unblock RQ-20261101-78fc-04: TMBENCH-QTM1B-BUILD: a path-state feature block in tm_bench (the four features named in the question), causal at each check-in",
    "owner_rows": null,
    "last_activity": "2026-11-01T00:00:00Z",
@@ -4351,6 +4980,7 @@
     "unit": "RQ-20261016-65ff-21",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-25T05:02:07Z",
     "metrics": null,
@@ -4368,6 +4998,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author the next unit",
    "owner_rows": null,
    "last_activity": "2026-10-25T05:02:07Z",
@@ -4393,6 +5028,7 @@
     "unit": "RQ-20261013-1414-04",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-13T21:54:26Z",
     "metrics": {
@@ -4413,6 +5049,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author the next unit",
    "owner_rows": null,
    "last_activity": "2026-10-14T00:00:00Z",
@@ -4436,6 +5077,7 @@
     "unit": "RQ-20261013-1414-06",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-15T11:12:33Z",
     "metrics": {
@@ -4456,6 +5098,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author the next unit",
    "owner_rows": null,
    "last_activity": "2026-10-15T11:12:33Z",
@@ -4479,6 +5126,7 @@
     "unit": "RQ-20261013-1414-07",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-14T13:08:34Z",
     "metrics": {
@@ -4499,6 +5147,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author the next unit",
    "owner_rows": null,
    "last_activity": "2026-10-14T13:08:34Z",
@@ -4528,6 +5181,11 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "unblock RQ-20261013-1414-08: FRONTIER-LEVER-TSFM: The zero-shot bake-off 9da8-01 is itself blocked on build_forecasts.py backends; this unit additionally needs a LoRA fine-tune script (scripts/research, GPU-capable, Kaggle-allowlisted) and ",
    "owner_rows": null,
    "last_activity": "2026-11-01T00:00:00Z",
@@ -4557,6 +5215,11 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "unblock RQ-20261013-1414-09: FUNDING-OI-DATASETS-ETH-SOL: ETH/SOL funding-rate and open-interest datasets (point-in-time, aligned to the 1h shard) do not exist on the trainer; the covariate forecasting backends (Chronos-2 covariate API, TiR",
    "owner_rows": null,
    "last_activity": "2026-10-13T00:00:00Z",
@@ -4580,6 +5243,7 @@
     "unit": "RQ-20261014-9d20-05",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-14T13:08:33Z",
     "metrics": {
@@ -4600,6 +5264,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author the next unit",
    "owner_rows": null,
    "last_activity": "2026-10-14T13:08:33Z",
@@ -4623,6 +5292,7 @@
     "unit": "RQ-20261016-001",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-16T04:53:20Z",
     "metrics": {
@@ -4643,6 +5313,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author the next unit",
    "owner_rows": null,
    "last_activity": "2026-10-16T04:53:20Z",
@@ -4666,6 +5341,7 @@
     "unit": "RQ-20261018-ff8f-01",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-18T10:17:15Z",
     "metrics": {
@@ -4686,6 +5362,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author the next unit",
    "owner_rows": null,
    "last_activity": "2026-10-18T10:17:15Z",
@@ -4715,6 +5396,11 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "unblock RQ-20261011-9da8-02: FRONTIER-LEVER-TABULAR: The comparison instrument now exists and is GENERIC (ML-RQ-RUNNER: scripts/research/ml_bakeoff.py has lightgbm / catboost / tabicl / tabpfn learner kinds on shared purged folds, tabpfn fl",
    "owner_rows": null,
    "last_activity": "2026-10-11T00:00:00Z",
@@ -4738,6 +5424,7 @@
     "unit": "RQ-20261018-ff8f-02",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-18T14:39:49Z",
     "metrics": {
@@ -4758,6 +5445,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author the next unit",
    "owner_rows": null,
    "last_activity": "2026-10-20T00:00:00Z",
@@ -4781,6 +5473,7 @@
     "unit": "RQ-20261018-ff8f-04",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-22T09:53:47Z",
     "metrics": {
@@ -4801,6 +5494,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author the next unit",
    "owner_rows": null,
    "last_activity": "2026-10-22T09:53:47Z",
@@ -4830,6 +5528,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author the next unit",
    "owner_rows": null,
    "last_activity": "2026-10-24T00:00:00Z",
@@ -4859,6 +5562,11 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "unblock RQ-20261025-7ee1-01: FRONTIER-LEVER-TSFM-TIMESTRAL: ml/datasets/forecast_features.py::FORECAST_BACKENDS has chronos-bolt-tiny/-small and chronos-2 only; resolve_backend raises for anything else. Needs (1) a timestral forecast_fn + b",
    "owner_rows": null,
    "last_activity": "2026-10-25T00:00:00Z",
@@ -4888,6 +5596,11 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "unblock RQ-20261011-9da8-03: ML-HEAD-AGREEMENT-JOIN: [2026-10-18 lane ML-UNBLOCK-1018] The SCORER now exists: scripts/research/conformal_abstain_eval.py (split-conformal, Mondrian per predicted class, vs a plain max-probability threshold at",
    "owner_rows": null,
    "last_activity": "2026-10-11T00:00:00Z",
@@ -4917,6 +5630,11 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "unblock RQ-20261011-9da8-04: ML-LEG-CORPUS: The per-trade corpus with realised closes and the baseline exit arms does not exist yet (ML-X1).; EXIT-PATH-EMIT-OFFLINE: Added 2026-10-14 (lane IN-TRADE-EXIT-MODEL): a contextual bandit needs the",
    "owner_rows": null,
    "last_activity": "2026-10-11T00:00:00Z",
@@ -4940,6 +5658,7 @@
     "unit": "RQ-20261013-1414-01",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-14T00:07:17Z",
     "metrics": {
@@ -4960,6 +5679,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author the next unit",
    "owner_rows": null,
    "last_activity": "2026-10-14T00:07:17Z",
@@ -4983,6 +5707,7 @@
     "unit": "RQ-20261013-1414-02",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-13T23:04:39Z",
     "metrics": {
@@ -5003,6 +5728,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author the next unit",
    "owner_rows": null,
    "last_activity": "2026-10-14T00:00:00Z",
@@ -5026,6 +5756,7 @@
     "unit": "RQ-20261013-1414-03",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-14T15:00:25Z",
     "metrics": {
@@ -5046,6 +5777,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author the next unit",
    "owner_rows": null,
    "last_activity": "2026-10-14T15:00:25Z",
@@ -5075,6 +5811,11 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "unblock RQ-20261014-9d20-04: METALABEL-EMIT-FEATURES: The harness --emit-trades rows carry only confidence / direction / entry_time / adx_at_entry (null ~96%) / regime_weight (MEASURED 2026-10-14 over 13,070 committed rows). The within-fami",
    "owner_rows": null,
    "last_activity": "2026-10-14T00:00:00Z",
@@ -5104,6 +5845,11 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "unblock RQ-20261011-17f4-03: ML-HEAD-AGREEMENT-JOIN (docs/claude/work/checklist/); overlaps REGIME-PROGRAM deliverable 3: No joiner puts shadow-log head scores on a common clock beside realized forward vol.",
    "owner_rows": null,
    "last_activity": "2026-10-11T00:00:00Z",
@@ -5133,6 +5879,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author the next unit",
    "owner_rows": [
     "ML-NETR-RANKER"
@@ -5164,6 +5915,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author the next unit",
    "owner_rows": [
     "M19-S1"
@@ -5195,6 +5951,11 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "unblock RQ-20261008-901: checklist EXIT-HEAD-PULLBACK-DRIVER (owner: manager dispatch, Sonnet ceiling $8, due 2026-11-07 before this unit ages past 30 days in blocked/); scripts/ml/exit_head_replay.py HARNESS_REL; scripts/research/exit_head",
    "owner_rows": null,
    "last_activity": "2026-10-08T00:00:00Z",
@@ -5224,6 +5985,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author the next unit",
    "owner_rows": [
     "R-M19"
@@ -5255,6 +6021,11 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "unblock RQ-20261011-17f4-01: ML-PARITY-HARNESS (docs/claude/work/checklist/, state done) -- CORRECTED by research-ops 2026-10-24: the svble self-check WAS read (funding gap reproduced) and the mes head answered OK; the remaining blocker for",
    "owner_rows": null,
    "last_activity": "2026-10-11T00:00:00Z",
@@ -5278,6 +6049,7 @@
     "unit": "RQ-20261017-003",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-17T07:58:43Z",
     "metrics": null,
@@ -5295,6 +6067,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author the next unit",
    "owner_rows": null,
    "last_activity": "2026-10-17T07:58:43Z",
@@ -5321,6 +6098,7 @@
     "unit": "RQ-20261017-004",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-17T07:58:43Z",
     "metrics": null,
@@ -5338,6 +6116,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author the next unit",
    "owner_rows": null,
    "last_activity": "2026-10-17T07:58:43Z",
@@ -5364,6 +6147,7 @@
     "unit": "RQ-20261017-005",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-17T09:18:37Z",
     "metrics": null,
@@ -5381,6 +6165,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author the next unit",
    "owner_rows": null,
    "last_activity": "2026-10-17T09:18:37Z",
@@ -5407,6 +6196,7 @@
     "unit": "RQ-20261025-009",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-25T12:41:05Z",
     "metrics": {
@@ -5427,6 +6217,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author the next unit",
    "owner_rows": null,
    "last_activity": "2026-10-25T12:41:05Z",
@@ -5452,6 +6247,7 @@
     "unit": "RQ-20261025-010",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-25T13:55:19Z",
     "metrics": {
@@ -5472,6 +6268,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author the next unit",
    "owner_rows": null,
    "last_activity": "2026-10-25T13:55:19Z",
@@ -5497,6 +6298,7 @@
     "unit": "RQ-20261027-002",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-27T07:50:34Z",
     "metrics": {
@@ -5517,6 +6319,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author the next unit",
    "owner_rows": null,
    "last_activity": "2026-10-27T07:50:34Z",
@@ -5548,6 +6355,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Hand unit RQ-20261025-d7e6-01 (pooled paired read of the 9a7e-01/-02/-03 tighten gate; bar 0.07 R per trade because the measured paired sd of a tight trail is 0.82 R). This node only follows its verdict. PASS -> ONE confirmation on a disjoint window, then Q6 parity and a Tier-3 proposal (never a co\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -5579,6 +6391,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "VARIANT of the failed AI-ATM rung B1 (RQ-20261024-09a6-03: 6 legs, 2558 trades, 50926 bar states; clause 1 failed at tau 0.5 and 0.7, 1 of 6 folds better than the open-R bucket quantile Q0, tau-0.5 coverage 0.617 against a nominal 0.5; clause 2 was decisively negative too: the pulled-in TP earned 5\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -5610,6 +6427,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RESULT 2026-10-27 (research-ops 2048): RQ-20261026-1b57-08 read PASS (rule: pooled n >= 88, net > 0, >= 4 of 6 folds, >= half of powered cells) -- sol_4h as declared on basket B (AVAX/NEAR/ATOM/FIL/TRX/ETC): pooled n 1375, net +111.77 R, 4 of 6 folds positive, 3 of 6 powered cells pass; the last fo\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -5641,6 +6463,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "DESK-LIFECYCLE-S0 full run FAILED (PR #20967, RULE-RQ20261028-D1F5-02-LIFECYCLE): Claude whole-trade management -0.159 R vs hold on Claude entries (n 473) and -0.124 R on random entries (n 465); 981 of 1,155 non-hold actions were stop tightens worth -0.097 R each, while its 2,001 holds were worth +\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -5672,6 +6499,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Q11 rung 2 on trend_donchian_eth_prop and trend_donchian_sol_prop (k=12 on 1h): same shape as blocked/RQ-20261022-eba2-07 (out-of-fold triggers, MB/MT arms vs the A baseline AND the unconditional UB/UT control, replace grade, 6 folds, 5 of 6, maxDD <= 1.35 x A), ONE unit per leg (RESEARCH-MULTICMD-\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -5703,6 +6535,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Read RQ-20261022-eba2-03 (hand unit; R-armed tight trail on ada_pullback_2h, arms 1.5 / 2.0 / 3.0 R -> 2.5 x ATR). PASS -> ONE confirmation unit on a disjoint partition (same statistic and bar), then Q6 parity; the live producer already exists (src/runtime/trail_decay.py), so the declare is a Tier-\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -5734,6 +6571,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "ATR-contraction (Chandelier-style, vol-adaptive) tight trail on ada_pullback_2h (RQ-20261022-b7e1-06, blocked/). Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> variants named i\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -5765,6 +6607,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Choppiness-gated tight trail on ada_pullback_2h (RQ-20261022-b7e1-07, blocked/). Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> variants named in the unit (a first-test fail is\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -5796,6 +6643,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "ER-gated tight trail on ada_pullback_2h (RQ-20261022-b7e1-04, blocked/ on PATHSTATE-TRAIL-GATE). Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> variants named in the unit (a fi\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -5827,6 +6679,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "ER-gated tight trail on xrp_pullback_2h (RQ-20261022-b7e1-05, blocked/ on PATHSTATE-TRAIL-GATE). Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> variants named in the unit (a fi\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -5858,6 +6715,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Split/partial exit gated on ER, vs the ungated far-rung bank, on ada_pullback_2h (RQ-20261022-b7e1-08, blocked/). Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> variants named \u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -5889,6 +6751,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Prop eth: ER-gated tight trail in both directions, TP untouched (RQ-20261022-b7e1-10, blocked/; prop EV/survival gate follows any PASS). Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (never a config edit). \u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -5920,6 +6787,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Time-in-chop stop on ada_pullback_2h (RQ-20261022-b7e1-09, blocked/). Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> variants named in the unit (a first-test fail is not a dead\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -5951,6 +6823,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "C2 SL widen: does widening the stop on a live trigger (vol expansion, event risk, a liquidity sweep before a level) beat hold net of cost? Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.",
    "owner_rows": null,
    "last_activity": null,
@@ -5982,6 +6859,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "C3 SL move-to-structure: does re-anchoring the stop to new structure (swing / FVG / level) beat hold net of cost? Reuse the Q10 --trail-level flags as a re-anchor, not a trail. Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.",
    "owner_rows": null,
    "last_activity": null,
@@ -6013,6 +6895,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "C5 TP pull-in: does pulling the target in on momentum loss, a liquidity level ahead, or vol contraction beat hold net of cost? Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.",
    "owner_rows": null,
    "last_activity": null,
@@ -6044,6 +6931,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "C7 partial close: does a triggered partial close (level reached, event ahead), with both brackets kept on the remainder, beat hold net of cost? Judge on expectancy, not on distribution shape (principle T10). Register the rule before the run; grade per leg, real-money legs first; both brackets must \u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6075,6 +6967,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "C8 full close: does a triggered exit-now (thesis invalidated, regime flip, event) beat hold net of cost on each leg as traded (not the fixed bracket the Q8 line failed on)? Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.",
    "owner_rows": null,
    "last_activity": null,
@@ -6106,6 +7003,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "The alpaca 1d family's pooled K* passed the screen on the long window. Register per-leg harness-native confirmations (slv / iaum / ief: exit_lever_ablation replace, tp_r = K* vs 50, --non-crypto-source dukascopy, 4 folds) -- ief's n is ~36 over the dukascopy window, so it rides a pooled verdict, sa\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6137,6 +7039,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "trend_donchian_eth_prop's predictive TP K* passed the screen. Register the harness-native confirmation at prop costs (exit_lever_ablation replace, tp_r = K* vs 6.0) and then prop_ev_grid per ruleset.",
    "owner_rows": null,
    "last_activity": null,
@@ -6168,6 +7075,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "tp_r 2.5 CONFIRMED on trend_donchian_sol_prop at Bybit costs. Register (a) the same ablation at the prop cost stack (the RQ-20261016-010 flags: --fee-bps-roundtrip=6 --slippage-bps-roundtrip=3 --funding-bps-per-window=5 --funding-window-hours=24 on both arms) and (b) prop_ev_grid with the K25 arm's\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6200,6 +7112,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "rrfloor0.5 CONFIRMED on trend_donchian_sol_prop at Bybit costs. Register (a) the same ablation at the prop cost stack and (b) prop_ev_grid with the passing arm's emitted trades vs the incumbent's on each prop ruleset (tradeify_1, velotrade_1, breakout_2) -- the prop superset gate -- before any Tier\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6231,6 +7148,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "A tp_extend cell CONFIRMED on ada_pullback_2h (real money). Register Q6 parity + the Tier-3 declare draft, as P1-Q6-xrp-pb-declare. If both pullback legs confirm, author ONE pooled-family parity unit, not two.",
    "owner_rows": null,
    "last_activity": null,
@@ -6262,6 +7184,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "The measured-move revision CONFIRMED on trend_donchian_eth_4h. Register Q6: live parity of the B1 producer's tp verdict vs the harness's on 1-2 trades (position_path_history once EXIT-PATH-TELEMETRY-LIVE is deployed, else a harness-vs-live replay of the same bars), then the Tier-3 declare PR draft.",
    "owner_rows": null,
    "last_activity": null,
@@ -6293,6 +7220,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Width 0.5 measured-move CONFIRMED on trend_donchian_eth_4h. FIRST the doctrine read from the record: clamped_share (tp_revisions_clamped / applied) and net_r_per_capital_day(MM05) vs (A). clamped_share >= 0.5 or a worse capital-day figure = forward to the manager as \"P&L at the cap\", no declare, ro\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6324,6 +7256,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "CONFIRMED 2026-10-18 (RQ-20261016-005, run 39103761258): M1 trail_adx_below 20 / trail_adx_tight_mult 2.5 111.37 vs 88.27 R, n 270 vs 262, 5 of 6 folds, maxDD 16.12 vs 18.06, vs the NEW incumbent (atr 1.5 / trail 6.0). The live-monitor check was DONE the same day: NO producer -- trend_donchian.moni\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6355,6 +7292,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "CONFIRMED 2026-10-18 (RQ-20261016-016, run 39103752013): momentum_stale_bars 8 / momentum_stale_adx_below 20 on slv_pullback_1d 20.73 vs 12.82 R, n 89 vs 69, 3 of 4 folds (all four positive), DD 6.36 vs 7.02, 2018-03..2026-10 dukascopy. The pullback monitor has no momentum-stale producer (src/resea\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6386,6 +7328,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "A tp_extend cell CONFIRMED on xrp_pullback_2h (real money). Register Q6: (1) the observe-only parity check that the TP-DOCTRINE B1 producer reproduces the harness's extension decision on 1-2 live trades (a parity unit over position_path_history once EXIT-PATH-TELEMETRY-LIVE is deployed, or the harn\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6417,6 +7364,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "The measured-move revision CONFIRMED on trend_donchian_xrp_4h. FIRST the doctrine read (2026-10-18): the MM arm's tp_revisions_clamped / tp_revisions_applied from the unit's record -- in RQ-20261007-080 xrp_4h at width 1.0 clamped 367 of 418 (88%); if the confirm run's share is >= 0.5 the PASS is P\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6448,6 +7400,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RESULT 2026-10-27 (research-ops 1930): RQ-20261027-d789-01 read FAIL under its own rule (run 40488856601): configuration closed (SOL prop, tp_r 3.0 vs 6.0, 2023-09-24..2025-09-23 at the breakout_1 stack); the TP-geometry family stays open; next test = P1-Q2-solprop-derive, and the same lever on the\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6479,6 +7436,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "The rich state carries information at K = 3R. Register the K = 3R exit-now policy rung (first_passage.py --mode policy --features rich --policy-tp-r 3.0, the d6e7-05 rule).",
    "owner_rows": null,
    "last_activity": null,
@@ -6510,6 +7472,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Q8 on the legs AS TRADED. The fixed-bracket linear line is closed FAIL (d6e7-02, RQ-20261016-012/-013, 1fa6-06) while the 8.1 prize stands (d6e7-01 PASS, oracle 0.656 R/trade). Not a new unit: when checklist row FIRST-PASSAGE-ON-PATHS lands (first_passage.py --paths over --emit-paths rows, #18536),\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6542,6 +7509,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Rung 4 (momentum / ADX-slope / range / regime features beyond where the trade is) FAILED. Register the refinement (feature family, per-class split, longer window) or record the negative on IN-TRADE-EXIT-MODEL with the number. [moot since 2026-10-15: d6e7-04 closed INDETERMINATE; that branch is P1-Q\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6573,6 +7545,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "STATUS 2026-10-25 (lane EXITS-ROUND2-1026): AUTHORED as hand units RQ-20261025-d7e6-02..06 (25% bank at +1 R, trigger P >= 0.7, one per pullback-2h leg: ada, xrp, eth, sol, avax; arms A / MB / UB / RB random control) and the pooled decision unit RQ-20261025-d7e6-07 (scripts/research/pool_arm_diff.p\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6604,6 +7581,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "DESIGN NOTE node (not code). GATED on VOL-WINDOW stage A (RQ-20261031-28bf-01) naming >= 1 qualifying cell. Author ONE design note (docs/plans, registered per the document index) plus, if the note holds, one research unit that replays it: a trading-desk trigger that wakes the desk at the qualifying\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6636,6 +7618,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-c56e-11 FAILED: ada_pullback_2h (real money) has no fold-consistent Stage-0 edge on the four years BEFORE its committed record. Register the roster-retention case for the manager: both windows' grades side by side (never pooled), the leg's open P3 sweeps and S0-C reads, the live book's \u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6667,6 +7654,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "c56e-14 FAILED: trend_donchian_eth_prop is not fold-consistent over the five years before its record, so it does not meet the superset bar (PROP-GATE-PARITY) on the MD-PROMOTE-S1-S2 fold-majority clause. Register the prop-roster input for the manager (the leg is grandfathered to 2026-11-07) and the\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6699,6 +7691,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-c56e-12 FAILED: trend_donchian_eth_4h (real money) has no fold-consistent Stage-0 edge on the four years BEFORE its committed record. Register the roster-retention case for the manager: both windows' grades side by side (never pooled), the leg's open P3 sweeps and S0-C reads, the live b\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6730,6 +7727,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "ANSWERED ELSEWHERE (programme review 2026-11-04): RQ-20261101-78fc-18 (ITERATION 1, dukascopy 1h, a second feed, 2018-06..2026-10) CONFIRMED the leg on a holdout: discovery n 316 net +41.66 R (3 of 4 folds), holdout 2024-09..2026-10 n 104 net +35.99 R; RQ-20261103-5a03-02 PASS agrees. The figure is\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6761,6 +7763,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-c56e-10 FAILED: xrp_pullback_2h (real money) has no fold-consistent Stage-0 edge on the four years BEFORE its committed record. Register the roster-retention case for the manager: both windows' grades side by side (never pooled), the leg's open P3 sweeps and S0-C reads, the live book's \u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6792,6 +7799,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-c56e-13 FAILED: trend_donchian_xrp_4h (real money) has no fold-consistent Stage-0 edge on the four years BEFORE its committed record. Register the roster-retention case for the manager: both windows' grades side by side (never pooled), the leg's open P3 sweeps and S0-C reads, the live b\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6823,6 +7835,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "c56e-13 read INDETERMINATE (n < 39 on 2018-10..2022-10 for the short-only, min_confidence 0.8 leg). State the leg `infeasible at 4y` on L-LADDER and decide whether the record's own 4-fold grade is the only Stage-0 evidence it can carry, or whether the both-sides arm (side_filter both) is worth a se\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6854,6 +7871,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Both same-symbol allocation inputs closed (ETH: eth_4h vs eth_prop; XRP: xrp_4h vs xrp_pullback_2h). Read solo vs shared net R per capital-day for each pair and register the next M18 question: is the live election (src/runtime/intents.py, ties broken by NAME) costing the book R measurably -- a repl\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6885,6 +7907,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "The honest-R-scale pairs re-measure (470a-12, unblocked by build row PAIRS-R-SCALE) closed. Decide the M22 sleeve from THAT record, not the sprint log: PASS -> a Tier-3 keep note per pair with both records; FAIL -> the retire case per pair through the manager (config/pairs.yaml is the sleeve's own \u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6916,6 +7943,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "The HTF trend-bias filter does NOT add edge on the 7 ict_scalp variants that declare it (RQ-20260928-001 FAIL). Register the declared-equals-executable case (strip htf_trend_filter_enabled where it is dead weight, Tier 3, through the manager) and decide whether M27 has any remaining Stage-0 questio\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6947,6 +7979,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RESULT 2026-10-25 (lane RQ-20260928-001-RUN, docs/research/ict-scalp-htf-filter-wiring-2026-09-28.json): 6 of 7 legs PASS (mgc_15m no_data); ON beats OFF by +91 R (sol_5m) .. +4 R, pooled -318.3 R OFF vs -97.9 R ON, but ON is still net-negative on 5 of 6 legs and the outlier clause is already disch\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -6978,6 +8015,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "HIGHEST MONEY (audit 2026-10-16 \u00a7 5.1). xrp_pullback_2h and ada_pullback_2h trade real money BELOW_BACKTEST (8bbc-01: -8.84 R over 16, 3.4th pct; 8bbc-02: -7.04 R over 15, 4.7th pct). Stage B: register ONE unit that joins each live close to its config-exact backtest counterpart over the same bars a\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7009,6 +8051,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-c56e-05 PASSED its one-unit multi-fold rule (ada_pullback_2h, cooldown: >= 7 of 8 folds over ~6 years, the R bar, dDD <= 0). The fold clause IS the registered confirmation (audit 2026-10-16: no further single-window S0-C). Register the Tier-3 PROPOSAL note on the owning row with the rec\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7040,6 +8087,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-c56e-06 PASSED its one-unit multi-fold rule (ada_pullback_2h, trend_lookback: >= 7 of 8 folds over ~6 years, the R bar, dDD <= 0). The fold clause IS the registered confirmation (audit 2026-10-16: no further single-window S0-C). Register the Tier-3 PROPOSAL note on the owning row with t\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7071,6 +8123,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-c56e-07 PASSED its one-unit multi-fold rule (trend_donchian_eth_4h, donchian: >= 7 of 8 folds over ~6 years, the R bar, dDD <= 0). The fold clause IS the registered confirmation (audit 2026-10-16: no further single-window S0-C). Register the Tier-3 PROPOSAL note on the owning row with t\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7102,6 +8159,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-c56e-08 PASSED its one-unit multi-fold rule (trend_donchian_eth_4h, side: >= 7 of 8 folds over ~6 years, the R bar, dDD <= 0). The fold clause IS the registered confirmation (audit 2026-10-16: no further single-window S0-C). Register the Tier-3 PROPOSAL note on the owning row with the r\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7133,6 +8195,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-c56e-09 PASSED its one-unit multi-fold rule (trend_donchian_xrp_4h, min_confidence: >= 7 of 8 folds over ~6 years, the R bar, dDD <= 0). The fold clause IS the registered confirmation (audit 2026-10-16: no further single-window S0-C). Register the Tier-3 PROPOSAL note on the owning row \u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7164,6 +8231,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-c56e-18 FAILED: gld_pullback_1d (iaum_pullback_1d proxy) has no fold-consistent edge over ~18.5 years at its configured params. Register the alpaca_live roster-retention case for the manager (real money; the mirror alpaca_portfolio follows by equality) with the 365d record's grade besid\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7195,6 +8267,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "trend_lookback PASSED multi-fold on ada_pullback_2h (c56e-06). Q6 transfer (03 \u00a7 4): register the passing value as ONE pre-fixed arm (selection-free) on xrp_pullback_2h and eth_pullback_2h, same 6-year 8-fold design and 7-of-8 rule. If the operator has routed xrp_pullback_2h's entry side to P1 (aud\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7226,6 +8303,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Programme review 2026-10-21 authored Stage A as five units on BNB/DOGE/LINK/LTC/BCH/DOT at declared params: 7c2b-06 (trend_donchian_eth_4h), -07 (trend_donchian_xrp_4h), -08 (xrp_pullback_2h), -09 (ada_pullback_2h), -10 (trend_donchian_eth_prop 1h). When they close: for each PASSING CELL, Stage B =\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7258,6 +8340,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Single-leg lever tests (326f-01..05/-07/-08, 3a84-02..04, 4b82-10..13/-15..17) ran at n_B 68-430 against an ABSOLUTE bar (dR >= 1.0 R, >= 3 of 4 folds), and read \"lines are dead config -- strip them\". That strip reading is NOT adopted: one window, thin n, and 4b82-10..17 are already the variants (h\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7289,6 +8376,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "GATED on VOL-WINDOW stage A (RQ-20261031-28bf-01, row VOL-WINDOW-RESEARCH) naming >= 1 qualifying cell. Author ONE Stage-0 unit for a time-window breakout / continuation strategy on exactly the qualifying (symbol, window, rule) cells, no others: entry rule as stage A's qualifying rule PLUS a protec\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7321,6 +8413,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "The realistic-cost rescore landed. Close PI-20260927-CAA05-0003 with its number, then decide the VALUATION READ's calibration: the pooled read is null at every horizon tested (comms/macro/horizon_ic_scorecard.json: IC 7d +0.034 t 1.13 ... 180d -0.025 t -0.34, zero cost) and in every construction (v\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7352,6 +8449,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Q1 rung 2: the realistic-cost rescore did NOT kill the valuation axis, so the labelled fee_frac 0.005 proxy must be replaced by a MEASURED options cost (Alpaca options fee schedule + point-in-time chain spreads for GLD/IEF/SLV/SPY/TLT) before anything is proposed.",
    "owner_rows": null,
    "last_activity": null,
@@ -7383,6 +8485,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-7769-04 PASSED its IC bar and its placebo was CLEAN. Register the economic rung: on an equity index a symmetric sign book cannot beat being long unless the index FALLS after the adverse print (4a4c-06 arithmetic), so the rung is the exposure-matched RANK TILT (the RQ-20261016-7769-20 de\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7414,6 +8521,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-7769-19 PASSED (no registered direction) and its placebo was CLEAN. Register the net-of-cost sign book: --trade-horizon 3 --cost-symbol MGC with --expected-sign set to the parent's OBSERVED sign (stated as post-hoc), PASS iff mean net > 0 with t >= 2.0 AND above the all-long floor (the \u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7445,6 +8557,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-7769-15 PASSED its IC bar and its placebo was CLEAN. Register the economic rung: on an equity index a symmetric sign book cannot beat being long unless the index FALLS after the adverse print (4a4c-06 arithmetic), so the rung is the exposure-matched RANK TILT (the RQ-20261016-7769-20 de\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7476,6 +8593,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-7769-18 PASSED its IC bar and its placebo was CLEAN. Register the economic rung: on an equity index a symmetric sign book cannot beat being long unless the index FALLS after the adverse print (4a4c-06 arithmetic), so the rung is the exposure-matched RANK TILT (the RQ-20261016-7769-20 de\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7507,6 +8629,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-7769-07 PASSED its IC bar and its placebo was CLEAN. Register the economic rung: on an equity index a symmetric sign book cannot beat being long unless the index FALLS after the adverse print (4a4c-06 arithmetic), so the rung is the exposure-matched RANK TILT (the RQ-20261016-7769-20 de\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7538,6 +8665,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-7769-06 PASSED its IC bar and its placebo was CLEAN. Register the economic rung: on an equity index a symmetric sign book cannot beat being long unless the index FALLS after the adverse print (4a4c-06 arithmetic), so the rung is the exposure-matched RANK TILT (the RQ-20261016-7769-20 de\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7569,6 +8701,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-7769-17 PASSED its IC bar and its placebo was CLEAN. Register the economic rung: on an equity index a symmetric sign book cannot beat being long unless the index FALLS after the adverse print (4a4c-06 arithmetic), so the rung is the exposure-matched RANK TILT (the RQ-20261016-7769-20 de\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7600,6 +8737,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-7769-05 PASSED its IC bar and its placebo was CLEAN. Register the economic rung: on an equity index a symmetric sign book cannot beat being long unless the index FALLS after the adverse print (4a4c-06 arithmetic), so the rung is the exposure-matched RANK TILT (the RQ-20261016-7769-20 de\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7631,6 +8773,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-7769-12 PASSED its IC bar and its placebo was CLEAN. Register the economic rung: on an equity index a symmetric sign book cannot beat being long unless the index FALLS after the adverse print (4a4c-06 arithmetic), so the rung is the exposure-matched RANK TILT (the RQ-20261016-7769-20 de\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7662,6 +8809,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-7769-13 PASSED its IC bar and its placebo was CLEAN. Register the economic rung: on an equity index a symmetric sign book cannot beat being long unless the index FALLS after the adverse print (4a4c-06 arithmetic), so the rung is the exposure-matched RANK TILT (the RQ-20261016-7769-20 de\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7693,6 +8845,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-7769-16 PASSED its IC bar and its placebo was CLEAN. Register the economic rung: on an equity index a symmetric sign book cannot beat being long unless the index FALLS after the adverse print (4a4c-06 arithmetic), so the rung is the exposure-matched RANK TILT (the RQ-20261016-7769-20 de\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7724,6 +8881,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-7769-03 PASSED (no registered direction) and its placebo was CLEAN. Register the net-of-cost sign book: --trade-horizon 3 --cost-symbol MGC with --expected-sign set to the parent's OBSERVED sign (stated as post-hoc), PASS iff mean net > 0 with t >= 2.0 AND above the all-long floor (the \u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7755,6 +8917,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "The NQ=F placebo PASSED: the NQ leg of the PPI lead is a sample artifact. Record it on the lead (ES alone remains), retire RQ-20261016-7769-22 (NQ rank tilt) with this reason, and state whether the ES placebo's cleanliness still carries the lead.",
    "owner_rows": null,
    "last_activity": null,
@@ -7786,6 +8953,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "The PPI drift does not pay even magnitude-weighted at a daily-close entry on ES. Two honest exits: (a) the intraday-reaction rung (programme 04 Q2 rung 6: needs intraday bars at release time, a build) if the IC record argues the money is in the first hours, or (b) close the PPI lead on M28 with the\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7817,6 +8989,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-7769-02 PASSED its IC bar and its placebo was CLEAN. Register the economic rung: on an equity index a symmetric sign book cannot beat being long unless the index FALLS after the adverse print (4a4c-06 arithmetic), so the rung is the exposure-matched RANK TILT (the RQ-20261016-7769-20 de\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7848,6 +9025,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-7769-14 PASSED its IC bar and its placebo was CLEAN. Register the economic rung: on an equity index a symmetric sign book cannot beat being long unless the index FALLS after the adverse print (4a4c-06 arithmetic), so the rung is the exposure-matched RANK TILT (the RQ-20261016-7769-20 de\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7879,6 +9061,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "The PPI rank tilt PASSED on ES. Re-author the event-scored conviction axis replay (retired RQ-20261014-4a4c-09; its rule is the template: pooled paired difference vs valuation-only AND all-long > 0 with the interval above 0 and >= 4 of 6 folds, fee_frac 0.005) with the RANK-TILT mapping instead of \u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7911,6 +9098,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "NOT BEFORE 2026-11-07 (the PM collector's quality read). G2 read FAIL at paired n=68 (floor 49). Re-test PM-implied vs consensus surprise only once the paired n can move the interval (state the n the collector has reached); until then the answer is 'n-bound, not yet' and this node stays unauthored.\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -7942,6 +9134,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "NEWS-ALPHA U11 (FOMC statement text change -> TLT/SPY/GLD/UUP drift) PASSED. Register its net-of-cost book on the sleeve's TLT/IEF/GLD legs vs all-long as a Q3 axis candidate.",
    "owner_rows": null,
    "last_activity": null,
@@ -7973,6 +9170,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "NEWS-ALPHA U06 (macro/geopolitical topic intensity -> ETF vol/returns) PASSED. It is a Q3 axis candidate: register its own rung set on the sleeve universe (placebo/future-shift, sub-period, net-of-cost book vs all-long) before it may enter the axis replay.",
    "owner_rows": null,
    "last_activity": null,
@@ -8004,6 +9206,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "An M28 conviction axis PASSED its replay. M29 wakes for ONE scoping unit: does the gas system-dynamics mispricing (comms/macro/sysdyn_*_scorecard.json) add an NG axis, at what n and cost. If P4-Q3-event-axis is never authored or fails, M29 stays dormant with that record as the reason.",
    "owner_rows": null,
    "last_activity": null,
@@ -8035,6 +9242,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Re-priced as verticals the three legs do NOT clear. Register the per-leg refinement (wider verticals, longer DTE, or linear shares instead of verticals for the 1d legs) as a unit, and put the express_as choice for these legs to the operator as a Tier-3 proposal with this record.",
    "owner_rows": null,
    "last_activity": null,
@@ -8066,6 +9278,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "The three alpaca_options_paper legs stay net-positive re-priced as verticals (Stage 0 at the expressed payoff). Remaining to grade them: the Stage-1 mechanical read (1-2 clean trades per leg from the journal, /performance-review; slv_trend_1h is execution: shadow and cannot produce one -- a Tier-3 \u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8097,6 +9314,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "An axis passed Gate 1. Q7 is a Tier-3 BUILD (the P5 debit-vertical executor for thesis_tick) plus a Stage-1 mechanical soak of 1-2 clean trades on alpaca_options_paper (never edge): file the build row, and register the cost-fidelity read (realised vertical cost vs the 0.005 proxy) as a unit.",
    "owner_rows": null,
    "last_activity": null,
@@ -8128,6 +9350,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Read P5-GATE-BRK's measurement.leg_verdicts. For every leg that PASSED write its comms/prop_survival record per the unit's rule. For a grandfathered leg that FAILED on this account, register the resize question (that leg at 0.0025 / 0.0035 alone, same ledgers) so the manager's pull-or-resize propos\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8159,6 +9386,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Read P5-GATE-TRAD's measurement.leg_verdicts. For every leg that PASSED write its comms/prop_survival record per the unit's rule. For a grandfathered leg that FAILED on this account, register the resize question (that leg at 0.0025 / 0.0035 alone, same ledgers) so the manager's pull-or-resize propo\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8190,6 +9422,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Read P5-GATE-VELO's measurement.leg_verdicts. For every leg that PASSED write its comms/prop_survival record per the unit's rule. For a grandfathered leg that FAILED on this account, register the resize question (that leg at 0.0025 / 0.0035 alone, same ledgers) so the manager's pull-or-resize propo\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8221,6 +9458,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "STANDING ITERATION (ML-PROP-ITERATE): for EACH ML-ENTRY-DYNAMIC-SL arm unit (break-even, trailing, time-decay tightening, ML SL revision, structure SL; checklist row ML-ENTRY-DYNAMIC-SL, authored after the 2026-11-04 18:00Z reset) whose Stage-0 result PASSES, add one node of the same shape as P5-ML\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8252,6 +9494,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "STANDING ITERATION (ML-PROP-ITERATE): every future ML-ENTRY variant (recipe fixes such as the b601 bracket-geometry, b602 selectivity, b604 calibration and b606 cost-gate levers, a retrained ml_entry_v2, any new ENTRY recipe) whose own Stage-0 unit PASSES gets a gate node of the P5-MLV-GATE-MOVINGT\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8283,6 +9530,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "STANDING ITERATION (ML-PROP-ITERATE): structure-exit arms on ml_entry (swing-based SL, structure-aware exits; lever maps research/levers/ltr-sl-to-structure.yaml and ml-entry.yaml) - each arm unit that PASSES Stage 0 gets a gate node of the P5-MLV-GATE-MOVINGTP shape, authored in the same PR as the\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8314,6 +9566,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-e2db-05 PASSED: the 4h ETH+SOL pair adds on breakout_2 at matched risk 0.005, window-matched. Before the manager's Tier-3 roster proposal register the per-half robustness question (does the dominance hold on 2023-10..2025-04 and 2025-04..2026-10 separately; needs a ledger split, prop_ev\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8345,6 +9602,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-e2db-06 PASSED: the 4h ETH+SOL pair adds on tradeify_1 at matched risk 0.005, window-matched. Before the manager's Tier-3 roster proposal register the per-half robustness question (does the dominance hold on 2023-10..2025-04 and 2025-04..2026-10 separately; needs a ledger split, prop_ev\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8376,6 +9638,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-e2db-07 PASSED: the 4h ETH+SOL pair adds on velotrade_1 at matched risk 0.005, window-matched. Before the manager's Tier-3 roster proposal register the per-half robustness question (does the dominance hold on 2023-10..2025-04 and 2025-04..2026-10 separately; needs a ledger split, prop_e\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8407,6 +9674,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Neither breadth (ADA, the 4h pair) nor sizing helped breakout_2 on Turbo. Register the product question as data: does the same incumbent book on Breakout CLASSIC (config/prop_rulesets/breakout.yaml) beat Turbo on EV per life net of each product's fee (a fresh account is an operator purchase decisio\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8438,6 +9710,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Live prop closes do NOT match the sim's venue stack (f516-11 FAIL, |mean delta R| CI outside +/-0.10 R). Per 05 \u00a7 4 Q6: recalibrate that firm's --commission/--slippage/--swap in the sim from the measured closes, re-run its Q1 baseline (f516-0x shape) and every open Q2..Q5 proposal on that account b\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8469,6 +9746,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Gradable prop closes exist and match the sim. Per 05 Q7: re-run RQ-20261007-002 (P1-Q7 TP extension on the prop routings) against the measured closes, now that a TP revision on dxtrade/phone can be graded; coordinate with Programme 01's Q7 node rather than duplicating it.",
    "owner_rows": null,
    "last_activity": null,
@@ -8500,6 +9782,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261022-4b82-03 arm WIDE (squeeze 1h, break-even floor + stale exit + wider compression) PASSED the pooled rule (net_r 43.5R) but at n_B 6.9k < the 9.5k floor for its 0.05 R bar, so it is a LEAD, not a result (squeeze 1h defaults and 4h defaults both FAILED: 326f-10/-12). Author the ONE confirm\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8531,6 +9818,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Q14 is reached only when ef5d-02 FAILS (the same gate as P7-Q2-frontier-fail, which drafts the re-grade this node names) (the short arm is dead at taker cost): the maker-cost re-grade of the break-even frontier described there. If it reads viable at maker cost on >= 3 perps, the next unit is the EX\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8563,6 +9855,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "ef5d-02 FAILED: no sub-hour cell is viable at taker cost on any perp. The short arm's next lever is a COST change, not an entry: read the maker_cost_bps column per cell and author ONE unit that re-grades the frontier at maker-entry/taker-exit cost (fee/2) with a fill-rate haircut (RQ-20260930-502 /\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8595,6 +9892,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "ef5d-03 FAILED: daily Donchian 20/55 with a 5-ATR trail has no fold-consistent pooled edge on the six perps 2020-2026. Per the negative-result protocol (idea-family review 2026-10-16), this closes the configuration, not the horizon. Not tested and still open: the regime-filtered arms (ef5d-06, whic\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8627,6 +9929,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "ef5d-03 read INDETERMINATE (pooled n < 39, fewer than 2 powered cells, or half the cells unmeasured). Read the record: if it is thin n, pool the two daily families (ef5d-03 + ef5d-04 trades) in one unit on the same window rather than lower the floor; if it is a fetch/harness fault on >= 3 cells, th\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8658,6 +9965,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "ef5d-05 FAILED: weekly Donchian-20 (long-only and both) has no fold-consistent pooled edge across the 17 equity/futures cells. Closes the configuration on this history. Still open, and the literature's actual claim (Moskowitz-Ooi-Pedersen 2012: 1-12 MONTH lookback time-series momentum, not a 20-wee\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8690,6 +10002,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "ef5d-06 read INDETERMINATE: the filtered arms kept too few trades to grade (expected for VOL50/ADX20 on ~110 pooled entries). The finding is the selectivity: report each filter's kept share and R/trade beside the baseline in the plan's s1 table, and re-ask the filter question once on the two-family\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8722,6 +10039,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "ef5d-03 PASSED (the record names the best arm, D20 or D55). Before any re-entry case: a same-symbol OVERLAP read of the passing daily arm against the live bybit_2 legs on the same symbols (trend_donchian_eth_4h, trend_donchian_xrp_4h, trend_donchian_sol_prop, xrp_pullback_2h, ada_pullback_2h): corr\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8755,6 +10077,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "ef5d-04 PASSED. Same overlap read as P7-Q6-daily-donchian against the live 2h pullback legs (xrp_pullback_2h, ada_pullback_2h) and the 4h Donchian legs, then the re-entry case with a holdout confirmation. If ef5d-03 also passed, read the two daily families against EACH OTHER first (one combined dai\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8788,6 +10115,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "ef5d-07 PASSED: a vol-percentile gate (V50/V75/V90, the record names it) lifts the 30m Donchian breakout over its cost by >= 0.05 R/trade with breadth. Confirmation is the transfer across BARS, no re-selection of the percentile: ONE unit with the passing gate alone vs ungated at 15m and at 1h on th\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8820,6 +10152,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "ef5d-07 FAILED: no vol gate lifts the 30m breakout over its cost on the six perps. Closes the gate lever at 30m (not tested: 15m/1h, a time-of-day gate (Q12), maker entries (Q14)). Record which the break-even frontier predicted (if ef5d-02 graded 30m dead for these symbols the FAIL is the expected \u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8852,6 +10189,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "ef5d-08 PASSED: a fixed target (TP2 or TP15 + 12-bar time stop, the record names it) beats trailing the 1h compression breakout by >= 0.05 R/trade with breadth. Confirmation: the passing target alone vs TRAIL at 30m and 4h (transfer across bars, no re-selection), plus the prop fit through prop_ev_g\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8885,6 +10227,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "ef5d-09 PASSED: a sweep-depth floor (SWEEP or SWEEP_TP1, the record names it) lifts the 1h fade over its cost with breadth. Confirmation: the passing arm alone vs FAR at 15m and 4h on the same symbols, AND a read against fade_breakout_4h's own committed 4h record (the live shadow leg) -- if the 4h \u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8917,6 +10264,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "207f-01 FAILED: the dev edge does not survive the $194.52 cash book. Read the refusal mix first. If unaffordable_whole_share dominates, author ONE unit: the same recipe re-scored on the AFFORDABLE sub-pool only (ETFs whose 1-share price <= 0.9 x cash at each decision, a causal filter) vs the full p\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8949,6 +10301,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "207f-02 PASSED: a selection rule beat tau 0.25 on the live book (dev). It is a LEAD. Register its confirmation BEFORE reading any new data: the frozen served ensemble (ml/candidates/ml_entry_eq_v3_struct_ens5/model.json, no refit) with the lead rule fixed, paired by month against tau 0.25 on the li\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -8980,6 +10337,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "207f-03 FAILED. Branch on its registered diagnostic. reads_cost_per_r = true: the label is the diagnosis but L1/L2 did not fix it; author ONE cost-neutral target (net return per unit of NOTIONAL, i.e. net_long x 2 ATR / entry, which removes the stop-width tilt while keeping costs) on the same harne\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -9011,6 +10373,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "207f-03 PASSED: a direction-only label (gross R or raw return) selects better at matched count. Register (a) its walk-forward re-read through the live book (selection per 207f-02's outcome) and (b) a deterministic export of the new label's 5-seed ensemble with a parity fixture (as RQ-20261108-a7d3-\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -9042,6 +10409,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Challengers qualified on the live book (207f-04 PASS) and Foxhound-4's live-book baseline exists (207f-01). Author THE HEAD-TO-HEAD under the P8 promotion rule (08-ALPACA-LIVE-BOOK.md s 5): each qualifying leg and the combined (qualifiers + Foxhound-4 competing for the slot, Foxhound-4's picks firs\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -9073,6 +10445,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Feature families for the equity ENTRY on the label 207f-03 leaves standing. Config A vs B read flat (98e3-14, indeterminate). Untested families: volatility-regime context (VIXY term proxy, realised-vol percentile of the pool), ETF-family-relative strength (rank within the same asset class, not the \u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -9104,6 +10481,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "ETF-family pooling. The model trains on one pool of ~173 ETFs (equity index, bonds, sector, leveraged and inverse, commodity miners). Author ONE unit: per-family models (equity-beta / rates-credit / commodity / leveraged-inverse) vs the pooled model, and the pooled model trained on the affordable s\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -9135,6 +10517,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "ETF rotation / dual momentum as a NEW strategy family sized for this account: hold the single affordable ETF with the best trailing 6-month (126-day) total return among a fixed, pre-declared list (equity index, bonds, gold proxy IAUM, cash BIL), only if it beats BIL (absolute momentum), else hold c\u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -9166,6 +10553,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Holding period and exit plan. Pivot 8 read +0.109 vs pivot 5 +0.132 (98e3-16, dev, one point); pivot 3 (98e3-15) is queued after a producer failure. Untested: the 24-bar time stop vs 48 / 72 bars, and a DAILY decision bar (one decision per session at the close; fewer, longer trades suit a T+1 cash \u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -9197,6 +10589,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "SCOPING, not a strategy test: can alpaca_live trade options at all, and would any defined-risk structure fit $194.52? Step 1 is a read (UNVERIFIED today: /api/diag/broker_account_status does not expose options_approved_level / options_trading_level): add the two fields to the diag read (Tier 1) or \u2026",
    "owner_rows": null,
    "last_activity": null,
@@ -9230,6 +10627,11 @@
    "open_units": [
     "RQ-20261103-001"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261103-001 (queued): ML-PROP-ITERATE gate: does the moving-TP (first-passage re-scored TP revision) variant of the ENTRY model, on ETHUSDT+SOLUSDT, clear RULE-P5-GATE-BRK-PER-LEG-V3 on breakout_2 / tradeify_1 / velotrade_1?",
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -9257,6 +10659,7 @@
     "unit": "RQ-20261101-d1f3-05",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-04T11:43:17Z",
     "metrics": {
@@ -9276,6 +10679,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-11-04T11:43:17Z",
@@ -9296,6 +10704,7 @@
     "unit": "RQ-20261101-d1f3-01",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-04T06:04:51Z",
     "metrics": null,
@@ -9313,6 +10722,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-11-04T06:04:51Z",
@@ -9333,6 +10747,7 @@
     "unit": "RQ-20261101-d1f3-04",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-04T04:55:56Z",
     "metrics": null,
@@ -9350,6 +10765,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-11-04T04:55:56Z",
@@ -9370,6 +10790,7 @@
     "unit": "RQ-20261101-d1f3-06",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-04T04:55:57Z",
     "metrics": null,
@@ -9387,6 +10808,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-11-04T04:55:57Z",
@@ -9407,6 +10833,7 @@
     "unit": "RQ-20261101-d1f3-02",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-04T02:49:13Z",
     "metrics": null,
@@ -9424,6 +10851,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-11-04T02:49:13Z",
@@ -9442,6 +10874,7 @@
     "unit": "RQ-20261022-b7e1-03",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-23T16:05:30Z",
     "metrics": {
@@ -9462,6 +10895,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Rung 1e PROP (RQ-20261022-b7e1-03, runnable): X=1.0 on eth/sol prop 1h legs, w=12, stop room controlled; INDETERMINATE is possible (positives are scarce). Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (neve\u2026",
    "owner_rows": null,
    "last_activity": "2026-10-23T16:05:30Z",
@@ -9487,6 +10925,7 @@
     "unit": "RQ-20261022-b7e1-01",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-23T14:59:31Z",
     "metrics": {
@@ -9507,6 +10946,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Rung 1e TRANSFER (RQ-20261022-b7e1-01, runnable): per-bar path state vs \"gives back >= 1.5 R from here\", stop room controlled, six legs not in the discovery run. Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposa\u2026",
    "owner_rows": null,
    "last_activity": "2026-10-23T14:59:31Z",
@@ -9532,6 +10976,7 @@
     "unit": "RQ-20261022-b7e1-02",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-23T16:05:29Z",
     "metrics": {
@@ -9552,6 +10997,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Rung 1e WINDOW VARIANT (RQ-20261022-b7e1-02, runnable): w=12 on ada/xrp pullback_2h + eth_4h, stop room controlled. Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> variants name\u2026",
    "owner_rows": null,
    "last_activity": "2026-10-23T16:05:29Z",
@@ -9577,6 +11027,7 @@
     "unit": "RQ-20261016-012",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-16T21:12:30Z",
     "metrics": null,
@@ -9594,6 +11045,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-10-17T00:00:00Z",
@@ -9620,6 +11076,7 @@
     "unit": "RQ-20261016-013",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-16T20:51:32Z",
     "metrics": null,
@@ -9637,6 +11094,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-10-17T00:00:00Z",
@@ -9663,6 +11125,7 @@
     "unit": "RQ-20261029-010",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-31T06:55:55Z",
     "metrics": null,
@@ -9680,6 +11143,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-10-31T06:55:55Z",
@@ -9705,6 +11173,7 @@
     "unit": "RQ-20261029-009",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-31T03:55:00Z",
     "metrics": null,
@@ -9722,6 +11191,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-10-31T03:55:00Z",
@@ -9747,6 +11221,7 @@
     "unit": "RQ-20261025-003",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-25T08:54:26Z",
     "metrics": {
@@ -9769,6 +11244,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-10-25T08:54:26Z",
@@ -9794,6 +11274,7 @@
     "unit": "RQ-20261020-003",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-23T05:59:23Z",
     "metrics": {
@@ -9816,6 +11297,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-10-23T05:59:23Z",
@@ -9841,6 +11327,7 @@
     "unit": "RQ-20261021-7c2b-12",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-22T03:36:24Z",
     "metrics": null,
@@ -9858,6 +11345,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "Programme review 2026-10-21 authored rung 2 as RQ-20261021-7c2b-12 (A = flat 0.35%, the rung-1 winner; C0030, C0040, CROOM35; same ledgers, 5 seeds). On its verdict: the dominating arm, or 0.35% if none, is the breakout_2 sizing PROPOSAL (0.5% today); apply it only through the standing data-backed \u2026",
    "owner_rows": null,
    "last_activity": "2026-10-25T00:00:00Z",
@@ -9883,6 +11375,7 @@
     "unit": "RQ-20261016-030",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-17T20:53:43Z",
     "metrics": null,
@@ -9900,6 +11393,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-10-18T00:00:00Z",
@@ -9925,6 +11423,7 @@
     "unit": "RQ-20261016-032",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-17T15:28:08Z",
     "metrics": null,
@@ -9942,6 +11441,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-10-17T15:28:08Z",
@@ -9967,6 +11471,7 @@
     "unit": "RQ-20261026-f679-01",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-27T17:57:49Z",
     "metrics": null,
@@ -9984,6 +11489,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-10-27T17:57:49Z",
@@ -10009,6 +11519,7 @@
     "unit": "RQ-20261026-f679-02",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-27T21:01:38Z",
     "metrics": null,
@@ -10026,6 +11537,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-10-28T00:00:00Z",
@@ -10051,6 +11567,7 @@
     "unit": "RQ-20261026-f679-04",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-27T05:00:09Z",
     "metrics": null,
@@ -10068,6 +11585,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author an iteration unit from a diagnosis, or record lever exhaustion (programme-review iteration loop)",
    "owner_rows": null,
    "last_activity": "2026-10-27T05:00:09Z",
@@ -10094,6 +11616,7 @@
     "unit": "RQ-20261029-84ef-04",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-29T19:58:40Z",
     "metrics": null,
@@ -10111,6 +11634,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "ef5d-05 read INDETERMINATE. If pooled n < 39 even over 17 symbols and ~20 years, the weekly bar is too slow for a Stage-0 verdict by construction: record that (the n is the finding) and move the equity long arm to 1d bars with a weekly TIME stop (hold 5-20 trading days) as the next unit, same symbo\u2026",
    "owner_rows": null,
    "last_activity": "2026-10-30T00:00:00Z",
@@ -10139,6 +11667,7 @@
     "unit": "RQ-20261111-203c-01",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-12T04:29:51Z",
     "metrics": null,
@@ -10158,6 +11687,11 @@
    "open_units": [
     "RQ-20261112-003"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261112-003 (due): ITERATION 3 of spy_pullback_1h (iteration 2 not_replicated: discovery +68.4 R n 252, 4 of 4 folds, holdout -8.5 R n 95): does ONE trend/vol filter selected on the discovery span (ADX 20 / ADX 25 / vol-skip top decile ",
    "owner_rows": null,
    "last_activity": "2026-11-12T04:29:51Z",
@@ -10193,6 +11727,7 @@
     "unit": "RQ-20261022-eba2-04",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-23T19:07:39Z",
     "metrics": {
@@ -10213,6 +11748,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "promotion decision on the passing record (Gate 1 / Stage-1 roster)",
    "owner_rows": null,
    "last_activity": "2026-10-23T19:07:39Z",
@@ -10238,6 +11778,7 @@
     "unit": "RQ-20261022-008",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-22T17:37:05Z",
     "metrics": {
@@ -10258,6 +11799,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "promotion decision on the passing record (Gate 1 / Stage-1 roster)",
    "owner_rows": null,
    "last_activity": "2026-10-22T17:37:05Z",
@@ -10284,6 +11830,7 @@
     "unit": "RQ-20261025-002",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-25T07:56:49Z",
     "metrics": {
@@ -10306,6 +11853,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "promotion decision on the passing record (Gate 1 / Stage-1 roster)",
    "owner_rows": null,
    "last_activity": "2026-10-25T07:56:49Z",
@@ -10331,6 +11883,7 @@
     "unit": "RQ-20261023-a1f3-17",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-24T07:24:33Z",
     "metrics": {
@@ -10353,6 +11906,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "promotion decision on the passing record (Gate 1 / Stage-1 roster)",
    "owner_rows": null,
    "last_activity": "2026-10-24T07:24:33Z",
@@ -10378,6 +11936,7 @@
     "unit": "RQ-20261016-026",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-17T10:56:36Z",
     "metrics": null,
@@ -10395,6 +11954,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "promotion decision on the passing record (Gate 1 / Stage-1 roster)",
    "owner_rows": [
     "PROP-GATE-EDGE-SENSITIVE"
@@ -10422,6 +11986,7 @@
     "unit": "RQ-20261016-027",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-17T11:58:19Z",
     "metrics": null,
@@ -10439,6 +12004,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "promotion decision on the passing record (Gate 1 / Stage-1 roster)",
    "owner_rows": null,
    "last_activity": "2026-10-17T11:58:19Z",
@@ -10464,6 +12034,7 @@
     "unit": "RQ-20261016-028",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-17T13:44:16Z",
     "metrics": null,
@@ -10481,6 +12052,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "promotion decision on the passing record (Gate 1 / Stage-1 roster)",
    "owner_rows": null,
    "last_activity": "2026-10-17T13:44:16Z",
@@ -10506,6 +12082,7 @@
     "unit": "RQ-20261016-029",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-17T17:07:45Z",
     "metrics": null,
@@ -10523,6 +12100,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "promotion decision on the passing record (Gate 1 / Stage-1 roster)",
    "owner_rows": null,
    "last_activity": "2026-10-17T17:07:45Z",
@@ -10548,6 +12130,7 @@
     "unit": "RQ-20261029-84ef-05",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-29T20:23:49Z",
     "metrics": null,
@@ -10565,6 +12148,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "promotion decision on the passing record (Gate 1 / Stage-1 roster)",
    "owner_rows": null,
    "last_activity": "2026-10-30T00:00:00Z",
@@ -10591,6 +12179,7 @@
     "unit": "RQ-20261029-84ef-03",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-29T19:58:39Z",
     "metrics": null,
@@ -10608,6 +12197,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "ef5d-05 PASSED (LO or BOTH, the record names it). Overlap read against the live alpaca_live legs (ief/slv/iaum_pullback_1d) and the alpaca_paper 1d trend legs: SPY/QQQ/QLD/TQQQ/SPLG/IWM/SCHA are one equity-beta factor (programme 03 node P3-Q3-soak-equity-overlap) -- the weekly arm's per-symbol pass\u2026",
    "owner_rows": null,
    "last_activity": "2026-10-30T00:00:00Z",
@@ -10638,6 +12232,7 @@
     "unit": "RQ-20261111-203c-02",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-12T05:47:03Z",
     "metrics": null,
@@ -10655,6 +12250,13 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 1,
+    "units": [
+     "RQ-20261104-003"
+    ],
+    "by_class": null
+   },
    "next_step": "promotion decision on the passing record (Gate 1 / Stage-1 roster)",
    "owner_rows": null,
    "last_activity": "2026-11-12T05:47:03Z",
@@ -10694,6 +12296,7 @@
     "unit": "RQ-20261110-73de-24",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-10T09:46:01Z",
     "metrics": null,
@@ -10714,6 +12317,13 @@
     "RQ-20261025-3947-05",
     "RQ-20261031-7b6f-13"
    ],
+   "survivors": {
+    "count": 1,
+    "units": [
+     "RQ-20261029-013"
+    ],
+    "by_class": null
+   },
    "next_step": "RQ-20261025-3947-05 (queued): Path-state trail gate (avax_pullback_2h (paper roster)): does a trail that tightens to 2.5 x ATR once peak_r >= 1.5 AND the path-state gate holds beat the declared avax_pullback_2h exit?",
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -10760,6 +12370,11 @@
     "RQ-20261026-e535-03",
     "RQ-20261029-014"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261026-e535-03 (dispatched): Desk D-S0 entry generation (arm 1): on masked point-in-time scan packets, do Claude's proposed entries earn a positive net R per capital-day, beat a random entry with the same bracket geometry at random tim",
    "owner_rows": [
     "DESK-17-DESK-LEG",
@@ -10802,6 +12417,11 @@
    "open_units": [
     "RQ-20261031-014"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261031-014 (dispatched): M20 exit-lever sweep: e4_oi_shock_1h (generated, monthly)",
    "owner_rows": [
     "STAGE0-ROUTE-E4-DESK"
@@ -10835,6 +12455,7 @@
     "unit": "RQ-20261110-73de-25",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-10T09:46:03Z",
     "metrics": null,
@@ -10844,9 +12465,9 @@
     "title": "HOLDOUT-SELECTED structure exit (pivot 3 / 5 / 8) on eth_pullback_2h, net of cost"
    },
    "counts": {
-    "units": 42,
-    "passed": 12,
-    "failed": 19,
+    "units": 48,
+    "passed": 13,
+    "failed": 24,
     "indeterminate": 5,
     "open": 3,
     "blocked": 0
@@ -10856,6 +12477,13 @@
     "RQ-20261031-c6fc-07",
     "RQ-20261101-78fc-34"
    ],
+   "survivors": {
+    "count": 1,
+    "units": [
+     "RQ-20261110-73de-25"
+    ],
+    "by_class": null
+   },
    "next_step": "RQ-20261031-3ef3-10 (queued): A time-based exit (close after 60 or 120 bars) on eth_pullback_2h: does TO1 or TO2 beat the declared leg net of cost over 2020-07-01..2026-10-15?",
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -10897,6 +12525,7 @@
     "unit": "RQ-20261106-019",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-06T21:55:50Z",
     "metrics": null,
@@ -10917,6 +12546,13 @@
     "RQ-20261101-78fc-20",
     "RQ-20261110-73de-09"
    ],
+   "survivors": {
+    "count": 1,
+    "units": [
+     "RQ-20261029-015"
+    ],
+    "by_class": null
+   },
    "next_step": "RQ-20261101-78fc-20 (queued): ITERATION 1 of eth_pullback_prop_2h (fail): On eth_pullback_prop_2h over 2020-07-01..2026-10-15 23:59, does any of AD30 (adx_min=30), AD35 (adx_min=35), PF62 (pullback_frac=0.618) beat the declared leg (A) net ",
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -10966,6 +12602,11 @@
     "RQ-20261101-78fc-52",
     "RQ-20261105-021"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261030-002 (dispatched): M20 exit-lever sweep: fade_breakout_4h (generated, monthly)",
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -11014,6 +12655,11 @@
     "RQ-20261101-78fc-53",
     "RQ-20261105-022"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261101-78fc-53 (queued): ITERATION 1 of fvg_range_15m (fail): On fvg_range_15m over 2024-10-05..2026-10-04 23:59, does any of MT5 (min_touches=5), AX15 (adx_max=15), MW25 (min_width_pct=0.025) beat the declared leg (A) net of the full ",
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -11054,6 +12700,7 @@
     "unit": "RQ-20261110-73de-21",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-10T06:08:29Z",
     "metrics": null,
@@ -11071,6 +12718,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -11112,6 +12764,7 @@
     "unit": "RQ-20261110-73de-05",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-10T06:08:27Z",
     "metrics": null,
@@ -11129,6 +12782,11 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": [
     "GLD-SOAK-REPLACE",
@@ -11174,6 +12832,7 @@
     "unit": "RQ-20261106-020",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-06T21:55:51Z",
     "metrics": null,
@@ -11195,6 +12854,11 @@
     "RQ-20261110-73de-14",
     "RQ-20261112-001"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261110-73de-08 (due): HOLDOUT-SELECTED real take-profit on htf_pullback_trend_2h (declared tp_r 50): tp 3R / 4R / 6R and a be-floor, net of cost",
    "owner_rows": [
     "TPX-PULLBACK-PRODUCER"
@@ -11237,6 +12901,7 @@
     "unit": "RQ-20261110-73de-03",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-10T05:19:12Z",
     "metrics": null,
@@ -11256,6 +12921,13 @@
    "open_units": [
     "RQ-20261111-203c-06"
    ],
+   "survivors": {
+    "count": 1,
+    "units": [
+     "RQ-20261104-c6f1-06"
+    ],
+    "by_class": null
+   },
    "next_step": "RQ-20261111-203c-06 (due): HOLDOUT-SELECTED regime gate on iaum_pullback_1d (real money, alpaca_live): vol skip / ADX max / be-floor, net of cost",
    "owner_rows": [
     "DECISION-BAR-SESSION-INSTRUMENT",
@@ -11299,6 +12971,7 @@
     "unit": "RQ-20261105-028",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-05T23:00:56Z",
     "metrics": null,
@@ -11318,6 +12991,11 @@
    "open_units": [
     "RQ-20261101-78fc-44"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261101-78fc-44 (queued): ITERATION 1 of ict_scalp_5m (fail): On ict_scalp_5m over 2024-10-05..2026-10-04 23:59, does any of H4 (--htf-rule=4h), SLB (--atr-sl-buffer-mult=0.6), LIM (--entry-mode=limit) beat the declared leg (A) net of t",
    "owner_rows": [
     "SHORT-TF-PROGRAMME"
@@ -11359,6 +13037,7 @@
     "unit": "RQ-20261105-029",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-05T23:00:58Z",
     "metrics": null,
@@ -11376,6 +13055,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -11415,6 +13099,7 @@
     "unit": "RQ-20261105-030",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-05T22:06:49Z",
     "metrics": null,
@@ -11424,14 +13109,19 @@
     "title": "Walk-forward lever sweep of ict_scalp_eth_15m: next lever entry (generated, weekly)"
    },
    "counts": {
-    "units": 22,
+    "units": 21,
     "passed": 0,
     "failed": 9,
-    "indeterminate": 9,
+    "indeterminate": 8,
     "open": 0,
     "blocked": 2
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -11471,6 +13161,7 @@
     "unit": "RQ-20260929-009",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-30T19:10:07Z",
     "metrics": {
@@ -11494,6 +13185,11 @@
    "open_units": [
     "RQ-20261105-031"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261105-031 (queued): Walk-forward lever sweep of ict_scalp_mgc_15m: next lever entry (generated, weekly)",
    "owner_rows": [
     "MGC-SIZING-OVERSIZE"
@@ -11535,6 +13231,7 @@
     "unit": "RQ-20261105-032",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-06T10:01:31Z",
     "metrics": null,
@@ -11544,14 +13241,19 @@
     "title": "Walk-forward lever sweep of ict_scalp_sol_15m: next lever entry (generated, weekly)"
    },
    "counts": {
-    "units": 18,
+    "units": 19,
     "passed": 0,
     "failed": 8,
-    "indeterminate": 7,
+    "indeterminate": 8,
     "open": 0,
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -11591,6 +13293,7 @@
     "unit": "RQ-20261105-033",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-06T10:01:32Z",
     "metrics": null,
@@ -11608,6 +13311,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -11647,6 +13355,7 @@
     "unit": "RQ-20261105-034",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-06T10:01:33Z",
     "metrics": null,
@@ -11664,6 +13373,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -11703,6 +13417,7 @@
     "unit": "RQ-20261105-035",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-06T10:53:05Z",
     "metrics": null,
@@ -11722,6 +13437,11 @@
    "open_units": [
     "RQ-20261101-78fc-46"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261101-78fc-46 (queued): ITERATION 1 of ict_scalp_xrp_5m (fail): On ict_scalp_xrp_5m over 2024-10-05..2026-10-04 23:59, does any of H4 (--htf-rule=4h), SLB (--atr-sl-buffer-mult=0.6), LIM (--entry-mode=limit) beat the declared leg (A) ",
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -11763,6 +13483,7 @@
     "unit": "RQ-20261110-73de-02",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-10T05:19:11Z",
     "metrics": null,
@@ -11782,6 +13503,11 @@
    "open_units": [
     "RQ-20261111-203c-04"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261111-203c-04 (due): HOLDOUT-SELECTED regime gate on ief_pullback_1d (real money, alpaca_live): vol skip / ADX max / be-floor, net of cost",
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -11823,6 +13549,7 @@
     "unit": "RQ-20261106-021",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-06T21:55:52Z",
     "metrics": null,
@@ -11842,6 +13569,11 @@
    "open_units": [
     "RQ-20261016-d37f-04"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261016-d37f-04 (dispatched): Holdout re-run of RQ-20261003-007: M20 exit-lever sweep: iwm_trend_long_1d (generated, monthly)",
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -11882,6 +13614,7 @@
     "unit": "RQ-20261106-022",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-06T23:06:37Z",
     "metrics": null,
@@ -11899,6 +13632,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -11939,6 +13677,7 @@
     "unit": "RQ-20261106-023",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-06T23:06:37Z",
     "metrics": null,
@@ -11956,6 +13695,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -11995,6 +13739,7 @@
     "unit": "RQ-20261106-004",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-06T16:52:33Z",
     "metrics": null,
@@ -12012,6 +13757,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -12051,6 +13801,7 @@
     "unit": "RQ-20261106-005",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-06T16:52:34Z",
     "metrics": null,
@@ -12068,6 +13819,11 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -12113,6 +13869,11 @@
    "open_units": [
     "RQ-20261106-003"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261106-003 (dispatched): M20 exit-lever sweep: ml_entry_eq (generated, monthly)",
    "owner_rows": [
     "ML-ENTRY-EQ-STRUCTURE-RETEST"
@@ -12144,6 +13905,7 @@
     "unit": "RQ-20261101-b611-01",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-02T10:48:20Z",
     "metrics": {
@@ -12166,6 +13928,11 @@
    "open_units": [
     "RQ-20261105-002"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261105-002 (dispatched): M20 exit-lever sweep: ml_entry_v2 (generated, monthly)",
    "owner_rows": null,
    "last_activity": "2026-11-07T00:00:00Z",
@@ -12194,6 +13961,7 @@
     "unit": "RQ-20261106-006",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-06T16:52:35Z",
     "metrics": null,
@@ -12213,6 +13981,11 @@
    "open_units": [
     "RQ-20261101-78fc-37"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261101-78fc-37 (queued): ITERATION 1 of qld_trend_long_1d (indeterminate): Measured at power on 2018-06-01..2026-10-15 23:59, does qld_trend_long_1d as declared clear Stage 0 net of the full cost stack?",
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -12253,6 +14026,7 @@
     "unit": "RQ-20261111-203c-03",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-12T07:05:58Z",
     "metrics": null,
@@ -12270,6 +14044,13 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 1,
+    "units": [
+     "RQ-20261101-78fc-25"
+    ],
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": [
     "PROMOTE-1H-SURVIVORS-20261104"
@@ -12313,6 +14094,7 @@
     "unit": "RQ-20261110-73de-16",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-10T07:44:15Z",
     "metrics": null,
@@ -12330,6 +14112,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": [
     "PROMO-EVIDENCE-REFRESH"
@@ -12373,6 +14160,7 @@
     "unit": "RQ-20261005-014",
     "verdict": "indeterminate",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": "underpowered",
     "date": "2026-11-07T11:32:47Z",
     "metrics": {
@@ -12395,6 +14183,13 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 1,
+    "units": [
+     "RQ-20261016-d37f-06"
+    ],
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": [
     "PROMO-EVIDENCE-REFRESH"
@@ -12439,6 +14234,7 @@
     "unit": "RQ-20261110-73de-01",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-10T05:19:11Z",
     "metrics": null,
@@ -12458,6 +14254,13 @@
    "open_units": [
     "RQ-20261111-203c-05"
    ],
+   "survivors": {
+    "count": 1,
+    "units": [
+     "RQ-20261016-077e-07"
+    ],
+    "by_class": null
+   },
    "next_step": "RQ-20261111-203c-05 (due): HOLDOUT-SELECTED regime gate on slv_pullback_1d (real money, alpaca_live): vol skip / ADX max / be-floor, net of cost",
    "owner_rows": [
     "SLV-PB1D-RETENTION-T3"
@@ -12500,6 +14303,7 @@
     "unit": "RQ-20261106-010",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-06T17:55:06Z",
     "metrics": null,
@@ -12520,6 +14324,15 @@
     "RQ-20261030-015",
     "RQ-20261104-7fdb-02"
    ],
+   "survivors": {
+    "count": 3,
+    "units": [
+     "RQ-20261030-028",
+     "RQ-20261101-78fc-18",
+     "RQ-20261103-5a03-02"
+    ],
+    "by_class": null
+   },
    "next_step": "RQ-20261030-015 (dispatched): E35 bracket-geometry sweep: slv_trend_1h (generated, monthly)",
    "owner_rows": [
     "PROMOTE-1H-SURVIVORS-20261104"
@@ -12564,6 +14377,7 @@
     "unit": "RQ-20261110-73de-23",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-10T09:46:00Z",
     "metrics": null,
@@ -12581,6 +14395,13 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 1,
+    "units": [
+     "RQ-20261030-034"
+    ],
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -12622,6 +14443,7 @@
     "unit": "RQ-20261005-813",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-07T19:09:43Z",
     "metrics": {
@@ -12643,6 +14465,13 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 1,
+    "units": [
+     "RQ-20261016-d37f-08"
+    ],
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": [
     "SPLG-TICKER-DEAD"
@@ -12686,6 +14515,7 @@
     "unit": "RQ-20261110-73de-22",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-10T07:44:14Z",
     "metrics": null,
@@ -12703,6 +14533,13 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 1,
+    "units": [
+     "RQ-20261110-73de-22"
+    ],
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -12744,6 +14581,7 @@
     "unit": "RQ-20260929-060",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-04T18:51:22Z",
     "metrics": null,
@@ -12764,6 +14602,11 @@
     "RQ-20261101-78fc-54",
     "RQ-20261106-014"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261101-78fc-54 (queued): ITERATION 1 of squeeze_breakout_4h (fail): On squeeze_breakout_4h over 2020-07-01..2026-10-15 23:59, does any of KC15 (kc_mult=1.5), CD6 (cooldown_bars=6), SL35 (atr_stop_mult=3.5) beat the declared leg (A) net",
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -12804,6 +14647,7 @@
     "unit": "RQ-20261110-73de-04",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-10T05:19:12Z",
     "metrics": null,
@@ -12821,6 +14665,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": [
     "PROMO-EVIDENCE-REFRESH"
@@ -12865,6 +14714,7 @@
     "unit": "RQ-20261106-017",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-06T20:53:37Z",
     "metrics": null,
@@ -12884,6 +14734,11 @@
    "open_units": [
     "RQ-20261111-3a23-01"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261111-3a23-01 (dispatched): M23 meta-labeling on test results, widened emits: does a WITHIN-FAMILY take/skip head on the signals catalog's decision-time features beat take-all AND a confidence-only control, net of the full cost stack,",
    "owner_rows": [
     "DONCHIAN-PARITY",
@@ -12928,6 +14783,7 @@
     "unit": "RQ-20261106-024",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-06T23:06:38Z",
     "metrics": null,
@@ -12947,6 +14803,11 @@
    "open_units": [
     "RQ-20261112-002"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261112-002 (due): ITERATION 3 of trend_donchian_1h (iteration 2 PASS: NOSX, no structure exit, +14.5 R vs A -91.5 R; the structure exit was removed from the leg on 2026-11-05 by #23485): does the leg AS NOW DECLARED confirm on a held-b",
    "owner_rows": [
     "LTR-EVIDENCE-TD1H",
@@ -12992,6 +14853,7 @@
     "unit": "RQ-20261110-73de-11",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-10T09:45:59Z",
     "metrics": null,
@@ -13011,6 +14873,13 @@
    "open_units": [
     "RQ-20261031-3ef3-09"
    ],
+   "survivors": {
+    "count": 1,
+    "units": [
+     "RQ-20261110-73de-11"
+    ],
+    "by_class": null
+   },
    "next_step": "RQ-20261031-3ef3-09 (queued): A top-volatility skip (skip entries above the trailing vol percentile) on trend_donchian_ada_4h: does VH95 or VH90 beat the declared leg net of cost over 2020-07-01..2026-10-15?",
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -13053,6 +14922,7 @@
     "unit": "RQ-20261107-47b6-20",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-07T19:00:51Z",
     "metrics": null,
@@ -13072,6 +14942,13 @@
    "open_units": [
     "RQ-20261110-73de-15"
    ],
+   "survivors": {
+    "count": 1,
+    "units": [
+     "RQ-20261031-005"
+    ],
+    "by_class": null
+   },
    "next_step": "RQ-20261110-73de-15 (due): HOLDOUT-SELECTED session-hour skip on trend_donchian_avax_4h, net of cost",
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -13112,6 +14989,7 @@
     "unit": "RQ-20261106-027",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-06T23:54:57Z",
     "metrics": null,
@@ -13129,6 +15007,13 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 1,
+    "units": [
+     "RQ-20261031-006"
+    ],
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": [
     "RM-AM-ETH4H-ENTRYTP",
@@ -13175,6 +15060,7 @@
     "unit": "RQ-20261006-003",
     "verdict": "fail",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": "not_replicated",
     "date": "2026-11-08T08:38:53Z",
     "metrics": {
@@ -13189,9 +15075,9 @@
     "title": "M20 exit-lever sweep: trend_donchian_eth_4h (generated, monthly)"
    },
    "counts": {
-    "units": 77,
-    "passed": 15,
-    "failed": 50,
+    "units": 73,
+    "passed": 14,
+    "failed": 47,
     "indeterminate": 10,
     "open": 1,
     "blocked": 0
@@ -13199,6 +15085,13 @@
    "open_units": [
     "RQ-20261106-5b7a-02"
    ],
+   "survivors": {
+    "count": 1,
+    "units": [
+     "RQ-20261016-077e-02"
+    ],
+    "by_class": null
+   },
    "next_step": "RQ-20261106-5b7a-02 (queued): HOLDOUT RE-RUN at the CURRENT config (soak-backlog review 2026-11-06): does trend_donchian_eth_4h's configuration, SELECTED on the earliest ~75% of its history, hold up net of the full cost stack when tested ON",
    "owner_rows": [
     "RM-AM-ETH4H-ENTRYTP",
@@ -13246,6 +15139,7 @@
     "unit": "RQ-20261009-002",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": "confirmed",
     "date": "2026-11-09T02:18:48Z",
     "metrics": {
@@ -13260,9 +15154,9 @@
     "title": "M20 exit-lever sweep: trend_donchian_eth_prop (generated, monthly)"
    },
    "counts": {
-    "units": 87,
-    "passed": 22,
-    "failed": 40,
+    "units": 82,
+    "passed": 20,
+    "failed": 39,
     "indeterminate": 16,
     "open": 6,
     "blocked": 1
@@ -13274,6 +15168,14 @@
     "RQ-20261103-003",
     "RQ-20261103-004"
    ],
+   "survivors": {
+    "count": 2,
+    "units": [
+     "RQ-20261009-002",
+     "RQ-20261016-d37f-11"
+    ],
+    "by_class": null
+   },
    "next_step": "RQ-20261030-ea4a-01 (queued): CONFIRMATION (disjoint window) of the stop-out cooldown on trend_donchian_eth_prop: do CD4 / CD8 beat the declared leg net of cost over 2020-07-01..2023-05-31, a window RQ-20261030-41cc-24 did not see?",
    "owner_rows": [
     "RM-AM-ETHPROP-TRAIL45",
@@ -13319,6 +15221,7 @@
     "unit": "RQ-20261107-47b6-02",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-07T10:01:02Z",
     "metrics": null,
@@ -13338,6 +15241,13 @@
    "open_units": [
     "RQ-20261101-78fc-30"
    ],
+   "survivors": {
+    "count": 1,
+    "units": [
+     "RQ-20261031-007"
+    ],
+    "by_class": null
+   },
    "next_step": "RQ-20261101-78fc-30 (queued): ITERATION 1 of trend_donchian_sol (fail): On trend_donchian_sol over 2020-07-01..2026-10-15 23:59, does any of AD25 (adx_min=25), DC40 (donchian=40), DC55 (donchian=55) beat the declared leg (A) net of the full",
    "owner_rows": [
     "SOL-PROP-GATE-FIX",
@@ -13384,6 +15294,7 @@
     "unit": "RQ-20261107-47b6-18",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-07T17:54:16Z",
     "metrics": null,
@@ -13393,9 +15304,9 @@
     "title": "ADX trail tighten (M1) on trend_donchian_sol_4h: candidate vs declared, 2020-07-01..2026-10-26, net of the full cost stack"
    },
    "counts": {
-    "units": 49,
-    "passed": 9,
-    "failed": 30,
+    "units": 53,
+    "passed": 10,
+    "failed": 33,
     "indeterminate": 6,
     "open": 2,
     "blocked": 0
@@ -13404,6 +15315,13 @@
     "RQ-20261105-d256-03",
     "RQ-20261110-73de-10"
    ],
+   "survivors": {
+    "count": 1,
+    "units": [
+     "RQ-20261101-78fc-27"
+    ],
+    "by_class": null
+   },
    "next_step": "RQ-20261105-d256-03 (dispatched): FAITHFUL Stage-0 re-measure of trend_donchian_sol_4h WITH its structure_exit \"pivot=5\" modelled: does it still clear RULE-D1 net of the full cost stack?",
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -13454,6 +15372,11 @@
    "open_units": [
     "RQ-20261031-018"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261031-018 (dispatched): M20 exit-lever sweep: turtle_soup (generated, monthly)",
    "owner_rows": null,
    "last_activity": "2026-11-01T00:00:00Z",
@@ -13493,6 +15416,7 @@
     "unit": "RQ-20261106-035",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-07T06:00:14Z",
     "metrics": null,
@@ -13512,6 +15436,14 @@
    "open_units": [
     "RQ-20261031-013"
    ],
+   "survivors": {
+    "count": 2,
+    "units": [
+     "RQ-20261031-019",
+     "RQ-20261101-78fc-19"
+    ],
+    "by_class": null
+   },
    "next_step": "RQ-20261031-013 (dispatched): E35 bracket-geometry sweep: uso_trend_1h (generated, monthly)",
    "owner_rows": [
     "PROMOTE-1H-SURVIVORS-20261104"
@@ -13555,6 +15487,7 @@
     "unit": "RQ-20261106-036",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-07T06:00:15Z",
     "metrics": null,
@@ -13564,9 +15497,9 @@
     "title": "Walk-forward lever sweep of xrp_pullback_2h: next lever exit (generated, weekly)"
    },
    "counts": {
-    "units": 67,
+    "units": 65,
     "passed": 9,
-    "failed": 48,
+    "failed": 46,
     "indeterminate": 5,
     "open": 1,
     "blocked": 0
@@ -13574,6 +15507,14 @@
    "open_units": [
     "RQ-20261101-e5b1-09"
    ],
+   "survivors": {
+    "count": 2,
+    "units": [
+     "RQ-20261016-077e-01",
+     "RQ-20261104-c6f1-02"
+    ],
+    "by_class": null
+   },
    "next_step": "RQ-20261101-e5b1-09 (queued): CONFIRMATION of a4e7-02 on a DISJOINT earlier window: xrp_pullback_2h at the prop stack, V3 on breakout_2 / tradeify_1 / velotrade_1, 2020-10-01..2023-10-12",
    "owner_rows": [
     "LIVE-BT-STAGE-B",
@@ -13620,6 +15561,7 @@
     "unit": "RQ-20261015-8bbc-02",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-06T08:00:12Z",
     "metrics": null,
@@ -13629,9 +15571,9 @@
     "title": "ada_pullback_2h live-vs-backtest divergence (stage A): does BELOW_BACKTEST persist on bybit_2 realMoney as n grows? (-7.04R over 15, 4.7th pct on 2026-10-15)"
    },
    "counts": {
-    "units": 82,
-    "passed": 11,
-    "failed": 55,
+    "units": 78,
+    "passed": 10,
+    "failed": 52,
     "indeterminate": 4,
     "open": 4,
     "blocked": 2
@@ -13642,6 +15584,13 @@
     "RQ-20261106-5b7a-01",
     "RQ-20261111-9b09-01"
    ],
+   "survivors": {
+    "count": 1,
+    "units": [
+     "RQ-20261016-077e-04"
+    ],
+    "by_class": null
+   },
    "next_step": "RQ-20261031-7b6f-27 (queued): TRANSFER of cold-vol entry skip VL20/VL30 (VL20/VL30) to ada_pullback_2h: does any arm beat the declared leg net of cost over the leg's declared window?",
    "owner_rows": [
     "VOLSKIP-FORMING",
@@ -13687,6 +15636,7 @@
     "unit": "RQ-20261112-8d20-01",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-12T00:09:41Z",
     "metrics": null,
@@ -13710,6 +15660,11 @@
     "RQ-20261102-5e03-01",
     "RQ-20261105-001"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261102-001 (queued): ML-PROP-ITERATE diagnostic 1: where is ml_entry's ETH+SOL edge, and where is it lost? By regime (trend, vol), side, tau threshold, UTC hour block, symbol, month and prop cost component",
    "owner_rows": [
     "ML-ENTRY-TP-REVISION",
@@ -13765,6 +15720,11 @@
     "RQ-20261112-8d20-02",
     "RQ-20261112-d9c0-01"
    ],
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "RQ-20261112-8d20-02 (due): ml_entry_eq_struct HTF trend: do the equity structure-ensemble LONG decisions taken AGAINST a strong daily downtrend (daily ADX14 > 40, daily -DI > +DI) lose money net of cost on its confirming window?",
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -13806,6 +15766,7 @@
     "unit": "RQ-20261106-018",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-06T21:55:49Z",
     "metrics": null,
@@ -13826,6 +15787,13 @@
     "RQ-20261101-78fc-16",
     "RQ-20261103-5a03-03"
    ],
+   "survivors": {
+    "count": 1,
+    "units": [
+     "RQ-20261023-be01-02"
+    ],
+    "by_class": null
+   },
    "next_step": "RQ-20261101-78fc-16 (queued): ITERATION 1 of tqqq_trend_long_1d (pass_unconfirmed): Does tqqq_trend_long_1d as declared, selected on 2018-06-01..(holdout boundary), stay net-positive once on the held-back latest span?",
    "owner_rows": [
     "PROMO-EVIDENCE-REFRESH"
@@ -13872,6 +15840,7 @@
     "unit": "RQ-20261009-004",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": "confirmed",
     "date": "2026-11-09T15:40:17Z",
     "metrics": {
@@ -13886,9 +15855,9 @@
     "title": "M20 exit-lever sweep: trend_donchian_sol_prop (generated, monthly)"
    },
    "counts": {
-    "units": 68,
-    "passed": 10,
-    "failed": 42,
+    "units": 73,
+    "passed": 12,
+    "failed": 43,
     "indeterminate": 11,
     "open": 4,
     "blocked": 0
@@ -13899,6 +15868,15 @@
     "RQ-20261103-008",
     "RQ-20261103-009"
    ],
+   "survivors": {
+    "count": 3,
+    "units": [
+     "RQ-20261009-004",
+     "RQ-20261010-002",
+     "RQ-20261016-077e-05"
+    ],
+    "by_class": null
+   },
    "next_step": "RQ-20261103-006 (queued): PROP STRUCTURE EXITS gate: does trend_donchian_sol_prop arm P clear RULE-P5-GATE-BRK-PER-LEG-V3 on breakout_2 / tradeify_1 / velotrade_1?",
    "owner_rows": [
     "SOL-PROP-GATE-FIX",
@@ -13946,6 +15924,7 @@
     "unit": "RQ-20261011-002",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "unverified",
     "confirmation": null,
     "date": "2026-11-11T01:50:47Z",
     "metrics": null,
@@ -13966,6 +15945,14 @@
     "RQ-20261016-d37f-13",
     "RQ-20261101-e5b1-08"
    ],
+   "survivors": {
+    "count": 2,
+    "units": [
+     "RQ-20261010-003",
+     "RQ-20261016-077e-03"
+    ],
+    "by_class": null
+   },
    "next_step": "RQ-20261016-d37f-13 (dispatched): Holdout re-run of RQ-20261009-005: M20 exit-lever sweep: trend_donchian_xrp_4h (generated, monthly)",
    "owner_rows": [
     "PROP-GATE-ADA-XRP",
@@ -14009,6 +15996,7 @@
     "unit": "RQ-20261106-034",
     "verdict": "fail",
     "verdict_raw": "fail",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-11-07T03:53:49Z",
     "metrics": null,
@@ -14029,6 +16017,13 @@
     "RQ-20261024-004",
     "RQ-20261106-5b7a-03"
    ],
+   "survivors": {
+    "count": 1,
+    "units": [
+     "RQ-20261101-78fc-28"
+    ],
+    "by_class": null
+   },
    "next_step": "RQ-20261024-004 (dispatched): M20 exit-lever sweep: trend_donchian_xrp_adx25 (generated, monthly)",
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
@@ -14067,6 +16062,7 @@
     "unit": "RQ-20260929-006",
     "verdict": "pass",
     "verdict_raw": "pass",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-09-30T12:04:20Z",
     "metrics": {
@@ -14089,6 +16085,13 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 1,
+    "units": [
+     "RQ-20260929-006"
+    ],
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": [
     "GLD-VENUE-STOP-MISMATCH"
@@ -14132,6 +16135,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": [
     "CF-C2-HARNESS-REST"
@@ -14164,6 +16172,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": null,
    "owner_rows": null,
    "last_activity": null,
@@ -14196,6 +16209,11 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "unblock RQ-20261101-d1f3-03: COST-BROKER-SOURCED: Broker-reported fee and funding on every real-money trade (485 of 488 real rows were cost_source estimate, audit 2026-11-01); plus >=150 closed real-money trades.",
    "owner_rows": null,
    "last_activity": "2026-11-01T00:00:00Z",
@@ -14222,6 +16240,11 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "unblock RQ-20261101-d1f3-07: HOLDOUT-LOCK: the read-once script that logs every read of the held-out window; a holdout read must go through it; scripts/research/edge_portfolio_discovery.py --holdout-read: the --holdout-read mode (carry only",
    "owner_rows": null,
    "last_activity": "2026-11-01T00:00:00Z",
@@ -14248,6 +16271,11 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "unblock RQ-20261101-78fc-10: LTR-CLOSE-CLASS-TEST: the disjoint-window close replay (live_review_outcomes.py over the post-discovery packets)",
    "owner_rows": null,
    "last_activity": "2026-11-01T00:00:00Z",
@@ -14274,6 +16302,11 @@
     "blocked": 1
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "unblock RQ-20261101-78fc-09: BOOK-SIM-REAL-SIZER: a cell-restricted tighten arm in exit_lever_ablation --grade risk_adjusted (raw flags for the +1R / BE / 1 ATR gate) -- or, sooner, the e1a7-01 corpus wrapper",
    "owner_rows": null,
    "last_activity": "2026-11-01T00:00:00Z",
@@ -14292,6 +16325,7 @@
     "unit": "RQ-20261016-014",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-18T07:04:09Z",
     "metrics": null,
@@ -14309,6 +16343,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author the next unit",
    "owner_rows": null,
    "last_activity": "2026-10-18T07:04:09Z",
@@ -14334,6 +16373,7 @@
     "unit": "RQ-20261020-001",
     "verdict": "indeterminate",
     "verdict_raw": "indeterminate",
+    "provenance": "measured",
     "confirmation": null,
     "date": "2026-10-22T23:20:48Z",
     "metrics": {
@@ -14356,6 +16396,11 @@
     "blocked": 0
    },
    "open_units": null,
+   "survivors": {
+    "count": 0,
+    "units": null,
+    "by_class": null
+   },
    "next_step": "author the next unit",
    "owner_rows": null,
    "last_activity": "2026-10-23T00:00:00Z",

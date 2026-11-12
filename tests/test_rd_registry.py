@@ -83,7 +83,9 @@ def _tree(root: Path) -> dict:
         {"id": "P1-Q-done", "goal": "G1", "roadmap": [], "value": {}, "needs_authoring": "AUTHORED 2026-10-01"}]})
     _w(root, "research/programmes/06-infra.yaml", {"programme": "P6", "nodes": [
         {"id": "P6-Q-build", "goal": "G9", "roadmap": [], "value": {}, "needs_authoring": "a build"}]})
-    for uid, extra in {"RQ-20261101-001": {}, "RQ-20261101-002": {"iteration": {"subject": "new_hypo", "subject_kind": "strategy_leg"}},
+    held = {"evidence_class": {"holdout": "walk_forward", "claim": "edge"},
+            "decision_rule": {"id": "r", "registered_before_run": True}}
+    for uid, extra in {"RQ-20261101-001": held, "RQ-20261101-002": {"iteration": {"subject": "new_hypo", "subject_kind": "strategy_leg"}},
                        "RQ-20261101-003": {}, "RQ-20261101-004": {}, "RQ-20261101-005": {},
                        "RQ-20261101-006": {"programme_node": {"programme": "P1", "node": "P1-Q-node"}}}.items():
         _w(root, f"research/queue/{uid}.yaml", {"id": uid, "title": "t", **extra})
@@ -171,3 +173,22 @@ def test_route_filters(monkeypatch, tmp_path):
     assert {i["id"] for i in body["ideas"]} == {"ml:m-live-v1", "ml:m-shadow-v1"}
     assert body["summary"]["ideas"] == len(doc["ideas"])          # summary is never filtered
     assert c.get("/api/bot/research/registry", params={"track": "NOPE"}).status_code == 422
+
+
+def test_survivors_reuse_research_slo_definitions(tmp_path):
+    doc = rdr.build_registry(tmp_path, now=NOW, catalog=_tree(tmp_path))
+    by = {i["id"]: i for i in doc["ideas"]}
+    assert by["mlplan:ML-U"]["survivors"]["count"] == 1                 # held-out, registered, pass
+    assert by["strategy:leg_paper"]["survivors"]["count"] == 0
+    cat = _tree(tmp_path)
+    cat["units"][0] = {**cat["units"][0]}
+    p = tmp_path / "research/queue/RQ-20261101-001.yaml"
+    d = yaml.safe_load(p.read_text())
+    d["grading"] = {"confirmation": "not_replicated"}
+    p.write_text(yaml.safe_dump(d))
+    doc2 = rdr.build_registry(tmp_path, now=NOW, catalog=cat)
+    by2 = {i["id"]: i for i in doc2["ideas"]}
+    assert by2["mlplan:ML-U"]["survivors"]["count"] == 0 and by2["mlplan:ML-U"]["stage"] == "failed"
+    s = doc["summary"]
+    assert s["survivors"]["per_track"]["ML"] == 1
+    assert s["ml_per_slot"]["slots"]["D2"]["ideas"] == 1               # Collie-9 carries slot D2
