@@ -36,7 +36,7 @@ decision_rule:
 practice_precedent: 'M4 (rule and analysis plan registered before the run), M6 (compare with a simple baseline: here the cost), M13 (no holdout is consumed: no model is fit). Cost-aware scalping practice: required hit rate / edge per trade from fee + spread over a stop distance (in-repo precedent: scripts/research/desk_edge_levers.py cost_over_sd, RQ-20261027-fe57-02).'
 ml_consumer:
   book: demo_floor
-  consumer: SMALL-TF-ML-RESEARCH
+  consumer: src/units/strategies/ict_scalp.py
   decision: 'whether a small-TF (1m-15m) ML entry/filter unit is authored for a cell, or the cost lever (maker-fill model) is built first; no live order is changed'
   legs: [ict_scalp_5m]
 compute: cpu_light
