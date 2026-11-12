@@ -16,8 +16,10 @@ Frames (Server-Sent Events, ``id: <seq>``, ``event: <type>``, ``data: <json>``):
   * position  the open-trade set changed (ids opened / closed) -- the client re-reads REST /positions
   * health    the /api/bot/health/latest document, pushed only when it changes (30 s compute)
   * pnl       a position's uPnL moved >= PNL_MIN_MOVE (or its source/provenance changed) between open-set
-              changes; read every 5 s from the snapshot /api/bot/positions already holds (no venue call),
-              carrying unrealizedPnlProvenance, as_of and snapshot_age_s
+              changes; read every 5 s from the /api/bot/positions snapshot, carrying unrealizedPnlProvenance,
+              as_of and snapshot_age_s. While >= 1 client is connected the broadcaster keeps that snapshot warm
+              itself, through the route's own SWR path, at most once per 15 s in total (one old SPA poll's
+              cadence, independent of viewer count); with 0 clients it refreshes nothing.
   * hello     first frame on every connection: the current seq and what the ring buffer holds
 
 Reconnect: ``Last-Event-ID`` (or ``?last_event_id=``) replays frames from a 10-minute ring buffer.
@@ -46,7 +48,7 @@ import logging
 import sqlite3
 import time
 from collections import deque
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -63,6 +65,7 @@ HEALTH_EVERY_S = 30.0
 PNL_EVERY_S = 5.0
 PNL_MIN_MOVE = 0.5          # account currency: a smaller uPnL change is not pushed
 PNL_STALE_S = 120.0         # the positions snapshot's own stale bound (dashboard._POSITIONS_SWR)
+POS_REFRESH_EVERY_S = 15.0  # while >= 1 client: keep the snapshot warm at ONE old-SPA-poll's cadence, total
 HEARTBEAT_S = 15.0
 RING_SECONDS = 600
 RING_MAX = 5000
@@ -104,6 +107,14 @@ def _default_pnl_snapshot() -> tuple[list[dict[str, Any]] | None, float]:
     return None, float("inf")
 
 
+async def _default_pos_refresh() -> Any:
+    """Keep the positions snapshot warm through the SAME stale-while-revalidate path /api/bot/positions uses
+    (dashboard.get_positions -> _POSITIONS_SWR.aget). Its single-flight means a REST read and this refresh
+    never build at the same time; a fresh snapshot is served without any build at all."""
+    from src.web.api.routers import dashboard
+    return await dashboard.get_positions(include_paper=True, include_demo=False, response=None)
+
+
 def _default_health() -> dict[str, Any]:
     from src.web.api.routers import health_snapshots
     return health_snapshots.get_latest()
@@ -116,6 +127,7 @@ class Broadcaster:
                  ledger_path: Callable[[], Path] = _default_ledger_path,
                  health: Callable[[], dict[str, Any]] = _default_health,
                  pnl_snapshot: Callable[[], tuple[list[dict[str, Any]] | None, float]] = _default_pnl_snapshot,
+                 pos_refresh: Callable[[], Awaitable[Any]] | None = _default_pos_refresh,
                  clock: Callable[[], float] = time.monotonic) -> None:
         self._db_path, self._ledger_path, self._health, self._clock = db_path, ledger_path, health, clock
         self.seq = 0
@@ -138,6 +150,9 @@ class Broadcaster:
         self._pnl_snapshot = pnl_snapshot
         self._pnl_at = -1e9
         self._pnl_last: dict[str, tuple] = {}
+        self._pos_refresh = pos_refresh
+        self._pos_refresh_at = -1e9
+        self._pos_refresh_task: asyncio.Task | None = None
         self._pending: list[tuple[str, Any]] = []
 
     # ── frames ──────────────────────────────────────────────────────────────────────────
@@ -362,6 +377,27 @@ class Broadcaster:
         self.sources["pnl"] = {"read_state": "stale" if age > PNL_STALE_S else "read", "at": _now_iso(),
                                "snapshot_age_s": age_s, "positions": len(rows)}
 
+    async def maybe_refresh_positions(self) -> None:
+        """While >= 1 client is connected, refresh the positions snapshot at most once per POS_REFRESH_EVERY_S
+        (total, whatever the client count: O(1) in viewers). With 0 clients: nothing. The refresh runs as a
+        background task with its own single-flight, so a slow cold build never delays this broadcaster's tick."""
+        if not self.clients or self._pos_refresh is None:
+            return
+        if self._pos_refresh_task is not None and not self._pos_refresh_task.done():
+            return
+        now = self._clock()
+        if now - self._pos_refresh_at < POS_REFRESH_EVERY_S:
+            return
+        self._pos_refresh_at = now
+
+        async def _run() -> None:
+            try:
+                await self._pos_refresh()
+                self.sources["pnl_refresh"] = {"read_state": "read", "at": _now_iso(), "every_s": POS_REFRESH_EVERY_S}
+            except Exception as exc:  # noqa: BLE001  # allow-silent: reported in status/hello; the stale snapshot's age shows in every pnl frame
+                self._mark("pnl_refresh", exc)
+        self._pos_refresh_task = asyncio.get_running_loop().create_task(_run())
+
     def tick(self) -> None:
         """One pass over every source. The first pass only primes cursors (emits nothing old)."""
         if not self._primed:
@@ -380,6 +416,7 @@ class Broadcaster:
     async def run(self) -> None:
         while True:
             if self.clients:
+                await self.maybe_refresh_positions()
                 try:
                     await asyncio.to_thread(self.tick)
                 except Exception:  # allow-silent: not silent -- logged with stack; the broadcaster never stops
