@@ -140,7 +140,7 @@ def count_file_source(root, name, h1_file, h1_keys, h2_file, h2_keys, h3_file, s
     return out
 
 
-def registry_hops(start):
+def registry_hops():
     """H4 per family, H6, from the public registry. Returns (rows|None, reason)."""
     reg = get_json(f"{API}/ml/registry")
     if "_error" in reg or "rows" not in reg:
@@ -163,7 +163,7 @@ def h4_for(rows, families, start):
     return n
 
 
-def h5(root, start):
+def h5(start):
     q = REPO / "research" / "queue"
     res = REPO / "research" / "results"
     if not q.exists() or not res.exists():
@@ -221,7 +221,7 @@ def build(root, window_days, now):
     start = now - timedelta(days=window_days)
     rec = {"schema": "ml_learning/1", "generated_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "window_days": window_days,
            "window_start": start.strftime("%Y-%m-%dT%H:%M:%SZ"), "sources": {}, "pipeline": {}, "alarms": []}
-    reg_rows, reg_err = registry_hops(start)
+    reg_rows, reg_err = registry_hops()
     srcs = rec["sources"]
     srcs["desk"] = count_file_source(root, "desk", "decisions.jsonl", ("judged_at",), "outcomes.jsonl",
                                      ("computed_at",), "consumed.jsonl", start)
@@ -238,7 +238,7 @@ def build(root, window_days, now):
             srcs[s]["H4"] = hop(h4_for(reg_rows, fams, start), P.ESTIMATED,
                                 population=f"{len(reg_rows)} registry rows; source->family mapping {list(fams)} is declared, not read")
     pl = rec["pipeline"]
-    pl["H5"] = h5(root, start)
+    pl["H5"] = h5(start)
     if reg_rows is None:
         pl["H6"] = cnl(reg_err)
     else:
@@ -307,7 +307,7 @@ def self_test():
             assert h2["H1"]["value"] is None and fmt(h2["H1"]) == "—"
             zero_after_nonzero = bool(h["H2"]["value"] and h["H3"]["value"] == 0)
             assert zero_after_nonzero is planted
-    print("self-test ok (planted alarms, clean does not; absent source renders —)")
+    print("self-test passed: planted case and control case")
 
 
 def main():
