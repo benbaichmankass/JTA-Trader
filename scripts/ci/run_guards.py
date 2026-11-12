@@ -1724,6 +1724,20 @@ GUARDS: List[Dict[str, Any]] = [
                   ["python3", "scripts/ci/check_tp_doctrine.py"]],
     },
     {
+        "name": "w9-gate-reports",
+        # REPORT ONLY (operator 2026-11-12, decisions page w9 "Build them as reports only (no gate)"): the
+        # four candidate gates ML-ADVISORY-SCOPE-GUARD / LEVER-LIVE-CONSUMER-PARITY / PROP-GATE-RECOST-AND-FLOOR /
+        # RM-AM-STANDARD-GUARD as one read-only breakdown. It exits 0 whatever it finds -- a hit is a line in the
+        # report, never a refusal. The self-test (positive + negative controls) runs in
+        # tests/test_report_w9_gates.py, so a script defect fails pytest, not this entry.
+        "when": {"globs": [
+            "config/accounts.yaml", "config/strategies.yaml", "config/regime_policy.yaml",
+            "comms/prop_survival/*.json", "comms/strategy_evidence/*.json",
+            "scripts/ci/report_w9_gates.py",
+        ]},
+        "steps": [["python3", "scripts/ci/report_w9_gates.py"]],
+    },
+    {
         "name": "no-action-rate-cap-guard",
         # REMOVE-PER-BAR-CAP (operator 2026-10-29: "What's the point of having
         # active management and then specifically limiting how active that
