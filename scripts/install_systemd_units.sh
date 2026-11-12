@@ -111,7 +111,7 @@ else
 fi
 
 shopt -s nullglob
-for unit_path in deploy/*.service deploy/*.timer; do
+for unit_path in deploy/*.service deploy/*.timer deploy/*.path; do
     unit_name=$(basename "$unit_path")
     # Skip systemd template units (e.g. claude-vm-runner@.service) —
     # those are installed once by the bootstrap script and don't get
@@ -685,6 +685,24 @@ if [ "$_VM_ROLE" != "gateway" ] && [ -f deploy/ict-claude-decision-bot.service ]
         echo ">>> install_systemd_units: enable --now ict-claude-decision-bot.service (core always-on)"
         if ! "${SUDO[@]}" systemctl enable --now ict-claude-decision-bot.service 2>&1; then
             echo ">>> install_systemd_units: WARN could not enable ict-claude-decision-bot.service (no systemd? TELEGRAM_CLAUDE_BOT_SECRET unset?)"
+        fi
+        changed=1
+    fi
+fi
+
+# ict-ops-runner.path (MANAGER-VM-DIRECT-OPS) starts the direct ops channel's runner whenever the web API leaves
+# a job in the queue dir. A path unit is not a timer, so the timer loop above never enables it; without this block
+# a submitted job would sit "queued" forever (GET /api/bot/ops/jobs/<id> then reads runner_not_picking_up).
+# Trader box only, idempotent, tolerant of a failed enable (never fails the deploy).
+if [ "$_VM_ROLE" != "gateway" ] && [ -f deploy/ict-ops-runner.path ]; then
+    heal_devnull || true
+    if "${SUDO[@]}" systemctl is-enabled ict-ops-runner.path >/dev/null 2>&1 \
+        && "${SUDO[@]}" systemctl is-active ict-ops-runner.path >/dev/null 2>&1; then
+        :  # already enabled + watching
+    else
+        echo ">>> install_systemd_units: enable --now ict-ops-runner.path (ops channel queue watch)"
+        if ! "${SUDO[@]}" systemctl enable --now ict-ops-runner.path 2>&1; then
+            echo ">>> install_systemd_units: WARN could not enable ict-ops-runner.path"
         fi
         changed=1
     fi

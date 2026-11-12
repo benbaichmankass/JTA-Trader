@@ -237,6 +237,7 @@ _SAFE_METHODS = frozenset({"GET", "HEAD"})
 #   POST /api/bot/work/decision                 -> work._require_decision_write_token
 #   POST /api/bot/work/items[/<id>/set|note|close] -> work_items._require_work_store_token
 #   POST /api/bot/live-review/rows               -> live_review_direct (work-store token)
+#   POST /api/bot/ops/actions                   -> work_items._require_work_store_token (ops_channel)
 # Their callers are non-browser services (alert posters, the Telegram decision
 # bot, the console MCP, work.py) that hold that token and no ws_ session. The gate
 # lets the service bearer through on GET/HEAD only, so without this list arming
@@ -249,9 +250,18 @@ SITE_PUBLIC_POST_PATHS: frozenset[str] = frozenset({
     "/api/bot/work/decision",
     "/api/bot/work/items",
     "/api/bot/live-review/rows",   # -> live_review_direct: work-store token (TRADE-ACTION-DIRECT-PATH)
+    "/api/bot/ops/actions",
 })
 SITE_PUBLIC_POST_PREFIXES: tuple[str, ...] = (
     "/api/bot/work/items/",
+)
+# GET carve-out (MANAGER-VM-DIRECT-OPS): the ops job read. Its router checks the
+# SAME fail-closed X-Work-Store-Token as the POST (a job record carries script
+# output, so it is not open either); the session that submitted the job holds
+# that token and no ws_ session. Same rule as above: only a route whose router
+# fails closed on its own credential (tests/test_web_site_auth_write_carveouts.py).
+SITE_TOKEN_GET_PREFIXES: tuple[str, ...] = (
+    "/api/bot/ops/jobs/",
 )
 
 
@@ -296,6 +306,8 @@ def require_site_session(conn: HTTPConnection) -> None:
     if method == "OPTIONS" or _is_site_public(conn.url.path):
         return
     if method == "POST" and _is_site_public_post(conn.url.path):
+        return      # the router's own fail-closed token check decides
+    if method in _SAFE_METHODS and conn.url.path.startswith(SITE_TOKEN_GET_PREFIXES):
         return      # the router's own fail-closed token check decides
 
     token = _bearer(conn)
