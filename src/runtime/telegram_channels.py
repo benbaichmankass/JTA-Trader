@@ -198,6 +198,7 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     "scripts/notify_session.py": ("session",),
     "scripts/ops/work_digest_now.py": ("manager_update",),
     "src/runtime/telegram_decisions.py": ("decision",),
+    "src/runtime/trade_approvals.py": ("decision", "alert"),   # TRADE-ACTION-DIRECT-PATH: the Approve/Reject ask (decision); the no-answerable-bot fallback (alert)
     "src/runtime/manager_status.py": ("command_reply",),
     # REPLY (polled bots answering the operator in-conversation)
     "src/bot/telegram_query_bot.py": ("command_reply",),
