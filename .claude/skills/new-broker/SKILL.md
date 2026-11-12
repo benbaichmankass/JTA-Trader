@@ -3,7 +3,7 @@ name: new-broker
 description: Wire a new broker (futures, FX, crypto, prop firm) into the bot's execution path. Use when the operator says "integrate <broker>", "wire up a new exchange", or anything that adds a new entry to `src/units/accounts/integrator.py::EXCHANGE_MAP`. Covers credentials handoff (via the `credentials-and-vm-mutations` rule), the package + factory + integrator + executor wiring, `accounts.yaml` entry, and verification. NOT for tuning an existing broker's params and NOT for adding a strategy (that's `new-strategy`).
 ---
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-09-07` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-11-11` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
 # /new-broker — wire a new broker into the execution path
 
@@ -145,6 +145,37 @@ is that EVERY new broker touches each of these.
     paragraph lists the new broker), `ROADMAP.md` (one-line entry
     under the active milestone queue if it deserves visibility).
 
+## Every account proves its six capabilities BEFORE it trades (operator, 2026-11-11, binding)
+
+The operator, verbatim, 2026-11-11 (Thursday-planning decision doc, n2, answering "No" to a CI capability gate): *"We need to
+resolve this now for all existing accounts, and make sure it's clearly mandated in the instructions for adding new accounts to
+the system"*.
+
+**The rule.** No account goes on any `strategies:` roster (paper, prop or real money) until the system itself, with no human at a
+keyboard or phone, can do all six of these on it, and each one has been **proven once on the venue**:
+
+| capability | what "proven" means |
+|---|---|
+| **open** | an entry with its bracket (SL + TP) placed at the venue, filled and journalled |
+| **amend SL** | the venue stop moved (both directions the account's policy allows) and read back |
+| **amend TP** | the venue take-profit moved and read back (the TP doctrine needs this: a TP that cannot move is a fictional TP) |
+| **close** | an automatic flatten from a strategy exit or a live-review close, journalled with the right close reason |
+| **cancel** | an unfilled or working order cancelled and read back |
+| **read** | positions, open orders, fills and balance read by the system, with a read-state (a `0` that means "could not look" is not a read) |
+
+How to satisfy it:
+- Build each path in the broker's executor and record it in the account capability matrix (the matrix from PR #24979, kept current).
+- Prove each one once on the venue, at the smallest size the venue allows (or on an existing position, e.g. move a TP by a tick
+  and back), and link the proof (order ids / journal rows) from the matrix. Operator 2026-11-11 n3 approved exactly this drill
+  shape: *"Yes: run each drill once, smallest size, report each result"*.
+- A capability that genuinely does not apply (e.g. no shorting on a cash book) is written in the matrix as **not applicable + why**.
+- A gap on an EXISTING account is **now-work**: a `CAP-*` checklist row with an owner and a due date (2026-11-11: CAP-PROP-VM-CLOSE,
+  CAP-TRADEIFY-TP-AMEND, CAP-OPTIONS-ORDER-MGMT, CAP-PROP-LIVE-DRILL). It is never parked.
+
+**Gates this adds or changes: none.** The operator answered "No" to a CI check. This is an instruction to the session adding the
+account, enforced by this skill and by review, not by a guard. It does not change the two execution gates and never flips
+`mode:`. (CLAUDE.md § "No new gates".)
+
 ## After the operator pings you
 
 Once the operator has done their three steps, you drive these
@@ -188,5 +219,7 @@ autonomously:
 ---
 
 ## Definition of done
+
+**And an account is not done until its six capabilities (open / amend SL / amend TP / close / cancel / read) are each built AND proven once on the venue** (§ "Every account proves its six capabilities BEFORE it trades").
 
 A capability is not shipped until something RUNS it (runner, consumer, wiring check). The four-point rule is binding on this skill: [`docs/CLAUDE-RULES-CANONICAL.md`](../../../docs/CLAUDE-RULES-CANONICAL.md) § "Generation Discipline" → "Rule 4 — Definition of done". Verify with `python3 scripts/ci/check_unwired_artifacts.py`.

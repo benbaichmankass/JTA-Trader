@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "SITE-AUTH step (i), Tier 2 (web-api auth). The manager dispatched it at 22:26Z as safe before arming. It changes nothing while SITE_AUTH_ENFORCE is off, which is the live state (site_auth_enforced=false, MEASURED 22:35Z per row SEC-API-OPEN-READS). The manager merges; the operator decides when to flip the flag.",
+  "why": "With the site gate armed, the service bearer passes on GET/HEAD only, so POST /api/bot/alerts, /wake-toggles, /work/decision and /work/items* would return 401 even with their correct token. This adds a POST-only carve-out for exactly those routes. Each router fails closed on its own token (503 unset, 401 wrong), and tests pin that. GETs on the same paths stay gated. No effect while the flag is off. No order path, strategy or config change."
+}

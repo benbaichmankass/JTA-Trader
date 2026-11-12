@@ -61,3 +61,32 @@ def test_brief_section0_carries_the_slo_block():
     b = {"pipeline": {"section0Lines": ["## §0 — WHAT CAME DUE", ""]},
          "researchSlo": {"lines": ["### ✅ Research pipeline SLOs — 0 not ok of 16", ""]}}
     assert any("Research pipeline SLOs" in ln for ln in rdb._section0(b))
+
+
+def test_heldout_census_counts_only_classified_heldout_registered_passes():
+    """RESEARCH-SLO-HELDOUT-SURVIVORS: unknown held-out class is shown, never counted; a pass without a
+    pre-registered rule is not a survivor; edge vs model_quality comes from structured fields only."""
+    from datetime import datetime, timezone
+
+    from scripts.research.research_slo import heldout_pass_census
+
+    now = datetime(2026, 11, 11, tzinfo=timezone.utc)
+    rbr = {"registered_before_run": True}
+    g = {"verdict": "pass", "graded_at": "2026-11-05"}
+    units = {
+        "a": {"grading": g, "decision_rule": rbr, "evidence_class": {"holdout": "final_fold", "claim": "edge"}},
+        "b": {"grading": g, "decision_rule": rbr, "ml_bakeoff": {"cv": "purged"}},
+        "c": {"grading": g, "decision_rule": rbr},  # no structured class -> unknown
+        "d": {"grading": g, "decision_rule": {"registered_before_run": False},
+              "evidence_class": {"holdout": "final_fold", "claim": "edge"}},  # not pre-registered
+        "e": {"grading": {"verdict": "fail", "graded_at": "2026-11-05"}, "decision_rule": rbr},
+        "f": {"grading": {"verdict": "pass", "graded_at": "2026-09-01"}, "decision_rule": rbr,
+              "evidence_class": {"holdout": "walk_forward", "claim": "edge"}},  # outside the window
+        "h": {"grading": g, "decision_rule": rbr, "evidence_class": {"holdout": "in_sample", "claim": "edge"}},
+    }
+    c = heldout_pass_census(units, now, days=30)
+    assert c["held_out"] == 2
+    assert c["held_out_edge"] == 1 and c["held_out_model_quality"] == 1
+    assert c["registered_passes"] == 4
+    assert c["unknown_holdout"] == 1
+    assert c["by_holdout"]["in_sample"] == 1

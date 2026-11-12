@@ -107,10 +107,10 @@ sleep 1
 cat <<EOF
 
 === DIAG ENDPOINT READY ===
-  Token: ${TOKEN_OUT}
+  Token: written to ${ENV_FILE} (DIAG_READ_TOKEN); never printed (PI-20261111-PREP1111-0002)
 
 Local smoke test (run on the VM):
-  curl -sS -H "Authorization: Bearer ${TOKEN_OUT}" \\
+  sudo grep -oP '^DIAG_READ_TOKEN=\\K.*' ${ENV_FILE} | sed 's/^/Authorization: Bearer /' | curl -sS -H @- \\
        http://127.0.0.1:8001/api/diag/snapshot | head -c 800
 
 External access (PM-side Claude):

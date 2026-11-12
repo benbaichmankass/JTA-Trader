@@ -47,6 +47,10 @@ power:
     source: none
     accrual_basis: >-
       Runs on whatever history the trainer holds for the leg; nothing waits.
+# EVIDENCE-CLASS-BACKFILL 2026-11-11: what a PASS from this family is (a cell must beat the base book in BOTH IS and OOS; OOS is the held-out span).
+evidence_class:
+  holdout: holdout_window
+  claim: edge
 decision_rule:
   id: "RULE-EXIT-REFINEMENT-P2-GATE"
   statistic: >-
