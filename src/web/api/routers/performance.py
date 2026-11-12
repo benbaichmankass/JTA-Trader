@@ -1506,3 +1506,55 @@ def get_performance_recent(
         env["mirror"] = {"readState": "error", "accountIds": [], "newestClosedAt": None,
                          "perStrategy": {}}
         return env
+
+
+#: Per-trade series cap. A CUSUM monitor needs the whole sequence, not 20-trade blocks.
+SERIES_N_MAX = 400
+
+
+@router.get("/performance/trade-series")
+def get_performance_trade_series(
+    n: int = Query(RECENT_N_MAX, ge=1, le=SERIES_N_MAX),
+) -> Dict[str, Any]:
+    """Each leg's last ``n`` closed trades ONE ROW PER TRADE, oldest -> newest, on the real-money book (LIVE-DECAY-MONITOR).
+
+    Read-only and separate from ``/performance/recent`` ON PURPOSE: that route's 20-trade block is fixed so no caller can
+    re-price R4's demotion rule by asking differently, and this route must not become a second way to ask it. Every figure is
+    an ``_aggregate()`` output over ONE row -- the same population filter, R basis and provenance rules as ``/performance``;
+    there is no second R implementation. ``r`` is ``totalR`` of that single trade and is ``null`` when the trade has no R basis
+    (``rTradeCount`` 0): never folded to ``0``. ``journalTrust`` is the leg-level ledger read, so a consumer can see a book is
+    known-divergent from the venue. A DB read failure is ``error: true`` / ``readState: "error"``, never an empty series.
+    """
+    env: Dict[str, Any] = {"n": n, "error": False,
+                           "basis": ("last n closed non-backtest real-money trades per strategy_name, oldest first, ordered by "
+                                     "close time then trade id; r = journal-net R of that one trade"),
+                           "realMoney": {"readState": "absent", "newestClosedAt": None, "perStrategy": {}}}
+    if not _DB_PATH.exists():
+        return env
+    try:
+        rosters = _book_rosters()
+        rows = _query(_DB_PATH, None, demo=False)
+        by: Dict[str, List[sqlite3.Row]] = {leg: [] for leg in rosters["realMoneyLegs"]}
+        for r in rows:
+            by.setdefault(r["strategy_name"] or "(unknown)", []).append(r)
+        per: Dict[str, Any] = {}
+        for name, legrows in sorted(by.items()):
+            tail = legrows[-n:]
+            series = []
+            for r in tail:
+                agg = _strip_envelope(_aggregate([r], "recent", None))
+                has_r = int(agg.get("rTradeCount") or 0) == 1
+                series.append({"tradeId": _rget(r, "trade_id"), "closedAt": _rget(r, "closed_at"),
+                               "r": agg.get("totalR") if has_r else None})
+            per[name] = {"closedAvailable": len(legrows), "nUsed": len(tail),
+                         "journalTrust": (_strip_envelope(_aggregate(tail, "recent", None)).get("journalTrust")
+                                          if tail else None),
+                         "series": series}
+        env["realMoney"] = {"readState": "ok", "rosterReadState": rosters["readState"],
+                            "newestClosedAt": _newest_close(rows), "perStrategy": per}
+        return env
+    except Exception:  # noqa: BLE001  # allow-silent: logged (logger.exception) + an explicit error envelope (error: true, readState "error") so "could not look" never reads as "no trades"
+        logger.exception("performance/trade-series: read failed")
+        env["error"] = True
+        env["realMoney"] = {"readState": "error", "newestClosedAt": None, "perStrategy": {}}
+        return env

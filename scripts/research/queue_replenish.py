@@ -68,7 +68,7 @@ TEMPLATES = Path("research/templates")
 # is "landing machinery" (check_pr_landing R12) and would force a human read of every such change.
 # A template may still override with its own `roadmap:` field.
 FAMILY_ROADMAP = {"e35-bracket": ["M20"], "m20-exit-lever": ["M20"], "macro-valuation": ["M28"],
-                  "prop-fit-breakout": ["L-PROP"], "roster-walkforward": ["L-LADDER"], "leg-corpus-s1": ["L-ML-LIVE"]}
+                  "prop-fit-breakout": ["L-PROP"], "roster-walkforward": ["L-LADDER"], "live-decay": ["L-LADDER"], "leg-corpus-s1": ["L-ML-LIVE"]}
 QUEUE = Path("research/queue")
 DEFAULT_TARGET = 25
 _PLACEHOLDER = re.compile(r"\{([a-z_]+)\}")
@@ -242,6 +242,16 @@ def _leg_source(name: str, tpl: Dict[str, Any], facts: Dict[str, Any]) -> List[D
             fam = classify(cfg)
             if fam:
                 out.append({"leg": leg, **info, "harness": fam})
+    elif name == "live_decay_legs":
+        # LIVE-DECAY-MONITOR: every Stage-2 roster leg that has a committed Stage-0 per-trade series AND a readable live
+        # series (scripts/research/live_decay_cusum.coverage re-parses config each call). Legs that cannot be monitored
+        # (no Stage-0 series, prop-only with no public live route) are NOT minted -- a unit that can only say "could not look"
+        # is noise -- and are listed by `live_decay_cusum.py --coverage` and filed in the pipeline.
+        from scripts.research.live_decay_cusum import coverage
+        for row in coverage(Path(facts["root"])):
+            leg = row["leg"]
+            if row["monitorable"] and leg in legs:
+                out.append({"leg": leg, **legs[leg]})
     elif name == "money_leg_families":
         # one point per FAMILY that has a money leg right now (ML-LINE-S1-CORPUS): the producer re-resolves
         # the family's legs from config at run time, so a roster change never needs a new unit.
