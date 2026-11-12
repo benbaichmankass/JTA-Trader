@@ -1221,6 +1221,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/runbooks/devnull-guard.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/gpu-burst.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/health-check.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
+| `docs/runbooks/account-balance-history-purge.md` | instruction | live | — | 2026-11-12 | `read:ACCOUNT-SNAPSHOT-BALANCE-HISTORY-lane-mirror-clone-scan-2026-11-12` | the history-rewrite plan purging committed account balances (freeze, filter-repo, VMs, protection, GitHub Support) |
 | `docs/runbooks/alpaca-wedged-oco.md` | instruction | live | — | 2026-11-06 | `read:ALPACA-LIVE-MECHANICS-lane-authored-it-2026-11-06-against-live-broker-reads` | the self-healing Alpaca close ladder for a wedged OCO (paper reset / live red flag) |
 | `docs/runbooks/phone-executor-action-coverage.md` | instruction | live | — | 2026-11-11 | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/phone-executor-anomaly.md` | instruction | live | — | 2026-11-07 | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
