@@ -1,0 +1,142 @@
+id: RQ-20261112-0bc8-02
+title: 'Volume composition -> EXIT head (feature add): does adding the size/count surprise (ss, sn) to exit-head-donchian-1h-v1''s recipe
+  improve its out-of-sample replayed R per trade over the champion recipe AND over a plain-volume control? (trend_donchian BTC/ETH/SOL 1h,
+  walk-forward, one cost stack)'
+status: queued
+cadence: once
+roadmap:
+- L-DATA
+theme: ml_health
+priority: 2
+kind: experiment
+question: 'Operator 2026-11-12 07:46Z (planning page p3, verbatim choice "Also test it in the exit head now"), the second arm of the
+  RQ-20261111-f5c8-02 PASS consequence (row VOLUME-COMPOSITION-RESEARCH; regime-vol arm = RQ-20261112-0bc8-01). f5c8-02 found a SIZE-led
+  volume surprise precedes a calmer next 4h bar (held-out partial rank IC -0.069, t -8.19, 27 months); a calmer next bar is exit-relevant.
+  That is ONE passing univariate unit, not a feature; this bake-off decides, by the exit head''s OWN judge: the RQ-20260927-002 /
+  RQ-20261101-78fc-03 method (sequential trade-count walk-forward per leg, 7-day embargo, head retrained per fold on the pooled trainer
+  rows.jsonl, each OOS trade re-resolved through the live predicate exit_head_shadow.would_exit_for, shape below_half_r tau 0.10, action
+  close; baseline trades from the live-faithful scripts/backtest_trend.py with config/strategies.yaml params, net of the full fee +
+  slippage + funding stack). THREE arms, identical rows, trades, replay and cost, differing only in feature columns: champion =
+  train_exit_head.FEATURES; vol = champion + sv1h, sv4h; comp = champion + sv1h, ss1h, sn1h, sv4h, ss4h, sn4h (composition from Binance USD-M
+  1h klines, surprise vs the same hour-of-day over the previous 20 days, strictly before the bar). Legs: trend_donchian (BTCUSDT),
+  trend_donchian_eth, trend_donchian_sol, the three that carry exit_head_model exit-head-donchian-1h-v1. Prior work: RQ-20260927-002 (BTC
+  walk-forward, the head FAILS B4 KEEP: -0.0141 R/trade pooled) and RQ-20261101-78fc-03 (ETH OOS control). The champion is weak, so this
+  measures improvement over its recipe, not absolute skill.'
+why_this_matters: 'The exit head closes or annotates live trend_donchian trades (src/runtime/exit_head_apply.py; trend_donchian and
+  trend_donchian_eth are at annotate, trend_donchian_sol at close). Its features are price/position-only; no volume-composition column
+  exists. A composition lift that beats plain volume would be the first new feature family with a mechanism for this head; a null closes
+  this configuration and says the f5c8-02 signal does not reach exit decisions at the 1h grain.'
+evidence_class:
+  holdout: walk_forward
+  claim: model_quality
+power:
+  expected_n: 500
+  min_detectable_effect: 0.01
+  effect_units: r_multiple
+  sd: 0.15
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, not a measurement. n = pooled OOS trades over 3 legs x (folds - seed block); 78fc-03 / RQ-20260927-002 saw ~350-1,000
+    OOS trades per leg-family at 1h. The test is one-sample on the per-trade paired difference comp - champion (same trade replayed by both
+    heads), which is zero on every trade neither head closes early, so its sd is far below the per-trade R sd; sd 0.15 R is a guess the
+    first run replaces. At n 500 and sd 0.15 the SE is ~0.0067, so the 0.01 R bar plus CI LB > 0 is reachable only for a real lift. At that guess the one-sample floor
+    for 0.01 R is ~1,770 trades, ABOVE the ~500 expected: the unit is under-powered for a lift near the bar, and the rule''s FAIL (CI UB <
+    +0.01) then needs a clearly non-positive mean, so under-power reads INDETERMINATE rather than a false FAIL. The first run replaces sd.'
+  feasibility:
+    source: none
+    accrual_basis: 'Replays the existing trainer corpus and the public Binance archive; nothing accrues.'
+decision_rule:
+  id: RULE-VOLCOMP-EXITHEAD-01
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'Pooled over legs and folds, per OOS trade d_c = replayed_r(comp) - replayed_r(champion) and d_v = replayed_r(comp) -
+    replayed_r(vol), on identical trades, replay and cost; mean, per-trade SE (one trade = one cluster) and normal 95% CI.'
+  rule: 'INDETERMINATE IF pooled n_oos < 300. PASS IF mean(d_c) >= +0.01 R/trade AND the 95% CI lower bound of d_c > 0 AND mean(d_v) >= 0
+    (composition beats plain volume). FAIL IF the 95% CI upper bound of d_c < +0.01 R/trade (cannot reach the bar). INDETERMINATE otherwise.
+    Thresholds, legs, folds (5), embargo (7 d), lookback (500), shape and arms are not changed after any result.'
+  min_n: 300 pooled OOS trades; per fold MIN_FOLD_TEST_N 64 test trades and 500 training rows (the multifold harness floors).
+  what_it_does_not_do: 'Edits no config, registry, artifact or exit_head_action; promotes and demotes nothing. A PASS is an offline result
+    under the head''s own judge; any change to what the live head runs is a separate Tier-3 proposal with its own evidence record
+    (OPERATING-PLAN section 2). No demotion or annotate flip proceeds on this data alone (operator 2026-11-12 p2: "don''t let anything get
+    demoted without me looking at it first"). Does not re-test the champion''s own KEEP rule (RQ-20260927-002 / 78fc-03 own that). The
+    baseline harness models the legs'' config params only (donchian / atr / trail / min_confidence / long_only), as 78fc-03; other declared
+    exit levers are not modelled. Binance 1h klines PROXY the venue''s trade count; rows.jsonl symbols Binance does not list get NaN
+    composition (rows_joined_share is reported). The walk-forward span overlaps the window f5c8-02 read when it selected the feature
+    (2021-01..2026-09): a PASS is not independent of that discovery, stated as a caveat on the reading. No look at the real corpus was taken
+    before registration: the harness was smoke-tested on BTC 2020 harness trades built locally (outside every span, fold floor lowered
+    in-process for mechanics only); no delta was read.'
+  proposal_mapping: 'The registered rule decides. PASS -> a Tier-3 proposal for the exit-head recipe change (retrain exit-head-donchian-1h-v1
+    with the comp columns, plus the live-serving parity build: a Binance kline trade-count read beside the Bybit bars), with this record as
+    its evidence, put to the operator. FAIL -> composition adds nothing to the exit head beyond its recipe at the 1h grain (this configuration
+    closed, not the family); the 4h-only and tick-data variants stay open. INDETERMINATE -> read which clause missed and file the narrower
+    follow-up.'
+practice_precedent: 'M4 (rule registered before the run), M6 (beat the simple baseline, the champion recipe AND plain volume, on identical
+  trades and cost) in docs/reference/trading-and-model-practice-principles.md; method of RQ-20260927-002 / RQ-20261101-78fc-03 (the head''s
+  own walk-forward judge); in-repo precedent RQ-20261111-f5c8-02.'
+intervention_controls:
+  not_applicable: 'A feature-add bake-off between three heads of the same recipe; the champion arm is the control, and the head''s own
+    intervention controls are owned by RQ-20261101-78fc-03.'
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  basis: 'stand-in: the head acts on 3 trend_donchian legs (close on _sol, annotate on BTC/_eth); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 150
+  why_runner: The exit-head training rows (datasets-out/exit_head/1h/donchian/rows.jsonl) live only on the trainer; the trainer reaches
+    Binance Vision (RQ-20261101-78fc-03 fetched its candles there).
+  basis: 'ESTIMATE: 78fc-03 (one leg, one head) and RQ-20260927-002 ran the same walk-forward at ~2.5 GB; this is 3 legs x 3 heads.'
+run:
+  workflow: trainer-vm-diag (issue label trainer-vm-diag-request)
+  command:
+  - python3
+  - scripts/research/volcomp_exit_head_bakeoff.py
+  - --rows
+  - datasets-out/exit_head/1h/donchian/rows.jsonl
+  - --num-folds
+  - '5'
+  - --embargo-days
+  - '7'
+  - --lookback
+  - '500'
+  - --kline-start
+  - 2019-09
+  - --kline-end
+  - 2026-10
+  - --json
+  - '{out_dir}/verdict.json'
+  inputs:
+    research_unit: RQ-20261112-0bc8-02
+  note: 'One relay dispatch, as 78fc-03: a temporary git worktree of the committed harness, 1h candles for BTC/ETH/SOL via the trainer
+    resolver (BACKTEST_DATA_PATH), rows from the trainer-resident rows.jsonl; the RESULT_JSON block in the relay comment and the --json
+    file are landed under research/results/.'
+ml_consumer:
+  book: demo_floor
+  consumer: src/runtime/exit_head_apply.py
+  decision: close or annotate on trend_donchian, trend_donchian_eth and trend_donchian_sol (exit_head_model exit-head-donchian-1h-v1)
+  legs:
+  - trend_donchian
+  - trend_donchian_eth
+  - trend_donchian_sol
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261112-0bc8-01.yaml
+- research/queue/RQ-20261111-f5c8-02.yaml
+- research/queue/RQ-20260927-002.yaml
+- research/queue/RQ-20261101-78fc-03.yaml
+- scripts/research/volcomp_exit_head_bakeoff.py
+- scripts/research/exit_head_eth_oos_control.py
+- scripts/research/exit_head_walkforward_multifold.py
+- scripts/ml/train_exit_head.py
+- scripts/ml/exit_head_replay.py
+grading:
+  auto: true
+  decision_rule_id: RULE-VOLCOMP-EXITHEAD-01

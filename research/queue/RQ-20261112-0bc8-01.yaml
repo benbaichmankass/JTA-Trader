@@ -31,14 +31,19 @@ power:
   expected_n: 37000
   min_detectable_effect: 0.005
   effect_units: auc
-  design: paired
+  sd: 0.4
+  design: one_sample
   alpha: 0.05
   power: 0.8
   basis: 'ESTIMATE, not a measurement: n = held-out 15m bars per symbol (2025-10-01..2026-10-31, ~13 months x 2,880 = ~37,000), of which ~2-4%
     are volatile (smoke on 2020-06..09 BTC, outside every span: 2.2%), so ~750-1,500 positives per symbol. A single AUC on that many positives has
     SE ~0.008, but comp/vol/champion are nested models scored on IDENTICAL rows, so the paired delta is far tighter; 0.005 AUC is set as the
     smallest lift worth a new side-stream, not as the detectable floor. Bars are autocorrelated, so the CV leg (5 purged folds, embargo 96 bars)
-    is required too, and the rule needs all 3 symbols.'
+    is required too, and the rule needs all 3 symbols. sd 0.4 is the implied per-row sd of the paired AUC delta if its SE at 37,000
+    rows is ~0.002 (0.002 x sqrt(37,000)); at that guess the one-sample floor for 0.005 is ~50,000 rows, ABOVE the 37,000 holdout rows per
+    symbol, so the holdout leg alone is under-powered for the bar: a real lift near 0.005 can miss, and the CV leg (~120,000 OOS rows per
+    symbol) carries more of the power. The rule''s FAIL needs comp - vol < +0.001 on every symbol''s holdout, so under-power reads
+    INDETERMINATE more often than a false FAIL.'
   feasibility:
     source: none
     accrual_basis: 'Replays the public Binance archive for pinned months (2021-01..2026-10 all published; 2026-10 checked HTTP 200 on
