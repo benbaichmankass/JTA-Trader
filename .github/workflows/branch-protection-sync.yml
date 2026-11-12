@@ -93,7 +93,8 @@ jobs:
           # green on main: #1658-1667 cleared the failure backlog, #1681
           # the order-dependent + post-IB-merge regressions, and #1717
           # the non-root sudo-stub fix that was failing only on the CI
-          # runner. See pytest-run.yml header.
+          # runner. See pytest-run.yml header. (No longer required since
+          # 2026-11-12: operator made it report-only — see the note below.)
           # provenance-consumer-guard promoted to REQUIRED on 2026-07-30, in the
           # same PR that made it green: a provenance signal with a writer and no
           # consumer is what let +$247,683.78 of mark-price PnL accumulate
@@ -150,7 +151,20 @@ jobs:
           # pytest-collect / pytest-run stay separate contexts (the test suite is a
           # different kind of check, and long enough that folding it in would
           # serialise every guard behind it).
-          REQUIRED_CONTEXTS='["pytest-collect","pytest-run","guards"]'
+          #
+          # 2026-11-12 — operator gate decisions (decisions page, Gates tab;
+          # record comms/gates/gate_decisions_2026-11-12.json, lane GATE-CI-LANDING):
+          #   PYTEST-COLLECT-REQUIRED: REMOVE      -> dropped from this list.
+          #   PYTEST-RUN-REQUIRED:     REPORT-ONLY -> dropped from this list; the
+          #     workflow still runs on every PR and its result still shows on the PR,
+          #     it just no longer blocks a merge.
+          #   pytest-collect.yml also keeps running (its own result still reports);
+          #   only its required-check status is gone.
+          # `guards` stays required: it carries checks the operator KEPT
+          # (CI-env-gate-guard, the pr-landing guard's PRL-R10-ARMED-BUT-HOLD) plus
+          # every run_guards guard the operator did not answer. The guards the operator
+          # made report-only are report-only INSIDE run_guards.py (per-guard mode).
+          REQUIRED_CONTEXTS='["guards"]'
 
           # Use the CURRENT canonical repo path from the Actions context, NOT a
           # hardcoded owner/repo. The 2026-07-23 rename (ict-trading-bot ->
@@ -212,8 +226,8 @@ jobs:
           #
           # WHAT IT DOES NOT CHANGE: required checks still gate every merge.
           # REQUIRED_CONTEXTS above is untouched and ENFORCE_ADMINS stays true,
-          # so `pytest-collect` / `pytest-run` / `guards` must still be GREEN on
-          # the PR head. `strict` only governs whether that head must also
+          # so every context in it (`guards`, since 2026-11-12) must still be GREEN
+          # on the PR head. `strict` only governs whether that head must also
           # contain the current tip of `main`.
           #
           # WHY. With strict=true, any merge to `main` invalidates every other

@@ -48,7 +48,33 @@ def load_feed(path: str | None) -> dict:
         return json.loads(r.read())
 
 
-def build_lines(feed: dict, power: dict) -> list[str]:
+def load_power_doc(path) -> dict:
+    return yaml.safe_load(Path(path).read_text()) or {}
+
+
+def slot_map(doc: dict) -> dict:
+    """Machine-readable slot map: per served artifact its slot, baseline, competition metric and demotion read, joined from `slots:`.
+
+    A model whose slot or baseline is undeclared reports None for those fields (printed '—'), never a made-up value.
+    """
+    slots, models = doc.get("slots") or {}, doc.get("models") or {}
+    out = {"slots": slots, "models": {}, "undeclared": []}
+    for mid, rec in models.items():
+        sl = slots.get(rec.get("baseline"))
+        row = {
+            "slot": rec.get("slot"),
+            "baseline": sl.get("baseline") if sl else None,
+            "competition_metric": sl.get("competition_metric") if sl else None,
+            "cost_net_metric": sl.get("cost_net_metric") if sl else None,
+            "demotion_read": rec.get("demotion_read"),
+        }
+        out["models"][mid] = row
+        if not all(row[k] for k in ("slot", "baseline", "competition_metric", "demotion_read")):
+            out["undeclared"].append(mid)
+    return out
+
+
+def build_lines(feed: dict, power: dict, slots: dict | None = None) -> list[str]:
     rows = [r for r in feed.get("rows", []) if r.get("consumers")]
 
     def best(r):
@@ -70,7 +96,8 @@ def build_lines(feed: dict, power: dict) -> list[str]:
             f"{name} [{mid}] slot={r.get('slot')} order_effect={rec.get('order_effect', DASH)} books={','.join(books)} | "
             f"mean_net_r={_f(rec.get('mean_net_r'), 4)} n={rec.get('n') or DASH} sd={_f(p['sd'], 2)} se={_f(p['se'], 4)} "
             f"t={_f(p['t'], 2)} cse={_f(p['cse'], 3)} trades_to_confirm(t=2)={p['need'] or DASH} | "
-            f"demotion_signal(label, report-only)={rec.get('demotion_signal') or DASH}")
+            f"slot={rec.get('slot') or DASH} baseline={((slots or {}).get(rec.get('baseline')) or {}).get('baseline') or DASH} | "
+            f"demotion_signal(label, report-only)={rec.get('demotion_read') or rec.get('demotion_signal') or DASH}")
     return out
 
 
@@ -78,17 +105,29 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--registry-json", help="read the feed from a file instead of HTTPS")
     ap.add_argument("--power", default=str(POWER))
+    ap.add_argument("--slot-map", action="store_true",
+                    help="print the machine-readable slot map (JSON; baseline, metric, demotion read per artifact) and exit; "
+                         "needs no feed. Exit 0 ok; 1 = an artifact has an undeclared field; 2 = could-not-look")
     a = ap.parse_args(argv)
+    if a.slot_map:
+        try:
+            sm = slot_map(load_power_doc(a.power))
+        except Exception as e:  # noqa: BLE001
+            print(f"could-not-look: {type(e).__name__}: {e}", file=sys.stderr)
+            return 2
+        print(json.dumps(sm, indent=2, sort_keys=True))
+        return 1 if sm["undeclared"] else 0
     try:
         feed = load_feed(a.registry_json)
         if feed.get("inventory_read_state") != "ok":
             print(f"could-not-look: inventory_read_state={feed.get('inventory_read_state')!r}", file=sys.stderr)
             return 2
-        power = (yaml.safe_load(Path(a.power).read_text()) or {}).get("models") or {}
+        pdoc = load_power_doc(a.power)
+        power, slots = pdoc.get("models") or {}, pdoc.get("slots") or {}
     except Exception as e:  # noqa: BLE001 - any failure to look is could-not-look, not 'none'
         print(f"could-not-look: {type(e).__name__}: {e}", file=sys.stderr)
         return 2
-    lines = build_lines(feed, power)
+    lines = build_lines(feed, power, slots)
     print(f"# models with a consumer: {len(lines)} (population: feed rows with consumers[]; real money first; "
           f"feed inventory_count={feed.get('inventory_count')}, rows={feed.get('total_count')})")
     print("\n".join(lines))
