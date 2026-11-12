@@ -196,7 +196,7 @@ class BarCache:
         if path is not None:
             self._load()
 
-    # -- persistence (a restart must not cost a full re-seed: the live trader restarted ~40 times on 2026-11-12 alone) --
+    # -- persistence (a restart must not cost a full re-seed: MEASURED: 36 trader processes logged a refresher poll on 2026-11-12 between 00:00 and 16:15Z) --
     def _load(self) -> None:
         try:
             if self.path is not None and Path(self.path).exists():
