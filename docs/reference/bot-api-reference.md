@@ -183,6 +183,54 @@ Unauthenticated GET routes — Tier 1 read surface. See
 | `PATCH /api/bot/devices/{id}/subscriptions` | `{id, subscriptions}` — replace a device's per-kind push subscription prefs (`{subscriptions: null\|[kinds]\|{kind:bool}}`; null/empty = all). 404 on unknown id; unknown kinds → 400. Token-gated when `DASHBOARD_API_TOKEN` set. Tier 1 | `trade_journal.db::device_tokens` |
 | `POST /api/auth/login` | `{access_token, token_type, expires_in}` (S-013 M3 PR #1) — issues a bearer session token for the session-gated `/api/pnl` + `/api/status` routes given `{email, password}`. **Enforcement IS live on those two routes** — `auth.require_session` is **default-deny**, with no permissive-when-unconfigured branch: 401 `invalid_session` on a missing/malformed `Authorization`, an expired token, a bad signature, or `alg=none`; 403 `email_not_allowlisted` if the token's `email` claim no longer matches `ALLOWED_EMAIL` (de-allowlisted after issuance); 500 generic `auth_unavailable` (never echoing which var) if the server's own auth env vars are missing, so a dropped secret **fails closed** rather than opening the routes. *(Corrected 2026-08-13: this row read "**Issuance only**: `require_session` enforcement on protected routes is a separate PR" — stale, and stale in the dangerous direction. The dependency is attached on both routes today; field beats comment. Verified by reading `pnl.py` / `status.py` / `auth.py`, not inferred from the merge.)* What remains true is the consumer half: **no consumer has ever called this path** — the retired Streamlit dashboard and Android app consumed only no-session routes, and the Svelte SPA does not call it yet either (it is what Phase H wires up) (`/api/pnl/history`, not `/api/pnl`) — so the gate is invisible to either consumer, and a session-gated route reading 401 from a relay is the CONTRACT, not an outage. `PUBLIC_ROUTES` in `src/web/api/main.py` is the opt-out list, enforced by the test suite. | env-configured allowed email + password hash (`src/web/api/auth.py`) |
 
+### Trade chart snapshot + decision markers (UI-REDESIGN-2026-11, addenda 2, 3, 5)
+
+Two Tier-1 GET routes keyed by `trades.id` (the `id` that `/api/bot/positions` and `/api/bot/trades/closed`
+already return). CORS like every `/api/bot` GET. `null` = not recorded: render a dash, never `0`.
+
+| Route | Shape | Fixture |
+|---|---|---|
+| `GET /api/bot/trades/{trade_id}/snapshot` | `{as_of, trade_id, read_state, partial_reasons[], snapshot\|null}` | `tests/fixtures/trade_chart_snapshot_v1.json` |
+| `GET /api/bot/trades/{trade_id}/markers?interval=1h` | `{as_of, trade_id, order_package_id, account_id, symbol, direction, status, interval, read_state, partial_reasons[], entry, entry_signal, brackets, decisions}` | `tests/fixtures/trade_markers_v1.json` |
+
+**Snapshot (closed trades).** Built ONCE per closed trade by a background writer and STORED (table
+`trade_chart_snapshots` in `trade_journal.db`, one JSON payload per trade); the route only reads it, it never
+fetches candles. Stored as framed DATA, not an image: the SPA draws it with the same chart library as the live
+cards (hover, zoom, theme), it is a few tens of KB per trade, and a later change to how it is drawn needs no
+rebuild. `read_state`: `measured` (all parts present) · `partial` (built, some part missing; `partial_reasons`
+names it) · `not_built` (trade closed, snapshot not written yet: `snapshot` is `null`) · 404 when no trade
+has that id or the trade is still open (use `/markers`).
+
+`snapshot` blocks (`schema: trade_chart_snapshot/v1`):
+- `trade` — the trade row: ids, account, strategy, symbol, direction, qty, open/close times, entry/exit price,
+  `exit_reason`, `pnl` + `pnl_provenance`.
+- `frame` — the view box. `time_from`/`time_to` = open..close widened by 15% of the span on each side;
+  `price_low`/`price_high` = the low/high of the candles between open and close, widened by 10% of that range on
+  each side. `interval` = the bar size chosen so the window holds at most ~300 bars. `levels_outside_frame` lists
+  any bracket price outside the box, so the UI can extend the axis if it chooses.
+  The writer waits until `time_to` has passed before building, so the post-close 15% is real candles.
+- `candles` — `{state: measured|unavailable, source, rows[{time (epoch s), open, high, low, close, volume}]}`.
+- `indicators` — `{state, source: computed_from_candles, series[{name, pane: price|rsi|atr, points[{time, value|null}]}]}`:
+  EMA 20, EMA 50, RSI 14, ATR 14 computed from the stored candles. The strategy's own values AT ENTRY are in
+  `entry_signal.features` (per-bar strategy indicator series are not recorded anywhere, so they are not invented).
+- `entry` / `exit` — `{ts, bar_ts, price, provenance}` (+ `reason` on exit). `bar_ts` = `ts` floored to `frame.interval`.
+- `entry_signal` — from `order_packages.signal_logic` + `model_scores`: `decision_bar`, `timeframe`, `model_id`,
+  `confidence`, `p_long`, `p_short`, `tp_intent`, `tp_basis`, `contributing_strategies`, `features{}`, `model_scores`.
+- `brackets` — the same shape as `/api/bot/brackets/history` (`levels[]` main line = `to_ts` null; `updates[]`
+  one marker per change at its `bar_ts`), plus this account's own stop moves from the trade's notes
+  (`sl_amends`, `live_review_actions`, `sl_floor`) as `updates[]` with `scope: account` (package moves carry
+  `scope: package`). `tp_history: unrecorded` for exchange packages (no TP move store exists).
+- `decisions` — every LTR review (`comms/live_review/reviews.jsonl` + `live-review/rows`) and directed-action
+  receipt on the package, each `{kind: ltr_review|directed_action, id, ts, bar_ts, action, level, confidence,
+  summary, route, disposition, account_read}`. `disposition` is for THIS trade's account:
+  `applied` (the review/record id is on the trade's applied record, or the receipt says executed) ·
+  `advice_only` (an advice-only action class, recorded not executed) · `refused` (the account read or receipt
+  refused it) · `operator_ask` · `dry_run` · `no_action` (hold / no recommendation) · `unknown`.
+  `sources.reviews` / `sources.receipts` = `read` or `could_not_look` (then `read_state` is `partial`).
+
+**Markers (open trades).** Computed per request (cheap: journal + review files, no candle fetch): the same
+`entry`, `entry_signal`, `brackets`, `decisions` blocks, floored to the requested `interval`. 404 for an unknown id.
+
 ### `BotStats` shape
 ```json
 {
