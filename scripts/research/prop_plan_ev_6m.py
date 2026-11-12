@@ -26,7 +26,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import prop_gate as pg
+import prop_gate as pg  # noqa: E402
 
 RULESETS = ["breakout_turbo_1step", "breakout", "velotrade_classic_1step", "velotrade_pro_1step", "tradeify_247_1step",
             "propr_classic_1step", "propr_turbo_1step", "hyrotrader", "hyrotrader_lenient"]
