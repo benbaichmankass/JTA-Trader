@@ -17,6 +17,9 @@ leg was measured on; the firm's CFD on the same underlying is a PROXY transfer, 
 first-party cost stack (commission per side + overnight fee per 00:30 UTC rollover).
 
 Offline research only: imports nothing from src/, places no order, changes no config.
+
+# wiring: manual-only - a one-off lane screen (PROP-FRONTIER-RESEARCH); re-run by hand when a follow-up
+#   (PI-20261112-D6UC5YT4-0001/-0003) changes the book or the simulator, per the memo's buy-point table.
 """
 from __future__ import annotations
 
@@ -40,10 +43,15 @@ RULE = REPO / "comms/research/prop_frontier/ev6m_rule.json"
 
 
 def ledger_path(leg: str) -> Path:
+    """The leg's NEWEST committed Stage-0 trade ledger. The chosen path is printed and recorded in
+    verdict.json population.per_leg[leg].ledger, so the selection is never silent."""
+    # provenance: ledger_path — newest committed run dir for the leg; printed below and stored in the verdict
     hits = sorted(glob.glob(str(REPO / f"comms/strategy_evidence/runs/*/{leg}__trades.jsonl")))
     if not hits:
         raise SystemExit(f"no committed ledger for {leg}")
-    return Path(hits[-1])
+    chosen = Path(hits[-1])  # provenance: ledger_path — newest of the sorted run dirs, printed
+    print(f"ledger {leg}: {chosen.relative_to(REPO)} (newest of {len(hits)})", file=sys.stderr)
+    return chosen
 
 
 def load(leg: str, start: str) -> list[dict]:
