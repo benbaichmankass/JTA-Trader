@@ -1,0 +1,8 @@
+# wiring: manual-only — OPS + manager run it inside the merge freeze in docs/runbooks/account-balance-history-purge.md (filter-repo callback body; holds no balance values)
+# git filter-repo --message-callback body: replace each exact balance literal
+# (read at run time from a LOCAL file that is never committed) in commit messages.
+import os as _os
+_p = _os.environ["PURGE_VALUES_FILE"]
+for _v in open(_p, "rb").read().split():
+    message = message.replace(_v, b"[balance removed]")
+return message

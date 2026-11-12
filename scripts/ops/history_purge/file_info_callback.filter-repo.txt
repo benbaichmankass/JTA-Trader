@@ -1,0 +1,41 @@
+# wiring: manual-only — OPS + manager run it inside the merge freeze in docs/runbooks/account-balance-history-purge.md (filter-repo callback body; holds no balance values)
+# git filter-repo --file-info-callback body. filter-repo calls
+#   file_info_callback(filename, mode, blob_id, value) -> (filename, mode, blob_id)
+# Scope (ACCOUNT-SNAPSHOT-BALANCE-HISTORY purge plan): drop balance-valued JSON keys
+# from the named path families ONLY. Every other path passes through untouched,
+# so trees outside these paths (and the main tip, once the writers are fixed)
+# are byte-identical.
+import json as _json, re as _re
+_SCOPES = [
+    # (path regex, keys to drop wherever they occur in the JSON document)
+    (rb"^comms/mandate_evidence/account_snapshot/[^/]+\.json$", {"equity_usd", "buying_power_usd", "cash_usd"}),
+    (rb"^comms/research/counterfactual_grades/[^/]+\.json$",    {"equity_pre_usd"}),
+    (rb"^comms/research/RQ-20261106-d5a1-01/.+\.json$",          {"equity_usd"}),
+]
+def _strip(o, keys):
+    n = 0
+    if isinstance(o, dict):
+        for k in list(o):
+            if k in keys and o[k] is not None:
+                o[k] = None; n += 1
+            else:
+                n += _strip(o[k], keys)
+    elif isinstance(o, list):
+        for x in o:
+            n += _strip(x, keys)
+    return n
+for _rx, _keys in _SCOPES:
+    if _re.match(_rx, filename):
+        _raw = value.get_contents_by_identifier(blob_id)
+        try:
+            _doc = _json.loads(_raw)
+        except ValueError:
+            value.data.setdefault("unparsed", []).append(filename)
+            break
+        if _strip(_doc, _keys):
+            _indent = 2 if b"\n  " in _raw[:200] else None
+            _new = _json.dumps(_doc, indent=_indent, ensure_ascii=False).encode() + (b"\n" if _raw.endswith(b"\n") else b"")
+            blob_id = value.insert_file_with_contents(_new)
+            value.data["rewritten"] = value.data.get("rewritten", 0) + 1
+        break
+return (filename, mode, blob_id)

@@ -121,7 +121,7 @@ plan is the same either way.
 
 ## 2. The tool: `git filter-repo` (v2.47.0, `a40bce548d2c`)
 
-### 2.1 Callbacks (kept in the freeze runbook's sandbox; they hold no values)
+### 2.1 Callbacks (`scripts/ops/history_purge/`; they hold no values)
 
 - **File-info callback** (S1 + S2): for paths matching
   `^comms/mandate_evidence/account_snapshot/[^/]+\.json$`, `^comms/research/counterfactual_grades/[^/]+\.json$` and
@@ -141,6 +141,7 @@ test values.
 ### 2.2 Exact commands (run by OPS with the manager, inside the freeze, on a fresh mirror)
 
 ```bash
+# (callback paths are relative to a JTA-Trader checkout; copy them beside jta.git or use absolute paths)
 # 0. fresh mirror AFTER the freeze starts (so nothing lands mid-rewrite)
 git clone --mirror https://github.com/benbaichmankass/JTA-Trader jta.git && cd jta.git
 git show-ref > ../pre-refs.txt                      # rollback position (§7)
@@ -151,10 +152,10 @@ for b in cb6e9154 d7990439 dc27f6d0 fec468e7; do git cat-file -p $b | python3 -c
  done | sort -u > ../.purge-values
 # 2. rewrite
 PURGE_VALUES_FILE=../.purge-values git filter-repo --sensitive-data-removal --no-fetch \
-  --file-info-callback "$(cat ../file_info_callback.py)" \
-  --message-callback  "$(cat ../message_callback.py)"
+  --file-info-callback "$(cat scripts/ops/history_purge/file_info_callback.filter-repo.txt)" \
+  --message-callback  "$(cat scripts/ops/history_purge/message_callback.filter-repo.txt)"
 # S1-only variant (the row as decided, if the operator overrides §1): replace the file-info callback with
-#   --blob-callback "$(cat ../strip_balance_blobs.py)"   # rewrites exactly the 4 blob ids above
+#   --blob-callback "$(cat scripts/ops/history_purge/strip_balance_blobs.filter-repo.txt)"   # rewrites exactly the 4 blob ids above
 # 3. verify (§7) BEFORE any push
 # 4. push only branch heads (GitHub refuses writes to refs/pull/*; tags: none exist)
 git push --force origin 'refs/heads/*:refs/heads/*'

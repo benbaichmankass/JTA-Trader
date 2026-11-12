@@ -1,0 +1,18 @@
+# wiring: manual-only — OPS + manager run it inside the merge freeze in docs/runbooks/account-balance-history-purge.md (filter-repo callback body; holds no balance values)
+# git filter-repo --blob-callback body (filter-repo injects `blob`).
+# Rewrites ONLY the four v1 account-snapshot blobs that carry balance fields,
+# identified by their original blob id; every other blob passes through untouched.
+import json as _json
+_TARGETS = {
+    b"cb6e915417577c7e9180a514b964f5abd683cf13",  # alpaca_live.json v1
+    b"d7990439d4a2ec54398181d43c45292d9edbb59b",  # alpaca_live.json v1
+    b"dc27f6d0b0dc34b5e150b614a9c8d780381f70f0",  # bybit_2.json v1
+    b"fec468e77a1cd739c4d3a461d8b67d76098cad1f",  # bybit_2.json v1
+}
+if blob.original_id in _TARGETS:
+    _d = _json.loads(blob.data)
+    for _k in ("equity_usd", "buying_power_usd", "cash_usd"):
+        _d.pop(_k, None)
+    _d["balance_committed"] = False
+    _d["balance_purged"] = "history rewrite, row ACCOUNT-SNAPSHOT-BALANCE-HISTORY"
+    blob.data = (_json.dumps(_d, indent=2, sort_keys=False) + "\n").encode()
