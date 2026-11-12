@@ -67,20 +67,44 @@ def load_plan(path: Path = PLAN) -> dict:
     return yaml.safe_load(path.read_text())
 
 
-def rows(repo: Path = REPO) -> dict:
-    out = {}
-    for p in (repo / "docs/claude/work/checklist").glob("*.json"):
-        try:
-            d = json.loads(p.read_text())
-        except (
-            OSError,
-            ValueError,
-        ) as e:  # an unreadable row is reported, never silently dropped
-            print(f"WARN unreadable checklist row {p.name}: {e}", file=sys.stderr)
-            continue
-        if isinstance(d, dict) and d.get("id"):
-            out[d["id"]] = d
-    return out
+class RowsUnreadable(Exception):
+    """The register could not be read from its canonical source (never read as "no rows")."""
+
+
+def _store_rows(repo: Path) -> list[dict]:
+    """Every checklist row as the WORK STORE holds it, or raise. On the VM that is the local
+    work_store.db (via checklist_store); off the VM it is the live API (scripts/ops/work.py)."""
+    sys.path.insert(0, str(REPO))
+    sys.path.insert(0, str(REPO / "scripts/ops"))
+    from src.runtime import work_read, work_store_import as wi
+
+    local = work_read.local_store()
+    if local is not None:
+        return work_read.checklist_rows(local)
+    import work  # scripts/ops/work.py (stdlib only)
+
+    return [wi.to_row(i) for i in work._all_items(None) if i.get("kind") == "build"]
+
+
+def rows(repo: Path = REPO, allow_export: bool = False, fetch=None) -> dict:
+    """id -> row, read through src/runtime/checklist_store.py (checklist-readers-guard).
+
+    After the WSD-S4 freeze the committed checklist files are only the EXPORT; the live rows are in
+    the work store. Frozen register => read the store (``fetch(repo)`` -> list of rows, default
+    ``_store_rows``); if that fails raise RowsUnreadable -- never fall back to the stale files as if
+    live. ``allow_export=True`` (CI tests, which have no store access) reads the export files
+    through checklist_store and is the caller's explicit statement that it is not live state."""
+    sys.path.insert(0, str(REPO))
+    from src.runtime import checklist_store, work_read
+
+    try:
+        if work_read.frozen(repo) and not allow_export:
+            items = (fetch or _store_rows)(repo)
+        else:
+            items = checklist_store.load(repo)["items"]
+    except Exception as e:  # noqa: BLE001 -- every failure is "could not look", not "empty"
+        raise RowsUnreadable(f"{type(e).__name__}: {e}") from e
+    return {r["id"]: r for r in items if isinstance(r, dict) and r.get("id")}
 
 
 def unit_state(rq: str, repo: Path = REPO):
@@ -427,10 +451,38 @@ def self_test() -> int:
     assert any(x.startswith("UNKNOWN-FAMILY") and "nonsense" in x for x in dfind), dfind
     assert any(x.startswith("UNMAPPED-TRAINER") for x in dfind), dfind
     assert dtab["rl_bandit"]["open_units"] == 0 and dtab["ts_foundation_model"]["manifests"] == 0
+    _store_vs_files_test()
     print(
         "ml_plan_status self-test: OK (5 plan flags + 4 plumbing findings + 4 diversity findings planted and detected, clean item stays clean)"
     )
     return 0
+
+
+def _store_vs_files_test() -> None:
+    """Planted/clean pair: a frozen export that disagrees with the store resolves to the STORE; an
+    unreachable store is could_not_look, never the stale files."""
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as td:
+        repo = Path(td)
+        d = repo / "docs/claude/work/checklist"
+        d.mkdir(parents=True)
+        (d / "_header.json").write_text(json.dumps({"frozen_into_work_store": "2026-11-01", "items": None}))
+        (d / "ML-X.json").write_text(json.dumps({"id": "ML-X", "state": "in_flight"}))  # the stale export
+        live = {"id": "ML-X", "state": "queued"}  # what the store says
+        got = rows(repo, fetch=lambda r: [live])
+        assert got["ML-X"]["state"] == "queued", got  # planted disagreement -> the store wins
+        assert rows(repo, allow_export=True)["ML-X"]["state"] == "in_flight"  # explicit export read only
+
+        def down(_r):
+            raise OSError("store down")
+
+        try:
+            rows(repo, fetch=down)
+        except RowsUnreadable:
+            pass
+        else:
+            raise AssertionError("an unreachable store fell back to the frozen files")
 
 
 def main() -> int:
@@ -453,7 +505,15 @@ def main() -> int:
     if a.self_test:
         return self_test()
     plan = load_plan()
-    res = analyse(plan, rows())
+    try:
+        rowmap = rows()
+    except RowsUnreadable as e:  # could not look != no rows: say so, measure nothing from it
+        print(f"COULD NOT LOOK checklist rows (work store unreachable; the committed files are a "
+              f"frozen export, not live): {e}", file=sys.stderr)
+        if a.json:
+            print(json.dumps({"read_state": "could_not_look", "reason": str(e)}))
+        return 2
+    res = analyse(plan, rowmap)
     plumb, rc = [], 0
     if a.plumbing:
         try:
