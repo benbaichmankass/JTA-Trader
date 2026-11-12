@@ -128,6 +128,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                "--research-unit", args.research_unit or "as-traded-stage0"]
         if args.fetch:
             cmd.append("--fetch")
+        if getattr(args, "fee_bps", None) is not None:
+            cmd += ["--fee-bps", str(args.fee_bps)]
         if args.end:
             cmd += ["--end", args.end]
         for lg in args.leg:
@@ -184,6 +186,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", required=True)
     ap.add_argument("--arms-dir", default=None, help="grade existing arm files; skip the replay")
     ap.add_argument("--fetch", action="store_true")
+    ap.add_argument("--fee-bps", type=float, default=None,
+                    help="passed to decision_bar_holdout.py (round-trip fee in bps; default = harness 7.5)")
     ap.add_argument("--end", default=None)
     ap.add_argument("--strategies", default=str(REPO / "config" / "strategies.yaml"))
     ap.add_argument("--n-floor", type=int, required=True)

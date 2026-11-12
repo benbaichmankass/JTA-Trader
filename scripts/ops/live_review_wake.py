@@ -384,6 +384,20 @@ def health_line(pkg: str, packet: Optional[Dict[str, Any]]) -> str:
     return f"PACKET HEALTH `{pkg}`: {h.get('status')}" + (f" ({ds})" if ds else " (no defects)")
 
 
+def _routine_started(e: Dict[str, Any]) -> bool:
+    """TRADE-ACTION-DIRECT-PATH phase 3: the VM poster fired the routine for this entry (now or on an earlier pass)."""
+    return str((e.get("routine_fire") or {}).get("state")) in ("fired", "already_fired")
+
+
+def _routine_note(e: Dict[str, Any]) -> str:
+    rf = e.get("routine_fire") or {}
+    if _routine_started(e):
+        return f"; **reviewer started by routine** `{rf.get('session_id')}`: do not dispatch"
+    if rf.get("state") and rf.get("state") not in ("not_configured",):
+        return f"; routine fire `{rf.get('state')}` ({rf.get('reason') or '-'}): dispatch as usual"
+    return ""
+
+
 def render(p: Dict[str, Any], now: datetime, run_url: str,
            bundles: Optional[Dict[str, Dict[str, Any]]] = None) -> str:
     blocks: List[str] = []
@@ -415,14 +429,23 @@ def render(p: Dict[str, Any], now: datetime, run_url: str,
             cls = _wt.ltr_label(p["entries"])
         except Exception:  # noqa: BLE001
             cls = "real-money/prop"
-        head = (f"**LTR wake: {len(p['entries'])} live-review event(s) newly due** on {cls} "
-                "packages. Manager: dispatch ONE Sonnet LIVE-REVIEW lane per package "
-                "(`.claude/skills/manager/SKILL.md` § Live-review wake).")
+        n_fired = sum(1 for e in p["entries"] if _routine_started(e))
+        if n_fired == len(p["entries"]):
+            head = (f"**LTR wake: {len(p['entries'])} live-review event(s) newly due** on {cls} packages. "
+                    "Every reviewer was ALREADY STARTED by the routine API trigger (session ids below). "
+                    "Manager: do NOT dispatch; this comment is the dedupe record "
+                    "(`.claude/skills/manager/SKILL.md` § Live-review wake).")
+        else:
+            head = (f"**LTR wake: {len(p['entries'])} live-review event(s) newly due** on {cls} "
+                    "packages. Manager: dispatch ONE Sonnet LIVE-REVIEW lane per package "
+                    + (f"NOT marked as started by the routine ({n_fired} were) " if n_fired else "")
+                    + "(`.claude/skills/manager/SKILL.md` § Live-review wake).")
         lines = [f"- `{e['order_package_id']}` {e['leg']} {e['symbol']} on {', '.join(map(str, e['accounts']))}: "
                  f"**{e['event']}** @ {e['level']} — {e['why']} (due_at {e['due_at']})"
                  + (f"; evidence on `{ROWS_BRANCH}`: **{e['evidence_state']}**"
                     + (f" `{str(e['evidence_commit'])[:12]}`" if e.get("evidence_commit") else "")
                     if e.get("evidence_state") else "")
+                 + _routine_note(e)
                  for e in p["entries"]]
     return "\n".join([head, "", *lines, "", *health, "", *blocks, "", f"Run: {run_url}", "",
                       f"<!-- {MARKER} {json.dumps(marker, separators=(',', ':'), default=str)} -->",
