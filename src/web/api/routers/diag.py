@@ -1435,6 +1435,20 @@ def _require_diag_token(request: Request) -> None:
     # the session's Authorization header (measured: 401 from a fresh ICT-env session
     # whose DIAG_READ_TOKEN fingerprint matched the VM's), so sessions send it here.
     # When present it alone decides, so the two carriers can never disagree silently.
+    # DIAG-DIRECT-READ (operator 2026-11-12: "you need to be able to read the logs of all the VMs and apps
+    # directly, without going through git"): the work-store credential the session proxy injects on every
+    # request to this host also opens the read-only diag routes. It already authorizes the ops channel's
+    # Tier-2 actions (routers/ops_channel.py), so a read is strictly narrower. Checked first; when that
+    # header is present it alone decides.
+    ws_tok = request.headers.get("X-Work-Store-Token")
+    if ws_tok is not None:
+        ws_expected = os.environ.get("WORK_STORE_TOKEN", "").strip()
+        if ws_expected and ws_tok.strip() and hmac.compare_digest(ws_tok.strip(), ws_expected):
+            return
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"error": "invalid_token"},
+        )
     header_tok = request.headers.get(DIAG_TOKEN_HEADER)
     if header_tok is not None:
         if not header_tok.strip() or not hmac.compare_digest(header_tok.strip(), expected):
