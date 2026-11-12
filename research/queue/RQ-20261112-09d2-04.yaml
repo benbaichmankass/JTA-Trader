@@ -1,7 +1,7 @@
 # Hand-authored 2026-11-12 by lane TRADEIFY-FUTURES-FRONTIER (Tier 1), dispatched by Manager Session 2026-11-11a. Decision rule registered BEFORE any run. Gates this adds or changes: none.
 id: RQ-20261112-09d2-04
 title: 'Tradeify futures transfer: does ict_scalp_mgc_15m (and the ict_scalp 15m family params) on MGC / MES / MNQ, forced flat by 16:40 ET, clear Stage 0 at Tradeify costs?'
-status: blocked
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 2
@@ -62,9 +62,66 @@ related:
 - FUT-INTRADAY-DUKA-LANE
 - RQ-20261101-78fc-13
 what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
-blocked_on:
-- kind: work_item
+unblocked_by:
   ref: FUT-INTRADAY-DUKA-LANE
-  what: a dukascopy 15m lane for the ict_scalp branch of exit_lever_ablation (its _DUKA_INTERVAL has 1h/2h/4h/1d only) plus a session-flat
-    overlay flag (close at the 16:35 ET bar) and a per-contract cost arm
-  clears_when: the 15m lane lands; then git-mv to research/queue/ with run.command (rule unchanged)
+  at: '2026-11-12'
+  what: 'PR #25303: dukascopy 15m in exit_lever_ablation, --session-flat-et and the per-contract cost arm in backtest_ict_scalp,
+    the opt-in extended stage0 grade, and the per-instrument runner below. Rule unchanged.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/fut_intraday_stage0.py
+  - --leg
+  - ict_scalp_mgc_15m
+  - --instrument
+  - MGC:2.12:10:0.10
+  - --instrument
+  - MES:1.82:5:0.25
+  - --instrument
+  - MNQ:1.82:2:0.25
+  - --start
+  - '2019-01-01'
+  - --holdout-start
+  - '2025-01-01'
+  - --end
+  - 2026-10-31 23:59
+  - --days
+  - '2900'
+  - --flat-et
+  - '16:35'
+  - --slip-ticks-per-fill
+  - '1'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --yearly-folds
+  - --n-floor
+  - '30'
+  - --ci-z
+  - '2.394'
+  - --holdout-min-trades
+  - '15'
+  - --research-unit
+  - RQ-20261112-09d2-04
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261112-09d2-04
+grading:
+  verdict: fail
+  decision_rule_id: RULE-RQ-20261112-09d2-04
+  graded_at: '2026-11-12'
+  grader: session_01AFoLuM4o8Pd4R6xczg9eWA (lane FUT-INTRADAY-DUKA-LANE), by hand under the registered rule from the runner's verdict.json
+  evidence:
+  - research/results/RQ-20261112-09d2-04/local-20261112.jsonl
+  - comms/research/RQ-20261112-09d2-04/local-20261112/verdict.json
+  reason: '0 of 3 instruments PASS under RULE-RQ-20261112-09d2-04; every one is powered (discovery n >= 348). MGC: discovery -6.0R
+    on n=348, 2/6 years positive, CI lower bound -0.131 R/trade; holdout -10.4R on n=176. MES: discovery +12.3R on n=404 but only
+    2/6 years positive (the net comes from 2020), CI lower bound -0.074; holdout -20.4R on n=108. MNQ: discovery -32.8R on n=508,
+    1/6 years, CI lower bound -0.168; holdout -20.6R on n=167. Each fails the fold and CI clauses, and each holdout is negative.
+    Run locally on Dukascopy proxies (XAU_USD, E_SANDP_500, E_NQ_100), not the CME contracts. The Tradeify futures plan was dropped
+    (operator, relayed 2026-11-12); this result serves the IB books (ib_paper trades MGC and MES), where the same session-flat
+    transfer of ict_scalp has no edge either.'
