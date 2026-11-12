@@ -3,7 +3,7 @@
 id: RQ-20261112-8d20-02
 title: 'ml_entry_eq_struct HTF trend: do the equity structure-ensemble LONG decisions taken AGAINST a strong daily downtrend (daily ADX14 > 40, daily
   -DI > +DI) lose money net of cost on its confirming window?'
-status: blocked
+status: queued
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -26,9 +26,9 @@ power:
   sd: 1.0
   design: one_sample
   alpha: 0.05
-  power: 0.5
+  power: 0.8
   basis: 'ESTIMATE: the confirming read took n 207 decisions in total; strong daily downtrends in a long-only liquid-ETF pool are rare, so the primary
-    cell is expected to be small (tens). An INDETERMINATE is the likely outcome and is a first-class result.'
+    cell is expected to be small (tens). An INDETERMINATE is the likely outcome and is a first-class result. power 0.5 -> 0.8 on unblocking (2026-11-12): research_queue.required_n has no 0.5 floor, so the gate read the unit as unverifiable; at 0.8 the floor exceeds expected_n and the unit grades ACCRUING via its own feasibility.source none + accrual_basis. The decision rule (CT40 n >= 40) is unchanged.'
   feasibility:
     source: none
     accrual_basis: Replays Alpaca history on the runner; nothing accrues.
@@ -59,15 +59,24 @@ routing:
   basis: INFERRED from RQ-20261107-98e3-06 (same data and fits).
 run:
   workflow: research-script-run.yml
-  command: []
+  command:
+  - python3
+  - scripts/research/ml_entry_eq_htf_split.py
+  - --cache
+  - /tmp/ml_entry_equity
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
   timeout_minutes: 240
   inputs:
     research_unit: RQ-20261112-8d20-02
-blocked_on:
-- what: 'NO DECISION-LEVEL DUMP. ml_entry_equity.py confirm/structure stages write aggregates only (comms/research/RQ-20261107-98e3-06/42432561069/
-    measurement.json has no per-decision rows). Needs a subcommand that refits the graded ensemble (config B, seeds 1-5, rows <= 2025-06-30), scores
-    2025-07-15..2026-10-31 at tau 0.25 and splits the taken decisions by the daily DMI/ADX above, reusing ml_entry_htf_trend_split.cell_stats.
-    Unblocks with ~60 lines; then dispatch on research-script-run.'
+unblocked:
+  at: '2026-11-12'
+  by: ML standing lane part 3 (session_01AFoLuMDTXRAaebDXhfn3Wu)
+  how: 'scripts/research/ml_entry_eq_htf_split.py is the decision-level dump the blocked_on named: it imports the graded ml_entry_equity.py pool, table, purge, pinned ensemble, session gate and take rule, refits config B seeds 1-5, refuses to read the cells unless the refit sha starts with the graded 0afc49948a41671a, and splits by the daily DMI/ADX of the last session before the decision day. The runner path already existed: research-script-run.yml carries the read-only Alpaca keys ml_entry_equity._pool_and_bars uses. The decision rule is unchanged.'
 lands:
   store: research/results/
   assert_field: read_state
