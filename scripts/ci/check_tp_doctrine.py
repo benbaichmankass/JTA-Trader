@@ -241,7 +241,6 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # 2026-11-08 ML-ENTRY-PROP-BASELINE (Tier-3, operator chat ~23:35Z): ml_entry on the prop books as a measured baseline. The ENTRY bracket is compliant (real predictive 3 ATR TP,
     # declared); the extend-only TP revision cannot reach a phone / manual-ticket venue (revision path absent), so only the revision is owed. velotrade_1 (VM executor) is plumbed and
     # passes. The SL-only structure stop does propagate through the prop trail (src/prop/prop_trail.py structure_exit). Follow-up row ML-ENTRY-PROP-BASELINE.
-    "breakout_2/ml_entry": R,
     "tradeify_1/ml_entry": R,
     # ── prop ────────────────────────────────────────────────────────────────
     # breakout_1 legs removed 2026-10-07 (account retired, roster cleared).
@@ -371,8 +370,6 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # extend your baseline exception to sol_4h's approximate evidence."). The ETH/SOL 4h trend legs exit by
     # trail; on breakout_2/tradeify_1 the prop ticket path has no TP-revision plumbing (path=absent), on
     # velotrade_1 it is plumbed. Same exit recipe as bybit_2/eth_4h (E) and bybit_1/sol_4h (ER). Record: ML-PROP-ITERATE.
-    "breakout_2/trend_donchian_eth_4h": ER,
-    "breakout_2/trend_donchian_sol_4h": ER,
     "tradeify_1/trend_donchian_eth_4h": ER,
     "tradeify_1/trend_donchian_sol_4h": ER,
     "velotrade_1/trend_donchian_eth_4h": E,

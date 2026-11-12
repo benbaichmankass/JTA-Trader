@@ -56,6 +56,69 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _closed_population(conn: sqlite3.Connection) -> Dict[str, Any]:
+    """What the writer must eventually build: closed live trades + closed prop fills (the builder's own population)."""
+    trades = conn.execute("SELECT COUNT(*) FROM trades WHERE status = 'closed' AND closed_at IS NOT NULL "
+                          "AND COALESCE(is_backtest, 0) = 0").fetchone()[0]
+    try:
+        prop = conn.execute("SELECT COUNT(*) FROM prop_fills WHERE lower(status) = 'closed'").fetchone()[0]
+    except sqlite3.OperationalError as exc:
+        if "no such table" not in str(exc):
+            raise
+        prop = 0
+    return {"trades": trades, "prop": prop}
+
+
+@router.get("/trades/snapshots/status")
+def get_snapshot_writer_status() -> Dict[str, Any]:
+    """Backfill / writer progress (the builder logs at INFO, which the journal does not keep): built, pending,
+    failing, total_closed, last batch and last error. Read-only; nulls mean "could not look", never 0."""
+    as_of = _now()
+    reasons = []
+    counts = store.status_counts(str(_SNAP_PATH))
+    if counts["state"] != "read":
+        reasons.append(f"snapshot_db_{counts['state']}")
+    try:
+        conn = _connect()
+        try:
+            pop = _closed_population(conn)
+        finally:
+            conn.close()
+    except sqlite3.Error:  # allow-silent: surfaced as total_closed null + partial_reasons journal_unreadable
+        logger.warning("snapshot status: journal read failed", exc_info=True)
+        pop = None
+        reasons.append("journal_unreadable")
+    total = (pop["trades"] + pop["prop"]) if pop else None
+    built, retrying = counts["built"], counts["retrying"]
+    pending = (max(total - built - retrying, 0) if (total is not None and built is not None and retrying is not None)
+               else None)
+    try:
+        from src.runtime import trade_snapshot_builder as tsb
+        rt = dict(tsb.STATUS)
+        running = tsb._thread is not None and tsb._thread.is_alive()
+    except Exception:  # noqa: BLE001  # allow-silent: surfaced as writer.running null + partial reason
+        rt, running = {}, None
+        reasons.append("writer_status_unreadable")
+    if running is False:
+        reasons.append("writer_not_running")
+    return {
+        "as_of": as_of,
+        "read_state": "measured" if not reasons else "partial",
+        "partial_reasons": reasons,
+        "total_closed": total,
+        "total_closed_trades": pop["trades"] if pop else None,
+        "total_closed_prop": pop["prop"] if pop else None,
+        "built": built, "built_partial": counts["built_partial"],
+        "built_trade": counts["built_trade"], "built_prop": counts["built_prop"],
+        "pending": pending,
+        "failing": retrying, "failing_flagged": counts["failing_flagged"], "failing_max_attempts": counts["max_attempts"],
+        "last_built_at": counts["last_built_at"],
+        "last_error": counts["last_error"], "last_error_key": counts["last_error_key"],
+        "writer": {"running": running, "started_at": rt.get("started_at"), "last_batch_at": rt.get("last_batch_at"),
+                   "last_batch": rt.get("last_batch"), "loop_errors": rt.get("errors")},
+    }
+
+
 @router.get("/trades/{trade_id}/snapshot")
 def get_trade_snapshot(trade_id: int) -> Dict[str, Any]:
     as_of = _now()
