@@ -33,8 +33,8 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install lightgbm (the repo pin; gain shares need it)
-        run: pip install --quiet "lightgbm==4.6.0"
+      - name: Install lightgbm (the repo pin; gain shares need it) + pandas/numpy (the M2 rank IC needs them)
+        run: pip install --quiet "lightgbm==4.6.0" "pandas>=2.0.0" "numpy>=1.24.0"
 
       - name: Compute the M1 long table
         run: |
