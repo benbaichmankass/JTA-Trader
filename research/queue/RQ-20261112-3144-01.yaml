@@ -3,7 +3,7 @@
 id: RQ-20261112-3144-01
 title: 'ITERATION 2 of ml-tm-action-value (fail): with a SHORT-HORIZON per-action label (the action''s value censored at 12 bars), is the
   per-action advantage predictable out of fold?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -93,7 +93,7 @@ ml_consumer:
   - trend_donchian_sol_prop
   book: money
 registration_addendum:
-  at: '2026-11-12T11:55Z'
+  at: '2026-11-12T11:40Z'
   rule_changed: false
   by: lane ML-AM-NEXT-LIVE (session_01AFoLuKUkUmhzEzkiXTb9tG), per AM-ML 11:33Z
   note: 'blocked_on TMBENCH-HORIZON-LABEL cleared in the same PR (#25250): tm_bench --label horizon --horizon N (both arms force-closed
@@ -135,3 +135,12 @@ run:
   timeout_minutes: 120
   inputs:
     research_unit: RQ-20261112-3144-01
+result:
+  verdict: fail
+  read_at: '2026-11-12T11:43Z'
+  evidence:
+  - research/results/RQ-20261112-3144-01/local-20261112T1140Z.jsonl
+  summary: 'FAIL (harness paths, ESTIMATED provenance, full cost stack; tmb-73f5c3660014, 2,627 trades, 50,926 states, >= 7,784 OOS check-ins
+    per fold): 0/6 folds for every non-hold action. The 12-bar label narrows pooled CIs (~+-0.02) but rho shrinks with them; closest
+    tighten_sl_atr1 rho +0.019 CI [-0.0005, +0.037] vs p95 +0.005. Next per the registered FAIL branch: iteration 3 widens the training
+    population (corpus v2), RQ-20261112-3144-02.'
