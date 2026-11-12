@@ -163,3 +163,14 @@ def test_is_frozen_name_matches_the_copy_rule():
     now = pd.Timestamp("2026-11-12", tz="UTC")
     assert lake_mirror.is_frozen_name("a/2026-09.parquet", now) and not lake_mirror.is_frozen_name("a/2026-10.parquet", now)
     assert lake_mirror.is_frozen_name("a/2025.parquet", now) and not lake_mirror.is_frozen_name("a/2026.parquet", now)
+
+
+def test_planted_unknown_symbol_is_not_a_silent_empty_frame(tmp_path, monkeypatch):
+    monkeypatch.setenv("LAKE_MIRROR_DIR", str(_mirror(tmp_path)))
+    _hf_down(monkeypatch)
+    with pytest.raises(lake.LakeReadError, match="not in the manifest"):
+        lake.load("crypto", "um_perp", "1h", ["NOSUCHUSDT"], end="2025-03-01")
+    df = lake.load("crypto", "um_perp", "1h", ["AAAUSDT", "NOSUCHUSDT"], end="2025-03-01", on_unreadable="state")
+    assert len(df) and df.attrs["lake_read"]["n_could_not_look"] == 1
+    twin = lake.load("crypto", "um_perp", "1h", ["AAAUSDT"], end="2025-03-01")      # clean twin
+    assert twin.attrs["lake_read"]["n_could_not_look"] == 0 and twin.attrs["lake_read"]["partitions_selected"] == 2

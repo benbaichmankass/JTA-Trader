@@ -165,11 +165,12 @@ class _ReadLog:
     def __init__(self) -> None:
         self.mirror = 0
         self.hf = 0
+        self.selected = 0   # partitions the request selected from the manifest (0 with state ok = the window holds no data)
         self.unreadable: List[Dict] = []
 
     def state(self) -> Dict:
         return {"state": "ok" if not self.unreadable else ("could_not_look" if not (self.mirror or self.hf) else "partial"),
-                "from_kaggle_mirror": self.mirror, "from_hf_or_local": self.hf, "could_not_look": self.unreadable[:20],
+                "from_kaggle_mirror": self.mirror, "from_hf_or_local": self.hf, "partitions_selected": self.selected, "could_not_look": self.unreadable[:20],
                 "n_could_not_look": len(self.unreadable)}
 
 
@@ -235,6 +236,7 @@ def _read(e: Dict, start=None, end=None, columns: Optional[Sequence[str]] = None
         fp = _fetch_partition(path, revision, log)
         if fp is not None:
             frames.append(pd.read_parquet(fp, columns=pq_cols, filters=pq_filters))
+    n_paths = len(set(_paths(e, start, end)))
     frames = [f for f in frames if len(f)]
     if not frames:
         df = pd.DataFrame(columns=list(columns) if columns else None)
@@ -249,6 +251,7 @@ def _read(e: Dict, start=None, end=None, columns: Optional[Sequence[str]] = None
             df = df.reset_index(drop=True)
             if columns:
                 df = df[[c for c in columns if c in df.columns]]
+    log.selected += n_paths
     df.attrs["lake_read"] = log.state()
     return df
 
@@ -287,12 +290,16 @@ def load(asset_class: str, market: str, tf: str, syms: Optional[Sequence[str]] =
     want = set(syms) if syms else None
     log = _ReadLog()
     frames = []
+    seen = set()
     for e in entries(asset_class, market, tf, revision):
         if want is not None and e["symbol"] not in want:
             continue
+        seen.add(e["symbol"])
         df = _read(e, start, end, columns, revision, log)
         df.insert(0, "symbol", e["symbol"])
         frames.append(df)
+    for sym in sorted((want or set()) - seen):  # asked for, not listed: unknown, never a silent absence
+        log.unreadable.append({"path": f"{asset_class}/{market}/{tf}/{sym}", "why": "symbol not in the manifest for this (asset, market, tf)"})
     _check(log, on_unreadable, f"lake.load({asset_class}/{market}/{tf})")
     out = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
     out.attrs["lake_read"] = log.state()
