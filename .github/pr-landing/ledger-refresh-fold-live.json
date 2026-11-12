@@ -1,5 +1,7 @@
 {
   "tier": 1,
-  "landing": "self",
-  "why": "LEDGER-REFRESH (operator decisions page w13, 2026-11-12: 'why can't the current key read that? This is an unacceptable gap'). The existing bybit_2 key already pulls the transaction log hourly; the broker-truth ledger only looked 122 days stale because the read path never added that live figure to the hand record. This folds them on the read path (hand record + live API since its inclusive window_end, only when every declared gap is closed), fixes a one-day double count in the live window start, marks the closed SUB component with its evidence, and feeds the refreshed figure to journalTrust. Read path + tests + a committed ledger annotation only: no VM job, timer, order path, config or strategy change. Gates this adds or changes: none."
+  "landing": "hold",
+  "why": "LEDGER-REFRESH (operator decisions page w13, 2026-11-12: 'why can't the current key read that? This is an unacceptable gap'). The existing bybit_2 key already pulls the transaction log hourly; the broker-truth ledger only looked 122 days stale because the read path never added that live figure to the hand record. This folds them on the read path (hand record + live API since its inclusive window_end, only when every declared gap is closed), fixes a one-day double count in the live window start, marks the closed SUB component with its evidence, and feeds the refreshed figure to journalTrust. Read path + tests + a committed ledger annotation only: no VM job, timer, order path, config or strategy change. Gates this adds or changes: none.",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Tier-1 read-path work, but src/runtime/broker_truth.py and src/web/api/routers/pnl_broker_truth.py are Tier-2 by name to the guard, so it cannot certify self-landing. Both are read-only: one SQLite read of the transaction-log store per ledger account, no order path, no writes. The manager merges (AM-TRADING GO, 2026-11-12 11:00Z)."
 }
