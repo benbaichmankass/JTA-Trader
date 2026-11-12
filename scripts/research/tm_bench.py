@@ -82,6 +82,7 @@ import argparse
 import gzip
 import hashlib
 import json
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -132,7 +133,10 @@ LOGIT_ACT_P = 0.6
 LGBM_ROUNDS = 300
 LGBM_PARAMS = {"objective": "regression", "learning_rate": 0.05, "num_leaves": 31, "min_data_in_leaf": 100,
                "bagging_fraction": 0.8, "bagging_freq": 1, "feature_fraction": 0.8, "lambda_l2": 1.0, "verbose": -1,
-               "num_threads": 4}
+               # CI-SUITE-SLOWDOWN (2026-11-12): honour OMP_NUM_THREADS when the caller set it (pytest-run sets 1).
+               # A fixed 4 under 4 xdist workers = 16 spinning OpenMP threads on 4 vCPUs: MEASURED
+               # test_transfer_end_to_end 21 s alone, 1424 s inside the suite. Unset -> 4, as before.
+               "num_threads": int(os.environ.get("OMP_NUM_THREADS") or 4)}
 S_OFFLINE = {"min_gain_r": 0.03, "min_folds": 5}
 INNER_MARGIN_GRID = (0.0, 0.02, 0.05, 0.1, 0.2, 0.3)   # RQ-20261030-c7a1-01 (Q-TM1b) registered grid
 SYNTH_SUBSTEPS = 100

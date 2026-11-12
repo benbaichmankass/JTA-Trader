@@ -412,6 +412,13 @@ jobs:
         if: steps.changed.outputs.relevant == 'true' && steps.changed.outputs.mode == 'data'
         env:
           PYTHONPATH: ${{ github.workspace }}
+          # CI-SUITE-SLOWDOWN (2026-11-12): one native thread per xdist worker. LightGBM / OpenMP / BLAS default to
+          # every core, so N workers x N threads oversubscribe the runner and OpenMP spin-waits: MEASURED
+          # tests/test_tm_bench.py::test_transfer_end_to_end 21 s alone vs 1424 s inside a 4-worker run.
+          # Inherited by the scripts tests run as subprocesses (--self-test). Changes scheduling, not results.
+          OMP_NUM_THREADS: "1"
+          OPENBLAS_NUM_THREADS: "1"
+          MKL_NUM_THREADS: "1"
         run: |
           # CI-STREAMLINE (2026-11-03): only the readers of the data trees THIS diff touches (.github/ci-change-classes.json).
           python3 scripts/ci/pytest_run_scope.py --select-tests --changed /tmp/changed-files.txt > /tmp/data-tests.txt
@@ -424,6 +431,13 @@ jobs:
         if: steps.changed.outputs.relevant == 'true' && steps.changed.outputs.mode == 'affected'
         env:
           PYTHONPATH: ${{ github.workspace }}
+          # CI-SUITE-SLOWDOWN (2026-11-12): one native thread per xdist worker. LightGBM / OpenMP / BLAS default to
+          # every core, so N workers x N threads oversubscribe the runner and OpenMP spin-waits: MEASURED
+          # tests/test_tm_bench.py::test_transfer_end_to_end 21 s alone vs 1424 s inside a 4-worker run.
+          # Inherited by the scripts tests run as subprocesses (--self-test). Changes scheduling, not results.
+          OMP_NUM_THREADS: "1"
+          OPENBLAS_NUM_THREADS: "1"
+          MKL_NUM_THREADS: "1"
         run: |
           echo "selected $(wc -l < /tmp/affected-tests.txt) test files"
           pytest -q -n logical --dist loadfile $(cat /tmp/affected-tests.txt) \
@@ -434,6 +448,13 @@ jobs:
         if: steps.changed.outputs.relevant == 'true' && steps.changed.outputs.mode != 'data' && steps.changed.outputs.mode != 'affected'
         env:
           PYTHONPATH: ${{ github.workspace }}
+          # CI-SUITE-SLOWDOWN (2026-11-12): one native thread per xdist worker. LightGBM / OpenMP / BLAS default to
+          # every core, so N workers x N threads oversubscribe the runner and OpenMP spin-waits: MEASURED
+          # tests/test_tm_bench.py::test_transfer_end_to_end 21 s alone vs 1424 s inside a 4-worker run.
+          # Inherited by the scripts tests run as subprocesses (--self-test). Changes scheduling, not results.
+          OMP_NUM_THREADS: "1"
+          OPENBLAS_NUM_THREADS: "1"
+          MKL_NUM_THREADS: "1"
         run: |
           # Real execution (no --collect-only, no `|| true`): the job
           # reports honest pass/fail so the advisory signal is truthful.
