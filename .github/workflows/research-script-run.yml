@@ -167,17 +167,6 @@ jobs:
           else
             echo "unit does not read corpus_v2/: nothing to materialise"
           fi
-      - name: Keep a regenerated corpus v2 as an artifact (the next unit fetches it instead of regenerating)
-        if: steps.corpus_v2.outputs.state == 'regenerated'
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        with:
-          name: broad-paths-${{ steps.corpus_v2.outputs.corpus_id }}-data
-          path: |
-            corpus_v2/trades.jsonl.gz
-            corpus_v2/paths.jsonl.gz
-          retention-days: 90
-          if-no-files-found: error
       - name: Check the unit's declared command against the allowlist
         env:
           UNIT: ${{ inputs.research_unit }}
@@ -218,6 +207,17 @@ jobs:
           name: research-script-run-${{ inputs.research_unit }}-${{ github.run_id }}
           path: comms/research/${{ inputs.research_unit }}/${{ github.run_id }}
           retention-days: 14
+          if-no-files-found: error
+      - name: Keep a regenerated corpus v2 as an artifact (the next unit fetches it instead of regenerating)
+        if: steps.corpus_v2.outputs.state == 'regenerated'
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: broad-paths-${{ steps.corpus_v2.outputs.corpus_id }}-data
+          path: |
+            corpus_v2/trades.jsonl.gz
+            corpus_v2/paths.jsonl.gz
+          retention-days: 90
           if-no-files-found: error
       - name: Summarize
         if: always()
