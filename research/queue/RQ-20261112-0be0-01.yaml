@@ -1,0 +1,111 @@
+# Hand-authored 2026-11-12 by lane ML-DECISION-MODELS (session_01AFoLuHrh2txGoKFBMCuhC9; Tier 1 research), dispatched by the ML assistant
+# manager for Manager Session 2026-11-11a. Decision rule registered BEFORE any run. Gates this adds or changes: none (a research rule).
+id: RQ-20261112-0be0-01
+title: 'MANAGE lever M1, signal-reversal CLOSE: at each 4h check-in, close a frozen-ENTRY trade when the ENTRY model''s own re-score no
+  longer backs it (own side <= 0, or the opposite side > tau; rule chosen on dev) -- does it beat hold-to-bracket net of the full cost stack, held-out?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T1, M6, M13 (docs/reference/trading-and-model-practice-principles.md): purged + embargoed walk-forward, sealed held-out read
+  under the deflated-reuse bar; signal-decay / signal-reversal exits are the standard discretionary-to-systematic close rule.'
+question: 'Row ML-DECISION-MODELS, MANAGE question, lever M1 (the row''s 2026-11-12 lever table). On the SAME frozen-ENTRY trades every MANAGE arm
+  used (tau from c692-01, static 2/4 ATR bracket, 24h, one position per symbol), CLOSE at the next bar open when, at check-in k in {4,8,12,16,20},
+  the ENTRY model re-scored at that bar says: own_le0 (own-side prediction <= 0), opp_gt_tau (opposite side > tau), or either. One rule chosen on
+  the 8 dev walk-forward folds (2022-01..2025-09), then the held-out year 2025-10-01..2026-09-30 read once as MANAGE read 6. Look-before-retest:
+  c692-03 (learned CLOSE among 4 actions, FAIL dev) decided from heads trained on paired deltas; -08..-15 are SL-tighten arms; 383f-01 moves the
+  TP. No arm used the decision model''s own re-score as the close signal.'
+why_this_matters: 'Operator 2026-11-01 (row ML-DECISION-MODELS, verbatim): "make decisions for like brackets and then either a hold, adjust, or close
+  decision". No CLOSE decision is live; a PASS is a Tier-3 packet (a new serving hook on ml_entry), never a self-merge.'
+decision_rule:
+  id: RULE-RQ20261112-0be0-01-REVCLOSE
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'Held-out paired mean delta net R per trade vs hold-to-bracket (same trades, same cost stack; a close pays the cost at its exit bar),
+    trade-resampled paired bootstrap (2000 draws) at the holdout ledger''s bar for this read. Reported, never gating: managed mean net R vs hold,
+    n closed and mean delta per closed trade, closes by check-in, day-clustered SE, matched random (same count and check-in mix on random trades,
+    200 draws), by-month and by-side delta, the delta ex the 9 symbols peeked on 2026-11-05, giveback.'
+  rule: 'Rule chosen on DEV only: argmax pooled dev delta over {own_le0, opp_gt_tau, either} (tie -> the earlier). NOT READ (verdict fail, dev) IF
+    the chosen rule''s pooled dev delta <= 0 OR it is positive in fewer than 5 of the 8 dev folds: no held-out outcome is read. Otherwise the
+    held-out read is claimed in the holdout ledger (family MANAGE) BEFORE any outcome is computed. INDETERMINATE IF held-out trades < 300 OR
+    distinct symbols < 10. PASS IF held-out mean paired delta > 0 AND the bootstrap lower bound at the ledger''s bar (MANAGE read 6 on this window:
+    CI level 99.16%, one-sided alpha 0.0042) > 0. FAIL otherwise. Thresholds are not changed after any result.'
+  what_it_does_not_do: No sizing, no config change, no order. A PASS is a Tier-3 PROPOSAL (held PR) with the exact change, not a change.
+  min_n: 300 held-out trades on >= 10 symbols
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 800
+  confidence: 0.15
+  basis: 'stand-in: operator priority (row ML-DECISION-MODELS); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 45
+  why_runner: Keyless public Binance Vision klines; GBDT on CPU; no trainer data. First run local in the lane container (Actions backlog).
+  basis: 'INFERRED from c692-10 (same world build) plus 3 rule simulations and 200 random simulations.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_decision_manage_reverse.py
+  - run
+  - --cache
+  - /tmp/ml_decision_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261112-0be0-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-DECISION-MODELS
+- ML-ENTRY-DYNAMIC-SL
+- RQ-20261101-c692-03
+- RQ-20261105-c692-15
+- docs/research/ml-decision-models-2026-11-01/DESIGN.md
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
+window:
+  dev: ENTRY walk-forward OOS trades 2022-01-01..2025-09-30 (ENTRY and the rule both fit or chosen on rows before each fold / before 2025-10-01)
+  heldout: 2025-10-01..2026-09-30, time-disjoint from all training (train_end 2025-09-30; PI-20261105-GEXSLEAK-0001 satisfied, check_window_disjoint
+    enforces it); 6th MANAGE read on this window, graded at the ledger's deflated bar.
+  disclosure: 'the 2026-11-05 smoke printed part of the sealed-window MANAGE summary for ADAUSDT, BCHUSDT, BTCUSDT, ETCUSDT, ETHUSDT, LINKUSDT,
+    LTCUSDT, TRXUSDT, XLMUSDT (c692-03 addendum); this rule was not chosen from it; heldout.peek reports the delta ex those 9.'
+  stricter_than_the_entry_bar: 'As c692-10: an improvement over the free baseline (keep the bracket) is vacuous at >= 0, so delta > 0 with the
+    lower bound > 0 is required. A research rule, not a runtime gate.'
+power:
+  expected_n: 10641
+  min_detectable_effect: 0.02
+  effect_units: metric
+  sd: 0.5
+  design: one_sample
+  alpha: 0.0042
+  power: 0.8
+  basis: 'INFERRED: c692-15 held-out had 10,641 base trades; sd 0.5 R guessed for the paired delta of a close rule; MDE ~ (2.63+0.84)*0.5/sqrt(10641)
+    ~ 0.017, rounded up to 0.02. The run records observed n and sd.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history; nothing accrues.
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    note: same number of closes at the same check-in mix on randomly chosen trades
+  best_static:
+    grid:
+    - own_le0
+    - opp_gt_tau
+    - either
+    excludes_test_folds: true
+  bootstrap_group: trade
+ml_consumer:
+  not_applicable: a close rule driven by the live ENTRY model's own re-score; no new learner is fit; the consumer would be the ml_entry leg's exit
