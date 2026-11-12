@@ -1,6 +1,6 @@
 id: RQ-20261112-743a-01
 title: 'Small-TF cost-breakeven census (M27): per (symbol, tf 1m/5m/15m, hold) the gross edge a small-TF entry must earn to clear fee + slippage + funding, versus the best learner lift already measured on the same symbols and window, under measured and upper-bound cost recipes (maker entry, maker TP exit, wider TP, longer hold)'
-status: queued
+status: done
 cadence: once
 roadmap:
 - M27
@@ -62,7 +62,15 @@ lands:
   assert_field: read_state
   min_rows: 1
 related: ['research/queue/RQ-20261027-fe57-02.yaml', 'research/queue/RQ-20261027-a3f1-01.yaml', 'research/queue/RQ-20261101-b623-01.yaml', 'research/queue/RQ-20260928-001.yaml', 'comms/research/desk_edge/ceiling-1m/verdict.json', 'scripts/research/smalltf_cost_census.py']
-last_dispatched_at: null
+last_dispatched_at: '2026-11-12T10:54:00Z'
 grading:
+  attested: RULE-SMALLTF-COST-CENSUS-01
   auto: false
   decision_rule_id: RULE-SMALLTF-COST-CENSUS-01
+  graded_at: '2026-11-12'
+  grader: lane SMALL-TF-ML-RESEARCH (the harness's own verdict under the registered constants)
+  verdict: fail
+  evidence:
+  - research/results/RQ-20261112-743a-01/local-2026-11-12.jsonl
+  - comms/research/smalltf_cost_census/census_summary.json
+  note: 'FAIL clause: no (tf, hold, k, m) cell reaches CLEARS_POINT in even one symbol under taker 12.3, repo 10.5 or maker-entry-F 10.3 bps (rule needed 4 of 6). Configuration closed: the desk-feature GBDT ceiling at 5-240 min holds; the small-TF family and the cost lever stay open; next test = the maker-exit fill model unit named in the row note.'
