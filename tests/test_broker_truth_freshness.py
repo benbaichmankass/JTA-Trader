@@ -117,6 +117,10 @@ def test_journal_trust_uses_current_when_measured(tmp_path):
                                            "window_end": "2026-07-13", "source": "x",
                                            "declared_gaps": [{"sub_account": "S", "closed": True}]}]}))
     m = bt.journal_trust_map(p, now=NOW, lister=lambda *a, **k: [_row(1, -2.0, 3)])
+    assert m["read_state"] == "read"
+    assert bt.journal_trust_map(tmp_path / "missing.json", now=NOW)["read_state"] == "absent"
+    (tmp_path / "bad.json").write_text("{not json")
+    assert bt.journal_trust_map(tmp_path / "bad.json", now=NOW)["read_state"] == "unreadable"
     v = bt.journal_trust_for("a", m)
     assert v["state"] == bt.TRUST_KNOWN_DIVERGENT and v["realized_usd"] == -12.0 and v["stale"] is False
     # store unreadable -> falls back to the hand record, still flagged stale
@@ -124,6 +128,8 @@ def test_journal_trust_uses_current_when_measured(tmp_path):
         raise RuntimeError("db")
     v2 = bt.journal_trust_for("a", bt.journal_trust_map(p, now=NOW, lister=boom))
     assert v2["realized_usd"] == -10.0 and v2["stale"] is True
+    assert v2["figure"] == "hand_record" and v2["current_state"] == "incomplete" and v2["current_reason"]
+    assert v["figure"] == "current" and v["current_state"] == "measured"
 
 
 def test_grader_fresh_when_current_measured():

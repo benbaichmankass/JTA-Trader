@@ -447,15 +447,22 @@ def journal_trust_for(
                 "as_of_age_days": cur.get("as_of_age_days"),
                 "stale": cur.get("stale"),
                 "source": f"{rec.get('source')}+bybit_transaction_log_api",
+                "figure": "current", "current_state": CURRENT_MEASURED, "current_reason": None,
                 "note": _DIVERGENT_NOTE if not cur.get("stale") else (
                     _DIVERGENT_NOTE + f" — ⚠️ STALE: newest API row is "
                     f"{cur.get('as_of_age_days')} days old (puller dead or account silent)")}
+    # No measured current figure: the hand record is quoted ONLY under an
+    # explicit `figure: hand_record` with the read-state that blocked the fold,
+    # so a frozen number never reads as the account's current result.
     return {"state": TRUST_KNOWN_DIVERGENT, "account_id": account_id,
             "realized_usd": rec.get("realized_usd"),
             "as_of": rec.get("as_of"),
             "as_of_age_days": rec.get("as_of_age_days"),
             "stale": rec.get("stale"),
             "source": rec.get("source"),
+            "figure": "hand_record",
+            "current_state": (cur or {}).get("state") or "not_computed",
+            "current_reason": (cur or {}).get("reason"),
             "note": _DIVERGENT_NOTE if not rec.get("stale") else (
                 _DIVERGENT_NOTE + f" — ⚠️ STALE: as_of is {rec.get('as_of_age_days')} "
                 "days old with no scheduled refresh; treat realized_usd as a "
