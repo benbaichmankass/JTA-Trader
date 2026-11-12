@@ -201,3 +201,72 @@ def test_the_phone_claim_path_plans_strategy_exits_before_serving_closes(phone):
     assert src.count("strategy_exit_close.plan_phone_exits(acct, now=now)") == 2
     for chunk in src.split("strategy_exit_close.plan_phone_exits(acct, now=now)")[1:]:
         assert chunk.index("phone_cancel.plan_closes(acct, now=now)") < 200
+
+
+# ------------------------------------------------------------------ ATTRIBUTION (AM-TRADING 2026-11-12)
+# One package's exit never closes a position another still-open package owns: reduce by its own qty where the venue
+# can, else ONE alert asks for the call and nothing is closed.
+
+class _ApiShared(_Api):
+    def all_tickets(self, account_id):
+        mine = dict(self.t, qty=3.4)
+        other = {"ticket_id": "T2", "symbol": "SOLUSDT", "direction": "short", "status": "filled",
+                 "op_status": "open", "close_reason": None, "close_request": None, "qty": 3.4}
+        return [mine, other]
+
+
+class _ReduceAdapter(_Adapter):
+    PARTIAL_CLOSE_SUPPORTED = True
+
+    def read_positions(self, page):
+        self.reads += 1
+        q = getattr(self, "q", 6.8)
+        return [Position(symbol="SOLUSD", side="short", quantity=q, entry_price=87.64, stop_loss=89.1,
+                         take_profit=79.0, raw={"positionCode": "PC"})]
+
+    def reduce_position(self, page, pos, qty, *, arm=False, client_id=None):
+        self.calls.append(("reduce", round(qty, 6), arm))
+        if arm:
+            self.q = round(pos.quantity - qty, 6)
+        return {"ok": True}
+
+
+def test_shared_position_on_a_reducing_venue_is_reduced_by_the_own_qty_only(tmp_path):
+    a = _ReduceAdapter()
+    res = _step(a, _ApiShared(), tmp_path)
+    assert a.calls == [("reduce", 3.4, True)]                               # never ("flatten", ...)
+    assert vm_close._load_done(tmp_path)[sec.vm_request_id("T1")]["result"] == "reduced"
+    assert sum("partial close" in x for x in res.alerts) == 1
+
+
+def test_shared_position_without_a_partial_close_alerts_once_and_closes_nothing(tmp_path):
+    a = _Adapter()                                                          # no partial close (browser)
+    res = _step(a, _ApiShared(), tmp_path)
+    assert a.calls == []
+    out = vm_close._load_done(tmp_path)[sec.vm_request_id("T1")]
+    assert out["result"] == "needs_call" and "T2" in out["why"]
+    assert sum("NOT applied" in x for x in res.alerts) == 1
+    res2 = _step(a, _ApiShared(), tmp_path)                                 # rerun: no second alert
+    assert a.calls == [] and res2.alerts == []
+
+
+def test_sharers_ignore_closed_packages_and_unfilled_tickets():
+    t = {"ticket_id": "A", "symbol": "SOLUSDT", "direction": "short"}
+    others = [{"ticket_id": "B", "symbol": "SOLUSDT", "direction": "short", "status": "filled", "op_status": "closed"},
+              {"ticket_id": "C", "symbol": "SOLUSDT", "direction": "short", "status": "placed", "op_status": "open"},
+              {"ticket_id": "D", "symbol": "ETHUSDT", "direction": "short", "status": "filled", "op_status": "open"},
+              {"ticket_id": "E", "symbol": "SOLUSDT", "direction": "long", "status": "filled", "op_status": "open"},
+              {"ticket_id": "F", "symbol": "SOLUSDT", "direction": "short", "status": "filled", "op_status": "open"}]
+    assert sec.sharers(others, t) == ["F"]
+
+
+def test_phone_shared_position_alerts_once_and_requests_no_close(phone):
+    _ticket("P1", pkg="pkg-exit")
+    _ticket("P2", pkg="pkg-open")
+    _pkg("pkg-exit", "closed", "netting_attributed")
+    _pkg("pkg-open", "open", None)
+    assert sec.plan_phone_exits("breakout_2", now=NOW) == 0
+    assert _close("P1") == {} and _close("P2") == {}
+    assert len(phone) == 1 and "SHARED" in phone[0] and "P2" in phone[0]
+    assert sec.plan_phone_exits("breakout_2", now=NOW) == 0
+    assert len(phone) == 1                                                  # alerted once

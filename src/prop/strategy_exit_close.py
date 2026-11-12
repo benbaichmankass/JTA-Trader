@@ -39,18 +39,46 @@ def package_exited(op_status: Any, close_reason: Any = None) -> bool:
     return str(op_status or "").strip().lower() in CLOSED_PKG
 
 
+#: Ticket statuses that own venue quantity (a resting or unsent entry owns none).
+_OWNS_QTY = ("filled", "open")
+SHARED_KEY = "strategy_exit_close"
+
+
+def sharers(tickets: Any, ticket: Any) -> list:
+    """ATTRIBUTION (AM-TRADING 2026-11-12, "correctness, not a gate"): the OTHER tickets on the same account, symbol and
+    direction whose order package is still OPEN and which own venue quantity. One package's exit must never close
+    their share of a netted venue position."""
+    sym, d, tid = str(ticket.get("symbol") or "").upper(), str(ticket.get("direction") or "").lower(), ticket.get(
+        "ticket_id")
+    out = []
+    for o in tickets or ():
+        if not isinstance(o, dict) or o.get("ticket_id") == tid:
+            continue
+        if (str(o.get("symbol") or "").upper() == sym and str(o.get("direction") or "").lower() == d
+                and str(o.get("status") or "").lower() in _OWNS_QTY
+                and str(o.get("op_status") or "").lower() not in CLOSED_PKG):
+            out.append(str(o.get("ticket_id")))
+    return out
+
+
 def vm_request_id(ticket_id: Any) -> str:
     return f"{VM_ID_PREFIX}{ticket_id}"
 
 
-def vm_synth_request(ticket: Any) -> Optional[dict]:
-    """The full-close request a VM ticket implies when its package exited and it carries no explicit request."""
+def vm_synth_request(ticket: Any, all_tickets: Any = ()) -> Optional[dict]:
+    """The close request a VM ticket implies when its package exited and it carries no explicit request. When other
+    open packages share the venue position, the request carries ``shared_with`` and this ticket's own ``own_qty``:
+    the executor then REDUCES by that qty (or, without a partial close, alerts for the call) -- never a flatten."""
     if not isinstance(ticket, dict) or ticket.get("close_request") or not ticket.get("ticket_id"):
         return None
     if not package_exited(ticket.get("op_status"), ticket.get("close_reason")):
         return None
-    return {"id": vm_request_id(ticket["ticket_id"]), "fraction": None, "source": "strategy_exit",
-            "reason": f"{REASON_PREFIX}{ticket.get('close_reason')}", "synthetic": True}
+    req = {"id": vm_request_id(ticket["ticket_id"]), "fraction": None, "source": "strategy_exit",
+           "reason": f"{REASON_PREFIX}{ticket.get('close_reason')}", "synthetic": True}
+    others = sharers(all_tickets, ticket)
+    if others:
+        req.update(shared_with=others, own_qty=ticket.get("qty"))
+    return req
 
 
 def plan_phone_exits(account_id: str, *, now: Optional[datetime] = None,
@@ -59,27 +87,51 @@ def plan_phone_exits(account_id: str, *, now: Optional[datetime] = None,
     Idempotent: a ticket whose close slot already carries a strategy-exit request (any status) is never asked again,
     and ``request_close`` refuses while another request is outstanding."""
     from src.prop import phone_cancel, prop_journal
-    from src.prop.phone_trail import _meta, _package_state, _send
+    from src.prop.phone_trail import _cas, _meta, _package_state, _send
 
     now = now or datetime.now(timezone.utc)
     issued = 0
     conn = prop_journal._connect(read_only=True)
     try:
-        rows = conn.execute("SELECT ticket_id, order_package_id, meta FROM prop_tickets "
+        rows = conn.execute("SELECT ticket_id, order_package_id, symbol, direction, meta FROM prop_tickets "
                             "WHERE account_id = ? AND status = 'filled'", (account_id,)).fetchall()
-        todo = []
+        view = []
         for r in rows:
+            pk = _package_state(conn, r["order_package_id"]) or {}
+            view.append({"ticket_id": r["ticket_id"], "symbol": r["symbol"], "direction": r["direction"],
+                         "status": "filled", "op_status": pk.get("status"), "_pk": pk, "_row": r})
+        todo, shared = [], []
+        for v in view:
+            r, pk = v["_row"], v["_pk"]
             m = _meta(r["meta"])
             if m.get("test") or m.get("origin") == "exec_test":
                 continue
             c = m.get(phone_cancel.CLOSE_KEY) if isinstance(m.get(phone_cancel.CLOSE_KEY), dict) else {}
             if str(c.get("reason") or "").startswith(REASON_PREFIX):
                 continue
-            pk = _package_state(conn, r["order_package_id"])
-            if pk and package_exited(pk.get("status"), pk.get("close_reason")):
-                todo.append((r["ticket_id"], r["order_package_id"], pk))
+            if not (pk and package_exited(pk.get("status"), pk.get("close_reason"))):
+                continue
+            others = sharers(view, v)
+            if others:
+                # ATTRIBUTION: the phone has no reduce (refused at claim since #25227), so a close here would also
+                # close the other open package(s)' share. ONE alert asks for the call; nothing is closed.
+                if not (m.get(SHARED_KEY) or {}).get("alerted"):
+                    shared.append((r, m, pk, others))
+                continue
+            todo.append((r["ticket_id"], r["order_package_id"], pk))
     finally:
         conn.close()
+    for r, m, pk, others in shared:
+        w = prop_journal._connect()
+        try:
+            ok = _cas(w, r["ticket_id"], r["meta"], {**m, SHARED_KEY: {"alerted": now.isoformat(), "shared_with": others}})
+        finally:
+            w.close()
+        if ok:
+            _send(f"📱 phone {account_id}: [{r['ticket_id']}] strategy exited ({pk.get('close_reason')}, package "
+                  f"{r['order_package_id']} closed) but the venue position is SHARED with open ticket(s) {others} on "
+                  f"{r['symbol']} {r['direction']}. The phone cannot reduce, so NOTHING was closed: your call "
+                  "(close all, or leave it for the other package)", send)
     for tid, opid, pk in todo:
         res = phone_cancel.request_close(account_id, tid, reason=f"{REASON_PREFIX}{pk.get('close_reason')} {opid}",
                                          now=now)

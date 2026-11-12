@@ -219,6 +219,19 @@ def round_down(x: float, step: Optional[float]) -> float:
     return math.floor(x / step + 1e-9) * step
 
 
+def _shared_fraction(adapter: Any, req: Mapping[str, Any], pos: Any, sym_cfg: Mapping[str, Any]) -> Optional[float]:
+    """This ticket's own share of a SHARED venue position as a fraction of it, or None when it cannot be closed alone
+    (no partial close on the adapter, the ticket qty unreadable, or the share is the whole position)."""
+    if not getattr(adapter, "PARTIAL_CLOSE_SUPPORTED", False):
+        return None
+    own, size = _f(req.get("own_qty")), _f(getattr(pos, "quantity", None))
+    units = _f(sym_cfg.get("lot_units")) or 1.0
+    if own is None or size is None:
+        return None
+    frac = (own / units) / size
+    return frac if 0 < frac < 1 else None
+
+
 def run_close_step(*, adapter: Any, page: Any, api: Any, cfg: Any, mode: str, state_dir: Path, res: Any,
                    sleep: Callable[[float], None], reads: int = 10) -> Any:
     """One pass over this account's pending close requests. Never raises past one ticket."""
@@ -231,13 +244,15 @@ def run_close_step(*, adapter: Any, page: Any, api: Any, cfg: Any, mode: str, st
         from src.prop import strategy_exit_close as sec
 
         tickets = []
-        for t in api.all_tickets(cfg.account_id):
+        all_t = list(api.all_tickets(cfg.account_id))
+        for t in all_t:
             if t.get(KEY):
                 tickets.append(t)
                 continue
-            # PROP-VM-STRATEGY-EXIT-CLOSE (operator 2026-11-12): the ticket's ORDER PACKAGE closed on a strategy
-            # decision -> a full close with the deterministic id pkgexit-<ticket> (idempotent per package + ticket).
-            synth = sec.vm_synth_request(t)
+            # PROP-VM-STRATEGY-EXIT-CLOSE (operator 2026-11-12): the ticket's ORDER PACKAGE closed -> a close with the
+            # deterministic id pkgexit-<ticket> (idempotent per package + ticket); attributed to THIS ticket's own
+            # share when other open packages hold the same venue position (sec.sharers).
+            synth = sec.vm_synth_request(t, all_t)
             if synth is not None:
                 tickets.append({**t, KEY: synth})
     except Exception as exc:  # noqa: BLE001
@@ -246,7 +261,7 @@ def run_close_step(*, adapter: Any, page: Any, api: Any, cfg: Any, mode: str, st
     if not tickets:
         return res
     done = _load_done(state_dir)
-    final = ("closed", "reduced", "refused", "apply_failed")
+    final = ("closed", "reduced", "refused", "apply_failed", "needs_call")
     pending = [t for t in tickets if (t.get(KEY) or {}).get("id")
                and (done.get(t[KEY]["id"]) or {}).get("result") not in final]
     if not pending:
@@ -295,7 +310,15 @@ def run_close_step(*, adapter: Any, page: Any, api: Any, cfg: Any, mode: str, st
                 outcome.update(result="closed", why="position gone since the last attempt (venue flat)")
             elif len(mine) != 1:
                 outcome.update(result="refused", why=f"{len(mine)} {venue or bot_sym} {side} positions (need 1)")
-            elif frac is None:
+            elif req.get("shared_with") and frac is None and not _shared_fraction(adapter, req, mine[0], sym_cfg):
+                # ATTRIBUTION: another open package owns part of this venue position and this ticket's own share
+                # cannot be closed alone (no partial close on this adapter, or its qty unreadable): ONE alert asks for
+                # the call; another package's position is never closed.
+                outcome.update(result="needs_call", why=(
+                    f"venue position shared with open ticket(s) {req['shared_with']}; this package's own share "
+                    f"({req.get('own_qty')}) cannot be closed alone on {type(adapter).__name__} -- nothing closed, "
+                    "your call"))
+            elif frac is None and not req.get("shared_with"):
                 pos = mine[0]
                 if not live:
                     r = adapter.flatten(page, venue, arm=False, side=pos.side, quantity=pos.quantity,
@@ -307,6 +330,9 @@ def run_close_step(*, adapter: Any, page: Any, api: Any, cfg: Any, mode: str, st
                 outcome.update(result="closed" if ok else "retrying", why=why or "flat, no orphan order", attempts=n)
             else:
                 pos = mine[0]
+                if frac is None:   # shared: reduce by THIS ticket's own qty
+                    frac = _shared_fraction(adapter, req, pos, sym_cfg)
+                    outcome["fraction"] = frac
                 step = _f(sym_cfg.get("lot_step"))
                 qty = round_down(float(pos.quantity or 0) * frac, step)
                 min_q = _f(sym_cfg.get("min_lots")) or step or 0.0
