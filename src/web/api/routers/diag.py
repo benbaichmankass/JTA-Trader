@@ -638,6 +638,9 @@ _DESK_WATCH_STATUS = Path(repo_root()) / "runtime_logs" / "live_review" / "desk_
 _DIRECTED_ACTIONS_LOG = Path(repo_root()) / "runtime_logs" / "directed_actions" / "receipts.jsonl"
 _DIRECTED_ACTIONS_STATUS = Path(repo_root()) / "runtime_logs" / "directed_actions" / "pass_status.json"
 _DIRECTED_ACTIONS_WATCH_STATUS = Path(repo_root()) / "runtime_logs" / "directed_actions" / "watch_status.json"
+# TRADE-ACTION-DIRECT-PATH phase 1: every Telegram Approve/Reject ask and decision.
+_TRADE_APPROVALS_LOG = Path(repo_root()) / "runtime_logs" / "trade_approvals" / "journal.jsonl"
+_TRADE_APPROVALS_PENDING = Path(repo_root()) / "runtime_logs" / "trade_approvals" / "pending.json"
 # DESK-PAPER-ACCOUNTS (2026-10-27): the claude_desk leg's own ledger -- one line per accepted proposal that ended
 # without a package (expired_unfilled, e.g. waiting on a closed ETF/CME market; a refused bracket). Written by
 # src/units/strategies/claude_desk.py::record (ledger_path()).
@@ -707,6 +710,8 @@ _LOG_FILES: dict[str, Path] = {
     "directed_actions": _DIRECTED_ACTIONS_LOG,
     "directed_actions_status": _DIRECTED_ACTIONS_STATUS,
     "directed_actions_watch_status": _DIRECTED_ACTIONS_WATCH_STATUS,
+    "trade_approvals": _TRADE_APPROVALS_LOG,
+    "trade_approvals_pending": _TRADE_APPROVALS_PENDING,
     "desk_leg": _DESK_LEG_LEDGER,
     "oi_feed_status": _OI_FEED_STATUS,
     "e4_decisions": _E4_DECISIONS_LOG,
