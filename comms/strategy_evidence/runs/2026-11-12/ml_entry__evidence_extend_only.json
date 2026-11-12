@@ -1,0 +1,75 @@
+{
+ "population": "served ENTRY trades 2025-10-01..2026-10-01 on ['BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'ADAUSDT', 'SOLUSDT']",
+ "n": 907,
+ "margin_r": 0.05,
+ "tp_fold_train_end_exclusive": "2025-09-22 23:00:00+00:00",
+ "n_train": 448694,
+ "fixed_3atr": {
+  "mean_net_r": 0.026283168276339256,
+  "sum_net_r": 23.838833626639705
+ },
+ "two_way": {
+  "mean_net_r": 0.016952546767249006,
+  "sum_net_r": 15.375959917894848,
+  "mean_delta": -0.00933062150909024,
+  "n_trades_moved": 434,
+  "n_pull_in": 272,
+  "exit_reasons": {
+   "0": 157,
+   "1": 417,
+   "2": 333
+  },
+  "per_symbol": {
+   "BTCUSDT": -0.0272,
+   "ETHUSDT": -0.0228,
+   "XRPUSDT": -0.0587,
+   "ADAUSDT": 0.1143,
+   "SOLUSDT": 0.0299
+  }
+ },
+ "extend_only": {
+  "mean_net_r": 0.02712995887700275,
+  "sum_net_r": 24.606872701441496,
+  "mean_delta": 0.0008467906006634907,
+  "n_trades_moved": 314,
+  "n_pull_in": 0,
+  "exit_reasons": {
+   "0": 285,
+   "1": 420,
+   "2": 202
+  },
+  "per_symbol": {
+   "BTCUSDT": -0.0385,
+   "ETHUSDT": -0.0034,
+   "XRPUSDT": -0.0217,
+   "ADAUSDT": 0.1332,
+   "SOLUSDT": 0.0088
+  }
+ },
+ "trades_ledger": {
+  "file": "trades_arm_F.jsonl",
+  "rows": 907
+ },
+ "structure_sl": "pivot=5",
+ "extend_only_structure_sl": {
+  "mean_net_r": 0.03713201932489742,
+  "sum_net_r": 33.67874152768196,
+  "mean_delta_vs_extend_only": 0.010002060447894666,
+  "exit_reasons": {
+   "0": 204,
+   "1": 523,
+   "2": 180
+  },
+  "per_symbol": {
+   "BTCUSDT": -0.0005,
+   "ETHUSDT": 0.0023,
+   "XRPUSDT": -0.0031,
+   "ADAUSDT": 0.1095,
+   "SOLUSDT": 0.0393
+  },
+  "rule": "RULE-RQ20261103-5E04-01-ML-SLONLY: PASS if mean_net_r >= 0 (parent RULE-RQ20261101-c692-06-TRADED-SUBSET)",
+  "verdict": "pass"
+ },
+ "elapsed_s": 776,
+ "git_sha": "8bc3e4fef54da070697c87c91f6e575357bf5320"
+}

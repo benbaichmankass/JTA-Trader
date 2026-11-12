@@ -1056,6 +1056,16 @@ def evidence_extend_only(args) -> int:
         scf = Scorer(trades, bars, probs, tm["class_mean_net_r"], structure_sl=args.structure_sl)
         polf = scf.policy(m, extend_only=True)
         vf = np.array([x[0] for x in polf])
+        # ML-ENTRY-EVIDENCE-SOURCE (2026-11-12): the per-trade arm-F ledger, so the Stage-0 evidence record's
+        # source_run is a committed per-trade JSONL (mandate_resolver.stage0_block_p10 bootstraps net_r from it;
+        # without it r4_demotion_gate abstains on ml_entry for ever). Observation only: same rows as vf.
+        with (out / "trades_arm_F.jsonl").open("w", encoding="utf-8") as fh:
+            for k, (nr, reason, moves) in enumerate(polf):
+                t = trades.loc[k]
+                fh.write(json.dumps({"symbol": t.symbol, "ts": str(t.ts), "side": t.side, "net_r": float(nr),
+                                     "exit_reason": {0: "time", 1: "sl", 2: "tp"}.get(int(reason), str(reason)),
+                                     "n_tp_moves": len(moves)}) + "\n")
+        res["trades_ledger"] = {"file": "trades_arm_F.jsonl", "rows": len(polf)}
         res["structure_sl"] = args.structure_sl
         res["extend_only_structure_sl"] = {
             "mean_net_r": float(vf.mean()), "sum_net_r": float(vf.sum()),
