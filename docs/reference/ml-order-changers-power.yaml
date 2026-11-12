@@ -1,0 +1,71 @@
+# Power + demotion-label record for every model that has a consumer (row ML-ONE-LADDER, 2026-11-12).
+# REPORT-ONLY. Read by scripts/ops/ml_order_changers.py for the /ml-review one-line-per-model table. Nothing reads this
+# for a decision; a demotion_signal is a LABEL in a report, never wired to act. Gates this adds or changes: none.
+# Provenance per figure: MEASURED = read from the named evidence file; QUOTED = from docs/research/ml-deep-audit-2026-11-12.md
+# (itself reading the cited record); a blank/absent field renders "—" (unknown), never 0.
+# Keyed by registry model_id (GET /api/bot/ml/registry rows[].model_id). Add a line when a model gains a consumer.
+models:
+  ml-decision-entry-v1r20261106:
+    order_effect: "yes"            # opens long/short
+    mean_net_r: 0.0371           # MEASURED comms/strategy_evidence/ml_entry.json expectancy_r_oos
+    n: 907                       # MEASURED same file n_trades_oos (held-out 2025-10-01..2026-09-30, 5 bybit_2 symbols)
+    sd_r: 1.09                   # QUOTED audit section 0 item 4
+    clustered_se: null
+    evidence: comms/strategy_evidence/ml_entry.json
+    demotion_signal: "mirror net-of-cost window (OPERATING-PLAN section 2); live read = ml_entry_live_monitor_state"
+  ml-decision-entry-v1:
+    order_effect: "yes"            # same lineage; the pointer ml/served/ENTRY_SERVED.json serves the refit
+    mean_net_r: 0.0371
+    n: 907
+    sd_r: 1.09
+    clustered_se: null
+    evidence: comms/strategy_evidence/ml_entry.json
+    demotion_signal: "same lineage as ml-decision-entry-v1r20261106"
+  ml-entry-eq-struct-ens5-v1:
+    order_effect: "yes"            # opens long, ETFs
+    mean_net_r: 0.4922           # MEASURED comms/strategy_evidence/ml_entry_eq_struct.json expectancy_r_oos
+    n: 207                       # MEASURED same file n_trades_oos (113 symbols)
+    sd_r: 1.09                   # ESTIMATED = iid se 0.076 (QUOTED audit 1.1) x sqrt(207)
+    clustered_se: 0.239          # QUOTED audit 1.1, month-clustered
+    evidence: comms/strategy_evidence/ml_entry_eq_struct.json
+    demotion_signal: "mirror net-of-cost window (OPERATING-PLAN section 2); none registered per model yet"
+  ml-decision-entry-v2:
+    order_effect: "yes"            # bybit_1 (paper) testing leg
+    mean_net_r: -0.1161          # QUOTED audit 1.1 (MECE section 3), n=320
+    n: 320
+    sd_r: null
+    clustered_se: null
+    evidence: ml/served/ml_decision_entry_v2/model.json
+    demotion_signal: "n/a: testing leg in iteration (OPERATING-PLAN section 2)"
+  ml-entry-eq-v1:
+    order_effect: "yes"            # alpaca_paper testing leg
+    mean_net_r: 0.0392           # QUOTED audit 1.1 (row ML-ENTRY-ALL-ACCOUNTS), pooled confirm
+    n: 858
+    sd_r: null
+    clustered_se: null
+    evidence: null
+    demotion_signal: "n/a: testing leg in iteration (OPERATING-PLAN section 2)"
+  ml-entry-tp-revision-v1:
+    order_effect: "yes"            # extends the entry TP at 4h check-ins
+    mean_net_r: 0.0081           # QUOTED audit 1.1 (RQ-20261101-383f-01), forward read
+    n: 868
+    sd_r: null
+    clustered_se: null
+    evidence: ml/served/ml_entry_tp_revision_v1/model.json
+    demotion_signal: "mirror net-of-cost window (OPERATING-PLAN section 2); none registered per model yet"
+  overlay-td-v1:
+    order_effect: "yes"            # reduce: qty x0.5 below tau on trend_donchian legs
+    mean_net_r: null
+    n: 1830                      # QUOTED audit 1.1 (RULE-ML-OVERLAY-NONINFERIOR-V2, TD family pooled); a non-inferiority rule, no mean R
+    sd_r: null
+    clustered_se: null
+    evidence: null
+    demotion_signal: "mirror net-of-cost window (OPERATING-PLAN section 2); none registered per model yet"
+  exit-head-donchian-1h-v1:
+    order_effect: "no"             # exit_head_action is annotate on all 3 legs (MEASURED strategies.yaml, audit 1.1)
+    mean_net_r: -0.0141          # QUOTED audit 1.1, BTC head failed B4, n=1041
+    n: 1041
+    sd_r: null
+    clustered_se: null
+    evidence: null
+    demotion_signal: "n/a: changes no order today"
