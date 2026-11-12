@@ -290,17 +290,6 @@ def session_alive(handle: str) -> bool:
     return bool(r) and r["revoked_at"] is None and (r["expires_at"] or 0) > _now()
 
 
-def session_by_handle(handle: str) -> Optional[dict[str, Any]]:
-    """The session row for a public handle iff unrevoked and unexpired, else None."""
-    with _connect() as conn:
-        r = conn.execute(
-            "SELECT * FROM web_sessions WHERE kind='session' AND handle=?", (handle,),
-        ).fetchone()
-    if r is None or r["revoked_at"] is not None or (r["expires_at"] or 0) <= _now():
-        return None
-    return dict(r)
-
-
 def list_sessions() -> list[dict[str, Any]]:
     now = _now()
     with _connect() as conn:

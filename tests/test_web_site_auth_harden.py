@@ -1,4 +1,7 @@
-"""UI-UPGRADE-1-AUTH-HARDEN items (a)-(h), each pinned before SITE_AUTH_ENFORCE is flipped.
+"""UI-UPGRADE-1-AUTH-HARDEN items kept in UI-OAUTH-SIGNIN: (a) passkey list/revoke, (b), (f), (g), (h).
+
+Parked, not built (operator 2026-11-12: "no more gates that I don't explicitly give you
+permission for"): the (a) step-up, (c), (d) and (e). Each adds a refusal no operator quote names.
 
 Uses the real Google verifier (local RSA key) and a software WebAuthn
 authenticator from tests/test_web_site_auth.py, so each refusal comes from the
@@ -10,7 +13,6 @@ import asyncio
 import inspect
 import time
 
-import pytest
 
 from src.web.api import auth as auth_module
 from src.web.api import web_sessions as ws
@@ -24,30 +26,13 @@ client = base.client
 google = base.google
 
 
-def _age_session(handle: str, seconds: int) -> None:
-    import sqlite3
-    from src.utils.paths import trade_journal_db_path
-    c = sqlite3.connect(trade_journal_db_path())
-    c.execute("UPDATE web_sessions SET created_at=created_at-? WHERE kind='session' AND handle=?",
-              (seconds, handle))
-    c.commit()
-    c.close()
-
-
 def _begin_add(client, tok, label="Tablet"):
     return client.post("/api/auth/passkey/register/begin", json={"label": label}, headers=bearer(tok))
 
 
-# (a) step-up for adding a passkey; passkey list + revoke; revoke kills its sessions
+# (a) passkey list + revoke; revoking a passkey revokes its sessions (the step-up half is parked: no operator quote)
 
-def test_a_stale_session_cannot_add_a_passkey(client, google):
-    a = enrol(client, google, SoftKey())
-    _age_session(a["session_handle"], auth_google.STEPUP_WINDOW_SECONDS + 5)
-    r = _begin_add(client, a["session_token"])
-    assert r.status_code == 401 and r.json()["detail"] == {"error": "stepup_required"}
-
-
-def test_a_fresh_session_can_add_a_passkey(client, google):
+def test_a_signed_in_session_can_add_a_passkey(client, google):
     a = enrol(client, google, SoftKey())
     assert _begin_add(client, a["session_token"]).status_code == 200
 
@@ -81,14 +66,6 @@ def test_a_revoking_a_passkey_revokes_its_sessions_only(client, google):
     assert r.status_code == 401
 
 
-def test_a_revoke_passkey_needs_step_up_and_404s_unknown(client, google):
-    a = enrol(client, google, SoftKey())
-    assert client.post("/api/auth/passkeys/nope/revoke", headers=bearer(a["session_token"])).status_code == 404
-    _age_session(a["session_handle"], auth_google.STEPUP_WINDOW_SECONDS + 5)
-    r = client.post("/api/auth/passkeys/nope/revoke", headers=bearer(a["session_token"]))
-    assert r.status_code == 401 and r.json()["detail"] == {"error": "stepup_required"}
-
-
 # (b) the site gate is async: no threadpool hop when off
 
 def test_b_site_gate_is_a_coroutine_and_off_is_a_no_op(monkeypatch):
@@ -98,62 +75,6 @@ def test_b_site_gate_is_a_coroutine_and_off_is_a_no_op(monkeypatch):
     monkeypatch.setattr(auth_module, "run_in_threadpool", lambda *a, **k: called.append(a))
     assert asyncio.run(auth_module.require_site_session(object())) is None   # never touches conn
     assert called == []
-
-
-# (c) register/finish re-checks the session that began it
-
-def test_c_finish_refused_after_the_beginning_session_is_revoked(client, google):
-    a = enrol(client, google, SoftKey())
-    b = _begin_add(client, a["session_token"])
-    ws.revoke_session(a["session_handle"])
-    f = client.post("/api/auth/passkey/register/finish", headers=bearer(a["session_token"]),
-                    json={"challenge_id": b.json()["challenge_id"],
-                          "credential": SoftKey().register(b.json()["options"])})
-    assert f.status_code == 401
-    assert len(ws.list_passkeys()) == 1
-
-
-def test_c_finish_refused_from_a_different_session(client, google):
-    k1 = SoftKey()
-    a = enrol(client, google, k1)
-    r, _, _ = login(client, google, k1)
-    other = r.json()["session_token"]
-    b = _begin_add(client, a["session_token"])
-    f = client.post("/api/auth/passkey/register/finish", headers=bearer(other),
-                    json={"challenge_id": b.json()["challenge_id"],
-                          "credential": SoftKey().register(b.json()["options"])})
-    assert f.status_code == 401
-    f2 = client.post("/api/auth/passkey/register/finish",
-                     json={"challenge_id": b.json()["challenge_id"], "credential": {}})
-    assert f2.status_code in (400, 401)                                 # challenge already burned
-
-
-# (d) the assertion challenge is bound to its pre-auth ticket
-
-def test_d_assertion_challenge_bound_to_its_preauth_ticket(client, google):
-    key = SoftKey()
-    enrol(client, google, key)
-    pre_a, pre_b = signin(client, google), signin(client, google)
-    b = client.post("/api/auth/passkey/assert/begin", json={"preauth_ticket": pre_a})
-    cred = key.assertion(b.json()["options"])
-    r = client.post("/api/auth/passkey/assert/finish",
-                    json={"preauth_ticket": pre_b, "challenge_id": b.json()["challenge_id"],
-                          "credential": cred})
-    assert r.status_code == 400 and r.json()["detail"] == {"error": "invalid_challenge"}
-
-
-# (e) the WS ticket path checks ALLOWED_EMAIL
-
-def test_e_ws_ticket_refused_after_de_allowlisting(client, google, monkeypatch):
-    from tests.test_web_site_auth import _ws_conn
-    monkeypatch.setenv("SITE_AUTH_ENFORCE", "1")
-    a = enrol(client, google, SoftKey())
-    t = client.post("/api/auth/ws-ticket", headers=bearer(a["session_token"])).json()["ticket"]
-    monkeypatch.setenv("ALLOWED_EMAIL", "someone-else@example.invalid")
-    with pytest.raises(Exception) as e:
-        asyncio.run(auth_module.require_site_session(_ws_conn("/ws/market", f"ticket={t}")))
-    assert getattr(e.value, "status_code", None) == 403
-    assert auth_module.ws_ticket_ok("") is False
 
 
 # (f) the failure log is bounded
@@ -207,3 +128,8 @@ def test_h_testclient_is_not_a_trusted_proxy(client, google):
     r = client.post("/api/auth/google", json={"id_token": "garbage"},
                     headers={"X-Forwarded-For": "203.0.113.250"})
     assert r.status_code == 429
+
+
+def test_a_revoke_unknown_passkey_is_404(client, google):
+    a = enrol(client, google, SoftKey())
+    assert client.post("/api/auth/passkeys/nope/revoke", headers=bearer(a["session_token"])).status_code == 404

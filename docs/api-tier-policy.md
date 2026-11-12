@@ -283,7 +283,7 @@ gate over everything else — `/api/health`, `/api/auth/*`, `/api/diag/*`,
 | `DELETE /api/auth/sessions/{handle}`, `POST /api/auth/sessions/{handle}/revoke` | `routers/auth_google.py` | Revoke one session. The POST twin exists because the API's CORS allow-list is GET/POST only (untouched). `require_device_session`. |
 | `DELETE /api/auth/sessions`, `POST /api/auth/sessions/revoke-others` | `routers/auth_google.py` | "Sign out everywhere": revoke all but the current session. `require_device_session`. |
 | `GET /api/auth/passkeys` | `routers/auth_google.py` | **Added 2026-11-12 (UI-UPGRADE-1-AUTH-HARDEN a).** Registered passkeys: handle, label, created/last-used. Never returns key material or credential ids. `require_device_session`. |
-| `POST /api/auth/passkeys/{handle}/revoke` | `routers/auth_google.py` | **Added 2026-11-12 (UI-UPGRADE-1-AUTH-HARDEN a).** Revoke one passkey AND every device session it issued. Needs a fresh ceremony: the calling session must be under `STEPUP_WINDOW_SECONDS` (10 min) old, else 401 `stepup_required` (the same step-up adding a passkey from a signed-in device now needs). POST because the CORS allow-list is GET/POST. `require_device_session`. |
+| `POST /api/auth/passkeys/{handle}/revoke` | `routers/auth_google.py` | **Added 2026-11-12 (UI-UPGRADE-1-AUTH-HARDEN a).** Revoke one passkey AND every device session it issued. POST because the CORS allow-list is GET/POST. `require_device_session`. |
 | `POST /api/auth/ws-ticket` | `routers/auth_google.py` | 60 s single-use ticket for `WS /ws/market?ticket=` (a browser WebSocket cannot send `Authorization`). `require_device_session`. |
 
 ### 2b — `DASHBOARD_API_TOKEN` bearer (writes + client management)

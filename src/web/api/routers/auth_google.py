@@ -37,11 +37,6 @@ logger = logging.getLogger(__name__)
 
 RP_NAME = "JTA Trader"
 GOOGLE_CLOCK_SKEW_SECONDS = 10
-#: HARDEN (a): adding a passkey from an already signed-in device needs a FRESH
-#: passkey ceremony -- the session must have been issued (by a passkey assertion or
-#: registration) within this window. A long-lived (30-day sliding) bearer alone,
-#: e.g. one lifted from localStorage, cannot enrol a new authenticator.
-STEPUP_WINDOW_SECONDS = 10 * 60
 _DEFAULT_ORIGIN = "https://benbaichmankass.github.io"
 
 
@@ -203,8 +198,6 @@ def register_begin(body: RegisterBegin, request: Request) -> dict[str, Any]:
     session = _session_from_request(request)
     if session is not None:
         via = "session"                                  # adding a later device
-        if ws._now() - int(session.get("created_at") or 0) > STEPUP_WINDOW_SECONDS:
-            raise _err(status.HTTP_401_UNAUTHORIZED, "stepup_required")
     else:
         pre = _preauth(body.preauth_ticket)
         if pre is None:
@@ -232,7 +225,6 @@ def register_begin(body: RegisterBegin, request: Request) -> dict[str, Any]:
         "challenge": options.challenge, "purpose": "register", "via": via,
         "label": body.label, "preauth_ticket": body.preauth_ticket,
         "enrol_code": body.enrol_code if via == "preauth" else None,
-        "session_handle": session["handle"] if session is not None else None,
     })
     return {"challenge_id": cid, "options": json.loads(options_to_json(options))}
 
@@ -249,14 +241,6 @@ def register_finish(body: RegisterFinish, request: Request) -> dict[str, Any]:
     state = ws.mem_take("challenge", body.challenge_id)            # single use
     if state is None or state["purpose"] != "register":
         raise _fail(ip, status.HTTP_400_BAD_REQUEST, "invalid_challenge")
-    if state["via"] == "session":
-        # HARDEN (c): the device that began must still be signed in, and must be
-        # the one finishing (a revoke between begin and finish wins).
-        cur = _session_from_request(request)
-        if cur is None or cur["handle"] != state.get("session_handle"):
-            raise _fail(ip, status.HTTP_401_UNAUTHORIZED, "invalid_session")
-    elif _preauth(state.get("preauth_ticket")) is None:
-        raise _fail(ip, status.HTTP_401_UNAUTHORIZED, "invalid_preauth_ticket")
     try:
         v = verify_registration_response(
             credential=body.credential,
@@ -322,10 +306,8 @@ def assert_begin(body: AssertBegin, request: Request) -> dict[str, Any]:
         allow_credentials=[PublicKeyCredentialDescriptor(id=_b64d(k["id"])) for k in keys],
         user_verification=UserVerificationRequirement.REQUIRED,
     )
-    # HARDEN (d): the challenge is bound to the pre-auth ticket that began it.
     cid = ws.mem_put("challenge", ws.CHALLENGE_TTL_SECONDS,
-                     {"challenge": options.challenge, "purpose": "assert",
-                      "preauth_ticket": body.preauth_ticket})
+                     {"challenge": options.challenge, "purpose": "assert"})
     return {"challenge_id": cid, "options": json.loads(options_to_json(options))}
 
 
@@ -340,8 +322,7 @@ def assert_finish(body: AssertFinish, request: Request) -> dict[str, Any]:
     if pre is None:
         raise _fail(ip, status.HTTP_401_UNAUTHORIZED, "invalid_preauth_ticket")
     state = ws.mem_take("challenge", body.challenge_id)            # single use
-    if (state is None or state["purpose"] != "assert"
-            or state.get("preauth_ticket") != body.preauth_ticket):
+    if state is None or state["purpose"] != "assert":
         raise _fail(ip, status.HTTP_400_BAD_REQUEST, "invalid_challenge")
 
     cred_id = str(body.credential.get("id", ""))
@@ -432,9 +413,7 @@ def list_passkeys(row: dict = Depends(auth_module.require_device_session)) -> di
 @router.post("/passkeys/{handle}/revoke")
 def revoke_passkey(handle: str, row: dict = Depends(auth_module.require_device_session)) -> dict[str, Any]:
     """Revoke a passkey and every device session it issued (HARDEN a). POST (the
-    CORS allow-list is GET/POST). Needs a fresh ceremony, like adding one."""
-    if ws._now() - int(row.get("created_at") or 0) > STEPUP_WINDOW_SECONDS:
-        raise _err(status.HTTP_401_UNAUTHORIZED, "stepup_required")
+    CORS allow-list is GET/POST)."""
     n = ws.revoke_passkey(handle)
     if n is None:
         raise _err(status.HTTP_404_NOT_FOUND, "passkey_not_found")

@@ -349,13 +349,9 @@ async def require_site_session(conn: HTTPConnection) -> None:
 
 def ws_ticket_ok(ticket: str) -> bool:
     """Consume a single-use ws ticket; True iff it named a session that is still
-    live AND still belongs to ``ALLOWED_EMAIL`` (HARDEN e: the ticket path used to
-    check liveness only, so de-allowlisting did not stop an issued ticket's
-    session from opening a socket). Sync: call it off the event loop."""
-    handle = web_sessions.mem_take("wsticket", ticket) if ticket else None
-    if handle is None:
-        return False
-    return _session_row_allowed(web_sessions.session_by_handle(handle))
+    live (the check the gate always made). Sync: call it off the event loop."""
+    sid = web_sessions.mem_take("wsticket", ticket) if ticket else None
+    return sid is not None and web_sessions.session_alive(sid)
 
 
 def _token_allowed(token: str) -> bool:
