@@ -6,7 +6,7 @@ id: RQ-20261112-2e3b-01
 title: 'ml_entry POPULATION test (operator rule 2026-11-04): pooled over every Bybit-tradable USDT perp the served ENTRY v1 model can score,
   minus a liquidity/listing-age filter fixed before the run, each symbol charged its OWN cost stack, does the frozen model reach a pooled
   mean net R per decision >= the deflated holdout bar on 2025-10-01..2026-10-31?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -139,3 +139,16 @@ ml_consumer:
   - ada_pullback_2h
   book: money
 last_dispatched_at: '2026-11-12T20:41:20+00:00'
+grading:
+  attested: RULE-RQ20261112-2e3b-01-ENTRY-POPULATION
+  auto: true
+  decision_rule_id: RULE-RQ20261112-2e3b-01-ENTRY-POPULATION
+  evidence:
+  - research/results/RQ-20261112-2e3b-01/43302779170.jsonl
+  graded_at: '2026-11-12'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
