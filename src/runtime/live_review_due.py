@@ -617,6 +617,23 @@ def _base_of(symbol: Any) -> str:
     return base
 
 
+def review_calendar_classes(symbol: Any, base: str, cc: Dict[str, Any], now: datetime) -> Set[str]:
+    """LTR-CALENDAR-CLASSES (b): the REVIEW-ONLY event classes for *symbol* from ``events.calendar`` in
+    config/live_trade_review.yaml -- ``review_classes_by_base[base]``, else
+    ``review_classes_by_asset_class[<asset class of its instrument profile>]``. An unprofiled symbol (or an
+    unreadable profile) gets none, so it stays could_not_look. The trader's event risk never reads this."""
+    by_base = cc.get("review_classes_by_base") or {}
+    if base in by_base:
+        return {str(c).lower() for c in by_base.get(base) or []}
+    try:
+        if profile_exchange(symbol) is None:
+            return set()
+    except Exception:  # noqa: BLE001  # allow-silent: no default; the event stays could_not_look with its reason
+        return set()
+    _, cls, _ = package_market_state(symbol, now)
+    return {str(c).lower() for c in (cc.get("review_classes_by_asset_class") or {}).get(cls) or []}
+
+
 def _is_perp(symbol: Any) -> bool:
     try:
         from src.runtime.execution_costs import is_perp
@@ -725,6 +742,7 @@ def market_events(row: Dict[str, Any], ctx: Optional[Dict[str, Any]],
     else:
         base = _base_of(sym)
         classes = {str(c).lower() for c in (cal.get("classes") or {}).get(base) or []}
+        classes |= review_calendar_classes(sym, base, cc, now)
         if not classes:
             miss("calendar", f"no event classes declared for {base}")
         else:

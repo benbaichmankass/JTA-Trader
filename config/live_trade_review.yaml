@@ -66,6 +66,29 @@ due:
       # impact >= min_impact, inside the next bar of the leg. A calendar whose
       # newest event is in the past is STALE: could_not_look, never "no event".
       min_impact: 0.8
+      # LTR-CALENDAR-CLASSES (b), manager decision 2026-11-12 12:38Z: a REVIEW-ONLY
+      # event-class map. Read by src/runtime/live_review_due.py alone (it decides
+      # when a live review is due, nothing else); the trader's event risk
+      # (src/news/news_events.py -> pipeline.py) reads only
+      # config/economic_calendar.yaml::symbol_event_classes and is unchanged.
+      # Classes for a symbol = the shared map's classes for its base UNION
+      # review_classes_by_base[base] if present, else
+      # review_classes_by_asset_class[asset class of its instrument profile].
+      # An UNPROFILED symbol gets no default and stays could_not_look (honest).
+      # BASIS: judgement of which scheduled US macro releases move each
+      # instrument, NOT an evidence record; a wrong class only adds or skips a
+      # review prompt. Filling the shared (trade-path) map is the separate
+      # Tier-3 proposal (a) on the row, evidence first.
+      review_classes_by_asset_class:
+        us_equity: [fomc, cpi, nfp, pce, ppi, gdp, ism, retail_sales]
+        crypto: [fomc, cpi]
+        cme_futures: [fomc, cpi, nfp, pce]
+      review_classes_by_base:
+        TLT: [fomc, cpi, nfp, pce, ppi, gdp, retail_sales, treasury_auction]
+        GLD: [fomc, cpi, pce, ppi, nfp]
+        IAUM: [fomc, cpi, pce, ppi, nfp]
+        GDX: [fomc, cpi, pce, ppi, nfp]
+        USO: [eia, opec, fomc, cpi]
     mechanics:
       # Journal half only: the exit loop is still writing telemetry for the
       # package (fresh within telemetry_max_age_minutes) but the trade row it
