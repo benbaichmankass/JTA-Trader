@@ -33,7 +33,7 @@ def env(tmp_path):
     health = {"doc": {"ok": 1}}
     t = [0.0]
     b = S.Broadcaster(db_path=lambda: str(dbp), ledger_path=lambda: led, health=lambda: dict(health["doc"]),
-                      clock=lambda: t[0])
+                      clock=lambda: t[0], pnl_snapshot=lambda: (None, float("inf")), pos_refresh=None)
     return b, conn, led, health, t
 
 
@@ -158,3 +158,120 @@ def test_route_is_mounted_and_status_answers():
     assert "/api/bot/stream" in paths and "/api/bot/stream/status" in paths
     r = c.get("/api/bot/stream/status")
     assert r.status_code == 200 and "sources" in r.json()
+
+
+def _pos(tid, pnl, src="broker", prov="estimated", open_r=None):
+    return {"id": tid, "account": "bybit_2", "symbol": "SOLUSDT", "side": "short", "qty": 1.0, "entryPrice": 100.0,
+            "unrealizedPnl": pnl, "unrealizedPnlSource": src, "unrealizedPnlProvenance": prov,
+            "r": {"openR": open_r} if open_r is not None else None}
+
+
+def test_pnl_frames_only_on_threshold_or_provenance_change(env):
+    b, conn, led, health, t = env
+    snap = {"rows": [_pos("7", 10.0, open_r=0.5)], "age": 3.0}
+    b._pnl_snapshot = lambda: (snap["rows"], snap["age"])
+    _step(b, t)                                     # prime: baseline only
+    assert "pnl" not in _types(b)
+    snap["rows"] = [_pos("7", 10.3)]
+    _step(b, t, 6)
+    assert "pnl" not in _types(b)                    # 0.3 < PNL_MIN_MOVE
+    snap["rows"] = [_pos("7", 11.0, open_r=0.6)]
+    _step(b, t, 6)
+    frames = [json.loads(raw.split(b"data: ", 1)[1]) for _, _, raw in b.ring]
+    p = [f for f in frames if f["type"] == "pnl"]
+    assert len(p) == 1 and p[0]["payload"]["unrealizedPnl"] == 11.0 and p[0]["payload"]["prev_unrealizedPnl"] == 10.0
+    assert p[0]["payload"]["unrealizedPnlProvenance"] == "estimated" and p[0]["payload"]["snapshot_age_s"] == 3.0
+    assert p[0]["payload"]["openR"] == 0.6 and p[0]["payload"]["as_of"].endswith("Z")
+    snap["rows"] = [_pos("7", 11.0, src="unavailable", prov="unverified")]
+    _step(b, t, 6)
+    assert _types(b).count("pnl") == 2               # provenance change pushes even with no move
+    _step(b, t, 2)
+    assert _types(b).count("pnl") == 2               # inside PNL_EVERY_S: not read again
+
+
+def test_pnl_no_snapshot_is_could_not_look_and_no_venue_call(env):
+    b, conn, led, health, t = env
+    calls = []
+    b._pnl_snapshot = lambda: calls.append(1) or (None, float("inf"))
+    _step(b, t)
+    _step(b, t, 6)
+    assert b.sources["pnl"]["read_state"] == "could_not_look" and "pnl" not in _types(b)
+    assert len(calls) == 2                           # one peek per 5 s, nothing else
+
+
+def test_default_pnl_snapshot_peeks_without_building(monkeypatch):
+    from src.web.api.routers import dashboard
+    built = []
+    monkeypatch.setattr(dashboard, "_build_positions", lambda *a, **k: built.append(1))
+    dashboard._POSITIONS_SWR.clear()
+    rows, age = S._default_pnl_snapshot()
+    assert rows is None and age == float("inf") and built == []
+    dashboard._POSITIONS_SWR._store(True, [_pos("1", 2.0)])
+    rows, age = S._default_pnl_snapshot()
+    assert rows[0]["id"] == "1" and age < 5 and built == []
+    dashboard._POSITIONS_SWR.clear()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("n_clients,max_builds", [(3, 4), (0, 0)])
+async def test_snapshot_kept_warm_o1_in_viewers(monkeypatch, n_clients, max_builds):
+    """3 clients for 60 s -> at most ~4 snapshot builds (one per 15 s, total); 0 clients -> 0 builds.
+    Goes through the REAL route path (dashboard.get_positions -> SWRCache.aget) with a counted build."""
+    import asyncio
+
+    from src.web.api import _swr
+    from src.web.api.routers import dashboard
+    t = [0.0]
+    builds = []
+
+    async def fake_build(include):
+        builds.append(t[0])
+        return [_pos("1", 1.0)]
+    monkeypatch.setattr(dashboard, "_build_positions", fake_build)
+    monkeypatch.setattr(dashboard, "_POSITIONS_SWR",
+                        _swr.SWRCache(name="positions-test", fresh_s=1.0, stale_s=120.0, clock=lambda: t[0]))
+    b = S.Broadcaster(clock=lambda: t[0], pnl_snapshot=lambda: (None, float("inf")))
+    for _ in range(n_clients):
+        b.clients.add(asyncio.Queue())
+    for _ in range(60):
+        t[0] += 1.0
+        await b.maybe_refresh_positions()
+        for _ in range(3):
+            await asyncio.sleep(0)
+    if b._pos_refresh_task:
+        await b._pos_refresh_task
+    for _ in range(3):
+        await asyncio.sleep(0)
+    assert len(builds) <= max_builds, builds
+    if n_clients:
+        assert len(builds) >= 3 and b.sources["pnl_refresh"]["read_state"] == "read"
+
+
+@pytest.mark.asyncio
+async def test_refresh_single_flight_with_rest_read(monkeypatch):
+    """A REST /positions read and the broadcaster's refresh in the same moment build ONCE."""
+    import asyncio
+
+    from src.web.api import _swr
+    from src.web.api.routers import dashboard
+    t = [100.0]
+    builds = []
+    gate = asyncio.Event()
+
+    async def slow_build(include):
+        builds.append(1)
+        await gate.wait()
+        return [_pos("1", 1.0)]
+    monkeypatch.setattr(dashboard, "_build_positions", slow_build)
+    monkeypatch.setattr(dashboard, "_POSITIONS_SWR",
+                        _swr.SWRCache(name="positions-test2", fresh_s=1.0, stale_s=120.0, clock=lambda: t[0]))
+    b = S.Broadcaster(clock=lambda: t[0], pnl_snapshot=lambda: (None, float("inf")))
+    b.clients.add(asyncio.Queue())
+    await b.maybe_refresh_positions()
+    rest = asyncio.ensure_future(dashboard.get_positions(include_paper=True, include_demo=False, response=None))
+    for _ in range(3):
+        await asyncio.sleep(0)
+    gate.set()
+    rows = await rest
+    await b._pos_refresh_task
+    assert len(builds) == 1 and rows[0]["id"] == "1"
