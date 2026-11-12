@@ -2,10 +2,15 @@ name: vm-net-diag
 
 # Tier-1 read-only network diagnostics for the trading-bot VM.
 #
-# Confirms whether port 8001 is reachable from the public internet and
-# what the VM-side network state looks like (without requiring sudo).
-# Distinguishes "service down" (handled by vm-web-api-recover) from
-# "service up but firewalled" (the latter requires a vm-net-fix follow-up).
+# Probes the API the way every client reaches it -- Caddy's HTTPS front,
+# https://ict-bot.duckdns.org/api/health -- and reports the VM-side network
+# state (without requiring sudo).
+#
+# SEC-8001-LOCKDOWN (operator decisions page m3, 2026-11-12): uvicorn binds
+# 127.0.0.1:8001 and no client calls :8001 from off the box. The raw
+# <VM>:<port> probe below is kept as an EXPOSURE check: after the lockdown its
+# expected result is "no connection" (curl exit 7/28). A 200 there means the
+# port is public again -- a regression, not a fix.
 #
 # Triggers:
 #   1. workflow_dispatch — operator clicks "Run workflow" in the UI.
@@ -20,7 +25,7 @@ on:
   workflow_dispatch:
     inputs:
       port:
-        description: "Port to probe (default 8001)"
+        description: "Raw port for the exposure check (default 8001; expected CLOSED)"
         required: false
         default: "8001"
   repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
@@ -56,19 +61,45 @@ jobs:
           fail=0
           [ -n "${NEED_VM_SSH_HOST}" ] || { echo "::error::secret VM_SSH_HOST not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
           exit "$fail"
-      - name: Probe public reachability from GitHub runner
+      - name: Probe the canonical HTTPS front from GitHub runner
+        id: https_probe
+        run: |
+          set +e
+          curl -sS --max-time 15 \
+            -o https_body.txt \
+            -w 'http_code=%{http_code}\nexitcode=%{exitcode}\ntime_total=%{time_total}\n' \
+            "https://ict-bot.duckdns.org/api/health" \
+            > https_meta.txt 2>&1
+          rc=$?
+          set -e
+          {
+            echo "## HTTPS front (GH runner -> https://ict-bot.duckdns.org/api/health)"
+            echo ""
+            echo '```'
+            echo "curl exit: $rc"
+            cat https_meta.txt
+            echo ""
+            echo "Body (first 500 bytes):"
+            head -c 500 https_body.txt 2>/dev/null || echo '(empty)'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "HTTPS_RC=$rc" >> "$GITHUB_ENV"
+
+      - name: Exposure check -- raw port from GitHub runner (expected CLOSED)
         id: public_probe
         run: |
           set +e
           curl -sS --max-time 10 \
             -o public_body.txt \
-            -w 'http_code=%{http_code}\nexitcode=%{exitcode}\ntime_total=%{time_total}\nremote_ip=%{remote_ip}\nremote_port=%{remote_port}\n' \
+            -w 'http_code=%{http_code}\nexitcode=%{exitcode}\ntime_total=%{time_total}\n' \
             "http://${VM_SSH_HOST}:${DASHBOARD_PORT}/api/health" \
             > public_meta.txt 2>&1
           rc=$?
+          # curl's error text names the host; this file is posted to a public issue.
+          sed -i "s/${VM_SSH_HOST//./\\.}/<vm>/g" public_meta.txt
           set -e
           {
-            echo "## Public reachability probe (GH runner -> ${VM_SSH_HOST}:${DASHBOARD_PORT})"
+            echo "## Exposure check, expected CLOSED (GH runner -> raw VM port ${DASHBOARD_PORT})"
             echo ""
             echo '```'
             echo "curl exit: $rc"
@@ -120,7 +151,7 @@ jobs:
           head -c 500 /tmp/h_loop 2>/dev/null; echo
           echo
 
-          echo "===== curl http://$PUBLIC_IP:$PORT/api/health (loopback via public IP) ====="
+          echo "===== curl http://<public-ip>:$PORT/api/health (expected refused: :$PORT binds 127.0.0.1) ====="
           curl -sS --max-time 8 -o /tmp/h_pub -w 'http=%{http_code} time=%{time_total}s\n' "http://$PUBLIC_IP:$PORT/api/health" || echo "(curl exit $?)"
           head -c 500 /tmp/h_pub 2>/dev/null; echo
           echo
@@ -202,6 +233,10 @@ jobs:
         with:
           script: |
             const fs = require('fs');
+            const httpsMeta = fs.existsSync('https_meta.txt') ? fs.readFileSync('https_meta.txt', 'utf8') : '(not run)';
+            const httpsBody = fs.existsSync('https_body.txt')
+              ? fs.readFileSync('https_body.txt', 'utf8').slice(0, 500)
+              : '(empty)';
             const publicMeta = fs.readFileSync('public_meta.txt', 'utf8');
             const publicBody = fs.existsSync('public_body.txt')
               ? fs.readFileSync('public_body.txt', 'utf8').slice(0, 500)
@@ -211,7 +246,16 @@ jobs:
             const body = [
               `**vm-net-diag** result. Run: ${runUrl}`,
               ``,
-              `### Public reachability (GH runner -> live VM:8001)`,
+              `### HTTPS front (GH runner -> https://ict-bot.duckdns.org/api/health)`,
+              '```',
+              `curl exit: ${process.env.HTTPS_RC}`,
+              httpsMeta,
+              ``,
+              `Body (first 500 bytes):`,
+              httpsBody || '(empty)',
+              '```',
+              ``,
+              `### Exposure check, expected CLOSED (GH runner -> raw VM port)`,
               '```',
               `curl exit: ${process.env.PUBLIC_RC}`,
               publicMeta,
