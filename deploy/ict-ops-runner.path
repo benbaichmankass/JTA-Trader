@@ -9,6 +9,8 @@
 
 [Unit]
 Description=ICT ops channel queue watch
+# OPS-RUNNER-START-LIMIT: never rate-limit the watch itself either (see ict-ops-runner.service).
+StartLimitIntervalSec=0
 
 [Path]
 DirectoryNotEmpty=/data/bot-data/runtime_logs/ops/queue
