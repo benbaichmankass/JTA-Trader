@@ -108,3 +108,4 @@
 - The open-set walk (§ 3c) was cut. The gate set is computed from a stale export (C2).
 - The ping went out as system-action #24957 (delivery not confirmed when this page was written).
 - H16 soak grading was not done.
+- **Late finding (2026-11-12 05:53Z):** the Actions backlog is stranded, not slow. 412 runs created up to 2026-11-11 20:53:30Z still read `queued`, and the cancel API refuses them with "has not been queued yet". Runs created after that start at once (6 in progress at 05:53Z). This PR's first CI runs were among the stranded ones. Measurement added to PI-20261104-COSTINFRA-0003.
