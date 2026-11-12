@@ -15,7 +15,7 @@ def _write(tmp: Path, rows) -> dict:
 
 
 def _rows(rec: dict):
-    return [json.loads(l) for l in Path(rec["records_file"]).read_text().splitlines() if l.strip()]
+    return [json.loads(ln) for ln in Path(rec["records_file"]).read_text().splitlines() if ln.strip()]
 
 
 def test_no_data_row_with_a_count_lands_with_n_null_and_the_count_in_population(tmp_path):
