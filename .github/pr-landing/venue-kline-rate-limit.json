@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "src/runtime/market_data.py is on the trade path (every signal builder and the exit-evaluation loop read candles through it) and deploy/ict-ml-decision-shadow.timer is a VM timer (Tier 2): one operator OK relayed by the manager. Bybit kline frames are shared across account keys, symbol spellings and limits; a post-close (bypass_cache) read reuses a Bybit frame only when it was fetched >= close+5 s and already holds the just-closed bar; single-flight per key. Non-Bybit clients unchanged. The observe-only shadow timer moves from +50 s to +3 min 20 s after each 15m boundary and retries a failed symbol once.",
+  "why": "Row VENUE-KLINE-RATE-LIMIT (PI-20261106-5A1BGFHC-0003, PI-20261104-GEVRW4ZM-0001, PI-20261103-SHADOWFETCH-0001): the bar-close kline burst trips Bybit retCode 10006 (30 cooldown starts and 380 'no candle data' strategy raises in 2026-11-11T14:59Z..2026-11-12T09:30Z)."
+}
