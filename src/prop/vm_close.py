@@ -228,7 +228,18 @@ def run_close_step(*, adapter: Any, page: Any, api: Any, cfg: Any, mode: str, st
         return res
     live = mode == "live"
     try:
-        tickets = [t for t in api.all_tickets(cfg.account_id) if t.get(KEY)]
+        from src.prop import strategy_exit_close as sec
+
+        tickets = []
+        for t in api.all_tickets(cfg.account_id):
+            if t.get(KEY):
+                tickets.append(t)
+                continue
+            # PROP-VM-STRATEGY-EXIT-CLOSE (operator 2026-11-12): the ticket's ORDER PACKAGE closed on a strategy
+            # decision -> a full close with the deterministic id pkgexit-<ticket> (idempotent per package + ticket).
+            synth = sec.vm_synth_request(t)
+            if synth is not None:
+                tickets.append({**t, KEY: synth})
     except Exception as exc:  # noqa: BLE001
         res.alerts.append(f"close: ticket read failed ({type(exc).__name__}); no close this tick")
         return res
@@ -241,13 +252,24 @@ def run_close_step(*, adapter: Any, page: Any, api: Any, cfg: Any, mode: str, st
     if not pending:
         return res
     try:
-        positions = adapter.read_positions(page)
         journal = api.open_fills(cfg.account_id)
     except Exception as exc:  # noqa: BLE001
-        res.alerts.append(f"close: venue/journal read failed ({type(exc).__name__}); {len(pending)} close request(s)"
+        res.alerts.append(f"close: journal read failed ({type(exc).__name__}); {len(pending)} close request(s)"
                           " retried next tick")
         return res
     by_tid = {str(j.get("ticket_id")): j for j in journal if j.get("ticket_id")}
+    # A strategy-exit request on a ticket with no open journal row (closed long ago, never filled) is dropped here,
+    # before any venue read, so old tickets never cost a terminal read.
+    pending = [t for t in pending if not t[KEY].get("synthetic") or str(t.get("ticket_id")) in by_tid
+               or int((done.get(t[KEY]["id"]) or {}).get("attempts") or 0) > 0]
+    if not pending:
+        return res
+    try:
+        positions = adapter.read_positions(page)
+    except Exception as exc:  # noqa: BLE001
+        res.alerts.append(f"close: venue read failed ({type(exc).__name__}); {len(pending)} close request(s)"
+                          " retried next tick")
+        return res
     for t in pending:
         tid, req = str(t.get("ticket_id")), dict(t[KEY])
         rid, frac = req["id"], _f(req.get("fraction"))
@@ -261,6 +283,10 @@ def run_close_step(*, adapter: Any, page: Any, api: Any, cfg: Any, mode: str, st
             side = pe._dir((j or {}).get("direction") or t.get("direction"))
             mine = [p for p in positions if venue and p.symbol.upper() == venue and p.side == side]
             prev = done.get(rid) or {}
+            if req.get("synthetic") and (j is None or len(mine) != 1) and not int(prev.get("attempts") or 0):
+                # A strategy exit whose venue is already flat (or not this account's position): nothing to close, no
+                # alert, no record -- the reconcile journals a flat venue on its own.
+                continue
             if j is None and frac is None and int(prev.get("attempts") or 0) > 0:
                 outcome.update(result="closed", why="journal row closed since the last attempt (venue flat)")
             elif j is None:
