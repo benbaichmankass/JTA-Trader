@@ -60,6 +60,8 @@ jobs:
           sparse-checkout: |
             /scripts/ops/pr_landing_hold_alarm.py
             /.github/pr-landing/
+            /docs/claude/work/checklist/
+            /docs/claude/work/pipeline/
           sparse-checkout-cone-mode: false
 
       - uses: actions/setup-python@v5
@@ -69,6 +71,10 @@ jobs:
       - name: Grade every PR associated with this push
         env:
           GH_TOKEN: ${{ github.token }}
+          # The ping issue must be opened with a PAT: an issue opened with GITHUB_TOKEN starts no workflow, so
+          # system-actions never ran and no alarm was ever delivered (PI-20261112-BOTPING-0001; #25058 #25061
+          # #25062 #25065 created 0 runs). Falls back to GITHUB_TOKEN only if the secret is unset.
+          PING_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
           REPO: ${{ github.repository }}
           COMMITS_JSON: ${{ toJSON(github.event.commits) }}
         run: |
@@ -127,9 +133,18 @@ jobs:
               reviews_arg="UNREADABLE"
             fi
 
+            # The PR object: its body may cite the operator decision, its labels may carry operator-approved.
+            pr_path="/tmp/pr-${pr_number}.json"
+            if gh api "repos/${REPO}/pulls/${pr_number}" > "$pr_path" 2>/dev/null \
+               && python3 -c "import json; d=json.load(open('$pr_path')); assert isinstance(d, dict)" 2>/dev/null; then
+              pr_arg="$pr_path"
+            else
+              pr_arg="UNREADABLE"
+            fi
+
             set +e
             out=$(python3 scripts/ops/pr_landing_hold_alarm.py \
-              --decl-json "$decl_arg" --reviews-json "$reviews_arg" \
+              --decl-json "$decl_arg" --reviews-json "$reviews_arg" --pr-json "$pr_arg" \
               --pr-number "$pr_number" --pr-title "$pr_title")
             rc=$?
             set -e
@@ -138,7 +153,7 @@ jobs:
 
             if [ "$rc" -eq 2 ]; then
               ping_msg=$(echo "$out" | tail -n1)
-              gh issue create --label system-action \
+              GH_TOKEN="${PING_TOKEN:-$GH_TOKEN}" gh issue create --label system-action \
                 --title "send-ping: PR #${pr_number} hold-merge alarm (JC-CA-04)" \
                 --body "$(printf 'action: send-ping\npriority: high\nmessage: %s (pr-landing-hold-merge-alarm, run %s)\nreason: JC-CA-04 A09-hold-merge-unenforced -- tier 2/3 landing:hold PR merged with no recorded human approval' "$ping_msg" "${{ github.run_id }}")"
             elif [ "$rc" -eq 3 ]; then

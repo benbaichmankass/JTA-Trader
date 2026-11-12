@@ -59,6 +59,9 @@ EXPECTED_ACTIONS = {
     "gateway-logs": "gateway_logs.sh",
     # Read-only restart forensics for the ib-gateway container + its watchdog/reset timers.
     "gateway-forensics": "gateway_forensics.sh",
+    # SEC-VM-POSTURE-READ (2026-11-11): read-only posture of the trader AND
+    # the gateway, piped over ssh stdin; counts, modes, fingerprints only.
+    "security-posture-report": "security_posture_report.sh",
     "gateway-disk-report": "gateway_disk_report.sh",
     "gateway-disk-cleanup": "gateway_disk_cleanup.sh",
     "inspect-closed-pnl": "inspect_closed_pnl_action.sh",
@@ -310,6 +313,7 @@ EXPECTED_ACTIONS = {
     # 2026-11-05 — BREAKOUT-UNRECORDED-1101: journal ONE never-filled prop ticket
     # as `skipped` via ingest_report. DRY-RUN by default; apply needs confirm: <ticket_id>.
     "prop-report-skip": "prop_report_skip_action.sh",
+    "prop-report-open": "prop_report_open_action.sh",
     # 2026-08-20 — prop-journal hygiene for fills admitted with NO direction
     # (BL-20260820-PROP-FILL-DIRECTION-ADMISSION-GAP). _position_key needs
     # (account, symbol, direction) but ingest_report only validates the first
@@ -391,6 +395,8 @@ EXPECTED_ACTIONS = {
     # 2026-10-24 — AMEND-SL-ACTION: tighten one live Bybit stop, venue +
     # journal (order_packages.sl + trades.stop_loss) together; refuses looser.
     "amend-position-sl": "amend_position_sl_action.sh",
+    # 2026-11-11 — PROP-BRACKET-APPLY: record a TP/SL request on a VM-prop ticket; the executor applies it.
+    "amend-prop-bracket": "amend_prop_bracket_action.sh",
     # 2026-10-25 — LTR-6R-APPLY-PATH: READ-ONLY per-account dry-run of the
     # live-review apply path (scripts/ops/live_review_apply.py --dry-run).
     "live-review-dry-run": "live_review_dry_run_action.sh",
@@ -495,6 +501,7 @@ TIER_2_ACTIONS = {
     "prop-ticket-reissue",
     "prop-report-close",
     "prop-report-skip",
+    "prop-report-open",
     "repair-prop-fill-direction",
     "breakout-login-check",
     "breakout-terminal-probe",
@@ -517,6 +524,7 @@ TIER_2_ACTIONS = {
     "backfill-package-risk-meta",
     "relink-orphan-trade-5209",
     "amend-position-sl",
+    "amend-prop-bracket",
     "live-review-dry-run",
     "live-review-apply",
     "run-desk-judge",
@@ -1183,3 +1191,25 @@ def test_prune_db_backups_forwards_every_action_var_its_script_reads() -> None:
     assert {"ACTION_APPLY", "ACTION_DAYS", "ACTION_KEEP"} <= read & forwarded
     assert {"ACTION_FILE", "ACTION_CONFIRM"} <= read, "script no longer reads file/confirm?"
     assert not (read - forwarded), f"read but not forwarded: {sorted(read - forwarded)}"
+
+
+def test_security_posture_report_is_read_only_and_never_prints_key_material():
+    """SEC-VM-POSTURE-READ: the posture script reads, masks and fingerprints.
+
+    Pinned properties: no write/restart/package verbs; key lines go through
+    ssh-keygen -l and only bits/fingerprint/type are printed; output is masked.
+    """
+    import re
+    from pathlib import Path
+
+    src = (Path(__file__).resolve().parents[2]
+           / "scripts/ops/security_posture_report.sh").read_text()
+    code = "\n".join(ln for ln in src.splitlines() if not ln.lstrip().startswith("#"))
+    for verb in (r"\brm\b", r"systemctl (restart|stop|start|enable|disable)",
+                 r"apt(-get)? (install|upgrade|remove|update)", r"\bchmod\b",
+                 r"\bchown\b", r"fail2ban-client (set|unban|stop)", r">\s*/etc/"):
+        assert not re.search(verb, code), verb
+    assert "ssh-keygen -lf -" in code
+    assert "awk '{print $1, $2, $NF}'" in code  # bits, fingerprint, (TYPE)
+    assert "} 2>&1 | mask" in code
+    assert "Banned IP list" not in code

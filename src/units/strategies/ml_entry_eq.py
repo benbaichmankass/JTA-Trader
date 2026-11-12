@@ -60,22 +60,25 @@ def pool_symbols() -> List[str]:
     return [str(s) for s in load_model()["meta"]["pool_symbols"]]
 
 
-def score(row: Mapping[str, float], model: Dict[str, Any]) -> float:
+def score_rows(rows: List[Mapping[str, float]], model: Dict[str, Any]) -> List[float]:
+    """Mean-of-boosters prediction for MANY rows in one predict call per booster (a row's prediction does not depend on the other rows)."""
+    if not rows:
+        return []
     cols = model["meta"]["features"]
-    x = pd.DataFrame([[row[k] for k in cols]], columns=cols)
+    x = pd.DataFrame([[r[k] for k in cols] for r in rows], columns=cols)
     bs = model.get("boosters") or [model["long"]]
-    return float(sum(float(b.predict(x)[0]) for b in bs) / len(bs))  # provenance: predict -- live decision scoring (mean of the N boosters)
+    preds = sum(b.predict(x).astype(float) for b in bs) / len(bs)  # provenance: predict -- live decision scoring (mean of the N boosters)
+    return [float(v) for v in preds]
 
 
-def order_package(cfg: dict, snapshot: Mapping[str, Any], model: Optional[Dict[str, Any]] = None) -> dict:
-    """The LONG package for ``cfg['symbol']`` from the pool snapshot, or ``ValueError(<named reason>)`` for a non-actionable tick."""
-    symbol = str(cfg.get("symbol") or "")
-    model = model or load_model(artifact_path(cfg))
-    meta = model["meta"]
+def score(row: Mapping[str, float], model: Dict[str, Any]) -> float:
+    return score_rows([row], model)[0]
+
+
+def _precheck(cfg: Mapping[str, Any], snapshot: Mapping[str, Any], symbol: str, meta: Mapping[str, Any]) -> Dict[str, Any]:
+    """Everything before the model call for ONE symbol: the feature row, ATR/close and the session refusal. Raises ``ValueError(<named reason>)``."""
     br = meta["bracket"]
     bc = pd.Timestamp(snapshot["bar_close"])
-    if not F.is_decision_close(bc):
-        raise ValueError("not_a_decision_bar")
     row = F.feature_vector(snapshot, symbol, features=meta["features"])
     if row is None:
         raise ValueError("symbol_not_in_snapshot")
@@ -87,7 +90,14 @@ def order_package(cfg: dict, snapshot: Mapping[str, Any], model: Optional[Dict[s
     sess = PR.session_refusal(cfg.get("session", "auto"), symbol, bc, int(br["horizon_bars"]) * 60)
     if sess:
         raise ValueError(sess)
-    pred = score(row, model)
+    return {"row": row, "atr": atr, "entry": entry}
+
+
+def _package(cfg: Mapping[str, Any], snapshot: Mapping[str, Any], symbol: str, meta: Mapping[str, Any], pre: Mapping[str, Any], pred: float) -> dict:
+    """The LONG package for one pre-checked symbol and its model score, or ``ValueError(<named reason>)``."""
+    br = meta["bracket"]
+    bc = pd.Timestamp(snapshot["bar_close"])
+    row, atr, entry = pre["row"], pre["atr"], pre["entry"]
     tau = float(meta["tau"])
     if not pred > tau:
         raise ValueError(f"below_tau:pred={pred:.4f};tau={tau:.4f};bar={bc.isoformat()}")
@@ -104,6 +114,43 @@ def order_package(cfg: dict, snapshot: Mapping[str, Any], model: Optional[Dict[s
                  "max_hold_min": int(br["horizon_bars"]) * 60, "pool_covered": snapshot.get("covered"), "pool_size": snapshot.get("pool_size"),
                  "features": {k: round(float(v), 6) for k, v in row.items()}},
     }
+
+
+def score_pool(cfg: Mapping[str, Any], snapshot: Mapping[str, Any], symbols: List[str], model: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Score EVERY symbol in ``symbols`` at the snapshot's decision close in ONE batched predict per booster (row ML-ENTRY-EQ-STRUCT-FULL-POOL).
+
+    Returns ``{symbol: package_dict | "<named refusal reason>"}`` -- the same packages and the same reasons ``order_package`` gives one symbol at a
+    time (``order_package`` IS this function on one symbol, so the two cannot drift). Raises ``ValueError("not_a_decision_bar")`` for the whole pool
+    when the snapshot's close is not a decision close. A booster's prediction for a row does not depend on the other rows in the batch."""
+    model = model or load_model(artifact_path(cfg))
+    meta = model["meta"]
+    if not F.is_decision_close(pd.Timestamp(snapshot["bar_close"])):
+        raise ValueError("not_a_decision_bar")
+    out: Dict[str, Any] = {}
+    pres: Dict[str, Dict[str, Any]] = {}
+    for s in symbols:
+        try:
+            pres[str(s)] = _precheck(cfg, snapshot, str(s), meta)
+        except ValueError as exc:
+            out[str(s)] = str(exc)
+    if pres:
+        names = list(pres)
+        preds = score_rows([pres[s]["row"] for s in names], model)
+        for s, p in zip(names, preds):
+            try:
+                out[s] = _package(cfg, snapshot, s, meta, pres[s], float(p))
+            except ValueError as exc:
+                out[s] = str(exc)
+    return out
+
+
+def order_package(cfg: dict, snapshot: Mapping[str, Any], model: Optional[Dict[str, Any]] = None) -> dict:
+    """The LONG package for ``cfg['symbol']`` from the pool snapshot, or ``ValueError(<named reason>)`` for a non-actionable tick."""
+    symbol = str(cfg.get("symbol") or "")
+    res = score_pool(cfg, snapshot, [symbol], model)[symbol]
+    if isinstance(res, str):
+        raise ValueError(res)
+    return res
 
 
 def monitor(cfg, candles_df, open_pkg):  # noqa: ARG001 -- canonical signature

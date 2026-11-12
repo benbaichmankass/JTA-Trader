@@ -226,7 +226,8 @@ def vm_pass(ref: str, *, git: Git = _git, apply_fn: Callable[[Dict[str, Any]], D
         rec: Dict[str, Any] = {"id": rid, "ref": ref, "path": path, "seen_at": first.isoformat()}
         if isinstance(record, dict):
             rec.update({k: record.get(k) for k in ("order_package_id", "action", "level", "fraction", "scope",
-                                                   "dry_run", "directed_by", "operator_quote", "created_at")})
+                                                   "dry_run", "directed_by", "operator_quote", "created_at",
+                                                   "review_id", "approval_token")})
         probs = da.problems(record, path=path)
         res: Dict[str, Any] = {}
         if probs:
@@ -276,6 +277,51 @@ def vm_pass(ref: str, *, git: Git = _git, apply_fn: Callable[[Dict[str, Any]], D
                   seeded=first_ever, exit=EXIT_UNREADABLE if pending else min(worst, EXIT_REFUSED))
     _write_json(status_path, status)
     return status
+
+
+# --------------------------------------------------------------------------- VM side: the local spool
+
+SPOOL_REF = "spool"
+
+
+def spool_git(spool: Path) -> Git:
+    """A read-only stand-in for ``git`` over a LOCAL spool tree (TRADE-ACTION-DIRECT-PATH phase 1): it answers the
+    two calls :func:`vm_pass` makes (``ls-tree --name-only <ref> <dir>/`` and ``show <ref>:<path>``) from files, so an
+    operator approval tapped on the VM runs through the SAME pass, state file, receipts, retries and ping as a
+    record pushed to ``directed/actions``, with no git hop. A record id handled here is ``seen`` in that one
+    state file, so a later git copy of it can never be applied twice."""
+    def _g(*args: str, **_: Any) -> Tuple[int, str]:
+        if args[:2] == ("ls-tree", "--name-only") and len(args) == 4:
+            d = spool / args[3].rstrip("/")
+            if not d.is_dir():
+                return 0, ""
+            return 0, "\n".join(f"{args[3].rstrip('/')}/{p.name}" for p in sorted(d.glob("*.json")))
+        if args[:1] == ("show",) and len(args) == 2 and ":" in args[1]:
+            try:
+                return 0, (spool / args[1].split(":", 1)[1]).read_text()
+            except OSError as exc:
+                return 1, str(exc)
+        return 1, f"spool_git: unsupported {args[:2]}"
+    return _g
+
+
+def spool_pass(spool: Path, *, apply_fn: Callable[[Dict[str, Any]], Dict[str, Any]] = _apply_record,
+               ping: Callable[[Dict[str, Any], Dict[str, Any], str], None] = _ping,
+               now_fn: Callable[[], datetime] = _now, logs: Optional[Path] = None) -> Dict[str, Any]:
+    """Run :func:`vm_pass` over the local spool, then move every record the pass marked ``seen`` to
+    ``<spool>/handled/`` (a pending retry or venue deferral stays put and is retried by the next pass)."""
+    d = logs or log_dir()
+    st = vm_pass(SPOOL_REF, git=spool_git(spool), apply_fn=apply_fn, ping=ping, now_fn=now_fn, logs=d)
+    seen = ((_load(d / "state.json") or {}).get("seen") or {})
+    src_dir, done_dir = spool / da.RECORDS_DIR, spool / "handled"
+    moved = 0
+    for p in sorted(src_dir.glob("*.json")) if src_dir.is_dir() else []:
+        if p.stem in seen:
+            done_dir.mkdir(parents=True, exist_ok=True)
+            os.replace(p, done_dir / p.name)
+            moved += 1
+    st["spool_moved"] = moved
+    return st
 
 
 # --------------------------------------------------------------------------- manager side
@@ -422,11 +468,18 @@ def main(argv: Optional[List[str]] = None) -> int:
     s.add_argument("--wait", type=float, default=240.0, help="seconds to poll the receipt (0 = do not wait)")
     v = sub.add_parser("vm-pass", help="(VM) handle every new record at a pinned tip")
     v.add_argument("--ref", required=True)
+    sp = sub.add_parser("spool-pass", help="(VM) handle every record in the local operator-approval spool")
+    sp.add_argument("--spool", default=None, help="default: runtime_logs/trade_approvals/spool")
     r = sub.add_parser("receipt", help="read one record's receipt")
     r.add_argument("--id", required=True)
     a = ap.parse_args(argv)
     if a.cmd == "vm-pass":
         st = vm_pass(a.ref)
+        print(json.dumps(st, default=str))
+        return int(st.get("exit") or 0)
+    if a.cmd == "spool-pass":
+        from src.runtime import trade_approvals
+        st = spool_pass(Path(a.spool) if a.spool else trade_approvals.spool_root())
         print(json.dumps(st, default=str))
         return int(st.get("exit") or 0)
     if a.cmd == "receipt":

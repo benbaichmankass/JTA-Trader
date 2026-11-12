@@ -46,10 +46,10 @@ on:
         description: "true = report current shape + plan only, no stop/resize"
         required: false
         default: "true"
-  issues:
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
     # `opened` only — single fire per create-with-label dispatch (2026-06-10);
     # listening to `labeled` too spawned a redundant second run.
-    types: [opened]
+    types: [vm-resize-live]
 
 permissions:
   contents: read
@@ -63,10 +63,10 @@ jobs:
   resize:
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       (github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'vm-resize-live'))
+      (github.event_name == 'repository_dispatch' &&
+       (github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'vm-resize-live'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -84,7 +84,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Dedup — bail if a bot comment already exists
-        if: github.event_name == 'issues'
+        if: github.event_name == 'repository_dispatch'
         id: dedup
         uses: actions/github-script@v7
         with:
@@ -92,7 +92,7 @@ jobs:
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               per_page: 100,
             });
             const hasBotComment = comments.some(
@@ -102,9 +102,9 @@ jobs:
 
       - name: Parse target from issue body
         id: parse
-        if: github.event_name == 'issues' && steps.dedup.outputs.skip != 'true'
+        if: github.event_name == 'repository_dispatch' && steps.dedup.outputs.skip != 'true'
         env:
-          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_BODY: ${{ github.event.client_payload.issue.body }}
         run: |
           set -euo pipefail
           ocpus="$(printf '%s' "${ISSUE_BODY}" | awk -F: '/^[[:space:]]*ocpus[[:space:]]*:/{gsub(/[[:space:]]/,"",$2);print $2;exit}')"
@@ -208,7 +208,7 @@ jobs:
           cat /tmp/verify.txt || true
 
       - name: Post result to issue
-        if: github.event_name == 'issues' && steps.dedup.outputs.skip != 'true' && always()
+        if: github.event_name == 'repository_dispatch' && steps.dedup.outputs.skip != 'true' && always()
         uses: actions/github-script@v7
         with:
           script: |
@@ -228,10 +228,10 @@ jobs:
             ].join('\n');
             await github.rest.issues.createComment({
               owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number, body
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), body
             });
             await github.rest.issues.update({
               owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               state: 'closed', state_reason: ok ? 'completed' : 'not_planned'
             });

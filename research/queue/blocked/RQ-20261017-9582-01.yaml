@@ -81,12 +81,8 @@ related:
 - scripts/research/pairs_configured_stage0.py
 - src/units/strategies/pairs_engine.py
 blocked_review:
-  by: RESEARCH-OPS-20261101-0940
+  by: RESEARCH-OPS-20261111-2049
   disposition: kept
-  due_by: '2026-11-15'
-  note: 'blocker row(s) read done/landed_unproven (PAIRS-R-SCALE=landed_unproven) but the unit is NOT
-    dispatchable as authored or its own clears_when is unverified (dispatcher dry run 2026-11-01: missing
-    run.workflow/lands.store, or missing run.inputs.research_unit, or unsupported design ''paired'', or
-    the stated lever not confirmed built). Needs a run-spec/inputs repair by an owner before it can unlock;
-    not unlocked blind.'
-  reviewed: '2026-11-01'
+  due_by: '2026-11-25'
+  reviewed: '2026-11-11'
+  note: 're-scoped: #18648 IS merged (PAIRS-R-SCALE done) so the first blocker is cleared; the second is NOT built (grep -c entry-trigger scripts/backtest_pairs.py scripts/research/pairs_configured_stage0.py = 0). Lever owner moved from the done row PAIRS-R-SCALE to the new row PAIRS-FIXED-BETA-ENTRY-TRIGGER (filed once, tier 1). Re-dated, not dropped.'

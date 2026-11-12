@@ -51,8 +51,8 @@ on:
   schedule:
     - cron: "30 22 * * *"
   workflow_dispatch:
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [econ-calendar-produce-now]
 
 permissions:
   contents: write
@@ -67,9 +67,9 @@ jobs:
     if: |
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       github.event.issue.user.login == github.repository_owner &&
-       contains(github.event.issue.labels.*.name, 'econ-calendar-produce-now'))
+      (github.event_name == 'repository_dispatch' &&
+       github.event.client_payload.issue.user.login == github.repository_owner &&
+       contains(github.event.client_payload.issue.labels.*.name, 'econ-calendar-produce-now'))
     runs-on: ubuntu-latest
     timeout-minutes: 95  # was 65: shared commit-to-main wait 50->80 (W41)
     steps:
@@ -136,7 +136,7 @@ jobs:
           verify-merged: "true"
 
       - name: Comment + close issue (issue-driven path)
-        if: github.event_name == 'issues'
+        if: github.event_name == 'repository_dispatch'
         uses: actions/github-script@v7
         env:
           SUMMARY: ${{ steps.produce.outputs.summary }}
@@ -159,9 +159,9 @@ jobs:
             ].join('\n');
             await github.rest.issues.createComment({
               owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number, body,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), body,
             });
             await github.rest.issues.update({
               owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number, state: 'closed',
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), state: 'closed',
             });

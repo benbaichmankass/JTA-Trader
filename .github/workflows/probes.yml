@@ -54,8 +54,8 @@ on:
     # # morning renders against probe results from the same morning.
     # - cron: "20 5 * * *"
   workflow_dispatch:
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [probes-now]
 
 permissions:
   contents: write
@@ -75,9 +75,9 @@ jobs:
     if: |
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       github.event.issue.user.login == github.repository_owner &&
-       contains(github.event.issue.labels.*.name, 'probes-now'))
+      (github.event_name == 'repository_dispatch' &&
+       github.event.client_payload.issue.user.login == github.repository_owner &&
+       contains(github.event.client_payload.issue.labels.*.name, 'probes-now'))
     runs-on: ubuntu-latest
     # BUDGET = work + wait + slack. Sized against the DECLARED bound, not
     # today's row count: run_probes.py allows DEFAULT_TIMEOUT_S=120 per
@@ -211,7 +211,7 @@ jobs:
           refresh-command: python3 scripts/ops/render_due_list.py --write
 
       - name: Comment + close issue (issue-driven path)
-        if: github.event_name == 'issues'
+        if: github.event_name == 'repository_dispatch'
         uses: actions/github-script@v7
         env:
           PROBE_MD: ${{ steps.run.outputs.md }}
@@ -220,9 +220,9 @@ jobs:
             const body = '🟢 **probes** run complete.\n\n' + (process.env.PROBE_MD || '(no output captured)');
             await github.rest.issues.createComment({
               owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number, body,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), body,
             });
             await github.rest.issues.update({
               owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number, state: 'closed',
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), state: 'closed',
             });

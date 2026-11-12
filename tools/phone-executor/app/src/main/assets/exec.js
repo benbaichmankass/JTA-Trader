@@ -6,7 +6,7 @@
   // PHONE-EXEC-OBSERVABLE-1018: this file is also served SIGNED by our own API and swapped in at runtime
   // (RemoteJs.kt): a newer version replaces the installed helpers on the next ensure(); the same version is
   // never injected twice. Bump on every change (CI signs the file; the app pins by version).
-  var EXEC_VERSION = "2026-11-09.1";
+  var EXEC_VERSION = "2026-11-11.1";
   if (window.__ex && window.__ex.version === EXEC_VERSION) return;
   function hostOk() { return /(^|\.)breakoutprop\.com$/.test(location.hostname || ""); }
   function vis(el) { if (!el) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }
@@ -574,7 +574,14 @@
       // "no positions". Page-wide text is never enough (review of #17745: a "no positions" string elsewhere would
       // read as flat and close every open journal row).
       var panels = all("[role=tabpanel]"), panelEmpty = panels.length === 1 && emptyRe.test(t(panels[0]));
-      if (hits.length === 0 && (count === 0 || (count === null && panelEmpty))) return {state: "read", rows: [], count: count, headers: []};
+      // PHONE-LIVE-ACCOUNT-FEED (2026-11-11): Breakout's Trade view has no tabpanel; its list sits in ONE
+      // <div role="region" aria-label="Positions"> whose own <span role="status"> says "No positions." (capture
+      // entry-prop-manual-c1391d5720b1 008, fixture breakout-trade-view-no-open-orders-panel). A region LABELLED by
+      // this tab's own name is the panel's evidence too; page-wide text still never is. Until this, every empty read
+      // posted no_table, so the server could not mark the account flat (cushion_unknown refused an entry 2026-11-10).
+      var regions = all("[role=region]").filter(function (rg) { return tabRe.test((rg.getAttribute("aria-label") || "").trim()); });
+      var regionEmpty = regions.length === 1 && emptyRe.test(t(regions[0]));
+      if (hits.length === 0 && (count === 0 || (count === null && (panelEmpty || regionEmpty)))) return {state: "read", rows: [], count: count, headers: [], empty_by: panelEmpty ? "tabpanel" : (count === 0 ? "count" : "region")};
       return {state: hits.length ? "ambiguous" : "no_table", tables: hits.length, count: count,
         headers: hits.length ? masked(hits[0].hs) : [], controls: controlsDump()};
     }

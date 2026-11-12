@@ -84,7 +84,8 @@ from src.prop.platform.dxtrade import ROLLOUT_MAX_TIGHTEN_FRACTION, ModifyRollou
 from src.prop.prop_executor import CycleResult, ExecutorConfig, _dir, _f, _parse_ts, _report
 from src.research.trail_levers import effective_trail_mult
 from src.runtime.monitor_verdict import MEANINGFUL_MODIFY_REL_TOL
-from src.runtime.tp_revision import declared_rule, plan_tp_revision
+from src.runtime.tp_revision import (TpRevision, clamp_to_venue_cap, declared_rule, plan_tp_revision,
+                                    tp_revision_rejection)
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 STRATEGIES_PATH = _REPO_ROOT / "config" / "strategies.yaml"
@@ -112,6 +113,38 @@ class TrailPlan:
 def _num(cfg: Mapping[str, Any], key: str, default: float = 0.0) -> float:
     v = _f(cfg.get(key))
     return default if v is None else v
+
+
+#: PROP-TRAIL-BAD-CANDLE-EXT (MEASURED 2026-11-11 18:03Z, ict-prop-executor@tradeify_1 / @velotrade_1): the live replay
+#: of the SOL short (entry 87.64) logged ext 22.93 / mfe_r 44.18 / structure_tp 74.19, while the SAME code on the web
+#: API's candles for SOLUSDT 4h (min low 81.27 over 300 bars, read via /api/bot/candles) gives ext 81.27 / mfe_r 4.35 /
+#: structure_tp 84.94. A bar below half or above twice the ticket's entry since the signal is not a real move for a
+#: managed trade; the plan SKIPS (no SL step, no TP step) and says why. Bounds are deliberately wide: they catch a wrong
+#: feed, never a real trend.
+IMPLAUSIBLE_FEED = "candle feed implausible"
+FEED_LOW_FRAC, FEED_HIGH_MULT = 0.5, 2.0
+
+
+def implausible_feed(bars: pd.DataFrame, entry: float) -> Optional[str]:
+    """None when every bar since the signal sits inside [0.5 x entry, 2 x entry]; else why (pure)."""
+    if bars is None or len(bars) == 0 or not entry or entry <= 0:
+        return None
+    lo, hi = float(bars["low"].min()), float(bars["high"].max())
+    if lo < FEED_LOW_FRAC * entry:
+        return f"bar low {lo:g} < {FEED_LOW_FRAC:g} x entry {entry:g}"
+    if hi > FEED_HIGH_MULT * entry:
+        return f"bar high {hi:g} > {FEED_HIGH_MULT:g} x entry {entry:g}"
+    return None
+
+
+def feed_summary(bars: pd.DataFrame) -> Dict[str, Any]:
+    """Provenance for a skipped plan: how many bars, their span, the extremes (so the bad bar is findable)."""
+    try:
+        return {"n": int(len(bars)), "first": str(bars["timestamp"].iloc[0]), "last": str(bars["timestamp"].iloc[-1]),
+                "min_low": float(bars["low"].min()), "max_high": float(bars["high"].max()),
+                "min_low_at": str(bars.loc[bars["low"].idxmin(), "timestamp"])}
+    except Exception:  # noqa: BLE001
+        return {"n": None}
 
 
 def _closed_bars(candles: pd.DataFrame, start: datetime, tf_min: int, now: datetime) -> pd.DataFrame:
@@ -235,6 +268,10 @@ def plan_trail(*, leg: Mapping[str, Any], direction: str, entry: float, initial_
     if str(leg.get("decision_bar") or "forming").lower() != "closed":
         start = start + timedelta(minutes=tf_min)
     bars = _closed_bars(candles, start, tf_min, now)
+    bad = implausible_feed(bars, entry)
+    if bad:
+        # PROP-TRAIL-BAD-CANDLE-EXT: never step a stop or a target from a feed that cannot be this symbol's.
+        return TrailPlan("skip", f"{IMPLAUSIBLE_FEED}: {bad}", detail={"feed": feed_summary(bars)})
     long_ = direction == "long"
 
     decay_tight = _num(leg, "trail_decay_tight_mult")
@@ -530,6 +567,20 @@ def run_trail_step(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mo
         res.log("trail_plan", ticket_id=tid, venue=venue, action=plan.action, why=plan.why,
                 resting_sl=p.stop_loss, new_sl=plan.sl, replay_sl=plan.replay_sl, bars=plan.bars,
                 close_lever=plan.close_lever, **plan.detail)
+        if plan.action == "skip" and plan.why.startswith(IMPLAUSIBLE_FEED):
+            # No SL step AND no TP step from this feed (the TP step below would read the same bars).
+            if not tst.get("feed_alerted"):
+                res.alerts.append(f"{tid}: {venue} trail skipped: {plan.why} (feed {plan.detail.get('feed')}); "
+                                  "stops and targets stay as they rest until the feed is sane")
+                tst["feed_alerted"] = True
+            if _f(t.get("tp_target")) is not None:
+                # PROP-BRACKET-APPLY: a pinned TP reads no candles (only the venue quote), so a corrupt feed does
+                # not block it; only the stop-trailing stays off.
+                _tp_step(p=p, leg=leg, tid=tid, venue=venue, bot_sym=bot_sym, entry=entry,
+                         initial_sl=isl, signal_time=sig_t, candles=None, tst=tst,
+                         tp_target=_f(t.get("tp_target")))
+            return
+        tst.pop("feed_alerted", None)
         if plan.close_lever and not tst.get("close_lever_alerted"):
             res.alerts.append(
                 f"{tid}: {venue} declared close lever `{plan.close_lever}` WOULD exit now "
@@ -563,7 +614,8 @@ def run_trail_step(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mo
             # TP-revision rule may move the resting TP (one modify per ticket
             # per tick; the protective SL step always goes first).
             _tp_step(p=p, leg=leg, tid=tid, venue=venue, bot_sym=bot_sym, entry=entry,
-                     initial_sl=isl, signal_time=sig_t, candles=candles, tst=tst)
+                     initial_sl=isl, signal_time=sig_t, candles=candles, tst=tst,
+                     tp_target=_f(t.get("tp_target")))
             return
         # Through-price guard on the VENUE's own quote (the plan only saw the
         # Bybit feed): a long stop must sit a buffer under the bid, a short
@@ -646,7 +698,8 @@ def run_trail_step(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mo
                             "source": "prop_trail"})
     def _tp_step(*, p: Position, leg: Mapping[str, Any], tid: Any, venue: str, bot_sym: Any,
                  entry: float, initial_sl: float, signal_time: datetime,
-                 candles: Optional[pd.DataFrame], tst: Dict[str, Any]) -> None:
+                 candles: Optional[pd.DataFrame], tst: Dict[str, Any],
+                 tp_target: Optional[float] = None) -> None:
         """Move the resting TP to the leg's revised prediction (TP doctrine,
         clause 2). Fails CLOSED per step: an amend that is refused or
         unconfirmed on the re-read keeps the resting TP, alerts once and is
@@ -654,7 +707,7 @@ def run_trail_step(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mo
         RED_FLAG_AFTER in a row -- NO-HALT); one that disturbs the SL is
         alerted. Nothing here can loosen or remove the stop."""
         _sx_params = _structure_declared(leg)
-        if declared_rule(leg) is None and _sx_params is None:
+        if declared_rule(leg) is None and _sx_params is None and tp_target is None:
             return
         if not getattr(adapter, "TP_AMEND_SUPPORTED", False):
             # dxtrade (browser): the rollout guard admits SL-only tightens, so a
@@ -663,24 +716,42 @@ def run_trail_step(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mo
             res.log("trail_tp_skip", ticket_id=tid, venue=venue,
                     why=f"adapter {getattr(adapter, 'platform', '?')!r} cannot amend a TP")
             return
-        if candles is None or len(candles) == 0 or "timestamp" not in candles:
+        if tp_target is None and (candles is None or len(candles) == 0 or "timestamp" not in candles):
             res.log("trail_tp_skip", ticket_id=tid, why="no candles")
             return
         tf_min = _TF_MINUTES.get(str(leg.get("timeframe") or "1h"))
-        if tf_min is None:
+        if tf_min is None and tp_target is None:
             return
         q = adapter.read_quote(page, venue) or {}
         ref = _f(q.get("bid")) if p.side == "long" else _f(q.get("ask"))
         if ref is None:
             res.log("trail_tp_skip", ticket_id=tid, why="no venue quote: could not look, no TP amend")
             return
-        bars = _closed_bars(candles, datetime(1970, 1, 1, tzinfo=timezone.utc), tf_min, now)
-        if _sx_params is not None:
+        if tp_target is not None:
+            # PROP-BRACKET-APPLY: a TP the system pinned on this ticket (meta.tp_target) wins over any declared
+            # rule, through the SAME amend, confirm and report below. A pin through the price or beyond the venue
+            # cap is refused (alerted once), never silently clamped: the asker named a level.
+            why = tp_revision_rejection(p.side or "", tp_target, ref)
+            cap_tp, clamped = clamp_to_venue_cap(p.side or "", tp_target, ref)
+            if why is None and clamped:
+                why = f"beyond the venue cap ({cap_tp:.8g} from the quote {ref})"
+            if why is not None:
+                res.log("trail_tp_skip", ticket_id=tid, why=f"pinned TP {tp_target} refused: {why}")
+                if tst.get("pin_refused_alerted") != tp_target:
+                    res.alerts.append(f"{tid}: pinned TP {tp_target} refused ({why}); the resting TP stays")
+                    tst["pin_refused_alerted"] = tp_target
+                return
+            rev = TpRevision(tp=round(float(tp_target), 8), rule="pinned",
+                             reason=f"pinned: TP {tp_target:.8g} asked of this ticket (meta.tp_target)",
+                             clamped=False, detail={})
+        elif _sx_params is not None:
+            bars = _closed_bars(candles, datetime(1970, 1, 1, tzinfo=timezone.utc), tf_min, now)
             # STRUCTURE-EXITS-DEFAULT: the structure TP replaces the declared revision rule; the same venue-cap
             # clamp and through-price refusal as plan_tp_revision apply.
             rev = _structure_tp_revision(leg, _sx_params, p.side or "", entry, initial_sl, signal_time,
                                          candles, tf_min, now, ref)
         else:
+            bars = _closed_bars(candles, datetime(1970, 1, 1, tzinfo=timezone.utc), tf_min, now)
             rev = plan_tp_revision(leg=leg, direction=p.side or "", entry=entry,
                                    risk=abs(entry - initial_sl), bars=bars,
                                    entry_time=signal_time, ref_price=ref)
