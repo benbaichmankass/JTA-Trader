@@ -33,12 +33,45 @@ set -uo pipefail
 
 REPO_DIR=${REPO_DIR:-/home/ubuntu/ict-trading-bot}
 SYSTEMD_DIR=${SYSTEMD_DIR:-/etc/systemd/system}
+# SYSTEMD-WATCH-KNOWS-INSTALLER: where this installer records the sha256 of every
+# file it EDITS in place (content that is not a byte copy of a deploy/ file).
+# scripts/ops/security_watch.py treats a systemd file whose bytes match its
+# receipt line as an expected deploy change, so a sanctioned installer edit does
+# not page while a foreign edit still does. Root-owned, outside SYSTEMD_DIR.
+# Gates this adds or changes: none.
+SYSTEMD_RECEIPT=${SYSTEMD_RECEIPT:-/var/lib/ict-systemd-install/receipt.tsv}
 
 if [ "$(id -u)" -eq 0 ]; then
     SUDO=()
 else
     SUDO=(sudo)
 fi
+
+# record_receipt <path>: set <path>'s line in SYSTEMD_RECEIPT to "<sha256>\t<path>"
+# (one line per path, last write wins). Never fails the deploy: a missing receipt
+# only means the watch pages for this edit, as it did before the receipt existed.
+record_receipt() {
+    local path="$1" digest tmp
+    digest=$(sha256sum -- "$path" 2>/dev/null | cut -d' ' -f1) \
+        || digest=$("${SUDO[@]}" sha256sum -- "$path" 2>/dev/null | cut -d' ' -f1)
+    if [ -z "${digest:-}" ]; then
+        echo ">>> install_systemd_units: WARN receipt: cannot hash ${path}; the security watch will page for it"
+        return 0
+    fi
+    tmp=$(mktemp) || return 0
+    if [ -f "${SYSTEMD_RECEIPT}" ]; then
+        awk -F'\t' -v p="$path" '$2 != p' "${SYSTEMD_RECEIPT}" > "$tmp" 2>/dev/null || true
+    fi
+    printf '%s\t%s\n' "$digest" "$path" >> "$tmp"
+    if "${SUDO[@]}" mkdir -p "$(dirname "${SYSTEMD_RECEIPT}")" \
+        && "${SUDO[@]}" install -m 0644 "$tmp" "${SYSTEMD_RECEIPT}"; then
+        echo ">>> install_systemd_units: receipt: ${path} ${digest:0:12}"
+    else
+        echo ">>> install_systemd_units: WARN receipt: could not write ${SYSTEMD_RECEIPT}; the security watch will page for ${path}"
+    fi
+    rm -f "$tmp"
+    return 0
+}
 
 cd "$REPO_DIR"
 
@@ -186,6 +219,7 @@ if [ -d "${_WEBAPI_DROPIN_DIR}" ]; then
         if grep -qE '^ExecStart=.*uvicorn src\.web\.api\.main:app.*--host 0\.0\.0\.0' "${_webapi_conf}"; then
             echo ">>> install_systemd_units: ${_webapi_conf}: uvicorn --host 0.0.0.0 -> 127.0.0.1 (SEC-8001-LOCKDOWN)"
             "${SUDO[@]}" sed -i -E '/^ExecStart=.*uvicorn src\.web\.api\.main:app/ s/--host 0\.0\.0\.0/--host 127.0.0.1/' "${_webapi_conf}"
+            record_receipt "${_webapi_conf}"
             changed=1
         fi
     done
@@ -464,6 +498,24 @@ if [ -f "${_DATADIR_DROPIN_SRC}" ]; then
         "${SUDO[@]}" mkdir -p "$(dirname "${_DISKALARM_DROPIN_DST}")"
         "${SUDO[@]}" cp "${_DATADIR_DROPIN_SRC}" "${_DISKALARM_DROPIN_DST}"
         "${SUDO[@]}" chmod 0644 "${_DISKALARM_DROPIN_DST}"
+        changed=1
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# ict-desk-build@.service (DESK-TRIGGER-SCAN-TIMEOUT): the TEMPLATE the trader starts with
+# `sudo -n systemctl start ict-desk-build@<job>.service` to run a desk trigger build in its OWN cgroup, so a deploy
+# restart of the trader (which SIGTERMs the trader's cgroup) no longer kills an in-flight build. The generic loop
+# above skips `@` units, so it is copied here. Copy only: nothing is enabled or started (instances are started
+# on demand by the trader); not installed on the gateway VM. Without it the trader falls back to its in-process build.
+# ---------------------------------------------------------------------------
+_DESKBUILD_SRC="${REPO_DIR}/deploy/ict-desk-build@.service"
+if [ "$_VM_ROLE_EARLY" != "gateway" ] && [ -f "${_DESKBUILD_SRC}" ]; then
+    _DESKBUILD_DST="${SYSTEMD_DIR}/ict-desk-build@.service"
+    if [ ! -e "${_DESKBUILD_DST}" ] || ! cmp -s "${_DESKBUILD_SRC}" "${_DESKBUILD_DST}"; then
+        echo ">>> install_systemd_units: ict-desk-build@.service → ${_DESKBUILD_DST}"
+        "${SUDO[@]}" cp "${_DESKBUILD_SRC}" "${_DESKBUILD_DST}"
+        "${SUDO[@]}" chmod 0644 "${_DESKBUILD_DST}"
         changed=1
     fi
 fi

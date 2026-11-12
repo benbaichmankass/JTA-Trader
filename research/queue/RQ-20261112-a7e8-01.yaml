@@ -96,17 +96,15 @@ run:
 related:
 - RQ-20261112-a7e8-02
 - RQ-20261103-b3c9-11
-last_dispatched_at: null
+last_dispatched_at: '2026-11-12T17:43:17+00:00'
 grading:
   auto: true
-  confirmatory_run: 1
   decision_rule_id: RULE-RQ20261112a7e801
   evidence:
-  - research/results/RQ-20261112-a7e8-01/local-20261112T0650Z.jsonl
-  first_fail: 1 row(s), all measured, all fail
+  - research/results/RQ-20261112-a7e8-01/43272693504.jsonl
   graded_at: '2026-11-12'
   grader: scripts/research/queue_grade.py
-  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
-  reason: 1 row(s), all measured, all fail
+  needs_review: true
+  reason: 'read_state not unanimously measured: [''producer_failed'']'
   rows: 1
-  verdict: fail
+  verdict: null

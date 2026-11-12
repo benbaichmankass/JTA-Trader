@@ -93,6 +93,17 @@ flags, never defaults chosen here:
     flags). pass iff net_r > 0 AND n >= n_floor AND >= fold_majority folds net
     > 0; fail otherwise at n >= n_floor; indeterminate when n < n_floor or a
     ``--control`` arm does not reproduce its committed record.
+    EXTENDED (FUT-INTRADAY-DUKA-LANE, 2026-11-12, for RQ-20261112-09d2-04; every flag default off =
+    the grade above, byte-identical): ``--stage0-holdout-start ISO`` splits the window at a boundary
+    fixed in the UNIT (not grown from data): discovery = trades whose entry AND exit precede it, graded
+    by the clauses above on folds over [--start, boundary); holdout = trades entered in [boundary,
+    --end], which must hold >= ``--holdout-min-trades`` with net R > 0. ``--stage0-ci-z Z`` adds the
+    clause mean(discovery net R) - Z * sd / sqrt(n) > 0. ``--stage0-yearly-folds`` makes the folds
+    the calendar years [Jan 1 of --start's year, boundary) (their count must equal ``--folds``).
+      pass   iff every discovery clause holds AND the holdout clause holds;
+      fail   iff discovery n >= n_floor and any clause fails (a holdout short of its floor after a
+             discovery pass is indeterminate / ``holdout_underpowered``, never a fail);
+      indeterminate if discovery n < n_floor (or the control fails).
   * ``holdout`` (PROMOTION-BAR-HOLDOUT-1016; operator decision 2026-10-16, "Require holdout":
     *"promotion needs a pass on the held-back 25% ... one setting tested once, so no deflation
     is needed"*) -- SELECT on the earliest span, then test the ONE selected arm ONCE on the latest
@@ -259,7 +270,11 @@ def build_arm_argv(leg: str, cfg: dict[str, Any], csv: str, resample: str, emit:
 
 
 #: `--non-crypto-source dukascopy` interval codes (scripts/ops/fetch_backtest_candles.py --interval).
-_DUKA_INTERVAL = {"1h": "60", "2h": "120", "4h": "240", "1d": "D"}
+#: 5m/15m added 2026-11-12 (FUT-INTRADAY-DUKA-LANE) for the intraday futures legs (ict_scalp_mgc_15m,
+#: RQ-20261101-78fc-13 / RQ-20261112-09d2-04). 2h is ABSENT on purpose: the fetcher's
+#: _BYBIT_TO_DK_TIMEFRAME refuses "120" (Dukascopy serves no 2h bar), so the old "2h": "120" entry
+#: only moved the refusal one subprocess later.
+_DUKA_INTERVAL = {"5m": "5", "15m": "15", "1h": "60", "4h": "240", "1d": "D"}
 
 
 def fetch_candles(leg: str, cfg: dict[str, Any], days: int, csv: str,
@@ -348,7 +363,10 @@ def summarize_arm(jout: str, emit: str, edges: list[Any]) -> dict[str, Any]:
         "net_r_per_capital_day": bt.get("net_r_per_capital_day"),
         "cost_stack": {"fee_bps_roundtrip": bt.get("fee_bps_roundtrip"),
                        "slippage_bps_roundtrip": bt.get("slippage_bps_roundtrip"),
-                       "funding_bps_per_window": bt.get("funding_bps_per_window")},
+                       "funding_bps_per_window": bt.get("funding_bps_per_window"),
+                       **({"cost_model": bt["cost_model"], "contract_cost": bt.get("contract_cost")}
+                          if bt.get("cost_model") else {})},
+        **({"session_flat": bt["session_flat"]} if bt.get("session_flat") else {}),
         "params": bt.get("params"),
         "data_start": bt.get("data_start"), "data_end": bt.get("data_end"),
         "folds": fold_net_r(trades, edges),
@@ -527,6 +545,64 @@ def grade_stage0(arms: dict[str, dict[str, Any]], *, baseline: str, fold_majorit
                 "why": f"net_r={b['net_r']} > 0 with {pos}/{N_FOLDS} positive folds at this arm's cost stack"}
     return {"verdict": "fail", "label": "stage0_no_edge", **m,
             "why": f"net_r={b['net_r']} with {pos}/{N_FOLDS} positive folds (needs > 0 and >= {fold_majority})"}
+
+
+def grade_stage0_split(trades: list[dict[str, Any]], *, boundary: Any, hi: Any, edges: list[Any],
+                       fold_majority: int, n_floor: int, ci_z: float | None, holdout_min_n: int,
+                       control: dict[str, Any] | None) -> dict[str, Any]:
+    """The extended ``stage0`` grade (module docstring): discovery clauses + optional CI + a fixed-boundary
+    holdout, all on ONE arm's trade list. Pure."""
+    import math
+    disc = discovery_trades(trades, boundary)
+    _assert_discovery_only(disc, boundary)
+    held = holdout_trades(trades, boundary, hi)
+    d = _span_stats(disc, edges)
+    h = _span_stats(held, None)
+    rs = [float(t.get("net_r") or 0.0) for t in disc]
+    ci_lo = None
+    if ci_z is not None and len(rs) >= 2:
+        mu = sum(rs) / len(rs)
+        sd = math.sqrt(sum((x - mu) ** 2 for x in rs) / (len(rs) - 1))
+        ci_lo = round(mu - ci_z * sd / math.sqrt(len(rs)), 5)
+    straddle = len(trades) - len(disc) - len(held)
+    m = {"boundary": str(boundary), "end": str(hi), "discovery": d, "holdout": h, "ci_z": ci_z,
+         "discovery_ci_lower_r_per_trade": ci_lo, "n_floor": n_floor, "fold_majority": fold_majority,
+         "n_folds": len(edges) - 1, "holdout_min_n": holdout_min_n, "n_straddling_boundary": straddle,
+         "control": control}
+    if control is not None and not control["ok"]:
+        return {"verdict": "indeterminate", "label": "control_failed", **m,
+                "why": "the control arm does not reproduce the committed record: the corpus differs, so nothing is read"}
+    if d["n"] < n_floor:
+        return {"verdict": "indeterminate", "label": "underpowered", **m,
+                "why": f"discovery n={d['n']} < n_floor {n_floor}"}
+    fails = []
+    if not d["net_r"] > 0:
+        fails.append(f"discovery net_r={d['net_r']} <= 0")
+    if d["folds_positive"] < fold_majority:
+        fails.append(f"{d['folds_positive']}/{len(edges) - 1} folds positive < {fold_majority}")
+    if ci_z is not None and not (ci_lo is not None and ci_lo > 0):
+        fails.append(f"discovery CI lower bound {ci_lo} <= 0 at z={ci_z}")
+    if fails:
+        return {"verdict": "fail", "label": "stage0_no_edge", **m, "why": "; ".join(fails)}
+    if h["n"] < holdout_min_n:
+        return {"verdict": "indeterminate", "label": "holdout_underpowered", **m,
+                "why": f"discovery passes; holdout n={h['n']} < {holdout_min_n}"}
+    if not h["net_r"] > 0:
+        return {"verdict": "fail", "label": "not_replicated", **m,
+                "why": f"discovery passes; holdout net_r={h['net_r']} <= 0 on n={h['n']}"}
+    return {"verdict": "pass", "label": "stage0_edge_confirmed", **m,
+            "why": (f"discovery net_r={d['net_r']} on n={d['n']}, {d['folds_positive']}/{len(edges) - 1} folds"
+                    + (f", CI lo {ci_lo}" if ci_z is not None else "")
+                    + f"; holdout net_r={h['net_r']} on n={h['n']}")}
+
+
+def yearly_edges(start: str, boundary: str) -> list[Any]:
+    """Jan 1 (UTC) of each year from ``start``'s year to ``boundary`` (which must itself be a Jan 1)."""
+    import pandas as pd
+    s, b = _ts(start), _ts(boundary)
+    if (b.month, b.day, b.hour, b.minute) != (1, 1, 0, 0):
+        raise ValueError(f"--stage0-yearly-folds needs a Jan-1 boundary, got {boundary}")
+    return [pd.Timestamp(f"{y}-01-01", tz="UTC") for y in range(s.year, b.year + 1)]
 
 
 # ── holdout (pure; see the module docstring's ``holdout`` grade) ───────────────
@@ -764,6 +840,12 @@ def main(argv: list[str] | None = None) -> int:
                     help="risk_adjusted: R1 bar (default: RULE-AM-RISK-ADJUSTED-V1's)")
     ap.add_argument("--min-dd-cut-pct", type=float, default=None, help="risk_adjusted: R2 maxDD-cut bar (default V1's)")
     ap.add_argument("--min-cvar5-cut-pct", type=float, default=None, help="risk_adjusted: R2 CVaR5-cut bar (default V1's)")
+    ap.add_argument("--stage0-holdout-start", default=None,
+                    help="stage0: a FIXED holdout boundary (ISO); see the module docstring's extended stage0")
+    ap.add_argument("--stage0-ci-z", type=float, default=None,
+                    help="stage0: add the discovery CI clause mean - z*sd/sqrt(n) > 0")
+    ap.add_argument("--stage0-yearly-folds", action="store_true",
+                    help="stage0 with a holdout start: folds are calendar years [start year, boundary)")
     ap.add_argument("--control-since", action="store_true",
                     help="grade the control on trades entered on/after the record's data_start (window longer than the record's)")
     ap.add_argument("--out", required=True)
@@ -826,7 +908,21 @@ def main(argv: list[str] | None = None) -> int:
     feed: dict[str, Any] = {"resample": base.get("timeframe"), "source": "explicit --data-csv"}
     if not a.data_csv:
         feed = fetch_candles(a.leg, base, a.days, csv, non_crypto_source=a.non_crypto_source)
-    edges = fold_edges(csv, a.start, a.end)
+    split = a.grade == "stage0" and a.stage0_holdout_start is not None
+    if (a.stage0_ci_z is not None or a.stage0_yearly_folds) and not split:
+        print("ERROR: --stage0-ci-z / --stage0-yearly-folds need --grade stage0 with --stage0-holdout-start",
+              file=sys.stderr)
+        return 2
+    if split and a.stage0_yearly_folds:
+        edges = yearly_edges(a.start or "", a.stage0_holdout_start)
+        if len(edges) - 1 != a.folds:
+            print(f"ERROR: {len(edges) - 1} calendar years in [{a.start}, {a.stage0_holdout_start}) != --folds {a.folds}",
+                  file=sys.stderr)
+            return 2
+    elif split:
+        edges = fold_edges(csv, a.start, a.stage0_holdout_start)
+    else:
+        edges = fold_edges(csv, a.start, a.end)
     trigger_meta: dict[str, Any] | None = None
     if a.trigger_from_path_metrics:
         if str(feed["resample"]) != str(base.get("timeframe")):
@@ -907,6 +1003,13 @@ def main(argv: list[str] | None = None) -> int:
     if a.grade == "parity":
         g = grade_parity(arms, baseline=a.baseline, candidate=a.candidate, delta_r=a.delta_r,
                          fold_majority=a.fold_majority, n_floor=a.n_floor, control=control)
+    elif a.grade == "stage0" and split:
+        import pandas as pd
+        bt_trades = _load_trades(str(arms_dir / f"{a.baseline}__trades.jsonl"))
+        hi = _ts(a.end) if a.end else pd.Timestamp(arms[a.baseline]["data_end"], tz="UTC")
+        g = grade_stage0_split(bt_trades, boundary=_ts(a.stage0_holdout_start), hi=hi, edges=edges,
+                               fold_majority=a.fold_majority, n_floor=a.n_floor, ci_z=a.stage0_ci_z,
+                               holdout_min_n=a.holdout_min_trades, control=control)
     elif a.grade == "stage0":
         g = grade_stage0(arms, baseline=a.baseline, fold_majority=a.fold_majority, n_floor=a.n_floor,
                          control=control)

@@ -716,12 +716,16 @@ def _collect_intents(
     leg_cfgs = _strategy_cfgs()
     forming_seen: Dict[str, dict] = {}
     for name in strategies:
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab —
+        # GATE-STRATEGY-PAUSED-FLAG: REMOVE. Record:
+        # comms/gates/gate_decisions_2026-11-12.json. A ``runtime_flags/pause_<name>``
+        # file used to skip the strategy here; it is now logged only.
         if is_strategy_paused(name):
             logger.info(
-                "intent_multiplexer: '%s' paused via runtime flag — skipping",
+                "intent_multiplexer: '%s' has a pause flag — ignored "
+                "(GATE-STRATEGY-PAUSED-FLAG removed 2026-11-12)",
                 name,
             )
-            continue
         # Per-strategy symbol scope: skip a strategy that does not declare
         # this tick's symbol. Permissive when the strategy declares no
         # ``symbols`` (absent from ``symbol_scope``) or the tick symbol is
@@ -824,7 +828,7 @@ def _collect_intents(
             timestamp=now,
         )
         if intent is None:
-            logger.info(
+            logger.debug(  # per-tick no-op; HEALTH-20261112-LIVE-DISK-OTHER-GROWERS
                 "intent_multiplexer: '%s' returned no actionable signal",
                 name,
             )
@@ -859,7 +863,12 @@ def _record_forming_evaluations(seen: Dict[str, dict]) -> None:
 def _debounce_emissions(
     intents: List[StrategyIntent], *, now: Optional[float] = None
 ) -> List[StrategyIntent]:
-    """Drop intents a strategy already emitted earlier in the SAME closed bar.
+    """Observe intents a strategy already emitted earlier in the SAME closed bar.
+
+    ⚠️ GATE-BAR-DEBOUNCE REMOVED (operator 2026-11-12 decisions page, Gates tab;
+    ``comms/gates/gate_decisions_2026-11-12.json``): this used to DROP the
+    repeat. It now returns every intent and only logs the repeat. The history
+    below is kept for context.
 
     Re-entry-storm guard (PERF-20260601-001). A strategy emits at most ONE
     intent per ``(strategy, symbol, floor(now / bar_seconds))`` — regardless of
@@ -893,12 +902,18 @@ def _debounce_emissions(
         bucket = int(now // bar_seconds)
         key = (intent.strategy, intent.symbol)
         if _LAST_EMITTED_BUCKET.get(key) == bucket:
+            # Gate decision: operator 2026-11-12 decisions page, Gates tab —
+            # GATE-BAR-DEBOUNCE: REMOVE. Record:
+            # comms/gates/gate_decisions_2026-11-12.json. This emission-side
+            # half of the same-bar debounce shares the gate's
+            # STRATEGY_BAR_DEBOUNCE_DISABLED switch; it used to DROP the repeat
+            # intent here. It is now logged only and the intent passes.
             logger.debug(
                 "intent_multiplexer: '%s' on %s already emitted this bar "
-                "(bucket=%d, bar_seconds=%d) — debounced (re-entry-storm guard)",
+                "(bucket=%d, bar_seconds=%d) — passing it on "
+                "(GATE-BAR-DEBOUNCE removed 2026-11-12)",
                 intent.strategy, intent.symbol, bucket, int(bar_seconds),
             )
-            continue
         _LAST_EMITTED_BUCKET[key] = bucket
         kept.append(intent)
     return kept
@@ -1100,12 +1115,12 @@ def multiplexed_intent_signal_builder(
         strategies=resolved_strategies,
         target_qty_hint=0.0,
     )
-    # Re-entry-storm guard: collapse a strategy's repeated same-bar emissions to
-    # one per closed bar before aggregation (PERF-20260601-001).
+    # Same-bar repeat observation (was the PERF-20260601-001 re-entry-storm
+    # guard; GATE-BAR-DEBOUNCE removed 2026-11-12 — logs, never drops).
     intents = _debounce_emissions(intents)
 
     if not intents:
-        logger.info("intent_multiplexer: no strategy emitted an intent — staying flat")
+        logger.debug("intent_multiplexer: no strategy emitted an intent — staying flat")
         return {
             "symbol": symbol,
             "side": "none",

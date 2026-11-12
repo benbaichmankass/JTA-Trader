@@ -1,0 +1,27 @@
+diff --git a/config/strategies.yaml b/config/strategies.yaml
+index 21d53ffd1..7ec8b8fb1 100644
+--- a/config/strategies.yaml
++++ b/config/strategies.yaml
+@@ -2720,15 +2720,13 @@ strategies:
+     trail_mult: 3.0
+     trail_decay_stall_bars: 6   # M20 P4.1 decay cell (stall6 tight1.5 wf 5/6; sweep 2026-07-12, PR #6251)
+     trail_decay_tight_mult: 1.5
+-    # Was absent, therefore inherited htf_pullback_trend_2h._DEFAULTS["tp_r"] = 50.0.
+-    # Written out so the sentinel is visible to `grep tp_r`. RUNTIME-IDENTICAL.
+-    tp_r: 50.0
+-    tp_intent:
+-      mode: none
+-      reason: trail_is_the_profit_exit
+-      # MEASURED: this leg has NEVER carried a tp_r key, across all 110 revisions of this
+-      # file (2026-04-29 -> 2026-09-06). Never declared — NOT intended-and-lost.
+-      evidence: no_gate_passing_timeout_free_tp_cell
++    # 2026-11-12 PROMOTE-TLT-1H-REAL-MONEY (Tier 3, operator decisions page m9 "Rebuild the evidence record, then
++    # promote when it passes"): REAL predictive take-profit, replacing the 50 R sentinel (tp_r 50 + tp_intent none, never
++    # declared since 2026-04-29). K* = 3.5 R from RQ-20261112-5ab1-01 (tp_prediction_derive, dukascopy 1h 2018-06..2026-10-26,
++    # n 579 / n_oos 232): reach_IS 0.107 / reach_OOS 0.112 (calibrated, gap 0.005), OOS delta vs the sentinel -0.020 R/trade,
++    # CI95 [-0.082, +0.032] -- INDETERMINATE (straddles the -0.05 margin), so the operator DECLARES it (the tqqq 1.5 R /
++    # iaum 3.5 R precedent). ROLLBACK: restore `tp_r: 50.0` + the tp_intent {mode: none} block from git history.
++    tp_r: 3.5
+     min_confidence: 0.0
+     shadow_model_ids: []
+ 

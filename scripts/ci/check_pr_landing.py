@@ -87,13 +87,12 @@ So nothing here is satisfied by a field merely being present.
 
   * ``tier`` is checked against the DIFF, not taken on trust (R5). Declaring
     tier 1 while touching `config/strategies.yaml` fails.
-  * ``hold_reason: changes_landing_machinery`` is checked against the diff too
-    (R8) — and the branch's OWN declaration file is EXCLUDED from the machinery
-    set, because every branch touches that file and an excuse every branch
-    satisfies is not an excuse.
-  * ``hold_reason: depends_on_unmerged_pr`` must name a PR number (R9).
-  * ``why`` / ``hold_text`` must carry real text (R3/R7). A one-word `"why": "x"`
-    is refused.
+  * ``why`` must carry real text (R3). A one-word `"why": "x"` is refused.
+  * REMOVED 2026-11-12 (operator gate decisions, decisions page, Gates tab):
+    R7 (hold_reason vocabulary / hold_text length) and R8 / R9 / R14 (a hold's
+    stated reason verified against the diff). A held PR is merged by a human,
+    so its hold fields are free text. R6 (self-land must arm) is REPORT-ONLY:
+    it writes a note and never fails the PR.
 
 AND A TIER-2 PR LANDS ON A RECORDED APPROVAL (R15, 2026-09-11)
 --------------------------------------------------------------
@@ -1659,10 +1658,12 @@ def check(root: Path, base: str, branch: Optional[str]) -> tuple[str, list[str],
                   "the tier is not the objection — set `landing: \"hold\"` with "
                   "`hold_reason: \"changes_landing_machinery\"` and let a human "
                   "read it once.")
-        # R6
+        # R6 -- REPORT-ONLY since 2026-11-12 (decision: operator 2026-11-12
+        # decisions page, Gates tab -- PRL-R6-ARMING-REQUIRED: MAKE REPORT-ONLY).
+        # It still says so on every run; it no longer fails the PR.
         if not armed:
-            fails.append(
-                f"R6 {decl_rel} says `landing: \"self\"` but this branch has not "
+            notes.append(
+                f"R6 (report-only) {decl_rel} says `landing: \"self\"` but this branch has not "
                 f"armed the route: {arm_rel} is absent or unchanged from `{base}`. "
                 f"A readiness declaration lands nothing on its own — that is "
                 f"precisely how 7 green PRs sat unmerged on 2026-09-03. Add "
@@ -1740,66 +1741,11 @@ def check(root: Path, base: str, branch: Optional[str]) -> tuple[str, list[str],
                 + ". Those are opposite instructions and the arming is the one "
                   "that would take effect. Remove the request file, or declare "
                   "tier 1 with `landing: \"self\"` and satisfy R5.")
-        # R7
-        reason = str(decl.get("hold_reason") or "").strip()
-        text = str(decl.get("hold_text") or "").strip()
-        if reason not in HOLD_REASONS:
-            fails.append(
-                f"R7 {decl_rel} `hold_reason` is {reason!r}; must be one of: "
-                + ", ".join(sorted(HOLD_REASONS))
-                + ". A closed vocabulary, so a hold is a stated kind of hold and "
-                  "not an adjective — the `operator_decision` discipline in "
-                  "docs/claude/work/OPEN-PRS.json.")
-        if len(text) < MIN_TEXT:
-            fails.append(
-                f"R7 {decl_rel} `hold_text` is {len(text)} chars; needs at least "
-                f"{MIN_TEXT}. The typed reason stays checkable against the "
-                f"author's own wording only if the wording is there.")
-        # R8 — verified, not presence-only.
-        if reason == "changes_landing_machinery":
-            machinery = [p for p in changed
-                         if _match(p, LANDING_MACHINERY) and p != decl_rel]
-            if not machinery:
-                fails.append(
-                    f"R8 {decl_rel} claims `changes_landing_machinery`, but no "
-                    f"changed path is landing machinery. Recognised: "
-                    + ", ".join(LANDING_MACHINERY)
-                    + f". (This branch's own {decl_rel} is deliberately EXCLUDED "
-                      "— every branch writes one, so counting it would make this "
-                      "excuse free for everybody, which is the presence-only "
-                      "marker `new-table-wiring-guard` was bitten by.)")
-            else:
-                notes.append("R8 verified — landing machinery in the diff: "
-                             + ", ".join(sorted(machinery)[:5]))
-        # R14 -- verified, not presence-only, exactly as R8 is. Without this,
-        # `unvouchable_paths` would be the cheapest way past R5 for ANY diff,
-        # which is the presence-only marker failure `new-table-wiring-guard` was
-        # bitten by and that this guard cites twice elsewhere.
-        if reason == "unvouchable_paths":
-            unvouchable = [p for p in unvouched_paths(root, base, changed)
-                           if p != decl_rel and p not in e58_vouched]
-            if not unvouchable:
-                fails.append(
-                    f"R14 {decl_rel} claims `unvouchable_paths`, but every "
-                    f"changed path IS inside TIER1_SURFACE. Such a PR can "
-                    f"self-land: declare `landing: \"self\"` and arm it. This "
-                    f"reason exists for the case R5 names and must not become a "
-                    f"way to avoid landing work that is ready.")
-            elif tier != 1:
-                fails.append(
-                    f"R14 {decl_rel} claims `unvouchable_paths` at tier {tier}. "
-                    f"That reason is for TIER-1 work the guard cannot certify; "
-                    f"Tier-2/3 work is held under `tier_2_3_needs_approval`, "
-                    f"which says what approval is being sought and from whom.")
-            else:
-                notes.append("R14 verified — paths outside TIER1_SURFACE: "
-                             + ", ".join(sorted(unvouchable)[:5]))
-        # R9
-        if reason == "depends_on_unmerged_pr" and not re.search(r"#\d+", text):
-            fails.append(
-                f"R9 {decl_rel} claims `depends_on_unmerged_pr` but `hold_text` "
-                f"names no PR (`#123`). A dependency nobody can look up is not a "
-                f"dependency a reader can clear.")
+        # R7 / R8 / R9 / R14 REMOVED 2026-11-12 (decision: operator 2026-11-12
+        # decisions page, Gates tab -- PRL-R7-HOLD-VOCAB: REMOVE;
+        # PRL-R8-R9-R14-HOLD-VERIFY: REMOVE). A hold's `hold_reason` / `hold_text`
+        # are free text now: nothing checks their vocabulary, length or truth
+        # against the diff, because a human merges a held PR anyway.
 
     if fails:
         return ("undeclared" if landing in ("self", autoland.LANDING_VALUE)
@@ -2347,32 +2293,8 @@ def self_test() -> int:
                            "x\n", encoding="utf-8"),
                        _declare(r, tier=1, landing="self", why=_GOOD_WHY), _arm(r),
                        _claim_slot(r)), True),
-        "R6 self-land declared but route not armed": (
-            lambda r: _declare(r, tier=1, landing="self", why=_GOOD_WHY), True),
         "R3 a one-word `why`": (
             lambda r: (_declare(r, tier=1, landing="self", why="x"), _arm(r)), True),
-        "R7 hold_reason outside the vocabulary": (
-            lambda r: _declare(r, tier=1, landing="hold", hold_reason="because",
-                               hold_text="a perfectly reasonable sounding excuse",
-                               why=_GOOD_WHY), True),
-        "R8 unverified changes_landing_machinery": (
-            lambda r: _declare(r, tier=1, landing="hold",
-                               hold_reason="changes_landing_machinery",
-                               hold_text="claims to touch the landing route but "
-                                         "the diff is a docs file",
-                               why=_GOOD_WHY), True),
-        "R14 unvouchable_paths on an all-Tier-1 diff": (
-            lambda r: _declare(r, tier=1, landing="hold",
-                               hold_reason="unvouchable_paths",
-                               hold_text="claims the guard cannot vouch for this, "
-                                         "but every path is inside the allowlist",
-                               why="a docs-only diff pretending it cannot self-land"),
-            True),
-        "R9 depends_on_unmerged_pr naming no PR": (
-            lambda r: _declare(r, tier=1, landing="hold",
-                               hold_reason="depends_on_unmerged_pr",
-                               hold_text="waiting on the other one to land first",
-                               why=_GOOD_WHY), True),
         "R12 self-landing a change to the landing machinery": (
             lambda r: ((r / "scripts/ci").mkdir(parents=True, exist_ok=True),
                        (r / "scripts/ci/check_automerge_trigger.py").write_text(
@@ -2429,6 +2351,56 @@ def self_test() -> int:
             lambda r: (r / LANDING_DIR / "demo.json").write_text("{nope", encoding="utf-8"),
             True),
     }
+    # ---- operator 2026-11-12 gate decisions: these no longer FAIL ----------
+    # PRL-R6-ARMING-REQUIRED: MAKE REPORT-ONLY (R6 now writes a note);
+    # PRL-R7-HOLD-VOCAB: REMOVE; PRL-R8-R9-R14-HOLD-VERIFY: REMOVE. Each former
+    # plant is now a CONTROL that must pass, so a rule creeping back fails here.
+    no_longer_refused = {
+        "R6 self-land declared but route not armed": (
+            lambda r: _declare(r, tier=1, landing="self", why=_GOOD_WHY), True),
+        "R7 hold_reason outside the vocabulary": (
+            lambda r: _declare(r, tier=1, landing="hold", hold_reason="because",
+                               hold_text="a perfectly reasonable sounding excuse",
+                               why=_GOOD_WHY), True),
+        "R8 unverified changes_landing_machinery": (
+            lambda r: _declare(r, tier=1, landing="hold",
+                               hold_reason="changes_landing_machinery",
+                               hold_text="claims to touch the landing route but "
+                                         "the diff is a docs file",
+                               why=_GOOD_WHY), True),
+        "R14 unvouchable_paths on an all-Tier-1 diff": (
+            lambda r: _declare(r, tier=1, landing="hold",
+                               hold_reason="unvouchable_paths",
+                               hold_text="claims the guard cannot vouch for this, "
+                                         "but every path is inside the allowlist",
+                               why="a docs-only diff pretending it cannot self-land"),
+            True),
+        "R9 depends_on_unmerged_pr naming no PR": (
+            lambda r: _declare(r, tier=1, landing="hold",
+                               hold_reason="depends_on_unmerged_pr",
+                               hold_text="waiting on the other one to land first",
+                               why=_GOOD_WHY), True),
+    }
+    for name, (plant, tier1_only) in no_longer_refused.items():
+        with tempfile.TemporaryDirectory() as td:
+            root = _sandbox(Path(td), tier1_only=tier1_only)
+            plant(root)
+            _commit(root)
+            _, fails, notes = check(root, "main", "claude/demo")
+            rid = name.split()[0]
+            hit = [f for f in fails if f.startswith(rid + " ")]
+            if hit:
+                print(f"::error::self-test FAILED — '{name}' is refused again "
+                      f"({hit[0][:120]}), but the operator removed / made "
+                      f"report-only that rule on 2026-11-12.")
+                bad += 1
+            elif rid == "R6" and not any(n.startswith("R6 (report-only)") for n in notes):
+                print("::error::self-test FAILED — R6 is report-only but no longer "
+                      "REPORTS: the unarmed self-land note is missing.")
+                bad += 1
+            else:
+                print(f"self-test: '{name}' no longer refused (operator 2026-11-12)")
+
     for name, (plant, tier1_only) in plants.items():
         with tempfile.TemporaryDirectory() as td:
             root = _sandbox(Path(td), tier1_only=tier1_only)

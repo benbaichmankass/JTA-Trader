@@ -108,7 +108,7 @@ lines:
   state:
     summary: >-
       150 of 234 ML units authored since 2026-10-01 are regime/direction classifier bake-offs; none is judged by money. The
-      consumer test (d2ct-01, TD family pooled, regime_cell_walkforward) is authored by the row's lane and waits on a trainer
+      consumer test (bcd2-01, TD family pooled, regime_cell_walkforward) is authored by the row's lane and waits on a trainer
       dispatch that also unblocks 78fc-08.
     evidence:
       - {record: docs/research/ml-deep-audit-2026-11-12.md § 2.1, n: 234, value: '150 bake-offs, 0 money reads', provenance: QUOTED}
@@ -117,7 +117,7 @@ lines:
     - {lever: pooled trend-axis cells (L-REGIME confirmations), ref: RQ-20261016-65ff-01..08, verdict: '16 of 17 FAIL (QUOTED, MECE § 3 D2)'}
   levers_ahead:
     - lever: regime gate on the real-money TD family pooled, matched-random cell control
-      ref: 'row ML-D2-CONSUMER-TEST unit d2ct-01'
+      ref: 'row ML-D2-CONSUMER-TEST unit bcd2-01'
       baseline: the TD family ungated, and a same-rate matched-random cell drop, net of the full cost stack
       pass: Tier-3 proposal (first real-money D2 consumer); then the trainer cycle is pointed at that head (MLP-INFRA-TRAINER-CYCLE)
       fail: D2 authoring for TD stops (row's own note); the nightly cycle is re-pointed at the money models
@@ -126,9 +126,9 @@ lines:
       baseline: the 3 BTC legs ungated, net of cost
       pass: cells stay; the head behind them keeps its consumer
       fail: Tier-3 proposal to drop the cells; Collie-5a loses its only consumer (MLP-D2-COLLIE-5A)
-  next_weeks: {W47: 'dispatch d2ct-01 + 78fc-08 on the trainer (one job); grade', W48: 'act on the verdicts above', W49: 'size D2 authoring from the verdicts', W50: review}
+  next_weeks: {W47: 'dispatch bcd2-01 + 78fc-08 on the trainer (one job); grade', W48: 'act on the verdicts above', W49: 'size D2 authoring from the verdicts', W50: review}
   exhaustion: >-
-    d2ct-01 and 78fc-08 both FAIL and no leg family remains where a cell could gate >= one real-money or prop leg: the slot then
+    bcd2-01 and 78fc-08 both FAIL and no leg family remains where a cell could gate >= one real-money or prop leg: the slot then
     runs no new head work until a new information class (MLP-N-*) or a new leg family arrives.
   owner: AM-ML
   plan_items: [ML-R1, ML-R5, ML-R2, ML-R6, ML-R7, ML-R8]
@@ -156,7 +156,7 @@ lines:
     - lever: one-shard one-split bake-off vs the yz and v2 shadow heads
       ref: 'RQ-20261112-ef4c-01 (PR #25242)'
       baseline: Mutt-Regime-1b (majority class) and the v2 head on the SAME shard and purged split
-      pass: the winner is the head d2ct-01 / 78fc-08 judge by money
+      pass: the winner is the head bcd2-01 / 78fc-08 judge by money
       fail: the incumbent stays the comparison head; losers go to retire wave 3
     - lever: money read of its cells
       ref: RQ-20261101-78fc-08
@@ -183,13 +183,13 @@ lines:
       - {record: docs/research/ml-deep-audit-2026-11-12.md § 1.1, provenance: QUOTED}
   levers_tried: []
   levers_ahead:
-    - lever: a consumer for each head = the d2ct-01 design applied to the SOL / MES leg families
-      ref: needs_authoring (only after d2ct-01 grades; authoring before is a bake-off with no customer)
+    - lever: a consumer for each head = the bcd2-01 design applied to the SOL / MES leg families
+      ref: needs_authoring (only after bcd2-01 grades; authoring before is a bake-off with no customer)
       baseline: the leg family ungated, net of cost, matched-random cell control
       pass: Tier-3 proposal for a first cell naming that leg
       fail: proposed retirement of the head (manager)
-  next_weeks: {W47: none, W48: 'author the SOL/MES consumer unit iff d2ct-01 PASS', W49: run, W50: grade}
-  exhaustion: d2ct-01 FAIL (no consumer design worth repeating), or the per-family consumer test FAILs.
+  next_weeks: {W47: none, W48: 'author the SOL/MES consumer unit iff bcd2-01 PASS', W49: run, W50: grade}
+  exhaustion: bcd2-01 FAIL (no consumer design worth repeating), or the per-family consumer test FAILs.
   owner: AM-ML
   plan_items: []
 
@@ -200,7 +200,7 @@ lines:
   subject: >-
     the 11 REVIEW heads without a matched Mutt + eth-regime-1h-lgbm-xasset-v1 (Collie-3c, KEEP) + the 4 Mutt baselines (slot
     references): BTC 1h/15m/5m, ETH 1h/15m/5m, SOL 5m/15m, MES 1d shadow heads
-  consumer: {class: none, note: shadow, no consumer, no money question until d2ct-01 reads}
+  consumer: {class: none, note: shadow, no consumer, no money question until bcd2-01 reads}
   stage: testing_offline
   row: MLP-D2-REVIEW-HEADS
   carried_by: [ML-PROGRAMME-CONSOLIDATION]
@@ -219,7 +219,7 @@ lines:
       pass: the winner is the only head of that cell kept for a consumer test
       fail: head goes to retire wave 3 (Tier-2 archive, manager)
   next_weeks: {W47: 'ef4c-01..08 run after #25242 lands', W48: grade + wave-3 list, W49: none, W50: none}
-  exhaustion: per head, losing its cell's bake-off; for the group, d2ct-01 FAIL (no consumer for any head).
+  exhaustion: per head, losing its cell's bake-off; for the group, bcd2-01 FAIL (no consumer for any head).
   owner: AM-ML
   plan_items: [ML-R3]
   proposed_disposition: >-
@@ -298,13 +298,13 @@ lines:
       - {record: research/queue/blocked/RQ-20261011-17f4-03.yaml, provenance: MEASURED}
   levers_tried: []
   levers_ahead:
-    - lever: agreement-gated cells in the d2ct-01 design
-      ref: needs_authoring (only on d2ct-01 PASS)
+    - lever: agreement-gated cells in the bcd2-01 design
+      ref: needs_authoring (only on bcd2-01 PASS)
       baseline: the best single head's cells on the same leg family, net of cost
       pass: Tier-3 proposal
       fail: idea retired with the record
-  next_weeks: {W47: none, W48: 'author iff d2ct-01 PASS', W49: none, W50: none}
-  exhaustion: d2ct-01 FAIL (no consumer for any head), or the agreement arm FAILs.
+  next_weeks: {W47: none, W48: 'author iff bcd2-01 PASS', W49: none, W50: none}
+  exhaustion: bcd2-01 FAIL (no consumer for any head), or the agreement arm FAILs.
   owner: AM-ML
   plan_items: [ML-N1, ML-N1J]
 
@@ -1349,12 +1349,12 @@ lines:
       - {record: docs/research/ml-deep-audit-2026-11-12.md § 4 I3, provenance: QUOTED}
   levers_tried: []
   levers_ahead:
-    - lever: re-point the cycle after d2ct-01 reads
+    - lever: re-point the cycle after bcd2-01 reads
       ref: ML-PROGRAMME-CONSOLIDATION
       baseline: n/a
       pass: trainer time follows the money models
       fail: n/a
-  next_weeks: {W47: 'confirm registry archive ran (row done-when)', W48: 're-point proposal (Tier 2) after d2ct-01', W49: none, W50: none}
+  next_weeks: {W47: 'confirm registry archive ran (row done-when)', W48: 're-point proposal (Tier 2) after bcd2-01', W49: none, W50: none}
   exhaustion: infra.
   owner: AM-ML
   plan_items: []

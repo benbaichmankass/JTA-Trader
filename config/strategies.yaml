@@ -1474,7 +1474,7 @@ strategies:
       bybit_portfolio: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]
       # 2026-11-08 ML-ENTRY-PROP-BASELINE: the prop books trade the ETH+SOL slice (the population comms/prop_survival/ml_entry.json scored; the venue routing
       # files also list BTC/ADA/XRP for some firms, unconfirmed in-terminal). Other symbols drop with the named exclusion leg_account_scope. Widening = one line.
-      breakout_2: [ETHUSDT, SOLUSDT]
+      # breakout_2 removed 2026-11-12: account ON ICE (operator), roster emptied in accounts.yaml.
       tradeify_1: [ETHUSDT, SOLUSDT]
       velotrade_1: [ETHUSDT, SOLUSDT]
       alpaca_paper: [SPY, QQQ, IWM, TLT, IEF, SLV, USO, GDX, TQQQ, QLD, SPYM, IAUM, SCHA]
@@ -2572,8 +2572,14 @@ strategies:
     # having to re-derive the leg from scratch. This is the sanctioned demotion
     # per CLAUDE.md § "The two execution gates".
     #
-    # NOTE it routes to `alpaca_live` (real_money) as well as the paper books —
-    # so this also removes the fleet's worst leg from the account being funded.
+    # ⚠️ SUPERSEDED 2026-11-12 (SLV-1H-PROMOTE, Tier 3; OPERATOR chat ~10:32Z, relayed by Manager Session 2026-11-11a,
+    # verbatim "I answer that I do want to promote silver."): the 08-24 demote above is LIFTED. It was decided on paper-book
+    # P&L whose closes (per AM-TRADING's relay of the 09-29 review) all exited exchange_flat_reconciled, the fleet
+    # exit-protection defect; a book never establishes edge. The leg is now PRODUCTION on alpaca_live + alpaca_portfolio
+    # (off alpaca_paper) on comms/strategy_evidence/slv_trend_1h.json (rebuilt 2026-11-12, +44.71 R n 69, 4/4 folds) + holdout
+    # RQ-20261101-78fc-18 (+35.99 R n 104). The paragraph above is kept as the record of an EVIDENCE-BASED LADDER MOVE (a
+    # demotion on the data then believed), never a ban; it was reopened 2026-11-04 ~22:05Z (operator popup, verbatim "Reopen,
+    # promote if it clears (Recommended)") and confirmed 2026-11-12 ("I answer that I do want to promote silver.").
     model: null
     signal_prefixes: [slv_trend]
     enabled: true
@@ -2585,7 +2591,15 @@ strategies:
     atr_period: 14
     atr_stop_mult: 1.5  # M20 B4 bracket geometry: cell sm1.5 (path_b_wf_pass, wf 5/6); was 2.5
     trail_mult: 4.0
-    tp_r: 50.0
+    # 2026-11-12 SLV-1H-PROMOTE (Tier 3): REAL take-profit replacing the 50 R sentinel. RQ-20261112-5ab1-03 (RQ-20261104-7fdb-01 design,
+    # dukascopy 1h 2018-06..2026-10-15) selected T6 from {2,3,4,6} R on discovery (n 329, +30.83 R, 3/4 folds) and CONFIRMED it on the
+    # held-back span (2024-09-17..2026-10-15, n 108, +33.37 R, read once). Corroborated by RQ-20261112-5ab1-02 (tp_prediction_derive K* 6 R,
+    # reach_OOS 0.175, calibrated, gap 0.045). DISCLOSED: the held-back span holds the parameter-choice data and was read before for arm A
+    # (78fc-18); the fresh-span confirmation is RQ-20261104-7fdb-02. ROLLBACK: restore `tp_r: 50.0` and drop tp_intent (git history).
+    # tp_intent (basis): r_multiple, RQ-20261112-5ab1-03 holdout T6, calibrated per RQ-20261112-5ab1-02. Kept as a COMMENT on purpose: a
+    # `tp_intent:` key enters config_fingerprint, and the holdout's selected_config_fingerprint (sha256:eab5e2b8...) is this block without it,
+    # so a key here would unbind the record from its holdout confirmation (mandate_resolver R-HOLDOUT reads a mismatch as NEEDS_DATA).
+    tp_r: 6.0
     # 0.0 -> 0.3 (2026-08-01, PB-20260801-SLV-TREND-DEGENERATE-CONFIDENCE): 2
     # consecutive reviews of should_skip-grade entries (conf 0.04-0.15), 5
     # graded entries all losses. The builder was emitting entries its own

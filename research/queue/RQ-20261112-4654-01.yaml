@@ -1,0 +1,123 @@
+id: RQ-20261112-4654-01
+title: 'Market-residual target for the crypto ENTRY recipe: does training on the asset''s move minus beta x BTC beat training on the raw net R, graded on
+  the trades each would take at actual net R? (13 monthly refits over 2025-10..2026-09, shuffled-market placebo)'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+origin: new_hypothesis
+practice_precedent: 'https://arxiv.org/abs/2611.13572 (Market-Conditioned JEPA, HKU, 2026-11-10; PRIMARY, abstract and introduction read): under a latent factor model,
+  per-asset prediction treats the common market shock as noise; conditioning on the market factor isolates the asset-specific signal. Residual
+  (market-neutral) targets are standard cross-sectional practice; this is the first test of one on our ENTRY recipe.'
+levers:
+- name: target_definition
+  values: [raw net R, net R minus beta x BTC 24h fwd return (R units), placebo (BTC fwd return permuted across timestamps)]
+  hypothesised_effect: the residual target raises held-out net R per decision by >= +0.06 vs raw, and the placebo does not
+- name: beta_window_hours
+  values: [720]
+  hypothesised_effect: fixed, not swept (declared)
+question: 'RQ-20261108-98e3-23 read SIDE-DRIVER on the served ENTRY replay (2026-10-25..11-07: longs -0.90 R n=51, shorts +0.017 R n=266): its result
+  flips with the direction the market moved, i.e. the model prices the common crypto factor. Refit the SAME recipe (ml_decision_entry FEATURES,
+  LGB_PARAMS, E.purge_train, served tau) at each of 13 monthly origins over the frozen v1''s clean held-out year in three arms -- RAW (targets
+  net_long/net_short), RESID (targets net_long - m / net_short + m, m = beta x BTC 24h fwd return x entry/(SL_ATR x ATR), beta = 720-bar rolling
+  point-in-time OLS slope clipped [-1,3]), PLACEBO (as RESID with the BTC fwd return permuted across timestamps) -- and grade every arm on the
+  decisions it takes at the ACTUAL net R of an outright bracket trade (canonical cost stack). Does RESID beat RAW?'
+why_this_matters: 'Foxhound-1 (D3 ml_entry) trades bybit_2 (real money), its mirror and three prop books; its held-out edge is +0.037 R/decision (n=907)
+  and the served window lost -0.13 R. If removing the market factor from the target raises per-decision edge, it is a refit of a real-money model
+  at zero model cost (same learner, same serving path, inline OHLCV, no torch). If it fails, the side-driver is not fixed by the target and the
+  market-conditioning idea (incl. the costlier MC-JEPA encoder, dropped on compute) is closed for this recipe.'
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+power:
+  expected_n: 13
+  min_detectable_effect: 0.06
+  effect_units: metric
+  sd: 0.074
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE (QUOTED, not re-derived here): frontier-scan-2026-11-11 K1 gives a paired window sd of 0.074 R/decision for two refits of this recipe
+    over the same 13 x 28-day windows (from RQ-20261108-98e3-26), so se = 0.074/sqrt(13) = 0.0205 and the 80%-power MDE at alpha 0.05 two-sided is
+    ~ (2.18 + 0.87) x 0.0205 = 0.063 R. The registered effect is +0.06. Fewer than 10 windows with n >= 30 per arm is INDETERMINATE. The window sd
+    is re-measured in the result (paired_resid_vs_raw.sd); if it is > 0.10 the design was underpowered and that is stated in the grading note.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Binance USD-M 1h history 2021..2026-09 already published; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261112-4654-01-RESID-TARGET
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  baseline: 'RAW: the same recipe refit on the raw net-R target at the same origins, same rows, same tau, same cost stack. The frozen v1 is reported for
+    context only.'
+  statistic: 'scripts/research/ml_entry_residual.py run: per 28-day window, mean actual net R per taken decision for each arm (E.policy, served tau);
+    d_w = RESID - RAW over windows where both took >= 30 decisions; mean, sd and 95% t-interval of d_w; same for PLACEBO - RAW; pooled means and n.'
+  rule: 'PASS iff >= 10 paired windows AND mean d >= +0.06 R/decision AND the 95% t-CI lower bound > 0 AND RESID pooled n >= 300 AND the PLACEBO does
+    not pass (PLACEBO-RAW mean < +0.06 or its CI lower bound <= 0) AND RESID pooled mean > PLACEBO pooled mean. FAIL iff >= 10 paired windows AND
+    (mean d <= 0 OR PLACEBO-RAW mean >= RESID-RAW mean). INDETERMINATE otherwise. Net of the full cost stack (fee + slippage + funding via
+    ml_decision_entry._cost_r). Thresholds are not changed after any result.'
+  pass_action: 'a Tier-3 proposal note on row ML-ENTRY-FINETUNE: candidate manifest for a residual-target ENTRY refit, plus the next unit (the same
+    target on the full held-out-year promotion design with the prop survival gate, and FRONTIER-Q-RESID-ENTRY-EQ for Foxhound-4).'
+  fail_action: 'record FAIL for this exact configuration (BTC-beta residual, 720h beta, 24h horizon, the v1 recipe, served tau); close
+    FRONTIER-Q-RESID-ENTRY and RESID-ENTRY-EQ unless the placebo matched (then the target lever is noise, say so).'
+  what_it_does_not_do: Changes no served model, tau, roster or config. Trades stay outright (not beta-hedged); a hedged or market-neutral book is a
+    different question. One seed per refit. BTCUSDT is excluded from all arms (its residual target is degenerate). The window was read before by
+    98e3-26 (declared). A PASS is not a promotion; it earns the promotion-design unit.
+  min_n: 10 paired windows with >= 30 decisions per arm; 300 pooled RESID decisions
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  basis: 'stand-in: Foxhound-1 trades bybit_2 + 3 prop books; a +0.06 R/decision lift at ~40 decisions/month on bybit_2 is the scale; not a P&L
+    measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 110
+  why_runner: Binance public klines plus 39 LightGBM refit pairs; no trainer-resident data.
+  basis: 'ESTIMATE: RQ-20261108-98e3-26 (13 refits + fetch) ran ~40 min on research-script-run (dispatched 22:10Z, record 22:49Z); this is 3x the fits.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_residual.py
+  - run
+  - --cache
+  - /tmp/ml_entry_klines
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --run-date
+  - '2026-11-12'
+  - --rule-id
+  - RULE-RQ20261112-4654-01-RESID-TARGET
+  - --registered-at
+  - '2026-11-12'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261112-4654-01
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: whether Foxhound-1 (ml_decision_entry) is refit on a market-residual target; no change from this unit
+  legs:
+  - ml_entry
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261108-98e3-23
+- RQ-20261108-98e3-25
+- RQ-20261108-98e3-26
+- FRONTIER-Q-RESID-ENTRY
+- ML-ENTRY-FINETUNE
+population: The ml_decision_entry universe (Binance USD-M perps in the bp2 manifest, BTCUSDT excluded), both-sides at the served tau over
+  2025-10-01..2026-09-30 in 13 x 28-day windows; a recipe comparison, not a promotion read.

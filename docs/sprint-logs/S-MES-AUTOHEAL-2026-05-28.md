@@ -103,7 +103,7 @@
 - **Watchdog verified live** via the #2196 post-restart systemd dump:
   `ict-ib-gateway-watchdog.service` Loaded, `TriggeredBy: ● ict-ib-gateway-watchdog.timer`
   (timer active), and the probe fired:
-  `probe: healthy=True reason=net_liquidation=1000600.6 action=none`. The trader
+  `probe: healthy=True reason=net_liquidation=[balance removed] action=none`. The trader
   itself reconnected to IB Gateway cleanly (`clientId 498 … API connection ready`,
   data farms OK). A `/api/diag/services` pull confirmed `ict-web-api` + trader
   active.
