@@ -1,6 +1,6 @@
 ---
 name: ml-review
-description: Weekly review of the ICT bot's ML LIFECYCLE, built on the shared four-layer analyst pattern (docs/reference/llm-analyst-skill-design.md). Layer 0 grades the previous review's calls. A fixed CHECKS layer (scripts and relays with stated populations) covers registry state, data and label freshness, the produced→labelled→trained→scored→changes-an-order chain, serve parity, drift split into score drift vs labelled decay, champion vs challenger on one replay and cost stack, and family concentration. An ANALYSIS layer then reasons over that evidence and a wide context: why each model does or does not add value to the decisions it feeds, which hypotheses were tested, and the next experiments ranked by expected value per cost. Each decision is a call with a pre-registered check. It also covers promotion/demotion proposals against the 3-stage ladder (candidate→shadow→advisory), the ML plan loop and the backlog drain. Files follow-ups to docs/claude/work/pipeline/ and the checklist. Use when the ML-FRONTIER-PREP lane of the Wednesday "Weekly review prep" routine runs, or when the operator says "run the ml review", "/ml-review", "how are the models doing", "is the ML learning", or "what should we train next". NOT for live trading promotion past shadow (Tier-3, operator-gated): this skill proposes and the operator promotes. NOT for system health (use /health-review) and NOT for strategy trade scoring (use /performance-review).
+description: Weekly review of the ICT bot's ML LIFECYCLE, built on the shared four-layer analyst pattern (docs/reference/llm-analyst-skill-design.md). Layer 0 grades the previous review's calls. A fixed CHECKS layer (scripts and relays with stated populations) covers registry state, data and label freshness, the produced→labelled→trained→scored→changes-an-order chain, serve parity, drift split into score drift vs labelled decay, champion vs challenger on one replay and cost stack, and family concentration. An ANALYSIS layer then reasons over that evidence and a wide context: why each model does or does not add value to the decisions it feeds, which hypotheses were tested, and the next experiments ranked by expected value per cost. Each decision is a call with a pre-registered check. It also covers promotion/demotion proposals (offline evidence → advisory directly; advisory → shadow on demotion — the stage step was retired 2026-11-12), the ML plan loop and the backlog drain. Files follow-ups to docs/claude/work/pipeline/ and the checklist. Use when the ML-FRONTIER-PREP lane of the Wednesday "Weekly review prep" routine runs, or when the operator says "run the ml review", "/ml-review", "how are the models doing", "is the ML learning", or "what should we train next". Promotion to real money is a data-backed Tier-3 decision on committed backtest evidence with no shadow step (retired 2026-11-12): this skill proposes it, it does not run promote-stage. NOT for system health (use /health-review) and NOT for strategy trade scoring (use /performance-review).
 ---
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-10-28` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
@@ -185,7 +185,11 @@ is always noise / expected variation), run the discriminating test, and record w
   - Cite the gate packet (`ready`, `blocking[]`) **and** the C3 decision value.
   - A head that changes no order is a wiring-or-retire question, not a promotion question.
   - Never `promote` on `ready: false`.
-  - `shadow → advisory` and every demotion are Tier-3, or data-backed per canonical § "Data-backed Tier-2/3 decisions".
+  - Promotion into `advisory` (from `candidate` or `shadow` — there is no shadow step) and every demotion are Tier-3,
+    data-backed per canonical § "Data-backed Tier-2/3 decisions" when a committed evidence record settles them.
+    Live-row gates (`shadow_soak`, `live_parity`, `labels_accruing`, `drift_clean`, live AUC/brier) are reported, never
+    required before real money (operator, 2026-11-12: *"There is nothing in between proving edge on back testing and real
+    money. Absolutely no steps."*).
 
 ## Layer 3 — DECISIONS
 
@@ -260,15 +264,19 @@ Priority `high` only if an advisory head is decaying on labelled data.
 
 ## Lifecycle rules (unchanged in substance; they feed C1/C5/C6 and the stages question)
 
-- **3-stage ladder** `candidate → shadow → advisory`. Normalize legacy names with `ml.manifest.canonical_stage` and report the
-  canonical stage. `candidate → shadow` is the trainer's autonomous track: note readiness, and the `model-training` skill flips it.
-  `shadow → advisory` is the live-trading gate (Tier-3).
+- **Three stage labels, no ladder** — `candidate` · `shadow` · `advisory`. Normalize legacy names with
+  `ml.manifest.canonical_stage` and report the canonical stage. A model whose committed offline evidence clears the gates goes
+  `candidate → advisory` directly; `shadow` holds only a model DEMOTED from `advisory`, soaking to keep generating data while it is
+  iterated on. Operator, chat 2026-11-12, verbatim: *"you're going to retire the step from the ML. Everything goes through the new
+  flow, back testing, live money, and then if it gets demoted, it soaks to still generate data while we iterate on it. That is the
+  only acceptable flow. There is nothing in between proving edge on back testing and real money. Absolutely no steps."*
 - **Refine, do not abandon** ([`docs/claude/model-refinement-lifecycle.md`](../../../docs/claude/model-refinement-lifecycle.md)):
   - A stage-guard `demote` on an advisory head becomes a soft-off proposal (advisory → shadow) plus a `[refinement]` pipeline row,
-    with a hypothesis and `resolution_criteria`. The row resolves as re-gate → restore, or 3 attempts → retire to candidate.
+    with a hypothesis and `resolution_criteria`. The row resolves as re-gate → restore, or lever exhaustion → retire to candidate
+    (retirement is on lever exhaustion, never an attempt count — `programme-review` § iteration loop).
   - Drive each open `[refinement]` row one step every run.
 - **Lens role** (`docs/unified-confidence-risk-DESIGN.md`): tag each model as `c_reg` / `c_setup` / `c_wr` (conviction) or sizing.
-  `conviction-meta-v1`'s `shadow → advisory` is the switch that turns learned conviction live. Report calibrator coverage, staleness
+  `conviction-meta-v1` reaching `advisory` (on offline evidence, no shadow step) is what turns learned conviction live. Report calibrator coverage, staleness
   and Brier/ECE (`scripts/ml/fit_confidence_calibrators.py`). A degenerate head feeding conviction is a conviction-quality finding.
 
 ## Backlog drain — a hard completion gate
@@ -344,7 +352,7 @@ item's state when it grades a plan-ref result.
 **Never:**
 - touch `src/`, `config/` or `ml/configs/` (manifest and code changes are proposals);
 - run a training cycle, promote, or build a dataset (chain into `model-training` after approval);
-- promote past `shadow`;
+- run `promote-stage` itself (a promotion is proposed with its evidence record; the manager or a dispatched lane acts on it);
 - edit `config/strategies.yaml` or `config/accounts.yaml`;
 - place an order;
 - create a cron or trigger (a cadence change is a `handoff` request to the manager);

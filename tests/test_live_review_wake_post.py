@@ -78,6 +78,8 @@ def _reset(monkeypatch):
     monkeypatch.setattr(post, "_cached_markers", [])
     monkeypatch.setattr(post, "_last_kick", float("-inf"))
     monkeypatch.setattr(post, "_evidence_backoff_until", float("-inf"))
+    monkeypatch.setattr(post, "_suppressed_markers", [])
+    monkeypatch.setattr(post, "_suppressed_loaded_from", None)
 
 
 PACKET = {"review_id": "LR-20261026T1200Z-pkg-1", "order_package_id": "pkg-1", "state": {"open_r": 1.2}}
@@ -344,3 +346,87 @@ def _wake_switches_all_on(tmp_path, monkeypatch):
     monkeypatch.delenv("WAKE_TOGGLES_REMOTE", raising=False)
     for _k in _wt.TOGGLES:
         _wt.set_toggle(_k, True, "test")
+
+
+# --- PI-20261112-MK2UZULF: real-money/prop FIRST, suppressed markers persisted across a restart -------------------
+
+def two_pkg_due(paper_first=True):
+    rows = [{"order_package_id": "pkg-paper", "leg": "l1", "symbol": "ADAUSDT", "account_id": "bybit_1",
+             "telemetry_updated_at": NOW.isoformat(), "events": [{"event": "r_milestone", "level": 1, "why": "x"}]},
+            {"order_package_id": "pkg-real", "leg": "l2", "symbol": "ETHUSDT", "account_id": "bybit_2",
+             "telemetry_updated_at": NOW.isoformat(), "events": [{"event": "r_milestone", "level": 1, "why": "x"}]}]
+    return {"read_state": "looked", "due_count": 2, "generated_at": NOW.isoformat(),
+            "due": rows if paper_first else rows[::-1]}
+
+
+def _toggles(monkeypatch, paper_on):
+    from src.runtime import wake_toggles as wt
+    st = {"read_state": "read", "toggles": dict(wt._defaults(), ltr_paper=paper_on)}
+    monkeypatch.setattr(wt, "read", lambda remote=None: st)
+
+
+@pytest.mark.parametrize("paper_on", [False, True])
+def test_real_money_is_built_and_fired_before_any_paper_entry(tmp_path, monkeypatch, paper_on):
+    _toggles(monkeypatch, paper_on)
+    order = []
+
+    def build(pkg):
+        order.append(("build", pkg))
+        return built(pkg)
+
+    def fire(entries, bundles):
+        order.append(("fire", tuple(e["order_package_id"] for e in entries)))
+        return {"state": "fired"}
+
+    rec = post.run_once(due_fn=lambda: two_pkg_due(paper_first=True), auth_fn=lambda: AUTH, http=FakeHttp(),
+                        now_fn=lambda: NOW, receipt=tmp_path / "r.json", build_bundle=build, fire_fn=fire)
+    assert order[0] == ("build", "pkg-real") and order[1] == ("fire", ("pkg-real",))
+    assert ("build", "pkg-paper") in order[2:]  # the paper data path is kept, just after the fire
+    assert rec["state"] == "posted"
+    if paper_on:
+        assert rec["entries"] == ["pkg-real|r_milestone|1", "pkg-paper|r_milestone|1"]
+        assert order[-1] == ("fire", ("pkg-paper",))
+    else:
+        assert rec["entries"] == ["pkg-real|r_milestone|1"]
+        assert rec["suppressed_by_wake_toggle"] == ["pkg-paper|r_milestone|1"]
+
+
+def test_suppressed_paper_entries_are_not_rebuilt_after_a_restart(tmp_path, monkeypatch):
+    _toggles(monkeypatch, False)
+    built_pkgs = []
+
+    def build(pkg):
+        built_pkgs.append(pkg)
+        return built(pkg)
+
+    def go():
+        return post.run_once(due_fn=lambda: two_pkg_due(), auth_fn=lambda: AUTH, http=FakeHttp(),
+                             now_fn=lambda: NOW, receipt=tmp_path / "r.json", build_bundle=build,
+                             fire_fn=lambda e, b: {"state": "fired"})
+
+    go()
+    assert sorted(built_pkgs) == ["pkg-paper", "pkg-real"]
+    assert (tmp_path / post.SUPPRESSED_STATE_NAME).exists()
+    # restart: in-memory state gone, the PR comment markers for the real-money post are still on GitHub
+    built_pkgs.clear()
+    monkeypatch.setattr(post, "_suppressed_markers", [])
+    monkeypatch.setattr(post, "_suppressed_loaded_from", None)
+    monkeypatch.setattr(post, "_cached_markers", [])
+    wake = post.wake_module()
+    real_only = wake.plan(two_pkg_due(), [], wake.load_cfg(), NOW)
+    real_only["entries"] = [e for e in real_only["entries"] if e["order_package_id"] == "pkg-real"]
+    posted = FakeHttp(comments=[{"body": wake.render(real_only, NOW, "run")}])
+    rec = post.run_once(due_fn=lambda: two_pkg_due(), auth_fn=lambda: AUTH, http=posted, now_fn=lambda: NOW,
+                        receipt=tmp_path / "r.json", build_bundle=build, fire_fn=lambda e, b: {"state": "fired"})
+    assert built_pkgs == [] and rec["state"] == "already_posted"
+
+
+def test_an_unreadable_or_stale_suppressed_file_reads_as_empty(tmp_path):
+    f = tmp_path / post.SUPPRESSED_STATE_NAME
+    f.write_text("{not json")
+    assert post.load_suppressed(f, NOW) == 0
+    post._suppressed_loaded_from = None
+    old = {"kind": "ltr-wake", "posted_at": (NOW - timedelta(days=45)).isoformat(),
+           "entries": [{"order_package_id": "p", "event": "e", "level": 1}]}
+    f.write_text(json.dumps({"version": 1, "markers": [old]}))
+    assert post.load_suppressed(f, NOW) == 0 and post._suppressed_markers == []

@@ -85,8 +85,14 @@ _wake_mod: Any = None
 #: GitHub call on every pass. Refreshed whenever the plan against it is non-empty.
 _cached_markers: List[dict] = []
 #: Synthetic markers for entries the console wake switches suppressed: keeps plan() from re-flagging (and the VM
-#: from rebuilding packets for) the same event every pass. In-process only; a restart re-evaluates once.
+#: from rebuilding packets for) the same event every pass. Persisted to ``runtime_state/ltr_suppressed_markers.json``
+#: (PI-20261112-MK2UZULF), so a trader restart does not rebuild every suppressed paper packet in its first pass.
 _suppressed_markers: List[dict] = []
+SUPPRESSED_STATE_NAME = "ltr_suppressed_markers.json"
+#: Keep at most this many suppressed markers (each carries >= 1 entry).
+SUPPRESSED_KEEP = 200
+#: The path the in-memory list was last loaded from (None = not loaded yet this process).
+_suppressed_loaded_from: Optional[Path] = None
 #: LTR-PACKET-ECHO: after a failed evidence commit, no packet build/commit from here until this monotonic time.
 EVIDENCE_BACKOFF_S = 600
 _evidence_backoff_until = float("-inf")
@@ -95,6 +101,72 @@ _evidence_backoff_until = float("-inf")
 def receipt_path() -> Path:
     from src.utils.paths import repo_root
     return Path(repo_root()) / "runtime_logs" / RECEIPT_NAME
+
+
+def suppressed_state_path(receipt: Optional[Path] = None) -> Path:
+    """Where the suppressed markers persist: ``runtime_state/`` by default (survives a restart, not git-tracked);
+    beside an explicit receipt when one is given (tests / one-off passes never touch the VM's real state)."""
+    if receipt is not None:
+        return Path(receipt).with_name(SUPPRESSED_STATE_NAME)
+    from src.utils.paths import runtime_state_dir
+    return Path(runtime_state_dir()) / SUPPRESSED_STATE_NAME
+
+
+def load_suppressed(path: Path, now: datetime) -> int:
+    """Merge the persisted suppressed markers into memory, once per path per process. Markers older than
+    ``MARKER_LOOKBACK_DAYS`` (long-closed packages) are dropped. An unreadable file reads as empty (the worst case
+    is today's behaviour: one re-evaluation). Never raises. Returns the number loaded."""
+    global _suppressed_loaded_from
+    if _suppressed_loaded_from == path:
+        return 0
+    _suppressed_loaded_from = path
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        raw = doc.get("markers") if isinstance(doc, dict) else None
+        if not isinstance(raw, list):
+            return 0
+        cutoff = now.timestamp() - MARKER_LOOKBACK_DAYS * 86400
+        have = {json.dumps(m, sort_keys=True, default=str) for m in _suppressed_markers}
+        n = 0
+        for m in raw:
+            if not isinstance(m, dict) or not isinstance(m.get("entries"), list):
+                continue
+            try:
+                at = datetime.fromisoformat(str(m.get("posted_at")).replace("Z", "+00:00"))
+                if (at if at.tzinfo else at.replace(tzinfo=timezone.utc)).timestamp() < cutoff:
+                    continue
+            except ValueError:
+                continue
+            if json.dumps(m, sort_keys=True, default=str) not in have:
+                _suppressed_markers.append(m)
+                n += 1
+        del _suppressed_markers[:-SUPPRESSED_KEEP]
+        return n
+    except (OSError, ValueError):
+        return 0
+
+
+def save_suppressed(path: Path) -> None:
+    """Atomically write the in-memory suppressed markers. Contained: a write failure costs one re-evaluation."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps({"version": 1, "markers": _suppressed_markers[-SUPPRESSED_KEEP:]},
+                                  default=str) + "\n", encoding="utf-8")
+        os.replace(tmp, path)
+    except Exception:  # noqa: BLE001
+        logger.warning("ltr-wake-post: suppressed-marker save failed", exc_info=True)
+
+
+def entry_priority(entry: Dict[str, Any]) -> bool:
+    """True when the entry spans a real-money or prop account (fired FIRST). An unknown account maps to real
+    money (``wake_toggles.ltr_keys_for_accounts``), so a doubt is never demoted behind paper."""
+    try:
+        from src.runtime import wake_toggles as wt
+        return any(k in ("ltr_real_money", "ltr_prop")
+                   for k in wt.ltr_keys_for_accounts(entry.get("accounts") or []))
+    except Exception:  # noqa: BLE001
+        return True
 
 
 def _is_live_trader() -> bool:
@@ -307,6 +379,8 @@ def run_once(due_fn: Optional[Callable[[], Any]] = None,
     rec["prescreen_logged"] = log_prescreen(doc, prescreen_log)
     rec["conflicting_exposure"] = conflict_alert(doc)
     cfg = wake.load_cfg()
+    sup_path = suppressed_state_path(receipt)
+    load_suppressed(sup_path, computed_at)
     if wake.plan(doc, [], cfg, computed_at)["kind"] != "wake":
         rec["state"] = "nothing_due"
         write_receipt(rec, receipt)
@@ -341,51 +415,78 @@ def run_once(due_fn: Optional[Callable[[], Any]] = None,
         rec.update(state="evidence_backoff", reason="the last evidence commit failed; the Actions poller covers this window")
         write_receipt(rec, receipt)
         return rec
-    # LTR C2: the decision packet rides the comment (built on the VM, read-only).
-    bundles = wake.attach_packets(p, build=build_bundle) if build_bundle else wake.attach_packets(p)
-    # LTR-PACKET-ECHO: the packet + table land on live-review/rows by machine, byte-exact, BEFORE the wake
-    # is posted, so the reviewer only writes its row. A failed commit posts nothing from here: the Actions
-    # poller (same markers, its own token) posts within ~5 min and lands the evidence itself, and this
-    # poster backs off for EVIDENCE_BACKOFF_S instead of rebuilding packets every pass.
-    rec["local_evidence"] = keep_local_evidence(wake, bundles)
-    ev = wake.land_evidence(p, bundles, auth, http)
-    rec["evidence"] = {k: {kk: v for kk, v in st.items() if kk != "reason"} for k, st in ev.items()}
-    if any(st.get("state") == "could_not_commit" for st in ev.values()):
-        _evidence_backoff_until = time.monotonic() + EVIDENCE_BACKOFF_S
-        codes = [st.get("http_code") for st in ev.values() if st.get("state") == "could_not_commit"]
-        rec.update(state="could_not_post", http_code=codes[0] if codes else None,
-                   reason="evidence_commit_failed: left to the Actions poller")
-        write_receipt(rec, receipt)
-        return rec
-    # Console wake switches: packets/evidence above are landed regardless; only the comment is withheld.
-    dropped = wake.apply_toggles(p, bundles)
-    if dropped:
-        _suppressed_markers.append({"kind": "ltr-wake", "posted_at": computed_at.isoformat(), "entries": dropped})
-        del _suppressed_markers[:-200]
-        rec["suppressed_by_wake_toggle"] = [f"{e['order_package_id']}|{e['event']}|{e['level']}" for e in dropped]
-    if not p["entries"]:
-        rec["state"] = "suppressed_by_wake_toggle"
-        write_receipt(rec, receipt)
-        return rec
-    rec["packet_states"] = {e["order_package_id"]: e.get("packet_state") for e in p["entries"]}
-    # TRADE-ACTION-DIRECT-PATH phase 3: start the reviewer NOW via the routine API trigger. The comment below still
-    # posts (it is the dedupe record the Actions poller reads, and the manager's view); entries stamped
-    # ``routine_fire.state: fired`` tell the manager not to dispatch. Any fire failure leaves them on the comment path.
-    rec["routine_fire"] = fire_fn(p["entries"], bundles)
-    body = wake.render(p, computed_at, "VM poster (ict-trader-live, in process)", bundles)
-    code, data = http("POST", f"{API}/repos/{REPO}/issues/{pr}/comments",
-                      json.dumps({"body": body}).encode(), auth)
-    posted_at = now_fn()
-    rec.update(entries=[f"{e['order_package_id']}|{e['event']}|{e['level']}" for e in p["entries"]],
-               http_code=code)
-    if code == 201:
-        _cached_markers = markers + wake.parse_markers([{"body": body}])
-        _first_proof_wake(_cached_markers)
-        rec.update(state="posted", posted_at=posted_at.isoformat(),
-                   latency_s=round((posted_at - computed_at).total_seconds(), 3),
-                   comment_url=(data or {}).get("html_url") if isinstance(data, dict) else None)
-    else:
-        rec.update(state="could_not_post", reason="comment_post_failed")
+    # PI-20261112-MK2UZULF: real-money/prop entries are built, landed and FIRED before any paper-only entry is even
+    # built (a paper packet build is ~seconds each and, after a restart, used to hold the first fire ~10 min). The paper
+    # group runs the identical sequence afterwards: packets still built and stored, the console switches still govern.
+    prio = [e for e in p["entries"] if entry_priority(e)]
+    paper = [e for e in p["entries"] if not entry_priority(e)]
+    outcomes: List[str] = []
+    posted_entries: List[str] = []
+    first_group = True
+    for group in (prio, paper):
+        if not group:
+            continue
+        sub = dict(p, entries=group)
+        pre = "" if first_group else "then_"
+        first_group = False
+        # LTR C2: the decision packet rides the comment (built on the VM, read-only).
+        bundles = wake.attach_packets(sub, build=build_bundle) if build_bundle else wake.attach_packets(sub)
+        # LTR-PACKET-ECHO: the packet + table land on live-review/rows by machine, byte-exact, BEFORE the wake
+        # is posted, so the reviewer only writes its row. A failed commit posts nothing from here: the Actions
+        # poller (same markers, its own token) posts within ~5 min and lands the evidence itself, and this
+        # poster backs off for EVIDENCE_BACKOFF_S instead of rebuilding packets every pass.
+        rec[pre + "local_evidence"] = keep_local_evidence(wake, bundles)
+        ev = wake.land_evidence(sub, bundles, auth, http)
+        rec[pre + "evidence"] = {k: {kk: v for kk, v in st.items() if kk != "reason"} for k, st in ev.items()}
+        if any(st.get("state") == "could_not_commit" for st in ev.values()):
+            _evidence_backoff_until = time.monotonic() + EVIDENCE_BACKOFF_S
+            codes = [st.get("http_code") for st in ev.values() if st.get("state") == "could_not_commit"]
+            if not outcomes:
+                rec.update(state="could_not_post", http_code=codes[0] if codes else None,
+                           reason="evidence_commit_failed: left to the Actions poller")
+                write_receipt(rec, receipt)
+                return rec
+            rec[pre + "evidence_failed"] = True  # an earlier group already went out; its state stands
+            break
+        # Console wake switches: packets/evidence above are landed regardless; only the comment is withheld.
+        dropped = wake.apply_toggles(sub, bundles)
+        if dropped:
+            _suppressed_markers.append({"kind": "ltr-wake", "posted_at": computed_at.isoformat(), "entries": dropped})
+            del _suppressed_markers[:-SUPPRESSED_KEEP]
+            save_suppressed(sup_path)
+            rec.setdefault("suppressed_by_wake_toggle", []).extend(
+                f"{e['order_package_id']}|{e['event']}|{e['level']}" for e in dropped)
+        if not sub["entries"]:
+            outcomes.append("suppressed_by_wake_toggle")
+            continue
+        rec[pre + "packet_states"] = {e["order_package_id"]: e.get("packet_state") for e in sub["entries"]}
+        # TRADE-ACTION-DIRECT-PATH phase 3: start the reviewer NOW via the routine API trigger. The comment below still
+        # posts (it is the dedupe record the Actions poller reads, and the manager's view); entries stamped
+        # ``routine_fire.state: fired`` tell the manager not to dispatch. Any fire failure leaves them on the comment path.
+        rec[pre + "routine_fire"] = fire_fn(sub["entries"], bundles)
+        body = wake.render(sub, computed_at, "VM poster (ict-trader-live, in process)", bundles)
+        code, data = http("POST", f"{API}/repos/{REPO}/issues/{pr}/comments",
+                          json.dumps({"body": body}).encode(), auth)
+        posted_at = now_fn()
+        posted_entries += [f"{e['order_package_id']}|{e['event']}|{e['level']}" for e in sub["entries"]]
+        rec.update(entries=list(posted_entries), http_code=code)
+        if code == 201:
+            markers = markers + wake.parse_markers([{"body": body}])
+            _cached_markers = markers
+            _first_proof_wake(_cached_markers)
+            if "posted" not in outcomes:
+                rec.update(posted_at=posted_at.isoformat(),
+                           latency_s=round((posted_at - computed_at).total_seconds(), 3),
+                           comment_url=(data or {}).get("html_url") if isinstance(data, dict) else None)
+            outcomes.append("posted")
+        else:
+            outcomes.append("could_not_post")
+            rec.setdefault("reason", "comment_post_failed")
+    rec["state"] = ("posted" if "posted" in outcomes else
+                    "could_not_post" if "could_not_post" in outcomes else "suppressed_by_wake_toggle")
+    if rec["state"] == "posted":
+        rec.pop("reason", None)
+        rec["http_code"] = 201
     write_receipt(rec, receipt)
     return rec
 

@@ -642,6 +642,12 @@ def build(*, today: date | None = None, root: Path | None = None) -> dict[str, A
     except Exception:  # noqa: BLE001 — unreadable is a state, not a crash
         bw = None
 
+    try:  # UNBLOCK-WATCH: every blocked/waiting item and the condition that clears it
+        from scripts.ops import unblock_watch  # noqa: PLC0415
+        uw = unblock_watch.brief_lines(root)
+    except Exception:  # noqa: BLE001 — unreadable is a state, not a crash
+        uw = None
+
     try:  # SCOREBOARD-PNL-FIRST: unreadable is a state (renders "we could not look"), never a crash or a zero
         from scripts.ops import scoreboard  # noqa: PLC0415
         sb = scoreboard.build(root=root, source="db")
@@ -651,6 +657,7 @@ def build(*, today: date | None = None, root: Path | None = None) -> dict[str, A
     return {
         "scoreboard": sb,
         "blockerWatch": bw,
+        "unblockWatch": uw,
         "schemaVersion": 1,
         "forDate": today.isoformat(),
         "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
@@ -696,6 +703,10 @@ def _section0(b: dict) -> list[str]:
         L += blocker_watch.render_lines(bw)
     elif "blockerWatch" in b:
         L += ["### 🧱 BLOCKER-WATCH — COULD NOT BE RUN (we did not look; this is not zero)", ""]
+    # UNBLOCK-WATCH (operator 2026-11-12): the daily BLOCKED section -- counts, unconditioned, stale manual,
+    # could_not_look and money waits > 7 days. Repo-only per request + the newest VM receipt.
+    if "unblockWatch" in b:
+        L += list(b["unblockWatch"] or ["### ⛓️ BLOCKED — COULD NOT BE EVALUATED (we did not look; this is not zero)", ""])
     return L
 
 

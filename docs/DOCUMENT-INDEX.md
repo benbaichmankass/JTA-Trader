@@ -509,6 +509,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/claude/work/SOAK-REPORT-observations.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/SOAK-REPORT.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/SOAK-TOUCH-SPLIT.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/claude/work/designs/direct-ops-migration-2026-11-12.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/designs/world-event-prediction-engine-v0.1.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/findings/E18-starved-triage-post-E35-20260926.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/findings/soak-regrade-20261103.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
@@ -1110,6 +1111,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/research-ops-benchmark-2026-10-16.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Research loop benchmarked against published research-ops practice (quant multiple testing, MLOps tracking, pre-registration, stage-gate, SRE): gap table, filed rows and operator decisions (lane RESEARCH-OPS-BENCHMARK-1016). |
 | `docs/research/prop-retest-2026-11-06/velotrade_book/RESULT.md` | evidence | live | — | 2026-11-06 | `dir:research-is-measurement / read:SOAK-BACKLOG-REVIEW-lane-measured-it-2026-11-06` | sol_4h prop book sim: keep on velotrade_1 (p(pass) 0.138 vs 0.076 at $10/leg); goes historical on the manager's merge |
 | `docs/research/restart-gap-exit-first-2026-11-05.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/slv-trend-1h-param-provenance-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/strategy-status-model-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/structure-exits-default-scope-2026-11-01.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/prop-retest-2026-11-06/RESULT.md` | evidence | live | — | 2026-11-06 | `dir:research-is-measurement / read:SOAK-BACKLOG-REVIEW-lane-measured-it-2026-11-06` | Prop V3 re-test of trend_donchian_eth_4h (FAIL_EDGE) and trend_donchian_sol_4h (FAIL); goes historical on the operator's keep/pull decision |
