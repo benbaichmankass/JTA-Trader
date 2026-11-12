@@ -1,7 +1,7 @@
 {
   "tier": 1,
   "landing": "hold",
-  "hold_reason": "new ict-web-api route, manager merges",
-  "hold_text": "Adds new read routes to ict-web-api (performance reviews list/fetch, /performance?since=&until=, /health/infra, /work/testing-queue) and an additive ?linked_trade_id= on /order-packages. All GET, read-only, no secrets, no writes; existing response shapes unchanged. The manager merges because new ict-web-api route code is held by rule.",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "New ict-web-api read routes (src/web/api/routers/*) plus an additive ?linked_trade_id= and ?since=&until= on existing routes. R5 cannot vouch for new web-api route code, so the manager merges (operator/AM-UI: landing hold, manager merges). All GET, read-only, no secrets; existing response shapes unchanged. Revert: git revert.",
   "why": "Backend routes the redesigned SPA (ict-trader-dashboard PRs 238/239/240) needs (UI-SPA-BACKEND-ROUTES)."
 }

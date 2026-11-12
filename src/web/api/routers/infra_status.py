@@ -25,7 +25,6 @@ import json
 import logging
 import re
 import sqlite3
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -136,18 +135,14 @@ def _trader_vm(now: datetime) -> Dict[str, Any]:
 
 def _ib_accounts() -> Optional[List[str]]:
     """Declared-live Interactive Brokers account ids from config, or None."""
-    try:
-        import yaml  # noqa: PLC0415
-        cfg = yaml.safe_load((Path(repo_root()) / "config" / "accounts.yaml")
-                             .read_text(encoding="utf-8")) or {}
-        accts = cfg.get("accounts", cfg)
-        return sorted(
-            a for a, c in accts.items()
-            if isinstance(c, dict) and c.get("exchange") == "interactive_brokers"
-            and c.get("mode") == "live")
-    except Exception as exc:  # noqa: BLE001  # allow-silent: logged; maps to could_not_look
-        logger.warning("infra_status: accounts.yaml unreadable: %s", exc)
-        return None
+    from src.config.accounts_loader import load_accounts_dict  # noqa: PLC0415
+    accts = load_accounts_dict(Path(repo_root()) / "config" / "accounts.yaml")
+    if not accts:
+        return None  # empty = unreadable (the loader logs and returns {})
+    return sorted(
+        a for a, c in accts.items()
+        if isinstance(c, dict) and c.get("exchange") == "interactive_brokers"
+        and c.get("mode") == "live")
 
 
 def _ib_gateway(now: datetime) -> Dict[str, Any]:
@@ -205,7 +200,7 @@ def _phone_app(now: datetime) -> Dict[str, Any]:
                 "SELECT COUNT(*), MAX(last_seen_at) FROM device_tokens").fetchone()
         finally:
             conn.close()
-    except sqlite3.Error as exc:
+    except sqlite3.Error as exc:  # allow-silent: maps to a stated could_not_look entry, never ok
         return _cnl("phone_app", f"device_tokens not readable ({exc.__class__.__name__})",
                     src, now)
     n, newest = row[0], _parse_ts(row[1]) if row[1] else None

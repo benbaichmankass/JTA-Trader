@@ -147,6 +147,7 @@ def _index() -> Dict[str, Any]:
     for s in _sources():
         d: Path = s["dir"]
         if not d.is_dir():
+            # collapsed-state: absent — a missing source dir is published as read_state "absent" and rolls up to partial/could_not_look; no freshness grading here
             srcs.append({"source": s["source"], "read_state": "absent", "count": None})
             continue
         n = 0
