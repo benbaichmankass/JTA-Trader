@@ -1,0 +1,136 @@
+"""CLOSED-TRADE-SNAPSHOT-WRITER: the web-api background builder (new closes + backfill), contained per trade."""
+from __future__ import annotations
+
+import json
+import sqlite3
+from datetime import datetime, timedelta, timezone
+
+import pytest
+
+from src.runtime import trade_snapshot_builder as b
+from src.runtime import trade_snapshot_store as store
+from tests.fixtures.real_schema_db import insert_order_package, insert_trade, make_canonical_db
+from tests.test_trade_chart_snapshot import PKG, RECEIPTS, REVIEWS, _candles
+
+NOW = datetime(2026, 11, 12, 12, 0, tzinfo=timezone.utc)
+EMPTY = {"state": "read", "rows": []}
+
+
+@pytest.fixture
+def db(tmp_path):
+    p = tmp_path / "trade_journal.db"
+    make_canonical_db(p)
+    insert_order_package(p, order_package_id=PKG, created_at="2026-11-12T01:00:00+00:00", status="closed", meta="{}")
+    return p
+
+
+def _trade(db, opened="2026-11-12T01:00:00+00:00", closed="2026-11-12T07:00:00+00:00", **kw):
+    f = dict(timestamp=opened, closed_at=closed, symbol="BTCUSDT", direction="long", entry_price=100.0,
+             exit_price=101.0, position_size=1.0, status="closed", is_backtest=0, account_id="bybit_1",
+             order_package_id=PKG)
+    f.update(kw)
+    return insert_trade(db, **f)
+
+
+def _fetch_ok(calls=None):
+    def fetch(symbol, interval, since_ms, limit):
+        if calls is not None:
+            calls.append((symbol, interval, since_ms, limit))
+        start = int(datetime(2026, 11, 12, 0, 0, tzinfo=timezone.utc).timestamp())
+        return _candles(start, 120), "test"
+    return fetch
+
+
+def _row(db, tid):
+    conn = sqlite3.connect(str(db))
+    try:
+        return store.read(conn, tid)
+    finally:
+        conn.close()
+
+
+def test_builds_closed_trade_once_and_is_idempotent(db):
+    tid = _trade(db)
+    calls = []
+    assert b.run_batch(db, _fetch_ok(calls), NOW, reviews=REVIEWS, receipts=RECEIPTS)["built_partial"] == 1
+    got = _row(db, tid)
+    assert got["state"] == "built" and got["payload"]["trade"]["trade_id"] == tid
+    assert "indicators" not in got["payload"]            # stored slim; the route recomputes them
+    assert calls[0][1] == "5m" and calls[0][2] is not None   # historical read from the window start
+    assert b.run_batch(db, _fetch_ok(calls), NOW, reviews=REVIEWS, receipts=RECEIPTS) == \
+        {"built": 0, "built_partial": 0, "retrying": 0}
+    assert len(calls) == 1
+
+
+def test_waits_until_post_close_window_has_passed(db):
+    _trade(db, opened="2026-11-12T10:00:00+00:00", closed="2026-11-12T11:50:00+00:00")   # window ends 12:06:30
+    assert sum(b.run_batch(db, _fetch_ok(), NOW, reviews=EMPTY, receipts=EMPTY).values()) == 0
+    assert sum(b.run_batch(db, _fetch_ok(), NOW + timedelta(minutes=10), reviews=EMPTY, receipts=EMPTY).values()) == 1
+
+
+def test_open_and_backtest_trades_are_skipped(db):
+    _trade(db, status="open", closed=None)
+    _trade(db, is_backtest=1)
+    assert sum(b.run_batch(db, _fetch_ok(), NOW, reviews=EMPTY, receipts=EMPTY).values()) == 0
+
+
+def test_candle_failure_retries_then_stores_partial_without_candles(db):
+    tid = _trade(db)
+    none = lambda *a: (None, "test")  # noqa: E731
+    t = NOW
+    assert b.run_batch(db, none, t, reviews=EMPTY, receipts=EMPTY)["retrying"] == 1
+    got = _row(db, tid)
+    assert got["state"] == "retrying" and got["attempts"] == 1 and "candles_unavailable" in got["last_error"]
+    # not due again until the backoff passes
+    assert sum(b.run_batch(db, none, t + timedelta(seconds=60), reviews=EMPTY, receipts=EMPTY).values()) == 0
+    t += timedelta(seconds=b.BACKOFF_S[0] + 1)
+    assert b.run_batch(db, none, t, reviews=EMPTY, receipts=EMPTY)["retrying"] == 1
+    t += timedelta(seconds=b.BACKOFF_S[1] + 1)
+    assert b.run_batch(db, none, t, reviews=EMPTY, receipts=EMPTY)["built_partial"] == 1
+    got = _row(db, tid)
+    assert got["state"] == "built" and got["payload"]["candles"]["state"] == "unavailable"
+
+
+def test_one_bad_trade_does_not_stop_the_batch(db):
+    bad = _trade(db, closed="not-a-time")
+    good = _trade(db)
+    out = b.run_batch(db, _fetch_ok(), NOW, reviews=EMPTY, receipts=EMPTY)
+    assert out["retrying"] == 1 and out["built_partial"] == 1
+    assert _row(db, bad)["state"] == "retrying" and _row(db, good)["state"] == "built"
+
+
+def test_newest_first_and_batch_limit(db):
+    ids = [_trade(db) for _ in range(5)]
+    b.run_batch(db, _fetch_ok(), NOW, limit=2, reviews=EMPTY, receipts=EMPTY)
+    built = [i for i in ids if _row(db, i)["state"] == "built"]
+    assert built == ids[-2:]
+
+
+def test_recent_fallback_when_connector_has_no_since(db):
+    _trade(db)
+
+    def fetch(symbol, interval, since_ms, limit):
+        if since_ms is not None:
+            return None, "test"           # e.g. IB / Alpaca: no historical since read
+        start = int(datetime(2026, 11, 11, 23, 0, tzinfo=timezone.utc).timestamp())
+        return _candles(start, limit), "test"
+
+    assert b.run_batch(db, fetch, NOW, reviews=EMPTY, receipts=EMPTY)["built_partial"] == 1
+
+
+def test_route_reads_what_the_builder_wrote(db, monkeypatch):
+    from fastapi.testclient import TestClient
+    from src.web.api import main as api_main
+    from src.web.api.routers import trade_snapshot as router
+    tid = _trade(db)
+    b.run_batch(db, _fetch_ok(), NOW, reviews=REVIEWS, receipts=RECEIPTS)
+    monkeypatch.setattr(router, "_DB_PATH", db)
+    d = TestClient(api_main.app).get(f"/api/bot/trades/{tid}/snapshot").json()
+    assert d["snapshot"]["indicators"]["state"] == "measured"
+    assert json.dumps(d)  # serialisable
+
+
+def test_startup_hook_does_not_spawn_under_pytest():
+    from src.web.api import main as api_main
+    api_main._start_trade_snapshot_builder()
+    assert b._thread is None
