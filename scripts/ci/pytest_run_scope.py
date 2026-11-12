@@ -292,9 +292,20 @@ class ImportGraph:
         self.dyn_prefixes: list[tuple[str, str]] = []  # (prefix, loader path)
         for rel, src in self.text.items():
             self._scan(rel, src)
-        # rev[m] = files (repo-relative) that import / load m
+        # rev[m] = files (repo-relative) that import / load m.
+        # CI-SCOPE-LAZY-EDGES (2026-11-12). decision: 2026-11-12 operator chat "each item is only getting the
+        # checks it needs" + manager approval of CI-SCOPE-LAZY-EDGES (selection narrowed to import-time edges;
+        # main backstop catches misses). A LIBRARY module contributes only its import-time edges (`eager`): an
+        # import inside one of its function bodies runs only when that function is called, and following those
+        # edges transitively joined ~half the source tree into one blob that reached ~990-1200 of ~1830 test
+        # files, so 43 of 59 PR heads (73%, 2026-11-12 09:30-11:19Z) fell back to the full suite. Code under
+        # tests/ (test functions, conftest/plugin fixture bodies, helpers) RUNS when the test runs, so it keeps
+        # every edge. GIVES UP: a test that reaches a library's function-local import only THROUGH another
+        # library module is no longer selected for a change to that import; the 2-hourly full-suite backstop on
+        # main (pytest-run.yml schedule) catches it post-merge.
         self.rev: dict[str, set[str]] = {}
-        for rel, mods in self.fwd.items():
+        for rel in self.fwd:
+            mods = self.fwd[rel] if rel.startswith("tests/") else self.eager[rel]
             for m in mods:
                 self.rev.setdefault(m, set()).add(rel)
             mod = _module_name(rel)
@@ -407,7 +418,8 @@ class ImportGraph:
                 if f in seen:
                     continue
                 seen.add(f)
-                stack.extend(self.fwd.get(f, ()))
+                # CI-SCOPE-LAZY-EDGES: a reached library module runs its IMPORT-TIME code only.
+                stack.extend((self.fwd if f.startswith("tests/") else self.eager).get(f, ()))
         return seen
 
     def _files_for(self, mod: str) -> list[str]:
@@ -468,6 +480,16 @@ class ImportGraph:
             for other, src in self.text.items():
                 if other != rel and (rel in src or base in src):
                     reach(other)
+            if not seen and not rel.endswith(".py"):
+                # CI-SCOPE-LAZY-EDGES: a data file nothing names by path or basename is usually built from
+                # its directory (`FIXTURES / f"snapshot_{kind}_v1.json"`): the files naming that directory
+                # (its repo path, or its last segment as a quoted string) are its readers.
+                parent = Path(rel).parent
+                if parent.name:
+                    seg = re.compile(r"[\"']" + re.escape(parent.name) + r"[/\"']")
+                    for other, src in self.text.items():
+                        if parent.as_posix() + "/" in src or seg.search(src):
+                            reach(other)
         done: set[str] = set()
         while frontier:
             m = frontier.pop()
@@ -520,8 +542,8 @@ def classify_affected(
             return "full", f"affected: {f} is conftest/requirements/.github/scripts/ci -> full suite", []
         if f in guards:
             return "full", f"affected: {f} is run by the guards job -> full suite", []
-        if not f.endswith(".py"):
-            return "full", f"affected: {f} is a suite-read non-Python file -> full suite", []
+        # CI-SCOPE-LAZY-EDGES: a suite-read non-Python file is no longer FULL by itself; it selects the files
+        # that read it (by path, basename, or its directory) below, and is FULL only when nothing names it.
     graph = graph or ImportGraph()
     tests_all = graph.test_files()
     limit = max(1, int(len(tests_all) * FANIN_FULL_FRACTION))

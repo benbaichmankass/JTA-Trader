@@ -328,17 +328,26 @@ def action_spec(t: dict, a: str, s: int) -> Optional[dict]:
     raise ValueError(a)
 
 
-def label_trade(t: dict, cost) -> Dict[str, Any]:
-    """label[a] (len n_states): net R(B0 + a at t) - net R(B0 replay); NaN = invalid there (scored as HOLD)."""
+def label_trade(t: dict, cost, horizon: Optional[int] = None) -> Dict[str, Any]:
+    """label[a] (len n_states): net R(B0 + a at t) - net R(B0 replay); NaN = invalid there (scored as HOLD).
+    `horizon` H (RQ-20261112-3144-01): BOTH arms are force-closed at bar s+1+H's open through the same engine replay, so the
+    label is the action's value over the next H bars (first passage of whatever level is in force, else marked at H). When
+    s+1+H is at or past the exit bar no close is added and the label equals the full label."""
     bars, cm = engine_bars(t), _cm(t, cost)
     net0, info = replay(t, bars, cm)
     n = t["bars"] - 1
+    sec = _sec(t)
     lab = {a: np.full(max(n, 0), np.nan) for a in ACTIONS}
     for s in range(max(n, 0)):
+        cut: List[dict] = []
+        base = net0
+        if horizon is not None and s + 1 + horizon < t["bars"] - 1:
+            cut = [{"ts": (s + 1 + horizon) * sec, "kind": "close", "frac": 1.0}]
+            base = replay(t, bars, cm, extra=cut)[0]
         for a in ACTIONS:
             sp = action_spec(t, a, s)
             if sp is not None:
-                lab[a][s] = replay(t, bars, cm, extra=sp.get("extra", ()), tp_cap=sp.get("tp_cap"))[0] - net0
+                lab[a][s] = replay(t, bars, cm, extra=list(sp.get("extra", ())) + cut, tp_cap=sp.get("tp_cap"))[0] - base
     return {"labels": lab, "b0_replay_net_r": net0, "b0_replay_gross_r": info["gross_r"], "bars": bars, "cm": cm,
             "fidelity_ok": bool(abs(info["gross_r"] - t["exit_r"]) <= FIDELITY_TOL_R)}
 
@@ -427,6 +436,68 @@ def med_win(trades: List[dict], idx: Sequence[int]) -> Dict[str, float]:
 
 
 # --------------------------------------------------------------------------- learners
+PATH_STATE = ["mae_r", "atr_ratio_entry", "swing_hi_dist_atr", "swing_lo_dist_atr"]
+SWING_K = 2          # 5-bar fractal: a pivot at bar j is CONFIRMED after bar j + SWING_K closes
+STAGE_A_FOLD_RULE = {"min_folds": 4, "min_checkins_per_fold": 200}   # RULE-RQ-20261101-78fc-04 (registered 2026-11-01)
+
+
+def path_state_features(t: dict) -> np.ndarray:
+    """RQ-20261101-78fc-04 path-state block, one row per decision state (exit row excluded, the R1 row order), every value
+    a function of bars 0..s only. MFE so far and bars since MFE are ALREADY in R0 (peak_r, log_since_peak), so the block
+    adds the other two named quantities plus the swing distance, split by side:
+      mae_r              min(0, min adv_r over bars 0..s)            -- the worst excursion so far, in R
+      atr_ratio_entry    atr_r[s] / atr_r[0]                         -- volatility now vs at entry
+      swing_hi_dist_atr  (latest CONFIRMED in-trade pivot high - c_r[s]) / atr_r[s]
+      swing_lo_dist_atr  (c_r[s] - latest CONFIRMED in-trade pivot low) / atr_r[s]
+    A pivot high at j: fav[j] is the max of fav[j-K .. j+K] (ties: the latest bar wins via >=), usable from state j + K.
+    The harness emit starts at the entry bar, so pre-entry structure is not available: swings are IN-TRADE swings
+    (NaN until one is confirmed; NaN -> train median in the learner)."""
+    n = t["bars"] - 1
+    if n <= 0:
+        return np.zeros((0, len(PATH_STATE)))
+    fav, adv, c = np.asarray(t["fav"], float), np.asarray(t["adv"], float), np.asarray(t["c_r"], float)
+    atr = np.asarray(t["atr_r"], float)
+    sa = np.where(np.isfinite(atr) & (atr > 0), atr, np.nan)
+    mae = np.minimum(0.0, np.fmin.accumulate(np.where(np.isfinite(adv), adv, np.inf)))
+    a0 = sa[0] if len(sa) else np.nan
+    out = np.full((n, len(PATH_STATE)), np.nan)
+    hi_lvl, lo_lvl = np.nan, np.nan
+    K = SWING_K
+    for s in range(n):
+        j = s - K                       # the newest bar whose pivot status is decided after bar s closes
+        if j >= K:
+            w = slice(j - K, j + K + 1)
+            if np.isfinite(fav[j]) and fav[j] >= np.nanmax(fav[w]):
+                hi_lvl = fav[j]
+            if np.isfinite(adv[j]) and adv[j] <= np.nanmin(adv[w]):
+                lo_lvl = adv[j]
+        out[s] = (mae[s] if np.isfinite(mae[s]) else np.nan, sa[s] / a0 if np.isfinite(a0) else np.nan,
+                  (hi_lvl - c[s]) / sa[s], (c[s] - lo_lvl) / sa[s])
+    return out
+
+
+_PER_BAR = ("open_r", "peak_r", "bsp", "off", "o_r", "c_r", "fav", "adv", "stop_r", "target_r", "d_stop", "d_target",
+            "atr_r", "adx")
+
+
+def truncate_trade(t: dict, m: int) -> dict:
+    """The trade as known after bar m closes: rows 0..m kept, plus one all-NaN placeholder exit row so that state m (the
+    decision after bar m) still exists. A causal feature returns the same rows 0..m on this as on the full trade; one that
+    reads bar m + 1 sees NaN at state m and is caught."""
+    return dict(t, bars=m + 2, **{k: np.r_[np.asarray(t[k], float)[:m + 1], np.nan] for k in _PER_BAR if k in t})
+
+
+def add_feature_block(ev: List[dict], trades: List[dict], block: Optional[str]) -> None:
+    """Append the block's columns to every state's X1 AFTER the leg fixed effects (B2 reads X1[:, 4:7]; unchanged)."""
+    if not block:
+        return
+    if block != "path_state":
+        raise ValueError(f"unknown feature block {block!r}; valid: path_state")
+    for e, t in zip(ev, trades):
+        if e["n"]:
+            e["X1"] = np.c_[e["X1"], path_state_features(t)]
+
+
 def _fit_lgbm(X: np.ndarray, y: np.ndarray, seed: int):
     import lightgbm as lgb   # native API: the runner installs lightgbm without scikit-learn on some paths
     return lgb.train(dict(LGBM_PARAMS, seed=seed), lgb.Dataset(X, label=y), num_boost_round=LGBM_ROUNDS)
@@ -632,8 +703,8 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
           checkins: Sequence[str] = tuple(CHECKINS), act_margin_r: float = ACT_MARGIN_R,
           logit_act_p: float = LOGIT_ACT_P, act_margin_grid: Sequence[float] = (),
           calibration: bool = False, inner_folds: int = 0, actions: Optional[Sequence[str]] = None,
-          n_perm: int = 200) -> Dict[str, Any]:
-    """`calibration`: Stage-A per-action OOS rank calibration of the lgbm arm. `inner_folds` N > 0: the lgbm act margin is chosen per
+          n_perm: int = 200, feature_block: Optional[str] = None, horizon: Optional[int] = None) -> Dict[str, Any]:
+    """`feature_block` "path_state": append path_state_features to X1 (RQ-20261101-78fc-04). `calibration`: Stage-A per-action OOS rank calibration of the lgbm arm. `inner_folds` N > 0: the lgbm act margin is chosen per
     outer fold on N-fold out-of-fold predictions of the OUTER TRAIN set (no outer test row is touched; grid = `act_margin_grid` or
     INNER_MARGIN_GRID). `actions`: restrict the lgbm arm to these classes, or ["stage_a"] = the classes passing Stage A."""
     T = test["trades"]
@@ -642,7 +713,10 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
     fe_legs = sorted({t["leg"] for t in T} | {t["leg"] for t in TR})
     ev = [fpp.events(t, fe_legs) for t in T]
     ev_tr = ev if same else [fpp.events(t, fe_legs) for t in TR]
-    labs = [label_trade(t, cost) for t in T]
+    add_feature_block(ev, T, feature_block)
+    if not same:
+        add_feature_block(ev_tr, TR, feature_block)
+    labs = [label_trade(t, cost, horizon) for t in T]
     fl = make_folds(T, TR, k, same)
     labs_tr: Dict[int, Any] = {}
 
@@ -650,7 +724,7 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
         if same:
             return labs[i]
         if i not in labs_tr:
-            labs_tr[i] = label_trade(TR[i], cost)
+            labs_tr[i] = label_trade(TR[i], cost, horizon)
         return labs_tr[i]
     rng = np.random.default_rng(seed)
     a0 = np.array([t["atr_r"][0] for t in T if len(t["atr_r"]) and np.isfinite(t["atr_r"][0])])
@@ -712,6 +786,7 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
         P = {a: [] for a in ACTIONS}
         Lb = {a: [] for a in ACTIONS}
         tids: List[np.ndarray] = []
+        tfold: List[int] = []
         nt_ = 0
         for f, i in oos:
             mdl = fold_models[f].get("lgbm_action_value")
@@ -722,6 +797,7 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
                 P[a].append(sc_[:, j])
                 Lb[a].append(np.nan_to_num(labs[i]["labels"][a], nan=0.0))
             tids.append(np.full(ev[i]["n"], nt_))
+            tfold.append(f)
             nt_ += 1
         if tids:
             calib = {"definition": "OOS Spearman rho(predicted advantage, realized label) over every state of every OOS trade; "
@@ -730,6 +806,28 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
                      "actions": calibrate({a: np.concatenate(P[a]) for a in ACTIONS}, {a: np.concatenate(Lb[a]) for a in ACTIONS},
                                           np.concatenate(tids), np.random.default_rng(seed + 17), n_boot, n_perm)}
             calib["passing"] = [a for a in ACTIONS if calib["actions"][a].get("pass")]
+            # per fold (RULE-RQ-20261101-78fc-04): the same rho on that fold's OOS states vs its own within-trade null p95
+            tid_all, tf = np.concatenate(tids), np.array(tfold)
+            fold_of_state = tf[tid_all]
+            per_fold: Dict[str, Any] = {}
+            for f in sorted(set(tfold)):
+                sel = fold_of_state == f
+                ids = tid_all[sel]
+                _, ids = np.unique(ids, return_inverse=True)
+                cf = calibrate({a: np.concatenate(P[a])[sel] for a in ACTIONS}, {a: np.concatenate(Lb[a])[sel] for a in ACTIONS},
+                               ids, np.random.default_rng(seed + 31 + f), n_boot, n_perm)
+                per_fold[str(f)] = {"n_checkins": int(sel.sum()), "n_trades": int(ids.max()) + 1 if len(ids) else 0,
+                                    "actions": {a: {"rho": cf[a].get("rho"), "ci95": cf[a].get("ci95"),
+                                                    "perm_null_p95": cf[a].get("perm_null_p95"),
+                                                    "beats_null_point": bool(cf[a].get("rho") is not None and
+                                                                             cf[a]["rho"] > cf[a]["perm_null_p95"]),
+                                                    "beats_null": bool(cf[a].get("pass"))}
+                                                for a in ACTIONS}}
+            calib["per_fold"] = per_fold
+            calib["folds_beating_null"] = {a: sum(v["actions"][a]["beats_null"] for v in per_fold.values()) for a in ACTIONS}
+            calib["folds_beating_null_point"] = {a: sum(v["actions"][a]["beats_null_point"] for v in per_fold.values())
+                                                 for a in ACTIONS}
+            calib["min_checkins_per_fold"] = min((v["n_checkins"] for v in per_fold.values()), default=0)
     allowed: Optional[List[int]] = None
     if actions:
         names = calib["passing"] if list(actions) == ["stage_a"] and calib else ([] if list(actions) == ["stage_a"] else list(actions))
@@ -901,7 +999,26 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
             "fold_assignment": {T[i]["trade_key"]: f["fold"] for f in fl["folds"] for i in f["test"]},
             "action_enum": list(ALL_ACTIONS), "checkin_grid": list(checkins), "entry_source": "E1",
             "calibration": calib, "actions_allowed": None if allowed is None else [ACTIONS[j] for j in allowed],
-            "inner_folds": inner_folds, "arms": arms, "_labs": labs, "_oracle": oracle_ceiling, "_trades": T}
+            "inner_folds": inner_folds, "feature_block": feature_block,
+            "label": {"kind": "full" if horizon is None else "horizon", "horizon_bars": horizon,
+                      "note": None if horizon is None else "policy arms are scored on the horizon label: Stage A is the read; "
+                              "arm deltas are not net-of-cost policy values"},
+            "features": fpp.R1 + ["leg_fixed_effects"] + (PATH_STATE if feature_block == "path_state" else []), "arms": arms, "_labs": labs, "_oracle": oracle_ceiling, "_trades": T}
+
+
+def stage_a_folds(calib: Optional[Dict[str, Any]], n_folds: int, sc_pass: bool) -> Tuple[str, str]:
+    """RULE-RQ-20261101-78fc-04: PASS iff some non-hold action's OOS Spearman beats its within-trade-shuffle p95 on >= 4 of
+    the 6 purged folds; INDETERMINATE if any fold has < 200 check-ins (or the selfcheck fails); else FAIL."""
+    if not sc_pass or not calib or "per_fold" not in calib:
+        return "indeterminate", "selfcheck failed or no per-fold calibration"
+    pf = calib["per_fold"]
+    if len(pf) < n_folds or calib["min_checkins_per_fold"] < STAGE_A_FOLD_RULE["min_checkins_per_fold"]:
+        return "indeterminate", f"{len(pf)} folds scored; min check-ins per fold {calib['min_checkins_per_fold']}"
+    fb = calib["folds_beating_null"]
+    best = max(fb, key=lambda a: fb[a])
+    ok = fb[best] >= STAGE_A_FOLD_RULE["min_folds"]
+    return ("pass" if ok else "fail"), (f"folds beating the permutation p95 per action {fb}; best {best} {fb[best]}/{len(pf)} "
+                                        f"(needs >= {STAGE_A_FOLD_RULE['min_folds']})")
 
 
 def s_offline(arm: Dict[str, Any], arms: List[Dict[str, Any]]) -> Tuple[str, str]:
@@ -1047,6 +1164,63 @@ def selfcheck(verbose: bool = True) -> Dict[str, Any]:
             checks.append(("null: logit action-value does not pass on a driftless walk (CI lower <= 0)",
                            lo.get("read_state") == "measured" and lo["ci95"][0] <= 0,
                            f"null {lo.get('delta_vs_b0_r')} {lo.get('ci95')}"))
+        # 2b. path-state block: causal (truncation-invariant) and the per-fold Stage-A rule separates planted from null
+        corp, meta = resolve_corpus("synthetic-planted", work=Path(td))
+        TT = build_corpus(corp, meta, cost_fn=cx)["trades"][:200]
+
+        def _trunc_worst(fn) -> Tuple[float, int]:
+            worst, n_cmp = 0.0, 0
+            for t in TT:
+                full = fn(t)
+                for m in range(0, t["bars"] - 1):
+                    a_, b_ = full[:m + 1], fn(truncate_trade(t, m))[:m + 1]
+                    if not np.array_equal(np.isnan(a_), np.isnan(b_)):
+                        return np.inf, n_cmp + 1
+                    if np.isfinite(a_).any():
+                        worst = max(worst, float(np.nanmax(np.abs(a_ - b_))))
+                    n_cmp += 1
+            return worst, n_cmp
+        worst_tr, n_cmp = _trunc_worst(path_state_features)
+        checks.append(("path_state: every feature at state s is unchanged when the trade is cut after bar s (causal)",
+                       worst_tr == 0.0 and n_cmp > 0, f"{n_cmp} truncations, max |diff| {worst_tr}"))
+
+        def _leaky(t: dict) -> np.ndarray:   # an UNCONFIRMED pivot (reads fav[s + 1]): the test must catch it
+            f_ = np.asarray(t["fav"], float)
+            n_ = t["bars"] - 1
+            return np.array([[f_[min(s_ + 1, len(f_) - 1)]] for s_ in range(n_)]) if n_ > 0 else np.zeros((0, 1))
+        leak_worst, _ = _trunc_worst(_leaky)
+        checks.append(("path_state: positive control -- a feature reading bar s+1 FAILS the truncation test", leak_worst > 0,
+                       f"leaky max |diff| {leak_worst}"))
+        fb_p, fb_n = res["synthetic-planted"]["calibration"]["folds_beating_null"], res["synthetic"]["calibration"]["folds_beating_null"]
+        checks.append(("stage_a_folds: planted reads pass, driftless null reads fail",
+                       stage_a_folds(res["synthetic-planted"]["calibration"], 6, True)[0] == "pass" and
+                       stage_a_folds(res["synthetic"]["calibration"], 6, True)[0] != "pass",
+                       f"planted {max(fb_p.values())}/6, null {max(fb_n.values())}/6"))
+        # 2c. horizon label (RQ-20261112-3144-01): equals the full label when H covers the trade; planted passes, null fails
+        cost_ = cost
+        worst_h = 0.0
+        for t in TT[:60]:
+            a_, b_ = label_trade(t, cost_)["labels"], label_trade(t, cost_, horizon=10 ** 6)["labels"]
+            for k_ in ACTIONS:
+                same_nan = np.array_equal(np.isnan(a_[k_]), np.isnan(b_[k_]))
+                d_ = np.nanmax(np.abs(a_[k_] - b_[k_])) if np.isfinite(a_[k_]).any() else 0.0
+                worst_h = max(worst_h, float(d_) if same_nan else np.inf)
+        checks.append(("horizon label == full label when H >= the remaining bars", worst_h <= 1e-12, f"max |diff| {worst_h}"))
+        short = [t for t in TT[:60] if t["bars"] > 6]
+        moved = sum(int(np.nanmax(np.abs(label_trade(t, cost_, horizon=2)["labels"]["close"] -
+                                         label_trade(t, cost_)["labels"]["close"])) > 1e-9) for t in short)
+        checks.append(("horizon label differs from the full label when H < the remaining bars (positive control)", moved > 0,
+                       f"{moved}/{len(short)} trades differ at H=2"))
+        hz = {}
+        for spec in ("synthetic", "synthetic-planted"):
+            corp, meta = resolve_corpus(spec, work=Path(td))
+            bc = build_corpus(corp, meta, cost_fn=cx)   # all 900 trades: at 300 (50 per fold) the planted horizon signal is
+            hz[spec] = score(bc, None, k=6, n_boot=200, draws=5, seed=7, cost=cost, kinds=("lgbm_action_value",),
+                             checkins=("every_bar",), calibration=True, n_perm=50, feature_block="path_state", horizon=12)
+        vp = stage_a_folds(hz["synthetic-planted"]["calibration"], 6, True)
+        vn = stage_a_folds(hz["synthetic"]["calibration"], 6, True)
+        checks.append(("stage_a_folds at horizon 12: planted reads pass, driftless null does not", vp[0] == "pass" and vn[0] != "pass",
+                       f"planted {vp[0]}, null {vn[0]}"))
         # 3. cross-symbol purge: a train trade overlapping a test fold window is dropped whatever its symbol
         corp, meta = resolve_corpus("synthetic", work=Path(td))
         bc = build_corpus(corp, meta, cost_fn=cx)
@@ -1096,7 +1270,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("cmd", choices=("selfcheck", "score", "transfer", "corpus"))
     ap.add_argument("--test-corpus", default="v1")
     ap.add_argument("--train-corpus", default=None, help="train on this corpus, test on --test-corpus (cross-symbol purge)")
-    ap.add_argument("--rule", choices=("reproduce", "s_offline", "none"), default="none")
+    ap.add_argument("--rule", choices=("reproduce", "s_offline", "stage_a_folds", "none"), default="none")
+    ap.add_argument("--label", choices=("full", "horizon"), default="full", help="horizon: per-action value censored at --horizon bars")
+    ap.add_argument("--horizon", type=int, default=None)
+    ap.add_argument("--feature-block", default=None, choices=("path_state",), help="append a feature block to X1 (RQ-20261101-78fc-04)")
     ap.add_argument("--learners", default="lgbm_action_value,logit_action_value")
     ap.add_argument("--checkins", default=",".join(CHECKINS))
     ap.add_argument("--desk-policy", default=None, help="JSONL {state_id, action}: scored as B3")
@@ -1115,6 +1292,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--write-labels", action="store_true")
     ap.add_argument("--out", default=None)
     a = ap.parse_args(argv)
+    if a.label == "horizon" and not (a.horizon and a.horizon > 0):
+        ap.error("--label horizon needs --horizon N > 0")
     if a.cmd == "selfcheck":
         sc = selfcheck()
         if a.out:
@@ -1157,7 +1336,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                   checkins=[s for s in a.checkins.split(",") if s], act_margin_r=a.act_margin, logit_act_p=a.logit_act_p,
                   act_margin_grid=[float(x) for x in a.act_margin_grid.split(",") if x],
                   calibration=a.calibration, inner_folds=a.inner_folds,
-                  actions=[x for x in a.actions.split(",") if x] or None, n_perm=a.n_perm)
+                  actions=[x for x in a.actions.split(",") if x] or None, n_perm=a.n_perm, feature_block=a.feature_block,
+                  horizon=(a.horizon if a.label == "horizon" else None))
         if a.write_labels:
             with gzip.open(out / "labels.jsonl.gz", "wt", encoding="utf-8") as fh:
                 for t, L in zip(r["_trades"], r["_labs"]):
@@ -1192,6 +1372,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                        "fail" if vs and all(v == "fail" for v in vs) else "indeterminate")
             why = ("STAGE A FAIL: no action class has OOS rho CI lower > permutation p95; Stage B not run" if stage_a_fail
                    else f"S-OFFLINE per learner arm: {vs}")
+        elif a.rule == "stage_a_folds":
+            verdict, why = stage_a_folds(r.get("calibration"), a.folds, sc["pass"])
         else:
             verdict, why = "measured", "scored; no rule applied"
     v = {"verdict": verdict, "read_state": "measured" if test["trades"] else "unmeasured", "population": pop,

@@ -79,16 +79,19 @@ pinged once on a real-money or prop account:
   (``phone_trail.request_sl_widen``, declared so the app applies a looser stop); close / reduce
   (``phone_cancel.request_close``, the server-issued action channel, operator 2026-11-09);
 * prop_vm: move_tp (PROP-BRACKET-APPLY: ``meta.tp_target`` on the ticket, applied by the account's own trail through
-  its amend code; refused for an adapter that cannot amend a TP, e.g. browser dxtrade); other / IB: none;
+  its amend code; refused for an adapter that cannot amend a TP, e.g. browser dxtrade); close / reduce
+  (CAP-PROP-VM-CLOSE, operator 2026-11-12: ``src.prop.vm_close.request_close`` writes ``meta.close_request``; the
+  account's own executor tick closes through its watched close and reads the venue back; a reduce is refused for an
+  adapter without a partial close, i.e. browser dxtrade / tradeify_1); other / IB: none;
 * any account: add_entry / change_size > 1 -- none: no add-to-an-open-position executor exists yet
   (``no_action_path:add_size``); the account's decision is still computed and recorded.
 
-Not built, and why (DESK-3, MEASURED by reading the executors at 2026-10-27): a prop ``widen_sl``
-has no executor that could carry it. Both prop executors refuse a looser stop BY CONSTRUCTION, on
-the client side: the phone app's amend refuses "amend would loosen the stop"
-(``tools/phone-executor/app/.../MainActivity.kt``, an APK change) and the DXtrade adapter's armed
-modify is tighten-only (``ModifyRollout``, ``rollout_tighten_mismatch``). A prop add has no
-add-to-position ticket path. Alpaca partial_close: the bracket legs reserve every share, so the
+Not built, and why (re-read 2026-11-12, CAP-PROP-VM-CLOSE): a ``widen_sl`` on a VM prop account
+(tradeify_1, velotrade_1) has no executor: the DXtrade adapter's armed modify is tighten-only BY
+CONSTRUCTION (``ModifyRollout``, ``rollout_tighten_mismatch``), deliberately kept. The PHONE account
+does have one since 2026-11-09 (``phone_trail.request_sl_widen``, above), so "widen_sl: no executor"
+is no longer true for prop as a whole. A prop add has no add-to-position ticket path.
+Alpaca partial_close: the bracket legs reserve every share, so the
 venue refuses a reduce (``insufficient qty``) unless the legs are cancelled first, which would leave
 the leg unbracketed. Tracked on checklist row ``LTR-ACTION-EXECUTOR-GAPS``.
 
@@ -705,7 +708,7 @@ ACTION_PATHS: Dict[str, frozenset] = {
     "bybit": frozenset({"close", "reduce", "move_tp", "widen_sl"}),
     "alpaca": frozenset({"close", "move_tp"}),
     "phone": frozenset({"move_tp", "close", "reduce", "widen_sl"}),
-    "prop_vm": frozenset({"move_tp"}),
+    "prop_vm": frozenset({"move_tp", "close", "reduce"}),
     "other": frozenset(),
 }
 LIVE_REVIEW_CLOSE = "live_review_close"
@@ -760,7 +763,7 @@ def _decide_trade_action(intent: lri.LiveReviewIntent, leg: Dict[str, Any], pkg:
     if str(pkg.get("strategy_name") or "") == DESK_LEG and key in ("widen_sl", "add_size"):
         return lri.AmendVerdict(aid, lri.V_REFUSE, None, f"{R_DESK_LEG_NEVER}:{key}")
     if key not in ACTION_PATHS.get(cls, frozenset()) or (cls in ("bybit", "alpaca") and leg["kind"] != "trade") \
-            or (cls == "phone" and leg["kind"] != "ticket"):
+            or (cls in ("phone", "prop_vm") and leg["kind"] != "ticket"):
         return lri.AmendVerdict(aid, lri.V_REFUSE, None, f"{lri.R_NO_ACTION_PATH}:{key}")
     row = leg["row"]
     if leg["kind"] == "trade":
@@ -1083,6 +1086,28 @@ def _exec_prop_vm_tp(leg: Dict[str, Any], v: lri.AmendVerdict, intent: lri.LiveR
     return {"result": X_REFUSED if r["result"] == R_REFUSED else X_APPLY_FAILED, "detail": r["detail"]}
 
 
+def _exec_prop_vm_close(leg: Dict[str, Any], key: str, intent: lri.LiveReviewIntent) -> Dict[str, Any]:
+    """CAP-PROP-VM-CLOSE: record a close / reduce request on THIS prop ticket (``meta.close_request``) and read it back.
+    The account's own executor tick carries it out through its watched close (venue re-read; a partial also checks
+    both brackets still rest) and alerts the outcome. Applied here = the request is recorded and read back, exactly
+    as ``_exec_prop_vm_tp``; the venue's confirmation is the executor's ``vm_close`` line."""
+    from src.prop import vm_close
+
+    tk = leg["row"]
+    frac = None
+    if key == "reduce":
+        d = lri.size_delta(intent)
+        frac = -d if d is not None else None   # size_delta is already a fraction of the open size
+        if frac is None or not 0 < frac < 1:
+            return {"result": X_REFUSED, "detail": f"reduce fraction unreadable (size delta {d!r})"}
+    r = vm_close.request_close(tk["ticket_id"], account_id=tk["account_id"], fraction=frac, apply=True,
+                               source=lri.PROVENANCE, review_id=intent.review_id,
+                               reason=f"mandate {intent.mandate} review {intent.review_id}")
+    if r["result"] == vm_close.R_QUEUED:
+        return {"result": X_APPLIED, "close_id": r.get("close_id"), "fraction": frac, "detail": r["detail"]}
+    return {"result": X_REFUSED if r["result"] == vm_close.R_REFUSED else X_APPLY_FAILED, "detail": r["detail"]}
+
+
 def _exec_phone_tp(leg: Dict[str, Any], v: lri.AmendVerdict, intent: lri.LiveReviewIntent) -> Dict[str, Any]:
     """Publish a TP revision through the phone's one-slot amend channel; read back the emitted amend."""
     from src.prop.phone_trail import KEY, request_tp_amend
@@ -1153,6 +1178,8 @@ def _exec_trade_action(db, leg: Dict[str, Any], pkg: Dict[str, Any], cls: str, v
         return _exec_phone_tp(leg, v, intent)
     if cls == "prop_vm" and key == "move_tp":
         return _exec_prop_vm_tp(leg, v, intent)
+    if cls == "prop_vm" and key in ("close", "reduce"):
+        return _exec_prop_vm_close(leg, key, intent)
     if cls == "phone" and key == "widen_sl":
         return _exec_phone_sl_widen(leg, v, intent)
     if cls == "phone" and key in ("close", "reduce"):
