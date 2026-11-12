@@ -7,7 +7,8 @@ grade faithful; any other rule must stay OMITTED (approximate), never silently f
 from scripts.research import regime_debt_matrix as r
 
 BASE = {"trend_lookback": 40, "pullback_lookback": 10, "pullback_frac": 0.5, "atr_period": 14,
-        "atr_stop_mult": 1.5, "trail_mult": 3.0, "tp_r": 3.0, "symbols": ["XRPUSDT"], "timeframe": "2h"}
+        "atr_stop_mult": 1.5, "trail_mult": 3.0, "tp_r": 3.0, "symbols": ["XRPUSDT"], "timeframe": "2h",
+        "decision_bar": "closed"}  # absent == forming == an omitted lever (EVIDENCE-DECISION-BAR-DEFAULT)
 
 
 def _cmd(cfg):
