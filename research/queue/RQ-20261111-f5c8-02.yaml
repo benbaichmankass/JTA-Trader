@@ -1,7 +1,7 @@
 id: RQ-20261111-f5c8-02
 title: 'Volume composition (volatility): does a SIZE-led volume surprise carry held-out rank information on the SIZE of the next 4h move beyond plain volume
   and the current bar''s range? (crypto core, held-out 2024-07..2026-09)'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-DATA
@@ -135,7 +135,14 @@ related:
 - research/queue/RQ-20261108-98e3-29.yaml
 - scripts/research/timeframe_breakeven.py
 - scripts/data_lake/binance_vision_lake.py
+last_dispatched_at: '2026-11-12T07:17:02+00:00'
 grading:
   auto: true
   decision_rule_id: RULE-VOLCOMP-VOLATILITY-01
-last_dispatched_at: '2026-11-12T07:17:02+00:00'
+  evidence:
+  - research/results/RQ-20261111-f5c8-02/local-20261112T0710Z.jsonl
+  graded_at: '2026-11-12'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
