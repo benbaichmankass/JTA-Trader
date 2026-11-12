@@ -342,6 +342,45 @@ names that file; read it before running or changing the planning.** What binds, 
   protocol): `config/reset_protocol.yaml` and `list_triggers` are the source; the moved doc carries the table as agreed 2026-10-14. Unchanged:
   research-ops 4×/day, the daily review ONCE a day at 05:52Z, lane check-ins.
 
+## Assistant managers: one per class of work, at least through every surge (operator, 2026-11-12, binding) — gates this adds or changes: none
+
+Operator, 2026-11-12 ~09:00Z, verbatim: *"use assitant managers if needed (e.g. UI assistant manager, ML assitant manager, that manage all of their
+class of tasks and lanes) ... what's the point of keeping all that tasks documented if you're not referncing that information when we're planning
+and executing work?"* and *"We can also add instructions for assitant managers in the manager skill - at least during surges, it might be the best
+way to make sure we stay on top of everything so that you don't lose track of tasks like this"*. **What went wrong without it (2026-11-12):** after
+Thursday planning, 471 queued builds held only 39 `week_lane` tags and 25 lanes; the operator's 11-09 UI spec (`UI-REDESIGN-2026-11`) sat queued
+with no lane, and a UI lane briefed from an older row rebuilt the wrong chart layout.
+
+- **When.** From the start of every surge until the throttle-down at least, and any time the manager runs more lanes than it can brief from the
+  register. The manager creates them right after planning (or at once when it finds itself behind).
+- **Classes** (a row spanning classes goes to the class that owns its money risk first: TRADING > ML > UI > OPS):
+  **TRADING** (real money: prop and the phone executor, desk, live-review MECHANICS, active management, DD switch, promotions and the ladder,
+  TP doctrine, book mechanics) · **ML** (models and heads, bakeoffs, trainer, frontier, research programmes / queue / SLO, regime, timeframes; it
+  keeps the one ML lane running, § "ONE ML LANE ALWAYS RUNS") · **UI** (dashboard SPA, console, UI backend routes, android) · **OPS** (security,
+  VM/hosts, CI/Actions, work store and checklist tooling, health and observability, data feeds, alerts plumbing, the backlog drain).
+- **Creating one.** `create_session` with `source_url` = this repo, `permission_mode: auto`, tags `["am:<CLASS>", "assistant-manager",
+  "manager:<date>"]`. The prompt carries: the class and its governing operator spec rows, the lanes it takes over (ids and state), and the contract below.
+- **The contract** (each assistant manager):
+  1. **The register is its plan.** It owns every row and lane of its class. Before briefing any lane it reads the row(s) (`work.py --via
+     direct get`) and the governing operator spec row for that area, and hands the lane the spec TEXT. Never from memory or an older row.
+  2. It takes over its class's running lanes (one message each: "I am now your manager; report to me"). It dispatches new lanes for its rows by
+     planned priority, with `source_url` = the repo the work is in (§ "Spawning"; `manager-runbooks.md` § A). It keeps rows current (in_flight +
+     lane id; notes; close with evidence) and archives finished lanes. It never sits idle while its class has runnable rows and no lane.
+  3. **Merges:** Tier-1 self-landing is its own. Tier-2/3, and anything touching real money or a prop book, goes to the manager with the PR,
+     CI state, tier and decision line. The manager makes the call.
+  4. **Operator questions, access needs and operator-only steps go to the manager, never to the operator** (the manager puts them on the
+     decisions page).
+  5. It reports to the manager on a fixed cadence (TRADING every 2 h, the others every 3 h) and at once on a real-money risk, a lane it cannot
+     unblock, a merge for the manager or an operator question.
+- **What the manager keeps:** live trade reviews and every alert (operator m12, 2026-11-12: *"The manager needs to get these alerts and
+  handle immediately"*), Tier-2/3 merge calls, the decisions page, the operator conversation, and supervising the assistant managers (read
+  each report; check one claim per report against the register or live data).
+- **Planning feeds them.** Weekly planning (§ "Weekly planning") is not done until every queued, in-flight and blocked row has exactly one
+  disposition, and every (a) row has `week_lane`, a slot and `lane` = its class's assistant manager. Planning sends each assistant manager its
+  queue as soon as that class is disposed. Rows the planning skipped are a planning defect, filed on `WEEKLY-PLANNING`.
+- **Retiring them.** At the throttle-down the manager may fold assistant managers back (record it on `WEEKLY-PLANNING`). Their rows' `lane`
+  fields move to whoever takes the class.
+
 ## The insights ledger (operator, 2026-11-11, row INSIGHTS-LEDGER) — gates this adds or changes: none
 
 A finding that changed how we trade (a performance/trading insight, a research-infra or pipeline-restructure finding such as a sizing result; **not** a plain infra bug) is logged as a `kind: "insight"` item in the pipeline every time it is made: `claim`, `population`, `provenance` (MEASURED / ESTIMATED / UNVERIFIED), `evidence`, `outcome` (`acted|filed|killed|open`), `links` to the row / unit / PR it became (`acted` needs one), optional `topic`/`roadmap` — validated by `scripts/ops/pipeline.py`, shown by `GET /api/bot/work/ledger`. Not a new register; performance-review sessions file theirs the same way. A dangling link is reported by the route, never a CI gate.
