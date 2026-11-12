@@ -119,10 +119,10 @@ def load_ibkr_percontract(path: Path) -> tuple[pd.DataFrame, dict]:
         if chosen[d] != prev:
             rolls.append({"from_session": str(d), "contract": chosen[d]})
             prev = chosen[d]
-    per_contract = {c: {"first_ts": str(g["timestamp"].min()), "last_ts": str(g["timestamp"].max()), "bars": int(len(g))}
+    per_contract = {c: {"first_ts": str(g["timestamp"].min()), "last_ts": str(g["timestamp"].max()), "bars": len(g)}
                     for c, g in pd.DataFrame(rows).assign(timestamp=lambda x: pd.to_datetime(x["ts"], utc=True))
                     .groupby("contract")}
-    prov = {"path": str(path), "bars_raw": len(rows), "bars_continuous": int(len(df)),
+    prov = {"path": str(path), "bars_raw": len(rows), "bars_continuous": len(df),
             "first_ts": str(df["timestamp"].min()), "last_ts": str(df["timestamp"].max()),
             "contracts_served": per_contract, "roll_calendar": rolls,
             "roll_rule": "per ET session, max-volume contract, monotonic; no back-adjustment"}
