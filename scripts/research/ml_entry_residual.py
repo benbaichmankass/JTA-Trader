@@ -163,6 +163,7 @@ def replay(tab: pd.DataFrame, tau: float, frozen: dict | None = None, start: str
             row[arm] = _stats(taken)
             alls[arm].append(taken)
         if frozen is not None:
+            # provenance: predict -- the frozen v1 booster's regressed net R of each side (policy() thresholds at tau), not a probability
             fro = E.policy(win, frozen["long"].predict(win[E.FEATURES]), frozen["short"].predict(win[E.FEATURES]), tau)
             row["frozen"] = _stats(fro)
             alls["frozen"].append(fro)

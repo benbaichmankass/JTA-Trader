@@ -116,6 +116,10 @@ DECLARED_LIGHT = {
     "scripts/research/ml_entry_tp_revision.py":
         "ML-ENTRY-TP-REVISION moving-TP harness: same data and route as ml_decision_entry.py (units RQ-20261101-383f-01/"
         "-03, compute cpu_long, github_runner); fits LightGBM in a lane container or a runner, never routed to the trainer.",
+    "scripts/research/ml_entry_residual.py":
+        "FRONTIER-Q-RESID-ENTRY market-residual target harness: same data and route as ml_decision_entry.py (unit "
+        "RQ-20261112-4654-01, compute cpu_long, research-script-run.yml github_runner); fits LightGBM on public Binance Vision "
+        "klines, never needs_vm_data, never routed to the trainer.",
     "scripts/research/compute_smoke.py":
         "RESEARCH-ROUTER plumbing smoke: one 4096x4096 fp16 matmul loop (GPU, on a Kaggle kernel) or one "
         "1024x1024 fp32 numpy loop (CPU, on a runner) for a few seconds. It is never routed to the trainer "
