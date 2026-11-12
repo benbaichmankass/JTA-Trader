@@ -39,8 +39,8 @@ on:
         options:
           - "false"
           - "true"
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [purge-artifacts-now]
   schedule:
     # Daily 03:00 UTC safety net — keeps storage at < ~7 days of uploads.
     - cron: "0 3 * * *"
@@ -61,10 +61,10 @@ jobs:
     if: |
       github.event_name == 'workflow_dispatch' ||
       github.event_name == 'schedule' ||
-      (github.event_name == 'issues' &&
-       (github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'purge-artifacts-now'))
+      (github.event_name == 'repository_dispatch' &&
+       (github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'purge-artifacts-now'))
     runs-on: ubuntu-latest
     # Generous timeout — the first one-shot total purge on a full
     # storage cap deletes thousands of artifacts; serial DELETEs are
@@ -78,7 +78,7 @@ jobs:
         id: purge
         uses: actions/github-script@v7
         env:
-          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_BODY: ${{ github.event.client_payload.issue.body }}
         with:
           script: |
             // ----- Resolve parameters by trigger -----
@@ -199,7 +199,7 @@ jobs:
       # first one-shot purge run, no comment was ever posted and the
       # issue looked indistinguishable from a wedge.
       - name: Reply to issue with result
-        if: always() && github.event_name == 'issues'
+        if: always() && github.event_name == 'repository_dispatch'
         uses: actions/github-script@v7
         env:
           SUMMARY_MD: ${{ steps.purge.outputs.summary_md }}
@@ -221,13 +221,13 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               body,
             });
             await github.rest.issues.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               state: 'closed',
               state_reason: status === 'success' ? 'completed' : 'not_planned',
             });

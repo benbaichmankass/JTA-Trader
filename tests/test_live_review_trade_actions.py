@@ -186,7 +186,11 @@ def test_move_tp_reaches_bybit_alpaca_and_phone(act):
     by = _by(res)
     assert by["bybit_2"]["executed"] and by["breakout_2"]["executed"]
     assert by["alpaca_live"]["executed"]                              # DESK-3: alpaca move_tp cell
-    assert by["tradeify_1"]["reason"] == "no_action_path:move_tp"
+    # tradeify_1 is a VM prop account: since PROP-BRACKET-APPLY (operator 2026-11-11) move_tp has a path for the class, so
+    # the cell reaches the executor (stubbed here). The per-account refusal (browser dxtrade cannot amend a TP) is the
+    # executor's, pinned in tests/test_prop_bracket_request.py::test_live_review_prop_vm_move_tp_...
+    assert by["tradeify_1"]["executed"] and by["tradeify_1"]["account_class"] == "prop_vm"
+    assert ("prop_vm", "tradeify_1", "move_tp", 0.185, None) in act["actions"]
 
 
 def test_widen_and_add_paths(act):

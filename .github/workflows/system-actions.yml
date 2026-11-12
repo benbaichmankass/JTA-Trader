@@ -77,6 +77,7 @@ on:
           - list-listening-ports
           - gateway-logs
           - gateway-forensics
+          - security-posture-report
           - gateway-disk-report
           - gateway-disk-cleanup
           - pull-latest-logs
@@ -193,6 +194,7 @@ on:
           - backfill-package-risk-meta
           - relink-orphan-trade-5209
           - amend-position-sl
+          - amend-prop-bracket
           - live-review-dry-run
           - live-review-apply
           - run-desk-judge
@@ -760,6 +762,15 @@ jobs:
                      | grep -i -m1 '^[[:space:]]*new_sl[[:space:]]*:' \
                      | sed -E 's/^[[:space:]]*[Nn]ew_sl[[:space:]]*:[[:space:]]*//' \
                      | tr -d '[:space:]' || true)
+            # amend-prop-bracket: the TP to rest at, and whether to remove a TP pin.
+            new_tp=$(printf '%s\n' "${ISSUE_BODY}" \
+                     | grep -i -m1 '^[[:space:]]*new_tp[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Nn]ew_tp[[:space:]]*:[[:space:]]*//' \
+                     | tr -d '[:space:]' || true)
+            clear_tp=$(printf '%s\n' "${ISSUE_BODY}" \
+                     | grep -i -m1 '^[[:space:]]*clear_tp[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Cc]lear_tp[[:space:]]*:[[:space:]]*//' \
+                     | tr -d '[:space:]' || true)
             side=$(printf '%s\n' "${ISSUE_BODY}" \
                      | grep -i -m1 '^[[:space:]]*side[[:space:]]*:' \
                      | sed -E 's/^[[:space:]]*[Ss]ide[[:space:]]*:[[:space:]]*//' \
@@ -897,6 +908,8 @@ jobs:
           echo "ACTION_ROW=${row_id:-}" >>"$GITHUB_ENV"
           echo "ACTION_EXIT_KIND=${exit_kind:-}" >>"$GITHUB_ENV"
           echo "ACTION_NEW_SL=${new_sl:-}" >>"$GITHUB_ENV"
+          echo "ACTION_NEW_TP=${new_tp:-}" >>"$GITHUB_ENV"
+          echo "ACTION_CLEAR_TP=${clear_tp:-}" >>"$GITHUB_ENV"
           echo "ACTION_TARGET=${cap_target:-}" >>"$GITHUB_ENV"
           echo "ACTION_NEW_QTY=${new_qty:-}" >>"$GITHUB_ENV"
           echo "ACTION_EXPECT_QTY=${expect_qty:-}" >>"$GITHUB_ENV"
@@ -913,10 +926,10 @@ jobs:
         run: |
           set -euo pipefail
           case "${ACTION}" in
-            status-check|verify-account-mode|disk-usage-report|list-listening-ports|gateway-logs|gateway-forensics|gateway-disk-report|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|send-ping|send-prop-test-ping|phone-dry-test|phone-drill|generate-strategy-review-packets|grade-closed-trades|net-r-regrade|get-env|passkey-enrol-code|live-review-dry-run)
+            status-check|verify-account-mode|disk-usage-report|list-listening-ports|gateway-logs|gateway-forensics|security-posture-report|gateway-disk-report|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|send-ping|send-prop-test-ping|phone-dry-test|phone-drill|generate-strategy-review-packets|grade-closed-trades|net-r-regrade|get-env|passkey-enrol-code|live-review-dry-run)
               echo "tier=1" >>"$GITHUB_ENV"
               ;;
-            pull-and-deploy|vm-sparse-bootstrap|init-web-session-pepper|install-web-api-deps|cap-vm-logs|gateway-disk-cleanup|set-journal-trade-qty|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|set-bybit-collateral-switch|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|rearm-ib-protective|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|purge-phone-captures|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|prop-report-skip|prop-report-open|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs|relabel-package-close-reasons|backfill-package-risk-meta|relink-orphan-trade-5209|amend-position-sl|live-review-apply|run-desk-judge)
+            pull-and-deploy|vm-sparse-bootstrap|init-web-session-pepper|install-web-api-deps|cap-vm-logs|gateway-disk-cleanup|set-journal-trade-qty|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|set-bybit-collateral-switch|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|rearm-ib-protective|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|purge-phone-captures|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|prop-report-skip|prop-report-open|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs|relabel-package-close-reasons|backfill-package-risk-meta|relink-orphan-trade-5209|amend-position-sl|amend-prop-bracket|live-review-apply|run-desk-judge)
               echo "tier=2" >>"$GITHUB_ENV"
               if [ -z "${REASON// }" ]; then
                 echo "::error::Tier-2 action '${ACTION}' requires a non-empty 'reason' input."
@@ -1407,6 +1420,32 @@ jobs:
             case "${ACTION_ALLOW_IMMEDIATE:-}" in
               ""|true|false|True|False) ;;
               *) echo "::error::amend-position-sl allow_immediate must be true or false (got '${ACTION_ALLOW_IMMEDIATE}')."; exit 1 ;;
+            esac
+          fi
+          # amend-prop-bracket (PROP-BRACKET-APPLY): account + ticket_id + at least one of new_tp / new_sl / clear_tp.
+          # The python helper owns every money guard (capability, ticket state, side of entry, tighten-only).
+          if [ "${ACTION}" = "amend-prop-bracket" ]; then
+            if [ -z "${ACCOUNT_ID// }" ] || ! printf '%s' "${ACCOUNT_ID}" | grep -Eq '^[A-Za-z0-9_-]+$'; then
+              echo "::error::amend-prop-bracket requires a valid 'account: <id>'."
+              exit 1
+            fi
+            if ! printf '%s' "${ACTION_TICKET_ID:-}" | grep -Eq '^prop-[a-z]+-[0-9a-f]{6,64}$'; then
+              echo "::error::amend-prop-bracket requires 'ticket_id: prop-<kind>-<hex>' (got '${ACTION_TICKET_ID:-}')."
+              exit 1
+            fi
+            for pv in "${ACTION_NEW_TP:-}" "${ACTION_NEW_SL:-}"; do
+              if [ -n "${pv}" ] && ! printf '%s' "${pv}" | grep -Eq '^[0-9]+(\.[0-9]+)?$'; then
+                echo "::error::amend-prop-bracket new_tp / new_sl must be positive decimals (got '${pv}')."
+                exit 1
+              fi
+            done
+            if [ -z "${ACTION_NEW_TP:-}" ] && [ -z "${ACTION_NEW_SL:-}" ] && [ "${ACTION_CLEAR_TP:-}" != "true" ]; then
+              echo "::error::amend-prop-bracket needs 'new_tp:', 'new_sl:' or 'clear_tp: true'."
+              exit 1
+            fi
+            case "${ACTION_APPLY:-}" in
+              ""|true|false|True|False) ;;
+              *) echo "::error::amend-prop-bracket apply must be true or false (got '${ACTION_APPLY}')."; exit 1 ;;
             esac
           fi
           # live-review-apply: review_id required; apply true|false. The VM-side
@@ -1940,6 +1979,7 @@ jobs:
             list-listening-ports)               SCRIPT="list_listening_ports.sh" ;;
             gateway-logs)                       SCRIPT="gateway_logs.sh" ;;
             gateway-forensics)                  SCRIPT="gateway_forensics.sh" ;;
+            security-posture-report)            SCRIPT="security_posture_report.sh" ;;
             gateway-disk-report)                SCRIPT="gateway_disk_report.sh" ;;
             gateway-disk-cleanup)               SCRIPT="gateway_disk_cleanup.sh" ;;
             pull-latest-logs)                   SCRIPT="pull_logs.sh" ;;
@@ -2046,6 +2086,7 @@ jobs:
             validate-bybit-naked-rearm)         SCRIPT="validate_bybit_naked_rearm_action.sh" ;;
             cancel-stale-tpsl-legs)             SCRIPT="cancel_stale_tpsl_legs_action.sh" ;;
             amend-position-sl)                  SCRIPT="amend_position_sl_action.sh" ;;
+            amend-prop-bracket)                 SCRIPT="amend_prop_bracket_action.sh" ;;
             live-review-dry-run)                SCRIPT="live_review_dry_run_action.sh" ;;
             live-review-apply)                  SCRIPT="live_review_apply_action.sh" ;;
             run-desk-judge)                     SCRIPT="run_desk_judge_action.sh" ;;
@@ -2568,6 +2609,9 @@ jobs:
             # dispatch formality — forwarded like flatten-*'s.
             REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") TRADE_ID=$(printf '%q' "${TRADE_ID:-}") ACTION_SYMBOL=$(printf '%q' "${ACTION_SYMBOL:-}") ACTION_SIDE=$(printf '%q' "${ACTION_SIDE:-}") ACTION_NEW_SL=$(printf '%q' "${ACTION_NEW_SL:-}") ACTION_REASON=$(printf '%q' "${REASON}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_ALLOW_IMMEDIATE=$(printf '%q' "${ACTION_ALLOW_IMMEDIATE:-}") ${REMOTE_CMD}"
           fi
+          if [ "${ACTION}" = "amend-prop-bracket" ]; then
+            REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") ACTION_TICKET_ID=$(printf '%q' "${ACTION_TICKET_ID}") ACTION_NEW_TP=$(printf '%q' "${ACTION_NEW_TP:-}") ACTION_NEW_SL=$(printf '%q' "${ACTION_NEW_SL:-}") ACTION_CLEAR_TP=$(printf '%q' "${ACTION_CLEAR_TP:-}") ACTION_REASON=$(printf '%q' "${REASON}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
+          fi
           if [ "${ACTION}" = "live-review-apply" ]; then
             REMOTE_CMD="ACTION_REVIEW_ID=$(printf '%q' "${ACTION_REVIEW_ID:-}") ACTION_REVIEW_REF=$(printf '%q' "${ACTION_REVIEW_REF:-}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
           fi
@@ -2751,6 +2795,30 @@ jobs:
                 "${REMOTE_CMD}" \
                 < scripts/ops/vm_sparse_bootstrap.sh \
                 > action-output.txt 2>&1
+          elif [ "${ACTION}" = "security-posture-report" ]; then
+            # SEC-VM-POSTURE-READ: read-only, on BOTH hosts. The script goes over
+            # ssh STDIN from the runner's checkout, so neither host needs it on
+            # disk (the gateway has no git-sync). The trader half runs first; a
+            # gateway failure is reported, never hidden, and does not skip the
+            # trader half.
+            {
+              echo "################ live trader VM ################"
+              ssh "${SSH_ARGS[@]}" "${VM_SSH_USER}@${VM_SSH_HOST}" \
+                  "POSTURE_ROLE=live-trader bash -s" < scripts/ops/security_posture_report.sh
+              rc_t=$?
+              echo
+              echo "################ IB gateway VM ################"
+              GW_ARGS=( "${SSH_ARGS[@]}" )
+              if [ "${GATEWAY_HOST}" != "${VM_SSH_HOST}" ]; then
+                GW_ARGS+=( -o "ProxyJump=${VM_SSH_USER}@${VM_SSH_HOST}" )
+              fi
+              ssh "${GW_ARGS[@]}" "${VM_SSH_USER}@${GATEWAY_HOST}" \
+                  "POSTURE_ROLE=ib-gateway bash -s" < scripts/ops/security_posture_report.sh
+              rc_g=$?
+              echo
+              echo "exit codes: trader=${rc_t} gateway=${rc_g}"
+              [ "${rc_t}" -eq 0 ] && [ "${rc_g}" -eq 0 ]
+            } > action-output.txt 2>&1
           else
             ssh "${SSH_ARGS[@]}" \
                 "${VM_SSH_USER}@${SSH_TARGET_HOST}" \

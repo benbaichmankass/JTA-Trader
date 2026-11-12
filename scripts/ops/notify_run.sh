@@ -70,7 +70,7 @@ if [ "${action}" = "send-ping" ]; then
 fi
 
 case "${action}" in
-    status-check|disk-usage-report|list-listening-ports|gateway-logs|gateway-forensics|gateway-disk-report|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|generate-strategy-review-packets|send-prop-test-ping|phone-dry-test|phone-drill|grade-closed-trades|net-r-regrade|get-env)
+    status-check|disk-usage-report|list-listening-ports|gateway-logs|gateway-forensics|security-posture-report|gateway-disk-report|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|generate-strategy-review-packets|send-prop-test-ping|phone-dry-test|phone-drill|grade-closed-trades|net-r-regrade|get-env)
         tier=1
         if [ "${exit_code}" -eq 0 ]; then
             result="ok"
@@ -500,6 +500,17 @@ case "${action}" in
             2) result="refused (no cap, bad range, overlap/gap with a judged batch, or the stopping rule is met) — nothing built, nothing spent"; priority="high" ;;
             3) result="ENVIRONMENT (no API key / packets step failed / judge failed) — see the run; any spend is in the ledger"; priority="high" ;;
             4) result="judged, but intake could not run — the ledger shows the spend; re-dispatch the same inputs"; priority="high" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
+    amend-prop-bracket)
+        # 2026-11-11 (PROP-BRACKET-APPLY): record a TP/SL request on a VM-prop ticket; the account's executor applies
+        # it. Dry-run unless apply:true.
+        tier=2
+        case "${exit_code}" in
+            0) result="request recorded (or dry-run ok) — the executor applies it next cycle; check the fills amendments"; priority="normal" ;;
+            5) result="refused (account cannot amend / ticket not live / wrong side / looser stop) — nothing written"; priority="high" ;;
+            1) result="the ticket write failed or did not read back — nothing applied"; priority="high" ;;
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;
