@@ -1,0 +1,173 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261112T0151Z-pkg-dc63bb3b4bbf4723",
+ "reviewed_at": "2026-11-12T02:00:59Z",
+ "order_package_id": "pkg-dc63bb3b4bbf4723",
+ "trade_id": 6879,
+ "leg": "tlt_pullback_1d",
+ "accounts": [
+  "ib_paper"
+ ],
+ "trigger": {
+  "event": "structure_break",
+  "level": "2026-11-10T05:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-12T01:51:54Z",
+ "state": {
+  "atr_now_over_entry": 1.0842,
+  "bars_held": 5,
+  "giveback_r": 0.8138,
+  "open_r": -0.16,
+  "peak_provenance": "estimated",
+  "peak_r": 0.6538,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 79.4125,
+  "tp": 83.59
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.0842,
+  "bars_since_peak": 2,
+  "giveback_r": 0.8138,
+  "open_r": -0.16,
+  "peak_r": 0.6538,
+  "r_to_stop": 0.84,
+  "r_to_target": 1.4648
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "package sl 79.4125 / tp 83.59 agree with every readable account"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 42,
+   "mean_r": 0.7019,
+   "sd_r": 1.668,
+   "worst_r": -1.022,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 42,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 42,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 42,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261112T0151Z-pkg-dc63bb3b4bbf4723.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "suggestive",
+  "evidence_source": "table",
+  "judgement_confidence": 0.5,
+  "reason": "Hold. Previous forecast (2026-11-06 18:00Z: target 83.59 p0.40, invalidation a daily close below 80.73, 4 bars) expired unresolved: the high since entry is 82.41 (target not reached) and the last daily close 80.89 is above 80.73 (invalidation not triggered). Now -0.16R after giving back 0.81R of a 0.65R estimated peak, structure_break on the 11-10 bar, daily ADX 16 chop. Revised: target cut to the 82.41 swing high (p0.30), invalidation moved to the 79.35 swing low that the 79.41 stop already sits at. Measured HOLD cell n=42 mean +0.702R worst -1.022R; no tighten or close arm priced (no_candles / n=0), so nothing measured beats hold.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "table: hold n=42 mean +0.702R sd n/a worst -1.022R (measured, leg's whole peak-then-pullback population, comparable 42 of 134 corpus trades); every tighten arm unpriced (no_candles + stop_level_not_below_price), close n=0",
+  "trigger: structure_break 2026-11-10T05:00Z answered",
+  "ib_paper has no apply path (apply_paths empty): any bracket call here is recorded and graded only",
+  "packet_defect: priced_options.options all_options_unpriced:no_candles+stop_level_not_below_price 4/4",
+  "packet_defect: priced_options.candles candles_missing 1/4"
+ ],
+ "account_reads": [
+  {
+   "account_id": "ib_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing; no apply path on this account (apply_paths empty)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuK4BNLR7TQ3gWnmanH",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_defects": [
+  {
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:no_candles+stop_level_not_below_price",
+   "count": 4,
+   "denominator": 4
+  },
+  {
+   "field": "priced_options.candles",
+   "reason": "candles_missing",
+   "count": 1,
+   "denominator": 4
+  }
+ ],
+ "packet_sha": "146640cf72dda9fc8c3ddf8bd8cfc784d41187fc60c19a6abac5d4e5e21567ce",
+ "forecast": {
+  "thesis": "Chop (daily ADX 16) after a failed push to 82.41; weekly trend still up, so I expect a bounce back toward the 82.41 swing high before a daily close under 79.35; the 83.59 TP is 3.4 ATR away and now unlikely inside the horizon.",
+  "direction": "with_trade",
+  "target_px": 82.41,
+  "p_target": 0.3,
+  "invalidation_px": 79.35,
+  "horizon_bars": 5,
+  "timeframe": "1d",
+  "evidence": [
+   "context.previous_review forecast target 83.59 inv 80.73 (unresolved)",
+   "chart.since_entry high 82.41 low 80.545",
+   "chart.swings low 79.35",
+   "regime trend_now chop adx 16.0"
+  ]
+ }
+}

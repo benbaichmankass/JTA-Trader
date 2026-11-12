@@ -1,0 +1,160 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261112T0153Z-pkg-da983993f7bd48f3",
+ "reviewed_at": "2026-11-12T02:00:59Z",
+ "order_package_id": "pkg-da983993f7bd48f3",
+ "trade_id": 7069,
+ "leg": "trend_donchian_1h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "adverse_r",
+  "level": -0.5,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-12T01:53:39Z",
+ "state": {
+  "atr_now_over_entry": 1.0279,
+  "bars_held": 8,
+  "giveback_r": 0.9534,
+  "open_r": -0.7294,
+  "peak_provenance": "estimated",
+  "peak_r": 0.224,
+  "regime_cell_entry": "chop/calm",
+  "regime_cell_now": null,
+  "sl": 73340.89285714,
+  "tp": 81896.9305
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.0279,
+  "bars_since_peak": 3,
+  "giveback_r": 0.9534,
+  "open_r": -0.7294,
+  "peak_r": 0.224,
+  "r_to_stop": 0.2706,
+  "r_to_target": 6.9889
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "package sl 73340.89285714 / tp 81896.9305 agree with every readable account"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 55,
+   "mean_r": 0.2652,
+   "sd_r": 1.7088,
+   "worst_r": -1.3654,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 55,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 55,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 55,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 55,
+   "mean_r": -0.8491,
+   "sd_r": 0.0756,
+   "worst_r": -1.0765,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261112T0153Z-pkg-da983993f7bd48f3.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "suggestive",
+  "evidence_source": "table",
+  "judgement_confidence": 0.55,
+  "reason": "Hold. Long from 74519.5, now -0.73R after an est 0.22R peak, 8 bars; adverse_r -0.5 trigger. Measured HOLD cell n=55 mean +0.265R worst -1.365R; the measured close arm is -0.849R, so exiting now is the worse measured choice, and tighten arms are unpriced. 1h tape swept 73434.7 and closed back at 74048 (a wick), 1h ADX 14 chop in a chop/calm cell; the stop 73340.9 sits just under the 73344.2/73434.7 lows. HOLD already expresses the view; no bracket move beats it.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "table: hold n=55 mean +0.265R sd n/a worst -1.365R; close n=55 mean -0.849R worst -1.077R (measured, net of the full cost stack; leg's whole peak-then-pullback population, comparable 55 of 159 corpus trades); every tighten arm unpriced",
+  "tighten_bias: stop-at-price fills flatter any tighten",
+  "book: the only BTC long amid 5 crypto shorts (ETH x2, XRP, ADA, SOL) plus the AVAX long: partly a hedge",
+  "exit_plan note: the entry-time declared target (80412.5, 5R) differs from tp_now 81896.9 which matches venue and package; the snapshot is stale by design, no action",
+  "trigger: adverse_r -0.5 answered (level copied exactly)"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing; apply paths close, move_tp, reduce, tighten, widen_sl"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuK4BNLR7TQ3gWnmanH",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_defects": [],
+ "packet_sha": "fbc73a3b49c85ef123605f68824bd2997b06c8cf50e58bf1bab66bb31004cdd9",
+ "forecast": {
+  "thesis": "Chop/calm range: the 73434.7 sweep was bought back above the 73,900s, so I expect price back to the 74783.5 range high before a 1h close under 73344.2 (the stop sits just below it).",
+  "direction": "with_trade",
+  "target_px": 74783.5,
+  "p_target": 0.4,
+  "invalidation_px": 73344.2,
+  "horizon_bars": 8,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings lows 73344.2 and since_entry low 73434.7",
+   "chart.swings highs 74783.5",
+   "regime trend_now chop adx 14.4, cell_entry chop/calm",
+   "table close arm n=55 mean -0.849R"
+  ]
+ }
+}

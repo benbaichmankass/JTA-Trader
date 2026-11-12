@@ -1,0 +1,177 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261112T0150Z-pkg-7296e4ed01a44ed6",
+ "reviewed_at": "2026-11-12T02:00:59Z",
+ "order_package_id": "pkg-7296e4ed01a44ed6",
+ "trade_id": 7000,
+ "leg": "eth_pullback_prop_2h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-12T00:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-12T01:50:21Z",
+ "state": {
+  "atr_now_over_entry": 0.6394,
+  "bars_held": 28,
+  "giveback_r": 0.505,
+  "open_r": 0.9587,
+  "peak_provenance": "estimated",
+  "peak_r": 1.4637,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 2139.0725,
+  "tp": 1932.87025
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.6394,
+  "bars_since_peak": 16,
+  "giveback_r": 0.505,
+  "open_r": 0.9587,
+  "peak_r": 1.4637,
+  "r_to_stop": 0.895,
+  "r_to_target": 1.2299
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "bybit_1: ETHUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-952be5976ffc4c6c); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 8,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 8,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 8,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 8,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 8,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 8,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261112T0150Z-pkg-7296e4ed01a44ed6.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "Hold. Short from 2145.25, +0.96R, peak est 1.46R, 28 bars. 2h shows lower highs (2151.3, 2142.78 since entry, 2103.37) and the 1d closes fell from 2423 to 2055; the last bar wicked to 2033.97 and closed 2055.28. Stop 2139.07 locks only about +0.06R and sits above my 2103.37 invalidation, but tightening has measured negative on average (-0.097R over 981 stop-tightens) and the packet cannot price any tighten here, so I keep the strategy's bracket. HOLD cell n=8 < floor 20, judgement.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold n=8 < floor 20 (insufficient_n; not measured)",
+  "mechanics_note: ETHUSDT netted across 2 open packages on bybit_1 (this + pkg-952be5976ffc4c6c), each matched by order id",
+  "overlay: atr_now_over_entry 0.64 (<=0.67); stop 2139.07 is 3.4 ATR(now) from price vs the 2103.37 structural invalidation 36 pts below it; if price reclaims 2103.37 the next review should price a structure stop",
+  "tighten_bias: stop-at-price fills flatter any tighten; none priced here (stop_level_not_below_price on every arm)",
+  "book: crypto-beta book is 5 shorts (ETH x2, XRP, ADA, SOL) vs 2 longs (BTC, AVAX); the shorts are largely one bet; this package and pkg-952be5976ffc4c6c are the same ETH short (netted on one account)",
+  "packet_defect: priced_options.options all_options_unpriced:insufficient_n+stop_level_not_below_price 5/5"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing; apply paths close, move_tp, reduce, tighten, widen_sl"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuK4BNLR7TQ3gWnmanH",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_defects": [
+  {
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:insufficient_n+stop_level_not_below_price",
+   "count": 5,
+   "denominator": 5
+  }
+ ],
+ "packet_sha": "1d12ce3d22ea8bcea8f839cb8b1d6d372f6e91a73601b14a59ef69de7f6efd39",
+ "forecast": {
+  "thesis": "Downtrend continuation: 2h lower highs (2142.78 since entry, 2103.37) and falling 1d closes; the 2103.37 lower high caps rallies, so I expect a retest of the 2003.22 swing low before a close above 2103.37.",
+  "direction": "with_trade",
+  "target_px": 2003.22,
+  "p_target": 0.4,
+  "invalidation_px": 2103.37,
+  "horizon_bars": 10,
+  "timeframe": "2h",
+  "evidence": [
+   "chart.swings highs 2103.37 (3 bars ago)",
+   "chart.swings lows 2003.22 (16 bars ago)",
+   "chart.htf 1d closes 2423 to 2055",
+   "regime trend_now trending adx 40.7"
+  ]
+ }
+}

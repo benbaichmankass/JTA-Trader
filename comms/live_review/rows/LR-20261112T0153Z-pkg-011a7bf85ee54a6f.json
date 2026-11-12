@@ -1,0 +1,192 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261112T0153Z-pkg-011a7bf85ee54a6f",
+ "reviewed_at": "2026-11-12T02:00:59Z",
+ "order_package_id": "pkg-011a7bf85ee54a6f",
+ "trade_id": 6673,
+ "leg": "mgc_pullback_1d",
+ "accounts": [
+  "ib_paper"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-12T00:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-12T01:53:01Z",
+ "state": {
+  "atr_now_over_entry": 1.324,
+  "bars_held": 18,
+  "giveback_r": 1.114,
+  "open_r": 1.7479,
+  "peak_provenance": "estimated",
+  "peak_r": 2.8619,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 4160.32857143,
+  "tp": 3766.9909
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.324,
+  "bars_since_peak": 8,
+  "giveback_r": 1.114,
+  "open_r": 1.7479,
+  "peak_r": 2.8619,
+  "r_to_stop": 1.5527,
+  "r_to_target": 2.1797
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "package sl 4160.32857143 / tp 3766.9909 agree with every readable account"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261112T0153Z-pkg-011a7bf85ee54a6f.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "Hold. Previous forecast (2026-11-06 03:42Z: daily close below 3989 within 5 bars before 4160.3 trades, p0.40) is unresolved at its horizon: the last bar's low 3989.4 stopped 0.4 above the 3989.0 swing low with no daily close below it, and price came within 1.6 of 4160.3 (high 4158.7) without trading it; carried forward with a deeper target. Short from 4180.9, +1.75R, peak est 2.86R, giveback 1.11R. Price 4000.5, last bar low 3989.4 touched the 3989 swing low, supply 4156-4158.7 rejected twice and the 4160.33 stop sits just above it, so the stop already expresses my invalidation; ATR now 1.32x entry argues against tightening into expanding vol. TP 3767 is 2.5 ATR below. HOLD cell n=0 (comparable 0 of 8 corpus), judgement.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold n=0 (comparable 0 of 8 corpus trades; insufficient_n; not measured)",
+  "overlay: atr_now_over_entry 1.32 (between 0.67 and 1.5, no overlay threshold hit)",
+  "ib_paper has no apply path (apply_paths empty): any bracket call here is recorded and graded only",
+  "packet_defect: priced_options.options all_options_unpriced:no_candles+stop_level_not_below_price 6/6",
+  "packet_defect: priced_options.candles candles_missing 4/6",
+  "context.previous_review is the 2026-11-06T03:42Z row (its forecast unresolved, carried forward)"
+ ],
+ "account_reads": [
+  {
+   "account_id": "ib_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing; no apply path on this account (apply_paths empty)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuK4BNLR7TQ3gWnmanH",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_defects": [
+  {
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:no_candles+stop_level_not_below_price",
+   "count": 6,
+   "denominator": 6
+  },
+  {
+   "field": "priced_options.candles",
+   "reason": "candles_missing",
+   "count": 4,
+   "denominator": 6
+  }
+ ],
+ "packet_sha": "4f22659df2b5c2f5edc71f710ed6025c463b5111a9c0b9a5dae92dcc93fbfe49",
+ "forecast": {
+  "thesis": "Weekly downtrend (ADX 35) with supply at 4156-4158.7 rejected twice; I expect a daily close below the 3989 swing low and a push to the 3879.3 since-entry low before price trades 4158.7.",
+  "direction": "with_trade",
+  "target_px": 3879.3,
+  "p_target": 0.35,
+  "invalidation_px": 4158.7,
+  "horizon_bars": 5,
+  "timeframe": "1d",
+  "evidence": [
+   "chart.swings highs 4158.7 (2 bars ago)",
+   "chart.since_entry low 3879.3",
+   "exit_plan sl_now 4160.33 tp_now 3766.99",
+   "regime atr_now_over_entry 1.324"
+  ]
+ }
+}

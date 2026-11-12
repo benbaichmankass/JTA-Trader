@@ -1,0 +1,200 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261112T0152Z-pkg-976b459f5c954df0",
+ "reviewed_at": "2026-11-12T02:00:59Z",
+ "order_package_id": "pkg-976b459f5c954df0",
+ "trade_id": 5886,
+ "leg": "mhg_pullback_1d",
+ "accounts": [
+  "ib_paper"
+ ],
+ "trigger": {
+  "event": "daily_floor",
+  "level": "2026-11-12",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-12T01:52:32Z",
+ "state": {
+  "atr_now_over_entry": 0.9301,
+  "bars_held": 39,
+  "giveback_r": 0.2184,
+  "open_r": 1.0816,
+  "peak_provenance": "estimated",
+  "peak_r": 1.3,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 6.68589286,
+  "tp": 5.9641695
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.9301,
+  "bars_since_peak": 4,
+  "giveback_r": 0.2184,
+  "open_r": 1.0816,
+  "peak_r": 1.3,
+  "r_to_stop": 1.2816,
+  "r_to_target": 0.8928
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "package sl 6.68589286 / tp 5.9641695 agree with every readable account"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261112T0152Z-pkg-976b459f5c954df0.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.6,
+  "reason": "Hold. Previous forecast (2026-11-06 03:42Z: a daily close at or under 6.19 within 3 bars before 6.47 is reclaimed, p0.55) expired unresolved: the last three daily closes are 6.3445, 6.2345 and 6.29 (none at or under 6.19) and 6.47 was not reclaimed (high 6.3955); carried forward. Short from 6.6195, +1.08R, peak est 1.30R, giveback 0.22R, weekly downtrend, daily ADX 21 transitional. Stop 6.686 (4.0 ATR now) is far but the next structure above is the 6.388 bounce high; TP 5.964 is 2.1 ATR below. HOLD cell n=0 (comparable 0 of 10 corpus), judgement.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold n=0 (comparable 0 of 10 corpus trades; insufficient_n; not measured)",
+  "ib_paper has no apply path (apply_paths empty): any bracket call here is recorded and graded only",
+  "packet_defect: priced_options.options all_options_unpriced:no_candles 7/7",
+  "packet_defect: priced_options.candles candles_missing 7/7",
+  "trigger: daily_floor 2026-11-12 answered"
+ ],
+ "account_reads": [
+  {
+   "account_id": "ib_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing; no apply path on this account (apply_paths empty)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuK4BNLR7TQ3gWnmanH",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_defects": [
+  {
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:no_candles",
+   "count": 7,
+   "denominator": 7
+  },
+  {
+   "field": "priced_options.candles",
+   "reason": "candles_missing",
+   "count": 7,
+   "denominator": 7
+  }
+ ],
+ "packet_sha": "e96ecebd943c3d5603ed3463528b9abec64e6b0e06e3ae118c2f873f15a01d98",
+ "forecast": {
+  "thesis": "Weekly downtrend intact; the 6.188 low is the next support and the daily bounce is capped under the 6.388 high, so I expect a daily close at or under 6.19 before price reclaims 6.47.",
+  "direction": "with_trade",
+  "target_px": 6.19,
+  "p_target": 0.45,
+  "invalidation_px": 6.47,
+  "horizon_bars": 4,
+  "timeframe": "1d",
+  "evidence": [
+   "context.previous_review forecast target 6.19 inv 6.47 (unresolved)",
+   "chart.since_entry low 6.188",
+   "chart.swings highs 6.388 area",
+   "state open_r 1.08 peak 1.30 giveback 0.22"
+  ]
+ }
+}

@@ -1,0 +1,184 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261112T0154Z-pkg-8aa0b26a2fc24b28",
+ "reviewed_at": "2026-11-12T02:00:59Z",
+ "order_package_id": "pkg-8aa0b26a2fc24b28",
+ "trade_id": 7030,
+ "leg": "avax_pullback_2h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-12T00:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-12T01:54:26Z",
+ "state": {
+  "atr_now_over_entry": 0.5976,
+  "bars_held": 17,
+  "giveback_r": 0.5555,
+  "open_r": 0.1706,
+  "peak_provenance": "estimated",
+  "peak_r": 0.726,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 7.94771429,
+  "tp": 9.237095
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.5976,
+  "bars_since_peak": 3,
+  "giveback_r": 0.5555,
+  "open_r": 0.1706,
+  "peak_r": 0.726,
+  "r_to_stop": 1.1706,
+  "r_to_target": 1.6491
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "package sl 7.94771429 / tp 9.237095 agree with every readable account"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 7,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 7,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 7,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 7,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 7,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 7,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 7,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261112T0154Z-pkg-8aa0b26a2fc24b28.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "Hold. First review of this long (entry 8.405, +0.17R, peak est 0.73R). 2h tape: two highs at 8.737/8.724 capped price, the last bar rejected 8.62 to 8.37 but closed 8.509 above entry and the 8.13 since-entry low is intact; ATR now 0.60x entry so the 7.948 stop (4.1 ATR now) is loose but sits just under structure. Stop and 9.237 TP already express a pullback-continuation view. HOLD cell n=7 < floor 20, so this is judgement.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold cell n=7 < floor 20 (read_state insufficient_n; not measured)",
+  "packet_defect: priced_options could_not_price 1/1 on the 01:49Z build only; rebuilt 01:54Z clean (priced_options read_state insufficient_n, not could_not_price)",
+  "book: crypto-beta book is 5 shorts (ETH x2, XRP, ADA, SOL) vs 2 longs (BTC, AVAX); the shorts are largely one bet",
+  "overlay: atr_now_over_entry 0.60 (<=0.67): vol compressed vs entry"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing; apply paths close, move_tp, reduce, tighten, widen_sl"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuK4BNLR7TQ3gWnmanH",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_defects": [
+  {
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:insufficient_n+stop_level_not_below_price",
+   "count": 6,
+   "denominator": 6
+  }
+ ],
+ "packet_sha": "820b6564341cbc18e0e33e69a4063dc3fdc56cbaab61edba12ba8386c4f1246b",
+ "forecast": {
+  "thesis": "Pullback long: the 8.13 low holds and the 2h bounce retests the 8.737/8.724 double high before closing below 8.13; ADX 21 transitional with ATR compressing, so I expect a retest, not a breakout to the 9.237 TP.",
+  "direction": "with_trade",
+  "target_px": 8.737,
+  "p_target": 0.4,
+  "invalidation_px": 8.13,
+  "horizon_bars": 8,
+  "timeframe": "2h",
+  "evidence": [
+   "chart.swings highs 8.737/8.724",
+   "chart.since_entry low 8.13",
+   "regime atr_now_over_entry 0.5976, adx 21.5 transitional",
+   "book: lone crypto long against 5 shorts"
+  ]
+ }
+}

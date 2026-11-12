@@ -1,0 +1,178 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261112T0151Z-pkg-952be5976ffc4c6c",
+ "reviewed_at": "2026-11-12T02:00:59Z",
+ "order_package_id": "pkg-952be5976ffc4c6c",
+ "trade_id": 7004,
+ "leg": "eth_pullback_2h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-12T00:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-12T01:51:21Z",
+ "state": {
+  "atr_now_over_entry": 0.6014,
+  "bars_held": 27,
+  "giveback_r": 0.4365,
+  "open_r": 0.7405,
+  "peak_provenance": "estimated",
+  "peak_r": 1.177,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 2106.39321429,
+  "tp": 1914.31866
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.6014,
+  "bars_since_peak": 16,
+  "giveback_r": 0.4365,
+  "open_r": 0.7405,
+  "peak_r": 1.177,
+  "r_to_stop": 0.5635,
+  "r_to_target": 1.2982
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "bybit_1: ETHUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-7296e4ed01a44ed6); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 11,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 11,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 11,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 11,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 11,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 11,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261112T0151Z-pkg-952be5976ffc4c6c.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.6,
+  "reason": "Hold. Short from 2124.66, +0.74R, peak est 1.18R, 27 bars. Same tape as the prop sibling (lower highs 2136.52 since entry then 2103.37, 1d closes 2423 to 2055). Here the 2106.39 stop already sits just above my 2103.37 invalidation (locks about +0.18R), so HOLD expresses the view and no bracket move is needed; TP 1914.32 is 2.0R. HOLD cell n=11 < floor 20, judgement.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold n=11 < floor 20 (insufficient_n; not measured)",
+  "mechanics_note: ETHUSDT netted across 2 open packages on bybit_1 (this + pkg-7296e4ed01a44ed6), each matched by order id",
+  "overlay: atr_now_over_entry 0.60 (<=0.67)",
+  "tighten_bias: stop-at-price fills flatter any tighten; none priced here (stop_level_not_below_price on every arm)",
+  "book: crypto-beta book is 5 shorts (ETH x2, XRP, ADA, SOL) vs 2 longs (BTC, AVAX); the shorts are largely one bet; this package and pkg-7296e4ed01a44ed6 are the same ETH short (netted on one account)",
+  "live_vs_backtest: CONSISTENT (realMoney 19 closed live_r -2.47R, percentile 49.8; mirror 11 closed, percentile 21.6)",
+  "packet_defect: priced_options.options all_options_unpriced:insufficient_n+stop_level_not_below_price 5/5"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing; apply paths close, move_tp, reduce, tighten, widen_sl"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuK4BNLR7TQ3gWnmanH",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_defects": [
+  {
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:insufficient_n+stop_level_not_below_price",
+   "count": 5,
+   "denominator": 5
+  }
+ ],
+ "packet_sha": "a4f5381678de2e33d7954b81e65c36f15f56142e2d188facca31a1e0a2315213",
+ "forecast": {
+  "thesis": "Downtrend continuation: lower highs (2136.52 since entry, 2103.37) cap rallies at 2103.37, so I expect a retest of the 2003.22 swing low before price closes above 2103.37; the 2106.39 stop sits just beyond that invalidation.",
+  "direction": "with_trade",
+  "target_px": 2003.22,
+  "p_target": 0.4,
+  "invalidation_px": 2103.37,
+  "horizon_bars": 10,
+  "timeframe": "2h",
+  "evidence": [
+   "chart.swings highs 2103.37",
+   "chart.swings lows 2003.22",
+   "exit_plan sl_now 2106.39 tp_now 1914.32",
+   "live_vs_backtest eth_pullback_2h CONSISTENT"
+  ]
+ }
+}

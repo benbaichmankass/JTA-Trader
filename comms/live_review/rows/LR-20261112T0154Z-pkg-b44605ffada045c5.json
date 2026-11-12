@@ -1,0 +1,178 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261112T0154Z-pkg-b44605ffada045c5",
+ "reviewed_at": "2026-11-12T02:00:59Z",
+ "order_package_id": "pkg-b44605ffada045c5",
+ "trade_id": 7054,
+ "leg": "xrp_pullback_2h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-12T00:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-12T01:54:49Z",
+ "state": {
+  "atr_now_over_entry": 0.7926,
+  "bars_held": 7,
+  "giveback_r": 0.1788,
+  "open_r": 0.2198,
+  "peak_provenance": "estimated",
+  "peak_r": 0.3986,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1.10441071,
+  "tp": 0.953258
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.7926,
+  "bars_since_peak": 0,
+  "giveback_r": 0.1788,
+  "open_r": 0.2198,
+  "peak_r": 0.3986,
+  "r_to_stop": 1.2198,
+  "r_to_target": 2.0371
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "package sl 1.10441071 / tp 0.953258 agree with every readable account"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 144,
+   "mean_r": 0.6344,
+   "sd_r": 1.4661,
+   "worst_r": -1.1572,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 144,
+   "mean_r": 0.353,
+   "sd_r": 0.4094,
+   "worst_r": -0.3661,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 144,
+   "mean_r": 0.3991,
+   "sd_r": 0.5692,
+   "worst_r": -0.3661,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 144,
+   "mean_r": 0.4198,
+   "sd_r": 0.7506,
+   "worst_r": -0.4559,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 144,
+   "mean_r": 0.4277,
+   "sd_r": 0.885,
+   "worst_r": -0.3661,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 144,
+   "mean_r": 0.3758,
+   "sd_r": 0.7316,
+   "worst_r": -0.3661,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 144,
+   "mean_r": 0.182,
+   "sd_r": 0.0197,
+   "worst_r": 0.1174,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261112T0154Z-pkg-b44605ffada045c5.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "suggestive",
+  "evidence_source": "table",
+  "judgement_confidence": 0.6,
+  "reason": "Hold. Measured HOLD cell n=144 mean +0.634R worst -1.157R beats every measured alternative (tighten atr:1.0-2.0 / r:0-0.11 means +0.353 to +0.428R, close +0.182R). Short from 1.058, +0.22R, peak est 0.40R; 1d closes have stepped down for 7 days (1.30 to 1.05), 2h ADX 36.9 trending, and the last bar's 1.0395 low was bought back to 1.0517 (a wick, not a close through the 1.0512 low). HOLD already runs the 1.1044 stop and 0.9533 TP I would use.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "table: hold n=144 mean +0.634R sd 1.466 worst -1.157R net of the full cost stack; the cell is the leg's whole peak-then-pullback population (comparable 144 of 404 corpus trades), not this trade's exact state",
+  "tighten_bias: stop-at-price fills flatter any tighten; all measured tighten arms are below hold EV",
+  "live_vs_backtest: BELOW_BACKTEST on both books (realMoney 20 closed live_r -12.10R, percentile 1.5; mirror 16 closed live_r -8.24R, percentile 4.8) against backtest expectancy +0.124R n=53: a leg-level live shortfall to the manager, not a reason to act on this trade",
+  "book: crypto-beta book is 5 shorts (ETH x2, XRP, ADA, SOL) vs 2 longs (BTC, AVAX); the shorts are largely one bet",
+  "packet_defect: first build 01:49Z hit a 502 outage (venue_read_unreachable, could_not_look); rebuilt 01:54Z with all reads clean and judged on that packet"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing; apply paths close, move_tp, reduce, tighten, widen_sl"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuK4BNLR7TQ3gWnmanH",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_defects": [],
+ "packet_sha": "228e5756dbcb7c064b52573feb9d1f5b2dcb5e02d6078ad9f30d472a0f6a33c5",
+ "forecast": {
+  "thesis": "1d trend is down (ADX 37 on 2h, 1d closes stepped down seven days running); the 1.0395 wick low was bought but the 1.0512/1.0464 supports are the next to give, so I expect price to retest 1.0395 before reclaiming the 1.0804 lower high.",
+  "direction": "with_trade",
+  "target_px": 1.0395,
+  "p_target": 0.5,
+  "invalidation_px": 1.0804,
+  "horizon_bars": 6,
+  "timeframe": "2h",
+  "evidence": [
+   "chart.since_entry low 1.0395 (-0.83 ATR)",
+   "chart.swings highs 1.0804 (1.95 ATR)",
+   "chart.htf 1d closes 1.3044 to 1.0517",
+   "regime trend_now trending adx 36.9"
+  ]
+ }
+}
