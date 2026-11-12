@@ -1,0 +1,25 @@
+# ============================================
+# ICT OPS RUNNER (MANAGER-VM-DIRECT-OPS)
+# Runs the direct ops channel's queued jobs (scripts/ops/ops_runner.py), started
+# by ict-ops-runner.path. Its own unit, so a restart-service job for
+# ict-web-api cannot kill the process serving the API. Same user, tree and
+# .env as the system-action wrappers it calls (scripts/ops/*). DATA_DIR is set
+# here so runtime_logs resolves where the web API writes.
+# ============================================
+
+[Unit]
+Description=ICT ops channel runner
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/ict-trading-bot
+Environment=PYTHONPATH=/home/ubuntu/ict-trading-bot
+Environment=DATA_DIR=/data/bot-data
+Environment=TRADE_JOURNAL_DB=/data/bot-data/trade_journal.db
+EnvironmentFile=-/home/ubuntu/ict-trading-bot/.env
+ExecStart=/usr/bin/python3 -u -B /home/ubuntu/ict-trading-bot/scripts/ops/ops_runner.py
+TimeoutStartSec=3600
+StandardOutput=journal
+StandardError=journal

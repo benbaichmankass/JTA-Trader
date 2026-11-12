@@ -404,3 +404,71 @@ def test_traded_symbols_and_scoped_optional_streams():
     # the traded-universe fallbacks fit the measured free allowance; the all-perp big streams do not
     assert {"bookDepth_traded", "aggTrades_traded"} <= set(d["enabled"])
     assert "bookDepth" in {x["stream"] for x in d["deferred"]}
+
+
+class _HLStub:
+    """fetch_hyperliquid stand-in: 1h bars incl. the still-forming last bar, and hourly funding."""
+    INTERVAL_MS = {"1m": 60_000, "1h": 3_600_000}
+
+    def __init__(self, now_ms):
+        self.now_ms = now_ms
+
+    @staticmethod
+    def safe_name(coin):
+        return coin.replace(":", "_")
+
+    def fetch_candles(self, coin, interval, start_ms, end_ms):
+        step = self.INTERVAL_MS[interval]
+        last_open = (self.now_ms // step) * step          # forming bar
+        out = []
+        for k in range(3, -1, -1):
+            t = last_open - k * step
+            ts = pd.Timestamp(t, unit="ms", tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ")
+            out.append({"timestamp": ts, "open": "10", "high": "11", "low": "9", "close": "10.5", "volume": "1"})
+        return out
+
+    def fetch_funding(self, coin, start_ms, end_ms):
+        t = (self.now_ms // 3_600_000) * 3_600_000 - 3_600_000
+        return [{"timestamp": pd.Timestamp(t, unit="ms", tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
+                 "funding_rate": "0.0000125", "premium": "0.0001"}]
+
+
+def _hl_cfg():
+    return {"hyperliquid": {"source": "hl", "licence": "x", "perps": ["BTC"], "builder": ["xyz:SILVER"],
+                            "candles": ["1h"], "funding": True, "funding_refresh_days": 30}}
+
+
+def test_hyperliquid_writes_closed_bars_and_funding_and_accrues(tmp_path, monkeypatch):
+    import time as _t
+    now_ms = int(_t.time() * 1000)
+    monkeypatch.setattr(fs, "_cfg", _hl_cfg)
+    monkeypatch.setattr(fs, "_lake_previous_manifest", lambda *a, **k: {"files": []})
+    a = type("A", (), {"out": str(tmp_path), "prev_manifest": "", "full": False})()
+    assert fs.cmd_hyperliquid(a, fetcher=_HLStub(now_ms)) == 0
+    man = json.loads(next((tmp_path / "_manifests").glob("hyperliquid-*.json")).read_text())
+    by = {(e["symbol"], e["tf"]): e for e in man}
+    assert set(by) == {("BTC", "1h"), ("BTC", "funding"), ("xyz_SILVER", "1h"), ("xyz_SILVER", "funding")}
+    assert all(e["state"] == "ok" and e["market"] == "hyperliquid" for e in man)
+    yr = next(iter(by[("BTC", "1h")]["partitions"]))
+    df = pd.read_parquet(tmp_path / by[("BTC", "1h")]["partitions"][yr]["path"])
+    assert len(df) <= 3                                   # the forming bar is dropped (closed bars only)
+    assert (((df["ts"] - pd.Timestamp(0, tz="UTC")) // pd.Timedelta(milliseconds=1)) + 3_600_000 <= now_ms).all()
+    f = pd.read_parquet(tmp_path / by[("BTC", "funding")]["partitions"][yr]["path"])
+    assert list(f.columns) == ["ts", "funding_rate", "premium"] and f["funding_rate"].iloc[0] == pytest.approx(1.25e-5)
+
+
+def test_hyperliquid_never_overwrites_an_unreadable_lake_year(tmp_path, monkeypatch):
+    import time as _t
+    now_ms = int(_t.time() * 1000)
+    yr = str(pd.Timestamp(now_ms, unit="ms", tz="UTC").year)
+    monkeypatch.setattr(fs, "_cfg", _hl_cfg)
+    prev = {"files": [{"asset_class": "crypto", "market": "hyperliquid", "tf": "1h", "symbol": "BTC",
+                       "partitions": {yr: {"path": f"crypto/hyperliquid/1h/BTC/{yr}.parquet"}}}]}
+    monkeypatch.setattr(fs, "_lake_previous_manifest", lambda *a, **k: prev)
+    monkeypatch.setattr(fs, "_lake_download", lambda rel: None)
+    a = type("A", (), {"out": str(tmp_path), "prev_manifest": "", "full": False})()
+    fs.cmd_hyperliquid(a, fetcher=_HLStub(now_ms))
+    man = json.loads(next((tmp_path / "_manifests").glob("hyperliquid-*.json")).read_text())
+    btc = next(e for e in man if e["symbol"] == "BTC" and e["tf"] == "1h")
+    assert btc["state"] == "partial" and "NOT overwritten" in btc["errors"][0]
+    assert not (tmp_path / f"crypto/hyperliquid/1h/BTC/{yr}.parquet").exists()

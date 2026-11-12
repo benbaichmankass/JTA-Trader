@@ -634,10 +634,97 @@ def cmd_import_option_snapshots(a) -> int:
     return 0
 
 
+# ---------------------------------------------------------------- Hyperliquid / trade[XYZ] (public info API)
+def _hl_module():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("fetch_hyperliquid", REPO_ROOT / "scripts" / "ops" / "fetch_hyperliquid.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def hl_frame(rows: List[Dict], kind: str, tf_ms: int = 0, now_ms: int = 0) -> pd.DataFrame:
+    """Fetcher rows -> lake frame. Bars: ts/open/high/low/close/volume, CLOSED bars only (the API's last candle is the
+    forming one). Funding: ts/funding_rate/premium (per hour, a fraction)."""
+    cols = ["open", "high", "low", "close", "volume"] if kind == "bars" else ["funding_rate", "premium"]
+    if not rows:
+        return pd.DataFrame(columns=["ts"] + cols)
+    df = pd.DataFrame(rows)
+    df["ts"] = pd.to_datetime(df["timestamp"], utc=True)
+    for c in cols:
+        df[c] = pd.to_numeric(df.get(c), errors="coerce")
+    df = df[["ts"] + cols]
+    if kind == "bars" and tf_ms and now_ms:
+        open_ms = (df["ts"] - pd.Timestamp(0, tz="UTC")) // pd.Timedelta(milliseconds=1)
+        df = df[open_ms + tf_ms <= now_ms]
+    return df.dropna(subset=[cols[0]]).sort_values("ts").drop_duplicates("ts", keep="last").reset_index(drop=True)
+
+
+def cmd_hyperliquid(a, fetcher=None) -> int:
+    """VENUE-SCOPE-HYPERLIQUID / HL-DATA-FETCHER (manager 2026-11-11): Hyperliquid perps + trade[XYZ] builder markets into
+    the lake, ACCRUING. The public API serves only ~5000 recent bars per interval, so every run merges into the lake's
+    year file (merge_year_partition: rows never lost) and the 1m base, refreshed daily, never gaps (5000 1m bars ~ 3.5
+    days). Lake: crypto/hyperliquid/<tf>/<SAFE>/<YYYY>.parquet, tf in config candles + 'funding'. A lake year file that
+    exists but cannot be read is NOT overwritten (state partial): a partial pull never replaces good history."""
+    out = Path(a.out)
+    spec = _cfg()["hyperliquid"]
+    fh = fetcher or _hl_module()
+    now_ms = int(time.time() * 1000)
+    coins = list(spec.get("perps") or []) + list(spec.get("builder") or [])
+    prev = _lake_previous_manifest(getattr(a, "prev_manifest", ""))
+    prev_parts = {(e.get("tf"), e.get("symbol")): e.get("partitions") or {} for e in prev.get("files", [])
+                  if e.get("asset_class") == "crypto" and e.get("market") == "hyperliquid"}
+    fund_start = (int(pd.Timestamp(spec.get("funding_since", "2023-05-01"), tz="UTC").timestamp() * 1000)
+                  if getattr(a, "full", False) else now_ms - int(spec.get("funding_refresh_days", 30)) * 86_400_000)
+    entries: List[Dict] = []
+    for coin in coins:
+        safe = fh.safe_name(coin)
+        jobs = [(tf, "bars") for tf in spec.get("candles") or []] + ([("funding", "funding")] if spec.get("funding") else [])
+        for tf, kind in jobs:
+            e = {"asset_class": "crypto", "market": "hyperliquid", "tf": tf, "symbol": safe, "venue_coin": coin,
+                 "partitions": {}, "source": spec["source"], "licence": spec["licence"], "state": "ok",
+                 "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+            try:
+                if kind == "bars":
+                    step = fh.INTERVAL_MS[tf]
+                    new = hl_frame(fh.fetch_candles(coin, tf, now_ms - step * 5000, now_ms), "bars", step, now_ms)
+                else:
+                    new = hl_frame(fh.fetch_funding(coin, fund_start, now_ms), "funding")
+                if new.empty:
+                    e["state"] = "empty"
+                for yr, part in (new.groupby(new["ts"].dt.year) if not new.empty else []):
+                    yr = str(yr)
+                    old = prev_parts.get((tf, safe), {}).get(yr)
+                    existing = None
+                    if old and old.get("path"):
+                        lp = _lake_download(old["path"])
+                        if lp is None:
+                            e["state"] = "partial"
+                            e.setdefault("errors", []).append(f"{yr}: lake year file not readable; NOT overwritten")
+                            continue
+                        existing = pd.read_parquet(lp)
+                    merged = merge_year_partition(part, existing, key="ts")
+                    pth = out / "crypto" / "hyperliquid" / tf / safe / f"{yr}.parquet"
+                    pth.parent.mkdir(parents=True, exist_ok=True)
+                    merged.to_parquet(pth, index=False, compression="zstd")
+                    e["partitions"][yr] = {"rows": int(len(merged)), "first": merged["ts"].iloc[0].isoformat(),
+                                           "last": merged["ts"].iloc[-1].isoformat(), "bytes": pth.stat().st_size,
+                                           "path": str(pth.relative_to(out)), "fetched_rows": int(len(part))}
+            except Exception as ex:  # noqa: BLE001 -- one series fails; every other series still runs
+                e["state"] = "error"
+                e.setdefault("errors", []).append(str(ex)[:200])
+            e["n_errors"] = len(e.get("errors") or [])
+            entries.append(e)
+            print(f"[hyperliquid] {coin} {tf}: {e['state']} partitions={sorted(e['partitions'])}", flush=True)
+    _write_manifest(out, "hyperliquid", entries, unique=True)
+    return 0
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("cmd", choices=["universe", "fred", "futures", "import-etf", "cboe", "cot", "alpaca-daily",
-                                    "import-csv", "import-option-snapshots", "measure-equity-1m"])
+                                    "import-csv", "import-option-snapshots", "measure-equity-1m", "hyperliquid"])
+    ap.add_argument("--full", action="store_true", help="hyperliquid: funding from config funding_since (backfill)")
     ap.add_argument("--kind", choices=["chain", "volatility", "stocks"], default="volatility")
     ap.add_argument("--csv", default="")
     ap.add_argument("--limit", type=int, default=0)
@@ -649,7 +736,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     return {"universe": cmd_universe, "fred": cmd_fred, "futures": cmd_futures,
             "import-etf": cmd_import_etf, "cboe": cmd_cboe, "cot": cmd_cot, "alpaca-daily": cmd_alpaca_daily,
             "import-csv": cmd_import_csv, "import-option-snapshots": cmd_import_option_snapshots,
-            "measure-equity-1m": cmd_measure_equity_1m}[a.cmd](a)
+            "measure-equity-1m": cmd_measure_equity_1m, "hyperliquid": cmd_hyperliquid}[a.cmd](a)
 
 
 if __name__ == "__main__":

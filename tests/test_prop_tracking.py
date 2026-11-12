@@ -935,3 +935,13 @@ def test_a_venue_read_move_is_appended_to_prop_fills_amendments():
     am = row["amendments"] if isinstance(row["amendments"], list) else json.loads(row["amendments"] or "[]")
     assert len(am) == 1 and am[0]["sl_before"] == 81.48 and am[0]["sl"] == 85.5
     assert "phone_venue_read" in json.dumps(am[0])
+def test_clean_positions_keeps_the_venue_sl_tp_cells_and_never_invents_them():
+    """PHONE-LIVE-ACCOUNT-FEED 2026-11-11: the row's own resting SL / TP (a hand-moved stop included) reaches the
+    server; an absent, zero or non-numeric cell stays absent -- never 0, never the ticket's level."""
+    rows = rc.clean_positions("breakout_2", [
+        {"symbol": "SOL", "side": "short", "qty": 1.0, "entry": 87.0, "sl": 89.105, "tp": 76.535},
+        {"symbol": "ETH", "side": "long", "qty": 0.5, "entry": 2100.0, "sl": 0, "tp": "2300"},
+        {"symbol": "XRP", "side": "long", "qty": 10.0, "entry": 0.5}])
+    assert (rows[0]["sl"], rows[0]["tp"]) == (89.105, 76.535)
+    assert "sl" not in rows[1] and "tp" not in rows[1]
+    assert "sl" not in rows[2] and "tp" not in rows[2]

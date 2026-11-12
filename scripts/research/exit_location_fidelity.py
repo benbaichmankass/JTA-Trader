@@ -104,6 +104,17 @@ from src.runtime.bracket_calibration import quantile  # noqa: E402
 from src.runtime.tp_venue_cap import TP_VENUE_CAP_PCT  # noqa: E402
 
 DEFAULT_API = "https://ict-bot.duckdns.org"
+
+
+def _default_api() -> str:
+    """DIAG_BASE_URL when it is HTTPS; otherwise the canonical HTTPS front.
+
+    SEC-8001-LOCKDOWN (operator decisions page m3, 2026-11-12): :8001 binds to
+    127.0.0.1, so a plain-http DIAG_BASE_URL (http://<vm>:8001, a stale session
+    value) can never answer. --api still overrides this explicitly.
+    """
+    env = (os.environ.get("DIAG_BASE_URL") or "").strip().rstrip("/")
+    return env if env.startswith("https://") else DEFAULT_API
 BACKTEST_REF = "docs/research/data/backtest-mfe-reference-2026-09-07.json"
 
 #: THE ABSTAIN FLOOR — the minimum live n below which a leg gets no target from
@@ -428,7 +439,7 @@ def selftest() -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--api", default=os.environ.get("DIAG_BASE_URL") or DEFAULT_API)
+    ap.add_argument("--api", default=_default_api())
     ap.add_argument("--token", default=os.environ.get("DIAG_READ_TOKEN", ""))
     ap.add_argument("--limit", type=int, default=1000)
     ap.add_argument("--telemetry-file")
