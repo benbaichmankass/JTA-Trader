@@ -225,6 +225,10 @@ def _signal_catalog(repo: Path) -> dict:
     return yaml.safe_load((repo / "docs/reference/signal-catalog.yaml").read_text(encoding="utf-8")) or {}
 
 
+class _Skip(Exception):
+    """Internal: a section the caller did not ask for."""
+
+
 def _mechanics_for_legs() -> dict:
     """Per-leg ``mechanics_proven`` from the live VM (GET /api/bot/soak/mechanics, row UI-CONSOLE-ARTIFACT C2).
 
@@ -242,13 +246,17 @@ def _mechanics_for_legs() -> dict:
     return doc
 
 
-def system_catalog(repo: Path, signals_limit: int = 400) -> dict:
+def system_catalog(repo: Path, signals_limit: int = 400, mechanics: bool = False) -> dict:
     """The System tab: strategy legs (status, books, venue, symbol), ML models and the signal catalog.
 
     A projection over committed files only (config/strategies.yaml, config/accounts.yaml,
     scripts/ops/strategy_status.py, docs/reference/signal-catalog.yaml); nothing live is read, so a
     leg's status is the roster's status at the register commit, not a venue read. ML ``target_stage`` is the
     manifest's target, not the live registry stage (that is `performance` -> ml_models).
+
+    ``mechanics=True`` (the Ladder tab) attaches each leg's live ``mechanics_proven`` from
+    GET /api/bot/soak/mechanics and returns ONLY the legs section: per-leg detail plus the models and
+    signals would pass REPLY_BUDGET (measured 48,960 B on 2026-11-12). The default call reads nothing live.
     """
     sections: dict[str, Any] = {}
     # (a) strategy legs
@@ -272,16 +280,19 @@ def system_catalog(repo: Path, signals_limit: int = 400) -> dict:
         counts: dict[str, int] = {}
         for r in legs:
             counts[r["status"]] = counts.get(r["status"], 0) + 1
-        mech = _mechanics_for_legs()
-        for r in legs:
-            r["mechanics_proven"] = (mech.get("legs") or {}).get(r["leg"]) if mech.get("read_state") == "read" else None
         sections["legs"] = {"read_state": "read", "population": {"legs": len(legs), "by_status": counts},
-                            "items": legs,
-                            "mechanics": {k: mech.get(k) for k in ("read_state", "reason", "as_of", "population", "provenance")}}
+                            "items": legs}
+        if mechanics:
+            mech = _mechanics_for_legs()
+            for r in legs:
+                r["mechanics_proven"] = (mech.get("legs") or {}).get(r["leg"]) if mech.get("read_state") == "read" else None
+            sections["legs"]["mechanics"] = {k: mech.get(k) for k in ("read_state", "reason", "as_of", "population", "provenance")}
     except Exception as exc:  # noqa: BLE001 - a failed source says so; it is never an empty list
         sections["legs"] = {"read_state": "could_not_look", "population": {"legs": None}, "reason": _err(exc)}
-    # (b) ML models + signals from the catalog artifact (row SIGNAL-CATALOG)
+    # (b) ML models + signals from the catalog artifact (row SIGNAL-CATALOG); skipped for the Ladder's mechanics call
     try:
+        if mechanics:
+            raise _Skip()
         cat = _signal_catalog(repo)
         models = [{"model_id": m.get("model_id"), "family": m.get("model_family"),
                    "target_stage": m.get("target_deployment_stage"),
@@ -302,6 +313,8 @@ def system_catalog(repo: Path, signals_limit: int = 400) -> dict:
             "by_family_kind": (cat.get("population") or {}).get("by_family_kind"),
             "generated": cat.get("generated"), "health_note": "health.state says whether a metric EXISTS; "
             "'unmeasured' is a could-not-look, never healthy"}, "items": items}
+    except _Skip:
+        pass
     except Exception as exc:  # noqa: BLE001
         for k in ("ml_models", "signals"):
             sections[k] = {"read_state": "could_not_look", "population": {}, "reason": _err(exc)}
