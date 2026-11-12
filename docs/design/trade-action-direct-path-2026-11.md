@@ -65,7 +65,7 @@ The current hops, in order:
 ## 2. The new path
 
 ```
-VM due event ──(3) wake──► standing review lane ──(2) HTTPS POST row──► VM /api/bot/live-review/rows
+VM due event ──(3) wake──► standing review lane ──(2) HTTPS ops call──► VM /api/bot/ops/actions
                                                                           │
                        ┌──────────────────────────────────────────────────┤
                        ▼                                                  ▼
@@ -81,7 +81,7 @@ VM due event ──(3) wake──► standing review lane ──(2) HTTPS POST r
 ```
 
 Numbered as the dispatch numbers the target: (1) the button, (2) the direct submit, (3) the immediate wake, (5) the journal and export. (4) the
-mandate route already executes on the VM today with no repo hop once the row is on the VM; (2) removes the remaining git hop in front of it.
+mandate route already executes on the VM today with no repo hop once the row is on the VM; (2) removes the remaining git hop in front of it, and also carries every non-code operational action (MANAGER-VM-DIRECT-OPS).
 
 ### 2.1 Phase 1: Telegram Approve / Reject for operator-needed recommendations (built first; biggest win)
 
@@ -118,20 +118,52 @@ operator session (`require_session`, default-deny, never a carve-out). Both call
 click in the console are one state machine: whichever comes first wins, and the other reads `already_approved`. The SPA change itself lives in
 `ict-trader-dashboard` (its own row).
 
-### 2.3 Phase 2: direct submit endpoint for review lanes
+### 2.3 Phase 2: the direct ops channel (MANAGER-VM-DIRECT-OPS) and the direct row submit
 
-`POST /api/bot/live-review/rows` takes one row (schema `comms/schema/live_review.schema.json`), validated exactly as the watcher validates a
-branch row (`live_review_rows.py`), then handed to the same `run_pass` logic in-process: mandate → dispatch; operator → phase-1 ask. The row
-is journaled at `runtime_logs/live_review/direct_rows/<review_id>.json`; a create-only duplicate review_id returns 409.
+Scope added 2026-11-12 00:06Z by the manager, carrying the operator's words (verbatim, ~00:05Z): *"the Claude sessions should already be
+able to interact directly with the VM without needing to go through GitHub ... for things like this, which is not a code change, it's just
+an action on the system, that shouldn't have to go through GitHub. It should go through the system though ... we're not looking for a
+workaround that has Claude directly interacting with the brokers ... it should go directly from Claude to the VM and skip like a merge as
+part of that process."* This is row `MANAGER-VM-DIRECT-OPS`, operator-approved 2026-11-05 (popup "Direct ops = Approve (Recommended)";
+"Config path = Keep via git"; "Deploy = Keep git-sync" plus a direct "sync now"; "Alert wake = Tiny GitHub doorbell"). It is now owned by
+this lane. It is ONE channel: the review lanes' row submit is one action on it.
 
-- **Auth**: a dedicated bearer `LIVE_REVIEW_SUBMIT_TOKEN` in the VM `.env`, checked fail-closed in the router (503 unset, 401 wrong), listed in
-  `SITE_PUBLIC_POST_PATHS` like the other service-token POSTs. Cloud review lanes reach `ict-bot.duckdns.org` through the session proxy, which
-  injects the environment's credential for that host, so **no token ever appears in a prompt, a row or the repo**. The operator originates the
-  value (credentials skill); a workflow writes it to the VM `.env`.
-- **The packet stays byte-exact**: the wake poster already writes the packet on the VM. A direct row cites `packet_sha`; the VM checks the sha
-  against its local copy (no git read on the hot path).
-- **Git keeps a LOG copy**: the existing rows-branch push stays valid as a fallback, and an exporter (phase 4) copies direct rows onto
-  `live-review/rows` afterwards; the watcher seeds them as seen, so the copy never replays.
+**The channel.** `POST /api/bot/ops/actions` with `{"action", "params", "session", "reason", "operator_quote"?}` returns `{"job_id", "tier",
+"state"}`, and `GET /api/bot/ops/jobs/{job_id}` returns the journaled result (exit, stdout tail, `read_state`). The actions are the
+**existing system-actions allowlist** (`docs/claude/system-actions.md` § 2; the `case` arms of `.github/workflows/system-actions.yml`).
+They are the same names, the same parameter validation and the same scripts, run **on the VM** instead of over SSH from an Actions runner.
+Nothing reaches a broker except through those scripts and the per-account executors, exactly as today.
+
+- **Tiers and approvals do not change.**
+  - **Tier 1** (read-only / hygiene) runs at once.
+  - **Tier 2** runs when the call carries the operator's verbatim OK (`operator_quote`, the same rule as `directed_actions`). Without one, the
+    VM sends the operator the phase-1 Telegram **Approve / Reject** card for that job and runs it on Approve.
+  - **Tier 3** (strategy logic, params, risk caps, account-mode promotion) and every **config or code edit** stay in git (operator
+    2026-11-05, "Keep via git"). The channel refuses them by name and points at the PR route.
+  - A **trade action** goes through the same `directed_actions` / `live_review_apply` path as phase 1. A reviewer row under a granted mandate
+    goes through the same `dispatchable()` check as a branch row.
+- **Execution is out of process.** The web API validates the call and writes a job file to `runtime_logs/ops/queue/`. A small
+  path-activated unit (`ict-ops-runner.path` → `.service`, user `ubuntu`, the VM `.env`) runs it at once and writes
+  `runtime_logs/ops/jobs/<id>.json`. So a `restart ict-web-api` job cannot kill the process that is serving it, and a long job never blocks
+  the API.
+- **Auth.** The env proxy already injects the ICT environment's credential on every request a session makes to `ict-bot.duckdns.org`, in
+  `X-Work-Store-Token` (row WSD-S1-PROXY-AUTH-COLLISION, done and observed 2026-11-05: a request carrying only that header is accepted by
+  the work store). The ops router checks that header fail-closed (503 when unset, 401 when wrong), the same as
+  `work_items._require_work_store_token`, and is listed in `SITE_PUBLIC_POST_PATHS` like the other service-token POSTs. **So no new secret is
+  needed and no token ever appears in a prompt, a row or the repo.** Every job records the calling `session`. The token authenticates the
+  environment; the tier rules above decide what it may do.
+- **The row submit** is the action `live-review-row`. The VM validates the row exactly as the watcher validates a branch row
+  (`live_review_rows.py`, `packet_sha` against the wake poster's local packet), then runs the same `run_pass` classification in process:
+  mandate → dispatch, operator → phase-1 ask. A duplicate review_id returns 409. The rows-branch push stays valid as the fallback, and
+  phase 4 copies direct rows onto the branch as a log; the watcher seeds them as seen, so the copy never replays.
+- **Porting in waves, with parity enforced.** A VM-side registry (`src/runtime/ops_actions.py`: action → tier, parameter validator, argv)
+  is filled one action at a time. A CI test requires every registered action to exist in the `system-actions.md` allowlist **with the same
+  tier**, so the channel can never grant more than the workflow does. The workflow stays as the fallback for every action not yet ported.
+  - **Wave 1** is the trade path and deploy: `live-review-row`, `directed-action`, `amend-prop-bracket` (PROP-BRACKET-APPLY), `sync-now`
+    (one ict-git-sync pull) and `restart-service`.
+  - Later waves follow the order in which the manager files system-action issues today (the most-used actions first).
+- **Alerts towards the manager** stay as decided on 11-05: the manager reads `/api/bot/alerts` directly on every wake, and GitHub carries
+  only the content-free doorbell (ALERT-LEDGER-TO-MANAGER #23033, `landed_unproven`; its observation is on that row).
 
 ### 2.4 Phase 3: the immediate review wake
 
@@ -175,7 +207,8 @@ to git for audit. Git is **never** read on the action path.
 | a double tap / two surfaces | file lock + state machine; a non-`pending` ask reads `already_<state>`; the directed record id is unique and handled once |
 | a stale approval | expiry (default 15 min) + `directed_actions.STALE_S`; the package must still be `open` at apply |
 | an approval that loosens risk | none possible outside today's rules: `RiskManager` per account (tighten-only unless the operator directs a widen, which then passes the fresh-entry check), TP doctrine, both brackets always, read-back |
-| the review lane submitting directly | phase 2 bearer, schema + `packet_sha` check, then the SAME mandate check as a branch row; a lane cannot widen what a mandate grants |
+| the review lane submitting directly | the proxy-injected environment credential, schema + `packet_sha` check, then the SAME mandate check as a branch row; a lane cannot widen what a mandate grants |
+| a session running an ops action | the channel serves only actions already on the system-actions allowlist, at the same tier (CI parity test); Tier 2 needs the operator's verbatim OK or an Approve tap; Tier 3 and config/code edits are refused and stay in git |
 | a wake storm / spend | routine caps (30/h, 100/h) + VM dedupe; runs on the plan; no Messages API, no API key anywhere |
 | secrets in git | none: tokens live in the VM `.env` and the session proxy; records name accounts by their existing config ids only (already in the repo) |
 
@@ -187,7 +220,8 @@ to git for audit. Git is **never** read on the action path.
 - The Telegram two-way pattern from `src/runtime/telegram_decisions.py` (the 64-byte callback, fail-closed chat auth, answerable-route-by-poll-evidence),
   `src/runtime/telegram_poll_registry.py`, `src/bot/claude_decision_bot.py`, `src/bot/telegram_query_bot.py`.
 - `src/runtime/notify.send_telegram_direct` (reply_markup) and `src/runtime/telegram_channels` (the result ping already goes to TRADES).
-- `/api/bot/work/decision`'s service-token pattern (`_require_decision_write_token`, `SITE_PUBLIC_POST_PATHS`) for the phase-2 bearer.
+- The work store's service-token check (`work_items._require_work_store_token`, `X-Work-Store-Token`, `SITE_PUBLIC_POST_PATHS`) for the phase-2 auth.
+- The system-actions allowlist and its scripts (`docs/claude/system-actions.md`, `.github/workflows/system-actions.yml`) for every phase-2 action.
 
 ## 5. Phases, each its own Tier-2 PR
 
@@ -195,7 +229,7 @@ to git for audit. Git is **never** read on the action path.
 |---|---|---|
 | 1 | Telegram Approve/Reject + spool execution (`trade_approvals.py`, watcher hook, both bots, `spool-pass`, diag `trade_approvals`) | the first `operator_ask` row after deploy produces ONE Telegram ask (`trade_approvals` journal `sent: true`); a tap produces a `directed_actions` receipt with `verdict: applied` (or a named refusal) and `tap_to_done_s` < 15 |
 | 1b | SPA routes `GET/POST /api/bot/trade-approvals` + dashboard button | one approval from the console, read back in the journal with `source: spa` |
-| 2 | `POST /api/bot/live-review/rows` + submit token + lane brief | one review lane row lands via HTTPS and appears in `rows_watch.jsonl` with `source: direct` and `reviewed_to_seen_s` < 5 |
+| 2 | the direct ops channel (`/api/bot/ops/actions` + `ict-ops-runner` + `ops_actions.py` wave 1 incl. `live-review-row`) + lane brief | (a) a Tier-1 job from a session returns `done` in `/api/bot/ops/jobs/<id>` with no GitHub issue; (b) one review row lands via `live-review-row` and appears in `rows_watch.jsonl` with `source: direct`, `reviewed_to_seen_s` < 5; (c) a Tier-2 job without a quote produces a Telegram card, and Approve runs it |
 | 3 | routine fire from `live_review_due` + dedupe + fallback | a due event → `fires.jsonl` 2xx → a row from that session; trigger → row measured against today's ~7 min |
 | 4 | exporter of the journals to a git log branch | the log branch carries the day's receipts; no action read from it |
 
@@ -204,10 +238,10 @@ to git for audit. Git is **never** read on the action path.
 1. 2026-11-11: the VM had both ETH/SOL close calls within 45 s; the 22-27 min until the stops hit were lost waiting for the operator's yes and the Actions queue.
 2. Phase 1 (built now): every `operator_ask` / advice-only recommendation with an executor becomes a Telegram message with **Approve / Reject**.
 3. Approve executes in the live trader in seconds, through the existing directed-action path and the same executors + RiskManager gates. No PR, no Actions, no broker login.
-4. Phase 1b adds the same Approve on the SPA console; Phase 2 lets review lanes POST rows straight to the VM; Phase 3 wakes a reviewer via the routine API trigger.
+4. Phase 1b adds Approve to the SPA console. Phase 2 is the direct ops channel (MANAGER-VM-DIRECT-OPS): the system-actions allowlist as HTTPS calls from a session to the VM, same tiers, with review rows as one action. Phase 3 wakes a reviewer via the routine API trigger.
 5. Gates added or changed: **none**. Nothing spends API credits (routines run on the plan; no API key anywhere).
 6. **Decision: approval expiry.** Default 15 min (matches the directed-action staleness bound). Alternative: 5 min or 30 min.
 7. **Decision: which classes get buttons.** Default: close, partial_close, move_tp, tighten_sl, widen_sl (every class with an executor). Alternative: close + partial_close only.
 8. **Decision: advice-only `recommended` rows.** Default: they get a button too (they also need the operator to execute). Alternative: only `route: operator_ask`.
 9. **Decision (phase 3): create a routine + API token** in the claude.ai web UI for the reviewer (operator-only act; ~2 min), within 30 fires/h per routine.
-10. **Decision (phase 2): originate `LIVE_REVIEW_SUBMIT_TOKEN`** (any random 32+ byte value) and save it as the environment credential for `ict-bot.duckdns.org`.
+10. **Phase 2 needs no new secret**: it authenticates with the credential the env proxy already injects (`X-Work-Store-Token`). Decision: OK that this one environment credential authorises Tier-1 ops at once, with Tier 2 still needing your quote or an Approve tap.
