@@ -199,7 +199,8 @@ closing row's id resolves to the same trade, reported as `prop_fill_id` = the op
 | `GET /api/bot/prop-trades/{fill_id}/markers?interval=1h` | same as `/trades/{id}/markers`, `trade_id: null` | (shape of `trade_markers_v1.json`) |
 
 **Snapshot (closed trades).** Built ONCE per closed trade by a background writer and STORED (table
-`trade_chart_snapshots` in `trade_journal.db`, one zlib-compressed JSON payload per trade, stored without the
+`trade_chart_snapshots` in its OWN file `trade_chart_snapshots.db` beside the journal (`src.utils.paths.trade_snapshots_db_path`,
+env `TRADE_SNAPSHOTS_DB`), never inside `trade_journal.db`, which the writer and the routes open READ-ONLY; one zlib-compressed JSON payload per trade, stored without the
 indicator series, which the route recomputes from the stored candles); the route only reads it, it never fetches candles. Stored as framed DATA, not an image: the SPA draws it with the same chart library as the live
 cards (hover, zoom, theme), it is ~7.5 KB stored per trade (one synthetic 272-bar snapshot: 87 KB raw JSON), and a later change to how it is drawn needs no
 rebuild. `read_state`: `measured` (all parts present) · `partial` (built, some part missing; `partial_reasons`

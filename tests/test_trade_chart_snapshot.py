@@ -203,9 +203,19 @@ def db(tmp_path, monkeypatch):
     path = tmp_path / "trade_journal.db"
     make_canonical_db(path)
     monkeypatch.setattr(router, "_DB_PATH", path)
+    monkeypatch.setattr(router, "_SNAP_PATH", tmp_path / "trade_chart_snapshots.db")
     monkeypatch.setattr(router.srcs, "load_reviews", lambda: REVIEWS)
     monkeypatch.setattr(router.srcs, "load_receipts", lambda: RECEIPTS)
     return path
+
+
+def _put(db, key, payload, trade_id=None, prop_fill_id=None):
+    """A built snapshot row in the SNAPSHOT DB beside the journal (never in trade_journal.db)."""
+    conn = store.snapshots_rw(str(db.parent / "trade_chart_snapshots.db"))
+    conn.execute(f"INSERT INTO {store.TABLE} (snapshot_key, trade_id, prop_fill_id, state, payload) "
+                 "VALUES (?, ?, ?, 'built', ?)", (key, trade_id, prop_fill_id, payload))
+    conn.commit()
+    conn.close()
 
 
 def _insert(db, **kw):
@@ -220,12 +230,7 @@ def test_snapshot_route_not_built_then_built(db, client):
     d = client.get(f"/api/bot/trades/{tid}/snapshot").json()
     assert d["read_state"] == "not_built" and d["snapshot"] is None   # no table yet
     payload = _build()
-    conn = sqlite3.connect(str(db))
-    conn.execute(store.DDL)
-    conn.execute(f"INSERT INTO {store.TABLE} (snapshot_key, trade_id, state, payload) VALUES (?, ?, 'built', ?)",
-                 (store.trade_key(tid), tid, json.dumps(payload)))
-    conn.commit()
-    conn.close()
+    _put(db, store.trade_key(tid), json.dumps(payload), trade_id=tid)
     d = client.get(f"/api/bot/trades/{tid}/snapshot").json()
     assert d["snapshot"]["schema"] == tcs.SCHEMA
     assert d["read_state"] == "partial" and "tp_history_unrecorded" in d["partial_reasons"]
@@ -254,12 +259,7 @@ def test_stored_form_is_compressed_and_route_recomputes_indicators(db, client):
     payload = _build()
     blob = store.encode(payload)
     assert len(blob) < len(json.dumps(payload)) / 3
-    conn = sqlite3.connect(str(db))
-    conn.execute(store.DDL)
-    conn.execute(f"INSERT INTO {store.TABLE} (snapshot_key, trade_id, state, payload) VALUES (?, ?, 'built', ?)",
-                 (store.trade_key(tid), tid, blob))
-    conn.commit()
-    conn.close()
+    _put(db, store.trade_key(tid), blob, trade_id=tid)
     d = client.get(f"/api/bot/trades/{tid}/snapshot").json()
     assert d["snapshot"]["indicators"] == payload["indicators"]
     assert d["snapshot"]["candles"] == payload["candles"]
@@ -322,11 +322,8 @@ def test_prop_routes(db, client):
     o, c, tk = store.resolve_prop(conn, opener)
     payload = tcs.build_snapshot(tcs.prop_trade(o, c, tk), None, [], "x", REVIEWS, RECEIPTS,
                                  datetime(2026, 11, 12, 9, tzinfo=timezone.utc))
-    conn.execute(store.DDL)
-    conn.execute(f"INSERT INTO {store.TABLE} (snapshot_key, prop_fill_id, state, payload) VALUES (?, ?, 'built', ?)",
-                 (store.prop_key(closer), opener, store.encode(payload)))
-    conn.commit()
     conn.close()
+    _put(db, store.prop_key(closer), store.encode(payload), prop_fill_id=opener)
     d = client.get(f"/api/bot/prop-trades/{opener}/snapshot").json()
     assert d["snapshot"]["trade"]["account_class"] == "prop"
     mk = client.get(f"/api/bot/prop-trades/{opener}/markers").json()
