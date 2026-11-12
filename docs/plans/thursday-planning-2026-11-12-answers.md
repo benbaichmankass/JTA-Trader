@@ -1,8 +1,8 @@
 # Thursday planning 2026-11-12: the operator's 21 answers and where each landed
 
 > **Doc status:** `unknown` · category `evidence` · last verified `2026-11-12` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
-> **Gates this adds or changes: none.** This is a record. The one rule that changes an automatic path (p2, demotions wait for the operator)
-> lands on its own Tier-3 HOLD PR (row `DEMOTE-OPERATOR-LOOKS`), and the operator asked for it in their own words.
+> **Gates this adds or changes: none.** This is a record. p2 is a one-off instruction for this week's batch only (§ p2); it is not a rule
+> and is written into no rule file. The existing demotion ladder is unchanged.
 
 **Source of truth:** the decisions page https://claude.ai/artifact/3YvSRcb5eMSbTL8zmD9Bwt, database collection `answers`, documents p1–p9 and
 m1–m13 (there is no m8). The operator saved them on 2026-11-12 between 07:45:24Z (p1) and 07:51:18Z (m13). This lane, OPDEC-20261112
@@ -19,7 +19,7 @@ Rows live in the work store (WSD-S4 freeze; `scripts/ops/checklist.py` writes th
 | id | card | choice (verbatim) | note (verbatim) | owner of the follow-through |
 |---|---|---|---|---|
 | p1 | Capacity: this week's Usage reading | "I'll give the reading in chat" | "We have a reset so the plan is to surge until we reset again, hopefully on Saturday or Sunday, then reset and keep surging until we have to throttle ahead of the Wednesday reset. Don't worry about capacity for now, just keep the surge going" | **manager** (already handling) |
-| p2 | Surge slot 1: a working demotion signal for the 6 real-money legs, before new ML research? | "Both in parallel (needs capacity)" | "And don't let anything get demoted without me looking at it first " | this lane: rule → `DEMOTE-OPERATOR-LOOKS` (Tier 3 HOLD PR); F1 → `PERF-F1-DEMOTION-SIGNAL` (lane) |
+| p2 | Surge slot 1: a working demotion signal for the 6 real-money legs, before new ML research? | "Both in parallel (needs capacity)" | "And don't let anything get demoted without me looking at it first " | one-off for this week's batch (§ p2), not a rule; F1 → `PERF-F1-DEMOTION-SIGNAL` (lane) |
 | p3 | Volume-composition feature: keep the shadow-first path? | "Also test it in the exit head now" | "We already said that things get promoted to real money based on backtesting, shadow on paper is only for something that is demoted and in iteration, not a step on the way to real money " | **manager** (ML lane part 5); doctrine check by this lane, see § p3 |
 | p4 | Backlog drain: the plan | "Accept: start after the export fix" | — | `HEALTH-20261111-EXPORT-READS-STALE` then `BACKLOG-DRAIN-20261112` (lane) |
 | p5 | Draft workplan (15 items): accept as the week's list? | "Accept the list; size it to my Usage reading" | "I don't see the signals catalog and features heat map here" | list accepted; heat map → `FEATURE-IMPACT-MAP`, catalog → `FEATURES-CATALOG-UI-VERIFY`, both to lane UI-SPA |
@@ -44,18 +44,20 @@ The dispatch table (row → lane session → PR) is in the lane's report to the 
 
 ## Binding rules from these answers, and their canonical homes
 
-### p2 — no demotion without the operator looking first
+### p2 — this week's demotion candidates go to the operator first (ONE-OFF, not a rule)
 
 Operator, verbatim (p2 note): *"And don't let anything get demoted without me looking at it first "*.
 
-This narrows the 2026-09-27 data-backed Tier-2/3 authorization for one class: a **demotion** (Stage 2 → floor, a roster cut, an ML overlay
-stepped down, an exit head moved from `close` to `annotate`, an ML model's stage lowered) is **proposed with its evidence and waits for the
-operator**; it is not shipped first and reported after. It touches `config/mandates.yaml` (`MD-DEMOTE-S2-S1` carries `autoland: true`;
-`MD-DEMOTE-S1-OFF`, `MD-S1-CUT-ON-STAGE0-FAIL`, `MD-ML-OVERLAY-CANARY` grant demotions) and `docs/CLAUDE-RULES-CANONICAL.md` § "Data-backed
-Tier-2/3 decisions" ("De-risking decisions (demote, shrink, cut, add protection) carry no such block"). That is Tier 3: row
-`DEMOTE-OPERATOR-LOOKS`, one HOLD PR the manager merges. **Until it merges, every session applies the rule as stated by the operator.**
-INFERRED consequence to watch: last night's ETH exit-head `close` → `annotate` (#25120) was shipped under the old rule; it predates this answer
-and is not reverted by it. The operator can say so if they want it reviewed.
+**Correction from the operator, relayed by the manager at ~08:05Z (chat, verbatim):** *"I didn't mean to create a forever binding rule
+about the demotions. I meant specifically this batch. Don't put it in Claude, in any Claude docs. Don't. I want to keep the demotion ladder
+that we already have. I just, in this specific case, I want you to run them by me before demoting them automatically."*
+
+**Scope:** this week's batch of demotion candidates coming out of the planning: the real-money demotion-signal work F1/P1, including the
+ml_entry Stage-2 read, and any demotion it proposes this week. Those go to the operator before any automatic demotion. **The existing
+demotion ladder is unchanged.** Nothing about p2 is written into `config/mandates.yaml`, `docs/CLAUDE-RULES-CANONICAL.md`, the operating
+plan, any skill, `CLAUDE.md` or any other doc or rule file. The lane started at 08:13Z to write it as a rule (OPDEC-P2-DEMOTE-RULE,
+session_01AFoLuN1M3mPZin4zDKrmH9) was archived at 08:15:29Z and pushed no branch and no PR (`git ls-remote`, checked 2026-11-12). Row
+`DEMOTE-OPERATOR-LOOKS` is dropped with this correction as its reason.
 
 ### p3 — shadow is not a step to real money
 
@@ -130,8 +132,8 @@ All lanes were created by this lane with `create_session` on JTA-Trader and repo
 | m11 | `PHONE-CANCEL-FILLED-AS-SKIPPED` | OPDEC-M11 | session_01AFoLuK7LNskMkynxgJmJ5s | Opus |
 | m12 | `WORK-GAP-ALERTS` | OPDEC-M12 | session_01AFoLuLZUmLfdYeDbi7nMEF | Sonnet |
 | m13 | `CLOSE-CLASS-NOC-TEST` | OPDEC-M13 | session_01AFoLuMsaUDHEBnFNj8WppB | Sonnet |
-| p2 rule | `DEMOTE-OPERATOR-LOOKS` | OPDEC-P2-DEMOTE-RULE (Tier 3 HOLD PR) | session_01AFoLuN1M3mPZin4zDKrmH9 | Opus |
-| p2 F1 | `PERF-F1-DEMOTION-SIGNAL` | OPDEC-P2-F1 (/perf-followup) | session_01AFoLuKGivxba8N7Mss11en | Opus |
+| p2 rule | `DEMOTE-OPERATOR-LOOKS` (dropped) | **withdrawn**: operator correction ~08:05Z, p2 is batch-only; lane archived, nothing pushed | session_01AFoLuN1M3mPZin4zDKrmH9 | — |
+| p2 F1 | `PERF-F1-DEMOTION-SIGNAL` | OPDEC-P2-F1 (/perf-followup; its demotion proposals go to the operator this week) | session_01AFoLuKGivxba8N7Mss11en | Opus |
 | p4 | `HEALTH-20261111-EXPORT-READS-STALE` → `BACKLOG-DRAIN-20261112` | OPDEC-P4 | session_01AFoLuHsrjCGGba7eop8Qev | Opus |
 | p7 | TABULAR/TSFM kill data, `FRONTIER-LEVER-HARNESS-COSTS` | OPDEC-P7-LEVERS | session_01AFoLuMaNct18F1jYBq2Ry4 | Sonnet |
 | p7 | `AUD-20261019-RESEARCH-SLO-RED` | OPDEC-P7-RESEARCH-SLO | session_01AFoLuKDJYVZsxPtE74wG5z | Opus |
