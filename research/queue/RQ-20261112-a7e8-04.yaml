@@ -73,9 +73,20 @@ run:
   timeout_minutes: 240
   inputs:
     research_unit: RQ-20261112-a7e8-04
-grading:
-  auto: true
 related:
 - ML-QUEUE-DIVERSIFY
 - RQ-20261112-a7e8-03
-last_dispatched_at: '2026-11-12T04:08:32+00:00'
+last_dispatched_at: null
+grading:
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ20261112-a7e8-04-SIZE-BY-SCORE
+  evidence:
+  - research/results/RQ-20261112-a7e8-04/local-20261112T0408Z.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-11-12'
+  grader: scripts/research/queue_grade.py
+  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
