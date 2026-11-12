@@ -15,9 +15,10 @@ always goes through the account class's existing executor, one implementation ea
 * VM accounts (tradeify_1, velotrade_1): ``vm_close.run_close_step`` treats such a ticket as a full-close request with
   the deterministic id ``pkgexit-<ticket_id>`` (:func:`vm_request_id`), so it is idempotent per package and ticket;
   the watched close re-reads the venue flat, and the reconcile journals the exit in ``prop_fills`` from venue history.
-* phone accounts (breakout_2): :func:`plan_phone_exits` issues ONE ``phone_cancel.request_close`` per ticket (reason
-  ``strategy_exit:<close_reason>``); the phone closes through the position sheet and reports, and its retry/backoff
-  and red flag are ``phone_cancel``'s own.
+* phone accounts (breakout_2): :func:`plan_phone_exits` would issue ONE ``phone_cancel.request_close`` per ticket.
+  It is INERT -- nothing calls it -- since breakout_2 was breached and put ON ICE (operator ~11:56Z, AM-TRADING
+  12:39Z: no phone-app work). Wire it at phone_executor's two ``"close" in accepts`` sites when work row
+  PHONE-EXECUTOR-ICE lifts.
 
 Never a gate and never a halt: a close that fails is retried by its executor with ONE red flag after N failures.
 """

@@ -386,8 +386,7 @@ def claim_next(device: PhoneDevice, now: Optional[datetime] = None,
         if c is not None:
             return c
     if "close" in accepts:
-        from src.prop import phone_cancel, strategy_exit_close
-        strategy_exit_close.plan_phone_exits(acct, now=now)   # PROP-VM-STRATEGY-EXIT-CLOSE: the strategy exited
+        from src.prop import phone_cancel
         phone_cancel.plan_closes(acct, now=now)
         c = phone_cancel.claim_close(device, now=now, accepts_reduce="reduce" in accepts)
         if c is not None:
@@ -598,8 +597,7 @@ def pending_count(device: PhoneDevice, now: Optional[datetime] = None, accepts: 
         phone_cancel.plan_cancels(acct, now=now)
         n += phone_cancel.pending_cancels(acct, now=now)
     if "close" in accepts:
-        from src.prop import phone_cancel, strategy_exit_close
-        strategy_exit_close.plan_phone_exits(acct, now=now)   # PROP-VM-STRATEGY-EXIT-CLOSE: the strategy exited
+        from src.prop import phone_cancel
         phone_cancel.plan_closes(acct, now=now)
         n += phone_cancel.pending_closes(acct, now=now)
     return n + (1 if _unserved_dry_test_request(acct) else 0)

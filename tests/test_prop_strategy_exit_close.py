@@ -196,11 +196,11 @@ def test_phone_no_close_when_the_package_is_open_or_no_position(phone, status, r
     assert _close("P2") == {}
 
 
-def test_the_phone_claim_path_plans_strategy_exits_before_serving_closes(phone):
+def test_the_phone_path_is_not_wired_while_breakout_2_is_on_ice(phone):
+    """AM-TRADING 2026-11-12 ~12:39Z: breakout_2 is breached and on ice (operator ~11:56Z) -- plan_phone_exits stays
+    INERT (no caller) until PHONE-EXECUTOR-ICE lifts; the VM path is the live one."""
     src = (Path(__file__).resolve().parents[1] / "src/prop/phone_executor.py").read_text()
-    assert src.count("strategy_exit_close.plan_phone_exits(acct, now=now)") == 2
-    for chunk in src.split("strategy_exit_close.plan_phone_exits(acct, now=now)")[1:]:
-        assert chunk.index("phone_cancel.plan_closes(acct, now=now)") < 200
+    assert "plan_phone_exits" not in src
 
 
 # ------------------------------------------------------------------ ATTRIBUTION (AM-TRADING 2026-11-12)
