@@ -87,13 +87,13 @@ what_it_does_not_do: Serves, promotes or applies nothing; changes no config; pla
 blocked_on:
 - kind: work_item
   ref: TMBENCH-V2-TRAIN-INPUT
+  clears_when:
+  - row_state:TMBENCH-V2-TRAIN-INPUT=done
   owner: AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)
-  what: 'corpus v2 rows exist only as the Actions artifact broad-paths-bp2-f4271084b120-data of run 40999208713 (90-day retention), not in
-    the repo, and research-script-run.yml has no step that fetches another run''s artifact. tm_bench --train-corpus also has no
-    "sample k x v1-train trades per fold, trade-grouped, seeded" option.'
-  clears_when: 'a research-script-run step (or tm_bench --train-corpus broad:bp2-f4271084b120) materialises corpus v2 on the runner with its
-    manifest hash checked, and tm_bench --train-sample-mult 4 lands with a selfcheck row (sample is trade-grouped, seeded, purged, de-duplicated
-    against v1); then git-mv to research/queue/ with run.command, rule unchanged'
+  reason: 'corpus v2 (bp2-f4271084b120) is needed as a tm_bench TRAIN input on the runner; it exists only as the Actions artifact of run
+    40999208713 (90-day retention) and research-script-run.yml cannot fetch another run''s artifact; tm_bench also lacks a seeded,
+    trade-grouped --train-sample-mult. When the row is done: git-mv to research/queue/ with run.command, rule unchanged.'
+  since: '2026-11-12'
 intervention_controls:
   not_applicable: an offline Stage-A calibration read; the consumer's own gate applies any action
 ml_consumer:
