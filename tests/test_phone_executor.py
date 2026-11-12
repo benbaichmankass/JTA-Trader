@@ -672,29 +672,38 @@ def test_pending_poll_runs_the_stale_claim_watchdog(tmp_path, monkeypatch, _iso)
 
 # --- PROP-SIZE-EXCEEDS-DD-CUSHION (2026-11-05): a LIVE go-token needs the drawdown cushion graded ----------------
 
-def test_live_verify_refuses_when_the_form_risk_exceeds_the_cushion(tmp_path, monkeypatch, _iso):
+# GATE-PROP-RISK-CUSHION: MAKE REPORT-ONLY (operator 2026-11-12, decisions page, Gates tab). The grade still runs and
+# anything but within_cushion is PINGED with its cause; the live go-token is issued in every case.
+
+def test_live_verify_over_the_cushion_on_enforce_pings_and_issues_the_token(tmp_path, monkeypatch, _iso):
     _live(tmp_path, monkeypatch, cushion="exceeds_cushion")
     from src.prop import prop_risk_gate
     monkeypatch.setattr(prop_risk_gate, "breach_guards_for", lambda acct: "enforce")  # the default for an account
     tid = _claimed()
     v = _verify(tid)
-    assert v["ok"] is False and v.get("token") is None
-    assert "exceeds_cushion" in json.dumps(v) and "$25.00" in json.dumps(v)  # 0.50 x |2500 - 2450|
-    assert prop_journal.get_ticket(tid)["meta"]["phone"].get("go") is None
+    assert v["ok"] is True and v["mode"] == "live" and v["token"]
+    assert any("exceeds_cushion" in m and "$25.00" in m and "report-only" in m for m in _iso)  # 0.50 x |2500 - 2450|
 
 
-def test_live_verify_refuses_when_the_cushion_could_not_be_read(tmp_path, monkeypatch, _iso):
+def test_live_verify_with_an_unread_cushion_pings_and_issues_the_token(tmp_path, monkeypatch, _iso):
     _live(tmp_path, monkeypatch, cushion="cushion_unknown")
-    tid = _claimed()
-    v = _verify(tid)
-    assert v["ok"] is False and "cushion_unknown" in json.dumps(v)
+    v = _verify(_claimed())
+    assert v["ok"] is True and v["token"] and any("cushion_unknown" in m for m in _iso)
 
 
-def test_live_verify_with_the_real_grader_and_no_balance_on_record_fails_closed(tmp_path, monkeypatch, _iso):
+def test_live_verify_with_the_real_grader_and_no_balance_on_record_reports(tmp_path, monkeypatch, _iso):
     _live(tmp_path, monkeypatch, cushion=None)  # the real prop_risk_gate wrapper; the temp journal has no status
+    v = _verify(_claimed())
+    assert v["ok"] is True and any("risk gate" in m for m in _iso)
+
+
+def test_live_verify_positive_control_a_form_mismatch_still_refuses(tmp_path, monkeypatch, _iso):
+    # The remaining safety: the server read-back still refuses a form that does not match the ticket (no token).
+    _live(tmp_path, monkeypatch, cushion="exceeds_cushion")
     tid = _claimed()
-    v = _verify(tid)
-    assert v["ok"] is False and "risk gate" in json.dumps(v)
+    rb = _rb(tid, qty="5.00")
+    v = pe.verify_readback(_dev(), {"ticket_id": tid, "readback": rb, "readback_sha256": pe.readback_hash(rb)})
+    assert v["ok"] is False and v.get("token") is None
 
 
 def test_breach_guards_report_pings_and_lets_the_submit_proceed(tmp_path, monkeypatch, _iso):
@@ -707,11 +716,11 @@ def test_breach_guards_report_pings_and_lets_the_submit_proceed(tmp_path, monkey
     assert any("breach_guards=report" in m for m in _iso)
 
 
-def test_unknown_cushion_refuses_even_under_report(tmp_path, monkeypatch, _iso):
+def test_unknown_cushion_under_report_is_reported_not_refused(tmp_path, monkeypatch, _iso):
     _live(tmp_path, monkeypatch, cushion="cushion_unknown")
     from src.prop import prop_risk_gate
     monkeypatch.setattr(prop_risk_gate, "breach_guards_for", lambda acct: "report")
-    assert _verify(_claimed())["ok"] is False
+    assert _verify(_claimed())["ok"] is True
 
 
 def test_dry_verify_is_not_graded(tmp_path, monkeypatch, _iso):
@@ -725,13 +734,16 @@ def test_cushion_risk_is_qty_times_stop_distance():
     from src.prop import prop_risk_gate
     orig = prop_risk_gate.grade_account_ticket_risk
     try:
-        prop_risk_gate.grade_account_ticket_risk = lambda a, risk_usd=None: calls.setdefault("r", risk_usd) and {
+        prop_risk_gate.grade_account_ticket_risk = lambda a, risk_usd=None, **_kw: calls.setdefault("r", risk_usd) and {
             "state": "within_cushion"} or {"state": "within_cushion"}
         assert pe.live_cushion_refusals("breakout_2", {"qty": "0.29", "price": "2,379.36", "sl": "2319.40"}) == []
     finally:
         prop_risk_gate.grade_account_ticket_risk = orig
     assert abs(calls["r"] - 17.3884) < 1e-6
-    assert pe.live_cushion_refusals("breakout_2", {"qty": "", "price": "1", "sl": "1"})[0].startswith("risk gate:")
+    sent = []
+    assert pe.live_cushion_refusals("breakout_2", {"qty": "", "price": "1", "sl": "1"},
+                                    send=lambda m, **k: sent.append(m)) == []      # report-only (2026-11-12)
+    assert sent and "could not be computed" in sent[0]
 
 
 def test_repo_config_puts_breakout_2_on_report_so_an_over_cushion_live_verify_pings_and_proceeds(tmp_path, monkeypatch, _iso):
@@ -745,9 +757,9 @@ def test_repo_config_puts_breakout_2_on_report_so_an_over_cushion_live_verify_pi
     assert any("breach_guards=report" in m and "exceeds_cushion" in m for m in _iso)
 
 
-def test_breakout_2_on_report_still_refuses_an_unknown_cushion(tmp_path, monkeypatch, _iso):
+def test_breakout_2_on_report_reports_an_unknown_cushion(tmp_path, monkeypatch, _iso):
     _live(tmp_path, monkeypatch, cushion="cushion_unknown")
-    assert _verify(_claimed())["ok"] is False
+    assert _verify(_claimed())["ok"] is True and any("cushion_unknown" in m for m in _iso)
 
 
 # PHONE-EXECUTOR-ANOMALY: a failed expectation is recorded as expected-vs-seen, deduplicated by a signature of step + what
