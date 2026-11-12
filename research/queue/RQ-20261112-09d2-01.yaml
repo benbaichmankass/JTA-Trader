@@ -1,7 +1,7 @@
 # Hand-authored 2026-11-12 by lane TRADEIFY-FUTURES-FRONTIER (Tier 1), dispatched by Manager Session 2026-11-11a. Decision rule registered BEFORE any run. Gates this adds or changes: none.
 id: RQ-20261112-09d2-01
 title: 'Tradeify futures Stage 0: does an opening-range-breakout leg on MES / MNQ / MGC, flat by 16:40 ET, clear Stage 0 net of Tradeify per-contract costs?'
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 1
@@ -79,3 +79,12 @@ related:
 - RQ-20261112-09d2-02
 - RQ-20261112-09d2-03
 what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+grading:
+  verdict: fail
+  decision_rule_id: RULE-RQ-20261112-09d2-01
+  graded_at: '2026-11-12'
+  grader: session_01AFoLuLwRU7eg9KzpMcxWu (lane TRADEIFY-FUTURES-FRONTIER), by hand under the registered rule
+  evidence:
+  - research/results/RQ-20261112-09d2-01/local-20261112.jsonl
+  - comms/research/RQ-20261112-09d2-01/local-20261112/verdict.json
+  reason: '0 of 6 cells PASS under RULE-RQ-20261112-09d2-01. Every cell has discovery n >= 1455 (powered). Closest: MNQ_OR15, net +89.3R, 5/6 folds, but its Bonferroni CI lower bound is -0.020 (edge clause fails). MNQ_OR30 also fails the edge clause (lower bound -0.034). MES_OR15: net +14.0R, 3/6 folds. MES_OR30, MGC_OR15, MGC_OR30: net-negative. Costs on MES/MGC are roughly the size of the gross edge (MES_OR15 gross 114.3R vs cost 100.3R). Next iteration: RQ-20261112-09d2-05 (blocked: MNQ on the real CME contract).'

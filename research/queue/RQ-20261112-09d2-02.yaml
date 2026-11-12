@@ -1,7 +1,7 @@
 # Hand-authored 2026-11-12 by lane TRADEIFY-FUTURES-FRONTIER (Tier 1), dispatched by Manager Session 2026-11-11a. Decision rule registered BEFORE any run. Gates this adds or changes: none.
 id: RQ-20261112-09d2-02
 title: 'Tradeify futures survival: do the Stage-0-passing session-flat cells of RQ-20261112-09d2-01 make a positive-EV Tradeify 50K account under its END-OF-DAY TRAILING drawdown?'
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 1
@@ -77,3 +77,12 @@ related:
 - TRADEIFY-FUTURES-FRONTIER
 - RQ-20261112-09d2-01
 what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+grading:
+  verdict: not_applicable
+  decision_rule_id: RULE-RQ-20261112-09d2-02
+  graded_at: '2026-11-12'
+  grader: session_01AFoLuLwRU7eg9KzpMcxWu (lane TRADEIFY-FUTURES-FRONTIER), by hand under the registered rule
+  evidence:
+  - research/results/RQ-20261112-09d2-02/local-20261112.jsonl
+  - comms/research/RQ-20261112-09d2-02/local-20261112/verdict.json
+  reason: 'No RQ-20261112-09d2-01 cell PASSed, so RULE-RQ-20261112-09d2-02 grades nothing. A descriptive run on MNQ_OR15 is in verdict.json; it is NOT a verdict. It shows the zero-edge null at +EV on Lightning at $300 risk per trade (+$325) and on Growth at $300 (+$22). At those settings the payout structure alone pays, which is why the rule requires EV above the null.'

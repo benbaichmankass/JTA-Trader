@@ -1,0 +1,79 @@
+# Hand-authored 2026-11-12 by lane TRADEIFY-FUTURES-FRONTIER (Tier 1). ITERATION unit, authored from the written diagnosis of RQ-20261112-09d2-01's FAIL. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261112-09d2-05
+title: 'ITERATION 1 of the Tradeify-futures ORB (fail on proxies): on REAL CME MNQ 5m history, does MNQ_OR15 clear the same Stage-0 bar, deflated for having been picked from 6 cells?'
+status: blocked
+cadence: once
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-PROP
+programme: P5
+kind: experiment
+origin: new_hypothesis
+question: Using the engine and Tradeify costs of RQ-20261112-09d2-01 unchanged, on a real CME MNQ 5m continuous series (rolled on volume,
+  2019-01-01..2026-10-31), does the 15-minute opening-range breakout on MNQ clear Stage 0 at the 6-cell Bonferroni bar?
+why_this_matters: MNQ_OR15 was the closest cell on proxies. Discovery net +89.3R on n=1488 with 5/6 folds; holdout +11.3R. Its per-trade
+  mean of +0.060R missed only the multiplicity-deflated edge clause (CI lower bound -0.020). The proxy (a Dukascopy CFD) differs from the
+  futures in session hours, the close and microstructure; the real contract is the instrument Tradeify trades.
+iteration:
+  subject: tradeify_futures_orb
+  subject_kind: strategy_hypothesis
+  from_result: research/results/RQ-20261112-09d2-01/local-20261112.jsonl
+  verdict_read: fail
+  diagnosis: 'Costs ~= gross on MES and MGC (the stops are tight relative to $1.82-$2.12 + 2 ticks); MNQ has the widest stop in $ per micro
+    (median $171), so costs are 27% of gross, and an edge is visible but not separable from zero at the deflated bar on a proxy feed.'
+  hypothesis: on the real contract the MNQ_OR15 edge is at least as large and clears the deflated bar
+  attempt: 1
+power:
+  expected_n: 1450
+  min_detectable_effect: 0.08
+  effect_units: R per trade
+  sd: 1.2
+  design: one-sample
+  alpha: 0.00833
+  power: 0.8
+  basis: INFERRED from the proxy run's n and dispersion.
+  feasibility:
+    source: none
+    accrual_basis: Replays a corpus that does not exist yet (row FUT-CME-INTRADAY-HIST).
+decision_rule:
+  id: RULE-RQ-20261112-09d2-05
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: scripts/research/tradeify_futures_fit.py's ORB engine and costs, MNQ, OR15, on the real-contract series; discovery 2019-2024 in
+    6 yearly folds, holdout 2025-01..2026-10.
+  rule: 'PASS iff discovery n >= 100 AND net R > 0 AND >= 4 of 6 folds positive AND the per-trade CI lower bound > 0 at z = 2.638 (the
+    6-cell bar is kept although only one cell runs, because the cell was chosen after the proxy read: M13, re-reading raises the bar) AND
+    holdout n >= 30 AND holdout net R > 0. FAIL if discovery n >= 100 and a clause fails. INDETERMINATE if n < 100. A PASS goes to the
+    survival rule of RQ-20261112-09d2-02 (unchanged) in a new unit. Fixed now.'
+  what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+practice_precedent: 'M13 + M5 (docs/reference/trading-and-model-practice-principles.md): a re-read after selection keeps the deflated bar.'
+intervention_controls:
+  not_applicable: an offline backtest; nothing is applied
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 10
+  basis: The proxy run took ~1 minute for 6 cells.
+  why_runner: CPU.
+value:
+  usd_at_stake_per_month: 1500
+  confidence: 0.1
+  bucket: new_income
+  basis: as RQ-20261112-09d2-01; an estimate, not a measurement
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- TRADEIFY-FUTURES-FRONTIER
+- RQ-20261112-09d2-01
+- FUT-CME-INTRADAY-HIST
+what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+blocked_on:
+- kind: work_item
+  ref: FUT-CME-INTRADAY-HIST
+  what: a real CME MNQ 5m continuous series 2019+ and a --source flag on tradeify_futures_fit.py that reads it
+  clears_when: the series lands; then git-mv to research/queue/ with run.command (rule unchanged)

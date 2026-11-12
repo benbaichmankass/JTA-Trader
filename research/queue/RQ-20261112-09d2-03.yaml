@@ -1,7 +1,7 @@
 # Hand-authored 2026-11-12 by lane TRADEIFY-FUTURES-FRONTIER (Tier 1), dispatched by Manager Session 2026-11-11a. Decision rule registered BEFORE any run. Gates this adds or changes: none.
 id: RQ-20261112-09d2-03
 title: 'Tradeify futures ML: does a gbdt meta-label filter over the session-flat ORB candidates on MES / MNQ / MGC raise net R per trade on a frozen 2025-26 holdout, at Tradeify costs?'
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 2
@@ -72,3 +72,12 @@ related:
 - TRADEIFY-FUTURES-FRONTIER
 - RQ-20261112-09d2-01
 what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+grading:
+  verdict: fail
+  decision_rule_id: RULE-RQ-20261112-09d2-03
+  graded_at: '2026-11-12'
+  grader: session_01AFoLuLwRU7eg9KzpMcxWu (lane TRADEIFY-FUTURES-FRONTIER), by hand under the registered rule
+  evidence:
+  - research/results/RQ-20261112-09d2-03/local-20261112.jsonl
+  - comms/research/RQ-20261112-09d2-03/local-20261112/verdict.json
+  reason: 'RULE-RQ-20261112-09d2-03 FAIL. On the holdout, kept n=1437 averaged -0.0008R against +0.0130R for all n=2725; the uplift CI lower bound is -0.052. In walk-forward scoring of 2021-2024, kept beat all every year, and the frozen holdout did not repeat it. FAIL closes this exact configuration (features, gbdt, median threshold), not the family.'

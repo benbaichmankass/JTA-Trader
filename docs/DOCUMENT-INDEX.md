@@ -1111,6 +1111,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/velotrade-api-executor-design-2026-10-05.md` | evidence | unknown | — | 2026-10-05 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/tradeify-portfolio-feasibility-2026-09-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/tradeify-platforms-2026-10-15.md` | evidence | unknown | — | 2026-10-15 | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/tradeify-futures-frontier-2026-11-12.md` | evidence | live | — | 2026-11-12 | `dir:research-is-measurement / read:TRADEIFY-FUTURES-FRONTIER-lane-measured-it-2026-11-12` | Tradeify FUTURES (Tradovate brand): account facts, fit of our legs (none), ORB Stage 0 FAIL, ML FAIL, execution path, buy-point |
 | `docs/research/prop-dynamic-exits-faster-banking-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/research/prop-exit-evidence-2026-09-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/prop-firm-testing-tool-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
