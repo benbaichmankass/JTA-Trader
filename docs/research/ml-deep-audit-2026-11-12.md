@@ -247,7 +247,7 @@ Filed as pipeline item `PI-20261112-IXCFGFWB-0001` (due with the next weekly sca
 - **F5. Stop scanning learner families for the regime label** until rank 4 reads. The scan already drops these; say so once in the
   skill's standing notes instead of weekly.
 - **F6. Every candidate states the smallest effect its population can detect** (sd about 1.09 R per decision for the entry line), so
-  an idea that cannot be measured on our data is dropped at triage.
+  an idea whose expected effect is below that figure is dropped at triage.
 
 ## 8. What this lane did and did not verify
 
