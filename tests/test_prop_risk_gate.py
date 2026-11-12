@@ -32,7 +32,9 @@ def test_exceeds_cushion_names_the_binding_limit_and_the_overshoot():
     assert v["binding_limit"] == "dd_floor"
     assert v["cushion_usd"] == 64.0
     assert v["overshoot_usd"] == 11.0
-    assert any("DO NOT PLACE" in ln for ln in G.caveat_lines(v))
+    # GATE-PROP-RISK-CUSHION: MAKE REPORT-ONLY (operator 2026-11-12): a warning, never "DO NOT PLACE"
+    assert any("Would breach the dd floor limit" in ln for ln in G.caveat_lines(v))
+    assert not any("DO NOT PLACE" in ln for ln in G.caveat_lines(v))
 
 
 def test_no_risk_declared_is_its_own_state():
@@ -202,8 +204,8 @@ def test_the_caveat_appears_ABOVE_the_size_it_contradicts(monkeypatch):
             risk_usd=75.0, distance_to_dd_floor_usd=64.0, status_freshness="ok"),
     )
     body = render_ticket(t, account_id="breakout_1")
-    assert "DO NOT PLACE AT THE SUGGESTED SIZE" in body
-    assert body.index("DO NOT PLACE") < body.index("Size     :"), \
+    assert "Would breach the dd floor limit" in body           # a warning since 2026-11-12 (report-only)
+    assert body.index("Would breach") < body.index("Size     :"), \
         "the caveat must precede the size"
 
 

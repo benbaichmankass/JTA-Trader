@@ -37,9 +37,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sqlite3
 import sys
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional, Set
@@ -90,6 +90,8 @@ def plan(conn: sqlite3.Connection, *, account_id: str, ticket_id: str,
          rest: Set[str], now: datetime) -> Dict[str, Any]:
     """The decision, without writing: ``{"ok": bool, "why": str, "before": row,
     "to": status}``."""
+    # Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PROP-TICKET-EXPIRE-REFUSALS: KEEP.
+    # Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
     out: Dict[str, Any] = {"ok": False, "account_id": account_id, "ticket_id": ticket_id,
                            "before": None, "to": TERMINAL_STATUS}
     if account_id not in rest:
@@ -140,19 +142,18 @@ def apply(conn: sqlite3.Connection, decision: Dict[str, Any]) -> Dict[str, Any]:
     conn.commit()
     return _row(conn, before["ticket_id"]) or {}
 
+def _take_backup():
+    """The shared pre-APPLY backup with per-tag retention (scripts/ops/journal_backup.py)."""
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    from scripts.ops.journal_backup import take_backup
+    return take_backup
+
 
 def _backup(db_path: str) -> str:
-    dest = f"{db_path}.bak-prop-ticket-expire-{int(time.time())}"
-    src = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
-    try:
-        dst = sqlite3.connect(dest)
-        try:
-            src.backup(dst)
-        finally:
-            dst.close()
-    finally:
-        src.close()
-    return dest
+    """Pre-APPLY copy to <db>.bak-prop-ticket-expire-<stamp>; keeps only the newest per tag (journal_backup.py)."""
+    return _take_backup()(db_path, "prop-ticket-expire", method="online", stamp_style="epoch")
 
 
 def main(argv: Optional[list] = None) -> int:

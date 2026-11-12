@@ -1,7 +1,7 @@
 # Hand-authored 2026-11-01 by lane RESEARCH-ITERATE (Tier 1), dispatched by Manager Session 2026-11-01a. ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates: none.
 id: RQ-20261101-78fc-13
 title: 'ITERATION 1 of ict_scalp_mgc_15m (indeterminate): on a 15m gold feed with history, does the declared leg clear Stage 0?'
-status: blocked
+status: queued
 cadence: once
 theme: live_strategy
 priority: 1
@@ -65,12 +65,47 @@ lands:
 related:
 - RESEARCH-ITERATE
 - ICT-SCALP-EVIDENCE
+- FUT-INTRADAY-DUKA-LANE
 what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
-blocked_on:
-- kind: work_item
-  ref: ICT-SCALP-EVIDENCE
-  what: a dukascopy 15m XAU lane for the ict_scalp branch of exit_lever_ablation / regime_debt_matrix (dukascopy has no 15m interval code wired
-    today)
-  clears_when: the 15m lane lands; then git-mv to research/queue/ with run.command (rule unchanged)
+unblocked_by:
+  ref: FUT-INTRADAY-DUKA-LANE
+  at: '2026-11-12'
+  what: scripts/research/exit_lever_ablation.py fetches 15m (and 5m) through the dukascopy lane (_DUKA_INTERVAL); the
+    run below is the leg as declared (arm W=, the harness's venue-aware cost stack for MGC) on 2019-01..2026-10 XAU_USD
+    15m (the adjudicated MGC proxy), 6 equal calendar folds. Rule unchanged.
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - ict_scalp_mgc_15m
+  - --arm
+  - W=
+  - --non-crypto-source
+  - dukascopy
+  - --days
+  - '2900'
+  - --start
+  - '2019-01-01'
+  - --end
+  - 2026-10-31 23:59
+  - --grade
+  - stage0
+  - --baseline
+  - W
+  - --delta-r
+  - '0'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '30'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261101-78fc-13
 intervention_controls:
   not_applicable: an offline model evaluation; the consumer's own gate applies any action
