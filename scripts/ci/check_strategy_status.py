@@ -49,9 +49,9 @@ except ImportError as exc:  # pragma: no cover
 UNHOMED: Dict[str, str] = {
     leg: ("cut from alpaca_paper 2026-10-05 by MD-S1-CUT-ON-STAGE0-FAIL (PR #16548); not retired. Off until "
           "alpaca_paper takes slices (same symbol as a 1d leg there). Owner: row ALPACA-SLICES-REHOME-1H")
-    # 2026-11-11 Thursday-planning b1: qqq_pullback_1h re-homed on alpaca_paper (allocation record). tlt_pullback_1h stays
-    # unhomed only until its real-money promotion lands (row PROMOTE-TLT-1H-REAL-MONEY).
-    for leg in ("spy_pullback_1h", "tlt_pullback_1h")
+    # 2026-11-11 Thursday-planning b1: qqq_pullback_1h re-homed on alpaca_paper (allocation record). 2026-11-12 (row
+    # PROMOTE-TLT-1H-REAL-MONEY): tlt_pullback_1h re-homed on alpaca_paper too (its long-only real-money step is not supported).
+    for leg in ("spy_pullback_1h",)
 }
 
 #: Production legs that ALSO stay on general paper, BY NAME. Operator 2026-10-28 (Q2, verbatim "Keep on

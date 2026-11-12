@@ -272,6 +272,10 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # floor with the debt it carried before its 10-05 cut (tp_r 50 sentinel, tp_intent none). A visible, deliberate line; the real-TP
     # test is RQ-20261104-7fdb-01 (tp_r 2/3/4/6) and a PASS replaces this line.
     "alpaca_paper/qqq_pullback_1h": ER,
+    # 2026-11-12 PROMOTE-TLT-1H-REAL-MONEY (Tier 3, HELD; operator b1 "Put qqq and tlt on the paper floor now"): tlt_pullback_1h joins the demo
+    # floor with the 50 R sentinel it has always run. RQ-20261112-5ab1-01 measured K* 3.5 R INDETERMINATE (calibrated; OOS delta CI
+    # [-0.082, +0.032] straddles -0.05), so declaring 3.5 R is the operator's call; a declaration replaces ER with R on this line.
+    "alpaca_paper/tlt_pullback_1h": ER,
     "alpaca_paper/qld_trend_long_1d": ER,
     "alpaca_paper/qqq_trend_long_1d": R,
     "alpaca_paper/scha_trend_long_1d": R,

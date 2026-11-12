@@ -1346,6 +1346,12 @@ accounts:
       # allocation record comms/same_symbol_allocation/qqq-alpaca_paper.json (refreshed). tlt_pullback_1h's real-money promotion is row
       # PROMOTE-TLT-1H-REAL-MONEY (its Stage-0 record must carry the holdout confirmation first); it stays off general paper (three statuses). ROLLBACK: delete the next line and restore the record's 2-leg form.
       - qqq_pullback_1h
+      # 2026-11-12 PROMOTE-TLT-1H-REAL-MONEY (Tier 3, HELD for the manager): tlt_pullback_1h on the demo floor, the operator's own b1 choice above
+      # ("Put qqq and tlt on the paper floor now"). Its real-money step does NOT go ahead: alpaca_live is long-only (side_filter long, venue
+      # shorting_enabled false) and the leg's LONG side loses on both windows (365 d -3.88 R / 46; holdout RQ-20261104-003 -3.01 R / 60; all its
+      # edge is short). Evidence: docs/plans/1h-survivor-promotion-proposals-2026-11-12.md. TLT is shared with tlt_pullback_1d + ml_entry_eq:
+      # the split is comms/same_symbol_allocation/tlt-alpaca_paper.json (refreshed). ROLLBACK: delete the next line and restore that record's 2-leg form.
+      - tlt_pullback_1h
       # 2026-10-27 DESK-PAPER-ACCOUNTS (Tier-3, PAPER; operator verbatim, chat ~15:58Z: "I do want to have the desk
       # live on the other paper accounts as well, so Alpaca and IB."): the Claude desk leg, scoped to
       # strategies.yaml::claude_desk.account_symbols.alpaca_paper (SPY, QQQ, IWM, GLD, TLT). This account has no slice
