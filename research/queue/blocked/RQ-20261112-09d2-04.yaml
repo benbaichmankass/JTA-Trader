@@ -1,0 +1,70 @@
+# Hand-authored 2026-11-12 by lane TRADEIFY-FUTURES-FRONTIER (Tier 1), dispatched by Manager Session 2026-11-11a. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261112-09d2-04
+title: 'Tradeify futures transfer: does ict_scalp_mgc_15m (and the ict_scalp 15m family params) on MGC / MES / MNQ, forced flat by 16:40 ET, clear Stage 0 at Tradeify costs?'
+status: blocked
+cadence: once
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-PROP
+programme: P5
+kind: experiment
+origin: new_hypothesis
+question: Measured config-exact (the ict_scalp_mgc_15m block of config/strategies.yaml) on multi-year 15m proxies for MGC, MES and MNQ, with
+  every open position closed at the 16:35 ET bar close and Tradeify per-contract costs ($1.82 / $2.12 round turn + 1 tick per market or
+  stop fill), does the leg clear Stage 0?
+why_this_matters: ict_scalp_mgc_15m is our only intraday futures leg; it is the cheapest existing candidate for a session-flat Tradeify
+  account. Its own Stage 0 (RQ-20261101-78fc-13) is blocked on the same missing 15m dukascopy lane.
+power:
+  expected_n: 300
+  min_detectable_effect: 0.1
+  effect_units: R per trade
+  sd: 1.0
+  design: one-sample, per instrument
+  alpha: 0.0167
+  power: 0.8
+  basis: INFERRED; the rule's own INDETERMINATE floor governs.
+  feasibility:
+    source: dukascopy
+    accrual_basis: Replays a public corpus; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261112-09d2-04
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: Per instrument, net R per trade after the session-flat overlay and Tradeify costs, discovery 2019-2024 in 6 yearly folds,
+    holdout 2025-01..2026-10.
+  rule: 'Per instrument: PASS iff discovery n >= 30 AND net R > 0 AND >= 4 of 6 folds positive AND discovery CI lower bound > 0 at z = 2.394
+    (alpha 0.05 / 3) AND holdout net R > 0 with holdout n >= 15. FAIL if discovery n >= 30 and a clause fails. INDETERMINATE if n < 30.
+    A PASS feeds RQ-20261112-09d2-02''s simulator in a new unit. Fixed now.'
+  what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+practice_precedent: 'M4 (docs/reference/trading-and-model-practice-principles.md): config-exact harness, baseline = the declared leg.'
+intervention_controls:
+  not_applicable: an offline backtest; nothing is applied
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: Estimate; the first run replaces it.
+  why_runner: CPU, public corpus.
+value:
+  usd_at_stake_per_month: 1500
+  confidence: 0.08
+  bucket: new_income
+  basis: as RQ-20261112-09d2-01; an estimate, not a measurement
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- TRADEIFY-FUTURES-FRONTIER
+- ICT-SCALP-EVIDENCE
+- RQ-20261101-78fc-13
+what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+blocked_on:
+- kind: work_item
+  ref: ICT-SCALP-EVIDENCE
+  what: a dukascopy 15m lane for the ict_scalp branch of exit_lever_ablation (its _DUKA_INTERVAL has 1h/2h/4h/1d only) plus a session-flat
+    overlay flag (close at the 16:35 ET bar) and a per-contract cost arm
+  clears_when: the 15m lane lands; then git-mv to research/queue/ with run.command (rule unchanged)

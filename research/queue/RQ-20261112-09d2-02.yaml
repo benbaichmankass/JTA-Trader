@@ -1,0 +1,79 @@
+# Hand-authored 2026-11-12 by lane TRADEIFY-FUTURES-FRONTIER (Tier 1), dispatched by Manager Session 2026-11-11a. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261112-09d2-02
+title: 'Tradeify futures survival: do the Stage-0-passing session-flat cells of RQ-20261112-09d2-01 make a positive-EV Tradeify 50K account under its END-OF-DAY TRAILING drawdown?'
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 1
+roadmap:
+- L-PROP
+programme: P5
+kind: experiment
+origin: new_hypothesis
+question: For each cell that PASSes RQ-20261112-09d2-01 (and their combined book), simulated on Tradeify Growth, Select and Lightning 50K
+  rules -- EOD trailing drawdown $2,000 enforced intraday on net liquidation (per-trade MAE), soft daily loss limit $1,250 (Growth,
+  Lightning), target $3,000, consistency rules, payout rules and caps, max 40 micros, list fees $145 / $165 / $492, 90% split -- is the
+  expected net payout per purchase positive at every seed and above the zero-edge null?
+why_this_matters: Prop legs clear a SUPERSET of the real-money bar (CLAUDE.md, promotion ladder; comms/prop_survival/README.md). The
+  existing simulator (scripts/research/prop_ev_sim.py) models a STATIC drawdown only (it raises on any other type), and Tradeify futures
+  uses an EOD trailing drawdown that is the usual killer of breakout-then-runner books. This unit is the gate that decides the buy-point.
+lever_manifest:
+  variables:
+    plan: [growth_50k, select_50k, lightning_50k]
+    risk_usd_per_trade: [100, 200, 300]
+  fixed: {primary_risk_usd: 200, seeds: [1, 2, 3, 4, 5], paths_per_seed: 2000, funded_horizon_days: 250, day_sampling: iid trading days from 2019-01..2026-10 incl. no-trade days}
+  hypothesised_effect: a positive per-trade edge at ~10% of the drawdown per trade survives the trailing floor long enough to reach payouts
+power:
+  expected_n: 10000
+  min_detectable_effect: 25
+  effect_units: USD EV per purchase
+  sd: 1500
+  design: Monte Carlo, 5 seeds x 2000 paths
+  alpha: 0.05
+  power: 0.8
+  basis: INFERRED; the Monte Carlo error at 2000 paths is ~$35 per seed, so "EV > 0 at every seed" is a meaningful bar only above ~$50.
+  feasibility:
+    source: dukascopy
+    accrual_basis: Replays the -01 ledger; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261112-09d2-02
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'scripts/research/tradeify_futures_fit.py --stage survival --stage0-json <the -01 verdict.json>: per (target, plan, risk)
+    EV_net = mean over paths of 0.9 x sum(payouts) - fee; P(pass eval), P(breach), P(any payout); null EV = the same ledger with net R
+    shifted to mean 0 (costs, stops and MAE untouched).'
+  rule: 'Per (target, plan, risk): PASS iff the target PASSed RQ-20261112-09d2-01 AND EV_net > 0 at all 5 seeds AND mean EV_net > the
+    zero-edge null EV. The unit PASSes iff at least one target PASSes at the PRIMARY risk of $200 per trade (the other risk points are
+    reported, not selected on). FAIL if a Stage-0 PASS target exists and none PASSes at $200. NOT_APPLICABLE if no -01 cell PASSed; then a
+    descriptive run on the best discovery cell is reported and graded nothing. Not changed after any result.'
+  what_it_does_not_do: Writes no comms/prop_survival record by itself (that needs the real-contract confirmation and a Stage-1 soak);
+    promotes nothing; places no order.
+practice_precedent: 'M4 + docs/research/prop-gate-edge-regrade-2026-10-31/RESULT.md: the prop EV/survival gate (scripts/research/prop_gate.py V3: EV > 0 at every seed plus an edge clause plus the
+  zero-edge null), re-implemented for an EOD-trailing ruleset because prop_ev_sim.py refuses non-static drawdowns.'
+intervention_controls:
+  not_applicable: an offline simulation; nothing is applied
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 40
+  basis: Estimate; the first run replaces it.
+  why_runner: CPU Monte Carlo over a public-corpus ledger.
+value:
+  usd_at_stake_per_month: 1500
+  confidence: 0.1
+  bucket: new_income
+  basis: as RQ-20261112-09d2-01; an estimate, not a measurement
+run:
+  command: [python3, scripts/research/tradeify_futures_fit.py, --stage, survival, --unit, RQ-20261112-09d2-02, --stage0-json, 'comms/research/RQ-20261112-09d2-01/local-20261112/verdict.json', --out, '{out_dir}']
+  timeout_minutes: 90
+  inputs: {research_unit: RQ-20261112-09d2-02}
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- TRADEIFY-FUTURES-FRONTIER
+- RQ-20261112-09d2-01
+what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
