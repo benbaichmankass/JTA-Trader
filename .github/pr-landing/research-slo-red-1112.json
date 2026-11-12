@@ -1,5 +1,7 @@
 {
   "tier": 1,
-  "landing": "self",
-  "why": "AUD-20261019-RESEARCH-SLO-RED (operator p7 2026-11-12, one research-SLO lane). Research tooling only (scripts/research + tests), no runtime/order-path/config: (1) queue_grade no longer re-stamps graded_at on an unchanged grading (194 of 195 dry-run changes were stamp-only); (2) hand-written recurring units whose rows carry their own rule id are graded (6 daily self-tests never were); (3) survivors_per_month / trials_per_survivor measured by the operator's 2026-11-04 definition, window keyed on result date. Revert: git revert."
+  "landing": "hold",
+  "hold_reason": "changes_landing_machinery",
+  "hold_text": "Edits scripts/research/queue_grade.py, the producer whose --verify vouches automation/research-queue-grade-* PRs (E58), so a human reads it once (R12). Two grader changes: (1) a re-grade that changes nothing but graded_at returns None (dry run for 11-13: 194 changes -> 1); --verify only re-derives files the diff modifies, so stamp-only units simply drop out of the diff. (2) rule_attested also covers recurring hand-written units (6 daily self-tests never graded). Plus research_slo.py: survivors measured by the operator's 2026-11-04 definition. The manager merges. Revert: git revert.",
+  "why": "AUD-20261019-RESEARCH-SLO-RED (operator p7 2026-11-12, one research-SLO lane). Research tooling only, no runtime/order-path/config. Removes the daily graded_at re-stamp that poisoned grade latency and every graded_at window, grades units the grader never read, and measures survivors as the operator defined them."
 }
