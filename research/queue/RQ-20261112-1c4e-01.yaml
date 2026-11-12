@@ -1,0 +1,104 @@
+# Hand-authored 2026-11-12 by lane ML-DECISION-MODELS (session_01AFoLuHrh2txGoKFBMCuhC9; Tier 1 research), dispatched by AM-ML for Manager
+# Session 2026-11-11a (trigger 19:53Z: "continue your next lever on ML-DECISION-MODELS"). Decision rule registered BEFORE any run.
+# Gates this adds or changes: none (a research rule, not a runtime switch).
+id: RQ-20261112-1c4e-01
+title: 'ENTRY execution lever: does a post-only MAKER entry (join the touch, 5-min market fallback; DESK-MAKER-FILLS policy F) improve the
+  frozen ENTRY v1 model''s OWN held-out decisions, net of fees and adverse selection, in R per decision?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T-series execution practice (docs/reference/trading-and-model-practice-principles.md): passive entry with a timed
+  aggressive fallback, graded net of fees and of the adverse selection carried by the unfilled orders; RQ-20261027-a3f1-01 (+2.03 bps per
+  entry, PASS, random direction, Bybit prints).'
+question: 'Row ML-DECISION-MODELS lever table: cost takes ~90% of v1''s gross on its held-out decisions (+0.073 gross vs +0.007 net R per
+  decision, RQ-20261112-a7e8-03). a3f1-01 measured the maker entry on RANDOM-direction on-the-hour decisions; a directional model''s picks may
+  run away from a resting limit more often. On the frozen v1 booster''s decisions over the held-out year 2025-10-01..2026-09-30 (60-perp
+  pool, tau 0.10, the live booster comms/research/RQ-20261101-c692-06/41324826751/model), what is the paired delta, maker minus taker entry,
+  in R per decision? Look-before-retest: a3f1-01 (random direction, prints, 40 days x 6 perps), 58e4-04 (journal upper bounds on other legs,
+  FAIL, n=64), f18f-01 (desk proposals, not_applicable). No unit measured the maker entry on an ML decision model''s own picks.'
+why_this_matters: 'Operator 2026-11-01 (row ML-DECISION-MODELS): "we need to understand what we''re not doing correctly and why this is so
+  difficult". Cost is the measured binding constraint; the maker entry is the only cost lever with a passing record. A PASS is a Tier-3
+  packet (entry_order for ml_entry; the maker probe is fenced to demo/paper today), never a self-merge.'
+data_and_approximation: 'Binance Vision daily 1m futures klines (Bybit prints are ~135 MB per BTC day; a full year is infeasible). Touch at
+  decision time T = close of the minute ending at T, one-tick spread (bid = p - tick/2, ask = p + tick/2); maker long L = bid (k = 0); STRICT
+  fill iff some 1m low in (T, T+5m] <= L - tick (short: high >= L + tick); unfilled -> market at the T+5m touch. delta_F bps = dir x (taker_px
+  - eff_px) / mid x 1e4 + (5.5 - 2.0 if filled), the formula of desk_maker_fills.decision_rows. delta_R = delta_F / 1e4 x entry / (2 x ATR14).
+  The approximation is CALIBRATED in the same run on a3f1-01''s own 40 days x 6 perps, random direction, hours 1..22.'
+decision_rule:
+  id: RULE-RQ20261112-1c4e-01-MAKER-ENTRY
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'Pooled mean paired delta_R (maker minus taker entry) per decision over the measured v1 held-out decisions, with a 95% day-block
+    bootstrap CI (2000 reps, whole calendar days resampled, the a3f1-01 method). Reported, never gating: delta in bps and its CI, fill rate,
+    delta if filled / unfilled, by side, the traded-5 slice, the taker mean net R on the measured rows and the implied maker mean net R, the
+    calibration arm.'
+  rule: 'INDETERMINATE IF the calibration arm''s mean delta_F lies outside [+1.0, +3.0] bps (the 1m approximation is then more than 1 bps from
+    a3f1-01''s print-based +2.03 and cannot be trusted), OR measured decisions < 1000 OR distinct symbols < 10. PASS IF the pooled mean
+    delta_R > 0 AND the day-block CI95 lower bound > 0. FAIL otherwise. The holdout ledger is claimed (family EXEC, its first read on this
+    window, so the bar is CI95) BEFORE any post-decision 1m bar is read. Thresholds are not changed after any result.'
+  what_it_does_not_do: No sizing, no config change, no order. A PASS is a Tier-3 PROPOSAL with the exact change, not a change.
+  min_n: 1000 measured decisions on >= 10 symbols
+family_note: 'The ledger family is EXEC, not ENTRY: the decision SET is fixed (v1''s already-read held-out decisions) and this unit selects
+  nothing; the factor under test is the execution of a fixed decision, paired, like BRACKETS / MANAGE have their own families.'
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 600
+  confidence: 0.3
+  basis: 'stand-in: a3f1-01 +2.03 bps per entry is roughly +0.01 R per ml_entry decision at a 2 ATR stop; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 60
+  why_runner: Keyless public Binance Vision klines; scores a committed booster (no fit). First run local in the lane container.
+  basis: 'INFERRED: ~9,000 symbol-days of 1m files (~60 KB each) plus 240 calibration files; the 1h world build as c692-01.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_maker_replay.py
+  - run
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261112-1c4e-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-DECISION-MODELS
+- DESK-MAKER-FILLS
+- RQ-20261027-a3f1-01
+- RQ-20261112-a7e8-03
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
+power:
+  expected_n: 11000
+  min_detectable_effect: 0.005
+  effect_units: metric
+  sd: 0.08
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED: a3f1-01 delta_F sd 12.8-25 bps; at ~200 bps per R that is ~0.06-0.12 R; n ~11,000 decisions on ~360 days, day-clustering
+    design effect up to ~10 leaves ~1,100 effective rows: MDE ~ 2.5 x 0.08 / sqrt(1100) ~ 0.006 R.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history; nothing accrues.
+intervention_controls:
+  hold_to_bracket: false
+  matched_random:
+    draws: 0
+    note: 'paired by construction (same decision, two entry rules); the random-direction control is the calibration arm (a3f1-01 sample)'
+  bootstrap_group: day
+ml_consumer:
+  consumer: ml_entry (bybit_2 + bybit_portfolio) entry order type
+  decision: whether ml_entry should enter post-only at the touch with a 5-min market fallback
