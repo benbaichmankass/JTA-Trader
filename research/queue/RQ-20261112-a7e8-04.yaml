@@ -30,10 +30,10 @@ power:
   min_detectable_effect: 0.02
   effect_units: metric
   sd: 1.0
-  design: paired
+  design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: 'The decision set is a7e8-03''s (n = 11,240 on the same window, MEASURED there; this unit does not read outcomes until its own run). A per-unit-risk delta of 0.02 R with per-decision sd ~1 R and ~4,000 decision-time clusters is detectable; the cluster bootstrap is the interval that gates. Below 100 decisions INDETERMINATE.'
+  basis: 'The decision set is a7e8-03''s (n = 11,240 on the same window, MEASURED there; this unit does not read outcomes until its own run). A per-unit-risk delta of 0.02 R with per-decision sd ~1 R and ~4,000 decision-time clusters is detectable; the cluster bootstrap is the interval that gates. Below 100 decisions INDETERMINATE. DISCLOSED EDIT (2026-11-12, after the local read at 04:08:30Z): power.design relabelled paired -> one_sample because the power gate (research_queue.required_n) accepts only one_sample / two_sample; a paired re-weighting of the same trades is a one-sample test on the per-decision difference. The decision_rule, statistic, weight map and thresholds are unchanged.'
   feasibility:
     source: none
     accrual_basis: Re-measurement on public candles over a pinned, already-claimed window; nothing accrues.
