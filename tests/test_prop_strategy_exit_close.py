@@ -25,14 +25,11 @@ SIG = datetime(2026, 11, 12, 8, 0, tzinfo=timezone.utc)
 NOW = datetime(2026, 11, 12, 11, 40, tzinfo=timezone.utc)
 
 
-def test_strategy_vs_bookkeeping_reasons():
-    for r in ("sl", "tp", "trail_stop", "sl_cross", "stale_exit_bars", "live_review_close", "strategy_close",
-              "exchange_flat_reconciled"):
-        assert sec.is_strategy_exit(r), r
-    for r in ("", None, "netting_attributed", "stuck_strategy_watchdog", "reconciler_filled", "account_reset",
-              "prop_shadow_no_emit"):
-        assert not sec.is_strategy_exit(r), r
-    assert sec.package_exited("closed", "sl") and not sec.package_exited("open", "sl")
+def test_any_closed_package_counts_no_reason_filter():
+    """Operator 2026-11-12 ~11:45Z (binding): no gate that was not asked for -- so no close-reason filter."""
+    for r in ("sl", "tp", "trail_stop", "netting_attributed", "reconciler_filled", "", None):
+        assert sec.package_exited("closed", r), r
+    assert not sec.package_exited("open", "sl")
 
 
 # ------------------------------------------------------------------ VM accounts (tradeify_1 / velotrade_1)
@@ -111,8 +108,8 @@ def test_vm_no_open_journal_row_reads_no_venue(tmp_path):
     assert a.calls == [] and a.reads == 0
 
 
-@pytest.mark.parametrize("op_status,reason", [("open", "sl"), ("closed", "netting_attributed"), ("closed", None)])
-def test_vm_open_package_or_bookkeeping_reason_is_not_closed(tmp_path, op_status, reason):
+@pytest.mark.parametrize("op_status,reason", [("open", "sl"), ("orphaned", None)])
+def test_vm_an_open_package_is_not_closed(tmp_path, op_status, reason):
     a = _Adapter()
     _step(a, _Api(op_status=op_status, close_reason=reason), tmp_path)
     assert a.calls == []
@@ -190,9 +187,9 @@ def test_phone_package_exit_issues_exactly_one_close_and_alerts_once(phone):
     assert len(phone) == 1
 
 
-@pytest.mark.parametrize("status,reason,tstatus", [("open", "sl", "filled"), ("closed", "reconciler_filled", "filled"),
-                                                   ("closed", "sl", "closed"), ("closed", "sl", "placed")])
-def test_phone_no_close_when_not_a_strategy_exit_or_no_position(phone, status, reason, tstatus):
+@pytest.mark.parametrize("status,reason,tstatus", [("open", "sl", "filled"), ("closed", "sl", "closed"),
+                                                   ("closed", "sl", "placed")])
+def test_phone_no_close_when_the_package_is_open_or_no_position(phone, status, reason, tstatus):
     _ticket("P2", status=tstatus)
     _pkg("pkg-a20ebe8b65ce4c44", status, reason)
     assert sec.plan_phone_exits("breakout_2", now=NOW) == 0

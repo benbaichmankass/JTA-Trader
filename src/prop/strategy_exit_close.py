@@ -7,9 +7,9 @@ closed on a strategy decision (sl / tp / trail / a close lever / a review close)
 The VM trail only stepped its stop, a close lever only alerted, and the phone trail only logged the divergence
 (breakout_2 pkg-a20ebe8b65ce4c44 closed ``sl`` at 11:32:17Z with the venue position still open).
 
-What this module decides, and nothing else: :func:`is_strategy_exit` -- does a package ``close_reason`` mean the
-STRATEGY exited (close the prop position), or is it bookkeeping (a reconciler / watchdog / netting / reset label that
-says nothing about the trade)? Every non-empty reason not in :data:`BOOKKEEPING` is a strategy exit. The CLOSE itself
+What this module decides, and nothing else: the ticket's ORDER PACKAGE is ``closed`` (:func:`package_exited`), so the
+prop position is closed too -- whatever the close reason (operator 2026-11-12 ~11:45Z, binding: "no more gates that I
+don't explicitly give you permission for"; no reason filter was asked for, so none is applied). The CLOSE itself
 always goes through the account class's existing executor, one implementation each:
 
 * VM accounts (tradeify_1, velotrade_1): ``vm_close.run_close_step`` treats such a ticket as a full-close request with
@@ -29,27 +29,14 @@ from typing import Any, Callable, Optional
 
 logger = logging.getLogger(__name__)
 
-#: Package close reasons that are bookkeeping, not a trading decision (MEASURED from the writers in
-#: src/runtime/order_monitor.py, src/core/coordinator.py and the reconcilers). Everything else that closes a package
-#: is the strategy (or its reviewer) exiting the trade.
-BOOKKEEPING = frozenset({
-    "netting_attributed", "stuck_strategy_watchdog", "stuck_cascade_recovered", "reconciler_filled", "reconciler",
-    "exit_coverage_no_strategy", "exchange_reset_flat", "account_reset", "shadow_no_execute", "prop_shadow_no_emit",
-    "options_expiry_assignment", "orphaned", "rejected", "expired", "skipped", "superseded",
-})
 CLOSED_PKG = ("closed",)
 REASON_PREFIX = "strategy_exit:"
 VM_ID_PREFIX = "pkgexit-"
 
 
-def is_strategy_exit(close_reason: Any) -> bool:
-    r = str(close_reason or "").strip().lower()
-    return bool(r) and r not in BOOKKEEPING
-
-
-def package_exited(op_status: Any, close_reason: Any) -> bool:
-    """The ticket's ORDER PACKAGE is closed on a strategy decision."""
-    return str(op_status or "").strip().lower() in CLOSED_PKG and is_strategy_exit(close_reason)
+def package_exited(op_status: Any, close_reason: Any = None) -> bool:
+    """The ticket's ORDER PACKAGE is closed (any reason; ``close_reason`` is carried for the alert only)."""
+    return str(op_status or "").strip().lower() in CLOSED_PKG
 
 
 def vm_request_id(ticket_id: Any) -> str:
@@ -59,8 +46,6 @@ def vm_request_id(ticket_id: Any) -> str:
 def vm_synth_request(ticket: Any) -> Optional[dict]:
     """The full-close request a VM ticket implies when its package exited and it carries no explicit request."""
     if not isinstance(ticket, dict) or ticket.get("close_request") or not ticket.get("ticket_id"):
-        return None
-    if str(ticket.get("status") or "").lower() not in ("placed", "filled", "open", "closed"):
         return None
     if not package_exited(ticket.get("op_status"), ticket.get("close_reason")):
         return None

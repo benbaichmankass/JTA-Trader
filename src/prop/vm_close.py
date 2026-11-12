@@ -283,9 +283,9 @@ def run_close_step(*, adapter: Any, page: Any, api: Any, cfg: Any, mode: str, st
             side = pe._dir((j or {}).get("direction") or t.get("direction"))
             mine = [p for p in positions if venue and p.symbol.upper() == venue and p.side == side]
             prev = done.get(rid) or {}
-            if req.get("synthetic") and (j is None or len(mine) != 1) and not int(prev.get("attempts") or 0):
-                # A strategy exit whose venue is already flat (or not this account's position): nothing to close, no
-                # alert, no record -- the reconcile journals a flat venue on its own.
+            if req.get("synthetic") and (j is None or not mine) and not int(prev.get("attempts") or 0):
+                # A strategy exit whose venue is already flat: nothing to close, no alert, no record -- the reconcile
+                # journals a flat venue on its own.
                 continue
             if j is None and frac is None and int(prev.get("attempts") or 0) > 0:
                 outcome.update(result="closed", why="journal row closed since the last attempt (venue flat)")
