@@ -14,6 +14,7 @@ Usage:
     python3 scripts/ops/status_move_positions.py --json
 Exit: 0 clean · 1 a close is due, a version breach, or an unexplained row · 2 could not look.
 """
+# wiring: manual-only - run by whoever merges a roster PR, after the merge (OPERATING-PLAN § 2 "Open positions on a book move")
 from __future__ import annotations
 
 import argparse
