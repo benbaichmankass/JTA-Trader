@@ -211,16 +211,87 @@ def test_receipt_carries_build_wall_and_stages_and_failed_build_label_carries_th
     assert not (tmp_path / "logs" / det.INFLIGHT).exists()  # a finished pass leaves no in-flight mark
 
 
-def test_build_packet_records_which_stage_timed_out(tmp_path, monkeypatch):
+def _fake_run(monkeypatch, tmp_path, *, sudo):
+    """subprocess.run stand-in: `sudo ...` behaves per `sudo(cmd)`; any builder/publisher stage times out."""
     import subprocess
+    monkeypatch.setattr(det, "_jobs_dir", lambda: tmp_path / "jobs")
     monkeypatch.setattr(det.dpw, "BUILD_TIMEOUT_S", 7)
-    def boom(cmd, **kw):
+
+    def run(cmd, **kw):
+        if cmd[0] == "sudo":
+            return sudo(cmd)
         raise subprocess.TimeoutExpired(cmd, kw["timeout"])
-    monkeypatch.setattr(det.subprocess, "run", boom)
-    f = {"kind": "atr_burst", "symbol": "ETHUSDT", "bar": "b", "detail": {}}
-    stage, why = det.build_packet(f, CFG, "")
-    assert stage is None and why.startswith("TimeoutExpired")
+    monkeypatch.setattr(det.subprocess, "run", run)
+
+
+_F = {"kind": "atr_burst", "symbol": "ETHUSDT", "bar": "b", "detail": {}}
+
+
+def test_build_packet_falls_back_in_process_and_records_which_stage_timed_out(tmp_path, monkeypatch):
+    import subprocess
+    _fake_run(monkeypatch, tmp_path, sudo=lambda c: subprocess.CompletedProcess(c, 5, "", "Unit ict-desk-build@x.service not found."))
+    stage, why = det.build_packet(_F, CFG, "")
+    assert stage is None and why.startswith("TimeoutExpired") and det.LAST_PATH == "inproc"
     assert [(s["stage"], s["outcome"]) for s in det.LAST_STAGES] == [("builder", "timeout")]
+
+
+def test_build_packet_runs_in_its_own_unit_and_reads_the_job_result(tmp_path, monkeypatch):
+    import subprocess
+    seen = {}
+
+    def sudo(cmd):
+        seen["cmd"] = cmd
+        job = tmp_path / "jobs" / cmd[-1].split("@")[1].removesuffix(".service")
+        spec = json.loads((job / "job.json").read_text())
+        assert [x["timeout_s"] for x in spec["stages"]] == [7, 7]  # the 420 s semantics travel with the job
+        (job / "result.json").write_text(json.dumps({"state": "ok", "stages": [
+            {"stage": "builder", "outcome": "exit 0", "wall_s": 11.0}, {"stage": "publisher", "outcome": "exit 0", "wall_s": 2.0}]}))
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+    _fake_run(monkeypatch, tmp_path, sudo=sudo)
+    stage, why = det.build_packet(_F, CFG, "")
+    assert why is None and stage.name == "stage" and det.LAST_PATH == "unit"
+    assert seen["cmd"][:4] == ["sudo", "-n", "systemctl", "start"] and [s["wall_s"] for s in det.LAST_STAGES] == [11.0, 2.0]
+
+
+def test_a_timeout_inside_the_unit_reads_as_the_same_timeout_reason(tmp_path, monkeypatch):
+    import subprocess
+
+    def sudo(cmd):
+        job = tmp_path / "jobs" / cmd[-1].split("@")[1].removesuffix(".service")
+        (job / "result.json").write_text(json.dumps({"state": "timeout", "stages": [
+            {"stage": "builder", "outcome": "timeout", "wall_s": 7.1}]}))
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+    _fake_run(monkeypatch, tmp_path, sudo=sudo)
+    stage, why = det.build_packet(_F, CFG, "")
+    assert stage is None and why.startswith("TimeoutExpired: builder exceeded 7s")
+
+
+def test_the_job_runner_enforces_the_stage_timeout_and_always_writes_a_result(tmp_path, monkeypatch):
+    import sys
+    sys.path.insert(0, str(det.ROOT / "scripts" / "ops"))
+    import desk_build_job as job
+    monkeypatch.setattr(job, "JOBS", tmp_path)
+    jd = tmp_path / "j1"
+    jd.mkdir()
+    py = sys.executable
+    (jd / "job.json").write_text(json.dumps({"stages": [
+        {"name": "builder", "argv": [py, "-c", "print(1)"], "timeout_s": 5},
+        {"name": "publisher", "argv": [py, "-c", "import time; time.sleep(30)"], "timeout_s": 1}]}))
+    assert job.main(["x", "j1"]) == 0
+    res = json.loads((jd / "result.json").read_text())
+    assert res["state"] == "timeout" and [s["outcome"] for s in res["stages"]] == ["exit 0", "timeout"]
+
+
+def test_a_survivor_build_is_recorded_on_the_interrupted_label(tmp_path, monkeypatch):
+    monkeypatch.setattr(det, "_jobs_dir", lambda: tmp_path / "jobs")
+    (tmp_path / "jobs" / "j9").mkdir(parents=True)
+    (tmp_path / "jobs" / "j9" / "result.json").write_text(json.dumps({"state": "ok", "stages": []}))
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    (logs / det.INFLIGHT).write_text(json.dumps({"started_at": NOW.isoformat(), "fired": {"key": "k"}, "job": "j9"}))
+    det._reconcile_inflight(logs, logs / "l.jsonl", NOW + timedelta(seconds=30))
+    lab = json.loads((logs / "l.jsonl").read_text())
+    assert lab["disposition"] == "interrupted" and lab["survivor"]["state"] == "ok" and "outlived the trader" in lab["reason"]
 
 
 def test_a_pass_cut_off_mid_build_is_labelled_interrupted_on_the_next_pass(tmp_path):

@@ -469,6 +469,24 @@ if [ -f "${_DATADIR_DROPIN_SRC}" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# ict-desk-build@.service (DESK-TRIGGER-SCAN-TIMEOUT): the TEMPLATE the trader starts with
+# `sudo -n systemctl start ict-desk-build@<job>.service` to run a desk trigger build in its OWN cgroup, so a deploy
+# restart of the trader (which SIGTERMs the trader's cgroup) no longer kills an in-flight build. The generic loop
+# above skips `@` units, so it is copied here. Copy only: nothing is enabled or started (instances are started
+# on demand by the trader); not installed on the gateway VM. Without it the trader falls back to its in-process build.
+# ---------------------------------------------------------------------------
+_DESKBUILD_SRC="${REPO_DIR}/deploy/ict-desk-build@.service"
+if [ "$_VM_ROLE_EARLY" != "gateway" ] && [ -f "${_DESKBUILD_SRC}" ]; then
+    _DESKBUILD_DST="${SYSTEMD_DIR}/ict-desk-build@.service"
+    if [ ! -e "${_DESKBUILD_DST}" ] || ! cmp -s "${_DESKBUILD_SRC}" "${_DESKBUILD_DST}"; then
+        echo ">>> install_systemd_units: ict-desk-build@.service → ${_DESKBUILD_DST}"
+        "${SUDO[@]}" cp "${_DESKBUILD_SRC}" "${_DESKBUILD_DST}"
+        "${SUDO[@]}" chmod 0644 "${_DESKBUILD_DST}"
+        changed=1
+    fi
+fi
+
+# ---------------------------------------------------------------------------
 # OnFailure= alerting (FIX-SA-08, SA-AUD-5-onfailure-still-absent, CA-A10-402).
 #
 # A failed oneshot behind an active timer shows `active (waiting)` on the timer
