@@ -453,7 +453,6 @@ def m2_regime_rows(t, run_id: str, computed_at: str, info: Dict[str, Any]) -> Li
 def _fit_score(train, test, feats: List[str], params: Dict[str, Any], tau: float, label: str, gate=None):
     """One LightGBM regressor on ``train`` -> (mean net R of test rows with pred > tau, n taken, rank IC pred vs label)."""
     import lightgbm as lgb
-    import numpy as np
     m = lgb.LGBMRegressor(**params)
     m.fit(train[feats], train[label])
     pred = m.predict(test[feats])  # provenance: predict -- the regressed net R of the long side, not a probability
