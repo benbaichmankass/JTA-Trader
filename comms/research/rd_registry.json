@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "generated_at": "2026-11-12T12:33:49Z",
+ "generated_at": "2026-11-12T12:38:37Z",
  "population": "every strategy leg in config/strategies.yaml; every ML registry row in bucket LIVE/SHADOW (plus OFFLINE rows with an attributed unit); every unit-subject that is neither; every ML plan item that is an idea; every programme question node with attributed units or an open needs_authoring",
  "decision": "operator 2026-11-12 chat \u2014 idea-level ML + strategy testing registry for visibility",
  "gates": "none: a read projection; it refuses and blocks nothing",
@@ -130,9 +130,8 @@
    "n": 62
   },
   "ml_registry": {
-   "state": "snapshot",
-   "source": "comms/ml_consolidation/2026-11-11.json",
-   "as_of": "2026-11-11T19:30Z",
+   "state": "ok",
+   "source": "live /api/bot/ml/registry rows",
    "n": 106
   },
   "model_names": {
@@ -159,10 +158,10 @@
   }
  },
  "summary": {
-  "ideas": 361,
+  "ideas": 357,
   "per_track": {
    "STRATEGY": 218,
-   "ML": 143
+   "ML": 139
   },
   "per_stage_per_track": {
    "STRATEGY": {
@@ -187,13 +186,13 @@
     "passed_waiting": 4,
     "testing_book": 0,
     "production": 0,
-    "shadow_advisory": 31,
+    "shadow_advisory": 27,
     "retired": 0,
     "stuck": 39
    }
   },
   "changed_last_7d": {
-   "basis": "idea's newest attributed-unit activity (result, dispatch or grading) on/after 2026-11-05T12:33:49Z",
+   "basis": "idea's newest attributed-unit activity (result, dispatch or grading) on/after 2026-11-05T12:38:37Z",
    "count": 66,
    "items": [
     {
@@ -518,34 +517,34 @@
     }
    ]
   },
-  "stage_changes_since_previous": null,
+  "stage_changes_since_previous": [],
   "units": {
    "total": 2214,
-   "attributed": 1399,
-   "unattributed": 815,
+   "attributed": 1395,
+   "unattributed": 819,
    "by_attribution": {
     "declared_subject": 469,
     "title_match": 843,
     "ml_plan_ref": 33,
-    "programme_node": 54
+    "programme_node": 50
    },
    "check": "attributed + unattributed == total"
   },
   "unattributed_units": {
-   "count": 815,
+   "count": 819,
    "by_theme": {
     "new_strategy_prop": 302,
     "ml_health": 195,
     "macro": 122,
     "live_strategy": 95,
     "timeframes": 35,
+    "infra": 27,
     "regime": 26,
-    "infra": 23,
     "none": 16,
     "new_venue": 1
    },
    "by_status": {
-    "result": 707,
+    "result": 711,
     "dispatched": 6,
     "queued": 12,
     "retired": 8,
@@ -556,7 +555,7 @@
   },
   "excluded": {
    "ml_plan_build_items": 26,
-   "data_infra_programme_nodes": 9
+   "data_infra_programme_nodes": 5
   }
  },
  "ideas": [
@@ -1147,7 +1146,8 @@
    "roadmap": [
     "L-REGIME",
     "L-ML-LIVE"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-MECE-D5-aggregator-voi",
@@ -1177,7 +1177,8 @@
    "goal": "G4",
    "roadmap": [
     "L-ML-LIVE"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-MECE-D6-pointer-v0",
@@ -1208,7 +1209,8 @@
    "roadmap": [
     "L-ML-LIVE",
     "L-AM-STANDARD"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-Q1.3-drift-1h-fail",
@@ -1238,7 +1240,8 @@
    "goal": "G4",
    "roadmap": [
     "M25"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-Q1.3-drift-artifact",
@@ -1268,7 +1271,8 @@
    "goal": "G4",
    "roadmap": [
     "M25"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-Q1.3-drift-decay",
@@ -1298,7 +1302,8 @@
    "goal": "G4",
    "roadmap": [
     "M25"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-Q2-costnet-metalabel-regate",
@@ -1328,7 +1333,8 @@
    "goal": "G4",
    "roadmap": [
     "M23"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-Q2.3-pass",
@@ -1358,7 +1364,8 @@
    "goal": "G4",
    "roadmap": [
     "M23"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-Q2.5-fail",
@@ -1388,7 +1395,8 @@
    "goal": "G4",
    "roadmap": [
     "M23"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-Q4-catboost-confirmed",
@@ -1418,7 +1426,8 @@
    "goal": "G4",
    "roadmap": [
     "M25"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-Q4-cross-asset-features",
@@ -1448,7 +1457,8 @@
    "goal": "G4",
    "roadmap": [
     "M23"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-Q4-tabular-read",
@@ -1478,7 +1488,8 @@
    "goal": "G4",
    "roadmap": [
     "M25"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-Q4-tsfm-read",
@@ -1509,7 +1520,8 @@
    "roadmap": [
     "M25",
     "L-REGIME"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-Q6-parity-hmm-fail",
@@ -1539,7 +1551,8 @@
    "goal": "G4",
    "roadmap": [
     "M25"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-Q6-parity-hmm-pass",
@@ -1569,7 +1582,8 @@
    "goal": "G4",
    "roadmap": [
     "M25"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-Q6-parity-regimeclf-fail",
@@ -1599,7 +1613,8 @@
    "goal": "G4",
    "roadmap": [
     "M25"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-Q6-parity-regimeclf-pass",
@@ -1629,7 +1644,8 @@
    "goal": "G4",
    "roadmap": [
     "M25"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-R1-softweight-read",
@@ -1659,7 +1675,8 @@
    "goal": "G4",
    "roadmap": [
     "L-REGIME"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-R1-volcells-parity-read",
@@ -1689,7 +1706,8 @@
    "goal": "G1",
    "roadmap": [
     "L-REGIME"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-R2-classifier-fail",
@@ -1719,7 +1737,8 @@
    "goal": "G4",
    "roadmap": [
     "L-REGIME"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-R2-classifier-pass",
@@ -1749,7 +1768,8 @@
    "goal": "G1",
    "roadmap": [
     "L-REGIME"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-R3-equity-read",
@@ -1779,7 +1799,8 @@
    "goal": "G1",
    "roadmap": [
     "L-REGIME"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-R3.c01-pass",
@@ -1809,7 +1830,8 @@
    "goal": "G1",
    "roadmap": [
     "L-REGIME"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-R3.c02-pass",
@@ -1839,7 +1861,8 @@
    "goal": "G1",
    "roadmap": [
     "L-REGIME"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-R3.c03-pass",
@@ -1869,7 +1892,8 @@
    "goal": "G4",
    "roadmap": [
     "L-REGIME"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-R3.c04-pass",
@@ -1899,7 +1923,8 @@
    "goal": "G4",
    "roadmap": [
     "L-REGIME"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-R3.g07-pass",
@@ -1929,7 +1954,8 @@
    "goal": "G1",
    "roadmap": [
     "L-REGIME"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-R3.g08-pass",
@@ -1959,7 +1985,8 @@
    "goal": "G1",
    "roadmap": [
     "L-REGIME"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-R4-direction-baseline",
@@ -1990,7 +2017,8 @@
    "roadmap": [
     "L-REGIME",
     "M23"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-R5-voltarget-sizing",
@@ -2020,7 +2048,8 @@
    "goal": "G1",
    "roadmap": [
     "L-REGIME"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-VOLWIN-direction-head",
@@ -2051,7 +2080,8 @@
    "roadmap": [
     "M23",
     "L-DESK"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-desk-checkin-exit-head",
@@ -2081,7 +2111,8 @@
    "goal": "G4",
    "roadmap": [
     "M23"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "hypothesis:ml-entry",
@@ -2626,7 +2657,8 @@
    "goal": "G4",
    "roadmap": [
     "M23"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-Q1.5-fail",
@@ -2667,7 +2699,8 @@
    "goal": "G4",
    "roadmap": [
     "L-REGIME"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-Q4-lgbm-capacity-big",
@@ -2709,7 +2742,8 @@
    "goal": "G4",
    "roadmap": [
     "M23"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-Q4-var-price-vector",
@@ -2751,7 +2785,8 @@
    "goal": "G4",
    "roadmap": [
     "M23"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-RG1025-yz-longtail-btc",
@@ -2793,7 +2828,8 @@
    "goal": "G1",
    "roadmap": [
     "L-PROGRAMMES"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "hypothesis:tradeify_own_ml_leg",
@@ -2992,7 +3028,8 @@
    "goal": "G4",
    "roadmap": [
     "M25"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "ml:btc-regime-15m-baseline-v1",
@@ -3023,36 +3060,6 @@
    "slot": "D2",
    "bucket": "SHADOW",
    "family": "classification_baseline"
-  },
-  {
-   "id": "ml:btc-regime-15m-lgbm-fc-pcv-v1",
-   "name": "Collie-4a",
-   "track": "ML",
-   "kind": "ml_model",
-   "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "shadow",
-   "latest_result": null,
-   "counts": {
-    "units": 0,
-    "passed": 0,
-    "failed": 0,
-    "indeterminate": 0,
-    "open": 0,
-    "blocked": 0
-   },
-   "open_units": null,
-   "next_step": null,
-   "owner_rows": null,
-   "last_activity": null,
-   "links": {
-    "registry": "/api/bot/ml/registry"
-   },
-   "model_id": "btc-regime-15m-lgbm-fc-pcv-v1",
-   "slot": "D2",
-   "bucket": "SHADOW",
-   "family": "classification_lightgbm"
   },
   {
    "id": "ml:btc-regime-15m-lgbm-fc-pcv-v2",
@@ -3274,36 +3281,6 @@
    "family": "classification_lightgbm"
   },
   {
-   "id": "ml:btc-regime-5m-lgbm-yz-v1",
-   "name": "Chihuahua-2a",
-   "track": "ML",
-   "kind": "ml_model",
-   "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "shadow",
-   "latest_result": null,
-   "counts": {
-    "units": 0,
-    "passed": 0,
-    "failed": 0,
-    "indeterminate": 0,
-    "open": 0,
-    "blocked": 0
-   },
-   "open_units": null,
-   "next_step": null,
-   "owner_rows": null,
-   "last_activity": null,
-   "links": {
-    "registry": "/api/bot/ml/registry"
-   },
-   "model_id": "btc-regime-5m-lgbm-yz-v1",
-   "slot": "D2",
-   "bucket": "SHADOW",
-   "family": "classification_lightgbm"
-  },
-  {
    "id": "ml:eth-regime-15m-lgbm-selfonly-v901ctrl",
    "name": "Collie-3a",
    "track": "ML",
@@ -3463,36 +3440,6 @@
    "slot": "D2",
    "bucket": "SHADOW",
    "family": "classification_lightgbm"
-  },
-  {
-   "id": "ml:execution-quality-baseline-v0",
-   "name": "Mutt-Execution-1a",
-   "track": "ML",
-   "kind": "ml_model",
-   "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "shadow",
-   "latest_result": null,
-   "counts": {
-    "units": 0,
-    "passed": 0,
-    "failed": 0,
-    "indeterminate": 0,
-    "open": 0,
-    "blocked": 0
-   },
-   "open_units": null,
-   "next_step": null,
-   "owner_rows": null,
-   "last_activity": null,
-   "links": {
-    "registry": "/api/bot/ml/registry"
-   },
-   "model_id": "execution-quality-baseline-v0",
-   "slot": "D9",
-   "bucket": "SHADOW",
-   "family": "regression_baseline"
   },
   {
    "id": "ml:exit-head-donchian-1h-v1",
@@ -3874,36 +3821,6 @@
    "slot": "D4",
    "bucket": "LIVE",
    "family": null
-  },
-  {
-   "id": "ml:sol-regime-15m-lgbm-fc-pcv-v1",
-   "name": "Collie-4b",
-   "track": "ML",
-   "kind": "ml_model",
-   "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "shadow",
-   "latest_result": null,
-   "counts": {
-    "units": 0,
-    "passed": 0,
-    "failed": 0,
-    "indeterminate": 0,
-    "open": 0,
-    "blocked": 0
-   },
-   "open_units": null,
-   "next_step": null,
-   "owner_rows": null,
-   "last_activity": null,
-   "links": {
-    "registry": "/api/bot/ml/registry"
-   },
-   "model_id": "sol-regime-15m-lgbm-fc-pcv-v1",
-   "slot": "D2",
-   "bucket": "SHADOW",
-   "family": "classification_lightgbm"
   },
   {
    "id": "ml:sol-regime-15m-lgbm-fc-pcv-v2",
@@ -5096,7 +5013,8 @@
    "roadmap": [
     "M23",
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-Q3.1b-pullback",
@@ -5136,7 +5054,8 @@
    "roadmap": [
     "M23",
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-Q3.1c-scalp",
@@ -5176,7 +5095,8 @@
    "roadmap": [
     "M23",
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-Q4-lgbm-capacity-small",
@@ -5218,7 +5138,8 @@
    "goal": "G4",
    "roadmap": [
     "M23"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-Q4-lgbm-regularised",
@@ -5260,7 +5181,8 @@
    "goal": "G4",
    "roadmap": [
     "M23"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P2-RG1025-yz-longtail-eth",
@@ -5302,7 +5224,8 @@
    "goal": "G1",
    "roadmap": [
     "L-PROGRAMMES"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-ATM-pooled-tighten-gate-read",
@@ -5332,7 +5255,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-ATM-remaining-move-flow-variant",
@@ -5362,7 +5286,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-ATM-sol4h-b-overlap",
@@ -5392,7 +5317,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-DESK-no-tighten-policy",
@@ -5422,7 +5348,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q11-prop-rung2",
@@ -5452,7 +5379,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q12-ada-r-armed-read",
@@ -5482,7 +5410,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q14-atr-contraction-trail-ada",
@@ -5512,7 +5441,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q14-chop-gated-trail-ada",
@@ -5542,7 +5472,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q14-er-gated-trail-ada",
@@ -5572,7 +5503,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q14-er-gated-trail-xrp",
@@ -5602,7 +5534,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q14-gated-bank-ada",
@@ -5632,7 +5565,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q14-prop-er-trail-eth",
@@ -5662,7 +5596,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q14-time-in-chop-stop-ada",
@@ -5692,7 +5627,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q15-c2-sl-widen",
@@ -5722,7 +5658,8 @@
    "goal": "G1",
    "roadmap": [
     "L-AM-STANDARD"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q15-c3-sl-structure",
@@ -5752,7 +5689,8 @@
    "goal": "G1",
    "roadmap": [
     "L-AM-STANDARD"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q15-c5-tp-pullin",
@@ -5782,7 +5720,8 @@
    "goal": "G1",
    "roadmap": [
     "L-AM-STANDARD"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q15-c7-partial",
@@ -5812,7 +5751,8 @@
    "goal": "G1",
    "roadmap": [
     "L-AM-STANDARD"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q15-c8-full-close",
@@ -5842,7 +5782,8 @@
    "goal": "G1",
    "roadmap": [
     "L-AM-STANDARD"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q2-alpaca-1d-confirm-kstar",
@@ -5872,7 +5813,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q2-ethprop-confirm-kstar",
@@ -5902,7 +5844,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q2-solprop-kstar-propcost",
@@ -5933,7 +5876,8 @@
    "roadmap": [
     "L-ATM",
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q4-solprop-propcost",
@@ -5963,7 +5907,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q6-ada-pb-declare",
@@ -5993,7 +5938,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q6-eth4h-measured-move-declare",
@@ -6023,7 +5969,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q6-eth4h-measured-move-w05-declare",
@@ -6053,7 +6000,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q6-eth4h-stop-declare",
@@ -6083,7 +6031,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q6-slv1d-declare",
@@ -6113,7 +6062,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q6-xrp-pb-declare",
@@ -6143,7 +6093,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q6-xrp4h-measured-move-declare",
@@ -6173,7 +6124,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q7-sol-tp3-prop",
@@ -6203,7 +6155,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q8-k3-policy",
@@ -6233,7 +6186,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q8-paths-rerun",
@@ -6264,7 +6218,8 @@
    "roadmap": [
     "L-ATM",
     "M23"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q8.4-fail",
@@ -6294,7 +6249,8 @@
    "goal": "G1",
    "roadmap": [
     "M31"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-RG1025-giveback-trigger-variant",
@@ -6324,7 +6280,8 @@
    "goal": "G1",
    "roadmap": [
     "L-PROGRAMMES"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-VOLWIN-desk-wake",
@@ -6355,7 +6312,8 @@
    "roadmap": [
     "L-DESK",
     "L-AM-STANDARD"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-L-ada-pb-prewindow-fail",
@@ -6385,7 +6343,8 @@
    "goal": "G1",
    "roadmap": [
     "L-LADDER"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-L-eth-prop-fold-fail",
@@ -6416,7 +6375,8 @@
    "roadmap": [
     "L-LADDER",
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-L-eth4h-prewindow-fail",
@@ -6446,7 +6406,8 @@
    "goal": "G1",
    "roadmap": [
     "L-LADDER"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-L-slv-trend-1h-outlier",
@@ -6476,7 +6437,8 @@
    "goal": "G1",
    "roadmap": [
     "L-LADDER"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-L-xrp-pb-prewindow-fail",
@@ -6506,7 +6468,8 @@
    "goal": "G1",
    "roadmap": [
     "L-LADDER"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-L-xrp4h-prewindow-fail",
@@ -6536,7 +6499,8 @@
    "goal": "G1",
    "roadmap": [
     "L-LADDER"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-L-xrp4h-prewindow-underpowered",
@@ -6566,7 +6530,8 @@
    "goal": "G1",
    "roadmap": [
     "L-LADDER"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-M18-same-symbol-read",
@@ -6596,7 +6561,8 @@
    "goal": "G1",
    "roadmap": [
     "M18"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-M22-pairs-roster",
@@ -6626,7 +6592,8 @@
    "goal": "G1",
    "roadmap": [
     "M22"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-M27-htf-fail",
@@ -6656,7 +6623,8 @@
    "goal": "G1",
    "roadmap": [
     "M27"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-M27-htf-pass",
@@ -6686,7 +6654,8 @@
    "goal": "G1",
    "roadmap": [
     "M27"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-Q1-live-bt-stage-b",
@@ -6716,7 +6685,8 @@
    "goal": "G1",
    "roadmap": [
     "L-LADDER"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-Q2-ada-pb-cd-propose",
@@ -6746,7 +6716,8 @@
    "goal": "G1",
    "roadmap": [
     "M21"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-Q2-ada-pb-tl-propose",
@@ -6776,7 +6747,8 @@
    "goal": "G1",
    "roadmap": [
     "M21"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-Q2-eth4h-don-propose",
@@ -6806,7 +6778,8 @@
    "goal": "G1",
    "roadmap": [
     "M21"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-Q2-eth4h-side-propose",
@@ -6836,7 +6809,8 @@
    "goal": "G1",
    "roadmap": [
     "M21"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-Q2-xrp4h-mc-propose",
@@ -6866,7 +6840,8 @@
    "goal": "G1",
    "roadmap": [
     "M21"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-Q3-gld-iaum-fail",
@@ -6896,7 +6871,8 @@
    "goal": "G1",
    "roadmap": [
     "L-LADDER"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-Q6-trend-lookback-transfer",
@@ -6926,7 +6902,8 @@
    "goal": "G1",
    "roadmap": [
     "M21"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-Q8-new-symbols",
@@ -6957,7 +6934,8 @@
    "roadmap": [
     "L-LADDER",
     "M21"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-RG1025-lever-pooled",
@@ -6987,7 +6965,8 @@
    "goal": "G1",
    "roadmap": [
     "M20"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-VOLWIN-s0-breakout",
@@ -7018,7 +6997,8 @@
    "roadmap": [
     "L-LADDER",
     "L-DESK"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q1-cost-read",
@@ -7048,7 +7028,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q1-options-cost",
@@ -7078,7 +7059,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q2-ahe-es-econ",
@@ -7108,7 +7090,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q2-cpi-gold-econ",
@@ -7138,7 +7121,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q2-durables-es-econ",
@@ -7168,7 +7152,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q2-empire-es-econ",
@@ -7198,7 +7183,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q2-gdp-px-es-econ",
@@ -7228,7 +7214,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q2-import-px-es-econ",
@@ -7258,7 +7245,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q2-indpro-es-econ",
@@ -7288,7 +7276,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q2-ism-prices-es-econ",
@@ -7318,7 +7307,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q2-ism-services-es-econ",
@@ -7348,7 +7338,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q2-jolts-es-econ",
@@ -7378,7 +7369,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q2-philly-fed-es-econ",
@@ -7408,7 +7400,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q2-ppi-gold-econ",
@@ -7438,7 +7431,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q2-ppi-nq-artifact",
@@ -7468,7 +7462,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q2-ppi-ranktilt-fail",
@@ -7498,7 +7493,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q2-ppi-rty-econ",
@@ -7528,7 +7524,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q2-unemployment-es-econ",
@@ -7558,7 +7555,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q3-event-axis",
@@ -7589,7 +7587,8 @@
    "roadmap": [
     "M28",
     "M29"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q4-g2-rerun",
@@ -7619,7 +7618,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q5-fomc-text-axis",
@@ -7649,7 +7649,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q5-news-macro-axis",
@@ -7679,7 +7680,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q6-m29-wake",
@@ -7709,7 +7711,8 @@
    "goal": "G6",
    "roadmap": [
     "M29"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q7-options-legs-fail",
@@ -7739,7 +7742,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q7-options-legs-pass",
@@ -7769,7 +7773,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q7-sleeve-executor",
@@ -7799,7 +7804,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P5-GATE-BRK-read",
@@ -7829,7 +7835,8 @@
    "goal": "G2",
    "roadmap": [
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P5-GATE-TRAD-read",
@@ -7859,7 +7866,8 @@
    "goal": "G2",
    "roadmap": [
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P5-GATE-VELO-read",
@@ -7889,7 +7897,8 @@
    "goal": "G2",
    "roadmap": [
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P5-MLV-GATE-DYNSL",
@@ -7919,7 +7928,8 @@
    "goal": "G2",
    "roadmap": [
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P5-MLV-GATE-NEXT",
@@ -7949,7 +7959,8 @@
    "goal": "G2",
    "roadmap": [
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P5-MLV-GATE-STRUCT",
@@ -7979,7 +7990,8 @@
    "goal": "G2",
    "roadmap": [
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P5-Q5-4H-BRK-pass",
@@ -8009,7 +8021,8 @@
    "goal": "G2",
    "roadmap": [
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P5-Q5-4H-TRAD-pass",
@@ -8039,7 +8052,8 @@
    "goal": "G2",
    "roadmap": [
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P5-Q5-4H-VELO-pass",
@@ -8069,7 +8083,8 @@
    "goal": "G2",
    "roadmap": [
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P5-Q5-BRK-product",
@@ -8099,7 +8114,8 @@
    "goal": "G2",
    "roadmap": [
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P5-Q6-fail",
@@ -8129,7 +8145,8 @@
    "goal": "G2",
    "roadmap": [
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P5-Q7-tp-amend",
@@ -8159,7 +8176,8 @@
    "goal": "G2",
    "roadmap": [
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P5-RG1025-squeeze-wide-confirm",
@@ -8189,7 +8207,8 @@
    "goal": "G2",
    "roadmap": [
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P7-Q14-maker-frontier",
@@ -8220,7 +8239,8 @@
    "roadmap": [
     "L-TIMEFRAMES",
     "M22"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P7-Q2-frontier-fail",
@@ -8251,7 +8271,8 @@
    "roadmap": [
     "L-TIMEFRAMES",
     "M22"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P7-Q3-donchian-fail",
@@ -8282,7 +8303,8 @@
    "roadmap": [
     "L-TIMEFRAMES",
     "L-LADDER"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P7-Q3-indeterminate",
@@ -8312,7 +8334,8 @@
    "goal": "G1",
    "roadmap": [
     "L-TIMEFRAMES"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P7-Q4-fail",
@@ -8343,7 +8366,8 @@
    "roadmap": [
     "L-TIMEFRAMES",
     "L-LADDER"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P7-Q5-indeterminate",
@@ -8374,7 +8398,8 @@
    "roadmap": [
     "L-TIMEFRAMES",
     "L-REGIME"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P7-Q6-daily-donchian",
@@ -8406,7 +8431,8 @@
     "L-TIMEFRAMES",
     "L-LADDER",
     "M18"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P7-Q6-daily-pullback",
@@ -8438,7 +8464,8 @@
     "L-TIMEFRAMES",
     "L-LADDER",
     "M18"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P7-Q7-confirm",
@@ -8469,7 +8496,8 @@
    "roadmap": [
     "L-TIMEFRAMES",
     "M22"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P7-Q7-fail",
@@ -8500,7 +8528,8 @@
    "roadmap": [
     "L-TIMEFRAMES",
     "M22"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P7-Q8-confirm",
@@ -8532,7 +8561,8 @@
     "L-TIMEFRAMES",
     "M22",
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P7-Q9-confirm",
@@ -8563,7 +8593,8 @@
    "roadmap": [
     "L-TIMEFRAMES",
     "M22"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P8-Q1-fail",
@@ -8594,7 +8625,8 @@
    "roadmap": [
     "L-ML-LIVE",
     "L-LADDER"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P8-Q2-pass",
@@ -8624,7 +8656,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ML-LIVE"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P8-Q3-fail",
@@ -8654,7 +8687,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ML-LIVE"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P8-Q3-pass",
@@ -8684,7 +8718,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ML-LIVE"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P8-Q4-h2h",
@@ -8714,7 +8749,8 @@
    "goal": "G1",
    "roadmap": [
     "L-LADDER"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P8-Q5-features",
@@ -8744,7 +8780,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ML-LIVE"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P8-Q6-pool",
@@ -8774,7 +8811,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ML-LIVE"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P8-Q7-rotation",
@@ -8804,7 +8842,8 @@
    "goal": "G1",
    "roadmap": [
     "L-LADDER"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P8-Q8-horizon",
@@ -8834,7 +8873,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ML-LIVE"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P8-Q9-options",
@@ -8864,7 +8904,8 @@
    "goal": "G1",
    "roadmap": [
     "L-LADDER"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P5-MLV-GATE-MOVINGTP",
@@ -8896,7 +8937,8 @@
    "goal": "G2",
    "roadmap": [
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "hypothesis:movement-capture",
@@ -9115,7 +9157,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q13-pathstate-transfer",
@@ -9157,7 +9200,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q13-pathstate-w12",
@@ -9199,7 +9243,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q8.2-fail",
@@ -9239,7 +9284,8 @@
    "roadmap": [
     "L-ATM",
     "M23"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P1-Q8.4-indet-policy",
@@ -9279,7 +9325,8 @@
    "roadmap": [
     "L-ATM",
     "M23"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-M22-small-tf-pullback",
@@ -9318,7 +9365,8 @@
    "goal": "G1",
    "roadmap": [
     "M22"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-M22-small-tf-scoping",
@@ -9357,7 +9405,8 @@
    "goal": "G1",
    "roadmap": [
     "M22"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q2-ppi-es-placebo",
@@ -9401,7 +9450,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q2-ppi-rty-placebo",
@@ -9445,7 +9495,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P5-Q2-SIZING-BRK-pass",
@@ -9484,7 +9535,8 @@
    "goal": "G2",
    "roadmap": [
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P5-Q2R2-SIZING-VELO",
@@ -9523,7 +9575,8 @@
    "goal": "G2",
    "roadmap": [
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P5-Q5-ADA-BRK",
@@ -9562,7 +9615,8 @@
    "goal": "G2",
    "roadmap": [
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P5-RG1025-fade-pullback-1h",
@@ -9601,7 +9655,8 @@
    "goal": "G2",
    "roadmap": [
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P5-RG1025-trend-pooled",
@@ -9640,7 +9695,8 @@
    "goal": "G2",
    "roadmap": [
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P7-Q2-frontier-pass",
@@ -9680,7 +9736,8 @@
    "roadmap": [
     "L-TIMEFRAMES",
     "M22"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P7-Q4-indeterminate",
@@ -9719,7 +9776,8 @@
    "goal": "G1",
    "roadmap": [
     "L-TIMEFRAMES"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "strategy:spy_pullback_1h",
@@ -9816,7 +9874,8 @@
    "goal": "G1",
    "roadmap": [
     "M20"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P3-Q3-soak-equity-overlap",
@@ -9859,7 +9918,8 @@
    "roadmap": [
     "L-LADDER",
     "M18"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q2-ppi-es-late",
@@ -9903,7 +9963,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q2-ppi-rty-late",
@@ -9947,7 +10008,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P5-GATE-BRK",
@@ -9988,7 +10050,8 @@
    "goal": "G2",
    "roadmap": [
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P5-GATE-TRAD",
@@ -10027,7 +10090,8 @@
    "goal": "G2",
    "roadmap": [
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P5-GATE-VELO",
@@ -10066,7 +10130,8 @@
    "goal": "G2",
    "roadmap": [
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P5-Q2-SIZING-BRK",
@@ -10105,7 +10170,8 @@
    "goal": "G2",
    "roadmap": [
     "L-PROP"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P7-Q5-confirm",
@@ -10145,7 +10211,8 @@
    "roadmap": [
     "L-TIMEFRAMES",
     "L-REGIME"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P7-Q6-weekly-etf",
@@ -10186,7 +10253,8 @@
     "L-TIMEFRAMES",
     "L-LADDER",
     "M18"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "strategy:tlt_pullback_1h",
@@ -10404,16 +10472,15 @@
     "title": "HOLDOUT-SELECTED structure exit (pivot 3 / 5 / 8) on eth_pullback_2h, net of cost"
    },
    "counts": {
-    "units": 46,
-    "passed": 13,
-    "failed": 22,
+    "units": 40,
+    "passed": 12,
+    "failed": 18,
     "indeterminate": 5,
-    "open": 3,
+    "open": 2,
     "blocked": 0
    },
    "open_units": [
     "RQ-20261031-3ef3-10",
-    "RQ-20261031-c6fc-07",
     "RQ-20261101-78fc-34"
    ],
    "next_step": "RQ-20261031-3ef3-10 (queued): A time-based exit (close after 60 or 120 bars) on eth_pullback_2h: does TO1 or TO2 beat the declared leg net of cost over 2020-07-01..2026-10-15?",
@@ -12080,14 +12147,16 @@
    },
    "counts": {
     "units": 36,
-    "passed": 10,
+    "passed": 9,
     "failed": 16,
     "indeterminate": 8,
-    "open": 0,
+    "open": 1,
     "blocked": 0
    },
-   "open_units": null,
-   "next_step": null,
+   "open_units": [
+    "RQ-20261031-c6fc-07"
+   ],
+   "next_step": "RQ-20261031-c6fc-07 (queued): TRANSFER of the top-volatility skip (VH95/VH85) lever to eth_pullback_2h: does it beat the declared leg net of cost over 2020-07-01..2026-10-15 (41cc-30 PASS on sol_pullback_2h; which sibling legs does the PASS",
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
    "links": {
@@ -12744,9 +12813,9 @@
     "title": "M20 exit-lever sweep: trend_donchian_eth_prop (generated, monthly)"
    },
    "counts": {
-    "units": 87,
-    "passed": 22,
-    "failed": 40,
+    "units": 82,
+    "passed": 20,
+    "failed": 39,
     "indeterminate": 16,
     "open": 6,
     "blocked": 1
@@ -13040,9 +13109,9 @@
     "title": "Walk-forward lever sweep of xrp_pullback_2h: next lever exit (generated, weekly)"
    },
    "counts": {
-    "units": 61,
-    "passed": 7,
-    "failed": 44,
+    "units": 69,
+    "passed": 10,
+    "failed": 49,
     "indeterminate": 5,
     "open": 1,
     "blocked": 0
@@ -13103,9 +13172,9 @@
     "title": "ada_pullback_2h live-vs-backtest divergence (stage A): does BELOW_BACKTEST persist on bybit_2 realMoney as n grows? (-7.04R over 15, 4.7th pct on 2026-10-15)"
    },
    "counts": {
-    "units": 82,
-    "passed": 11,
-    "failed": 55,
+    "units": 80,
+    "passed": 10,
+    "failed": 54,
     "indeterminate": 4,
     "open": 4,
     "blocked": 2
@@ -13354,9 +13423,9 @@
     "title": "M20 exit-lever sweep: trend_donchian_sol_prop (generated, monthly)"
    },
    "counts": {
-    "units": 68,
-    "passed": 11,
-    "failed": 41,
+    "units": 73,
+    "passed": 13,
+    "failed": 42,
     "indeterminate": 11,
     "open": 4,
     "blocked": 0
@@ -13778,7 +13847,8 @@
    "goal": "G1",
    "roadmap": [
     "L-ATM"
-   ]
+   ],
+   "node_read_state": "ok"
   },
   {
    "id": "question:P4-Q2-ppi-rty-early",
@@ -13822,7 +13892,8 @@
    "goal": "G6",
    "roadmap": [
     "M28"
-   ]
+   ],
+   "node_read_state": "ok"
   }
  ],
  "cross_check": {

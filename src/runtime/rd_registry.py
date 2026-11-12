@@ -302,6 +302,7 @@ def build_registry(root: Path, *, now: datetime | None = None, catalog: dict | N
     plan_ref_units = {str(i["ref"]): str(i["id"]) for i in plan_items if isinstance(i.get("ref"), str) and _RQ.match(i["ref"])}
     title_keys = sorted(set(strategies) | set(reg), key=len, reverse=True)
     attributed: dict[str, list[str]] = {}
+    node_prog: dict[str, str] = {}
     subject_kind: dict[str, str] = {}
     how_count: dict[str, int] = {}
     unattributed: list[str] = []
@@ -323,8 +324,10 @@ def build_registry(root: Path, *, now: datetime | None = None, catalog: dict | N
         if not key:
             pn = d.get("programme_node") if isinstance(d.get("programme_node"), dict) else {}
             nid = pn.get("node") if isinstance(pn.get("node"), str) else node_of_unit.get(uid)
-            if nid:
+            prog = (nodes.get(nid) or {}).get("_programme") or pn.get("programme") if nid else None
+            if nid and str(prog) in PROGRAMME_TRACK:   # a data-infra (P6) node is a build, not an idea
                 key, how = f"node:{nid}", "programme_node"
+                node_prog.setdefault(nid, str(prog))
         if not key:
             unattributed.append(uid)
             continue
@@ -476,7 +479,9 @@ def build_registry(root: Path, *, now: datetime | None = None, catalog: dict | N
 
     # 5) programme question nodes: units attributed to the node, or an open needs_authoring with no unit
     excluded_infra_nodes = 0
-    for nid, n in sorted(nodes.items()):
+    node_keys = sorted(set(nodes) | {k[5:] for k in attributed if k.startswith("node:")})
+    for nid in node_keys:
+        n = nodes.get(nid) or {"_programme": node_prog.get(nid), "_file": None, "_missing": True}
         track = PROGRAMME_TRACK.get(str(n.get("_programme")))
         us = ulist(f"node:{nid}")
         na = str(n.get("needs_authoring") or "")
@@ -492,8 +497,10 @@ def build_registry(root: Path, *, now: datetime | None = None, catalog: dict | N
         emit(iid=f"question:{nid}", name=nid, track=track, kind="programme_question", stage=stage, reason=reason,
              us=us, latest=latest, programme=n.get("_programme"),
              next_step=(rc._text(na, 300) if open_authoring else next_from(stage, us, latest)),
-             owner=owner_rows(nid), links={"programme": f"{REPO_BLOB}/{n['_file']}"},
-             extra={"goal": n.get("goal"), "roadmap": n.get("roadmap") or None})
+             owner=owner_rows(nid), links={"programme": f"{REPO_BLOB}/{n['_file']}" if n.get("_file") else None},
+             extra={"goal": n.get("goal"), "roadmap": n.get("roadmap") or None,
+                    "node_read_state": "not in research/programmes (named by a unit's programme_node)"
+                    if n.get("_missing") else "ok"})
 
     # ── summary ──
     per_stage = {t: {s: 0 for s in STAGES} for t in (STRATEGY, ML)}
@@ -579,6 +586,9 @@ def cross_check(doc: dict, root: Path) -> list[str]:
             want = sum(1 for r in rows if str(r.get("bucket") or "").upper() in ("LIVE", "SHADOW"))
             if want != len(regs):
                 out.append(f"registry LIVE+SHADOW {want} != registry shadow_advisory ideas {len(regs)}")
+    shown = sum(i["counts"]["units"] for i in doc["ideas"])
+    if shown != u["attributed"]:
+        out.append(f"units shown on ideas {shown} != attributed {u['attributed']} (an attributed unit is hidden or doubled)")
     for i in doc["ideas"]:
         c = i["counts"]
         if c["passed"] + c["failed"] + c["indeterminate"] > c["units"]:
