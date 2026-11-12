@@ -16,9 +16,15 @@ import os
 import subprocess
 import time
 
-from tests.test_deploy_pull_restart_trader_gate import (  # noqa: F401 (fixture)
-    TRADER, _restarted, _stub, _with_trader_marker, fake,
+from tests import test_deploy_pull_restart_trader_gate as _gate
+from tests.test_deploy_pull_restart_trader_gate import (
+    TRADER, _restarted, _stub, _with_trader_marker,
 )
+
+# Re-export the fake-VM pytest fixture under its own name so pytest finds it
+# here; a module attribute (not an import binding) avoids ruff F811 on every
+# test that takes `fake` as a parameter.
+fake = _gate.fake
 
 
 def _concurrent_setup(fake, tmp_path):
