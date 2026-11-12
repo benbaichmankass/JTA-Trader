@@ -331,6 +331,37 @@ def refresh(db_path: str | None = None, root: Path | None = None, *, send_alerts
         src = load_sources(root)
         now = _now()
         errors: list[str] = []
+        # ⚠️ LOCK DISCIPLINE (2026-11-12, measured live): every slow step -- the CI-guard scan, the src/scripts
+        # file scan, `git log`, the probe file -- runs HERE, before any write, so trade_journal.db's write lock
+        # is held only for the short in-memory upsert/update pass below. The first deploy ran the scans inside
+        # the write transaction (~7 s at 22:41Z) and the trader's signal_audit dual-write hit "database is
+        # locked" at the same moments (21:46:28, 22:41:27).
+        baseline = src["baseline"]
+        guards, err = scan_ci_guards(root)
+        if err:
+            errors.append(err)
+        flags, err2 = scan_env_flags(root)
+        if err2:
+            errors.append(err2)
+        probes = _load_hit_probes(root)
+        head = head_sha(root)
+        rconn = connect(db_path)
+        try:
+            pre = {r["id"]: (r["operator_decision"], r["decided_at"])
+                   for r in rconn.execute("SELECT id, operator_decision, decided_at FROM gate_registry")}
+        finally:
+            rconn.close()
+        decided_ids = {gid for gid, (dec, _) in pre.items() if dec in ("remove", "report_only")}
+        decided_ids |= {d["id"] for d in src["decisions"] if d["decision"] in ("remove", "report_only")}
+        commits: dict[str, dict] = {}
+        commit_err = None
+        if decided_ids:
+            ats = [a for gid, (_, a) in pre.items() if gid in decided_ids and a]
+            ats += [d["decided_at"] for d in src["decisions"] if d["id"] in decided_ids and d["decided_at"]]
+            since = (min(ats) if ats else now)[:10]
+            commits, commit_err = scan_implementation_commits(root, sorted(decided_ids), since)
+            if commit_err:
+                errors.append(commit_err)
         conn = connect(db_path)
         try:
             existing = {r["id"]: dict(r) for r in conn.execute("SELECT * FROM gate_registry")}
@@ -371,14 +402,7 @@ def refresh(db_path: str | None = None, root: Path | None = None, *, send_alerts
                 _apply_decision(conn, d["id"], d["decision"], d["note"], d["decided_at"] or now,
                                 d["decided_by"], d["source"], only_if_newer=True)
 
-            # 4. scans
-            baseline = src["baseline"]
-            guards, err = scan_ci_guards(root)
-            if err:
-                errors.append(err)
-            flags, err2 = scan_env_flags(root)
-            if err2:
-                errors.append(err2)
+            # 4. unregistered sites from the (already finished) scans
             rows = {r["id"]: dict(r) for r in conn.execute("SELECT * FROM gate_registry")}
             cited_text = " ".join(f"{r['where_site'] or ''} {r['where_more'] or ''}" for r in rows.values())
             if guards is not None:
@@ -404,15 +428,6 @@ def refresh(db_path: str | None = None, root: Path | None = None, *, send_alerts
 
             # 5. implementation state, mode in code, site drift, hits
             rows = {r["id"]: dict(r) for r in conn.execute("SELECT * FROM gate_registry")}
-            decided = [r for r in rows.values() if r["operator_decision"] in ("remove", "report_only")]
-            commits: dict[str, dict] = {}
-            commit_err = None
-            if decided:
-                since = min((r["decided_at"] or now) for r in decided)[:10]
-                commits, commit_err = scan_implementation_commits(root, [r["id"] for r in decided], since)
-                if commit_err:
-                    errors.append(commit_err)
-            probes = _load_hit_probes(root)
             guard_set = set(guards) if guards is not None else None
             for gid, r in rows.items():
                 upd: dict[str, Any] = {}
@@ -464,23 +479,24 @@ def refresh(db_path: str | None = None, root: Path | None = None, *, send_alerts
                     conn.execute(f"UPDATE gate_registry SET {sets} WHERE id = ?", (*changed.values(), gid))
             conn.commit()
 
-            # 6. alerts: once per drifting / unregistered row
-            alerts_sent = 0
-            if send_alerts:
-                for r in conn.execute("SELECT id, drift, drift_detail, where_site FROM gate_registry "
-                                      "WHERE drift IS NOT NULL AND alerted_at IS NULL"):
-                    text = (f"Gate registry: {r['drift']} — {r['id']}\n{r['drift_detail'] or ''}\n"
-                            f"where: {r['where_site'] or '—'}\nReported only; nothing is blocked. "
-                            f"GET /api/bot/gates?state=drift")
-                    if _alert(text):
-                        conn.execute("UPDATE gate_registry SET alerted_at = ? WHERE id = ?", (now, r["id"]))
-                        alerts_sent += 1
-                conn.commit()
-
-            head = head_sha(root)
+            # 6. alerts: once per drifting / unregistered row. The Telegram sends happen with NO transaction open
+            # (a network call must never sit inside a write lock on the money DB); the latch writes are one short
+            # transaction afterwards.
+            to_alert = [dict(r) for r in conn.execute(
+                "SELECT id, drift, drift_detail, where_site FROM gate_registry "
+                "WHERE drift IS NOT NULL AND alerted_at IS NULL")] if send_alerts else []
+            sent_ids = []
+            for r in to_alert:
+                text = (f"Gate registry: {r['drift']} — {r['id']}\n{r['drift_detail'] or ''}\n"
+                        f"where: {r['where_site'] or '—'}\nReported only; nothing is blocked. "
+                        f"GET /api/bot/gates?state=drift")
+                if _alert(text):
+                    sent_ids.append(r["id"])
+            alerts_sent = len(sent_ids)
             meta = {"at": now, "head_sha": head, "read_state": "partial" if errors else "read",
                     "error": "; ".join(errors) or None, "inventory_path": src["inventory_path"],
                     "decision_paths": src["decision_paths"], "alerts_sent": alerts_sent}
+            conn.executemany("UPDATE gate_registry SET alerted_at = ? WHERE id = ?", [(now, i) for i in sent_ids])
             conn.execute("INSERT OR REPLACE INTO gate_registry_meta (key, value) VALUES ('last_refresh', ?)",
                          (json.dumps(meta),))
             conn.commit()
