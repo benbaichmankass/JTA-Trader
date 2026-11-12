@@ -308,6 +308,73 @@ def test_a_pass_cut_off_mid_build_is_labelled_interrupted_on_the_next_pass(tmp_p
     assert not (logs / det.INFLIGHT).exists()
 
 
+def _survivor(tmp_path, monkeypatch, *, bar_age_s, state="ok", key="k1"):
+    """A pass cut off by a restart whose build finished in its own unit: in-flight mark + job dir with a complete stage."""
+    import shutil
+    monkeypatch.setattr(det, "_jobs_dir", lambda: tmp_path / "jobs")
+    st, _ = _stage(tmp_path)
+    job = tmp_path / "jobs" / "j1"
+    job.mkdir(parents=True)
+    shutil.copytree(st, job / "stage")
+    (job / "result.json").write_text(json.dumps({"state": state, "stages": []}))
+    logs = tmp_path / "logs"
+    logs.mkdir(exist_ok=True)
+    bar = (NOW - timedelta(seconds=bar_age_s)).strftime("%Y-%m-%dT%H:%MZ")
+    fired = {"kind": "atr_burst", "symbol": "AVAXUSDT", "bar": bar, "key": key, "detail": {}}
+    (logs / det.INFLIGHT).write_text(json.dumps({"started_at": (NOW - timedelta(seconds=240)).isoformat(),
+                                                 "fired": fired, "job": "j1"}))
+    return logs, fired
+
+
+def _pass(tmp_path, logs, http, commit=("c" * 40, None)):
+    return det.run_once(cfg=CFG, now_fn=lambda: NOW, bars_fn=lambda s, tf, n: {"AVAXUSDT": bars()},
+                        auth_fn=lambda: "tok", fetch=lambda url, auth: (404, None), http=http, pr_fn=lambda: 7,
+                        build_fn=lambda f, cfg, text: (None, "must not rebuild"),
+                        commit_fn=lambda *a, **k: commit, calendar_fn=None, logs=logs, receipt=tmp_path / "r.json")
+
+
+def _labels(logs):
+    return [json.loads(x) for x in (logs / "trigger_labels.jsonl").read_text().splitlines()]
+
+
+def test_a_finished_survivor_is_adopted_committed_and_posted(tmp_path, monkeypatch):
+    logs, fired = _survivor(tmp_path, monkeypatch, bar_age_s=420)
+    http = _Http()
+    res = _pass(tmp_path, logs, http)
+    assert res["state"] == "posted" and res["adopted_job"] == "j1" and len(http.posts) == 1
+    lab = _labels(logs)
+    assert [x["disposition"] for x in lab] == ["posted"] and lab[0]["adopted_job"] == "j1" and lab[0]["fired"] == fired
+    assert not (logs / det.INFLIGHT).exists()
+    res2 = _pass(tmp_path, logs, _Http())  # the mark is consumed: no second adoption
+    assert "adopted_job" not in res2
+
+
+def test_a_survivor_for_a_stale_bar_is_not_adopted(tmp_path, monkeypatch):
+    logs, _ = _survivor(tmp_path, monkeypatch, bar_age_s=3600)
+    http = _Http()
+    res = _pass(tmp_path, logs, http)
+    assert "adopted_job" not in res and http.posts == [] and _labels(logs)[0]["disposition"] == "interrupted"
+
+
+def test_an_unfinished_or_already_handled_survivor_is_not_adopted(tmp_path, monkeypatch):
+    logs, _ = _survivor(tmp_path, monkeypatch, bar_age_s=420, state="timeout")
+    assert "adopted_job" not in _pass(tmp_path, logs, _Http()) and _labels(logs)[0]["disposition"] == "interrupted"
+
+
+def test_a_survivor_whose_key_was_already_handled_is_not_posted_twice(tmp_path, monkeypatch):
+    logs, _ = _survivor(tmp_path, monkeypatch, bar_age_s=420, key="dup")
+    (logs / "trigger_state.json").write_text(json.dumps({"seen_keys": ["dup"], "wakes": []}))
+    http = _Http()
+    assert "adopted_job" not in _pass(tmp_path, logs, http) and http.posts == []
+
+
+def test_an_incomplete_survivor_stage_is_not_adopted(tmp_path, monkeypatch):
+    import shutil
+    logs, _ = _survivor(tmp_path, monkeypatch, bar_age_s=420)
+    shutil.rmtree(tmp_path / "jobs" / "j1" / "stage" / "comms" / "desk" / "packets")
+    http = _Http()
+    assert "adopted_job" not in _pass(tmp_path, logs, http) and http.posts == []
+
 def _run_timed(tmp_path, http, commit=("c" * 40, None), toggle_on=True, monkeypatch=None):
     logs = tmp_path / "logs"
     st, _ = _stage(tmp_path)
