@@ -418,6 +418,16 @@ def bracket_from_ticket(ticket: Mapping[str, Any], cfg: ExecutorConfig,
                   "risk_cap_resize": resize}, ""
 
 
+def _mark_from_raw(p: Position) -> Optional[float]:
+    """The venue's own "Current Price" cell on a position row (``raw`` header -> text), else None."""
+    from src.prop.platform.dxtrade import parse_number
+    for h, v in (getattr(p, "raw", None) or {}).items():
+        if str(h).strip().lower() in ("current price", "mark price", "last price"):
+            px = parse_number(v)
+            return px if px and px > 0 else None
+    return None
+
+
 def open_risk(positions: Sequence[Position], orders: Sequence[WorkingOrder],
               cfg: ExecutorConfig) -> Tuple[Optional[float], str]:
     """$ the account can still lose to the stops of what is on the terminal:
@@ -433,11 +443,23 @@ def open_risk(positions: Sequence[Position], orders: Sequence[WorkingOrder],
         cv, lu = (_f(sym.get("cvpp")), _f(sym.get("lot_units"))) if sym else (None, None)
         if p.stop_loss is None:
             return None, "stop_unknown"
-        if p.unrealized_pnl is None:
-            return None, "unrealized_unreported"
         if None in (cv, lu, p.quantity, p.entry_price) or p.side not in ("long", "short"):
+            if p.unrealized_pnl is None:
+                return None, "unrealized_unreported"
             return None, "unreadable"
         units = p.quantity * lu
+        if p.unrealized_pnl is None:
+            # PROP-TICKET-TRUTH-2: the Open P&L cell did not read (velotrade_1's SOL short left
+            # every ml_entry ticket `cushion_unknown`). Loss-to-stop needs only the MEASURED
+            # venue "Current Price" on the same row: units*cv*(mark - stop) for a long,
+            # (stop - mark) for a short -- identical to unrealized - pnl_at_stop. No mark either
+            # -> still "could not look" (never an assumed 0).
+            mark = _mark_from_raw(p)
+            if mark is None:
+                return None, "unrealized_unreported"
+            total += max(0.0, units * cv * ((mark - p.stop_loss) if p.side == "long"
+                                            else (p.stop_loss - mark)))
+            continue
         pnl_at_stop = units * cv * ((p.stop_loss - p.entry_price) if p.side == "long"
                                     else (p.entry_price - p.stop_loss))
         total += max(0.0, p.unrealized_pnl - pnl_at_stop)
@@ -551,7 +573,13 @@ def evaluate_guards(*, ticket: Mapping[str, Any], spec: Optional[BracketSpec], f
             open_risk_state=open_risk_state,
             open_loss_to_stop_usd=open_risk_usd)
     else:
-        grade = prop_risk_gate.grade_ticket_risk(risk_usd=risk, status_freshness="unreadable")
+        if eq is not None and open_risk_usd is None:
+            # The account read was fine; the OPEN POSITIONS could not be marked. Say that
+            # (the gate's reason named a "snapshot unreadable" that was not the cause).
+            grade = prop_risk_gate.grade_ticket_risk(
+                risk_usd=risk, status_freshness="ok", open_risk_state=open_risk_state)
+        else:
+            grade = prop_risk_gate.grade_ticket_risk(risk_usd=risk, status_freshness="unreadable")
     checks["risk_gate"] = {"state": grade.get("state"), "reason": grade.get("reason")}
     if grade.get("state") == prop_risk_gate.EXCEEDS:
         breach.append(f"risk gate: {grade.get('state')} ({grade.get('reason')})")
