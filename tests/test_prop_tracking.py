@@ -802,3 +802,27 @@ def test_row_side_read_off_the_expanded_child_row_is_measured(env):
     raw = json.loads(prop_journal.latest_account_status("breakout_2")["raw"])
     assert (raw["positions_state"], raw["positions_side_source"], raw["positions_provenance"]) == ("read", "row", "MEASURED")
     assert raw["positions"][0]["side_source"] == "row" and "upnl_signed" not in raw["positions"][0]
+
+
+# ---- PHONE-LIVE-ACCOUNT-FEED (2026-11-12): Breakout's Positions CARDS carry only a "Net P&L" per position ----
+
+def test_card_rows_net_pnl_is_the_measured_upnl_and_labelled_net():
+    eth = {k: v for k, v in ETH.items() if k != "upnl"}
+    sol = {k: v for k, v in SOL.items() if k != "upnl"}
+    _status([{**eth, "netpnl": -3.21}, {**sol, "netpnl": -1.07}])
+    row = prop_journal.latest_account_status("breakout_2")
+    raw = json.loads(row["raw"])
+    assert row["unrealized"] == -4.28 and raw["unrealized_source"] == "positions_net_sum"
+    assert [p.get("upnl_basis") for p in raw["positions"]] == ["net", "net"]
+
+
+def test_card_row_without_a_net_pnl_number_leaves_the_account_upnl_unknown():
+    eth = {k: v for k, v in ETH.items() if k != "upnl"}
+    _status([{**eth, "netpnl": -3.21}, {k: v for k, v in SOL.items() if k != "upnl"}])
+    assert prop_journal.latest_account_status("breakout_2")["unrealized"] is None   # a partial sum is not the account's
+
+
+def test_a_real_upnl_wins_over_net_pnl():
+    _status([{**ETH, "netpnl": -9.99}, SOL])
+    raw = json.loads(prop_journal.latest_account_status("breakout_2")["raw"])
+    assert raw["unrealized_source"] == "positions_sum" and raw["positions"][0]["upnl"] == 31.27

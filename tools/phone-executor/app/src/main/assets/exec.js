@@ -6,7 +6,7 @@
   // PHONE-EXEC-OBSERVABLE-1018: this file is also served SIGNED by our own API and swapped in at runtime
   // (RemoteJs.kt): a newer version replaces the installed helpers on the next ensure(); the same version is
   // never injected twice. Bump on every change (CI signs the file; the app pins by version).
-  var EXEC_VERSION = "2026-11-12.1";
+  var EXEC_VERSION = "2026-11-12.2";
   if (window.__ex && window.__ex.version === EXEC_VERSION) return;
   function hostOk() { return /(^|\.)breakoutprop\.com$/.test(location.hostname || ""); }
   function vis(el) { if (!el) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }
@@ -593,6 +593,15 @@
       var head = Array.prototype.slice.call(c.querySelectorAll("*")).filter(function (x) {
         return !x.children.length && vis(x) && !dl.contains(x) && before(x, dl) && !x.closest("button,[role=button]");
       }).map(t).filter(Boolean);
+      // the card's HEAD figures (Net P&L): a leaf whose text maps to a column and whose next sibling holds the value
+      // ("Net P&L" span, then the "-1.23 USD" span); mapped like a dt/dd pair, inside the head only
+      Array.prototype.slice.call(c.querySelectorAll("*")).forEach(function (x) {
+        if (x.children.length || !vis(x) || dl.contains(x) || !before(x, dl) || x.closest("button,[role=button]")) return;
+        var k = colKey(t(x), cols), v = x.nextElementSibling;
+        if (!k || k === "skip" || k === "symbol" || k === "side" || f[k] !== undefined || !v || !vis(v) || !/\d/.test(t(v))) return;
+        if (hs.indexOf(t(x)) < 0) hs.push(t(x));
+        f[k] = v; if (!seen[k]) { seen[k] = 1; keys.push(k); }
+      });
       var sym = head.filter(function (x) { return /^[A-Z0-9]{2,12}(\/[A-Z]{2,5})?$/.test(x); }), sd = head.filter(function (x) { return /^(long|short)$/i.test(x); });
       var lab = Array.prototype.slice.call(c.querySelectorAll("button,[role=button]")).map(function (b) { return b.getAttribute("aria-label") || ""; }).join(" | ");
       // every BASE/QUOTE pair the controls name ("for ETH/USD", "Close ETH/USD long position"); "TP/SL" is a button word

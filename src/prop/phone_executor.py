@@ -505,7 +505,8 @@ def record_report(device: PhoneDevice, body: Dict[str, Any]) -> Dict[str, Any]:
                 derived = phone_reconcile.account_unrealized(positions)
                 if derived is not None:
                     body["unrealized"] = derived
-                    body["unrealized_source"] = "positions_sum"
+                    body["unrealized_source"] = ("positions_net_sum" if any(p.get("upnl_basis") == "net" for p in positions)
+                                                 else "positions_sum")
         if (body.get("unrealized") is None and label == "equity" and clean["balance"] is not None
                 and clean["equity"] is not None):
             body["unrealized"] = round(clean["equity"] - clean["balance"], 2)

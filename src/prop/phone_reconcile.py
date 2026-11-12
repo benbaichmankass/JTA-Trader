@@ -176,6 +176,13 @@ def clean_positions(account_id: str, rows: Any) -> List[Dict[str, Any]]:
         out.append({"symbol": bot_symbol(account_id, venue), "venue_symbol": venue, "direction": side, "qty": qty,
                     "entry": _num(r.get("entry"), signed=False), "mark": _num(r.get("mark"), signed=False),
                     "upnl": _num(r.get("upnl"))})
+        if out[-1]["upnl"] is None and r.get("netpnl") is not None:
+            # PHONE-LIVE-ACCOUNT-FEED (2026-11-12): Breakout's Positions CARDS show only the position's "Net P&L" (no
+            # separate UP&L). It is the venue's own open-position figure, so it stands in as the row's uPnL, labelled
+            # `upnl_basis: net` so a reader knows it is net of the fees the venue folds in (MEASURED, never computed).
+            out[-1]["upnl"] = _num(r.get("netpnl"))
+            if out[-1]["upnl"] is not None:
+                out[-1]["upnl_basis"] = "net"
         if r.get("side_source") in ("journal", "sheet", "row"):
             out[-1]["side_source"] = r["side_source"]
         if r.get("side_source") == "sheet":
