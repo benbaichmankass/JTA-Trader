@@ -204,6 +204,87 @@ def live_wallet_block(
     return base
 
 
+def live_since_ms(rec: dict[str, Any]) -> int | None:
+    """Start of the live API window for a record: 00:00Z the day AFTER ``window_end``.
+
+    ``window_end`` is an INCLUSIVE date. Measured 2026-11-12: the API sums
+    bybit_2's MAIN rows over 2026-04-15..2026-07-13 *inclusive* to -1.52, the
+    record's MAIN component to the cent. Starting the live window at
+    ``window_end`` 00:00Z (what the router did before) counted the 07-13 day
+    twice (-0.68) once the two figures are added. ``None`` when the record
+    carries no parseable ``window_end``/``as_of``.
+    """
+    raw = rec.get("window_end") or rec.get("as_of")
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    try:
+        d = datetime.strptime(raw.strip()[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+    return int(d.timestamp() * 1000) + 86_400_000
+
+
+#: ``current`` states. ``measured`` = hand record + live API, every declared gap
+#: closed. ``incomplete`` = a figure cannot be stated (open gap, or the live read
+#: is not measured); ``realized_usd`` is then ``None``, never the hand figure
+#: passed off as current.
+CURRENT_MEASURED = "measured"
+CURRENT_INCOMPLETE = "incomplete"
+
+
+def current_wallet_truth(
+    rec: dict[str, Any],
+    live: dict[str, Any] | None,
+    *,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """The account's CURRENT lifetime wallet truth: hand record + live API since it.
+
+    WHY (LEDGER-REFRESH, operator 2026-11-12: *"why can't the current key read
+    that? This is an unacceptable gap"*). The key CAN read it: the hourly
+    transaction-log puller has stored every day since the account returned to
+    the key's sub-account on 2026-06-29. The record only looked 122 days stale
+    because nothing ever added the API figure to it.
+
+    The sum is valid only when every part the key cannot see is CLOSED, i.e. a
+    finished historical component rather than one that may still be moving. A
+    declared gap says so with ``closed: true`` (and its evidence). Any open gap,
+    or a live block that is not ``measured_api``, gives ``incomplete`` with the
+    reason and ``realized_usd: None``. Best-effort: never raises.
+    """
+    hand = _coerce_float(rec.get("realized_usd"))
+    gaps = rec.get("declared_gaps") or []
+    open_gaps = [g.get("sub_account") for g in gaps if isinstance(g, dict) and g.get("closed") is not True]
+    out: dict[str, Any] = {
+        "state": CURRENT_INCOMPLETE, "realized_usd": None, "as_of": None,
+        "as_of_age_days": None, "stale": None,
+        "hand_realized_usd": hand, "hand_window_end": rec.get("window_end"),
+        "live_realized_usd_since": None,
+        "closed_components": [g.get("sub_account") for g in gaps if isinstance(g, dict) and g.get("closed") is True],
+        "reason": None,
+    }
+    live_state = (live or {}).get("state")
+    live_usd = _coerce_float((live or {}).get("realized_usd_since"))
+    if hand is None:
+        out["reason"] = "hand record has no realized_usd"
+    elif open_gaps:
+        out["reason"] = f"open declared gap(s) {open_gaps}: a part the key cannot see may still be moving"
+    elif live_state != "measured_api" or live_usd is None:
+        out["reason"] = f"live API block is {live_state!r}, not measured_api"
+    else:
+        latest = (live or {}).get("latest_row_at")
+        age = _as_of_age_days(latest, now=now) if latest else None
+        out.update({
+            "state": CURRENT_MEASURED,
+            "realized_usd": round(hand + live_usd, 2),
+            "live_realized_usd_since": round(live_usd, 2),
+            "as_of": latest,
+            "as_of_age_days": age,
+            "stale": (age > STALE_THRESHOLD_DAYS) if age is not None else None,
+        })
+    return out
+
+
 def summarize_broker_truth(
     path: str | os.PathLike[str] | None = None,
     *,
@@ -277,6 +358,8 @@ def journal_trust_map(
     path: str | os.PathLike[str] | None = None,
     *,
     now: datetime | None = None,
+    with_live: bool = True,
+    lister: Any = None,
 ) -> dict[str, Any]:
     """Read the ledger ONCE and return every account known not to reconcile.
 
@@ -306,6 +389,14 @@ def journal_trust_map(
     for rec in accounts:
         aid = rec.get("account_id")
         if aid:
+            if with_live:
+                # One read-only store query per LEDGER account (not per trade):
+                # the refreshed figure, so journalTrust stops quoting a frozen
+                # hand number (LEDGER-REFRESH). Never raises.
+                rec["current"] = current_wallet_truth(
+                    rec, live_wallet_block(str(aid), since_ms=live_since_ms(rec), now=now, lister=lister),
+                    now=now,
+                )
             out[str(aid)] = rec
     return {"read_state": state, "accounts": out}
 
@@ -345,6 +436,20 @@ def journal_trust_for(
                 "stale": None, "source": None,
                 "note": _NO_RECORD_NOTE if account_id
                         else "no account id on the row; nothing to look up"}
+    cur = rec.get("current") if isinstance(rec.get("current"), dict) else None
+    if cur and cur.get("state") == CURRENT_MEASURED:
+        # Hand record + live API since it (LEDGER-REFRESH): the account's
+        # current figure, with its own as_of. The hand figure stays on the
+        # record as provenance.
+        return {"state": TRUST_KNOWN_DIVERGENT, "account_id": account_id,
+                "realized_usd": cur.get("realized_usd"),
+                "as_of": cur.get("as_of"),
+                "as_of_age_days": cur.get("as_of_age_days"),
+                "stale": cur.get("stale"),
+                "source": f"{rec.get('source')}+bybit_transaction_log_api",
+                "note": _DIVERGENT_NOTE if not cur.get("stale") else (
+                    _DIVERGENT_NOTE + f" — ⚠️ STALE: newest API row is "
+                    f"{cur.get('as_of_age_days')} days old (puller dead or account silent)")}
     return {"state": TRUST_KNOWN_DIVERGENT, "account_id": account_id,
             "realized_usd": rec.get("realized_usd"),
             "as_of": rec.get("as_of"),
