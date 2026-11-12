@@ -1,0 +1,112 @@
+# Hand-authored 2026-11-12 by the ML standing lane part 4 (FRONTIER-STATIC-MARKETS round 2, Tier 1), dispatched by Manager Session 2026-11-11a. Decision rule registered BEFORE any run; neither arm has been run on this population. Gates this adds or changes: none.
+id: RQ-20261112-3c8f-02
+title: 'Static-market frontier round 2b: frozen IBS arm L on a7e8-01''s nine ETFs over 2010-01-01..2020-05-29 (time-disjoint, before a7e8-01''s window), vs every-day-long control'
+status: blocked
+cadence: once
+origin: new_hypothesis
+roadmap:
+- M22
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  basis: 'Estimate: 9 symbols x daily bars x 2 arms, pure-Python loop + 9 yfinance fetches; the a7e8-01 run took 17 s locally.'
+  why_runner: ibs_reversion_stage0.py fetches keyless public daily candles (yfinance, installed by research-script-run.yml) and runs on CPU; no trainer data.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+question: On a7e8-01's nine ETFs (SPY QQQ IWM DIA TLT IEF GLD SLV GDX) at 1d over 2010-01-01..2020-05-29, a window that ends before a7e8-01's starts and that no lane has graded IBS on, does the frozen IBS
+  arm L clear the pooled Stage-0 rule net of cost AND beat an every-day-long control by >= 0.05 R/trade?
+why_this_matters: 'Row FRONTIER-STATIC-MARKETS round 2. HONEST FRAMING: RQ-20261112-a7e8-01 graded FAIL with arm L beating the control by +0.0492 R/trade against a pre-registered 0.05 bar (n 1,995, 5/6
+  folds, 7/9 cells; evidence comms/research/RQ-20261112-a7e8-01/local-20261112T0650Z/verdict.json). That FAIL stands. This unit is a NEW, independent test motivated by that near miss, graded on its own
+  data with the arm frozen and the bar unchanged, so it cannot rescue a7e8-01; it asks whether the effect generalizes. Outside evidence: Pandey & Joshi, arXiv:2306.12434. TIME-disjoint from a7e8-01 (ends
+  2020-05-29, a7e8-01 starts 2020-06-01). Caveat stated before the run: this window overlaps Pandey & Joshi''s 2009-2019 sample, so it is out-of-sample for US but in-sample for the published claim; publication-era
+  decay would show as a 3c8f-02 PASS with an a7e8-01-style weaker recent window. Needs the DIA yfinance map (PR #25135).'
+power:
+  expected_n: 3200
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d = 0.1 at alpha 0.05 / power 0.8 needs ~620 L trades pooled; expected_n ~3,200 is an ESTIMATE scaled from a7e8-01 (1,995 L trades in ~6.4 years) to ~10.4 years, NOT a measurement.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered rule, a control arm that carries the drift, a PASS across 3 candidate arms is a LEAD that needs one
+  confirmation'
+intervention_controls:
+  not_applicable: a Stage-0 harness comparison of fixed arms, not an in-trade action or active-management intervention
+decision_rule:
+  id: RULE-RQ202611123c8f02
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'scripts/research/ibs_reversion_stage0.py on SPY,QQQ,IWM,DIA,TLT,IEF,GLD,SLV,GDX, 1d, 2010-01-01..2020-05-29 (--days 6200 fetches back to ~2009-11). Arms FROZEN from RQ-20261112-a7e8-01 (no
+    parameter changed): C = control, long EVERY day (ibs_lo 1.01); L = long IBS < 0.2; both max_hold 3, stop 2.0 x ATR14, exit at the first close beyond the prior bar''s high. Baseline C. Net of the venue
+    fee + the venue slippage default (5 bps round trip for ETFs); no funding.'
+  rule: 'L PASSES iff pooled n >= 39, pooled net_r > 0, >= 4 of 6 calendar folds net positive, >= half of the powered cells (n >= 39, at least 2) pass, AND its pooled net R/trade beats C''s by >= 0.05 (the
+    same bar a7e8-01 failed by 0.0008; NOT lowered). PASS / FAIL / INDETERMINATE exactly as RQ-20261112-a7e8-01 (INDETERMINATE when pooled n < 39 or a powered-cell count < 2). JOINT READING with its sibling
+    (declared now): IBS arm L becomes a LEAD only if BOTH RQ-20261112-3c8f-01 (symbol-disjoint) AND RQ-20261112-3c8f-02 (time-disjoint) PASS; a lead then goes to a Stage-0 -> Stage-1 case on alpaca_paper
+    via the normal ladder, never a roster edit from this unit. One PASS + one FAIL = no lead (recorded as mixed). Both FAIL = IBS L at these parameters is closed for US ETFs. Nothing is re-run with other
+    thresholds under these ids.'
+  what_it_does_not_do: 'Edits no config, roster or risk; is not a promotion case. Unadjusted yfinance closes (dividends not added back: biases LONG arms slightly DOWN); a > 25 % close jump cuts that symbol''s
+    series and is recorded. A market-on-close fill at the signal bar''s close is assumed (the slippage term prices it; a live leg would need an MOC order type or a close-proximate entry, measured separately).
+    No borrow cost on the S arm (liquid ETFs; recorded as an omission).'
+value:
+  usd_at_stake_per_month: 80
+  confidence: 0.2
+  bucket: frontier
+  basis: 'p(PASS) ~0.2 for EACH unit: a7e8-01 showed L 0.0008 under the bar on the original basket; a near miss regresses toward zero on a fresh sample, so the prior is below a7e8-01''s 0.3. An estimate,
+    not a measurement.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ibs_reversion_stage0.py
+  - --symbols
+  - SPY,QQQ,IWM,DIA,TLT,IEF,GLD,SLV,GDX
+  - --days
+  - '6200'
+  - --start
+  - '2010-01-01'
+  - --end
+  - '2020-05-29'
+  - --arm
+  - C=ibs_lo=1.01
+  - --arm
+  - L=
+  - --baseline
+  - C
+  - --delta-r-per-trade
+  - '0.05'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '39'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ202611123c8f02
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261112-3c8f-02
+grading:
+  auto: true
+related:
+- RQ-20261112-a7e8-01
+- RQ-20261112-3c8f-01
+blocked_reason: 'research-script-run cannot fetch the registered basket until PR #25135 (yfinance map for DIA + 7 sector SPDRs) is on main: a runner would grade a wrong-population run. Unblock (status queued) when #25135 merges, unless a local run has already landed a result row (then the unit is consumed). Owner: ML standing lane, row FRONTIER-STATIC-MARKETS.'
