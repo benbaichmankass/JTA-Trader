@@ -1,0 +1,29 @@
+=== trainer-diag-relay result ===
+request: ml-retire-demote-20261112
+state: ran
+remote_exit: 0
+run: https://github.com/benbaichmankass/JTA-Trader/actions/runs/43137552462
+=================================
+checkout_head: d2b3014f17 ml retire step 2: committed id list + trainer-side shadow->candidate demote script (ML-RETIRE-WAVES-20261111) (#25051)
+=== DRY RUN ===
+registry_root=./ml/registry-store list=ml/configs/retired/registry-demote-2026-11-11.txt apply=0 git_head=d2b3014f17
+btc-regime-15m-lgbm-fc-pcv-v1: stage shadow -> WOULD demote to candidate (dry run)
+sol-regime-15m-lgbm-fc-pcv-v1: stage shadow -> WOULD demote to candidate (dry run)
+btc-regime-5m-lgbm-yz-v1: stage shadow -> WOULD demote to candidate (dry run)
+execution-quality-baseline-v0: stage shadow -> WOULD demote to candidate (dry run)
+summary: {'demoted': 0, 'would_demote': 4, 'skipped': 0, 'missing': 0, 'failed': 0} of 4
+=== APPLY ===
+registry_root=./ml/registry-store list=ml/configs/retired/registry-demote-2026-11-11.txt apply=1 git_head=d2b3014f17
+btc-regime-15m-lgbm-fc-pcv-v1: shadow -> candidate DONE
+sol-regime-15m-lgbm-fc-pcv-v1: shadow -> candidate DONE
+btc-regime-5m-lgbm-yz-v1: shadow -> candidate DONE
+execution-quality-baseline-v0: shadow -> candidate DONE
+summary: {'demoted': 4, 'would_demote': 0, 'skipped': 0, 'missing': 0, 'failed': 0} of 4
+=== RE-READ (expect all skipped: not at shadow) ===
+registry_root=./ml/registry-store list=ml/configs/retired/registry-demote-2026-11-11.txt apply=0 git_head=d2b3014f17
+btc-regime-15m-lgbm-fc-pcv-v1: stage candidate -> skip (only shadow is demoted)
+sol-regime-15m-lgbm-fc-pcv-v1: stage candidate -> skip (only shadow is demoted)
+btc-regime-5m-lgbm-yz-v1: stage candidate -> skip (only shadow is demoted)
+execution-quality-baseline-v0: stage candidate -> skip (only shadow is demoted)
+summary: {'demoted': 0, 'would_demote': 0, 'skipped': 4, 'missing': 0, 'failed': 0} of 4
+
