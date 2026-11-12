@@ -8,6 +8,10 @@
 # open ref whose item is marked done, and a stale item (no movement past `review_days`).
 # An item with no resolvable ref is not a plan item -- it is a memo.
 #
+# ⇢ 2026-11-12 (row ML-DEV-PLAN): THE ITERATIVE ML DEV PLAN is docs/plans/ml-dev-plan.yaml -- one line per model / idea / slot with
+# levers ahead, next 3-4 weeks and the exhaustion condition. Every item below is absorbed by a line there (its `plan_items`), and
+# scripts/ops/ml_dev_plan.py flags an open item no line absorbs. This file stays for ml_plan_status.py and the RD registry.
+#
 # Edit rules: add/close items ONLY with the row/unit that carries them. `state` here is the PLAN's
 # view (open | done | killed | parked); the ref's own state is read live, never copied.
 schema: 1

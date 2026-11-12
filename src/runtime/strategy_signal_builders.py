@@ -6141,8 +6141,8 @@ def eth_pullback_prop_2h_signal_builder(settings: dict) -> Dict[str, Any]:
     never emits a prop ticket). Funded-EV gate: full-period 12-mo EV +$538
     @72.7% P(net>0), walk-forward 4/4 folds EV-positive — but realised post-swap
     is regime-dependent (negative in 2/4 folds), so this is a soak candidate, NOT
-    a live-money promotion. Promotion past shadow is the operator-gated Tier-3
-    switch. Eval: docs/research/eth-pullback-prop-swap-aware-2026-06-25.md.
+    a live-money promotion. (2026-11-12: there is no shadow step — a leg goes to
+    real money when its committed backtest evidence clears the bar.) Eval: docs/research/eth-pullback-prop-swap-aware-2026-06-25.md.
     Delegates to the shared ``_htf_pullback_variant_builder`` (reads the
     ``eth_pullback_prop_2h`` config block, which pins the swap-robust exits).
     """

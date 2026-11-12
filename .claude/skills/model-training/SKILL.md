@@ -1,11 +1,13 @@
 ---
 name: model-training
-description: Trigger, monitor, and analyze ML model training for the ICT bot. The actual training RUNS on the trainer VM (ict-trainer.service → scripts/ops/run_training_cycle.sh); Claude drives it autonomously through the trainer-vm-diag relay — kick a cycle, watch the journal, read the registry, analyze the result. Covers the `python -m ml ...` CLI (train, list-models, promote-stage, shadow-*, build-dataset), the manifests in ml/configs/, dataset families, and the 3-stage deployment ladder (candidate→shadow→advisory). Use when the operator says "train the models", "run a training cycle", "check the trainer", "what's in the registry", or "promote model X". NOT for live promotion past shadow (Tier-3, operator-gated).
+description: Trigger, monitor, and analyze ML model training for the ICT bot. The actual training RUNS on the trainer VM (ict-trainer.service → scripts/ops/run_training_cycle.sh); Claude drives it autonomously through the trainer-vm-diag relay — kick a cycle, watch the journal, read the registry, analyze the result. Covers the `python -m ml ...` CLI (train, list-models, promote-stage, shadow-*, build-dataset), the manifests in ml/configs/, dataset families, and the registry stage labels (candidate→shadow→advisory, housekeeping). Use when the operator says "train the models", "run a training cycle", "check the trainer", "what's in the registry", or "promote model X". A model reaches real money on its backtest evidence, with no stage step in between (operator 2026-11-12).
 ---
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-09-07` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
 > **The research loop (binding, 2026-11-01):** [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow" -- a model is BUILT parameterised: its levers (features, labels, recipe, universe, horizon, threshold, calibration) are declared in `research/levers/<model>.yaml` and the first evaluation is a structured design (one-factor ablations against the base recipe), never one configuration; a model whose evidence does not pass iterates from its map, never parked in shadow.
+
+> **One ladder (operator, 2026-11-12, binding; row `ML-ONE-LADDER`).** A model reaches a book the way a strategy does -- [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 (the ladder, the soak, three strategy statuses); this skill points at it and restates none of it. The registry `stage` (`candidate`/`shadow`/`advisory`) is a trainer-housekeeping label, never a step to real money; shadow on paper is only for something demoted and in iteration. Operator, verbatim: *"We already said that things get promoted to real money based on backtesting, shadow on paper is only for something that is demoted and in iteration, not a step on the way to real money"*. Gates this adds or changes: none.
 
 # /model-training — drive the ICT bot's ML training lifecycle
 
@@ -14,10 +16,11 @@ description: Trigger, monitor, and analyze ML model training for the ICT bot. Th
 
 Training is **autonomous trainer-VM territory** (CLAUDE.md § VM authority
 split). Claude provisions, kicks cycles, reads the registry, and analyzes
-results without operator-in-the-loop — up to `advisory` in the registry
-(autonomous only up to `shadow`; `shadow → advisory` is the operator gate).
-The one gate Claude does NOT cross alone is **promotion past `shadow`**
-(shadow → advisory is the operator-approved live-influence switch).
+results without operator-in-the-loop. The registry `stage` is a housekeeping
+label, never a step: a model reaches real money by the one flow, backtest →
+real money → (if demoted) soak on the demo floor while it iterates. Operator,
+2026-11-12, verbatim: *"There is nothing in between proving edge on back testing
+and real money. Absolutely no steps."*
 
 **The training run happens on the trainer VM, never in this session.** The
 sandbox has no SSH and no GPU; it drives the trainer through the
@@ -154,7 +157,7 @@ the full cost stack plus an enforced cost gate on model promotion; revert is one
 
 **Naming:** a model promoted to shadow or above gets a display alias (breed = its job, `Breed-<gen><variant>`) in `docs/reference/model_names.yaml` in the same PR as the `promote-stage` record. Aliases are display only; ids never change.
 
-## The 3-stage deployment ladder
+## The registry stage labels (housekeeping, not a ladder to real money)
 
 `candidate → shadow → advisory`
 
@@ -168,10 +171,11 @@ still resolve.)
   A `shadow` model auto-wires onto every strategy whose YAML omits
   `shadow_model_ids` — shadow logging is enabled-by-default for newly
   trained models, so Claude does not hand-wire it.
-- `advisory`: model output influences the order package. The
-  **`shadow → advisory` transition is the live switch — operator-approved
-  (Tier-3) only.** Claude prepares the `promote-stage` call and the
-  evidence; the operator authorizes.
+- `advisory`: model output influences the order package through the registry
+  consumers. A stage label does not by itself put a model on a book; that
+  follows the strategy ladder (OPERATING-PLAN § 2). A change to
+  `promote-stage` / `gate-check` / `stage-guard` code is a separate Tier-2
+  proposal, not an edit to this skill.
 
 ## What to analyze / report
 
