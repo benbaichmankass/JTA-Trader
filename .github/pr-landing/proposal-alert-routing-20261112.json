@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Read-path and alerting change only (routes and alerts, refuses nothing, no order path, config, roster or runtime-behaviour change), but it edits src/runtime/checklist_store.py, which the landing guard counts as Tier-2 by path and will not self-land. AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx) reads it and merges with the head sha, per its relay of 2026-11-12 10:00Z.",
+  "why": "Add one awaits_operator predicate used by brief section 2 and 0 and by attention_watch, so a ready decision waiting on the operator is alerted instead of sitting as note prose (PROPOSAL-ALERT-ROUTING)."
+}
