@@ -553,8 +553,9 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/design/desk-entry-review-redesign-2026-11-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/site-auth-consumer-inventory-2026-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/trade-action-direct-path-2026-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
-| `docs/design/ui-workplan-2026-11-questions.md` | plan | unknown | — | never | `name:workplan-is-a-forward-commitment / not-assessed` | — |
-| `docs/design/ui-workplan-2026-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | UI workplan 2026-11: design for OAuth sign-in enforcement, prop/chart bracket history, performance table + P&L chart, insights ledger, models/strategies tables, sidebar, topic map |
+| `docs/design/ui-redesign-2026-11-reconciliation.md` | architecture | live | — | 2026-11-12 | `dir:design-declares-contracts / not-assessed` | Reconciles ui-workplan-2026-11 (superseded) against operator spec row UI-REDESIGN-2026-11 and each row's operator note |
+| `docs/design/ui-workplan-2026-11-questions.md` | plan | superseded | `docs/design/ui-redesign-2026-11-reconciliation.md` | 2026-11-12 | `name:workplan-is-a-forward-commitment / mi159:plan-status-header:superseded` | — |
+| `docs/design/ui-workplan-2026-11.md` | architecture | superseded | `docs/design/ui-redesign-2026-11-reconciliation.md` | 2026-11-12 | `dir:design-declares-contracts / mi159:plan-status-header:superseded` | UI workplan 2026-11: design for OAuth sign-in enforcement, prop/chart bracket history, performance table + P&L chart, insights ledger, models/strategies tables, sidebar, topic map |
 | `docs/design/close-confirmation-scope-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/design/d1b-live-time-stop-PROPOSAL.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/decision-push-back-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
