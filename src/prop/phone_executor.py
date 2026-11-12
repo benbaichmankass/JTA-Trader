@@ -16,9 +16,10 @@ What this module owns, and why each piece is here and not on the phone:
   secret is ever put on the phone, and no secret is in git or chat.
 * **Atomic claim (§ 3.3).** ``emitted -> claimed`` in one conditional UPDATE,
   so two devices or a retry can never both act on a ticket. A claim is the only
-  way the phone gets a ticket. One attempt per ticket: a claimed ticket is
-  never re-offered; a claim with no report inside ``CLAIM_TIMEOUT_S`` is
-  marked ``skipped`` and alerted (the watchdog runs on every phone call).
+  way the phone gets a ticket. A claim with no report inside ``CLAIM_TIMEOUT_S``
+  and no redeemed live go-token is RE-OFFERED (back to ``emitted``) and alerted
+  (the watchdog runs on every phone call); until 2026-11-12 it was marked
+  ``skipped`` and never re-offered (AM-PROP-CLAIM-TIME-BLOCKS: REMOVE).
 * **The submit decision.** ``submit`` is ``live`` only when the account's
   ``config/accounts.yaml`` mode is ``live`` AND the kill switch
   ``PROP_PHONE_MODE_<ACCOUNT>`` is not ``off``/``dry`` AND the ticket is not a
@@ -217,8 +218,9 @@ def _meta(row: sqlite3.Row) -> Dict[str, Any]:
 
 
 def expire_stale_claims(account_id: str, now: Optional[datetime] = None) -> list:
-    """Watchdog (§ 3.3): a claim with no report within CLAIM_TIMEOUT_S becomes
-    ``skipped`` (never re-emitted) and is returned so the caller alerts.
+    """Watchdog (§ 3.3): a claim with no report within CLAIM_TIMEOUT_S is RE-OFFERED (back to ``emitted``; until
+    2026-11-12 it became ``skipped`` and was never re-offered, removed by AM-PROP-CLAIM-TIME-BLOCKS) and is returned
+    so the caller alerts.
 
     EXCEPTION (BREAKOUT-UNRECORDED, 2026-10-12): a claim whose LIVE go-token was redeemed (``go.go`` true) is NOT
     skipped. The phone was told to click submit, so an order may be resting or filled on the terminal: calling that
@@ -242,9 +244,16 @@ def expire_stale_claims(account_id: str, now: Optional[datetime] = None) -> list
                 if go.get("go") is True and go.get("mode") == "live":
                     unconfirmed.append(prop_journal._ticket_row(r))
                     continue
-                m.setdefault("phone", {})["skipped_reason"] = "claimed_no_report"
+                # Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PROP-CLAIM-TIME-BLOCKS: REMOVE. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+                # A claim with no report and no redeemed live go-token never reached the submit click (the go-token is
+                # redeemed right before it), so the ticket is RE-OFFERED (back to ``emitted``) instead of being marked
+                # skipped and never re-offered. The miss is recorded and still alerted. The ticket's own validity
+                # (``valid_until``, the strategy's) decides whether a later claim serves it.
+                ph = m.setdefault("phone", {})
+                ph["reoffered"] = int(ph.get("reoffered") or 0) + 1
+                ph["last_no_report"] = {"claimed_at": ph.get("claimed_at"), "at": now.isoformat()}
                 cur = conn.execute(
-                    "UPDATE prop_tickets SET status = 'skipped', meta = ? "
+                    "UPDATE prop_tickets SET status = 'emitted', meta = ? "
                     "WHERE ticket_id = ? AND status = 'claimed'",
                     (json.dumps(m), r["ticket_id"]))
                 if cur.rowcount:
@@ -333,34 +342,35 @@ def claim_next(device: PhoneDevice, now: Optional[datetime] = None,
             if vu is None or vu <= now:
                 continue
             m = _meta(r)
+            # Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PROP-CLAIM-TIME-BLOCKS: REMOVE. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+            # Operator: "this is managed at the strategy/risk manager level, adding another gate at the app level is
+            # exactly the kind of mistake that lead us to have to do a gate audit now". The two claim-time re-checks
+            # below (exec-test bounds, opposite side of a held symbol) are KEPT AS OBSERVATIONS: computed, logged and
+            # recorded on the ticket's meta (``claim_observed``), never a refusal or a deferral. The ticket is served.
+            observed: Dict[str, Any] = {}
             if m.get("origin") == "exec_test":
-                # MD-EXEC-DEV-TEST-TRADES: every bound again at claim time; a refused ticket is never served
-                from src.prop import exec_test_trades
-                v = exec_test_trades.check_bounds(acct, r["symbol"], now=now, skip_count_for=r["ticket_id"])
-                if not v["ok"]:
-                    m["exec_test"] = {**(m.get("exec_test") or {}), "refused_at_claim": v["refusals"],
-                                      "refused_at": now.isoformat()}
-                    conn.execute("UPDATE prop_tickets SET status = 'refused', meta = ? "
-                                 "WHERE ticket_id = ? AND status = 'emitted'", (json.dumps(m), r["ticket_id"]))
-                    conn.commit()
-                    logger.warning("phone_executor: exec test ticket %s refused at claim: %s", r["ticket_id"], v["refusals"])
-                    continue
+                try:
+                    from src.prop import exec_test_trades
+                    v = exec_test_trades.check_bounds(acct, r["symbol"], now=now, skip_count_for=r["ticket_id"])
+                    if not v["ok"]:
+                        observed["exec_test_bounds"] = v["refusals"]
+                except Exception as exc:  # noqa: BLE001  # allow-silent: an observation, logged; never blocks
+                    observed["exec_test_bounds"] = f"unreadable: {type(exc).__name__}"
             if not m.get("test") and m.get("origin") != "exec_test":
-                # CLAIM-TIME RE-CHECK (manager 2026-11-09): a phone ticket is claimed minutes after emission and a position another leg holds can
-                # open in between. Never serve the opposite side of a symbol this account now holds. A transient unreadable journal just defers.
-                from src.prop.breakout_executor import _opposite_direction_block_reason
-                opp = _opposite_direction_block_reason(acct, r["symbol"], r["direction"], r["strategy"], now=now, include_emitted=False)
-                if opp and opp.startswith("opposite_check_unreadable"):
-                    logger.warning("phone_executor: claim of %s deferred (%s)", r["ticket_id"], opp)
-                    continue
-                if opp:
-                    m["claim_block"] = {"reason": f"opposite_direction_blocked - {opp}", "blocked_at": now.isoformat()}
-                    conn.execute("UPDATE prop_tickets SET status = 'refused', meta = ? WHERE ticket_id = ? AND status = 'emitted'",
-                                 (json.dumps(m), r["ticket_id"]))
-                    conn.commit()
-                    logger.warning("phone_executor: ticket %s refused at claim: %s", r["ticket_id"], opp)
-                    continue
-            m["phone"] = {"device_id": device.device_id, "claimed_at": now.isoformat()}
+                try:
+                    from src.prop.breakout_executor import _opposite_direction_block_reason
+                    opp = _opposite_direction_block_reason(acct, r["symbol"], r["direction"], r["strategy"], now=now,
+                                                           include_emitted=False)
+                    if opp:
+                        observed["opposite_direction"] = opp
+                except Exception as exc:  # noqa: BLE001  # allow-silent: an observation, logged; never blocks
+                    observed["opposite_direction"] = f"unreadable: {type(exc).__name__}"
+            if observed:
+                m["claim_observed"] = {**observed, "at": now.isoformat(), "action": "served (AM-PROP-CLAIM-TIME-BLOCKS removed)"}
+                logger.warning("phone_executor: ticket %s served at claim; observed (not refused): %s", r["ticket_id"], observed)
+            _prev = m.get("phone") if isinstance(m.get("phone"), dict) else {}
+            m["phone"] = {"device_id": device.device_id, "claimed_at": now.isoformat(),
+                          **{k: _prev[k] for k in ("reoffered", "last_no_report") if k in _prev}}
             cur = conn.execute(
                 "UPDATE prop_tickets SET status = 'claimed', meta = ? "
                 "WHERE ticket_id = ? AND account_id = ? AND status = 'emitted'",
@@ -1068,8 +1078,8 @@ def alert_expired(account_id: str, ids: list, *, send=None) -> None:
     if not ids:
         return
     msg = (f"📱 phone {account_id}: {len(ids)} claimed ticket(s) got no report in "
-           f"{CLAIM_TIMEOUT_S}s and were marked skipped (never re-offered). Check the terminal "
-           f"for an unreported position: {', '.join(ids)[:300]}")
+           f"{CLAIM_TIMEOUT_S}s and were RE-OFFERED (back to emitted; served again while still valid). Check the "
+           f"terminal for an unreported order: {', '.join(ids)[:300]}")
     try:
         if send is None:
             from src.runtime.notify import send_telegram_direct

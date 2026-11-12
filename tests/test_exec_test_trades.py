@@ -138,15 +138,15 @@ def test_write_ticket_shape_min_size_protective_stop_and_the_claim_serves_it_liv
     assert c["venue_symbol"] == "ETHUSD" and c["meta"]["origin"] == "exec_test"
 
 
-def test_the_claim_rechecks_every_bound_and_refuses_a_ticket_the_bounds_no_longer_allow(monkeypatch):
+def test_the_claim_rechecks_every_bound_records_it_and_serves_the_ticket(monkeypatch):
+    # AM-PROP-CLAIM-TIME-BLOCKS: REMOVE (operator 2026-11-12). The claim-time bound re-check is recorded on the
+    # ticket (claim_observed) and the ticket is served; the write-time bounds (et.write_ticket) are unchanged.
     r = et.write_ticket("breakout_2", "ETHUSDT", by="drill", now=NOW)
     assert r["ok"] is True
     monkeypatch.setattr(et, "_day_loss", lambda a, n: {"loss_usd": 90.0, "limit_usd": 120.0, "fraction": 0.75, "tripped": False})
-    assert pe.claim_next(_dev(), now=NOW + timedelta(seconds=30)) is None
-    t = prop_journal.get_ticket(r["ticket_id"])
-    m = t["meta"] if isinstance(t["meta"], dict) else json.loads(t["meta"])
-    assert t["status"] == "refused" and m["exec_test"]["refused_at_claim"][0].startswith("day_loss_past_bound")
-    assert et.count_today("breakout_2", NOW) == 0, "a ticket refused at claim never reached the venue"
+    c = pe.claim_next(_dev(), now=NOW + timedelta(seconds=30))
+    assert c is not None and c["ticket_id"] == r["ticket_id"] and c["status"] == "claimed"
+    assert c["meta"]["claim_observed"]["exec_test_bounds"][0].startswith("day_loss_past_bound")
 
 
 def test_overdue_lists_a_placed_test_trade_past_close_by_without_a_closed_fill():

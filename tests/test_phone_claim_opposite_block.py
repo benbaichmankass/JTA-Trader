@@ -60,16 +60,15 @@ def test_negative_control_with_no_opposite_position_the_ticket_is_claimed():
     assert got and got["ticket_id"] == "prop-manual-baafc9daacf1" and got["status"] == "claimed"
 
 
-def test_the_incident_a_position_opened_between_emission_and_claim_blocks_the_claim():
+def test_the_incident_shape_is_now_served_and_the_opposite_position_is_recorded():
+    # AM-PROP-CLAIM-TIME-BLOCKS: REMOVE (operator 2026-11-12: "this is managed at the strategy/risk manager level").
+    # The claim-time re-check still runs and is recorded on the ticket, but the ticket is SERVED.
     _ml_long()                      # emitted first ...
     _trend_short()                  # ... then the trend short is on the books
-    assert pe.claim_next(_dev()) is None
-    assert _status("prop-manual-baafc9daacf1") == "refused"
-    t = next(t for t in prop_journal.list_tickets(account_id="breakout_2", limit=50) if t["ticket_id"] == "prop-manual-baafc9daacf1")
-    meta = t.get("meta") or {}
-    meta = json.loads(meta) if isinstance(meta, str) else meta
-    assert "opposite_direction_blocked" in json.dumps(meta) and "trend_donchian_sol_4h" in json.dumps(meta)
-    assert pe.claim_next(_dev()) is None            # never re-offered
+    got = pe.claim_next(_dev())
+    assert got and got["ticket_id"] == "prop-manual-baafc9daacf1" and got["status"] == "claimed"
+    obs = got["meta"]["claim_observed"]
+    assert "trend_donchian_sol_4h" in json.dumps(obs) and "served" in obs["action"]
 
 
 def test_the_same_leg_reversal_is_still_claimed():
@@ -94,5 +93,7 @@ def test_an_unreadable_journal_defers_the_claim_without_killing_the_ticket(monke
     _ml_long()
     monkeypatch.setattr(BE, "_opposite_direction_block_reason",
                         lambda *a, **k: "opposite_check_unreadable: RuntimeError")
-    assert pe.claim_next(_dev()) is None
-    assert _status("prop-manual-baafc9daacf1") == "emitted"      # retried on the next poll
+    # AM-PROP-CLAIM-TIME-BLOCKS removed 2026-11-12: an unreadable re-check no longer defers; it is recorded and served
+    got = pe.claim_next(_dev())
+    assert got and got["meta"]["claim_observed"]["opposite_direction"].startswith("opposite_check_unreadable")
+    assert _status("prop-manual-baafc9daacf1") == "claimed"

@@ -89,12 +89,17 @@ def test_kill_switch_off_claims_nothing(monkeypatch):
     assert pe.claim_next(_dev()) is None
 
 
-def test_watchdog_skips_unreported_claims():
+def test_watchdog_reoffers_unreported_claims():
+    # AM-PROP-CLAIM-TIME-BLOCKS: REMOVE (operator 2026-11-12). A claim with no report and no redeemed live go-token
+    # is re-offered (back to emitted) and still alerted; before, it became skipped and was never re-offered.
     _ticket("t1")
     pe.claim_next(_dev())
     later = datetime.now(timezone.utc) + timedelta(seconds=pe.CLAIM_TIMEOUT_S + 5)
     assert pe.expire_stale_claims("breakout_2", now=later) == ["t1"]
-    assert prop_journal.get_ticket("t1")["status"] == "skipped"
+    t = prop_journal.get_ticket("t1")
+    assert t["status"] == "emitted" and t["meta"]["phone"]["reoffered"] == 1
+    again = pe.claim_next(_dev(), now=later)
+    assert again and again["ticket_id"] == "t1" and again["meta"]["phone"]["reoffered"] == 1
 
 
 def test_ticket_result_keeps_form_dump_and_needs_a_claim():
@@ -586,13 +591,13 @@ def test_late_phone_report_corrects_the_unconfirmed_row_in_place(tmp_path, monke
     assert len(prop_journal.list_fills(account_id="breakout_2")) == 1
 
 
-def test_claim_without_a_live_go_is_still_skipped(tmp_path, monkeypatch):
+def test_claim_without_a_live_go_is_reoffered(tmp_path, monkeypatch):
     _live(tmp_path, monkeypatch)
     _claimed("t2")
     _verify("t2")  # token issued but never redeemed: nothing was clicked
     later = datetime.now(timezone.utc) + timedelta(seconds=pe.CLAIM_TIMEOUT_S + 5)
     assert pe.expire_stale_claims("breakout_2", now=later) == ["t2"]
-    assert prop_journal.get_ticket("t2")["status"] == "skipped"
+    assert prop_journal.get_ticket("t2")["status"] == "emitted"   # AM-PROP-CLAIM-TIME-BLOCKS removed 2026-11-12
     assert prop_journal.list_fills(account_id="breakout_2") == []
 
 
