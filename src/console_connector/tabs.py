@@ -44,7 +44,7 @@ def _now() -> datetime:
 
 
 def _env(repo: Path, read_state: str, population: dict, provenance: dict | None = None, **rest: Any) -> dict:
-    prov = {"register": D.git_provenance(repo)}
+    prov = {"register": D.register_provenance(repo)}
     prov.update(provenance or {})
     return {"as_of": D._iso(_now()), "read_state": read_state, "population": population,
             "provenance": prov, **rest}
@@ -225,6 +225,23 @@ def _signal_catalog(repo: Path) -> dict:
     return yaml.safe_load((repo / "docs/reference/signal-catalog.yaml").read_text(encoding="utf-8")) or {}
 
 
+def _mechanics_for_legs() -> dict:
+    """Per-leg ``mechanics_proven`` from the live VM (GET /api/bot/soak/mechanics, row UI-CONSOLE-ARTIFACT C2).
+
+    Soak state needs the trade journal, which only the live VM has; that route evaluates
+    scripts/ops/soak_state.py::mechanics_proven there. A failed read is ``could_not_look`` and every leg's
+    ``mechanics_proven`` is None, never False (an unread source is not a "not proven")."""
+    try:
+        doc = _work_get("/api/bot/soak/mechanics")
+    except Exception as exc:  # noqa: BLE001 - a failed source says so; it is never an empty or false answer
+        return {"read_state": "could_not_look", "reason": _err(exc), "legs": None}
+    if not isinstance(doc, dict) or doc.get("read_state") != "read":
+        return {"read_state": "could_not_look",
+                "reason": (doc or {}).get("reason") if isinstance(doc, dict) else "unexpected reply", "legs": None,
+                "population": (doc or {}).get("population") if isinstance(doc, dict) else None}
+    return doc
+
+
 def system_catalog(repo: Path, signals_limit: int = 400) -> dict:
     """The System tab: strategy legs (status, books, venue, symbol), ML models and the signal catalog.
 
@@ -255,8 +272,12 @@ def system_catalog(repo: Path, signals_limit: int = 400) -> dict:
         counts: dict[str, int] = {}
         for r in legs:
             counts[r["status"]] = counts.get(r["status"], 0) + 1
+        mech = _mechanics_for_legs()
+        for r in legs:
+            r["mechanics_proven"] = (mech.get("legs") or {}).get(r["leg"]) if mech.get("read_state") == "read" else None
         sections["legs"] = {"read_state": "read", "population": {"legs": len(legs), "by_status": counts},
-                            "items": legs}
+                            "items": legs,
+                            "mechanics": {k: mech.get(k) for k in ("read_state", "reason", "as_of", "population", "provenance")}}
     except Exception as exc:  # noqa: BLE001 - a failed source says so; it is never an empty list
         sections["legs"] = {"read_state": "could_not_look", "population": {"legs": None}, "reason": _err(exc)}
     # (b) ML models + signals from the catalog artifact (row SIGNAL-CATALOG)
@@ -667,3 +688,236 @@ def research_queue(repo: Path, args: dict | None = None) -> dict:
                  "note": "counts cover every unit; rows are the filtered page, newest activity first"},
                 counts={"by_status": tally("status"), "by_theme_group": tally("theme_group"), "by_compute": tally("compute")},
                 rows=sel[offset:offset + limit])
+
+
+# ───────────────────────────── work_items (console Work tab, step C3) ─────────────────────────────
+#: The work store's read routes (WORK-STORE S1, live since 2026-11-05) on the trader VM. The GETs are open
+#: reads while SITE_AUTH_ENFORCE is off; when it is armed the gate accepts the service bearer on GET only,
+#: so the connector sends DASHBOARD_API_TOKEN when the host has it. The work register is public-repo data
+#: (the same rows as work_rows), so this tool is NOT in GATED_TOOLS.
+WORK_ITEM_KEYS = ("id", "kind", "parent_id", "title", "state", "owner", "lane", "tier", "due_at", "priority_rank",
+                  "next_action", "summary", "terminal_reason", "prs", "created_at", "updated_at", "version")
+WORK_VIEWS = ("recent", "due", "open", "state")
+OPEN_ITEM_STATES = ("queued", "in_flight", "blocked", "routed", "landed_unproven")
+
+
+def _frozen() -> bool:
+    try:
+        from src.runtime import work_read
+        return work_read.frozen()
+    except Exception:  # noqa: BLE001  # allow-silent: unknown freeze state reports the route's own field
+        return False
+
+
+def _work_get(path: str) -> Any:
+    tok = (os.environ.get("DASHBOARD_API_TOKEN") or "").strip() or None
+    return FETCH(path, tok) if tok else _public(path)
+
+
+def _slim_item(it: dict) -> dict:
+    out = {k: it.get(k) for k in WORK_ITEM_KEYS}
+    out["by"] = it.get("updated_by")   # who last wrote it: the C3 check is "a session-written item appears"
+    out["blocked_on"] = [b.get("ref") for b in (it.get("blocked_on") or []) if isinstance(b, dict)] or None
+    src = (it.get("extra") or {}).get("_source") if isinstance(it.get("extra"), dict) else None
+    out["source"] = src or "store"      # "checklist" / "pipeline" = imported by S2; "store" = written natively
+    return out
+
+
+def work_items(args: dict[str, Any]) -> dict[str, Any]:
+    """Work-store items for the console Work tab (C3), or one item's events when ``item_id`` is given.
+
+    view: recent (newest updated_at first; ``since_hours`` window, default 24) | due (the due_now view) |
+    open (queued/in_flight/blocked/routed/landed_unproven, newest first) | state (needs ``state``).
+    """
+    import urllib.parse as up
+    now = _now()
+    item_id = (args.get("item_id") or "").strip()
+    if item_id:
+        path = f"/api/bot/work/items/{up.quote(item_id, safe='')}/events"
+        try:
+            doc = _work_get(path)
+        except Exception as exc:  # noqa: BLE001  # allow-silent: could_not_look with the reason
+            return {"as_of": D._iso(now), "read_state": "could_not_look", "item_id": item_id, "events": None,
+                    "population": {"events_scanned": None}, "error": _err(exc), "upstream": path}
+        evs = doc.get("events") or []
+        tail = [{"seq": e.get("seq"), "at": e.get("at") or e.get("ts") or e.get("created_at"), "op": e.get("op"),
+                 "by": e.get("by"), "op_id": e.get("op_id")} for e in evs[-40:]]
+        return {"as_of": D._iso(now), "read_state": "read", "item_id": item_id, "events": tail,
+                "population": {"events_scanned": len(evs), "shown": len(tail), "truncated": len(evs) > len(tail)},
+                "chain": doc.get("chain"), "upstream": path}
+
+    view = str(args.get("view") or "recent")
+    if view not in WORK_VIEWS:
+        view = "recent"
+    limit = max(1, min(200, int(args.get("limit") or 30)))
+    offset = max(0, int(args.get("offset") or 0))
+    q: dict[str, Any] = {"limit": limit, "offset": offset}
+    since = None
+    if view == "recent":
+        hours = max(1, min(24 * 14, int(args.get("since_hours") or 24)))
+        since = (now - timedelta(hours=hours)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        q["since"] = since
+    elif view == "due":
+        q["due"] = 1
+    elif view == "state":
+        st = str(args.get("state") or "")
+        if not re.fullmatch(r"[a-z_]{2,24}", st):
+            return {"as_of": D._iso(now), "read_state": "could_not_look", "items": None, "count": None,
+                    "population": {"rows_scanned": None}, "error": "view=state needs a state, e.g. in_flight"}
+        q["state"] = st
+    if args.get("kind"):
+        q["kind"] = str(args["kind"])
+
+    def fetch(qq: dict) -> dict:
+        return _work_get("/api/bot/work/items?" + up.urlencode(qq))
+
+    try:
+        if view == "open":
+            # the route filters one state at a time: read each open state (5 cheap indexed reads) and merge
+            items, per_state = [], {}
+            for st in OPEN_ITEM_STATES:
+                d = fetch({**q, "state": st, "offset": 0, "limit": min(1000, limit + offset)})
+                got = d.get("items") or []
+                per_state[st] = len(got)
+                items.extend(got)
+            items.sort(key=lambda it: str(it.get("updated_at") or ""), reverse=True)
+            items = items[offset: offset + limit]
+            doc = {"total": d.get("total"), "canonical": d.get("canonical"), "note": d.get("note")}
+        else:
+            doc = fetch(q)
+            items, per_state = doc.get("items"), None
+    except Exception as exc:  # noqa: BLE001  # allow-silent: could_not_look with the reason, never []
+        return {"as_of": D._iso(now), "read_state": "could_not_look", "view": view, "items": None, "count": None,
+                "population": {"rows_scanned": None}, "error": _err(exc)}
+    if items is None or doc.get("readState") == "could_not_look":
+        return {"as_of": D._iso(now), "read_state": "could_not_look", "view": view, "items": None, "count": None,
+                "population": {"rows_scanned": None}, "error": doc.get("error") or "upstream returned no items"}
+    slim = [_slim_item(it) for it in items]
+    return {"as_of": D._iso(now), "read_state": "read", "view": view, "since": since, "count": len(slim),
+            "items": slim,
+            "population": {"store_items_total": doc.get("total"), "returned": len(slim), "offset": offset,
+                           "limit": limit, "per_state": per_state,
+                           "next_offset": offset + limit if len(slim) == limit else None},
+            # the route still prints its S1-era "canonical": false; the committed S4 freeze is the fact
+            "canonical": True if _frozen() else doc.get("canonical"),
+            "canonical_note": ("register of record since the WORK-STORE S4 freeze (docs/claude/work/checklist/"
+                               "_header.json frozen_into_work_store); the repo row files are its export")
+            if _frozen() else (doc.get("note") or "the checklist + pipeline files are canonical until WORK-STORE S4"),
+            "upstream": f"{LIVE_BASE}/api/bot/work/items"}
+
+
+# ───────────────────── alerts · journal · reports (spec § 2.3; SIGN-IN ONLY) ─────────────────────
+#: These serve the alert ledger, closed trades with P&L, order packages and the review reports, so
+#: server.py lists them in GATED_TOOLS: they answer only while the connector's Google sign-in is on.
+ALERT_KEYS = ("ts", "kind", "channel", "priority", "delivered", "reason", "body")
+URGENT = ("system",)
+
+
+def alerts(args: dict[str, Any]) -> dict[str, Any]:
+    """The live alert ledger (GET /api/bot/alerts): newest first, optionally only urgent ones
+    (channel system or priority high, the filter that wakes the manager)."""
+    import urllib.parse as up
+    now = _now()
+    hours = max(1, min(24 * 14, int(args.get("since_hours") or 24)))
+    limit = max(1, min(200, int(args.get("limit") or 40)))
+    q: dict[str, Any] = {"since": (now - timedelta(hours=hours)).strftime("%Y-%m-%dT%H:%M:%SZ"), "limit": 2000}
+    for k in ("kind", "channel"):
+        if args.get(k):
+            q[k] = str(args[k])
+    path = "/api/bot/alerts?" + up.urlencode(q)
+    try:
+        doc = _work_get(path)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: could_not_look with the reason
+        return {"as_of": D._iso(now), "read_state": "could_not_look", "rows": None, "count": None,
+                "population": {"rows_scanned": None}, "error": _err(exc)}
+    if not isinstance(doc, dict) or doc.get("rows") is None or doc.get("read_state") == "could_not_look":
+        return {"as_of": D._iso(now), "read_state": "could_not_look", "rows": None, "count": None,
+                "population": {"rows_scanned": None}, "error": (doc or {}).get("error") if isinstance(doc, dict) else None}
+    rows = doc["rows"]
+    if args.get("urgent"):
+        rows = [r for r in rows if r.get("channel") in URGENT or r.get("priority") == "high"]
+    rows = sorted(rows, key=lambda r: str(r.get("ts") or ""), reverse=True)
+    shown = [{k: (r.get(k)[:400] if k == "body" and isinstance(r.get(k), str) else r.get(k)) for k in ALERT_KEYS}
+             for r in rows[:limit]]
+    return {"as_of": D._iso(now), "read_state": doc.get("read_state") or "read", "since_hours": hours,
+            "urgent_only": bool(args.get("urgent")), "count": len(rows), "rows": shown,
+            "counts_by_kind": doc.get("counts_by_kind"), "newest_ts": doc.get("newest_ts"),
+            "population": {"ledger_rows_matching": doc.get("total_matching"), "returned": len(shown),
+                           "upstream_truncated": doc.get("rows_truncated_to_limit"), "upstream": doc.get("population")}}
+
+
+TRADE_KEYS = ("id", "account", "accountClass", "assetClass", "symbol", "side", "qty", "entryPrice", "exitPrice",
+              "openedAt", "closedAt", "closeReason", "pattern", "realizedPnl", "realizedPnlPct", "pnlProvenance",
+              "journalTrust")
+PACKAGE_KEYS = ("orderPackageId", "strategy", "symbol", "direction", "status", "tradeStatus", "entry", "sl", "tp",
+                "confidence", "claudeScore", "pnl", "closeReason", "accountClass", "createdAt", "updatedAt",
+                "linkedTradeId")
+
+
+def journal(args: dict[str, Any]) -> dict[str, Any]:
+    """Closed trades (GET /api/bot/trades/closed) or order packages (GET /api/bot/order-packages), newest first."""
+    import urllib.parse as up
+    now = _now()
+    kind = "packages" if args.get("kind") == "packages" else "trades"
+    limit = max(1, min(200, int(args.get("limit") or 50)))
+    offset = max(0, int(args.get("offset") or 0))
+    if kind == "trades":
+        q: dict[str, Any] = {"limit": limit, "offset": offset, "include_paper": "true" if args.get("include_paper") else "false"}
+        if args.get("account"):
+            q["account_id"] = str(args["account"])
+        if args.get("since"):
+            q["since"] = str(args["since"])
+        path, keys = "/api/bot/trades/closed?" + up.urlencode(q), TRADE_KEYS
+    else:
+        q = {"limit": limit, "offset": offset}
+        for k in ("strategy", "symbol", "status"):
+            if args.get(k):
+                q[k] = str(args[k])
+        path, keys = "/api/bot/order-packages?" + up.urlencode(q), PACKAGE_KEYS
+    try:
+        doc = _work_get(path)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: could_not_look with the reason
+        return {"as_of": D._iso(now), "read_state": "could_not_look", "kind": kind, "rows": None, "count": None,
+                "population": {"rows_scanned": None}, "error": _err(exc)}
+    rows = doc if isinstance(doc, list) else (doc.get("rows") if isinstance(doc, dict) else None)
+    if rows is None:
+        return {"as_of": D._iso(now), "read_state": "could_not_look", "kind": kind, "rows": None, "count": None,
+                "population": {"rows_scanned": None}, "error": "upstream returned no rows"}
+    shown = [{k: r.get(k) for k in keys} for r in rows if isinstance(r, dict)]
+    return {"as_of": D._iso(now), "read_state": "read", "kind": kind, "count": len(shown), "rows": shown,
+            "population": {"returned": len(shown), "offset": offset, "limit": limit,
+                           "next_offset": offset + limit if len(shown) == limit else None,
+                           "include_paper": bool(args.get("include_paper")) if kind == "trades" else None,
+                           "filter_state": doc.get("filter_state") if isinstance(doc, dict) else None},
+            "upstream": path.split("?")[0]}
+
+
+def reports(args: dict[str, Any]) -> dict[str, Any]:
+    """The review reports index (GET /api/bot/reports), or one report's metadata + markdown/HTML body."""
+    import urllib.parse as up
+    now = _now()
+    rid = (args.get("report_id") or "").strip()
+    path = "/api/bot/reports" + (f"/{up.quote(rid, safe='')}" if rid else "")
+    try:
+        doc = _work_get(path)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: could_not_look with the reason
+        return {"as_of": D._iso(now), "read_state": "could_not_look", "report_id": rid or None,
+                "population": {"rows_scanned": None}, "error": _err(exc)}
+    if rid:
+        body = doc.get("html") or doc.get("html_body") or doc.get("body") or ""
+        body = re.sub(r"(?is)<(style|script)[^>]*>.*?</\1>", " ", body) if isinstance(body, str) else ""
+        text = re.sub(r"<[^>]+>", " ", body)
+        text = re.sub(r"\s+", " ", text).strip()
+        meta = {k: v for k, v in doc.items() if not isinstance(v, str) or len(v) < 400}
+        return {"as_of": D._iso(now), "read_state": "read", "report_id": rid, "meta": meta,
+                "text": text[:12000], "population": {"text_chars": len(text), "truncated": len(text) > 12000}}
+    reps = doc.get("reports") if isinstance(doc, dict) else None
+    if reps is None:
+        return {"as_of": D._iso(now), "read_state": "could_not_look", "report_id": None, "reports": None,
+                "population": {"rows_scanned": None}, "error": "upstream returned no reports"}
+    limit = max(1, min(100, int(args.get("limit") or 30)))
+    keys = ("id", "headline", "generated_at", "window", "window_start", "window_end", "roll_up_grade")
+    reps = sorted(reps, key=lambda r: str(r.get("generated_at") or ""), reverse=True)
+    return {"as_of": D._iso(now), "read_state": "read", "count": len(reps),
+            "reports": [{k: r.get(k) for k in keys} for r in reps[:limit]],
+            "population": {"reports_total": doc.get("total"), "returned": min(limit, len(reps))}}

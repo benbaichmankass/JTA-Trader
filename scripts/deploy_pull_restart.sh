@@ -653,11 +653,19 @@ fi
 # ict-ops-runner.service (MANAGER-VM-DIRECT-OPS) is a oneshot owned by
 # ict-ops-runner.path. It MUST be skipped: a `sync-now` ops job runs THIS script
 # from inside that unit, and restarting it here would kill the job mid-deploy.
+# ict-work-digest.service (MI-83, 5-min timer) and ict-work-report.service
+# (WORK-SYSTEM, daily 05:30Z timer) are timer-owned oneshots. `systemctl
+# restart` on a oneshot runs it to completion INSIDE this loop: MEASURED
+# 2026-11-12 in the ict-git-sync journal, work-digest held the loop 6m38s and
+# 6m23s and work-report 7m32s and 7m36s (17:05-17:19Z and 18:05-18:19Z), so
+# every deploy that restarts units took ~18 min and a 900 s `sync-now` ops job
+# timed out holding the single runner (GITSYNC-SLOW-ONESHOTS). Their timers
+# run them on the new code at the next tick; let the timers own them.
 # ict-notify-failure@<unit>.service instances (FIX-SA-08) are NOT listed here
 # because instance names vary: the restart loop below skips every `@` unit
 # outright, since restarting one would send a bogus "unit FAILED" ping.
 # ---------------------------------------------------------------------------
-DEFAULT_SKIP="ict-smoke-once.service ict-env-check.service ict-hourly-snapshot.service ict-heartbeat.service ict-git-sync.service ict-mes-ibkr-pull.service ict-exchange-fills-pull.service ict-alpaca-fills-pull.service ict-ib-executions-pull.service ict-prop-feed.service ict-prop-executor.service ict-trainer-disk-alarm.service ict-security-watch.service ict-phone-capture-purge.service ict-ml-decision-shadow.service ict-ops-runner.service"
+DEFAULT_SKIP="ict-smoke-once.service ict-env-check.service ict-hourly-snapshot.service ict-heartbeat.service ict-git-sync.service ict-mes-ibkr-pull.service ict-exchange-fills-pull.service ict-alpaca-fills-pull.service ict-ib-executions-pull.service ict-prop-feed.service ict-prop-executor.service ict-trainer-disk-alarm.service ict-security-watch.service ict-phone-capture-purge.service ict-ml-decision-shadow.service ict-ops-runner.service ict-work-digest.service ict-work-report.service"
 SKIP_LIST="${DEPLOY_RESTART_SKIP:-${DEFAULT_SKIP}}"
 
 # list-units --all surfaces inactive units too; --type=service excludes
