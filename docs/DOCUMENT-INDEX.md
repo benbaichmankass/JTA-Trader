@@ -1237,6 +1237,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/runbooks/gpu-burst.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/health-check.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/alpaca-wedged-oco.md` | instruction | live | — | 2026-11-06 | `read:ALPACA-LIVE-MECHANICS-lane-authored-it-2026-11-06-against-live-broker-reads` | the self-healing Alpaca close ladder for a wedged OCO (paper reset / live red flag) |
+| `docs/runbooks/ops-token-rotation.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/phone-executor-action-coverage.md` | instruction | live | — | 2026-11-11 | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/phone-executor-anomaly.md` | instruction | live | — | 2026-11-07 | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/jta-trader-rename.md` | instruction | live | — | 2026-10-28 | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
