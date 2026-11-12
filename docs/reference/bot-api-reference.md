@@ -218,7 +218,7 @@ has that id or the trade is still open (use `/markers`).
   `confidence`, `p_long`, `p_short`, `tp_intent`, `tp_basis`, `contributing_strategies`, `features{}`, `model_scores`.
 - `brackets` — the same shape as `/api/bot/brackets/history` (`levels[]` main line = `to_ts` null; `updates[]`
   one marker per change at its `bar_ts`), plus this account's own stop moves from the trade's notes
-  (`sl_amends`, `live_review_actions`, `sl_floor`) as `updates[]` with `scope: account` (package moves carry
+  (`sl_amends`, `live_review_actions`; `sl_floor` only marks a decision applied) as `updates[]` with `scope: account` (package moves carry
   `scope: package`). `tp_history: unrecorded` for exchange packages (no TP move store exists).
 - `decisions` — every LTR review (`comms/live_review/reviews.jsonl` + `live-review/rows`) and directed-action
   receipt on the package, each `{kind: ltr_review|directed_action, id, ts, bar_ts, action, level, confidence,
