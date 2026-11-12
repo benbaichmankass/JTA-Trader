@@ -107,13 +107,15 @@ def simulate(d: pd.DataFrame, a: np.ndarray, nbars: int, k: float, m: float, chu
     idx = np.arange(ATR_N, n - nbars - 1)
     idx = idx[np.isfinite(a[idx])]
     out = {x: [] for x in ("entry", "risk", "exit", "kind", "bars", "gross_r")}
-    sw = lambda arr: np.lib.stride_tricks.sliding_window_view(arr, nbars)
-    H, L, O = sw(h), sw(lo), sw(o)
+    def sw(arr):
+        return np.lib.stride_tricks.sliding_window_view(arr, nbars)
+
+    H, L, OP = sw(h), sw(lo), sw(o)
     for s0 in range(0, len(idx), chunk):
         ii = idx[s0 : s0 + chunk]
         e = o[ii + 1]
         risk = k * a[ii]
-        hh, ll, oo = H[ii + 1], L[ii + 1], O[ii + 1]
+        hh, ll, oo = H[ii + 1], L[ii + 1], OP[ii + 1]
         lastc = c[ii + nbars]
         for side in (1, -1):
             stop = e - side * risk
@@ -133,8 +135,11 @@ def simulate(d: pd.DataFrame, a: np.ndarray, nbars: int, k: float, m: float, chu
             ex = np.where(stop_first, sx, np.where(tp_first, tx, lastc))
             kind = np.where(stop_first, 0, np.where(tp_first, 1, 2))
             bars = np.where(stop_first, fs + 1, np.where(tp_first, ft + 1, nbars))
-            out["entry"].append(e); out["risk"].append(risk); out["exit"].append(ex)
-            out["kind"].append(kind); out["bars"].append(bars)
+            out["entry"].append(e)
+            out["risk"].append(risk)
+            out["exit"].append(ex)
+            out["kind"].append(kind)
+            out["bars"].append(bars)
             out["gross_r"].append(side * (ex - e) / risk)
     return {x: np.concatenate(v) for x, v in out.items()}
 
