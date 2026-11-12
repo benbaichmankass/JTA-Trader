@@ -289,7 +289,7 @@ def main(argv: Optional[List[str]] = None) -> int:
            "read_state": "measured" if measured else "producer_failed",
            "verdict": j["verdict"] if measured else "not_applicable", "note": j["why"], "n": j["comp_vs_champion"]["n"],
            "population": {"n": j["comp_vs_champion"]["n"], "description": (
-               f"OOS harness trades of {[l for l, _ in legs]} ({a.timeframe}), {a.num_folds}-fold sequential walk-forward per leg, "
+               f"OOS harness trades of {[leg for leg, _ in legs]} ({a.timeframe}), {a.num_folds}-fold sequential walk-forward per leg, "
                f"3 heads retrained per fold on pooled rows.jsonl (n {len(rows)}) bar_t <= fold start - {a.embargo_days} d; paired "
                "per-trade replayed R, comp vs champion and comp vs vol")},
            "decision_rule": {"id": RULE_ID, "registered_at": "2026-11-12", "registered_before_run": True},
