@@ -1,6 +1,6 @@
 ---
 name: close-out
-description: How a session knows it is DONE. Read this before you stop — whether you finished, ran out of budget, or are handing off. Defines the one question, the seven checks, what `done` is not, and why stopping early is a handoff rather than a completion.
+description: How a session knows it is DONE. Read this before you stop — whether you finished, ran out of budget, or are handing off. Defines the one question, the eight checks, what `done` is not, and why stopping early is a handoff rather than a completion.
 ---
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-09-21` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
@@ -27,7 +27,7 @@ misread it.
 > **Could this session end right now — without warning — and nothing be lost,
 > and nothing be silently dropped?**
 
-If the answer is no, you are not done. That is the entire contract. The seven
+If the answer is no, you are not done. That is the entire contract. The eight
 checks below are how you answer it honestly instead of optimistically.
 
 ⚠️ **"I have stopped working" and "I am done" are different states**, and
@@ -36,7 +36,7 @@ fine. A session that ends mid-task silently is the failure this exists for.
 
 ---
 
-## The seven checks
+## The eight checks
 
 Run all of them, every time, including when you are confident.
 
@@ -114,12 +114,33 @@ differently, and the ordering usually encodes something you learned.
 per `.claude/skills/manager/SKILL.md` § "Archive protocol" — closing finished
 sessions is the manager's job, never the operator's.
 
+### 8. Leave nothing scheduled behind, and archive yourself when done
+
+(Operator, 2026-11-12: *"we need to get rid of things once we're done using
+them, or figure out how to reuse them and repurpose them instead of creating
+new ones every time."* Full rule: manager SKILL § "Scheduled-task and session
+hygiene". Gates this adds or changes: none.)
+
+- **Read, then delete.** Every one-shot message task that was addressed to you
+  and that you have read, and every check-in reminder (`send_later`) of your
+  own that has fired, is deleted with `delete_trigger`. A pending reminder you
+  no longer need is deleted too. Never delete a recurring routine or a task
+  that has not fired yet and is still needed.
+- **Your final report task.** Delete it once `get_trigger` shows a `last_run`.
+- **Archive yourself last** when the work is DONE: after the push, the report
+  and the deletes, call `archive_session` on your own session id. A HANDOFF (you
+  stopped early) does not archive; the manager decides. Never archive a session
+  that owns an open PR needing pushes.
+- If the auto-mode classifier refuses `delete_trigger` or `archive_session`, do
+  not retry and do not work around it. Name the task ids in your final report;
+  the daily hygiene pass picks them up.
+
 ---
 
 ## Stopping early is legitimate. It is a HANDOFF, not a completion.
 
 Running out of budget, context or time is a normal way for a session to end.
-**It is not a reason to skip the seven checks — it is the reason they exist.**
+**It is not a reason to skip the eight checks — it is the reason they exist.**
 
 When you stop early, say all three of these plainly:
 

@@ -104,6 +104,9 @@ related:
 - docs/plans/claude-trading-desk-DESIGN.md
 last_dispatched_at: '2026-10-28T08:43:11+00:00'
 grading:
+  needs_review: true
+  owner: RESEARCH-OPS
+  owner_reason: 'lane AUD-20261019-RESEARCH-SLO-RED 2026-11-12: the fresh re-run 40658829510 (fixed driver) failed exit 2: "1498 re-derived packet(s) differ from what the judge saw (candle drift or a changed builder)" -- every packet of the judged-1 export re-derives differently from current candles, so a re-run cannot reproduce. Needs the desk owner: re-judge on a fresh export, or pin the export candles. Same export feeds RQ-20261026-e535-03 (whose indeterminate verdict cites the stopping-rule misflag fixed in the DESK-E535-04 driver PR). Pipeline PI-20261112-TE74WG5Z-0004.'
   confirmatory_run: 1
   evidence:
   - research/results/RQ-20261026-e535-04/40603775266.jsonl

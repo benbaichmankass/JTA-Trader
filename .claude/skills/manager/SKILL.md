@@ -80,7 +80,9 @@ Read the recipe for the kind of marker you are acting on **before** you dispatch
 lives ONLY in `scripts/research/research_watchdog.yaml` `ops_flags.pr_number`). Never merge or close it. **Treat every comment as an incident:
 fix it, dispatch a lane, or tell the operator; never leave one unanswered** (ledger `comms/research/ops/watchdog_incidents.jsonl`). Wake markers
 on that PR (`ltr-wake`, `mandate_cadence`, `judgement_cadence`, `desk-wake` / `desk-trigger-wake`, `short-hold-wake`): **one marker, one lane,
-never spawn twice for the same id**; a `could_not_*` kind is an incident, not a wake. **Never create a session with no `source_url`** (403 on every
+never spawn twice for the same id**; a `could_not_*` kind is an incident, not a wake. An `ltr-wake` entry marked **`reviewer started by routine`**
+(`routine_fire.state` `fired` / `already_fired` + `session_id`; TRADE-ACTION-DIRECT-PATH phase 3) already HAS its reviewer: do NOT dispatch it; the
+comment is the dedupe record. Dispatch only the entries without that mark (a routine fire that failed says so and falls back to you). **Never create a session with no `source_url`** (403 on every
 write). **Never run your own timer or scheduled watch that starts a live reviewer without a marker**: only the wake poster commits packets. Every
 reviewer dispatch prompt ends: "end your report with a `PACKET DEFECTS:` line (REVIEWER-BRIEF § 2d)"; file each reported defect once on its owner
 (`LTR-GRADER-COVERAGE`, `LTR-PACKET-READ-REACH`, else a PIPELINE item). Desk and short-hold lanes follow `.claude/skills/trading-desk/SKILL.md` § 6b
@@ -180,8 +182,10 @@ Plus, then I can also, like, if there's artifacts, I can leave you comments and 
   - answers saved in the page (the `db` capability, collection `answers`);
   - a "copy my answers" summary.
   Write for reading away from the chat: no unexplained ids, and every question stands on its own.
-- **Delivery.** Send the link once via `send-ping`, put it in the console inbox (until the UI lists decision docs, the brief's "decisions for
-  you" carries the link), and keep updating **the same artifact** (same URL) as items resolve or new ones join. Do not spawn a new page per
+- **Delivery.** Send the link once via `send-ping` and **register it on the console** (row UI-DECISION-DOCS, console v27+): `ArtifactData set`
+  on the console artifact (https://claude.ai/artifact/YU4ZwddDFB1AD2xWV2oE3g), collection `decisions`, doc id `<slug>-<yyyymmdd>`, data `{title, url, questions, answered, counted_at, created_at,
+  status: "open", row}`. It then shows under "Decision docs waiting on you". At each check-in, recount the doc's `answers` collection and
+  update `answered` / `counted_at`; set `status: "closed"` (or `"answered"`) when it is done, and it folds away. Also keep updating **the same artifact** (same URL) as items resolve or new ones join. Do not spawn a new page per
   question.
 - **The manager keeps running.** A decision doc never blocks other work (§ "Five things", item 4): state the assumption, carry on, and pick
   the answers up at the next check-in or when the operator says they are done.
@@ -268,6 +272,34 @@ LEFT ALONE block. **Archive when** its PRs merged and nothing remains only it ca
 committed; it was superseded; or its row is `done`/`dropped`/`landed_unproven` with the observation filed (an observation needing only time or a read does not keep a lane open). Do not tell a lane to idle on CI: the manager merges, the lane stops. **Never archive** a lane that owns an
 unmerged PR needing pushes, whose report has not arrived, that is BLOCKED on a permission prompt (surface it), or is mid-run on a live action. Read
 the final spend and note it on the row (reversible: `unarchive_session`).
+
+### Scheduled-task and session hygiene (operator, 2026-11-12, binding) — gates this adds or changes: none
+
+Operator, 2026-11-12 ~10:40Z, verbatim: *"we're supposed to be archiving sessions once they're done and keeping the system clean, and that
+applies to scheduled runs as well ... we need to get rid of things once we're done using them, or figure out how to reuse them and repurpose
+them instead of creating new ones every time."* **Cause:** nearly every report between sessions is a NEW one-shot task (`create_trigger` with
+`persistent_session_id`), and a fired one-shot is never deleted. MEASURED 2026-11-12 (row `SESSION-TRIGGER-HYGIENE`): a `create_trigger` +
+`fire_trigger` task with no `run_once_at` stays `enabled: true` after it fires, so **"fired" is `last_run` present, never `enabled: false`**.
+
+1. **Read, then delete.** The recipient deletes each one-shot message task after reading it (`delete_trigger`). A session deletes its own
+   check-in reminders once they have fired, and its final report task once `get_trigger` shows a `last_run`. Never delete a recurring routine
+   or a pending task still needed.
+2. **Archive on DONE.** `close-out` check 8: a lane archives itself last when its work is done. The manager archives its lanes on DONE; each
+   assistant manager archives its own lanes (same rules as § "Archive protocol").
+3. **Reuse where it is cheaper.** A lane keeps ONE reply task to its manager, created at dispatch, reused with `update_trigger(prompt)` then
+   `fire_trigger`, and deleted when the lane archives. Never share one mailbox between senders: two senders updating one task's prompt overwrite
+   each other before it fires. The account's hourly manual-fire limit (which `update_trigger` and `fire_trigger` both use) is NOT yet measured;
+   until it is, the one-shot path stays allowed, with rule 1.
+4. **Daily hygiene pass,** run by the OPS assistant manager (the manager while there is none) inside its existing cadence, never a new routine:
+   delete one-shot tasks that fired more than 24 h ago and those whose recipient is archived; list unarchived sessions idle more than 24 h with
+   no open PR or held work, and archive the finished ones. Never delete a recurring routine (list those with their `last_run` status instead),
+   a pending one-shot, or the desk wake, live-review, review or reset tasks.
+5. **Preconditions, MEASURED 2026-11-12.** (a) In auto mode the classifier refused `delete_trigger` ("Irreversible Deletion") in a lane, so
+   rules 1 and 4 need an explicit allow entry for `delete_trigger` (and `archive_session` if that is refused too) in `.claude/settings.json`;
+   adding one is the operator's call (precedent: the 2026-11-08 merge entries). (b) `delete_trigger`'s description says deleting a task deletes
+   every session it started; that a fired `persistent_session_id` message does NOT take its recipient with it is NOT yet proven. **No bulk
+   delete runs until row `SESSION-TRIGGER-HYGIENE` records that test passing.** A refused call is not retried or worked around; name the ids
+   in your report.
 
 ### When session tools or the GitHub proxy fail
 
@@ -366,7 +398,7 @@ with no lane, and a UI lane briefed from an older row rebuilt the wrong chart la
      direct get`) and the governing operator spec row for that area, and hands the lane the spec TEXT. Never from memory or an older row.
   2. It takes over its class's running lanes (one message each: "I am now your manager; report to me"). It dispatches new lanes for its rows by
      planned priority, with `source_url` = the repo the work is in (§ "Spawning"; `manager-runbooks.md` § A). It keeps rows current (in_flight +
-     lane id; notes; close with evidence) and archives finished lanes. It never sits idle while its class has runnable rows and no lane.
+     lane id; notes; close with evidence) and archives its lanes on DONE; it deletes the message tasks it has read (§ "Scheduled-task and session hygiene"). It never sits idle while its class has runnable rows and no lane.
   3. **Merges:** Tier-1 self-landing is its own. Tier-2/3, and anything touching real money or a prop book, goes to the manager with the PR,
      CI state, tier and decision line. The manager makes the call.
   4. **Operator questions, access needs and operator-only steps go to the manager, never to the operator** (the manager puts them on the
@@ -459,6 +491,7 @@ its authority is the operator's (CLAUDE.md § Every session, step 1). Ceiling: $
 WAKE THE MANAGER when you finish a deliverable, are blocked, or produce something it must act on:
 create_trigger(persistent_session_id="<manager session id>", prompt=<what merged/deployed/observed,
 what is blocked and on what>) then fire_trigger(<id>). Never set run_once_at (it fires twice).
+Read, then delete: delete each message task sent to you once read, and your own fired reminders (close-out check 8).
 If your PR waits on the manager (landing: hold), wake it AGAIN once CI on your head is green, with the PR
 number and head sha; you stay subscribed to your own PR and fix red CI yourself. If that prompts, comment on your PR instead.
 NEVER END A TURN WAITING SILENTLY: if you need a decision, a go-ahead or a merge, wake the manager FIRST (above);
@@ -523,7 +556,7 @@ The ladder is CLAUDE.md § "The promotion ladder" (Stage 0 backtest net of the F
 it without having to go back into the chat. And ping me also when everything is fully closed out."*). A chat reply is not the record. **The gate —
 publish and ping only when ALL are true:** (1) every PR the session opened or drove is merged, or HELD with the blocker on the PR and in
 `PIPELINE.jsonl`; (2) deployed means deployed: land, wait for `ict-git-sync`, restart the unit, OBSERVE the running process; (3) every row has a
-true state; (4) every finding is fixed, filed (pipeline or checklist) or flagged; (5) stale docs corrected; (6) `close-out` run, all seven checks;
+true state; (4) every finding is fixed, filed (pipeline or checklist) or flagged; (5) stale docs corrected; (6) `close-out` run, all eight checks;
 (7) every finished lane archived, none while it owns an open PR. **Then, in order:** PUSH FIRST; PUBLISH THE SUMMARY AS A PAGE (Artifact tool) with
 what each lane was dispatched to do and what became of it, what MERGED (shas), DEPLOYED and OBSERVED (never collapsed), verified vs waiting with the
 specific observation each needs, the operator's decisions in their words, **the session's own errors** plainly, next steps in order with why the
