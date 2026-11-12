@@ -95,6 +95,7 @@ if str(REPO_ROOT) not in sys.path:
 # `section0_lines` (ranked, capped) from `pipeline.due` / `due_bucket` /
 # `unrouted_alarm`; `pipeline.render_section_0` remains for `pipeline.py --due`.
 from scripts.ops import pipeline  # noqa: E402
+from src.runtime import checklist_store  # noqa: E402
 
 BRIEF_DIR = REPO_ROOT / "comms" / "briefs"
 
@@ -373,18 +374,38 @@ def checklist_view(doc: Any) -> dict[str, Any]:
     }
 
 
+def overdue_build_lines(items: list, today: date) -> list[str]:
+    """§0c: overdue (non-terminal, past due_by) build rows NAMED by id, oldest due first, so section 0
+    never carries only a bare count (PROPOSAL-ALERT-ROUTING). Rows waiting on the operator are marked."""
+    rows = sorted((r for r in items if isinstance(r, dict) and checklist_store.is_overdue(r, today)),
+                  key=lambda r: (str(checklist_store.effective_due(r)), str(r.get("id"))))
+    if not rows:
+        return ["### §0c — OVERDUE BUILD ROWS: none.", ""]
+    L = [f"### §0c — OVERDUE BUILD ROWS ({len(rows)}), oldest due first; ⚠ = waiting on the operator", ""]
+    rest = []
+    for r in rows:
+        why = checklist_store.awaits_operator(r, today)
+        if why:
+            L.append(f"- ⚠ `{r.get('id')}` [{r.get('state')}] due {checklist_store.effective_due(r)} — {why}")
+        else:
+            rest.append(f"`{r.get('id')}`")
+    if rest:
+        L += ["", "Other overdue: " + ", ".join(rest)]
+    return L + [""]
+
+
 def _is_operator_owned(item: dict) -> bool:
     return "operator" in str(item.get("owner") or "").lower()
 
 
-def decisions_for_you(ck: dict[str, Any]) -> list[dict]:
+def decisions_for_you(ck: dict[str, Any], today: date | None = None) -> list[dict]:
     """§2 population: operator-owned rows not yet resolved. NO CAP — a queue
     outrunning one person is an argument for a mandate, not for truncation."""
     out = []
     for state, rows in ck["byState"].items():
         if state in ("done", "dropped"):
             continue
-        out.extend(r for r in rows if _is_operator_owned(r))
+        out.extend(r for r in rows if checklist_store.awaits_operator(r, today))
     return sorted(out, key=lambda r: str(r.get("id") or ""))
 
 
@@ -606,6 +627,7 @@ def build(*, today: date | None = None, root: Path | None = None) -> dict[str, A
     if checklist_state == "read":
         section0 = section0 + derived_due_lines(derived_due(
             pipe_items, (checklist_doc or {}).get("items") or [], today))
+        section0 = section0 + overdue_build_lines((checklist_doc or {}).get("items") or [], today)
     else:
         section0 = section0 + ["### §0b — DERIVED DUE — COULD NOT BE COMPUTED "
                                f"(checklist `{checklist_state}`; we did not look, this is not zero)", ""]
@@ -712,7 +734,8 @@ def _section2(b: dict) -> list[str]:
         return ["---", "", "## §2 — DECISIONS FOR YOU", "",
                 f"{_HOLE[b['checklistState']]} — `docs/claude/work/MANAGER-CHECKLIST.json`. "
                 f"(Pipeline `ask_operator` items below are still shown: {len(ask)}.)", ""] + _ask_lines(ask)
-    rows = decisions_for_you(b["checklist"])
+    today = date.fromisoformat(b["forDate"]) if b.get("forDate") else None
+    rows = decisions_for_you(b["checklist"], today)
     L = ["---", "", f"## §2 — DECISIONS FOR YOU ({len(rows)} checklist + {len(ask)} pipeline)", "",
          "_Operator-owned checklist rows, then due pipeline items with "
          "`ask_operator`. **No cap on rows** (a queue outrunning one person argues "
@@ -721,7 +744,8 @@ def _section2(b: dict) -> list[str]:
     if not rows and not ask:
         return L + ["_None._", ""]
     for it in rows:
-        L.append(f"- **{it.get('id')}** [{it.get('state')}] {_clip(it.get('title') or '(untitled)', 90)}")
+        why = checklist_store.awaits_operator(it, today)
+        L.append(f"- **{it.get('id')}** [{it.get('state')}] ({why}) {_clip(it.get('title') or '(untitled)', 90)}")
         if it.get("note"):
             L.append(f"  - {_clip(it['note'], 80)}")
         bo = _blocked_on_text(it)
