@@ -244,3 +244,17 @@ def test_run_dispatches_the_ml_legs_and_the_controls_gate_the_status(entry, monk
     assert c["plants"] and all(p["flagged"] is True for p in c["plants"])
     assert c["clean"] and all(x["passed"] for x in c["clean"])
     assert "ml_entry" not in doc["totals"]["real_money_legs_could_not_check"]
+
+
+def test_bars_decided_by_the_previous_served_artifact_are_not_comparable(entry, monkeypatch):
+    leg, bundle, _ = entry
+    monkeypatch.setattr(M, "served_epoch", lambda repo=None: UNTIL + 86400)   # the pointer 'changed' after every bar
+    r = M.analyse_ml_entry(leg, bundle, SINCE, UNTIL)
+    assert r["state"] == "could_not_check" and r["divergences"] is None
+
+
+def test_live_nonmodel_refusal_where_replay_decides_is_its_own_class():
+    live = {"side": "none", "reason": "feature_row_unformable"}
+    rep = {"side": "short", "pkg": {}, "parsed": {"head": "package"}}
+    cls, _ = M.compare_entry(live, rep)
+    assert cls == "ml_refusal_mismatch"

@@ -138,6 +138,24 @@ def _live_decisions(rows: list[dict], strategy: str) -> dict[tuple[str, float], 
     return out
 
 
+ARTIFACT_DEPLOY_GRACE_S = 1800   # git-sync (~5 min) + trader restart after a served-pointer commit
+
+
+def served_epoch(repo: Any = None) -> float | None:
+    """Commit time of the last change to the ONE served-entry pointer (``ml/served/ENTRY_SERVED.json``), or None when git cannot
+    say. A decision made before it (plus the deploy grace) was scored by a DIFFERENT artifact than the one the replay loads, so it
+    is not comparable -- it is reported as such, never as a score mismatch."""
+    import subprocess
+    from pathlib import Path
+    root = Path(repo) if repo else Path(__file__).resolve().parents[2]
+    try:
+        out = subprocess.run(["git", "-C", str(root), "log", "-1", "--format=%ct", "--", "ml/served/ENTRY_SERVED.json"],
+                             capture_output=True, text=True, timeout=30).stdout.strip()
+        return float(out) if out else None
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+
+
 def _entry_replay(cfg: Mapping, symbol: str, bar: float, frames: Mapping[str, Any], model: Mapping, PR: Any) -> dict:
     """The LIVE ml_entry.order_package on the frame cut at ``bar``; returns {side, reason|pkg, ...}."""
     import pandas as pd
@@ -199,6 +217,10 @@ def compare_entry(live: Mapping, rep: Mapping) -> tuple[str | None, dict]:
         if a is not None and b is not None and abs(float(a) - float(b)) > SCORE_TOL:
             return "ml_score_mismatch", {"what": k, "live": float(a), "replay": float(b)}
     # 3. decision
+    if not live_is_pkg and r_side != "none" and lp["head"] not in ("below_tau", "cost_gate"):
+        # live REFUSED for a non-model reason (feature_row_unformable, reference_symbols, insufficient_bars ...) where the
+        # replay, from the same candles, decides: a degraded live input, reported as its own class
+        return "ml_refusal_mismatch", {"live": lp["head"], "live_reason": str(live.get("reason"))[:120], "replay": r_side}
     if live_is_pkg or r_side != "none":
         if live_is_pkg != (r_side != "none"):
             return "ml_side_mismatch", {"live": l_side, "replay": r_side, "live_reason": str(live.get("reason"))[:120],
@@ -266,7 +288,13 @@ def analyse_ml_entry(leg: Any, bundle: Mapping, since: float, until: float, *,
     bars: list[dict] = []
     n_cmp = 0
     nc = 0
+    art_epoch = served_epoch()
+    older_artifact = 0
     for bar in decision_bars(since, until, every_h):
+        if art_epoch is not None and bar + BAR_S < art_epoch + ARTIFACT_DEPLOY_GRACE_S:
+            older_artifact += 1
+            bars.append({"bar": _iso(bar), "status": "not_comparable", "reason": "decided by the previous served artifact"})
+            continue
         per: list[dict] = []
         for sym in replayable:
             lv = live.get((sym, bar))
@@ -296,7 +324,9 @@ def analyse_ml_entry(leg: Any, bundle: Mapping, since: float, until: float, *,
     return _finish(out, n_cmp, divs, bars, nc, extra={"symbols_replayed": replayable, "symbols_not_replayed": not_replayed,
                                                       "not_replayed_reason": "non-bybit symbols: reference/anchor from another venue, paper roster only"
                                                       if not_replayed else None,
-                                                      "reference_frames": f"{len(have_refs)}/{len(ref_set)}"})
+                                                      "reference_frames": f"{len(have_refs)}/{len(ref_set)}",
+                                                      "served_artifact_changed_at": _iso(art_epoch) if art_epoch else None,
+                                                      "bars_before_served_artifact": older_artifact})
 
 
 # ── ml_entry_eq_struct ───────────────────────────────────────────────────────
@@ -466,7 +496,13 @@ def ml_planted_defect(legs: list, results: list[dict], bundle: Mapping, since: f
 
 def _plant_entry(lg: Any, bundle: Mapping, since: float, until: float, rows: list[dict]) -> list[dict]:
     live = _live_decisions(rows, lg.name)
-    tail = [(k, v) for k, v in live.items() if since <= k[1] + BAR_S < until and parse_reason(v.get("reason")).get("feat")]
+    ep = served_epoch()
+    floor = max(since, (ep + ARTIFACT_DEPLOY_GRACE_S) if ep else since)   # a plant in a not-comparable bar can never be flagged
+    from src.units.strategies import ml_entry as ME
+    _ref = set(ME.load_model()["meta"]["xs_reference"])
+    syms = {str(x) for x in (lg.cfg.get("symbols") or []) if str(x) in _ref}   # the symbols the replay reproduces
+    tail = [(k, v) for k, v in live.items() if floor <= k[1] + BAR_S < until and k[0] in syms
+            and parse_reason(v.get("reason")).get("feat")]
     out: list[dict] = []
     if tail:
         (sym, bar), v = tail[0]
@@ -478,7 +514,8 @@ def _plant_entry(lg: Any, bundle: Mapping, since: float, until: float, rows: lis
         out.append({"plant": "ml_feature_nudged", "leg": lg.name, "bar": _iso(bar), "symbol": sym,
                     "flagged": any(d["class"] == "ml_feature_mismatch" and d["symbol"] == sym and d["bar"] == _iso(bar)
                                    for d in res.get("_divs") or [])})
-        none = [(k, x) for k, x in live.items() if _norm_side(x.get("side")) == "none" and since <= k[1] + BAR_S < until]
+        none = [(k, x) for k, x in live.items() if _norm_side(x.get("side")) == "none" and floor <= k[1] + BAR_S < until
+                and k[0] in syms and parse_reason(x.get("reason")).get("head") == "below_tau"]
         if none:
             (s2, b2), v2 = none[0]
             pkg_row = {k: val for k, val in v2.items() if k != "reason"}
@@ -507,22 +544,24 @@ def _clean_entry(lg: Any, bundle: Mapping, since: float, until: float, rows: lis
     frames = {s: _frame(b["candles"]) for s, b in (bundle.get("ml_candles") or {}).items() if (b or {}).get("candles")}
     model = ME.load_model()
     synth: list[dict] = []
-    for (sym, bar), v in _live_decisions(rows, lg.name).items():
-        if sym not in frames:
-            continue
-        rep = _rep_cached(bundle, dict(lg.cfg), sym, bar, frames, model, PR)
-        if rep.get("error"):
-            continue
-        row = {"event": f"{lg.name}_eval", "strategy": lg.name, "symbol": sym, "logged_at_utc": v.get("logged_at_utc"),
-               "id": v.get("id")}
-        if rep["side"] == "none":
-            row.update({"side": "none", "reason": rep["reason"]})
-        else:
-            p = rep["pkg"]
-            row.update({"side": "buy" if rep["side"] == "long" else "sell", "reason": None, "entry": p["entry"],
-                        "stop_loss": p["sl"], "take_profit": p["tp"], "p_long": p["meta"]["p_long"],
-                        "p_short": p["meta"]["p_short"]})
-        synth.append(row)
+    every_h = int(model["meta"]["bracket"]["decision_every_h"])
+    for bar in decision_bars(since, until, every_h):
+        for k, sym in enumerate(str(x) for x in (lg.cfg.get("symbols") or [])):
+            if sym not in frames or sym not in model["meta"]["xs_reference"]:
+                continue
+            rep = _rep_cached(bundle, dict(lg.cfg), sym, bar, frames, model, PR)
+            if rep.get("error"):
+                continue
+            row = {"event": f"{lg.name}_eval", "strategy": lg.name, "symbol": sym, "id": 10_000 + len(synth),
+                   "logged_at_utc": _iso(bar + BAR_S + 120 + k)}
+            if rep["side"] == "none":
+                row.update({"side": "none", "reason": rep["reason"]})
+            else:
+                p = rep["pkg"]
+                row.update({"side": "buy" if rep["side"] == "long" else "sell", "reason": None, "entry": p["entry"],
+                            "stop_loss": p["sl"], "take_profit": p["tp"], "p_long": p["meta"]["p_long"],
+                            "p_short": p["meta"]["p_short"]})
+            synth.append(row)
     res = analyse_ml_entry(lg, bundle, since, until, evals_override=synth)
     return [{"clean": "ml_entry_roundtrip", "leg": lg.name, "state": res["state"], "records": len(synth),
              "divergences": res.get("divergences"),
