@@ -54,6 +54,14 @@ REPO = Path(__file__).resolve().parents[2]
 
 # Changing the guard harness itself makes every guard relevant (mirrors the
 # self-referencing `paths:` entry each retired workflow carried).
+REPORT_MODE = "report"
+
+
+def is_report_only(guard: Dict[str, Any]) -> bool:
+    """True when the guard reports but never fails the job (see ``mode``)."""
+    return guard.get("mode") == REPORT_MODE
+
+
 HARNESS_PATHS = (
     ".github/workflows/guards.yml",
     "scripts/ci/run_guards.py",
@@ -87,6 +95,15 @@ HARNESS_PATHS = (
 #               hint        — extra operator guidance printed on failure
 #             `{changed_files}` in an argv element is replaced with the
 #             space-joined changed-file list.
+#   mode    — optional. "report" = REPORT-ONLY: the guard still runs and its
+#             findings print as ::warning:: lines in the log and the summary,
+#             but a failure (or a could-not-run) never fails the job. Omitted =
+#             blocking, as before. Added 2026-11-12 for the operator's gate
+#             decisions (decisions page, Gates tab; record
+#             comms/gates/gate_decisions_2026-11-12.json): sixteen guards were
+#             made report-only there. Do not delete a report-only guard; flipping
+#             one back to blocking is adding a gate and needs the operator's
+#             permission (docs/CLAUDE-RULES-CANONICAL.md § "No new gates").
 #   notify  — True if tripping this guard used to send an operator Telegram
 #             ping. The driver records these; guards.yml sends ONE message
 #             naming all of them (previously one message per guard).
@@ -131,6 +148,7 @@ GUARDS: List[Dict[str, Any]] = [
     },
     {
         "name": "account-class-guard",
+        "mode": "report",  # operator 2026-11-12 gate decisions: CI-account-class-guard: MAKE REPORT-ONLY
         "when": {"globs": ["config/accounts.yaml", "scripts/check_account_class.py"]},
         "steps": [["python3", "scripts/check_account_class.py", "--list"]],
     },
@@ -158,6 +176,7 @@ GUARDS: List[Dict[str, Any]] = [
         # guard whose green has never been shown capable of turning red is not
         # evidence (`check_guard_selftest_coverage.py`).
         "name": "roster-symbol-reachability",
+        "mode": "report",  # operator 2026-11-12 gate decisions: CI-roster-symbol-reachability: MAKE REPORT-ONLY
         "when": {"globs": [
             "config/accounts.yaml",
             "config/strategies.yaml",
@@ -1031,6 +1050,7 @@ GUARDS: List[Dict[str, Any]] = [
     },
     {
         "name": "canonical-config-loaders",
+        "mode": "report",  # operator 2026-11-12 gate decisions: CI-canonical-config-loaders: MAKE REPORT-ONLY
         "when": {"regex": r"\.py$|config/accounts\.yaml$"},
         "steps": [["python3", "scripts/check_canonical_config_loaders.py", "--list"]],
     },
@@ -1048,6 +1068,7 @@ GUARDS: List[Dict[str, Any]] = [
         # and every CLOSED live cell carries the evidence ref the matrix's own
         # `_doc` requires ("statuses only from verified evidence").
         "name": "exit-coverage-matrix-guard",
+        "mode": "report",  # operator 2026-11-12 gate decisions: CI-exit-coverage-matrix-guard: MAKE REPORT-ONLY
         # `config/strategies.yaml` is in this list because the check JOINS the
         # matrix against it (`execution` must agree). Without it the guard was
         # scoped to one side of its own join, so the single edit that can make
@@ -1100,6 +1121,7 @@ GUARDS: List[Dict[str, Any]] = [
         # checks BOTH: a guard that only ever looked one way would report that
         # clean as evidence when it had never looked.
         "name": "matrix-config-agreement",
+        "mode": "report",  # operator 2026-11-12 gate decisions: CI-matrix-config-agreement: MAKE REPORT-ONLY
         "when": {"globs": ["docs/research/exit-refinement-coverage.json",
                            "config/strategies.yaml",
                            "scripts/ci/check_matrix_config_agreement.py",
@@ -1129,6 +1151,7 @@ GUARDS: List[Dict[str, Any]] = [
         # reconciled the 8 cells, so its first CI run is green — the discipline this
         # guard's own sibling header argues for.
         "name": "matrix-bracket-values",
+        "mode": "report",  # operator 2026-11-12 gate decisions: CI-matrix-bracket-values: MAKE REPORT-ONLY
         "when": {"globs": ["docs/research/exit-refinement-coverage.json",
                            "config/strategies.yaml",
                            "scripts/ci/check_matrix_bracket_values.py"]},
@@ -1579,6 +1602,7 @@ GUARDS: List[Dict[str, Any]] = [
     },
     {
         "name": "pairs-sizing-basis-guard",
+        "mode": "report",  # operator 2026-11-12 gate decisions: CI-pairs-sizing-basis-guard: MAKE REPORT-ONLY
         "when": {
             "globs": [
                 "config/pairs.yaml",
@@ -1593,6 +1617,7 @@ GUARDS: List[Dict[str, Any]] = [
     },
     {
         "name": "prop-identity-guard",
+        "mode": "report",  # operator 2026-11-12 gate decisions: CI-prop-identity-guard: MAKE REPORT-ONLY
         "when": {"globs": ["src/**/*.py", "scripts/ci/check_prop_identity_single_home.py"]},
         "steps": [["python3", "scripts/ci/check_prop_identity_single_home.py"]],
     },
@@ -1623,6 +1648,7 @@ GUARDS: List[Dict[str, Any]] = [
     },
     {
         "name": "risk-basis-agreement",
+        "mode": "report",  # operator 2026-11-12 gate decisions: CI-risk-basis-agreement: MAKE REPORT-ONLY
         # Fires on the harness fleet, the live risk config, and itself. The
         # SOURCE of truth (config/accounts.yaml) is in the trigger set
         # deliberately: a live risk_pct change must re-grade every harness
@@ -1641,6 +1667,7 @@ GUARDS: List[Dict[str, Any]] = [
     },
     {
         "name": "cost-model-single-owner",
+        "mode": "report",  # operator 2026-11-12 gate decisions: CI-cost-model-single-owner: MAKE REPORT-ONLY
         # Fires on the harness fleet + the owner itself. The OWNER is in the
         # trigger set deliberately, mirroring risk-basis-agreement: changing
         # DEFAULT_FEE_BPS_ROUNDTRIP must re-grade every registered duplicate,
@@ -1670,6 +1697,7 @@ GUARDS: List[Dict[str, Any]] = [
     },
     {
         "name": "tp-venue-cap-single-owner",
+        "mode": "report",  # operator 2026-11-12 gate decisions: CI-tp-venue-cap-single-owner: MAKE REPORT-ONLY
         "when": {"globs": [
             "src/runtime/tp_venue_cap.py", "src/units/strategies/*.py",
             "src/runtime/position_telemetry.py", "src/runtime/target_expectation.py",
@@ -2144,6 +2172,7 @@ GUARDS: List[Dict[str, Any]] = [
     },
     {
         "name": "strategy-decision-record",
+        "mode": "report",  # operator 2026-11-12 gate decisions: CI-strategy-decision-record: MAKE REPORT-ONLY
         # C4 of the operating-layer build (Phase F). Compares the DECISION
         # RECORD (config/strategy_changelog.json) against the GATE it is a
         # record of (config/strategies.yaml). An execution flip is a Tier-3
@@ -2183,6 +2212,7 @@ GUARDS: List[Dict[str, Any]] = [
     },
     {
         "name": "roster-promotion-evidence-guard",
+        "mode": "report",  # operator 2026-11-12 gate decisions: CI-roster-promotion-evidence-guard: MAKE REPORT-ONLY
         # B1, THE LOAD-BEARING CHANGE. The counterpart that never existed:
         # `scripts/check_dry_run_in_diff.py` blocks turning a leg OFF and
         # NOTHING blocked turning one ON. That asymmetry is the mechanical fact
@@ -2478,6 +2508,7 @@ GUARDS: List[Dict[str, Any]] = [
     },
     {
         "name": "qty-legalization-guard",
+        "mode": "report",  # operator 2026-11-12 gate decisions: CI-qty-legalization-guard: MAKE REPORT-ONLY
         "when": {"globs": ["**/*.py"]},
         "steps": [["python3", "scripts/check_qty_legalization_guard.py"]],
     },
@@ -2529,6 +2560,7 @@ GUARDS: List[Dict[str, Any]] = [
     },
     {
         "name": "strategy-coverage-guard",
+        "mode": "report",  # operator 2026-11-12 gate decisions: CI-strategy-coverage-guard: MAKE REPORT-ONLY
         "when": None,
         "steps": [
             ["python3", "scripts/check_strategy_coverage.py", "--self-test"],
@@ -2542,6 +2574,7 @@ GUARDS: List[Dict[str, Any]] = [
     },
     {
         "name": "strategy-risk-guard",
+        "mode": "report",  # operator 2026-11-12 gate decisions: CI-strategy-risk-guard: MAKE REPORT-ONLY
         "when": {"globs": ["**/*.py", "config/strategies.yaml"]},
         "steps": [["python3", "scripts/check_strategy_risk_field_in_diff.py", "{pr_diff}"]],
         "notify": True,
@@ -3417,6 +3450,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             return 2
 
     failures: List[tuple] = []
+    # REPORT-ONLY findings (guard ``mode: report``): printed as warnings, never
+    # counted as failures, never fail the job. A could-not-run on a report-only
+    # guard lands here too — it reports, it does not block.
+    reported: List[tuple] = []
     # ⚠️ A THIRD BUCKET, NEVER POOLED WITH `failures`. A guard whose RUNNER is
     # absent checked nothing; reporting that as a failure is what let a session
     # read `FAIL 4, all four environmental` and ship two real defects on
@@ -3449,6 +3486,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if reason is None:
             passed.append(name)
             print(f"--- {name}: PASS ({dt:.1f}s)", flush=True)
+        elif is_report_only(guard):
+            kind = "COULD NOT RUN" if isinstance(reason, CouldNotRun) else "FINDING"
+            reported.append((name, f"{kind}: {reason}"))
+            print(f"::warning::{name} (report-only): {kind} — {reason}", flush=True)
+            print(f"--- {name}: REPORT-ONLY {kind} ({dt:.1f}s) — not gating", flush=True)
         elif isinstance(reason, CouldNotRun):
             could_not_run.append((name, reason))
             print(f"--- {name}: COULD NOT RUN ({dt:.1f}s) — {reason}",
@@ -3483,6 +3525,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     print(counts_line(len(passed), len(failures), len(could_not_run),
                       len(skipped), len(unchecked),
                       len(tree_dirty_at_start)))
+    if reported:
+        # Not in the PASS/FAIL counts above (they would stop summing to what ran):
+        # a report-only guard that found something is neither a pass nor a block.
+        print(f"REPORT-ONLY {len(reported)} (findings from report-only guards; "
+              f"not gating — listed below)")
     if could_not_run:
         print()
         print("COULD NOT RUN — these guards CHECKED NOTHING. This is the "
@@ -3547,6 +3594,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print("  Add --all to run them regardless of the diff.")
     print("=" * 72)
 
+    if reported:
+        print(f"\nREPORT-ONLY findings ({len(reported)}) — these guards are "
+              f"report-only by the operator's 2026-11-12 gate decisions; they "
+              f"do NOT fail this job. Read them anyway:")
+        for n, r in reported:
+            print(f"  ::warning::{n}: {r}")
     if args.notify_file and notify:
         Path(args.notify_file).write_text("\n".join(notify) + "\n", encoding="utf-8")
 
@@ -3614,6 +3667,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if asked_but_skipped:
         caveats.append(f"{len(asked_but_skipped)} guard(s) you named with "
                        f"--only were skipped as not relevant")
+    if reported:
+        caveats.append(f"{len(reported)} report-only guard(s) reported findings "
+                       f"(not gating; listed above)")
     if caveats:
         print("\nAll SELECTED guards passed — but " + "; and ".join(caveats)
               + ". This is NOT a clean bill of health for your change.")
