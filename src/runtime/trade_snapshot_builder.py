@@ -64,7 +64,6 @@ def pending(conn: sqlite3.Connection, now: datetime, limit: int) -> List[Dict[st
     """Closed trades with no built snapshot (or a retry that is due) whose framed window has ended, newest close
     first: ``trades`` rows (closed, not backtest) and prop trades (closed ``prop_fills`` rows). Each item carries
     ``_key`` (the store key), ``_attempts`` and, for prop, the resolved trade."""
-    conn.execute(store.DDL)
     items: List[Dict[str, Any]] = []
     for r in conn.execute(
             f"SELECT t.*, s.attempts AS _attempts FROM trades t LEFT JOIN {store.TABLE} s "
@@ -133,7 +132,7 @@ def _upsert(conn: sqlite3.Connection, trade: Dict[str, Any], **cols: Any) -> Non
             "order_package_id": trade.get("order_package_id"), "account_id": trade.get("account_id"), **cols}
     names = ", ".join(cols)
     marks = ", ".join("?" for _ in cols)
-    conn.execute(f"INSERT OR REPLACE INTO {store.TABLE} ({names}) VALUES ({marks})", list(cols.values()))
+    conn.execute(f"INSERT OR REPLACE INTO main.{store.TABLE} ({names}) VALUES ({marks})", list(cols.values()))
     conn.commit()
 
 
@@ -167,13 +166,20 @@ def build_one(conn: sqlite3.Connection, trade: Dict[str, Any], fetch: Fetch, rev
         return "retrying"
 
 
+def _snap_path_for(db_path: Path) -> Path:
+    """The snapshot DB beside ``db_path`` (tests); production passes the canonical resolver's path."""
+    return Path(db_path).parent / "trade_chart_snapshots.db"
+
+
 def run_batch(db_path: Path, fetch: Fetch, now: Optional[datetime] = None, limit: int = BATCH,
-              reviews: Optional[Dict[str, Any]] = None, receipts: Optional[Dict[str, Any]] = None) -> Dict[str, int]:
+              reviews: Optional[Dict[str, Any]] = None, receipts: Optional[Dict[str, Any]] = None,
+              snap_path: Optional[Path] = None) -> Dict[str, int]:
+    """One batch. ``db_path`` = ``trade_journal.db``, ATTACHed READ-ONLY; every write goes to ``snap_path``
+    (``trade_chart_snapshots.db``), so this never opens a write transaction on the money DB."""
     from src.web.api import trade_decision_sources as srcs
     now = now or datetime.now(timezone.utc)
     counts = {"built": 0, "built_partial": 0, "retrying": 0}
-    conn = sqlite3.connect(str(db_path), timeout=10.0)
-    conn.row_factory = sqlite3.Row
+    conn = store.snapshots_rw(str(snap_path or _snap_path_for(db_path)), journal_path=str(db_path))
     try:
         todo = pending(conn, now, limit)
         if not todo:
@@ -220,10 +226,10 @@ _started = threading.Lock()
 _thread: Optional[threading.Thread] = None
 
 
-def _loop(db_path: Path, fetch: Fetch) -> None:
+def _loop(db_path: Path, fetch: Fetch, snap_path: Optional[Path] = None) -> None:
     while True:
         try:
-            STATUS["last_batch"] = run_batch(db_path, fetch)
+            STATUS["last_batch"] = run_batch(db_path, fetch, snap_path=snap_path)
             STATUS["last_batch_at"] = _iso(datetime.now(timezone.utc))
             if any(STATUS["last_batch"].values()):
                 logger.info("trade snapshot batch: %s", STATUS["last_batch"])
@@ -239,10 +245,11 @@ def start(db_path: Optional[Path] = None, fetch: Optional[Fetch] = None) -> bool
     with _started:
         if _thread is not None and _thread.is_alive():
             return False
+        from src.utils.paths import trade_journal_db_path, trade_snapshots_db_path
         if db_path is None:
-            from src.utils.paths import trade_journal_db_path
             db_path = Path(trade_journal_db_path())
-        _thread = threading.Thread(target=_loop, args=(db_path, fetch or web_api_fetch),
+        snap = Path(trade_snapshots_db_path())
+        _thread = threading.Thread(target=_loop, args=(db_path, fetch or web_api_fetch, snap),
                                    name="trade-snapshot-builder", daemon=True)
         _thread.start()
         STATUS["started_at"] = _iso(datetime.now(timezone.utc))

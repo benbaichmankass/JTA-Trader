@@ -7,8 +7,11 @@ One row per closed trade, keyed by ``snapshot_key``:
     opening row, which is what the routes take).
 The payload is the framed DATA (``src.web.api.trade_chart_snapshot.build_snapshot``), not an image, stored
 zlib-compressed (``payload`` BLOB) and WITHOUT the indicator series, which the read route recomputes from the
-stored candles (deterministic), so ~2,600 backfilled trades stay small. The table lives in ``trade_journal.db``
-next to the trades it describes; it is derived data (always rebuildable from the journal + candles).
+stored candles (deterministic), so ~2,600 backfilled trades stay small. The table lives in its OWN SQLite file,
+``trade_chart_snapshots.db`` (``src.utils.paths.trade_snapshots_db_path``), beside the journal and never inside it:
+a snapshot write can never take ``trade_journal.db``'s write lock (manager condition 2026-11-12,
+JOURNAL-LOCK-RESIDUAL). Every reader and the builder open the journal READ-ONLY (:func:`journal_ro`). It is
+derived data (always rebuildable from the journal + candles).
 
 ``state``: ``built`` (payload present) · ``retrying`` (a build failed; ``attempts``/``last_error``/``next_attempt_at``
 say when it runs again). There is no give-up state: a failing trade keeps retrying at the longest backoff (Prime
@@ -39,6 +42,45 @@ CREATE TABLE IF NOT EXISTS {TABLE} (
     payload BLOB
 )
 """
+
+
+def journal_ro(path: str, timeout: float = 5.0) -> sqlite3.Connection:
+    """``trade_journal.db`` opened READ-ONLY (``mode=ro`` URI): no statement on it can ever write."""
+    conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=timeout)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def snapshots_rw(path: str, journal_path: Optional[str] = None, timeout: float = 10.0) -> sqlite3.Connection:
+    """The snapshot DB, read-write, table ensured; with ``journal_path`` the journal is ATTACHed READ-ONLY as ``j``,
+    so unqualified ``trades`` / ``order_packages`` / ``prop_fills`` resolve to it for joins and every write lands
+    in the snapshot file only."""
+    conn = sqlite3.connect(f"file:{path}", uri=True, timeout=timeout)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute(DDL)
+    conn.commit()
+    if journal_path:
+        conn.execute("ATTACH DATABASE ? AS j", (f"file:{journal_path}?mode=ro",))
+    return conn
+
+
+def snapshots_ro(path: str) -> Optional[sqlite3.Connection]:
+    """The snapshot DB for a read route, read-only; None while the builder has not created it yet."""
+    import os
+    if not os.path.exists(path):
+        return None
+    return sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=5.0)
+
+
+def read_key(path: str, key: str) -> Dict[str, Any]:
+    conn = snapshots_ro(path)
+    if conn is None:
+        return {"state": "no_table", "payload": None}
+    try:
+        return read(conn, key)
+    finally:
+        conn.close()
 
 
 def trade_key(trade_id: int) -> str:

@@ -42,11 +42,8 @@ def _fetch_ok(calls=None):
 
 
 def _row(db, tid):
-    conn = sqlite3.connect(str(db))
-    try:
-        return store.read(conn, tid if isinstance(tid, str) else store.trade_key(tid))
-    finally:
-        conn.close()
+    return store.read_key(str(db.parent / "trade_chart_snapshots.db"),
+                          tid if isinstance(tid, str) else store.trade_key(tid))
 
 
 def test_builds_closed_trade_once_and_is_idempotent(db):
@@ -125,6 +122,7 @@ def test_route_reads_what_the_builder_wrote(db, monkeypatch):
     tid = _trade(db)
     b.run_batch(db, _fetch_ok(), NOW, reviews=REVIEWS, receipts=RECEIPTS)
     monkeypatch.setattr(router, "_DB_PATH", db)
+    monkeypatch.setattr(router, "_SNAP_PATH", db.parent / "trade_chart_snapshots.db")
     d = TestClient(api_main.app).get(f"/api/bot/trades/{tid}/snapshot").json()
     assert d["snapshot"]["indicators"]["state"] == "measured"
     assert json.dumps(d)  # serialisable
@@ -160,3 +158,36 @@ def test_no_prop_tables_is_not_an_error(tmp_path):
     conn.commit()
     conn.close()
     assert sum(b.run_batch(p, _fetch_ok(), NOW, reviews=EMPTY, receipts=EMPTY).values()) == 0
+
+
+def test_writer_never_writes_the_journal(db):
+    """Manager condition 2026-11-12: no write transaction on trade_journal.db. The journal file is made
+    read-only on disk; a single write (DDL, insert, even a WAL switch) would raise 'readonly database'."""
+    import os
+    import stat
+    tid = _trade(db)
+    insert_prop_trade(db)
+    wal = db.parent / (db.name + "-wal")
+    before = (db.read_bytes(), wal.read_bytes() if wal.exists() else None)
+    os.chmod(db, stat.S_IRUSR | stat.S_IRGRP)   # (root ignores this; the byte checks below are the proof)
+    try:
+        out = b.run_batch(db, _fetch_ok(), NOW, reviews=REVIEWS, receipts=RECEIPTS)
+    finally:
+        os.chmod(db, stat.S_IRUSR | stat.S_IWUSR)
+    assert out["retrying"] == 0 and out["built"] + out["built_partial"] == 2
+    after = (db.read_bytes(), wal.read_bytes() if wal.exists() else None)
+    assert after == before                                             # journal + its WAL byte-identical
+    conn = sqlite3.connect(str(db))
+    assert conn.execute("SELECT name FROM sqlite_master WHERE name = ?", (store.TABLE,)).fetchone() is None
+    conn.close()
+    assert _row(db, tid)["state"] == "built"                           # the snapshot is in its own file
+
+
+def test_attached_journal_rejects_writes(db, tmp_path):
+    conn = store.snapshots_rw(str(tmp_path / "s.db"), journal_path=str(db))
+    with pytest.raises(sqlite3.OperationalError, match="readonly"):
+        conn.execute("INSERT INTO j.trades (timestamp, symbol, direction, entry_price, position_size) "
+                     "VALUES ('t', 'X', 'long', 1, 1)")
+    with pytest.raises(sqlite3.OperationalError, match="readonly"):
+        store.journal_ro(str(db)).execute("CREATE TABLE x (a)")
+    conn.close()

@@ -20,7 +20,7 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, HTTPException
 
 from src.runtime import trade_snapshot_store as store
-from src.utils.paths import trade_journal_db_path
+from src.utils.paths import trade_journal_db_path, trade_snapshots_db_path
 from src.web.api import brackets_history as bh
 from src.web.api import trade_chart_snapshot as tcs
 from src.web.api import trade_decision_sources as srcs
@@ -30,10 +30,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/bot", tags=["bot"])
 
 _DB_PATH = Path(trade_journal_db_path())
+_SNAP_PATH = Path(trade_snapshots_db_path())
 
 
 def _connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(_DB_PATH), timeout=5.0)
+    """The journal, READ-ONLY (mode=ro): these routes never write it."""
+    conn = store.journal_ro(str(_DB_PATH))
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -65,7 +67,7 @@ def get_trade_snapshot(trade_id: int) -> Dict[str, Any]:
                 raise HTTPException(status_code=404, detail="no such trade")
             if str(trade.get("status")) != "closed":
                 raise HTTPException(status_code=404, detail="trade is not closed; use /markers for an open trade")
-            got = store.read(conn, store.trade_key(trade_id))
+            got = store.read_key(str(_SNAP_PATH), store.trade_key(trade_id))
         finally:
             conn.close()
     except HTTPException:
@@ -135,7 +137,7 @@ def get_prop_trade_snapshot(fill_id: int) -> Dict[str, Any]:
             trade, _pkg, closer = _prop(conn, fill_id)
             if closer is None:
                 raise HTTPException(status_code=404, detail="prop trade is not closed; use /markers for an open trade")
-            got = store.read(conn, store.prop_key(closer["id"]))
+            got = store.read_key(str(_SNAP_PATH), store.prop_key(closer["id"]))
         finally:
             conn.close()
     except HTTPException:
