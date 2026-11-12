@@ -802,3 +802,126 @@ def test_row_side_read_off_the_expanded_child_row_is_measured(env):
     raw = json.loads(prop_journal.latest_account_status("breakout_2")["raw"])
     assert (raw["positions_state"], raw["positions_side_source"], raw["positions_provenance"]) == ("read", "row", "MEASURED")
     assert raw["positions"][0]["side_source"] == "row" and "upnl_signed" not in raw["positions"][0]
+
+
+# ---- PHONE-LIVE-ACCOUNT-FEED (2026-11-12): Breakout's Positions CARDS carry only a "Net P&L" per position ----
+
+def test_card_rows_net_pnl_is_the_measured_upnl_and_labelled_net():
+    eth = {k: v for k, v in ETH.items() if k != "upnl"}
+    sol = {k: v for k, v in SOL.items() if k != "upnl"}
+    _status([{**eth, "netpnl": -3.21}, {**sol, "netpnl": -1.07}])
+    row = prop_journal.latest_account_status("breakout_2")
+    raw = json.loads(row["raw"])
+    assert row["unrealized"] == -4.28 and raw["unrealized_source"] == "positions_net_sum"
+    assert [p.get("upnl_basis") for p in raw["positions"]] == ["net", "net"]
+
+
+def test_card_row_without_a_net_pnl_number_leaves_the_account_upnl_unknown():
+    eth = {k: v for k, v in ETH.items() if k != "upnl"}
+    _status([{**eth, "netpnl": -3.21}, {k: v for k, v in SOL.items() if k != "upnl"}])
+    assert prop_journal.latest_account_status("breakout_2")["unrealized"] is None   # a partial sum is not the account's
+
+
+def test_a_real_upnl_wins_over_net_pnl():
+    _status([{**ETH, "netpnl": -9.99}, SOL])
+    raw = json.loads(prop_journal.latest_account_status("breakout_2")["raw"])
+    assert raw["unrealized_source"] == "positions_sum" and raw["positions"][0]["upnl"] == 31.27
+
+
+# ---- PHONE-LIVE-ACCOUNT-FEED part B: venue brackets off the Open orders view move the journaled stop/target ----
+
+def _brk(sym="SOL", typ="sl", trig=81.48, side="short", reduce=True, dp=2):
+    return {"symbol": sym, "side": side, "reduce": reduce, "type": typ, "group": "OCO", "qty": 11.81,
+            "trigger": trig, "trigger_dp": dp, "limit": None, "limit_kind": "market"}
+
+
+SOLP = {"symbol": "SOL", "side": "long", "qty": 11.81, "entry": 82.96, "mark": 83.1, "upnl": 1.65}
+
+
+def _open_sol():
+    return _open("prop-manual-sol", symbol="SOLUSDT", direction="long", qty=11.81, entry=82.96, sl=81.48, tp=85.18)
+
+
+def _sol_fill():
+    from src.prop.prop_monitor_pulse import find_open_prop_positions
+    return [p for p in find_open_prop_positions(account_id="breakout_2") if p["symbol"] == "SOLUSDT"][0]
+
+
+def test_hand_moved_venue_stop_reaches_the_journal_in_one_read():
+    _open_sol()
+    r = _status([SOLP], brackets_state="read", brackets=[_brk(trig=82.5), _brk(typ="tp", trig=85.18)])
+    assert r["brackets_sync"]["amended"] == ["SOLUSDT long sl=82.5"]
+    p = _sol_fill()
+    assert p["fill_sl"] == 82.5 and p["fill_tp"] == 85.18
+    raw = json.loads(prop_journal.latest_account_status("breakout_2")["raw"])
+    assert raw["brackets_state"] == "read" and [b["type"] for b in raw["venue_brackets"]] == ["sl", "tp"]
+
+
+def test_same_level_at_the_precision_shown_moves_nothing():
+    _open_sol()
+    r = _status([SOLP], brackets_state="read", brackets=[_brk(trig=81.48), _brk(typ="tp", trig=85.18)])
+    assert r["brackets_sync"]["amended"] == [] and r["brackets_sync"]["positions"][0]["venue_sl"] == 81.48
+
+
+def test_no_venue_stop_is_reported_missing_and_never_written():
+    _open_sol()
+    r = _status([SOLP], brackets_state="read", brackets=[_brk(typ="tp", trig=85.18)])
+    assert r["brackets_sync"]["missing"] == ["SOLUSDT long sl"] and _sol_fill()["fill_sl"] == 81.48
+
+
+def test_two_venue_stops_are_ambiguous_and_move_nothing():
+    _open_sol()
+    r = _status([SOLP], brackets_state="read", brackets=[_brk(trig=82.0), _brk(trig=82.5)])
+    assert r["brackets_sync"]["ambiguous"] == ["SOLUSDT long sl x2"] and _sol_fill()["fill_sl"] == 81.48
+
+
+def test_opening_side_or_other_symbol_rows_are_not_brackets():
+    _open_sol()
+    r = _status([SOLP], brackets_state="read", brackets=[_brk(trig=80.0, side="long", reduce=False),
+                                                         _brk(sym="ETH", trig=2000.0)])
+    assert r["brackets_sync"]["missing"] == ["SOLUSDT long sl", "SOLUSDT long tp"] and _sol_fill()["fill_sl"] == 81.48
+
+
+def test_an_unclean_brackets_read_is_a_label_and_moves_nothing():
+    _open_sol()
+    r = _status([SOLP], brackets_state="unparsed", brackets=[_brk(trig=82.5)])
+    assert "brackets_sync" not in r and _sol_fill()["fill_sl"] == 81.48
+    raw = json.loads(prop_journal.latest_account_status("breakout_2")["raw"])
+    assert raw["brackets_state"] == "unparsed" and "venue_brackets" not in raw
+
+
+def test_an_old_app_without_brackets_reads_not_reported():
+    _status([])
+    assert json.loads(prop_journal.latest_account_status("breakout_2")["raw"])["brackets_state"] == "not_reported"
+
+
+def test_a_stop_row_without_a_trigger_refuses_the_report():
+    with pytest.raises(ValueError):
+        _status([SOLP], brackets_state="read", brackets=[_brk(trig=None)])
+
+
+# ---- the NO-REINSTALL channel (operator 2026-11-12): brackets arrive behind a marker row in closed_orders ----
+
+def test_brackets_behind_the_closed_orders_marker_row_sync_and_closed_reads_no_tab():
+    _open_sol()
+    rows = [{"venue_brackets_read": True, "n": 2}, {**_brk(trig=82.7), "venue_bracket": True},
+            {**_brk(typ="tp", trig=85.18), "venue_bracket": True}]
+    r = _status([SOLP], closed=rows, closed_state="read")
+    assert r["brackets_sync"]["amended"] == ["SOLUSDT long sl=82.7"] and _sol_fill()["fill_sl"] == 82.7
+    raw = json.loads(prop_journal.latest_account_status("breakout_2")["raw"])
+    assert raw["brackets_state"] == "read" and raw["brackets_via"] == "closed_tab_channel"
+    assert raw["closed_orders_state"] == "no_tab" and raw["closed_orders"] == []
+
+
+def test_an_unclean_bracket_read_through_the_channel_is_a_label_only():
+    _open_sol()
+    r = _status([SOLP], closed_state="brackets_unparsed")
+    raw = json.loads(prop_journal.latest_account_status("breakout_2")["raw"])
+    assert "brackets_sync" not in r and raw["brackets_state"] == "unparsed" and raw["closed_orders_state"] == "no_tab"
+
+
+def test_a_real_closed_orders_read_is_untouched_by_the_channel():
+    _status([], closed=[{"symbol": "ETH", "side": "long", "type": "Stop loss", "status": "Filled", "price": 2535.25}],
+            closed_state="read")
+    raw = json.loads(prop_journal.latest_account_status("breakout_2")["raw"])
+    assert raw["closed_orders_state"] == "read" and raw["brackets_state"] == "not_reported"

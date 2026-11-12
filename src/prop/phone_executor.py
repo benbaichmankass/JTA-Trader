@@ -479,11 +479,32 @@ def record_report(device: PhoneDevice, body: Dict[str, Any]) -> Dict[str, Any]:
         # whether that [] was the venue's empty list or a read that never got its rows (the app posted rows only on a
         # clean read and dropped the state). An app that predates `closed_state` reads `read` when it sent rows (it
         # only ever sent them on a clean read) and `not_reported` otherwise -- never a guessed clean.
+        # PHONE-LIVE-ACCOUNT-FEED, NO-REINSTALL CHANNEL (operator 2026-11-12: no app reinstall where avoidable). With no
+        # Closed orders tab on the new Trade view, exec.js shows Open orders in its place and its closedRead() answers
+        # the venue's working orders behind ONE marker row ({venue_brackets_read: true}); an unclean bracket read
+        # arrives as closed_state "brackets_<state>". Either way the Closed orders list itself was NOT read: no_tab.
+        cl_in, cs_raw = body_in.get("closed_orders"), str(body_in.get("closed_state") or "")
+        if (isinstance(cl_in, list) and cl_in and isinstance(cl_in[0], dict)
+                and cl_in[0].get("venue_brackets_read") is True):
+            body_in = {**body_in, "brackets_state": "read", "brackets": cl_in[1:], "closed_orders": None,
+                       "closed_state": "no_tab"}
+            body["brackets_via"] = "closed_tab_channel"
+        elif cs_raw.startswith("brackets_"):
+            body_in = {**body_in, "brackets_state": cs_raw[len("brackets_"):], "closed_orders": None,
+                       "closed_state": "no_tab"}
+            body["brackets_via"] = "closed_tab_channel"
         cs_in = body_in.get("closed_state")
         if cs_in is not None:
             body["closed_orders_state"] = re.sub(r"[^a-z_]", "", str(cs_in))[:24] or "not_read"
         else:
             body["closed_orders_state"] = "read" if isinstance(body_in.get("closed_orders"), list) else "not_reported"
+        # PHONE-LIVE-ACCOUNT-FEED (2026-11-12): the venue's working orders off the Open orders view. Only a CLEAN read is
+        # stored as rows (and moves journaled stops below); any other state is kept as a label. An app that predates the
+        # field reads `not_reported`, never a guessed clean.
+        bs_in = body_in.get("brackets_state")
+        body["brackets_state"] = (re.sub(r"[^a-z_]", "", str(bs_in))[:24] or "not_read") if bs_in is not None else "not_reported"
+        if body["brackets_state"] == "read":
+            body["venue_brackets"] = phone_reconcile.clean_brackets(device.account_id, body_in.get("brackets"))
         if pstate == "read":
             positions = phone_reconcile.clean_positions(device.account_id, body_in.get("positions"))
             if any(p.get("side_source") == "sheet" for p in positions):
@@ -505,7 +526,8 @@ def record_report(device: PhoneDevice, body: Dict[str, Any]) -> Dict[str, Any]:
                 derived = phone_reconcile.account_unrealized(positions)
                 if derived is not None:
                     body["unrealized"] = derived
-                    body["unrealized_source"] = "positions_sum"
+                    body["unrealized_source"] = ("positions_net_sum" if any(p.get("upnl_basis") == "net" for p in positions)
+                                                 else "positions_sum")
         if (body.get("unrealized") is None and label == "equity" and clean["balance"] is not None
                 and clean["equity"] is not None):
             body["unrealized"] = round(clean["equity"] - clean["balance"], 2)
@@ -524,6 +546,12 @@ def record_report(device: PhoneDevice, body: Dict[str, Any]) -> Dict[str, Any]:
         except Exception:  # noqa: BLE001  # allow-silent: logged; the next clean read retries
             logger.warning("phone_executor: closed-order fill-in failed for %s", device.account_id, exc_info=True)
             res["fill_in"] = None
+    if body.get("kind") == "account_status" and body.get("brackets_state") == "read":
+        try:   # a hand-moved venue stop / target reaches the journal (and the phone trail) within one read
+            res["brackets_sync"] = phone_reconcile.sync_venue_brackets(device.account_id, body.get("venue_brackets") or [])
+        except Exception:  # noqa: BLE001  # allow-silent: logged; the snapshot is stored and the next read retries
+            logger.warning("phone_executor: venue bracket sync failed for %s", device.account_id, exc_info=True)
+            res["brackets_sync"] = None
     tid = body.get("ticket_id")
     if tid and str(body.get("kind") or "") == "amend":
         # The human {kind: amend} path ("moved stop/target"): the phone trail's resting levels follow it.

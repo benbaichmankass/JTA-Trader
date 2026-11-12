@@ -6,7 +6,7 @@
   // PHONE-EXEC-OBSERVABLE-1018: this file is also served SIGNED by our own API and swapped in at runtime
   // (RemoteJs.kt): a newer version replaces the installed helpers on the next ensure(); the same version is
   // never injected twice. Bump on every change (CI signs the file; the app pins by version).
-  var EXEC_VERSION = "2026-11-12.2";
+  var EXEC_VERSION = "2026-11-12.4";
   if (window.__ex && window.__ex.version === EXEC_VERSION) return;
   function hostOk() { return /(^|\.)breakoutprop\.com$/.test(location.hostname || ""); }
   function vis(el) { if (!el) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }
@@ -566,6 +566,31 @@
   // the symbol is the card's FIRST ticker word and the side its own Long / Short word, cross-checked against the
   // card's control labels (a disagreement makes the card unparsed, never guessed). A card is the highest ancestor of
   // its <dl> inside the region that holds no other <dl>. Only inside a region labelled by THIS tab's name.
+  // one CARD per <dl> inside a region: the highest ancestor of the <dl> that holds no other visible <dl>
+  function cardsOf(rg) {
+    var cards = [];
+    Array.prototype.slice.call(rg.querySelectorAll("dl")).filter(vis).forEach(function (dl) {
+      var c = dl;
+      for (var a = dl.parentElement; a && a !== rg && rg.contains(a); a = a.parentElement) {
+        if (Array.prototype.slice.call(a.querySelectorAll("dl")).filter(vis).length > 1) break;
+        c = a;
+      }
+      if (cards.indexOf(c) < 0) cards.push(c);
+    });
+    return cards;
+  }
+  // the card's HEAD leaves (before its <dl>, outside its buttons) and its controls' BASE/QUOTE pairs
+  function cardHead(c, dl) {
+    return Array.prototype.slice.call(c.querySelectorAll("*")).filter(function (x) {
+      return !x.children.length && vis(x) && !dl.contains(x) && before(x, dl) && !x.closest("button,[role=button]");
+    });
+  }
+  function cardPairs(c) {
+    var lab = Array.prototype.slice.call(c.querySelectorAll("button,[role=button]")).map(function (b) { return b.getAttribute("aria-label") || ""; }).join(" | ");
+    return (lab.match(/\b[A-Z0-9]{2,12}\/[A-Z]{2,5}\b/g) || []).filter(function (x) { return !/^(TP\/SL|SL\/TP)$/.test(x); }).map(function (x) { return x.split("/")[0]; });
+  }
+  // decimals shown in a price text ("2,022.06 USD" -> 2): the server compares a venue level at the precision shown
+  function dpOf(s) { var m = /\d[\d,]*\.(\d+)/.exec(s || ""); return m ? m[1].length : 0; }
   function readCards(cols, need, emptyRe, tabRe, count, strict) {
     var regions = all("[role=region]").filter(function (rg) { return tabRe.test((rg.getAttribute("aria-label") || "").trim()); });
     if (regions.length !== 1) return null;
@@ -593,6 +618,15 @@
       var head = Array.prototype.slice.call(c.querySelectorAll("*")).filter(function (x) {
         return !x.children.length && vis(x) && !dl.contains(x) && before(x, dl) && !x.closest("button,[role=button]");
       }).map(t).filter(Boolean);
+      // the card's HEAD figures (Net P&L): a leaf whose text maps to a column and whose next sibling holds the value
+      // ("Net P&L" span, then the "-1.23 USD" span); mapped like a dt/dd pair, inside the head only
+      Array.prototype.slice.call(c.querySelectorAll("*")).forEach(function (x) {
+        if (x.children.length || !vis(x) || dl.contains(x) || !before(x, dl) || x.closest("button,[role=button]")) return;
+        var k = colKey(t(x), cols), v = x.nextElementSibling;
+        if (!k || k === "skip" || k === "symbol" || k === "side" || f[k] !== undefined || !v || !vis(v) || !/\d/.test(t(v))) return;
+        if (hs.indexOf(t(x)) < 0) hs.push(t(x));
+        f[k] = v; if (!seen[k]) { seen[k] = 1; keys.push(k); }
+      });
       var sym = head.filter(function (x) { return /^[A-Z0-9]{2,12}(\/[A-Z]{2,5})?$/.test(x); }), sd = head.filter(function (x) { return /^(long|short)$/i.test(x); });
       var lab = Array.prototype.slice.call(c.querySelectorAll("button,[role=button]")).map(function (b) { return b.getAttribute("aria-label") || ""; }).join(" | ");
       // every BASE/QUOTE pair the controls name ("for ETH/USD", "Close ETH/USD long position"); "TP/SL" is a button word
@@ -903,16 +937,16 @@
   // long position", "Open position details for SOL/USD"). cardCtl returns the ONE button of that kind for `sym`, or
   // why not: no_cards (no Positions region / no card controls: the grid path decides) | none | cards_<n>.
   var CARD_CTL = {details: "open position details for ", tpsl: "manage tp\\/sl for ", close: "close "};
-  function cardCtl(sym, kind) {
+  function cardCtl(sym, kind) {   // reuses #25217's cardsOf / cardPairs: the card is the one whose controls all name `sym`
     var rg = all("[role=region]").filter(function (r) { return /^positions$/i.test((r.getAttribute("aria-label") || "").trim()); });
     if (rg.length !== 1) return "no_cards";
-    var bs = Array.prototype.slice.call(rg[0].querySelectorAll("button,[role=button]")).filter(vis);
-    var any = bs.some(function (x) { return /\b[A-Z0-9]{2,12}\/[A-Z]{2,5}\b/.test(x.getAttribute("aria-label") || ""); });
-    if (!any) return "no_cards";
+    var cards = cardsOf(rg[0]); if (!cards.length) return "no_cards";
     var b = base(sym).replace(/[^A-Z0-9]/g, "");
+    var mine = cards.filter(function (c) { var p = cardPairs(c); return p.length && p.every(function (x) { return x.toUpperCase() === b; }); });
+    if (!mine.length) return "none"; if (mine.length > 1) return "cards_" + mine.length;
     var re = new RegExp("^" + CARD_CTL[kind] + b + "\\/USD[TC]?" + (kind === "close" ? "\\s+(long|short)\\s+position" : "") + "$", "i");
-    var hits = bs.filter(function (x) { return re.test((x.getAttribute("aria-label") || "").trim()); });
-    if (!hits.length) return "none"; if (hits.length > 1) return "cards_" + hits.length;
+    var hits = Array.prototype.slice.call(mine[0].querySelectorAll("button,[role=button]")).filter(function (x) { return vis(x) && re.test((x.getAttribute("aria-label") || "").trim()); });
+    if (hits.length !== 1) return hits.length ? "ctl_" + hits.length : "no_ctl";
     return hits[0];
   }
   function sheetHit(sym, which) {
@@ -1692,7 +1726,19 @@
     // Like clickText, but also finds a chip that is a plain div/span/li (no button/role): the LEAF element whose
     // whole text is the label. Read-only view switch, same as clickText.
     clickTab: function (re) {
+      window.__exBracketsVia = false;
       if (window.__ex.clickText(re) === "clicked") return "clicked";
+      // PHONE-LIVE-ACCOUNT-FEED, NO-REINSTALL CHANNEL (operator 2026-11-12 ~09:17Z: "as much as it's going to be done
+      // without me having to reinstall the app every time, it's better"). The new Trade view has NO Closed orders tab
+      // (chips: Order form / Positions / Open orders), so the app's existing "show Closed orders, then closedRead()"
+      // step found nothing every pass. With no Closed tab on the page, that step now shows OPEN ORDERS instead and
+      // closedRead() answers with the venue's working orders (brackets) behind a marker row; the server splits them
+      // off as venue_brackets and records the Closed orders read as no_tab (src/prop/phone_executor.py). The app is
+      // unchanged: it already shows Positions again after this step.
+      // only on the NEW layout (its lists sit in role=region panels labelled Positions / Open orders); a legacy page
+      // without a Closed chip stays a miss ("none"), never a silent stand-in
+      if (/closed orders/i.test(re) && all("[role=region]").some(function (rg) { return /^(positions|open orders)$/i.test((rg.getAttribute("aria-label") || "").trim()); }) && !all("button,[role=tab],[role=button],a").some(function (x) { return /^(closed orders|trades)\b/i.test(tabText(t(x))); }) &&
+          window.__ex.clickText("^open orders\\b") === "clicked") { window.__exBracketsVia = true; return "clicked"; }
       var rx = new RegExp(re, "i");
       var b = all("div,span,li").filter(function (x) { var s = t(x); return s.length > 0 && s.length <= 30 && tabMatch(rx, s) && TAB_LABEL.test(s); })
         .filter(function (x, i, a) { return !a.some(function (y) { return y !== x && x.contains(y); }); })[0];
@@ -2078,8 +2124,71 @@
     },
     // CLOSED ORDERS READ (PROP-TRACKING): the shown Closed orders / Trades table, newest rows as the page orders
     // them, max 15. Only OUR orders' symbol, side, qty, price, status, time and realized P&L columns; nothing else.
+    // VENUE BRACKETS (PHONE-LIVE-ACCOUNT-FEED, 2026-11-12; read-only, no click). The Open orders view must already be
+    // shown (the app clicks the tab). Breakout draws ONE card per working order inside <div role="region"
+    // aria-label="Open orders"> (capture entry-prop-manual-f4c3fab02c11 009-placed, fixture
+    // breakout-open-orders-brackets): head = ticker, side word, "( Reduce )" on a closing order, "Type" + "Take profit" /
+    // "Stop loss" / "Limit" (+ an OCO / OTOCO chip); <dl> = Quantity, Progress, Limit price ("Market" or a price),
+    // Trigger price ("-" or a price); buttons "Edit order for SOL/USD" ... Each card -> {symbol, side, reduce, type
+    // (tp | sl | limit | market | other), group, qty, trigger, trigger_dp, limit}. A card whose ticker disagrees with its
+    // own controls, or a TP / SL card without a trigger number or quantity, makes the read "unparsed" (never guessed).
+    // state: read (rows [] only on the region's own empty text or a tab count of 0) | no_table (no region yet) |
+    // unparsed | count_mismatch | ambiguous (more than one region). Anything but "read" moves nothing on the server.
+    bracketsRead: function () {
+      if (!hostOk()) return {state: "bad_host"};
+      var tabRe = /^open orders\b/i, count = tabCount(tabRe);
+      var regions = all("[role=region]").filter(function (rg) { return tabRe.test((rg.getAttribute("aria-label") || "").trim()); });
+      if (regions.length > 1) return {state: "ambiguous", regions: regions.length, count: count};
+      if (!regions.length) return {state: "no_table", count: count, controls: controlsDump()};
+      var rg = regions[0], cards = cardsOf(rg), rows = [], bad = [];
+      if (!cards.length) {
+        if (count === 0 || /no (open )?orders/i.test(t(rg))) return {state: "read", rows: [], n_rows: 0, count: count, empty_by: count === 0 ? "count" : "region"};
+        return {state: "empty_unconfirmed", n_rows: 0, count: count};
+      }
+      cards.forEach(function (c, i) {
+        var dl = Array.prototype.slice.call(c.querySelectorAll("dl")).filter(vis)[0], f = {};
+        Array.prototype.slice.call(dl.querySelectorAll("dt")).filter(vis).forEach(function (dt) {
+          var dd = dt.nextElementSibling; if (!dd || dd.tagName !== "DD") return;
+          var l = t(dt).toLowerCase(); if (f[l] === undefined) f[l] = t(dd);
+        });
+        var head = cardHead(c, dl), ht = head.map(t).filter(Boolean);
+        var sym = ht.filter(function (x) { return /^[A-Z0-9]{2,12}(\/[A-Z]{2,5})?$/.test(x); });
+        var sd = ht.filter(function (x) { return /^(long|short|buy|sell)$/i.test(x); });
+        // the "Type" label's next sibling holds the type word AND its OCO chip as a child, so it is no leaf: read it whole
+        var tl = head.filter(function (x) { return /^type$/i.test(t(x)); })[0], tyEl = tl ? tl.nextElementSibling : null;
+        var tyText = tyEl ? t(tyEl) : "";
+        var pairs = cardPairs(c), s0 = sym.length ? sym[0].split("/")[0] : null;
+        if (s0 && pairs.some(function (x) { return x !== s0; })) s0 = null;
+        var type = /take\s*profit/i.test(tyText) ? "tp" : /stop\s*loss/i.test(tyText) ? "sl" : /^limit/i.test(tyText) ? "limit" : /^market/i.test(tyText) ? "market" : (tyText ? "other" : null);
+        var grp = ((/\b(otoco|oco|oto)\b/i.exec(tyText) || [])[1] || "").toUpperCase() || null;
+        var trig = f["trigger price"], lim = f["limit price"];
+        var o = {symbol: s0, side: sd.length === 1 ? sideOf(sd[0]) : null, reduce: ht.some(function (x) { return /^\(?\s*reduce\s*\)?$/i.test(x); }),
+          type: type, group: grp, qty: firstNumber(f["quantity"]), trigger: /\d/.test(trig || "") ? firstNumber(trig) : null,
+          trigger_dp: /\d/.test(trig || "") ? dpOf(trig) : null, limit: /\d/.test(lim || "") ? firstNumber(lim) : null,
+          limit_kind: /^market$/i.test((lim || "").trim()) ? "market" : (/\d/.test(lim || "") ? "price" : null)};
+        var miss = [];
+        if (!o.symbol) miss.push("symbol"); if (!o.side) miss.push("side"); if (!o.type) miss.push("type");
+        if ((o.type === "tp" || o.type === "sl") && !(o.trigger > 0)) miss.push("trigger");
+        if ((o.type === "tp" || o.type === "sl") && !(o.qty > 0)) miss.push("qty");
+        if (miss.length) bad.push(("c" + i + " miss=" + miss.join("+") + " " + ht.join(" ").replace(/\d/g, "d")).slice(0, 40));
+        rows.push(o);
+      });
+      if (rows.length > ROW_CAP) return {state: "too_many_rows", n_rows: rows.length, count: count};
+      if (bad.length) return {state: "unparsed", n_rows: rows.length, count: count, cells: bad.slice(0, 6)};
+      if (count !== null && count !== rows.length) return {state: "count_mismatch", n_rows: rows.length, count: count};
+      return {state: "read", rows: rows, n_rows: rows.length, count: count, layout: "cards"};
+    },
     closedRead: function () {
       if (!hostOk()) return {state: "bad_host"};
+      if (window.__exBracketsVia) {
+        // the Open orders view stands in for the absent Closed tab (see clickTab): the venue's working orders, behind
+        // ONE marker row the server keys on; a read that is not clean says so ("brackets_<state>"), never rows
+        var b = window.__ex.bracketsRead();
+        if (b.state === "no_table" || b.state === "empty_unconfirmed") return {state: b.state, headers: [], controls: b.controls || []};
+        if (b.state !== "read") return {state: ("brackets_" + b.state).slice(0, 24), headers: [], cells: b.cells || [], controls: []};
+        return {state: "read", via: "open_orders", count: b.count,
+          rows: [{venue_brackets_read: true, n: b.rows.length}].concat(b.rows.map(function (r) { var o = {venue_bracket: true}; for (var k in r) o[k] = r[k]; return o; }))};
+      }
       return readTable(CLOSED_COLS, ["symbol", "side"], /no (closed )?orders|no (trades|history)/i, /^(closed orders|trades)\b/i, false);
     },
     // ---- POSITION SHEET (BREAKOUT-SL-AMEND-CLICK) ----

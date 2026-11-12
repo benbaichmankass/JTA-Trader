@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "PHONE-LIVE-ACCOUNT-FEED part B, NO APK: the venue's working orders (each TP/SL leg) are read off Breakout's Open orders view by the server-served exec.js (bracketsRead, read-only). With no Closed orders tab on the new Trade view, the app's existing 'show Closed orders, closedRead()' step shows Open orders instead and answers the brackets behind one marker row; the server splits them off as MEASURED venue_brackets (Closed orders recorded no_tab) and moves the journaled stop/target of each open position to the ONE closing-side SL/TP the venue shows, through the normal kind:amend report (source phone_venue_read) plus phone_trail.note_human_amend. Missing or ambiguous venue brackets are reported, never written. Adds no gate.",
+  "hold_text": "Tier-2 (prop journal writes on a live account). Stacked on #25212 and #25197 (merge those first). No app install (operator rule 2026-11-12: no reinstall where avoidable). The manager merges and deploys; the lane observes /api/bot/prop/status breakout_2: brackets_state read with brackets_via closed_tab_channel, venue_brackets carrying each position's SL/TP, and a hand-moved stop appearing as rule_distance.open_risk.positions[].sl within one cadence."
+}
