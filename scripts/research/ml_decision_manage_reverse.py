@@ -33,8 +33,8 @@ import pandas as pd
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO), str(REPO / "scripts" / "research")]
-import ml_decision_entry as E
-import ml_decision_manage as M
+import ml_decision_entry as E  # noqa: E402
+import ml_decision_manage as M  # noqa: E402
 
 SCHEMA = "ml_decision_manage_reverse/1"
 RULES = ["own_le0", "opp_gt_tau", "either"]
