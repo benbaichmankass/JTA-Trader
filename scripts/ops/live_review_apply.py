@@ -239,16 +239,93 @@ def _prop_tickets(pkg_id: str) -> List[Dict[str, Any]]:
         conn.close()
 
 
+#: A prop-only package is stamped ``emitted`` (``prop_ticket_emitted``) the moment its ticket goes out
+#: (``src/units/accounts/execute.py``: prop writes no ``trades`` row, so ``open`` would be mis-swept as an
+#: orphan) and KEEPS that status while the position is live on the venue. Until PHONE-LIVE-ACCOUNT-FEED
+#: (2026-11-11) every apply refused such a package as "not open" before any account was asked: the SOL
+#: short pkg-50f5eed272f64197 on tradeify_1 + velotrade_1 refused three directed tightens
+#: (2026-11-09 20:15Z, 2026-11-10 15:51Z / 15:52Z) and its stop stayed at the entry stop 89.105.
+PKG_LIVE, PKG_NOT_LIVE, PKG_COULD_NOT_LOOK = "live", "not_live", "could_not_look"
+
+
+def package_live_state(pkg: Optional[Dict[str, Any]]) -> str:
+    """``live`` when the package can carry an apply: ``open``, or ``emitted`` with at least one
+    placed/filled prop ticket. ``could_not_look`` when an ``emitted`` package's tickets are unreadable
+    (never read as "not live")."""
+    if not pkg:
+        return PKG_NOT_LIVE
+    st = str(pkg.get("status") or "")
+    if st == "open":
+        return PKG_LIVE
+    if st != "emitted":
+        return PKG_NOT_LIVE
+    try:
+        return PKG_LIVE if _prop_tickets(str(pkg.get("order_package_id"))) else PKG_NOT_LIVE
+    except Exception:  # noqa: BLE001 -- an unread prop journal is could-not-look, never "closed"
+        try:
+            from src.prop import prop_journal
+
+            if not prop_journal.tables_present():     # no prop journal at all: no ticket can be live
+                return PKG_NOT_LIVE
+        except Exception:  # noqa: BLE001
+            pass
+        return PKG_COULD_NOT_LOOK
+
+
+#: The VM executor posts ``account_status`` every ~5 min; an older venue read is not a leg's stop.
+VENUE_STOP_MAX_AGE_S = 30 * 60
+
+
+def venue_prop_stop(account_id: str, symbol: str, direction: str,
+                    now: Optional[datetime] = None) -> Optional[float]:
+    """The stop RESTING on the venue for this account's position (PHONE-LIVE-ACCOUNT-FEED): the latest
+    ``prop_account_status`` positions read (``positions_state: read``, provenance ``MEASURED``, at most
+    :data:`VENUE_STOP_MAX_AGE_S` old). This is what makes a HAND-MOVED stop visible to the apply: the
+    ticket's ``sl`` is only what the bot instructed. ``None`` (fall back to the ticket) when the read is
+    stale, unmeasured, or ambiguous: more than one venue position, or more than one live ticket, on this
+    account + symbol + side (a netted venue position cannot be attributed to one ticket)."""
+    from src.prop import prop_journal
+
+    try:
+        st = prop_journal.latest_account_status(account_id)
+        if not st:
+            return None
+        raw = json.loads(st.get("raw") or "{}")
+        at = datetime.fromisoformat(str(st.get("reported_at")).replace("Z", "+00:00"))
+        if at.tzinfo is None:
+            at = at.replace(tzinfo=timezone.utc)
+        if ((now or datetime.now(timezone.utc)) - at).total_seconds() > VENUE_STOP_MAX_AGE_S:
+            return None
+        if raw.get("positions_state") != "read" or str(raw.get("positions_provenance") or "").upper() != "MEASURED":
+            return None
+        sym, d = str(symbol or "").upper(), str(direction or "").lower()
+        hits = [q for q in (raw.get("positions") or [])
+                if str(q.get("symbol") or "").upper() == sym and str(q.get("direction") or "").lower() == d]
+        if len(hits) != 1:
+            return None
+        conn = prop_journal._connect(read_only=True)
+        try:
+            n = conn.execute("SELECT COUNT(*) FROM prop_tickets WHERE account_id = ? AND UPPER(symbol) = ? "
+                             "AND LOWER(direction) = ? AND status IN (?, ?)",
+                             (account_id, sym, d, *_PROP_PARENT)).fetchone()[0]
+        finally:
+            conn.close()
+        return _f(hits[0].get("sl")) if n == 1 else None
+    except Exception:  # noqa: BLE001 -- an unread status falls back to the ticket's stop, never 0
+        return None
+
+
 def _open_packages(db) -> List[Dict[str, Any]]:
     import sqlite3
 
     conn = db.connect()
     try:
         conn.row_factory = sqlite3.Row
-        return [dict(r) for r in conn.execute(
-            "SELECT * FROM order_packages WHERE status = 'open' ORDER BY created_at")]
+        rows = [dict(r) for r in conn.execute(
+            "SELECT * FROM order_packages WHERE status IN ('open', 'emitted') ORDER BY created_at")]
     finally:
         conn.close()
+    return [r for r in rows if package_live_state(r) == PKG_LIVE]
 
 
 def _get_package(db, pkg_id: str) -> Optional[Dict[str, Any]]:
@@ -351,9 +428,12 @@ def gather_legs(db, pkg: Dict[str, Any]) -> List[Dict[str, Any]]:
     for tk in tickets:
         meta = _notes(tk.get("meta"))
         trail = meta.get("phone_trail") if isinstance(meta.get("phone_trail"), dict) else {}
+        venue_sl = None if trail.get("resting_sl") else venue_prop_stop(
+            str(tk.get("account_id")), str(tk.get("symbol") or ""), direction)
         out.append({"kind": "ticket", "account_id": tk.get("account_id"), "row": tk,
-                    "leg_sl": tightest(direction, trail.get("resting_sl") or tk.get("sl"),
+                    "leg_sl": tightest(direction, trail.get("resting_sl") or venue_sl or tk.get("sl"),
                                        lri.sl_floor_from(meta)),
+                    "venue_sl": venue_sl,
                     "review_ids": applied_review_ids(meta)})
     return out
 
@@ -1137,7 +1217,11 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
     out: Dict[str, Any] = {"intent": intent.to_dict(), "apply": apply, "accounts": [],
                            "exit": EXIT_OK, "package_sl_moved": False, "flags": []}
     pkg = _get_package(db, intent.order_package_id)
-    if not pkg or pkg.get("status") != "open":
+    live_state = package_live_state(pkg)
+    if live_state == PKG_COULD_NOT_LOOK:
+        out.update(exit=EXIT_UNREADABLE, detail=f"package {intent.order_package_id}: prop tickets unreadable")
+        return out
+    if live_state != PKG_LIVE:
         out.update(exit=EXIT_REFUSED, detail=f"package {intent.order_package_id} not open")
         return out
     mandate_ok = bool(intent.mandate) and intent.mandate in (granted if granted is not None else _granted_mandates())
