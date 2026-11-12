@@ -41,8 +41,8 @@ on:
   schedule:
     - cron: "12 * * * *"
   workflow_dispatch:
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [dashboard-edge-watch-now]
 
 permissions:
   contents: read
@@ -57,10 +57,10 @@ jobs:
     if: |
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       (github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'dashboard-edge-watch-now'))
+      (github.event_name == 'repository_dispatch' &&
+       (github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'dashboard-edge-watch-now'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -226,7 +226,7 @@ jobs:
             }
 
       - name: Reply to trigger issue (issue-driven path)
-        if: github.event_name == 'issues'
+        if: github.event_name == 'repository_dispatch'
         uses: actions/github-script@v7
         env:
           EDGE_SUMMARY: ${{ steps.probe.outputs.summary }}
@@ -239,12 +239,12 @@ jobs:
             const emoji = overall === 'ok' ? '✅' : '🚨';
             await github.rest.issues.createComment({
               owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               body: `${emoji} **dashboard-edge-watch** ran — overall: ${overall}.\n\n${summary}\n\nRun: ${runUrl}`,
             });
             await github.rest.issues.update({
               owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               state: 'closed', state_reason: overall === 'ok' ? 'completed' : 'not_planned',
             });
 

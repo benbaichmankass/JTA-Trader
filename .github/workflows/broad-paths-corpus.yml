@@ -26,8 +26,8 @@ on:
         description: "Concurrent shard jobs. Default 3: research_compute.yaml caps github_runner at 3."
         required: false
         default: "3"
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [broad-paths-corpus-request]
 
 permissions:
   contents: read
@@ -38,7 +38,7 @@ concurrency:
 
 jobs:
   plan:
-    if: github.event_name == 'workflow_dispatch' || (contains(github.event.issue.labels.*.name, 'broad-paths-corpus-request') && (github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]'))
+    if: github.event_name == 'workflow_dispatch' || (contains(github.event.client_payload.issue.labels.*.name, 'broad-paths-corpus-request') && (github.event.client_payload.issue.user.login == github.repository_owner || github.event.client_payload.issue.user.login == 'github-actions[bot]'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     outputs:
@@ -103,7 +103,7 @@ jobs:
 
   merge:
     needs: [plan, shard]
-    if: always() && needs.plan.result == 'success' && (github.event_name == 'workflow_dispatch' || (contains(github.event.issue.labels.*.name, 'broad-paths-corpus-request') && (github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]')))
+    if: always() && needs.plan.result == 'success' && (github.event_name == 'workflow_dispatch' || (contains(github.event.client_payload.issue.labels.*.name, 'broad-paths-corpus-request') && (github.event.client_payload.issue.user.login == github.repository_owner || github.event.client_payload.issue.user.login == 'github-actions[bot]')))
     runs-on: ubuntu-latest
     timeout-minutes: 95
     permissions:
@@ -161,7 +161,7 @@ jobs:
             Actions artifact `broad-paths-${{ needs.plan.outputs.corpus_id }}-data` of run ${{ github.run_id }}.
           verify-merged: "true"
       - name: Report on the dispatching issue
-        if: always() && github.event_name == 'issues'
+        if: always() && github.event_name == 'repository_dispatch'
         uses: actions/github-script@v7
         with:
           script: |
@@ -169,7 +169,7 @@ jobs:
             const p = `comms/research/broad_paths/${{ needs.plan.outputs.corpus_id }}/manifest.json`;
             const c = fs.existsSync(p) ? JSON.stringify(JSON.parse(fs.readFileSync(p)).counts, null, 1) : '(no manifest)';
             await github.rest.issues.createComment({owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               body: `broad-paths-corpus run ${context.runId}\n\n\`\`\`\n${c}\n\`\`\``});
             await github.rest.issues.update({owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number, state: 'closed'});
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), state: 'closed'});
