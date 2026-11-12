@@ -51,6 +51,18 @@ _DEFAULT_LIMIT = 200
 _MAX_SYMBOLS = 12
 
 
+#: T3a (UI-CHART-CRYPTO-LIVE, docs/plans/UI-TWO-SURFACE-DESIGN-2026-11.md § 4.3): crypto (*USDT, Bybit)
+#: charts tick from Bybit's public WebSocket IN THE BROWSER, so this socket no longer fetches their
+#: candles through the VM. Positions for those symbols still stream here. Each one gets ONE
+#: ``candles_source`` frame per connection saying where its candles come from.
+BROWSER_FED_SUFFIXES = ("USDT",)
+BROWSER_FEED = {"source": "browser", "feed": "bybit_public_ws", "url": "wss://stream.bybit.com/v5/public/linear"}
+
+
+def _browser_fed(symbol: str) -> bool:
+    return symbol.upper().endswith(BROWSER_FED_SUFFIXES)
+
+
 def _candle_ttl(symbol: str) -> float:
     """Crypto (Bybit) can refresh fast; IBKR futures must not (pacing)."""
     return _CRYPTO_CANDLE_TTL if symbol.upper().endswith("USDT") else _OTHER_CANDLE_TTL
@@ -78,14 +90,20 @@ async def market_ws(ws: WebSocket) -> None:
     loop = asyncio.get_running_loop()
     last_fetch: dict[str, float] = {}
 
-    await ws.send_json({"type": "hello", "symbols": symbols, "interval": interval})
+    candle_symbols = [s for s in symbols if not _browser_fed(s)]
+    browser_fed = [s for s in symbols if _browser_fed(s)]
+    await ws.send_json({"type": "hello", "symbols": symbols, "interval": interval,
+                        "candle_symbols": candle_symbols, "browser_fed": browser_fed})
+    for sym in browser_fed:
+        await ws.send_json({"type": "candles_source", "symbol": sym, "interval": interval, **BROWSER_FEED,
+                            "reason": "crypto candles come from the browser feed; this socket no longer fetches them"})
 
     try:
         while True:
             now = time.monotonic()
 
             # ── candles per symbol (refreshed on a per-asset TTL) ──
-            for sym in symbols:
+            for sym in candle_symbols:
                 if now - last_fetch.get(sym, 0.0) < _candle_ttl(sym):
                     continue
                 last_fetch[sym] = now

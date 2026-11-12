@@ -14,7 +14,7 @@ builders can call a single helper and stay focused on signal logic.
 The two existing builders both did the same shape of work:
 
   1. Pick the connector based on ``settings["EXCHANGE"]``.
-  2. Honour ``BYBIT_TESTNET``.
+  2. Honour ``BYBIT_TESTNET`` (explicit ``true`` only; unset = mainnet, see :func:`bybit_testnet`).
   3. Call ``get_ohlcv(symbol, timeframe, limit=N)``.
   4. Convert list-of-rows → ``pandas.DataFrame`` with the canonical
      column ordering.
@@ -70,11 +70,10 @@ def _client_cache_key(settings: Dict[str, Any]) -> Optional[tuple]:
         settings.get("EXCHANGE", settings.get("exchange", "bybit"))
     ).strip().lower()
     if name == "bybit":
-        testnet_raw = str(os.environ.get("BYBIT_TESTNET", "true")).strip().lower()
         return (
             "bybit",
             _connector_class_id("src.exchange.bybit_connector", "BybitConnector"),
-            testnet_raw not in {"false", "0", "no"},
+            bybit_testnet(),
             settings.get("BYBIT_API_KEY"),
             settings.get("BYBIT_API_SECRET"),
         )
@@ -147,6 +146,19 @@ def _connector_class_id(module_path: str, attr: str):
         return None
 
 
+#: PROP-CANDLE-FEED-FIX (MEASURED 2026-11-12 14:13-15:33Z, ict-prop-executor@tradeify_1): every prop trail cycle
+#: logged ``candle feed implausible: bar low 22.93 < 0.5 x entry 87.64`` for SOLUSDT 4h (feed max_high 172.22), while
+#: the live trader and the web API (both carry ``BYBIT_TESTNET=false``) read mainnet bars around 81. The prop tick
+#: (scripts/ops/prop_executor_tick.sh) exports only its mode / login / token keys, so this builder's old default
+#: ``"true"`` sent EVERY candle read in that process (trail, SL/TP alert, invalidation prompt, fill inference, overview)
+#: to the Bybit TESTNET market, whose prices are not the real market. A market-data read is never meant to land on
+#: testnet by omission: an UNSET variable now means MAINNET, the same default ``BybitConnector`` and
+#: ``src/units/accounts/clients.py`` already use. An explicit ``BYBIT_TESTNET=true`` is still honoured.
+def bybit_testnet() -> bool:
+    """True only when ``BYBIT_TESTNET`` is explicitly truthy (``true`` / ``1`` / ``yes``); unset = mainnet."""
+    return str(os.environ.get("BYBIT_TESTNET", "false")).strip().lower() in {"true", "1", "yes"}
+
+
 def _build_exchange_client(settings: Dict[str, Any]):
     """Return a connector instance for the configured exchange.
 
@@ -196,10 +208,7 @@ def _build_exchange_client_uncached(settings: Dict[str, Any]):
     exchange_name = str(
         settings.get("EXCHANGE", settings.get("exchange", "bybit"))
     ).strip().lower()
-    bybit_testnet_raw = str(
-        os.environ.get("BYBIT_TESTNET", "true")
-    ).strip().lower()
-    testnet = bybit_testnet_raw not in {"false", "0", "no"}
+    testnet = bybit_testnet()
 
     if exchange_name == "bybit":
         from src.exchange.bybit_connector import BybitConnector
