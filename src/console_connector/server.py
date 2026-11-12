@@ -129,10 +129,20 @@ WAKE_API = os.environ.get("WAKE_TOGGLES_API") or "https://ict-bot.duckdns.org/ap
 
 
 def wake_toggles_read() -> dict[str, Any]:
-    """Live read of the VM's switches (public GET). ``could_not_look`` is a state, never 'all off'."""
+    """Live read of the VM's switches (GET). ``could_not_look`` is a state, never 'all off'.
+
+    Sends the read-only service bearer when one is configured: once the site gate
+    (``SITE_AUTH_ENFORCE``) is on, an anonymous GET here is a 401 (UI-OAUTH-SIGNIN).
+    The connector host holds that value as ``WAKE_TOGGLES_WRITE_TOKEN``
+    (``trainer-console-connector-install.yml`` maps it from ``DASHBOARD_API_TOKEN``)."""
     import urllib.request
+    tok = (os.environ.get("DASHBOARD_API_TOKEN", "").strip()
+           or os.environ.get("WAKE_TOGGLES_WRITE_TOKEN", "").strip())
+    headers = {"User-Agent": "jta-console-connector"}
+    if tok:
+        headers["Authorization"] = "Bearer " + tok
     try:
-        req = urllib.request.Request(WAKE_API, headers={"User-Agent": "jta-console-connector"})
+        req = urllib.request.Request(WAKE_API, headers=headers)
         with urllib.request.urlopen(req, timeout=8) as r:  # noqa: S310 fixed https URL
             doc = json.loads(r.read())
         doc["as_of"] = data._iso(data._now())

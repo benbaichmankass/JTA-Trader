@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "UI-OAUTH-SIGNIN prep (lane dispatched by AM-UI for Manager Session 2026-11-11a). Tests + client-side retrofits only, nothing in src/web/api or deploy. (1) tests/test_web_site_auth_route_walk.py walks app.routes with SITE_AUTH_ENFORCE on: every /api/diag/* and /api/bot/prop/phone/* route refuses an anonymous caller (401/403/503), every other route gets the gate's own 401, and a gate 401 still carries CORS headers. (2) The GET callers named in docs/design/site-auth-consumer-inventory-2026-11.md send the DASHBOARD_API_TOKEN bearer when it is in their environment (the gate ignores it while off, so behaviour is unchanged today). trader_import_closure decide = SKIP on this file set."
+}
