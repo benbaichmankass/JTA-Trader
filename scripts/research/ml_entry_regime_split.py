@@ -25,8 +25,8 @@ import pandas as pd
 REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO), str(REPO / "scripts" / "research")]
 
-import ml_decision_entry as E
-import ml_decision_vol_decomp as VD
+import ml_decision_entry as E  # noqa: E402
+import ml_decision_vol_decomp as VD  # noqa: E402
 
 RULE_ID = "RULE-RQ20261112-cd01-01-REGIME-SELECT-COST"
 TAU = 0.1
@@ -263,7 +263,9 @@ def self_test() -> int:
     assert abs(s["net"]["excess"]["mean"] - s["net"]["tilt"]["mean"] - s["net"]["select"]["mean"]) < 1e-3
     # R1 identity and branch coverage on planted summaries
     def S(taken, pool, cost, n=500):
-        c = lambda m: {"mean": m, "se_ts_clustered": 0.02, "n": n}
+        def c(m):
+            return {"mean": m, "se_ts_clustered": 0.02, "n": n}
+
         return {"n": n, "net": {"taken": c(taken), "pool": c(pool), "excess": c(taken - pool)}, "cost": {"taken": c(cost)}}
     assert judge_r1(S(-0.13, -0.15, 0.07), S(0.007, 0.0, 0.066))["verdict"].startswith("REGIME")
     assert judge_r1(S(-0.13, 0.0, 0.07), S(0.007, 0.0, 0.066))["verdict"].startswith("SELECTION")
@@ -274,7 +276,7 @@ def self_test() -> int:
     assert judge_r3({"atr_pct": {"net": 0.49, "gross": -0.08}})["verdict"] == "COST-ARTIFACT"
     assert judge_r3({"atr_pct": {"net": 0.49, "gross": 0.4}})["verdict"] == "SAME-RANKING"
     ic = rank_ic(tab)
-    assert set(ic) == {"atr_pct", "vol24", "ret_24"} and all(-1 <= ic[f][l] <= 1 for f in ic for l in ("net", "gross"))
+    assert set(ic) == {"atr_pct", "vol24", "ret_24"} and all(-1 <= ic[f][k] <= 1 for f in ic for k in ("net", "gross"))
     print("self-test ok")
     return 0
 
