@@ -184,8 +184,8 @@ def test_phone_limit_equals_the_probe_limit_and_probe_agrees_with_it():
     def fetch(age):
         return lambda path: ("read", {"phone_heartbeat": {"at": (now - td(minutes=age)).isoformat()}})
     live = lambda acct: "live"            # noqa: E731
-    assert ps.probe_phone_heartbeat(now, fetch(3), live)["status"] == ps.OK
-    assert ps.probe_phone_heartbeat(now, fetch(25), live)["status"] == ps.BREACHED
+    assert ps.probe_phone_heartbeat(now, fetch(3), live, lambda a: ["s"])["status"] == ps.OK
+    assert ps.probe_phone_heartbeat(now, fetch(25), live, lambda a: ["s"])["status"] == ps.BREACHED
     assert ps.probe_phone_heartbeat(now, fetch(25), lambda a: "dry_run")["status"] == ps.OK     # not live -> not required
 
 

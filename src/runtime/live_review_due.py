@@ -77,6 +77,9 @@ MARKET_EVENTS = ("swing", "vol_regime", "funding", "calendar")
 #: vol_regime's entry ATR when the path history lacks the entry bar: the strategy's signal-time ATR stamped on the
 #: package (order_packages.meta.atr). Always named in the event's ``why`` so it never reads as path-measured.
 ENTRY_ATR_PACKAGE_META = "package_meta"
+#: Package-meta keys that carry the strategy's signal-time ATR, in read order (13 legs stamp `atr`; ml_entry,
+#: ml_entry_eq and e4_oi_shock_1h stamp `atr14`). The key read is named wherever the value is used.
+ENTRY_ATR_META_KEYS = ("atr", "atr14")
 
 #: Pre-screen events (LTR-PRACTICE-REDESIGN): evaluated only when configured.
 #: The per-package auto mandate's review cadence (src/runtime/ltr_auto_mandate.py::CADENCE_EVENT).
@@ -722,7 +725,8 @@ def market_events(row: Dict[str, Any], ctx: Optional[Dict[str, Any]],
                                        "and the package carries no entry ATR")
             if a0 is not None and a0 > 0 and a1 is not None:
                 ratio = a1 / a0
-                tag = "" if src == "path_history" else f" (entry_atr_source={src}: not path-measured)"
+                key = (ctx.get("venue") or {}).get("meta_atr_key") or "atr"
+                tag = "" if src == "path_history" else f" (entry_atr_source={src}, meta.{key}: not path-measured)"
                 up, dn = float(vr.get("expand_ratio", 1.5)), float(vr.get("contract_ratio", 0.67))
                 if ratio >= up:
                     out.append(("vol_regime", "expand", f"ATR now/entry {ratio:.2f} >= {up:g}{tag}"))
@@ -998,6 +1002,10 @@ def prescreen(row: Dict[str, Any], prior: Dict[str, Any], ctx: Optional[Dict[str
             if tel_reason is None and peak_r is None and held is not None \
                     and row.get("peak_state") == "thin_window":
                 miss("stall", f"peak_r thin_window: {int(held)} bar(s) since entry; need 2")
+            elif tel_reason is None and peak_r is None and row.get("peak_state") == "unanchored":
+                # Not youth: telemetry cannot anchor the since-entry window because the package meta carries no
+                # entry_time (the strategy does not publish one), so peak_r is never measured for this leg.
+                miss("stall", "peak_r unanchored: package meta has no entry_time (the strategy does not publish it)")
             else:
                 miss("stall", tel_reason or "bars_held / peak_r unknown")
         else:
@@ -1602,10 +1610,17 @@ def read_venue_context(pkgs: List[str], db_path: Optional[str] = None) -> Dict[s
         if lv is None:
             out[p] = {"state": "could_not_look", "reason": "package_not_in_order_packages"}
             continue
-        meta_atr = None
+        meta_atr, meta_atr_key = None, None
         try:
             m = json.loads(lv["meta"]) if lv["meta"] else {}
-            meta_atr = _f(m.get("atr")) if isinstance(m, dict) else None
+            # The strategy's signal-time ATR: most legs stamp `atr`; ml_entry / ml_entry_eq / e4_oi_shock_1h stamp
+            # `atr14` (same meaning, ATR14 at the decision bar). RM-AM-DUE-COULDNOTLOOK re-score 2026-11-12 21:13Z:
+            # two ml_entry packages read "no entry ATR" because only `atr` was read.
+            for key in ENTRY_ATR_META_KEYS:
+                v = _f(m.get(key)) if isinstance(m, dict) else None
+                if v is not None and v > 0:
+                    meta_atr, meta_atr_key = v, key
+                    break
         except (ValueError, TypeError):
             meta_atr = None  # allow-silent: an unreadable meta is "no entry ATR", reported as such downstream
         # LTR-MECH-PROP-MIRROR-BRACKET: when the package stop last moved -- the stamped mover record only. A package
@@ -1614,7 +1629,8 @@ def read_venue_context(pkgs: List[str], db_path: Optional[str] = None) -> Dict[s
         from src.runtime.sl_mover import last_sl_move_ts
         moved_at = last_sl_move_ts(lv["meta"])
         out[p] = {"state": "read", "snapshots": snaps.get(p, []), "pkg_sl": _f(lv["sl"]),
-                  "pkg_tp": _f(lv["tp"]), "meta_atr": meta_atr, "pkg_sl_changed_at": moved_at}
+                  "pkg_tp": _f(lv["tp"]), "meta_atr": meta_atr, "meta_atr_key": meta_atr_key,
+                  "pkg_sl_changed_at": moved_at}
     return out
 
 
