@@ -187,3 +187,12 @@ def test_live_review_prop_vm_move_tp_is_queued_for_velotrade_and_refused_for_tra
     assert ok["result"] == lra.X_APPLIED
     no = lra._exec_prop_vm_tp({"row": {"ticket_id": "prop-manual-abcdef", "account_id": "tradeify_1"}}, V, _intent())
     assert no["result"] == lra.X_REFUSED and "TP_AMEND_SUPPORTED" in no["detail"]
+
+
+def test_the_action_wrapper_resolves_the_runtime_journal_like_its_siblings():
+    """Issue #25083: the first dry run said "ticket not readable in the prop journal" because the wrapper never loaded
+    the runtime env (DATA_DIR / TRADE_JOURNAL_DB), so prop_journal opened a default path on the VM."""
+    sh = (Path(__file__).resolve().parents[1] / "scripts/ops/amend_prop_bracket_action.sh").read_text()
+    assert 'DB_PATH="$(runtime_db_path)"' in sh
+    assert 'export TRADE_JOURNAL_DB="${DB_PATH}"' in sh
+    assert sh.index("runtime_db_path") < sh.index('"${PY}" scripts/ops/amend_prop_bracket.py')
