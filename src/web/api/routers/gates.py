@@ -20,7 +20,7 @@ import re
 import threading
 import time
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
@@ -45,7 +45,7 @@ def _bg_loop() -> None:
         time.sleep(BG_INTERVAL_S)
         try:
             gate_registry.refresh_if_stale()
-        except Exception as exc:  # noqa: BLE001 — never kill the loop; the next pass retries
+        except Exception as exc:  # noqa: BLE001  # allow-silent: logged at ERROR; the loop must survive and the next pass retries
             logger.error("gate_registry background refresh failed: %s", exc)
 
 
@@ -66,7 +66,7 @@ def _refresh_and(fn):
     refresh_error = None
     try:
         gate_registry.refresh_if_stale()
-    except Exception as exc:  # noqa: BLE001 — serve what the table holds; say the refresh failed
+    except Exception as exc:  # noqa: BLE001  # allow-silent: logged at ERROR and returned as refresh.read_state=failed + error
         refresh_error = f"refresh failed: {exc}"
         logger.error("gate_registry: %s", refresh_error)
     conn = gate_registry.connect()
@@ -77,9 +77,9 @@ def _refresh_and(fn):
 
 
 @router.get("/api/bot/gates")
-async def list_gates(category: Optional[str] = None, decision: Optional[str] = None,
-                     state: Optional[str] = None, real_money: Optional[str] = None,
-                     decided_since: Optional[str] = None) -> Any:
+async def list_gates(category: str | None = None, decision: str | None = None,
+                     state: str | None = None, real_money: str | None = None,
+                     decided_since: str | None = None) -> Any:
     _ensure_bg()
     if decision and decision not in gate_registry.DECISIONS:
         raise HTTPException(status_code=400, detail=f"decision must be one of {list(gate_registry.DECISIONS)}")
@@ -92,7 +92,7 @@ async def list_gates(category: Optional[str] = None, decision: Optional[str] = N
             _refresh_and, lambda c: gate_registry.list_gates(
                 c, category=category, decision=decision, state=state, real_money=real_money,
                 decided_since=decided_since))
-    except Exception as exc:  # noqa: BLE001 — "could not look" is a state, never an empty list
+    except Exception as exc:  # noqa: BLE001  # allow-silent: logged at ERROR; 503 readState=unreadable, gates=null (never an empty list)
         logger.error("gate_registry read failed: %s", exc)
         return JSONResponse(status_code=503, content={
             "readState": "unreadable", "as_of": _as_of(), "error": str(exc)[:300],
@@ -115,7 +115,8 @@ async def get_gate(gate_id: str) -> Any:
         raise HTTPException(status_code=400, detail="bad gate id")
     try:
         found, refresh, refresh_error = await run_in_threadpool(_refresh_and, lambda c: gate_registry.get_gate(c, gate_id))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # allow-silent: 503 readState=unreadable with the error, never a 200
+        logger.error("gate_registry read failed: %s", exc)
         return JSONResponse(status_code=503, content={"readState": "unreadable", "as_of": _as_of(),
                                                       "error": str(exc)[:300], "gate": None, "history": None})
     if found is None:
@@ -127,7 +128,7 @@ async def get_gate(gate_id: str) -> Any:
 
 
 @router.post("/api/bot/gates/{gate_id}/decision")
-async def post_gate_decision(gate_id: str, request: Request, session: dict = Depends(require_session)) -> Any:
+async def post_gate_decision(gate_id: str, request: Request, _session: dict = Depends(require_session)) -> Any:  # noqa: B008
     """Record the operator's decision on one gate. It changes no code; Claude implements it."""
     if not GATE_ID_RE.match(gate_id):
         raise HTTPException(status_code=400, detail="bad gate id")

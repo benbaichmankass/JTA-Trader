@@ -110,7 +110,7 @@ def test_seed_decisions_drift_and_unregistered(tree):
 
 
 def test_new_env_flag_is_reported_and_implementation_is_detected(tree):
-    root, db, alerts = tree
+    root, db, _alerts = tree
     gr.refresh(db, root)
     (root / "src/runtime/c.py").write_text('Y = os.environ.get("NEW_THING_ENABLED")\n')
     (root / "src/runtime/b.py").write_text("def gate():\n    return True  # removed\n")
@@ -180,7 +180,7 @@ def client(tree):
 
 
 def test_api_list_get_and_decide(client):
-    c, (root, db, _) = client
+    c, _tree = client
     r = c.get("/api/bot/gates")
     assert r.status_code == 200, r.text
     body = r.json()

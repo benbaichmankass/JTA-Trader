@@ -46,9 +46,10 @@ import re
 import sqlite3
 import subprocess
 import threading
+from collections.abc import Iterable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any
 
 from src.utils.paths import repo_root, trade_journal_db_path
 
@@ -72,7 +73,7 @@ REFRESH_MAX_AGE = timedelta(hours=1)
 _ENV_FLAG_RE = re.compile(r"""["']([A-Z][A-Z0-9_]*_(?:ENABLED|DISABLED))["']""")
 _PATH_RE = re.compile(r"((?:[\w.-]+/)+[\w.-]+\.(?:py|ya?ml|sh|json|kt|js|ts|toml|txt|md))")
 _PR_RE = re.compile(r"\(#(\d+)\)")
-_ADDED_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})\s+(.*)$", re.S)
+_ADDED_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})\s+(.*)$", re.DOTALL)
 
 _refresh_lock = threading.Lock()
 
@@ -83,7 +84,7 @@ def _now() -> str:
 
 # ─────────────────────────────────────────────────────────────── schema
 
-def connect(db_path: Optional[str] = None) -> sqlite3.Connection:
+def connect(db_path: str | None = None) -> sqlite3.Connection:
     conn = sqlite3.connect(db_path or str(trade_journal_db_path()), timeout=10)
     conn.row_factory = sqlite3.Row
     ensure_tables(conn)
@@ -152,7 +153,7 @@ def ensure_tables(conn: sqlite3.Connection) -> None:
 
 # ─────────────────────────────────────────────────────────────── sources
 
-def _read_json(path: Path) -> Optional[Any]:
+def _read_json(path: Path) -> Any | None:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
@@ -160,7 +161,7 @@ def _read_json(path: Path) -> Optional[Any]:
         return None
 
 
-def load_sources(root: Optional[Path] = None) -> dict[str, Any]:
+def load_sources(root: Path | None = None) -> dict[str, Any]:
     """Return ``{gates, decisions, baseline, inventory_path, decision_paths}`` from the tree."""
     root = Path(root or repo_root())
     seed = _read_json(root / SEED_RELPATH) or {}
@@ -196,7 +197,7 @@ def _cited_paths(where: str, where_more: Iterable[str]) -> list[str]:
     return sorted(set(_PATH_RE.findall(text)))
 
 
-def _split_added(added: Optional[str]) -> tuple[Optional[str], Optional[str]]:
+def _split_added(added: str | None) -> tuple[str | None, str | None]:
     if not added:
         return None, None
     m = _ADDED_RE.match(str(added).strip())
@@ -207,18 +208,19 @@ def _split_added(added: Optional[str]) -> tuple[Optional[str], Optional[str]]:
 
 def _git(root: Path, *args: str, timeout: int = 30) -> tuple[int, str]:
     try:
-        r = subprocess.run(["git", *args], cwd=str(root), capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run(["git", *args], cwd=str(root), capture_output=True, text=True, timeout=timeout,
+                           check=False)
         return r.returncode, r.stdout
     except (OSError, subprocess.SubprocessError) as exc:
         return 1, str(exc)
 
 
-def head_sha(root: Optional[Path] = None) -> Optional[str]:
+def head_sha(root: Path | None = None) -> str | None:
     rc, out = _git(Path(root or repo_root()), "rev-parse", "--short", "HEAD", timeout=10)
     return out.strip() if rc == 0 and out.strip() else None
 
 
-def scan_implementation_commits(root: Path, ids: Iterable[str], since: str) -> tuple[dict[str, dict], Optional[str]]:
+def scan_implementation_commits(root: Path, ids: Iterable[str], since: str) -> tuple[dict[str, dict], str | None]:
     """Map gate id → newest commit (after ``since``) naming it that touches code outside comms/gates and docs.
 
     Returns ``(found, error)``; ``error`` set means the scan could not look (the caller keeps prior state).
@@ -235,7 +237,7 @@ def scan_implementation_commits(root: Path, ids: Iterable[str], since: str) -> t
             continue
         sha, when, subject, body, files = parts[0], parts[1], parts[2], parts[3], parts[4]
         paths = [f for f in files.split("\n") if f.strip()]
-        if not any(not (p.startswith("comms/gates/") or p.startswith("docs/")) for p in paths):
+        if not any(not p.startswith(("comms/gates/", "docs/")) for p in paths):
             continue
         msg = f"{subject}\n{body}"
         pr = _PR_RE.search(subject)
@@ -247,7 +249,7 @@ def scan_implementation_commits(root: Path, ids: Iterable[str], since: str) -> t
     return found, None
 
 
-def scan_ci_guards(root: Path) -> tuple[Optional[list[str]], Optional[str]]:
+def scan_ci_guards(root: Path) -> tuple[list[str] | None, str | None]:
     """Names in ``scripts/ci/run_guards.py::GUARDS``, read as text (never imported/executed)."""
     p = root / "scripts/ci/run_guards.py"
     try:
@@ -257,10 +259,10 @@ def scan_ci_guards(root: Path) -> tuple[Optional[list[str]], Optional[str]]:
     start = text.find("GUARDS:")
     if start < 0:
         return None, "GUARDS registry not found in run_guards.py"
-    return sorted(set(re.findall(r'^\s*"name":\s*"([^"]+)"', text[start:], re.M))), None
+    return sorted(set(re.findall(r'^\s*"name":\s*"([^"]+)"', text[start:], re.MULTILINE))), None
 
 
-def scan_env_flags(root: Path) -> tuple[Optional[dict[str, str]], Optional[str]]:
+def scan_env_flags(root: Path) -> tuple[dict[str, str] | None, str | None]:
     """``*_ENABLED`` / ``*_DISABLED`` string literals in src/ and scripts/ → first file seen."""
     rc, out = _git(root, "ls-files", "src", "scripts")
     if rc != 0:
@@ -284,7 +286,7 @@ def _load_hit_probes(root: Path) -> dict[str, dict]:
     return doc if isinstance(doc, dict) else {}
 
 
-def _run_hit_probe(conn: sqlite3.Connection, probe: dict) -> tuple[Optional[int], Optional[str], str]:
+def _run_hit_probe(conn: sqlite3.Connection, probe: dict) -> tuple[int | None, str | None, str]:
     """``(count_14d, last_fired, read_state)``. Only the ``signals`` table is probe-able (allowlisted columns)."""
     if probe.get("table") != "signals" or probe.get("column") not in ("reason", "status") or "equals" not in probe:
         return None, None, "not_measurable"
@@ -313,7 +315,7 @@ def _alert(text: str) -> bool:
         return False
 
 
-def refresh(db_path: Optional[str] = None, root: Optional[Path] = None, *, send_alerts: bool = True) -> dict[str, Any]:
+def refresh(db_path: str | None = None, root: Path | None = None, *, send_alerts: bool = True) -> dict[str, Any]:
     """Re-seed metadata, apply newer file decisions, detect implementation and drift. Idempotent.
 
     Never raises on a scan failure: a scan that could not look leaves the affected fields as they were and the
@@ -499,7 +501,7 @@ def _upsert(conn: sqlite3.Connection, gid: str, vals: dict, existing: dict, now:
 
 
 def _apply_decision(conn: sqlite3.Connection, gid: str, decision: str, note: str, decided_at: str,
-                    decided_by: Optional[str], source: str, *, only_if_newer: bool) -> bool:
+                    decided_by: str | None, source: str, *, only_if_newer: bool) -> bool:
     """Append to the history (de-duplicated) and set the row's current decision. Returns True if it changed."""
     conn.execute(
         "INSERT OR IGNORE INTO gate_decision_log (gate_id, decision, note, decided_at, decided_by, source, recorded_at) "
@@ -519,7 +521,7 @@ def _apply_decision(conn: sqlite3.Connection, gid: str, decision: str, note: str
 
 # ─────────────────────────────────────────────────────────────── reads / writes
 
-def last_refresh(conn: sqlite3.Connection) -> Optional[dict]:
+def last_refresh(conn: sqlite3.Connection) -> dict | None:
     row = conn.execute("SELECT value FROM gate_registry_meta WHERE key = 'last_refresh'").fetchone()
     try:
         return json.loads(row["value"]) if row else None
@@ -527,7 +529,7 @@ def last_refresh(conn: sqlite3.Connection) -> Optional[dict]:
         return None
 
 
-def refresh_if_stale(db_path: Optional[str] = None, root: Optional[Path] = None) -> Optional[dict]:
+def refresh_if_stale(db_path: str | None = None, root: Path | None = None) -> dict | None:
     """Refresh when never run, HEAD moved (a deploy / git-sync), or older than :data:`REFRESH_MAX_AGE`."""
     root = Path(root or repo_root())
     conn = connect(db_path)
@@ -568,7 +570,7 @@ def row_to_api(r: sqlite3.Row | dict) -> dict[str, Any]:
     }
 
 
-def _parse_bool(v: Optional[str]) -> Optional[bool]:
+def _parse_bool(v: str | None) -> bool | None:
     if v is None or v == "":
         return None
     s = str(v).strip().lower()
@@ -579,9 +581,9 @@ def _parse_bool(v: Optional[str]) -> Optional[bool]:
     raise ValueError("real_money must be true or false")
 
 
-def list_gates(conn: sqlite3.Connection, *, category: Optional[str] = None, decision: Optional[str] = None,
-               state: Optional[str] = None, real_money: Optional[str] = None,
-               decided_since: Optional[str] = None) -> dict[str, Any]:
+def list_gates(conn: sqlite3.Connection, *, category: str | None = None, decision: str | None = None,
+               state: str | None = None, real_money: str | None = None,
+               decided_since: str | None = None) -> dict[str, Any]:
     """Filtered rows, drift/unregistered first, plus counts over the WHOLE registry (the population)."""
     if decision and decision not in DECISIONS:
         raise ValueError(f"decision must be one of {list(DECISIONS)}")
@@ -603,9 +605,7 @@ def list_gates(conn: sqlite3.Connection, *, category: Optional[str] = None, deci
             return False
         if rm is not None and (r.get("real_money") is None or bool(r["real_money"]) != rm):
             return False
-        if decided_since and not (r.get("decided_at") and r["decided_at"] >= decided_since):
-            return False
-        return True
+        return not (decided_since and not (r.get("decided_at") and r["decided_at"] >= decided_since))
 
     rows = [r for r in all_rows if keep(r)]
     rows.sort(key=lambda r: (0 if r.get("drift") else 1, 0 if r.get("registry_state") == "unregistered" else 1,
@@ -632,7 +632,7 @@ def list_gates(conn: sqlite3.Connection, *, category: Optional[str] = None, deci
     }
 
 
-def get_gate(conn: sqlite3.Connection, gid: str) -> Optional[dict[str, Any]]:
+def get_gate(conn: sqlite3.Connection, gid: str) -> dict[str, Any] | None:
     r = conn.execute("SELECT * FROM gate_registry WHERE id = ?", (gid,)).fetchone()
     if r is None:
         return None
@@ -642,8 +642,8 @@ def get_gate(conn: sqlite3.Connection, gid: str) -> Optional[dict[str, Any]]:
     return {"gate": row_to_api(r), "history": hist}
 
 
-def record_decision(conn: sqlite3.Connection, gid: str, decision: str, note: Optional[str],
-                    decided_by: Optional[str], source: str = "api") -> dict[str, Any]:
+def record_decision(conn: sqlite3.Connection, gid: str, decision: str, note: str | None,
+                    decided_by: str | None, source: str = "api") -> dict[str, Any]:
     """Record an operator decision. It is an instruction to Claude; it changes no code by itself."""
     if decision not in DECISIONS:
         raise ValueError(f"decision must be one of {list(DECISIONS)}")
