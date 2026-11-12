@@ -1,7 +1,5 @@
 {
   "tier": 1,
-  "landing": "hold",
-  "hold_reason": "unvouchable_paths",
-  "hold_text": "Adds a Tier-1 READ-ONLY system action (vm-cpu-sample). It edits .github/workflows/system-actions.yml, so the manager/AM-DEVOPS reads and merges it.",
-  "why": "LIVE-VM-CPU-SATURATION-1112: no allowlisted read gives per-process CPU over a window."
+  "landing": "self",
+  "why": "Adds a Tier-1 READ-ONLY system action (vm-cpu-sample): a wrapper script, an allowlist entry, docs and tests; every changed path is inside TIER1_SURFACE. NOT ARMED on purpose: AM-OPS told this lane that AM-DEVOPS merges, so the auto-merge request file is deliberately absent until AM-OPS says to arm it."
 }
