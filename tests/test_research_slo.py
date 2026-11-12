@@ -90,3 +90,30 @@ def test_heldout_census_counts_only_classified_heldout_registered_passes():
     assert c["registered_passes"] == 4
     assert c["unknown_holdout"] == 1
     assert c["by_holdout"]["in_sample"] == 1
+
+
+def test_heldout_census_keys_on_result_date_and_counts_a_confirmation_once():
+    """AUD-20261019-RESEARCH-SLO-RED: a re-stamped graded_at must not pull an old verdict into the window, and a
+    holdout re-run of a counted discovery is one survivor, not two."""
+    from datetime import datetime, timezone
+
+    from scripts.research.research_slo import heldout_pass_census
+
+    now = datetime(2026, 11, 12, tzinfo=timezone.utc)
+    rbr = {"registered_before_run": True}
+    ec = {"holdout": "holdout_window", "claim": "edge"}
+    g = {"verdict": "pass", "graded_at": "2026-11-12"}           # every stamp re-written today
+    units = {
+        "OLD": {"id": "OLD", "grading": g, "decision_rule": rbr, "evidence_class": ec},
+        "NEW": {"id": "NEW", "grading": g, "decision_rule": rbr, "evidence_class": ec},
+        "NEW-CONF": {"id": "NEW-CONF", "grading": g, "decision_rule": rbr, "evidence_class": ec,
+                     "confirmation": {"of": "NEW", "mode": "holdout_rerun"}},
+    }
+    landed = {"OLD": datetime(2026, 9, 30, tzinfo=timezone.utc), "NEW": datetime(2026, 11, 1, tzinfo=timezone.utc),
+              "NEW-CONF": datetime(2026, 11, 2, tzinfo=timezone.utc)}
+    c = heldout_pass_census(units, now, days=30, verdict_at=lambda uid, ga: landed[uid])
+    assert c["held_out_edge"] == 2 and c["held_out_edge_distinct"] == 1 and c["held_out_edge_ids"] == ["NEW"]
+    assert c["window_keyed_on"] == {"result_date": 2, "graded_at_fallback": 0}
+    # without dated results the graded_at fallback applies (and says so)
+    c2 = heldout_pass_census(units, now, days=30)
+    assert c2["held_out_edge"] == 3 and c2["window_keyed_on"]["graded_at_fallback"] == 3

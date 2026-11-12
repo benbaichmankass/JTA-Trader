@@ -1260,9 +1260,14 @@ def _hard_regime_gate(candidates: tuple) -> tuple:
 
     Design A (Phase 1, default-off): when ``REGIME_ML_VERDICT_MODE`` is
     ``shadow``/``use`` this ALSO emits a ``regime_ml_vol_shadow`` row per
-    candidate (observe-only). It does NOT influence which intents are dropped —
-    the enforcement still keys on the frozen ``intent.vol_regime`` via
-    ``would_gate``. The ``off`` default short-circuits before any ML work runs.
+    candidate (observe-only). It does NOT influence which intents are dropped.
+    The ``off`` default short-circuits before any ML work runs.
+
+    Vol-axis input is ADVISORY-ONLY (REGIME-VOL-SPEC-ADVISORY-ONLY): the vol
+    label handed to ``would_gate`` here is the advisory head's ML label under
+    mode ``use``, else ``unknown`` — never the frozen ``intent.vol_regime``,
+    whose edges come from SHADOW-stage heads (observe-only under the ladder).
+    So a shadow promotion cannot change this gate's verdict.
     """
     # Design-A Phase-1 ML-vol shadow audit — gated, observe-only, fires
     # independently of the trend policy / enforcement below (a different axis,
@@ -1281,14 +1286,26 @@ def _hard_regime_gate(candidates: tuple) -> tuple:
     kept: list = []
     mode = _regime_ml_verdict_mode()
     for intent in candidates:
-        eff_vol, frozen_vol, ml_vol, ml_src, ml_p_vol = _decision_vol_regime(intent, mode)
+        _eff_vol, frozen_vol, ml_vol, ml_src, ml_p_vol = _decision_vol_regime(intent, mode)
+        # Advisory-only vol input (REGIME-VOL-SPEC-ADVISORY-ONLY, closes
+        # PI-20261029-Q17QWHDZ-0003). The frozen ``intent.vol_regime`` is built
+        # from SHADOW-stage heads' edges (``vol_detector.resolve_vol_specs``),
+        # and a shadow head is observe-only under the ladder. So the enforcing
+        # gate never sees it: the vol label fed to ``would_gate`` is the ADVISORY
+        # head's ML label (mode ``use``, concrete) or ``unknown`` (permissive).
+        # A candidate->shadow promotion therefore cannot change any part of this
+        # gate's verdict. The frozen label stays on the audit row
+        # (``vol_regime_frozen``) and drives only the observe-only
+        # ``regime_shadow_gate`` / ``regime_ml_vol_shadow`` rows.
+        vol_is_ml = mode == "use" and ml_vol in ("calm", "volatile")
+        gate_vol = ml_vol if vol_is_ml else "unknown"
         try:
             verdict = would_gate(
                 strategy=intent.strategy,
                 side=intent.side,
                 regime=intent.regime,
                 policy=policy,
-                vol_regime=eff_vol,
+                vol_regime=gate_vol,
             )
         except Exception:  # noqa: BLE001
             # Fail-permissive: an unverifiable verdict keeps the intent
@@ -1299,14 +1316,12 @@ def _hard_regime_gate(candidates: tuple) -> tuple:
             continue
         trend_gated = bool(verdict.get("gated"))
         vol_gated = bool(verdict.get("vol_gated"))
-        # ML-only-enforce guard: a VOL cell may only DROP an intent when the vol
-        # label came from the advisory ML head (vol_label_source == "ml"). The
-        # trend_vol cells LOSE money under the frozen label, so a vol gate on a
-        # frozen-fallback (no advisory head for the symbol) must NOT enforce —
-        # it stays permissive. The 1-D TREND (ADX) axis is ML-independent and
-        # always enforces. So a symbol without an advisory vol head is safely
-        # never vol-gated, and enforce activates per-symbol as heads promote.
-        vol_is_ml = mode == "use" and ml_vol in ("calm", "volatile")
+        # A VOL cell DROPS an intent only on the advisory ML label: ``gate_vol``
+        # above is ``unknown`` otherwise, so ``vol_gated`` is already False for a
+        # symbol without an advisory vol head (the trend_vol cells LOSE money
+        # under the frozen label). ``and vol_is_ml`` is kept as a redundant
+        # belt. The 1-D TREND (ADX) axis is ML-independent and always enforces;
+        # enforce activates per-symbol as vol heads reach ADVISORY.
         vol_enforced = vol_gated and vol_is_ml
         if not (trend_gated or vol_enforced):
             kept.append(intent)
@@ -1323,9 +1338,10 @@ def _hard_regime_gate(candidates: tuple) -> tuple:
                 "gated": trend_gated,
                 "cell": verdict.get("cell"),
                 "reason": verdict.get("reason"),
-                # ``vol_regime`` = the label the enforce DECISION used (ML under
-                # mode=use, else frozen); frozen + ML kept alongside for audit.
-                "vol_regime": eff_vol,
+                # ``vol_regime`` = the label the enforce DECISION used (the
+                # advisory ML label, else ``unknown``); frozen + ML kept
+                # alongside for audit.
+                "vol_regime": gate_vol,
                 "vol_regime_frozen": frozen_vol,
                 "vol_regime_ml": ml_vol,
                 # The probability the label was thresholded from —
@@ -1337,9 +1353,9 @@ def _hard_regime_gate(candidates: tuple) -> tuple:
                 "vol_label_source": "ml" if vol_is_ml else "frozen",
                 "vol_gated": vol_gated,
                 # ``vol_enforced``: the vol axis actually drove this drop (only
-                # true when the label was ML-sourced). A vol_gated-but-frozen
-                # cell shows vol_enforced:false and the drop (if any) is the
-                # trend axis.
+                # true when the label was ML-sourced). On a frozen fallback
+                # the vol axis is not evaluated (``vol_regime: unknown``) and
+                # the drop is the trend axis.
                 "vol_enforced": vol_enforced,
                 "vol_cell": verdict.get("vol_cell"),
                 "vol_reason": verdict.get("vol_reason"),
