@@ -24,6 +24,7 @@ import math
 import statistics as st
 import subprocess
 import sys
+import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
@@ -145,7 +146,8 @@ def main(argv=None) -> int:
         try:
             csv = fetch_csv(spec["cfd_underlying"], work)
             rows, meta = run_leg(leg, cfg, csv, work)
-        except Exception as e:  # noqa: BLE001 - a leg-level failure is INDETERMINATE, never a FAIL
+        except Exception as e:  # noqa: BLE001  # allow-silent: a leg-level failure is recorded as INDETERMINATE with its error text and logged with a stack trace; it is never read as a FAIL or an empty result
+            traceback.print_exc()
             per_leg[leg] = {"verdict": "INDETERMINATE", "error": f"{type(e).__name__}: {e}"[:500]}
             continue
         cc = leg_costs(rule, leg)
