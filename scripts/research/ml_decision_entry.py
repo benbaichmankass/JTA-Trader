@@ -269,14 +269,23 @@ FEATURES = ["ret_1", "ret_4", "ret_12", "ret_24", "ret_72", "ret_168", "vol24", 
             "xs_rank_ret24", "btc_ret24", "btc_vol24", "breadth_up24", "rel_vol"]
 
 
+def regrid_hourly(df: pd.DataFrame) -> pd.DataFrame:
+    """Reindex one symbol's bars onto a complete hourly grid so a data hole becomes NaN bars, not a seam. Without it the
+    positional rolling features (ret_k, vol_ratio, vol_z, range_pos, atr) silently span the hole (ENTRY-GRADE-REPRO)."""
+    full = pd.date_range(df["ts"].min(), df["ts"].max(), freq="1h", tz="UTC")
+    return df.set_index("ts").reindex(full).rename_axis("ts").reset_index()
+
+
 def build_table(cache: Path, symbols: list[str], xs_symbols: list[str] | None = None,
-                recost_inputs: bool = False) -> pd.DataFrame:
+                recost_inputs: bool = False, hole_safe: bool = False) -> pd.DataFrame:
     """``xs_symbols`` None: cross-sectional context over ``symbols`` (the c692-01 recipe, unchanged). Given: context is
     computed against that fixed REFERENCE set for every row, so a row's inputs do not depend on which other symbols are
     in the table (the c692-04 training-universe arms)."""
     rows, feats = [], {}
     for sym in symbols:
         df = pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True)
+        if hole_safe:   # default off: every committed table/grade keeps its byte-identical build
+            df = regrid_hourly(df)
         f = features_symbol(df)
         feats[sym] = f
         lab = label_symbol(df, recost_inputs=recost_inputs)
