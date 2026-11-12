@@ -340,6 +340,12 @@ def run_once(fetch: Fetch = _get,
     if not mm.wake_due(pbar):
         return done("skipped_by_cadence", bar=pbar, every_h=mm.scan_wake_every_h(),
                     reason="the packet landed; no wake by design on this bar (config/desk_triggers.yaml scan_wake_every_h)")
+    # Console wake switch OFF (operator 2026-11-07; default OFF): the producer withheld the comment on purpose, so a
+    # missing marker is by design, never wake_missing (which pages the manager). Unreadable state => is_on is True.
+    from src.runtime import wake_toggles as wt
+    if not wt.is_on("desk_wake"):
+        return done("suppressed_by_wake_toggle", packet_id=pid, bar=pbar,
+                    reason="the packet landed; the desk_wake console switch is off, no wake by design")
     age = now - built
     if age < timedelta(minutes=WAKE_GRACE_MIN):
         return done("awaiting_wake")
