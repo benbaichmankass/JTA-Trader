@@ -661,6 +661,10 @@ class WorkStore:
             r = conn.execute("SELECT seq, hash FROM events ORDER BY seq DESC LIMIT 1").fetchone()
             return {"seq": r["seq"], "hash": r["hash"]} if r else {"seq": 0, "hash": GENESIS_HASH}
 
+    # data-wiring: the `meta` table is the register header's store-backed keys (last_review), in the same
+    #   operator-approved work store as items/events (D1). Canonical after the S4 freeze; before it the value
+    #   lived in docs/claude/work/checklist/_header.json (kept as read-only history and fallback). No backfill:
+    #   the first post-deploy manager review writes the key.
     # ── meta: the register header's store-backed keys (WSD-S4-READERS-FLIP: last_review) ──
     #   One JSON value per key, last-writer-wins, versioned. Not items: it never enters due_now,
     #   the queue or the pipeline. History of a key = the files it had before the move.
