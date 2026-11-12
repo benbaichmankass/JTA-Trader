@@ -9,8 +9,12 @@ This file records an answer the operator gave, in the operator's own words. It i
 ## What was granted
 
 - **When and where:** about 20:40Z on 2026-11-12, in a popup question from Manager Session 2026-11-11a (session_01AFoLuLyarNRcy3nziCep2U).
-- **The question and answer:** the question offered four grants and the operator selected all four. One of them is labelled, verbatim, **"Merge + deploy on green"**.
-- **The other three labels:** the manager has not passed them on to the session writing this record, so they are not quoted here. The manager may add them verbatim.
+- **The question and answer:** the question offered four grants and the operator selected all four. Their labels, verbatim as recorded in the manager's session (relayed to AM-OPS at 23:04Z):
+  - **"VM direct channel"**
+  - **"Skill/doc edits"**
+  - **"Merge + deploy on green"**
+  - **"Cancel non-required CI"**
+- **This file's scope:** it records only the labels. The scope below is the manager's statement for "Merge + deploy on green", the grant the hold-merge alarm citations need. The other three are recorded here word for word and nothing more is read into them.
 - **Provenance:** relayed by the manager to AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx) at 22:45Z on 2026-11-12, and committed here on the manager's instruction.
 
 ## Scope, as the manager stated it
