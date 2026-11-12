@@ -1,0 +1,3115 @@
+{
+ "schema": "prop_frontier/firms.v1",
+ "generated": "2026-11-12",
+ "lane": "PROP-FRONTIER-RESEARCH (session_01AFoLuKEZCj8H39D6uc5yt4)",
+ "memo": "docs/research/prop-frontier-2026-11-12.md",
+ "hard_filter": "Orders can originate from our cloud server with no operator device: a firm-permitted API, a headless web session on the VM, or an EA on a VPS; and no own-PC / personal-device / no-VPS / video-enable / no-fully-automated clause.",
+ "status_key": {
+  "1P": "firm's own page",
+  "3P": "third party",
+  "UNVERIFIED": "could not read; never treated as permission"
+ },
+ "ev_screen": {
+  "rule": "comms/research/prop_frontier/ev6m_rule.json",
+  "verdict": "comms/research/prop_frontier/ev6m-20261112/verdict.json",
+  "any_buyable": true,
+  "primary_cells": [
+   {
+    "ruleset": "velotrade_classic_1step",
+    "book": "VELO_ALL",
+    "risk_pct": 0.005,
+    "primary": true,
+    "fee_usd": 54.0,
+    "ev_6m_mean": 44.83,
+    "ev_6m_min": 41.8,
+    "ev_6m_null_mean": -41.13,
+    "ev_6m_with_rebuy_mean": 48.16,
+    "p_pass_eval": 0.62,
+    "p_breach": 0.1433,
+    "trades_per_life": 89.7,
+    "edge_ci_lo": 0.00368,
+    "verdict": "BUYABLE"
+   },
+   {
+    "ruleset": "velotrade_pro_1step",
+    "book": "VELO_ALL",
+    "risk_pct": 0.005,
+    "primary": true,
+    "fee_usd": 32.0,
+    "ev_6m_mean": 21.4,
+    "ev_6m_min": 18.75,
+    "ev_6m_null_mean": -27.37,
+    "ev_6m_with_rebuy_mean": 40.5,
+    "p_pass_eval": 0.416,
+    "p_breach": 0.6333,
+    "trades_per_life": 51.6,
+    "edge_ci_lo": 0.00368,
+    "verdict": "BUYABLE"
+   }
+  ]
+ },
+ "ranked_shortlist": [
+  {
+   "rank": 1,
+   "firm": "Velotrade",
+   "ev_screen": "BUYABLE under RULE-PROP-FRONTIER-EV6M-20261112 on VELO_ALL at 0.5% risk, both plans; marginal (see memo section 5)"
+  },
+  {
+   "rank": 2,
+   "firm": "FundedNext Futures",
+   "ev_screen": "not_run: no fitting leg (the rule screens only firms with at least one)"
+  },
+  {
+   "rank": 3,
+   "firm": "Blue Guardian (CFD)",
+   "ev_screen": "not_attempted: 6% trailing drawdown; prop_ev_sim.py raises on non-static drawdown (PI-20261112-D6UC5YT4-0003)"
+  },
+  {
+   "rank": 4,
+   "firm": "FTMO",
+   "ev_screen": "not_run: hard filter unverified (own cTrader Open API client not stated; 1-Step DD is EOD trailing)"
+  }
+ ],
+ "follow_ups": {
+  "PI-20261112-D6UC5YT4-0001": "VELO-CFD-STAGE0",
+  "PI-20261112-D6UC5YT4-0002": "VELO-INSTR-READ",
+  "PI-20261112-D6UC5YT4-0003": "PROP-TRAILING-DD-SIM"
+ },
+ "firms": [
+  {
+   "firm": "Topstep (TopstepX / ProjectX Gateway API)",
+   "brand_url": "https://www.topstep.com",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "TopstepX",
+    "ProjectX Gateway API"
+   ],
+   "automation_path": "api",
+   "automation_path_detail": "ProjectX Gateway REST+SignalR API, $29/mo ($14.50 with code), sim/eval/XFA only; not on Live funded.",
+   "hard_filter": "FAIL",
+   "hard_filter_reason": "Re-verified 2026-11-12: VPS/VPN/remote servers prohibited (order transmission must come from personal device) AND live funded accounts cannot use the API.",
+   "quotes": [
+    {
+     "topic": "device",
+     "text": "All trading activity must originate from your personal device.",
+     "url": "https://help.topstep.com/en/articles/11187768-topstepx-api-access",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "vps",
+     "text": "The use of VPS, VPNs, and remote servers is prohibited by Topstep's Terms of Use.",
+     "url": "https://help.topstep.com/en/articles/11187768-topstepx-api-access",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "vps",
+     "text": "your server can watch and record, but it cannot trade.",
+     "url": "https://help.topstep.com/en/articles/11187768-topstepx-api-access",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "api",
+     "text": "Live funded accounts are not allowed to trade through the ProjectX API.",
+     "url": "https://help.topstep.com/en/articles/11187768-topstepx-api-access",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "api",
+     "text": "The API Gateway is built for the simulated environment and isn't available on Live.",
+     "url": "https://help.topstep.com/en/articles/11187768-topstepx-api-access",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "automation",
+     "text": "Custom automated strategies and bots are allowed via the TopstepX / ProjectX API, subject to standard platform rules and our prohibition on highfrequency trading (HFT).",
+     "url": "https://help.topstep.com/en/articles/11187768-topstepx-api-access",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "api",
+     "text": "API Access is $29/month.",
+     "url": "https://help.topstep.com/en/articles/11187768-topstepx-api-access",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": "CME futures incl. micros (not itemised from fetched page).",
+   "unverified": [
+    "plan sizes/prices/DD not collected (firm fails filter)"
+   ],
+   "notes": "Unchanged vs 2026-09-30 read. Only allowed on server: data storage, research, logging, read-only dashboard.",
+   "cluster": "futures (ProjectX/API platforms)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "FAIL",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "ProjectX Gateway API (platform facts)",
+   "brand_url": "https://gateway.docs.projectx.com/docs/intro/",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "ProjectX"
+   ],
+   "automation_path": "api",
+   "automation_path_detail": "REST API (+SignalR/WebSocket streaming), API-key auth, no sandbox (tests run against production per 3P). Access is per-firm: sold via Topstep at $29/mo.",
+   "hard_filter": "FAIL",
+   "hard_filter_reason": "Only practical host (Topstep) bans VPS and disables API on live funded; platform reportedly became Topstep-exclusive after 2026-02-28 (3P NexusFi); a Sept 2026 3P post says Gateway docs list only TopstepX and The Futures Desk.",
+   "quotes": [
+    {
+     "topic": "api",
+     "text": "utilizes the REST API architecture for managing your prop firm trader operations.",
+     "url": "http://gateway.docs.projectx.com/docs/intro/",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "api",
+     "text": "ships a public, self-serve REST API with open documentation.",
+     "url": "https://blog.pickmytrade.trade/every-prop-firm-with-a-public-trading-api-in-2026-master-list/",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "api",
+     "text": "billed apart from your evaluation or funded subscription.",
+     "url": "https://blog.pickmytrade.trade/every-prop-firm-with-a-public-trading-api-in-2026-master-list/",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": null,
+   "unverified": [
+    "docs page lists no firms/cost/limits on intro page; firm roster per 3P only"
+   ],
+   "notes": "Former ProjectX firms (Alpha, Lucid, Blue Guardian, Top One, Tradeify, Bulenox per 3P FAQ) reportedly moved to Tradovate/Rithmic, which expose no public API on evals.",
+   "cluster": "futures (ProjectX/API platforms)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "FAIL",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "The Futures Desk (TFD)",
+   "brand_url": "https://www.thefuturesdesk.com",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "TFD-X (ProjectX)",
+    "Rithmic data/Sierra Chart/Quantower etc."
+   ],
+   "automation_path": "api",
+   "automation_path_detail": "ProjectX API via TradersPost webhooks (3P); direct API terms not read.",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "3P (saveonpropfirms) says firm has ceased operations; other 3P (TradersPost) says algo explicitly allowed. No VPS rule found. 1P help centre not reachable.",
+   "quotes": [
+    {
+     "topic": "status",
+     "text": "The Futures Desk has ceased operations.",
+     "url": "https://saveonpropfirms.com/prop-firms/the-futures-desk/rules",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "automation",
+     "text": "TFD explicitly allows algorithmic and bot trading.",
+     "url": "https://blog.traderspost.io/article/automate-the-futures-desk-with-traderspost",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "drawdown",
+     "text": "soft limit that pauses trading for the day, not a failure",
+     "url": "https://blog.traderspost.io/article/the-futures-desk-review",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [
+    {
+     "name": "$25K EOD/static",
+     "size_usd": 25000,
+     "price_usd": null,
+     "billing": null,
+     "activation_fee_usd": null,
+     "reset_usd": null,
+     "profit_target_usd": 1750,
+     "daily_loss_usd": 400,
+     "daily_loss_type": "soft",
+     "max_dd_usd": 1000,
+     "max_dd_type": "eod_trailing",
+     "dd_lock": null,
+     "min_days": 5,
+     "consistency": "20% eval, none funded",
+     "flat_by": null,
+     "overnight": false,
+     "weekend": null,
+     "news": "5 micros within 1 min of events",
+     "min_hold": "none",
+     "max_size": "1 mini/10 micro",
+     "payout": "80%, daily M-F, via Rise",
+     "status": "3P"
+    },
+    {
+     "name": "$50K EOD/static",
+     "size_usd": 50000,
+     "price_usd": null,
+     "billing": null,
+     "activation_fee_usd": null,
+     "reset_usd": null,
+     "profit_target_usd": 3500,
+     "daily_loss_usd": 800,
+     "daily_loss_type": "soft",
+     "max_dd_usd": 2000,
+     "max_dd_type": "eod_trailing",
+     "dd_lock": null,
+     "min_days": 5,
+     "consistency": "20% eval, none funded",
+     "flat_by": null,
+     "overnight": false,
+     "weekend": null,
+     "news": "same",
+     "min_hold": "none",
+     "max_size": "3 mini/30 micro",
+     "payout": "80%",
+     "status": "3P"
+    },
+    {
+     "name": "$100K/$150K",
+     "size_usd": 100000,
+     "price_usd": null,
+     "billing": null,
+     "activation_fee_usd": null,
+     "reset_usd": null,
+     "profit_target_usd": 5250,
+     "daily_loss_usd": 1200,
+     "daily_loss_type": "soft",
+     "max_dd_usd": 3000,
+     "max_dd_type": "eod_trailing",
+     "dd_lock": null,
+     "min_days": 5,
+     "consistency": "20% eval",
+     "flat_by": null,
+     "overnight": false,
+     "weekend": null,
+     "news": "same",
+     "min_hold": "none",
+     "max_size": "5/50 (150K: 10/100)",
+     "payout": "80%",
+     "status": "3P"
+    }
+   ],
+   "instruments_detail": "CME minis and micros; swing trading not permitted (day only).",
+   "unverified": [
+    "operating status",
+    "VPS rule",
+    "prices",
+    "flat-by time"
+   ],
+   "notes": "Static option also offered (targets 2000/4000/6000/9000).",
+   "cluster": "futures (ProjectX/API platforms)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Alpha Futures",
+   "brand_url": "https://alpha-futures.com",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "Tradovate (3P)"
+   ],
+   "automation_path": "none",
+   "automation_path_detail": "Bots banned.",
+   "hard_filter": "FAIL",
+   "hard_filter_reason": "Alpha's prohibited-practices page (quoted by 3P) bans AI/bots/automation on all account types; VPS allowed only for hosting a platform.",
+   "quotes": [
+    {
+     "topic": "automation",
+     "text": "The use of AI, bots, and other automated trading mechanisms is strictly prohibited across all account types.",
+     "url": "https://pickmytrade.trade/prop-firm-faq/alpha-futures-faq/",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "vps",
+     "text": "The use of VPS is permitted in your trading, however the use of VPN attempting to hide or change you IP address is not.",
+     "url": "https://pickmytrade.trade/prop-firm-faq/alpha-futures-faq/",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [
+    {
+     "name": "Zero/Standard/Advanced/Direct",
+     "size_usd": null,
+     "price_usd": null,
+     "billing": null,
+     "activation_fee_usd": null,
+     "reset_usd": 79,
+     "profit_target_usd": null,
+     "daily_loss_usd": null,
+     "daily_loss_type": "hard",
+     "max_dd_usd": null,
+     "max_dd_type": "eod_trailing",
+     "dd_lock": "stops at starting balance",
+     "min_days": null,
+     "consistency": "Eval: 40% Adv, 50% Std, none Zero",
+     "flat_by": null,
+     "overnight": null,
+     "weekend": null,
+     "news": "2-min window Direct/Standard/Zero qualified",
+     "min_hold": "scalp test <10 ticks & <2min",
+     "max_size": null,
+     "payout": "90% of up to 50% profit, 5 winning days >=$200, 4x/month",
+     "status": "3P"
+    }
+   ],
+   "instruments_detail": null,
+   "unverified": [
+    "1P page not read (help.alpha-futures.com)"
+   ],
+   "notes": "Zero has 2% daily loss guard; qualified resets $399-$999.",
+   "cluster": "futures (ProjectX/API platforms)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "FAIL",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Lucid Trading",
+   "brand_url": "https://lucidtrading.com",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "Tradovate",
+    "Rithmic (3P)"
+   ],
+   "automation_path": "headless_web",
+   "automation_path_detail": "No public API on eval; automation via Tradovate/Rithmic bridges or own platform on VPS. Rithmic R|Protocol is gated by developer-kit request and conformance testing.",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "Multiple 3P say automation/copiers permitted (HFT banned) and one lists VPS allowed; 1P rules page not read; no 1P VPS quote.",
+   "quotes": [
+    {
+     "topic": "automation",
+     "text": "automated trading systems and trade copiers are permitted, as long as all automated activity follows Lucid's rules",
+     "url": "https://pickmytrade.io/prop-firm-faq/lucid-trading/",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "automation",
+     "text": "High-frequency trading is prohibited.",
+     "url": "https://pickmytrade.io/prop-firm-faq/lucid-trading/",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "drawdown",
+     "text": "Daily Loss Limits are soft breaches.",
+     "url": "https://pickmytrade.io/prop-firm-faq/lucid-trading/",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "payout",
+     "text": "Approved payouts are disbursed within 2 business days.",
+     "url": "https://pickmytrade.io/prop-firm-faq/lucid-trading/",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [
+    {
+     "name": "LucidFlex/LucidPro/Direct/Daily/Live",
+     "size_usd": null,
+     "price_usd": null,
+     "billing": null,
+     "activation_fee_usd": null,
+     "reset_usd": null,
+     "profit_target_usd": null,
+     "daily_loss_usd": 1200,
+     "daily_loss_type": "soft",
+     "max_dd_usd": null,
+     "max_dd_type": "eod_trailing",
+     "dd_lock": null,
+     "min_days": null,
+     "consistency": "Flex eval <=50%, funded none; Pro funded 40%",
+     "flat_by": null,
+     "overnight": null,
+     "weekend": null,
+     "news": null,
+     "min_hold": "microscalp flag >50% profit in <=5s trades",
+     "max_size": null,
+     "payout": "90/10 Flex; >=5 profitable days, $500 min, 50% cap",
+     "status": "3P"
+    }
+   ],
+   "instruments_detail": null,
+   "unverified": [
+    "1P agreement",
+    "VPS clause",
+    "prices",
+    "flat-by"
+   ],
+   "notes": "DLL 1200 is for a Pro 50K. Best remaining candidate to confirm with 1P read.",
+   "cluster": "futures (ProjectX/API platforms)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Aqua Futures",
+   "brand_url": "https://aquafutures.com",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "unknown"
+   ],
+   "automation_path": "none",
+   "automation_path_detail": "Bots banned.",
+   "hard_filter": "FAIL",
+   "hard_filter_reason": "1P help article bans bots/unattended algorithms on all accounts.",
+   "quotes": [
+    {
+     "topic": "automation",
+     "text": "The use of fully automated systems, unattended algorithms, trading bots, AI-driven execution software",
+     "url": "https://intercom.help/aquafutures-help-center/en/articles/15863742-prohibited-trading-strategies",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "automation",
+     "text": "all trading activity must remain actively supervised and manually managed by the trader at all times.",
+     "url": "https://intercom.help/aquafutures-help-center/en/articles/15863742-prohibited-trading-strategies",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": null,
+   "unverified": [
+    "VPS rule"
+   ],
+   "notes": "",
+   "cluster": "futures (ProjectX/API platforms)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "FAIL",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Top One Futures",
+   "brand_url": "https://toponefutures.com",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "Tradovate (3P)"
+   ],
+   "automation_path": "mt5_vps",
+   "automation_path_detail": "VPS with static IP permitted if registered; automation rule not found 1P.",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "1P allows VPS with static IP (notify in advance, VPN banned); automation conflicting 3P (LuxAlgo: not permitted; ProptradingVibes: allowed within limits). No 1P automation quote.",
+   "quotes": [
+    {
+     "topic": "vps",
+     "text": "we permit the use of Virtual Private Servers (VPS) with static IP addresses for trading purposes",
+     "url": "https://intercom.help/top-one-futures/en/articles/11187841-are-there-ip-address-restrictions",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "vps",
+     "text": "If you choose to use a VPS, please ensure it has a static IP address and notify us in advance to avoid any issues.",
+     "url": "https://intercom.help/top-one-futures/en/articles/11187841-are-there-ip-address-restrictions",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "vps",
+     "text": "Using a VPN (strictly prohibited)",
+     "url": "https://intercom.help/top-one-futures/en/articles/11187841-are-there-ip-address-restrictions",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": null,
+   "unverified": [
+    "automation policy 1P",
+    "plans"
+   ],
+   "notes": "IP article has no automation content. Candidate worth a 1P prohibited-trading read.",
+   "cluster": "futures (ProjectX/API platforms)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Blue Guardian Futures",
+   "brand_url": "https://www.blueguardian.com",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "Tradovate (3P)"
+   ],
+   "automation_path": "none",
+   "automation_path_detail": "",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "3P consensus: fully automated trading/bots/EAs prohibited, semi-auto allowed; one comparison table says bots allowed. No 1P read.",
+   "quotes": [],
+   "plans": [],
+   "instruments_detail": null,
+   "unverified": [
+    "everything 1P"
+   ],
+   "notes": "Likely FAIL.",
+   "cluster": "futures (ProjectX/API platforms)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "MyFundedFutures (MFFU)",
+   "brand_url": "https://myfundedfutures.com",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "Tradovate",
+    "Rithmic",
+    "NinjaTrader (3P)"
+   ],
+   "automation_path": "headless_web",
+   "automation_path_detail": "No public API; bridges/own platform on VPS.",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "Conflicting. 1P fair-play page allows automated strategies on own settings (HFT banned), but 3P says fully autonomous bots without oversight prohibited (earlier read) and others say VPS allowed. Prior 'no unsupervised bots' not confirmed on 1P.",
+   "quotes": [
+    {
+     "topic": "automation",
+     "text": "Traders may make use of automated trading strategies tailored to their own specific settings",
+     "url": "https://intercom.help/myfundedfutures/en/articles/8444599-fair-play-and-prohibited-trading-practices",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "automation",
+     "text": "High-frequency Trading is not allowed on our plans.",
+     "url": "https://intercom.help/myfundedfutures/en/articles/8444599-fair-play-and-prohibited-trading-practices",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "automation",
+     "text": "Traders trading live accounts with automated trading must abide by CME guidelines.",
+     "url": "https://intercom.help/myfundedfutures/en/articles/8444599-fair-play-and-prohibited-trading-practices",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "vps",
+     "text": "VPS trading: Allowed",
+     "url": "https://algopropfirms.pages.dev/blog/myfundedfutures-automation-rules",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": null,
+   "unverified": [
+    "whether 'without human oversight' clause exists on 1P",
+    "VPS 1P",
+    "plans"
+   ],
+   "notes": "Strong candidate for deeper 1P read.",
+   "cluster": "futures (ProjectX/API platforms)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "FundingTicks",
+   "brand_url": "https://fundingticks.com",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "Tradovate",
+    "NinjaTrader",
+    "TradingView (3P)"
+   ],
+   "automation_path": "none",
+   "automation_path_detail": "",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "No automation/VPS rule found on any page read; coverage statement only, not permission.",
+   "quotes": [],
+   "plans": [],
+   "instruments_detail": null,
+   "unverified": [
+    "everything"
+   ],
+   "notes": "",
+   "cluster": "futures (ProjectX/API platforms)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Tradeify (futures)",
+   "brand_url": "https://tradeify.co",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "Tradovate"
+   ],
+   "automation_path": "none",
+   "automation_path_detail": "No API on eval",
+   "hard_filter": "FAIL",
+   "hard_filter_reason": "Per caller's prior research: Tradovate, no API on eval, 'own PC' video, no VPS login (not refetched).",
+   "quotes": [],
+   "plans": [],
+   "instruments_detail": null,
+   "unverified": [
+    "not refetched today"
+   ],
+   "notes": "",
+   "cluster": "futures (ProjectX/API platforms)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "FAIL",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Funded Futures Family",
+   "brand_url": "https://intercom.help/funded-futures-family",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "Tradovate"
+   ],
+   "automation_path": "none",
+   "automation_path_detail": "",
+   "hard_filter": "FAIL",
+   "hard_filter_reason": "Search snippets of 1P intercom pages: all automation banned; separate 3P item says VPN/VPS permission changed (unverified).",
+   "quotes": [
+    {
+     "topic": "automation",
+     "text": "automated trading of any kind is strictly prohibited on all FundedFuturesFamily accounts",
+     "url": "https://intercom.help/funded-futures-family/en/articles/10114863-bots-algorithmic-trading-policy",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": null,
+   "unverified": [
+    "page not fetched directly"
+   ],
+   "notes": "Not MFFU.",
+   "cluster": "futures (ProjectX/API platforms)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "FAIL",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Phidias Propfirm",
+   "brand_url": "https://phidiaspropfirm.com",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "Rtrader Pro",
+    "NinjaTrader/Tradovate",
+    "DeepCharts (dxFeed)",
+    "any Rithmic-compatible platform"
+   ],
+   "automation_path": "none",
+   "automation_path_detail": "Rithmic-routed; no firm API. Fully automated bots banned; only semi-automatic software with trader supervising/adjusting each trade.",
+   "hard_filter": "FAIL",
+   "hard_filter_reason": "Rules page bans fully automated bots/algos; only semi-automatic with manual supervision of each trade. Premium plan does allow overnight/weekend (rare) but is unusable for a bot.",
+   "quotes": [
+    {
+     "topic": "automation",
+     "text": "\"L'usage de robots, d'algorithmes de trading entièrement automatisés\" n'est pas autorisé; \"Seul un logiciel semi-automatique est permis\" (trader supervise et ajuste manuellement chaque trade) [fetch tool paraphrase of French page; section titled 'Pas de trading automatisé / HFT']",
+     "url": "https://phidiaspropfirm.com/regles",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "holding",
+     "text": "Premium: \"Positions overnight et week-end AUTORISÉES\"; Fundamental: \"Toutes les positions doivent être FERMÉES avant la fin de journée\"; Express to Live: overnight/weekend NON autorisées",
+     "url": "https://phidiaspropfirm.com/regles",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "holding",
+     "text": "the one Phidias account that keeps your positions open overnight and over the weekend (Premium)",
+     "url": "https://phidiaspropfirm.com/swing-allowed",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [
+    {
+     "name": "Premium (swing) 50K/100K/150K",
+     "size_usd": 100000,
+     "price_usd": 180,
+     "billing": "one-time (monthly option exists, price not shown)",
+     "activation_fee_usd": 149,
+     "reset_usd": 499,
+     "profit_target_usd": 6000,
+     "daily_loss_usd": null,
+     "daily_loss_type": "none",
+     "max_dd_usd": 3000,
+     "max_dd_type": "eod_trailing",
+     "dd_lock": null,
+     "min_days": 1,
+     "consistency": "none in eval; funded: single day <=30% of total profit (>=4 days)",
+     "flat_by": null,
+     "overnight": true,
+     "weekend": true,
+     "news": null,
+     "min_hold": null,
+     "max_size": "14 minis / 140 micros (100K, label unclear)",
+     "payout": "every 5 days; min $500; split 75/25 rising to 100/0 by 5th payout; cap $2,000/2,500/2,750 per period (50/100/150K); valid day min PnL 150/200/250",
+     "status": "1P (sale price with discount code on swing-allowed page; list ~$450)"
+    },
+    {
+     "name": "Fundamental 50K/100K/150K",
+     "size_usd": 100000,
+     "price_usd": null,
+     "billing": "one-time",
+     "activation_fee_usd": 149,
+     "reset_usd": null,
+     "profit_target_usd": 6000,
+     "daily_loss_usd": null,
+     "daily_loss_type": "none",
+     "max_dd_usd": 3000,
+     "max_dd_type": "eod_trailing",
+     "dd_lock": null,
+     "min_days": null,
+     "consistency": "funded 30%",
+     "flat_by": "end of day",
+     "overnight": false,
+     "weekend": false,
+     "news": null,
+     "min_hold": null,
+     "max_size": null,
+     "payout": "every 10 days; 80/20",
+     "status": "1P"
+    }
+   ],
+   "instruments_detail": "CME futures incl. micros (specific list not extracted).",
+   "unverified": [
+    "VPS/EA wording (page does not mention)",
+    "contract list",
+    "exact eval prices"
+   ],
+   "notes": "Rule text read via fetch summarizer from French page. Market data Rithmic 15 EUR/mo/exchange.",
+   "cluster": "futures (Rithmic/CQG/Tradovate/own)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "FAIL",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Elite Trader Funding (ETF)",
+   "brand_url": "https://elitetraderfunding.com",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "see Supported Platforms article (not read)"
+   ],
+   "automation_path": "none",
+   "automation_path_detail": "ToS bans bots/automation not authorized in writing; only approved copier list; VPS banned in ToS.",
+   "hard_filter": "FAIL",
+   "hard_filter_reason": "ToS section (l) bans VPS/VPN/TOR/proxy; section (ac) bans bots/automated systems without written authorization; 10s min trade duration. DTF and Diamond Hands plans allow overnight+weekend (valuable) but bot/VPS ban blocks.",
+   "quotes": [
+    {
+     "topic": "vps",
+     "text": "Section (l): \"utilize virtual private networks (VPNs), The Onion Router (TOR), virtual private servers (VPS), proxy servers.\"",
+     "url": "https://elitetraderfunding.app/help/trader-policies",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "automation",
+     "text": "\"makes use of artificial intelligence (AI), bots, automated trading systems, trade copiers\" ... \"that are not expressly authorized in writing by ETF.\"",
+     "url": "https://elitetraderfunding.app/help/trader-policies",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "automation",
+     "text": "Section (ah): \"All trades executed by you on ETF's platform shall have a minimum duration of ten (10) seconds.\"",
+     "url": "https://elitetraderfunding.app/help/trader-policies",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "holding",
+     "text": "\"Overnights/weekends allowed — swing trading permitted.\" (DTF plan)",
+     "url": "https://elitetraderfunding.app/help/how-the-dtf-plan-works",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [
+    {
+     "name": "Direct To Funded (DTF)",
+     "size_usd": null,
+     "price_usd": null,
+     "billing": "one-time",
+     "activation_fee_usd": null,
+     "reset_usd": null,
+     "profit_target_usd": null,
+     "daily_loss_usd": null,
+     "daily_loss_type": null,
+     "max_dd_usd": null,
+     "max_dd_type": "eod_trailing",
+     "dd_lock": "static variant exists",
+     "min_days": null,
+     "consistency": "best-day rule for ATDs (50%)",
+     "flat_by": null,
+     "overnight": true,
+     "weekend": true,
+     "news": null,
+     "min_hold": "10 seconds",
+     "max_size": null,
+     "payout": "min $500 (10K/100K) or $1,000 (25K/50K); $25,000 reward cap per trader",
+     "status": "1P partial"
+    },
+    {
+     "name": "Diamond Hands eval",
+     "size_usd": null,
+     "price_usd": null,
+     "billing": null,
+     "activation_fee_usd": null,
+     "reset_usd": null,
+     "profit_target_usd": null,
+     "daily_loss_usd": null,
+     "daily_loss_type": null,
+     "max_dd_usd": null,
+     "max_dd_type": null,
+     "dd_lock": null,
+     "min_days": null,
+     "consistency": null,
+     "flat_by": null,
+     "overnight": true,
+     "weekend": true,
+     "news": null,
+     "min_hold": null,
+     "max_size": null,
+     "payout": null,
+     "status": "3P (QuantVPS Oct 2026)"
+    },
+    {
+     "name": "Elite 50K (standard eval)",
+     "size_usd": 50000,
+     "price_usd": null,
+     "billing": null,
+     "activation_fee_usd": null,
+     "reset_usd": null,
+     "profit_target_usd": null,
+     "daily_loss_usd": null,
+     "daily_loss_type": null,
+     "max_dd_usd": null,
+     "max_dd_type": null,
+     "dd_lock": null,
+     "min_days": null,
+     "consistency": null,
+     "flat_by": "1 min before close",
+     "overnight": false,
+     "weekend": false,
+     "news": null,
+     "min_hold": null,
+     "max_size": null,
+     "payout": null,
+     "status": "3P snippet of firm page"
+    }
+   ],
+   "instruments_detail": "Trade most current high-volume contract.",
+   "unverified": [
+    "platforms",
+    "prices",
+    "authorized-copier list contents",
+    "whether any written authorization is granted to custom bots"
+   ],
+   "notes": "Domain moved help.elitetraderfunding.com -> elitetraderfunding.app. Page was 130k chars; last 30k unread.",
+   "cluster": "futures (Rithmic/CQG/Tradovate/own)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "FAIL",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "FundedNext Futures",
+   "brand_url": "https://fundednext.com/futures",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "Tradovate",
+    "NinjaTrader"
+   ],
+   "automation_path": "headless_web",
+   "automation_path_detail": "Firm explicitly allows EAs/bots and VPS/VPN. No prop API for Tradovate prop accounts (see Tradovate finding), so path would be headless Tradovate web session or an approved bridge; not verified.",
+   "hard_filter": "PASS",
+   "hard_filter_reason": "Automation + VPS explicitly allowed by 1P FAQ. BUT flat by 3:10 PM CT daily, no overnight/weekend -> incompatible with multi-day daily-bar legs; usable only for intraday legs. Order-entry path unverified.",
+   "quotes": [
+    {
+     "topic": "automation",
+     "text": "\"you are allowed to use automated trading systems such as Expert Advisors (EAs) and trading bots.\" Support not provided; latency abuse/order flooding prohibited.",
+     "url": "https://helpfutures.fundednext.com/en/articles/17225788-fundednext-futures-most-frequently-asked-questions",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "vps",
+     "text": "\"You may use a VPS (Virtual Private Server) or VPN (Virtual Private Network)\" on Challenge and FundedNext Accounts; repeated inconsistent IP may prompt document requests.",
+     "url": "https://helpfutures.fundednext.com/en/articles/17225788-fundednext-futures-most-frequently-asked-questions",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "holding",
+     "text": "\"All positions must be closed by 3:10 PM CT each trading day\"; overnight/weekend not allowed.",
+     "url": "https://helpfutures.fundednext.com/en/articles/17225788-fundednext-futures-most-frequently-asked-questions",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [
+    {
+     "name": "Futures challenges (Bolt/Rapid/Legacy)",
+     "size_usd": null,
+     "price_usd": null,
+     "billing": "one-time",
+     "activation_fee_usd": null,
+     "reset_usd": null,
+     "profit_target_usd": null,
+     "daily_loss_usd": null,
+     "daily_loss_type": null,
+     "max_dd_usd": null,
+     "max_dd_type": null,
+     "dd_lock": null,
+     "min_days": null,
+     "consistency": "applies on some plans, % not stated",
+     "flat_by": "3:10 PM CT",
+     "overnight": false,
+     "weekend": false,
+     "news": null,
+     "min_hold": null,
+     "max_size": null,
+     "payout": null,
+     "status": "1P partial"
+    }
+   ],
+   "instruments_detail": "not read",
+   "unverified": [
+    "plan numbers",
+    "order-entry path (API/headless)",
+    "micros list"
+   ],
+   "notes": "Best automation-friendliness among cluster, but no overnight.",
+   "cluster": "futures (Rithmic/CQG/Tradovate/own)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": 2,
+    "lane_hard_filter": "PASS_RULES_ROUTE_UNVERIFIED",
+    "fit_legs": [],
+    "fit_note": "Flat by 3:10 PM CT (16:10 ET) with no overnight holds. No Stage-0-PASS session-flat futures leg exists (RQ-20261112-09d2-01 0/6, -03 FAIL; -04/-05 blocked).",
+    "ev_screen": "not_run: no fitting leg (the rule screens only firms with at least one)",
+    "route": "Headless browser on the Tradovate web trader from the VM (no Tradovate API on prop accounts). Not built, not measured.",
+    "integration_exists": false
+   }
+  },
+  {
+   "firm": "Apex Trader Funding",
+   "brand_url": "https://apextraderfunding.com",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "Tradovate",
+    "NinjaTrader",
+    "Rithmic-based"
+   ],
+   "automation_path": "none",
+   "automation_path_detail": "Prohibited-activities list reported to ban automation; cloud servers used to disguise location banned.",
+   "hard_filter": "FAIL",
+   "hard_filter_reason": "Apex prohibited-activities page (403 to us) reported by 3P as 'No Automation or Algorithm Usage allowed' and cloud servers banned; no overnight either. Conflicting 3P reports (bots OK in eval, not funded); treat as FAIL.",
+   "quotes": [
+    {
+     "topic": "automation",
+     "text": "\"No Automation or Algorithm Usage allowed\" (quoted by Propvator, Aug 15 2026)",
+     "url": "https://propvator.com/blog/apex-trader-funding-automated-trading/",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "vps",
+     "text": "\"VPNs, proxies and cloud servers used to disguise identity, device or location are banned.\"",
+     "url": "https://propvator.com/blog/apex-trader-funding-automated-trading/",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": null,
+   "unverified": [
+    "1P page https://apextraderfunding.com/help-center/getting-started/prohibited-activities/ returned 403",
+    "plans"
+   ],
+   "notes": "Re-verification of 1P text not achieved.",
+   "cluster": "futures (Rithmic/CQG/Tradovate/own)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "FAIL",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Take Profit Trader",
+   "brand_url": "https://www.takeprofittrader.com",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "NinjaTrader",
+    "TradingView",
+    "Tradovate",
+    "RTrader",
+    "Quantower",
+    "MotiveWave"
+   ],
+   "automation_path": "none",
+   "automation_path_detail": "UTP reportedly requires all trades placed manually.",
+   "hard_filter": "FAIL",
+   "hard_filter_reason": "3P-cited UTP: automated systems/bots/algo tools not permitted, all trades manual (Test, PRO, PRO+); PRO flat by 5 PM ET. 1P zendesk pages returned 403.",
+   "quotes": [
+    {
+     "topic": "automation",
+     "text": "\"automated systems, bots and algorithmic execution tools not permitted; all trades must be placed manually.\" (PickMyTrade excerpt of UTP)",
+     "url": "https://takeprofittraderhelp.zendesk.com/hc/en-us/articles/34431153546397-TakeProfitTrader-Universal-Trading-Policies-UTP",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [
+    {
+     "name": "PRO",
+     "size_usd": null,
+     "price_usd": 130,
+     "billing": "one-time (funded fee)",
+     "activation_fee_usd": null,
+     "reset_usd": null,
+     "profit_target_usd": null,
+     "daily_loss_usd": null,
+     "daily_loss_type": null,
+     "max_dd_usd": null,
+     "max_dd_type": "intraday_trailing",
+     "dd_lock": null,
+     "min_days": null,
+     "consistency": null,
+     "flat_by": "5:00 PM ET",
+     "overnight": false,
+     "weekend": false,
+     "news": null,
+     "min_hold": null,
+     "max_size": null,
+     "payout": "80% split",
+     "status": "3P"
+    }
+   ],
+   "instruments_detail": null,
+   "unverified": [
+    "1P text"
+   ],
+   "notes": "Test stage reportedly allows overnight; irrelevant given bot ban.",
+   "cluster": "futures (Rithmic/CQG/Tradovate/own)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "FAIL",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Bulenox",
+   "brand_url": "https://bulenox.com",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "Rithmic",
+    "NinjaTrader",
+    "Tradovate?"
+   ],
+   "automation_path": "api",
+   "automation_path_detail": "3P: bots allowed if user-built for owner's personal use; Rithmic third-party API connection reportedly +$100/mo. 1P text not read (403).",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "Automation likely permitted (3P) but must flat by 15:59 CT: no overnight, so fails multi-day need. 1P unread; third-party algorithms need Bulenox approval per some 3P.",
+   "quotes": [
+    {
+     "topic": "automation",
+     "text": "\"Bulenox permits bots, algorithms and trade copiers outright.\" / \"Only user-built tools intended solely for the account owner personal use are permitted.\" / third-party API \"an extra $100 per month.\"",
+     "url": "https://propvator.com/blog/bulenox-automated-trading/",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "holding",
+     "text": "overnight holding strictly prohibited, flat by 3:59 PM CT (multiple 3P)",
+     "url": "https://tradingaudit.pages.dev/rules/bulenox",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": null,
+   "unverified": [
+    "1P rules (bulenox.com/help 403)",
+    "plans/prices"
+   ],
+   "notes": "Overnight prohibited.",
+   "cluster": "futures (Rithmic/CQG/Tradovate/own)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Earn2Trade",
+   "brand_url": "https://www.earn2trade.com",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "Rithmic-based",
+    "NinjaTrader"
+   ],
+   "automation_path": "none",
+   "automation_path_detail": "unresolved",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "Flat by 3:50 PM CT (3P citing help centre); automation conflicting 3P; 1P not read.",
+   "quotes": [
+    {
+     "topic": "holding",
+     "text": "positions must be flat by 3:50 PM CT; overnight not permitted (Gauntlet Mini and TCP)",
+     "url": "https://ptv-dev.pages.dev/blog/earn2trade-rules",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": null,
+   "unverified": [
+    "automation",
+    "1P rules at help.earn2trade.com"
+   ],
+   "notes": "No overnight.",
+   "cluster": "futures (Rithmic/CQG/Tradovate/own)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "The Trading Pit (Futures)",
+   "brand_url": "https://thetradingpit.com",
+   "asset_classes": [
+    "futures",
+    "fx/cfd"
+   ],
+   "platforms": [
+    "CQG?(unverified)"
+   ],
+   "automation_path": "none",
+   "automation_path_detail": "unresolved",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "3P says EAs allowed and HFT prohibited; overnight reported allowed on Prime, weekend not; no 1P read, no CQG info found.",
+   "quotes": [
+    {
+     "topic": "automation",
+     "text": "EAs and automated trading permitted on all The Trading Pit Futures accounts (must comply with trading conditions); HFT prohibited (3P summary)",
+     "url": "https://www.luxalgo.com/prop-firms/the-trading-pit-futures/",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [
+    {
+     "name": "Futures Prime",
+     "size_usd": null,
+     "price_usd": null,
+     "billing": null,
+     "activation_fee_usd": null,
+     "reset_usd": null,
+     "profit_target_usd": null,
+     "daily_loss_usd": null,
+     "daily_loss_type": null,
+     "max_dd_usd": null,
+     "max_dd_type": null,
+     "dd_lock": null,
+     "min_days": null,
+     "consistency": null,
+     "flat_by": "positions closed 5 min before new trading day (3P)",
+     "overnight": null,
+     "weekend": false,
+     "news": null,
+     "min_hold": null,
+     "max_size": null,
+     "payout": null,
+     "status": "3P conflicting"
+    }
+   ],
+   "instruments_detail": null,
+   "unverified": [
+    "everything 1P",
+    "CQG access",
+    "overnight"
+   ],
+   "notes": "Worth a follow-up read of 1P rules; potential overnight candidate but weekend ban.",
+   "cluster": "futures (Rithmic/CQG/Tradovate/own)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Alpha Futures (other)",
+   "brand_url": "https://alpha-futures.com",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "Tradovate/Rithmic?"
+   ],
+   "automation_path": "none",
+   "automation_path_detail": "",
+   "hard_filter": "FAIL",
+   "hard_filter_reason": "1P: bots and full automation strictly prohibited. (Live Alpha Prime overnight reported allowed by 3P.)",
+   "quotes": [
+    {
+     "topic": "automation",
+     "text": "\"The use of AI, bots, and other automated trading mechanisms is strictly prohibited across all account types.\"",
+     "url": "https://intercom.help/alpha-futures-limited-f14467eeaf9c/en/articles/9508585-prohibited-trading-practices",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "automation",
+     "text": "\"Any form of hands-off, continuous day and night trading, or any other type of full automation is strictly forbidden.\"",
+     "url": "https://intercom.help/alpha-futures-limited-f14467eeaf9c/en/articles/9508585-prohibited-trading-practices",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "vps",
+     "text": "\"The use of VPS is permitted in your trading, however the use of VPN attempting to hide or change you IP address is not.\"",
+     "url": "https://intercom.help/alpha-futures-limited-f14467eeaf9c/en/articles/9508585-prohibited-trading-practices",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": null,
+   "unverified": [],
+   "notes": "Surfaced because it allegedly allows overnight on live Alpha Prime.",
+   "cluster": "futures (Rithmic/CQG/Tradovate/own)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "FAIL",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Funded Futures Family / Funded Futures Network",
+   "brand_url": "https://fundedfuturesfamily.com",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "Tradovate/NinjaTrader"
+   ],
+   "automation_path": "none",
+   "automation_path_detail": "",
+   "hard_filter": "FAIL",
+   "hard_filter_reason": "FFF (Family): bots/algorithmic trading officially prohibited (3P quoting 1P policy). Funded Futures Network is a distinct firm: flat by 16:50 ET, automation not established.",
+   "quotes": [
+    {
+     "topic": "automation",
+     "text": "FFF \"officially prohibits bot and algorithmic trading\" ('fair, human-driven trading environment'), citing Bots & Algorithmic Trading Policy",
+     "url": "https://intercom.help/funded-futures-family/en/articles/10114863-bots-algorithmic-trading-policy",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "holding",
+     "text": "\"Overnight holding is permitted on sim-funded accounts.\" (FFF, TradersPost summary)",
+     "url": "https://intercom.help/funded-futures-family/en/articles/10114799-rules-permitted-times-to-trade",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": null,
+   "unverified": [
+    "1P pages 404/not read",
+    "Funded Futures Network automation"
+   ],
+   "notes": "Names are two different firms; only FFF checked.",
+   "cluster": "futures (Rithmic/CQG/Tradovate/own)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "FAIL",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "DayTraders.com",
+   "brand_url": "https://daytraders.com",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "ArcTrader (in-house, Rithmic login)",
+    "ProjectX (per 3P, unconfirmed)"
+   ],
+   "automation_path": "api",
+   "automation_path_detail": "3P (TradersPost) says automation via ProjectX API; conflicting 3P says ProjectX now Topstep-only. ArcTrader has no documented API.",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "Only HFT reportedly prohibited (3P); no 1P bot/VPS text read. Flat by 5 PM ET, so no overnight.",
+   "quotes": [
+    {
+     "topic": "automation",
+     "text": "\"automated high-frequency trading is prohibited on all accounts\" (Propvator paraphrase); no clause banning EAs/bots found by that source",
+     "url": "https://propvator.com/blog/daytraders-automated-trading/",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "platforms",
+     "text": "\"Use your Rithmic credentials to sign into ArcTrader\"",
+     "url": "https://intercom.help/daytraders/en/articles/15853741-arctrader-platform-overview",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": "limited instrument set per 1P marketing",
+   "unverified": [
+    "1P rules (404 on help URLs)",
+    "ProjectX status",
+    "prices"
+   ],
+   "notes": "No overnight.",
+   "cluster": "futures (Rithmic/CQG/Tradovate/own)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Tick Tick Trader",
+   "brand_url": "https://tickticktrader.com",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "Rithmic/Tradovate?"
+   ],
+   "automation_path": "none",
+   "automation_path_detail": "",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "3P: automation/bots not allowed; overnight conflicting, likely flat by 5 PM ET.",
+   "quotes": [
+    {
+     "topic": "automation",
+     "text": "\"Algorithmic Trading: Automation or bots are not allowed.\" (3P rules summary)",
+     "url": "https://tradingfinder.com/props/ticktick-trader/rules",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": null,
+   "unverified": [
+    "1P"
+   ],
+   "notes": "",
+   "cluster": "futures (Rithmic/CQG/Tradovate/own)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Leeloo Trading",
+   "brand_url": "https://leelootrading.com",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "Rithmic"
+   ],
+   "automation_path": "none",
+   "automation_path_detail": "",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "3P conflict: Propvator says no automation where system trades for you; others differ. Overnight: Performance accounts reportedly 3 micros overnight (3P).",
+   "quotes": [
+    {
+     "topic": "automation",
+     "text": "Leeloo does not allow automation where the system trades for the trader (Propvator FAQ paraphrase)",
+     "url": "https://propvator.com/blog/leeloo-trading-automated-trading/",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": null,
+   "unverified": [
+    "1P"
+   ],
+   "notes": "Possible small overnight micro allowance; follow up.",
+   "cluster": "futures (Rithmic/CQG/Tradovate/own)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "OneUp Trader",
+   "brand_url": "https://oneuptrader.com",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "Rithmic/Tradovate"
+   ],
+   "automation_path": "none",
+   "automation_path_detail": "",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "3P conflict on bots (no stated ban vs 'not allowed'); flat by 3:15 PM CT per Trading Funder; lineup changed Sep 16 2026 (3P).",
+   "quotes": [
+    {
+     "topic": "holding",
+     "text": "overnight/weekend not allowed, close by 3:15 PM CT (Trading Funder)",
+     "url": "https://tradingfunder.com/?p=30878",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": null,
+   "unverified": [
+    "1P"
+   ],
+   "notes": "",
+   "cluster": "futures (Rithmic/CQG/Tradovate/own)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "INFRASTRUCTURE: Rithmic R|Protocol API",
+   "brand_url": "https://rithmic.com/apis",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "Rithmic"
+   ],
+   "automation_path": "api",
+   "automation_path_detail": "API exists but needs conformance review before production credentials; prop firm must enable it.",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "No 1P doc readable (rithmic.com/apis returned only a title or 404). 3P: wire-level WebSocket+protobuf; dev kit -> test system -> conformance -> production; free trial IDs/paper demos with live data cannot use it. Nothing found on prop-firm accounts specifically.",
+   "quotes": [
+    {
+     "topic": "api",
+     "text": "developers request a Rithmic dev kit, test against Rithmic's test system, and pass conformance review before getting production credentials (Ironbeam)",
+     "url": "https://www.ironbeam.com/?p=10677",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "api",
+     "text": "production URLs are released only after the conformance test is passed (async-rithmic docs)",
+     "url": "https://async-rithmic.readthedocs.io/en/stable/connection.html",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": null,
+   "unverified": [
+    "whether prop-firm Rithmic logins have API permission (3P error 'api access level' exists)",
+    "who registers app: Rithmic vs FCM vs prop firm"
+   ],
+   "notes": "Decisive question unresolved; needs email to Rithmic/firm.",
+   "cluster": "futures (Rithmic/CQG/Tradovate/own)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "INFRASTRUCTURE: Tradovate API",
+   "brand_url": "https://support.tradovate.com",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "Tradovate"
+   ],
+   "automation_path": "none",
+   "automation_path_detail": "Official support article (via search snippet) says live funded >= $1,000 + $25/mo add-on; prop/eval accounts not eligible.",
+   "hard_filter": "FAIL",
+   "hard_filter_reason": "Prop accounts do not allow direct API access (community consensus; Tradovate support article via snippet; direct article fetch failed with CSS error).",
+   "quotes": [
+    {
+     "topic": "api",
+     "text": "\"we know that the Prop Accounts do not allow direct API access.\" (community member, not staff)",
+     "url": "https://community.tradovate.com/t/prop-account-api-access/10430",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "api",
+     "text": "live, funded Tradovate account with minimum $1,000 plus active API Access add-on ($25/mo); prop and evaluation accounts not eligible (search snippet of official article)",
+     "url": "https://support.tradovate.com/s/article/Tradovate-API-Access?language=en_US",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": null,
+   "unverified": [
+    "official article text"
+   ],
+   "notes": "Third-party bridges (PickMyTrade etc.) work through firm-approved integrations; firm-dependent.",
+   "cluster": "futures (Rithmic/CQG/Tradovate/own)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "FAIL",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "INFRASTRUCTURE: CQG API",
+   "brand_url": "https://help.cqg.com/apihelp",
+   "asset_classes": [
+    "futures"
+   ],
+   "platforms": [
+    "CQG"
+   ],
+   "automation_path": "api",
+   "automation_path_detail": "WebAPI/Continuum need conformance test before production and per-user enablement by the FCM/firm.",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "No evidence any prop firm enables CQG WebAPI for trader accounts; credentials/enablement come from FCM or firm.",
+   "quotes": [
+    {
+     "topic": "api",
+     "text": "formal conformance test before any API-powered application can connect to our production environment (CQG docs, via search snippet)",
+     "url": "https://help.cqg.com/apihelp/Documents/webapiconformancetestandtestplan1.htm",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": null,
+   "unverified": [
+    "prop-firm eligibility"
+   ],
+   "notes": "",
+   "cluster": "futures (Rithmic/CQG/Tradovate/own)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Velotrade (FX/indices/stocks CFD side, DXtrade)",
+   "brand_url": "https://velotrade.com",
+   "asset_classes": [
+    "forex (39 pairs)",
+    "crypto",
+    "stocks",
+    "index ETFs (SPY, QQQ, IWM)",
+    "commodities (gold, silver, WTI)",
+    "indices (unnamed)"
+   ],
+   "platforms": [
+    "DXtrade (dx.velotrade.com)"
+   ],
+   "automation_path": "api",
+   "automation_path_detail": "DXtrade REST + Push(WebSocket) API on every account, no fee, no approval step; FIX not provisioned. Blog says automated trading permitted on evaluation AND funded accounts. REST base https://dx.velotrade.com/dxsca-web, login with trading-account username/password. DXtrade default limits (not guaranteed): 1 login/s/IP, 10 read/s, 10 trade/s per session.",
+   "hard_filter": "PASS",
+   "hard_filter_reason": "Firm blog states API on every account, bots/EAs permitted on eval and funded, VPS fine if only you trade; Terms 8.3 permit EAs; no device/VPS clause in Terms. Caveat: VPS/API permission is in firm blog (1P marketing), not in Terms; Terms 8.3(c) lets Velotrade ban specific EAs. Rules require automation to monitor P&L and stop before breach.",
+   "quotes": [
+    {
+     "topic": "api",
+     "text": "Velotrade gives every account full REST and Push (WebSocket) API access with no extra fee and no approval step",
+     "url": "https://velotrade.com/blog/dxtrade-api-algo-trading",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "automation",
+     "text": "Automated trading is permitted on Velotrade evaluation and funded accounts",
+     "url": "https://velotrade.com/blog/dxtrade-api-algo-trading",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "automation",
+     "text": "Use of Expert Advisors (automated trading software) is permitted, subject to: (a) EAs must not engage in Prohibited Trading; (b) You remain fully responsible for all trades executed by EAs; (c) We reserve the right to restrict or prohibit specific EAs.",
+     "url": "https://velotrade.com/terms",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "automation",
+     "text": "High-frequency trading (HFT): Using automated systems for ultra-high-speed trading; Grid trading: Placing multiple orders at predetermined intervals without genuine market analysis;",
+     "url": "https://velotrade.com/terms",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "vps",
+     "text": "VPS hosting is fine as long as only you trade the account.",
+     "url": "https://velotrade.com/blog/prop-firms-that-allow-eas",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "vps",
+     "text": "Permitted for legitimate routing and execution purposes.",
+     "url": "https://velotrade.com/blog/velotrade-review",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "api",
+     "text": "The evaluation rules, including the daily loss limit and the static maximum drawdown, apply to API activity exactly as they apply to manual trades.",
+     "url": "https://velotrade.com/blog/dxtrade-api-algo-trading",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "holding",
+     "text": "Weekend holding permitted.",
+     "url": "https://velotrade.com/forex",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "holding",
+     "text": "An overnight fee of 0.05% of the notional value applies to positions still open at 00:30 UTC",
+     "url": "https://velotrade.com/blog/velotrade-review",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "instruments",
+     "text": "index ETFs (SPY, QQQ, IWM), and commodities (gold, silver, WTI crude)",
+     "url": "https://velotrade.com/blog/velotrade-review",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "fees",
+     "text": "There is no spread markup, so the commission is the full trading cost. (0.004% per side forex majors; 0.01% commodities; 0.03% index ETFs and single stocks)",
+     "url": "https://velotrade.com/blog/velotrade-review",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "drawdown",
+     "text": "Static drawdown, no trailing floor. Limits are 10% (2-Step), 7% (1-Step Classic), and 3% (PRO 1-Step). No consistency rule.",
+     "url": "https://velotrade.com/forex",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [
+    {
+     "name": "CLASSIC 2-Step",
+     "size_usd": 5000,
+     "price_usd": 54,
+     "billing": "one-time",
+     "activation_fee_usd": null,
+     "reset_usd": null,
+     "profit_target_usd": null,
+     "daily_loss_usd": null,
+     "daily_loss_type": "hard",
+     "max_dd_usd": null,
+     "max_dd_type": "static",
+     "dd_lock": "static 90% floor of initial balance; 10% P1, 5% P2 targets",
+     "min_days": null,
+     "consistency": "none stated",
+     "flat_by": null,
+     "overnight": true,
+     "weekend": true,
+     "news": "allowed",
+     "min_hold": null,
+     "max_size": "up to 200K",
+     "payout": "80% base, 90% with paid add-on; 'within 24h once approved'",
+     "status": "1P"
+    },
+    {
+     "name": "CLASSIC 1-Step",
+     "size_usd": 5000,
+     "price_usd": 67,
+     "billing": "one-time",
+     "activation_fee_usd": null,
+     "reset_usd": null,
+     "profit_target_usd": null,
+     "daily_loss_usd": null,
+     "daily_loss_type": "hard",
+     "max_dd_usd": null,
+     "max_dd_type": "static",
+     "dd_lock": "static floor 93% of start (7% DD); 10% target",
+     "min_days": null,
+     "consistency": "none stated",
+     "flat_by": null,
+     "overnight": true,
+     "weekend": true,
+     "news": "allowed",
+     "min_hold": null,
+     "max_size": null,
+     "payout": "80%/90%",
+     "status": "1P"
+    }
+   ],
+   "instruments_detail": "Index exposure appears to be index ETFs (SPY, QQQ, IWM) and commodities incl. gold/silver/WTI, not named US500/US100 CFDs. GLD/TLT/SLV/GDX/USO availability NOT confirmed; account-specific instrument discovery via API. Single stocks reportedly carry tighter holding rules (no weekend, earnings/ex-div close) per firm blogs. Overnight fee 0.05%/day notional on crypto/index/commodity/stock at 00:30 UTC (very high vs normal swaps, ~18%/yr); forex swap 0.05%/night (3x Wed). Whether ETFs are real shares or CFDs not confirmed.",
+   "unverified": [
+    "Whether the funded (live-funded) account retains API; blog says eval and funded",
+    "Daily loss amount/reset (one blog says 00:30 UTC)",
+    "Exact plan prices at larger sizes",
+    "Single-stock/ETF weekend restrictions in rule text",
+    "GLD/TLT/SLV/GDX/USO list",
+    "Platforms page not read; no explicit VPS clause in Terms (coverage: terms page only)"
+   ],
+   "notes": "BEST candidate in cluster: genuine API for our server. Overnight fee makes multi-day index/gold holds costly. Prior crypto read extends to FX/ETF/commodity per same terms.",
+   "cluster": "FX / CFD (incl. index, commodity, ETF and stock CFDs)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": 1,
+    "lane_hard_filter": "PASS",
+    "fit_legs": [
+     "spy_trend_long_1d",
+     "qqq_trend_long_1d",
+     "qqq_pullback_1h",
+     "iwm_trend_long_1d",
+     "gld_pullback_1d",
+     "gld_pullback_1h",
+     "slv_trend_1h",
+     "slv_pullback_1d",
+     "uso_trend_1h"
+    ],
+    "fit_note": "CFDs on SPY/QQQ/IWM, gold, silver and WTI (1P, re-fetched by the lane). Overnight and weekend holds allowed. Every fitting leg holds 6 h to weeks. At Velotrade costs (overnight fee 0.05%/night) the equity-ETF legs are net negative over the window; the commodity legs carry the edge.",
+    "ev_screen": "BUYABLE under RULE-PROP-FRONTIER-EV6M-20261112 on VELO_ALL at 0.5% risk, both plans; marginal (see memo section 5)",
+    "route": "DXtrade REST: the same API velotrade_1 already trades through (platform dxtrade_api)",
+    "integration_exists": true
+   }
+  },
+  {
+   "firm": "FTMO",
+   "brand_url": "https://ftmo.com",
+   "asset_classes": [
+    "forex",
+    "indices",
+    "commodities",
+    "stocks",
+    "crypto"
+   ],
+   "platforms": [
+    "MT4",
+    "MT5",
+    "cTrader",
+    "DXtrade (discontinued 2026-03-24 per prior)"
+   ],
+   "automation_path": "mt5_vps",
+   "automation_path_detail": "EAs allowed (MT4/MT5 EA, cTrader cBot). VPS/VPN generally allowed. No first-party statement found that cTrader Open API / own API client is permitted for FTMO accounts; not addressed on pages read.",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "EA + VPS permitted (PASS under route c), but own API client permission not stated; US-geolocation caveat; 2,000 requests/day hyperactivity cap; third-party-EA duplication risk. Swing account needed for overnight/weekend.",
+   "quotes": [
+    {
+     "topic": "vps",
+     "text": "Trading with FTMO while travelling to a different country is generally allowed. The use of VPN/VPS is also generally allowed.",
+     "url": "https://ftmo.com/en/faq/can-i-travel-or-use-vpn-vps/",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "vps",
+     "text": "When using VPN/VPS, clients should also avoid changing their geolocation to the United States when using MetaTrader, cTrader or TradingView.",
+     "url": "https://ftmo.com/en/faq/can-i-travel-or-use-vpn-vps/",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "automation",
+     "text": "yes, you are allowed to use algorithmic trading at FTMO ... Although the code enters the trades, you remain responsible for meeting the Trading Objectives",
+     "url": "https://ftmo.com/en/blog/what-is-algorithmic-trading-and-how-to-use-it-for-the-ftmo-challenge/",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "automation",
+     "text": "automated robots / EAs (Expert Advisors) which cause the trading account to become hyperactive ... more than 2,000 server requests per day",
+     "url": "https://ftmo.com/en/forbidden-trading-practices/",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "automation",
+     "text": "platform servers have a limit of 200 orders at a time and 2000 max positions per day",
+     "url": "https://ftmo.com/en/faq/which-instruments-can-i-trade-and-what-strategies-am-i-allowed-to-use/",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "holding",
+     "text": "Overnight and weekend position restrictions apply only to the Standard account type.",
+     "url": "https://ftmo.com/en/trading-rules/",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "holding",
+     "text": "Restrictions for trading during selected news releases apply only to the Standard account type.",
+     "url": "https://ftmo.com/en/trading-rules/",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "drawdown",
+     "text": "1-Step: Max Daily Loss 3%, end-of-day trailing max loss 10%, profit target 10%; 2-Step: daily 5%, static 10%, targets 10%/5%, min 4 trading days; Instant: intraday balance-based trailing, best day <=30%",
+     "url": "https://ftmo.com/en/trading-objectives/",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "instruments",
+     "text": "You can trade all the instruments and assets that are available in your trading platform (Forex, Indices, Commodities, Stocks, Crypto,…).",
+     "url": "https://ftmo.com/en/faq/which-instruments-can-i-trade-and-what-strategies-am-i-allowed-to-use/",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [
+    {
+     "name": "2-Step (Standard vs Swing)",
+     "size_usd": 100000,
+     "price_usd": null,
+     "billing": "one-time",
+     "activation_fee_usd": null,
+     "reset_usd": null,
+     "profit_target_usd": 10000,
+     "daily_loss_usd": 5000,
+     "daily_loss_type": "hard",
+     "max_dd_usd": 10000,
+     "max_dd_type": "static",
+     "dd_lock": "static at initial-10%",
+     "min_days": 4,
+     "consistency": "none",
+     "flat_by": "Standard: restrictions apply (details not read); Swing: none",
+     "overnight": null,
+     "weekend": null,
+     "news": "restricted only on Standard funded",
+     "min_hold": null,
+     "max_size": "up to 200K",
+     "payout": null,
+     "status": "1P"
+    },
+    {
+     "name": "1-Step",
+     "size_usd": 100000,
+     "price_usd": null,
+     "billing": "one-time",
+     "activation_fee_usd": null,
+     "reset_usd": null,
+     "profit_target_usd": 10000,
+     "daily_loss_usd": 3000,
+     "daily_loss_type": "hard",
+     "max_dd_usd": 10000,
+     "max_dd_type": "eod_trailing",
+     "dd_lock": "never decreases; highest EOD balance basis",
+     "min_days": null,
+     "consistency": null,
+     "flat_by": null,
+     "overnight": null,
+     "weekend": null,
+     "news": null,
+     "min_hold": null,
+     "max_size": null,
+     "payout": null,
+     "status": "1P"
+    }
+   ],
+   "instruments_detail": "Symbol list page not read; US500/US100/XAUUSD/ETF CFD availability and commissions UNVERIFIED (FAQ only says Forex, Indices, Commodities, Stocks, Crypto).",
+   "unverified": [
+    "Own cTrader Open API client permission",
+    "Swing vs Standard exact holding wording",
+    "Symbol list/commission/swap",
+    "Prices",
+    "help.ftmo.com not resolvable in this session"
+   ],
+   "notes": "Prior: DXtrade discontinued 2026-03-24 (not re-verified). An MT5 EA on a Linux server needs Wine/Windows VPS.",
+   "cluster": "FX / CFD (incl. index, commodity, ETF and stock CFDs)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": 4,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "fit_note": "Swing account type needed for overnight/weekend; symbol list unread.",
+    "ev_screen": "not_run: hard filter unverified (own cTrader Open API client not stated; 1-Step DD is EOD trailing)",
+    "route": "cTrader Open API or MT5 EA on VPS; 2,000 server requests/day cap",
+    "integration_exists": false
+   }
+  },
+  {
+   "firm": "The5ers",
+   "brand_url": "https://the5ers.com",
+   "asset_classes": [
+    "forex",
+    "indices",
+    "metals",
+    "crypto (varies)"
+   ],
+   "platforms": [
+    "MT5",
+    "cTrader (per FXEmpire 3P)"
+   ],
+   "automation_path": "mt5_vps",
+   "automation_path_detail": "EAs allowed if you own the source code and avoid banned types. Own API client permission not stated. Futures program forbids algo trading (per 3P/1P futures FAQ, not read).",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "EA allowed (own source) but VPS rule not found on pages read and own-API permission not stated.",
+   "quotes": [
+    {
+     "topic": "automation",
+     "text": "You can use any EA you have in your trading account, as long as it does not: [copy signals, tick scalp, latency arb, reverse/hedge arb, HFT, emulators] ... Additionally, the trader must own the source code of the EA.",
+     "url": "https://the5ers.com/faqs/can-i-use-an-ea-expert-advisor-can-i-set-a-stealth-mode-stop-loss/",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "automation",
+     "text": "The stop-loss order has to be visible in the trading platform, so you cannot use a 'stealth mode' stop-loss.",
+     "url": "https://the5ers.com/faqs/can-i-use-an-ea-expert-advisor-can-i-set-a-stealth-mode-stop-loss/",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": "UNVERIFIED",
+   "unverified": [
+    "VPS rule",
+    "API",
+    "holding rules",
+    "instruments",
+    "plans (Bootcamp/Hyper Growth/High Stakes)"
+   ],
+   "notes": "Visible-SL requirement conflicts with strategies relying on software-managed stops; bracket must sit at venue.",
+   "cluster": "FX / CFD (incl. index, commodity, ETF and stock CFDs)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "FundedNext (CFD)",
+   "brand_url": "https://fundednext.com",
+   "asset_classes": [
+    "forex",
+    "indices",
+    "metals",
+    "energies",
+    "stocks",
+    "crypto (CFD)"
+   ],
+   "platforms": [
+    "MT4",
+    "MT5",
+    "cTrader",
+    "Match-Trader"
+   ],
+   "automation_path": "mt5_vps",
+   "automation_path_detail": "EAs and VPS each need a paid add-on; MT4/MT5 only; no automation on cTrader or Match-Trader; no API.",
+   "hard_filter": "FAIL",
+   "hard_filter_reason": "Help centre bars VPS and EAs on accounts >=$50K (own device); automation only MT4/MT5 on small accounts; unauthorized VPS/EA use is prohibited. No API path.",
+   "quotes": [
+    {
+     "topic": "vps",
+     "text": "Accounts of $50,000 and above: VPS use is not permitted. Trades must be placed from your own device. (summary of article)",
+     "url": "https://help.fundednext.com/en/articles/8223809-can-i-use-a-vpn-or-vps",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "automation",
+     "text": "Both EAs and VPS are allowed in 5K-25K accounts. EAs and VPS each require their own paid add-on to enable usage. MT4 and MT5 only. Match-Trader and cTrader do not support automated trading.",
+     "url": "https://fundednext.com/general-rules/cfds/what-is-allowed",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "automation",
+     "text": "Using a VPS or Expert Advisor (EAs) without prior approval through official FundedNext add-ons.",
+     "url": "https://fundednext.com/general-rules/cfds/what-is-forbidden",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": "UNVERIFIED",
+   "unverified": [
+    "holding rules",
+    "instruments",
+    "prices"
+   ],
+   "notes": "The help-centre article says VPS only for trade-taking EAs; manual on VPS prohibited.",
+   "cluster": "FX / CFD (incl. index, commodity, ETF and stock CFDs)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "FAIL",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "E8 Markets",
+   "brand_url": "https://e8markets.com",
+   "asset_classes": [
+    "forex",
+    "indices",
+    "metals",
+    "crypto"
+   ],
+   "platforms": [
+    "MT5",
+    "TradeLocker",
+    "Match-Trader (unverified)"
+   ],
+   "automation_path": "mt5_vps",
+   "automation_path_detail": "Any EA allowed if not duplicated across users; VPS rule not read (help.e8markets.com 403; intercom mirror partial).",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "EA clause permissive but VPS/API/holding not confirmed first-party.",
+   "quotes": [
+    {
+     "topic": "automation",
+     "text": "you can use any EA (Expert Advisor) as long as we don't see multiple users executing the same trades/strategy.",
+     "url": "https://intercom.help/e8/en/articles/6929927-trading-policies-and-prohibited-trading-strategies",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "automation",
+     "text": "To avoid high-frequency trading (HFT) behaviors, you cannot hold more than 50% of your trades for under one minute.",
+     "url": "https://intercom.help/e8/en/articles/6929927-trading-policies-and-prohibited-trading-strategies",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": "UNVERIFIED",
+   "unverified": [
+    "VPS",
+    "API",
+    "holding",
+    "instruments",
+    "drawdown",
+    "prices"
+   ],
+   "notes": "Page covered EAs, copy trading, HFT only.",
+   "cluster": "FX / CFD (incl. index, commodity, ETF and stock CFDs)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Blue Guardian (CFD)",
+   "brand_url": "https://blueguardian.com",
+   "asset_classes": [
+    "forex",
+    "indices (SPX500, US30)",
+    "metals (XAUUSD)",
+    "crypto"
+   ],
+   "platforms": [
+    "MT5",
+    "MatchTrader",
+    "TradeLocker (platform list conflicting in 3P)"
+   ],
+   "automation_path": "mt5_vps",
+   "automation_path_detail": "EAs allowed; VPN/VPS allowed except to bypass copy/group/signal rules. No API statement.",
+   "hard_filter": "PASS",
+   "hard_filter_reason": "EAs allowed and VPS allowed (route c, MT5 EA on VPS); no overnight/weekend restriction. No first-party API route confirmed. Funded accounts: news window rule; 2-minute min hold.",
+   "quotes": [
+    {
+     "topic": "automation",
+     "text": "EAs are allowed. You may use EAs (Expert Advisors) that you setup to suit your own strategy or trading style.",
+     "url": "https://help.blueguardian.com/en/articles/14062186-1-step-standard-rules",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "vps",
+     "text": "using either service to bypass rules related to copy trading, group trading, or signal trading is strictly prohibited.",
+     "url": "https://help.blueguardian.com/en/articles/14062186-1-step-standard-rules",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "holding",
+     "text": "We have no restrictions on holding trades over night or the weekend on all account types.",
+     "url": "https://help.blueguardian.com/en/articles/14062186-1-step-standard-rules",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "news",
+     "text": "refrain from Opening/Closing trades 5 minutes before and 5 minutes after red folder (high-impact) news events.",
+     "url": "https://help.blueguardian.com/en/articles/14062186-1-step-standard-rules",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "drawdown",
+     "text": "1 step standard maximum drawdown will remain at 6% trailing of your Highest Watermark Closing Trade made. The maximum daily loss is limited to 4% of the initial account balance. (resets 5pm EST)",
+     "url": "https://help.blueguardian.com/en/articles/14062186-1-step-standard-rules",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "instruments",
+     "text": "USD news affects USD pairs like EURUSD and GBPUSD, indices like SPX500 and US30, gold (XAUUSD), and BTCUSD and ETHUSD. (table of news-restricted instruments)",
+     "url": "https://help.blueguardian.com/en/articles/14062186-1-step-standard-rules",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [
+    {
+     "name": "1 Step Standard",
+     "size_usd": null,
+     "price_usd": null,
+     "billing": "one-time",
+     "activation_fee_usd": null,
+     "reset_usd": null,
+     "profit_target_usd": null,
+     "daily_loss_usd": null,
+     "daily_loss_type": "hard",
+     "max_dd_usd": null,
+     "max_dd_type": "eod_trailing",
+     "dd_lock": "6% trailing on highest closed-trade watermark; locks at start once 6% profit (+1% buffer); 9% target (10% for pre-Aug-20 buys); daily 4% resets 5pm EST",
+     "min_days": null,
+     "consistency": null,
+     "flat_by": null,
+     "overnight": true,
+     "weekend": true,
+     "news": "challenge allowed; funded +/-5min restriction",
+     "min_hold": "2 minutes",
+     "max_size": null,
+     "payout": null,
+     "status": "1P"
+    }
+   ],
+   "instruments_detail": "SPX500, US30, XAUUSD, BTC/ETH confirmed present via news table; US100, US2000, XAGUSD, USOIL, ETF CFDs UNVERIFIED.",
+   "unverified": [
+    "API/own client",
+    "prices",
+    "ETF CFDs",
+    "commission/swap",
+    "platform list per plan",
+    "trailing basis wording (closed-trade watermark vs EOD)"
+   ],
+   "notes": "Best first-party FX/index CFD EA-on-VPS candidate for multi-day holds. 2-min min hold; drawdown trailing is tight (6%).",
+   "cluster": "FX / CFD (incl. index, commodity, ETF and stock CFDs)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": 3,
+    "lane_hard_filter": "PASS_ROUTE_C",
+    "fit_legs": [
+     "spy_trend_long_1d (SPX500)",
+     "gld_pullback_1d",
+     "gld_pullback_1h (XAUUSD)"
+    ],
+    "fit_note": "SPX500, US30, XAUUSD confirmed 1P; US100/XAG/oil/ETF CFDs unverified. 2-minute minimum hold (all our legs clear it).",
+    "ev_screen": "not_attempted: 6% trailing drawdown; prop_ev_sim.py raises on non-static drawdown (PI-20261112-D6UC5YT4-0003)",
+    "route": "MT5 Expert Advisor on a VPS (Wine on Linux or a Windows VPS); no API. We have no MT5 path.",
+    "integration_exists": false
+   }
+  },
+  {
+   "firm": "FunderPro",
+   "brand_url": "https://funderpro.com",
+   "asset_classes": [
+    "forex",
+    "indices",
+    "metals",
+    "futures (separate)"
+   ],
+   "platforms": [
+    "MT5",
+    "cTrader",
+    "TradeLocker",
+    "Quantower/ATAS (futures)"
+   ],
+   "automation_path": "mt5_vps",
+   "automation_path_detail": "CFD accounts: VPS/VPN must be approved and whitelisted by Risk team (static IP, proof of ownership). cTrader Open API and TradeLocker API reportedly workable but clause 7.2 (no login-data sharing) conflicts.",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "Only 3P (PickMyTrade, Sept 2026) read; VPS whitelist process burdensome; HFT clause 13.9 vs help-centre conflict; own-source-code EA required (13.11).",
+   "quotes": [
+    {
+     "topic": "vps",
+     "text": "The Risk team \"has to approve and whitelist a VPS or VPN before you trade through it.\" (CFD accounts)",
+     "url": "https://blog.pickmytrade.trade/funderpro-bot-limits-by-platform-mt5-ctrader-tradelocker/",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "automation",
+     "text": "Clause 13.11 \"requires source-code ownership for any third-party EA.\" Clause 13.4 bans \"shared VPS and IP setups that link accounts\".",
+     "url": "https://blog.pickmytrade.trade/funderpro-bot-limits-by-platform-mt5-ctrader-tradelocker/",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": "UNVERIFIED",
+   "unverified": [
+    "all first-party text"
+   ],
+   "notes": "Secondary evidence only.",
+   "cluster": "FX / CFD (incl. index, commodity, ETF and stock CFDs)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Alpha Capital Group",
+   "brand_url": "https://alphacapitalgroup.uk",
+   "asset_classes": [
+    "forex",
+    "indices",
+    "metals",
+    "crypto"
+   ],
+   "platforms": [
+    "MT5",
+    "cTrader",
+    "TradeLocker (unverified)"
+   ],
+   "automation_path": "none",
+   "automation_path_detail": "Prior 1P: fully automated EAs strictly prohibited. 3P: only pre-approved risk-management EAs.",
+   "hard_filter": "FAIL",
+   "hard_filter_reason": "Prior 1P rule bans unsupervised EAs (my fetch of the help article returned 404; relied on brief prior plus 3P search consensus).",
+   "quotes": [
+    {
+     "topic": "automation",
+     "text": "Automated EAs that execute trades independently, without human oversight, are strictly prohibited",
+     "url": "https://intercom.help/alpicap/",
+     "source": "UNVERIFIED",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": "UNVERIFIED",
+   "unverified": [
+    "could not re-read the first-party article"
+   ],
+   "notes": "3P sources conflict (some say EAs allowed).",
+   "cluster": "FX / CFD (incl. index, commodity, ETF and stock CFDs)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "FAIL",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "FXIFY",
+   "brand_url": "https://fxify.com",
+   "asset_classes": [
+    "forex",
+    "indices",
+    "metals"
+   ],
+   "platforms": [
+    "MT4/MT5",
+    "cTrader",
+    "DXtrade (unverified)"
+   ],
+   "automation_path": "mt5_vps",
+   "automation_path_detail": "3P conflict on EAs; not allowed on Instant/Lightning.",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "No first-party page read.",
+   "quotes": [],
+   "plans": [],
+   "instruments_detail": "UNVERIFIED",
+   "unverified": [
+    "everything first-party"
+   ],
+   "notes": "3P summaries only (quantvps, tradingfinder).",
+   "cluster": "FX / CFD (incl. index, commodity, ETF and stock CFDs)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "FundingPips",
+   "brand_url": "https://fundingpips.com",
+   "asset_classes": [
+    "forex",
+    "indices",
+    "metals",
+    "crypto"
+   ],
+   "platforms": [
+    "MT5",
+    "cTrader",
+    "Match-Trader"
+   ],
+   "automation_path": "mt5_vps",
+   "automation_path_detail": "3P: third-party EAs only as trade/risk managers; VPS/VPN allowed with proof of ownership.",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "First-party article returned 404; 3P only.",
+   "quotes": [],
+   "plans": [],
+   "instruments_detail": "UNVERIFIED",
+   "unverified": [
+    "all first-party"
+   ],
+   "notes": "Own-strategy EAs apparently OK; execution-speed/arbitrage bots banned.",
+   "cluster": "FX / CFD (incl. index, commodity, ETF and stock CFDs)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Maven Trading",
+   "brand_url": "https://maventrading.com",
+   "asset_classes": [
+    "forex",
+    "indices",
+    "metals"
+   ],
+   "platforms": [
+    "MT5",
+    "others"
+   ],
+   "automation_path": "none",
+   "automation_path_detail": "3P sources conflict: Propvator says no EAs; Tradingaudit says allowed.",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "No first-party text read; conflicting 3P.",
+   "quotes": [],
+   "plans": [],
+   "instruments_detail": "UNVERIFIED",
+   "unverified": [
+    "all"
+   ],
+   "notes": "",
+   "cluster": "FX / CFD (incl. index, commodity, ETF and stock CFDs)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Goat Funded Trader",
+   "brand_url": "https://goatfundedtrader.com",
+   "asset_classes": [
+    "forex",
+    "indices",
+    "metals",
+    "crypto"
+   ],
+   "platforms": [
+    "MT5",
+    "TradeLocker"
+   ],
+   "automation_path": "mt5_vps",
+   "automation_path_detail": "3P: EAs allowed with HFT/gold-arbitrage bans, hedging not allowed; no VPS rule found.",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "3P only.",
+   "quotes": [],
+   "plans": [],
+   "instruments_detail": "UNVERIFIED",
+   "unverified": [
+    "all first-party"
+   ],
+   "notes": "",
+   "cluster": "FX / CFD (incl. index, commodity, ETF and stock CFDs)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Instant Funding",
+   "brand_url": "https://instantfunding.com",
+   "asset_classes": [
+    "forex",
+    "indices",
+    "metals"
+   ],
+   "platforms": [
+    "cTrader",
+    "MT5"
+   ],
+   "automation_path": "none",
+   "automation_path_detail": "Search snippet from intercom 'Instant Funding Prime': prohibits EAs and trade copiers (page not fetched).",
+   "hard_filter": "FAIL",
+   "hard_filter_reason": "Instant Funding Prime reportedly prohibits EAs/automated trading (3P snippet; unconfirmed for other programs).",
+   "quotes": [],
+   "plans": [],
+   "instruments_detail": "UNVERIFIED",
+   "unverified": [
+    "first-party text; other programs"
+   ],
+   "notes": "",
+   "cluster": "FX / CFD (incl. index, commodity, ETF and stock CFDs)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "FAIL",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Hola Prime",
+   "brand_url": "https://holaprime.com",
+   "asset_classes": [
+    "forex",
+    "indices",
+    "metals",
+    "crypto"
+   ],
+   "platforms": [
+    "MT5",
+    "cTrader (unverified)"
+   ],
+   "automation_path": "mt5_vps",
+   "automation_path_detail": "3P: EAs allowed on challenge accounts not Direct; one source says MT5 + 10% add-on.",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "3P only.",
+   "quotes": [],
+   "plans": [],
+   "instruments_detail": "UNVERIFIED",
+   "unverified": [
+    "all first-party"
+   ],
+   "notes": "",
+   "cluster": "FX / CFD (incl. index, commodity, ETF and stock CFDs)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Fintokei",
+   "brand_url": "https://fintokei.com",
+   "asset_classes": [
+    "forex",
+    "indices",
+    "metals",
+    "crypto"
+   ],
+   "platforms": [
+    "MT5",
+    "cTrader (unverified)"
+   ],
+   "automation_path": "mt5_vps",
+   "automation_path_detail": "3P: own-strategy EAs allowed, commercial/public bots banned; weekend/news trading allowed; VPS rule not found.",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "3P only.",
+   "quotes": [],
+   "plans": [],
+   "instruments_detail": "UNVERIFIED",
+   "unverified": [
+    "all first-party"
+   ],
+   "notes": "",
+   "cluster": "FX / CFD (incl. index, commodity, ETF and stock CFDs)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Seacrest Funded",
+   "brand_url": "https://seacrestfunded.com",
+   "asset_classes": [
+    "forex",
+    "indices",
+    "metals"
+   ],
+   "platforms": [
+    "MT5"
+   ],
+   "automation_path": "mt5_vps",
+   "automation_path_detail": "3P snippets of intercom: bots/EAs allowed if your own; VPN/VPS permitted; device sharing banned. Older page said no EAs on MT5. Fetches of both intercom articles returned 404.",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "Could not read first-party pages; conflicting history.",
+   "quotes": [],
+   "plans": [],
+   "instruments_detail": "UNVERIFIED",
+   "unverified": [
+    "all first-party"
+   ],
+   "notes": "Intercom path: intercom.help/SeacrestFunded/en/articles/6978697 and 6462152.",
+   "cluster": "FX / CFD (incl. index, commodity, ETF and stock CFDs)",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Trade The Pool (TTP)",
+   "brand_url": "https://tradethepool.com",
+   "asset_classes": [
+    "US stocks (real shares)",
+    "US ETFs"
+   ],
+   "platforms": [
+    "Trader Evolution (via Interactive Brokers)"
+   ],
+   "automation_path": "none",
+   "automation_path_detail": "No public API found for prop accounts; TradersPost connector listed 'Coming Soon'; firm bans bots.",
+   "hard_filter": "FAIL",
+   "hard_filter_reason": "Firm's own article says bots/EAs strictly prohibited on all funded and evaluation accounts and a human must place every trade.",
+   "quotes": [
+    {
+     "topic": "automation",
+     "text": "prohibits automated bots, Expert Advisors, and copy-trading tools",
+     "url": "https://tradethepool.com/ai/ai-trading-bots-on-funded-accounts/",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "automation",
+     "text": "Strictly prohibited on all funded accounts and evaluation phases.",
+     "url": "https://tradethepool.com/ai/ai-trading-bots-on-funded-accounts/",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "automation",
+     "text": "A human person must personally place and authorize every single trade.",
+     "url": "https://tradethepool.com/ai/ai-trading-bots-on-funded-accounts/",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "instruments",
+     "text": "operates exclusively on TraderEvolution (paraphrase of fetched page summary)",
+     "url": "https://tradethepool.com/fundamental/stock-prop-firms-explained",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": "Real US stocks and ETFs (12,000+ per 3P/1P marketing) via IBKR; Trader Evolution only.",
+   "unverified": [
+    "Overnight rules (3P sources conflict: earnings-season overnight ban vs unrestricted on FLEXMAX)",
+    "Plan pricing/drawdown values",
+    "API existence"
+   ],
+   "notes": "Disqualified regardless of overnight. Quote text for first quote taken from fetch summary; treat as near-verbatim.",
+   "cluster": "real stocks / ETFs",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "FAIL",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "PropShopTrader (PST) - Stocks Swing / Real Prop",
+   "brand_url": "https://propshoptrader.com",
+   "asset_classes": [
+    "US stocks (real; min 2M avg daily volume)",
+    "futures"
+   ],
+   "platforms": [
+    "Tickblaze (Windows-only desktop)"
+   ],
+   "automation_path": "none",
+   "automation_path_detail": "Tickblaze is a Windows desktop platform with built-in strategies; no external order API found; third-party bot stance not found in first-party text. Copy trading allowed.",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "Automation rule could not be read (FAQ 'Are automated trading strategies allowed?' not retrievable; propshoptrader.com pages returned 404 to fetch). Also NEW PURCHASES ENDED 2026-08-18 per help center. Windows-only platform means headless server path would need Windows VPS (path c-like, unconfirmed).",
+   "quotes": [
+    {
+     "topic": "holding",
+     "text": "Overnight and weekend holding is allowed.",
+     "url": "https://intercom.help/propshoptrader/en/articles/14080091-swing-trading-accounts-master-faq",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "instruments",
+     "text": "Stocks must have at least 2 million shares of average daily trading volume.",
+     "url": "https://intercom.help/propshoptrader/en/articles/14080091-swing-trading-accounts-master-faq",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "drawdown",
+     "text": "This rule applies during market hours, overnight, and over weekends.",
+     "url": "https://intercom.help/propshoptrader/en/articles/14080091-swing-trading-accounts-master-faq",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "automation",
+     "text": "Traders are responsible for ensuring that copier activity remains compliant with all PropShopTrader policies.",
+     "url": "https://intercom.help/propshoptrader/en/articles/15409135-copy-trading-policy",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "fees",
+     "text": "new account purchases and resets are no longer available",
+     "url": "https://intercom.help/propshoptrader/en/articles/14080091-swing-trading-accounts-master-faq",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [
+    {
+     "name": "25K Stocks Swing",
+     "size_usd": 25000,
+     "price_usd": 295,
+     "billing": "one-time",
+     "activation_fee_usd": null,
+     "reset_usd": 100,
+     "profit_target_usd": 500,
+     "daily_loss_usd": null,
+     "daily_loss_type": "none",
+     "max_dd_usd": 1250,
+     "max_dd_type": "intraday_trailing",
+     "dd_lock": null,
+     "min_days": null,
+     "consistency": "none for Stocks accounts",
+     "flat_by": null,
+     "overnight": true,
+     "weekend": true,
+     "news": "allowed",
+     "min_hold": null,
+     "max_size": null,
+     "payout": "Real Prop split 80/20 to 90/10; $3,000 signing bonus; monthly payouts",
+     "status": "1P"
+    },
+    {
+     "name": "50K Stocks Swing",
+     "size_usd": 50000,
+     "price_usd": 595,
+     "billing": "one-time",
+     "activation_fee_usd": null,
+     "reset_usd": 200,
+     "profit_target_usd": 1000,
+     "daily_loss_usd": null,
+     "daily_loss_type": "none",
+     "max_dd_usd": 2500,
+     "max_dd_type": "intraday_trailing",
+     "dd_lock": null,
+     "min_days": null,
+     "consistency": "none for Stocks accounts",
+     "flat_by": null,
+     "overnight": true,
+     "weekend": true,
+     "news": "allowed",
+     "min_hold": null,
+     "max_size": null,
+     "payout": "Real Prop split 80/20 to 90/10; $6,000 signing bonus; monthly payouts",
+     "status": "1P"
+    }
+   ],
+   "instruments_detail": "Stocks Swing: US stocks >=2M ADV; ETFs not mentioned in the article (symbol list elsewhere). No IPOs; no hedging; MAE limit $625/$1,250 (3 strikes). Benchmarks weekly ($500/$1,000), closed trades only.",
+   "unverified": [
+    "Automation/bot rule",
+    "ETF eligibility (SPY/QQQ etc.)",
+    "VPS rule",
+    "max_dd_type exact (trailing; intraday vs EOD not confirmed for Swing)",
+    "Whether sales reopen"
+   ],
+   "notes": "Best overnight-friendly real-stock fit but sales closed 2026-08-18 and automation path unproven. MAE per-trade rule would interfere with multi-day ETF holds. 25/50K only.",
+   "cluster": "real stocks / ETFs",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Lux Trading Firm",
+   "brand_url": "https://luxtradingfirm.com",
+   "asset_classes": [
+    "FX",
+    "indices CFD",
+    "metals",
+    "energy",
+    "single-stock CFDs",
+    "crypto"
+   ],
+   "platforms": [
+    "MT5",
+    "Lux Trader"
+   ],
+   "automation_path": "mt5_vps",
+   "automation_path_detail": "Self-developed EAs allowed on MT5; third-party EAs banned; >2,500 server messages/24h forbidden. VPS rule not found.",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "Own EAs allowed (1P) but no VPS/remote clause found on trading-rules page (coverage statement, not permission). Stocks are CFDs only; ETFs not addressed.",
+   "quotes": [
+    {
+     "topic": "automation",
+     "text": "Self-developed EAs, news trading, and holding trades over the weekend are allowed.",
+     "url": "https://luxtradingfirm.com/trading-rules/",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "automation",
+     "text": "EAs that are developed by a third party, are prohibited.",
+     "url": "https://luxtradingfirm.com/trading-rules/",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "drawdown",
+     "text": "The MAXIMUM RELATIVE DRAWDOWN is 6% on our Evaluation and Advanced stages.",
+     "url": "https://luxtradingfirm.com/trading-rules/",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "instruments",
+     "text": "any symbol on our trading platforms that we currently offer (single-stock CFDs among them; ETFs not specifically addressed)",
+     "url": "https://luxtradingfirm.com/trading-rules/",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [
+    {
+     "name": "Career plan 50K",
+     "size_usd": 50000,
+     "price_usd": null,
+     "billing": "one-time",
+     "activation_fee_usd": null,
+     "reset_usd": 139,
+     "profit_target_usd": 3000,
+     "daily_loss_usd": null,
+     "daily_loss_type": "none",
+     "max_dd_usd": 3000,
+     "max_dd_type": "static",
+     "dd_lock": null,
+     "min_days": 29,
+     "consistency": "risk per trade within +/-20% variation (eval)",
+     "flat_by": null,
+     "overnight": true,
+     "weekend": true,
+     "news": "SL +100% near news; no SL adjust 30s around news",
+     "min_hold": null,
+     "max_size": null,
+     "payout": "75% (3P pickmytrade)",
+     "status": "3P"
+    }
+   ],
+   "instruments_detail": "Single-stock CFDs, indices; ETF CFDs unconfirmed. Min SL 0.3% (mega-cap) / 0.5% (other stocks).",
+   "unverified": [
+    "VPS rule",
+    "ETF CFD availability",
+    "Plan prices",
+    "DD type (1P says relative; 3P audit says static)"
+   ],
+   "notes": "Not a real-equity route; low priority for the ETF book.",
+   "cluster": "real stocks / ETFs",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "SabioTrade",
+   "brand_url": "https://sabiotrade.com",
+   "asset_classes": [
+    "FX",
+    "CFDs (250+ assets incl. stock CFDs per 3P)"
+   ],
+   "platforms": [
+    "MT5 (unconfirmed)"
+   ],
+   "automation_path": "mt5_vps",
+   "automation_path_detail": "3P: own EAs allowed; sources conflict (Propvator says no EAs); no VPS rule found.",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "Only 3P sources read (tradingfinder, search snippets); conflicting EA statements; no first-party page read.",
+   "quotes": [
+    {
+     "topic": "automation",
+     "text": "Traders may use their own automated trading systems (3P paraphrase)",
+     "url": "https://tradingfinder.com/props/sabiotrade/rules",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "holding",
+     "text": "positions must be closed by Friday, 3:45 pm EST (weekend); overnight allowed (3P paraphrase)",
+     "url": "https://tradingfinder.com/props/sabiotrade/rules",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    },
+    {
+     "topic": "drawdown",
+     "text": "Daily loss 3%; max trailing drawdown 6% (3P paraphrase)",
+     "url": "https://tradingfinder.com/props/sabiotrade/rules",
+     "source": "3P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": "Stock/ETF CFD coverage unconfirmed.",
+   "unverified": [
+    "everything first-party",
+    "EA stance",
+    "VPS",
+    "ETF CFDs"
+   ],
+   "notes": "Weekend flat requirement and trailing DD would hamper multi-day holds.",
+   "cluster": "real stocks / ETFs",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Maverick Trading",
+   "brand_url": "https://mavericktrading.com",
+   "asset_classes": [
+    "US stocks",
+    "options",
+    "forex (via 3P)"
+   ],
+   "platforms": [
+    "IBKR Trader Workstation (3P)"
+   ],
+   "automation_path": "none",
+   "automation_path_detail": "Discretionary trader-training/capital program (interview + training, risk deposit); no API/automation info.",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "Home page silent on automation, VPS, overnight; model is human-trader program, not an evaluation product.",
+   "quotes": [
+    {
+     "topic": "instruments",
+     "text": "Proprietary Trading Firm for Stock & Options Traders",
+     "url": "https://mavericktrading.com",
+     "source": "1P",
+     "fetched": "2026-11-12"
+    }
+   ],
+   "plans": [],
+   "instruments_detail": "Stocks and options; ETFs not confirmed.",
+   "unverified": [
+    "automation",
+    "overnight",
+    "ETFs",
+    "fees (3P: $7,000 program + $5,000 deposit, $199/mo desk)"
+   ],
+   "notes": "Unlikely fit for bot.",
+   "cluster": "real stocks / ETFs",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  },
+  {
+   "firm": "Funded Equities / Funded Trading Plus / City Traders Imperium / Fintokei / Hantec / Earn2Trade / Apex (stocks)",
+   "brand_url": null,
+   "asset_classes": [
+    "not established"
+   ],
+   "platforms": [],
+   "automation_path": "none",
+   "automation_path_detail": "Not researched to first-party depth.",
+   "hard_filter": "UNVERIFIED",
+   "hard_filter_reason": "Searches found no first-party stock/ETF-with-API rules; 'Funded Equities' returned no firm-specific pages; Fintokei help centre not retrievable (faq 404). Fundedtrading.com 3P list names only TTP and PropShop as real-stock prop firms; Finotive Funding (MT5 stocks, real/CFD unspecified), One Stop Prop and The Trading Pit (stock CFDs) also mentioned.",
+   "quotes": [],
+   "plans": [],
+   "instruments_detail": "Earn2Trade and Apex are futures-focused (not stocks) per general knowledge, unverified here.",
+   "unverified": [
+    "all"
+   ],
+   "notes": "No Alpaca/IBKR-API-based stock prop firm found in searches (3P search statement, not proof of absence). Topstep skipped as instructed.",
+   "cluster": "real stocks / ETFs",
+   "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
+   "lane_verdict": {
+    "rank": null,
+    "lane_hard_filter": "UNVERIFIED",
+    "fit_legs": [],
+    "ev_screen": "not_run: hard filter not passed"
+   }
+  }
+ ]
+}
