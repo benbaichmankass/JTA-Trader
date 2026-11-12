@@ -9,13 +9,12 @@
 # STAGE: the ladder value (candidate -> shadow -> advisory) the model is ALREADY operating at by config. Every model
 # below changes an order on at least one consumer (strategies.yaml `execution: live` on a rostered account), which is
 # the influence stage, so each is `advisory`. A served model is never labelled `shadow`: shadow means "logged,
-# decisions unchanged" (I7, ML-SHADOW-NEVER-ORDERS), and tests/test_ml_registry_inventory.py refuses a declared stage
-# below advisory for a model whose consumer executes live. The paper/real-money split is `stage_from_config`
-# (testing / live), which the route keeps beside it.
+# decisions unchanged" (I7, ML-SHADOW-NEVER-ORDERS). The paper/real-money split is `stage_from_config`
+# (testing / live), which the route keeps beside it. Labels only: no test or guard refuses an edit to this file.
 #
 # HEADLINE METRIC: copied from the committed record named in `source` (fields copied, not re-derived); `value` null
-# when the record states only a verdict. provenance MEASURED = a graded run's number. The test checks every `source`
-# exists. When a record is regenerated, update the entry here in the same PR.
+# when the record states only a verdict. provenance MEASURED = a graded run's number. When a record is regenerated,
+# update the entry here in the same PR.
 models:
   ml-decision-entry-v1:
     stage: advisory

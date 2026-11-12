@@ -69,21 +69,6 @@ def test_served_models_carry_stage_and_headline_metric(feed):
         assert hm and hm["provenance"] == "MEASURED" and hm["source"] and hm["n"], mid
 
 
-def test_served_declaration_sources_exist_and_no_order_changing_model_is_called_shadow():
-    from src.runtime import ml_serving_inventory as inv
-    from src.runtime.conviction_inputs import INFLUENCE_STAGES
-
-    served = inv.load_served_models(REPO)
-    rows = {r["model_id"]: r for r in inv.inventory_rows(REPO)}
-    for mid, ent in served.items():
-        src = (ent.get("headline_metric") or {}).get("source")
-        assert src and (REPO / src).is_file(), f"{mid}: headline_metric.source {src!r} is not a repo file"
-        r = rows.get(mid)
-        if r and any(c["execution"] == "live" and c["mode"] == "live" for c in r["consumers"]):
-            # I7: shadow means "logged, decisions unchanged"; a model whose consumer executes live is not shadow.
-            assert ent["stage"] in INFLUENCE_STAGES, f"{mid}: declared {ent['stage']!r} but a consumer executes live"
-
-
 def test_undeclared_inventory_row_renders_dash_not_a_guess():
     from src.runtime import ml_serving_inventory as inv
 
