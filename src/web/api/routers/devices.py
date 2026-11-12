@@ -200,8 +200,17 @@ def _upsert_device_row(
 
 
 @router.post("/register")
-async def register_device(request: Request) -> dict[str, Any]:
+async def register_device(
+    request: Request,
+    authorization: str | None = Header(default=None),
+) -> dict[str, Any]:
     """Upsert a device by FCM token.
+
+    Requires ``Authorization: Bearer <DASHBOARD_API_TOKEN>`` and fails CLOSED
+    (503) when that token is unset, the same check ``POST /api/bot/prop/report``
+    and ``POST /api/bot/alerts`` use (SEC-API-DEVICE-REGISTER-OPEN, operator OK
+    2026-11-11). Until then this was an unauthenticated write: anyone who could
+    reach the API could add a push target to ``device_tokens``.
 
     Request JSON: ``{token, platform?, label?, subscriptions?}``.
 
@@ -210,6 +219,9 @@ async def register_device(request: Request) -> dict[str, Any]:
     last 8 chars of the token (full token is never echoed back; the
     caller already has it).
     """
+    from src.web.api.routers.prop import _require_write_token
+
+    _require_write_token(authorization)
     try:
         body = await request.json()
     except (ValueError, TypeError) as exc:
