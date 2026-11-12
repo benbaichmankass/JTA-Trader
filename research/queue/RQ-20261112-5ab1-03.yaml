@@ -1,0 +1,139 @@
+# Hand-authored 2026-11-12 by lane OPDEC-SURVIVORS (Manager Session 2026-11-11a 10:43Z brief + AM-TRADING). Decision rule registered
+# BEFORE any run of these arms. Gates this adds or changes: none.
+id: RQ-20261112-5ab1-03
+title: 'TP-DOCTRINE ITERATION, slv_trend_1h: does a REAL take-profit (tp_r 2/3/4/6, trail kept), selected on the earliest ~75% of
+  2018-06..2026-10, stay net-positive net of the full cost stack on the held-back latest span? (RQ-20261104-7fdb-01 design)'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-LADDER
+kind: experiment
+question: slv_trend_1h cleared C1-C5 and its 8-yr holdout (RQ-20261101-78fc-18, PASS, n_holdout 104, +35.99R) but only at the tp_r 50
+  sentinel, which the TP doctrine refuses on a new real-money routing. Is there a real take-profit at which the leg stays net-positive on
+  held-back data?
+why_this_matters: 'Operator 2026-11-04 ~22:05Z popup, verbatim "Reopen, promote if it clears (Recommended)", and 2026-11-12 ~10:32Z chat,
+  verbatim "I answer that I do want to promote silver."; operator p3 (promote on the backtest). Manager Session 2026-11-11a, 10:43Z: run the
+  TP test today with the RQ-20261104-7fdb-01 design instead of waiting for RQ-20261104-7fdb-02''s 2027-03-16 fresh span; do not promote on
+  the sentinel. PASS -> tp_r set to the selected value in the promotion PR (#25267); FAIL -> no promotion, report the numbers.'
+iteration:
+  subject: slv_trend_1h
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261101-78fc-18/41486192593.jsonl
+  verdict_read: pass_tp_noncompliant
+  diagnosis: 'Holdout PASS at tp_r 50 (sentinel). RQ-20261112-5ab1-02 (tp_prediction_derive, same day) graded INDETERMINATE: K* 6 R calibrated,
+    OOS delta vs the sentinel +0.012 R/trade CI [-0.142, +0.152]. This unit asks the harness-native question with fixed arms.'
+  hypothesis: at least one real tp_r cell (2, 3, 4 or 6 R; stop, trail and every other lever unchanged) is eligible on discovery and stays
+    net-positive on the held-back span
+  attempt: 2
+  due_by: '2026-11-12'
+power:
+  expected_n: 104
+  min_detectable_effect: 0.28
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: expected_n is the held-back trade count the declared config produced on the same window (78fc-18, n_holdout 104), an ESTIMATE for
+    the T-arms. Floor 25; below it the unit grades INDETERMINATE/underpowered, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public dukascopy candles over a pinned window; nothing accrues.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+decision_rule:
+  id: RULE-RQ-20261112-5ab1-03
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --grade holdout on slv_trend_1h, window 2018-06-01 .. 2026-10-15 23:59, dukascopy 1h,
+    every arm ONE continuous harness pass, net of the full cost stack the harness resolves for Alpaca equities (fee 0 + 5.0 bps slippage + 0
+    funding). Arms (the tp_r 50 sentinel is NOT an arm; its read is RQ-20261101-78fc-18): T2 tp_r=2.0; T3 tp_r=3.0; T4 tp_r=4.0; T6 tp_r=6.0;
+    every other lever as declared. Boundary fixed before any outcome: latest 25% of the window, grown in 1% steps until it holds 25 of
+    baseline T3''s entries, capped at 40%. Discovery = trades whose entry AND exit precede the boundary; 4 equal calendar folds of discovery.'
+  rule: 'Exactly RULE-RQ-20261104-7fdb-01 for this leg. SELECTION (discovery only): a T-arm is eligible iff discovery n >= 25 AND discovery
+    net R > 0 AND >= 3 of 4 discovery folds net-positive; the eligible T-arm with the highest discovery net R is selected (a tie goes to the
+    baseline T3). HOLDOUT (read once per arm): INDETERMINATE/insufficient_discovery if every T-arm holds < 25 discovery trades; FAIL/no_discovery
+    if no T-arm is eligible otherwise; INDETERMINATE/underpowered if the selected arm holds < 25 held-back trades; PASS/confirmed if its held-back
+    net R > 0; FAIL/not_replicated otherwise. ON PASS: tp_r set to the selected value (tp_intent r_multiple) in the promotion PR, the evidence
+    record regenerated at that config. ON FAIL: no promotion. Thresholds are not changed after any result.'
+  what_it_does_not_do: 'Edits no config, roster or record; places no order. DISCLOSED CONTAMINATION: the held-back span (~2024-09..2026-10)
+    was already read once for arm A by RQ-20261101-78fc-18, and the declared parameters were chosen on data up to 2026-08-26 (atr_stop_mult
+    1.5 from the 2026-08-26 bracket packet; donchian 24 from the 2026-06-20 sweep), i.e. INSIDE this held-back span (RQ-20261104-7fdb-02
+    diagnosis). The lane also saw RQ-20261112-5ab1-02''s reach curve (K* 6 R) before registering. A PASS is therefore weaker than a fresh-span
+    confirmation and the proposal must say so; RQ-20261104-7fdb-02 remains the fresh-span confirmation.'
+intervention_controls:
+  not_applicable: a config-exact harness re-measurement / parameter ablation, not an in-trade action
+practice_precedent: 'T3, T4, R5, M10 (docs/reference/trading-and-model-practice-principles.md): profit target tested per leg net of cost;
+  variants registered before the run, counted, confirmed once on a span they were not selected on. Same protocol as RQ-20261104-7fdb-01.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 45
+  why_runner: Fetches keyless public dukascopy candles for a pinned window; reads no trainer data; CPU only.
+  basis: Estimate from RQ-20261104-7fdb-01 (4 arms, comparable window); lane sandbox run.
+value:
+  usd_at_stake_per_month: 300
+  confidence: 0.25
+  bucket: structural
+  basis: 'stand-in: a real-money promotion decision; not a P&L measurement.'
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - slv_trend_1h
+  - --arm
+  - T2=tp_r=2.0
+  - --arm
+  - T3=tp_r=3.0
+  - --arm
+  - T4=tp_r=4.0
+  - --arm
+  - T6=tp_r=6.0
+  - --days
+  - '3060'
+  - --start
+  - '2018-06-01'
+  - --end
+  - 2026-10-15 23:59
+  - --non-crypto-source
+  - dukascopy
+  - --grade
+  - holdout
+  - --baseline
+  - T3
+  - --delta-r
+  - '0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '25'
+  - --holdout-frac
+  - '0.25'
+  - --holdout-min-trades
+  - '25'
+  - --holdout-max-frac
+  - '0.40'
+  - --research-unit
+  - RQ-20261112-5ab1-03
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261112-5ab1-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- PR1111-SURVIVOR-PROMOTIONS
+- RQ-20261104-7fdb-01
+- RQ-20261104-7fdb-02
+- RQ-20261101-78fc-18
+- RQ-20261112-5ab1-02
