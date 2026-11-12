@@ -1,5 +1,5 @@
 {
- "computed_at": "2026-11-12T06:01:50Z",
+ "computed_at": "2026-11-12T20:13:39Z",
  "coverage": {
   "in_v0": "M1 split_share + gain_share for ml/served + ml/candidates LightGBM artifacts, pooled population",
   "m2": {
@@ -115,16 +115,116 @@
    "symbols_requested": 60,
    "xs_reference": "served v2 xs_reference"
   },
+  "m2_equity": {
+   "cost": {
+    "regulatory_bps": 0.5,
+    "slippage_bps": 5.0,
+    "slippage_status": "PROVISIONAL"
+   },
+   "data_end": "2025-06-25 16:00:00+00:00",
+   "decision_rows": 377067,
+   "features": [
+    "ret_1",
+    "ret_4",
+    "ret_12",
+    "ret_24",
+    "ret_72",
+    "ret_168",
+    "vol24",
+    "vol_ratio",
+    "atr_pct",
+    "range_pos_24",
+    "range_pos_168",
+    "vol_z",
+    "rsi14",
+    "hour",
+    "dow",
+    "xs_rank_ret24",
+    "xs_rank_ret168",
+    "xs_rank_vol24",
+    "xs_rank_volz",
+    "breadth_up24",
+    "rel_vol",
+    "spy_ret24",
+    "spy_ret168",
+    "spy_vol24",
+    "qqq_ret24",
+    "iwm_ret24",
+    "tlt_ret24",
+    "vixy_ret24",
+    "vixy_vol24",
+    "rel_ret_spy"
+   ],
+   "label_note": "net_long = LONG net R of the registered 2 ATR stop / 3 ATR target / 24 RTH-bar bracket after fee + provisional 5 bps slippage + 0.5 bps regulatory (the ENTRY-EQ label; the struct models train a pivot-5 SL-only variant of it); fwd_ret_24 = raw 24 RTH-bar log return. Read both: net R divides by stop distance, so a volatility feature can rank net R through cost-per-R rather than direction. DEV ONLY: decisions before 2025-07-01; the confirming window is never loaded. Population: the registered POOL_RULE ETF pool (sha in this block).",
+   "pool_rule_sha256": "e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2",
+   "pool_symbols": 172,
+   "rows": 11004,
+   "state": "measured",
+   "symbols_built": 170
+  },
+  "m2_regime": {
+   "data_end": "2025-06-30 23:00:00+00:00",
+   "data_start": "2020-07-01 19:00:00+00:00",
+   "label_note": "regime_label = forward_vol > vol_threshold (a function of forward_vol alone) and trend_regime_label keys off the Kaufman efficiency ratio of the same forward window; both are measured here as the continuous quantity (forward_vol = pstdev of the next 5 1h log returns; forward_er = |sum r| / sum |r|), which carries every threshold. Features are re-derived past-only from the cached klines (vol_bucket is a monotone bucket of rolling_log_return_vol and is not listed separately). Rank IC is monotone association only.",
+   "rows": 129488,
+   "state": "measured",
+   "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT"
+   ]
+  },
   "m2_scope": "rank_ic_xs (cross-sectional per 4 h decision timestamp, averaged; by quarter) and rank_ic_ts (per symbol) for the crypto decision-entry family's 20 features vs its own net-R label and the raw 24 h return",
-  "not_in_v0": [
-   "M2 for the equity ENTRY-EQ pool and the tp-revision head",
-   "M3 family ablation",
-   "registry regime models (importances on the trainer VM)",
+  "m3_crypto": {
+   "base": {
+    "mean_net_r": -0.06002737289255669,
+    "n_taken": 13144,
+    "rank_ic": 0.16991769919939334
+   },
+   "noise_floor": {
+    "ic": 0.0037380439817616684,
+    "taken": 0.006031295941849785
+   },
+   "rows": 50,
+   "state": "measured",
+   "symbols_test": 59,
+   "tau": 0.07800176202369186,
+   "test_end": "2025-07-01",
+   "test_rows": 125660,
+   "train_end": "2024-07-01",
+   "train_rows": 506401
+  },
+  "m3_equity": {
+   "base": {
+    "mean_net_r": -0.1294627083966819,
+    "n_taken": 2424,
+    "rank_ic": 0.20465400274946594
+   },
+   "noise_floor": {
+    "ic": 0.007574955082490009,
+    "taken": 0.03854975494899203
+   },
+   "rows": 72,
+   "state": "measured",
+   "symbols_test": 168,
+   "tau": 0.2,
+   "test_end": "2025-07-01",
+   "test_rows": 82184,
+   "train_end": "2024-07-01",
+   "train_rows": 292872
+  },
+  "not_yet": [
+   "M2 / M3 for the tp-revision exit head (its 18-class check-in label needs its own builder)",
+   "M3 for the regime heads (not money heads; their score is a classification metric)",
+   "regime heads at 5m / 15m (only 1h klines are cached) and the MES regime heads (no keyless equity-futures bars)",
+   "registry regime models' M1 importances (on the trainer VM)",
    "SHAP / permutation on OOF"
   ]
  },
- "file": "20261112T0601Z.jsonl",
+ "file": "20261112T2013Z.jsonl",
  "measures": [
+  "abl_rank_ic",
+  "abl_taken_mean_net_r",
   "gain_share",
   "rank_ic_ts",
   "rank_ic_xs",
@@ -139,9 +239,9 @@
   "ml/served/ml_decision_entry_v2/model.json": "measured",
   "ml/served/ml_entry_tp_revision_v1/model.json": "measured"
  },
- "n_measured": 3604,
- "n_rows": 3614,
+ "n_measured": 14970,
+ "n_rows": 15004,
  "read_state": "measured",
- "run_id": "20261112T0601Z",
+ "run_id": "20261112T2013Z",
  "schema": "feature_impact/1"
 }
