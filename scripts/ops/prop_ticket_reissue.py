@@ -165,8 +165,9 @@ def rebuild_fields(row: dict[str, Any], account_cfg: dict[str, Any], now: dateti
         if cap["action"] == prop_risk_gate.CAP_RESIZED:
             gate_cap = cap
             leg = build_account_leg(sig, unit, risk_usd_override=cap["risk_usd"], **kw)
-        elif cap["action"] == prop_risk_gate.CAP_REFUSED:
-            return None, f"risk gate refuses: {cap['cause']}"
+        elif cap["action"] == prop_risk_gate.CAP_UNBOUNDED_REPORTED:
+            # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-PROP-RISK-CUSHION: MAKE REPORT-ONLY. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d). (reported on the ticket meta, never a refusal)
+            gate_cap = cap
     if leg.decision != "place" or leg.ticket is None:
         return None, f"leg skips: {leg.reason}"
     lev = be._leverage_refusal(account_id, unit, symbol, leg.ticket.qty_units, sig.entry, cvpp)

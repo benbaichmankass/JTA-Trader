@@ -1293,30 +1293,33 @@ def live_cushion_refusals(account_id: str, fields: Dict[str, Any], *, send=None)
     against the ticket. breakout_2 ETH ``prop-manual-8468ab1f682f`` was live-submitted at 0.29 ETH (risk at stop
     ~$17.39) with $11.94 left to the static floor, so a stop-out would have ended the account.
 
-    Same two kinds of "no" as ``evaluate_guards``:
-      * HARD in every mode: the risk could not be computed from the form, or the cushion could not be read
-        (``cushion_unknown`` / ``no_risk_declared``). "We could not look" never submits.
-      * BREACH, per ``accounts.yaml::<acct>.risk.breach_guards``: ``exceeds_cushion`` refuses under ``enforce``
-        (the default); under ``report`` it pings and lets the submit proceed.
+    REPORT-ONLY since 2026-11-12 (GATE-PROP-RISK-CUSHION, operator decisions page): every outcome other than
+    ``within_cushion`` -- an unreadable form, ``cushion_unknown``, ``no_risk_declared``, ``exceeds_cushion`` under
+    either ``breach_guards`` mode -- is pinged with its cause and the submit proceeds. Returns ``[]`` always; the
+    name is kept so callers and open PRs (#25223) need no change.
 
     Risk is ``qty * |price - sl|``: phone instruments are quoted per base unit (``prop_platforms.yaml``
     ``phone_accounts.<acct>.instruments``: qty in ETH/SOL). The form values are the ones the server just verified
     against the ticket, so this grades what will actually be submitted."""
     from src.prop import prop_risk_gate
 
+    # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-PROP-RISK-CUSHION: MAKE REPORT-ONLY. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+    # The grade still runs and anything but within_cushion is PINGED with its named cause; the submit always
+    # proceeds (this returns [] in every case). The account's own RiskManager and the venue answer the trade.
     qty, price, sl = _num(fields.get("qty")), _num(fields.get("price")), _num(fields.get("sl"))
     if qty is None or price is None or sl is None or qty <= 0:
-        return ["risk gate: risk at the stop could not be computed from the form (qty/price/sl unreadable)"]
+        _ping(f"phone {account_id}: risk gate: risk at the stop could not be computed from the form "
+              "(qty/price/sl unreadable) -- report-only, submit proceeds", send=send)
+        return []
     risk = round(qty * abs(price - sl), 6)
     grade = prop_risk_gate.grade_account_ticket_risk(account_id, risk_usd=risk)
     state = grade.get("state")
     if state == prop_risk_gate.WITHIN:
         return []
     why = f"risk gate: {state} (risk at stop ${risk:,.2f}; {grade.get('reason')})"
-    if state == prop_risk_gate.EXCEEDS and prop_risk_gate.breach_guards_for(account_id) == "report":
-        _ping(f"phone {account_id}: {why} -- breach_guards=report, submit proceeds", send=send)
-        return []
-    return [why]
+    _ping(f"phone {account_id}: {why} -- report-only (GATE-PROP-RISK-CUSHION), submit proceeds "
+          f"(breach_guards={prop_risk_gate.breach_guards_for(account_id)})", send=send)
+    return []
 
 
 def _verify_refused(device: PhoneDevice, tid: str, reasons: list, rb_hash: Optional[str], *, send=None) -> Dict[str, Any]:

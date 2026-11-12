@@ -131,7 +131,10 @@ def mode() -> str:
 CAP_NOT_ENFORCED = "not_enforced"   # mode is off / annotate: size untouched
 CAP_UNCHANGED = "unchanged"         # enforce; the risk is within the cap
 CAP_RESIZED = "resized"             # enforce; the risk exceeded the cap -> cut to it
-CAP_REFUSED = "refused"             # enforce; no cap is known -> the ticket is refused
+CAP_REFUSED = "refused"             # RETIRED 2026-11-12 (GATE-PROP-RISK-CUSHION report-only); kept for old rows
+#: enforce; no cap is known -> REPORTED and the ticket proceeds at its requested risk (never refused).
+# Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-PROP-RISK-CUSHION: MAKE REPORT-ONLY. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+CAP_UNBOUNDED_REPORTED = "unbounded_reported"
 
 
 def enforce_ticket_cap(
@@ -161,10 +164,13 @@ def enforce_ticket_cap(
     if gm != "enforce":
         return {**base, "action": CAP_NOT_ENFORCED, "risk_usd": risk, "cause": None}
     if cap_usd is None:
-        return {**base, "action": CAP_REFUSED, "risk_usd": None,
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-PROP-RISK-CUSHION: MAKE REPORT-ONLY. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+        # Before 2026-11-12 an unknown cap REFUSED the ticket. Now it is reported with its cause and the ticket
+        # proceeds at the size it asked for.
+        return {**base, "action": CAP_UNBOUNDED_REPORTED, "risk_usd": risk,
                 "cause": (f"risk gate ENFORCE: no configured cap for {sizing_mode or 'this'} "
-                          f"sizing — refusing a ${risk:,.2f} ticket rather than emitting "
-                          f"an unbounded size")}
+                          f"sizing — ${risk:,.2f} ticket emitted at its requested size (report-only, "
+                          f"GATE-PROP-RISK-CUSHION)")}
     cap = float(cap_usd)
     # half-a-cent tolerance: both sides are rounded to cents upstream.
     if risk <= cap + 0.005:
@@ -385,6 +391,19 @@ def caveat_lines(verdict: Dict[str, Any], breach_guards: str = "enforce") -> lis
     stays a caveat in every mode.
     """
     state = verdict.get("state")
+    if state == EXCEEDS and breach_guards != "report":
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-PROP-RISK-CUSHION: MAKE REPORT-ONLY. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+        # The "DO NOT PLACE" block is retired: under enforce an exceeds_cushion grade is a WARNING on the ticket,
+        # never a no-go for a human or the executor.
+        risk = verdict.get("risk_usd") or 0.0
+        cushion = verdict.get("cushion_usd") or 0.0
+        limit = str(verdict.get("binding_limit") or "").replace("_", " ")
+        return [
+            "",
+            f"  ⚠️ Would breach the {limit} limit if stopped out (risk ${risk:,.2f} vs "
+            f"${cushion:,.2f} left). Reported, not refused (cushion check is report-only since "
+            "2026-11-12). PLACE AS SHOWN.",
+        ]
     if state == EXCEEDS and breach_guards == "report":
         risk = verdict.get("risk_usd") or 0.0
         cushion = verdict.get("cushion_usd") or 0.0
@@ -394,22 +413,6 @@ def caveat_lines(verdict: Dict[str, Any], breach_guards: str = "enforce") -> lis
             f"  ⚠️ Would breach the {limit} limit if stopped out (risk ${risk:,.2f} vs "
             f"${cushion:,.2f} left): accepted, the account is replaceable "
             "(breach_guards: report). PLACE AS SHOWN.",
-        ]
-    if state == EXCEEDS:
-        risk = verdict.get("risk_usd") or 0.0
-        cushion = verdict.get("cushion_usd") or 0.0
-        limit = str(verdict.get("binding_limit") or "").replace("_", " ")
-        return [
-            "",
-            "  🛑 DO NOT PLACE AT THE SUGGESTED SIZE — THIS RISKS MORE THAN THE "
-            "ACCOUNT HAS LEFT.",
-            f"     Suggested risk ${risk:,.2f} vs ${cushion:,.2f} remaining to "
-            f"the {limit} limit.",
-            "     Breaching that limit PERMANENTLY DISABLES the account. Either "
-            "size so the",
-            f"     risk at the stop is well under ${cushion:,.2f}, or skip this "
-            "setup and reply",
-            "     'skipped: insufficient cushion'.",
         ]
     if state == UNKNOWN:
         out = [
@@ -537,5 +540,5 @@ def record_ticket_risk_soak(
 __all__ = [
     "grade_ticket_risk", "grade_account_ticket_risk", "caveat_lines", "mode", "breach_guards_for",
     "record_ticket_risk_soak",
-    "WITHIN", "EXCEEDS", "UNKNOWN", "NO_RISK",
+    "WITHIN", "EXCEEDS", "UNKNOWN", "NO_RISK", "CAP_UNBOUNDED_REPORTED",
 ]
