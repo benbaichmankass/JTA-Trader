@@ -183,7 +183,8 @@ def indicators(candles: List[Dict[str, Any]]) -> Dict[str, Any]:
 def trade_block(trade: Dict[str, Any], pnl_provenance: Optional[str] = None) -> Dict[str, Any]:
     opened = bh.parse_ts(trade.get("timestamp"))
     closed = bh.parse_ts(trade.get("closed_at"))
-    return {"trade_id": trade.get("id"), "order_package_id": trade.get("order_package_id"),
+    return {"trade_id": trade.get("id"), "prop_fill_id": trade.get("prop_fill_id"),
+            "ticket_id": trade.get("ticket_id"), "order_package_id": trade.get("order_package_id"),
             "account_id": trade.get("account_id"), "account_class": trade.get("account_class"),
             "strategy_name": trade.get("strategy_name"), "symbol": trade.get("symbol"),
             "direction": trade.get("direction"), "qty": _num(trade.get("position_size")),
@@ -222,6 +223,32 @@ def entry_signal(pkg: Optional[Dict[str, Any]], interval: str) -> Dict[str, Any]
             "model_scores": scores if isinstance(scores, (dict, list)) else None}
 
 
+def prop_trade(opener: Dict[str, Any], closer: Optional[Dict[str, Any]],
+               ticket: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """A prop trade (``prop_fills`` opening row + closing row, ``prop_tickets`` row) in the ``trades``-row shape the
+    builders read. ``id`` is None (prop has no ``trades.id``); ``prop_fill_id`` = the opening row's id. The ticket's
+    ``meta.sl_floor`` (written by the live-review / phone-trail applies) becomes ``notes.sl_floor`` so a review it
+    names reads ``applied``. Bracket history comes from the opener's ``amendments`` (``_prop_opener``)."""
+    tk = ticket or {}
+    meta = _dict(tk.get("meta"))
+    notes: Dict[str, Any] = {}
+    if isinstance(meta.get("sl_floor"), dict):
+        notes["sl_floor"] = meta["sl_floor"]
+    c = closer or {}
+    d = str(opener.get("direction") or "").lower()
+    direction = "long" if d in ("long", "buy") else ("short" if d in ("short", "sell") else (opener.get("direction") or None))
+    return {"id": None, "prop_fill_id": opener.get("id"), "ticket_id": opener.get("ticket_id"),
+            "timestamp": opener.get("opened_at") or opener.get("reported_at"),
+            "closed_at": c.get("closed_at") or (c.get("reported_at") if closer else None),
+            "status": "closed" if closer else "open", "symbol": opener.get("symbol"), "direction": direction,
+            "position_size": opener.get("qty"), "entry_price": opener.get("entry_price"),
+            "exit_price": c.get("exit_price"), "exit_reason": c.get("reason"), "pnl": c.get("pnl"),
+            "stop_loss": opener.get("sl"), "take_profit_1": opener.get("tp"),
+            "account_id": opener.get("account_id"), "account_class": "prop",
+            "order_package_id": tk.get("order_package_id"), "strategy_name": tk.get("strategy"),
+            "notes": json.dumps(notes), "_prop_opener": opener}
+
+
 # ───────────────────────────────────────────── brackets
 
 def _account_updates(notes: Dict[str, Any], interval: str) -> List[Dict[str, Any]]:
@@ -250,6 +277,13 @@ def _account_updates(notes: Dict[str, Any], interval: str) -> List[Dict[str, Any
 def brackets(trade: Dict[str, Any], pkg: Optional[Dict[str, Any]], interval: str) -> Dict[str, Any]:
     notes = _dict(trade.get("notes"))
     acct = _account_updates(notes, interval)
+    if trade.get("_prop_opener") is not None:
+        # prop: the ticket's own SL/TP amendments (before/after, with times) ARE this account's bracket history
+        h = bh.build_prop_history(trade["_prop_opener"], interval)
+        ups = [dict(u, scope="account") for u in h["updates"]] + acct
+        return {"read_state": "partial" if h["read_state"] != "measured" else "measured",
+                "partial_reasons": list(h["partial_reasons"]), "tp_history": h["tp_history"],
+                "levels": h["levels"], "updates": sorted(ups, key=lambda u: u["ts"])}
     if pkg is None:
         # no package: the trade row's own levels are all there is
         opened = bh.parse_ts(trade.get("timestamp"))
@@ -327,6 +361,19 @@ def _in_window(ts: Optional[datetime], lo: Optional[datetime], hi: Optional[date
     return hi is None or ts <= hi
 
 
+def _my_leg(legs: List[Dict[str, Any]], trade: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """This trade's entry in a receipt's ``accounts[]``: by trade id (exchange) or ticket id (prop), else the account
+    when the entry names no other trade/ticket."""
+    tid, tk, acct = trade.get("id"), trade.get("ticket_id"), trade.get("account_id")
+    for a in legs:
+        if (tid is not None and a.get("trade_id") == tid) or (tk and a.get("ticket_id") == tk):
+            return a
+    for a in legs:
+        if a.get("account_id") == acct and a.get("trade_id") in (None, tid) and a.get("ticket_id") in (None, tk):
+            return a
+    return None
+
+
 def decisions(trade: Dict[str, Any], interval: str, reviews: Dict[str, Any], receipts: Dict[str, Any],
               lo: Optional[datetime] = None, hi: Optional[datetime] = None) -> Dict[str, Any]:
     """``reviews`` / ``receipts`` = ``{"state": read|could_not_look|absent, "rows": [...]}``. ``lo``/``hi`` bound
@@ -357,8 +404,7 @@ def decisions(trade: Dict[str, Any], interval: str, reviews: Dict[str, Any], rec
         if not _in_window(ts, lo, hi):
             continue
         legs = [a for a in (d.get("accounts") or []) if isinstance(a, dict)]
-        mine = next((a for a in legs if a.get("trade_id") == trade.get("id")), None) or \
-            next((a for a in legs if a.get("account_id") == acct and a.get("trade_id") in (None, trade.get("id"))), None)
+        mine = _my_leg(legs, trade)
         if legs and mine is None:
             continue   # scoped to another account / trade: not a decision on this leg
         mine = mine or {}
@@ -411,7 +457,8 @@ def build_markers(trade: Dict[str, Any], pkg: Optional[Dict[str, Any]], reviews:
              "decisions": decisions(trade, interval, reviews, receipts,
                                     lo=opened - timedelta(hours=1) if opened else None, hi=closed)}
     rs, reasons = _rollup(parts)
-    return {"as_of": as_of, "trade_id": trade.get("id"), "order_package_id": trade.get("order_package_id"),
+    return {"as_of": as_of, "trade_id": trade.get("id"), "prop_fill_id": trade.get("prop_fill_id"),
+            "order_package_id": trade.get("order_package_id"),
             "account_id": trade.get("account_id"), "symbol": trade.get("symbol"), "direction": trade.get("direction"),
             "status": trade.get("status"), "interval": interval, "read_state": rs, "partial_reasons": reasons, **parts}
 

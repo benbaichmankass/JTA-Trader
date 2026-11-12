@@ -1,25 +1,31 @@
 """Store for the closed-trade chart snapshot (UI-REDESIGN-2026-11 addendum 3): table ``trade_chart_snapshots``.
 
-One row per closed ``trades.id``. The payload is the framed DATA (``src.web.api.trade_chart_snapshot.build_snapshot``),
-not an image, stored zlib-compressed (``payload`` BLOB) and WITHOUT the indicator series, which the read route
-recomputes from the stored candles (deterministic), so ~2,600 backfilled trades stay small. The table lives in ``trade_journal.db`` next to the trade it describes; it is derived data (it can
-always be rebuilt from the journal + candles), so a lost row is a rebuild, never lost truth.
+One row per closed trade, keyed by ``snapshot_key``:
+  * ``trade:<trades.id>``            -- exchange / paper accounts (the ``trades`` table);
+  * ``prop:<opening prop_fills.id>`` -- prop accounts (``prop_fills``; a trade with no journaled opening row is
+    keyed by its closing row's id).
+The payload is the framed DATA (``src.web.api.trade_chart_snapshot.build_snapshot``), not an image, stored
+zlib-compressed (``payload`` BLOB) and WITHOUT the indicator series, which the read route recomputes from the
+stored candles (deterministic), so ~2,600 backfilled trades stay small. The table lives in ``trade_journal.db``
+next to the trades it describes; it is derived data (always rebuildable from the journal + candles).
 
 ``state``: ``built`` (payload present) · ``retrying`` (a build failed; ``attempts``/``last_error``/``next_attempt_at``
-say when it runs again) · ``gave_up`` is never used -- a failing trade keeps retrying at the max backoff (Prime
-Directive rule 7: no halting; the builder flags a trade that keeps failing).
+say when it runs again). There is no give-up state: a failing trade keeps retrying at the longest backoff (Prime
+Directive rule 7: no halting); the builder flags one that keeps failing.
 """
 from __future__ import annotations
 
 import json
 import sqlite3
 import zlib
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 TABLE = "trade_chart_snapshots"
 DDL = f"""
 CREATE TABLE IF NOT EXISTS {TABLE} (
-    trade_id INTEGER PRIMARY KEY,
+    snapshot_key TEXT PRIMARY KEY,
+    trade_id INTEGER,
+    prop_fill_id INTEGER,
     order_package_id TEXT,
     account_id TEXT,
     schema TEXT,
@@ -29,22 +35,31 @@ CREATE TABLE IF NOT EXISTS {TABLE} (
     last_error TEXT,
     next_attempt_at TEXT,
     built_at TEXT,
-    payload TEXT
+    payload BLOB
 )
 """
 
 
-def read(conn: sqlite3.Connection, trade_id: int) -> Dict[str, Any]:
+def trade_key(trade_id: int) -> str:
+    return f"trade:{int(trade_id)}"
+
+
+def prop_key(fill_id: int) -> str:
+    return f"prop:{int(fill_id)}"
+
+
+def read(conn: sqlite3.Connection, key: str) -> Dict[str, Any]:
     """``{"state": "absent"|"built"|"retrying"|"no_table", "payload": dict|None, ...}``. Never raises on a missing table."""
     try:
         row = conn.execute(f"SELECT state, read_state, attempts, last_error, built_at, payload FROM {TABLE} "
-                           "WHERE trade_id = ?", (int(trade_id),)).fetchone()
+                           "WHERE snapshot_key = ?", (key,)).fetchone()
     except sqlite3.OperationalError as exc:
         if "no such table" in str(exc):
             return {"state": "no_table", "payload": None}
         raise
     if row is None:
         return {"state": "absent", "payload": None}
+    row = tuple(row)
     payload: Optional[Dict[str, Any]] = None
     if row[5]:
         try:
@@ -61,3 +76,56 @@ def encode(payload: Dict[str, Any]) -> bytes:
     """The stored form: the payload minus ``indicators`` (recomputed on read), compact JSON, zlib level 6."""
     slim = {k: v for k, v in payload.items() if k != "indicators"}
     return zlib.compress(json.dumps(slim, separators=(",", ":")).encode("utf-8"), 6)
+
+
+# ───────────────────────────── prop trades: one trade = an opening prop_fills row + (once closed) a closing row
+
+def _one(conn: sqlite3.Connection, sql: str, args: tuple) -> Optional[Dict[str, Any]]:
+    cur = conn.execute(sql, args)
+    r = cur.fetchone()
+    if r is None:
+        return None
+    return dict(zip([d[0] for d in cur.description], tuple(r)))
+
+
+def _sibling(conn: sqlite3.Connection, row: Dict[str, Any], want_open: bool) -> Optional[Dict[str, Any]]:
+    """The other half of ``row``'s trade: same account and external order id (else ticket id)."""
+    status_sql = "lower(status) IN ('open','filled')" if want_open else "lower(status) = 'closed'"
+    order = "ASC" if want_open else "DESC"
+    for col in ("external_order_id", "ticket_id"):
+        val = row.get(col)
+        if not val:
+            continue
+        got = _one(conn, f"SELECT * FROM prop_fills WHERE account_id = ? AND {col} = ? AND {status_sql} "
+                         f"AND id != ? ORDER BY id {order} LIMIT 1", (row.get("account_id"), str(val), row.get("id")))
+        if got is not None:
+            return got
+    return None
+
+
+def resolve_prop(conn: sqlite3.Connection, fill_id: int) -> Optional[Tuple[Dict[str, Any], Optional[Dict[str, Any]],
+                                                                          Optional[Dict[str, Any]]]]:
+    """``(opener, closer|None, ticket|None)`` for the prop trade ``fill_id`` (an opening OR closing row) belongs to.
+
+    ``opener`` is the opening row, or the closing row itself when no opening row was journaled. None = no such
+    row (or no prop tables)."""
+    try:
+        row = _one(conn, "SELECT * FROM prop_fills WHERE id = ?", (int(fill_id),))
+    except sqlite3.OperationalError as exc:
+        if "no such table" in str(exc):
+            return None
+        raise
+    if row is None:
+        return None
+    if str(row.get("status") or "").lower() in ("open", "filled"):
+        opener, closer = row, _sibling(conn, row, want_open=False)
+    else:
+        closer = row
+        opener = _sibling(conn, row, want_open=True) or row
+    ticket = None
+    if opener.get("ticket_id"):
+        try:
+            ticket = _one(conn, "SELECT * FROM prop_tickets WHERE ticket_id = ?", (str(opener["ticket_id"]),))
+        except sqlite3.OperationalError:
+            ticket = None
+    return opener, closer, ticket
