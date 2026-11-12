@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "VM-CHANGE-LEDGER: append-only VM change ledger on the ops jobs store (<ops>/ledger.jsonl, GET /api/bot/ops/ledger, brief §0 due items via pipeline.vm_ledger_due), ledger-backfill / ledger-fold / stage-token-rotation ops actions, exec/set-env write notification (system_action, never a gate), WORK_STORE_TOKEN_PREV dual-accept, syslog-cap fold-back (deploy/logrotate + install script run best-effort by deploy_pull_restart.sh). No order path, strategy, risk or config change. Gates this adds: none.",
+  "hold_text": "Tier-2 (runtime routes + ops runner + deploy script). Operator granted merge + deploy on green (popup ~21:10Z 2026-11-12 'Build it', relayed by Manager Session 2026-11-11a). The manager merges; ict-git-sync deploys; the lane then verifies GET /api/bot/ops/ledger live, backfills today's VM changes and folds OPS-20261112T204454Z-exec-e9f0f4."
+}
