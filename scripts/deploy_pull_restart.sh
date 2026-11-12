@@ -890,6 +890,33 @@ for unit in "${ICT_UNITS[@]}"; do
     if stop_note="$(stopped_unit_note "${unit}")"; then
         echo ">>>   starting stopped ${unit} (${stop_note}). To keep the trader stopped use stop-bot-service."
     fi
+    TRADER_LOCK_FD=""
+    if [ "${unit}" = "${TRADER_UNIT}" ] && command -v flock >/dev/null 2>&1 \
+            && ( : >> "${REPO_DIR}/runtime_logs/trader_restart.lock" ) 2>&-; then
+        # TRADER-DEPLOY-DOUBLE-RESTART: ict-git-sync and the pull-and-deploy system
+        # action both run THIS script, and the trader marker is only written AFTER
+        # the restart, so two overlapping runs both read a stale marker and both
+        # bounced the trader for one deploy batch. Dedupe on the deployed sha, no
+        # delay or wait: a non-blocking lock held across restart+marker. A run that
+        # finds it held skips (the holder is restarting the trader right now, onto
+        # this or a newer sha; a missed newer sha is re-diffed from the marker on
+        # the next tick). A run that gets it re-reads the marker first: if the sha
+        # is already running, skip. The lock dies with its holder, so it can never
+        # strand a restart. No flock / unwritable lock file => restart as before.
+        exec {TRADER_LOCK_FD}>>"${REPO_DIR}/runtime_logs/trader_restart.lock"
+        if ! flock -n "${TRADER_LOCK_FD}"; then
+            echo ">>>   skip ${unit} (another deploy run is restarting the trader right now; not restarting it twice)"
+            exec {TRADER_LOCK_FD}>&-
+            continue
+        fi
+        if [ "${DEPLOY_FORCE_RESTART:-0}" != "1" ] \
+                && [ "$(tr -d '[:space:]' < "${TRADER_DEPLOYED_SHA_FILE}" 2>/dev/null || true)" = "${POST_SYNC_HEAD}" ] \
+                && [ "$("${SYSTEMCTL[@]}" is-active "${unit}" 2>/dev/null || true)" = "active" ]; then
+            echo ">>>   skip ${unit} (already restarted onto ${POST_SYNC_HEAD:0:7} by a concurrent deploy run)"
+            exec {TRADER_LOCK_FD}>&-
+            continue
+        fi
+    fi
     if [ "${unit}" = "${TRADER_UNIT}" ]; then
         # TELEGRAM-RESTART-MSG: tell the trader's boot ping WHY it is starting
         # (src/runtime/restart_cause.py reads + consumes this). Best-effort.
@@ -920,6 +947,7 @@ for unit in "${ICT_UNITS[@]}"; do
             fi
         done
     fi
+    if [ -n "${TRADER_LOCK_FD}" ]; then exec {TRADER_LOCK_FD}>&-; fi
 done
 
 # ---------------------------------------------------------------------------
