@@ -203,6 +203,30 @@ run_test_masked_unit_is_skipped() {
     rm -rf "$tmp"
 }
 
+# ---------------------------------------------------------------------------
+# 9. SYSTEMD-WATCH-KNOWS-INSTALLER: the SEC-8001 --host rewrite of an existing
+#    ict-web-api drop-in records "<sha256>\t<path>" in SYSTEMD_RECEIPT, and the
+#    recorded hash is the rewritten file's, so security_watch treats it as expected.
+# ---------------------------------------------------------------------------
+run_test_webapi_rewrite_writes_receipt() {
+    local tmp; tmp=$(setup_temp_systemd)
+    mkdir -p "$tmp/systemd/ict-web-api.service.d"
+    local conf="$tmp/systemd/ict-web-api.service.d/venv.conf"
+    printf '[Service]\nExecStart=\nExecStart=/opt/venv/bin/python -m uvicorn src.web.api.main:app --host 0.0.0.0 --port 8001\n' > "$conf"
+    local receipt="$tmp/state/receipt.tsv"
+    REPO_DIR="$tmp" SYSTEMD_DIR="$tmp/systemd" SYSTEMD_RECEIPT="$receipt" \
+        bash "$tmp/install.sh" >/dev/null 2>&1 || true
+    assert_eq "webapi drop-in rewritten to 127.0.0.1" "$(grep -c -- '--host 127.0.0.1' "$conf")" 1
+    assert_eq "receipt has one line for the drop-in" "$(grep -c "	${conf}\$" "$receipt" 2>/dev/null)" 1
+    assert_eq "receipt hash is the rewritten file's" \
+        "$(grep "	${conf}\$" "$receipt" | cut -f1)" "$(sha256sum "$conf" | cut -d' ' -f1)"
+    # Re-run: nothing to rewrite, receipt unchanged (still one line).
+    REPO_DIR="$tmp" SYSTEMD_DIR="$tmp/systemd" SYSTEMD_RECEIPT="$receipt" \
+        bash "$tmp/install.sh" >/dev/null 2>&1 || true
+    assert_eq "re-run keeps one receipt line" "$(grep -c "	${conf}\$" "$receipt")" 1
+    rm -rf "$tmp"
+}
+
 run_test_missing_role_file_is_silent
 run_test_masked_unit_is_skipped
 run_test_fresh
@@ -211,6 +235,7 @@ run_test_refresh_on_change
 run_test_template_skipped
 run_test_git_sync_loads_env
 run_test_onfailure_dropins
+run_test_webapi_rewrite_writes_receipt
 
 echo
 echo "=== install_systemd_units summary: $PASS passed, $FAIL failed ==="
