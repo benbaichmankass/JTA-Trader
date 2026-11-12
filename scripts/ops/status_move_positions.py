@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Status-move positions read: which OPEN positions a book move left behind (row STATUS-MOVE-OPEN-POSITIONS).
 
-Rule: docs/plans/OPERATING-PLAN-2026-09-21.md § 2 "Open positions on a book move". Logic: src/runtime/status_move.py.
+Rule: docs/plans/OPERATING-PLAN-2026-09-21.md § 2 "Open positions on a book move". Logic: scripts/ops/status_move.py.
 This is the runtime half of strategy-status-guard: that guard reads the rosters in CI; this reads the positions.
 
 Read-only. Places nothing, writes nothing. A ``close_duplicate`` row is closed through the existing
@@ -26,9 +26,8 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "scripts" / "ops"))
 
+import status_move as sm
 import strategy_status as st
-
-from src.runtime import status_move as sm
 
 LIVE_URL = "https://ict-bot.duckdns.org/api/bot/positions?include_paper=true"
 

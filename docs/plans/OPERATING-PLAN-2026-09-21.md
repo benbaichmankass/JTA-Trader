@@ -204,7 +204,7 @@ in iteration, not a step on the way to real money"*.
 That is at most two copies of any trade on the judged books (general paper, real money, mirror). Prop and options accounts sit outside
 the status model and are reported, not judged.
 
-**The positions read** is `python3 scripts/ops/status_move_positions.py`, logic in `src/runtime/status_move.py`. It is the runtime half of
+**The positions read** is `python3 scripts/ops/status_move_positions.py`, logic in `scripts/ops/status_move.py`. It is the runtime half of
 `strategy-status-guard`: the guard reads rosters in CI, where positions cannot be read. It classifies every open position as `on_book` ·
 `not_judged` · `close_duplicate` · `close_netted` · `run_out` · `unexplained`, and it lists any trade open more than twice. It reads
 `/api/bot/positions?include_paper=true`, which carries no order-package id, so siblings are matched on leg + symbol + side and labelled

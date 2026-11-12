@@ -1,5 +1,9 @@
-"""src/runtime/status_move.py — open positions on a book move (row STATUS-MOVE-OPEN-POSITIONS)."""
-from src.runtime import status_move as sm
+"""scripts/ops/status_move.py — open positions on a book move (row STATUS-MOVE-OPEN-POSITIONS)."""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts" / "ops"))
+import status_move as sm
 
 
 def _p(i, acct, leg, sym="ADAUSDT", side="sell", pkg=None):
