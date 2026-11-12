@@ -38,7 +38,8 @@ fi
 echo
 echo "===== PUBLIC-facing binds (0.0.0.0 / :: / non-loopback) — the exposure ====="
 # Flag any listener NOT bound to loopback. These are the ports reachable from
-# off-box (subject to the OCI security list). Expected: 22 (SSH) + 8001 (API).
+# off-box (subject to the OCI security list). Expected: 22 (SSH) + 80/443 (Caddy).
+# :8001 (the API) binds 127.0.0.1 since SEC-8001-LOCKDOWN (2026-11-12).
 # Anything else here is worth a second look (e.g. a DB/metrics/gateway port).
 timeout 8 ss -tln 2>/dev/null \
     | awk 'NR>1 {print $4}' \
@@ -66,7 +67,7 @@ echo "===== summary ====="
 PUB_COUNT="$(timeout 8 ss -tln 2>/dev/null | awk 'NR>1 {print $4}' \
     | grep -vcE '^(127\.|\[::1\]|::1)' || true)"
 echo "public-facing listeners: ${PUB_COUNT:-0}"
-echo "expected public set: SSH (22) + bot API (8001). Investigate anything else."
+echo "expected public set: SSH (22) + Caddy (80, 443). :8001 must be loopback (SEC-8001-LOCKDOWN). Investigate anything else."
 echo "reminder: IB Gateway API (4002) MUST be loopback/private only — never public."
 
 exit 0
