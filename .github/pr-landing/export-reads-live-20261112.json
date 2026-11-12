@@ -1,5 +1,7 @@
 {
   "tier": 1,
-  "landing": "self",
-  "why": "Read-path/tooling fix (HEALTH-20261111-EXPORT-READS-STALE): off the VM, canonical register bulk reads (checklist_store.load, pipeline.read_log) now come from the live work store via GET /api/bot/work/items, raise could_not_look when unreachable, and read the frozen export only when asked (WORK_READ_SOURCE=export: CI guards via run_guards.py, and pytest), stamped with the export's newest record. On the VM (work_store.db present) nothing changes. No order-path, runtime-service, config or data-mutation change."
+  "landing": "hold",
+  "why": "Read-path fix (HEALTH-20261111-EXPORT-READS-STALE). It touches src/runtime/work_read.py, which pr-landing-guard names Tier-2 because the VM web API imports it. On the VM (work_store.db present) behaviour is unchanged; only off-VM bulk reads switch from the frozen export to GET /api/bot/work/items, and an unreachable API reads could_not_look. No order-path, service, config or data-mutation change. HOLD: manager merges.",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "src/runtime/work_read.py is named Tier-2 by pr-landing-guard (imported by the VM web API); the manager reads and merges."
 }
