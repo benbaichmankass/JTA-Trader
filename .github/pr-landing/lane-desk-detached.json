@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Trader-side change in src/runtime/desk_event_trigger.py (Tier-2 by path, R5): a build whose `systemctl start` client was killed with the trader is DETACHED, not failed. No could_not_build label, the in-flight mark stays for the next pass to adopt a finished survivor, and one build at a time is preserved. AM-OPS merges on green guards.",
+  "why": "DESK-BUILD-DETACHED: with isolation=unit live, every deploy restart SIGTERMs the systemctl client (4 of 5 builds 21:10-21:44Z ended `no result.json (systemctl exit -15)` at a trader stop), the thread labelled could_not_build and cleared the in-flight mark, so survivor adoption (#25356) could never see those builds."
+}
