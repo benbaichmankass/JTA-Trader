@@ -1558,3 +1558,34 @@ def test_without_the_bar_flag_a_proven_path_does_not_skip_the_soak(repo):
     root = _mech_repo(repo)
     _w(root, mr.MANDATES_REL, AMENDED, as_yaml=True)  # AMENDED has no mechanics_proven
     _needs_data(_s1s2(root), "R-NOT-SOAKED")
+
+
+# ── SOAK STEP RETIRED (operator, chat 2026-11-12, verbatim: "There is nothing in between proving edge on
+# back testing and real money. Absolutely no steps.") -- `bar.soak_step: retired` ────────────────────
+RETIRED = {"mandates": [
+    dict(x, bar=dict(x["bar"], soak_step="retired")) if x.get("id") == "MD-PROMOTE-S1-S2" else x
+    for x in AMENDED["mandates"]], "proposed": []}
+
+
+def test_soak_step_retired_fires_with_an_unproven_path_and_no_soak(repo):
+    # Same fixture that NEEDS_DATA R-NOT-SOAKED under the old bar: path unproven, leg off the soak
+    # roster, no passed soak contract. With the step retired the Stage-0 record alone decides.
+    root = _mech_repo(repo, other_passed=False)
+    _w(root, mr.MANDATES_REL, RETIRED, as_yaml=True)
+    res = _s1s2(root)
+    assert res["verdict"] == "FIRE", res
+    assert res["evidence"]["mechanics"]["proven"] is False  # recorded, not required
+    assert "retired" in res["evidence"]["soak_step"]
+
+
+def test_soak_step_retired_fires_for_new_code_leg(repo):
+    root = _mech_repo(repo, delta="new_code")
+    _w(root, mr.MANDATES_REL, RETIRED, as_yaml=True)
+    assert _s1s2(root)["verdict"] == "FIRE"
+
+
+def test_soak_step_retired_still_needs_the_stage0_record(repo):
+    root = _mech_repo(repo, other_passed=False)
+    _w(root, mr.MANDATES_REL, RETIRED, as_yaml=True)
+    (root / mr.EVIDENCE_DIR_REL / f"{LEG}.json").unlink()
+    _needs_data(_s1s2(root), "R-RECORD-MISSING")
