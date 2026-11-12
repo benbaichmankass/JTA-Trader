@@ -93,3 +93,46 @@ def test_cli_missing_file_fails_closed(tmp_path):
     r = subprocess.run([sys.executable, str(SCRIPT), str(tmp_path / "nope")],
                        capture_output=True, text=True)
     assert r.returncode == 1
+
+
+# ---- account_balance (CF-GRADES-EQUITY-COMMITTED / DIAG-RELAY-EQUITY-LEAK, 2026-11-12) ----
+# 99999.99 is a synthetic shape, not any real balance.
+BALANCE_POSITIVE = {
+    "kv_colon": "alpaca_live equity: 99999.99 ok",
+    "json_float": '{"account_id": "x", "equity": 99999.99}',
+    "json_string": '{"totalEquity": "99999.99", "marginMode": "cross"}',
+    "snake": '{"equity_usd": 99999.99, "buying_power_usd": 99999.99}',
+    "eq_sign": "equity=99999.99",
+    "dollar_prose": "affordable 1/2 at equity $99999.99 (as of t)",
+    "buying_power": "cash = equity = buying power 99999.99, shorting_enabled false",
+    "comma_thousands": "wallet balance: $99,999.99",
+    "pre_usd": '"equity_pre_usd": 99999.99',
+}
+
+
+@pytest.mark.parametrize("name,text", BALANCE_POSITIVE.items())
+def test_balance_positive_controls_are_redacted(name, text):
+    out, counts = redact(text)
+    assert "99999.99" not in out and "99,999.99" not in out, name
+    assert counts.get("account_balance", 0) >= 1, (name, counts)
+
+
+def test_balance_label_is_kept_so_the_diag_stays_readable():
+    out, _ = redact('{"equity": 99999.99, "symbol": "BTCUSDT"}')
+    assert '"equity"' in out and "BTCUSDT" in out and "[REDACTED:account_balance]" in out
+    json.loads(out.replace("[REDACTED:account_balance]", '"x"'))
+
+
+BALANCE_NEGATIVE = {
+    "no_label_number": "tick ok in 0.42s qty 99999.99 px 2.5",
+    "equity_word_no_number": "equity curve written, balance check ok, buying power unknown",
+    "snapshots_count": '{"balance_snapshots": [], "n": 3}',
+    "pnl_not_balance": '{"pnl": -12.5, "pnl_usd": 99999.99, "risk_usd": 4.2}',
+    "null_balance": '{"equity": null, "balance": null}',
+}
+
+
+@pytest.mark.parametrize("name,text", BALANCE_NEGATIVE.items())
+def test_balance_negative_controls_are_untouched(name, text):
+    out, counts = redact(text)
+    assert out == text and not counts, (name, counts)

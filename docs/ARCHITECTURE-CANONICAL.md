@@ -1394,13 +1394,18 @@ training sessions follow the established workflow:
      (WS5-C; setup-quality scorer on `setup_labels`).
 4. **Compare runs.** `python -m ml compare <id-a> <id-b>` surfaces
    shared-metric deltas as JSON.
-5. **Promotion is gated past shadow.** Since 2026-05-19 every
-   baseline manifest declares `target_deployment_stage: shadow` and
-   `_DEFAULT_STAGE` is `shadow`, so a clean training run lands a model
-   ready for shadow consumption (predictions logged, decisions
-   unchanged). Promotion past shadow (`shadow → advisory`) still
-   requires `python -m ml promote-stage --by <name> --reason <text>`
-   and operator approval. Models can be parked back at `candidate`
+5. **Promotion is decided on offline evidence — no stage step**
+   (retired by the operator 2026-11-12, verbatim: *"you're going to retire the step from the ML. Everything goes through the new flow, back testing, live money, and then if it gets demoted, it soaks to still generate data while we iterate on it. That is the only acceptable flow. There is nothing in between proving edge on back testing and real money. Absolutely no steps."*). Since 2026-05-19
+   every baseline manifest declares `target_deployment_stage: shadow` and
+   `_DEFAULT_STAGE` is `shadow`, so a clean training run logs predictions
+   (data collection; decisions unchanged). A model whose committed
+   offline evidence clears `ml.promotion.gates` (oos_edge, cost_net,
+   non_degenerate, offline sample_sufficiency, cross_run_stability) moves
+   to `advisory` directly from `candidate` or `shadow` via
+   `python -m ml promote-stage --by <name> --reason <text>`, a data-backed
+   Tier-3 change (canonical § "Data-backed Tier-2/3 decisions"). Live-row
+   gates are monitoring + demote triggers. A demoted model goes to
+   `shadow`, soaking for data while it is iterated on. Models can be parked back at `candidate`
    via the same CLI when an operator wants them out of the shadow
    channel without retraining. (Stage ladder collapsed 7→3 on
    2026-06-16 — canonical `candidate → shadow → advisory`; legacy
@@ -1502,11 +1507,12 @@ The boundary that prevents trainer autonomy from leaking into live
 (2026-05-19 update). As of the default-flip, any model registered
 at `target_deployment_stage: shadow` is auto-wired onto every
 strategy's shadow channel — predictions are logged on signals
-without operator approval. Operator approval is still required for
-the cross into live influence: the
-`shadow → advisory` promotion (the single live-influence gate; the
-former `limited_live`/`live_approved` tiers collapsed into `advisory`
-2026-06-16) remains gated, and the live-trader's order package is
+without operator approval. The cross into live influence is the move
+into `advisory` (the former `limited_live`/`live_approved` tiers
+collapsed into `advisory` 2026-06-16), decided on committed OFFLINE
+evidence with no shadow step (operator, 2026-11-12: *"There is nothing in
+between proving edge on back testing and real money. Absolutely no
+steps."*) — a data-backed Tier-3 change; and the live-trader's order package is
 unaffected by shadow predictions per the WS7 non-negotiable. An operator who
 wants a strategy *not* to log against the auto-wired set sets
 `shadow_model_ids: []` (explicit opt-out) or provides an explicit
@@ -1760,7 +1766,7 @@ milestone.
 | **Orphaned mode-override dead code in `src/`** — **RESOLVED (verified 2026-07-09, full-system audit S-AUDIT-E).** The Prime-Directive-violating vectors are gone (breaker auto-flip removed → the rejection path is alert-only; Telegram `/accounts dry\|live` removed in #1933), AND the shim code itself is now **deleted**: `_DRY_RUN_OVERRIDES` + `set_account_dry_run()` (+ the `Coordinator` wrapper) survive only as a removal docstring in `src/units/accounts/__init__.py`, with a regression test asserting their absence (`tests/test_exchange_rejection_circuit_breaker.py` — `assert not hasattr(...)`). The earlier "deletion never landed" note was itself stale. **The `account_state.yaml` dry-only override read (`src/runtime/orders.py::account_state_dry_run`, consumed in `coordinator.py`) was kept here in 2026-07 as an intentional dry-only gate. It was RETIRED on 2026-09-29 by operator decision JC-CA-06** ("Retire it"): the fold, its reader, the file and the `/api/bot/config` field are removed, and the two execution gates are the only ones. | Closed — no action (the "two execution gates" wording should acknowledge `account_state.yaml` as a dry-only override; tracked in the audit findings doc as E1-F3). |
 | **Per-trade RiskManager rejection → per-trade Telegram** | The Prime Directive (§ rules doc) requires every refusal to emit its own Telegram with account/symbol/side/qty/reason/exchange-error. Today's path uses aggregate alerts when conditions cluster. The per-trade wiring ships in the safeguards PR. | Safeguards PR. |
 | ~~**WS5 baselines not yet at `shadow` in any registry**~~ | **Resolved.** The trainer VM is provisioned and the M14 program has been running training cycles for weeks; baseline + regime heads sit at `shadow` and log predictions live (`runtime_logs/shadow_predictions.jsonl`, surfaced on `/api/bot/shadow/*` + `/api/bot/trades/scores`). | Closed (M14 in progress). |
-| **`shadow_model_ids` empty in production strategy YAML** | ~~Operator step~~. **Resolved 2026-05-19 by the default-flip + auto-wire.** Strategies that omit `shadow_model_ids` (or set it to `None`) auto-discover every model at `target_deployment_stage: shadow` and attach them as shadow predictors. The boundary between trainer-VM Claude and live trading moves from `shadow_model_ids` wiring to the `shadow → advisory` promotion gate; the latter still requires operator approval. | Closed. |
+| **`shadow_model_ids` empty in production strategy YAML** | ~~Operator step~~. **Resolved 2026-05-19 by the default-flip + auto-wire.** Strategies that omit `shadow_model_ids` (or set it to `None`) auto-discover every model at `target_deployment_stage: shadow` and attach them as shadow predictors. The boundary between trainer-VM Claude and live trading moves from `shadow_model_ids` wiring to the move into `advisory` (offline evidence, no shadow step since 2026-11-12; data-backed Tier-3). | Closed. |
 | ~~**Trainer VM not yet provisioned**~~ | **Resolved.** `ict-trainer-vm` (`158.178.209.121`) is up and running the ML lifecycle; read it via the `trainer-vm-diag` relay. The M14 ML-Optimization Program (S0–S18) has executed numerous training cycles on it. | Closed. |
 | ~~**Trainer VM ↔ live VM data flow not yet wired**~~ | **Resolved.** The trainer pulls live `trade_journal.db` (read-only sync) and publishes its lifecycle artifacts back to the live VM via the trainer mirror (`runtime_logs/trainer_mirror/`), ingested into the federated `trainer_store.db` sidecar (`src/units/db/trainer_store.py`) and surfaced through `/api/bot/ml/*` + `/api/bot/backtests/sweeps`. | Closed (S-PERSIST-CANON). |
 | **No open-source model layer (HF transformers as `Predictor`)** | WS6 not started. Per the master plan, defer until the WS8 feedback loop is observable end-to-end (drift detector + dashboard panels are live as of 2026-05-11; missing piece is real shadow predictions in production, which lands when the trainer + YAML wiring resolve). | WS6. |

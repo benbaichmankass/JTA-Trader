@@ -488,6 +488,12 @@ def evaluate_guards(*, ticket: Mapping[str, Any], spec: Optional[BracketSpec], f
 
     reasons: List[str] = []
     breach: List[str] = []
+    # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-PROP-RISK-CUSHION: MAKE REPORT-ONLY. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+    # ``cushion`` holds every drawdown-cushion finding (account / open-risk read, static DD, daily loss, the risk
+    # gate's exceeds / unknown, an unbounded $-cap). They are REPORTED in breach_reports in EVERY breach_guards
+    # mode and never refuse. Structure, expiry, the flat $-cap resize (the sizing decision) and the leverage cap
+    # are unchanged.
+    cushion: List[str] = []
     checks: Dict[str, Any] = {"breach_guards": cfg.breach_guards}
     if halted:
         reasons.append(f"executor halted: {halted}")
@@ -506,9 +512,9 @@ def evaluate_guards(*, ticket: Mapping[str, Any], spec: Optional[BracketSpec], f
     # account read, this cycle
     eq, bal = account.equity, account.balance
     if eq is None or bal is None:
-        reasons.append("account: balance/equity not read this cycle (could not look)")
+        cushion.append("account: balance/equity not read this cycle (could not look)")
     if open_risk_usd is None:
-        reasons.append(f"open risk: {open_risk_state} (could not look)")
+        cushion.append(f"open risk: {open_risk_state} (could not look)")
     risk = _f(facts.get("ticket_risk_usd"))
     floor = cfg.account_size_usd * (1.0 - cfg.max_dd_pct)
     daily_floor = prop_rule_guards.daily_floor(
@@ -518,17 +524,16 @@ def evaluate_guards(*, ticket: Mapping[str, Any], spec: Optional[BracketSpec], f
                   ticket_risk_usd=risk, dd_floor=floor, daily_floor=daily_floor,
                   day_start_balance=day_start_balance, margin=cfg.safety_margin_usd)
     if daily_floor is None:
-        # Feeds ONLY the daily-loss breach guard, so it is a breach item.
-        breach.append("daily loss: day-start balance unknown for this prop day (could not look)")
+        cushion.append("daily loss: day-start balance unknown for this prop day (could not look)")
     if None not in (eq, open_risk_usd, risk):
         after = eq - open_risk_usd - risk
         checks["equity_after_all_stops"] = round(after, 2)
         if after <= floor + cfg.safety_margin_usd:
-            breach.append(f"static DD: equity after all stops ${after:,.2f} <= floor ${floor:,.2f} "
-                          f"+ margin ${cfg.safety_margin_usd:,.2f}")
+            cushion.append(f"static DD: equity after all stops ${after:,.2f} <= floor ${floor:,.2f} "
+                           f"+ margin ${cfg.safety_margin_usd:,.2f}")
         if daily_floor is not None and after <= daily_floor + cfg.safety_margin_usd:
-            breach.append(f"daily loss: equity after all stops ${after:,.2f} <= day floor "
-                          f"${daily_floor:,.2f} + margin ${cfg.safety_margin_usd:,.2f}")
+            cushion.append(f"daily loss: equity after all stops ${after:,.2f} <= day floor "
+                           f"${daily_floor:,.2f} + margin ${cfg.safety_margin_usd:,.2f}")
     # Leverage cap (declared per ruleset; breakout.yaml declares none). A
     # breach item: ``enforce`` refuses, ``report`` alerts.
     if cfg.leverage_caps:
@@ -553,11 +558,9 @@ def evaluate_guards(*, ticket: Mapping[str, Any], spec: Optional[BracketSpec], f
     else:
         grade = prop_risk_gate.grade_ticket_risk(risk_usd=risk, status_freshness="unreadable")
     checks["risk_gate"] = {"state": grade.get("state"), "reason": grade.get("reason")}
-    if grade.get("state") == prop_risk_gate.EXCEEDS:
-        breach.append(f"risk gate: {grade.get('state')} ({grade.get('reason')})")
-    elif grade.get("state") != prop_risk_gate.WITHIN:
-        # cushion_unknown / no_risk_declared: could not look → HARD in every mode
-        reasons.append(f"risk gate: {grade.get('state')} ({grade.get('reason')})")
+    if grade.get("state") != prop_risk_gate.WITHIN:
+        # exceeds / cushion_unknown / no_risk_declared: reported, never refused (GATE-PROP-RISK-CUSHION)
+        cushion.append(f"risk gate: {grade.get('state')} ({grade.get('reason')})")
     if risk is not None:
         cap = prop_risk_gate.enforce_ticket_cap(risk_usd=risk, cap_usd=cfg.risk_cap_usd,
                                                 gate_mode="enforce", sizing_mode="flat")
@@ -576,12 +579,15 @@ def evaluate_guards(*, ticket: Mapping[str, Any], spec: Optional[BracketSpec], f
             reasons.append(f"risk cap: ticket asks ${risk:,.2f}, above the flat-mode cap "
                            f"${cfg.risk_cap_usd:,.2f} after sizing at the venue increments — REFUSED "
                            f"(the size was already cut to the cap where rounding allowed)")
+        elif cap.get("action") == prop_risk_gate.CAP_UNBOUNDED_REPORTED:
+            cushion.append(f"risk cap: {cap.get('action')} ({cap.get('cause')})")
         elif cap.get("action") != "unchanged":
             reasons.append(f"risk cap: {cap.get('action')} ({cap.get('cause')})")
+    checks["cushion_report_only"] = list(cushion)
     if cfg.breach_guards == "report":
-        return GuardVerdict(fits=not reasons, reasons=reasons, checks=checks, breach_reports=breach)
+        return GuardVerdict(fits=not reasons, reasons=reasons, checks=checks, breach_reports=cushion + breach)
     reasons.extend(breach)
-    return GuardVerdict(fits=not reasons, reasons=reasons, checks=checks)
+    return GuardVerdict(fits=not reasons, reasons=reasons, checks=checks, breach_reports=cushion)
 
 
 def match_terminal(spec: Mapping[str, Any], positions: Sequence[Position],
@@ -1494,7 +1500,7 @@ def _run_cycle(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mode: 
                         cfg=cfg, now=now)
     res.log("guards", ticket_id=candidate["ticket_id"], **v.as_dict(), facts=dict(facts))
     for b in v.breach_reports:
-        res.alerts.append(f"{candidate['ticket_id']}: breach_guards=report, placing anyway — {b}")
+        res.alerts.append(f"{candidate['ticket_id']}: reported, placing anyway (breach_guards={cfg.breach_guards}) — {b}")
     if not v.fits:
         if live:
             ledger.record(candidate["ticket_id"], "refused", reasons=v.reasons)

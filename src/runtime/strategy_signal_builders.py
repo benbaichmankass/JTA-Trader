@@ -132,6 +132,32 @@ def _publish_liquidity_state(symbol: str, candles_df: Any) -> None:
         logger.exception("liquidity state publish failed for symbol=%s", symbol)
 
 
+def _log_market_closed_report_only(strategy_id: str, symbol: Any, reason: str) -> None:
+    """GATE-MARKET-HOURS, report-only (operator 2026-11-12 decisions page, Gates tab).
+
+    Record: ``comms/gates/gate_decisions_2026-11-12.json``. Until 2026-11-12 every
+    us_equity / fx builder returned ``side=none`` when ``market_hours.is_market_open``
+    read closed. The operator decided it may exist as a check but not a gate: *"If the
+    market is closed the trade won't go through, it can exist as a check but not a
+    gate."* So the builder now carries on and builds its signal, and this logs the
+    market state with a named cause. The venue's own answer (reject, or queue for the
+    open) is the outcome. Best-effort: an audit failure never changes the signal.
+    """
+    logger.info(
+        "%s: market reads closed (%s) for %s — building the signal anyway "
+        "(GATE-MARKET-HOURS report-only; the venue answers)", strategy_id, reason, symbol,
+    )
+    try:
+        log_signal({
+            "event": "market_closed_report_only",
+            "strategy": strategy_id,
+            "symbol": symbol,
+            "cause": reason,
+        })
+    except Exception:  # a report never changes the signal
+        logger.exception("%s: market-closed report emit failed", strategy_id)
+
+
 def _with_signal_package(strategy_id: str, sig: dict) -> dict:
     """Attach a typed SignalPackage to a builder result dict (S3 wiring).
 
@@ -2976,15 +3002,10 @@ def xauusd_trend_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         fx_open = True
     if not fx_open:
-        logger.info("xauusd_trend_1h: FX market closed (weekend) - side=none")
-        return _with_signal_package("xauusd_trend_1h", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {
-                "strategy_name": "xauusd_trend_1h",
-                "reason": "fx_market_closed",
-            },
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("xauusd_trend_1h", symbol, "fx_market_closed")
 
     timeframe = str(xau_cfg.get("timeframe") or "1h")
 
@@ -3295,12 +3316,10 @@ def spy_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("spy_trend_long_1d: US market closed - side=none")
-        return _with_signal_package("spy_trend_long_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "spy_trend_long_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("spy_trend_long_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -3448,12 +3467,10 @@ def iwm_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("iwm_trend_long_1d: US market closed - side=none")
-        return _with_signal_package("iwm_trend_long_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "iwm_trend_long_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("iwm_trend_long_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -3601,12 +3618,10 @@ def splg_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("splg_trend_long_1d: US market closed - side=none")
-        return _with_signal_package("splg_trend_long_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "splg_trend_long_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("splg_trend_long_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -3755,12 +3770,10 @@ def scha_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("scha_trend_long_1d: US market closed - side=none")
-        return _with_signal_package("scha_trend_long_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "scha_trend_long_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("scha_trend_long_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -3905,12 +3918,10 @@ def qqq_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("qqq_trend_long_1d: US market closed - side=none")
-        return _with_signal_package("qqq_trend_long_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "qqq_trend_long_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("qqq_trend_long_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -4056,12 +4067,10 @@ def tqqq_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("tqqq_trend_long_1d: US market closed - side=none")
-        return _with_signal_package("tqqq_trend_long_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "tqqq_trend_long_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("tqqq_trend_long_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -4201,12 +4210,10 @@ def qld_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("qld_trend_long_1d: US market closed - side=none")
-        return _with_signal_package("qld_trend_long_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "qld_trend_long_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("qld_trend_long_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -4349,12 +4356,10 @@ def gld_pullback_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("gld_pullback_1d: US market closed - side=none")
-        return _with_signal_package("gld_pullback_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "gld_pullback_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("gld_pullback_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -4481,12 +4486,10 @@ def iaum_pullback_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("iaum_pullback_1d: US market closed - side=none")
-        return _with_signal_package("iaum_pullback_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "iaum_pullback_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("iaum_pullback_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -4613,12 +4616,10 @@ def tlt_pullback_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("tlt_pullback_1d: US market closed - side=none")
-        return _with_signal_package("tlt_pullback_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "tlt_pullback_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("tlt_pullback_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -4745,12 +4746,10 @@ def slv_pullback_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("slv_pullback_1d: US market closed - side=none")
-        return _with_signal_package("slv_pullback_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "slv_pullback_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("slv_pullback_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -4877,12 +4876,10 @@ def gdx_pullback_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("gdx_pullback_1d: US market closed - side=none")
-        return _with_signal_package("gdx_pullback_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "gdx_pullback_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("gdx_pullback_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -5010,12 +5007,10 @@ def ief_pullback_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("ief_pullback_1d: US market closed - side=none")
-        return _with_signal_package("ief_pullback_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "ief_pullback_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("ief_pullback_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -5144,12 +5139,10 @@ def gld_pullback_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("gld_pullback_1h: US market closed - side=none")
-        return _with_signal_package("gld_pullback_1h", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "gld_pullback_1h", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("gld_pullback_1h", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1h")
 
@@ -5279,12 +5272,10 @@ def slv_trend_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("slv_trend_1h: US market closed - side=none")
-        return _with_signal_package("slv_trend_1h", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "slv_trend_1h", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("slv_trend_1h", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1h")
 
@@ -5416,12 +5407,10 @@ def spy_pullback_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("spy_pullback_1h: US market closed - side=none")
-        return _with_signal_package("spy_pullback_1h", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "spy_pullback_1h", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("spy_pullback_1h", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1h")
 
@@ -5551,12 +5540,10 @@ def qqq_pullback_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("qqq_pullback_1h: US market closed - side=none")
-        return _with_signal_package("qqq_pullback_1h", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "qqq_pullback_1h", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("qqq_pullback_1h", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1h")
 
@@ -5686,12 +5673,10 @@ def tlt_pullback_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("tlt_pullback_1h: US market closed - side=none")
-        return _with_signal_package("tlt_pullback_1h", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "tlt_pullback_1h", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("tlt_pullback_1h", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1h")
 
@@ -5822,12 +5807,10 @@ def uso_trend_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("uso_trend_1h: US market closed - side=none")
-        return _with_signal_package("uso_trend_1h", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "uso_trend_1h", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("uso_trend_1h", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1h")
 
@@ -6172,8 +6155,8 @@ def eth_pullback_prop_2h_signal_builder(settings: dict) -> Dict[str, Any]:
     never emits a prop ticket). Funded-EV gate: full-period 12-mo EV +$538
     @72.7% P(net>0), walk-forward 4/4 folds EV-positive — but realised post-swap
     is regime-dependent (negative in 2/4 folds), so this is a soak candidate, NOT
-    a live-money promotion. Promotion past shadow is the operator-gated Tier-3
-    switch. Eval: docs/research/eth-pullback-prop-swap-aware-2026-06-25.md.
+    a live-money promotion. (2026-11-12: there is no shadow step — a leg goes to
+    real money when its committed backtest evidence clears the bar.) Eval: docs/research/eth-pullback-prop-swap-aware-2026-06-25.md.
     Delegates to the shared ``_htf_pullback_variant_builder`` (reads the
     ``eth_pullback_prop_2h`` config block, which pins the swap-robust exits).
     """

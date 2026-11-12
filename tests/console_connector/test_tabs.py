@@ -366,3 +366,141 @@ def test_work_rows_and_workplan_add_fields_keep_old_shape():
         if r.get("week_lane"):
             direct[r["week_lane"]] = direct.get(r["week_lane"], 0) + 1
     assert {k: v["total"] for k, v in wr["week_lane_totals"].items()} == direct
+
+
+# ── work_items (C3): the console Work tab on the live work store ──
+def _store_item(i, state="queued", by="Manager Session 2026-11-11a", src=None):
+    it = {"id": f"X-{i}", "kind": "build", "title": f"t{i}", "state": state, "owner": "manager",
+          "updated_at": f"2026-11-12T07:{40 + i:02d}:00Z", "updated_by": by, "version": 1,
+          "blocked_on": [{"kind": "work_item", "ref": "Y"}] if i == 0 else [], "extra": {}}
+    if src:
+        it["extra"]["_source"] = src
+    return it
+
+
+def test_work_items_recent_passes_since_and_slims(monkeypatch):
+    seen = []
+
+    def f(path, tok):
+        seen.append(path)
+        return {"readState": "read", "items": [_store_item(1), _store_item(0, src="checklist")], "total": 2700,
+                "canonical": False, "note": "S1"}
+    monkeypatch.setattr(tabs, "FETCH", f)
+    monkeypatch.delenv("DASHBOARD_API_TOKEN", raising=False)
+    out = tabs.work_items({"view": "recent", "since_hours": 2, "limit": 5})
+    assert out["read_state"] == "read" and out["count"] == 2
+    assert "since=" in seen[0] and "limit=5" in seen[0] and seen[0].startswith("/api/bot/work/items?")
+    assert out["items"][0]["by"] == "Manager Session 2026-11-11a" and out["items"][0]["source"] == "store"
+    assert out["items"][1]["source"] == "checklist" and out["items"][1]["blocked_on"] == ["Y"]
+    assert out["population"]["store_items_total"] == 2700 and out["canonical"] is True  # S4 freeze is committed
+
+
+def test_work_items_open_merges_states_newest_first(monkeypatch):
+    def f(path, tok):
+        st = path.split("state=")[1].split("&")[0]
+        return {"readState": "read", "items": [_store_item(len(st) % 10, state=st)], "total": 9}
+    monkeypatch.setattr(tabs, "FETCH", f)
+    out = tabs.work_items({"view": "open", "limit": 3})
+    assert out["count"] == 3 and set(out["population"]["per_state"]) == set(tabs.OPEN_ITEM_STATES)
+    ts = [i["updated_at"] for i in out["items"]]
+    assert ts == sorted(ts, reverse=True)
+
+
+def test_work_items_events_and_failures(monkeypatch):
+    monkeypatch.setattr(tabs, "FETCH", lambda p, t: {"events": [{"seq": 1, "op": "create", "by": "s"}],
+                                                      "chain": {"ok": True}})
+    ev = tabs.work_items({"item_id": "A B"})
+    assert ev["read_state"] == "read" and ev["events"][0]["op"] == "create" and "A%20B" in ev["upstream"]
+    monkeypatch.setattr(tabs, "FETCH", lambda p, t: {"readState": "could_not_look", "items": None, "error": "db"})
+    out = tabs.work_items({"view": "due"})
+    assert out["read_state"] == "could_not_look" and out["items"] is None and out["count"] is None
+    bad = tabs.work_items({"view": "state", "state": "x; drop"})
+    assert bad["read_state"] == "could_not_look"
+
+
+def test_work_items_sends_service_bearer_when_present(monkeypatch):
+    toks = []
+    monkeypatch.setattr(tabs, "FETCH", lambda p, t: toks.append(t) or {"readState": "read", "items": [], "total": 0})
+    monkeypatch.setenv("DASHBOARD_API_TOKEN", "x")
+    tabs.work_items({"view": "due"})
+    assert toks == ["x"]
+
+
+# ── after the S4 freeze: register reads come from the live store, not the frozen export ──
+@pytest.mark.store_register
+def test_frozen_register_reads_live_store(monkeypatch):
+    from src.console_connector import data as D
+    monkeypatch.setattr(D, "register_source", lambda repo: "work_store")
+    item = {"id": "LIVE-ROW", "kind": "build", "title": "from the store", "state": "in_flight", "owner": "m",
+            "lane": None, "tier": 1, "roadmap": ["L-OPS"], "due_rule": None, "due_at": None, "prs": [],
+            "blocked_on": [], "updated_at": "2026-11-12T07:49:35Z", "updated_by": "UI lane", "version": 3,
+            "priority_rank": None, "extra": {"_seq": 5, "_source": "checklist", "note": "n"}}
+    calls = []
+
+    def fake(url):
+        calls.append(url)
+        return {"readState": "read", "items": [item] if "kind=build" in url else []}
+    monkeypatch.setattr(D, "STORE_FETCH", fake)
+    out = D.work_rows(REPO, "in_flight", 5)
+    assert out["read_state"] == "read" and out["provenance"]["register_source"] == "work_store"
+    assert [r["id"] for r in out["sections"]["in_flight"]] == ["LIVE-ROW"]
+    n = len(calls)
+    D.work_rows(REPO, "all", 5)
+    assert len(calls) == n, "second read inside the TTL must come from the shared cache"
+
+
+@pytest.mark.store_register
+def test_frozen_register_store_down_is_could_not_look(monkeypatch):
+    from src.console_connector import data as D
+    monkeypatch.setattr(D, "register_source", lambda repo: "work_store")
+    monkeypatch.setattr(D, "STORE_FETCH", lambda url: {"readState": "could_not_look", "items": None, "error": "db"})
+    out = D.work_rows(REPO, "all", 5)
+    assert out["read_state"] == "could_not_look" and out["population"]["rows_scanned"] is None
+
+
+# ── alerts / journal / reports (sign-in only) ──
+def test_alerts_urgent_filter_and_failure(monkeypatch):
+    rows = [{"ts": "2026-11-12T08:00:00Z", "kind": "a", "channel": "system", "priority": "normal", "body": "x"},
+            {"ts": "2026-11-12T08:01:00Z", "kind": "b", "channel": "manager", "priority": "high", "body": "y"},
+            {"ts": "2026-11-12T08:02:00Z", "kind": "c", "channel": "manager", "priority": "normal", "body": "z"}]
+    monkeypatch.setattr(tabs, "FETCH", lambda p, t: {"read_state": "read", "rows": rows, "total_matching": 3})
+    out = tabs.alerts({"urgent": True})
+    assert out["count"] == 2 and [r["kind"] for r in out["rows"]] == ["b", "a"]
+    monkeypatch.setattr(tabs, "FETCH", lambda p, t: (_ for _ in ()).throw(OSError("down")))
+    bad = tabs.alerts({})
+    assert bad["read_state"] == "could_not_look" and bad["rows"] is None and bad["count"] is None
+
+
+def test_journal_trades_and_packages(monkeypatch):
+    seen = []
+
+    def f(p, t):
+        seen.append(p)
+        return [{"id": 1, "symbol": "X", "realizedPnl": -1.0, "secret": "no"}] if "trades" in p else \
+            {"rows": [{"orderPackageId": "op1", "status": "open"}], "filter_state": "read"}
+    monkeypatch.setattr(tabs, "FETCH", f)
+    t = tabs.journal({"limit": 1, "account": "bybit_2"})
+    assert t["rows"][0]["symbol"] == "X" and "secret" not in t["rows"][0] and "account_id=bybit_2" in seen[0]
+    p = tabs.journal({"kind": "packages"})
+    assert p["rows"][0]["orderPackageId"] == "op1" and seen[1].startswith("/api/bot/order-packages?")
+
+
+def test_reports_index_and_body(monkeypatch):
+    def f(p, t):
+        if p.endswith("/reports"):
+            return {"reports": [{"id": "r1", "generated_at": "2026-09-01"}, {"id": "r2", "generated_at": "2026-09-09"}], "total": 2}
+        return {"id": "r2", "html": "<style>body{x}</style><h1>Title</h1><p>Body text</p>"}
+    monkeypatch.setattr(tabs, "FETCH", f)
+    idx = tabs.reports({})
+    assert [r["id"] for r in idx["reports"]] == ["r2", "r1"]
+    one = tabs.reports({"report_id": "r2"})
+    assert one["text"] == "Title Body text"
+
+
+def test_new_tools_are_gated_without_sign_in(monkeypatch):
+    from src.console_connector import server
+    monkeypatch.delenv("CONSOLE_CONNECTOR_AUTH", raising=False)
+    monkeypatch.setattr(tabs, "FETCH", lambda *a: pytest.fail("must not fetch without sign-in"))
+    for name in ("alerts", "journal", "reports"):
+        r = server.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": name, "arguments": {}}})
+        assert r["result"]["structuredContent"]["read_state"] == "auth_required"

@@ -145,3 +145,51 @@ def test_legacy_stamp_fed_by_shadow_is_not_applied(monkeypatch, tmp_path):
         "trade-outcome-x": {"stage": "shadow", "score": 0.1}}, direction="long")
     stamp.pop("influencing")
     assert _apply(monkeypatch, tmp_path, stamp) == 0.5
+
+
+# ---- 3. guard against a later apply flip (row ML-SHADOW-NEVER-ORDERS) ---------
+# MEASURED 2026-10-29 (get-env run 40775326133): CONVICTION_SIZING_MODE=annotate
+# on bybit_1, so no shadow score changes an order today. These two tests keep it
+# that way across a later ``apply`` flip. They are tests, not a runtime gate.
+
+_SHADOW_ONLY = {
+    "trade-outcome-x": {"stage": "shadow", "score": 0.05},
+    "setup-quality-y": {"stage": "shadow", "score": 0.05},
+}
+
+
+def _sized(monkeypatch, tmp_path, stamp, mode):
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("CONVICTION_SIZING_MODE", mode)
+    monkeypatch.setenv("CONVICTION_SIZING_DIRECTION", "symmetric")
+    monkeypatch.delenv("CONVICTION_SIZING_ACCOUNTS", raising=False)
+    return cs.apply_conviction_sizing(_pkg_with_stamp(stamp), 0.5,
+                                      account_name="bybit_1", **_LARGE)
+
+
+def test_planted_shadow_influence_under_apply_is_caught(monkeypatch, tmp_path):
+    """PLANTED: let shadow count as an influence stage (the regression this row
+    guards) and ``apply`` mode. The size MUST then move, which is exactly what
+    test_shadow_scores_do_not_move_the_applied_size would fail on. If this test
+    ever stops seeing a size change, the guard above has gone inert."""
+    import src.runtime.conviction_inputs as ci
+
+    baseline = conviction_stamp("trend_donchian", 0.6, {}, direction="long")
+    clean = conviction_stamp("trend_donchian", 0.6, _SHADOW_ONLY, direction="long")
+    assert _sized(monkeypatch, tmp_path, clean, "apply") == pytest.approx(
+        _sized(monkeypatch, tmp_path, baseline, "apply"))
+
+    monkeypatch.setattr(ci, "INFLUENCE_STAGES", ci.INFLUENCE_STAGES | {"shadow"})
+    planted = conviction_stamp("trend_donchian", 0.6, _SHADOW_ONLY, direction="long")
+    assert _sized(monkeypatch, tmp_path, planted, "apply") != pytest.approx(
+        _sized(monkeypatch, tmp_path, baseline, "apply"))
+
+
+@pytest.mark.parametrize("stage", ["shadow", "advisory"])
+def test_annotate_mode_never_changes_the_size(monkeypatch, tmp_path, stage):
+    """CLEAN: the measured live mode (annotate) leaves the qty untouched, even
+    for a stamp an advisory head would act on under ``apply``."""
+    stamp = conviction_stamp("trend_donchian", 0.6, {
+        "trade-outcome-x": {"stage": stage, "score": 0.05}}, direction="long")
+    assert _sized(monkeypatch, tmp_path, stamp, "annotate") == 0.5
+    assert _sized(monkeypatch, tmp_path, stamp, "off") == 0.5

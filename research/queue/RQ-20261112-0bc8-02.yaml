@@ -9,6 +9,15 @@ roadmap:
 theme: ml_health
 priority: 2
 kind: experiment
+iteration:
+  subject: ml-exit-head-donchian-1h
+  subject_kind: ml_model
+  from_result: RQ-20261101-78fc-03
+  verdict_read: fail
+  diagnosis: 'RQ-20261101-78fc-03 graded FAIL 2026-11-12: on ETH trend_donchian 1h the head replayed OOS dR/trade -0.0612 (trade-clustered 95% CI LB -0.1954, n_oos 605), after BTC FAIL (-0.0141, n 1041) and SOL FAIL (-0.0246 IS). The head loses on all three symbols out of sample or in sample, so the failure is not symbol-specific; the feature-family lever has not been searched, and this unit tests it.'
+  hypothesis: a size/count volume-composition surprise carries exit information the champion feature set lacks
+  attempt: 2
+  due_by: '2026-11-26'
 question: 'Operator 2026-11-12 07:46Z (planning page p3, verbatim choice "Also test it in the exit head now"), the second arm of the
   RQ-20261111-f5c8-02 PASS consequence (row VOLUME-COMPOSITION-RESEARCH; regime-vol arm = RQ-20261112-0bc8-01). f5c8-02 found a SIZE-led
   volume surprise precedes a calmer next 4h bar (held-out partial rank IC -0.069, t -8.19, 27 months); a calmer next bar is exit-relevant.
@@ -136,6 +145,17 @@ related:
 - scripts/research/exit_head_walkforward_multifold.py
 - scripts/ml/train_exit_head.py
 - scripts/ml/exit_head_replay.py
+last_dispatched_at: null
 grading:
   auto: true
+  confirmatory_run: 1
   decision_rule_id: RULE-VOLCOMP-EXITHEAD-01
+  evidence:
+  - research/results/RQ-20261112-0bc8-02/trainer-43187689666.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-11-12'
+  grader: scripts/research/queue_grade.py
+  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
