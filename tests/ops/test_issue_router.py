@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import importlib.util
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 import yaml
@@ -53,7 +55,6 @@ def test_routed_workflows_are_consistent():
 
 def test_check_mode_passes_on_the_tree():
     assert irm.main.__module__  # import smoke
-    import subprocess, sys
     r = subprocess.run([sys.executable, str(REPO / "scripts/ops/issue_router_migrate.py"), "--check"],
                        cwd=REPO, capture_output=True, text=True)
     assert r.returncode == 0, r.stdout + r.stderr
