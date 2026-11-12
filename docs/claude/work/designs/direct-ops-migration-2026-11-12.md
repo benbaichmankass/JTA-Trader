@@ -26,9 +26,11 @@ training VMs, all of those things go directly between Claude and the VM."*
 
 ## 3. Not runnable yet: why
 
-- **#25351 set-env `PROP_PHONE_MODE_BREAKOUT_2=off` was CANCELLED and NOT RUN.** The `system-actions` concurrency
-  group displaced it (cancel-guard comment, 15:11Z). It needs the direct `set-env` (PR #25390). Separately, #25390 fails
-  `tests/ops/test_ops_actions_parity.py` (2 of 7): it has no § 2.3 row and leaves the wave set untouched.
+- **#25351 set-env `PROP_PHONE_MODE_BREAKOUT_2=off` was CANCELLED and NOT RUN.** The `system-actions` concurrency group
+  displaced it (cancel-guard comment, 15:11Z). The direct `set-env` (PR #25390) merged at ~17:00Z, and the VM answers it
+  (a probe with empty params got its 400 validation message). #25390 merged without its § 2.3 row, so
+  `tests/ops/test_ops_actions_parity.py` is red on main (2 of 7). #25402 adds the row. Tracked as work item
+  `PI-20261112-DOPSSWEEP-0001`.
 - `sync-vm-secrets` #24576: the secret values live in Actions secrets. That stays a workflow until secrets have a
   VM-side home. Operator-originated values only.
 
@@ -38,7 +40,7 @@ training VMs, all of those things go directly between Claude and the VM."*
 |---|---|---|
 | #25402 | notification | `send-ping` (Tier 1; replaces the 637-issue send-ping path, including `pr-landing-hold-merge-alarm.yml`) |
 | #25403 (stacked on #25402) | read-only report | `status-check`, `disk-usage-report`, `list-listening-ports` (Tier 1) |
-| #25390 (other lane) | config | `set-env` (PROP_PHONE_MODE_* only) |
+| #25390 (other lane, merged) | config | `set-env` (PROP_PHONE_MODE_* only); its missing § 2.3 row is added in #25402 |
 
 ## 5. Classes with no direct path yet, and the next step for each
 
