@@ -3,7 +3,7 @@
 id: RQ-20261112-3144-02
 title: 'ITERATION 3 of ml-tm-action-value (fail): trained on the six money-leg configs run across the 60-perp universe (corpus v2) as well as
   the money legs, is the per-action advantage on the money legs predictable out of fold?'
-status: blocked
+status: queued
 cadence: once
 theme: ml_health
 priority: 1
@@ -74,6 +74,52 @@ value:
   confidence: 0.1
   bucket: ai_trader
   basis: planning weight carried from RQ-20261101-78fc-04; an estimate, not a measurement
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/tm_bench.py
+  - score
+  - --test-corpus
+  - comms/research/RQ-20261030-c7a1-01/41134401720/tm_bench_v1_4t7ondlz/*__paths.jsonl
+  - --train-corpus
+  - corpus_v2
+  - --train-sample-mult
+  - '4'
+  - --seed
+  - '11'
+  - --rule
+  - stage_a_folds
+  - --feature-block
+  - path_state
+  - --label
+  - horizon
+  - --horizon
+  - '12'
+  - --learners
+  - lgbm_action_value
+  - --checkins
+  - every_bar
+  - --calibration
+  - --folds
+  - '6'
+  - --n-boot
+  - '2000'
+  - --n-perm
+  - '200'
+  - --random-draws
+  - '50'
+  - --expect-test-corpus
+  - tmb-73f5c3660014
+  - --expect-train-corpus
+  - bp2-f4271084b120
+  - --min-train-trades
+  - '10000'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261112-3144-02
 lands:
   store: research/results/
   assert_field: read_state
@@ -84,16 +130,6 @@ related:
 - RQ-20261029-7294-01
 - ML-DATA-BROAD-PATHS
 what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
-blocked_on:
-- kind: work_item
-  ref: TMBENCH-V2-TRAIN-INPUT
-  clears_when:
-  - row_state:TMBENCH-V2-TRAIN-INPUT=done
-  owner: AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)
-  reason: 'corpus v2 (bp2-f4271084b120) is needed as a tm_bench TRAIN input on the runner; it exists only as the Actions artifact of run
-    40999208713 (90-day retention) and research-script-run.yml cannot fetch another run''s artifact; tm_bench also lacks a seeded,
-    trade-grouped --train-sample-mult. When the row is done: git-mv to research/queue/ with run.command, rule unchanged.'
-  since: '2026-11-12'
 intervention_controls:
   not_applicable: an offline Stage-A calibration read; the consumer's own gate applies any action
 ml_consumer:

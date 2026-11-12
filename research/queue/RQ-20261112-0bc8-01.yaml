@@ -1,7 +1,7 @@
 id: RQ-20261112-0bc8-01
 title: 'Volume composition -> regime-vol head (feature add): does adding the size/count surprise (ss, sn) to the shipped 15m regime-head
   recipe lift its out-of-sample volatile-AUC over the champion AND over a plain-volume control? (BTC/ETH/SOL 15m, held-out 2025-10..2026-10)'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-DATA
@@ -179,7 +179,17 @@ related:
 - scripts/research/ml_bakeoff.py
 - ml/configs/btc-regime-15m-lgbm-v2.yaml
 - src/runtime/regime/ml_vol_verdict.py
+last_dispatched_at: '2026-11-12T09:08:35+00:00'
 grading:
   auto: true
+  awaiting: more_data
   decision_rule_id: RULE-VOLCOMP-REGIMEHEAD-01
-last_dispatched_at: '2026-11-12T09:08:35+00:00'
+  evidence:
+  - research/results/RQ-20261112-0bc8-01/local-20261112T0900Z.jsonl
+  graded_at: '2026-11-12'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

@@ -844,14 +844,18 @@ mcp__github__issue_write
 **Trigger:** `issues.opened` (label `vm-net-fix-request`),
 `workflow_dispatch`.
 
-**Purpose:** Opens TCP/8001 via `ufw allow` + `iptables -I INPUT ACCEPT`;
-verifies post-fix.
+**Purpose:** Opens ONE named TCP port via `ufw allow` + `iptables -I INPUT ACCEPT`;
+verifies post-fix. **Opens nothing by default** and **refuses 8001** (SEC-8001,
+operator decisions page m3, 2026-11-12: ict-web-api binds 127.0.0.1 and is
+reached only through Caddy's HTTPS front). The port comes from the required
+`port` input or a `port: NNN` line in the issue body; pinned by
+`tests/test_vm_net_fix_workflow.py`.
 
 **MCP trigger (Pattern A, after operator approval):**
 ```
 mcp__github__issue_write
-  title: "[vm-net-fix] open port 8001"
-  body: "Operator approved. Opening ufw + iptables for dashboard API port."
+  title: "[vm-net-fix] open port 443"
+  body: "Operator approved. Opening ufw + iptables for the Caddy HTTPS front.\nport: 443"
   labels: ["vm-net-fix-request"]
 ```
 
