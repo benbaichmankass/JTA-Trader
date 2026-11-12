@@ -54,8 +54,8 @@ on:
         description: "Why this run is happening (audit only)."
         required: false
         default: "manual operator dispatch"
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [get-diag-token]
 
 permissions:
   contents: read
@@ -69,10 +69,10 @@ jobs:
   get-token:
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       (github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'get-diag-token'))
+      (github.event_name == 'repository_dispatch' &&
+       (github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'get-diag-token'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -246,7 +246,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Reply to issue with the env block
-        if: github.event_name == 'issues' && success() && steps.gate.outputs.visibility_state == 'private'
+        if: github.event_name == 'repository_dispatch' && success() && steps.gate.outputs.visibility_state == 'private'
         uses: actions/github-script@v7
         env:
           SOURCE: ${{ steps.resolve.outputs.source }}
@@ -270,13 +270,13 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               body
             });
             await github.rest.issues.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               state: 'closed',
               state_reason: 'completed'
             });
@@ -288,7 +288,7 @@ jobs:
       # for, and here it would actively mislead: a visibility refusal is
       # not a VM problem and re-running will not fix it.
       - name: Reply to issue with failure
-        if: github.event_name == 'issues' && failure()
+        if: github.event_name == 'repository_dispatch' && failure()
         uses: actions/github-script@v7
         env:
           VISIBILITY_STATE: ${{ steps.gate.outputs.visibility_state }}
@@ -333,13 +333,13 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               body
             });
             await github.rest.issues.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               state: 'closed',
               state_reason: 'not_planned'
             });

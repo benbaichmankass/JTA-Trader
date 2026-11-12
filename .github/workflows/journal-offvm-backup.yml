@@ -31,8 +31,8 @@ on:
         default: "backup"
         type: choice
         options: [backup, status, restore-test]
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [journal-backup-request]
 
 permissions:
   contents: read
@@ -45,10 +45,10 @@ concurrency:
 jobs:
   backup:
     if: |
-      github.event_name != 'issues' ||
-      ((github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'journal-backup-request'))
+      github.event_name != 'repository_dispatch' ||
+      ((github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'journal-backup-request'))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -59,7 +59,7 @@ jobs:
       OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
       OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_CLI_KEY_CONTENT }}
       OCI_CLI_REGION: ${{ secrets.OCI_CLI_REGION }}
-      ISSUE_BODY: ${{ github.event.issue.body }}
+      ISSUE_BODY: ${{ github.event.client_payload.issue.body }}
     steps:
       - name: Require VM host secrets (fail closed)
         env:
@@ -115,8 +115,8 @@ jobs:
             const body = `journal-offvm-backup (${{ steps.mode.outputs.mode }}): **${{ steps.run.outcome }}**\n\n\`\`\`\n${out}\n\`\`\`\n\n[run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
             await core.summary.addRaw(body).write();
             if (context.eventName === 'issues') {
-              await github.rest.issues.createComment({...context.repo, issue_number: context.issue.number, body});
-              await github.rest.issues.update({...context.repo, issue_number: context.issue.number, state: 'closed'});
+              await github.rest.issues.createComment({...context.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), body});
+              await github.rest.issues.update({...context.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), state: 'closed'});
             }
 
       - name: Red flag (one Telegram message)

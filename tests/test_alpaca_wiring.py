@@ -780,6 +780,9 @@ def test_accounts_yaml_alpaca_paper_ships_inert():
         # DEMO-FLOOR RULE 2026-10-27 (operator rule relayed by the manager; Tier-3, held PR): uso_trend_1h returns to its demo floor.
         # (qqq/spy/tlt_pullback_1h stay off: same symbol as a 1d leg, no slice support here.)
         "uso_trend_1h",
+        # THURSDAY-PLANNING b1 2026-11-11 (operator verbatim "Put qqq and tlt on the paper floor now; promote tlt to
+        # real money"): qqq_pullback_1h back on its demo floor; QQQ split by comms/same_symbol_allocation/qqq-alpaca_paper.json.
+        "qqq_pullback_1h",
         # 2026-10-27 DESK-PAPER-ACCOUNTS (Tier-3, paper): the Claude desk leg, scoped to SPY/QQQ/IWM/GLD/TLT.
         "claude_desk",
         # 2026-11-01 ALPACA-LIVE-ACTIVITY-ML (Tier-3, paper; operator "Paper now, v2 for live (Rec.)"):

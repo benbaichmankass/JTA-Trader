@@ -49,8 +49,8 @@ on:
       days:
         description: "Trailing days of candles"
         default: "730"
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [gld-compat-matrix-request]
 
 permissions:
   contents: read
@@ -58,17 +58,17 @@ permissions:
   pull-requests: write   # commit-to-main opens the landing PR
 
 concurrency:
-  group: gld-compat-matrix-${{ github.event_name }}-${{ github.event.issue.number || github.run_id }}
+  group: gld-compat-matrix-${{ github.event_name }}-${{ github.event.client_payload.issue.number || github.run_id }}
   cancel-in-progress: false
 
 jobs:
   compat:
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       (github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'gld-compat-matrix-request'))
+      (github.event_name == 'repository_dispatch' &&
+       (github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'gld-compat-matrix-request'))
     runs-on: ubuntu-latest
     timeout-minutes: 115  # was 85: shared commit-to-main wait 50->80 (W41)
     steps:
@@ -81,9 +81,9 @@ jobs:
           token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
 
       - name: Parse issue body
-        if: github.event_name == 'issues'
+        if: github.event_name == 'repository_dispatch'
         env:
-          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_BODY: ${{ github.event.client_payload.issue.body }}
         run: |
           strat=$(printf '%s' "$ISSUE_BODY" | grep -iE '^strategy:' | head -1 | cut -d: -f2- | xargs || true)
           symbol=$(printf '%s' "$ISSUE_BODY" | grep -iE '^symbol:' | head -1 | cut -d: -f2- | xargs || true)
@@ -476,7 +476,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Comment summary on issue
-        if: github.event_name == 'issues' && success()
+        if: github.event_name == 'repository_dispatch' && success()
         uses: actions/github-script@v7
         with:
           script: |
@@ -487,7 +487,7 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               body: body.slice(0, 60000) + footer,
             });
 

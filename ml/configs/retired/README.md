@@ -67,3 +67,60 @@ here because no citable verdict was found for them this pass; a manifest retired
 a quotable verdict is the same anti-pattern as a guard that is cheaper to lie to than to
 satisfy.
 | `baseline-setup-quality.yaml` | `setup-quality-baseline-v0` | 2026-10-21 | **Operator decision 2026-10-21 (popup ~22:15Z, "Retire it (Recommended)"):** stop training it to free trainer time and memory. Evidence: PI-20261021-K43EKTZA-0001 -- degenerate, flat scores after 172 retrains. Setup quality may return later as a new model with a proper design. Revert: move the file back to `ml/configs/`. Registry stage flip is a trainer-VM `promote-stage` after merge. |
+
+## 2026-11-11 — ML consolidation waves 1 + 2 (operator, Thursday-planning a1 / a2)
+
+Operator decisions, 2026-11-11, verbatim. a1: *"Retire the 28 with no active manifest now; the 44 after their manifests are removed"*. a2: *"Accept as proposed"*.
+Source: `docs/plans/ML-CONSOLIDATION-2026-11-11.md` (RETIRE table + addendum). Each model's lifecycle plan moved to `ml/lifecycle/plans/retired/` with it.
+Registry archive of these models plus the 28 manifest-less RETIRE rows is a Tier-2 system-action step (row ML-RETIRE-WAVES-20261111).
+
+| Manifest | model_id | Retired | Why |
+|---|---|---|---|
+| `btc-direction-15m-lgbm-base-v003.yaml` | `btc-direction-15m-lgbm-base-v003` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `btc-direction-15m-lgbm-fc-v1.yaml` | `btc-direction-15m-lgbm-fc-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `btc-regime-15m-hmm-cw-v1.yaml` | `btc-regime-15m-hmm-cw-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `btc-regime-15m-hmm-fc-v1.yaml` | `btc-regime-15m-hmm-fc-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `btc-regime-15m-hmm-v1.yaml` | `btc-regime-15m-hmm-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `btc-regime-15m-lgbm-base-pcv-v003.yaml` | `btc-regime-15m-lgbm-base-pcv-v003` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `btc-regime-15m-lgbm-base-v003.yaml` | `btc-regime-15m-lgbm-base-v003` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `btc-regime-15m-lgbm-base-vt003-pcv-v1.yaml` | `btc-regime-15m-lgbm-base-vt003-pcv-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `btc-regime-15m-lgbm-fc-pcv-v1.yaml` | `btc-regime-15m-lgbm-fc-pcv-v1` | 2026-11-11 | wave 2: superseded by the LIVE -v2 (same lineage; nothing consumes v1) |
+| `btc-regime-15m-lgbm-fc-v1.yaml` | `btc-regime-15m-lgbm-fc-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `btc-regime-15m-lgbm-vt003-pin-v1.yaml` | `btc-regime-15m-lgbm-vt003-pin-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `btc-regime-15m-lgbm-vt004-pin-v1.yaml` | `btc-regime-15m-lgbm-vt004-pin-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `btc-regime-15m-lgbm-vt005-pin-v1.yaml` | `btc-regime-15m-lgbm-vt005-pin-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `btc-regime-1h-hmm-v1.yaml` | `btc-regime-1h-hmm-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `btc-regime-1h-lgbm-base-pcv-v003.yaml` | `btc-regime-1h-lgbm-base-pcv-v003` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `btc-regime-1h-lgbm-funding-svble-v1.yaml` | `btc-regime-1h-lgbm-funding-svble-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `btc-regime-1h-lgbm-funding-v1.yaml` | `btc-regime-1h-lgbm-funding-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `btc-regime-1h-trend-lgbm-v1.yaml` | `btc-regime-1h-trend-lgbm-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `btc-regime-5m-lgbm-flow-v1.yaml` | `btc-regime-5m-lgbm-flow-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `btc-regime-5m-lgbm-yz-v1.yaml` | `btc-regime-5m-lgbm-yz-v1` | 2026-11-11 | wave 2: duplicate of btc-regime-5m-lgbm-v2 (macro F1 0.5564 = 0.5564, same shard and split) |
+| `conviction-meta-base-btc-v1.yaml` | `conviction-meta-base-btc-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `conviction-meta-v1-bt.yaml` | `conviction-meta-v1-bt` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `eth-direction-1h-lgbm-v1.yaml` | `eth-direction-1h-lgbm-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `eth-direction-1h-lgbm-xasset-v1.yaml` | `eth-direction-1h-lgbm-xasset-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `eth-regime-15m-hmm-cw-v1.yaml` | `eth-regime-15m-hmm-cw-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `eth-regime-15m-lgbm-base-pcv-v003.yaml` | `eth-regime-15m-lgbm-base-pcv-v003` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `eth-regime-15m-lgbm-fc-pcv-v1.yaml` | `eth-regime-15m-lgbm-fc-pcv-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `eth-regime-15m-lgbm-v1.yaml` | `eth-regime-15m-lgbm-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `baseline-execution-quality.yaml` | `execution-quality-baseline-v0` | 2026-11-11 | wave 2: constant shadow scorer, n_eval 65 (ML-HYGIENE) |
+| `mes-regime-15m-lgbm-v2.yaml` | `mes-regime-15m-lgbm-v2` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `mes-regime-15m-lgbm-yz-v1.yaml` | `mes-regime-15m-lgbm-yz-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `mes-regime-5m-lgbm-macro-v1.yaml` | `mes-regime-5m-lgbm-macro-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `mes-regime-5m-lgbm-yz-v1.yaml` | `mes-regime-5m-lgbm-yz-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `baseline-prop-mission-policy.yaml` | `prop-mission-policy-baseline-v0` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `setup-candidates-metalabel-backtest-c1-v1.yaml` | `setup-candidates-metalabel-backtest-c1-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `setup-candidates-metalabel-backtest-c2-v1.yaml` | `setup-candidates-metalabel-backtest-c2-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `setup-candidates-metalabel-backtest-v1.yaml` | `setup-candidates-metalabel-backtest-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `setup-candidates-metalabel-p2pool-c1-v1.yaml` | `setup-candidates-metalabel-p2pool-c1-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `setup-candidates-metalabel-p2pool-v1.yaml` | `setup-candidates-metalabel-p2pool-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `setup-candidates-metalabel-siglog-v1.yaml` | `setup-candidates-metalabel-siglog-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `setup-candidates-metalabel-v1.yaml` | `setup-candidates-metalabel-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `setup-candidates-metalabel-xsym-v1.yaml` | `setup-candidates-metalabel-xsym-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `setup-candidates-metalabel-xsym-yz-v1.yaml` | `setup-candidates-metalabel-xsym-yz-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `baseline-setup-quality-audit.yaml` | `setup-quality-audit-baseline-v0` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `sol-regime-15m-lgbm-base-pcv-v530.yaml` | `sol-regime-15m-lgbm-base-pcv-v530` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `sol-regime-15m-lgbm-fc-pcv-v1.yaml` | `sol-regime-15m-lgbm-fc-pcv-v1` | 2026-11-11 | wave 2: superseded by the LIVE -v2 (same lineage; nothing consumes v1) |
+| `sol-regime-15m-lgbm-v1.yaml` | `sol-regime-15m-lgbm-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
+| `trade-outcome-lgbm-v1.yaml` | `trade-outcome-lgbm-v1` | 2026-11-11 | wave 1: RETIRE in the 2026-11-11 consolidation (no consumer, no open unit, or superseded in its slot) |
