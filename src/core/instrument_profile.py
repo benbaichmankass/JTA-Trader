@@ -68,6 +68,15 @@ class InstrumentProfile:
     # `config/instruments.yaml` for the concrete case.
     max_qty: Optional[float] = None
 
+    # Which Bybit venue `max_qty` was MEASURED on: "demo" (api-demo, an account
+    # carrying `demo: true`) or "production". None = unstated, applies to every
+    # account (the pre-2026-11-12 behaviour). When stated, `qty_legalize` drops
+    # the ceiling to `could_not_look` for an account on the OTHER venue, so a
+    # demo-measured number can never become a production fallback ceiling
+    # (ORDER-PATH-RESIDUE-2, BL-20260903-AVAX-VENUE-MAX-CEILING-MEASURED-ON-
+    # DEMO-BUT-SYMBOL-SCOPED).
+    max_qty_venue: Optional[str] = None
+
     # ------------------------------------------------------------------
     # Pre-built factory methods
     # ------------------------------------------------------------------

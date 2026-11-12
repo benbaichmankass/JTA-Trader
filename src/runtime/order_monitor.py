@@ -691,6 +691,15 @@ def _apply_partial_close(
                 pkg_id, exc,
             )
 
+    # ORDER-PATH-RESIDUE-2 (BL-20260825-CLOSE-SIDE-LEG-CANCEL-IS-WIRED-AT-1-
+    # OF-10-CALL-SITES, the "needs an AMEND, not a cancel" site): the position
+    # is still open, so its own tracked legs must be amended DOWN to the
+    # remainder -- cancelling would leave it naked, leaving them over-covers it.
+    # Runs only after the venue reduce AND the journal write landed (a dry-run
+    # short-circuit reduced nothing at the venue, so there is nothing to amend).
+    if not ex_result.get("skipped"):
+        _resize_legs_after_partial_close(trade, new_position_size)
+
     logger.info(
         "order_monitor: partial close pkg=%s trade=%s "
         "close_pct=%.3f filled_qty=%.8f new_position_size=%.8f "
@@ -2404,6 +2413,58 @@ def _cancel_closed_row_protection(row: Any, db: Any = None) -> None:
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning("order_monitor: _cancel_closed_row_protection raised: %s", exc)
+
+def _resize_legs_after_partial_close(
+    trade: Dict[str, Any], new_position_size: float,
+) -> Optional[Dict[str, Any]]:
+    """Amend *trade*'s OWN tracked protective legs to *new_position_size*
+    after a strategy-verdict partial close (``_apply_partial_close``).
+
+    The same per-row seam the two other partial paths already use
+    (``execute.resize_tracked_protective_legs``: the trading desk's reduce in
+    ``scripts/ops/live_review_apply.py`` and the intent-reduce allocator). It
+    touches ONLY the ids on this row, never a sibling's, never cancels, and is
+    a recorded no-op off Bybit Partial-tpsl mode. Returns the seam's per-leg
+    result (``None`` when no client could be built). Never raises: the venue
+    reduce and the journal write have already landed, so a failure here leaves
+    the legs exactly as oversized as they were before this existed.
+    """
+    try:
+        if new_position_size <= 0:
+            return None
+        if not (trade.get("sl_order_id") or trade.get("tp_order_id")):
+            return None
+        from src.units.accounts.execute import resize_tracked_protective_legs
+        client, cfg = _build_account_client(trade.get("account_id"))
+        if client is None or cfg is None:
+            logger.warning(
+                "order_monitor: partial-close leg resize skipped for trade %s "
+                "(%s/%s): no client -- legs still sized to the pre-reduce qty",
+                trade.get("id"), trade.get("account_id"), trade.get("symbol"),
+            )
+            return None
+        legs = resize_tracked_protective_legs(
+            client, cfg, symbol=str(trade.get("symbol") or ""),
+            new_qty=float(new_position_size),
+            sl_order_id=trade.get("sl_order_id"),
+            tp_order_id=trade.get("tp_order_id"),
+            trade_id=trade.get("id"),
+        )
+        states = {k: (v or {}).get("state") for k, v in (legs or {}).items()}
+        failed = any(s in ("failed", "not_attempted") for s in states.values())
+        (logger.warning if failed else logger.info)(
+            "order_monitor: partial-close leg resize trade=%s %s/%s new_qty=%s "
+            "-> %s", trade.get("id"), trade.get("account_id"),
+            trade.get("symbol"), new_position_size, states,
+        )
+        return legs
+    except Exception as exc:  # noqa: BLE001 -- never crash the order path
+        logger.warning(
+            "order_monitor: partial-close leg resize raised for trade %s: %s",
+            trade.get("id"), exc,
+        )
+        return None
+
 
 def _send_partial_close_to_exchange(
     matched_trade: Dict[str, Any], qty: float,
