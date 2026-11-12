@@ -121,16 +121,34 @@ jobs:
           dst = os.path.join(d, shard, os.path.dirname(m["path"]))
           os.makedirs(dst, exist_ok=True)
           r = subprocess.run(["kaggle", "datasets", "download", "-d", f"{user}/{slug}", "-f", rel, "-p", dst, "--unzip"], capture_output=True, text=True)
-          present = os.path.isfile(os.path.join(d, shard, m["path"]))
+          # the CLI may save the file under its basename, its relative path, or a subfolder (documented in kaggle-cold-lake-copy.yml's sample step,
+          # run 42158580079): find it by name and size wherever it landed, move it to <dataset>/<shard>/<member path>. The loader still verifies
+          # its SHA-256 against MANIFEST.json, so a wrong file cannot pass.
+          expect = os.path.join(d, shard, m["path"])
+          where = None
+          for root, _dirs, files in os.walk(d):
+              for name in files:
+                  q = os.path.join(root, name)
+                  if name == os.path.basename(m["path"]) and os.path.getsize(q) == m["bytes"]:
+                      where = os.path.relpath(q, d)
+                      if os.path.abspath(q) != os.path.abspath(expect):
+                          os.makedirs(os.path.dirname(expect), exist_ok=True)
+                          os.replace(q, expect)
+          present = os.path.isfile(expect)
           os.environ["LAKE_MIRROR_DIR"] = os.path.dirname(d)
           os.environ["HF_HUB_OFFLINE"] = "1"
           sys.path.insert(0, ".")
           from ml.datasets import lake
-          df = lake.load("crypto", "um_perp", "1h", ["BTCUSDT"], start="2023-01-01", end="2023-04-01")
+          try:
+              df = lake.load("crypto", "um_perp", "1h", ["BTCUSDT"], start="2023-01-01", end="2023-04-01")
+          except lake.LakeReadError as e:   # explicit could_not_look: print what the step saw, then fail
+              print(json.dumps({"ok": False, "dataset": slug, "member": m["path"], "download_rc": r.returncode, "cli_saved_at": where,
+                                "present": present, "download_output": (r.stdout + r.stderr)[-300:], "read": e.state}).replace(user, "<user>"))
+              sys.exit(1)
           rd = df.attrs["lake_read"]
           ok = bool(present and len(df) == 90 * 24 and df["complete"].all() and rd["from_kaggle_mirror"] == 1 and rd["n_could_not_look"] == 0)
           print(json.dumps({"ok": ok, "dataset": slug, "member": m["path"], "member_bytes": m.get("bytes"), "download_rc": r.returncode,
-                            "present": present, "rows": int(len(df)), "read": rd}).replace(user, "<user>"))
+                            "cli_saved_at": where, "present": present, "rows": int(len(df)), "read": rd}).replace(user, "<user>"))
           sys.exit(0 if ok else 1)
           PY
       - uses: actions/upload-artifact@v4
