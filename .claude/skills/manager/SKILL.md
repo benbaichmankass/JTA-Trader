@@ -80,7 +80,9 @@ Read the recipe for the kind of marker you are acting on **before** you dispatch
 lives ONLY in `scripts/research/research_watchdog.yaml` `ops_flags.pr_number`). Never merge or close it. **Treat every comment as an incident:
 fix it, dispatch a lane, or tell the operator; never leave one unanswered** (ledger `comms/research/ops/watchdog_incidents.jsonl`). Wake markers
 on that PR (`ltr-wake`, `mandate_cadence`, `judgement_cadence`, `desk-wake` / `desk-trigger-wake`, `short-hold-wake`): **one marker, one lane,
-never spawn twice for the same id**; a `could_not_*` kind is an incident, not a wake. **Never create a session with no `source_url`** (403 on every
+never spawn twice for the same id**; a `could_not_*` kind is an incident, not a wake. An `ltr-wake` entry marked **`reviewer started by routine`**
+(`routine_fire.state` `fired` / `already_fired` + `session_id`; TRADE-ACTION-DIRECT-PATH phase 3) already HAS its reviewer: do NOT dispatch it; the
+comment is the dedupe record. Dispatch only the entries without that mark (a routine fire that failed says so and falls back to you). **Never create a session with no `source_url`** (403 on every
 write). **Never run your own timer or scheduled watch that starts a live reviewer without a marker**: only the wake poster commits packets. Every
 reviewer dispatch prompt ends: "end your report with a `PACKET DEFECTS:` line (REVIEWER-BRIEF § 2d)"; file each reported defect once on its owner
 (`LTR-GRADER-COVERAGE`, `LTR-PACKET-READ-REACH`, else a PIPELINE item). Desk and short-hold lanes follow `.claude/skills/trading-desk/SKILL.md` § 6b
@@ -180,8 +182,10 @@ Plus, then I can also, like, if there's artifacts, I can leave you comments and 
   - answers saved in the page (the `db` capability, collection `answers`);
   - a "copy my answers" summary.
   Write for reading away from the chat: no unexplained ids, and every question stands on its own.
-- **Delivery.** Send the link once via `send-ping`, put it in the console inbox (until the UI lists decision docs, the brief's "decisions for
-  you" carries the link), and keep updating **the same artifact** (same URL) as items resolve or new ones join. Do not spawn a new page per
+- **Delivery.** Send the link once via `send-ping` and **register it on the console** (row UI-DECISION-DOCS, console v27+): `ArtifactData set`
+  on the console artifact (https://claude.ai/artifact/YU4ZwddDFB1AD2xWV2oE3g), collection `decisions`, doc id `<slug>-<yyyymmdd>`, data `{title, url, questions, answered, counted_at, created_at,
+  status: "open", row}`. It then shows under "Decision docs waiting on you". At each check-in, recount the doc's `answers` collection and
+  update `answered` / `counted_at`; set `status: "closed"` (or `"answered"`) when it is done, and it folds away. Also keep updating **the same artifact** (same URL) as items resolve or new ones join. Do not spawn a new page per
   question.
 - **The manager keeps running.** A decision doc never blocks other work (§ "Five things", item 4): state the assumption, carry on, and pick
   the answers up at the next check-in or when the operator says they are done.

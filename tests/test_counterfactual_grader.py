@@ -105,7 +105,7 @@ def test_grade_package_one_record_per_package_with_every_arm_family_and_the_init
     ids = [a["arm_id"] for a in rec["arms"]]
     assert len(ids) == len(set(ids))
     pa = rec["arms"][0]["per_account"]
-    assert pa["bybit_2"]["pnl_usd"] == 9.5 and pa["bybit_portfolio"]["pct_of_account"] is None   # null, never 0
+    assert pa["bybit_2"]["pnl_usd"] == 9.5 and pa["bybit_portfolio"]["pnl_usd"] is None   # null, never 0; no balance-derived field
 
 
 def test_a_package_with_an_open_leg_is_not_graded():
