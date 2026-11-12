@@ -4,6 +4,8 @@ docs/design/trade-action-direct-path-2026-11.md).
 * ``POST /api/bot/ops/actions`` ``{"action", "params", "session", "reason", "operator_quote"?}`` ->
   ``{"job_id", "tier", "state", ...}``. 202 for a queued or awaiting job.
 * ``GET /api/bot/ops/jobs/{job_id}`` -> the journaled job (state, exit, stdout tail, ``read_state``).
+* ``GET /api/bot/ops/ledger`` -> the VM change ledger folded per job (VM-CHANGE-LEDGER): what changed, authority,
+  revert, ``durable_in_repo`` and ``fold_due``; ``?pending=1`` keeps only entries still awaiting a fold-back.
 
 Auth: the work store's credential, ``X-Work-Store-Token`` (the env proxy injects it on every request a session
 makes to this host; WSD-S1-PROXY-AUTH-COLLISION). Checked fail-closed on BOTH routes by
@@ -54,3 +56,16 @@ def get_job(job_id: str, authorization: str | None = Header(default=None),
         return ops.read_job(job_id)
     except ops.OpsError as exc:
         raise _err(exc) from None
+
+
+@router.get("/ledger")
+def get_ledger(pending: bool = False, limit: int = 200, authorization: str | None = Header(default=None),
+               x_work_store_token: str | None = Header(default=None, alias=WORK_STORE_HEADER)):
+    """The VM change ledger (``ops_actions.ledger_view``). Same fail-closed token as the job read: a ledger entry
+    names files, keys and commands on the live VM."""
+    _require_work_store_token(authorization, x_work_store_token)
+    view = ops.ledger_view()
+    if pending:
+        view["entries"] = [e for e in view["entries"] if e.get("durable_in_repo") == "pending"]
+    view["entries"] = view["entries"][:max(1, min(int(limit), 2000))]
+    return view

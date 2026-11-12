@@ -3,7 +3,7 @@
 # only while `queue_replenish.py --verify` reproduces it byte-for-byte from the template.
 id: RQ-20261106-003
 title: 'M20 exit-lever sweep: ml_entry_eq (generated, monthly)'
-status: queued
+status: retired
 cadence: monthly
 kind: experiment
 theme: live_strategy
@@ -134,3 +134,4 @@ generated:
     symbol: SPY
     timeframe: 1h
 last_dispatched_at: '2026-11-06T16:52:40+00:00'
+retired_reason: '2026-11-12 RESEARCH-LOSS-M20-UNLANDED: unroutable leg -- m20_fleet_exit_sweep.classify("ml_entry_eq") is None (no family/harness), so the sweep''s plan job refuses it. Run 42256673587 died in `plan` with "legs with no family/harness: [ml_entry_eq]" and never reached a sweep; the unit was stamped and could not re-fire. The same refusal recurs on every dispatch. Template m20-exit-lever now draws from live_roster_legs_m20_sweepable, so no replacement unit is generated. Re-entry: give the leg a harness family in m20_fleet_exit_sweep.FAMILY_HARNESS.'

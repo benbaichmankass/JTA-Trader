@@ -274,6 +274,29 @@ def _self_test() -> int:
     return 1 if failures else 0
 
 
+def fallback_dispatched_legs(input_legs: str = "", sentinel_text: str = "") -> tuple:
+    """The legs a run was ASKED to sweep, read from the same two places the workflow's `plan` job reads them,
+    for the case where `plan` died before it could publish its `legs` output.
+
+    (PI-20261112-TE74WG5Z-0005, RESEARCH-LOSS-M20-UNLANDED.) `plan` validates the selection and fails the whole
+    run on one unroutable leg; `research_result` still runs (`always()`), finds no plan output and no rows, and
+    used to exit 1 -- so the run wrote NO `producer_failed` row and the unit read as never-run. The dispatch input
+    wins, then the sentinel's `legs:` line, exactly as in `plan`. There is deliberately NO census-default
+    fallback here: a run nobody named legs for has nothing to attribute a failure to, and inventing ten legs would
+    manufacture rows. Returns (legs, source); ([], "none") when neither names a leg.
+    """
+    legs = [x.strip() for x in (input_legs or "").split(",") if x.strip()]
+    if legs:
+        return legs, "dispatch input"
+    for line in (sentinel_text or "").splitlines():
+        line = line.strip()
+        if line.startswith("legs:"):
+            legs = [x.strip() for x in line.split(":", 1)[1].split(",") if x.strip()]
+            if legs:
+                return legs, "sentinel file"
+    return [], "none"
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -285,6 +308,10 @@ def main(argv=None) -> int:
                     help="CSV of the DISPATCHED legs. A leg that produced no "
                          "rows still gets a record; deriving the population "
                          "from the rows would make a dropped leg invisible.")
+    ap.add_argument("--input-legs", default="",
+                    help="The workflow's `legs` dispatch input; used ONLY when --legs is empty (plan died).")
+    ap.add_argument("--sentinel", default="",
+                    help="Path of the sweep-request sentinel; used ONLY when --legs and --input-legs are empty.")
     ap.add_argument("--sweep-result", default="success")
     ap.add_argument("--run-stamp", default="")
     args = ap.parse_args(argv)
@@ -294,6 +321,15 @@ def main(argv=None) -> int:
 
     legs = [x.strip() for x in args.legs.split(",") if x.strip()]
     rows = _load(Path(args.corpus))
+    if not legs:
+        try:
+            _stxt = Path(args.sentinel).read_text(encoding="utf-8") if args.sentinel else ""
+        except OSError:
+            _stxt = ""
+        legs, _src = fallback_dispatched_legs(args.input_legs, _stxt)
+        if legs:
+            print(f"::warning::m20_sweep_result: the plan job published no legs (it failed before its output); "
+                  f"using the {len(legs)} leg(s) named by the {_src}: every one without a row grades producer_failed.")
     if not legs:
         # Falls back to the observed legs, and SAYS SO rather than silently
         # producing a population nobody declared.

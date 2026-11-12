@@ -33,12 +33,45 @@ set -uo pipefail
 
 REPO_DIR=${REPO_DIR:-/home/ubuntu/ict-trading-bot}
 SYSTEMD_DIR=${SYSTEMD_DIR:-/etc/systemd/system}
+# SYSTEMD-WATCH-KNOWS-INSTALLER: where this installer records the sha256 of every
+# file it EDITS in place (content that is not a byte copy of a deploy/ file).
+# scripts/ops/security_watch.py treats a systemd file whose bytes match its
+# receipt line as an expected deploy change, so a sanctioned installer edit does
+# not page while a foreign edit still does. Root-owned, outside SYSTEMD_DIR.
+# Gates this adds or changes: none.
+SYSTEMD_RECEIPT=${SYSTEMD_RECEIPT:-/var/lib/ict-systemd-install/receipt.tsv}
 
 if [ "$(id -u)" -eq 0 ]; then
     SUDO=()
 else
     SUDO=(sudo)
 fi
+
+# record_receipt <path>: set <path>'s line in SYSTEMD_RECEIPT to "<sha256>\t<path>"
+# (one line per path, last write wins). Never fails the deploy: a missing receipt
+# only means the watch pages for this edit, as it did before the receipt existed.
+record_receipt() {
+    local path="$1" digest tmp
+    digest=$(sha256sum -- "$path" 2>/dev/null | cut -d' ' -f1) \
+        || digest=$("${SUDO[@]}" sha256sum -- "$path" 2>/dev/null | cut -d' ' -f1)
+    if [ -z "${digest:-}" ]; then
+        echo ">>> install_systemd_units: WARN receipt: cannot hash ${path}; the security watch will page for it"
+        return 0
+    fi
+    tmp=$(mktemp) || return 0
+    if [ -f "${SYSTEMD_RECEIPT}" ]; then
+        awk -F'\t' -v p="$path" '$2 != p' "${SYSTEMD_RECEIPT}" > "$tmp" 2>/dev/null || true
+    fi
+    printf '%s\t%s\n' "$digest" "$path" >> "$tmp"
+    if "${SUDO[@]}" mkdir -p "$(dirname "${SYSTEMD_RECEIPT}")" \
+        && "${SUDO[@]}" install -m 0644 "$tmp" "${SYSTEMD_RECEIPT}"; then
+        echo ">>> install_systemd_units: receipt: ${path} ${digest:0:12}"
+    else
+        echo ">>> install_systemd_units: WARN receipt: could not write ${SYSTEMD_RECEIPT}; the security watch will page for ${path}"
+    fi
+    rm -f "$tmp"
+    return 0
+}
 
 cd "$REPO_DIR"
 
@@ -186,6 +219,7 @@ if [ -d "${_WEBAPI_DROPIN_DIR}" ]; then
         if grep -qE '^ExecStart=.*uvicorn src\.web\.api\.main:app.*--host 0\.0\.0\.0' "${_webapi_conf}"; then
             echo ">>> install_systemd_units: ${_webapi_conf}: uvicorn --host 0.0.0.0 -> 127.0.0.1 (SEC-8001-LOCKDOWN)"
             "${SUDO[@]}" sed -i -E '/^ExecStart=.*uvicorn src\.web\.api\.main:app/ s/--host 0\.0\.0\.0/--host 127.0.0.1/' "${_webapi_conf}"
+            record_receipt "${_webapi_conf}"
             changed=1
         fi
     done
