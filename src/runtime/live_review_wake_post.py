@@ -163,6 +163,42 @@ def read_markers(wake: Any, pr: int, auth: str, now: datetime,
     return None, None  # page cap hit: cannot prove the read was complete
 
 
+LOCAL_EVIDENCE_REL = Path("runtime_logs") / "live_review" / "local_evidence"
+
+
+def local_evidence_root() -> Path:
+    """TRADE-ACTION-DIRECT-PATH phase 2: a VM-local copy of every packet + table this poster builds, at its repo
+    path, so a row submitted DIRECTLY to the VM (``POST /api/bot/live-review/rows``) is dispatched against the
+    same bytes without a git read (``live_review_dispatch.py --local-root``)."""
+    from src.utils.paths import repo_root
+    return Path(repo_root()) / LOCAL_EVIDENCE_REL
+
+
+def keep_local_evidence(wake: Any, bundles: Dict[str, Dict[str, Any]], root: Optional[Path] = None) -> int:
+    """Write each built bundle's evidence files under :func:`local_evidence_root`, create-only (an existing file
+    is never overwritten: the rows branch is create-only too). Returns the count written. Never raises."""
+    n = 0
+    try:
+        base = root or local_evidence_root()
+        for b in bundles.values():
+            if b.get("state") != "built":
+                continue
+            for rel, data in wake.evidence_files(b):
+                if ".." in rel or rel.startswith("/"):
+                    continue
+                dest = base / rel
+                if dest.exists():
+                    continue
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                tmp = dest.with_suffix(dest.suffix + ".tmp")
+                tmp.write_bytes(data)
+                os.replace(tmp, dest)
+                n += 1
+    except Exception:  # noqa: BLE001 -- the git landing below is unaffected
+        logger.warning("ltr-wake-post: local evidence copy failed", exc_info=True)
+    return n
+
+
 def write_receipt(rec: Dict[str, Any], path: Optional[Path] = None) -> None:
     try:
         p = path or receipt_path()
@@ -284,6 +320,7 @@ def run_once(due_fn: Optional[Callable[[], Any]] = None,
     # is posted, so the reviewer only writes its row. A failed commit posts nothing from here: the Actions
     # poller (same markers, its own token) posts within ~5 min and lands the evidence itself, and this
     # poster backs off for EVIDENCE_BACKOFF_S instead of rebuilding packets every pass.
+    rec["local_evidence"] = keep_local_evidence(wake, bundles)
     ev = wake.land_evidence(p, bundles, auth, http)
     rec["evidence"] = {k: {kk: v for kk, v in st.items() if kk != "reason"} for k, st in ev.items()}
     if any(st.get("state") == "could_not_commit" for st in ev.values()):
