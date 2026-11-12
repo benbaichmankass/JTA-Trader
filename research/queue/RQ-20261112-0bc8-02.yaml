@@ -136,7 +136,17 @@ related:
 - scripts/research/exit_head_walkforward_multifold.py
 - scripts/ml/train_exit_head.py
 - scripts/ml/exit_head_replay.py
+last_dispatched_at: null
 grading:
   auto: true
+  confirmatory_run: 1
   decision_rule_id: RULE-VOLCOMP-EXITHEAD-01
-last_dispatched_at: '2026-11-12T10:01:35+00:00'
+  evidence:
+  - research/results/RQ-20261112-0bc8-02/trainer-43187689666.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-11-12'
+  grader: scripts/research/queue_grade.py
+  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
