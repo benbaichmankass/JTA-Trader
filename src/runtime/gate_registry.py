@@ -92,6 +92,11 @@ def connect(db_path: str | None = None) -> sqlite3.Connection:
 
 
 def ensure_tables(conn: sqlite3.Connection) -> None:
+    # data-wiring: gate_registry is the canonical store for the gate registry (no existing table holds gates);
+    # its source of truth is the code + comms/gates/*.json, re-derived by refresh(), so history backfills itself.
+    # data-wiring: gate_decision_log is the canonical append-only record of operator gate decisions (seeded from
+    # comms/gates/gate_decisions_*.json + the registry seed; POST /api/bot/gates/{id}/decision appends).
+    # data-wiring: gate_registry_meta holds only the last refresh read-state (derived, rebuilt each refresh).
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS gate_registry (
