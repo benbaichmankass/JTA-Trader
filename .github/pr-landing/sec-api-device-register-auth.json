@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "SEC-API-DEVICE-REGISTER-OPEN. POST /api/bot/devices/register now requires the service bearer (prop._require_write_token: 401 wrong or missing, 503 fail-closed when DASHBOARD_API_TOKEN is unset). It was an unauthenticated write to device_tokens. Operator OK relayed by the manager 2026-11-11 22:20Z, popup verbatim 'Yes, all four (Recommended)'. Web-api change, restarts on deploy. Tightens an existing check on one route; adds no trading gate.",
+  "hold_text": "Tier-2: manager merges and deploys ict-web-api. BEFORE merging confirm DASHBOARD_API_TOKEN is set on the VM (get-env), else the route returns 503. Post-merge check: POST /api/bot/devices/register with no bearer returns 401. Consumer risk: the SPA's Devices page was NOT read (repo not attached); code search found 0 hits for 'devices/register' there. If the SPA does register push devices it will get 401 until it sends a credential."
+}

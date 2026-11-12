@@ -63,6 +63,7 @@ from src.web.api.routers import trades_closed as trades_closed_router
 from src.web.api.routers import training_center as training_center_router
 from src.web.api.routers import work as work_router
 from src.web.api.routers import work_ledger as work_ledger_router
+from src.web.api.routers import work_topics as work_topics_router
 from src.web.api.routers import work_items as work_items_router
 
 # UI-UPGRADE-1-AUTH: the whole-site gate is an APP-LEVEL dependency (so it covers
@@ -150,6 +151,7 @@ app.include_router(learning_router.router)
 app.include_router(market_ws_router.router)
 app.include_router(work_router.router)
 app.include_router(work_ledger_router.router)
+app.include_router(work_topics_router.router)
 app.include_router(work_items_router.router)
 
 
