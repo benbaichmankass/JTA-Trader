@@ -91,16 +91,20 @@ def _one(conn: sqlite3.Connection, sql: str, args: tuple) -> Optional[Dict[str, 
 
 def _sibling(conn: sqlite3.Connection, row: Dict[str, Any], want_open: bool) -> Optional[Dict[str, Any]]:
     """The other half of ``row``'s trade: same account and external order id (else ticket id)."""
-    status_sql = "lower(status) IN ('open','filled')" if want_open else "lower(status) = 'closed'"
+    # an opener is an open/filled row; a 'placed' row (order sent, fill not journaled) is the fallback
+    # (MEASURED 2026-11-12, /api/bot/prop/fills, all 257 rows: of 72 closed rows, 66 have an open/filled
+    # sibling, 2 only a placed one, 4 none)
+    tiers = ("lower(status) IN ('open','filled')", "lower(status) = 'placed'") if want_open else ("lower(status) = 'closed'",)
     order = "ASC" if want_open else "DESC"
-    for col in ("external_order_id", "ticket_id"):
-        val = row.get(col)
-        if not val:
-            continue
-        got = _one(conn, f"SELECT * FROM prop_fills WHERE account_id = ? AND {col} = ? AND {status_sql} "
-                         f"AND id != ? ORDER BY id {order} LIMIT 1", (row.get("account_id"), str(val), row.get("id")))
-        if got is not None:
-            return got
+    for status_sql in tiers:
+        for col in ("external_order_id", "ticket_id"):
+            val = row.get(col)
+            if not val:
+                continue
+            got = _one(conn, f"SELECT * FROM prop_fills WHERE account_id = ? AND {col} = ? AND {status_sql} "
+                             f"AND id != ? ORDER BY id {order} LIMIT 1", (row.get("account_id"), str(val), row.get("id")))
+            if got is not None:
+                return got
     return None
 
 
@@ -118,7 +122,7 @@ def resolve_prop(conn: sqlite3.Connection, fill_id: int) -> Optional[Tuple[Dict[
         raise
     if row is None:
         return None
-    if str(row.get("status") or "").lower() in ("open", "filled"):
+    if str(row.get("status") or "").lower() in ("open", "filled", "placed"):
         opener, closer = row, _sibling(conn, row, want_open=False)
     else:
         closer = row
