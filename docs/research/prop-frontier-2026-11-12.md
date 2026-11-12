@@ -26,7 +26,11 @@ Machine-readable companion: [`comms/research/prop_frontier/firms.json`](../../co
    - CLASSIC 1-Step ($54): 6-month EV **+$44.83** per purchase, against a zero-edge null of −$41.13.
    - PRO 1-Step ($32): **+$21.40**, against a null of −$27.37.
    - **The pass is marginal.** The book edge CI lower bound is +0.004R. Dropping any one of five legs turns it negative, and the edge sits entirely in the commodity legs. The rule's own proxy caveat applies: the ledgers are on the ETFs, not on Velotrade's CFDs.
-5. **Buy-point: not yet. It is conditional, and the conditions are cheap** (§ 6). The first two are a Stage-0 re-run on the CFD underlyings and a read-only instrument probe on our existing Velotrade login. The second account would be a **$54 CLASSIC 1-Step**. The alternative is adding the commodity legs to `velotrade_1` itself, which is a Tier-3 roster decision through the prop SUPERSET gate.
+5. **Update, same day: Velotrade is NOT BUYABLE.** The Stage-0 re-run on the CFD underlyings (VELO-CFD-STAGE0, RULE-VELO-CFD-STAGE0-20261112, registered in 1f4d346a7 before the run) **failed all 4 commodity legs** over 2019-01..2026-10 on spot silver, WTI and gold (§ 5b).
+   - The 2025-26 window behind the EV pass was a favourable stretch. Over 8 years, the overnight fee of 0.05% of notional per night (about 18% a year) eats 0.15–0.47R per trade.
+   - Without that fee, `gld_pullback_1h` (+0.36R per trade, 7 of 8 years positive) and `slv_trend_1h` (+0.21R, 7/8) hold up over the full 8 years.
+   - **So the edge is real, but Velotrade's financing kills it.** A venue that charges no per-night financing on gold and silver (CME futures: MGC, SIL) is where these legs belong, and that is a real-money/IB question, not a prop one.
+   - **No Velotrade purchase.**
 6. **Real-stock firms: none passes.** Trade The Pool, the main one, says *"A human person must personally place and authorize every single trade."* No stock prop firm with an Alpaca, DAS or IBKR API was found. That is a search result, not proof of absence.
 
 ## 1. Method
@@ -187,14 +191,63 @@ The descriptive reading of the 1h-only book is the stronger one. It has higher E
 
 **Prop SUPERSET.** This screen is the 6-month EV question. It is not the per-leg prop survival gate. Any leg added to a prop book still needs everything a real-money leg clears, **plus** `comms/prop_survival/<leg>.json` against the firm's drawdown limits (`prop-roster-gate-guard`).
 
+## 5b. VELO-CFD-STAGE0: the commodity legs on the CFD underlying's own series (RULE-VELO-CFD-STAGE0-20261112)
+
+**Registration.** [`comms/research/prop_frontier/velo_cfd_stage0_rule.json`](../../comms/research/prop_frontier/velo_cfd_stage0_rule.json), committed in 1f4d346a7 and pushed before the fetch and the run. Runner: [`scripts/research/velo_cfd_stage0.py`](../../scripts/research/velo_cfd_stage0.py). Verdict: [`comms/research/prop_frontier/velo-cfd-stage0-20261112/verdict.json`](../../comms/research/prop_frontier/velo-cfd-stage0-20261112/verdict.json).
+
+**Population.**
+- Four legs, with config fingerprints pinned in the rule and parameters unchanged from `config/strategies.yaml`:
+  - `slv_trend_1h` on spot XAG/USD;
+  - `uso_trend_1h` on Dukascopy E_LIGHT (WTI);
+  - `gld_pullback_1h` and `gld_pullback_1d` on spot XAU/USD.
+- Data: Dukascopy 1h bid bars, filtered to the US cash session to match each leg's ETF bar grid. Window 2019-01-02..2026-10-30, about 1,530 bars a year for each instrument (checked per year).
+- Harness: the evidence producer's own argv (`regime_debt_matrix.build_harness_cmd`, all four `faithful`, no omitted levers) at fee 0.
+
+**Costs** (per leg, stated in the rule):
+- commission 2 bps RT (Velotrade 0.01%/side on commodities, 1P);
+- slippage 3 bps RT;
+- spread 3 bps RT on gold and 5 bps on silver and WTI (an **assumption**: the bars are bid-only and Velotrade's quoted spread was not read);
+- overnight fee 0.05% of notional per 00:30 UTC rollover, weekends included (1P).
+
+**Per-leg bar.** PASS needs all of:
+- n ≥ 30;
+- net R > 0;
+- at least 60% of trading years positive;
+- per-trade CI lower bound > 0 at z 2.241 (one-sided Bonferroni over 4 legs).
+
+| Leg | n | Gross R | Cost R | Net R | Mean net R | CI lo (z 2.241) | Years positive | Verdict |
+|---|---|---|---|---|---|---|---|---|
+| `slv_trend_1h` | 321 | +97.56 | 95.27 | +2.29 | +0.007 | −0.346 | 4/8 | **FAIL** |
+| `uso_trend_1h` | 244 | +15.79 | 36.16 | −20.38 | −0.084 | −0.320 | 2/8 | **FAIL** |
+| `gld_pullback_1h` | 441 | +229.19 | 206.06 | +23.14 | +0.053 | −0.176 | 4/8 | **FAIL** |
+| `gld_pullback_1d` | 62 | +34.17 | 37.72 | −3.56 | −0.057 | −0.517 | 3/8 | **FAIL** |
+
+The book step and the drop-one check are NOT_APPLICABLE, because no leg passed. Cross-check: gross − cost = net in every row (for example, 229.19 − 206.06 = 23.14 for `gld_pullback_1h`).
+
+**Descriptive reads (not part of the rule, run after the verdict).**
+- **The proxy holds.** The same spot ledgers clipped to 2025-06+ at Velotrade costs give +0.39R per trade on `slv_trend_1h` (n=66), +0.62R on `gld_pullback_1h` (n=79), +0.25R on `uso_trend_1h` (n=50) and +0.67R on `gld_pullback_1d` (n=10). That is close to the ETF-ledger figures behind the EV pass, so the ETF ledgers were a fair proxy. **The problem is the window, not the instrument.**
+- **The cost is mostly the overnight fee.**
+
+  | Leg | Net R per trade, 2019-26, with no overnight fee | Years positive |
+  |---|---|---|
+  | `gld_pullback_1h` | +0.358 | 7/8 |
+  | `slv_trend_1h` | +0.206 | 7/8 |
+  | `gld_pullback_1d` | +0.514 | 6/8 |
+  | `uso_trend_1h` | +0.009 | 4/8 |
+
+  With a 0.74% median stop (`gld_pullback_1h`) and holds of about 3 nights, 0.05% per night is about 0.2R per trade on its own.
+- **Lead, filed rather than claimed.** The gold and silver legs look robust where financing is zero or small, as on CME futures (MGC, SIL), but that has not been tested on a futures series at futures costs. Filed as PI-20261112-D6UC5YT4-0004. It belongs to the IB/real-money ladder, not to a prop firm: every futures prop forces positions flat daily (§ 2a).
+
 ## 6. Ranked shortlist and buy-points
 
 | # | Firm · plan | Why here | Buy-point: buy when ALL hold |
 |---|---|---|---|
-| **1** | **Velotrade CLASSIC 1-Step $5k ($54)**, CFD book: commodity legs first (`slv_trend_1h`, `uso_trend_1h`, `gld_pullback_1h`, `gld_pullback_1d`), equity-ETF legs only if they clear their own CFD re-test | Passes the device filter on 1P text; **integration already live** (`velotrade_1`, DXtrade REST); overnight and weekend holds; static DD; the registered EV rule says BUYABLE. PRO ($32) also passes, but with P(breach) 0.63 | (1) **VELO-CFD-STAGE0** (PI-20261112-D6UC5YT4-0001): each commodity leg PASSes Stage 0 on the spot or CFD series at Velotrade costs including the overnight fee. (2) **VELO-INSTR-READ** (PI-…-0002): the read-only probe shows the gold, silver and WTI symbols exist on our Velotrade login, with lot and multiplier. (3) Re-run RULE-PROP-FRONTIER-EV6M on the book that survives (1); it still says BUYABLE. (4) Each leg has its `comms/prop_survival/<leg>.json` PASS (SUPERSET). Then the operator chooses: a second Velotrade account for the CFD book, or adding the legs to `velotrade_1` (Tier 3). The first trade is the one-small-trade mechanical check (OPERATING-PLAN § 2; DXtrade REST mechanics are already proven on `velotrade_1`, the new instrument class is not). |
+| ~~1~~ **closed: NOT BUYABLE (§ 5b)** | **Velotrade CLASSIC 1-Step $5k ($54)**, CFD book: commodity legs first (`slv_trend_1h`, `uso_trend_1h`, `gld_pullback_1h`, `gld_pullback_1d`), equity-ETF legs only if they clear their own CFD re-test | Passes the device filter on 1P text; **integration already live** (`velotrade_1`, DXtrade REST); overnight and weekend holds; static DD; the registered EV rule says BUYABLE. PRO ($32) also passes, but with P(breach) 0.63 | (1) **VELO-CFD-STAGE0** (PI-20261112-D6UC5YT4-0001): each commodity leg PASSes Stage 0 on the spot or CFD series at Velotrade costs including the overnight fee. (2) **VELO-INSTR-READ** (PI-…-0002): the read-only probe shows the gold, silver and WTI symbols exist on our Velotrade login, with lot and multiplier. (3) Re-run RULE-PROP-FRONTIER-EV6M on the book that survives (1); it still says BUYABLE. (4) Each leg has its `comms/prop_survival/<leg>.json` PASS (SUPERSET). Then the operator chooses: a second Velotrade account for the CFD book, or adding the legs to `velotrade_1` (Tier 3). The first trade is the one-small-trade mechanical check (OPERATING-PLAN § 2; DXtrade REST mechanics are already proven on `velotrade_1`, the new instrument class is not). |
 | **2** | **FundedNext Futures** (CME micros), plan to be chosen | The only futures firm whose own help centre allows bots **and** a VPS. It fits the operator's CME-micro priority once a session-flat leg exists. | (1) A session-flat leg PASSes Stage 0 at Tradovate-class costs **flat by 15:10 CT**: RQ-20261112-09d2-05 (MNQ_OR15 on real CME) or -04 (`ict_scalp_mgc_15m`), re-cut to the earlier cutoff. (2) Its prices, DD type and micro list are read 1P. (3) The EOD-trailing survival rule (09d2-02's) PASSes on that plan. (4) A headless Tradovate-web executor passes a dry run from the VM: fill, read back, no submit, flat before 15:10 CT. (5) The operator's written question to FundedNext ("a sole-owned bot deciding on a cloud server and placing orders through a headless browser on Tradovate web — allowed?") is answered yes. **Today: 0 legs meet (1).** |
-| **3** | **Blue Guardian 1-Step** (SPX500, XAUUSD; MT5) | 1P allows EAs and VPS, and overnight and weekend holds. But the route is an MT5 EA, which we have no path for, and the drawdown is trailing. | (1) PROP-TRAILING-DD-SIM (PI-…-0003) lands, and RULE-PROP-FRONTIER-EV6M re-run on Blue Guardian says BUYABLE. (2) An MT5 runner exists on a VM (Wine or a Windows VPS; build not scoped). (3) Prices read 1P. Rank 1 dominates it on every axis, so no work is queued beyond the simulator item. |
+| **3** | **Blue Guardian 1-Step** (SPX500, XAUUSD; MT5) | 1P allows EAs and VPS, and overnight and weekend holds. But the route is an MT5 EA, which we have no path for, and the drawdown is trailing. | (1) PROP-TRAILING-DD-SIM (PI-…-0003) lands, and RULE-PROP-FRONTIER-EV6M re-run on Blue Guardian says BUYABLE. (2) An MT5 runner exists on a VM (Wine or a Windows VPS; build not scoped). (3) Prices read 1P. Velotrade (the old rank 1) failed on its overnight fee, and Blue Guardian also charges CFD swaps, so read its swap table before any simulator work. |
 | 4 | FTMO Swing (cTrader / MT5) | EA and VPS allowed 1P. | Hard filter first: a 1P statement that a trader's own cTrader Open API client is allowed, plus the symbol list. No work queued. |
+
+**After § 5b the shortlist has no buyable plan today.** FundedNext Futures (row 2) is the live candidate. Its gate is a session-flat futures leg passing Stage 0, which is the same critical path as the Tradeify futures memo: FUT-INTRADAY-DUKA-LANE and FUT-CME-INTRADAY-HIST, then RQ-20261112-09d2-04/-05. AM-TRADING relays their verdicts. Blue Guardian and FTMO charge swaps on CFDs too. Until their swap tables are read, the § 5b cost finding is a reason to expect the same outcome there.
 
 Not shortlisted: MyFundedFutures, Lucid and Top One Futures (UNVERIFIED and session-flat anyway). They are worth a 1P re-read only if the FundedNext route fails.
 
@@ -210,10 +263,39 @@ Not shortlisted: MyFundedFutures, Lucid and Top One Futures (UNVERIFIED and sess
 
 | Id | What | clears_when (machine-checkable) | Owner |
 |---|---|---|---|
-| PI-20261112-D6UC5YT4-0001 | VELO-CFD-STAGE0: CFD-series Stage 0 for `slv_trend_1h`, `uso_trend_1h`, `gld_pullback_1h`, `gld_pullback_1d` at Velotrade costs | a `research/results` row exists for a registered Stage-0 unit naming each of the four legs on a spot/CFD series at Velotrade costs (any verdict) | manager → research lane |
-| PI-20261112-D6UC5YT4-0002 | VELO-INSTR-READ: add the gold/silver/WTI/SPY/QQQ/IWM spellings to the read-only `velotrade-api-probe` and dispatch once while flat (Tier 2) | a probe run log shows `symbols_present` true or false for a gold, a silver and a WTI symbol on `velotrade_1` | manager → Tier-2 build lane (operator OK in chat) |
+| PI-20261112-D6UC5YT4-0001 | **done 2026-11-12: FAIL, 0/4** (§ 5b). VELO-CFD-STAGE0: CFD-series Stage 0 for `slv_trend_1h`, `uso_trend_1h`, `gld_pullback_1h`, `gld_pullback_1d` at Velotrade costs | a `research/results` row exists for a registered Stage-0 unit naming each of the four legs on a spot/CFD series at Velotrade costs (any verdict) | manager → research lane |
+| PI-20261112-D6UC5YT4-0002 | **killed 2026-11-12**: its only purpose was buy-point condition 2 for a Velotrade CFD account, and § 5b closed that buy. The draft diff is kept in Appendix A. VELO-INSTR-READ: add the gold/silver/WTI/SPY/QQQ/IWM spellings to the read-only `velotrade-api-probe` and dispatch once while flat (Tier 2) | a probe run log shows `symbols_present` true or false for a gold, a silver and a WTI symbol on `velotrade_1` | manager → Tier-2 build lane (operator OK in chat) |
+| PI-20261112-D6UC5YT4-0004 | GOLD-SILVER-FUT-STAGE0: Stage 0 for the `gld_pullback_1h` / `slv_trend_1h` logic on CME MGC / SIL continuous series at IB futures costs (no overnight financing); lead from § 5b | a `research/results` row exists for a registered unit naming MGC or SIL with either leg's logic (any verdict) | manager → research lane (IB/real-money ladder) |
 | PI-20261112-D6UC5YT4-0003 | PROP-TRAILING-DD-SIM: give `prop_ev_sim.py` an EOD/intraday-trailing drawdown (generalise 09d2-02's simulator) | `prop_ev_sim.py` accepts `drawdown_type` `eod_trailing` without raising | manager → research-tooling lane |
 
 **Operator external actions (optional, no credentials needed).** These are written questions to firm support:
 - Velotrade: does the API/VPS permission cover CFD accounts, and is it binding beyond the blog?
 - FundedNext Futures: is the headless-browser route allowed (§ 6 row 2)?
+
+## Appendix A. VELO-INSTR-READ draft diff (not applied; PI-…-0002 killed after § 5b)
+
+AM-TRADING asked for the exact diff so it would be ready once an operator OK arrived. It is kept here in case a later unit revives the Velotrade CFD route. It is a read-only change to an allowlisted Tier-2 system action (`velotrade-api-probe`): REST GETs only, as before.
+
+```diff
+--- a/scripts/prop/velotrade_api_probe.py
++++ b/scripts/prop/velotrade_api_probe.py
+@@
+ SYMBOLS = ["ETHUSD", "SOLUSD", "XRPUSD", "BTCUSD", "ETH/USD", "SOL/USD", "XRP/USD"]
+ WANTED = ("ETH", "SOL", "XRP")
++# VELO-INSTR-READ (PI-20261112-D6UC5YT4-0002): the CFD underlyings Velotrade lists 1P
++# (velotrade.com/blog/velotrade-review: gold, silver, WTI, SPY/QQQ/IWM). The DXtrade spelling
++# is unknown, so each is tried slashed and unslashed; ETHUSD stays the positive control.
++VELO_CFD_SYMBOLS = ["ETHUSD", "XAUUSD", "XAU/USD", "GOLD", "XAGUSD", "XAG/USD", "SILVER",
++                    "USOIL", "USOIL/USD", "WTI", "SPY", "SPY.US", "QQQ", "QQQ.US", "IWM", "IWM.US"]
++VELO_CFD_WANTED = ("ETH", "XAU", "XAG", "OIL", "SPY", "QQQ", "IWM")
+@@ def main(...):
+-        symbols = TRADEIFY_SYMBOLS if account == "tradeify_1" else SYMBOLS
+-        wanted = TRADEIFY_WANTED if account == "tradeify_1" else WANTED
++        cfd = os.environ.get("ACTION_SYMBOL_SET") == "velo_cfd" and account == "velotrade_1"
++        symbols = TRADEIFY_SYMBOLS if account == "tradeify_1" else (VELO_CFD_SYMBOLS if cfd else SYMBOLS)
++        wanted = TRADEIFY_WANTED if account == "tradeify_1" else (VELO_CFD_WANTED if cfd else WANTED)
+```
+
+It also needs:
+- a fixed-choice `symbol_set: default | velo_cfd` input on the `velotrade-api-probe` branch of `.github/workflows/system-actions.yml`, rejecting any other value, the same way `account_id` is handled;
+- the row in `docs/claude/system-actions.md` updated.

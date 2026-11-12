@@ -50,30 +50,31 @@
  },
  "ranked_shortlist": [
   {
-   "rank": 1,
+   "rank": null,
    "firm": "Velotrade",
-   "ev_screen": "BUYABLE under RULE-PROP-FRONTIER-EV6M-20261112 on VELO_ALL at 0.5% risk, both plans; marginal (see memo section 5)"
+   "status": "closed: NOT BUYABLE after VELO-CFD-STAGE0 (overnight fee 0.05%/night eats the edge over 2019-26)"
+  },
+  {
+   "rank": 1,
+   "firm": "FundedNext Futures",
+   "status": "live candidate; gate = a session-flat futures leg passing Stage 0 flat by 15:10 CT + headless Tradovate-web route"
   },
   {
    "rank": 2,
-   "firm": "FundedNext Futures",
-   "ev_screen": "not_run: no fitting leg (the rule screens only firms with at least one)"
+   "firm": "Blue Guardian (CFD)",
+   "status": "not_attempted: trailing DD (PI-...-0003); MT5-only route; CFD swaps likely bind as at Velotrade"
   },
   {
    "rank": 3,
-   "firm": "Blue Guardian (CFD)",
-   "ev_screen": "not_attempted: 6% trailing drawdown; prop_ev_sim.py raises on non-static drawdown (PI-20261112-D6UC5YT4-0003)"
-  },
-  {
-   "rank": 4,
    "firm": "FTMO",
-   "ev_screen": "not_run: hard filter unverified (own cTrader Open API client not stated; 1-Step DD is EOD trailing)"
+   "status": "hard filter UNVERIFIED"
   }
  ],
  "follow_ups": {
-  "PI-20261112-D6UC5YT4-0001": "VELO-CFD-STAGE0",
-  "PI-20261112-D6UC5YT4-0002": "VELO-INSTR-READ",
-  "PI-20261112-D6UC5YT4-0003": "PROP-TRAILING-DD-SIM"
+  "PI-20261112-D6UC5YT4-0001": "VELO-CFD-STAGE0 (done: FAIL 0/4)",
+  "PI-20261112-D6UC5YT4-0002": "VELO-INSTR-READ (killed)",
+  "PI-20261112-D6UC5YT4-0003": "PROP-TRAILING-DD-SIM (queued)",
+  "PI-20261112-D6UC5YT4-0004": "GOLD-SILVER-FUT-STAGE0 (queued; IB ladder)"
  },
  "firms": [
   {
@@ -1087,7 +1088,7 @@
    "cluster": "futures (Rithmic/CQG/Tradovate/own)",
    "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
    "lane_verdict": {
-    "rank": 2,
+    "rank": 1,
     "lane_hard_filter": "PASS_RULES_ROUTE_UNVERIFIED",
     "fit_legs": [],
     "fit_note": "Flat by 3:10 PM CT (16:10 ET) with no overnight holds. No Stage-0-PASS session-flat futures leg exists (RQ-20261112-09d2-01 0/6, -03 FAIL; -04/-05 blocked).",
@@ -1906,7 +1907,7 @@
    "cluster": "FX / CFD (incl. index, commodity, ETF and stock CFDs)",
    "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
    "lane_verdict": {
-    "rank": 1,
+    "rank": null,
     "lane_hard_filter": "PASS",
     "fit_legs": [
      "spy_trend_long_1d",
@@ -1920,7 +1921,7 @@
      "uso_trend_1h"
     ],
     "fit_note": "CFDs on SPY/QQQ/IWM, gold, silver and WTI (1P, re-fetched by the lane). Overnight and weekend holds allowed. Every fitting leg holds 6 h to weeks. At Velotrade costs (overnight fee 0.05%/night) the equity-ETF legs are net negative over the window; the commodity legs carry the edge.",
-    "ev_screen": "BUYABLE under RULE-PROP-FRONTIER-EV6M-20261112 on VELO_ALL at 0.5% risk, both plans; marginal (see memo section 5)",
+    "ev_screen": "BUYABLE under RULE-PROP-FRONTIER-EV6M-20261112 on VELO_ALL at 0.5% risk, both plans; marginal (see memo section 5); SUPERSEDED same day by VELO-CFD-STAGE0 FAIL 0/4 -> NOT BUYABLE",
     "route": "DXtrade REST: the same API velotrade_1 already trades through (platform dxtrade_api)",
     "integration_exists": true
    }
@@ -2072,7 +2073,7 @@
    "cluster": "FX / CFD (incl. index, commodity, ETF and stock CFDs)",
    "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
    "lane_verdict": {
-    "rank": 4,
+    "rank": 3,
     "lane_hard_filter": "UNVERIFIED",
     "fit_legs": [],
     "fit_note": "Swing account type needed for overnight/weekend; symbol list unread.",
@@ -2349,7 +2350,7 @@
    "cluster": "FX / CFD (incl. index, commodity, ETF and stock CFDs)",
    "source_file_note": "lane research agent output, quotes verbatim with URL and fetch date; Velotrade and FundedNext Futures key clauses re-fetched by the lane itself 2026-11-12",
    "lane_verdict": {
-    "rank": 3,
+    "rank": 2,
     "lane_hard_filter": "PASS_ROUTE_C",
     "fit_legs": [
      "spy_trend_long_1d (SPX500)",
@@ -3111,5 +3112,44 @@
     "ev_screen": "not_run: hard filter not passed"
    }
   }
- ]
+ ],
+ "velo_cfd_stage0": {
+  "rule": "comms/research/prop_frontier/velo_cfd_stage0_rule.json",
+  "verdict_file": "comms/research/prop_frontier/velo-cfd-stage0-20261112/verdict.json",
+  "per_leg": {
+   "slv_trend_1h": {
+    "n": 321,
+    "net_r": 2.29,
+    "mean_net_r": 0.0071,
+    "ci_lo_z2241": -0.3457,
+    "years_positive": "4/8",
+    "verdict": "FAIL"
+   },
+   "uso_trend_1h": {
+    "n": 244,
+    "net_r": -20.375,
+    "mean_net_r": -0.0835,
+    "ci_lo_z2241": -0.3201,
+    "years_positive": "2/8",
+    "verdict": "FAIL"
+   },
+   "gld_pullback_1h": {
+    "n": 441,
+    "net_r": 23.138,
+    "mean_net_r": 0.0525,
+    "ci_lo_z2241": -0.1756,
+    "years_positive": "4/8",
+    "verdict": "FAIL"
+   },
+   "gld_pullback_1d": {
+    "n": 62,
+    "net_r": -3.558,
+    "mean_net_r": -0.0574,
+    "ci_lo_z2241": -0.5166,
+    "years_positive": "3/8",
+    "verdict": "FAIL"
+   }
+  },
+  "outcome": "FAIL 0/4 -> Velotrade CFD book NOT BUYABLE (supersedes the EV6M BUYABLE, which rested on the 2025-06..2026-10 window)"
+ }
 }
