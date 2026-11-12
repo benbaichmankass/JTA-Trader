@@ -2,9 +2,15 @@
 #
 # Save to: /etc/systemd/system/ict-web-api.service
 #
-# S-014: binds to 0.0.0.0:8001 so the Vercel React dashboard can reach
-# the API from the browser. Restrict inbound access at the firewall
-# (ufw allow 8001/tcp) if needed.
+# SEC-8001-LOCKDOWN (operator decisions page m3, 2026-11-12): binds to
+# 127.0.0.1:8001 ONLY. Every off-box client (the SPA browser-direct, the
+# phone executor, the diag relay, workflows) reaches the API through Caddy's
+# HTTPS front, https://ict-bot.duckdns.org, which reverse-proxies to this
+# loopback port (deploy/caddy/Caddyfile). On-box callers already use
+# http://127.0.0.1:8001. Do not re-bind 0.0.0.0: it serves token-carrying
+# requests over plain HTTP to the internet. (Was 0.0.0.0 since S-014.)
+# scripts/install_systemd_units.sh also rewrites a leftover --host 0.0.0.0
+# in any ict-web-api.service.d drop-in (deploy-candidate's venv.conf).
 #
 # DASHBOARD_ORIGIN is set here directly so the git-sync autosync picks
 # it up without a manual VM edit. The /api/bot/* endpoints are
@@ -47,7 +53,7 @@ EnvironmentFile=/etc/ict-trader/web-api.env
 # views in sync — flip DATA_DIR in .env, both services follow.
 # Leading `-` so a missing .env doesn't fail the start.
 EnvironmentFile=-/home/ubuntu/ict-trading-bot/.env
-ExecStart=/usr/bin/python3 -m uvicorn src.web.api.main:app --host 0.0.0.0 --port 8001
+ExecStart=/usr/bin/python3 -m uvicorn src.web.api.main:app --host 127.0.0.1 --port 8001
 Restart=always
 RestartSec=5
 StandardOutput=journal

@@ -221,6 +221,16 @@ jobs:
           REMOTE
           echo "exit=$?"
 
+      - name: Checkout (redactor script only; clean:false keeps the VM output file)
+        if: github.event_name == 'issues' && steps.dedup.outputs.skip != 'true' && always()
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Redact secrets and account ids from output (shared redactor)
+        if: github.event_name == 'issues' && steps.dedup.outputs.skip != 'true' && always()
+        run: python3 scripts/ops/redact_diag_output.py vm_bybit.txt || true
+
       - name: Post result to issue
         if: github.event_name == 'issues' && steps.dedup.outputs.skip != 'true' && always()
         uses: actions/github-script@v7

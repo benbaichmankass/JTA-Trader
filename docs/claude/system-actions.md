@@ -292,6 +292,39 @@ unit disable/mask) stays off-limits as documented in § 2.1.
 
 ---
 
+### 2.3 The direct ops channel (`/api/bot/ops/actions`)
+
+**Gates this adds or changes: none.** Same actions, same tiers, same approval rule; only the pipe changes (operator
+2026-11-05 popup "Direct ops = Approve (Recommended)"; 2026-11-12 ~00:05Z *"it should go directly from Claude to
+the VM and skip like a merge"*; design: `docs/design/trade-action-direct-path-2026-11.md` § 2.3).
+
+A session calls the VM directly: `POST https://ict-bot.duckdns.org/api/bot/ops/actions` with
+`{"action", "params", "session", "reason", "operator_quote"?}`, then reads `GET /api/bot/ops/jobs/<job_id>`.
+Auth is the `X-Work-Store-Token` the session's env proxy already injects (no new secret; fail-closed on both
+routes). The API only writes a job; the path-activated `ict-ops-runner` unit runs it out of process. No issue, no
+Actions run, no PR. Module: `src/runtime/ops_actions.py`.
+
+- **Tier 1** runs at once (`ops_actions.TIER1_AUTORUN`, one line; design § 6 line 10 is the operator's open
+  question on it).
+- **Tier 2** runs when the call carries the operator's verbatim OK in `operator_quote`; without one the runner
+  creates the phase-1 Approve / Reject ask (`trade_approvals.offer_ops`: the same store, `tapv` buttons, operator
+  chat only, expiry and `decide()` as a trade ask, so the Telegram button and the SPA console both decide it) and
+  the job runs on Approve.
+- **Tier 3 and every config or code edit are refused by name** (`ops_actions.REFUSED_BY_NAME`) and stay in git.
+- An action not in the table below is not ported: use the workflow above, which stays the fallback for every action.
+
+The table is the channel's allowlist. `tests/ops/test_ops_actions_parity.py` requires it to equal
+`ops_actions.REGISTRY` row for row (name and tier), and an entry whose **Ports** names a § 2 action must carry
+that action's tier, so the channel can never grant more than the workflow does.
+
+| Action | Tier | Ports | What it runs on the VM |
+|---|---|---|---|
+| `live-review-row` | 1 | `POST /api/bot/live-review/rows` (the direct row submit) | Delegates to the direct row submit (TRADE-ACTION-DIRECT-PATH phase 2): the same `validate_row`, already-handled check and create-only write into the dir the live trader's `ltr-direct-rows` thread reads every 2 s; its `process_row` and `live_review_dispatch.py` decide what executes, unchanged. Not a second row path. A review_id already submitted is 409. |
+| `directed-action` | 2 | `scripts/ops/directed_action.py submit` | One `directed_action/v1` record (params `package`, `action`, `level` / `fraction`, `scope`, `dry_run`) written into the phase-1 spool; the live trader's directed thread runs it within ~2 s (`spool-pass` -> `vm_pass` -> `live_review_apply.run()`: each account's own `RiskManager`, the venue read-back, one ping). The job waits up to 120 s for the receipt. The tap or quote is the record's `operator_quote`. |
+| `amend-prop-bracket` | 2 | `amend-prop-bracket` | `scripts/ops/amend_prop_bracket_action.sh` with the same params and shape checks as the § 2 row (PROP-BRACKET-APPLY, PR #25016). Answers `not_deployed` until that wrapper is on the VM. |
+| `sync-now` | 1 | the `ict-git-sync` timer's own unit | `systemctl start ict-git-sync.service` once, then its journal tail: it deploys exactly what the timer would within ~5 min, early. (`pull-and-deploy` stays Tier 2: it bounces services unconditionally.) |
+| `restart-service` | 2 | `restart-bot-service` | `service:` one of `ict-trader-live` (through `scripts/ops/restart_bot.sh`), `ict-web-api`, `ict-telegram-bot`, `ict-claude-bridge`, `ict-hourly-snapshot` (`set_env.sh`'s restart allowlist); polls `is-active`. Never `ict-ops-runner` itself. |
+
 ## 3. Tier policy (PM-side dispatch)
 
 Mirrors the existing `docs/claude/operating-protocol.md` decision
