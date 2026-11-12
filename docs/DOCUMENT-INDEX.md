@@ -553,8 +553,9 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/design/desk-entry-review-redesign-2026-11-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/site-auth-consumer-inventory-2026-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/trade-action-direct-path-2026-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
-| `docs/design/ui-workplan-2026-11-questions.md` | plan | unknown | — | never | `name:workplan-is-a-forward-commitment / not-assessed` | — |
-| `docs/design/ui-workplan-2026-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | UI workplan 2026-11: design for OAuth sign-in enforcement, prop/chart bracket history, performance table + P&L chart, insights ledger, models/strategies tables, sidebar, topic map |
+| `docs/design/ui-redesign-2026-11-reconciliation.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | Reconciles ui-workplan-2026-11 (superseded) against operator spec row UI-REDESIGN-2026-11 and each row's operator note |
+| `docs/design/ui-workplan-2026-11-questions.md` | plan | superseded | `docs/design/ui-redesign-2026-11-reconciliation.md` | 2026-11-12 | `name:workplan-is-a-forward-commitment / mi159:plan-status-header:superseded` | — |
+| `docs/design/ui-workplan-2026-11.md` | architecture | superseded | `docs/design/ui-redesign-2026-11-reconciliation.md` | 2026-11-12 | `dir:design-declares-contracts / mi159:plan-status-header:superseded` | UI workplan 2026-11: design for OAuth sign-in enforcement, prop/chart bracket history, performance table + P&L chart, insights ledger, models/strategies tables, sidebar, topic map |
 | `docs/design/close-confirmation-scope-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/design/d1b-live-time-stop-PROPOSAL.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/decision-push-back-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
@@ -842,6 +843,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/CONFIDENCE-SCORE-DATA-AUDIT-2026-11-09.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-entry-eq-serve-spec-2026-11-06.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-entry-promotion-rule-2026-11-06.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/pnl-gross-vs-venue-6817-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/prod-legs-dsr-2026-11-06.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/alpaca-promotion-inventory-2026-11-01.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/alpaca-live-refusal-verdict-2026-09-07.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
@@ -894,6 +896,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/crypto-edge-audit-2026-07-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/crypto-finetune-proposals-2026-07-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/analytic-skill-design-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/cf-counterfactual-d-phase-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/d1-cost-stack-verification-2026-09-25.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/hf-lake-free-storage-options-2026-11-05.md` | evidence | unknown | — | 2026-11-05 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/options-iv-history-sources-2026-11-01.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
@@ -1038,6 +1041,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/mirror-qty-diverge-2026-10-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-buildout-strategy-2026-06-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-coverage-audit-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | ML coverage vs the traded roster (5/51 legs, 4/23 symbols) + next-week breadth plan. |
+| `docs/research/ml-deep-audit-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | ML deep audit (lane ML-DEEP-AUDIT-FABLE): every model on every roster with value added, research-unit allocation by slot, the survivor-count read, infra and workflow findings, ranked structural recommendations with their rows. |
 | `docs/research/ml-data-rate-path-2026-10-29.md` | evidence | unknown | — | 2026-10-29 | `dir:research-is-measurement / not-assessed` | Ranked data sources the system can generate now for ML training (harness universe, cf arms, bar labels, desk, live) + units RQ-20261029-7294-01..03. |
 | `docs/research/ml-decision-models-2026-11-01/DESIGN.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-decision-models-2026-11-01/DIAGNOSIS.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
@@ -1215,6 +1219,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/reviews/2026-11-04-weekly-walkthrough.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-11-11-weekly-audit.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/reviews/2026-11-11-weekly-walkthrough.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/reviews/2026-11-12-w9-gate-breakdown.md` | evidence | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-11-12-weekly-walkthrough.md` | evidence | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/runbooks/alpaca-integration.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/backfill-orphan-pnl.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
