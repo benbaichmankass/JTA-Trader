@@ -197,7 +197,10 @@ def run(a) -> int:
     syms = E.universe()
     from datetime import date
     import ml_entry_retrain as RT
-    rep = RT.fetch_through(cache, syms, RT.plan(date.fromisoformat(a.run_date)))
+    if a.no_fetch:   # cache already holds the through-run-date archives (same fetch_through output)
+        rep = {s_: {"last_bar": str(pd.read_pickle(cache / f"{s_}.pkl").ts.max())} for s_ in syms}
+    else:
+        rep = RT.fetch_through(cache, syms, RT.plan(date.fromisoformat(a.run_date)))
     tab = E.build_table(cache, syms)
     last_ts = str(tab.ts.max())
     sp = served_artifact()
@@ -281,6 +284,7 @@ def main(argv=None) -> int:
     ap.add_argument("--unit", default="RQ-20261112-cd01-01")
     ap.add_argument("--reader", default="research-script-run")
     ap.add_argument("--run-date", dest="run_date", default="2026-11-12")
+    ap.add_argument("--no-fetch", action="store_true")
     ap.add_argument("--no-ledger", action="store_true")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
