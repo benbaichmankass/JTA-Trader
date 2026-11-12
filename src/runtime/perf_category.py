@@ -19,6 +19,9 @@ from src.runtime.provenance import MEASURED, classify_pnl
 from src.runtime.r_provenance import r_multiple_provenanced
 
 CATEGORIES = ("live", "prop", "paper_portfolio", "paper_testing")
+#: The four books, named exactly as the SPA / UI-FOUR-BOOKS name them (dashboard#232).
+BOOK_LABELS = {"live": "Live money", "prop": "Prop", "paper_portfolio": "Paper portfolio", "paper_testing": "Paper testing"}
+BREAKDOWNS = ("strategy", "asset_class", "account")
 MIN_N_R = 10          # the perf-review --min-n: fewer R-graded rows than this is flagged insufficient_n
 MIN_SNAPSHOTS = 24    # hourly balance snapshots needed before capital_utilisation is computed
 PROP_PNL_BUCKET = "ESTIMATED"  # prop pnl is phone/sheet-reported, not a venue-API close: never MEASURED
@@ -209,3 +212,33 @@ def pnl_series(rows: Iterable[Mapping[str, Any]], *, category: str, per_trade: b
         p["cum_pct"] = round(p["cum_pnl_usd"] / start_capital * 100.0, 4) if ok else None
         p["cum_pct_all_rows"] = round(p["cum_pnl_all_rows_usd"] / start_capital * 100.0, 4) if ok else None
     return pts
+
+
+def breakdown_key(row: Mapping[str, Any], by: str) -> str:
+    """Group key for ``breakdown=strategy|asset_class|account``; a missing value groups under ``unknown`` (visible, never dropped)."""
+    if by == "strategy":
+        return str(row.get("strategy_name") or "unknown")
+    if by == "account":
+        return str(row.get("account_id") or "unknown")
+    if by == "asset_class":
+        from src.core.instrument_class import asset_class_for_symbol
+        return str(asset_class_for_symbol(row.get("symbol")) or "unknown")
+    raise ValueError(f"unknown breakdown {by!r}; valid: {list(BREAKDOWNS)}")
+
+
+def breakdown_metrics(rows: Iterable[Mapping[str, Any]], *, category: str, by: str, window_days: Optional[float],
+                      snapshots: Optional[Mapping[str, Mapping[str, Any]]] = None) -> List[Dict[str, Any]]:
+    """One ``category_metrics`` block per group (same definitions as the category row, so the groups' n_closed and net P&L
+    sum to the category's). Capital utilisation needs an equity record: only the ``account`` breakdown has one (that
+    account's own snapshots); strategy / asset_class groups span accounts with no per-group equity, so it is null with
+    read_state ``no_equity_record`` -- never 0."""
+    groups: Dict[str, List[Mapping[str, Any]]] = {}
+    for r in rows:
+        groups.setdefault(breakdown_key(r, by), []).append(r)
+    out: List[Dict[str, Any]] = []
+    for key in sorted(groups):
+        snap = {key: snapshots[key]} if by == "account" and snapshots and key in snapshots else None
+        m = category_metrics(groups[key], category=category, window_days=window_days, snapshots=snap)
+        m["group"] = key
+        out.append(m)
+    return out

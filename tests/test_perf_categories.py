@@ -91,7 +91,7 @@ def env(tmp_path, monkeypatch):
     make_canonical_db(db)
     monkeypatch.setattr(router, "_DB_PATH", db)
     monkeypatch.setattr(router, "_accounts", lambda: ACCOUNTS)
-    monkeypatch.setattr(router, "_prop_rows", lambda ids, since: {"rows": [], "n_null_pnl": 0})
+    monkeypatch.setattr(router, "_prop_rows", lambda ids, since, until=None: {"rows": [], "n_null_pnl": 0})
     return db
 
 
@@ -222,3 +222,66 @@ def test_pnl_series_pure_daily_bucketing_and_nonpositive_capital():
         ("2026-11-08", 3.0, 3.0, 2, 3.0), ("2026-11-09", 4.0, 7.0, 1, 7.0)]
     assert pc.pnl_series(rows, category="live", per_trade=False, measured_only=True, start_capital=0.0)[0]["cum_pct"] is None
     assert pc.pnl_series([], category="live", per_trade=True, measured_only=True, start_capital=None) == []
+
+
+# ---- operator 2026-11-11: date-range picker, book labels, breakdowns, raw-query cross-check ----------------------------------
+
+def _day(days_ago):
+    return (datetime.now(timezone.utc) - timedelta(days=days_ago)).isoformat()
+
+
+def test_start_end_range_echo_inclusive_and_400s(env, client):
+    inside, before = _day(5), _day(20)
+    _trade(env, pnl=3.0, closed_at=inside, timestamp=inside)
+    _trade(env, pnl=8.0, closed_at=before, timestamp=before)
+    s, e = inside[:10], inside[:10]                                  # a one-day range is inclusive of that whole UTC day
+    d = client.get("/api/bot/performance/categories", params={"start": s, "end": e}).json()
+    assert d["start"] == s and d["end"] == e and d["window"] is None and d["read_state"] == "measured"
+    live = d["categories"][0]
+    assert live["label"] == "Live money" and live["n_closed"] == 1 and live["net_pnl_usd"] == 3.0
+    assert [c["label"] for c in d["categories"]] == ["Live money", "Prop", "Paper portfolio", "Paper testing"]
+    assert "n_closed=1" in d["population"]["text"] and s in d["population"]["text"]
+    wide = client.get("/api/bot/performance/categories", params={"start": before[:10], "end": inside[:10]}).json()
+    assert wide["categories"][0]["n_closed"] == 2
+    for bad in ({"start": "2026-02-30"}, {"start": "nope", "end": "2026-01-01"}, {"start": "2026-03-02", "end": "2026-03-01"},
+                {"end": "2026-03-01"}, {"start": s, "breakdown": "color"}):
+        assert client.get("/api/bot/performance/categories", params=bad).status_code == 400, bad
+
+
+def test_breakdowns_sum_to_the_category_and_group_keys(env, client):
+    _trade(env, pnl=10.0, symbol="BTCUSDT", strategy_name="s_a")
+    _trade(env, pnl=-4.0, symbol="ETHUSDT", strategy_name="s_b")
+    _trade(env, pnl=2.0, symbol="BTCUSDT", strategy_name="s_a", account_id="a_live2")
+    accts = dict(ACCOUNTS, a_live2={"account_class": "real_money"})
+    import pytest as _p
+    mp = _p.MonkeyPatch()
+    mp.setattr(router, "_accounts", lambda: accts)
+    try:
+        for by, keys in (("strategy", {"s_a", "s_b"}), ("account", {"a_live", "a_live2"})):
+            live = client.get("/api/bot/performance/categories", params={"window": "30d", "breakdown": by}).json()["categories"][0]
+            assert {g["group"] for g in live["groups"]} == keys
+            assert sum(g["n_closed"] for g in live["groups"]) == live["n_closed"] == 3
+            assert round(sum(g["net_pnl_usd"] for g in live["groups"]), 4) == live["net_pnl_usd"] == 8.0
+            assert all(g["capital_utilisation"] is None for g in live["groups"])      # no snapshots: null, never 0
+        ac = client.get("/api/bot/performance/categories", params={"breakdown": "asset_class"}).json()["categories"][0]
+        assert sum(g["n_closed"] for g in ac["groups"]) == 3
+        assert "groups" not in client.get("/api/bot/performance/categories").json()["categories"][0]
+    finally:
+        mp.undo()
+
+
+def test_category_cross_check_against_a_raw_query(env, client):
+    """net P&L and n_closed for 'live' equal a hand-written SQL over the same journal (the review's raw definition)."""
+    import sqlite3
+    for p in (10.0, -4.0, 6.5):
+        _trade(env, pnl=p)
+    _trade(env, pnl=-1.0, account_id="a_paper", account_class="paper")                # another book: not in 'live'
+    _trade(env, pnl=50.0, is_backtest=1)                                              # backtest: not a trade
+    con = sqlite3.connect(str(env))
+    n, tot = con.execute("SELECT COUNT(*), SUM(pnl) FROM trades WHERE status='closed' AND COALESCE(is_backtest,0)=0 "
+                         "AND account_id='a_live' AND pnl IS NOT NULL").fetchone()
+    con.close()
+    live = client.get("/api/bot/performance/categories", params={"window": "30d"}).json()["categories"][0]
+    assert live["n_closed"] == n == 3 and live["net_pnl_usd"] == round(tot, 4) == 12.5
+    assert round(live["measured_usd"] + (live["not_measured_usd"] or 0.0), 4) == live["net_pnl_usd"]
+    assert live["max_drawdown_usd"] == 4.0                                            # 10 -> 6 off the peak
