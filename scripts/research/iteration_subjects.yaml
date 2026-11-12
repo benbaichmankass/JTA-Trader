@@ -41,6 +41,42 @@ ml_model:
     unit: RQ-20261101-fs06-01
     value: T1..T4 queued
     shape: no_reading
+- id: ml-entry-eq-struct
+  title: Foxhound-4 -- ENTRY-EQ structure-exit 5-seed ensemble (ml_entry_eq_struct, ml-entry-eq-struct-ens5-v1), the live alpaca_live + alpaca_portfolio leg
+  verdict: pass_unconfirmed
+  basis: 'RQ-20261107-98e3-06 PASS (+0.49 R/trade, n 207, confirm 2025-07-15..2026-10-31, third read of the window, month-clustered t ~2.06, 75 of 207
+    trades in 2026-03; dev OOF tau 0.25 +0.132 R n 1691). Forward read RQ-20261108-98e3-13 not before 2027-04-01. Listed although on real money
+    (an exception to the header rule, lane ALPACA-LIVE-BOOK-PLAN 2026-11-11): the operator asked for a plan to find something better
+    (2026-11-11 ~22:40Z), its demotion signal is blank (the DSR probation tool prints nothing for this leg) and its evidence is not measured on
+    the cash book it trades. Programme P8 (research/programmes/08-alpaca-live-book.yaml) owns its iteration.'
+  money: real_money
+  lever_evidence:
+  - family: threshold
+    lever: tau
+    unit: RQ-20261107-98e3-03
+    value: 0.20 / 0.25 / 0.30 / 0.40 (single seed, dev)
+    response: +0.083 n 3191 / +0.109 n 1943 / +0.197 n 1122 / +0.204 n 342 dev OOF R/trade; fold 3 negative at every tau
+    shape: noisy
+    note: per-trade only; the ensemble at 0.30 read +0.190 n 954 (98e3-05) but the seed range at 0.30 was 0.152 (98e3-04), so 06 restricted the grid
+  - family: recipe
+    lever: seed_ensemble
+    unit: RQ-20261107-98e3-05
+    value: 5-seed mean vs single seeds
+    response: tau 0.20 ensemble +0.0919 vs seed range 0.047 (98e3-04)
+    shape: single_point
+  - family: features
+    lever: config_A_vs_B
+    unit: RQ-20261108-98e3-14
+    value: own+market (A) vs own+cross-sectional (B)
+    response: B ensemble tau 0.25 +0.118 n 1688; graded indeterminate
+    shape: flat
+  - family: horizon
+    lever: structure_exit_pivot
+    unit: RQ-20261108-98e3-16
+    value: pivot 8 vs live pivot 5
+    response: pivot 8 tau 0.25 +0.109 n 1833 vs pivot 5 +0.132 n 1691 (dev)
+    shape: single_point
+    note: pivot 3 (RQ-20261108-98e3-15) is queued after a producer failure
 - id: ml-brackets
   title: BRACKETS decision model (learned SL/TP cell per decision)
   verdict: indeterminate
