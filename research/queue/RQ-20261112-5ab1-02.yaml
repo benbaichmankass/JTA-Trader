@@ -2,7 +2,7 @@
 # Decision rule registered BEFORE any run of this instrument on this leg. Gates this adds or changes: none.
 id: RQ-20261112-5ab1-02
 title: 'slv_trend_1h real-money promotion: does the leg carry a PREDICTIVE take-profit (tp_prediction_derive, dukascopy 1h 2018-06..2026-10-15) to replace the 50 R sentinel before it reaches alpaca_live + alpaca_portfolio?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-LADDER
@@ -89,3 +89,12 @@ related:
 - RQ-20261101-78fc-18
 - RQ-20261112-5ab1-01
 - scripts/research/tp_prediction_derive.py
+grading:
+  verdict: indeterminate
+  graded_at: '2026-11-12'
+  reason: 'MEASURED: slv_trend_1h dukascopy 1h 2018-06-01..2026-10-15, config-exact uncapped no-TP replay, n 398 / n_oos 160; K* 6.0 R
+    (median IS venue cap 11.0 R), reach_IS 0.130 / reach_OOS 0.175, calibration gap 0.045, OOS mean net 0.420 (K*) vs 0.408 (sentinel)
+    R/trade, delta +0.012, CI95 [-0.142, +0.152] straddles the -0.05 margin. Not a PASS: per the rule the lane declares nothing; 6 R is
+    the operator''s to declare. Note: every K''s IS mean net is negative (2018..~2023 trades); the leg''s edge is in the later span.'
+  evidence:
+  - research/results/RQ-20261112-5ab1-02/local-20261112.jsonl

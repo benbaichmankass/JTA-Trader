@@ -1316,8 +1316,9 @@ accounts:
       - iwm_trend_long_1d              # ETF-breadth daily sweep (2026-06-20,
       - tlt_pullback_1d                # Tier-3): IWM small-cap trend +
       - ief_pullback_1d                # TLT/IEF bond pullback (paper money).
-      - slv_trend_1h                   # Intraday ETF pilot (2026-06-20 § 0e,
-                                       # Tier-3): SLV 1h bidirectional trend.
+      # slv_trend_1h REMOVED 2026-11-12 (SLV-1H-PROMOTE, operator "I answer that I do want to promote silver."): promoted to
+      # alpaca_live + alpaca_portfolio, and production is not general paper (OPERATING-PLAN § 2 "Three strategy statuses").
+      # ROLLBACK with alpaca_live's line. Was: Intraday ETF pilot (2026-06-20 § 0e, Tier-3): SLV 1h bidirectional trend.
                                        # 2026-10-05 MD-S1-CUT-ON-STAGE0-FAIL (operator
                                        # grant 2026-10-04, PR #16548) REMOVED 5 legs:
                                        # gld_pullback_1h (R-CUT-AFFORD: alpaca_live
@@ -1433,7 +1434,10 @@ accounts:
     # enabled (MEASURED 2026-11-01 broker_account_status: ACTIVE, shorting_enabled true, multiplier 4, flat).
     # ROLLBACK: add `side_filter: long` back (Tier 3).
     # 2026-11-08 ML-ENTRY-EQ-STRUCT-LIVE (Tier-3): ml_entry_eq_struct mirrors alpaca_live (superset rule; see alpaca_live's roster comment). ROLLBACK with alpaca_live's line.
-    strategies: [tqqq_trend_long_1d, ml_entry_eq_struct]   # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3; OPERATOR popup ~11:10Z, relayed by Manager Session 2026-11-06a, verbatim "Probe with tqqq_trend_long (Recommended)"):
+    # 2026-11-12 SLV-1H-PROMOTE (Tier 3; OPERATOR chat ~10:32Z, relayed by Manager Session 2026-11-11a / AM-TRADING, verbatim "I answer that I do want to promote silver."): slv_trend_1h mirrors alpaca_live
+    # (superset rule). THIS book trades its SHORT side too (no side_filter, shorting enabled); alpaca_live is a long-only cash book and refuses
+    # shorts. ROLLBACK with alpaca_live's line.
+    strategies: [tqqq_trend_long_1d, ml_entry_eq_struct, slv_trend_1h]   # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3; OPERATOR popup ~11:10Z, relayed by Manager Session 2026-11-06a, verbatim "Probe with tqqq_trend_long (Recommended)"):
                                        # MECHANICS-ONLY EXCEPTION (kind=mechanics), NOT an edge bet and NOT a promotion (no committed DSR/trial-ledger record for tqqq_trend_long_1d; PROD-LEGS-DSR-DECISION did not measure it). Mirror of alpaca_live (superset rule: alpaca_portfolio carries every alpaca_live leg).
                                        # Purpose: ONE real-money GTC-bracket trade on alpaca_live (entry booked at the venue fill once #23777 lands, bracket at
                                        # the broker, venue exit, correct close reason, graded). REMOVE after that ONE trade closes and is graded: set this back
@@ -1562,7 +1566,14 @@ accounts:
     # 5-seed structure-exit ensemble that PASSED RQ-20261107-98e3-06 (evidence docs/research/ml-entry-eq-structure-ensemble-evidence-and-proposal-2026-11-08.md), on REAL MONEY + its
     # mirror (alpaca_portfolio). NOT alpaca_paper. New mechanics (5-booster serve + SL-only structure stop) prove themselves on ONE small trade: sizing is the account's existing risk_pct
     # on a cash book (whole shares, 0.9 cash wall), no new knob. ROLLBACK: delete `ml_entry_eq_struct` from this list AND alpaca_portfolio's (strict equality) and `enabled: false` on the leg.
-    strategies: [tqqq_trend_long_1d, ml_entry_eq_struct]   # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3; OPERATOR popup ~11:10Z, relayed by Manager Session 2026-11-06a, verbatim "Probe with tqqq_trend_long (Recommended)"):
+    # 2026-11-12 SLV-1H-PROMOTE (Tier 3; OPERATOR chat ~10:32Z, relayed by Manager Session 2026-11-11a / AM-TRADING, verbatim "I answer that I do want to promote silver."): slv_trend_1h on REAL MONEY + its
+    # mirror. Lifts the 2026-08-24 standing demote (see the rewritten block below). Evidence: comms/strategy_evidence/slv_trend_1h.json (rebuilt
+    # 2026-11-12, faithful, net_r_oos +44.71 R over n 69, 4/4 folds, net of fee 0 / slippage 5 bps PLACEHOLDER / funding 0; RULE-D1 pass) +
+    # holdout RQ-20261101-78fc-18 CONFIRMED (+35.99 R over n 104; long side +27.64 R / 65). LONG side only here (side_filter long, venue
+    # shorting_enabled false); the short side trades on alpaca_portfolio. Mechanics proven (config/mechanics_paths.yaml, alpaca_equity_bracket_v1):
+    # no paper soak; the first live fill is the one-trade check. TP: 50 R sentinel kept, RQ-20261112-5ab1-02 INDETERMINATE (K* 6 R); the
+    # operator declares or not. ROLLBACK: delete `slv_trend_1h` here AND on alpaca_portfolio, and restore `- slv_trend_1h` on alpaca_paper.
+    strategies: [tqqq_trend_long_1d, ml_entry_eq_struct, slv_trend_1h]   # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3; OPERATOR popup ~11:10Z, relayed by Manager Session 2026-11-06a, verbatim "Probe with tqqq_trend_long (Recommended)"):
                                        # MECHANICS-ONLY EXCEPTION (kind=mechanics), NOT an edge bet and NOT a promotion (no committed DSR/trial-ledger record for tqqq_trend_long_1d; PROD-LEGS-DSR-DECISION did not measure it). Long-only via side_filter; existing risk_pct sizing; no new knob.
                                        # Purpose: ONE real-money GTC-bracket trade on alpaca_live (entry booked at the venue fill once #23777 lands, bracket at
                                        # the broker, venue exit, correct close reason, graded). REMOVE after that ONE trade closes and is graded: set this back
@@ -1772,13 +1783,13 @@ accounts:
       # lists under strict ordered equality). Re-adding it is a fresh Tier-3
       # decision, not an extension of this one.
       #
-      # ⚠️ slv_trend_1h IS NOT HERE AND MUST NOT BE PROPOSED BACK, and it is the
-      # trap in this set: it has the BEST long-flow profile of any affordable
-      # candidate (longs in every month including September, 116/116 sizing), so
-      # ranking by activity puts it near the top. Its blocker is a standing
-      # Tier-3 DEMOTE (operator, 2026-08-24: 0 wins in 13 closed, -$5,375), taken
-      # specifically to keep the fleet's worst leg off the account being funded.
-      # Same shape as the USO constraint recorded above, and it holds the same way.
+      # slv_trend_1h: the 2026-08-24 standing Tier-3 DEMOTE (0 wins in 13 closed, -$5,375 on paper) is LIFTED by the
+      # operator, 2026-11-12 ~10:32Z, verbatim "I answer that I do want to promote silver." (relayed by Manager Session
+      # 2026-11-11a; recorded on PR1111-SURVIVOR-PROMOTIONS). Why the demote existed, and why it no longer holds: the 09-29
+      # review (as relayed by AM-TRADING) found every close in that window exited exchange_flat_reconciled -- the fleet exit-protection defect,
+      # not the strategy -- and a live/paper book never establishes edge (OPERATING-PLAN § 2). The leg is now on this
+      # roster on its Stage-0 record + confirmed holdout (see the roster comment above). This replaces the former
+      # "MUST NOT BE PROPOSED BACK" paragraph; the USO constraint above is NON-financial and is UNCHANGED.
       #
       # ⚠️ NO `symbols:` EDIT IS REQUIRED. This paragraph has now been wrong
       # TWICE in opposite directions, so read the dates.

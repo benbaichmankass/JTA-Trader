@@ -2568,8 +2568,13 @@ strategies:
     # having to re-derive the leg from scratch. This is the sanctioned demotion
     # per CLAUDE.md § "The two execution gates".
     #
-    # NOTE it routes to `alpaca_live` (real_money) as well as the paper books —
-    # so this also removes the fleet's worst leg from the account being funded.
+    # ⚠️ SUPERSEDED 2026-11-12 (SLV-1H-PROMOTE, Tier 3; OPERATOR chat ~10:32Z, relayed by Manager Session 2026-11-11a,
+    # verbatim "I answer that I do want to promote silver."): the 08-24 demote above is LIFTED. It was decided on paper-book
+    # P&L whose closes (per AM-TRADING's relay of the 09-29 review) all exited exchange_flat_reconciled, the fleet
+    # exit-protection defect; a book never establishes edge. The leg is now PRODUCTION on alpaca_live + alpaca_portfolio
+    # (off alpaca_paper) on comms/strategy_evidence/slv_trend_1h.json (rebuilt 2026-11-12, +44.71 R n 69, 4/4 folds) + holdout
+    # RQ-20261101-78fc-18 (+35.99 R n 104). The paragraph above is kept as the record. tp_r 50 below is still the sentinel:
+    # RQ-20261112-5ab1-02 INDETERMINATE (K* 6 R, calibrated; OOS delta CI [-0.142, +0.152]); declaring 6 R is the operator's.
     model: null
     signal_prefixes: [slv_trend]
     enabled: true
