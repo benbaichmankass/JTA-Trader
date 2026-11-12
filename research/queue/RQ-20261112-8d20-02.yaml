@@ -26,9 +26,9 @@ power:
   sd: 1.0
   design: one_sample
   alpha: 0.05
-  power: 0.5
+  power: 0.8
   basis: 'ESTIMATE: the confirming read took n 207 decisions in total; strong daily downtrends in a long-only liquid-ETF pool are rare, so the primary
-    cell is expected to be small (tens). An INDETERMINATE is the likely outcome and is a first-class result.'
+    cell is expected to be small (tens). An INDETERMINATE is the likely outcome and is a first-class result. power 0.5 -> 0.8 on unblocking (2026-11-12): research_queue.required_n has no 0.5 floor, so the gate read the unit as unverifiable; at 0.8 the floor exceeds expected_n and the unit grades ACCRUING via its own feasibility.source none + accrual_basis. The decision rule (CT40 n >= 40) is unchanged.'
   feasibility:
     source: none
     accrual_basis: Replays Alpaca history on the runner; nothing accrues.
