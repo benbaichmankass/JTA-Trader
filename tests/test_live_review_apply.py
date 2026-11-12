@@ -402,6 +402,8 @@ def wired(monkeypatch):
     monkeypatch.setattr(lra, "_get_package", lambda db, pid: dict(db.pkg) if pid == "P" else None)
     monkeypatch.setattr(lra, "_prop_tickets", lambda pid: [dict(t) for t in state["tickets"]])
     monkeypatch.setattr(lra, "_is_phone", lambda aid: aid == "breakout_2")
+    state["venue_sl"] = {}
+    monkeypatch.setattr(lra, "venue_prop_stop", lambda aid, sym, d, now=None: state["venue_sl"].get(aid))
 
     def _rm(aid, cfg):
         risk = {"live_review_min_buffer_atr": state["buffers"][aid]} if aid in state["buffers"] else {}
@@ -498,6 +500,60 @@ def test_account_types_route_to_their_own_executors(wired):
     assert by["breakout_2"]["account_class"] == "phone" and by["breakout_2"]["executed"] is True
     assert sorted(e[0] for e in wired["exec"]) == ["alpaca", "bybit", "phone", "prop_vm"]
     assert res["package_sl_moved"] is True         # both trade legs applied the same level
+
+
+# PHONE-LIVE-ACCOUNT-FEED (2026-11-11): a prop-only package is `emitted` while its tickets are live.
+EMITTED = {**PKG, "status": "emitted"}
+ACCOUNTS_V = {**ACCOUNTS, "velotrade_1": {"exchange": "breakout", "type": "prop", "mode": "live", "risk": {}}}
+
+
+def _prop_tk(tid, account, sl=0.2200, status="filled"):
+    return {"ticket_id": tid, "account_id": account, "order_package_id": "P", "status": status, "sl": sl,
+            "symbol": "ADAUSDT", "meta": None}
+
+
+def test_a_prop_only_emitted_package_reaches_every_prop_account(wired):
+    """The SOL short pkg-50f5eed272f64197 (tradeify_1 + velotrade_1) refused three directed tightens as
+    'not open' because a prop-only package is stamped `emitted`; it must reach each account's executor."""
+    db = _ApplyDB([], EMITTED)
+    wired["tickets"] = [_prop_tk("tk1", "tradeify_1"), _prop_tk("tk2", "velotrade_1")]
+    res = lra.run(_intent(), apply=True, db=db, accounts=ACCOUNTS_V, strategies=STRATS,
+                  review_cfg={"apply_mode": "apply"}, granted={lri.MANDATE_ID}, write_log=False, state={})
+    assert "not open" not in str(res.get("detail"))
+    assert sorted(wired["exec"]) == [("prop_vm", "tradeify_1", 0.2100), ("prop_vm", "velotrade_1", 0.2100)]
+    assert res["package_sl_moved"] is False and db.package_writes == []   # no trade leg: the shared stop never moves
+
+
+def test_an_emitted_package_with_no_live_ticket_is_still_not_open(wired):
+    db = _ApplyDB([], EMITTED)
+    res = _run(db, wired)
+    assert res["exit"] == lra.EXIT_REFUSED and "not open" in res["detail"] and wired["exec"] == []
+
+
+def test_package_live_state_reads_could_not_look_when_tickets_are_unreadable(monkeypatch):
+    def boom(pid):
+        raise RuntimeError("db locked")
+    monkeypatch.setattr(lra, "_prop_tickets", boom)
+    from src.prop import prop_journal
+    monkeypatch.setattr(prop_journal, "tables_present", lambda: True)
+    assert lra.package_live_state(EMITTED) == lra.PKG_COULD_NOT_LOOK
+    monkeypatch.setattr(prop_journal, "tables_present", lambda: False)   # no prop journal at all
+    assert lra.package_live_state(EMITTED) == lra.PKG_NOT_LIVE
+    assert lra.package_live_state(PKG) == lra.PKG_LIVE
+    assert lra.package_live_state({**PKG, "status": "closed"}) == lra.PKG_NOT_LIVE
+    assert lra.package_live_state(None) == lra.PKG_NOT_LIVE
+
+
+def test_a_hand_moved_venue_stop_is_the_legs_stop(wired):
+    """The venue read (MEASURED account_status) beats the ticket's instructed stop: a stop the operator
+    moved by hand to 0.2150 makes a 0.2170 'tighten' a LOOSEN for that account, refused; 0.2100 applies."""
+    db = _ApplyDB([], EMITTED)
+    wired["tickets"] = [_prop_tk("tk1", "tradeify_1")]
+    wired["venue_sl"]["tradeify_1"] = 0.2150
+    loose = _run(db, wired, new_sl=0.2170)
+    assert wired["exec"] == [] and loose["accounts"][0]["verdict"] != "approve"
+    _run(db, wired, new_sl=0.2100)
+    assert wired["exec"] == [("prop_vm", "tradeify_1", 0.2100)]
 
 
 def test_recommend_mode_computes_but_never_executes(wired):

@@ -229,6 +229,9 @@ SITE_PUBLIC_PREFIXES: tuple[str, ...] = (
     "/api/bot/prop/phone/",
 )
 _SAFE_METHODS = frozenset({"GET", "HEAD"})
+#: The SSE push stream (routers/stream.py). With the gate on it also takes ``?ticket=`` (an EventSource
+#: cannot set headers), exactly as ``WS /ws/market`` does.
+STREAM_PATH = "/api/bot/stream"
 
 # POST-only carve-outs (SITE-AUTH step (i), 2026-11-11). Each of these routes
 # checks its OWN service token inside the router and fails CLOSED (503 when the
@@ -237,6 +240,7 @@ _SAFE_METHODS = frozenset({"GET", "HEAD"})
 #   POST /api/bot/work/decision                 -> work._require_decision_write_token
 #   POST /api/bot/work/items[/<id>/set|note|close] -> work_items._require_work_store_token
 #   POST /api/bot/live-review/rows               -> live_review_direct (work-store token)
+#   POST /api/bot/ops/actions                   -> work_items._require_work_store_token (ops_channel)
 # Their callers are non-browser services (alert posters, the Telegram decision
 # bot, the console MCP, work.py) that hold that token and no ws_ session. The gate
 # lets the service bearer through on GET/HEAD only, so without this list arming
@@ -249,9 +253,18 @@ SITE_PUBLIC_POST_PATHS: frozenset[str] = frozenset({
     "/api/bot/work/decision",
     "/api/bot/work/items",
     "/api/bot/live-review/rows",   # -> live_review_direct: work-store token (TRADE-ACTION-DIRECT-PATH)
+    "/api/bot/ops/actions",
 })
 SITE_PUBLIC_POST_PREFIXES: tuple[str, ...] = (
     "/api/bot/work/items/",
+)
+# GET carve-out (MANAGER-VM-DIRECT-OPS): the ops job read. Its router checks the
+# SAME fail-closed X-Work-Store-Token as the POST (a job record carries script
+# output, so it is not open either); the session that submitted the job holds
+# that token and no ws_ session. Same rule as above: only a route whose router
+# fails closed on its own credential (tests/test_web_site_auth_write_carveouts.py).
+SITE_TOKEN_GET_PREFIXES: tuple[str, ...] = (
+    "/api/bot/ops/jobs/",
 )
 
 
@@ -297,6 +310,8 @@ def require_site_session(conn: HTTPConnection) -> None:
         return
     if method == "POST" and _is_site_public_post(conn.url.path):
         return      # the router's own fail-closed token check decides
+    if method in _SAFE_METHODS and conn.url.path.startswith(SITE_TOKEN_GET_PREFIXES):
+        return      # the router's own fail-closed token check decides
 
     token = _bearer(conn)
     if scope["type"] == "websocket":
@@ -308,6 +323,15 @@ def require_site_session(conn: HTTPConnection) -> None:
                 web_sessions.validate_session(token)):
             return
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail={"error": "invalid_session"})
+
+    if method == "GET" and conn.url.path == STREAM_PATH and not token:
+        # A browser EventSource cannot send Authorization: it passes the same single-use ws-ticket
+        # /ws/market takes (UI-TRADING-PUSH T1). Same check, same store, GET on this one path only.
+        ticket = conn.query_params.get("ticket", "")
+        sid = web_sessions.mem_take("wsticket", ticket) if ticket else None
+        if sid is not None and web_sessions.session_alive(sid):
+            return
+        raise _UNAUTH
 
     if token.startswith(web_sessions.SESSION_TOKEN_PREFIX):
         if _session_row_allowed(web_sessions.validate_session(token)):

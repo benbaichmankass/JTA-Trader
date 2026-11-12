@@ -150,8 +150,9 @@ def _mandates():
 
 def test_every_exception_is_a_granted_single_package_or_paper_account_operator_mandate():
     """A package-scoped exception names ONE package and expires with it (MD-LTR-ADA-AUTO). An account-scoped
-    one (MD-LTR-PAPER-AUTO, operator 2026-11-01) names only PAPER, non-mirror accounts in config/accounts.yaml:
-    real money, the mirrors (paper_role portfolio) and prop are never in an exception's scope."""
+    one names only PAPER non-mirror accounts (MD-LTR-PAPER-AUTO, operator 2026-11-01) or PROP accounts
+    (MD-LTR-PROP-AUTO, operator 2026-11-12 "Standing permission granted", de-risking classes only) in
+    config/accounts.yaml: real money and the mirrors (paper_role portfolio) are never in an exception's scope."""
     import yaml
 
     from src.runtime import ltr_auto_mandate as am
@@ -171,7 +172,10 @@ def test_every_exception_is_a_granted_single_package_or_paper_account_operator_m
             assert sc["accounts"], m["id"]
             for aid in sc["accounts"]:
                 cfg = accts.get(aid) or {}
-                assert str(cfg.get("account_class")).lower() == "paper", (m["id"], aid)
+                cls = str(cfg.get("account_class")).lower()
+                assert cls in ("paper", "prop"), (m["id"], aid)
+                if cls == "prop":   # prop: the operator granted the de-risking classes only (2026-11-12)
+                    assert set(m["account_scope"]["actions"]) <= {"close", "partial_close", "tighten_sl"}, m["id"]
                 # a Stage-2 mirror is account_class paper too: it is never in an exception's scope
                 assert str(cfg.get("paper_role") or "").lower() != "portfolio", (m["id"], aid)
         assert set(sc["actions"]) <= set(rows_lib.ADVICE_ONLY_ACTIONS) | set(w.DISPATCHABLE_ACTIONS)
