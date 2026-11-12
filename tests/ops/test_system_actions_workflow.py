@@ -1199,7 +1199,7 @@ def test_security_posture_report_is_read_only_and_never_prints_key_material():
 
     src = (Path(__file__).resolve().parents[2]
            / "scripts/ops/security_posture_report.sh").read_text()
-    code = "\n".join(l for l in src.splitlines() if not l.lstrip().startswith("#"))
+    code = "\n".join(ln for ln in src.splitlines() if not ln.lstrip().startswith("#"))
     for verb in (r"\brm\b", r"systemctl (restart|stop|start|enable|disable)",
                  r"apt(-get)? (install|upgrade|remove|update)", r"\bchmod\b",
                  r"\bchown\b", r"fail2ban-client (set|unban|stop)", r">\s*/etc/"):
