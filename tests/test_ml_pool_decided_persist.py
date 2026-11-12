@@ -15,10 +15,10 @@ import pandas as pd
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
-from src.runtime import ml_entry_eq_features as F
-from src.runtime import ml_pool_scoring as PS
-from src.units.strategies import ml_entry_eq as L
-from tests.test_ml_entry_eq_full_pool import CFG, _snap
+from src.runtime import ml_entry_eq_features as F  # noqa: E402
+from src.runtime import ml_pool_scoring as PS  # noqa: E402
+from src.units.strategies import ml_entry_eq as L  # noqa: E402
+from tests.test_ml_entry_eq_full_pool import CFG, _snap  # noqa: E402
 
 LEG = "ml_entry_eq_struct"
 
