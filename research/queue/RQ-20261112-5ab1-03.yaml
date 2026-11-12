@@ -3,7 +3,7 @@
 id: RQ-20261112-5ab1-03
 title: 'TP-DOCTRINE ITERATION, slv_trend_1h: does a REAL take-profit (tp_r 2/3/4/6, trail kept), selected on the earliest ~75% of
   2018-06..2026-10, stay net-positive net of the full cost stack on the held-back latest span? (RQ-20261104-7fdb-01 design)'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -137,3 +137,13 @@ related:
 - RQ-20261104-7fdb-02
 - RQ-20261101-78fc-18
 - RQ-20261112-5ab1-02
+grading:
+  verdict: pass
+  graded_at: '2026-11-12'
+  reason: 'MEASURED (dukascopy 1h 2018-06..2026-10-15, boundary 2024-09-17 21:14Z, share 0.25, not grown): discovery T2 n415 -26.20R 2/4
+    (ineligible), T3 n378 -7.37R 2/4 (ineligible), T4 n353 +7.64R 3/4 (eligible), T6 n329 +30.83R 3/4 (eligible, folds -22.65/+21.04/+10.69/+21.75)
+    -> T6 selected from 4; holdout read once: n 108, net +33.366R, expectancy +0.309R -> PASS/confirmed. Full window: T6 n438 +70.15R maxDD 36.0R
+    (59 take_profit / 115 trail_stop / 264 stop). DISCLOSED: the held-back span was read before for arm A (78fc-18) and contains the parameter-choice
+    data; a fresh-span confirmation remains RQ-20261104-7fdb-02.'
+  evidence:
+  - research/results/RQ-20261112-5ab1-03/local-20261112.jsonl
