@@ -1,7 +1,7 @@
 # Hand-authored 2026-11-12 by lane session_01AFoLuLwRU7eg9KzpMcxWu for rows PROP-PLAN-EV-6M + TRADEIFY-FUTURES-EVAL (Q4), dispatched by Manager Session 2026-11-11a. Decision rule registered BEFORE any run. Gates this adds or changes: none.
 id: RQ-20261112-09d2-06
 title: 'PROP-PLAN-EV-6M: standing 6-month expected return per prop firm and plan, for the book our prop accounts actually run, net of the full cost stack and against the zero-edge null'
-status: queued
+status: done
 cadence: weekly
 theme: new_strategy_prop
 priority: 1
@@ -79,3 +79,13 @@ related:
 - TRADEIFY-FUTURES-EVAL
 - RQ-20261112-09d2-02
 what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+last_dispatched_at: '2026-11-12'
+grading:
+  verdict: fail
+  decision_rule_id: RULE-RQ-20261112-09d2-06
+  graded_at: '2026-11-12'
+  grader: session_01AFoLuLwRU7eg9KzpMcxWu (lane TRADEIFY-FUTURES-EVAL / PROP-PLAN-EV-6M), by hand under the registered rule
+  evidence:
+  - research/results/RQ-20261112-09d2-06/local-20261112.jsonl
+  - comms/research/RQ-20261112-09d2-06/local-20261112/verdict.json
+  reason: 'No ROSTER cell is BUYABLE: every 6-month EV per purchase is negative and the book edge CI lower bound is -0.050 (n=620). Least-negative ROSTER plans: propr_turbo_1step -$9.06 (null -$18.78), breakout_turbo_1step -$9.79 (null -$16.03). The low-frequency trend book seldom passes an evaluation inside 182 days (ROSTER p_pass_eval 0.09-0.20), so the fee dominates. Weekly cadence: the same rule re-applies to refreshed ledgers.'

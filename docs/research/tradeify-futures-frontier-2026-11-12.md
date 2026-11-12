@@ -23,7 +23,8 @@ The operator asked on 2026-11-12 at about 08:05Z (verbatim): *"let me know when 
    - **No login through a VPS.**
 
    The compliant shape is our phone/PC executor pattern (the `breakout_2` precedent) on the operator's device. A TradersPost webhook bridge is the other option, but it is supported only by third-party sources.
-5. **Buy-point: not yet.** Do not buy an account now. § 5 lists the conditions. The earliest realistic date is set by the two data/infra rows below, not by the calendar.
+5. **Six-month EV across every prop plan the repo models: none is positive** (§ 6, RQ-20261112-09d2-06, 0/27 cells buyable). The least-negative are the cheap turbo 1-steps, around −$9 per purchase.
+6. **Buy-point: not yet.** Do not buy an account now. § 5 lists the conditions. The earliest realistic date is set by the two data/infra rows below, not by the calendar.
 
 ## 1. Account facts (public sources, fetched 2026-11-12)
 
@@ -175,6 +176,67 @@ Then buy the cheapest plan the survival result favours. Today's descriptive numb
 
 If one of those units then passes, conditions 2–4 take about 2–4 more weeks, mostly the executor. **The earliest plausible buy is therefore early-to-mid December 2026.** That is an estimate that holds only if a leg passes. The current promotion (code "NOV", ending 13 Nov) is not a reason to buy before condition 1.
 
+## 6. Which prop plan has the highest expected return over 6 months? (PROP-PLAN-EV-6M, RQ-20261112-09d2-06)
+
+**Answer: none is positive.**
+- Over a 182-day horizon, buying any prop plan the repo models loses money in expectation. That holds both for the book our three live prop accounts run (`trend_donchian_eth_4h` + `trend_donchian_sol_4h` + `ml_entry`) and for each leg alone.
+- 0 of 27 cells (9 rulesets × 3 books) clear the rule. The rule needs all three: EV > 0 at every seed, EV above the zero-edge null, and the book's edge CI lower bound > 0.
+- The least-negative plans are the cheap 3%-drawdown "turbo" 1-steps: Propr Turbo (−$9.06) and Breakout Turbo (−$9.79).
+- Tradeify futures plans sit at −fee, because no leg is eligible for them.
+
+**Model.**
+- Engine: `scripts/research/prop_ev_sim.py` account lives at `--horizon-days 182`: 3 seeds × 1,000 lives per cell, path mode.
+- Settings: risk 0.5% of start balance, daily-drawdown switch at 0.8, and the conservative current cost stack (11 bps commission, 3 bps slippage, 0.0003/day swap), applied the same way at every firm.
+- Null and edge clause: from `scripts/research/prop_gate.py`.
+- Runner: `scripts/research/prop_plan_ev_6m.py`.
+- Registration commit: f7bfc08da, pushed before the run.
+
+**Book (ROSTER) edge, cur arm:** n=620, mean +0.059R, 95% CI [−0.050, +0.168].
+
+| Plan (ruleset) | Fee | EV over 6 months, per purchase (mean / worst seed) | Zero-edge null | With rebuy, 6-month share | P(pass eval) | P(breach) | Verdict |
+|---|---|---|---|---|---|---|---|
+| Propr Turbo 1-step | $25 | −$9.06 / −$9.70 | −$18.78 | −$13.50 | 0.198 | 0.565 | NOT BUYABLE |
+| Breakout Turbo 1-step (`breakout_2`'s plan) | $20 | −$9.79 / −$10.83 | −$16.03 | −$14.80 | 0.194 | 0.544 | NOT BUYABLE |
+| Velotrade Pro 1-step | $32 | −$29.83 / −$30.95 | −$31.37 | −$45.27 | 0.138 | 0.480 | NOT BUYABLE |
+| Breakout 2-step | $45 | −$35.01 / −$36.12 | −$41.67 | −$39.27 | 0.163 | 0.227 | NOT BUYABLE |
+| Propr Classic 1-step | $60 | −$47.06 / −$47.91 | −$55.45 | −$53.04 | 0.159 | 0.234 | NOT BUYABLE |
+| HyroTrader (lenient) | $59 | −$50.42 / −$52.07 | −$55.85 | −$56.42 | 0.169 | 0.232 | NOT BUYABLE |
+| HyroTrader (strict) | $59 | −$50.49 / −$52.91 | −$56.42 | −$60.25 | 0.162 | 0.305 | NOT BUYABLE |
+| Velotrade Classic 1-step (`velotrade_1`'s plan) | $54 | −$50.74 / −$50.98 | −$52.94 | −$54.54 | 0.175 | 0.153 | NOT BUYABLE |
+| Tradeify 247 1-step 10K (`tradeify_1`'s plan) | $120 | −$108.80 / −$110.37 | −$116.63 | −$121.70 | 0.092 | 0.214 | NOT BUYABLE |
+| Tradeify futures Growth / Select / Lightning 50K | $145 / $165 / $492 | −fee (nothing eligible to trade) | — | — | — | — | NOT BUYABLE |
+
+The ETH4H-only and ML-only books rank the same way and are all negative. Full table: `comms/research/RQ-20261112-09d2-06/local-20261112/verdict.json`.
+
+**Why every plan loses over 6 months.**
+- The book is low-frequency: 136 ETH and 103 SOL trades in 3 years.
+- Inside 182 days it reaches the evaluation target only 9–20% of the time, so most lives end at the horizon still in evaluation, with the fee spent.
+- The earlier per-life results have no horizon, and a life can run for years. `trend_donchian_eth_4h` on `tradeify_1` showed +$112 per life in the 2026-11-06 re-test, and it still FAILed the V3 edge clause. The 6-month framing the operator asked for removes that tail.
+
+**Caveats.**
+- The ML ledger covers 1 year (2025-10..2026-09), while the trend ledgers cover 3 years.
+- Breakout's live risk is 0.35%, not the uniform 0.5% used here.
+- Commission is the current stack at every firm, not each firm's own.
+
+The unit has `cadence: weekly`, so the same rule re-applies to refreshed ledgers. A standing weekly re-run needs a queue template; that is noted on PROP-PLAN-EV-6M.
+
+## 7. The operator's four questions (row TRADEIFY-FUTURES-EVAL, 2026-11-10)
+
+1. **Is anything we already trade usable on the other Tradeify accounts?** No.
+   - The futures accounts force positions flat by 16:45 ET. Our futures legs hold for days, and MHG is not offered (§ 2).
+   - The crypto legs have no futures equivalent at Tradeify: there are no crypto futures.
+2. **What avenues does it open, such as a futures ML that could also run on IB?**
+   - The first futures ML (RQ-20261112-09d2-03) failed its holdout.
+   - An ML on CME micros would serve both IB (`ib_paper` already trades MES and MGC) and Tradeify, if it is session-flat.
+   - The next model needs real-contract intraday history: row FUT-CME-INTRADAY-HIST.
+   - No forex: Tradeify lists only the M6E and M6A micro FX futures, and we have no FX leg.
+3. **What builds are needed to add it to the roster, reusing the crypto Tradeify integration?** `TRADEIFY-WIRE` is DXtrade REST and does **not** carry over to Tradovate. The builds are:
+   - **TRADEIFY-FUT-EXECUTOR** (Tier 2, blocked): a Tradovate ticket/bracket executor on the operator's device, using the `breakout_2` phone-executor plumbing.
+   - **FUT-INTRADAY-DUKA-LANE**: the 15m/5m data lane.
+   - **FUT-CME-INTRADAY-HIST**: real CME history.
+   - A `config/prop_rulesets/tradeify_futures_*.yaml` with EOD-trailing drawdown support in `prop_ev_sim.py`. Today it raises on non-static drawdowns; this lane's simulator is the stand-in.
+4. **Which account option has the highest expected return over about 6 months?** None is positive (§ 6). The least-negative are the cheap turbo plans. Every Tradeify plan we modelled loses most of its fee in 6 months with the book we run.
+
 ## Units and rows
 
 | Id | What | Status |
@@ -184,6 +246,7 @@ If one of those units then passes, conditions 2–4 take about 2–4 more weeks,
 | RQ-20261112-09d2-03 | gbdt meta-label ML filter | done: **fail** |
 | RQ-20261112-09d2-04 | `ict_scalp_mgc_15m` session-flat transfer | blocked on FUT-INTRADAY-DUKA-LANE |
 | RQ-20261112-09d2-05 | Iteration: MNQ_OR15 on real CME MNQ | blocked on FUT-CME-INTRADAY-HIST |
+| RQ-20261112-09d2-06 | PROP-PLAN-EV-6M: 6-month EV per firm/plan | done: **fail** (0/27 buyable); weekly |
 
 **Harness:** `scripts/research/tradeify_futures_fit.py`. It is offline, imports nothing from `src/`, and fetches its own corpus.
 
