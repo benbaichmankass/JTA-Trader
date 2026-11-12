@@ -365,3 +365,12 @@ def test_prop_placed_row_is_fallback_opener(db):
     assert o["status"] == "placed" and c["id"] == cur.lastrowid
     t = tcs.prop_trade(o, c, None)
     assert t["timestamp"] == OPEN and t["closed_at"] == CLOSE      # no closed_at on the row -> reported_at
+
+
+def test_prop_brackets_partial_when_no_amendments_record():
+    """A prop opener with no `amendments` record: brackets must say partial, matching its own reasons."""
+    opener = {"id": 9, "account_id": "a", "ticket_id": None, "symbol": "SOLUSDT", "direction": "SELL",
+              "qty": 1.0, "entry_price": 87.0, "sl": 89.0, "tp": 80.0, "status": "filled", "opened_at": OPEN,
+              "reported_at": OPEN, "amendments": None}
+    b = tcs.brackets(tcs.prop_trade(opener, None, None), None, "1h")
+    assert "no_amendments_record" in b["partial_reasons"] and b["read_state"] == "partial"

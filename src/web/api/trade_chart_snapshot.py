@@ -281,8 +281,11 @@ def brackets(trade: Dict[str, Any], pkg: Optional[Dict[str, Any]], interval: str
         # prop: the ticket's own SL/TP amendments (before/after, with times) ARE this account's bracket history
         h = bh.build_prop_history(trade["_prop_opener"], interval)
         ups = [dict(u, scope="account") for u in h["updates"]] + acct
-        return {"read_state": "partial" if h["read_state"] != "measured" else "measured",
-                "partial_reasons": list(h["partial_reasons"]), "tp_history": h["tp_history"],
+        # partial whenever ANY reason is listed (build_prop_history says "measured" with "no_amendments_record";
+        # observed live on prop-trades/260 2026-11-12), so the block never contradicts its own reasons
+        reasons = list(h["partial_reasons"])
+        return {"read_state": "partial" if (reasons or h["read_state"] != "measured") else "measured",
+                "partial_reasons": reasons, "tp_history": h["tp_history"],
                 "levels": h["levels"], "updates": sorted(ups, key=lambda u: u["ts"])}
     if pkg is None:
         # no package: the trade row's own levels are all there is
