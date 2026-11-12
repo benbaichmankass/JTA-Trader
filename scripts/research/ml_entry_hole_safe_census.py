@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: research harness for row ML-ENTRY-HOLE-SAFE-ADOPT (manual / research-script-run); evidence in comms/research/ml_entry_hole_safe/
+# wiring: manual-only - one-shot evidence harness for row ML-ENTRY-HOLE-SAFE-ADOPT; its output is committed in comms/research/ml_entry_hole_safe/, re-run by hand if the lake or the registered policy changes
 """Census of hourly bar holes in the crypto 1h lake, legacy-vs-hole-safe table diff, and re-grade of the committed entry grades.
 
 Tier 1, offline, public Binance Vision klines only. Does NOT touch the holdout ledger (no claim_read): it re-scores windows the
@@ -88,6 +88,7 @@ def score(models: dict, tab: pd.DataFrame, rec: dict, tau: float) -> dict:
     t = tab[(tab.ts >= pd.Timestamp(rec["start"], tz="UTC")) & (tab.ts < pd.Timestamp(rec["end"], tz="UTC"))]   # last labelled day = window_end - 1 (a decision needs 24 forward bars; the grade run's data ended at window_end), matching the committed window_rows
     if t.empty:
         return {"window_rows": 0, "n": 0}
+    # provenance: predict — LightGBM Booster/LGBMRegressor .predict is the regressed net R of that side (the quantity policy() thresholds at tau), not a probability
     pl, ps = models["long"].predict(t[E.FEATURES]), models["short"].predict(t[E.FEATURES])
     r = E.summarize(E.policy(t, pl, ps, tau))
     keep = ("n", "mean_net_r", "sum_net_r", "se_net_r", "n_symbols", "by_side")
