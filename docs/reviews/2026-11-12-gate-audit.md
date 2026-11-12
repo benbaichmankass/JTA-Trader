@@ -85,7 +85,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Added:** 2026-06-01 bd3c1c8c44 fix(pipeline): bar-close debounce [Tier-2] (#2548)
 - **Operator authorization (NONE):** NONE FOUND (PERF-20260601-001 in comment; no operator quote)
 - **Hits, last 14 days:** not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)
-- **Cost of removing it:** no evidence found
+- **Cost of removing it:** It was added for PERF-20260601-001 (2026-06-01, #2548): repeat entry dispatches within one bar stacked positions. The reader judged that the open-package gate and the netting guard now cover that case; the lane did not re-verify it.
 - **Recommendation: REMOVE.** Duplicate of open-package + netting guards, unauthorized; risk of stacking is covered by those.
 - **Question:** No operator authorization found. Keep this gate? One entry attempt per strategy+symbol per closed timeframe bar; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
 

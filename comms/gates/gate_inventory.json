@@ -24,7 +24,7 @@
    "auth_search": "grep of docs/CLAUDE-RULES-CANONICAL.md, ARCHITECTURE-CANONICAL.md, OPERATING-PLAN-2026-09-21.md, config/mandates.yaml, docs/claude/work/checklist/*.json and code comments near the gate for gate name/file/distinctive words",
    "real_money": true,
    "hits_14d": "not measured: trade_journal.db / signals ledger live on the VM only; repo has no ledger covering 2026-10-29..11-12 (probed comms/*.jsonl, runtime_logs/, find *.db -> only a research backtest db)",
-   "removal_cost": "no evidence found",
+   "removal_cost": "It was added for PERF-20260601-001 (2026-06-01, #2548): repeat entry dispatches within one bar stacked positions. The reader judged that the open-package gate and the netting guard now cover that case; the lane did not re-verify it.",
    "rec": "REMOVE",
    "rec_why": "Duplicate of open-package + netting guards, unauthorized; risk of stacking is covered by those.",
    "trigger_case": false,
