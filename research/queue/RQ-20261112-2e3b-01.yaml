@@ -1,0 +1,138 @@
+# Hand-authored 2026-11-12 by lane ML-ENTRY-POPULATION-TEST (Tier 1), dispatched by AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F) for
+# Manager Session 2026-11-12a. Population FROZEN (comms/research/RQ-20261112-2e3b-01/freeze/population.json) and decision rule registered
+# BEFORE any run; no label, prediction or P&L in the window was computed by this lane before registration. Gates: none (a measurement;
+# its outcome feeds a Tier-3 proposal for strategies.yaml ml_entry.account_symbols, which AM-ML holds).
+id: RQ-20261112-2e3b-01
+title: 'ml_entry POPULATION test (operator rule 2026-11-04): pooled over every Bybit-tradable USDT perp the served ENTRY v1 model can score,
+  minus a liquidity/listing-age filter fixed before the run, each symbol charged its OWN cost stack, does the frozen model reach a pooled
+  mean net R per decision >= the deflated holdout bar on 2025-10-01..2026-10-31?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T1, M3, M6, M10 (docs/reference/trading-and-model-practice-principles.md): population-level (pooled) out-of-sample
+  decision value net of the full cost stack; a filter fixed before the run; square-root market impact (Almgren et al. 2005; Toth et al.
+  2011); the holdout ledger deflates a re-read window (HOLDOUT-DEFLATED-REUSE).'
+question: 'Operator rule 2026-11-04 (docs/CLAUDE-RULES-CANONICAL.md § "An account configures strategies, never symbols", points 3-4): an ML
+  trades the whole POPULATION its registered pooled test passed on, net of each symbol''s own costs, minus a filter fixed before the run,
+  intersected with what the venue can trade; per-symbol results never gate. ml_entry today trades a per-account symbol map
+  (strategies.yaml ml_entry.account_symbols) that the rule says should not exist (row ML-ENTRY-POPULATION-TEST; manager 2026-11-12 12:49Z:
+  do not just delete the map). Prior pooled reads did NOT answer this: c692-01 (60 Binance perps, ONE flat cost for all) and c692-06 (5
+  bybit_2 coins) were not over the venue population with per-symbol costs; a24c-01 (51 Bybit-listed reference symbols, per-symbol costs) is
+  blocked on its window driver and covers only the 60 training symbols. THIS unit: (1) POPULATION, frozen before the run from a Bybit V5
+  instruments-info + tickers snapshot taken on the trainer VM 2026-11-12 (issue #25453, committed as
+  comms/research/RQ-20261112-2e3b-01/freeze/bybit_linear_usdt_snapshot.csv): every LinearPerpetual USDT symbol passing F1 status Trading;
+  F2 launchTime <= 2025-06-30 (>= 3 months listed before the window); F3 snapshot turnover24h >= 5,000,000 USD; F4 snapshot quoted spread
+  <= 10 bps; F5 Binance Vision USDT-M 1h monthly klines under the same name for every month 2025-08..2026-10 (the harness''s data source).
+  The list, every dropped symbol and its first failing filter are in population.json. (2) MODEL: ml/served/ml_decision_entry_v1 (fit on 60
+  reference perps, train_end_exclusive 2025-09-22), tau 0.10 and the 20 features from model.json, unchanged; cross-sectional features
+  against the model''s own reference list (>= 40 available, strategies.yaml min_reference_symbols). (3) WINDOW: decisions 2025-10-01..
+  2026-10-31 whose 24 h outcome ends inside it (out of time for every symbol; out of symbol for every member not in the 60). (4) COST
+  STACK, each symbol and month: fee 11.0 bps (bybit:linear) + max(3.0, quoted spread floored at one tick + 2 x 1e4 x sigma_daily x
+  sqrt(5000 / ADV_bybit)) + max(1.0, the symbol-month mean |funding| per 8 h) x 8 h windows crossed. (5) POLICY: the c692-01 tau policy, one
+  position per symbol, reference bracket SL 2 / TP 3 ATR, 24 h time stop (the scored bracket of the evidence; the live TP revision and
+  structure SL are not part of this test).'
+why_this_matters: 'It is the evidence that replaces strategies.yaml ml_entry.account_symbols with a population record
+  (comms/ml_universe/ml_entry.json, src/config/ml_universe.py) whichever way it lands: a PASS makes the frozen population the ML''s
+  universe on the Bybit venue (a real-money widening, rule point 4: this unit is that widening''s own registered population test); a FAIL
+  or INDETERMINATE keeps the population that already passed (c692-06, the 5 bybit_2 coins) and is recorded. Two ML dev plan lines ride on
+  it: MLP-D3-FOXHOUND-1 and MLP-D3-ENTRY-ETF-ON-CRYPTO (docs/plans/ml-dev-plan.yaml).'
+power:
+  expected_n: 15000
+  min_detectable_effect: 0.03
+  effect_units: metric
+  sd: 1.3
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED from MEASURED rates: c692-01 took 11,240 held-out decisions in 12 months on 53 symbols (~212 per symbol-year) at sd ~1.3 R
+    (comms/research/ML-ENTRY-UNIVERSE/local-20261101T1830Z/summary.json). The frozen population (population.json n_population) over 13
+    months at that rate gives n well above 15,000 when it has >= 65 members; 15,000 is the conservative figure. SE = 1.3 / sqrt(15000) =
+    0.0106 R; MDE at 80 percent power one-sided alpha 0.05 = (1.645 + 0.842) x 0.0106 = 0.026 R, stated 0.03. The window is RE-READ by
+    family ENTRY (holdout ledger: >= 10 prior overlapping reads), so the deflated bar raises the point hurdle to point_t_min x SE
+    (~0.017-0.02 R at this n); an edge the size of c692-01''s pooled +0.0073 R is NOT detectable here and that is stated before the run.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history (Binance Vision klines + fundingRate) on a frozen snapshot; nothing accrues.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+  subject: existing
+decision_rule:
+  id: RULE-RQ20261112-2e3b-01-ENTRY-POPULATION
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_population_test.py run: pooled mean net R per TAKEN decision over every scorable member of the frozen
+    population (each decision re-costed by its own symbol-month stack, item (4)), its SE, n, distinct symbols traded. The read is claimed in
+    comms/research/holdout_reads.jsonl (model id ENTRY-v1-population-2e3b, symbols = the scored population, train_end 2025-09-22) BEFORE any
+    outcome is summarised; the claim returns the deflated bar.'
+  rule: 'INDETERMINATE IF the scorable population < 10 symbols, OR < 40 model reference symbols have data, OR the cost model is missing for
+    > 10 percent of decision rows, OR n < 300, OR < 10 distinct symbols traded. PASS IF the pooled mean net R >= point_t_min x SE of the
+    holdout-ledger bar (holdout_lock.point_ok; at N = 1 this is mean >= 0, the operator bar). FAIL otherwise. Reported, NEVER gating: the
+    fresh-symbol subset (never in training) and the reference subset, the bybit_2 pull-list subset, every symbol''s n and mean, the same
+    decisions at the flat c692 stack (fee 11 + 3 + 1 bps/8h), always-long / always-short / matched-random baselines, cost per symbol,
+    funding months defaulted. Thresholds, filter and cost stack are fixed here and never changed after any result.'
+  outcome_routing: 'PASS: the unit writes the population (venue bybit) as a pass into comms/ml_universe/ml_entry.json via
+    src/config/ml_universe.write_population, and AM-ML holds the Tier-3 PR that removes ml_entry.account_symbols with that record as the
+    universe on the Bybit accounts. FAIL / INDETERMINATE: the population is written with that verdict (adds nothing, removes nothing:
+    group-level); the real-money set stays the c692-06 pooled pass (BTC/ETH/XRP/ADA/SOL) and the Tier-3 PR records it as the Bybit
+    population instead of an account map. Either way the result is recorded on the row and the two ML dev plan lines.'
+  what_it_does_not_do: No sizing, no config change, no order, no refit, no tau re-choice. Prop accounts (prop superset gate,
+    comms/prop_survival/) and the alpaca_paper ETF scope are NOT decided here.
+  min_n: 300 decisions on >= 10 symbols
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 800
+  confidence: 0.2
+  basis: 'stand-in: the operator priority-1 goal (the general ENTRY model on every validated market); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 60
+  why_runner: Keyless public Binance Vision klines + fundingRate; scoring the frozen boosters on CPU; the Bybit snapshot is committed, so no
+    Bybit call on the runner.
+  basis: 'INFERRED: (population + 60 reference) x 15 monthly kline zips + population x 13 funding zips; no fit.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_population_test.py
+  - run
+  - --cache
+  - /tmp/ml_entry_population_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261112-2e3b-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-ENTRY-POPULATION-TEST
+- ML-UNIVERSE-RULE
+- RQ-20261101-a24c-01
+- RQ-20261101-c692-01
+- RQ-20261101-c692-06
+- comms/research/RQ-20261112-2e3b-01/freeze/population.json
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
+ml_consumer:
+  consumer: ML-UNIVERSE-RULE
+  decision: 'whether strategies.yaml ml_entry.account_symbols is replaced by the population record with the frozen population (PASS) or the
+    c692-06 five coins (FAIL / INDETERMINATE) as ml_entry''s universe on bybit_2 + bybit_portfolio, beside the rostered legs below that share
+    the account risk book'
+  legs:
+  - ml_entry
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - ada_pullback_2h
+  book: money
