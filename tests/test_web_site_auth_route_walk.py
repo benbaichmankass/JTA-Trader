@@ -78,15 +78,22 @@ def _http_routes():
 
 
 ROUTES = _http_routes()
-EXEMPT = [(m, p) for m, p in ROUTES if p.startswith(EXEMPT_PREFIXES) or p in EXEMPT_EXACT]
+EXEMPT = [(m, p) for m, p in ROUTES if p.startswith(EXEMPT_PREFIXES) or p in EXEMPT_EXACT
+          or (m == "GET" and p.startswith(tuple(getattr(auth_module, "SITE_TOKEN_GET_PREFIXES", ()))))]
 
 
 def _concrete(path: str) -> str:
     return _PARAM.sub("x", path)
 
 
+_TOKEN_GET_PREFIXES = tuple(getattr(auth_module, "SITE_TOKEN_GET_PREFIXES", ()))
+
+
 def _is_public(method: str, path: str) -> bool:
+    """Exempt from the SITE gate (the route's own credential then decides)."""
     if auth_module._is_site_public(path):
+        return True
+    if method in ("GET", "HEAD") and _TOKEN_GET_PREFIXES and path.startswith(_TOKEN_GET_PREFIXES):
         return True
     return method == "POST" and auth_module._is_site_public_post(path)
 
@@ -193,6 +200,7 @@ def test_public_set_is_exactly_the_declared_one():
                      and not p.startswith(("/api/diag/", "/api/bot/prop/phone/", "/api/auth/"))})
     assert public == sorted([
         "/api/bot/alerts", "/api/bot/devices/register", "/api/bot/live-review/rows",
+        "/api/bot/ops/actions", "/api/bot/ops/jobs/{job_id}",
         "/api/bot/prop/report", "/api/bot/wake-toggles", "/api/bot/work/decision",
         "/api/bot/work/items", "/api/bot/work/items/{item_id}/close",
         "/api/bot/work/items/{item_id}/note", "/api/bot/work/items/{item_id}/set",
