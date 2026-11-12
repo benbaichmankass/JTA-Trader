@@ -669,6 +669,10 @@ _LTR_FIRST_PROOF = Path(repo_root()) / "runtime_logs" / "ltr_first_proof.json"
 # one line per package per closed bar, for per-trigger grading. Same anchor as the
 # writer (src.runtime.live_review_wake_post.prescreen_log_path).
 _LTR_PRESCREEN_LOG = Path(repo_root()) / "runtime_logs" / "live_review" / "prescreen.jsonl"
+# TRADE-ACTION-DIRECT-PATH phase 3: every live-review routine fire (fired / rate_limited / could_not_fire /
+# rate_limited_backoff), with the session id and due -> fire latency. Same anchor as the writer
+# (src.runtime.live_review_routine_fire.fires_log_path). Carries no part of the token.
+_LTR_FIRES_LOG = Path(repo_root()) / "runtime_logs" / "live_review" / "fires.jsonl"
 
 # TRAIL-OBSERVABILITY (2026-10-07, PI-20261006-KX6ZKFNA-0003). The prop trail's
 # former pause latch (`modify_rollout.json`; retired by NO-HALT 2026-10-09, so
@@ -711,6 +715,7 @@ _LOG_FILES: dict[str, Path] = {
     # LTR C1: did the VM apply a rows-branch row, with what verdict and latency.
     "live_review_rows_watch": _LTR_ROWS_WATCH_LOG,
     "ltr_prescreen": _LTR_PRESCREEN_LOG,
+    "live_review_fires": _LTR_FIRES_LOG,
     "live_review_rows_watch_status": _LTR_ROWS_WATCH_STATUS,
     # DESK-4-INTAKE: what happened to each desk decision row on the VM, and why.
     "desk_intake": _DESK_INTAKE_LOG,
