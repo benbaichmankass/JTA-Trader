@@ -1345,6 +1345,12 @@ accounts:
       # promote tlt to real money"): qqq_pullback_1h back on the demo floor. QQQ is shared with qqq_trend_long_1d + ml_entry_eq: the split is the
       # allocation record comms/same_symbol_allocation/qqq-alpaca_paper.json (refreshed). tlt_pullback_1h's real-money promotion is row
       # PROMOTE-TLT-1H-REAL-MONEY (its Stage-0 record must carry the holdout confirmation first); it stays off general paper (three statuses). ROLLBACK: delete the next line and restore the record's 2-leg form.
+      # ⚠️ CORRECTION 2026-11-12 (lane DEMOTION-NOT-BAN, comment only, no field changed): "stays off general paper (three statuses)"
+      # misreads the rule. Until its promotion lands tlt_pullback_1h is TESTING, not production (strategy_status.py reads it
+      # `testing` on NO book), and a testing leg belongs ON its demo floor (OPERATING-PLAN § 2). The operator's verbatim choice
+      # above also says "Put qqq and tlt on the paper floor now". The roster line and scripts/ci/check_strategy_status.py
+      # UNHOMED entry that would follow are a Tier-3 FIELD change, proposed to AM-TRADING, not made here. Also: no checklist
+      # row PROMOTE-TLT-1H-REAL-MONEY exists on main (2026-11-12); this comment and that CI entry cite it anyway.
       - qqq_pullback_1h
       # 2026-10-27 DESK-PAPER-ACCOUNTS (Tier-3, PAPER; operator verbatim, chat ~15:58Z: "I do want to have the desk
       # live on the other paper accounts as well, so Alpaca and IB."): the Claude desk leg, scoped to
@@ -1772,13 +1778,20 @@ accounts:
       # lists under strict ordered equality). Re-adding it is a fresh Tier-3
       # decision, not an extension of this one.
       #
-      # ⚠️ slv_trend_1h IS NOT HERE AND MUST NOT BE PROPOSED BACK, and it is the
-      # trap in this set: it has the BEST long-flow profile of any affordable
-      # candidate (longs in every month including September, 116/116 sizing), so
-      # ranking by activity puts it near the top. Its blocker is a standing
-      # Tier-3 DEMOTE (operator, 2026-08-24: 0 wins in 13 closed, -$5,375), taken
-      # specifically to keep the fleet's worst leg off the account being funded.
-      # Same shape as the USO constraint recorded above, and it holds the same way.
+      # slv_trend_1h IS NOT ON THIS ROSTER TODAY BECAUSE OF A LADDER MOVE, NOT A
+      # BAN. Demoted off real money 2026-08-24 on stated evidence (0 wins in 13
+      # closed, -$5,375 on the paper book; EXIT-CLUSTER later found all 6 of its
+      # packages closed via exchange_flat_reconciled, the close-path defect class).
+      # A comment written here afterwards called it "MUST NOT BE PROPOSED BACK ...
+      # same shape as the USO constraint". That was wrong: USO is the operator's
+      # VALUES exclusion (block above); slv's was an evidence-based demotion.
+      # REVERSED by the operator 2026-11-04 ~22:05Z (popup, verbatim): "Reopen,
+      # promote if it clears (Recommended)" (row PROMOTE-1H-SURVIVORS-20261104).
+      # It returns to real money when its evidence passes: iteration unit
+      # RQ-20261104-7fdb-02 (real TP + clean holdout), then the tp_r change and
+      # the promotion PR. Operator 2026-11-12: "The whole point of an iterative
+      # system is that we fix things that aren't working and then get them back
+      # on real money." (lane DEMOTION-NOT-BAN; comment-only edit)
       #
       # ⚠️ NO `symbols:` EDIT IS REQUIRED. This paragraph has now been wrong
       # TWICE in opposite directions, so read the dates.

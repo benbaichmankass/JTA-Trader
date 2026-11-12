@@ -593,6 +593,17 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
         "the 2026-10-08 read of Breakout's FAQ Center terms; goes historical "
         "when the Evaluation Agreement / Program Rules are read at source",
     ),
+    # Prop columns re-read from the code on main (ca16a2781b) by lane AM-TRADING C2,
+    # 2026-11-12, which read the file in full and checked each prop cell against
+    # live_review_apply.ACTION_PATHS, platform/dxtrade.py and platform/dxtrade_api.py,
+    # and the open/merged state of #25016/#25230/#25272/#25295 on GitHub. The
+    # non-prop columns are carried from 2026-11-11 and the doc says so in its header.
+    "docs/reference/account-capability-matrix.md": (
+        "live",
+        "read:AM-TRADING-C2-prop-columns-reread-from-code-2026-11-12",
+        "prop columns re-read from code at ca16a2781b; non-prop columns carried "
+        "from f0b9698bbf; re-read when #25230/#25272/#25295 merge",
+    ),
 }
 
 # ---------------------------------------------------------------------------

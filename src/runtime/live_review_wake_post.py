@@ -36,6 +36,11 @@ rows-branch commit of its packet + table, LTR-PACKET-ECHO) · ``could_not_post``
 Actions poller) · ``evidence_backoff`` (inside ``EVIDENCE_BACKOFF_S`` after such a failure) · ``due_could_not_look`` (the due computation
 itself could not look; the poller owns that flag).
 
+Routine fire (TRADE-ACTION-DIRECT-PATH phase 3): before the comment, ``src.runtime.live_review_routine_fire.fire``
+starts ONE fresh reviewer session for every newly due entry whose packet is on the rows branch (receipt key
+``routine_fire``; log ``runtime_logs/live_review/fires.jsonl``). The comment still posts either way; a fired entry
+carries ``routine_fire.state: fired`` + ``session_id`` in the marker, so the manager does not dispatch it.
+
 Pre-screen log (LTR-PRACTICE-REDESIGN): each pass appends the due computation's
 ``prescreen`` records to ``runtime_logs/live_review/prescreen.jsonl`` (read via
 ``/api/diag/log_file?name=ltr_prescreen``), once per package per closed bar and
@@ -281,8 +286,9 @@ def run_once(due_fn: Optional[Callable[[], Any]] = None,
              now_fn: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
              receipt: Optional[Path] = None,
              build_bundle: Optional[Callable[[str], Dict[str, Any]]] = None,
-             prescreen_log: Optional[Path] = None) -> Dict[str, Any]:
-    """One due computation -> at most one comment. Returns (and writes) the receipt."""
+             prescreen_log: Optional[Path] = None,
+             fire_fn: Optional[Callable[..., Dict[str, Any]]] = None) -> Dict[str, Any]:
+    """One due computation -> at most one routine fire + one comment. Returns (and writes) the receipt."""
     global _cached_markers, _evidence_backoff_until
     computed_at = now_fn()
     if due_fn is None:
@@ -296,6 +302,8 @@ def run_once(due_fn: Optional[Callable[[], Any]] = None,
         write_receipt(rec, receipt)
         return rec
     rec["due_count"] = doc.get("due_count")
+    if fire_fn is None:
+        from src.runtime.live_review_routine_fire import fire as fire_fn  # noqa: N806
     rec["prescreen_logged"] = log_prescreen(doc, prescreen_log)
     rec["conflicting_exposure"] = conflict_alert(doc)
     cfg = wake.load_cfg()
@@ -360,6 +368,10 @@ def run_once(due_fn: Optional[Callable[[], Any]] = None,
         write_receipt(rec, receipt)
         return rec
     rec["packet_states"] = {e["order_package_id"]: e.get("packet_state") for e in p["entries"]}
+    # TRADE-ACTION-DIRECT-PATH phase 3: start the reviewer NOW via the routine API trigger. The comment below still
+    # posts (it is the dedupe record the Actions poller reads, and the manager's view); entries stamped
+    # ``routine_fire.state: fired`` tell the manager not to dispatch. Any fire failure leaves them on the comment path.
+    rec["routine_fire"] = fire_fn(p["entries"], bundles)
     body = wake.render(p, computed_at, "VM poster (ict-trader-live, in process)", bundles)
     code, data = http("POST", f"{API}/repos/{REPO}/issues/{pr}/comments",
                       json.dumps({"body": body}).encode(), auth)
