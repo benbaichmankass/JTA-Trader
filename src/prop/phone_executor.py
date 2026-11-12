@@ -1255,7 +1255,7 @@ def verify_readback(device: PhoneDevice, body: Dict[str, Any], *, now: Optional[
         if mode == "live" and (vu is None or vu <= now):
             reasons.append("ticket validity expired before the live submit")
         if mode == "live" and not reasons:
-            reasons += live_cushion_refusals(device.account_id, fields, send=send)
+            reasons += live_cushion_refusals(device.account_id, fields, send=send, ticket_id=tid)
         if reasons:
             ph["verify"] = {"at": now.isoformat(), "ok": False, "reasons": reasons[:12]}
             m["phone"] = ph
@@ -1284,7 +1284,8 @@ def verify_readback(device: PhoneDevice, body: Dict[str, Any], *, now: Optional[
             "expires_at": expires.isoformat(), "ttl_s": GO_TOKEN_TTL_S}
 
 
-def live_cushion_refusals(account_id: str, fields: Dict[str, Any], *, send=None) -> list:
+def live_cushion_refusals(account_id: str, fields: Dict[str, Any], *, send=None,
+                          ticket_id: Optional[str] = None) -> list:
     """The account's drawdown cushion, graded against the risk at the stop of the form the phone is about to submit
     (PROP-SIZE-EXCEEDS-DD-CUSHION, 2026-11-05). ``[]`` = submit may proceed; else the refusal reasons.
 
@@ -1312,11 +1313,24 @@ def live_cushion_refusals(account_id: str, fields: Dict[str, Any], *, send=None)
               "(qty/price/sl unreadable) -- report-only, submit proceeds", send=send)
         return []
     risk = round(qty * abs(price - sl), 6)
-    grade = prop_risk_gate.grade_account_ticket_risk(account_id, risk_usd=risk)
+    grade = prop_risk_gate.grade_account_ticket_risk(account_id, risk_usd=risk, exclude_ticket_id=ticket_id)
     state = grade.get("state")
+    inf = grade.get("inflight") or {}
+    note = ""
+    if inf.get("state") == "measured" and inf.get("tickets"):
+        note = (f"; in flight: ${float(inf.get('loss_to_stop_usd') or 0.0):,.2f} at the stops of "
+                f"{', '.join(str(i.get('ticket_id')) for i in inf['tickets'])}")
+    elif inf.get("state") in ("risk_unknown", "unreadable"):
+        note = f"; in-flight reserve {inf.get('state')}"
     if state == prop_risk_gate.WITHIN:
+        # AM-PROP-INFLIGHT-RESERVE: MAKE REPORT-ONLY (operator 2026-11-12): a within grade that the in-flight reserve
+        # would push past the cushion (or an unread reserve) is PINGED; the submit proceeds.
+        if inf.get("would_exceed") or inf.get("state") in ("risk_unknown", "unreadable"):
+            _ping(f"phone {account_id}: risk gate: within_cushion alone, but ${risk:,.2f}{note} "
+                  f"{'would pass the cushion' if inf.get('would_exceed') else ''} -- report-only "
+                  "(AM-PROP-INFLIGHT-RESERVE), submit proceeds", send=send)
         return []
-    why = f"risk gate: {state} (risk at stop ${risk:,.2f}; {grade.get('reason')})"
+    why = f"risk gate: {state} (risk at stop ${risk:,.2f}; {grade.get('reason')}{note})"
     _ping(f"phone {account_id}: {why} -- report-only (GATE-PROP-RISK-CUSHION), submit proceeds "
           f"(breach_guards={prop_risk_gate.breach_guards_for(account_id)})", send=send)
     return []

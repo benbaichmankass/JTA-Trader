@@ -402,7 +402,7 @@ def _live(tmp_path: Path, monkeypatch, mode: str = "live", cushion: str = "withi
     if cushion is not None:
         from src.prop import prop_risk_gate
         monkeypatch.setattr(prop_risk_gate, "grade_account_ticket_risk",
-                            lambda acct, risk_usd=None: {"state": cushion, "risk_usd": risk_usd, "reason": "test"})
+                            lambda acct, risk_usd=None, **_kw: {"state": cushion, "risk_usd": risk_usd, "reason": "test"})
 
 
 def _rb(tid: str, **over) -> dict:

@@ -315,6 +315,7 @@ def grade_ticket_risk(
 
 def grade_account_ticket_risk(
     account_id: str, *, risk_usd: Optional[float],
+    exclude_ticket_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """:func:`grade_ticket_risk` against ``account_id``'s latest snapshot.
 
@@ -353,7 +354,30 @@ def grade_account_ticket_risk(
         status_freshness=rd.get("status_freshness"),
         open_risk_state=ors,
         open_loss_to_stop_usd=rd.get("open_loss_to_stop_usd"),
-    )
+    ) | {"inflight": _inflight_label(account_id, exclude_ticket_id, risk_usd, dd, daily, ors)}
+
+
+def _inflight_label(account_id: str, exclude_ticket_id: Optional[str], risk_usd: Optional[float],
+                    dd: Optional[float], daily: Optional[float], ors: str) -> Dict[str, Any]:
+    """Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PROP-INFLIGHT-RESERVE: MAKE REPORT-ONLY. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+
+    The in-flight reserve (ported from PR #25223) as a LABEL on the grade: ``state`` (none / measured /
+    risk_unknown / unreadable), the tickets, their loss at the stop, and ``would_exceed`` -- whether this risk plus
+    the in-flight reserve would pass the binding cushion. It never changes ``state``, a distance or any decision:
+    ``risk_unknown`` / ``unreadable`` here are labels, never ``cushion_unknown``."""
+    try:
+        from src.prop import prop_reconcile
+        inf = dict(prop_reconcile.compute_inflight_risk(account_id, exclude_ticket_id=exclude_ticket_id))
+    except Exception as exc:  # noqa: BLE001 — a label read failure is a label
+        logger.warning("prop_risk_gate: in-flight label read failed for %s (%s)", account_id, exc)
+        inf = {"state": "unreadable", "tickets": [], "loss_to_stop_usd": None}
+    would = None
+    reserve = inf.get("loss_to_stop_usd")
+    dists = [d for d in (dd, daily) if d is not None]
+    if inf.get("state") == "measured" and risk_usd is not None and dists and ors in ("no_open_positions", "measured"):
+        would = float(risk_usd) + float(reserve or 0.0) >= min(dists)
+    inf["would_exceed"] = would
+    return inf
 
 
 def breach_guards_for(account_id: Optional[str]) -> str:
