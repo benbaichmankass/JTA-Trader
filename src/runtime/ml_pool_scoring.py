@@ -53,7 +53,7 @@ def _close_key(bar_close: Any) -> Any:
     try:
         import pandas as pd
         return (0, pd.Timestamp(str(bar_close)).value)
-    except Exception:  # noqa: BLE001 -- an unparseable close sorts first (pruned first), never raises
+    except Exception:
         return (-1, str(bar_close))
 
 
@@ -81,7 +81,7 @@ class DecidedMemo(set):
                         set.add(self, (str(row[0]), str(row[1])))
                 logger.info("%s decided memo loaded: %d entries over %d closes from %s", self.name, set.__len__(self),
                             len({m[1] for m in set.__iter__(self)}), p)
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.exception("%s decided memo: could not read %s (memory-only until the next write)", self.name, p)
 
     def _persist(self) -> None:
@@ -96,7 +96,7 @@ class DecidedMemo(set):
             tmp = p.with_suffix(p.suffix + ".tmp")
             tmp.write_text(json.dumps({"leg": self.name, "decided": sorted([list(m) for m in set.__iter__(self)])}))
             os.replace(tmp, p)
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.exception("%s decided memo: could not write %s (kept in memory)", self.name, p)
 
     def __contains__(self, item: object) -> bool:
@@ -198,6 +198,7 @@ def picks(strategies_cfg: Mapping[str, Any], legs: Optional[List[str]] = None) -
     the current snapshot's decision close and have not been decided yet, strongest predicted net R first. Never raises: [] on any failure."""
     try:
         import pandas as pd
+
         from src.runtime import ml_entry_eq_features as EF
         from src.runtime.ml_entry_eq_refresher import snapshot_path
         scored: Dict[str, float] = {}
@@ -220,6 +221,6 @@ def picks(strategies_cfg: Mapping[str, Any], legs: Optional[List[str]] = None) -
                 if isinstance(v, dict) and m not in done and m not in refused:
                     scored[s] = max(scored.get(s, float("-inf")), float(v["meta"]["pred_net_r"]))
         return [s for s, _p in sorted(scored.items(), key=lambda kv: -kv[1])]
-    except Exception:  # noqa: BLE001 -- a scoring fault must never break the tick; the leg just gets no extra passes this tick
+    except Exception:
         logger.exception("ml_pool_scoring.picks failed (no pool picks this tick)")
         return []
