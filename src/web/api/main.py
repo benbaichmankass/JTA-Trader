@@ -72,6 +72,7 @@ from src.web.api.routers import work_topics as work_topics_router
 from src.web.api.routers import work_items as work_items_router
 from src.web.api.routers import live_review_direct as live_review_direct_router
 from src.web.api.routers import gates as gates_router
+from src.web.api.routers import work_plans as work_plans_router
 from src.web.api.routers import ops_channel as ops_channel_router
 
 # UI-UPGRADE-1-AUTH: the whole-site gate is an APP-LEVEL dependency (so it covers
@@ -168,6 +169,7 @@ app.include_router(work_topics_router.router)
 app.include_router(work_items_router.router)
 app.include_router(live_review_direct_router.router)
 app.include_router(gates_router.router)  # GATE-REGISTRY: GETs + operator-session POST /decision
+app.include_router(work_plans_router.router)  # UI-WQ-PLANS-ROUTES: GET /api/bot/ml/plan + operator-session POST /work/plan-edits
 app.include_router(ops_channel_router.router)  # MANAGER-VM-DIRECT-OPS (X-Work-Store-Token, fail-closed)
 
 
