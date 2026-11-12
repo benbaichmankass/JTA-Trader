@@ -81,7 +81,7 @@ def decompose(window: pd.DataFrame, taken: pd.DataFrame) -> dict:
         return {"n": 0}
     k = pd.concat(rows, ignore_index=True).dropna(subset=["bucket", "all_net", "b_net"])
     ts = k.ts.astype("int64").to_numpy() if hasattr(k.ts, "astype") else k.ts.to_numpy()
-    out = {"n": int(len(k)), "n_dropped_unbucketed": int(len(taken) - len(k)),
+    out = {"n": len(k), "n_dropped_unbucketed": int(len(taken) - len(k)),
            "taken_bucket_mix": {str(int(b)): int(c) for b, c in k.bucket.value_counts().sort_index().items()}}
     for lab in ("net", "gross"):
         r = k[f"{lab}_r"].to_numpy(float)
