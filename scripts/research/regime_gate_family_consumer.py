@@ -122,7 +122,8 @@ def _selftest() -> None:
     def mk(bias, n=200):
         rows = []
         for i in range(n):
-            tr = rng.choice(["trending", "chop"]); vol = rng.choice(["calm", "volatile"])
+            tr = rng.choice(["trending", "chop"])
+            vol = rng.choice(["calm", "volatile"])
             r = rng.gauss(0.05, 1.0) + (bias if (tr, vol) == ("trending", "volatile") else 0)
             rows.append({"entry_time": f"2025-{1 + i % 12:02d}-{1 + i % 27:02d}T00:00:00Z", "direction": "long",
                          "net_r": r, "regime": tr, "vol_regime": vol, "_t": 1.7e9 + i * 86400 * 3})
