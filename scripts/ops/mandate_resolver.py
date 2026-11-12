@@ -664,7 +664,7 @@ def _affordability_from_legs(leg: str, account: str, record: Dict[str, Any], sna
 
 def _no_balance(text: str) -> str:
     """Strip every account-money figure from a message bound for a committed file: the sizer's refuse text names
-    the equity / buying power it read (``(equity $197.28, buying power $197.28, ...)``)."""
+    the equity / buying power it read (``(equity $123.45, buying power $123.45, ...)``)."""
     import re
     text = re.sub(r"\(equity \$[^)]*\)", "(balance read, not committed)", text)
     return re.sub(r"\$\s?[0-9][0-9,]*(\.[0-9]+)?", "$<redacted>", text)
