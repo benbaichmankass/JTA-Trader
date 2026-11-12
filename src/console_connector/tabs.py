@@ -225,6 +225,23 @@ def _signal_catalog(repo: Path) -> dict:
     return yaml.safe_load((repo / "docs/reference/signal-catalog.yaml").read_text(encoding="utf-8")) or {}
 
 
+def _mechanics_for_legs() -> dict:
+    """Per-leg ``mechanics_proven`` from the live VM (GET /api/bot/soak/mechanics, row UI-CONSOLE-ARTIFACT C2).
+
+    Soak state needs the trade journal, which only the live VM has; that route evaluates
+    scripts/ops/soak_state.py::mechanics_proven there. A failed read is ``could_not_look`` and every leg's
+    ``mechanics_proven`` is None, never False (an unread source is not a "not proven")."""
+    try:
+        doc = _work_get("/api/bot/soak/mechanics")
+    except Exception as exc:  # noqa: BLE001 - a failed source says so; it is never an empty or false answer
+        return {"read_state": "could_not_look", "reason": _err(exc), "legs": None}
+    if not isinstance(doc, dict) or doc.get("read_state") != "read":
+        return {"read_state": "could_not_look",
+                "reason": (doc or {}).get("reason") if isinstance(doc, dict) else "unexpected reply", "legs": None,
+                "population": (doc or {}).get("population") if isinstance(doc, dict) else None}
+    return doc
+
+
 def system_catalog(repo: Path, signals_limit: int = 400) -> dict:
     """The System tab: strategy legs (status, books, venue, symbol), ML models and the signal catalog.
 
@@ -255,8 +272,12 @@ def system_catalog(repo: Path, signals_limit: int = 400) -> dict:
         counts: dict[str, int] = {}
         for r in legs:
             counts[r["status"]] = counts.get(r["status"], 0) + 1
+        mech = _mechanics_for_legs()
+        for r in legs:
+            r["mechanics_proven"] = (mech.get("legs") or {}).get(r["leg"]) if mech.get("read_state") == "read" else None
         sections["legs"] = {"read_state": "read", "population": {"legs": len(legs), "by_status": counts},
-                            "items": legs}
+                            "items": legs,
+                            "mechanics": {k: mech.get(k) for k in ("read_state", "reason", "as_of", "population", "provenance")}}
     except Exception as exc:  # noqa: BLE001 - a failed source says so; it is never an empty list
         sections["legs"] = {"read_state": "could_not_look", "population": {"legs": None}, "reason": _err(exc)}
     # (b) ML models + signals from the catalog artifact (row SIGNAL-CATALOG)
