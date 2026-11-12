@@ -1,0 +1,104 @@
+# Hand-authored 2026-11-12 by lane ML-ENTRY-HTF-COUNTERTREND (Tier 1), dispatched by Manager Session 2026-11-11a
+# (session_01AFoLuLyarNRcy3nziCep2U). Decision rule registered and pushed to main BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261112-8d20-01
+title: 'ml_entry HTF counter-trend: do the frozen crypto ENTRY v1 decisions taken AGAINST a strong 4h trend (4h ADX14 > 40, side opposite the 4h DMI
+  direction) lose money net of the full cost stack, out of sample?'
+status: queued
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml_health
+priority: 1
+kind: experiment
+question: 'On 2026-11-11 the 20:00Z ml_entry long wave (SOL, ETH, XRP) all stopped out by 23:14Z; each was a 1h bounce call into a 4h downtrend (SOL 4h
+  ADX ~42, ETH 4h ADX 52). Split the frozen artifact ml/served/ml_decision_entry_v1 (tau 0.1, train_end 2025-09-22) decisions by 4h trend alignment and
+  4h ADX bucket. 4h bars are resampled from the 1h bars (UTC 00/04/08/...); a decision at the close of a 4h boundary reads only the 4h bar that just
+  closed (point in time). PRIMARY trend definition, fixed now: direction D = sign(+DI14 - -DI14), strength = ADX14, both Wilder on the 4h bars.
+  Alignment: WITH if the decision side equals D, AGAINST otherwise. ADX buckets: < 25, 25..40, > 40. Robustness definitions, reported, never gating:
+  (r1) 4h EMA20 vs EMA50, (r2) 4h Donchian-20 breakout state (last close beyond the prior 20-bar high/low, held until the opposite break).'
+why_this_matters: 'ml_entry trades real money (bybit_2 + bybit_portfolio) and prop copies (breakout_2, tradeify_1, velotrade_1). If its counter-trend
+  calls in strong 4h trends lose net of cost out of sample, a one-line filter removes a losing slice; if they do not, the 11-11 wave was variance and
+  nothing should change.'
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+power:
+  expected_n: 600
+  min_detectable_effect: 0.1
+  effect_units: metric
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: c692-01 held-out has n 11,240 taken decisions; ADX14 > 40 on 4h bars covers very roughly 10-15 percent of bars and roughly half
+    of decisions are against the DMI direction, so the primary cell is ~500-800 decisions. sd ~1 R (2/3 ATR bracket). SE ~0.04 R iid; decisions
+    share timestamps across symbols so the timestamp-clustered SE is larger. The n floor 40 is the dispatch floor; the t bar is the binding one.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance Vision history; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261112-8d20-01-HTF-CT
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'Per cell (alignment x ADX bucket): n, mean net R per decision (net of fee 11.0 + slip 3.0 bps round trip + funding 1.0 bps/8h, the
+    ml_decision_entry.py cost stack = execution_costs.roundtrip_cost_r), iid SE and t, and t with SE clustered by decision timestamp (gating).
+    Populations: A PRIMARY = frozen v1 artifact, tau 0.1, policy() mechanics (one position per symbol), 60-perp reference universe, held-out
+    2025-10-01..2026-09-30 (after train_end; ledger family ENTRY, read recorded). B DEV = the c692-01 recipe refit per purged dev fold 2022-01..2025-09,
+    tau 0.1, each fold out of sample. C FORWARD = frozen artifact 2026-10-01..2026-10-31. bybit_2 five-symbol slice of A and C reported.'
+  rule: 'Primary cell CT40 = AGAINST and ADX14 > 40 (primary definition). INDETERMINATE IF CT40 n < 40 in A. PASS IF ALL: (1) A: CT40 mean net R < 0
+    AND clustered t <= -2.0 (stricter than the ledger deflated point bar for ENTRY on this window, |t| 1.05 at N=4); (2) A: WITH and ADX > 40 mean net
+    R >= CT40 mean (with-trend not worse); (3) B: CT40 mean net R < 0 (same sign out of sample on dev). FAIL otherwise. Secondary cell CT25 (AGAINST,
+    25..40) is judged by the same three clauses and is reported; it joins a proposal only if it passes on its own. Thresholds, buckets and trend
+    definitions are not changed after any result.'
+  proposal_mapping: 'PASS -> a Tier-3 proposal held for the manager: skip ml_entry decisions in the passing cell(s) (a negative-EV cell is better skipped
+    than sized down), with its effect on A and C stated (n removed, leg mean and sum net R before/after). FAIL -> no change; the 11-11 wave is recorded
+    as within the leg''s measured distribution. INDETERMINATE -> no change; re-run with the next month of forward data.'
+  what_it_does_not_do: 'Changes no config, trains no new model, places no order. Measures the DECISION under the reference bracket (2 / 3 ATR, 24 h);
+    live adds the extend-only TP revision and the SL-only structure exit, which this does not model. No split of any window was looked at before
+    registration.'
+  min_n: 40 decisions in the primary cell
+practice_precedent: 'M4 (rule registered before the run), M5 (out-of-sample dev folds and a held-out window), M6 (net of the full cost stack) in
+  docs/reference/trading-and-model-practice-principles.md; HTF trend alignment is a standard multi-timeframe filter (trade the lower timeframe in the
+  direction of the higher).'
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 200
+  confidence: 0.2
+  basis: 'stand-in: one losing slice of a real-money leg; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 40
+  why_runner: Keyless public Binance Vision klines; GBDT on CPU. Run in the dispatched lane's session container (local), reproducible on research-script-run.
+  basis: 'INFERRED from c692-01 (60 min on the runner incl. a 200-draw random baseline this unit does not run).'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_htf_trend_split.py
+  - --cache
+  - /tmp/ml_decision_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261112-8d20-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-ENTRY-HTF-COUNTERTREND
+- RQ-20261101-c692-01
+- ml/served/ml_decision_entry_v1/model.json
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
+ml_consumer:
+  consumer: ML-ENTRY-HTF-COUNTERTREND
+  decision: whether ml_entry skips its decisions taken against a strong 4h trend on bybit_2, bybit_portfolio and its prop copies
+  legs:
+  - ml_entry
+  book: money
