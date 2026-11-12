@@ -56,6 +56,9 @@ def _isolate(tmp_path, monkeypatch):
     # test that wants either populated does so explicitly.
     monkeypatch.setattr(wk, "_checklist_path", lambda: root / "MANAGER-CHECKLIST.json")
     monkeypatch.setattr(wk, "_pipeline_store_path", lambda: root / "PIPELINE.jsonl")
+    # UI-WQ-DECISIONS-ROUTE: the inbox also reads the work store; point it at a
+    # path that does not exist so these tests never see the real register.
+    monkeypatch.setenv("WORK_STORE_DB", str(tmp_path / "no-work-store.db"))
     transit = tmp_path / "transit.jsonl"
     monkeypatch.setattr(wk, "transit_log_path", lambda: transit)
     monkeypatch.setattr(wd, "transit_log_path", lambda: transit)
@@ -667,7 +670,8 @@ def test_e15_a_build_failure_reports_unknown_sources_not_a_clean_zero(_isolate, 
     build failed before anything could be counted."""
     monkeypatch.setattr(wk, "_get_index", lambda: (_ for _ in ()).throw(RuntimeError("boom")))
     inbox = client.get("/api/bot/work/decisions").json()
-    assert set(inbox["sources"]) == {"workObjects", "checklist", "pipeline"}
+    assert set(inbox["sources"]) == {"workObjects", "checklist", "pipeline", "workStore"}
     assert inbox["sources"]["checklist"]["state"] == "unknown"
+    assert inbox["sources"]["workStore"]["state"] == "unknown"
     assert inbox["sources"]["pipeline"]["state"] == "unknown"
     assert inbox["summary"]["waitingOnYouTotal"] is None

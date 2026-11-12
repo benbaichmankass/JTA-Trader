@@ -80,6 +80,16 @@ WRITABLE_FIELDS = (
 #: importer keeps it, and where ``to_row`` reads it back as a top-level row key). Value ->
 #: allowed set; ``None`` clears the key. (WORK-STORE-WEEK-LANE-WRITABLE.)
 EXTRA_WRITABLE = {"week_lane": ("surge", "throttle", "after_reset", "standing")}  # "standing" stays writable/readable for old rows; new work uses the first three
+#: ``decision_requests`` (UI-WQ-DECISIONS-ROUTE): the planning questions on a work item, read by
+#: ``GET /api/bot/work/decisions``. ``None`` as the allowed set means "any value that passes
+#: :func:`_valid_decision_requests`" (a list of objects, each with a non-empty string ``id``);
+#: writing it by name merges into ``extra`` instead of replacing the whole column.
+EXTRA_WRITABLE["decision_requests"] = None
+
+
+def _valid_decision_requests(v) -> bool:
+    return isinstance(v, list) and all(
+        isinstance(r, dict) and isinstance(r.get("id"), str) and r["id"].strip() for r in v)
 _JSON_FIELDS = ("roadmap", "due_rule", "origin", "prs", "blocked_on", "extra")
 _COMPUTED = ("due_at", "version", "created_at", "updated_at", "updated_by")
 
@@ -433,7 +443,13 @@ class WorkStore:
         if not named:
             return fields
         for k, v in named.items():
-            if v is not None and v not in EXTRA_WRITABLE[k]:
+            if v is None:
+                continue
+            if EXTRA_WRITABLE[k] is None:
+                if k == "decision_requests" and not _valid_decision_requests(v):
+                    raise WorkStoreValidationError(
+                        "decision_requests: must be a list of objects, each with a non-empty string id")
+            elif v not in EXTRA_WRITABLE[k]:
                 raise WorkStoreValidationError(
                     f"{k}: must be one of {EXTRA_WRITABLE[k]} or null, got {v!r}")
         extra = dict(fields["extra"] if isinstance(fields.get("extra"), dict) else (base_extra or {}))
