@@ -1038,6 +1038,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/mirror-qty-diverge-2026-10-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-buildout-strategy-2026-06-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-coverage-audit-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | ML coverage vs the traded roster (5/51 legs, 4/23 symbols) + next-week breadth plan. |
+| `docs/research/ml-deep-audit-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | ML deep audit (lane ML-DEEP-AUDIT-FABLE): every model on every roster with value added, research-unit allocation by slot, the survivor-count read, infra and workflow findings, ranked structural recommendations with their rows. |
 | `docs/research/ml-data-rate-path-2026-10-29.md` | evidence | unknown | — | 2026-10-29 | `dir:research-is-measurement / not-assessed` | Ranked data sources the system can generate now for ML training (harness universe, cf arms, bar labels, desk, live) + units RQ-20261029-7294-01..03. |
 | `docs/research/ml-decision-models-2026-11-01/DESIGN.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-decision-models-2026-11-01/DIAGNOSIS.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
