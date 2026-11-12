@@ -2011,7 +2011,12 @@ async def post_work_decision(
     a decision is truth. The response says so in ``answerState``: it comes back
     ``in_transit``, never ``committed``.
     """
-    _require_decision_write_token(authorization)
+    # The operator answering from the signed-in SPA uses the session; the Telegram
+    # decision bot keeps DASHBOARD_API_TOKEN (UI-OAUTH-SIGNIN).
+    from src.web.api.auth import operator_session_or_none, session_actor
+    session = await operator_session_or_none(request)
+    if session is None:
+        _require_decision_write_token(authorization)
     try:
         body = await request.json()
     except (ValueError, TypeError) as exc:
@@ -2070,7 +2075,7 @@ async def post_work_decision(
         # is worse than no answer.
         raise HTTPException(status_code=400, detail="an answer needs `chosen` or `free_text`")
 
-    submitted_by = body.get("submitted_by")
+    submitted_by = session_actor(session) if session is not None else body.get("submitted_by")
     try:
         row = await asyncio.to_thread(
             append_submission,

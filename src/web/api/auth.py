@@ -201,6 +201,30 @@ async def require_session(request: Request) -> dict:
     return claims
 
 
+async def operator_session_or_none(request: Request) -> Optional[dict]:
+    """The operator-session claims on this request, or ``None``. Never raises.
+
+    For the operator-write routes that ALSO take a service token (wake-toggles,
+    work/decision, work/items*): the signed-in SPA acts with the operator's
+    session (``Bearer ws_...`` or the legacy password JWT, both checked by
+    ``require_session`` including ``ALLOWED_EMAIL``), while non-browser services
+    keep their token. ``None`` means "not an operator session", so the caller
+    falls through to its own fail-closed service-token check, which is what
+    answers an anonymous or wrong-token request (401/503).
+    """
+    if not _bearer(request):
+        return None
+    try:
+        return await require_session(request)
+    except HTTPException:
+        return None
+
+
+def session_actor(claims: dict) -> str:
+    """The ``by`` recorded for a write made with an operator session."""
+    return f"{str(claims.get('email', '')).strip().lower()} (SPA session)"[:80]
+
+
 # ---------------------------------------------------------------------------
 # UI-UPGRADE-1-AUTH — the whole-site gate (design §2b).
 #
