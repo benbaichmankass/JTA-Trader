@@ -1284,7 +1284,16 @@ strategies:
     # symbol filter keeps BTC/MES regime heads off). Observe-only.
     exit_head_model: exit-head-donchian-1h-v1
     exit_head_threshold: 0.10
-    exit_head_action: close
+    # ANNOTATE (2026-11-12, Tier-3 data-backed de-risk, RQ-20261101-78fc-03 FAIL, row
+    # ETH-EXITHEAD-CONTROL-TEST, HOLD for the manager): scored + logged every closed bar,
+    # `close` not applied. OUT-OF-SAMPLE 5-fold walk-forward (head retrained per fold,
+    # 7 d embargo) on ETHUSDT 1h, 605 OOS trades 2021-08..2026-11: dR/trade -0.0612,
+    # 95% CI LB -0.195 (rule: >= 0 and > -0.02); 3 of 5 folds negative; the head's
+    # -37.0 R ranks below every one of 1000 matched random truncations (p50 +155 R).
+    # Evidence: issue #25113 / scripts/research/exit_head_eth_oos_control.py at f50fe443.
+    # The ETH in-sample +0.0215 R/trade (n 583) did not survive out of sample. Revert: set
+    # back to `close`.
+    exit_head_action: annotate
 
   trend_donchian_sol_prop:
     # SWAP-ROBUST prop exit variant of trend_donchian_sol (SOLUSDT, 1h, LONG-ONLY).
