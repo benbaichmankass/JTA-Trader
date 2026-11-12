@@ -87,7 +87,8 @@ def test_format_markdown_lists_each_bucket():
     )
     md = format_markdown(report)
     assert "good-model" in md
-    assert "shadow → advisory" in md
+    # stage step retired 2026-11-12: promote is candidate/shadow -> advisory
+    assert "→ advisory, no intermediate step" in md
     assert "bad-model" in md
     assert "live calibration worse than base rate" in md  # demote follow-up reason
     assert "blocking: oos_edge, shadow_soak" in md
