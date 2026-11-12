@@ -127,6 +127,21 @@ def build_ticket(sig: BreakoutSignal, cfg: TicketConfig) -> Ticket:
     )
 
 
+# PROP-TICKET-TRUTH: the header names the account's OWN venue. The ticket bridge
+# (exchange: breakout) is shared by every prop firm; only breakout_* accounts
+# trade on the Breakout terminal. Unknown/absent account -> "Breakout" so the
+# original ticket text stays byte-identical.
+_VENUE_BY_ACCOUNT_PREFIX = (("tradeify", "Tradeify"), ("velotrade", "Velotrade"))
+
+
+def venue_label(account_id: Optional[str]) -> str:
+    a = (account_id or "").lower()
+    for prefix, label in _VENUE_BY_ACCOUNT_PREFIX:
+        if a.startswith(prefix):
+            return label
+    return "Breakout"
+
+
 def render_ticket(t: Ticket, *, now: Optional[datetime] = None,
                   account_id: Optional[str] = None,
                   ticket_id: Optional[str] = None) -> str:
@@ -217,7 +232,7 @@ def render_ticket(t: Ticket, *, now: Optional[datetime] = None,
             )
 
     lines = [
-        "BREAKOUT TRADE SETUP — place a BRACKET order on the Breakout terminal.",
+        f"BREAKOUT TRADE SETUP — place a BRACKET order on the {venue_label(account_id)} terminal.",
         "RULES (do all): attach SL **and** TP at entry; never place without both. "
         "If now is past 'Valid until' "
         "OR the live price is outside the entry band, DO NOT place — reply "
