@@ -168,7 +168,10 @@ def run(a) -> int:
     # the claim comes BEFORE any post-decision 1m outcome is read
     claim = HL.claim_read(MODEL_ID, E.HOLDOUT_START, E.END, UNIT, a.reader, Path(a.ledger), train_end="2025-09-30", family="EXEC")
     cache = Path(a.cache)
-    taken["T"] = (pd.to_datetime(taken.ts, utc=True) + pd.Timedelta(hours=1)).astype("int64") // 10**9
+    # epoch seconds via the unit-explicit path: pandas 3 stores datetimes in ms/us, so astype("int64") // 1e9 is wrong (found on the
+    # first attempt 2026-11-12, which therefore read no post-decision bar; disclosed in the result)
+    taken["T"] = (pd.to_datetime(taken.ts, utc=True) + pd.Timedelta(hours=1)).dt.as_unit("s").astype("int64")
+    assert taken["T"].min() >= int(pd.Timestamp(E.HOLDOUT_START, tz="UTC").timestamp())
     taken["day"] = pd.to_datetime(taken["T"], unit="s", utc=True).dt.date
     jobs = sorted(set(zip(taken.symbol, taken.day)))
     with cf.ThreadPoolExecutor(24) as ex:
@@ -219,7 +222,8 @@ def run(a) -> int:
            "taker_mean_net_r_on_measured": float(ok.net_r_taker.mean()), "implied_maker_mean_net_r": float(ok.net_r_taker.mean() + mean),
            "traded5": {"n": int(ok.symbol.isin(["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"]).sum()),
                        "mean_delta_r": float(ok.delta_r[ok.symbol.isin(["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"])].mean())},
-           "median_tick_bps": float(ok.tick_bps.median()), "matched_random_direction": matched, "holdout_lock": claim, "git_sha": E._git_sha(), "elapsed_s": round(time.time() - t0)}
+           "median_tick_bps": float(ok.tick_bps.median()), "matched_random_direction": matched,
+           "disclosure": "a first attempt (2026-11-12 ~20:50Z) made the EXEC ledger claim, then computed every decision time in 1970 (pandas 3 datetime unit), so every 1m fetch 404d and NO post-decision bar was read; it crashed on an empty sample. This run re-claims from the repo ledger; the aborted claim is not counted as a read.", "holdout_lock": claim, "git_sha": E._git_sha(), "elapsed_s": round(time.time() - t0)}
     (out / "result.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
     df.to_csv(out / "decisions.csv.gz", index=False)
     print(json.dumps({"verdict": v, "why": why}), flush=True)
