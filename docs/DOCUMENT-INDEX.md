@@ -614,6 +614,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/ENGINEERING-PLAN-2026-09-21.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/ML-PROGRAMME-2026-10-28.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | ONE consolidated ML programme: models that manage trades, TM-BENCH, 8 tracks, proposed infra rows, learning ledger. |
 | `docs/plans/ML-CONSOLIDATION-2026-11-11.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | ML registry inventory (106 rows) by slot with a keep/review/retire proposal; Thursday input for ML-PROGRAMME-CONSOLIDATION. |
+| `docs/plans/ML-D3-HEAD-TO-HEAD-2026-11-12.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | D3 entry-slot head-to-head rules, declared demotion signals, D2 bake-off units and the step-4 process audit for ML-PROGRAMME-CONSOLIDATION. |
 | `docs/plans/ML-ROADMAP-MECE-2026-11.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | MECE map of ML model families onto the ten trade-lifecycle decisions (D1-D10): per-slot question/baseline/label/harness, position aggregator (Mastiff) design, research dependency graph, compute demand, ranked proposals for Thursday planning. Propose-only. |
 | `docs/plans/UI-SPA-HANDOFF-2026-11-12.md` | history | historical | — | 2026-11-12 | `name:record-of-a-past-state / dir:record-of-a-completed-session` | — |
 | `docs/plans/WATCHDOG-CONSOLIDATION-DESIGN-2026-11-06.md` | plan | unknown | — | never | `not-assessed / not-assessed` | — |
@@ -793,6 +794,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/exit-path-metrics-2026-10-22.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | In-trade path measures vs giveback (per-bar state, stop-room control), outside research, and the b7e1 unit set. |
 | `docs/research/frontier-scan-2026-10-11.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | First frontier scan: ranked model/strategy shortlist behind RQ-20261011-9da8-01..07. |
 | `docs/research/frontier-scan-2026-11-11.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Weekly frontier scan 2026-11-11 (ML-FRONTIER-PREP-20261111): triage, K1 market-residual ENTRY proposal, M41 verdict, lever-row dispositions. |
+| `docs/research/frontier-scan-2026-11-12-surge.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Frontier surge pass 1 (lane FRONTIER-RESEARCH, 2026-11-12): the FRONTIER-Q sub-queue, sources, triage (RESID-ENTRY unit, SIGNATURE sequenced, METALABEL dropped on power). |
 | `docs/research/frontier-static-markets-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | FRONTIER-STATIC-MARKETS first pass: range/mean-reversion triage after the M22 retirement; units RQ-20261112-a7e8-01/-02. |
 | `docs/research/idea-family-review-2026-10-16.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Lane IDEA-REVIEW-1016: family-level A/B/C review of ideas closed since 2026-09-22 with outside sources; units RQ-20261016-1fa6-01..10; proposed negative-result protocol. |
 | `docs/research/R5-REMAINING-CORPUS-COST-STACK-2026-09-22.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | R7 lane: regrades the 40 of 52 evidence records that carried no `cost_stack`. Answers both live operator questions and carries proposals P1-P5, applied by nobody. `unknown` is correct and deliberate — the author wrote it, nobody else has read it. |
@@ -896,6 +898,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/crypto-edge-audit-2026-07-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/crypto-finetune-proposals-2026-07-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/analytic-skill-design-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/cf-counterfactual-d-phase-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/d1-cost-stack-verification-2026-09-25.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/hf-lake-free-storage-options-2026-11-05.md` | evidence | unknown | — | 2026-11-05 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/options-iv-history-sources-2026-11-01.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
@@ -1218,6 +1221,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/reviews/2026-11-04-weekly-walkthrough.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-11-11-weekly-audit.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/reviews/2026-11-11-weekly-walkthrough.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/reviews/2026-11-12-w9-gate-breakdown.md` | evidence | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-11-12-weekly-walkthrough.md` | evidence | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/runbooks/alpaca-integration.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/backfill-orphan-pnl.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |

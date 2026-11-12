@@ -573,14 +573,27 @@ def run_trail_step(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mo
                 res.alerts.append(f"{tid}: {venue} trail skipped: {plan.why} (feed {plan.detail.get('feed')}); "
                                   "stops and targets stay as they rest until the feed is sane")
                 tst["feed_alerted"] = True
-            if _f(t.get("tp_target")) is not None:
-                # PROP-BRACKET-APPLY: a pinned TP reads no candles (only the venue quote), so a corrupt feed does
-                # not block it; only the stop-trailing stays off.
-                _tp_step(p=p, leg=leg, tid=tid, venue=venue, bot_sym=bot_sym, entry=entry,
-                         initial_sl=isl, signal_time=sig_t, candles=None, tst=tst,
-                         tp_target=_f(t.get("tp_target")))
-            return
-        tst.pop("feed_alerted", None)
+            # PROP-FLOOR-ON-BAD-FEED (operator 2026-11-12: "we should hold the trade, but we shouldn't hold the
+            # SL"): an approved stop floor (meta.sl_floor) reads no candles, only the venue quote, so a corrupt
+            # feed must not strand it. It goes through the SAME tighten path below (venue-quote buffer, backoff,
+            # bounded ModifyRollout step, re-read); only the candle replay stays off.
+            floor = _f(t.get("sl_floor"))
+            fstep = _f((cfg.symbols.get(bot_sym) or {}).get("price_step"))
+            if floor is not None and floor > 0 and tightens(p.side or "", p.stop_loss, floor, fstep):
+                res.log("trail_floor_on_bad_feed", ticket_id=tid, venue=venue, sl_floor=floor,
+                        resting_sl=p.stop_loss)
+                plan = TrailPlan("tighten", "sl_floor applied while the candle feed is implausible",
+                                 sl=floor, detail={"sl_floor": floor, "source": "sl_floor_bad_feed"})
+            else:
+                if _f(t.get("tp_target")) is not None:
+                    # PROP-BRACKET-APPLY: a pinned TP reads no candles (only the venue quote), so a corrupt feed
+                    # does not block it; only the stop-trailing stays off.
+                    _tp_step(p=p, leg=leg, tid=tid, venue=venue, bot_sym=bot_sym, entry=entry,
+                             initial_sl=isl, signal_time=sig_t, candles=None, tst=tst,
+                             tp_target=_f(t.get("tp_target")))
+                return
+        else:
+            tst.pop("feed_alerted", None)
         if plan.close_lever and not tst.get("close_lever_alerted"):
             res.alerts.append(
                 f"{tid}: {venue} declared close lever `{plan.close_lever}` WOULD exit now "
