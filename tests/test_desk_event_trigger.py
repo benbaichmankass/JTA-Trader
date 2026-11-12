@@ -299,7 +299,7 @@ def test_a_pass_cut_off_mid_build_is_labelled_interrupted_on_the_next_pass(tmp_p
     logs.mkdir()
     fired = {"kind": "atr_burst", "symbol": "ETHUSDT", "bar": "b", "key": "k", "detail": {}}
     (logs / det.INFLIGHT).write_text(json.dumps({"started_at": (NOW - timedelta(seconds=300)).isoformat(), "fired": fired}))
-    res = det.run_once(cfg=CFG, now_fn=lambda: NOW, bars_fn=lambda s, tf, n: {"AVAXUSDT": bars()},
+    det.run_once(cfg=CFG, now_fn=lambda: NOW, bars_fn=lambda s, tf, n: {"AVAXUSDT": bars()},
                        auth_fn=lambda: "tok", fetch=lambda url, auth: (404, None), http=_Http(), pr_fn=lambda: 7,
                        commit_fn=lambda *a, **k: ("c" * 40, None), calendar_fn=None, logs=logs, receipt=tmp_path / "r.json")
     labels = [json.loads(x) for x in (logs / "trigger_labels.jsonl").read_text().splitlines()]
