@@ -4,9 +4,8 @@ quote, typed into the same measured Position Details field the SL uses, and veri
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Dict, List
 
-import pytest
 
 from src.prop.platform.base import Position
 from src.prop.platform import dxtrade as dx
