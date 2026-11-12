@@ -36,8 +36,13 @@ single command you can re-run locally.
 | `hf-cron` | `.github/workflows/hf-cron.yml` | `schedule` (HF dataset publish) | n/a | not PR-gating |
 | `training-run` | `.github/workflows/training-run.yml` | `workflow_dispatch` | n/a | not PR-gating |
 
-**Required status checks on `main`** (2026-08-06): `pytest-collect`,
-`pytest-run`, `guards`. The 13 individual guard contexts that were required
+**Required status checks on `main`** (2026-11-12): **`guards` only.** The
+operator's gate decisions of 2026-11-12 (record
+`comms/gates/gate_decisions_2026-11-12.json`) removed `pytest-collect`
+(PYTEST-COLLECT-REQUIRED: REMOVE) and made `pytest-run` report-only
+(PYTEST-RUN-REQUIRED: MAKE REPORT-ONLY): both workflows still run on every PR
+and their results still show, they no longer block a merge. Before that
+(2026-08-06): `pytest-collect`, `pytest-run`, `guards`. The 13 individual guard contexts that were required
 before that date (`secret-scan`, `ruff-lint`, `dry-run-guard`,
 `env-gate-guard`, `silent-empty-guard`, `canonical-config-loaders`,
 `canonical-db-resolver`, `provenance-consumer-guard`,
@@ -248,7 +253,7 @@ GETs the current protection (preserving any existing PR-review /
 restrictions / admin-enforcement values), then PUTs the new spec.
 Idempotent — re-running with no change is a no-op.
 
-Current required contexts on `main` (2026-05-22):
+Required contexts on `main` as of 2026-05-22 (historical; the current list is `guards` only — see the top of this doc and `REQUIRED_CONTEXTS` in `branch-protection-sync.yml`):
 
 - `pytest-collect`
 - `pytest-run`

@@ -81,3 +81,29 @@ def test_remote_snapshot_reports_absent_db(tmp_path):
          "--db", str(tmp_path / "nope.db"), "--out-dir", str(tmp_path), "--label", "x"],
         capture_output=True, text=True, check=True)
     assert json.loads(out.stdout) == {"label": "x", "state": "absent"}
+
+
+def _wf():
+    import yaml
+    p = pathlib.Path(__file__).resolve().parents[2] / ".github" / "workflows" / "journal-offvm-backup.yml"
+    return yaml.safe_load(p.read_text()), p.read_text()
+
+
+def test_issue_routed_runs_read_mode_and_get_a_comment():
+    """HEALTH-20261112-JOURNAL-BAK-RETENTION: issue-routed runs arrive as repository_dispatch."""
+    _, text = _wf()
+    assert '"${{ github.event_name }}" = "repository_dispatch"' in text
+    assert "context.eventName === 'repository_dispatch'" in text
+
+
+def test_on_vm_prune_runs_only_after_a_verified_backup_and_keeps_the_newest():
+    wf, _ = _wf()
+    steps = wf["jobs"]["backup"]["steps"]
+    names = [s.get("id") for s in steps]
+    prune = steps[names.index("prune")]
+    assert names.index("prune") > names.index("run")
+    assert "steps.run.outcome == 'success'" in prune["if"]
+    assert "steps.mode.outputs.mode == 'backup'" in prune["if"]
+    assert prune.get("continue-on-error") is True
+    assert "ACTION_KEEP=1" in prune["run"] and "ACTION_APPLY=true" in prune["run"]
+    assert "prune_db_backups.sh" in prune["run"]

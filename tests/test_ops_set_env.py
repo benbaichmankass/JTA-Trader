@@ -28,3 +28,12 @@ def test_phone_pending_is_quiet_when_kill_switch_off(monkeypatch):
     monkeypatch.setattr(pe, "expire_stale_claims", lambda a: [])
     out = asyncio.run(r.phone_pending(accepts="", authorization="x"))
     assert out == {"ok": True, "pending": 0, "status_age_hours": None, "drill": None, "kill_switch": "off"}
+
+
+def test_exec_validates_and_runs():
+    p, errs = ops._v_exec({"cmd": "echo hi", "timeout_s": 99999})
+    assert errs == [] and p["timeout_s"] == ops.EXEC_MAX_TIMEOUT_S
+    assert ops._v_exec({"cmd": ""})[1] and ops._v_exec({"cmd": "x", "rm": 1})[1]
+    out = ops.run_exec({"params": {"cmd": "echo ops-exec-ok", "timeout_s": 10}})
+    assert out["exit"] == 0 and "ops-exec-ok" in out["stdout_tail"]
+    assert ops.REGISTRY["exec"].tier == 2 and "run_exec" in ops.RUNNERS

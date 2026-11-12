@@ -83,6 +83,52 @@ def load_bars(sym: str, corpus: Path, start: str, end: str) -> pd.DataFrame:
     return df[(df["d"] >= lo) & (df["d"] <= hi)].reset_index(drop=True)
 
 
+def load_ibkr_percontract(path: Path) -> tuple[pd.DataFrame, dict]:
+    """Real CME bars from IB's free history (FUT-CME-INTRADAY-HIST): a per-contract jsonl written by
+    ``pull-ibkr-history per_contract: 1`` (``market_raw_percontract/<SYM>/<tf>/<ver>/data.jsonl``; each bar
+    carries ``contract`` = expiry YYYYMMDD and cross-contract overlaps are kept).
+
+    ROLL ON VOLUME, PER SESSION: for each ET calendar date, take the contract with the largest volume that date,
+    never stepping back to an older expiry once rolled. The splice is at a session boundary, so no intraday bar
+    mixes contracts. No back-adjustment: every trade opens and closes inside one session, the result is in R
+    (level-free) and the ATR feature uses day ranges, so a constant level shift changes nothing.
+    Returns (bars, provenance) where provenance states the span actually served and the roll calendar.
+    """
+    rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    if not rows:
+        raise SystemExit(f"no bars in {path}")
+    df = pd.DataFrame(rows)
+    df["timestamp"] = pd.to_datetime(df["ts"], utc=True)
+    df["et"] = df["timestamp"].dt.tz_convert(ET)
+    df["d"] = df["et"].dt.date
+    vol = df.groupby(["d", "contract"])["volume"].sum().reset_index()
+    chosen: dict = {}
+    floor = ""
+    for d, g in vol.groupby("d"):
+        g = g[g["contract"] >= floor]
+        if g.empty:
+            continue
+        c = str(g.sort_values(["volume", "contract"], ascending=[False, True]).iloc[0]["contract"])
+        chosen[d] = c
+        floor = c
+    df = df[df.apply(lambda r: chosen.get(r["d"]) == r["contract"], axis=1)]
+    df = df.drop_duplicates("timestamp").sort_values("timestamp").reset_index(drop=True)
+    df["t"] = df["et"].dt.time
+    rolls, prev = [], None
+    for d in sorted(chosen):
+        if chosen[d] != prev:
+            rolls.append({"from_session": str(d), "contract": chosen[d]})
+            prev = chosen[d]
+    per_contract = {c: {"first_ts": str(g["timestamp"].min()), "last_ts": str(g["timestamp"].max()), "bars": len(g)}
+                    for c, g in pd.DataFrame(rows).assign(timestamp=lambda x: pd.to_datetime(x["ts"], utc=True))
+                    .groupby("contract")}
+    prov = {"path": str(path), "bars_raw": len(rows), "bars_continuous": len(df),
+            "first_ts": str(df["timestamp"].min()), "last_ts": str(df["timestamp"].max()),
+            "contracts_served": per_contract, "roll_calendar": rolls,
+            "roll_rule": "per ET session, max-volume contract, monotonic; no back-adjustment"}
+    return df[["timestamp", "open", "high", "low", "close", "volume", "et", "d", "t"]], prov
+
+
 # ------------------------------------------------------------------ ORB engine
 @dataclass
 class Trade:
@@ -231,6 +277,44 @@ def grade_cell(trades: list[Trade]) -> dict:
         v = "pass"
     elif len(hn) < HOLD_N_FLOOR and sum(dn) > 0 and n_pos >= FOLD_MAJ and c["lo"] > 0:
         v = "indeterminate"
+    else:
+        v = "fail"
+    out["verdict"] = v
+    return out
+
+
+def grade_cell_sessions(trades: list[Trade], sessions: list[str], disc_frac: float = 0.75, n_folds: int = 6) -> dict:
+    """RULE-RQ-20261112-09d2-05 window: discovery = the first 75% of the RTH sessions served, in 6 equal folds
+    (by session count); holdout = the last 25%. Clauses as grade_cell (N_FLOOR, FOLD_MAJ, Z_BONF, holdout floor)."""
+    sessions = sorted(sessions)
+    cut = int(len(sessions) * disc_frac)
+    disc_s, hold_s = sessions[:cut], sessions[cut:]
+    fold_of = {d: min(i * n_folds // max(len(disc_s), 1), n_folds - 1) for i, d in enumerate(disc_s)}
+    disc = [t for t in trades if t.day in fold_of]
+    hold = [t for t in trades if hold_s and t.day >= hold_s[0]]
+    folds: dict = {f"F{k + 1}": [] for k in range(n_folds)}
+    for t in disc:
+        folds[f"F{fold_of[t.day] + 1}"].append(t.net_r)
+    fold_net = {k: round(sum(v), 3) for k, v in folds.items()}
+    n_pos = sum(1 for v in fold_net.values() if v > 0)
+    dn, hn = [t.net_r for t in disc], [t.net_r for t in hold]
+    c = ci(dn, Z_BONF)
+    out = {
+        "window": {"sessions": len(sessions), "discovery": [disc_s[0], disc_s[-1]] if disc_s else None,
+                   "holdout": [hold_s[0], hold_s[-1]] if hold_s else None,
+                   "fold_bounds": {f"F{k + 1}": [min(d for d in disc_s if fold_of[d] == k), max(d for d in disc_s if fold_of[d] == k)]
+                                   for k in range(n_folds) if any(fold_of[d] == k for d in disc_s)}},
+        "n_disc": len(dn), "net_r_disc": round(sum(dn), 3), "folds": fold_net, "folds_positive": n_pos,
+        "edge_ci_disc": c, "n_hold": len(hn), "net_r_hold": round(sum(hn), 3),
+        "mean_r_hold": round(st.fmean(hn), 5) if hn else None,
+        "gross_r_disc": round(sum(t.gross_r for t in disc), 3), "cost_r_disc": round(sum(t.cost_r for t in disc), 3),
+        "median_risk_usd_1c": round(st.median([t.risk_usd_1c for t in trades]), 2) if trades else None,
+        "by_reason": {r: sum(1 for t in trades if t.exit_reason == r) for r in ("stop", "take_profit", "session_flat")},
+    }
+    if len(dn) < N_FLOOR:
+        v = "indeterminate"
+    elif sum(dn) > 0 and n_pos >= FOLD_MAJ and c["lo"] is not None and c["lo"] > 0 and len(hn) >= HOLD_N_FLOOR and sum(hn) > 0:
+        v = "pass"
     else:
         v = "fail"
     out["verdict"] = v
@@ -444,12 +528,46 @@ def main(argv=None) -> int:
     ap.add_argument("--out", required=True)
     ap.add_argument("--unit", required=True)
     ap.add_argument("--stage0-json", help="survival: the stage0 result to read the PASS cells from")
+    ap.add_argument("--source", choices=("dukascopy", "ibkr"), default="dukascopy",
+                    help="ibkr = real CME bars from IB's free history (per-contract jsonl, --ibkr-percontract); stage0 only")
+    ap.add_argument("--ibkr-percontract", action="append", default=[], metavar="SYM=PATH",
+                    help="with --source ibkr: a per-contract jsonl per symbol (repeatable)")
+    ap.add_argument("--cells", default="", help="comma list of cells to run, e.g. MNQ_OR15 (default: all)")
     a = ap.parse_args(argv)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     corpus = Path(a.corpus)
     cells: dict[str, list[Trade]] = {}
     all_days: set[str] = set()
+    want = {c.strip() for c in a.cells.split(",") if c.strip()}
+    if a.source == "ibkr":
+        if a.stage != "stage0":
+            raise SystemExit("--source ibkr supports --stage stage0 only (RULE-RQ-20261112-09d2-05)")
+        paths = dict(x.split("=", 1) for x in a.ibkr_percontract)
+        provs, sess_by_sym = {}, {}
+        for sym, pth in paths.items():
+            df, provs[sym] = load_ibkr_percontract(Path(pth))
+            rth_days = {str(d) for d, g in df[(df["t"] >= RTH_OPEN) & (df["t"] < FLAT_AT)].groupby("d") if len(g) >= 60}
+            sess_by_sym[sym] = sorted(rth_days)
+            for orm in OR_MINUTES:
+                k = f"{sym}_OR{orm}"
+                if not want or k in want:
+                    cells[k] = orb_trades(df, sym, orm)
+        rec = {"research_unit": a.unit, "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+               "produced_by": "scripts/research/tradeify_futures_fit.py --source ibkr", "stage": a.stage,
+               "population": {k: len(v) for k, v in cells.items()},
+               "data": "IB reqHistoricalData TRADES, real CME contracts, per-session volume roll (load_ibkr_percontract)",
+               "data_provenance": provs,
+               "cells": {k: grade_cell_sessions(v, sess_by_sym[k.split("_")[0]]) for k, v in cells.items()}}
+        with open(out / "trades.jsonl", "w") as f:
+            for k, v in cells.items():
+                f.writelines(json.dumps({"cell": k, **asdict(t)}, default=str) + "\n" for t in v)
+        vs = [c["verdict"] for c in rec["cells"].values()]
+        rec["verdict"] = "pass" if "pass" in vs else ("fail" if vs and all(v == "fail" for v in vs) else "indeterminate")
+        rec["read_state"] = "complete"
+        (out / "verdict.json").write_text(json.dumps(rec, indent=1, default=str) + "\n")
+        print(json.dumps({k: rec[k] for k in ("research_unit", "stage", "verdict", "population")}, default=str))
+        return 0
     for sym in INSTR:
         df = load_bars(sym, corpus, DISC[0], HOLD[1])
         all_days |= {str(d) for d in df[(df["t"] >= RTH_OPEN) & (df["t"] < FLAT_AT)]["d"].unique()}

@@ -1,6 +1,6 @@
 ---
 name: drift-remediation
-description: The standing process for FIXING a drifted / degrading ML model instead of reflexively demoting it. Use when the daily promotion-readiness report proposes a DEMOTE for a live (advisory) model, when shadow-drift or gate-check flags drift, or when the operator asks "how do we fix this model / get it back to where it needs to be" rather than just turning it off. Distinguishes transient drift (self-corrects on the daily retrain → no action) from persistent capability failure (needs a feature/label fix shipped as a new version → operator promotes the validated replacement). Demote is interim safety only, never the endpoint. Composes with model-training, ml-review, diag-data. NOT for promoting a model past shadow (that's the Tier-3 operator gate) and NOT for routine training (model-training).
+description: The standing process for FIXING a drifted / degrading ML model instead of reflexively demoting it. Use when the daily promotion-readiness report proposes a DEMOTE for a live (advisory) model, when shadow-drift or gate-check flags drift, or when the operator asks "how do we fix this model / get it back to where it needs to be" rather than just turning it off. Distinguishes transient drift (self-corrects on the daily retrain → no action) from persistent capability failure (needs a feature/label fix shipped as a new version → the validated replacement is promoted on its offline evidence, no shadow step). Demote is interim safety only, never the endpoint; a demoted head soaks in shadow to keep generating data while it is iterated on. Composes with model-training, ml-review, diag-data. NOT for routine training (model-training).
 ---
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-09-07` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
@@ -9,9 +9,13 @@ description: The standing process for FIXING a drifted / degrading ML model inst
 
 Full runbook: [`docs/runbooks/model-drift-remediation.md`](../../docs/runbooks/model-drift-remediation.md).
 This skill is the invokable entry; the runbook carries the detail + the worked
-example. **Promotion/demotion of a live head is Tier-3 (operator-gated)** — this
-skill prepares evidence and builds the fix; the operator authorizes the live
-switch.
+example. **Promotion/demotion of a live head is Tier-3**, data-backed per canonical
+§ "Data-backed Tier-2/3 decisions" when a committed evidence record settles it
+(ship, then notify the operator). There is **no shadow step** before real money
+(operator, chat 2026-11-12, verbatim: *"Everything goes through the new flow, back
+testing, live money, and then if it gets demoted, it soaks to still generate data
+while we iterate on it. That is the only acceptable flow. There is nothing in between
+proving edge on back testing and real money. Absolutely no steps."*).
 
 ## The one rule
 
@@ -41,9 +45,11 @@ self-heals; and a capability gap never heals from a retrain. So:
    new `model_id`, so the **live advisory artifact is never touched**; it lands
    `candidate`/`shadow`.
 
-4. **Verify + hand off** — the new version must clear all required gates across
-   the soak window; `gate-check <new_id>` → the go/no-go packet → **the operator**
-   `promote-stage <new_id> --new-stage advisory`, then retire the old one.
+4. **Verify + promote** — the new version must clear the required OFFLINE gates
+   (`gate-check <new_id> --datasets-root ...` → `ready: true`; live gates are reported,
+   not required — there is no soak window); then `promote-stage <new_id> --new-stage
+   advisory` under the data-backed Tier-3 rule (notify the operator), and retire the
+   old one.
 
 5. **Interim demote — only if the live head is actively harmful now and no
    replacement is ready.** `promote-stage <id> --new-stage shadow` is
@@ -85,4 +91,5 @@ not demotion, so what do we do with it? ... it should feed into iterating and im
 
 Record the triage verdict (transient vs persistent), the diagnosed root cause,
 and the remediation version + its gate status in the ml-review backlog. Never
-silently demote or silently promote — both are Tier-3 operator calls.
+silently demote or silently promote — both are Tier-3, data-backed on a committed
+record, and the operator is notified at once.
