@@ -21,16 +21,16 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from src.runtime import rd_registry  # noqa: E402
+from src.runtime import rd_registry
 
 OUT_REL = "comms/research/rd_registry.json"
 
 
 def _live_rows(url: str) -> list[dict] | None:
     try:
-        with urllib.request.urlopen(url, timeout=30) as r:  # noqa: S310 -- operator-configured https read
+        with urllib.request.urlopen(url, timeout=30) as r:
             doc = json.loads(r.read().decode("utf-8"))
-    except Exception as exc:  # noqa: BLE001 -- falls back to the committed snapshot, stated in read_state
+    except Exception as exc:  # noqa: BLE001  # allow-silent: falls back to the committed snapshot, stated in read_state.ml_registry and on stderr
         print(f"rd_registry: live registry unreadable ({type(exc).__name__}); using committed snapshot", file=sys.stderr)
         return None
     rows = doc.get("rows") if isinstance(doc, dict) else None

@@ -261,7 +261,7 @@ def _survivor_tools():
     (classify_evidence, heldout_kinds, classify_subject or None, read_state)."""
     try:
         from scripts.research import research_slo as slo
-    except Exception as exc:  # noqa: BLE001 -- surfaced as read_state
+    except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as read_state.survivor_definitions
         return None, (), None, f"unavailable: research_slo import failed ({type(exc).__name__})"
     cs = getattr(slo, "classify_subject", None)
     return (slo.classify_evidence, tuple(slo.HELDOUT_KINDS), cs,
@@ -317,12 +317,11 @@ def build_registry(root: Path, *, now: datetime | None = None, catalog: dict | N
     try:
         from scripts.ops import strategy_status as ss
         status_table = ss.table(root)
-        accounts, strategies = ss.load(root)
-        ros = ss.rosters(accounts)
+        _accounts, strategies = ss.load(root)
         read_state["strategy_status"] = {"state": "ok" if status_table else "unreadable",
                                          "n": len(status_table) if status_table else None}
-    except Exception as exc:  # noqa: BLE001 -- surfaced as read_state, never as an empty fleet
-        status_table, strategies, ros = {}, {}, {}
+    except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as read_state.strategy_status, never as an empty fleet
+        status_table, strategies = {}, {}
         read_state["strategy_status"] = {"state": f"unreadable: {type(exc).__name__}", "n": None}
 
     reg_rows, read_state["ml_registry"] = load_ml_registry(root, live_registry_rows)
@@ -352,7 +351,7 @@ def build_registry(root: Path, *, now: datetime | None = None, catalog: dict | N
         from src.runtime import checklist_store
         rows = [r for r in (checklist_store.load(root).get("items") or []) if isinstance(r, dict)]
         read_state["checklist"] = {"state": "ok", "n": len(rows)}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as read_state.checklist
         rows = []
         read_state["checklist"] = {"state": f"unreadable: {type(exc).__name__}", "n": None}
     open_rows = [r for r in rows if str(r.get("state") or "").lower() not in CLOSED_ROW_STATES]
@@ -373,7 +372,7 @@ def build_registry(root: Path, *, now: datetime | None = None, catalog: dict | N
     subject_kind: dict[str, str] = {}
     how_count: dict[str, int] = {}
     unattributed: list[str] = []
-    for uid in units:
+    for uid, unit in units.items():
         d = docs.get(uid) or {}
         key, how = None, None
         if uid in plan_ref_units:
@@ -384,7 +383,7 @@ def build_registry(root: Path, *, now: datetime | None = None, catalog: dict | N
                 key, how = f"subj:{s}", "declared_subject"
                 subject_kind.setdefault(s, kind or "")
         if not key:
-            title = str(units[uid].get("title") or "")
+            title = str(unit.get("title") or "")
             hit = next((k for k in title_keys if k in title), None)
             if hit:
                 key, how = f"subj:{hit}", "title_match"
@@ -685,7 +684,7 @@ def cross_check(doc: dict, root: Path) -> list[str]:
                 out.append(f"strategy_status {want} {a} != registry {stage} legs {b}")
         if len(legs) != len(t):
             out.append(f"strategy legs {len(legs)} != strategies.yaml legs {len(t)}")
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # allow-silent: reported as a cross_check problem, never as clean
         out.append(f"strategy_status unreadable: {type(exc).__name__}")
     regs = [i for i in doc["ideas"] if i["kind"] == "ml_model" and i.get("bucket") in ("LIVE", "SHADOW")]
     n_reg = doc["read_state"]["ml_registry"].get("n")
