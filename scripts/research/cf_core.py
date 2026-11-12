@@ -47,7 +47,7 @@ BIASES = [
     "an unresolved arm is marked at the last close and costed as closed there (resolved=false)",
     "post-exit bars end at t_close + horizon (leg max-hold, else a per-timeframe default); an arm open there is unresolved and never in a verdict",
     "post-exit excursions start at the first bar opening after the close; the bar containing the exit is excluded",
-    "funding = policy default x windows held (ESTIMATED); account % = current equity less actual P&L (ESTIMATED)",
+    "funding = policy default x windows held (ESTIMATED); account balance is never recorded (R and USD P&L only)",
     "alt-bracket arms hold the risk budget constant (wider stop => smaller size); margin and lot size not modelled",
 ]
 
@@ -250,15 +250,13 @@ def post_exit_block(arms: List[dict], bars: Sequence[dict], *, side: str, exit_p
 
 
 def _arm(arm_id: str, family: str, label: str, params: dict, sim: dict, legs: List[dict], cm_fn, side: str,
-         entry_fill: float, r_dist: float, t_entry: float, equity: Dict[str, Optional[float]]) -> dict:
+         entry_fill: float, r_dist: float, t_entry: float) -> dict:
     n = net_of(sim, side=side, entry_fill=entry_fill, r_dist=r_dist, t_entry=t_entry, cm=cm_fn)
     last = sim["fills"][-1] if sim["fills"] else None
     per = {}
     for lg in legs:
         pnl = n["net_r"] * lg["risk_usd"] if lg["risk_usd"] else None
-        eq = equity.get(lg["account_id"])
         per[lg["account_id"]] = {"pnl_usd": None if pnl is None else round(pnl, 4),
-                                 "pct_of_account": None if (pnl is None or not eq) else round(pnl / eq * 100, 4),
                                  "account_class": lg["account_class"]}
     return {"arm_id": arm_id, "family": family, "label": label, "params": params, "resolved": sim["resolved"],
             "exit": None if last is None else {"ts": lrc._iso(last["ts"]), "px": round(last["px"], 8), "reason": last["reason"],
@@ -347,15 +345,14 @@ def grade_package(pkg: dict, legs_in: List[dict], bars: List[dict], reviews: Lis
     for lg in legs:
         eq = equity_now.get(lg["account_id"])
         got = lg["pnl_usd_venue"] if lg["pnl_usd_venue"] is not None else lg["pnl_usd_journal"]
-        equity[lg["account_id"]] = (eq - (got or 0.0)) if eq else None
-        lg["equity_pre_usd"] = None if not equity[lg["account_id"]] else round(equity[lg["account_id"]], 2)
+        equity[lg["account_id"]] = (eq - (got or 0.0)) if eq else None   # IN MEMORY ONLY: never serialized (CF-GRADES-EQUITY-COMMITTED)
 
     arms: List[dict] = []
 
     def run(arm_id, family, label, params, *, stop=stop0, tp=tp0, acts=(), rules=(), trail=own_trail, r=r_dist):
         sim = simulate(bars, side=side, entry_ref=entry_ref, r_dist=r_dist, t_entry=t_entry,
                        stop0=stop, tp=tp, actions=acts, rules=rules, trail_dist=trail)
-        a = _arm(arm_id, family, label, params, sim, legs, cm_lead, side, entry_fill, r, t_entry, equity)
+        a = _arm(arm_id, family, label, params, sim, legs, cm_lead, side, entry_fill, r, t_entry)
         arms.append(a)
         return a
 
@@ -366,9 +363,7 @@ def grade_package(pkg: dict, legs_in: List[dict], bars: List[dict], reviews: Lis
     actual_per = {}
     for lg in legs:
         usd = lg["pnl_usd_venue"] if lg["pnl_usd_venue"] is not None else lg["pnl_usd_journal"]
-        eq = equity.get(lg["account_id"])
         actual_per[lg["account_id"]] = {"pnl_usd": None if usd is None else round(usd, 4),
-                                        "pct_of_account": None if (usd is None or not eq) else round(usd / eq * 100, 4),
                                         "account_class": lg["account_class"]}
     lead_usd = actual_per[lead["account_id"]]["pnl_usd"]
     actual_r = None if lead_usd is None or not legs[0]["risk_usd"] else lead_usd / legs[0]["risk_usd"]
