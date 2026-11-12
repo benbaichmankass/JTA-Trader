@@ -30,6 +30,9 @@ power:
     source: none
     accrual_basis: 'First observation of trend on BNBUSDT 1h in this repo as a queue unit (checked 2026-10-11). Data: binance_vision,
       window declared in scripts/ops/fetch_backtest_corpus.py. Below the floor the unit grades indeterminate, never FAIL.'
+evidence_class:  # EVIDENCE-CLASS-BACKFILL 2026-11-11, rule H2 (scripts/research/backfill_evidence_class.py)
+  holdout: in_sample
+  claim: edge
 decision_rule:
   id: RULE-RQ-20261011-fc31-01-TREND-BNBUSDT-1h-STAGE0
   registered_at: '2026-10-11'

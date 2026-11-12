@@ -2,7 +2,7 @@ id: RQ-20261014-9807-04
 title: 'Programme 01 Q4, stop waiting: do giveback-stop and trail_decay cells KEYED TO THE MEASURED GIVEBACK (RQ-20261014-9807-01)
   beat the fixed gb1R_afterMFE1R cell on net R per capital-day on the real-money legs? BLOCKED: the m20 sweep has no `cells`
   input (fixed giveback cells only)'
-status: blocked
+status: retired
 cadence: once
 theme: live_strategy
 priority: 1
@@ -39,6 +39,9 @@ power:
       Grounded on m20 because the run is an m20 exit-lever sweep; min_per_leg over the three legs with n >= 39 reads 49 on the
       2026-10-08 rows -> cleared for those legs. trend_donchian_xrp_4h (31) and the alpaca 1d legs (4-7) are scoped into the rule
       as below_floor strata rather than certified on these legs' n.
+evidence_class:  # EVIDENCE-CLASS-BACKFILL 2026-11-11, rule M1 (scripts/research/backfill_evidence_class.py)
+  holdout: holdout_window
+  claim: edge
 decision_rule:
   id: RULE-RQ20261014-9807-04-CENSUS-KEYED-STOP
   registered_at: '2026-10-14'
@@ -121,8 +124,8 @@ related:
 - src/runtime/trail_decay.py (the live lever; declared per leg, Tier-3)
 last_dispatched_at: null
 blocked_review:
-  by: RESEARCH-OPS-20261101-0940
-  disposition: kept
-  due_by: '2026-11-15'
-  note: 'kept: blocker still live (RQ-20261014-9807-01=unit:queued); re-dated, not dropped'
-  reviewed: '2026-11-01'
+  by: RESEARCH-OPS-20261111-2049
+  disposition: retired
+  reviewed: '2026-11-11'
+  note: 'retired at config level; reason in retired_reason'
+retired_reason: '2026-11-11 RESEARCH-OPS-20261111-2049 (blocked_over_age UNBLOCK-OR-RETIRE): retired at CONFIG level. The cells are keyed to the per-leg giveback census, which cannot be derived: RQ-20261014-9807-01 landed insufficient_n (7 real-money closes < 20) and the harness-ledger fallback reads negative givebacks (mfe_r is a lagged lower bound), so no per-leg giveback_r / bars_since_peak exists to key a cell. The giveback_stop / trail_decay lever families are NOT closed or retired: they stay open and re-enter as a new unit once per-bar paths exist (EXIT-PATH-EMIT-OFFLINE landed_unproven; its observation is the re-entry test). Unit-level decision only.'
