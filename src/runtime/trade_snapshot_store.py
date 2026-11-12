@@ -181,3 +181,39 @@ def resolve_prop(conn: sqlite3.Connection, fill_id: int) -> Optional[Tuple[Dict[
         except sqlite3.OperationalError:
             ticket = None
     return opener, closer, ticket
+
+
+FLAG_AFTER_ATTEMPTS = 5  # == trade_snapshot_builder.FLAG_AFTER (asserted in tests)
+
+
+def status_counts(path: str) -> Dict[str, Any]:
+    """Backfill progress from the snapshot DB, read-only: built / built_partial / retrying (+ attempts), the newest
+    build time and the latest error. ``state`` = read | no_table (the builder has not created the file yet) |
+    could_not_look (the read failed). Counts are None (never 0) unless state is read."""
+    out: Dict[str, Any] = {"state": "no_table", "built": None, "built_partial": None, "built_trade": None,
+                           "built_prop": None, "retrying": None, "failing_flagged": None, "max_attempts": None,
+                           "last_built_at": None, "last_error": None, "last_error_key": None}
+    conn = snapshots_ro(path)
+    if conn is None:
+        return out
+    try:
+        r = conn.execute(
+            f"SELECT SUM(state='built'), SUM(state='built' AND read_state='partial'), "
+            f"SUM(state='built' AND snapshot_key LIKE 'trade:%'), SUM(state='built' AND snapshot_key LIKE 'prop:%'), "
+            f"SUM(state='retrying'), SUM(state='retrying' AND attempts>=?), MAX(CASE WHEN state='retrying' "
+            f"THEN attempts END), MAX(built_at) FROM {TABLE}", (FLAG_AFTER_ATTEMPTS,)).fetchone()
+        e = conn.execute(f"SELECT snapshot_key, last_error FROM {TABLE} WHERE state='retrying' AND last_error IS NOT NULL "
+                         "ORDER BY next_attempt_at DESC LIMIT 1").fetchone()
+    except sqlite3.OperationalError as exc:
+        if "no such table" in str(exc):
+            return out
+        return dict(out, state="could_not_look", error=str(exc)[:200])
+    except sqlite3.Error as exc:
+        return dict(out, state="could_not_look", error=str(exc)[:200])
+    finally:
+        conn.close()
+    n = [int(x or 0) for x in r[:6]]
+    out.update(state="read", built=n[0], built_partial=n[1], built_trade=n[2], built_prop=n[3], retrying=n[4],
+               failing_flagged=n[5], max_attempts=r[6], last_built_at=r[7],
+               last_error=(e[1] if e else None), last_error_key=(e[0] if e else None))
+    return out
