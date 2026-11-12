@@ -47,7 +47,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import sys
 from pathlib import Path
 from typing import Any
@@ -162,9 +161,10 @@ def _edges(lo: Any, hi: Any, k: int) -> list[Any]:
 
 
 def run(a: argparse.Namespace) -> dict[str, Any]:
-    import harness_stage0 as hs
     import exit_lever_ablation as ela
+    import harness_stage0 as hs
     from short_tf_discovery_sweep import mean_test
+
     from src.runtime import execution_costs as ec
 
     out_dir = Path(a.out)
@@ -270,6 +270,7 @@ def run(a: argparse.Namespace) -> dict[str, Any]:
 
 def _self_test() -> int:
     """Synthetic: a mean-reverting series must give the long IBS arm positive gross R; costs must be charged."""
+    import itertools
     import random
     random.seed(7)
     bars, px = [], 100.0
@@ -288,7 +289,7 @@ def _self_test() -> int:
     assert all(t["cost_r"] > 0 for t in tr)
     assert all(t["exit_time"] > t["entry_time"] for t in tr)
     # no overlap: each entry after the previous exit
-    for p, q in zip(tr, tr[1:]):
+    for p, q in itertools.pairwise(tr):
         assert q["entry_time"] > p["exit_time"]
     lab, cfg = parse_arm("C=ibs_lo=1.01;max_hold=3")
     assert lab == "C" and cfg["ibs_lo"] == 1.01

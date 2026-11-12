@@ -1,11 +1,12 @@
 """ibs_reversion_stage0: the self-test (mean-reverting synthetic -> positive gross R, costs charged, no overlap)
 and the no-look-ahead property of an entry (the signal bar's own close is the entry; exits start the next bar)."""
 import datetime as dt
+import importlib
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts" / "research"))
-import ibs_reversion_stage0 as ibs  # noqa: E402
+ibs = importlib.import_module("ibs_reversion_stage0")
 
 
 def test_self_test_passes():
