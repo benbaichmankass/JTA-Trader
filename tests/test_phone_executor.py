@@ -397,7 +397,7 @@ def _live(tmp_path: Path, monkeypatch, mode: str = "live", cushion: str = "withi
     if cushion is not None:
         from src.prop import prop_risk_gate
         monkeypatch.setattr(prop_risk_gate, "grade_account_ticket_risk",
-                            lambda acct, risk_usd=None: {"state": cushion, "risk_usd": risk_usd, "reason": "test"})
+                            lambda acct, risk_usd=None, **_kw: {"state": cushion, "risk_usd": risk_usd, "reason": "test"})
 
 
 def _rb(tid: str, **over) -> dict:
@@ -720,7 +720,7 @@ def test_cushion_risk_is_qty_times_stop_distance():
     from src.prop import prop_risk_gate
     orig = prop_risk_gate.grade_account_ticket_risk
     try:
-        prop_risk_gate.grade_account_ticket_risk = lambda a, risk_usd=None: calls.setdefault("r", risk_usd) and {
+        prop_risk_gate.grade_account_ticket_risk = lambda a, risk_usd=None, **_kw: calls.setdefault("r", risk_usd) and {
             "state": "within_cushion"} or {"state": "within_cushion"}
         assert pe.live_cushion_refusals("breakout_2", {"qty": "0.29", "price": "2,379.36", "sl": "2319.40"}) == []
     finally:

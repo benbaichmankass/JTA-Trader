@@ -182,8 +182,13 @@ def grade_ticket_risk(
     status_freshness: Optional[str] = None,
     open_risk_state: Optional[str] = None,
     open_loss_to_stop_usd: Optional[float] = None,
+    inflight: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Grade one ticket's risk against the account's remaining cushion.
+
+    ``inflight`` (optional, from ``prop_reconcile.compute_inflight_risk``) is
+    carried through for the reader only: the distances passed in already have
+    its reserve subtracted and ``open_loss_to_stop_usd`` already includes it.
 
     ``open_risk_state`` (E66) is ``compute_rule_distance``'s
     ``after_open_risk_state``. ``None`` means the caller did not supply one and
@@ -235,6 +240,13 @@ def grade_ticket_risk(
                 "unrealized_unreported": "the snapshot carries no unrealized "
                                          "P&L, so open positions cannot be "
                                          "marked to their stops",
+                "inflight_risk_unknown": "an in-flight ticket (go-token issued "
+                                         "or entry order placed, not yet "
+                                         "filled) has no computable risk at "
+                                         "its stop",
+                "inflight_unreadable": "the in-flight tickets (go-token issued "
+                                       "or entry order placed, not yet filled) "
+                                       "could not be read",
             }.get(str(open_risk_state),
                   f"the open positions could not be read ({open_risk_state})"))
         else:
@@ -270,6 +282,7 @@ def grade_ticket_risk(
             "status_freshness": status_freshness, "reason": why,
             "open_risk_state": open_risk_state,
             "open_loss_to_stop_usd": open_loss_to_stop_usd,
+            "inflight": inflight,
             # Explicitly NOT `cushion_usd` — a stale number must never be read
             # as the live one by a consumer that only checks for a value.
             "last_known_cushion_usd": last_known[1] if last_known else None,
@@ -293,6 +306,7 @@ def grade_ticket_risk(
         "status_freshness": status_freshness,
         "open_risk_state": open_risk_state,
         "open_loss_to_stop_usd": open_loss_to_stop_usd,
+        "inflight": inflight,
         "reason": (
             f"suggested risk ${risk:,.2f} is at or past the remaining "
             f"${cushion:,.2f} to the {binding.replace('_', ' ')} limit"
@@ -301,7 +315,12 @@ def grade_ticket_risk(
             f"${cushion:,.2f} to the {binding.replace('_', ' ')} limit"
         ) + (
             f" (after ${open_loss_to_stop_usd:,.2f} still at risk to the stops "
-            f"of open positions)"
+            f"of open positions"
+            + (f", incl. ${float(inflight['loss_to_stop_usd']):,.2f} reserved for "
+               f"{len(inflight.get('tickets') or [])} in-flight ticket(s) "
+               f"{', '.join(str(i.get('ticket_id')) for i in inflight.get('tickets') or [])}"
+               if inflight and inflight.get("state") == "measured" else "")
+            + ")"
             if open_risk_state == "measured" and open_loss_to_stop_usd else ""
         ),
     }
@@ -309,12 +328,22 @@ def grade_ticket_risk(
 
 def grade_account_ticket_risk(
     account_id: str, *, risk_usd: Optional[float],
+    exclude_ticket_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """:func:`grade_ticket_risk` against ``account_id``'s latest snapshot.
 
     The impure wrapper. Best-effort by construction: a read failure grades
     ``cushion_unknown`` — never ``within_cushion`` — so a broken reader can
     never be mistaken for a comfortable account.
+
+    IN-FLIGHT RESERVE (PROP-SIZE-EXCEEDS-DD-CUSHION, 2026-11-12): the cushion
+    is also reduced by the loss at the stop of every in-flight ticket
+    (``prop_reconcile.compute_inflight_risk``: a live go-token issued or
+    redeemed, or a working entry journaled ``placed``, not yet a filled
+    position). Before this, two breakout_2 tickets verified 80 s apart each
+    graded against the whole cushion. ``exclude_ticket_id`` is the ticket being
+    graded, so it never reserves against itself. An in-flight read failure or
+    an in-flight ticket with no computable risk grades ``cushion_unknown``.
     """
     try:
         from src.prop import prop_reconcile
@@ -331,9 +360,27 @@ def grade_account_ticket_risk(
     # reader that did not report the state is `unreadable`, not "flat" — the
     # absence of the key must not silently restore the pre-E66 optimism.
     ors = rd.get("after_open_risk_state") or "unreadable"
+    open_loss = rd.get("open_loss_to_stop_usd")
+    inflight: Dict[str, Any] = {"state": "none", "tickets": [], "loss_to_stop_usd": 0.0}
     if ors in ("no_open_positions", "measured"):
         dd = rd.get("distance_to_dd_floor_after_open_risk_usd")
         daily = rd.get("distance_to_daily_loss_after_open_risk_usd")
+        try:
+            from src.prop import prop_reconcile
+            inflight = prop_reconcile.compute_inflight_risk(
+                account_id, exclude_ticket_id=exclude_ticket_id)
+        except Exception as exc:  # noqa: BLE001 — a read failure is not "nothing in flight"
+            logger.warning("prop_risk_gate: in-flight read failed for %s (%s)", account_id, exc)
+            inflight = {"state": "unreadable", "tickets": [], "loss_to_stop_usd": None}
+        ist = inflight.get("state")
+        if ist == "measured":
+            reserve = float(inflight.get("loss_to_stop_usd") or 0.0)
+            dd = dd - reserve if dd is not None else None
+            daily = daily - reserve if daily is not None else None
+            open_loss = float(open_loss or 0.0) + reserve
+            ors = "measured"
+        elif ist != "none":
+            ors = f"inflight_{ist}"   # risk_unknown / unreadable: we could not look
     else:
         # Passed so the UNKNOWN verdict can quote a last-known figure; it is
         # an UPPER bound here (open risk not subtracted), and caveat_lines only
@@ -346,7 +393,8 @@ def grade_account_ticket_risk(
         distance_to_daily_loss_usd=daily,
         status_freshness=rd.get("status_freshness"),
         open_risk_state=ors,
-        open_loss_to_stop_usd=rd.get("open_loss_to_stop_usd"),
+        open_loss_to_stop_usd=open_loss,
+        inflight=inflight,
     )
 
 

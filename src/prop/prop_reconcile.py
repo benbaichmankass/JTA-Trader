@@ -524,6 +524,104 @@ def compute_open_risk(account_id: str) -> Dict[str, Any]:
     }
 
 
+# A `placed` ticket (a working entry order) reserves its risk until a fill
+# settles it, but not forever: a row still `placed` this long after its
+# validity is a lifecycle record the stale-entry cancel and unseen-position
+# alerts own (phone_cancel / phone_executor._alert_unseen_positions), not a
+# live order to hold cushion for. Generous by design; the incident it exists
+# for filled 18 minutes after placement inside a 1-hour validity.
+INFLIGHT_PLACED_GRACE_HOURS = 24.0
+INFLIGHT_STATES = ("none", "measured", "risk_unknown", "unreadable")
+
+
+def _inflight_ticket_risk(t: Dict[str, Any]) -> Optional[float]:
+    """Loss at the stop of one in-flight ticket: the verified phone form
+    (what was actually submitted) when there is one, else the ticket's own
+    qty x |entry - sl|. ``None`` when neither can be computed."""
+    meta = t.get("meta") if isinstance(t.get("meta"), dict) else {}
+    form = ((meta.get("phone") or {}).get("go") or {}).get("form") or {}
+    for qty, px, sl in ((form.get("qty"), form.get("price"), form.get("sl")),
+                        (t.get("qty"), t.get("entry"), t.get("sl"))):
+        try:
+            q, p, s = float(qty), float(px), float(sl)
+        except (TypeError, ValueError):
+            continue
+        if q > 0 and p > 0 and s > 0:
+            return round(q * abs(p - s), 8)
+    return None
+
+
+def compute_inflight_risk(
+    account_id: str, *, exclude_ticket_id: Optional[str] = None,
+    now: Optional[datetime] = None,
+) -> Dict[str, Any]:
+    """Loss at the stop of every IN-FLIGHT ticket on ``account_id``: risk the
+    account has committed that :func:`compute_open_risk` cannot see yet.
+
+    WHY (PROP-SIZE-EXCEEDS-DD-CUSHION, 2026-11-12): ``compute_open_risk`` reads
+    open/filled positions from ``prop_fills`` only. breakout_2 ETH
+    ``prop-manual-feb50ae29826`` was verified, sent and resting as a limit
+    (journaled ``placed``) when SOL ``prop-manual-f4c3fab02c11`` was graded 80 s
+    later, so SOL graded against the whole ~$20.9 cushion and both filled at
+    08:21Z: $34.86 to the stops against $20.93 to the static floor.
+
+    In flight = a ticket other than ``exclude_ticket_id`` that no non-``placed``
+    fill has settled yet (a linked ``open``/``filled`` fill is already in
+    ``compute_open_risk``; ``closed``/``skipped``/... are over), and either
+      * ``claimed`` with a LIVE go-token that may still be or was clicked
+        (unused and unexpired, or redeemed with ``go: true``); or
+      * ``placed`` (a working entry order), until ``valid_until`` +
+        ``INFLIGHT_PLACED_GRACE_HOURS``.
+    An in-flight ticket whose risk cannot be computed makes the aggregate
+    ``risk_unknown``, never zero (same doctrine as ``stop_unknown``).
+    """
+    now = now or datetime.now(timezone.utc)
+    empty = {"state": "unreadable", "tickets": [], "loss_to_stop_usd": None}
+    try:
+        tickets = prop_journal.list_tickets(account_id=account_id, limit=200)
+        fills = prop_journal.list_fills(account_id=account_id, limit=2000)
+    except Exception as exc:  # noqa: BLE001 — a read failure is not "nothing in flight"
+        logger.warning("prop_reconcile: in-flight read failed for %s: %s", account_id, exc)
+        return empty
+    settled = {str(f.get("ticket_id")) for f in fills or []
+               if f.get("ticket_id") and str(f.get("status") or "").lower() != "placed"}
+    items: List[Dict[str, Any]] = []
+    unknown = 0
+    for t in tickets or []:
+        tid = str(t.get("ticket_id") or "")
+        if not tid or tid == str(exclude_ticket_id or "") or tid in settled:
+            continue
+        status = str(t.get("status") or "").lower()
+        meta = t.get("meta") if isinstance(t.get("meta"), dict) else {}
+        if meta.get("test"):
+            continue
+        go = (meta.get("phone") or {}).get("go") or {}
+        why = None
+        if status == "claimed" and go.get("mode") == "live":
+            exp = _parse_iso(go.get("expires_at"))
+            if go.get("used") and go.get("go"):
+                why = "claimed_go_redeemed"
+            elif not go.get("used") and exp is not None and exp > now:
+                why = "claimed_go_issued"
+        elif status == "placed":
+            vu = _parse_iso(t.get("valid_until"))
+            if vu is None or (now - vu).total_seconds() < INFLIGHT_PLACED_GRACE_HOURS * 3600:
+                why = "placed"
+        if why is None:
+            continue
+        loss = _inflight_ticket_risk(t)
+        if loss is None:
+            unknown += 1
+        items.append({"ticket_id": tid, "symbol": t.get("symbol"), "why": why,
+                      "loss_to_stop_usd": loss})
+    if not items:
+        return {"state": "none", "tickets": [], "loss_to_stop_usd": 0.0}
+    if unknown:
+        return {"state": "risk_unknown", "tickets": items, "loss_to_stop_usd": None}
+    return {"state": "measured", "tickets": items,
+            "loss_to_stop_usd": round(sum(i["loss_to_stop_usd"] for i in items), 8)}
+
+
 def _qualifying_days(account_id: str) -> Dict[str, Any]:
     from src.prop import qualifying_days
 
@@ -762,6 +860,8 @@ __all__ = [
     "find_unacted_tickets",
     "compute_rule_distance",
     "compute_open_risk",
+    "compute_inflight_risk",
+    "INFLIGHT_STATES",
     "OPEN_RISK_STATES",
     "reconstruct_equity",
     "BALANCE_BASIS_STATES",

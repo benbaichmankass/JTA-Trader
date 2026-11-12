@@ -1245,7 +1245,7 @@ def verify_readback(device: PhoneDevice, body: Dict[str, Any], *, now: Optional[
         if mode == "live" and (vu is None or vu <= now):
             reasons.append("ticket validity expired before the live submit")
         if mode == "live" and not reasons:
-            reasons += live_cushion_refusals(device.account_id, fields, send=send)
+            reasons += live_cushion_refusals(device.account_id, fields, send=send, ticket_id=tid)
         if reasons:
             ph["verify"] = {"at": now.isoformat(), "ok": False, "reasons": reasons[:12]}
             m["phone"] = ph
@@ -1274,7 +1274,8 @@ def verify_readback(device: PhoneDevice, body: Dict[str, Any], *, now: Optional[
             "expires_at": expires.isoformat(), "ttl_s": GO_TOKEN_TTL_S}
 
 
-def live_cushion_refusals(account_id: str, fields: Dict[str, Any], *, send=None) -> list:
+def live_cushion_refusals(account_id: str, fields: Dict[str, Any], *, send=None,
+                          ticket_id: Optional[str] = None) -> list:
     """The account's drawdown cushion, graded against the risk at the stop of the form the phone is about to submit
     (PROP-SIZE-EXCEEDS-DD-CUSHION, 2026-11-05). ``[]`` = submit may proceed; else the refusal reasons.
 
@@ -1291,14 +1292,18 @@ def live_cushion_refusals(account_id: str, fields: Dict[str, Any], *, send=None)
 
     Risk is ``qty * |price - sl|``: phone instruments are quoted per base unit (``prop_platforms.yaml``
     ``phone_accounts.<acct>.instruments``: qty in ETH/SOL). The form values are the ones the server just verified
-    against the ticket, so this grades what will actually be submitted."""
+    against the ticket, so this grades what will actually be submitted.
+
+    The cushion is net of every IN-FLIGHT ticket's risk at its stop (2026-11-12: breakout_2 ETH and SOL verified
+    80 s apart each graded against the whole cushion while the other was a resting, unfilled limit);
+    ``ticket_id`` is this ticket, excluded from its own reserve. See ``prop_reconcile.compute_inflight_risk``."""
     from src.prop import prop_risk_gate
 
     qty, price, sl = _num(fields.get("qty")), _num(fields.get("price")), _num(fields.get("sl"))
     if qty is None or price is None or sl is None or qty <= 0:
         return ["risk gate: risk at the stop could not be computed from the form (qty/price/sl unreadable)"]
     risk = round(qty * abs(price - sl), 6)
-    grade = prop_risk_gate.grade_account_ticket_risk(account_id, risk_usd=risk)
+    grade = prop_risk_gate.grade_account_ticket_risk(account_id, risk_usd=risk, exclude_ticket_id=ticket_id)
     state = grade.get("state")
     if state == prop_risk_gate.WITHIN:
         return []
