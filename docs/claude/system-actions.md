@@ -55,6 +55,7 @@ Adding an action requires a PR that updates this doc, the workflow's
 |---|---|---|---|
 | `status-check` | 1 | `scripts/ops/status_check.sh` | no |
 | `disk-usage-report` | 1 | `scripts/ops/disk_usage_report.sh` | no |
+| `vm-cpu-sample` | 1 | `scripts/ops/vm_cpu_sample.sh` | Read-only (LIVE-VM-CPU-SATURATION-1112): per-process + per-systemd-unit CPU over a 30 s `/proc` window (`CPU_SAMPLE_WINDOW_S`, 5-120), loadavg, CPU PSI, 24 h trader restart count; prints its population. Signals/restarts/writes nothing. |
 | `list-listening-ports` | 1 | `scripts/ops/list_listening_ports.sh` | no |
 | `gateway-logs` | 1 | `scripts/ops/gateway_logs.sh` | no |
 | `gateway-forensics` | 1 | `scripts/ops/gateway_forensics.sh` | Read-only, runs on the **gateway VM** (ProxyJump via the trader, like `gateway-logs`). Prints `docker inspect` RestartCount / State.ExitCode / State.FinishedAt / State.StartedAt / restart policy for the `ib-gateway` container, plus is-active / is-enabled and the last ~50 journal lines of `ict-ib-gateway-watchdog.{service,timer}` and `ict-ib-gateway-reset.{service,timer}`. Answers *who restarts the container* (watchdog vs Docker restart policy vs IBC) which `gateway-logs` cannot. No restart, no stop; IPv4 addresses and `DU…` account ids are masked in the output (public repo). Added 2026-10-08 for IB-GATEWAY-DOWN. |
@@ -342,6 +343,7 @@ Claude may dispatch these without operator approval:
 
 - `status-check`
 - `disk-usage-report`
+- `vm-cpu-sample` — read-only per-process/per-unit CPU over a sampled window
 - `gateway-forensics` — read-only restart forensics on the IB gateway VM
 - `gateway-disk-report` — read-only disk breakdown on the IB gateway VM
 - `verify-account-mode` — read-only post-state check of an account's mode

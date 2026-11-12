@@ -36,9 +36,9 @@ import json
 import logging
 import math
 import os
+import shutil
 import subprocess
 import sys
-import tempfile
 import threading
 import time
 from datetime import datetime, timedelta, timezone
@@ -64,6 +64,9 @@ KINDS = ("atr_burst", "momentum_burst", "liquidity_sweep", "level_break", "near_
 #: could_not_build receipt says WHICH stage was slow, not only that one timed out (DESK-TRIGGER-SCAN-TIMEOUT).
 LAST_STAGES: List[Dict[str, Any]] = []
 INFLIGHT = "inflight.json"
+#: "unit" (own cgroup) | "inproc" (fallback) for the last build; the in-flight mark path the running pass owns.
+LAST_PATH: Optional[str] = None
+CURRENT_INFLIGHT: Optional[Path] = None
 
 _LOCK = threading.Lock()
 _last_kick = float("-inf")
@@ -290,21 +293,82 @@ def _calendar(symbol: str, now: datetime) -> Tuple[float, dict]:
     return event_risk_for_symbol(symbol, now)
 
 
-def build_packet(f: Dict[str, Any], cfg: Dict[str, Any], decisions_text: str) -> Tuple[Optional[Path], Optional[str]]:
-    """The hourly builder + publisher, on ONE symbol at the trigger timeframe. (stage, None) | (None, why)."""
+def _jobs_dir() -> Path:
+    return ROOT / "runtime_logs" / "desk" / "jobs"
+
+
+def _prune_jobs(max_age_s: float = 3600.0) -> None:
     try:
-        tmp = Path(tempfile.mkdtemp(prefix="desk-trigger-"))
+        now = time.time()
+        for j in _jobs_dir().iterdir():
+            if j.is_dir() and now - j.stat().st_mtime > max_age_s:
+                shutil.rmtree(j, ignore_errors=True)
+    except OSError:
+        pass
+
+
+def _run_isolated(job_id: str, job_dir: Path, stages: List[Tuple[str, List[str]]], env_overlay: Dict[str, str],
+                  stage_dir: Path) -> Optional[Tuple[Optional[Path], Optional[str]]]:
+    """Run the stages in ``ict-desk-build@<job>.service`` (its own cgroup: a trader restart cannot kill it).
+    (stage, None) | (None, why) | None when isolation is unavailable here (unit not installed / no sudo) -> the caller
+    falls back to the in-process run, which is what happened before. Per-stage timeout semantics are unchanged
+    (dpw.BUILD_TIMEOUT_S, enforced by scripts/ops/desk_build_job.py); the unit's RuntimeMaxSec is only the backstop."""
+    (job_dir / "job.json").write_text(json.dumps({"env": env_overlay, "stages": [
+        {"name": n, "argv": argv, "timeout_s": dpw.BUILD_TIMEOUT_S} for n, argv in stages]}))
+    if CURRENT_INFLIGHT is not None:
+        mark = _read_json(CURRENT_INFLIGHT)
+        if mark is not None:
+            _write_state(CURRENT_INFLIGHT, dict(mark, job=job_id))
+    try:
+        r = subprocess.run(["sudo", "-n", "systemctl", "start", f"ict-desk-build@{job_id}.service"],
+                           capture_output=True, text=True, timeout=2 * dpw.BUILD_TIMEOUT_S + 60)
+    except subprocess.TimeoutExpired:
+        return None, "desk-build unit: systemctl start exceeded 2 stages + 60 s (unit RuntimeMaxSec bounds it)"
+    res = _read_json(job_dir / "result.json")
+    if res is None:
+        err = (r.stderr or r.stdout or "").strip()
+        if r.returncode != 0 and any(k in err.lower() for k in ("not found", "password", "not allowed", "no tty", "sudo:")):
+            return None
+        return None, f"desk-build unit: no result.json (systemctl exit {r.returncode}: {err[-120:]})"
+    LAST_STAGES.clear()
+    LAST_STAGES.extend({k: v for k, v in st.items() if k != "tail"} for st in res.get("stages") or [])
+    bad = next((st for st in res.get("stages") or [] if st.get("outcome") != "exit 0"), None)
+    if res.get("state") == "ok" and bad is None:
+        return stage_dir, None
+    if bad and bad.get("outcome") == "timeout":
+        return None, f"TimeoutExpired: {bad['stage']} exceeded {dpw.BUILD_TIMEOUT_S}s (isolated unit, {bad.get('wall_s')}s)"
+    if bad:
+        return None, f"{bad['stage']} {bad.get('outcome')}: {bad.get('tail', '')}"
+    return None, f"desk-build unit: {res.get('error') or res.get('state')}"
+
+
+def build_packet(f: Dict[str, Any], cfg: Dict[str, Any], decisions_text: str) -> Tuple[Optional[Path], Optional[str]]:
+    """The hourly builder + publisher, on ONE symbol at the trigger timeframe. (stage, None) | (None, why).
+    Runs in its own systemd unit when it can (survives a trader restart), else in-process (DESK-TRIGGER-SCAN-TIMEOUT)."""
+    global LAST_PATH
+    try:
+        _prune_jobs()
+        job_id = f"{int(time.time())}-{os.getpid()}"
+        tmp = _jobs_dir() / job_id
+        tmp.mkdir(parents=True, exist_ok=True)
         dec = tmp / "decisions.jsonl"
         dec.write_text(decisions_text)
-        env = dict(os.environ, LIVE_REVIEW_PUBLIC_BASE=os.environ.get("LIVE_REVIEW_PUBLIC_BASE", dpw.LOCAL_API))
+        base = os.environ.get("LIVE_REVIEW_PUBLIC_BASE", dpw.LOCAL_API)
+        env = dict(os.environ, LIVE_REVIEW_PUBLIC_BASE=base)
         scan, stage = tmp / "scan.json", tmp / "stage"
         trig = json.dumps({k: f[k] for k in ("kind", "symbol", "bar", "detail")}, separators=(",", ":"))
         tf, hz = str(cfg.get("timeframe", "5m")), ",".join(str(h) for h in cfg.get("horizons") or [3, 6, 12])
+        stages = [("builder", [sys.executable, str(dpw.BUILDER), "--timeframe", tf, "--horizons", hz, "--symbols", f["symbol"],
+                               "--decisions", str(dec), "--trigger-json", trig, "--out", str(scan)]),
+                  ("publisher", [sys.executable, str(dpw.PUBLISHER), "publish", "--packet", str(scan), "--stage", str(stage),
+                                 "--pointer", TRIGGER_POINTER])]
         LAST_STAGES.clear()
-        for name, cmd in (("builder", [sys.executable, str(dpw.BUILDER), "--timeframe", tf, "--horizons", hz, "--symbols", f["symbol"],
-                                       "--decisions", str(dec), "--trigger-json", trig, "--out", str(scan)]),
-                          ("publisher", [sys.executable, str(dpw.PUBLISHER), "publish", "--packet", str(scan), "--stage", str(stage),
-                                         "--pointer", TRIGGER_POINTER])):
+        iso = _run_isolated(job_id, tmp, stages, {"LIVE_REVIEW_PUBLIC_BASE": base}, stage)
+        if iso is not None:
+            LAST_PATH = "unit"
+            return iso
+        LAST_PATH = "inproc"
+        for name, cmd in stages:
             t0 = time.monotonic()
             try:
                 r = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True, timeout=dpw.BUILD_TIMEOUT_S)
@@ -399,9 +463,11 @@ def run_once(*, cfg: Optional[Dict[str, Any]] = None, now_fn: Callable[[], datet
         return done("could_not_commit", fired=chosen["key"])
     code, text = fetch(dpw._contents_url(dpw.DECISIONS_PATH), auth)
     _write_state(d / INFLIGHT, {"started_at": now.isoformat(), "fired": chosen})
+    global CURRENT_INFLIGHT, LAST_PATH
+    CURRENT_INFLIGHT, LAST_PATH = d / INFLIGHT, None
     t_build = time.monotonic()
     stage, why = build_fn(chosen, cfg, text if code == 200 and isinstance(text, str) else "")
-    rec["build_wall_s"], rec["stages"] = round(time.monotonic() - t_build, 1), list(LAST_STAGES)
+    rec["build_wall_s"], rec["stages"], rec["isolation"] = round(time.monotonic() - t_build, 1), list(LAST_STAGES), LAST_PATH
     try:
         (d / INFLIGHT).unlink()
     except OSError:
@@ -446,8 +512,11 @@ def _reconcile_inflight(d: Path, labels_path: Path, now: datetime) -> None:
     if not mark:
         return
     started = _parse(mark.get("started_at"))
+    surv = _read_json(_jobs_dir() / str(mark["job"]) / "result.json") if mark.get("job") else None
+    why = ("build outlived the trader and finished (" + str(surv.get("state")) + "), but the pass was not posted"
+           if surv else "build never finished: process ended mid-build (restart/kill)")
     _append(labels_path, {"at": mark.get("started_at"), "fired": mark.get("fired"), "disposition": "interrupted",
-                          "packet_id": None, "reason": "build never finished: process ended mid-build (restart/kill)",
+                          "packet_id": None, "reason": why, "survivor": surv,
                           "noticed_at": now.isoformat(),
                           "after_s": round((now - started).total_seconds(), 1) if started else None})
     try:
