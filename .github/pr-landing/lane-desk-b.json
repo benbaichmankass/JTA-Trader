@@ -1,5 +1,7 @@
 {
-  "tier": 1,
-  "landing": "self",
-  "why": "DESK-TRIGGER-SCAN-TIMEOUT: per-stage wall time + an 'interrupted' label for a cut-off pass in the desk trigger (observability on a Tier-1 path; no behaviour change to what is built, committed or posted). The manager/AM-DEVOPS merges (branch is lane-*, not claude/**)."
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Observability only (per-stage wall time in the desk trigger receipt/labels, an 'interrupted' label for a cut-off pass), but it edits src/runtime/desk_event_trigger.py, which pr-landing-guard classifies Tier-2 by path (R5), so it cannot self-land. AM-DEVOPS merges.",
+  "why": "DESK-TRIGGER-SCAN-TIMEOUT: every exit -15 pass is a deploy restart, and a cut-off pass wrote no label."
 }
