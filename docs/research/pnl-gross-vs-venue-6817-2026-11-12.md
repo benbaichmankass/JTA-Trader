@@ -1,6 +1,6 @@
 # Journal `pnl` vs venue `closed_pnl`, per Bybit account (PNL-GROSS-VS-VENUE-6817)
 
-> **Doc status:** `evidence` · owning row [`PNL-GROSS-VS-VENUE-6817`](../claude/work/checklist/PNL-GROSS-VS-VENUE-6817.json) · measured 2026-11-12 by lane JOURNAL-TRUTH
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · lane `JOURNAL-TRUTH` (row `docs/claude/work/checklist/PNL-GROSS-VS-VENUE-6817.json`, roadmap `L-OPS`) · measured 2026-11-12
 > Gates this adds or changes: none. This is a measurement and a Tier-3 proposal. Nothing here changes what is stored.
 
 ## Population
