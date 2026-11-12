@@ -7,7 +7,7 @@ back as an empty list (canonical § "Collapsed states").
 Sources, all PUBLIC repo files on the host's git checkout (``ict-git-sync`` keeps it at main):
   * checklist rows: ``docs/claude/work/checklist/`` via ``src.runtime.checklist_store``
   * pipeline items: ``docs/claude/work/pipeline/`` via ``scripts.ops.pipeline``
-Live-VM sources (alert ledger, work store ``/api/bot/work/items``) are NOT read here until the
+Live-VM sources (the alert ledger) are NOT read here until the
 connector's sign-in (G1) is live; their sections report ``could_not_look`` with the reason.
 """
 from __future__ import annotations
@@ -275,11 +275,3 @@ def inbox(repo: Path, limit: int = 25, today: date | None = None) -> dict[str, A
                                  "population": {"rows_scanned": None},
                                  "reason": "alert ledger is on the live VM; served once the connector's sign-in (G1) is live"}
     return out
-
-
-def work_items() -> dict[str, Any]:
-    """Work-store items (WORK-STORE S1, /api/bot/work/items). Not built yet: say so, never return []."""
-    return {"as_of": _iso(_now()), "read_state": "could_not_look", "count": None, "items": [],
-            "population": {"rows_scanned": None},
-            "reason": "the work store route /api/bot/work/items (WORK-STORE S1) is not live yet; "
-                      "the Work tab reads checklist rows (work_rows) meanwhile"}

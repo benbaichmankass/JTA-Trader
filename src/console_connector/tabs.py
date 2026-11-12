@@ -667,3 +667,108 @@ def research_queue(repo: Path, args: dict | None = None) -> dict:
                  "note": "counts cover every unit; rows are the filtered page, newest activity first"},
                 counts={"by_status": tally("status"), "by_theme_group": tally("theme_group"), "by_compute": tally("compute")},
                 rows=sel[offset:offset + limit])
+
+
+# ───────────────────────────── work_items (console Work tab, step C3) ─────────────────────────────
+#: The work store's read routes (WORK-STORE S1, live since 2026-11-05) on the trader VM. The GETs are open
+#: reads while SITE_AUTH_ENFORCE is off; when it is armed the gate accepts the service bearer on GET only,
+#: so the connector sends DASHBOARD_API_TOKEN when the host has it. The work register is public-repo data
+#: (the same rows as work_rows), so this tool is NOT in GATED_TOOLS.
+WORK_ITEM_KEYS = ("id", "kind", "parent_id", "title", "state", "owner", "lane", "tier", "due_at", "priority_rank",
+                  "next_action", "summary", "terminal_reason", "prs", "created_at", "updated_at", "version")
+WORK_VIEWS = ("recent", "due", "open", "state")
+OPEN_ITEM_STATES = ("queued", "in_flight", "blocked", "routed", "landed_unproven")
+
+
+def _work_get(path: str) -> Any:
+    tok = (os.environ.get("DASHBOARD_API_TOKEN") or "").strip() or None
+    return FETCH(path, tok) if tok else _public(path)
+
+
+def _slim_item(it: dict) -> dict:
+    out = {k: it.get(k) for k in WORK_ITEM_KEYS}
+    out["by"] = it.get("updated_by")   # who last wrote it: the C3 check is "a session-written item appears"
+    out["blocked_on"] = [b.get("ref") for b in (it.get("blocked_on") or []) if isinstance(b, dict)] or None
+    src = (it.get("extra") or {}).get("_source") if isinstance(it.get("extra"), dict) else None
+    out["source"] = src or "store"      # "checklist" / "pipeline" = imported by S2; "store" = written natively
+    return out
+
+
+def work_items(args: dict[str, Any]) -> dict[str, Any]:
+    """Work-store items for the console Work tab (C3), or one item's events when ``item_id`` is given.
+
+    view: recent (newest updated_at first; ``since_hours`` window, default 24) | due (the due_now view) |
+    open (queued/in_flight/blocked/routed/landed_unproven, newest first) | state (needs ``state``).
+    """
+    import urllib.parse as up
+    now = _now()
+    item_id = (args.get("item_id") or "").strip()
+    if item_id:
+        path = f"/api/bot/work/items/{up.quote(item_id, safe='')}/events"
+        try:
+            doc = _work_get(path)
+        except Exception as exc:  # noqa: BLE001  # allow-silent: could_not_look with the reason
+            return {"as_of": D._iso(now), "read_state": "could_not_look", "item_id": item_id, "events": None,
+                    "population": {"events_scanned": None}, "error": _err(exc), "upstream": path}
+        evs = doc.get("events") or []
+        tail = [{"seq": e.get("seq"), "at": e.get("at") or e.get("ts") or e.get("created_at"), "op": e.get("op"),
+                 "by": e.get("by"), "op_id": e.get("op_id")} for e in evs[-40:]]
+        return {"as_of": D._iso(now), "read_state": "read", "item_id": item_id, "events": tail,
+                "population": {"events_scanned": len(evs), "shown": len(tail), "truncated": len(evs) > len(tail)},
+                "chain": doc.get("chain"), "upstream": path}
+
+    view = str(args.get("view") or "recent")
+    if view not in WORK_VIEWS:
+        view = "recent"
+    limit = max(1, min(200, int(args.get("limit") or 30)))
+    offset = max(0, int(args.get("offset") or 0))
+    q: dict[str, Any] = {"limit": limit, "offset": offset}
+    since = None
+    if view == "recent":
+        hours = max(1, min(24 * 14, int(args.get("since_hours") or 24)))
+        since = (now - timedelta(hours=hours)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        q["since"] = since
+    elif view == "due":
+        q["due"] = 1
+    elif view == "state":
+        st = str(args.get("state") or "")
+        if not re.fullmatch(r"[a-z_]{2,24}", st):
+            return {"as_of": D._iso(now), "read_state": "could_not_look", "items": None, "count": None,
+                    "population": {"rows_scanned": None}, "error": "view=state needs a state, e.g. in_flight"}
+        q["state"] = st
+    if args.get("kind"):
+        q["kind"] = str(args["kind"])
+
+    def fetch(qq: dict) -> dict:
+        return _work_get("/api/bot/work/items?" + up.urlencode(qq))
+
+    try:
+        if view == "open":
+            # the route filters one state at a time: read each open state (5 cheap indexed reads) and merge
+            items, per_state = [], {}
+            for st in OPEN_ITEM_STATES:
+                d = fetch({**q, "state": st, "offset": 0, "limit": min(1000, limit + offset)})
+                got = d.get("items") or []
+                per_state[st] = len(got)
+                items.extend(got)
+            items.sort(key=lambda it: str(it.get("updated_at") or ""), reverse=True)
+            items = items[offset: offset + limit]
+            doc = {"total": d.get("total"), "canonical": d.get("canonical"), "note": d.get("note")}
+        else:
+            doc = fetch(q)
+            items, per_state = doc.get("items"), None
+    except Exception as exc:  # noqa: BLE001  # allow-silent: could_not_look with the reason, never []
+        return {"as_of": D._iso(now), "read_state": "could_not_look", "view": view, "items": None, "count": None,
+                "population": {"rows_scanned": None}, "error": _err(exc)}
+    if items is None or doc.get("readState") == "could_not_look":
+        return {"as_of": D._iso(now), "read_state": "could_not_look", "view": view, "items": None, "count": None,
+                "population": {"rows_scanned": None}, "error": doc.get("error") or "upstream returned no items"}
+    slim = [_slim_item(it) for it in items]
+    return {"as_of": D._iso(now), "read_state": "read", "view": view, "since": since, "count": len(slim),
+            "items": slim,
+            "population": {"store_items_total": doc.get("total"), "returned": len(slim), "offset": offset,
+                           "limit": limit, "per_state": per_state,
+                           "next_offset": offset + limit if len(slim) == limit else None},
+            "canonical": doc.get("canonical"),
+            "canonical_note": doc.get("note") or "the checklist + pipeline files stay canonical until WORK-STORE S4",
+            "upstream": f"{LIVE_BASE}/api/bot/work/items"}

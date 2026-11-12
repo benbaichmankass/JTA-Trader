@@ -26,7 +26,7 @@ REPO = Path(os.environ.get("CONSOLE_CONNECTOR_REPO") or Path(__file__).resolve()
 LOG = Path(os.environ.get("CONSOLE_CONNECTOR_LOG") or REPO / "runtime_logs" / "console_connector.jsonl")
 PROTOCOL_DEFAULT = "2025-06-18"
 CACHE = data.TTLCache()
-TTL_S = {"work_rows": 30.0, "inbox": 30.0, "work_items": 30.0, "workplan": 60.0, "ml_roadmap": 120.0,
+TTL_S = {"work_rows": 30.0, "inbox": 30.0, "work_items": 10.0, "workplan": 60.0, "ml_roadmap": 120.0,
          "performance": 300.0, "system_health": 60.0, "data_query": 30.0, "system_catalog": 300.0,
          "research_queue": 300.0, "wake_toggles": 10.0}
 #: Tools that serve P&L, journal rows or live-VM state: registered ONLY when CONSOLE_CONNECTOR_AUTH=google
@@ -111,8 +111,21 @@ TOOLS: list[dict[str, Any]] = [
      "description": "Which wake notifications reach the manager session (live from the trader VM's GET /api/bot/wake-toggles).",
      "inputSchema": {"type": "object", "properties": {}}, "annotations": _RO},
     {"name": "work_items", "title": "Work-store items",
-     "description": "Work-store items (WORK-STORE S1). Reports could_not_look until that route is live.",
-     "inputSchema": {"type": "object", "properties": {}}, "annotations": _RO},
+     "description": "Work-store items from the live work store (WORK-STORE S1, GET /api/bot/work/items on the trader VM), "
+                    "for the console Work tab. view: recent (newest updated first within since_hours, default 24) | due "
+                    "(the due_now view) | open (queued/in_flight/blocked/routed/landed_unproven) | state (with state). "
+                    "Pass item_id for that item's event log and chain check instead. Each item carries by (last writer) "
+                    "and source (store = written natively, checklist/pipeline = imported). canonical=false until S4: "
+                    "the checklist files stay the register of record until then. 10 s cache.",
+     "inputSchema": {"type": "object", "properties": {
+         "view": {"type": "string", "enum": ["recent", "due", "open", "state"], "default": "recent"},
+         "state": {"type": "string", "description": "for view=state, e.g. in_flight"},
+         "kind": {"type": "string", "description": "optional item kind filter, e.g. build"},
+         "since_hours": {"type": "integer", "minimum": 1, "maximum": 336, "default": 24},
+         "limit": {"type": "integer", "minimum": 1, "maximum": 200, "default": 30},
+         "offset": {"type": "integer", "minimum": 0, "default": 0},
+         "item_id": {"type": "string", "description": "return this item's events instead of a list"}}},
+     "annotations": _RO},
 ]
 #: The ONLY write tool on this otherwise read-only connector (operator 2026-11-07: wake switches must be flippable
 #: from the console). Listed and callable only when write_enabled() (Google sign-in + a configured write token);
@@ -241,7 +254,9 @@ def _call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
     if name == "set_wake_toggle":
         return wake_toggle_write(args)
     if name == "work_items":
-        return CACHE.get("work_items", TTL_S["work_items"], data.work_items)
+        a = {k: args.get(k) for k in ("view", "state", "kind", "since_hours", "limit", "offset", "item_id")}
+        return CACHE.get("work_items:" + json.dumps(a, sort_keys=True, default=str), TTL_S[name],
+                         lambda: tabs.work_items(a))
     if name in GATED_TOOLS and not auth_active():
         # never cached, never built: the data is not read at all without the sign-in
         return {"as_of": data._iso(data._now()), "read_state": "auth_required", "tool": name,

@@ -366,3 +366,61 @@ def test_work_rows_and_workplan_add_fields_keep_old_shape():
         if r.get("week_lane"):
             direct[r["week_lane"]] = direct.get(r["week_lane"], 0) + 1
     assert {k: v["total"] for k, v in wr["week_lane_totals"].items()} == direct
+
+
+# ── work_items (C3): the console Work tab on the live work store ──
+def _store_item(i, state="queued", by="Manager Session 2026-11-11a", src=None):
+    it = {"id": f"X-{i}", "kind": "build", "title": f"t{i}", "state": state, "owner": "manager",
+          "updated_at": f"2026-11-12T07:{40 + i:02d}:00Z", "updated_by": by, "version": 1,
+          "blocked_on": [{"kind": "work_item", "ref": "Y"}] if i == 0 else [], "extra": {}}
+    if src:
+        it["extra"]["_source"] = src
+    return it
+
+
+def test_work_items_recent_passes_since_and_slims(monkeypatch):
+    seen = []
+
+    def f(path, tok):
+        seen.append(path)
+        return {"readState": "read", "items": [_store_item(1), _store_item(0, src="checklist")], "total": 2700,
+                "canonical": False, "note": "S1"}
+    monkeypatch.setattr(tabs, "FETCH", f)
+    monkeypatch.delenv("DASHBOARD_API_TOKEN", raising=False)
+    out = tabs.work_items({"view": "recent", "since_hours": 2, "limit": 5})
+    assert out["read_state"] == "read" and out["count"] == 2
+    assert "since=" in seen[0] and "limit=5" in seen[0] and seen[0].startswith("/api/bot/work/items?")
+    assert out["items"][0]["by"] == "Manager Session 2026-11-11a" and out["items"][0]["source"] == "store"
+    assert out["items"][1]["source"] == "checklist" and out["items"][1]["blocked_on"] == ["Y"]
+    assert out["population"]["store_items_total"] == 2700 and out["canonical"] is False
+
+
+def test_work_items_open_merges_states_newest_first(monkeypatch):
+    def f(path, tok):
+        st = path.split("state=")[1].split("&")[0]
+        return {"readState": "read", "items": [_store_item(len(st) % 10, state=st)], "total": 9}
+    monkeypatch.setattr(tabs, "FETCH", f)
+    out = tabs.work_items({"view": "open", "limit": 3})
+    assert out["count"] == 3 and set(out["population"]["per_state"]) == set(tabs.OPEN_ITEM_STATES)
+    ts = [i["updated_at"] for i in out["items"]]
+    assert ts == sorted(ts, reverse=True)
+
+
+def test_work_items_events_and_failures(monkeypatch):
+    monkeypatch.setattr(tabs, "FETCH", lambda p, t: {"events": [{"seq": 1, "op": "create", "by": "s"}],
+                                                      "chain": {"ok": True}})
+    ev = tabs.work_items({"item_id": "A B"})
+    assert ev["read_state"] == "read" and ev["events"][0]["op"] == "create" and "A%20B" in ev["upstream"]
+    monkeypatch.setattr(tabs, "FETCH", lambda p, t: {"readState": "could_not_look", "items": None, "error": "db"})
+    out = tabs.work_items({"view": "due"})
+    assert out["read_state"] == "could_not_look" and out["items"] is None and out["count"] is None
+    bad = tabs.work_items({"view": "state", "state": "x; drop"})
+    assert bad["read_state"] == "could_not_look"
+
+
+def test_work_items_sends_service_bearer_when_present(monkeypatch):
+    toks = []
+    monkeypatch.setattr(tabs, "FETCH", lambda p, t: toks.append(t) or {"readState": "read", "items": [], "total": 0})
+    monkeypatch.setenv("DASHBOARD_API_TOKEN", "x")
+    tabs.work_items({"view": "due"})
+    assert toks == ["x"]
