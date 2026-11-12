@@ -2252,13 +2252,15 @@ jobs:
             # adapter + IB _build_contract map (MES/MGC/MHG) — the pull writes
             # market_raw/<SYMBOL>/<tf>/<version>/data.jsonl.
             if [ -z "${ACTION_SYMBOL// }" ]; then
-              echo "::error::pull-ibkr-history requires 'symbol: <MES|MGC|MHG>' (issue body)."
+              echo "::error::pull-ibkr-history requires 'symbol: <MES|MNQ|MGC|MHG>' (issue body)."
               exit 1
             fi
+            # MNQ added 2026-11-12 (FUT-CME-INTRADAY-HIST): read-only history
+            # for the Tradeify futures research; CME-listed like MES.
             case "${ACTION_SYMBOL}" in
-              MES|MGC|MHG) : ;;
+              MES|MNQ|MGC|MHG) : ;;
               *)
-                echo "::error::pull-ibkr-history symbol '${ACTION_SYMBOL}' not supported (allowed: MES, MGC, MHG — the IB futures roots _build_contract maps)."
+                echo "::error::pull-ibkr-history symbol '${ACTION_SYMBOL}' not supported (allowed: MES, MNQ, MGC, MHG)."
                 exit 1
                 ;;
             esac

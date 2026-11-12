@@ -108,11 +108,12 @@ def _default_pnl_snapshot() -> tuple[list[dict[str, Any]] | None, float]:
 
 
 async def _default_pos_refresh() -> Any:
-    """Keep the positions snapshot warm through the SAME stale-while-revalidate path /api/bot/positions uses
-    (dashboard.get_positions -> _POSITIONS_SWR.aget). Its single-flight means a REST read and this refresh
-    never build at the same time; a fresh snapshot is served without any build at all."""
+    """Keep the positions snapshot warm through the SAME cache /api/bot/positions uses (_POSITIONS_SWR),
+    AWAITING a real rebuild (``arefresh``) rather than taking ``aget``'s stale return, so the snapshot is
+    at most POS_REFRESH_EVERY_S + one build old while clients are connected. Its single-flight means a
+    REST read and this refresh never build at the same time."""
     from src.web.api.routers import dashboard
-    return await dashboard.get_positions(include_paper=True, include_demo=False, response=None)
+    return await dashboard.refresh_positions_snapshot(include_paper=True)
 
 
 def _default_health() -> dict[str, Any]:
