@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tier-1 observability/read path: GET /api/diag/version adds unit_config_pending_by_unit (installed unit file or drop-in newer than the unit's ActiveEnterTimestamp, or NeedDaemonReload=yes; null = could not look) and ORs it into restart_pending_by_unit, so a same-sha restart that ran before install_systemd_units (#25185, 10:08Z, web-api on the old unit while restart_pending read false) is visible. restart_pending (the code-only flag the deploy compares) is unchanged; no deploy, unit, timer or order-path change. Gates this adds or changes: none."
+}
