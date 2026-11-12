@@ -201,6 +201,7 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     "scripts/notify_session.py": ("session",),
     "scripts/ops/work_digest_now.py": ("manager_update",),
     "src/runtime/telegram_decisions.py": ("decision",),
+    "src/runtime/ops_actions.py": ("system_action",),   # VM-CHANGE-LEDGER: ONE notification per exec/set-env job that writes (a ping, never a gate)
     "src/runtime/trade_approvals.py": ("decision", "alert"),   # TRADE-ACTION-DIRECT-PATH: the Approve/Reject ask (decision); the no-answerable-bot fallback (alert)
     "src/runtime/manager_status.py": ("command_reply",),
     # REPLY (polled bots answering the operator in-conversation)
