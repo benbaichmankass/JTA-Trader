@@ -1,4 +1,6 @@
-"""security_watch ssh detector: baseline, new identity, burst, blind (SEC-DETECTORS D1)."""
+"""security_watch detectors: ssh (D1) baseline, new identity, burst, blind; files (D3)."""
+import hashlib as _hl
+
 from scripts.ops import security_watch as w
 
 OK = "2026-11-11T22:00:08+0000 h sshd[1]: Accepted publickey for ubuntu from 192.0.2.1 port 5 ssh2: ED25519 SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
@@ -68,3 +70,113 @@ def test_unreadable_journal_is_not_zero_and_alerts_after_three_runs():
         out.append(len(alerts))
     assert out == [0] * (w.BLIND_AFTER - 1) + [1]
     assert s["read_state"].startswith("could_not_look") and "known" in s
+
+
+# ---------------------------------------------------------------------------
+# D3: file integrity
+# ---------------------------------------------------------------------------
+
+
+def _h(b: bytes) -> str:
+    return _hl.sha256(b).hexdigest()
+
+
+class _FS:
+    """In-memory filesystem: {path: bytes or None (exists but unreadable)}."""
+
+    def __init__(self, files):
+        self.files = dict(files)
+
+    def collect(self):
+        cats = {}
+        for p in self.files:
+            if p.startswith("/etc/systemd/system/"):
+                cats[p] = "systemd"
+            elif "authorized_keys" in p:
+                cats[p] = "ssh_keys"
+            elif "sudoers" in p:
+                cats[p] = "sudoers"
+            else:
+                cats[p] = "cron"
+        return cats, []
+
+    def read(self, p):
+        return self.files.get(p)
+
+
+UNIT = "/etc/systemd/system/ict-web-api.service"
+DROPIN = "/etc/systemd/system/ict-web-api.service.d/data-dir.conf"
+KEYS = "/home/ubuntu/.ssh/authorized_keys"
+DEPLOY = ({"ict-web-api.service": _h(b"unit v2")}, {_h(b"unit v2"), _h(b"dropin v2")})
+
+
+def _pass(state, fs, admit=lambda *a, **k: True, monkeypatch=None):
+    return w.run_files(state, 1000.0, "vm", admit, collect=fs.collect, reader=fs.read,
+                       deploy=DEPLOY)
+
+
+def test_files_first_run_records_baseline_and_one_info():
+    fs = _FS({UNIT: b"unit v1", KEYS: b"ssh-ed25519 AAAA k"})
+    st, alerts = _pass({}, fs)
+    assert len(alerts) == 1 and alerts[0].startswith("[INFO]")
+    assert set(st["hashes"]) == {UNIT, KEYS}
+
+
+def test_files_deploy_copy_is_silent_foreign_edit_alerts_once():
+    fs = _FS({UNIT: b"unit v1", DROPIN: b"dropin v1", KEYS: b"k1"})
+    st, _ = _pass({}, fs)
+    fs.files[UNIT] = b"unit v2"          # what install_systemd_units.sh copies
+    fs.files[DROPIN] = b"dropin v2"      # a drop-in equal to a deploy/ file
+    st, alerts = _pass(st, fs)
+    assert alerts == [] and st["last"]["expected"] == 2
+    fs.files[UNIT] = b"unit v2 + ExecStartPre=/tmp/x"   # not a deploy copy
+    st, alerts = _pass(st, fs)
+    assert len(alerts) == 1 and "CHANGED" in alerts[0] and UNIT in alerts[0]
+    assert "ExecStartPre" not in alerts[0]              # content never shown
+    st, alerts = _pass(st, fs)
+    assert alerts == []                                  # baseline moved on: once
+
+
+def test_files_new_key_and_removed_sudoers_alert():
+    fs = _FS({KEYS: b"k1", "/etc/sudoers.d/90-x": b"x ALL"})
+    st, _ = _pass({}, fs)
+    fs.files[KEYS] = b"k1\nk2"
+    del fs.files["/etc/sudoers.d/90-x"]
+    st, alerts = _pass(st, fs)
+    assert len(alerts) == 2
+    assert any("CHANGED" in a and KEYS in a for a in alerts)
+    assert any("REMOVED" in a and "90-x" in a for a in alerts)
+
+
+def test_files_removed_unit_is_counted_not_alerted():
+    fs = _FS({UNIT: b"unit v1"})
+    st, _ = _pass({}, fs)
+    del fs.files[UNIT]
+    st, alerts = _pass(st, fs)
+    assert alerts == [] and st["last"]["expected"] == 1
+
+
+def test_files_unreadable_is_not_removed_and_alerts_once(monkeypatch):
+    fs = _FS({KEYS: b"k1"})
+    st, _ = _pass({}, fs)
+    fs.files[KEYS] = None                       # exists, cannot be read
+    monkeypatch.setattr(w.os.path, "lexists", lambda p: True)
+    st, alerts = _pass(st, fs)
+    assert st["hashes"][KEYS] == _h(b"k1")      # kept, not "removed"
+    assert len(alerts) == 1 and "cannot read 1" in alerts[0]
+    st, alerts = _pass(st, fs)
+    assert alerts == []                          # same blind set: no repeat
+
+
+def test_files_cooldown_suppresses_repeat_alert():
+    fs = _FS({KEYS: b"k1"})
+    st, _ = _pass({}, fs)
+    fs.files[KEYS] = b"k2"
+    _, alerts = _pass(st, fs, admit=lambda *a, **k: False)
+    assert alerts == []
+
+
+def test_deploy_index_matches_real_deploy_dir():
+    by_name, every = w.deploy_index(w.REPO_ROOT / "deploy")
+    assert "ict-security-watch.service" in by_name
+    assert by_name["ict-security-watch.service"] in every

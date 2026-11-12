@@ -33,8 +33,10 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install lightgbm (the repo pin; gain shares need it)
-        run: pip install --quiet "lightgbm==4.6.0"
+      - name: Install lightgbm (the repo pin; gain shares need it) + M2 deps (pandas, numpy, requests; requirements.txt floors)
+        # M2 imports these lazily, so a missing one only showed at run time: the 2026-11-11 23:25Z dispatch
+        # failed its self-test on `No module named 'pandas'` and landed nothing (M1 included).
+        run: pip install --quiet "lightgbm==4.6.0" "pandas>=2.0.0" "numpy>=1.24.0" "requests>=2.31.0"
 
       - name: Compute the M1 long table
         run: |

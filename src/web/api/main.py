@@ -31,6 +31,7 @@ from src.web.api.routers import research_runs as research_runs_router
 from src.web.api.routers import exit_interval as exit_interval_router
 from src.web.api.routers import exit_ladder as exit_ladder_router
 from src.web.api.routers import exposure as exposure_router
+from src.web.api.routers import feature_impact as feature_impact_router
 from src.web.api.routers import fc_geometry as fc_geometry_router
 from src.web.api.routers import gpu_spend as gpu_spend_router
 from src.web.api.routers import health_snapshots as health_snapshots_router
@@ -138,6 +139,7 @@ app.include_router(fc_geometry_router.router)
 app.include_router(allocator_router.router)
 app.include_router(exit_interval_router.router)
 app.include_router(exposure_router.router)
+app.include_router(feature_impact_router.router)
 app.include_router(pairs_router.router)
 app.include_router(prop_router.router)
 app.include_router(brackets_history_router.router)
