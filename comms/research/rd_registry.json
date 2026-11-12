@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "generated_at": "2026-11-12T12:38:37Z",
+ "generated_at": "2026-11-12T12:55:04Z",
  "population": "every strategy leg in config/strategies.yaml; every ML registry row in bucket LIVE/SHADOW (plus OFFLINE rows with an attributed unit); every unit-subject that is neither; every ML plan item that is an idea; every programme question node with attributed units or an open needs_authoring",
  "decision": "operator 2026-11-12 chat \u2014 idea-level ML + strategy testing registry for visibility",
  "gates": "none: a read projection; it refuses and blocks nothing",
@@ -60,8 +60,16 @@
    "rule": "strategy leg is on a real-money roster (bybit_2 / alpaca_live / ib_live) and not retired (scripts/ops/strategy_status.py == production)"
   },
   {
+   "stage": "production",
+   "rule": "ML model: a registry consumer is a real-money account (consumer account_class real_money, or the account is bybit_2 / alpaca_live / ib_live) -- the one ladder: a model reaches a book the way a strategy does (row ML-ONE-LADDER)"
+  },
+  {
+   "stage": "testing_book",
+   "rule": "ML model: a registry consumer is any other book (paper / prop) and none is real money"
+  },
+  {
    "stage": "shadow_advisory",
-   "rule": "ML registry row deployment_bucket is LIVE (advisory, order-influencing) or SHADOW"
+   "rule": "ML model with NO order consumer whose registry deployment_bucket is LIVE (advisory) or SHADOW -- a housekeeping label, not a step to real money (operator 2026-11-12)"
   },
   {
    "stage": "testing_book",
@@ -77,7 +85,7 @@
   },
   {
    "stage": "iterating",
-   "rule": "latest graded edge verdict (pass/fail/indeterminate, by latestResultAt) is fail AND an attributed unit is open (due/dispatched/running/queued)"
+   "rule": "EFFECTIVE verdict = the unit verdict, except pass with grading.confirmation not_replicated reads fail and pass with confirmation underpowered reads indeterminate. Latest graded edge verdict (pass/fail/indeterminate, by latestResultAt) is fail AND an attributed unit is open (due/dispatched/running/queued)"
   },
   {
    "stage": "failed",
@@ -184,15 +192,15 @@
     "failed": 16,
     "iterating": 1,
     "passed_waiting": 4,
-    "testing_book": 0,
-    "production": 0,
-    "shadow_advisory": 27,
+    "testing_book": 3,
+    "production": 5,
+    "shadow_advisory": 19,
     "retired": 0,
     "stuck": 39
    }
   },
   "changed_last_7d": {
-   "basis": "idea's newest attributed-unit activity (result, dispatch or grading) on/after 2026-11-05T12:38:37Z",
+   "basis": "idea's newest attributed-unit activity (result, dispatch or grading) on/after 2026-11-05T12:55:04Z",
    "count": 66,
    "items": [
     {
@@ -464,7 +472,7 @@
      "name": "scha_trend_long_1d",
      "track": "STRATEGY",
      "stage": "testing_book",
-     "verdict": "pass",
+     "verdict": "indeterminate",
      "last_activity": "2026-11-12T00:00:00Z"
     },
     {
@@ -2128,6 +2136,8 @@
    "latest_result": {
     "unit": "RQ-20261101-b623-01",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-11-06T08:00:11Z",
     "metrics": null,
     "population": "RQ-20261101-b623-01: timeframe 5m ENTRY pipeline, DEV FOLDS ONLY; registered word 'indeterminate' (gated variant 'indeterminate'); features read-out is in the result file",
@@ -2199,6 +2209,8 @@
    "latest_result": {
     "unit": "RQ-20261109-98e3-37",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-09T13:46:47Z",
     "metrics": {
      "arms_graded": 10
@@ -2236,6 +2248,8 @@
    "latest_result": {
     "unit": "RQ-20261101-78fc-03",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-12T04:08:37Z",
     "metrics": {
      "baseline_net_total_r": 71.6454,
@@ -2273,6 +2287,8 @@
    "latest_result": {
     "unit": "RQ-20261109-98e3-38",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-09T14:25:07Z",
     "metrics": {
      "arms_graded": 10
@@ -2310,6 +2326,8 @@
    "latest_result": {
     "unit": "RQ-20261011-17f4-02",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-25T11:41:15Z",
     "metrics": {
      "cells_in_both_sources": 0,
@@ -2353,6 +2371,8 @@
    "latest_result": {
     "unit": "RQ-20261011-9da8-01",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-24T08:23:48Z",
     "metrics": {
      "n_folds_cv_min_over_groups": 5,
@@ -2394,6 +2414,8 @@
    "latest_result": {
     "unit": "RQ-20261018-ff8f-03",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-20T11:30:46Z",
     "metrics": {
      "n_folds_cv_min_over_groups": 5,
@@ -2435,6 +2457,8 @@
    "latest_result": {
     "unit": "RQ-20261016-65ff-25",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-18T14:40:13Z",
     "metrics": {
      "seconds": 30.5
@@ -2475,6 +2499,8 @@
    "latest_result": {
     "unit": "RQ-20261014-9d20-02",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-16T11:01:29Z",
     "metrics": {
      "n_test_trades": 1796
@@ -2515,6 +2541,8 @@
    "latest_result": {
     "unit": "RQ-20261014-9d20-03",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-16T11:01:28Z",
     "metrics": {
      "n_test_trades": 1680,
@@ -2556,6 +2584,8 @@
    "latest_result": {
     "unit": "RQ-20261009-902",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-12T11:08:41Z",
     "metrics": null,
     "population": "closed non-backtest costed trades with a meta.news-stamped package, one row per package, n=634 (paper 601 / real_money 33); 19 |R|>20 risk-basis rows excluded",
@@ -2594,6 +2624,8 @@
    "latest_result": {
     "unit": "RQ-20261009-903",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-13T20:15:25Z",
     "metrics": null,
     "population": "releases with a Kalshi quote <= 6 h before close AND a resolved consensus, exact-date join; paired=68 of 134 PM events (CPI mom / NFP / FOMC); horizons [1, 3, 5, 10, 21], ES=F",
@@ -2632,6 +2664,8 @@
    "latest_result": {
     "unit": "RQ-20261025-004",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-25T12:41:04Z",
     "metrics": null,
     "population": "8 head(s), shadow-log real-time rows 2026-09-04..2026-10-25 joined to realised forward-vol labels from market_raw; 55142 rows read",
@@ -2672,6 +2706,8 @@
    "latest_result": {
     "unit": "RQ-20261024-001",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-24T15:21:34Z",
     "metrics": {
      "seconds": 24.8
@@ -2714,6 +2750,8 @@
    "latest_result": {
     "unit": "RQ-20261025-008",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-25T15:59:52Z",
     "metrics": {
      "n_folds_cv_min_over_groups": 5,
@@ -2757,6 +2795,8 @@
    "latest_result": {
     "unit": "RQ-20261025-001",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-25T15:21:45Z",
     "metrics": {
      "n_folds_cv_min_over_groups": 5,
@@ -2800,6 +2840,8 @@
    "latest_result": {
     "unit": "RQ-20261027-006",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-27T16:48:19Z",
     "metrics": {
      "n_folds_cv_min_over_groups": 5,
@@ -2843,6 +2885,8 @@
    "latest_result": {
     "unit": "RQ-20261105-fd68-06",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-05T19:21:03Z",
     "metrics": {
      "arms_graded": 8
@@ -2880,6 +2924,8 @@
    "latest_result": {
     "unit": "RQ-20261013-1414-05",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-10-14T13:54:20Z",
     "metrics": {
      "n_folds_cv_min_over_groups": 5,
@@ -2921,6 +2967,8 @@
    "latest_result": {
     "unit": "RQ-20261015-eda2-01",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-10-15T17:57:47Z",
     "metrics": {
      "n_folds_cv_min_over_groups": 5,
@@ -2962,6 +3010,8 @@
    "latest_result": {
     "unit": "RQ-20261014-9d20-01",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-10-14T13:11:24Z",
     "metrics": null,
     "population": "newest committed ledger per leg under comms/strategy_evidence/runs/*/*__trades.jsonl; resamples excluded (__B<k>/__M); 54 ledger file(s), 5063 trades, 54 legs; net_r is the harness value net of fee + slippage + funding",
@@ -3000,6 +3050,8 @@
    "latest_result": {
     "unit": "RQ-20261024-002",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-10-24T08:23:49Z",
     "metrics": {
      "n_folds_cv_min_over_groups": 5,
@@ -3032,424 +3084,14 @@
    "node_read_state": "ok"
   },
   {
-   "id": "ml:btc-regime-15m-baseline-v1",
-   "name": "Mutt-Regime-1b",
-   "track": "ML",
-   "kind": "ml_model",
-   "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "shadow",
-   "latest_result": null,
-   "counts": {
-    "units": 0,
-    "passed": 0,
-    "failed": 0,
-    "indeterminate": 0,
-    "open": 0,
-    "blocked": 0
-   },
-   "open_units": null,
-   "next_step": null,
-   "owner_rows": null,
-   "last_activity": null,
-   "links": {
-    "registry": "/api/bot/ml/registry"
-   },
-   "model_id": "btc-regime-15m-baseline-v1",
-   "slot": "D2",
-   "bucket": "SHADOW",
-   "family": "classification_baseline"
-  },
-  {
-   "id": "ml:btc-regime-15m-lgbm-fc-pcv-v2",
-   "name": "Collie-5a",
-   "track": "ML",
-   "kind": "ml_model",
-   "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "advisory (LIVE bucket)",
-   "latest_result": {
-    "unit": "RQ-20261008-902",
-    "verdict": "pass",
-    "date": "2026-10-10T15:17:40Z",
-    "metrics": null,
-    "population": "{\"description\":\"trend_donchian BTCUSDT 1h harness trades (n=147) split into 6 (trend,vol) cells by btc-regime-15m-lgbm-fc-pcv-v2 vol labels\",\"n\":147}",
-    "n": 147,
-    "note": "PASS-candidate cells: transitional/calm and chop/calm (both already authored long:off) - no new cell, no config change. Label verify NOT run (no live BTC ML rows to compare): provisional.",
-    "title": "Regime head as entry gate: does the btc-regime-15m-lgbm-fc-pcv-v2 vol label (advisory) drop money-losing entries on BTCUSDT legs out of sample?"
-   },
-   "counts": {
-    "units": 1,
-    "passed": 1,
-    "failed": 0,
-    "indeterminate": 0,
-    "open": 0,
-    "blocked": 0
-   },
-   "open_units": null,
-   "next_step": null,
-   "owner_rows": null,
-   "last_activity": "2026-10-10T15:17:40Z",
-   "links": {
-    "registry": "/api/bot/ml/registry"
-   },
-   "model_id": "btc-regime-15m-lgbm-fc-pcv-v2",
-   "slot": "D2",
-   "bucket": "LIVE",
-   "family": "classification_lightgbm"
-  },
-  {
-   "id": "ml:btc-regime-15m-lgbm-v2",
-   "name": "Collie-1a",
-   "track": "ML",
-   "kind": "ml_model",
-   "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "shadow",
-   "latest_result": null,
-   "counts": {
-    "units": 0,
-    "passed": 0,
-    "failed": 0,
-    "indeterminate": 0,
-    "open": 0,
-    "blocked": 0
-   },
-   "open_units": null,
-   "next_step": null,
-   "owner_rows": null,
-   "last_activity": null,
-   "links": {
-    "registry": "/api/bot/ml/registry"
-   },
-   "model_id": "btc-regime-15m-lgbm-v2",
-   "slot": "D2",
-   "bucket": "SHADOW",
-   "family": "classification_lightgbm"
-  },
-  {
-   "id": "ml:btc-regime-15m-lgbm-yz-v1",
-   "name": "Collie-2a",
-   "track": "ML",
-   "kind": "ml_model",
-   "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "shadow",
-   "latest_result": null,
-   "counts": {
-    "units": 0,
-    "passed": 0,
-    "failed": 0,
-    "indeterminate": 0,
-    "open": 0,
-    "blocked": 0
-   },
-   "open_units": null,
-   "next_step": null,
-   "owner_rows": null,
-   "last_activity": null,
-   "links": {
-    "registry": "/api/bot/ml/registry"
-   },
-   "model_id": "btc-regime-15m-lgbm-yz-v1",
-   "slot": "D2",
-   "bucket": "SHADOW",
-   "family": "classification_lightgbm"
-  },
-  {
-   "id": "ml:btc-regime-1h-lgbm-v2",
-   "name": "Collie-1b",
-   "track": "ML",
-   "kind": "ml_model",
-   "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "shadow",
-   "latest_result": null,
-   "counts": {
-    "units": 0,
-    "passed": 0,
-    "failed": 0,
-    "indeterminate": 0,
-    "open": 0,
-    "blocked": 0
-   },
-   "open_units": null,
-   "next_step": null,
-   "owner_rows": null,
-   "last_activity": null,
-   "links": {
-    "registry": "/api/bot/ml/registry"
-   },
-   "model_id": "btc-regime-1h-lgbm-v2",
-   "slot": "D2",
-   "bucket": "SHADOW",
-   "family": "classification_lightgbm"
-  },
-  {
-   "id": "ml:btc-regime-1h-lgbm-yz-v1",
-   "name": "Collie-2b",
-   "track": "ML",
-   "kind": "ml_model",
-   "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "shadow",
-   "latest_result": null,
-   "counts": {
-    "units": 0,
-    "passed": 0,
-    "failed": 0,
-    "indeterminate": 0,
-    "open": 0,
-    "blocked": 0
-   },
-   "open_units": null,
-   "next_step": null,
-   "owner_rows": null,
-   "last_activity": null,
-   "links": {
-    "registry": "/api/bot/ml/registry"
-   },
-   "model_id": "btc-regime-1h-lgbm-yz-v1",
-   "slot": "D2",
-   "bucket": "SHADOW",
-   "family": "classification_lightgbm"
-  },
-  {
-   "id": "ml:btc-regime-5m-baseline-v1",
-   "name": "Mutt-Regime-1a",
-   "track": "ML",
-   "kind": "ml_model",
-   "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "shadow",
-   "latest_result": null,
-   "counts": {
-    "units": 0,
-    "passed": 0,
-    "failed": 0,
-    "indeterminate": 0,
-    "open": 0,
-    "blocked": 0
-   },
-   "open_units": null,
-   "next_step": null,
-   "owner_rows": null,
-   "last_activity": null,
-   "links": {
-    "registry": "/api/bot/ml/registry"
-   },
-   "model_id": "btc-regime-5m-baseline-v1",
-   "slot": "D2",
-   "bucket": "SHADOW",
-   "family": "classification_baseline"
-  },
-  {
-   "id": "ml:btc-regime-5m-lgbm-v2",
-   "name": "Chihuahua-1a",
-   "track": "ML",
-   "kind": "ml_model",
-   "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "shadow",
-   "latest_result": null,
-   "counts": {
-    "units": 0,
-    "passed": 0,
-    "failed": 0,
-    "indeterminate": 0,
-    "open": 0,
-    "blocked": 0
-   },
-   "open_units": null,
-   "next_step": null,
-   "owner_rows": null,
-   "last_activity": null,
-   "links": {
-    "registry": "/api/bot/ml/registry"
-   },
-   "model_id": "btc-regime-5m-lgbm-v2",
-   "slot": "D2",
-   "bucket": "SHADOW",
-   "family": "classification_lightgbm"
-  },
-  {
-   "id": "ml:eth-regime-15m-lgbm-selfonly-v901ctrl",
-   "name": "Collie-3a",
-   "track": "ML",
-   "kind": "ml_model",
-   "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "shadow",
-   "latest_result": null,
-   "counts": {
-    "units": 0,
-    "passed": 0,
-    "failed": 0,
-    "indeterminate": 0,
-    "open": 0,
-    "blocked": 0
-   },
-   "open_units": null,
-   "next_step": null,
-   "owner_rows": null,
-   "last_activity": null,
-   "links": {
-    "registry": "/api/bot/ml/registry"
-   },
-   "model_id": "eth-regime-15m-lgbm-selfonly-v901ctrl",
-   "slot": "D2",
-   "bucket": "SHADOW",
-   "family": "classification_lightgbm"
-  },
-  {
-   "id": "ml:eth-regime-15m-lgbm-xasset-v1",
-   "name": "Collie-3b",
-   "track": "ML",
-   "kind": "ml_model",
-   "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "shadow",
-   "latest_result": null,
-   "counts": {
-    "units": 0,
-    "passed": 0,
-    "failed": 0,
-    "indeterminate": 0,
-    "open": 0,
-    "blocked": 0
-   },
-   "open_units": null,
-   "next_step": null,
-   "owner_rows": null,
-   "last_activity": null,
-   "links": {
-    "registry": "/api/bot/ml/registry"
-   },
-   "model_id": "eth-regime-15m-lgbm-xasset-v1",
-   "slot": "D2",
-   "bucket": "SHADOW",
-   "family": "classification_lightgbm"
-  },
-  {
-   "id": "ml:eth-regime-1h-lgbm-v1",
-   "name": "Collie-1c",
-   "track": "ML",
-   "kind": "ml_model",
-   "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "shadow",
-   "latest_result": {
-    "unit": "RQ-20261016-8b93-01",
-    "verdict": "pass",
-    "date": "2026-10-16T04:03:13Z",
-    "metrics": {
-     "agreement": 1.0
-    },
-    "population": "eval rows of eth-regime-1h-lgbm-v1, trainer vs kaggle_cpu, ts < 2026-10-01T00:00:00Z",
-    "n": 8694,
-    "note": "all metrics within tolerance",
-    "title": "Training parity re-run WITH artefact: eth-regime-1h-lgbm-v1 on a Kaggle CPU kernel vs the trainer reference; on PASS emit the ml/offload-inbox drop for the one operator-gated registry write"
-   },
-   "counts": {
-    "units": 3,
-    "passed": 3,
-    "failed": 0,
-    "indeterminate": 0,
-    "open": 0,
-    "blocked": 0
-   },
-   "open_units": null,
-   "next_step": null,
-   "owner_rows": null,
-   "last_activity": "2026-10-16T04:03:13Z",
-   "links": {
-    "registry": "/api/bot/ml/registry"
-   },
-   "model_id": "eth-regime-1h-lgbm-v1",
-   "slot": "D2",
-   "bucket": "SHADOW",
-   "family": "classification_lightgbm"
-  },
-  {
-   "id": "ml:eth-regime-1h-lgbm-xasset-v1",
-   "name": "Collie-3c",
-   "track": "ML",
-   "kind": "ml_model",
-   "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "shadow",
-   "latest_result": null,
-   "counts": {
-    "units": 0,
-    "passed": 0,
-    "failed": 0,
-    "indeterminate": 0,
-    "open": 0,
-    "blocked": 0
-   },
-   "open_units": null,
-   "next_step": null,
-   "owner_rows": null,
-   "last_activity": null,
-   "links": {
-    "registry": "/api/bot/ml/registry"
-   },
-   "model_id": "eth-regime-1h-lgbm-xasset-v1",
-   "slot": "D2",
-   "bucket": "SHADOW",
-   "family": "classification_lightgbm"
-  },
-  {
-   "id": "ml:eth-regime-5m-lgbm-v1",
-   "name": "Chihuahua-1b",
-   "track": "ML",
-   "kind": "ml_model",
-   "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "shadow",
-   "latest_result": null,
-   "counts": {
-    "units": 0,
-    "passed": 0,
-    "failed": 0,
-    "indeterminate": 0,
-    "open": 0,
-    "blocked": 0
-   },
-   "open_units": null,
-   "next_step": null,
-   "owner_rows": null,
-   "last_activity": null,
-   "links": {
-    "registry": "/api/bot/ml/registry"
-   },
-   "model_id": "eth-regime-5m-lgbm-v1",
-   "slot": "D2",
-   "bucket": "SHADOW",
-   "family": "classification_lightgbm"
-  },
-  {
    "id": "ml:exit-head-donchian-1h-v1",
    "name": "Labrador-2",
    "track": "ML",
    "kind": "ml_model",
    "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "shadow",
+   "stage": "testing_book",
+   "stage_label": "testing book (Stage 1 demo floor)",
+   "stage_reason": "order consumer on: bybit_1",
    "latest_result": null,
    "counts": {
     "units": 1,
@@ -3474,17 +3116,34 @@
    "model_id": "exit-head-donchian-1h-v1",
    "slot": "D8",
    "bucket": "SHADOW",
-   "family": null
+   "family": null,
+   "consumers": [
+    {
+     "account": "bybit_1",
+     "strategy": "trend_donchian",
+     "account_class": "paper"
+    },
+    {
+     "account": "bybit_1",
+     "strategy": "trend_donchian_sol",
+     "account_class": "paper"
+    },
+    {
+     "account": "bybit_1",
+     "strategy": "trend_donchian_eth",
+     "account_class": "paper"
+    }
+   ]
   },
   {
-   "id": "ml:mes-regime-15m-baseline-v1",
-   "name": "Mutt-Regime-1d",
+   "id": "ml:ml-decision-entry-v2",
+   "name": "Foxhound-2",
    "track": "ML",
    "kind": "ml_model",
    "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "shadow",
+   "stage": "testing_book",
+   "stage_label": "testing book (Stage 1 demo floor)",
+   "stage_reason": "order consumer on: bybit_1",
    "latest_result": null,
    "counts": {
     "units": 0,
@@ -3501,52 +3160,27 @@
    "links": {
     "registry": "/api/bot/ml/registry"
    },
-   "model_id": "mes-regime-15m-baseline-v1",
-   "slot": "D2",
+   "model_id": "ml-decision-entry-v2",
+   "slot": "D3",
    "bucket": "SHADOW",
-   "family": "classification_baseline"
+   "family": null,
+   "consumers": [
+    {
+     "account": "bybit_1",
+     "strategy": "ml_entry_v2",
+     "account_class": "paper"
+    }
+   ]
   },
   {
-   "id": "ml:mes-regime-1d-lgbm-v2",
-   "name": "Collie-1d",
+   "id": "ml:ml-entry-eq-v1",
+   "name": "Foxhound-3",
    "track": "ML",
    "kind": "ml_model",
    "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "shadow",
-   "latest_result": null,
-   "counts": {
-    "units": 0,
-    "passed": 0,
-    "failed": 0,
-    "indeterminate": 0,
-    "open": 0,
-    "blocked": 0
-   },
-   "open_units": null,
-   "next_step": null,
-   "owner_rows": [
-    "ML-MES-REGIME-1D-SILENCE"
-   ],
-   "last_activity": null,
-   "links": {
-    "registry": "/api/bot/ml/registry"
-   },
-   "model_id": "mes-regime-1d-lgbm-v2",
-   "slot": "D2",
-   "bucket": "SHADOW",
-   "family": "classification_lightgbm"
-  },
-  {
-   "id": "ml:mes-regime-5m-baseline-v1",
-   "name": "Mutt-Regime-1c",
-   "track": "ML",
-   "kind": "ml_model",
-   "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "shadow",
+   "stage": "testing_book",
+   "stage_label": "testing book (Stage 1 demo floor)",
+   "stage_reason": "order consumer on: alpaca_paper",
    "latest_result": null,
    "counts": {
     "units": 0,
@@ -3563,40 +3197,17 @@
    "links": {
     "registry": "/api/bot/ml/registry"
    },
-   "model_id": "mes-regime-5m-baseline-v1",
-   "slot": "D2",
+   "model_id": "ml-entry-eq-v1",
+   "slot": "D3",
    "bucket": "SHADOW",
-   "family": "classification_baseline"
-  },
-  {
-   "id": "ml:mes-regime-5m-lgbm-v2",
-   "name": "Chihuahua-1d",
-   "track": "ML",
-   "kind": "ml_model",
-   "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "advisory (LIVE bucket)",
-   "latest_result": null,
-   "counts": {
-    "units": 1,
-    "passed": 0,
-    "failed": 0,
-    "indeterminate": 0,
-    "open": 0,
-    "blocked": 1
-   },
-   "open_units": null,
-   "next_step": null,
-   "owner_rows": null,
-   "last_activity": "2026-10-08T00:00:00Z",
-   "links": {
-    "registry": "/api/bot/ml/registry"
-   },
-   "model_id": "mes-regime-5m-lgbm-v2",
-   "slot": "D2",
-   "bucket": "LIVE",
-   "family": "classification_lightgbm"
+   "family": null,
+   "consumers": [
+    {
+     "account": "alpaca_paper",
+     "strategy": "ml_entry_eq",
+     "account_class": "paper"
+    }
+   ]
   },
   {
    "id": "ml:ml-decision-entry-v1",
@@ -3604,12 +3215,14 @@
    "track": "ML",
    "kind": "ml_model",
    "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "advisory (LIVE bucket)",
+   "stage": "production",
+   "stage_label": "production (real money)",
+   "stage_reason": "order consumer on real money: bybit_2",
    "latest_result": {
     "unit": "RQ-20261104-a41f-01",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-05T20:03:14Z",
     "metrics": {
      "alpaca_429s": 0,
@@ -3640,7 +3253,39 @@
    "model_id": "ml-decision-entry-v1",
    "slot": "D3",
    "bucket": "LIVE",
-   "family": null
+   "family": null,
+   "consumers": [
+    {
+     "account": "bybit_2",
+     "strategy": "ml_entry",
+     "account_class": "real_money"
+    },
+    {
+     "account": "bybit_portfolio",
+     "strategy": "ml_entry",
+     "account_class": "paper"
+    },
+    {
+     "account": "alpaca_paper",
+     "strategy": "ml_entry",
+     "account_class": "paper"
+    },
+    {
+     "account": "breakout_2",
+     "strategy": "ml_entry",
+     "account_class": "prop"
+    },
+    {
+     "account": "tradeify_1",
+     "strategy": "ml_entry",
+     "account_class": "prop"
+    },
+    {
+     "account": "velotrade_1",
+     "strategy": "ml_entry",
+     "account_class": "prop"
+    }
+   ]
   },
   {
    "id": "ml:ml-decision-entry-v1r20261106",
@@ -3648,9 +3293,9 @@
    "track": "ML",
    "kind": "ml_model",
    "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "advisory (LIVE bucket)",
+   "stage": "production",
+   "stage_label": "production (real money)",
+   "stage_reason": "order consumer on real money: bybit_2",
    "latest_result": null,
    "counts": {
     "units": 0,
@@ -3670,37 +3315,39 @@
    "model_id": "ml-decision-entry-v1r20261106",
    "slot": "D3",
    "bucket": "LIVE",
-   "family": null
-  },
-  {
-   "id": "ml:ml-decision-entry-v2",
-   "name": "Foxhound-2",
-   "track": "ML",
-   "kind": "ml_model",
-   "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "shadow",
-   "latest_result": null,
-   "counts": {
-    "units": 0,
-    "passed": 0,
-    "failed": 0,
-    "indeterminate": 0,
-    "open": 0,
-    "blocked": 0
-   },
-   "open_units": null,
-   "next_step": null,
-   "owner_rows": null,
-   "last_activity": null,
-   "links": {
-    "registry": "/api/bot/ml/registry"
-   },
-   "model_id": "ml-decision-entry-v2",
-   "slot": "D3",
-   "bucket": "SHADOW",
-   "family": null
+   "family": null,
+   "consumers": [
+    {
+     "account": "bybit_2",
+     "strategy": "ml_entry",
+     "account_class": "real_money"
+    },
+    {
+     "account": "bybit_portfolio",
+     "strategy": "ml_entry",
+     "account_class": "paper"
+    },
+    {
+     "account": "alpaca_paper",
+     "strategy": "ml_entry",
+     "account_class": "paper"
+    },
+    {
+     "account": "breakout_2",
+     "strategy": "ml_entry",
+     "account_class": "prop"
+    },
+    {
+     "account": "tradeify_1",
+     "strategy": "ml_entry",
+     "account_class": "prop"
+    },
+    {
+     "account": "velotrade_1",
+     "strategy": "ml_entry",
+     "account_class": "prop"
+    }
+   ]
   },
   {
    "id": "ml:ml-entry-eq-struct-ens5-v1",
@@ -3708,9 +3355,9 @@
    "track": "ML",
    "kind": "ml_model",
    "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "advisory (LIVE bucket)",
+   "stage": "production",
+   "stage_label": "production (real money)",
+   "stage_reason": "order consumer on real money: alpaca_live",
    "latest_result": null,
    "counts": {
     "units": 0,
@@ -3730,37 +3377,19 @@
    "model_id": "ml-entry-eq-struct-ens5-v1",
    "slot": "D3",
    "bucket": "LIVE",
-   "family": null
-  },
-  {
-   "id": "ml:ml-entry-eq-v1",
-   "name": "Foxhound-3",
-   "track": "ML",
-   "kind": "ml_model",
-   "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "shadow",
-   "latest_result": null,
-   "counts": {
-    "units": 0,
-    "passed": 0,
-    "failed": 0,
-    "indeterminate": 0,
-    "open": 0,
-    "blocked": 0
-   },
-   "open_units": null,
-   "next_step": null,
-   "owner_rows": null,
-   "last_activity": null,
-   "links": {
-    "registry": "/api/bot/ml/registry"
-   },
-   "model_id": "ml-entry-eq-v1",
-   "slot": "D3",
-   "bucket": "SHADOW",
-   "family": null
+   "family": null,
+   "consumers": [
+    {
+     "account": "alpaca_portfolio",
+     "strategy": "ml_entry_eq_struct",
+     "account_class": "paper"
+    },
+    {
+     "account": "alpaca_live",
+     "strategy": "ml_entry_eq_struct",
+     "account_class": "real_money"
+    }
+   ]
   },
   {
    "id": "ml:ml-entry-tp-revision-v1",
@@ -3768,9 +3397,9 @@
    "track": "ML",
    "kind": "ml_model",
    "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "advisory (LIVE bucket)",
+   "stage": "production",
+   "stage_label": "production (real money)",
+   "stage_reason": "order consumer on real money: bybit_2",
    "latest_result": null,
    "counts": {
     "units": 0,
@@ -3790,7 +3419,39 @@
    "model_id": "ml-entry-tp-revision-v1",
    "slot": "D7",
    "bucket": "LIVE",
-   "family": null
+   "family": null,
+   "consumers": [
+    {
+     "account": "bybit_2",
+     "strategy": "ml_entry",
+     "account_class": "real_money"
+    },
+    {
+     "account": "bybit_portfolio",
+     "strategy": "ml_entry",
+     "account_class": "paper"
+    },
+    {
+     "account": "alpaca_paper",
+     "strategy": "ml_entry",
+     "account_class": "paper"
+    },
+    {
+     "account": "breakout_2",
+     "strategy": "ml_entry",
+     "account_class": "prop"
+    },
+    {
+     "account": "tradeify_1",
+     "strategy": "ml_entry",
+     "account_class": "prop"
+    },
+    {
+     "account": "velotrade_1",
+     "strategy": "ml_entry",
+     "account_class": "prop"
+    }
+   ]
   },
   {
    "id": "ml:overlay-td-v1",
@@ -3798,9 +3459,9 @@
    "track": "ML",
    "kind": "ml_model",
    "programme": null,
-   "stage": "shadow_advisory",
-   "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "advisory (LIVE bucket)",
+   "stage": "production",
+   "stage_label": "production (real money)",
+   "stage_reason": "order consumer on real money: bybit_2",
    "latest_result": null,
    "counts": {
     "units": 0,
@@ -3820,7 +3481,607 @@
    "model_id": "overlay-td-v1",
    "slot": "D4",
    "bucket": "LIVE",
-   "family": null
+   "family": null,
+   "consumers": [
+    {
+     "account": "bybit_1",
+     "strategy": "trend_donchian_eth_4h",
+     "account_class": "paper"
+    },
+    {
+     "account": "breakout_2",
+     "strategy": "trend_donchian_eth_4h",
+     "account_class": "prop"
+    },
+    {
+     "account": "tradeify_1",
+     "strategy": "trend_donchian_eth_4h",
+     "account_class": "prop"
+    },
+    {
+     "account": "velotrade_1",
+     "strategy": "trend_donchian_eth_4h",
+     "account_class": "prop"
+    },
+    {
+     "account": "bybit_2",
+     "strategy": "trend_donchian_xrp_4h",
+     "account_class": "real_money"
+    },
+    {
+     "account": "bybit_portfolio",
+     "strategy": "trend_donchian_xrp_4h",
+     "account_class": "paper"
+    },
+    {
+     "account": "bybit_1",
+     "strategy": "trend_donchian_eth_prop",
+     "account_class": "paper"
+    },
+    {
+     "account": "bybit_2",
+     "strategy": "trend_donchian_sol_prop",
+     "account_class": "real_money"
+    },
+    {
+     "account": "bybit_portfolio",
+     "strategy": "trend_donchian_sol_prop",
+     "account_class": "paper"
+    }
+   ]
+  },
+  {
+   "id": "ml:btc-regime-15m-baseline-v1",
+   "name": "Mutt-Regime-1b",
+   "track": "ML",
+   "kind": "ml_model",
+   "programme": null,
+   "stage": "shadow_advisory",
+   "stage_label": "shadow / advisory (ML)",
+   "stage_reason": "shadow, no order consumer",
+   "latest_result": null,
+   "counts": {
+    "units": 0,
+    "passed": 0,
+    "failed": 0,
+    "indeterminate": 0,
+    "open": 0,
+    "blocked": 0
+   },
+   "open_units": null,
+   "next_step": null,
+   "owner_rows": null,
+   "last_activity": null,
+   "links": {
+    "registry": "/api/bot/ml/registry"
+   },
+   "model_id": "btc-regime-15m-baseline-v1",
+   "slot": "D2",
+   "bucket": "SHADOW",
+   "family": "classification_baseline",
+   "consumers": null
+  },
+  {
+   "id": "ml:btc-regime-15m-lgbm-fc-pcv-v2",
+   "name": "Collie-5a",
+   "track": "ML",
+   "kind": "ml_model",
+   "programme": null,
+   "stage": "shadow_advisory",
+   "stage_label": "shadow / advisory (ML)",
+   "stage_reason": "advisory (LIVE bucket), no order consumer",
+   "latest_result": {
+    "unit": "RQ-20261008-902",
+    "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
+    "date": "2026-10-10T15:17:40Z",
+    "metrics": null,
+    "population": "{\"description\":\"trend_donchian BTCUSDT 1h harness trades (n=147) split into 6 (trend,vol) cells by btc-regime-15m-lgbm-fc-pcv-v2 vol labels\",\"n\":147}",
+    "n": 147,
+    "note": "PASS-candidate cells: transitional/calm and chop/calm (both already authored long:off) - no new cell, no config change. Label verify NOT run (no live BTC ML rows to compare): provisional.",
+    "title": "Regime head as entry gate: does the btc-regime-15m-lgbm-fc-pcv-v2 vol label (advisory) drop money-losing entries on BTCUSDT legs out of sample?"
+   },
+   "counts": {
+    "units": 1,
+    "passed": 1,
+    "failed": 0,
+    "indeterminate": 0,
+    "open": 0,
+    "blocked": 0
+   },
+   "open_units": null,
+   "next_step": null,
+   "owner_rows": null,
+   "last_activity": "2026-10-10T15:17:40Z",
+   "links": {
+    "registry": "/api/bot/ml/registry"
+   },
+   "model_id": "btc-regime-15m-lgbm-fc-pcv-v2",
+   "slot": "D2",
+   "bucket": "LIVE",
+   "family": "classification_lightgbm",
+   "consumers": null
+  },
+  {
+   "id": "ml:btc-regime-15m-lgbm-v2",
+   "name": "Collie-1a",
+   "track": "ML",
+   "kind": "ml_model",
+   "programme": null,
+   "stage": "shadow_advisory",
+   "stage_label": "shadow / advisory (ML)",
+   "stage_reason": "shadow, no order consumer",
+   "latest_result": null,
+   "counts": {
+    "units": 0,
+    "passed": 0,
+    "failed": 0,
+    "indeterminate": 0,
+    "open": 0,
+    "blocked": 0
+   },
+   "open_units": null,
+   "next_step": null,
+   "owner_rows": null,
+   "last_activity": null,
+   "links": {
+    "registry": "/api/bot/ml/registry"
+   },
+   "model_id": "btc-regime-15m-lgbm-v2",
+   "slot": "D2",
+   "bucket": "SHADOW",
+   "family": "classification_lightgbm",
+   "consumers": null
+  },
+  {
+   "id": "ml:btc-regime-15m-lgbm-yz-v1",
+   "name": "Collie-2a",
+   "track": "ML",
+   "kind": "ml_model",
+   "programme": null,
+   "stage": "shadow_advisory",
+   "stage_label": "shadow / advisory (ML)",
+   "stage_reason": "shadow, no order consumer",
+   "latest_result": null,
+   "counts": {
+    "units": 0,
+    "passed": 0,
+    "failed": 0,
+    "indeterminate": 0,
+    "open": 0,
+    "blocked": 0
+   },
+   "open_units": null,
+   "next_step": null,
+   "owner_rows": null,
+   "last_activity": null,
+   "links": {
+    "registry": "/api/bot/ml/registry"
+   },
+   "model_id": "btc-regime-15m-lgbm-yz-v1",
+   "slot": "D2",
+   "bucket": "SHADOW",
+   "family": "classification_lightgbm",
+   "consumers": null
+  },
+  {
+   "id": "ml:btc-regime-1h-lgbm-v2",
+   "name": "Collie-1b",
+   "track": "ML",
+   "kind": "ml_model",
+   "programme": null,
+   "stage": "shadow_advisory",
+   "stage_label": "shadow / advisory (ML)",
+   "stage_reason": "shadow, no order consumer",
+   "latest_result": null,
+   "counts": {
+    "units": 0,
+    "passed": 0,
+    "failed": 0,
+    "indeterminate": 0,
+    "open": 0,
+    "blocked": 0
+   },
+   "open_units": null,
+   "next_step": null,
+   "owner_rows": null,
+   "last_activity": null,
+   "links": {
+    "registry": "/api/bot/ml/registry"
+   },
+   "model_id": "btc-regime-1h-lgbm-v2",
+   "slot": "D2",
+   "bucket": "SHADOW",
+   "family": "classification_lightgbm",
+   "consumers": null
+  },
+  {
+   "id": "ml:btc-regime-1h-lgbm-yz-v1",
+   "name": "Collie-2b",
+   "track": "ML",
+   "kind": "ml_model",
+   "programme": null,
+   "stage": "shadow_advisory",
+   "stage_label": "shadow / advisory (ML)",
+   "stage_reason": "shadow, no order consumer",
+   "latest_result": null,
+   "counts": {
+    "units": 0,
+    "passed": 0,
+    "failed": 0,
+    "indeterminate": 0,
+    "open": 0,
+    "blocked": 0
+   },
+   "open_units": null,
+   "next_step": null,
+   "owner_rows": null,
+   "last_activity": null,
+   "links": {
+    "registry": "/api/bot/ml/registry"
+   },
+   "model_id": "btc-regime-1h-lgbm-yz-v1",
+   "slot": "D2",
+   "bucket": "SHADOW",
+   "family": "classification_lightgbm",
+   "consumers": null
+  },
+  {
+   "id": "ml:btc-regime-5m-baseline-v1",
+   "name": "Mutt-Regime-1a",
+   "track": "ML",
+   "kind": "ml_model",
+   "programme": null,
+   "stage": "shadow_advisory",
+   "stage_label": "shadow / advisory (ML)",
+   "stage_reason": "shadow, no order consumer",
+   "latest_result": null,
+   "counts": {
+    "units": 0,
+    "passed": 0,
+    "failed": 0,
+    "indeterminate": 0,
+    "open": 0,
+    "blocked": 0
+   },
+   "open_units": null,
+   "next_step": null,
+   "owner_rows": null,
+   "last_activity": null,
+   "links": {
+    "registry": "/api/bot/ml/registry"
+   },
+   "model_id": "btc-regime-5m-baseline-v1",
+   "slot": "D2",
+   "bucket": "SHADOW",
+   "family": "classification_baseline",
+   "consumers": null
+  },
+  {
+   "id": "ml:btc-regime-5m-lgbm-v2",
+   "name": "Chihuahua-1a",
+   "track": "ML",
+   "kind": "ml_model",
+   "programme": null,
+   "stage": "shadow_advisory",
+   "stage_label": "shadow / advisory (ML)",
+   "stage_reason": "shadow, no order consumer",
+   "latest_result": null,
+   "counts": {
+    "units": 0,
+    "passed": 0,
+    "failed": 0,
+    "indeterminate": 0,
+    "open": 0,
+    "blocked": 0
+   },
+   "open_units": null,
+   "next_step": null,
+   "owner_rows": null,
+   "last_activity": null,
+   "links": {
+    "registry": "/api/bot/ml/registry"
+   },
+   "model_id": "btc-regime-5m-lgbm-v2",
+   "slot": "D2",
+   "bucket": "SHADOW",
+   "family": "classification_lightgbm",
+   "consumers": null
+  },
+  {
+   "id": "ml:eth-regime-15m-lgbm-selfonly-v901ctrl",
+   "name": "Collie-3a",
+   "track": "ML",
+   "kind": "ml_model",
+   "programme": null,
+   "stage": "shadow_advisory",
+   "stage_label": "shadow / advisory (ML)",
+   "stage_reason": "shadow, no order consumer",
+   "latest_result": null,
+   "counts": {
+    "units": 0,
+    "passed": 0,
+    "failed": 0,
+    "indeterminate": 0,
+    "open": 0,
+    "blocked": 0
+   },
+   "open_units": null,
+   "next_step": null,
+   "owner_rows": null,
+   "last_activity": null,
+   "links": {
+    "registry": "/api/bot/ml/registry"
+   },
+   "model_id": "eth-regime-15m-lgbm-selfonly-v901ctrl",
+   "slot": "D2",
+   "bucket": "SHADOW",
+   "family": "classification_lightgbm",
+   "consumers": null
+  },
+  {
+   "id": "ml:eth-regime-15m-lgbm-xasset-v1",
+   "name": "Collie-3b",
+   "track": "ML",
+   "kind": "ml_model",
+   "programme": null,
+   "stage": "shadow_advisory",
+   "stage_label": "shadow / advisory (ML)",
+   "stage_reason": "shadow, no order consumer",
+   "latest_result": null,
+   "counts": {
+    "units": 0,
+    "passed": 0,
+    "failed": 0,
+    "indeterminate": 0,
+    "open": 0,
+    "blocked": 0
+   },
+   "open_units": null,
+   "next_step": null,
+   "owner_rows": null,
+   "last_activity": null,
+   "links": {
+    "registry": "/api/bot/ml/registry"
+   },
+   "model_id": "eth-regime-15m-lgbm-xasset-v1",
+   "slot": "D2",
+   "bucket": "SHADOW",
+   "family": "classification_lightgbm",
+   "consumers": null
+  },
+  {
+   "id": "ml:eth-regime-1h-lgbm-v1",
+   "name": "Collie-1c",
+   "track": "ML",
+   "kind": "ml_model",
+   "programme": null,
+   "stage": "shadow_advisory",
+   "stage_label": "shadow / advisory (ML)",
+   "stage_reason": "shadow, no order consumer",
+   "latest_result": {
+    "unit": "RQ-20261016-8b93-01",
+    "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
+    "date": "2026-10-16T04:03:13Z",
+    "metrics": {
+     "agreement": 1.0
+    },
+    "population": "eval rows of eth-regime-1h-lgbm-v1, trainer vs kaggle_cpu, ts < 2026-10-01T00:00:00Z",
+    "n": 8694,
+    "note": "all metrics within tolerance",
+    "title": "Training parity re-run WITH artefact: eth-regime-1h-lgbm-v1 on a Kaggle CPU kernel vs the trainer reference; on PASS emit the ml/offload-inbox drop for the one operator-gated registry write"
+   },
+   "counts": {
+    "units": 3,
+    "passed": 3,
+    "failed": 0,
+    "indeterminate": 0,
+    "open": 0,
+    "blocked": 0
+   },
+   "open_units": null,
+   "next_step": null,
+   "owner_rows": null,
+   "last_activity": "2026-10-16T04:03:13Z",
+   "links": {
+    "registry": "/api/bot/ml/registry"
+   },
+   "model_id": "eth-regime-1h-lgbm-v1",
+   "slot": "D2",
+   "bucket": "SHADOW",
+   "family": "classification_lightgbm",
+   "consumers": null
+  },
+  {
+   "id": "ml:eth-regime-1h-lgbm-xasset-v1",
+   "name": "Collie-3c",
+   "track": "ML",
+   "kind": "ml_model",
+   "programme": null,
+   "stage": "shadow_advisory",
+   "stage_label": "shadow / advisory (ML)",
+   "stage_reason": "shadow, no order consumer",
+   "latest_result": null,
+   "counts": {
+    "units": 0,
+    "passed": 0,
+    "failed": 0,
+    "indeterminate": 0,
+    "open": 0,
+    "blocked": 0
+   },
+   "open_units": null,
+   "next_step": null,
+   "owner_rows": null,
+   "last_activity": null,
+   "links": {
+    "registry": "/api/bot/ml/registry"
+   },
+   "model_id": "eth-regime-1h-lgbm-xasset-v1",
+   "slot": "D2",
+   "bucket": "SHADOW",
+   "family": "classification_lightgbm",
+   "consumers": null
+  },
+  {
+   "id": "ml:eth-regime-5m-lgbm-v1",
+   "name": "Chihuahua-1b",
+   "track": "ML",
+   "kind": "ml_model",
+   "programme": null,
+   "stage": "shadow_advisory",
+   "stage_label": "shadow / advisory (ML)",
+   "stage_reason": "shadow, no order consumer",
+   "latest_result": null,
+   "counts": {
+    "units": 0,
+    "passed": 0,
+    "failed": 0,
+    "indeterminate": 0,
+    "open": 0,
+    "blocked": 0
+   },
+   "open_units": null,
+   "next_step": null,
+   "owner_rows": null,
+   "last_activity": null,
+   "links": {
+    "registry": "/api/bot/ml/registry"
+   },
+   "model_id": "eth-regime-5m-lgbm-v1",
+   "slot": "D2",
+   "bucket": "SHADOW",
+   "family": "classification_lightgbm",
+   "consumers": null
+  },
+  {
+   "id": "ml:mes-regime-15m-baseline-v1",
+   "name": "Mutt-Regime-1d",
+   "track": "ML",
+   "kind": "ml_model",
+   "programme": null,
+   "stage": "shadow_advisory",
+   "stage_label": "shadow / advisory (ML)",
+   "stage_reason": "shadow, no order consumer",
+   "latest_result": null,
+   "counts": {
+    "units": 0,
+    "passed": 0,
+    "failed": 0,
+    "indeterminate": 0,
+    "open": 0,
+    "blocked": 0
+   },
+   "open_units": null,
+   "next_step": null,
+   "owner_rows": null,
+   "last_activity": null,
+   "links": {
+    "registry": "/api/bot/ml/registry"
+   },
+   "model_id": "mes-regime-15m-baseline-v1",
+   "slot": "D2",
+   "bucket": "SHADOW",
+   "family": "classification_baseline",
+   "consumers": null
+  },
+  {
+   "id": "ml:mes-regime-1d-lgbm-v2",
+   "name": "Collie-1d",
+   "track": "ML",
+   "kind": "ml_model",
+   "programme": null,
+   "stage": "shadow_advisory",
+   "stage_label": "shadow / advisory (ML)",
+   "stage_reason": "shadow, no order consumer",
+   "latest_result": null,
+   "counts": {
+    "units": 0,
+    "passed": 0,
+    "failed": 0,
+    "indeterminate": 0,
+    "open": 0,
+    "blocked": 0
+   },
+   "open_units": null,
+   "next_step": null,
+   "owner_rows": [
+    "ML-MES-REGIME-1D-SILENCE"
+   ],
+   "last_activity": null,
+   "links": {
+    "registry": "/api/bot/ml/registry"
+   },
+   "model_id": "mes-regime-1d-lgbm-v2",
+   "slot": "D2",
+   "bucket": "SHADOW",
+   "family": "classification_lightgbm",
+   "consumers": null
+  },
+  {
+   "id": "ml:mes-regime-5m-baseline-v1",
+   "name": "Mutt-Regime-1c",
+   "track": "ML",
+   "kind": "ml_model",
+   "programme": null,
+   "stage": "shadow_advisory",
+   "stage_label": "shadow / advisory (ML)",
+   "stage_reason": "shadow, no order consumer",
+   "latest_result": null,
+   "counts": {
+    "units": 0,
+    "passed": 0,
+    "failed": 0,
+    "indeterminate": 0,
+    "open": 0,
+    "blocked": 0
+   },
+   "open_units": null,
+   "next_step": null,
+   "owner_rows": null,
+   "last_activity": null,
+   "links": {
+    "registry": "/api/bot/ml/registry"
+   },
+   "model_id": "mes-regime-5m-baseline-v1",
+   "slot": "D2",
+   "bucket": "SHADOW",
+   "family": "classification_baseline",
+   "consumers": null
+  },
+  {
+   "id": "ml:mes-regime-5m-lgbm-v2",
+   "name": "Chihuahua-1d",
+   "track": "ML",
+   "kind": "ml_model",
+   "programme": null,
+   "stage": "shadow_advisory",
+   "stage_label": "shadow / advisory (ML)",
+   "stage_reason": "advisory (LIVE bucket), no order consumer",
+   "latest_result": null,
+   "counts": {
+    "units": 1,
+    "passed": 0,
+    "failed": 0,
+    "indeterminate": 0,
+    "open": 0,
+    "blocked": 1
+   },
+   "open_units": null,
+   "next_step": null,
+   "owner_rows": null,
+   "last_activity": "2026-10-08T00:00:00Z",
+   "links": {
+    "registry": "/api/bot/ml/registry"
+   },
+   "model_id": "mes-regime-5m-lgbm-v2",
+   "slot": "D2",
+   "bucket": "LIVE",
+   "family": "classification_lightgbm",
+   "consumers": null
   },
   {
    "id": "ml:sol-regime-15m-lgbm-fc-pcv-v2",
@@ -3830,10 +4091,12 @@
    "programme": null,
    "stage": "shadow_advisory",
    "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "advisory (LIVE bucket)",
+   "stage_reason": "advisory (LIVE bucket), no order consumer",
    "latest_result": {
     "unit": "RQ-20261008-903",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-10-10T15:44:52Z",
     "metrics": null,
     "population": "{\"description\":\"SOLUSDT legs trend_donchian_sol 1h (119), sol_pullback_2h (37), ict_scalp_sol_15m (157) harness trades split into 6 (trend,vol) cells by sol-regime-15m-lgbm-fc-pcv-v2 vol labels\",\"n\":313}",
@@ -3859,7 +4122,8 @@
    "model_id": "sol-regime-15m-lgbm-fc-pcv-v2",
    "slot": "D2",
    "bucket": "LIVE",
-   "family": "classification_lightgbm"
+   "family": "classification_lightgbm",
+   "consumers": null
   },
   {
    "id": "ml:sol-regime-5m-lgbm-v1",
@@ -3869,7 +4133,7 @@
    "programme": null,
    "stage": "shadow_advisory",
    "stage_label": "shadow / advisory (ML)",
-   "stage_reason": "shadow",
+   "stage_reason": "shadow, no order consumer",
    "latest_result": null,
    "counts": {
     "units": 0,
@@ -3889,7 +4153,8 @@
    "model_id": "sol-regime-5m-lgbm-v1",
    "slot": "D2",
    "bucket": "SHADOW",
-   "family": "classification_lightgbm"
+   "family": "classification_lightgbm",
+   "consumers": null
   },
   {
    "id": "hypothesis:ml-brackets",
@@ -4085,6 +4350,8 @@
    "latest_result": {
     "unit": "RQ-20261016-65ff-21",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-10-25T05:02:07Z",
     "metrics": null,
     "population": "eval rows of btc-regime-1h-hmm-v1, trainer vs kaggle_cpu, ts < 2026-10-01T00:00:00Z",
@@ -4110,7 +4377,8 @@
    "model_id": "btc-regime-1h-hmm-v1",
    "slot": "D2",
    "bucket": "OFFLINE",
-   "family": "classification_hmm"
+   "family": "classification_hmm",
+   "consumers": null
   },
   {
    "id": "mlplan:ML-F10",
@@ -4124,6 +4392,8 @@
    "latest_result": {
     "unit": "RQ-20261013-1414-04",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-10-13T21:54:26Z",
     "metrics": {
      "n_folds_cv_min_over_groups": 5,
@@ -4165,6 +4435,8 @@
    "latest_result": {
     "unit": "RQ-20261013-1414-06",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-10-15T11:12:33Z",
     "metrics": {
      "n_folds_cv_min_over_groups": 5,
@@ -4206,6 +4478,8 @@
    "latest_result": {
     "unit": "RQ-20261013-1414-07",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-10-14T13:08:34Z",
     "metrics": {
      "n_folds_cv_min_over_groups": 5,
@@ -4305,6 +4579,8 @@
    "latest_result": {
     "unit": "RQ-20261014-9d20-05",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-10-14T13:08:33Z",
     "metrics": {
      "n_folds_cv_min_over_groups": 5,
@@ -4346,6 +4622,8 @@
    "latest_result": {
     "unit": "RQ-20261016-001",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-10-16T04:53:20Z",
     "metrics": {
      "n_folds_cv_min_over_groups": 5,
@@ -4387,6 +4665,8 @@
    "latest_result": {
     "unit": "RQ-20261018-ff8f-01",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-10-18T10:17:15Z",
     "metrics": {
      "n_folds_cv_min_over_groups": 5,
@@ -4457,6 +4737,8 @@
    "latest_result": {
     "unit": "RQ-20261018-ff8f-02",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-10-18T14:39:49Z",
     "metrics": {
      "n_folds_cv_min_over_groups": 5,
@@ -4498,6 +4780,8 @@
    "latest_result": {
     "unit": "RQ-20261018-ff8f-04",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-10-22T09:53:47Z",
     "metrics": {
      "n_folds_cv_min_over_groups": 5,
@@ -4655,6 +4939,8 @@
    "latest_result": {
     "unit": "RQ-20261013-1414-01",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-10-14T00:07:17Z",
     "metrics": {
      "n_folds_cv_min_over_groups": 5,
@@ -4696,6 +4982,8 @@
    "latest_result": {
     "unit": "RQ-20261013-1414-02",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-10-13T23:04:39Z",
     "metrics": {
      "n_folds_cv_min_over_groups": 5,
@@ -4737,6 +5025,8 @@
    "latest_result": {
     "unit": "RQ-20261013-1414-03",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-10-14T15:00:25Z",
     "metrics": {
      "n_folds_cv_min_over_groups": 5,
@@ -4987,6 +5277,8 @@
    "latest_result": {
     "unit": "RQ-20261017-003",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-10-17T07:58:43Z",
     "metrics": null,
     "population": "newest committed ledger per leg (comms/strategy_evidence/runs/*/*__trades.jsonl), USDT legs whose re-walk passes the MFE control; 1094 trades on 10 legs; fixed-bracket reconstruction (initial SL = -1 R, TP = K R), not the leg as traded",
@@ -5028,6 +5320,8 @@
    "latest_result": {
     "unit": "RQ-20261017-004",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-10-17T07:58:43Z",
     "metrics": null,
     "population": "newest committed ledger per leg (comms/strategy_evidence/runs/*/*__trades.jsonl), USDT legs whose re-walk passes the MFE control; 1636 trades on 10 legs; fixed-bracket reconstruction (initial SL = -1 R, TP = K R), not the leg as traded",
@@ -5069,6 +5363,8 @@
    "latest_result": {
     "unit": "RQ-20261017-005",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-10-17T09:18:37Z",
     "metrics": null,
     "population": "newest committed ledger per leg (comms/strategy_evidence/runs/*/*__trades.jsonl), USDT legs whose re-walk passes the MFE control; 620 trades on 4 legs; fixed-bracket reconstruction (initial SL = -1 R, TP = K R), not the leg as traded",
@@ -5110,6 +5406,8 @@
    "latest_result": {
     "unit": "RQ-20261025-009",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-10-25T12:41:05Z",
     "metrics": {
      "n_folds_cv_min_over_groups": 5,
@@ -5153,6 +5451,8 @@
    "latest_result": {
     "unit": "RQ-20261025-010",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-10-25T13:55:19Z",
     "metrics": {
      "n_folds_cv_min_over_groups": 5,
@@ -5196,6 +5496,8 @@
    "latest_result": {
     "unit": "RQ-20261027-002",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-10-27T07:50:34Z",
     "metrics": {
      "n_folds_cv_min_over_groups": 5,
@@ -8954,6 +9256,8 @@
    "latest_result": {
     "unit": "RQ-20261101-d1f3-05",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-04T11:43:17Z",
     "metrics": {
      "delta_sharpe": 0.494
@@ -8991,6 +9295,8 @@
    "latest_result": {
     "unit": "RQ-20261101-d1f3-01",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-04T06:04:51Z",
     "metrics": null,
     "population": "tsmom iteration: 7 arms incl. control A0, daily net returns, 2020-06-01..2024-06-30 (n_days=1491), DSR N_cum=16",
@@ -9026,6 +9332,8 @@
    "latest_result": {
     "unit": "RQ-20261101-d1f3-04",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-04T04:55:56Z",
     "metrics": null,
     "population": "etf tsmom iteration: 5 arms incl. control A0, daily net returns, 2008-01-02..2024-06-28 (n_days=4151), DSR N_cum=14",
@@ -9061,6 +9369,8 @@
    "latest_result": {
     "unit": "RQ-20261101-d1f3-06",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-04T04:55:57Z",
     "metrics": null,
     "population": "vol-premium iteration: 4 arms incl. control A0, 6 underlyings, 21d periods, 2008-07-01..2024-06-30, DSR N_cum=12",
@@ -9096,6 +9406,8 @@
    "latest_result": {
     "unit": "RQ-20261101-d1f3-02",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-04T02:49:13Z",
     "metrics": null,
     "population": "xsec iteration: 7 arms incl. control A0, daily net returns, 2020-06-01..2024-06-30 (n_days=1491), DSR N_cum=17",
@@ -9129,6 +9441,8 @@
    "latest_result": {
     "unit": "RQ-20261022-b7e1-03",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-23T16:05:30Z",
     "metrics": {
      "min_peak": 1.0,
@@ -9172,6 +9486,8 @@
    "latest_result": {
     "unit": "RQ-20261022-b7e1-01",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-23T14:59:31Z",
     "metrics": {
      "min_peak": 1.0,
@@ -9215,6 +9531,8 @@
    "latest_result": {
     "unit": "RQ-20261022-b7e1-02",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-23T16:05:29Z",
     "metrics": {
      "min_peak": 1.0,
@@ -9258,6 +9576,8 @@
    "latest_result": {
     "unit": "RQ-20261016-012",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-16T21:12:30Z",
     "metrics": null,
     "population": "newest committed ledger per leg (comms/strategy_evidence/runs/*/*__trades.jsonl), USDT legs whose re-walk passes the MFE control; 3926 trades on 27 legs; fixed-bracket reconstruction (initial SL = -1 R, TP = K R), not the leg as traded",
@@ -9299,6 +9619,8 @@
    "latest_result": {
     "unit": "RQ-20261016-013",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-16T20:51:32Z",
     "metrics": null,
     "population": "newest committed ledger per leg (comms/strategy_evidence/runs/*/*__trades.jsonl), USDT legs whose re-walk passes the MFE control; 3926 trades on 27 legs; fixed-bracket reconstruction (initial SL = -1 R, TP = K R), not the leg as traded",
@@ -9340,6 +9662,8 @@
    "latest_result": {
     "unit": "RQ-20261029-010",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-31T06:55:55Z",
     "metrics": null,
     "population": "family=pullback timeframe=15m symbols=BTCUSDT,ETHUSDT,XRPUSDT,BNBUSDT arms=['B'] window=2022-01-01..2026-10-25 days=2500; 4 of 4 cells measured; trades net of fee+slippage+funding",
@@ -9380,6 +9704,8 @@
    "latest_result": {
     "unit": "RQ-20261029-009",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-31T03:55:00Z",
     "metrics": null,
     "population": "family=trend timeframe=15m symbols=BTCUSDT,ETHUSDT,XRPUSDT,BNBUSDT arms=['B'] window=2022-01-01..2026-10-25 days=2500; 4 of 4 cells measured; trades net of fee+slippage+funding",
@@ -9420,6 +9746,8 @@
    "latest_result": {
     "unit": "RQ-20261025-003",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-25T08:54:26Z",
     "metrics": {
      "anchor_shift_td": -10,
@@ -9465,6 +9793,8 @@
    "latest_result": {
     "unit": "RQ-20261020-003",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-23T05:59:23Z",
     "metrics": {
      "anchor_shift_td": -10,
@@ -9510,6 +9840,8 @@
    "latest_result": {
     "unit": "RQ-20261021-7c2b-12",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-22T03:36:24Z",
     "metrics": null,
     "population": "trend_donchian_eth_prop: 517 committed trades from comms/research/RQ-20261015-1bf3-05/38713761684/arms/P__trades.jsonl (pinned by --leg); prop_ev_sim path-mode over 4 arm(s) x 5 seed(s), --trades trend_donchian_sol_prop=comms/research/RQ-20261015-1bf3-06/38730575207/arms/P__trades.jsonl --ruleset config/prop_rulesets/breakout_turbo_1step.yaml --costs breakout --swap-model prorated --funded-start \u2026",
@@ -9550,6 +9882,8 @@
    "latest_result": {
     "unit": "RQ-20261016-030",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-17T20:53:43Z",
     "metrics": null,
     "population": "trend_donchian_eth_prop: 517 committed trades from comms/research/RQ-20261015-1bf3-05/38713761684/arms/P__trades.jsonl (pinned by --leg); prop_ev_sim path-mode over 5 arm(s) x 5 seed(s), --trades trend_donchian_sol_prop=comms/research/RQ-20261015-1bf3-06/38730575207/arms/P__trades.jsonl --ruleset config/prop_rulesets/velotrade_classic_1step.yaml --costs breakout --commission-bps-rt 6 --slippage-b\u2026",
@@ -9590,6 +9924,8 @@
    "latest_result": {
     "unit": "RQ-20261016-032",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-17T15:28:08Z",
     "metrics": null,
     "population": "trend_donchian_eth_prop: 517 committed trades from comms/research/RQ-20261015-1bf3-05/38713761684/arms/P__trades.jsonl (pinned by --leg); prop_ev_sim path-mode over 2 arm(s) x 5 seed(s), --trades trend_donchian_sol_prop=comms/research/RQ-20261015-1bf3-06/38730575207/arms/P__trades.jsonl --ruleset config/prop_rulesets/breakout_turbo_1step.yaml --costs breakout --swap-model prorated --funded-start \u2026",
@@ -9630,6 +9966,8 @@
    "latest_result": {
     "unit": "RQ-20261026-f679-01",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-27T17:57:49Z",
     "metrics": null,
     "population": "family=fade timeframe=4h symbols=ADAUSDT,XRPUSDT,LINKUSDT,DOGEUSDT,BNBUSDT,AVAXUSDT arms=['B', 'R20', 'R20MID', 'R20TRL'] window=2020-06-01..2026-10-25 days=2500; 24 of 24 cells measured; trades net of fee+slippage+funding",
@@ -9670,6 +10008,8 @@
    "latest_result": {
     "unit": "RQ-20261026-f679-02",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-27T21:01:38Z",
     "metrics": null,
     "population": "family=trend timeframe=1h symbols=SOLUSDT,BNBUSDT,ETHUSDT,XRPUSDT,LINKUSDT,AAVEUSDT arms=['B', 'D55'] window=2020-06-01..2026-10-25 days=2500; 12 of 12 cells measured; trades net of fee+slippage+funding",
@@ -9710,6 +10050,8 @@
    "latest_result": {
     "unit": "RQ-20261026-f679-04",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-27T05:00:09Z",
     "metrics": null,
     "population": "family=trend timeframe=15m symbols=ADAUSDT,AVAXUSDT,SOLUSDT arms=['B', 'M', 'G90M'] window=2022-01-01..2026-10-25 days=2500; 9 of 9 cells measured; trades net of fee+slippage+funding",
@@ -9751,6 +10093,8 @@
    "latest_result": {
     "unit": "RQ-20261029-84ef-04",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-10-29T19:58:40Z",
     "metrics": null,
     "population": "family=trend timeframe=1w symbols=BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT,BNBUSDT,DOGEUSDT,LINKUSDT,LTCUSDT,BCHUSDT,DOTUSDT,NEARUSDT,ATOMUSDT,FILUSDT,TRXUSDT,ETCUSDT arms=['W10', 'W20'] window=2020-01-01..2026-10-25 days=2700; 34 of 34 cells measured; trades net of fee+slippage+funding",
@@ -9794,6 +10138,8 @@
    "latest_result": {
     "unit": "RQ-20261111-203c-01",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-12T04:29:51Z",
     "metrics": null,
     "population": "spy_pullback_1h: 253 trades in the baseline arm 'A' on SPY 1h candles 2020-07-01 .. 2026-10-15 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'S1', 'C1', 'C4']; holdout boundary 2025-03-20 11:59:15+00:00 (share 0.25), selection on discovery trades only, the selected arm read once on the held-back span",
@@ -9846,6 +10192,8 @@
    "latest_result": {
     "unit": "RQ-20261022-eba2-04",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-10-23T19:07:39Z",
     "metrics": {
      "k": 6,
@@ -9889,6 +10237,8 @@
    "latest_result": {
     "unit": "RQ-20261022-008",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-10-22T17:37:05Z",
     "metrics": {
      "n_eff": 3.017,
@@ -9933,6 +10283,8 @@
    "latest_result": {
     "unit": "RQ-20261025-002",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-10-25T07:56:49Z",
     "metrics": {
      "anchor_shift_td": 0,
@@ -9978,6 +10330,8 @@
    "latest_result": {
     "unit": "RQ-20261023-a1f3-17",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-10-24T07:24:33Z",
     "metrics": {
      "anchor_shift_td": 0,
@@ -10023,6 +10377,8 @@
    "latest_result": {
     "unit": "RQ-20261016-026",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-10-17T10:56:36Z",
     "metrics": null,
     "population": "trend_donchian_eth_prop: 517 committed trades from comms/research/RQ-20261015-1bf3-05/38713761684/arms/P__trades.jsonl (pinned by --leg); prop_ev_sim path-mode over 1 arm(s) x 5 seed(s), --ruleset config/prop_rulesets/breakout_turbo_1step.yaml --costs breakout --swap-model prorated --funded-start fresh --lev-cap trend_donchian_eth_prop=5 --lev-cap trend_donchian_sol_prop=5 --lev-cap trend_donchia\u2026",
@@ -10065,6 +10421,8 @@
    "latest_result": {
     "unit": "RQ-20261016-027",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-10-17T11:58:19Z",
     "metrics": null,
     "population": "trend_donchian_eth_prop: 517 committed trades from comms/research/RQ-20261015-1bf3-05/38713761684/arms/P__trades.jsonl (pinned by --leg); prop_ev_sim path-mode over 1 arm(s) x 5 seed(s), --ruleset config/prop_rulesets/tradeify_247_1step.yaml --costs breakout --swap-model prorated --no-hedge --funded-start fresh --lev-cap trend_donchian_eth_prop=5 --lev-cap trend_donchian_sol_prop=2 --lev-cap tren\u2026",
@@ -10105,6 +10463,8 @@
    "latest_result": {
     "unit": "RQ-20261016-028",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-10-17T13:44:16Z",
     "metrics": null,
     "population": "trend_donchian_eth_prop: 517 committed trades from comms/research/RQ-20261015-1bf3-05/38713761684/arms/P__trades.jsonl (pinned by --leg); prop_ev_sim path-mode over 1 arm(s) x 5 seed(s), --ruleset config/prop_rulesets/velotrade_classic_1step.yaml --costs breakout --commission-bps-rt 6 --slippage-bps-rt 3 --swap-daily 0.0005 --swap-model dxtrade --no-hedge --funded-start fresh --lev-cap trend_donc\u2026",
@@ -10145,6 +10505,8 @@
    "latest_result": {
     "unit": "RQ-20261016-029",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-10-17T17:07:45Z",
     "metrics": null,
     "population": "trend_donchian_eth_prop: 517 committed trades from comms/research/RQ-20261015-1bf3-05/38713761684/arms/P__trades.jsonl (pinned by --leg); prop_ev_sim path-mode over 5 arm(s) x 5 seed(s), --trades trend_donchian_sol_prop=comms/research/RQ-20261015-1bf3-06/38730575207/arms/P__trades.jsonl --ruleset config/prop_rulesets/breakout_turbo_1step.yaml --costs breakout --swap-model prorated --funded-start \u2026",
@@ -10185,6 +10547,8 @@
    "latest_result": {
     "unit": "RQ-20261029-84ef-05",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-10-29T20:23:49Z",
     "metrics": null,
     "population": "family=trend timeframe=1d symbols=BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT,BNBUSDT,DOGEUSDT,LINKUSDT,LTCUSDT,BCHUSDT,DOTUSDT,NEARUSDT,ATOMUSDT,FILUSDT,TRXUSDT,ETCUSDT arms=['L10', 'L20', 'L40'] window=2020-06-01..2026-10-25 days=2500; 51 of 51 cells measured; trades net of fee+slippage+funding",
@@ -10226,6 +10590,8 @@
    "latest_result": {
     "unit": "RQ-20261029-84ef-03",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-10-29T19:58:39Z",
     "metrics": null,
     "population": "family=trend timeframe=1d symbols=SPY,QQQ,IWM,GLD,SLV,TLT,IEF,USO,GDX,TQQQ,QLD,SPLG,IAUM,SCHA arms=['LO', 'LO_TS20'] window=data_start..2026-10-25 days=7300; 26 of 28 cells measured; trades net of fee+slippage+funding",
@@ -10271,6 +10637,8 @@
    "latest_result": {
     "unit": "RQ-20261111-203c-02",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-11-12T05:47:03Z",
     "metrics": null,
     "population": "tlt_pullback_1h: 434 trades in the baseline arm 'A' on TLT 1h candles 2020-07-01 .. 2026-10-15 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'F1', 'F2', 'C1']; holdout boundary 2025-03-20 11:59:15+00:00 (share 0.25), selection on discovery trades only, the selected arm read once on the held-back span",
@@ -10325,6 +10693,8 @@
    "latest_result": {
     "unit": "RQ-20261110-73de-24",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-10T09:46:01Z",
     "metrics": null,
     "population": "avax_pullback_2h: 465 trades in the baseline arm 'A' on AVAXUSDT 2h candles 2020-07-01 .. 2026-10-15 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'S3', 'S5', 'S8']; holdout boundary 2025-04-10 13:29:15+00:00 (share 0.25), selection on discovery trades only, the selected arm read once on the held-back span",
@@ -10464,6 +10834,8 @@
    "latest_result": {
     "unit": "RQ-20261110-73de-25",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-11-10T09:46:03Z",
     "metrics": null,
     "population": "eth_pullback_2h: 437 trades in the baseline arm 'A' on ETHUSDT 2h candles 2020-07-01 .. 2026-10-15 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'S3', 'S5', 'S8']; holdout boundary 2025-03-20 11:59:15+00:00 (share 0.25), selection on discovery trades only, the selected arm read once on the held-back span",
@@ -10472,15 +10844,16 @@
     "title": "HOLDOUT-SELECTED structure exit (pivot 3 / 5 / 8) on eth_pullback_2h, net of cost"
    },
    "counts": {
-    "units": 40,
+    "units": 42,
     "passed": 12,
-    "failed": 18,
+    "failed": 19,
     "indeterminate": 5,
-    "open": 2,
+    "open": 3,
     "blocked": 0
    },
    "open_units": [
     "RQ-20261031-3ef3-10",
+    "RQ-20261031-c6fc-07",
     "RQ-20261101-78fc-34"
    ],
    "next_step": "RQ-20261031-3ef3-10 (queued): A time-based exit (close after 60 or 120 bars) on eth_pullback_2h: does TO1 or TO2 beat the declared leg net of cost over 2020-07-01..2026-10-15?",
@@ -10523,6 +10896,8 @@
    "latest_result": {
     "unit": "RQ-20261106-019",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-06T21:55:50Z",
     "metrics": null,
     "population": "eth_pullback_prop_2h: 324 trades in the baseline arm 'A' on ETHUSDT 2h candles 2021-11-02 00:00:00+00:00 .. 2026-11-05 22:00:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'atr_stop_mult_lo', 'atr_stop_mult_hi', 'tp_r_lo', 'tp_r_hi']",
@@ -10670,8 +11045,7 @@
    "kind": "strategy_leg",
    "programme": [
     "P1",
-    "P3",
-    "P4"
+    "P3"
    ],
    "stage": "testing_book",
    "stage_label": "testing book (Stage 1 demo floor)",
@@ -10679,6 +11053,8 @@
    "latest_result": {
     "unit": "RQ-20261110-73de-21",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-10T06:08:29Z",
     "metrics": null,
     "population": "gdx_pullback_1d: 72 trades in the baseline arm 'A' on GDX 1d candles 2018-03-01 .. 2026-10-15 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'C1', 'C2', 'C3', 'C4']; holdout boundary 2023-11-09 15:49:44.400000+00:00 (share 0.34), selection on discovery trades only, the selected arm read once on the held-back span",
@@ -10687,12 +11063,12 @@
     "title": "HOLDOUT-SELECTED exit levers on gdx_pullback_1d: be-floor 1R, bank 50% at 1.5R, cooldown 4, structure pivot 5, net of cost"
    },
    "counts": {
-    "units": 20,
-    "passed": 6,
+    "units": 19,
+    "passed": 4,
     "failed": 11,
-    "indeterminate": 1,
+    "indeterminate": 3,
     "open": 0,
-    "blocked": 1
+    "blocked": 0
    },
    "open_units": null,
    "next_step": null,
@@ -10735,6 +11111,8 @@
    "latest_result": {
     "unit": "RQ-20261110-73de-05",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-11-10T06:08:27Z",
     "metrics": null,
     "population": "gld_pullback_1d: 63 trades in the baseline arm 'A' on GLD 1d candles 2018-03-01 .. 2026-10-15 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'C1', 'C2', 'C3', 'C4']; holdout boundary 2023-05-04 14:23:24+00:00 (share 0.4), selection on discovery trades only, the selected arm read once on the held-back span",
@@ -10744,8 +11122,8 @@
    },
    "counts": {
     "units": 23,
-    "passed": 6,
-    "failed": 11,
+    "passed": 4,
+    "failed": 13,
     "indeterminate": 4,
     "open": 0,
     "blocked": 1
@@ -10795,6 +11173,8 @@
    "latest_result": {
     "unit": "RQ-20261106-020",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-06T21:55:51Z",
     "metrics": null,
     "population": "htf_pullback_trend_2h: 368 trades in the baseline arm 'A' on BTCUSDT 2h candles 2021-11-02 00:00:00+00:00 .. 2026-11-05 22:00:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'pullback_frac_lo', 'pullback_frac_hi']",
@@ -10856,6 +11236,8 @@
    "latest_result": {
     "unit": "RQ-20261110-73de-03",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-11-10T05:19:12Z",
     "metrics": null,
     "population": "iaum_pullback_1d: 63 trades in the baseline arm 'A' on IAUM 1d candles 2018-03-01 .. 2026-10-15 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'C1', 'C2', 'C3', 'C4']; holdout boundary 2023-05-04 14:23:24+00:00 (share 0.4), selection on discovery trades only, the selected arm read once on the held-back span",
@@ -10916,6 +11298,8 @@
    "latest_result": {
     "unit": "RQ-20261105-028",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-05T23:00:56Z",
     "metrics": null,
     "population": "ict_scalp_5m: 671 trades in the baseline arm 'A' on BTCUSDT 5m candles 2021-11-01 00:00:00+00:00 .. 2026-11-04 23:55:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'displacement_atr_mult_lo', 'displacement_atr_mult_hi', 'min_displacement_body_to_range_lo', 'min_displacement_body_to_range_hi']",
@@ -10974,6 +11358,8 @@
    "latest_result": {
     "unit": "RQ-20261105-029",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-05T23:00:58Z",
     "metrics": null,
     "population": "ict_scalp_avax_5m: 1074 trades in the baseline arm 'A' on AVAXUSDT 5m candles 2021-11-01 00:00:00+00:00 .. 2026-11-04 23:55:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'displacement_atr_mult_lo', 'displacement_atr_mult_hi', 'min_displacement_body_to_range_lo', 'min_displacement_body_to_range_hi']",
@@ -11028,6 +11414,8 @@
    "latest_result": {
     "unit": "RQ-20261105-030",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-05T22:06:49Z",
     "metrics": null,
     "population": "ict_scalp_eth_15m: 333 trades in the baseline arm 'A' on ETHUSDT 15m candles 2021-11-01 00:00:00+00:00 .. 2026-11-04 23:45:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'displacement_atr_mult_lo', 'displacement_atr_mult_hi', 'min_displacement_body_to_range_lo', 'min_displacement_body_to_range_hi']",
@@ -11082,6 +11470,8 @@
    "latest_result": {
     "unit": "RQ-20260929-009",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-10-30T19:10:07Z",
     "metrics": {
      "cells_passed": 0,
@@ -11144,6 +11534,8 @@
    "latest_result": {
     "unit": "RQ-20261105-032",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-06T10:01:31Z",
     "metrics": null,
     "population": "ict_scalp_sol_15m: 363 trades in the baseline arm 'A' on SOLUSDT 15m candles 2021-11-02 00:00:00+00:00 .. 2026-11-05 23:45:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'displacement_atr_mult_lo', 'displacement_atr_mult_hi', 'min_displacement_body_to_range_lo', 'min_displacement_body_to_range_hi']",
@@ -11198,6 +11590,8 @@
    "latest_result": {
     "unit": "RQ-20261105-033",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-06T10:01:32Z",
     "metrics": null,
     "population": "ict_scalp_sol_5m: 916 trades in the baseline arm 'A' on SOLUSDT 5m candles 2021-11-02 00:00:00+00:00 .. 2026-11-05 23:55:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'displacement_atr_mult_lo', 'displacement_atr_mult_hi', 'min_displacement_body_to_range_lo', 'min_displacement_body_to_range_hi']",
@@ -11207,8 +11601,8 @@
    },
    "counts": {
     "units": 10,
-    "passed": 2,
-    "failed": 7,
+    "passed": 1,
+    "failed": 8,
     "indeterminate": 0,
     "open": 0,
     "blocked": 0
@@ -11252,6 +11646,8 @@
    "latest_result": {
     "unit": "RQ-20261105-034",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-06T10:01:33Z",
     "metrics": null,
     "population": "ict_scalp_xrp_15m: 305 trades in the baseline arm 'A' on XRPUSDT 15m candles 2021-11-02 00:00:00+00:00 .. 2026-11-05 23:45:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'displacement_atr_mult_lo', 'displacement_atr_mult_hi', 'min_displacement_body_to_range_lo', 'min_displacement_body_to_range_hi']",
@@ -11306,6 +11702,8 @@
    "latest_result": {
     "unit": "RQ-20261105-035",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-06T10:53:05Z",
     "metrics": null,
     "population": "ict_scalp_xrp_5m: 765 trades in the baseline arm 'A' on XRPUSDT 5m candles 2021-11-02 00:00:00+00:00 .. 2026-11-05 23:55:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'displacement_atr_mult_lo', 'displacement_atr_mult_hi', 'min_displacement_body_to_range_lo', 'min_displacement_body_to_range_hi']",
@@ -11364,6 +11762,8 @@
    "latest_result": {
     "unit": "RQ-20261110-73de-02",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-10T05:19:11Z",
     "metrics": null,
     "population": "ief_pullback_1d: 60 trades in the baseline arm 'A' on IEF 1d candles 2018-03-01 .. 2026-10-15 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'C1', 'C2', 'C3', 'C4', 'C5']; holdout boundary 2023-05-04 14:23:24+00:00 (share 0.4), selection on discovery trades only, the selected arm read once on the held-back span",
@@ -11422,6 +11822,8 @@
    "latest_result": {
     "unit": "RQ-20261106-021",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-11-06T21:55:52Z",
     "metrics": null,
     "population": "iwm_trend_long_1d: 34 trades in the baseline arm 'A' on IWM 1d candles 2019-07-30 00:00:00+00:00 .. 2026-11-06 00:00:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'atr_stop_mult_lo', 'atr_stop_mult_hi', 'tp_r_lo', 'tp_r_hi']",
@@ -11479,6 +11881,8 @@
    "latest_result": {
     "unit": "RQ-20261106-022",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-11-06T23:06:37Z",
     "metrics": null,
     "population": "mes_trend_long_1d: 24 trades in the baseline arm 'A' on ES=F 1d candles 2020-11-02 00:00:00+00:00 .. 2026-11-06 00:00:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'atr_stop_mult_lo', 'atr_stop_mult_hi', 'tp_r_lo', 'tp_r_hi']",
@@ -11534,6 +11938,8 @@
    "latest_result": {
     "unit": "RQ-20261106-023",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-06T23:06:37Z",
     "metrics": null,
     "population": "mgc_pullback_1d: 46 trades in the baseline arm 'A' on GC=F 1d candles 2020-11-02 00:00:00+00:00 .. 2026-11-06 00:00:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'atr_stop_mult_lo', 'atr_stop_mult_hi', 'tp_r_lo', 'tp_r_hi']",
@@ -11588,6 +11994,8 @@
    "latest_result": {
     "unit": "RQ-20261106-004",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-06T16:52:33Z",
     "metrics": null,
     "population": "mgc_trend_1h: 231 trades in the baseline arm 'A' on GC=F 1h candles 2024-06-28 04:00:00+00:00 .. 2026-11-06 15:00:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'donchian_lo', 'donchian_hi']",
@@ -11642,6 +12050,8 @@
    "latest_result": {
     "unit": "RQ-20261106-005",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-11-06T16:52:34Z",
     "metrics": null,
     "population": "mhg_pullback_1d: 52 trades in the baseline arm 'A' on HG=F 1d candles 2020-11-02 00:00:00+00:00 .. 2026-11-06 00:00:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'pullback_frac_lo', 'pullback_frac_hi']",
@@ -11733,6 +12143,8 @@
    "latest_result": {
     "unit": "RQ-20261101-b611-01",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-11-02T10:48:20Z",
     "metrics": {
      "agreement": 0.9850574712643678,
@@ -11781,6 +12193,8 @@
    "latest_result": {
     "unit": "RQ-20261106-006",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-06T16:52:35Z",
     "metrics": null,
     "population": "qld_trend_long_1d: 42 trades in the baseline arm 'A' on QLD 1d candles 2019-07-30 00:00:00+00:00 .. 2026-11-06 00:00:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'donchian_lo', 'donchian_hi']",
@@ -11838,6 +12252,8 @@
    "latest_result": {
     "unit": "RQ-20261111-203c-03",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-11-12T07:05:58Z",
     "metrics": null,
     "population": "qqq_pullback_1h: 214 trades in the baseline arm 'A' on QQQ 1h candles 2020-07-01 .. 2026-10-15 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'S1', 'C1']; holdout boundary 2025-03-20 11:59:15+00:00 (share 0.25), selection on discovery trades only, the selected arm read once on the held-back span",
@@ -11896,6 +12312,8 @@
    "latest_result": {
     "unit": "RQ-20261110-73de-16",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-10T07:44:15Z",
     "metrics": null,
     "population": "qqq_trend_long_1d: 42 trades in the baseline arm 'A' on QQQ 1d candles 2018-03-01 .. 2026-10-15 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'VH90', 'AX40', 'BE']; holdout boundary 2023-05-04 14:23:24+00:00 (share 0.4), selection on discovery trades only, the selected arm read once on the held-back span",
@@ -11905,8 +12323,8 @@
    },
    "counts": {
     "units": 10,
-    "passed": 5,
-    "failed": 1,
+    "passed": 4,
+    "failed": 2,
     "indeterminate": 3,
     "open": 0,
     "blocked": 0
@@ -11953,7 +12371,9 @@
    "stage_reason": "general paper roster: alpaca_paper",
    "latest_result": {
     "unit": "RQ-20261005-014",
-    "verdict": "pass",
+    "verdict": "indeterminate",
+    "verdict_raw": "pass",
+    "confirmation": "underpowered",
     "date": "2026-11-07T11:32:47Z",
     "metrics": {
      "base_net_r_OOS": -1.2297,
@@ -11968,9 +12388,9 @@
    },
    "counts": {
     "units": 9,
-    "passed": 5,
+    "passed": 4,
     "failed": 1,
-    "indeterminate": 3,
+    "indeterminate": 4,
     "open": 0,
     "blocked": 0
    },
@@ -12009,7 +12429,8 @@
    "programme": [
     "P1",
     "P2",
-    "P3"
+    "P3",
+    "P4"
    ],
    "stage": "testing_book",
    "stage_label": "testing book (Stage 1 demo floor)",
@@ -12017,6 +12438,8 @@
    "latest_result": {
     "unit": "RQ-20261110-73de-01",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-10T05:19:11Z",
     "metrics": null,
     "population": "slv_pullback_1d: 65 trades in the baseline arm 'A' on SLV 1d candles 2018-03-01 .. 2026-10-15 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'C1', 'C2', 'C3', 'C4']; holdout boundary 2023-05-04 14:23:24+00:00 (share 0.4), selection on discovery trades only, the selected arm read once on the held-back span",
@@ -12025,12 +12448,12 @@
     "title": "HOLDOUT-SELECTED exit levers on slv_pullback_1d (real money (alpaca_live)): be-floor 1R, bank 50% at 1.5R, cooldown 4, structure/ADX-trail extras, net of cost"
    },
    "counts": {
-    "units": 28,
+    "units": 29,
     "passed": 5,
     "failed": 16,
     "indeterminate": 2,
     "open": 1,
-    "blocked": 1
+    "blocked": 2
    },
    "open_units": [
     "RQ-20261111-203c-05"
@@ -12076,6 +12499,8 @@
    "latest_result": {
     "unit": "RQ-20261106-010",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-06T17:55:06Z",
     "metrics": null,
     "population": "slv_trend_1h: 129 trades in the baseline arm 'A' on SLV 1h candles 2023-12-26 15:00:00+00:00 .. 2026-11-06 17:00:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'atr_stop_mult_lo', 'atr_stop_mult_hi', 'tp_r_lo', 'tp_r_hi']",
@@ -12138,6 +12563,8 @@
    "latest_result": {
     "unit": "RQ-20261110-73de-23",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-10T09:46:00Z",
     "metrics": null,
     "population": "sol_pullback_2h: 159 trades in the baseline arm 'A' on SOLUSDT 2h candles 2020-07-01 .. 2026-10-15 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'S3', 'S5', 'S8']; holdout boundary 2025-04-08 07:29:15+00:00 (share 0.25), selection on discovery trades only, the selected arm read once on the held-back span",
@@ -12146,17 +12573,15 @@
     "title": "HOLDOUT-SELECTED structure exit (pivot 3 / 5 / 8) on sol_pullback_2h, net of cost"
    },
    "counts": {
-    "units": 36,
+    "units": 34,
     "passed": 9,
-    "failed": 16,
+    "failed": 15,
     "indeterminate": 8,
-    "open": 1,
+    "open": 0,
     "blocked": 0
    },
-   "open_units": [
-    "RQ-20261031-c6fc-07"
-   ],
-   "next_step": "RQ-20261031-c6fc-07 (queued): TRANSFER of the top-volatility skip (VH95/VH85) lever to eth_pullback_2h: does it beat the declared leg net of cost over 2020-07-01..2026-10-15 (41cc-30 PASS on sol_pullback_2h; which sibling legs does the PASS",
+   "open_units": null,
+   "next_step": null,
    "owner_rows": null,
    "last_activity": "2026-11-12T00:00:00Z",
    "links": {
@@ -12196,6 +12621,8 @@
    "latest_result": {
     "unit": "RQ-20261005-813",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-11-07T19:09:43Z",
     "metrics": {
      "cells_passed": 0,
@@ -12258,6 +12685,8 @@
    "latest_result": {
     "unit": "RQ-20261110-73de-22",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-11-10T07:44:14Z",
     "metrics": null,
     "population": "spy_trend_long_1d: 66 trades in the baseline arm 'A' on SPY 1d candles 2018-03-01 .. 2026-10-15 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'T3', 'T4', 'TO', 'BE']; holdout boundary 2023-11-09 15:49:44.400000+00:00 (share 0.34), selection on discovery trades only, the selected arm read once on the held-back span",
@@ -12314,6 +12743,8 @@
    "latest_result": {
     "unit": "RQ-20260929-060",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-10-04T18:51:22Z",
     "metrics": null,
     "population": "squeeze_breakout_4h: 10 committed trades from comms/strategy_evidence/runs/2026-09-25/squeeze_breakout_4h__trades.jsonl (evidence record comms/strategy_evidence/squeeze_breakout_4h.json -> cost_stack.source); prop_ev_sim path-mode over 1 arm(s) x 5 seed(s), --ruleset config/prop_rulesets/breakout.yaml --costs breakout --funded-start fresh --swap-model dxtrade",
@@ -12372,6 +12803,8 @@
    "latest_result": {
     "unit": "RQ-20261110-73de-04",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-11-10T05:19:12Z",
     "metrics": null,
     "population": "tlt_pullback_1d: 68 trades in the baseline arm 'A' on TLT 1d candles 2018-03-01 .. 2026-10-15 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'C1', 'C2', 'C3', 'C4']; holdout boundary 2023-10-09 03:35:21+00:00 (share 0.35), selection on discovery trades only, the selected arm read once on the held-back span",
@@ -12381,8 +12814,8 @@
    },
    "counts": {
     "units": 19,
-    "passed": 3,
-    "failed": 11,
+    "passed": 2,
+    "failed": 12,
     "indeterminate": 4,
     "open": 0,
     "blocked": 0
@@ -12431,6 +12864,8 @@
    "latest_result": {
     "unit": "RQ-20261106-017",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-06T20:53:37Z",
     "metrics": null,
     "population": "trend_donchian: 356 trades in the baseline arm 'A' on BTCUSDT 1h candles 2021-11-02 00:00:00+00:00 .. 2026-11-05 23:00:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'donchian_lo', 'donchian_hi', 'min_confidence_lo', 'min_confidence_hi']",
@@ -12440,8 +12875,8 @@
    },
    "counts": {
     "units": 40,
-    "passed": 19,
-    "failed": 10,
+    "passed": 18,
+    "failed": 11,
     "indeterminate": 4,
     "open": 1,
     "blocked": 2
@@ -12492,6 +12927,8 @@
    "latest_result": {
     "unit": "RQ-20261106-024",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-11-06T23:06:38Z",
     "metrics": null,
     "population": "trend_donchian_1h: 770 trades in the baseline arm 'A' on BTCUSDT 1h candles 2021-11-02 00:00:00+00:00 .. 2026-11-05 23:00:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'atr_stop_mult_lo', 'atr_stop_mult_hi', 'tp_r_lo', 'tp_r_hi']",
@@ -12501,8 +12938,8 @@
    },
    "counts": {
     "units": 15,
-    "passed": 4,
-    "failed": 7,
+    "passed": 3,
+    "failed": 8,
     "indeterminate": 0,
     "open": 1,
     "blocked": 2
@@ -12554,6 +12991,8 @@
    "latest_result": {
     "unit": "RQ-20261110-73de-11",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-11-10T09:45:59Z",
     "metrics": null,
     "population": "trend_donchian_ada_4h: 222 trades in the baseline arm 'A' on ADAUSDT 4h candles 2020-07-01 .. 2026-10-15 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'S3', 'S5', 'S8']; holdout boundary 2025-03-20 11:59:15+00:00 (share 0.25), selection on discovery trades only, the selected arm read once on the held-back span",
@@ -12563,8 +13002,8 @@
    },
    "counts": {
     "units": 32,
-    "passed": 4,
-    "failed": 26,
+    "passed": 3,
+    "failed": 27,
     "indeterminate": 0,
     "open": 1,
     "blocked": 0
@@ -12613,6 +13052,8 @@
    "latest_result": {
     "unit": "RQ-20261107-47b6-20",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-07T19:00:51Z",
     "metrics": null,
     "population": "trend_donchian_avax_4h: 209 trades in the baseline arm 'A' on AVAXUSDT 4h candles 2020-07-01 .. 2026-10-26 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'M1']",
@@ -12670,6 +13111,8 @@
    "latest_result": {
     "unit": "RQ-20261106-027",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-11-06T23:54:57Z",
     "metrics": null,
     "population": "trend_donchian_eth: 592 trades in the baseline arm 'A' on ETHUSDT 1h candles 2021-11-02 00:00:00+00:00 .. 2026-11-05 23:00:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'donchian_lo', 'donchian_hi', 'min_confidence_lo', 'min_confidence_hi']",
@@ -12730,7 +13173,9 @@
    "stage_reason": "general paper roster: bybit_1",
    "latest_result": {
     "unit": "RQ-20261006-003",
-    "verdict": "pass",
+    "verdict": "fail",
+    "verdict_raw": "pass",
+    "confirmation": "not_replicated",
     "date": "2026-11-08T08:38:53Z",
     "metrics": {
      "base_net_r_OOS": 12.8708,
@@ -12744,9 +13189,9 @@
     "title": "M20 exit-lever sweep: trend_donchian_eth_4h (generated, monthly)"
    },
    "counts": {
-    "units": 73,
-    "passed": 16,
-    "failed": 45,
+    "units": 77,
+    "passed": 15,
+    "failed": 50,
     "indeterminate": 10,
     "open": 1,
     "blocked": 0
@@ -12800,6 +13245,8 @@
    "latest_result": {
     "unit": "RQ-20261009-002",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": "confirmed",
     "date": "2026-11-09T02:18:48Z",
     "metrics": {
      "base_net_r_OOS": -6.7809,
@@ -12813,9 +13260,9 @@
     "title": "M20 exit-lever sweep: trend_donchian_eth_prop (generated, monthly)"
    },
    "counts": {
-    "units": 82,
-    "passed": 20,
-    "failed": 39,
+    "units": 87,
+    "passed": 22,
+    "failed": 40,
     "indeterminate": 16,
     "open": 6,
     "blocked": 1
@@ -12871,6 +13318,8 @@
    "latest_result": {
     "unit": "RQ-20261107-47b6-02",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-11-07T10:01:02Z",
     "metrics": null,
     "population": "trend_donchian_sol: 122 trades in the baseline arm 'B' on SOLUSDT 1h candles 2024-10-05 .. 2026-10-26 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['B', 'VH90']",
@@ -12934,6 +13383,8 @@
    "latest_result": {
     "unit": "RQ-20261107-47b6-18",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-07T17:54:16Z",
     "metrics": null,
     "population": "trend_donchian_sol_4h: 217 trades in the baseline arm 'A' on SOLUSDT 4h candles 2020-07-01 .. 2026-10-26 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'M1']",
@@ -12942,9 +13393,9 @@
     "title": "ADX trail tighten (M1) on trend_donchian_sol_4h: candidate vs declared, 2020-07-01..2026-10-26, net of the full cost stack"
    },
    "counts": {
-    "units": 53,
-    "passed": 10,
-    "failed": 33,
+    "units": 49,
+    "passed": 9,
+    "failed": 30,
     "indeterminate": 6,
     "open": 2,
     "blocked": 0
@@ -13041,6 +13492,8 @@
    "latest_result": {
     "unit": "RQ-20261106-035",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-11-07T06:00:14Z",
     "metrics": null,
     "population": "uso_trend_1h: 111 trades in the baseline arm 'A' on USO 1h candles 2023-12-26 15:00:00+00:00 .. 2026-11-06 21:00:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'donchian_lo', 'donchian_hi']",
@@ -13101,6 +13554,8 @@
    "latest_result": {
     "unit": "RQ-20261106-036",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-07T06:00:15Z",
     "metrics": null,
     "population": "xrp_pullback_2h: 289 trades in the baseline arm 'A' on XRPUSDT 2h candles 2021-11-03 00:00:00+00:00 .. 2026-11-05 22:00:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'atr_stop_mult_lo', 'atr_stop_mult_hi', 'trail_mult_lo', 'trail_mult_hi']",
@@ -13109,9 +13564,9 @@
     "title": "Walk-forward lever sweep of xrp_pullback_2h: next lever exit (generated, weekly)"
    },
    "counts": {
-    "units": 69,
-    "passed": 10,
-    "failed": 49,
+    "units": 67,
+    "passed": 9,
+    "failed": 48,
     "indeterminate": 5,
     "open": 1,
     "blocked": 0
@@ -13164,6 +13619,8 @@
    "latest_result": {
     "unit": "RQ-20261015-8bbc-02",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-11-06T08:00:12Z",
     "metrics": null,
     "population": "ada_pullback_2h: live Stage-2 closed trades with an R basis vs bootstrap of its committed Stage-0 net_r",
@@ -13172,9 +13629,9 @@
     "title": "ada_pullback_2h live-vs-backtest divergence (stage A): does BELOW_BACKTEST persist on bybit_2 realMoney as n grows? (-7.04R over 15, 4.7th pct on 2026-10-15)"
    },
    "counts": {
-    "units": 80,
-    "passed": 10,
-    "failed": 54,
+    "units": 82,
+    "passed": 11,
+    "failed": 55,
     "indeterminate": 4,
     "open": 4,
     "blocked": 2
@@ -13229,6 +13686,8 @@
    "latest_result": {
     "unit": "RQ-20261112-8d20-01",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-12T00:09:41Z",
     "metrics": null,
     "population": "frozen ml_decision_entry_v1 (tau 0.1) decisions, 60-perp bp2 universe, reference bracket 2/3 ATR 24h, net of fee 11 + slip 3 bps + funding 1 bps/8h; A held-out 2025-10-01..2026-09-29, B dev walk-forward OOS 2022-01..2025-09, C forward 2026-10; split by 4h DMI direction x 4h ADX14 bucket",
@@ -13346,6 +13805,8 @@
    "latest_result": {
     "unit": "RQ-20261106-018",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-11-06T21:55:49Z",
     "metrics": null,
     "population": "family trend_1d: 1 money legs, 2330 d window",
@@ -13410,6 +13871,8 @@
    "latest_result": {
     "unit": "RQ-20261009-004",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": "confirmed",
     "date": "2026-11-09T15:40:17Z",
     "metrics": {
      "base_net_r_OOS": 2.1366,
@@ -13423,8 +13886,8 @@
     "title": "M20 exit-lever sweep: trend_donchian_sol_prop (generated, monthly)"
    },
    "counts": {
-    "units": 73,
-    "passed": 13,
+    "units": 68,
+    "passed": 10,
     "failed": 42,
     "indeterminate": 11,
     "open": 4,
@@ -13482,6 +13945,8 @@
    "latest_result": {
     "unit": "RQ-20261011-002",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-11-11T01:50:47Z",
     "metrics": null,
     "population": null,
@@ -13543,6 +14008,8 @@
    "latest_result": {
     "unit": "RQ-20261106-034",
     "verdict": "fail",
+    "verdict_raw": "fail",
+    "confirmation": null,
     "date": "2026-11-07T03:53:49Z",
     "metrics": null,
     "population": "trend_donchian_xrp_adx25: 60 trades in the baseline arm 'A' on XRPUSDT 4h candles 2021-11-03 00:00:00+00:00 .. 2026-11-05 20:00:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'donchian_lo', 'donchian_hi', 'min_confidence_lo', 'min_confidence_hi']",
@@ -13599,6 +14066,8 @@
    "latest_result": {
     "unit": "RQ-20260929-006",
     "verdict": "pass",
+    "verdict_raw": "pass",
+    "confirmation": null,
     "date": "2026-09-30T12:04:20Z",
     "metrics": {
      "base_net_r_OOS": 42.8855,
@@ -13822,6 +14291,8 @@
    "latest_result": {
     "unit": "RQ-20261016-014",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-10-18T07:04:09Z",
     "metrics": null,
     "population": "iaum_pullback_1d+ief_pullback_1d+slv_pullback_1d+gdx_pullback_1d+tlt_pullback_1d+gld_pullback_1d 2018-02-01..2026-10-17 (3180 d), config-exact UNCAPPED no-TP harness replay, 326 trades, rule=unconditioned: {'pooled:iaum_pullback_1d+ief_pullback_1d+slv_pullback_1d+gdx_pullback_1d+tlt_pullback_1d+gld_pullback_1d': 'INDETERMINATE'}",
@@ -13862,6 +14333,8 @@
    "latest_result": {
     "unit": "RQ-20261020-001",
     "verdict": "indeterminate",
+    "verdict_raw": "indeterminate",
+    "confirmation": null,
     "date": "2026-10-22T23:20:48Z",
     "metrics": {
      "anchor_shift_td": 0,

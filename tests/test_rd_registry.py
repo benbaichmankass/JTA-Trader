@@ -43,6 +43,10 @@ def test_offline_stage_planted_positives():
     assert st == "stuck" and "indeterminate" in reason
     assert rdr.offline_stage([U("a", status="retired")])[0] == "stuck"
     # failed reason carries the result note; the latest graded verdict wins over an older pass
+    # a pass the held-out confirmation did not replicate is not a pass; underpowered is indeterminate
+    assert rdr.offline_stage([{**U("a", verdict="pass"), "confirmation": "not_replicated"}])[0] == "failed"
+    assert rdr.offline_stage([{**U("a", verdict="pass"), "confirmation": "underpowered"}])[0] == "stuck"
+    assert rdr.offline_stage([{**U("a", verdict="pass"), "confirmation": "confirmed"}])[0] == "passed_waiting"
     st, reason, latest = rdr.offline_stage([U("old", verdict="pass", at="2026-10-01T00:00:00Z"),
                                             U("new", verdict="fail", at="2026-11-01T00:00:00Z", note="lost")])
     assert (st, reason, latest["id"]) == ("failed", "lost", "new")
@@ -66,7 +70,9 @@ def _tree(root: Path) -> dict:
         {"model_id": "m-live-v1", "bucket": "LIVE", "slot": "D2", "display": "Collie-9"},
         {"model_id": "m-shadow-v1", "bucket": "SHADOW"},
         {"model_id": "m-offline-v1", "bucket": "OFFLINE"},
-        {"model_id": "m-unused-v1", "bucket": "OFFLINE"}]})
+        {"model_id": "m-unused-v1", "bucket": "OFFLINE"},
+        {"model_id": "m-money-v1", "bucket": "LIVE", "cons_acc": ["bybit_2", "bybit_portfolio"]},
+        {"model_id": "m-paper-v1", "bucket": "SHADOW", "cons_acc": ["bybit_1"]}]})
     _w(root, "docs/plans/ml-plan-items.yaml", {"items": [
         {"id": "ML-K", "track": "S", "state": "killed", "ref": "ROW-K", "title": "killed idea"},
         {"id": "ML-P", "track": "S", "state": "parked", "ref": "ROW-P", "title": "parked idea", "close": "needs a new class"},
@@ -98,7 +104,7 @@ def test_every_stage_has_a_planted_positive(tmp_path):
         "strategy:leg_retired": "retired", "strategy:leg_prod": "production", "strategy:leg_paper": "testing_book",
         "strategy:leg_floating": "iterating", "ml:m-live-v1": "shadow_advisory", "ml:m-shadow-v1": "shadow_advisory",
         "ml:m-offline-v1": "failed", "mlplan:ML-K": "retired", "mlplan:ML-P": "stuck", "mlplan:ML-U": "passed_waiting",
-        "hypothesis:new_hypo": "testing_offline", "question:P1-Q-new": "idea", "question:P1-Q-node": "queued",
+        "hypothesis:new_hypo": "testing_offline", "ml:m-money-v1": "production", "ml:m-paper-v1": "testing_book", "question:P1-Q-new": "idea", "question:P1-Q-node": "queued",
     }
     for iid, stage in want.items():
         assert by[iid]["stage"] == stage, (iid, by[iid]["stage"], by[iid]["stage_reason"])
@@ -161,7 +167,7 @@ def test_route_filters(monkeypatch, tmp_path):
     r = c.get("/api/bot/research/registry", params={"track": "ML", "stage": "shadow_advisory"})
     assert r.status_code == 200
     body = r.json()
-    assert body["present"] is True and body["matched"] == 2
+    assert body["present"] is True and body["matched"] == 2, [i["id"] for i in body["ideas"]]
     assert {i["id"] for i in body["ideas"]} == {"ml:m-live-v1", "ml:m-shadow-v1"}
     assert body["summary"]["ideas"] == len(doc["ideas"])          # summary is never filtered
     assert c.get("/api/bot/research/registry", params={"track": "NOPE"}).status_code == 422

@@ -58,13 +58,19 @@ STAGE_RULES: list[dict[str, str]] = [
                                  "or ML plan item state == killed"},
     {"stage": "production", "rule": "strategy leg is on a real-money roster (bybit_2 / alpaca_live / ib_live) and not retired "
                                     "(scripts/ops/strategy_status.py == production)"},
-    {"stage": "shadow_advisory", "rule": "ML registry row deployment_bucket is LIVE (advisory, order-influencing) or SHADOW"},
+    {"stage": "production", "rule": "ML model: a registry consumer is a real-money account (consumer account_class real_money, "
+                                    "or the account is bybit_2 / alpaca_live / ib_live) -- the one ladder: a model reaches a "
+                                    "book the way a strategy does (row ML-ONE-LADDER)"},
+    {"stage": "testing_book", "rule": "ML model: a registry consumer is any other book (paper / prop) and none is real money"},
+    {"stage": "shadow_advisory", "rule": "ML model with NO order consumer whose registry deployment_bucket is LIVE (advisory) or "
+                                         "SHADOW -- a housekeeping label, not a step to real money (operator 2026-11-12)"},
     {"stage": "testing_book", "rule": "strategy leg is on a general paper roster (bybit_1 / alpaca_paper / ib_paper), not retired, "
                                       "not production"},
     {"stage": "stuck", "rule": "ML plan item state == parked (reason = the item's close text)"},
     {"stage": "idea", "rule": "no research unit attributed to the idea (e.g. a programme node with an open needs_authoring and "
                               "no unit), or an ML plan item whose ref is an open build row"},
-    {"stage": "iterating", "rule": "latest graded edge verdict (pass/fail/indeterminate, by latestResultAt) is fail AND an "
+    {"stage": "iterating", "rule": "EFFECTIVE verdict = the unit verdict, except pass with grading.confirmation not_replicated "
+                                   "reads fail and pass with confirmation underpowered reads indeterminate. Latest graded edge verdict (pass/fail/indeterminate, by latestResultAt) is fail AND an "
                                    "attributed unit is open (due/dispatched/running/queued)"},
     {"stage": "failed", "rule": "latest graded edge verdict is fail and no attributed unit is open (reason = that unit's result note)"},
     {"stage": "passed_waiting", "rule": "latest graded edge verdict is pass and no attributed unit is open"},
@@ -126,9 +132,21 @@ def _blocked_text(doc: dict) -> str | None:
     return rc._text(bo, 300) or rc._text(doc.get("blocked_reason"), 300)
 
 
-def _verdict(u: dict) -> str | None:
+def _raw_verdict(u: dict) -> str | None:
     v = u.get("verdict")
     return str(v).strip().lower() if v not in (None, "") else None
+
+
+def _verdict(u: dict) -> str | None:
+    """EFFECTIVE verdict: a pass the held-out confirmation did not replicate is not a pass
+    (grading.confirmation; row RESEARCH-SLO-SURVIVOR-CONVERSION)."""
+    v = _raw_verdict(u)
+    c = str(u.get("confirmation") or "").lower()
+    if v == "pass" and c == "not_replicated":
+        return "fail"
+    if v == "pass" and c == "underpowered":
+        return "indeterminate"
+    return v
 
 
 def load_queue_docs(root: Path) -> dict[str, dict]:
@@ -148,7 +166,10 @@ def load_ml_registry(root: Path, live_rows: list[dict] | None) -> tuple[list[dic
     """[{model_id, bucket, slot, display, family}], read_state. Live rows win; else newest committed snapshot."""
     if live_rows:
         rows = [{"model_id": r.get("model_id"), "bucket": r.get("deployment_bucket"), "slot": r.get("slot"),
-                 "display": r.get("display_name"), "family": r.get("model_family")}
+                 "display": r.get("display_name"), "family": r.get("model_family"),
+                 "consumers": [{"account": c.get("account"), "strategy": c.get("strategy"),
+                                "account_class": c.get("account_class")}
+                               for c in (r.get("consumers") or []) if isinstance(c, dict)]}
                 for r in live_rows if isinstance(r, dict) and r.get("model_id")]
         return rows, {"state": "ok", "source": "live /api/bot/ml/registry rows", "n": len(rows)}
     snaps = sorted((root / "comms" / "ml_consolidation").glob("*.json"))
@@ -158,7 +179,8 @@ def load_ml_registry(root: Path, live_rows: list[dict] | None) -> tuple[list[dic
     if not isinstance(doc, dict):
         return [], {"state": st, "source": snaps[-1].relative_to(root).as_posix(), "n": None}
     rows = [{"model_id": m.get("model_id"), "bucket": m.get("bucket"), "slot": m.get("slot"),
-             "display": m.get("display"), "family": m.get("family")}
+             "display": m.get("display"), "family": m.get("family"),
+             "consumers": [{"account": a, "strategy": None, "account_class": None} for a in (m.get("cons_acc") or [])]}
             for m in doc.get("models") or [] if isinstance(m, dict) and m.get("model_id")]
     return rows, {"state": "snapshot", "source": snaps[-1].relative_to(root).as_posix(),
                   "as_of": doc.get("as_of"), "n": len(rows)}
@@ -217,7 +239,8 @@ def _result(u: dict | None) -> dict | None:
         return None
     du = u.get("dataUsed") or {}
     metrics = {k: v for k, v in (u.get("metrics") or {}).items() if isinstance(v, (int, float)) and not isinstance(v, bool)}
-    return {"unit": u["id"], "verdict": _verdict(u), "date": u.get("latestResultAt"),
+    return {"unit": u["id"], "verdict": _verdict(u), "verdict_raw": _raw_verdict(u),
+            "confirmation": u.get("confirmation"), "date": u.get("latestResultAt"),
             "metrics": dict(list(metrics.items())[:4]) or None,
             "population": du.get("population"), "n": du.get("n"),
             "note": u.get("resultNote"), "title": u.get("title")}
@@ -244,9 +267,15 @@ def build_registry(root: Path, *, now: datetime | None = None, catalog: dict | N
                                       ("partial" if units else "unreadable"),
                                       "n": len(units) if units else None, "read_errors": len(cat.get("readErrors") or [])}
     docs = load_queue_docs(root)
-    for uid, u in units.items():
-        if u.get("status") == "blocked" and docs.get(uid):
-            u = units[uid] = {**u, "blockedReason": _blocked_text(docs[uid]) or u.get("blockedReason")}
+    for uid, u in list(units.items()):
+        d = docs.get(uid)
+        if not d:
+            continue
+        g = d.get("grading") if isinstance(d.get("grading"), dict) else {}
+        conf = g.get("confirmation") if isinstance(g.get("confirmation"), str) else None
+        units[uid] = {**u, "confirmation": conf,
+                      "blockedReason": (_blocked_text(d) or u.get("blockedReason")) if u.get("status") == "blocked"
+                      else u.get("blockedReason")}
 
     # strategies
     try:
@@ -416,16 +445,26 @@ def build_registry(root: Path, *, now: datetime | None = None, catalog: dict | N
                                            "config": f"{REPO_BLOB}/config/strategies.yaml"},
              extra={"books": books or None, "execution": cfg.get("execution"), "stage0_evidence": evidence})
 
-    # 2) ML registry models: every LIVE/SHADOW row, and OFFLINE rows only when a unit is attributed
+    # 2) ML registry models: every LIVE/SHADOW row or row with an order consumer; OFFLINE rows only with a unit
+    real_money = ("bybit_2", "alpaca_live", "ib_live")
     for mid, r in sorted(reg.items()):
         us = ulist(f"subj:{mid}")
         bucket = str(r.get("bucket") or "").upper()
-        if bucket not in ("LIVE", "SHADOW") and not us:
+        cons = r.get("consumers") or []
+        if bucket not in ("LIVE", "SHADOW") and not us and not cons:
             continue
         name = (model_names.get(mid) or {}).get("name") if isinstance(model_names.get(mid), dict) else None
-        if bucket in ("LIVE", "SHADOW"):
+        rm = sorted({c["account"] for c in cons if c.get("account_class") == "real_money" or c.get("account") in real_money})
+        books = sorted({c["account"] for c in cons if c.get("account")})
+        if rm:
+            stage, reason = "production", f"order consumer on real money: {', '.join(rm)}"
+            _, _, latest = offline_stage(us)
+        elif books:
+            stage, reason = "testing_book", f"order consumer on: {', '.join(books)}"
+            _, _, latest = offline_stage(us)
+        elif bucket in ("LIVE", "SHADOW"):
             stage = "shadow_advisory"
-            reason = "advisory (LIVE bucket)" if bucket == "LIVE" else "shadow"
+            reason = ("advisory (LIVE bucket), no order consumer" if bucket == "LIVE" else "shadow, no order consumer")
             _, _, latest = offline_stage(us)
         else:
             stage, reason, latest = offline_stage(us)
@@ -433,7 +472,8 @@ def build_registry(root: Path, *, now: datetime | None = None, catalog: dict | N
         emit(iid=f"ml:{mid}", name=name or r.get("display") or mid, track=ML, kind="ml_model", stage=stage, reason=reason,
              us=us, latest=latest, programme=programmes_of(us), next_step=next_from(stage, us, latest),
              owner=owner_rows(mid), links={"registry": "/api/bot/ml/registry"},
-             extra={"model_id": mid, "slot": r.get("slot"), "bucket": bucket or None, "family": r.get("family")})
+             extra={"model_id": mid, "slot": r.get("slot"), "bucket": bucket or None, "family": r.get("family"),
+                    "consumers": cons or None})
 
     # 3) declared subjects that are neither a config leg nor a registry model (new hypotheses / ML ideas)
     for key in sorted(k for k in attributed if k.startswith("subj:")):
@@ -578,14 +618,14 @@ def cross_check(doc: dict, root: Path) -> list[str]:
             out.append(f"strategy legs {len(legs)} != strategies.yaml legs {len(t)}")
     except Exception as exc:  # noqa: BLE001
         out.append(f"strategy_status unreadable: {type(exc).__name__}")
-    regs = [i for i in doc["ideas"] if i["kind"] == "ml_model" and i["stage"] == "shadow_advisory"]
+    regs = [i for i in doc["ideas"] if i["kind"] == "ml_model" and i.get("bucket") in ("LIVE", "SHADOW")]
     n_reg = doc["read_state"]["ml_registry"].get("n")
     if n_reg is not None:
         rows, _ = load_ml_registry(root, None) if doc["read_state"]["ml_registry"]["state"] == "snapshot" else ([], None)
         if rows:
             want = sum(1 for r in rows if str(r.get("bucket") or "").upper() in ("LIVE", "SHADOW"))
             if want != len(regs):
-                out.append(f"registry LIVE+SHADOW {want} != registry shadow_advisory ideas {len(regs)}")
+                out.append(f"registry LIVE+SHADOW {want} != LIVE/SHADOW ml_model ideas {len(regs)}")
     shown = sum(i["counts"]["units"] for i in doc["ideas"])
     if shown != u["attributed"]:
         out.append(f"units shown on ideas {shown} != attributed {u['attributed']} (an attributed unit is hidden or doubled)")
