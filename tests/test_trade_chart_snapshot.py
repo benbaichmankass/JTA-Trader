@@ -353,3 +353,18 @@ def test_prop_fixture_shape_matches_builder(db):
     strip = lambda ks: {k for k in ks if ".features." not in k and ".model_scores" not in k}  # noqa: E731
     missing = strip(_keys(fx)) - strip(_keys(built))
     assert not missing, missing
+
+
+def test_prop_placed_row_is_fallback_opener(db):
+    from src.prop import prop_journal
+    conn = sqlite3.connect(str(db))
+    prop_journal.ensure_tables(conn)
+    conn.execute("INSERT INTO prop_fills (account_id, external_order_id, symbol, status, opened_at, reported_at,"
+                 " entry_price, created_at) VALUES ('a', 'x9', 'SOLUSDT', 'placed', ?, ?, 87.0, ?)", (OPEN, OPEN, OPEN))
+    cur = conn.execute("INSERT INTO prop_fills (account_id, external_order_id, symbol, status, reported_at, exit_price,"
+                       " created_at) VALUES ('a', 'x9', 'SOLUSDT', 'closed', ?, 86.0, ?)", (CLOSE, CLOSE))
+    o, c, _ = store.resolve_prop(conn, cur.lastrowid)
+    conn.close()
+    assert o["status"] == "placed" and c["id"] == cur.lastrowid
+    t = tcs.prop_trade(o, c, None)
+    assert t["timestamp"] == OPEN and t["closed_at"] == CLOSE      # no closed_at on the row -> reported_at
