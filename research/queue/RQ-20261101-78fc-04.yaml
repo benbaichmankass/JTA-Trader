@@ -2,7 +2,7 @@
 id: RQ-20261101-78fc-04
 title: 'ITERATION 1 of ml-tm-action-value (fail): with path-state features the R1 state lacks, is the per-action advantage predictable out of
   fold at all?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -140,3 +140,13 @@ run:
   timeout_minutes: 120
   inputs:
     research_unit: RQ-20261101-78fc-04
+result:
+  verdict: fail
+  read_at: '2026-11-12T10:14Z'
+  evidence:
+  - research/results/RQ-20261101-78fc-04/local-20261112T1014Z.jsonl
+  summary: 'FAIL (MEASURED on harness paths, ESTIMATED provenance, full cost stack; corpus tmb-73f5c3660014, 2,627 trades, 50,926 states,
+    6 purged folds, 7,784-9,179 OOS check-ins per fold): 0/6 folds for every non-hold action under the amended rule. Pooled OOS rho moved
+    from negative on R1 (close -0.028) to positive with the block (close +0.036, CI [-0.014, +0.089]); no class clears. The literal
+    point reading (reported, not graded) would read 6/6 for close; it also reads 5-6/6 on the R1 control with negative rho, the failure
+    the pre-run amendment names. Next: iteration 2 RQ-20261112-3144-01 (label change), per the registered FAIL branch.'
