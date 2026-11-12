@@ -31,6 +31,7 @@ Gates this adds or changes: none. Read-only; ``--post-note`` is the only write a
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import subprocess
 import sys
@@ -42,7 +43,8 @@ import yaml
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
-from src.runtime import provenance as P  # noqa: E402
+from src.config.accounts_loader import load_accounts_dict
+from src.runtime import provenance as P
 
 API = "https://ict-bot.duckdns.org/api/bot"
 LABEL_KINDS_EXCLUDED = {"not_computable", "pending"}
@@ -103,7 +105,7 @@ def in_window(row, keys, start):
 
 def get_json(url):
     try:
-        with urlopen(url, timeout=30) as r:  # noqa: S310 - fixed https host
+        with urlopen(url, timeout=30) as r:
             return json.load(r)
     except Exception as e:  # noqa: BLE001 - a failed read is a read-state, not a crash
         return {"_error": type(e).__name__}
@@ -199,7 +201,7 @@ def h5(start):
 def h7():
     try:
         strat = yaml.safe_load((REPO / "config/strategies.yaml").read_text())["strategies"]
-        acc = yaml.safe_load((REPO / "config/accounts.yaml").read_text())["accounts"]
+        acc = load_accounts_dict()
         ov = yaml.safe_load((REPO / "config/overlay_policy.yaml").read_text()).get("strategies") or {}
     except (OSError, KeyError, yaml.YAMLError) as e:
         return cnl(f"config unreadable: {type(e).__name__}"), cnl("config unreadable")
@@ -255,7 +257,7 @@ def build(root, window_days, now):
     # alarms: hop at 0 while the previous hop is non-zero; any could_not_look
     for s, hops in srcs.items():
         order = [k for k in ("H1", "H2", "H3", "H4") if k in hops]
-        for prev, cur in zip(order, order[1:]):
+        for prev, cur in itertools.pairwise(order):
             pv, cv = hops[prev].get("value"), hops[cur].get("value")
             if pv and cv == 0:
                 rec["alarms"].append(f"{s}: {cur} is 0 while {prev} is {pv} (recorded-but-never-learned shape)")
@@ -277,8 +279,8 @@ def render(rec):
         lines.append(f"{s:14}" + "".join(f"{fmt(hops.get(h, cnl('')))+('*' if hops.get(h, {}).get('provenance') == P.ESTIMATED else ''):>8}"
                                          for h in ("H1", "H2", "H3", "H4")))
     pl = rec["pipeline"]
-    lines += ["", f"H5 scored {fmt(pl['H5'])}   H6 promoted {fmt(pl['H6'])}*   H7 order-changing legs {fmt(pl['H7'])}* "
-              f"(real-money/prop {fmt(pl['H7_real_money'])}*)", "  * ESTIMATED; — = could_not_look", ""]
+    lines += ["", (f"H5 scored {fmt(pl['H5'])}   H6 promoted {fmt(pl['H6'])}*   H7 order-changing legs {fmt(pl['H7'])}* "
+               f"(real-money/prop {fmt(pl['H7_real_money'])}*)"), "  * ESTIMATED; — = could_not_look", ""]
     lines += ["ALARMS:"] + [f"  - {a}" for a in rec["alarms"]] if rec["alarms"] else ["ALARMS: none"]
     return "\n".join(lines)
 
