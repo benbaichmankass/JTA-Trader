@@ -93,3 +93,38 @@ def test_two_slice_accounts_each_keep_their_admission(coord, tmp_path, trade_db,
     assert set(by_acct) == {"bybit_2", "bybit_9"}
     assert by_acct["bybit_2"]["qty"] != by_acct["bybit_9"]["qty"]
     assert set(pkg.meta["placed_qty_by_account"]) == {"bybit_2", "bybit_9"}
+
+
+def test_refusal_id_from_execute_pkg_records_no_placed_qty(
+        coord, slice_yaml, trade_db, venue, monkeypatch):  # noqa: F811 (pytest fixture params)
+    """execute_pkg returns ``opt-norfit-*`` (not a raise) for an options no-fit and
+    places nothing; measured live on pkg-59f612ef793840bb (placed 201, journal 0)."""
+    import src.units.accounts.execute as execute_mod
+    captured = []
+    _patch_dispatch_deps(monkeypatch, captured)
+    monkeypatch.setattr(execute_mod, "execute_pkg",
+                        lambda *a, **k: "opt-norfit-0123456789")
+    pkg = _pkg("trend_donchian_eth_4h")
+    _run(coord, slice_yaml, pkg)
+    assert pkg.meta["placed_qty_by_account"] == {}
+
+
+def test_options_expression_account_records_no_placed_qty(
+        coord, slice_yaml, trade_db, venue, monkeypatch):  # noqa: F811 (pytest fixture params)
+    import src.core.coordinator as coord_mod
+    captured = []
+    _patch_dispatch_deps(monkeypatch, captured)
+    monkeypatch.setattr(coord_mod, "_account_expresses_options", lambda cfg: True)
+    pkg = _pkg("trend_donchian_eth_4h")
+    _run(coord, slice_yaml, pkg)
+    assert len(captured) == 1  # the order still went out
+    assert pkg.meta["placed_qty_by_account"] == {}
+
+
+def test_is_placement_id():
+    from src.core.coordinator import _is_placement_id
+    assert _is_placement_id("b796ccb9-cef9-429c-90f3-09a5f8d85d20")
+    assert _is_placement_id("opt-a1b2c3")
+    for tid in (None, "", "dry-abc", "opt-norfit-abc", "rejected-abc",
+                "rejected_too_small:x", "exchange_rejected-abc"):
+        assert not _is_placement_id(tid), tid
