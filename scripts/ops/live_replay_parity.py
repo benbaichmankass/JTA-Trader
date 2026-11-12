@@ -48,6 +48,9 @@ THE DIVERGENCE CLASSES (any one is a finding)
 ``candle_mismatch``     live's fingerprint (adx_14 / printed close / channel)
                         cannot come from the candles the replay sees.
 ``lost_bar``            a bar the market traded in that live never evaluated.
+``closed_bar_skip``     a closed-mode bar live left UNDECIDED and said why
+                        (``closed_bar_skip`` audit row: stale_skipped /
+                        unconfirmed / unreadable) with no decision after it.
 ``unevaluated_signal``  a 15m window live did not evaluate in which the replay
                         signals for every plausible price.
 ``dropped_no_package``  live signalled; no order package and no named downstream
@@ -159,6 +162,7 @@ DIVERGENCE_CLASSES = (
     "previous_bar_signal",
     "missed_signal", "live_only_signal", "side_mismatch", "candle_mismatch",
     "lost_bar", "unevaluated_signal", "dropped_no_package", "dropped_no_order",
+    "closed_bar_skip",
 )
 
 #: Known live entries the historical positive must report MATCHED while they
@@ -613,6 +617,9 @@ class EvalRow:
     #: writer change (``_stamp_regime`` → ``bar_open_ts`` / ``bar_close``) ships
     bar_open: float | None = None
     bar_close: float | None = None
+    #: the builder left a closed bar UNDECIDED and said why (stale_skipped,
+    #: unconfirmed, unreadable): an audit row, not a decision (PI-20261111-LRP-C5F97202)
+    skip: bool = False
 
 
 def _evals_and_events(rows: list[dict], leg: str) -> tuple[list[EvalRow], list[dict]]:
@@ -628,7 +635,8 @@ def _evals_and_events(rows: list[dict], leg: str) -> tuple[list[EvalRow], list[d
                                  adx=r.get("adx_14"), confidence=r.get("confidence"),
                                  close=parse_close(reason), channel=parse_channel(reason),
                                  bar_open=to_epoch(r.get("bar_open_ts")),
-                                 bar_close=r.get("bar_close")))
+                                 bar_close=r.get("bar_close"),
+                                 skip=bool(r.get("closed_bar_skip"))))
         elif ev in DOWNSTREAM_GATE_EVENTS:
             events.append({"t": t, "event": ev, "row": r})
         elif ev == "pipeline_result" and str(r.get("status") or "").lower() in _PIPELINE_SKIP:
@@ -887,7 +895,17 @@ def analyse_leg(leg: Leg, bundle: dict, since: float, until: float, *,
                 divs.append({"class": "lost_bar", "bar": iso(b0),
                              "detail": f"no {leg.name}_eval in the {fresh:.0f}s window after close"})
             d = closed_decision(i)
+            decided = any(not e.skip for e in evs)
             for e in evs:
+                if e.skip:
+                    if decided:   # e.g. unconfirmed, then decided on the next tick
+                        continue
+                    # named non-decision: the live leg never decided this bar
+                    kinds.append("closed_bar_skip")
+                    divs.append({"class": "closed_bar_skip", "bar": iso(b0), "t": iso(e.t),
+                                 "live": {"side": "none", "reason": e.reason},
+                                 "replay": {"side": d["side"], "reason": d.get("reason")}})
+                    continue
                 evals_checked += 1
                 cls = None
                 if e.bar_open is not None and int(e.bar_open) != int(b0):

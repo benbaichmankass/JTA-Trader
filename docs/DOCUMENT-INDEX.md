@@ -325,6 +325,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/audits/2026-11-06-guard-prune.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
 | `docs/audits/2026-11-06-skills-prune.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
 | `docs/audits/2026-11-06-workflow-prune.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
+| `docs/audits/2026-11-12-ui-spec-gap-audit.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
 | `docs/audits/M1-comms-audit-2026-05-07-fresh.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
 | `docs/audits/M1-comms-audit-followups-fresh.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
 | `docs/audits/amend-parity-2026-10-25.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
@@ -613,6 +614,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/ML-PROGRAMME-2026-10-28.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | ONE consolidated ML programme: models that manage trades, TM-BENCH, 8 tracks, proposed infra rows, learning ledger. |
 | `docs/plans/ML-CONSOLIDATION-2026-11-11.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | ML registry inventory (106 rows) by slot with a keep/review/retire proposal; Thursday input for ML-PROGRAMME-CONSOLIDATION. |
 | `docs/plans/ML-ROADMAP-MECE-2026-11.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | MECE map of ML model families onto the ten trade-lifecycle decisions (D1-D10): per-slot question/baseline/label/harness, position aggregator (Mastiff) design, research dependency graph, compute demand, ranked proposals for Thursday planning. Propose-only. |
+| `docs/plans/UI-SPA-HANDOFF-2026-11-12.md` | history | historical | — | 2026-11-12 | `name:record-of-a-past-state / dir:record-of-a-completed-session` | — |
 | `docs/plans/WATCHDOG-CONSOLIDATION-DESIGN-2026-11-06.md` | plan | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/counterfactual-everywhere-DESIGN-2026-10-29.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/manager-runbooks.md` | instruction | live | — | 2026-11-06 | `name:policy-prescribes / not-assessed` | — |
@@ -639,6 +641,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/soak-decisions-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/soak-verdicts-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/thursday-planning-2026-11-11-readbacks.md` | evidence | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/plans/thursday-planning-2026-11-12-answers.md` | evidence | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/ui-upgrade-1-auth-and-keys-design.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/plans/UI-TWO-SURFACE-DESIGN-2026-11.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | UI-TWO-SURFACE-DESIGN: trading dashboard (SPA, SSE push, browser-direct chart feed, health cards) vs management console (Claude artifact fed by a read-only JTA MCP connector on the trainer VM); SPA page inventory; notes/comments/sample paths; build order T1-T4/C1-C5/R1; operator decisions U1-U6. Design only. |
 | `docs/plans/weekly-planning-protocol.md` | instruction | live | — | 2026-11-06 | `name:policy-prescribes / not-assessed` | — |

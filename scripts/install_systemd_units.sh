@@ -172,6 +172,25 @@ if [ -f "${_WATCHDOG_DROPIN_SRC}" ]; then
     fi
 fi
 
+# SEC-8001-LOCKDOWN (operator decisions page m3, 2026-11-12): ict-web-api binds
+# 127.0.0.1:8001 only; Caddy's HTTPS front is the one public way in. The base
+# unit (deploy/ict-web-api.service) carries --host 127.0.0.1, but a box built by
+# deploy-candidate.yml also has an ExecStart override in
+# ict-web-api.service.d/venv.conf that still says --host 0.0.0.0, and a drop-in
+# ExecStart wins over the unit's. Rewrite exactly that flag on uvicorn ExecStart
+# lines in existing ict-web-api drop-ins; nothing else in them changes. Idempotent.
+_WEBAPI_DROPIN_DIR="${SYSTEMD_DIR}/ict-web-api.service.d"
+if [ -d "${_WEBAPI_DROPIN_DIR}" ]; then
+    for _webapi_conf in "${_WEBAPI_DROPIN_DIR}"/*.conf; do
+        [ -f "${_webapi_conf}" ] || continue
+        if grep -qE '^ExecStart=.*uvicorn src\.web\.api\.main:app.*--host 0\.0\.0\.0' "${_webapi_conf}"; then
+            echo ">>> install_systemd_units: ${_webapi_conf}: uvicorn --host 0.0.0.0 -> 127.0.0.1 (SEC-8001-LOCKDOWN)"
+            "${SUDO[@]}" sed -i -E '/^ExecStart=.*uvicorn src\.web\.api\.main:app/ s/--host 0\.0\.0\.0/--host 127.0.0.1/' "${_webapi_conf}"
+            changed=1
+        fi
+    done
+fi
+
 # Why ict-telegram-bot needs the data-dir drop-in:
 #   The bot's pending-pings drainer (src/bot/cloud_notifier) + journal
 #   reads resolve through DATA_DIR-aware paths. Without a drop-in it

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# wiring: manual-only - research data tooling run by a lane or a research-script-run job; no schedule yet (persistence
-# home for daily accrual is an open decision on row HL-DATA-FETCHER).
+# wiring: imported - scripts/data_lake/free_sources.py `hyperliquid` loads it in market-data-lake.yml (daily accrual into
+# the private HF lake, manager 2026-11-11); the CLI below stays for manual CSV pulls.
 """Fetch Hyperliquid / trade[XYZ] public candles and hourly funding to CSV (row HL-DATA-FETCHER).
 
 Why: VENUE-SCOPE-HYPERLIQUID (2026-11-11) filed RQ-20261111-9b09-02 / -03 blocked on "no Hyperliquid data fetcher".
