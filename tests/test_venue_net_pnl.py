@@ -193,3 +193,33 @@ def test_gap_report_lists_gaps_and_unmatched(tmp_path):
     ]
     out = find_items(rows)
     assert out["n_gap"] == 1 and out["n_unmatched"] == 1 and out["n_classified"] == 3
+
+
+def test_gap_report_modes_and_check():
+    import datetime as dtm
+    from scripts.ops.venue_pnl_gaps import select
+    now = dtm.datetime.now(dtm.timezone.utc).isoformat()
+    rows = [
+        {"id": 1, "status": "closed", "account_id": "bybit_1", "account_class": "paper",
+         "pnl_basis": "venue_net", "pnl": -1500.0, "pnl_computed": -888.7, "closed_at": now},
+        {"id": 2, "status": "closed", "account_id": "bybit_2", "account_class": "real_money",
+         "pnl_basis": "venue_net", "pnl": -10.0, "pnl_computed": -2.0, "closed_at": now},
+        {"id": 3, "status": "closed", "account_id": "bybit_2", "account_class": "real_money",
+         "pnl_basis": "venue_unmatched", "pnl": 1.0, "closed_at": now},
+    ]
+    real = select(rows, mode="real")
+    assert [i["item_id"] for i in real["items"]] == ["VPG-2", "VPG-3"]
+    demo = select(rows, mode="demo")
+    assert demo["groups"] == {"bybit_1|gap": [1]}
+    assert select(rows, mode="demo", account="bybit_portfolio", kind="gap")["items"] == []
+
+
+def test_gap_report_check_exit_codes(tmp_path):
+    from scripts.ops.venue_pnl_gaps import main
+    f = tmp_path / "j.json"
+    f.write_text(json.dumps([{"id": 1, "status": "closed", "account_id": "bybit_1",
+                              "account_class": "paper", "pnl_basis": "venue_net",
+                              "pnl": -1500.0, "pnl_computed": -888.7}]))
+    assert main(["--journal-json", str(f), "--mode", "demo", "--check"]) == 1
+    assert main(["--journal-json", str(f), "--mode", "demo", "--account", "bybit_portfolio",
+                 "--check"]) == 0
