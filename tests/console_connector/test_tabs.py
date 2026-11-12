@@ -456,3 +456,51 @@ def test_frozen_register_store_down_is_could_not_look(monkeypatch):
     monkeypatch.setattr(D, "STORE_FETCH", lambda url: {"readState": "could_not_look", "items": None, "error": "db"})
     out = D.work_rows(REPO, "all", 5)
     assert out["read_state"] == "could_not_look" and out["population"]["rows_scanned"] is None
+
+
+# ── alerts / journal / reports (sign-in only) ──
+def test_alerts_urgent_filter_and_failure(monkeypatch):
+    rows = [{"ts": "2026-11-12T08:00:00Z", "kind": "a", "channel": "system", "priority": "normal", "body": "x"},
+            {"ts": "2026-11-12T08:01:00Z", "kind": "b", "channel": "manager", "priority": "high", "body": "y"},
+            {"ts": "2026-11-12T08:02:00Z", "kind": "c", "channel": "manager", "priority": "normal", "body": "z"}]
+    monkeypatch.setattr(tabs, "FETCH", lambda p, t: {"read_state": "read", "rows": rows, "total_matching": 3})
+    out = tabs.alerts({"urgent": True})
+    assert out["count"] == 2 and [r["kind"] for r in out["rows"]] == ["b", "a"]
+    monkeypatch.setattr(tabs, "FETCH", lambda p, t: (_ for _ in ()).throw(OSError("down")))
+    bad = tabs.alerts({})
+    assert bad["read_state"] == "could_not_look" and bad["rows"] is None and bad["count"] is None
+
+
+def test_journal_trades_and_packages(monkeypatch):
+    seen = []
+
+    def f(p, t):
+        seen.append(p)
+        return [{"id": 1, "symbol": "X", "realizedPnl": -1.0, "secret": "no"}] if "trades" in p else \
+            {"rows": [{"orderPackageId": "op1", "status": "open"}], "filter_state": "read"}
+    monkeypatch.setattr(tabs, "FETCH", f)
+    t = tabs.journal({"limit": 1, "account": "bybit_2"})
+    assert t["rows"][0]["symbol"] == "X" and "secret" not in t["rows"][0] and "account_id=bybit_2" in seen[0]
+    p = tabs.journal({"kind": "packages"})
+    assert p["rows"][0]["orderPackageId"] == "op1" and seen[1].startswith("/api/bot/order-packages?")
+
+
+def test_reports_index_and_body(monkeypatch):
+    def f(p, t):
+        if p.endswith("/reports"):
+            return {"reports": [{"id": "r1", "generated_at": "2026-09-01"}, {"id": "r2", "generated_at": "2026-09-09"}], "total": 2}
+        return {"id": "r2", "html": "<style>body{x}</style><h1>Title</h1><p>Body text</p>"}
+    monkeypatch.setattr(tabs, "FETCH", f)
+    idx = tabs.reports({})
+    assert [r["id"] for r in idx["reports"]] == ["r2", "r1"]
+    one = tabs.reports({"report_id": "r2"})
+    assert one["text"] == "Title Body text"
+
+
+def test_new_tools_are_gated_without_sign_in(monkeypatch):
+    from src.console_connector import server
+    monkeypatch.delenv("CONSOLE_CONNECTOR_AUTH", raising=False)
+    monkeypatch.setattr(tabs, "FETCH", lambda *a: pytest.fail("must not fetch without sign-in"))
+    for name in ("alerts", "journal", "reports"):
+        r = server.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": name, "arguments": {}}})
+        assert r["result"]["structuredContent"]["read_state"] == "auth_required"

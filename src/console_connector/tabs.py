@@ -783,3 +783,120 @@ def work_items(args: dict[str, Any]) -> dict[str, Any]:
                                "_header.json frozen_into_work_store); the repo row files are its export")
             if _frozen() else (doc.get("note") or "the checklist + pipeline files are canonical until WORK-STORE S4"),
             "upstream": f"{LIVE_BASE}/api/bot/work/items"}
+
+
+# ───────────────────── alerts · journal · reports (spec § 2.3; SIGN-IN ONLY) ─────────────────────
+#: These serve the alert ledger, closed trades with P&L, order packages and the review reports, so
+#: server.py lists them in GATED_TOOLS: they answer only while the connector's Google sign-in is on.
+ALERT_KEYS = ("ts", "kind", "channel", "priority", "delivered", "reason", "body")
+URGENT = ("system",)
+
+
+def alerts(args: dict[str, Any]) -> dict[str, Any]:
+    """The live alert ledger (GET /api/bot/alerts): newest first, optionally only urgent ones
+    (channel system or priority high, the filter that wakes the manager)."""
+    import urllib.parse as up
+    now = _now()
+    hours = max(1, min(24 * 14, int(args.get("since_hours") or 24)))
+    limit = max(1, min(200, int(args.get("limit") or 40)))
+    q: dict[str, Any] = {"since": (now - timedelta(hours=hours)).strftime("%Y-%m-%dT%H:%M:%SZ"), "limit": 2000}
+    for k in ("kind", "channel"):
+        if args.get(k):
+            q[k] = str(args[k])
+    path = "/api/bot/alerts?" + up.urlencode(q)
+    try:
+        doc = _work_get(path)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: could_not_look with the reason
+        return {"as_of": D._iso(now), "read_state": "could_not_look", "rows": None, "count": None,
+                "population": {"rows_scanned": None}, "error": _err(exc)}
+    if not isinstance(doc, dict) or doc.get("rows") is None or doc.get("read_state") == "could_not_look":
+        return {"as_of": D._iso(now), "read_state": "could_not_look", "rows": None, "count": None,
+                "population": {"rows_scanned": None}, "error": (doc or {}).get("error") if isinstance(doc, dict) else None}
+    rows = doc["rows"]
+    if args.get("urgent"):
+        rows = [r for r in rows if r.get("channel") in URGENT or r.get("priority") == "high"]
+    rows = sorted(rows, key=lambda r: str(r.get("ts") or ""), reverse=True)
+    shown = [{k: (r.get(k)[:400] if k == "body" and isinstance(r.get(k), str) else r.get(k)) for k in ALERT_KEYS}
+             for r in rows[:limit]]
+    return {"as_of": D._iso(now), "read_state": doc.get("read_state") or "read", "since_hours": hours,
+            "urgent_only": bool(args.get("urgent")), "count": len(rows), "rows": shown,
+            "counts_by_kind": doc.get("counts_by_kind"), "newest_ts": doc.get("newest_ts"),
+            "population": {"ledger_rows_matching": doc.get("total_matching"), "returned": len(shown),
+                           "upstream_truncated": doc.get("rows_truncated_to_limit"), "upstream": doc.get("population")}}
+
+
+TRADE_KEYS = ("id", "account", "accountClass", "assetClass", "symbol", "side", "qty", "entryPrice", "exitPrice",
+              "openedAt", "closedAt", "closeReason", "pattern", "realizedPnl", "realizedPnlPct", "pnlProvenance",
+              "journalTrust")
+PACKAGE_KEYS = ("orderPackageId", "strategy", "symbol", "direction", "status", "tradeStatus", "entry", "sl", "tp",
+                "confidence", "claudeScore", "pnl", "closeReason", "accountClass", "createdAt", "updatedAt",
+                "linkedTradeId")
+
+
+def journal(args: dict[str, Any]) -> dict[str, Any]:
+    """Closed trades (GET /api/bot/trades/closed) or order packages (GET /api/bot/order-packages), newest first."""
+    import urllib.parse as up
+    now = _now()
+    kind = "packages" if args.get("kind") == "packages" else "trades"
+    limit = max(1, min(200, int(args.get("limit") or 50)))
+    offset = max(0, int(args.get("offset") or 0))
+    if kind == "trades":
+        q: dict[str, Any] = {"limit": limit, "offset": offset, "include_paper": "true" if args.get("include_paper") else "false"}
+        if args.get("account"):
+            q["account_id"] = str(args["account"])
+        if args.get("since"):
+            q["since"] = str(args["since"])
+        path, keys = "/api/bot/trades/closed?" + up.urlencode(q), TRADE_KEYS
+    else:
+        q = {"limit": limit, "offset": offset}
+        for k in ("strategy", "symbol", "status"):
+            if args.get(k):
+                q[k] = str(args[k])
+        path, keys = "/api/bot/order-packages?" + up.urlencode(q), PACKAGE_KEYS
+    try:
+        doc = _work_get(path)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: could_not_look with the reason
+        return {"as_of": D._iso(now), "read_state": "could_not_look", "kind": kind, "rows": None, "count": None,
+                "population": {"rows_scanned": None}, "error": _err(exc)}
+    rows = doc if isinstance(doc, list) else (doc.get("rows") if isinstance(doc, dict) else None)
+    if rows is None:
+        return {"as_of": D._iso(now), "read_state": "could_not_look", "kind": kind, "rows": None, "count": None,
+                "population": {"rows_scanned": None}, "error": "upstream returned no rows"}
+    shown = [{k: r.get(k) for k in keys} for r in rows if isinstance(r, dict)]
+    return {"as_of": D._iso(now), "read_state": "read", "kind": kind, "count": len(shown), "rows": shown,
+            "population": {"returned": len(shown), "offset": offset, "limit": limit,
+                           "next_offset": offset + limit if len(shown) == limit else None,
+                           "include_paper": bool(args.get("include_paper")) if kind == "trades" else None,
+                           "filter_state": doc.get("filter_state") if isinstance(doc, dict) else None},
+            "upstream": path.split("?")[0]}
+
+
+def reports(args: dict[str, Any]) -> dict[str, Any]:
+    """The review reports index (GET /api/bot/reports), or one report's metadata + markdown/HTML body."""
+    import urllib.parse as up
+    now = _now()
+    rid = (args.get("report_id") or "").strip()
+    path = "/api/bot/reports" + (f"/{up.quote(rid, safe='')}" if rid else "")
+    try:
+        doc = _work_get(path)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: could_not_look with the reason
+        return {"as_of": D._iso(now), "read_state": "could_not_look", "report_id": rid or None,
+                "population": {"rows_scanned": None}, "error": _err(exc)}
+    if rid:
+        body = doc.get("html") or doc.get("html_body") or doc.get("body") or ""
+        body = re.sub(r"(?is)<(style|script)[^>]*>.*?</\1>", " ", body) if isinstance(body, str) else ""
+        text = re.sub(r"<[^>]+>", " ", body)
+        text = re.sub(r"\s+", " ", text).strip()
+        meta = {k: v for k, v in doc.items() if not isinstance(v, str) or len(v) < 400}
+        return {"as_of": D._iso(now), "read_state": "read", "report_id": rid, "meta": meta,
+                "text": text[:12000], "population": {"text_chars": len(text), "truncated": len(text) > 12000}}
+    reps = doc.get("reports") if isinstance(doc, dict) else None
+    if reps is None:
+        return {"as_of": D._iso(now), "read_state": "could_not_look", "report_id": None, "reports": None,
+                "population": {"rows_scanned": None}, "error": "upstream returned no reports"}
+    limit = max(1, min(100, int(args.get("limit") or 30)))
+    keys = ("id", "headline", "generated_at", "window", "window_start", "window_end", "roll_up_grade")
+    reps = sorted(reps, key=lambda r: str(r.get("generated_at") or ""), reverse=True)
+    return {"as_of": D._iso(now), "read_state": "read", "count": len(reps),
+            "reports": [{k: r.get(k) for k in keys} for r in reps[:limit]],
+            "population": {"reports_total": doc.get("total"), "returned": min(limit, len(reps))}}

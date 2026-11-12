@@ -28,11 +28,12 @@ PROTOCOL_DEFAULT = "2025-06-18"
 CACHE = data.TTLCache()
 TTL_S = {"work_rows": 30.0, "inbox": 30.0, "work_items": 10.0, "workplan": 60.0, "ml_roadmap": 120.0,
          "performance": 300.0, "system_health": 60.0, "data_query": 30.0, "system_catalog": 300.0,
-         "research_queue": 300.0, "wake_toggles": 10.0}
+         "research_queue": 300.0, "wake_toggles": 10.0,
+         "alerts": 15.0, "journal": 60.0, "reports": 120.0}
 #: Tools that serve P&L, journal rows or live-VM state: registered ONLY when CONSOLE_CONNECTOR_AUTH=google
 #: (the sign-in is on), so they never serve over the authless tunnel. workplan and ml_roadmap carry only
 #: public-register data (repo files) and are always available.
-GATED_TOOLS = frozenset({"performance", "system_health", "data_query"})
+GATED_TOOLS = frozenset({"performance", "system_health", "data_query", "alerts", "journal", "reports"})
 
 
 def auth_active() -> bool:
@@ -107,6 +108,30 @@ TOOLS: list[dict[str, Any]] = [
          "theme": {"type": "string", "enum": ["all", "ml", "trading"], "default": "all"},
          "limit": {"type": "integer", "minimum": 1, "maximum": 300, "default": 30},
          "offset": {"type": "integer", "minimum": 0}}}, "annotations": _RO},
+    {"name": "alerts", "title": "Alerts",
+     "description": "SIGN-IN ONLY. The live alert ledger (GET /api/bot/alerts on the trader VM), newest first: ts, kind, "
+                    "channel, priority, delivered, body. urgent=true keeps channel system or priority high.",
+     "inputSchema": {"type": "object", "properties": {
+         "since_hours": {"type": "integer", "minimum": 1, "maximum": 336, "default": 24},
+         "kind": {"type": "string"}, "channel": {"type": "string"}, "urgent": {"type": "boolean", "default": False},
+         "limit": {"type": "integer", "minimum": 1, "maximum": 200, "default": 40}}}, "annotations": _RO},
+    {"name": "journal", "title": "Trade journal",
+     "description": "SIGN-IN ONLY. kind=trades: closed trades (GET /api/bot/trades/closed; real money unless "
+                    "include_paper) with realized P&L and its provenance. kind=packages: order packages "
+                    "(GET /api/bot/order-packages) with entry/SL/TP, scores and status. Newest first, paged.",
+     "inputSchema": {"type": "object", "properties": {
+         "kind": {"type": "string", "enum": ["trades", "packages"], "default": "trades"},
+         "account": {"type": "string"}, "include_paper": {"type": "boolean", "default": False},
+         "since": {"type": "string", "description": "trades: ISO date/datetime"},
+         "strategy": {"type": "string"}, "symbol": {"type": "string"}, "status": {"type": "string"},
+         "limit": {"type": "integer", "minimum": 1, "maximum": 200, "default": 50},
+         "offset": {"type": "integer", "minimum": 0, "default": 0}}}, "annotations": _RO},
+    {"name": "reports", "title": "Reports",
+     "description": "SIGN-IN ONLY. The review reports index (GET /api/bot/reports), newest first; pass report_id for "
+                    "one report's metadata and text.",
+     "inputSchema": {"type": "object", "properties": {
+         "report_id": {"type": "string"},
+         "limit": {"type": "integer", "minimum": 1, "maximum": 100, "default": 30}}}, "annotations": _RO},
     {"name": "wake_toggles", "title": "Wake switches",
      "description": "Which wake notifications reach the manager session (live from the trader VM's GET /api/bot/wake-toggles).",
      "inputSchema": {"type": "object", "properties": {}}, "annotations": _RO},
@@ -219,6 +244,20 @@ def _lean_rows(o: Any) -> Any:
     return o
 
 
+def _inbox(limit: int) -> dict[str, Any]:
+    """The Inbox; with the sign-in on, its alerts section is the live ledger's urgent rows (24 h)."""
+    out = data.inbox(REPO, limit)
+    if auth_active():
+        a = tabs.alerts({"urgent": True, "since_hours": 24, "limit": limit})
+        out["sections"]["alerts"] = {
+            "read_state": a["read_state"], "count": a.get("count"), "population": a.get("population"),
+            "error": a.get("error"),
+            "items": [{"source": "alert", "id": f"{r.get('kind')}@{r.get('ts')}", "title": (r.get("body") or "")[:160],
+                       "ref": r.get("channel"), "what": f"{r.get('priority')} · {r.get('delivered')}",
+                       "due_by": (r.get("ts") or "")[:16]} for r in (a.get("rows") or [])]}
+    return out
+
+
 def call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
     out = _clip(_lean_rows(_call_tool(name, args)))
     if isinstance(out, dict):
@@ -244,7 +283,7 @@ def _call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
                          lambda: data.work_rows(REPO, view, limit, offset=offset))
     if name == "inbox":
         limit = _clamp(args.get("limit"), 1, 200, 25)
-        return CACHE.get(f"inbox:{limit}", TTL_S["inbox"], lambda: data.inbox(REPO, limit))
+        return CACHE.get(f"inbox:{limit}:{auth_active()}", TTL_S["inbox"], lambda: _inbox(limit))
     if name == "research_queue":
         a = {k: args.get(k) for k in ("status", "theme", "limit", "offset")}
         return CACHE.get("research_queue:" + json.dumps(a, sort_keys=True, default=str), TTL_S[name],
@@ -263,6 +302,9 @@ def _call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
                 "population": {"rows_scanned": None},
                 "reason": "this tool serves P&L / journal / live-VM state and is available only when the "
                           "connector's Google sign-in is active (CONSOLE_CONNECTOR_AUTH=google)"}
+    if name in ("alerts", "journal", "reports"):
+        fn = getattr(tabs, name)
+        return CACHE.get(name + ":" + json.dumps(args, sort_keys=True, default=str), TTL_S[name], lambda: fn(dict(args)))
     if name == "workplan":
         limit = _clamp(args.get("limit"), 1, 200, 40)
         return CACHE.get(f"workplan:{limit}", TTL_S[name], lambda: tabs.workplan(REPO, limit))
