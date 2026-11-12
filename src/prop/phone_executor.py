@@ -484,6 +484,13 @@ def record_report(device: PhoneDevice, body: Dict[str, Any]) -> Dict[str, Any]:
             body["closed_orders_state"] = re.sub(r"[^a-z_]", "", str(cs_in))[:24] or "not_read"
         else:
             body["closed_orders_state"] = "read" if isinstance(body_in.get("closed_orders"), list) else "not_reported"
+        # PHONE-LIVE-ACCOUNT-FEED (2026-11-12): the venue's working orders off the Open orders view. Only a CLEAN read is
+        # stored as rows (and moves journaled stops below); any other state is kept as a label. An app that predates the
+        # field reads `not_reported`, never a guessed clean.
+        bs_in = body_in.get("brackets_state")
+        body["brackets_state"] = (re.sub(r"[^a-z_]", "", str(bs_in))[:24] or "not_read") if bs_in is not None else "not_reported"
+        if body["brackets_state"] == "read":
+            body["venue_brackets"] = phone_reconcile.clean_brackets(device.account_id, body_in.get("brackets"))
         if pstate == "read":
             positions = phone_reconcile.clean_positions(device.account_id, body_in.get("positions"))
             if any(p.get("side_source") == "sheet" for p in positions):
@@ -525,6 +532,12 @@ def record_report(device: PhoneDevice, body: Dict[str, Any]) -> Dict[str, Any]:
         except Exception:  # noqa: BLE001  # allow-silent: logged; the next clean read retries
             logger.warning("phone_executor: closed-order fill-in failed for %s", device.account_id, exc_info=True)
             res["fill_in"] = None
+    if body.get("kind") == "account_status" and body.get("brackets_state") == "read":
+        try:   # a hand-moved venue stop / target reaches the journal (and the phone trail) within one read
+            res["brackets_sync"] = phone_reconcile.sync_venue_brackets(device.account_id, body.get("venue_brackets") or [])
+        except Exception:  # noqa: BLE001  # allow-silent: logged; the snapshot is stored and the next read retries
+            logger.warning("phone_executor: venue bracket sync failed for %s", device.account_id, exc_info=True)
+            res["brackets_sync"] = None
     tid = body.get("ticket_id")
     if tid and str(body.get("kind") or "") == "amend":
         # The human {kind: amend} path ("moved stop/target"): the phone trail's resting levels follow it.

@@ -1,0 +1,41 @@
+{
+ "checks": [
+  {
+   "call": "__ex.bracketsRead()",
+   "expect": {
+    "state": "read",
+    "layout": "cards",
+    "n_rows": 6,
+    "rows": [
+     {"symbol": "SOL", "side": "short", "reduce": true, "type": "tp", "group": "OCO", "qty": 10.81, "trigger": 86.16, "trigger_dp": 2, "limit": null, "limit_kind": "market"},
+     {"symbol": "SOL", "side": "short", "reduce": true, "type": "sl", "group": "OCO", "qty": 10.81, "trigger": 81.43, "trigger_dp": 2},
+     {"symbol": "SOL", "side": "long", "reduce": false, "type": "limit", "group": "OTOCO", "trigger": null, "limit_kind": null},
+     {"symbol": "ETH", "side": "short", "reduce": true, "type": "tp", "qty": 0.66, "trigger": 2090.38},
+     {"symbol": "ETH", "side": "short", "reduce": true, "type": "sl", "qty": 0.66, "trigger": 2098.03},
+     {"symbol": "ETH", "side": "long", "reduce": false, "type": "limit", "group": "OTOCO"}
+    ]
+   },
+   "note": "PHONE-LIVE-ACCOUNT-FEED: the REAL Open orders view (two working entries, each with its TP and SL OCO legs) reads every card: type, closing side + Reduce, quantity and trigger price (numbers replaced by the fixture tool)"
+  },
+  {
+   "call": "(function(){var b=document.querySelectorAll('button[aria-label*=\"ETH/USD\"]');b.forEach(function(x){x.setAttribute('aria-label',x.getAttribute('aria-label').replace('ETH/USD','BTC/USD'));});var r=__ex.bracketsRead();b.forEach(function(x){x.setAttribute('aria-label',x.getAttribute('aria-label').replace('BTC/USD','ETH/USD'));});return r;})()",
+   "expect": {"state": "unparsed"},
+   "note": "a card whose ticker disagrees with its own controls makes the whole read unparsed, never guessed"
+  },
+  {
+   "call": "(function(){var x=Array.prototype.slice.call(document.querySelectorAll('[role=region] span')).filter(function(e){return !e.children.length&&e.textContent.trim()==='81.43';})[0];x.textContent='-';var r=__ex.bracketsRead();x.textContent='81.43';return r;})()",
+   "expect": {"state": "unparsed"},
+   "note": "a stop-loss card with no trigger number is unparsed (a stop we cannot read is never a missing stop)"
+  },
+  {
+   "call": "(function(){var r=document.querySelector('[role=region][aria-label=\"Open orders\"]');r.setAttribute('aria-label','Markets');var x=__ex.bracketsRead();r.setAttribute('aria-label','Open orders');return x;})()",
+   "expect": {"state": "no_table"},
+   "note": "the same cards outside a region labelled Open orders are not read"
+  },
+  {
+   "call": "__ex.positionsRead().state",
+   "expect": "re:^(no_table|read|empty_unconfirmed)$",
+   "note": "the Open orders view is not read as positions (no Positions-labelled region with cards)"
+  }
+ ]
+}

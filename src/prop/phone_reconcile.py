@@ -214,6 +214,89 @@ def clean_closed(account_id: str, rows: Any) -> List[Dict[str, Any]]:
     return out
 
 
+_BRACKET_TYPES = ("tp", "sl", "limit", "market", "other")
+
+
+def clean_brackets(account_id: str, rows: Any) -> List[Dict[str, Any]]:
+    """Validate the phone's Open orders rows (PHONE-LIVE-ACCOUNT-FEED). Strict like ``clean_positions``: the phone posts
+    rows only on a CLEAN read, so a malformed row is a bad report, not a row to drop (dropping a stop row would read
+    as "no stop at the venue")."""
+    if not isinstance(rows, list) or len(rows) > _MAX_ROWS:
+        raise ValueError("account_status.brackets must be a list of at most %d rows" % _MAX_ROWS)
+    out = []
+    for r in rows:
+        if not isinstance(r, dict):
+            raise ValueError("account_status.brackets row must be an object")
+        side, typ = _side(r.get("side")), str(r.get("type") or "")
+        if side is None or typ not in _BRACKET_TYPES:
+            raise ValueError("account_status.brackets row needs a side and a known type")
+        trig = _num(r.get("trigger"), signed=False)
+        if typ in ("tp", "sl") and (trig is None or trig <= 0):
+            raise ValueError("account_status.brackets tp/sl row needs a positive trigger")
+        dp = r.get("trigger_dp")
+        venue = re.sub(r"[^A-Za-z0-9 ./-]", "", str(r.get("symbol") or ""))[:24]
+        out.append({"symbol": bot_symbol(account_id, venue), "venue_symbol": venue, "side": side, "type": typ,
+                    "reduce": r["reduce"] if isinstance(r.get("reduce"), bool) else None,
+                    "qty": _num(r.get("qty"), signed=False), "trigger": trig,
+                    "trigger_dp": dp if isinstance(dp, int) and not isinstance(dp, bool) and 0 <= dp <= 10 else None})
+    return out
+
+
+def _level_differs(journal: Any, venue: float, dp: Optional[int]) -> bool:
+    """The venue level differs from the journaled one at the precision the venue SHOWED (half its last digit), so a
+    journal stop of 81.4786 and a terminal showing 81.48 are the same stop; no journaled level always differs."""
+    j = _num(journal, signed=False)
+    if j is None:
+        return True
+    tol = 0.5 * 10 ** (-dp) if dp is not None else max(1e-9, abs(venue) * 1e-6)
+    return abs(j - venue) > tol + 1e-12
+
+
+def sync_venue_brackets(account_id: str, brackets: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Bring the journal's stop / target of every OPEN position on ``account_id`` to what the venue shows
+    (PHONE-LIVE-ACCOUNT-FEED; operator 2026-11-10: three hand-moves of a SOL stop never reached the journal).
+
+    For each open position (``find_open_prop_positions``, the derivation the risk read uses) the venue bracket is the
+    ONE closing-side (opposite side, not marked non-reduce) ``sl`` / ``tp`` row with the same bot symbol. Exactly one ->
+    MEASURED venue level; when it differs from the journaled fill level (at the precision shown) it is journaled through
+    the normal ``kind: amend`` report (source ``phone_venue_read``) and the phone trail follows it
+    (``phone_trail.note_human_amend``). None -> ``missing`` (the venue shows no such order: reported, never written as
+    "no stop"); more than one -> ``ambiguous`` (nothing written). Only called on a CLEAN Open orders read."""
+    from src.prop.prop_monitor_pulse import find_open_prop_positions
+    from src.prop.prop_report import ingest_report
+
+    out: Dict[str, Any] = {"positions": [], "amended": [], "missing": [], "ambiguous": []}
+    for p in find_open_prop_positions(account_id=account_id):
+        sym, dirn = str(p.get("symbol") or "").upper(), str(p.get("direction") or "").lower()
+        if dirn not in ("long", "short"):
+            continue
+        closing = "short" if dirn == "long" else "long"
+        item: Dict[str, Any] = {"ticket_id": p.get("ticket_id"), "symbol": sym, "direction": dirn}
+        move: Dict[str, float] = {}
+        for typ, key in (("sl", "fill_sl"), ("tp", "fill_tp")):
+            hits = [b for b in brackets if b.get("symbol") == sym and b.get("side") == closing and b.get("type") == typ
+                    and b.get("reduce") is not False]
+            if len(hits) == 1:
+                item[f"venue_{typ}"] = hits[0]["trigger"]
+                if _level_differs(p.get(key), hits[0]["trigger"], hits[0].get("trigger_dp")):
+                    move[typ] = hits[0]["trigger"]
+            elif not hits:
+                out["missing"].append(f"{sym} {dirn} {typ}")
+            else:
+                out["ambiguous"].append(f"{sym} {dirn} {typ} x{len(hits)}")
+        if move:
+            r = ingest_report({"kind": "amend", "account_id": account_id, "symbol": sym, "direction": dirn,
+                               **move, "source": "phone_venue_read",
+                               "reason": "venue Open orders read (PHONE-LIVE-ACCOUNT-FEED)"})
+            item["amended"] = {"moved": move, "ok": bool(r.get("ok"))}
+            out["amended"].append(f"{sym} {dirn} " + " ".join(f"{k}={v}" for k, v in sorted(move.items())))
+            if p.get("ticket_id"):
+                from src.prop import phone_trail
+                phone_trail.note_human_amend(account_id, str(p["ticket_id"]), move.get("sl"), move.get("tp"))
+        out["positions"].append(item)
+    return out
+
+
 def account_unrealized(positions: List[Dict[str, Any]]) -> Optional[float]:
     """The account's unrealized P&L from a CLEAN Positions read: the venue's own per-position figures summed, 0.0
     when the venue says flat, None when any position carries no figure (a partial sum is not the account's)."""

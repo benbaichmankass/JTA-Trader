@@ -785,6 +785,13 @@ class MainActivity : Activity() {
         if (pos != null && pos.optString("state") == "side_unread" && p === fg) pos = sheetSides(p, pos)
         val closed = if (pos?.optString("state") == "read") readView(p, "^(closed orders|trades)\\b", "__ex.closedRead()") else null
         if (closed != null) { p.js("__ex.clickText(${q("^positions\\b")})"); delay(600) }
+        // PHONE-LIVE-ACCOUNT-FEED (operator 2026-11-10 "that should basically be a live feed"): with a position open, the
+        // VENUE's brackets are read off the Open orders view every pass (each TP / SL is its own card there; the
+        // Positions cards show no levels), so a hand-moved stop reaches the server within one cadence. Tab clicks only
+        // (a read-only view), never inside a ticket (checked above); Positions is shown again afterwards.
+        val nPos = pos?.optJSONArray("rows")?.length() ?: 0
+        val brk = if (pos?.optString("state") == "read" && nPos > 0) readView(p, "^open orders\\b", "__ex.bracketsRead()") else null
+        if (brk != null) { p.js("__ex.clickText(${q("^positions\\b")})"); delay(600) }
         val ps = pos?.optString("state") ?: "unanswered"
         // A Closed orders read that was not clean is dumped like a Positions miss (state prefixed "closed_"), so its
         // layout can be fixed from evidence; the server keeps the latest miss per account.
@@ -806,7 +813,7 @@ class MainActivity : Activity() {
             // the page as the reader saw it (PHONE-EXEC-OBSERVABLE-1018): a miss is fixed from this, not from a 40-char line
             cap(CaptureRun("positions", ps), p, "positions_miss", false, (ps + " " + (pos?.optString("detail") ?: "")).trim())
         }
-        api.accountStatus(bal, eq, if (eqRead != null) "equity" else "portfolio", d(a, "unrealized"), pos, closed)
+        api.accountStatus(bal, eq, if (eqRead != null) "equity" else "portfolio", d(a, "unrealized"), pos, closed, brk)
         return if (ps == "read") "posted" else "posted_pos_$ps"
     }
 
