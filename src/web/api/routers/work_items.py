@@ -50,6 +50,38 @@ def _store() -> ws.WorkStore:
 WORK_STORE_HEADER = "X-Work-Store-Token"
 
 
+def accepted_work_store_tokens(now: float | None = None) -> list[str]:
+    """Every value the work-store token check accepts right now (VM-CHANGE-LEDGER 4b, the rotation dual-accept).
+
+    ``WORK_STORE_TOKEN`` always; ``WORK_STORE_TOKEN_PREV`` too while ``WORK_STORE_TOKEN_PREV_UNTIL`` (ISO-8601 UTC)
+    is in the future, so a rotation never cuts off a holder of the old value mid-switch. A PREV with no parseable
+    UNTIL is NOT accepted (an open-ended second token is not a rotation). Empty list = writes not configured.
+    """
+    import time as _time
+    from datetime import datetime as _dt
+
+    out = [t for t in [os.environ.get("WORK_STORE_TOKEN", "").strip()] if t]
+    prev = os.environ.get("WORK_STORE_TOKEN_PREV", "").strip()
+    until = os.environ.get("WORK_STORE_TOKEN_PREV_UNTIL", "").strip()
+    if out and prev and until:
+        try:
+            exp = _dt.fromisoformat(until.replace("Z", "+00:00")).timestamp()
+        except ValueError:
+            exp = 0.0
+        if (now if now is not None else _time.time()) < exp:
+            out.append(prev)
+    return out
+
+
+def work_store_token_ok(presented: str) -> bool:
+    """Constant-time match of ``presented`` against every accepted value."""
+    p = (presented or "").strip()
+    ok = False
+    for t in accepted_work_store_tokens():
+        ok = hmac.compare_digest(p, t) or ok
+    return bool(p) and ok
+
+
 def _require_work_store_token(authorization: str | None, x_work_store_token: str | None = None) -> None:
     """Fail-closed token gate (design G2), the ``_require_decision_write_token`` pattern.
 
@@ -58,20 +90,19 @@ def _require_work_store_token(authorization: str | None, x_work_store_token: str
     When the dedicated header is present it alone decides: a wrong value there is 401 even if
     ``Authorization`` would pass, so the two carriers can never disagree silently.
     """
-    expected = os.environ.get("WORK_STORE_TOKEN", "").strip()
-    if not expected:
+    if not accepted_work_store_tokens():
         raise HTTPException(status_code=503, detail="work store is not configured to accept writes")
     if x_work_store_token is not None:
         if not x_work_store_token.strip():
             raise HTTPException(status_code=401, detail=f"empty {WORK_STORE_HEADER}")
-        if not hmac.compare_digest(x_work_store_token.strip(), expected):
+        if not work_store_token_ok(x_work_store_token):
             raise HTTPException(status_code=401, detail="bad token")
         return
     if not authorization:
         raise HTTPException(status_code=401, detail="missing authorization")
     if not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=401, detail="bearer scheme required")
-    if not hmac.compare_digest(authorization[7:].strip(), expected):
+    if not work_store_token_ok(authorization[7:]):
         raise HTTPException(status_code=401, detail="bad token")
 
 

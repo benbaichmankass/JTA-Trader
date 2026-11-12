@@ -1448,8 +1448,8 @@ def _require_diag_token(request: Request) -> None:
     # header is present it alone decides.
     ws_tok = request.headers.get("X-Work-Store-Token")
     if ws_tok is not None:
-        ws_expected = os.environ.get("WORK_STORE_TOKEN", "").strip()
-        if ws_expected and ws_tok.strip() and hmac.compare_digest(ws_tok.strip(), ws_expected):
+        from src.web.api.routers.work_items import work_store_token_ok  # rotation dual-accept (VM-CHANGE-LEDGER)
+        if work_store_token_ok(ws_tok):
             return
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

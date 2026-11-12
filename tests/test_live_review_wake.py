@@ -122,5 +122,5 @@ def test_prop_package_carries_all_its_accounts_and_the_prop_label():
     d = pkg("pkg-prop", acct="breakout_2")
     d["accounts"] = ["breakout_2", "tradeify_1", "velotrade_1"]
     p = lrw.plan(due(d), [], CFG, NOW)
-    assert p["kind"] == "wake" and p["entries"][0]["accounts"] == ["breakout_2", "tradeify_1", "velotrade_1"]
+    assert p["kind"] == "wake" and p["entries"][0]["accounts"] == ["tradeify_1", "velotrade_1"]  # breakout_2 on ice 2026-11-12 (#25306)
     assert wt.ltr_label(p["entries"]) == "prop"
