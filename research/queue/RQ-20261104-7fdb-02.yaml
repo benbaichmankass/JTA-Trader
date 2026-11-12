@@ -47,6 +47,9 @@ power:
   feasibility:
     source: none
     accrual_basis: The fresh span accrues in calendar time; on/after not_before the run replays public dukascopy candles; nothing else accrues.
+evidence_class:  # EVIDENCE-CLASS-BACKFILL 2026-11-11, rule E1 (scripts/research/backfill_evidence_class.py)
+  holdout: holdout_window
+  claim: edge
 decision_rule:
   id: RULE-RQ-20261104-7fdb-02
   registered_at: '2026-11-04'

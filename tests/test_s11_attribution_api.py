@@ -79,8 +79,13 @@ def _insert_trade(
 
 class TestNetPositionsEndpoint:
     def _call(self, db_path: str):
-        from src.web.api.routers.attribution import get_net_positions
-        return get_net_positions(db_path=db_path)
+        # The route takes no path any more (SEC-API-DBPATH-PARAM): point the
+        # module's canonical path at the test DB instead.
+        from pathlib import Path
+        from unittest import mock
+        from src.web.api.routers import attribution
+        with mock.patch.object(attribution, "_DB_PATH", Path(db_path)):
+            return attribution.get_net_positions()
 
     def test_missing_db_returns_empty(self, tmp_path):
         data = self._call(str(tmp_path / "nonexistent.db"))
@@ -151,8 +156,11 @@ class TestNetPositionsEndpoint:
 
 class TestStrategyAttributionEndpoint:
     def _call(self, db_path: str):
-        from src.web.api.routers.attribution import get_strategy_attribution
-        return get_strategy_attribution(db_path=db_path)
+        from pathlib import Path
+        from unittest import mock
+        from src.web.api.routers import attribution
+        with mock.patch.object(attribution, "_DB_PATH", Path(db_path)):
+            return attribution.get_strategy_attribution()
 
     def test_missing_db_returns_empty_strategies(self, tmp_path):
         data = self._call(str(tmp_path / "nonexistent.db"))
@@ -255,3 +263,40 @@ class TestStrategyAttributionEndpoint:
         s = data["strategies"][0]
         assert s["losing_trades"] == 1
         assert s["winning_trades"] == 0
+
+
+# ---------------------------------------------------------------------------
+# SEC-API-DBPATH-PARAM: the query string can no longer choose the SQLite file
+# ---------------------------------------------------------------------------
+
+class TestDbPathParamRemoved:
+    def test_handlers_take_no_db_path(self):
+        import inspect
+        from src.web.api.routers import attribution
+        for fn in (attribution.get_net_positions, attribution.get_strategy_attribution):
+            assert "db_path" not in inspect.signature(fn).parameters
+
+    def test_query_string_db_path_is_ignored_over_http(self, tmp_path):
+        from pathlib import Path
+        from unittest import mock
+        from fastapi.testclient import TestClient
+        from src.web.api import main as api_main
+        from src.web.api.routers import attribution
+        real = str(tmp_path / "journal.db")
+        _init_db(real)
+        _insert_trade(real, strategy_name="ours", status="closed", pnl=1.0)
+        other = str(tmp_path / "other.db")
+        _init_db(other)
+        _insert_trade(other, strategy_name="theirs", status="closed", pnl=1.0)
+        with mock.patch.object(attribution, "_DB_PATH", Path(real)):
+            r = TestClient(api_main.app).get(
+                "/api/bot/strategy/attribution", params={"db_path": other})
+        assert r.status_code == 200
+        names = {s["strategy"] for s in r.json()["strategies"]}
+        assert names == {"ours"}
+
+    def test_attribution_read_cannot_create_a_file(self, tmp_path):
+        from src.web.api.routers.attribution import _query_attribution
+        missing = tmp_path / "nope.db"
+        assert _query_attribution(missing) == []
+        assert not missing.exists()

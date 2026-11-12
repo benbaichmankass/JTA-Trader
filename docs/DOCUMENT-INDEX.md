@@ -551,6 +551,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/design/boot-read-size-PROPOSAL.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/desk-entry-review-redesign-2026-11-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/site-auth-consumer-inventory-2026-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
+| `docs/design/ui-workplan-2026-11-questions.md` | plan | unknown | — | never | `name:workplan-is-a-forward-commitment / not-assessed` | — |
 | `docs/design/ui-workplan-2026-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | UI workplan 2026-11: design for OAuth sign-in enforcement, prop/chart bracket history, performance table + P&L chart, insights ledger, models/strategies tables, sidebar, topic map |
 | `docs/design/close-confirmation-scope-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/design/d1b-live-time-stop-PROPOSAL.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
@@ -636,6 +637,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/decision-brief-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/soak-decisions-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/soak-verdicts-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/plans/thursday-planning-2026-11-11-readbacks.md` | evidence | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/ui-upgrade-1-auth-and-keys-design.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/plans/UI-TWO-SURFACE-DESIGN-2026-11.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | UI-TWO-SURFACE-DESIGN: trading dashboard (SPA, SSE push, browser-direct chart feed, health cards) vs management console (Claude artifact fed by a read-only JTA MCP connector on the trainer VM); SPA page inventory; notes/comments/sample paths; build order T1-T4/C1-C5/R1; operator decisions U1-U6. Design only. |
 | `docs/plans/weekly-planning-protocol.md` | instruction | live | — | 2026-11-06 | `name:policy-prescribes / not-assessed` | — |
@@ -643,6 +645,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/WORK-STORE-DESIGN-2026-11.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | WORK-STORE-DESIGN: one register (items+events SQLite on the VM behind the API) replacing checklist+pipeline files; bot-output ledgers off the repo; measured repo-flow inventory; deploy path (keep ict-git-sync); migration dry-run; build order; operator decisions D1-D9. Design only. |
 | `docs/proposals/sizer-margin-base-2026-10-28.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/proposals/tier2-sweep-candle-anchoring-2026-07-30.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/reference/account-capability-matrix.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
 | `docs/reference/backtest-data-loading.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
 | `docs/reference/bot-api-reference.md` | lookup | live | — | 2026-09-07 | `dir:reference-is-lookup / ci:canonical-doc-coherence-ACTIVE_DOCS` | — |
 | `docs/reference/data-model.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
@@ -782,6 +785,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/exits-round2-1026.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Exits round 2: design-vs-edge read of the graded eba2 fails, the 9 underpowered units, and the d7e6-01..11 units it earns. |
 | `docs/research/exit-path-metrics-2026-10-22.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | In-trade path measures vs giveback (per-bar state, stop-room control), outside research, and the b7e1 unit set. |
 | `docs/research/frontier-scan-2026-10-11.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | First frontier scan: ranked model/strategy shortlist behind RQ-20261011-9da8-01..07. |
+| `docs/research/frontier-scan-2026-11-11.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Weekly frontier scan 2026-11-11 (ML-FRONTIER-PREP-20261111): triage, K1 market-residual ENTRY proposal, M41 verdict, lever-row dispositions. |
 | `docs/research/idea-family-review-2026-10-16.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Lane IDEA-REVIEW-1016: family-level A/B/C review of ideas closed since 2026-09-22 with outside sources; units RQ-20261016-1fa6-01..10; proposed negative-result protocol. |
 | `docs/research/R5-REMAINING-CORPUS-COST-STACK-2026-09-22.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | R7 lane: regrades the 40 of 52 evidence records that carried no `cost_stack`. Answers both live operator questions and carries proposals P1-P5, applied by nobody. `unknown` is correct and deliberate — the author wrote it, nobody else has read it. |
 | `docs/research/R6-VM-RESIDENCY-VERDICT-2026-08-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
