@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "LTR-CALENDAR-CLASSES (b), built on the manager's decision of 2026-11-12 12:38Z: a review-only event-class map in config/live_trade_review.yaml, read by src/runtime/live_review_due.py alone. The trader's event risk (news_events -> pipeline.py) reads config/economic_calendar.yaml only and is unchanged (a test pins that). Tier 2, landing hold. Stacked on #25302 (needs its memoized profile lookup); merge #25302 first.",
+  "why": "Measured 2026-11-12 12:16Z: the calendar event read could_not_look on 14 of 20 open packages ('no event classes declared'). With this map all 15 open symbols get classes; an unprofiled symbol still reads could_not_look."
+}

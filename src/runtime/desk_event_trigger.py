@@ -422,7 +422,11 @@ def run_once(*, cfg: Optional[Dict[str, Any]] = None, now_fn: Callable[[], datet
     chosen: Optional[Dict[str, Any]] = None
 
     def label(disp: str, **kw: Any) -> None:
-        _append(labels_path, dict({"at": now.isoformat(), "fired": chosen, "disposition": disp}, **kw))
+        # Every label written AFTER a build carries that build's wall time, per-stage outcome and isolation path, so
+        # the successful-build distribution accrues (before this only could_not_build did; the receipt is overwritten
+        # each pass). Labels written before a build (no credential) carry none.
+        timing = {k: rec[k] for k in ("build_wall_s", "stages", "isolation") if k in rec}
+        _append(labels_path, {**{"at": now.isoformat(), "fired": chosen, "disposition": disp}, **timing, **kw})
         state["seen_keys"] = (state["seen_keys"] + [chosen["key"]])[-500:]
         _write_state(state_path, state)
 

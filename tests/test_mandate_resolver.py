@@ -871,12 +871,12 @@ EQ_R3 = {EQ_LEG: {"verdict": "consistent", "from_account": "alpaca_live", "basis
 
 def test_afford_refuses_a_leg_whose_one_share_exceeds_the_account(repo):
     """The 2026-09-28 fire, reproduced: FIRE on a funded book (control), REFUSE
-    at the $193.56 measured on alpaca_live 2026-09-30T05:36Z. One field differs."""
+    at the $197.28 measured on alpaca_live 2026-09-30T05:36Z. One field differs."""
     ok = _s1s2(repo(setups=GLD_LIKE, r3=_r3(EQ_R3)), leg=EQ_LEG, account="alpaca_live")
     assert ok["verdict"] == "FIRE", ok
     assert ok["evidence"]["affordability"]["setups_sized"] == 10
     res = _s1s2(repo(setups=GLD_LIKE, r3=_r3(EQ_R3),
-                     snapshots={"bybit_2": 100_000.0, "alpaca_live": 193.56}),
+                     snapshots={"bybit_2": 100_000.0, "alpaca_live": 197.28}),
                 leg=EQ_LEG, account="alpaca_live")
     _refused(res, "R-AFFORD")
     assert "0 of 10" in res["detail"] and "whole-unit" in res["detail"]
@@ -886,7 +886,7 @@ def test_afford_refuses_a_leg_whose_one_share_exceeds_the_account(repo):
 def test_afford_is_decided_before_cost_fidelity(repo):
     """An unaffordable leg must not come back NEEDS_DATA "collect more fills"."""
     res = _s1s2(repo(setups=GLD_LIKE, r3=_r3({EQ_LEG: "insufficient_n"}),
-                     snapshots={"bybit_2": 100_000.0, "alpaca_live": 193.56}),
+                     snapshots={"bybit_2": 100_000.0, "alpaca_live": 197.28}),
                 leg=EQ_LEG, account="alpaca_live")
     _refused(res, "R-AFFORD")
 
@@ -911,7 +911,7 @@ def test_afford_reprices_old_setups_to_the_latest_committed_price(repo):
                       entry_time="2025-01-01 00:00:00+00:00") for r in GLD_LIKE[EQ_LEG][:-1]]
     rows = {EQ_LEG: old_cheap + GLD_LIKE[EQ_LEG][-1:]}
     res = _s1s2(repo(setups=rows, r3=_r3(EQ_R3),
-                     snapshots={"bybit_2": 100_000.0, "alpaca_live": 193.56}),
+                     snapshots={"bybit_2": 100_000.0, "alpaca_live": 197.28}),
                 leg=EQ_LEG, account="alpaca_live")
     _refused(res, "R-AFFORD")
 
@@ -936,7 +936,7 @@ def test_afford_needs_data_when_equity_is_not_measured(repo, snap):
 
 def test_afford_on_the_real_committed_gld_record(tmp_path):
     """The real 2026-09-28 gld_pullback_1h record, source_run, mandates and
-    accounts from THIS tree, with alpaca_live at its measured $193.56 (fresh
+    accounts from THIS tree, with alpaca_live at its measured $197.28 (fresh
     timestamp, so the test does not rot as the committed snapshot ages)."""
     import shutil
     leg = "gld_pullback_1h"
@@ -953,7 +953,7 @@ def test_afford_on_the_real_committed_gld_record(tmp_path):
         soak.append(leg)
     _w(tmp_path, mr.ACCOUNTS_REL, accts, as_yaml=True)
     _w(tmp_path, f"{mr.ACCOUNT_SNAPSHOT_DIR_REL}/alpaca_live.json",
-       _snapshot("alpaca_live", 193.56))
+       _snapshot("alpaca_live", 197.28))
     # The 2026-10-15 amendment (bar.soak_passed) checks the mechanical soak BEFORE
     # affordability; give the COPY a passed contract so R-AFFORD is still reached.
     _w(tmp_path, mr.SOAKS_REL, {"soaks": [{
@@ -964,15 +964,15 @@ def test_afford_on_the_real_committed_gld_record(tmp_path):
     _refused(res, "R-AFFORD")
     aff = res["evidence"]["affordability"]
     assert aff["setups_sized"] == 0 and aff["setups_permitted"] > 0
-    assert aff["ref_price"] > 193.56
+    assert aff["ref_price"] > 197.28
 
 
 _DIAG_ALPACA = {"captured_at": "2026-09-30T05:36:08.978715+00:00",
                 "requested_account_id": "alpaca_live",
                 "accounts": [{"account_id": "alpaca_live", "exchange": "alpaca", "error": None,
                               "status_flags": {"shorting_enabled": False, "capacity": {
-                                  "multiplier": "1", "buying_power": "193.56",
-                                  "cash": "193.56", "equity": "193.56"}}}]}
+                                  "multiplier": "1", "buying_power": "197.28",
+                                  "cash": "197.28", "equity": "197.28"}}}]}
 
 
 def test_snapshot_writer_commits_no_balance(repo):
@@ -983,7 +983,7 @@ def test_snapshot_writer_commits_no_balance(repo):
     snap = snapw.build(_DIAG_ALPACA, "alpaca_live", root, legs=[EQ_LEG])
     text = json.dumps(snap)
     assert not any(k in snap for k in ("equity_usd", "buying_power_usd", "cash_usd"))
-    assert "193.56" not in text and snap["balance_committed"] is False
+    assert "197.28" not in text and snap["balance_committed"] is False
     assert snap["schema"] == mr.AFFORD_SNAPSHOT_SCHEMA and snap["captured_at"] == _DIAG_ALPACA["captured_at"]
     ans = snap["legs"][EQ_LEG]
     assert ans["setups_sized"] == 0 and ans["affordable"] is False and ans["refuse"]
@@ -1007,7 +1007,7 @@ def _answer_for(root, leg, equity):
 
 def test_afford_v2_answer_matches_the_balance_path(repo):
     """The committed per-leg answer reaches the same verdict the balance path does, both ways."""
-    for equity, want in ((1e6, "FIRE"), (193.56, mr.REFUSE)):
+    for equity, want in ((1e6, "FIRE"), (197.28, mr.REFUSE)):
         root = repo(setups=GLD_LIKE, r3=_r3(EQ_R3))
         legacy = _s1s2(root, leg=EQ_LEG, account="alpaca_live")  # default fixture: 100k equity
         ans = _answer_for(root, EQ_LEG, equity)
@@ -1016,7 +1016,7 @@ def test_afford_v2_answer_matches_the_balance_path(repo):
         assert res["verdict"] == want, res
         assert legacy["verdict"] == "FIRE"
         if want == mr.REFUSE:
-            assert "193.56" not in res["detail"]
+            assert "197.28" not in res["detail"]
 
 
 @pytest.mark.parametrize("mutate,why", [
@@ -1042,8 +1042,8 @@ def test_afford_v2_stale_snapshot_is_needs_data(repo):
 
 
 def test_no_balance_redacts_money_figures():
-    t = mr._no_balance("0 of 5 size on alpaca_live (equity $193.56, buying power $193.56, whole-unit venue) at 393.01")
-    assert "193.56" not in t and "393.01" in t
+    t = mr._no_balance("0 of 5 size on alpaca_live (equity $197.28, buying power $197.28, whole-unit venue) at 393.01")
+    assert "197.28" not in t and "393.01" in t
 
 
 def test_committed_snapshots_carry_no_balance():

@@ -1,0 +1,161 @@
+# Hand-authored 2026-11-12 by lane SLV-ITERATION (am:TRADING; reports to AM-TRADING, cc the manager). The decision rule is
+# registered BEFORE any run of this unit. Gates this adds or changes: none.
+id: RQ-20261112-cdb2-03
+title: 'SLV-ITERATION lever: CHANNEL LENGTH of slv_trend_1h (donchian 16 / 20 / 32 / 40 vs the declared 24) on the full 2019-01..2026-10 history'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+kind: experiment
+question: donchian 24 was the best of 5 variants in the 2026-06-20 sweep; RQ-20261103-5a03-02 tested 16 and 32 on 2025-04..2026-10 only (n ~70).
+  On the full history with tp_r 6.0 and the 1.5 ATR stop, how does net-of-cost R respond to channel length 16 / 20 / 32 / 40?
+why_this_matters: 'A single best-of-5 pick on one window, with a monotone-but-fold-unstable reading on the short window (lever map: ''overfit
+  until a holdout says otherwise''). A smooth response around 24 supports the setting; a spike at 24 says it was fitted.'
+iteration:
+  subject: slv_trend_1h
+  subject_kind: strategy_leg
+  from_result: comms/strategy_evidence/slv_trend_1h.json
+  verdict_read: pass_short_window
+  diagnosis: Live on real money since 2026-11-12 on a ~17-month record; full-history mean positive but unresolved (RQ-20261112-cdb2-01). Lever
+    map (research/levers/slv_trend_1h.yaml) reads entry and exit tested, filter / regime_gating / session / sizing_vs_cost untested.
+  hypothesis: stepping the entry lever one factor at a time moves net-of-cost R monotonically and fold-stably; a flat or spiky response is recorded
+    as no edge / overfit
+  attempt: 1
+  due_by: '2026-11-26'
+  design:
+    control: A (the leg as declared, tp_r 6.0)
+    kind: one-factor sweep around the control
+    levers:
+      slv_trend_1h: entry
+    lever_basis:
+      slv_trend_1h: lever_map_gap
+    why_this_lever:
+      slv_trend_1h: 'lever map: entry/donchian has only two points, on a ~17-month window, read as fold-unstable'
+    arms:
+      slv_trend_1h:
+      - - A
+        - tp_r=6.0
+      - - D16
+        - tp_r=6.0;donchian=16
+      - - D20
+        - tp_r=6.0;donchian=20
+      - - D32
+        - tp_r=6.0;donchian=32
+      - - D40
+        - tp_r=6.0;donchian=40
+  multiple_testing:
+    arms_counted: 5
+    variants_vs_control: 4
+    correction: Holm
+    note: every variant is fixed before the run; a best-of-k pass is a LEAD that needs a held-out read, never a finding
+design: structured
+levers_declared:
+- entry
+power:
+  expected_n: 380
+  min_detectable_effect: 0.43
+  effect_units: r_per_trade
+  sd: 2.94
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Paired variant-vs-control on the same calendar; control n ESTIMATED ~380 (RQ-20261112-5ab1-03 T6: n 438 over 2018-06..2026-10, scaled
+    to 2019-01). The 8.0 R materiality bar plus the 3-of-4 fold clause is the gate, not a significance test. MDE stated for the CONTROL''s own
+    per-trade mean at sd ~2.9 R: two-sided alpha 0.05, power 0.8: 2.80 x 2.94 / sqrt(380) = 0.42 R/trade, declared 0.43 (gate floor 362 <= 380). Floor 100.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public Dukascopy candles over a pinned window; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ-20261112-cdb2-03
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --grade sweep on slv_trend_1h, Dukascopy SLV CFD 1h, window 2019-01-01..2026-10-31 23:59,
+    one continuous harness pass per arm, net of the full cost stack the harness resolves for an Alpaca equity (fee 0 + 5.0 bps RT slippage + 0
+    funding). Per variant: delta net R vs the control A over the window, delta maxDD, and the number of 4 equal calendar folds in which it beats
+    A.'
+  rule: 'PASS (a LEAD, never applied here) IF some variant beats A by >= 8.0 R over the window (about 0.02 R/trade at A''s expected n) with maxDD
+    no worse than A''s AND >= 3 of 4 folds. FAIL IF none does at A''s n >= 100 (these settings are not better than the declared one; the lever
+    FAMILY stays open). INDETERMINATE IF A''s n < 100 or the producer failed. The result is appended to research/levers/slv_trend_1h.yaml either
+    way. Thresholds are not changed after any result. ADDITIONALLY reported, not graded: the response SHAPE across 16-20-24-32-40 (monotone /
+    peaked at 24 / flat / noisy).'
+  on_pass: Author ONE held-out confirmation unit for the selected variant (exit_lever_ablation --grade holdout, latest 25%), then a Tier-3 proposal
+    to AM-TRADING only if it confirms. No config change here.
+  on_fail: Record the flat or negative map; the declared setting stands. No config change.
+  what_it_does_not_do: 'Edits no config, roster or record; places no order. IN-SAMPLE: the control''s parameters were chosen on data inside this
+    window (docs/research/slv-trend-1h-param-provenance-2026-11-12.md), so a PASS is a LEAD that earns a held-out or fresh-span read before any
+    Tier-3 proposal, never a finding. Bars: Dukascopy SLV CFD 1h (INSTRUMENT_ETF_CFD_US_SLV_US_USD, bid), the repo''s adjudicated SLV mapping;
+    CFD hours and prices are a proxy for the SLV ETF, not its tape. The control A pins tp_r 6.0 (PR #25267''s value) so the unit reads the same
+    arm before and after that PR merges.'
+intervention_controls:
+  not_applicable: a config-exact harness parameter ablation on history, not an in-trade action
+practice_precedent: 'M2, M4 (docs/reference/trading-and-model-practice-principles.md): one-factor sensitivity before combinations, net of the
+  full cost stack, rule registered before the run, variants counted.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 60
+  why_runner: Fetches keyless public Dukascopy candles for a pinned window; reads no trainer data; CPU only.
+  basis: 5 harness passes over one ~8-year 1h fetch; estimate from RQ-20261112-5ab1-03.
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  bucket: structural
+  basis: 'stand-in: an iteration lever on a leg trading real money; not a P&L measurement.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - slv_trend_1h
+  - --arm
+  - A=tp_r=6.0
+  - --arm
+  - D16=tp_r=6.0;donchian=16
+  - --arm
+  - D20=tp_r=6.0;donchian=20
+  - --arm
+  - D32=tp_r=6.0;donchian=32
+  - --arm
+  - D40=tp_r=6.0;donchian=40
+  - --days
+  - '2200'
+  - --start
+  - '2019-01-01'
+  - --end
+  - 2026-10-31 23:59
+  - --non-crypto-source
+  - dukascopy
+  - --grade
+  - sweep
+  - --baseline
+  - A
+  - --delta-r
+  - '8.0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '100'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261112-cdb2-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261112-cdb2-01
+- RQ-20261104-7fdb-02
+- RQ-20261106-010
+- SLV-ITERATION

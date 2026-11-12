@@ -632,7 +632,7 @@ def multiplexed_signal_builder(
             )
             return signal
 
-        logger.info("Multiplexer: '%s' returned no actionable signal", strategy_name)
+        logger.debug("Multiplexer: '%s' returned no actionable signal", strategy_name)
 
     logger.info("Multiplexer: no strategy fired — staying flat")
     return {"symbol": symbol, "side": "none",
@@ -1033,7 +1033,8 @@ def run_pipeline(
     S-012 PR C5: roster is turtle_soup + vwap. Default is the multiplexer
     so unset / unknown values still iterate the active strategies.
     """
-    logger.info("Pipeline start")
+    # HEALTH-20261112-LIVE-DISK-OTHER-GROWERS: per-tick no-op lines are DEBUG; the decision itself is in signal_audit.jsonl.
+    logger.debug("Pipeline start")
 
     # S-MLOPT-S13 (Phase 3.1): per-bar regime scoring. Fires once per tick so
     # every shadow-stage regime head logs predictions on its own
@@ -1108,7 +1109,7 @@ def run_pipeline(
         else:
             builder = multiplexed_signal_builder
 
-    logger.info("Using strategy builder: %s", strategy_name)
+    logger.debug("Using strategy builder: %s", strategy_name)
     with _phase("signal_build"):
         signal = builder(settings)
     _write_ict_signals_from_meta(signal, settings)
@@ -1142,7 +1143,7 @@ def run_pipeline(
     logger.info("Generated signal: %s", signal)
 
     if signal.get("side") not in ("buy", "sell"):
-        logger.info("No actionable signal; skipping order placement.")
+        logger.debug("No actionable signal; skipping order placement.")
         result = {
             "status": "skipped",
             "reason": skip_reason(signal),

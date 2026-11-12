@@ -374,3 +374,45 @@ def test_an_incomplete_survivor_stage_is_not_adopted(tmp_path, monkeypatch):
     shutil.rmtree(tmp_path / "jobs" / "j1" / "stage" / "comms" / "desk" / "packets")
     http = _Http()
     assert "adopted_job" not in _pass(tmp_path, logs, http) and http.posts == []
+
+def _run_timed(tmp_path, http, commit=("c" * 40, None), toggle_on=True, monkeypatch=None):
+    logs = tmp_path / "logs"
+    st, _ = _stage(tmp_path)
+
+    def build(f, cfg, text):
+        det.LAST_STAGES[:] = [{"stage": "builder", "outcome": "exit 0", "wall_s": 41.5},
+                              {"stage": "publisher", "outcome": "exit 0", "wall_s": 2.5}]
+        det.LAST_PATH = "unit"
+        return st, None
+    res = det.run_once(cfg=CFG, now_fn=lambda: NOW, bars_fn=lambda s, tf, n: {"AVAXUSDT": bars(last={"open": 100.0, "high": 104.0, "low": 99.8, "close": 103.9})},
+                       auth_fn=lambda: "tok", fetch=lambda url, auth: (404, None), http=http, pr_fn=lambda: 7,
+                       build_fn=build, commit_fn=lambda *a, **k: commit, calendar_fn=None, logs=logs, receipt=tmp_path / "r.json")
+    lab = [json.loads(x) for x in (logs / "trigger_labels.jsonl").read_text().splitlines()]
+    return res, [x for x in lab if x["disposition"] != "not_strongest"]
+
+
+def test_a_posted_label_carries_the_build_timing(tmp_path):
+    res, lab = _run_timed(tmp_path, _Http())
+    (x,) = lab
+    assert x["disposition"] == "posted" and x["stages"][0]["wall_s"] == 41.5 and x["isolation"] == "unit"
+    assert isinstance(x["build_wall_s"], float) and res["stages"] == x["stages"]
+
+
+def test_a_refused_commit_and_a_failed_post_labels_carry_the_build_timing_too(tmp_path):
+    _, lab = _run_timed(tmp_path, _Http(), commit=(None, 403))
+    (x,) = lab
+    assert x["disposition"] == "could_not_commit" and x["stages"][1]["stage"] == "publisher" and "build_wall_s" in x
+    _, lab2 = _run_timed(tmp_path / "b", _Http(code=500))
+    (y,) = lab2
+    assert y["disposition"] == "could_not_post" and y["stages"] and y["isolation"] == "unit"
+
+
+def test_a_label_written_before_any_build_carries_no_timing(tmp_path):
+    logs = tmp_path / "logs"
+    det.run_once(cfg=CFG, now_fn=lambda: NOW, bars_fn=lambda s, tf, n: {"AVAXUSDT": bars(last={"open": 100.0, "high": 104.0, "low": 99.8, "close": 103.9})},
+                 auth_fn=lambda: None, fetch=lambda url, auth: (404, None), http=_Http(), pr_fn=lambda: 7,
+                 build_fn=lambda *a: (None, "must not build"), commit_fn=lambda *a, **k: ("c" * 40, None), calendar_fn=None,
+                 logs=logs, receipt=tmp_path / "r.json")
+    lab = [json.loads(x) for x in (logs / "trigger_labels.jsonl").read_text().splitlines()]
+    nc = [x for x in lab if x["disposition"] == "could_not_commit"]
+    assert len(nc) == 1 and "build_wall_s" not in nc[0] and "stages" not in nc[0]

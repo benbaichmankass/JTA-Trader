@@ -74,6 +74,10 @@ TELEMETRY_EVENTS = ("r_milestone", "new_peak", "giveback", "near_target")
 #: Events computed from market inputs (history / funding / calendar).
 MARKET_EVENTS = ("swing", "vol_regime", "funding", "calendar")
 
+#: vol_regime's entry ATR when the path history lacks the entry bar: the strategy's signal-time ATR stamped on the
+#: package (order_packages.meta.atr). Always named in the event's ``why`` so it never reads as path-measured.
+ENTRY_ATR_PACKAGE_META = "package_meta"
+
 #: Pre-screen events (LTR-PRACTICE-REDESIGN): evaluated only when configured.
 #: The per-package auto mandate's review cadence (src/runtime/ltr_auto_mandate.py::CADENCE_EVENT).
 CADENCE_EVENT = "mandate_cadence"
@@ -617,6 +621,23 @@ def _base_of(symbol: Any) -> str:
     return base
 
 
+def review_calendar_classes(symbol: Any, base: str, cc: Dict[str, Any], now: datetime) -> Set[str]:
+    """LTR-CALENDAR-CLASSES (b): the REVIEW-ONLY event classes for *symbol* from ``events.calendar`` in
+    config/live_trade_review.yaml -- ``review_classes_by_base[base]``, else
+    ``review_classes_by_asset_class[<asset class of its instrument profile>]``. An unprofiled symbol (or an
+    unreadable profile) gets none, so it stays could_not_look. The trader's event risk never reads this."""
+    by_base = cc.get("review_classes_by_base") or {}
+    if base in by_base:
+        return {str(c).lower() for c in by_base.get(base) or []}
+    try:
+        if profile_exchange(symbol) is None:
+            return set()
+    except Exception:  # noqa: BLE001  # allow-silent: no default; the event stays could_not_look with its reason
+        return set()
+    _, cls, _ = package_market_state(symbol, now)
+    return {str(c).lower() for c in (cc.get("review_classes_by_asset_class") or {}).get(cls) or []}
+
+
 def _is_perp(symbol: Any) -> bool:
     try:
         from src.runtime.execution_costs import is_perp
@@ -684,16 +705,29 @@ def market_events(row: Dict[str, Any], ctx: Optional[Dict[str, Any]],
         else:
             entry_bar = last_ts - timedelta(seconds=bars_held * tf_seconds)
             late = (first_ts - entry_bar).total_seconds()
-            if late > tf_seconds + 60:
-                miss("vol_regime", f"history starts {late / tf_seconds:.1f} bars after entry")
+            a1 = _f(atrs[-1]["atr"])
+            a0, src = None, None
+            if late <= tf_seconds + 60:
+                a0, src = _f(atrs[0]["atr"]), "path_history"
             else:
-                a0, a1 = _f(atrs[0]["atr"]), _f(atrs[-1]["atr"])
+                # LTR-VOLREGIME-ENTRY-ATR (AM-TRADING decision 2026-11-12 13:50Z): the path history lacks the
+                # entry bar, so take the entry ATR the strategy stamped on the package (order_packages.meta.atr,
+                # computed at signal time), LABELLED as such so it never reads as path-measured. Review path only.
+                venue = ctx.get("venue") or {}
+                m = _f(venue.get("meta_atr")) if venue.get("state") == "read" else None
+                if m is not None and m > 0:
+                    a0, src = m, ENTRY_ATR_PACKAGE_META
+                else:
+                    miss("vol_regime", f"history starts {late / tf_seconds:.1f} bars after entry "
+                                       "and the package carries no entry ATR")
+            if a0 is not None and a0 > 0 and a1 is not None:
                 ratio = a1 / a0
+                tag = "" if src == "path_history" else f" (entry_atr_source={src}: not path-measured)"
                 up, dn = float(vr.get("expand_ratio", 1.5)), float(vr.get("contract_ratio", 0.67))
                 if ratio >= up:
-                    out.append(("vol_regime", "expand", f"ATR now/entry {ratio:.2f} >= {up:g}"))
+                    out.append(("vol_regime", "expand", f"ATR now/entry {ratio:.2f} >= {up:g}{tag}"))
                 elif ratio <= dn:
-                    out.append(("vol_regime", "contract", f"ATR now/entry {ratio:.2f} <= {dn:g}"))
+                    out.append(("vol_regime", "contract", f"ATR now/entry {ratio:.2f} <= {dn:g}{tag}"))
 
     # -- funding: crypto perps only ------------------------------------------
     sym = row.get("symbol")
@@ -725,6 +759,7 @@ def market_events(row: Dict[str, Any], ctx: Optional[Dict[str, Any]],
     else:
         base = _base_of(sym)
         classes = {str(c).lower() for c in (cal.get("classes") or {}).get(base) or []}
+        classes |= review_calendar_classes(sym, base, cc, now)
         if not classes:
             miss("calendar", f"no event classes declared for {base}")
         else:
@@ -958,7 +993,13 @@ def prescreen(row: Dict[str, Any], prior: Dict[str, Any], ctx: Optional[Dict[str
         need = stall_bars(sc, tf_seconds)
         max_peak = float(sc.get("max_peak_r", 0.5))
         if held is None or peak_r is None:
-            miss("stall", tel_reason or "bars_held / peak_r unknown")
+            # thin_window = fewer than 2 bars since entry (trail_decay): a YOUNG package, said so, so the
+            # done bar counts it as youth (AM-TRADING OK 2026-11-12 14:32Z; honest label, no new behaviour).
+            if tel_reason is None and peak_r is None and held is not None \
+                    and row.get("peak_state") == "thin_window":
+                miss("stall", f"peak_r thin_window: {int(held)} bar(s) since entry; need 2")
+            else:
+                miss("stall", tel_reason or "bars_held / peak_r unknown")
         else:
             hit = held >= need and peak_r < max_peak
             lvl = int(held // need) * need if hit else None

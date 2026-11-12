@@ -10,6 +10,9 @@ policy -- a rule, a model, the desk -- is scored on the same states and reported
     python3 scripts/research/tm_bench.py score --test-corpus v1 --train-corpus <dir> --rule s_offline --out <dir>
     python3 scripts/research/tm_bench.py transfer --test-corpus v1 --train-corpus <dir> --fractions 0,0.25,1,4 --out <dir>
     python3 scripts/research/tm_bench.py corpus --test-corpus v1 --out <dir>          # freeze + hash, nothing scored
+    python3 scripts/research/tm_bench.py score --test-corpus <v1 glob> --train-corpus corpus_v2 --train-sample-mult 4 --seed 11 \
+        --expect-train-corpus bp2-f4271084b120 ...   # v1 train fold + a seeded, trade-grouped, purged, de-duplicated 4x sample of
+                                                      # corpus v2 (RQ-20261112-3144-02); corpus_v2/ from corpus_v2_materialise.py
 
 ONE ENGINE (row note, binding: "the labeler imports the cf core ... never rebuilt"). Neither CF-B0-ENGINE-LIFT's
 `cf_core` nor the ML-EXIT-ACTIONGRID-LABELS replay exists on main (both rows `queued`, 2026-10-30). The narrowest
@@ -201,7 +204,9 @@ def resolve_corpus(spec: str, *, work: Path, synthetic_seed: int = 5) -> Tuple[l
                    man.get("timeframes", {}).get(leg)) for leg in man["legs"]]
         return corpus, {"source": f"frozen corpus {man['corpus_id']} ({p})", "frozen_manifest": man}
     if p.is_dir():
-        return load_combined(p), {"source": f"combined shard dir {p}"}
+        mp = p / "materialise.json"   # written by corpus_v2_materialise.py: the manifest id + trade_key hash check of this directory
+        return load_combined(p), {"source": f"combined shard dir {p}",
+                                  "materialise": json.loads(mp.read_text()) if mp.exists() else None}
     corpus, skipped = fpp.load_paths_glob(spec)
     return [(leg, pr, tr, ((tr[0].get("meta") or {}).get("timeframe") if tr else None) or _leg_tf(leg))
             for leg, pr, tr, _ in corpus], {"source": f"emitted path files {spec}", "failed": skipped}
@@ -226,7 +231,7 @@ def build_corpus(corpus: list, meta: Dict[str, Any], cost_fn=None) -> Dict[str, 
     legs = sorted({t["leg"] for t in trades})
     h = hashlib.sha256(json.dumps({"trades": rows, "legs": legs}).encode()).hexdigest()
     return {"corpus_id": f"tmb-{h[:12]}", "trades": trades, "legs": reports, "source": meta.get("source"),
-            "failed": meta.get("failed") or [], "runs": meta.get("runs") or {},
+            "failed": meta.get("failed") or [], "runs": meta.get("runs") or {}, "materialise": meta.get("materialise"),
             "parity_ok": bool(reports) and not meta.get("failed") and all(r["state"] == "included" for r in reports)}
 
 
@@ -368,6 +373,13 @@ def rule_delta(t: dict, L: Dict[str, Any], rule: dict) -> float:
 
 
 # --------------------------------------------------------------------------- folds (cross-symbol purge)
+def trade_identity(t: dict) -> str:
+    """The trade as an event: leg | symbol | entry instant | direction. trade_key strings are NOT comparable across corpora
+    (v1 keys carry the harness strategy name `htf_pullback_trend_2h|ADAUSDT|..`, v2 keys the leg name
+    `ada_pullback_2h|ADAUSDT|..`), so a key-string de-dup of v2 against v1 matched nothing (MEASURED 2026-11-12, TMBENCH-V2-TRAIN-INPUT)."""
+    return f"{t['leg']}|{t['symbol']}|{t['entry_time'].value}|{str(t['trade_key']).rsplit('|', 1)[-1]}"
+
+
 def make_folds(test: List[dict], train: List[dict], k: int, same: bool) -> Dict[str, Any]:
     ent = np.array([t["entry_time"].value for t in test], dtype=np.int64)
     edges = np.linspace(ent.min(), ent.max() + 1, k + 1)
@@ -375,7 +387,7 @@ def make_folds(test: List[dict], train: List[dict], k: int, same: bool) -> Dict[
     emb: Dict[str, int] = {}
     for t in train:
         emb[t["leg"]] = max(emb.get(t["leg"], 0), int(t["exit_time"].value - t["entry_time"].value))
-    test_keys = {t["trade_key"] for t in test}
+    test_keys = {t["trade_key"] for t in test} | {trade_identity(t) for t in test}
     folds = []
     for f in range(k):
         lo_, hi_ = edges[f], edges[f + 1]
@@ -384,7 +396,7 @@ def make_folds(test: List[dict], train: List[dict], k: int, same: bool) -> Dict[
         for i, t in enumerate(train):
             if same and fid[i] == f:
                 continue
-            if not same and t["trade_key"] in test_keys:
+            if not same and (t["trade_key"] in test_keys or trade_identity(t) in test_keys):
                 n_dup += 1
                 continue
             e0, e1 = t["entry_time"].value, t["exit_time"].value + emb[t["leg"]]
@@ -396,7 +408,49 @@ def make_folds(test: List[dict], train: List[dict], k: int, same: bool) -> Dict[
                       "test": te, "train": tr, "n_purged": n_purged, "n_dedup": n_dup})
     return {"k": k, "folds": folds, "embargo_hours_by_leg": {lg: round(v / 3.6e12, 2) for lg, v in sorted(emb.items())},
             "rule": "train trade purged if [entry, exit + leg max hold] overlaps the test fold window (any symbol); "
-                    "train trade_keys present in the test corpus dropped"}
+                    "train trades whose trade_key or (leg, symbol, entry, direction) identity is in the test corpus dropped"}
+
+
+# --------------------------------------------------------------------------- --train-sample-mult (RQ-20261112-3144-02)
+def sample_train_v2(T: List[dict], V2: List[dict], k: int, mult: float, seed: int) -> Dict[str, Any]:
+    """Per outer fold: the v1 train fold (make_folds same-corpus: purged by the leg embargo, test fold excluded) plus a seeded,
+    trade-grouped random sample of `mult` x (the v1 train-fold trade count) from V2 (all of the pool if smaller).
+    The V2 pool is make_folds's cross-corpus train list: cross-symbol purged ([entry, exit + the leg's max hold in V2] overlaps
+    the test fold window) and de-duplicated against the test corpus (trade_key OR leg/symbol/entry/direction identity).
+    Trades are sampled WHOLE (an index = one trade; all its states then enter the fit together, never a subset of states),
+    without replacement, from trades that have at least one decision state, by np.random.default_rng([seed, fold]).
+    Returns {"folds": [{fold, test, v1_train, v2_sample, ...}], "k", "mult", "seed", "embargo_hours_by_leg_v2"}."""
+    fl_self, fl_x = make_folds(T, T, k, True), make_folds(T, V2, k, False)
+    out = []
+    for fs, fx in zip(fl_self["folds"], fl_x["folds"]):
+        base = [i for i in fs["train"] if T[i]["bars"] > 1]
+        pool = [i for i in fx["train"] if V2[i]["bars"] > 1]
+        size = min(len(pool), int(round(mult * len(base))))
+        pick = np.random.default_rng([int(seed), int(fs["fold"])]).choice(len(pool), size=size, replace=False) if size else []
+        out.append({"fold": fs["fold"], "lo": fs["lo"], "hi": fs["hi"], "test": fs["test"], "v1_train": list(fs["train"]),
+                    "v2_sample": sorted(pool[int(j)] for j in pick), "n_v1_train_with_states": len(base),
+                    "n_v2_pool": len(pool), "n_v2_target": int(round(mult * len(base))), "n_v2_purged": fx["n_purged"],
+                    "n_v2_dedup": fx["n_dedup"], "n_v1_purged": fs["n_purged"]})
+    return {"k": k, "mult": mult, "seed": seed, "folds": out, "embargo_hours_by_leg_v2": fl_x["embargo_hours_by_leg"],
+            "embargo_hours_by_leg_v1": fl_self["embargo_hours_by_leg"]}
+
+
+class _ComboEv:
+    """Events for [v1 trades..., v2 trades...]: v1 from the already-built list, v2 built on first use (146k trades x 18 R1 columns
+    is not held in memory; only sampled trades are ever read)."""
+
+    def __init__(self, ev1: List[dict], V2: List[dict], fe_legs: Sequence[str], block: Optional[str]):
+        self.ev1, self.V2, self.fe, self.block, self.cache = ev1, V2, list(fe_legs), block, {}
+
+    def __getitem__(self, i: int) -> dict:
+        n1 = len(self.ev1)
+        if i < n1:
+            return self.ev1[i]
+        if i not in self.cache:
+            e = fpp.events(self.V2[i - n1], self.fe)
+            add_feature_block([e], [self.V2[i - n1]], self.block)
+            self.cache[i] = e
+        return self.cache[i]
 
 
 # --------------------------------------------------------------------------- check-ins
@@ -703,25 +757,43 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
           checkins: Sequence[str] = tuple(CHECKINS), act_margin_r: float = ACT_MARGIN_R,
           logit_act_p: float = LOGIT_ACT_P, act_margin_grid: Sequence[float] = (),
           calibration: bool = False, inner_folds: int = 0, actions: Optional[Sequence[str]] = None,
-          n_perm: int = 200, feature_block: Optional[str] = None, horizon: Optional[int] = None) -> Dict[str, Any]:
-    """`feature_block` "path_state": append path_state_features to X1 (RQ-20261101-78fc-04). `calibration`: Stage-A per-action OOS rank calibration of the lgbm arm. `inner_folds` N > 0: the lgbm act margin is chosen per
+          n_perm: int = 200, feature_block: Optional[str] = None, horizon: Optional[int] = None,
+          train_sample_mult: Optional[float] = None) -> Dict[str, Any]:
+    """`train_sample_mult` K (with a train corpus): each fold trains on the v1 train fold PLUS a seeded, trade-grouped sample of
+    K x its trade count from the train corpus, purged and de-duplicated (`sample_train_v2`); without it the train corpus alone is
+    the training set (the transfer / s_offline construction). `feature_block` "path_state": append path_state_features to X1 (RQ-20261101-78fc-04). `calibration`: Stage-A per-action OOS rank calibration of the lgbm arm. `inner_folds` N > 0: the lgbm act margin is chosen per
     outer fold on N-fold out-of-fold predictions of the OUTER TRAIN set (no outer test row is touched; grid = `act_margin_grid` or
     INNER_MARGIN_GRID). `actions`: restrict the lgbm arm to these classes, or ["stage_a"] = the classes passing Stage A."""
     T = test["trades"]
     same = train is None
-    TR = T if same else train["trades"]
+    combo = (not same) and train_sample_mult is not None
+    V2 = None if same else train["trades"]
+    TR = T if same else (T + V2 if combo else V2)
     fe_legs = sorted({t["leg"] for t in T} | {t["leg"] for t in TR})
     ev = [fpp.events(t, fe_legs) for t in T]
-    ev_tr = ev if same else [fpp.events(t, fe_legs) for t in TR]
     add_feature_block(ev, T, feature_block)
-    if not same:
-        add_feature_block(ev_tr, TR, feature_block)
+    sample: Optional[Dict[str, Any]] = None
+    if combo:
+        ev_tr = _ComboEv(ev, V2, fe_legs, feature_block)
+        sample = sample_train_v2(T, V2, k, float(train_sample_mult), seed)
+        n1 = len(T)
+        fl = {"k": k, "embargo_hours_by_leg": sample["embargo_hours_by_leg_v1"],
+              "rule": "v1 train fold (leg-embargo purged) + a seeded trade-grouped sample of v2; every train trade of either corpus "
+                      "purged if [entry, exit + its leg max hold] overlaps the test fold window (any symbol); v2 trades whose "
+                      "trade_key or (leg, symbol, entry, direction) is in the test corpus dropped",
+              "folds": [{"fold": f["fold"], "lo": f["lo"], "hi": f["hi"], "test": f["test"],
+                         "train": f["v1_train"] + [n1 + j for j in f["v2_sample"]],
+                         "n_purged": f["n_v1_purged"] + f["n_v2_purged"], "n_dedup": f["n_v2_dedup"]} for f in sample["folds"]]}
+    else:
+        ev_tr = ev if same else [fpp.events(t, fe_legs) for t in TR]
+        if not same:
+            add_feature_block(ev_tr, TR, feature_block)
+        fl = make_folds(T, TR, k, same)
     labs = [label_trade(t, cost, horizon) for t in T]
-    fl = make_folds(T, TR, k, same)
     labs_tr: Dict[int, Any] = {}
 
     def lab_tr(i: int):
-        if same:
+        if same or (combo and i < len(T)):
             return labs[i]
         if i not in labs_tr:
             labs_tr[i] = label_trade(TR[i], cost, horizon)
@@ -758,7 +830,7 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
         if not f["test"] or not f["train"]:
             continue
         tr = f["train"]
-        trlabs = {i: lab_tr(i) for i in tr} if not same else {i: labs[i] for i in tr}
+        trlabs = {i: lab_tr(i) for i in tr}
         fold_models[f["fold"]] = fit_learners(ev_tr, trlabs, tr, list(kinds) + ["b2"], seed)
         fold_medwin[f["fold"]] = med_win(TR, tr)
         mdl = fold_models[f["fold"]]
@@ -987,6 +1059,13 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
     # ceiling check: every policy arm <= the action-value oracle, per trade (v1 single-action policies)
     oracle_oos = float(np.mean([oracle_ceiling[i] for _f, i in oos])) if oos else None
     return {"corpus_id": test["corpus_id"], "train_corpus_id": None if same else train["corpus_id"],
+            "train_sample": None if sample is None else {
+                "mult": sample["mult"], "seed": sample["seed"], "embargo_hours_by_leg_v2": sample["embargo_hours_by_leg_v2"],
+                "per_fold": [{kk: f[kk] for kk in ("fold", "n_v1_train_with_states", "n_v2_target", "n_v2_pool", "n_v1_purged",
+                                                    "n_v2_purged", "n_v2_dedup")} | {"n_v2_sampled": len(f["v2_sample"])}
+                             for f in sample["folds"]],
+                "sample_sha256_by_fold": {str(f["fold"]): hashlib.sha256(
+                    "\n".join(TR[len(T) + j]["trade_key"] for j in f["v2_sample"]).encode()).hexdigest() for f in sample["folds"]}},
             "n_trades": len(T), "n_states": int(sum(e["n"] for e in ev)), "n_oos_trades": len(oos),
             "engine": ENGINE_SOURCE, "engine_fidelity": {"share_within_tol": None if fid is None else round(fid, 4),
                                                          "tol_r": FIDELITY_TOL_R},
@@ -1236,6 +1315,60 @@ def selfcheck(verbose: bool = True) -> Dict[str, Any]:
         fl2 = make_folds(T, T, 6, False)
         checks.append(("same trade_key in train and test is de-duplicated", sum(f["n_dedup"] for f in fl2["folds"]) == 6 * len(T),
                        ""))
+        # 4. --train-sample-mult (RQ-20261112-3144-02): seeded, trade-grouped, purged, de-duplicated, sized K x v1 per fold
+        corp, meta = resolve_corpus("synthetic", work=Path(td))
+        allt = build_corpus(corp, meta, cost_fn=cx)["trades"]
+        corp2, meta2 = resolve_corpus("synthetic-planted", work=Path(td), synthetic_seed=9)
+        pool2 = build_corpus(corp2, meta2, cost_fn=cx)["trades"]
+        T4 = allt[:150]
+        V4 = [dict(t, symbol="OTHERUSDT", trade_key=t["trade_key"].replace("|", "|v2|", 1)) for t in pool2[:600]]
+        # planted duplicates of v1 trades under a DIFFERENT key string (the real v1 vs v2 situation: strategy name vs leg name)
+        dups = [dict(t, trade_key="LEGSTAMP|" + t["trade_key"].split("|", 1)[1]) for t in T4[:25]]
+        same_key = [dict(t) for t in T4[25:30]]
+        V4 = V4 + dups + same_key
+        S1 = sample_train_v2(T4, V4, 6, 2.0, seed=11)
+        S2 = sample_train_v2(T4, V4, 6, 2.0, seed=11)
+        S3 = sample_train_v2(T4, V4, 6, 2.0, seed=12)
+        pick = lambda S: [f["v2_sample"] for f in S["folds"]]  # noqa: E731
+        checks.append(("train-sample: seeded -- same seed gives the same sample, another seed a different one",
+                       pick(S1) == pick(S2) and pick(S1) != pick(S3) and any(pick(S1)), f"seed 11 sizes {[len(x) for x in pick(S1)]}"))
+        fe4 = sorted({t["leg"] for t in T4 + V4})
+        ev_ = _ComboEv([fpp.events(t, fe4) for t in T4], V4, fe4, None)
+        whole = all(len(set(f["v2_sample"])) == len(f["v2_sample"]) and all(
+            ev_[len(T4) + j]["n"] == V4[j]["bars"] - 1 > 0 for j in f["v2_sample"]) for f in S1["folds"])
+        checks.append(("train-sample: trade-grouped -- whole trades, no repeats, every state of a sampled trade is in the fit",
+                       whole, f"{sum(len(f['v2_sample']) for f in S1['folds'])} trades over 6 folds"))
+        fx4 = make_folds(T4, V4, 6, False)
+        emb = {lg: v * 3.6e12 for lg, v in fx4["embargo_hours_by_leg"].items()}
+        leak4, n_ov = 0, 0
+        for f in S1["folds"]:
+            lo, hi = pd.Timestamp(f["lo"]).value, pd.Timestamp(f["hi"]).value
+            leak4 += sum(1 for j in f["v2_sample"]
+                         if V4[j]["entry_time"].value < hi and V4[j]["exit_time"].value + emb[V4[j]["leg"]] >= lo)
+            n_ov += sum(1 for t in V4 if t["entry_time"].value < hi and t["exit_time"].value + emb[t["leg"]] >= lo)
+        checks.append(("train-sample: purged -- no sampled trade overlaps its test fold window + embargo (and the pool had overlappers)",
+                       leak4 == 0 and n_ov > 0 and all(f["n_v2_purged"] > 0 for f in S1["folds"]),
+                       f"{leak4} leaks; {n_ov} pool trades overlap a window; purged {[f['n_v2_purged'] for f in S1['folds']]}"))
+        ids_v1 = {trade_identity(t) for t in T4}
+        hit4 = sum(1 for f in S1["folds"] for j in f["v2_sample"] if trade_identity(V4[j]) in ids_v1 or V4[j]["trade_key"] in {t["trade_key"] for t in T4})
+        checks.append(("train-sample: de-duplicated vs v1 -- by trade_key AND by (leg, symbol, entry, direction) under a different key string",
+                       hit4 == 0 and all(f["n_v2_dedup"] == 30 for f in S1["folds"]),
+                       f"{hit4} duplicates sampled; dropped per fold {[f['n_v2_dedup'] for f in S1['folds']]} of 30 planted (25 re-keyed + 5 same key)"))
+        sized = all(len(f["v2_sample"]) == min(f["n_v2_pool"], int(round(2.0 * f["n_v1_train_with_states"]))) for f in S1["folds"]) and \
+            any(len(f["v2_sample"]) == int(round(2.0 * f["n_v1_train_with_states"])) for f in S1["folds"])
+        big = sample_train_v2(T4, V4, 6, 1000.0, seed=11)
+        checks.append(("train-sample: size = K x v1 train-fold trades, or the whole purged pool if smaller",
+                       sized and all(len(f["v2_sample"]) == f["n_v2_pool"] for f in big["folds"]),
+                       f"target {[f['n_v2_target'] for f in S1['folds']]} pool {[f['n_v2_pool'] for f in S1['folds']]}"))
+        # the score() path uses that same sampler (its per-fold sample hash == the one recomputed here), and runs end to end
+        sc4 = score(dict(corpus_id="t4", trades=T4), dict(corpus_id="v4", trades=V4), k=6, n_boot=50, draws=2, seed=11, cost=cost,
+                    kinds=("lgbm_action_value",), checkins=("every_bar",), calibration=True, n_perm=10, train_sample_mult=2.0,
+                    horizon=12)
+        rec_h = {str(f["fold"]): hashlib.sha256("\n".join(V4[j]["trade_key"] for j in f["v2_sample"]).encode()).hexdigest()
+                 for f in S1["folds"]}
+        checks.append(("train-sample: score() trains on exactly that sample and reports it",
+                       sc4["train_sample"]["sample_sha256_by_fold"] == rec_h and sc4["calibration"] is not None,
+                       f"folds {[f['n_v2_sampled'] for f in sc4['train_sample']['per_fold']]}"))
     ok = all(c[1] for c in checks)
     if verbose:
         for lbl, c, d in checks:
@@ -1265,6 +1398,25 @@ def _load(spec: Optional[str], out: Path) -> Optional[Dict[str, Any]]:
     return build_corpus(corp, meta)
 
 
+def corpus_expectations(test: Dict[str, Any], train: Optional[Dict[str, Any]], samp: Optional[Dict[str, Any]],
+                        a: argparse.Namespace) -> Optional[str]:
+    """The registered INDETERMINATE clauses about the corpora (RULE-RQ-20261112-3144-02): test corpus id, train corpus id with
+    its manifest hash matching, and the de-duplicated pool size after purge. Returns the reason, or None when all hold / none asked."""
+    why = []
+    if a.expect_test_corpus and test["corpus_id"] != a.expect_test_corpus:
+        why.append(f"test corpus {test['corpus_id']} is not {a.expect_test_corpus}")
+    if a.expect_train_corpus:
+        m = (train or {}).get("materialise") or {}
+        if m.get("corpus_id") != a.expect_train_corpus or m.get("trade_key_sha256_match") is not True:
+            why.append(f"train corpus is not {a.expect_train_corpus} with its manifest trade_key hash matching "
+                       f"(materialise: id {m.get('corpus_id')}, match {m.get('trade_key_sha256_match')})")
+    if a.min_train_trades:
+        pools = [f["n_v2_pool"] for f in (samp or {}).get("per_fold", [])]
+        if not pools or min(pools) < a.min_train_trades:
+            why.append(f"fewer than {a.min_train_trades} de-duplicated trades after purge (per-fold pools {pools})")
+    return "; ".join(why) or None
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("cmd", choices=("selfcheck", "score", "transfer", "corpus"))
@@ -1289,11 +1441,21 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--inner-folds", type=int, default=0, help="lgbm act margin chosen on N inner out-of-fold predictions of the outer train set")
     ap.add_argument("--actions", default="", help="restrict the lgbm arm: comma list of action classes, or 'stage_a' (the Stage-A passers)")
     ap.add_argument("--n-perm", type=int, default=200)
+    ap.add_argument("--train-sample-mult", type=float, default=None,
+                    help="K: train on the v1 train fold PLUS a seeded (--seed), trade-grouped, purged, de-duplicated sample of "
+                         "K x its trade count from --train-corpus (all of it if smaller)")
+    ap.add_argument("--expect-test-corpus", default=None, help="the corpus_id the test corpus must have (else the rule reads indeterminate)")
+    ap.add_argument("--expect-train-corpus", default=None,
+                    help="the bp2-... corpus_id the train corpus directory must carry, manifest trade_key hash matching (else indeterminate)")
+    ap.add_argument("--min-train-trades", type=int, default=0,
+                    help="indeterminate if any fold's de-duplicated, purged train pool has fewer trades than this")
     ap.add_argument("--write-labels", action="store_true")
     ap.add_argument("--out", default=None)
     a = ap.parse_args(argv)
     if a.label == "horizon" and not (a.horizon and a.horizon > 0):
         ap.error("--label horizon needs --horizon N > 0")
+    if a.train_sample_mult is not None and not (a.train_sample_mult > 0 and a.train_corpus):
+        ap.error("--train-sample-mult needs K > 0 and --train-corpus")
     if a.cmd == "selfcheck":
         sc = selfcheck()
         if a.out:
@@ -1320,7 +1482,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     meas: Dict[str, Any] = {"schema": SCHEMA, "selfcheck": sc, "test_corpus": {k: test[k] for k in
                             ("corpus_id", "source", "legs", "failed", "runs", "parity_ok")}}
     if train:
-        meas["train_corpus"] = {k: train[k] for k in ("corpus_id", "source", "legs", "failed", "parity_ok")}
+        meas["train_corpus"] = {k: train[k] for k in ("corpus_id", "source", "legs", "failed", "parity_ok", "materialise")}
     verdict, why = "indeterminate", "no trades"
     if a.cmd == "transfer" and test["trades"] and train and train["trades"]:
         fr = [float(x) for x in a.fractions.split(",")]
@@ -1337,7 +1499,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                   act_margin_grid=[float(x) for x in a.act_margin_grid.split(",") if x],
                   calibration=a.calibration, inner_folds=a.inner_folds,
                   actions=[x for x in a.actions.split(",") if x] or None, n_perm=a.n_perm, feature_block=a.feature_block,
-                  horizon=(a.horizon if a.label == "horizon" else None))
+                  horizon=(a.horizon if a.label == "horizon" else None), train_sample_mult=a.train_sample_mult)
         if a.write_labels:
             with gzip.open(out / "labels.jsonl.gz", "wt", encoding="utf-8") as fh:
                 for t, L in zip(r["_trades"], r["_labs"]):
@@ -1374,6 +1536,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                    else f"S-OFFLINE per learner arm: {vs}")
         elif a.rule == "stage_a_folds":
             verdict, why = stage_a_folds(r.get("calibration"), a.folds, sc["pass"])
+            bad = corpus_expectations(test, train, r.get("train_sample"), a)
+            if bad:   # the rule's own INDETERMINATE clause (RULE-RQ-20261112-3144-02), stated verbatim; never a refusal to run
+                verdict, why = "indeterminate", f"{bad}; (otherwise {verdict}: {why})"
         else:
             verdict, why = "measured", "scored; no rule applied"
     v = {"verdict": verdict, "read_state": "measured" if test["trades"] else "unmeasured", "population": pop,
