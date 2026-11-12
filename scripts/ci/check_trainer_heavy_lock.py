@@ -75,6 +75,10 @@ HEAVY_ENTRYPOINTS = [
 # `.fit(`/`lgb.train(` it belongs above, and the reason recorded here is what
 # makes that reviewable.
 DECLARED_LIGHT = {
+    "scripts/research/tradeify_futures_fit.py":
+        "TRADEIFY-FUTURES-FRONTIER (units RQ-20261112-09d2-01..03): an ORB backtest, a survival Monte-Carlo and one scikit-learn "
+        "HistGradientBoosting meta-label fit on ~11.6k ledger rows of public Dukascopy 5m proxies; minutes of CPU in a lane container or "
+        "a GitHub runner, never needs_vm_data, never routed to the trainer.",
     "scripts/research/feature_impact.py":
         "FEATURE-IMPACT-MAP v0: loads 7 committed LightGBM model texts to read their split/gain importances (no training, no data), "
         "seconds of CPU on a GitHub runner (feature-impact.yml), never needs_vm_data, never routed to the trainer.",

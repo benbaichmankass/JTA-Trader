@@ -614,6 +614,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/ENGINEERING-PLAN-2026-09-21.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/ML-PROGRAMME-2026-10-28.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | ONE consolidated ML programme: models that manage trades, TM-BENCH, 8 tracks, proposed infra rows, learning ledger. |
 | `docs/plans/ML-CONSOLIDATION-2026-11-11.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | ML registry inventory (106 rows) by slot with a keep/review/retire proposal; Thursday input for ML-PROGRAMME-CONSOLIDATION. |
+| `docs/plans/ML-D3-HEAD-TO-HEAD-2026-11-12.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | D3 entry-slot head-to-head rules, declared demotion signals, D2 bake-off units and the step-4 process audit for ML-PROGRAMME-CONSOLIDATION. |
 | `docs/plans/ML-ROADMAP-MECE-2026-11.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | MECE map of ML model families onto the ten trade-lifecycle decisions (D1-D10): per-slot question/baseline/label/harness, position aggregator (Mastiff) design, research dependency graph, compute demand, ranked proposals for Thursday planning. Propose-only. |
 | `docs/plans/UI-SPA-HANDOFF-2026-11-12.md` | history | historical | — | 2026-11-12 | `name:record-of-a-past-state / dir:record-of-a-completed-session` | — |
 | `docs/plans/WATCHDOG-CONSOLIDATION-DESIGN-2026-11-06.md` | plan | unknown | — | never | `not-assessed / not-assessed` | — |
@@ -694,6 +695,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/e4-prop-sim-2026-10-30/PLAN.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/e4-prop-sim-2026-10-30/RESULT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-18g-event-entries-2026-10-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/desk-18h-event-packet-arm-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-event-calendar-scope-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-lifecycle-factorial-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/gh-actions-capacity-2026-10-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
@@ -793,6 +795,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/exit-path-metrics-2026-10-22.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | In-trade path measures vs giveback (per-bar state, stop-room control), outside research, and the b7e1 unit set. |
 | `docs/research/frontier-scan-2026-10-11.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | First frontier scan: ranked model/strategy shortlist behind RQ-20261011-9da8-01..07. |
 | `docs/research/frontier-scan-2026-11-11.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Weekly frontier scan 2026-11-11 (ML-FRONTIER-PREP-20261111): triage, K1 market-residual ENTRY proposal, M41 verdict, lever-row dispositions. |
+| `docs/research/frontier-scan-2026-11-12-surge.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Frontier surge pass 1 (lane FRONTIER-RESEARCH, 2026-11-12): the FRONTIER-Q sub-queue, sources, triage (RESID-ENTRY unit, SIGNATURE sequenced, METALABEL dropped on power). |
 | `docs/research/frontier-static-markets-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | FRONTIER-STATIC-MARKETS first pass: range/mean-reversion triage after the M22 retirement; units RQ-20261112-a7e8-01/-02. |
 | `docs/research/idea-family-review-2026-10-16.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Lane IDEA-REVIEW-1016: family-level A/B/C review of ideas closed since 2026-09-22 with outside sources; units RQ-20261016-1fa6-01..10; proposed negative-result protocol. |
 | `docs/research/R5-REMAINING-CORPUS-COST-STACK-2026-09-22.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | R7 lane: regrades the 40 of 52 evidence records that carried no `cost_stack`. Answers both live operator questions and carries proposals P1-P5, applied by nobody. `unknown` is correct and deliberate — the author wrote it, nobody else has read it. |
@@ -1099,6 +1102,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/prop-platform-automation-survey-2026-09-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/prop-dxtrade-firms-2026-09-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/prop-firm-scan-2026-10-04.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/prop-frontier-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/prop-firm-deepdive-2026-10-04.md` | evidence | unknown | — | 2026-10-04 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/relative-value-families-2026-10-07.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/research-loop-audit-2026-10-15.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Research loop as built vs intended: why results go ungraded, why intake reads exhausted, compute use, root causes and the proposed build (lane RESEARCH-LOOP-AUDIT-AND-DRIVER). |
@@ -1120,6 +1124,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/velotrade-api-executor-design-2026-10-05.md` | evidence | unknown | — | 2026-10-05 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/tradeify-portfolio-feasibility-2026-09-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/tradeify-platforms-2026-10-15.md` | evidence | unknown | — | 2026-10-15 | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/tradeify-futures-frontier-2026-11-12.md` | evidence | unknown | — | 2026-11-12 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/prop-dynamic-exits-faster-banking-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/research/prop-exit-evidence-2026-09-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/prop-firm-testing-tool-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
