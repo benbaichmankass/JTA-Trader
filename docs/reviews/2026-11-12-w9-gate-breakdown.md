@@ -1,5 +1,7 @@
 # w9 gate breakdown — four candidate gates, built as reports (2026-11-12)
 
+> **Doc status:** `unknown` · category `evidence` · last verified `2026-11-12` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
+
 **Gates this adds or changes: none.** Lane `ML-ADVISORY-SCOPE-GUARD` (w9 bundle), Tier 1.
 
 
