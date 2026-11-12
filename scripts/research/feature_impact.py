@@ -465,7 +465,7 @@ def _fit_score(train, test, feats: List[str], params: Dict[str, Any], tau: float
             "rank_ic": _spearman(pred, y)}
 
 
-def m3_rows(tab, feats: List[str], *, params: Dict[str, Any], tau: float, run_id: str, computed_at: str,
+def m3_rows(tab, feats: List[str], *, params: Dict[str, Any], tau: float,
             base: Dict[str, Any], gate_fn=None, label: str = "net_long", log=print) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     """Drop-column ablation on the held-out score of a MONEY head (long-side net-R regressor). Train rows < ABL_TRAIN_END
     minus a purge, test rows [ABL_TRAIN_END, DEV_END). For each feature and each feature FAMILY: refit without it (same
@@ -528,8 +528,7 @@ def m3_crypto(tab, run_id: str, computed_at: str, log=print):
             "stage": "family", "ml_type": "entry", "asset_class": "crypto_perp", "venue": "bybit (Binance USD-M proxy bars)",
             "timeframe": "1h", "horizon_bars": mde.HORIZON_H, "regime": "all", "provenance": "MEASURED",
             "window_end": DEV_END, "source_artifact": "scripts/research/ml_decision_entry.py::LGB_PARAMS"}
-    return m3_rows(tab, list(mde.FEATURES), params={**mde.LGB_PARAMS, "n_jobs": 4}, tau=tau, run_id=run_id,
-                   computed_at=computed_at, base=base, log=log)
+    return m3_rows(tab, list(mde.FEATURES), params={**mde.LGB_PARAMS, "n_jobs": 4}, tau=tau, base=base, log=log)
 
 
 def m3_equity(tab, feats: List[str], EQ, run_id: str, computed_at: str, log=print):
@@ -538,7 +537,7 @@ def m3_equity(tab, feats: List[str], EQ, run_id: str, computed_at: str, log=prin
             "stage": "family", "ml_type": "entry", "asset_class": "us_etf", "venue": "alpaca (1h RTH bars)", "timeframe": "1h",
             "horizon_bars": 24, "regime": "all", "provenance": "MEASURED", "window_end": DEV_END,
             "source_artifact": "scripts/research/ml_entry_equity.py::BASE_PARAMS (CONFIG A: own + cross-section + market context)"}
-    return m3_rows(tab, feats, params=dict(EQ.BASE_PARAMS), tau=tau, run_id=run_id, computed_at=computed_at, base=base,
+    return m3_rows(tab, feats, params=dict(EQ.BASE_PARAMS), tau=tau, base=base,
                    gate_fn=lambda t: EQ.session_mask(t["ts"]), log=log)
 
 
@@ -753,7 +752,7 @@ def _self_test_m3_regime() -> bool:
     try:
         rows, meta = m3_rows(tab, ["sig", "noise"], params={"n_estimators": 60, "learning_rate": 0.1, "num_leaves": 7,
                                                            "min_child_samples": 50, "verbose": -1, "n_jobs": 2, "random_state": 1},
-                             tau=0.0, run_id="T", computed_at="now", base={"schema": SCHEMA}, log=lambda *_: None)
+                             tau=0.0, base={"schema": SCHEMA}, log=lambda *_: None)
     finally:
         ABL_TRAIN_END, DEV_END = old
     ic = {r["feature"]: r for r in rows if r["measure"] == "abl_rank_ic" and r["ablation_unit"] == "feature"}
