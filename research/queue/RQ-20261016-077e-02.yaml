@@ -33,6 +33,9 @@ power:
   feasibility:
     source: none
     accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+evidence_class:  # EVIDENCE-CLASS-BACKFILL 2026-11-11, rule E1 (scripts/research/backfill_evidence_class.py)
+  holdout: holdout_window
+  claim: edge
 decision_rule:
   id: RULE-RQ-20261016-077e-02
   statistic: 'scripts/research/exit_lever_ablation.py --grade holdout on trend_donchian_eth_4h, window 2020-07-01 .. 2026-10-15
