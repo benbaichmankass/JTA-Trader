@@ -1,0 +1,166 @@
+{
+ "account_reads": [
+  {
+   "account_id": "tradeify_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "flag only; venue SL 89.105 / TP 78.964 match the package"
+  },
+  {
+   "account_id": "velotrade_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "flag only; SL 89.105 matches, venue TP 76.477 differs from package 78.96364; reset is PROP-BRACKET-APPLY #25016, not this row"
+  }
+ ],
+ "accounts": [
+  "tradeify_1",
+  "velotrade_1"
+ ],
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "tighten_r": null,
+  "within_bound": null
+ },
+ "context_flags": [
+  "state: open_r null in packet; ESTIMATED ~+2.84R (tradeify upnl 28.37/6.82 SOL, entry 87.64, risk 1.4646/SOL); peak ESTIMATED ~+4.36R (low 81.27); not broker-measured",
+  "priced_options: could_not_price; live_review_outcomes.py at open 2.85/peak 4.36/18 bars (SOL leg, short): hold n=2, every tighten insufficient_n or invalid_level, so the table is not evidence; judgement only",
+  "prior_forecast: 11-11 22:35Z target 81.25 not reached, invalidation 86.20 not touched (bars since: high 85.13); carried forward with p_target raised 0.45 to 0.55 on the lost 83.11 long-stop bid",
+  "atr_ratio: 4h ATR now 1.69 vs entry 0.976 = 1.73 (>=1.5, volatility elevated); TP 78.96 is 2.6 ATR below price",
+  "correlated: other open shorts ETH x2, ADA, XRP plus GLD/IAUM/GDX/MGC/MHG; the crypto shorts are one beta bet; opposing ml_entry longs QLD/TQQQ/QQQ negative R",
+  "tighten_bias: tightens are flattered by stop fills and advice-only; a structure stop at 86.20 would lock ~+0.98R but the leg has not invalidated",
+  "would_be_call: with mechanics match this is HOLD + judgement (conf 0.55); recorded as flag_mechanics only because velotrade TP 76.477 != package",
+  "packet_defect: priced_options could_not_price 1/1",
+  "packet_defect: state.open_r context_null:state.open_r 1/1",
+  "packet_defect: mechanics verdict_match_did_not_read_venue_tp 1/1"
+ ],
+ "disposition": {
+  "action_issue": null,
+  "applied_at": null,
+  "mandate": null,
+  "route": "operator_ask",
+  "verified_readback": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.733,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "forecast": {
+  "thesis": "4h and 1d downtrend intact (4h ADX 43.9, 1d 37.7); the 11-11 bounce failed at 85.84 under the 86.13 pre-flush high and the 20:00Z bar printed 85.13/82.12, close 83.22. The opposing ml_entry SOL longs stopped at 83.11, so the bid that held 83 is gone. Continuation retests the 81.27 flush low; the 78.96 TP needs a break below it. A 4h close above 86.20 invalidates.",
+  "direction": "with_trade",
+  "target_px": 81.27,
+  "p_target": 0.55,
+  "invalidation_px": 86.2,
+  "horizon_bars": 18,
+  "timeframe": "4h",
+  "evidence": [
+   "context_v3.chart last_close 83.22, swing low 81.27 (-1.15 ATR), bar 20:00Z H85.13 L82.12",
+   "htf 1d ADX 37.67 lower highs 98.13/88.43",
+   "venue upnl tradeify 28.37 on 6.82 SOL at 00:06Z (mark ~83.48, ~+2.84R est.)",
+   "previous forecast target 81.25 not yet touched, invalidation 86.20 not touched"
+  ]
+ },
+ "handoff": {
+  "prior_decision_id": "LR-20261111T2235Z-pkg-50f5eed272f64197",
+  "read_state": "read",
+  "verdict": "confirm",
+  "reason": "previous HOLD forecast carried; 86.20 invalidation untouched (4h high since 85.13), 81.25 low retested to 81.27 on 11-11 04:00Z only"
+ },
+ "info_cutoff_at": "2026-11-12T00:02:44Z",
+ "judge_prior": null,
+ "leg": "trend_donchian_sol_4h",
+ "mechanics": {
+  "verdict": "mismatch",
+  "evidence": "SL agrees on both props (89.105 vs package 89.10464, to the tick). TP: tradeify_1 78.964 = package 78.96364; velotrade_1 position TP 76.477 and resting limit prop-manual-507568d434f5-T at 76.477 vs package 78.96364 (2.49 wider). Source /api/bot/prop/status raw positions+open_orders, positions_provenance MEASURED, 00:06:10Z. Packet verdict \"match\" compared package fields only and did not read the venue TP. Known TP-chasing: structure_exit removed by #24981 (merged, deploy pending); PROP-BRACKET-APPLY #25016 resets it to 78.964. Wider TP adds no risk and the stop is unaffected."
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "options": [],
+ "order_package_id": "pkg-50f5eed272f64197",
+ "outcome_table_source": null,
+ "packet_defects": [
+  {
+   "field": "priced_options",
+   "reason": "could_not_price",
+   "count": 1,
+   "denominator": 1
+  },
+  {
+   "field": "state.open_r",
+   "reason": "context_null:state.open_r",
+   "count": 1,
+   "denominator": 1
+  },
+  {
+   "field": "mechanics",
+   "reason": "verdict_match_did_not_read_venue_tp",
+   "count": 1,
+   "denominator": 1
+  }
+ ],
+ "packet_sha": "b41ea7706e747b3af015cdf2537dc9bb5737b76ee5c394b6299b658683054e41",
+ "prompt_sha": null,
+ "recommendation": {
+  "action": "flag_mechanics",
+  "basis": "mechanics",
+  "confidence": "anecdote",
+  "ev_delta_r": null,
+  "evidence_source": "none",
+  "forecast": {
+   "thesis": "4h and 1d downtrend intact (4h ADX 43.9, 1d 37.7); the 11-11 bounce failed at 85.84 under the 86.13 pre-flush high and the 20:00Z bar printed 85.13/82.12, close 83.22. The opposing ml_entry SOL longs stopped at 83.11, so the bid that held 83 is gone. Continuation retests the 81.27 flush low; the 78.96 TP needs a break below it. A 4h close above 86.20 invalidates.",
+   "direction": "with_trade",
+   "target_px": 81.27,
+   "p_target": 0.55,
+   "invalidation_px": 86.2,
+   "horizon_bars": 18,
+   "timeframe": "4h",
+   "evidence": [
+    "context_v3.chart last_close 83.22, swing low 81.27 (-1.15 ATR), bar 20:00Z H85.13 L82.12",
+    "htf 1d ADX 37.67 lower highs 98.13/88.43",
+    "venue upnl tradeify 28.37 on 6.82 SOL at 00:06Z (mark ~83.48, ~+2.84R est.)",
+    "previous forecast target 81.25 not yet touched, invalidation 86.20 not touched"
+   ]
+  },
+  "judgement_confidence": null,
+  "level": null,
+  "level_atr": null,
+  "reason": "flag_mechanics: velotrade_1 TP 76.477 != package TP 78.96364 (known; #24981 deploy pending, PROP-BRACKET-APPLY #25016 will reset). Trade view meanwhile is HOLD: forecast carried (target 81.27, invalidation 86.20), price 83.2 vs flush low 81.27, ~+2.84R est., TP and SL both live on both accounts. No exit judgement made on the mismatch per Step 1; operator_ask recorded for the morning, not urgent (wider TP adds no risk).",
+  "size_fraction": null,
+  "size_multiplier": null,
+  "worst_case_delta_r": null
+ },
+ "review_id": "LR-20261112T0002Z-pkg-50f5eed272f64197",
+ "reviewed_at": "2026-11-12T00:25:00Z",
+ "schema_version": 1,
+ "session": "session_01AFoLuLyarNRcy3nziCep2U-lane",
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "tighten_r": null,
+  "within_bound": null,
+  "would_apply": null
+ },
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "state": {
+  "atr_now_over_entry": 1.733,
+  "bars_held": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_provenance": "unverified",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 89.10464286,
+  "tp": 78.96364
+ },
+ "trade_id": null,
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-12T00:01:34Z",
+  "l0_snapshot_at": "2026-11-12T00:01:34Z"
+ }
+}
