@@ -90,6 +90,8 @@ def plan(conn: sqlite3.Connection, *, account_id: str, ticket_id: str,
          rest: Set[str], now: datetime) -> Dict[str, Any]:
     """The decision, without writing: ``{"ok": bool, "why": str, "before": row,
     "to": status}``."""
+    # Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PROP-TICKET-EXPIRE-REFUSALS: KEEP.
+    # Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
     out: Dict[str, Any] = {"ok": False, "account_id": account_id, "ticket_id": ticket_id,
                            "before": None, "to": TERMINAL_STATUS}
     if account_id not in rest:

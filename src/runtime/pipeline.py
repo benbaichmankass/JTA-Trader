@@ -601,9 +601,13 @@ def multiplexed_signal_builder(
     resolved_builders = builders if builders is not None else strategy_builders()
 
     for strategy_name in STRATEGIES:
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab —
+        # GATE-STRATEGY-PAUSED-FLAG: REMOVE. Record:
+        # comms/gates/gate_decisions_2026-11-12.json. A ``runtime_flags/pause_<name>``
+        # file used to skip the strategy here; it is now logged only.
         if is_strategy_paused(strategy_name):
-            logger.info("Multiplexer: '%s' paused via runtime flag — skipping", strategy_name)
-            continue
+            logger.info("Multiplexer: '%s' has a pause flag — ignored "
+                        "(GATE-STRATEGY-PAUSED-FLAG removed 2026-11-12)", strategy_name)
         builder = resolved_builders.get(strategy_name)
         if builder is None:
             logger.warning(
@@ -713,11 +717,14 @@ def skip_reason(signal: dict) -> str:
 def _monocle_gate(
     signal: Dict[str, Any], settings: dict, *, open_package_checked: bool = False,
 ) -> Optional[Dict[str, Any]]:
-    """The four per-STRATEGY dispatch gates, for ONE signal. ``None`` = pass.
+    """The per-STRATEGY dispatch gate, for ONE signal. ``None`` = pass.
 
     Returns the ``status: skipped`` result the caller reports and records, or
-    ``None`` when the signal may be dispatched. The gates, in order: open
-    package, same-bar debounce, refusal cooldown, empty-sizing brake.
+    ``None`` when the signal may be dispatched. ONE gate refuses: the open
+    package. Since the operator's 2026-11-12 gate decisions
+    (``comms/gates/gate_decisions_2026-11-12.json``) the same-bar debounce and
+    the refusal cooldown are REMOVED (observed and logged only) and the
+    empty-sizing brake is REPORT-ONLY (logged with its cause, never refuses).
 
     ⚠️ **E35 — RUN ONCE PER DISPATCH ROUND, KEYED ON THAT ROUND'S STRATEGY.**
     Until 2026-09-25 these ran once per tick on the GLOBAL winner, before the
@@ -773,7 +780,7 @@ def _monocle_gate(
             "already has open package %s",
             _gate_strategy, _existing_open,
         )
-        # The only one of the four gates that wrote no audit row. When every
+        # Until 2026-09-30 the only monocle gate that wrote no audit row. When every
         # dispatch round is gated, run_pipeline returns BEFORE its
         # ``pipeline_result`` write, and the intent layer emits a leg at most
         # once per bar — so a blocked emission left NOTHING in ``signals``: a
@@ -806,32 +813,29 @@ def _monocle_gate(
             "signal": signal,
         }
         return result
-    # Bar-close debounce — one entry attempt per CLOSED bar
-    # (PERF-20260601-001). The open-package gate above only blocks
-    # while a package is *open*; when one closes mid-bar (the
-    # reconciler records an exchange-side SL/TP fire) the gate frees
-    # and the strategy re-fires its still-valid breakout on the next
-    # tick — within the SAME bar. On the 2 h trend_donchian this
-    # stacked 9 packages in ~1 h on 2026-06-01 and flooded the
-    # journal with ``intent_noop`` rejection rows (the intent layer
-    # no-ops the duplicate while a net position is held), skewing
-    # per-strategy stats. Suppress a second actionable dispatch for
-    # the same strategy+symbol inside the same timeframe bucket as
-    # the package it already created this bar. Kill-switch:
-    # ``STRATEGY_BAR_DEBOUNCE_DISABLED``.
+    # Gate decision: operator 2026-11-12 decisions page, Gates tab —
+    # GATE-BAR-DEBOUNCE: REMOVE. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+    # Until 2026-11-12 a second actionable dispatch for the same
+    # strategy+symbol inside one timeframe bar was SKIPPED here
+    # (PERF-20260601-001, ``same_bar_reentry_debounce``). The refusal is
+    # deleted; the observation is kept as a log line and an audit row
+    # (``same_bar_reentry_observed``) so the re-entry rate stays measurable.
+    # Stacking stays covered by the per-account open-package gate above
+    # and the coordinator's netting no-op.
     _same_bar = _same_bar_entry_for_strategy(
         _gate_strategy, symbol=signal.get("symbol")
     )
     if _same_bar is not None:
         logger.info(
-            "strategy_monocle: skipping dispatch — strategy=%s "
-            "already acted this bar (bar=%ds, last_pkg=%s @ %s)",
+            "strategy_monocle: strategy=%s already acted this bar "
+            "(bar=%ds, last_pkg=%s @ %s) — dispatching anyway "
+            "(GATE-BAR-DEBOUNCE removed 2026-11-12)",
             _gate_strategy, _same_bar["bar_seconds"],
             _same_bar["order_package_id"], _same_bar["last_created_at"],
         )
         try:
             log_signal({
-                "event": "bar_debounce_blocked",
+                "event": "same_bar_reentry_observed",
                 "strategy": _gate_strategy,
                 "symbol": signal.get("symbol"),
                 "side": signal.get("side"),
@@ -841,97 +845,59 @@ def _monocle_gate(
             })
         except Exception:  # noqa: BLE001
             logger.exception(
-                "strategy_monocle: bar-debounce audit emit failed",
+                "strategy_monocle: same-bar observation audit emit failed",
             )
-        result = {
-            "status": "skipped",
-            "reason": "same_bar_reentry_debounce",
-            "strategy": _gate_strategy,
-            "last_package_id": _same_bar["order_package_id"],
-            "bar_seconds": _same_bar["bar_seconds"],
-            "signal": signal,
-        }
-        return result
-    # Refusal cooldown — second strategy_monocle gate. Prevents
-    # the dispatcher from re-firing the same signal every tick
-    # when the most recent attempt was internally refused
-    # (``sized_qty=0`` from RiskManager → log_rejection_to_journal
-    # ``status='rejected'``). 2026-05-10 produced 20 such rows
-    # in 1 h on bybit_2/vwap because the open-package gate above
-    # only catches outstanding live positions, not refused
-    # ones. Cooldown defaults to 300 s (~one 5 m candle); the
-    # most common transient cause of refusal is Bybit V5
-    # returning ``availableToBorrow=0`` (S-056 / S-058) and
-    # repopulating on the exchange's cadence rather than ours.
-    # Operator override: ``STRATEGY_REFUSAL_COOLDOWN_SECONDS``.
+    # Gate decision: operator 2026-11-12 decisions page, Gates tab —
+    # GATE-REFUSAL-COOLDOWN: REMOVE. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+    # Until 2026-11-12 every dispatch for a strategy was SKIPPED for 300 s
+    # (``STRATEGY_REFUSAL_COOLDOWN_SECONDS``) after its last package was
+    # refused (``recent_refusal_cooldown``). The refusal is deleted: the next
+    # signal is evaluated fresh and RiskManager decides per trade (Prime
+    # Directive rule 3). The observation is kept as a log line and an audit
+    # row (``recent_refusal_observed``).
     _recent_refusal = _recent_refusal_for_strategy(
         _gate_strategy, symbol=signal.get("symbol")
     )
     if _recent_refusal is not None:
         logger.info(
-            "strategy_monocle: skipping dispatch — strategy=%s "
-            "refused %.0fs ago (cooldown=%ds, last_pkg=%s)",
+            "strategy_monocle: strategy=%s was refused %.0fs ago "
+            "(last_pkg=%s) — dispatching anyway "
+            "(GATE-REFUSAL-COOLDOWN removed 2026-11-12)",
             _gate_strategy,
             _recent_refusal["age_seconds"],
-            _recent_refusal["cooldown_seconds"],
             _recent_refusal["order_package_id"],
         )
-        # Land a dedicated audit row so the operator can
-        # reconstruct cooldown cadence without grepping the
-        # info-level pipeline.log. Best-effort — never let
-        # an audit failure bypass the gate.
         try:
             log_signal({
-                "event": "cooldown_blocked",
+                "event": "recent_refusal_observed",
                 "strategy": _gate_strategy,
                 "symbol": signal.get("symbol"),
                 "side": signal.get("side"),
                 "age_seconds": _recent_refusal["age_seconds"],
-                "cooldown_seconds": _recent_refusal["cooldown_seconds"],
+                "window_seconds": _recent_refusal["cooldown_seconds"],
                 "last_refused_package_id": _recent_refusal["order_package_id"],
             })
         except Exception:  # noqa: BLE001
             logger.exception(
-                "strategy_monocle: cooldown audit emit failed",
+                "strategy_monocle: recent-refusal observation audit emit failed",
             )
-        result = {
-            "status": "skipped",
-            "reason": "recent_refusal_cooldown",
-            "strategy": _gate_strategy,
-            "last_refused_package_id": _recent_refusal["order_package_id"],
-            "cooldown_age_seconds": _recent_refusal["age_seconds"],
-            "signal": signal,
-        }
-        return result
-    # Empty-sizing brake — the LAST gate before dispatch
-    # (BL-20260905). The three gates above are each bounded by
-    # something other than "did the last attempt size anything":
-    # the open-package gate frees when the package terminalises,
-    # the refusal cooldown needs status='rejected' inside 300 s,
-    # and the bar debounce needs a resolvable timeframe. So an
-    # EMPTY ``sized_qty_by_account`` — no account reached the
-    # sizer at all — had no ceiling of its own: on 2026-06-01
-    # ``mes_trend_long_1d`` minted SEVEN packages in 49 minutes
-    # from ONE daily signal (one entry_time, one donchian_hi),
-    # each carrying ``{}`` and each orphaned unexecuted. Nothing
-    # reached a venue, but seven phantom packages per occurrence
-    # pollute the order-package data the M7 review packets grade
-    # strategies on.
-    #
-    # Refuse the SAME signal once, keyed on its identity rather
-    # than on a clock, and SAY WHY — the recorded cause is logged
-    # and journaled on every block. Suppressing the re-emission
-    # without naming the cause would trade a noisy failure for a
-    # silent one.
+    # Gate decision: operator 2026-11-12 decisions page, Gates tab —
+    # GATE-EMPTY-SIZING-BRAKE: MAKE REPORT-ONLY. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+    # Until 2026-11-12 a signal that had already sized to an EMPTY
+    # ``sized_qty_by_account`` (no account reached the sizer; BL-20260905)
+    # was refused re-dispatch here (``empty_sizing_refused``). The check
+    # still runs and names the recorded cause on every repeat, but it never
+    # refuses: the signal is dispatched and each account's own RiskManager
+    # answers.
     _signal_key = signal_key_for_signal(signal, settings)
     _empty_sizing = _empty_sizing_refusal_for_signal(
         _gate_strategy, _signal_key, symbol=signal.get("symbol"),
     )
     if _empty_sizing is not None:
         logger.warning(
-            "strategy_monocle: skipping dispatch — strategy=%s "
-            "already refused this signal for an empty sizing map "
-            "(pkg=%s, refused_at=%s): %s",
+            "strategy_monocle: strategy=%s re-dispatching a signal that "
+            "already sized to an empty map (pkg=%s, at=%s): %s "
+            "(GATE-EMPTY-SIZING-BRAKE report-only 2026-11-12)",
             _gate_strategy,
             _empty_sizing["order_package_id"],
             _empty_sizing["refused_at"],
@@ -939,29 +905,19 @@ def _monocle_gate(
         )
         try:
             log_signal({
-                "event": "empty_sizing_refused",
+                "event": "empty_sizing_repeat_reported",
                 "strategy": _gate_strategy,
                 "symbol": signal.get("symbol"),
                 "side": signal.get("side"),
                 "cause": _empty_sizing["cause"],
                 "signal_key": _empty_sizing["signal_key"],
-                "refused_package_id": _empty_sizing["order_package_id"],
-                "refused_at": _empty_sizing["refused_at"],
+                "prior_package_id": _empty_sizing["order_package_id"],
+                "prior_at": _empty_sizing["refused_at"],
             })
         except Exception:  # noqa: BLE001
             logger.exception(
-                "strategy_monocle: empty-sizing audit emit failed",
+                "strategy_monocle: empty-sizing report audit emit failed",
             )
-        result = {
-            "status": "skipped",
-            "reason": "empty_sizing_refused",
-            "strategy": _gate_strategy,
-            "cause": _empty_sizing["cause"],
-            "signal_key": _empty_sizing["signal_key"],
-            "refused_package_id": _empty_sizing["order_package_id"],
-            "signal": signal,
-        }
-        return result
     return None
 
 
@@ -1267,7 +1223,23 @@ def run_pipeline(
                 news_result.reason[:80],
             )
 
-            multi = _multi_account_dispatch_enabled(settings)
+            # Gate decision: operator 2026-11-12 decisions page, Gates tab —
+            # GATE-MULTI-ACCOUNT-DISPATCH-ENV: MAKE REPORT-ONLY. Record:
+            # comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions
+            # a040d7aa0d). ``MULTI_ACCOUNT_DISPATCH=false`` used to refuse every
+            # actionable signal (``multi_account_dispatch_disabled``). The env is
+            # still read and a pinned-off value is logged with its cause, but it
+            # no longer decides anything: the one sanctioned order path always
+            # runs. The missing entry/sl/tp refusal below is unchanged (there is
+            # no order to build without a stop; see the lane report).
+            if not _multi_account_dispatch_enabled(settings):
+                logger.warning(
+                    "pipeline: MULTI_ACCOUNT_DISPATCH reads off — dispatching "
+                    "anyway (GATE-MULTI-ACCOUNT-DISPATCH-ENV report-only "
+                    "2026-11-12; symbol=%s side=%s)",
+                    signal.get("symbol"), signal.get("side"),
+                )
+            multi = True
 
             # Operator directive 2026-05-03 — the per-account
             # ``RiskManager.dry_run`` flag is the only dry/live toggle

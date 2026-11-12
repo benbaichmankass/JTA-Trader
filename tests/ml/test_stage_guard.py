@@ -123,22 +123,40 @@ def test_shadow_ready_proposes_promote():
     assert p.proposed_stage == "advisory"
 
 
-def test_shadow_regime_holds_without_mechanics_evidence():
-    # M25 reframe (2026-07-19): the regime profile requires the deterministic
-    # serving-mechanics gates (`live_parity` + `labels_accruing`). The
-    # stage-guard SWEEP passes None for them (per-model candle/dataset
-    # resolution is a separate follow-up), so an otherwise-healthy regime head
-    # holds on the mechanics gates — while the demoted-to-advisory
-    # `live_regime_discrimination` no longer blocks.
+def test_shadow_regime_promotes_without_mechanics_evidence():
+    # Stage step RETIRED (operator, chat 2026-11-12, verbatim: "There is nothing in
+    # between proving edge on back testing and real money. Absolutely no steps."):
+    # missing serving-mechanics evidence no longer holds an otherwise
+    # offline-ready regime head — it is promoted to advisory directly.
     p = propose_for_model(
         _entry("shadow", runs=_runs([0.70, 0.71, 0.69])),
         attribution=_good_attr(), drift={"overall_verdict": "no_change"},
         oos_edge=_good_oos_edge(), live_regime_auc=None,
     )
+    assert p.action == "promote" and p.proposed_stage == "advisory"
+
+
+def test_candidate_promotes_directly_to_advisory_on_offline_evidence():
+    # Stage step RETIRED (operator, chat 2026-11-12, verbatim: "There is nothing in
+    # between proving edge on back testing and real money. Absolutely no steps."):
+    # a candidate never served (no attribution, no drift, no shadow rows) that
+    # clears the offline gates is proposed straight to advisory — no shadow step.
+    p = propose_for_model(
+        _entry("candidate", runs=_runs([0.70, 0.71, 0.69])),
+        attribution=None, drift=None,
+        oos_edge=_good_oos_edge(), live_regime_auc=None, shadow_clean_count=None,
+    )
+    assert p.action == "promote", p.reasons
+    assert p.proposed_stage == "advisory"
+
+
+def test_candidate_without_offline_edge_holds():
+    p = propose_for_model(
+        _entry("candidate", runs=_runs([0.70, 0.71, 0.69])),
+        attribution=None, drift=None, oos_edge=None,
+    )
     assert p.action == "hold"
-    assert any("live_parity" in r for r in p.reasons)
-    assert any("labels_accruing" in r for r in p.reasons)
-    assert not any("live_regime_discrimination" in r for r in p.reasons)
+    assert any("oos_edge" in r for r in p.reasons)
 
 
 def test_shadow_without_oos_edge_holds():

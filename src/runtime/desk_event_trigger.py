@@ -60,6 +60,11 @@ TF_S = {"1m": 60, "3m": 180, "5m": 300, "15m": 900, "30m": 1800, "1h": 3600}
 #: Strength order when several fire in one pass: the one woken is the first in this list.
 KINDS = ("atr_burst", "momentum_burst", "liquidity_sweep", "level_break", "near_signal", "calendar")
 
+#: Per-stage wall time of the LAST build_packet call (one pass runs at a time under _LOCK). Measured so the
+#: could_not_build receipt says WHICH stage was slow, not only that one timed out (DESK-TRIGGER-SCAN-TIMEOUT).
+LAST_STAGES: List[Dict[str, Any]] = []
+INFLIGHT = "inflight.json"
+
 _LOCK = threading.Lock()
 _last_kick = float("-inf")
 
@@ -295,11 +300,18 @@ def build_packet(f: Dict[str, Any], cfg: Dict[str, Any], decisions_text: str) ->
         scan, stage = tmp / "scan.json", tmp / "stage"
         trig = json.dumps({k: f[k] for k in ("kind", "symbol", "bar", "detail")}, separators=(",", ":"))
         tf, hz = str(cfg.get("timeframe", "5m")), ",".join(str(h) for h in cfg.get("horizons") or [3, 6, 12])
-        for cmd in ([sys.executable, str(dpw.BUILDER), "--timeframe", tf, "--horizons", hz, "--symbols", f["symbol"],
-                     "--decisions", str(dec), "--trigger-json", trig, "--out", str(scan)],
-                    [sys.executable, str(dpw.PUBLISHER), "publish", "--packet", str(scan), "--stage", str(stage),
-                     "--pointer", TRIGGER_POINTER]):
-            r = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True, timeout=dpw.BUILD_TIMEOUT_S)
+        LAST_STAGES.clear()
+        for name, cmd in (("builder", [sys.executable, str(dpw.BUILDER), "--timeframe", tf, "--horizons", hz, "--symbols", f["symbol"],
+                                       "--decisions", str(dec), "--trigger-json", trig, "--out", str(scan)]),
+                          ("publisher", [sys.executable, str(dpw.PUBLISHER), "publish", "--packet", str(scan), "--stage", str(stage),
+                                         "--pointer", TRIGGER_POINTER])):
+            t0 = time.monotonic()
+            try:
+                r = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True, timeout=dpw.BUILD_TIMEOUT_S)
+            except subprocess.TimeoutExpired:
+                LAST_STAGES.append({"stage": name, "outcome": "timeout", "wall_s": round(time.monotonic() - t0, 1)})
+                raise
+            LAST_STAGES.append({"stage": name, "outcome": f"exit {r.returncode}", "wall_s": round(time.monotonic() - t0, 1)})
             if r.returncode != 0:
                 return None, f"{Path(cmd[1]).name} exit {r.returncode}: {(r.stderr or r.stdout).strip()[-160:]}"
         return stage, None
@@ -335,6 +347,7 @@ def run_once(*, cfg: Optional[Dict[str, Any]] = None, now_fn: Callable[[], datet
     state_path, labels_path = d / "trigger_state.json", d / "trigger_labels.jsonl"
     rec: Dict[str, Any] = {"computed_at": now.isoformat(), "watcher": "vm"}
     state = _read_json(state_path) or {"seen_keys": [], "wakes": []}
+    _reconcile_inflight(d, labels_path, now)
 
     def done(st: str, **kw: Any) -> Dict[str, Any]:
         rec.update(state=st, **kw)
@@ -385,9 +398,16 @@ def run_once(*, cfg: Optional[Dict[str, Any]] = None, now_fn: Callable[[], datet
         label("could_not_commit", packet_id=None, reason="no_credential_in_git_extraheader")
         return done("could_not_commit", fired=chosen["key"])
     code, text = fetch(dpw._contents_url(dpw.DECISIONS_PATH), auth)
+    _write_state(d / INFLIGHT, {"started_at": now.isoformat(), "fired": chosen})
+    t_build = time.monotonic()
     stage, why = build_fn(chosen, cfg, text if code == 200 and isinstance(text, str) else "")
+    rec["build_wall_s"], rec["stages"] = round(time.monotonic() - t_build, 1), list(LAST_STAGES)
+    try:
+        (d / INFLIGHT).unlink()
+    except OSError:
+        pass
     if stage is None:
-        label("could_not_build", packet_id=None, reason=why)
+        label("could_not_build", packet_id=None, reason=why, build_wall_s=rec["build_wall_s"], stages=rec["stages"])
         return done("could_not_build", fired=chosen["key"], reason=why)
     ptr = json.loads((stage / TRIGGER_POINTER).read_text())
     sha, ccode = (commit_fn or dpw.commit_packet)(stage, ptr["packet_id"], auth, http, pointer_path=TRIGGER_POINTER)
@@ -416,6 +436,24 @@ def run_once(*, cfg: Optional[Dict[str, Any]] = None, now_fn: Callable[[], datet
     label("posted", packet_id=ptr["packet_id"], commit=sha)
     return done("posted", fired=chosen["key"], packet_id=ptr["packet_id"], commit=sha,
                 latency_s=round((now_fn() - now).total_seconds(), 1))
+
+
+def _reconcile_inflight(d: Path, labels_path: Path, now: datetime) -> None:
+    """A pass that started a build and never reached its label was cut off (a deploy restart SIGTERMs the whole
+    cgroup, builder child included) -- before this it left NO record. Label it, once, on the next pass."""
+    p = d / INFLIGHT
+    mark = _read_json(p)
+    if not mark:
+        return
+    started = _parse(mark.get("started_at"))
+    _append(labels_path, {"at": mark.get("started_at"), "fired": mark.get("fired"), "disposition": "interrupted",
+                          "packet_id": None, "reason": "build never finished: process ended mid-build (restart/kill)",
+                          "noticed_at": now.isoformat(),
+                          "after_s": round((now - started).total_seconds(), 1) if started else None})
+    try:
+        p.unlink()
+    except OSError:
+        pass
 
 
 def _write_state(p: Path, state: Dict[str, Any]) -> None:
