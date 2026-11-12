@@ -142,9 +142,15 @@ def make_op(op: str, item_id: str, body: dict, by: str, op_id: str | None) -> di
     return {"op": op, "id": item_id, "body": body, "by": by, "op_id": op_id or f"cli-{uuid.uuid4().hex}"}
 
 
+META_API = "/api/bot/work/meta"
+
+
 def apply_direct(o: dict) -> dict:
     """Apply one op through the API; a 409 is re-read and re-applied once."""
     body = {**o["body"], "by": o["by"], "op_id": o["op_id"]}
+    if o["op"] == "meta":  # a register-header key: last-writer-wins, no version
+        st, p, _ = http("POST", f"{META_API}/{urllib.parse.quote(o['id'])}", body)
+        return _ok(st, p, f"meta {o['id']}")
     if o["op"] == "create":
         st, p, _ = http("POST", API, body)
         return _ok(st, p, f"create {o['id']}")
@@ -170,7 +176,7 @@ def parse_outbox_comment(text: str) -> dict | None:
     if not m:
         return None
     o = json.loads(m.group(1))
-    if not (isinstance(o, dict) and o.get("op") in ("create", "set", "note", "close")
+    if not (isinstance(o, dict) and o.get("op") in ("create", "set", "note", "close", "meta")
             and isinstance(o.get("id"), str) and isinstance(o.get("body"), dict)
             and isinstance(o.get("by"), str) and isinstance(o.get("op_id"), str)):
         raise WorkError("outbox op is malformed (needs op, id, body, by, op_id)")
@@ -214,7 +220,7 @@ def send(o: dict, via: str, issue: int | None) -> dict:
         out["direct_error"] = str(exc)
         return out
     return {"via": "direct", "op_id": o["op_id"], "replayed": res.get("replayed", False),
-            "item": res.get("item"), "event_seq": (res.get("event") or {}).get("seq")}
+            "item": res.get("item"), "meta": res.get("meta"), "event_seq": (res.get("event") or {}).get("seq")}
 
 
 # ── the drainer (runner side) ───────────────────────────────────────────────────────────
@@ -298,7 +304,25 @@ def _all_items(db: str | None) -> list[dict]:
     return out
 
 
-def export_to_files(root, items: list[dict], *, unfreeze: bool = False) -> dict:
+#: The register-header keys the store holds (mirrors checklist_store.STORE_HEADER_KEYS).
+HEADER_META_KEYS = ("last_review",)
+
+
+def _header_meta(db: str | None) -> dict:
+    out = {}
+    for k in HEADER_META_KEYS:
+        if db:
+            from src.runtime.work_store import WorkStore
+            m = WorkStore(db).meta_get(k)
+        else:
+            st, p, _ = http("GET", f"{META_API}/{urllib.parse.quote(k)}")
+            m = None if st == 404 else _ok(st, p, f"header get {k}")["meta"]
+        if m is not None:
+            out[k] = m["value"]
+    return out
+
+
+def export_to_files(root, items: list[dict], *, unfreeze: bool = False, header_meta: dict | None = None) -> dict:
     """Write the store's items into the file layout under ``root``; only what differs is written."""
     from pathlib import Path
     from scripts.ops import pipeline as pl
@@ -330,6 +354,14 @@ def export_to_files(root, items: list[dict], *, unfreeze: bool = False) -> dict:
             (pdir / name).write_text(json.dumps(rec, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
                                      encoding="utf-8")
             out["records_written"] += 1
+    hp = cdir / cs.HEADER
+    if header_meta:  # store-backed header keys go back into _header.json (rollback fidelity)
+        head = json.loads(hp.read_text(encoding="utf-8"))
+        changed = {k: v for k, v in header_meta.items() if head.get(k) != v}
+        if changed:
+            head.update(changed)
+            hp.write_text(json.dumps(head, indent=2) + "\n", encoding="utf-8")
+        out["header_keys_written"] = sorted(changed)
     if unfreeze:
         hp = cdir / cs.HEADER
         head = json.loads(hp.read_text(encoding="utf-8"))
@@ -409,6 +441,12 @@ def main(argv: list[str] | None = None) -> int:
     po.add_argument("id")
     po.add_argument("text")
     sub.add_parser("drain")
+    ph = sub.add_parser("header", help="the register header's store-backed keys (last_review)")
+    ph.add_argument("action", choices=("get", "set"))
+    ph.add_argument("key")
+    ph.add_argument("value", nargs="?", help="JSON (set only)")
+    ph.add_argument("--by")
+    ph.add_argument("--op-id")
     pe = sub.add_parser("export")
     pe.add_argument("--to-files", action="store_true", required=True)
     pe.add_argument("--root", default=None, help="repo root to write into (default: this repo)")
@@ -432,9 +470,21 @@ def main(argv: list[str] | None = None) -> int:
                 q["due"] = "true"
             st, p, _ = http("GET", f"{API}?{urllib.parse.urlencode(q)}")
             out = _ok(st, p, "list")
+        elif a.cmd == "header":
+            if a.action == "get":
+                st, p, _ = http("GET", f"{META_API}/{urllib.parse.quote(a.key)}")
+                out = _ok(st, p, f"header get {a.key}")
+            else:
+                if a.value is None:
+                    raise WorkError("header set needs a JSON value")
+                try:
+                    val = json.loads(a.value)
+                except ValueError as exc:
+                    raise WorkError(f"header set: value is not JSON: {exc}") from None
+                out = send(make_op("meta", a.key, {"value": val}, _by(a), a.op_id), a.via, a.issue)
         elif a.cmd == "export":
             root = a.root or str(_REPO)
-            out = export_to_files(root, _all_items(a.db), unfreeze=a.unfreeze)
+            out = export_to_files(root, _all_items(a.db), unfreeze=a.unfreeze, header_meta=_header_meta(a.db))
         elif a.cmd == "drain":
             if not a.issue:
                 raise WorkError("drain needs --issue (or WORK_STORE_OUTBOX_ISSUE)")

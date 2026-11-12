@@ -250,3 +250,75 @@ def test_tests_never_reach_the_live_api(monkeypatch, tmp_path):
     monkeypatch.delenv("WORK_STORE_URL", raising=False)
     with pytest.raises(wr.WorkWriteError, match="live work-store API"):
         wr.get_row("ANY")
+
+
+# ── last_review lives in the store (WSD-S4-READERS-FLIP, manager decision 2026-11-12) ────────────
+
+LR = {"report_id": "WR-1", "reviewed_at": "2026-11-12T05:58:00Z", "by": "mgr"}
+
+
+def _header_bytes(repo):
+    return (repo / cs.STORE / cs.HEADER).read_bytes()
+
+
+def test_meta_roundtrip_versioned(env):
+    _, store = env
+    assert store.meta_get("last_review") is None
+    a = store.meta_set("last_review", LR, by="s")
+    b = store.meta_set("last_review", {**LR, "report_id": "WR-2"}, by="s")
+    assert (a["version"], b["version"]) == (1, 2)
+    assert store.meta_get("last_review")["value"]["report_id"] == "WR-2"
+    with pytest.raises(ws.WorkStoreValidationError):
+        store.meta_set("items", {}, by="s")
+
+
+def test_frozen_header_write_goes_to_store_not_file(env, monkeypatch):
+    repo, store = env
+    _freeze(repo)
+    before = _header_bytes(repo)
+    cs.write_header("last_review", LR, repo, by="session_x")
+    assert _header_bytes(repo) == before                      # the register folder is untouched
+    assert store.meta_get("last_review")["value"] == LR
+    assert cs.load(repo)["last_review"] == LR                 # readers see the store's value
+
+
+def test_file_value_is_fallback_when_store_lacks_the_key(env):
+    repo, _ = env
+    _freeze(repo)
+    hp = repo / cs.STORE / cs.HEADER
+    h = json.loads(hp.read_text())
+    h["last_review"] = {"report_id": "OLD"}
+    hp.write_text(json.dumps(h))
+    assert cs.load(repo)["last_review"] == {"report_id": "OLD"}
+
+
+def test_unfrozen_header_write_still_writes_file(env):
+    repo, store = env
+    cs.write_header("last_review", LR, repo)
+    assert json.loads(_header_bytes(repo))["last_review"] == LR
+    assert store.meta_get("last_review") is None
+
+
+def test_other_header_keys_still_write_the_file(env):
+    repo, store = env
+    _freeze(repo)
+    cs.write_header("updated_by", "x", repo)
+    assert json.loads(_header_bytes(repo))["updated_by"] == "x"
+
+
+def test_cli_op_meta_shape_and_outbox_roundtrip():
+    o = work_cli.make_op("meta", "last_review", {"value": LR}, "s", "op1")
+    parsed = work_cli.parse_outbox_comment(work_cli.outbox_comment(o))
+    assert parsed == o
+
+
+def test_export_writes_header_keys_back(env, tmp_path):
+    repo, store = env
+    store.meta_set("last_review", LR, by="s")
+    root = tmp_path / "exp"
+    (root / cs.STORE).mkdir(parents=True)
+    (root / cs.STORE / cs.HEADER).write_text(json.dumps({"schema_version": 2}))
+    out = work_cli.export_to_files(root, store.list_items(limit=10 ** 6),
+                                   header_meta=work_cli._header_meta(store.path))
+    assert out["header_keys_written"] == ["last_review"]
+    assert json.loads((root / cs.STORE / cs.HEADER).read_text())["last_review"] == LR
