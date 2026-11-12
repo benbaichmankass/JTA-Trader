@@ -3057,6 +3057,15 @@ jobs:
       # is the authoritative success signal; job-level success()/failure()
       # are not used here because they can't survive post-exec step failures.
       # ────────────────────────────────────────────────────────────
+      - name: Redact secrets and balances from the action output (DIAG-RELAY-EQUITY-LEAK)
+        if: always() && github.event_name == 'issues'
+        # Before the reply below posts action-output.txt into a PUBLIC issue. Shared redactor; prints rule=count only.
+        continue-on-error: true
+        run: |
+          for f in action-output.txt mode-pr.txt; do
+            [ -f "$f" ] && python3 scripts/ops/redact_diag_output.py "$f" || true
+          done
+
       - name: Reply to issue with outcome
         if: always() && github.event_name == 'issues'
         uses: actions/github-script@v7
