@@ -46,10 +46,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
-
-import yaml
 
 SCHEMA = "account_reachable_set/1"
 CANDLES_BASE = "https://ict-bot.duckdns.org/api/bot/candles"
