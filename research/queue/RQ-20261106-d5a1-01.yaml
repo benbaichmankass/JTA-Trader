@@ -1,10 +1,10 @@
 # Hand-authored 2026-11-06 by lane PROD-LEGS-DSR-DECISION (Tier 1), dispatched by Manager Session 2026-11-05b
 # (session_01AFoLuLmhUKeUzHC6CHz2uP), on its ~01:23Z instruction, verbatim: "take (iii) ... author and fire the price/ATR + pull-load
-# measurement unit now: last close + ATR14 1h per a41f symbol, the affordable count under the 1-share rule at [balance removed], and a timed
+# measurement unit now: last close + ATR14 1h per a41f symbol, the affordable count under the 1-share rule at $194.52, and a timed
 # 173-symbol 1h pull with its 429 count, run off the live trader (research unit or a read-only system-action; never the live tick path)".
 # Gates: none.
 id: RQ-20261106-d5a1-01
-title: 'Alpaca ml_entry baseline: how many of the a41f 173 ETFs does the 1-share minimum reach at alpaca_live equity [balance removed], and can the
+title: 'Alpaca ml_entry baseline: how many of the a41f 173 ETFs does the 1-share minimum reach at alpaca_live equity $194.52, and can the
   live Alpaca 1h fetch pull all 173 in one tick without 429s?'
 status: done
 cadence: once
@@ -17,7 +17,7 @@ why_not_inferential: A measurement of prices, ATR and fetch latency on the curre
   statistic, and grades on completeness.
 practice_precedent: 'none: affordability under a whole-share cash book and a data-path load check are plumbing measurements; no external
   practice source was reviewed for them'
-question: 'Under src/units/accounts/risk.py''s whole-unit sizing on alpaca_live (risk_pct from config/accounts.yaml, equity [balance removed] MEASURED
+question: 'Under src/units/accounts/risk.py''s whole-unit sizing on alpaca_live (risk_pct from config/accounts.yaml, equity $194.52 MEASURED
   2026-11-06T01:00:13Z, round-up to 1 share only when 2 x ATR14 <= 1.5 x budget, one share must fit the cash), how many of the
   RQ-20261104-a41f-01 pooled 173 ETFs size to >= 1 share, and how long does a sequential unpaced 173-symbol
   AlpacaMarketData.get_ohlcv(symbol, "1h", limit=400) pass take, with how many HTTP 429s?'
@@ -70,7 +70,7 @@ run:
   - scripts/research/alpaca_baseline_affordability.py
   - run
   - --equity
-  - '[balance removed]'
+  - '194.52'
   - --equity-as-of
   - '2026-11-06T01:00:13Z'
   - --unit
