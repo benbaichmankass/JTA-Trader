@@ -98,7 +98,7 @@ def grade(rows: list[dict], cc: pes.CostConfig) -> dict:
             "verdict": "PASS" if ok else "FAIL"}
 
 
-def ev_book(name: str, legs: dict[str, Path], nulls: dict[str, Path], cc_by_leg: dict, out: Path) -> dict:
+def ev_book(name: str, legs: dict[str, Path], nulls: dict[str, Path], out: Path) -> dict:
     sim = dict(EV_RULE["sim"])
     res = {}
     for rs in EV_RULE["rulesets"]:
@@ -164,7 +164,7 @@ def main(argv=None) -> int:
             books.update({f"DROP_{k}": [x for x in ledgers if x != k] for k in ledgers})
         with ThreadPoolExecutor(4) as ex:
             res = dict(zip(books, ex.map(lambda b: ev_book(b, {k: ledgers[k] for k in books[b]},
-                                                           {k: nulls[k] for k in books[b]}, cc_by, out / "cells"), books)))
+                                                           {k: nulls[k] for k in books[b]}, out / "cells"), books)))
         net_all = [x for k in ledgers
                    for x in ev.net_r([json.loads(y) for y in ledgers[k].read_text().splitlines() if y.strip()], cc_by[k])]
         edge = pg.edge_ci(net_all)
