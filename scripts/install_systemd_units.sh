@@ -111,7 +111,7 @@ else
 fi
 
 shopt -s nullglob
-for unit_path in deploy/*.service deploy/*.timer; do
+for unit_path in deploy/*.service deploy/*.timer deploy/*.path; do
     unit_name=$(basename "$unit_path")
     # Skip systemd template units (e.g. claude-vm-runner@.service) —
     # those are installed once by the bootstrap script and don't get
@@ -469,6 +469,24 @@ if [ -f "${_DATADIR_DROPIN_SRC}" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# ict-desk-build@.service (DESK-TRIGGER-SCAN-TIMEOUT): the TEMPLATE the trader starts with
+# `sudo -n systemctl start ict-desk-build@<job>.service` to run a desk trigger build in its OWN cgroup, so a deploy
+# restart of the trader (which SIGTERMs the trader's cgroup) no longer kills an in-flight build. The generic loop
+# above skips `@` units, so it is copied here. Copy only: nothing is enabled or started (instances are started
+# on demand by the trader); not installed on the gateway VM. Without it the trader falls back to its in-process build.
+# ---------------------------------------------------------------------------
+_DESKBUILD_SRC="${REPO_DIR}/deploy/ict-desk-build@.service"
+if [ "$_VM_ROLE_EARLY" != "gateway" ] && [ -f "${_DESKBUILD_SRC}" ]; then
+    _DESKBUILD_DST="${SYSTEMD_DIR}/ict-desk-build@.service"
+    if [ ! -e "${_DESKBUILD_DST}" ] || ! cmp -s "${_DESKBUILD_SRC}" "${_DESKBUILD_DST}"; then
+        echo ">>> install_systemd_units: ict-desk-build@.service → ${_DESKBUILD_DST}"
+        "${SUDO[@]}" cp "${_DESKBUILD_SRC}" "${_DESKBUILD_DST}"
+        "${SUDO[@]}" chmod 0644 "${_DESKBUILD_DST}"
+        changed=1
+    fi
+fi
+
+# ---------------------------------------------------------------------------
 # OnFailure= alerting (FIX-SA-08, SA-AUD-5-onfailure-still-absent, CA-A10-402).
 #
 # A failed oneshot behind an active timer shows `active (waiting)` on the timer
@@ -704,6 +722,24 @@ if [ "$_VM_ROLE" != "gateway" ] && [ -f deploy/ict-claude-decision-bot.service ]
         echo ">>> install_systemd_units: enable --now ict-claude-decision-bot.service (core always-on)"
         if ! "${SUDO[@]}" systemctl enable --now ict-claude-decision-bot.service 2>&1; then
             echo ">>> install_systemd_units: WARN could not enable ict-claude-decision-bot.service (no systemd? TELEGRAM_CLAUDE_BOT_SECRET unset?)"
+        fi
+        changed=1
+    fi
+fi
+
+# ict-ops-runner.path (MANAGER-VM-DIRECT-OPS) starts the direct ops channel's runner whenever the web API leaves
+# a job in the queue dir. A path unit is not a timer, so the timer loop above never enables it; without this block
+# a submitted job would sit "queued" forever (GET /api/bot/ops/jobs/<id> then reads runner_not_picking_up).
+# Trader box only, idempotent, tolerant of a failed enable (never fails the deploy).
+if [ "$_VM_ROLE" != "gateway" ] && [ -f deploy/ict-ops-runner.path ]; then
+    heal_devnull || true
+    if "${SUDO[@]}" systemctl is-enabled ict-ops-runner.path >/dev/null 2>&1 \
+        && "${SUDO[@]}" systemctl is-active ict-ops-runner.path >/dev/null 2>&1; then
+        :  # already enabled + watching
+    else
+        echo ">>> install_systemd_units: enable --now ict-ops-runner.path (ops channel queue watch)"
+        if ! "${SUDO[@]}" systemctl enable --now ict-ops-runner.path 2>&1; then
+            echo ">>> install_systemd_units: WARN could not enable ict-ops-runner.path"
         fi
         changed=1
     fi

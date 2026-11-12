@@ -59,6 +59,7 @@ _TIMEFRAME_TO_IB: Mapping[str, tuple[str, int]] = {
 # backfilled on its native instrument (BL-20260707-IBKR-METALS-CME-EXCHANGE).
 _SYMBOL_EXCHANGE: Mapping[str, str] = {
     "MES": "CME",
+    "MNQ": "CME",
     "MGC": "COMEX",
     "MHG": "COMEX",
 }

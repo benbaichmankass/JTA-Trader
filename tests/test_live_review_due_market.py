@@ -105,7 +105,9 @@ def test_calendar_stale_fresh_and_horizon(tmp_path):
     cal = lrd.read_calendar(str(p), NOW)
     ev, _ = mkt(row(symbol="BTCUSDT"), ctx([], calendar=cal))
     assert names(ev).count("calendar") == 1
-    _, c = mkt(row(symbol="ADAUSDT"), ctx([], calendar=cal))   # no classes declared for ADA
+    # an UNPROFILED symbol has no classes in either map (LTR-CALENDAR-CLASSES (b) gives profiled symbols a
+    # review-only default by asset class; an unprofiled one stays could_not_look)
+    _, c = mkt(row(symbol="ZZZNOPROFILEUSDT"), ctx([], calendar=cal))
     assert "calendar" in cnl_names(c)
 
 
@@ -221,7 +223,8 @@ def test_payload_carries_coverage_for_all_open(tmp_path):
     cols = "order_package_id,trade_id,strategy,symbol,account_id,direction,updated_at"
     c.execute(f"CREATE TABLE position_telemetry ({cols}, terminal_state, levers)")
     c.execute(f"INSERT INTO position_telemetry ({cols}) VALUES (?,?,?,?,?,?,?)",
-              ("pkg-1", "7", "spy_trend_long_1d", "SPY", "alpaca_paper", "long", NOW.isoformat()))
+              ("pkg-1", "7", "spy_trend_long_1d", "ZZZNOPROFILE", "alpaca_paper", "long", NOW.isoformat()))
+    # unprofiled: SPY now has review-only classes (LTR-CALENDAR-CLASSES (b)), so it no longer exercises this
     c.commit()
     c.close()
     cal = tmp_path / "cal.yaml"
@@ -232,3 +235,32 @@ def test_payload_carries_coverage_for_all_open(tmp_path):
     assert [c["order_package_id"] for c in out["event_coverage"]] == ["pkg-1"]
     assert out["could_not_look_summary"]["by_event"]["calendar"]["reasons"] == {
         "no event classes declared for <symbol>": 1}
+
+
+# ---- LTR-CALENDAR-CLASSES (b): review-only event-class map (manager decision 2026-11-12 12:38Z) ----
+def _cal_with(cls, minutes=90):
+    soon = (NOW + timedelta(minutes=minutes)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return {"state": "read", "classes": {"BTC": ["fomc"]},
+            "events": [{"class": cls, "time": soon, "impact": 0.9}]}
+
+
+def test_review_map_gives_profiled_symbols_classes_by_asset_class_and_by_base():
+    cc = CFG["events"]["calendar"]
+    assert lrd.review_calendar_classes("ADAUSDT", "ADA", cc, NOW) == {"fomc", "cpi"}        # crypto default
+    assert "retail_sales" in lrd.review_calendar_classes("QQQ", "QQQ", cc, NOW)             # us_equity default
+    assert "treasury_auction" in lrd.review_calendar_classes("TLT", "TLT", cc, NOW)         # per-base override
+    assert lrd.review_calendar_classes("ZZZNOPROFILE", "ZZZNOPROFILE", cc, NOW) == set()    # no guess
+
+
+def test_review_map_turns_could_not_look_into_a_real_read():
+    ev, c = mkt(row(symbol="QQQ", strategy="qqq_trend_1h"), ctx([], calendar=_cal_with("cpi")))
+    assert "calendar" not in cnl_names(c) and names(ev).count("calendar") == 1
+    ev, c = mkt(row(symbol="QQQ", strategy="qqq_trend_1h"), ctx([], calendar=_cal_with("eia")))
+    assert "calendar" not in cnl_names(c) and "calendar" not in names(ev)                 # looked, quiet
+
+
+def test_review_map_is_not_the_trade_path_map():
+    """The trader's event risk reads economic_calendar.yaml only; the review map lives in the LTR config."""
+    from pathlib import Path
+    assert "review_classes" not in Path("src/news/news_events.py").read_text()
+    assert "review_classes" not in Path("config/economic_calendar.yaml").read_text()

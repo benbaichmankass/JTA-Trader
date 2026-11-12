@@ -97,7 +97,12 @@ class TestListPausedStrategies:
 # ---------------------------------------------------------------------------
 
 class TestMultiplexerRespectsPauseFlag:
-    """Smoke tests that multiplexed_signal_builder skips paused strategies."""
+    """multiplexed_signal_builder IGNORES pause flags (logs them only).
+
+    GATE-STRATEGY-PAUSED-FLAG was REMOVED by the operator on 2026-11-12
+    (decisions page, Gates tab; comms/gates/gate_decisions_2026-11-12.json).
+    These tests used to assert the skip; they now assert the flag decides
+    nothing."""
 
     def _make_builder(self, side, strategy_name):
         def builder(settings):
@@ -105,8 +110,8 @@ class TestMultiplexerRespectsPauseFlag:
                     "meta": {"strategy_name": strategy_name}}
         return builder
 
-    def test_paused_strategy_is_skipped(self, tmp_path, monkeypatch):
-        """When vwap is paused and turtle_soup fires, turtle_soup wins."""
+    def test_paused_strategy_now_fires(self, tmp_path, monkeypatch):
+        """A pause flag on vwap no longer skips it: first-strategy (vwap) wins."""
         import src.runtime.pipeline as pl
         from src.runtime import runtime_flags
 
@@ -126,7 +131,7 @@ class TestMultiplexerRespectsPauseFlag:
             "vwap":        self._make_builder("buy", "vwap"),
             "turtle_soup": self._make_builder("buy", "turtle_soup"),
         })
-        assert result.get("meta", {}).get("strategy_name") == "turtle_soup"
+        assert result.get("meta", {}).get("strategy_name") == "vwap"
 
     def test_unpaused_strategy_fires_normally(self, tmp_path, monkeypatch):
         """No pause flags → first-strategy wins as before."""
@@ -149,8 +154,8 @@ class TestMultiplexerRespectsPauseFlag:
         })
         assert result.get("meta", {}).get("strategy_name") == "vwap"
 
-    def test_all_paused_returns_no_signal(self, tmp_path, monkeypatch):
-        """All strategies paused → multiplexer returns side='none'."""
+    def test_all_paused_still_returns_a_signal(self, tmp_path, monkeypatch):
+        """Every strategy flagged → the multiplexer still returns the signal."""
         import src.runtime.pipeline as pl
         from src.runtime import runtime_flags
 
@@ -170,7 +175,8 @@ class TestMultiplexerRespectsPauseFlag:
             "vwap":        self._make_builder("buy", "vwap"),
             "turtle_soup": self._make_builder("buy", "turtle_soup"),
         })
-        assert result.get("side") == "none"
+        assert result.get("side") == "buy"
+        assert result.get("meta", {}).get("strategy_name") == "vwap"
 
 
 # ---------------------------------------------------------------------------

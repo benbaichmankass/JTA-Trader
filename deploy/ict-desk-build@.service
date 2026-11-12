@@ -1,0 +1,17 @@
+[Unit]
+Description=Desk trigger packet build %i (outside the trader cgroup)
+
+[Service]
+# DESK-TRIGGER-SCAN-TIMEOUT: started by the trader via `sudo -n systemctl start ict-desk-build@<job>.service` so a
+# deploy restart of ict-trader-live (which SIGTERMs ITS cgroup) cannot kill an in-flight build. oneshot: `systemctl
+# start` returns when the job ends. Per-stage 420 s timeouts live in scripts/ops/desk_build_job.py; RuntimeMaxSec is
+# only the backstop (2 stages x 420 s + slack) so a build can never outlive its purpose. Writes result.json always.
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/ict-trading-bot
+EnvironmentFile=-/home/ubuntu/ict-trading-bot/.env
+ExecStart=/usr/bin/python3 -u -B /home/ubuntu/ict-trading-bot/scripts/ops/desk_build_job.py %i
+TimeoutStartSec=infinity
+RuntimeMaxSec=900
+StandardOutput=journal
+StandardError=journal
