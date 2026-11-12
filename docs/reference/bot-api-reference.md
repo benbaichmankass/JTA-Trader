@@ -194,9 +194,9 @@ already return). CORS like every `/api/bot` GET. `null` = not recorded: render a
 | `GET /api/bot/trades/{trade_id}/markers?interval=1h` | `{as_of, trade_id, order_package_id, account_id, symbol, direction, status, interval, read_state, partial_reasons[], entry, entry_signal, brackets, decisions}` | `tests/fixtures/trade_markers_v1.json` |
 
 **Snapshot (closed trades).** Built ONCE per closed trade by a background writer and STORED (table
-`trade_chart_snapshots` in `trade_journal.db`, one JSON payload per trade); the route only reads it, it never
-fetches candles. Stored as framed DATA, not an image: the SPA draws it with the same chart library as the live
-cards (hover, zoom, theme), it is a few tens of KB per trade, and a later change to how it is drawn needs no
+`trade_chart_snapshots` in `trade_journal.db`, one zlib-compressed JSON payload per trade, stored without the
+indicator series, which the route recomputes from the stored candles); the route only reads it, it never fetches candles. Stored as framed DATA, not an image: the SPA draws it with the same chart library as the live
+cards (hover, zoom, theme), it is ~7.5 KB stored per trade (one synthetic 272-bar snapshot: 87 KB raw JSON), and a later change to how it is drawn needs no
 rebuild. `read_state`: `measured` (all parts present) · `partial` (built, some part missing; `partial_reasons`
 names it) · `not_built` (trade closed, snapshot not written yet: `snapshot` is `null`) · 404 when no trade
 has that id or the trade is still open (use `/markers`).
@@ -204,8 +204,8 @@ has that id or the trade is still open (use `/markers`).
 `snapshot` blocks (`schema: trade_chart_snapshot/v1`):
 - `trade` — the trade row: ids, account, strategy, symbol, direction, qty, open/close times, entry/exit price,
   `exit_reason`, `pnl` + `pnl_provenance`.
-- `frame` — the view box. `time_from`/`time_to` = open..close widened by 15% of the span on each side;
-  `price_low`/`price_high` = the low/high of the candles between open and close, widened by 10% of that range on
+- `frame` — the view box. `time_from`/`time_to` = open..close widened by 15% of the span on each side; <!-- population-ok: a framing rule from the operator spec, not a measurement -->
+  `price_low`/`price_high` = the low/high of the candles between open and close, widened by 10% of that range on <!-- population-ok: a framing rule from the operator spec, not a measurement -->
   each side. `interval` = the bar size chosen so the window holds at most ~300 bars. `levels_outside_frame` lists
   any bracket price outside the box, so the UI can extend the axis if it chooses.
   The writer waits until `time_to` has passed before building, so the post-close 15% is real candles.
