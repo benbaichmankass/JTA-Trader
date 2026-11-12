@@ -58,20 +58,17 @@ decision_rule:
   min_n: 3 usable CV folds per symbol; holdout >= 20 rows (ml_bakeoff floor); all 3 symbols built.
   what_it_does_not_do: 'Trains no registered model, touches no registry, manifest, stage, dataset version or config; promotes nothing (a head
     change is Tier-3 and would follow its own shadow soak). Grades model quality on the regime LABEL only, not trade P&L: the money test of a
-    better head is the router-cell walk-forward (regime-selectivity skill), authored only on PASS. Does not test the EXIT head (exit-policy-v1,
-    per-trade exit_candidates family): that arm needs a trade corpus and its own net-of-cost unit, authored on PASS. Does not reproduce
+    better head is the router-cell walk-forward (regime-selectivity skill), authored only on PASS. Does not test the EXIT head (exit-policy-v1): that arm is its own unit, registered in parallel (operator 2026-11-12 07:46Z). Does not reproduce
     vol_bucket or the 60-day recency sample weight (ml_bakeoff has neither; identical for every arm). HOLDOUT HONESTY: f5c8-02, which selected
     this feature, read 2024-07..2026-09, so the 2025-10..2026-09 part of this holdout is NOT independent of the feature''s discovery; only
     2026-10 is unread by it. First read of a REGIME-VOL-HEAD family window: claimed via holdout_lock.py at run time (n_tries 1, no deflation).
     No look at either window was taken before registration; the builder was smoke-tested on BTC 2020-06..2020-09 (outside every span) for
     fetch/build mechanics only, and no arm was fitted.'
-  proposal_mapping: 'PASS IS NOT INDEPENDENT CONFIRMATION (manager 2026-11-12 07:36Z, stated before any run): this holdout overlaps 12 of
-    its 13 months with the window f5c8-02 already read; the selection bias is limited (one operator-originated, pre-registered hypothesis, not
-    a pick from many) but real. So a PASS authorizes ONLY a SHADOW head (comp recipe registered at shadow, forward-only scoring). Nothing
-    reaches a router cell or the exit-head apply path until a FORWARD window starting on or after 2026-11-12 (this registration date)
-    confirms it, and that forward check is its own registered unit, authored on PASS before any forward data is read. PASS -> (0) the shadow
-    head + the forward-confirmation unit; then, only after the forward unit passes, (1) author the router-cell walk-forward with the comp head''s vol label vs the champion''s (money, net of cost,
-    regime-selectivity rules); (2) author the exit-head arm (ss/sn into exit-policy-v1 features, net of cost); (3) file the live-serving parity
+  proposal_mapping: 'The registered rule decides (OPERATING-PLAN section 2: edge is decided offline against a rule registered before the
+    run; operator 2026-11-12 07:46Z, planning page p3: shadow on paper is only for a demoted leg in iteration, never a step to real money;
+    this withdraws a pre-run shadow-first clause the manager added at 07:36Z and reversed at 07:55Z). The holdout overlap with f5c8-02 is a
+    stated caveat on the reading (what_it_does_not_do), not a promotion stage. PASS -> (1) author the router-cell walk-forward with the comp head''s vol label vs the champion''s (money, net of cost,
+    regime-selectivity rules); (2) [the exit-head arm is registered SEPARATELY and in parallel, operator 07:46Z, graded by its own rule, not conditioned on this one]; (3) file the live-serving parity
     build (Binance kline trade-count read beside the Bybit bars). FAIL -> composition adds nothing to the 15m regime head beyond plain volume
     (this configuration closed, not the family); record whether plain volume itself helped (headline check vol_vs_champion) as its own finding.
     INDETERMINATE -> read which clause missed and file the narrower follow-up.'
