@@ -78,7 +78,8 @@ pinged once on a real-money or prop account:
 * phone: move_tp (``phone_trail.request_tp_amend``, the one-slot amend channel); widen_sl
   (``phone_trail.request_sl_widen``, declared so the app applies a looser stop); close / reduce
   (``phone_cancel.request_close``, the server-issued action channel, operator 2026-11-09);
-* prop_vm: none yet (the VM executor reads only ``meta.sl_floor``); other / IB: none;
+* prop_vm: move_tp (PROP-BRACKET-APPLY: ``meta.tp_target`` on the ticket, applied by the account's own trail through
+  its amend code; refused for an adapter that cannot amend a TP, e.g. browser dxtrade); other / IB: none;
 * any account: add_entry / change_size > 1 -- none: no add-to-an-open-position executor exists yet
   (``no_action_path:add_size``); the account's decision is still computed and recorded.
 
@@ -624,7 +625,7 @@ ACTION_PATHS: Dict[str, frozenset] = {
     "bybit": frozenset({"close", "reduce", "move_tp", "widen_sl"}),
     "alpaca": frozenset({"close", "move_tp"}),
     "phone": frozenset({"move_tp", "close", "reduce", "widen_sl"}),
-    "prop_vm": frozenset(),
+    "prop_vm": frozenset({"move_tp"}),
     "other": frozenset(),
 }
 LIVE_REVIEW_CLOSE = "live_review_close"
@@ -989,6 +990,19 @@ def _exec_alpaca_tp(db, leg: Dict[str, Any], pkg: Dict[str, Any], v: lri.AmendVe
     return {"result": X_APPLIED, "venue_after": got}
 
 
+def _exec_prop_vm_tp(leg: Dict[str, Any], v: lri.AmendVerdict, intent: lri.LiveReviewIntent) -> Dict[str, Any]:
+    """Record a TP request on THIS prop ticket (``meta.tp_target``); the account's trail applies it through its own
+    amend code and the executor's ``amend`` report is the venue confirmation (PROP-BRACKET-APPLY)."""
+    from src.prop.bracket_request import R_QUEUED, R_REFUSED, request_bracket
+
+    tk = leg["row"]
+    r = request_bracket(tk["ticket_id"], account_id=tk["account_id"], tp=v.level, apply=True,
+                        source=lri.PROVENANCE, reason=f"mandate {intent.mandate} review {intent.review_id}")
+    if r["result"] == R_QUEUED:
+        return {"result": X_APPLIED, "tp": v.level, "detail": r["detail"]}
+    return {"result": X_REFUSED if r["result"] == R_REFUSED else X_APPLY_FAILED, "detail": r["detail"]}
+
+
 def _exec_phone_tp(leg: Dict[str, Any], v: lri.AmendVerdict, intent: lri.LiveReviewIntent) -> Dict[str, Any]:
     """Publish a TP revision through the phone's one-slot amend channel; read back the emitted amend."""
     from src.prop.phone_trail import KEY, request_tp_amend
@@ -1057,6 +1071,8 @@ def _exec_trade_action(db, leg: Dict[str, Any], pkg: Dict[str, Any], cls: str, v
         return _exec_alpaca_tp(db, leg, pkg, v, intent)
     if cls == "phone" and key == "move_tp":
         return _exec_phone_tp(leg, v, intent)
+    if cls == "prop_vm" and key == "move_tp":
+        return _exec_prop_vm_tp(leg, v, intent)
     if cls == "phone" and key == "widen_sl":
         return _exec_phone_sl_widen(leg, v, intent)
     if cls == "phone" and key in ("close", "reduce"):

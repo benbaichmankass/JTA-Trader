@@ -503,6 +503,17 @@ case "${action}" in
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;
+    amend-prop-bracket)
+        # 2026-11-11 (PROP-BRACKET-APPLY): record a TP/SL request on a VM-prop ticket; the account's executor applies
+        # it. Dry-run unless apply:true.
+        tier=2
+        case "${exit_code}" in
+            0) result="request recorded (or dry-run ok) — the executor applies it next cycle; check the fills amendments"; priority="normal" ;;
+            5) result="refused (account cannot amend / ticket not live / wrong side / looser stop) — nothing written"; priority="high" ;;
+            1) result="the ticket write failed or did not read back — nothing applied"; priority="high" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
     amend-position-sl)
         # 2026-10-24 (AMEND-SL-ACTION): tighten one live Bybit stop, venue +
         # journal together; dry-run unless apply:true.
