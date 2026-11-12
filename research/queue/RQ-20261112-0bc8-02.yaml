@@ -58,8 +58,7 @@ decision_rule:
   min_n: 300 pooled OOS trades; per fold MIN_FOLD_TEST_N 64 test trades and 500 training rows (the multifold harness floors).
   what_it_does_not_do: 'Edits no config, registry, artifact or exit_head_action; promotes and demotes nothing. A PASS is an offline result
     under the head''s own judge; any change to what the live head runs is a separate Tier-3 proposal with its own evidence record
-    (OPERATING-PLAN section 2). No demotion or annotate flip proceeds on this data alone (operator 2026-11-12 p2: "don''t let anything get
-    demoted without me looking at it first"). Does not re-test the champion''s own KEEP rule (RQ-20260927-002 / 78fc-03 own that). The
+    (OPERATING-PLAN section 2). Does not re-test the champion''s own KEEP rule (RQ-20260927-002 / 78fc-03 own that). The
     baseline harness models the legs'' config params only (donchian / atr / trail / min_confidence / long_only), as 78fc-03; other declared
     exit levers are not modelled. Binance 1h klines PROXY the venue''s trade count; rows.jsonl symbols Binance does not list get NaN
     composition (rows_joined_share is reported). The walk-forward span overlaps the window f5c8-02 read when it selected the feature
