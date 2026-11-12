@@ -13,11 +13,11 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
-import scripts.ops.live_replay_parity as P
-import scripts.ops.live_replay_parity_ml as M
-from src.runtime import ml_entry_eq_features as F
-from src.units.strategies import ml_entry as ME
-from src.units.strategies import ml_entry_eq as L
+import scripts.ops.live_replay_parity as P  # noqa: E402
+import scripts.ops.live_replay_parity_ml as M  # noqa: E402
+from src.runtime import ml_entry_eq_features as F  # noqa: E402
+from src.units.strategies import ml_entry as ME  # noqa: E402
+from src.units.strategies import ml_entry_eq as L  # noqa: E402
 
 
 def _ep(s: str) -> float:
