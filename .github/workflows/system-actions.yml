@@ -2802,6 +2802,12 @@ jobs:
             # gateway failure is reported, never hidden, and does not skip the
             # trader half.
             {
+              echo "################ outside-in probe (from this GitHub runner) ################"
+              # Read-only: TCP connect + close, and one portmapper NULL call on UDP 111.
+              # The address is never printed; 22 is the positive control.
+              python3 scripts/ops/external_port_probe.py "${VM_SSH_HOST}" trader-public 22 111 8001 2019 || true
+              echo "gateway: no public address is configured here (reached only via ProxyJump on its private address), so no outside probe."
+              echo
               echo "################ live trader VM ################"
               ssh "${SSH_ARGS[@]}" "${VM_SSH_USER}@${VM_SSH_HOST}" \
                   "POSTURE_ROLE=live-trader bash -s" < scripts/ops/security_posture_report.sh
