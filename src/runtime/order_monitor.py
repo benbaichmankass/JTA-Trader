@@ -678,6 +678,25 @@ def _apply_partial_close(
         summary.errors.append(f"{pkg_id}: partial-close trade-write failed")
         return
 
+    # PARTIAL-CLOSE-PNL-NOT-JOURNALED: the closed part gets its own closed child
+    # row. Priced only from the venue fill read back above; a verdict-projected
+    # price is not a fill, so that child is written pending and settled from the
+    # fills store by the close order id. Never blocks the partial close.
+    try:
+        from src.runtime.partial_close_journal import book_partial_close
+        book_partial_close(
+            db, parent_trade_id=int(linked_trade_id), qty=actual_filled_qty,
+            fill_price=(actual_exit_price if exit_price_source == "exchange" else None),
+            filled_at=now, close_order_id=ex_result.get("exchange_order_id"),
+            source="monitor_verdict_partial", reason=str(reason or "partial_close"),
+            shrink_parent=False,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "order_monitor: partial-close child row failed pkg=%s trade=%s: %s",
+            pkg_id, linked_trade_id, exc,
+        )
+
     # Roll the package's tp forward when the verdict supplied next_tp
     # (e.g. turtle_soup emits next_tp=meta.tp2 alongside a TP1 partial).
     # Failure here is non-fatal — the partial close has already landed
@@ -14606,6 +14625,58 @@ def _sweep_venue_entry(cfg: Optional[Dict[str, Any]],
     return value
 
 
+def _own_leg_exit_for_demo_row(
+    db, cfg: Optional[Dict[str, Any]], row: Dict[str, Any], opened_at_ms: Optional[int],
+) -> Optional[Dict[str, Any]]:
+    """The exit of a DEMO Bybit row priced from its OWN stop/target order's fills.
+
+    DEMO-EXIT-FIRST-FILL-ATTRIBUTION. Returns a record shaped like
+    ``account_closed_pnl_for_trade``'s (``avg_exit_price``, ``fees``,
+    ``closed_pnl=None``, ``source='exchange_fill'``) only when the row's own
+    ``sl_order_id``/``tp_order_id`` filled the whole position inside
+    ``[open, close + 60 s]`` (``fills_pnl.exit_from_one_order_fills``,
+    ``match == own_bracket_order``); else ``None`` and the caller keeps its
+    existing read. Real-money accounts are untouched: their record comes from
+    the venue's closed-pnl endpoint, not from fills. Local read; never raises.
+    """
+    try:
+        if not isinstance(cfg, dict):
+            return None
+        if str(cfg.get("exchange") or "").lower() != "bybit":
+            return None
+        if str(cfg.get("demo", "false")).strip().lower() not in ("true", "1", "yes"):
+            return None
+        # The sweep's scan does not select these columns; read them for the
+        # demo rows only (an older schema without them simply returns None).
+        conn = db.connect()
+        try:
+            got = conn.execute(
+                "SELECT sl_order_id, tp_order_id, closed_at FROM trades WHERE id = ?",
+                (int(row["id"]),)).fetchone()
+        finally:
+            conn.close()
+        if not got:
+            return None
+        own = tuple(o for o in (got[0], got[1]) if o)
+        closed_ms = _isoformat_to_ms(got[2])
+        if not own or opened_at_ms is None or closed_ms is None:
+            return None
+        from src.runtime.fills_pnl import exit_from_one_order_fills
+        rec = exit_from_one_order_fills(
+            account_id=str(row.get("account_id") or ""),
+            symbol=str(row.get("symbol") or ""),
+            direction=str(row.get("direction") or ""),
+            opened_at_ms=int(opened_at_ms), closed_at_ms=closed_ms + 60_000,
+            qty=_safe_float(row.get("position_size")), own_order_ids=own,
+        )
+        if not rec or rec.get("match") != "own_bracket_order":
+            return None
+        return rec
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("_own_leg_exit_for_demo_row: row %s: %s", row.get("id"), exc)
+        return None
+
+
 def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
     """Fill ``pnl`` / ``exit_price`` / the broker-PnL note for any DB-closed
     trade that hasn't yet been reconciled against its broker's authoritative
@@ -14674,6 +14745,9 @@ def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
                 " WHERE status = 'closed' "
                 "   AND COALESCE(is_backtest, 0) = 0 "
                 "   AND pnl IS NULL "
+                # PARTIAL-CLOSE-PNL-NOT-JOURNALED: a partial-close child is priced
+                # by partial_close_journal only (its own close order's fill).
+                "   AND COALESCE(setup_type, '') != 'partial_close' "
                 # E62: keyed on the CLOSE, like the local sweep since MI-128.
                 # Keyed on the open, a position held > 7 days was outside the
                 # window the moment it closed, and its broker truth was never
@@ -14744,14 +14818,23 @@ def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
 
             journal_entry = _safe_float(row.get("entry_price"))
             try:
-                rec = account_closed_pnl_for_trade(
-                    cfg,
-                    symbol=str(row.get("symbol") or ""),
-                    direction=str(row.get("direction") or ""),
-                    opened_at_ms=opened_at_ms,
-                    qty=_safe_float(row.get("position_size")),
-                    entry_price=journal_entry,
-                )
+                # DEMO-EXIT-FIRST-FILL-ATTRIBUTION: on a DEMO account the record
+                # below is built from the FIRST close-side fills whose qty
+                # matches, over a window open to now, so a partial close's fill
+                # (bybit_portfolio 6983: 9178f2b1 @ 1.0836) was taken for the
+                # row's own stop (bd8d3a72 @ 1.0629). The row's OWN bracket
+                # order, bounded by its close, is asked first; only when that
+                # finds nothing does the old read run.
+                rec = _own_leg_exit_for_demo_row(db, cfg, row, opened_at_ms)
+                if rec is None:
+                    rec = account_closed_pnl_for_trade(
+                        cfg,
+                        symbol=str(row.get("symbol") or ""),
+                        direction=str(row.get("direction") or ""),
+                        opened_at_ms=opened_at_ms,
+                        qty=_safe_float(row.get("position_size")),
+                        entry_price=journal_entry,
+                    )
                 # CLOSE-PNL-NULL (2026-10-12): WATCHDOG-PAST-STOP (2026-10-10)
                 # taught the reconciler and the watchdog to match the venue's
                 # record against the venue's entry FILL (`_venue_entry_price`)
@@ -15123,6 +15206,7 @@ def _sweep_local_pnl_for_unpriced(db) -> Dict[str, int]:
                 # NULL. Keep this predicate in lockstep with the canonical
                 # src.web.api._clean_trades.exclude_reduce_leg_predicate.
                 "   AND COALESCE(setup_type, '') != 'intent_reduce' "
+                "   AND COALESCE(setup_type, '') != 'partial_close' "
                 "   AND COALESCE(notes, '') NOT LIKE '%\"intent_reduce\": true%' "
                 # NO-HALT (2026-10-09): a RESET-SUSPECT row auto-resolved as
                 # exchange_reset_flat is DECLARED unmeasured at close — the venue
@@ -17061,6 +17145,19 @@ def run_reconciliation_tick(
     except Exception as exc:  # noqa: BLE001
         logger.warning(
             "run_monitor_tick: local-pnl sweep raised: %s", exc,
+        )
+
+    # PARTIAL-CLOSE-PNL-NOT-JOURNALED: price partial-close child rows whose fill
+    # was not readable at apply time, from the fills store by close order id.
+    try:
+        with _phase("settle_partial_close_children"):
+            from src.runtime.partial_close_journal import settle_pending_children
+            pc_settle = settle_pending_children(db)
+        if pc_settle.get("settled") or pc_settle.get("errors"):
+            summaries["__partial_close_children__"] = pc_settle
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "run_monitor_tick: partial-close child settle raised: %s", exc,
         )
 
     # PERF-FU-REDUCE-PNL: settle intent_reduce legs' realised PnL from venue

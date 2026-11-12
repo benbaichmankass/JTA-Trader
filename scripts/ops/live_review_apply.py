@@ -877,6 +877,29 @@ def _journal_action(db, t: Dict[str, Any], intent: lri.LiveReviewIntent, fields:
     db.update_trade(int(t["id"]), {**fields, "notes": dump_capped(notes, 2000)})
 
 
+def _book_reduce_child(db, t: Dict[str, Any], intent: lri.LiveReviewIntent, *, qty: Any, sent: Any,
+                       reason: str) -> Dict[str, Any]:
+    """Book THIS reduce as a closed child row (``src.runtime.partial_close_journal``). The exit price is the
+    reduce order's own venue fill, read back by its order id; when that read fails the child is written
+    ``pending_fill`` and the monitor settles it from the fills store. The review's mark is never used as the
+    child's price (it is a quote, not a fill). Never raises."""
+    try:
+        from src.runtime import order_monitor as om
+        from src.runtime.partial_close_journal import book_partial_close
+
+        oid = str((sent or {}).get("exchange_order_id") or "").strip() or None
+        fill = om._capture_fill_details(t, oid) if oid else None
+        return book_partial_close(
+            db, parent_trade_id=int(t["id"]), qty=qty,
+            fill_price=(fill or {}).get("avg_price"),
+            filled_at=datetime.now(timezone.utc).isoformat(),
+            close_order_id=oid, source="live_review_apply", reason=reason,
+            shrink_parent=False, review_id=intent.review_id,
+        )
+    except Exception as exc:  # noqa: BLE001 — the reduce is already applied at the venue
+        return {"state": "error", "child_id": None, "detail": f"{type(exc).__name__}: {exc}"}
+
+
 def _exec_bybit_action(db, leg: Dict[str, Any], pkg: Dict[str, Any], v: lri.AmendVerdict,
                        intent: lri.LiveReviewIntent) -> Dict[str, Any]:
     """Act on ONLY this account's Bybit leg through the monitor's own seams, then read the venue back."""
@@ -979,9 +1002,15 @@ def _exec_bybit_action(db, leg: Dict[str, Any], pkg: Dict[str, Any], v: lri.Amen
         # twice). A resize that fails or does not read back is ONE alert; the legs are reduce-only, so an oversized
         # one can close at most what is held.
         rz = resize_legs_after_reduce(client, cfg, t, remaining)
+        # PARTIAL-CLOSE-PNL-NOT-JOURNALED: the closed part is its own closed journal row, priced from the
+        # reduce order's own venue fill (read back by order id) or settled later from the fills store. Before
+        # this, only notes.live_review_actions recorded it (shed by later 500-char rewrites) and its realised
+        # P&L landed on no row. A child-write failure never undoes the applied reduce.
+        child = _book_reduce_child(db, t, intent, qty=qty, sent=sent, reason=reason)
         _journal_action(db, t, intent, {"position_size": remaining},
                         {"qty": qty, "exit_price": mark, "exit_price_source": "venue_mark_at_apply (ESTIMATED)",
                          "venue_size_after": size1, "close_reason": reason,
+                         "partial_close_child": {"state": child.get("state"), "child_id": child.get("child_id")},
                          "leg_resize": {"ok": rz["ok"], "detail": rz["detail"], "readback": rz["readback"],
                                         "states": {k: v.get("state") for k, v in (rz["legs"] or {}).items()}}})
         if not rz["ok"]:
