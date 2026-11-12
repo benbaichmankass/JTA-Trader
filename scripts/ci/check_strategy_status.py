@@ -50,7 +50,10 @@ UNHOMED: Dict[str, str] = {
     leg: ("cut from alpaca_paper 2026-10-05 by MD-S1-CUT-ON-STAGE0-FAIL (PR #16548); not retired. Off until "
           "alpaca_paper takes slices (same symbol as a 1d leg there). Owner: row ALPACA-SLICES-REHOME-1H")
     # 2026-11-11 Thursday-planning b1: qqq_pullback_1h re-homed on alpaca_paper (allocation record). tlt_pullback_1h stays
-    # unhomed only until its real-money promotion lands (row PROMOTE-TLT-1H-REAL-MONEY).
+    # unhomed only until its real-money promotion lands (row PROMOTE-TLT-1H-REAL-MONEY). 2026-11-12 (operator w5 + AM-TRADING (b)/(c)):
+    # it trades SHORT-ONLY on the alpaca_portfolio mirror, which this guard does not count as a book, and stays OFF alpaca_live until
+    # shorting is enabled there (cash account, shorting_enabled false) -- so the entry STAYS, with that reason. Drop it the day
+    # tlt_pullback_1h joins alpaca_live.
     for leg in ("spy_pullback_1h", "tlt_pullback_1h")
 }
 
