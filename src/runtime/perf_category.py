@@ -19,6 +19,9 @@ from src.runtime.provenance import MEASURED, classify_pnl
 from src.runtime.r_provenance import r_multiple_provenanced
 
 CATEGORIES = ("live", "prop", "paper_portfolio", "paper_testing")
+#: The four books, named exactly as the SPA / UI-FOUR-BOOKS name them (dashboard#232).
+BOOK_LABELS = {"live": "Live money", "prop": "Prop", "paper_portfolio": "Paper portfolio", "paper_testing": "Paper testing"}
+BREAKDOWNS = ("strategy", "asset_class", "account")
 MIN_N_R = 10          # the perf-review --min-n: fewer R-graded rows than this is flagged insufficient_n
 MIN_SNAPSHOTS = 24    # hourly balance snapshots needed before capital_utilisation is computed
 PROP_PNL_BUCKET = "ESTIMATED"  # prop pnl is phone/sheet-reported, not a venue-API close: never MEASURED
@@ -81,6 +84,7 @@ def category_metrics(rows: Iterable[Mapping[str, Any]], *, category: str, window
     meas = unmeas = 0.0
     n_meas = n_unmeas = 0
     wins = priced = 0
+    n_hold_rows = 0
     gp = gl = 0.0
     r_vals: List[float] = []
     notional_days = notional_days_meas = 0.0
@@ -116,6 +120,7 @@ def category_metrics(rows: Iterable[Mapping[str, Any]], *, category: str, window
         if o and c and c >= o:
             hd = (c - o).total_seconds() / 86400.0
             holds.append(hd)
+            n_hold_rows += 1
             if qty is not None and entry is not None:
                 nd = abs(qty * entry) * float(contract_value_usd_for(r.get("symbol")) or 1.0) * hd
                 notional_days += nd
@@ -138,11 +143,13 @@ def category_metrics(rows: Iterable[Mapping[str, Any]], *, category: str, window
     rot_meas = (pnl_meas_nd / notional_days_meas * 1e4) if notional_days_meas > 0 and n_no_hold == 0 else None
     # capital utilisation: gross notional-days / equity-days; null without enough snapshots on EVERY account
     util = None
+    equity_days = None
     util_state = "no_equity_record"
     snaps = snapshots or {}
     if snaps and window_days and all((s.get("n") or 0) >= MIN_SNAPSHOTS and s.get("mean_balance") for s in snaps.values()):
         equity_days = sum(float(s["mean_balance"]) for s in snaps.values()) * window_days
         util = notional_days / equity_days if equity_days > 0 else None
+        equity_days = equity_days if equity_days > 0 else None
         util_state = "estimated" if util is not None else "no_equity_record"
     return {
         "category": category, "n_closed": n,
@@ -160,6 +167,11 @@ def category_metrics(rows: Iterable[Mapping[str, Any]], *, category: str, window
         "max_drawdown_usd": _round(max_dd, 4) if n else None,
         "fees_usd": _round(fees, 4) if n_fees else None, "n_fees": n_fees,
         "funding_usd": _round(funding, 4) if n_funding else None, "n_funding": n_funding,
+        # additive building blocks: the total row is computed from THESE (sums), never from a second pass over the journal
+        "n_wins": wins, "gross_profit_usd": _round(gp, 4), "gross_loss_usd": _round(gl, 4),
+        "sum_r": _round(sum(r_vals), 6), "sum_hold_days": _round(sum(holds), 6), "n_hold": n_hold_rows,
+        "notional_days": _round(notional_days, 6), "notional_days_measured": _round(notional_days_meas, 6),
+        "pnl_measured_in_notional_days_usd": _round(pnl_meas_nd, 4), "equity_days": _round(equity_days, 4),
         "provenance": {"net_pnl_usd": "MEASURED+not_measured split (never folded)",
                        "capital_utilisation": "ESTIMATED (sampled balance_snapshots; open positions excluded)",
                        "return_on_time_in_trade": "ESTIMATED when any row's pnl is not MEASURED",
@@ -209,3 +221,95 @@ def pnl_series(rows: Iterable[Mapping[str, Any]], *, category: str, per_trade: b
         p["cum_pct"] = round(p["cum_pnl_usd"] / start_capital * 100.0, 4) if ok else None
         p["cum_pct_all_rows"] = round(p["cum_pnl_all_rows_usd"] / start_capital * 100.0, 4) if ok else None
     return pts
+
+
+def breakdown_key(row: Mapping[str, Any], by: str) -> str:
+    """Group key for ``breakdown=strategy|asset_class|account``; a missing value groups under ``unknown`` (visible, never dropped)."""
+    if by == "strategy":
+        return str(row.get("strategy_name") or "unknown")
+    if by == "account":
+        return str(row.get("account_id") or "unknown")
+    if by == "asset_class":
+        from src.core.instrument_class import asset_class_for_symbol
+        return str(asset_class_for_symbol(row.get("symbol")) or "unknown")
+    raise ValueError(f"unknown breakdown {by!r}; valid: {list(BREAKDOWNS)}")
+
+
+def breakdown_metrics(rows: Iterable[Mapping[str, Any]], *, category: str, by: str, window_days: Optional[float],
+                      snapshots: Optional[Mapping[str, Mapping[str, Any]]] = None) -> List[Dict[str, Any]]:
+    """One ``category_metrics`` block per group (same definitions as the category row, so the groups' n_closed and net P&L
+    sum to the category's). Capital utilisation needs an equity record: only the ``account`` breakdown has one (that
+    account's own snapshots); strategy / asset_class groups span accounts with no per-group equity, so it is null with
+    read_state ``no_equity_record`` -- never 0."""
+    groups: Dict[str, List[Mapping[str, Any]]] = {}
+    for r in rows:
+        groups.setdefault(breakdown_key(r, by), []).append(r)
+    out: List[Dict[str, Any]] = []
+    for key in sorted(groups):
+        snap = {key: snapshots[key]} if by == "account" and snapshots and key in snapshots else None
+        m = category_metrics(groups[key], category=category, window_days=window_days, snapshots=snap)
+        m["group"] = key
+        out.append(m)
+    return out
+
+
+ADDITIVE_FIELDS = ("n_closed", "n_measured", "n_not_measured", "n_priced", "n_r_graded", "n_no_hold", "n_fees", "n_funding",
+                   "n_wins", "n_hold", "n_excluded_null_pnl")
+ADDITIVE_USD = ("net_pnl_usd", "measured_usd", "not_measured_usd", "fees_usd", "funding_usd")
+
+CAPITAL_FLOWS = {
+    "read_state": "could_not_look",
+    "reason": ("no deposit/withdrawal record is stored: balance_snapshots holds balance/delta_1h only (no flow column) and "
+               "Bybit TRANSFER_IN/OUT live only in the venue wallet log (bybit_wallet_truth.py), never persisted"),
+    "effect": ("P&L and the % series are summed from closed-trade pnl over the capital at the window start, so a mid-window "
+               "deposit is never counted as profit nor a withdrawal as loss; capital_utilisation (mean snapshot equity) and "
+               "the start-of-window denominator can still be moved by a flow we cannot see"),
+}
+
+
+def total_row(rows_by_category: Iterable[Mapping[str, Any]]) -> Dict[str, Any]:
+    """The computed TOTAL over the four book rows (operator 2026-11-12: "four separate rows, plus a computed total").
+
+    Additive fields are plain sums of the rows (None-aware: a field is None only when every book is None, so "no data" never
+    reads 0). Ratios are recomputed from summed building blocks, not averaged. ``max_drawdown_usd`` is NOT additive (it needs
+    one pooled close order) -> None with read_state ``not_additive``. ``capital_utilisation`` needs every book that holds
+    accounts to have an equity record, else None."""
+    rows = list(rows_by_category)
+
+    def tot(key: str, nd: int = 4) -> Optional[float]:
+        vals = [r[key] for r in rows if r.get(key) is not None]
+        return round(sum(vals), nd) if vals else None
+
+    out: Dict[str, Any] = {"category": "total", "label": "Total", "accounts": [a for r in rows for a in (r.get("accounts") or [])]}
+    for k in ADDITIVE_FIELDS:
+        out[k] = sum(int(r.get(k) or 0) for r in rows)
+    for k in ADDITIVE_USD:
+        out[k] = tot(k)
+    n_priced, n_r, n_hold = out["n_priced"], out["n_r_graded"], out["n_hold"]
+    gp, gl = tot("gross_profit_usd"), tot("gross_loss_usd")
+    out["gross_profit_usd"], out["gross_loss_usd"] = gp, gl
+    out["win_rate"] = round(out["n_wins"] / n_priced, 4) if n_priced else None
+    out["profit_factor"] = round(gp / gl, 4) if gl else None
+    sr, sh = tot("sum_r", 6), tot("sum_hold_days", 6)
+    out["sum_r"], out["sum_hold_days"] = sr, sh
+    out["avg_realised_r"] = round(sr / n_r, 4) if n_r and sr is not None else None
+    out["r_insufficient_n"] = n_r < MIN_N_R
+    out["avg_hold_days"] = round(sh / n_hold, 4) if n_hold and sh is not None else None
+    nd, ndm, pm = tot("notional_days", 6), tot("notional_days_measured", 6), tot("pnl_measured_in_notional_days_usd")
+    out["notional_days"], out["notional_days_measured"], out["pnl_measured_in_notional_days_usd"] = nd, ndm, pm
+    clean = out["n_no_hold"] == 0
+    out["return_on_time_in_trade_bps_per_notional_day"] = round(pm / ndm * 1e4, 4) if ndm and clean and pm is not None else None
+    out["return_on_time_in_trade_all_rows_bps_per_notional_day"] = (
+        round(out["net_pnl_usd"] / nd * 1e4, 4) if nd and clean and out["net_pnl_usd"] is not None else None)
+    holding = [r for r in rows if r.get("accounts")]
+    eq_ok = bool(holding) and all(r.get("equity_days") for r in holding)
+    eq = sum(r["equity_days"] for r in holding) if eq_ok else None
+    out["equity_days"] = round(eq, 4) if eq else None
+    out["capital_utilisation"] = round((nd or 0.0) / eq, 6) if eq else None
+    out["capital_utilisation_read_state"] = "estimated" if eq else "no_equity_record"
+    out["max_drawdown_usd"] = None
+    out["max_drawdown_read_state"] = "not_additive"
+    out["read_state"] = "measured"
+    out["provenance"] = {"total": "computed from the four book rows: additive fields summed, ratios recomputed from summed "
+                                  "building blocks; measured vs not-measured split kept (never folded)"}
+    return out
