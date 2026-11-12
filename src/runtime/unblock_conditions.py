@@ -6,9 +6,11 @@ create an alert when those blocks are lifted, or it needs to be part of a regula
 was lifted 2026-11-04, its one remaining blocker (a TP test) was parked with a far ``not_before``, and nothing watched it, so
 for 8 days nobody acted. Row ``UNBLOCK-WATCH``.
 
-Gates this adds or changes: **none**. This module only PARSES and NORMALISES. It refuses nothing; the writers
-(``scripts/ops/checklist.py``, ``scripts/ops/pipeline.py``) warn on an unconditioned block, and refusing is held behind the
-operator's answer (``config/unblock_watch.yaml::refuse_unconditioned``, default false).
+Gates this adds or changes: this module refuses nothing itself; it supplies :func:`refusable`, which the two writers use.
+GATE (operator-approved, decision: 2026-11-12 operator popup "Yes: refuse it (Recommended)"): ``scripts/ops/checklist.py`` and
+``scripts/ops/pipeline.py`` REFUSE a NEW or CHANGED blocked/waiting item whose block has no machine-checkable condition and no
+explicit ``manual:<text>``. Switch: ``config/unblock_watch.yaml::refuse_unconditioned`` (true); remove by setting it false.
+Closing an item is never refused; an untouched legacy block is never refused (it only warns).
 
 ONE SHAPE, THREE STORES (no parallel register — the condition lives ON the item that is blocked):
 
@@ -265,6 +267,21 @@ def problems(block: dict) -> list[str]:
         if c.get("malformed"):
             out.append(f"malformed condition: {c['malformed']}")
     return out
+
+
+def is_explicit_manual(c: dict) -> bool:
+    """A ``manual:<text>`` condition someone WROTE (the sanctioned last resort), as opposed to legacy prose read as manual."""
+    return c.get("kind") == "manual" and str(c.get("raw") or "").startswith("manual:") and bool(str(c.get("arg") or "").strip())
+
+
+def refusable(block: dict) -> bool:
+    """The operator's refusal test (2026-11-12 popup "Yes: refuse it (Recommended)"): a block with NO machine-checkable
+    condition and NO explicit ``manual:<text>`` -- i.e. prose only, or nothing. A malformed known-kind condition also
+    refuses (it was meant to be checkable and is not)."""
+    conds = block.get("conditions") or []
+    if any(c.get("malformed") for c in conds):
+        return True
+    return not any(is_checkable(c) or is_explicit_manual(c) for c in conds)
 
 
 def refuse_unconditioned(repo=None) -> bool:

@@ -272,11 +272,18 @@ class Resolver:
             doc, ev = self.decisions()
             if doc is None:
                 return UNKNOWN, ev
+            from src.runtime import work_decisions as wd  # noqa: PLC0415  one owner of the answer-state vocabulary
             for rq in doc.get("requests") or []:
                 ids = {str(rq.get(x)) for x in ("id", "requestId", "request_id", "qid") if rq.get(x)}
                 if c["ref"] in ids:
-                    ans = rq.get("answer") or rq.get("answerState") in ("decided", "committed")
-                    return (MET, f"answered on the decisions inbox ({ev})") if ans else (UNMET, f"awaiting the operator ({ev})")
+                    st = rq.get("answerState")
+                    # every state lands in one of three buckets, never folded: settled -> met; the grader could not
+                    # read or recognise the answer -> could_not_look; not submitted / in transit / engaged -> unmet.
+                    if st in wd.SETTLED_STATES:
+                        return MET, f"answerState={st} on the decisions inbox ({ev})"
+                    if st in (wd.UNREADABLE, wd.VERDICT_UNRECOGNISED) or st not in wd.ANSWER_STATES:
+                        return UNKNOWN, f"answerState={st!r}: the inbox could not grade the answer ({ev})"
+                    return UNMET, f"answerState={st} ({ev})"
             return UNKNOWN, (f"{c['ref']} is not on the decisions inbox ({ev}); answers given on an Artifact decision doc are "
                              "recorded by the manager on the row, then the block is edited")
         if k == "data_n":
@@ -676,6 +683,13 @@ def _self_test() -> int:
     ub = uc.unit_block({"status": "queued", "not_before": "2027-03-16T00:00:00Z"})
     ck("unit not_before implies date, with no reason flagged", ub and ub["conditions"][0]["kind"] == "date" and "no reason" in uc.problems(ub))
     ck("a done unit is not waiting", uc.unit_block({"status": "done", "not_before": "2027-01-01"}) is None)
+    ck("refusable: prose only", uc.refusable(uc.edge_block("waiting on review")))
+    ck("refusable: empty blocked row", uc.refusable(uc.row_blocks({"state": "blocked", "blocked_on": []})[0]))
+    ck("NOT refusable: explicit manual:<text> (the allowed last resort)",
+       not uc.refusable(uc.edge_block({"reason": "r", "owner": "o", "clears_when": ["manual:a human checks X"]})))
+    ck("NOT refusable: a checkable condition", not uc.refusable(uc.edge_block({"clears_when": ["pr_merged:1"]})))
+    ck("NOT refusable: a legacy row ref (implies row_state)", not uc.refusable(uc.edge_block("ALPACA-LIVE-MECHANICS")))
+    ck("refusable: a malformed known kind", uc.refusable(uc.edge_block({"clears_when": ["pr_merged:abc"]})))
     ck("a pipeline observation item is not a wait", uc.pipeline_block({"state": "queued", "due_when": {"kind": "observation", "clears_when": "x"}}) is None)
 
     now = datetime(2026, 11, 12, tzinfo=timezone.utc)

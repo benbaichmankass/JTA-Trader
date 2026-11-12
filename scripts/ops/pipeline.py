@@ -589,11 +589,13 @@ def version_of(item_id: str, store: Path = STORE) -> str | None:
     return read_log(store).sources.get(item_id)
 
 
-def _unblock_contract(item: dict) -> None:
-    """UNBLOCK-WATCH (operator 2026-11-12): an item waiting on an event should carry a structured
-    ``due_when.conditions`` list (grammar: ``src/runtime/unblock_conditions.py``) + an owner, not prose only.
-    Gates this adds or changes: none by default -- it WARNS on stderr. It refuses only when the operator sets
-    ``config/unblock_watch.yaml::refuse_unconditioned: true`` (held behind the operator's answer)."""
+def _unblock_contract(item: dict, prior: dict | None) -> None:
+    """UNBLOCK-WATCH (operator 2026-11-12): an item waiting on an event carries a structured ``due_when.conditions``
+    list (grammar: ``src/runtime/unblock_conditions.py``) + an owner, not prose only.
+    GATE (decision: 2026-11-12 operator popup "Yes: refuse it (Recommended)"): REFUSES a NEW event item, or an update
+    that CHANGES ``due_when``, whose block has no machine-checkable condition and no explicit ``manual:<text>``, while
+    ``config/unblock_watch.yaml::refuse_unconditioned`` is true (the same precedent as the due_when refusal above). An
+    untouched legacy item only warns; closing (done/killed) is never refused. Remove: set refuse_unconditioned: false."""
     try:
         from src.runtime import unblock_conditions as uc  # noqa: PLC0415
         blk = uc.pipeline_block(item)
@@ -605,8 +607,10 @@ def _unblock_contract(item: dict) -> None:
     if not probs:
         return
     msg = (f"pipeline: id {item.get('id')!r} waits on an event without a full structured block: {'; '.join(probs)}. "
-           "Add due_when.conditions, e.g. [\"pr_merged:123\"] (kinds: src/runtime/unblock_conditions.py).")
-    if uc.refuse_unconditioned() and any("clears_when" in p or "malformed" in p for p in probs):
+           "Add due_when.conditions, e.g. [\"pr_merged:123\"] (kinds: pr_merged pr_closed deployed row_state "
+           "unit_result operator_answer date data_n; manual:<text> last).")
+    changed = prior is None or (prior.get("due_when") or {}) != (item.get("due_when") or {})
+    if changed and uc.refusable(blk) and uc.refuse_unconditioned():
         raise PipelineError(msg)
     print(msg, file=sys.stderr)
 
@@ -650,7 +654,6 @@ def append(item: dict, store: Path = STORE, *, intent: str,
     a caller mid-transition cannot silently start a second store.
     """
     validate(item)
-    _unblock_contract(item)
     # ROUTE-20261012: `routed_to` on a non-routed item is invisible to
     # unrouted() (which keys on state alone), so the item stays "unrouted"
     # while its record claims an owner (PI-20261011-YJAYF7GD-0001..4 were
@@ -674,6 +677,7 @@ def append(item: dict, store: Path = STORE, *, intent: str,
     else:
         prior = read_log(store).items.get(item["id"])
 
+    _unblock_contract(item, prior if intent == "update" else None)
     if intent == "new" and prior is not None:
         raise PipelineError(
             f"id {item['id']!r} already exists (state={prior.get('state')!r}, "

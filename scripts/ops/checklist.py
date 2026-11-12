@@ -95,29 +95,36 @@ def _require_seeded(repo: Path) -> dict:
     return json.loads(hp.read_text(encoding="utf-8"))
 
 
-def _unblock_contract(row: dict, repo: Path) -> list[str]:
+def _unblock_contract(row: dict, repo: Path, prior: dict | None = None) -> list[str]:
     """UNBLOCK-WATCH (operator 2026-11-12): a blocked row (or one with blocked_on) carries, per edge, a structured
     ``clears_when`` + owner (grammar: src/runtime/unblock_conditions.py), never prose only.
-    Gates this adds or changes: none by default -- WARNS on stderr. Refuses only when the operator sets
-    config/unblock_watch.yaml::refuse_unconditioned: true (held behind the operator's answer). Closing never refuses."""
+    GATE (decision: 2026-11-12 operator popup "Yes: refuse it (Recommended)"): REFUSES a NEW or CHANGED block (an `add`,
+    a changed blocked_on, or a move into `blocked`) whose edge has no machine-checkable condition and no explicit
+    `manual:<text>`, while config/unblock_watch.yaml::refuse_unconditioned is true. An untouched legacy block only warns;
+    closing (done/dropped) never refuses. Remove: set refuse_unconditioned: false."""
     if row.get("state") in ("done", "dropped") or not (row.get("state") == "blocked" or row.get("blocked_on")):
         return []
     try:
         from src.runtime import unblock_conditions as uc  # noqa: PLC0415
     except Exception:  # noqa: BLE001  # allow-silent: advisory; a missing module must not block a write
         return []
-    probs = sorted({p for b in uc.row_blocks(row) for p in uc.problems(b)})
-    if probs:
-        msg = (f"row {row.get('id')!r}: blocked without a full structured block: {'; '.join(probs)}. Give each blocked_on "
-               "entry reason/owner/clears_when, e.g. {\"reason\": ..., \"owner\": ..., \"clears_when\": [\"pr_merged:123\"]}.")
-        if uc.refuse_unconditioned(repo) and any("clears_when" in p or "malformed" in p for p in probs):
-            return [msg]
-        print(f"checklist: WARNING {msg}", file=sys.stderr)
+    blocks = uc.row_blocks(row)
+    probs = sorted({p for b in blocks for p in uc.problems(b)})
+    if not probs:
+        return []
+    msg = (f"row {row.get('id')!r}: blocked without a full structured block: {'; '.join(probs)}. Give each blocked_on "
+           "entry reason/owner/clears_when, e.g. {\"reason\": ..., \"owner\": ..., \"clears_when\": [\"pr_merged:123\"]} "
+           "(kinds: pr_merged pr_closed deployed row_state unit_result operator_answer date data_n; manual:<text> last).")
+    changed = prior is None or prior.get("blocked_on") != row.get("blocked_on") or \
+        (row.get("state") == "blocked" and prior.get("state") != "blocked")
+    if changed and any(uc.refusable(b) for b in blocks) and uc.refuse_unconditioned(repo):
+        return [msg]
+    print(f"checklist: WARNING {msg}", file=sys.stderr)
     return []
 
 
-def _commit_row(row: dict, repo: Path, header: dict, by: str | None) -> Path:
-    problems = _vocab_problems(row, header) + _unblock_contract(row, repo)
+def _commit_row(row: dict, repo: Path, header: dict, by: str | None, prior: dict | None = None) -> Path:
+    problems = _vocab_problems(row, header) + _unblock_contract(row, repo, prior)
     if problems:
         raise ChecklistError(f"row {row.get('id')!r} refused: " + "; ".join(problems))
     row = dict(row, updated_at=_now_utc())
@@ -159,7 +166,7 @@ def op_set(repo: Path, row_id: str, fields: dict, by: str | None) -> Path:
                                  f"change it to a new value instead")
     for f in fill_defaults(row):  # a legacy row is brought up to the contract when touched, never blocked
         print(f"checklist: filled {f}", file=sys.stderr)
-    return _commit_row(row, repo, header, by)
+    return _commit_row(row, repo, header, by, prior=old)
 
 
 def op_note(repo: Path, row_id: str, text: str, append: bool, by: str | None) -> Path:

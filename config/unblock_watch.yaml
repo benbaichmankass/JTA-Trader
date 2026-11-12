@@ -1,10 +1,15 @@
 # UNBLOCK-WATCH writer switch (row UNBLOCK-WATCH; grammar src/runtime/unblock_conditions.py).
 #
-# Gates this adds or changes: NONE while false.
-#   false (default): scripts/ops/checklist.py and scripts/ops/pipeline.py WARN when a blocked/waiting item has no
-#                    machine-checkable clears_when, and the daily brief lists it as `unconditioned`.
-#   true:            the same two writers REFUSE that write (a writer-side gate). Only the OPERATOR flips this
-#                    (canonical § "No new gates without the operator's permission"); the manager asked 2026-11-12.
-#                    Closing an item (done/dropped/killed) is never refused either way.
-# How to remove: leave false, or delete this file (unreadable reads as false).
-refuse_unconditioned: false
+# Gates this adds or changes: ONE writer-side gate, operator-approved.
+#   decision: 2026-11-12 operator popup "Yes: refuse it (Recommended)" (writers refuse a blocked/waiting item without a
+#   checkable clears_when).
+#   What it blocks: scripts/ops/checklist.py (`_unblock_contract`) and scripts/ops/pipeline.py (`_unblock_contract`)
+#     REFUSE a NEW or CHANGED blocked/waiting item whose block has no machine-checkable condition and no explicit
+#     `manual:<text>` (prose only, or nothing). Precedent: pipeline.py's existing due_when refusal.
+#   What it never blocks: closing an item (done/dropped/killed); a write that leaves an existing legacy block untouched
+#     (that only warns); `manual:<text>` (allowed as the last resort, listed daily, stale after 7 days).
+#   Research units: no refusal needed -- the tooling that writes not_before/blocked (queue_grade.py) always writes a
+#     date (not_before) and a requires_result, both machine-checkable.
+#   How to remove: set refuse_unconditioned: false (or delete this file; unreadable reads as false).
+#   No CI check enforces any of this.
+refuse_unconditioned: true
