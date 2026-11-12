@@ -591,7 +591,7 @@ class WorkStore:
         alone (SAVEPOINT) and reported, never aborting the run.
         """
         self._need_by(by)
-        out = {"created": 0, "updated": 0, "unchanged": 0, "events": 0, "errors": []}
+        out = {"created": 0, "updated": 0, "unchanged": 0, "skipped_native": 0, "events": 0, "errors": []}
         for start in range(0, len(entries), chunk):
             with self._tx() as conn:
                 known = None
@@ -620,6 +620,14 @@ class WorkStore:
         prior = self._get(conn, item["id"])
         if prior is not None and prior.get("kind") != item["kind"]:
             raise ConflictError(f"item {item['id']!r} exists as kind {prior.get('kind')!r}")
+        # WORK-STORE-IMPORTER-RACE (2026-11-12): the caller decided "not native" from a snapshot
+        # read BEFORE this transaction (the VM importer lists the whole store, then migrates for
+        # minutes). A session write landing in between made the item native, and writing the
+        # entry anyway reverted it to the frozen file (MEASURED: 3 of 319 BACKLOG-DRAIN-20261112
+        # writes reverted 2 s after landing, e.g. PI-20261106-01AFOLUJ-0002 seq 10666 -> 10668).
+        # Re-check here, under the write lock: an item last written by someone else is the truth.
+        if prior is not None and prior.get("updated_by") != by:
+            return "skipped_native", 0
         new_events = [ev for ev in e.get("events") or [] if ev["op_id"] not in known]
         full = {k: item.get(k) for k in WRITABLE_FIELDS}
         full.update(id=item["id"], kind=item["kind"])
