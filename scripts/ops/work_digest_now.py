@@ -470,6 +470,12 @@ def main(argv: list[str] | None = None) -> int:
         attention_watch.alert_watch(dry_run=a.dry_run)
     except Exception as exc:  # noqa: BLE001
         print(f"work-digest-now: alert_watch failed (digest unaffected): {exc}")
+    # WORK-GAP-ALERTS: insight-link / milestone-topic gap numbers -> alert ledger (wakes the manager); never gates.
+    try:
+        from scripts.ops import gap_counts  # noqa: PLC0415
+        print("work-digest-now: gap-alerts:", gap_counts.emit(gap_counts.compute(), dry_run=a.dry_run)["state"])
+    except Exception as exc:  # noqa: BLE001
+        print(f"work-digest-now: gap_counts failed (digest unaffected): {exc}")
     return run(dry_run=a.dry_run, force=a.force)
 
 

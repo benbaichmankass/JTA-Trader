@@ -65,6 +65,7 @@ from src.web.api.routers import training_center as training_center_router
 from src.web.api.routers import work as work_router
 from src.web.api.routers import work_ledger as work_ledger_router
 from src.web.api.routers import work_topics as work_topics_router
+from src.web.api.routers import work_gaps as work_gaps_router
 from src.web.api.routers import work_items as work_items_router
 from src.web.api.routers import live_review_direct as live_review_direct_router
 
@@ -155,6 +156,7 @@ app.include_router(market_ws_router.router)
 app.include_router(work_router.router)
 app.include_router(work_ledger_router.router)
 app.include_router(work_topics_router.router)
+app.include_router(work_gaps_router.router)
 app.include_router(work_items_router.router)
 app.include_router(live_review_direct_router.router)
 
