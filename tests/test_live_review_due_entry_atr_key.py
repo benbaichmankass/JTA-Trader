@@ -63,6 +63,8 @@ def test_vol_regime_label_names_the_meta_key():
 def test_stall_names_the_unanchored_cause_and_it_is_not_youth():
     import re
     no_prior = {"fired": set(), "last": None, "peak": None, "mech": None}
+    # collapsed-state: unanchored — this test pins the ONE state it is about (thin_window is covered in
+    # test_live_review_prescreen.py; measured / no_risk never reach this stall reason)
     row = {"order_package_id": "pkg-e", "strategy": "e4_oi_shock_1h", "symbol": "SOLUSDT", "direction": "long",
            "bars_held": 0, "peak_r": None, "peak_state": "unanchored", "open_r": 0.57,
            "updated_at": NOW.isoformat(), "lifecycle": "open"}
