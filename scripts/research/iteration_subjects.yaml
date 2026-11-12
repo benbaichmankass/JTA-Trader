@@ -176,6 +176,31 @@ ml_model:
     response: holdout -0.0001
     shape: flat
     note: cells still veto entries; never re-verified by money
+- id: sol-regime-15m-lgbm-fc-pcv-v2
+  title: D2 SOL regime head (advisory; no trend_vol cell names a SOL leg, so it changes no order)
+  verdict: pending
+  basis: 'MEASURED config/regime_policy.yaml names only 3 BTC legs; no cost-net figure for any D2 head. Row ML-KEEP-ITERATION-COVERAGE, unit RQ-20261112-0f87-01.'
+  money: demo_floor
+- id: mes-regime-5m-lgbm-v2
+  title: D2 MES regime head (advisory; changes no order)
+  verdict: pending
+  basis: 'Same as sol-regime-15m-lgbm-fc-pcv-v2. Unit RQ-20261112-0f87-01.'
+  money: demo_floor
+- id: eth-regime-1h-lgbm-xasset-v1
+  title: D2 ETH 1h cross-asset regime head (shadow, no consuming leg)
+  verdict: pending
+  basis: 'consolidation 2026-11-11 cons_strat empty; bake-off RQ-20261112-ef4c-03 is the feature-set read only. Unit RQ-20261112-0f87-01.'
+  money: demo_floor
+- id: ml-overlay-td-v1
+  title: overlay-td-v1 (D4 reduce x0.5 on trend_donchian gate legs, live-served)
+  verdict: pass_unconfirmed
+  basis: 'RQ-20261029-5785-02 TD PASS on RULE-ML-OVERLAY-NONINFERIOR-V2 (non-inferiority; PB2H FAIL). No live read of the reduced trades. Unit RQ-20261112-0f87-02. Listed although on real money: its demotion read is the live read the unit takes.'
+  money: real_money
+- id: ml-entry-tp-revision-v1
+  title: ml-entry-tp-revision-v1 (D7 TP extend at 4h check-ins, live-served)
+  verdict: pass_unconfirmed
+  basis: 'RQ-20261101-383f-01 PASS, held-out point estimate >= 0 (+0.0081 R n 868 in the power table), one read. Unit RQ-20261112-0f87-03. Listed although on real money for the same reason as ml-overlay-td-v1.'
+  money: real_money
 ltr_class:
 - id: ltr-tighten-sl
   title: live-review stop tighten

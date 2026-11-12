@@ -5,7 +5,7 @@
     "DIAG_BASE_URL": "http://141.145.193.91:8001"
   },
   "permissions": {
-    "_comment": "Repo-shared allowlist for the VM-side claude-vm-runner. Scoped to read-only diagnostic commands + the two narrow self-heal restart paths (ict-web-api.service via vm-web-api-recover.yml, ict-trader-live.service via system-actions.yml::restart-bot-service). Per docs/claude/system-actions.md and docs/claude/diag-relay.md, restarting ict-web-api has no trading blast radius (read-only API). Adding entries: mirror the audit pattern in scripts/ops/*.sh — narrow as possible. The broad tool-level entries (Read … mcp__Claude_Code_Remote) are the operator directive of 2026-09-27: every session gets full permission from the start, and approval exists only for merging or deploying changes that affect live operations — docs/CLAUDE-RULES-CANONICAL.md § \"Reading is never gated\". The merge-claim touch entry (operator 2026-10-26 ~19:40Z) lets the merge-slot guard's step (4) run in auto mode, where the classifier otherwise refuses it as a guard bypass; the real claim is still the committed .github/merge-slots/<slug>.json. The two narrow `gh api` merge/ready_for_review entries (operator 2026-10-27 ~11:40Z, manager session session_01AFoLuJi1vLTnYv9LbP6539: \"Make sure it's in the general settings, not just for this session\") let the manager squash-merge a PR in auto mode, where the classifier refuses it as Merge Without Review; WHAT may be merged is still governed by the tiers, mandates and pr-landing rules (a lane never merges its own landing:hold PR). 2026-11-08 (operator popup 'Allow manager merges (Recommended)', Manager Session 2026-11-07a): the 10-27 merge entries pinned the pre-rename repo slug Metis-Insights, so after the 2026-10-28 rename to JTA-Trader they matched nothing and every held PR needed an auto-off window; added the same entries for JTA-Trader plus the GitHub MCP merge/update tools the manager actually calls. WHAT may be merged is unchanged: tiers, mandates, pr-landing; the operator is asked only for Tier-3 changes the data does not settle; a lane never merges its own landing:hold PR.",
+    "_comment": "Repo-shared allowlist for the VM-side claude-vm-runner. Scoped to read-only diagnostic commands + the two narrow self-heal restart paths (ict-web-api.service via vm-web-api-recover.yml, ict-trader-live.service via system-actions.yml::restart-bot-service). Per docs/claude/system-actions.md and docs/claude/diag-relay.md, restarting ict-web-api has no trading blast radius (read-only API). Adding entries: mirror the audit pattern in scripts/ops/*.sh — narrow as possible. The broad tool-level entries (Read … mcp__Claude_Code_Remote) are the operator directive of 2026-09-27: every session gets full permission from the start, and approval exists only for merging or deploying changes that affect live operations — docs/CLAUDE-RULES-CANONICAL.md § \"Reading is never gated\". The merge-claim touch entry (operator 2026-10-26 ~19:40Z) lets the merge-slot guard's step (4) run in auto mode, where the classifier otherwise refuses it as a guard bypass; the real claim is still the committed .github/merge-slots/<slug>.json. The two narrow `gh api` merge/ready_for_review entries (operator 2026-10-27 ~11:40Z, manager session session_01AFoLuJi1vLTnYv9LbP6539: \"Make sure it's in the general settings, not just for this session\") let the manager squash-merge a PR in auto mode, where the classifier refuses it as Merge Without Review; WHAT may be merged is still governed by the tiers, mandates and pr-landing rules (a lane never merges its own landing:hold PR). 2026-11-08 (operator popup 'Allow manager merges (Recommended)', Manager Session 2026-11-07a): the 10-27 merge entries pinned the pre-rename repo slug Metis-Insights, so after the 2026-10-28 rename to JTA-Trader they matched nothing and every held PR needed an auto-off window; added the same entries for JTA-Trader plus the GitHub MCP merge/update tools the manager actually calls. WHAT may be merged is unchanged: tiers, mandates, pr-landing; the operator is asked only for Tier-3 changes the data does not settle; a lane never merges its own landing:hold PR. 2026-11-12 (operator chat ~11:50Z, Manager Session 2026-11-11a: \"You need to make the edit to the Claude Code settings. I can take you off auto mode if you need that in order to make those changes.\" after \"Whatever we break whatever gate is there and throw it in the trash\"): added the live-review row write (GitHub create_or_update_file + git push to live-review/rows: the auto-mode classifier refused reviewer rows as Real-World Transactions, so decided breakout_2 closes could not reach the VM, which applies them under MD-LTR-PROP-AUTO), Actions run cancel/rerun for this repo (DevOps queue management, operator 11:05Z \"I want you to clear the queue ... You have the permit\"), and delete_trigger / archive_session (session hygiene, operator 10:40Z).",
     "allow": [
       "Bash(sudo systemctl restart ict-web-api.service)",
       "Bash(sudo systemctl restart ict-trader-live.service)",
@@ -36,7 +36,15 @@
       "Bash(gh api -X PUT repos/benbaichmankass/JTA-Trader/pulls/*/merge *)",
       "Bash(gh api -X POST repos/benbaichmankass/JTA-Trader/pulls/*/ccr/ready_for_review*)",
       "mcp__github__merge_pull_request",
-      "mcp__github__update_pull_request"
+      "mcp__github__update_pull_request",
+      "mcp__github__create_or_update_file",
+      "mcp__Github__create_or_update_file",
+      "Bash(git push origin live-review/rows*)",
+      "Bash(git push origin HEAD:live-review/rows*)",
+      "Bash(gh api -X POST repos/benbaichmankass/JTA-Trader/actions/runs/*/cancel)",
+      "Bash(gh api -X POST repos/benbaichmankass/JTA-Trader/actions/runs/*/rerun)",
+      "mcp__Claude_Code_Remote__delete_trigger",
+      "mcp__Claude_Code_Remote__archive_session"
     ]
   },
   "hooks": {
@@ -94,6 +102,19 @@
           }
         ]
       }
+    ]
+  },
+  "autoMode": {
+    "allow": [
+      "$defaults",
+      "Calling the JTA Trader direct ops channel (POST https://ict-bot.duckdns.org/api/bot/ops/actions, including the exec action that runs a shell command on the operator's own live VM, and GET /api/bot/ops/jobs/*) with a reason and operator_quote, for an action covered by a mandate, the operator's instruction, or the operator's explicit yes (operator authorization 2026-11-12).",
+      "Instructing other Claude sessions (lanes / assistant managers) of this operator's JTA Trader project to use that direct ops channel and exec for actions and configuration (operator authorization 2026-11-12).",
+      "Editing .claude/skills/** and docs/** text in the JTA Trader repo, including skill text that changes how Claude operates, when it implements an operator decision (operator authorization 2026-11-12).",
+      "Merging JTA Trader / ict-trader-dashboard PRs whose required guards check is green, and cancelling queued or running non-required GitHub Actions runs (PR pytest, noise workflows) to keep guards moving (operator authorization 2026-11-12)."
+    ],
+    "environment": [
+      "$defaults",
+      "ict-bot.duckdns.org is the operator's own live trading VM API; its /api/bot/ops channel is the operator-sanctioned path for all actions and configuration. The work-store token for it is injected by the session proxy."
     ]
   }
 }

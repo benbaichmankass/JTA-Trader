@@ -7,22 +7,6 @@ Lane OPDEC-20261112 (dispatched by Manager Session 2026-11-11a). Rows **PROMOTE-
 verbatim *"Rebuild the evidence record, then promote when it passes"*) and **PR1111-SURVIVOR-PROMOTIONS** (p8, verbatim *"Yes: evidence
 check, then a proposal per leg"*). Record: `docs/plans/thursday-planning-2026-11-12-answers.md`.
 
-## ⚠️ Superseded the same day (2026-11-12, after operator answers) -- read this first
-
-The per-leg proposals below were written at ~08:30Z. Two were overtaken by operator decisions later that day:
-
-- **slv_trend_1h: PROMOTED** in PR #25267 (Tier 3, held). The 2026-08-24 demote had already been reopened by the operator on
-  2026-11-04 ("Reopen, promote if it clears (Recommended)") and was confirmed 2026-11-12 ("I answer that I do want to promote
-  silver."; decisions page w4 "Lift the ban: run the normal promotion check"). It was an evidence-based ladder move, never a ban.
-  The real blocker was the TP: RQ-20261112-5ab1-03 selected tp_r 6.0 on discovery and confirmed it on the holdout (+33.37 R, n 108),
-  and the record was regenerated at that config (+39.09 R, n 73, 4/4).
-- **tlt_pullback_1h: SHORT-ONLY on the alpaca_portfolio mirror** in PR #25274 (Tier 3, held); decisions page w5 "Enable shorting on
-  alpaca_live for it (Tier 3)". alpaca_live stays untouched until shorting is enabled there (cash account, shorting_enabled false,
-  $194.52); TLT longs never go to real money. The paper-floor PR #25192 was closed as superseded (a production leg does not sit on
-  general paper). The tlt record in THIS PR is the both-sided one; #25274 rebuilds it short-only.
-
-qqq_pullback_1h (affordability) and uso_trend_1h (non-financial constraint) are unchanged.
-
 ## What was measured, and on what
 
 - **Stage-0 records rebuilt** with `scripts/ops/build_strategy_evidence.py` (the promotion-corpus harness; not `backtest_orb.py`, not

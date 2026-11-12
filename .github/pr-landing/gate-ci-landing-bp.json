@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "Manager dispatch for lane GATE-CI-LANDING (acting with operator authority): \"This is CI/tooling, so Tier 1 by tier, but it changes what can merge, so AM-DEVOPS merges it.\" The diff changes .github/workflows/branch-protection-sync.yml REQUIRED_CONTEXTS from [pytest-collect, pytest-run, guards] to [guards] per the operator's 2026-11-12 gate decisions (PYTEST-COLLECT-REQUIRED: REMOVE; PYTEST-RUN-REQUIRED: MAKE REPORT-ONLY). Revert: git revert (the workflow re-applies the old list on push).",
+  "why": "Apply the operator's 2026-11-12 decision to drop pytest-collect and pytest-run from the required checks on main."
+}

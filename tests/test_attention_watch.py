@@ -349,3 +349,24 @@ def test_killed_row_is_not_a_rows_mirror_stall(tmp_path, monkeypatch):
     refuses = a._lr_refuses()
     assert refuses is not None
     assert refuses({"review_id": "KILLED", "reviewed_at": "2026-10-31T15:36:00Z"}) is True
+
+
+@pytest.fixture(autouse=True)
+def _desk_wake_switch_on(tmp_path, monkeypatch):
+    """The console desk_wake switch defaults OFF (src/runtime/wake_toggles.py); the strict-breach cases need it ON."""
+    from src.runtime import wake_toggles as _wt
+    monkeypatch.setenv("RUNTIME_STATE_DIR", str(tmp_path / "_wt_state"))
+    monkeypatch.delenv("WAKE_TOGGLES_REMOTE", raising=False)
+    _wt.set_toggle("desk_wake", True, "test")
+
+
+def test_desk_row_missing_ok_when_the_desk_wake_switch_is_off(monkeypatch):
+    """DESK-WAKE-SILENT-1112: switch off => no wake, no row, by design (never a breach), even on an even bar."""
+    from src.runtime import wake_toggles as _wt
+    import scripts.ops.desk_wake_marker as _dwm
+    monkeypatch.setattr(_dwm, "scan_wake_every_h", lambda path=None: 2)
+    monkeypatch.setattr(a, "_git", _desk_git(_ptr_cut(300, "2026-10-28T12:31:00Z"), ""))
+    assert a.probe_desk_row_missing(_DNOW)["status"] == a.BREACHED
+    _wt.set_toggle("desk_wake", False, "test")
+    p = a.probe_desk_row_missing(_DNOW)
+    assert p["status"] == a.OK and "desk_wake console switch is off" in p["detail"]

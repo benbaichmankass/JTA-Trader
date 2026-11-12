@@ -1,0 +1,146 @@
+# Hand-authored 2026-11-12 by lane ML-AM-NEXT-LIVE (session_01AFoLuKUkUmhzEzkiXTb9tG, Tier 1), dispatched by AM-ML for Manager Session 2026-11-11a.
+# ITERATION unit from a written diagnosis. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261112-3144-01
+title: 'ITERATION 2 of ml-tm-action-value (fail): with a SHORT-HORIZON per-action label (the action''s value censored at 12 bars), is the
+  per-action advantage predictable out of fold?'
+status: done
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+- L-ATM
+programme: P2
+kind: experiment
+question: 'TM-BENCH corpus v1 (tmb-73f5c3660014, the committed Q-TM1b emit), R1 + the path-state block, the same learner, folds and seed as
+  RQ-20261101-78fc-04. Label changed: label_H[a][t] = net R(B0 + a at t, everything closed at bar t+1+H) - net R(B0, closed at bar t+1+H),
+  H = 12 bars, full cost stack (first passage of whichever level is in force within H, else a mark-to-close at H). Does Stage-A out-of-fold
+  rank calibration of the per-action advantage beat the within-trade shuffled control?'
+why_this_matters: 'The full-trade label prices an action at t by everything that happens until the leg exits, often dozens of bars later, so
+  most of its variance is path noise after the decision. That is a candidate reason the OOS action-value ceiling (0.86 R/trade) exists while
+  no state selects it.'
+iteration:
+  subject: ml-tm-action-value
+  subject_kind: ml_model
+  from_result: RQ-20261101-78fc-04
+  verdict_read: fail
+  diagnosis: 'Five negatives on this subject (d6e7-06, RQ-20260927-002, a7e1-01, 7294-02, c7a1-01) plus 78fc-04: adding path state (MAE,
+    ATR vs entry, in-trade swing distances) moved pooled OOS rho from negative to positive (close -0.028 -> +0.036) but no class cleared the
+    null in any fold. Features moved the needle in the right direction and not enough; the label horizon is the registered next lever
+    (78fc-04 FAIL branch).'
+  hypothesis: a short-horizon label carries less post-decision noise, so the same state predicts it out of fold
+  attempt: 2
+  due_by: '2026-11-19'
+power:
+  expected_n: 2627
+  min_detectable_effect: 0.03
+  effect_units: metric
+  sd: 0.45
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: n MEASURED (78fc-04 run, 2,627 trades / 50,926 states); sd carried from RQ-20261030-c7a1-01. Stage A is carried by trades (cluster bootstrap).
+  feasibility:
+    source: none
+    accrual_basis: Replays a committed corpus; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261112-3144-01
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: Per fold and per non-hold action, the OOS Spearman between the lgbm predicted label_H and the realised label_H, its trade-clustered
+    bootstrap 95% CI (2,000 resamples) and the within-trade permutation p95 (200 permutations); graded by tm_bench --rule stage_a_folds.
+  rule: 'PASS iff at least one non-hold action has CI lower > permutation p95 on >= 4 of 6 purged folds. INDETERMINATE if any fold has < 200
+    check-ins, the corpus is not tmb-73f5c3660014, or the selfcheck fails. FAIL otherwise: state and label are both exhausted on the six-leg
+    v1 population, and iteration 3 widens the TRAINING population (broad-universe corpus v2, RQ-20261029-7294-01) before any further state or
+    label change. H is fixed at 12 now and is not tuned after any result. A PASS opens a Stage-B policy unit (inner-fold margin, restricted to
+    the passing classes, graded net of cost vs hold, B1, causal matched random), never a promotion.'
+  what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): purged walk-forward, shuffled control, one pre-registered read.'
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 20
+  basis: MEASURED 78fc-04 took ~2 min on 4 cores; the horizon label adds ~2 replays per state-action.
+  why_runner: Replays a committed corpus on CPU.
+value:
+  usd_at_stake_per_month: 250
+  confidence: 0.1
+  bucket: ai_trader
+  basis: planning weight carried from RQ-20261101-78fc-04; an estimate, not a measurement
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-AM-NEXT-LIVE
+- RQ-20261101-78fc-04
+- RQ-20261030-c7a1-01
+- RQ-20261029-7294-01
+what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+intervention_controls:
+  not_applicable: an offline Stage-A calibration read; the consumer's own gate applies any action
+ml_consumer:
+  consumer: scripts/ops/live_review_apply.py
+  decision: which in-trade action the management model advises on the real-money legs (advice-only per class until graduation)
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - xrp_pullback_2h
+  - ada_pullback_2h
+  - trend_donchian_eth_prop
+  - trend_donchian_sol_prop
+  book: money
+registration_addendum:
+  at: '2026-11-12T11:40Z'
+  rule_changed: false
+  by: lane ML-AM-NEXT-LIVE (session_01AFoLuKUkUmhzEzkiXTb9tG), per AM-ML 11:33Z
+  note: 'blocked_on TMBENCH-HORIZON-LABEL cleared in the same PR (#25250): tm_bench --label horizon --horizon N (both arms force-closed
+    at bar s+1+N through the same engine replay), selfcheck rows PASS: horizon label == full label when N >= remaining bars (max diff 0),
+    differs at N=2 (45/45 trades, positive control), stage_a_folds at N=12 reads pass on the planted corpus and not on the driftless null.
+    The planted positive control needs the 900-trade corpus (150 per fold); at 300 trades (50 per fold) per-fold CIs were too wide although
+    pooled rho was 0.60. v1 has ~430 trades per fold. Registered rule and H=12 unchanged.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/tm_bench.py
+  - score
+  - --test-corpus
+  - comms/research/RQ-20261030-c7a1-01/41134401720/tm_bench_v1_4t7ondlz/*__paths.jsonl
+  - --rule
+  - stage_a_folds
+  - --feature-block
+  - path_state
+  - --label
+  - horizon
+  - --horizon
+  - '12'
+  - --learners
+  - lgbm_action_value
+  - --checkins
+  - every_bar
+  - --calibration
+  - --folds
+  - '6'
+  - --n-boot
+  - '2000'
+  - --n-perm
+  - '200'
+  - --random-draws
+  - '50'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261112-3144-01
+result:
+  verdict: fail
+  read_at: '2026-11-12T11:43Z'
+  evidence:
+  - research/results/RQ-20261112-3144-01/local-20261112T1140Z.jsonl
+  summary: 'FAIL (harness paths, ESTIMATED provenance, full cost stack; tmb-73f5c3660014, 2,627 trades, 50,926 states, >= 7,784 OOS check-ins
+    per fold): 0/6 folds for every non-hold action. The 12-bar label narrows pooled CIs (~+-0.02) but rho shrinks with them; closest
+    tighten_sl_atr1 rho +0.019 CI [-0.0005, +0.037] vs p95 +0.005. Next per the registered FAIL branch: iteration 3 widens the training
+    population (corpus v2), RQ-20261112-3144-02.'

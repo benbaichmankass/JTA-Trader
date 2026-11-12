@@ -52,12 +52,17 @@ from __future__ import annotations
 
 import ast
 import json
+import logging
 import math
 import os
 import re
 import sqlite3
+import threading
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
+
+logger = logging.getLogger(__name__)
 
 CONFIG_REL = os.path.join("config", "live_trade_review.yaml")
 REVIEWS_REL = os.path.join("comms", "live_review", "reviews.jsonl")
@@ -68,6 +73,10 @@ TELEMETRY_EVENTS = ("r_milestone", "new_peak", "giveback", "near_target")
 
 #: Events computed from market inputs (history / funding / calendar).
 MARKET_EVENTS = ("swing", "vol_regime", "funding", "calendar")
+
+#: vol_regime's entry ATR when the path history lacks the entry bar: the strategy's signal-time ATR stamped on the
+#: package (order_packages.meta.atr). Always named in the event's ``why`` so it never reads as path-measured.
+ENTRY_ATR_PACKAGE_META = "package_meta"
 
 #: Pre-screen events (LTR-PRACTICE-REDESIGN): evaluated only when configured.
 #: The per-package auto mandate's review cadence (src/runtime/ltr_auto_mandate.py::CADENCE_EVENT).
@@ -84,13 +93,40 @@ SKIPPED_CLOSED = "skipped_closed_market"
 SKIPPED_NOTHING_NEW = "skipped_nothing_new"
 
 
+# RM-AM-DUE-COULDNOTLOOK (measured 2026-11-12 on the VM after #25234): compute_due took 8-20 s of the route's
+# 9-30 s because every package_market_state call went through market_hours.asset_class_for_symbol, which re-parses
+# config/instruments.yaml (load_instrument_profiles is not memoized): 41 parses = 13.7 s of a 13.8 s compute_due on
+# 20 packages, profiled locally. The exchange per symbol is now read once per PROFILE_TTL_S and shared by every call
+# in the process. Same mapping as asset_class_for_symbol (profile exchange -> asset class; unprofiled -> crypto); a
+# failed profile read is not cached, so the next call retries.
+PROFILE_TTL_S = 300.0
+_PROFILE_EXCHANGE: Dict[str, Optional[str]] = {}
+_PROFILE_LOADED_AT: Optional[float] = None
+_PROFILE_LOCK = threading.Lock()
+
+
+def profile_exchange(symbol: Any) -> Optional[str]:
+    """The instrument profile's ``exchange`` for *symbol* (``config/instruments.yaml``), None when unprofiled.
+    Raises when the profiles cannot be read (callers already treat that as could-not-read)."""
+    global _PROFILE_LOADED_AT
+    now = time.monotonic()
+    with _PROFILE_LOCK:
+        if _PROFILE_LOADED_AT is None or now - _PROFILE_LOADED_AT > PROFILE_TTL_S:
+            from src.core.profile_loader import load_instrument_profiles
+            profs = load_instrument_profiles() or {}
+            _PROFILE_EXCHANGE.clear()
+            _PROFILE_EXCHANGE.update({str(k).upper(): getattr(v, "exchange", None) for k, v in profs.items()})
+            _PROFILE_LOADED_AT = now
+        return _PROFILE_EXCHANGE.get(str(symbol or "").strip().upper())
+
+
 def package_market_state(symbol: Any, now: datetime) -> Tuple[bool, str, str]:
     """``(open, asset_class, why)`` for the package's instrument at *now*, from the one session helper
     (``src.runtime.market_hours``). Crypto perps are always open. An unreadable helper or an asset class it
     does not model reads OPEN, with the reason: a review that fires is the safe side (Prime Directive)."""
     try:
-        from src.runtime.market_hours import ASSET_CLASSES, asset_class_for_symbol, is_market_open
-        cls = asset_class_for_symbol(str(symbol or ""))
+        from src.runtime.market_hours import ASSET_CLASSES, asset_class_for_exchange, is_market_open
+        cls = asset_class_for_exchange(profile_exchange(symbol) or "")
         if cls not in ASSET_CLASSES:
             return True, str(cls), f"asset class {cls!r} not modelled: treated as open"
         return bool(is_market_open(cls, now)), cls, f"{cls} market {'open' if is_market_open(cls, now) else 'closed'}"
@@ -233,6 +269,92 @@ def _f(v: Any) -> Optional[float]:
     except (TypeError, ValueError):
         return None
 
+
+# DIAG-LIVE-REVIEW-DUE-SLOW / RM-AM-DUE-COULDNOTLOOK (2026-11-12): the route's only network reads are the bot-feed
+# marks (``local_pnl.last_mark_price``: a Bybit / IB / Alpaca candle fetch per symbol). Run serially inside the
+# request they summed past the callers' budgets (19.1 s on 11-12 01:46Z; a 502 after ~31 s from 09:19Z once
+# CONFLICTING-EXPOSURE-ALERT marked every open symbol), so the wake read could_not_look while packages were due.
+# Marks are now fetched in parallel under ONE wall-clock budget; a mark not back in time is labelled
+# (could_not_look with the reason), never 0, and never holds the due list hostage.
+MARK_BUDGET_S = 4.0
+_MARK_INFLIGHT: Set[str] = set()
+_MARK_INFLIGHT_LOCK = threading.Lock()
+
+
+def _ms(t0: float) -> int:
+    return int(round((time.monotonic() - t0) * 1000))
+
+
+class MarkTimeout(Exception):
+    """A bot-feed mark that was not back inside the route's mark budget (or is still in flight from an earlier call)."""
+
+
+def bounded_marks(symbols: Iterable[Any], mark_fn: Optional[Callable[[Any], Optional[float]]],
+                  budget_s: Optional[float] = None) -> Tuple[Dict[str, Optional[float]], Dict[str, str]]:
+    """Fetch ``mark_fn(sym)`` for each distinct symbol in parallel, waiting at most ``budget_s`` in total.
+
+    Returns ``(marks, misses)``: ``marks[sym]`` is the float mark; ``misses[sym]`` is why there is none
+    (``timeout``, ``in_flight`` -- a read for that symbol from an earlier request has not returned, so a hung feed
+    is not stacked one thread per request -- ``error: ...`` or ``unavailable``). Daemon threads: a hung read can
+    never hold the request or the process's shutdown. Never raises.
+    """
+    syms = sorted({str(s) for s in symbols if s not in (None, "")})
+    marks: Dict[str, Optional[float]] = {}
+    misses: Dict[str, str] = {}
+    if mark_fn is None:
+        return marks, {s: "no_mark_source_supplied" for s in syms}
+    out: Dict[str, Any] = {}
+
+    def run(sym: str) -> None:
+        try:
+            out[sym] = ("ok", mark_fn(sym))
+        except Exception as exc:  # noqa: BLE001  # allow-silent: returned as misses[sym]
+            out[sym] = ("error", f"{type(exc).__name__}: {exc}")
+        finally:
+            with _MARK_INFLIGHT_LOCK:
+                _MARK_INFLIGHT.discard(sym)
+
+    threads: List[Tuple[str, threading.Thread]] = []
+    for sym in syms:
+        with _MARK_INFLIGHT_LOCK:
+            if sym in _MARK_INFLIGHT:
+                misses[sym] = "in_flight"
+                continue
+            _MARK_INFLIGHT.add(sym)
+        t = threading.Thread(target=run, args=(sym,), name=f"ltr-mark-{sym}", daemon=True)
+        t.start()
+        threads.append((sym, t))
+    deadline = time.monotonic() + max(0.0, float(MARK_BUDGET_S if budget_s is None else budget_s))
+    for sym, t in threads:
+        t.join(max(0.0, deadline - time.monotonic()))
+    for sym, _t in threads:
+        got = out.get(sym)
+        if got is None:
+            misses[sym] = "timeout"
+        elif got[0] == "error":
+            misses[sym] = f"error: {got[1]}"
+        else:
+            v = _f(got[1])
+            if v is not None and v > 0:
+                marks[sym] = v
+            else:
+                misses[sym] = "unavailable"
+    return marks, misses
+
+
+def _memo_mark_fn(marks: Dict[str, Optional[float]], misses: Dict[str, str],
+                  budget_s: float) -> Callable[[Any], Optional[float]]:
+    """A ``mark_fn`` over pre-fetched marks: a timed-out / in-flight symbol raises :class:`MarkTimeout` so the
+    caller labels it ``mark_read_failed: MarkTimeout: ...``; an unknown symbol is ``None`` (no network here)."""
+    def fn(sym: Any) -> Optional[float]:
+        k = str(sym)
+        if k in marks:
+            return marks[k]
+        why = misses.get(k)
+        if why in ("timeout", "in_flight"):
+            raise MarkTimeout(f"mark {why} (route mark budget {budget_s:g}s)")
+        return None
+    return fn
 
 def _parse_ts(v: Any) -> Optional[datetime]:
     if not v:
@@ -499,6 +621,23 @@ def _base_of(symbol: Any) -> str:
     return base
 
 
+def review_calendar_classes(symbol: Any, base: str, cc: Dict[str, Any], now: datetime) -> Set[str]:
+    """LTR-CALENDAR-CLASSES (b): the REVIEW-ONLY event classes for *symbol* from ``events.calendar`` in
+    config/live_trade_review.yaml -- ``review_classes_by_base[base]``, else
+    ``review_classes_by_asset_class[<asset class of its instrument profile>]``. An unprofiled symbol (or an
+    unreadable profile) gets none, so it stays could_not_look. The trader's event risk never reads this."""
+    by_base = cc.get("review_classes_by_base") or {}
+    if base in by_base:
+        return {str(c).lower() for c in by_base.get(base) or []}
+    try:
+        if profile_exchange(symbol) is None:
+            return set()
+    except Exception:  # noqa: BLE001  # allow-silent: no default; the event stays could_not_look with its reason
+        return set()
+    _, cls, _ = package_market_state(symbol, now)
+    return {str(c).lower() for c in (cc.get("review_classes_by_asset_class") or {}).get(cls) or []}
+
+
 def _is_perp(symbol: Any) -> bool:
     try:
         from src.runtime.execution_costs import is_perp
@@ -566,16 +705,29 @@ def market_events(row: Dict[str, Any], ctx: Optional[Dict[str, Any]],
         else:
             entry_bar = last_ts - timedelta(seconds=bars_held * tf_seconds)
             late = (first_ts - entry_bar).total_seconds()
-            if late > tf_seconds + 60:
-                miss("vol_regime", f"history starts {late / tf_seconds:.1f} bars after entry")
+            a1 = _f(atrs[-1]["atr"])
+            a0, src = None, None
+            if late <= tf_seconds + 60:
+                a0, src = _f(atrs[0]["atr"]), "path_history"
             else:
-                a0, a1 = _f(atrs[0]["atr"]), _f(atrs[-1]["atr"])
+                # LTR-VOLREGIME-ENTRY-ATR (AM-TRADING decision 2026-11-12 13:50Z): the path history lacks the
+                # entry bar, so take the entry ATR the strategy stamped on the package (order_packages.meta.atr,
+                # computed at signal time), LABELLED as such so it never reads as path-measured. Review path only.
+                venue = ctx.get("venue") or {}
+                m = _f(venue.get("meta_atr")) if venue.get("state") == "read" else None
+                if m is not None and m > 0:
+                    a0, src = m, ENTRY_ATR_PACKAGE_META
+                else:
+                    miss("vol_regime", f"history starts {late / tf_seconds:.1f} bars after entry "
+                                       "and the package carries no entry ATR")
+            if a0 is not None and a0 > 0 and a1 is not None:
                 ratio = a1 / a0
+                tag = "" if src == "path_history" else f" (entry_atr_source={src}: not path-measured)"
                 up, dn = float(vr.get("expand_ratio", 1.5)), float(vr.get("contract_ratio", 0.67))
                 if ratio >= up:
-                    out.append(("vol_regime", "expand", f"ATR now/entry {ratio:.2f} >= {up:g}"))
+                    out.append(("vol_regime", "expand", f"ATR now/entry {ratio:.2f} >= {up:g}{tag}"))
                 elif ratio <= dn:
-                    out.append(("vol_regime", "contract", f"ATR now/entry {ratio:.2f} <= {dn:g}"))
+                    out.append(("vol_regime", "contract", f"ATR now/entry {ratio:.2f} <= {dn:g}{tag}"))
 
     # -- funding: crypto perps only ------------------------------------------
     sym = row.get("symbol")
@@ -607,6 +759,7 @@ def market_events(row: Dict[str, Any], ctx: Optional[Dict[str, Any]],
     else:
         base = _base_of(sym)
         classes = {str(c).lower() for c in (cal.get("classes") or {}).get(base) or []}
+        classes |= review_calendar_classes(sym, base, cc, now)
         if not classes:
             miss("calendar", f"no event classes declared for {base}")
         else:
@@ -840,7 +993,13 @@ def prescreen(row: Dict[str, Any], prior: Dict[str, Any], ctx: Optional[Dict[str
         need = stall_bars(sc, tf_seconds)
         max_peak = float(sc.get("max_peak_r", 0.5))
         if held is None or peak_r is None:
-            miss("stall", tel_reason or "bars_held / peak_r unknown")
+            # thin_window = fewer than 2 bars since entry (trail_decay): a YOUNG package, said so, so the
+            # done bar counts it as youth (AM-TRADING OK 2026-11-12 14:32Z; honest label, no new behaviour).
+            if tel_reason is None and peak_r is None and held is not None \
+                    and row.get("peak_state") == "thin_window":
+                miss("stall", f"peak_r thin_window: {int(held)} bar(s) since entry; need 2")
+            else:
+                miss("stall", tel_reason or "bars_held / peak_r unknown")
         else:
             hit = held >= need and peak_r < max_peak
             lvl = int(held // need) * need if hit else None
@@ -1188,7 +1347,7 @@ def _prop_dd_context(account_id: str, strategy: Any, accts_cfg: Dict[str, Any]) 
 
 #: Mirror of ``scripts/ops/live_review_apply.ACTION_PATHS`` for the two prop classes. Not imported: that script
 #: is the apply path and must stay out of this read path's import closure (tests/test_live_review_due.py pins equality).
-_PROP_ACTION_PATHS = {"phone": ["close", "move_tp", "reduce", "tighten", "widen_sl"], "prop_vm": ["move_tp", "tighten"]}   # move_tp: PROP-BRACKET-APPLY (operator 2026-11-11)
+_PROP_ACTION_PATHS = {"phone": ["close", "move_tp", "reduce", "tighten", "widen_sl"], "prop_vm": ["close", "move_tp", "reduce", "tighten"]}   # move_tp: PROP-BRACKET-APPLY (operator 2026-11-11); close / reduce: CAP-PROP-VM-CLOSE (2026-11-12)
 
 
 def _prop_apply_paths(account_id: str, accts_cfg: Dict[str, Any]) -> Dict[str, Any]:
@@ -1226,8 +1385,7 @@ def _prop_telemetry(symbol: Any, direction: Any, entry: Any, qty: Any,
     if not isinstance(mark, (int, float)) or mark <= 0:
         return dict(base, reason="mark_unavailable", mark=None)
     try:  # the instrument profile's exchange, as prop_overview labels it (not imported: layer-guard)
-        from src.core.profile_loader import load_instrument_profiles
-        ex = getattr((load_instrument_profiles() or {}).get(str(symbol).upper()), "exchange", None)
+        ex = profile_exchange(symbol)
     except Exception:  # noqa: BLE001  # allow-silent: an unread profile is labelled, not guessed
         ex = None
     src = f"{str(ex).lower() if ex else 'bot_feed'}_last_close_5m"
@@ -1506,11 +1664,14 @@ def live_review_due(db_path: Optional[str] = None,
     prop uPnL estimates; None -> those fields are could_not_look ``no_mark_source_supplied``. Never raises. With the default reviews path the prior-review index also
     holds the rows on ``live-review/rows`` that main lacks (``branch`` overrides that read)."""
     now = now or datetime.now(timezone.utc)
+    t0 = time.monotonic()
+    timings: Dict[str, int] = {}
     env: Dict[str, Any] = {
         "generated_at": now.isoformat(), "read_state": "could_not_look",
         "reason": None, "open_count": None, "due_count": None, "due": [],
         "reviews_state": None, "events_not_evaluated": [],
         "open_count_complete": False, "telemetry_less": [],
+        "timings_ms": timings, "mark_budget_s": float(MARK_BUDGET_S),
     }
     try:
         cfg = load_config(config_path)
@@ -1520,12 +1681,14 @@ def live_review_due(db_path: Optional[str] = None,
     env["events_not_evaluated"] = list(cfg.get("not_evaluated") or [])
     env["thresholds_source"] = CONFIG_REL.replace(os.sep, "/")
 
+    t_rv = time.monotonic()
     if reviews_path is None or branch is not None:
         rv = read_reviews_merged(reviews_path, branch)
         env["branch_state"], env["branch_reason"] = rv["branch_state"], rv["branch_reason"]
         env["branch_rows_added"] = rv["branch_added"]
     else:
         rv = read_reviews(reviews_path)
+    timings["reviews"] = _ms(t_rv)
     env["reviews_state"] = rv["state"]
     env["review_bad_lines"] = rv["bad_lines"]
     if rv["state"] == "unreadable":
@@ -1533,6 +1696,7 @@ def live_review_due(db_path: Optional[str] = None,
         env["reason"] = f"reviews_unreadable: {rv.get('error')}"
         return env
 
+    t_tel = time.monotonic()
     try:
         from src.runtime.position_telemetry import read_records
         tel = read_records(db_path=db_path, limit=1000)
@@ -1546,6 +1710,7 @@ def live_review_due(db_path: Optional[str] = None,
         env["reason"] = "telemetry_table_absent"
         return env
 
+    timings["telemetry"] = _ms(t_tel)
     open_rows = [r for r in tel.get("rows", []) if r.get("lifecycle") == "open"]
     mech_rows = [r for r in tel.get("rows", []) if r.get("lifecycle") == "unknown_trade_absent"]
     jo = read_journal_open(db_path)
@@ -1554,7 +1719,15 @@ def live_review_due(db_path: Optional[str] = None,
     have = {str(r.get("order_package_id")) for r in open_rows}
     less = [dict(p, telemetry_absent=True, lifecycle="open")
             for p in jo.get("packages", []) if p["order_package_id"] not in have]
-    po = read_prop_open(db_path, mark_fn=mark_fn)
+    t_marks = time.monotonic()
+    po = read_prop_open(db_path, mark_fn=None)  # rows first; the marks are fetched below under one budget
+    prop_syms = {p.get("symbol") for p in po.get("packages", [])}
+    pre_marks, pre_miss = bounded_marks(prop_syms, mark_fn) if mark_fn is not None else ({}, {})
+    memo = _memo_mark_fn(pre_marks, pre_miss, float(MARK_BUDGET_S)) if mark_fn is not None else None
+    for p in po.get("packages", []):
+        for a in p.get("accounts") or []:
+            a["telemetry"] = _prop_telemetry(p.get("symbol"), p.get("direction"), p.get("entry"), a.get("qty"), memo)
+    timings["prop_marks"] = _ms(t_marks)
     env["prop_open_state"], env["prop_open_reason"] = po["state"], po.get("reason")
     known = have | {p["order_package_id"] for p in less}
     prop_less = []
@@ -1566,7 +1739,9 @@ def live_review_due(db_path: Optional[str] = None,
             lifecycle="open", prop=True))
     less = less + prop_less
     env["prop_open"] = po.get("packages", [])
+    t_mk = time.monotonic()
     market = read_market_context(open_rows + less, cfg, now, db_path, funding_db_path, calendar_path)
+    timings["market_context"] = _ms(t_mk)
     try:
         from src.runtime import ltr_auto_mandate
         cad = ltr_auto_mandate.cadence(now=now)
@@ -1579,14 +1754,29 @@ def live_review_due(db_path: Optional[str] = None,
         for r in sorted(open_rows, key=lambda r: str(r.get("updated_at") or "")):
             if _f(r.get("last_price")):
                 tel_marks[conflicting_exposure.normalize_symbol(r.get("symbol"))] = float(r["last_price"])
-        ce = conflicting_exposure.detect(
-            db_path, mark_fn=mark_fn or (lambda s: tel_marks.get(conflicting_exposure.normalize_symbol(s))))
-        ce["mark_source"] = "route_mark_fn" if mark_fn else "telemetry_last_price"
+        # Telemetry's last_price first (the trader's own mark, no network), then the prop marks already fetched;
+        # only the legs of an ACTUAL conflict that still lack a mark get a bounded bot-feed read.
+        def _ce_mark(sym: Any) -> Optional[float]:
+            m = tel_marks.get(conflicting_exposure.normalize_symbol(sym))
+            return m if m is not None else pre_marks.get(str(sym))
+        t_ce = time.monotonic()
+        ce = conflicting_exposure.detect(db_path, mark_fn=_ce_mark)
+        need = {x.get("symbol") for c in ce.get("conflicts") or [] for x in c.get("legs") or []
+                if x.get("open_r") is None}
+        if need and mark_fn is not None:
+            got, miss = bounded_marks(need, mark_fn)
+            conflicting_exposure.fill_open_r(ce, lambda s: got.get(str(s)))
+            if miss:
+                ce["mark_misses"] = miss
+        ce["mark_source"] = "telemetry_last_price+route_mark_fn" if mark_fn else "telemetry_last_price"
+        timings["conflicting_exposure"] = _ms(t_ce)
     except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as could_not_look
         ce = {"state": "could_not_look", "reason": f"{type(exc).__name__}: {exc}", "conflicts": []}
     env["conflicting_exposure"] = ce
+    t_cd = time.monotonic()
     res = compute_due(open_rows + less, rv["rows"], cfg, now, market=market, mechanics_rows=mech_rows,
                       cadence=cad, conflicts=ce.get("conflicts") or [])
+    timings["compute_due"] = _ms(t_cd)
     env.update(res)
     env["open_count"] = len(open_rows) + len(less)
     env["open_count_complete"] = jo["state"] == "read" and po["state"] in ("read", "table_absent")
@@ -1614,4 +1804,6 @@ def live_review_due(db_path: Optional[str] = None,
     env["read_state"] = "looked"
     env["oldest_due_bar_start"] = min(
         (d["bar_start"] for d in res["due"]), default=None)
+    timings["total"] = _ms(t0)
+    logger.info("live_review_due: open=%s due=%s timings_ms=%s", env["open_count"], env.get("due_count"), timings)
     return env

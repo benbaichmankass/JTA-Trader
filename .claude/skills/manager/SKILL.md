@@ -80,7 +80,9 @@ Read the recipe for the kind of marker you are acting on **before** you dispatch
 lives ONLY in `scripts/research/research_watchdog.yaml` `ops_flags.pr_number`). Never merge or close it. **Treat every comment as an incident:
 fix it, dispatch a lane, or tell the operator; never leave one unanswered** (ledger `comms/research/ops/watchdog_incidents.jsonl`). Wake markers
 on that PR (`ltr-wake`, `mandate_cadence`, `judgement_cadence`, `desk-wake` / `desk-trigger-wake`, `short-hold-wake`): **one marker, one lane,
-never spawn twice for the same id**; a `could_not_*` kind is an incident, not a wake. **Never create a session with no `source_url`** (403 on every
+never spawn twice for the same id**; a `could_not_*` kind is an incident, not a wake. An `ltr-wake` entry marked **`reviewer started by routine`**
+(`routine_fire.state` `fired` / `already_fired` + `session_id`; TRADE-ACTION-DIRECT-PATH phase 3) already HAS its reviewer: do NOT dispatch it; the
+comment is the dedupe record. Dispatch only the entries without that mark (a routine fire that failed says so and falls back to you). **Never create a session with no `source_url`** (403 on every
 write). **Never run your own timer or scheduled watch that starts a live reviewer without a marker**: only the wake poster commits packets. Every
 reviewer dispatch prompt ends: "end your report with a `PACKET DEFECTS:` line (REVIEWER-BRIEF § 2d)"; file each reported defect once on its owner
 (`LTR-GRADER-COVERAGE`, `LTR-PACKET-READ-REACH`, else a PIPELINE item). Desk and short-hold lanes follow `.claude/skills/trading-desk/SKILL.md` § 6b
@@ -180,8 +182,10 @@ Plus, then I can also, like, if there's artifacts, I can leave you comments and 
   - answers saved in the page (the `db` capability, collection `answers`);
   - a "copy my answers" summary.
   Write for reading away from the chat: no unexplained ids, and every question stands on its own.
-- **Delivery.** Send the link once via `send-ping`, put it in the console inbox (until the UI lists decision docs, the brief's "decisions for
-  you" carries the link), and keep updating **the same artifact** (same URL) as items resolve or new ones join. Do not spawn a new page per
+- **Delivery.** Send the link once via `send-ping` and **register it on the console** (row UI-DECISION-DOCS, console v27+): `ArtifactData set`
+  on the console artifact (https://claude.ai/artifact/YU4ZwddDFB1AD2xWV2oE3g), collection `decisions`, doc id `<slug>-<yyyymmdd>`, data `{title, url, questions, answered, counted_at, created_at,
+  status: "open", row}`. It then shows under "Decision docs waiting on you". At each check-in, recount the doc's `answers` collection and
+  update `answered` / `counted_at`; set `status: "closed"` (or `"answered"`) when it is done, and it folds away. Also keep updating **the same artifact** (same URL) as items resolve or new ones join. Do not spawn a new page per
   question.
 - **The manager keeps running.** A decision doc never blocks other work (§ "Five things", item 4): state the assumption, carry on, and pick
   the answers up at the next check-in or when the operator says they are done.
@@ -269,6 +273,34 @@ committed; it was superseded; or its row is `done`/`dropped`/`landed_unproven` w
 unmerged PR needing pushes, whose report has not arrived, that is BLOCKED on a permission prompt (surface it), or is mid-run on a live action. Read
 the final spend and note it on the row (reversible: `unarchive_session`).
 
+### Scheduled-task and session hygiene (operator, 2026-11-12, binding) — gates this adds or changes: none
+
+Operator, 2026-11-12 ~10:40Z, verbatim: *"we're supposed to be archiving sessions once they're done and keeping the system clean, and that
+applies to scheduled runs as well ... we need to get rid of things once we're done using them, or figure out how to reuse them and repurpose
+them instead of creating new ones every time."* **Cause:** nearly every report between sessions is a NEW one-shot task (`create_trigger` with
+`persistent_session_id`), and a fired one-shot is never deleted. MEASURED 2026-11-12 (row `SESSION-TRIGGER-HYGIENE`): a `create_trigger` +
+`fire_trigger` task with no `run_once_at` stays `enabled: true` after it fires, so **"fired" is `last_run` present, never `enabled: false`**.
+
+1. **Read, then delete.** The recipient deletes each one-shot message task after reading it (`delete_trigger`). A session deletes its own
+   check-in reminders once they have fired, and its final report task once `get_trigger` shows a `last_run`. Never delete a recurring routine
+   or a pending task still needed.
+2. **Archive on DONE.** `close-out` check 8: a lane archives itself last when its work is done. The manager archives its lanes on DONE; each
+   assistant manager archives its own lanes (same rules as § "Archive protocol").
+3. **Reuse where it is cheaper.** A lane keeps ONE reply task to its manager, created at dispatch, reused with `update_trigger(prompt)` then
+   `fire_trigger`, and deleted when the lane archives. Never share one mailbox between senders: two senders updating one task's prompt overwrite
+   each other before it fires. The account's hourly manual-fire limit (which `update_trigger` and `fire_trigger` both use) is NOT yet measured;
+   until it is, the one-shot path stays allowed, with rule 1.
+4. **Daily hygiene pass,** run by the OPS assistant manager (the manager while there is none) inside its existing cadence, never a new routine:
+   delete one-shot tasks that fired more than 24 h ago and those whose recipient is archived; list unarchived sessions idle more than 24 h with
+   no open PR or held work, and archive the finished ones. Never delete a recurring routine (list those with their `last_run` status instead),
+   a pending one-shot, or the desk wake, live-review, review or reset tasks.
+5. **Preconditions, MEASURED 2026-11-12.** (a) In auto mode the classifier refused `delete_trigger` ("Irreversible Deletion") in a lane, so
+   rules 1 and 4 need an explicit allow entry for `delete_trigger` (and `archive_session` if that is refused too) in `.claude/settings.json`;
+   adding one is the operator's call (precedent: the 2026-11-08 merge entries). (b) `delete_trigger`'s description says deleting a task deletes
+   every session it started; that a fired `persistent_session_id` message does NOT take its recipient with it is NOT yet proven. **No bulk
+   delete runs until row `SESSION-TRIGGER-HYGIENE` records that test passing.** A refused call is not retried or worked around; name the ids
+   in your report.
+
 ### When session tools or the GitHub proxy fail
 
 First check `https://status.claude.com/api/v2/summary.json` and `githubstatus.com`. `create_trigger` with `run_once_at` 1–2 min ahead can succeed
@@ -332,6 +364,7 @@ names that file; read it before running or changing the planning.** What binds, 
   (b) dated for a named later week with a reason, or (c) killed with a `terminal_reason`. Carry-over from last week comes first; a second carry of
   the same item is a decision for the operator. The (a) set may not exceed the post-review capacity less the standing routines. The backlog is
   reviewed weekly, budgeted in planning, and its drain lane dispatched that morning; **never bulk-drop** (every drop is a row with its reason).
+- **Every kill carries a reason AND supporting data** (operator, 2026-11-12, decisions page p7, verbatim: *"In general, all killed items need to have a reason and supporting data attach"*). Applies to a `dropped` row, a `killed` pipeline item (`terminal_reason`), a killed research unit and every backlog-drain kill. Supporting data is something a later session can open (the measurement, result file, PR or row, with its population); a decision quote alone is a reason, not data. Doc rule only, no guard (gates this adds: none).
 - **Surge, then throttle** (gates: none): every (a) item is tagged `week_lane: surge | throttle | standing`. Surge = real money (including prop MLs),
   anything moving a strategy or ML model toward live, the week's big ML/strategic milestones; it runs first, as wide as the work allows. Throttle =
   important but not top-line; it runs after the throttle-down (surge rows landed or blocked, or the capacity reading says the rest of the week is
@@ -342,9 +375,49 @@ names that file; read it before running or changing the planning.** What binds, 
   protocol): `config/reset_protocol.yaml` and `list_triggers` are the source; the moved doc carries the table as agreed 2026-10-14. Unchanged:
   research-ops 4×/day, the daily review ONCE a day at 05:52Z, lane check-ins.
 
+## Assistant managers: one per class of work, at least through every surge (operator, 2026-11-12, binding) — gates this adds or changes: none
+
+Operator, 2026-11-12 ~09:00Z, verbatim: *"use assitant managers if needed (e.g. UI assistant manager, ML assitant manager, that manage all of their
+class of tasks and lanes) ... what's the point of keeping all that tasks documented if you're not referncing that information when we're planning
+and executing work?"* and *"We can also add instructions for assitant managers in the manager skill - at least during surges, it might be the best
+way to make sure we stay on top of everything so that you don't lose track of tasks like this"*. **What went wrong without it (2026-11-12):** after
+Thursday planning, 471 queued builds held only 39 `week_lane` tags and 25 lanes; the operator's 11-09 UI spec (`UI-REDESIGN-2026-11`) sat queued
+with no lane, and a UI lane briefed from an older row rebuilt the wrong chart layout.
+
+- **When.** From the start of every surge until the throttle-down at least, and any time the manager runs more lanes than it can brief from the
+  register. The manager creates them right after planning (or at once when it finds itself behind).
+- **Classes** (a row spanning classes goes to the class that owns its money risk first: TRADING > ML > UI > OPS):
+  **TRADING** (real money: prop and the phone executor, desk, live-review MECHANICS, active management, DD switch, promotions and the ladder,
+  TP doctrine, book mechanics) · **ML** (models and heads, bakeoffs, trainer, frontier, research programmes / queue / SLO, regime, timeframes; it
+  keeps the one ML lane running, § "ONE ML LANE ALWAYS RUNS") · **UI** (dashboard SPA, console, UI backend routes, android) · **OPS** (security,
+  VM/hosts, CI/Actions, work store and checklist tooling, health and observability, data feeds, alerts plumbing, the backlog drain).
+- **Creating one.** `create_session` with `source_url` = this repo, `permission_mode: auto`, tags `["am:<CLASS>", "assistant-manager",
+  "manager:<date>"]`. The prompt carries: the class and its governing operator spec rows, the lanes it takes over (ids and state), and the contract below.
+- **The contract** (each assistant manager):
+  1. **The register is its plan.** It owns every row and lane of its class. Before briefing any lane it reads the row(s) (`work.py --via
+     direct get`) and the governing operator spec row for that area, and hands the lane the spec TEXT. Never from memory or an older row.
+  2. It takes over its class's running lanes (one message each: "I am now your manager; report to me"). It dispatches new lanes for its rows by
+     planned priority, with `source_url` = the repo the work is in (§ "Spawning"; `manager-runbooks.md` § A). It keeps rows current (in_flight +
+     lane id; notes; close with evidence) and archives its lanes on DONE; it deletes the message tasks it has read (§ "Scheduled-task and session hygiene"). It never sits idle while its class has runnable rows and no lane.
+  3. **Merges:** Tier-1 self-landing is its own. Tier-2/3, and anything touching real money or a prop book, goes to the manager with the PR,
+     CI state, tier and decision line. The manager makes the call.
+  4. **Operator questions, access needs and operator-only steps go to the manager, never to the operator** (the manager puts them on the
+     decisions page).
+  5. It reports to the manager on a fixed cadence (TRADING every 2 h, the others every 3 h) and at once on a real-money risk, a lane it cannot
+     unblock, a merge for the manager or an operator question.
+  6. **Blocked/waiting = a structured `clears_when` condition + owner, never prose only** (operator, 2026-11-12, row `UNBLOCK-WATCH`; gates: none). `scripts/ops/unblock_watch.py` evaluates every condition hourly on the `ict-work-digest` tick; a NEW clear lands on the alert ledger -> the PR #17895 alert-watch and is handled at once like any alert. The brief's BLOCKED section lists unconditioned, stale-manual (> 7 d), could_not_look and money-blocking waits > 7 d; **each money wait goes onto the decisions page as a question — no session chooses a long wait on a money item silently.** Weekly planning reads the same section.
+- **What the manager keeps:** live trade reviews and every alert (operator m12, 2026-11-12: *"The manager needs to get these alerts and
+  handle immediately"*), Tier-2/3 merge calls, the decisions page, the operator conversation, and supervising the assistant managers (read
+  each report; check one claim per report against the register or live data).
+- **Planning feeds them.** Weekly planning (§ "Weekly planning") is not done until every queued, in-flight and blocked row has exactly one
+  disposition, and every (a) row has `week_lane`, a slot and `lane` = its class's assistant manager. Planning sends each assistant manager its
+  queue as soon as that class is disposed. Rows the planning skipped are a planning defect, filed on `WEEKLY-PLANNING`.
+- **Retiring them.** At the throttle-down the manager may fold assistant managers back (record it on `WEEKLY-PLANNING`). Their rows' `lane`
+  fields move to whoever takes the class.
+
 ## The insights ledger (operator, 2026-11-11, row INSIGHTS-LEDGER) — gates this adds or changes: none
 
-A finding that changed how we trade (a performance/trading insight, a research-infra or pipeline-restructure finding such as a sizing result; **not** a plain infra bug) is logged as a `kind: "insight"` item in the pipeline every time it is made: `claim`, `population`, `provenance` (MEASURED / ESTIMATED / UNVERIFIED), `evidence`, `outcome` (`acted|filed|killed|open`), `links` to the row / unit / PR it became (`acted` needs one), optional `topic`/`roadmap` — validated by `scripts/ops/pipeline.py`, shown by `GET /api/bot/work/ledger`. Not a new register; performance-review sessions file theirs the same way. A dangling link is reported by the route, never a CI gate.
+A finding that changed how we trade (a performance/trading insight, a research-infra or pipeline-restructure finding such as a sizing result; **not** a plain infra bug) is logged as a `kind: "insight"` item in the pipeline every time it is made: `claim`, `population`, `provenance` (MEASURED / ESTIMATED / UNVERIFIED), `evidence`, `outcome` (`acted|filed|killed|open`), `links` to the row / unit / PR it became (`acted` needs one), optional `topic`/`roadmap` — validated by `scripts/ops/pipeline.py`, shown by `GET /api/bot/work/ledger`. Not a new register; performance-review sessions file theirs the same way. A dangling link is reported by the route, never a CI gate. **Gaps are alerts the manager handles at once** (operator, 2026-11-12, decisions page m12, verbatim: *"No; report gaps as a number instead"* · *"The manager needs to get these alerts and handle immediately "*): the count of insights with no link and of roadmap milestones with no topic goes to the manager's alert path (alert ledger, row `ALERT-LEDGER-TO-MANAGER`; build row `WORK-GAP-ALERTS`), and a non-zero count is fixed or dispatched the same day. No `insight-link-guard` or `topic-map-guard`.
 
 ## Standing authorizations — the ladder is fully automated
 
@@ -419,6 +492,7 @@ its authority is the operator's (CLAUDE.md § Every session, step 1). Ceiling: $
 WAKE THE MANAGER when you finish a deliverable, are blocked, or produce something it must act on:
 create_trigger(persistent_session_id="<manager session id>", prompt=<what merged/deployed/observed,
 what is blocked and on what>) then fire_trigger(<id>). Never set run_once_at (it fires twice).
+Read, then delete: delete each message task sent to you once read, and your own fired reminders (close-out check 8).
 If your PR waits on the manager (landing: hold), wake it AGAIN once CI on your head is green, with the PR
 number and head sha; you stay subscribed to your own PR and fix red CI yourself. If that prompts, comment on your PR instead.
 NEVER END A TURN WAITING SILENTLY: if you need a decision, a go-ahead or a merge, wake the manager FIRST (above);
@@ -483,7 +557,7 @@ The ladder is CLAUDE.md § "The promotion ladder" (Stage 0 backtest net of the F
 it without having to go back into the chat. And ping me also when everything is fully closed out."*). A chat reply is not the record. **The gate —
 publish and ping only when ALL are true:** (1) every PR the session opened or drove is merged, or HELD with the blocker on the PR and in
 `PIPELINE.jsonl`; (2) deployed means deployed: land, wait for `ict-git-sync`, restart the unit, OBSERVE the running process; (3) every row has a
-true state; (4) every finding is fixed, filed (pipeline or checklist) or flagged; (5) stale docs corrected; (6) `close-out` run, all seven checks;
+true state; (4) every finding is fixed, filed (pipeline or checklist) or flagged; (5) stale docs corrected; (6) `close-out` run, all eight checks;
 (7) every finished lane archived, none while it owns an open PR. **Then, in order:** PUSH FIRST; PUBLISH THE SUMMARY AS A PAGE (Artifact tool) with
 what each lane was dispatched to do and what became of it, what MERGED (shas), DEPLOYED and OBSERVED (never collapsed), verified vs waiting with the
 specific observation each needs, the operator's decisions in their words, **the session's own errors** plainly, next steps in order with why the
