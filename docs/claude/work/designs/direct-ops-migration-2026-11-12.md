@@ -26,11 +26,12 @@ training VMs, all of those things go directly between Claude and the VM."*
 
 ## 3. Not runnable yet: why
 
-- **#25351 set-env `PROP_PHONE_MODE_BREAKOUT_2=off` was CANCELLED and NOT RUN.** The `system-actions` concurrency group
-  displaced it (cancel-guard comment, 15:11Z). The direct `set-env` (PR #25390) merged at ~17:00Z, and the VM answers it
-  (a probe with empty params got its 400 validation message). #25390 merged without its § 2.3 row, so
-  `tests/ops/test_ops_actions_parity.py` is red on main (2 of 7). #25402 adds the row. Tracked as work item
-  `PI-20261112-DOPSSWEEP-0001`.
+- **Kill switch `PROP_PHONE_MODE_BREAKOUT_2=off`: APPLIED.** The manager verified it at 18:38Z through ops exec
+  OPS-20261112T183345Z-exec-7bf161: the value is in the shared `.env` and in the environment of both the trader and
+  the web API. It was written at 16:30Z by a rerun of the system-action (#25350). #25351 itself was cancelled while
+  pending and never ran. This lane's 17:10-17:35Z reading, "not applied", was **wrong**: it rested on #25351's cancel
+  comment and the ops-runner journal, and never checked #25350 or the process environment. Work item
+  `PI-20261112-DOPSSWEEP-0001` is closed with that evidence.
 - `sync-vm-secrets` #24576: the secret values live in Actions secrets. That stays a workflow until secrets have a
   VM-side home. Operator-originated values only.
 
@@ -40,14 +41,16 @@ training VMs, all of those things go directly between Claude and the VM."*
 |---|---|---|
 | #25402 | notification | `send-ping` (Tier 1; replaces the 637-issue send-ping path, including `pr-landing-hold-merge-alarm.yml`) |
 | #25403 (stacked on #25402) | read-only report | `status-check`, `disk-usage-report`, `list-listening-ports` (Tier 1) |
+| #25397 (other lane, merged) | any VM action | `exec` (Tier 2); its missing § 2.3 row is added in #25402 |
 | #25390 (other lane, merged) | config | `set-env` (PROP_PHONE_MODE_* only); its missing § 2.3 row is added in #25402 |
 
 ## 5. Classes with no direct path yet, and the next step for each
 
-- **C1 · live-VM actions over SSH (system-actions.yml and 19 other label workflows).** Port them one typed
-  `ops_actions` entry at a time, smallest and most-used first. Next after #25403: `get-env` (masked read), `cap-vm-logs`,
-  `prune-db-backups`, then the Tier-2 backfill / reconcile family (each with its own validated params). When the last
-  caller of an action moves, retire that action's issue arm.
+- **C1 · live-VM actions over SSH (system-actions.yml and 19 other label workflows).** Since #25397 (operator-ordered
+  2026-11-12), the Tier-2 general `exec` action on the ops channel can run any of these wrappers directly, so C1 has a
+  direct path today. Typed entries (#25402, #25403 and later ones) remain useful where a Tier-1 action should run
+  without a quote or tap, and where params should be validated at submit. When the last caller of an action moves,
+  retire that action's issue arm.
 - **C2 · trainer-VM jobs.** The live VM has **no path to the trainer**: the trainer pulls from the live VM
   (`scripts/ops/sync_trainer_data.sh` ssh's trainer→live), and every trainer action today is a GitHub runner
   ssh'ing in. The direct shape is a **trainer-side pull**: a trainer unit polls a live-VM ops queue for typed trainer
