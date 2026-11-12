@@ -828,7 +828,7 @@ def _collect_intents(
             timestamp=now,
         )
         if intent is None:
-            logger.info(
+            logger.debug(  # per-tick no-op; HEALTH-20261112-LIVE-DISK-OTHER-GROWERS
                 "intent_multiplexer: '%s' returned no actionable signal",
                 name,
             )
@@ -1120,7 +1120,7 @@ def multiplexed_intent_signal_builder(
     intents = _debounce_emissions(intents)
 
     if not intents:
-        logger.info("intent_multiplexer: no strategy emitted an intent — staying flat")
+        logger.debug("intent_multiplexer: no strategy emitted an intent — staying flat")
         return {
             "symbol": symbol,
             "side": "none",
