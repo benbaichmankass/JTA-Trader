@@ -5244,6 +5244,56 @@ def rollout_tighten_mismatch(side: Optional[str], current_sl: Optional[float], c
     return bad
 
 
+def rollout_tp_mismatch(side: Optional[str], current_sl: Optional[float], current_tp: Optional[float],
+                        new_sl: Optional[float], new_tp: Optional[float],
+                        quote: Optional[Mapping[str, float]]) -> List[str]:
+    """Pure: is this modify the single TP-ONLY rollout step (CAP-TRADEIFY-TP-AMEND, operator 2026-11-12 decisions page
+    w12 "Build it")? Every reason returned is a refusal. The stop is NOT touched (``new_sl`` None or equal to the
+    current) and must already rest (both brackets stay at the venue); a TP must already rest (it is MOVED, never added
+    or removed); the new TP stays on the profit side of the live quote it would fill against (a long's TP above the
+    ask, a short's below the bid), so the amend can never act as a close. How far a revision may move is the caller's
+    rule (``prop_trail``: the TP doctrine's prediction, the venue cap and the through-price refusal)."""
+    bad: List[str] = []
+    if side not in ("long", "short"):
+        return [f"position side {side!r} unknown"]
+    if new_tp is None:
+        return ["TP step must move the take profit (no TP given)"]
+    if current_tp is None:
+        return ["current take profit not readable on the row (a TP is moved, never added)"]
+    if current_sl is None:
+        return ["current stop loss not readable on the row (both brackets must rest)"]
+    if new_sl is not None and not math.isclose(float(new_sl), float(current_sl), rel_tol=1e-9):
+        bad.append("TP step must leave the stop loss unchanged (one leg per step)")
+    bid, ask = (quote or {}).get("bid"), (quote or {}).get("ask")
+    if bid is None or ask is None:
+        return bad + ["no live quote: cannot check the TP against the price"]
+    new = float(new_tp)
+    if side == "long" and new <= float(ask):
+        bad.append(f"take profit {_fmt_num(new)} is not above the ask {_fmt_num(float(ask))} (would act as a close)")
+    if side == "short" and new >= float(bid):
+        bad.append(f"take profit {_fmt_num(new)} is not below the bid {_fmt_num(float(bid))} (would act as a close)")
+    if math.isclose(new, float(current_tp), rel_tol=1e-9):
+        bad.append("take profit unchanged: nothing to move")
+    return bad
+
+
+def rollout_verify_tp_mismatch(before: "Position", after: Optional["Position"], new_tp: float) -> List[str]:
+    """Pure: the very next positions read after a TP step must show the NEW take profit, the UNCHANGED stop and the
+    UNCHANGED size."""
+    if after is None:
+        return ["position not found on the next read"]
+    bad: List[str] = []
+    if after.take_profit is None or not math.isclose(float(after.take_profit), float(new_tp), rel_tol=1e-6,
+                                                     abs_tol=1e-9):
+        bad.append(f"TP reads {after.take_profit!r}, want {_fmt_num(new_tp)}")
+    if after.stop_loss is None or before.stop_loss is None or not math.isclose(
+            float(after.stop_loss), float(before.stop_loss), rel_tol=1e-6, abs_tol=1e-9):
+        bad.append(f"SL reads {after.stop_loss!r}, want unchanged {before.stop_loss!r}")
+    if after.quantity is None or not math.isclose(float(after.quantity), float(before.quantity), rel_tol=1e-6, abs_tol=1e-9):
+        bad.append(f"size reads {after.quantity!r}, want unchanged {before.quantity!r}")
+    return bad
+
+
 def rollout_verify_mismatch(before: "Position", after: Optional["Position"], new_sl: float) -> List[str]:
     """Pure: the very next positions read after a rollout submit must show
     the NEW stop, the UNCHANGED take profit and the UNCHANGED size."""
@@ -8530,10 +8580,11 @@ class DXtradeAdapter(PropPlatformAdapter):
     # per-account latch: ModifyRollout records each step's outcome as evidence
     # and a failed step is retried by its caller. Every armed modify is gated by it.
     ROLLOUT_GUARD = True
-    # TP doctrine B1: the rollout guard refuses any TP change
-    # (`rollout_tighten_mismatch`), so this adapter cannot move a TP while it
-    # is set. Flip only together with a measured TP-amend rollout step.
-    TP_AMEND_SUPPORTED = False
+    # TP doctrine B1 / CAP-TRADEIFY-TP-AMEND (operator 2026-11-12, decisions page w12 "Build it"): a TP-only
+    # modify is its own rollout step (`rollout_tp_mismatch`: SL untouched and resting, TP moved and kept on the
+    # profit side of the live quote; `rollout_verify_tp_mismatch`: the next read shows the new TP with SL and size
+    # unchanged), typed into the SAME measured Position Details TP field (mode "Price", #15657) the SL uses.
+    TP_AMEND_SUPPORTED = True
 
     def _locate_edit_control(self, page: Any, symbol: str, side: Optional[str],
                              quantity: Optional[float]) -> Dict[str, Any]:
@@ -8777,14 +8828,25 @@ class DXtradeAdapter(PropPlatformAdapter):
                 quote = self.read_quote(page, position.symbol)
             except Exception:
                 quote = None
-            bad = rollout_tighten_mismatch(position.side, position.stop_loss, position.take_profit,
-                                           stop_loss, take_profit, quote)
+            tp_step = stop_loss is None and take_profit is not None
+            if tp_step:
+                # CAP-TRADEIFY-TP-AMEND: a TP-only step (one leg per step; the SL is never typed).
+                bad = rollout_tp_mismatch(position.side, position.stop_loss, position.take_profit,
+                                          stop_loss, take_profit, quote)
+            else:
+                bad = rollout_tighten_mismatch(position.side, position.stop_loss, position.take_profit,
+                                               stop_loss, take_profit, quote)
             if bad:
                 return {"ok": False, "clicked": False, **seen, "quote": quote,
                         "why": "rollout refused: " + "; ".join(bad)}
-            want = {"stop_loss": float(stop_loss)}               # the TP is never typed
-            rollout.record("in_progress", symbol=position.symbol, side=position.side,
-                           from_sl=position.stop_loss, to_sl=float(stop_loss), quote=quote)
+            if tp_step:
+                want = {"take_profit": float(take_profit)}       # the SL is never typed
+                rollout.record("in_progress", symbol=position.symbol, side=position.side, leg="tp",
+                               from_tp=position.take_profit, to_tp=float(take_profit), quote=quote)
+            else:
+                want = {"stop_loss": float(stop_loss)}           # the TP is never typed
+                rollout.record("in_progress", symbol=position.symbol, side=position.side,
+                               from_sl=position.stop_loss, to_sl=float(stop_loss), quote=quote)
 
         def refuse(why: str, panel: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:
             exit_ = self._discard_position_panel(page)
@@ -8840,12 +8902,21 @@ class DXtradeAdapter(PropPlatformAdapter):
             why_read = None if len(rows) == 1 else f"{len(rows)} rows for {position.symbol} on the next read"
         except Exception as exc:
             rows, why_read = [], f"positions read failed ({type(exc).__name__})"
-        bad = [why_read] if why_read else rollout_verify_mismatch(position, rows[0], float(stop_loss))
+        if why_read:
+            bad = [why_read]
+        elif stop_loss is None:
+            bad = rollout_verify_tp_mismatch(position, rows[0], float(take_profit))
+        else:
+            bad = rollout_verify_mismatch(position, rows[0], float(stop_loss))
         if bad:
             rollout.record("verify_failed", why="; ".join(bad))
             return {"ok": False, "clicked": True, **seen, "panel": panel, "rollout": "verify_failed",
                     "why": "ROLLOUT VERIFY FAILED after Modify Position: " + "; ".join(bad)
                            + " -- this step failed; the next cycle retries"}
+        if stop_loss is None:
+            rollout.record("verified", tp=float(take_profit))
+            return {"ok": True, "clicked": True, **seen, "panel": panel, "rollout": "verified",
+                    "why": "Modify Position clicked; next read shows the new TP with SL and size unchanged"}
         rollout.record("verified", sl=float(stop_loss))
         return {"ok": True, "clicked": True, **seen, "panel": panel, "rollout": "verified",
                 "why": "Modify Position clicked; next read shows the new SL with TP and size unchanged"}
