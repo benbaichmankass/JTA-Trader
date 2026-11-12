@@ -1,0 +1,80 @@
+{
+ "checks": [
+  {
+   "call": "__ex.cardCtl('SOLUSDT','details')",
+   "expect": {
+    "ok": true,
+    "label": "Open position details for SOL/USD",
+    "denied": ""
+   },
+   "note": "PHONE-CLOSE-CARDS: the SOL card's ONE [Details] button is found by its exact aria-label and is not a destructive control"
+  },
+  {
+   "call": "__ex.cardCtl('ETHUSDT','tpsl')",
+   "expect": {
+    "ok": true,
+    "label": "Manage TP/SL for ETH/USD",
+    "denied": ""
+   },
+   "note": "the ETH card's ONE [TP/SL] button"
+  },
+  {
+   "call": "__ex.cardCtl('SOLUSDT','close')",
+   "expect": {
+    "ok": true,
+    "label": "Close SOL/USD long position",
+    "denied": "deny_word"
+   },
+   "note": "the SOL card's ONE [Close] button resolves, and without a declared close intent it is refused (precision, not a click)"
+  },
+  {
+   "call": "__ex.cardCtl('BTCUSDT','details')",
+   "expect": {
+    "ok": false,
+    "why": "none"
+   },
+   "note": "no card for a symbol that is not open: none, never another card"
+  },
+  {
+   "call": "(function(){var r=document.querySelector('[role=region][aria-label=Positions]');r.setAttribute('aria-label','Markets');var x=__ex.cardCtl('SOLUSDT','details');r.setAttribute('aria-label','Positions');return x;})()",
+   "expect": {
+    "ok": false,
+    "why": "no_cards"
+   },
+   "note": "the same cards outside a region labelled Positions are not position cards"
+  },
+  {
+   "call": "__ex.sheetTarget('SOLUSDT','child_entry',true)",
+   "expect": {
+    "ok": true
+   },
+   "note": "the app's first sheet target on the cards layout is the card's [Details] button (was no_grid: every tighten and close stopped at sheet_not_open)"
+  },
+  {
+   "call": "(function(){__ex.sheetTarget('SOLUSDT','child_entry',true);return window.__exTap?window.__exTap.getAttribute('aria-label'):null;})()",
+   "expect": "Open position details for SOL/USD",
+   "note": "and the element it will touch is that button, not the Close or TP/SL button beside it"
+  },
+  {
+   "call": "__ex.sheetTarget('SOLUSDT','child_tpsl',true)",
+   "expect": {
+    "ok": false,
+    "why": "no_grid"
+   },
+   "note": "every other target answers no_grid on the cards layout, which ends the app's target loop after ONE touch"
+  },
+  {
+   "call": "__ex.sheetTarget('SOLUSDT','group',true)",
+   "expect": {
+    "ok": false,
+    "why": "no_grid"
+   },
+   "note": "the group target too"
+  },
+  {
+   "call": "(function(){__ex.allowClose('SOLUSDT');return __ex.sheetClosePosition('SOLUSDT');})()",
+   "expect": "no_sheet",
+   "note": "an armed close with no sheet open clicks nothing (the card's own Close is not reached by the sheet path)"
+  }
+ ]
+}
