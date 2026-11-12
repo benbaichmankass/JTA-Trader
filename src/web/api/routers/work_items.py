@@ -163,6 +163,29 @@ async def close_item(item_id: str, request: Request, authorization: str | None =
                                           by=by, op_id=op_id, expected_version=_version(if_match)))
 
 
+@router.post("/meta/{key}")
+async def set_meta(key: str, request: Request, authorization: str | None = Header(default=None),
+                   x_work_store_token: str | None = Header(default=None, alias=WORK_STORE_HEADER)):
+    """Set one register-header key (last_review). Body: ``{value, by}``; last-writer-wins."""
+    _require_work_store_token(authorization, x_work_store_token)
+    body = await _body(request)
+    by = _by(body)
+    if "value" not in body:
+        raise HTTPException(status_code=400, detail="`value` is required")
+    try:
+        return {"meta": _store().meta_set(key, body["value"], by=by)}
+    except ws.WorkStoreError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc)) from None
+
+
+@router.get("/meta/{key}")
+def get_meta(key: str):
+    m = _store().meta_get(key)
+    if m is None:
+        raise HTTPException(status_code=404, detail=f"no meta key {key!r}")
+    return {"meta": m}
+
+
 @router.get("/items")
 def list_items(state: str | None = None, due: bool = False, parent: str | None = None,
                since: str | None = None, kind: str | None = None,

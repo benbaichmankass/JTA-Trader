@@ -104,7 +104,7 @@ and `SHORT-HOLD-BRIEF.md`.
 4. **Day one for a NEW manager:** `list_triggers` (routines bound to a session die with it) and recreate/rebind **"Manager lane check-in"**
    (`17 */3 * * *`) and the **daily review** (once a day, 05:52Z) to YOUR session; tell every live lane your id by its own trigger;
    `curl -sS 'https://ict-bot.duckdns.org/api/bot/work/report?since=<yesterday>'` (absent/stale → check `/api/diag/services` for the two timers,
-   fixing that comes first); run the review, clear `ask_operator` items by classification not forwarding, record `last_review`, push, then answer.
+   fixing that comes first); run the review, clear `ask_operator` items by classification not forwarding, record `last_review` (`checklist.py header last_review '<json>'` writes the work store; read it back with `work.py --via direct header get last_review`), push, then answer.
 
 ## When the auto-mode classifier refuses the manager, or a lane refuses (operator, 2026-09-27/28, binding)
 
@@ -393,7 +393,7 @@ dispatch, close with a `terminal_reason`, or decide (§ "Before any operator pop
 **(4b) the backlog drain is MANDATORY once a day** (operator, 2026-11-01): run `checklist_daily_measure.py`, rank what is due, and dispatch ONE
 `BACKLOG-DRAIN-<date>` lane (a review that skips it has failed close-out; inflow above outflow three days running goes to "decisions for you");
 **(4c) orphan drain**: `iteration_orphans.py`, report the orphan count per kind as a NUMBER (target 0), and give every `ORPHAN` / overdue iteration
-ONE disposition that run (an orphan carried past two reviews is the manager's dispatch failure); (5) record `checklist.py header last_review`,
+ONE disposition that run (an orphan carried past two reviews is the manager's dispatch failure); (5) record `checklist.py header last_review` (writes the work store, not a file),
 push; (6) roadmap hook. **Prep always runs, and the scratch pad feeds it** (operator, 2026-10-21): read the Google Doc "JTA Trader — Ideas inbox"
 (also titled "Metis — Ideas inbox"), copy new items verbatim to `docs/claude/work/IDEAS.md`, triage each into a row, a unit or `killed`, and publish
 a short work-plan status in-session and on the Workflow page, NOT to Telegram (TELEGRAM-TRIM); `send-ping` is for a decision or red flag only.

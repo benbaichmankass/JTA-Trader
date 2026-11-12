@@ -216,6 +216,34 @@ def _put(item: dict, by: str) -> dict:
         raise WorkWriteError(f"work store refused {item['id']!r}: {exc}") from None
 
 
+def put_header(key: str, value, by: str | None = None) -> dict:
+    """A store-backed register-header key (``last_review``): in-process on the VM, else the API."""
+    by = by or os.environ.get("CLAUDE_SESSION_ID") or os.environ.get("GITHUB_WORKFLOW_REF") or WRITER
+    store = local_store()
+    if store is not None:
+        from src.runtime import work_store as ws
+        try:
+            return store.meta_set(key, value, by=by)
+        except ws.WorkStoreError as exc:
+            raise WorkWriteError(f"work store refused header {key!r}: {exc}") from None
+    w = _work_cli()
+    try:
+        return w.send(w.make_op("meta", key, {"value": value}, by, None), "auto", None)
+    except w.WorkError as exc:
+        raise WorkWriteError(f"work store refused header {key!r}: {exc}") from None
+
+
+def header_overlay(store, keys) -> dict:
+    """{key: value} for each of ``keys`` the store holds (a key it lacks is absent: the file's
+    value, kept as history, shows through)."""
+    out = {}
+    for k in keys:
+        m = store.meta_get(k)
+        if m is not None:
+            out[k] = m["value"]
+    return out
+
+
 def put_row(row: dict) -> dict:
     """``checklist_store.write_row`` after the freeze: the row, mapped losslessly, into the store."""
     from src.runtime import work_store_import as wi

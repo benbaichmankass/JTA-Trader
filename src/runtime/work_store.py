@@ -127,6 +127,10 @@ CREATE TRIGGER IF NOT EXISTS events_no_update BEFORE UPDATE ON events
   BEGIN SELECT RAISE(ABORT, 'events is append-only'); END;
 CREATE TRIGGER IF NOT EXISTS events_no_delete BEFORE DELETE ON events
   BEGIN SELECT RAISE(ABORT, 'events is append-only'); END;
+CREATE TABLE IF NOT EXISTS meta (
+  key TEXT PRIMARY KEY, value TEXT NOT NULL, version INTEGER NOT NULL,
+  updated_at TEXT NOT NULL, updated_by TEXT NOT NULL
+);
 CREATE VIEW IF NOT EXISTS due_now AS SELECT * FROM items
   WHERE state NOT IN ('done','dropped') AND due_at <= strftime('%Y-%m-%dT%H:%M:%SZ','now');
 """
@@ -656,6 +660,30 @@ class WorkStore:
         with self._connect() as conn:
             r = conn.execute("SELECT seq, hash FROM events ORDER BY seq DESC LIMIT 1").fetchone()
             return {"seq": r["seq"], "hash": r["hash"]} if r else {"seq": 0, "hash": GENESIS_HASH}
+
+    # ── meta: the register header's store-backed keys (WSD-S4-READERS-FLIP: last_review) ──
+    #   One JSON value per key, last-writer-wins, versioned. Not items: it never enters due_now,
+    #   the queue or the pipeline. History of a key = the files it had before the move.
+    def meta_get(self, key: str) -> dict | None:
+        with self._connect() as conn:
+            r = conn.execute("SELECT * FROM meta WHERE key=?", (key,)).fetchone()
+        if r is None:
+            return None
+        return {"key": r["key"], "value": json.loads(r["value"]), "version": r["version"],
+                "updated_at": r["updated_at"], "updated_by": r["updated_by"]}
+
+    def meta_set(self, key: str, value: Any, *, by: str) -> dict:
+        if not isinstance(key, str) or not key.strip() or key == "items":
+            raise WorkStoreValidationError(f"meta key {key!r}: expected a non-empty key other than 'items'")
+        self._need_by(by)
+        with self._tx() as conn:
+            r = conn.execute("SELECT version FROM meta WHERE key=?", (key,)).fetchone()
+            conn.execute(
+                "INSERT INTO meta(key,value,version,updated_at,updated_by) VALUES(?,?,?,?,?) "
+                "ON CONFLICT(key) DO UPDATE SET value=excluded.value, version=excluded.version, "
+                "updated_at=excluded.updated_at, updated_by=excluded.updated_by",
+                (key, json.dumps(value, sort_keys=True), (r["version"] + 1) if r else 1, _now(), by))
+        return self.meta_get(key)
 
     # ── reads ──
     def get(self, item_id: str) -> dict | None:

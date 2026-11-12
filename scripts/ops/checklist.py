@@ -172,6 +172,11 @@ def op_queue(repo: Path, limit: int | None) -> list[str]:
     return out
 
 
+def _work_write_error():
+    from src.runtime.work_read import WorkWriteError
+    return WorkWriteError
+
+
 def _cli_write(a, repo: Path) -> int:
     by = getattr(a, "by", None) or None
     try:
@@ -213,8 +218,11 @@ def _cli_write(a, repo: Path) -> int:
             path = op_archive_lane(repo, a.id, by)
         else:  # header
             _require_seeded(repo)
-            path = _store.write_header(a.key, _parse_value(a.value), repo)
-    except ChecklistError as exc:
+            path = _store.write_header(a.key, _parse_value(a.value), repo, by=by)
+            if a.key in _store.STORE_HEADER_KEYS and _store._frozen_canonical(repo / _store.STORE):
+                print(f"checklist: header {a.key!r} routed to the work store (the register folder is untouched; if this session cannot reach the VM the op is an outbox comment to post)")
+                return 0
+    except (ChecklistError, _work_write_error()) as exc:
         print(f"checklist: refused -- {exc}")
         return 1
     print(f"checklist: wrote {path.relative_to(repo)}")
