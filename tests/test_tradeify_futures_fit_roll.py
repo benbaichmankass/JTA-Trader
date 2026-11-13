@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts" / "research"))
-import tradeify_futures_fit as tff  # noqa: E402
+import tradeify_futures_fit as tff
 
 
 def _bar(ts: str, contract: str, volume: float) -> dict:
