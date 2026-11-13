@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-13T12:25:00Z",
- "bar_close": "2026-11-13T12:30:00Z",
- "built_at": "2026-11-13T12:30:34Z",
+ "bar": "2026-11-13T12:30:00Z",
+ "bar_close": "2026-11-13T12:35:00Z",
+ "built_at": "2026-11-13T12:35:37Z",
  "closed": false,
  "order_package_id": "pkg-b21979f5dd744e65",
  "packet": {
@@ -104,7 +104,27 @@
     "ts": "2026-11-13T10:13:26.474895+00:00",
     "veto": false
    },
-   "previous_review": null,
+   "previous_review": {
+    "action": "hold",
+    "forecast": {
+     "direction": "with_trade",
+     "evidence": [
+      "chart.since_entry high 8.445 low 8.377",
+      "desk_handoff.opening forecast target 8.05 inv 8.42 p 0.3",
+      "exit_plan sl 8.45 tp 8.05"
+     ],
+     "horizon_bars": 8,
+     "invalidation_px": 8.42,
+     "p_target": 0.25,
+     "target_px": 8.05,
+     "thesis": "Fade at the 8.409 swing high with the broader crypto book leaning short: the bounce across crypto printed 8.445 and is testing the 8.42 exit line, so I expect the 7.983-8.05 zone only if the 8.42 line holds on a 1h close",
+     "timeframe": "1h"
+    },
+    "reason": "Hold; the desk record stands. Opening (DD-20261113T1002Z-scan-1h-1): AVAX short 8.337, stop 8.45, TP 8.05, p 0.30, with the early-exit rule \"a 1h close holds above 8.42 or the crypto-wide short bias reverses\". The packet has no telemetry (open_r null) and no AVAX mark, so I cannot say whether that rule has fired: the latest 1h bar printed 8.377-8.445, its high 0.005 under the 8.45 stop and above \u2026",
+    "review_id": "LR-20261113T1228Z-pkg-b21979f5dd744e65",
+    "reviewed_at": "2026-11-13T12:42:00Z",
+    "route": null
+   },
    "symbol": "AVAXUSDT"
   },
   "context_v3": {
@@ -125,7 +145,7 @@
      "ADAUSDT",
      "short",
      "trend_donchian_ada_4h",
-     -0.533
+     -0.582
     ],
     [
      "TQQQ",
@@ -143,7 +163,7 @@
      "ADAUSDT",
      "short",
      "ada_pullback_2h",
-     1.07
+     1.02
     ],
     [
      "QLD",
@@ -155,7 +175,7 @@
      "SOLUSDT",
      "short",
      "trend_donchian_sol_4h",
-     -0.731
+     -0.829
     ],
     [
      "TLT",
@@ -167,19 +187,19 @@
      "ETHUSDT",
      "short",
      "trend_donchian_eth",
-     1.74
+     1.67
     ],
     [
      "ETHUSDT",
      "short",
      "trend_donchian_eth_4h",
-     -0.0981
+     -0.168
     ],
     [
      "ETHUSDT",
      "short",
      "trend_donchian_eth_prop",
-     -0.432
+     -0.477
     ],
     [
      "MHG",
@@ -191,7 +211,7 @@
      "XRPUSDT",
      "short",
      "xrp_pullback_2h",
-     0.754
+     0.733
     ],
     [
      "GLD",
@@ -555,8 +575,24 @@
    "basis": null
   },
   "desk_handoff": {
-   "chain_length": 0,
-   "chain_tail": [],
+   "chain_length": 1,
+   "chain_tail": [
+    {
+     "action": "hold",
+     "forecast": {
+      "direction": "with_trade",
+      "horizon_bars": 8,
+      "invalidation_px": 8.42,
+      "p_target": 0.25,
+      "target_px": 8.05,
+      "timeframe": "1h"
+     },
+     "reason": "Hold; the desk record stands. Opening (DD-20261113T1002Z-scan-1h-1): AVAX short 8.337, stop 8.45, TP 8.05, p 0.30, with the early-exit rule \"a 1h close holds above 8.42 or the crypto-wide short bias reverses\". The packet has no telemetry (open_r null) and no AVAX mark, so I cannot say whether that rule has fired: the latest 1h bar printed 8.377-8.445, its high 0.005 under the 8.45 stop and above the 8.42 line, and the rest of the crypto book is bouncing (ADA, SOL, ETH). That is the same signal as the desk exit rule, so p_target drops from 0.30 to 0.25, but with no mark I do not call it dead; the stop is within 0.5 ATR and owns the exit. First review of this package (chain_length 0).",
+     "review_id": "LR-20261113T1228Z-pkg-b21979f5dd744e65",
+     "reviewed_at": "2026-11-13T12:42:00Z",
+     "verdict": "confirm"
+    }
+   ],
    "instruction": "CONFIRM, REVISE (with a reason) or EXIT this position against the opening thesis and the newest view in the chain; copy prior_decision_id into handoff.prior_decision_id.",
    "missing": [],
    "opening": {
@@ -585,7 +621,7 @@
     "timeframe": "1h",
     "tp": 8.05
    },
-   "prior_decision_id": "DD-20261113T1002Z-scan-1h-1",
+   "prior_decision_id": "LR-20261113T1228Z-pkg-b21979f5dd744e65",
    "protocol": "DESK-HANDOFF-PROTOCOL",
    "read_state": "read"
   },
@@ -599,10 +635,10 @@
    "r_to_target": null
   },
   "generator": {
-   "head": "cd80bc5364",
+   "head": "9c7da42b86",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-13T12:30:51Z",
+  "info_cutoff_at": "2026-11-13T12:35:54Z",
   "leg": "claude_desk",
   "mechanics": {
    "evidence": "package sl 8.45 / tp 8.05 agree with every readable account",
@@ -662,25 +698,18 @@
    "cell_now": null,
    "trend_now": "transitional"
   },
-  "review_id": "LR-20261113T1230Z-pkg-b21979f5dd744e65",
+  "review_id": "LR-20261113T1235Z-pkg-b21979f5dd744e65",
   "short_hold": {
-   "atr": 0.01942857142857119,
-   "bar": "2026-11-13T12:25:00Z",
-   "bar_close": "2026-11-13T12:30:00Z",
+   "atr": 0.019571428571428382,
+   "bar": "2026-11-13T12:30:00Z",
+   "bar_close": "2026-11-13T12:35:00Z",
    "entry": 8.337,
-   "mark": 8.398,
-   "minutes_held": 137.1,
-   "open_r_at_mark": -0.5398,
+   "mark": 8.417,
+   "minutes_held": 142.1,
+   "open_r_at_mark": -0.708,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 8.402,
-     "high": 8.409,
-     "low": 8.387,
-     "open": 8.4,
-     "t": "2026-11-13T11:30:00Z"
-    },
     {
      "close": 8.404,
      "high": 8.407,
@@ -757,6 +786,13 @@
      "low": 8.385,
      "open": 8.396,
      "t": "2026-11-13T12:25:00Z"
+    },
+    {
+     "close": 8.417,
+     "high": 8.424,
+     "low": 8.394,
+     "open": 8.398,
+     "t": "2026-11-13T12:30:00Z"
     }
    ],
    "risk_per_unit": null,
@@ -775,25 +811,18 @@
    "tp": 8.05
   }
  },
- "packet_sha": "9639e524a1d55d345745ecfbe302144ad9543656de5b4ce96eae5905bbce7d6f",
+ "packet_sha": "a0f5092b3f934787f38518e5320c70744d06b75b6c66312e5883ccc37858800c",
  "short_hold": {
-  "atr": 0.01942857142857119,
-  "bar": "2026-11-13T12:25:00Z",
-  "bar_close": "2026-11-13T12:30:00Z",
+  "atr": 0.019571428571428382,
+  "bar": "2026-11-13T12:30:00Z",
+  "bar_close": "2026-11-13T12:35:00Z",
   "entry": 8.337,
-  "mark": 8.398,
-  "minutes_held": 137.1,
-  "open_r_at_mark": -0.5398,
+  "mark": 8.417,
+  "minutes_held": 142.1,
+  "open_r_at_mark": -0.708,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 8.402,
-    "high": 8.409,
-    "low": 8.387,
-    "open": 8.4,
-    "t": "2026-11-13T11:30:00Z"
-   },
    {
     "close": 8.404,
     "high": 8.407,
@@ -870,6 +899,13 @@
     "low": 8.385,
     "open": 8.396,
     "t": "2026-11-13T12:25:00Z"
+   },
+   {
+    "close": 8.417,
+    "high": 8.424,
+    "low": 8.394,
+    "open": 8.398,
+    "t": "2026-11-13T12:30:00Z"
    }
   ],
   "risk_per_unit": null,
