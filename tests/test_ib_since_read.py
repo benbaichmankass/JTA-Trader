@@ -180,6 +180,29 @@ def test_pacing_error_backs_off_and_sends_nothing_after():
     assert info2["outcome"] == "deferred" and len(fake.hist) == sent and info2["requests"] == 0
 
 
+def test_no_data_162_is_an_empty_answer_not_pacing():
+    """MEASURED 2026-11-13: 'HMDS query returned no data: MGCV6@COMEX' arrived as error 162. It must not back off
+    or keep the trade queued -- the next contract is tried and the outcome says what happened."""
+    class _NoDataOct(_IBFake):
+        def reqHistoricalData(self, contract, **kw):
+            if contract.conId == 1:
+                self.hist.append((contract.conId, kw))
+                self.errorEvent.fire(5, 162, "Historical Market Data Service error message:HMDS query returned no data: MGCV6@COMEX Trades", contract)
+                return []
+            return super().reqHistoricalData(contract, **kw)
+    fake = _NoDataOct()
+    df, info = _at(fake, price=4100.5)
+    assert info["outcome"] == "matched" and info["contract"] == "202612" and info["tried"] == ["202610", "202612"]
+    assert ibc.pacing_backoff_remaining() == 0
+    _, info2 = _at(_NoDataOct(), price=3500.0)          # nothing matches: an outcome, never a deferral
+    assert info2["outcome"] in ("no_bars", "price_mismatch") and ibc.pacing_backoff_remaining() == 0
+
+
+def test_query_cancelled_162_still_backs_off():
+    _, info = _at(_IBFake(error=(162, "Historical Market Data Service error message:API historical data query cancelled: 7")))
+    assert info["outcome"] == "deferred" and ibc.pacing_backoff_remaining() > 0
+
+
 def test_error_420_also_backs_off():
     _, info = _at(_IBFake(error=(420, "Invalid real-time query")))
     assert info["outcome"] == "deferred" and ibc.pacing_backoff_remaining() > 0
