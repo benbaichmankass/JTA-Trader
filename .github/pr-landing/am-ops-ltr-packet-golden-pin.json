@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tier-1 test hermeticity fix, root cause of CI-MGC-IB-STOP-TARGET-INTERMITTENT (failed in pytest-runs 43303739084, 43357655726, 43356399433 on unrelated PRs). tests/test_live_review_packet.py built GOLD from an unsorted glob('*.json') keyed by package id; the directory holds 20 production packets for the MGC package, 7 with SL 4160.33 (post 2026-10-31 tighten), so the last file in checkout directory order sometimes set the golden SL to 4160 against the fixture's 4270 STP -> 'mismatch'. Pin GOLD to the hand-built review at NOW (LR-20261025T1616Z-*) and add a regression test. Reproduced by swapping in the 10-31 packet. No production code. Gates this adds or changes: none."
+}
