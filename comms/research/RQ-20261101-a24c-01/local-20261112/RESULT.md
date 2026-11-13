@@ -8,5 +8,10 @@ spread = Bybit quoted floored at one tick, sqrt impact Q=5000, fee+funding as c6
 - Reported only: 5 bybit_2 coins +0.0156 (n=971, se 0.036); flat 3 bps on U -0.0103; impact sensitivity Q x0.25 -0.0265, Q x4 -0.0944.
 - Arm B did not evaluate: the harness labelled its cost basis "net_of_cost", which cost_gate rejects (needs net/realized). Fixed in this PR (label "net").
   The verdict does not depend on it (arm A fails on its own); arm B was not re-run so the ledger gets no extra read.
-- Meaning: widening ml_entry to the passed population does not add edge once each symbol pays its own spread and impact; the
-  liquid majors alone are not enough either. No Tier-3 widening packet. bybit_2 keeps its 5 coins.
+- Meaning (corrected 2026-11-13, lane ML-ENTRY-UNIVERSE-LEVER; the first version over-claimed): on the registered test, the widened
+  population (19 symbols after the dev-chosen 30 bps cost filter) is net NEGATIVE once each symbol pays its own spread and impact
+  (-0.0492 R/decision, t about -2.9), so there is no evidence for a Tier-3 widening packet. What this does NOT show: the 5 bybit_2 coins
+  read +0.0156 R/decision (se 0.036, t about 0.4, n=971), which is indistinguishable from zero in either direction, so it is no
+  evidence for or against narrowing them. bybit_2 keeps its 5 coins by the standing rule (a widening needs its own passed test).
+  Costs were the Bybit quoted spread from ONE Sunday snapshot held constant across months (its error vs the true monthly spread is
+  unmeasured), so the cost side is approximate; the dev folds were also negative at every C.
