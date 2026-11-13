@@ -238,6 +238,10 @@ def _replace_opt(argv: list[str], flag: str, value: str) -> list[str]:
     return out
 
 
+#: bar sizes the --timeframe lever accepts, in minutes (a coarser bar is resampled from the native fetch).
+_TF_MIN = {"5m": 5, "15m": 15, "30m": 30, "1h": 60, "2h": 120, "4h": 240, "1d": 1440}
+
+
 def build_arm_argv(leg: str, cfg: dict[str, Any], csv: str, resample: str, emit: str, jout: str,
                    extra: list[str], start: str | None, end: str | None,
                    forming_1m: str | None = None,
@@ -800,6 +804,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--minutes-1m-csv", default=None,
                     help="replay the leg's live FORMING-bar decision from this 1m CSV (trend harness; "
                          "row EQ-FORMING-BAR-REPLAY). Pair it with --data-csv from the same source")
+    ap.add_argument("--timeframe", default=None,
+                    help="run the leg at THIS bar size instead of its config timeframe (the timeframe lever family)")
+    ap.add_argument("--forming-1m-fetch", action="store_true",
+                    help="fetch Binance-vision 1m over [--start, --end] into a temp dir and replay the FORMING bar "
+                         "(fills --minutes-1m-csv; crypto feeds only)")
     ap.add_argument("--decision-session", choices=("us_equity",), default=None,
                     help="with --minutes-1m-csv: a US-session daily leg (ET-date alignment, cash-session ticks)")
     ap.add_argument("--non-crypto-source", choices=("auto", "dukascopy"), default="auto",
@@ -913,14 +922,51 @@ def main(argv: list[str] | None = None) -> int:
 
     if a.symbol:
         base = {**base, "symbols": [a.symbol]}
+    native_tf = base.get("timeframe")
+    if a.timeframe:
+        # DEMO-FLOOR-ITER (2026-11-13): the TIMEFRAME lever family. The leg's own config at a COARSER bar size: the
+        # candles are fetched at the leg's native bar and the harness resamples them up (the resample and every arm's
+        # cfg follow --timeframe). Fetching at the target bar instead starves the fill engines, which simulate on the
+        # fine base series: turtle_soup at 4h read 0 trades from a 4h CSV and 4 from the same window's 15m CSV
+        # (2026-07-01..11-01, measured 2026-11-13). A finer bar than native cannot be built from the native fetch.
+        if _TF_MIN.get(str(a.timeframe)) is None or _TF_MIN.get(str(native_tf)) is None:
+            print(f"ERROR: --timeframe {a.timeframe!r} / native {native_tf!r}: not one of {sorted(_TF_MIN)}", file=sys.stderr)
+            return 2
+        if _TF_MIN[str(a.timeframe)] < _TF_MIN[str(native_tf)]:
+            print(f"ERROR: --timeframe {a.timeframe} is finer than the leg's native {native_tf}: it cannot be resampled "
+                  f"from the native fetch", file=sys.stderr)
+            return 2
+        base = {**base, "timeframe": a.timeframe}
     wd = Path(tempfile.mkdtemp(prefix="exit_lever_ablation_"))
+    if a.forming_1m_fetch and not a.minutes_1m_csv:
+        import regime_debt_matrix as rdm
+        sym, tf = (base.get("symbols") or [None])[0], base.get("timeframe")
+        if not sym or rdm.resolve_feed(sym, tf).get("source") != "binance":
+            print("ERROR: --forming-1m-fetch reads Binance-vision 1m; this leg's feed is not binance", file=sys.stderr)
+            return 2
+        if not (a.start and a.end):
+            print("ERROR: --forming-1m-fetch needs --start and --end (the 1m window is the pinned window)", file=sys.stderr)
+            return 2
+        import pandas as pd
+        s1 = (pd.Timestamp(a.start) - pd.Timedelta(days=2)).strftime("%Y-%m-%d")
+        e1 = (pd.Timestamp(a.end) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+        m1 = wd / f"{sym}__1m.csv"
+        r1 = subprocess.run([sys.executable, str(REPO / "scripts/ops/fetch_backtest_candles.py"), "--symbol", sym,
+                             "--interval", "1", "--start-date", s1, "--end-date", e1, "--output", str(m1),
+                             "--source", "binance_vision"], cwd=str(REPO), capture_output=True, text=True, check=False)
+        if r1.returncode != 0 or not m1.exists():
+            print(f"ERROR: 1m fetch for {sym} {s1}..{e1} exited {r1.returncode}: {(r1.stderr or '')[-400:]}", file=sys.stderr)
+            _write_failure(out, {"stage": "forming_1m_fetch", "error": f"exit {r1.returncode}"})
+            return 1
+        a.minutes_1m_csv = str(m1)
     if a.decision_session and not a.minutes_1m_csv:
         print("ERROR: --decision-session needs --minutes-1m-csv", file=sys.stderr)
         return 2
     csv = a.data_csv or str(wd / f"{a.leg}__data.csv")
     feed: dict[str, Any] = {"resample": base.get("timeframe"), "source": "explicit --data-csv"}
     if not a.data_csv:
-        feed = fetch_candles(a.leg, base, a.days, csv, non_crypto_source=a.non_crypto_source)
+        feed = fetch_candles(a.leg, {**base, "timeframe": native_tf}, a.days, csv, non_crypto_source=a.non_crypto_source)
+        feed["resample"] = base.get("timeframe")
     split = a.grade == "stage0" and a.stage0_holdout_start is not None
     if (a.stage0_ci_z is not None or a.stage0_yearly_folds) and not split:
         print("ERROR: --stage0-ci-z / --stage0-yearly-folds need --grade stage0 with --stage0-holdout-start",

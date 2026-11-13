@@ -88,18 +88,27 @@ def position_rows(closed: List[Any]) -> List[Dict[str, Any]]:
 
 def run(data: str, *, symbol: str, start: Optional[str], end: Optional[str],
         fee_bps_roundtrip: Optional[float], slippage_bps_roundtrip: Optional[float],
-        funding_bps_per_window: Optional[float], overrides: Dict[str, Any]) -> Dict[str, Any]:
+        funding_bps_per_window: Optional[float], overrides: Dict[str, Any], tf: str = "15m") -> Dict[str, Any]:
     import backtest_system as bs
     from src.research.run_costs import resolve_run_costs
     base = bs._load_candles(data)
     costs = resolve_run_costs(symbol, fee_bps_roundtrip=fee_bps_roundtrip,
                               slippage_bps_roundtrip=slippage_bps_roundtrip,
                               funding_bps_per_window=funding_bps_per_window)
-    out = bs.run_system_backtest(
-        base, roster=[LEG], start=start, end=end, initial_balance=10_000.0, risk_pct=0.3,
-        daily_loss_pct=100.0, signal_ttl_bars=1, overrides={LEG: overrides} if overrides else {},
-        refresh=True, clock_tf="15m", symbol=symbol, costs=costs, require_full_costs=False,
-        attach_full=True)   # attach_full: the per-trade ledger (closed_trades); the summary math is unchanged
+    # DEMO-FLOOR-ITER (2026-11-13), the TIMEFRAME lever family: the same unit on a coarser setup bar. The engine builds the
+    # leg's frame from ROSTER[leg]["tf"] and clocks on clock_tf, so both follow ``tf``; the unit reads its bar size from
+    # cfg["timeframe"] (sweep_lookback_15m is a BAR COUNT, so it spans 4x / 16x the clock time at 1h / 4h -- stated, not hidden).
+    saved = dict(bs.ROSTER[LEG])
+    bs.ROSTER[LEG] = {**saved, "tf": tf}
+    ov = {**(overrides or {}), "timeframe": tf} if tf != "15m" else (overrides or {})
+    try:
+        out = bs.run_system_backtest(
+            base, roster=[LEG], start=start, end=end, initial_balance=10_000.0, risk_pct=0.3,
+            daily_loss_pct=100.0, signal_ttl_bars=1, overrides={LEG: ov} if ov else {},
+            refresh=True, clock_tf=tf, symbol=symbol, costs=costs, require_full_costs=False,
+            attach_full=True)   # attach_full: the per-trade ledger (closed_trades); the summary math is unchanged
+    finally:
+        bs.ROSTER[LEG] = saved
     return out
 
 
@@ -172,7 +181,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     p = argparse.ArgumentParser(description="turtle_soup per-leg Stage-0 harness (live order_package + monitor).")
     p.add_argument("--data")
     p.add_argument("--symbol", default="BTCUSDT")
-    p.add_argument("--resample", default="15m", help="accepted for the regime_debt_matrix argv shape; the engine clocks 15m")
+    p.add_argument("--resample", default="15m", help="setup bar: 15m (the live unit) or 1h / 4h (the timeframe lever family)")
     p.add_argument("--start")
     p.add_argument("--end")
     p.add_argument("--fee-bps-roundtrip", type=float, default=None)
@@ -188,8 +197,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         return _self_test()
     if not a.data:
         p.error("--data is required")
-    if str(a.resample).lower() not in ("15m", "15min"):
-        print(f"ERROR: turtle_soup's live adapter is a 15m unit; --resample {a.resample!r} is not modelled", file=sys.stderr)
+    tf = {"15min": "15m"}.get(str(a.resample).lower(), str(a.resample).lower())
+    if tf not in ("15m", "1h", "4h"):
+        print(f"ERROR: turtle_soup is modelled on 15m (live) and, for the timeframe lever family, 1h / 4h; "
+              f"--resample {a.resample!r} is not", file=sys.stderr)
         return 2
     overrides: Dict[str, Any] = {}
     for kv in a.override:
@@ -200,7 +211,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             overrides[k] = v
     out = run(a.data, symbol=a.symbol, start=a.start, end=a.end, fee_bps_roundtrip=a.fee_bps_roundtrip,
               slippage_bps_roundtrip=a.slippage_bps_roundtrip, funding_bps_per_window=a.funding_bps_per_window,
-              overrides=overrides)
+              overrides=overrides, tf=tf)
     rows = position_rows(out.get("closed_trades") or [])
     import pandas as pd
     import backtest_system as bs

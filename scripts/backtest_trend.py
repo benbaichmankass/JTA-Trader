@@ -2166,7 +2166,8 @@ def main(argv: List[str]) -> int:
             _block = _fbe.block_with_arm_params(_block, donchian=args.donchian,
                                                 atr_period=args.atr_period,
                                                 atr_stop_mult=args.atr_stop_mult,
-                                                long_only=args.long_only)
+                                                long_only=args.long_only,
+                                                side_filter=args.side_filter)
         else:
             _m1, _block = _fbe.cli_inputs(args.klines_1m_dir, args.strategy_name)
         decision_kw = dict(decision_bar="forming", decision_1m=_m1, decision_cfg=_block,
