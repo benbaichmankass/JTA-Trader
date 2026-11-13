@@ -14,6 +14,15 @@ Rules (each is a named class so the counts say WHAT matched, never the value):
   pem_block                      -- BEGIN..END, or BEGIN..end-of-text if the
                                     output was cut before END
   bearer                         -- ``Bearer <20+ chars>``
+  ib_account_id                  -- IBKR account ids: DU/DF + 5+ alnum incl. a digit (paper /
+                                    advisor) or U + 7+ digits (live). Never put
+                                    account ids in the public repo (2026-11-12).
+  account_balance                -- a real-money balance printed after an equity / balance / buying-power label
+                                    (``equity: 123.4``, ``"totalEquity": "123.4"``, ``equity=$123``, ``buying power of $123``).
+                                    The label is kept so the diag stays readable, only the number goes
+                                    (CF-GRADES-EQUITY-COMMITTED / DIAG-RELAY-EQUITY-LEAK, 2026-11-12: one balance sat verbatim in
+                                    13 public issue bodies). A bare number with no label is NOT matched; the structural fix is to
+                                    never print a balance, this rule is the backstop.
   long_hex                       -- >=64 contiguous hex chars (sha256-length
                                     and up: token_hex(32) secrets). 40-char git
                                     shas are deliberately NOT matched — they
@@ -32,6 +41,14 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from src.utils.log_redact import _BARE_TOKEN_RE, _TELEGRAM_URL_RE  # noqa: E402
 
+_BALANCE_LABEL = (r"(?:total[_ ]?equity|equity(?:[_ ]?(?:usd|pre[_ ]?usd|now))?|(?:wallet|available|account|cash|total|net)[_ ]?balance"
+                  r"(?:[_ ]?usd)?|balance(?:[_ ]?usd)?|buying[_ ]?power(?:[_ ]?usd)?|net[_ ]?liquidation(?:[_ ]?value)?|"
+                  r"cash[_ ]?available|available[_ ]?(?:funds|cash))")
+#: label, then a separator (``:`` ``=`` ``is`` ``of`` ``$`` quotes) then a money-looking number. Group 1 is kept.
+_BALANCE_RE = re.compile(
+    r"(?i)(?<![A-Za-z0-9])(" + _BALANCE_LABEL + r"[\"']?\s*(?:[:=]|\bis\b|\bof\b|\bat\b)?\s*[\"']?\s*)"
+    r"[$]?\s?-?[0-9][0-9,]*(?:\.[0-9]+)?(?![A-Za-z0-9])")
+
 RULES = (
     ("pem_block", re.compile(
         r"-----BEGIN [A-Z0-9 ]*(?:PRIVATE KEY|CERTIFICATE|PGP [A-Z ]*BLOCK)-----"
@@ -41,6 +58,8 @@ RULES = (
     ("aws_access_key", re.compile(r"(?<![A-Za-z0-9])(?:AKIA|ASIA)[0-9A-Z]{16}(?![A-Za-z0-9])")),
     ("github_token", re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,})")),
     ("bearer", re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._~+/=-]{20,}")),
+    ("ib_account_id", re.compile(r"(?<![A-Za-z0-9])(?:(?:DU|DF)(?=[A-Z0-9]*[0-9])[A-Z0-9]{5,}|U[0-9]{7,})(?![A-Za-z0-9])")),
+    ("account_balance", _BALANCE_RE),
     ("long_hex", re.compile(r"(?<![0-9A-Fa-f])[0-9A-Fa-f]{64,}(?![0-9A-Fa-f])")),
 )
 
@@ -48,7 +67,8 @@ RULES = (
 def redact(text: str) -> tuple[str, dict[str, int]]:
     counts: dict[str, int] = {}
     for name, rx in RULES:
-        text, n = rx.subn(f"[REDACTED:{name}]", text)
+        repl = (lambda m: m.group(1) + "[REDACTED:account_balance]") if name == "account_balance" else f"[REDACTED:{name}]"
+        text, n = rx.subn(repl, text)
         if n:
             counts[name] = n
     return text, counts

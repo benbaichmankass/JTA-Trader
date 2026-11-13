@@ -1,7 +1,7 @@
 # Hand-authored 2026-11-11 by lane ALPACA-LIVE-BOOK-PLAN (Manager Session 2026-11-11a dispatch; operator ask 2026-11-11 ~22:40Z). Programme P8
 # (research/programmes/08-alpaca-live-book.yaml). Rule registered before any run; thresholds never change after a result.
 id: RQ-20261111-207f-04
-title: 'ALPACA-LIVE BOOK / CHALLENGERS (P8-Q4): which rostered equity legs earn on the alpaca_live cash book -- $194.52, long only, whole shares, one slot, T+1, the live sizer
+title: 'ALPACA-LIVE BOOK / CHALLENGERS (P8-Q4): which rostered equity legs earn on the alpaca_live cash book -- [balance removed], long only, whole shares, one slot, T+1, the live sizer
   -- one at a time and all competing for the slot?'
 status: queued
 cadence: once
@@ -35,7 +35,7 @@ decision_rule:
   registered_at: '2026-11-11'
   registered_before_run: true
   statistic: 'scripts/research/alpaca_live_book.py legs: per leg, the build_strategy_evidence trade list (entry_time, exit_time, entry, sl, net_r, direction) replayed through
-    the alpaca_live book (cash 194.52, accounts.yaml risk_pct, risk.py wall + round-up, one slot, T+1, long only): n_candidates, n_taken, refusals, taken mean net R, return
+    the alpaca_live book (cash [balance removed], accounts.yaml risk_pct, risk.py wall + round-up, one slot, T+1, long only): n_candidates, n_taken, refusals, taken mean net R, return
     %/month with month-clustered t, max drawdown $; plus the combined one-slot book of all listed legs (entry-time order).'
   rule: 'INDETERMINATE IF no leg reaches n_taken >= 30. PASS IF at least one leg has n_taken >= 30 AND book taken mean net R > 0 AND month-clustered t of book return >= 1.0;
     those legs QUALIFY for the head-to-head with Foxhound-4 (node P8-Q4-h2h). FAIL otherwise. A qualification is not a promotion: the P8 promotion rule (docs/research/programmes/08-ALPACA-LIVE-BOOK.md
@@ -70,7 +70,7 @@ value:
   bucket: structural
   usd_at_stake_per_month: 80
   confidence: 0.45
-  basis: 'stand-in decision value: which strategy carries the real-money alpaca book (account $194.52).'
+  basis: 'stand-in decision value: which strategy carries the real-money alpaca book (account [balance removed]).'
 run:
   command:
   - python3

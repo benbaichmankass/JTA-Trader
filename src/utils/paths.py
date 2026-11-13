@@ -402,6 +402,36 @@ def work_store_db_path() -> str:
     return str(Path(trade_journal_db_path()).parent / _WORK_STORE_DB_BASENAME)
 
 
+_ENV_TRADE_SNAPSHOTS_DB = "TRADE_SNAPSHOTS_DB"
+_TRADE_SNAPSHOTS_DB_BASENAME = "trade_chart_snapshots.db"
+
+
+def trade_snapshots_db_path() -> str:
+    """Return the canonical absolute path to the closed-trade chart snapshot DB (UI-REDESIGN-2026-11).
+
+    Derived data (``trade_chart_snapshots``, built by ``src/runtime/trade_snapshot_builder.py``) lives in its OWN
+    SQLite file beside the trade journal, never inside it, so a snapshot write can never take the write lock of
+    ``trade_journal.db`` (manager condition 2026-11-12; JOURNAL-LOCK-RESIDUAL). The journal is only ever opened
+    read-only by the builder and the read routes.
+
+    Resolution (same as ``work_store_db_path``):
+      1. ``TRADE_SNAPSHOTS_DB`` env -- exact path.
+      2. ``$DATA_DIR/trade_chart_snapshots.db`` -- the umbrella data root.
+      3. beside ``trade_journal_db_path()``.
+    Always absolute.
+    """
+    env = os.environ.get(_ENV_TRADE_SNAPSHOTS_DB)
+    if env:
+        return str(Path(env).expanduser())
+    umbrella = os.environ.get(_ENV_UMBRELLA)
+    if umbrella:
+        umbrella_root = Path(umbrella).expanduser()
+        if not umbrella_root.is_absolute():
+            umbrella_root = Path(repo_root()) / umbrella_root
+        return str(umbrella_root / _TRADE_SNAPSHOTS_DB_BASENAME)
+    return str(Path(trade_journal_db_path()).parent / _TRADE_SNAPSHOTS_DB_BASENAME)
+
+
 def describe_roots() -> dict[str, str]:
     """Return a debug map of the resolved roots and their env source.
 

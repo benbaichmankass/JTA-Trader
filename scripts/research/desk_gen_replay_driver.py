@@ -1300,14 +1300,12 @@ def cmd_score(a: argparse.Namespace) -> int:
     pop = (f"entry generation, subset={a.subset}: {st['n']} filled proposals from {len(by)} judged of {len(packets)} masked packets "
            f"over {', '.join(sorted(mkt))}")
     notes = "; ".join(res["reasons"]) or "all registered clauses met"
-    # Below 20 fills a symbol is no_data, and research_result requires n null for it (AUD-20261019-RESEARCH-SLO-RED:
-    # n=8 got run 40603772459 refused); the count stays visible in the population text.
-    recs = [{"leg": k,
-             "population": f"{k} entry generation" if v["n"] >= 20
-             else f"{k} entry generation ({v['n']} fill(s), below the 20 floor)",
-             "n": v["n"] if v["n"] >= 20 else None,
-             "verdict": res["verdict"] if v["n"] >= 20 else "not_applicable",
-             "read_state": "measured" if v["n"] >= 20 else "no_data", "mean_net_r": v["mean_net_r"]}
+    # research_result.validate(): a symbol with fills WAS measured -- below the 20-fill floor it is `indeterminate`, never
+    # `no_data` with an n (RQ-20261026-e535-03 run 40603772459 was refused at emit for exactly that: ETHUSDT n 8 no_data);
+    # `no_data` is only a symbol with zero fills, and then its n is null.
+    recs = [{"leg": k, "population": f"{k} entry generation", "n": v["n"] if v["n"] else None,
+             "verdict": (res["verdict"] if v["n"] >= 20 else "indeterminate") if v["n"] else "not_applicable",
+             "read_state": "measured" if v["n"] else "no_data", "mean_net_r": v["mean_net_r"] if v["n"] else None}
             for k, v in (st.get("by_symbol") or {}).items()]
     _write_verdict(Path(a.out), res, pop, st["n"], f"{notes} | {note}", recs or None, src)
     print(json.dumps({"verdict": res["verdict"], "n_filled": st["n"], "mean_net_r": st.get("mean_net_r"), "mean_ci95": st.get("mean_ci95")}))

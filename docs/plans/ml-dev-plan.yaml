@@ -1,0 +1,1370 @@
+# docs/plans/ml-dev-plan.yaml -- THE ITERATIVE ML DEV PLAN (machine-readable; the operator monitors, tracks and edits it).
+#
+# Row ML-DEV-PLAN (owner AM-ML). Operator 2026-11-12 ~13:47Z (verbatim): "We also need to have the full iterative dev plan built
+# out, should be visibile to so i can monitor/track/edit".
+#
+# Gates this adds or changes: NONE. Nothing here is read by the order path, a promotion, a roster or a dispatcher as a condition.
+# A PASS/FAIL arrow says what the NEXT piece of work is; it is not a switch. Where a recommendation would add a gate it sits under
+# `labelled_gates_not_planned` and is not planned (operator 11:45Z, verbatim: "no more gates that I don't explicitly give you
+# permission for. It is not your job to add limitations that I did not ask for.").
+#
+# How a model reaches money is stated ONCE in docs/plans/OPERATING-PLAN-2026-09-21.md § 2 (the ladder, the soak, the three
+# strategy statuses) and for ML in row ML-ONE-LADDER; this file points at it and restates none of it. Operator p3 2026-11-12
+# (verbatim): "We already said that things get promoted to real money based on backtesting, shadow on paper is only for something
+# that is demoted and in iteration, not a step on the way to real money". So no lever below routes through a paper/shadow step.
+#
+# READ / CHECK:  python3 scripts/ops/ml_dev_plan.py            (table; resolves every row + unit; exit 0/1/2)
+#                python3 scripts/ops/ml_dev_plan.py --json     (what the operator's Plans page renders)
+#                python3 scripts/ops/ml_dev_plan.py --validate (schema only; CI-safe, no network)
+# LIVE STATE: every line names its work-store row in `row`. The row's own state is read live by the reader, never copied here.
+#
+# SCHEMA (per line)
+#   id            MLP-<slot|track>-<NAME>; stable; never reused
+#   slot          D1..D10 (ML-ROADMAP-MECE-2026-11.md § 2) or "-" for a cross-slot line
+#   track         the ml-plan-items.yaml track letter(s) it absorbs (S R X P D N F V M) or "infra"
+#   kind          model | idea | slot | infra
+#   subject       the model id(s) / idea, with display names (docs/reference/model_names.yaml)
+#   consumer      {class: real_money|prop|paper|none, books, legs, note}. `none` is said plainly; none is invented.
+#   stage         the one-ladder / RD-REGISTRY vocabulary (src/runtime/rd_registry.py STAGES): idea queued testing_offline failed
+#                 iterating passed_waiting testing_book production shadow_advisory retired stuck
+#   row           the work-store row that mirrors the line (scripts/ops/work.py --via direct get <row>); a line with no
+#                 dedicated live row has a mirror row whose id IS the line id (created by lane ML-DEV-PLAN, 2026-11-12)
+#   carried_by    optional: other rows doing the line's current work (the reader checks they exist)
+#   state         {summary, evidence: [{record, n, value, provenance}]}; provenance MEASURED | QUOTED | ESTIMATED | UNVERIFIED
+#                 (QUOTED = from a committed record or an open PR's committed record, path named; not re-derived)
+#   levers_tried  [{lever, ref, verdict}]
+#   levers_ahead  [{lever, ref (unit or row; "needs_authoring" if neither exists), baseline (what it must beat, net of cost),
+#                   pass, fail}]
+#   next_weeks    {W47: ..., W48: ..., W49: ..., W50: ...}  ISO weeks starting 2026-11-16, -23, -30, 12-07
+#   exhaustion    the condition that would retire the line. NEVER an attempt count (programme-review skill, ITERATION LOOP).
+#   owner         AM-ML unless stated
+#   plan_items    the ml-plan-items.yaml ids this line absorbs (the reader flags an open item no line absorbs)
+#   proposed_disposition  optional; a kill/retire PROPOSAL with reason + data. Applying it is the manager's / operator's act.
+schema: 1
+updated: '2026-11-12'
+as_of_main: 5a0bd82b9
+review_days: 7
+weeks: {W47: '2026-11-16', W48: '2026-11-23', W49: '2026-11-30', W50: '2026-12-07'}
+sources:
+  - docs/research/ml-deep-audit-2026-11-12.md
+  - docs/plans/ML-CONSOLIDATION-2026-11-11.md
+  - 'docs/plans/ML-D3-HEAD-TO-HEAD-2026-11-12.md (PR #25242, open at as_of)'
+  - docs/plans/ML-ROADMAP-MECE-2026-11.md
+  - docs/plans/ml-plan-items.yaml
+  - config/accounts.yaml, config/strategies.yaml, config/overlay_policy.yaml, config/regime_policy.yaml (re-parsed at as_of_main)
+  - work-store rows of the ML class (owner AM-ML), read 2026-11-12 ~14:40Z
+graded_today:   # 2026-11-12; the record path is on main unless a PR is named
+  - {unit: RQ-20261101-b610-01, verdict: fail, record: research/results/RQ-20261101-b610-01/local-20261112T1107Z.jsonl, pr: 25278}
+  - {unit: RQ-20261101-78fc-04, verdict: fail, record: research/results/RQ-20261101-78fc-04/local-20261112T1014Z.jsonl, pr: 25250}
+  - {unit: RQ-20261112-3144-01, verdict: fail, record: 'PR #25250 (iteration 2 of ml-tm-action-value)', pr: 25250}
+  - {unit: RQ-20261112-0bc8-01, verdict: indeterminate, record: research/results/RQ-20261112-0bc8-01/local-20261112T0900Z.jsonl}
+  - {unit: RQ-20261112-0bc8-02, verdict: fail, record: research/results/RQ-20261112-0bc8-02/trainer-43187689666.jsonl}
+  - {unit: RQ-20261112-0be0-01, verdict: fail, record: research/results/RQ-20261112-0be0-01/local-20261112T1002Z.jsonl, pr: 25243}
+  - {unit: RQ-20261112-743a-01, verdict: fail, record: research/results/RQ-20261112-743a-01/local-2026-11-12.jsonl, pr: 25279, note: small-TF cost-breakeven census}
+  - {unit: RQ-20261105-d256-01, verdict: fail, record: research/results/RQ-20261105-d256-01/42528989784.jsonl}
+  - {unit: RQ-20261101-a24c-01, verdict: fail, record: 'comms/research/RQ-20261101-a24c-01/local-20261112/ (row ML-ENTRY-UNIVERSE-LEVER note)'}
+
+lines:
+# =====================================================================================================================
+# D1 UNIVERSE & BOOK
+# =====================================================================================================================
+- id: MLP-D1-UNIVERSE
+  slot: D1
+  track: S
+  kind: slot
+  subject: no model, on purpose. Which legs sit on which book is decided offline by the ladder (OPERATING-PLAN § 2).
+  consumer: {class: none, note: no model exists for this slot}
+  stage: idea
+  row: MLP-D1-UNIVERSE
+  state:
+    summary: >-
+      Kept as a rule. A model ranking legs from live P&L is the category error the operating plan forbids; cross-sectional n of
+      rostered legs is too small for a learned selector.
+    evidence:
+      - {record: docs/plans/ML-ROADMAP-MECE-2026-11.md § 3 D1, provenance: QUOTED}
+  levers_tried: []
+  levers_ahead:
+    - lever: leg-selection backtest over the Stage-0 panel
+      ref: needs_authoring (re-entry test below)
+      baseline: the current roster, and 1/N over the same panel, net of the full cost stack
+      pass: a Tier-3 roster proposal to the manager with the record
+      fail: the slot stays a rule; re-check when the panel doubles
+  next_weeks: {W47: none, W48: none, W49: 'count legs with committed Stage-0 records on one cost basis (ML-LINE-S1-CORPUS)', W50: none}
+  exhaustion: not a model line; reopens when >= 30 legs carry committed Stage-0 records on one cost basis (the ML-LINE-S1-CORPUS panel).
+  owner: AM-ML
+  plan_items: [ML-S1, ML-S3]
+
+# =====================================================================================================================
+# D2 REGIME GATE (Collie / Chihuahua)
+# =====================================================================================================================
+- id: MLP-D2-SLOT-MONEY-READ
+  slot: D2
+  track: R
+  kind: slot
+  subject: does any regime gate earn its keep net of cost on a leg that matters (the slot's one money question)
+  consumer: {class: paper, books: [bybit_1], legs: [trend_donchian, ict_scalp_5m, squeeze_breakout_4h], note: 'trend_vol cells in config/regime_policy.yaml name only these 3 BTC legs; 0 real-money or prop legs are gated'}
+  stage: testing_offline
+  row: ML-D2-CONSUMER-TEST
+  state:
+    summary: >-
+      150 of 234 ML units authored since 2026-10-01 are regime/direction classifier bake-offs; none is judged by money. The
+      consumer test (bcd2-01, TD family pooled, regime_cell_walkforward) is authored by the row's lane and waits on a trainer
+      dispatch that also unblocks 78fc-08.
+    evidence:
+      - {record: docs/research/ml-deep-audit-2026-11-12.md § 2.1, n: 234, value: '150 bake-offs, 0 money reads', provenance: QUOTED}
+      - {record: research/queue/blocked/RQ-20261101-78fc-08.yaml, value: blocked on ML-VOL-LABEL-LIVE-VERIFY, provenance: MEASURED}
+  levers_tried:
+    - {lever: pooled trend-axis cells (L-REGIME confirmations), ref: RQ-20261016-65ff-01..08, verdict: '16 of 17 FAIL (QUOTED, MECE § 3 D2)'}
+  levers_ahead:
+    - lever: regime gate on the real-money TD family pooled, matched-random cell control
+      ref: 'row ML-D2-CONSUMER-TEST unit bcd2-01'
+      baseline: the TD family ungated, and a same-rate matched-random cell drop, net of the full cost stack
+      pass: Tier-3 proposal (first real-money D2 consumer); then the trainer cycle is pointed at that head (MLP-INFRA-TRAINER-CYCLE)
+      fail: D2 authoring for TD stops (row's own note); the nightly cycle is re-pointed at the money models
+    - lever: do the 6 authored BTC off-cells still earn their keep
+      ref: RQ-20261101-78fc-08
+      baseline: the 3 BTC legs ungated, net of cost
+      pass: cells stay; the head behind them keeps its consumer
+      fail: Tier-3 proposal to drop the cells; Collie-5a loses its only consumer (MLP-D2-COLLIE-5A)
+  next_weeks: {W47: 'dispatch bcd2-01 + 78fc-08 on the trainer (one job); grade', W48: 'act on the verdicts above', W49: 'size D2 authoring from the verdicts', W50: review}
+  exhaustion: >-
+    bcd2-01 and 78fc-08 both FAIL and no leg family remains where a cell could gate >= one real-money or prop leg: the slot then
+    runs no new head work until a new information class (MLP-N-*) or a new leg family arrives.
+  owner: AM-ML
+  plan_items: [ML-R1, ML-R5, ML-R2, ML-R6, ML-R7, ML-R8]
+
+- id: MLP-D2-COLLIE-5A
+  slot: D2
+  track: R
+  kind: model
+  subject: btc-regime-15m-lgbm-fc-pcv-v2 (Collie-5a)
+  consumer: {class: paper, books: [bybit_1], legs: [trend_donchian, ict_scalp_5m, squeeze_breakout_4h], note: drops intents in trend_vol off-cells}
+  stage: shadow_advisory
+  row: MLP-D2-COLLIE-5A
+  carried_by: [ML-D2-CONSUMER-TEST]
+  state:
+    summary: >-
+      Advisory head behind the only live D2 consumer. Classifier quality only: macro-F1 0.582 (purged walk-forward, n 87,636).
+      No cost-net figure exists for any D2 head. REGIME_ML_VERDICT_MODE on the VM last read 2026-10-28 (UNVERIFIED since).
+    evidence:
+      - {record: docs/plans/ML-CONSOLIDATION-2026-11-11.md addendum, n: 87636, value: macro-F1 0.582, provenance: QUOTED}
+      - {record: 'GET /api/bot/ml/registry (cost_gate_applicable 0)', provenance: QUOTED}
+  levers_tried:
+    - {lever: yz range-vol feature (champion-challenger), ref: RQ-20261018-ff8f-01, verdict: done}
+    - {lever: volume-composition feature add, ref: RQ-20261112-0bc8-01, verdict: 'indeterminate (BTC/SOL comp-vol > +0.001, no PASS in all 3)'}
+  levers_ahead:
+    - lever: one-shard one-split bake-off vs the yz and v2 shadow heads
+      ref: 'RQ-20261112-ef4c-01 (PR #25242)'
+      baseline: Mutt-Regime-1b (majority class) and the v2 head on the SAME shard and purged split
+      pass: the winner is the head bcd2-01 / 78fc-08 judge by money
+      fail: the incumbent stays the comparison head; losers go to retire wave 3
+    - lever: money read of its cells
+      ref: RQ-20261101-78fc-08
+      baseline: the 3 BTC legs ungated, net of cost
+      pass: keeps its consumer
+      fail: no consumer left -> proposed retirement (manager)
+  next_weeks: {W47: 'ef4c-01 runs', W48: '78fc-08 verdict', W49: 'keep or propose retire', W50: none}
+  exhaustion: its cells lose the money read (78fc-08 FAIL) and no other leg's cell names it.
+  owner: AM-ML
+  plan_items: [ML-V5]
+
+- id: MLP-D2-ADVISORY-NO-CONSUMER
+  slot: D2
+  track: R
+  kind: model
+  subject: sol-regime-15m-lgbm-fc-pcv-v2 (Collie-5b), mes-regime-5m-lgbm-v2 (Chihuahua-1d)
+  consumer: {class: none, note: 'advisory stage, but no trend_vol cell names a SOL or MES leg (MEASURED config/regime_policy.yaml)'}
+  stage: shadow_advisory
+  row: MLP-D2-ADVISORY-NO-CONSUMER
+  carried_by: [ML-PROGRAMME-CONSOLIDATION]
+  state:
+    summary: Advisory with nothing to change. Value added - none measurable.
+    evidence:
+      - {record: docs/research/ml-deep-audit-2026-11-12.md § 1.1, provenance: QUOTED}
+  levers_tried: []
+  levers_ahead:
+    - lever: a consumer for each head = the bcd2-01 design applied to the SOL / MES leg families
+      ref: needs_authoring (only after bcd2-01 grades; authoring before is a bake-off with no customer)
+      baseline: the leg family ungated, net of cost, matched-random cell control
+      pass: Tier-3 proposal for a first cell naming that leg
+      fail: proposed retirement of the head (manager)
+  next_weeks: {W47: none, W48: 'author the SOL/MES consumer unit iff bcd2-01 PASS', W49: run, W50: grade}
+  exhaustion: bcd2-01 FAIL (no consumer design worth repeating), or the per-family consumer test FAILs.
+  owner: AM-ML
+  plan_items: []
+
+- id: MLP-D2-REVIEW-HEADS
+  slot: D2
+  track: R
+  kind: model
+  subject: >-
+    the 11 REVIEW heads without a matched Mutt + eth-regime-1h-lgbm-xasset-v1 (Collie-3c, KEEP) + the 4 Mutt baselines (slot
+    references): BTC 1h/15m/5m, ETH 1h/15m/5m, SOL 5m/15m, MES 1d shadow heads
+  consumer: {class: none, note: shadow, no consumer, no money question until bcd2-01 reads}
+  stage: testing_offline
+  row: MLP-D2-REVIEW-HEADS
+  carried_by: [ML-PROGRAMME-CONSOLIDATION]
+  state:
+    summary: >-
+      Every head with a matched Mutt clears it on the same shard (a floor, not value). 11 have no Mutt. Champions and challengers are
+      not on one shard, so no comparison is valid yet.
+    evidence:
+      - {record: docs/plans/ML-CONSOLIDATION-2026-11-11.md addendum, n: 19, provenance: QUOTED}
+  levers_tried:
+    - {lever: learner families (logit, ExtraTrees, MLP, TabICL, GRU, TSFM), ref: 'ML-F7..F28 units', verdict: 'no family beat LightGBM materially (QUOTED, ml-plan-items F-track closes)'}
+  levers_ahead:
+    - lever: one pre-registered bake-off per (symbol, timeframe), one shard, one purged split
+      ref: 'RQ-20261112-ef4c-01..08 (PR #25242)'
+      baseline: the Mutt for that cell (or the class prior where none exists), same rows
+      pass: the winner is the only head of that cell kept for a consumer test
+      fail: head goes to retire wave 3 (Tier-2 archive, manager)
+  next_weeks: {W47: 'ef4c-01..08 run after #25242 lands', W48: grade + wave-3 list, W49: none, W50: none}
+  exhaustion: per head, losing its cell's bake-off; for the group, bcd2-01 FAIL (no consumer for any head).
+  owner: AM-ML
+  plan_items: [ML-R3]
+  proposed_disposition: >-
+    RETIRE now (consolidation wave-2 proposal, data in the addendum): btc/sol-regime-15m-lgbm-fc-pcv-v1 (superseded by v2),
+    btc-regime-5m-lgbm-yz-v1 (macro-F1 0.5564 = v2 0.5564 on the same shard). Manager's Tier-2 call.
+
+- id: MLP-D2-XRP-5M-FROZEN
+  slot: D2
+  track: R
+  kind: model
+  subject: m27-derived-xrpusdt-5m-frozen (not a registry row)
+  consumer: {class: paper, books: [bybit_1], legs: [ict_scalp_xrp_5m], note: vol-bucket off-cells}
+  stage: testing_book
+  row: MLP-D2-XRP-5M-FROZEN
+  carried_by: [SMALL-TF-ML-RESEARCH]
+  state:
+    summary: UNVERIFIED this session (audit § 1.1). Not in the registry feed, so the weekly review cannot see it.
+    evidence:
+      - {record: docs/research/ml-deep-audit-2026-11-12.md § 1.1, provenance: UNVERIFIED}
+  levers_tried: []
+  levers_ahead:
+    - lever: add it to the consumer inventory (served/overlay rows of the registry feed)
+      ref: ML-REGISTRY-SERVED-MODELS-NO-STAGE
+      baseline: n/a (inventory)
+      pass: it gets a power line in docs/reference/ml-order-changers-power.yaml (ML-ONE-LADDER)
+      fail: n/a
+    - lever: money read of its off-cells
+      ref: needs_authoring (same design as 78fc-08, leg ict_scalp_xrp_5m)
+      baseline: the leg ungated, net of cost
+      pass: keep
+      fail: Tier-3 proposal to drop the cells
+  next_weeks: {W47: inventory row, W48: author the money read, W49: run, W50: grade}
+  exhaustion: its cells lose the money read.
+  owner: AM-ML
+  plan_items: []
+
+- id: MLP-D2-VOLCOMP-FEATURE
+  slot: D2
+  track: N
+  kind: idea
+  subject: volume composition (size/count surprise) as a feature for the vol head and as a direction/vol signal
+  consumer: {class: none, note: feeds Collie-5a only through MLP-D2-COLLIE-5A}
+  stage: iterating
+  row: MLP-D2-VOLCOMP-FEATURE
+  carried_by: [SMALL-TF-ML-RESEARCH]
+  state:
+    summary: Regime head read INDETERMINATE today; exit-head read FAIL today (see MLP-D8-LABRADOR-2).
+    evidence:
+      - {record: research/results/RQ-20261112-0bc8-01/local-20261112T0900Z.jsonl, n: 365991, value: 'INDETERMINATE; vol-AUC delta BTC +0.0028 / ETH -0.0009', provenance: MEASURED}
+  levers_tried:
+    - {lever: comp feature -> regime head, ref: RQ-20261112-0bc8-01, verdict: indeterminate}
+    - {lever: comp feature -> exit head, ref: RQ-20261112-0bc8-02, verdict: fail}
+  levers_ahead:
+    - lever: size-led surprise -> next-4h direction and move size
+      ref: 'RQ-20261111-f5c8-01, RQ-20261111-f5c8-02 (PR #25242)'
+      baseline: plain volume surprise, held-out rank IC, same rows
+      pass: the feature joins the D3 entry feature set as a one-factor lever (ML-LEVER-PLAN)
+      fail: volume composition closes as a feature class for D2/D3
+  next_weeks: {W47: f5c8-01/02 run, W48: grade, W49: none, W50: none}
+  exhaustion: f5c8-01 and f5c8-02 FAIL (with 0bc8-02 already FAIL) -- the information class shows no held-out rank content.
+  owner: AM-ML
+  plan_items: []
+
+- id: MLP-D2-MULTITF-AGREEMENT
+  slot: D2
+  track: R
+  kind: idea
+  subject: multi-timeframe regime-head agreement vs the best single head (ML-N1)
+  consumer: {class: none}
+  stage: stuck
+  row: MLP-D2-MULTITF-AGREEMENT
+  carried_by: [ML-PROGRAMME-CONSOLIDATION]
+  state:
+    summary: Its lever row ML-HEAD-AGREEMENT-JOIN was dropped; the unit sits in blocked/. No consumer exists for any D2 head beyond 3 paper BTC legs.
+    evidence:
+      - {record: research/queue/blocked/RQ-20261011-17f4-03.yaml, provenance: MEASURED}
+  levers_tried: []
+  levers_ahead:
+    - lever: agreement-gated cells in the bcd2-01 design
+      ref: needs_authoring (only on bcd2-01 PASS)
+      baseline: the best single head's cells on the same leg family, net of cost
+      pass: Tier-3 proposal
+      fail: idea retired with the record
+  next_weeks: {W47: none, W48: 'author iff bcd2-01 PASS', W49: none, W50: none}
+  exhaustion: bcd2-01 FAIL (no consumer for any head), or the agreement arm FAILs.
+  owner: AM-ML
+  plan_items: [ML-N1, ML-N1J]
+
+# =====================================================================================================================
+# D3 ENTRY GENERATION (Foxhound)
+# =====================================================================================================================
+- id: MLP-D3-FOXHOUND-1
+  slot: D3
+  track: S
+  kind: model
+  subject: ml-decision-entry-v1 / v1r20261106 (Foxhound-1; one lineage, ml/served/ENTRY_SERVED.json serves the refit)
+  consumer: {class: real_money, books: [bybit_2, bybit_portfolio, breakout_2, tradeify_1, velotrade_1], legs: [ml_entry], note: 'prop books under a recorded operator exception (prop gate FAIL); alpaca_paper ETFs are a separate line MLP-D3-ENTRY-ETF-ON-CRYPTO'}
+  stage: production
+  row: MLP-D3-FOXHOUND-1
+  carried_by: [CRYPTO-ENTRY-RETRAIN-UNIT, ML-DECISION-LABEL-VOL-CONFOUND, FRONTIER-Q-RESID-ENTRY, ML-LEVER-PLAN, ML-ENTRY-POPULATION-TEST]
+  state:
+    summary: >-
+      +0.0371 R/decision held-out (t about 1.0). Forward reads negative and inside noise. Breadth (60-perp population) graded FAIL
+      today, so bybit_2 keeps 5 coins. Confirming +0.037 R live at t=2 needs about 3,470 closes; the weekly forward grade of the
+      retrain workflow (n about 340 / 2 weeks) is the usable demotion read.
+    evidence:
+      - {record: comms/strategy_evidence/ml_entry.json, n: 907, value: '+0.0371 R/decision, held-out 2025-10-01..2026-09-30', provenance: MEASURED}
+      - {record: 'row ML-ENTRY-FINETUNE / ML-ENTRY-LIVE-MONITOR', n: 868, value: 'forward Oct-2026 -0.0193; 10-23..11-05 served -0.0918 (n 342, se 0.059)', provenance: QUOTED}
+      - {record: 'comms/research/RQ-20261101-a24c-01/local-20261112/', n: 4272, value: 'universe arm A fwd -0.0492 R/decision, t about -2.9; 5 bybit_2 coins +0.0156 n=971 (reported)', provenance: QUOTED}
+      - {record: 'research/results/RQ-20261101-b610-01/local-20261112T1107Z.jsonl (PR #25278)', n: 1857, value: 'frozen v1 +0.0245 on a disjoint symbol x time population (monitoring)', provenance: QUOTED}
+      - {record: 'research/results/RQ-20261112-2e3b-01/43302779170.jsonl (PR #25462)', n: 12746, value: 'POPULATION test FAIL: pooled -0.0680 R/decision (se 0.0098) on the 51-symbol Bybit USDT-perp population (filter fixed pre-run), each symbol its own costs; gross +0.071, cost 0.139 R; 5 bybit_2 coins +0.0103 n=971 (reported only)', provenance: MEASURED}
+  levers_tried:
+    - {lever: pooled 60-perp LightGBM, ref: RQ-20261101-c692-01, verdict: pass}
+    - {lever: expanded feature set (v2 recipe), ref: ML-FS-ENTRY-V2, verdict: 'fail (becomes Foxhound-2)'}
+    - {lever: labels (market-neutral, rank, clipped, first-passage), ref: ML-FS-LABELS, verdict: done}
+    - {lever: recipe regularisation / shadow-feature selection, ref: ML-FS-RECIPE, verdict: done}
+    - {lever: HTF counter-trend filter, ref: ML-ENTRY-HTF-COUNTERTREND, verdict: done}
+    - {lever: universe breadth, own per-symbol costs, ref: RQ-20261101-a24c-01, verdict: fail}
+    - {lever: 'venue population test (11-04 rule): 51 Bybit USDT perps, own costs, pre-run filter', ref: RQ-20261112-2e3b-01, verdict: 'fail (real-money set stays the c692-06 five coins; Tier-3 record + map-removal patch held for AM-ML)'}
+  levers_ahead:
+    - lever: diagnose the served -0.13 R window (drift vs regime vs cost)
+      ref: CRYPTO-ENTRY-RETRAIN-UNIT
+      baseline: the frozen v1 held-out record on the same cost stack
+      pass: a named cause with a one-factor lever registered against it
+      fail: the read is recorded as noise at the measured sd; the line continues on the target levers
+    - lever: is it picking symbols by cost-per-R (vol) rather than direction
+      ref: ML-DECISION-LABEL-VOL-CONFOUND
+      baseline: a vol-bucket-only selector at the same decision rate
+      pass: target lever (residual / vol-neutral label) becomes the next unit
+      fail: the direction content stands; no target change on this ground
+    - lever: market-residual target (move minus beta x BTC)
+      ref: FRONTIER-Q-RESID-ENTRY
+      baseline: frozen v1 on the same held-out rows, net of the full cost stack, deflated by the family's trial count
+      pass: one combined held-out read under ML-LEVER-PLAN; a PASS there is the Tier-3 candidate-to-served packet
+      fail: residual target closes for crypto entry
+    - lever: ranked lever plan, one combined held-out read
+      ref: ML-LEVER-PLAN
+      baseline: frozen v1 held-out record
+      pass: refit served through the retrain workflow's candidate rule (ML-ENTRY-RETRAIN-CADENCE)
+      fail: v1 stays served; lever list re-ranked from the dev-fold ablations
+    - lever: population test over the venue-tradable population with a filter fixed before the run
+      ref: ML-ENTRY-POPULATION-TEST
+      baseline: the 5-coin read on the same window, net of each symbol's own costs
+      pass: Tier-3 widening packet (a real-money widening needs its own population test - operator 2026-11-04)
+      fail: per-account symbol map is replaced by the recorded result; bybit_2 keeps the tested 5
+  next_weeks:
+    W47: 'retrain-unit + vol-confound reads land (dispatched 11-12, due 11-15); RESID-ENTRY registered and run'
+    W48: 'combined held-out read under ML-LEVER-PLAN if any lever passed dev folds; weekly forward grade continues'
+    W49: 'population test (filter registered first)'
+    W50: 'review the forward grade series as the demotion read'
+  exhaustion: >-
+    the mirror net-of-cost window crosses the declared demotion read (ML-D3-HEAD-TO-HEAD § "Declared demotion signals": mean < 0 at
+    day-clustered t <= -2, n >= 100, refit not better on the same replay) AND no lever in levers_ahead passes its dev-fold read -- then
+    the leg demotes to the demo floor (testing) and iterates there; a retirement needs its own record.
+  owner: AM-ML
+  plan_items: [ML-S2]
+
+- id: MLP-D3-FOXHOUND-2
+  slot: D3
+  track: S
+  kind: model
+  subject: ml-decision-entry-v2 (Foxhound-2)
+  consumer: {class: paper, books: [bybit_1], legs: [ml_entry_v2]}
+  stage: failed
+  row: MLP-D3-FOXHOUND-2
+  carried_by: [ML-ENTRY-V2-FWD-UNBLOCK]
+  state:
+    summary: Failed its W1 read and today its symbol-holdout read. Testing leg; stays at the demo floor (never demoted by a lane).
+    evidence:
+      - {record: ml/served/ml_decision_entry_v2/model.json, n: 320, value: 'w1_verdict fail, -0.1161 R vs frozen v1 -0.0405 on the same rows', provenance: QUOTED}
+      - {record: 'research/results/RQ-20261101-b610-01/local-20261112T1107Z.jsonl (PR #25278)', n: 948, value: '-0.0443 R (73 symbols) vs v1 +0.0245 (n 1857)', provenance: QUOTED}
+  levers_tried:
+    - {lever: expanded feature set, ref: RQ-20261101-b609-01, verdict: fail}
+    - {lever: symbol-holdout forward read, ref: RQ-20261101-b610-01, verdict: fail}
+  levers_ahead: []
+  next_weeks: {W47: 'manager decides the disposition below', W48: none, W49: none, W50: none}
+  exhaustion: MET on the declared read (ML-D3-HEAD-TO-HEAD, "retire on a b610 FAIL"); b610 graded FAIL 2026-11-12.
+  owner: AM-ML
+  plan_items: []
+  proposed_disposition: >-
+    RETIRE ml_entry_v2 by record (reason: two registered reads FAIL, -0.1161 n=320 and -0.0443 n=948, both below frozen v1 on the
+    same rows; the v2 recipe's levers continue inside MLP-D3-FOXHOUND-1). Applying it is the manager's / operator's act; a retirement
+    record is the only thing that removes a leg from the books (OPERATING-PLAN § 2).
+
+- id: MLP-D3-FOXHOUND-4
+  slot: D3
+  track: S
+  kind: model
+  subject: ml-entry-eq-struct-ens5-v1 (Foxhound-4)
+  consumer: {class: real_money, books: [alpaca_live, alpaca_portfolio], legs: [ml_entry_eq_struct]}
+  stage: production
+  row: MLP-D3-FOXHOUND-4
+  carried_by: [ML-ENTRY-EQ-STRUCT-FULL-POOL, FRONTIER-Q-RESID-ENTRY-EQ, ML-LIVE-PARITY-ML-LEGS]
+  state:
+    summary: >-
+      +0.492 R/trade held-out on 113 symbols, month-clustered t about 2.06; 75 of 207 trades in 2026-03; slippage provisional.
+      Live value UNVERIFIED (no closes read). Live-vs-replay parity reads could_not_check daily (PI-2026111x-LRP-A038E248).
+    evidence:
+      - {record: comms/strategy_evidence/ml_entry_eq_struct.json, n: 207, value: '+0.4922 R/trade; iid se 0.076, clustered se 0.239', provenance: QUOTED}
+  levers_tried:
+    - {lever: structure exit vs fixed 2/3 ATR, ref: ML-ENTRY-EQ-STRUCTURE-RETEST, verdict: done}
+    - {lever: 5-seed ensemble, ref: ML-ENTRY-EQ-STRUCT-LIVE, verdict: landed_unproven}
+  levers_ahead:
+    - lever: head-to-head vs ml_entry_eq on the same decision bars
+      ref: 'RQ-20261112-ef4c-09 (PR #25242)'
+      baseline: ml_entry_eq (v1) per bar, same pool and cost stack, day-clustered t
+      pass: struct stays the equity champion; v1's line follows its declared read
+      fail: reported to the manager about a LIVE leg (not applied)
+    - lever: tau
+      ref: RQ-20261111-207f-02
+      baseline: tau 0.25 on the same window
+      pass: Tier-3 tau proposal
+      fail: tau stays
+    - lever: market-residual target (move minus beta x SPY)
+      ref: FRONTIER-Q-RESID-ENTRY-EQ
+      baseline: struct-ens5 on the same held-out rows, net of cost
+      pass: candidate-to-served packet (Tier 3)
+      fail: closes for equity entry
+    - lever: replay parity on the live leg
+      ref: ML-LIVE-PARITY-ML-LEGS
+      baseline: n/a (mechanics)
+      pass: parity reads replace could_not_check
+      fail: a parity defect row
+  next_weeks: {W47: 'ef4c-09 + 207f-02 run', W48: 'RESID-ENTRY-EQ registered', W49: grade, W50: 'first parity read on live closes'}
+  exhaustion: >-
+    the declared read fires (ef4c-09 FAIL, or mirror net-of-cost mean < 0 at day-clustered t <= -2 at n >= 100) and no lever passes;
+    the leg then demotes to the demo floor and iterates.
+  owner: AM-ML
+  plan_items: []
+  labelled_gates_not_planned:
+    - >-
+      G1 (audit § 6): raise the real-money bar for an ML promotion (e.g. month-clustered t >= 2 or a fresh window). It would raise a
+      gate; reported as a risk with the numbers above, not planned.
+
+- id: MLP-D3-FOXHOUND-3
+  slot: D3
+  track: S
+  kind: model
+  subject: ml-entry-eq-v1 (Foxhound-3)
+  consumer: {class: paper, books: [alpaca_paper], legs: [ml_entry_eq]}
+  stage: testing_book
+  row: MLP-D3-FOXHOUND-3
+  carried_by: [ML-ENTRY-EQ-RESTART-REDECIDE]
+  state:
+    summary: Testing leg. Pooled confirm +0.0392 R. A restart re-decide defect is being fixed on its row.
+    evidence:
+      - {record: row ML-ENTRY-ALL-ACCOUNTS, n: 858, value: '+0.0392 R pooled confirm', provenance: QUOTED}
+  levers_tried:
+    - {lever: equity-native 173-ETF pool, ref: ML-ENTRY-EQUITY-NATIVE, verdict: done}
+  levers_ahead:
+    - lever: head-to-head vs struct-ens5
+      ref: 'RQ-20261112-ef4c-09 (PR #25242)'
+      baseline: struct-ens5 per bar
+      pass: 'v1 beats struct: reported about the live leg'
+      fail: 'v1 retires unless its v1-only arm has mean net R > 0 at n >= 30 (declared read, ML-D3-HEAD-TO-HEAD)'
+  next_weeks: {W47: ef4c-09 runs, W48: grade + disposition proposal, W49: none, W50: none}
+  exhaustion: the declared read above (struct beats it and its v1-only arm is not > 0 at n >= 30).
+  owner: AM-ML
+  plan_items: []
+
+- id: MLP-D3-ENTRY-ETF-ON-CRYPTO
+  slot: D3
+  track: S
+  kind: model
+  subject: ml_entry (Foxhound-1) on 13 alpaca_paper ETFs, outside its tested population
+  consumer: {class: paper, books: [alpaca_paper], legs: [ml_entry]}
+  stage: testing_book
+  row: MLP-D3-ENTRY-ETF-ON-CRYPTO
+  carried_by: [ML-ENTRY-POPULATION-TEST]
+  state:
+    summary: >-
+      Group-level ETF read FAIL; ETF scope read FAIL; the moving TP cannot run there (code read). Testing leg, no edge claim.
+      2026-11-12 ML-ENTRY-POPULATION-TEST: the crypto population test RQ-20261112-2e3b-01 (Bybit venue only) does NOT cover this
+      book; alpaca_paper keeps its ml_entry.account_symbols entry (canonical rule point 5: a TESTING ML on the paper floor trades
+      the population of its pending test) until this line's disposition (W48) records the ETF population or retires the arm.
+    evidence:
+      - {record: research/results/RQ-20261104-a41f-01/42091158467.jsonl, n: 1099, value: '-0.0708 R/decision, 173-ETF pool long-only', provenance: MEASURED}
+      - {record: RQ-20261101-bdc2-01, value: ETF scope FAIL, provenance: QUOTED}
+  levers_tried:
+    - {lever: frozen v1 group-level on Alpaca, ref: RQ-20261104-a41f-01, verdict: fail}
+    - {lever: frozen v1 long-only with daily structure exit, ref: RQ-20261102-5e03-01, verdict: 'producer_failed (raw outputs on main, ungraded)'}
+  levers_ahead:
+    - lever: grade 5e03-01 from its committed raw outputs
+      ref: RQ-20261102-5e03-01
+      baseline: always-nothing (0) and the frozen-v1 group read on the same rows
+      pass: the ETF leg gets its first edge record
+      fail: the crypto model's ETF arm closes; equity entry continues in MLP-D3-FOXHOUND-3/-4
+  next_weeks: {W47: grade 5e03-01 by hand from comms/research/RQ-20261102-5e03-01/, W48: disposition proposal, W49: none, W50: none}
+  exhaustion: 5e03-01 FAIL (with a41f-01 and bdc2-01 already FAIL) -- the crypto-trained model has no ETF lever left that is not the equity-native line.
+  owner: AM-ML
+  plan_items: []
+
+- id: MLP-D3-PROP-ENTRY
+  slot: D3
+  track: S
+  kind: idea
+  subject: a prop-qualifying ML entry on ETH/SOL (the prop books trade only these)
+  consumer: {class: prop, books: [breakout_2, tradeify_1, velotrade_1], legs: [ml_entry], note: 'ml_entry trades there under a recorded operator exception as a baseline; prop gate FAIL'}
+  stage: iterating
+  row: PROP-ML-NEW-DATA
+  state:
+    summary: >-
+      Smallest edge detectable at n=381 is about 0.14 R/trade; the pooled model's edge is 0.03-0.04 R. Price-feature arms are a
+      search inside noise; the open lever is new information. Free Binance OI, basis and book families all FAIL at LightGBM.
+    evidence:
+      - {record: comms/prop_survival/ml_entry.json, n: 381, value: 'EV -13.55 USD, p_breach 0.875', provenance: QUOTED}
+      - {record: research/results/RQ-20261105-d256-01/42528989784.jsonl, value: prop-specific entry FAIL, provenance: MEASURED}
+      - {record: docs/research/ml-deep-audit-2026-11-12.md § 3.2, value: 'MDE 0.139 R at n 381', provenance: ESTIMATED}
+  levers_tried:
+    - {lever: about 40 price-feature arms, ref: ML-PROP-ITERATE, verdict: 'no candidate'}
+    - {lever: prop-specific entry with firm cost stack in the label, ref: RQ-20261105-d256-01, verdict: fail}
+    - {lever: free OI / basis / book families (LightGBM), ref: 'RQ-...-98e3-31/32/34/35/37/38', verdict: fail}
+  levers_ahead:
+    - lever: same non-price families at low capacity (logistic head)
+      ref: RQ-20261112-7d41-01, RQ-20261112-7d41-02
+      baseline: take-all ml_entry on the prop population, prop EV/survival gate against each firm's DD limits
+      pass: held Tier-3 prop roster PR (superset bar, CLAUDE.md "Prop legs clear a SUPERSET")
+      fail: free non-price families close for the pooled prop entry
+    - lever: an information source the free archive lacks (liquidations, depth history)
+      ref: needs_authoring (spend or new collection; the operator's call on spend)
+      baseline: as above
+      pass: as above
+      fail: line exhausted for the current venue universe
+  next_weeks: {W47: '7d41-01/02 run (dispatcher)', W48: grade, W49: 'if FAIL: one decision line to the operator on a paid/new source', W50: none}
+  exhaustion: >-
+    every information source reachable without new spend has FAILed at declared power AND the operator declines spend on a new one;
+    or the prop venues' tradable universe stays ETH/SOL (MDE stays above any plausible effect). Operator instruction to keep iterating
+    stands until then.
+  owner: AM-ML
+  plan_items: []
+
+- id: MLP-D3-RANKING-TARGETS
+  slot: D3
+  track: F
+  kind: idea
+  subject: cross-sectional ranking targets for entry (LambdaRank ENTRY, taker-flow ENTRY) -- kept by the frontier scan 11-04, never registered
+  consumer: {class: none, note: would feed MLP-D3-FOXHOUND-1 as a recipe lever}
+  stage: idea
+  row: ML-LEVER-PLAN
+  state:
+    summary: Kept twice by the scan and not registered (audit W2). The one D3 idea class that raises breadth/effect instead of classifier quality.
+    evidence:
+      - {record: comms/ml-plan/20261111T2000Z-ML-FRONTIER-PREP.json, provenance: QUOTED}
+  levers_tried: []
+  levers_ahead:
+    - lever: LambdaRank objective on the frozen feature set
+      ref: needs_authoring (ML-LEVER-PLAN dev-fold unit)
+      baseline: frozen v1 on the same dev folds, net of cost
+      pass: joins the combined held-out read in MLP-D3-FOXHOUND-1
+      fail: objective closes
+    - lever: taker-flow features
+      ref: needs_authoring (needs a taker-flow history; check ML-FS-STORE coverage first)
+      baseline: frozen v1 on the same dev folds
+      pass: as above
+      fail: feature class closes for entry
+  next_weeks: {W47: register both under ML-LEVER-PLAN, W48: run dev folds, W49: grade, W50: none}
+  exhaustion: both dev-fold reads FAIL.
+  owner: AM-ML
+  plan_items: []
+
+- id: MLP-D3-SMALL-TF
+  slot: D3
+  track: S
+  kind: idea
+  subject: small-timeframe MLs for scalping / breakout / VWAP-style legs (M27)
+  consumer: {class: none}
+  stage: failed
+  row: SMALL-TF-ML-RESEARCH
+  state:
+    summary: Cost-breakeven census FAIL today -- under every measured cost scenario no (tf, hold, stop, TP) cell has one symbol where the best learner's lift clears the round trip.
+    evidence:
+      - {record: 'research/results/RQ-20261112-743a-01/local-2026-11-12.jsonl (PR #25279)', value: 'FAIL at taker 12.3 / stack 10.5 / post-only 10.3 bps', provenance: QUOTED}
+  levers_tried:
+    - {lever: cost-breakeven census over learners x cells, ref: RQ-20261112-743a-01, verdict: fail}
+  levers_ahead:
+    - lever: maker-entry fill model (cost side, not model side)
+      ref: needs_authoring (depends on MLP-D9-WHIPPET data)
+      baseline: the census's post-only-with-taker-fallback scenario
+      pass: re-run the census at the measured maker cost
+      fail: small-TF ML closes until venue costs change
+  next_weeks: {W47: 'row disposition (manager)', W48: none, W49: none, W50: none}
+  exhaustion: MET for the current cost stack (census FAIL under every measured scenario); reopens when a measured fill cost below the census break-even exists.
+  owner: AM-ML
+  plan_items: []
+
+# =====================================================================================================================
+# D4 SIGNAL FILTER (Beagle)
+# =====================================================================================================================
+- id: MLP-D4-BEAGLE-1
+  slot: D4
+  track: X
+  kind: model
+  subject: overlay-td-v1 (Beagle-1), qty x0.5 below tau
+  consumer: {class: real_money, books: [bybit_2, bybit_portfolio, bybit_1], legs: [trend_donchian_xrp_4h, trend_donchian_eth_prop], note: 'mode reduce (MEASURED config/overlay_policy.yaml); eth_4h and sol_prop are annotate (no order change)'}
+  stage: production
+  row: ML-REAL-MONEY-OVERLAY
+  state:
+    summary: Passed the non-inferiority rule on the TD family pooled. Merged + deployed; not yet observed at decision level.
+    evidence:
+      - {record: RQ-20261029-5785-02 (RULE-ML-OVERLAY-NONINFERIOR-V2), n: 1830, provenance: QUOTED}
+  levers_tried:
+    - {lever: meta-label take/reduce on the TD family, ref: RQ-20261029-5785-02, verdict: pass}
+    - {lever: same on PB2H, ref: RQ-20261029-5785-01, verdict: fail}
+  levers_ahead:
+    - lever: calibration / nested refine
+      ref: RQ-20261029-5785-03, RQ-20261029-5785-04, RQ-20261029-5785-05
+      baseline: overlay-td-v1 on the same rows; take-all; same-rate random reduce
+      pass: Tier-3 artifact swap
+      fail: v1 stays
+    - lever: the demotion CUSUM's live join (overlay_shadow.jsonl x outcomes)
+      ref: PI-20261029-XME2GXW7-0001
+      baseline: n/a (instrument)
+      pass: the declared demotion read becomes computable
+      fail: a defect row
+  next_weeks: {W47: 'fix the 5785-03/-04 run.command (PI-20261030-0261030B-0001) and run', W48: grade, W49: CUSUM join, W50: 'first decision-level observation'}
+  exhaustion: its demotion read fires (CUSUM on the reduce legs' mirror net R) and no refine passes; then reduce -> annotate (Tier 3) and it iterates.
+  owner: AM-ML
+  plan_items: [ML-M4]
+
+- id: MLP-D4-SETUP-METALABEL
+  slot: D4
+  track: M
+  kind: model
+  subject: setup-candidates-metalabel-p2pool-v2 (KEEP for its open unit)
+  consumer: {class: none}
+  stage: stuck
+  row: MLP-D4-SETUP-METALABEL
+  carried_by: [ML-KEEP-ITERATION-COVERAGE]
+  state:
+    summary: Iteration 1 blocked; the cost-net rebuild of the setup_candidates family is the dependency.
+    evidence:
+      - {record: research/queue/blocked/RQ-20261101-78fc-02.yaml, provenance: MEASURED}
+  levers_tried:
+    - {lever: P1 read on gross costs, ref: ML-P1, verdict: 'indeterminate (n_eval 144 < 200; PI-20261029-MLP1-0001)'}
+  levers_ahead:
+    - lever: declared-initial-risk basis rebuild, then re-read
+      ref: RQ-20261101-78fc-02
+      baseline: take-all on the same legs, and same-rate random skip, net of cost
+      pass: a reduce/annotate proposal for the legs in its population (Tier 3)
+      fail: proposed retirement
+  next_weeks: {W47: 'name the blocker owner on ML-KEEP-ITERATION-COVERAGE', W48: run if unblocked, W49: grade, W50: none}
+  exhaustion: 78fc-02 FAIL on a powered population, or the population cannot reach the registered n because the legs lack declared initial risk (then a data row, not more arms).
+  owner: AM-ML
+  plan_items: [ML-M5]
+
+- id: MLP-D4-CONVICTION-META
+  slot: D4
+  track: M
+  kind: model
+  subject: conviction-meta-v1 (KEEP for its open unit)
+  consumer: {class: none, note: 'shadow conviction stamps must not resize (ML-SHADOW-NEVER-ORDERS)'}
+  stage: stuck
+  row: MLP-D4-CONVICTION-META
+  carried_by: [ML-KEEP-ITERATION-COVERAGE]
+  state:
+    summary: Iteration 1 blocked; demoted shadow->candidate 2026-09-29 (PI-20260929-K85Q64SF-0001).
+    evidence:
+      - {record: research/queue/blocked/RQ-20261101-78fc-06.yaml, provenance: MEASURED}
+  levers_tried:
+    - {lever: regate on cost-stamped rows, ref: ML-P4-CONVICTION-REGATE, verdict: dropped}
+  levers_ahead:
+    - lever: retrain on cost-stamped rows, read cost gate + ECE
+      ref: RQ-20261101-78fc-06
+      baseline: take-all and the confidence-only rule on the same rows, net of cost
+      pass: a D4 consumer proposal
+      fail: proposed retirement
+  next_weeks: {W47: name the blocker owner, W48: run if unblocked, W49: grade, W50: none}
+  exhaustion: 78fc-06 FAIL.
+  owner: AM-ML
+  plan_items: []
+
+- id: MLP-D4-METALABEL-TEST-RESULTS
+  slot: D4
+  track: M
+  kind: idea
+  subject: within-family take/skip head on the signals catalog's decision-time features (M23 P3)
+  consumer: {class: none, note: would feed D4 for the legs in the tested family}
+  stage: queued
+  row: MLP-D4-METALABEL-TEST-RESULTS
+  carried_by: [ML-LINE-S1-CORPUS]
+  state:
+    summary: Widened emits now exist (METALABEL-EMIT-FEATURES done); the M23 unit is re-registered on them.
+    evidence:
+      - {record: research/queue/RQ-20261014-9d20-04.yaml, provenance: MEASURED}
+  levers_tried:
+    - {lever: thin-column meta-label baseline, ref: RQ-20261014-9d20-02, verdict: done}
+    - {lever: giveback predictable at entry, ref: RQ-20261014-9d20-03, verdict: done}
+  levers_ahead:
+    - lever: within-family take/skip head, widened emits
+      ref: 'RQ-20261111-3a23-01 (PR #25242), RQ-20261014-9d20-04'
+      baseline: take-all AND the confidence-only rule, same-rate random skip, net of cost
+      pass: a D4 annotate/reduce proposal on that family (Tier 3)
+      fail: meta-label on catalog features closes for that family
+  next_weeks: {W47: 3a23-01 runs, W48: grade, W49: none, W50: none}
+  exhaustion: 3a23-01 and 9d20-04 FAIL.
+  owner: AM-ML
+  plan_items: [ML-M0, ML-M1, ML-M2, ML-M3, ML-M6]
+
+- id: MLP-D4-METALABEL-SIZE
+  slot: D4
+  track: F
+  kind: idea
+  subject: meta-label sizing for ENTRY (scale size by a second model's confidence instead of a fixed tau cut)
+  consumer: {class: none, note: would act on ml_entry}
+  stage: idea
+  row: FRONTIER-Q-METALABEL-SIZE
+  state:
+    summary: Frontier queue item, not yet a unit.
+    evidence: []
+  levers_tried: []
+  levers_ahead:
+    - lever: confidence-scaled size vs fixed-tau take
+      ref: needs_authoring (FRONTIER-Q-METALABEL-SIZE)
+      baseline: ml_entry fixed tau on the same held-out decisions, net of cost, same total risk
+      pass: Tier-3 sizing proposal (sizing is Tier 3)
+      fail: closes
+  next_weeks: {W47: author, W48: run, W49: grade, W50: none}
+  exhaustion: the registered read FAILs.
+  owner: AM-ML (frontier lane authors)
+  plan_items: []
+
+# =====================================================================================================================
+# D5 POSITION AGGREGATION (Mastiff) and D6 BRACKET AT ENTRY (Pointer)
+# =====================================================================================================================
+- id: MLP-D5-MASTIFF
+  slot: D5
+  track: S
+  kind: slot
+  subject: how >= 2 packages on one (account, symbol) are split and netted; today a rule (slices)
+  consumer: {class: none, note: no model; slices rule live (NETTED-SLICES)}
+  stage: idea
+  row: MLP-D5-MASTIFF
+  carried_by: [SAME-SYMBOL-ALLOCATION]
+  state:
+    summary: Value of information first -- the refusal/concurrency census decides whether any build is worth it.
+    evidence:
+      - {record: docs/plans/ML-ROADMAP-MECE-2026-11.md § 4, provenance: QUOTED}
+  levers_tried: []
+  levers_ahead:
+    - lever: VOI census (14-day refusals by reason; Stage-0 concurrent same-symbol episodes)
+      ref: PI-20261104-BCZDXJNR-0002
+      baseline: n/a (census)
+      pass: the harness + rule arms (AGG-HARNESS, needs_authoring) are built
+      fail: the slot stays a rule
+    - lever: same-symbol head-to-head re-runs
+      ref: RQ-20261015-1631-01, RQ-20261015-1631-02
+      baseline: today's slices, 1/N, best-single, net of cost
+      pass: Tier-3 allocation change
+      fail: slices stay
+  next_weeks: {W47: census, W48: 'harness only if material concurrency', W49: none, W50: none}
+  exhaustion: the census shows concurrency too rare to move net P&L (threshold set in its own registration).
+  owner: AM-ML
+  plan_items: []
+
+- id: MLP-D6-POINTER
+  slot: D6
+  track: X
+  kind: idea
+  subject: a predicted SL/TP at entry (Pointer v0 = Labrador-1b scored at bar 0; the TP-doctrine predict head)
+  consumer: {class: none, note: would act on ml_entry first}
+  stage: idea
+  row: TP-PREDICT-HEAD
+  state:
+    summary: No model at any stage. The served TP-revision model scored at bar 0 is the cheapest first test (MECE P5, never filed).
+    evidence:
+      - {record: docs/plans/ML-ROADMAP-MECE-2026-11.md § 3 D6, provenance: QUOTED}
+  levers_tried:
+    - {lever: brackets as predictions (doctrine), ref: BRACKETS-AS-PREDICTIONS, verdict: done}
+  levers_ahead:
+    - lever: Pointer v0 -- tp-revision-v1 at bar 0 of Foxhound-1 entries
+      ref: needs_authoring (MECE P5, parent RQ-20261101-383f-01)
+      baseline: the fixed 3-ATR TP at the same entries, frozen held-out window, net of cost
+      pass: Tier-3 bracket proposal for ml_entry
+      fail: Pointer v0 closes; the predict head below continues
+    - lever: move-extent predict head, step 1 sharper than baseline
+      ref: RQ-20261009-900 (blocked; prerequisite met per PI-20261022-HOPS2047-0001)
+      baseline: the leg's own TP and the measured-move rule
+      pass: step 2 net-of-cost overlay (RQ-20261009-901)
+      fail: closes for the tested legs
+    - lever: brackets re-scored on the shared feature store
+      ref: ML-FS-BRACKETS-HOLD
+      baseline: the leg's fixed bracket
+      pass: as above
+      fail: as above
+  next_weeks: {W47: author Pointer v0, W48: run + drive RQ-20261009-900, W49: grade, W50: 'ML-FS-BRACKETS-HOLD (ranked LATER @11-30)'}
+  exhaustion: Pointer v0 and the predict head FAIL on their registered reads.
+  owner: AM-TRADING (row) / AM-ML (Pointer v0)
+  plan_items: [ML-X1, ML-X2]
+
+# =====================================================================================================================
+# D7 IN-TRADE MANAGEMENT and D8 EXIT NOW (Labrador)
+# =====================================================================================================================
+- id: MLP-D7-LABRADOR-1B
+  slot: D7
+  track: X
+  kind: model
+  subject: ml-entry-tp-revision-v1 (Labrador-1b), extends the entry TP at 4h check-ins
+  consumer: {class: real_money, books: [bybit_2, bybit_portfolio, breakout_2, tradeify_1, velotrade_1], legs: [ml_entry], note: 'cannot run on alpaca_paper (code read, PI-20261104-ELSFP54S-0001)'}
+  stage: production
+  row: ML-ENTRY-TP-REVISION
+  state:
+    summary: Forward read PASS at +0.0081 R/trade (CI spans 0); prop-gate variant FAIL. Live value UNVERIFIED. Its harness does not yet claim through the holdout ledger.
+    evidence:
+      - {record: research/results/RQ-20261101-383f-01/local-20261101T1030Z.jsonl, n: 868, value: '+0.0081 R/trade, CI95 [-0.0222, +0.0394]', provenance: MEASURED}
+      - {record: research/results/RQ-20261101-383f-01/local-20261103.jsonl, n: 381, value: 'prop gate FAIL, +0.019 R CI [-0.102,+0.140]', provenance: MEASURED}
+  levers_tried:
+    - {lever: pooled first-passage TP revision, ref: RQ-20261101-383f-01, verdict: pass}
+    - {lever: path-signature state (frontier), ref: FRONTIER-Q-SIGNATURE-INTRADE, verdict: 'not run'}
+  levers_ahead:
+    - lever: re-read on the deflated bar via the holdout ledger
+      ref: ML-ENTRY-TP-REVISION
+      baseline: the fixed TP on the same trades, net of cost
+      pass: keeps serving with a computable demotion read
+      fail: Tier-3 proposal to stop the TP move on ml_entry; the line iterates on features
+    - lever: path-signature features as the state
+      ref: FRONTIER-Q-SIGNATURE-INTRADE
+      baseline: tp-revision-v1 on the same check-ins
+      pass: candidate artifact (Tier 3)
+      fail: closes
+  next_weeks: {W47: add the ledger claim to ml_entry_tp_revision.py, W48: deflated re-read, W49: signature unit, W50: grade}
+  exhaustion: the deflated re-read FAILs and the signature/feature levers FAIL.
+  owner: AM-ML
+  plan_items: [ML-F4]
+
+- id: MLP-D7-ACTION-VALUE
+  slot: D7
+  track: X
+  kind: idea
+  subject: an in-trade policy (tighten / BE / partial / close / TP move) learned from TM-BENCH action-value labels
+  consumer: {class: none, note: would be the next ML to go live per ML-AM-NEXT-LIVE}
+  stage: iterating
+  row: ML-AM-NEXT-LIVE
+  state:
+    summary: >-
+      Seven negatives now (d6e7-06, RQ-20260927-002, a7e1-01, 7294-02, c7a1-01, 78fc-04, 3144-01). The hindsight ceiling is
+      0.86 R/trade, so the value exists; the R1 state + path-state block do not select it. Iteration 3 trains on corpus v2.
+    evidence:
+      - {record: research/results/RQ-20261030-c7a1-01/41134401720.jsonl, value: 'Stage A FAIL: no action class OOS rho CI > permutation p95', provenance: MEASURED}
+      - {record: 'research/results/RQ-20261101-78fc-04/local-20261112T1014Z.jsonl (PR #25250)', value: FAIL with path-state features, provenance: QUOTED}
+      - {record: 'PR #25250 (RQ-20261112-3144-01)', value: 'FAIL 0/6 folds, 12-bar label', provenance: QUOTED}
+  levers_tried:
+    - {lever: one-step exit-now policy, ref: d6e7-06, verdict: fail}
+    - {lever: ML-gated 50% partial, ref: RQ-20261029-a7e1-01, verdict: fail}
+    - {lever: Stage-A calibration on R1, ref: RQ-20261030-c7a1-01, verdict: fail}
+    - {lever: path-state block, ref: RQ-20261101-78fc-04, verdict: fail}
+    - {lever: short-horizon label (12 bars), ref: RQ-20261112-3144-01, verdict: fail}
+  levers_ahead:
+    - lever: train on corpus v2 (bp2-f4271084b120)
+      ref: 'RQ-20261112-3144-02 (PR #25250) + build row TMBENCH-V2-TRAIN-INPUT'
+      baseline: within-trade shuffled control (Stage-A rank calibration), then B0-B6 net of cost
+      pass: Stage B (policy value vs the leg's rules, best static rule, matched random intervention)
+      fail: R1-family features close; next is order-flow/path features at the check-in (frontier input F4)
+    - lever: exit-head learner arm in TM-BENCH
+      ref: TM-BENCH-EXIT-ARM
+      baseline: as above
+      pass: as above
+      fail: arm closes (row offered as a kill candidate with data)
+  next_weeks: {W47: 'TMBENCH-V2-TRAIN-INPUT build (dispatch fresh)', W48: 3144-02 runs, W49: grade, W50: 'feature-block unit if FAIL'}
+  exhaustion: >-
+    a feature block that is not R1-derived (order flow / path signature / desk labels) also fails Stage A on corpus v2 -- no state
+    representation then predicts action value out of fold.
+  owner: AM-ML
+  plan_items: []
+
+- id: MLP-D8-LABRADOR-2
+  slot: D8
+  track: X
+  kind: model
+  subject: exit-head-donchian-1h-v1 (Labrador-2)
+  consumer: {class: none, note: 'exit_head_action annotate on all 3 legs (MEASURED config/strategies.yaml); changes no order'}
+  stage: iterating
+  row: ML-EXITHEAD-VALUE
+  state:
+    summary: Fails out of the leg family it was trained on, and the volume-composition feature add failed today.
+    evidence:
+      - {record: research/results/RQ-20261101-78fc-03/43152387165.jsonl, n: 605, value: 'OOS dR/trade -0.0612, CI LB -0.1954', provenance: MEASURED}
+      - {record: research/results/RQ-20261112-0bc8-02/trainer-43187689666.jsonl, n: 901, value: 'comp - champion -0.0003 R/trade [-0.0059, +0.0053]', provenance: MEASURED}
+  levers_tried:
+    - {lever: BTC head B4, ref: ML-EXITHEAD-VALUE, verdict: 'fail -0.0141 R/trade n 1041 (QUOTED)'}
+    - {lever: out-of-family value, ref: RQ-20261101-78fc-03, verdict: fail}
+    - {lever: volume composition, ref: RQ-20261112-0bc8-02, verdict: fail}
+  levers_ahead:
+    - lever: variant for trend_donchian_eth_4h
+      ref: PI-20261104-NHN7JV7U-0001
+      baseline: hold to bracket on the same trades, net of cost
+      pass: Tier-3 close proposal on that leg
+      fail: closes for the 4h family
+    - lever: desk lifecycle labels joined to the dataset
+      ref: PI-20261029-IHFQDB3W-0004
+      baseline: as above
+      pass: as above
+      fail: as above
+  next_weeks: {W47: author the eth_4h variant, W48: run, W49: grade, W50: none}
+  exhaustion: the eth_4h variant and the desk-label variant FAIL; with today's FAILs the head's feature set then has no lever left.
+  owner: AM-ML
+  plan_items: [ML-X3, ML-X4, ML-N4]
+
+- id: MLP-D8-MANAGE-CLOSE
+  slot: D8
+  track: S
+  kind: idea
+  subject: market-context MANAGE decision (signal-reversal close) for ml_entry -- the third decision model of ML-DECISION-MODELS
+  consumer: {class: none}
+  stage: failed
+  row: ML-DECISION-MODELS
+  state:
+    summary: Signal-reversal CLOSE graded FAIL today at n=10,641 (deflated CI below 0).
+    evidence:
+      - {record: 'research/results/RQ-20261112-0be0-01/local-20261112T1002Z.jsonl (PR #25243)', n: 10641, value: 'delta vs hold-to-bracket -0.0070 R/trade, CI99.16 [-0.0135, -0.0007]', provenance: QUOTED}
+  levers_tried:
+    - {lever: reverse-signal close at opp > tau, ref: RQ-20261112-0be0-01, verdict: fail}
+  levers_ahead:
+    - lever: close on the in-trade action-value model instead of the entry signal
+      ref: MLP-D7-ACTION-VALUE (no separate unit)
+      baseline: hold to bracket
+      pass: see MLP-D7-ACTION-VALUE
+      fail: see MLP-D7-ACTION-VALUE
+  next_weeks: {W47: none, W48: none, W49: none, W50: none}
+  exhaustion: MET for the entry-signal reversal rule (0be0-01 FAIL at n 10,641); the D8 question continues only through MLP-D7-ACTION-VALUE and MLP-D8-LABRADOR-2.
+  owner: AM-ML
+  plan_items: []
+
+# =====================================================================================================================
+# D9 EXECUTION (Whippet) and D10 REVIEW & GRADING (Basset)
+# =====================================================================================================================
+- id: MLP-D9-WHIPPET
+  slot: D9
+  track: S
+  kind: slot
+  subject: maker-first / offset fill policy vs today's order type; execution-quality-baseline-v0 (Mutt-Execution-1a)
+  consumer: {class: none}
+  stage: stuck
+  row: MLP-D9-WHIPPET
+  state:
+    summary: Parked with a re-entry test. The only registry model is a constant scorer (n_eval 65).
+    evidence:
+      - {record: docs/plans/ML-ROADMAP-MECE-2026-11.md § 8 (parked), provenance: QUOTED}
+  levers_tried: []
+  levers_ahead:
+    - lever: fill replay on journal order rows
+      ref: needs_authoring (re-entry test below); desk maker-fill lever RQ-20261030-f18f-01 is the first data
+      baseline: today's order type per venue, realised cost incl. missed fills priced at counterfactual R
+      pass: Tier-2/3 order-type proposal
+      fail: slot stays parked
+  next_weeks: {W47: none, W48: none, W49: count real-money fills carrying a decision price, W50: none}
+  exhaustion: not exhausted, parked; reopens at >= 300 real-money fills with a decision price.
+  owner: AM-ML
+  plan_items: []
+  proposed_disposition: RETIRE execution-quality-baseline-v0 (consolidation wave-2; constant scorer, n_eval 65). Manager's Tier-2 call.
+
+- id: MLP-D10-BASSET
+  slot: D10
+  track: S
+  kind: slot
+  subject: does a per-decision grade (Claude blind grade, forecast grade) predict a leg's decay earlier than a CUSUM on R
+  consumer: {class: none, note: main value is upstream as the label factory for D4/D7/D8}
+  stage: stuck
+  row: MLP-D10-BASSET
+  state:
+    summary: Parked with a re-entry test. CJ-4 label hazard open (24% of graded packages on tiny risk_atr).
+    evidence:
+      - {record: PI-20261026-4ALST35N-0001, provenance: QUOTED}
+  levers_tried: []
+  levers_ahead:
+    - lever: grade vs CUSUM early-warning join
+      ref: needs_authoring (re-entry test below)
+      baseline: Bernoulli CUSUM on realised R (overlay_cusum.py style)
+      pass: the grade becomes a monitoring read (never a gate)
+      fail: grades stay a label source only
+  next_weeks: {W47: none, W48: none, W49: none, W50: 'count blind-graded closes per leg family'}
+  exhaustion: not exhausted, parked; reopens when the CJ blind store reaches n >= 150 graded closes on one leg family (CJ-4's own bar).
+  owner: AM-ML
+  plan_items: []
+
+# =====================================================================================================================
+# N  NEW INFORMATION CLASSES
+# =====================================================================================================================
+- id: MLP-N-NEWS-VETO
+  slot: '-'
+  track: N
+  kind: idea
+  subject: news-layer veto (WEPE G1) and the news-alpha programme
+  consumer: {class: none}
+  stage: stuck
+  row: NEWS-VETO-ARMB-READ
+  state:
+    summary: Arm B needs >= 25 distinct vetoed signals; computed due 2027-02-04. WEPE build-out stays operator-gated.
+    evidence:
+      - {record: research/results/RQ-20261009-902, provenance: QUOTED}
+  levers_tried:
+    - {lever: news veto arm A, ref: RQ-20261009-902, verdict: done}
+  levers_ahead:
+    - lever: Arm B (vetoed-signal counterfactual net R)
+      ref: NEWS-VETO-ARMB-READ
+      baseline: the vetoed signals taken, net of cost
+      pass: result to the manager -> operator on WEPE-BUILDOUT
+      fail: news veto closes
+    - lever: news-alpha first readout
+      ref: PI-20261012-TRY1KAIX-0001
+      baseline: each unit's registered rule
+      pass: per unit
+      fail: per unit
+  next_weeks: {W47: none, W48: none, W49: none, W50: 'recount vetoed signals'}
+  exhaustion: Arm B FAILs at its floor.
+  owner: AM-ML
+  plan_items: [ML-N2, ML-N3]
+
+- id: MLP-N-DRIFT-SPLIT
+  slot: '-'
+  track: N
+  kind: infra
+  subject: split model score drift into regime-mix vs capability loss (drift_regime_mix.py)
+  consumer: {class: none, note: a monitoring read for the money models' demotion reads}
+  stage: passed_waiting
+  row: ML-DRIFT-SPLIT-INSTRUMENT
+  state:
+    summary: Instrument landed_unproven; not yet run on a money model.
+    evidence: []
+  levers_tried: []
+  levers_ahead:
+    - lever: run on Foxhound-1's forward series
+      ref: ML-DRIFT-SPLIT-INSTRUMENT
+      baseline: n/a (instrument)
+      pass: the split appears in /ml-review C7 for the money models
+      fail: defect row
+  next_weeks: {W47: run on Foxhound-1, W48: none, W49: none, W50: none}
+  exhaustion: instrument; closes when it runs in C7.
+  owner: AM-ML
+  plan_items: [ML-N5, ML-V4]
+
+- id: MLP-N-NETR-RANKER
+  slot: '-'
+  track: N
+  kind: idea
+  subject: contrastive net-R ranker across legs (moved from retired M24)
+  consumer: {class: none}
+  stage: stuck
+  row: MLP-N-NETR-RANKER
+  carried_by: [ML-PROGRAMME-CONSOLIDATION]
+  state:
+    summary: Parked in the old plan. It is a D1-shaped question (rank legs) and inherits D1's re-entry test.
+    evidence: []
+  levers_tried: []
+  levers_ahead:
+    - lever: ranker over the Stage-0 panel
+      ref: needs_authoring (with MLP-D1-UNIVERSE)
+      baseline: 1/N and the current roster, net of cost
+      pass: as MLP-D1-UNIVERSE
+      fail: closes
+  next_weeks: {W47: none, W48: none, W49: none, W50: none}
+  exhaustion: as MLP-D1-UNIVERSE.
+  owner: AM-ML
+  plan_items: [ML-N6]
+
+# =====================================================================================================================
+# F  FRONTIER (models and methods from outside)
+# =====================================================================================================================
+- id: MLP-F-FRONTIER-SCAN
+  slot: '-'
+  track: F
+  kind: infra
+  subject: the weekly frontier scan (frontier-research skill) and its sub-queue FRONTIER-Q-*
+  consumer: {class: none, note: feeds D3/D4/D7 lines above}
+  stage: testing_offline
+  row: MLP-F-FRONTIER-SCAN
+  state:
+    summary: >-
+      Audit W2: drop calls do not stop authoring and keep calls are not registered. Inputs F1-F6 handed to the next scan
+      (PI-20261112-IXCFGFWB-0001). Open queue items: RESID-ENTRY (in flight), RESID-ENTRY-EQ, METALABEL-SIZE, SIGNATURE-INTRADE,
+      LEADLAG (strategy, not ML).
+    evidence:
+      - {record: docs/research/ml-deep-audit-2026-11-12.md § 7, provenance: QUOTED}
+  levers_tried: []
+  levers_ahead:
+    - lever: every kept idea registered in the scan's own PR with its power line
+      ref: PI-20261112-IXCFGFWB-0001
+      baseline: n/a (process)
+      pass: kept ideas appear as units the same week
+      fail: reported in the slot report (ML-SLOT-REPORT)
+  next_weeks: {W47: 'scan (Wed) with F1-F6', W48: scan, W49: scan, W50: scan}
+  exhaustion: recurring; never retires.
+  owner: AM-ML (lane FRONTIER-RESEARCH)
+  plan_items: [ML-F0, ML-F5, ML-F25]
+
+- id: MLP-F-TABULAR-FM
+  slot: D2
+  track: F
+  kind: idea
+  subject: small-n tabular bake-off (TabICL / TabPFN / CatBoost vs LightGBM)
+  consumer: {class: none}
+  stage: queued
+  row: MLP-F-TABULAR-FM
+  carried_by: [ML-NONGBDT-RUNNERS]
+  state:
+    summary: Earlier tabular-FM arms (F12, F20, F27) did not beat LightGBM; 9da8-02 is still open on regime targets with no consumer.
+    evidence:
+      - {record: research/queue/RQ-20261011-9da8-02.yaml, provenance: MEASURED}
+  levers_tried:
+    - {lever: TabICL / TabPFN at small and full n, ref: 'RQ-20261013-1414-06, RQ-20261018-ff8f-02, RQ-20261022-4a3b-01', verdict: done}
+  levers_ahead:
+    - lever: re-target onto the D3 entry label (where money is) instead of the regime label
+      ref: needs_authoring (frontier input F1/F5)
+      baseline: frozen v1 LightGBM on the same dev folds, net of cost
+      pass: joins ML-LEVER-PLAN's combined read
+      fail: tabular FMs close for entry
+  next_weeks: {W47: 're-scope 9da8-02 to the entry label or retire it (frontier F5)', W48: run, W49: grade, W50: none}
+  exhaustion: the entry-label arm FAILs (regime-label arms are already done without a lift).
+  owner: AM-ML
+  plan_items: [ML-F2, ML-F2T, ML-F12, ML-F20, ML-F27]
+
+- id: MLP-F-CONFORMAL
+  slot: D2
+  track: F
+  kind: idea
+  subject: conformal abstention on the advisory regime heads vs plain threshold
+  consumer: {class: none}
+  stage: queued
+  row: MLP-F-CONFORMAL
+  carried_by: [ML-PROGRAMME-CONSOLIDATION]
+  state:
+    summary: The published-shard twin (F3P) is done; 9da8-03 stays open for heads with no consumer.
+    evidence:
+      - {record: research/queue/RQ-20261011-9da8-03.yaml, provenance: MEASURED}
+  levers_tried:
+    - {lever: conformal at 1h on published shards, ref: RQ-20261016-65ff-25, verdict: done}
+  levers_ahead:
+    - lever: conformal abstention applied to Foxhound-1's take decision
+      ref: needs_authoring
+      baseline: fixed tau at matched coverage, net of cost
+      pass: Tier-3 tau-rule proposal
+      fail: closes
+  next_weeks: {W47: none, W48: author on the entry model, W49: run, W50: grade}
+  exhaustion: the entry-model arm FAILs.
+  owner: AM-ML
+  plan_items: [ML-F3, ML-F3P]
+
+- id: MLP-F-BANDIT-EXIT
+  slot: D7
+  track: F
+  kind: idea
+  subject: offline contextual bandit over exit-ladder arms (doubly-robust OPE)
+  consumer: {class: none}
+  stage: queued
+  row: MLP-F-BANDIT-EXIT
+  carried_by: [TM-BENCH]
+  state:
+    summary: Open since 10-11; uses the same state the action-value line has failed on seven times.
+    evidence:
+      - {record: research/queue/RQ-20261011-9da8-04.yaml, provenance: MEASURED}
+  levers_tried: []
+  levers_ahead:
+    - lever: bandit on TM-BENCH corpus v2 with the new state block
+      ref: RQ-20261011-9da8-04
+      baseline: B0-B6 on the same trades, net of cost
+      pass: as MLP-D7-ACTION-VALUE Stage B
+      fail: closes
+  next_weeks: {W47: none, W48: none, W49: 'run only if 3144-02 passes Stage A', W50: grade}
+  exhaustion: 3144-02 and the feature-block unit FAIL Stage A (no state worth a policy), or this arm FAILs.
+  owner: AM-ML
+  plan_items: []
+
+- id: MLP-F-COVARIATE-TSFM
+  slot: D2
+  track: F
+  kind: idea
+  subject: covariate-native forecasters (Chronos-2 / TiRex-2) with funding + OI on ETH/SOL 1h
+  consumer: {class: none}
+  stage: queued
+  row: MLP-F-COVARIATE-TSFM
+  carried_by: [ML-PROGRAMME-CONSOLIDATION]
+  state:
+    summary: TSFM bake-off (F1), LoRA (F14) and the HAR-RV control (F10) are done; the funding/OI covariate arm is open.
+    evidence:
+      - {record: research/queue/RQ-20261013-1414-09.yaml, provenance: MEASURED}
+  levers_tried:
+    - {lever: TSFM forecaster bake-off, ref: RQ-20261011-9da8-01, verdict: done}
+    - {lever: Timestral-209M, ref: RQ-20261025-7ee1-01, verdict: done}
+  levers_ahead:
+    - lever: forecasts as features for the prop entry (ETH/SOL, where funding/OI is the open information class)
+      ref: RQ-20261013-1414-09 (re-scope to the prop entry target)
+      baseline: the prop entry baseline in MLP-D3-PROP-ENTRY
+      pass: joins MLP-D3-PROP-ENTRY's lever list
+      fail: closes
+  next_weeks: {W47: none, W48: re-scope, W49: run, W50: grade}
+  exhaustion: the re-scoped arm FAILs.
+  owner: AM-ML
+  plan_items: [ML-F1, ML-F10, ML-F14, ML-F15, ML-F28]
+
+- id: MLP-F-SEQUENCE-GRU
+  slot: D2
+  track: F
+  kind: idea
+  subject: GRU over windows of engineered features
+  consumer: {class: none}
+  stage: stuck
+  row: MLP-F-SEQUENCE-GRU
+  carried_by: [ML-PROGRAMME-CONSOLIDATION]
+  state:
+    summary: Fold-level macro-F1 delta sd is about 0.03, so a +0.010 bar is unresolvable (F29 needs_authoring). Regime target has no consumer.
+    evidence: []
+  levers_tried:
+    - {lever: GRU vs LightGBM on 15m regime, ref: RQ-20261018-ff8f-04, verdict: done}
+  levers_ahead:
+    - lever: GRU on the entry label with a resolvable bar
+      ref: needs_authoring
+      baseline: frozen v1 on the same folds, net of cost
+      pass: joins ML-LEVER-PLAN
+      fail: closes
+  next_weeks: {W47: none, W48: none, W49: none, W50: none}
+  exhaustion: the entry-label arm FAILs.
+  owner: AM-ML
+  plan_items: [ML-F22, ML-F22L, ML-F29, ML-F7, ML-F8, ML-F9, ML-F11, ML-F13, ML-F16, ML-F17, ML-F18, ML-F19, ML-F21]
+
+# =====================================================================================================================
+# P / D / V  PARITY, DATA, PLUMBING, PROCESS (the lines every model line depends on)
+# =====================================================================================================================
+- id: MLP-P-PARITY
+  slot: '-'
+  track: P
+  kind: infra
+  subject: live-vs-replay parity for the money ML legs; advisory value parity
+  consumer: {class: real_money, legs: [ml_entry, ml_entry_eq_struct], note: mechanics, not edge}
+  stage: testing_offline
+  row: ML-LIVE-PARITY-ML-LEGS
+  state:
+    summary: 'Daily parity reads for ml_entry_eq_struct are could_not_check (PI-20261109..12-LRP-A038E248); ml_entry likewise (PI-20261102-LRP-A66D9AD4).'
+    evidence: []
+  levers_tried:
+    - {lever: replay parity harness, ref: ML-PARITY-HARNESS, verdict: done}
+  levers_ahead:
+    - lever: replay re-scores the archived pool snapshot
+      ref: ML-LIVE-PARITY-ML-LEGS
+      baseline: n/a (mechanics)
+      pass: could_not_check rows close
+      fail: defect row
+    - lever: advisory-head value parity
+      ref: RQ-20261011-17f4-01
+      baseline: present AND non-default AND equal
+      pass: closes
+      fail: defect row
+  next_weeks: {W47: land the parity build, W48: 'first real parity read', W49: none, W50: none}
+  exhaustion: infra; closes when parity reads are measured daily for every money ML leg.
+  owner: AM-ML
+  plan_items: [ML-P0, ML-V1, ML-V1J, ML-P1, ML-P2]
+
+- id: MLP-DATA-FEATURES
+  slot: '-'
+  track: D
+  kind: infra
+  subject: feature store, lake read path, feature impact map, dataset hygiene
+  consumer: {class: none, note: inputs to D3/D6/D7}
+  stage: testing_offline
+  row: FEATURE-IMPACT-MAP
+  state:
+    summary: M2 rank-IC exists for the crypto entry family; M3 ablation and other families open. Lake Kaggle loader in flight.
+    evidence: []
+  levers_tried: []
+  levers_ahead:
+    - lever: feature impact M2/M3 across families
+      ref: FEATURE-IMPACT-MAP
+      baseline: n/a
+      pass: feeds ML-LEVER-PLAN's ranking
+      fail: n/a
+    - lever: frozen months from the private lake mirror
+      ref: HF-LAKE-KAGGLE-LOADER
+      baseline: n/a
+      pass: research off the trainer (ML-DATA-OFF-TRAINER)
+      fail: defect row
+  next_weeks: {W47: 'loader lands', W48: 'M3 for entry', W49: none, W50: none}
+  exhaustion: infra.
+  owner: AM-ML
+  plan_items: [ML-D1, ML-D2, ML-D3, ML-D4, ML-D5, ML-D6, ML-F23, ML-F24, ML-F6, ML-R4]
+
+- id: MLP-INFRA-ONE-LADDER
+  slot: '-'
+  track: infra
+  kind: infra
+  subject: one ladder for ML, consumer inventory, power + demotion labels, slot report, slot baselines, idea registry
+  consumer: {class: none, note: report-only}
+  stage: testing_offline
+  row: ML-ONE-LADDER
+  state:
+    summary: >-
+      PR #25311 (skills re-keyed on consumers; ml_order_changers.py; power yaml) and PR #25313 (rd_registry) open. Slot report and
+      slot baselines queued. This file is the plan those surfaces render against.
+    evidence: []
+  levers_tried: []
+  levers_ahead:
+    - lever: land ML-ONE-LADDER, RD-REGISTRY, ML-SLOT-REPORT, ML-SLOT-BASELINES-DECLARE, ML-REGISTRY-SERVED-MODELS-NO-STAGE
+      ref: ML-ONE-LADDER
+      baseline: n/a
+      pass: /ml-review C3 prints one line per money model; RD tab renders ideas by stage
+      fail: n/a
+  next_weeks: {W47: '#25311/#25313 land', W48: slot report reads this file, W49: none, W50: none}
+  exhaustion: infra.
+  owner: AM-ML
+  plan_items: [ML-L1, ML-L2, ML-V2, ML-V3, ML-V6, ML-F26]
+
+- id: MLP-INFRA-SHADOW-NEVER-ORDERS
+  slot: '-'
+  track: infra
+  kind: infra
+  subject: a shadow-stage model never changes an order (I6/I7; vol_detector reads advisory heads only)
+  consumer: {class: none}
+  stage: testing_offline
+  row: ML-SHADOW-NEVER-ORDERS
+  state:
+    summary: I7 guard merged (#25260). REGIME-VOL-SPEC-ADVISORY-ONLY landed_unproven (Tier-2/3 held). REGIME_ML_VERDICT_MODE is a default-off env switch on an order path (audit I4), reported.
+    evidence: []
+  levers_tried: []
+  levers_ahead:
+    - lever: structural handle removal
+      ref: ML-SHADOW-NO-ORDER-HANDLE
+      baseline: n/a
+      pass: closes I2
+      fail: n/a
+  next_weeks: {W47: observe the vol-spec fix, W48: none, W49: none, W50: none}
+  exhaustion: infra.
+  owner: AM-ML
+  plan_items: []
+
+- id: MLP-INFRA-TRAINER-CYCLE
+  slot: '-'
+  track: infra
+  kind: infra
+  subject: retire waves + point the nightly trainer cycle at models with a consumer or an open unit
+  consumer: {class: none}
+  stage: testing_offline
+  row: ML-RETIRE-WAVES-20261111
+  state:
+    summary: 'Waves 1+2 landed (#25001, #25051); 25 top-level manifests remain; the nightly cycle trains no money model (audit I3).'
+    evidence:
+      - {record: docs/research/ml-deep-audit-2026-11-12.md § 4 I3, provenance: QUOTED}
+  levers_tried: []
+  levers_ahead:
+    - lever: re-point the cycle after bcd2-01 reads
+      ref: ML-PROGRAMME-CONSOLIDATION
+      baseline: n/a
+      pass: trainer time follows the money models
+      fail: n/a
+  next_weeks: {W47: 'confirm registry archive ran (row done-when)', W48: 're-point proposal (Tier 2) after bcd2-01', W49: none, W50: none}
+  exhaustion: infra.
+  owner: AM-ML
+  plan_items: []
+
+labelled_gates_not_planned:
+  - {id: G1, from: docs/research/ml-deep-audit-2026-11-12.md § 6, text: 'raise the real-money bar for an ML promotion (clustered t >= 2 / fresh window)', status: not planned; needs the operator's explicit permission}
+  - {id: G2, from: docs/research/ml-deep-audit-2026-11-12.md § 6, text: 'refuse to author a D2/direction bake-off that names no consuming leg', status: not planned; the non-gate form is the slot report + MLP-D2-SLOT-MONEY-READ}

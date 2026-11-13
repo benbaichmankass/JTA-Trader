@@ -114,49 +114,51 @@ def test_a_ticket_with_room_fits():
     assert v.checks["ticket_risk_usd"] == 1.0  # 0.5 lots x 1 unit x |120-118| x 1.0
 
 
-def test_static_dd_refuses_at_the_measured_24_dollar_cushion():
-    # Balance ~$4,724 on 2026-09-27: floor $4,700, cushion $24. A flat-$75
-    # ticket (37.5 SOL at a $2 stop) must be refused — correct behaviour.
+def test_static_dd_at_the_measured_24_dollar_cushion_is_reported_and_placed():
+    # GATE-PROP-RISK-CUSHION: MAKE REPORT-ONLY (operator 2026-11-12): cushion findings are REPORTED, never refused.
+    # Balance ~$4,724 on 2026-09-27: floor $4,700, cushion $24. A flat-$75 ticket (37.5 SOL at a $2 stop) now fits,
+    # and the static-DD and risk-gate findings are in breach_reports (an enforce account; before: a refusal).
     v = guards(t=ticket(qty=37.5), account=acct(4724.0, 4724.0), ds=4724.0)
-    assert not v.fits
-    assert any(r.startswith("static DD") for r in v.reasons)
-    assert any(r.startswith("risk gate: exceeds_cushion") for r in v.reasons)
+    assert v.fits, v.reasons
+    assert any(r.startswith("static DD") for r in v.breach_reports)
+    assert any(r.startswith("risk gate: exceeds_cushion") for r in v.breach_reports)
+    assert v.checks["cushion_report_only"] == v.breach_reports
 
 
 def test_static_dd_margin_is_applied():
     # equity 4725, risk 20 → after 4705 <= 4700 + 5
     v = guards(t=ticket(qty=10.0), account=acct(4725.0, 4725.0), ds=4725.0)
-    assert any(r.startswith("static DD") for r in v.reasons)
+    assert any(r.startswith("static DD") for r in v.breach_reports) and v.fits
 
 
-def test_daily_loss_refuses():
+def test_daily_loss_is_reported():
     # day start 5200 → floor 5044; equity 5060 - risk 20 = 5040
     v = guards(t=ticket(qty=10.0), account=acct(5060.0, 5060.0), ds=5200.0)
-    assert any(r.startswith("daily loss") for r in v.reasons)
+    assert v.fits and any(r.startswith("daily loss") for r in v.breach_reports)
 
 
-def test_daily_loss_unknown_day_start_refuses():
+def test_daily_loss_unknown_day_start_is_reported():
     v = guards(ds=None)
-    assert any("day-start balance unknown" in r for r in v.reasons)
+    assert v.fits and any("day-start balance unknown" in r for r in v.breach_reports)
 
 
 def test_open_risk_counts_against_the_cushion():
     # 4760 - 55 open - 2 ticket = 4703 <= 4700 + 5 margin → refused
     v = guards(t=ticket(qty=1.0), account=acct(4760.0, 4760.0), ds=4760.0, orisk=55.0, ostate="measured")
-    assert any(r.startswith("static DD") for r in v.reasons)
+    assert v.fits and any(r.startswith("static DD") for r in v.breach_reports)
     v2 = guards(t=ticket(qty=1.0), account=acct(4760.0, 4760.0), ds=4760.0, orisk=0.0)
     assert v2.fits
 
 
 @pytest.mark.parametrize("state", ["stop_unknown", "unrealized_unreported", "unreadable"])
-def test_open_risk_could_not_look_refuses(state):
+def test_open_risk_could_not_look_is_reported(state):
     v = guards(orisk=None, ostate=state)
-    assert not v.fits and any(state in r for r in v.reasons)
+    assert v.fits and any(state in r for r in v.breach_reports)
 
 
-def test_account_not_read_refuses():
+def test_account_not_read_is_reported():
     v = guards(account=AccountSnapshot(balance=None, equity=None))
-    assert not v.fits and any("could not look" in r for r in v.reasons)
+    assert v.fits and any("could not look" in r for r in v.breach_reports)
 
 
 def test_risk_gate_enforce_cap_refuses_above_flat_75():
@@ -231,12 +233,13 @@ def test_the_size_never_grows():
     assert facts["risk_cap_resize"] is None
 
 
-def test_no_declared_cap_still_refuses_rather_than_emitting_an_unbounded_size():
+def test_no_declared_cap_is_reported_and_the_ticket_placed_at_its_size():
+    # GATE-PROP-RISK-CUSHION: MAKE REPORT-ONLY (operator 2026-11-12); before: refused as an unbounded size.
     c = cfg(risk_cap_usd=None, symbols={"SOLUSDT": SOL_STEPPED})
     _, facts, _ = pe.bracket_from_ticket(ticket(**ROUNDING_TICKET), c)
     assert facts["risk_cap_resize"] is None, "an unknown cap bounds nothing — nothing to resize to"
     v = guards(t=ticket(**ROUNDING_TICKET), c=c)
-    assert not v.fits and any("no configured cap" in r for r in v.reasons), v.reasons
+    assert v.fits and any("no configured cap" in r for r in v.breach_reports), (v.reasons, v.breach_reports)
 
 
 def test_a_stop_that_rounds_onto_the_entry_is_refused_not_risk_zero():
@@ -491,9 +494,10 @@ def test_dry_run_walks_to_a_verified_form_and_stops(env):
 
 
 def test_dry_run_stops_at_the_guard_when_the_ticket_does_not_fit(env):
-    ad = FakeAdapter(account=acct(4724.0, 4724.0))
-    env[1].save({"day": pe.trading_day(NOW), "day_start_captured": 4724.0})
-    res = run(ad, FakeApi([ticket(qty=37.5)]), env, mode="read_only", walk_form=True)
+    # a HARD refusal (the flat $-cap: $80 asked > $75), not a cushion finding (report-only since 2026-11-12)
+    ad = FakeAdapter(account=acct(9000.0, 9000.0))
+    env[1].save({"day": pe.trading_day(NOW), "day_start_captured": 9000.0})
+    res = run(ad, FakeApi([ticket(qty=40.0)]), env, mode="read_only", walk_form=True)
     assert ad.calls == []
     g = [a for a in res.actions if a["what"] == "guards"][0]
     assert g["fits"] is False
@@ -540,13 +544,25 @@ def test_at_most_one_ticket_per_cycle(env):
 
 
 def test_guard_refusal_reports_skipped_with_the_reason(env):
-    ad = FakeAdapter(account=acct(4724.0, 4724.0))
-    env[1].save({"day": pe.trading_day(NOW), "day_start_captured": 4724.0})
-    api = FakeApi([ticket(qty=37.5)])
+    # a HARD refusal (the flat $-cap), since cushion findings are report-only (GATE-PROP-RISK-CUSHION, 2026-11-12)
+    ad = FakeAdapter(account=acct(9000.0, 9000.0))
+    env[1].save({"day": pe.trading_day(NOW), "day_start_captured": 9000.0})
+    api = FakeApi([ticket(qty=40.0)])
     run(ad, api, env)
     skip = [p for p in api.posts if p.get("status") == "skipped"][0]
-    assert "static DD" in skip["reason"] and skip["ticket_id"] == "prop-manual-aaa"
+    assert "risk cap" in skip["reason"] and skip["ticket_id"] == "prop-manual-aaa"
     assert ad.calls == []
+
+
+def test_a_cushion_breach_on_an_enforce_account_is_placed_and_alerted(env):
+    # GATE-PROP-RISK-CUSHION: MAKE REPORT-ONLY (operator 2026-11-12): the $24-cushion ticket is placed, and the
+    # static-DD finding reaches the operator as an alert naming its cause.
+    ad = FakeAdapter(account=acct(4724.0, 4724.0), after_submit=([], [_o(quantity=37.5)]))
+    env[1].save({"day": pe.trading_day(NOW), "day_start_captured": 4724.0})
+    api = FakeApi([ticket(qty=37.5)])
+    res = run(ad, api, env)
+    assert ("place_bracket", "prop-manual-aaa", True) in ad.calls
+    assert any("placing anyway (breach_guards=enforce)" in a and "static DD" in a for a in res.alerts)
 
 
 def test_expired_ticket_reports_skipped_expired(env):
@@ -1015,8 +1031,8 @@ def test_report_mode_unknown_day_start_is_a_report_not_a_refusal():
 
 
 @pytest.mark.parametrize("kw,needle", [
-    (dict(orisk=None, ostate="stop_unknown"), "could not look"),
-    (dict(account=AccountSnapshot(balance=None, equity=None)), "could not look"),
+    # the could-not-look cushion reads are report-only since 2026-11-12 (GATE-PROP-RISK-CUSHION); the structure,
+    # the flat $-cap and a halt stay hard
     (dict(t=ticket(sl=None)), "lacks SL or TP"),
     (dict(t=ticket(qty=40.0), account=acct(9000.0, 9000.0), ds=9000.0), "risk cap"),
     (dict(halted="orphan"), "halted"),
@@ -1034,7 +1050,7 @@ def test_report_mode_cycle_places_and_alerts(tmp_path):
     res = pe.run_cycle(adapter=ad, page=None, api=api, cfg=cfg(breach_guards="report"), mode="live",
                        ledger=ledger, state=state, now=NOW)
     assert ("place_bracket", "prop-manual-aaa", True) in ad.calls
-    assert any("breach_guards=report, placing anyway" in a for a in res.alerts)
+    assert any("placing anyway (breach_guards=report)" in a for a in res.alerts)
 
 
 # ── the round trip ────────────────────────────────────────────────────────
@@ -3811,9 +3827,10 @@ def test_a_retry_runs_the_same_guards_as_a_first_attempt(env):
     api = FakeApi([ticket()])
     _rcycle(ad, api, env, 0)
     ad.attempt = None
-    ad.account = acct(4724.0, 4724.0)
-    env[1].save({**env[1].load(), "day": pe.trading_day(NOW), "day_start_captured": 4724.0})
-    api._tickets = [ticket(qty=37.5)]
+    # a HARD refusal (the flat $-cap); cushion findings are report-only since 2026-11-12
+    ad.account = acct(9000.0, 9000.0)
+    env[1].save({**env[1].load(), "day": pe.trading_day(NOW), "day_start_captured": 9000.0})
+    api._tickets = [ticket(qty=40.0)]
     _rcycle(ad, api, env, 1)
     assert len(_places(ad)) == 1
     assert env[0].state("prop-manual-aaa") == "refused"
@@ -5133,3 +5150,32 @@ def test_the_posted_positions_grade_in_inv_prop_positions(env):
                                                       "direction": "long", "status": "open", "qty": 0.5}]}}
     r = si.inv_prop_positions_reconcile(ctx)
     assert r.verdict == si.PASS and r.n == 1, r
+
+
+def test_velotrade_unreadable_snapshot_cushion_unknown_is_placed_and_labelled(env):
+    """PROP-TICKET-TRUTH / ML-ENTRY-PROP-BASELINE, live 2026-11-11 20:03Z and 11-12 08:02Z: velotrade_1 SKIPPED
+    both ml_entry ETH long tickets on the risk gate (cushion_unknown + open risk unrealized_unreported) because
+    the account-status snapshot was unreadable, while the same tickets FILLED on tradeify_1.
+
+    GATE-PROP-RISK-CUSHION: MAKE REPORT-ONLY (operator 2026-11-12 13:08Z decisions page, Gates tab): a
+    could-not-look cushion labels and alerts; the ticket is placed."""
+    # Snapshot unreadable: no balance/equity, no unrealized P&L reported.
+    ad = FakeAdapter(account=AccountSnapshot(balance=None, equity=None, unrealized=None, realized_today=None),
+                     after_submit=([], [_o(quantity=10.0)]))
+    api = FakeApi([ticket(qty=10.0)])
+    res = run(ad, api, env)
+    assert ("place_bracket", "prop-manual-aaa", True) in ad.calls          # placed, not skipped
+    assert not [p for p in api.posts if p.get("status") == "skipped"]
+    alerts = " ".join(res.alerts)
+    assert "placing anyway" in alerts
+    assert "cushion_unknown" in alerts and "could not look" in alerts      # the named label
+
+
+def test_velotrade_unreadable_snapshot_guard_level_label():
+    """Guard-level twin: an unreadable account plus open risk ``unrealized_unreported`` fits, and carries the
+    ``cushion_unknown`` grade and both could-not-look causes as report-only findings."""
+    v = guards(account=AccountSnapshot(balance=None, equity=None, unrealized=None, realized_today=None),
+               orisk=None, ostate="unrealized_unreported")
+    assert v.fits and not v.reasons
+    rep = " ".join(v.breach_reports)
+    assert "cushion_unknown" in rep and "unrealized_unreported" in rep and "account:" in rep

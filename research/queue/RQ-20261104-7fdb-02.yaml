@@ -10,7 +10,12 @@ priority: 1
 roadmap:
 - L-LADDER
 kind: experiment
-not_before: '2027-03-16T00:00:00Z'
+# not_before moved 2027-03-16 -> 2026-11-12 (Manager Session 2026-11-11a, 10:43Z: the wait was a session's choice the operator did not ask
+# for; operator p3 "promote on the backtest"; operator lines 2026-11-04 "Reopen, promote if it clears (Recommended)" and 2026-11-12 "I answer
+# that I do want to promote silver."). The promotion decision now rides RQ-20261112-5ab1-03 (RQ-20261104-7fdb-01 design, contamination
+# disclosed). Rule UNCHANGED: run today, this unit's post-2026-08-30 span holds ~10-15 trades and grades INDETERMINATE/underpowered (its own
+# rule), never FAIL; it stays the fresh-span confirmation when re-run with a later --end.
+not_before: '2026-11-12T00:00:00Z'
 question: slv_trend_1h passed its 8-yr holdout at the tp_r 50 sentinel (RQ-20261101-78fc-18, n_holdout=104, +35.99R), but (a) the TP doctrine
   refuses a sentinel TP on a new real-money routing and (b) that holdout (2024-09-15..2026-10-15) contains the data the declared parameters
   were chosen on. Does a real TP keep the leg net-positive on a span that begins after the last parameter choice?
@@ -148,3 +153,15 @@ related:
 - comms/strategy_evidence/slv_trend_1h.json
 - scripts/ci/check_tp_doctrine.py
 what_it_does_not_do: Edits no config, roster or rule; places no order; a PASS is an input to a Tier-3 proposal, not a promotion.
+blocked:
+  reason: 'Data accrual, not a defect: the clean fresh span (~2026-08-30..2027-03-15) must hold enough held-back trades to reach
+    the power floor (see power.basis). The operator lifted the demote 2026-11-04 ("Reopen, promote if it clears"); a real TP test
+    is the only remaining blocker to the slv_trend_1h promotion. A 4-month wait on a money item is the operator''s call, not a
+    session''s (UNBLOCK-WATCH money_wait -> decisions page); the date itself is under review by lane DEMOTION-NOT-BAN.'
+  owner: ML assistant manager (am:ML)
+  money: true
+  since: '2026-11-04'
+  set_by: unit author 2026-11-04 (RQ-20261104-7fdb authoring session); structured 2026-11-12 by lane UNBLOCK-WATCH
+  clears_when:
+  - date:2027-03-16T00:00:00Z
+last_dispatched_at: '2026-11-13T02:52:46+00:00'

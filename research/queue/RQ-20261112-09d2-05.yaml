@@ -1,0 +1,95 @@
+# Hand-authored 2026-11-12 by lane TRADEIFY-FUTURES-FRONTIER (Tier 1). ITERATION unit, authored from the written diagnosis of RQ-20261112-09d2-01's FAIL. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261112-09d2-05
+title: 'ITERATION 1 of the Tradeify-futures ORB (fail on proxies): on REAL CME MNQ 5m history, does MNQ_OR15 clear the same Stage-0 bar, deflated for having been picked from 6 cells?'
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-PROP
+programme: P5
+kind: experiment
+origin: new_hypothesis
+question: Using the engine and Tradeify costs of RQ-20261112-09d2-01 unchanged, on a real CME MNQ 5m continuous series (rolled on volume,
+  from IB's free historical data, the operator's 2026-11-12 decision; whatever span IB serves), does the 15-minute opening-range breakout on MNQ clear Stage 0 at the 6-cell Bonferroni bar?
+why_this_matters: MNQ_OR15 was the closest cell on proxies. Discovery net +89.3R on n=1488 with 5/6 folds; holdout +11.3R. Its per-trade
+  mean of +0.060R missed only the multiplicity-deflated edge clause (CI lower bound -0.020). The proxy (a Dukascopy CFD) differs from the
+  futures in session hours, the close and microstructure; the real contract is the instrument Tradeify trades.
+iteration:
+  subject: tradeify_futures_orb
+  subject_kind: strategy_hypothesis
+  from_result: research/results/RQ-20261112-09d2-01/local-20261112.jsonl
+  verdict_read: fail
+  diagnosis: 'Costs ~= gross on MES and MGC (the stops are tight relative to $1.82-$2.12 + 2 ticks); MNQ has the widest stop in $ per micro
+    (median $171), so costs are 27% of gross, and an edge is visible but not separable from zero at the deflated bar on a proxy feed.'
+  hypothesis: on the real contract the MNQ_OR15 edge is at least as large and clears the deflated bar
+  attempt: 1
+power:
+  expected_n: 345
+  min_detectable_effect: 0.225
+  effect_units: R per trade
+  sd: 1.2
+  design: one_sample
+  alpha: 0.01
+  power: 0.8
+  basis: 'MEASURED 2026-11-12 (amended BEFORE any run, AM-TRADING decision (b); power block only, decision_rule
+    unchanged): IB serves MNQ contracts 20241220..20270319 and nothing older (contract_span lines, issue #25422), so
+    real front-month coverage is ~2024-09-12..2026-11-11 (~540 RTH sessions). At the proxy trade rate (~213/yr) that is
+    ~460 trades, ~345 in the 75% discovery window. MDE = (2.638 + 0.842) x 1.2 / sqrt(345) = 0.225 R per trade at the
+    rule''s own two-sided alpha 0.00833 (z = 2.638, the 6-cell bar). alpha is declared 0.01 only because the power gate
+    tabulates {0.10, 0.05, 0.01} and refuses any other value; 0.01 is the strictest it offers, and the MDE above is the
+    one at the rule''s stricter 0.00833, so the declared effect is conservative (at 0.01 the MDE would be 0.221). THIS RUN CAN DETECT ONLY AN EDGE >= ~0.22 R/trade, ~3.7x the proxy
+    mean (+0.060): a PASS means a large edge; a FAIL or INDETERMINATE says little about a smaller one. No new power
+    target is registered.'
+  feasibility:
+    source: none
+    accrual_basis: Replays IB's free per-contract history (market_raw_percontract/MNQ/5m/v020, pulled 2026-11-12, row
+      FUT-CME-INTRADAY-HIST); the corpus is fixed, nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261112-09d2-05
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: scripts/research/tradeify_futures_fit.py's ORB engine and costs, MNQ, OR15, on the real-contract series from IB's free history.
+    The window is set by IB's depth, so it is not fixed to calendar years. Discovery = the first 75% of RTH sessions served, in 6 equal
+    folds; holdout = the last 25%. (Amended 2026-11-12, BEFORE any run, after the operator's decision to use IB's free history. The
+    2019-2024 calendar window may not be servable.)
+  rule: 'PASS iff discovery n >= 100 AND net R > 0 AND >= 4 of 6 equal folds positive AND the per-trade CI lower bound > 0 at z = 2.638 (the
+    6-cell bar is kept although only one cell runs, because the cell was chosen after the proxy read: M13, re-reading raises the bar) AND
+    holdout n >= 30 AND holdout net R > 0. FAIL if discovery n >= 100 and a clause fails. INDETERMINATE if n < 100. A PASS goes to the
+    survival rule of RQ-20261112-09d2-02 (unchanged) in a new unit. Fixed now.'
+  what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+practice_precedent: 'M13 + M5 (docs/reference/trading-and-model-practice-principles.md): a re-read after selection keeps the deflated bar.'
+intervention_controls:
+  not_applicable: an offline backtest; nothing is applied
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 10
+  basis: The proxy run took ~1 minute for 6 cells.
+  why_runner: 'Trainer: the IB per-contract shard (data/ibkr_datasets/market_raw_percontract/MNQ/5m/v020) is synced there by sync_trainer_data.sh (#25298); CPU only.'
+value:
+  usd_at_stake_per_month: 1500
+  confidence: 0.1
+  bucket: structural
+  basis: 'as RQ-20261112-09d2-01; an estimate, not a measurement. Re-scoped 2026-11-12 (AM-TRADING): the Tradeify
+    futures plan is dropped, so the value is for the IB books ib_paper (MES/MNQ), not a Tradeify account.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- TRADEIFY-FUTURES-FRONTIER
+- ib_paper
+- RQ-20261112-09d2-01
+- FUT-CME-INTRADAY-HIST
+what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+run:
+  workflow: research-script-run-trainer.yml
+  command: [python3, scripts/research/tradeify_futures_fit.py, --stage, stage0, --source, ibkr, --ibkr-percontract,
+    'MNQ=data/ibkr_datasets/market_raw_percontract/MNQ/5m/v020/data.jsonl', --cells, MNQ_OR15, --unit, '{unit}', --out,
+    '{out_dir}']
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261112-09d2-05

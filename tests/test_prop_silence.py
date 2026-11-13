@@ -48,7 +48,7 @@ def _hb(at, mode="live", key=True):
     body = {"account_id": "breakout_2"}
     if key:
         body["phone_heartbeat"] = None if at is None else {"at": at.isoformat()}
-    return ps.probe_phone_heartbeat(NOW, lambda _p: ("read", body), lambda _a: mode)
+    return ps.probe_phone_heartbeat(NOW, lambda _p: ("read", body), lambda _a: mode, lambda _a: ["s"])
 
 
 def test_heartbeat_edges():
@@ -59,15 +59,31 @@ def test_heartbeat_edges():
     assert _hb(None, mode="dry_run")["status"] == "ok"  # not live: not required
     assert _hb(None, key=False)["status"] == "unknown"  # error envelope: did not look
     assert ps.probe_phone_heartbeat(NOW, lambda _p: ("unreadable", "x"),
-                                    lambda _a: "live")["status"] == "unknown"
-    assert ps.probe_phone_heartbeat(NOW, lambda _p: ("read", {}), lambda _a: None)["status"] == "unknown"
+                                    lambda _a: "live", lambda _a: ["s"])["status"] == "unknown"
+    assert ps.probe_phone_heartbeat(NOW, lambda _p: ("read", {}), lambda _a: None, lambda _a: ["s"])["status"] == "unknown"
+
+
+def test_empty_roster_shadows_the_phone_probes_but_unreadable_does_not():
+    """PHONE-EXECUTOR-SHADOWED: the app was uninstalled (operator 2026-11-12) and breakout_2's roster is
+    empty, so a stale or missing heartbeat on a live account with NO rostered strategy is not a page.
+    Only a READ empty roster shadows; an unreadable roster (None) keeps paging."""
+    stale = {"account_id": "breakout_2", "status_age_hours": 15.0,
+             "phone_heartbeat": {"at": (NOW - timedelta(minutes=135)).isoformat()}}
+    live = lambda _a: "live"   # noqa: E731
+    for probe in (ps.probe_phone_heartbeat, ps.probe_phone_login):
+        r = probe(NOW, lambda _p: ("read", stale), live, lambda _a: [])
+        assert r["status"] == "ok" and "shadowed" in r["detail"], r
+    assert ps.probe_phone_heartbeat(NOW, lambda _p: ("read", stale), live, lambda _a: None)["status"] == "breached"
+    assert ps.probe_phone_heartbeat(NOW, lambda _p: ("read", stale), live, lambda _a: ["s"])["status"] == "breached"
+    never = {"account_id": "breakout_2", "phone_heartbeat": None}
+    assert ps.probe_phone_heartbeat(NOW, lambda _p: ("read", never), live, lambda _a: [])["status"] == "ok"
 
 
 def _login(hb_min, age_h, mode="live", state=None):
     body = {"account_id": "breakout_2", "status_age_hours": age_h,
             "phone_heartbeat": None if hb_min is None else
             {"at": (NOW - timedelta(minutes=hb_min)).isoformat(), "state": state or {"last": "login"}}}
-    return ps.probe_phone_login(NOW, lambda _p: ("read", body), lambda _a: mode)
+    return ps.probe_phone_login(NOW, lambda _p: ("read", body), lambda _a: mode, lambda _a: ["s"])
 
 
 def test_silent_logout_edges():
@@ -79,7 +95,7 @@ def test_silent_logout_edges():
     assert _login(None, 15.0)["status"] == "ok"
     assert _login(1, None)["status"] == "unknown"       # no dateable row: did not look, never "fresh"
     assert _login(1, 15.0, mode="dry_run")["status"] == "ok"
-    assert ps.probe_phone_login(NOW, lambda _p: ("unreadable", "x"), lambda _a: "live")["status"] == "unknown"
+    assert ps.probe_phone_login(NOW, lambda _p: ("unreadable", "x"), lambda _a: "live", lambda _a: ["s"])["status"] == "unknown"
     assert ps.login_key() in a.PROBE_LABEL
 
 

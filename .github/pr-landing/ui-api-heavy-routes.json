@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "UI-API-HEAVY-ROUTES-502 + UI-RESEARCH-CATALOG-502: read-path performance only. research_catalog parses with libyaml CSafeLoader (identical parse on all 2,257 files, 14.7x faster) and memoizes per file by mtime; GET /api/bot/ml/registry memoizes its built body while registry.jsonl is unchanged (<=60 s) and gains an opt-in ?runs_tail=N slim view. No response shape changes for existing callers, no writes, no order path, no new gate. Held only because R5 cannot certify src/web/api and src/runtime paths.",
+  "hold_text": "Read-only performance change on ict-web-api. The manager merges. After deploy: GET /api/bot/research/catalog returns 200 well under 30 s (was 502 at 30.3 s); GET /api/bot/ml/registry?runs_tail=5 is a fraction of the 8.9 MB full body; a repeat GET /api/bot/ml/registry is fast while the mirror is unchanged."
+}

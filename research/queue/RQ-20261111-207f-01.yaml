@@ -1,7 +1,7 @@
 # Hand-authored 2026-11-11 by lane ALPACA-LIVE-BOOK-PLAN (Manager Session 2026-11-11a dispatch; operator ask 2026-11-11 ~22:40Z). Programme P8
 # (research/programmes/08-alpaca-live-book.yaml). Rule registered before any run; thresholds never change after a result.
 id: RQ-20261111-207f-01
-title: 'ALPACA-LIVE BOOK / Foxhound-4 DIAGNOSE (P8-Q1): does the live leg''s edge survive the account it trades -- $194.52 cash, long only, whole shares, one slot, T+1 settlement,
+title: 'ALPACA-LIVE BOOK / Foxhound-4 DIAGNOSE (P8-Q1): does the live leg''s edge survive the account it trades -- [balance removed] cash, long only, whole shares, one slot, T+1 settlement,
   the live sizer -- on its own dev walk-forward?'
 status: queued
 cadence: once
@@ -15,7 +15,7 @@ programme: P8
 question: 'Foxhound-4 (ml_entry_eq_struct, ml-entry-eq-struct-ens5-v1) is the only ML leg on real money. Its evidence (RQ-20261107-98e3-06: +0.49 R/trade, n 207, 113 symbols;
   dev OOF at tau 0.25 +0.132 R over n 1691) is in R per trade with ONE POSITION PER SYMBOL and unlimited cash (ml_entry_alpaca_score.take), and the record lists ''live whole-share
   cash-book sizing on alpaca_live is not modelled'' under known_gaps. The account is a cash book (MEASURED /api/diag/broker_account_status 2026-11-11T22:44Z: multiplier 1,
-  cash = equity = 194.52, shorting_enabled false), long only, whole-share brackets, sized by RiskManager.position_size (risk qty floored, rounded up to one share if its risk
+  cash = equity = [balance removed], shorting_enabled false), long only, whole-share brackets, sized by RiskManager.position_size (risk qty floored, rounded up to one share if its risk
   <= 1.5 x the 2% budget, capped at 0.9 x cash), T+1 settlement armed, in practice one position at a time, picks ordered by predicted net R (ml_pool_scoring.picks). Re-fit
   the same recipe (config B, structure exit pivot=5;sl_only, 5-seed pinned ensemble) on the purged dev walk-forward and replay its tau-0.25 OOF trades through that book: what
   share of the trades and of the per-trade edge survives, and what does the book earn per month?'
@@ -39,7 +39,7 @@ decision_rule:
   registered_at: '2026-11-11'
   registered_before_run: true
   statistic: 'scripts/research/alpaca_live_book.py foxhound --section book: dev OOF restricted-LONG trades of the 5-seed ensemble at tau 0.25; unconstrained n and mean net
-    R (trade_stats); live-book replay (cash 194.52, accounts.yaml risk_pct, risk.py wall + round-up, one slot, T+1, score-ordered) n_taken, taken mean net R, refusals by reason,
+    R (trade_stats); live-book replay (cash [balance removed], accounts.yaml risk_pct, risk.py wall + round-up, one slot, T+1, score-ordered) n_taken, taken mean net R, refusals by reason,
     return %/month (month-clustered se), max drawdown $; arms cash_x10_one_slot, no_t1_one_slot, multi_slot_cash_x100_no_t1 reported.'
   rule: 'INDETERMINATE IF live-book n_taken < 30. PASS IF live-book taken mean net R > 0 AND >= 0.5 x the unconstrained tau-0.25 mean net R (the edge survives the account).
     FAIL otherwise. Report-only, never gating: return %/month and its month-clustered t, refusal mix, the three arms.'
@@ -70,7 +70,7 @@ value:
   bucket: structural
   usd_at_stake_per_month: 80
   confidence: 0.5
-  basis: 'stand-in: the account is $194.52, so the dollar figure is the DECISION''s value (which strategy carries the real-money book as it grows), not this month''s P&L.'
+  basis: 'stand-in: the account is [balance removed], so the dollar figure is the DECISION''s value (which strategy carries the real-money book as it grows), not this month''s P&L.'
 run:
   command:
   - python3
@@ -117,7 +117,7 @@ iteration:
   subject_kind: ml_model
   from_result: RQ-20261107-98e3-06
   verdict_read: pass_unconfirmed
-  diagnosis: '98e3-06 passed in R per trade with one position per SYMBOL and unlimited cash; the live account is a $194.52 cash book with one slot, whole shares and T+1, and
+  diagnosis: '98e3-06 passed in R per trade with one position per SYMBOL and unlimited cash; the live account is a [balance removed] cash book with one slot, whole shares and T+1, and
     the live leg has produced no package since the full-pool widening. The untested lever is the book itself: how much of 1691 dev trades and +0.132 R survive the account.'
   search: 'the account''s execution constraints (cash wall, whole-share affordability, one slot, T+1, pick order) against the declared leg: the reachable universe'
   levers:

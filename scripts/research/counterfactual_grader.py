@@ -39,20 +39,20 @@ STATED BIASES (also written into every record)
     the amended ``order_packages.sl``.
   * An arm that has not hit a bracket by the end of the data is ``resolved: false``, marked at the last close and
     costed as if closed there. It is NOT a realised exit; compare it with that in mind.
-  * Funding is the policy default x windows held (ESTIMATED) unless the trade recorded its own. Account % uses the
-    CURRENT equity less this trade's actual P&L (ESTIMATED; bybit_1 is a margin-borrowing paper account whose
-    equity is not comparable and is reported null).
+  * Funding is the policy default x windows held (ESTIMATED) unless the trade recorded its own. No account balance, equity
+    or percent-of-account is ever written (CF-GRADES-EQUITY-COMMITTED, 2026-11-12: the grade files are public and
+    pnl_usd / pct would back-solve the balance); equity is read in memory for the arms' math only.
   * Management actions are the declared / derived ones with their time provenance; a wrong time moves an arm.
 
 SCHEMA of ``comms/research/counterfactual_grades/<order_package_id>.json``  (``schema_version`` 1)
   order_package_id, strategy, symbol, side, graded_at, status ("graded" | "could_not_grade"), reason
   bracket   {entry_pkg, stop0, stop0_source, tp, tp_r, r_dist, atr, trail_mult}
   legs      [{account_id, trade_id, account_class, qty, entry_fill, exit_price, exit_reason, risk_usd, pnl_usd_journal,
-              pnl_usd_venue, equity_pre_usd, provenance}]
+              pnl_usd_venue, provenance}]
   path      {bars, resolution_by_tf, first_bar, last_bar, t_entry, t_close}
   actions   [{ts, kind, level, source, time_provenance}]    the applied in-trade actions the baseline replays
   arms      [{arm_id, family, label, params, resolved, exit{ts,px,reason}, gross_r, cost_r{fee,slip,funding}, net_r,
-              per_account{acct:{pnl_usd, pct_of_account}}, delta_vs_replayed_actual_r, delta_vs_actual_r,
+              per_account{acct:{pnl_usd, account_class}}, delta_vs_replayed_actual_r, delta_vs_actual_r,
               delta_vs_replayed_actual_usd{acct}, provenance}]
   random_control  {n, class, mean_r, p10_r, p50_r, p90_r, p_random_ge_replayed_actual, mode}   mode "causal" (default since
                   CF-RANDOM-CAUSAL-DEFAULT); a record without ``mode`` was drawn on the legacy window (the trade's own length)

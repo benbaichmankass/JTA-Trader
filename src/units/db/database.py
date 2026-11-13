@@ -16,6 +16,8 @@ from pathlib import Path
 # say so.
 logger = logging.getLogger(__name__)
 
+_TABLES_VERIFIED: set = set()  # DB paths whose create_tables() already logged in this process
+
 
 def _migrate_add_strategy_name(cursor: sqlite3.Cursor) -> bool:
     """Add ``strategy_name`` column to ``trades`` table if absent.
@@ -1007,7 +1009,13 @@ class Database:
         conn.commit()
         conn.close()
 
-        print("✓ Database tables created/verified")
+        # HEALTH-20261112-LIVE-DISK-OTHER-GROWERS: this ran on every Database() open and printed to stdout,
+        # 335 of 2000 sampled ict-trader-live journal lines (all duplicated into /var/log/syslog). Log it once
+        # per process per DB path, through logging (stdout stays clean for --json callers).
+        key = str(self.db_path)
+        if key not in _TABLES_VERIFIED:
+            _TABLES_VERIFIED.add(key)
+            logger.info("Database tables created/verified: %s", key)
     
     def insert_trade(self, trade_data):
         """

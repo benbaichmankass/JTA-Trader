@@ -902,6 +902,18 @@ async def get_positions(
 
 _POSITIONS_SWR = SWRCache(name="positions", fresh_s=1.0, stale_s=120.0)
 
+async def refresh_positions_snapshot(include_paper: bool = True) -> list[dict[str, Any]]:
+    """Rebuild the /positions snapshot NOW and wait for it (the stream's keep-warm, #25271 follow-up).
+
+    ``get_positions`` goes through ``aget``, which returns the STALE value at once and rebuilds in the
+    background, so a caller refreshing every 15 s saw snapshots up to 15 s + one build old (measured
+    after #25271 deployed, 2026-11-12 13:47-13:48Z: snapshot_age_s 36.9 / 10.4 / 25.8 / 2.7). This
+    awaits the rebuild itself, through the same single-flight, so a concurrent REST read and this
+    never build twice."""
+    key = bool(include_paper)
+    return await _POSITIONS_SWR.arefresh(key, lambda: _build_positions(key))
+
+
 
 async def _build_positions(effective_include: bool) -> list[dict[str, Any]]:
     # Offload the blocking sqlite read to a worker thread so it never runs on

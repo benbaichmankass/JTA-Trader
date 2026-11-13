@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "SEC-8001-LOCKDOWN, the OCI half of 'drop its firewall rule' (operator decisions page m3, saved 2026-11-12 07:49:12Z). Asked for by AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx) at 09:10Z: write the inverse of cloud_open_port.py as a held Tier-2 PR. New workflow oci-close-api-port plus scripts/ops/cloud_close_port.py. Dry run by default; apply needs a reason and refuses while :8001 still answers publicly. The manager merges it; the run happens after #25185 is deployed and observed.",
+  "why": "Remove only the OCI ingress rule TCP 8001 from 0.0.0.0/0 on the live trader's subnet security lists and VNIC NSGs, with a dry run that also probes whether the API key can write."
+}
