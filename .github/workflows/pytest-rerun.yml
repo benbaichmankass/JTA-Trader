@@ -36,7 +36,15 @@ concurrency:
 jobs:
   rerun:
     # Cheap pre-filter; the script re-checks everything.
+    # PR / merge-queue runs only (CI-SUITE-SLOWDOWN, 2026-11-12). decision: 2026-11-12 operator chat "each item is only
+    # getting the checks it needs" (CI waste). MEASURED 11:01Z by the manager: 24 pytest-rerun runs queued, all on main,
+    # all for OLD shas (up to 7 per sha), each waiting for one of the 20 runner slots only to decide "head moved on / no
+    # rerun". A main run is the post-merge BACKSTOP (schedule / keeper dispatch), which re-asks every 2 h whether
+    # main's HEAD is graded and runs the full suite if not, so a timed-out or dead main run is retried by the next
+    # tick; its pending runs are also cancelled by design whenever a newer tick queues in its never-cancel group.
+    # Filtering here (an expression, not a step) costs no runner.
     if: >-
+      (github.event.workflow_run.event == 'pull_request' || github.event.workflow_run.event == 'merge_group') &&
       github.event.workflow_run.run_attempt == 1 &&
       (github.event.workflow_run.conclusion == 'cancelled' ||
        github.event.workflow_run.conclusion == 'failure')

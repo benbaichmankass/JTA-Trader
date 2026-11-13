@@ -1,0 +1,27 @@
+{
+ "checks": [
+  {
+   "call": "__ex.positionsRead()",
+   "expect": {
+    "state": "read",
+    "layout": "cards",
+    "n_rows": 2,
+    "rows": [
+     {"symbol": "ETH", "side": "long", "qty": 0.66, "mark": 2047.42},
+     {"symbol": "SOL", "side": "long", "qty": 11.81, "mark": 87.98}
+    ]
+   },
+   "note": "PHONE-POSITIONS-CARDS: the REAL Positions view with 2 positions open (cards: ticker, Long, dl Open quantity / Current price) reads both rows, not no_table"
+  },
+  {
+   "call": "(function(){var b=document.querySelectorAll('button[aria-label*=\"ETH/USD\"]');b.forEach(function(x){x.setAttribute('aria-label',x.getAttribute('aria-label').replace('ETH/USD','BTC/USD'));});var r=__ex.positionsRead();b.forEach(function(x){x.setAttribute('aria-label',x.getAttribute('aria-label').replace('BTC/USD','ETH/USD'));});return r;})()",
+   "expect": {"state": "unparsed", "layout": "cards"},
+   "note": "a card whose ticker disagrees with its own controls (ETH heading, BTC/USD buttons) is unparsed, never guessed"
+  },
+  {
+   "call": "(function(){var r=document.querySelector('[role=region][aria-label=Positions]');r.setAttribute('aria-label','Markets');var x=__ex.positionsRead();r.setAttribute('aria-label','Positions');return x;})()",
+   "expect": {"state": "no_table"},
+   "note": "the same cards in a region NOT labelled Positions are not read as positions"
+  }
+ ]
+}

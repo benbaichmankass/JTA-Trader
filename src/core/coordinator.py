@@ -22,7 +22,7 @@ import logging
 import os
 import uuid
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Mapping, Optional
 
 import yaml
 
@@ -988,7 +988,9 @@ class Coordinator:
         S-026 G2: per-account sizing happens here. Each account's
         ``risk_manager.position_size(pkg, balance)`` is called before the
         package is forwarded; the resulting qty is recorded under
-        ``pkg.meta['sized_qty_by_account'][account.name]``. Accounts with a
+        ``pkg.meta['sized_qty_by_account'][account.name]`` (the RiskManager
+        size, BEFORE slice admission / intent delta; the qty actually sent is
+        ``pkg.meta['placed_qty_by_account']``). Accounts with a
         non-positive balance produce ``qty=0.0`` and a ``zero_balance`` skip
         result instead of being routed (there is no arbitrary minimum-balance
         floor — ``min_balance_usd`` was removed 2026-06-24).
@@ -1097,6 +1099,21 @@ class Coordinator:
         if pkg.meta is None:
             pkg.meta = {}
         pkg.meta["sized_qty_by_account"] = sized_qty_by_account
+        # SIZED-QTY-META-MISMATCH (2026-11-12): ``sized_qty_by_account`` is the
+        # RiskManager's per-trade size, stamped BEFORE the slice admission
+        # (``positions.admit_slice``) and the intent delta resize it. On a
+        # ``position_model: slices`` account a declared slice of 0.5 (bybit_1
+        # claude_desk / e4_oi_shock_1h) places HALF of it, so readers taking the
+        # sized figure as the placed size were 2x wrong. The qty actually handed
+        # to ``execute_pkg`` for the opening leg(s) is recorded here, per
+        # account, on live dispatches only; the journal row's position_size
+        # should equal it (modulo venue step alignment / a venue-min size-up).
+        placed_qty_by_account: Dict[str, float] = {}
+        pkg.meta["placed_qty_by_account"] = placed_qty_by_account
+        # ``slice_admission`` is a single key overwritten by every slice
+        # account in the loop (the last one wins); this map keeps each one.
+        slice_admission_by_account: Dict[str, Any] = {}
+        pkg.meta["slice_admission_by_account"] = slice_admission_by_account
 
         # S-026 G3: live balance fetcher. Pull every account's USDT
         # balance once at the top of the dispatch round and cache the
@@ -2436,10 +2453,14 @@ class Coordinator:
             # latching daily-loss-cap ping that lived here was retired with the
             # DAILY_LOSS_CAP it reported on; the switch sends its own ONE trip
             # and ONE reset alert. Only a TOTAL-equity reading is fed (Bybit
-            # linear ``totalEquity``); otherwise the switch reads the balance
-            # snapshot (prop: the reported status row). Best-effort.
+            # linear ``totalEquity``, or this round's Alpaca/OANDA account
+            # equity, see ``_dd_switch_live_equity``); otherwise the switch
+            # reads the balance snapshot (prop: the reported status row).
+            # Best-effort.
             try:
-                account.risk_manager.note_live_equity(total_account_usd)
+                account.risk_manager.note_live_equity(_dd_switch_live_equity(
+                    account, total_account_usd, live_balances,
+                    effective_dry=effective_dry))
             except Exception as _dd_exc:  # noqa: BLE001
                 logger.debug(
                     "multi_account_execute: dd-switch equity feed failed for %s: %s",
@@ -2589,6 +2610,9 @@ class Coordinator:
                             "ok": _adm["ok"], "reason": _adm["reason"],
                             "qty": _adm["qty"], **(_adm.get("detail") or {}),
                         }
+                        slice_admission_by_account[account.name] = (
+                            pkg.meta["slice_admission"]
+                        )
                         if not _adm["ok"]:
                             logger.info(
                                 "[coordinator] slice refused for %s/%s/%s: %s",
@@ -3278,6 +3302,20 @@ class Coordinator:
                         trade_id=_leg_trade_id,
                         sized_qty=_leg["qty"],
                     )
+                # Only legs execute_pkg actually PLACED count: it returns an id
+                # rather than raising for some refusals (an options-expression
+                # no-fit returns ``opt-norfit-*`` and journals a qty-0 rejection;
+                # measured 2026-11-12 on pkg-59f612ef793840bb, which recorded a
+                # placed 201 for an order that never left). An options-expression
+                # account places CONTRACTS, not this share qty, so it is left out.
+                if not exec_dry_run and not _account_expresses_options(account_cfg):
+                    _opened = sum(
+                        float(_l["qty"])
+                        for _l, _tid in zip(intent_legs, leg_trade_ids)
+                        if not _l.get("reduce_only") and _is_placement_id(_tid)
+                    )
+                    if _opened > 0:
+                        placed_qty_by_account[account.name] = _opened
                 trade_id = leg_trade_ids[-1] if leg_trade_ids else None
                 results.append({
                     "name": account.name,
@@ -4508,6 +4546,36 @@ def _explain_empty_sizing_map(
     )
 
 
+# Venues whose balance read (``get_account_balances`` -> ``total_usdt``) IS the
+# account's TOTAL equity: Alpaca ``/v2/account`` ``equity`` and OANDA NAV
+# (``alpaca_client.balance`` / ``oanda_client.balance``). IB is not listed: its
+# balance diagnostic has not been checked to be NetLiquidation, and the switch
+# must never fold a free-cash figure as equity.
+_DD_EQUITY_IS_BALANCE_EXCHANGES = frozenset({"alpaca", "oanda"})
+
+
+def _dd_switch_live_equity(account: Any, total_account_usd: Optional[float],
+                           live_balances: Mapping[str, Optional[float]], *,
+                           effective_dry: bool) -> Optional[float]:
+    """The live TOTAL equity this dispatch feeds the daily-DD switch, or None.
+
+    PI-20261009-BKKVRSVQ-0002: only Bybit linear ``totalEquity`` was fed, so
+    every armed non-Bybit account (alpaca_live and alpaca_portfolio, real money)
+    fell back to the HOURLY balance snapshot, accepted up to 2 h old: a 3 % loss
+    could be seen up to ~1 h late. Alpaca's balance read at the top of this
+    dispatch round is already the account's total equity, so it is fed the
+    same way. None (could not look) keeps the snapshot fallback; a cached or
+    test-injected balance is never fed, only this round's live read.
+    """
+    if total_account_usd is not None:
+        return total_account_usd
+    if effective_dry:
+        return None
+    if str(getattr(account, "exchange", "") or "").lower() not in _DD_EQUITY_IS_BALANCE_EXCHANGES:
+        return None
+    return live_balances.get(getattr(account, "name", None))
+
+
 def _explain_zero_sized_qty(
     *,
     balance: float,
@@ -4704,3 +4772,25 @@ def _log_smoke_to_journal(
         except Exception:  # noqa: BLE001
             pass
         return False
+
+
+#: Trade-id prefixes ``execute_pkg`` returns when it placed NOTHING (a dry
+#: run, a journalled refusal). ``placed_qty_by_account`` skips these legs.
+_NON_PLACEMENT_ID_PREFIXES = ("dry-", "opt-norfit-", "rejected", "exchange_rejected")
+
+
+def _is_placement_id(trade_id: Any) -> bool:
+    """True when *trade_id* names an order execute_pkg actually sent."""
+    return isinstance(trade_id, str) and bool(trade_id) and not trade_id.startswith(
+        _NON_PLACEMENT_ID_PREFIXES
+    )
+
+
+def _account_expresses_options(account_cfg: Any) -> bool:
+    """True for an options-expression account (it places contracts, not shares)."""
+    try:
+        from src.units.accounts.options_overlay import account_expresses_options
+        return account_expresses_options(account_cfg or {}) is not None
+    except Exception:  # noqa: BLE001 -- observability only; unknown -> not options
+        return False
+

@@ -42,6 +42,9 @@ from src.units.accounts.risk import (
 logger = logging.getLogger(__name__)
 
 
+# Gate decision: operator 2026-11-12 decisions page, Gates tab —
+# GATE-EXECUTE-ZEROQTY-WHOLEUNIT: KEEP (now operator-authorized; covers this
+# below-venue-minimum refusal). Record: comms/gates/gate_decisions_2026-11-12.json.
 class BelowVenueMinQtyRefusal(RuntimeError):
     """A risk-sized qty that floors below the exchange lot minimum after
     step-alignment — a BENIGN per-trade refusal (never oversize), NOT an
@@ -389,6 +392,9 @@ def execute_pkg(
     else:
         qty = size_order_from_cfg(pkg, account_cfg, balance_usdt)
 
+    # Gate decision: operator 2026-11-12 decisions page, Gates tab —
+    # GATE-EXECUTE-ZEROQTY-WHOLEUNIT: KEEP (now operator-authorized). Record:
+    # comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
     # 5. Refuse zero-qty orders before hitting the exchange.
     if qty <= 0 and not is_dry and not _is_test_order(pkg):
         raise RuntimeError(

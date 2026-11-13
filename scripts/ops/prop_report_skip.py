@@ -40,7 +40,6 @@ import json
 import os
 import sqlite3
 import sys
-import time
 from pathlib import Path
 from typing import Any, Dict, Optional, Set
 
@@ -124,19 +123,18 @@ def plan(conn: sqlite3.Connection, *, account_id: str, ticket_id: str, reason: s
     out["why"] = f"ticket {status} -> skipped ({len(fills)} non-position fill row(s))"
     return out
 
+def _take_backup():
+    """The shared pre-APPLY backup with per-tag retention (scripts/ops/journal_backup.py)."""
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    from scripts.ops.journal_backup import take_backup
+    return take_backup
+
 
 def _backup(db_path: str) -> str:
-    dest = f"{db_path}.bak-prop-report-skip-{int(time.time())}"
-    src = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
-    try:
-        dst = sqlite3.connect(dest)
-        try:
-            src.backup(dst)
-        finally:
-            dst.close()
-    finally:
-        src.close()
-    return dest
+    """Pre-APPLY copy to <db>.bak-prop-report-skip-<stamp>; keeps only the newest per tag (journal_backup.py)."""
+    return _take_backup()(db_path, "prop-report-skip", method="online", stamp_style="epoch")
 
 
 def apply(decision: Dict[str, Any], db_path: str) -> Dict[str, Any]:

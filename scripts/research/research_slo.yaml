@@ -12,24 +12,27 @@
 
 slos:
   # ── YIELD SLOs (RESEARCH-SLO-YIELD, operator 2026-11-01 ~08:50Z, popup verbatim: "Replace with yield SLOs (Rec.)") ──
-  # The only two SLOs that alert on the research programme's OUTPUT. Source: the weekly trial ledger
-  # (scripts/research/trial_ledger.py -> comms/research/*/*/trial_ledger.json). A "survivor" is a REGISTERED-RULE PASS ON HELD-OUT DATA
+  # The only two SLOs that alert on the research programme's OUTPUT. Sources: research/queue grading (survivors) and the weekly
+  # trial ledger (scripts/research/trial_ledger.py -> comms/research/*/*/trial_ledger.json; trials). A "survivor" is a REGISTERED-RULE PASS ON HELD-OUT DATA
   # (operator, 2026-11-04 weekly planning, popup verbatim: "Registered-rule PASS on held-out data (Recommended)"; Gates this adds
-  # or changes: none). MEASUREMENT GAP: research_slo.py still reads the ledger's stage0_pass_surviving_dsr_and_bhy_haircut (Stage-0 PASS
-  # AND DSR > 0.95 AND BHY-haircut expectancy > 0), a proxy for that definition until the ledger counts held-out registered-rule PASSes;
-  # read the number as the proxy. A "trial" is a config tried (sum of legs.*.n_configs). Measured 2026-11-01: 0 survivors in all 3 ledgers (10-16, 10-23, 10-30), trials 1462 -> 2179 -> 2832.
+  # or changes: none). MEASURED BY THAT DEFINITION since 2026-11-12 (AUD-20261019-RESEARCH-SLO-RED, operator p7 11-12 "one
+  # research-SLO lane"): research_slo.py counts graded registered-rule PASSes on held-out data with an EDGE claim, keyed on when the
+  # graded result landed. The old ledger proxy (Stage-0 PASS AND DSR > 0.95 AND BHY-haircut expectancy > 0) read 0 by construction --
+  # BHY haircut 0.0 on every ledger leg with a series, best DSR 0.54, ml_entry dsr null (ledger 42276444552) -- and stays in the
+  # evidence as proxy_survivors_*. Gates this adds or changes: none (both SLOs alert only, as before).
+  # A "trial" is a config tried (sum of legs.*.n_configs in the weekly trial ledger), counted over the same 30 d window.
   # Thresholds are placeholders for the operator to set at planning: survivors_per_month >= 1 is "at least one
-  # leg a month clears the multiple-testing haircut"; trials_per_survivor <= 500 is "a hit rate no worse than 1 in 500".
+  # held-out edge pass a month"; trials_per_survivor <= 500 is "a hit rate no worse than 1 in 500".
   survivors_per_month:
-    what: "survivors (defined: registered-rule PASS on held-out data, operator 2026-11-04; MEASURED today by the ledger proxy Stage-0 pass AND DSR>0.95 AND BHY haircut>0) gained per 30 d = (newest ledger - oldest ledger within the last 45 d) x 30 / span_days; needs >= 14 d of ledger history, else could_not_look"
+    what: "survivors = graded registered-rule PASSes on HELD-OUT data with an EDGE claim (operator 2026-11-04) whose graded result landed in the last 30 d, EXCLUDING a pass whose grading.confirmation is present and not 'confirmed' (its own held-out read failed: not_replicated / underpowered; ML deep audit 2026-11-12 s2.2), distinct (a holdout re-run whose parent discovery is counted is not counted again); held-out class from structured unit fields only. Evidence (report-only, no gate) splits by_subject new / lever / revalidation / unknown (evidence_class.subject, or the m20 lever family) and prints converted = survivors cited under config/ or comms/strategy_evidence/ (reached a roster or config change). The ledger proxy (Stage-0 AND DSR>0.95 AND BHY>0) is shown in the evidence, not alerted on"
     op: min
     threshold: 1
   trials_per_survivor:
-    what: "configs tried (newest ledger, cumulative) / max(survivors, 1) -- zero survivors is divided by 1, the most generous reading, and the evidence names survivors: 0"
+    what: "configs tried in the last 30 d (trial-ledger growth newest - base, scaled to 30 d) / max(survivors_per_month, 1) -- zero survivors is divided by 1 and the evidence says zero_survivor_floor"
     op: max
     threshold: 500
   heldout_registered_passes_30d:
-    what: "graded registered-rule PASSes on HELD-OUT data in the last 30 d (the operator's 2026-11-04 survivor definition, measured directly; row RESEARCH-SLO-HELDOUT-SURVIVORS). Held-out class comes from structured unit fields only (evidence_class, or ml_bakeoff / kind inferred); passes with no class are shown as unknown_holdout and NOT counted. Split edge vs model_quality in the evidence. DIAGNOSTIC: shown beside the proxy; whether it replaces survivors_per_month as the alerting SLO is the operator's call (Gates this adds or changes: none)."
+    what: "graded registered-rule PASSes on HELD-OUT data whose graded result landed in the last 30 d, ALL claims (edge + model_quality + other; row RESEARCH-SLO-HELDOUT-SURVIVORS). Held-out class comes from structured unit fields only (evidence_class, or ml_bakeoff / kind inferred); passes with no class are shown as unknown_holdout and NOT counted. DIAGNOSTIC: the edge-claim subset is survivors_per_month (Gates this adds or changes: none)."
     diagnostic: true
     op: min
     threshold: 1

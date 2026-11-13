@@ -1,0 +1,68 @@
+# Hand-authored 2026-11-13 by AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx), ordered by Manager Session 2026-11-11a (07:52Z: "GO ...
+# author ... the GDX PPI+CPI unit"), from the PPI-EVENT-DESK-20261113 pre-event read. Decision rule registered BEFORE any CPI-release
+# GDX outcome was read. Gates this adds or changes: none.
+id: RQ-20261113-e44a-04
+title: 'GDX post-release follow (the one lead from the 2026-11-13 PPI read): on US CPI releases the PPI read never looked at, does trading
+  GDX in the direction of its first post-release RTH bar and holding 24 h earn a positive net mean?'
+status: blocked
+cadence: once
+roadmap:
+- L-PROGRAMMES
+theme: macro
+priority: 3
+kind: experiment
+origin: follow_up
+practice_precedent: 'M1/M2 macro event study (.claude/skills/macro-research): a lead found on one release family is confirmed on a SEPARATE,
+  never-read family before anything else; costs net; n must be known before waiting on accrual.'
+question: 'The PPI read (comms/macro/ppi_event_read_20261113/README.md, PR #25673) swept 60 post-release continuation arms over 23 PPI
+  releases; ONE cleared |t| > 2: GDX, entering at the close of the first RTH bar after the release in the direction of that bar''s move
+  (prior close -> first-bar close) and holding 24 h, +145 bps net per trade, t 2.28, n 23 (ESTIMATED 4 bps round trip). With ~3 false
+  positives expected in 60 looks it is a lead, not evidence. On US CPI releases (headline CPI, any surprise), which that read never
+  touched, does the SAME rule earn a positive net mean?'
+why_this_matters: 'A confirmed post-release drift in gold miners would be a small, event-driven paper leg; an unconfirmed one closes the
+  lead with a record instead of a memo.'
+power:
+  expected_n: 31
+  min_detectable_effect: 150
+  effect_units: bps net per trade
+  sd: 300
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED from the PPI lead: +145 bps at t 2.28, n 23 -> per-trade sd ~305 bps; a 150 bps effect at sd 300 needs n ~31 (d 0.5,
+    two-sided 0.05, power 0.8). The committed GDX 1h bars (comms/research/RQ-20261018-ef5d-01/*/data/GDX_60.csv, 2024-10-21..2026-10-16)
+    cover ~24 CPI releases, short of 31: hence blocked on accrual, not run underpowered.'
+  feasibility:
+    source: none
+    accrual_basis: 'GDX 1h bars plus CPI release times; yfinance caps 1h history at ~730 d, so n grows only forward (~1 CPI release a month).'
+decision_rule:
+  id: RULE-RQ20261113e44a04-GDX-CPI-FOLLOW
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  statistic: 'Per US headline-CPI release in the window (release time from the Bigdata.com economic calendar): t = the release time floored
+    to the hour; j = the first GDX 1h bar starting at or after t; reaction = close[j] / close[j-1] - 1; trade = sign(reaction) x (close at
+    the first bar >= start[j] + 24 h / close[j] - 1) - 4 bps. Statistic: mean and one-sample t of the trade over the releases.'
+  rule: 'PASS iff n >= 31 AND mean > 0 AND t >= 1.96. FAIL iff n >= 31 and (mean <= 0 or t < 1.96). INDETERMINATE iff n < 31. The cost is
+    the PPI read''s ESTIMATED 4 bps; a PASS must be re-graded on the repo cost stack before any promotion step. Not changed after any
+    result.'
+  what_it_does_not_do: 'Promotes nothing, places no order, adds no strategy; a PASS lets a Stage-0 strategy unit be authored for the leg.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  why_runner: Reads committed or keyless hourly bars and a release list; CPU only.
+  basis: Estimate from the session-local PPI read (seconds per symbol).
+intervention_controls:
+  not_applicable: an offline event-study measurement of a fixed entry rule; no in-trade action is evaluated
+blocked_on:
+- kind: accrual
+  ref: GDX 1h bars x US CPI releases
+  what: '>= 31 US headline-CPI releases with GDX 1h bars covering t-1 h .. t+25 h (about 24 today; ~7 more monthly releases)'
+  clears_when: 'the count is met (the next refresh of the GDX 1h corpus past ~2027-05); then add a grader (scripts/research/ppi_event_read.py
+    generalized to take a release list and grade one symbol/arm, OR a new script with the statistic above, self-tested on the PPI ledger to
+    reproduce +145 bps / n 23), git-mv this file to research/queue/ with status queued and a run block, rule unchanged'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1

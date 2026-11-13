@@ -37,6 +37,11 @@ import yaml
 WF_DIR = ".github/workflows"
 ROUTER = "issue-router.yml"
 ROUTED_MARK = "# routed by issue-router.yml"
+#: Phase 2 (PI-20261112-FANOUT2-0001): the router also forwards each `labeled` event as `labeled:<added label>`.
+LABELED_PREFIX = "labeled:"
+LABEL_ADDED_RE = re.compile(r"github\.event\.(?:client_payload\.)?label\.name\s*==\s*'([^']+)'")
+EVENT_NAME_VARS = re.compile(r"^\s*([A-Z_]+):\s*\$\{\{\s*github\.event_name\s*\}\}", re.M)
+SHELL_EVENT_CMP = re.compile(r"(\$\{?EVENT_NAME\}?[\"']?\s*==?\s*)([\"'])issues\2")
 
 LABEL_RE = re.compile(r"contains\(\s*github\.event\.(?:client_payload\.)?issue\.labels\.\*\.name\s*,\s*'([^']+)'\s*\)")
 ISSUE_REF_OK = re.compile(r"github\.event\.issue\.(number|title|body|labels\.\*\.name|user\.login|html_url|state)\b")
@@ -46,6 +51,10 @@ EXCLUDE = [
     (re.compile(r"GITHUB_EVENT_NAME|GITHUB_EVENT_PATH|toJSON\(\s*github\.event\s*\)"), "reads the raw event"),
     (re.compile(r"context\.payload\.(?!issue\b)"), "reads a non-issue context.payload field"),
 ]
+#: Destructive VM-lifecycle workflows stay on `issues`, where the author gate reads the REAL issue author: under
+#: repository_dispatch the gate reads client_payload, which any token holder with contents:write can forge
+#: (manager decision 2026-11-13 01:15Z on PR #25566). Never routed, whatever their trigger shape.
+KEEP_ON_ISSUES = ("terminate-instance.yml", "reset-instance.yml", "provision-live-vm.yml", "cutover-live.yml")
 #: The client_payload.issue fields the router sends; a migrated workflow may read only these.
 PAYLOAD_FIELDS = ("number", "title", "body", "labels", "user", "html_url", "state")
 
@@ -70,14 +79,21 @@ def classify(path: str) -> tuple[str, list[str], str]:
         return "not_issue", [], ""
     if os.path.basename(path) == ROUTER:
         return "router", [], ""
+    if os.path.basename(path) in KEEP_ON_ISSUES:
+        return "excluded", sorted(set(LABEL_RE.findall(src))), "destructive VM-lifecycle: keeps the real issue-author gate"
     labels = sorted(set(LABEL_RE.findall(src)))
     rd = on.get("repository_dispatch")
+    if isinstance(rd, dict) and any(str(t).startswith(LABELED_PREFIX) for t in (rd.get("types") or [])):
+        labels = sorted(set(labels) | set(LABEL_ADDED_RE.findall(src)))   # phase 2b keys on the added label
     if ROUTED_MARK in src and isinstance(rd, dict):
         return "migrated", labels, ""
     iss = on.get("issues")
     if iss is None and "issues" not in on:
         return "not_issue", [], ""
-    if not (isinstance(iss, dict) and iss.get("types") == ["opened"]):
+    if isinstance(iss, dict) and iss.get("types") == ["labeled"]:
+        # phase 2b: a labeled-only workflow keys on the ADDED label (github.event.label.name == '<x>')
+        labels = sorted(set(labels) | set(LABEL_ADDED_RE.findall(src)))
+    elif not (isinstance(iss, dict) and iss.get("types") in (["opened"], ["opened", "labeled"])):
         return "excluded", labels, f"issues types {iss.get('types') if isinstance(iss, dict) else iss} (not [opened])"
     if not labels:
         return "excluded", labels, "no label condition (title-prefix gate)"
@@ -105,16 +121,30 @@ def rewrite(src: str, labels: list[str]) -> str:
     if not m:
         raise ValueError("no top-level on: block")
     block = m.group(0)
+    def _types(mm):
+        # [opened] -> one dispatch per label at open. [opened, labeled] -> also `labeled:<label>`, the router's
+        # forward of each labeled event, so the workflow runs on exactly the events it ran on before.
+        shape = mm.group(4).replace(" ", "")
+        if shape == "opened,labeled":
+            return labels + [LABELED_PREFIX + lab for lab in labels]
+        if shape == "labeled":
+            return [LABELED_PREFIX + lab for lab in labels]
+        return labels
     new_block, n = re.subn(
-        r"^([ \t]+)issues:[ \t]*\n((?:\1[ \t]+#[^\n]*\n)*)\1([ \t]+)types:[ \t]*\[opened\][ \t]*\n",
+        r"^([ \t]+)issues:[ \t]*\n((?:\1[ \t]+#[^\n]*\n)*)\1([ \t]+)types:[ \t]*\[(opened|opened,[ \t]*labeled|labeled)\][ \t]*\n",
         lambda mm: (f"{mm.group(1)}repository_dispatch:  {ROUTED_MARK} (one dispatch per issue label)\n"
-                    f"{mm.group(2)}{mm.group(1)}{mm.group(3)}types: [{', '.join(labels)}]\n"),
+                    f"{mm.group(2)}{mm.group(1)}{mm.group(3)}types: [{', '.join(_types(mm))}]\n"),
         block, count=1, flags=re.M)
     if n != 1:
-        raise ValueError("could not find `issues: types: [opened]` in the on: block")
+        raise ValueError("could not find `issues: types: [opened]` or `[opened, labeled]` in the on: block")
     out = src[:m.start()] + new_block + src[m.end():]
     out = out.replace("github.event.issue.", "github.event.client_payload.issue.")
     out = re.sub(r"(github\.event_name\s*[!=]=\s*)(['\"])issues\2", r"\1\2repository_dispatch\2", out)
+    # a step that passes github.event_name into the shell and compares it there (cutover-live, reserve-live-ip)
+    out = SHELL_EVENT_CMP.sub(r"\1\2repository_dispatch\2", out)
+    for var in set(EVENT_NAME_VARS.findall(out)):     # any env var holding github.event_name (EVENT, EV, ...)
+        out = re.sub(r"(\$\{?" + var + r"\}?[\"']?\s*==?\s*)([\"'])issues\2", r"\1\2repository_dispatch\2", out)
+    out = out.replace("github.event.label.name", "github.event.client_payload.label.name")
     out = re.sub(r"\bcontext\.issue\.number\b",
                  "(context.payload.client_payload?.issue?.number ?? context.issue.number)", out)
     out = re.sub(r"\bcontext\.payload\.issue\b", "context.payload.client_payload.issue", out)
@@ -139,7 +169,9 @@ def runs_per_issue(states: dict[str, tuple[str, list[str], str]], labels_on_issu
             n += ("opened" in types) + k * ("labeled" in types)
         rd = on.get("repository_dispatch")
         if isinstance(rd, dict) and os.path.basename(path) != ROUTER:
-            n += sum(1 for lab in labels_on_issue if lab in (rd.get("types") or []))
+            types = rd.get("types") or []
+            n += sum(1 for lab in labels_on_issue if lab in types)
+            n += sum(1 for lab in labels_on_issue if LABELED_PREFIX + lab in types)
     return n
 
 
@@ -157,9 +189,11 @@ def main() -> int:
         if st == "migrated":
             y = yaml.safe_load(src)
             types = sorted((_on(y).get("repository_dispatch") or {}).get("types") or [])
-            if types != labels:
+            if types not in (labels, sorted(labels + [LABELED_PREFIX + lab for lab in labels]),
+                             sorted(LABELED_PREFIX + lab for lab in labels)):
                 bad.append(f"{p}: repository_dispatch types {types} != label conditions {labels}")
-            if re.search(r"github\.event\.issue\.|github\.event_name\s*[!=]=\s*['\"]issues['\"]", src):
+            if re.search(r"github\.event\.issue\.|github\.event_name\s*[!=]=\s*['\"]issues['\"]", src) \
+                    or SHELL_EVENT_CMP.search(src):
                 bad.append(f"{p}: routed but still reads the issues event")
     if a.check:
         if not os.path.exists(os.path.join(a.dir, ROUTER)) and any(s[0] == "migrated" for s in states.values()):

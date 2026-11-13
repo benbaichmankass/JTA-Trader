@@ -74,16 +74,11 @@ def leg_subjects(root: Path) -> list[dict[str, Any]]:
     sys.path.insert(0, str(root / "scripts" / "ops"))
     import strategy_status as ss
     out = []
-    for leg, row in ss.table(root).items():
+    table = ss.table(root)
+    for leg, row in table.items():
         if row["status"] != ss.TESTING:
             continue
-        ev = evidence_path(root, leg)
-        rec: dict[str, Any] = {}
-        if ev.is_file():
-            try:
-                rec = json.loads(ev.read_text(encoding="utf-8"))
-            except (OSError, ValueError):  # unreadable record -> its own state, the leg stays a subject
-                rec = {"coverage_state": "unreadable"}
+        ev, rec = leg_record(root, leg, set(table))
         out.append({"id": leg, "kind": "strategy_leg", "books": row["books"], "verdict": leg_verdict(rec),
                     "basis": (f"{ev.relative_to(root)}: coverage {rec.get('coverage_state')}, "
                               f"n {rec.get('n_trades_oos')}, net R {rec.get('net_r_oos')}, fidelity {rec.get('fidelity')}, "
@@ -92,19 +87,52 @@ def leg_subjects(root: Path) -> list[dict[str, Any]]:
     return out
 
 
-def evidence_path(root: Path, leg: str) -> Path:
-    """`<leg>.json`, else the longest record stem the leg name extends (e4_oi_shock_1h -> e4_oi_shock.json)."""
+def evidence_path(root: Path, leg: str, legs: set[str] | None = None) -> Path:
+    """`<leg>.json`, else the longest record stem the leg name extends (e4_oi_shock_1h -> e4_oi_shock.json) -- but NEVER a stem
+    that is itself another configured leg (ml_entry_v2 must not read ml_entry.json, the v1 leg's record: that made v2 and
+    ml_entry_eq show v1's PASS and hid v2's b610-01 FAIL; AM-ML 2026-11-13). ``legs`` defaults to config/strategies.yaml's keys."""
     d = root / "comms" / "strategy_evidence"
     exact = d / f"{leg}.json"
     if exact.is_file():
         return exact
+    if legs is None:
+        legs = set((_load_yaml(root / "config" / "strategies.yaml") or {}).keys())
     # provenance: evidence_path — falls back only to a record whose stem the leg name extends (strategy_evidence names by strategy)
-    stems = sorted((p for p in d.glob("*.json") if leg.startswith(p.stem + "_")), key=lambda p: -len(p.stem))
+    stems = sorted((p for p in d.glob("*.json") if leg.startswith(p.stem + "_") and p.stem not in legs),
+                   key=lambda p: -len(p.stem))
     return stems[0] if stems else exact
+
+
+#: E5 result verdict -> leg verdict for a `leg_evidence` override that names a research/results record (no Stage-0 record)
+_RESULT_VERDICT = {"fail": "fail", "pass": "pass_unconfirmed", "indeterminate": "indeterminate", "no_action_warranted": "indeterminate"}
+
+
+def leg_record(root: Path, leg: str, legs: set[str] | None = None) -> tuple[Path, dict[str, Any]]:
+    """The leg's OWN evidence: an explicit ``leg_evidence: {<leg>: {record: <path>}}`` entry in iteration_subjects.yaml first (a
+    research/results/*.jsonl E5 record or a comms/strategy_evidence/*.json), else ``evidence_path``. Returns (path, rec); rec is
+    {} when absent and {"coverage_state": "unreadable"} when it cannot be parsed."""
+    ov = ((_load_yaml(root / SUBJECTS_REL) or {}).get("leg_evidence") or {}).get(leg) or {}
+    ev = root / ov["record"] if ov.get("record") else evidence_path(root, leg, legs)
+    if not ev.is_file():
+        return ev, {}
+    try:
+        if ev.suffix == ".jsonl":
+            r = json.loads(ev.read_text(encoding="utf-8").splitlines()[0])
+            measured = r.get("read_state") == "measured"
+            return ev, {"coverage_state": "measured" if measured else str(r.get("read_state")),
+                        "decision_rule": {"verdict": r.get("verdict")}, "n_trades_oos": (r.get("population") or {}).get("n"),
+                        "fidelity": "result_record", "net_r_oos": None,
+                        "_verdict": _RESULT_VERDICT.get(str(r.get("verdict")), "indeterminate") if measured else "indeterminate",
+                        "_note": str(r.get("note") or "")[:160]}
+        return ev, json.loads(ev.read_text(encoding="utf-8"))
+    except (OSError, ValueError, IndexError):  # unreadable record -> its own state, the leg stays a subject
+        return ev, {"coverage_state": "unreadable"}
 
 
 def leg_verdict(rec: dict[str, Any]) -> str:
     """fail | indeterminate | pass_unconfirmed, from the Stage-0 record's own fields (never a new rule)."""
+    if rec.get("_verdict"):                 # a leg_evidence override naming an E5 result record (leg_record)
+        return rec["_verdict"]
     if not rec or rec.get("coverage_state") != "measured":
         return "indeterminate"
     v = (rec.get("decision_rule") or {}).get("verdict")
@@ -392,6 +420,24 @@ def _self_test() -> int:
     check("verdict: pass but n < 30 -> indeterminate",
           leg_verdict({"coverage_state": "measured", "decision_rule": {"verdict": "pass"}, "n_trades_oos": 8, "fidelity": "faithful"}) == "indeterminate")
     check("verdict: no record -> indeterminate (never pass)", leg_verdict({}) == "indeterminate")
+    # leg evidence wiring (AM-ML 2026-11-13): a variant leg never borrows another configured leg's record
+    import tempfile
+    tr = Path(tempfile.mkdtemp())
+    (tr / "comms" / "strategy_evidence").mkdir(parents=True)
+    (tr / "comms" / "strategy_evidence" / "ml_entry.json").write_text("{}")
+    (tr / "comms" / "strategy_evidence" / "e4_oi_shock.json").write_text("{}")
+    check("fallback: leg_x_1h -> its strategy stem e4_oi_shock",
+          evidence_path(tr, "e4_oi_shock_1h", {"e4_oi_shock_1h"}).name == "e4_oi_shock.json")
+    check("fallback: ml_entry_v2 does NOT read ml_entry.json (another leg)",
+          evidence_path(tr, "ml_entry_v2", {"ml_entry", "ml_entry_v2"}).name == "ml_entry_v2.json")
+    (tr / "scripts" / "research").mkdir(parents=True)
+    (tr / "research" / "results" / "RQ-X").mkdir(parents=True)
+    (tr / "research" / "results" / "RQ-X" / "r.jsonl").write_text(json.dumps(
+        {"read_state": "measured", "verdict": "fail", "population": {"n": 948}, "note": "v2 -0.04"}) + "\n")
+    (tr / SUBJECTS_REL).write_text(yaml.safe_dump({"leg_evidence": {"ml_entry_v2": {"record": "research/results/RQ-X/r.jsonl"}}}))
+    p2, r2 = leg_record(tr, "ml_entry_v2", {"ml_entry", "ml_entry_v2"})
+    check("override: leg_evidence names an E5 result -> its verdict (fail), n 948",
+          p2.name == "r.jsonl" and leg_verdict(r2) == "fail" and r2["n_trades_oos"] == 948)
     u_arm = {"id": "U9", "live": False, "status": "done", "grading": {"verdict": "fail"}, "iteration": None, "generated": None,
              "run": {"command": ["python3", "x.py", "--leg", "leg_a", "--arm", "A=", "--arm", "AD=adx_min=25;tp_r=3",
                                  "--arm", "H4=--htf-rule=4h"]}}

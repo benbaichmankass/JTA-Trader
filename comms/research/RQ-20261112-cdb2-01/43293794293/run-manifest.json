@@ -1,0 +1,86 @@
+{
+  "unit": "RQ-20261112-cdb2-01",
+  "run_id": "43293794293",
+  "commit_sha": "f2488a4794109abd8bae3794160fdeb17e763400",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/43293794293",
+  "timeout_minutes": 150,
+  "runner": {
+    "cpu_model": "Intel(R) Xeon(R) 6975P-C",
+    "cpu_simd": [
+      "amx_tile",
+      "avx",
+      "avx2",
+      "avx512_vnni",
+      "avx512bw",
+      "avx512f",
+      "avx512vl",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1016-aws",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261111.82.6",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "526b395f4fe0",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/slv_rth_stage0.py",
+        "--leg",
+        "slv_trend_1h",
+        "--source",
+        "XAG=INSTRUMENT_FX_METALS_XAG_USD",
+        "--source",
+        "CFD=INSTRUMENT_ETF_CFD_US_SLV_US_USD",
+        "--arm",
+        "P=tp_r=6.0",
+        "--arm",
+        "R50=tp_r=50.0",
+        "--start",
+        "2019-01-01",
+        "--end",
+        "2026-10-31",
+        "--n-floor",
+        "100",
+        "--folds",
+        "4",
+        "--fold-majority",
+        "3",
+        "--boot",
+        "10000",
+        "--seed",
+        "20261112",
+        "--research-unit",
+        "RQ-20261112-cdb2-01",
+        "--out",
+        "comms/research/RQ-20261112-cdb2-01/43293794293"
+      ],
+      "log": "comms/research/RQ-20261112-cdb2-01/43293794293/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 10.9
+    }
+  ],
+  "all_ok": true
+}
