@@ -47,11 +47,9 @@ except ImportError as exc:  # pragma: no cover
 #: name here is a roster decision, not a test edit. Operator 2026-10-28 (Q4, verbatim "Retire gld, re-home 3
 #: later (Recommended)"): gld_pullback_1h retired by record; these three go back on alpaca_paper once it has slices.
 UNHOMED: Dict[str, str] = {
-    leg: ("cut from alpaca_paper 2026-10-05 by MD-S1-CUT-ON-STAGE0-FAIL (PR #16548); not retired. Off until "
-          "alpaca_paper takes slices (same symbol as a 1d leg there). Owner: row ALPACA-SLICES-REHOME-1H")
-    # 2026-11-11 Thursday-planning b1: qqq_pullback_1h re-homed on alpaca_paper (allocation record). tlt_pullback_1h stays
-    # unhomed only until its real-money promotion lands (row PROMOTE-TLT-1H-REAL-MONEY).
-    for leg in ("spy_pullback_1h", "tlt_pullback_1h")
+    # EMPTY since 2026-11-13 (B38CQPVI-0001): spy_pullback_1h and tlt_pullback_1h re-homed on alpaca_paper under the
+    # operator's 2026-11-11 "Put qqq and tlt on the paper floor now" + OPERATING-PLAN § 2 (demo floor), with refreshed
+    # allocation records. Was: cut 2026-10-05 by MD-S1-CUT-ON-STAGE0-FAIL (PR #16548), owner ALPACA-SLICES-REHOME-1H.
 }
 
 #: Production legs that ALSO stay on general paper, BY NAME. Operator 2026-10-28 (Q2, verbatim "Keep on
@@ -117,14 +115,20 @@ def self_test() -> int:
     # for the run and restores the real table after -- every control is unchanged.
     # The fixture gets its OWN table (2026-11-06, ALPACA-LIVE-MECHANICS): adding to the real one made every new real
     # entry leak into the synthetic tree as a false R-STALE-EXCEPTION.
+    # UNHOMED likewise (2026-11-13): the real table is empty, so the fixture names spy_pullback_1h for the run.
     saved = dict(DUAL_BOOK_EXCEPTIONS)
+    saved_unhomed = dict(UNHOMED)
     DUAL_BOOK_EXCEPTIONS.clear()
     DUAL_BOOK_EXCEPTIONS.update({"iaum_pullback_1d": "alpaca_paper", "ml_entry": "alpaca_paper"})
+    UNHOMED.clear()
+    UNHOMED.update({"spy_pullback_1h": "self-test fixture"})
     try:
         return _self_test_body()
     finally:
         DUAL_BOOK_EXCEPTIONS.clear()
         DUAL_BOOK_EXCEPTIONS.update(saved)
+        UNHOMED.clear()
+        UNHOMED.update(saved_unhomed)
 
 
 def _self_test_body() -> int:

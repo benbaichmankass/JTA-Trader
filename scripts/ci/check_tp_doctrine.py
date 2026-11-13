@@ -277,6 +277,12 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # floor with the debt it carried before its 10-05 cut (tp_r 50 sentinel, tp_intent none). A visible, deliberate line; the real-TP
     # test is RQ-20261104-7fdb-01 (tp_r 2/3/4/6) and a PASS replaces this line.
     "alpaca_paper/qqq_pullback_1h": ER,
+    # 2026-11-13 B38CQPVI-0001 (same operator words + OPERATING-PLAN § 2 demo floor): tlt_pullback_1h and spy_pullback_1h return to
+    # the demo floor with the debt they carried before their 10-05 cut (tp_r 50 sentinel, tp_intent none). Visible, deliberate lines.
+    # tlt: the predictive-TP test RQ-20261112-5ab1-01 read INDETERMINATE (n 579); spy: no real-TP test yet (pipeline item filed with this PR).
+    # A PASS that sets a real tp_r replaces each line.
+    "alpaca_paper/tlt_pullback_1h": ER,
+    "alpaca_paper/spy_pullback_1h": ER,
     "alpaca_paper/qld_trend_long_1d": ER,
     "alpaca_paper/qqq_trend_long_1d": R,
     "alpaca_paper/scha_trend_long_1d": R,
