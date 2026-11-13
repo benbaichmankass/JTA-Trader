@@ -77,9 +77,29 @@ def _created(uid: str) -> datetime | None:
         return None
 
 
+#: UI-RESEARCH-CATALOG-502. The catalog parses ~2,260 YAML files per build; pure-Python
+#: ``yaml.safe_load`` took 10.3 s of them locally (36 s of a 38 s profiled build) and the VM's build
+#: passed Caddy's 30 s upstream timeout (502 at 30.3 s / 30.5 s, measured 2026-11-12 16:15Z and again
+#: 2026-11-13 00:0xZ). libyaml's ``CSafeLoader`` parsed the same 2,257 files in 0.7 s with a parse
+#: IDENTICAL to ``safe_load`` on every one (compared 2026-11-13 over research/queue + THEMES +
+#: milestones). It is the same safe constructor set; the pure-Python loader stays the fallback where
+#: libyaml is not built. This is a display projection, never a decision input.
+_LOADER = getattr(yaml, "CSafeLoader", None) or yaml.SafeLoader
+#: Per-file parse memo keyed by (path, mtime_ns, size): an unchanged file is not re-parsed on the
+#: next build; any edit (ict-git-sync pulling main) changes the key. Errors are never memoized.
+#: Values are returned as-is because build_catalog only reads them.
+_PARSE_MEMO: dict[str, tuple[int, int, Any]] = {}
+
+
 def _load_yaml(path: Path) -> tuple[dict | None, str | None]:
     try:
-        doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+        st = path.stat()
+        hit = _PARSE_MEMO.get(str(path))
+        if hit is not None and hit[0] == st.st_mtime_ns and hit[1] == st.st_size:
+            doc = hit[2]
+        else:
+            doc = yaml.load(path.read_text(encoding="utf-8"), Loader=_LOADER)  # noqa: S506 -- a safe loader
+            _PARSE_MEMO[str(path)] = (st.st_mtime_ns, st.st_size, doc)
     except (OSError, UnicodeDecodeError, yaml.YAMLError) as exc:
         return None, f"unreadable: {type(exc).__name__}"
     if not isinstance(doc, dict):
