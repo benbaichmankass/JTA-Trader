@@ -1,0 +1,138 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261113T1447Z-pkg-ccd62bd7265a4e33",
+ "reviewed_at": "2026-11-13T14:56:00Z",
+ "order_package_id": "pkg-ccd62bd7265a4e33",
+ "trade_id": null,
+ "leg": "uso_trend_1h",
+ "accounts": [
+  "alpaca_paper"
+ ],
+ "trigger": {
+  "event": "daily_floor",
+  "level": "2026-11-13",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-13T14:47:58Z",
+ "state": {
+  "atr_now_over_entry": 1.0277,
+  "bars_held": 2,
+  "giveback_r": 0.0,
+  "open_r": 0.4264,
+  "peak_provenance": "estimated",
+  "peak_r": 0.4264,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 142.92571429,
+  "tp": 155.29714286
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.0277,
+  "bars_since_peak": 0,
+  "giveback_r": 0.0,
+  "open_r": 0.4264,
+  "peak_r": 0.4264,
+  "r_to_stop": 1.4264,
+  "r_to_target": 3.5736
+ },
+ "mechanics": {
+  "evidence": "package sl 142.92571429 / tp 155.29714286 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 41,
+   "mean_r": 0.955,
+   "sd_r": null,
+   "worst_r": -2.307,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261113T1447Z-pkg-ccd62bd7265a4e33.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. Never reviewed; +0.43R, 2 bars held, no giveback. Hold cell measured n=41 mean +0.96R worst -2.31R but every tighten/close option is unpriced (no_candles), so alternatives cannot be compared and the call is judgement. Price broke the 145.0 1h swing high and holds above it; the strategy's SL 142.93 (2 ATR, below the 143.61 prior swing high) and TP 155.30 stand, and a trend leg this young should be left to its trail."
+ },
+ "forecast": {
+  "thesis": "1h breakout above the 145.0 swing high with 1d trend still up (ADX 31); I expect continuation to the 148.9 area (1d swing high 149.34) while 144.0 holds as support.",
+  "direction": "with_trade",
+  "target_px": 148.9,
+  "p_target": 0.35,
+  "invalidation_px": 144.0,
+  "horizon_bars": 8,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings 1h highs 145.0 (broken), 143.61",
+   "chart.htf 1d trending ADX 31.2, highs 149.34/148.9",
+   "exit_plan sl 142.926 tp 155.297",
+   "priced_options hold n=41 mean 0.955"
+  ]
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold n=41 mean +0.96R worst -2.31R measured, but tighten and close unpriced (no_candles), so no alternative to compare",
+  "also due: judgement_cadence slot 2026-11-13T12:00Z; answered by this review",
+  "regime: atr_now/entry 1.03; calendar and news not read for this symbol; crude exposure is a single long on the book",
+  "live_vs_backtest: mirror CONSISTENT (11 closed, +7.08R); realMoney no closed trades",
+  "packet_defect: priced_options.options all_options_unpriced:no_candles 6/6",
+  "packet_defect: priced_options.candles candles_missing 6/6"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuKxP8qoct8RDZYFs7g",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [
+  {
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:no_candles",
+   "count": 6,
+   "denominator": 6
+  },
+  {
+   "field": "priced_options.candles",
+   "reason": "candles_missing",
+   "count": 6,
+   "denominator": 6
+  }
+ ],
+ "packet_sha": "81445e4ce45365c4b161835c7c00b7937358d6bf4b9ef8f18518800fb7803b50"
+}
