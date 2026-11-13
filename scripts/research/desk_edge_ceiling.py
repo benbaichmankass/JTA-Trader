@@ -437,6 +437,9 @@ def cmd_build(a: argparse.Namespace) -> int:
     # judged-1 cutoffs are rebuilt with THEIR index and seed so the packet is byte-identical (packet_sha asserted)
     jobs = [(ce, int(j1_keys[ce]["index"]), d.SEED) for ce in sorted(j1)]
     jobs += [(ce, 100000 + n, SEED) for n, ce in enumerate(sorted(grid - set(j1)))]
+    stride = int(getattr(a, "stride", 1) or 1)
+    if stride > 1:                              # smoke only: an even sample across every fold (a registered run uses 1)
+        jobs = sorted(jobs)[::stride]
     if a.limit:
         jobs = jobs[: a.limit]
     with mp.get_context("fork").Pool(a.workers) as pool:
@@ -705,7 +708,7 @@ def cmd_run(a: argparse.Namespace) -> int:
             p = walk_forward(acts, Xp, lr, **kw)[te]
             ev[lr] = evaluate(test_rows, p, alpha)
             ic[lr] = ic_summary(weekly_ic(test_rows, p), alpha)
-            fo[lr] = {str(k): evaluate([r for r in test_rows if r["fold"] == k], p[np.array([r["fold"] == k for r in test_rows])], alpha).get("paired_diff_vs_random") for k in TEST_FOLDS}
+            fo[lr] = {str(k): evaluate([r for r in test_rows if r["fold"] == k], p[np.array([r["fold"] == k for r in test_rows], dtype=bool)], alpha).get("paired_diff_vs_random") for k in TEST_FOLDS}
         v, why = verdict_for(ev, ic, fo)
         ctl[name] = {"verdict": v, "S3": {lr: e["paired_diff_vs_random"] for lr, e in ev.items()},
                      "S3_ci_corrected": {lr: e["S3_ci_corrected"] for lr, e in ev.items()}, "IC": {lr: i.get("mean_ic") for lr, i in ic.items()}}
@@ -858,7 +861,7 @@ def cmd_universe_run(a: argparse.Namespace) -> int:
         bdir, edir = out / f"build-{arm}", out / f"evidence-{arm}"
         rc = cmd_build(argparse.Namespace(out=str(bdir), candles=a.candles, mask_key=a.mask_key, funding=a.funding,
                                           fetch_funding=a.fetch_funding, workers=a.workers, limit=a.limit, era=False,
-                                          universe=arm, fetch_candles=a.fetch_candles))
+                                          universe=arm, fetch_candles=a.fetch_candles, stride=a.stride))
         if rc == 0:
             rc = cmd_run(argparse.Namespace(out=str(bdir), evidence=str(edir), mask_key=a.mask_key, judged1_records=None))
         if rc != 0:
@@ -918,6 +921,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     b.add_argument("--universe", choices=sorted(UNIVERSES), default=None,
                    help="RQ-20261113-d18c-01: SIX (registered six) | W (24) | R (18 added); default = config pull list")
     b.add_argument("--fetch-candles", action="store_true", help="fetch absent symbols' Binance Vision 1h candles first")
+    b.add_argument("--stride", type=int, default=1, help="smoke only: every Nth cutoff (registered run: 1)")
     b.set_defaults(fn=cmd_build)
     r = sub.add_parser("run")
     r.add_argument("--out", required=True)
@@ -938,6 +942,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ur.add_argument("--fetch-candles", action="store_true")
     ur.add_argument("--workers", type=int, default=4)
     ur.add_argument("--limit", type=int, default=0)
+    ur.add_argument("--stride", type=int, default=1, help="smoke only: every Nth cutoff (registered run: 1)")
     ur.set_defaults(fn=cmd_universe_run)
     st = sub.add_parser("self-test", help="universe plumbing + arm-rule planted cases")
     st.set_defaults(fn=lambda _a: universe_self_test())
