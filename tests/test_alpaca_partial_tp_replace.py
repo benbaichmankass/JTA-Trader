@@ -36,6 +36,8 @@ class _Venue(AlpacaClient):
         self.stop_status, self.tp_status, self.order_class = stop_status, tp_status, order_class
         self.tp_cancelled = False
         self.calls: list = []
+        # ALPACA-PARTIAL-TP-BREACH-EXIT knobs: the market (position mark, last trade, quote)
+        self.price, self.trade_price, self.trade_age_s = 77.80, 77.80, 5.0
 
     # the target / stop legs as the venue reports them right now
     def _tp_leg(self):
@@ -64,7 +66,8 @@ class _Venue(AlpacaClient):
             if self.held <= 0:
                 return {"retCode": 404, "retMsg": "position does not exist"}
             return {"retCode": 0, "result": {"symbol": "QLD", "qty": str(self.held),
-                                             "side": "short", "current_price": "77.80"}}
+                                             "side": "short",
+                                             "current_price": str(self.price)}}
         if method == "GET" and "status=open" in path:
             tp = self._tp_leg()
             return {"retCode": 0, "result": [tp] if tp["status"] in (
@@ -91,10 +94,10 @@ class _Venue(AlpacaClient):
         return {"retCode": 500, "retMsg": f"unrouted {method} {path}"}
 
     def latest_trade(self, symbol):
-        return {"price": 77.80, "age_s": 5.0}
+        return {"price": self.trade_price, "age_s": self.trade_age_s}
 
     def latest_quote(self, symbol):
-        return {"bid": 77.79, "ask": 77.81}
+        return {"bid": self.price - 0.01, "ask": self.price + 0.01}
 
     def positions(self):
         return [] if self.held <= 0 else [{"symbol": "QLD", "qty": str(self.held), "side": "short"}]
@@ -340,3 +343,70 @@ def test_cancel_order_confirmed_reports_filled_and_failed():
     assert _ORIG_CANCEL(v, TP_ID, timeout_s=0, poll_s=0, sleep=lambda s: None)["state"] == "failed"
     v = _Venue()
     assert _ORIG_CANCEL(v, TP_ID, timeout_s=0, poll_s=0, sleep=lambda s: None)["state"] == "canceled"
+
+
+# ── ALPACA-PARTIAL-TP-BREACH-EXIT (manager review of #25790): the remainder's stop is already ──
+# through the market. The venue holds 38 of the row's 77 (the target partly filled and is gone),
+# so the preflight takes its deficit branch. Before this fix that branch returned
+# all_stops_breached (a page only): no stop could post and the exit was never reached.
+def _gone_target_venue(**kw):
+    """Target already gone (cancelled after the partial fill), stop leg cancelled by the venue."""
+    v = _Venue(**kw)
+    v.tp_status = "canceled"
+    return v
+
+
+def test_remainder_with_a_confirmed_breach_exits_instead_of_only_paging(tmp_path, monkeypatch):
+    db, pages, _log = _make(tmp_path, monkeypatch)
+    v = _gone_target_venue()
+    v.price = v.trade_price = 84.10              # short; row stop 83.28 -> a fresh print through it
+    _use(monkeypatch, v)
+    exits = []
+    monkeypatch.setattr(om, "_send_close_to_exchange",
+                        lambda matched: exits.append(matched) or {"ok": True})
+    s = om._check_broker_naked_equity_positions(db)
+    assert s["breach_exits"] == 1
+    assert [e["id"] for e in exits] == [7142]
+    assert "all_stops_breached" not in _kinds(pages)
+    assert not any(b.get("type") == "stop" for b in v.posts())   # no instant-fill stop posted
+
+
+def test_remainder_exit_clears_a_pending_partial_tp_retry(tmp_path, monkeypatch):
+    db, _pages, _log = _make(tmp_path, monkeypatch)
+    v = _gone_target_venue()
+    v.price = v.trade_price = 84.10
+    _use(monkeypatch, v)
+    om._ALPACA_PARTIAL_TP_PENDING[("alpaca_paper", "QLD", 7142)] = {
+        "qty": 38, "sl": 83.28, "tp": 77.76, "side": "short"}
+    monkeypatch.setattr(om, "_send_close_to_exchange", lambda matched: {"ok": True})
+    s = om._check_broker_naked_equity_positions(db)
+    assert s["breach_exits"] == 1
+    assert om._ALPACA_PARTIAL_TP_PENDING == {}
+
+
+def test_remainder_with_only_a_quote_through_the_stop_defers_not_exits(tmp_path, monkeypatch):
+    db, pages, _log = _make(tmp_path, monkeypatch)
+    v = _gone_target_venue()
+    v.price = 84.10                               # quote/mark through the stop...
+    v.trade_price, v.trade_age_s = 84.10, 900.0   # ...but no FRESH trade confirms it
+    _use(monkeypatch, v)
+    exits = []
+    monkeypatch.setattr(om, "_send_close_to_exchange",
+                        lambda matched: exits.append(matched) or {"ok": True})
+    s = om._check_broker_naked_equity_positions(db)
+    assert exits == []
+    assert s.get("rearm_refused_deferred_unconfirmed_breach", 0) == 1
+    assert "all_stops_breached" not in _kinds(pages)
+
+
+def test_remainder_whose_stop_is_not_through_still_takes_the_partial_tp_path(tmp_path,
+                                                                            monkeypatch):
+    """Unchanged behaviour when nothing is breached: the deficit branch protects the holding."""
+    db, _pages, _log = _make(tmp_path, monkeypatch)
+    v = _gone_target_venue()                      # price 77.80, stop 83.28: clear
+    _use(monkeypatch, v)
+    exits = []
+    monkeypatch.setattr(om, "_send_close_to_exchange",
+                        lambda matched: exits.append(matched) or {"ok": True})
+    s = om._check_broker_naked_equity_positions(db)
+    assert exits == [] and s["breach_exits"] == 0
