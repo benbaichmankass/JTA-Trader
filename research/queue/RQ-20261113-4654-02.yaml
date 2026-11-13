@@ -1,0 +1,184 @@
+id: RQ-20261113-4654-02
+title: 'Resolvable GRU test (ML-F29): 2x32 GRU over 32-bar windows vs LightGBM given the SAME 10 columns on the BTC/SOL 15m regime heads, graded by a paired
+  row-level block-bootstrap CI of the pooled macro-F1 delta (fold-level sd 0.03 made ff8f-04 undecidable)'
+status: queued
+cadence: once
+theme: ml_health
+priority: 3
+roadmap:
+- L-ML-LIVE
+kind: experiment
+question: On the trainer's BTC and SOL 15m v002 market-feature shards (target regime_label, the fc-pcv-v2 heads' task), does a 2-layer GRU (hidden 32) over
+  32-bar windows beat LightGBM when BOTH learners get the same 10 columns (6 shared features + 4 range-vol estimators), under identical purged folds, by
+  a pooled out-of-sample macro-F1 delta whose 95% block-bootstrap lower bound is above 0?
+why_this_matters: 'deep_sequence is the only family with one open plan item (ML-F29) and a FAIL history. ff8f-04 (GRU vs LightGBM) read INDETERMINATE on
+  every variant because its statistic was fold-level (5 folds, sd ~0.03, so +0.010 needed ~70 folds) and the GRU arm was given 4 more columns than LightGBM
+  (a confound). This is the resolvable version: same columns, row-level statistic.'
+practice_precedent: 'https://doi.org/10.1080/01621459.1994.10476870 (Politis and Romano 1994, the stationary/moving-block bootstrap for dependent data;
+  SECONDARY, known before this pass): a block bootstrap over contiguous out-of-sample rows is the standard interval for a serially dependent paired metric.
+  Our harness: scripts/research/ml_bakeoff.py cv.row_bootstrap (#25573).'
+power:
+  expected_n: 72000
+  min_detectable_effect: 0.01
+  effect_units: metric
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, not measured: ~36,000 OOS rows per symbol (tail_rows 60000, min_train_frac 0.4), ~375 blocks of 96 rows. The row-level paired sd of
+    the pooled macro-F1 delta has NEVER been measured on this task (ff8f-04 kept no per-row predictions); a plausible se of 0.004-0.006 gives an 80%-power
+    MDE of ~0.011-0.017, i.e. borderline for the +0.010 bar. This run MEASURES it (deltas.<sym>.cv.gru.lightgbm.boot.sd) and the grading note states it;
+    INDETERMINATE (CI straddles) is the honest reading if it is larger. ML-F29 asked for power from the measured sd: only the fold-level sd exists, so this
+    is declared, not hidden.'
+  feasibility:
+    source: none
+    accrual_basis: Trainer-resident shards; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261113-4654-02-GRU-ROW-BOOT
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  baseline: LightGBM (n_estimators 200, lr 0.05, leaves 31, min_child 50) on the SAME 10 columns, same rows, same purged folds.
+  statistic: 'ml_bakeoff.py cv.row_bootstrap {block_rows 96, n_boot 1000, seed 0}: per symbol, the pooled out-of-sample macro-F1 of gru minus lightgbm over
+    identical rows, its point delta (stat boot_mean) and 95% percentile lower bound (stat boot_ci_low); the fold-level paired mean and the prior-control
+    deltas are reported, not graded.'
+  rule: 'PASS IF on BOTH BTCUSDT and SOLUSDT: boot_ci_low > 0 AND boot_mean >= +0.010 (the ff8f-04 effect bar, unchanged). FAIL IF neither symbol has boot_mean
+    > 0 (closes a 2x32 GRU on this 10-column window for this task, not the deep_sequence family). INDETERMINATE otherwise, or if the gru arm is unavailable,
+    or fewer than 3 usable folds. Thresholds are not changed after any result.'
+  pass_action: the net-of-cost regime-cell walk-forward with the LightGBM head as the baseline (a classification lift is not edge); families.deep_sequence.history
+    appended PASS.
+  fail_action: families.deep_sequence.history appended FAIL for this configuration; close ML-F29.
+  what_it_does_not_do: 'Serves and registers nothing; touches no config. Classification lift only, not money. ETH is excluded: its 15m regime heads were
+    retired (operator Thursday-planning a4, 2026-11-11). Both arms get identical columns (the ff8f-04 confound is removed).'
+  min_n: 3 usable CV folds per symbol
+compute: needs_vm_data
+value:
+  bucket: frontier
+  usd_at_stake_per_month: 150
+  confidence: 0.1
+  basis: 'stand-in: family diversity on a demo-floor regime head; not a measured P&L'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 5.0
+  est_minutes: 240
+  why_runner: Trainer-resident 15m v002 shards and the trainer torch venv.
+  basis: 'ESTIMATE from ff8f-04 (240 min for 3 symbols x 40k rows): 2 symbols x 60k rows is about the same; the bootstrap adds minutes.'
+ml_bakeoff:
+  task: classification
+  metric: macro_f1
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT:
+        path: datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl
+      SOLUSDT:
+        path: datasets-out/market_features/SOLUSDT/15m/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 60000
+    extra_columns:
+    - parkinson_vol
+    - garman_klass_vol
+    - rogers_satchell_vol
+    - yang_zhang_vol
+  cv:
+    folds: 5
+    embargo_rows: 96
+    min_train_frac: 0.4
+    row_bootstrap:
+      block_rows: 96
+      n_boot: 1000
+      seed: 0
+  baseline: lightgbm
+  controls:
+  - prior
+  candidates:
+  - gru
+  learners:
+    prior:
+      kind: prior
+    lightgbm:
+      kind: lightgbm
+      params:
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+      feature_blocks:
+      - kind: df_columns
+        columns: &id001
+        - parkinson_vol
+        - garman_klass_vol
+        - rogers_satchell_vol
+        - yang_zhang_vol
+    gru:
+      kind: torch_gru
+      params:
+        window_bars: 32
+        hidden: 32
+        layers: 2
+        epochs: 8
+      feature_blocks:
+      - kind: df_columns
+        columns: *id001
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - BTCUSDT
+      - SOLUSDT
+      vs: baseline
+      window: cv
+      op: '>'
+      value: 0.0
+      stat: boot_ci_low
+    - group:
+      - BTCUSDT
+      - SOLUSDT
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.01
+      stat: boot_mean
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: baseline
+      window: cv
+      op: '>'
+      value: 0.0
+      stat: boot_mean
+  common_rows: false
+run:
+  workflow: research-script-run-trainer.yml
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261113-4654-02
+ml_consumer:
+  consumer: config/regime_policy.yaml (the 15m regime heads btc/sol-regime-15m-lgbm-fc-pcv-v2 that feed trend_vol OFF-cells)
+  decision: whether a GRU architecture earns a net-of-cost regime-cell walk-forward against the LightGBM head; no change from this unit
+  legs:
+  - trend_donchian
+  - ict_scalp_5m
+  - squeeze_breakout_4h
+lands:
+  store: research/results/
+  assert_field: verdict
+  min_rows: 1
+related:
+- RQ-20261018-ff8f-04
+- ML-F29
+- FRONTIER-Q-GRU-RESOLVABLE
+- 'PR #25573'
