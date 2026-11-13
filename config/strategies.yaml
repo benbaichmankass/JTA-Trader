@@ -1580,6 +1580,7 @@ strategies:
     model: null
     signal_prefixes: [trend_donchian_eth_4h, donchian_eth_4h]
     enabled: true
+    decision_bar: closed     # Tier-3, OPERATOR 2026-11-13 Decisions inbox FORMING-VS-CLOSED-4H-PROP = "both_closed" (21:16Z; work item FORMING-VS-CLOSED-ETH4H-SOL4H): decide on the CLOSED 4h bar. Evidence: RQ-20261113-f251-03 run 43451968959 (no material difference; closed passes RULE-D1 on the record window) + the closed-basis evidence record. Revert = delete this line (default forming).
     execution: live          # LIVE on REAL-MONEY bybit_2 AND paper bybit_1/
                              # bybit_portfolio (config/accounts.yaml). Corrected
                              # 2026-09-28 (lane EXIT-OPS, PI-20260926-X3QEGPJL-0002):
@@ -1644,6 +1645,7 @@ strategies:
     model: null
     signal_prefixes: [trend_donchian_sol_4h, donchian_sol_4h]
     enabled: true
+    decision_bar: closed     # Tier-3, OPERATOR 2026-11-13 Decisions inbox FORMING-VS-CLOSED-4H-PROP = "both_closed" (21:16Z; work item FORMING-VS-CLOSED-ETH4H-SOL4H): decide on the CLOSED 4h bar. Evidence: RQ-20261113-f251-03 run 43451968959 (no material difference; closed passes RULE-D1 on the record window) + the closed-basis evidence record. Revert = delete this line (default forming).
     execution: live          # shadow-guard: allow — operator decision 2026-09-28  # DEMO-FLOOR RULE 2026-10-27 (Tier-3): shadow -> live; ROLLBACK = shadow
                              # (relayed via manager to lane EXIT-OPS on
                              # PI-20260924-TJTOJHYE-0001): "Demote all 3 to

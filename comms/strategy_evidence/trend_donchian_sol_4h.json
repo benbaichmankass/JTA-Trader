@@ -3,47 +3,47 @@
   "strategy": "trend_donchian_sol_4h",
   "symbol": "SOLUSDT",
   "timeframe": "4h",
-  "config_fingerprint": "sha256:745a2f7a20a3f221eaacf38189954f1e",
+  "config_fingerprint": "sha256:596eebc2eeffb713b77183bff44ef085",
   "basis": "harness_timefolds",
   "coverage_state": "measured",
   "fidelity": "faithful",
   "omitted_levers": [],
-  "net_r_oos": 41.9726,
-  "expectancy_r_oos": 0.2245,
-  "n_trades_oos": 187,
+  "net_r_oos": 36.4198,
+  "expectancy_r_oos": 0.3167,
+  "n_trades_oos": 115,
   "folds": 4,
   "fold_detail": [
     {
       "fold": 1,
-      "trades": 46,
-      "net_r": -7.4741,
-      "expectancy_r": -0.1625,
-      "start": "2023-12-18 00:00:00+00:00",
-      "end": "2024-07-04 00:00:00+00:00"
+      "trades": 28,
+      "net_r": 13.7206,
+      "expectancy_r": 0.49,
+      "start": "2023-11-29 08:00:00+00:00",
+      "end": "2024-08-03 16:00:00+00:00"
     },
     {
       "fold": 2,
-      "trades": 46,
-      "net_r": 37.7719,
-      "expectancy_r": 0.8211,
-      "start": "2024-07-14 20:00:00+00:00",
-      "end": "2025-04-12 12:00:00+00:00"
+      "trades": 28,
+      "net_r": 10.0289,
+      "expectancy_r": 0.3582,
+      "start": "2024-08-11 20:00:00+00:00",
+      "end": "2025-04-06 16:00:00+00:00"
     },
     {
       "fold": 3,
-      "trades": 46,
-      "net_r": 11.1666,
-      "expectancy_r": 0.2428,
-      "start": "2025-04-22 12:00:00+00:00",
-      "end": "2026-01-25 16:00:00+00:00"
+      "trades": 28,
+      "net_r": 14.4319,
+      "expectancy_r": 0.5154,
+      "start": "2025-04-12 12:00:00+00:00",
+      "end": "2025-12-18 16:00:00+00:00"
     },
     {
       "fold": 4,
-      "trades": 49,
-      "net_r": 0.5082,
-      "expectancy_r": 0.0104,
-      "start": "2026-01-29 12:00:00+00:00",
-      "end": "2026-11-08 20:00:00+00:00"
+      "trades": 31,
+      "net_r": -1.7616,
+      "expectancy_r": -0.0568,
+      "start": "2025-12-29 00:00:00+00:00",
+      "end": "2026-11-10 12:00:00+00:00"
     }
   ],
   "folds_positive": 3,
@@ -51,15 +51,15 @@
   "fee_bps_roundtrip": 11.0,
   "path_stats": {
     "series_location": "source_run (the per-trade rows, in order, with net_r)",
-    "n": 187,
-    "max_drawdown_r": 24.6674,
-    "max_drawdown_at_trade": 174,
-    "final_equity_r": 41.9726,
-    "max_equity_r": 51.4537,
-    "worst_trade_r": -1.2297,
-    "best_trade_r": 6.5131,
-    "worst_day_r": -1.2297,
-    "worst_day_date": "2026-08-16",
+    "n": 115,
+    "max_drawdown_r": 13.0561,
+    "max_drawdown_at_trade": 113,
+    "final_equity_r": 36.4198,
+    "max_equity_r": 47.6091,
+    "worst_trade_r": -1.1852,
+    "best_trade_r": 6.3356,
+    "worst_day_r": -1.1852,
+    "worst_day_date": "2026-05-04",
     "trades_without_exit_time": 0,
     "ordering": "by entry_time ascending; pooled ACROSS folds, so this is the full-window path, not a per-fold one",
     "not_a_verdict": "Descriptive only. No bar is applied here -- the prop bar is B6's to register, and it must be registered before these numbers are read."
@@ -69,9 +69,9 @@
     "slippage": 3.0,
     "funding": 1.0,
     "unit": "bps_roundtrip (funding: bps per funding window)",
-    "source": "comms/research/RQ-20261113-f251-01/43447401545/evidence_runs/trend_donchian_sol_4h__bt.json"
+    "source": "comms/strategy_evidence/runs/2026-11-13-closed/trend_donchian_sol_4h__bt.json"
   },
-  "net_r_oos_fee_only": 47.4119,
+  "net_r_oos_fee_only": 40.2493,
   "decision_rule": {
     "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
     "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
@@ -79,18 +79,18 @@
     "verdict": "pass"
   },
   "param_selection_provenance": "not_established",
-  "generated_at": "2026-11-13T15:00:29.257545+00:00",
+  "generated_at": "2026-11-13T21:26:44.885472+00:00",
   "generated_by": "scripts/ops/build_strategy_evidence.py",
-  "source_run": "comms/research/RQ-20261113-f251-01/43447401545/evidence_runs/trend_donchian_sol_4h__trades.jsonl",
+  "source_run": "comms/strategy_evidence/runs/2026-11-13-closed/trend_donchian_sol_4h__trades.jsonl",
   "error": null,
   "harness": "trend",
   "reproduce": {
     "window_days": 1095,
-    "window_days_source": "--data-csv span",
+    "window_days_source": "--days",
     "folds": 4,
     "data_start": "2023-11-14 00:00:00+00:00",
     "data_end": "2026-11-12 20:00:00+00:00",
-    "git_sha": "8cffce56ab294bcf7f06347f68d60181ce5a70b1",
+    "git_sha": "3bdbd267b39117474ef0950fba1f7e9bc2e985ec",
     "argv": [
       "python3",
       "scripts/ops/build_strategy_evidence.py",
@@ -103,18 +103,31 @@
       "--window-start",
       "2023-11-14 00:00:00+00:00",
       "--window-end",
-      "2026-11-12 20:00:00+00:00",
-      "--data-csv",
-      "/tmp/forming_regen_e5eo1z5s/trend_donchian_sol_4h__data.csv",
-      "--minutes-1m-csv",
-      "/tmp/forming_regen_e5eo1z5s/SOLUSDT__2023-11-12__2026-11-14__1m.csv"
-    ],
-    "inputs": {
-      "data_csv": "/tmp/forming_regen_e5eo1z5s/trend_donchian_sol_4h__data.csv",
-      "minutes_1m_csv": "/tmp/forming_regen_e5eo1z5s/SOLUSDT__2023-11-12__2026-11-14__1m.csv",
-      "decision_session": null,
-      "decision_bar_modelled": "forming"
-    }
+      "2026-11-12 20:00:00+00:00"
+    ]
   },
-  "venue_bracket_arm": null
+  "venue_bracket_arm": null,
+  "rebaseline_history": [
+    {
+      "superseded_at": "2026-11-13",
+      "reason": "DECISION-BAR switch to CLOSED: OPERATOR 2026-11-13 Decisions inbox FORMING-VS-CLOSED-4H-PROP = \"both_closed\" (work item FORMING-VS-CLOSED-ETH4H-SOL4H; evidence RQ-20261113-f251-03 run 43451968959); this record re-measured on the closed basis (build_strategy_evidence, the leg's own config with decision_bar: closed)",
+      "net_r_oos": 41.9726,
+      "expectancy_r_oos": 0.2245,
+      "n_trades_oos": 187,
+      "fee_bps_roundtrip": 11.0,
+      "window_days": 1095,
+      "window": [
+        "2023-12-18 00:00:00+00:00",
+        "2026-11-08 20:00:00+00:00"
+      ],
+      "generated_at": "2026-11-13T15:00:29.257545+00:00",
+      "source_run": "comms/research/RQ-20261113-f251-01/43447401545/evidence_runs/trend_donchian_sol_4h__trades.jsonl",
+      "decision_rule_verdict": "pass",
+      "folds_positive": 3,
+      "decision_bar": "forming",
+      "fidelity": "faithful"
+    }
+  ],
+  "decision_bar": "closed",
+  "decision_bar_note": "Evidence measured on the bar the leg TRADES (closed), per the operator's 2026-11-13 \"both_closed\" decision (FORMING-VS-CLOSED-ETH4H-SOL4H): build_strategy_evidence on config/strategies.yaml with decision_bar: closed, over the record window; full cost stack."
 }
