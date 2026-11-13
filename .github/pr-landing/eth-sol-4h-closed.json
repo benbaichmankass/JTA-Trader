@@ -1,0 +1,12 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-3 config: decision_bar closed on trend_donchian_eth_4h and trend_donchian_sol_4h, which sit on prop tradeify_1 + velotrade_1 and demo-floor bybit_1; no real-money account (config/accounts.yaml re-parsed 2026-11-13). On the OPERATOR's 2026-11-13 Decisions-inbox answer FORMING-VS-CLOSED-4H-PROP = \"both_closed\". The manager merges at the reviewed head after the full pytest-run is green.",
+  "recorded_decision": {
+    "kind": "operator_decision",
+    "ref": "FORMING-VS-CLOSED-ETH4H-SOL4H (operator Decisions inbox 2026-11-13T21:16:10Z, submission 47e833d4; committed by the manager 21:17Z)",
+    "evidence": "comms/research/RQ-20261113-f251-03/43451968959/verdict.json"
+  },
+  "why": "Applies the operator's both_closed decision: the two legs decide on the CLOSED 4h bar, and their evidence records are re-measured on the closed basis (C5: build_strategy_evidence, faithful, RULE-D1 pass: eth_4h +28.95R n135 3/4 folds; sol_4h +36.42R n115 3/4 folds). Prop operator_exception (2026-11-05) unchanged and not bar-tied. Revert: git revert."
+}
