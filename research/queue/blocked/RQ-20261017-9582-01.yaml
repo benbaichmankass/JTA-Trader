@@ -1,7 +1,8 @@
 id: RQ-20261017-9582-01
 title: 'M22 Bybit pairs: does a FIXED-BETA ENTRY TRIGGER (z read on logA - beta_entry*logB, the same spread the stop/target/R unit use)
   turn any of the four Bybit pairs net-positive, net of the full cost stack, at configured params?'
-status: blocked
+status: retired
+retired_reason: "2026-11-13 AM-OPS on the manager's decision (03:54Z, option a): RETIRED without a run. sleeve retired by operator record #24991 (2026-11-11 'Retire it'); re-entry, if ever, goes through FRONTIER-STATIC-MARKETS. config/pairs.yaml is pairs: [], so the planned run (pairs_configured_stage0.py --pair <each>) cannot load any pair. A retirement by record is not an off-trade-path removal, so no re-entry test is owed. The entry-trigger lever (backtest_pairs.py --entry-trigger {rolling,fixed_beta}, default arm byte-identical to main, self-test plants a disagreement) was built and kept OFF main: recoverable from branch am-ops/pairs-entry-trigger (7c919d54). Owner row PAIRS-ENTRY-TRIGGER-LEVER dropped with the same reason."
 cadence: once
 theme: live_strategy
 priority: 1
