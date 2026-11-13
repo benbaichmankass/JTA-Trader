@@ -32,6 +32,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from src.runtime import trade_snapshot_store as store
+from src.utils.closed_at import normalize_closed_at_value
 from src.web.api import brackets_history as bh
 from src.web.api import trade_chart_snapshot as tcs
 
@@ -77,6 +78,9 @@ def pending(conn: sqlite3.Connection, now: datetime, limit: int) -> List[Dict[st
             f"AND {_due_sql('s')} ORDER BY t.id DESC LIMIT ?", (_iso(now), limit * 3)).fetchall():
         d = dict(r)
         d["_key"] = store.trade_key(d["id"])
+        # closed_at can be stored as epoch-ms text (BL-20260730-TRADES-TIMESTAMP-FORMAT-MIXED; trade:6131 is
+        # '1790835474843'); one canonical normaliser so the window, the candle read and the snapshot see ISO.
+        d["closed_at"] = normalize_closed_at_value(d.get("closed_at")) or d.get("closed_at")
         items.append(d)
     try:
         prop_rows = conn.execute(
