@@ -1,0 +1,7 @@
+WARNING: signal-stream cache is not being written (ImportError: Unable to find a usable engine; tried using: 'pyarrow', 'fastparquet'.
+A suitable version of pyarrow or fastparquet is required for parquet support.
+Trying to import the above resulted in these errors:
+ - `Import pyarrow` failed. pyarrow is required for parquet support. Use pip, conda, or your preferred package management tool to install the pyarrow package.
+ - `Import fastparquet` failed. fastparquet is required for parquet support. Use pip, conda, or your preferred package management tool to install the fastparquet package.). The run will still be correct, but every cell re-derives every stream — install a parquet engine (`pip install pyarrow`) to make --prebuild-cache real.
+/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_system.py:1171: UserWarning: no explicit representation of timezones available for np.datetime64
+  idx = int(np.searchsorted(clock_ts, np.datetime64(pd.Timestamp(r["ts"])), side="right"))
