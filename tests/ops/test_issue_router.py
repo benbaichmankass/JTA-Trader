@@ -45,8 +45,9 @@ def test_routed_workflows_are_consistent():
         on = _on(doc)
         assert "issues" not in on, f"{p.name}: routed and still on issues (would double-run)"
         types = sorted(on["repository_dispatch"]["types"])
-        labels = sorted(set(irm.LABEL_RE.findall(src)))
-        assert types in (labels, sorted(labels + [irm.LABELED_PREFIX + lab for lab in labels])), \
+        labels = sorted(set(irm.LABEL_RE.findall(src)) | set(irm.LABEL_ADDED_RE.findall(src)))
+        assert types in (labels, sorted(labels + [irm.LABELED_PREFIX + lab for lab in labels]),
+                         sorted(irm.LABELED_PREFIX + lab for lab in labels)), \
             f"{p.name}: dispatch types != label conditions"
         assert "github.event.issue." not in src, f"{p.name}: still reads github.event.issue"
         assert not re.search(r"github\.event_name\s*[!=]=\s*['\"]issues['\"]", src), p.name
@@ -132,3 +133,12 @@ def test_rewrite_opened_labeled_keeps_both_events_and_fixes_shell_compare():
     out = irm.rewrite(src, ["x-req"])
     assert _on(yaml.safe_load(out))["repository_dispatch"] == {"types": ["x-req", "labeled:x-req"]}
     assert '[ "${EVENT_NAME}" = "repository_dispatch" ]' in out and "'issues'" not in out
+
+
+def test_labeled_only_workflows_key_on_the_added_label():
+    """Phase 2b: a labeled-only workflow subscribes to labeled:<label> and reads the label the router forwards."""
+    for name, label in (("etf-history-pipeline.yml", "etf-history-request"),
+                        ("options-snapshot-capture.yml", "options-snapshot-request")):
+        src = (WF / name).read_text(encoding="utf-8")
+        assert _on(yaml.safe_load(src))["repository_dispatch"] == {"types": [irm.LABELED_PREFIX + label]}
+        assert "github.event.client_payload.label.name" in src and "github.event.label.name" not in src
