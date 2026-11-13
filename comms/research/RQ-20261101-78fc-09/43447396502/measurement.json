@@ -1,0 +1,212 @@
+{
+  "label": "no_candidate_passes",
+  "pooled": {
+    "verdict": "fail",
+    "label": "no_candidate_passes",
+    "passing": [],
+    "rule": {
+      "id": "RULE-AM-RISK-ADJUSTED-V1",
+      "registered_at": "2026-10-29",
+      "doctrine": "docs/ARCHITECTURE-CANONICAL.md \u00a7 Active management, clause 4",
+      "max_r_cost_per_trade": 0.05,
+      "min_dd_cut_pct": 0.15,
+      "min_cvar5_cut_pct": 0.15,
+      "cvar_tail": 0.05,
+      "cvar_basis": "book_iso_week_of_exit",
+      "folds": 6,
+      "fold_majority": 4,
+      "fold_min_risk_cut_pct": 0.0,
+      "n_floor": 39,
+      "random_control": "required",
+      "min_control_beat_frac": 0.95,
+      "measurement_of_record": "book_usd_sim_per_account (row BOOK-SIM-REAL-SIZER)",
+      "reported_measurements": [
+        "giveback_r_mean_p95 (peak MFE R - realised net R, per trade)",
+        "net_pnl_pct_per_account_and_book (net of the full cost stack)",
+        "net_pnl_usd_per_account_and_book (only from a book_usd_sim; never committed from a per-trade translation, and balances are never committed to this public repo)"
+      ]
+    },
+    "baseline": "H",
+    "baseline_book": {
+      "n": 751,
+      "net_r": 150.9009,
+      "max_drawdown_r": 26.4601,
+      "cvar5_week_r": -3.963689,
+      "cvar5_trade_r": -1.472305,
+      "weeks": 359,
+      "giveback": {
+        "n_measured": 751,
+        "n_missing_mfe": 0,
+        "mean_r": 1.02673,
+        "p95_r": 2.3302
+      }
+    },
+    "measurement_basis": "per_trade_r_screen",
+    "graduation_eligible": false,
+    "candidates": {
+      "T": {
+        "book": {
+          "n": 788,
+          "net_r": 116.0585,
+          "max_drawdown_r": 27.1487,
+          "cvar5_week_r": -3.646916,
+          "cvar5_trade_r": -1.43009,
+          "weeks": 363,
+          "giveback": {
+            "n_measured": 788,
+            "n_missing_mfe": 0,
+            "mean_r": 0.993772,
+            "p95_r": 2.066
+          }
+        },
+        "lever_fired": true,
+        "r_cost_per_trade": 0.046395,
+        "dd_cut_pct": -0.026024,
+        "cvar5_cut_pct": 0.079919,
+        "pnl_by_account": null,
+        "risk_metrics_passing": [],
+        "folds": [
+          {
+            "fold": 1,
+            "n_baseline": 21,
+            "n_candidate": 22,
+            "r_cost": 0.106281,
+            "cuts": {
+              "dd": 0.0,
+              "cvar5": 0.0
+            },
+            "holds": false
+          },
+          {
+            "fold": 2,
+            "n_baseline": 20,
+            "n_candidate": 20,
+            "r_cost": -0.09134,
+            "cuts": {
+              "dd": 0.108001,
+              "cvar5": 0.0
+            },
+            "holds": false
+          },
+          {
+            "fold": 3,
+            "n_baseline": 24,
+            "n_candidate": 24,
+            "r_cost": 0.021563,
+            "cuts": {
+              "dd": 0.081292,
+              "cvar5": 0.0
+            },
+            "holds": false
+          },
+          {
+            "fold": 4,
+            "n_baseline": 62,
+            "n_candidate": 65,
+            "r_cost": -0.000102,
+            "cuts": {
+              "dd": -0.21756,
+              "cvar5": 0.0
+            },
+            "holds": false
+          },
+          {
+            "fold": 5,
+            "n_baseline": 226,
+            "n_candidate": 231,
+            "r_cost": -0.045061,
+            "cuts": {
+              "dd": 0.061131,
+              "cvar5": 0.020918
+            },
+            "holds": false
+          },
+          {
+            "fold": 6,
+            "n_baseline": 398,
+            "n_candidate": 426,
+            "r_cost": 0.110829,
+            "cuts": {
+              "dd": -0.026024,
+              "cvar5": 0.126434
+            },
+            "holds": false
+          }
+        ],
+        "folds_held": 0,
+        "n_folds": 6,
+        "clauses": {
+          "R1_cost": true,
+          "R2_risk_cut": false,
+          "R3_folds": false,
+          "R4_control": false
+        },
+        "controls": {
+          "C": {
+            "book": {
+              "n": 785,
+              "net_r": 112.9951,
+              "max_drawdown_r": 21.213,
+              "cvar5_week_r": -3.718374,
+              "cvar5_trade_r": -1.448913,
+              "weeks": 363,
+              "giveback": {
+                "n_measured": 785,
+                "n_missing_mfe": 0,
+                "mean_r": 1.001302,
+                "p95_r": 2.066
+              }
+            },
+            "cuts": {
+              "dd": 0.198302,
+              "cvar5": 0.061891
+            },
+            "beats": false,
+            "pnl_by_account": null
+          }
+        },
+        "verdict": "fail",
+        "label": "fails_R2_R3"
+      }
+    },
+    "why": "every candidate fails a necessary clause (R1 cost, R2 risk cut, R3 folds or R4 control)"
+  },
+  "per_leg": {
+    "tqqq_trend_long_1d": {
+      "verdict": "fail",
+      "label": "no_candidate_passes",
+      "passing": [],
+      "exit_code": 0
+    },
+    "slv_trend_1h": {
+      "verdict": "fail",
+      "label": "no_candidate_passes",
+      "passing": [],
+      "exit_code": 0
+    },
+    "trend_donchian_sol_prop": {
+      "verdict": "fail",
+      "label": "no_candidate_passes",
+      "passing": [],
+      "exit_code": 0
+    },
+    "trend_donchian_xrp_4h": {
+      "verdict": "fail",
+      "label": "no_candidate_passes",
+      "passing": [],
+      "exit_code": 0
+    },
+    "trend_donchian_xrp_adx25": {
+      "verdict": "fail",
+      "label": "no_candidate_passes",
+      "passing": [],
+      "exit_code": 0
+    },
+    "ada_pullback_2h": {
+      "verdict": "fail",
+      "label": "no_candidate_passes",
+      "passing": [],
+      "exit_code": 0
+    }
+  }
+}

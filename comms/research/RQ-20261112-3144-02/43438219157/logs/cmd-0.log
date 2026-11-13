@@ -1,0 +1,32 @@
+  PASS synthetic: frozen corpus re-reads to the same corpus_id tmb-4e14430561be, 900 trades
+  PASS synthetic: B0 - B0 == 0 exactly 0.0
+  PASS synthetic: engine replays B0 to the harness exit_r on >= 99% of trades 1.0
+  PASS synthetic: action-value ceiling >= every labelled action per trade max excess 0.00e+00
+  PASS synthetic: census oracle == first_passage_paths.census 
+  PASS synthetic-planted: frozen corpus re-reads to the same corpus_id tmb-a164b47a7dde, 900 trades
+  PASS synthetic-planted: B0 - B0 == 0 exactly 0.0
+  PASS synthetic-planted: engine replays B0 to the harness exit_r on >= 99% of trades 1.0
+  PASS synthetic-planted: action-value ceiling >= every labelled action per trade max excess 0.00e+00
+  PASS synthetic-planted: census oracle == first_passage_paths.census 
+  PASS planted: lgbm action-value beats B0 (CI lower > 0) 0.37298 [0.31186, 0.44038]
+  PASS null: lgbm action-value does not pass on a driftless walk (CI lower <= 0) null 0.04112 [-0.08612, 0.1563]
+  PASS Stage A: planted corpus has a passing action class, driftless null has none planted passes ['close', 'partial_close_50', 'tighten_sl_be', 'tighten_sl_atr1', 'tighten_sl_atr2', 'tp_pull_in_0p5r', 'tp_pull_in_1r']; null passes []
+  PASS null: logit action-value does not pass on a driftless walk (CI lower <= 0) null -0.02492 [-0.18847, 0.12346]
+  PASS path_state: every feature at state s is unchanged when the trade is cut after bar s (causal) 2954 truncations, max |diff| 0.0
+  PASS path_state: positive control -- a feature reading bar s+1 FAILS the truncation test leaky max |diff| inf
+  PASS signature: every feature at state s is unchanged when the trade is cut after bar s (causal) 2954 truncations, max |diff| 0.0
+  PASS signature: Chen's identity -- a straight-line path's signature equals the tensor exponential of its increment 39 columns
+  PASS stage_a_folds: planted reads pass, driftless null reads fail planted 4/6, null 0/6
+  PASS horizon label == full label when H >= the remaining bars max |diff| 0.0
+  PASS horizon label differs from the full label when H < the remaining bars (positive control) 45/45 trades differ at H=2
+  PASS stage_a_folds at horizon 12: planted reads pass, driftless null does not planted pass, null fail
+  PASS cross-symbol purge leaves no overlapping train trade 0 leaks; purged [20, 23, 23, 23, 22, 22]
+  PASS same trade_key in train and test is de-duplicated 
+  PASS train-sample: seeded -- same seed gives the same sample, another seed a different one seed 11 sizes [250, 244, 244, 246, 244, 244]
+  PASS train-sample: trade-grouped -- whole trades, no repeats, every state of a sampled trade is in the fit 1472 trades over 6 folds
+  PASS train-sample: purged -- no sampled trade overlaps its test fold window + embargo (and the pool had overlappers) 0 leaks; 349 pool trades overlap a window; purged [50, 53, 54, 52, 54, 53]
+  PASS train-sample: de-duplicated vs v1 -- by trade_key AND by (leg, symbol, entry, direction) under a different key string 0 duplicates sampled; dropped per fold [30, 30, 30, 30, 30, 30] of 30 planted (25 re-keyed + 5 same key)
+  PASS train-sample: size = K x v1 train-fold trades, or the whole purged pool if smaller target [250, 244, 244, 246, 244, 244] pool [550, 547, 546, 548, 546, 547]
+  PASS train-sample: score() trains on exactly that sample and reports it folds [250, 244, 244, 246, 244, 244]
+SELFCHECK PASS
+tm_bench score/stage_a_folds: folds beating the permutation p95 per action {'close': 4, 'partial_close_50': 4, 'tighten_sl_be': 0, 'tighten_sl_atr1': 1, 'tighten_sl_atr2': 0, 'tp_pull_in_0p5r': 0, 'tp_pull_in_1r': 0}; best close 4/6 (needs >= 4)
