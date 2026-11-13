@@ -19,9 +19,9 @@ on:
         default: "capture"
   schedule:
     - cron: "25 21 * * 1-5"
-  issues:
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
     # `labeled` (not `opened`): see etf-history-pipeline.yml; a re-added label (#22406) never fired under `opened`.
-    types: [labeled]
+    types: [labeled:options-snapshot-request]
 
 permissions:
   contents: read
@@ -35,10 +35,10 @@ jobs:
       group: options-snapshot-capture
       cancel-in-progress: false
     if: >-
-      github.event_name != 'issues' ||
-      ((github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       github.event.label.name == 'options-snapshot-request')
+      github.event_name != 'repository_dispatch' ||
+      ((github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       github.event.client_payload.label.name == 'options-snapshot-request')
     runs-on: ubuntu-latest
     timeout-minutes: 150
     steps:
@@ -47,12 +47,12 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
           INPUT_MODE: ${{ inputs.mode }}
-          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_BODY: ${{ github.event.client_payload.issue.body }}
         run: |
           set -euo pipefail
           m="capture"
           if [ "$EVENT" = "workflow_dispatch" ]; then m="${INPUT_MODE:-capture}"; fi
-          if [ "$EVENT" = "issues" ]; then
+          if [ "$EVENT" = "repository_dispatch" ]; then
             m="$(printf '%s\n' "$ISSUE_BODY" | sed -n 's/^mode:[[:space:]]*\([a-z]*\).*/\1/p' | head -1)"
             m="${m:-capture}"
           fi
@@ -147,7 +147,7 @@ jobs:
             store/ "${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/options_history/"
           echo "store pushed"
       - name: Comment result on the issue
-        if: always() && github.event_name == 'issues'
+        if: always() && github.event_name == 'repository_dispatch'
         uses: actions/github-script@v7
         env:
           MODE: ${{ steps.mode.outputs.mode }}
@@ -160,8 +160,8 @@ jobs:
             for (const f of ['verify.md', 'probe.json']) {
               if (fs.existsSync(f)) body += '```\n' + fs.readFileSync(f, 'utf8').slice(0, 60000) + '\n```\n';
             }
-            await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
-            await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, state: 'closed' });
+            await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), body });
+            await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), state: 'closed' });
       - name: Red flag on a failed fetch or stale/missing series (ONE flag; the next run retries)
         if: always() && (steps.fetch.outcome == 'failure' || steps.fetch_cboe.outcome == 'failure' || steps.verify.outcome == 'failure')
         run: |

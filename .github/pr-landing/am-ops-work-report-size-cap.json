@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "WR-1113 item 7 (manager daily review 2026-11-13): the work report breached attention_watch REPORT_MAX_BYTES (64,000) at 79,249 B. render_daily_brief.py names the first 40 'Other overdue' rows (oldest first) then '... and N more' with the work.py command; work_report.py lists only non-quiet soak states and counts the quiet ones, and caps 'Due (ranked)' at the top 15 x 140 chars. Counts stay complete. Measured after: 63,223 B. Tooling/report only; no runtime path. Revert: git revert."
+}

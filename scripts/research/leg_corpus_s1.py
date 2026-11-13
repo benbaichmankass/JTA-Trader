@@ -226,7 +226,9 @@ def run_family(family: str, out: Path, *, days: int, start: Optional[str], end: 
     ok = [m for m in metas.values() if m["state"] == "ok"]
     n = sum(m["n_trades"] for m in ok)
     full = bool(legs) and sm["coverage"]["covered"] == len(legs)
-    verdict = {"verdict": "pass" if full else ("indeterminate" if ok else "not_applicable" if not legs else "indeterminate"),
+    # research_result.validate: a run that measured nothing (no leg ok) carries verdict not_applicable whatever the cause --
+    # `indeterminate` on producer_failed refused RQ-20261105-025 run 42101993187 at emit (RESEARCH-PRODUCER-ROW-DEFECTS).
+    verdict = {"verdict": "pass" if full else ("indeterminate" if ok else "not_applicable"),
                "read_state": ("measured" if ok else ("not_attempted" if not legs else "producer_failed")),
                "n": n if ok else None, "population": f"family {family}: {len(legs)} money legs, {days} d window",
                "note": ("every money leg covered" if full else f"not covered: {sm['coverage']['not_covered']}"),

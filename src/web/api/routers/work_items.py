@@ -128,8 +128,23 @@ async def _body(request: Request) -> dict[str, Any]:
     return body
 
 
-def _by(body: dict) -> str:
+async def _writer(request: Request, authorization: str | None,
+                  x_work_store_token: str | None) -> dict | None:
+    """The operator's SPA session (returned, so ``by`` comes from it) or the fail-closed
+    work-store token (``None`` returned). UI-OAUTH-SIGNIN: the operator edits rows from the
+    signed-in dashboard; work.py and the outbox keep ``WORK_STORE_TOKEN``."""
+    from src.web.api.auth import operator_session_or_none
+    session = await operator_session_or_none(request)
+    if session is None:
+        _require_work_store_token(authorization, x_work_store_token)
+    return session
+
+
+def _by(body: dict, session: dict | None = None) -> str:
     by = body.pop("by", None)
+    if session is not None:
+        from src.web.api.auth import session_actor
+        return session_actor(session)
     if not isinstance(by, str) or not by.strip():
         raise HTTPException(status_code=400, detail="`by` is required (who is writing)")
     return by.strip()
@@ -151,9 +166,9 @@ def _answer(fn, *, created: bool = False) -> JSONResponse:
 async def create_item(request: Request, authorization: str | None = Header(default=None),
                    x_work_store_token: str | None = Header(default=None, alias=WORK_STORE_HEADER)):
     """Create one item. Body: ``{id, kind, title, ..., by, op_id?}``. 201, or 200 on a replayed op_id."""
-    _require_work_store_token(authorization, x_work_store_token)
+    session = await _writer(request, authorization, x_work_store_token)
     body = await _body(request)
-    by, op_id = _by(body), body.pop("op_id", None)
+    by, op_id = _by(body, session), body.pop("op_id", None)
     return _answer(lambda: _store().create(body, by=by, op_id=op_id), created=True)
 
 
@@ -162,9 +177,9 @@ async def set_item(item_id: str, request: Request, authorization: str | None = H
                    x_work_store_token: str | None = Header(default=None, alias=WORK_STORE_HEADER),
                    if_match: str | None = Header(default=None)):
     """Patch fields. Body: ``{fields: {...}, by, op_id?}``; ``If-Match: <version>`` required."""
-    _require_work_store_token(authorization, x_work_store_token)
+    session = await _writer(request, authorization, x_work_store_token)
     body = await _body(request)
-    by, op_id = _by(body), body.pop("op_id", None)
+    by, op_id = _by(body, session), body.pop("op_id", None)
     fields = body.get("fields")
     if not isinstance(fields, dict) or not fields:
         raise HTTPException(status_code=400, detail="`fields` must be a non-empty object")
@@ -177,9 +192,9 @@ async def note_item(item_id: str, request: Request, authorization: str | None = 
                    x_work_store_token: str | None = Header(default=None, alias=WORK_STORE_HEADER),
                     if_match: str | None = Header(default=None)):
     """Append a note event. Body: ``{text, summary?, by, op_id?}``; ``If-Match`` required."""
-    _require_work_store_token(authorization, x_work_store_token)
+    session = await _writer(request, authorization, x_work_store_token)
     body = await _body(request)
-    by, op_id = _by(body), body.pop("op_id", None)
+    by, op_id = _by(body, session), body.pop("op_id", None)
     return _answer(lambda: _store().note(item_id, body.get("text"), summary=body.get("summary"),
                                          by=by, op_id=op_id, expected_version=_version(if_match)))
 
@@ -189,9 +204,9 @@ async def close_item(item_id: str, request: Request, authorization: str | None =
                    x_work_store_token: str | None = Header(default=None, alias=WORK_STORE_HEADER),
                      if_match: str | None = Header(default=None)):
     """Close with a stated reason. Body: ``{state: done|dropped, reason, by, op_id?}``."""
-    _require_work_store_token(authorization, x_work_store_token)
+    session = await _writer(request, authorization, x_work_store_token)
     body = await _body(request)
-    by, op_id = _by(body), body.pop("op_id", None)
+    by, op_id = _by(body, session), body.pop("op_id", None)
     return _answer(lambda: _store().close(item_id, state=body.get("state", "done"), reason=body.get("reason"),
                                           by=by, op_id=op_id, expected_version=_version(if_match)))
 
