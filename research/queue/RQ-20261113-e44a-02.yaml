@@ -5,7 +5,7 @@ id: RQ-20261113-e44a-02
 title: 'Time exit or late trail-tighten on mgc_pullback_1d: selected on the earlier span of the leg''s GC=F daily history, does an exit at N
   bars (20/30/40) or a 1.5xATR trail after 20 stalled bars beat the declared exit on a later span selection never saw, net of the full
   cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROGRAMMES
@@ -84,3 +84,14 @@ routing:
   why_runner: Fetches keyless public daily candles for a pinned window; reads no trainer data; CPU only.
   basis: Estimate from RQ-20261101-78fc-38/39 (one arm, same leg and window) times five arms; the first run replaces it.
 last_dispatched_at: '2026-11-13T09:06:19+00:00'
+grading:
+  attested: RULE-RQ20261113e44a02-TIME-EXIT-HOLDOUT
+  auto: true
+  decision_rule_id: RULE-RQ20261113e44a02-TIME-EXIT-HOLDOUT
+  evidence:
+  - research/results/RQ-20261113-e44a-02/43398559682.jsonl
+  graded_at: '2026-11-13'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
