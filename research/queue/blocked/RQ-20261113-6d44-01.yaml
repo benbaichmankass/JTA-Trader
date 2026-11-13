@@ -1,0 +1,159 @@
+# Hand-authored 2026-11-13 by an orphan-iteration lane (Tier 1, session_01AFoLuMfGoUaVmVtfzXaKEK). ITERATION unit for the orphan subject ml_entry_v2,
+# authored from a written diagnosis of RQ-20261101-b610-01's own result row. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261113-6d44-01
+title: 'ITERATION 1 of ml_entry_v2 (two failed reads): which v2 component costs the edge vs v1? Leave-one-out ablation of the R2 recipe, the 0.06
+  cost gate and the 2/4 bracket, every arm refit at ONE cutoff (rows before 2025-10-01) and scored on the same in-hand year'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+origin: iteration
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): a pre-registered arm grid with every arm counted; T1, M6: purged
+  and embargoed fits, one cutoff for every arm so the arms differ only by the ablated component.'
+levers:
+- name: v2_component_ablation
+  values: [V1 (R0, tau 0.10, no gate, 2/3), V2 (R2 matched share, gate 0.06, 2/4), V2 minus R2, V2 minus gate, V2 minus 2/4 bracket]
+  hypothesised_effect: removing the R2 recipe (with its matched-share threshold) recovers at least half of the V2-vs-V1 gap
+question: 'The frozen v2 artifact (ml/served/ml_decision_entry_v2/model.json, stack S3_R2_gate_24) failed both of its reads: W1 (RQ-20261101-b609-01,
+  -0.1161 R per decision, n=320, vs frozen v1 -0.0405) and the time-disjoint symbol holdout (RQ-20261101-b610-01, -0.0443, n=948 on 73 symbols, vs
+  v1 reference +0.0245, n=1857). Its three components were chosen on the 8 dev folds through 2025-09-30 only (RQ-20261101-b608-01, cumulative stack
+  S1 R2 -> S2 gate -> S3 2/4), so the year 2025-10-01..2026-09-30 never took part in choosing them. Refit FIVE arms at ONE cutoff (rows strictly
+  before 2025-10-01, the 7-day embargo and 24h label purge of ml_decision_entry), seeds 7, 11, 13, on the frozen-60 universe, and score every
+  arm on 2025-10-01..2026-09-30 under its own bracket and the full cost stack: V1 = R0 params, tau 0.10, no gate, 2/3 outcomes; V2 = R2 params,
+  threshold = the quantile taking the V1 dev share of rows (fixed on dev, as b609 did), cost gate 0.06 with k fixed on dev rows, 2/4 outcomes;
+  V2-R2 = V2 with R0 params at tau 0.10; V2-gate = V2 without the gate; V2-2/4 = V2 scored on 2/3 outcomes. Which single component, removed,
+  recovers the edge V2 loses to V1 on the same rows?'
+why_this_matters: 'ml_entry_v2 is a TESTING leg on bybit_1 with no live iteration (scripts/research/iteration_orphans.py, 2026-11-13). Operator
+  2026-11-01: "if the data doesn''t pass, it goes back into research for improvments and testing". Two reads of the same frozen artifact cannot
+  say WHICH change broke it; a third read of the artifact would not either. The ablation names the component to drop, so the next v2 candidate is
+  v1 plus only the components that hold.'
+iteration:
+  subject: ml_entry_v2
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261101-b610-01/local-20261112T1107Z.jsonl (RULE-20261101-b610-01, graded fail 2026-11-13)
+  verdict_read: fail
+  diagnosis: 'b610 row (2026-09-24..10-31, 100-symbol holdout, 75 with rows): v2 mean net -0.0443 at n=948 = gross -0.0005 minus cost 0.0438; the
+    v1 reference on the same rows made gross +0.0832, cost 0.0586, net +0.0245 at n=1857. The cost gate did its job (v2 cost 0.015 R lower); the
+    loss is in SELECTION: v2 lost about 0.084 R of gross per decision. 834 of 948 v2 decisions (88%) were shorts at -0.1158 while always-short on
+    the same 2/4 mechanics made +0.0502 and a random matched policy -0.0042, so v2 picked shorts worse than random; its 114 longs made +0.4786.
+    W1 (b609) showed the same shape (v2 -0.1161 vs v1 -0.0405). Most likely cause: the R2 recipe with its matched-share threshold (the largest dev
+    contributor, +0.0204 to +0.0293, chosen from a recipe grid on the same dev folds) learned a smoother short-leaning score that does not rank
+    rows out of sample. Competing hypotheses: (1) a label mismatch: the v2 boosters were fit on the 2/3-bracket net-R table (ml_decision_entry
+    SL_ATR, TP_ATR = 2.0, 3.0) but traded on 2/4 outcomes (ml_entry_levers.py w1_unit), so the bracket component may be the culprit; (2) recency,
+    not composition: v2 was fit on rows to 2026-09-22 and v1 on rows to about 2025-09-22, so the extra year, not the stack, may set the short bias.
+    The ablation separates (1) from the R2 cause; refitting V1 and V2 at the SAME cutoff separates (2).'
+  hypothesis: removing the R2 recipe (R0 at tau 0.10) from the v2 stack recovers at least half of the gap between V2 and V1 on the same rows,
+    and removing the gate or the 2/4 bracket does not
+  attempt: 1
+  due_by: '2026-11-20'
+  map_entries:
+  - research/levers/ml_entry_v2.yaml
+evidence_class:
+  holdout: holdout_window
+  claim: attribution
+population: 'The frozen-60 universe of ml_decision_entry (Binance USD-M perps in manifest bp2-f4271084b120), decisions 2025-10-01..2026-09-30
+  (labels 24h past the end), both sides, one position per symbol, seeds 7, 11, 13 (seed-mean per arm). A recipe ablation at one cutoff, not a
+  promotion read.'
+power:
+  expected_n: 3800
+  min_detectable_effect: 0.05
+  effect_units: metric
+  sd: 1.07
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED inputs, INFERRED n: per-decision SD about 1.07 R (b609/b610 rows); b610 v2 took 948 decisions in 38 days on 75 symbols and the
+    v1 reference 1857, so on 60 symbols over 365 days about 3,800 (V2-like arms) and about 11,000 (V1-like arms) per seed. The SE of a difference
+    between two arms on overlapping rows is at most 1.07 x sqrt(1/3800 + 1/11000) = 0.020 R, so the 80%-power MDE is about 2.8 x 0.020 = 0.056 R;
+    the gaps to attribute were -0.076 (b609) and -0.069 (b610). A recovery below about 0.05 R is under-powered and is reported as such.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance Vision 1h klines 2020-07..2026-10 already published; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261113-6d44-01-V2-ABLATION
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  baseline: 'V1, the frozen v1 recipe (R0 params, 20 features, tau 0.10, no gate, SL 2 / TP 3 ATR) refit at the SAME cutoff and seeds and scored on
+    the same rows, NET OF THE FULL COST STACK of the harness (fee + slippage + funding, ml_decision_entry._cost_r, the stack every ENTRY read uses).
+    Each ablation arm is also compared with V2 (recovery).'
+  statistic: 'Seed-mean net R per decision for each arm over 2025-10-01..2026-09-30; gap = mean(V2) - mean(V1); recovery_c = mean(V2 minus c) -
+    mean(V2) for c in {R2, gate, 2/4}; threshold = 2 x max(0.0034, the V1 seed range) (the common rule of ml_entry_levers.judge); per arm n,
+    gross, cost, net, per side, per calendar quarter; the ledger bar for the window (reported).'
+  rule: 'INDETERMINATE iff any arm has fewer than 300 decisions for any seed, OR |gap| < threshold (V2 and V1 indistinguishable at this cutoff;
+    reported as evidence for the recency hypothesis, no component named). FAIL iff gap >= +threshold (refit at the same cutoff, the V2 stack is NOT
+    worse than V1: the failed reads are not explained by the stack composition; the next iteration is the recency / training-window hypothesis), OR
+    gap <= -threshold and no component has recovery_c >= threshold. PASS iff gap <= -threshold AND at least one component c has recovery_c >=
+    threshold AND recovery_c >= 0.5 x |gap| AND recovery_c > 0 in >= 3 of the 4 calendar quarters; every qualifying component is NAMED as an
+    edge-costing component, ranked by recovery. The hypothesis (R2) is CONFIRMED only if R2 is named and is the top-ranked component; a PASS that
+    names only the gate or the bracket is reported as the competing hypothesis winning. 5 arms x 3 seeds = 15 fits; every arm is reported.
+    Thresholds are not changed after any result.'
+  pass_action: 'author the next iteration: the v2 candidate = V1 plus only the components NOT named, with its own pre-registered read on a window
+    no ENTRY claim has used; record the named component(s) as failed levers in research/levers/ml_entry_v2.yaml.'
+  fail_action: 'gap >= +threshold: author the recency iteration (V2 fit at the 2025-10-01 cutoff vs the served artifact on the same post-cutoff
+    rows). No component recovers: author a pairwise (interaction) ablation; say in the grading note which.'
+  what_it_does_not_do: Registers, serves or promotes nothing; changes no config, roster or served artifact; places no order. It does not re-read
+    W1 (2026-10) or the b610 symbol holdout, and it never scores the frozen v2 artifact; it refits every arm.
+  min_n: 300 decisions per arm per seed
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  basis: 'stand-in: the ENTRY model family trades bybit_2 (real money) through ml_entry; a corrected v2 is its replacement path. Not a P&L
+    measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 150
+  why_runner: Keyless public Binance Vision archives; LightGBM on CPU.
+  basis: 'ESTIMATE: one 8-fold arm of the baseline recipe took about 480 s on 4 threads (b608/b610 routing); this unit is 15 single fits plus the
+    dev-only tau/share and k fits, about 2 hours with the fetch.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_v2_run.py
+  - ablate
+  - '{unit}'
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261113-6d44-01
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: which v2 components a next ENTRY candidate keeps; no change from this unit
+  legs:
+  - ml_entry_v2
+  book: demo_floor
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261101-b610-01
+- RQ-20261101-b609-01
+- RQ-20261101-b608-01
+- RQ-20261101-fs01-01
+- ML-ENTRY-V2-TESTING
+- HOLDOUT-LOCK
+holdout_ledger: 'Window 2025-10-01..2026-09-30 was read before by the ENTRY family (comms/research/holdout_reads.jsonl: ENTRY-v1-c692-01 and
+  later re-reads; `holdout_lock.py families` shows the next bar). Rule 1 / 2 of holdout_lock.py: a re-read is allowed and every arm''s read is
+  claimed (family ENTRY, train_end 2025-09-23) BEFORE any outcome; this rule is relative (arm vs arm on the same rows), so the deflated bar is
+  reported, not gating. Not read: W1 2026-10 (ENTRY-v2-S3_R2_gate_24) and the b610 symbol holdout (ENTRY-v2-frozen-symholdout).'
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config or roster; places no order. The bybit_1 leg proves mechanics only.
+intervention_controls:
+  not_applicable: an offline model-recipe ablation; no trade intervention is tested
+blocked_on:
+- kind: tool
+  what: 'the ablation harness does not exist. ml_entry_levers.py has stack_unit (cumulative S1..S3 on DEV folds only) and w1_unit (one stack, hard
+    wired to W1 and to the b608 winning stack); neither fits several arms at one cutoff and scores a chosen post-cutoff window. Needed: an opt-in
+    subcommand `ml_entry_levers.py ablate-window --start 2025-10-01 --end 2026-09-30` (arms V1, V2, V2-R2, V2-gate, V2-2/4; seeds 7, 11, 13;
+    share, tau and k fixed on dev rows; a holdout_lock claim per arm before any outcome) and the runner mode `ml_entry_v2_run.py ablate` that
+    fetches the klines and calls it.'
+  clears_when: 'both land with a self-test proving (a) the V2 arm reproduces stack_unit''s S3_R2_gate_24 policy on a synthetic table, (b) every
+    claim is written before any outcome is read and refuses a window that overlaps the fit (holdout_lock rule 4), and (c) V1 at tau 0.10 equals
+    the base arm; then git-mv this file to research/queue/ with the rule unchanged.'
