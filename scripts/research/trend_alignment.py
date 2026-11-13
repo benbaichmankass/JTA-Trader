@@ -203,6 +203,18 @@ def _leg_corpora() -> Dict[str, Dict[str, Any]]:
     return out
 
 
+#: Corpus trade files name the entry instant differently: the trend/pullback harnesses `entry_time`, the ML entry
+#: corpora `decision_ts` (ml_entry__trades.jsonl). Without the fallback all 907 ml_entry trades read no_entry_time.
+_ENTRY_TS_KEYS = ("entry_time", "decision_ts", "entry_ts", "timestamp", "ts")
+
+
+def _entry_ts(t: Dict[str, Any]) -> Any:
+    for k in _ENTRY_TS_KEYS:
+        if t.get(k):
+            return t[k]
+    return None
+
+
 def _bootstrap_diff_ci(with_r: np.ndarray, counter_r: np.ndarray, *, seed: int = CORPUS_SEED,
                        resamples: int = CORPUS_RESAMPLES) -> Tuple[float, float, float]:
     """(D, lo, hi): D = mean(with) - mean(counter); 95% percentile CI resampling WITHIN each arm (paired by index of the
@@ -266,26 +278,40 @@ def corpus(out: Path, cache: Path, legs: Optional[Dict[str, Dict[str, Any]]] = N
             if not trades:
                 per_leg[leg] = {"read_state": "producer_failed", "note": "empty trades file"}
                 continue
-            first = min((parse_ts(t.get("entry_time")) for t in trades if t.get("entry_time")), default=now)
-            days = max(60, int((now - first).days) + 5)
-            bars_leg, leg_err = load_bars(sym, tf, days, cache)
-            bars_d1, d1_err = (load_bars(sym, "1d", days, cache) if tf != "1d" else (bars_leg, leg_err))
+            first = min((parse_ts(_entry_ts(t)) for t in trades if _entry_ts(t)), default=now)
+            days = max(60, int((now - first).days) + 40)          # + 40: >= MIN_BARS closed daily bars before the first trade
+            # Per-trade symbol: a pooled corpus (ml_entry: 5 symbols) labels each trade on ITS OWN symbol's bars,
+            # never the config's symbols[0]. Single-symbol corpora load exactly one pair, as before.
+            by_sym: Dict[str, Tuple[Any, Any, Any, Any]] = {}
+            for s_ in sorted({str(t.get("symbol") or sym) for t in trades}):
+                bl, le = load_bars(s_, tf, days, cache, base="1d" if tf == "1d" else None)
+                bd, de = (load_bars(s_, "1d", days, cache, base="1d") if tf != "1d" else (bl, le))
+                by_sym[s_] = (bl, le, bd, de)
+            bars_leg, leg_err, bars_d1, d1_err = by_sym.get(sym) or next(iter(by_sym.values()))
+            errs = sorted({e for v in by_sym.values() for e in (v[1], v[3]) if e})
+            leg_err = leg_err or (errs[0] if errs else None)
         arms: Dict[str, List[float]] = {"with_trend": [], "counter_trend": []}
         counts = Counter()
         for t in trades:
-            lab = label_trade({"id": t.get("id"), "timestamp": t.get("entry_time"), "direction": t.get("direction"),
-                               "strategy_name": leg, "symbol": sym}, tf, bars_leg, bars_d1)
+            tsym = str(t.get("symbol") or sym)
+            if trades_by_leg is None and tsym in by_sym:
+                t_leg_bars, _, t_d1_bars, _ = by_sym[tsym]
+            else:
+                t_leg_bars, t_d1_bars = bars_leg, bars_d1
+            lab = label_trade({"id": t.get("id"), "timestamp": _entry_ts(t), "direction": t.get("direction") or t.get("side"),
+                               "strategy_name": leg, "symbol": tsym}, tf, t_leg_bars, t_d1_bars)
             L = lab["LEG"]["label"]
             counts[L if L else ("missing:" + str(lab["LEG"]["missing_reason"]))] += 1
             counts["D1:" + str(lab["D1"]["label"] or ("missing:" + str(lab["D1"]["missing_reason"])))] += 1
             r = t.get("net_r")
             if L in arms and isinstance(r, (int, float)):
                 arms[L].append(float(r))
-            labelled_rows.append({"leg": leg, "trade_id": t.get("id"), "entry_time": t.get("entry_time"),
+            labelled_rows.append({"leg": leg, "trade_id": t.get("id"), "entry_time": _entry_ts(t),
                                   "net_r": r, "LEG_label": L, "D1_label": lab["D1"]["label"],
                                   "agreement": lab["agreement"]})
         nw, nc = len(arms["with_trend"]), len(arms["counter_trend"])
         block: Dict[str, Any] = {"symbol": sym, "tf": tf, "n_trades": len(trades),
+                                 "symbols": sorted({str(t.get("symbol") or sym) for t in trades}),
                                  "n_with": nw, "n_counter": nc,
                                  "counts": dict(counts), "leg_err": leg_err, "d1_err": d1_err,
                                  "mean_net_r_with": round(float(np.mean(arms["with_trend"])), 5) if nw else None,
@@ -355,10 +381,13 @@ def _base_interval(tf: str) -> str:
     return tf if TF_DELTA[tf] < timedelta(hours=1) else "1h"
 
 
-def load_bars(symbol: str, tf: str, days: int, cache: Path) -> Tuple[Optional[pd.DataFrame], Optional[str]]:
-    """(bars, None) or (None, error text). Fetches the base interval through regime_debt_matrix's feed router."""
+def load_bars(symbol: str, tf: str, days: int, cache: Path,
+              base: Optional[str] = None) -> Tuple[Optional[pd.DataFrame], Optional[str]]:
+    """(bars, None) or (None, error text). Fetches the base interval through regime_debt_matrix's feed router.
+    ``base`` overrides the fetched interval (the corpus driver asks for 1d directly: a 1h base is capped at
+    ~730 days on Yahoo, which truncated multi-year 1d corpora to their last two years)."""
     import regime_debt_matrix as rdm
-    base = _base_interval(tf)
+    base = base or _base_interval(tf)
     path = cache / f"{symbol}_{base}_{days}d.csv"
     try:
         if not path.exists():
@@ -509,6 +538,9 @@ def self_test() -> int:
                    trades_by_leg={"legA_matters": A, "legB_nodiff": B})["measurement"]["by_leg"]["legA_matters"]["D"]
             == bl["legA_matters"]["D"])
         chk("corpus: labels.jsonl written, one row per trade", sum(1 for _ in (Path(td) / "labels.jsonl").open()) == len(A) + len(B))
+    chk("corpus: an ML-corpus row (decision_ts + side) is labelled, not no_entry_time",
+        label_trade({"id": 9, "timestamp": _entry_ts({"decision_ts": entries[10].isoformat()}),
+                     "direction": {"side": "long"}.get("side")}, "1d", up, up)["LEG"]["label"] is not None)
     # A leg below the floor is INDETERMINATE and does not gate the family.
     with tempfile.TemporaryDirectory() as td:
         small = {"legC": {"symbol": "CCC", "tf": "1d", "bars_leg": up, "bars_d1": up}}

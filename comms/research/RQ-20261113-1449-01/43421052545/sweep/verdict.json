@@ -1,0 +1,334 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "tqqq_trend_long_1d: 43 trades in the baseline arm 'D30' on TQQQ 1d candles 2020-07-27 00:00:00+00:00 .. 2026-11-12 00:00:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['D30', 'D20']",
+  "n": 43,
+  "measurement": {
+    "leg": "tqqq_trend_long_1d",
+    "label": "reachable_lever_beats_removed",
+    "grade": {
+      "verdict": "pass",
+      "label": "reachable_lever_beats_removed",
+      "best": "D20",
+      "baseline": "D30",
+      "candidates": {
+        "D20": {
+          "delta_net_r": 3.1616,
+          "delta_max_drawdown_r": -1.0061,
+          "fold_wins": 3,
+          "passes": true
+        }
+      },
+      "delta_r_bar": 0.0,
+      "fold_majority": 3,
+      "n_floor": 25,
+      "control": null,
+      "why": "D20 beats the removed-lever baseline by 3.1616 R with no worse drawdown and >= 3/4 fold wins: a Tier-3 proposal to declare it (not done here)"
+    },
+    "arms": {
+      "D30": {
+        "reach_ge_6r": 0.0,
+        "n": 43,
+        "net_r": 9.6083,
+        "net_r_fee_only": 9.8546,
+        "max_drawdown_r": 4.6601,
+        "by_outcome": {
+          "take_profit": 25,
+          "trail_stop": 4,
+          "stop": 14
+        },
+        "mean_bars_held": 10.744,
+        "net_r_per_capital_day": 0.0208,
+        "cost_stack": {
+          "fee_bps_roundtrip": 0.0,
+          "slippage_bps_roundtrip": 5.0,
+          "funding_bps_per_window": 0.0
+        },
+        "params": {
+          "donchian": 30,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 4.0,
+          "min_confidence": 0.0
+        },
+        "data_start": "2020-07-27 00:00:00+00:00",
+        "data_end": "2026-11-12 00:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2020-07-27 00:00:00+00:00",
+            "end": "2022-02-21 18:00:00+00:00",
+            "trades": 7,
+            "net_r": 0.2795
+          },
+          {
+            "fold": 2,
+            "start": "2022-02-21 18:00:00+00:00",
+            "end": "2023-09-19 12:00:00+00:00",
+            "trades": 9,
+            "net_r": 0.7853
+          },
+          {
+            "fold": 3,
+            "start": "2023-09-19 12:00:00+00:00",
+            "end": "2025-04-16 06:00:00+00:00",
+            "trades": 12,
+            "net_r": 4.9407
+          },
+          {
+            "fold": 4,
+            "start": "2025-04-16 06:00:00+00:00",
+            "end": "2026-11-12 00:00:00+00:00",
+            "trades": 15,
+            "net_r": 3.6026
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "30",
+          "--data",
+          "<data>",
+          "--symbol",
+          "TQQQ",
+          "--resample",
+          "1d",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261113-1449-01/43421052545/sweep/arms/D30__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261113-1449-01/43421052545/sweep/arms/D30__bt.json",
+          "--long-only",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "1.5",
+          "--decision-bar",
+          "forming",
+          "--minutes-1m-csv",
+          "<minutes_1m>",
+          "--strategy-name",
+          "tqqq_trend_long_1d",
+          "--decision-session",
+          "us_equity"
+        ]
+      },
+      "D20": {
+        "reach_ge_6r": 0.0,
+        "n": 54,
+        "net_r": 12.7699,
+        "net_r_fee_only": 13.0601,
+        "max_drawdown_r": 3.654,
+        "by_outcome": {
+          "take_profit": 33,
+          "stop": 19,
+          "trail_stop": 2
+        },
+        "mean_bars_held": 9.963,
+        "net_r_per_capital_day": 0.0237,
+        "cost_stack": {
+          "fee_bps_roundtrip": 0.0,
+          "slippage_bps_roundtrip": 5.0,
+          "funding_bps_per_window": 0.0
+        },
+        "params": {
+          "donchian": 20,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 4.0,
+          "min_confidence": 0.0
+        },
+        "data_start": "2020-07-27 00:00:00+00:00",
+        "data_end": "2026-11-12 00:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2020-07-27 00:00:00+00:00",
+            "end": "2022-02-21 18:00:00+00:00",
+            "trades": 7,
+            "net_r": 3.7281
+          },
+          {
+            "fold": 2,
+            "start": "2022-02-21 18:00:00+00:00",
+            "end": "2023-09-19 12:00:00+00:00",
+            "trades": 14,
+            "net_r": 2.5133
+          },
+          {
+            "fold": 3,
+            "start": "2023-09-19 12:00:00+00:00",
+            "end": "2025-04-16 06:00:00+00:00",
+            "trades": 14,
+            "net_r": 5.1975
+          },
+          {
+            "fold": 4,
+            "start": "2025-04-16 06:00:00+00:00",
+            "end": "2026-11-12 00:00:00+00:00",
+            "trades": 19,
+            "net_r": 1.3309
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "TQQQ",
+          "--resample",
+          "1d",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261113-1449-01/43421052545/sweep/arms/D20__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261113-1449-01/43421052545/sweep/arms/D20__bt.json",
+          "--long-only",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "1.5",
+          "--decision-bar",
+          "forming",
+          "--minutes-1m-csv",
+          "<minutes_1m>",
+          "--strategy-name",
+          "tqqq_trend_long_1d",
+          "--decision-session",
+          "us_equity"
+        ]
+      }
+    },
+    "window": {
+      "start": null,
+      "end": null,
+      "fetch_days": 740,
+      "feed": {
+        "resample": "1d",
+        "source": "explicit --data-csv"
+      },
+      "fold_edges": [
+        "2020-07-27 00:00:00+00:00",
+        "2022-02-21 18:00:00+00:00",
+        "2023-09-19 12:00:00+00:00",
+        "2025-04-16 06:00:00+00:00",
+        "2026-11-12 00:00:00+00:00"
+      ]
+    },
+    "argv": {
+      "D30": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "30",
+          "--data",
+          "<data>",
+          "--symbol",
+          "TQQQ",
+          "--resample",
+          "1d",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261113-1449-01/43421052545/sweep/arms/D30__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261113-1449-01/43421052545/sweep/arms/D30__bt.json",
+          "--long-only",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "1.5",
+          "--decision-bar",
+          "forming",
+          "--minutes-1m-csv",
+          "<minutes_1m>",
+          "--strategy-name",
+          "tqqq_trend_long_1d",
+          "--decision-session",
+          "us_equity"
+        ],
+        "cfg_set": {
+          "donchian": 30
+        },
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": []
+      },
+      "D20": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "TQQQ",
+          "--resample",
+          "1d",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261113-1449-01/43421052545/sweep/arms/D20__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261113-1449-01/43421052545/sweep/arms/D20__bt.json",
+          "--long-only",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "1.5",
+          "--decision-bar",
+          "forming",
+          "--minutes-1m-csv",
+          "<minutes_1m>",
+          "--strategy-name",
+          "tqqq_trend_long_1d",
+          "--decision-session",
+          "us_equity"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": []
+      }
+    }
+  },
+  "note": "PASS / reachable_lever_beats_removed: D20 beats the removed-lever baseline by 3.1616 R with no worse drawdown and >= 3/4 fold wins: a Tier-3 proposal to declare it (not done here)"
+}

@@ -226,13 +226,11 @@ FIDELITY_OPERATOR_WAIVER: Dict[Tuple[str, str], str] = {
 #: C5 PENDING RE-MEASURE -- (account, leg) -> (owning row, expiry YYYY-MM-DD). See the
 #: module docstring: NOT a waiver, NOT a baseline, read by NO verdict (C5 stays fail-closed);
 #: only the exactness test reads it, and it fails on or after the expiry date. Exactly one
-#: entry, manager OK 2026-11-13 ~09:27Z. tqqq_trend_long_1d decides on the FORMING daily bar
-#: (no decision_bar), and the trend harness cannot replay forming bars for equities yet, so
-#: its record honestly reads approximate (omitted_levers [decision_bar]) until
-#: EQ-FORMING-BAR-REPLAY lands (operator TQQQ-DECISION-BAR = "build_replay", 2026-11-13 08:02Z).
-FIDELITY_PENDING_REMEASURE: Dict[Tuple[str, str], Tuple[str, str]] = {
-    ("alpaca_live", "tqqq_trend_long_1d"): ("EQ-FORMING-BAR-REPLAY", "2026-11-27"),
-}
+#: entry, manager OK 2026-11-13 ~09:27Z. EMPTY since 2026-11-13: the one entry
+#: (alpaca_live / tqqq_trend_long_1d, row EQ-FORMING-BAR-REPLAY) was deleted when
+#: RQ-20261113-1449-01 run 43421052545 regenerated its record faithful (forming-bar replay from
+#: Alpaca 1m, omitted_levers []). The class stays; a new entry still needs a manager OK.
+FIDELITY_PENDING_REMEASURE: Dict[Tuple[str, str], Tuple[str, str]] = {}
 
 
 # --------------------------------------------------------------------------

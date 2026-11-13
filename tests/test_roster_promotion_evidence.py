@@ -357,16 +357,18 @@ def test_c5_baseline_is_exactly_the_approximate_risk_bearing_slots():
 
 
 def test_pending_remeasure_is_exactly_the_one_approved_entry():
-    """Manager OK 2026-11-13: exactly ONE entry, keyed to EQ-FORMING-BAR-REPLAY, expiring
-    2026-11-27. Any other slot needs a manager OK, so the dict cannot grow silently."""
-    assert G.FIDELITY_PENDING_REMEASURE == {
-        ("alpaca_live", "tqqq_trend_long_1d"): ("EQ-FORMING-BAR-REPLAY", "2026-11-27")}
+    """Manager OK 2026-11-13 allowed exactly ONE entry (EQ-FORMING-BAR-REPLAY); it was deleted the same
+    day when RQ-20261113-1449-01 regenerated the tqqq record faithful. The dict is now EMPTY, and any new
+    slot needs a manager OK, so it cannot grow silently."""
+    assert G.FIDELITY_PENDING_REMEASURE == {}
 
 
 def test_pending_remeasure_never_passes_c5():
     """The pending class changes NO verdict: C5 stays fail-closed for a promotion of the pending
     slot itself (on its real committed record and on a planted approximate one), and for any
     other slot."""
+    if not G.FIDELITY_PENDING_REMEASURE:
+        pytest.skip("FIDELITY_PENDING_REMEASURE is empty: no pending slot to hold to fail-closed C5")
     (acct, leg), _ = next(iter(G.FIDELITY_PENDING_REMEASURE.items()))
     real = json.loads((EVIDENCE / f"{leg}.json").read_text(encoding="utf-8"))
     assert real["fidelity"] == "approximate", "the pending slot's record must read approximate honestly"

@@ -55,9 +55,9 @@ _LOOKBACK_BUFFER_DAYS = 10
 # Bars pagination (row ML-ENTRY-ALPACA-BAR-PARITY): Alpaca's per-request cap, and a bound on pages per fetch.
 _PAGE_LIMIT_MAX = 10000
 _MAX_PAGES = 10
-# Multi-symbol bars (row ML-EQ-ENTRY-TIMING): symbols per request (keeps the URL short), and a bound on pages per chunk. A full-window seed
-# of 173 ETFs is at most ~470k 1h bars (ESTIMATED: ~168 sessions in the ~235-day lookback x <= 16 extended-hours bars), i.e. <= ~50 pages
-# of 10k; an incremental pass is 1 page.
+# Multi-symbol bars (row ML-EQ-ENTRY-TIMING): symbols per request (keeps the URL short), and a bound on pages per chunk. Pages come back far
+# smaller than ``limit`` (MEASURED 2026-11-12: a ~235-day window for 100 ETFs did not finish in 200 pages), so this endpoint serves only the
+# refresher's INCREMENTAL read (~32 bars per symbol); full-window seeds stay per symbol (ml_entry_eq_refresher.BarCache.update).
 _MULTI_CHUNK = 100
 _MULTI_MAX_PAGES = 200
 

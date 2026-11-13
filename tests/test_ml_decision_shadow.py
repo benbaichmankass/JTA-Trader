@@ -120,6 +120,22 @@ def test_batched_rows_are_bit_identical_to_decision_row(b):
     assert got["ZILUSDT"] is None
 
 
+@pytest.mark.parametrize("back", [10, 150, 300])
+def test_batched_rows_stay_bit_identical_on_a_holed_frame(back):
+    """ML-ENTRY-SERVING-HOLE-GUARD: both paths regrid the same way, so a hole changes neither's agreement."""
+    import src.runtime.ml_decision_features as F
+    prep = _prepared(B4)
+    frames = {s: sb.hourly for s, sb in prep.items()}
+    eth = frames["ETHUSDT"]
+    n = len(eth)
+    if n <= back + 3:
+        pytest.skip(f"frame has {n} bars")
+    frames["ETHUSDT"] = eth.drop(index=eth.index[n - back:n - back + 3]).reset_index(drop=True)
+    got = M.decision_rows(frames, SYMS)
+    for s in SYMS:
+        assert got[s] == F.decision_row(s, frames), s
+
+
 def test_off_4h_rows_are_never_trading_bars():
     pytest.importorskip("lightgbm")
     models = _models()

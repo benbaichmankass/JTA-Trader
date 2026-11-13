@@ -2,7 +2,7 @@
 id: RQ-20261101-78fc-09
 title: 'ITERATION 1 of ltr-tighten-sl (fail): is the tighten loss confined to the EARLY cell, i.e. does a tighten allowed only at open >= +1 R
   with stop >= break-even and >= 1 ATR of room clear RULE-AM-RISK-ADJUSTED-V1?'
-status: blocked
+status: queued
 cadence: once
 theme: live_strategy
 priority: 1
@@ -71,12 +71,65 @@ related:
 - RESEARCH-ITERATE
 - BOOK-SIM-REAL-SIZER
 what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
-blocked_on:
-- kind: work_item
+cleared_blocker:
+  kind: work_item
   ref: BOOK-SIM-REAL-SIZER
-  what: a cell-restricted tighten arm in exit_lever_ablation --grade risk_adjusted (raw flags for the +1R / BE / 1 ATR gate) -- or, sooner, the
-    e1a7-01 corpus wrapper
-  clears_when: the arm flags land with a self-test; then git-mv to research/queue/ (rule unchanged)
+  what: 'the cell-restricted tighten arm: --cell-tighten-* flags in scripts/backtest_trend.py and scripts/backtest_pullback.py
+    (scripts/research/cell_tighten.py): one-shot stop move to close -/+ 1 ATR once open R >= +1, never below break-even, never
+    looser; mode random = the matched random control in the same cell (seeded, p 0.5 per in-cell bar, no lookahead).'
+  cleared_by: 'the PR that adds the lever with tests (build gap (c), manager order 2026-11-13 04:00Z); rule unchanged.'
+population_note: 'The real-money legs are production per scripts/ops/strategy_status.py on 2026-11-13 (8 legs). The 6 with a Stage-0
+  harness are run and pooled; ml_entry and ml_entry_eq_struct have no harness path (ML decision legs) and are out of this unit, stated
+  rather than silently dropped. Each leg runs over its committed record''s window_days (tqqq 6200, slv_1h 365, sol_prop 2170, xrp_4h
+  1460, xrp_adx25 1460 (no reproduce block; its 4h sibling''s window), ada_2h 365). Arms fixed before any run: H = hold (the leg as
+  declared), T = cell tighten (first in-cell close), C = matched random control (same cell, seed 20261113).'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/am_risk_adjusted.py
+  - run-legs
+  - --leg
+  - tqqq_trend_long_1d
+  - --leg
+  - slv_trend_1h
+  - --leg
+  - trend_donchian_sol_prop
+  - --leg
+  - trend_donchian_xrp_4h
+  - --leg
+  - trend_donchian_xrp_adx25
+  - --leg
+  - ada_pullback_2h
+  - --arm
+  - H=
+  - --arm
+  - T=--cell-tighten-min-r=1.0;--cell-tighten-room-atr=1.0
+  - --arm
+  - C=--cell-tighten-min-r=1.0;--cell-tighten-room-atr=1.0;--cell-tighten-mode=random;--cell-tighten-random-p=0.5;--cell-tighten-seed=20261113
+  - --baseline
+  - H
+  - --candidate
+  - T
+  - --random-control
+  - T=C
+  - --leg-args
+  - tqqq_trend_long_1d=--days=6200
+  - --leg-args
+  - slv_trend_1h=--days=365
+  - --leg-args
+  - trend_donchian_sol_prop=--days=2170
+  - --leg-args
+  - trend_donchian_xrp_4h=--days=1460
+  - --leg-args
+  - trend_donchian_xrp_adx25=--days=1460
+  - --leg-args
+  - ada_pullback_2h=--days=365
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261101-78fc-09
 intervention_controls:
   hold_to_bracket: true
   matched_random:

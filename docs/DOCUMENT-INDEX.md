@@ -1090,6 +1090,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/programmes/RESEARCH-MAP.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | The five research programmes, their measures, cross-programme feeds and infra needs (weekly planning 2026-10-14). |
 | `docs/research/prop-gate-edge-regrade-2026-10-31/RESULT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/prop-eth4h-tp4-2026-11-13/fidelity/README.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/prop-ml-new-data-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/reduce-fill-qty-2026-10-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/replace-grade-control-regrade-2026-10-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/repo-private-transition-2026-10-08.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
