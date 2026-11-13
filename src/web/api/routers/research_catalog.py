@@ -4,6 +4,10 @@
   resulted, blocked, retired) with search, facet filters, sorting, pagination, facet counts
   and a "stay on top" block (new since ``since``, stuck, due, recent verdicts).
 - ``GET /api/bot/research/catalog/{unit_id}`` -- one unit in full, with its landed result rows.
+- ``GET /api/bot/research/registry`` -- the IDEA-level R&D registry (operator 2026-11-12, lane RD-REGISTRY):
+  one entry per strategy / ML idea with a computed stage (``src/runtime/rd_registry.py``). Built from the
+  catalog above plus the live trainer-mirror ML registry rows; falls back to the committed
+  ``comms/research/rd_registry.json`` if the build fails. Additive read route; gates nothing.
 
 Projected ONLY from files committed to this public repo (``research/queue``, ``research/results``,
 ``research/THEMES.yaml``, ``docs/roadmap/milestones.yaml``) -- no DB, no secrets, no new table, so it
@@ -26,6 +30,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query
 
+from src.runtime import rd_registry as rdr
 from src.runtime import research_catalog as rc
 from src.utils.paths import repo_root
 from src.web.api._swr import SWRCache
@@ -36,6 +41,7 @@ router = APIRouter(prefix="/api/bot/research", tags=["research"])
 
 _UNIT_ID_RE = re.compile(r"^RQ-[0-9A-Za-z-]{4,40}$")
 _SWR = SWRCache(name="research-catalog", fresh_s=30.0, stale_s=300.0)
+_SWR_REG = SWRCache(name="research-registry", fresh_s=300.0, stale_s=1800.0)
 
 
 def _catalog() -> dict[str, Any]:
@@ -108,3 +114,48 @@ def get_catalog_unit(unit_id: str) -> dict[str, Any]:
             "resultRows": [{k: v for k, v in r.items() if k != "_file"} | {"file": r.get("_file")}
                            for r in rows[:20]],
             "resultRowsTruncated": len(rows) > 20}
+
+
+def _registry() -> dict[str, Any]:
+    root = Path(repo_root())
+    live_rows = None
+    try:
+        from src.web.api.routers import training_center
+        reg = training_center.get_registry()
+        live_rows = reg.get("rows") if isinstance(reg, dict) else None
+    except Exception as exc:  # noqa: BLE001  # allow-silent: falls back to the committed snapshot, stated in read_state.ml_registry
+        logger.warning("research registry: live ML registry unreadable: %s", exc)
+    doc = rdr.build_registry(root, catalog=_get(), live_registry_rows=live_rows or None)
+    doc["cross_check"] = {"ok": None, "problems": None, "note": "run scripts/research/rd_registry.py for the cross-check"}
+    doc["servedFrom"] = "built"
+    return doc
+
+
+@router.get("/registry")
+def get_registry(
+    track: str | None = Query(None, pattern="^(STRATEGY|ML)$"),
+    stage: Annotated[list[str] | None, Query()] = None,
+    q: str = Query("", max_length=200),
+) -> dict[str, Any]:
+    """The idea-level R&D registry. Optional filters narrow ``ideas``; ``summary`` is always the whole registry."""
+    try:
+        doc, _age, swr_state = _SWR_REG.get("registry", _registry)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: falls back to the committed file, stated as servedFrom/readState
+        logger.warning("research registry build failed: %s", exc)
+        path = Path(repo_root()) / "comms" / "research" / "rd_registry.json"
+        try:
+            import json as _json
+            doc = _json.loads(path.read_text(encoding="utf-8"))
+            doc["servedFrom"] = f"committed file (live build failed: {type(exc).__name__})"
+            swr_state = "fallback"
+        except Exception:  # noqa: BLE001  # allow-silent: surfaced as present False + readState unreadable
+            return {"present": False, "readState": "unreadable", "reason": type(exc).__name__,
+                    "ideas": [], "summary": None}
+    stages = set(_csv(stage))
+    terms = [t for t in q.lower().split() if t]
+    ideas = [i for i in doc.get("ideas") or []
+             if (not track or i.get("track") == track) and (not stages or i.get("stage") in stages)
+             and all(t in f"{i.get('id')} {i.get('name')} {i.get('stage_reason')}".lower() for t in terms)]
+    return {**doc, "present": True, "readState": "read", "cache": swr_state,
+            "matched": len(ideas), "ideas": ideas,
+            "freshness": "built from the VM working tree (ict-git-sync pulls main ~every 5 min); cached 5 min"}

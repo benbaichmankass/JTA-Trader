@@ -1036,6 +1036,36 @@ def due(items: Iterable[dict], today: date | None = None) -> list[dict]:
     return [i for i in items if is_due(i, today)]
 
 
+# ── VM change ledger fold-backs (VM-CHANGE-LEDGER, operator 2026-11-12 "Build it") ─────────────────────────────
+# A direct change on the VM (src/runtime/ops_actions.py ledger) whose `durable_in_repo` is still `pending` is due
+# work: lasting config must be re-expressed in the repo's deploy files, or marked not_needed with a reason. The
+# ledger IS the record (the ops jobs store, extended); this function only computes due-ness over it, in the same
+# pipeline-item shape `due()` returns, so the brief surfaces it as a due item. No second register, nothing stored.
+
+def vm_ledger_due(view: dict | None) -> list[dict]:
+    """Pipeline-shaped DUE items for every ledger entry with ``fold_due`` (pending and older than the ledger's
+    ``fold_due_after_h``). ``view`` is ``ops_actions.ledger_view()``; None / unreadable -> []. The caller renders
+    the read_state, so an unread ledger is never shown as "nothing due"."""
+    if not isinstance(view, dict) or view.get("read_state") != "measured":
+        return []
+    out = []
+    for e in view.get("entries") or []:
+        if not e.get("fold_due"):
+            continue
+        out.append({
+            "id": f"VMLEDGER-{e.get('job_id')}",
+            "what": f"VM change awaiting fold-back to the repo: {e.get('summary') or e.get('action')}",
+            "state": "routed", "routed_to": "VM-CHANGE-LEDGER",
+            "origin": {"kind": "deploy", "ref": e.get("job_id"),
+                       "rerun": "GET /api/bot/ops/ledger?pending=1"},
+            "due_when": {"kind": "observation",
+                         "clears_when": "ledger-fold sets durable_in_repo to folded (with the PR/path) or not_needed"},
+            "next_action": "dispatch_lane",   # a fold-back is lane work (NEXT_ACTIONS); the brief prints `fold_back`
+            "age_h": e.get("age_h"), "session": e.get("session"), "touched": e.get("touched") or [],
+        })
+    return out
+
+
 def unrouted(items: Iterable[dict], today: date | None = None) -> list[dict]:
     """Due, and nobody has taken it. THIS is the number section 5 reports.
 

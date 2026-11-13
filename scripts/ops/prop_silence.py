@@ -175,14 +175,35 @@ def account_mode(account: str) -> str | None:
         return None
 
 
+def account_roster(account: str) -> list | None:
+    """``config/accounts.yaml::<account>.strategies`` or None when it cannot be read."""
+    try:
+        from src.config.accounts_loader import load_accounts_dict  # noqa: PLC0415
+        roster = load_accounts_dict()[account].get("strategies")
+        return list(roster) if isinstance(roster, (list, tuple)) else None
+    except Exception:  # noqa: BLE001 — unreadable == unknown, never "empty"
+        return None
+
+
+# The phone executor is SHADOWED (docs/reference/shadowed-features.yaml::phone_executor_heartbeat):
+# the operator uninstalled the app on 2026-11-12 and breakout_2 is on ice with an empty roster.
+# An account that routes no strategy sends no ticket the phone could carry, so its heartbeat is
+# not required. Only a READ empty roster says so; an unreadable roster keeps the old behaviour.
+_SHADOWED_DETAIL = ("roster empty — phone executor shadowed, heartbeat not required "
+                    "(re-entry: operator reinstalls the app and a strategy is rostered)")
+
+
 def probe_phone_heartbeat(now: datetime, fetch: Fetch = api_get,
-                          mode_reader: Callable[[str], str | None] = account_mode) -> dict:
+                          mode_reader: Callable[[str], str | None] = account_mode,
+                          roster_reader: Callable[[str], list | None] = account_roster) -> dict:
     mode = mode_reader(PHONE_ACCOUNT)
     if mode is None:
         return _probe(UNKNOWN, f"{PHONE_ACCOUNT}: mode unreadable — cannot tell if the "
                                f"heartbeat is expected")
     if mode != "live":
         return _probe(OK, f"{PHONE_ACCOUNT}: mode {mode} — heartbeat not required")
+    if roster_reader(PHONE_ACCOUNT) == []:
+        return _probe(OK, f"{PHONE_ACCOUNT}: {_SHADOWED_DETAIL}")
     st, data = fetch(f"/api/bot/prop/status?account_id={PHONE_ACCOUNT}")
     if st != "read" or not isinstance(data, dict) or "phone_heartbeat" not in data:
         # a missing key is the route's own error envelope — we did not look
@@ -203,13 +224,16 @@ def probe_phone_heartbeat(now: datetime, fetch: Fetch = api_get,
 
 
 def probe_phone_login(now: datetime, fetch: Fetch = api_get,
-                      mode_reader: Callable[[str], str | None] = account_mode) -> dict:
+                      mode_reader: Callable[[str], str | None] = account_mode,
+                      roster_reader: Callable[[str], list | None] = account_roster) -> dict:
     """Heartbeat alive + account_status stale = the phone runs but is not logged in on the terminal."""
     mode = mode_reader(PHONE_ACCOUNT)
     if mode is None:
         return _probe(UNKNOWN, f"{PHONE_ACCOUNT}: mode unreadable — cannot tell if a login is expected")
     if mode != "live":
         return _probe(OK, f"{PHONE_ACCOUNT}: mode {mode} — login not required")
+    if roster_reader(PHONE_ACCOUNT) == []:
+        return _probe(OK, f"{PHONE_ACCOUNT}: {_SHADOWED_DETAIL}")
     st, data = fetch(f"/api/bot/prop/status?account_id={PHONE_ACCOUNT}")
     if st != "read" or not isinstance(data, dict) or "phone_heartbeat" not in data:
         return _probe(UNKNOWN, f"{PHONE_ACCOUNT}: could not read prop status ({data})")
