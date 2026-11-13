@@ -3,47 +3,47 @@
   "strategy": "tlt_pullback_1h",
   "symbol": "TLT",
   "timeframe": "1h",
-  "config_fingerprint": "sha256:741a91aaa5df103977ff8890b2f1822c",
+  "config_fingerprint": "sha256:e62456ce471dcf4996597b5ce90d9d60",
   "basis": "harness_timefolds",
   "coverage_state": "measured",
   "fidelity": "faithful",
   "omitted_levers": [],
-  "net_r_oos": 0.2321,
-  "expectancy_r_oos": 0.0023,
-  "n_trades_oos": 101,
+  "net_r_oos": 4.1126,
+  "expectancy_r_oos": 0.0748,
+  "n_trades_oos": 55,
   "folds": 4,
   "fold_detail": [
     {
       "fold": 1,
-      "trades": 25,
-      "net_r": 1.3505,
-      "expectancy_r": 0.054,
-      "start": "2025-06-20 15:00:00+00:00",
-      "end": "2025-11-04 16:00:00+00:00"
+      "trades": 13,
+      "net_r": -0.7106,
+      "expectancy_r": -0.0547,
+      "start": "2025-07-10 14:00:00+00:00",
+      "end": "2025-11-11 18:00:00+00:00"
     },
     {
       "fold": 2,
-      "trades": 25,
-      "net_r": -10.5344,
-      "expectancy_r": -0.4214,
-      "start": "2025-11-06 18:00:00+00:00",
-      "end": "2026-02-18 21:00:00+00:00"
+      "trades": 13,
+      "net_r": -5.6904,
+      "expectancy_r": -0.4377,
+      "start": "2025-11-17 21:00:00+00:00",
+      "end": "2026-02-05 19:00:00+00:00"
     },
     {
       "fold": 3,
-      "trades": 25,
-      "net_r": 10.5139,
-      "expectancy_r": 0.4206,
+      "trades": 13,
+      "net_r": 9.5353,
+      "expectancy_r": 0.7335,
       "start": "2026-03-03 21:00:00+00:00",
-      "end": "2026-06-15 19:00:00+00:00"
+      "end": "2026-06-09 17:00:00+00:00"
     },
     {
       "fold": 4,
-      "trades": 26,
-      "net_r": -1.0979,
-      "expectancy_r": -0.0422,
-      "start": "2026-06-22 19:00:00+00:00",
-      "end": "2026-11-09 15:00:00+00:00"
+      "trades": 16,
+      "net_r": 0.9783,
+      "expectancy_r": 0.0611,
+      "start": "2026-06-11 16:00:00+00:00",
+      "end": "2026-10-07 19:00:00+00:00"
     }
   ],
   "folds_positive": 2,
@@ -51,11 +51,11 @@
   "fee_bps_roundtrip": 0.0,
   "path_stats": {
     "series_location": "source_run (the per-trade rows, in order, with net_r)",
-    "n": 101,
-    "max_drawdown_r": 15.5651,
-    "max_drawdown_at_trade": 48,
-    "final_equity_r": 0.2321,
-    "max_equity_r": 7.3925,
+    "n": 55,
+    "max_drawdown_r": 8.4199,
+    "max_drawdown_at_trade": 28,
+    "final_equity_r": 4.1126,
+    "max_equity_r": 6.0606,
     "worst_trade_r": -1.1744,
     "best_trade_r": 5.992,
     "worst_day_r": -1.7996,
@@ -71,7 +71,7 @@
     "unit": "bps_roundtrip (funding: bps per funding window)",
     "source": "comms/strategy_evidence/runs/2026-11-12/tlt_pullback_1h__bt.json"
   },
-  "net_r_oos_fee_only": 10.6485,
+  "net_r_oos_fee_only": 9.8385,
   "decision_rule": {
     "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
     "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
@@ -79,7 +79,7 @@
     "verdict": "pass"
   },
   "param_selection_provenance": "not_established",
-  "generated_at": "2026-11-12T08:25:29.802976+00:00",
+  "generated_at": "2026-11-12T10:58:45.090229+00:00",
   "generated_by": "scripts/ops/build_strategy_evidence.py",
   "source_run": "comms/strategy_evidence/runs/2026-11-12/tlt_pullback_1h__trades.jsonl",
   "error": null,
@@ -90,7 +90,7 @@
     "folds": 4,
     "data_start": "2025-06-02 15:00:00+00:00",
     "data_end": "2026-11-11 21:00:00+00:00",
-    "git_sha": "5a83952251af9b5f37b32a19482d45c726fca697",
+    "git_sha": "63e504d37b6c875a996ae952f2a36bb48401019e",
     "argv": [
       "python3",
       "scripts/ops/build_strategy_evidence.py",
@@ -139,6 +139,6 @@
       "unit": "bps_roundtrip (funding: bps per funding window)"
     },
     "source_run": "comms/research/RQ-20261104-003/41936606348/verdict.json",
-    "provenance": "Copied 2026-11-12 (lane OPDEC-20261112, operator decisions page m9 'Rebuild the evidence record, then promote when it passes') from RQ-20261104-003's committed verdict, unchanged; the leg's config is unchanged since that run (selected_config_fingerprint == this record's config_fingerprint). By side on the same 146 held-back trades (A__trades.jsonl): long n 60 net -3.012 R, short n 86 net +9.425 R. alpaca_live is a long-only cash book (side_filter long, venue shorting_enabled false), so the side it can trade is negative here; see docs/plans/1h-survivor-promotion-proposals-2026-11-12.md."
+    "config_note": "The holdout confirmed the leg BOTH-SIDED (fingerprint sha256:741a91aa...). This record's config differs ONLY by side_filter: short (PROMOTE-TLT-1H-REAL-MONEY, operator w5). On the same 146 held-back trades (A__trades.jsonl) the short subset is n 86, net +9.425 R and the long subset n 60, net -3.012 R; the short-only figure is approximate (dropping longs can free the position slot for a short the both-sided run skipped; not modelled). Not a fresh confirmation: mandate_resolver R-HOLDOUT reads the fingerprint mismatch as NEEDS_DATA, so this routing is a manager merge."
   }
 }

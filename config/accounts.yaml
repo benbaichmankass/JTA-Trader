@@ -1443,7 +1443,14 @@ accounts:
     # 2026-11-12 SLV-1H-PROMOTE (Tier 3; OPERATOR chat ~10:32Z, relayed by Manager Session 2026-11-11a / AM-TRADING, verbatim "I answer that I do want to promote silver."): slv_trend_1h mirrors alpaca_live
     # (superset rule). THIS book trades its SHORT side too (no side_filter, shorting enabled); alpaca_live is a long-only cash book and refuses
     # shorts. ROLLBACK with alpaca_live's line.
-    strategies: [tqqq_trend_long_1d, ml_entry_eq_struct, slv_trend_1h]   # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3; OPERATOR popup ~11:10Z, relayed by Manager Session 2026-11-06a, verbatim "Probe with tqqq_trend_long (Recommended)"):
+    # 2026-11-12 PROMOTE-TLT-1H-REAL-MONEY (Tier 3; operator decisions page w5, verbatim "Enable shorting on alpaca_live for it (Tier 3)",
+    # note "I'm not sure we can do this as I don't think I'm allowed margins there yet, but lets try"; AM-TRADING call (b)/(c)):
+    # tlt_pullback_1h SHORT-ONLY (strategies.yaml side_filter: short) on THIS mirror only, which can short (superset rule: the mirror
+    # carries what live cannot yet trade). It is NOT on alpaca_live: that book is a cash account with shorting_enabled false (MEASURED
+    # 2026-11-12 08:24Z, $194.52, multiplier 1), so a short-only leg there would only journal refusals. Add it to alpaca_live the day
+    # shorting is enabled there. Evidence: comms/strategy_evidence/tlt_pullback_1h.json (short-only, +4.11 R n 55, faithful, RULE-D1
+    # pass) + holdout RQ-20261104-003 short subset +9.43 R n 86 (approximate). ROLLBACK: delete `tlt_pullback_1h` from this list.
+    strategies: [tqqq_trend_long_1d, ml_entry_eq_struct, slv_trend_1h, tlt_pullback_1h]   # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3; OPERATOR popup ~11:10Z, relayed by Manager Session 2026-11-06a, verbatim "Probe with tqqq_trend_long (Recommended)"):
                                        # MECHANICS-ONLY EXCEPTION (kind=mechanics), NOT an edge bet and NOT a promotion (no committed DSR/trial-ledger record for tqqq_trend_long_1d; PROD-LEGS-DSR-DECISION did not measure it). Mirror of alpaca_live (superset rule: alpaca_portfolio carries every alpaca_live leg).
                                        # Purpose: ONE real-money GTC-bracket trade on alpaca_live (entry booked at the venue fill once #23777 lands, bracket at
                                        # the broker, venue exit, correct close reason, graded). REMOVE after that ONE trade closes and is graded: set this back

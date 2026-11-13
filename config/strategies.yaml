@@ -2744,6 +2744,12 @@ strategies:
     trail_mult: 3.0
     trail_decay_stall_bars: 6   # M20 P4.1 decay cell (stall6 tight1.5 wf 5/6; sweep 2026-07-12, PR #6251)
     trail_decay_tight_mult: 1.5
+    # 2026-11-12 PROMOTE-TLT-1H-REAL-MONEY (Tier 3; operator decisions page w5, verbatim "Enable shorting on alpaca_live for it
+    # (Tier 3)"; AM-TRADING call (c): mirror short-only now, alpaca_live OFF until shorting is enabled there). SHORT-ONLY: every
+    # bit of this leg's edge is short and its LONG side loses on both windows (365 d -3.88 R / 46; holdout RQ-20261104-003
+    # -3.01 R / 60). NEVER route TLT longs to real money. Strategy-level, so it binds on every book the leg routes to.
+    # ROLLBACK: delete this line (absent == both sides).
+    side_filter: short
     # Was absent, therefore inherited htf_pullback_trend_2h._DEFAULTS["tp_r"] = 50.0.
     # Written out so the sentinel is visible to `grep tp_r`. RUNTIME-IDENTICAL.
     tp_r: 50.0

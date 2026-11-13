@@ -244,6 +244,10 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # +33.37 R n 108; corroborated by RQ-20261112-5ab1-02 K* 6 R, calibrated). Only tp_revision is owed (no revision rule tested on this leg).
     "alpaca_live/slv_trend_1h": R,
     "alpaca_portfolio/slv_trend_1h": R,
+    # 2026-11-12 PROMOTE-TLT-1H-REAL-MONEY (Tier 3; operator w5 + AM-TRADING (c)): tlt_pullback_1h short-only on the alpaca_portfolio
+    # MIRROR (a paper book), carrying the 50 R sentinel it has always run. RQ-20261112-5ab1-01 (K* 3.5 R) graded INDETERMINATE, so no
+    # predictive TP is established; a harness-native tp_r holdout (the RQ-20261112-5ab1-03 design) is owed BEFORE any alpaca_live line.
+    "alpaca_portfolio/tlt_pullback_1h": ER,
     # 2026-11-08 ML-ENTRY-PROP-BASELINE (Tier-3, operator chat ~23:35Z): ml_entry on the prop books as a measured baseline. The ENTRY bracket is compliant (real predictive 3 ATR TP,
     # declared); the extend-only TP revision cannot reach a phone / manual-ticket venue (revision path absent), so only the revision is owed. velotrade_1 (VM executor) is plumbed and
     # passes. The SL-only structure stop does propagate through the prop trail (src/prop/prop_trail.py structure_exit). Follow-up row ML-ENTRY-PROP-BASELINE.
