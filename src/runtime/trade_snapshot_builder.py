@@ -219,6 +219,8 @@ def requeue_alpaca_candle_partials(conn: sqlite3.Connection, alpaca_symbols: Opt
     """Put Alpaca-symbol partial snapshots that lack candles back in the queue, once. Returns the number re-queued,
     or None when the migration already ran. The stored payload is kept (the chart keeps serving until rebuilt);
     rebuilds go through the builder's normal path and its 1-per-10 s Alpaca pacing."""
+    # data-wiring: bookkeeping sidecar in trade_chart_snapshots.db, NOT a source of truth -- one row per one-off
+    # snapshot migration (name, when, rows touched) so it runs once; no history to backfill (absent = not yet run).
     conn.execute(f"CREATE TABLE IF NOT EXISTS main.{MIGRATIONS_TABLE} (name TEXT PRIMARY KEY, applied_at TEXT, "
                  "rows INTEGER)")
     if conn.execute(f"SELECT 1 FROM main.{MIGRATIONS_TABLE} WHERE name = ?", (REQUEUE_ALPACA_CANDLES,)).fetchone():
