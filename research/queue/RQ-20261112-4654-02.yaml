@@ -1,0 +1,117 @@
+id: RQ-20261112-4654-02
+title: 'ENTRY cost lever: does a higher entry tau (0.20 / 0.30 / 0.50: fewer, larger-predicted trades) beat tau 0.10 under each symbol''s own cost stack
+  on the dev folds?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+origin: new_hypothesis
+practice_precedent: 'M2, M6 (docs/reference/trading-and-model-practice-principles.md): one factor at a time against a declared base, purged walk-forward,
+  costs net of the full stack'
+levers:
+- name: tau
+  values:
+  - 0.1
+  - 0.2
+  - 0.3
+  - 0.5
+  hypothesised_effect: raises dev mean net R per decision by >= +0.03 R vs the base under the per-symbol cost stack, by cutting cost in R faster than gross
+question: 'RQ-20261112-2e3b-01 scored the frozen ml_entry on its 51-symbol Bybit population with each symbol''s own cost stack: mean GROSS +0.0709 R per
+  decision vs mean COST 0.1389 R (net -0.0680, n 12,746). Round-1 levers (b601 brackets, b602 selectivity, b625/b626 4h) were judged under the flat c692-01
+  stack (fee 11 + slip 3 + funding 1 bps/8h), which prices cost at about a third of that. Cost in R = round-trip bps x price / (SL_ATR x ATR). Re-test the
+  lever under the 2e3b-01 per-symbol stack, dev folds only: arms tau in {0.20, 0.30, 0.50} on the base fold predictions (same models, stricter threshold).'
+why_this_matters: ml_entry trades bybit_2 (real money), its mirror and three prop books, and the 2e3b-01 population read says it loses -0.068 R/decision
+  once each symbol pays its own costs. The model's gross edge is positive; the cost-to-gross ratio is the binding problem. A lever that moves that ratio
+  is the cheapest route back to a positive net edge; a LOSS on both closes these two levers for this recipe under real costs.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+power:
+  expected_n: 5000
+  min_detectable_effect: 0.03
+  effect_units: metric
+  sd: 1.1
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: per-decision sd ~1.09 R (2026-11-12 audit, ml_entry held-out); 2e3b-01 took 12,746 decisions in 13 months on 51 symbols, so the 2022-01..2025-09
+    dev folds should yield several thousand base decisions; se of a pooled mean ~1.1/sqrt(5000) = 0.016, so +0.03 is ~2 se, and the 6-of-8 fold condition
+    guards against one window carrying it. Arms below ARM_MIN_N 1000 pooled or 100 in any fold read INDETERMINATE.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Binance Vision 1h klines + fundingRate already published; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261112-4654-02-ENTRY-COST-TAU
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  baseline: 'BASE: the c692-01 recipe refit per dev fold (E.purge_train, the 8 DEV_FOLDS), SL 2 / TP 3 ATR, 24 h horizon, tau 0.10, scored on the same rows
+    with the same one-position-per-symbol policy and the same per-symbol cost stack'
+  statistic: 'scripts/research/ml_entry_cost_levers.py run --lever tau: per arm, pooled and per-fold mean net R per taken decision (gross and cost reported),
+    re-costed with ml_entry_population_test.symbol_costs/recost on the frozen 2e3b-01 population; dev folds only (ts < 2025-10-01).'
+  rule: An arm WINS iff pooled dev n >= 1000 AND every fold n >= 100 AND arm pooled mean net R >= base pooled mean net R + 0.03 AND the arm's fold mean
+    beats the base fold mean in >= 6 of the 8 folds. INDETERMINATE iff a floor is not met; LOSS otherwise. The unit PASSes iff at least one arm WINS, FAILs
+    iff every arm is a LOSS, else INDETERMINATE. Thresholds are not changed after any result.
+  pass_action: the winning arm is a CANDIDATE for one fresh-window read (a new unit, rule first, on data after 2026-10-31); no config, tau or bracket change
+    from this unit
+  fail_action: record the lever closed for this recipe under the per-symbol cost stack on row ML-LEVER-PLAN (research/levers/ml-entry.yaml round-2 entry)
+  what_it_does_not_do: 'Changes no served model, tau, bracket, roster or config. Never reads the held-out year (2025-10..2026-10). One seed. The cost stack
+    is the 2e3b-01 one as registered (quoted spread from the 2026-11 snapshot applied to all dev months -- declared: spreads in 2022-2024 may have been
+    wider).'
+  min_n: 1000 pooled per arm, 100 per fold
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  basis: 'stand-in: ml_entry on bybit_2 + 3 prop books; a tau change is a config-only lever if a later fresh read confirms; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 10.0
+  est_minutes: 90
+  why_runner: Binance public klines + fundingRate and LightGBM refits; no trainer-resident data.
+  basis: 'ESTIMATE: a ~100-symbol 2020-2026 1h fetch (~25-40 min, as RQ-20261108-98e3-26) plus 8 fold refits per labelled table.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_cost_levers.py
+  - run
+  - --lever
+  - tau
+  - --cache
+  - /tmp/ml_entry_cost_klines
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --rule-id
+  - RULE-RQ20261112-4654-02-ENTRY-COST-TAU
+  - --registered-at
+  - '2026-11-12'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261112-4654-02
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: whether ml_entry's entry tau changes to cut cost in R; no change from this unit
+  legs:
+  - ml_entry
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261112-2e3b-01
+- RQ-20261101-b601-01
+- RQ-20261101-b602-01
+- RQ-20261101-b625-01
+- ML-LEVER-PLAN
+- ML-TIMEFRAME
+population: The frozen 2e3b-01 population (51 Bybit USDT perps, F1-F5) on the c692-01 dev folds 2022-01-01..2025-09-30; a lever comparison, not a promotion
+  read.

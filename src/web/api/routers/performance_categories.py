@@ -179,9 +179,13 @@ def get_performance_categories(window: str = "30d", start: Optional[str] = None,
                     first = min(pc._dt(r["closed_at"]) or now for r in data["rows"])
                     wd = max((now - first).total_seconds() / 86400.0, 1e-9)
                 snaps = _snapshots(conn, ids, since, until) if ids else None
+                cap_start = pc._dt(since) if since else (min((pc._dt(r["closed_at"]) for r in data["rows"] if pc._dt(r["closed_at"])),
+                                                              default=None))   # "all": the book's first close
+                cap = _start_capital(conn, ids, cap_start)
                 m = pc.category_metrics(data["rows"], category=cat, window_days=wd, snapshots=snaps)
                 m.update({"label": pc.BOOK_LABELS[cat], "accounts": ids, "n_excluded_null_pnl": data["n_null_pnl"],
-                          "read_state": "measured" if ids else "no_accounts"})
+                          "read_state": "measured" if ids else "no_accounts", **_capital_fields(cap),
+                          "pct": _pct(m["net_pnl_usd"], cap["usd"]), "measured_pct": _pct(m["measured_usd"], cap["usd"])})
                 if breakdown:
                     m["groups"] = pc.breakdown_metrics(data["rows"], category=cat, by=breakdown, window_days=wd,
                                                        snapshots=snaps)
@@ -194,6 +198,15 @@ def get_performance_categories(window: str = "30d", start: Optional[str] = None,
                 "population": None}
     n_closed = sum(c["n_closed"] for c in out)
     total = pc.total_row(out)
+    # total capital: every book that holds accounts needs a base, else None (a partial sum would understate it)
+    holding = [c for c in out if c["accounts"]]
+    t_usd = (round(sum(c["start_capital_usd"] for c in holding), 4)
+             if holding and all(c["start_capital_usd"] is not None for c in holding) else None)
+    t_states = {c["capital_read_state"] for c in holding}
+    total.update({"start_capital_usd": t_usd,
+                  "capital_read_state": ("no_capital_record" if t_usd is None else
+                                         "first_after_start" if "first_after_start" in t_states else "measured"),
+                  "pct": _pct(total["net_pnl_usd"], t_usd), "measured_pct": _pct(total["measured_usd"], t_usd)})
     span = (f"{rng['start']}..{rng['end']}" if rng["window"] is None else rng["window"])
     return {"as_of": as_of, **echo, "read_state": "measured", "categories": out, "total": total,
             "capital_flows": pc.CAPITAL_FLOWS, "excluded": excluded,
@@ -210,26 +223,56 @@ def get_performance_categories(window: str = "30d", start: Optional[str] = None,
 _SERIES_MAX_DAYS = 400   # "all" is capped here (pnl_history.MAX_DAYS is 90 and serves the older flat route)
 
 
-def _start_capital(conn: sqlite3.Connection, account_ids: List[str], start: datetime) -> Dict[str, Any]:
-    """Sum over accounts of the balance at-or-before ``start``; first row after it when none earlier (flagged)."""
-    total, n_ok, n_after = 0.0, 0, 0
+def _start_capital(conn: sqlite3.Connection, account_ids: List[str], start: Optional[datetime]) -> Dict[str, Any]:
+    """Capital at the start of the chosen window (operator u3), summed over the category's accounts.
+
+    Per account: the nearest ``balance_snapshots`` reading AT OR BEFORE ``start`` (state ``measured``); none -> the nearest
+    reading AFTER ``start`` (state ``first_after_start``, its timestamp published); neither -> no reading. The category
+    figure needs a reading on EVERY account (a partial sum would understate the base), else ``usd`` is None with
+    ``no_capital_record`` -- never 0. ``accounts[]`` names each account's reading and timestamp so nothing is hidden."""
+    src = "balance_snapshots (api_ok=1): nearest reading at or before start, else nearest after"
+    if not account_ids:
+        return {"usd": None, "read_state": "no_accounts", "source": src, "as_of": None, "accounts": []}
+    if start is None:
+        return {"usd": None, "read_state": "no_window_start", "source": src, "as_of": None,
+                "accounts": [{"account_id": a, "balance": None, "ts": None, "state": "no_window_start"} for a in account_ids]}
+    detail: List[Dict[str, Any]] = []
+    total = 0.0
     for aid in account_ids:
-        row = conn.execute("SELECT balance FROM balance_snapshots WHERE account_id = ? AND api_ok = 1 AND balance IS NOT NULL "
-                           "AND datetime(ts) <= datetime(?) ORDER BY datetime(ts) DESC LIMIT 1", (aid, start.isoformat())).fetchone()
+        base = ("SELECT balance, ts FROM balance_snapshots WHERE account_id = ? AND api_ok = 1 AND balance IS NOT NULL "
+                "AND datetime(ts) {op} datetime(?) ORDER BY datetime(ts) {order} LIMIT 1")
+        row = conn.execute(base.format(op="<=", order="DESC"), (aid, start.isoformat())).fetchone()
+        state = "measured"
         if row is None:
-            row = conn.execute("SELECT balance FROM balance_snapshots WHERE account_id = ? AND api_ok = 1 AND balance IS NOT NULL "
-                               "ORDER BY datetime(ts) ASC LIMIT 1", (aid,)).fetchone()
-            n_after += row is not None
-        if row is not None:
-            total += float(row[0])
-            n_ok += 1
-    if not account_ids or n_ok < len(account_ids) or total <= 0:
-        return {"usd": None, "read_state": "no_capital_record" if n_ok < len(account_ids) or not account_ids else "non_positive"}
-    return {"usd": round(total, 4), "read_state": "first_snapshot_after_start" if n_after else "measured"}
+            row = conn.execute(base.format(op=">", order="ASC"), (aid, start.isoformat())).fetchone()
+            state = "first_after_start"
+        if row is None:
+            detail.append({"account_id": aid, "balance": None, "ts": None, "state": "no_capital_record"})
+            continue
+        detail.append({"account_id": aid, "balance": round(float(row[0]), 4), "ts": row[1], "state": state})
+        total += float(row[0])
+    if any(d["balance"] is None for d in detail):
+        return {"usd": None, "read_state": "no_capital_record", "source": src, "as_of": None, "accounts": detail}
+    if total <= 0:
+        return {"usd": None, "read_state": "non_positive", "source": src, "as_of": None, "accounts": detail}
+    after = [d for d in detail if d["state"] == "first_after_start"]
+    return {"usd": round(total, 4), "read_state": "first_after_start" if after else "measured", "source": src,
+            "as_of": max(d["ts"] for d in detail), "accounts": detail}
+
+
+def _pct(numer: Optional[float], capital: Optional[float]) -> Optional[float]:
+    """Percentage points (x100, like ``cum_pct``); None when either side is None or the capital is not positive."""
+    return round(numer / capital * 100.0, 4) if numer is not None and capital and capital > 0 else None
+
+
+def _capital_fields(cap: Dict[str, Any]) -> Dict[str, Any]:
+    return {"start_capital_usd": cap["usd"], "capital_read_state": cap["read_state"],
+            "capital_source": cap["source"], "capital_as_of": cap["as_of"], "capital_accounts": cap["accounts"]}
 
 
 @router.get("/performance/pnl-series")
-def get_pnl_series(window: str = "30d", category: Optional[str] = None, account_id: Optional[str] = None,
+def get_pnl_series(window: str = "30d", start: Optional[str] = None, end: Optional[str] = None,
+                   category: Optional[str] = None, account_id: Optional[str] = None,
                    strategy: Optional[str] = None, symbol: Optional[str] = None, asset_class: Optional[str] = None,
                    measured_only: bool = True) -> Dict[str, Any]:
     """Cumulative P&L per category: ``points[{date, pnl_usd, cum_pnl_usd, cum_pct|null, n, cum_pnl_all_rows_usd}]``.
@@ -238,22 +281,26 @@ def get_pnl_series(window: str = "30d", category: Optional[str] = None, account_
     ``measured_only`` (default true) skips non-MEASURED rows; the all-rows curve rides alongside. Last point's
     ``cum_pnl_usd`` equals ``/performance/categories`` ``measured_usd`` (or ``net_pnl_usd`` with measured_only=false)."""
     from src.core.instrument_class import asset_class_for_symbol
-    if window not in _WINDOWS:
-        raise HTTPException(status_code=400, detail=f"unknown window {window!r}; valid: {sorted(_WINDOWS)}")
     wanted = [c.strip() for c in category.split(",") if c.strip()] if category else list(pc.CATEGORIES)
     bad = [c for c in wanted if c not in pc.CATEGORIES]
     if bad:
         raise HTTPException(status_code=400, detail=f"unknown category {bad}; valid: {list(pc.CATEGORIES)}")
     now = datetime.now(timezone.utc)
-    days = _WINDOWS[window] or _SERIES_MAX_DAYS
-    start = now - timedelta(days=days)
-    since = start.isoformat()
+    rng = _parse_range(window, start, end, now)       # same rules as /performance/categories: dates win, 400 on bad input
+    until = rng["until"]
+    if rng["since"] is None:                          # window=all: capped at _SERIES_MAX_DAYS
+        start_dt = now - timedelta(days=_SERIES_MAX_DAYS)
+    else:
+        start_dt = pc._dt(rng["since"])
+    since = start_dt.isoformat()
+    per_trade = (rng["days"] or _SERIES_MAX_DAYS) <= 7
+    echo = {"window": rng["window"], "start": rng["start"] or start_dt.date().isoformat(), "end": rng["end"]}
     as_of = now.isoformat()
     try:
         cats, _excluded = pc.categorize(_accounts())
     except Exception:  # noqa: BLE001  # allow-silent: an unreadable accounts.yaml is a stated read_state, not a 5xx
         logger.warning("performance/pnl-series: accounts.yaml unreadable", exc_info=True)
-        return {"as_of": as_of, "window": window, "read_state": "accounts_unreadable", "series": [], "population": None}
+        return {"as_of": as_of, **echo, "read_state": "accounts_unreadable", "series": [], "population": None}
     series: List[Dict[str, Any]] = []
     n_rows = 0
     try:
@@ -261,27 +308,26 @@ def get_pnl_series(window: str = "30d", category: Optional[str] = None, account_
         try:
             for cat in wanted:
                 ids = [a for a in cats[cat] if not account_id or a == account_id]
-                data = _prop_rows(ids, since) if cat == "prop" else _trade_rows(conn, ids, since)
+                data = _prop_rows(ids, since, until) if cat == "prop" else _trade_rows(conn, ids, since, until)
                 rows = [r for r in data["rows"]
                         if (not strategy or r.get("strategy_name") == strategy) and (not symbol or r.get("symbol") == symbol)
                         and (not asset_class or asset_class_for_symbol(r.get("symbol")) == asset_class)]
-                cap = _start_capital(conn, ids, start) if ids else {"usd": None, "read_state": "no_accounts"}
-                pts = pc.pnl_series(rows, category=cat, per_trade=(window == "7d"), measured_only=measured_only,
+                cap = _start_capital(conn, ids, start_dt)
+                pts = pc.pnl_series(rows, category=cat, per_trade=per_trade, measured_only=measured_only,
                                     start_capital=cap["usd"])
                 n_rows += len(rows)
-                series.append({"category": cat, "accounts": ids, "start_capital_usd": cap["usd"],
-                               "capital_read_state": cap["read_state"], "n_rows": len(rows), "points": pts,
+                series.append({"category": cat, "accounts": ids, **_capital_fields(cap), "n_rows": len(rows), "points": pts,
                                "read_state": "measured" if ids else "no_accounts"})
         finally:
             conn.close()
     except sqlite3.Error:  # allow-silent: logs the stack and answers read_state journal_unreadable with no series, never an empty chart that reads as "no P&L"
         logger.warning("performance/pnl-series: journal read failed", exc_info=True)
-        return {"as_of": as_of, "window": window, "read_state": "journal_unreadable", "series": [], "population": None}
-    return {"as_of": as_of, "window": window, "read_state": "measured", "measured_only": measured_only,
-            "bucket": "trade" if window == "7d" else "utc_day", "series": series,
+        return {"as_of": as_of, **echo, "read_state": "journal_unreadable", "series": [], "population": None}
+    return {"as_of": as_of, **echo, "read_state": "measured", "measured_only": measured_only,
+            "bucket": "trade" if per_trade else "utc_day", "series": series,
             "capital_flows": pc.CAPITAL_FLOWS,
-            "population": {"window": window, "since": since, "categories": wanted, "n_rows": n_rows,
+            "population": {"window": rng["window"], "since": since, "until": until, "categories": wanted, "n_rows": n_rows,
                            "filters": {"account_id": account_id, "strategy": strategy, "symbol": symbol,
                                        "asset_class": asset_class},
-                           "capital": "balance_snapshots at-or-before window start (prop and any account without a "
-                                      "snapshot -> null, $ only)"}}
+                           "capital": "balance_snapshots: nearest reading at or before start, else nearest after (first_after_start, "
+                                      "timestamp published); an account with none -> null, $ only"}}
