@@ -75,3 +75,12 @@ def test_forming_equity_fetch_refuses_a_non_equity_leg():
                         "--fold-majority", "3", "--start", "2026-07-01", "--end", "2026-11-01", "--forming-equity-fetch",
                         "--out", "/tmp/_dfi_never_written"], cwd=str(REPO), capture_output=True, text=True, timeout=120)
     assert r.returncode == 2 and "US ETF 1d leg" in r.stderr
+
+
+def test_regime_cell_lever_grade_self_test_and_walkforward_flags():
+    r = subprocess.run([sys.executable, str(REPO / "scripts" / "research" / "regime_cell_lever_grade.py"), "--self-test"],
+                       cwd=str(REPO), capture_output=True, text=True, timeout=120)
+    assert r.returncode == 0 and "cosmetic cell" in r.stdout and "self-test passed" in r.stdout
+    h = subprocess.run([sys.executable, str(REPO / "scripts" / "research" / "regime_cell_walkforward.py"), "--help"],
+                       cwd=str(REPO), capture_output=True, text=True, timeout=120)
+    assert h.returncode == 0 and "--forming-1m-fetch" in h.stdout and "--start" in h.stdout and "--out-json" in h.stdout
