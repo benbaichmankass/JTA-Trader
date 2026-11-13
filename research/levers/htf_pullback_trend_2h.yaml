@@ -499,11 +499,55 @@ levers_tested:
       n: 56
       net_r: 0.158
       folds_positive: 2/4
-    reading: 'smooth monotone improvement with the ADX floor (the closed-bar response carries to the forming bar) but no arm clears Stage 0: adx_min
-      30 is +0.16R over n 56 with 2/4 positive folds (needs 3)'
+    reading: 'smooth monotone improvement with the ADX floor (the closed-bar response carries to the forming bar) but no arm clears Stage 0: adx_min 30 is +0.16R
+      over n 56 with 2/4 positive folds (needs 3)'
   shape: monotone
   tested_at_power: true
   unit: RQ-20261113-f251-10
   lever_family: filter
+- family: direction (forming bar)
+  varied: both sides (A) vs long-only (L) on the FORMING bar, record window 2025-11-13..2026-11-12 + confirmation window 2024-11-13..2025-11-12, full cost stack
+  response:
+    verdict: fail
+    run: '43518614942'
+    baseline:
+      arm: A
+      n: 105
+      net_r: -23.3731
+      folds_positive: 1/4
+    arms:
+    - direction: long_only
+      n: 68
+      net_r: -12.8807
+      folds_positive: 1/4
+    confirm:
+      A:
+        n: 83
+        net_r: 2.9423
+      L:
+        n: 59
+        net_r: 2.4561
+    reading: 'long-only cuts the record-window loss (-12.9R vs -23.4R) but stays stage0_no_edge (1/4 folds) and does not beat both-sides on the confirmation window
+      (+2.46R vs +2.94R): the short side is not where the loss lives'
+  shape: flat
+  tested_at_power: true
+  unit: RQ-20261113-f251-15
+  lever_family: direction
 units:
 - RQ-20261113-f251-10
+- RQ-20261113-f251-15
+manifest_notes:
+  census_2026_11_13: 'DEMO-FLOOR-ITER lever-family census after the 2nd forming-bar lever failed (AM-ML multiple-testing guard). Forming baseline RQ-20261113-f251-01
+    over 2025-11-13..2026-11-12: -23.37R over n 105, gross -14.2R (negative BEFORE cost), every ADX cell negative.'
+  filter: 'TESTED forming: adx_min 20/25/30 (RQ-20261113-f251-10, FAIL): smooth monotone, best +0.16R n56 2/4 folds. Closed bar: adx_min/adx_max/vol_skip tested earlier.'
+  direction: 'TESTED forming: long-only (RQ-20261113-f251-15, FAIL): -12.88R n68 1/4 folds; confirmation window +2.46R vs both-sides +2.94R. Closed-bar long-only
+    pass (RQ-20261104-004) does not carry to the forming bar.'
+  entry: 'TESTED (closed bar): pullback_frac, trend_lookback; no forming-bar diagnosis points at the entry.'
+  exit: 'TESTED (closed bar): atr_stop_mult, tp_r, structure_exit; gross is negative, so an exit lever would have to create edge rather than keep it.'
+  regime_gating: 'INAPPLICABLE as an off-cell: every ADX cell is negative on the forming ledger, so no cell is left to keep; gating would gate the whole leg.'
+  sizing_vs_cost: 'INAPPLICABLE: gross is negative before cost (-14.2R), so a cheaper venue cannot clear it.'
+  timeframe: 'UNTESTED forming, no diagnostic pointer: nothing in the ledger isolates the 2h bar as the cause.'
+  symbol_set: UNTESTED, no diagnostic pointer.
+  next: 'The only diagnosis-backed candidate left is extending the adx_min monotone response past 30 (adx_min 35), but the arm would fall to about n 40, under the
+    power floor. No lever has a diagnosis that points at a pass at adequate power. Proposed to the manager: a lever-exhaustion note (retirement proposal ONLY through
+    the manager); no 3rd unit authored.'
