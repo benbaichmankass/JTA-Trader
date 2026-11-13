@@ -639,6 +639,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/ml-claude-distillation-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/plans/ml-producers-milestones-2026-10-08.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/ops-decisions-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/plans/operator-grant-merge-deploy-on-green-2026-11-12.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/review-pack-2026-09-27.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/decision-brief-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/soak-decisions-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
