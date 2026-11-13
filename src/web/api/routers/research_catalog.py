@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -133,13 +133,41 @@ def _registry() -> dict[str, Any]:
     return doc
 
 
+def _changed(ideas: list[dict[str, Any]], since: str | None) -> dict[str, Any]:
+    """Ideas whose newest attributed-unit activity is on/after the window start. 400 on an invalid ``since``."""
+    if since:
+        raw = since.rstrip("Z")
+        raw = raw if "T" in raw else f"{raw}T00:00"
+        try:
+            cutoff = rc._iso(datetime.fromisoformat(raw).replace(tzinfo=timezone.utc))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="since is not a valid date") from None
+        basis = "since param"
+    else:
+        cutoff = rc._iso(datetime.now(timezone.utc) - timedelta(days=7))
+        basis = "default window: 7 days"
+    hit = sorted((i for i in ideas if i.get("last_activity") and str(i["last_activity"]) >= cutoff),
+                 key=lambda i: str(i["last_activity"]), reverse=True)
+    return {"since": cutoff, "basis": f"{basis}; idea's newest attributed-unit activity (result, dispatch or "
+                                      "grading) on/after `since`, over the whole registry",
+            "count": len(hit),
+            "items": [{"id": i.get("id"), "name": i.get("name"), "track": i.get("track"), "stage": i.get("stage"),
+                       "verdict": (i.get("latest_result") or {}).get("verdict"),
+                       "last_activity": i.get("last_activity")} for i in hit]}
+
+
 @router.get("/registry")
 def get_registry(
     track: str | None = Query(None, pattern="^(STRATEGY|ML)$"),
     stage: Annotated[list[str] | None, Query()] = None,
     q: str = Query("", max_length=200),
+    since: str | None = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?Z?)?$"),
 ) -> dict[str, Any]:
-    """The idea-level R&D registry. Optional filters narrow ``ideas``; ``summary`` is always the whole registry."""
+    """The idea-level R&D registry. Optional filters narrow ``ideas``; ``summary`` is always the whole registry.
+
+    ``changed`` (UI-WQ-RD-ROUTE) is computed here over the WHOLE registry for the window starting at ``since``
+    (an ISO date or UTC datetime; default 7 days before now), so the SPA's "changed" view never derives it.
+    """
     try:
         doc, _age, swr_state = _SWR_REG.get("registry", _registry)
     except Exception as exc:  # noqa: BLE001  # allow-silent: falls back to the committed file, stated as servedFrom/readState
@@ -159,7 +187,7 @@ def get_registry(
              if (not track or i.get("track") == track) and (not stages or i.get("stage") in stages)
              and all(t in f"{i.get('id')} {i.get('name')} {i.get('stage_reason')}".lower() for t in terms)]
     return {**doc, "present": True, "readState": "read", "cache": swr_state,
-            "matched": len(ideas), "ideas": ideas,
+            "matched": len(ideas), "ideas": ideas, "changed": _changed(doc.get("ideas") or [], since),
             "freshness": "built from the VM working tree (ict-git-sync pulls main ~every 5 min); cached 5 min"}
 
 

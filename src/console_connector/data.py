@@ -25,6 +25,8 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from src.runtime.work_read import week_lane_totals as _work_read_week_lane_totals
+
 ROW_FIELDS = ("id", "title", "state", "owner", "lane", "tier", "due_by", "updated_at", "updated_by", "prs",
               "priority_rank", "roadmap", "week_lane", "writeback")
 LIVE_STATES = ("in_flight", "blocked", "queued", "landed_unproven")
@@ -73,19 +75,9 @@ def closed_this_week(items: list[dict], now: datetime, today: date) -> dict[str,
             "counts_by_week_lane": counts, "rows": keep}
 
 
-def week_lane_totals(items: list[dict]) -> dict[str, Any]:
-    """Every week_lane row in the register (any state): total per lane and per lane x state, so the
-    console can show done / landed_unproven against the full lane total."""
-    out: dict[str, dict] = {}
-    for r in items:
-        lane = r.get("week_lane")
-        if not lane:
-            continue
-        d = out.setdefault(str(lane), {"total": 0, "by_state": {}})
-        d["total"] += 1
-        st = str(r.get("state"))
-        d["by_state"][st] = d["by_state"].get(st, 0) + 1
-    return out
+#: Moved to src/runtime/work_read.py (UI-WQ-WEEK-ROUTES) so the web API can reuse it without pulling the
+#: console connector into the live trader's import closure. Kept here as the same object.
+week_lane_totals = _work_read_week_lane_totals
 
 
 def _now() -> datetime:

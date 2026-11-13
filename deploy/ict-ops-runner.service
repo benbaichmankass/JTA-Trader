@@ -10,6 +10,12 @@
 [Unit]
 Description=ICT ops channel runner
 After=network-online.target
+# OPS-RUNNER-START-LIMIT (2026-11-12): the path unit starts this oneshot once per drained burst, so a burst of
+# submissions can start it more than systemd's default 5 times in 10 s. The start limit then trips
+# ("start-limit-hit"), ict-ops-runner.path stops triggering and every later job sits queued (measured 22:36:42Z after
+# 13 back-to-back ledger-backfill jobs). The runner exits when the queue is empty and holds the channel lock, so a
+# fast restart is harmless: no rate limit (no halting, Prime Directive rule 7).
+StartLimitIntervalSec=0
 
 [Service]
 Type=oneshot
