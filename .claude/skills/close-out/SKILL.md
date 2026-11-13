@@ -57,6 +57,7 @@ container costs the work.
 - **Red CI on a PR you opened is not done.** Fix it, or establish it is not
   yours and say so in one comment on that PR.
 - **An open PR you own is not done.** Merge it or state the blocker.
+- **Abandoning a PR means removing its `.github/pr-automerge-requests/<slug>.txt` from the branch**, not only closing it: `claude-pr-automerge` otherwise opens a fresh PR from the branch and lands it (2026-11-13: closed #25578 came back as #25583 and auto-merged).
 - A merged PR is the only form of work that cannot be lost.
 
 ### 3. Every row you touched has a TRUE state

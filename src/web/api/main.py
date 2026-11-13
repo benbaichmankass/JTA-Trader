@@ -8,6 +8,7 @@ from __future__ import annotations
 import os
 
 from fastapi import Depends, FastAPI
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html, get_swagger_ui_oauth2_redirect_html
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.web.api import auth as auth_module
@@ -71,7 +72,9 @@ from src.web.api.routers import work_ledger as work_ledger_router
 from src.web.api.routers import work_topics as work_topics_router
 from src.web.api.routers import work_items as work_items_router
 from src.web.api.routers import live_review_direct as live_review_direct_router
+from src.web.api.routers import dd_switch as dd_switch_router
 from src.web.api.routers import gates as gates_router
+from src.web.api.routers import work_plans as work_plans_router
 from src.web.api.routers import ops_channel as ops_channel_router
 
 # UI-UPGRADE-1-AUTH: the whole-site gate is an APP-LEVEL dependency (so it covers
@@ -80,7 +83,33 @@ app = FastAPI(
     title="JTA Trader — Dashboard API",
     version="0.2.0",
     dependencies=[Depends(auth_module.require_site_session)],
+    # FastAPI adds its built-in docs routes OUTSIDE the app-level dependencies, so
+    # with the gate on they answered anonymously (found by
+    # tests/test_web_site_auth_route_walk.py). They are re-added below as ordinary
+    # app routes, which the gate covers; same paths, same pages.
+    openapi_url=None, docs_url=None, redoc_url=None,
 )
+
+
+@app.get("/openapi.json", include_in_schema=False)
+def _openapi_json() -> dict:
+    return app.openapi()
+
+
+@app.get("/docs", include_in_schema=False)
+def _swagger_ui():
+    return get_swagger_ui_html(openapi_url="/openapi.json", title=app.title + " - docs",
+                               oauth2_redirect_url="/docs/oauth2-redirect")
+
+
+@app.get("/docs/oauth2-redirect", include_in_schema=False)
+def _swagger_ui_redirect():
+    return get_swagger_ui_oauth2_redirect_html()
+
+
+@app.get("/redoc", include_in_schema=False)
+def _redoc():
+    return get_redoc_html(openapi_url="/openapi.json", title=app.title + " - redoc")
 
 _dashboard_origin = os.environ.get("DASHBOARD_ORIGIN", "")
 _origins = ["http://localhost:5173", "http://localhost:3000"]
@@ -167,7 +196,9 @@ app.include_router(work_ledger_router.router)
 app.include_router(work_topics_router.router)
 app.include_router(work_items_router.router)
 app.include_router(live_review_direct_router.router)
+app.include_router(dd_switch_router.router)
 app.include_router(gates_router.router)  # GATE-REGISTRY: GETs + operator-session POST /decision
+app.include_router(work_plans_router.router)  # UI-WQ-PLANS-ROUTES: GET /api/bot/ml/plan + operator-session POST /work/plan-edits
 app.include_router(ops_channel_router.router)  # MANAGER-VM-DIRECT-OPS (X-Work-Store-Token, fail-closed)
 
 

@@ -17,6 +17,7 @@ TOKEN = "svc-token"
 
 POSTS = [
     "/api/bot/alerts",
+    "/api/bot/devices/register",
     "/api/bot/wake-toggles",
     "/api/bot/work/decision",
     "/api/bot/work/items",

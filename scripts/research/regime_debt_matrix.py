@@ -958,10 +958,12 @@ def _tp_r_flags(cfg: dict) -> List[str]:
     return ["--tp-cap-pct", str(_tp_venue_cap_pct()), "--tp-r", str(v)]
 
 
-def build_harness_cmd(name: str, cfg: dict, harness: str, csv: str, resample: str,  # inert: name — the argv is built from cfg/harness/csv; the cell name is used by the CALLER for reporting, never by the command
+def build_harness_cmd(name: str, cfg: dict, harness: str, csv: str, resample: str,  # name: used only on the forming_1m path (--strategy-name); otherwise the caller's reporting label
                       emit: str, jout: str,
                       fee_override: Optional[float] = None,
-                      research_emits: bool = False
+                      research_emits: bool = False,
+                      forming_1m: Optional[str] = None,
+                      forming_session: Optional[str] = None,
                       ) -> tuple[list[str], bool, list[str]]:
     """Return (argv, faithful, omitted_levers).
 
@@ -971,6 +973,13 @@ def build_harness_cmd(name: str, cfg: dict, harness: str, csv: str, resample: st
     effect from the window slide that confounds two-run comparisons. ``None``
     (the default) keeps the venue-appropriate resolved fee — every existing
     caller is byte-for-byte unchanged.
+
+    ``forming_1m`` (row EQ-FORMING-BAR-REPLAY, 2026-11-13): a 1m CSV for the
+    leg's symbol. A TREND leg whose live decision bar is ``forming`` (explicit
+    or absent) is then replayed on the forming bar -- ``--decision-bar forming
+    --minutes-1m-csv`` plus ``--decision-session`` (``us_equity`` for a US
+    session daily leg) -- and ``decision_bar`` is MODELLED, not omitted. Without
+    it (every existing caller) ``decision_bar: forming`` stays an omitted lever.
     """
     py = sys.executable
     symbol = cfg["symbols"][0]
@@ -1009,11 +1018,17 @@ def build_harness_cmd(name: str, cfg: dict, harness: str, csv: str, resample: st
         # See `_tp_r_flags`. `[]` when the leg declares no tp_r.
         argv += _tp_r_flags(cfg)
         argv += _tp_revision_flags(cfg)
+        forming_live = str(cfg.get("decision_bar") or "forming").lower() != "closed"
+        forming_modelled = bool(forming_1m) and forming_live
+        if forming_modelled:
+            argv += ["--decision-bar", "forming", "--minutes-1m-csv", str(forming_1m),
+                     "--strategy-name", name]
+            if forming_session:
+                argv += ["--decision-session", str(forming_session)]
         omitted = sorted(set(k for k in cfg
                              if k not in _TREND_PLAIN and k not in _TREND_LEVER_FLAG)
                          | set(conditional_omissions("trend", cfg, argv))
-                         | ({"decision_bar"}
-                            if str(cfg.get("decision_bar") or "forming").lower() != "closed" else set()))
+                         | ({"decision_bar"} if forming_live and not forming_modelled else set()))
         faithful = not omitted
     elif harness == "fade":
         # Deliberately does NOT reuse `common`: that list hard-codes
@@ -1323,7 +1338,10 @@ def trim_csv_to_window(csv: str, start: str, end: str, tf: str) -> int:
 
 def run_one(name: str, cfg: dict, workdir: str, days: int,
             fee_arms: Optional[list] = None, research_emits: bool = False,
-            window: Optional[tuple] = None) -> dict:
+            window: Optional[tuple] = None,
+            data_csv: Optional[str] = None,
+            forming_1m: Optional[str] = None,
+            forming_session: Optional[str] = None) -> dict:
     harness = classify(cfg)
     sym = (cfg.get("symbols") or [None])[0]
     tf = cfg.get("timeframe")
@@ -1338,7 +1356,17 @@ def run_one(name: str, cfg: dict, workdir: str, days: int,
     emit = os.path.join(workdir, f"{name}__trades.jsonl")
     jout = os.path.join(workdir, f"{name}__bt.json")
     try:
-        if window:
+        if data_csv:
+            # An explicit candle file (EQ-FORMING-BAR-REPLAY: the daily bars of the
+            # SAME source as `forming_1m`, so the forming bar and its 199-bar history
+            # share one price scale). Window trimming still applies.
+            import shutil
+            shutil.copyfile(data_csv, csv)
+            row["feed"] = {**feed, "source": "explicit data_csv", "data_csv": os.path.basename(data_csv)}
+            if window:
+                row["replay_window"] = list(window)
+                row["replay_rows"] = trim_csv_to_window(csv, window[0], window[1], tf)
+        elif window:
             # Fetch far enough back to cover the pinned start, then trim.
             import pandas as pd
             back = (pd.Timestamp.now(tz="UTC") - pd.Timestamp(window[0]).tz_convert("UTC")
@@ -1354,7 +1382,12 @@ def run_one(name: str, cfg: dict, workdir: str, days: int,
         return row
     argv, faithful, omitted = build_harness_cmd(name, cfg, harness, csv,
                                                 feed["resample"], emit, jout,
-                                                research_emits=research_emits)
+                                                research_emits=research_emits,
+                                                **({"forming_1m": forming_1m,
+                                                    "forming_session": forming_session}
+                                                   if forming_1m else {}))
+    if forming_1m:
+        row["decision_bar_modelled"] = "forming" if "--decision-bar" in argv else "closed"
     row["fidelity"] = "faithful" if faithful else "approximate"
     row["omitted_levers"] = omitted
     annotate_exit_head_replayability(cfg, row, omitted)

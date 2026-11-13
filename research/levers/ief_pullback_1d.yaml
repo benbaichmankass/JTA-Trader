@@ -383,10 +383,24 @@ levers:
         max_drawdown_r: 6.7089
         verdict: fail
         joint_change: false
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: BE
+        unit: RQ-20261111-203c-04
+        window: 2018-03-01..2026-10-15
+        n: 49
+        net_r: 18.3079
+        baseline_n: 49
+        baseline_net_r: 18.2749
+        delta_net_r: 0.033
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 4.6469
+        verdict: indeterminate
+        joint_change: false
       shape: flat
-      points: 1
-      best_delta_r_per_trade: 0.0
-      fold_stability: 1.0
+      points: 2
+      best_delta_r_per_trade: 0.0007
+      fold_stability: 0.875
       reading: no response at the tested values
     bank_at_r:
       tests:
@@ -727,8 +741,22 @@ levers:
         max_drawdown_r: 36.7194
         verdict: fail
         joint_change: false
+      - value: '0.9'
+        baseline_value: 'off'
+        arm: VH90
+        unit: RQ-20261111-203c-04
+        window: 2018-03-01..2026-10-15
+        n: 49
+        net_r: 19.5291
+        baseline_n: 49
+        baseline_net_r: 18.2749
+        delta_net_r: 1.2542
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 4.3418
+        verdict: indeterminate
+        joint_change: false
       shape: noisy
-      points: 3
+      points: 4
       best_delta_r_per_trade: 0.0327
       fold_stability: 0.5
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
@@ -797,10 +825,24 @@ levers:
         max_drawdown_r: 37.2731
         verdict: fail
         joint_change: false
+      - value: '40'
+        baseline_value: 'off'
+        arm: AX40
+        unit: RQ-20261111-203c-04
+        window: 2018-03-01..2026-10-15
+        n: 48
+        net_r: 18.2015
+        baseline_n: 49
+        baseline_net_r: 18.2749
+        delta_net_r: -0.0734
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 4.6469
+        verdict: indeterminate
+        joint_change: false
       shape: peaked
-      points: 3
+      points: 4
       best_delta_r_per_trade: 0.0092
-      fold_stability: 0.833
+      fold_stability: 0.75
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
   other:
     momentum_stale_bars:

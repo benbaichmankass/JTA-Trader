@@ -505,6 +505,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/claude/work/LANE-WATCHDOG-PROMPT.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/MANAGER-HANDOFF-2026-10-01.md` | history | historical | — | 2026-10-01 | `name:record-of-a-past-state / dir:record-of-a-completed-session` | — |
 | `docs/claude/work/MANAGER-HANDOFF-2026-10-11.md` | history | historical | — | 2026-10-11 | `name:record-of-a-past-state / dir:record-of-a-completed-session` | — |
+| `docs/claude/work/MANAGER-HANDOFF-2026-11-13.md` | history | historical | — | 2026-11-13 | `name:record-of-a-past-state / dir:record-of-a-completed-session` | — |
 | `docs/claude/work/README.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/SOAK-REPORT-observations.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/SOAK-REPORT.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
@@ -639,6 +640,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/ml-claude-distillation-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/plans/ml-producers-milestones-2026-10-08.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/ops-decisions-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/plans/operator-grant-merge-deploy-on-green-2026-11-12.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/review-pack-2026-09-27.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/decision-brief-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/soak-decisions-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
@@ -697,6 +699,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/e4-prop-sim-2026-10-30/PLAN.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/e4-prop-sim-2026-10-30/RESULT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/entry-grade-42473814600-repro-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/ml-entry-hole-safe-adopt-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-18g-event-entries-2026-10-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-18h-event-packet-arm-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-event-calendar-scope-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
@@ -894,6 +897,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/candle-feed-canonical-2026-09-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/capital-allocation-ai-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/research/capital-allocation-ai-PROMPT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/ce01-01-opposed-newcomer-grade-2026-11-13.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/chop-scalp-capital-efficiency-2026-07-15.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/corpus-schema-degradation-2026-09-12.md` | evidence | live | — | 2026-09-12 | `mi-279:self-measured-2026-09-12 / population-stated / positive-control-on-every-negative` | MI-279 OPS lane: closes `BL-20260816-CORPUS-CONFLICT-REDERIVE-RUNS-THE-STALE-BRANCH-EXTRACTOR`. **HALF 1 (code) verified on a run that ACTUALLY CONFLICTED**, which is what its criterion demands: `corpus union:` is printed from exactly ONE call site — inside `rebase_onto_target`'s conflict branch — so its presence in a log is a positive marker, not an inference. Negative control run 49 (pre-fix, `31976325152`): conflict fired, reset to `9a085926`, 52 rows with none of the eight `live_tp_reach_r_*` keys. Positive control run 53 (post-fix, head `e90108644`, which CONTAINS both #9812 and #9827 by `merge-base --is-ancestor`): union line present, 2 rows written, **both carrying the field**. **HALF 2 (data) CANNOT be met — the 52 rows are GONE**: no commit on `claude/m20-sweep-corpus` has ever held a `2026-08-16` row (probe positive-controlled at 39/348/65/312 on four other dates), four of its six corpus commits are ancestors of `main`, and `e9fb0d6d` is unreachable — the branch was reset onto `main` and the rows went with the commit. **What replaces it:** whether a run's extractor COULD emit a field is a property of the commit it was dispatched with, and the corpus records **no dispatched sha** (`run_id` is the sweep's own timestamp, by design), so two candidate boundaries exist and disagree. Over `main`'s **1379 rows**: present 452 · predates 906 · **after both 1** · **between 20** · undateable 0. ⚠️ **THIS CORRECTED THE AUTHOR'S OWN FIRST READING BY 20×** — a hand probe against the default-branch boundary alone called 21 rows degraded; 20 sit BETWEEN the boundaries where the corpus cannot settle it. Silently taking one boundary is the unprovenanced-diagnostic **sub-class B** shape, committed by the session that went looking for it. **The 20 are deliberately NOT stamped** — their cause is unestablished and recording one would be a fabricated measurement. Re-filed as `BL-20260912-THE-SWEEP-CORPUS-RECORDS-NO-DISPATCHED-SHA-SO-A-MISSING-FIELD-CANNOT-BE-TOLD-FROM-ONE-THE-EXTRACTOR-COULD-NOT-EMIT`; carried by `docs/claude/work/objects/BL-20260912-THE-SWEEP-CORPUS-RECORDS-NO-DISPATCHED-SHA-SO-A-MISSING-FIELD-CANNOT-BE-TOLD-FROM-ONE-THE-EXTRACTOR-COULD-NOT-EMIT.yaml` (`dormant`). Reader: `scripts/research/m20_corpus_schema_census.py`. Nothing enacted: no `src/`, no config, no order path, and the census writes nothing. |
 | `docs/research/cross-asset-diversification-2026-06-18.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
@@ -1085,6 +1089,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/programmes/03-STRATEGY-IMPROVEMENT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Programme 03 plan (every leg pulls its own weight): Stage-0 capital-day census, S0-C fresh-window confirmation rule, Q1-Q8 ladders, 4-week backlog; units RQ-20261014-470a-01..12, row PAIRS-R-SCALE. |
 | `docs/research/programmes/RESEARCH-MAP.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | The five research programmes, their measures, cross-programme feeds and infra needs (weekly planning 2026-10-14). |
 | `docs/research/prop-gate-edge-regrade-2026-10-31/RESULT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/prop-eth4h-tp4-2026-11-13/fidelity/README.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/reduce-fill-qty-2026-10-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/replace-grade-control-regrade-2026-10-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/repo-private-transition-2026-10-08.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
@@ -1123,6 +1128,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/tp-doctrine-w43-proposals-2026-10-22.md` | evidence | unknown | — | 2026-10-22 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/trail-ratchet-audit-2026-10-31/RESULT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/trainer-workload-2026-10-13.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/trend-alignment-framework-2026-11-13.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/velotrade-fit-2026-10-06.md` | evidence | unknown | — | 2026-10-06 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/velotrade-api-probe-2026-10-05.md` | evidence | unknown | — | 2026-10-05 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/tradeify-feed-trip-2026-10-07.md` | evidence | unknown | — | 2026-10-07 | `dir:research-is-measurement / not-assessed` | — |

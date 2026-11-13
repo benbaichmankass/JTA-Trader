@@ -200,9 +200,39 @@ def purge(train: pd.DataFrame, cut: pd.Timestamp) -> pd.DataFrame:
     return train[train.ts < cut - pd.Timedelta(days=PURGE_DAYS)]
 
 
+def cap_per_bar(rows: pd.DataFrame, pred: np.ndarray, tau: float, k: int) -> np.ndarray:
+    """OPT-IN concurrency cap (RQ-20261113 ml_entry_eq iteration; default k=0 = unchanged). Among the rows whose prediction clears tau at
+    the SAME decision timestamp, only the k highest predictions keep their value; the rest are pushed below tau so the restricted-long
+    take rule skips them. Applied BEFORE the one-position-per-symbol loop, so a busy symbol still counts toward its bar's k (declared:
+    the cap can bind slightly more often than a live per-bar slot count would). Ties break by row order (stable sort)."""
+    if not k or k <= 0:
+        return pred
+    p = np.asarray(pred, dtype=float).copy()
+    ok = p > tau
+    if not ok.any():
+        return p
+    f = pd.DataFrame({"ts": rows["ts"].to_numpy()[ok], "p": p[ok], "j": np.flatnonzero(ok)})
+    rank = f.sort_values(["ts", "p"], ascending=[True, False], kind="mergesort").groupby("ts", sort=False).cumcount()
+    drop = f.loc[rank.index[rank.to_numpy() >= k], "j"].to_numpy()
+    p[drop] = tau - 1.0
+    return p
+
+
+def day_cluster_t(tk: pd.DataFrame):
+    """t of the per-decision-date (UTC) SUM of net R: the clustered read the ml_entry_eq iteration grades on (None if < 3 dates)."""
+    if tk.empty:
+        return None, 0
+    ds = tk.groupby(pd.to_datetime(tk.ts, utc=True).dt.date)["net_r"].sum()
+    return _cluster_t(ds), int(len(ds))
+
+
 def dev_stage(tab: pd.DataFrame, folds: list[str] = DEV_FOLDS, train_end: str = TRAIN_END, taus=TAUS,
-              configs: dict = CONFIGS, min_oof_n: int = MIN_OOF_N, log=print) -> dict:
-    """Walk-forward on dates <= train_end ONLY. Returns every (config, tau) out-of-fold result and the registered selection."""
+              configs: dict = CONFIGS, min_oof_n: int = MIN_OOF_N, log=print, caps=(0,)) -> dict:
+    """Walk-forward on dates <= train_end ONLY. Returns every (config, tau) out-of-fold result and the registered selection.
+    ``caps`` (opt-in, default (0,) = byte-identical to the graded stage): per-decision-bar caps; k > 0 adds a key ``<config>|<tau>|cap<k>``
+    and, with any k > 0 requested, every row also carries the decision-date clustered t (``day_cluster_t``, ``n_days``)."""
+    caps = tuple(int(c) for c in caps) or (0,)
+    with_t = any(c > 0 for c in caps)
     te = pd.Timestamp(train_end, tz="UTC") + pd.Timedelta(days=1)
     dev = tab[tab.ts < te].dropna(subset=["net_long"])
     bounds = [pd.Timestamp(x, tz="UTC") for x in folds] + [te]
@@ -224,11 +254,15 @@ def dev_stage(tab: pd.DataFrame, folds: list[str] = DEV_FOLDS, train_end: str = 
         o = pd.concat(oof)
         o = o[session_mask(o.ts)]
         for tau in taus:
-            tk = taken_trades(o, o["pred"].to_numpy(), tau)
-            st = _stats(tk)
-            st["by_fold"] = ({int(k): {"n": int(len(g)), "mean_net_r": round(float(g.net_r.mean()), 4)}
-                              for k, g in tk.assign(fold=_fold_of(tk.ts, bounds)).groupby("fold")} if len(tk) else {})
-            res[f"{name}|{tau}"] = {"config": name, "tau": tau, **st}
+            for cap in caps:
+                tk = taken_trades(o, cap_per_bar(o, o["pred"].to_numpy(), tau, cap), tau)
+                st = _stats(tk)
+                st["by_fold"] = ({int(k): {"n": int(len(g)), "mean_net_r": round(float(g.net_r.mean()), 4)}
+                                  for k, g in tk.assign(fold=_fold_of(tk.ts, bounds)).groupby("fold")} if len(tk) else {})
+                if with_t:
+                    st["day_cluster_t"], st["n_days"] = day_cluster_t(tk)
+                    st["max_per_bar"] = cap
+                res[f"{name}|{tau}" + (f"|cap{cap}" if cap > 0 else "")] = {"config": name, "tau": tau, **st}
     ok = {k: v for k, v in res.items() if v["n"] >= min_oof_n and v["mean_net_r"] is not None}
     best = max(ok.items(), key=lambda kv: kv[1]["mean_net_r"]) if ok else None
     return {"grid": res, "n_selection_draws": len(res), "selection_rule": REGISTERED_SELECTION,
@@ -559,6 +593,27 @@ def dev_row(d: dict, unit: str, where: str) -> dict:
             "produced_by": {"tool": "python3 scripts/research/ml_entry_equity.py dev", "where": where}}
 
 
+CAP_T_MARGIN = 0.5        # the capped arm's clustered t must exceed the uncapped arm's by at least this (ml_entry_eq iteration rule)
+
+
+def cap_verdict(grid: dict, config: str, tau: float, k: int, n_folds: int = len(DEV_FOLDS)) -> tuple[str, str]:
+    """The registered rule of the ml_entry_eq concurrency-cap iteration, applied to a dev grid run with caps (0, k, ...).
+    INDETERMINATE if the capped arm has < MIN_OOF_N trades or either clustered t is undefined. PASS iff capped mean net R >= uncapped
+    AND capped day-clustered t >= uncapped + CAP_T_MARGIN AND the capped mean is > 0 in >= n_folds - 1 dev folds. FAIL otherwise."""
+    u, c = grid.get(f"{config}|{tau}"), grid.get(f"{config}|{tau}|cap{k}")
+    if not u or not c or c.get("n", 0) < MIN_OOF_N or c.get("mean_net_r") is None or u.get("mean_net_r") is None:
+        return "indeterminate", f"capped arm cap{k} n={None if not c else c.get('n')} < {MIN_OOF_N} or an arm is missing"
+    if c.get("day_cluster_t") is None or u.get("day_cluster_t") is None:
+        return "indeterminate", "a decision-date clustered t is undefined (< 3 dates)"
+    pos = sum(1 for v in (c.get("by_fold") or {}).values() if v.get("mean_net_r") is not None and v["mean_net_r"] > 0)
+    a = c["mean_net_r"] >= u["mean_net_r"]
+    b = c["day_cluster_t"] >= u["day_cluster_t"] + CAP_T_MARGIN
+    f = pos >= n_folds - 1
+    v = "pass" if (a and b and f) else "fail"
+    return v, (f"{v}: {config}|{tau} cap{k} mean {c['mean_net_r']:+.4f} (n={c['n']}, day-t {c['day_cluster_t']:.2f}, {pos}/{n_folds} folds > 0) "
+               f"vs uncapped {u['mean_net_r']:+.4f} (n={u['n']}, day-t {u['day_cluster_t']:.2f}); mean>=: {a}, t+{CAP_T_MARGIN}: {b}, folds: {f}")
+
+
 def _write_taken(c: dict, a, repro: str) -> None:
     """PERF-F1-DEMOTION-SIGNAL (2026-11-12): per-trade Stage-0 rows for the r4 demotion gate and live_vs_backtest.
 
@@ -615,12 +670,23 @@ def main_run(a) -> int:
         if getattr(a, "ensemble_seeds", ""):   # one 5-seed-average model per config (variance-reduction read), alongside nothing else
             cfgs = {f"{k}_ens": {"features": v["features"], "params": {**v["params"], "_ens_seeds": [int(x) for x in a.ensemble_seeds.split(",")]}}
                     for k, v in cfgs.items()}
-        d = dev_stage(tab, taus=[float(x) for x in a.taus.split(",")] if getattr(a, "taus", "") else TAUS, configs=cfgs)
+        caps = tuple(int(x) for x in a.max_per_bar.split(",")) if getattr(a, "max_per_bar", "") else (0,)
+        d = dev_stage(tab, taus=[float(x) for x in a.taus.split(",")] if getattr(a, "taus", "") else TAUS, configs=cfgs, caps=caps)
         d.update({"structure_exit": spec_used if getattr(a, "structure", False) else None, "train_end": TRAIN_END, "pool": {k: v for k, v in prep.items() if k != "excluded"}, "n_pool": len(pool),
                   "costs": {"slippage_bps": slip, "fee_bps": fee, "regulatory_bps": S.REGULATORY_BPS},
                   "configs": {k: {"features": v["features"], "params": v["params"]} for k, v in CONFIGS.items()},
                   "alpaca_calls": client.calls, "runtime_s": round(time.time() - t0, 1)})
         row = dev_row(d, a.unit, a.where)
+        if getattr(a, "cap_grade", ""):   # opt-in: grade the concurrency-cap iteration's registered rule (cap_verdict) instead of the descriptive dev verdict
+            cg_cfg, cg_tau, cg_k = a.cap_grade.split("|")
+            v, why = cap_verdict(d["grid"], cg_cfg, float(cg_tau), int(cg_k))
+            u, c = d["grid"].get(f"{cg_cfg}|{float(cg_tau)}"), d["grid"].get(f"{cg_cfg}|{float(cg_tau)}|cap{int(cg_k)}")
+            row.update({"verdict": v, "note": "DEV concurrency-cap read (walk-forward <= %s; no confirming window loaded). %s" % (TRAIN_END, why),
+                        "n": None if not c else c.get("n"),
+                        "population": (f"DEV stage: purged walk-forward OOF restricted-long decisions of config {cg_cfg} at tau {cg_tau} on the "
+                                       f"{d.get('n_pool')}-ETF Alpaca liquidity pool, dates <= {TRAIN_END}; uncapped n={None if not u else u.get('n')} vs "
+                                       f"top-{cg_k}-per-decision-bar n={None if not c else c.get('n')}"),
+                        "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True}})
     elif a.cmd == "structure":
         repro = getattr(a, "reproduce_sha", "")
         c = structure_stage(tab, a.unit, out / "ledger", end_day, pool,
@@ -731,6 +797,24 @@ def self_test() -> int:
     assert d["n_selection_draws"] == 4 and d["selected"] is not None, d
     assert max(len(r["by_fold"]) for r in d["grid"].values()) >= 2, "by_fold collapsed into one fold"
     assert tab[tab.ts <= "2023-04-30"].shape[0] < tab.shape[0], "synthetic calendar must extend past train_end"
+    # opt-in concurrency cap: default call is unchanged (no cap keys, no clustered-t fields); k keeps only the top-k per decision bar
+    assert not any("|cap" in k or "day_cluster_t" in v for k, v in d["grid"].items()), "the default dev grid must be unchanged"
+    toy = pd.DataFrame({"ts": pd.to_datetime(["2022-01-03 15:00"] * 4 + ["2022-01-03 19:00"] * 2, utc=True)})
+    cp = cap_per_bar(toy, np.array([0.5, 0.9, 0.1, 0.7, 0.3, 0.4]), 0.2, 2)
+    assert list(cp > 0.2) == [False, True, False, True, True, True], cp
+    assert np.array_equal(cap_per_bar(toy, np.array([0.5, 0.9, 0.1, 0.7, 0.3, 0.4]), 0.2, 0), np.array([0.5, 0.9, 0.1, 0.7, 0.3, 0.4]))
+    dc = dev_stage(tab, folds=["2022-09-01", "2023-01-01"], train_end="2023-04-30", taus=[0.0], configs={"B": small["B"]}, min_oof_n=1,
+                   log=lambda *_: None, caps=(0, 1))
+    gu, gc = dc["grid"]["B|0.0"], dc["grid"]["B|0.0|cap1"]
+    assert gc["n"] <= gu["n"] and gc["max_per_bar"] == 1 and "day_cluster_t" in gu and gc["n_days"] >= 1, (gu, gc)
+    assert gu["n"] == d["grid"]["B|0.0"]["n"] and gu["mean_net_r"] == d["grid"]["B|0.0"]["mean_net_r"], "cap 0 must equal the default arm"
+    fake = {"B|0.2": {"n": 900, "mean_net_r": 0.05, "day_cluster_t": 1.0, "by_fold": {}},
+            "B|0.2|cap3": {"n": 400, "mean_net_r": 0.06, "day_cluster_t": 1.6, "by_fold": {i: {"mean_net_r": 0.1} for i in range(4)}}}
+    assert cap_verdict(fake, "B", 0.2, 3)[0] == "pass"
+    fake["B|0.2|cap3"]["day_cluster_t"] = 1.4
+    assert cap_verdict(fake, "B", 0.2, 3)[0] == "fail"
+    fake["B|0.2|cap3"]["n"] = 299
+    assert cap_verdict(fake, "B", 0.2, 3)[0] == "indeterminate"
     # the confirming window must be refused when it overlaps training or sits inside the embargo
     for bad in ("2023-04-30", "2023-05-05"):
         try:
@@ -836,6 +920,10 @@ def main(argv=None) -> int:
             p.add_argument("--configs", default="", help="comma list of configs to run (default all)")
             p.add_argument("--ensemble-seeds", dest="ensemble_seeds", default="", help="comma list of seeds: ONE model per config = the mean of pinned fits at these seeds")
             p.add_argument("--seeds", default="", help="comma list of LightGBM seeds: refit every config under PINNED determinism per seed (variance read)")
+            p.add_argument("--max-per-bar", dest="max_per_bar", default="", help="OPT-IN comma list of per-decision-bar caps, e.g. 0,3,5 (0 = uncapped); default off")
+            p.add_argument("--cap-grade", dest="cap_grade", default="", help="OPT-IN 'config|tau|k': grade the concurrency-cap rule (cap_verdict); needs --max-per-bar with 0 and k")
+            p.add_argument("--rule-id", dest="rule_id", default="")
+            p.add_argument("--registered-at", dest="registered_at", default="")
         if name == "forward":
             p.add_argument("--tau", required=True)
             p.add_argument("--dev-oof-mean", required=True)

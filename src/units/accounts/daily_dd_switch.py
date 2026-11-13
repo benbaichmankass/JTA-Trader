@@ -34,13 +34,30 @@ Semantics
   ``limits.daily_loss_reset_utc`` for prop accounts.
 * **Loss** — ``day_start_equity - current_equity`` (EQUITY drawdown from the
   day start, i.e. realized + unrealized), the same shape as the firms'
-  ``equity_vs_daystart_balance`` rule. Day-start equity is the last equity
-  read within 2h before the boundary, else the first read after it.
+  ``equity_vs_daystart_balance`` rule. Day-start equity is the FIRST reading
+  taken at or after the boundary (DD-SWITCH-OVERRIDE, 2026-11-12). A reading
+  taken BEFORE the boundary is yesterday's equity and never anchors today:
+  until the first post-boundary reading arrives the row reads
+  ``awaiting_day_start`` (not ok, no unreadable streak, cannot trip). The one
+  exception is ``carried_quiescent`` below, where nothing moved equity since
+  the reading, so it IS the boundary equity. (Until 2026-11-12 the last
+  reading within 2h before the boundary was carried: on 11-12 bybit_2 and
+  bybit_portfolio anchored on the 23:00Z hourly snapshot, so the 23:00-00:00Z
+  loss of 11-11 was charged to 11-12 and the switch read ~45% used at 00:05Z.)
 * **Trip** — armed and ``loss >= limit``: NEW entries on the account are
   refused (``DAILY_DD_SWITCH``, the RiskManager per-trade refusal path).
   Open positions and their brackets are untouched; reduce-only legs pass.
-  The trip latches until the next day boundary, then clears by itself — no
-  manual clear. ONE alert on trip, ONE on reset.
+  The trip latches until the next day boundary, then clears by itself. ONE
+  alert on trip, ONE on reset.
+* **One-time override** (operator, 2026-11-12, m7) — :meth:`DailyDDSwitch.override`
+  clears TODAY's trip for one account for the rest of its trading day, at most
+  once per account per day. Journaled (append-only
+  ``runtime_logs/daily_dd_switch_overrides.jsonl``, who / when / why / the
+  loss and limit at the time) and alerted. It is not a mode flip and not a
+  gate: it only lifts the per-trade refusal for that day; the trip stays
+  latched in the row (no second trip alert that day) and the next day starts
+  armed as normal. The override file is written only by the override path, so
+  the trader's per-tick state writes can never drop it.
 * **Could not look** — unreadable equity never trips the switch (and never
   clears a trip already latched today). After ``UNREADABLE_FLAG_AFTER``
   consecutive unreadable checks on an armed account, ONE red flag is sent;
@@ -99,6 +116,13 @@ READ_UNREADABLE = "could_not_look"
 READ_NOT_OBSERVED = "not_observed"
 READ_CARRIED = "carried_quiescent"
 READ_DRY_NOT_READ = "dry_run_not_read"
+READ_AWAITING = "awaiting_day_start"
+_OVERRIDES_FILENAME = "daily_dd_switch_overrides.jsonl"
+
+OVERRIDE_OK = "overridden"
+OVERRIDE_NOT_ARMED = "not_armed"
+OVERRIDE_NOT_TRIPPED = "not_tripped"
+OVERRIDE_ALREADY = "already_overridden"
 
 
 def _f(x: Any) -> Optional[float]:
@@ -320,16 +344,10 @@ class DailyDDSwitch:
         row = dict(before)
         if row.get("day") != day.isoformat():
             was_tripped = bool(row.get("tripped"))
-            carry = None
             last_eq, last_ts = _f(row.get("last_equity")), row.get("last_equity_ts")
-            if last_eq and last_ts:
-                try:
-                    ts = datetime.fromisoformat(str(last_ts))
-                    if day_boundary(day, self.cfg.reset_utc) - ts <= CARRY_DAY_START_WINDOW:
-                        carry = last_eq
-                except ValueError:
-                    carry = None
-            row = {"day": day.isoformat(), "day_start_equity": carry,
+            # No carry: a pre-boundary reading is yesterday's equity. Today's
+            # anchor is the first reading at/after the boundary (module doc).
+            row = {"day": day.isoformat(), "day_start_equity": None,
                    "last_equity": last_eq, "last_equity_ts": last_ts,
                    "tripped": False, "tripped_at": None,
                    "unreadable_streak": 0, "red_flagged": False}
@@ -346,10 +364,19 @@ class DailyDDSwitch:
                 return row
         carried = False
         if eq is not None and eq > 0:
-            if reading_ts < day_boundary(day, self.cfg.reset_utc) - CARRY_DAY_START_WINDOW:
+            boundary = day_boundary(day, self.cfg.reset_utc)
+            if reading_ts < boundary:
                 # Yesterday's equity is not a reading of today -- unless the
                 # caller shows nothing has moved it since (carried, labelled).
                 carried = _still_valid(still_valid, reading_ts)
+                if not carried and reading_ts >= boundary - CARRY_DAY_START_WINDOW:
+                    # The day just turned and today's first reading has not
+                    # arrived yet (the hourly snapshot lands ~1 min after the
+                    # boundary): honest, never ok, never counted unreadable.
+                    row["unreadable_streak"] = 0
+                    row["read_state"] = READ_AWAITING
+                    self._put_if_changed(before, row)
+                    return row
                 if not carried:
                     eq = None
 
@@ -395,20 +422,86 @@ class DailyDDSwitch:
         if row != before:
             self._put(row)
 
-    def blocks_new_entries(self, row: Optional[Dict[str, Any]] = None,
-                           now: Optional[datetime] = None) -> bool:
-        """Armed AND tripped for the CURRENT trading day."""
-        if not self.cfg.armed:
-            return False
-        row = row if row is not None else self._row()
+    def _tripped_today(self, row: Mapping[str, Any], now: Optional[datetime] = None) -> bool:
         day = trading_day(now or datetime.now(timezone.utc), self.cfg.reset_utc)
         return bool(row.get("tripped")) and row.get("day") == day.isoformat()
 
-    def status(self, row: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """The operator-facing view (``/api/bot/config``, ``report()``)."""
+    def blocks_new_entries(self, row: Optional[Dict[str, Any]] = None,
+                           now: Optional[datetime] = None) -> bool:
+        """Armed AND tripped for the CURRENT trading day AND not overridden
+        for that day by the operator's one-time override."""
+        if not self.cfg.armed:
+            return False
+        row = row if row is not None else self._row()
+        if not self._tripped_today(row, now):
+            return False
+        return self.override_for_day(str(row.get("day"))) is None
+
+    # -- the one-time override (operator 2026-11-12, m7) ----------------------
+    def _overrides_path(self) -> Path:
+        return _overrides_path(self._state_path)
+
+    def override_for_day(self, day: str) -> Optional[Dict[str, Any]]:
+        """Today's override record for this account, or None."""
+        return _find_override(self._overrides_path(), self.account_id, day)
+
+    def override(self, *, by: str, reason: str = "",
+                 now: Optional[datetime] = None) -> Tuple[str, Dict[str, Any]]:
+        """Clear TODAY's trip for this account for the rest of its trading day.
+
+        One-time: at most one override per account per trading day. Refused
+        (nothing written) when the switch is not armed, not tripped today, or
+        already overridden today. Returns ``(outcome, payload)``; ``payload``
+        carries the journal record on success and the current status always.
+        Raises ``OSError`` only when the journal cannot be written (then
+        nothing was overridden)."""
+        now = now or datetime.now(timezone.utc)
+        row = self._row()
+        day = trading_day(now, self.cfg.reset_utc).isoformat()
+        if not self.cfg.armed:
+            return OVERRIDE_NOT_ARMED, {"status": self.status(row, now=now)}
+        if not self._tripped_today(row, now):
+            return OVERRIDE_NOT_TRIPPED, {"status": self.status(row, now=now)}
+        path = self._overrides_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "a+", encoding="utf-8") as fh:
+            _lock(fh)
+            try:
+                existing = _find_override(path, self.account_id, day)
+                if existing is not None:
+                    return OVERRIDE_ALREADY, {"override": existing,
+                                              "status": self.status(row, now=now)}
+                rec = {
+                    "account": self.account_id, "day": day, "at": now.isoformat(),
+                    "by": str(by or "unknown")[:120], "reason": str(reason or "")[:500],
+                    "tripped_at": row.get("tripped_at"),
+                    "day_start_equity": row.get("day_start_equity"),
+                    "loss_usd": row.get("loss_usd"), "limit_usd": row.get("limit_usd"),
+                    "limit_desc": self.cfg.describe(),
+                }
+                fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+                fh.flush()
+                os.fsync(fh.fileno())
+            finally:
+                _unlock(fh)
+        logger.warning("daily_dd_switch: OVERRIDE %s day=%s by=%s reason=%s",
+                       self.account_id, day, rec["by"], rec["reason"])
+        self._send("override", dict(row, override=rec))
+        return OVERRIDE_OK, {"override": rec, "status": self.status(row, now=now)}
+
+    def status(self, row: Optional[Dict[str, Any]] = None, *,
+               now: Optional[datetime] = None) -> Dict[str, Any]:
+        """The operator-facing view (``/api/bot/config``, ``report()``).
+
+        ``tripped`` = new entries are refused right now (False once today's
+        trip is overridden); ``trip_latched`` = the switch tripped today;
+        ``override`` = today's override record or None; ``override_available``
+        = the one-time override can be used now."""
         row = row if row is not None else self._row()
         dse = _f(row.get("day_start_equity"))
         limit = self.cfg.limit_usd(dse)
+        latched = self.cfg.armed and self._tripped_today(row, now)
+        ovr = self.override_for_day(str(row.get("day"))) if latched else None
         return {
             "armed": self.cfg.armed,
             "limit_basis": self.cfg.basis,
@@ -422,12 +515,62 @@ class DailyDDSwitch:
             "day_start_equity": dse,
             "limit_usd": round(limit, 2) if limit is not None else None,
             "loss_usd": row.get("loss_usd"),
-            "tripped": self.blocks_new_entries(row),
+            "tripped": bool(latched and ovr is None),
             "tripped_at": row.get("tripped_at"),
+            "trip_latched": bool(latched),
+            "override": ovr,
+            "override_available": bool(latched and ovr is None),
             "read_state": row.get("read_state") or READ_NOT_OBSERVED,
             "carried_from": row.get("carried_from"),
             "unreadable_streak": int(row.get("unreadable_streak") or 0),
         }
+
+
+def _overrides_path(state_path: Optional[Path] = None) -> Path:
+    """The override journal sits beside the state file (same test seam)."""
+    return (state_path or _state_path()).with_name(_OVERRIDES_FILENAME)
+
+
+def load_overrides(path: Optional[Path] = None) -> list:
+    """Every override record, oldest first. Unreadable lines are skipped."""
+    p = path or _overrides_path()
+    out: list = []
+    try:
+        if not p.exists():
+            return out
+        for line in p.read_text(encoding="utf-8").splitlines():
+            try:
+                rec = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(rec, dict):
+                out.append(rec)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("daily_dd_switch: overrides load failed: %s", exc)
+    return out
+
+
+def _find_override(path: Path, account_id: str, day: str) -> Optional[Dict[str, Any]]:
+    for rec in load_overrides(path):
+        if rec.get("account") == account_id and rec.get("day") == day:
+            return rec
+    return None
+
+
+def _lock(fh: Any) -> None:
+    try:
+        import fcntl
+        fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
+    except (ImportError, OSError):  # pragma: no cover — non-POSIX: best effort
+        pass
+
+
+def _unlock(fh: Any) -> None:
+    try:
+        import fcntl
+        fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+    except (ImportError, OSError):  # pragma: no cover
+        pass
 
 
 def _still_valid(check: Optional[Callable[[datetime], bool]], since: datetime) -> bool:
@@ -602,5 +745,7 @@ __all__ = [
     "BASIS_PCT", "BASIS_PROP", "SwitchConfig", "DailyDDSwitch", "parse_config",
     "prop_firm_terms", "trading_day", "switch_for_account", "load_state",
     "snapshot_equity_reading", "prop_equity_reading", "observe_armed_accounts",
-    "prop_quiescent_since", "READ_CARRIED", "READ_DRY_NOT_READ",
+    "prop_quiescent_since", "READ_CARRIED", "READ_DRY_NOT_READ", "READ_AWAITING",
+    "load_overrides", "OVERRIDE_OK", "OVERRIDE_NOT_ARMED", "OVERRIDE_NOT_TRIPPED",
+    "OVERRIDE_ALREADY",
 ]

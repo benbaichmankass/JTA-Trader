@@ -132,12 +132,22 @@ LEDGER_URL = os.environ.get("BOT_API_BASE", "https://ict-bot.duckdns.org").rstri
     "/api/bot/alerts?kind=work_digest_receipt&limit=5"
 
 
+def _service_headers() -> dict:
+    """``Authorization: Bearer $DASHBOARD_API_TOKEN`` when the token is in the
+    environment, else nothing. The read-only service credential the site gate
+    accepts on GET/HEAD once ``SITE_AUTH_ENFORCE`` is on (UI-OAUTH-SIGNIN; the
+    gate ignores it while off). Only ever sent to this project's own API."""
+    tok = os.environ.get("DASHBOARD_API_TOKEN", "").strip()
+    return {"Authorization": f"Bearer {tok}"} if tok else {}
+
+
 def read_ledger_receipt(url: str = "", timeout: float = 15.0) -> Tuple[Optional[Dict[str, Any]], str]:
     """(newest receipt, read_state) from the alert ledger. read_state is ``read`` |
     ``absent`` (ledger read, no receipt row yet) | ``could_not_look`` — never folded together."""
     import urllib.request  # noqa: PLC0415 — keep module import free
     try:
-        with urllib.request.urlopen(url or LEDGER_URL, timeout=timeout) as r:  # noqa: S310
+        req = urllib.request.Request(url or LEDGER_URL, headers=_service_headers())
+        with urllib.request.urlopen(req, timeout=timeout) as r:  # noqa: S310
             doc = json.loads(r.read().decode("utf-8"))
     except Exception:  # noqa: BLE001 — a failed look is reported as such, not as "absent"
         return None, "could_not_look"

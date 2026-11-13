@@ -182,9 +182,13 @@ class AlpacaMarketData:
         with _STATE_LOCK:
             READ_STATE_COUNTS[state] += 1
 
-    def _get(self, url: str, params: dict):
+    def _get(self, url: str, params: dict, share_cooldown: bool = True):
         """One GET, never a sleep. Raises AlpacaRateLimited while a cooldown runs (no call made) or when this call answers
-        429/5xx (which starts the cooldown); otherwise returns the response for raise_for_status to judge."""
+        429/5xx (which starts the cooldown); otherwise returns the response for raise_for_status to judge.
+
+        ``share_cooldown=False`` (only the historical ``since`` read, CLOSED-TRADE-SNAPSHOT-FUTURES-CANDLES): the call still
+        HONOURS a running cooldown (no call made), but its own 429/5xx raises WITHOUT starting or extending the shared
+        cooldown, so a background backfill can never put this process's other Alpaca bars reads into cooldown."""
         left = _cooldown_remaining()
         if left > 0.0:
             raise AlpacaRateLimited(f"cooldown {left:.1f}s left (no call made)")
@@ -196,6 +200,8 @@ class AlpacaMarketData:
         status = getattr(resp, "status_code", 200)   # raise_for_status still judges the answer
         if status in _RETRY_STATUSES:
             secs = _retry_after_s(resp)
+            if not share_cooldown:
+                raise AlpacaRateLimited(f"HTTP {status} on a since read; shared cooldown NOT started")
             if _start_cooldown(secs):
                 logger.warning("alpaca: HTTP %s on %s (thread=%s) -- Alpaca bars calls return read_state=rate_limited for "
                                "%.0f s (no in-line sleep)", status, url.rsplit("/", 2)[-2], threading.current_thread().name,
@@ -203,12 +209,17 @@ class AlpacaMarketData:
             raise AlpacaRateLimited(f"HTTP {status}; cooldown {secs:.0f}s")
         return resp
 
-    def get_ohlcv(self, symbol: str, timeframe: str = "5m", limit: int = 100):
+    def get_ohlcv(self, symbol: str, timeframe: str = "5m", limit: int = 100, since: int | None = None):
         """Return the most recent *limit* bars as a canonical DataFrame.
 
         Columns: ``timestamp, open, high, low, close, volume`` —
         timestamps are tz-aware UTC. Returns ``None`` on any error or
         empty response (the ``fetch_candles`` contract).
+
+        ``since`` (optional, epoch MILLISECONDS, the CCXT/Bybit convention ``fetch_candles`` passes): return up to
+        *limit* bars FORWARD from that instant instead of the most recent ones (CLOSED-TRADE-SNAPSHOT-FUTURES-CANDLES,
+        AM-UI Q10 option (b)). A call without it takes exactly the path it always took. A since read never starts the
+        shared rate-limit cooldown (see ``_get``).
         """
         tf_key = str(timeframe).lower()
         tf = _TIMEFRAME_MAP.get(tf_key)
@@ -216,7 +227,10 @@ class AlpacaMarketData:
             logger.warning("alpaca: unsupported timeframe %r", timeframe)
             return None
         try:
-            bars = self._bars_paged(symbol, tf, tf_key, int(limit))
+            if since is not None:
+                bars = self._bars_since(symbol, tf, int(since), int(limit))
+            else:
+                bars = self._bars_paged(symbol, tf, tf_key, int(limit))
             if not bars:
                 self._record(symbol, "empty")
                 logger.warning(
@@ -282,6 +296,34 @@ class AlpacaMarketData:
             # the post-deploy observation reads this: a short frame with no token left is the venue's whole answer
             logger.info("alpaca: %s %s %d/%d bars after %d page(s), next_page_token=%s",
                         symbol, tf, len(out), limit, page + 1, "set" if token else "none")
+        return out[:limit]
+
+    def _bars_since(self, symbol: str, tf: str, since_ms: int, limit: int) -> list:
+        """Up to ``limit`` bars from ``since_ms`` forward (ascending), following ``next_page_token``; bounded by
+        ``_MAX_PAGES``. Uses ``_get(share_cooldown=False)``. The first page failing raises to the caller; a later page
+        failing keeps the bars already read (logged) -- the same rule as ``_bars_paged``."""
+        start = datetime.fromtimestamp(since_ms / 1000.0, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        out: list = []
+        token = None
+        for page in range(_MAX_PAGES):
+            params = {"timeframe": tf, "limit": max(1, min(limit - len(out), _PAGE_LIMIT_MAX)), "start": start,
+                      "adjustment": "split", "feed": self.feed, "sort": "asc"}
+            if token:
+                params["page_token"] = token
+            try:
+                resp = self._get(f"{self.base_url}/v2/stocks/{symbol}/bars", params, share_cooldown=False)
+                resp.raise_for_status()
+                body = resp.json() or {}
+            except Exception as exc:  # noqa: BLE001
+                if page == 0:
+                    raise
+                logger.warning("alpaca: since page %d of %s %s failed (%s) — keeping %d bars already read",
+                               page + 1, symbol, tf, exc, len(out))
+                break
+            out.extend(body.get("bars") or [])
+            token = body.get("next_page_token")
+            if len(out) >= limit or not token:
+                break
         return out[:limit]
 
     def get_bars_multi(self, symbols, timeframe: str, start: str, chunk: int = _MULTI_CHUNK) -> tuple:

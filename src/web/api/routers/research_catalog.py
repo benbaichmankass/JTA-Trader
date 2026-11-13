@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -32,6 +32,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from src.runtime import rd_registry as rdr
 from src.runtime import research_catalog as rc
+from src.runtime import research_runs as rr
 from src.utils.paths import repo_root
 from src.web.api._swr import SWRCache
 
@@ -42,6 +43,7 @@ router = APIRouter(prefix="/api/bot/research", tags=["research"])
 _UNIT_ID_RE = re.compile(r"^RQ-[0-9A-Za-z-]{4,40}$")
 _SWR = SWRCache(name="research-catalog", fresh_s=30.0, stale_s=300.0)
 _SWR_REG = SWRCache(name="research-registry", fresh_s=300.0, stale_s=1800.0)
+_SWR_RUNS = SWRCache(name="research-runs", fresh_s=60.0, stale_s=600.0)
 
 
 def _catalog() -> dict[str, Any]:
@@ -131,13 +133,41 @@ def _registry() -> dict[str, Any]:
     return doc
 
 
+def _changed(ideas: list[dict[str, Any]], since: str | None) -> dict[str, Any]:
+    """Ideas whose newest attributed-unit activity is on/after the window start. 400 on an invalid ``since``."""
+    if since:
+        raw = since.rstrip("Z")
+        raw = raw if "T" in raw else f"{raw}T00:00"
+        try:
+            cutoff = rc._iso(datetime.fromisoformat(raw).replace(tzinfo=timezone.utc))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="since is not a valid date") from None
+        basis = "since param"
+    else:
+        cutoff = rc._iso(datetime.now(timezone.utc) - timedelta(days=7))
+        basis = "default window: 7 days"
+    hit = sorted((i for i in ideas if i.get("last_activity") and str(i["last_activity"]) >= cutoff),
+                 key=lambda i: str(i["last_activity"]), reverse=True)
+    return {"since": cutoff, "basis": f"{basis}; idea's newest attributed-unit activity (result, dispatch or "
+                                      "grading) on/after `since`, over the whole registry",
+            "count": len(hit),
+            "items": [{"id": i.get("id"), "name": i.get("name"), "track": i.get("track"), "stage": i.get("stage"),
+                       "verdict": (i.get("latest_result") or {}).get("verdict"),
+                       "last_activity": i.get("last_activity")} for i in hit]}
+
+
 @router.get("/registry")
 def get_registry(
     track: str | None = Query(None, pattern="^(STRATEGY|ML)$"),
     stage: Annotated[list[str] | None, Query()] = None,
     q: str = Query("", max_length=200),
+    since: str | None = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?Z?)?$"),
 ) -> dict[str, Any]:
-    """The idea-level R&D registry. Optional filters narrow ``ideas``; ``summary`` is always the whole registry."""
+    """The idea-level R&D registry. Optional filters narrow ``ideas``; ``summary`` is always the whole registry.
+
+    ``changed`` (UI-WQ-RD-ROUTE) is computed here over the WHOLE registry for the window starting at ``since``
+    (an ISO date or UTC datetime; default 7 days before now), so the SPA's "changed" view never derives it.
+    """
     try:
         doc, _age, swr_state = _SWR_REG.get("registry", _registry)
     except Exception as exc:  # noqa: BLE001  # allow-silent: falls back to the committed file, stated as servedFrom/readState
@@ -157,5 +187,74 @@ def get_registry(
              if (not track or i.get("track") == track) and (not stages or i.get("stage") in stages)
              and all(t in f"{i.get('id')} {i.get('name')} {i.get('stage_reason')}".lower() for t in terms)]
     return {**doc, "present": True, "readState": "read", "cache": swr_state,
-            "matched": len(ideas), "ideas": ideas,
+            "matched": len(ideas), "ideas": ideas, "changed": _changed(doc.get("ideas") or [], since),
             "freshness": "built from the VM working tree (ict-git-sync pulls main ~every 5 min); cached 5 min"}
+
+
+# ── UI-BACKTEST-LOG-GAPS: the run log (every test run, its result, what we did with it) ─────────────────────────
+
+
+def _runs() -> dict[str, Any]:
+    root = Path(repo_root())
+    cat = _get()
+    docs: dict[str, dict] = {}
+    q = root / "research" / "queue"
+    for sub in (q, q / "blocked"):
+        if sub.is_dir():
+            for p in sorted(sub.glob("*.yaml")):
+                doc, _err = rc._load_yaml(p)  # unreadable files are already in the catalog's readErrors
+                if doc is not None:
+                    docs[str(doc.get("id") or p.stem)] = doc
+    return {"rows": rr.build_runs(cat["units"], docs), "readErrors": cat["readErrors"],
+            "generatedAt": rc._iso(datetime.now(timezone.utc))}
+
+
+def _trainer_sweeps() -> dict[str, Any]:
+    """The trainer sweep mirror's own age, stated (it is an on-demand producer, not a schedule)."""
+    try:
+        from src.web.api.routers import backtests as bt
+        sw = bt.get_backtest_sweeps(limit=1)
+        age = sw.get("mirror_age_seconds")
+        return {"read_state": "read" if sw.get("present") else "absent", "mirror_age_seconds": age,
+                "mirror_age_days": round(age / 86400, 1) if isinstance(age, (int, float)) else None,
+                "route": "/api/bot/backtests/sweeps",
+                "note": "scripts/ops/run_backtest_sweep.sh is an ON-DEMAND sweep (run by hand through the trainer "
+                        "relay, last for the 2026-05-17 post-incident validation); it is not scheduled, so its "
+                        "age is not a broken sync. Research-harness runs are the log above."}
+    except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as read_state unreadable
+        return {"read_state": "unreadable", "mirror_age_seconds": None, "mirror_age_days": None,
+                "route": "/api/bot/backtests/sweeps", "note": f"could not read: {type(exc).__name__}"}
+
+
+@router.get("/runs")
+def get_runs(
+    verdict: Annotated[list[str] | None, Query()] = None,
+    what: Annotated[list[str] | None, Query()] = None,
+    q: str = Query("", max_length=200),
+    since: str | None = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+) -> dict[str, Any]:
+    """Every research/backtest run that produced a verdict, newest first, with what was done with it.
+
+    ``what`` filters on ``what_we_did.state`` (``acted`` / ``recorded`` / ``none_recorded``); ``counts`` are over
+    the whole log. An unreadable catalog is ``readState: unreadable`` with ``runs: null``, never an empty log.
+    """
+    try:
+        data, _age, swr_state = _SWR_RUNS.get("runs", _runs)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as readState unreadable + runs null
+        logger.warning("research runs build failed: %s", exc)
+        return {"present": False, "readState": "unreadable", "reason": type(exc).__name__, "total": None,
+                "matched": None, "runs": None, "counts": None, "trainer_sweeps": _trainer_sweeps()}
+    bad = [w for w in _csv(what) if w not in rr.WHAT_STATES]
+    if bad:
+        raise HTTPException(status_code=400, detail=f"what must be among {list(rr.WHAT_STATES)}")
+    out = rr.query_runs(data["rows"], verdict=_csv(verdict), what=_csv(what), q=q, since=since,
+                        limit=limit, offset=offset)
+    return {**out, "present": True, "readState": "partial" if data["readErrors"] else "read",
+            "readErrors": data["readErrors"], "generatedAt": data["generatedAt"], "cache": swr_state,
+            "population": "every research/queue unit (incl. blocked/) whose catalog row carries a verdict",
+            "what_we_did_basis": "follow-up units linked by iteration.from_result, requires_result.unit, "
+                                 "grading.confirm_unit / grading.confirms; plus grading.disposition and retired_reason "
+                                 "(prose). none_recorded = no such link on the record, NOT 'nobody acted'.",
+            "trainer_sweeps": _trainer_sweeps()}
