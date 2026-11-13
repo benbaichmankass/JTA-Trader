@@ -32,7 +32,21 @@ class _Client:
         return self
 
     def _ensure_event_loop(self):
-        return None
+        # Mirror IBClient._ensure_event_loop: put an event loop on the CALLING thread (the pinned
+        # ``ib-marketdata`` worker). A no-op here let the first ``from ib_insync import Future`` inside
+        # that thread fail ("There is no current event loop in thread 'ib-marketdata_0'") whenever no
+        # earlier test had already imported ib_insync on the main thread: an order-dependent red that
+        # only shows where ib_insync is installed (CI), never where the stub module is used.
+        import asyncio
+        try:
+            asyncio.get_running_loop()
+            return
+        except RuntimeError:
+            pass
+        loop = getattr(self, "_loop", None)
+        if loop is None or loop.is_closed():
+            loop = self._loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
     def _build_contract(self, symbol):
         return object()
