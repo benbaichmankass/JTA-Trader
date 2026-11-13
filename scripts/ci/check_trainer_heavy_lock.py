@@ -127,6 +127,9 @@ DECLARED_LIGHT = {
         "FRONTIER-Q-RESID-ENTRY market-residual target harness: same data and route as ml_decision_entry.py (unit "
         "RQ-20261112-4654-01, compute cpu_long, research-script-run.yml github_runner); fits LightGBM on public Binance Vision "
         "klines, never needs_vm_data, never routed to the trainer.",
+    "scripts/research/ml_entry_maker_replay.py":
+        "ML-DECISION-MODELS maker-entry replay: scores the committed frozen ENTRY v1 booster (no fit) on public Binance Vision klines "
+        "(unit RQ-20261112-1c4e-01, compute cpu_long, github_runner or a lane container); never routed to the trainer.",
     "scripts/research/ml_entry_cost_levers.py":
         "ML-LEVER-PLAN ENTRY cost levers (units RQ-20261112-4654-02/-03): same data and route as ml_decision_entry.py, LightGBM refits on "
         "public Binance Vision klines on a GitHub runner (compute cpu_long, github_runner); never needs_vm_data, never routed to the trainer.",
