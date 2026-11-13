@@ -263,6 +263,19 @@ def _adx(df: pd.DataFrame, period: int) -> pd.Series:
 _effective_trail_mult = effective_trail_mult
 
 
+def _cell_tighten():
+    """scripts/research/cell_tighten.py, loaded by FILE (shared with backtest_pullback.py)."""
+    mod = sys.modules.get("cell_tighten")
+    if mod is None:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "cell_tighten", Path(__file__).resolve().parent / "research" / "cell_tighten.py")
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules["cell_tighten"] = mod
+        spec.loader.exec_module(mod)
+    return mod
+
+
 def _forming_bar_entries():
     """scripts/research/forming_bar_entries.py, loaded by FILE (the decision
     mode's one implementation; see run_backtest(decision_bar=...))."""
@@ -359,6 +372,11 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  momentum_stale_bars: int = 0,
                  momentum_stale_adx_below: float = 0.0,
                  be_floor_r: float = 0.0,
+                 cell_tighten_min_r: float = 0.0,
+                 cell_tighten_room_atr: float = 1.0,
+                 cell_tighten_mode: str = "first",
+                 cell_tighten_random_p: float = 0.5,
+                 cell_tighten_seed: int = 0,
                  tp_revision: str = "",
                  tp_revision_width_mult: float = 1.0,
                  tp_geometry: Optional[_tpg.TPGeometrySpec] = None,
@@ -905,6 +923,9 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                                                 df["timestamp"].iloc[entry_i], direction),
                         entry_i=entry_i, entry=entry, risk=risk,
                         is_long=(direction == "long"))
+        # CELL TIGHTEN (RQ-20261101-78fc-09; 0 = off, byte-identical): one-shot late-cell stop move, per trade.
+        _ct = _cell_tighten().for_trade(cell_tighten_min_r, cell_tighten_room_atr, cell_tighten_mode,
+                                        cell_tighten_random_p, cell_tighten_seed, entry_i)
         for j in range(entry_i + 1, min(entry_i + timeout_bars + 1, n)) if _rest_hit is None else ():
             if _prec is not None:
                 # Closes bar j-1's row with the state as it stands now (its end
@@ -983,6 +1004,9 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                 # tightening direction here, mirroring the ratchet above.
                 if be_floor_r > 0.0 and mfe >= be_floor_r:
                     trail = min(trail, entry)
+            if _ct.on:
+                # after the ratchet + BE floor on bar j's CLOSE: binds from bar j+1 (SL-first), only ever tightens
+                trail = _ct.on_close(j, float(df["close"].iloc[j]), entry, risk, atr, trail, direction == "long")
             if _sx is not None:
                 # bar j has CLOSED: new confirmed levels bind from bar j+1 (ratchet / extend-only)
                 trail, _sx_tp = _sx.on_bar_close(j, float(df["close"].iloc[j]), trail, tp_price, entry)
@@ -1339,6 +1363,10 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
         params["adx_period"] = adx_period
     if be_floor_r > 0.0:
         params["be_floor_r"] = be_floor_r
+    if cell_tighten_min_r > 0.0:
+        params.update(cell_tighten_min_r=cell_tighten_min_r, cell_tighten_room_atr=cell_tighten_room_atr,
+                      cell_tighten_mode=cell_tighten_mode, cell_tighten_random_p=cell_tighten_random_p,
+                      cell_tighten_seed=cell_tighten_seed)
     params.update(tp_geom.params())
     if confirm_bars:
         params["confirm_bars"] = confirm_bars
@@ -1763,6 +1791,7 @@ def main(argv: List[str]) -> int:
     p.add_argument("--trail-decay-tight-mult", type=float, default=0.0,
                    help="The tightened trail mult once armed (0 disables the "
                         "whole decay lever, byte-identical).")
+    _cell_tighten().add_cli(p)
     p.add_argument("--be-floor-r", type=float, default=0.0,
                    help="MI-165 break-even FLOOR (0=off, byte-identical): once "
                         "the trade has SEEN this many R of open profit, the "
@@ -2075,6 +2104,11 @@ def main(argv: List[str]) -> int:
                      trail_decay_tight_mult=args.trail_decay_tight_mult,
                      rr_floor=args.rr_floor,
                      be_floor_r=args.be_floor_r,
+                     cell_tighten_min_r=args.cell_tighten_min_r,
+                     cell_tighten_room_atr=args.cell_tighten_room_atr,
+                     cell_tighten_mode=args.cell_tighten_mode,
+                     cell_tighten_random_p=args.cell_tighten_random_p,
+                     cell_tighten_seed=args.cell_tighten_seed,
                      confirm_bars=args.confirm_bars,
                      skip_hours=args.skip_hours,
                      flat_at_utc=args.flat_at_utc,
