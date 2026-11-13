@@ -1,0 +1,22 @@
+Fetching BTCUSDT 60 candles 2025-10-09 -> 2026-11-13 (source=binance_vision) …
+  vision monthly 2025-10: 744 bars (552 kept)
+  vision monthly 2025-11: 720 bars (1272 kept)
+  vision monthly 2025-12: 744 bars (2016 kept)
+  vision monthly 2026-01: 744 bars (2760 kept)
+  vision monthly 2026-02: 672 bars (3432 kept)
+  vision monthly 2026-03: 744 bars (4176 kept)
+  vision monthly 2026-04: 720 bars (4896 kept)
+  vision monthly 2026-05: 744 bars (5640 kept)
+  vision monthly 2026-06: 720 bars (6360 kept)
+  vision monthly 2026-07: 744 bars (7104 kept)
+  vision monthly 2026-08: 744 bars (7848 kept)
+  vision monthly 2026-09: 720 bars (8568 kept)
+  vision monthly 2026-10: 744 bars (9312 kept)
+  vision daily 2026-11: 9600 bars kept so far
+Wrote 9600 rows (2025-10-09 -> 2026-11-12) to /tmp/exit_lever_ablation_m6ok8bjt/trend_donchian_1h__data.csv
+[A] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol BTCUSDT --resample 1h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261113-f251-05/43479076292/tf_1h/arms/A__trades.jsonl --json comms/research/RQ-20261113-f251-05/43479076292/tf_1h/arms/A__bt.json --tp-cap-pct 0.099 --tp-r 50.0 --decision-bar forming --minutes-1m-csv <minutes_1m> --strategy-name trend_donchian_1h --start 2025-11-01T00:00:00 --end 2026-10-31T23:00:00
+{
+ "verdict": "fail",
+ "label": "stage0_no_edge",
+ "why": "net_r=-10.57 with 1/4 positive folds (needs > 0 and >= 3)"
+}
