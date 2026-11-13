@@ -2229,6 +2229,9 @@ strategies:
     # research/results/RQ-20261113-4654-01/43368810094.jsonl. Confirms be01-02's C3 off TQQQ.
     # ROLLBACK: donchian: 30.
     donchian: 20
+    decision_bar: closed     # Tier-3 (fix for main red after #25671): decide on the CLOSED daily bar, which is what every Stage-0 record
+    # for this leg measures (comms/strategy_evidence/tqqq_trend_long_1d.json; RQ-20261113-4654-01). The runtime default
+    # (forming) has no equity replay, so it had no evidence. Precedent: DECISION-BAR-MATCH (operator 2026-10-22). Revert = delete this line.
     atr_period: 14
     atr_stop_mult: 2.5
     trail_mult: 4.0
