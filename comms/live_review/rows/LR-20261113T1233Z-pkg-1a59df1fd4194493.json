@@ -1,0 +1,140 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261113T1233Z-pkg-1a59df1fd4194493",
+ "reviewed_at": "2026-11-13T12:34:00Z",
+ "order_package_id": "pkg-1a59df1fd4194493",
+ "trade_id": null,
+ "leg": "qqq_pullback_1h",
+ "accounts": [
+  "alpaca_paper"
+ ],
+ "trigger": {
+  "event": "calendar",
+  "level": "ppi@2026-11-13T13:30:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-13T12:33:14Z",
+ "state": {
+  "atr_now_over_entry": 0.8871,
+  "bars_held": 8,
+  "giveback_r": 0.4618,
+  "open_r": 0.2911,
+  "peak_provenance": "estimated",
+  "peak_r": 0.7528,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 675.00875,
+  "tp": 754.06786
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.8871,
+  "bars_since_peak": 5,
+  "giveback_r": 0.4618,
+  "open_r": 0.2911,
+  "peak_r": 0.7528,
+  "r_to_stop": 1.2911,
+  "r_to_target": 5.8114
+ },
+ "mechanics": {
+  "evidence": "package sl 675.00875 / tp 754.06786 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 16,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261113T1233Z-pkg-1a59df1fd4194493.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. QQQ long from 686.14 is +0.29R (peak est +0.75R, 5 bars ago) with both brackets matching the venue (SL 675.01, TP 754.07) and the stop 1.29R away, so a PPI print at 13:30Z is bounded by the stop whichever way it breaks, and the plan already holds both sides of the Nasdaq book (QQQ long vs the QLD/TQQQ ml_entry shorts, which partly offset it). The table cannot price an exit: the hold cell is thin (n=16, floor 20) and every tighten/close option is unpriced for want of candles, so this is judgement. Nothing in the packet beats hold: I would not pull a long that is above entry with a 1.3R stop just before a scheduled two-sided event. First review."
+ },
+ "forecast": {
+  "thesis": "1h pullback long in a transitional regime (ADX 23.8) that gave back from a 694.52 high to ~689; the PPI print is two-sided, so I keep the entry plan and expect a retest of 694.52 only about a third of the time",
+  "direction": "with_trade",
+  "target_px": 694.52,
+  "p_target": 0.35,
+  "invalidation_px": 680.0,
+  "horizon_bars": 6,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings highs 694.52 (1.3 ATR), lows 680.0",
+   "chart.since_entry high 694.52 low 683.63",
+   "exit_plan sl 675.01 tp 754.07",
+   "calendar ppi 2026-11-13T13:30Z"
+  ]
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold cell n=16 below floor 20 (insufficient_n, mean not measured); tighten and close unpriced",
+  "calendar: ppi (impact 0.9) at 2026-11-13T13:30:00Z is inside the next bar",
+  "correlated: QQQ long offsets part of the QLD/TQQQ ml_entry shorts on alpaca_paper (net Nasdaq beta is small)",
+  "atr_ratio: now/entry 0.89 (inside 0.67-1.5)",
+  "regime: transitional (ADX 23.8); regime cell entry/now null",
+  "htf: context_v3 htf null (could not look)",
+  "packet_defect: priced_options.options all_options_unpriced:no_candles 5/5",
+  "packet_defect: priced_options.candles candles_missing 5/5"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuMSFxvwPgnqM56W3J2",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [
+  {
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:no_candles",
+   "count": 5,
+   "denominator": 5
+  },
+  {
+   "field": "priced_options.candles",
+   "reason": "candles_missing",
+   "count": 5,
+   "denominator": 5
+  }
+ ],
+ "packet_sha": "9e0177233eca5c922657928bc0a615f6e36a3fc92b1973dc774c37b5bf78ac47"
+}

@@ -1,0 +1,139 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261113T1233Z-pkg-3963c1d1e6e24a88",
+ "reviewed_at": "2026-11-13T12:34:00Z",
+ "order_package_id": "pkg-3963c1d1e6e24a88",
+ "trade_id": null,
+ "leg": "slv_trend_1h",
+ "accounts": [
+  "alpaca_paper"
+ ],
+ "trigger": {
+  "event": "calendar",
+  "level": "ppi@2026-11-13T13:30:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-13T12:33:14Z",
+ "state": {
+  "atr_now_over_entry": 0.8045,
+  "bars_held": 8,
+  "giveback_r": 0.5439,
+  "open_r": 0.0614,
+  "peak_provenance": "estimated",
+  "peak_r": 0.6053,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 45.765,
+  "tp": 40.720695
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.8045,
+  "bars_since_peak": 6,
+  "giveback_r": 0.5439,
+  "open_r": 0.0614,
+  "peak_r": 0.6053,
+  "r_to_stop": 1.0614,
+  "r_to_target": 7.7883
+ },
+ "mechanics": {
+  "evidence": "package sl 45.765 / tp 40.720695 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 16,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261113T1233Z-pkg-3963c1d1e6e24a88.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.5,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. SLV short from 45.195 is +0.06R (peak est +0.61R, 6 bars ago, so 0.54R given back) with both brackets matching the venue (SL 45.765, TP 40.72) and the stop 1.06R away, so the PPI print at 13:30Z can cost at most the remaining stop distance. The table cannot price an exit (hold cell thin, n=16 below floor 20; every tighten/close option unpriced for want of candles), so this is judgement, not a table call. The leg is flat after a 44.85 low and a lower high at 45.40 under the trend (ADX 25.3, trending): the trade is working sideways, and nothing in the packet beats the entry plan. First review."
+ },
+ "forecast": {
+  "thesis": "1h downtrend (ADX 25) with a lower high at 45.40 after the 44.85 low; I expect a retest of 44.85 before the 45.765 stop, but the two-sided PPI print caps conviction",
+  "direction": "with_trade",
+  "target_px": 44.85,
+  "p_target": 0.35,
+  "invalidation_px": 45.765,
+  "horizon_bars": 6,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings highs 45.40 (0.79 ATR), lows 44.85",
+   "chart.since_entry high 45.40 low 45.045",
+   "exit_plan sl 45.765 tp 40.72",
+   "calendar ppi 2026-11-13T13:30Z"
+  ]
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold cell n=16 below floor 20 (insufficient_n, mean not measured); tighten and close unpriced",
+  "calendar: ppi (impact 0.9) at 2026-11-13T13:30:00Z is inside the next bar",
+  "atr_ratio: now/entry 0.80 (inside 0.67-1.5)",
+  "regime: trending (ADX 25.3); regime cell entry/now null",
+  "htf: context_v3 htf null (could not look)",
+  "packet_defect: priced_options.options all_options_unpriced:no_candles 6/6",
+  "packet_defect: priced_options.candles candles_missing 6/6"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuMSFxvwPgnqM56W3J2",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [
+  {
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:no_candles",
+   "count": 6,
+   "denominator": 6
+  },
+  {
+   "field": "priced_options.candles",
+   "reason": "candles_missing",
+   "count": 6,
+   "denominator": 6
+  }
+ ],
+ "packet_sha": "1c2a4e5ef30a0ab448f31906e2e5621219e2664d6d3550f31577cabaa31f9dd2"
+}
