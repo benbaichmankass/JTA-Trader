@@ -1,0 +1,7 @@
+{
+ "tier": 1,
+ "landing": "hold",
+ "why": "Offline replay / observability tooling only: scripts/ops/live_replay_parity*.py, a read-only token-gated file-read diag route (/api/diag/ml_pool_snapshots, no socket, no order path), its two doc rows and tests. Nothing on the order path; no config, strategy, sizing or account-mode change.",
+ "hold_reason": "unvouchable_paths",
+ "hold_text": "Tier-1 work whose diff touches src/web/api/routers/diag.py (a new read-only, token-gated file-read diag route /api/diag/ml_pool_snapshots; no order path), a path outside TIER1_SURFACE: the guard cannot certify self-landing, so the manager lands it."
+}
