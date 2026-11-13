@@ -1354,7 +1354,14 @@ decides whether to intervene.
      `armed` defaults to `false` in code and arming is an explicit
      per-account YAML act. It is a per-trade `RiskManager` refusal (rule 3),
      never a `mode:` flip (rule 2). Checklist row `DAILY-DD-SWITCH`. It
-     sanctions no other self-halt.
+     sanctions no other self-halt. Day-start equity is the first reading at
+     or after the reset, never a pre-reset reading carried forward. The
+     operator may clear TODAY's trip for one account ONCE per day with a
+     logged override (operator, 2026-11-12, m7 *"Build the one-time override
+     button and fix the day-start reading first"*; `POST
+     /api/bot/accounts/{account}/daily-dd-switch/override`, row
+     `DD-SWITCH-OVERRIDE`); it lifts the per-trade refusal until the next
+     reset and is not a gate or a mode flip.
 
 ### What this rules out (queued for the safeguards PR follow-on)
 
