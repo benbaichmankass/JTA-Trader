@@ -10845,6 +10845,37 @@ def _alpaca_rearm_preflight(client, account_id: str, symbol: str, row,
                 s_ = _safe_float(r["stop_loss"])
                 if s_ and s_ > 0 and not _stop_is_marketable(want, s_, last, bid, ask):
                     cands.append(r)
+            if (not cands and not mixed and len(same) == 1
+                    and same[0]["id"] == row["id"] and 0 < venue_qty < row_qty):
+                # ALPACA-PARTIAL-TP-BREACH-EXIT (manager review of #25790, 2026-11-13):
+                # ONE row, the venue holds PART of it (a partially filled target whose
+                # stop leg the venue cancelled) and that row's stop is already through
+                # the market. Returning all_stops_breached here only paged: no stop
+                # could be posted and the exit_breached flow below was never reached,
+                # so the remainder sat with NO stop and NO exit. Run the same breach
+                # check the attributable path runs; the exit closes the venue's whole
+                # holding on this symbol (AlpacaClient.close: qty >= held -> whole
+                # symbol), which is exactly this one row's remainder.
+                s_row = _safe_float(row["stop_loss"])
+                if s_row and s_row > 0:
+                    bstate, binfo = _breach_state(client, symbol, want, float(s_row),
+                                                  last, bid, ask)
+                    if bstate == "confirmed":
+                        return "exit_breached", binfo
+                    remainder = {"row": row, "qty": venue_qty, "side": want}
+                    if bstate == "unconfirmed":
+                        esc, _n = _breach_deferral(account_id, symbol, row["id"])
+                        if not esc:
+                            return "deferred_unconfirmed_breach", binfo
+                        _page_rearm_refusal(
+                            "breach_deferral_escalated", account_id, symbol, row["id"],
+                            f"partial remainder {venue_qty} of {row_qty}: stop {s_row} "
+                            f"looked breached for {_n} sweeps with no fresh trade — "
+                            "posting protection for the held qty", verb="escalated")
+                        return "protect_venue_holding", {**remainder, "escalated": True}
+                    if bstate == "session_closed":
+                        # A GTC stop RESTS outside RTH and triggers at the open.
+                        return "protect_venue_holding", remainder
             if not cands:
                 _page_rearm_refusal(
                     "all_stops_breached", account_id, symbol, row["id"],
@@ -11582,6 +11613,9 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
                              "than left naked"))
                     _ok_key = "cap_exits"
                 if _res == "exited":
+                    # A partial-TP retry left for this row is moot once it exits.
+                    _ALPACA_PARTIAL_TP_PENDING.pop(
+                        (account_id, symbol.upper(), row["id"]), None)
                     summary[_ok_key] += 1
                 elif _res == "working":
                     # An extended-hours close-limit is resting at the broker.
