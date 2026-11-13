@@ -952,3 +952,28 @@ levers:
       best_delta_r_per_trade: -0.0373
       fold_stability: 0.333
       reading: every tested value is worse than the baseline
+levers_tested:
+- family: side_filter
+  varied: side_filter both vs short-only, forming bar from Alpaca iex 1Day + 1Min, window 2020-07-27..2026-11-13, full cost stack
+  response:
+    verdict: fail
+    run: '43479916308'
+    baseline:
+      arm: A
+      n: 45
+      net_r: -6.9566
+      folds_positive: 2/8
+    arms:
+    - side_filter: short
+      n: 29
+      net_r: 4.5532
+      folds_positive: 3/8
+      max_drawdown_r: 6.3479
+    reading: 'short-only turns the leg positive (+4.55R, +11.51R vs both sides, DD 6.3 vs 11.2) but only 3/8 folds are positive (rule needs 5):
+      improvement without a Stage-0 edge'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261113-f251-11
+  lever_family: direction
+units:
+- RQ-20261113-f251-11
