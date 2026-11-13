@@ -1,0 +1,123 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261113T2002Z-pkg-3963c1d1e6e24a88",
+ "reviewed_at": "2026-11-13T20:40:00Z",
+ "order_package_id": "pkg-3963c1d1e6e24a88",
+ "trade_id": null,
+ "leg": "slv_trend_1h",
+ "accounts": [
+  "alpaca_paper"
+ ],
+ "trigger": {
+  "event": "new_peak",
+  "level": 2.0,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-13T20:02:08Z",
+ "state": {
+  "atr_now_over_entry": 0.7857,
+  "bars_held": 14,
+  "giveback_r": 0.0702,
+  "open_r": 1.9386,
+  "peak_provenance": "estimated",
+  "peak_r": 2.0088,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 45.57,
+  "tp": 40.720695
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.7857,
+  "bars_since_peak": 0,
+  "giveback_r": 0.0702,
+  "open_r": 1.9386,
+  "peak_r": 2.0088,
+  "r_to_stop": 2.5965,
+  "r_to_target": 5.9111
+ },
+ "mechanics": {
+  "evidence": "package sl 45.57 / tp 40.720695 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. New peak: open +1.94R, estimated peak 2.01R, giveback 0.07R at 14 1h bars. Previous forecast (15:52Z: target 43.90, inv 45.16, p 0.45, 6x1h) is unresolved: 43.90 not yet touched (since-entry low 44.05), and the since-entry high 45.40 was 9 bars ago, before that review, with lower highs after. Table is thin (n=12 < floor 20), so the call is judgement. HOLD expresses the view: SL 45.57 is 3.7R from the open price and TP 40.72 is a real target; a tighten has class evidence of -0.097R and is advice only; carry the view forward with the target 43.90 and the invalidation moved to 44.85 (the broken 1h swing low, now resistance)."
+ },
+ "forecast": {
+  "thesis": "1h downtrend continues (lower highs from 45.40; the 44.16 swing low just broke, price 44.115 on a closed bar); I expect 43.90 before 44.85 is retaken, 4h only ADX 21.8 so conviction is modest",
+  "direction": "with_trade",
+  "target_px": 43.9,
+  "p_target": 0.45,
+  "invalidation_px": 44.85,
+  "horizon_bars": 6,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings lows 44.16 (broken), highs 45.40 / 44.85 (4h swing low)",
+   "chart.since_entry low 44.05",
+   "exit_plan sl 45.57 tp 40.72",
+   "context.previous_review forecast target 43.9 inv 45.16",
+   "packet state open_r 1.9386 peak 2.0088"
+  ]
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold n=12 below floor 20, cells insufficient_n; not measured",
+  "book: SLV short appears in 3 open packages (this, plus 2 more slv_trend_1h) = one metal-beta bet; GLD/IAUM/GDX/MGC/MHG shorts add precious-metals correlation",
+  "live_vs_backtest: mirror book 8 closed, live -7.42R at 4.1st percentile of the backtest band (p5 -6.95); realMoney no live trades; leg backtest +0.593R (n=92)",
+  "tighten_bias: stop-at-price fills flatter any tighten; tighten is advice-only",
+  "atr_ratio: now/entry 0.79",
+  "packet_defect: priced_options.options all_options_unpriced:insufficient_n 7/7"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuJLsSEBXRvoswfFiWp",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [
+  {
+   "count": 7,
+   "denominator": 7,
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:insufficient_n"
+  }
+ ],
+ "packet_sha": "42a3c454eacaa78827880befec4172845c498ff0dabd6a14895f7ad5e47360f3"
+}

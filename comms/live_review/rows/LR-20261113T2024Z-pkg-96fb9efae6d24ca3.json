@@ -1,0 +1,123 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261113T2024Z-pkg-96fb9efae6d24ca3",
+ "reviewed_at": "2026-11-13T20:40:00Z",
+ "order_package_id": "pkg-96fb9efae6d24ca3",
+ "trade_id": null,
+ "leg": "sol_pullback_2h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-13T20:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-13T20:24:41Z",
+ "state": {
+  "atr_now_over_entry": 1.0425,
+  "bars_held": 3,
+  "giveback_r": 0.4703,
+  "open_r": 0.3125,
+  "peak_provenance": "estimated",
+  "peak_r": 0.7828,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 84.64214286,
+  "tp": 73.35041
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.0425,
+  "bars_since_peak": 2,
+  "giveback_r": 0.4703,
+  "open_r": 0.3125,
+  "peak_r": 0.7828,
+  "r_to_stop": 1.3125,
+  "r_to_target": 2.1811
+ },
+ "mechanics": {
+  "evidence": "bybit_1: SOLUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-8c5ea40296f0432d); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": "comms/live_review/tables/LR-20261113T2024Z-pkg-96fb9efae6d24ca3.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. Previous forecast (14:56Z: target 80.37, inv 83.46, p 0.45, 6x2h) held: 80.37 traded (since-entry low 79.25, swing low 78.88) and 83.46 was never touched (since-entry high 80.55). Table thin (hold n=17 < floor 20), so judgement. Open +0.31R from an estimated 0.78R peak (0.47R given back) at 3 bars. HOLD already expresses the view (SL 84.64 beyond the 83.46 and 82.35 swing highs, TP 73.35); revise the target to the 78.88 swing low and the invalidation to the 82.35 swing high."
+ },
+ "forecast": {
+  "thesis": "1d down (ADX 39) and 2h lower highs 83.46/82.35; price broke the 80.37 swing low and bounced to 80.55, so I expect 78.88 before 82.35 is retaken",
+  "direction": "with_trade",
+  "target_px": 78.88,
+  "p_target": 0.4,
+  "invalidation_px": 82.35,
+  "horizon_bars": 6,
+  "timeframe": "2h",
+  "evidence": [
+   "chart.swings lows 78.88 (-1.02 ATR), highs 82.35 (1.56 ATR)",
+   "chart.htf 1d trending ADX 39.0",
+   "exit_plan sl 84.64 tp 73.35",
+   "context.previous_review forecast target 80.37 inv 83.46"
+  ]
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold n=17 below floor 20, cells insufficient_n; not measured",
+  "correlated: ETH shorts x4 on the book (this + 3 more across bybit_1/prop), plus ADA x2, SOL x2, XRP shorts = one crypto-beta bet",
+  "netted: SOLUSDT netted with ict_scalp_sol_15m short on bybit_1",
+  "atr_ratio: now/entry 1.04",
+  "inapplicable_options: 1/6 stop_level_not_below_price",
+  "tighten_bias: stop-at-price fills flatter any tighten",
+  "packet_defect: priced_options.options all_options_unpriced:insufficient_n 5/5"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuJLsSEBXRvoswfFiWp",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [
+  {
+   "count": 5,
+   "denominator": 5,
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:insufficient_n"
+  }
+ ],
+ "packet_sha": "369cbd704aa051faef96293bdfd712655d8b34d8825958e86ca466b8a7578d7a"
+}

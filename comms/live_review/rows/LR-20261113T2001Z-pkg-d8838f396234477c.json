@@ -1,0 +1,131 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261113T2001Z-pkg-d8838f396234477c",
+ "reviewed_at": "2026-11-13T20:40:00Z",
+ "order_package_id": "pkg-d8838f396234477c",
+ "trade_id": null,
+ "leg": "trend_donchian_eth_4h",
+ "accounts": [
+  "tradeify_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-13T20:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-13T20:01:15Z",
+ "state": {
+  "atr_now_over_entry": 1.2131,
+  "bars_held": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_provenance": "unverified",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1988.64892857,
+  "tp": 1742.9845
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.2131,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "mechanics": {
+  "evidence": "order_packages status=emitted close_reason=prop_ticket_emitted; no account carries this package in the reads (no trade / ticket row): nothing compared",
+  "verdict": "could_not_look"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.5,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. Prior forecast (18:33Z: target 1894.1, inv 1988.65, p 0.35, 3x4h) is unresolved and still live: since then the 16:00 4h bar ranged 1917.42-1955.71 and closed 1953.0, so 1894.1 was not retouched and 1988.65 was not retaken (the 1988.67 spike was the earlier 12:00 bar). Carry the view forward with p 0.30 (price drifted 0.42 ATR against the entry 1934.5). HOLD already expresses it: stop 1988.65 sits above the 1988.67 swing high, TP 1742.98 at 3.5R. Mechanics (read independently at 20:28Z, see context_flags): the bracket is resting on the venue and equals the package. open_r is null on prop (no telemetry); none invented."
+ },
+ "forecast": {
+  "thesis": "1d still down (ADX 26.6) and the 4h 12:00 spike to 1988.67 was rejected; the 16:00 bar bounced to 1955.71 and closed 1953, below the prior high, so shorts keep control. I expect a retest of the 1894.1 swing low before the 1988.65 stop, but the bounce above the 1934.5 entry keeps the odds modest",
+  "direction": "with_trade",
+  "target_px": 1894.1,
+  "p_target": 0.3,
+  "invalidation_px": 1988.65,
+  "horizon_bars": 3,
+  "timeframe": "4h",
+  "evidence": [
+   "chart.bars_ohlc 16:00 bar H 1955.71 L 1917.42 C 1953.0",
+   "chart.swings lows 1894.1, highs 1988.67 (0.81 ATR)",
+   "exit_plan sl 1988.65 tp 1742.98",
+   "context.previous_review forecast target 1894.1 inv 1988.65",
+   "prop/status tradeify_1 20:28Z short 0.18 @1934.5 SL 1988.649 TP 1742.984 (venue_terminal, MEASURED)"
+  ]
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "mechanics_unread: packet verdict could_not_look (order_packages status=emitted, no account carries the package in the generator's reads). Independent read-only check 20:28:33Z: /api/bot/prop/status?account_id=tradeify_1 positions_state=read, positions_provenance MEASURED, short ETHUSDT 0.18 @1934.5 SL 1988.649 TP 1742.984 (status age 3 min); ticket prop-manual-117fcf591c99 status filled sl 1988.64892857 tp 1742.9845. Both brackets present and equal the package to the tick; evidence only, the verdict stays as the packet gives it",
+  "prop_risk: tradeify_1 distance to DD floor 232.84 USD, open loss-to-stop 9.75 USD, unrealized -3.12 USD (rule_distance, freshness ok); daily_loss day_pnl unreported (realized_unreported)",
+  "venue_note: velotrade_1 (same strategy, a separate ticket, not this package) also read 20:33Z short ETHUSDT 0.19 @1962.01 SL 2004.16 TP 1759.73, both brackets present",
+  "correlated: ETH shorts x4 on the book (this + 3 more across bybit_1/prop), plus ADA x2, SOL x2, XRP shorts = one crypto-beta bet",
+  "priced_options: could_not_price, no table; call is judgement",
+  "atr_ratio: now/entry 1.21; funding not readable (puller not writing for tradeify_1)",
+  "packet_defect: priced_options could_not_price 1/1",
+  "packet_defect: state.open_r context_null:state.open_r 1/1"
+ ],
+ "account_reads": [
+  {
+   "account_id": "tradeify_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuJLsSEBXRvoswfFiWp",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [
+  {
+   "count": 1,
+   "denominator": 1,
+   "field": "priced_options",
+   "reason": "could_not_price"
+  },
+  {
+   "count": 1,
+   "denominator": 1,
+   "field": "state.open_r",
+   "reason": "context_null:state.open_r"
+  }
+ ],
+ "packet_sha": "530309247aaab33cdcdfd7e5e81dbf796e082999a93aafe9fac98cf11f838601"
+}

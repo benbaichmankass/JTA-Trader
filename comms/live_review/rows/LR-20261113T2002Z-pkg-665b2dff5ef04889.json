@@ -1,0 +1,162 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261113T2002Z-pkg-665b2dff5ef04889",
+ "reviewed_at": "2026-11-13T20:40:00Z",
+ "order_package_id": "pkg-665b2dff5ef04889",
+ "trade_id": null,
+ "leg": "trend_donchian_eth_4h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-13T20:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-13T20:02:47Z",
+ "state": {
+  "atr_now_over_entry": 1.2864,
+  "bars_held": 5,
+  "giveback_r": 1.128,
+  "open_r": 0.0272,
+  "peak_provenance": "estimated",
+  "peak_r": 1.1552,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 2004.15535714,
+  "tp": 1773.81672
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.2864,
+  "bars_since_peak": 3,
+  "giveback_r": 1.128,
+  "open_r": 0.0272,
+  "peak_r": 1.1552,
+  "r_to_stop": 1.0272,
+  "r_to_target": 3.4834
+ },
+ "mechanics": {
+  "evidence": "bybit_1: ETHUSDT is NETTED across 3 open packages on this account (per side) (this one + pkg-0204c3deb7e84ebe, pkg-f5d668173a7c4f3f); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 84,
+   "mean_r": 1.5377,
+   "sd_r": 2.1196,
+   "worst_r": -1.14,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 84,
+   "mean_r": 1.2675,
+   "sd_r": 1.5063,
+   "worst_r": -0.355,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 84,
+   "mean_r": 1.4541,
+   "sd_r": 1.9095,
+   "worst_r": -0.355,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 84,
+   "mean_r": 1.4588,
+   "sd_r": 1.9057,
+   "worst_r": -0.355,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 84,
+   "mean_r": -0.0357,
+   "sd_r": 0.0279,
+   "worst_r": -0.1474,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261113T2002Z-pkg-665b2dff5ef04889.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. Measured table (n=84 comparable shorts, net): HOLD +1.538R (sd 2.12, worst -1.14R) is above tighten atr:2.0 +1.268R, tighten r:0 +1.454R, r:0.01 +1.459R and close -0.036R. Open +0.03R after an estimated 1.16R peak (1.13R given back) at 5 4h bars. Previous forecast (15:52Z: target 1894.1, inv 1982.36, p 0.45) is not clean: 1894.1 traded before that review and was not retouched, and inv 1982.36 was breached by the 12:00 bar's high 1988.67 (rejected, closed 1934.17); revised invalidation to 1988.67 (stop 2004.16 stays 0.36 ATR beyond). The stop and TP already express the view."
+ },
+ "forecast": {
+  "thesis": "1d down (ADX 26.6) and ADX 55.8 on 4h; the 12:00 spike to 1988.67 was rejected and the 16:00 bar bounced to 1955.71 (close 1953.0) under it. I expect the 1894.1 swing low to retest before 1988.67 is retaken, with a modest probability as price sits at entry",
+  "direction": "with_trade",
+  "target_px": 1894.1,
+  "p_target": 0.35,
+  "invalidation_px": 1988.67,
+  "horizon_bars": 3,
+  "timeframe": "4h",
+  "evidence": [
+   "table hold n=84 mean 1.5377 worst -1.14",
+   "chart.swings lows 1894.1 highs 1988.67",
+   "chart.htf 1d trending ADX 26.6",
+   "exit_plan sl 2004.16 tp 1773.82",
+   "context.previous_review forecast target 1894.1 inv 1982.36"
+  ]
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "tighten_bias: stop-at-price fills flatter any tighten; tighten is advice-only (evidence: 981 Claude tightens -0.097R)",
+  "correlated: ETH shorts x4 on the book (this + 3 more across bybit_1/prop), plus ADA x2, SOL x2, XRP shorts = one crypto-beta bet",
+  "netted: ETHUSDT is netted across 3 open packages on bybit_1 (each leg matched by order id)",
+  "atr_ratio: now/entry 1.29",
+  "inapplicable_options: 2/6 stop_level_not_below_price",
+  "live_vs_backtest: realMoney 19 closed CONSISTENT (45.8th pct); mirror 17 closed 5.9th pct of its band"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuJLsSEBXRvoswfFiWp",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [],
+ "packet_sha": "5560d92a11fdcfbebba8178352abb862e48b2091e9b206b7f58a3d5b89eb599d"
+}

@@ -1,0 +1,136 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261113T2032Z-pkg-8c5ea40296f0432d",
+ "reviewed_at": "2026-11-13T20:42:00Z",
+ "order_package_id": "pkg-8c5ea40296f0432d",
+ "trade_id": null,
+ "leg": "ict_scalp_sol_15m",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "adverse_r",
+  "level": -0.5,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-13T20:32:10Z",
+ "state": {
+  "atr_now_over_entry": 0.6557,
+  "bars_held": 22,
+  "giveback_r": 0.7889,
+  "open_r": -0.4561,
+  "peak_provenance": "estimated",
+  "peak_r": 0.3328,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 81.04242857,
+  "tp": 76.98635714
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.6557,
+  "bars_since_peak": 20,
+  "giveback_r": 0.7889,
+  "open_r": -0.4561,
+  "peak_r": 0.3328,
+  "r_to_stop": 0.5439,
+  "r_to_target": 1.9561
+ },
+ "mechanics": {
+  "evidence": "bybit_1: SOLUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-96fb9efae6d24ca3); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 37,
+   "mean_r": 0.2207,
+   "sd_r": 0.9094,
+   "worst_r": -1.2084,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 37,
+   "mean_r": -0.5673,
+   "sd_r": 0.0652,
+   "worst_r": -0.7976,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261113T2032Z-pkg-8c5ea40296f0432d.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. Open -0.46R (-0.62R at the 20:15 trigger) after an estimated 0.33R peak, 22 15m bars, stop 81.04 is 0.54R away. Measured table (n=37 comparable shorts, net): HOLD +0.221R (sd 0.91, worst -1.21R) is above close -0.124R; every tighten arm is invalid (stop level not below price). Previous forecast (15:50Z: target 78.88, inv 80.23, p 0.45, 4x15m) is mixed: 78.88 traded (since-entry low 78.88) but 80.23 was retaken (high 80.55), so it did not hold cleanly. The 1h is transitional and the 15m is chop (ADX 17.5), so the stall is not a thesis failure; no bracket move beats the strategy's own stop and TP. The stall event (21 bars, peak 0.33R < 0.5R) is answered by the same hold."
+ },
+ "forecast": {
+  "thesis": "15m chop under a transitional 1h (ADX 22.8); price made a lower low at 79.81 then bounced to 80.5, still under the 80.55 swing high. I expect a retest of the 79.85 swing low before 80.55 is retaken, even odds at best",
+  "direction": "with_trade",
+  "target_px": 79.85,
+  "p_target": 0.5,
+  "invalidation_px": 80.55,
+  "horizon_bars": 8,
+  "timeframe": "15m",
+  "evidence": [
+   "table hold n=37 mean 0.2207 worst -1.2084",
+   "chart.swings highs 80.55 (0.84 ATR) lows 79.85 / 79.81",
+   "chart.htf 1h transitional",
+   "exit_plan sl 81.0424 tp 76.9864",
+   "context.previous_review forecast target 78.88 inv 80.23"
+  ]
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "trigger_note: wake carried two events (adverse_r -0.5 and stall 16); the row answers adverse_r, the stall is addressed in the reason",
+  "tighten_bias: stop-at-price fills flatter any tighten; tighten is advice-only",
+  "inapplicable_options: 3/4 stop_level_not_below_price",
+  "correlated: ETH shorts x4 on the book (this + 3 more across bybit_1/prop), plus ADA x2, SOL x2, XRP shorts = one crypto-beta bet",
+  "netted: SOLUSDT netted with sol_pullback_2h short on bybit_1",
+  "atr_ratio: now/entry 0.66",
+  "live_vs_backtest: leg backtest expectancy -0.144R (n=87); no closed live trades"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuJLsSEBXRvoswfFiWp",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [],
+ "packet_sha": "48745849097afc9743df30fa498452043b3194a8e7cb492b3d536edd8ea878f3"
+}
