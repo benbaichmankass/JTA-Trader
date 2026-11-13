@@ -1308,13 +1308,21 @@ def packet_health(packet: dict) -> dict:
     ``degraded`` = at least one defect; ``could_not_look`` = the packet carries no usable read of the trade itself
     (every account's venue read failed, or neither open_r nor a chart could be read). Never a gate: the call is still made."""
     defects: List[dict] = []
+    inapplicable: List[dict] = []
+    all_opts: List[dict] = []
     po = packet.get("priced_options")
     state = packet.get("priced_options_state")
     if po is None:
         if state != "not_priced":
             defects.append(_defect("priced_options", str(state or "could_not_price"), 1, 1))
     else:
-        opts = [o for o in po.get("options") or [] if o.get("action") != "hold"]
+        all_opts = [o for o in po.get("options") or [] if o.get("action") != "hold"]
+        # A tighten rung at/above the price on a position that is UNDER WATER is no stop (live_review_outcomes marks it
+        # invalid_level / stop_level_not_below_price). That is the menu not applying to a losing trade, not missing
+        # data, so it is counted as `inapplicable_options` beside the verdict and kept out of the defect arithmetic
+        # (2026-11-13, LTR-GRADER-COVERAGE: TLT x2, ETH 1h, BTC 1h, SOL 5m read 'degraded' for this alone).
+        inapplicable = [o for o in all_opts if o.get("reason") == "stop_level_not_below_price"]
+        opts = [o for o in all_opts if o.get("reason") != "stop_level_not_below_price"]
         unpriced = [o for o in opts if o.get("mean_r") is None]
         reasons = sorted({str(o.get("reason") or o.get("state") or "unpriced") for o in unpriced})
         if opts and len(unpriced) == len(opts):
@@ -1340,7 +1348,11 @@ def packet_health(packet: dict) -> dict:
     if st.get("open_r") is None:
         defects.append(_defect("state.open_r", "context_null:state.open_r", 1, 1))
     blind = (bool(unread) and unread >= (len(bounds) or unread)) or (st.get("open_r") is None and ctx.get("chart") is None)
-    return {"status": "could_not_look" if blind else ("degraded" if defects else "ok"), "defects": defects}
+    out = {"status": "could_not_look" if blind else ("degraded" if defects else "ok"), "defects": defects}
+    if inapplicable:
+        out["inapplicable_options"] = {"reason": "stop_level_not_below_price", "count": len(inapplicable),
+                                       "denominator": len(all_opts)}
+    return out
 
 
 # ----------------------------------------------------------------------------- CLI

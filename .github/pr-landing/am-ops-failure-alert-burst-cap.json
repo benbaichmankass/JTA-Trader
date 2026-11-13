@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tier-1 CI: claude-run-failure-alert.yml gets a JOB-level concurrency group keyed on the watched workflow_id (cancel-in-progress false), capping the listener at one running + one pending alert per watched workflow. Measured 2026-11-12: 100 listener runs in 82 min and 65 queued at once inside a 468-run backlog, because cancelling watched runs created more queued alert runs. Skipped jobs never join a job-level group, so a success cannot cancel a pending real alert. No alert is removed for a workflow; no new gate. AM-OPS merges (the auto-merge bot cannot merge workflow files). Gates this adds or changes: none."
+}

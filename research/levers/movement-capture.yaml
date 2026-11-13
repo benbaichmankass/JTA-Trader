@@ -25,11 +25,12 @@ manifest:
   symbol_set: untested
   direction: untested
   session: untested
-  sizing_vs_cost: untested
+  sizing_vs_cost: underpowered
 levers: {}
 title: 'Direction-agnostic movement capture: two-sided stop brackets around an EWMA-predicted daily range, 10 liquid perps, 1h bars'
 units:
 - RQ-20261101-58e4-06
+- RQ-20261101-d1f3-05
 doctrine: 'operator 2026-11-01 14:00-14:09Z: nothing that failed is closed; attribute first; next tests are one-factor/ablation chosen from this
   map; retire only when every lever family has been tested at power, net of cost, with no effect'
 verdict_so_far: 'fail: all 8 configs lose net; best (gated fade) net Sharpe -0.72, stress -1.41; 1 of 4 years positive. Volatility IS predictable
@@ -217,6 +218,16 @@ levers_tested:
       stress_sharpe: -1.407
   shape: gate helps both (-5.0 -> -3.6; -1.28 -> -0.72) but does not cross zero
   tested_at_power: false
+- family: sizing_vs_cost
+  varied: maker-fill cost ceiling 4 bps RT vs 14 over the 8-config grid (attempt 2)
+  response:
+    selected: FD1g
+    sharpe: -0.226
+    control_sharpe: -0.72
+    verdict: fail
+  shape: single_point
+  tested_at_power: false
+  unit: RQ-20261101-d1f3-05
 lever_families_untested:
 - cost (maker/limit fills; the fade has zero gross edge so cost is the whole loss)
 - time-of-day windows (the earlier stage-A scan failed on hours, but not combined with the range forecast)

@@ -361,3 +361,20 @@ def test_positive_control_a_job_that_ran_steps_before_cancel_is_started():
 def test_a_job_with_no_started_at_is_not_started():
     assert _started({"jobs": [{"name": "x", "conclusion": "skipped", "started_at": None, "steps": []}]}) == 0
 
+
+
+def test_alert_job_is_burst_capped_per_watched_workflow():
+    """CI-ALERT-STORM (2026-11-12): a JOB-level concurrency group keyed on the watched workflow caps
+    the listener at one running + one pending alert per workflow. Job-level (not workflow-level), so
+    a skipped job for a successful watched run never joins the group and cancels a pending real alert;
+    cancel-in-progress false, so a ping being sent is never killed."""
+    import yaml
+    doc = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    assert "concurrency" not in doc, "workflow-level concurrency would let skipped runs cancel real alerts"
+    job = doc["jobs"]["alert"]
+    conc = job.get("concurrency") or {}
+    assert "github.event.workflow_run.workflow_id" in str(conc.get("group", "")), conc
+    assert conc.get("cancel-in-progress") is False, conc
+    # the listener must not watch itself (no self-amplification)
+    on = doc.get("on") or doc.get(True)
+    assert "claude-run-failure-alert" not in (on["workflow_run"]["workflows"])

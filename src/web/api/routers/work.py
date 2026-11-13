@@ -65,7 +65,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
 # Phase H — the decision round-trip. ONE owner for the transit contract and the
 # four answer states; this router never re-derives either (two copies of "what
@@ -108,6 +108,7 @@ from src.runtime.work_decisions import (
     transit_window,
 )
 from src.utils.paths import repo_root
+from src.web.api.auth import require_session
 # ONE owner for the ceiling + migration facts — imported, never re-derived.
 # They had two homes and Phase C updated neither; see the module docstring.
 from src.utils.work_facts import (
@@ -1504,6 +1505,66 @@ def _pipeline_ask_operator_items() -> tuple[list[dict[str, Any]], str, int]:
     return items, state, len(res.unreadable)
 
 
+#: UI-WQ-DECISIONS-ROUTE: planning questions live as ``extra.decision_requests`` on
+#: work-store items (``src/runtime/work_store.py``), the live register since S4. The
+#: archived ``objects/*.yaml`` stay a source too; the two feed one grading loop.
+_STORE_DECISION_SOURCE = "work_store"
+
+
+def _store_decision_objects() -> tuple[list[dict[str, Any]], str, str | None]:
+    """Work-store items carrying ``extra.decision_requests``, shaped like index objects.
+
+    Returns ``(objects, state, error)``. ``state`` is ``read``, ``absent`` (no store
+    file) or ``unreadable``;
+    an unreadable store is reported, never served as "no questions".
+    """
+    try:
+        from src.runtime import work_store as ws
+        from src.utils.paths import work_store_db_path
+
+        path = work_store_db_path()
+        if not Path(path).exists():
+            # Never create the store from a read path. No file = no questions
+            # written there yet, published as `absent` (not `read`).
+            return [], "absent", None
+        items = ws.WorkStore(path).list_items(limit=100000)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: not silent — returned as state `unreadable` with the error, published under sources.workStore.
+        logger.warning("work: decision inbox could not read the work store: %s", exc)
+        return [], "unreadable", f"{type(exc).__name__}: {exc}"[:300]
+    out: list[dict[str, Any]] = []
+    for it in items:
+        extra = it.get("extra") if isinstance(it.get("extra"), dict) else {}
+        if not extra.get("decision_requests"):
+            continue
+        out.append({
+            "id": it.get("id"),
+            "title": it.get("title"),
+            "lifecycle": it.get("state"),
+            "parentIntent": it.get("parent_id"),
+            "extra": {"decision_requests": extra.get("decision_requests")},
+            "blockedOn": [],
+            "source": _STORE_DECISION_SOURCE,
+        })
+    return out, "read", None
+
+
+def _store_item_object(object_id: str) -> dict[str, Any] | None:
+    """One work-store item as an index-shaped object, or None. Raises on an unreadable store."""
+    from src.runtime import work_store as ws
+    from src.utils.paths import work_store_db_path
+
+    path = work_store_db_path()
+    if not Path(path).exists():
+        return None
+    it = ws.WorkStore(path).get(object_id)
+    if not it:
+        return None
+    extra = it.get("extra") if isinstance(it.get("extra"), dict) else {}
+    return {"id": it.get("id"), "title": it.get("title"), "lifecycle": it.get("state"),
+            "extra": {"decision_requests": extra.get("decision_requests")},
+            "source": _STORE_DECISION_SOURCE}
+
+
 def _decision_inbox() -> dict[str, Any]:
     """Every operator decision the store is waiting on, with its answer state.
 
@@ -1542,7 +1603,12 @@ def _decision_inbox() -> dict[str, Any]:
     unanswerable: list[dict[str, Any]] = []
     malformed = 0
 
-    for obj in index.get("objects", []):
+    store_objects, store_state, store_error = _store_decision_objects()
+    file_ids = {o.get("id") for o in index.get("objects", [])}
+    # A file object wins on an id clash: it is the older, committed record.
+    store_objects = [o for o in store_objects if o.get("id") not in file_ids]
+
+    for obj in [*index.get("objects", []), *store_objects]:
         object_id = obj.get("id")
         raw_extra = obj.get("extra") or {}
         # `decision_requests` is a free-form key, so `_object_row` preserves it
@@ -1562,6 +1628,9 @@ def _decision_inbox() -> dict[str, Any]:
                 {
                     **req,
                     **subject,
+                    # Where the question lives: `work_object` (archived YAML) or
+                    # `work_store` (an item's extra.decision_requests).
+                    "source": obj.get("source") or "work_object",
                     "objectTitle": obj.get("title"),
                     "objectLifecycle": obj.get("lifecycle"),
                     "parentIntent": obj.get("parentIntent"),
@@ -1850,6 +1919,12 @@ def _decision_inbox() -> dict[str, Any]:
                 "unreadableRecords": pipeline_unreadable_records,
                 "path": str(_pipeline_store_path()),
             },
+            # UI-WQ-DECISIONS-ROUTE: answerable questions on work-store items.
+            "workStore": {
+                "state": store_state,
+                "error": store_error,
+                "itemsWithRequests": len(store_objects) if store_state == "read" else None,
+            },
         },
         "note": (
             "The repo is the source of truth. This route reports `committed` "
@@ -1873,6 +1948,16 @@ def _decision_inbox() -> dict[str, Any]:
     }
 
 
+#: The SPA's write route (UI-WQ-DECISIONS-ROUTE). It does not depend on
+#: DASHBOARD_API_TOKEN: the operator's signed-in session is the credential.
+_SESSION_WRITE_GATE: dict[str, Any] = {
+    "path": "/api/bot/work/decision/session",
+    "auth": "operator session (require_session)",
+    "acceptsWrites": True,
+    "note": "The signed-in SPA posts here. 401/403 means the session is missing or not the operator's.",
+}
+
+
 def _write_gate_reading() -> dict[str, Any]:
     """Whether the write route can accept anything right now, and why.
 
@@ -1891,11 +1976,12 @@ def _write_gate_reading() -> dict[str, Any]:
         return {"state": "unknown", "acceptsWrites": None,
                 "note": "could not read the server environment"}
     if configured:
-        return {"state": "open", "acceptsWrites": True,
+        return {"state": "open", "acceptsWrites": True, "session": _SESSION_WRITE_GATE,
                 "note": "DASHBOARD_API_TOKEN is set; the write route accepts a bearer."}
     return {
         "state": "closed_no_token",
         "acceptsWrites": False,
+        "session": _SESSION_WRITE_GATE,
         "note": (
             "DASHBOARD_API_TOKEN is UNSET, so POST /api/bot/work/decision "
             "refuses with 503. This is FAIL-CLOSED and deliberate (the "
@@ -1944,6 +2030,7 @@ def get_work_decisions() -> dict[str, Any]:
                 "workObjects": {"state": "unknown", "note": "inbox build failed before this was read"},
                 "checklist": {"state": "unknown", "error": None, "path": manager_status.CHECKLIST_RELPATH},
                 "pipeline": {"state": "unknown", "unreadableRecords": None, "path": None},
+                "workStore": {"state": "unknown", "error": None, "itemsWithRequests": None},
             },
         }
 
@@ -1988,11 +2075,19 @@ def _find_request(object_id: str, request_id: str) -> tuple[dict[str, Any] | Non
         # against an object we could not read would strand the answer.
         if found.get("error"):
             return None, f"object could not be read: {found['error']}"
-        return None, "no such work object"
+        # UI-WQ-DECISIONS-ROUTE: not a file object; try the work store.
+        try:
+            store_obj = _store_item_object(object_id)
+        except Exception as exc:  # noqa: BLE001  # allow-silent: returned as the refusal reason (400), never accepted against an unread object.
+            return None, f"object could not be read: work store unreadable: {exc}"
+        if store_obj is None:
+            return None, "no such work object"
+        found = {"present": True, "object": store_obj}
     extra = (found.get("object") or {}).get("extra") or {}
+    source = (found.get("object") or {}).get("source") or "work_object"
     for req in normalise_requests({"decision_requests": extra.get("decision_requests")}, object_id):
         if req["id"] == request_id:
-            return req, ""
+            return {**req, "source": source}, ""
     return None, "no such decision request on that object"
 
 
@@ -2011,7 +2106,38 @@ async def post_work_decision(
     a decision is truth. The response says so in ``answerState``: it comes back
     ``in_transit``, never ``committed``.
     """
-    _require_decision_write_token(authorization)
+    # The operator answering from the signed-in SPA may use the session here too;
+    # the Telegram decision bot keeps DASHBOARD_API_TOKEN (UI-OAUTH-SIGNIN).
+    # The SPA's dedicated route is POST /decision/session below (UI-WQ-DECISIONS-ROUTE).
+    # With a session, submitted_by is fixed to "operator-spa" (the same as
+    # /decision/session): decision records can reach the repo, so the operator's
+    # email is never written into one.
+    from src.web.api.auth import operator_session_or_none
+    session = await operator_session_or_none(request)
+    if session is None:
+        _require_decision_write_token(authorization)
+    return await _submit_decision(
+        request, submitted_by_override="operator-spa" if session is not None else None)
+
+
+@router.post("/decision/session")
+async def post_work_decision_session(
+    request: Request,
+    _session: dict = Depends(require_session),  # noqa: B008
+) -> dict[str, Any]:
+    """The SPA's decision write. **Tier 2.** Same body, same transit append and
+    the same 409-when-committed rule as ``POST /decision``; the credential is
+    the operator's signed-in session instead of the service token.
+
+    ``submitted_by`` is fixed to ``operator-spa``: the session is the operator's
+    (``require_session`` checks the allowlisted email) and the address itself is
+    never written or echoed.
+    """
+    return await _submit_decision(request, submitted_by_override="operator-spa")
+
+
+async def _submit_decision(request: Request, *, submitted_by_override: str | None) -> dict[str, Any]:
+    """Validate one submission and append it to the transit log (shared by both routes)."""
     try:
         body = await request.json()
     except (ValueError, TypeError) as exc:
@@ -2070,7 +2196,7 @@ async def post_work_decision(
         # is worse than no answer.
         raise HTTPException(status_code=400, detail="an answer needs `chosen` or `free_text`")
 
-    submitted_by = body.get("submitted_by")
+    submitted_by = submitted_by_override or body.get("submitted_by")
     try:
         row = await asyncio.to_thread(
             append_submission,
@@ -2097,11 +2223,16 @@ async def post_work_decision(
         # Deliberately NOT `committed`. The answer is in transit; the question
         # is still unanswered until it reaches the repo.
         "answerState": IN_TRANSIT,
+        "source": req.get("source") or "work_object",
         "note": (
             "Submitted, NOT decided. This answer is truth in transit: it becomes "
             "the decision only when a committer writes it into "
-            f"docs/claude/work/objects/{object_id.strip()}.yaml. Until then the "
-            "question reads UNANSWERED — transit fails back, never forward."
+            + (
+                f"work item {object_id.strip()} (extra.decision_requests[].answer)"
+                if req.get("source") == _STORE_DECISION_SOURCE
+                else f"docs/claude/work/objects/{object_id.strip()}.yaml"
+            )
+            + ". Until then the question reads UNANSWERED — transit fails back, never forward."
         ),
     }
 

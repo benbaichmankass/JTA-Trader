@@ -346,7 +346,35 @@ def test_c5_baseline_is_exactly_the_approximate_risk_bearing_slots():
 
     # FIDELITY_OPERATOR_WAIVER (operator 2026-11-05 'Both now, waive both') is held to the SAME exactness:
     # a waiver line cannot outlive its approximate record, and no approximate slot exists outside the two dicts.
-    assert approximate_slots(EVIDENCE) == set(G.FIDELITY_BASELINE) | set(G.FIDELITY_OPERATOR_WAIVER)
+    # FIDELITY_PENDING_REMEASURE (manager OK 2026-11-13) is held to the same exactness, and each entry
+    # must still be inside its expiry date: on expiry this assertion goes red by itself.
+    import datetime as _dt
+    for slot, (row, expires) in G.FIDELITY_PENDING_REMEASURE.items():
+        assert _dt.date.today() <= _dt.date.fromisoformat(expires), (
+            f"{slot} pending re-measure ({row}) EXPIRED {expires}: land the faithful record or ask the manager")
+    assert approximate_slots(EVIDENCE) == (set(G.FIDELITY_BASELINE) | set(G.FIDELITY_OPERATOR_WAIVER)
+                                           | set(G.FIDELITY_PENDING_REMEASURE))
+
+
+def test_pending_remeasure_is_exactly_the_one_approved_entry():
+    """Manager OK 2026-11-13: exactly ONE entry, keyed to EQ-FORMING-BAR-REPLAY, expiring
+    2026-11-27. Any other slot needs a manager OK, so the dict cannot grow silently."""
+    assert G.FIDELITY_PENDING_REMEASURE == {
+        ("alpaca_live", "tqqq_trend_long_1d"): ("EQ-FORMING-BAR-REPLAY", "2026-11-27")}
+
+
+def test_pending_remeasure_never_passes_c5():
+    """The pending class changes NO verdict: C5 stays fail-closed for a promotion of the pending
+    slot itself (on its real committed record and on a planted approximate one), and for any
+    other slot."""
+    (acct, leg), _ = next(iter(G.FIDELITY_PENDING_REMEASURE.items()))
+    real = json.loads((EVIDENCE / f"{leg}.json").read_text(encoding="utf-8"))
+    assert real["fidelity"] == "approximate", "the pending slot's record must read approximate honestly"
+    for rec in (real, {**real, "fidelity": "approximate"}):
+        c5 = dict((c, ok) for c, ok, _ in G.clause_verdicts(rec, acct, leg))["C5"]
+        assert c5 is False, "a pending re-measure must never pass C5"
+        assert dict((c, ok) for c, ok, _ in G.clause_verdicts(rec))["C5"] is False
+        assert dict((c, ok) for c, ok, _ in G.clause_verdicts(rec, "bybit_2", leg))["C5"] is False
 
 
 # --------------------------------------------------------------------------
