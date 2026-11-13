@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "src/exchange/bybit_connector.py is on the trade path (Tier 2). LOGGING ONLY: each BybitConnector's ccxt fetch is wrapped to count requests (time, thread, method, path) in one process-wide ring; the original fetch is called with the same arguments and its result or exception passes through untouched. On a 10006 cooldown start, one extra WARNING line bybit_10006_context logs the endpoint that answered, Bybit's X-Bapi-Limit* headers and the call counts per endpoint/thread over the preceding 5 s. No sleep, pacing, retry, refusal or gate. decision: 2026-11-12 operator-popup \"Merge + deploy on green\".",
+  "why": "Row VENUE-KLINE-RATE-LIMIT: after #25256 the Bybit 10006 rate did not move (36 cooldown starts in 24.5 h vs 30 in 18.5 h) and the error body does not name the endpoint or call rate; this names both so the next fix is chosen on data."
+}
