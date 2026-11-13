@@ -133,9 +133,13 @@ jobs:
         run: pip install -q pyyaml
 
       - name: Fetch the T3 input (GET /api/bot/performance/recent?n=40)
+        env:
+          # UI-OAUTH-SIGNIN: the read-only service bearer the site gate accepts on GET once SITE_AUTH_ENFORCE is on.
+          DASHBOARD_API_TOKEN: ${{ secrets.DASHBOARD_API_TOKEN }}
         run: |
           set -euo pipefail
-          curl -fsS -m 60 --retry 3 --retry-delay 5 \
+          AUTH=(); [ -z "${DASHBOARD_API_TOKEN:-}" ] || AUTH=(-H "Authorization: Bearer ${DASHBOARD_API_TOKEN}")
+          curl -fsS -m 60 --retry 3 --retry-delay 5 "${AUTH[@]}" \
             "https://ict-bot.duckdns.org/api/bot/performance/recent?n=40" -o recent.json
           python3 -c "import json;d=json.load(open('recent.json'));assert 'realMoney' in d and 'mirror' in d and d.get('n')==40, 'not a /performance/recent?n=40 payload'"
 

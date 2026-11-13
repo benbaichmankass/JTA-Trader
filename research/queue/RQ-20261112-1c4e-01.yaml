@@ -113,3 +113,13 @@ ml_consumer:
   decision: whether ml_entry should enter post-only at the touch with a 5-min market fallback (entry_order; fenced to demo/paper today)
   legs:
   - ml_entry
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261112-1c4e-01-MAKER-ENTRY
+  evidence:
+  - research/results/RQ-20261112-1c4e-01/local-20261112T2047Z.jsonl
+  graded_at: '2026-11-13'
+  grader: session RESEARCH-OPS-20261113-0250
+  reason: 'row measured: maker-entry delta -0.0041 R/decision, day-block CI95 [-0.0087, +0.0002] does not clear 0 at n=9210; near-miss on the upper bound only, configuration closed, lever family stays open'
+  rows: 1
+  verdict: fail

@@ -45,11 +45,8 @@ decision_rule:
   what_it_does_not_do: Does not edit config/pairs.yaml or the pairs executor. Does not re-tune entry_z / lookback / stop. Does not decide
     prop fit or any real-money placement.
 blocked_on:
-- what: 'PR #18648 (fixed-beta-at-entry R scale in pairs_engine + backtest_pairs.py) is not merged.'
-  ref: docs/claude/work/checklist/PAIRS-R-SCALE.json
-  clears_when: '#18648 is merged to main.'
-- what: 'backtest_pairs.py has no fixed-beta entry-trigger arm: entries fire on the rolling-beta z only.'
-  ref: docs/claude/work/checklist/PAIRS-R-SCALE.json
+- what: 'backtest_pairs.py has no fixed-beta entry-trigger arm: entries fire on the rolling-beta z only. (The first clause, PR #18648, is MET: row PAIRS-R-SCALE is done and 42 post-deploy shadow records carry beta_entry.)'
+  ref: PAIRS-ENTRY-TRIGGER-LEVER
   clears_when: 'backtest_pairs.py takes --entry-trigger {rolling,fixed_beta} (default rolling = current behaviour) with a self-test that
     plants a case where the two triggers disagree, and pairs_configured_stage0.py passes it through. Then git mv to research/queue/, status
     queued, run.command = pairs_configured_stage0.py --pair <each> --entry-trigger fixed_beta --start 2023-10-15 --end 2026-10-15 --fetch.'
@@ -81,8 +78,8 @@ related:
 - scripts/research/pairs_configured_stage0.py
 - src/units/strategies/pairs_engine.py
 blocked_review:
-  by: RESEARCH-OPS-20261111-2049
+  by: RESEARCH-OPS-20261113-0250
   disposition: kept
-  due_by: '2026-11-25'
-  reviewed: '2026-11-11'
-  note: 're-scoped: #18648 IS merged (PAIRS-R-SCALE done) so the first blocker is cleared; the second is NOT built (grep -c entry-trigger scripts/backtest_pairs.py scripts/research/pairs_configured_stage0.py = 0). Lever owner moved from the done row PAIRS-R-SCALE to the new row PAIRS-FIXED-BETA-ENTRY-TRIGGER (filed once, tier 1). Re-dated, not dropped.'
+  due_by: '2026-11-26'
+  reviewed: '2026-11-13'
+  note: 'kept (re-scoped): stale clause (#18648 merged, PAIRS-R-SCALE done) removed from blocked_on; the one open lever is --entry-trigger in backtest_pairs.py (still absent: grep -c entry-trigger = 0), owned by row PAIRS-ENTRY-TRIGGER-LEVER (verified to exist 2026-11-13, unowned, build lane needed from the manager). Not retired: config-level only, entry-trigger family untested.'
