@@ -96,17 +96,48 @@ run_test_refresh_on_change() {
 }
 
 # ---------------------------------------------------------------------------
-# 4. Template units (with @ in the name) are skipped.
+# 4. Template units (with @ in the name): the generic loop skips them, and ONLY the
+#    templates the installer is meant to install explicitly are ever copied.
+#
+#    The rule (scripts/install_systemd_units.sh): a template is installed only by its own
+#    named block -- ict-notify-failure@.service (OnFailure= alerting, FIX-SA-08) and
+#    ict-desk-build@.service (the desk trigger build outside the trader's cgroup,
+#    DESK-TRIGGER-SCAN-TIMEOUT). Any other @ template, including one that merely sits in
+#    deploy/, must still be skipped. This test used to assert that NO @ unit was ever copied;
+#    that stopped being the rule when ict-desk-build@ was added on purpose.
 # ---------------------------------------------------------------------------
+
+INTENDED_TEMPLATES="ict-desk-build@.service ict-notify-failure@.service"
+
+installed_templates() {  # sorted basenames of every @ service the installer copied into $1
+    ls "$1/"*@*.service 2>/dev/null | xargs -r -n1 basename | sort | tr '\n' ' ' | sed 's/ $//'
+}
 
 run_test_template_skipped() {
     local tmp; tmp=$(setup_temp_systemd)
+    # The planted control: a foreign template that is NOT on the intended list. If the installer's generic
+    # loop (or any new block) ever starts copying arbitrary @ units, this reaches systemd.
+    cat > "$tmp/deploy/ict-foreign-planted@.service" <<'UNIT'
+[Unit]
+Description=planted foreign template (must never be installed)
+[Service]
+Type=oneshot
+ExecStart=/bin/true
+UNIT
     REPO_DIR="$tmp" SYSTEMD_DIR="$tmp/systemd" bash "$tmp/install.sh" >/dev/null 2>&1
-    if ls "$tmp/systemd/"*@*.service 2>/dev/null | grep -q .; then
-        FAIL=$((FAIL + 1)); echo "FAIL template-skipped  template unit was copied"
-    else
-        PASS=$((PASS + 1)); echo "ok  template units (claude-vm-runner@) are not auto-installed"
-    fi
+    local got; got=$(installed_templates "$tmp/systemd")
+    # (a) the intended desk-build template IS installed (the installer copies it on purpose)
+    assert_eq "ict-desk-build@ template is installed (intended)" \
+        "$([ -f "$tmp/systemd/ict-desk-build@.service" ] && echo yes || echo no)" yes
+    # (b) the planted foreign template is NOT
+    assert_eq "a foreign @ template in deploy/ is still skipped (planted control)" \
+        "$([ -e "$tmp/systemd/ict-foreign-planted@.service" ] && echo copied || echo skipped)" skipped
+    # (c) nothing outside the intended list was copied (catches a THIRD template sneaking in)
+    local extra="" t
+    for t in $got; do
+        case " $INTENDED_TEMPLATES " in *" $t "*) ;; *) extra="$extra $t" ;; esac
+    done
+    assert_eq "only intended templates are copied (extras: none)" "${extra# }" ""
     rm -rf "$tmp"
 }
 
@@ -203,6 +234,30 @@ run_test_masked_unit_is_skipped() {
     rm -rf "$tmp"
 }
 
+# ---------------------------------------------------------------------------
+# 9. SYSTEMD-WATCH-KNOWS-INSTALLER: the SEC-8001 --host rewrite of an existing
+#    ict-web-api drop-in records "<sha256>\t<path>" in SYSTEMD_RECEIPT, and the
+#    recorded hash is the rewritten file's, so security_watch treats it as expected.
+# ---------------------------------------------------------------------------
+run_test_webapi_rewrite_writes_receipt() {
+    local tmp; tmp=$(setup_temp_systemd)
+    mkdir -p "$tmp/systemd/ict-web-api.service.d"
+    local conf="$tmp/systemd/ict-web-api.service.d/venv.conf"
+    printf '[Service]\nExecStart=\nExecStart=/opt/venv/bin/python -m uvicorn src.web.api.main:app --host 0.0.0.0 --port 8001\n' > "$conf"
+    local receipt="$tmp/state/receipt.tsv"
+    REPO_DIR="$tmp" SYSTEMD_DIR="$tmp/systemd" SYSTEMD_RECEIPT="$receipt" \
+        bash "$tmp/install.sh" >/dev/null 2>&1 || true
+    assert_eq "webapi drop-in rewritten to 127.0.0.1" "$(grep -c -- '--host 127.0.0.1' "$conf")" 1
+    assert_eq "receipt has one line for the drop-in" "$(grep -c "	${conf}\$" "$receipt" 2>/dev/null)" 1
+    assert_eq "receipt hash is the rewritten file's" \
+        "$(grep "	${conf}\$" "$receipt" | cut -f1)" "$(sha256sum "$conf" | cut -d' ' -f1)"
+    # Re-run: nothing to rewrite, receipt unchanged (still one line).
+    REPO_DIR="$tmp" SYSTEMD_DIR="$tmp/systemd" SYSTEMD_RECEIPT="$receipt" \
+        bash "$tmp/install.sh" >/dev/null 2>&1 || true
+    assert_eq "re-run keeps one receipt line" "$(grep -c "	${conf}\$" "$receipt")" 1
+    rm -rf "$tmp"
+}
+
 run_test_missing_role_file_is_silent
 run_test_masked_unit_is_skipped
 run_test_fresh
@@ -211,6 +266,7 @@ run_test_refresh_on_change
 run_test_template_skipped
 run_test_git_sync_loads_env
 run_test_onfailure_dropins
+run_test_webapi_rewrite_writes_receipt
 
 echo
 echo "=== install_systemd_units summary: $PASS passed, $FAIL failed ==="

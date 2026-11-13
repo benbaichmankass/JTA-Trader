@@ -1,0 +1,92 @@
+{
+ "schema_version": 1,
+ "research_unit": "RQ-20261112-a7e8-04",
+ "read_state": "measured",
+ "verdict": "fail",
+ "note": "delta -0.0163 R per unit risk <= 0: score-proportional sizing does not beat flat",
+ "n": 11240,
+ "decision_rule": {
+  "id": "RULE-RQ20261112-a7e8-04-SIZE-BY-SCORE",
+  "registered_at": "2026-11-12",
+  "registered_before_run": true
+ },
+ "population": {
+  "n": 11240,
+  "description": "frozen ml_decision_entry_v1 (tau 0.1) taken decisions on the 60-perp universe, held-out 2025-10-01..2026-09-29; weights clip(pred/0.2, 0.5, 2.0) vs flat, per unit risk"
+ },
+ "measurement": {
+  "n": 11240,
+  "verdict": "fail",
+  "why": "delta -0.0163 R per unit risk <= 0: score-proportional sizing does not beat flat",
+  "delta_net": -0.01634,
+  "ci95": [
+   -0.04529,
+   0.01225
+  ],
+  "delta_gross": -0.01781,
+  "flat_mean_net": 0.0073,
+  "weighted_mean_net": -0.00904,
+  "spearman_pred_net": 0.02,
+  "weight_mix": {
+   "0.5x": 0,
+   "mid": 11126,
+   "2x": 114
+  },
+  "by_side": {
+   "long": [
+    0.01266,
+    3500
+   ],
+   "short": [
+    -0.03051,
+    7740
+   ]
+  },
+  "max_dd_r": {
+   "flat": 372.789,
+   "weighted_unit_risk": 415.967
+  },
+  "n_ts_clusters": 1293,
+  "boot": 2000,
+  "seed": 20261112,
+  "holdout_claim": {
+   "model_id": "ENTRY-v1-size-by-score",
+   "family": "ENTRY",
+   "start": "2025-10-01",
+   "end": "2026-09-29",
+   "train_end": "2025-09-22",
+   "unit": "RQ-20261112-a7e8-04",
+   "reader": "research-script-run",
+   "read_at": "2026-11-13T10:57:17Z",
+   "backfilled": false,
+   "symbols": null,
+   "variants_on_window": 25,
+   "n_tries": 12,
+   "bar": {
+    "n_tries": 12,
+    "alpha_one_sided": 0.002108,
+    "ci_level": 0.995785,
+    "ci_z": 2.8616,
+    "ci_lo_percentile": 0.2108,
+    "point_t_min": 1.6648,
+    "method": "Sidak-corrected CI (alpha_N = 1-(1-0.025)^(1/N), one-sided) for CI bars; Bailey-Lopez de Prado expected max of N null t-stats for point bars"
+   },
+   "next_bar": {
+    "n_tries": 13,
+    "alpha_one_sided": 0.001946,
+    "ci_level": 0.996109,
+    "ci_z": 2.8868,
+    "ci_lo_percentile": 0.1946,
+    "point_t_min": 1.7033,
+    "method": "Sidak-corrected CI (alpha_N = 1-(1-0.025)^(1/N), one-sided) for CI bars; Bailey-Lopez de Prado expected max of N null t-stats for point bars"
+   }
+  },
+  "git_sha": "383392c66de677b6ee59c0e2a695fa5267952d35",
+  "runtime_s": 173
+ },
+ "generated_at": "2026-11-13T10:57:20Z",
+ "produced_by": {
+  "tool": "python3 scripts/research/ml_decision_sizing_by_score.py",
+  "where": "research-script-run"
+ }
+}

@@ -94,6 +94,10 @@ _DEFAULT_PROTECTED: tuple[str, ...] = (
     # protected key must be SMALL: protecting a large value only moves the
     # overflow into the envelope, where it takes `closed_at` down with it.
     "operator_flatten_intent",
+    # ALPACA-CLOSE-BROKER-TRUTH: the short outcome string saying this row's
+    # Alpaca parent order was already read for its filled leg. It is what keeps
+    # the row from being re-read on every tick, so it must survive the shrink.
+    "broker_leg_read",
 )
 _ELLIPSIS = "…"
 # Hard stop on the trim loop so a pathological payload can never spin.

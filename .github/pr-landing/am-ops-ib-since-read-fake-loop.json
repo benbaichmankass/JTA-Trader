@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Main red reported by the manager (09:27Z): tests/test_ib_since_read.py 2 failed / 14 passed. Root cause is a TEST FAKE, order-dependent: _Client._ensure_event_loop was a no-op, so get_ohlcv_at's first `from ib_insync import Future` inside the ib-marketdata worker thread raised 'There is no current event loop' whenever no earlier test had imported ib_insync on the main thread. Reproduced only with the real ib_insync installed (2 failed); green with it pre-imported. The fake now mirrors IBClient._ensure_event_loop. Production calls the real one before that import, so no runtime change. Test file only."
+}

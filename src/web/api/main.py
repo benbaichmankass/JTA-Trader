@@ -8,6 +8,7 @@ from __future__ import annotations
 import os
 
 from fastapi import Depends, FastAPI
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html, get_swagger_ui_oauth2_redirect_html
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.web.api import auth as auth_module
@@ -16,6 +17,7 @@ from src.web.api.routers import alerts as alerts_router
 from src.web.api.routers import wake_toggles as wake_toggles_router
 from src.web.api.routers import allocator as allocator_router
 from src.web.api.routers import brackets_history as brackets_history_router
+from src.web.api.routers import trade_snapshot as trade_snapshot_router
 from src.web.api.routers import performance_categories as performance_categories_router
 from src.web.api.routers import attribution as attribution_router
 from src.web.api.routers import auth as auth_router
@@ -39,6 +41,7 @@ from src.web.api.routers import insights as insights_router
 from src.web.api.routers import learning as learning_router
 from src.web.api.routers import liquidity as liquidity_router
 from src.web.api.routers import market_ws as market_ws_router
+from src.web.api.routers import stream as stream_router
 from src.web.api.routers import news as news_router
 from src.web.api.routers import notifications as notifications_router
 from src.web.api.routers import order_packages as order_packages_router
@@ -52,6 +55,8 @@ from src.web.api.routers import prop as prop_router
 from src.web.api.routers import reports as reports_router
 from src.web.api.routers import research_catalog as research_catalog_router
 from src.web.api.routers import catalog_features as catalog_features_router
+from src.web.api.routers import signals_catalog as signals_catalog_router
+from src.web.api.routers import soak_mechanics as soak_mechanics_router
 from src.web.api.routers import roadmap as roadmap_router
 from src.web.api.routers import runtime_config as runtime_config_router
 from src.web.api.routers import shadow as shadow_router
@@ -67,6 +72,10 @@ from src.web.api.routers import work_ledger as work_ledger_router
 from src.web.api.routers import work_topics as work_topics_router
 from src.web.api.routers import work_items as work_items_router
 from src.web.api.routers import live_review_direct as live_review_direct_router
+from src.web.api.routers import dd_switch as dd_switch_router
+from src.web.api.routers import gates as gates_router
+from src.web.api.routers import work_plans as work_plans_router
+from src.web.api.routers import ops_channel as ops_channel_router
 
 # UI-UPGRADE-1-AUTH: the whole-site gate is an APP-LEVEL dependency (so it covers
 # every router and WS /ws/market) that is a no-op until SITE_AUTH_ENFORCE is set.
@@ -74,7 +83,33 @@ app = FastAPI(
     title="JTA Trader — Dashboard API",
     version="0.2.0",
     dependencies=[Depends(auth_module.require_site_session)],
+    # FastAPI adds its built-in docs routes OUTSIDE the app-level dependencies, so
+    # with the gate on they answered anonymously (found by
+    # tests/test_web_site_auth_route_walk.py). They are re-added below as ordinary
+    # app routes, which the gate covers; same paths, same pages.
+    openapi_url=None, docs_url=None, redoc_url=None,
 )
+
+
+@app.get("/openapi.json", include_in_schema=False)
+def _openapi_json() -> dict:
+    return app.openapi()
+
+
+@app.get("/docs", include_in_schema=False)
+def _swagger_ui():
+    return get_swagger_ui_html(openapi_url="/openapi.json", title=app.title + " - docs",
+                               oauth2_redirect_url="/docs/oauth2-redirect")
+
+
+@app.get("/docs/oauth2-redirect", include_in_schema=False)
+def _swagger_ui_redirect():
+    return get_swagger_ui_oauth2_redirect_html()
+
+
+@app.get("/redoc", include_in_schema=False)
+def _redoc():
+    return get_redoc_html(openapi_url="/openapi.json", title=app.title + " - redoc")
 
 _dashboard_origin = os.environ.get("DASHBOARD_ORIGIN", "")
 _origins = ["http://localhost:5173", "http://localhost:3000"]
@@ -144,21 +179,45 @@ app.include_router(feature_impact_router.router)
 app.include_router(pairs_router.router)
 app.include_router(prop_router.router)
 app.include_router(brackets_history_router.router)
+app.include_router(trade_snapshot_router.router)
 app.include_router(performance_categories_router.router)
 app.include_router(reports_router.router)
 app.include_router(roadmap_router.router)
 app.include_router(research_catalog_router.router)
 app.include_router(catalog_features_router.router)
+app.include_router(signals_catalog_router.router)
+app.include_router(soak_mechanics_router.router)
 app.include_router(runtime_config_router.router)
 app.include_router(learning_router.router)
 app.include_router(market_ws_router.router)
+app.include_router(stream_router.router)
 app.include_router(work_router.router)
 app.include_router(work_ledger_router.router)
 app.include_router(work_topics_router.router)
 app.include_router(work_items_router.router)
 app.include_router(live_review_direct_router.router)
+app.include_router(dd_switch_router.router)
+app.include_router(gates_router.router)  # GATE-REGISTRY: GETs + operator-session POST /decision
+app.include_router(work_plans_router.router)  # UI-WQ-PLANS-ROUTES: GET /api/bot/ml/plan + operator-session POST /work/plan-edits
+app.include_router(ops_channel_router.router)  # MANAGER-VM-DIRECT-OPS (X-Work-Store-Token, fail-closed)
 
 
 @app.get("/api/health", tags=["health"])
 def health() -> dict:
     return {"ok": True}
+
+
+@app.on_event("startup")
+def _start_trade_snapshot_builder() -> None:
+    """UI-REDESIGN-2026-11 / CLOSED-TRADE-SNAPSHOT-WRITER: build each closed trade's chart snapshot once, in a
+    daemon thread of THIS process (off the trader and the close path; src/runtime/trade_snapshot_builder.py).
+    Not started under pytest so a TestClient context never spawns a candle-fetching thread."""
+    import sys
+    if "pytest" in sys.modules:
+        return
+    try:
+        from src.runtime import trade_snapshot_builder
+        trade_snapshot_builder.start()
+    except Exception:  # noqa: BLE001  # allow-silent: the API serves without the builder; logged, next restart retries
+        import logging
+        logging.getLogger(__name__).warning("trade snapshot builder did not start", exc_info=True)

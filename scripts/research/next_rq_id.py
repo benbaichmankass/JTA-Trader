@@ -41,7 +41,10 @@ from typing import Dict, List
 
 ID_RE = re.compile(r"(RQ-(\d{8})-(\d{3}))")
 #: Both spellings of a unit id (old ``-NNN``, new ``-<h4>-NN``). Keep equal to research_queue._ID_RE.
-ANY_ID_RE = re.compile(r"(RQ-\d{8}-(?:\d{3}|[0-9a-f]{4}-\d{2}))")
+#: The hash form is tried FIRST and the old form must not be followed by a digit: unanchored `search`, so with the old order an
+#: all-digit <h4> (e.g. "4654", ~1 in 43 sessions) matched as "RQ-YYYYMMDD-465" and the real id was never counted as claimed
+#: (2026-11-13: RQ-20261113-4654-01 on main was re-offered).
+ANY_ID_RE = re.compile(r"(RQ-\d{8}-(?:[0-9a-f]{4}-\d{2}|\d{3}(?!\d)))")
 #: Hand-authored units live at 900-999 of each day; queue_replenish.py mints 001-899
 #: (PI-20261005-RQ-ID-RACE-0001). Keep equal to queue_replenish.HAND_FLOOR.
 HAND_FLOOR = 900
@@ -107,6 +110,10 @@ def next_hashed_ids(claimed: Dict[str, str], day: str, h4: str, count: int = 1) 
 
 
 def _self_test() -> int:
+    m = ANY_ID_RE.search("RQ-20261113-4654-01.yaml")
+    assert m and m.group(1) == "RQ-20261113-4654-01", m and m.group(1)   # all-digit h4 is the hash form, not "-465"
+    assert ANY_ID_RE.search("RQ-20261113-912.yaml").group(1) == "RQ-20261113-912"
+    assert ANY_ID_RE.search("RQ-20261113-ab12-03").group(1) == "RQ-20261113-ab12-03"
     c = {"RQ-20301001-001": "a", "RQ-20301001-914": "origin/branch", "RQ-20301002-099": "b",
          "RQ-20301004-653": "generated"}
     assert next_ids(c, "2030-10-01") == ["RQ-20301001-915"]

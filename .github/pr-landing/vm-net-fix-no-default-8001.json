@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "SEC-8001-FOLLOWUPS (operator decisions page m3, 2026-11-12): vm-net-fix.yml defaulted to opening TCP/8001, and its issue path compared event_name to 'issues' although it arrives as repository_dispatch, so every issue-triggered run opened 8001. It now opens nothing by default (port required, no fallback), parses the issue body's port line on the real event, and refuses 8001 outright; pinned by tests/test_vm_net_fix_workflow.py, which executes the extracted step. Workflow + test + catalog doc only; no runtime, order path, service, config or strategy change. Gates this adds or changes: none (it narrows what a mutating workflow will do)."
+}

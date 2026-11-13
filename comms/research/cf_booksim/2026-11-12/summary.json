@@ -1,0 +1,95 @@
+{
+ "schema": "cf_booksim/1",
+ "run_at": "2026-11-12T11:59:15.812720+00:00",
+ "rule": "RULE-AM-RISK-ADJUSTED-V1",
+ "measurement_basis": "book_usd_sim",
+ "book_unit": "account_R (net USD / (start balance x risk_pct)); USD and balances are not written",
+ "controls_per_class": 60,
+ "trigger_frac_of_horizon": 0.25,
+ "population_packages": 841,
+ "packages_by_account": {
+  "bybit_2": 148,
+  "bybit_portfolio": 101,
+  "bybit_1": 786
+ },
+ "required_accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "decision": {
+  "tighten_sl": {
+   "decision": "FAIL",
+   "verdict_by_account": {
+    "bybit_2": "fail",
+    "bybit_portfolio": "fail",
+    "bybit_1": "fail"
+   },
+   "label_by_account": {
+    "bybit_2": "fails_R1",
+    "bybit_portfolio": "fails_R1_R3",
+    "bybit_1": "fails_R2_R3"
+   }
+  },
+  "widen_sl": {
+   "decision": "FAIL",
+   "verdict_by_account": {
+    "bybit_2": "fail",
+    "bybit_portfolio": "fail",
+    "bybit_1": "fail"
+   },
+   "label_by_account": {
+    "bybit_2": "fails_R2_R3",
+    "bybit_portfolio": "fails_R3",
+    "bybit_1": "fails_R2_R3"
+   }
+  },
+  "move_tp": {
+   "decision": "FAIL",
+   "verdict_by_account": {
+    "bybit_2": "fail",
+    "bybit_portfolio": "fail",
+    "bybit_1": "fail"
+   },
+   "label_by_account": {
+    "bybit_2": "fails_R1",
+    "bybit_portfolio": "fails_R1_R2_R3",
+    "bybit_1": "fails_R4"
+   }
+  },
+  "partial_close": {
+   "decision": "FAIL",
+   "verdict_by_account": {
+    "bybit_2": "fail",
+    "bybit_portfolio": "fail",
+    "bybit_1": "fail"
+   },
+   "label_by_account": {
+    "bybit_2": "fails_R1",
+    "bybit_portfolio": "fails_R1_R2_R3",
+    "bybit_1": "fails_R2_R3"
+   }
+  },
+  "close": {
+   "decision": "FAIL",
+   "verdict_by_account": {
+    "bybit_2": "fail",
+    "bybit_portfolio": "fail",
+    "bybit_1": "fail"
+   },
+   "label_by_account": {
+    "bybit_2": "fails_R1_R3",
+    "bybit_portfolio": "fails_R1_R3",
+    "bybit_1": "fails_R2_R3"
+   }
+  }
+ },
+ "provenance": "ESTIMATED",
+ "stated_biases": [
+  "margin pledged not modelled (available_usd = balance)",
+  "start balance is an estimate",
+  "daily switch uses realised P&L only",
+  "population is the cf_bulk_live gradable set (crypto, non-pairs, closed, horizon passed), not the full live book",
+  "one registered action per class at a fixed causal time; not a lever sweep",
+  "stop fills at its price (flatters tightens)"
+ ]
+}

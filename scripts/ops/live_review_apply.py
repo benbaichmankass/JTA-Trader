@@ -67,8 +67,10 @@ runs that account's own ``fresh_entry_check`` -- the check a fresh entry at the 
 pass (mode, the daily-DD switch's block on new risk, the gross-exposure cap, and the size a fresh
 entry there would be given). The account's existing executor then acts on THAT leg only, and every
 apply is READ BACK from the venue (``apply_failed`` on a mismatch). The executor matrix
-(:data:`ACTION_PATHS`) -- anything not listed refuses ``no_action_path:<action>``, named, and is
-pinged once on a real-money or prop account:
+(:data:`ACTION_PATHS`) routes an APPROVED action to its executor; since 2026-11-12 (AM-PROP-VM-ACTION-MATRIX:
+REMOVE) it is no longer a decision refusal -- every account decides every action, and an approved action with
+no executor wired reports ``no_action_path:<action> (no executor wired for <class>)``, pinged once on a
+real-money or prop account:
 
 * bybit: close (reduce-only close of the leg), partial_close / change_size < 1 (reduce-only
   partial), move_tp and widen_sl (the monitor's own modify seam on this leg);
@@ -79,16 +81,19 @@ pinged once on a real-money or prop account:
   (``phone_trail.request_sl_widen``, declared so the app applies a looser stop); close / reduce
   (``phone_cancel.request_close``, the server-issued action channel, operator 2026-11-09);
 * prop_vm: move_tp (PROP-BRACKET-APPLY: ``meta.tp_target`` on the ticket, applied by the account's own trail through
-  its amend code; refused for an adapter that cannot amend a TP, e.g. browser dxtrade); other / IB: none;
+  its amend code; refused for an adapter that cannot amend a TP, e.g. browser dxtrade); close / reduce
+  (CAP-PROP-VM-CLOSE, operator 2026-11-12: ``src.prop.vm_close.request_close`` writes ``meta.close_request``; the
+  account's own executor tick closes through its watched close and reads the venue back; a reduce is refused for an
+  adapter without a partial close, i.e. browser dxtrade / tradeify_1); other / IB: none;
 * any account: add_entry / change_size > 1 -- none: no add-to-an-open-position executor exists yet
   (``no_action_path:add_size``); the account's decision is still computed and recorded.
 
-Not built, and why (DESK-3, MEASURED by reading the executors at 2026-10-27): a prop ``widen_sl``
-has no executor that could carry it. Both prop executors refuse a looser stop BY CONSTRUCTION, on
-the client side: the phone app's amend refuses "amend would loosen the stop"
-(``tools/phone-executor/app/.../MainActivity.kt``, an APK change) and the DXtrade adapter's armed
-modify is tighten-only (``ModifyRollout``, ``rollout_tighten_mismatch``). A prop add has no
-add-to-position ticket path. Alpaca partial_close: the bracket legs reserve every share, so the
+Not built, and why (re-read 2026-11-12, CAP-PROP-VM-CLOSE): a ``widen_sl`` on a VM prop account
+(tradeify_1, velotrade_1) has no executor: the DXtrade adapter's armed modify is tighten-only BY
+CONSTRUCTION (``ModifyRollout``, ``rollout_tighten_mismatch``), deliberately kept. The PHONE account
+does have one since 2026-11-09 (``phone_trail.request_sl_widen``, above), so "widen_sl: no executor"
+is no longer true for prop as a whole. A prop add has no add-to-position ticket path.
+Alpaca partial_close: the bracket legs reserve every share, so the
 venue refuses a reduce (``insufficient qty``) unless the legs are cancelled first, which would leave
 the leg unbracketed. Tracked on checklist row ``LTR-ACTION-EXECUTOR-GAPS``.
 
@@ -236,16 +241,94 @@ def _prop_tickets(pkg_id: str) -> List[Dict[str, Any]]:
         conn.close()
 
 
+#: A prop-only package is stamped ``emitted`` (``prop_ticket_emitted``) the moment its ticket goes out
+#: (``src/units/accounts/execute.py``: prop writes no ``trades`` row, so ``open`` would be mis-swept as an
+#: orphan) and KEEPS that status while the position is live on the venue. Until PHONE-LIVE-ACCOUNT-FEED
+#: (2026-11-11) every apply refused such a package as "not open" before any account was asked: the SOL
+#: short pkg-50f5eed272f64197 on tradeify_1 + velotrade_1 refused three directed tightens
+#: (2026-11-09 20:15Z, 2026-11-10 15:51Z / 15:52Z) and its stop stayed at the entry stop 89.105.
+# Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PACKAGE-LIVE-STATE: KEEP. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+PKG_LIVE, PKG_NOT_LIVE, PKG_COULD_NOT_LOOK = "live", "not_live", "could_not_look"
+
+
+def package_live_state(pkg: Optional[Dict[str, Any]]) -> str:
+    """``live`` when the package can carry an apply: ``open``, or ``emitted`` with at least one
+    placed/filled prop ticket. ``could_not_look`` when an ``emitted`` package's tickets are unreadable
+    (never read as "not live")."""
+    if not pkg:
+        return PKG_NOT_LIVE
+    st = str(pkg.get("status") or "")
+    if st == "open":
+        return PKG_LIVE
+    if st != "emitted":
+        return PKG_NOT_LIVE
+    try:
+        return PKG_LIVE if _prop_tickets(str(pkg.get("order_package_id"))) else PKG_NOT_LIVE
+    except Exception:  # noqa: BLE001 -- an unread prop journal is could-not-look, never "closed"
+        try:
+            from src.prop import prop_journal
+
+            if not prop_journal.tables_present():     # no prop journal at all: no ticket can be live
+                return PKG_NOT_LIVE
+        except Exception:  # noqa: BLE001
+            pass
+        return PKG_COULD_NOT_LOOK
+
+
+#: The VM executor posts ``account_status`` every ~5 min; an older venue read is not a leg's stop.
+VENUE_STOP_MAX_AGE_S = 30 * 60
+
+
+def venue_prop_stop(account_id: str, symbol: str, direction: str,
+                    now: Optional[datetime] = None) -> Optional[float]:
+    """The stop RESTING on the venue for this account's position (PHONE-LIVE-ACCOUNT-FEED): the latest
+    ``prop_account_status`` positions read (``positions_state: read``, provenance ``MEASURED``, at most
+    :data:`VENUE_STOP_MAX_AGE_S` old). This is what makes a HAND-MOVED stop visible to the apply: the
+    ticket's ``sl`` is only what the bot instructed. ``None`` (fall back to the ticket) when the read is
+    stale, unmeasured, or ambiguous: more than one venue position, or more than one live ticket, on this
+    account + symbol + side (a netted venue position cannot be attributed to one ticket)."""
+    from src.prop import prop_journal
+
+    try:
+        st = prop_journal.latest_account_status(account_id)
+        if not st:
+            return None
+        raw = json.loads(st.get("raw") or "{}")
+        at = datetime.fromisoformat(str(st.get("reported_at")).replace("Z", "+00:00"))
+        if at.tzinfo is None:
+            at = at.replace(tzinfo=timezone.utc)
+        if ((now or datetime.now(timezone.utc)) - at).total_seconds() > VENUE_STOP_MAX_AGE_S:
+            return None
+        if raw.get("positions_state") != "read" or str(raw.get("positions_provenance") or "").upper() != "MEASURED":
+            return None
+        sym, d = str(symbol or "").upper(), str(direction or "").lower()
+        hits = [q for q in (raw.get("positions") or [])
+                if str(q.get("symbol") or "").upper() == sym and str(q.get("direction") or "").lower() == d]
+        if len(hits) != 1:
+            return None
+        conn = prop_journal._connect(read_only=True)
+        try:
+            n = conn.execute("SELECT COUNT(*) FROM prop_tickets WHERE account_id = ? AND UPPER(symbol) = ? "
+                             "AND LOWER(direction) = ? AND status IN (?, ?)",
+                             (account_id, sym, d, *_PROP_PARENT)).fetchone()[0]
+        finally:
+            conn.close()
+        return _f(hits[0].get("sl")) if n == 1 else None
+    except Exception:  # noqa: BLE001 -- an unread status falls back to the ticket's stop, never 0
+        return None
+
+
 def _open_packages(db) -> List[Dict[str, Any]]:
     import sqlite3
 
     conn = db.connect()
     try:
         conn.row_factory = sqlite3.Row
-        return [dict(r) for r in conn.execute(
-            "SELECT * FROM order_packages WHERE status = 'open' ORDER BY created_at")]
+        rows = [dict(r) for r in conn.execute(
+            "SELECT * FROM order_packages WHERE status IN ('open', 'emitted') ORDER BY created_at")]
     finally:
         conn.close()
+    return [r for r in rows if package_live_state(r) == PKG_LIVE]
 
 
 def _get_package(db, pkg_id: str) -> Optional[Dict[str, Any]]:
@@ -348,9 +431,12 @@ def gather_legs(db, pkg: Dict[str, Any]) -> List[Dict[str, Any]]:
     for tk in tickets:
         meta = _notes(tk.get("meta"))
         trail = meta.get("phone_trail") if isinstance(meta.get("phone_trail"), dict) else {}
+        venue_sl = None if trail.get("resting_sl") else venue_prop_stop(
+            str(tk.get("account_id")), str(tk.get("symbol") or ""), direction)
         out.append({"kind": "ticket", "account_id": tk.get("account_id"), "row": tk,
-                    "leg_sl": tightest(direction, trail.get("resting_sl") or tk.get("sl"),
+                    "leg_sl": tightest(direction, trail.get("resting_sl") or venue_sl or tk.get("sl"),
                                        lri.sl_floor_from(meta)),
+                    "venue_sl": venue_sl,
                     "review_ids": applied_review_ids(meta)})
     return out
 
@@ -617,15 +703,20 @@ def _save_state(st: Dict[str, Any]) -> None:
 # Trade actions (LTR-ALL-ACTIONS, MD-TRADE-DESK)
 # --------------------------------------------------------------------------
 
+# Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PROP-VM-ACTION-MATRIX: REMOVE. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
 #: The executor matrix: which account class has an EXISTING executor for which
-#: trade action. ``reduce`` = partial_close and change_size < 1. Anything not
-#: listed refuses ``no_action_path:<action>``. ``add_size`` (add_entry,
+#: trade action. ``reduce`` = partial_close and change_size < 1. ``add_size`` (add_entry,
 #: change_size > 1) is in no row: no add-to-an-open-position executor exists.
+#: Since 2026-11-12 this table is NOT a decision gate: every account's own ``approve_action`` decides
+#: every action. It is read only at EXECUTION time (:func:`_exec_trade_action`) to route an approved
+#: action to the executor that can carry it; an approved action with no executor wired is reported
+#: ``no_action_path:<action> (no executor wired for <class>)`` and pinged, never a policy refusal.
+#: Routing through this table is also what stops an approved add from reaching the Bybit reduce branch.
 ACTION_PATHS: Dict[str, frozenset] = {
     "bybit": frozenset({"close", "reduce", "move_tp", "widen_sl"}),
     "alpaca": frozenset({"close", "move_tp"}),
     "phone": frozenset({"move_tp", "close", "reduce", "widen_sl"}),
-    "prop_vm": frozenset({"move_tp"}),
+    "prop_vm": frozenset({"move_tp", "close", "reduce"}),
     "other": frozenset(),
 }
 LIVE_REVIEW_CLOSE = "live_review_close"
@@ -672,16 +763,18 @@ def _fresh_entry(aid: str, cfg: Dict[str, Any], pkg: Dict[str, Any], intent: lri
 
 def _decide_trade_action(intent: lri.LiveReviewIntent, leg: Dict[str, Any], pkg: Dict[str, Any],
                          cfg: Dict[str, Any], cls: str, execution: str) -> lri.AmendVerdict:
-    """No executor for this action on this account -> refuse ``no_action_path:<action>`` before any
-    read (so an account that can never act raises no could-not-look streak). Else this account's
-    ``approve_action`` on a view of THIS leg, with its fresh-entry check when the action adds risk."""
+    """This account's ``approve_action`` on a view of THIS leg, with its fresh-entry check when the action
+    adds risk. Since 2026-11-12 (AM-PROP-VM-ACTION-MATRIX: REMOVE) there is no executor-matrix refusal
+    here: every account decides every action; whether an executor is wired is answered (and reported) at
+    execution time by :func:`_exec_trade_action`."""
     aid = leg["account_id"]
     key = action_path_key(intent)
     if str(pkg.get("strategy_name") or "") == DESK_LEG and key in ("widen_sl", "add_size"):
         return lri.AmendVerdict(aid, lri.V_REFUSE, None, f"{R_DESK_LEG_NEVER}:{key}")
-    if key not in ACTION_PATHS.get(cls, frozenset()) or (cls in ("bybit", "alpaca") and leg["kind"] != "trade") \
-            or (cls == "phone" and leg["kind"] != "ticket"):
-        return lri.AmendVerdict(aid, lri.V_REFUSE, None, f"{lri.R_NO_ACTION_PATH}:{key}")
+    # Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PROP-VM-ACTION-MATRIX: REMOVE. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+    if not _executor_wired(cls, key, leg):
+        print(f">>> live-review-apply: {aid} ({cls}) has no executor wired for {key}; deciding it anyway "
+              "(reported at execution, AM-PROP-VM-ACTION-MATRIX removed)")
     row = leg["row"]
     if leg["kind"] == "trade":
         entry, size = _f(row.get("entry_price")), _f(row.get("position_size"))
@@ -919,6 +1012,7 @@ def _exec_alpaca_close(db, leg: Dict[str, Any], pkg: Dict[str, Any], intent: lri
 
     t = leg["row"]
     aid, sym = t["account_id"], str(t.get("symbol") or "").upper()
+    # Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-ALPACA-CLOSE-SIBLING-REFUSE: KEEP. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
     siblings = [x for x in db.get_trades(filters={"account_id": aid, "symbol": t.get("symbol"), "status": "open"})
                 if not x.get("is_backtest") and x.get("id") != t.get("id")]
     if siblings:
@@ -1003,6 +1097,28 @@ def _exec_prop_vm_tp(leg: Dict[str, Any], v: lri.AmendVerdict, intent: lri.LiveR
     return {"result": X_REFUSED if r["result"] == R_REFUSED else X_APPLY_FAILED, "detail": r["detail"]}
 
 
+def _exec_prop_vm_close(leg: Dict[str, Any], key: str, intent: lri.LiveReviewIntent) -> Dict[str, Any]:
+    """CAP-PROP-VM-CLOSE: record a close / reduce request on THIS prop ticket (``meta.close_request``) and read it back.
+    The account's own executor tick carries it out through its watched close (venue re-read; a partial also checks
+    both brackets still rest) and alerts the outcome. Applied here = the request is recorded and read back, exactly
+    as ``_exec_prop_vm_tp``; the venue's confirmation is the executor's ``vm_close`` line."""
+    from src.prop import vm_close
+
+    tk = leg["row"]
+    frac = None
+    if key == "reduce":
+        d = lri.size_delta(intent)
+        frac = -d if d is not None else None   # size_delta is already a fraction of the open size
+        if frac is None or not 0 < frac < 1:
+            return {"result": X_REFUSED, "detail": f"reduce fraction unreadable (size delta {d!r})"}
+    r = vm_close.request_close(tk["ticket_id"], account_id=tk["account_id"], fraction=frac, apply=True,
+                               source=lri.PROVENANCE, review_id=intent.review_id,
+                               reason=f"mandate {intent.mandate} review {intent.review_id}")
+    if r["result"] == vm_close.R_QUEUED:
+        return {"result": X_APPLIED, "close_id": r.get("close_id"), "fraction": frac, "detail": r["detail"]}
+    return {"result": X_REFUSED if r["result"] == vm_close.R_REFUSED else X_APPLY_FAILED, "detail": r["detail"]}
+
+
 def _exec_phone_tp(leg: Dict[str, Any], v: lri.AmendVerdict, intent: lri.LiveReviewIntent) -> Dict[str, Any]:
     """Publish a TP revision through the phone's one-slot amend channel; read back the emitted amend."""
     from src.prop.phone_trail import KEY, request_tp_amend
@@ -1060,9 +1176,24 @@ def _exec_phone_close(leg: Dict[str, Any], key: str, intent: lri.LiveReviewInten
             "detail": f"{r.get('action')} request emitted; the phone verifies it on the terminal and reports"}
 
 
+def _executor_wired(cls: str, key: str, leg: Dict[str, Any]) -> bool:
+    """True when an executor exists that can carry ``key`` on this leg (class row + leg kind)."""
+    if key not in ACTION_PATHS.get(cls, frozenset()):
+        return False
+    if cls in ("bybit", "alpaca") and leg.get("kind") != "trade":
+        return False
+    if cls in ("phone", "prop_vm") and leg.get("kind") != "ticket":
+        return False
+    return True
+
+
 def _exec_trade_action(db, leg: Dict[str, Any], pkg: Dict[str, Any], cls: str, v: lri.AmendVerdict,
                        intent: lri.LiveReviewIntent) -> Dict[str, Any]:
     key = action_path_key(intent)
+    if not _executor_wired(cls, key, leg):
+        # Physical, not policy (AM-PROP-VM-ACTION-MATRIX removed 2026-11-12): the account approved, and no executor
+        # exists that can carry this action on this leg. Reported (and pinged once on a money account by run()).
+        return {"result": X_REFUSED, "detail": f"{lri.R_NO_ACTION_PATH}:{key} (no executor wired for {cls})"}
     if cls == "bybit":
         return _exec_bybit_action(db, leg, pkg, v, intent)
     if cls == "alpaca" and key == "close":
@@ -1073,6 +1204,8 @@ def _exec_trade_action(db, leg: Dict[str, Any], pkg: Dict[str, Any], cls: str, v
         return _exec_phone_tp(leg, v, intent)
     if cls == "prop_vm" and key == "move_tp":
         return _exec_prop_vm_tp(leg, v, intent)
+    if cls == "prop_vm" and key in ("close", "reduce"):
+        return _exec_prop_vm_close(leg, key, intent)
     if cls == "phone" and key == "widen_sl":
         return _exec_phone_sl_widen(leg, v, intent)
     if cls == "phone" and key in ("close", "reduce"):
@@ -1110,7 +1243,11 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
     out: Dict[str, Any] = {"intent": intent.to_dict(), "apply": apply, "accounts": [],
                            "exit": EXIT_OK, "package_sl_moved": False, "flags": []}
     pkg = _get_package(db, intent.order_package_id)
-    if not pkg or pkg.get("status") != "open":
+    live_state = package_live_state(pkg)
+    if live_state == PKG_COULD_NOT_LOOK:
+        out.update(exit=EXIT_UNREADABLE, detail=f"package {intent.order_package_id}: prop tickets unreadable")
+        return out
+    if live_state != PKG_LIVE:
         out.update(exit=EXIT_REFUSED, detail=f"package {intent.order_package_id} not open")
         return out
     mandate_ok = bool(intent.mandate) and intent.mandate in (granted if granted is not None else _granted_mandates())

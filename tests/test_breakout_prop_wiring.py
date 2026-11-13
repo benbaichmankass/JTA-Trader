@@ -99,7 +99,7 @@ def test_prop_account_config():
     # comms/prop_survival/v2/); eth_prop stays. REVERT: add sol_prop back to this set.
     # 2026-11-05 (Tier-3, operator 'Pull from prop (Recommended)', row PROP-PULL-ETHPROP): eth_prop pulled too
     # (RQ-20261031-422a-01 FAIL); breakout_2 carries an explicit []. REVERT: re-add eth_prop here.
-    assert _accounts()["breakout_2"]["strategies"] == ["trend_donchian_eth_4h", "trend_donchian_sol_4h", "ml_entry"]  # +ml_entry 2026-11-08 ML-ENTRY-PROP-BASELINE (operator chat ~23:35Z); was  # 2026-11-05 ~21:05Z (Tier-3, operator "Baseline at min size (Rec.)" + "Both now, waive both"): min-size BASELINE roster. REVERT: [].
+    assert _accounts()["breakout_2"]["strategies"] == []  # 2026-11-12 ON ICE (operator: "Breakout is breached - we're going to keep it on ice for now"), roster emptied #25306. Was ["trend_donchian_eth_4h", "trend_donchian_sol_4h", "ml_entry"]; REVERT on reactivation.
     assert set(a["symbols"]) == {"SOLUSDT", "ETHUSDT"}
 
 

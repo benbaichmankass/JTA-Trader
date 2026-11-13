@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "UI-WQ-RD-ROUTE: the SPA contract checks on GET /api/bot/research/registry (#25313): per-idea counts are null with counts_read_state when the research catalog is unreadable (were zeros), and a server-side changed{since,basis,count,items} over ?since= (default 7 d). Read-only, additive; no writes, no order path, no new gate. Held only because R5 cannot certify src/web/api and src/runtime paths.",
+  "hold_text": "Read-only route change on ict-web-api. The manager merges. After deploy (and after #25557, which removes the catalog/registry build cost the route sits on — it 502'd at 30.3 s on 2026-11-13 00:2xZ): GET /api/bot/research/registry 200 with ideas[].counts_read_state 'read' and changed.since 7 days back; ?since=2026-11-01 widens changed.count."
+}

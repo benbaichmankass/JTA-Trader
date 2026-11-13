@@ -16,6 +16,14 @@
 # verdict vocabulary: pass | fail | indeterminate | pending (no graded test yet). `basis` is where the verdict was read.
 schema: 1
 updated: '2026-11-01'
+# leg_evidence -- a TESTING leg whose own Stage-0 record does not exist reads its OWN latest graded result here, never a sibling leg's
+# record (AM-ML 2026-11-13: ml_entry_v2 and ml_entry_eq were read from ml_entry.json, v1's record, and showed v1's PASS, hiding v2's
+# b610-01 FAIL). iteration_orphans.leg_record / lever_map read it first. Update the record when a newer graded read lands.
+leg_evidence:
+  ml_entry_v2:
+    record: research/results/RQ-20261101-b610-01/local-20261112T1107Z.jsonl   # fresh-window read of frozen v2: FAIL -0.0443 vs v1 +0.0245, n 948
+  ml_entry_eq:
+    record: research/results/RQ-20261105-e9a1-02/42143223941.jsonl            # equity-native confirm (config B, tau 0.20): PASS +0.0392, n 858
 ml_model:
 - id: ml-entry
   title: ENTRY decision model (take long / short / none per bar; ml_entry leg)
@@ -144,25 +152,13 @@ ml_model:
   verdict: pending
   basis: 'Row ML-HOLDBIAS-EXIT-MODEL: not built; depends on ML-EXIT-ACTIONGRID-LABELS.'
   money: real_money_candidate
-- id: ml-conviction-meta
-  title: conviction-meta-v1 size multiplier (P4)
-  verdict: indeterminate
-  basis: macro-F1 0.430 on unstamped rows; no cost-net eval. Row ML-P4-CONVICTION-REGATE.
-  money: demo_floor
-- id: ml-eth-vol-head
-  title: ETH 15m vol-regime head for router OFF-cells (P2)
-  verdict: fail
-  basis: 'RQ-20261012-75b2-17: ETH 15m LightGBM holdout macro-F1 lift +0.022 vs the +0.10 bar. Rows ML-REGIME-15M-DRIFT, ML-LIVE-PROMOTION-PLAN
-    P2.'
-  money: demo_floor
-  lever_evidence:
-  - family: labels
-    lever: classification_lift
-    unit: RQ-20261012-75b2-17
-    value: macro-F1 vs prior
-    response: holdout +0.022 vs +0.10 bar
-    shape: flat
-    note: never judged by money (walk-forward cell)
+# RETIRED 2026-11-13 (lane FRONTIER-RESEARCH for AM-ML, item-4 decision 04:03Z), removed from this list:
+#   ml-conviction-meta -- operator decisions page w1 2026-11-12 (verbatim "Kill all of them (except the git-history one, asked below)"):
+#     row ML-P4-CONVICTION-REGATE dropped; conviction-meta-v1 is OFFLINE with no consumer (consolidation), sizing reads it annotate-only.
+#   ml-eth-vol-head -- operator Thursday-planning a4 2026-11-11 (verbatim "Schedule the ones whose models survive retirement; kill the
+#     rest"): no ETH 15m regime head survives retirement (docs/plans/ML-CONSOLIDATION-2026-11-11.md) and no trend_vol cell names an ETH
+#     leg; RQ-20261101-78fc-07 killed. Re-add if the D2 bake-off keeps an ETH head. A model retirement by operator record, not a family
+#     retirement: the regime / meta-label FAMILIES stay open.
 - id: ml-btc-router-cells
   title: btc-regime-15m-lgbm-fc-pcv-v2 router OFF-cells (advisory, acts on bybit_1 BTC legs; P3)
   verdict: fail
@@ -176,6 +172,31 @@ ml_model:
     response: holdout -0.0001
     shape: flat
     note: cells still veto entries; never re-verified by money
+- id: sol-regime-15m-lgbm-fc-pcv-v2
+  title: D2 SOL regime head (advisory; no trend_vol cell names a SOL leg, so it changes no order)
+  verdict: pending
+  basis: 'MEASURED config/regime_policy.yaml names only 3 BTC legs; no cost-net figure for any D2 head. Row ML-KEEP-ITERATION-COVERAGE, unit RQ-20261112-0f87-01.'
+  money: demo_floor
+- id: mes-regime-5m-lgbm-v2
+  title: D2 MES regime head (advisory; changes no order)
+  verdict: pending
+  basis: 'Same as sol-regime-15m-lgbm-fc-pcv-v2. Unit RQ-20261112-0f87-01.'
+  money: demo_floor
+- id: eth-regime-1h-lgbm-xasset-v1
+  title: D2 ETH 1h cross-asset regime head (shadow, no consuming leg)
+  verdict: pending
+  basis: 'consolidation 2026-11-11 cons_strat empty; bake-off RQ-20261112-ef4c-03 is the feature-set read only. Unit RQ-20261112-0f87-01.'
+  money: demo_floor
+- id: ml-overlay-td-v1
+  title: overlay-td-v1 (D4 reduce x0.5 on trend_donchian gate legs, live-served)
+  verdict: pass_unconfirmed
+  basis: 'RQ-20261029-5785-02 TD PASS on RULE-ML-OVERLAY-NONINFERIOR-V2 (non-inferiority; PB2H FAIL). No live read of the reduced trades. Unit RQ-20261112-0f87-02. Listed although on real money: its demotion read is the live read the unit takes.'
+  money: real_money
+- id: ml-entry-tp-revision-v1
+  title: ml-entry-tp-revision-v1 (D7 TP extend at 4h check-ins, live-served)
+  verdict: pass_unconfirmed
+  basis: 'RQ-20261101-383f-01 PASS, held-out point estimate >= 0 (+0.0081 R n 868 in the power table), one read. Unit RQ-20261112-0f87-03. Listed although on real money for the same reason as ml-overlay-td-v1.'
+  money: real_money
 ltr_class:
 - id: ltr-tighten-sl
   title: live-review stop tighten

@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "T3a bot side (row UI-CHART-CRYPTO-LIVE: '/ws/market stops fetching *USDT candles'): /ws/market fetches no *USDT candles through the VM; each such symbol gets one candles_source frame naming the browser feed (Bybit public WS); positions unchanged. Read-only socket, no order path.",
+  "hold_text": "Tier 2 (ict-web-api). TIMING IS THE MANAGER'S CALL: merge and deploy only once the SPA build that ticks *USDT from Bybit (ict-trader-dashboard#238) is live; before that, an old SPA bundle would get no crypto candles from /ws/market. Closing check after deploy: journalctl -u ict-web-api shows 0 /api/bot/candles?symbol=*USDT calls attributable to /ws/market and the SPA crypto chart still ticks."
+}

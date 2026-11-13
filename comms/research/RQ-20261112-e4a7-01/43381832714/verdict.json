@@ -1,0 +1,145 @@
+{
+ "unit": "RQ-20261112-e4a7-01",
+ "rule": "RULE-RQ20261112-E4A7-01-DESK-EVENT-PACKET-ARM",
+ "verdict": "S3_NOT_CLEARED",
+ "window": [
+  "2025-11-01T00:00:00+00:00",
+  "2026-09-15T00:00:00+00:00"
+ ],
+ "population": "E4-triggered masked packets: 762 judged of a 763-event DEV schedule; 113 filled proposals; six crypto USDT perps; Binance Vision 1h",
+ "design": {
+  "packets_judged": 762,
+  "is_schedule_prefix": true,
+  "whole_batches": true,
+  "batch": 100,
+  "schedule_len": 763,
+  "last_index": 762,
+  "batch_end": 763
+ },
+ "intake": {
+  "rows": 762,
+  "no_trade": 649,
+  "propose_entry": 113,
+  "refused": 0,
+  "refused_reasons": {},
+  "over_cap": 0,
+  "duplicate_symbol": 0,
+  "packets_with_rows": 762
+ },
+ "take_rate": 0.1483,
+ "states": {
+  "filled": 113
+ },
+ "S3": {
+  "n": 113,
+  "weeks": 29,
+  "mean": 0.1275924253401775,
+  "ci": [
+   -0.25785004591676086,
+   0.5528871208421531
+  ]
+ },
+ "S1_net_r": {
+  "n": 113,
+  "weeks": 29,
+  "mean": 0.10353547691013422,
+  "ci": [
+   -0.29719577945800807,
+   0.5299853370281655
+  ]
+ },
+ "sd_d": 1.530184857319196,
+ "mde_iid_r": 0.4031,
+ "by_side": {
+  "long": 3,
+  "short": 110
+ },
+ "by_symbol": {
+  "ADAUSDT": {
+   "n": 36,
+   "S3": 0.18097208970228187
+  },
+  "AVAXUSDT": {
+   "n": 14,
+   "S3": 0.19096425979040418
+  },
+  "BTCUSDT": {
+   "n": 10,
+   "S3": 0.5679519785316088
+  },
+  "ETHUSDT": {
+   "n": 12,
+   "S3": -0.3769925410264141
+  },
+  "SOLUSDT": {
+   "n": 20,
+   "S3": 0.3287249458003862
+  },
+  "XRPUSDT": {
+   "n": 21,
+   "S3": -0.11907900056736155
+  }
+ },
+ "rule_same_events": {
+  "S3": {
+   "n": 762,
+   "weeks": 47,
+   "mean": 0.14891109614007783,
+   "ci": [
+    0.04910484296489781,
+    0.25150551531401827
+   ]
+  },
+  "S1_net_r": {
+   "n": 762,
+   "weeks": 47,
+   "mean": -0.00861469906954695,
+   "ci": [
+    -0.11035198527438218,
+    0.09476769337146478
+   ]
+  }
+ },
+ "judge_minus_rule_per_event": {
+  "n": 762,
+  "weeks": 47,
+  "mean": 0.023968385278005176,
+  "ci": [
+   -0.06637927572727895,
+   0.11575911673371099
+  ]
+ },
+ "controls": {
+  "oracle": {
+   "n": 762,
+   "weeks": 47,
+   "mean": 0.797750869514064,
+   "ci": [
+    0.6835328990530837,
+    0.9118608889678979
+   ]
+  },
+  "anti_oracle": {
+   "n": 762,
+   "weeks": 47,
+   "mean": -0.6559902955434292,
+   "ci": [
+    -0.7182289733032794,
+    -0.5931664076079828
+   ]
+  }
+ },
+ "controls_ok": true,
+ "bar": {
+  "n_min": 30,
+  "S3": 0.25,
+  "ci": "95% weekly-cluster, lower bound > 0"
+ },
+ "read_state": "measured",
+ "limits": [
+  "Binance candles stand in for Bybit",
+  "entry at least one 1h bar after the event is known",
+  "judge model's knowledge cutoff postdates DEV: masked replay only, a clear needs the held-out run",
+  "trigger_history is from the holdout window, so a held-out run of this arm needs a different history window"
+ ]
+}

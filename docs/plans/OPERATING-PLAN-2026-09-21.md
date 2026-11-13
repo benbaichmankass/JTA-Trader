@@ -92,8 +92,9 @@ in-trade form is `RULE-AM-RISK-ADJUSTED-V1`. Point at it; never restate it.
                               ▼  GATE 1  ▼
   STAGE 1   Soak                         bybit_1 · alpaca_paper
             Do the MECHANICS work? (edge was already proven at Stage 0)
-            SKIPPED when the leg's mechanics are already proven (§ "The soak is
-            MECHANICAL", 2026-11-01): Stage 0 -> Gate 2 directly.
+            NOT a step to real money (2026-11-12, § "The soak is MECHANICAL"):
+            a Stage-0 pass goes to Gate 2 directly. Stage 1 is the demo floor
+            for TESTING legs and for DEMOTED legs soaking for data.
             Passes when — the first 1–2 CLEAN trades: the signal fires, the
             order is placed with the right size and side, a real SL and TP
             rest at the venue, management (trail/amend) works, the exit is
@@ -144,7 +145,7 @@ help by cleaning up duplicate trades in the books and creating a more integrated
 - **The status is DERIVED, never declared** (`scripts/ops/strategy_status.py`): inactive = retired by record; production = on a real-money
   roster; testing = otherwise. A `status:` field would be a third gate (CLAUDE.md § "The two execution gates") and a second copy of the
   roster, free to drift from it.
-- **Promotion MOVES a leg** (and, when its mechanics are already proven, it MOVES straight from Stage 0 to real money without ever being on general paper — § "The soak is MECHANICAL", 2026-11-01). Gate 2 (`MD-PROMOTE-S1-S2`, manager-merged PR on the data-backed rule, CLAUDE-RULES-CANONICAL § "Data-backed Tier-2/3 decisions"; no operator merge, 2026-11-03) adds it to real money **and** the mirror and removes it from its
+- **Promotion MOVES a leg** (since 2026-11-12 every Stage-0 pass MOVES straight to real money with no paper step — § "The soak is MECHANICAL"). Gate 2 (`MD-PROMOTE-S1-S2`, manager-merged PR on the data-backed rule, CLAUDE-RULES-CANONICAL § "Data-backed Tier-2/3 decisions"; no operator merge, 2026-11-03) adds it to real money **and** the mirror and removes it from its
   general paper account in the same PR (`mandate_resolver._delta` proposes all three edits). Production legs keep logging every trade on
   real money and the mirror, so general paper loses no record a production leg would have made — except where real money cannot size a
   trade the paper book would (measured below).
@@ -207,15 +208,29 @@ mechanical bugs while we're still improving the actual function."*
 - **`execution: shadow` is not a holding stage.** Shadow is no longer used for non-retired legs. A mechanism still being built (the desk leg, the short-hold lane, a new ML head) goes on the floor early, so mechanical bugs show up while the function is still improving.
 - **Demotion stops at the floor** (and, since 2026-10-28, a demoted production leg is put back ON it). The operator's popup answer, 2026-10-27, verbatim, was *"Demote stops at the floor (Recommended)"*. A leg that fails Stage 0 or underperforms is demoted out of real money and the mirror and stays on its demo floor. `MD-S1-CUT-ON-STAGE0-FAIL` and `MD-DEMOTE-S1-OFF` are rewritten to match. **Only an explicit retirement record removes a leg from its floor.**
 - **Real money is promotion only.** Gate 2 (`MD-PROMOTE-S1-S2`, manager-merged PR on the data-backed rule, CLAUDE-RULES-CANONICAL § "Data-backed Tier-2/3 decisions"; no operator merge, 2026-11-03) and the prop superset gate are unchanged.
+- **Shadow is not a step on the way to real money — for strategies, ML heads and features alike** (operator, 2026-11-12, decisions page p3, verbatim): *"We already said that things get promoted to real money based on backtesting, shadow on paper is only for something that is demoted and in iteration, not a step on the way to real money "*. A Stage-0 pass on a registered rule, net of the full cost stack, is what promotes. A paper or shadow run is for a demoted leg or model while it iterates; it is never a stage a passing candidate must clear first. Record: [`thursday-planning-2026-11-12-answers.md`](thursday-planning-2026-11-12-answers.md).
 - **Exceptions are named, never silent.** A leg no demo venue can serve (e.g. `xauusd_trend_1h`: OANDA practice is `dry_run` and OANDA US cannot trade XAU_USD) or one blocked by a guard (same-symbol allocation without slices on alpaca_paper) is listed with the reason on its checklist row until the blocker is fixed.
 
-### The soak is MECHANICAL — and a leg with proven mechanics skips it (operator, 2026-10-15 and 2026-11-01, binding)
+### The soak is MECHANICAL — and there is no soak step before real money (operator, 2026-10-15, 2026-11-01 and 2026-11-12, binding)
 
 <!-- SOAK-RULE-CANONICAL: the ONE statement of the soak rule. Every other doc points here
      (soak-doctrine-guard CHECK E refuses a live doc or skill that restates a long soak). -->
 
-**Gates this adds or changes:** it REMOVES one — Gate 2 no longer requires a paper soak for a leg whose mechanics are already proven.
-It adds none (`config/mechanics_paths.yaml` is an evidence input to `MD-PROMOTE-S1-S2`, not a switch on what trades).
+**Gates this adds or changes:** it REMOVES one — Gate 2 requires no paper soak at all (2026-11-12; before that, only legs with
+proven mechanics skipped it). It adds none.
+
+⚠️ **2026-11-12 — NO STEP between Stage 0 and real money.** Operator, chat to Manager Session 2026-11-11a ~16:35Z, verbatim: *"you're going to retire the step from the ML. Everything goes through the new flow, back testing, live money, and then if it gets demoted, it soaks to still generate data while we iterate on it. That is the only acceptable flow. There is nothing in between proving edge on back testing and real money. Absolutely no steps."*
+Granted for the strategy ladder by popup ~21:10Z ("Grant it") as `MD-PROMOTE-S1-S2` `bar.soak_step: retired` (PRs #25401 / #25491).
+What this means, and it SUPERSEDES rules 1–2 below wherever they disagree:
+- A leg that clears Stage 0 goes to Stage 2 (live + mirror) on the Stage-0 record alone. No paper soak, no "one small trade" first,
+  no `mechanics_proven` precondition — `mandate_resolver` still RECORDS `mechanics_proven` as evidence, and the first live trades are
+  a named closing observation on the promoting PR (monitoring, never a gate).
+- A soak now has ONE job: a leg DEMOTED from real money soaks on the demo floor (Stage 1) to keep generating data while it is iterated
+  on. TESTING legs that have not cleared Stage 0 also trade there. Neither is a step a Stage-0 pass must clear.
+- The same flow governs ML models (registry stage is a housekeeping label; offline evidence → `advisory` directly; demotion →
+  `shadow` to soak for data) — ML-STAGE-RETIRE, PR #25400.
+
+(History, kept: `config/mechanics_paths.yaml` was an evidence input to the 2026-11-01 rule below, not a switch on what trades.)
 
 Verbatim (2026-10-15): *"A soak is a mechanical verification that was already proven in backtesting, and nothing
 needs to soak for more than one or two trades."*
@@ -279,7 +294,9 @@ path. The registry starts empty; the promoting PR adds the entry, and the resolv
   state `scripts/ops/soak_state.py::soak_states()` (`passed` · `mechanical_fail` · `in_progress` ·
   `awaiting_first_trade` · `unknown`) and `mechanics_proven()`; registry `config/mechanics_paths.yaml`; guards
   `soak-contract-guard` (the contracts and the registry's shape) and `soak-doctrine-guard` (the docs, skills and generators).
-- **Open:** the 2026-11-01 amendment of `MD-PROMOTE-S1-S2` (`bar.mechanics_proven`) is Tier 3 and lands only on the operator's yes.
+- **Landed:** the 2026-11-01 amendment (`bar.mechanics_proven`) landed; on 2026-11-12 `bar.soak_step: retired` (operator grant, PRs
+  #25401 / #25491) removed the soak precondition entirely. The soak definition above now describes the DEMOTED-leg data soak and the
+  first-live-trade closing observation, never a promotion step.
 
 - **Exception — a config-only improvement to an existing, already-live strategy (operator, 2026-10-18,
   binding).** Verbatim: *"in general, yes, things need to pass a mechanical test on paper, but if it's an

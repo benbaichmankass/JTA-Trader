@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "src/runtime/strategy_signal_builders.py is order-path by path (Tier 2): one operator OK relayed by the manager. LOGGING ONLY: a closed-bar leg that leaves its bar undecided (stale_skipped / unconfirmed / unreadable) now writes one <strategy>_eval side=none audit row with closed_bar_skip=true; every returned skip reason and every decision is unchanged. live_replay_parity reads the row as its own class closed_bar_skip.",
+  "why": "PI-20261111-LRP-C5F97202: those exits wrote no audit row, so a bar live never decided could not be told apart from a dropped decision; parity could only say lost_bar / dropped_no_package."
+}

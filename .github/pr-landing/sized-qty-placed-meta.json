@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Touches src/core/coordinator.py (order-path file), but the change is meta-only: it adds two keys to order_packages.meta (placed_qty_by_account, slice_admission_by_account) and changes no qty, gate, order or journal row. Evidence: reproduction test tests/test_sized_qty_meta_placed.py fails 4/4 without the fix, passes with it; 123 slice/intent/sizing dispatch tests and 204 coordinator tests pass. AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk) merges under the data-backed Tier-2 rule. Goes live at the next trader restart. Revert: git revert of the merge commit.",
+  "why": "PKG-SIZED-QTY-2X-PLACED-BYBIT1: sized_qty_by_account is the RiskManager size stamped before slice admission halves it (bybit_1 declared slices 0.5), so the package meta read 2x the placed qty; record the placed qty per account and keep each account's slice admission."
+}

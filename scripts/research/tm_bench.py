@@ -10,6 +10,9 @@ policy -- a rule, a model, the desk -- is scored on the same states and reported
     python3 scripts/research/tm_bench.py score --test-corpus v1 --train-corpus <dir> --rule s_offline --out <dir>
     python3 scripts/research/tm_bench.py transfer --test-corpus v1 --train-corpus <dir> --fractions 0,0.25,1,4 --out <dir>
     python3 scripts/research/tm_bench.py corpus --test-corpus v1 --out <dir>          # freeze + hash, nothing scored
+    python3 scripts/research/tm_bench.py score --test-corpus <v1 glob> --train-corpus corpus_v2 --train-sample-mult 4 --seed 11 \
+        --expect-train-corpus bp2-f4271084b120 ...   # v1 train fold + a seeded, trade-grouped, purged, de-duplicated 4x sample of
+                                                      # corpus v2 (RQ-20261112-3144-02); corpus_v2/ from corpus_v2_materialise.py
 
 ONE ENGINE (row note, binding: "the labeler imports the cf core ... never rebuilt"). Neither CF-B0-ENGINE-LIFT's
 `cf_core` nor the ML-EXIT-ACTIONGRID-LABELS replay exists on main (both rows `queued`, 2026-10-30). The narrowest
@@ -81,7 +84,9 @@ from __future__ import annotations
 import argparse
 import gzip
 import hashlib
+import itertools
 import json
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -132,7 +137,10 @@ LOGIT_ACT_P = 0.6
 LGBM_ROUNDS = 300
 LGBM_PARAMS = {"objective": "regression", "learning_rate": 0.05, "num_leaves": 31, "min_data_in_leaf": 100,
                "bagging_fraction": 0.8, "bagging_freq": 1, "feature_fraction": 0.8, "lambda_l2": 1.0, "verbose": -1,
-               "num_threads": 4}
+               # CI-SUITE-SLOWDOWN (2026-11-12): honour OMP_NUM_THREADS when the caller set it (pytest-run sets 1).
+               # A fixed 4 under 4 xdist workers = 16 spinning OpenMP threads on 4 vCPUs: MEASURED
+               # test_transfer_end_to_end 21 s alone, 1424 s inside the suite. Unset -> 4, as before.
+               "num_threads": int(os.environ.get("OMP_NUM_THREADS") or 4)}
 S_OFFLINE = {"min_gain_r": 0.03, "min_folds": 5}
 INNER_MARGIN_GRID = (0.0, 0.02, 0.05, 0.1, 0.2, 0.3)   # RQ-20261030-c7a1-01 (Q-TM1b) registered grid
 SYNTH_SUBSTEPS = 100
@@ -197,7 +205,9 @@ def resolve_corpus(spec: str, *, work: Path, synthetic_seed: int = 5) -> Tuple[l
                    man.get("timeframes", {}).get(leg)) for leg in man["legs"]]
         return corpus, {"source": f"frozen corpus {man['corpus_id']} ({p})", "frozen_manifest": man}
     if p.is_dir():
-        return load_combined(p), {"source": f"combined shard dir {p}"}
+        mp = p / "materialise.json"   # written by corpus_v2_materialise.py: the manifest id + trade_key hash check of this directory
+        return load_combined(p), {"source": f"combined shard dir {p}",
+                                  "materialise": json.loads(mp.read_text()) if mp.exists() else None}
     corpus, skipped = fpp.load_paths_glob(spec)
     return [(leg, pr, tr, ((tr[0].get("meta") or {}).get("timeframe") if tr else None) or _leg_tf(leg))
             for leg, pr, tr, _ in corpus], {"source": f"emitted path files {spec}", "failed": skipped}
@@ -222,7 +232,7 @@ def build_corpus(corpus: list, meta: Dict[str, Any], cost_fn=None) -> Dict[str, 
     legs = sorted({t["leg"] for t in trades})
     h = hashlib.sha256(json.dumps({"trades": rows, "legs": legs}).encode()).hexdigest()
     return {"corpus_id": f"tmb-{h[:12]}", "trades": trades, "legs": reports, "source": meta.get("source"),
-            "failed": meta.get("failed") or [], "runs": meta.get("runs") or {},
+            "failed": meta.get("failed") or [], "runs": meta.get("runs") or {}, "materialise": meta.get("materialise"),
             "parity_ok": bool(reports) and not meta.get("failed") and all(r["state"] == "included" for r in reports)}
 
 
@@ -324,17 +334,26 @@ def action_spec(t: dict, a: str, s: int) -> Optional[dict]:
     raise ValueError(a)
 
 
-def label_trade(t: dict, cost) -> Dict[str, Any]:
-    """label[a] (len n_states): net R(B0 + a at t) - net R(B0 replay); NaN = invalid there (scored as HOLD)."""
+def label_trade(t: dict, cost, horizon: Optional[int] = None) -> Dict[str, Any]:
+    """label[a] (len n_states): net R(B0 + a at t) - net R(B0 replay); NaN = invalid there (scored as HOLD).
+    `horizon` H (RQ-20261112-3144-01): BOTH arms are force-closed at bar s+1+H's open through the same engine replay, so the
+    label is the action's value over the next H bars (first passage of whatever level is in force, else marked at H). When
+    s+1+H is at or past the exit bar no close is added and the label equals the full label."""
     bars, cm = engine_bars(t), _cm(t, cost)
     net0, info = replay(t, bars, cm)
     n = t["bars"] - 1
+    sec = _sec(t)
     lab = {a: np.full(max(n, 0), np.nan) for a in ACTIONS}
     for s in range(max(n, 0)):
+        cut: List[dict] = []
+        base = net0
+        if horizon is not None and s + 1 + horizon < t["bars"] - 1:
+            cut = [{"ts": (s + 1 + horizon) * sec, "kind": "close", "frac": 1.0}]
+            base = replay(t, bars, cm, extra=cut)[0]
         for a in ACTIONS:
             sp = action_spec(t, a, s)
             if sp is not None:
-                lab[a][s] = replay(t, bars, cm, extra=sp.get("extra", ()), tp_cap=sp.get("tp_cap"))[0] - net0
+                lab[a][s] = replay(t, bars, cm, extra=list(sp.get("extra", ())) + cut, tp_cap=sp.get("tp_cap"))[0] - base
     return {"labels": lab, "b0_replay_net_r": net0, "b0_replay_gross_r": info["gross_r"], "bars": bars, "cm": cm,
             "fidelity_ok": bool(abs(info["gross_r"] - t["exit_r"]) <= FIDELITY_TOL_R)}
 
@@ -355,6 +374,13 @@ def rule_delta(t: dict, L: Dict[str, Any], rule: dict) -> float:
 
 
 # --------------------------------------------------------------------------- folds (cross-symbol purge)
+def trade_identity(t: dict) -> str:
+    """The trade as an event: leg | symbol | entry instant | direction. trade_key strings are NOT comparable across corpora
+    (v1 keys carry the harness strategy name `htf_pullback_trend_2h|ADAUSDT|..`, v2 keys the leg name
+    `ada_pullback_2h|ADAUSDT|..`), so a key-string de-dup of v2 against v1 matched nothing (MEASURED 2026-11-12, TMBENCH-V2-TRAIN-INPUT)."""
+    return f"{t['leg']}|{t['symbol']}|{t['entry_time'].value}|{str(t['trade_key']).rsplit('|', 1)[-1]}"
+
+
 def make_folds(test: List[dict], train: List[dict], k: int, same: bool) -> Dict[str, Any]:
     ent = np.array([t["entry_time"].value for t in test], dtype=np.int64)
     edges = np.linspace(ent.min(), ent.max() + 1, k + 1)
@@ -362,7 +388,7 @@ def make_folds(test: List[dict], train: List[dict], k: int, same: bool) -> Dict[
     emb: Dict[str, int] = {}
     for t in train:
         emb[t["leg"]] = max(emb.get(t["leg"], 0), int(t["exit_time"].value - t["entry_time"].value))
-    test_keys = {t["trade_key"] for t in test}
+    test_keys = {t["trade_key"] for t in test} | {trade_identity(t) for t in test}
     folds = []
     for f in range(k):
         lo_, hi_ = edges[f], edges[f + 1]
@@ -371,7 +397,7 @@ def make_folds(test: List[dict], train: List[dict], k: int, same: bool) -> Dict[
         for i, t in enumerate(train):
             if same and fid[i] == f:
                 continue
-            if not same and t["trade_key"] in test_keys:
+            if not same and (t["trade_key"] in test_keys or trade_identity(t) in test_keys):
                 n_dup += 1
                 continue
             e0, e1 = t["entry_time"].value, t["exit_time"].value + emb[t["leg"]]
@@ -383,7 +409,49 @@ def make_folds(test: List[dict], train: List[dict], k: int, same: bool) -> Dict[
                       "test": te, "train": tr, "n_purged": n_purged, "n_dedup": n_dup})
     return {"k": k, "folds": folds, "embargo_hours_by_leg": {lg: round(v / 3.6e12, 2) for lg, v in sorted(emb.items())},
             "rule": "train trade purged if [entry, exit + leg max hold] overlaps the test fold window (any symbol); "
-                    "train trade_keys present in the test corpus dropped"}
+                    "train trades whose trade_key or (leg, symbol, entry, direction) identity is in the test corpus dropped"}
+
+
+# --------------------------------------------------------------------------- --train-sample-mult (RQ-20261112-3144-02)
+def sample_train_v2(T: List[dict], V2: List[dict], k: int, mult: float, seed: int) -> Dict[str, Any]:
+    """Per outer fold: the v1 train fold (make_folds same-corpus: purged by the leg embargo, test fold excluded) plus a seeded,
+    trade-grouped random sample of `mult` x (the v1 train-fold trade count) from V2 (all of the pool if smaller).
+    The V2 pool is make_folds's cross-corpus train list: cross-symbol purged ([entry, exit + the leg's max hold in V2] overlaps
+    the test fold window) and de-duplicated against the test corpus (trade_key OR leg/symbol/entry/direction identity).
+    Trades are sampled WHOLE (an index = one trade; all its states then enter the fit together, never a subset of states),
+    without replacement, from trades that have at least one decision state, by np.random.default_rng([seed, fold]).
+    Returns {"folds": [{fold, test, v1_train, v2_sample, ...}], "k", "mult", "seed", "embargo_hours_by_leg_v2"}."""
+    fl_self, fl_x = make_folds(T, T, k, True), make_folds(T, V2, k, False)
+    out = []
+    for fs, fx in zip(fl_self["folds"], fl_x["folds"]):
+        base = [i for i in fs["train"] if T[i]["bars"] > 1]
+        pool = [i for i in fx["train"] if V2[i]["bars"] > 1]
+        size = min(len(pool), int(round(mult * len(base))))
+        pick = np.random.default_rng([int(seed), int(fs["fold"])]).choice(len(pool), size=size, replace=False) if size else []
+        out.append({"fold": fs["fold"], "lo": fs["lo"], "hi": fs["hi"], "test": fs["test"], "v1_train": list(fs["train"]),
+                    "v2_sample": sorted(pool[int(j)] for j in pick), "n_v1_train_with_states": len(base),
+                    "n_v2_pool": len(pool), "n_v2_target": int(round(mult * len(base))), "n_v2_purged": fx["n_purged"],
+                    "n_v2_dedup": fx["n_dedup"], "n_v1_purged": fs["n_purged"]})
+    return {"k": k, "mult": mult, "seed": seed, "folds": out, "embargo_hours_by_leg_v2": fl_x["embargo_hours_by_leg"],
+            "embargo_hours_by_leg_v1": fl_self["embargo_hours_by_leg"]}
+
+
+class _ComboEv:
+    """Events for [v1 trades..., v2 trades...]: v1 from the already-built list, v2 built on first use (146k trades x 18 R1 columns
+    is not held in memory; only sampled trades are ever read)."""
+
+    def __init__(self, ev1: List[dict], V2: List[dict], fe_legs: Sequence[str], block: Optional[str]):
+        self.ev1, self.V2, self.fe, self.block, self.cache = ev1, V2, list(fe_legs), block, {}
+
+    def __getitem__(self, i: int) -> dict:
+        n1 = len(self.ev1)
+        if i < n1:
+            return self.ev1[i]
+        if i not in self.cache:
+            e = fpp.events(self.V2[i - n1], self.fe)
+            add_feature_block([e], [self.V2[i - n1]], self.block)
+            self.cache[i] = e
+        return self.cache[i]
 
 
 # --------------------------------------------------------------------------- check-ins
@@ -423,6 +491,110 @@ def med_win(trades: List[dict], idx: Sequence[int]) -> Dict[str, float]:
 
 
 # --------------------------------------------------------------------------- learners
+PATH_STATE = ["mae_r", "atr_ratio_entry", "swing_hi_dist_atr", "swing_lo_dist_atr"]
+SWING_K = 2          # 5-bar fractal: a pivot at bar j is CONFIRMED after bar j + SWING_K closes
+STAGE_A_FOLD_RULE = {"min_folds": 4, "min_checkins_per_fold": 200}   # RULE-RQ-20261101-78fc-04 (registered 2026-11-01)
+
+
+def path_state_features(t: dict) -> np.ndarray:
+    """RQ-20261101-78fc-04 path-state block, one row per decision state (exit row excluded, the R1 row order), every value
+    a function of bars 0..s only. MFE so far and bars since MFE are ALREADY in R0 (peak_r, log_since_peak), so the block
+    adds the other two named quantities plus the swing distance, split by side:
+      mae_r              min(0, min adv_r over bars 0..s)            -- the worst excursion so far, in R
+      atr_ratio_entry    atr_r[s] / atr_r[0]                         -- volatility now vs at entry
+      swing_hi_dist_atr  (latest CONFIRMED in-trade pivot high - c_r[s]) / atr_r[s]
+      swing_lo_dist_atr  (c_r[s] - latest CONFIRMED in-trade pivot low) / atr_r[s]
+    A pivot high at j: fav[j] is the max of fav[j-K .. j+K] (ties: the latest bar wins via >=), usable from state j + K.
+    The harness emit starts at the entry bar, so pre-entry structure is not available: swings are IN-TRADE swings
+    (NaN until one is confirmed; NaN -> train median in the learner)."""
+    n = t["bars"] - 1
+    if n <= 0:
+        return np.zeros((0, len(PATH_STATE)))
+    fav, adv, c = np.asarray(t["fav"], float), np.asarray(t["adv"], float), np.asarray(t["c_r"], float)
+    atr = np.asarray(t["atr_r"], float)
+    sa = np.where(np.isfinite(atr) & (atr > 0), atr, np.nan)
+    mae = np.minimum(0.0, np.fmin.accumulate(np.where(np.isfinite(adv), adv, np.inf)))
+    a0 = sa[0] if len(sa) else np.nan
+    out = np.full((n, len(PATH_STATE)), np.nan)
+    hi_lvl, lo_lvl = np.nan, np.nan
+    K = SWING_K
+    for s in range(n):
+        j = s - K                       # the newest bar whose pivot status is decided after bar s closes
+        if j >= K:
+            w = slice(j - K, j + K + 1)
+            if np.isfinite(fav[j]) and fav[j] >= np.nanmax(fav[w]):
+                hi_lvl = fav[j]
+            if np.isfinite(adv[j]) and adv[j] <= np.nanmin(adv[w]):
+                lo_lvl = adv[j]
+        out[s] = (mae[s] if np.isfinite(mae[s]) else np.nan, sa[s] / a0 if np.isfinite(a0) else np.nan,
+                  (hi_lvl - c[s]) / sa[s], (c[s] - lo_lvl) / sa[s])
+    return out
+
+
+_PER_BAR = ("open_r", "peak_r", "bsp", "off", "o_r", "c_r", "fav", "adv", "stop_r", "target_r", "d_stop", "d_target",
+            "atr_r", "adx")
+
+
+def truncate_trade(t: dict, m: int) -> dict:
+    """The trade as known after bar m closes: rows 0..m kept, plus one all-NaN placeholder exit row so that state m (the
+    decision after bar m) still exists. A causal feature returns the same rows 0..m on this as on the full trade; one that
+    reads bar m + 1 sees NaN at state m and is caught."""
+    return dict(t, bars=m + 2, **{k: np.r_[np.asarray(t[k], float)[:m + 1], np.nan] for k in _PER_BAR if k in t})
+
+
+SIG_CHANNELS = ("t_day", "c_r", "peak_r")       # time-augmented in-trade path: bars held / 24, close in R, running peak in R
+SIG_DEPTH = 3
+SIGNATURE = [f"sig{lvl}_" + "".join(str(i) for i in idx)
+             for lvl in range(1, SIG_DEPTH + 1)
+             for idx in itertools.product(range(len(SIG_CHANNELS)), repeat=lvl)]
+
+
+def signature_features(t: dict) -> np.ndarray:
+    """FRONTIER-Q-SIGNATURE-INTRADE path-signature block (Chevyrev & Kormilitzin, arXiv 1603.03788): the truncated (depth 3)
+    signature of the time-augmented in-trade path p_k = (k / 24, c_r[k], peak_r[k]) over bars 0..s, one row per decision state
+    (exit row excluded, the R1 row order). Built incrementally by Chen's identity, S(0..s) = S(0..s-1) (x) exp(dp_s), so every
+    value at state s is a function of bars 0..s only (the same truncation test as path_state). A NaN increment contributes 0.
+    3 channels x depth 3 = 3 + 9 + 27 = 39 columns, all order-aware summaries of the path (areas, ordering of up/down moves)."""
+    n = t["bars"] - 1
+    d = len(SIG_CHANNELS)
+    if n <= 0:
+        return np.zeros((0, len(SIGNATURE)))
+    c, pk = np.asarray(t["c_r"], float), np.asarray(t["peak_r"], float)
+    P = np.c_[np.arange(len(c), dtype=float) / 24.0, c, pk]
+    s1, s2, s3 = np.zeros(d), np.zeros((d, d)), np.zeros((d, d, d))
+    out = np.zeros((n, len(SIGNATURE)))
+    for s in range(n):
+        if s > 0:
+            dp = P[s] - P[s - 1]
+            dp = np.where(np.isfinite(dp), dp, 0.0)
+            dd = np.multiply.outer(dp, dp)
+            s3 = s3 + np.multiply.outer(s2, dp) + np.multiply.outer(s1, dd / 2.0) + np.multiply.outer(dd, dp) / 6.0
+            s2 = s2 + np.multiply.outer(s1, dp) + dd / 2.0
+            s1 = s1 + dp
+        out[s] = np.r_[s1, s2.ravel(), s3.ravel()]
+    return out
+
+
+FEATURE_BLOCKS = ("path_state", "signature", "path_state+signature")
+
+
+def block_feature_names(block: Optional[str]) -> List[str]:
+    parts = (block or "").split("+")
+    return (PATH_STATE if "path_state" in parts else []) + (SIGNATURE if "signature" in parts else [])
+
+
+def add_feature_block(ev: List[dict], trades: List[dict], block: Optional[str]) -> None:
+    """Append the block's columns to every state's X1 AFTER the leg fixed effects (B2 reads X1[:, 4:7]; unchanged)."""
+    if not block:
+        return
+    if block not in FEATURE_BLOCKS:
+        raise ValueError(f"unknown feature block {block!r}; valid: {', '.join(FEATURE_BLOCKS)}")
+    fns = [f for name, f in (("path_state", path_state_features), ("signature", signature_features)) if name in block.split("+")]
+    for e, t in zip(ev, trades):
+        if e["n"]:
+            e["X1"] = np.c_[(e["X1"], *[f(t) for f in fns])]
+
+
 def _fit_lgbm(X: np.ndarray, y: np.ndarray, seed: int):
     import lightgbm as lgb   # native API: the runner installs lightgbm without scikit-learn on some paths
     return lgb.train(dict(LGBM_PARAMS, seed=seed), lgb.Dataset(X, label=y), num_boost_round=LGBM_ROUNDS)
@@ -628,25 +800,46 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
           checkins: Sequence[str] = tuple(CHECKINS), act_margin_r: float = ACT_MARGIN_R,
           logit_act_p: float = LOGIT_ACT_P, act_margin_grid: Sequence[float] = (),
           calibration: bool = False, inner_folds: int = 0, actions: Optional[Sequence[str]] = None,
-          n_perm: int = 200) -> Dict[str, Any]:
-    """`calibration`: Stage-A per-action OOS rank calibration of the lgbm arm. `inner_folds` N > 0: the lgbm act margin is chosen per
+          n_perm: int = 200, feature_block: Optional[str] = None, horizon: Optional[int] = None,
+          train_sample_mult: Optional[float] = None) -> Dict[str, Any]:
+    """`train_sample_mult` K (with a train corpus): each fold trains on the v1 train fold PLUS a seeded, trade-grouped sample of
+    K x its trade count from the train corpus, purged and de-duplicated (`sample_train_v2`); without it the train corpus alone is
+    the training set (the transfer / s_offline construction). `feature_block` "path_state": append path_state_features to X1 (RQ-20261101-78fc-04). `calibration`: Stage-A per-action OOS rank calibration of the lgbm arm. `inner_folds` N > 0: the lgbm act margin is chosen per
     outer fold on N-fold out-of-fold predictions of the OUTER TRAIN set (no outer test row is touched; grid = `act_margin_grid` or
     INNER_MARGIN_GRID). `actions`: restrict the lgbm arm to these classes, or ["stage_a"] = the classes passing Stage A."""
     T = test["trades"]
     same = train is None
-    TR = T if same else train["trades"]
+    combo = (not same) and train_sample_mult is not None
+    V2 = None if same else train["trades"]
+    TR = T if same else (T + V2 if combo else V2)
     fe_legs = sorted({t["leg"] for t in T} | {t["leg"] for t in TR})
     ev = [fpp.events(t, fe_legs) for t in T]
-    ev_tr = ev if same else [fpp.events(t, fe_legs) for t in TR]
-    labs = [label_trade(t, cost) for t in T]
-    fl = make_folds(T, TR, k, same)
+    add_feature_block(ev, T, feature_block)
+    sample: Optional[Dict[str, Any]] = None
+    if combo:
+        ev_tr = _ComboEv(ev, V2, fe_legs, feature_block)
+        sample = sample_train_v2(T, V2, k, float(train_sample_mult), seed)
+        n1 = len(T)
+        fl = {"k": k, "embargo_hours_by_leg": sample["embargo_hours_by_leg_v1"],
+              "rule": "v1 train fold (leg-embargo purged) + a seeded trade-grouped sample of v2; every train trade of either corpus "
+                      "purged if [entry, exit + its leg max hold] overlaps the test fold window (any symbol); v2 trades whose "
+                      "trade_key or (leg, symbol, entry, direction) is in the test corpus dropped",
+              "folds": [{"fold": f["fold"], "lo": f["lo"], "hi": f["hi"], "test": f["test"],
+                         "train": f["v1_train"] + [n1 + j for j in f["v2_sample"]],
+                         "n_purged": f["n_v1_purged"] + f["n_v2_purged"], "n_dedup": f["n_v2_dedup"]} for f in sample["folds"]]}
+    else:
+        ev_tr = ev if same else [fpp.events(t, fe_legs) for t in TR]
+        if not same:
+            add_feature_block(ev_tr, TR, feature_block)
+        fl = make_folds(T, TR, k, same)
+    labs = [label_trade(t, cost, horizon) for t in T]
     labs_tr: Dict[int, Any] = {}
 
     def lab_tr(i: int):
-        if same:
+        if same or (combo and i < len(T)):
             return labs[i]
         if i not in labs_tr:
-            labs_tr[i] = label_trade(TR[i], cost)
+            labs_tr[i] = label_trade(TR[i], cost, horizon)
         return labs_tr[i]
     rng = np.random.default_rng(seed)
     a0 = np.array([t["atr_r"][0] for t in T if len(t["atr_r"]) and np.isfinite(t["atr_r"][0])])
@@ -680,7 +873,7 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
         if not f["test"] or not f["train"]:
             continue
         tr = f["train"]
-        trlabs = {i: lab_tr(i) for i in tr} if not same else {i: labs[i] for i in tr}
+        trlabs = {i: lab_tr(i) for i in tr}
         fold_models[f["fold"]] = fit_learners(ev_tr, trlabs, tr, list(kinds) + ["b2"], seed)
         fold_medwin[f["fold"]] = med_win(TR, tr)
         mdl = fold_models[f["fold"]]
@@ -708,6 +901,7 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
         P = {a: [] for a in ACTIONS}
         Lb = {a: [] for a in ACTIONS}
         tids: List[np.ndarray] = []
+        tfold: List[int] = []
         nt_ = 0
         for f, i in oos:
             mdl = fold_models[f].get("lgbm_action_value")
@@ -718,6 +912,7 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
                 P[a].append(sc_[:, j])
                 Lb[a].append(np.nan_to_num(labs[i]["labels"][a], nan=0.0))
             tids.append(np.full(ev[i]["n"], nt_))
+            tfold.append(f)
             nt_ += 1
         if tids:
             calib = {"definition": "OOS Spearman rho(predicted advantage, realized label) over every state of every OOS trade; "
@@ -726,6 +921,28 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
                      "actions": calibrate({a: np.concatenate(P[a]) for a in ACTIONS}, {a: np.concatenate(Lb[a]) for a in ACTIONS},
                                           np.concatenate(tids), np.random.default_rng(seed + 17), n_boot, n_perm)}
             calib["passing"] = [a for a in ACTIONS if calib["actions"][a].get("pass")]
+            # per fold (RULE-RQ-20261101-78fc-04): the same rho on that fold's OOS states vs its own within-trade null p95
+            tid_all, tf = np.concatenate(tids), np.array(tfold)
+            fold_of_state = tf[tid_all]
+            per_fold: Dict[str, Any] = {}
+            for f in sorted(set(tfold)):
+                sel = fold_of_state == f
+                ids = tid_all[sel]
+                _, ids = np.unique(ids, return_inverse=True)
+                cf = calibrate({a: np.concatenate(P[a])[sel] for a in ACTIONS}, {a: np.concatenate(Lb[a])[sel] for a in ACTIONS},
+                               ids, np.random.default_rng(seed + 31 + f), n_boot, n_perm)
+                per_fold[str(f)] = {"n_checkins": int(sel.sum()), "n_trades": int(ids.max()) + 1 if len(ids) else 0,
+                                    "actions": {a: {"rho": cf[a].get("rho"), "ci95": cf[a].get("ci95"),
+                                                    "perm_null_p95": cf[a].get("perm_null_p95"),
+                                                    "beats_null_point": bool(cf[a].get("rho") is not None and
+                                                                             cf[a]["rho"] > cf[a]["perm_null_p95"]),
+                                                    "beats_null": bool(cf[a].get("pass"))}
+                                                for a in ACTIONS}}
+            calib["per_fold"] = per_fold
+            calib["folds_beating_null"] = {a: sum(v["actions"][a]["beats_null"] for v in per_fold.values()) for a in ACTIONS}
+            calib["folds_beating_null_point"] = {a: sum(v["actions"][a]["beats_null_point"] for v in per_fold.values())
+                                                 for a in ACTIONS}
+            calib["min_checkins_per_fold"] = min((v["n_checkins"] for v in per_fold.values()), default=0)
     allowed: Optional[List[int]] = None
     if actions:
         names = calib["passing"] if list(actions) == ["stage_a"] and calib else ([] if list(actions) == ["stage_a"] else list(actions))
@@ -885,6 +1102,13 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
     # ceiling check: every policy arm <= the action-value oracle, per trade (v1 single-action policies)
     oracle_oos = float(np.mean([oracle_ceiling[i] for _f, i in oos])) if oos else None
     return {"corpus_id": test["corpus_id"], "train_corpus_id": None if same else train["corpus_id"],
+            "train_sample": None if sample is None else {
+                "mult": sample["mult"], "seed": sample["seed"], "embargo_hours_by_leg_v2": sample["embargo_hours_by_leg_v2"],
+                "per_fold": [{kk: f[kk] for kk in ("fold", "n_v1_train_with_states", "n_v2_target", "n_v2_pool", "n_v1_purged",
+                                                    "n_v2_purged", "n_v2_dedup")} | {"n_v2_sampled": len(f["v2_sample"])}
+                             for f in sample["folds"]],
+                "sample_sha256_by_fold": {str(f["fold"]): hashlib.sha256(
+                    "\n".join(TR[len(T) + j]["trade_key"] for j in f["v2_sample"]).encode()).hexdigest() for f in sample["folds"]}},
             "n_trades": len(T), "n_states": int(sum(e["n"] for e in ev)), "n_oos_trades": len(oos),
             "engine": ENGINE_SOURCE, "engine_fidelity": {"share_within_tol": None if fid is None else round(fid, 4),
                                                          "tol_r": FIDELITY_TOL_R},
@@ -897,7 +1121,26 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
             "fold_assignment": {T[i]["trade_key"]: f["fold"] for f in fl["folds"] for i in f["test"]},
             "action_enum": list(ALL_ACTIONS), "checkin_grid": list(checkins), "entry_source": "E1",
             "calibration": calib, "actions_allowed": None if allowed is None else [ACTIONS[j] for j in allowed],
-            "inner_folds": inner_folds, "arms": arms, "_labs": labs, "_oracle": oracle_ceiling, "_trades": T}
+            "inner_folds": inner_folds, "feature_block": feature_block,
+            "label": {"kind": "full" if horizon is None else "horizon", "horizon_bars": horizon,
+                      "note": None if horizon is None else "policy arms are scored on the horizon label: Stage A is the read; "
+                              "arm deltas are not net-of-cost policy values"},
+            "features": fpp.R1 + ["leg_fixed_effects"] + block_feature_names(feature_block), "arms": arms, "_labs": labs, "_oracle": oracle_ceiling, "_trades": T}
+
+
+def stage_a_folds(calib: Optional[Dict[str, Any]], n_folds: int, sc_pass: bool) -> Tuple[str, str]:
+    """RULE-RQ-20261101-78fc-04: PASS iff some non-hold action's OOS Spearman beats its within-trade-shuffle p95 on >= 4 of
+    the 6 purged folds; INDETERMINATE if any fold has < 200 check-ins (or the selfcheck fails); else FAIL."""
+    if not sc_pass or not calib or "per_fold" not in calib:
+        return "indeterminate", "selfcheck failed or no per-fold calibration"
+    pf = calib["per_fold"]
+    if len(pf) < n_folds or calib["min_checkins_per_fold"] < STAGE_A_FOLD_RULE["min_checkins_per_fold"]:
+        return "indeterminate", f"{len(pf)} folds scored; min check-ins per fold {calib['min_checkins_per_fold']}"
+    fb = calib["folds_beating_null"]
+    best = max(fb, key=lambda a: fb[a])
+    ok = fb[best] >= STAGE_A_FOLD_RULE["min_folds"]
+    return ("pass" if ok else "fail"), (f"folds beating the permutation p95 per action {fb}; best {best} {fb[best]}/{len(pf)} "
+                                        f"(needs >= {STAGE_A_FOLD_RULE['min_folds']})")
 
 
 def s_offline(arm: Dict[str, Any], arms: List[Dict[str, Any]]) -> Tuple[str, str]:
@@ -1043,6 +1286,73 @@ def selfcheck(verbose: bool = True) -> Dict[str, Any]:
             checks.append(("null: logit action-value does not pass on a driftless walk (CI lower <= 0)",
                            lo.get("read_state") == "measured" and lo["ci95"][0] <= 0,
                            f"null {lo.get('delta_vs_b0_r')} {lo.get('ci95')}"))
+        # 2b. path-state block: causal (truncation-invariant) and the per-fold Stage-A rule separates planted from null
+        corp, meta = resolve_corpus("synthetic-planted", work=Path(td))
+        TT = build_corpus(corp, meta, cost_fn=cx)["trades"][:200]
+
+        def _trunc_worst(fn) -> Tuple[float, int]:
+            worst, n_cmp = 0.0, 0
+            for t in TT:
+                full = fn(t)
+                for m in range(0, t["bars"] - 1):
+                    a_, b_ = full[:m + 1], fn(truncate_trade(t, m))[:m + 1]
+                    if not np.array_equal(np.isnan(a_), np.isnan(b_)):
+                        return np.inf, n_cmp + 1
+                    if np.isfinite(a_).any():
+                        worst = max(worst, float(np.nanmax(np.abs(a_ - b_))))
+                    n_cmp += 1
+            return worst, n_cmp
+        worst_tr, n_cmp = _trunc_worst(path_state_features)
+        checks.append(("path_state: every feature at state s is unchanged when the trade is cut after bar s (causal)",
+                       worst_tr == 0.0 and n_cmp > 0, f"{n_cmp} truncations, max |diff| {worst_tr}"))
+
+        def _leaky(t: dict) -> np.ndarray:   # an UNCONFIRMED pivot (reads fav[s + 1]): the test must catch it
+            f_ = np.asarray(t["fav"], float)
+            n_ = t["bars"] - 1
+            return np.array([[f_[min(s_ + 1, len(f_) - 1)]] for s_ in range(n_)]) if n_ > 0 else np.zeros((0, 1))
+        leak_worst, _ = _trunc_worst(_leaky)
+        checks.append(("path_state: positive control -- a feature reading bar s+1 FAILS the truncation test", leak_worst > 0,
+                       f"leaky max |diff| {leak_worst}"))
+        worst_sg, n_sg = _trunc_worst(signature_features)
+        checks.append(("signature: every feature at state s is unchanged when the trade is cut after bar s (causal)",
+                       worst_sg == 0.0 and n_sg > 0, f"{n_sg} truncations, max |diff| {worst_sg}"))
+        _line = {"bars": 4, "c_r": [0.0, 1.0, 2.0, 3.0], "peak_r": [0.0, 1.0, 2.0, 3.0]}
+        _sg = signature_features(_line)[-1]
+        _dp = np.array([2.0 / 24.0, 2.0, 2.0])            # a straight line: S = exp(total increment)
+        _ok = np.allclose(_sg[:3], _dp) and np.allclose(_sg[3:12], np.multiply.outer(_dp, _dp).ravel() / 2.0) \
+            and np.allclose(_sg[12:], np.multiply.outer(np.multiply.outer(_dp, _dp), _dp).ravel() / 6.0)
+        checks.append(("signature: Chen's identity -- a straight-line path's signature equals the tensor exponential of its increment",
+                       bool(_ok), f"{len(SIGNATURE)} columns"))
+        fb_p, fb_n = res["synthetic-planted"]["calibration"]["folds_beating_null"], res["synthetic"]["calibration"]["folds_beating_null"]
+        checks.append(("stage_a_folds: planted reads pass, driftless null reads fail",
+                       stage_a_folds(res["synthetic-planted"]["calibration"], 6, True)[0] == "pass" and
+                       stage_a_folds(res["synthetic"]["calibration"], 6, True)[0] != "pass",
+                       f"planted {max(fb_p.values())}/6, null {max(fb_n.values())}/6"))
+        # 2c. horizon label (RQ-20261112-3144-01): equals the full label when H covers the trade; planted passes, null fails
+        cost_ = cost
+        worst_h = 0.0
+        for t in TT[:60]:
+            a_, b_ = label_trade(t, cost_)["labels"], label_trade(t, cost_, horizon=10 ** 6)["labels"]
+            for k_ in ACTIONS:
+                same_nan = np.array_equal(np.isnan(a_[k_]), np.isnan(b_[k_]))
+                d_ = np.nanmax(np.abs(a_[k_] - b_[k_])) if np.isfinite(a_[k_]).any() else 0.0
+                worst_h = max(worst_h, float(d_) if same_nan else np.inf)
+        checks.append(("horizon label == full label when H >= the remaining bars", worst_h <= 1e-12, f"max |diff| {worst_h}"))
+        short = [t for t in TT[:60] if t["bars"] > 6]
+        moved = sum(int(np.nanmax(np.abs(label_trade(t, cost_, horizon=2)["labels"]["close"] -
+                                         label_trade(t, cost_)["labels"]["close"])) > 1e-9) for t in short)
+        checks.append(("horizon label differs from the full label when H < the remaining bars (positive control)", moved > 0,
+                       f"{moved}/{len(short)} trades differ at H=2"))
+        hz = {}
+        for spec in ("synthetic", "synthetic-planted"):
+            corp, meta = resolve_corpus(spec, work=Path(td))
+            bc = build_corpus(corp, meta, cost_fn=cx)   # all 900 trades: at 300 (50 per fold) the planted horizon signal is
+            hz[spec] = score(bc, None, k=6, n_boot=200, draws=5, seed=7, cost=cost, kinds=("lgbm_action_value",),
+                             checkins=("every_bar",), calibration=True, n_perm=50, feature_block="path_state", horizon=12)
+        vp = stage_a_folds(hz["synthetic-planted"]["calibration"], 6, True)
+        vn = stage_a_folds(hz["synthetic"]["calibration"], 6, True)
+        checks.append(("stage_a_folds at horizon 12: planted reads pass, driftless null does not", vp[0] == "pass" and vn[0] != "pass",
+                       f"planted {vp[0]}, null {vn[0]}"))
         # 3. cross-symbol purge: a train trade overlapping a test fold window is dropped whatever its symbol
         corp, meta = resolve_corpus("synthetic", work=Path(td))
         bc = build_corpus(corp, meta, cost_fn=cx)
@@ -1058,6 +1368,60 @@ def selfcheck(verbose: bool = True) -> Dict[str, Any]:
         fl2 = make_folds(T, T, 6, False)
         checks.append(("same trade_key in train and test is de-duplicated", sum(f["n_dedup"] for f in fl2["folds"]) == 6 * len(T),
                        ""))
+        # 4. --train-sample-mult (RQ-20261112-3144-02): seeded, trade-grouped, purged, de-duplicated, sized K x v1 per fold
+        corp, meta = resolve_corpus("synthetic", work=Path(td))
+        allt = build_corpus(corp, meta, cost_fn=cx)["trades"]
+        corp2, meta2 = resolve_corpus("synthetic-planted", work=Path(td), synthetic_seed=9)
+        pool2 = build_corpus(corp2, meta2, cost_fn=cx)["trades"]
+        T4 = allt[:150]
+        V4 = [dict(t, symbol="OTHERUSDT", trade_key=t["trade_key"].replace("|", "|v2|", 1)) for t in pool2[:600]]
+        # planted duplicates of v1 trades under a DIFFERENT key string (the real v1 vs v2 situation: strategy name vs leg name)
+        dups = [dict(t, trade_key="LEGSTAMP|" + t["trade_key"].split("|", 1)[1]) for t in T4[:25]]
+        same_key = [dict(t) for t in T4[25:30]]
+        V4 = V4 + dups + same_key
+        S1 = sample_train_v2(T4, V4, 6, 2.0, seed=11)
+        S2 = sample_train_v2(T4, V4, 6, 2.0, seed=11)
+        S3 = sample_train_v2(T4, V4, 6, 2.0, seed=12)
+        pick = lambda S: [f["v2_sample"] for f in S["folds"]]  # noqa: E731
+        checks.append(("train-sample: seeded -- same seed gives the same sample, another seed a different one",
+                       pick(S1) == pick(S2) and pick(S1) != pick(S3) and any(pick(S1)), f"seed 11 sizes {[len(x) for x in pick(S1)]}"))
+        fe4 = sorted({t["leg"] for t in T4 + V4})
+        ev_ = _ComboEv([fpp.events(t, fe4) for t in T4], V4, fe4, None)
+        whole = all(len(set(f["v2_sample"])) == len(f["v2_sample"]) and all(
+            ev_[len(T4) + j]["n"] == V4[j]["bars"] - 1 > 0 for j in f["v2_sample"]) for f in S1["folds"])
+        checks.append(("train-sample: trade-grouped -- whole trades, no repeats, every state of a sampled trade is in the fit",
+                       whole, f"{sum(len(f['v2_sample']) for f in S1['folds'])} trades over 6 folds"))
+        fx4 = make_folds(T4, V4, 6, False)
+        emb = {lg: v * 3.6e12 for lg, v in fx4["embargo_hours_by_leg"].items()}
+        leak4, n_ov = 0, 0
+        for f in S1["folds"]:
+            lo, hi = pd.Timestamp(f["lo"]).value, pd.Timestamp(f["hi"]).value
+            leak4 += sum(1 for j in f["v2_sample"]
+                         if V4[j]["entry_time"].value < hi and V4[j]["exit_time"].value + emb[V4[j]["leg"]] >= lo)
+            n_ov += sum(1 for t in V4 if t["entry_time"].value < hi and t["exit_time"].value + emb[t["leg"]] >= lo)
+        checks.append(("train-sample: purged -- no sampled trade overlaps its test fold window + embargo (and the pool had overlappers)",
+                       leak4 == 0 and n_ov > 0 and all(f["n_v2_purged"] > 0 for f in S1["folds"]),
+                       f"{leak4} leaks; {n_ov} pool trades overlap a window; purged {[f['n_v2_purged'] for f in S1['folds']]}"))
+        ids_v1 = {trade_identity(t) for t in T4}
+        hit4 = sum(1 for f in S1["folds"] for j in f["v2_sample"] if trade_identity(V4[j]) in ids_v1 or V4[j]["trade_key"] in {t["trade_key"] for t in T4})
+        checks.append(("train-sample: de-duplicated vs v1 -- by trade_key AND by (leg, symbol, entry, direction) under a different key string",
+                       hit4 == 0 and all(f["n_v2_dedup"] == 30 for f in S1["folds"]),
+                       f"{hit4} duplicates sampled; dropped per fold {[f['n_v2_dedup'] for f in S1['folds']]} of 30 planted (25 re-keyed + 5 same key)"))
+        sized = all(len(f["v2_sample"]) == min(f["n_v2_pool"], int(round(2.0 * f["n_v1_train_with_states"]))) for f in S1["folds"]) and \
+            any(len(f["v2_sample"]) == int(round(2.0 * f["n_v1_train_with_states"])) for f in S1["folds"])
+        big = sample_train_v2(T4, V4, 6, 1000.0, seed=11)
+        checks.append(("train-sample: size = K x v1 train-fold trades, or the whole purged pool if smaller",
+                       sized and all(len(f["v2_sample"]) == f["n_v2_pool"] for f in big["folds"]),
+                       f"target {[f['n_v2_target'] for f in S1['folds']]} pool {[f['n_v2_pool'] for f in S1['folds']]}"))
+        # the score() path uses that same sampler (its per-fold sample hash == the one recomputed here), and runs end to end
+        sc4 = score(dict(corpus_id="t4", trades=T4), dict(corpus_id="v4", trades=V4), k=6, n_boot=50, draws=2, seed=11, cost=cost,
+                    kinds=("lgbm_action_value",), checkins=("every_bar",), calibration=True, n_perm=10, train_sample_mult=2.0,
+                    horizon=12)
+        rec_h = {str(f["fold"]): hashlib.sha256("\n".join(V4[j]["trade_key"] for j in f["v2_sample"]).encode()).hexdigest()
+                 for f in S1["folds"]}
+        checks.append(("train-sample: score() trains on exactly that sample and reports it",
+                       sc4["train_sample"]["sample_sha256_by_fold"] == rec_h and sc4["calibration"] is not None,
+                       f"folds {[f['n_v2_sampled'] for f in sc4['train_sample']['per_fold']]}"))
     ok = all(c[1] for c in checks)
     if verbose:
         for lbl, c, d in checks:
@@ -1087,12 +1451,34 @@ def _load(spec: Optional[str], out: Path) -> Optional[Dict[str, Any]]:
     return build_corpus(corp, meta)
 
 
+def corpus_expectations(test: Dict[str, Any], train: Optional[Dict[str, Any]], samp: Optional[Dict[str, Any]],
+                        a: argparse.Namespace) -> Optional[str]:
+    """The registered INDETERMINATE clauses about the corpora (RULE-RQ-20261112-3144-02): test corpus id, train corpus id with
+    its manifest hash matching, and the de-duplicated pool size after purge. Returns the reason, or None when all hold / none asked."""
+    why = []
+    if a.expect_test_corpus and test["corpus_id"] != a.expect_test_corpus:
+        why.append(f"test corpus {test['corpus_id']} is not {a.expect_test_corpus}")
+    if a.expect_train_corpus:
+        m = (train or {}).get("materialise") or {}
+        if m.get("corpus_id") != a.expect_train_corpus or m.get("trade_key_sha256_match") is not True:
+            why.append(f"train corpus is not {a.expect_train_corpus} with its manifest trade_key hash matching "
+                       f"(materialise: id {m.get('corpus_id')}, match {m.get('trade_key_sha256_match')})")
+    if a.min_train_trades:
+        pools = [f["n_v2_pool"] for f in (samp or {}).get("per_fold", [])]
+        if not pools or min(pools) < a.min_train_trades:
+            why.append(f"fewer than {a.min_train_trades} de-duplicated trades after purge (per-fold pools {pools})")
+    return "; ".join(why) or None
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("cmd", choices=("selfcheck", "score", "transfer", "corpus"))
     ap.add_argument("--test-corpus", default="v1")
     ap.add_argument("--train-corpus", default=None, help="train on this corpus, test on --test-corpus (cross-symbol purge)")
-    ap.add_argument("--rule", choices=("reproduce", "s_offline", "none"), default="none")
+    ap.add_argument("--rule", choices=("reproduce", "s_offline", "stage_a_folds", "none"), default="none")
+    ap.add_argument("--label", choices=("full", "horizon"), default="full", help="horizon: per-action value censored at --horizon bars")
+    ap.add_argument("--horizon", type=int, default=None)
+    ap.add_argument("--feature-block", default=None, choices=FEATURE_BLOCKS, help="append a feature block to X1 (path_state: RQ-20261101-78fc-04; signature: FRONTIER-Q-SIGNATURE-INTRADE)")
     ap.add_argument("--learners", default="lgbm_action_value,logit_action_value")
     ap.add_argument("--checkins", default=",".join(CHECKINS))
     ap.add_argument("--desk-policy", default=None, help="JSONL {state_id, action}: scored as B3")
@@ -1108,9 +1494,21 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--inner-folds", type=int, default=0, help="lgbm act margin chosen on N inner out-of-fold predictions of the outer train set")
     ap.add_argument("--actions", default="", help="restrict the lgbm arm: comma list of action classes, or 'stage_a' (the Stage-A passers)")
     ap.add_argument("--n-perm", type=int, default=200)
+    ap.add_argument("--train-sample-mult", type=float, default=None,
+                    help="K: train on the v1 train fold PLUS a seeded (--seed), trade-grouped, purged, de-duplicated sample of "
+                         "K x its trade count from --train-corpus (all of it if smaller)")
+    ap.add_argument("--expect-test-corpus", default=None, help="the corpus_id the test corpus must have (else the rule reads indeterminate)")
+    ap.add_argument("--expect-train-corpus", default=None,
+                    help="the bp2-... corpus_id the train corpus directory must carry, manifest trade_key hash matching (else indeterminate)")
+    ap.add_argument("--min-train-trades", type=int, default=0,
+                    help="indeterminate if any fold's de-duplicated, purged train pool has fewer trades than this")
     ap.add_argument("--write-labels", action="store_true")
     ap.add_argument("--out", default=None)
     a = ap.parse_args(argv)
+    if a.label == "horizon" and not (a.horizon and a.horizon > 0):
+        ap.error("--label horizon needs --horizon N > 0")
+    if a.train_sample_mult is not None and not (a.train_sample_mult > 0 and a.train_corpus):
+        ap.error("--train-sample-mult needs K > 0 and --train-corpus")
     if a.cmd == "selfcheck":
         sc = selfcheck()
         if a.out:
@@ -1137,7 +1535,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     meas: Dict[str, Any] = {"schema": SCHEMA, "selfcheck": sc, "test_corpus": {k: test[k] for k in
                             ("corpus_id", "source", "legs", "failed", "runs", "parity_ok")}}
     if train:
-        meas["train_corpus"] = {k: train[k] for k in ("corpus_id", "source", "legs", "failed", "parity_ok")}
+        meas["train_corpus"] = {k: train[k] for k in ("corpus_id", "source", "legs", "failed", "parity_ok", "materialise")}
     verdict, why = "indeterminate", "no trades"
     if a.cmd == "transfer" and test["trades"] and train and train["trades"]:
         fr = [float(x) for x in a.fractions.split(",")]
@@ -1153,7 +1551,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                   checkins=[s for s in a.checkins.split(",") if s], act_margin_r=a.act_margin, logit_act_p=a.logit_act_p,
                   act_margin_grid=[float(x) for x in a.act_margin_grid.split(",") if x],
                   calibration=a.calibration, inner_folds=a.inner_folds,
-                  actions=[x for x in a.actions.split(",") if x] or None, n_perm=a.n_perm)
+                  actions=[x for x in a.actions.split(",") if x] or None, n_perm=a.n_perm, feature_block=a.feature_block,
+                  horizon=(a.horizon if a.label == "horizon" else None), train_sample_mult=a.train_sample_mult)
         if a.write_labels:
             with gzip.open(out / "labels.jsonl.gz", "wt", encoding="utf-8") as fh:
                 for t, L in zip(r["_trades"], r["_labs"]):
@@ -1188,6 +1587,11 @@ def main(argv: Optional[List[str]] = None) -> int:
                        "fail" if vs and all(v == "fail" for v in vs) else "indeterminate")
             why = ("STAGE A FAIL: no action class has OOS rho CI lower > permutation p95; Stage B not run" if stage_a_fail
                    else f"S-OFFLINE per learner arm: {vs}")
+        elif a.rule == "stage_a_folds":
+            verdict, why = stage_a_folds(r.get("calibration"), a.folds, sc["pass"])
+            bad = corpus_expectations(test, train, r.get("train_sample"), a)
+            if bad:   # the rule's own INDETERMINATE clause (RULE-RQ-20261112-3144-02), stated verbatim; never a refusal to run
+                verdict, why = "indeterminate", f"{bad}; (otherwise {verdict}: {why})"
         else:
             verdict, why = "measured", "scored; no rule applied"
     v = {"verdict": verdict, "read_state": "measured" if test["trades"] else "unmeasured", "population": pop,

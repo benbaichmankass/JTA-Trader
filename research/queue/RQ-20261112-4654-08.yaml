@@ -1,0 +1,128 @@
+id: RQ-20261112-4654-08
+title: 'Uncertainty-normalised selection at matched coverage for the crypto ENTRY recipe: does taking the decisions with the highest predicted net R per
+  unit of predicted error (mu / sigma), at the trade count RAW takes, beat taking the highest predicted net R? (13 monthly refits over 2025-10..2026-09)'
+status: queued
+cadence: once
+theme: ml_health
+priority: 3
+roadmap:
+- L-ML-LIVE
+kind: experiment
+origin: new_hypothesis
+practice_precedent: 'https://arxiv.org/abs/2107.07511 (Angelopoulos and Bates, A Gentle Introduction to Conformal Prediction and Distribution-Free Uncertainty
+  Quantification; SECONDARY, known before this pass, not re-read): normalised (locally adaptive) split-conformal scores |y - mu| / sigma with a separately
+  fitted scale model; selection by mu / sigma at matched coverage is the abstention form ML-F3 (RQ-20261011-9da8-03, retired with no verdict) designed for
+  the regime heads. Our own history: conformal_calibration has 0 open plan items after the 2026-11-13 hygiene pass; RQ-20261016-65ff-25 (conformal vs plain
+  threshold at matched coverage, regime shards) FAILED.'
+levers:
+- name: selection_score
+  values:
+  - mu (RAW, baseline)
+  - mu / sigma at matched coverage (CONF, decided)
+  hypothesised_effect: CONF raises held-out net R per decision by >= +0.06 vs RAW at about the same trade count
+- name: slices
+  values:
+  - proper 70% / CAL-A 15% (sigma) / CAL-B 15% (threshold), 25 h gaps, sigma floored at its CAL-A 5th percentile
+  hypothesised_effect: fixed, not swept (declared)
+question: Refit the SAME recipe (ml_decision_entry FEATURES, LGB_PARAMS, E.purge_train, served tau, raw net-R target) at each of 13 monthly origins over
+  the frozen v1's held-out year. RAW takes E.policy(mu, tau). CONF uses the same mu (the RAW booster on all training rows) but selects by mu / sigma, where
+  sigma is a LightGBM regression of the absolute residual of a PROPER-slice mu on CAL-A, and its threshold s* is set on CAL-B so CONF takes as many decisions
+  there as RAW does. Both are graded on the decisions they take in the test window at the ACTUAL net R of an outright bracket trade (canonical cost stack).
+  Does CONF beat RAW?
+why_this_matters: Foxhound-1 (D3 ml_entry) trades bybit_2 (real money), its mirror and three prop books, selecting on predicted net R alone. If the model's
+  error scale varies across rows, the same predicted R is worth less where the model is less reliable; ranking by mu / sigma at the same coverage is a serving-side
+  change (a second booster) with no new data. A FAIL closes this configuration and is the first conformal-family result on the real-money recipe.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+power:
+  expected_n: 13
+  min_detectable_effect: 0.06
+  effect_units: metric
+  sd: 0.074
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE (QUOTED, not re-derived here): as RQ-20261112-4654-01 -- frontier-scan-2026-11-11 K1 gives a paired window sd of 0.074 R/decision for
+    two refits of this recipe over the same 13 x 28-day windows, se = 0.0205, 80%-power MDE at alpha 0.05 two-sided ~0.063 R. CONF and RAW share mu, so
+    their decisions overlap and the paired sd is likely smaller (declared, not assumed in the MDE). Registered effect +0.06. Fewer than 10 windows with
+    n >= 30 per arm is INDETERMINATE. The window sd is re-measured (paired_extra_vs_raw.conf.sd).'
+  feasibility:
+    source: none
+    accrual_basis: Replays Binance USD-M 1h history 2021..2026-09 already published; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261112-4654-08-CONF-MATCHED
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  baseline: 'RAW: the same LightGBM recipe on the raw net-R target at the same origins, same rows (BTCUSDT excluded), same tau, same cost stack, selecting
+    on mu. Net of the full cost stack.'
+  statistic: 'scripts/research/ml_entry_residual.py run --arms raw,conf: per 28-day window, mean actual net R per taken decision for each arm (E.policy
+    at the served tau; CONF''s score shifted so the same test means mu / sigma > s*); d_w = CONF - RAW over windows where both took >= 30 decisions; mean,
+    sd and 95% t-interval of d_w (paired_extra_vs_raw.conf); pooled means and n; per-window s* and slice sizes (conf_info) and both arms'' decision counts
+    reported, so a coverage mismatch is visible.'
+  rule: 'decide_vs_raw on CONF: PASS iff >= 10 paired windows AND mean d >= +0.06 R/decision AND the 95% t-CI lower bound > 0 AND CONF pooled n >= 300.
+    FAIL iff >= 10 paired windows AND mean d <= 0. INDETERMINATE otherwise. Net of the full cost stack (fee + slippage + funding via ml_decision_entry._cost_r).
+    Thresholds are not changed after any result.'
+  pass_action: 'a Tier-3 proposal note on row ML-ENTRY-FINETUNE: candidate manifest for a mu / sigma ENTRY selector (booster + sigma booster + s*), plus
+    the promotion-design unit on the full held-out year with the prop survival gate; tag the result conformal_calibration in the diversity ledger.'
+  fail_action: record FAIL for this exact configuration (70/15/15 slices, LightGBM sigma on |residual|, CAL-B matched coverage, the v1 recipe, served tau);
+    close FRONTIER-Q-CONFORMAL-ENTRY; append conformal_calibration history.
+  what_it_does_not_do: Changes no served model, tau, roster or config. Coverage is matched on CAL-B (inside the training rows), never on the test window,
+    so test-window counts can differ and are reported. No interval-validity claim is graded (selection only). One seed per refit. BTCUSDT excluded. The
+    window was read before by 98e3-26 and 4654-01 (declared). A PASS is not a promotion.
+  min_n: 10 paired windows with >= 30 decisions per arm; 300 pooled CONF decisions
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.08
+  basis: 'stand-in: Foxhound-1 trades bybit_2 + 3 prop books; a +0.06 R/decision lift at ~40 decisions/month on bybit_2 is the scale; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 120
+  why_runner: Binance public klines plus 13 x (RAW pair + proper/sigma pairs) LightGBM refits; no trainer-resident data.
+  basis: 'ESTIMATE: RQ-20261108-98e3-26 (13 refits + fetch) ran ~40 min on research-script-run; this is ~3x the fits plus a 30-step bisection per refit.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_residual.py
+  - run
+  - --arms
+  - raw,conf
+  - --cache
+  - /tmp/ml_entry_klines
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --run-date
+  - '2026-11-13'
+  - --rule-id
+  - RULE-RQ20261112-4654-08-CONF-MATCHED
+  - --registered-at
+  - '2026-11-13'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261112-4654-08
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: whether Foxhound-1 (ml_decision_entry) selects by mu / sigma; no change from this unit
+  legs:
+  - ml_entry
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261112-4654-01
+- RQ-20261011-9da8-03
+- RQ-20261016-65ff-25
+- FRONTIER-Q-CONFORMAL-ENTRY
+- ML-ENTRY-FINETUNE
+population: The ml_decision_entry universe (Binance USD-M perps in the bp2 manifest, BTCUSDT excluded), both sides at the served tau over 2025-10-01..2026-09-30
+  in 13 x 28-day windows; a recipe comparison, not a promotion read.

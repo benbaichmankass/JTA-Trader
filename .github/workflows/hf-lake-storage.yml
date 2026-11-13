@@ -16,8 +16,8 @@ name: hf-lake-storage
 # The daily market-data-lake run also squashes when account private storage passes the threshold (retention).
 
 on:
-  issues:
-    types: [labeled]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [labeled:hf-lake-storage-request]
   pull_request:
     paths:
       - ".github/workflows/hf-lake-storage.yml"
@@ -35,8 +35,8 @@ jobs:
   storage:
     if: >-
       github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository ||
-      github.event_name == 'issues' && github.event.label.name == 'hf-lake-storage-request' &&
-      (github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]')
+      github.event_name == 'repository_dispatch' && github.event.client_payload.label.name == 'hf-lake-storage-request' &&
+      (github.event.client_payload.issue.user.login == github.repository_owner || github.event.client_payload.issue.user.login == 'github-actions[bot]')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -51,11 +51,11 @@ jobs:
         id: mode
         env:
           EVENT: ${{ github.event_name }}
-          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_BODY: ${{ github.event.client_payload.issue.body }}
         run: |
           set -euo pipefail
           m="measure"
-          if [ "$EVENT" = "issues" ]; then
+          if [ "$EVENT" = "repository_dispatch" ]; then
             m="$(printf '%s\n' "$ISSUE_BODY" | sed -n 's/^mode:[[:space:]]*\([a-z]*\).*/\1/p' | head -1)"; m="${m:-measure}"
           fi
           case "$m" in measure|squash) ;; *) echo "::error::bad mode '$m'"; exit 1;; esac
@@ -78,7 +78,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
       - name: Comment the numbers on the issue
-        if: always() && github.event_name == 'issues'
+        if: always() && github.event_name == 'repository_dispatch'
         uses: actions/github-script@v7
         with:
           script: |
@@ -86,5 +86,5 @@ jobs:
             let body = `hf-lake-storage mode=${{ steps.mode.outputs.mode }} run=${context.runId}\n\n\`\`\`\n`;
             if (fs.existsSync('storage.log')) body += fs.readFileSync('storage.log', 'utf8').slice(-55000);
             body += '\n```';
-            await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
-            await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, state: 'closed' });
+            await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), body });
+            await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), state: 'closed' });
