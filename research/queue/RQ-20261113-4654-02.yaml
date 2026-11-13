@@ -167,8 +167,8 @@ run:
   inputs:
     research_unit: RQ-20261113-4654-02
 ml_consumer:
-  consumer: config/regime_policy.yaml (the 15m regime heads btc/sol-regime-15m-lgbm-fc-pcv-v2 that feed trend_vol OFF-cells)
-  decision: whether a GRU architecture earns a net-of-cost regime-cell walk-forward against the LightGBM head; no change from this unit
+  consumer: config/regime_policy.yaml
+  decision: (consumer = the 15m regime heads btc/sol-regime-15m-lgbm-fc-pcv-v2 that feed the trend_vol OFF-cells) whether a GRU architecture earns a net-of-cost regime-cell walk-forward against the LightGBM head; no change from this unit
   legs:
   - trend_donchian
   - ict_scalp_5m
