@@ -677,6 +677,21 @@ def test_the_0700z_eth_packet_shape_is_degraded():
     assert any(d["reason"] == "candles_missing" and (d["count"], d["denominator"]) == (3, 5) for d in h["defects"])
 
 
+def test_rungs_above_price_on_a_losing_trade_are_inapplicable_not_a_defect():
+    """2026-11-13 (LTR-GRADER-COVERAGE): a losing long whose R rungs all sit at/above price read 'degraded' though
+    nothing was missing. Those rungs are counted as inapplicable; real gaps beside them still degrade."""
+    g = L
+    rung = ("invalid_level", "stop_level_not_below_price", None)
+    h = g.packet_health(_pk(_opts(*[rung] * 4)))
+    assert h["status"] == "ok" and h["defects"] == []
+    assert h["inapplicable_options"] == {"reason": "stop_level_not_below_price", "count": 4, "denominator": 4}
+    h = g.packet_health(_pk(_opts(rung, rung, ("could_not_look", "no_candles", None), ("could_not_look", "no_candles", None))))
+    assert h["status"] == "degraded"
+    assert {"field": "priced_options.options", "reason": "all_options_unpriced:no_candles", "count": 2, "denominator": 2} in h["defects"]
+    assert {"field": "priced_options.candles", "reason": "candles_missing", "count": 2, "denominator": 2} in h["defects"]
+    assert h["inapplicable_options"]["count"] == 2
+
+
 def test_other_defects_carry_a_reason_count_and_denominator():
     g = L
     h = g.packet_health(_pk(None, generator={"state": "stale_vs_origin_main"},
