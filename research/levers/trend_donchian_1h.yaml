@@ -867,11 +867,26 @@ levers_tested:
       net_r: -14.0822
       folds_positive: 0/4
       max_drawdown_r: 15.5206
-    reading: 'a slower bar makes the leg WORSE (0/4 folds at 2h and 4h): the 1h params do not transfer; the cost-share reading is refuted for
-      this leg'
+    reading: 'a slower bar makes the leg WORSE (0/4 folds at 2h and 4h): the 1h params do not transfer; the cost-share reading is refuted for this leg'
   shape: peaked
   tested_at_power: true
   unit: RQ-20261113-f251-05
   lever_family: timeframe
 units:
 - RQ-20261113-f251-05
+manifest_notes:
+  census_2026_11_13: 'DEMO-FLOOR-ITER lever-family census (AM-ML 21:08Z), forming record 2025-11-01..2026-10-31: -10.57R over n 184 (gross +15.4R, cost 26.0R; ledger
+    read by scripts/research/leg_r_diagnosis.py, run 43447401545).'
+  entry: 'TESTED (closed bar): donchian 40 / 55 (RQ-20261104-005).'
+  exit: 'TESTED (closed bar): trail_decay, trail_state, be_floor, atr_stop_mult, tp_r (no adopted gain).'
+  filter: 'TESTED (closed bar): adx_min 25 (pass, but the live trend unit has no entry ADX gate: backtest-only), adx_max, vol_skip_above.'
+  timeframe: 'TESTED forming: 2h -20.67R, 4h -14.08R, both 0/4 folds (RQ-20261113-f251-05, FAIL).'
+  direction: 'INAPPLICABLE as a pass lever: both sides lose on the forming record (long -9.5R, short -1.0R). f251-13 (short-only) was dropped before running (AM-ML
+    21:08Z) because it would only confirm a known negative.'
+  regime_gating: 'UNTESTED, PLAUSIBLE: by ADX-14 at entry the loss sits in adx<20 (-16.1R over n 75); 20-25 is +5.8R over n 42 and >=25 is -0.2R over n 67. A regime
+    off-cell (config/regime_policy.yaml, the live-capable path) is the candidate; it is a regime-selectivity unit (walk-forward before any Tier-3).'
+  sizing_vs_cost: 'UNTESTED, PLAUSIBLE: gross is POSITIVE (+15.4R) and cost (26.0R) takes it negative, so a cheaper execution route (maker entry / lower-fee venue)
+    could clear it; this needs a measured venue cost, never an assumed one.'
+  symbol_set: 'INAPPLICABLE as a lever on this leg: its sibling symbols at 1h are separate rostered legs (trend_donchian_sol, _eth).'
+  session: 'UNTESTED: no hour-block split isolates the loss in the diagnosis; ranked last.'
+  next: 'regime_gating first (largest isolated loss cell), then sizing_vs_cost. Not exhausted: no retirement note.'
