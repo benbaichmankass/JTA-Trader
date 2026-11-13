@@ -52,11 +52,20 @@ PLACEBO_SEED = 20261112
 ARMS = ("raw", "resid", "placebo")
 #: FRONTIER-Q-XSEC-RANK-ENTRY (not part of RQ-20261112-4654-01): the ranking objective in regression form -- each side's net R
 #: minus its cross-sectional mean over the symbols at the same decision timestamp, so only the relative order at a time is learned.
-EXTRA_ARMS = ("xsdemean", "ens", "ridge")
+EXTRA_ARMS = ("xsdemean", "ens", "ridge", "conf")
 # ens / ridge (FRONTIER-Q-ENS-RIDGE-ENTRY): the RAW target with a different learner -- ridge alone, or the equal-weight
 # average of the LightGBM and ridge predictions (a heterogeneous ensemble). They change the learner, not the target.
 LEARNER_ARMS = {"ens": "raw", "ridge": "raw"}
 RIDGE_ALPHA = 10.0
+# conf (FRONTIER-Q-CONFORMAL-ENTRY): uncertainty-normalised selection at MATCHED COVERAGE. Inside each refit's training
+# rows (time order): PROPER (first 70%) fits mu_p; CAL-A (next 15%) fits sigma = E|y - mu_p|; CAL-B (last 15%) picks the
+# score threshold s* so E.policy on (mu_p / sigma) takes as many decisions there as E.policy on mu_p at tau. A 25-hour gap
+# (label horizon + 1) separates the slices. On the test window the score is mu_full / sigma (mu_full = the RAW fit on
+# all training rows, so the arm differs from RAW only in WHICH decisions it takes). Point-in-time: nothing reads the test window.
+CONF_SPLIT = (0.70, 0.85)
+CONF_SIGMA_FLOOR_Q = 0.05
+LEARNER_ARMS["conf"] = "raw"
+TAU_ARMS = ("conf",)
 
 
 # ----------------------------------------------------------------------------------------------- target
@@ -103,10 +112,12 @@ def add_targets(tab: pd.DataFrame, cache: Path) -> pd.DataFrame:
     return t[keep].reset_index(drop=True)
 
 
-def fit_arm(train: pd.DataFrame, arm: str, sample: int | None = None) -> dict:
+def fit_arm(train: pd.DataFrame, arm: str, sample: int | None = None, tau: float | None = None) -> dict:
     import lightgbm as lgb
     if sample:
         train = train.sample(min(len(train), sample), random_state=0)
+    if arm == "conf":
+        return fit_conf(train, tau if tau is not None else 0.0)
     target = LEARNER_ARMS.get(arm, arm)
     out = {}
     for side in ("long", "short"):
@@ -126,6 +137,62 @@ def fit_arm(train: pd.DataFrame, arm: str, sample: int | None = None) -> dict:
         m.fit(train[E.FEATURES], y)
         out[side] = _Blend(m, ridge) if arm == "ens" else m
     return out
+
+
+def _slices(train: pd.DataFrame) -> tuple:
+    t = train.sort_values("ts")
+    ts = t["ts"].sort_values().unique()
+    gap = pd.Timedelta(hours=E.HORIZON_H + 1)
+    c1, c2 = (pd.Timestamp(ts[int(len(ts) * q)]) for q in CONF_SPLIT)
+    return (t[t.ts < c1 - gap], t[(t.ts >= c1) & (t.ts < c2 - gap)], t[t.ts >= c2])
+
+
+def _match_threshold(cal: pd.DataFrame, z: dict, n_target: int, tau: float) -> float:
+    """The score threshold s* at which E.policy on z takes n_target decisions on ``cal`` (bisection; count falls as s rises)."""
+    lo = float(min(z["long"].min(), z["short"].min())) - 1.0
+    hi = float(max(z["long"].max(), z["short"].max())) + 1.0
+    for _ in range(30):
+        mid = 0.5 * (lo + hi)
+        n = len(E.policy(cal, z["long"] - mid + tau, z["short"] - mid + tau, tau))
+        lo, hi = (mid, hi) if n > n_target else (lo, mid)
+    return 0.5 * (lo + hi)
+
+
+def fit_conf(train: pd.DataFrame, tau: float) -> dict:
+    import lightgbm as lgb
+    proper, cal_a, cal_b = _slices(train)
+    full = fit_arm(train, "raw")
+    out, z_b, mu_b = {}, {}, {}
+    sig = {}
+    for side in ("long", "short"):
+        y = f"y_{side}_raw"
+        mp = lgb.LGBMRegressor(**E.LGB_PARAMS).fit(proper[E.FEATURES], proper[y])
+        # provenance: predict -- mu_p, the PROPER-slice regressed net R, read on CAL-A to form the absolute residual sigma learns
+        res_a = (cal_a[y] - mp.predict(cal_a[E.FEATURES])).abs()
+        ms = lgb.LGBMRegressor(**E.LGB_PARAMS).fit(cal_a[E.FEATURES], res_a)
+        # provenance: predict -- sigma, the regressed absolute residual of mu_p (an uncertainty scale in R), floored
+        floor = max(float(np.quantile(ms.predict(cal_a[E.FEATURES]), CONF_SIGMA_FLOOR_Q)), 1e-6)
+        sig[side] = (ms, floor)
+        # provenance: predict -- mu_p and sigma on CAL-B, to match coverage there
+        mu_b[side] = mp.predict(cal_b[E.FEATURES])
+        z_b[side] = mu_b[side] / np.maximum(ms.predict(cal_b[E.FEATURES]), floor)
+    n_raw = len(E.policy(cal_b, mu_b["long"], mu_b["short"], tau))
+    s_star = _match_threshold(cal_b, z_b, n_raw, tau)
+    for side in ("long", "short"):
+        out[side] = _Normalised(full[side], *sig[side], s_star, tau)
+    out["_conf"] = {"s_star": s_star, "n_cal_b_raw": n_raw, "n_rows": [len(proper), len(cal_a), len(cal_b)]}
+    return out
+
+
+class _Normalised:
+    """mu_full / sigma shifted so E.policy's ``> tau`` test means ``mu / sigma > s*``."""
+
+    def __init__(self, mu, sigma, floor, s_star, tau):
+        self.mu, self.sigma, self.floor, self.s_star, self.tau = mu, sigma, floor, s_star, tau
+
+    def predict(self, x):
+        # provenance: predict -- the RAW booster's regressed net R over the sigma model's absolute-residual scale, shifted
+        return self.mu.predict(x) / np.maximum(self.sigma.predict(x), self.floor) - self.s_star + self.tau
 
 
 class _Blend:
@@ -203,10 +270,12 @@ def replay(tab: pd.DataFrame, tau: float, frozen: dict | None = None, start: str
         train = E.purge_train(tab[tab.ts < a0], a0)
         row = {"start": str(a0.date())}
         for arm in arms:
-            m = fit(train, arm)
+            m = fit(train, arm, tau=tau) if arm in TAU_ARMS else fit(train, arm)
             # provenance: predict -- regressed target of each side (policy() thresholds at tau), not a probability
             taken = E.policy(win, m["long"].predict(win[E.FEATURES]), m["short"].predict(win[E.FEATURES]), tau)
             row[arm] = _stats(taken)
+            if "_conf" in m:                 # conf: the matched threshold and slice sizes behind this window's decisions
+                row[f"{arm}_info"] = m["_conf"]
             alls[arm].append(taken)
         if frozen is not None:
             # provenance: predict -- the frozen v1 booster's regressed net R of each side (policy() thresholds at tau), not a probability
@@ -286,8 +355,8 @@ def self_test() -> int:
     m_res = (tab.y_long_raw - tab.y_long_resid).to_numpy()
     assert np.allclose(tab.y_short_resid - tab.y_short_raw, m_res)
 
-    def fit(t, arm):
-        return fit_arm(t, arm, sample=15000)
+    def fit(t, arm, **kw):
+        return fit_arm(t, arm, sample=15000, **kw)
 
     start = (tab.ts.max() - pd.Timedelta(days=56)).strftime("%Y-%m-%d")
     end = (tab.ts.max() - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
@@ -316,6 +385,15 @@ def self_test() -> int:
     assert np.allclose(me["long"].predict(xx), 0.5 * (mr["long"].predict(xx) + mg["long"].predict(xx)))
     d3 = replay(tab, 0.0, start=start, end=end, step_days=14, fit=fit, arms=("raw", "ens", "ridge"))
     assert set(d3["paired_extra_vs_raw"]) == {"ens", "ridge"} and d3["verdict"] in ("PASS", "FAIL", "INDETERMINATE")
+    # conf (FRONTIER-Q-CONFORMAL-ENTRY): slices are time-ordered and gapped, coverage on CAL-B is matched to RAW's
+    pr, ca, cb = _slices(tab)
+    gap = pd.Timedelta(hours=E.HORIZON_H + 1)
+    assert pr.ts.max() < ca.ts.min() - gap + pd.Timedelta(hours=1) and ca.ts.max() < cb.ts.min() - gap + pd.Timedelta(hours=1)
+    mc = fit_conf(tab, 0.0)
+    info = mc["_conf"]
+    assert info["n_cal_b_raw"] > 0 and np.isfinite(info["s_star"]), info
+    d4 = replay(tab, 0.0, start=start, end=end, step_days=14, fit=fit, arms=("raw", "conf"))
+    assert "conf" in d4["paired_extra_vs_raw"] and d4["verdict"] in ("PASS", "FAIL", "INDETERMINATE")
     assert decide_vs_raw({"k": 13, "mean": 0.08, "ci95": [0.02, 0.14]}, {"n": 400}) == "PASS"
     assert decide_vs_raw({"k": 13, "mean": -0.01, "ci95": [-0.05, 0.03]}, {"n": 400}) == "FAIL"
     assert decide_vs_raw({"k": 8, "mean": 0.2, "ci95": [0.1, 0.3]}, {"n": 400}) == "INDETERMINATE"
@@ -335,7 +413,7 @@ def main(argv=None) -> int:
     ap.add_argument("--rule-id", dest="rule_id", default="")
     ap.add_argument("--registered-at", dest="registered_at", default="")
     ap.add_argument("--arms", default=",".join(ARMS), help="comma list; default = the RQ-20261112-4654-01 arms (raw,resid,placebo). "
-                    "xsdemean (FRONTIER-Q-XSEC-RANK-ENTRY) and ens,ridge (FRONTIER-Q-ENS-RIDGE-ENTRY) are EXTRA arms for their own units; "
+                    "xsdemean (FRONTIER-Q-XSEC-RANK-ENTRY), ens,ridge (FRONTIER-Q-ENS-RIDGE-ENTRY) and conf (FRONTIER-Q-CONFORMAL-ENTRY) are EXTRA arms for their own units; "
                     "the verdict is on the first extra arm listed")
     a = ap.parse_args(argv)
     if a.self_test:
