@@ -24,6 +24,24 @@ def _ep(s: str) -> float:
     return datetime.fromisoformat(s).timestamp()
 
 
+# The served-pointer change time is PINNED, never read from the checkout. M.served_epoch() is the commit time of the last change
+# to ml/served/ENTRY_SERVED.json, and in a SHALLOW clone git reports the graft root instead (it "adds" every file), which puts the
+# epoch after this module's fixed 2026-11-10 bars and makes every bar "decided by the previous served artifact" -- the test then
+# read green on #25255's PR head (deeper checkout) and red on main (depth-1 checkout). Pinned to the real repoint the fixtures
+# assume: 425373a430 (#23888, "PROMOTE graded refit v1r20261106"), committed 2026-11-06 18:34:31Z.
+SERVED_REPOINT = "2026-11-06T18:34:31+00:00"
+_REAL_SERVED = (M.served_epoch, M.served_epoch_unknown_reason)   # captured before the pin, for the read's own test
+
+
+@pytest.fixture(autouse=True, scope="module")
+def _pinned_served_epoch():
+    saved = (M.served_epoch, M.served_epoch_unknown_reason)
+    M.served_epoch = lambda repo=None: _ep(SERVED_REPOINT)
+    M.served_epoch_unknown_reason = lambda repo=None: None
+    yield
+    M.served_epoch, M.served_epoch_unknown_reason = saved
+
+
 # ── ml_entry ─────────────────────────────────────────────────────────────────
 
 LAST_BAR = "2026-11-10T19:00:00+00:00"   # closes 20:00 -> a decision close (hour % 4 == 0)
@@ -258,3 +276,39 @@ def test_live_nonmodel_refusal_where_replay_decides_is_its_own_class():
     rep = {"side": "short", "pkg": {}, "parsed": {"head": "package"}}
     cls, _ = M.compare_entry(live, rep)
     assert cls == "ml_refusal_mismatch"
+
+
+# ── the served-epoch read itself: a shallow clone must say it cannot know, never guess ─────────────────────────────────
+
+def _git(*a, cwd, when=None):
+    import subprocess
+    env = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t",
+           "PATH": __import__("os").environ["PATH"], "HOME": str(cwd)}
+    if when:   # %ct is the COMMITTER date; --date alone would only move the author date
+        env.update(GIT_AUTHOR_DATE=when, GIT_COMMITTER_DATE=when)
+    return subprocess.run(["git", *a], cwd=str(cwd), capture_output=True, text=True, check=True, env=env).stdout.strip()
+
+
+def test_served_epoch_is_trusted_in_full_history_and_refused_at_a_shallow_root(tmp_path):
+    """Positive control and negative case on REAL git: a full clone reports the pointer's own commit; a depth-1 clone whose
+    pointer change lies beyond its depth is detected as unknowable (and the analyser would say could_not_check)."""
+    real_epoch, real_unknown = _REAL_SERVED   # the module-level pin replaced these two; test the real ones
+    src = tmp_path / "src"
+    (src / "ml" / "served").mkdir(parents=True)
+    _git("init", "-q", "-b", "main", cwd=src)
+    (src / "ml" / "served" / "ENTRY_SERVED.json").write_text("{}\n")
+    _git("add", "-A", cwd=src)
+    _git("commit", "-q", "-m", "repoint", cwd=src, when="2026-11-06T18:34:31+00:00")
+    pointer_sha = _git("rev-parse", "HEAD", cwd=src)
+    (src / "other.txt").write_text("x\n")
+    _git("add", "-A", cwd=src)
+    _git("commit", "-q", "-m", "unrelated", cwd=src, when="2026-11-13T12:00:00+00:00")
+    full_epoch = real_epoch(src)
+    assert full_epoch == float(_git("log", "-1", "--format=%ct", pointer_sha, cwd=src)) == _ep(SERVED_REPOINT)
+    assert real_unknown(src) is None
+    shallow = tmp_path / "shallow"
+    _git("clone", "-q", "--depth", "1", f"file://{src}", str(shallow), cwd=tmp_path)
+    assert _git("rev-parse", "--is-shallow-repository", cwd=shallow) == "true"
+    assert real_epoch(shallow) != full_epoch          # the naive read is wrong here...
+    why = real_unknown(shallow)
+    assert why and "shallow" in why                            # ...and is detected, not trusted
