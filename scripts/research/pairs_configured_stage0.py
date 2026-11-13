@@ -44,6 +44,13 @@ order path. A PASS here is Stage-0 evidence only; it is not a promotion and it
 is not a prop-fit verdict (that needs a 2-leg-aware simulator, which
 `prop_ev_sim.py` is not -- it skips legs independently).
 
+ENTRY TRIGGER (RQ-20261017-9582-01). ``--entry-trigger {rolling,fixed_beta}``
+is passed straight to ``backtest_pairs.run_backtest``; ``rolling`` (the default)
+is the original behaviour. Each ledger row carries ``z_at_entry`` and
+``z_fixed_at_entry``, and ``measurement.positive_control`` reports the share of
+entries with ``|z_fixed| >= entry_z`` for whichever arm ran, the unit's own
+check that the trigger is what it specifies.
+
 Self-test (synthetic cointegrated legs, no network)::
 
     python3 scripts/research/pairs_configured_stage0.py --self-test
@@ -98,7 +105,7 @@ def grade(net_total_r: float, n: int, min_n: int) -> str:
 
 def run_pair(pair: Dict[str, Any], *, data_a: Path, data_b: Path, out: Path,
              min_n: int, start: Optional[str] = None, end: Optional[str] = None,
-             pair_name: Optional[str] = None) -> Dict[str, Any]:
+             pair_name: Optional[str] = None, entry_trigger: str = "rolling") -> Dict[str, Any]:
     """Run the configured pair; write result.json / trades.jsonl / verdict.json."""
     import pandas as pd
 
@@ -132,7 +139,8 @@ def run_pair(pair: Dict[str, Any], *, data_a: Path, data_b: Path, out: Path,
         stop_z=float(pair.get("stop_z", 2.0)), max_hold_bars=int(pair.get("max_hold_bars", 20)),
         cooldown_bars=int(pair.get("cooldown_bars", 1)),
         hedge_beta=str(pair.get("hedge_beta", "rolling")),
-        timeframe=timeframe, pair=f"{sym_a}/{sym_b}", collect_rows=rows)
+        timeframe=timeframe, pair=f"{sym_a}/{sym_b}", collect_rows=rows,
+        entry_trigger=entry_trigger)
 
     # Sim-compatible ledger: entry_time / exit_time / gross_r / net_r per PAIR
     # trade, costed by the engine's own `_fee_r` over a Trade built from the
@@ -151,6 +159,7 @@ def run_pair(pair: Dict[str, Any], *, data_a: Path, data_b: Path, out: Path,
             "gross_r": float(r["gross_r"]), "cost_r": round(float(cost), 6),
             "net_r": round(float(r["gross_r"]) - float(cost), 4),
             "beta": r["beta"], "risk_spread": r["risk_spread"],
+            "z_at_entry": r.get("z_at_entry"), "z_fixed_at_entry": r.get("z_fixed_at_entry"),
         })
     with (out / "trades.jsonl").open("w", encoding="utf-8") as fh:
         for row in ledger:
@@ -159,6 +168,15 @@ def run_pair(pair: Dict[str, Any], *, data_a: Path, data_b: Path, out: Path,
     n = int(summary.get("total_trades") or 0)
     net = float(summary.get("net_total_r") or 0.0)
     verdict = grade(net, n, min_n)
+    entry_z = float(pair.get("entry_z", 2.0))
+    zf = [r["z_fixed_at_entry"] for r in ledger if r.get("z_fixed_at_entry") is not None]
+    positive_control = {
+        "entry_trigger": entry_trigger, "entry_z": entry_z,
+        "entries_with_z_fixed": len(zf),
+        "entries_abs_z_fixed_ge_entry_z": sum(1 for v in zf if abs(v) >= entry_z),
+        "frac_abs_z_fixed_ge_entry_z": (round(sum(1 for v in zf if abs(v) >= entry_z) / len(zf), 4)
+                                        if zf else None),
+    }
     data_start = str(m["timestamp"].iloc[0]) if len(m) else None
     data_end = str(m["timestamp"].iloc[-1]) if len(m) else None
     measurement = {
@@ -175,6 +193,7 @@ def run_pair(pair: Dict[str, Any], *, data_a: Path, data_b: Path, out: Path,
             "funding_per_window_a": bp.FUNDING_BPS_PER_WINDOW_A,
             "funding_per_window_b": bp.FUNDING_BPS_PER_WINDOW_B,
         },
+        "entry_trigger": entry_trigger, "positive_control": positive_control,
         "data_start": data_start, "data_end": data_end, "aligned_bars": int(len(m)),
         "min_n": min_n, "rule": "PASS iff net_total_r > 0 AND n >= min_n; FAIL iff "
                                 "net_total_r <= 0 AND n >= min_n; indeterminate iff n < min_n",
@@ -185,7 +204,8 @@ def run_pair(pair: Dict[str, Any], *, data_a: Path, data_b: Path, out: Path,
         "verdict": verdict,
         "read_state": "measured",
         "population": (f"{name}: {n} pair trades, {sym_a}/{sym_b} {timeframe} at the configured "
-                       f"params {measurement['params']}, {data_start} -> {data_end}, net of "
+                       f"params {measurement['params']}, entry_trigger={entry_trigger}, "
+                       f"{data_start} -> {data_end}, net of "
                        f"fee+slippage+funding per leg"),
         "n": n,
         "measurement": measurement,
@@ -242,11 +262,25 @@ def _self_test() -> int:
         # grading branches
         assert grade(1.0, 10, 39) == "indeterminate"
         assert grade(1.0, 40, 39) == "pass" and grade(0.0, 40, 39) == "fail"
-        # a config lookup that cannot find the pair names what exists
+        # entry-trigger pass-through: the fixed_beta arm fires only on |z_fixed| >= entry_z
+        out_f = d / "out_fixed"
+        vf = run_pair(pair, data_a=d / "A_1h.csv", data_b=d / "B_1h.csv", out=out_f, min_n=5,
+                      entry_trigger="fixed_beta")
+        assert vf["measurement"]["params"].get("entry_trigger") == "fixed_beta", vf["measurement"]["params"]
+        assert vf["measurement"]["positive_control"]["frac_abs_z_fixed_ge_entry_z"] == 1.0, vf
+        assert "entry_trigger" not in v["measurement"]["params"]  # the default arm is unchanged
+        assert v["measurement"]["positive_control"]["entry_trigger"] == "rolling"
+        frows = [json.loads(line) for line in (out_f / "trades.jsonl").read_text().splitlines()]
+        assert frows and all(r["z_at_entry"] == r["z_fixed_at_entry"] for r in frows)
+        # a config lookup that cannot find the pair names what exists. Use a config written
+        # here: the real config/pairs.yaml is `pairs: []` since the M22 retirement (#24991).
+        cfg = d / "pairs.yaml"
+        cfg.write_text("pairs:\n  - {name: pairs_test, symbol_a: AUSDT, symbol_b: BUSDT}\n", encoding="utf-8")
+        assert load_pair("pairs_test", cfg)["symbol_a"] == "AUSDT"
         try:
-            load_pair("no_such_pair")
+            load_pair("no_such_pair", cfg)
         except KeyError as exc:
-            assert "pairs_sol_eth" in str(exc)
+            assert "pairs_test" in str(exc)
         else:
             raise AssertionError("load_pair must refuse an unknown pair")
     print("pairs_configured_stage0 self-test OK")
@@ -265,6 +299,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--min-n", type=int, default=DEFAULT_MIN_N)
     ap.add_argument("--start", default=None, help="ISO date; drop aligned bars before it")
     ap.add_argument("--end", default=None, help="ISO date; drop aligned bars on/after it")
+    ap.add_argument("--entry-trigger", choices=["rolling", "fixed_beta"], default="rolling",
+                    help="passed to backtest_pairs.run_backtest (default rolling = original behaviour)")
     args = ap.parse_args(argv)
     if args.self_test:
         return _self_test()
@@ -279,7 +315,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     data_dir = Path(args.data_dir)
     run_pair(pair, data_a=data_dir / f"{sym_a}_{tf}.csv", data_b=data_dir / f"{sym_b}_{tf}.csv",
              out=Path(args.out), min_n=args.min_n, start=args.start, end=args.end,
-             pair_name=args.pair)
+             pair_name=args.pair, entry_trigger=args.entry_trigger)
     return 0
 
 

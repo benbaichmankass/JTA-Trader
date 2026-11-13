@@ -15,6 +15,14 @@ Signal : rolling z-score of the spread over ``--lookback`` bars, computed on the
          uses only the mean/std through i-1).
 Entry  : ``z >= +entry_z`` -> SHORT the spread (short A, long B);
          ``z <= -entry_z`` -> LONG the spread (long A, short B).
+         ``--entry-trigger`` picks WHICH z: ``rolling`` (default, the original
+         behaviour) reads the rolling-β spread's z; ``fixed_beta`` reads z on
+         ``log A − β_i·log B`` with β_i the rolling OLS β at the decision bar,
+         frozen, over the shift-1 lookback (``pairs_engine.fixed_beta_bar``) --
+         the same spread the stop, reversion exit and R unit already use
+         (RQ-20261017-9582-01). Each trade records ``z_fixed_at_entry`` under
+         either trigger, so the unit's positive control (share of entries with
+         ``|z_fixed| >= entry_z``) is readable for both arms.
 Exit   : ``|z| <= exit_z`` (reverted), OR an adverse ``stop_z``-sigma move from
          entry (the R-normalizer / divergence stop), OR ``--max-hold-bars``.
 R      : risk = ``stop_z * sigma_at_entry`` (spread units); R = spread P&L / risk.
@@ -83,6 +91,7 @@ class Trade:
     outcome: str            # "revert" | "stop" | "timeout"
     gross_r: float
     z_at_entry: float
+    z_fixed_at_entry: Optional[float] = None
 
 
 def _load_candles(path: str) -> pd.DataFrame:
@@ -122,7 +131,8 @@ def run_backtest(m: pd.DataFrame, *, lookback: int, entry_z: float, exit_z: floa
                  stop_z: float, max_hold_bars: int, cooldown_bars: int,
                  hedge_beta: str, timeframe: str, pair: str,
                  emit_path: Optional[str] = None,
-                 collect_rows: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+                 collect_rows: Optional[List[Dict[str, Any]]] = None,
+                 entry_trigger: str = "rolling") -> Dict[str, Any]:
     """Run the R-space pairs backtest and summarize.
 
     ``collect_rows`` (optional): when a list is passed, one **leg-level** dict per
@@ -133,7 +143,13 @@ def run_backtest(m: pd.DataFrame, *, lookback: int, entry_z: float, exit_z: floa
     return value and every existing caller are byte-for-byte unchanged when it is
     omitted. It exists so ``scripts/research/pairs_dollar_lots.py`` can reuse THIS
     engine's exact entry/exit decisions instead of re-implementing them.
+
+    ``entry_trigger``: ``"rolling"`` (default; unchanged behaviour) or
+    ``"fixed_beta"`` (see the module docstring). With ``hedge_beta="one"`` β is
+    1 on every bar, so the two triggers coincide.
     """
+    if entry_trigger not in ("rolling", "fixed_beta"):
+        raise ValueError(f"entry_trigger must be 'rolling' or 'fixed_beta', got {entry_trigger!r}")
     m = m.reset_index(drop=True)
     la, lb = np.log(m["close_a"]), np.log(m["close_b"])
     if hedge_beta == "rolling":
@@ -160,8 +176,15 @@ def run_backtest(m: pd.DataFrame, *, lookback: int, entry_z: float, exit_z: floa
         if i < next_idx:
             i += 1
             continue
-        zi, si = zz[i], sd[i]
-        if zi is None or np.isnan(zi) or si is None or np.isnan(si) or si <= 0:
+        si = sd[i]
+        # z on the fixed-β spread at this bar (β = this bar's rolling β, frozen):
+        # the trigger under entry_trigger="fixed_beta", recorded under either arm.
+        zf = float(_pe.fixed_beta_bar(ca, cb, float(bt[i]), i, lookback)[1])
+        zi = zf if entry_trigger == "fixed_beta" else zz[i]
+        if zi is None or np.isnan(zi):
+            i += 1
+            continue
+        if not fixed and (si is None or np.isnan(si) or si <= 0):
             i += 1
             continue
         if abs(zi) < entry_z:
@@ -211,7 +234,8 @@ def run_backtest(m: pd.DataFrame, *, lookback: int, entry_z: float, exit_z: floa
             entry_time=m["timestamp"].iloc[i], direction=direction,
             entry_spread=round(entry_spread, 6), exit_time=m["timestamp"].iloc[exit_idx],
             exit_spread=round(exit_spread, 6), risk=round(risk, 6), outcome=outcome,
-            gross_r=round(gross_r, 4), z_at_entry=round(float(zi), 3)))
+            gross_r=round(gross_r, 4), z_at_entry=round(float(zi), 3),
+            z_fixed_at_entry=(round(zf, 3) if np.isfinite(zf) else None)))
         if collect_rows is not None:
             # Leg-level facts for the $-and-lots simulator: real per-leg prices at
             # entry AND at the close bar (so a floored-qty two-leg P&L can be
@@ -229,6 +253,8 @@ def run_backtest(m: pd.DataFrame, *, lookback: int, entry_z: float, exit_z: floa
                 "risk_spread": float(risk),
                 "gross_r": float(round(gross_r, 4)),
                 "outcome": outcome,
+                "z_at_entry": float(round(float(zi), 3)),
+                "z_fixed_at_entry": (float(round(zf, 3)) if np.isfinite(zf) else None),
             })
         next_idx = exit_idx + 1 + cooldown_bars
         i = next_idx
@@ -245,7 +271,16 @@ def run_backtest(m: pd.DataFrame, *, lookback: int, entry_z: float, exit_z: floa
 
     params = {"lookback": lookback, "entry_z": entry_z, "exit_z": exit_z,
               "stop_z": stop_z, "max_hold_bars": max_hold_bars, "hedge_beta": hedge_beta}
-    return _summarize(trades, m, timeframe=timeframe, pair=pair, params=params)
+    if entry_trigger != "rolling":  # keep the default arm's output byte-identical
+        params["entry_trigger"] = entry_trigger
+    out = _summarize(trades, m, timeframe=timeframe, pair=pair, params=params)
+    if entry_trigger != "rolling":  # default arm unchanged, with or without collect_rows
+        zs = [t.z_fixed_at_entry for t in trades if t.z_fixed_at_entry is not None]
+        out["entries_abs_z_fixed_ge_entry_z"] = sum(1 for v in zs if abs(v) >= entry_z)
+        out["entries_with_z_fixed"] = len(zs)
+        out["frac_abs_z_fixed_ge_entry_z"] = (
+            round(out["entries_abs_z_fixed_ge_entry_z"] / len(zs), 4) if zs else None)
+    return out
 
 
 def _fee_only_r(t: Trade) -> float:
@@ -379,7 +414,54 @@ def _self_test() -> int:
     ok = out["total_trades"] >= 30 and out["net_total_r"] > 0 and out["win_rate_pct"] >= 50
     print(f"SELF-TEST {'PASS' if ok else 'FAIL'} "
           f"(trades={out['total_trades']} net_r={out['net_total_r']} win={out['win_rate_pct']}%)")
-    return 0 if ok else 1
+    trig_ok = _self_test_entry_trigger()
+    print(f"SELF-TEST entry-trigger {'PASS' if trig_ok else 'FAIL'}")
+    return 0 if (ok and trig_ok) else 1
+
+
+def _self_test_entry_trigger() -> bool:
+    """Plant a case where the rolling-β z and the fixed-β z DISAGREE (β drifts, so
+    the rolling-β spread moves with β itself) and check that:
+      * the default arm is unchanged (no entry_trigger arg == entry_trigger="rolling");
+      * the two arms take different entries;
+      * every fixed_beta entry has |z_fixed| >= entry_z (the unit's positive
+        control is 100% by construction) and its z_at_entry IS that z_fixed;
+      * hedge_beta="one" makes the two triggers coincide."""
+    rng = np.random.default_rng(11)
+    n = 3000
+    lb = np.cumsum(rng.normal(0, 0.01, n)) + 5.0
+    beta_true = np.linspace(0.6, 1.4, n)          # a drifting hedge ratio
+    s = np.zeros(n)
+    for k in range(1, n):
+        s[k] = 0.9 * s[k - 1] + rng.normal(0, 0.01)
+    la = beta_true * lb + s
+    ts = pd.date_range("2021-01-01", periods=n, freq="h", tz="UTC")
+    m = pd.DataFrame({"timestamp": ts, "close_a": np.exp(la), "close_b": np.exp(lb)})
+    kw = dict(lookback=15, entry_z=2.0, exit_z=0.5, stop_z=2.0, max_hold_bars=20,
+              cooldown_bars=1, hedge_beta="rolling", timeframe="1h", pair="SYN_DRIFT")
+    base = run_backtest(m, **kw)
+    r_rows: List[Dict[str, Any]] = []
+    f_rows: List[Dict[str, Any]] = []
+    roll = run_backtest(m, collect_rows=r_rows, entry_trigger="rolling", **kw)
+    fixd = run_backtest(m, collect_rows=f_rows, entry_trigger="fixed_beta", **kw)
+    same_default = ({k: v for k, v in base.items() if k != "run_date"}
+                    == {k: v for k, v in roll.items() if k != "run_date"})
+    r_t = {str(r["entry_time"]) for r in r_rows}
+    f_t = {str(r["entry_time"]) for r in f_rows}
+    disagree = bool(r_t ^ f_t)
+    ctl = (fixd.get("frac_abs_z_fixed_ge_entry_z") == 1.0 and len(f_rows) > 0
+           and all(r["z_at_entry"] == r["z_fixed_at_entry"] for r in f_rows))
+    one = dict(kw, hedge_beta="one")
+    a1 = run_backtest(m, entry_trigger="rolling", **one)
+    b1 = run_backtest(m, entry_trigger="fixed_beta", **one)
+    coincide = (a1["total_trades"] == b1["total_trades"] and a1["net_total_r"] == b1["net_total_r"])
+    r_share = (sum(1 for r in r_rows if r["z_fixed_at_entry"] is not None and abs(r["z_fixed_at_entry"]) >= 2.0)
+               / len(r_rows)) if r_rows else None
+    print(f"  entry-trigger: default==rolling {same_default}; rolling n={len(r_rows)} "
+          f"(|z_fixed|>=2 share {r_share and round(r_share, 4)}); fixed_beta n={len(f_rows)} "
+          f"(share {fixd.get('frac_abs_z_fixed_ge_entry_z')}); entries only-rolling={len(r_t - f_t)} "
+          f"only-fixed={len(f_t - r_t)}; hedge_beta=one coincide {coincide}")
+    return same_default and disagree and ctl and coincide
 
 
 def main(argv: List[str]) -> int:
@@ -401,6 +483,9 @@ def main(argv: List[str]) -> int:
     p.add_argument("--cooldown-bars", type=int, default=1)
     p.add_argument("--hedge-beta", choices=["one", "rolling"], default="one",
                    help="one=log-ratio (beta=1); rolling=rolling-OLS hedge ratio")
+    p.add_argument("--entry-trigger", choices=["rolling", "fixed_beta"], default="rolling",
+                   help="which z fires an entry: rolling (default) = the rolling-beta spread's z; "
+                        "fixed_beta = z on logA - beta_i*logB with beta_i frozen at the decision bar")
     p.add_argument("--fee-bps-roundtrip", type=float, default=FEE_BPS_ROUNDTRIP,
                    help="per-leg round-trip cost in bps (two legs are charged)")
     p.add_argument("--slippage-bps-roundtrip", type=float, default=None,
@@ -457,7 +542,8 @@ def main(argv: List[str]) -> int:
     out = run_backtest(m, lookback=args.lookback, entry_z=args.entry_z, exit_z=args.exit_z,
                        stop_z=args.stop_z, max_hold_bars=args.max_hold_bars,
                        cooldown_bars=args.cooldown_bars, hedge_beta=args.hedge_beta,
-                       timeframe=args.timeframe, pair=pair, emit_path=args.emit_trades)
+                       timeframe=args.timeframe, pair=pair, emit_path=args.emit_trades,
+                       entry_trigger=args.entry_trigger)
     print(_fmt(out))
     if args.json_out:
         payload = json.dumps(out, indent=2, default=str)
