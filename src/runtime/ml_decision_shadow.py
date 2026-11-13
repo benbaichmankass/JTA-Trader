@@ -115,7 +115,7 @@ def decision_rows(frames: Mapping[str, pd.DataFrame], symbols: Iterable[str]) ->
     for s, fr in frames.items():
         if fr is None or len(fr) < 25:
             continue
-        ff = F.features_symbol(fr.iloc[-200:].reset_index(drop=True)).iloc[-1]
+        ff = F.features_symbol(F.regrid_hourly(fr.iloc[-200:].reset_index(drop=True))).iloc[-1]
         ref[s] = (fr["ts"].iloc[-1], ff["ret24_raw"], ff["vol24"])
     out: Dict[str, Optional[Dict[str, float]]] = {}
     for symbol in symbols:
@@ -124,7 +124,7 @@ def decision_rows(frames: Mapping[str, pd.DataFrame], symbols: Iterable[str]) ->
             out[symbol] = None
             continue
         t = own["ts"].iloc[-1]
-        fo = F.features_symbol(own).iloc[-1]
+        fo = F.features_symbol(F.regrid_hourly(own)).iloc[-1]
         r24 = {s: v[1] for s, v in ref.items() if v[0] == t}
         v24 = {s: v[2] for s, v in ref.items() if v[0] == t}
         if "BTCUSDT" not in r24 or symbol not in r24:
