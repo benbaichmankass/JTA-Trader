@@ -52,7 +52,11 @@ PLACEBO_SEED = 20261112
 ARMS = ("raw", "resid", "placebo")
 #: FRONTIER-Q-XSEC-RANK-ENTRY (not part of RQ-20261112-4654-01): the ranking objective in regression form -- each side's net R
 #: minus its cross-sectional mean over the symbols at the same decision timestamp, so only the relative order at a time is learned.
-EXTRA_ARMS = ("xsdemean",)
+EXTRA_ARMS = ("xsdemean", "ens", "ridge")
+# ens / ridge (FRONTIER-Q-ENS-RIDGE-ENTRY): the RAW target with a different learner -- ridge alone, or the equal-weight
+# average of the LightGBM and ridge predictions (a heterogeneous ensemble). They change the learner, not the target.
+LEARNER_ARMS = {"ens": "raw", "ridge": "raw"}
+RIDGE_ALPHA = 10.0
 
 
 # ----------------------------------------------------------------------------------------------- target
@@ -103,12 +107,36 @@ def fit_arm(train: pd.DataFrame, arm: str, sample: int | None = None) -> dict:
     import lightgbm as lgb
     if sample:
         train = train.sample(min(len(train), sample), random_state=0)
+    target = LEARNER_ARMS.get(arm, arm)
     out = {}
     for side in ("long", "short"):
+        y = train[f"y_{side}_{target}"]
+        ridge = None
+        if arm in LEARNER_ARMS:
+            from sklearn.impute import SimpleImputer
+            from sklearn.linear_model import Ridge
+            from sklearn.pipeline import make_pipeline
+            from sklearn.preprocessing import StandardScaler
+            ridge = make_pipeline(SimpleImputer(strategy="median"), StandardScaler(), Ridge(alpha=RIDGE_ALPHA))
+            ridge.fit(train[E.FEATURES], y)
+        if arm == "ridge":
+            out[side] = ridge
+            continue
         m = lgb.LGBMRegressor(**E.LGB_PARAMS)
-        m.fit(train[E.FEATURES], train[f"y_{side}_{arm}"])
-        out[side] = m
+        m.fit(train[E.FEATURES], y)
+        out[side] = _Blend(m, ridge) if arm == "ens" else m
     return out
+
+
+class _Blend:
+    """Equal-weight average of two fitted regressors' predictions (both in net-R units of the same target)."""
+
+    def __init__(self, a, b):
+        self.a, self.b = a, b
+
+    def predict(self, x):
+        # provenance: predict -- mean of the LightGBM and ridge regressed net R, not a probability
+        return 0.5 * (self.a.predict(x) + self.b.predict(x))
 
 
 # ----------------------------------------------------------------------------------------------- statistics
@@ -279,6 +307,15 @@ def self_test() -> int:
     assert g < 1e-9, g
     d2 = replay(tab, 0.0, start=start, end=end, step_days=14, fit=fit, arms=("raw", "xsdemean"))
     assert "xsdemean" in d2["paired_extra_vs_raw"] and d2["verdict"] in ("PASS", "FAIL", "INDETERMINATE")
+    # ens / ridge (FRONTIER-Q-ENS-RIDGE-ENTRY): same raw target, different learner; the verdict is on the FIRST extra arm (ens)
+    mr = fit_arm(tab, "raw", sample=15000)
+    me = fit_arm(tab, "ens", sample=15000)
+    mg = fit_arm(tab, "ridge", sample=15000)
+    xx = tab[E.FEATURES].head(50)
+    # provenance: predict -- regressed net R of the long side for the raw / ens / ridge fits (a self-test identity check)
+    assert np.allclose(me["long"].predict(xx), 0.5 * (mr["long"].predict(xx) + mg["long"].predict(xx)))
+    d3 = replay(tab, 0.0, start=start, end=end, step_days=14, fit=fit, arms=("raw", "ens", "ridge"))
+    assert set(d3["paired_extra_vs_raw"]) == {"ens", "ridge"} and d3["verdict"] in ("PASS", "FAIL", "INDETERMINATE")
     assert decide_vs_raw({"k": 13, "mean": 0.08, "ci95": [0.02, 0.14]}, {"n": 400}) == "PASS"
     assert decide_vs_raw({"k": 13, "mean": -0.01, "ci95": [-0.05, 0.03]}, {"n": 400}) == "FAIL"
     assert decide_vs_raw({"k": 8, "mean": 0.2, "ci95": [0.1, 0.3]}, {"n": 400}) == "INDETERMINATE"
@@ -298,7 +335,8 @@ def main(argv=None) -> int:
     ap.add_argument("--rule-id", dest="rule_id", default="")
     ap.add_argument("--registered-at", dest="registered_at", default="")
     ap.add_argument("--arms", default=",".join(ARMS), help="comma list; default = the RQ-20261112-4654-01 arms (raw,resid,placebo). "
-                    "xsdemean (FRONTIER-Q-XSEC-RANK-ENTRY) is an EXTRA arm for its own unit")
+                    "xsdemean (FRONTIER-Q-XSEC-RANK-ENTRY) and ens,ridge (FRONTIER-Q-ENS-RIDGE-ENTRY) are EXTRA arms for their own units; "
+                    "the verdict is on the first extra arm listed")
     a = ap.parse_args(argv)
     if a.self_test:
         return self_test()
