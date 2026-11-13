@@ -44,9 +44,12 @@ Contract: `.claude/skills/manager/SKILL.md`. You are a **rotation manager**; rea
   - A Tier-3 `hold` landed under the 2026-09-27 data-backed authorization MUST carry
     `recorded_decision` (`kind: standing_authorization`, `ref` citing 2026-09-27, `evidence` = the record path) in
     its `.github/pr-landing/*.json`, or `pr-landing-hold-merge-alarm` pages the operator (#25780, 2026-11-13). The
-    resolver reads only repo files, checklist JSON and pipeline ids, so a row that lives only in the work store
-    does not resolve: `ref` names the row AND a repo path (the unit yaml or evidence dir). Check with
-    `scripts/ops/pr_landing_hold_alarm.py` before merging (manager 2026-11-13a, option (b)).
+    alarm workflow checks out SPARSE (only the alarm script, `.github/pr-landing/`, `docs/claude/work/checklist/`,
+    `docs/claude/work/pipeline/`), so a path under `research/` or `comms/` never resolves in CI even when it exists
+    (#25799 paged that way). INTERIM: `ref` names a pipeline id (`PI-...`) or checklist row, and `evidence` is a file
+    under `docs/claude/work/{checklist,pipeline}/`. Check with `scripts/ops/pr_landing_hold_alarm.py` on a checkout
+    that matches the workflow's sparse set, not a full one. Changing the detector is the operator's call (work item
+    PR-ALARM-SPARSE-RESOLVER, inbox request PR-ALARM-RESOLVER-FIX; lane edits were refused as oversight-touching).
 
 ## 2. Live sessions
 
