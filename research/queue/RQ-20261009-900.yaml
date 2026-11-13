@@ -1,6 +1,6 @@
 id: RQ-20261009-900
 title: 'TP doctrine, predict-head step 1: on the live-timeframe real-money Bybit legs and the prop Donchian legs, does an entry-time MFE-quantile head beat all three naive TP baselines out of sample? -- blocked on the live-leg corpus lever'
-status: blocked
+status: queued
 cadence: once
 theme: live_strategy
 priority: 1
@@ -118,6 +118,22 @@ decision_rule:
     THESE legs. Cannot cover the alpaca_live 1d pullback sentinels (too few
     trades).
 
+practice_precedent: >-
+  M4, M6, M12 (docs/reference/trading-and-model-practice-principles.md): the rule,
+  strata and features were registered before any run; the head must beat simple
+  domain baselines (B1..B4) above a shuffled-label null; it is scored per stratum
+  and per leg, never on pooled loss. Added 2026-11-13 at unblock (the move out of
+  blocked/ makes the guard grade this as a new unit); the rule is unchanged.
+ml_consumer:
+  consumer: TP-PREDICT-HEAD
+  decision: >-
+    whether the entry take-profit on these legs comes from a conditional MFE-quantile
+    head (a PASS licenses step 2, RQ-20261009-901) or from the per-leg B4 quantile plus
+    the RQ-20261007-001 extension rule (an honest negative)
+  legs: [trend_donchian_eth_4h, trend_donchian_xrp_4h, xrp_pullback_2h, ada_pullback_2h,
+    trend_donchian_eth_prop, trend_donchian_sol_prop]
+  book: money
+
 routing:
   needs_trainer_resident_data: false
   needs_gpu: false
@@ -139,6 +155,9 @@ blocked_on:
     config-exact (side_filter short) against the 135 the power basis took from e35. Under this unit's own rule S1 will grade
     INDETERMINATE unless the window is lengthened or S1 is pooled with another stratum (which the rule forbids). Decide
     that before promoting; the rule is not edited here.
+    CLEARED 2026-11-13 (row TP-PREDICT-GRADER): RQ-20261014-736c-01 landed read_state measured / verdict pass
+    (research/results/RQ-20261014-736c-01/38738465656.jsonl) and the corpus is on main; the grader
+    scripts/research/tp_predict_grader.py is built; unit moved to research/queue/ with run.workflow set.
   ref: ML-LEG-CORPUS (docs/claude/work/checklist/); RQ-20261014-736c-01
   clears_when: >-
     RQ-20261014-736c-01 lands a `read_state: measured`, `verdict: pass` record under research/results/RQ-20261014-736c-01/
@@ -147,13 +166,32 @@ blocked_on:
     --outcome mfe_r --per-leg --per-stratum --out {out_dir} (plus a small grader that writes verdict.json per the rule)
     and lands.store.
 run:
-  workflow: null
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/tp_predict_grader.py
+  - --corpus
+  - comms/research/RQ-20261014-736c-01/38738465656/ml2_live_leg_corpus.jsonl
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261009-900
   note: >-
-    Deliberately null until blocked_on clears. Existing ML-2 tooling would only
-    re-run the 15m corpus, which is the question already answered.
-
+    Unblocked 2026-11-13 (row TP-PREDICT-GRADER). The grader runs
+    ml2_bracket_train_eval.py --outcome mfe_r --per-leg --per-stratum
+    --control-trials 20 at each split 0.55 / 0.65 / 0.75 on the landed corpus,
+    keeps each evaluator output (eval_split_<s>.json) beside verdict.json, and
+    applies the decision_rule above clause by clause (see the grader's
+    docstring). Rule, thresholds and features unchanged. S1's eval n is
+    expected ~74 < 88 at split 0.65, so S1 grades INDETERMINATE under the rule
+    as written.
 lands:
-  store: research/results/ (once promoted)
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
 
 related:
 - TP-PREDICT-HEAD
