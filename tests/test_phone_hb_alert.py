@@ -35,12 +35,15 @@ def test_recovery_sends_one_message_then_rearms():
 def test_run_sends_on_system_target_and_failed_send_keeps_state(tmp_path):
     calls = []
     sp = tmp_path / "s.json"
-    out = h.run(NOW, BAD, sp, lambda body, priority, target: calls.append((priority, target)))
+    # Hermetic: the default watchdog_open reads the committed comms/research/ops/watchdog_incidents.jsonl, so an
+    # open phone incident landing there (#25537, 2026-11-13) silently turned this send path into the suppressed one.
+    out = h.run(NOW, BAD, sp, lambda body, priority, target: calls.append((priority, target)),
+                watchdog_open=lambda: False)
     assert calls == [("urgent", "system")] and len(out) == 1 and sp.exists()
 
     sp2 = tmp_path / "s2.json"
     def boom(*a, **k): raise OSError("inbox down")
-    assert h.run(NOW, BAD, sp2, boom) == [] and not sp2.exists()   # retried next run, not latched out
+    assert h.run(NOW, BAD, sp2, boom, watchdog_open=lambda: False) == [] and not sp2.exists()   # retried next run
 
 
 def test_probe_stale_heartbeat_is_breached_end_to_end():

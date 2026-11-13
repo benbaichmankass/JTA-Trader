@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Test-only: tests/test_phone_hb_alert.py::test_run_sends_on_system_target_and_failed_send_keeps_state injected no watchdog_open, so it read the committed comms/research/ops/watchdog_incidents.jsonl and went red on main when #25537 (eb855d71, bisected) added an open phone incident. Injects watchdog_open=lambda: False as the sibling tests do; nothing skipped; the suppression path keeps its own test."
+}
