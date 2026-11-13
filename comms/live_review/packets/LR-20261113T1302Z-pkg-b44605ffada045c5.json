@@ -1,0 +1,357 @@
+{
+ "account_bounds": [
+  {
+   "account_class": "paper",
+   "account_id": "bybit_1",
+   "apply_paths": [
+    "close",
+    "move_tp",
+    "reduce",
+    "tighten",
+    "widen_sl"
+   ],
+   "evidence": "bybit_orders: SL 1.1044 / TP 0.9533, position True, matched by symbol; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
+   "own_position": true,
+   "read": null,
+   "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
+   "read_if_amend": "would_apply"
+  }
+ ],
+ "assembled_by": "generator scripts/ops/live_review_packet.py",
+ "context": {
+  "calendar": {
+   "events_next_24h": [],
+   "state": "no_event_classes_for_symbol"
+  },
+  "correlated_open_packages": [],
+  "direction": "short",
+  "funding": null,
+  "news": null,
+  "previous_review": {
+   "action": "hold",
+   "forecast": {
+    "direction": "with_trade",
+    "evidence": [
+     "chart.swings highs 1.0439/1.0564/1.0804",
+     "chart.since_entry low 0.9953 (-0.99 ATR)",
+     "chart.htf 1d closes 1.30 to 1.04",
+     "exit_plan sl 1.1044 tp 0.9533",
+     "context.previous_review forecast target 1.0395"
+    ],
+    "horizon_bars": 6,
+    "invalidation_px": 1.0439,
+    "p_target": 0.5,
+    "target_px": 0.9953,
+    "thesis": "1d downtrend intact (7 lower closes, 2h ADX 41); the 0.9953 wick low was bought to 1.0112 but 1.0157 support has already failed, so I expect a retest of the 0.9953 low before price reclaims the 1.0439 lower high.",
+    "timeframe": "2h"
+   },
+   "reason": "Hold. Prior forecast (2026-11-12 target 1.0395, invalidation 1.0804, with_trade) held: target traded (lows 1.0348/1.0204/1.0157/0.9953), 1.0804 not re-touched (max high of the last 16 2h bars 1.0645). Short from 1.058 is +0.95R, peak est 1.35R, giveback 0.40R after a 1.0157 low undercut by 0.9953 then bought to 1.0112; 1d closes stepped down 7 days, 2h ADX 41 trending. HOLD already expresses this\u2026",
+   "review_id": "LR-20261113T0617Z-pkg-b44605ffada045c5",
+   "reviewed_at": "2026-11-13T06:40:00Z",
+   "route": null
+  },
+  "symbol": "XRPUSDT"
+ },
+ "context_v3": {
+  "book": [
+   [
+    "MGC",
+    "short",
+    "mgc_pullback_1d",
+    2.72
+   ],
+   [
+    "QQQ",
+    "long",
+    "qqq_pullback_1h",
+    0.291
+   ],
+   [
+    "ADAUSDT",
+    "short",
+    "trend_donchian_ada_4h",
+    -0.397
+   ],
+   [
+    "TQQQ",
+    "short",
+    "ml_entry",
+    -0.167
+   ],
+   [
+    "SLV",
+    "short",
+    "slv_trend_1h",
+    0.0614
+   ],
+   [
+    "ADAUSDT",
+    "short",
+    "ada_pullback_2h",
+    1.27
+   ],
+   [
+    "QLD",
+    "short",
+    "ml_entry",
+    -0.0195
+   ],
+   [
+    "SOLUSDT",
+    "short",
+    "trend_donchian_sol_4h",
+    -0.701
+   ],
+   [
+    "TLT",
+    "long",
+    "tlt_pullback_1d",
+    -0.677
+   ],
+   [
+    "ETHUSDT",
+    "short",
+    "trend_donchian_eth",
+    1.76
+   ],
+   [
+    "ETHUSDT",
+    "short",
+    "trend_donchian_eth_4h",
+    -0.0619
+   ],
+   [
+    "ETHUSDT",
+    "short",
+    "trend_donchian_eth_prop",
+    -0.416
+   ],
+   [
+    "MHG",
+    "short",
+    "mhg_pullback_1d",
+    1.39
+   ],
+   [
+    "GLD",
+    "short",
+    "gld_pullback_1d",
+    1.1
+   ],
+   [
+    "IAUM",
+    "short",
+    "iaum_pullback_1d",
+    1.18
+   ],
+   [
+    "USO",
+    "long",
+    "uso_trend_1h",
+    0.287
+   ],
+   [
+    "GDX",
+    "short",
+    "gdx_pullback_1d",
+    0.667
+   ],
+   [
+    null,
+    null,
+    null,
+    null
+   ],
+   [
+    "TLT",
+    "long",
+    "tlt_pullback_1d",
+    -0.825
+   ],
+   [
+    "ADAUSDT",
+    "short",
+    "e4_oi_shock_1h",
+    0.0288
+   ]
+  ],
+  "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
+  "chart": null,
+  "exit_plan": {
+   "declared": {},
+   "entry": 1.058,
+   "exit_plan_state": null,
+   "exit_plan_state_note": "entry-time snapshot, not updated when the stop moves; trust sl_now",
+   "sl_initial": null,
+   "sl_now": 1.10441,
+   "tp_now": null
+  },
+  "htf": null,
+  "live_vs_backtest": null
+ },
+ "cost": {
+  "basis": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 4,
+  "giveback_r": 0.4762,
+  "open_r": 0.8748,
+  "peak_r": 1.351,
+  "r_to_stop": 1.8748,
+  "r_to_target": 1.3821
+ },
+ "generator": {
+  "head": "72e3c08f10",
+  "state": "current"
+ },
+ "info_cutoff_at": "2026-11-13T13:02:49Z",
+ "leg": "xrp_pullback_2h",
+ "mechanics": {
+  "evidence": "package sl 1.10441071 / tp None agree with every readable account",
+  "verdict": "match"
+ },
+ "missing_inputs": [
+  {
+   "field": "state.sl/tp",
+   "reason": "order_packages row not in the paged journal read; falling back to the trade row"
+  },
+  {
+   "field": "state.sl",
+   "reason": "derived from telemetry entry +/- risk_per_unit (initial stop), not the live stop"
+  },
+  {
+   "field": "read:alpaca_orders",
+   "reason": "diag alpaca_open_orders: exit 3 (ict-bot.duckdns.org -> answered_502. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP"
+  },
+  {
+   "field": "read:ib_orders",
+   "reason": "diag ib_open_orders: exit 3 (ict-bot.duckdns.org -> answered_502. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP and"
+  },
+  {
+   "field": "read:news",
+   "reason": "<urlopen error [Errno 111] Connection refused>"
+  },
+  {
+   "field": "read:perf_recent",
+   "reason": "<urlopen error [Errno 111] Connection refused>"
+  },
+  {
+   "field": "read:prop_status:breakout_2",
+   "reason": "<urlopen error [Errno 111] Connection refused>"
+  },
+  {
+   "field": "read:prop_status:tradeify_1",
+   "reason": "<urlopen error [Errno 111] Connection refused>"
+  },
+  {
+   "field": "read:prop_status:velotrade_1",
+   "reason": "<urlopen error [Errno 111] Connection refused>"
+  },
+  {
+   "field": "read:order_packages@0",
+   "reason": "diag journal?table=order_packages&limit=150&offset=0: exit 3 (ict-bot.duckdns.org -> answered_502. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_con"
+  },
+  {
+   "field": "read:trades@0",
+   "reason": "diag journal?table=trades&limit=1000&offset=0: exit 3 (ict-bot.duckdns.org -> answered_502. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' m"
+  },
+  {
+   "field": "regime.atr_now_over_entry",
+   "reason": "package timeframe not recorded in meta"
+  },
+  {
+   "field": "regime.trend_now",
+   "reason": "package timeframe not recorded in meta"
+  },
+  {
+   "field": "regime.vol_now",
+   "reason": "calm/volatile buckets use frozen edges held only in the VM model registry; not reachable read-only from a session"
+  },
+  {
+   "field": "regime.cell_entry",
+   "reason": "entry meta regime=None vol_regime=None: not both known"
+  },
+  {
+   "field": "priced_options",
+   "reason": "open_r/peak_r/atr_stop_mult not available for this package"
+  },
+  {
+   "field": "context.funding",
+   "reason": "Bybit public funding API is geo-blocked from session networks and no read-only diag route carries funding_now; needs a diag route"
+  },
+  {
+   "field": "context.news",
+   "reason": "no news decision for this symbol in the last 60 records (or news read failed)"
+  },
+  {
+   "field": "context_v3.chart",
+   "reason": "no closed candles on the leg timeframe (route unreachable or timeframe unrecorded)"
+  },
+  {
+   "field": "context_v3.htf",
+   "reason": "no higher timeframe mapped for None"
+  },
+  {
+   "field": "context_v3.live_vs_backtest",
+   "reason": "api/bot/performance/recent not read"
+  },
+  {
+   "field": "context.live_vs_backtest",
+   "reason": "per-leg live-vs-backtest read failed (api/bot/performance/recent); see context_v3"
+  }
+ ],
+ "order_package_id": "pkg-b44605ffada045c5",
+ "packet_health": {
+  "defects": [
+   {
+    "count": 1,
+    "denominator": 1,
+    "field": "priced_options",
+    "reason": "could_not_price"
+   },
+   {
+    "count": 1,
+    "denominator": 1,
+    "field": "context_v3.chart",
+    "reason": "context_null:chart"
+   },
+   {
+    "count": 1,
+    "denominator": 1,
+    "field": "context_v3.htf",
+    "reason": "context_null:htf"
+   },
+   {
+    "count": 1,
+    "denominator": 1,
+    "field": "context_v3.live_vs_backtest",
+    "reason": "context_null:live_vs_backtest"
+   }
+  ],
+  "status": "degraded"
+ },
+ "packet_version": 3,
+ "priced_options": null,
+ "priced_options_state": "could_not_price",
+ "regime": {
+  "adx_now": null,
+  "atr_now_over_entry": null,
+  "cell_entry": null,
+  "cell_now": null,
+  "trend_now": null
+ },
+ "review_id": "LR-20261113T1302Z-pkg-b44605ffada045c5",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 25,
+  "giveback_r": 0.4762,
+  "open_r": 0.8748,
+  "peak_provenance": "estimated",
+  "peak_r": 1.351,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1.10441071,
+  "tp": null
+ }
+}
