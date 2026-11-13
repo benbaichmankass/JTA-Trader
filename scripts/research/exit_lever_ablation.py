@@ -249,9 +249,9 @@ def build_arm_argv(leg: str, cfg: dict[str, Any], csv: str, resample: str, emit:
     # ict_scalp joined 2026-10-13 (QUEUE-FILL-1013): its argv builder is the same
     # rdm.build_harness_cmd branch the evidence builder runs, and the arm tokens it
     # needs (--cooldown-bars, --timeout-bars, --min-confidence) are plain raw flags.
-    if harness not in ("trend", "pullback", "ict_scalp"):
-        raise ValueError(f"{leg}: harness {harness!r} -- this ablation covers the trend, pullback and "
-                         "ict_scalp harnesses")
+    if harness not in ("trend", "pullback", "ict_scalp", "turtle_soup"):
+        raise ValueError(f"{leg}: harness {harness!r} -- this ablation covers the trend, pullback, "
+                         "ict_scalp and turtle_soup harnesses")
     # forming_1m (EQ-FORMING-BAR-REPLAY): replay the leg's live FORMING-bar decision from 1m
     # data, through the same build_harness_cmd path the evidence builder uses.
     fkw = {"forming_1m": forming_1m, "forming_session": forming_session} if forming_1m else {}

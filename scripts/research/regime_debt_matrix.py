@@ -449,6 +449,20 @@ _FVG_PLAIN = {"model", "signal_prefixes", "enabled", "execution", "timeframe",
 #     target the harness then ignores. Left out, so a leg declaring `tp_r`
 #     reads `approximate` and names it — the honest answer. Porting the flags,
 #     not widening these sets, is the fix if a variant ever needs them.
+# turtle_soup (15m sweep-and-reversal) -> scripts/backtest_turtle_soup.py. Build gap (b) of the manager's
+# 2026-11-13 04:00Z order (row E25 was DONE without this branch; unit RQ-20261101-78fc-12).
+# The harness reuses backtest_system's engine with the REAL order_package + monitor, and every key the live
+# unit reads is forwarded as `--override key=value` so the ARM's cfg is what runs (exit_lever_ablation arms).
+# `_TS_PLAIN` holds config keys the LIVE adapter never reads: `entry_tf`, `max_entry_wait_bars_1m` and
+# `trail_atr_mult` have NO reader anywhere under src/ (grep of all of src/, 2026-11-13; the same grep finds
+# `sweep_lookback_15m` in src/units/strategies/turtle_soup.py, so the probe sees a positive). Modelling the
+# legacy 1m-entry MTF shape would measure a strategy that does not trade; carrying no behaviour is faithful.
+_TS_LEVER_KEYS = ("sweep_lookback_15m", "min_sweep_buffer_bps", "min_body_to_range", "atr_period",
+                  "atr_stop_mult", "be_at_r", "be_offset_bps", "tp1_at_r", "tp2_at_r", "partial_close_pct",
+                  "setup_lookback_bars")
+_TS_PLAIN = {"model", "signal_prefixes", "enabled", "execution", "timeframe", "symbols",
+             "shadow_model_ids", "description", "tp_intent", "min_confidence",
+             "entry_tf", "max_entry_wait_bars_1m", "trail_atr_mult"}
 # ICT scalp (liquidity sweep -> displacement -> FVG mitigation) config-key ->
 # harness flag, for scripts/backtest_ict_scalp.py. THE EIGHT-LEG FAMILY E28
 # ROUTES, and it is NOT a mechanical copy of the fvg_range branch above.
@@ -653,6 +667,11 @@ def classify(cfg: dict) -> str | None:
     # fvg_range, so no already-measured leg is silently re-routed.
     if "sweep_lookback_bars" in cfg and "mitigation_mode" in cfg:
         return "ict_scalp"
+    # turtle_soup: 15m sweep-and-reversal, keyed on its own STRUCTURAL params. MEASURED 2026-11-13 over
+    # config/strategies.yaml: `sweep_lookback_15m` and `min_body_to_range` are each carried by exactly ONE leg
+    # (turtle_soup), so the conjunction cannot capture a leg an earlier branch should take. Checked LAST.
+    if "sweep_lookback_15m" in cfg and "min_body_to_range" in cfg:
+        return "turtle_soup"
     return None
 
 
@@ -1108,6 +1127,19 @@ def build_harness_cmd(name: str, cfg: dict, harness: str, csv: str, resample: st
                 argv += [flag, str(cfg[k])]
         omitted = sorted(k for k in cfg
                          if k not in _FVG_PLAIN and k not in _FVG_LEVER_FLAG)
+        faithful = not omitted
+    elif harness == "turtle_soup":
+        # backtest_turtle_soup.py: the live order_package + monitor through backtest_system's engine, full
+        # cost stack via src.research.run_costs. Every live key rides as --override so an arm's cfg runs.
+        argv = [py, os.path.join(REPO, "scripts/backtest_turtle_soup.py"),
+                "--data", csv, "--symbol", symbol, "--resample", resample,
+                "--emit-trades", emit, "--json", jout]
+        if fee_override is not None:
+            argv += ["--fee-bps-roundtrip", str(fee)]
+        for k in _TS_LEVER_KEYS:
+            if cfg.get(k) is not None:
+                argv += ["--override", f"{k}={json.dumps(cfg[k])}"]
+        omitted = sorted(k for k in cfg if k not in _TS_PLAIN and k not in _TS_LEVER_KEYS)
         faithful = not omitted
     elif harness == "ict_scalp":
         # Like the fvg_range branch, this deliberately does NOT reuse `common`:

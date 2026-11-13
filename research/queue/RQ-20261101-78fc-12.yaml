@@ -1,7 +1,7 @@
 # Hand-authored 2026-11-01 by lane RESEARCH-ITERATE (Tier 1), dispatched by Manager Session 2026-11-01a. ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates: none.
 id: RQ-20261101-78fc-12
 title: 'ITERATION 1 of turtle_soup (indeterminate): once a harness routes it, does the declared leg clear Stage 0 on 2024-10..2026-10?'
-status: blocked
+status: queued
 cadence: once
 theme: live_strategy
 priority: 1
@@ -68,11 +68,43 @@ related:
 - RESEARCH-ITERATE
 - E25
 what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
-blocked_on:
-- kind: work_item
+cleared_blocker:
+  kind: work_item
   ref: E25
-  what: a turtle_soup classifier branch + lever map in regime_debt_matrix (the fvg_range branch, E25, is the worked example)
-  clears_when: the branch lands and build_strategy_evidence.py writes a measured record; then git-mv to research/queue/ with run.command (rule
-    unchanged)
+  what: 'the turtle_soup classifier branch + harness: regime_debt_matrix routes turtle_soup to scripts/backtest_turtle_soup.py (the live
+    order_package + monitor through backtest_system''s engine, full cost stack); every live key forwarded, faithful.'
+  cleared_by: 'the PR that adds the branch + harness (build gap (b), manager order 2026-11-13 04:00Z); rule unchanged.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - turtle_soup
+  - --arm
+  - A=
+  - --grade
+  - stage0
+  - --baseline
+  - A
+  - --days
+  - '800'
+  - --start
+  - '2024-10-05'
+  - --end
+  - '2026-10-04'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '30'
+  - --delta-r
+  - '0'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261101-78fc-12
 intervention_controls:
   not_applicable: an offline model evaluation; the consumer's own gate applies any action

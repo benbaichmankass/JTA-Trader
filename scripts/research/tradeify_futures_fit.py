@@ -96,7 +96,9 @@ def load_ibkr_percontract(path: Path, front_days: int = 100) -> tuple[pd.DataFra
     ``front_days`` calendar days of it. IB serves expired contracts for ~2 years only (MEASURED 2026-11-12: the
     oldest MNQ/MES contract served was the Dec-2024 expiry), so before the oldest contract became the front month
     it is the only contract on file and would be "highest volume" while still a thin back month. The quarterly
-    CME equity micros are front for ~91 days plus a ~8-day roll week, hence 100. Dropped sessions are counted.
+    CME equity micros are front for ~91 days plus a ~8-day roll week, hence 100. The window restricts each
+    session's CANDIDATES before the volume pick (so a far contract can never set the monotonic floor); a session
+    with no candidate is dropped and counted.
     Returns (bars, provenance) where provenance states the span actually served and the roll calendar.
     """
     rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
@@ -107,19 +109,25 @@ def load_ibkr_percontract(path: Path, front_days: int = 100) -> tuple[pd.DataFra
     df["et"] = df["timestamp"].dt.tz_convert(ET)
     df["d"] = df["et"].dt.date
     vol = df.groupby(["d", "contract"])["volume"].sum().reset_index()
+    vol["to_expiry"] = [(datetime.strptime(str(c)[:8] + "+0000", "%Y%m%d%z").date() - d).days
+                        for d, c in zip(vol["d"], vol["contract"])]
     chosen: dict = {}
     floor = ""
+    dropped_not_front = 0
     for d, g in vol.groupby("d"):
-        g = g[g["contract"] >= floor]
+        # FRONT CANDIDATES FIRST (FUT-CME-INTRADAY-HIST, 2026-11-13): only a contract expiring within front_days of
+        # the session may be chosen, BEFORE the max-volume pick and the monotonic floor. The earlier order (pick the
+        # max-volume contract, ratchet the floor, filter afterwards) let one day on which a FAR contract out-traded
+        # the nearer ones on file (a gap in the near contract's served bars) lock the floor on that far expiry; every
+        # session until it became front was then dropped or silently skipped (run 43361991285: MNQ kept only from
+        # 2025-12-10, exactly 100 d before the 2026-03-20 expiry, out of contracts served from 2023-09).
+        g = g[(g["contract"] >= floor) & (g["to_expiry"] >= 0) & (g["to_expiry"] <= front_days)]
         if g.empty:
+            dropped_not_front += 1
             continue
         c = str(g.sort_values(["volume", "contract"], ascending=[False, True]).iloc[0]["contract"])
         chosen[d] = c
         floor = c
-    n_before = len(chosen)
-    chosen = {d: c for d, c in chosen.items()
-              if (datetime.strptime(c[:8] + "+0000", "%Y%m%d%z").date() - d).days <= front_days}
-    dropped_not_front = n_before - len(chosen)
     keep = pd.DataFrame({"d": list(chosen), "contract": list(chosen.values())})
     df = df.merge(keep, on=["d", "contract"], how="inner")
     df = df.drop_duplicates("timestamp").sort_values("timestamp").reset_index(drop=True)
@@ -578,7 +586,10 @@ def main(argv=None) -> int:
                 f.writelines(json.dumps({"cell": k, **asdict(t)}, default=str) + "\n" for t in v)
         vs = [c["verdict"] for c in rec["cells"].values()]
         rec["verdict"] = "pass" if "pass" in vs else ("fail" if vs and all(v == "fail" for v in vs) else "indeterminate")
-        rec["read_state"] = "complete"
+        # the grader's vocabulary (measured | no_data | producer_failed | not_attempted) and a top-level n;
+        # "complete" made run 43361991285 land as producer_failed.
+        rec["read_state"] = "measured" if any(cells.values()) else "no_data"
+        rec["n"] = sum(len(v) for v in cells.values())
         (out / "verdict.json").write_text(json.dumps(rec, indent=1, default=str) + "\n")
         print(json.dumps({k: rec[k] for k in ("research_unit", "stage", "verdict", "population")}, default=str))
         return 0

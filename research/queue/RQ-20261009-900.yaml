@@ -1,6 +1,6 @@
 id: RQ-20261009-900
 title: 'TP doctrine, predict-head step 1: on the live-timeframe real-money Bybit legs and the prop Donchian legs, does an entry-time MFE-quantile head beat all three naive TP baselines out of sample?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -203,3 +203,16 @@ blocked_review:
   due_by: '2026-11-25'
   reviewed: '2026-11-13'
   note: 'kept (re-scoped, owner named): requires_result MET (RQ-20261014-736c-01 pass, corpus on main). Sole open lever is the verdict grader, row TP-PREDICT-GRADER (tier 1, due re-dated 2026-11-20); escalated to the manager as an unowned build. The S1 n~74 < 88 floor stays INDETERMINATE under the rule as written; the window decision belongs to the grader build, not this audit. Not retired: config-level only, lever family not exhausted.'
+grading:
+  attested: RULE-RQ1009-900-MFE-HEAD-VS-NAIVE-TP
+  auto: true
+  decision_rule_id: RULE-RQ1009-900-MFE-HEAD-VS-NAIVE-TP
+  evidence:
+  - research/results/RQ-20261009-900/43381824145.jsonl
+  graded_at: '2026-11-13'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
