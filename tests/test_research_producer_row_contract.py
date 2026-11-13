@@ -52,18 +52,22 @@ def test_desk_replay_score_rows_validate_and_keep_pooled_verdict():
     assert all("POOLED" in r["population"] for r in rows if r["read_state"] == "measured")
 
 
-def test_desk_replay_score_rows_from_the_committed_bf56_orphan_measurement_validate():
-    """The real refused run: rebuilding its rows from its own committed measurement now validates."""
+# The refused run's own per-leg block, copied verbatim from comms/research/RQ-20261026-bf56-02/40710666532/verdict.json
+# (inlined: comms/research/RQ-*/** is push paths-ignore, so a test may not read it -- test_push_paths_ignore_bot_data).
+BF56_02_PER_LEG = [
+    {"leg": "ada_pullback_2h", "n_obs": 31, "state": "measured", "mean_dR": -0.1635, "ci": [-0.5863, 0.1896]},
+    {"leg": "trend_donchian_eth_4h", "n_obs": 103, "state": "measured", "mean_dR": -0.0051, "ci": [-0.0665, 0.0537]},
+    {"leg": "trend_donchian_xrp_4h", "n_obs": 15, "state": "insufficient_n", "mean_dR": None, "ci": None},
+    {"leg": "xrp_pullback_2h", "n_obs": 27, "state": "measured", "mean_dR": -0.1081, "ci": [-0.4575, 0.229]}]
+
+
+def test_desk_replay_score_rows_from_the_bf56_orphan_measurement_validate():
+    """The real refused run: the pre-fix rows (as committed) fail the validator; the fixed builder's rows pass."""
     from scripts.research import desk_replay_driver as drv
-    for unit, run in (("RQ-20261026-bf56-02", "40710666532"), ("RQ-20261026-bf56-03", "40733370814")):
-        p = REPO / "comms" / "research" / unit / run / "verdict.json"
-        if not p.exists():
-            continue
-        v = json.loads(p.read_text())
-        old = v["records"]
-        assert _problems(old), "the committed rows must still show the defect (the probe can find a positive)"
-        res = {"verdict": v["verdict"], "per_leg": v["measurement"]["per_leg"]}
-        assert _problems(drv.score_records(res, unit[-2:] == "02" and "in_trade" or "exit")) == []
+    old = [{"read_state": "measured" if r["state"] == "measured" else "no_data", "leg": r["leg"],
+            "population": f"{r['leg']} in_trade", "n": r["n_obs"], "verdict": "not_applicable"} for r in BF56_02_PER_LEG]
+    assert _problems(old), "the pre-fix rows must still show the defect (the probe can find a positive)"
+    assert _problems(drv.score_records({"verdict": "fail", "per_leg": BF56_02_PER_LEG}, "in_trade")) == []
 
 
 def test_desk_replay_selfcheck_rows_never_carry_n_zero_on_no_data():
@@ -100,14 +104,17 @@ def test_fidelity_run_that_measured_nothing_is_not_measured_at_top_level():
     assert _problems([v]) == []
 
 
-def test_fidelity_committed_d256_orphan_rows_validate_after_contract_row():
+def test_fidelity_d256_orphan_row_validates_after_contract_row():
+    """Row copied from comms/research/RQ-20261105-d256-03/42134900236/verdict.json (inlined: paths-ignore)."""
     import fidelity_remeasure as fr
-    p = REPO / "comms" / "research" / "RQ-20261105-d256-03" / "42134900236" / "verdict.json"
-    if not p.exists():
-        return
-    old = json.loads(p.read_text())["records"]
-    assert _problems(old)
-    assert _problems([fr.contract_row(r) for r in old]) == []
+    faithful = {"n": 102, "net_r": 11.678, "net_r_fee_only": 13.4496, "still_omitted": []}
+    old = {"leg": "trend_donchian_sol_4h", "rule_id": "RULE-RQ1011-001-FAITHFUL-STAGE0", "record_n": 116,
+           "record_net_r_oos": 36.8572, "window": ["2023-10-29 00:00:00+00:00", "2026-10-27 20:00:00+00:00"],
+           "arms": {"approximate": dict(faithful), "faithful": faithful}, "control_reproduces_record": False,
+           "verdict": "indeterminate", "read_state": "measured", "note": "could_not_measure: ..."}
+    assert _problems([old])
+    fixed = fr.contract_row(old)
+    assert _problems([fixed]) == [] and fixed["n"] == 102
 
 
 # ── leg_corpus_s1 ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -143,15 +150,15 @@ def test_census_no_record_rows_are_not_applicable_with_null_n():
 
 # ── ml_entry_v2_run (already fixed at source; pin it on the committed b623-01 orphan's result file) ─────────────────
 def test_ml_entry_v2_timeframe_verdict_derives_n_from_the_b623_result(tmp_path):
-    import shutil
+    """The b623-01 run 41567569662 result's verdict fields, copied (inlined: paths-ignore)."""
     import ml_entry_v2_run as mer
-    src = REPO / "comms" / "research" / "RQ-20261101-b623-01" / "41567569662" / "RQ-20261101-b623-01_result.json"
-    if not src.exists():
-        return
-    shutil.copy(src, tmp_path / src.name)
+    res = {"unit": "RQ-20261101-b623-01", "schema": "ml_entry_timeframe/1", "timeframe": "5m", "verdict": "indeterminate",
+           "gated_verdict": "indeterminate",
+           "rows": {"1h/bar": {"decision_rows": 665209, "symbols": 60}, "5m/bar": {"decision_rows": 8016428, "symbols": 60}}}
+    (tmp_path / "RQ-20261101-b623-01_result.json").write_text(json.dumps(res))
     assert mer.write_verdict("RQ-20261101-b623-01", tmp_path)
     v = json.loads((tmp_path / "verdict.json").read_text())
-    assert v["read_state"] == "measured" and isinstance(v["n"], int) and v["n"] > 0
+    assert v["read_state"] == "measured" and v["n"] == 665209 + 8016428
     assert _problems([v]) == []
 
 
