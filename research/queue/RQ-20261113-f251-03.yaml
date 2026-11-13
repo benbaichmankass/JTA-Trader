@@ -1,0 +1,128 @@
+id: RQ-20261113-f251-03
+title: Forming vs closed decision bar for trend_donchian_eth_4h and trend_donchian_sol_4h (prop + bybit_1), net of the full cost stack, with decision_bar_match.py
+  grading unchanged (RULE-FORMING-VS-CLOSED-4H-20261113)
+status: queued
+cadence: monthly
+kind: experiment
+theme: live_strategy
+priority: 1
+roadmap:
+- L-LADDER
+question: 'trend_donchian_eth_4h and trend_donchian_sol_4h decide on the FORMING 4h bar (no decision_bar key) and AM-OPS measured both re-emitting a package about
+  every 60 s inside one forming bar (2026-11-13 03:25-04:01Z: 34 + 33 packages, drifting entries; tradeify_1 SOL cancelled and re-ticketed at 03:58Z; no duplicate
+  fill); the closed-bar control trend_donchian_eth_prop emitted once. Replayed with the same tool as the 2026-10-22 DECISION-BAR-MATCH run (scripts/research/decision_bar_match.py,
+  grading unchanged), is closed >= forming within the tool''s band on each leg, net of the full cost stack?'
+why_this_matters: 'Both legs trade prop money (tradeify_1, velotrade_1) and the bybit_1 demo; the re-emit/entry-chasing cost exists only on the forming bar and the
+  backtest cannot see it, so the rule breaks ties toward closed. PRIOR (read, not re-derived; docs/research/evidence/decision-bar-match-2026-10-22.json): eth_4h to
+  2026-10-17 read NO_MATERIAL_DIFFERENCE / SWITCH_TO_CLOSED, forming +143.32 R (n 446) vs closed +130.92 R (n 295), forming winning 4/6 folds; the operator kept forming.
+  sol_4h was never measured and its record reads approximate. Answers PROP-FORMING-BAR-REEMIT (AM-OPS).'
+power:
+  expected_n: 1500
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, not measured: the 2026-10-22 eth_4h run held 446 forming + 295 closed trades over the full Binance history; sol_4h is of similar frequency, so
+    ~1,500 trades across both legs and both arms. The tool grades per leg on 6 calendar folds with a per-fold materiality floor max(1.0 R, 0.02 R x n); it reports
+    the true n. Said before any run.'
+  sd: null
+  feasibility:
+    source: none
+    accrual_basis: 'Fixed in-hand window: the full Binance USD-M 1m history fetched from 2020-01 through the pinned --end 2026-11-12 23:59 UTC (the last day whose
+      daily archive is published at registration; the 2026-10-22 run pinned the same way). Nothing accrues.'
+evidence_class:
+  holdout: in_sample
+  claim: improvement
+run:
+  command:
+  - python3
+  - scripts/research/decision_bar_match.py
+  - --klines-dir
+  - /tmp/dbm_klines_f251_03
+  - --fetch
+  - --out
+  - '{out_dir}'
+  - --leg
+  - trend_donchian_eth_4h
+  - --leg
+  - trend_donchian_sol_4h
+  - --end
+  - 2026-11-12 23:59
+  - --workers
+  - '4'
+  - --research-unit
+  - RQ-20261113-f251-03
+  - --rule
+  - RULE-FORMING-VS-CLOSED-4H-20261113
+  timeout_minutes: 220
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261113-f251-03
+decision_rule:
+  id: RULE-FORMING-VS-CLOSED-4H-20261113
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  statistic: 'scripts/research/decision_bar_match.py, grading unchanged: per leg, forming_bar_pooled_regrade.leg_run (closed and forming arms, config-exact to config/strategies.yaml,
+    full cost stack, Binance USD-M 1m proxy); 6 equal calendar folds of [first decision bar, --end]; dR_k = net R(closed) - net R(forming), floor max(1.0 R, 0.02
+    R x max n); better = CLOSED_BETTER / FORMING_BETTER (>= 4 folds, <= 1 opposite, matching sign of dR_full) else NO_MATERIAL_DIFFERENCE; verdict from the better
+    bar + RULE-D1 per arm on the committed record window (restate). The improvement folds run over the full fetched history through --end (the tool''s own window,
+    as on 2026-10-22); RULE-D1 reads the committed record''s window.'
+  rule: 'Copied verbatim from row FORMING-VS-CLOSED-ETH4H-SOL4H (AM-ML, 2026-11-13 ~14:45Z, before any run): PRE-REGISTERED RULE (written 2026-11-13 ~14:45Z, before
+    any run), RULE-FORMING-VS-CLOSED-4H-20261113:
+
+    - Per leg, scripts/research/decision_bar_match.py with its existing grading UNCHANGED (the same tool as 2026-10-22, for comparability). Arms: forming (4h decision
+    replayed from Binance USD-M 1m) vs closed, the same leg config, the full cost stack, on each leg''s committed record window extended to the run date.
+
+    - Outcomes: verdict SWITCH_TO_CLOSED, or better=NO_MATERIAL_DIFFERENCE, means closed >= forming within the tool''s band, so propose decision_bar: closed to the
+    manager as Tier 3, with the record.
+
+    - Ties go to closed on purpose: the backtest does not model the live re-emit and entry-chasing cost, which only the forming bar incurs.
+
+    - Forming MATERIALLY better (the tool''s better=FORMING) means keep forming, and propose to AM-OPS an entry-hold / no-re-ticket fix for the chasing.
+
+    - Nothing changes config without the manager.
+
+    - Fixed now; not changed after any result. || E5 ENCODING (reporting only; the grading above is unchanged): per leg, pass = the outcome maps to closed >= forming
+    within the band (verdict SWITCH_TO_CLOSED, or better NO_MATERIAL_DIFFERENCE) -> propose closed; fail = better FORMING_BETTER -> keep forming + AM-OPS entry-hold
+    fix; indeterminate = not graded. Unit: indeterminate if any leg is; else pass if both pass; else fail. Each leg''s better, verdict, folds and RULE-D1 facts are
+    carried in its record.'
+  what_it_does_not_do: 'Changes no config, roster or order. A switch to decision_bar: closed is a Tier-3 proposal AM-ML makes to the manager with this record; an
+    entry-hold fix is a proposal to AM-OPS.'
+  baseline: 'The incumbent: each leg''s live forming-bar decision, replayed config-exact on the same 1m history and cost stack (paired per fold).'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.3
+  basis: 'stand-in: two prop-money legs with a measured live re-emit/chasing behaviour on the forming bar; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+ml_consumer:
+  not_applicable: 'Not an ML unit: a harness decision-bar comparison of rule-based Donchian legs. No model is trained, scored or served.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: trend_donchian_sol_4h
+  subject_kind: strategy_leg
+  from_result: comms/strategy_evidence/trend_donchian_sol_4h.json
+  verdict_read: approximate
+  diagnosis: 'The committed record (2026-10-28) reads approximate: it measures the CLOSED 4h bar while the leg decides on the forming one, and the leg was not in
+    the 2026-10-22 decision-bar run. AM-OPS measured it re-emitting ~every 60 s inside one forming bar. Unmeasured, not mis-tuned: closed by the paired forming-vs-closed
+    replay.'
+  hypothesis: Closed is at least as good as forming net of cost within the tool's band (ties go to closed because the live chasing cost is unmodelled).
+  attempt: 1
+  due_by: '2026-11-17'
+related:
+- RQ-20261022-4de5-01
+- PROP-FORMING-BAR-REEMIT
+- PI-20261113-AMML-0002
+- docs/research/evidence/decision-bar-match-2026-10-22.json
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): rule registered before the run, net of the full cost stack, paired per fold
+  with a materiality floor; the same tool and grading as RQ-20261022-4de5-01 for comparability.'
+follow_up: 'Report per-leg verdicts to AM-ML. Pass -> AM-ML proposes decision_bar: closed (Tier 3) to the manager; fail -> keep forming and propose an entry-hold
+  / no-re-ticket fix to AM-OPS. Change no config.'
