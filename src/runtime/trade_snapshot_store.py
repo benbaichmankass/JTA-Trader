@@ -13,7 +13,8 @@ a snapshot write can never take ``trade_journal.db``'s write lock (manager condi
 JOURNAL-LOCK-RESIDUAL). Every reader and the builder open the journal READ-ONLY (:func:`journal_ro`). It is
 derived data (always rebuildable from the journal + candles).
 
-``state``: ``built`` (payload present) · ``retrying`` (a build failed; ``attempts``/``last_error``/``next_attempt_at``
+``state``: ``built`` (payload present) · ``requeued`` (a stored partial put back for one rebuild; its payload is
+kept and still served) · ``retrying`` (a build failed; ``attempts``/``last_error``/``next_attempt_at``
 say when it runs again). There is no give-up state: a failing trade keeps retrying at the longest backoff (Prime
 Directive rule 7: no halting); the builder flags one that keeps failing.
 """
@@ -108,16 +109,20 @@ def read(conn: sqlite3.Connection, key: str) -> Dict[str, Any]:
     if row is None:
         return {"state": "absent", "payload": None}
     row = tuple(row)
-    payload: Optional[Dict[str, Any]] = None
-    if row[5]:
-        try:
-            raw = row[5]
-            p = json.loads(zlib.decompress(raw).decode("utf-8") if isinstance(raw, (bytes, bytearray)) else raw)
-            payload = p if isinstance(p, dict) else None
-        except (ValueError, zlib.error):
-            payload = None
+    payload = decode(row[5])
     return {"state": row[0], "read_state": row[1], "attempts": row[2], "last_error": row[3], "built_at": row[4],
             "payload": payload}
+
+
+def decode(raw: Any) -> Optional[Dict[str, Any]]:
+    """The inverse of :func:`encode` (also accepts a plain JSON string); None when absent or unreadable."""
+    if not raw:
+        return None
+    try:
+        p = json.loads(zlib.decompress(raw).decode("utf-8") if isinstance(raw, (bytes, bytearray)) else raw)
+    except (ValueError, zlib.error):
+        return None
+    return p if isinstance(p, dict) else None
 
 
 def encode(payload: Dict[str, Any]) -> bytes:
