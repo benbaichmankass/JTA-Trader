@@ -198,7 +198,7 @@ def load_bars(cache: Path, symbols: list[str]) -> dict:
 def feature_panel(bars: dict) -> dict:
     """Per-symbol per-bar ENTRY features (FEATURES) for EVERY bar, with the cross-sectional block computed exactly as
     ml_decision_entry.build_table does (xs_symbols=None). Asserted equal to the table rows in ``run``."""
-    feats = {s: E.features_symbol(df) for s, df in bars.items()}
+    feats = {s: E.features_symbol(E.regrid_hourly(df)) for s, df in bars.items()}   # hole-safe, as build_table's default
     r24 = pd.DataFrame({s: f.set_index("ts")["ret24_raw"] for s, f in feats.items()})
     v24 = pd.DataFrame({s: f.set_index("ts")["vol24"] for s, f in feats.items()})
     rank = r24.rank(axis=1, pct=True)

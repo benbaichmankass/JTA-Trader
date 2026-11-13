@@ -34,3 +34,22 @@ def test_regrid_turns_hole_into_nan_not_seam():
 def test_regrid_identity_without_hole():
     df = _bars()
     pd.testing.assert_frame_equal(E.regrid_hourly(df), df, check_dtype=False)
+
+
+def test_hole_safe_is_the_default_and_legacy_still_available(tmp_path):
+    """ML-ENTRY-HOLE-SAFE-ADOPT: every build_table consumer is hole-safe unless it asks for the legacy build."""
+    assert E.build_table.__defaults__[-1] is True
+    rng = np.random.default_rng(3)
+    for sym in ("BTCUSDT", "ETHUSDT"):
+        df = _bars(n=900, hole=("2026-01-20", "2026-01-21"))
+        df["close"] = df.close + rng.normal(0, 0.1, len(df))
+        df["high"], df["low"], df["open"] = df.close + 0.5, df.close - 0.5, df.close
+        pd.to_pickle(df, tmp_path / f"{sym}.pkl")
+    safe = E.build_table(tmp_path, ["BTCUSDT", "ETHUSDT"])
+    legacy = E.build_table(tmp_path, ["BTCUSDT", "ETHUSDT"], hole_safe=False)
+    # the seam rows exist only in the legacy table: ret_168 spans the hole for 168 bars after it
+    assert len(safe) < len(legacy)
+    first_after = pd.Timestamp("2026-01-21", tz="UTC")
+    seam = legacy[(legacy.ts >= first_after) & (legacy.ts < first_after + pd.Timedelta(hours=168))]
+    assert len(seam) > 0
+    assert not set(zip(seam.symbol, seam.ts)) & set(zip(safe.symbol, safe.ts))

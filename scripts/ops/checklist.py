@@ -245,8 +245,20 @@ def _cli_write(a, repo: Path) -> int:
     except ChecklistError as exc:
         print(f"checklist: refused -- {exc}")
         return 1
-    print(f"checklist: wrote {path.relative_to(repo)}")
+    print(_wrote_line(path, repo))
     return 0
+
+
+def _wrote_line(path: Path, repo: Path) -> str:
+    """What the write actually changed. After the WSD-S4 freeze a row write goes to work_store.db and the row
+    FILE (now the export) is NOT touched; printing the file path read as "wrote the file", so a lane saw an
+    unchanged mtime, took it for a silent no-op and re-ran ``note --append`` -- the same text landed three
+    times on LTR-GRADER-COVERAGE (2026-11-13 06:23Z). Say which store took the write."""
+    rel = path.relative_to(repo) if path.is_relative_to(repo) else path
+    if path.name != _store.HEADER and _store._frozen_canonical(repo / _store.STORE):
+        return (f"checklist: wrote row {path.stem} to the work store (frozen checklist: {rel} is the export and is "
+                f"NOT changed by this write; read it back with `python3 scripts/ops/work.py get {path.stem}`)")
+    return f"checklist: wrote {rel}"
 
 
 def _self_test() -> int:
