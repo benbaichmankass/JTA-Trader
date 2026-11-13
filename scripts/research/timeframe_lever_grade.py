@@ -86,7 +86,7 @@ def grade(rows: Dict[str, Optional[Dict[str, Any]]], baseline_tf: str, leg: str,
         return {"verdict": "indeterminate", "read_state": "measured", "n": n_total, "population": pop,
                 "note": f"no candidate passes, but {under} are below their n floor -- no FAIL claim", "records": records}
     return {"verdict": "fail", "read_state": "measured", "n": n_total, "population": pop,
-            "note": (f"no candidate timeframe passes Stage 0 and beats the {baseline_tf} baseline (net_r {base['net_r']}): "
+            "note": (f"no candidate {family} arm passes Stage 0 and beats the {baseline_tf} baseline (net_r {base['net_r']}): "
                      + "; ".join(f"{tf} {r.get('label')} net_r {r.get('net_r')}" for tf, r in cands.items())),
             "records": records}
 

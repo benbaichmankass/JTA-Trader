@@ -1295,3 +1295,27 @@ levers:
       best_delta_r_per_trade: 0.0128
       fold_stability: 0.75
       reading: no response at the tested values
+levers_tested:
+- family: side_filter
+  varied: side_filter both vs short-only, forming bar from Binance 1m, window 2025-11-13..2026-11-12, full cost stack
+  response:
+    verdict: fail
+    run: '43483019614'
+    baseline:
+      arm: A
+      n: 95
+      net_r: -15.7396
+      folds_positive: 1/4
+    arms:
+    - side_filter: short
+      n: 57
+      net_r: 2.3538
+      folds_positive: 1/4
+      max_drawdown_r: 10.9525
+    reading: 'short-only turns the leg positive (+2.35R, +18.09R vs both sides) but only 1/4 folds positive: the gain is concentrated, not consistent'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261113-f251-09
+  lever_family: direction
+units:
+- RQ-20261113-f251-09

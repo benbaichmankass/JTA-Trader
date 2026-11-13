@@ -845,3 +845,33 @@ levers:
       best_delta_r_per_trade: -0.0068
       fold_stability: 0.5
       reading: no response at the tested values
+levers_tested:
+- family: timeframe
+  varied: timeframe 1h (live) vs 2h / 4h, forming bar from Binance 1m, window 2025-11-01..2026-10-31, full cost stack
+  response:
+    verdict: fail
+    run: '43479076292'
+    baseline:
+      tf: 1h
+      n: 184
+      net_r: -10.57
+      folds_positive: 1/4
+    arms:
+    - tf: 2h
+      n: 96
+      net_r: -20.6718
+      folds_positive: 0/4
+      max_drawdown_r: 25.8036
+    - tf: 4h
+      n: 49
+      net_r: -14.0822
+      folds_positive: 0/4
+      max_drawdown_r: 15.5206
+    reading: 'a slower bar makes the leg WORSE (0/4 folds at 2h and 4h): the 1h params do not transfer; the cost-share reading is refuted for
+      this leg'
+  shape: peaked
+  tested_at_power: true
+  unit: RQ-20261113-f251-05
+  lever_family: timeframe
+units:
+- RQ-20261113-f251-05
