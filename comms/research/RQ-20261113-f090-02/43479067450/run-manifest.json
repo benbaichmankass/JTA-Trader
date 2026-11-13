@@ -1,0 +1,91 @@
+{
+  "unit": "RQ-20261113-f090-02",
+  "run_id": "43479067450",
+  "commit_sha": "3af14009669c1d925926b823466341bef5213e4e",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/43479067450",
+  "timeout_minutes": 90,
+  "runner": {
+    "cpu_model": "AMD EPYC 7763 64-Core Processor",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1019-azure",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261111.196.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "d5aeef1fabd2",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_lever_ablation.py",
+        "--leg",
+        "qqq_pullback_1h",
+        "--arm",
+        "A=--side-filter=long",
+        "--arm",
+        "T1=--side-filter=long;--trail-mult=4.0",
+        "--arm",
+        "T2=--side-filter=long;--trail-mult=6.5",
+        "--days",
+        "2330",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-15 23:59",
+        "--non-crypto-source",
+        "dukascopy",
+        "--grade",
+        "holdout",
+        "--baseline",
+        "A",
+        "--delta-r",
+        "0",
+        "--folds",
+        "4",
+        "--fold-majority",
+        "3",
+        "--n-floor",
+        "25",
+        "--holdout-frac",
+        "0.25",
+        "--holdout-min-trades",
+        "25",
+        "--holdout-max-frac",
+        "0.40",
+        "--research-unit",
+        "RQ-20261113-f090-02",
+        "--out",
+        "comms/research/RQ-20261113-f090-02/43479067450"
+      ],
+      "log": "comms/research/RQ-20261113-f090-02/43479067450/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 7.1
+    }
+  ],
+  "all_ok": true
+}
