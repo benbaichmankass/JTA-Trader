@@ -134,7 +134,9 @@ def write_population(leg: str, population: Dict[str, Any], base: Optional[Path] 
         raise ValueError("symbols must map SYMBOL -> {'venues': [non-empty list]}")
     dest = record_path(leg, base)
     existing: List[Dict[str, Any]] = []
-    for src in (base, seed_from):
+    # base=None writes to RECORD_DIR, so the existing populations are read from RECORD_DIR too: before 2026-11-12 the
+    # default call skipped the read and a second unit's write erased the first unit's populations (lane ML-ENTRY-POPULATION-TEST).
+    for src in (base or RECORD_DIR, seed_from):
         if src is None:
             continue
         if record_path(leg, src).exists():

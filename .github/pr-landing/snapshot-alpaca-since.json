@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "CLOSED-TRADE-SNAPSHOT-FUTURES-CANDLES (AM-UI 2026-11-12 Q10 option (b)): optional since on AlpacaMarketData.get_ohlcv (src/exchange, live data path) so the closed-trade snapshot builder can read an old window's candles; a since read never starts the shared rate-limit cooldown; the builder paces Alpaca since reads to 1 per 10 s on its own thread. A call without since is byte-identical (pinned by a test). Futures (IB) unchanged.",
+  "hold_text": "Tier 2 (live data path module). AM-UI/operator merges; deploys with ict-web-api (the builder) and is inert in the trader unless a caller passes since. Revert: revert this PR. Closes on: an old SPY trade (e.g. trade:3077) builds with candles and /api/bot/trades/snapshots/status failing drops below 33."
+}

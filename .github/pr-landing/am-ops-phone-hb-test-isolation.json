@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tier-1 test-only fix for main red after #25525: tests/test_phone_hb_alert.py::test_run_sends_on_system_target_and_failed_send_keeps_state called phone_hb_alert.run without injecting watchdog_open, so it read the repo's live research-watchdog incident ledger; with a real open phone_heartbeat incident (2026-11-12 22:54Z) the send was suppressed and the test failed. Inject watchdog_open=lambda: False; the suppressed path keeps its own test. No skip, no production change. Gates this adds or changes: none."
+}

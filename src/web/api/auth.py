@@ -201,6 +201,36 @@ async def require_session(request: Request) -> dict:
     return claims
 
 
+async def operator_session_or_none(request: Request) -> Optional[dict]:
+    """The operator-session claims on this request, or ``None``. Never raises.
+
+    For the operator-write routes that ALSO take a service token (wake-toggles,
+    work/decision, work/items*): the signed-in SPA acts with the operator's
+    session (``Bearer ws_...`` or the legacy password JWT, both checked by
+    ``require_session`` including ``ALLOWED_EMAIL``), while non-browser services
+    keep their token. ``None`` means "not an operator session", so the caller
+    falls through to its own fail-closed service-token check, which is what
+    answers an anonymous or wrong-token request (401/503).
+    """
+    if not _bearer(request):
+        return None
+    try:
+        return await require_session(request)
+    except HTTPException:
+        return None
+
+
+#: The actor recorded for every write made with an operator session (manager 2026-11-13):
+#: decision records, work items and flip logs can reach the repo, and personal details never
+#: go there, so the operator's email is never written into a stored field.
+SESSION_ACTOR = "operator-spa"
+
+
+def session_actor(claims: dict) -> str:  # noqa: ARG001 - claims kept for the call sites' shape
+    """The ``by`` recorded for a write made with an operator session: always ``operator-spa``."""
+    return SESSION_ACTOR
+
+
 # ---------------------------------------------------------------------------
 # UI-UPGRADE-1-AUTH — the whole-site gate (design §2b).
 #
@@ -236,7 +266,8 @@ STREAM_PATH = "/api/bot/stream"
 # POST-only carve-outs (SITE-AUTH step (i), 2026-11-11). Each of these routes
 # checks its OWN service token inside the router and fails CLOSED (503 when the
 # token is unset, 401 when it is missing or wrong):
-#   POST /api/bot/alerts, /api/bot/wake-toggles -> prop._require_write_token
+#   POST /api/bot/alerts, /api/bot/wake-toggles,
+#        /api/bot/devices/register              -> prop._require_write_token
 #   POST /api/bot/work/decision                 -> work._require_decision_write_token
 #   POST /api/bot/work/items[/<id>/set|note|close] -> work_items._require_work_store_token
 #   POST /api/bot/live-review/rows               -> live_review_direct (work-store token)
@@ -249,6 +280,7 @@ STREAM_PATH = "/api/bot/stream"
 # closed on its own credential (``tests/test_web_site_auth_write_carveouts.py``).
 SITE_PUBLIC_POST_PATHS: frozenset[str] = frozenset({
     "/api/bot/alerts",
+    "/api/bot/devices/register",   # -> prop._require_write_token (SEC-API-DEVICE-REGISTER-OPEN, #25007)
     "/api/bot/wake-toggles",
     "/api/bot/work/decision",
     "/api/bot/work/items",
@@ -294,7 +326,7 @@ def _service_token_ok(token: str) -> bool:
     return bool(expected) and bool(token) and hmac.compare_digest(token, expected)
 
 
-def require_site_session(conn: HTTPConnection) -> None:
+async def require_site_session(conn: HTTPConnection) -> None:
     """App-level gate. No-op unless ``SITE_AUTH_ENFORCE`` is on.
 
     On: public paths and CORS preflight pass; otherwise a live device session
@@ -302,6 +334,10 @@ def require_site_session(conn: HTTPConnection) -> None:
     ``DASHBOARD_API_TOKEN`` as a service credential. ``WS /ws/market`` takes a
     single-use ``?ticket=`` from ``POST /api/auth/ws-ticket`` (a browser
     WebSocket cannot send an Authorization header).
+
+    ``async`` (HARDEN b): with the gate off this returns on the event loop with
+    no threadpool hop per request; with it on, the sqlite session lookups run on
+    a worker thread, never on the event loop.
     """
     if not site_auth_enforced():
         return
@@ -317,11 +353,10 @@ def require_site_session(conn: HTTPConnection) -> None:
     token = _bearer(conn)
     if scope["type"] == "websocket":
         ticket = conn.query_params.get("ticket", "")
-        sid = web_sessions.mem_take("wsticket", ticket) if ticket else None
-        if sid is not None and web_sessions.session_alive(sid):
+        if ticket and await run_in_threadpool(ws_ticket_ok, ticket):
             return
-        if token.startswith(web_sessions.SESSION_TOKEN_PREFIX) and _session_row_allowed(
-                web_sessions.validate_session(token)):
+        if token.startswith(web_sessions.SESSION_TOKEN_PREFIX) and await run_in_threadpool(
+                _token_allowed, token):
             return
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail={"error": "invalid_session"})
 
@@ -329,18 +364,28 @@ def require_site_session(conn: HTTPConnection) -> None:
         # A browser EventSource cannot send Authorization: it passes the same single-use ws-ticket
         # /ws/market takes (UI-TRADING-PUSH T1). Same check, same store, GET on this one path only.
         ticket = conn.query_params.get("ticket", "")
-        sid = web_sessions.mem_take("wsticket", ticket) if ticket else None
-        if sid is not None and web_sessions.session_alive(sid):
+        if ticket and await run_in_threadpool(ws_ticket_ok, ticket):
             return
         raise _UNAUTH
 
     if token.startswith(web_sessions.SESSION_TOKEN_PREFIX):
-        if _session_row_allowed(web_sessions.validate_session(token)):
+        if await run_in_threadpool(_token_allowed, token):
             return
         raise _UNAUTH
     if method in _SAFE_METHODS and _service_token_ok(token):
         return
     raise _UNAUTH
+
+
+def ws_ticket_ok(ticket: str) -> bool:
+    """Consume a single-use ws ticket; True iff it named a session that is still
+    live (the check the gate always made). Sync: call it off the event loop."""
+    sid = web_sessions.mem_take("wsticket", ticket) if ticket else None
+    return sid is not None and web_sessions.session_alive(sid)
+
+
+def _token_allowed(token: str) -> bool:
+    return _session_row_allowed(web_sessions.validate_session(token))
 
 
 def _session_row_allowed(row: Optional[dict]) -> bool:

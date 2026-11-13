@@ -17,7 +17,8 @@ Responses (POST): 200 ``{"outcome": "overridden", "override": {...}, "status": {
 503 the journal could not be written (nothing overridden).
 
 Auth: the operator's SPA session (``require_session``, the trade-approvals pattern) -- the override is
-the operator's act; ``by`` is the session's email claim.
+the operator's act; ``by`` is ``session_actor(session)`` (always ``operator-spa``). Never the email claim: the
+override record goes into the journal AND the alert, and alerts can be mirrored onto the public repo.
 
 Gates this adds or changes: none. The switch stays a per-trade ``RiskManager`` refusal (keep open, block
 new); the override only lifts that refusal for the rest of the day it was used on. Not a mode flip.
@@ -33,7 +34,7 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from src.web.api.auth import require_session
+from src.web.api.auth import require_session, session_actor
 
 router = APIRouter(prefix="/api/bot", tags=["daily-dd-switch"])
 
@@ -78,7 +79,7 @@ async def post_dd_switch_override(account: str, request: Request,
         if not isinstance(doc, dict):
             raise HTTPException(status_code=400, detail="body must be a JSON object")
         reason = str(doc.get("reason") or "")[:500]
-    by = str((session or {}).get("email") or (session or {}).get("sub") or "operator-session")
+    by = session_actor(session or {})
     try:
         outcome, payload = await asyncio.to_thread(sw.override, by=by, reason=reason)
     except OSError as exc:

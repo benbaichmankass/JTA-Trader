@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "UI-WQ-WEEK-ROUTES: read-only additions for the SPA Work queue 'This week' tab. GET /api/bot/work/items gains optional filters (state=open, owner_prefix, week_lane, q), counts=1 and latest_note=1; a call without them is unchanged. New GET /api/bot/work/lanes (per-AM cards from items + the event log). Two read methods on WorkStore; week_lane_totals moved to src/runtime/work_read.py (console_connector.data keeps the alias). No writes, no order path, no new gate. Held only because R5 cannot certify src/runtime/work_store.py and src/web/api paths.",
+  "hold_text": "Read-only routes on ict-web-api. The manager merges. After deploy: GET /api/bot/work/lanes 200 read_state read with an AM-UI card; GET /api/bot/work/items?state=open&counts=1&latest_note=1 returns counts.by_owner_state and latest_note per item; a plain GET /api/bot/work/items is unchanged."
+}

@@ -673,9 +673,19 @@ def api_env(tmp_path, monkeypatch):
         "acct_old": {"exchange": "bybit", "retired": True},
     }}))
     monkeypatch.setattr(route, "_ACCOUNTS_YAML", acc)
-    monkeypatch.setattr(dd, "_default_alert", lambda *a, **k: None)
-    main.app.dependency_overrides[require_session] = lambda: {"email": "operator@example"}
-    yield TestClient(main.app, raise_server_exceptions=False)
+    import src.utils.paths as paths
+    logs = tmp_path / "runtime_logs"
+    logs.mkdir()
+    monkeypatch.setattr(paths, "runtime_logs_dir", lambda: logs)
+    monkeypatch.setattr(dd, "_PATH_OVERRIDE", None)
+    alerts: list = []
+    monkeypatch.setattr(dd, "_default_alert", lambda kind, acct, row, cfg: alerts.append((kind, acct, row)))
+    # The session carries an email claim on purpose: the route must NOT record it (see the no-'@' test).
+    main.app.dependency_overrides[require_session] = lambda: {"email": "operator@example", "sub": "op@example"}
+    client = TestClient(main.app, raise_server_exceptions=False)
+    client.alerts = alerts
+    client.logs = logs
+    yield client
     main.app.dependency_overrides.pop(require_session, None)
 
 
@@ -692,13 +702,32 @@ def test_override_route_contract(api_env):
     r = client.post("/api/bot/accounts/acct_api/daily-dd-switch/override", json={"reason": "checked"})
     body = r.json()
     assert r.status_code == 200 and body["outcome"] == "overridden"
-    assert body["override"]["by"] == "operator@example" and body["override"]["reason"] == "checked"
-    assert body["status"]["tripped"] is False and body["status"]["override"]["by"] == "operator@example"
+    assert body["override"]["by"] == "operator-spa" and body["override"]["reason"] == "checked"
+    assert body["status"]["tripped"] is False and body["status"]["override"]["by"] == "operator-spa"
     r = client.post("/api/bot/accounts/acct_api/daily-dd-switch/override")
     assert r.status_code == 409 and r.json()["outcome"] == "already_overridden"
     assert client.post("/api/bot/accounts/acct_old/daily-dd-switch/override").status_code == 404
     assert client.post("/api/bot/accounts/nope/daily-dd-switch/override").status_code == 404
     assert client.post("/api/bot/accounts/a%20b/daily-dd-switch/override").status_code == 400
+
+
+def test_override_record_carries_no_email_anywhere(api_env):
+    """The override record lands in the journal AND the alert, and alerts can be mirrored onto the
+    PUBLIC repo, so `by` is session_actor(...) ("operator-spa"), never the session's email claim
+    (manager review of #25181, 2026-11-13)."""
+    client = api_env
+    now = datetime.now(timezone.utc)
+    sw = dd.DailyDDSwitch("acct_api", dd.parse_config({"armed": True}))
+    sw.observe(10_000.0, now - timedelta(seconds=2))
+    sw.observe(9_600.0, now - timedelta(seconds=1))
+    r = client.post("/api/bot/accounts/acct_api/daily-dd-switch/override", json={"reason": "checked"})
+    assert r.status_code == 200, r.text
+    assert "@" not in r.json()["override"]["by"]
+    assert "@" not in json.dumps(r.json())
+    journal = dd.load_overrides(client.logs / "daily_dd_switch_overrides.jsonl")
+    assert len(journal) == 1 and journal[0]["by"] == "operator-spa" and "@" not in json.dumps(journal[0])
+    sent = [row for kind, _acct, row in client.alerts if kind == "override"]
+    assert sent and all("@" not in json.dumps(row, default=str) for row in sent)
 
 
 def test_override_route_needs_a_session(tmp_path, monkeypatch):
