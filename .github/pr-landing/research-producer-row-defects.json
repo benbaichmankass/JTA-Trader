@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "RESEARCH-PRODUCER-ROW-DEFECTS (AM-ML dispatch 2026-11-13). Research tooling only: fixes per-row status/n/verdict consistency against research_result.validate in four producers (desk_replay_driver score/selfcheck rows; fidelity_remeasure rows gain population+n, non-measured rows not_applicable; leg_corpus_s1 producer_failed -> not_applicable; stage0_capital_day_census no_record rows not_applicable with n null), adds a collector void of the verdict word on rows that measured nothing (read_state/n/population never touched), tests in tests/test_research_producer_row_contract.py, and lands 3 orphan records the collector now admits (RQ-20261105-025 run 42101993187 as producer_failed; RQ-20261014-470a-11 runs 38663651638, 39707652763). No src/, no config/, no queue unit edits (the re-arms ride a separate held PR). Revert: git revert."
+}

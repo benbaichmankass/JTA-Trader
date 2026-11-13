@@ -299,6 +299,46 @@ def _unpair_measured_not_applicable(rec: Dict[str, Any]) -> Dict[str, Any]:
     return rec
 
 
+_NON_MEASURED = ("no_data", "producer_failed", "not_attempted")
+
+
+def _void_nonmeasured_verdict(rec: Dict[str, Any], root: Path = _REPO) -> Dict[str, Any]:
+    """research_result.validate REFUSES a verdict other than `not_applicable` on a record (or fanned-out row) whose
+    read_state says nothing was measured. On such a row the producer's verdict word is, by the result contract, not a
+    statement about the world, so replacing it with `not_applicable` changes no claim: read_state, n, population and the
+    measurement are left exactly as written (a defect in any of THOSE still refuses). Producers that wrote the pair:
+    leg_corpus_s1 (producer_failed + indeterminate, RQ-20261105-025 run 42101993187) and stage0_capital_day_census
+    (no_data + no_action_warranted, every RQ-20261014-470a-11 run); both are fixed at source, this lands their committed
+    orphans. RESEARCH-PRODUCER-ROW-DEFECTS, 2026-11-13. Rows are rewritten to a temp file; the committed file is untouched."""
+    out = dict(rec)
+    if str(out.get("read_state")) in _NON_MEASURED and str(out.get("verdict")) not in ("", "not_applicable"):
+        out["note"] = (f"verdict {out.get('verdict')!r} voided to not_applicable by the collector (read_state "
+                       f"{out.get('read_state')} measured nothing). " + str(out.get("note") or ""))
+        out["verdict"] = "not_applicable"
+    rf = str(out.get("records_file") or "")
+    path = Path(rf) if rf and Path(rf).is_absolute() else (root / rf if rf else None)
+    if path is not None and path.is_file():
+        try:
+            rows = [json.loads(ln) for ln in path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        except ValueError:
+            return out
+        if any(isinstance(r, dict) and str(r.get("read_state")) in _NON_MEASURED
+               and str(r.get("verdict")) not in ("", "not_applicable") for r in rows):
+            import tempfile
+            fixed = []
+            for r in rows:
+                if isinstance(r, dict) and str(r.get("read_state")) in _NON_MEASURED \
+                        and str(r.get("verdict")) not in ("", "not_applicable"):
+                    r = {**r, "verdict": "not_applicable",
+                         "note": f"verdict {r.get('verdict')!r} voided to not_applicable by the collector "
+                                 f"(read_state {r.get('read_state')} measured nothing). " + str(r.get("note") or "")}
+                fixed.append(r)
+            tmp = Path(tempfile.mkdtemp()) / "records.jsonl"
+            tmp.write_text("".join(json.dumps(r) + "\n" for r in fixed), encoding="utf-8")
+            out["records_file"] = str(tmp)
+    return out
+
+
 def emit_record(root: Path, rec: Dict[str, Any], *, run: Dict[str, Any], repo_slug: str) -> Optional[str]:
     """Write the E5 record through research_result.py; returns its repo path."""
     run_id = str(run["databaseId"])
@@ -306,7 +346,7 @@ def emit_record(root: Path, rec: Dict[str, Any], *, run: Dict[str, Any], repo_sl
            "--workflow", str(run.get("_workflow_name") or WORKFLOW_NAME), "--run-id", run_id, "--run-attempt", "1",
            "--run-url", str(run.get("url") or f"https://github.com/{repo_slug}/actions/runs/{run_id}"),
            "--commit-sha", str(run.get("headSha") or "")]
-    rec = _unpair_measured_not_applicable(_scalar_n(rec))
+    rec = _void_nonmeasured_verdict(_unpair_measured_not_applicable(_scalar_n(rec)), root)
     for k in _EMIT_FIELDS:
         cmd += [f"--{k.replace('_', '-')}", str(rec.get(k, "") if rec.get(k) is not None else "null" if k == "n" else "")]
     if root != _REPO:
