@@ -28,8 +28,12 @@ RATE_LIMIT_ERR = ('bybit {"retCode":10006,"retMsg":"Too many visits. Exceeded th
 @pytest.fixture(autouse=True)
 def _reset_cooldown():
     bc._rate_limited_until = 0.0
+    bc._last_cooldown_start = 0.0
+    bc._cooldown_streak = 0
     yield
     bc._rate_limited_until = 0.0
+    bc._last_cooldown_start = 0.0
+    bc._cooldown_streak = 0
 
 
 def _connector():
@@ -86,6 +90,55 @@ def test_only_the_call_that_starts_a_cooldown_logs_it_and_the_line_names_the_thr
         c.get_ohlcv("BTCUSDT", "1h", 10)
     lines = [r.getMessage() for r in caplog.records if "rate limit" in r.getMessage()]
     assert len(lines) == 1 and "thread=MainThread" in lines[0] and "BTCUSDT" in lines[0]
+
+
+# --- backoff (row VENUE-KLINE-RATE-LIMIT, 2026-11-13): short first cooldown, doubled per streak step, capped ----
+
+def _hit(c, monkeypatch, at):
+    """A 10006 at monotonic time *at*, with any running cooldown already expired."""
+    monkeypatch.setattr(bc.time, "monotonic", lambda: at)
+    bc._rate_limited_until = 0.0
+    with patch.object(c.exchange, "fetch_ohlcv", side_effect=Exception(RATE_LIMIT_ERR)):
+        assert c.get_ohlcv("BTCUSDT", "1h", 10) is None
+    return bc._rate_limited_until - at
+
+
+def test_a_lone_10006_cools_down_for_the_short_base_not_15s(monkeypatch):
+    assert _hit(_connector(), monkeypatch, 1000.0) == pytest.approx(bc.RATE_LIMIT_COOLDOWN_BASE_S)
+    assert bc.RATE_LIMIT_COOLDOWN_BASE_S < bc.RATE_LIMIT_COOLDOWN_S
+
+
+def test_repeated_10006s_within_the_window_double_and_cap_at_the_old_15s(monkeypatch):
+    c = _connector()
+    got = [_hit(c, monkeypatch, 1000.0 + 10.0 * i) for i in range(5)]   # 10 s apart: inside the 60 s window
+    assert got == [pytest.approx(x) for x in (3.0, 6.0, 12.0, 15.0, 15.0)]
+
+
+def test_a_quiet_gap_longer_than_the_window_resets_the_streak(monkeypatch):
+    c = _connector()
+    assert _hit(c, monkeypatch, 1000.0) == pytest.approx(3.0)
+    assert _hit(c, monkeypatch, 1010.0) == pytest.approx(6.0)
+    assert _hit(c, monkeypatch, 1010.0 + bc.RATE_LIMIT_STREAK_WINDOW_S + 1) == pytest.approx(3.0)
+
+
+def test_a_10006_during_a_running_cooldown_does_not_extend_or_escalate_it(monkeypatch):
+    c = _connector()
+    monkeypatch.setattr(bc.time, "monotonic", lambda: 1000.0)
+    with patch.object(c.exchange, "fetch_ohlcv", side_effect=Exception(RATE_LIMIT_ERR)):
+        c.get_ohlcv("BTCUSDT", "1h", 10)
+    until, streak = bc._rate_limited_until, bc._cooldown_streak
+    assert not bc._start_cooldown()          # a concurrent caller hitting the same wall
+    assert (bc._rate_limited_until, bc._cooldown_streak) == (until, streak)
+
+
+def test_the_log_line_states_the_actual_cooldown_length_and_streak(monkeypatch, caplog):
+    c = _connector()
+    with caplog.at_level("WARNING", logger=bc.logger.name):
+        _hit(c, monkeypatch, 1000.0)
+        _hit(c, monkeypatch, 1005.0)
+    lines = [r.getMessage() for r in caplog.records if "rate limit (retCode 10006)" in r.getMessage()]
+    assert "None for 3 s" in lines[0] and "streak 0" in lines[0]
+    assert "None for 6 s" in lines[1] and "streak 1" in lines[1]
 
 
 def test_other_errors_do_not_start_a_cooldown():
