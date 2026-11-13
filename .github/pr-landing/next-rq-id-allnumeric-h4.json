@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tier-1 research tooling bug fix: next_rq_id.ANY_ID_RE tried the old -NNN form first in an unanchored search, so an all-digit session hash (e.g. 4654) matched as RQ-YYYYMMDD-465 and the real RQ-...-4654-NN ids were never counted as claimed -- it re-offered RQ-20261113-4654-01 already on main. Hash form first + (?!\\d) on the old form; self-test cases added."
+}
