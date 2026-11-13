@@ -43,12 +43,14 @@ power:
   effect_units: metric
   sd: 0.5
   design: paired
-  alpha: 0.0056
+  alpha: 0.01
   power: 0.8
-  basis: 'INFERRED, not measured: the book is the 4076 committed corpus trades (counted 2026-11-13 from the trades.jsonl files); hold net_r sd
-    over them is 1.47 R (measured), and the per-trade paired difference action - hold is assumed about 0.5 R because the action touches only the
-    post-trigger part of a trade. At alpha 0.0056 (Bonferroni over 9) and power 0.8 a paired mean difference of about 0.028 R/trade is detectable,
-    below the 0.05 R R1 bar. Trades with no candles or no path are excluded and counted; V1''s n_floor 39 governs.'
+  basis: 'INFERRED, not measured: the book is the 4076 committed corpus trades (counted 2026-11-13 from the trades.jsonl files); hold net_r sd over them
+    is 1.47 R (measured), and the per-trade paired difference action - hold is assumed about 0.5 R because the action touches only the post-trigger part
+    of a trade. At alpha 0.0056 (Bonferroni over 9) and power 0.8 a paired mean difference of about 0.028 R/trade is detectable, below the 0.05 R R1 bar.
+    Trades with no candles or no path are excluded and counted; V1''s n_floor 39 governs. POWER-BLOCK ALPHA: 0.01 is declared because research_queue tabulates
+    only 0.10 / 0.05 / 0.01 (an untabulated alpha is refused, not interpolated); the RULE still grades at the Bonferroni bar 0.9944 (alpha 0.0056), unchanged.
+    At 0.0056 the required n is ~1,303 (z 2.77) vs ~1,168 at 0.01, both below expected_n.'
   feasibility:
     source: none
     accrual_basis: Replays committed corpora and candles; nothing accrues.
