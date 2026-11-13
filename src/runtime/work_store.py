@@ -545,6 +545,14 @@ class WorkStore:
             at = _now()
             item.update(due_at=compute_due_at(item, now=at), version=prior["version"] + 1,
                         updated_at=at, updated_by=by)
+            # WORK-ROW-AGE-STALE: an item imported from a checklist row carries the row's OWN
+            # updated_at/updated_by in `extra`, which every row reader serves (SPA Work page,
+            # attention_watch, blocker_watch, work_digest). Only the item-level stamp moved on a
+            # write, so rows read days old (MANAGER-VM-DIRECT-OPS: 2026-11-05 served vs 2026-11-12
+            # stored). Moving the row's stamp with the write keeps store, export and files equal.
+            ex = item.get("extra")
+            if isinstance(ex, dict) and "updated_at" in ex:
+                item["extra"] = dict(ex, updated_at=at, updated_by=by)
             self._write_item(conn, item, insert=False)
             if op == "note":
                 patch: Any = {"note": note}
