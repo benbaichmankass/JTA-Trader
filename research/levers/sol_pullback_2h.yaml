@@ -7,66 +7,62 @@ books:
 - bybit_1
 baseline:
   record: comms/strategy_evidence/sol_pullback_2h.json
-  net_r: 6.9287
-  n: 17
+  net_r: 3.1859
+  n: 34
   fidelity: faithful
   rule_verdict: pass
 attribution:
   read_state: measured
-  n: 17
-  net_r: 6.929
-  gross_r: 7.996
-  cost_r: 1.067
-  cost_share_of_gross: 0.133
+  n: 34
+  net_r: 3.186
+  gross_r: 5.248
+  cost_r: 2.062
+  cost_share_of_gross: 0.393
   verdict_hint: gross edge survives cost
   entry_quality:
-    mean_mfe_r: 1.174
-    share_mfe_ge_1r: 0.588
-    n_with_mfe: 17
+    mean_mfe_r: 1.026
+    share_mfe_ge_1r: 0.441
+    n_with_mfe: 34
   exit_capture:
-    median_net_over_mfe_winners: 1.05
-    n_winners: 8
-    losers_that_reached_1r_mfe: 2
+    median_net_over_mfe_winners: 1.039
+    n_winners: 12
+    losers_that_reached_1r_mfe: 4
   by_year:
     '2025':
-      n: 4
-      net_r: -1.839
-      gross_r: -1.692
+      n: 3
+      net_r: -2.316
+      gross_r: -2.122
     '2026':
-      n: 13
-      net_r: 8.768
-      gross_r: 9.688
+      n: 31
+      net_r: 5.502
+      gross_r: 7.37
   by_direction:
     short:
-      n: 17
-      net_r: 6.929
-      gross_r: 7.996
+      n: 34
+      net_r: 3.186
+      gross_r: 5.248
   by_exit_reason:
     stop:
-      n: 7
-      net_r: -7.353
-      gross_r: -7.0
+      n: 17
+      net_r: -17.975
+      gross_r: -17.0
     take_profit:
-      n: 7
-      net_r: 15.064
-      gross_r: 15.534
+      n: 10
+      net_r: 21.453
+      gross_r: 22.035
     timeout:
-      n: 1
-      net_r: 0.375
-      gross_r: 0.471
-    trail_stop:
       n: 2
-      net_r: -1.158
-      gross_r: -1.009
+      net_r: 0.209
+      gross_r: 0.301
+    trail_stop:
+      n: 5
+      net_r: -0.501
+      gross_r: -0.088
   by_adx_at_entry:
-    30-40:
-      n: 8
-      net_r: 0.904
-      gross_r: 1.431
-    '>=40':
-      n: 9
-      net_r: 6.025
-      gross_r: 6.565
+    unknown:
+      n: 34
+      net_r: 3.186
+      gross_r: 5.248
 manifest:
   entry: tested
   exit: tested
