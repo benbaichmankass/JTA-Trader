@@ -1,7 +1,7 @@
 # Hand-authored 2026-11-12 by lane TRADEIFY-FUTURES-FRONTIER (Tier 1). ITERATION unit, authored from the written diagnosis of RQ-20261112-09d2-01's FAIL. Decision rule registered BEFORE any run. Gates this adds or changes: none.
 id: RQ-20261112-09d2-05
 title: 'ITERATION 1 of the Tradeify-futures ORB (fail on proxies): on REAL CME MNQ 5m history, does MNQ_OR15 clear the same Stage-0 bar, deflated for having been picked from 6 cells?'
-status: blocked
+status: queued
 cadence: once
 theme: new_strategy_prop
 priority: 2
@@ -61,12 +61,12 @@ intervention_controls:
   not_applicable: an offline backtest; nothing is applied
 compute: cpu_light
 routing:
-  needs_trainer_resident_data: false
+  needs_trainer_resident_data: true
   needs_gpu: false
   peak_memory_gb: 2.0
   est_minutes: 10
   basis: The proxy run took ~1 minute for 6 cells.
-  why_runner: CPU.
+  why_runner: 'Trainer: the IB per-contract shard (data/ibkr_datasets/market_raw_percontract/MNQ/5m/v020) is synced there by sync_trainer_data.sh (#25298); CPU only.'
 value:
   usd_at_stake_per_month: 1500
   confidence: 0.1
@@ -83,8 +83,11 @@ related:
 - RQ-20261112-09d2-01
 - FUT-CME-INTRADAY-HIST
 what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
-blocked_on:
-- kind: work_item
-  ref: FUT-CME-INTRADAY-HIST
-  what: a real CME MNQ 5m continuous series from IB's free historical data (reqHistoricalData via ict-ib-gateway; operator 2026-11-12, free sources only) and a --source flag on tradeify_futures_fit.py that reads it
-  clears_when: the series lands; then git-mv to research/queue/ with run.command (rule unchanged)
+run:
+  workflow: research-script-run-trainer.yml
+  command: [python3, scripts/research/tradeify_futures_fit.py, --stage, stage0, --source, ibkr, --ibkr-percontract,
+    'MNQ=data/ibkr_datasets/market_raw_percontract/MNQ/5m/v020/data.jsonl', --cells, MNQ_OR15, --unit, '{unit}', --out,
+    '{out_dir}']
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261112-09d2-05
