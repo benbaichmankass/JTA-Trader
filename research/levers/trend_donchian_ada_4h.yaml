@@ -1908,6 +1908,7 @@ levers:
       reading: every tested value is worse than the baseline
 units:
 - RQ-20261101-e5b1-11
+- RQ-20261113-f251-06
 levers_tested:
 - family: prop-stack fit (account sizing vs firm DD limits and the prop cost stack)
   varied: prop cost stack (fee 8 / slip 3 / funding 5 bps), 3 prop accounts x 2 arms x 2 windows, 5 seeds x 1000 lives
@@ -1931,3 +1932,25 @@ levers_tested:
     R vs TP +85 R; 21 of 71 stops had reached 1R MFE. Loss is regime/side-concentrated edge near zero, not sizing alone.'
   tested_at_power: false
   unit: RQ-20261101-e5b1-11
+- family: side_filter
+  varied: side_filter both vs long-only, forming bar from Binance 1m, window 2025-11-13..2026-11-12, full cost stack
+  response:
+    verdict: fail
+    run: '43483009044'
+    baseline:
+      arm: A
+      n: 55
+      net_r: -3.3545
+      folds_positive: 2/4
+    arms:
+    - side_filter: long
+      n: 27
+      net_r: 1.8843
+      folds_positive: 2/4
+      max_drawdown_r: 4.1773
+    reading: 'long-only turns the leg positive (+1.88R, +5.24R vs both sides, DD 4.2 vs 10.2) but 2/4 folds (needs 3): improvement without a Stage-0
+      edge'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261113-f251-06
+  lever_family: direction

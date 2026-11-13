@@ -1950,6 +1950,7 @@ levers:
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
 units:
 - RQ-20261101-e5b1-12
+- RQ-20261113-f251-07
 levers_tested:
 - family: prop-stack fit (account sizing vs firm DD limits and the prop cost stack)
   varied: prop cost stack, 3 prop accounts x 2 arms x 2 windows, 5 seeds x 1000 lives
@@ -1971,3 +1972,24 @@ levers_tested:
     +7.1, 2025 +17.4, 2026 -10.6 R; stops -76 R vs TP +88 R. Edge positive but CI spans zero and 2026 is losing: not separable from zero at n=138.'
   tested_at_power: false
   unit: RQ-20261101-e5b1-12
+- family: side_filter
+  varied: side_filter both vs long-only, forming bar from Binance 1m, window 2025-11-13..2026-11-12, full cost stack
+  response:
+    verdict: fail
+    run: '43483014959'
+    baseline:
+      arm: A
+      n: 57
+      net_r: -16.1778
+      folds_positive: 1/4
+    arms:
+    - side_filter: long
+      n: 26
+      net_r: -4.0917
+      folds_positive: 2/4
+      max_drawdown_r: 10.3058
+    reading: 'long-only cuts the loss (-4.09R vs -16.18R) but stays negative: both sides lose on this window'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261113-f251-07
+  lever_family: direction
