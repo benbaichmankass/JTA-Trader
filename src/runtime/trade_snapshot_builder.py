@@ -253,6 +253,8 @@ def requeue_ib_candle_partials(conn: sqlite3.Connection, ib_symbols: Optional[se
 
 def _requeue_candle_partials(conn: sqlite3.Connection, name: str, syms: set,
                              now: Optional[datetime]) -> Optional[int]:
+    # data-wiring: bookkeeping sidecar in trade_chart_snapshots.db, NOT a source of truth -- one row per one-off
+    # snapshot migration (name, when, rows touched) so it runs once; no history to backfill (absent = not yet run).
     conn.execute(f"CREATE TABLE IF NOT EXISTS main.{MIGRATIONS_TABLE} (name TEXT PRIMARY KEY, applied_at TEXT, "
                  "rows INTEGER)")
     if conn.execute(f"SELECT 1 FROM main.{MIGRATIONS_TABLE} WHERE name = ?", (name,)).fetchone():
