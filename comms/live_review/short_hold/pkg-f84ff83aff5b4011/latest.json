@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-13T21:50:00Z",
- "bar_close": "2026-11-13T21:55:00Z",
- "built_at": "2026-11-13T21:55:40Z",
+ "bar": "2026-11-13T21:55:00Z",
+ "bar_close": "2026-11-13T22:00:00Z",
+ "built_at": "2026-11-13T22:00:42Z",
  "closed": false,
  "order_package_id": "pkg-f84ff83aff5b4011",
  "packet": {
@@ -139,13 +139,13 @@
      "MGC",
      "short",
      "mgc_pullback_1d",
-     2.86
+     2.83
     ],
     [
      "ETHUSDT",
      "short",
      "eth_pullback_prop_2h",
-     0.47
+     0.447
     ],
     [
      "QQQ",
@@ -169,25 +169,25 @@
      "ADAUSDT",
      "short",
      "ada_pullback_2h",
-     1.71
+     1.67
     ],
     [
      "ETHUSDT",
      "short",
      "trend_donchian_eth_4h",
-     0.484
+     0.486
     ],
     [
      "SOLUSDT",
      "short",
      "ict_scalp_sol_15m",
-     0.431
+     0.512
     ],
     [
      "SOLUSDT",
      "short",
      "sol_pullback_2h",
-     0.863
+     0.842
     ],
     [
      "MHG",
@@ -205,7 +205,7 @@
      "XRPUSDT",
      "short",
      "xrp_pullback_2h",
-     1.01
+     0.959
     ],
     [
      "GLD",
@@ -241,21 +241,14 @@
      "ETHUSDT",
      "short",
      "eth_pullback_2h",
-     0.47
+     0.447
     ]
    ],
    "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
    "chart": {
-    "atr": 546.664,
+    "atr": 548.243,
     "bars_note": "[epoch_s, open, high, low, close], closed bars only, oldest first",
     "bars_ohlc": [
-     [
-      1794546000,
-      68544.0,
-      68843.1,
-      67468.4,
-      68106.7
-     ],
      [
       1794549600,
       68106.7,
@@ -360,42 +353,55 @@
       69096.0,
       68830.0,
       68888.1
+     ],
+     [
+      1794603600,
+      68888.1,
+      68888.1,
+      68047.0,
+      68368.1
      ]
     ],
-    "last_close": 68888.1,
-    "since_entry": null,
+    "last_close": 68368.1,
+    "since_entry": {
+     "bars": 1,
+     "high": 68888.1,
+     "high_dist_atr": 0.95,
+     "low": 68047.0,
+     "low_dist_atr": -0.59
+    },
     "swings": {
      "highs": [
       {
-       "bars_ago": 3,
-       "dist_atr": 0.41,
+       "bars_ago": 4,
+       "dist_atr": 1.36,
        "px": 69113.1
       },
       {
-       "bars_ago": 7,
-       "dist_atr": 2.38,
+       "bars_ago": 8,
+       "dist_atr": 3.32,
        "px": 70187.0
       },
       {
-       "bars_ago": 13,
-       "dist_atr": 0.84,
+       "bars_ago": 14,
+       "dist_atr": 1.79,
        "px": 69349.9
       }
      ],
      "lows": [
       {
-       "bars_ago": 5,
-       "dist_atr": -1.49,
+       "bars_ago": 6,
+       "dist_atr": -0.54,
        "px": 68073.3
       },
       {
-       "bars_ago": 15,
-       "dist_atr": -2.6,
+       "bars_ago": 16,
+       "dist_atr": -1.64,
        "px": 67468.4
       },
       {
-       "bars_ago": 29,
-       "dist_atr": 4.24,
+       "bars_ago": 30,
+       "dist_atr": 5.18,
        "px": 71205.3
       }
      ]
@@ -623,10 +629,10 @@
    "r_to_target": null
   },
   "generator": {
-   "head": "c18f77d2cb",
+   "head": "6d2e200323",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-13T21:56:07Z",
+  "info_cutoff_at": "2026-11-13T22:01:32Z",
   "leg": "claude_desk",
   "mechanics": {
    "evidence": "package sl 69960.0 / tp 67468.4 agree with every readable account",
@@ -656,10 +662,6 @@
    {
     "field": "context.funding",
     "reason": "Bybit public funding API is geo-blocked from session networks and no read-only diag route carries funding_now; needs a diag route"
-   },
-   {
-    "field": "context_v3.chart.since_entry",
-    "reason": "package open time not in the journal reads"
    }
   ],
   "order_package_id": "pkg-f84ff83aff5b4011",
@@ -684,31 +686,24 @@
   "priced_options": null,
   "priced_options_state": "evidence_missing",
   "regime": {
-   "adx_now": 41.87,
+   "adx_now": 41.6513,
    "atr_now_over_entry": null,
    "cell_entry": null,
    "cell_now": null,
    "trend_now": "trending"
   },
-  "review_id": "LR-20261113T2155Z-pkg-f84ff83aff5b4011",
+  "review_id": "LR-20261113T2200Z-pkg-f84ff83aff5b4011",
   "short_hold": {
-   "atr": 168.02142857142775,
-   "bar": "2026-11-13T21:50:00Z",
-   "bar_close": "2026-11-13T21:55:00Z",
+   "atr": 167.80714285714203,
+   "bar": "2026-11-13T21:55:00Z",
+   "bar_close": "2026-11-13T22:00:00Z",
    "entry": 69033.7,
-   "mark": 68399.0,
-   "minutes_held": 83.8,
-   "open_r_at_mark": 0.6852,
+   "mark": 68368.1,
+   "minutes_held": 88.9,
+   "open_r_at_mark": 0.7186,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 68888.1,
-     "high": 68914.7,
-     "low": 68830.0,
-     "open": 68914.7,
-     "t": "2026-11-13T20:55:00Z"
-    },
     {
      "close": 68608.7,
      "high": 68888.1,
@@ -785,6 +780,13 @@
      "low": 68201.0,
      "open": 68201.0,
      "t": "2026-11-13T21:50:00Z"
+    },
+    {
+     "close": 68368.1,
+     "high": 68413.6,
+     "low": 68317.8,
+     "open": 68399.0,
+     "t": "2026-11-13T21:55:00Z"
     }
    ],
    "risk_per_unit": null,
@@ -803,25 +805,18 @@
    "tp": 67468.4
   }
  },
- "packet_sha": "abbf2a6d14d12b499e8ab165111633b978b608f83c68e12824b4f3e881c148e6",
+ "packet_sha": "d78a943fe7ec61772f54f8e2dc472fe3d252e5e6684ee5d2464d97a3115fdcd2",
  "short_hold": {
-  "atr": 168.02142857142775,
-  "bar": "2026-11-13T21:50:00Z",
-  "bar_close": "2026-11-13T21:55:00Z",
+  "atr": 167.80714285714203,
+  "bar": "2026-11-13T21:55:00Z",
+  "bar_close": "2026-11-13T22:00:00Z",
   "entry": 69033.7,
-  "mark": 68399.0,
-  "minutes_held": 83.8,
-  "open_r_at_mark": 0.6852,
+  "mark": 68368.1,
+  "minutes_held": 88.9,
+  "open_r_at_mark": 0.7186,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 68888.1,
-    "high": 68914.7,
-    "low": 68830.0,
-    "open": 68914.7,
-    "t": "2026-11-13T20:55:00Z"
-   },
    {
     "close": 68608.7,
     "high": 68888.1,
@@ -898,6 +893,13 @@
     "low": 68201.0,
     "open": 68201.0,
     "t": "2026-11-13T21:50:00Z"
+   },
+   {
+    "close": 68368.1,
+    "high": 68413.6,
+    "low": 68317.8,
+    "open": 68399.0,
+    "t": "2026-11-13T21:55:00Z"
    }
   ],
   "risk_per_unit": null,
