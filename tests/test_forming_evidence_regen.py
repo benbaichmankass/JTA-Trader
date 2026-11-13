@@ -48,11 +48,11 @@ def test_backtest_pullback_accepts_the_1m_cli():
     assert "--minutes-1m-csv" in r.stdout and "--decision-session" in r.stdout
 
 
-def test_plan_scopes_binance_forming_trend_and_pullback_only():
+def test_plan_scopes_forming_trend_and_pullback_legs():
     rows = {r["leg"]: r for r in fer.plan(["eth_pullback_2h", "trend_donchian_sol_prop", "slv_trend_1h", "no_such_leg"])}
     assert not rows["eth_pullback_2h"].get("skip") and rows["eth_pullback_2h"]["harness"] == "pullback"
     assert not rows["trend_donchian_sol_prop"].get("skip") and rows["trend_donchian_sol_prop"]["data_start"]
-    assert "yahoo" in rows["slv_trend_1h"]["skip"]
+    assert "intraday" in rows["slv_trend_1h"]["skip"]
     assert rows["no_such_leg"]["skip"]
 
 
@@ -61,3 +61,65 @@ def test_self_test():
                        cwd=str(REPO), capture_output=True, text=True, timeout=300)
     assert r.returncode == 0, r.stdout[-3000:] + r.stderr[-3000:]
     assert "self-test passed" in r.stdout
+
+
+# --- CRYPTO-FORMING-EQUITY-REGEN: the US-equity daily branch ------------------------------------------------------
+
+def _fake_alpaca(days=300):
+    import numpy as np
+    import pandas as pd
+    mins, daily, p = [], [], 100.0
+    for d in pd.bdate_range(end="2026-11-12", periods=days):
+        t0 = pd.Timestamp(d.date()).tz_localize("America/New_York") + pd.Timedelta(minutes=570)
+        c = p * np.exp(np.cumsum(np.full(390, 1e-5)))
+        for i in range(0, 390, 30):  # a sparse minute set is enough for the fetch path
+            mins.append({"t": (t0 + pd.Timedelta(minutes=i)).tz_convert("UTC").isoformat(),
+                         "o": c[i], "h": c[i], "l": c[i], "c": c[i], "v": 1})
+        daily.append({"t": (pd.Timestamp(d.date()).tz_localize("America/New_York") + pd.Timedelta(hours=4))
+                      .tz_convert("UTC").isoformat(), "o": c[0], "h": c[::30].max(), "l": c[::30].min(), "c": c[-30], "v": 1})
+        p = c[-1]
+
+    class FC:
+        key_kind, calls, n_429 = "fake", 0, 0
+
+        def bars(self, symbols, timeframe, start, end, feed="iex", adjustment="split"):
+            self.calls += 1
+            assert feed == "iex"  # the live feed
+            return {symbols[0]: daily if timeframe == "1Day" else mins}
+    return FC
+
+
+def test_equity_daily_fetch_writes_one_source_and_reads_the_window_off_the_data(tmp_path):
+    row = fer.plan(["spy_trend_long_1d"])[0]
+    assert row["mode"] == "us_equity_daily" and not row.get("skip")
+    err = fer.fetch(row, tmp_path, tmp_path / "log", {}, "2026-11-13", client_factory=_fake_alpaca())
+    assert err is None, err
+    assert row["decision_session"] == "us_equity"
+    assert Path(row["data_csv"]).exists() and Path(row["m1_csv"]).exists()
+    # 365-day record window back from the pinned end; the window is what the CSV holds, not the request
+    assert row["window_used"][0].startswith("2025-11-1") and row["window_used"][1].startswith("2026-11-12")
+    assert row["source_meta"]["feed"] == "iex"
+
+
+def test_equity_regen_forwards_the_us_session(tmp_path, monkeypatch):
+    seen = {}
+
+    def fake_run(argv, log):
+        seen["argv"] = argv
+        return 1
+    monkeypatch.setattr(fer, "_run", fake_run)
+    row = {"leg": "spy_trend_long_1d", "data_csv": "d.csv", "m1_csv": "m.csv", "folds": 4, "decision_session": "us_equity"}
+    assert fer.regen(row, tmp_path, tmp_path / "log").get("error")
+    a = seen["argv"]
+    assert a[a.index("--decision-session") + 1] == "us_equity"
+    assert a[a.index("--minutes-1m-csv") + 1] == "m.csv"
+    row.pop("decision_session")
+    fer.regen(row, tmp_path, tmp_path / "log")
+    assert "--decision-session" not in seen["argv"]  # crypto: no session
+
+
+def test_plan_refuses_futures_and_intraday_equity_with_a_reason():
+    rows = {r["leg"]: r for r in fer.plan(["mgc_trend_1h", "mes_trend_long_1d", "slv_trend_1h", "gld_pullback_1d"])}
+    assert "futures" in rows["mgc_trend_1h"]["skip"] and "futures" in rows["mes_trend_long_1d"]["skip"]
+    assert "intraday" in rows["slv_trend_1h"]["skip"]
+    assert rows["gld_pullback_1d"]["mode"] == "us_equity_daily" and not rows["gld_pullback_1d"].get("skip")

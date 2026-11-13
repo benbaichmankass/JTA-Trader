@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Research tooling + a new pre-run queue unit, stacked on #25751. Diff inside the Tier-1 surface: scripts/research/forming_evidence_regen.py (US-equity daily branch: Alpaca iex 1Day + 1Min via equity_1m_source, --decision-session us_equity; futures and intraday-equity legs refused with a reason; optional --n-floor), tests/test_forming_evidence_regen.py, docs/research/RESEARCH-CAPABILITY-INDEX.md, and research/queue/RQ-20261113-f251-02.yaml -- a NEW pre-run unit (id == stem, registered_before_run: true, no last_dispatched_at, no result) per RQ-NEW-UNIT-SELF-LAND. AM-ML decision 1 (2026-11-13 13:32Z). No src/, config or order-path file; no comms/strategy_evidence/ record written. Revert: git revert."
+}
