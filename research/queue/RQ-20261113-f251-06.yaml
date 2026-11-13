@@ -1,0 +1,166 @@
+id: RQ-20261113-f251-06
+title: 'trend_donchian_ada_4h direction lever: long-only vs both sides on the forming bar over the record window -- does dropping the losing side clear Stage 0?'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+question: 'trend_donchian_ada_4h fails RULE-D1 on the forming bar (f251-01: -3.35R over n 55). The diagnosis puts the loss on one side (short -8.4R, long +5.0R).
+  With side_filter=long over the record window 2025-11-13..2026-11-12 (forming, Binance 1m), does the long-only arm pass Stage 0 and beat both-sides net of the full
+  cost stack?'
+why_this_matters: Demo-floor leg, one iteration from its diagnosis (row DEMO-FLOOR-ITER-20261113). The direction family (side_filter) is untested on its lever map;
+  the tested direction_filter (di / slope) is a regime-direction gate, not a side cut. The forming replay now carries an arm's side_filter (this PR's forming_bar_entries
+  fix -- before it the arm silently equalled the baseline).
+power:
+  expected_n: 82
+  min_detectable_effect: 0.5
+  effect_units: sd
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: baseline n 55 (f251-01); the long-only arm about half (~27). At n ~27 a one-sample test detects ~0.54 sd at 80% power -- a coarse test, disclosed;
+    the n floor is 20.'
+  sd: null
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window (the leg's own record window); nothing accrues; Binance / Binance-vision 1m covers it at run time.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+run:
+  commands:
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - trend_donchian_ada_4h
+    - --arm
+    - A=
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2025-11-13T00:00:00'
+    - --end
+    - '2026-11-12T20:00:00'
+    - --days
+    - '400'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '20'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/arm_A'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - trend_donchian_ada_4h
+    - --arm
+    - L=side_filter=long
+    - --grade
+    - stage0
+    - --baseline
+    - L
+    - --start
+    - '2025-11-13T00:00:00'
+    - --end
+    - '2026-11-12T20:00:00'
+    - --days
+    - '400'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '20'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/arm_L'
+  - - python3
+    - scripts/research/timeframe_lever_grade.py
+    - --out
+    - '{out_dir}'
+    - --leg
+    - trend_donchian_ada_4h
+    - --baseline-tf
+    - A
+    - --family
+    - direction
+    - --prefix
+    - arm_
+    - --tf
+    - A
+    - --tf
+    - L
+  timeout_minutes: 180
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261113-f251-06
+decision_rule:
+  id: RULE-DFI-TREND-DONCHIAN-ADA-4H-DIR-20261113
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  statistic: exit_lever_ablation --grade stage0 --forming-1m-fetch, one run per arm (A = config-exact, L = side_filter=long); timeframe_lever_grade.py --family direction
+    over the two.
+  rule: Registered 2026-11-13 on row DEMO-FLOOR-ITER-20261113 before any run of this arm set (no arm was run on this window before registration; the one local smoke
+    (2026-05-01..11-12, A vs L, a tooling check) is disclosed in iteration.diagnosis). Each arm runs as its OWN Stage-0 run through exit_lever_ablation --grade stage0
+    on the same pinned window, feed and full cost stack (fee + slippage + funding from resolve_run_costs); timeframe_lever_grade.py grades them together. PASS iff
+    some candidate passes its own Stage 0 (net_r > 0, n >= 20, >= 3/4 folds positive) AND its net_r exceeds the baseline arm's net_r. FAIL iff every candidate is
+    graded (n >= 20) and none passes both. INDETERMINATE otherwise (a run wrote no verdict, the baseline did not run, a candidate under its n floor). Arms, window,
+    folds and floors are fixed now.
+  what_it_does_not_do: Changes no config, roster, order or evidence record. A PASS is a data-backed Tier-3 proposal routed to the manager via AM-ML (the leg stays
+    on the demo floor until then); a FAIL is recorded on the lever map and the next untested family is picked.
+  baseline: trend_donchian_ada_4h config-exact, forming, both sides, re-run in this unit on the same corpus (f251-01 read -3.35R over n 55).
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: a demo-floor (Stage-1 paper) leg failing RULE-D1 on its forming record; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+ml_consumer:
+  not_applicable: 'Not an ML unit: a harness lever test on a rule-based leg.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: trend_donchian_ada_4h
+  subject_kind: strategy_leg
+  from_result: RQ-20261113-f251-01
+  verdict_read: fail
+  diagnosis: 'Gross -0.5R. By side: short -8.4R, long +5.0R. Disclosed smoke (2026-05-01..11-12, local tooling check of the arm carry): A n27 -3.35R, L n15 +0.87R.'
+  hypothesis: The short side carries the loss; the long-only arm clears Stage 0.
+  search: 'Lever map: entry donchian, ~25 exit params, filters (adx_min 25, adx_max, vol_skip, cooldown), structure_exit, direction_filter di/slope, skip_hours --
+    all tested, none adopted beyond config. Direction (side_filter) UNTESTED -> chosen: the only family the diagnosis points at that is untested. Timeframe untested,
+    ranked next.'
+  attempt: 1
+  due_by: '2026-11-20'
+  levers:
+  - direction
+  lever_arms:
+  - family: direction
+    param: side_filter
+    values:
+    - long
+    baseline_value: both
+  map_entries:
+  - research/levers/trend_donchian_ada_4h.yaml
+related:
+- RQ-20261113-f251-01
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): ONE lever chosen from the leg''s own R diagnosis (scripts/research/leg_r_diagnosis.py),
+  rule registered before the run against the leg''s own record, net of the full cost stack, graded once on its fixed window.'
+follow_up: On the verdict a session writes the tests to research/levers/trend_donchian_ada_4h.yaml. PASS -> Tier-3 proposal to the manager via AM-ML; FAIL -> the
+  next untested lever family from the map (row DEMO-FLOOR-ITER-20261113).

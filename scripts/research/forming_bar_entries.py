@@ -378,13 +378,35 @@ def cli_inputs_csv(csv_path: str, strategy_name: str) -> Tuple[pd.DataFrame, dic
 
 
 def block_with_arm_params(block: dict, *, donchian: int, atr_period: int,
-                          atr_stop_mult: float, long_only: bool) -> dict:
+                          atr_stop_mult: float, long_only: bool, side_filter: Optional[str] = None) -> dict:
     """The YAML block with the harness arm's ENTRY params, so the forming
     decision replays the arm under test (the unit reads donchian/atr_period/
     atr_stop_mult from the block; long_only from ``cfg``). ``long_only`` only
-    ever narrows: an arm cannot widen a long-only leg."""
+    ever narrows: an arm cannot widen a long-only leg.
+
+    ``side_filter`` (DEMO-FLOOR-ITER, 2026-11-13): in forming mode the harness switches its own side gate OFF and the
+    replay reads the builder's side_filter from THIS block, so an arm's ``--side-filter long|short`` was silently
+    dropped (every direction arm equalled its baseline). A ``long``/``short`` arm now reaches the replay. Narrow-only,
+    like long_only: ``both`` (the CLI default) leaves the block's own value, so an arm cannot widen a YAML side gate."""
     out = dict(block)
     out.update(donchian=int(donchian), atr_period=int(atr_period), atr_stop_mult=float(atr_stop_mult))
     if long_only:
         out["long_only"] = True
+    if side_filter in ("long", "short"):
+        out["side_filter"] = side_filter
+    return out
+
+
+def block_with_entry_gates(block: dict, *, side_filter: Optional[str] = None, adx_min: Optional[float] = None,
+                           adx_max: Optional[float] = None) -> dict:
+    """Pullback twin of the side_filter carry above, plus the regime gate: htf_pullback_trend_2h's order_package
+    applies adx_min / adx_max itself (from the block), and in forming mode the harness's own ADX gate is off, so an
+    arm's ``--adx-min`` / ``--adx-max`` must reach the block or it is a dead arm. Narrow-only: None leaves the block."""
+    out = dict(block)
+    if side_filter in ("long", "short"):
+        out["side_filter"] = side_filter
+    if adx_min is not None:
+        out["adx_min"] = float(adx_min)
+    if adx_max is not None:
+        out["adx_max"] = float(adx_max)
     return out
