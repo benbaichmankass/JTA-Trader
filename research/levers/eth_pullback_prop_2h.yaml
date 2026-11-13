@@ -7,74 +7,66 @@ books:
 - bybit_1
 baseline:
   record: comms/strategy_evidence/eth_pullback_prop_2h.json
-  net_r: -9.249
-  n: 65
-  fidelity: approximate
+  net_r: -6.574
+  n: 81
+  fidelity: faithful
   rule_verdict: fail
 attribution:
   read_state: measured
-  n: 65
-  net_r: -9.249
-  gross_r: -4.922
-  cost_r: 4.327
-  cost_share_of_gross: 0.879
+  n: 81
+  net_r: -6.574
+  gross_r: -1.226
+  cost_r: 5.348
+  cost_share_of_gross: 4.362
   verdict_hint: 'no gross edge: the loss is entry/exit, not cost'
   entry_quality:
-    mean_mfe_r: 1.043
-    share_mfe_ge_1r: 0.446
-    n_with_mfe: 65
+    mean_mfe_r: 1.099
+    share_mfe_ge_1r: 0.444
+    n_with_mfe: 81
   exit_capture:
-    median_net_over_mfe_winners: 0.432
-    n_winners: 19
-    losers_that_reached_1r_mfe: 10
+    median_net_over_mfe_winners: 0.494
+    n_winners: 25
+    losers_that_reached_1r_mfe: 11
   by_year:
     '2025':
-      n: 10
-      net_r: -3.365
-      gross_r: -2.865
+      n: 8
+      net_r: -2.703
+      gross_r: -2.281
     '2026':
-      n: 55
-      net_r: -5.884
-      gross_r: -2.057
+      n: 73
+      net_r: -3.871
+      gross_r: 1.055
   by_direction:
     long:
-      n: 31
-      net_r: -3.565
-      gross_r: -1.461
+      n: 40
+      net_r: -10.959
+      gross_r: -8.279
     short:
-      n: 34
-      net_r: -5.684
-      gross_r: -3.462
+      n: 41
+      net_r: 4.385
+      gross_r: 7.053
   by_exit_reason:
     stop:
-      n: 21
-      net_r: -22.169
-      gross_r: -21.0
+      n: 20
+      net_r: -21.111
+      gross_r: -20.0
     take_profit:
-      n: 6
-      net_r: 14.773
-      gross_r: 15.15
+      n: 7
+      net_r: 17.249
+      gross_r: 17.616
     timeout:
-      n: 1
-      net_r: 0.139
-      gross_r: 0.238
+      n: 2
+      net_r: 1.126
+      gross_r: 1.233
     trail_stop:
-      n: 37
-      net_r: -1.992
-      gross_r: 0.69
+      n: 52
+      net_r: -3.838
+      gross_r: -0.074
   by_adx_at_entry:
-    20-30:
-      n: 28
-      net_r: -0.852
-      gross_r: 1.259
-    30-40:
-      n: 21
-      net_r: -3.635
-      gross_r: -2.314
-    '>=40':
-      n: 16
-      net_r: -4.762
-      gross_r: -3.867
+    unknown:
+      n: 81
+      net_r: -6.574
+      gross_r: -1.226
 manifest:
   entry: tested
   exit: tested

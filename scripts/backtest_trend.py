@@ -2168,6 +2168,10 @@ def main(argv: List[str]) -> int:
                                                 atr_stop_mult=args.atr_stop_mult,
                                                 long_only=args.long_only,
                                                 side_filter=args.side_filter)
+            # ...and the vol-at-entry gate the trend order_package applies from the block (forming mode zeroes the
+            # harness's own copy, so an arm's --vol-skip-above-pctl would otherwise equal its baseline).
+            _block = _fbe.block_with_entry_gates(_block, vol_skip_above_pctl=args.vol_skip_above_pctl,
+                                                 vol_skip_below_pctl=args.vol_skip_below_pctl)
         else:
             _m1, _block = _fbe.cli_inputs(args.klines_1m_dir, args.strategy_name)
         decision_kw = dict(decision_bar="forming", decision_1m=_m1, decision_cfg=_block,

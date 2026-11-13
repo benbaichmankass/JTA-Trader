@@ -1827,7 +1827,9 @@ def main(argv: List[str]) -> int:
             # --side-filter / --adx-min / --adx-max must reach the block the unit reads (narrow-only; see
             # forming_bar_entries.block_with_entry_gates).
             _block = _fbe.block_with_entry_gates(_block, side_filter=args.side_filter, adx_min=args.adx_min,
-                                                 adx_max=args.adx_max)
+                                                 adx_max=args.adx_max,
+                                                 vol_skip_above_pctl=args.vol_skip_above_pctl,
+                                                 vol_skip_below_pctl=args.vol_skip_below_pctl)
         else:
             _m1, _block = _fbe.cli_inputs(args.klines_1m_dir, args.strategy_name)
         decision_kw = dict(decision_bar="forming", decision_1m=_m1, decision_cfg=_block,

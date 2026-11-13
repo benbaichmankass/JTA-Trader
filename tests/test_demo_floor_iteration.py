@@ -77,6 +77,19 @@ def test_forming_equity_fetch_refuses_a_non_equity_leg():
     assert r.returncode == 2 and "US ETF 1d leg" in r.stderr
 
 
+def test_vol_skip_arm_reaches_the_forming_block_narrow_only():
+    b = fbe.block_with_entry_gates({"pullback_frac": 0.5}, vol_skip_above_pctl=0.8)
+    assert b["vol_skip_above_pctl"] == 0.8 and "vol_skip_below_pctl" not in b
+    kept = fbe.block_with_entry_gates({"vol_skip_above_pctl": 0.9}, vol_skip_above_pctl=0.0)
+    assert kept["vol_skip_above_pctl"] == 0.9          # 0 (the CLI default) never clears a YAML gate
+
+
+def test_confirmation_window_grade_self_test_covers_the_guard():
+    r = subprocess.run([sys.executable, str(REPO / "scripts" / "research" / "timeframe_lever_grade.py"), "--self-test"],
+                       cwd=str(REPO), capture_output=True, text=True, timeout=120)
+    assert r.returncode == 0 and "loses on the confirmation window -> fail" in r.stdout
+
+
 def test_regime_cell_lever_grade_self_test_and_walkforward_flags():
     r = subprocess.run([sys.executable, str(REPO / "scripts" / "research" / "regime_cell_lever_grade.py"), "--self-test"],
                        cwd=str(REPO), capture_output=True, text=True, timeout=120)

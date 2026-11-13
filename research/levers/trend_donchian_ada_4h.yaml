@@ -7,62 +7,66 @@ books:
 - bybit_1
 baseline:
   record: comms/strategy_evidence/trend_donchian_ada_4h.json
-  net_r: -6.3445
-  n: 43
+  net_r: -3.3544
+  n: 55
   fidelity: faithful
   rule_verdict: fail
 attribution:
   read_state: measured
-  n: 43
-  net_r: -6.345
-  gross_r: -4.26
-  cost_r: 2.084
-  cost_share_of_gross: 0.489
+  n: 55
+  net_r: -3.354
+  gross_r: -0.528
+  cost_r: 2.826
+  cost_share_of_gross: 5.352
   verdict_hint: 'no gross edge: the loss is entry/exit, not cost'
   entry_quality:
-    mean_mfe_r: 0.994
-    share_mfe_ge_1r: 0.512
-    n_with_mfe: 43
+    mean_mfe_r: 1.006
+    share_mfe_ge_1r: 0.527
+    n_with_mfe: 55
   exit_capture:
-    median_net_over_mfe_winners: 1.028
-    n_winners: 13
-    losers_that_reached_1r_mfe: 9
+    median_net_over_mfe_winners: 1.088
+    n_winners: 17
+    losers_that_reached_1r_mfe: 12
   by_year:
     '2025':
-      n: 10
-      net_r: -1.062
-      gross_r: -0.618
+      n: 1
+      net_r: 1.559
+      gross_r: 1.648
     '2026':
-      n: 33
-      net_r: -5.283
-      gross_r: -3.642
+      n: 54
+      net_r: -4.913
+      gross_r: -2.176
   by_direction:
     long:
-      n: 21
-      net_r: -6.859
-      gross_r: -5.89
+      n: 24
+      net_r: 5.033
+      gross_r: 6.218
     short:
-      n: 22
-      net_r: 0.514
-      gross_r: 1.63
+      n: 31
+      net_r: -8.387
+      gross_r: -6.746
   by_exit_reason:
     stop:
-      n: 28
-      net_r: -29.278
-      gross_r: -28.0
+      n: 32
+      net_r: -33.454
+      gross_r: -32.0
     take_profit:
-      n: 13
-      net_r: 24.94
-      gross_r: 25.645
+      n: 17
+      net_r: 35.768
+      gross_r: 36.752
+    timeout:
+      n: 1
+      net_r: -0.873
+      gross_r: -0.841
     trail_stop:
-      n: 2
-      net_r: -2.007
-      gross_r: -1.905
+      n: 5
+      net_r: -4.796
+      gross_r: -4.439
   by_adx_at_entry:
     unknown:
-      n: 43
-      net_r: -6.345
-      gross_r: -4.26
+      n: 55
+      net_r: -3.354
+      gross_r: -0.528
 manifest:
   entry: tested
   exit: tested
