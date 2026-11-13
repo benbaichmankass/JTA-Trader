@@ -398,7 +398,8 @@ def block_with_arm_params(block: dict, *, donchian: int, atr_period: int,
 
 
 def block_with_entry_gates(block: dict, *, side_filter: Optional[str] = None, adx_min: Optional[float] = None,
-                           adx_max: Optional[float] = None) -> dict:
+                           adx_max: Optional[float] = None, vol_skip_above_pctl: Optional[float] = None,
+                           vol_skip_below_pctl: Optional[float] = None) -> dict:
     """Pullback twin of the side_filter carry above, plus the regime gate: htf_pullback_trend_2h's order_package
     applies adx_min / adx_max itself (from the block), and in forming mode the harness's own ADX gate is off, so an
     arm's ``--adx-min`` / ``--adx-max`` must reach the block or it is a dead arm. Narrow-only: None leaves the block."""
@@ -409,4 +410,11 @@ def block_with_entry_gates(block: dict, *, side_filter: Optional[str] = None, ad
         out["adx_min"] = float(adx_min)
     if adx_max is not None:
         out["adx_max"] = float(adx_max)
+    # vol-at-entry gate (DEMO-FLOOR-ITER round 2, 2026-11-13): both the pullback and the trend order_package apply
+    # vol_skip_above_pctl / vol_skip_below_pctl from the block, and forming mode zeroes the harness's own copies, so an
+    # arm's --vol-skip-above-pctl was a dead arm. A positive arm value reaches the block; 0 / None leaves the YAML's.
+    if vol_skip_above_pctl:
+        out["vol_skip_above_pctl"] = float(vol_skip_above_pctl)
+    if vol_skip_below_pctl:
+        out["vol_skip_below_pctl"] = float(vol_skip_below_pctl)
     return out

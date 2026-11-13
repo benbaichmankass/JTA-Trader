@@ -45,7 +45,7 @@ def read_tf(out: Path, tf: str, prefix: str = "tf_") -> Optional[Dict[str, Any]]
 
 
 def grade(rows: Dict[str, Optional[Dict[str, Any]]], baseline_tf: str, leg: str,
-          family: str = "timeframe") -> Dict[str, Any]:
+          family: str = "timeframe", confirm: Optional[Dict[str, Optional[Dict[str, Any]]]] = None) -> Dict[str, Any]:
     base = rows.get(baseline_tf)
     records = []
     for tf, r in rows.items():
@@ -76,6 +76,30 @@ def grade(rows: Dict[str, Optional[Dict[str, Any]]], baseline_tf: str, leg: str,
     passing = [tf for tf, r in cands.items() if r.get("verdict") == "pass"
                and isinstance(r.get("net_r"), (int, float)) and r["net_r"] > base["net_r"]]
     n_total = sum(r["n"] for r in rows.values() if r and isinstance(r.get("n"), int))
+    if passing and confirm is not None:
+        # CONFIRMATION WINDOW (AM-ML multiple-testing guard, 2026-11-13 18:50Z): successive levers on one window fork the
+        # paths, so a pass must ALSO hold on a window no diagnosis or lever pick read -- the equal-length window before
+        # the record window: there the candidate's net_r must be > 0 AND exceed the baseline arm's.
+        cb = confirm.get(baseline_tf)
+        if cb is None or cb.get("net_r") is None or any(confirm.get(t) is None or confirm[t].get("net_r") is None
+                                                       for t in passing):
+            return {"verdict": "indeterminate", "read_state": "measured", "n": None, "population": pop,
+                    "note": f"{passing} pass on the record window but a confirmation-window run wrote no verdict",
+                    "records": records}
+        for t in list(passing):
+            records.append({"leg": f"{leg}@{t}#confirm", "verdict": "pass" if (confirm[t]["net_r"] > 0
+                            and confirm[t]["net_r"] > cb["net_r"]) else "fail", "read_state": "measured",
+                            "n": confirm[t].get("n"), "net_r": confirm[t]["net_r"], "role": "confirmation",
+                            "population": f"{leg} at {t}: the equal-length window before the record window",
+                            "note": f"confirmation net_r {confirm[t]['net_r']} vs baseline {cb['net_r']}"})
+        held = [t for t in passing if confirm[t]["net_r"] > 0 and confirm[t]["net_r"] > cb["net_r"]]
+        if not held:
+            n_total = sum(r["n"] for r in rows.values() if r and isinstance(r.get("n"), int))
+            return {"verdict": "fail", "read_state": "measured", "n": n_total, "population": pop,
+                    "note": (f"{passing} pass on the record window but none holds on the confirmation window "
+                             f"(baseline net_r {cb['net_r']}: " + "; ".join(f"{t} {confirm[t]['net_r']}" for t in passing)
+                             + ") -- the record-window pass does not replicate"), "records": records}
+        passing = held
     if passing:
         best = max(passing, key=lambda t: cands[t]["net_r"])
         return {"verdict": "pass", "read_state": "measured", "n": n_total, "population": pop, "best_tf": best,
@@ -99,6 +123,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--tf", action="append", default=[], help="every timeframe run, baseline included")
     ap.add_argument("--family", default="timeframe", help="the lever family named in the population (timeframe / direction / filter)")
     ap.add_argument("--prefix", default="tf_", help="per-run directory prefix under --out (default tf_)")
+    ap.add_argument("--confirm-prefix", default=None,
+                    help="per-run directory prefix of the CONFIRMATION-window runs (the equal-length window before the "
+                         "record window); a record-window pass must also hold there (net_r > 0 and > the baseline's)")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
@@ -108,7 +135,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     if a.baseline_tf not in a.tf:
         ap.error("--baseline-tf must be one of the --tf values")
     out = Path(a.out)
-    v = grade({tf: read_tf(out, tf, a.prefix) for tf in a.tf}, a.baseline_tf, a.leg, a.family)
+    conf = {tf: read_tf(out, tf, a.confirm_prefix) for tf in a.tf} if a.confirm_prefix else None
+    v = grade({tf: read_tf(out, tf, a.prefix) for tf in a.tf}, a.baseline_tf, a.leg, a.family, confirm=conf)
     (out / "verdict.json").write_text(json.dumps(v, indent=2, default=str), encoding="utf-8")
     print(json.dumps({k: v[k] for k in ("verdict", "read_state", "n", "note")}, default=str))
     return 0
@@ -138,6 +166,15 @@ def _self_test() -> int:
     g = grade({"A": r("A", "fail", -3.35), "L": r("L", "fail", 0.9, n=40)}, "A", "L", family="direction")
     check("a direction arm that beats a losing baseline but fails its own Stage 0 -> fail", g["verdict"] == "fail"
           and "direction lever family" in g["population"])
+    ok = {"A": r("A", "fail", -6.0), "S": r("S", "pass", 4.0, n=40)}
+    g = grade(ok, "A", "L", family="direction", confirm={"A": r("A", "fail", -2.0), "S": r("S", "fail", 1.5, n=30)})
+    check("a record-window pass that also holds on the confirmation window -> pass", g["verdict"] == "pass")
+    g = grade(ok, "A", "L", family="direction", confirm={"A": r("A", "fail", -2.0), "S": r("S", "fail", -0.5, n=30)})
+    check("a record-window pass that loses on the confirmation window -> fail", g["verdict"] == "fail")
+    g = grade(ok, "A", "L", family="direction", confirm={"A": r("A", "fail", 3.0), "S": r("S", "fail", 1.0, n=30)})
+    check("confirmation net_r below the baseline's confirmation net_r -> fail", g["verdict"] == "fail")
+    g = grade(ok, "A", "L", family="direction", confirm={"A": r("A", "fail", -2.0), "S": None})
+    check("a missing confirmation run -> indeterminate, never pass", g["verdict"] == "indeterminate")
     import tempfile
     with tempfile.TemporaryDirectory() as td:
         (Path(td) / "arm_L").mkdir()
