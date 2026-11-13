@@ -350,7 +350,7 @@ def run(args: argparse.Namespace, candle_loader: Optional[Callable[..., Any]] = 
     recs, excluded = build_trades(corpora, action=args.action, triggers=triggers, cfg=cfg, opts=opts,
                                   candle_loader=candle_loader)
     pop = (f"{len(recs)} trades priced of {sum(len(r) for _, _, r in corpora)} in {len(corpora)} committed "
-           f"Stage-0 corpora ({', '.join(l for l, _, _ in corpora)}); action {args.action}; triggers {triggers}")
+           f"Stage-0 corpora ({', '.join(lbl for lbl, _, _ in corpora)}); action {args.action}; triggers {triggers}")
     base = {"schema": "ltr_action_trigger_s0/v1", "action": args.action, "triggers": triggers, "options": opts,
             "computed_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "population": pop,
             "excluded": dict(excluded), "by_leg_priced": dict(Counter(r["leg"] for r in recs)),
