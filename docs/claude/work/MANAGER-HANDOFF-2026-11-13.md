@@ -41,6 +41,12 @@ Contract: `.claude/skills/manager/SKILL.md`. You are a **rotation manager**; rea
   - For any Tier-2/3 or real-money config PR, wait for the FULL pytest-run, not just `guards`; only failures that reproduce on main are acceptable. (#25671 merged on guards alone and turned main red.)
   - Merge dashboard PRs only on AM-UI's approval message, never on a lane's own "ready" status. (#246 merged with a race.)
   - Batch merges that restart the trader.
+  - A Tier-3 `hold` landed under the 2026-09-27 data-backed authorization MUST carry
+    `recorded_decision` (`kind: standing_authorization`, `ref` citing 2026-09-27, `evidence` = the record path) in
+    its `.github/pr-landing/*.json`, or `pr-landing-hold-merge-alarm` pages the operator (#25780, 2026-11-13). The
+    resolver reads only repo files, checklist JSON and pipeline ids, so a row that lives only in the work store
+    does not resolve: `ref` names the row AND a repo path (the unit yaml or evidence dir). Check with
+    `scripts/ops/pr_landing_hold_alarm.py` before merging (manager 2026-11-13a, option (b)).
 
 ## 2. Live sessions
 
