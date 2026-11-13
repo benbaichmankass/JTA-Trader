@@ -1193,15 +1193,33 @@ def backpressure(research_names: Dict[str, str], *, max_inflight: int, max_queue
 STARVATION_HOURS = 0.75
 
 
+#: INFRA STARVATION FLOOR (manager 2026-11-12 22:33Z, RESEARCH-DISPATCH-INFRA-STARVE). The infra yield (limits.infra_yield_at)
+#: deferred EVERY fire from 17:43Z to 22:33Z (~5 h, 0 units): ~6 system-actions + a phone-executor-apk run kept >= 2 fresh infra
+#: runs queued, so the yield was effectively always met. A yield that can defer forever is a halt (Prime Directive 7), so once
+#: nothing has been dispatched for this long the infra block is lifted for EXACTLY ONE fire per cycle (the top-scored unit),
+#: mirroring the repo-queued floor. 0 disables it. Config: limits.infra_starvation_hours.
+INFRA_STARVATION_HOURS = 2.0
+
+
 def starvation_override(pressure: Dict[str, Any], jobs: List[Any], now: datetime,
-                        after_hours: float) -> Optional[str]:
-    """Lift a ``repo_queued`` block when no unit has been dispatched for ``after_hours``.
+                        after_hours: float, infra_after_hours: float = 0.0) -> Optional[str]:
+    """Lift a ``repo_queued`` block when no unit has been dispatched for ``after_hours``, or an ``infra`` (yield) block
+    when none has been dispatched for ``infra_after_hours`` (0 = the infra yield is never lifted).
 
     Mutates ``pressure`` (block -> None, ``starvation_override`` -> the reason) and returns the reason, or None
-    when the block stays. Only ``block_kind == "repo_queued"`` is liftable. The age is the newest
-    ``last_dispatched_at`` stamp across the queue; no stamp at all counts as starved."""
-    if pressure.get("block_kind") != "repo_queued" or after_hours <= 0:
+    when the block stays. Only ``block_kind`` ``repo_queued`` / ``infra`` is liftable (an unreadable ``gh`` and the
+    in-flight cap never are). The age is the newest ``last_dispatched_at`` stamp across the queue; no stamp at all
+    counts as starved. Either lift allows exactly ONE fire this cycle (the caller caps max_inflight)."""
+    kind = pressure.get("block_kind")
+    if kind == "repo_queued":
+        threshold = after_hours
+    elif kind == "infra":
+        threshold = infra_after_hours
+    else:
         return None
+    if threshold <= 0:
+        return None
+    after_hours = threshold
     newest: Optional[datetime] = None
     for j in jobs:
         ts = _parse_ts(j.raw.get("last_dispatched_at"))
@@ -1211,7 +1229,7 @@ def starvation_override(pressure: Dict[str, Any], jobs: List[Any], now: datetime
     if age_h is not None and age_h < after_hours:
         return None
     since = "no dispatch stamp on record" if age_h is None else f"nothing dispatched for {age_h:.1f} h"
-    reason = (f"starvation floor: {since} (>= {after_hours:g} h) -- lifting the repo-queued block "
+    reason = (f"starvation floor: {since} (>= {after_hours:g} h) -- lifting the {kind.replace('_', '-')} block "
               f"({pressure['block']}) for ONE fire this cycle")
     pressure["starvation_override"] = reason
     pressure["block"] = None
@@ -1567,7 +1585,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"backpressure: {pressure.get('detail') or pressure.get('block')}", file=sys.stderr)
         _starve_h = args.starvation_hours if args.starvation_hours is not None else \
             float((cfg or {}).get("limits", {}).get("starvation_hours", STARVATION_HOURS))
-        _floor = starvation_override(pressure, jobs, now, _starve_h)
+        _infra_starve_h = float((cfg or {}).get("limits", {}).get("infra_starvation_hours", INFRA_STARVATION_HOURS))
+        _floor = starvation_override(pressure, jobs, now, _starve_h, _infra_starve_h)
         if _floor:
             print(f"::warning::research-queue-dispatch {_floor}", file=sys.stderr)
             max_inflight = int(pressure.get("inflight_research") or 0) + 1   # exactly one fire

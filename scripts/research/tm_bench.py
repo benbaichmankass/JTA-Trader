@@ -84,6 +84,7 @@ from __future__ import annotations
 import argparse
 import gzip
 import hashlib
+import itertools
 import json
 import os
 import sys
@@ -541,15 +542,57 @@ def truncate_trade(t: dict, m: int) -> dict:
     return dict(t, bars=m + 2, **{k: np.r_[np.asarray(t[k], float)[:m + 1], np.nan] for k in _PER_BAR if k in t})
 
 
+SIG_CHANNELS = ("t_day", "c_r", "peak_r")       # time-augmented in-trade path: bars held / 24, close in R, running peak in R
+SIG_DEPTH = 3
+SIGNATURE = [f"sig{lvl}_" + "".join(str(i) for i in idx)
+             for lvl in range(1, SIG_DEPTH + 1)
+             for idx in itertools.product(range(len(SIG_CHANNELS)), repeat=lvl)]
+
+
+def signature_features(t: dict) -> np.ndarray:
+    """FRONTIER-Q-SIGNATURE-INTRADE path-signature block (Chevyrev & Kormilitzin, arXiv 1603.03788): the truncated (depth 3)
+    signature of the time-augmented in-trade path p_k = (k / 24, c_r[k], peak_r[k]) over bars 0..s, one row per decision state
+    (exit row excluded, the R1 row order). Built incrementally by Chen's identity, S(0..s) = S(0..s-1) (x) exp(dp_s), so every
+    value at state s is a function of bars 0..s only (the same truncation test as path_state). A NaN increment contributes 0.
+    3 channels x depth 3 = 3 + 9 + 27 = 39 columns, all order-aware summaries of the path (areas, ordering of up/down moves)."""
+    n = t["bars"] - 1
+    d = len(SIG_CHANNELS)
+    if n <= 0:
+        return np.zeros((0, len(SIGNATURE)))
+    c, pk = np.asarray(t["c_r"], float), np.asarray(t["peak_r"], float)
+    P = np.c_[np.arange(len(c), dtype=float) / 24.0, c, pk]
+    s1, s2, s3 = np.zeros(d), np.zeros((d, d)), np.zeros((d, d, d))
+    out = np.zeros((n, len(SIGNATURE)))
+    for s in range(n):
+        if s > 0:
+            dp = P[s] - P[s - 1]
+            dp = np.where(np.isfinite(dp), dp, 0.0)
+            dd = np.multiply.outer(dp, dp)
+            s3 = s3 + np.multiply.outer(s2, dp) + np.multiply.outer(s1, dd / 2.0) + np.multiply.outer(dd, dp) / 6.0
+            s2 = s2 + np.multiply.outer(s1, dp) + dd / 2.0
+            s1 = s1 + dp
+        out[s] = np.r_[s1, s2.ravel(), s3.ravel()]
+    return out
+
+
+FEATURE_BLOCKS = ("path_state", "signature", "path_state+signature")
+
+
+def block_feature_names(block: Optional[str]) -> List[str]:
+    parts = (block or "").split("+")
+    return (PATH_STATE if "path_state" in parts else []) + (SIGNATURE if "signature" in parts else [])
+
+
 def add_feature_block(ev: List[dict], trades: List[dict], block: Optional[str]) -> None:
     """Append the block's columns to every state's X1 AFTER the leg fixed effects (B2 reads X1[:, 4:7]; unchanged)."""
     if not block:
         return
-    if block != "path_state":
-        raise ValueError(f"unknown feature block {block!r}; valid: path_state")
+    if block not in FEATURE_BLOCKS:
+        raise ValueError(f"unknown feature block {block!r}; valid: {', '.join(FEATURE_BLOCKS)}")
+    fns = [f for name, f in (("path_state", path_state_features), ("signature", signature_features)) if name in block.split("+")]
     for e, t in zip(ev, trades):
         if e["n"]:
-            e["X1"] = np.c_[e["X1"], path_state_features(t)]
+            e["X1"] = np.c_[(e["X1"], *[f(t) for f in fns])]
 
 
 def _fit_lgbm(X: np.ndarray, y: np.ndarray, seed: int):
@@ -1082,7 +1125,7 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
             "label": {"kind": "full" if horizon is None else "horizon", "horizon_bars": horizon,
                       "note": None if horizon is None else "policy arms are scored on the horizon label: Stage A is the read; "
                               "arm deltas are not net-of-cost policy values"},
-            "features": fpp.R1 + ["leg_fixed_effects"] + (PATH_STATE if feature_block == "path_state" else []), "arms": arms, "_labs": labs, "_oracle": oracle_ceiling, "_trades": T}
+            "features": fpp.R1 + ["leg_fixed_effects"] + block_feature_names(feature_block), "arms": arms, "_labs": labs, "_oracle": oracle_ceiling, "_trades": T}
 
 
 def stage_a_folds(calib: Optional[Dict[str, Any]], n_folds: int, sc_pass: bool) -> Tuple[str, str]:
@@ -1270,6 +1313,16 @@ def selfcheck(verbose: bool = True) -> Dict[str, Any]:
         leak_worst, _ = _trunc_worst(_leaky)
         checks.append(("path_state: positive control -- a feature reading bar s+1 FAILS the truncation test", leak_worst > 0,
                        f"leaky max |diff| {leak_worst}"))
+        worst_sg, n_sg = _trunc_worst(signature_features)
+        checks.append(("signature: every feature at state s is unchanged when the trade is cut after bar s (causal)",
+                       worst_sg == 0.0 and n_sg > 0, f"{n_sg} truncations, max |diff| {worst_sg}"))
+        _line = {"bars": 4, "c_r": [0.0, 1.0, 2.0, 3.0], "peak_r": [0.0, 1.0, 2.0, 3.0]}
+        _sg = signature_features(_line)[-1]
+        _dp = np.array([2.0 / 24.0, 2.0, 2.0])            # a straight line: S = exp(total increment)
+        _ok = np.allclose(_sg[:3], _dp) and np.allclose(_sg[3:12], np.multiply.outer(_dp, _dp).ravel() / 2.0) \
+            and np.allclose(_sg[12:], np.multiply.outer(np.multiply.outer(_dp, _dp), _dp).ravel() / 6.0)
+        checks.append(("signature: Chen's identity -- a straight-line path's signature equals the tensor exponential of its increment",
+                       bool(_ok), f"{len(SIGNATURE)} columns"))
         fb_p, fb_n = res["synthetic-planted"]["calibration"]["folds_beating_null"], res["synthetic"]["calibration"]["folds_beating_null"]
         checks.append(("stage_a_folds: planted reads pass, driftless null reads fail",
                        stage_a_folds(res["synthetic-planted"]["calibration"], 6, True)[0] == "pass" and
@@ -1425,7 +1478,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--rule", choices=("reproduce", "s_offline", "stage_a_folds", "none"), default="none")
     ap.add_argument("--label", choices=("full", "horizon"), default="full", help="horizon: per-action value censored at --horizon bars")
     ap.add_argument("--horizon", type=int, default=None)
-    ap.add_argument("--feature-block", default=None, choices=("path_state",), help="append a feature block to X1 (RQ-20261101-78fc-04)")
+    ap.add_argument("--feature-block", default=None, choices=FEATURE_BLOCKS, help="append a feature block to X1 (path_state: RQ-20261101-78fc-04; signature: FRONTIER-Q-SIGNATURE-INTRADE)")
     ap.add_argument("--learners", default="lgbm_action_value,logit_action_value")
     ap.add_argument("--checkins", default=",".join(CHECKINS))
     ap.add_argument("--desk-policy", default=None, help="JSONL {state_id, action}: scored as B3")

@@ -45,7 +45,7 @@ def test_run_sends_on_system_target_and_failed_send_keeps_state(tmp_path):
 
 def test_probe_stale_heartbeat_is_breached_end_to_end():
     old = (NOW - timedelta(minutes=145)).isoformat()
-    p = ps.probe_phone_heartbeat(NOW, lambda _p: ("read", {"phone_heartbeat": {"at": old}}), lambda _a: "live")
+    p = ps.probe_phone_heartbeat(NOW, lambda _p: ("read", {"phone_heartbeat": {"at": old}}), lambda _a: "live", lambda _a: ["s"])
     assert p["status"] == "breached" and p["priority"] == "urgent"
     assert h.plan(p, {}, NOW)[0][0][0] == "urgent"
 
