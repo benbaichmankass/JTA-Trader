@@ -69,7 +69,7 @@ def split(trades: List[Dict[str, Any]], regime: str, sides: List[str]):
     return gated, kept
 
 
-def read_window(res_json: Path, workdir: Path, strategy: str) -> Optional[Dict[str, Any]]:
+def read_window(res_json: Path) -> Optional[Dict[str, Any]]:
     if not res_json.exists():
         return None
     r = json.loads(res_json.read_text(encoding="utf-8"))
@@ -156,7 +156,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         ap.error("missing one of --" + " / --".join(k.replace("_", "-") for k in need))
     sides = [s.strip() for s in a.sides.split(",") if s.strip()]
     rd, cd = Path(a.record_dir), Path(a.confirm_dir)
-    rec, conf = read_window(rd / "res.json", rd, a.leg), read_window(cd / "res.json", cd, a.leg)
+    rec, conf = read_window(rd / "res.json"), read_window(cd / "res.json")
     rt = ct = None
     try:
         if rec and not rec.get("error"):
