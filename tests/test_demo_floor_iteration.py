@@ -88,3 +88,12 @@ def test_confirmation_window_grade_self_test_covers_the_guard():
     r = subprocess.run([sys.executable, str(REPO / "scripts" / "research" / "timeframe_lever_grade.py"), "--self-test"],
                        cwd=str(REPO), capture_output=True, text=True, timeout=120)
     assert r.returncode == 0 and "loses on the confirmation window -> fail" in r.stdout
+
+
+def test_regime_cell_lever_grade_self_test_and_walkforward_flags():
+    r = subprocess.run([sys.executable, str(REPO / "scripts" / "research" / "regime_cell_lever_grade.py"), "--self-test"],
+                       cwd=str(REPO), capture_output=True, text=True, timeout=120)
+    assert r.returncode == 0 and "cosmetic cell" in r.stdout and "self-test passed" in r.stdout
+    h = subprocess.run([sys.executable, str(REPO / "scripts" / "research" / "regime_cell_walkforward.py"), "--help"],
+                       cwd=str(REPO), capture_output=True, text=True, timeout=120)
+    assert h.returncode == 0 and "--forming-1m-fetch" in h.stdout and "--start" in h.stdout and "--out-json" in h.stdout

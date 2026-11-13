@@ -1,0 +1,172 @@
+id: RQ-20261113-f251-17
+title: 'trend_donchian_1h regime off-cell lever: drop the chop (ADX<20) cell on the router''s 1-D axis, walk-forward-gated on the forming bar, with a confirmation
+  window'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+question: 'trend_donchian_1h fails RULE-D1 on the forming bar (f251-01: -10.57R over n 184). By ADX-14 at entry the loss sits in the chop cell (adx<20: -16.1R over
+  n 75; 20-25 +5.8R n42; >=25 -0.2R n67). Would a regime off-cell chop/trend_donchian_1h {long: off, short: off} -- the router''s live 1-D ADX axis, which always
+  enforces -- leave a book that passes Stage 0, with the dropped cell a stable, generalizing drag (regime_cell_walkforward *_stable_drag), and does it hold on the
+  2024-11-01..2025-10-31 confirmation window?'
+why_this_matters: 'Demo-floor leg; DEMO-FLOOR-ITER next lever, approved by AM-ML 2026-11-13 21:12Z after the census (#25845): timeframe FAILED (f251-05); direction
+  and symbol population are inapplicable; regime_gating is the untested family with the largest isolated loss. The off-cell is the ONLY live-capable form of an ADX
+  gate for this leg: the live trend unit has no entry adx_min (a closed-bar adx_min pass is backtest-only). Follows .claude/skills/regime-selectivity/SKILL.md: no
+  cosmetic cell, walk-forward before any Tier-3, axis fidelity.'
+power:
+  expected_n: 330
+  min_detectable_effect: 0.4
+  effect_units: sd
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: record window n 184 (chop n ~75 dropped -> ~110 kept); confirmation window of similar count. The walk-forward''s own per-side floor is n 10.'
+  sd: null
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand windows; nothing accrues; Binance + Binance-vision 1m cover both at run time.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+run:
+  commands:
+  - - python3
+    - scripts/research/regime_cell_walkforward.py
+    - --strategy
+    - trend_donchian_1h
+    - --regime
+    - chop
+    - --start
+    - '2025-11-01T00:00:00'
+    - --end
+    - '2026-10-31T23:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --forming-1m-fetch
+    - --workdir
+    - '{out_dir}/wf_record'
+    - --out-json
+    - '{out_dir}/wf_record/res.json'
+  - - python3
+    - scripts/research/regime_cell_walkforward.py
+    - --strategy
+    - trend_donchian_1h
+    - --regime
+    - chop
+    - --start
+    - '2024-11-01T00:00:00'
+    - --end
+    - '2025-10-31T23:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --forming-1m-fetch
+    - --workdir
+    - '{out_dir}/wf_confirm'
+    - --out-json
+    - '{out_dir}/wf_confirm/res.json'
+  - - python3
+    - scripts/research/regime_cell_lever_grade.py
+    - --out
+    - '{out_dir}'
+    - --leg
+    - trend_donchian_1h
+    - --regime
+    - chop
+    - --sides
+    - long,short
+    - --resample
+    - 1h
+    - --record-dir
+    - '{out_dir}/wf_record'
+    - --confirm-dir
+    - '{out_dir}/wf_confirm'
+    - --record-start
+    - '2025-11-01T00:00:00'
+    - --record-end
+    - '2026-10-31T23:00:00'
+    - --confirm-start
+    - '2024-11-01T00:00:00'
+    - --confirm-end
+    - '2025-10-31T23:00:00'
+    - --n-floor
+    - '30'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+  timeout_minutes: 300
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261113-f251-17
+decision_rule:
+  id: RULE-DFI3-TD1H-CHOP-OFFCELL-20261113
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  statistic: 'regime_cell_walkforward.py --regime chop --forming-1m-fetch on each pinned window (the forming replay, the router''s ADX-14 regime primitive); regime_cell_lever_grade.py
+    over both: the cell verdict (FOLD_PANEL 3/4/5 *_stable_drag) plus the gated book''s Stage 0.'
+  rule: 'AM-ML multiple-testing guard (2026-11-13 18:50Z) + the regime-selectivity skill. Prior lever attempts on the record window: RQ-20261113-f251-01 (forming
+    baseline, -10.57R), RQ-20261113-f251-05 (timeframe 2h / 4h -- FAIL); on the closed bar, entry (donchian 40/55, RQ-20261104-005), exit (trail_decay / trail_state
+    / be_floor / atr_stop_mult / tp_r) and filter (adx_min 25 -- backtest-only -- adx_max, vol_skip_above) tests on the lever map. The cell gates BOTH sides (registered
+    now, not picked from the result). PASS iff: R1 each gated side is *_stable_drag in the chop cell on the record window (pooled < 0 and strict majority-negative
+    under every FOLD_PANEL member -- no cosmetic cell); R2 the book WITHOUT the cell passes Stage 0 on the record window (net_r > 0, n >= 30, >= 3/4 equal calendar
+    folds positive -- the same fold bar as f251-05); R3 its net_r beats the ungated book''s; C1 on the confirmation window 2024-11-01..2025-10-31 the chop cell''s
+    net R is < 0; C2 there the gated book''s net_r is > 0 and above the ungated book''s. FAIL iff all are measured and one fails. INDETERMINATE when a run errored,
+    a gated side is under the walk-forward''s n floor, or the gated book is under n 30. Registered before any run on either window (one local tooling smoke on 2026-09-01..10-31,
+    n 30 / chop n 11, checked the forming walk-forward path and does not alter the rule).'
+  what_it_does_not_do: Changes no config, roster or order. A PASS is a Tier-3 regime_policy proposal (one 1-D cell, the existing router path -- not a new gate) routed
+    to the manager via AM-ML; the operator flips. A FAIL is recorded on the lever map; the next family is sizing_vs_cost, which waits for a measured venue cost.
+  baseline: trend_donchian_1h ungated, forming, re-run in this unit on both windows (f251-01 read -10.57R over n 184 on the record window).
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: a demo-floor (Stage-1 paper) leg failing RULE-D1 on its forming record; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+ml_consumer:
+  not_applicable: 'Not an ML unit: a harness lever test on a rule-based leg.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: trend_donchian_1h
+  subject_kind: strategy_leg
+  from_result: RQ-20261113-f251-05
+  verdict_read: fail
+  diagnosis: 'f251-01 forming ledger (scripts/research/leg_r_diagnosis.py): gross +15.4R, cost 26.0R; ADX-14 at entry: <20 -16.1R (n75), 20-25 +5.8R (n42), >=25 -0.2R
+    (n67); long -9.5R, short -1.0R. f251-05: a slower bar is worse. Census #25845: regime_gating is the untested family with the largest isolated loss. AXIS FIDELITY
+    (disclosed): the router stamps regime from ADX-14 on the LAST row of the leg''s live frame (the forming bar, intra-bar); regime_tag_emitted tags each trade from
+    the completed ADX of the bar at/just before entry -- the same primitive and cutoffs (chop < 20), measured on the completed rather than the intra-bar value.'
+  hypothesis: The chop cell is a stable, generalizing drag; without it the leg clears Stage 0 on both windows.
+  search: 'Census (#25845): timeframe TESTED FAIL; direction, symbol_set INAPPLICABLE; entry / exit / filter TESTED on the closed bar; regime_gating UNTESTED -> chosen
+    (AM-ML approved); sizing_vs_cost UNTESTED, waits for a measured venue cost; session ranked last.'
+  attempt: 2
+  due_by: '2026-11-20'
+  levers:
+  - regime_gating
+  lever_arms:
+  - family: regime_gating
+    param: regime_policy chop cell
+    values:
+    - 'long: off, short: off'
+    baseline_value: no cell
+  map_entries:
+  - research/levers/trend_donchian_1h.yaml
+related:
+- RQ-20261113-f251-05
+- RQ-20261113-f251-01
+practice_precedent: 'R5 + M10 and the regime-selectivity skill (rules 1-3): the cell must lose on its own and generalize out of sample (regime_cell_walkforward FOLD_PANEL),
+  measured on the bar the leg trades, registered before the run, with a confirmation window.'
+follow_up: On the verdict a session appends the test to research/levers/trend_donchian_1h.yaml. PASS -> Tier-3 regime_policy proposal (the cell + the walk-forward
+  evidence) to the manager via AM-ML, never a flip by a session. FAIL -> sizing_vs_cost once a venue cost is measured, else a lever-exhaustion note through AM-ML.

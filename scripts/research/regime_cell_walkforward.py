@@ -101,7 +101,8 @@ MIN_DIRECTION_TRADES = 10
 
 
 def run_cell(strategy: str, regime: str, folds: int, workdir: str, days: int,
-             vol: str | None = None, vol_labels: str | None = None) -> dict:
+             vol: str | None = None, vol_labels: str | None = None,
+             start: str | None = None, end: str | None = None, forming_1m_fetch: bool = False) -> dict:
     roster = rdm.load_roster()
     # Fall back to strategies.yaml so an ALREADY-CELLED strategy can still be
     # re-audited — authoring a cell pays it down out of coverage_debt, which used to
@@ -141,9 +142,34 @@ def run_cell(strategy: str, regime: str, folds: int, workdir: str, days: int,
     except Exception as e:  # noqa: BLE001
         out["error"] = f"fetch failed: {type(e).__name__}: {e}"
         return out
+    # PINNED WINDOW (DEMO-FLOOR-ITER, 2026-11-13): a unit's rule is registered on a fixed window (and a pre-window
+    # confirmation), so the trailing --days fetch is trimmed to [start, end] when both are given.
+    if start and end:
+        out["window"] = {"start": start, "end": end, "rows": rdm.trim_csv_to_window(csv, start, end, tf)}
+    # FORMING BAR (DEMO-FLOOR-ITER, 2026-11-13): a leg that decides on the forming bar must be walked forward on the
+    # trades it actually takes -- the harness forming replay from Binance-vision 1m over the window -- or the cell
+    # verdict grades a closed-bar population the leg never trades.
+    forming_1m = None
+    if forming_1m_fetch:
+        if feed.get("source") != "binance" or not (start and end):
+            out["error"] = "--forming-1m-fetch needs a binance feed and --start/--end"
+            return out
+        import pandas as pd
+        s1 = (pd.Timestamp(start) - pd.Timedelta(days=2)).strftime("%Y-%m-%d")
+        e1 = (pd.Timestamp(end) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+        import tempfile
+        # the 1m CSV goes to a temp dir, not the workdir: a unit's workdir sits under the uploaded {out_dir}
+        forming_1m = os.path.join(tempfile.mkdtemp(prefix="regime_cell_wf_1m_"), f"{sym}__1m.csv")
+        r1 = subprocess.run([sys.executable, os.path.join(REPO, "scripts/ops/fetch_backtest_candles.py"), "--symbol", sym,
+                             "--interval", "1", "--start-date", s1, "--end-date", e1, "--output", forming_1m,
+                             "--source", "binance_vision"], cwd=REPO, capture_output=True, text=True, check=False)
+        if r1.returncode != 0 or not os.path.exists(forming_1m):
+            out["error"] = f"1m fetch failed (exit {r1.returncode}): {(r1.stderr or '')[-300:]}"
+            return out
+        out["decision_bar"] = "forming"
 
     argv, faithful, omitted = rdm.build_harness_cmd(
-        strategy, cfg, harness, csv, feed["resample"], emit, jout)
+        strategy, cfg, harness, csv, feed["resample"], emit, jout, forming_1m=forming_1m)
     unreplayable = sorted(k for k in cfg if k in rdm._UNREPLAYABLE)
     if unreplayable:
         faithful = False
@@ -301,6 +327,11 @@ def main() -> int:
                          "(the verdict uses the fixed FOLD_PANEL, not this)")
     ap.add_argument("--days", type=int, default=730)
     ap.add_argument("--workdir", default="/tmp/regime_cell_wf")
+    ap.add_argument("--start", default=None, help="pin the window start (ISO); with --end trims the fetch to [start, end]")
+    ap.add_argument("--end", default=None, help="pin the window end (ISO)")
+    ap.add_argument("--forming-1m-fetch", action="store_true",
+                    help="replay the FORMING bar from Binance-vision 1m over [--start, --end] (a forming-decision leg)")
+    ap.add_argument("--out-json", default=None, help="also write the JSON result to this path")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
     if args.vol and not args.vol_labels:
@@ -309,7 +340,11 @@ def main() -> int:
         return 2
     os.makedirs(args.workdir, exist_ok=True)
     res = run_cell(args.strategy, args.regime, args.folds, args.workdir, args.days,
-                   vol=args.vol, vol_labels=args.vol_labels)
+                   vol=args.vol, vol_labels=args.vol_labels, start=args.start, end=args.end,
+                   forming_1m_fetch=args.forming_1m_fetch)
+    if args.out_json:
+        with open(args.out_json, "w", encoding="utf-8") as fh:
+            json.dump(res, fh, indent=2, default=str)
     if args.json:
         print(json.dumps(res))
         return 0
