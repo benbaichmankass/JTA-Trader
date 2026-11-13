@@ -236,5 +236,5 @@ For a record written before this change, the window is in
 - **What it lists:** an already-rostered slot whose record honestly reads `approximate`, because a lever it runs cannot be modelled yet.
 - **Conditions:** the slot is owned by a dated build row, and the entry expires.
 - **Effect:** no C5 verdict reads it, so every promotion stays fail-closed. Only the exactness test reads it, and that test fails on the expiry date.
-- **Current entry, the only one:** `alpaca_live` / `tqqq_trend_long_1d`. Row `EQ-FORMING-BAR-REPLAY`, expires 2026-11-27. The operator answered TQQQ-DECISION-BAR with "build_replay" on 2026-11-13 08:02Z, and the manager OKed this entry at ~09:27Z.
+- **Current entries: none.** The only entry ever made (`alpaca_live` / `tqqq_trend_long_1d`, row `EQ-FORMING-BAR-REPLAY`, manager OK 2026-11-13 ~09:27Z) was deleted the same day: `RQ-20261113-1449-01` run 43421052545 regenerated the record `faithful` on the forming-bar replay (`omitted_levers: []`).
 - **Adding an entry:** needs a manager OK.
