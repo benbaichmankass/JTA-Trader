@@ -1,0 +1,85 @@
+# Hand-authored 2026-11-13 by AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx), ordered by Manager Session 2026-11-11a (07:52Z: "GO ...
+# author the pre-registered MGC/MHG time-exit / trail-tighten unit"), from PAPER-STALE-MGC-MHG-REVIEW. Decision rule registered BEFORE
+# any arm of this unit ran. Gates this adds or changes: none.
+id: RQ-20261113-e44a-02
+title: 'Time exit or late trail-tighten on mgc_pullback_1d: selected on the earlier span of the leg''s GC=F daily history, does an exit at N
+  bars (20/30/40) or a 1.5xATR trail after 20 stalled bars beat the declared exit on a later span selection never saw, net of the full
+  cost stack?'
+status: queued
+cadence: once
+roadmap:
+- L-PROGRAMMES
+- M20
+theme: live_strategy
+programme: P3
+priority: 2
+kind: experiment
+origin: follow_up
+practice_precedent: 'T3 (net of the full cost stack); M20 exit-refinement (.claude/skills/exit-refinement): a lever is chosen on a
+  discovery span and read ONCE on a held-out span (exit_lever_ablation.py --grade holdout, the RQ-20261104-c6f1-0x design).'
+question: 'mgc_pullback_1d (ib_paper) holds trades far longer than its backtest: the live GC=F trade opened 2026-10-19 is 20 daily bars old while
+  the e55 evidence ledger''s longest GC=F trade lasted 69 days, and neither the live config nor the backtest has a time exit (the
+  harness timeout is 200 bars). PAPER-STALE-MGC-MHG-REVIEW (2026-11-13) found the evidence cannot say whether holding or exiting at
+  age is better: n 8 in that ledger and no time-exit arm ever tested. On 2018-06-01..2026-11-12 23:59 (GC=F, the window RQ-20261101-78fc-38
+  used: n 68 baseline trades), selected on discovery and read once on the held-out span, does a candidate beat the declared exit?'
+why_this_matters: 'A trade that has made several R with its stop near breakeven risks giving most of it back (MHG ~7R on 2026-11-13);
+  if a time exit or late tighten earns more net, the leg should carry it (a Tier-3 config change). If not, the hold is the evidence-backed
+  choice and the operator''s "halfway and flat" worry is answered with data.'
+lever_manifest:
+  variables:
+    arm: [A, T20, T30, T40, D20]
+  fixed: {window: '2018-06-01..2026-11-12 23:59', symbol: GC=F, folds: 4, holdout_frac: 0.25}
+  hypothesised_effect: capping the hold or tightening a stalled trail cuts late giveback by more than it cuts late runners
+power:
+  expected_n: 68
+  min_detectable_effect: 0.3
+  effect_units: net R per trade, held-out span
+  sd: 0.8
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED: sd is the PAIRED per-trade dR between an arm and A, not the trade-level R sd (~2): most trades are
+    identical across arms (a time exit or late tighten touches only trades that live past N bars), so the paired sd is far smaller;
+    0.8 R is a conservative guess. Required n ~56 over the window vs ~68 expected; the held-out span (~17 trades) is weaker, and
+    the rule fails closed (INDETERMINATE below the held-out floor of 15) rather than reading noise as a result.'
+  feasibility:
+    source: none
+    accrual_basis: 'replays yfinance daily history (GC=F / HG=F, uncapped for 1d, as RQ-20261101-78fc-38/39); nothing accrues.'
+decision_rule:
+  id: RULE-RQ20261113e44a02-TIME-EXIT-HOLDOUT
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --grade holdout on mgc_pullback_1d, window 2018-06-01..2026-11-12 23:59, net of the full cost stack the
+    harness resolves per venue (fees + slippage + funding; recorded per arm as cost_stack). Every arm runs once over the whole window; the
+    held-out boundary is fixed from A''s entry times before any outcome is read (latest 25%, grown to hold 15 of A''s entries, capped at
+    40%). Arms: A = the leg as declared; T20 / T30 / T40 = A plus --timeout-bars N; D20 = A with the trail tightened to 1.5 x ATR
+    after 20 bars without a new extreme (--trail-decay-stall-bars 20 --trail-decay-tight-mult 1.5).'
+  rule: 'ELIGIBLE on discovery iff n >= 30, net R > 0 and >= 3 of 4 discovery folds net-positive; the eligible arm with the highest
+    discovery net R is SELECTED (a tie goes to A). PASS iff (1) the selected arm is a candidate (T20/T30/T40/D20), not A; (2) its
+    held-out n >= 15 and held-out net R > 0; (3) on the SAME held-out span its net R >= A''s held-out net R. FAIL iff A is selected or
+    clause 2 or 3 fails. INDETERMINATE iff no arm is eligible or held-out n < 15. Not changed after any result.'
+  what_it_does_not_do: 'Changes no config: a PASS is the evidence record a Tier-3 PR for mgc_pullback_1d cites; places no order; says nothing about
+    the open trade''s own exit (the live position keeps its brackets).'
+run:
+  workflow: research-script-run.yml
+  command: [python3, scripts/research/exit_lever_ablation.py, --leg, mgc_pullback_1d, --arm, 'A=', --arm, 'T20=--timeout-bars=20',
+    --arm, 'T30=--timeout-bars=30', --arm, 'T40=--timeout-bars=40', --arm, 'D20=--trail-decay-stall-bars=20;--trail-decay-tight-mult=1.5',
+    --days, '3090', --start, '2018-06-01', --end, '2026-11-12 23:59', --grade, holdout, --baseline, A, --delta-r, '0', --folds, '4', --fold-majority,
+    '3', --n-floor, '30', --holdout-frac, '0.25', --holdout-min-trades, '15', --holdout-max-frac, '0.40', --research-unit, RQ-20261113-e44a-02, --out,
+    '{out_dir}']
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261113-e44a-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+intervention_controls:
+  not_applicable: a fixed exit RULE replay (time exit / stalled-trail tighten applied to every trade by the harness) graded against the declared exit A on a held-out span; no discretionary in-trade action is evaluated, and A is the hold-to-bracket control
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 40
+  why_runner: Fetches keyless public daily candles for a pinned window; reads no trainer data; CPU only.
+  basis: Estimate from RQ-20261101-78fc-38/39 (one arm, same leg and window) times five arms; the first run replaces it.
