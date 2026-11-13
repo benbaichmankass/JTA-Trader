@@ -19,9 +19,16 @@ L = importlib.util.module_from_spec(_spec)
 sys.modules["lrp"] = L  # dataclasses resolves annotations through sys.modules
 _spec.loader.exec_module(L)
 
-GOLD = {json.loads(f.read_text())["order_package_id"]: json.loads(f.read_text())
-        for f in (REPO / "comms/live_review/packets").glob("*.json")}
 NOW = datetime(2026, 10, 25, 16, 16, 30, tzinfo=timezone.utc)
+# The hand-built goldens are the packets of ONE review, the one at NOW (LR-20261025T1616Z-*). The directory
+# also holds every later production packet (20 for the MGC package alone, written by the live-review wake),
+# and several of those carry a moved level (MGC SL 4270.03 -> 4160.33 after the 2026-10-31 tighten). Keying
+# an unsorted glob("*.json") by package id let the LAST file in directory order win, which varies between
+# checkouts, so CI read a 4160 SL against the fixture's 4270 STP about 1 run in 3 and failed
+# test_mgc_ib_stop_and_target_match with 'mismatch' (CI-MGC-IB-STOP-TARGET-INTERMITTENT). Pin to the review.
+GOLDEN_REVIEW = f"LR-{NOW:%Y%m%dT%H%M}Z"
+GOLD = {json.loads(f.read_text())["order_package_id"]: json.loads(f.read_text())
+        for f in sorted((REPO / "comms/live_review/packets").glob(f"{GOLDEN_REVIEW}-*.json"))}
 # The goldens land with PR #20121 (the skill + comms/live_review/); until then the golden-dependent cases skip.
 needs_gold = pytest.mark.skipif(not GOLD, reason="comms/live_review/packets goldens not on this branch yet")
 ADA, MGC, ETH, GDX = "pkg-465a5d7d27644027", "pkg-011a7bf85ee54a6f", "pkg-2c3f338d9477499b", "pkg-23929c3f526440c3"
@@ -908,3 +915,14 @@ def test_no_carrying_account_is_could_not_look_not_a_vacuous_match():
     m = L._mechanics(s, view, [], 89.1, 78.96, "short", "SOLUSDT")[0]
     assert m["verdict"] == "could_not_look"
     assert "nothing compared" in m["evidence"]
+
+
+@needs_gold
+def test_goldens_are_the_pinned_review_not_a_later_packet():
+    """CI-MGC-IB-STOP-TARGET-INTERMITTENT: every golden comes from the review at NOW, whatever later packets for
+    the same package sit in the directory (and in whatever order the filesystem lists them)."""
+    assert all(g["review_id"].startswith(GOLDEN_REVIEW) for g in GOLD.values()), sorted(g["review_id"] for g in GOLD.values())
+    later = [f for f in (REPO / "comms/live_review/packets").glob(f"*-{MGC}.json")
+             if not f.name.startswith(GOLDEN_REVIEW)]
+    assert later, "the directory no longer holds a later MGC packet; this guard has nothing to guard"
+    assert GOLD[MGC]["state"]["sl"] == pytest.approx(4270.02857143)
