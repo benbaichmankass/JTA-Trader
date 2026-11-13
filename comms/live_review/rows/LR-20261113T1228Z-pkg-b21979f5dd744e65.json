@@ -1,0 +1,141 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261113T1228Z-pkg-b21979f5dd744e65",
+ "reviewed_at": "2026-11-13T12:42:00Z",
+ "order_package_id": "pkg-b21979f5dd744e65",
+ "trade_id": null,
+ "leg": "claude_desk",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "daily_floor",
+  "level": "2026-11-13",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-13T12:28:19Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_provenance": "unverified",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 8.45,
+  "tp": 8.05
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "mechanics": {
+  "evidence": "1 account(s) could not be read",
+  "verdict": "could_not_look"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.45,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold; the desk record stands. Opening (DD-20261113T1002Z-scan-1h-1): AVAX short 8.337, stop 8.45, TP 8.05, p 0.30, with the early-exit rule \"a 1h close holds above 8.42 or the crypto-wide short bias reverses\". The packet has no telemetry (open_r null) and no AVAX mark, so I cannot say whether that rule has fired: the latest 1h bar printed 8.377-8.445, its high 0.005 under the 8.45 stop and above the 8.42 line, and the rest of the crypto book is bouncing (ADA, SOL, ETH). That is the same signal as the desk exit rule, so p_target drops from 0.30 to 0.25, but with no mark I do not call it dead; the stop is within 0.5 ATR and owns the exit. First review of this package (chain_length 0)."
+ },
+ "forecast": {
+  "thesis": "Fade at the 8.409 swing high with the broader crypto book leaning short: the bounce across crypto printed 8.445 and is testing the 8.42 exit line, so I expect the 7.983-8.05 zone only if the 8.42 line holds on a 1h close",
+  "direction": "with_trade",
+  "target_px": 8.05,
+  "p_target": 0.25,
+  "invalidation_px": 8.42,
+  "horizon_bars": 8,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.since_entry high 8.445 low 8.377",
+   "desk_handoff.opening forecast target 8.05 inv 8.42 p 0.3",
+   "exit_plan sl 8.45 tp 8.05"
+  ]
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "mechanics_unread: bybit_open_orders unreachable from this lane; the desk position keeps its venue SL/TP",
+  "telemetry_absent: open_r/peak_r/bars_held null; AVAX mark not in the packet or the open telemetry rows, so R is not stated",
+  "priced_options: evidence_missing (no Stage-0 record for claude_desk, lvb NO_BACKTEST), so the call is judgement",
+  "correlated: bybit_1 holds 6 crypto shorts (ADA, SOL, ETH x3, AVAX desk) which are one crypto-beta bet; every one is under pressure from the same 4h bounce",
+  "calendar: none in the next 24h; funding not readable",
+  "packet_defect: priced_options evidence_missing 1/1",
+  "packet_defect: mechanics venue_read_unreachable 1/1",
+  "packet_defect: state.open_r context_null:state.open_r 1/1"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuMSFxvwPgnqM56W3J2",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [
+  {
+   "field": "priced_options",
+   "reason": "evidence_missing",
+   "count": 1,
+   "denominator": 1
+  },
+  {
+   "field": "mechanics",
+   "reason": "venue_read_unreachable",
+   "count": 1,
+   "denominator": 1
+  },
+  {
+   "field": "state.open_r",
+   "reason": "context_null:state.open_r",
+   "count": 1,
+   "denominator": 1
+  }
+ ],
+ "packet_sha": "656027d2277813610fe9c44c682e53cd62234252ccb572fa7ba2d8f2bdd58e69",
+ "handoff": {
+  "prior_decision_id": "DD-20261113T1002Z-scan-1h-1",
+  "verdict": "confirm",
+  "reason": null,
+  "read_state": "read"
+ }
+}

@@ -1,0 +1,152 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261113T1228Z-pkg-6534410f60b24067",
+ "reviewed_at": "2026-11-13T12:42:00Z",
+ "order_package_id": "pkg-6534410f60b24067",
+ "trade_id": null,
+ "leg": "trend_donchian_eth",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "r_milestone",
+  "level": 1.0,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-13T12:28:23Z",
+ "state": {
+  "atr_now_over_entry": 1.636,
+  "bars_held": 25,
+  "giveback_r": 1.7277,
+  "open_r": 1.7444,
+  "peak_provenance": "estimated",
+  "peak_r": 3.4721,
+  "regime_cell_entry": "trending/calm",
+  "regime_cell_now": null,
+  "sl": 1968.35,
+  "tp": 1822.723
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.636,
+  "bars_since_peak": 6,
+  "giveback_r": 1.7277,
+  "open_r": 1.7444,
+  "peak_r": 3.4721,
+  "r_to_stop": 0.2723,
+  "r_to_target": 3.6503
+ },
+ "mechanics": {
+  "evidence": "bybit_1: ETHUSDT is NETTED across 3 open packages on this account (per side) (this one + pkg-665b2dff5ef04889, pkg-8139db113a464c62); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone; 1 account(s) could not be read",
+  "verdict": "could_not_look"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 8,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 8,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261113T1228Z-pkg-6534410f60b24067.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.6,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. +1.74R (last_price 1958.5) after peaking +3.47R; the strategy stop 1968.35 is 0.27R above the mark and already locks about +1.47R, so a tighten would give up TP upside to save little and HOLD keeps the 1822.72 target alive (3.65R). Prior forecast (target 1894.1 inv 1941.68, p 0.55, 6x1h bars): 1894.1 did not retest; the 1941.68 invalidation was exceeded by the bounce to 1958.5, so that view held only in the stop, not in price. 3 closed bars against by 1 ATR (momentum_flip) and ATR 1.64x entry say the easy move is over: p_target cut from 0.55 to 0.25. The hold cell is thin (n=8 below floor 20), so this is judgement."
+ },
+ "forecast": {
+  "thesis": "4h trend down (ADX 55 prior) but 1h momentum flipped with ATR 1.64x entry; the stop at 1968.35 already locks +1.47R, so the remaining question is only whether 1894.1 retests first",
+  "direction": "with_trade",
+  "target_px": 1894.1,
+  "p_target": 0.25,
+  "invalidation_px": 1968.35,
+  "horizon_bars": 6,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.since_entry low 1894.1 high 2029.76",
+   "context.previous_review forecast target 1894.1 inv 1941.68",
+   "exit_plan sl 1968.35 tp 1822.72",
+   "state peak_r 3.47 giveback 1.73"
+  ]
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold cell n=8 below floor 20 (insufficient_n, mean not measured); close/tighten unpriced",
+  "mechanics_unread: bybit_open_orders unreachable from this lane; venue SL/TP could not be compared, so nothing here auto-applies; the package keeps its venue SL/TP",
+  "r_milestone: open_r 1.74 crossed +1R",
+  "momentum_flip: 3 closed bars against, net >= 1 ATR since 11:00Z",
+  "atr_ratio: now/entry 1.64 (above 1.5); regime cell at entry trending/calm",
+  "netting: ETHUSDT is netted across 3 open bybit_1 packages",
+  "correlated: bybit_1 holds 6 crypto shorts (ADA, SOL, ETH x3, AVAX desk) which are one crypto-beta bet; every one is under pressure from the same 4h bounce",
+  "calendar: none read",
+  "htf: context_v3 htf null (could not look)",
+  "packet_defect: priced_options.options all_options_unpriced:insufficient_n 1/1",
+  "packet_defect: mechanics venue_read_unreachable 1/1"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuMSFxvwPgnqM56W3J2",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [
+  {
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:insufficient_n",
+   "count": 1,
+   "denominator": 1
+  },
+  {
+   "field": "mechanics",
+   "reason": "venue_read_unreachable",
+   "count": 1,
+   "denominator": 1
+  }
+ ],
+ "packet_sha": "37c71a8a7d68a512d81dc4e846d9f367d11c2b9cf2216331c77a0786fabd41bb"
+}

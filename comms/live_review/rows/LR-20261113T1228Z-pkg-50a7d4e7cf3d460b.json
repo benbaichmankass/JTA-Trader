@@ -1,0 +1,168 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261113T1228Z-pkg-50a7d4e7cf3d460b",
+ "reviewed_at": "2026-11-13T12:42:00Z",
+ "order_package_id": "pkg-50a7d4e7cf3d460b",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "alpaca_paper"
+ ],
+ "trigger": {
+  "event": "calendar",
+  "level": "ppi@2026-11-13T13:30:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-13T12:28:22Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 2,
+  "giveback_r": 0.1839,
+  "open_r": -0.0195,
+  "peak_provenance": "estimated",
+  "peak_r": 0.1645,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 83.27883929,
+  "tp": 77.76392857142858
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 0,
+  "giveback_r": 0.1839,
+  "open_r": -0.0195,
+  "peak_r": 0.1645,
+  "r_to_stop": 0.8672,
+  "r_to_target": 1.5195
+ },
+ "mechanics": {
+  "evidence": "1 account(s) could not be read",
+  "verdict": "could_not_look"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 502,
+   "mean_r": 0.2125,
+   "sd_r": 1.292,
+   "worst_r": -1.2395,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 502,
+   "mean_r": 0.2005,
+   "sd_r": 0.5802,
+   "worst_r": -1.9922,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 502,
+   "mean_r": 0.2238,
+   "sd_r": 0.794,
+   "worst_r": -1.9922,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 502,
+   "mean_r": 0.2185,
+   "sd_r": 0.9098,
+   "worst_r": -1.9922,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 502,
+   "mean_r": -0.0993,
+   "sd_r": 0.0333,
+   "worst_r": -0.2899,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261113T1228Z-pkg-50a7d4e7cf3d460b.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. QLD short from 81.23 is -0.0195R (last_price 81.275) with both brackets in place (SL 83.27, TP 77.76, 1.5R reach) and the stop 0.8672R away, so a PPI print at 13:30Z can cost at most the remaining stop distance whichever way it breaks. The measured table (hold n=502, mean 0.2125R, worst -1.2395) prices hold above close (close mean negative) and tighten no better than hold, so there is nothing to buy by cutting before the event. The event is symmetric for a short that is flat, so I take no view beyond the entry plan. First review of this package."
+ },
+ "forecast": {
+  "thesis": "ml_entry short on the 1h; 2 to 3 bars old and flat with no change in structure; the PPI print is two-sided, so I keep the entry plan and expect the target 77.76 only with the base rate",
+  "direction": "with_trade",
+  "target_px": 77.76,
+  "p_target": 0.25,
+  "invalidation_px": 83.27,
+  "horizon_bars": 4,
+  "timeframe": "1h",
+  "evidence": [
+   "exit_plan sl/tp from the package",
+   "table hold n=502 mean 0.2125",
+   "calendar ppi 2026-11-13T13:30Z"
+  ]
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "table: hold n=502 mean 0.2125 worst -1.2395; close mean negative (measured, leg population)",
+  "calendar: ppi (impact 0.9) at 2026-11-13T13:30:00Z is inside the next bar",
+  "mechanics_unread: alpaca_open_orders unreachable from this lane; the package keeps its venue SL/TP",
+  "correlated: QLD and TQQQ shorts are one Nasdaq-beta bet; qqq_pullback_1h long is the partial offset in the book",
+  "momentum_flip/structure_break/swing: could_not_look (history bars < 4)",
+  "htf: context_v3 htf null (could not look)",
+  "packet_defect: mechanics venue_read_unreachable 1/1"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuMSFxvwPgnqM56W3J2",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [
+  {
+   "field": "mechanics",
+   "reason": "venue_read_unreachable",
+   "count": 1,
+   "denominator": 1
+  }
+ ],
+ "packet_sha": "e3625d4fc87a89869923b83452ae1c22e5c83c7ad49c3a26b2828d15ad8ac5a4"
+}
