@@ -1,5 +1,7 @@
 # eth_4h tp_r 4 — ledger-fidelity re-run (2026-11-13)
 
+> **Doc status:** `unknown` · category `research` · lane `AM-OPS` (unit RQ-20261113-e44a-01, ledger-fidelity re-run) · Tier 1, evidence only. **No config, roster or strategy edit is made or proposed by this record.**
+
 Ordered by Manager Session 2026-11-11a, 08:01Z: run T4 through the gap-fixed harness with the standing record's prop-stack
 arm and window, then re-grade under V3. It decides whether any honest eth_4h tp_r PR exists. Gates this adds or changes: none.
 
