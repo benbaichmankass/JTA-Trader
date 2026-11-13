@@ -1,0 +1,91 @@
+{
+  "unit": "RQ-20261110-73de-09",
+  "run_id": "43398566495",
+  "commit_sha": "5d8ca0579e830b97a052dcc892143e9144334db3",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/43398566495",
+  "timeout_minutes": 90,
+  "runner": {
+    "cpu_model": "AMD EPYC 7763 64-Core Processor",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1019-azure",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261111.196.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "d5aeef1fabd2",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_lever_ablation.py",
+        "--leg",
+        "eth_pullback_prop_2h",
+        "--arm",
+        "A=",
+        "--arm",
+        "S3=--structure-exit=pivot=3;--fee-bps-roundtrip=7.5;--slippage-bps-roundtrip=5.0;--funding-bps-per-window=1.0",
+        "--arm",
+        "S5=--structure-exit=pivot=5;--fee-bps-roundtrip=7.5;--slippage-bps-roundtrip=5.0;--funding-bps-per-window=1.0",
+        "--arm",
+        "S8=--structure-exit=pivot=8;--fee-bps-roundtrip=7.5;--slippage-bps-roundtrip=5.0;--funding-bps-per-window=1.0",
+        "--days",
+        "2330",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-15 23:59",
+        "--grade",
+        "holdout",
+        "--baseline",
+        "A",
+        "--delta-r",
+        "0",
+        "--folds",
+        "4",
+        "--fold-majority",
+        "3",
+        "--n-floor",
+        "25",
+        "--holdout-frac",
+        "0.25",
+        "--holdout-min-trades",
+        "25",
+        "--holdout-max-frac",
+        "0.40",
+        "--research-unit",
+        "RQ-20261110-73de-09",
+        "--out",
+        "comms/research/RQ-20261110-73de-09/43398566495"
+      ],
+      "log": "comms/research/RQ-20261110-73de-09/43398566495/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 36.9
+    }
+  ],
+  "all_ok": true
+}
