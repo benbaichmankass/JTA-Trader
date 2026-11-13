@@ -16,6 +16,14 @@
 # verdict vocabulary: pass | fail | indeterminate | pending (no graded test yet). `basis` is where the verdict was read.
 schema: 1
 updated: '2026-11-01'
+# leg_evidence -- a TESTING leg whose own Stage-0 record does not exist reads its OWN latest graded result here, never a sibling leg's
+# record (AM-ML 2026-11-13: ml_entry_v2 and ml_entry_eq were read from ml_entry.json, v1's record, and showed v1's PASS, hiding v2's
+# b610-01 FAIL). iteration_orphans.leg_record / lever_map read it first. Update the record when a newer graded read lands.
+leg_evidence:
+  ml_entry_v2:
+    record: research/results/RQ-20261101-b610-01/local-20261112T1107Z.jsonl   # fresh-window read of frozen v2: FAIL -0.0443 vs v1 +0.0245, n 948
+  ml_entry_eq:
+    record: research/results/RQ-20261105-e9a1-02/42143223941.jsonl            # equity-native confirm (config B, tau 0.20): PASS +0.0392, n 858
 ml_model:
 - id: ml-entry
   title: ENTRY decision model (take long / short / none per bar; ml_entry leg)
