@@ -36,6 +36,9 @@ config/live_trade_review.yaml ``due.events`` via ltr_trigger_close_s0.first_fire
             same set of trades where T fired. ``--draws`` books = the matched random-time control.
   A trade where T did not fire in time (or the action is not expressible at that bar) keeps HOLD in that arm.
 
+REPORTED, never graded: B3 best static rule (intervention_controls.best_static_rule): grid = hold + every registered
+trigger arm, each calendar fold's rule chosen on the other folds; each candidate's mean dR minus it.
+
 GRADE. RULE-AM-RISK-ADJUSTED-V1 (am_risk_adjusted.grade_risk_adjusted) over the pooled BOOK, baseline HOLD, one
 candidate per trigger, controls = the ``--draws`` random books, ``min_control_beat_frac`` from the flag (the unit's
 multiple-comparison correction). Plus L1: a V1 pass must still have r_cost <= max_r_cost_per_trade after dropping the
@@ -309,6 +312,20 @@ def grade(recs: List[dict], *, action: str, triggers: List[str], draws: int, bea
         if row["verdict"] == "pass" and l1 is False:
             row["verdict"], row["label"] = "indeterminate", "one_leg_carries_it"
         row["s0_report"] = report[cl]
+    # B3 best static rule (REPORTED, never a pass clause): grid = hold + each registered trigger arm, the rule for a
+    # calendar fold chosen on the OTHER folds (intervention_controls.best_static_rule), V1's own fold edges.
+    import numpy as np
+    import intervention_controls as ic
+    grid = ["hold"] + [f"{action}@{T}" for T in triggers]
+    mat = np.array([[c["net_r"] - a["net_r"] for c in (books[gl][i] for gl in grid)]
+                    for i, a in enumerate(books["hold"])])
+    edges = ra.calendar_edges(books["hold"], int(p["folds"]))
+    folds = [next((k for k in range(len(edges) - 1) if ra._in_fold(a, edges, k)), -1) for a in books["hold"]]
+    bs, chosen = ic.best_static_rule(mat, folds, grid)
+    g["best_static"] = {"grid": grid, "excludes_test_folds": True, "chosen_by_fold": {str(k): v for k, v in chosen.items()},
+                        "sum_dR_vs_hold": round(float(bs.sum()), 4), "mean_dR_vs_hold": round(float(bs.mean()), 6)}
+    for j, cl in enumerate(grid[1:], start=1):
+        g["candidates"][cl]["vs_best_static_mean_dR"] = round(float(mat[:, j].mean() - bs.mean()), 6)
     order = {"pass": 0, "indeterminate": 1, "fail": 2}
     vs = [r["verdict"] for r in g["candidates"].values()]
     g["verdict"] = min(vs, key=lambda v: order[v]) if vs else "indeterminate"
@@ -341,12 +358,14 @@ def run(args: argparse.Namespace, candle_loader: Optional[Callable[..., Any]] = 
     g = grade(recs, action=args.action, triggers=triggers, draws=args.draws, beat_frac=args.min_control_beat_frac,
               n_cmp=args.n_comparisons)
     cand = {c: {k: r[k] for k in ("verdict", "label", "r_cost_per_trade", "dd_cut_pct", "cvar5_cut_pct",
-                                  "folds_held", "n_folds", "clauses", "controls", "L1_drop_best_leg", "s0_report")}
+                                  "folds_held", "n_folds", "clauses", "controls", "L1_drop_best_leg", "s0_report",
+                                  "vs_best_static_mean_dR")}
             for c, r in g["candidates"].items()}
     note = "; ".join(f"{c}: {r['verdict']} ({r['label']})" for c, r in cand.items())
     return {**base, "verdict": g["verdict"], "read_state": "measured", "n": len(recs),
             "note": f"SCREEN under {ra.RULE_ID} (per-trade R; graduation_eligible false). {note}",
             "measurement": {"rule": g["rule"], "baseline_book": g["baseline_book"], "candidates": cand,
+                            "best_static_reported": g.get("best_static"),
                             "passing": g["passing"], "min_control_beat_frac": args.min_control_beat_frac,
                             "n_comparisons": args.n_comparisons}}
 
@@ -414,6 +433,10 @@ def _self_test() -> int:
                             min_control_beat_frac=0.95, n_comparisons=1)
     out = run(ns, candle_loader=loader, corpora=[("syn", man, rows)])
     check(f"planted positive (partial@+1R on reverting trades) reads pass, got {out['verdict']}", out["verdict"] == "pass")
+    bsr = out["measurement"]["best_static_reported"]
+    check("best static (B3) is reported leave-one-fold-out and picks the partial arm on reverting trades",
+          bsr["excludes_test_folds"] and set(bsr["chosen_by_fold"].values()) <= {"partial_close@r_milestone", None}
+          and bsr["mean_dR_vs_hold"] > 0)
     # planted negative: on trades that run to +3R, a partial at +1R gives up R and fails R1
     rows_n, df_n = _synthetic(60, revert=False)
     loader_n = lambda m, s, tf, r, c: (df_n, "synthetic")  # noqa: E731

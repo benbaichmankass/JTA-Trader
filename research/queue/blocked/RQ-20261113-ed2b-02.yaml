@@ -62,14 +62,15 @@ decision_rule:
     book, against 200 matched random-time widens on the same trades.'
   rule: 'RULE-AM-RISK-ADJUSTED-V1 (am_risk_adjusted.grade_risk_adjusted, V1 parameters: R1 r_cost <= 0.05 R per baseline trade; R2 maxDD cut >=
     15% OR weekly-CVaR5 cut >= 15%; R3 >= 4 of 6 calendar folds hold; n_floor 39) with R4 vs 200 matched random-time books, plus L1: a pass must
-    keep r_cost <= 0.05 R/trade after dropping the leg with the largest favourable contribution. Multiple comparisons: this unit and its blocked
-    twin (RQ-20261113-ed2b-02 widen_sl, RQ-20261113-ed2b-04 tp_extend) share the continuation harness with 2 pre-registered triggers each = 4
-    candidates, so R4 uses min_control_beat_frac 0.9875 (1 - 0.05/4, Bonferroni; 198 of 200 random books must be beaten) instead of V1''s 0.95,
-    and the reported edge CI is at 1 - 0.05/4. PASS: at least one pre-registered trigger candidate clears R1-R4 and L1. It is a SCREEN pass (per-trade
-    R books, graduation_eligible false until BOOK-SIM-REAL-SIZER): a Tier-3 proposal input for the class''s status, never an apply. FAIL: every
-    candidate fails a read necessary clause (R1, R2 or R3) or is beaten by its random control (R4): back to diagnosis (trigger choice, then action
-    bounds). INDETERMINATE: anything else, i.e. the best candidate is under the n floor, never fired, carried by one leg (L1 fails), or no trade
-    could be priced (read_state no_data). Fixed now; not changed after a run.'
+    keep r_cost <= 0.05 R/trade after dropping the leg with the largest favourable contribution. Reported, never graded: the B3 best static rule
+    (hold + the registered trigger arms, chosen leave-one-fold-out) and each candidate''s margin over it. Multiple comparisons: this unit and
+    its blocked twin (RQ-20261113-ed2b-02 widen_sl, RQ-20261113-ed2b-04 tp_extend) share the continuation harness with 2 pre-registered triggers
+    each = 4 candidates, so R4 uses min_control_beat_frac 0.9875 (1 - 0.05/4, Bonferroni; 198 of 200 random books must be beaten) instead of V1''s
+    0.95, and the reported edge CI is at 1 - 0.05/4. PASS: at least one pre-registered trigger candidate clears R1-R4 and L1. It is a SCREEN pass
+    (per-trade R books, graduation_eligible false until BOOK-SIM-REAL-SIZER): a Tier-3 proposal input for the class''s status, never an apply.
+    FAIL: every candidate fails a read necessary clause (R1, R2 or R3) or is beaten by its random control (R4): back to diagnosis (trigger choice,
+    then action bounds). INDETERMINATE: anything else, i.e. the best candidate is under the n floor, never fired, carried by one leg (L1 fails),
+    or no trade could be priced (read_state no_data). Fixed now; not changed after a run.'
   what_it_does_not_do: 'Advice-only research: serves, promotes or applies nothing; adds no gate; changes no config, mandate or roster; places
     no order.'
 practice_precedent: 'T1 (docs/reference/trading-and-model-practice-principles.md): an intervention is graded against a matched random-intervention
@@ -118,4 +119,11 @@ intervention_controls:
   matched_random:
     draws: 200
     same_cell: true
+  best_static:
+    grid:
+    - hold
+    - widen_sl@swing
+    - widen_sl@adverse_r_0.5
+    excludes_test_folds: true
+    how: leave-one-calendar-fold-out over V1's 6 folds (intervention_controls.best_static_rule); REPORTED, never a pass clause
   bootstrap_group: trade
