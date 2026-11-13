@@ -222,7 +222,11 @@ def _leg_account_scope(strategy: Optional[str]) -> Optional[Dict[str, List[str]]
         return None
     try:
         from src.config import ml_universe as _mu
-        from src.config.symbol_sets import ACCOUNT_SYMBOLS_KEY, leg_symbols, scoped_leg_accounts
+        from src.config.symbol_sets import (
+            ACCOUNT_SYMBOLS_KEY,
+            leg_symbols,
+            scoped_leg_accounts,
+        )
         from src.units.strategies import _DEFAULT_STRATEGIES_YAML, load_strategy_config
         # the population records (comms/ml_universe/*.json) change a scoped ML leg's per-account set too
         mtime = (os.path.getmtime(_DEFAULT_STRATEGIES_YAML),

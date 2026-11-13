@@ -47,7 +47,11 @@ _COST_KEYS = ("fee_bps_rt", "slippage_bps_rt", "funding_bps_per_8h", "artifact_b
 
 
 def _accounts_for(leg_cfg: Mapping[str, Any], symbol: str, leg: Optional[str] = None) -> List[str]:
-    from src.config.symbol_sets import ACCOUNT_SYMBOLS_KEY, leg_symbols, scoped_leg_accounts
+    from src.config.symbol_sets import (
+        ACCOUNT_SYMBOLS_KEY,
+        leg_symbols,
+        scoped_leg_accounts,
+    )
     scope = leg_cfg.get(ACCOUNT_SYMBOLS_KEY)
     if not isinstance(scope, Mapping):
         return []

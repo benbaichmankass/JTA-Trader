@@ -9,7 +9,7 @@ from pathlib import Path
 import yaml
 
 from src.config import ml_universe as MU
-from src.config.symbol_sets import leg_symbols, roster_symbols
+from src.config.symbol_sets import leg_symbols
 
 REPO = Path(__file__).resolve().parents[1]
 

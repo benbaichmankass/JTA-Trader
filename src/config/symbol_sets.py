@@ -147,7 +147,7 @@ def leg_symbols(strategy_cfg: Optional[Mapping[str, Any]],
     return _mu.apply(out, rec, _mu.account_venue(account_id))
 
 
-def scoped_leg_accounts(leg: Optional[str], scope: Optional[Mapping[str, Any]]) -> list[str]:
+def scoped_leg_accounts(leg: str | None, scope: Mapping[str, Any] | None) -> list[str]:
     """The accounts a leg declaring ``account_symbols`` is evaluated on: the map's own accounts, then every account whose
     ``strategies:`` roster names the leg (accounts.yaml order). An account the map does not name resolves through
     :func:`leg_symbols` to ``[]`` plus the leg's passed population on its venue (``src/config/ml_universe.py``), so for a leg
