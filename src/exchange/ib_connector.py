@@ -487,6 +487,11 @@ def _note_pacing(code: int, msg: str) -> None:
                    code, str(msg)[:120], PACING_BACKOFF_S)
 
 
+def _is_no_data(msg: Any) -> bool:
+    """IB error 162 text for an empty historical answer (not a pacing problem)."""
+    return "returned no data" in str(msg or "").lower()
+
+
 def _split_month(symbol: str) -> tuple:
     """``MHGN6`` -> (``MHG``, ``202607``); ``MGC`` -> (``MGC``, None). Same grammar as connector_for_symbol."""
     import re
@@ -609,7 +614,11 @@ def _ib_get_ohlcv_at_pinned(self, symbol, timeframe, limit, since, anchor_price,
                 finally:
                     ib.errorEvent -= _on_err
                 info["requests"] += 1
-                bad = [(code, msg) for code, msg in errs if code in (162, 420)]
+                # IB reuses 162 for "HMDS query returned no data" (e.g. an expired month with no bars in the window):
+                # that is an empty answer for THIS contract, not pacing -- try the next one. Every other 162
+                # (pacing violation, query cancelled on our timeout) and any 420 still backs off (MEASURED 2026-11-13
+                # 05:0xZ: two MGCV6 no-data 162s each started a 600 s backoff and left the trade re-queued forever).
+                bad = [(code, msg) for code, msg in errs if code == 420 or (code == 162 and not _is_no_data(msg))]
                 if bad:
                     _note_pacing(*bad[0])
                     info["outcome"] = "deferred"
