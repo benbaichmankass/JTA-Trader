@@ -85,7 +85,7 @@ def test_all_underpowered_is_indeterminate_and_records_validate():
     rec = rr.build(research_unit="RQ-20261009-900", decision_rule_id=tpg.RULE_ID,
                    decision_rule_registered_at=tpg.RULE_REGISTERED_AT, verdict=v["verdict"],
                    read_state=v["read_state"], population_description=v["population"], n=v["n"], workflow="w",
-                   run_id="1", run_attempt="1", run_url="u", commit_sha="a" * 40, tool="t", power_state="accruing",
+                   run_id="1", run_attempt="1", run_url="u", commit_sha="a" * 40, tool="t", power_state="accruing",  # collapsed-state: accruing — fixture value for the contract check, no branch on power state
                    artifact_store="comms/research/x", artifact_locator="comms/research/x/")
     assert rr.validate(rec) == []
 
