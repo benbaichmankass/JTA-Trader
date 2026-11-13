@@ -1,6 +1,6 @@
 id: RQ-20261009-900
-title: 'TP doctrine, predict-head step 1: on the live-timeframe real-money Bybit legs and the prop Donchian legs, does an entry-time MFE-quantile head beat all three naive TP baselines out of sample? -- blocked on the live-leg corpus lever'
-status: blocked
+title: 'TP doctrine, predict-head step 1: on the live-timeframe real-money Bybit legs and the prop Donchian legs, does an entry-time MFE-quantile head beat all three naive TP baselines out of sample?'
+status: queued
 cadence: once
 theme: live_strategy
 priority: 1
@@ -118,6 +118,22 @@ decision_rule:
     THESE legs. Cannot cover the alpaca_live 1d pullback sentinels (too few
     trades).
 
+practice_precedent: >-
+  M4, M6, M12 (docs/reference/trading-and-model-practice-principles.md): the rule,
+  strata and features were registered before any run; the head must beat simple
+  domain baselines (B1..B4) above a shuffled-label null; it is scored per stratum
+  and per leg, never on pooled loss. Added 2026-11-13 at unblock (the move out of
+  blocked/ makes the guard grade this as a new unit); the rule is unchanged.
+ml_consumer:
+  consumer: TP-PREDICT-HEAD
+  decision: >-
+    whether the entry take-profit on these legs comes from a conditional MFE-quantile
+    head (a PASS licenses step 2, RQ-20261009-901) or from the per-leg B4 quantile plus
+    the RQ-20261007-001 extension rule (an honest negative)
+  legs: [trend_donchian_eth_4h, trend_donchian_xrp_4h, xrp_pullback_2h, ada_pullback_2h,
+    trend_donchian_eth_prop, trend_donchian_sol_prop]
+  book: money
+
 routing:
   needs_trainer_resident_data: false
   needs_gpu: false
@@ -147,13 +163,28 @@ blocked_on:
     --outcome mfe_r --per-leg --per-stratum --out {out_dir} (plus a small grader that writes verdict.json per the rule)
     and lands.store.
 run:
-  workflow: null
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261009-900
+  commands:
+  - - python3
+    - scripts/research/tp_predict_grader.py
+    - --corpus
+    - comms/research/RQ-20261014-736c-01/38738465656/ml2_live_leg_corpus.jsonl
+    - --out
+    - '{out_dir}'
+  timeout_minutes: 60
   note: >-
-    Deliberately null until blocked_on clears. Existing ML-2 tooling would only
-    re-run the 15m corpus, which is the question already answered.
+    Unblocked 2026-11-13 by row TP-PREDICT-GRADER (lane session_01AFoLuJZ69XcyrjnD8na8ao) per clears_when: RQ-20261014-736c-01
+    landed measured/pass (research/results/RQ-20261014-736c-01/38738465656.jsonl) and its corpus is on main at the path above.
+    The grader scripts/research/tp_predict_grader.py applies RULE-RQ1009-900-MFE-HEAD-VS-NAIVE-TP to
+    ml2_bracket_train_eval.evaluate(outcome=mfe_r) per stratum at splits 0.55/0.65/0.75, 5 quantiles, B1-B4 each gated
+    by the shuffled-label null p95 (control_trials 20), plus the per-leg sign check, and writes verdict.json. RULE NOT
+    EDITED; window NOT changed: S1's eval n at 0.65 is 74 (< 88), so S1 grades INDETERMINATE under the rule as written.
+    Sandbox smoke on the same corpus: 4m07s wall time.
 
 lands:
-  store: research/results/ (once promoted)
+  store: research/results/
 
 related:
 - TP-PREDICT-HEAD
