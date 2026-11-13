@@ -194,7 +194,10 @@ def test_account_routing_and_descriptions():
     for name in _BUILDERS:
         # THURSDAY-PLANNING b1 2026-11-11 (operator verbatim "Put qqq and tlt on the paper floor now; promote tlt to real
         # money"): qqq_pullback_1h is back too, its QQQ share set by comms/same_symbol_allocation/qqq-alpaca_paper.json.
-        assert (name in acct["strategies"]) == (name in ("uso_trend_1h", "qqq_pullback_1h")), name
+        # B38CQPVI-0001 2026-11-13 (same operator words + OPERATING-PLAN § 2 demo floor): tlt_pullback_1h and
+        # spy_pullback_1h join, their shares set by comms/same_symbol_allocation/{tlt,spy}-alpaca_paper.json.
+        assert (name in acct["strategies"]) == (
+            name in ("uso_trend_1h", "qqq_pullback_1h", "tlt_pullback_1h", "spy_pullback_1h")), name
     assert "USO" in acct["symbols"]
     # SPY/QQQ/TLT already routed; the 1h pullback cells reuse them.
     for sym in ("SPY", "QQQ", "TLT"):

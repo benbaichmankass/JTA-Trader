@@ -1353,6 +1353,14 @@ accounts:
       # UNHOMED entry that would follow are a Tier-3 FIELD change, proposed to AM-TRADING, not made here. Also: no checklist
       # row PROMOTE-TLT-1H-REAL-MONEY exists on main (2026-11-12); this comment and that CI entry cite it anyway.
       - qqq_pullback_1h
+      # 2026-11-13 B38CQPVI-0001 (Tier-3, PAPER; Manager Session 2026-11-13a; operator 2026-11-11 decision doc verbatim
+      # "Put qqq and tlt on the paper floor now"; OPERATING-PLAN § 2 "Stage 1 is the DEMO FLOOR": every TESTING leg trades on
+      # its floor, only a retirement record removes one, a FAIL record does not). tlt_pullback_1h + spy_pullback_1h are
+      # TESTING (enabled, on no book) and share TLT / SPY with a 1d leg + ml_entry_eq on this non-slice account: the splits
+      # are the refreshed records comms/same_symbol_allocation/{tlt,spy}-alpaca_paper.json. tlt_pullback_1h's real-money
+      # promotion (if it lands) MOVES it off this line. ROLLBACK: delete these two lines and restore both records' 2-leg form.
+      - tlt_pullback_1h
+      - spy_pullback_1h
       # 2026-10-27 DESK-PAPER-ACCOUNTS (Tier-3, PAPER; operator verbatim, chat ~15:58Z: "I do want to have the desk
       # live on the other paper accounts as well, so Alpaca and IB."): the Claude desk leg, scoped to
       # strategies.yaml::claude_desk.account_symbols.alpaca_paper (SPY, QQQ, IWM, GLD, TLT). This account has no slice
