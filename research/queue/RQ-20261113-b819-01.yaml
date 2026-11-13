@@ -1,0 +1,182 @@
+# Hand-authored 2026-11-13 by lane ORPHANS-ML-MODELS (Tier 1), dispatched by the manager. ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261113-b819-01
+title: 'ITERATION 2 of ml-btc-router-cells (fail): by MONEY, not macro-F1: do the 8 authored BTC trend_vol OFF-cells drop trades that lose more
+  net R than the same number dropped at random, on the 3 bybit_1 legs they veto?'
+status: queued
+cadence: once
+theme: regime
+priority: 2
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+origin: new_hypothesis
+question: 'Under the labels of btc-regime-15m-lgbm-fc-pcv-v2 (the advisory BTC head the router resolved on 2026-11-12), applied to the harness
+  trades of trend_donchian, squeeze_breakout_4h and ict_scalp_5m (BTCUSDT, bybit_1) with EACH leg gated by its OWN authored cells, is added_r =
+  -(sum net R of the dropped trades) > 0, positive in >= 4 of 6 calendar folds, and beyond a matched random drop (p <= 0.05)? Does the
+  read survive on trades from 2026-07-01 on, after the cells were authored?'
+why_this_matters: 'config/regime_policy.yaml trend_vol holds 8 directional OFF-cells (MEASURED 2026-11-13 via regime_gate_family_consumer.load_cells:
+  trend_donchian 3, squeeze_breakout_4h 1, ict_scalp_5m 4) that drop entries on three bybit_1 legs every day. Their only grade is classification
+  (RQ-20261012-75b2-16: holdout macro-F1 lift -0.0001), which does not price a veto. RQ-20261112-bcd2-01 money-tested the trend_donchian cells on
+  the SOL legs only and excluded the BTC legs. B3 (docs/research/ml-volgate-wf-2026-10-29) read the BTC cells in-sample, per cell, with no random
+  control, and refused the trend_donchian cells as unfaithful. Nothing has priced the cells on the legs they actually veto against a random drop.
+  A FAIL is a data-backed Tier-3 removal proposal (regime-selectivity Rule 1, no cosmetic cells). It gives back demo-floor trades the cells now
+  suppress.'
+iteration:
+  subject: ml-btc-router-cells
+  subject_kind: ml_model
+  from_result: RQ-20261012-75b2-16
+  verdict_read: fail
+  diagnosis: 'RQ-20261012-75b2-16 FAILED on classification (BTC 15m LightGBM vs class prior, macro-F1 lift CV +0.017, 90d holdout -0.0001, bar
+    +0.10), yet the consumer is a veto, and a veto is graded by the net R of the trades it removes, which the classification test never measured.
+    Likely cause: the cells were chosen on 2026-06-27 (Design-A, ict_scalp cells 2026-07-20) from the same BTC history they were then validated
+    on, and the head adds no out-of-sample skill over its prior. So the cells are a fit to past slices: B3 found chop/calm long blocking +5.90 R
+    over 106 trades, and 4 ict_scalp cells no longer a stable drag. Competing hypothesis: the head labels only ~8% of BTC bars volatile, so a weak
+    classifier can still carve out a real money-losing slice. Under it the cells drop losers beyond chance even though macro-F1 is flat. Iteration
+    1 (RQ-20261101-78fc-08) asked the same question but was retired unrun on 2026-11-13.'
+  hypothesis: the dropped trades are not worse than a matched random drop (control_p > 0.05 or added_r <= 0), so the cells are cosmetic and should
+    come off
+  attempt: 2
+  due_by: '2026-11-20'
+  map_entries:
+  - research/levers/ml-btc-router-cells.yaml
+levers:
+- name: consumer_money_test
+  values: [authored cells applied per leg, matched random drop of the same count per leg and side (5000 draws), no veto]
+  hypothesised_effect: added_r <= 0 or not beyond random; the cells remove no money-losing slice
+evidence_class:
+  holdout: none
+  claim: edge
+power:
+  expected_n: 254
+  min_detectable_effect: 0.26
+  effect_units: metric
+  sd: 1.5
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE from MEASURED counts. expected_n = dropped trades: B3 (docs/research/ml-volgate-wf-2026-10-29/README.md, same head, same 3
+    legs, 1460d ending 2026-10-27) tagged 20+61+106 = 187 trend_donchian, 13 squeeze_breakout_4h and 13+16+10+15 = 54 ict_scalp_5m trades in
+    the 8 authored cells, 254 in all. MDE = 2.8 x sd / sqrt(n) = 2.8 x 1.5 / sqrt(254) = 0.26 R per dropped trade at sd 1.5 R (the
+    RQ-20261112-bcd2-01 precedent). SINCE slice (2026-07-01..run date, ~134 of 1460 days): expected ~254 x 134/1460 = 23 dropped trades, BELOW
+    the 25 floor. A PASS will therefore most likely read INDETERMINATE, and this unit is decisive mainly in the FAIL (removal) direction. Stated
+    before the run.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance-vision candles and the trainer-resident BTC 15m v002 dataset; nothing accrues.
+baseline:
+  definition: 'NO VETO: the same three legs'' harness trades with every authored cell switched off, each trade''s net_r net of the FULL cost stack
+    (fee + slippage + funding, resolved per symbol by execution_costs.resolve_cost_policy and stamped per trade by the harness). The control is a
+    random veto: per leg and side, drop the same number of trades uniformly at random, 5000 draws, seed 20261112.'
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ-20261113-b819-01-BTC-CELLS-KEEP
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  baseline: 'No veto (all cells off) on the same harness trades, full cost stack; plus the matched random drop (5000 draws, seed 20261112).'
+  statistic: 'scripts/research/d2_family_consumer_run.py --cells-per-leg --verdict-json: per leg, the harness trades (regime_debt_matrix resolution,
+    --emit-trades, net_r net of fee + slippage + funding) are tagged with (ADX regime, vol_regime). The vol labels are replayed from
+    btc-regime-15m-lgbm-fc-pcv-v2 (P(volatile) >= the live ML_VOL_VERDICT_THRESHOLD, live frozen vol-bucket edges, feature pre-flight on). Each
+    leg is gated by the cells config/regime_policy.yaml authors for that leg''s own name, read at run time. regime_gate_family_consumer.py then
+    computes, pooled over the 3 legs: dropped_n; added_r = -(sum net_r of dropped trades); fold_wins over 6 equal-width calendar folds; control_p
+    = (#draws with added_r >= actual + 1)/(5000 + 1). PRIMARY = all trades with a label in the 1460-day window. SINCE = trades from 2026-07-01
+    on.'
+  rule: 'INDETERMINATE iff PRIMARY dropped_n < 25, OR PRIMARY passes and SINCE dropped_n < 25. FAIL iff PRIMARY dropped_n >= 25 AND NOT
+    (added_r > 0 AND fold_wins >= 4 of 6 AND control_p <= 0.05). The PRIMARY window contains the history the cells were chosen on, so its bias
+    favours the cells; failing there is decisive. FAIL also iff PRIMARY passes AND SINCE dropped_n >= 25 AND SINCE added_r <= 0. PASS iff
+    PRIMARY passes (added_r > 0 AND fold_wins >= 4 AND control_p <= 0.05, dropped_n >= 25) AND SINCE dropped_n >= 25 AND SINCE added_r > 0.
+    PRODUCER_FAILED (not FAIL) iff any leg fails to tag or the label pre-flight fails. Per-leg added_r is reported, not graded. Thresholds are
+    fixed now and not changed after any result.'
+  pass_action: 'Record that the cells earn their keep on the legs they veto. No config change. The next iteration targets out-of-sample label
+    fidelity (live verify against regime_ml_vol_shadow rows, row ML-VOL-LABEL-LIVE-VERIFY).'
+  fail_action: 'A data-backed Tier-3 REMOVAL proposal (held PR to the manager, regime-selectivity Rule 1) for the cells of every leg whose per-leg
+    added_r <= 0. trend_donchian cells are flagged approximate (live exit head omitted), so the operator weighs that. Close the lever
+    consumer_money_test for this head on the lever map.'
+  what_it_does_not_do: 'Edits no config/regime_policy.yaml cell, flips no REGIME_ML_VERDICT_MODE or router switch, retrains or re-stages no model,
+    places no order, adds no gate. The labels are in_sample (the head is fit through its dataset end) and are NOT verified against the live gate
+    (no regime_ml_vol_shadow rows on the trainer). That caveat is stamped, as in RQ-20261112-bcd2-01. The trend_donchian harness is approximate
+    (omits decision_bar and the live exit head: regime_debt_matrix.build_harness_cmd, MEASURED 2026-11-13). No holdout claim: the window
+    overlaps the head''s training (bcd2 precedent: holdout_lock claim refused, WindowOverlapsTraining).'
+  min_n: 25 dropped trades in PRIMARY (and in SINCE for a PASS)
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): matched-random control and one pre-registered read, the same
+  method as RQ-20261112-bcd2-01 (the D2 family consumer test), applied to the legs the cells actually veto.'
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 150
+  why_runner: The label replay needs the trainer registry artifact of btc-regime-15m-lgbm-fc-pcv-v2, the trainer's lightgbm venv and the
+    trainer-resident BTCUSDT 15m v002 market_features dataset. The harnesses fetch public candles.
+  basis: 'ESTIMATE: RQ-20261112-bcd2-01 (label replay + 2 legs, 730d) ran inside one trainer-vm-diag relay; this is 3 legs over 1460d,
+    including a 5m leg.'
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 300
+  commands:
+  - - python3
+    - scripts/research/ml_vol_label_replay.py
+    - replay
+    - --symbol
+    - BTCUSDT
+    - --dataset
+    - datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl
+    - --model-id
+    - btc-regime-15m-lgbm-fc-pcv-v2
+    - --out
+    - '{out_dir}/BTCUSDT_labels.jsonl'
+    - --json
+  - - python3
+    - scripts/research/d2_family_consumer_run.py
+    - --out
+    - '{out_dir}/legs'
+    - --days
+    - '1460'
+    - --since
+    - '2026-07-01'
+    - --cells-per-leg
+    - --leg
+    - trend_donchian={out_dir}/BTCUSDT_labels.jsonl
+    - --leg
+    - squeeze_breakout_4h={out_dir}/BTCUSDT_labels.jsonl
+    - --leg
+    - ict_scalp_5m={out_dir}/BTCUSDT_labels.jsonl
+    - --verdict-json
+    - '{out_dir}/verdict.json'
+  inputs:
+    research_unit: RQ-20261113-b819-01
+  note: 'Dataset path is the manifest''s dataset block (ml/configs/btc-regime-15m-lgbm-fc-pcv-v2.yaml: market_features / BTCUSDT / 15m / v002)
+    under the trainer checkout''s datasets-out/ (layout per that manifest''s comment). It is not re-read on the trainer by this lane. A missing
+    file is a producer_failed run, never a verdict.'
+ml_consumer:
+  consumer: config/regime_policy.yaml
+  decision: keep or remove the BTC trend_vol OFF-cells (trend_donchian 3, squeeze_breakout_4h 1, ict_scalp_5m 4); no change from this unit
+  legs:
+  - trend_donchian
+  - squeeze_breakout_4h
+  - ict_scalp_5m
+  book: demo_floor
+value:
+  usd_at_stake_per_month: 30
+  confidence: 0.2
+  bucket: ai_trader
+  basis: 'stand-in: three demo-floor (bybit_1) legs, all three verdict fail at Stage 0 (scripts/research/iteration_orphans.py, 2026-11-13). The
+    value is giving back suppressed soak trades and removing cosmetic gates, not P&L. An estimate, not a measurement.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261012-75b2-16
+- RQ-20261101-78fc-08
+- RQ-20261112-bcd2-01
+- ML-VOLGATE-WF-ETH-BTC
+- ML-VOL-LABEL-LIVE-VERIFY
+- ML-PROGRAMME-CONSOLIDATION
+population: Harness trades of trend_donchian (BTCUSDT 1h, approximate), squeeze_breakout_4h (BTCUSDT 4h, faithful) and ict_scalp_5m (BTCUSDT
+  5m, faithful) over 1460 days of Binance-vision candles to the run date that carry a replayed fc-pcv-v2 vol label; full cost stack; a
+  consumer (veto) test, not a promotion read.
+what_it_does_not_do: Edits no regime cell, flips no router or verdict mode, re-stages no model, places no order, adds no gate. A FAIL produces a
+  held Tier-3 removal proposal only.
+intervention_controls:
+  not_applicable: an offline consumer evaluation; any cell change is a separate Tier-3 act
