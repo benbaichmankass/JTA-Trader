@@ -132,7 +132,9 @@ def test_work_decision_submitted_by_comes_from_the_session(client, session, monk
     r = client.post("/api/bot/work/decision", headers=bearer(session["session_token"]),
                     json={"object_id": "OBJ", "request_id": "r1", "chosen": "a", "submitted_by": "spoof"})
     assert r.status_code == 200, r.text
-    assert seen["submitted_by"] == f"{base.EMAIL} (SPA session)"
+    # Never the email: decision records can reach the repo (manager 2026-11-13).
+    assert seen["submitted_by"] == "operator-spa"
+    assert "@" not in seen["submitted_by"]
 
 
 # ── work/items ───────────────────────────────────────────────────────────────

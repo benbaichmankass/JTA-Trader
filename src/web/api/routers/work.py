@@ -2109,12 +2109,15 @@ async def post_work_decision(
     # The operator answering from the signed-in SPA may use the session here too;
     # the Telegram decision bot keeps DASHBOARD_API_TOKEN (UI-OAUTH-SIGNIN).
     # The SPA's dedicated route is POST /decision/session below (UI-WQ-DECISIONS-ROUTE).
-    from src.web.api.auth import operator_session_or_none, session_actor
+    # With a session, submitted_by is fixed to "operator-spa" (the same as
+    # /decision/session): decision records can reach the repo, so the operator's
+    # email is never written into one.
+    from src.web.api.auth import operator_session_or_none
     session = await operator_session_or_none(request)
     if session is None:
         _require_decision_write_token(authorization)
     return await _submit_decision(
-        request, submitted_by_override=session_actor(session) if session is not None else None)
+        request, submitted_by_override="operator-spa" if session is not None else None)
 
 
 @router.post("/decision/session")
