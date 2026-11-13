@@ -1071,7 +1071,7 @@ def _self_test() -> int:
                          {"c": "ok"}, 3, 5)["verdict"] == "fail"
     # row bootstrap (FRONTIER-Q-GRU-RESOLVABLE): opt-in; absent = byte-identical; present = a CI the rule can read
     assert all("boot" not in d for g in v["measurement"]["deltas"].values() for w in g.values()
-               for l in w.values() for d in l.values())
+               for lv in w.values() for d in lv.values())
     sb = json.loads(json.dumps(spec))
     sb["cv"]["row_bootstrap"] = {"block_rows": 20, "n_boot": 200, "seed": 1}
     sb["rule"]["pass_if"] = [{"group": ["A", "B"], "vs": "baseline", "op": ">", "value": 0.0, "stat": "boot_ci_low"}]
