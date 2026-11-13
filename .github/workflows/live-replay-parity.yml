@@ -122,6 +122,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          # Full commit history (blobless: no file contents beyond HEAD's) so live_replay_parity_ml.served_epoch() can see the
+          # real last change to ml/served/ENTRY_SERVED.json. A depth-1 clone reports the graft root instead, which marked every
+          # ML decision bar "decided by the previous served artifact" (2026-11-13, PI-20261113-TFZXAKEK-0002).
+          fetch-depth: 0
+          filter: blob:none
 
       - name: Resolve inputs (days, optional script ref)
         id: inp

@@ -142,19 +142,65 @@ def _live_decisions(rows: list[dict], strategy: str) -> dict[tuple[str, float], 
 ARTIFACT_DEPLOY_GRACE_S = 1800   # git-sync (~5 min) + trader restart after a served-pointer commit
 
 
+def _pointer_commit(root: Any) -> tuple[str, float] | None:
+    """(sha, commit epoch) of the last commit touching ``ml/served/ENTRY_SERVED.json``, or None when git cannot say."""
+    import subprocess
+    try:
+        out = subprocess.run(["git", "-C", str(root), "log", "-1", "--format=%H %ct", "--", "ml/served/ENTRY_SERVED.json"],
+                             capture_output=True, text=True, timeout=30, check=False).stdout.strip()
+        if not out:
+            return None
+        sha, ct = out.split()
+        return sha, float(ct)
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+
+
+def _repo_root(repo: Any):
+    from pathlib import Path
+    return Path(repo) if repo else Path(__file__).resolve().parents[2]
+
+
 def served_epoch(repo: Any = None) -> float | None:
     """Commit time of the last change to the ONE served-entry pointer (``ml/served/ENTRY_SERVED.json``), or None when git cannot
     say. A decision made before it (plus the deploy grace) was scored by a DIFFERENT artifact than the one the replay loads, so it
-    is not comparable -- it is reported as such, never as a score mismatch."""
+    is not comparable -- it is reported as such, never as a score mismatch.
+
+    ⚠️ In a SHALLOW clone this is NOT the pointer's last change when that change lies beyond the clone's depth: ``git log`` then
+    reports the shallow-graft root, which appears to "add" every file, so the epoch lands at the newest commit and every bar in the
+    window reads "decided by the previous served artifact". ``served_epoch_unknown_reason`` detects exactly that case; callers
+    check it first (2026-11-13: a depth-1 CI checkout turned tests/test_live_replay_parity_ml.py red on main while a deeper PR
+    checkout passed, and the live-replay-parity workflow's depth-1 checkout could compare no ML bar at all)."""
+    hit = _pointer_commit(_repo_root(repo))
+    return hit[1] if hit else None
+
+
+def served_epoch_unknown_reason(repo: Any = None) -> str | None:
+    """A reason string when the served pointer's change time CANNOT be known from this checkout (the commit git reports is a
+    shallow-graft root, so the real change lies beyond the clone's depth); None when the epoch is trustworthy or git has no answer
+    at all (served_epoch None keeps its old meaning)."""
     import subprocess
-    from pathlib import Path
-    root = Path(repo) if repo else Path(__file__).resolve().parents[2]
-    try:
-        out = subprocess.run(["git", "-C", str(root), "log", "-1", "--format=%ct", "--", "ml/served/ENTRY_SERVED.json"],
-                             capture_output=True, text=True, timeout=30, check=False).stdout.strip()
-        return float(out) if out else None
-    except (OSError, ValueError, subprocess.SubprocessError):
+    root = _repo_root(repo)
+    hit = _pointer_commit(root)
+    if hit is None:
         return None
+    try:
+        shallow = subprocess.run(["git", "-C", str(root), "rev-parse", "--is-shallow-repository"],
+                                 capture_output=True, text=True, timeout=30, check=False).stdout.strip()
+        if shallow != "true":
+            return None
+        path = subprocess.run(["git", "-C", str(root), "rev-parse", "--git-path", "shallow"],
+                              capture_output=True, text=True, timeout=30, check=False).stdout.strip()
+        from pathlib import Path
+        sp = Path(path) if Path(path).is_absolute() else root / path
+        roots = set(sp.read_text().split()) if sp.exists() else set()
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if hit[0] in roots:
+        return (f"served pointer's change time unknown: git history is shallow and the last commit it reports for "
+                f"ml/served/ENTRY_SERVED.json ({hit[0][:10]}) is a shallow-graft root, not the pointer's real change "
+                f"(deepen the checkout: fetch-depth 0)")
+    return None
 
 
 def _entry_replay(cfg: Mapping, symbol: str, bar: float, frames: Mapping[str, Any], model: Mapping, PR: Any) -> dict:
@@ -285,6 +331,10 @@ def analyse_ml_entry(leg: Any, bundle: Mapping, since: float, until: float, *,
     not_replayed = sorted(s for s in cfg_syms if s not in replayable)
     if not replayable:
         out["reason"] = "no configured symbol has a replayable bybit-perp frame"
+        return out
+    why_unknown = served_epoch_unknown_reason()
+    if why_unknown:   # never classify bars against an epoch that is an artifact of the clone depth
+        out["reason"] = why_unknown
         return out
     divs: list[dict] = []
     bars: list[dict] = []
