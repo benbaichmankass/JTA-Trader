@@ -61,6 +61,11 @@ decision_rule:
 practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): the rule is registered before the run, net of the
   full cost stack, on the fixed DEV window; the instrument and its planted/shuffled controls are DESK-EDGE-PROGRAM section 3, reused unchanged
   except for the symbol list (RULE ONE: the probe must find a positive before a negative counts).'
+ml_consumer:
+  consumer: DESK-18D-JUDGE-2
+  decision: whether the desk (claude_desk) gets a judged universe arm U and DESK-18D-JUDGE-2 unblocks, or the universe lever closes for 1h packets
+  legs: [claude_desk]
+  book: demo_floor
 universe:
   registered_six: [ADAUSDT, AVAXUSDT, BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT]
   added_18: [BNBUSDT, DOGEUSDT, LINKUSDT, LTCUSDT, DOTUSDT, TRXUSDT, BCHUSDT, NEARUSDT, UNIUSDT, ATOMUSDT, ETCUSDT, FILUSDT, APTUSDT, ARBUSDT, OPUSDT, SUIUSDT, INJUSDT, AAVEUSDT]
