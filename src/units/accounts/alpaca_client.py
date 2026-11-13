@@ -2989,6 +2989,137 @@ class AlpacaClient:
         result = env.get("result") or {}
         return {"retCode": 0, "result": {"orderId": str(result.get("id") or "")}}
 
+    # ── ALPACA-PARTIAL-TP-STOP-GAP (2026-11-13) ─────────────────────────────────────────────
+    # On a take-profit PARTIAL fill Alpaca cancels the bracket's stop leg, and the still-resting
+    # target holds the remaining shares, so an additive OCO for them is refused (REVIEW-14241
+    # round 2). These three primitives let the sweep replace OUR OWN target with a fresh OCO:
+    # find it by the row's bracket order id, cancel it and confirm the cancel at the venue, and
+    # fall back to a plain stop. Each never raises.
+
+    _FINAL_ORDER_STATUSES = frozenset({
+        "canceled", "filled", "expired", "rejected", "replaced", "done_for_day", "stopped",
+    })
+
+    def partial_target_holding(self, parent_order_id: Any, position_side: Any) -> Dict[str, Any]:
+        """Is OUR OWN entry-bracket take-profit the only protective leg still resting?
+
+        Reads ``GET /v2/orders/{parent_order_id}?nested=true`` (the row's ``broker_order_id`` is
+        its entry bracket's parent id) and grades its legs. Returns ``{"state": ...}`` with
+        ``state``:
+
+        * ``tp_only`` -- the reducing-side LIMIT leg rests and NO stop leg rests. Also carries
+          ``tp_order_id``, ``tp_qty`` (the leg's full qty), ``tp_filled`` and ``tp_remaining``.
+        * ``not_tp_only`` -- anything else: a stop still rests, the target is gone, the parent is
+          not a bracket, or the legs cannot be told apart.
+        * ``could_not_look`` -- the read failed or no parent id was given. Never acted on.
+
+        Ownership is the ORDER ID, never "any open limit on the symbol"."""
+        pid = str(parent_order_id or "").strip()
+        side = str(position_side or "").lower()
+        close_side = {"long": "sell", "buy": "sell", "short": "buy", "sell": "buy"}.get(side)
+        if not pid or not close_side:
+            return {"state": "could_not_look", "why": "no parent order id or unreadable side"}
+        try:
+            env = self._request("GET", f"/v2/orders/{pid}?nested=true")
+        except Exception as exc:  # noqa: BLE001
+            return {"state": "could_not_look", "why": f"{type(exc).__name__}: {exc}"}
+        parent = env.get("result") if env.get("retCode") == 0 else None
+        if not isinstance(parent, dict):
+            return {"state": "could_not_look", "why": f"order read failed: {env.get('retMsg')}"}
+        if str(parent.get("order_class") or "").lower() != "bracket":
+            return {"state": "not_tp_only", "why": "parent is not a bracket"}
+        targets, stops = [], []
+        for leg in parent.get("legs") or []:
+            if str(leg.get("side") or "").lower() != close_side:
+                continue
+            typ = str(leg.get("type") or leg.get("order_type") or "").lower()
+            if typ == "limit":
+                targets.append(leg)
+            elif typ in ("stop", "stop_limit", "trailing_stop"):
+                stops.append(leg)
+        if any(str(s.get("status") or "").lower() in _RESTING_LEG_STATUSES for s in stops):
+            return {"state": "not_tp_only", "why": "a stop leg still rests"}
+        resting = [t for t in targets if str(t.get("status") or "").lower() in _RESTING_LEG_STATUSES]
+        if len(resting) != 1:
+            return {"state": "not_tp_only", "why": f"{len(resting)} resting target leg(s)"}
+        tp = resting[0]
+        try:
+            qty = float(tp.get("qty") or 0)
+            filled = float(tp.get("filled_qty") or 0)
+        except (TypeError, ValueError):
+            return {"state": "not_tp_only", "why": "target leg qty unreadable"}
+        return {"state": "tp_only", "tp_order_id": str(tp.get("id") or ""), "tp_qty": qty,
+                "tp_filled": filled, "tp_remaining": max(0.0, qty - filled),
+                "tp_status": str(tp.get("status") or "").lower()}
+
+    def cancel_order_confirmed(self, order_id: Any, *, timeout_s: float = 6.0,
+                               poll_s: float = 0.5, sleep=time.sleep) -> Dict[str, Any]:
+        """Cancel ONE order and CONFIRM the outcome at the venue (a cancel can race a fill).
+
+        ``DELETE /v2/orders/{id}``, then re-read ``GET /v2/orders/{id}`` until its status is final
+        or *timeout_s* passes. Returns ``{"state", "status", "filled_qty"}`` with ``state``:
+        ``canceled`` (confirmed; nothing more can fill), ``filled`` (it filled first),
+        ``failed`` (still working, or unreadable, after the timeout: the order may still be
+        resting, so the caller does NOTHING further this tick)."""
+        oid = str(order_id or "").strip()
+        if not oid:
+            return {"state": "failed", "status": None, "filled_qty": None, "why": "no order id"}
+        try:
+            self._request("DELETE", f"/v2/orders/{oid}")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("alpaca cancel_order_confirmed(%s): DELETE raised %s", oid, exc)
+        deadline = time.monotonic() + max(0.0, float(timeout_s))
+        status, filled = None, None
+        while True:
+            try:
+                env = self._request("GET", f"/v2/orders/{oid}")
+            except Exception:  # noqa: BLE001
+                env = {}
+            res = env.get("result") if env.get("retCode") == 0 else None
+            if isinstance(res, dict):
+                status = str(res.get("status") or "").lower()
+                try:
+                    filled = float(res.get("filled_qty") or 0)
+                except (TypeError, ValueError):
+                    filled = None
+                if status == "filled":
+                    return {"state": "filled", "status": status, "filled_qty": filled}
+                if status in self._FINAL_ORDER_STATUSES:
+                    return {"state": "canceled", "status": status, "filled_qty": filled}
+            if time.monotonic() >= deadline:
+                return {"state": "failed", "status": status, "filled_qty": filled,
+                        "why": "cancel not confirmed final before the timeout"}
+            sleep(poll_s)
+
+    def place_stop_only(self, symbol: Any, position_side: Any, qty: Any,
+                        stop_price: Any) -> Dict[str, Any]:
+        """Post a plain GTC STOP on the closing side: the fallback when an OCO is refused, so a
+        position is never left without a stop. Envelope mirrors :meth:`place_protective`."""
+        try:
+            self._require_creds("place_stop_only")
+        except MissingCredentialsError as exc:
+            return {"retCode": -2, "retMsg": str(exc)}
+        side = str(position_side or "").lower()
+        close_side = {"long": "sell", "buy": "sell", "short": "buy", "sell": "buy"}.get(side)
+        if not close_side:
+            return {"retCode": -2, "retMsg": f"invalid position side {position_side!r}"}
+        try:
+            q = int(float(qty))
+            sp = float(stop_price)
+        except (TypeError, ValueError) as exc:
+            return {"retCode": -2, "retMsg": f"invalid qty/stop: {exc}"}
+        if q < 1 or sp <= 0:
+            return {"retCode": -2, "retMsg": f"invalid qty/stop {qty!r}/{stop_price!r}"}
+        body = {"symbol": str(symbol).upper(), "qty": str(q), "side": close_side, "type": "stop",
+                "time_in_force": "gtc", "stop_price": f"{sp:.2f}"}
+        try:
+            env = self._request("POST", "/v2/orders", body)
+        except Exception as exc:  # noqa: BLE001
+            return {"retCode": -1, "retMsg": f"{type(exc).__name__}: {exc}"}
+        if env.get("retCode") != 0:
+            return env
+        return {"retCode": 0, "result": {"orderId": str((env.get("result") or {}).get("id") or "")}}
+
     def cancel_row_protection(
         self, symbol: str, *, qty: Any, direction: Any, sibling_qtys: Any,
     ) -> Dict[str, Any]:
