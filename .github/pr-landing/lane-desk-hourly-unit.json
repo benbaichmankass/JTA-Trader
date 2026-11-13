@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Trader-side change in src/runtime/desk_packet_wake.py (Tier-2 by path, R5): the HOURLY wake build moves from an unisolated trader subprocess into ict-desk-build@ (own cgroup), with the same job runner and detached/adopt handling as the event trigger. No new gate, delay or timeout (BUILD_TIMEOUT_S 420 per stage unchanged); falls back to the in-process run when the unit is unavailable. AM-OPS merges on green guards.",
+  "why": "DESK-BUILD-HOURLY-UNIT: the hourly desk_scan_packet.py build runs as a child of the trader at nice -10 inside its cgroup, so a deploy restart SIGTERMs it (exit -15) and it competes with the trader for CPU. Same fix as the event trigger path (#25335/#25356/#25519)."
+}

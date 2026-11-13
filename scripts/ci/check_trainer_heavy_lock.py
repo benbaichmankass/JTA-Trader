@@ -120,6 +120,9 @@ DECLARED_LIGHT = {
     "scripts/research/ml_entry_tp_revision.py":
         "ML-ENTRY-TP-REVISION moving-TP harness: same data and route as ml_decision_entry.py (units RQ-20261101-383f-01/"
         "-03, compute cpu_long, github_runner); fits LightGBM in a lane container or a runner, never routed to the trainer.",
+    "scripts/research/ml_entry_v2_symholdout.py":
+        "ML-DECISION-MODELS b610-01 symbol-holdout read: scores the committed frozen ENTRY v2 / v1 boosters (no fit) on public "
+        "Binance Vision klines (unit RQ-20261101-b610-01, compute cpu_long, github_runner or a lane container); never routed to the trainer.",
     "scripts/research/ml_entry_residual.py":
         "FRONTIER-Q-RESID-ENTRY market-residual target harness: same data and route as ml_decision_entry.py (unit "
         "RQ-20261112-4654-01, compute cpu_long, research-script-run.yml github_runner); fits LightGBM on public Binance Vision "

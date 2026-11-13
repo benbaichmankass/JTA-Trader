@@ -4,7 +4,7 @@
 - Window: 2026-07-17T05:56:00+00:00 → 2026-07-20T08:15:00+00:00
 - Roll-up grade: caution
 
-System healthy end-to-end (all services active, IB connected, no alert banners, DB intact, trainer cycling). CORRECTION vs first pass: the real-money 'bleed' legs are regime-conditioned + low-n, NOT demote candidates — ada/xrp_pullback carry a live-firing adx_min:25 gate, ict_scalp_5m is already shadow (+$142 lifetime, loses only in trending+volatile). No demotions drafted. PROP: breakout_1 flat at $4825.61, ~$125.61 to the $4700 floor (fresh snapshot logged). Trainer disk 90%.
+System healthy end-to-end (all services active, IB connected, no alert banners, DB intact, trainer cycling). CORRECTION vs first pass: the real-money 'bleed' legs are regime-conditioned + low-n, NOT demote candidates — ada/xrp_pullback carry a live-firing adx_min:25 gate, ict_scalp_5m is already shadow (+$142 lifetime, loses only in trending+volatile). No demotions drafted. PROP: breakout_1 flat at [balance removed], ~$125.61 to the $4700 floor (fresh snapshot logged). Trainer disk 90%.
 
 ## P&L by class
 - **real**: window +$0.00 (prior $-8.90, flat)
@@ -12,7 +12,7 @@ System healthy end-to-end (all services active, IB connected, no alert banners, 
 - **prop**: window $-182.84 (prior —, down)
 
 ## Operator priorities
-1. Prop breakout_1 cushion to the $4700 static-DD floor is thin (~$131) and the balance snapshot is stale — Fresh snapshot logged this session: breakout_1 flat at $4825.61, $125.61 above the $4700 floor / $144.77 daily-loss room. Decide whether to keep sizing 2-lot ETH shorts this close to the floor.
+1. Prop breakout_1 cushion to the $4700 static-DD floor is thin (~$131) and the balance snapshot is stale — Fresh snapshot logged this session: breakout_1 flat at [balance removed], $125.61 above the $4700 floor / $144.77 daily-loss room. Decide whether to keep sizing 2-lot ETH shorts this close to the floor.
 2. Real-money 'bleed' legs are REGIME-CONDITIONED + low-n, NOT demotion candidates — the ADX gate already works — M7 verdict HOLD for ada/xrp_pullback_2h (n_closed=0, insufficient evidence); both already carry adx_min:25 (live audit shows XRP blocked at ADX 15.7<25). ict_scalp_5m is ALREADY execution:shadow and is +$142.8/66.7% lifetime, losing ONLY in the trending+volatile cell (-$8.53/25%). No demotions. Path: author 2-D regime cells + mature the shadow regime heads.
 3. Trainer VM disk at 90% (4.9G free) — Not yet failing builds (246 ok / 0 failed) but compounds the known trainer memory-saturation / OOM items (BL-20260715, MB-20260719-PROMOREADY-OOSEDGE-OOM). Prune old artifacts / datasets before it strands a cycle.
 4. Paper QQQ closed -$405 via delayed extended-hours flatten — qqq_pullback_1h alpaca_paper trade #3269 opened 07-07 finally closed 07-17 at -$405 (paper). Consistent with the known extended-hours-exit handling (ALPACA_EXT_LIMIT_BUFFER_BPS). Paper only — no money at risk; noting for the exit-behavior trail.

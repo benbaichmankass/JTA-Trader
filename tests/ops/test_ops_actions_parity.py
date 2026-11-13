@@ -44,7 +44,10 @@ def test_registry_equals_the_doc_table_name_and_tier():
 
 def test_wave_one_is_exactly_the_design_list():
     assert set(ops.REGISTRY) == {"live-review-row", "directed-action", "amend-prop-bracket", "sync-now",
-                                 "restart-service", "set-env", "send-ping", "exec"}
+                                 "restart-service", "set-env", "send-ping", "exec", "status-check",
+                                 "disk-usage-report", "list-listening-ports",
+                                 # VM-CHANGE-LEDGER (operator 2026-11-12 "Build it")
+                                 "ledger-backfill", "ledger-fold", "stage-token-rotation"}
 
 
 def test_a_ported_allowlist_action_keeps_its_tier():

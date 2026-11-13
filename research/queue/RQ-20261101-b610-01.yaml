@@ -1,7 +1,7 @@
 # Authored 2026-11-01 by lane ML-RECIPE (Tier 1). Decision rule registered BEFORE any window outcome exists (the window starts 2026-11-01, today). Gates: none.
 id: RQ-20261101-b610-01
 title: 'ENTRY v2 forward read on a FRESH window (from 2026-11-01): one read of the frozen v2 artifact, window closed by a label-free decision count. Offline replay; the bybit_1 leg proves mechanics only'
-status: blocked
+status: queued
 cadence: once
 theme: ml_health
 priority: 1
@@ -64,9 +64,9 @@ run:
   workflow: research-script-run.yml
   command:
   - python3
-  - scripts/research/ml_entry_v2_run.py
-  - levers
-  - '{unit}'
+  - scripts/research/ml_entry_v2_symholdout.py
+  - run
+  - --out
   - '{out_dir}'
   timeout_minutes: 300
   inputs:
@@ -115,10 +115,13 @@ amendments:
   - 'RESEARCH-NO-WAIT (lane of Manager Session 2026-11-05b). Operator 2026-11-05 ~17:08Z, verbatim: "Why does it need to wait for November? That''s not the workflow - we iterate in the data we have till we find what works, we don''t wait for new months of data". Window registered BEFORE any run; no outcome inside it was read by this lane; the rule text and every threshold are NOT edited.'
   - 'WINDOW CHANGE: the read registered on the "forward window" / "fresh window" (2026-11) is REPLACED by the in-hand window below. S = symbol holdout: the 20 lexicographically first Binance USDT-M perps NOT in manifest bp2-f4271084b120 that have >= 3 years of 1h bars, over 2022-01-01..2026-10-31; list frozen by the driver and written to the result before any outcome is read; claimed through holdout_lock.py with an explicit symbols list (a disjoint symbol claim: correlated with the 60-perp windows, reported as such).'
   - 'The data/accrual blocker is removed: nothing here waits for a month to elapse. What remains is the driver option that reads this window (named in blocked_on, owner lane ML-DECISION-MODELS / the unit''s own lane).'
-
-blocked_on:
-- kind: harness
-  ref: scripts/research/ml_entry_v2_run.py levers --window symbol-holdout
-  what: the levers/fwd-read path reads window S instead of waiting for 1,100 label-free candidates since 2026-11-01
-  clears_when: lands with a self-test that the count-closed window is not used
-  owner: lane ML-DECISION-MODELS (or the unit's owning ML lane)
+- at: '2026-11-12'
+  before_any_run: true
+  by: lane ML-DECISION-MODELS (session_01AFoLuHrh2txGoKFBMCuhC9)
+  text:
+  - 'Dispatch: AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F) relaying the operator decision verbatim: `decision: 2026-11-12 operator decisions page w14 "Take the assistant managers'' defaults on all three"` (default: do not wait for forward data, do not re-read W1, run the registered symbol-holdout window change). No outcome in any window below was read before this amendment was pushed; the rule text and every threshold are NOT edited.'
+  - 'WHY THE WINDOW NARROWS: the 2026-11-05 window S over 2022-01-01..2026-10-31 starts before the artifact''s training end (rows to 2026-09-22 19:00Z, labels to 2026-09-23 19:00Z). holdout_lock rule 4 (PI-20261105-GEXSLEAK-0001, adopted later on 2026-11-05) refuses it mechanically, symbol holdouts included (correlated series leak through shared dates); the driver self-test proves the refusal. The read therefore uses S only on the dates the artifact never saw.'
+  - 'WINDOW: decisions 2026-09-24..2026-10-31 (labels run 24h past the end; the 2026-11-01/02 daily klines are fetched for that). train_end for the lock = 2026-09-23.'
+  - 'SYMBOLS: S = the lexicographically first USDT-M perps NOT in bp2-f4271084b120 whose Binance Vision 1h archive starts by 2023-10 (>= 3 years by the window end) and runs to 2026-10, from listing spans only. PRIMARY population = the first 100 (at the measured W1 rate of 0.17 policy decisions per symbol-day, the registered 20 over 38 days give about 130 decisions, below the 300 floor, so the read would be indeterminate by construction); the registered first 20 are REPORTED beside it, non-gating. The list is frozen and written to symbols.json before any outcome is read; both claims (v2 ENTRY-v2-frozen-symholdout, v1 reference ENTRY-v1-frozen-ref-symholdout) carry the explicit 100-symbol list. Delisted-contract bars (volume 0 and high == low) are dropped as in b609''s build_full_cache.'
+  - 'Deflation: the lock grades this read at the bar for its n_tries on the window (claims without a symbol list overlap every symbol, so prior ENTRY W1 reads count); condition (b) uses holdout_lock.point_ok at that bar, as b609/fwd-read do.'
+  - 'Driver: scripts/research/ml_entry_v2_symholdout.py run (self-test: the window is fixed by constants, never closed by a candidate count; rule 4 refuses the 2022-01 window; the symbol rule on synthetic spans). This clears blocked_on (the harness).'

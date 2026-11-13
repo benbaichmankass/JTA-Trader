@@ -328,6 +328,25 @@ that action's tier, so the channel can never grant more than the workflow does.
 | `set-env` | 2 | `set-env` | `scripts/ops/set_env.sh` (the same byte-preserving upsert and service allowlist as the § 2 arm) for ONE key matching `ops_actions.SET_ENV_KEYS` (today `PROP_PHONE_MODE_*` in `off` / `dry` / `live`), `env_file` `shared` or `web-api`, then restarts the named service (or `none`). PR #25390 (OPS-SET-ENV, operator 2026-11-12). Row added by DIRECT-OPS-SWEEP: #25390 merged without it and left the parity test red. |
 | `exec` | 2 | any command on the live VM (OPS-EXEC, PR #25397) | `bash -lc <cmd>` as the ops runner, cwd the trader tree; params `cmd` and `timeout_s` (5 s to 3600 s, default 600). Tier 2: runs on the operator's verbatim quote or an Approve tap. Operator-ordered 2026-11-12. Row added by DIRECT-OPS-SWEEP: #25397 merged without it and left the parity test red. |
 | `send-ping` | 1 | `send-ping` | `scripts/ops/send_ping_action.sh` with the § 2 row's params (`message`, `priority`, `target`, `kind`, `why`, `unproven`), validated at submit (a bad priority / target / kind is a 400, never a silent default). One Telegram message via `scripts/send_ping.py`; the job's `result.verdict` is `queued` or `withheld` (class limiter). Lane DIRECT-OPS-SWEEP: the most-used issue-routed action (637 open `send-ping` issues on 2026-11-12). |
+| `status-check` | 1 | `status-check` | `scripts/ops/status_check.sh` exactly as the § 2 row runs it (read-only, no params; the script is fixed by the registry entry). `result.stdout_tail` is the report. |
+| `disk-usage-report` | 1 | `disk-usage-report` | `scripts/ops/disk_usage_report.sh` exactly as the § 2 row runs it (read-only, no params; the script is fixed by the registry entry). `result.stdout_tail` is the report. |
+| `list-listening-ports` | 1 | `list-listening-ports` | `scripts/ops/list_listening_ports.sh` exactly as the § 2 row runs it (read-only, no params; the script is fixed by the registry entry). `result.stdout_tail` is the report. |
+| `ledger-backfill` | 1 | the VM change ledger (VM-CHANGE-LEDGER) | Appends ONE `backfill` record to `<ops>/ledger.jsonl` for a change made outside the channel (params `summary`, `revert`, `durable_in_repo`, `authority` required; `job_id`, `at`, `action`, `via`, `touched`, `before`, `after` optional). Touches nothing else. |
+| `ledger-fold` | 1 | the VM change ledger (VM-CHANGE-LEDGER) | Appends ONE status record for a ledger entry: `durable_in_repo` `folded` (needs `ref`: the PR or repo path that now expresses the change), `not_needed` or `pending`. Never edits a record. |
+| `stage-token-rotation` | 2 | the ops token rotation, VM side (VM-CHANGE-LEDGER 4b) | Copies the current `WORK_STORE_TOKEN` in the trader `.env` to `WORK_STORE_TOKEN_PREV` with `WORK_STORE_TOKEN_PREV_UNTIL` = now + 72 h (both accepted until then), backs the file up, restarts `ict-web-api`. Prints fingerprints, never values. Runbook: `docs/runbooks/ops-token-rotation.md`. |
+
+**The VM change ledger** (VM-CHANGE-LEDGER, operator 2026-11-12 popup "Build it"; **gates this adds or changes:
+none**). Every finished job whose action changes state appends one `change` record to `<ops>/ledger.jsonl` (the same
+jobs store, append-only): what changed (files / keys touched, before / after where cheap), reason, authority,
+session, revert and `durable_in_repo` (`pending` | `folded` | `not_needed`). Read-only jobs append nothing. For
+`exec`, send an optional top-level `change` object — `{"writes": bool, "summary", "touched": [...], "before",
+"after", "revert", "durable_in_repo"}` — and the declaration wins; without one a write-marker heuristic
+(`ops_actions.looks_mutating`) decides and an undeclared write reads `pending`. Lasting config is folded back as
+code in `deploy/` (then `ledger-fold ... folded`); a value kept on the VM by design is `not_needed`. Read it at
+`GET /api/bot/ops/ledger` (`?pending=1`); a `pending` entry older than 24 h is a due item in the daily brief §0
+(`scripts/ops/pipeline.py::vm_ledger_due`). Every `exec` / `set-env` job that writes also sends ONE Telegram
+notification (kind `system_action`) with the job id, session, the first 200 characters of the command and the
+authority. It is a notification, not an approval: the job runs whether or not it is delivered.
 
 ## 3. Tier policy (PM-side dispatch)
 

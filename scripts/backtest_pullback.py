@@ -279,6 +279,7 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                  structure_buffer_atr: float = 0.25,
                  structure_min_r: float = 1.0,
                  structure_fvg: bool = True,
+                 structure_sl_only: bool = False,
                  giveback_frac: float = 0.0,
                  trigger_action: str = "",
                  trigger_file: str = "",
@@ -714,8 +715,10 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
             _tpt = _tpg.TPTracker(
                 tp_geom, anchor=entry, sl=sl, risk=risk, is_long=(direction == "long"),
                 tp_cap_pct=tp_cap_pct, target=tp_price, atr0=atr)
-        if _sx is not None:
+        if _sx is not None and not structure_sl_only:
             tp_price = _sx.tp              # None -> no resting TP until a level is confirmed
+        # STRUCTURE-EXIT-ITERATE (--structure-sl-only, default off = byte-identical): keep the structure STOP and the
+        # declared (capped) TP -- the live `pivot=5;sl_only` semantic; the structure TP is neither placed nor extended.
         ext = entry
         ext_j = i
         trail = sl
@@ -972,7 +975,9 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                     break
             if _sx is not None:
                 # bar j has CLOSED: new confirmed levels bind from bar j+1 (ratchet / extend-only)
-                trail, tp_price = _sx.on_bar_close(j, float(df["close"].iloc[j]), trail, tp_price, entry)
+                trail, _sx_tp = _sx.on_bar_close(j, float(df["close"].iloc[j]), trail, tp_price, entry)
+                if not structure_sl_only:
+                    tp_price = _sx_tp
             # GEOM-B1 target revision (off unless --tp-extend-r / --tp-retarget-mode):
             # once per LEG bar, on its close, after the bar's own stop/target and
             # lever tests; the revised level binds from the next bar. Native
@@ -1138,6 +1143,8 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
         params.update(structure_exit=structure_exit, structure_buffer_atr=structure_buffer_atr,
                       structure_min_r=structure_min_r, structure_fvg=structure_fvg,
                       structure_no_swing_fallbacks=_sx_fallback)
+        if structure_sl_only:
+            params["structure_sl_only"] = True
     if _trig.on:
         params["trigger_action"] = trigger_action
         params["trigger_all"] = trigger_all
@@ -1550,6 +1557,9 @@ def main(argv: List[str]) -> int:
                    help="Minimum distance of the structure TP from entry, in R.")
     p.add_argument("--structure-no-fvg", action="store_true",
                    help="Structure TP uses swing highs/lows only.")
+    p.add_argument("--structure-sl-only", action="store_true",
+                   help="STRUCTURE-EXIT-ITERATE (default off = byte-identical): with --structure-exit, keep the structure "
+                        "stop but not the structure TP (the declared capped TP stays) -- the live pivot=N;sl_only semantic.")
     p.add_argument("--trail-level-min-r", type=float, default=0.0,
                    help="LEVEL-TRAIL-R-GATE (0 = off, byte-identical): a level touch latches the tight "
                         "trail only once the trade's peak open profit has reached this many R (AND, not "
@@ -1828,6 +1838,7 @@ def main(argv: List[str]) -> int:
                        structure_buffer_atr=args.structure_buffer_atr,
                        structure_min_r=args.structure_min_r,
                        structure_fvg=not args.structure_no_fvg,
+                       structure_sl_only=args.structure_sl_only,
                        giveback_frac=args.giveback_frac,
                        trigger_action=args.trigger_action,
                        trigger_file=args.trigger_file,
