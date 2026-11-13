@@ -1,0 +1,177 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261113T1824Z-pkg-ccd62bd7265a4e33",
+ "reviewed_at": "2026-11-13T18:33:00Z",
+ "order_package_id": "pkg-ccd62bd7265a4e33",
+ "trade_id": 7131,
+ "leg": "uso_trend_1h",
+ "accounts": [
+  "alpaca_paper"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-13T16:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-13T18:24:23Z",
+ "state": {
+  "atr_now_over_entry": 0.97,
+  "bars_held": 6,
+  "giveback_r": 0.776,
+  "open_r": -0.1334,
+  "peak_provenance": "estimated",
+  "peak_r": 0.6426,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 142.92571429,
+  "tp": 155.29714286
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.97,
+  "bars_since_peak": 3,
+  "giveback_r": 0.776,
+  "open_r": -0.1334,
+  "peak_r": 0.6426,
+  "r_to_stop": 0.8666,
+  "r_to_target": 4.1334
+ },
+ "mechanics": {
+  "evidence": "package sl 142.92571429 / tp 155.29714286 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 42,
+   "mean_r": 0.9102,
+   "sd_r": 2.0202,
+   "worst_r": -4.3852,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 42,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 42,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261113T1824Z-pkg-ccd62bd7265a4e33.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.5,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. Prior forecast (14:56Z: target 148.9, inv 144.0, p 0.35, 8x1h) is unresolved and not invalidated: low since then 144.58, above 144.0, high 146.99 (target not traded). Position has given back from +0.64R peak to -0.13R (1h bars 146.99 -> 144.58 -> 145.03), the structure flipped from a clean break of 145.0 to a retest of it, and the stop 142.93 (0.87R away) is under the 143.61 swing high. Hold cell measured n=42 mean +0.91R worst -4.39R; tighten options invalid (stop not below price) or unpriced. HOLD keeps the invalidation at 144.0/142.93; carrying the view with p 0.30 after the giveback."
+ },
+ "forecast": {
+  "thesis": "1h broke 145.0 and is retesting it from above while 1d is still up (ADX 30); I expect continuation to 148.9 if 144.58 holds, but the giveback to the breakout level lowers the odds",
+  "direction": "with_trade",
+  "target_px": 148.9,
+  "p_target": 0.3,
+  "invalidation_px": 144.0,
+  "horizon_bars": 6,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.bars_ohlc 16:00 bar low 144.58, 17:00 close 145.025",
+   "chart.swings highs 146.99",
+   "htf adx 29.96 up",
+   "exit_plan sl 142.93 tp 155.30",
+   "context.previous_review forecast target 148.9 inv 144.0"
+  ]
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold n=42 mean +0.91R sd 2.02 worst -4.39R (measured cell); tighten options not evidence (stop_level_not_below_price / no_candles)",
+  "giveback: peak 0.64R to -0.13R, 0.78R given back in 3 bars",
+  "live_vs_backtest: mirror 11 closed, +7.08R, CONSISTENT (72nd pct); real money 0 closed",
+  "regime: trend_now transitional",
+  "atr_ratio: now/entry 0.97; calendar none in 24h; news not readable",
+  "book: USO long, no correlated long; energy not elsewhere in the book",
+  "packet_defect: priced_options.options all_options_unpriced:no_candles 2/2",
+  "packet_defect: priced_options.candles candles_missing 2/2"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuKQfQXzT7gvJnAB7Vh",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [
+  {
+   "count": 2,
+   "denominator": 2,
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:no_candles"
+  },
+  {
+   "count": 2,
+   "denominator": 2,
+   "field": "priced_options.candles",
+   "reason": "candles_missing"
+  }
+ ],
+ "packet_sha": "cc871b8b811b15afdc3e28143f9ebdf236fa7ab602c597cfc78442b4c572e224"
+}

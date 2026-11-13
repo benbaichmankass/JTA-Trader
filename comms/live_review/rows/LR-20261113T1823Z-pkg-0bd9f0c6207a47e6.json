@@ -1,0 +1,196 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261113T1823Z-pkg-0bd9f0c6207a47e6",
+ "reviewed_at": "2026-11-13T18:33:00Z",
+ "order_package_id": "pkg-0bd9f0c6207a47e6",
+ "trade_id": 7202,
+ "leg": "qqq_pullback_1h",
+ "accounts": [
+  "alpaca_paper"
+ ],
+ "trigger": {
+  "event": "daily_floor",
+  "level": "2026-11-13",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-13T18:23:59Z",
+ "state": {
+  "atr_now_over_entry": 1.038,
+  "bars_held": 2,
+  "giveback_r": 0.1259,
+  "open_r": 0.0242,
+  "peak_provenance": "estimated",
+  "peak_r": 0.1502,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 663.14607143,
+  "tp": 742.84707
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.038,
+  "bars_since_peak": 0,
+  "giveback_r": 0.1259,
+  "open_r": 0.0242,
+  "peak_r": 0.1502,
+  "r_to_stop": 1.0242,
+  "r_to_target": 5.2102
+ },
+ "mechanics": {
+  "evidence": "package sl 663.14607143 / tp 742.84707 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 28,
+   "mean_r": 0.8726,
+   "sd_r": 2.5589,
+   "worst_r": -1.0614,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261113T1823Z-pkg-0bd9f0c6207a47e6.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. Never reviewed; +0.02R after 2 bars, peak 0.15R, stop 663.15 (1.02R away) and TP 742.85 intact and equal at the venue. Hold cell measured n=28 mean +0.87R worst -1.06R; tighten options unpriced (no_candles), so alternatives cannot be compared and the call is judgement. 1h made a lower low sweep to 671.74 and reclaimed to 677.06; 1d ADX 18 (no trend), so no structural case to move either bracket yet. HOLD expresses the view."
+ },
+ "forecast": {
+  "thesis": "1h dip to 671.74 was bought and price reclaimed 677; in a non-trending 1d (ADX 18) I expect a rotation back to the 689-693 supply, not a breakout through it, before the 671.7 low is lost",
+  "direction": "with_trade",
+  "target_px": 689.0,
+  "p_target": 0.4,
+  "invalidation_px": 671.5,
+  "horizon_bars": 8,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.bars_ohlc last close 677.06, low 671.74",
+   "chart.swings highs 692.97/694.52",
+   "htf adx 17.98",
+   "exit_plan sl 663.15 tp 742.85",
+   "priced_options hold n=28 mean 0.8726"
+  ]
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold n=28 mean +0.87R sd 2.56 worst -1.06R (measured cell), all tighten options no_candles (not evidence)",
+  "also_due: judgement_cadence (level 2026-11-13T16:00:00+00:00) answered by this same review; daily_floor is the trigger recorded",
+  "events_could_not_look: momentum_flip, structure_break (2 closed history bars, need 4)",
+  "live_vs_backtest: mirror 7 closed, -2.70R, CONSISTENT (28th pct); real money 0 closed",
+  "regime: trend_now transitional, entry cell unknown",
+  "atr_ratio: now/entry 1.04; calendar none in 24h",
+  "book: QQQ is the only long equity beside shorts in metals/crypto; USO long is the other long",
+  "packet_defect: priced_options.options all_options_unpriced:no_candles 6/6",
+  "packet_defect: priced_options.candles candles_missing 6/6"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuKQfQXzT7gvJnAB7Vh",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [
+  {
+   "count": 6,
+   "denominator": 6,
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:no_candles"
+  },
+  {
+   "count": 6,
+   "denominator": 6,
+   "field": "priced_options.candles",
+   "reason": "candles_missing"
+  }
+ ],
+ "packet_sha": "0f56f2d15ca94dc0e0758b99e6eeadd50cc3f1151ff8ef4fb90982dd650fb664"
+}

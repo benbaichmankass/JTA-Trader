@@ -1,0 +1,168 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261113T1823Z-pkg-25611272fdac4388",
+ "reviewed_at": "2026-11-13T18:33:00Z",
+ "order_package_id": "pkg-25611272fdac4388",
+ "trade_id": 7111,
+ "leg": "trend_donchian_ada_4h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "stall",
+  "level": 6,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-13T18:23:38Z",
+ "state": {
+  "atr_now_over_entry": 1.1168,
+  "bars_held": 7,
+  "giveback_r": 0.731,
+  "open_r": -0.4956,
+  "peak_provenance": "estimated",
+  "peak_r": 0.2354,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.17577143,
+  "tp": 0.1510977
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.1168,
+  "bars_since_peak": 3,
+  "giveback_r": 0.731,
+  "open_r": -0.4956,
+  "peak_r": 0.2354,
+  "r_to_stop": 0.5044,
+  "r_to_target": 2.5525
+ },
+ "mechanics": {
+  "evidence": "package sl 0.17577143 / tp 0.1510977 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 18,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 18,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 18,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 18,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 18,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261113T1823Z-pkg-25611272fdac4388.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. Prior forecast (12:42Z: target 0.1673, inv 0.1756, p 0.30, 4x4h) did not resolve: the 12:00 4h bar high 0.1747 stayed under 0.1756 and the low 0.1691 stayed above 0.1673, so neither level traded; direction was with_trade only in the sense of no invalidation. Open R -0.50 (stall: 7 bars, peak 0.24R) with the stop 0.50R / 0.9 ATR away at the 0.1756 swing high, i.e. HOLD already puts the invalidation at structure. Hold cell n=18 < floor 20 and all tighten options unpriced (insufficient_n / invalid level), so judgement. 1d is down (ADX 35), the bounce is capped by the 0.1756 high; closing at -0.5R gives up the 2.6R target for a stall that the stop already bounds. Carrying the forecast with p 0.30."
+ },
+ "forecast": {
+  "thesis": "1d down (ADX 35) and the 4h bounce keeps stalling under the 0.1756 swing high; I expect a retest of 0.1673 before 0.1756 trades, but two failed attempts at the low lower the odds",
+  "direction": "with_trade",
+  "target_px": 0.1673,
+  "p_target": 0.3,
+  "invalidation_px": 0.1756,
+  "horizon_bars": 4,
+  "timeframe": "4h",
+  "evidence": [
+   "chart.swings highs 0.1756, lows 0.1673/0.1658",
+   "chart.bars_ohlc 12:00 bar H 0.1747 L 0.1691",
+   "exit_plan sl 0.17577 tp 0.15110",
+   "context.previous_review forecast target 0.1673 inv 0.1756"
+  ]
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold n=18 < floor 20, mean null (insufficient_n); tightens unpriced (stop_level_not_below_price / insufficient_n), not evidence",
+  "stall: 7 bars held, peak_r 0.24 < 0.5",
+  "correlated: crypto shorts (ETH x4, ADA x2, SOL x2, XRP) are one beta bet; ADA is the only one under water",
+  "atr_ratio: now/entry 1.12; calendar none in 24h; funding and news not readable (missing_inputs)",
+  "tighten_bias: stop-at-price fills would flatter any tighten",
+  "packet_defect: priced_options.options all_options_unpriced:insufficient_n 3/3"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuKQfQXzT7gvJnAB7Vh",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [
+  {
+   "count": 3,
+   "denominator": 3,
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:insufficient_n"
+  }
+ ],
+ "packet_sha": "8521aa2e04be24e09920473c1be8392906e76d8e49180ac7d82e93ed84be2d35"
+}
