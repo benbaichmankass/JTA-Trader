@@ -8,6 +8,7 @@ from __future__ import annotations
 import os
 
 from fastapi import Depends, FastAPI
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html, get_swagger_ui_oauth2_redirect_html
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.web.api import auth as auth_module
@@ -81,7 +82,33 @@ app = FastAPI(
     title="JTA Trader — Dashboard API",
     version="0.2.0",
     dependencies=[Depends(auth_module.require_site_session)],
+    # FastAPI adds its built-in docs routes OUTSIDE the app-level dependencies, so
+    # with the gate on they answered anonymously (found by
+    # tests/test_web_site_auth_route_walk.py). They are re-added below as ordinary
+    # app routes, which the gate covers; same paths, same pages.
+    openapi_url=None, docs_url=None, redoc_url=None,
 )
+
+
+@app.get("/openapi.json", include_in_schema=False)
+def _openapi_json() -> dict:
+    return app.openapi()
+
+
+@app.get("/docs", include_in_schema=False)
+def _swagger_ui():
+    return get_swagger_ui_html(openapi_url="/openapi.json", title=app.title + " - docs",
+                               oauth2_redirect_url="/docs/oauth2-redirect")
+
+
+@app.get("/docs/oauth2-redirect", include_in_schema=False)
+def _swagger_ui_redirect():
+    return get_swagger_ui_oauth2_redirect_html()
+
+
+@app.get("/redoc", include_in_schema=False)
+def _redoc():
+    return get_redoc_html(openapi_url="/openapi.json", title=app.title + " - redoc")
 
 _dashboard_origin = os.environ.get("DASHBOARD_ORIGIN", "")
 _origins = ["http://localhost:5173", "http://localhost:3000"]

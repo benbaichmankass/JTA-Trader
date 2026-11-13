@@ -508,6 +508,13 @@ def normalise_push(raw: Any) -> dict[str, Any] | None:
     }
 
 
+def _first_str(*values: Any) -> str | None:
+    for v in values:
+        if isinstance(v, str) and v.strip():
+            return v
+    return None
+
+
 def normalise_requests(object_data: dict[str, Any], object_id: str) -> list[dict[str, Any]]:
     """Every answerable decision request declared on one work object.
 
@@ -551,8 +558,22 @@ def normalise_requests(object_data: dict[str, Any], object_id: str) -> list[dict
                 # consumer branch on absence, and absence is not a state.
                 "resumeContext": resume,
                 "resumeState": resume_state,
-                "question": raw.get("question") if isinstance(raw.get("question"), str) else None,
+                # `title` is the planning-question spelling (UI-WQ-DECISIONS-ROUTE);
+                # `question` wins when both are written.
+                "question": _first_str(raw.get("question"), raw.get("title")),
                 "options": options,
+                # The evidence the author attached, verbatim (prose, labelled as
+                # prose by the consumer). `None` when none was written.
+                "evidence": raw.get("evidence") if isinstance(raw.get("evidence"), str) else None,
+                # The author's recommended option KEY, kept only when it names an
+                # option the author actually wrote; anything else is `None`, never
+                # a guessed key. The SPA lists it first and marks it.
+                "recommended": (
+                    raw.get("recommended").strip()
+                    if isinstance(raw.get("recommended"), str)
+                    and raw.get("recommended").strip() in {o["key"] for o in options}
+                    else None
+                ),
                 # An explicit `false` closes free text; anything else leaves it
                 # open, because a decision channel that can only pick from a
                 # list cannot carry "none of these, and here is why".
