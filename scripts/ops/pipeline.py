@@ -589,6 +589,32 @@ def version_of(item_id: str, store: Path = STORE) -> str | None:
     return read_log(store).sources.get(item_id)
 
 
+def _unblock_contract(item: dict, prior: dict | None) -> None:
+    """UNBLOCK-WATCH (operator 2026-11-12): an item waiting on an event carries a structured ``due_when.conditions``
+    list (grammar: ``src/runtime/unblock_conditions.py``) + an owner, not prose only.
+    GATE (decision: 2026-11-12 operator popup "Yes: refuse it (Recommended)"): REFUSES a NEW event item, or an update
+    that CHANGES ``due_when``, whose block has no machine-checkable condition and no explicit ``manual:<text>``, while
+    ``config/unblock_watch.yaml::refuse_unconditioned`` is true (the same precedent as the due_when refusal above). An
+    untouched legacy item only warns; closing (done/killed) is never refused. Remove: set refuse_unconditioned: false."""
+    try:
+        from src.runtime import unblock_conditions as uc  # noqa: PLC0415
+        blk = uc.pipeline_block(item)
+        if blk is None:
+            return
+        probs = uc.problems(blk)
+    except Exception:  # noqa: BLE001  # allow-silent: the contract check is advisory; a failure must not block a write
+        return
+    if not probs:
+        return
+    msg = (f"pipeline: id {item.get('id')!r} waits on an event without a full structured block: {'; '.join(probs)}. "
+           "Add due_when.conditions, e.g. [\"pr_merged:123\"] (kinds: pr_merged pr_closed deployed row_state "
+           "unit_result operator_answer date data_n; manual:<text> last).")
+    changed = prior is None or (prior.get("due_when") or {}) != (item.get("due_when") or {})
+    if changed and uc.refusable(blk) and uc.refuse_unconditioned():
+        raise PipelineError(msg)
+    print(msg, file=sys.stderr)
+
+
 def append(item: dict, store: Path = STORE, *, intent: str,
            based_on: str | None = None) -> dict:
     """Validate, then write one NEW record file. Never rewrites history.
@@ -651,6 +677,7 @@ def append(item: dict, store: Path = STORE, *, intent: str,
     else:
         prior = read_log(store).items.get(item["id"])
 
+    _unblock_contract(item, prior if intent == "update" else None)
     if intent == "new" and prior is not None:
         raise PipelineError(
             f"id {item['id']!r} already exists (state={prior.get('state')!r}, "
@@ -1007,6 +1034,36 @@ def due_bucket(item: dict, today: date | None = None) -> str | None:
 
 def due(items: Iterable[dict], today: date | None = None) -> list[dict]:
     return [i for i in items if is_due(i, today)]
+
+
+# ── VM change ledger fold-backs (VM-CHANGE-LEDGER, operator 2026-11-12 "Build it") ─────────────────────────────
+# A direct change on the VM (src/runtime/ops_actions.py ledger) whose `durable_in_repo` is still `pending` is due
+# work: lasting config must be re-expressed in the repo's deploy files, or marked not_needed with a reason. The
+# ledger IS the record (the ops jobs store, extended); this function only computes due-ness over it, in the same
+# pipeline-item shape `due()` returns, so the brief surfaces it as a due item. No second register, nothing stored.
+
+def vm_ledger_due(view: dict | None) -> list[dict]:
+    """Pipeline-shaped DUE items for every ledger entry with ``fold_due`` (pending and older than the ledger's
+    ``fold_due_after_h``). ``view`` is ``ops_actions.ledger_view()``; None / unreadable -> []. The caller renders
+    the read_state, so an unread ledger is never shown as "nothing due"."""
+    if not isinstance(view, dict) or view.get("read_state") != "measured":
+        return []
+    out = []
+    for e in view.get("entries") or []:
+        if not e.get("fold_due"):
+            continue
+        out.append({
+            "id": f"VMLEDGER-{e.get('job_id')}",
+            "what": f"VM change awaiting fold-back to the repo: {e.get('summary') or e.get('action')}",
+            "state": "routed", "routed_to": "VM-CHANGE-LEDGER",
+            "origin": {"kind": "deploy", "ref": e.get("job_id"),
+                       "rerun": "GET /api/bot/ops/ledger?pending=1"},
+            "due_when": {"kind": "observation",
+                         "clears_when": "ledger-fold sets durable_in_repo to folded (with the PR/path) or not_needed"},
+            "next_action": "dispatch_lane",   # a fold-back is lane work (NEXT_ACTIONS); the brief prints `fold_back`
+            "age_h": e.get("age_h"), "session": e.get("session"), "touched": e.get("touched") or [],
+        })
+    return out
 
 
 def unrouted(items: Iterable[dict], today: date | None = None) -> list[dict]:

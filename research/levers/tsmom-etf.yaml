@@ -18,9 +18,9 @@ manifest:
   entry: underpowered
   exit: untested
   filter: untested
-  regime_gating: untested
+  regime_gating: underpowered
   timeframe: underpowered
-  symbol_set: untested
+  symbol_set: underpowered
   direction: underpowered
   session: untested
   sizing_vs_cost: untested
@@ -28,6 +28,7 @@ levers: {}
 title: Vol-targeted multi-asset ETF / futures-proxy time-series momentum, 2008-2024
 units:
 - RQ-20261101-58e4-05
+- RQ-20261101-d1f3-04
 doctrine: 'operator 2026-11-01 14:00-14:09Z: nothing that failed is closed; attribute first; next tests are one-factor/ablation chosen from this
   map; retire only when every lever family has been tested at power, net of cost, with no effect'
 verdict_so_far: 'fail: primary E5 net Sharpe 0.418 (< 0.5), halves 0.495 / 0.342, DSR(N=9) 0.57; clause fail (11 of 16 years positive, short side
@@ -149,6 +150,27 @@ levers_tested:
       stress_sharpe: 0.385
   shape: flat (0.418 vs 0.397)
   tested_at_power: false
+- family: symbol_set
+  varied: asset-class gating C1/C2 vs E5 (attempt 2)
+  response:
+    delta_sharpe:
+      C1: -0.018
+      C2: -0.152
+    verdict: fail
+    note: no arm clears the registered rule at N_cum=14
+  shape: flat
+  tested_at_power: false
+  unit: RQ-20261101-d1f3-04
+- family: regime_gating
+  varied: SPY-trend regime gate R1/R2 (attempt 2)
+  response:
+    delta_sharpe:
+      R1: -0.034
+      R2: 0.191
+    verdict: fail
+  shape: noisy
+  tested_at_power: false
+  unit: RQ-20261101-d1f3-04
 lever_families_untested:
 - dividend-adjusted total-return series (data fix, may move bond/equity legs)
 - 'asset-class gating (trend only where it historically works: commodities, rates) vs equities'

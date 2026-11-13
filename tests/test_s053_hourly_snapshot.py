@@ -24,8 +24,6 @@ import pytest
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent.parent / "scripts"
-if str(SCRIPT_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPT_DIR))
 
 
 @pytest.fixture
@@ -36,6 +34,10 @@ def shn(monkeypatch):
     so the fixture stubs them via ``sys.modules`` before we call into
     ``main``.
     """
+    # scripts/ goes on sys.path PER TEST (not once at import): under xdist another test in the same worker
+    # can drop the entry between collection and this test, which raised ModuleNotFoundError on CI
+    # (#25221 run 43254112592, 2026-11-12). monkeypatch restores sys.path afterwards.
+    monkeypatch.syspath_prepend(str(SCRIPT_DIR))
     import send_hourly_now as mod
 
     importlib.reload(mod)

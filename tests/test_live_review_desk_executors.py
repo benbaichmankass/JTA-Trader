@@ -45,7 +45,7 @@ def test_the_cell_table():
     assert lra.ACTION_PATHS["phone"] == frozenset({"move_tp", "close", "reduce", "widen_sl"})
     # prop_vm: move_tp since PROP-BRACKET-APPLY (operator 2026-11-11, "it has to be able to do it on its own"):
     # a ticket-meta TP request the account's own trail applies; refused per account that cannot amend a TP.
-    assert lra.ACTION_PATHS["prop_vm"] == frozenset({"move_tp"}) and lra.ACTION_PATHS["other"] == frozenset()
+    assert lra.ACTION_PATHS["prop_vm"] == frozenset({"move_tp", "close", "reduce"}) and lra.ACTION_PATHS["other"] == frozenset()
     assert lra.close_reason_for(DESK_PKG) == "strategy_close"
     assert lra.close_reason_for(tla.PKG) == lra.LIVE_REVIEW_CLOSE
 
@@ -158,7 +158,9 @@ def test_desk_close_and_partial_reach_bybit_and_alpaca(act):
                   write_log=False, state={})
     by = {a["account_id"]: a for a in res["accounts"]}
     assert by["bybit_1"]["executed"]
-    assert by["alpaca_live"]["reason"] == "no_action_path:reduce"   # not built: the brackets hold every share
+    # AM-PROP-VM-ACTION-MATRIX removed 2026-11-12: alpaca decides the reduce and reaches the (stubbed) executor; the
+    # real executor router answers "no executor wired" (tests/test_live_review_trade_actions.py routing tests)
+    assert by["alpaca_live"]["reason"] == "within_bounds" and by["alpaca_live"]["executed"]
 
 
 # --------------------------------------------------------------- the Alpaca move_tp cell

@@ -1,0 +1,10 @@
+Fetching QQQ 60 candles 2018-06-28 -> 2026-11-13 (source=dukascopy) …
+  dukascopy: QQQ -> INSTRUMENT_ETF_CFD_US_QQQ_US_USD (relation=same_ticker_cfd: same underlying, CFD)
+INFO:DUKASCRIPT:current timestamp :2026-11-12T20:00:00
+Wrote 14646 rows (2018-06-28 -> 2026-11-12) to /tmp/exit_lever_ablation_9hbgwq01/qqq_pullback_1h__data.csv
+[S1] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 60 --pullback-lookback 12 --pullback-frac 0.618 --data <data> --symbol QQQ --resample 1h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261112-c1b4-01/43343151031/arms/S1__trades.jsonl --json comms/research/RQ-20261112-c1b4-01/43343151031/arms/S1__bt.json --tp-cap-pct 0.099 --tp-r 50.0 --side-filter long --start 2018-06-01 --end 2020-06-30 23:59
+{
+ "verdict": "fail",
+ "label": "stage0_no_edge",
+ "why": "net_r=11.3204 with 1/2 positive folds (needs > 0 and >= 2)"
+}

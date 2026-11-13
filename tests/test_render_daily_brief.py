@@ -390,3 +390,65 @@ def test_atm_line_on_the_live_tree_reads_and_names_a_next_decision():
     assert v["readState"] in ("read", "partial")
     assert v["units"] >= 21            # the 2026-10-16 re-cut materialised 21 P1 units
     assert "COULD NOT BE READ" not in v["nextDecision"]
+
+
+# ── PROPOSAL-ALERT-ROUTING: one awaits_operator predicate, three readers ──────────────────────
+def _promote_row():
+    import json
+    from src.runtime import checklist_store as cs
+    p = cs.REPO / cs.STORE / "PROMOTE-1H-SURVIVORS-20261104.json"
+    if not p.is_file():  # the row closes one day; the frozen shape below is its committed JSON's relevant fields
+        return {"id": "PROMOTE-1H-SURVIVORS-20261104", "state": "queued", "owner": "manager", "tier": 3,
+                "blocked_on": [], "due_by": "2026-11-06"}
+    return json.loads(p.read_text(encoding="utf-8"))
+
+
+def test_awaits_operator_finds_the_real_promote_row_and_each_structured_field():
+    from datetime import date
+    from src.runtime import checklist_store as cs
+    day = date(2026, 11, 12)
+    row = _promote_row()
+    if row.get("state") not in cs.TERMINAL:  # positive control: the row that was missed
+        assert cs.awaits_operator(row, day) == "tier-3 past due_by"
+    base = {"id": "X", "state": "queued", "owner": "manager", "tier": 1, "blocked_on": []}
+    assert cs.awaits_operator(base, day) is None
+    assert cs.awaits_operator({**base, "ask_operator": True}, day) == "ask_operator"
+    assert cs.awaits_operator({**base, "owner": "operator"}, day) == "owner operator"
+    assert cs.awaits_operator({**base, "blocked_on": [{"kind": "operator", "ref": "q"}]}, day) == "blocked on operator"
+    assert cs.awaits_operator({**base, "hand_back": "decide"}, day) == "lane hand-back"
+    assert cs.awaits_operator({**base, "tier": 3, "due_by": "2026-11-13"}, day) is None  # not yet due
+    assert cs.awaits_operator({**base, "state": "done", "ask_operator": True}, day) is None  # terminal
+    assert cs.awaits_operator({**base, "note": "operator must decide"}, day) is None  # prose never counts
+    # 2026-11-13 (manager OK): a landed_unproven tier-3 row past due owes an OBSERVATION, not a decision
+    lu = {**base, "tier": 3, "due_by": "2026-11-06", "state": "landed_unproven"}
+    assert cs.awaits_operator(lu, day) is None and cs.observation_owed_tier3(lu, day) is True
+    assert cs.awaits_operator({**lu, "ask_operator": True}, day) == "ask_operator"  # an explicit ask still routes
+    assert cs.observation_owed_tier3({**lu, "state": "queued"}, day) is False
+
+
+def test_section2_and_section0_name_the_missed_row():
+    from datetime import date
+    from scripts.ops import render_daily_brief as rdb
+    day = date(2026, 11, 12)
+    row = {"id": "PROMOTE-X", "state": "queued", "owner": "manager", "tier": 3, "due_by": "2026-11-06",
+           "title": "promote leg", "blocked_on": []}
+    ck = rdb.checklist_view({"items": [row, {**row, "id": "QUIET", "tier": 1}]})
+    assert [r["id"] for r in rdb.decisions_for_you(ck, day)] == ["PROMOTE-X"]
+    lines = "\n".join(rdb.overdue_build_lines([row, {**row, "id": "QUIET", "tier": 1}], day))
+    assert "⚠ `PROMOTE-X`" in lines and "tier-3 past due_by" in lines
+    assert "⚠ `QUIET`" not in lines and "Other overdue (oldest first): `QUIET`" in lines
+
+
+def test_section2_names_the_landed_unproven_rows_it_moved_out():
+    from datetime import date
+    from scripts.ops import render_daily_brief as rdb
+    day = date(2026, 11, 13)
+    ask = {"id": "PROMOTE-X", "state": "queued", "owner": "manager", "tier": 3, "due_by": "2026-11-06",
+           "title": "promote leg", "blocked_on": []}
+    lu = {**ask, "id": "MERGED-T3", "state": "landed_unproven", "title": "merged tier-3 change"}
+    ck = rdb.checklist_view({"items": [ask, lu]})
+    assert [r["id"] for r in rdb.decisions_for_you(ck, day)] == ["PROMOTE-X"]
+    text = "\n".join(rdb._section2({"checklistState": "read", "checklist": ck, "pipeline": {},
+                                     "forDate": day.isoformat()}))
+    assert "1 landed_unproven tier-3 row(s) past due_by are NOT listed here" in text and "MERGED-T3" in text
+    assert "**MERGED-T3**" not in text and "**PROMOTE-X**" in text

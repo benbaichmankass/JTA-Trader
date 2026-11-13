@@ -36,9 +36,9 @@ import json
 import logging
 import math
 import os
+import shutil
 import subprocess
 import sys
-import tempfile
 import threading
 import time
 from datetime import datetime, timedelta, timezone
@@ -59,6 +59,18 @@ MIN_INTERVAL_S = 120
 TF_S = {"1m": 60, "3m": 180, "5m": 300, "15m": 900, "30m": 1800, "1h": 3600}
 #: Strength order when several fire in one pass: the one woken is the first in this list.
 KINDS = ("atr_burst", "momentum_burst", "liquidity_sweep", "level_break", "near_signal", "calendar")
+
+#: Per-stage wall time of the LAST build_packet call (one pass runs at a time under _LOCK). Measured so the
+#: could_not_build receipt says WHICH stage was slow, not only that one timed out (DESK-TRIGGER-SCAN-TIMEOUT).
+LAST_STAGES: List[Dict[str, Any]] = []
+INFLIGHT = "inflight.json"
+#: build_packet's `why` starts with this when the isolated build may STILL BE RUNNING (the `systemctl start` client was
+#: killed with the trader, or never reported): not a failure, so no could_not_build label and the in-flight mark stays
+#: for the next pass to adopt (DESK-BUILD-DETACHED, 2026-11-12: every -15 was the client dying with a trader restart).
+DETACHED = "detached:"
+#: "unit" (own cgroup) | "inproc" (fallback) for the last build; the in-flight mark path the running pass owns.
+LAST_PATH: Optional[str] = None
+CURRENT_INFLIGHT: Optional[Path] = None
 
 _LOCK = threading.Lock()
 _last_kick = float("-inf")
@@ -285,21 +297,91 @@ def _calendar(symbol: str, now: datetime) -> Tuple[float, dict]:
     return event_risk_for_symbol(symbol, now)
 
 
-def build_packet(f: Dict[str, Any], cfg: Dict[str, Any], decisions_text: str) -> Tuple[Optional[Path], Optional[str]]:
-    """The hourly builder + publisher, on ONE symbol at the trigger timeframe. (stage, None) | (None, why)."""
+def _jobs_dir() -> Path:
+    return ROOT / "runtime_logs" / "desk" / "jobs"
+
+
+def _prune_jobs(max_age_s: float = 3600.0) -> None:
     try:
-        tmp = Path(tempfile.mkdtemp(prefix="desk-trigger-"))
+        now = time.time()
+        for j in _jobs_dir().iterdir():
+            if j.is_dir() and now - j.stat().st_mtime > max_age_s:
+                shutil.rmtree(j, ignore_errors=True)
+    except OSError:
+        pass
+
+
+def _run_isolated(job_id: str, job_dir: Path, stages: List[Tuple[str, List[str]]], env_overlay: Dict[str, str],
+                  stage_dir: Path) -> Optional[Tuple[Optional[Path], Optional[str]]]:
+    """Run the stages in ``ict-desk-build@<job>.service`` (its own cgroup: a trader restart cannot kill it).
+    (stage, None) | (None, why) | None when isolation is unavailable here (unit not installed / no sudo) -> the caller
+    falls back to the in-process run, which is what happened before. Per-stage timeout semantics are unchanged
+    (dpw.BUILD_TIMEOUT_S, enforced by scripts/ops/desk_build_job.py); the unit's RuntimeMaxSec is only the backstop."""
+    (job_dir / "job.json").write_text(json.dumps({"env": env_overlay, "stages": [
+        {"name": n, "argv": argv, "timeout_s": dpw.BUILD_TIMEOUT_S} for n, argv in stages]}))
+    if CURRENT_INFLIGHT is not None:
+        mark = _read_json(CURRENT_INFLIGHT)
+        if mark is not None:
+            _write_state(CURRENT_INFLIGHT, dict(mark, job=job_id))
+    try:
+        r = subprocess.run(["sudo", "-n", "systemctl", "start", f"ict-desk-build@{job_id}.service"],
+                           capture_output=True, text=True, timeout=2 * dpw.BUILD_TIMEOUT_S + 60)
+    except subprocess.TimeoutExpired:
+        return None, DETACHED + "systemctl start exceeded 2 stages + 60 s (the unit's RuntimeMaxSec bounds it)"
+    res = _read_json(job_dir / "result.json")
+    if res is None:
+        err = (r.stderr or r.stdout or "").strip()
+        if r.returncode != 0 and any(k in err.lower() for k in ("not found", "password", "not allowed", "no tty", "sudo:")):
+            return None  # isolation unavailable here: the caller falls back to the in-process run
+        # The client was killed by a signal (a deploy restart SIGTERMs the trader's cgroup, `systemctl start` with it)
+        # or reported nothing. The unit is a separate cgroup and may still be running: DETACHED, not failed.
+        return None, DETACHED + f"no result.json yet (systemctl exit {r.returncode}: {err[-120:]})"
+    LAST_STAGES.clear()
+    LAST_STAGES.extend({k: v for k, v in st.items() if k != "tail"} for st in res.get("stages") or [])
+    bad = next((st for st in res.get("stages") or [] if st.get("outcome") != "exit 0"), None)
+    if res.get("state") == "ok" and bad is None:
+        return stage_dir, None
+    if bad and bad.get("outcome") == "timeout":
+        return None, f"TimeoutExpired: {bad['stage']} exceeded {dpw.BUILD_TIMEOUT_S}s (isolated unit, {bad.get('wall_s')}s)"
+    if bad:
+        return None, f"{bad['stage']} {bad.get('outcome')}: {bad.get('tail', '')}"
+    return None, f"desk-build unit: {res.get('error') or res.get('state')}"
+
+
+def build_packet(f: Dict[str, Any], cfg: Dict[str, Any], decisions_text: str) -> Tuple[Optional[Path], Optional[str]]:
+    """The hourly builder + publisher, on ONE symbol at the trigger timeframe. (stage, None) | (None, why).
+    Runs in its own systemd unit when it can (survives a trader restart), else in-process (DESK-TRIGGER-SCAN-TIMEOUT)."""
+    global LAST_PATH
+    try:
+        _prune_jobs()
+        job_id = f"{int(time.time())}-{os.getpid()}"
+        tmp = _jobs_dir() / job_id
+        tmp.mkdir(parents=True, exist_ok=True)
         dec = tmp / "decisions.jsonl"
         dec.write_text(decisions_text)
-        env = dict(os.environ, LIVE_REVIEW_PUBLIC_BASE=os.environ.get("LIVE_REVIEW_PUBLIC_BASE", dpw.LOCAL_API))
+        base = os.environ.get("LIVE_REVIEW_PUBLIC_BASE", dpw.LOCAL_API)
+        env = dict(os.environ, LIVE_REVIEW_PUBLIC_BASE=base)
         scan, stage = tmp / "scan.json", tmp / "stage"
         trig = json.dumps({k: f[k] for k in ("kind", "symbol", "bar", "detail")}, separators=(",", ":"))
         tf, hz = str(cfg.get("timeframe", "5m")), ",".join(str(h) for h in cfg.get("horizons") or [3, 6, 12])
-        for cmd in ([sys.executable, str(dpw.BUILDER), "--timeframe", tf, "--horizons", hz, "--symbols", f["symbol"],
-                     "--decisions", str(dec), "--trigger-json", trig, "--out", str(scan)],
-                    [sys.executable, str(dpw.PUBLISHER), "publish", "--packet", str(scan), "--stage", str(stage),
-                     "--pointer", TRIGGER_POINTER]):
-            r = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True, timeout=dpw.BUILD_TIMEOUT_S)
+        stages = [("builder", [sys.executable, str(dpw.BUILDER), "--timeframe", tf, "--horizons", hz, "--symbols", f["symbol"],
+                               "--decisions", str(dec), "--trigger-json", trig, "--out", str(scan)]),
+                  ("publisher", [sys.executable, str(dpw.PUBLISHER), "publish", "--packet", str(scan), "--stage", str(stage),
+                                 "--pointer", TRIGGER_POINTER])]
+        LAST_STAGES.clear()
+        iso = _run_isolated(job_id, tmp, stages, {"LIVE_REVIEW_PUBLIC_BASE": base}, stage)
+        if iso is not None:
+            LAST_PATH = "unit"
+            return iso
+        LAST_PATH = "inproc"
+        for name, cmd in stages:
+            t0 = time.monotonic()
+            try:
+                r = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True, timeout=dpw.BUILD_TIMEOUT_S)
+            except subprocess.TimeoutExpired:
+                LAST_STAGES.append({"stage": name, "outcome": "timeout", "wall_s": round(time.monotonic() - t0, 1)})
+                raise
+            LAST_STAGES.append({"stage": name, "outcome": f"exit {r.returncode}", "wall_s": round(time.monotonic() - t0, 1)})
             if r.returncode != 0:
                 return None, f"{Path(cmd[1]).name} exit {r.returncode}: {(r.stderr or r.stdout).strip()[-160:]}"
         return stage, None
@@ -335,12 +417,54 @@ def run_once(*, cfg: Optional[Dict[str, Any]] = None, now_fn: Callable[[], datet
     state_path, labels_path = d / "trigger_state.json", d / "trigger_labels.jsonl"
     rec: Dict[str, Any] = {"computed_at": now.isoformat(), "watcher": "vm"}
     state = _read_json(state_path) or {"seen_keys": [], "wakes": []}
+    adopt: Optional[Tuple[Dict[str, Any], Path, str]] = None
 
     def done(st: str, **kw: Any) -> Dict[str, Any]:
         rec.update(state=st, **kw)
         rec["cost"] = cost_line(state, cfg or {}, now)
         ltr_post.write_receipt(rec, receipt or receipt_path())
         return rec
+
+    chosen: Optional[Dict[str, Any]] = None
+
+    def label(disp: str, **kw: Any) -> None:
+        # Every label written AFTER a build carries that build's wall time, per-stage outcome and isolation path, so
+        # the successful-build distribution accrues (before this only could_not_build did; the receipt is overwritten
+        # each pass). Labels written before a build (no credential) carry none.
+        timing = {k: rec[k] for k in ("build_wall_s", "stages", "isolation") if k in rec}
+        _append(labels_path, {**{"at": now.isoformat(), "fired": chosen, "disposition": disp}, **timing, **kw})
+        state["seen_keys"] = (state["seen_keys"] + [chosen["key"]])[-500:]
+        _write_state(state_path, state)
+
+    def land(stage: Path, adopted_job: Optional[str] = None) -> Dict[str, Any]:
+        extra = {"adopted_job": adopted_job} if adopted_job else {}
+        ptr = json.loads((stage / TRIGGER_POINTER).read_text())
+        sha, ccode = (commit_fn or dpw.commit_packet)(stage, ptr["packet_id"], auth, http, pointer_path=TRIGGER_POINTER)
+        if sha is None:
+            label("could_not_commit", packet_id=ptr["packet_id"], http_code=ccode, **extra)
+            return done("could_not_commit", fired=chosen["key"], http_code=ccode)
+        try:
+            pr = pr_fn() if pr_fn else ltr_post.wake_module().ops_flags_pr()
+        except Exception as exc:  # noqa: BLE001
+            label("could_not_post", packet_id=ptr["packet_id"], reason=type(exc).__name__, **extra)
+            return done("could_not_post", fired=chosen["key"], packet_id=ptr["packet_id"])
+        if not wake_toggles.is_on("desk_trigger_wake"):  # packet is landed above (data path untouched); only the comment is withheld
+            wake_toggles.log_suppressed("desk_trigger_wake", ptr["packet_id"], commit=sha)
+            label("suppressed_by_wake_toggle", packet_id=ptr["packet_id"], commit=sha, **extra)
+            return done("suppressed_by_wake_toggle", fired=chosen["key"], packet_id=ptr["packet_id"], commit=sha)
+        entry = {"packet_id": ptr["packet_id"], "packet_sha": ptr["packet_sha"], "path": ptr["path"],
+                 "built_at": ptr["built_at"], "commit": sha, "poster": "vm",
+                 "trigger": {k: chosen[k] for k in ("kind", "symbol", "bar", "detail")}}
+        pcode, _ = http("POST", f"{dpw.API}/repos/{dpw.REPO}/issues/{pr}/comments",
+                        json.dumps({"body": render_marker(entry, now)}).encode(), auth)
+        if pcode != 201:
+            label("could_not_post", packet_id=ptr["packet_id"], http_code=pcode, **extra)
+            return done("could_not_post", fired=chosen["key"], packet_id=ptr["packet_id"], http_code=pcode)
+        state["wakes"] = ([w for w in state.get("wakes") or [] if (_parse(w.get("at")) or now) > now - timedelta(days=2)]
+                          + [{"at": now.isoformat(), "symbol": chosen["symbol"], "packet_id": ptr["packet_id"]}])
+        label("posted", packet_id=ptr["packet_id"], commit=sha, **extra)
+        return done("posted", fired=chosen["key"], packet_id=ptr["packet_id"], commit=sha,
+                    latency_s=round((now_fn() - now).total_seconds(), 1), **extra)
 
     try:
         cfg = cfg if cfg is not None else load_config()
@@ -352,6 +476,18 @@ def run_once(*, cfg: Optional[Dict[str, Any]] = None, now_fn: Callable[[], datet
         return done("no_symbols")
     tf = str(cfg.get("timeframe", "5m"))
     auth = auth_fn()
+    adopt = _reconcile_inflight(d, labels_path, now, cfg, list(state.get("seen_keys") or []))
+    if adopt is not None and adopt[0] == "pending":
+        # A detached build is still running in its own unit. One build at a time is the existing invariant (the _LOCK):
+        # do not start a second one on top of it, and do not wait on it past its own lifetime (_reconcile_inflight).
+        return done("build_pending", job=adopt[1], age_s=adopt[2])
+    if adopt is not None:  # a finished survivor build: land it instead of detecting afresh this pass
+        chosen, adopt_stage, adopt_job = adopt[1], adopt[2], adopt[3]
+        rec["adopted_job"] = adopt_job
+        if not auth:
+            label("could_not_commit", packet_id=None, reason="no_credential_in_git_extraheader", adopted_job=adopt_job)
+            return done("could_not_commit", fired=chosen["key"])
+        return land(adopt_stage, adopted_job=adopt_job)
     bars = bars_fn(symbols, tf, int(cfg.get("candles", 120)))
     hourly = fetch_hourly_packet(auth, fetch)
     firings: List[Dict[str, Any]] = []
@@ -376,46 +512,91 @@ def run_once(*, cfg: Optional[Dict[str, Any]] = None, now_fn: Callable[[], datet
         _write_state(state_path, state)
         return done("quiet" if not firings else "limited", limited=[w for _, w in limited])
 
-    def label(disp: str, **kw: Any) -> None:
-        _append(labels_path, dict({"at": now.isoformat(), "fired": chosen, "disposition": disp}, **kw))
-        state["seen_keys"] = (state["seen_keys"] + [chosen["key"]])[-500:]
-        _write_state(state_path, state)
-
     if not auth:
         label("could_not_commit", packet_id=None, reason="no_credential_in_git_extraheader")
         return done("could_not_commit", fired=chosen["key"])
     code, text = fetch(dpw._contents_url(dpw.DECISIONS_PATH), auth)
+    _write_state(d / INFLIGHT, {"started_at": now.isoformat(), "fired": chosen})
+    global CURRENT_INFLIGHT, LAST_PATH
+    CURRENT_INFLIGHT, LAST_PATH = d / INFLIGHT, None
+    t_build = time.monotonic()
     stage, why = build_fn(chosen, cfg, text if code == 200 and isinstance(text, str) else "")
-    if stage is None:
-        label("could_not_build", packet_id=None, reason=why)
-        return done("could_not_build", fired=chosen["key"], reason=why)
-    ptr = json.loads((stage / TRIGGER_POINTER).read_text())
-    sha, ccode = (commit_fn or dpw.commit_packet)(stage, ptr["packet_id"], auth, http, pointer_path=TRIGGER_POINTER)
-    if sha is None:
-        label("could_not_commit", packet_id=ptr["packet_id"], http_code=ccode)
-        return done("could_not_commit", fired=chosen["key"], http_code=ccode)
+    rec["build_wall_s"], rec["stages"], rec["isolation"] = round(time.monotonic() - t_build, 1), list(LAST_STAGES), LAST_PATH
+    if stage is None and why and why.startswith(DETACHED):
+        # The build may still be running in its own unit: keep the in-flight mark (job id inside) so the NEXT pass adopts
+        # a finished survivor, and write no could_not_build label and do not mark the firing handled.
+        return done("build_detached", fired=chosen["key"], reason=why)
     try:
-        pr = pr_fn() if pr_fn else ltr_post.wake_module().ops_flags_pr()
-    except Exception as exc:  # noqa: BLE001
-        label("could_not_post", packet_id=ptr["packet_id"], reason=type(exc).__name__)
-        return done("could_not_post", fired=chosen["key"], packet_id=ptr["packet_id"])
-    if not wake_toggles.is_on("desk_trigger_wake"):  # packet is landed above (data path untouched); only the comment is withheld
-        wake_toggles.log_suppressed("desk_trigger_wake", ptr["packet_id"], commit=sha)
-        label("suppressed_by_wake_toggle", packet_id=ptr["packet_id"], commit=sha)
-        return done("suppressed_by_wake_toggle", fired=chosen["key"], packet_id=ptr["packet_id"], commit=sha)
-    entry = {"packet_id": ptr["packet_id"], "packet_sha": ptr["packet_sha"], "path": ptr["path"],
-             "built_at": ptr["built_at"], "commit": sha, "poster": "vm",
-             "trigger": {k: chosen[k] for k in ("kind", "symbol", "bar", "detail")}}
-    pcode, _ = http("POST", f"{dpw.API}/repos/{dpw.REPO}/issues/{pr}/comments",
-                    json.dumps({"body": render_marker(entry, now)}).encode(), auth)
-    if pcode != 201:
-        label("could_not_post", packet_id=ptr["packet_id"], http_code=pcode)
-        return done("could_not_post", fired=chosen["key"], packet_id=ptr["packet_id"], http_code=pcode)
-    state["wakes"] = ([w for w in state.get("wakes") or [] if (_parse(w.get("at")) or now) > now - timedelta(days=2)]
-                      + [{"at": now.isoformat(), "symbol": chosen["symbol"], "packet_id": ptr["packet_id"]}])
-    label("posted", packet_id=ptr["packet_id"], commit=sha)
-    return done("posted", fired=chosen["key"], packet_id=ptr["packet_id"], commit=sha,
-                latency_s=round((now_fn() - now).total_seconds(), 1))
+        (d / INFLIGHT).unlink()
+    except OSError:
+        pass
+    if stage is None:
+        label("could_not_build", packet_id=None, reason=why, build_wall_s=rec["build_wall_s"], stages=rec["stages"])
+        return done("could_not_build", fired=chosen["key"], reason=why)
+    return land(stage)
+
+
+#: A survivor's packet is adopted only while its bar is still current: at most this many bars after the bar closed.
+ADOPT_MAX_BARS = 3
+#: A detached build's unit lives at most its RuntimeMaxSec (2 stages x BUILD_TIMEOUT_S + slack); past that with no result
+#: it is gone, and the pass is labelled `interrupted`.
+DETACHED_WAIT_S = 2 * dpw.BUILD_TIMEOUT_S + 60
+
+
+def _adoptable(mark: Dict[str, Any], surv: Optional[Dict[str, Any]], now: datetime, cfg: Dict[str, Any],
+               seen: List[str]) -> Optional[Path]:
+    """The survivor's stage dir when its build FINISHED (state ok), is COMPLETE (pointer + the packet it names),
+    is for a bar not yet handled and still current. None otherwise (then it is labelled `interrupted`)."""
+    try:
+        if not mark.get("job") or not surv or surv.get("state") != "ok":
+            return None
+        fired = mark.get("fired") or {}
+        if fired.get("key") in seen:
+            return None
+        bar_start = _parse(str(fired.get("bar", "")).replace("Z", "+00:00"))
+        tf_s = TF_S.get(str(cfg.get("timeframe", "5m")))
+        if bar_start is None or tf_s is None or now > bar_start + timedelta(seconds=tf_s * (1 + ADOPT_MAX_BARS)):
+            return None
+        stage = _jobs_dir() / str(mark["job"]) / "stage"
+        ptr = json.loads((stage / TRIGGER_POINTER).read_text())
+        if not (stage / str(ptr["path"])).is_file() or not ptr.get("packet_id") or not ptr.get("packet_sha"):
+            return None
+        return stage
+    except Exception:  # noqa: BLE001 -- anything unreadable is "not adoptable", and gets the interrupted label
+        return None
+
+
+def _reconcile_inflight(d: Path, labels_path: Path, now: datetime, cfg: Optional[Dict[str, Any]] = None,
+                        seen: Optional[List[str]] = None) -> Optional[Tuple]:
+    """A pass that started a build and did not reach its label was cut off, or its build is DETACHED (running in its own
+    unit). Returns ("adopt", fired, stage, job) when the survivor FINISHED a complete packet for a still-current bar, so
+    the caller commits + posts it (DESK-BUILD-SURVIVOR-ADOPT); ("pending", job, age_s) when the unit has not finished yet
+    and is still within its own lifetime (the mark STAYS; the caller starts no second build); None otherwise, after
+    labelling the pass `interrupted` once, with the survivor's result when there is one."""
+    p = d / INFLIGHT
+    mark = _read_json(p)
+    if not mark:
+        return None
+    started = _parse(mark.get("started_at"))
+    age = (now - started).total_seconds() if started else None
+    surv = _read_json(_jobs_dir() / str(mark["job"]) / "result.json") if mark.get("job") else None
+    if mark.get("job") and surv is None and age is not None and age < DETACHED_WAIT_S:
+        return ("pending", str(mark["job"]), round(age, 1))  # not finished, not yet past its RuntimeMaxSec: leave the mark
+    try:
+        p.unlink()
+    except OSError:
+        pass
+    stage = _adoptable(mark, surv, now, cfg or {}, list(seen or []))
+    if stage is not None:
+        return ("adopt", mark["fired"], stage, str(mark["job"]))
+    why = ("build outlived the trader and finished (" + str(surv.get("state")) + "), but its packet could not be adopted "
+           "(unfinished, incomplete, already handled, or its bar is no longer current)"
+           if surv else "build never finished: process ended mid-build (restart/kill), or its unit passed its lifetime")
+    _append(labels_path, {"at": mark.get("started_at"), "fired": mark.get("fired"), "disposition": "interrupted",
+                          "packet_id": None, "reason": why, "survivor": surv,
+                          "noticed_at": now.isoformat(),
+                          "after_s": round(age, 1) if age is not None else None})
+    return None
 
 
 def _write_state(p: Path, state: Dict[str, Any]) -> None:

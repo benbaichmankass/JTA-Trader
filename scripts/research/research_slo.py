@@ -156,7 +156,59 @@ def gather_facts(root: Path, now: datetime, cfg: Dict[str, Any], gh: Optional["G
                 continue
         return sorted(out)
 
+    def _proxy():
+        """The trial-ledger proxy (Stage-0 PASS AND DSR > 0.95 AND BHY haircut > 0): kept as EVIDENCE only."""
+        led = _ledgers()
+        if len(led) < 2:
+            return None
+        newest = led[-1]
+        base = next((x for x in led if (newest[0] - x[0]).days <= 45), led[0])
+        return {"proxy_survivors_now": newest[1], "proxy_survivors_base": base[1], "ledger_newest": newest[3],
+                "ledger_base": base[3], "proxy_basis": "trial_ledger.json summary.stage0_pass_surviving_dsr_and_bhy_haircut"}
+
+    from scripts.research.result_disposition_check import _rows as _result_rows
+
+    def _verdict_at(uid: str, graded_at: str) -> Optional[datetime]:
+        """When the result a grading is ABOUT landed: the newest result row dated on or before the grading day.
+        graded_at alone is not that date (queue_grade re-stamped unchanged gradings daily until 2026-11-12)."""
+        day = graded_at[:10]
+        ts = [t for r in _result_rows(root / "research" / "results" / uid) if (t := _ts(r.get("generated_at")))
+              and t.strftime("%Y-%m-%d") <= day]
+        return max(ts) if ts else None
+
+    _cite_text: List[str] = []
+
+    def _cited(uid: str) -> bool:
+        """Is this unit id cited by the tree a roster / config change lives in (conversion, report-only)?"""
+        if not _cite_text:
+            for base in ("config", "comms/strategy_evidence"):
+                for fp in sorted((root / base).rglob("*")) if (root / base).is_dir() else []:
+                    if fp.is_file() and fp.suffix in (".yaml", ".yml", ".json", ".jsonl", ".md"):
+                        try:
+                            _cite_text.append(fp.read_text(encoding="utf-8", errors="replace"))
+                        except OSError:
+                            continue
+            _cite_text.append("")   # read once, even when nothing was found
+        return any(uid in t for t in _cite_text)
+
+    census_cache: Dict[str, Any] = {}
+
+    def _census() -> Dict[str, Any]:
+        if not census_cache:
+            census_cache.update(heldout_pass_census(units, now, days=30, verdict_at=_verdict_at, cited=_cited))
+        return census_cache
+
     def survivors_per_month():
+        # AUD-20261019-RESEARCH-SLO-RED (2026-11-12): measured BY THE OPERATOR'S DEFINITION (2026-11-04, "Registered-rule
+        # PASS on held-out data"), EDGE claims only, not the ledger proxy. The proxy reads 0 by construction: BHY
+        # haircut 0.0 on every ledger leg with a series, best DSR 0.54, ml_entry dsr null (ledger 42276444552).
+        c = _census()
+        return _fact(c["held_out_edge_distinct"], **{k: v for k, v in c.items() if k != "held_out"},
+                     **(_proxy() or {"proxy": "fewer than 2 readable trial ledgers"}))
+    f["survivors_per_month"] = _safe(survivors_per_month, "survivors_per_month")
+
+    def trials_per_survivor():
+        # Same 30-d window on both sides: configs tried (trial-ledger growth, scaled to 30 d) / survivors in 30 d.
         led = _ledgers()
         if len(led) < 2:
             return _cnl(f"{len(led)} readable trial_ledger.json under comms/research/ (need >= 2 to take a difference)")
@@ -165,24 +217,17 @@ def gather_facts(root: Path, now: datetime, cfg: Dict[str, Any], gh: Optional["G
         span = (newest[0] - base[0]).total_seconds() / 86400.0
         if span < 14:
             return _cnl(f"ledger history spans {span:.1f} d (< 14 d needed)")
-        gained = max(0, newest[1] - base[1])
-        return _fact(round(gained * 30.0 / span, 3), survivors_now=newest[1], survivors_base=base[1],
-                     span_days=round(span, 1), newest=newest[3], base=base[3],
-                     basis="trial_ledger.json summary.stage0_pass_surviving_dsr_and_bhy_haircut, difference over the span")
-    f["survivors_per_month"] = _safe(survivors_per_month, "survivors_per_month")
-
-    def trials_per_survivor():
-        led = _ledgers()
-        if not led:
-            return _cnl("no readable trial_ledger.json under comms/research/")
-        at, surv, trials, name = led[-1]
-        return _fact(round(trials / max(surv, 1), 1), trials=trials, survivors=surv, zero_survivor_floor=(surv == 0),
-                     ledger=name, ledger_generated_at=at.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                     basis="sum(legs.*.n_configs) / max(survivors, 1) from the newest trial_ledger.json")
+        trials_30d = max(0, newest[2] - base[2]) * 30.0 / span
+        surv = _census()["held_out_edge_distinct"]
+        return _fact(round(trials_30d / max(surv, 1), 1), trials_30d=round(trials_30d, 1), survivors_30d=surv,
+                     zero_survivor_floor=(surv == 0), trials_cumulative=newest[2], ledger=newest[3], ledger_base=base[3],
+                     span_days=round(span, 1), ledger_generated_at=newest[0].strftime("%Y-%m-%dT%H:%M:%SZ"),
+                     basis="(sum(legs.*.n_configs) newest - base trial ledger) x 30 / span_days, / max(held-out edge "
+                           "survivors in 30 d, 1)")
     f["trials_per_survivor"] = _safe(trials_per_survivor, "trials_per_survivor")
 
     def heldout_registered_passes_30d():
-        c = heldout_pass_census(units, now, days=30)
+        c = _census()
         return _fact(c["held_out"], **{k: v for k, v in c.items() if k != "held_out"})
     f["heldout_registered_passes_30d"] = _safe(heldout_registered_passes_30d, "heldout_registered_passes_30d")
 
@@ -432,34 +477,110 @@ def classify_evidence(unit: Dict[str, Any]) -> Tuple[str, str, str]:
     return "unknown", "unknown", "unknown"
 
 
-def heldout_pass_census(units: Dict[str, Dict[str, Any]], now: datetime, days: int = 30) -> Dict[str, Any]:
-    """Graded PASSes with a rule registered before the run, in the last ``days``, by held-out class and claim."""
-    since = (now - timedelta(days=days)).strftime("%Y-%m-%d")
+def heldout_pass_census(units: Dict[str, Dict[str, Any]], now: datetime, days: int = 30,
+                        verdict_at: Optional[Callable[[str, str], Optional[datetime]]] = None,
+                        cited: Optional[Callable[[str], bool]] = None) -> Dict[str, Any]:
+    """Graded PASSes with a rule registered before the run, in the last ``days``, by held-out class and claim.
+
+    The window is keyed on WHEN THE GRADED RESULT LANDED (``verdict_at(uid, graded_at)``), falling back to graded_at
+    only when no dated result row exists: until 2026-11-12 queue_grade re-stamped graded_at on unchanged gradings every
+    day, so a graded_at window counted month-old verdicts as new. ``held_out_edge_distinct`` drops a holdout
+    re-run / confirmation whose parent discovery is also counted (one survivor, not two)."""
+    since_dt = now - timedelta(days=days)
+    since = since_dt.strftime("%Y-%m-%d")
     by_holdout: Dict[str, int] = {}
     by_claim_heldout: Dict[str, int] = {}
     by_source: Dict[str, int] = {}
+    by_key: Dict[str, int] = {"result_date": 0, "graded_at_fallback": 0}
+    edge_ids: List[str] = []
+    unconfirmed: Dict[str, int] = {}
     n_pass = n_graded = 0
-    for u in units.values():
+    for uid, u in units.items():
         g = u.get("grading")
-        if not isinstance(g, dict) or str(g.get("graded_at") or "") < since:
+        if not isinstance(g, dict) or not g.get("graded_at"):
             continue
+        ga = str(g.get("graded_at"))
+        at = verdict_at(str(u.get("id") or uid), ga) if verdict_at else None
+        if at is not None:
+            if at < since_dt:
+                continue
+            key = "result_date"
+        elif ga[:10] < since:
+            continue
+        else:
+            key = "graded_at_fallback"
         n_graded += 1
         if str(g.get("verdict")) != "pass" or (u.get("decision_rule") or {}).get("registered_before_run") is not True:
             continue
         n_pass += 1
+        by_key[key] += 1
         h, c, src = classify_evidence(u)
         by_holdout[h] = by_holdout.get(h, 0) + 1
         by_source[src] = by_source.get(src, 0) + 1
         if h in HELDOUT_KINDS:
             by_claim_heldout[c] = by_claim_heldout.get(c, 0) + 1
+            if c == "edge":
+                # RESEARCH-SLO-SURVIVOR-CONVERSION (ML deep audit 2026-11-12 s2.2): queue_grade writes verdict pass when the
+                # run rows pass and puts the unit's OWN held-out outcome in grading.confirmation; a pass whose confirmation
+                # says not_replicated / underpowered failed its held-out read and is not a survivor.
+                conf = g.get("confirmation")
+                if conf not in (None, "", "confirmed"):
+                    unconfirmed[str(conf)] = unconfirmed.get(str(conf), 0) + 1
+                    continue
+                edge_ids.append(str(u.get("id") or uid))
     held = sum(by_holdout.get(k, 0) for k in HELDOUT_KINDS)
+    edge_set = set(edge_ids)
+    distinct = sorted(i for i in edge_set if _confirmation_parent(units.get(i) or {}) not in edge_set)
+    by_subject: Dict[str, List[str]] = {}
+    for i in distinct:
+        by_subject.setdefault(classify_subject(units.get(i) or {}, units), []).append(i)
+    converted = sorted(i for i in distinct if cited and (cited(i) or (
+        (p := _confirmation_parent(units.get(i) or {})) is not None and cited(p))))
     return {"held_out": held, "held_out_edge": by_claim_heldout.get("edge", 0),
+            "held_out_edge_distinct": len(distinct), "held_out_edge_ids": distinct,
+            "excluded_unconfirmed": unconfirmed,
+            "by_subject": {k: len(v) for k, v in sorted(by_subject.items())},
+            "by_subject_ids": {k: v for k, v in sorted(by_subject.items())},
+            "converted": (f"{len(converted)}/{len(distinct)}" if cited else None), "converted_ids": converted,
+            "converted_basis": ("survivor id (or its confirmation parent's id) cited in a file under config/ or "
+                                "comms/strategy_evidence/ -- the pass reached a roster or config change")
+                               if cited else "not measured (no tree to read)",
             "held_out_model_quality": by_claim_heldout.get("model_quality", 0),
             "registered_passes": n_pass, "graded_in_window": n_graded, "unknown_holdout": by_holdout.get("unknown", 0),
             "by_holdout": by_holdout, "by_claim_held_out": by_claim_heldout, "by_source": by_source,
-            "window_days": days, "since": since,
-            "basis": ("research/queue grading: verdict pass AND decision_rule.registered_before_run true, graded_at >= since; "
-                      "held-out class from evidence_class (explicit) or ml_bakeoff/kind (inferred); unknown is NOT held-out")}
+            "window_keyed_on": by_key, "window_days": days, "since": since,
+            "basis": ("research/queue grading: verdict pass AND decision_rule.registered_before_run true, graded result "
+                      "landed >= since (graded_at only when no dated row); held-out class from evidence_class (explicit) "
+                      "or ml_bakeoff/kind (inferred); unknown is NOT held-out; an edge pass whose grading.confirmation is "
+                      "present and not 'confirmed' is excluded; distinct drops a confirmation whose parent is counted; "
+                      "subject from evidence_class.subject (explicit) or the m20 lever family (inferred)")}
+
+
+#: What a survivor IS (RESEARCH-SLO-SURVIVOR-CONVERSION): a new leg or model, a lever on a leg that already trades, or a
+#: re-validation of a leg as declared (no new capability). Explicit ``evidence_class.subject`` wins; the only inference is
+#: structural (the m20 exit-lever family, directly or as the confirmation parent); anything else is ``unknown``.
+SUBJECT_KINDS = ("new", "lever", "revalidation")
+LEVER_FAMILIES = ("m20-exit-lever",)
+
+
+def classify_subject(unit: Dict[str, Any], units: Optional[Dict[str, Dict[str, Any]]] = None) -> str:
+    ec = unit.get("evidence_class")
+    if isinstance(ec, dict) and str(ec.get("subject") or "") in SUBJECT_KINDS:
+        return str(ec["subject"])
+    fam = str((unit.get("generated") or {}).get("family") or "")
+    if fam in LEVER_FAMILIES:
+        return "lever"
+    parent = _confirmation_parent(unit)
+    if parent and units is not None and parent in units:
+        return classify_subject(units[parent], None) if units[parent] is not unit else "unknown"
+    return "unknown"
+
+
+def _confirmation_parent(unit: Dict[str, Any]) -> Optional[str]:
+    c = unit.get("confirmation")
+    if isinstance(c, dict):
+        return str(c.get("of") or c.get("parent") or "") or None
+    return None
 
 
 def evaluate(facts: Dict[str, Dict[str, Any]], cfg: Dict[str, Any]) -> List[Dict[str, Any]]:

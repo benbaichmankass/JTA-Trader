@@ -4,7 +4,8 @@ Operator 2026-10-26 (mandate MD-TRADE-DESK, verbatim): "we also need to expand t
 mandate so include all trade actions, as long as they have reasoning and confidence attached";
 accounts "All accounts now". Each account decides through its OWN RiskManager.approve_action; an
 action that adds risk passes the same check a fresh entry would; an account with no executor for
-an action refuses it, named (no_action_path:<action>).
+an action is still decided by its own RiskManager; the executor router reports "no executor wired"
+(AM-PROP-VM-ACTION-MATRIX removed, operator 2026-11-12).
 """
 from __future__ import annotations
 
@@ -166,12 +167,13 @@ def test_close_on_every_account_class(act):
     res = _run(db, act, _ti("close"))
     by = _by(res)
     assert by["bybit_2"]["executed"] and by["alpaca_live"]["executed"]
-    assert by["tradeify_1"]["reason"] == "no_action_path:close"      # prop VM: no executor
+    # prop VM: a close reaches the account's executor (CAP-PROP-VM-CLOSE, operator 2026-11-12; was no_action_path)
+    assert by["tradeify_1"]["executed"] and by["tradeify_1"]["account_class"] == "prop_vm"
     # phone: a close reaches the phone's server-issued action channel (operator 2026-11-09; was "TP only")
     assert by["breakout_2"]["executed"] and by["breakout_2"].get("reason") != "no_action_path:close"
-    assert sorted(a[1] for a in act["actions"]) == ["alpaca_live", "breakout_2", "bybit_2"]
+    assert sorted(a[1] for a in act["actions"]) == ["alpaca_live", "breakout_2", "bybit_2", "tradeify_1"]
     assert res["package_sl_moved"] is False                          # a close never moves the shared stop
-    assert {a for a, _ in act["alerts"]} == {"tradeify_1"}           # the one remaining refusal pinged once
+    assert act["alerts"] == []                                       # every account class has a close path now
     assert res["writeback"]["action"] == "close"
     assert res["writeback"]["disposition"]["mandate"] == lri.TRADE_MANDATE_ID
 
@@ -195,14 +197,51 @@ def test_move_tp_reaches_bybit_alpaca_and_phone(act):
 
 def test_widen_and_add_paths(act):
     db = tla._ApplyDB([_tr(1, "bybit_2"), _tr(2, "alpaca_live")], tla.PKG)
+    # AM-PROP-VM-ACTION-MATRIX removed 2026-11-12: every account decides; the executor router (stubbed here) is the
+    # only place "no executor wired" is answered (see the routing tests below).
     by = _by(_run(db, act, _ti("widen_sl", new_sl=0.2300)))
-    assert by["bybit_2"]["executed"] and by["alpaca_live"]["reason"] == "no_action_path:widen_sl"
+    assert by["bybit_2"]["executed"] and by["alpaca_live"]["executed"]
     by = _by(_run(db, act, _ti("add_entry", size_fraction=0.5)))
-    assert by["bybit_2"]["reason"] == "no_action_path:add_size"     # no add-to-position executor anywhere
-    assert by["alpaca_live"]["reason"] == "no_action_path:add_size"
+    assert by["bybit_2"]["executed"] and by["alpaca_live"]["executed"]
+    assert by["bybit_2"]["qty"] == pytest.approx(5.0)                # still capped at the fresh-entry size
     by = _by(_run(db, act, _ti("change_size", size_multiplier=0.5)))
     assert by["bybit_2"]["executed"] and by["bybit_2"]["qty"] == pytest.approx(5.0)
-    assert by["alpaca_live"]["reason"] == "no_action_path:reduce"
+    assert by["alpaca_live"]["executed"]
+
+
+# --------------------------------------------------------------- the executor router (AM-PROP-VM-ACTION-MATRIX)
+
+def _route_leg(aid, kind):
+    return {"account_id": aid, "kind": kind, "row": {"account_id": aid, "ticket_id": "t1", "id": 1}}
+
+
+@pytest.mark.parametrize("cls,aid,kind,action,kw", [
+    ("prop_vm", "tradeify_1", "ticket", "add_entry", {"size_fraction": 0.5}),
+    ("prop_vm", "tradeify_1", "ticket", "widen_sl", {"new_sl": 0.23}),
+    ("alpaca", "alpaca_live", "trade", "partial_close", {"size_fraction": 0.5}),
+    ("bybit", "bybit_2", "trade", "add_entry", {"size_fraction": 0.5}),
+    ("other", "ib_paper", "trade", "close", {}),
+])
+def test_an_approved_action_with_no_executor_wired_is_reported_not_sent(monkeypatch, cls, aid, kind, action, kw):
+    called = []
+    for name in ("_exec_bybit_action", "_exec_alpaca_close", "_exec_alpaca_tp", "_exec_phone_tp",
+                 "_exec_prop_vm_tp", "_exec_phone_sl_widen", "_exec_phone_close"):
+        monkeypatch.setattr(lra, name, lambda *a, _n=name, **k: called.append(_n) or {"result": lra.X_APPLIED})
+    v = lri.AmendVerdict(aid, lri.V_APPROVE, 0.23, "within_bounds", qty=5.0)
+    out = lra._exec_trade_action(None, _route_leg(aid, kind), {"order_package_id": "P"}, cls, v, _ti(action, **kw))
+    assert out["result"] == lra.X_REFUSED and "no executor wired" in out["detail"]
+    assert called == []   # an approved add never reaches the Bybit reduce branch
+
+
+def test_an_approved_action_with_an_executor_reaches_it(monkeypatch):
+    called = []
+    monkeypatch.setattr(lra, "_exec_bybit_action", lambda *a, **k: called.append("bybit") or {"result": lra.X_APPLIED})
+    monkeypatch.setattr(lra, "_exec_phone_close", lambda *a, **k: called.append("phone") or {"result": lra.X_APPLIED})
+    v = lri.AmendVerdict("bybit_2", lri.V_APPROVE, None, "within_bounds", qty=10.0)
+    assert lra._exec_trade_action(None, _route_leg("bybit_2", "trade"), {}, "bybit", v, _ti("close"))["result"] == lra.X_APPLIED
+    assert lra._exec_trade_action(None, _route_leg("breakout_2", "ticket"), {}, "phone", v, _ti("close"))["result"] \
+        == lra.X_APPLIED
+    assert called == ["bybit", "phone"]
 
 
 def test_widen_refused_by_the_accounts_own_fresh_entry_check(act, monkeypatch):

@@ -35,7 +35,8 @@ due:
       # for trade actions under MD-TRADE-DESK, so paper packages are floored
       # too, not surfaced by event triggers alone. Each id must exist in
       # config/accounts.yaml (tests/test_live_review_due.py).
-      accounts: [bybit_2, bybit_portfolio, alpaca_live, breakout_1, breakout_2, tradeify_1, velotrade_1, bybit_1, ib_paper, alpaca_paper, alpaca_portfolio, alpaca_options_paper]
+      # breakout_2 removed 2026-11-12: account ON ICE (operator), no live-review wakes for it.
+      accounts: [bybit_2, bybit_portfolio, alpaca_live, breakout_1, tradeify_1, velotrade_1, bybit_1, ib_paper, alpaca_paper, alpaca_portfolio, alpaca_options_paper]
     # -- market triggers (LTR-1B-MARKET-TRIGGERS, 2026-10-26) -----------------
     # Registered here BEFORE first use. Basis for every number: the design § 2
     # events table (docs/plans/live-trade-review-DESIGN.md, operator-approved
@@ -66,6 +67,29 @@ due:
       # impact >= min_impact, inside the next bar of the leg. A calendar whose
       # newest event is in the past is STALE: could_not_look, never "no event".
       min_impact: 0.8
+      # LTR-CALENDAR-CLASSES (b), manager decision 2026-11-12 12:38Z: a REVIEW-ONLY
+      # event-class map. Read by src/runtime/live_review_due.py alone (it decides
+      # when a live review is due, nothing else); the trader's event risk
+      # (src/news/news_events.py -> pipeline.py) reads only
+      # config/economic_calendar.yaml::symbol_event_classes and is unchanged.
+      # Classes for a symbol = the shared map's classes for its base UNION
+      # review_classes_by_base[base] if present, else
+      # review_classes_by_asset_class[asset class of its instrument profile].
+      # An UNPROFILED symbol gets no default and stays could_not_look (honest).
+      # BASIS: judgement of which scheduled US macro releases move each
+      # instrument, NOT an evidence record; a wrong class only adds or skips a
+      # review prompt. Filling the shared (trade-path) map is the separate
+      # Tier-3 proposal (a) on the row, evidence first.
+      review_classes_by_asset_class:
+        us_equity: [fomc, cpi, nfp, pce, ppi, gdp, ism, retail_sales]
+        crypto: [fomc, cpi]
+        cme_futures: [fomc, cpi, nfp, pce]
+      review_classes_by_base:
+        TLT: [fomc, cpi, nfp, pce, ppi, gdp, retail_sales, treasury_auction]
+        GLD: [fomc, cpi, pce, ppi, nfp]
+        IAUM: [fomc, cpi, pce, ppi, nfp]
+        GDX: [fomc, cpi, pce, ppi, nfp]
+        USO: [eia, opec, fomc, cpi]
     mechanics:
       # Journal half only: the exit loop is still writing telemetry for the
       # package (fresh within telemetry_max_age_minutes) but the trade row it

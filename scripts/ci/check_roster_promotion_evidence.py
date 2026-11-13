@@ -52,6 +52,18 @@ still reads `approximate`; it is removed when the record is regenerated
 faithful. NEVER add an entry to quiet a finding — an entry needs a re-measure
 unit whose faithful arm cleared the leg's original Stage-0 rule.
 
+⚠️ C5 HAS ONE DATED PENDING-RE-MEASURE EXCEPTION CLASS, AND IT IS NOT A WAIVER OR A
+BASELINE (manager OK 2026-11-13 ~09:27Z, Manager Session 2026-11-11a; operator answer
+TQQQ-DECISION-BAR = "build_replay", 2026-11-13 08:02Z). `FIDELITY_PENDING_REMEASURE`
+lists an ALREADY-ROSTERED slot whose record reads `approximate` because a lever it
+runs cannot be modelled yet, while the build that will model it is owned and dated.
+It does NOT change any C5 verdict: `clause_verdicts` never reads it, so C5 stays
+fail-closed for every promotion, this slot included. Only the exactness test in
+tests/test_roster_promotion_evidence.py reads it, so that a known, owned, dated
+approximate slot does not hold main red. An entry turns that test red by itself on
+its expiry date, and is deleted when the record is regenerated faithful. Adding an
+entry needs a manager OK.
+
 ⚠️ A CLAIM IN A PR BODY IS NOT A RECORD. That distinction is the entire safety
 property once `B5` takes the human out of the path, and it is why this guard
 reads `comms/strategy_evidence/<leg>.json` — a committed artifact — and nothing
@@ -203,9 +215,23 @@ FIDELITY_BASELINE: Dict[Tuple[str, str], str] = {}
 #: your baseline exception to sol_4h's approximate evidence."). Record: ML-PROP-ITERATE.
 #: The faithful re-measure (structure_exit modelled) is owed on that row.
 FIDELITY_OPERATOR_WAIVER: Dict[Tuple[str, str], str] = {
-    ("breakout_2", "trend_donchian_sol_4h"): "operator 2026-11-05 ~21:05Z 'Both now, waive both' (prop baseline)",
+    # ("breakout_2", "trend_donchian_sol_4h") removed 2026-11-12: breakout_2 is ON ICE (operator) and its roster is
+    # empty (#25306), so the slot no longer exists and the exactness test refuses a waiver that outlives it.
+    # Re-entry: if breakout_2 is re-rostered with this leg, restore this exact line (same operator quote).
     ("tradeify_1", "trend_donchian_sol_4h"): "operator 2026-11-05 ~21:05Z 'Both now, waive both' (prop baseline)",
     ("velotrade_1", "trend_donchian_sol_4h"): "operator 2026-11-05 ~21:05Z 'Both now, waive both' (prop baseline)",
+}
+
+
+#: C5 PENDING RE-MEASURE -- (account, leg) -> (owning row, expiry YYYY-MM-DD). See the
+#: module docstring: NOT a waiver, NOT a baseline, read by NO verdict (C5 stays fail-closed);
+#: only the exactness test reads it, and it fails on or after the expiry date. Exactly one
+#: entry, manager OK 2026-11-13 ~09:27Z. tqqq_trend_long_1d decides on the FORMING daily bar
+#: (no decision_bar), and the trend harness cannot replay forming bars for equities yet, so
+#: its record honestly reads approximate (omitted_levers [decision_bar]) until
+#: EQ-FORMING-BAR-REPLAY lands (operator TQQQ-DECISION-BAR = "build_replay", 2026-11-13 08:02Z).
+FIDELITY_PENDING_REMEASURE: Dict[Tuple[str, str], Tuple[str, str]] = {
+    ("alpaca_live", "tqqq_trend_long_1d"): ("EQ-FORMING-BAR-REPLAY", "2026-11-27"),
 }
 
 
@@ -801,7 +827,8 @@ def self_test() -> int:
         # P9: OPERATOR WAIVER (operator 2026-11-05 ~21:05Z "Both now, waive both") is SLOT-keyed too:
         #     the named prop slot passes C5 with an "OPERATOR WAIVER" message; the same leg on an
         #     unnamed account still FAILS C5.
-        c5 = dict((c, (o, m)) for c, o, m in clause_verdicts(approx, "breakout_2", "trend_donchian_sol_4h"))["C5"]
+        #     (Probe slot moved from breakout_2 to tradeify_1 on 2026-11-12: breakout_2 is on ice and its waiver line is gone.)
+        c5 = dict((c, (o, m)) for c, o, m in clause_verdicts(approx, "tradeify_1", "trend_donchian_sol_4h"))["C5"]
         check("P9 waived slot passes C5", c5[0], True)
         check("P9 ...and says OPERATOR WAIVER", "OPERATOR WAIVER" in c5[1], True)
         check("P9b waived leg on an unnamed account fails C5",
