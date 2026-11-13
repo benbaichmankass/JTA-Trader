@@ -144,25 +144,13 @@ ml_model:
   verdict: pending
   basis: 'Row ML-HOLDBIAS-EXIT-MODEL: not built; depends on ML-EXIT-ACTIONGRID-LABELS.'
   money: real_money_candidate
-- id: ml-conviction-meta
-  title: conviction-meta-v1 size multiplier (P4)
-  verdict: indeterminate
-  basis: macro-F1 0.430 on unstamped rows; no cost-net eval. Row ML-P4-CONVICTION-REGATE.
-  money: demo_floor
-- id: ml-eth-vol-head
-  title: ETH 15m vol-regime head for router OFF-cells (P2)
-  verdict: fail
-  basis: 'RQ-20261012-75b2-17: ETH 15m LightGBM holdout macro-F1 lift +0.022 vs the +0.10 bar. Rows ML-REGIME-15M-DRIFT, ML-LIVE-PROMOTION-PLAN
-    P2.'
-  money: demo_floor
-  lever_evidence:
-  - family: labels
-    lever: classification_lift
-    unit: RQ-20261012-75b2-17
-    value: macro-F1 vs prior
-    response: holdout +0.022 vs +0.10 bar
-    shape: flat
-    note: never judged by money (walk-forward cell)
+# RETIRED 2026-11-13 (lane FRONTIER-RESEARCH for AM-ML, item-4 decision 04:03Z), removed from this list:
+#   ml-conviction-meta -- operator decisions page w1 2026-11-12 (verbatim "Kill all of them (except the git-history one, asked below)"):
+#     row ML-P4-CONVICTION-REGATE dropped; conviction-meta-v1 is OFFLINE with no consumer (consolidation), sizing reads it annotate-only.
+#   ml-eth-vol-head -- operator Thursday-planning a4 2026-11-11 (verbatim "Schedule the ones whose models survive retirement; kill the
+#     rest"): no ETH 15m regime head survives retirement (docs/plans/ML-CONSOLIDATION-2026-11-11.md) and no trend_vol cell names an ETH
+#     leg; RQ-20261101-78fc-07 killed. Re-add if the D2 bake-off keeps an ETH head. A model retirement by operator record, not a family
+#     retirement: the regime / meta-label FAMILIES stay open.
 - id: ml-btc-router-cells
   title: btc-regime-15m-lgbm-fc-pcv-v2 router OFF-cells (advisory, acts on bybit_1 BTC legs; P3)
   verdict: fail
