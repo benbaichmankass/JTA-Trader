@@ -435,6 +435,10 @@ _TARGET_EXTENSION_SOAK_LOG = runtime_logs_dir() / "target_extension_soak.jsonl"
 # unreadable on the one surface a relay-bound session can reach, which is the
 # defect #8778 shipped with `exit_loop_health`.
 _PROTECTION_REASSERT_SOAK_LOG = runtime_logs_dir() / "protection_reassert_soak.jsonl"
+# ALPACA-PARTIAL-TP-STOP-GAP: every step of replacing our own partially filled Alpaca target
+# (detect -> cancel -> post_cancel_read -> oco | fallback_stop), with the order ids
+# (src.runtime.order_monitor._alpaca_partial_tp_log_path).
+_ALPACA_PARTIAL_TP_LOG = runtime_logs_dir() / "alpaca_partial_tp_replace.jsonl"
 _STRAY_OCA_SOAK_LOG = runtime_logs_dir() / "stray_oca_soak.jsonl"
 # MI-150 — the ict_scalp exit-head consumer's staged soak. Allowlisted in the
 # SAME commit that ships the writer: an env-gated path whose only observation
@@ -810,6 +814,7 @@ _LOG_FILES: dict[str, Path] = {
     "overlay_shadow": _OVERLAY_SHADOW_LOG,
     "target_extension_soak": _TARGET_EXTENSION_SOAK_LOG,
     "protection_reassert_soak": _PROTECTION_REASSERT_SOAK_LOG,
+    "alpaca_partial_tp_replace": _ALPACA_PARTIAL_TP_LOG,
     "stray_oca_soak": _STRAY_OCA_SOAK_LOG,
     "ict_scalp_exit_head_soak": _ICT_SCALP_EXIT_HEAD_SOAK_LOG,
     "bybit_coverage_soak": _BYBIT_COVERAGE_SOAK_LOG,

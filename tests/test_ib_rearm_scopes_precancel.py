@@ -136,7 +136,10 @@ class TestEveryIBCallSitePassesIt:
         # ALPACA-only additive top-up; it passes oca_key anyway (inert there).
         # 4 since PR6YRTQY-0005 / REVIEW-14241: the Alpaca venue-holding
         # additive OCO in the naked sweep — also passes oca_key.
-        assert n == 4, (
-            f"expected 4 re-arm call sites in order_monitor, found {n}. A "
+        # 5 since ALPACA-PARTIAL-TP-STOP-GAP: `_alpaca_protect_after_target_cancel`
+        # (ALPACA-only OCO after a partially filled target is cancelled) — also
+        # passes oca_key (the row id).
+        assert n == 5, (
+            f"expected 5 re-arm call sites in order_monitor, found {n}. A "
             "new one must pass oca_key — add it above and update this count."
         )

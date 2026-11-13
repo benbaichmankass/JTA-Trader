@@ -10400,7 +10400,7 @@ def _iso_age_seconds(ts: Any, now: datetime) -> float | None:
 
 def _page_rearm_refusal(kind: str, account_id: str, symbol: str,
                         trade_id: Any, reason: str, *, verb: str = "refused",
-                        info_only: bool = False) -> None:
+                        info_only: bool = False, no_cooldown: bool = False) -> None:
     """Log every refusal; page CRITICAL (per symbol+kind cooldown).
 
     *verb* names what happened when it was not a refusal — the escalated
@@ -10427,8 +10427,11 @@ def _page_rearm_refusal(kind: str, account_id: str, symbol: str,
             logger.exception("_page_rearm_refusal: info report failed for %s/%s",
                              account_id, symbol)
         return
-    if not _cooldown_admits("alpaca_rearm_refused", f"{account_id}|{symbol}|{kind}",
-                            _ALPACA_REARM_REFUSAL_PAGE_COOLDOWN_S):
+    # no_cooldown (ALPACA-PARTIAL-TP-STOP-GAP): a position we left with NO stop after cancelling
+    # our own target pages CRITICAL on EVERY tick until it is protected again.
+    if not no_cooldown and not _cooldown_admits(
+            "alpaca_rearm_refused", f"{account_id}|{symbol}|{kind}",
+            _ALPACA_REARM_REFUSAL_PAGE_COOLDOWN_S):
         return
     try:
         from src.runtime.outcomes import Level, report
@@ -10567,6 +10570,185 @@ def _breach_state(client, symbol: str, side: str, stop: float,
     if _stop_is_marketable(side, float(stop), last_pos, bid, ask):
         return "unconfirmed", info
     return "clear", info
+
+
+# ── ALPACA-PARTIAL-TP-STOP-GAP (2026-11-13, manager "build (a)") ───────────────────────────────
+# On a take-profit PARTIAL fill Alpaca cancels the bracket's stop leg, and the still-resting
+# target holds the remaining shares. `protect_venue_holding` then posts an ADDITIVE OCO for them,
+# which the venue refuses while our own target holds them, and retries only every
+# _ALPACA_TOPUP_COOLDOWN_S (900 s): the remainder sat with NO STOP until the target completed,
+# unbounded if price turned. Measured on alpaca_paper 2026-11-13: QLD 7142 (40 s), TQQQ 7141
+# (2.7 s). The same path serves alpaca_live and alpaca_portfolio (no class gate).
+#
+# The replacement, in order, never leaving the position naked:
+#   1. SCOPE: exactly one open row on this account+symbol (unambiguous ownership), its entry
+#      bracket (row.broker_order_id) read BY ORDER ID shows OUR target resting and NO stop.
+#   2. Cancel that target and CONFIRM the cancel at the venue. A cancel that is not confirmed
+#      does nothing further this tick (the target is still there) and retries next tick.
+#   3. Re-read the venue holding. Flat (the target filled first): post nothing; the reconcile
+#      path closes the row from the fill.
+#   4. Post a fresh OCO (row stop + row target) for the held qty. Refused -> a plain STOP at once.
+#      Both refused -> CRITICAL page EVERY tick, and the chain is retried every tick (the target
+#      is gone now, so _ALPACA_PARTIAL_TP_PENDING carries the case past the next detection).
+# Every step is journaled to runtime_logs/alpaca_partial_tp_replace.jsonl and stamped on the row.
+
+#: (account_id, SYMBOL, trade_id) whose target WE cancelled but which is not yet protected again.
+_ALPACA_PARTIAL_TP_PENDING: Dict[Tuple[str, str, Any], Dict[str, Any]] = {}
+
+
+def _alpaca_partial_tp_log_path() -> str:
+    from src.utils.paths import runtime_logs_dir
+    return os.path.join(runtime_logs_dir(), "alpaca_partial_tp_replace.jsonl")
+
+
+def _alpaca_partial_tp_log(rec: Dict[str, Any]) -> None:
+    """Append one step record. Never raises (a log failure must not reach the repair)."""
+    try:
+        rec = {"ts": datetime.now(timezone.utc).isoformat(), **rec}
+        path = _alpaca_partial_tp_log_path()
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(rec, sort_keys=True, default=str) + "\n")
+    except Exception:  # noqa: BLE001
+        logger.warning("_alpaca_partial_tp_log: write failed", exc_info=True)
+
+
+def _row_broker_order_id(db, trade_id: Any) -> Optional[str]:
+    """The row's entry-bracket parent id, or None when the column/row cannot be read."""
+    try:
+        conn = db.connect()
+        try:
+            r = conn.execute("SELECT broker_order_id FROM trades WHERE id = ?", (trade_id,)).fetchone()
+        finally:
+            conn.close()
+    except Exception:  # noqa: BLE001
+        return None
+    v = r[0] if r else None
+    return str(v).strip() or None if v else None
+
+
+def _stamp_partial_tp(db, trade_id: Any, verified: str) -> None:
+    try:
+        stamp = getattr(db, "stamp_protection_repair", None)
+        if callable(stamp):
+            stamp(trade_id, "partial_tp_replace", verified)
+    except Exception:  # noqa: BLE001
+        logger.warning("_stamp_partial_tp: stamp failed for trade_id=%s", trade_id, exc_info=True)
+
+
+def _alpaca_protect_after_target_cancel(db, client, account_id: str, symbol: str, row,
+                                        side: str, qty: int, sl: float, tp: Optional[float],
+                                        key: Tuple[str, str, Any]) -> str:
+    """Steps 4: OCO, else plain stop, else CRITICAL every tick. Returns the outcome."""
+    tid = row["id"]
+    if qty < 1:
+        _alpaca_partial_tp_log({"step": "protect", "account_id": account_id, "symbol": symbol,
+                                "trade_id": tid, "outcome": "below_one_share", "qty": qty})
+        _ALPACA_PARTIAL_TP_PENDING.pop(key, None)
+        return "below_one_share"
+    oco = None
+    if sl and tp:
+        oco = client.place_protective({"symbol": symbol, "direction": side, "qty": qty,
+                                       "sl": sl, "tp": tp, "additive": True,
+                                       "oca_key": str(tid), "account_id": account_id})
+    if oco and oco.get("retCode") == 0:
+        oid = (oco.get("result") or {}).get("orderId")
+        _alpaca_partial_tp_log({"step": "oco", "account_id": account_id, "symbol": symbol,
+                                "trade_id": tid, "outcome": "placed", "oco_order_id": oid,
+                                "qty": qty, "sl": sl, "tp": tp})
+        _stamp_partial_tp(db, tid, "unverified")
+        _ALPACA_PARTIAL_TP_PENDING.pop(key, None)
+        return "oco_placed"
+    _alpaca_partial_tp_log({"step": "oco", "account_id": account_id, "symbol": symbol,
+                            "trade_id": tid, "outcome": "refused", "qty": qty, "sl": sl, "tp": tp,
+                            "ret_msg": (oco or {}).get("retMsg") if oco else "no sl/tp for an OCO"})
+    stop = client.place_stop_only(symbol, side, qty, sl) if sl else None
+    if stop and stop.get("retCode") == 0:
+        sid = (stop.get("result") or {}).get("orderId")
+        _alpaca_partial_tp_log({"step": "fallback_stop", "account_id": account_id,
+                                "symbol": symbol, "trade_id": tid, "outcome": "placed",
+                                "stop_order_id": sid, "qty": qty, "sl": sl})
+        _stamp_partial_tp(db, tid, "unverified")
+        _ALPACA_PARTIAL_TP_PENDING.pop(key, None)
+        _page_rearm_refusal("partial_tp_stop_only", account_id, symbol, tid,
+                            f"OCO refused after our target was cancelled; a plain stop "
+                            f"{sl} rests for {qty} (no target)", verb="stop_only")
+        return "stop_placed"
+    _alpaca_partial_tp_log({"step": "fallback_stop", "account_id": account_id, "symbol": symbol,
+                            "trade_id": tid, "outcome": "refused", "qty": qty, "sl": sl,
+                            "ret_msg": (stop or {}).get("retMsg") if stop else "no stop level"})
+    _stamp_partial_tp(db, tid, "call_failed")
+    _ALPACA_PARTIAL_TP_PENDING[key] = {"qty": qty, "sl": sl, "tp": tp, "side": side}
+    _page_rearm_refusal("partial_tp_unprotected", account_id, symbol, tid,
+                        f"our target was cancelled and BOTH the OCO and the plain stop were "
+                        f"refused: {qty} share(s) have NO STOP (retried every tick)",
+                        no_cooldown=True)
+    return "unprotected"
+
+
+def _alpaca_replace_partial_target(db, client, account_id: str, symbol: str, row,
+                                   rows: list, side: str, sl: Optional[float],
+                                   tp: Optional[float]) -> str:
+    """Steps 1-4 of the replacement. ``not_applicable`` hands back to the existing path."""
+    tid = row["id"]
+    key = (account_id, symbol.upper(), tid)
+    if key in _ALPACA_PARTIAL_TP_PENDING:
+        # Our target is already gone and the last attempt left it unprotected: retry the
+        # protection now, every tick, at the venue's CURRENT holding.
+        pq = client.position_quote(symbol)
+        if pq.get("state") == "flat":
+            _alpaca_partial_tp_log({"step": "retry", "account_id": account_id, "symbol": symbol,
+                                    "trade_id": tid, "outcome": "flat"})
+            _ALPACA_PARTIAL_TP_PENDING.pop(key, None)
+            return "flat_after_cancel"
+        held = pq.get("qty") if pq.get("state") == "open" else _ALPACA_PARTIAL_TP_PENDING[key]["qty"]
+        return _alpaca_protect_after_target_cancel(
+            db, client, account_id, symbol, row, side, int(math.floor(float(held) + 1e-9)),
+            sl, tp, key)
+    same = [r for r in rows if str(r["account_id"] or "") == account_id
+            and str(r["symbol"] or "").upper() == symbol.upper()]
+    if len(same) != 1 or same[0]["id"] != tid:
+        return "not_applicable"
+    parent = _row_broker_order_id(db, tid)
+    if not parent:
+        return "not_applicable"
+    hold = client.partial_target_holding(parent, side)
+    if hold.get("state") != "tp_only":
+        return "not_applicable"
+    tp_id = hold.get("tp_order_id")
+    _alpaca_partial_tp_log({"step": "detect", "account_id": account_id, "symbol": symbol,
+                            "trade_id": tid, "parent_order_id": parent, "tp_order_id": tp_id,
+                            "tp_qty": hold.get("tp_qty"), "tp_filled": hold.get("tp_filled"),
+                            "tp_remaining": hold.get("tp_remaining")})
+    cancel = client.cancel_order_confirmed(tp_id)
+    _alpaca_partial_tp_log({"step": "cancel", "account_id": account_id, "symbol": symbol,
+                            "trade_id": tid, "tp_order_id": tp_id, "outcome": cancel.get("state"),
+                            "status": cancel.get("status"), "filled_qty": cancel.get("filled_qty")})
+    if cancel.get("state") == "failed":
+        # The target may still rest: do nothing further this tick; retry next tick.
+        return "cancel_failed"
+    pq = client.position_quote(symbol)
+    if pq.get("state") == "flat":
+        _alpaca_partial_tp_log({"step": "post_cancel_read", "account_id": account_id,
+                                "symbol": symbol, "trade_id": tid, "outcome": "flat"})
+        return "flat_after_cancel"
+    if pq.get("state") == "open":
+        held = float(pq.get("qty") or 0.0)
+    else:
+        # Could not read the holding: the cancel is CONFIRMED, so nothing else can have filled
+        # since; the target's own unfilled remainder is exactly what it was holding.
+        try:
+            held = float(hold.get("tp_qty") or 0.0) - float(cancel.get("filled_qty") or 0.0)
+        except (TypeError, ValueError):
+            held = float(hold.get("tp_remaining") or 0.0)
+    if cancel.get("state") == "filled" and held <= 0:
+        return "flat_after_cancel"
+    qty = int(math.floor(held + 1e-9))
+    _alpaca_partial_tp_log({"step": "post_cancel_read", "account_id": account_id,
+                            "symbol": symbol, "trade_id": tid, "outcome": pq.get("state"),
+                            "held_qty": held})
+    return _alpaca_protect_after_target_cancel(db, client, account_id, symbol, row, side, qty,
+                                               sl, tp, key)
 
 
 def _alpaca_rearm_preflight(client, account_id: str, symbol: str, row,
@@ -10975,6 +11157,13 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
         "cap_exits": 0,
         "venue_holding_protected": 0,
         "venue_holding_cooldown": 0,
+        # ALPACA-PARTIAL-TP-STOP-GAP outcomes (one per row that took the replacement path)
+        "partial_tp_oco_placed": 0,
+        "partial_tp_stop_placed": 0,
+        "partial_tp_unprotected": 0,
+        "partial_tp_cancel_failed": 0,
+        "partial_tp_flat_after_cancel": 0,
+        "partial_tp_below_one_share": 0,
         "rearm_refused_deferred_unconfirmed_breach": 0,
         "exit_deferred": 0,
         # The breach exit's extended-hours close-limit is working at the broker;
@@ -11417,6 +11606,19 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
                     summary["venue_holding_duplicate"] += 1
                     continue
                 _venue_protected.add(_key)
+                # ALPACA-PARTIAL-TP-STOP-GAP: when the held shares are reserved by OUR OWN
+                # partially filled target, replace it (cancel -> confirm -> OCO, else stop)
+                # before the additive path below, and WITHOUT its 900 s cooldown: that OCO is
+                # exactly the one the venue refuses while our target holds the shares.
+                _pt_pick = _pf_info["row"]
+                _pt_sl = _safe_float(_pt_pick["stop_loss"])
+                _pt_tp = _safe_float(_pt_pick["take_profit_1"])
+                _pt = _alpaca_replace_partial_target(
+                    db, client, account_id, symbol, _pt_pick, rows, _pf_info["side"],
+                    _pt_sl, _pt_tp)
+                if _pt != "not_applicable":
+                    summary[f"partial_tp_{_pt}"] = summary.get(f"partial_tp_{_pt}", 0) + 1
+                    continue
                 # One attempt per symbol per cooldown: a refused additive OCO
                 # (e.g. a target-only leg holding the shares) must not be
                 # re-POSTed every tick (REVIEW-14241 round 2).

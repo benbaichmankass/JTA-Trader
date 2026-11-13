@@ -383,7 +383,9 @@ def _migrate_add_protection_repair(cursor: sqlite3.Cursor) -> bool:
                                          *anchor at first observation* rule.
     * ``protection_repair_last_at``      ISO of the most recent one.
     * ``protection_repair_last_kind``    WHICH mechanism: ``naked_rearm`` ·
-                                         ``partial_topup`` · ``reassert``.
+                                         ``partial_topup`` · ``reassert`` ·
+                                         ``partial_tp_replace`` (Alpaca: our partially
+                                         filled target replaced by a fresh OCO).
     * ``protection_repair_last_verified`` what we CHECKED afterwards, sharing
                                          ``order_monitor._reassert_applied_state``'s
                                          vocabulary rather than inventing a
@@ -1196,7 +1198,7 @@ class Database:
     #: warning rather than stored verbatim — a typo written through would make
     #: ``WHERE ... last_kind = 'reassert'`` miss the row silently, which is
     #: worse than a label that announces itself.
-    PROTECTION_REPAIR_KINDS = ("naked_rearm", "partial_topup", "reassert")
+    PROTECTION_REPAIR_KINDS = ("naked_rearm", "partial_topup", "reassert", "partial_tp_replace")
 
     #: What we CHECKED after the repair. Shares
     #: ``order_monitor._reassert_applied_state``'s vocabulary deliberately —
