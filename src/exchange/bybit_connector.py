@@ -1,7 +1,10 @@
+import collections
+import json
 import logging
 import os
 import threading
 import time
+import urllib.parse
 
 import ccxt
 import pandas as pd
@@ -73,6 +76,102 @@ def _start_cooldown() -> bool:
     return started
 
 
+# -------------------------------------------------------------------------------------------------------------------
+# 10006 OBSERVABILITY (row VENUE-KLINE-RATE-LIMIT, follow-up to #25256). LOGGING ONLY: nothing here waits, sleeps,
+# paces, refuses or retries. #25256 shared candle frames across accounts (per-tick cache hits 26% -> 40%), but the
+# 10006 rate did not move (2026-11-12T18:40Z..11-13T19:11Z: 36 cooldown starts in 24.5 h vs 30 in 18.5 h before), and
+# the error body does not say WHICH endpoint answered it or at WHAT call rate. Every HTTP request any BybitConnector
+# makes (klines, load_markets, private reads, orders) goes through ccxt's ``Exchange.fetch``; each instance's fetch is
+# wrapped to append (monotonic time, thread, method, path) to one process-wide ring, and the 10006 warning prints what
+# that ring held over the preceding seconds. The path is logged WITHOUT its query string unless it is a public
+# /v5/market/ path (no account data there); headers and bodies are never logged.
+_CALL_WINDOW_S = 5.0
+_CALL_RING_MAX = 4096
+_CALL_RING: "collections.deque" = collections.deque(maxlen=_CALL_RING_MAX)
+_CALL_RING_LOCK = threading.Lock()
+#: Bybit's own limit headers (present on V5 responses); logged verbatim when the 10006 response carries them.
+_LIMIT_HEADERS = ("X-Bapi-Limit", "X-Bapi-Limit-Status", "X-Bapi-Limit-Reset-Timestamp")
+
+
+def _safe_path(url) -> str:
+    """The request path; the query string only for public market-data paths. Never raises."""
+    try:
+        parts = urllib.parse.urlsplit(str(url or ""))
+        path = parts.path or "?"
+        if parts.query and path.startswith("/v5/market/"):
+            return f"{path}?{parts.query}"
+        return path
+    except Exception:  # noqa: BLE001
+        return "?"
+
+
+def _note_call(url, method) -> None:
+    """Record one outgoing Bybit HTTP call. Never raises (a counter must never break a request)."""
+    try:
+        entry = (time.monotonic(), threading.current_thread().name, str(method or "GET"), _safe_path(url))
+        with _CALL_RING_LOCK:
+            _CALL_RING.append(entry)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def recent_call_summary(window_s: float = _CALL_WINDOW_S, now: float | None = None) -> dict:
+    """What the ring holds over the last ``window_s`` seconds: totals for 1 s and the window, and counts per
+    endpoint (query dropped, so klines group by path) and per thread. Never raises."""
+    try:
+        t = time.monotonic() if now is None else float(now)
+        with _CALL_RING_LOCK:
+            recent = [e for e in _CALL_RING if t - e[0] <= window_s]
+        by_path: dict = {}
+        by_thread: dict = {}
+        for _ts, thread, method, path in recent:
+            key = f"{method} {path.split('?', 1)[0]}"
+            by_path[key] = by_path.get(key, 0) + 1
+            by_thread[thread] = by_thread.get(thread, 0) + 1
+        return {
+            "calls_1s": sum(1 for e in recent if t - e[0] <= 1.0),
+            f"calls_{int(window_s)}s": len(recent),
+            "by_endpoint": dict(sorted(by_path.items(), key=lambda kv: -kv[1])),
+            "by_thread": dict(sorted(by_thread.items(), key=lambda kv: -kv[1])),
+        }
+    except Exception as exc:  # noqa: BLE001
+        return {"error": f"{type(exc).__name__}"}
+
+
+def _instrument_fetch(exchange) -> None:
+    """Wrap this ccxt instance's ``fetch`` so every request is counted. The original is called unchanged, with the
+    same arguments, and its result or exception passes through untouched."""
+    original = getattr(exchange, "fetch", None)
+    if original is None or getattr(original, "_jta_counted", False):
+        return
+
+    def fetch(url, method="GET", headers=None, body=None):
+        _note_call(url, method)
+        return original(url, method, headers, body)
+
+    fetch._jta_counted = True
+    try:
+        exchange.fetch = fetch
+    except Exception:  # noqa: BLE001 -- an un-patchable client still works, it is just not counted
+        pass
+
+
+def _rate_limit_context(exchange) -> dict:
+    """The endpoint that answered (from ccxt's last request), Bybit's limit headers and the recent call counts."""
+    ctx: dict = {}
+    try:
+        ctx["endpoint"] = _safe_path(getattr(exchange, "last_request_url", None))
+        hdrs = getattr(exchange, "last_response_headers", None) or {}
+        lower = {str(k).lower(): v for k, v in dict(hdrs).items()}
+        for h in _LIMIT_HEADERS:
+            if h.lower() in lower:
+                ctx[h] = lower[h.lower()]
+    except Exception:  # noqa: BLE001
+        pass
+    ctx.update(recent_call_summary())
+    return ctx
+
+
 class BybitConnector:
     """
     Bybit connector for Unified Trading Account.
@@ -103,6 +202,7 @@ class BybitConnector:
 
         if testnet:
             self.exchange.set_sandbox_mode(True)
+        _instrument_fetch(self.exchange)
 
         # Operator directive 2026-05-03 — dry/live mode is per-account
         # (config/accounts.yaml `mode`, applied via RiskManager.dry_run).
@@ -148,6 +248,10 @@ class BybitConnector:
                         "bybit get_ohlcv: rate limit (retCode 10006) hit by thread=%s symbol=%s timeframe=%s -- "
                         "get_ohlcv returns None for %.0f s (no in-line sleep)",
                         threading.current_thread().name, symbol, timeframe, RATE_LIMIT_COOLDOWN_S)
+                    # Observability only (row VENUE-KLINE-RATE-LIMIT): which endpoint answered 10006, Bybit's own limit
+                    # headers, and every Bybit call this process made in the preceding seconds.
+                    logger.warning("bybit_10006_context %s",
+                                   json.dumps(_rate_limit_context(self.exchange), sort_keys=True, default=str))
             return None
 
     def get_balance(self):
