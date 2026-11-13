@@ -1,6 +1,6 @@
 id: RQ-20261113-f251-05
 title: 'trend_donchian_1h timeframe lever: the 1h leg''s own params on 2h and 4h bars, forming-bar replay, same window -- does a slower bar clear Stage 0?'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -199,3 +199,16 @@ practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-princip
 follow_up: On the verdict a session writes the tests to research/levers/trend_donchian_1h.yaml. PASS -> Tier-3 proposal to the manager via AM-ML; FAIL -> the next
   untested lever family from the map (row DEMO-FLOOR-ITER-20261113).
 last_dispatched_at: '2026-11-13T18:04:31+00:00'
+grading:
+  attested: RULE-DFI-TD1H-TF-20261113
+  auto: true
+  decision_rule_id: RULE-DFI-TD1H-TF-20261113
+  evidence:
+  - research/results/RQ-20261113-f251-05/43479076292.jsonl
+  graded_at: '2026-11-13'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 3 row(s), all measured, all fail
+  rows: 3
+  verdict: fail

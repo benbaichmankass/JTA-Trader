@@ -1,7 +1,7 @@
 id: RQ-20261113-f251-11
 title: 'tlt_pullback_1d direction lever: short-only vs both sides on the forming bar (Alpaca 1Day + 1Min) over the record window -- does dropping the losing long
   side clear Stage 0?'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -170,3 +170,16 @@ practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-princip
 follow_up: On the verdict a session writes the test to research/levers/tlt_pullback_1d.yaml. PASS -> Tier-3 proposal to the manager via AM-ML; FAIL -> the next untested
   lever family from the map (row DEMO-FLOOR-ITER-20261113).
 last_dispatched_at: '2026-11-13T18:09:38+00:00'
+grading:
+  attested: RULE-DFI-TLT-PULLBACK-1D-DIR-20261113
+  auto: true
+  decision_rule_id: RULE-DFI-TLT-PULLBACK-1D-DIR-20261113
+  evidence:
+  - research/results/RQ-20261113-f251-11/43479916308.jsonl
+  graded_at: '2026-11-13'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

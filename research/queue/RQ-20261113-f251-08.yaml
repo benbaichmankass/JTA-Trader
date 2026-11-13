@@ -1,6 +1,6 @@
 id: RQ-20261113-f251-08
 title: 'eth_pullback_prop_2h direction lever: short-only vs both sides on the forming bar over the record window -- does dropping the losing side clear Stage 0?'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -163,3 +163,16 @@ practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-princip
 follow_up: On the verdict a session writes the tests to research/levers/eth_pullback_prop_2h.yaml. PASS -> Tier-3 proposal to the manager via AM-ML; FAIL -> the next
   untested lever family from the map (row DEMO-FLOOR-ITER-20261113).
 last_dispatched_at: '2026-11-13T18:04:31+00:00'
+grading:
+  attested: RULE-DFI-ETH-PULLBACK-PROP-2H-DIR-20261113
+  auto: true
+  decision_rule_id: RULE-DFI-ETH-PULLBACK-PROP-2H-DIR-20261113
+  evidence:
+  - research/results/RQ-20261113-f251-08/43479071918.jsonl
+  graded_at: '2026-11-13'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

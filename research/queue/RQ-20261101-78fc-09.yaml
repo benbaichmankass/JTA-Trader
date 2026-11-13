@@ -2,7 +2,7 @@
 id: RQ-20261101-78fc-09
 title: 'ITERATION 1 of ltr-tighten-sl (fail): is the tighten loss confined to the EARLY cell, i.e. does a tighten allowed only at open >= +1 R
   with stop >= break-even and >= 1 ATR of room clear RULE-AM-RISK-ADJUSTED-V1?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -143,3 +143,16 @@ intervention_controls:
     excludes_test_folds: true
   bootstrap_group: trade
 last_dispatched_at: '2026-11-13T14:55:15+00:00'
+grading:
+  attested: RULE-RQ-20261101-78fc-09
+  auto: true
+  decision_rule_id: RULE-RQ-20261101-78fc-09
+  evidence:
+  - research/results/RQ-20261101-78fc-09/43447396502.jsonl
+  graded_at: '2026-11-13'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
