@@ -303,6 +303,7 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                  decision_1m: Optional[pd.DataFrame] = None,
                  decision_cfg: Optional[Dict[str, Any]] = None,
                  decision_workers: int = 4,
+                 decision_session: Optional[str] = None,
                  emit_paths_path: Optional[str] = None,
                  emit_features: bool = False) -> Dict[str, Any]:
     # FORMING-BAR DECISION MODE (PI-20260929-VOLSKIP-SIGNAL-0002; default
@@ -320,7 +321,8 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
             raise ValueError("decision_bar='forming' needs decision_1m and decision_cfg")
         entry_override = _forming_bar_entries().forming_entry_override(
             df, decision_1m, decision_cfg, family="pullback", label=strategy_name,
-            workers=decision_workers)
+            workers=decision_workers,
+            **({"session": decision_session} if decision_session else {}))
         adx_min = adx_max = None
         min_confidence = 0.0
         vol_skip_above_pctl = vol_skip_below_pctl = 0.0
@@ -1635,6 +1637,11 @@ def main(argv: List[str]) -> int:
                         "(needs --klines-1m-dir and --strategy-name <leg>)")
     p.add_argument("--klines-1m-dir", default=None, metavar="DIR",
                    help="Binance USD-M <SYMBOL>-1m-*.zip archives for --decision-bar forming")
+    p.add_argument("--minutes-1m-csv", default=None, metavar="CSV",
+                   help="--decision-bar forming from a 1m CSV (timestamp,open,high,low,close[,volume]) instead of "
+                        "Binance archives (CRYPTO-FORMING-RDM-FORWARD; parity with backtest_trend.py)")
+    p.add_argument("--decision-session", choices=["us_equity"], default=None,
+                   help="--decision-bar forming on a US-session daily frame (scripts/research/forming_bar_entries.py)")
     p.add_argument("--strategy-name", default="htf_pullback_trend_2h", metavar="NAME",
                    help="Leg name stamped on every emitted row's `strategy` "
                         "field. Defaults to the historical literal so an "
@@ -1776,11 +1783,25 @@ def main(argv: List[str]) -> int:
         return 1
     decision_kw: Dict[str, Any] = {}
     if args.decision_bar == "forming":
-        if not args.klines_1m_dir:
-            print("ERROR: --decision-bar forming requires --klines-1m-dir", file=sys.stderr)
+        if bool(args.klines_1m_dir) == bool(args.minutes_1m_csv):
+            print("ERROR: --decision-bar forming requires exactly one of --klines-1m-dir / "
+                  "--minutes-1m-csv", file=sys.stderr)
             return 1
-        _m1, _block = _forming_bar_entries().cli_inputs(args.klines_1m_dir, args.strategy_name)
-        decision_kw = dict(decision_bar="forming", decision_1m=_m1, decision_cfg=_block)
+        _fbe = _forming_bar_entries()
+        if args.minutes_1m_csv:
+            _m1, _block = _fbe.cli_inputs_csv(args.minutes_1m_csv, args.strategy_name)
+            # The ARM's own entry params decide (an exit_lever_ablation arm must replay ITS setup, not the YAML's).
+            _block = {**_block, "trend_lookback": int(args.trend_lookback),
+                      "pullback_lookback": int(args.pullback_lookback),
+                      "pullback_frac": float(args.pullback_frac),
+                      "atr_period": int(args.atr_period), "atr_stop_mult": float(args.atr_stop_mult)}
+        else:
+            _m1, _block = _fbe.cli_inputs(args.klines_1m_dir, args.strategy_name)
+        decision_kw = dict(decision_bar="forming", decision_1m=_m1, decision_cfg=_block,
+                           decision_session=args.decision_session)
+    elif args.minutes_1m_csv or args.decision_session:
+        print("ERROR: --minutes-1m-csv / --decision-session need --decision-bar forming", file=sys.stderr)
+        return 1
     out = run_backtest(df, **decision_kw,
                        trend_lookback=args.trend_lookback,
                        pullback_lookback=args.pullback_lookback,

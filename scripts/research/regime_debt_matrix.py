@@ -1159,13 +1159,19 @@ def build_harness_cmd(name: str, cfg: dict, harness: str, csv: str, resample: st
         argv += _tp_r_flags(cfg)
         _pb_tpx = _pb_tp_revision_flags(cfg)
         argv += _pb_tpx
+        # CRYPTO-FORMING-RDM-FORWARD: the same forming_1m forward the trend branch has.
+        pb_forming_live = str(cfg.get("decision_bar") or "forming").lower() != "closed"
+        pb_forming_modelled = bool(forming_1m) and pb_forming_live
+        if pb_forming_modelled:
+            argv += ["--decision-bar", "forming", "--minutes-1m-csv", str(forming_1m), "--strategy-name", name]
+            if forming_session:
+                argv += ["--decision-session", str(forming_session)]
         omitted = sorted(set(k for k in cfg
                              if k not in _PB_PLAIN and k not in _PB_LEVER_FLAG)
                          | ({"tp_revision"} if cfg.get("tp_revision") is not None and not _pb_tpx
                             else set())
                          | set(conditional_omissions("pullback", cfg, argv))
-                         | ({"decision_bar"}
-                            if str(cfg.get("decision_bar") or "forming").lower() != "closed" else set()))
+                         | ({"decision_bar"} if pb_forming_live and not pb_forming_modelled else set()))
         faithful = not omitted
     # EXIT-PATH-EMIT-OFFLINE / METALABEL-EMIT-FEATURES (opt-in, default False =
     # byte-identical argv): ask the trend/pullback harnesses for the per-bar path
