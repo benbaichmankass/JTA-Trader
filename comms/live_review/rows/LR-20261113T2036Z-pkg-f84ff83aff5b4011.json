@@ -1,0 +1,135 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261113T2036Z-pkg-f84ff83aff5b4011",
+ "reviewed_at": "2026-11-13T20:47:00Z",
+ "order_package_id": "pkg-f84ff83aff5b4011",
+ "trade_id": null,
+ "leg": "claude_desk",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "daily_floor",
+  "level": "2026-11-13",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-13T20:36:18Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_provenance": "unverified",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 69960.0,
+  "tp": 67468.4
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "mechanics": {
+  "evidence": "package sl 69960.0 / tp 67468.4 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.5,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold (confirm). Desk-opened BTC short from 69033.7 about 17 minutes ago (first review; no prior forecast). Mechanics match (SL 69960.0 / TP 67468.4 on the venue and the package). The opening desk record 'DD-20261113T2019Z-scan-1h-1' was not found, so the hand-off read is could_not_look and I judge the trade on the packet alone. HOLD expresses the view: the stop sits 1.5 ATR above entry, beyond the 70187 and 69349.9 swing highs it must break, and the TP is the 4h swing low 67468.4 (1.69R). The 1h lower highs under a 4h downtrend (ADX 54) support the short; no bracket move beats the entry plan this early."
+ },
+ "forecast": {
+  "thesis": "4h down (ADX 54) and 1h lower highs (70187 then 69349.9, with 69113 the latest); the last bar bounced to 69102.7 and closed back at the entry. I expect the 68073.3 swing low to trade before 69349.9 is retaken, with modest odds because price is just at entry",
+  "direction": "with_trade",
+  "target_px": 68073.3,
+  "p_target": 0.4,
+  "invalidation_px": 69349.9,
+  "horizon_bars": 6,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings lows 68073.3 (-1.56 ATR) highs 69349.9 (0.51 ATR) / 70187",
+   "chart.htf 4h trending ADX 54.0",
+   "exit_plan sl 69960.0 tp 67468.4",
+   "context.calendar no events next 24h"
+  ]
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "trigger_note: wake carried daily_floor (never reviewed) and judgement_cadence; the row answers daily_floor, the cadence slot is answered by the same hold",
+  "handoff_unread: opening desk row DD-20261113T2019Z-scan-1h-1 not found, desk_handoff.read_state could_not_look, prior_decision_id null; position keeps its venue SL/TP",
+  "correlated: short crypto book (ETH x4, SOL x2, ADA x2, XRP) plus precious-metals shorts; BTC short adds to one crypto-beta bet",
+  "priced_options: evidence_missing, no table; call is judgement",
+  "state: no telemetry row, open_r and ATR-at-entry null (not invented)",
+  "packet_defect: priced_options evidence_missing 1/1",
+  "packet_defect: state.open_r context_null:state.open_r 1/1"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuJLsSEBXRvoswfFiWp",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [
+  {
+   "count": 1,
+   "denominator": 1,
+   "field": "priced_options",
+   "reason": "evidence_missing"
+  },
+  {
+   "count": 1,
+   "denominator": 1,
+   "field": "state.open_r",
+   "reason": "context_null:state.open_r"
+  }
+ ],
+ "packet_sha": "6cd05142c7541bc6fd0c7e3d2a2828dd9064e18fe84909e9bcc8c1a82798965e",
+ "handoff": {
+  "prior_decision_id": null,
+  "verdict": "confirm",
+  "reason": null,
+  "read_state": "could_not_look"
+ }
+}
