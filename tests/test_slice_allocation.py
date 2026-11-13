@@ -89,7 +89,8 @@ def test_live_input_is_laplace_smoothed_and_absent_without_trades():
 
 
 def _intent(strategy="s", confidence=0.8, conviction=None):
-    meta = {"conviction": conviction} if conviction is not None else {}
+    # slice weights read the order-path block (ML-SHADOW-NO-ORDER-HANDLE)
+    meta = {"conviction_influencing": conviction} if conviction is not None else {}
     return SimpleNamespace(strategy=strategy, confidence=confidence, entry=100.0,
                            sl=95.0, tp=110.0, meta=meta)
 

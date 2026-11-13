@@ -1,0 +1,160 @@
+# Hand-authored 2026-11-12 by lane PROP-ML-NEW-DATA (Tier 1), ML assistant manager session_01AFoLuJkXEM1EigH9mSfz1F. Programme node P5-MLPROP-ENTRY-ETHSOL. Gates this adds or changes: NONE. Registered BEFORE any run.
+id: RQ-20261112-7d41-02
+title: 'P5-MLPROP-OIFLOW-LOWCAP-BV: does open-interest / long-short / taker-flow positioning carry a net-of-cost ETH+SOL entry signal at LOW model capacity (regularised logistic head) on the time-disjoint
+  2025-01..2025-09 held-out, and does it clear V3 on breakout_2 and velotrade_1?'
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+roadmap:
+- L-PROP
+- L-ML-LIVE
+practice_precedent: T3 (net of the full cost stack) + M-principles purged walk-forward with one held-out read; prop gate scripts/research/prop_gate.py RULE-P5-GATE-BRK-PER-LEG-V3 via ml_variant_prop_gate.py,
+  unchanged.
+question: 'RQ-20261109-98e3-31 (LightGBM, F0 vs F0+OI, 4h, bv) FAILED on discovery: all 10 draws net-negative. Leverage/positioning (OI change, top-trader long/short, taker imbalance) is information
+  price does not carry directly: it measures crowding and forced-liquidation fuel (Brunnermeier-Pedersen 2009 RFS on funding liquidity and spirals). Does the same family, offered to a LOW-capacity
+  head, show a discovery-eligible arm and then clear the registered held-out read? Operator spec 2026-11-05 (popup "New data sources (Rec.)"); surge from 2026-11-12.'
+why_this_matters: 'Second of the two highest-ranked non-price families not yet graded at low capacity (basis is first, unit 7d41-01). OI/positioning ranks second: it is slower than book depth
+  (whose edge decays within minutes, Cont-Kukanov-Stoikov 2014 JFEc; Kolm-Turiel-Westray 2023 Math Fin) so a 4h bar is not a mismatch, and its history (from 2021-12) is the longest after basis.
+  A discovery FAIL with the held-out unread is a clean record for the programme review.'
+instrument_universe:
+  basis: 'config/accounts.yaml: breakout_2, tradeify_1 and velotrade_1 all trade ETHUSDT and SOLUSDT (exchange: breakout)'
+  tradeable_now:
+  - ETHUSDT
+  - SOLUSDT
+  population_rule: Pooled ML over both symbols (an account configures strategies, never symbols). The bv profile covers breakout_2 and velotrade_1 (shared model, the stricter of their declared
+    stacks).
+data_sources:
+  status: Binance Vision um 1h klines, resampled to 4h by the driver; daily metrics (5m OI, long/short, taker ratios) from 2021-12; reachable from the lane container and the runner (data.binance.vision).
+  candidates:
+  - F0 price/volume only (the control). F0+OI = F0 + the 7 oi_flow columns, taken as-of the bar close from the daily metrics files (point-in-time). Funding columns (F1) are NOT in this arm; macro
+    (F2) and text (F3) are not arms. book_depth is deferred (no builder).
+label_and_horizon:
+  bar: 4h (--bar-hours 4); horizon as the driver sets it for 4h bars
+  entry: as RQ-20261105-fd68-05 (score each closed 4h bar per symbol; enter next bar open when score >= tau; one position per symbol; no hedging)
+  label: as RQ-20261105-fd68-05 (net R >= +0.5 after the profile cost stack; q60 MFE TP head clipped to [1.5R, 4.0R])
+  horizon_bars: driver default for bar_hours 4
+baselines:
+  cost_stack: 'bv profile: commission 4 bps/side, slippage 3 bps/side, swap 5 bps/night prorated (the stricter of Breakout''s and Velotrade''s declared stacks per term).'
+  B0: flat (net R 0).
+  B1: all-bars control and matched random-selection control (2000 draws, seed 20261105) on the identical held-out span.
+  B3: 'ml_entry ETH+SOL ledger (the reference the driver registers): reported beside the candidate, see the baseline clause of the rule.'
+arms:
+  denominator: '10 registered draws: feature set {F0, F0+OI} x tau {0.30, 0.35, 0.40, 0.45, 0.50}. All graded arms are counted and reported. The tau grid is shifted down from RQ-20261109-98e3-31''s
+    because a regularised logistic score is concentrated near the label base rate (registered before any run, for scale, not after seeing a result). Family-level multiplicity disclosed: this family
+    has already been graded with LightGBM in RQ-20261109-98e3-31 (10 draws, no discovery-eligible arm).'
+  models: 'LOW-CAPACITY head (the one lever of this unit): median-impute + standardise + L2 logistic regression (C=0.05, fixed in the driver before any run; --model logit) for the win label, and
+    ONE constant TP per side (q60 of the training MFE clipped to [1.5R, 4.0R]); no tuning loop. Every other element (label, bracket, costs, folds, eligibility, E1-E4) is the predecessor''s, unchanged.'
+split:
+  discovery: 2022-01-01 .. 2024-12-31 (rows before 2022-01-01 never enter discovery training or folds; --discovery-start), purged expanding walk-forward by calendar quarter, a fold scored only
+    once its training set holds >= 5000 rows (at 4h bars on two symbols that is about 14 months, so the first scored fold is in 2023).
+  held_out: '2025-01-01 .. 2025-09-30 (forward, time-disjoint), read ONCE by ONE model fit on every discovery row. Caveat registered now: the span is 9 months, so n may fall below the driver''s
+    floor of 150 and read INDETERMINATE even if an arm were eligible.'
+power:
+  expected_n: 150
+  min_detectable_effect: 0.185
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATED, not measured: the d256-01 floor of n >= 150. Basis for n: the discovery-only dry run produced 268 to 823 discovery trades per arm x tau over about 21 months of folds at 4h
+    (MEASURED, F0 tau 0.50 = 268; tau 0.30 = 823), which scales to roughly 115 to 350 over a 9-month held-out; n < 150 => INDETERMINATE, never FAIL (the driver floor, unchanged).'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261112-7d41-02-OIFLOW-LOWCAP-V3
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'The single arm selected on discovery (highest summed walk-forward net R among arms with >= 100 discovery trades, >= 2/3 of folds with trades net-positive, and discovery sum net R
+    > 0) among 2 feature sets x 5 taus = 10 registered draws (LOW-CAPACITY logistic head, --model logit) (F0 price-only control; F0+OI = F0 plus the 7 oi_flow columns oi_chg24, oi_z, ls_top_cnt,
+    ls_top_pos, ls_all, taker_ratio, taker_ratio_ma24, no funding column) x tau {0.30, 0.35, 0.40, 0.45, 0.50}, scored once on the held-out, graded by the driver''s E1-E4 exactly as RQ-20261105-d256-01
+    (E4 = ml_variant_prop_gate.py V3, the prop survival gate scripts/research/prop_gate.py RULE-P5-GATE-BRK-PER-LEG-V3, on breakout_2 and velotrade_1 (profile bv, pass rule any), both cost arms).
+    4h bars, forward split: discovery 2022-01-01..2024-12-31 (purged expanding walk-forward from 2022-01-01, a fold scored only once its training set holds >= 5000 rows), held-out 2025-01-01..2025-09-30.'
+  rule: 'INDETERMINATE iff held-out n < 150, the ledger is missing, or a self-check fails. FAIL iff no arm is eligible on discovery, or any of E1-E4 fails. PASS iff E1 (mean >= +0.10 R and block-bootstrap
+    CI lower bound > 0) AND E2 (beats B0, B1 all-bars and the random p95) AND E3 (driver regime clause over the OOS ledger) AND E4 (V3 PASS on both arms for >= 1 account of this profile). The
+    verdict applies to whichever arm discovery selects and the record NAMES it: if the selected arm is the price-only control F0 and it passes, that is a price-only candidate (not an oi_flow finding)
+    and is flagged as such. BASELINE TO BEAT (MEASURED, comms/prop_survival/ml_entry.json and docs/research/ml-entry-prop-gate-2026-11-02/RESULT.md): the deployed ml_entry, ETH+SOL, served ENTRY
+    v1 + extend-only TP on the held-out 2025-10-01..2026-09-30, n=381: edge mean net R +0.0170 (breakout_2 / tradeify_1) and +0.0223 (velotrade_1), 95% CI lower bound about -0.10 R; V3 FAIL on
+    all three firms (EV median -13.55 / -83.70 / -26.75 USD for breakout_2 / tradeify_1 / velotrade_1). A candidate beats this baseline only by clearing E1 (mean >= +0.10 R, CI lower bound > 0)
+    and E4 (V3 PASS) where the baseline failed both. No common-window comparison is claimed: the baseline was read on 2025-10..2026-09, this unit on 2025-01..2025-09 (a different span). A PASS
+    is NOT a roster add: it authorises ONE forward-window unit for the frozen arm (bars after 2026-10-01) and a manager proposal of a minimum-size baseline variant; it adds no gate. Thresholds
+    are not changed after any result.'
+  what_it_does_not_do: 'DISCLOSURE (registered 2026-11-12, before any run of this unit): (1) LightGBM discovery tables for this family and split are known from 98e3-31/32 (all draws net-negative)
+    and are NOT reused as evidence; this unit''s logistic discovery table has not been seen. (2) The forward span 2025-01-01..2025-09-30 was not read by 98e3-31/32 (no eligible arm); it lies inside
+    the span 2025-10..2026-09''s predecessor window only for ml_entry-family reads; any read here is claimed in comms/research/holdout_reads.jsonl by the driver and graded on the deflated bar
+    (principles M13). (3) Read at most once, and only if an arm is eligible on discovery. (4) Promotes nothing, edits no config or roster, places no order. (5) Self-test of the new --model option
+    passes; no discovery or held-out run was made before this registration.'
+ml_consumer:
+  not_applicable: No consumer leg exists yet; it would reach breakout_2 and velotrade_1 only by a held Tier-3 roster PR after a PASS plus the forward check.
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.1
+  basis: 'stand-in, not a P&L measurement: three live prop accounts; the family has shown no edge on any read; the operator wants a prop ML entry that beats the ml_entry baseline.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 45
+  why_runner: Run in the lane container (data.binance.vision reachable; lightgbm + scikit-learn installed); the same command runs on research-script-run.yml if re-dispatched.
+  basis: 'MEASURED on the local discovery-only dry run: the 4h table and 12 folds for two arms ran in a few minutes once the data were cached; est_minutes covers a cold runner fetch.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/prop_ml_leg.py
+  - run
+  - --profile
+  - bv
+  - --bar-hours
+  - '4'
+  - --taus
+  - 0.30,0.35,0.40,0.45,0.50
+  - --arms
+  - F0,F0+OI
+  - --model
+  - logit
+  - --require-positive-sum
+  - --heldout-span
+  - 2025-01-01:2025-09-30
+  - --discovery-start
+  - '2022-01-01'
+  - --cache
+  - /tmp/prop_ml_cache
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261112-7d41-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-PROP-ITERATE
+- RQ-20261105-d256-01
+- RQ-20261108-98e3-28
+- RQ-20261109-98e3-30
+- comms/prop_survival/ml_entry.json
+- RQ-20261109-98e3-31
+- PROP-ML-NEW-DATA
+- ML-PROP-ITERATE
+- RQ-20261108-98e3-28
+- comms/research/holdout_reads.jsonl
+- comms/prop_survival/ml_entry.json
+iteration:
+  subject: bv_shared_ml_leg
+  subject_kind: ml_model
+  from_result: RQ-20261109-98e3-31
+  verdict_read: fail
+  attempt: 6
+  due_by: '2026-11-14'
+  diagnosis: '98e3-31/-32 (LightGBM, oi_flow, bv and tradeify_es, forward span 2025-01..09): FAIL on discovery, held-out unread. The unvaried lever across the six non-price units is model capacity.'
+  search: 'Lever family: model capacity (LightGBM -> low-capacity regularised logistic head), same features/span/costs/rule as RQ-20261109-98e3-31.'
+  levers:
+  - model_capacity_low
+  - feature_family_oi_flow
+  map_entries: []

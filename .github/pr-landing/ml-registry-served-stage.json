@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "why": "Lane ML-SERVING-HYGIENE, row ML-REGISTRY-SERVED-MODELS-NO-STAGE: a read-path change (src/runtime/ml_serving_inventory.py builds the GET /api/bot/ml/registry inventory rows; it now reads ml/served/SERVED_MODELS.yaml to stamp target_deployment_stage + headline_metric on the 8 served models). Nothing on the order path reads either file for a decision, and there is no trainer registry write. The landing guard names both paths Tier-2 by directory, so this PR is held for the manager (AM-ML) to read and land, per the lane brief.",
+  "hold_text": "Touches src/runtime/ml_serving_inventory.py and ml/served/SERVED_MODELS.yaml, which the guard cannot vouch for by path; a read-path change only, held for the manager (AM-ML) to read and land."
+}

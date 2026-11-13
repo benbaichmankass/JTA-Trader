@@ -83,6 +83,21 @@ def _run(argv: List[str]) -> Optional[str]:
         return (e.stderr or b"").decode()[-400:]
 
 
+def _fetch_1m(symbol: str, start: Optional[str], end: Optional[str], out_csv: str) -> Optional[str]:
+    """Binance-vision 1m candles for [start, end] into `out_csv`; None on success, else the error text."""
+    if not (start and end):
+        return "record window unknown"
+    try:
+        import pandas as pd
+        s_ = (pd.to_datetime(start, utc=True) - pd.Timedelta(days=2)).strftime("%Y-%m-%d")
+        e_ = pd.to_datetime(end, utc=True).strftime("%Y-%m-%d")
+    except (ValueError, TypeError) as e:
+        return f"bad window: {e}"
+    return _run([sys.executable, str(Path(REPO) / "scripts/ops/fetch_backtest_candles.py"), "--symbol", symbol,
+                 "--interval", "1", "--start-date", s_, "--end-date", e_, "--output", out_csv,
+                 "--source", "binance_vision"])
+
+
 def measure(leg: str, cfg: Dict[str, Any], record: Dict[str, Any], out: Path) -> Dict[str, Any]:
     row: Dict[str, Any] = {"leg": leg, "rule_id": RULE_ID,
                            "record_fidelity": record.get("fidelity"),
@@ -116,11 +131,27 @@ def measure(leg: str, cfg: Dict[str, Any], record: Dict[str, Any], out: Path) ->
 
     arms: Dict[str, Dict[str, Any]] = {}
     passable = PASSABLE.get(harness or "", {})
+    # CRYPTO-FORMING-RDM-FORWARD (2026-11-13): a crypto trend leg that decides live on the FORMING bar has
+    # `decision_bar` omitted from its record. The faithful arm now models it: a Binance 1m CSV over the same window
+    # feeds build_harness_cmd(forming_1m=...) -> backtest_trend --decision-bar forming (the one forming
+    # implementation, scripts/research/forming_bar_entries.py). Equity legs need the Alpaca 1m source and their own
+    # unit (RQ-20261113-1449-01), so they are left as before.
+    forming_1m = None
+    if harness == "trend" and feed.get("source") == "binance" and str(cfg.get("decision_bar") or "forming") != "closed":
+        import tempfile
+        m1 = str(Path(tempfile.mkdtemp(prefix="fidelity_1m_")) / f"{leg}__1m.csv")   # bulky input: never under --out
+        fetch_err = _fetch_1m(sym, start, end, m1)
+        if fetch_err:
+            row["forming_1m_error"] = fetch_err
+        else:
+            forming_1m = m1
+            row["forming_1m"] = os.path.basename(m1)
     for arm in ("approximate", "faithful"):
         emit = str(out / f"{leg}__{arm}__trades.jsonl")
         jout = str(out / f"{leg}__{arm}__bt.json")
+        fkw = {"forming_1m": forming_1m} if (arm == "faithful" and forming_1m) else {}
         argv, _faithful, omitted = rdm.build_harness_cmd(
-            leg, cfg, harness, csv, feed["resample"], emit, jout)
+            leg, cfg, harness, csv, feed["resample"], emit, jout, **fkw)
         still_omitted = list(omitted)
         if arm == "faithful":
             for key in omitted:
@@ -210,7 +241,8 @@ def assemble_verdict(legs: List[str], rows: List[Dict[str, Any]]) -> Dict[str, A
                "indeterminate" if "indeterminate" in verdicts else "pass") if measured else "not_applicable"
     return {
         "verdict": overall, "read_state": "measured" if measured else "producer_failed",
-        "population": ("faithful (trail_decay simulated) vs approximate re-run of each "
+        "population": ("faithful (every omitted lever this script can pass simulated, incl. the FORMING decision bar "
+                       "for crypto trend legs) vs approximate re-run of each "
                        "record's own harness over its own window: " + ", ".join(legs)),
         "n": sum(r["n"] for r in measured) if measured else None,
         "note": "; ".join(f"{r['leg']}={r['verdict']}" for r in rows),
