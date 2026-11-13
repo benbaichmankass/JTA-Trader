@@ -193,14 +193,34 @@ def run_batch(db_path: Path, fetch: Fetch, now: Optional[datetime] = None, limit
     return counts
 
 
+#: CLOSED-TRADE-SNAPSHOT-FUTURES-CANDLES (AM-UI 2026-11-12 Q10 option (b)): the builder's historical (``since``) reads
+#: against Alpaca are paced to at most one per ``ALPACA_SINCE_MIN_INTERVAL_S``. The wait happens on the BUILDER's own
+#: thread, never on the shared fetch executor (which also serves GET /api/bot/candles), and never in the trader process.
+ALPACA_SINCE_MIN_INTERVAL_S = 10.0
+_THROTTLED = object()
+_alpaca_since_last = {"at": None}
+_sleep = time.sleep
+_mono = time.monotonic
+
+
+def _is_alpaca(client: Any) -> bool:
+    from src.exchange.alpaca_connector import AlpacaMarketData
+    return isinstance(client, AlpacaMarketData)
+
+
 def web_api_fetch(symbol: str, interval: str, since_ms: Optional[int], limit: int) -> Tuple[Optional[List[Dict[str, Any]]], str]:
     """Candles through the web-api's own market-data path, on its single IB-safe worker thread."""
     from src.web.api.routers import candles as cr
 
-    def go() -> Optional[List[Dict[str, Any]]]:
+    def go() -> Any:
         from src.runtime.market_data import fetch_candles
         settings = cr._settings()
         client = cr._connector(symbol, settings)
+        if since_ms is not None and _is_alpaca(client):
+            last = _alpaca_since_last["at"]
+            if last is not None and _mono() - last < ALPACA_SINCE_MIN_INTERVAL_S:
+                return _THROTTLED   # no venue call; the builder thread waits and resubmits
+            _alpaca_since_last["at"] = _mono()
         df = fetch_candles(symbol, interval, settings=settings, limit=limit, exchange_client=client,
                            since=since_ms, bypass_cache=True)
         if df is None or len(df) == 0:
@@ -219,7 +239,13 @@ def web_api_fetch(symbol: str, interval: str, since_ms: Optional[int], limit: in
         out.sort(key=lambda c: c["time"])
         return out or None
 
-    return cr._FETCH_EXECUTOR.submit(go).result(timeout=FETCH_TIMEOUT_S), "bot-exchange"
+    for _ in range(3):
+        out = cr._FETCH_EXECUTOR.submit(go).result(timeout=FETCH_TIMEOUT_S)
+        if out is not _THROTTLED:
+            return out, "bot-exchange"
+        last = _alpaca_since_last["at"] or _mono()
+        _sleep(max(0.0, ALPACA_SINCE_MIN_INTERVAL_S - (_mono() - last)) + 0.05)
+    return None, "bot-exchange"
 
 
 _started = threading.Lock()
