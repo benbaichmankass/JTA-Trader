@@ -50,6 +50,13 @@ BETA_WIN, BETA_LO, BETA_HI = 720, -1.0, 3.0
 WIN_N, MIN_WINDOWS, POOL_N, DELTA = 30, 10, 300, 0.06
 PLACEBO_SEED = 20261112
 ARMS = ("raw", "resid", "placebo")
+#: FRONTIER-Q-XSEC-RANK-ENTRY (not part of RQ-20261112-4654-01): the ranking objective in regression form -- each side's net R
+#: minus its cross-sectional mean over the symbols at the same decision timestamp, so only the relative order at a time is learned.
+EXTRA_ARMS = ("xsdemean", "ens", "ridge")
+# ens / ridge (FRONTIER-Q-ENS-RIDGE-ENTRY): the RAW target with a different learner -- ridge alone, or the equal-weight
+# average of the LightGBM and ridge predictions (a heterogeneous ensemble). They change the learner, not the target.
+LEARNER_ARMS = {"ens": "raw", "ridge": "raw"}
+RIDGE_ALPHA = 10.0
 
 
 # ----------------------------------------------------------------------------------------------- target
@@ -90,6 +97,8 @@ def add_targets(tab: pd.DataFrame, cache: Path) -> pd.DataFrame:
         t[f"y_long_{arm}"] = t["net_long"].to_numpy() - m
         t[f"y_short_{arm}"] = t["net_short"].to_numpy() + m
     t["y_long_raw"], t["y_short_raw"] = t["net_long"], t["net_short"]
+    for side in ("long", "short"):           # xsdemean: market-neutral by construction (relative order at each timestamp)
+        t[f"y_{side}_xsdemean"] = t[f"net_{side}"] - t.groupby("ts")[f"net_{side}"].transform("mean")
     keep = np.isfinite(t[[f"y_{s}_{a}" for s in ("long", "short") for a in ARMS]].to_numpy()).all(axis=1)
     return t[keep].reset_index(drop=True)
 
@@ -98,12 +107,36 @@ def fit_arm(train: pd.DataFrame, arm: str, sample: int | None = None) -> dict:
     import lightgbm as lgb
     if sample:
         train = train.sample(min(len(train), sample), random_state=0)
+    target = LEARNER_ARMS.get(arm, arm)
     out = {}
     for side in ("long", "short"):
+        y = train[f"y_{side}_{target}"]
+        ridge = None
+        if arm in LEARNER_ARMS:
+            from sklearn.impute import SimpleImputer
+            from sklearn.linear_model import Ridge
+            from sklearn.pipeline import make_pipeline
+            from sklearn.preprocessing import StandardScaler
+            ridge = make_pipeline(SimpleImputer(strategy="median"), StandardScaler(), Ridge(alpha=RIDGE_ALPHA))
+            ridge.fit(train[E.FEATURES], y)
+        if arm == "ridge":
+            out[side] = ridge
+            continue
         m = lgb.LGBMRegressor(**E.LGB_PARAMS)
-        m.fit(train[E.FEATURES], train[f"y_{side}_{arm}"])
-        out[side] = m
+        m.fit(train[E.FEATURES], y)
+        out[side] = _Blend(m, ridge) if arm == "ens" else m
     return out
+
+
+class _Blend:
+    """Equal-weight average of two fitted regressors' predictions (both in net-R units of the same target)."""
+
+    def __init__(self, a, b):
+        self.a, self.b = a, b
+
+    def predict(self, x):
+        # provenance: predict -- mean of the LightGBM and ridge regressed net R, not a probability
+        return 0.5 * (self.a.predict(x) + self.b.predict(x))
 
 
 # ----------------------------------------------------------------------------------------------- statistics
@@ -143,11 +176,24 @@ def decide(p_res: dict, p_pla: dict, pooled: dict) -> str:
     return "INDETERMINATE"
 
 
+def decide_vs_raw(p: dict, pooled_arm: dict) -> str:
+    """The RESID bar without the placebo clause, for an EXTRA_ARMS unit (its own unit registers this rule before its run):
+    PASS iff >= MIN_WINDOWS paired windows, mean >= DELTA, 95% CI low > 0 and pooled n >= POOL_N; FAIL iff >= MIN_WINDOWS and
+    mean <= 0; INDETERMINATE otherwise."""
+    if p.get("k", 0) < MIN_WINDOWS or p.get("mean") is None:
+        return "INDETERMINATE"
+    if p["mean"] <= 0:
+        return "FAIL"
+    if p["mean"] >= DELTA and p.get("ci95") and p["ci95"][0] > 0 and (pooled_arm.get("n") or 0) >= POOL_N:
+        return "PASS"
+    return "INDETERMINATE"
+
+
 def replay(tab: pd.DataFrame, tau: float, frozen: dict | None = None, start: str = START, end: str = END,
-           step_days: int = STEP_DAYS, fit=None) -> dict:
+           step_days: int = STEP_DAYS, fit=None, arms: tuple = ARMS) -> dict:
     fit = fit or fit_arm
     ts0, ts1 = pd.Timestamp(start, tz="UTC"), pd.Timestamp(end, tz="UTC") + pd.Timedelta(days=1)
-    rows, alls = [], {a: [] for a in ARMS + ("frozen",)}
+    rows, alls = [], {a: [] for a in tuple(arms) + ("frozen",)}
     for k in range(int((ts1 - ts0).days // step_days)):
         a0 = ts0 + pd.Timedelta(days=k * step_days)
         a1 = a0 + pd.Timedelta(days=step_days)
@@ -156,7 +202,7 @@ def replay(tab: pd.DataFrame, tau: float, frozen: dict | None = None, start: str
             continue
         train = E.purge_train(tab[tab.ts < a0], a0)
         row = {"start": str(a0.date())}
-        for arm in ARMS:
+        for arm in arms:
             m = fit(train, arm)
             # provenance: predict -- regressed target of each side (policy() thresholds at tau), not a probability
             taken = E.policy(win, m["long"].predict(win[E.FEATURES]), m["short"].predict(win[E.FEATURES]), tau)
@@ -171,9 +217,16 @@ def replay(tab: pd.DataFrame, tau: float, frozen: dict | None = None, start: str
         row["btc_ret24_mean"] = float(win_btc["btc_ret24"].mean()) if "btc_ret24" in win_btc else None
         rows.append(row)
     pooled = {a: _stats(pd.concat(v)) if v else _stats(None) for a, v in alls.items()}
-    p_res, p_pla = _paired(rows, "resid", "raw"), _paired(rows, "placebo", "raw")
-    verdict = decide(p_res, p_pla, pooled)
-    return {"verdict": verdict, "paired_resid_vs_raw": p_res, "paired_placebo_vs_raw": p_pla, "pooled": pooled,
+    p_res = _paired(rows, "resid", "raw") if "resid" in arms else {"k": 0, "mean": None, "sd": None, "ci95": None}
+    p_pla = _paired(rows, "placebo", "raw") if "placebo" in arms else {"k": 0, "mean": None, "sd": None, "ci95": None}
+    extra = {a: _paired(rows, a, "raw") for a in arms if a not in ARMS}
+    if "resid" in arms:
+        verdict = decide(p_res, p_pla, pooled)
+    else:                                    # an EXTRA_ARMS unit: the same paired bar against RAW, no placebo arm
+        a0 = next(iter(extra), None)
+        verdict = decide_vs_raw(extra[a0], pooled.get(a0, {})) if a0 else "INDETERMINATE"
+    return {"verdict": verdict, "paired_resid_vs_raw": p_res, "paired_placebo_vs_raw": p_pla,
+            "paired_extra_vs_raw": extra, "arms": list(arms), "pooled": pooled,
             "windows": rows, "tau": tau, "window": {"start": start, "end": end, "step_days": step_days},
             "thresholds": {"win_n": WIN_N, "min_windows": MIN_WINDOWS, "pool_n": POOL_N, "delta": DELTA,
                            "beta_win": BETA_WIN, "beta_clip": [BETA_LO, BETA_HI], "placebo_seed": PLACEBO_SEED}}
@@ -190,19 +243,28 @@ def run(a) -> int:
     tab = add_targets(E.build_table(cache, syms), cache)
     meta, frozen = E._frozen_models(REPO / "ml" / "served" / "ml_decision_entry_v1" / "model.json")
     assert str(meta["train_end_exclusive"]) < START, "the frozen model must not have seen the replay year"
-    d = replay(tab, float(meta["tau"]), frozen=frozen)
+    arms = tuple(x for x in a.arms.split(",") if x)
+    bad = [x for x in arms if x not in ARMS + EXTRA_ARMS]
+    if bad or "raw" not in arms:
+        raise SystemExit(f"--arms must include raw and only {ARMS + EXTRA_ARMS}; got {arms}")
+    d = replay(tab, float(meta["tau"]), frozen=frozen, arms=arms)
     v = d["verdict"]
     verdict = {"PASS": "pass", "FAIL": "fail"}.get(v, "indeterminate")
     pr = d["paired_resid_vs_raw"]
-    note = (f"RESID-TARGET: {v} | paired resid-raw mean {pr['mean']} over k={pr['k']} windows, ci95 {pr['ci95']} | "
-            f"placebo-raw mean {d['paired_placebo_vs_raw']['mean']} | pooled n raw/resid/placebo "
-            f"{d['pooled']['raw']['n']}/{d['pooled']['resid']['n']}/{d['pooled']['placebo']['n']}")
+    if "resid" in arms:
+        note = (f"RESID-TARGET: {v} | paired resid-raw mean {pr['mean']} over k={pr['k']} windows, ci95 {pr['ci95']} | "
+                f"placebo-raw mean {d['paired_placebo_vs_raw']['mean']} | pooled n raw/resid/placebo "
+                f"{d['pooled']['raw']['n']}/{d['pooled']['resid']['n']}/{d['pooled']['placebo']['n']}")
+    else:
+        note = f"EXTRA-ARM: {v} | " + " | ".join(f"paired {k}-raw mean {p['mean']} k={p['k']} ci95 {p['ci95']} n={d['pooled'][k]['n']}"
+                                                  for k, p in d["paired_extra_vs_raw"].items())
+    head_arm = "resid" if "resid" in arms else next(x for x in arms if x != "raw")
     row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": verdict,
            "population": (f"ml_decision_entry recipe refit at 13 monthly origins over {START}..{END} ({STEP_DAYS}-day windows), "
                           f"{tab.symbol.nunique()} symbols (BTCUSDT excluded), both-sides at served tau, canonical cost stack, outright trades"),
            "note": note, "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
            "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True},
-           "measurement": {**d, "latest_bar": max(x["last_bar"] for x in rep.values())}, "n": d["pooled"]["resid"]["n"],
+           "measurement": {**d, "latest_bar": max(x["last_bar"] for x in rep.values())}, "n": d["pooled"][head_arm]["n"],
            "produced_by": {"tool": "python3 scripts/research/ml_entry_residual.py run", "where": a.where}}
     (out / f"{a.unit}.json").write_text(json.dumps(row, indent=1, default=str))
     (out / "verdict.json").write_text(json.dumps(row, indent=1, default=str) + "\n")
@@ -240,6 +302,23 @@ def self_test() -> int:
     assert decide(good, {"k": 13, "mean": 0.09, "ci95": [0.03, 0.15]}, pooled) == "FAIL"
     assert decide({"k": 13, "mean": 0.04, "ci95": [-0.01, 0.09]}, weak_pla, pooled) == "INDETERMINATE"
     assert decide({"k": 8, "mean": 0.2, "ci95": [0.1, 0.3]}, weak_pla, pooled) == "INDETERMINATE"
+    # xsdemean (FRONTIER-Q-XSEC-RANK-ENTRY): zero cross-sectional mean at every timestamp; an extra-arm replay uses decide_vs_raw
+    g = tab.groupby("ts")["y_long_xsdemean"].mean().abs().max()
+    assert g < 1e-9, g
+    d2 = replay(tab, 0.0, start=start, end=end, step_days=14, fit=fit, arms=("raw", "xsdemean"))
+    assert "xsdemean" in d2["paired_extra_vs_raw"] and d2["verdict"] in ("PASS", "FAIL", "INDETERMINATE")
+    # ens / ridge (FRONTIER-Q-ENS-RIDGE-ENTRY): same raw target, different learner; the verdict is on the FIRST extra arm (ens)
+    mr = fit_arm(tab, "raw", sample=15000)
+    me = fit_arm(tab, "ens", sample=15000)
+    mg = fit_arm(tab, "ridge", sample=15000)
+    xx = tab[E.FEATURES].head(50)
+    # provenance: predict -- regressed net R of the long side for the raw / ens / ridge fits (a self-test identity check)
+    assert np.allclose(me["long"].predict(xx), 0.5 * (mr["long"].predict(xx) + mg["long"].predict(xx)))
+    d3 = replay(tab, 0.0, start=start, end=end, step_days=14, fit=fit, arms=("raw", "ens", "ridge"))
+    assert set(d3["paired_extra_vs_raw"]) == {"ens", "ridge"} and d3["verdict"] in ("PASS", "FAIL", "INDETERMINATE")
+    assert decide_vs_raw({"k": 13, "mean": 0.08, "ci95": [0.02, 0.14]}, {"n": 400}) == "PASS"
+    assert decide_vs_raw({"k": 13, "mean": -0.01, "ci95": [-0.05, 0.03]}, {"n": 400}) == "FAIL"
+    assert decide_vs_raw({"k": 8, "mean": 0.2, "ci95": [0.1, 0.3]}, {"n": 400}) == "INDETERMINATE"
     print("self-test ok")
     return 0
 
@@ -255,6 +334,9 @@ def main(argv=None) -> int:
     ap.add_argument("--run-date", dest="run_date", default="2026-11-12")
     ap.add_argument("--rule-id", dest="rule_id", default="")
     ap.add_argument("--registered-at", dest="registered_at", default="")
+    ap.add_argument("--arms", default=",".join(ARMS), help="comma list; default = the RQ-20261112-4654-01 arms (raw,resid,placebo). "
+                    "xsdemean (FRONTIER-Q-XSEC-RANK-ENTRY) and ens,ridge (FRONTIER-Q-ENS-RIDGE-ENTRY) are EXTRA arms for their own units; "
+                    "the verdict is on the first extra arm listed")
     a = ap.parse_args(argv)
     if a.self_test:
         return self_test()
