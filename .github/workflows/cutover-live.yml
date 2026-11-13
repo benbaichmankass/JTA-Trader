@@ -50,8 +50,8 @@ on:
         description: "Must be 'yes' for a LIVE cutover (dry_run: false)"
         required: false
         default: "no"
-  issues:
-    types: [opened, labeled]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [cutover-live, labeled:cutover-live]
 
 permissions:
   contents: read
@@ -65,10 +65,10 @@ jobs:
   cutover:
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       (github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'cutover-live'))
+      (github.event_name == 'repository_dispatch' &&
+       (github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'cutover-live'))
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
@@ -79,14 +79,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Dedup — bail if a bot comment already exists
-        if: github.event_name == 'issues'
+        if: github.event_name == 'repository_dispatch'
         id: dedup
         uses: actions/github-script@v7
         with:
           script: |
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number, per_page: 100,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), per_page: 100,
             });
             core.setOutput('skip',
               comments.some(c => c.user && c.user.login === 'github-actions[bot]') ? 'true' : 'false');
@@ -96,7 +96,7 @@ jobs:
         id: inputs
         env:
           EVENT_NAME: ${{ github.event_name }}
-          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_BODY: ${{ github.event.client_payload.issue.body }}
           DISP_IP: ${{ inputs.candidate_ip }}
           DISP_NAME: ${{ inputs.candidate_name }}
           DISP_DRY: ${{ inputs.dry_run }}
@@ -104,7 +104,7 @@ jobs:
         run: |
           set -euo pipefail
           field() { printf '%s' "$1" | awk -F: -v k="$2" '$1 ~ "^[[:space:]]*"k"[[:space:]]*$" {gsub(/^[[:space:]]+|[[:space:]]+$/,"",$2); print $2; exit}'; }
-          if [ "${EVENT_NAME}" = "issues" ]; then
+          if [ "${EVENT_NAME}" = "repository_dispatch" ]; then
             cand_ip="$(field "${ISSUE_BODY}" candidate_ip)"
             cand_name="$(field "${ISSUE_BODY}" candidate_name)"
             dry="$(field "${ISSUE_BODY}" dry_run | tr '[:upper:]' '[:lower:]')"
@@ -258,7 +258,7 @@ jobs:
           echo "::endgroup::"
 
       - name: Post plan + result to issue
-        if: github.event_name == 'issues' && steps.dedup.outputs.skip != 'true' && always()
+        if: github.event_name == 'repository_dispatch' && steps.dedup.outputs.skip != 'true' && always()
         uses: actions/github-script@v7
         with:
           script: |
@@ -277,8 +277,8 @@ jobs:
               dry ? '_Dry-run only. Re-run with `dry_run: false` + `confirm: yes` to execute._'
                   : ['**Cutover verify:**','```',read('verify.txt').slice(0,4000),'```'].join('\n')
             ].join('\n');
-            await github.rest.issues.createComment({owner:context.repo.owner,repo:context.repo.repo,issue_number:context.issue.number,body});
-            await github.rest.issues.update({owner:context.repo.owner,repo:context.repo.repo,issue_number:context.issue.number,state:'closed'});
+            await github.rest.issues.createComment({owner:context.repo.owner,repo:context.repo.repo,issue_number:(context.payload.client_payload?.issue?.number ?? context.issue.number),body});
+            await github.rest.issues.update({owner:context.repo.owner,repo:context.repo.repo,issue_number:(context.payload.client_payload?.issue?.number ?? context.issue.number),state:'closed'});
 
       - name: Emit summary (workflow_dispatch)
         if: github.event_name == 'workflow_dispatch' && steps.dedup.outputs.skip != 'true'

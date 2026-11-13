@@ -29,11 +29,11 @@ def _routed():
 
 def test_router_runs_once_per_opened_issue_and_forwards_every_label():
     doc = yaml.safe_load((WF / irm.ROUTER).read_text(encoding="utf-8"))
-    assert _on(doc) == {"issues": {"types": ["opened"]}}
+    assert _on(doc) == {"issues": {"types": ["opened", "labeled"]}}
     job = doc["jobs"]["route"]
     assert "if" not in job, "the router must not gate: every label of every issue is forwarded"
     script = job["steps"][0]["with"]["script"]
-    assert "createDispatchEvent" in script and "for (const label of labels)" in script
+    assert "createDispatchEvent" in script and "for (const label of targets)" in script
     for field in irm.PAYLOAD_FIELDS:
         assert re.search(rf"\b{field}:", script), f"router payload lacks issue.{field}"
 
@@ -45,7 +45,9 @@ def test_routed_workflows_are_consistent():
         on = _on(doc)
         assert "issues" not in on, f"{p.name}: routed and still on issues (would double-run)"
         types = sorted(on["repository_dispatch"]["types"])
-        assert types == sorted(set(irm.LABEL_RE.findall(src))), f"{p.name}: dispatch types != label conditions"
+        labels = sorted(set(irm.LABEL_RE.findall(src)))
+        assert types in (labels, sorted(labels + [irm.LABELED_PREFIX + lab for lab in labels])), \
+            f"{p.name}: dispatch types != label conditions"
         assert "github.event.issue." not in src, f"{p.name}: still reads github.event.issue"
         assert not re.search(r"github\.event_name\s*[!=]=\s*['\"]issues['\"]", src), p.name
         for m in re.finditer(r"github\.event\.client_payload\.issue\.([A-Za-z_]+)", src):
@@ -93,3 +95,40 @@ def test_runs_per_issue_drop(tmp_path):
         Path(p).write_text(irm.rewrite(Path(p).read_text(), labels))
     after = irm.runs_per_issue({p: irm.classify(p) for p in paths}, ["a-req"])
     assert (before, after) == (2, 1)
+
+
+_EVENT_NAME_VARS = re.compile(r"^\s*([A-Z_]+):\s*\$\{\{\s*github\.event_name\s*\}\}", re.M)
+
+
+def test_routed_workflows_never_branch_on_the_issues_event_name():
+    """A routed workflow runs as repository_dispatch, so any branch that tests for 'issues' is dead code that
+    silently takes the wrong path (prop-report read the empty dispatch input instead of the issue body).
+    Every env var holding github.event_name, inline ${{ github.event_name }} and context.eventName is checked;
+    a line that also accepts repository_dispatch is fine."""
+    bad = []
+    for p, src, _doc in _routed():
+        names = set(_EVENT_NAME_VARS.findall(src))
+        pats = [r"\$\{\{\s*github\.event_name\s*\}\}", r"context\.eventName"] + [rf"\$\{{?{n}\}}?" for n in names]
+        for i, line in enumerate(src.splitlines(), 1):
+            if line.lstrip().startswith("#") or "repository_dispatch" in line:
+                continue
+            for pat in pats:
+                if re.search(rf"{pat}[\"']?\s*(?:==?=?)\s*[\"']issues[\"']", line):
+                    bad.append(f"{p.name}:{i}: {line.strip()}")
+    assert not bad, bad
+
+
+def test_router_forwards_only_the_added_label_on_labeled():
+    script = yaml.safe_load((WF / irm.ROUTER).read_text(encoding="utf-8"))["jobs"]["route"]["steps"][0]["with"]["script"]
+    assert "'labeled:' + added" in script and "payload.label = { name: added }" in script
+    assert "action === 'labeled' ? (added ? ['labeled:' + added] : []) : labels" in script
+
+
+def test_rewrite_opened_labeled_keeps_both_events_and_fixes_shell_compare():
+    src = ("name: x\non:\n  workflow_dispatch:\n  issues:\n    types: [opened, labeled]\njobs:\n  a:\n"
+           "    if: github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'x-req')\n"
+           "    runs-on: ubuntu-latest\n    steps:\n      - env:\n          EVENT_NAME: ${{ github.event_name }}\n"
+           "        run: |\n          if [ \"${EVENT_NAME}\" = \"issues\" ]; then echo issue; fi\n")
+    out = irm.rewrite(src, ["x-req"])
+    assert _on(yaml.safe_load(out))["repository_dispatch"] == {"types": ["x-req", "labeled:x-req"]}
+    assert '[ "${EVENT_NAME}" = "repository_dispatch" ]' in out and "'issues'" not in out
