@@ -72,7 +72,8 @@ def test_live_config_declares_no_profile_for_the_bybit_symbols():
         assert (p["reference_venue"], p["reference_universe"], p["anchor"], p["session"], p["cost_basis"],
                 p["side_filter"]) == ("bybit", None, None, None, None, "both")
         # 2026-11-08 ML-ENTRY-PROP-BASELINE: the prop books run the ETH+SOL slice (same defaults, same implementation).
-        prop = {"breakout_2", "tradeify_1", "velotrade_1"} if s in ("ETHUSDT", "SOLUSDT") else set()
+        # breakout_2 dropped 2026-11-12 (account on ice, #25306 removed it from ml_entry.account_symbols).
+        prop = {"tradeify_1", "velotrade_1"} if s in ("ETHUSDT", "SOLUSDT") else set()
         assert set(p["accounts"]) == {"bybit_2", "bybit_portfolio"} | prop
 
 

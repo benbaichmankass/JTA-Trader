@@ -110,6 +110,7 @@ jobs:
         id: wake
         env:
           WAKE_TOGGLES_REMOTE: "1"  # console wake switch, read live over HTTP; unreadable => post
+          DASHBOARD_API_TOKEN: ${{ secrets.DASHBOARD_API_TOKEN }}  # UI-OAUTH-SIGNIN: GET service bearer for the wake-toggles read
         run: |
           set -o pipefail
           python3 scripts/ops/desk_wake_marker.py post --stage /tmp/stage --commit "$(git -C /tmp/desk rev-parse HEAD)" \
@@ -118,6 +119,7 @@ jobs:
         if: failure() && steps.wake.outcome != 'failure' && steps.gate.outputs.skip != 'true'
         env:
           WAKE_TOGGLES_REMOTE: "1"  # console switch "desk could_not_build"
+          DASHBOARD_API_TOKEN: ${{ secrets.DASHBOARD_API_TOKEN }}  # UI-OAUTH-SIGNIN: GET service bearer for the wake-toggles read
         run: |
           STEP="Read the desk book"
           if [ "${{ steps.build.outcome }}" = "failure" ]; then STEP="Build the scan packet"; fi

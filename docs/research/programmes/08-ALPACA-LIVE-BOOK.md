@@ -14,8 +14,8 @@ Operator, 2026-11-11 ~22:40Z, verbatim: *"what's the research and iteration plan
 
 **Goal:** the alpaca_live book earns more per month, net of the full cost stack, than it does with Foxhound-4 alone, measured on the book the account can actually hold.
 
-**Measure (the one every P8 test reports):** net return per month on the alpaca_live cash book, in % of the $194.52 starting balance, with its month-clustered t. This is the roadmap's G1 measure (net P&L per capital-day on the real-money books) at monthly grain. A candidate is replayed by `alpaca_live_book.py` through:
-- $194.52 cash;
+**Measure (the one every P8 test reports):** net return per month on the alpaca_live cash book, in % of the [balance removed] starting balance, with its month-clustered t. This is the roadmap's G1 measure (net P&L per capital-day on the real-money books) at monthly grain. A candidate is replayed by `alpaca_live_book.py` through:
+- [balance removed] cash;
 - long only;
 - whole-share brackets;
 - the live sizer;
@@ -28,7 +28,7 @@ Net R per trade is reported beside the monthly return, but it is never the decis
 ## 2. What is known (do not re-derive)
 
 **The account** (MEASURED from `/api/diag/broker_account_status` at 2026-11-11T22:44Z, and from `config/accounts.yaml`):
-- The balance is $194.52. Cash, equity and buying power are all 194.52, and the multiplier is 1: it is a cash account, and it is flat.
+- The balance is [balance removed]. Cash, equity and buying power are all [balance removed], and the multiplier is 1: it is a cash account, and it is flat.
 - `shorting_enabled: false` at the venue, and `side_filter: long` in config.
 - Roster: `[tqqq_trend_long_1d, ml_entry_eq_struct]`.
 - `risk_pct 0.02`, and `daily_dd_switch` is armed at 3%.
@@ -86,7 +86,7 @@ Q3 the label (cost-per-R?) ────────────┴──▶ Q5 f
 
 | Q | question | why now | unit / node |
 |---|---|---|---|
-| **Q1** | Does Foxhound-4's dev edge survive the $194.52 cash book (cash wall, whole shares, one slot, T+1, live sizer)? What does the book earn per month? | Every number behind the leg is per trade with no cash. "Better" must be measured on what the account can hold. | `RQ-20261111-207f-01` → `P8-Q1-fail` |
+| **Q1** | Does Foxhound-4's dev edge survive the [balance removed] cash book (cash wall, whole shares, one slot, T+1, live sizer)? What does the book earn per month? | Every number behind the leg is per trade with no cash. "Better" must be measured on what the account can hold. | `RQ-20261111-207f-01` → `P8-Q1-fail` |
 | **Q2** | Is tau 0.25 calibrated to the score distribution, and does a registered selection rule (tau 0.15/0.20/0.30, top-1/top-3 per close, causal adaptive tau) earn more per month on the book? | The live max score sits 15× below tau, and the trade rate fell 4× from dev to confirm: a fixed threshold on a drifting score trades in clusters. | `RQ-20261111-207f-02` → `P8-Q2-pass` |
 | **Q3** | Does the net-R label rank by cost per R on the equity pool, and does a direction-only label (gross R, raw return) select better at the same count? | The crypto sibling's label was measured doing this (PR #24996); it is unmeasured here. If true, no tau fixes it. | `RQ-20261111-207f-03` → `P8-Q3-pass` / `-fail` |
 | **Q4** | Which rostered equity legs earn on the alpaca_live book, one at a time and competing for the slot? | Challengers must be scored on the same book, not on R per trade. | `RQ-20261111-207f-04` → `P8-Q4-h2h` |
@@ -94,7 +94,7 @@ Q3 the label (cost-per-R?) ────────────┴──▶ Q5 f
 | **Q6** | Do per-family models (equity-beta, rates-credit, commodity, leveraged-inverse) or an affordable-only pool beat the pooled model on the book? | One pool mixes very different instruments, and the account can only buy the cheaper ones. | `P8-Q6-pool` |
 | **Q7** | Does an ETF rotation / dual-momentum family, built for one slot and monthly turnover, earn on this book? | It holds one affordable position, trades monthly (T+1 is irrelevant) and is well documented outside the repo. | `P8-Q7-rotation` (ready; needs a harness) |
 | **Q8** | Does a longer hold (48/72 bars) or a daily decision bar beat the 24-bar 1h design on the book? | Fewer, longer trades suit a T+1 cash book; only pivot variants have been tried. | `P8-Q8-horizon` (after `98e3-15`) |
-| **Q9** | Can alpaca_live trade options, and does any defined-risk structure fit $194.52? | The dispatch asked; approval is unverified and the options executor has build gaps. | `P8-Q9-options` (scoping) |
+| **Q9** | Can alpaca_live trade options, and does any defined-risk structure fit [balance removed]? | The dispatch asked; approval is unverified and the options executor has build gaps. | `P8-Q9-options` (scoping) |
 | **Q10** | Does the frozen ensemble earn on bars after 2026-10-31? | The only fully out-of-time check; it stays as registered. | `RQ-20261108-98e3-13` (carried; not before 2027-04-01) |
 
 ## 4. The diagnosis, as competing hypotheses (each has its test)
@@ -106,7 +106,7 @@ The fact to explain: no package since the widening, and a 4× lower trade rate i
 - **(d) The account cannot realise the edge.** The cash wall makes most of the pool unaffordable; one slot and T+1 cut the trade count; picks are ordered by score, not by affordability. *Test:* 207f-01's refusal mix and arms.
 - **(e) Execution drag.** The 15.6-minute late entry (RELAYED) costs part of a 1h edge. *Owner:* ML-EQ-ENTRY-TIMING (fix approved). P8 does not re-test it, and a parity read stays with ML-LIVE-PARITY-ML-LEGS.
 
-INFERRED, to be measured by 207f-01: at $194.52 the 0.9 cash wall leaves about $175 per position, so ETFs priced above that cannot be bought at all.
+INFERRED, to be measured by 207f-01: at [balance removed] the 0.9 cash wall leaves about $175 per position, so ETFs priced above that cannot be bought at all.
 
 ## 5. The promotion rule — what a challenger must beat to REPLACE or JOIN Foxhound-4
 

@@ -95,10 +95,10 @@ def test_a_real_money_account_in_dry_run_is_still_risk_bearing():
 @pytest.mark.parametrize("account", ["alpaca_live", "bybit_2", "breakout_1"])
 def test_adding_a_leg_to_a_real_money_roster_is_caught(account, tmp_path):
     """The edit the OLD guard cannot see: no `mode:` / `execution:` line moves."""
-    head = _with_leg(account, "tlt_pullback_1h")
+    head = _with_leg(account, "ict_scalp_5m")
     found = G.promotions(REAL_ACCOUNTS, head)
     assert [(f["kind"], f["leg"], f["account"]) for f in found] == [
-        ("roster_add", "tlt_pullback_1h", account)]
+        ("roster_add", "ict_scalp_5m", account)]
     findings = G.grade(found, REAL_STRATEGIES, EVIDENCE)
     assert len(findings) == 1, "a leg with no passing record must produce a finding"
     # ⚠️ THIS ASSERTION READ `C3 FAIL and C4 FAIL` UNTIL 2026-09-22 AND THE TEST
@@ -117,6 +117,10 @@ def test_adding_a_leg_to_a_real_money_roster_is_caught(account, tmp_path):
     # fails C4 and stopped being a valid fixture. The fixture is now `tlt_pullback_1h`
     # (record net_r_oos -6.7285 over n=94, verdict 'fail', on no real-money roster) --
     # the same property, a leg whose record is still a robust fail.
+    # 2026-11-12 (PROMOTE-TLT-1H-REAL-MONEY, PR #25191): tlt_pullback_1h's record was rebuilt faithful (it had
+    # omitted the trail-decay levers) and now grades net_r_oos +0.2321 over n=101, verdict 'pass', so it stopped
+    # being a valid fixture the same way. The fixture is now `ict_scalp_5m` (record net_r_oos -42.456 over n=146,
+    # verdict 'fail', fidelity faithful, on no risk-bearing roster).
     #
     # So both clauses stay pinned, in their CURRENT states rather than loosened
     # to "something failed". C3 PASS is asserted deliberately: if the corpus
@@ -127,7 +131,7 @@ def test_adding_a_leg_to_a_real_money_roster_is_caught(account, tmp_path):
         "C3 regressed: this leg's record lost its cost_stack. R7 (PR #12720) "
         "gave every enabled leg one; a FAIL here means the corpus went backwards.")
     assert "C4 FAIL" in findings[0], (
-        "C4 is the clause that must still refuse this add -- tlt_pullback_1h's "
+        "C4 is the clause that must still refuse this add -- ict_scalp_5m's "
         "record carries verdict='fail'. A PASS here means either the record or "
         "the rule moved, and the roster bar just got weaker.")
 
@@ -342,7 +346,35 @@ def test_c5_baseline_is_exactly_the_approximate_risk_bearing_slots():
 
     # FIDELITY_OPERATOR_WAIVER (operator 2026-11-05 'Both now, waive both') is held to the SAME exactness:
     # a waiver line cannot outlive its approximate record, and no approximate slot exists outside the two dicts.
-    assert approximate_slots(EVIDENCE) == set(G.FIDELITY_BASELINE) | set(G.FIDELITY_OPERATOR_WAIVER)
+    # FIDELITY_PENDING_REMEASURE (manager OK 2026-11-13) is held to the same exactness, and each entry
+    # must still be inside its expiry date: on expiry this assertion goes red by itself.
+    import datetime as _dt
+    for slot, (row, expires) in G.FIDELITY_PENDING_REMEASURE.items():
+        assert _dt.date.today() <= _dt.date.fromisoformat(expires), (
+            f"{slot} pending re-measure ({row}) EXPIRED {expires}: land the faithful record or ask the manager")
+    assert approximate_slots(EVIDENCE) == (set(G.FIDELITY_BASELINE) | set(G.FIDELITY_OPERATOR_WAIVER)
+                                           | set(G.FIDELITY_PENDING_REMEASURE))
+
+
+def test_pending_remeasure_is_exactly_the_one_approved_entry():
+    """Manager OK 2026-11-13: exactly ONE entry, keyed to EQ-FORMING-BAR-REPLAY, expiring
+    2026-11-27. Any other slot needs a manager OK, so the dict cannot grow silently."""
+    assert G.FIDELITY_PENDING_REMEASURE == {
+        ("alpaca_live", "tqqq_trend_long_1d"): ("EQ-FORMING-BAR-REPLAY", "2026-11-27")}
+
+
+def test_pending_remeasure_never_passes_c5():
+    """The pending class changes NO verdict: C5 stays fail-closed for a promotion of the pending
+    slot itself (on its real committed record and on a planted approximate one), and for any
+    other slot."""
+    (acct, leg), _ = next(iter(G.FIDELITY_PENDING_REMEASURE.items()))
+    real = json.loads((EVIDENCE / f"{leg}.json").read_text(encoding="utf-8"))
+    assert real["fidelity"] == "approximate", "the pending slot's record must read approximate honestly"
+    for rec in (real, {**real, "fidelity": "approximate"}):
+        c5 = dict((c, ok) for c, ok, _ in G.clause_verdicts(rec, acct, leg))["C5"]
+        assert c5 is False, "a pending re-measure must never pass C5"
+        assert dict((c, ok) for c, ok, _ in G.clause_verdicts(rec))["C5"] is False
+        assert dict((c, ok) for c, ok, _ in G.clause_verdicts(rec, "bybit_2", leg))["C5"] is False
 
 
 # --------------------------------------------------------------------------

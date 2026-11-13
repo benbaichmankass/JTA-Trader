@@ -23,6 +23,12 @@ operator Tier-2 popups 2026-10-28, verbatim):
   ``ml.promotion.gates.count_clean_shadow_predictions`` (no calendar term;
   docs/plans/OPERATING-PLAN-2026-09-21.md § 2 "The soak is MECHANICAL").
   Promotion is decided on the offline cost-net evidence.
+
+⚠️ 2026-11-12: the shadow-mechanics string is REMOVED from every transition.
+The operator retired the step, verbatim: "There is nothing in between proving
+edge on back testing and real money. Absolutely no steps." A model reaches a
+real-money consumer on its offline evidence alone; shadow is where a DEMOTED
+model soaks to keep generating data while it is iterated on.
 """
 from __future__ import annotations
 
@@ -43,7 +49,6 @@ PROMOTION_GATES: Mapping[tuple[str, str], tuple[str, ...]] = {
         "metrics_beat_heuristic_baseline",
     ),
     ("advisory", "live-approved"): (
-        "shadow_mechanics_clean_1_to_2_scored_predictions",
         "cost_net_evaluation_beats_incumbent_and_baselines",
         "operator_explicit_approval",
         "rollback_plan_documented",

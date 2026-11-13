@@ -172,6 +172,52 @@ def measure(leg: str, cfg: Dict[str, Any], record: Dict[str, Any], out: Path) ->
     return row
 
 
+def contract_row(row: Dict[str, Any]) -> Dict[str, Any]:
+    """One leg row made consistent with research_result.validate (RESEARCH-PRODUCER-ROW-DEFECTS).
+
+    `measure()` rows carried no `population` and no `n` (record_n is the RECORD's count, not this run's), and its
+    non-measured rows carried verdict `indeterminate`, so RQ-20261105-d256-03 run 42134900236 was refused at emit and
+    never landed. A measured row's n is the faithful arm's re-run trade count (the arm the rule grades; approximate if
+    the faithful arm has none); a row that measured nothing (not_attempted / no_data / producer_failed) has n null and
+    verdict not_applicable -- the reason stays in `note`."""
+    out = dict(row)
+    leg = row.get("leg")
+    if row.get("read_state") == "measured":
+        arms = row.get("arms") or {}
+        n = (arms.get("faithful") or {}).get("n")
+        if not isinstance(n, int) or isinstance(n, bool):
+            n = (arms.get("approximate") or {}).get("n")
+        out["n"] = n if isinstance(n, int) and not isinstance(n, bool) else None
+        out["population"] = (f"{leg}: faithful-arm re-run of the record's own harness over its own window "
+                             f"{row.get('window')}, {out['n']} trades")
+        if out["n"] is None:
+            # measured with no integer n is refused; nothing was counted, so it is a producer failure, said so
+            out.update(read_state="producer_failed", verdict="not_applicable",
+                       note=f"producer_failed: harness reported no trade count; {row.get('note') or ''}".strip())
+    else:
+        out.update(n=None, verdict="not_applicable",
+                   population=f"{leg}: {row.get('read_state')} -- nothing measured")
+    return out
+
+
+def assemble_verdict(legs: List[str], rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """The run's verdict.json from its leg rows. Only measured rows vote; a run where no leg measured anything is
+    producer_failed / not_applicable / n null, never `measured` (the pre-fix top level said measured regardless)."""
+    rows = [contract_row(r) for r in rows]
+    measured = [r for r in rows if r["read_state"] == "measured"]
+    verdicts = [r["verdict"] for r in measured]
+    overall = ("fail" if "fail" in verdicts else
+               "indeterminate" if "indeterminate" in verdicts else "pass") if measured else "not_applicable"
+    return {
+        "verdict": overall, "read_state": "measured" if measured else "producer_failed",
+        "population": ("faithful (trail_decay simulated) vs approximate re-run of each "
+                       "record's own harness over its own window: " + ", ".join(legs)),
+        "n": sum(r["n"] for r in measured) if measured else None,
+        "note": "; ".join(f"{r['leg']}={r['verdict']}" for r in rows),
+        "records": rows,
+    }
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--leg", action="append", required=True)
@@ -188,17 +234,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         row = measure(leg, cfg, rec, out)
         rows.append(row)
         print(f"{leg}: {row['verdict']} — {row.get('note')}")
-    verdicts = [r["verdict"] for r in rows]
-    overall = ("fail" if "fail" in verdicts else
-               "indeterminate" if "indeterminate" in verdicts else "pass")
-    verdict = {
-        "verdict": overall, "read_state": "measured",
-        "population": ("faithful (trail_decay simulated) vs approximate re-run of each "
-                       "record's own harness over its own window: " + ", ".join(a.leg)),
-        "n": sum((r.get("arms", {}).get("faithful", {}) or {}).get("n") or 0 for r in rows),
-        "note": "; ".join(f"{r['leg']}={r['verdict']}" for r in rows),
-        "records": rows,
-    }
+    verdict = assemble_verdict(a.leg, rows)
     (out / "verdict.json").write_text(json.dumps(verdict, indent=2) + "\n", encoding="utf-8")
     return 0
 

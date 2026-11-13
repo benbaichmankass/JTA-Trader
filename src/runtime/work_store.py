@@ -80,6 +80,16 @@ WRITABLE_FIELDS = (
 #: importer keeps it, and where ``to_row`` reads it back as a top-level row key). Value ->
 #: allowed set; ``None`` clears the key. (WORK-STORE-WEEK-LANE-WRITABLE.)
 EXTRA_WRITABLE = {"week_lane": ("surge", "throttle", "after_reset", "standing")}  # "standing" stays writable/readable for old rows; new work uses the first three
+#: ``decision_requests`` (UI-WQ-DECISIONS-ROUTE): the planning questions on a work item, read by
+#: ``GET /api/bot/work/decisions``. ``None`` as the allowed set means "any value that passes
+#: :func:`_valid_decision_requests`" (a list of objects, each with a non-empty string ``id``);
+#: writing it by name merges into ``extra`` instead of replacing the whole column.
+EXTRA_WRITABLE["decision_requests"] = None
+
+
+def _valid_decision_requests(v) -> bool:
+    return isinstance(v, list) and all(
+        isinstance(r, dict) and isinstance(r.get("id"), str) and r["id"].strip() for r in v)
 _JSON_FIELDS = ("roadmap", "due_rule", "origin", "prs", "blocked_on", "extra")
 _COMPUTED = ("due_at", "version", "created_at", "updated_at", "updated_by")
 
@@ -433,7 +443,13 @@ class WorkStore:
         if not named:
             return fields
         for k, v in named.items():
-            if v is not None and v not in EXTRA_WRITABLE[k]:
+            if v is None:
+                continue
+            if EXTRA_WRITABLE[k] is None:
+                if k == "decision_requests" and not _valid_decision_requests(v):
+                    raise WorkStoreValidationError(
+                        "decision_requests: must be a list of objects, each with a non-empty string id")
+            elif v not in EXTRA_WRITABLE[k]:
                 raise WorkStoreValidationError(
                     f"{k}: must be one of {EXTRA_WRITABLE[k]} or null, got {v!r}")
         extra = dict(fields["extra"] if isinstance(fields.get("extra"), dict) else (base_extra or {}))
@@ -529,6 +545,14 @@ class WorkStore:
             at = _now()
             item.update(due_at=compute_due_at(item, now=at), version=prior["version"] + 1,
                         updated_at=at, updated_by=by)
+            # WORK-ROW-AGE-STALE: an item imported from a checklist row carries the row's OWN
+            # updated_at/updated_by in `extra`, which every row reader serves (SPA Work page,
+            # attention_watch, blocker_watch, work_digest). Only the item-level stamp moved on a
+            # write, so rows read days old (MANAGER-VM-DIRECT-OPS: 2026-11-05 served vs 2026-11-12
+            # stored). Moving the row's stamp with the write keeps store, export and files equal.
+            ex = item.get("extra")
+            if isinstance(ex, dict) and "updated_at" in ex:
+                item["extra"] = dict(ex, updated_at=at, updated_by=by)
             self._write_item(conn, item, insert=False)
             if op == "note":
                 patch: Any = {"note": note}
@@ -587,7 +611,7 @@ class WorkStore:
         alone (SAVEPOINT) and reported, never aborting the run.
         """
         self._need_by(by)
-        out = {"created": 0, "updated": 0, "unchanged": 0, "events": 0, "errors": []}
+        out = {"created": 0, "updated": 0, "unchanged": 0, "skipped_native": 0, "events": 0, "errors": []}
         for start in range(0, len(entries), chunk):
             with self._tx() as conn:
                 known = None
@@ -616,6 +640,14 @@ class WorkStore:
         prior = self._get(conn, item["id"])
         if prior is not None and prior.get("kind") != item["kind"]:
             raise ConflictError(f"item {item['id']!r} exists as kind {prior.get('kind')!r}")
+        # WORK-STORE-IMPORTER-RACE (2026-11-12): the caller decided "not native" from a snapshot
+        # read BEFORE this transaction (the VM importer lists the whole store, then migrates for
+        # minutes). A session write landing in between made the item native, and writing the
+        # entry anyway reverted it to the frozen file (MEASURED: 3 of 319 BACKLOG-DRAIN-20261112
+        # writes reverted 2 s after landing, e.g. PI-20261106-01AFOLUJ-0002 seq 10666 -> 10668).
+        # Re-check here, under the write lock: an item last written by someone else is the truth.
+        if prior is not None and prior.get("updated_by") != by:
+            return "skipped_native", 0
         new_events = [ev for ev in e.get("events") or [] if ev["op_id"] not in known]
         full = {k: item.get(k) for k in WRITABLE_FIELDS}
         full.update(id=item["id"], kind=item["kind"])
@@ -683,6 +715,47 @@ class WorkStore:
         sql += " ORDER BY updated_at DESC, id LIMIT ? OFFSET ?"
         with self._connect() as conn:
             return [self._decode(r) for r in conn.execute(sql, (*args, int(limit), int(offset)))]
+
+    def latest_notes(self, item_ids: list[str]) -> dict[str, dict]:
+        """Newest ``note`` event per item (UI-WQ-WEEK-ROUTES): ``{id: {"at", "by", "note"}}``.
+
+        One query for the page, so the SPA never fetches ``/events`` per row. Items with no note are absent."""
+        ids = [i for i in dict.fromkeys(item_ids) if i]
+        if not ids:
+            return {}
+        out: dict[str, dict] = {}
+        with self._connect() as conn:
+            for chunk in (ids[i:i + 500] for i in range(0, len(ids), 500)):
+                marks = ",".join("?" * len(chunk))
+                rows = conn.execute(
+                    f"SELECT e.item_id, e.at, e.by, e.patch FROM events e JOIN ("
+                    f" SELECT item_id, MAX(seq) AS seq FROM events WHERE op = 'note' AND item_id IN ({marks})"
+                    f" GROUP BY item_id) m ON e.seq = m.seq", chunk)
+                for r in rows:
+                    try:
+                        note = (json.loads(r["patch"]) or {}).get("note")
+                    except (TypeError, ValueError):
+                        note = None
+                    out[r["item_id"]] = {"at": r["at"], "by": r["by"], "note": note}
+        return out
+
+    def state_moves_since(self, since: str) -> dict[str, str]:
+        """Items whose STATE changed at or after ``since`` (ISO), from the event log: ``{id: last_move_at}``.
+
+        A state change is a ``create``, ``close`` or ``reopen`` event, or a ``set`` whose patch changes ``state``."""
+        out: dict[str, str] = {}
+        with self._connect() as conn:
+            rows = conn.execute("SELECT item_id, at, op, patch FROM events WHERE at >= ? ORDER BY seq", (since,))
+            for r in rows:
+                moved = r["op"] in ("create", "close", "reopen")
+                if not moved and r["op"] == "set":
+                    try:
+                        moved = "state" in ((json.loads(r["patch"]) or {}).get("fields") or {})
+                    except (TypeError, ValueError):
+                        moved = False
+                if moved:
+                    out[r["item_id"]] = r["at"]
+        return out
 
     def count_items(self) -> int:
         with self._connect() as conn:

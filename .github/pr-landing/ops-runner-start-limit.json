@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "OPS-RUNNER-START-LIMIT: StartLimitIntervalSec=0 on ict-ops-runner.service/.path and a reset-failed before the installer re-enables the watch. Measured 2026-11-12T22:36:42Z: a burst of 13 ops jobs tripped systemd's default start limit (start-limit-hit) and stalled the direct ops channel. Deploy-unit change only; no order path, strategy or config. Gates this adds: none (it removes a rate limit).",
+  "hold_text": "Tier 2 (deploy units). The manager merges on green; the deploy's install_systemd_units.sh copies the units, daemon-reloads, resets the failed runner and re-enables the path, which drains the 6 queued ledger jobs. The lane verifies the queue drained and the ledger counts."
+}

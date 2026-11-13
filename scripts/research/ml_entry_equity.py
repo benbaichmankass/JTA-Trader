@@ -200,9 +200,39 @@ def purge(train: pd.DataFrame, cut: pd.Timestamp) -> pd.DataFrame:
     return train[train.ts < cut - pd.Timedelta(days=PURGE_DAYS)]
 
 
+def cap_per_bar(rows: pd.DataFrame, pred: np.ndarray, tau: float, k: int) -> np.ndarray:
+    """OPT-IN concurrency cap (RQ-20261113 ml_entry_eq iteration; default k=0 = unchanged). Among the rows whose prediction clears tau at
+    the SAME decision timestamp, only the k highest predictions keep their value; the rest are pushed below tau so the restricted-long
+    take rule skips them. Applied BEFORE the one-position-per-symbol loop, so a busy symbol still counts toward its bar's k (declared:
+    the cap can bind slightly more often than a live per-bar slot count would). Ties break by row order (stable sort)."""
+    if not k or k <= 0:
+        return pred
+    p = np.asarray(pred, dtype=float).copy()
+    ok = p > tau
+    if not ok.any():
+        return p
+    f = pd.DataFrame({"ts": rows["ts"].to_numpy()[ok], "p": p[ok], "j": np.flatnonzero(ok)})
+    rank = f.sort_values(["ts", "p"], ascending=[True, False], kind="mergesort").groupby("ts", sort=False).cumcount()
+    drop = f.loc[rank.index[rank.to_numpy() >= k], "j"].to_numpy()
+    p[drop] = tau - 1.0
+    return p
+
+
+def day_cluster_t(tk: pd.DataFrame):
+    """t of the per-decision-date (UTC) SUM of net R: the clustered read the ml_entry_eq iteration grades on (None if < 3 dates)."""
+    if tk.empty:
+        return None, 0
+    ds = tk.groupby(pd.to_datetime(tk.ts, utc=True).dt.date)["net_r"].sum()
+    return _cluster_t(ds), int(len(ds))
+
+
 def dev_stage(tab: pd.DataFrame, folds: list[str] = DEV_FOLDS, train_end: str = TRAIN_END, taus=TAUS,
-              configs: dict = CONFIGS, min_oof_n: int = MIN_OOF_N, log=print) -> dict:
-    """Walk-forward on dates <= train_end ONLY. Returns every (config, tau) out-of-fold result and the registered selection."""
+              configs: dict = CONFIGS, min_oof_n: int = MIN_OOF_N, log=print, caps=(0,)) -> dict:
+    """Walk-forward on dates <= train_end ONLY. Returns every (config, tau) out-of-fold result and the registered selection.
+    ``caps`` (opt-in, default (0,) = byte-identical to the graded stage): per-decision-bar caps; k > 0 adds a key ``<config>|<tau>|cap<k>``
+    and, with any k > 0 requested, every row also carries the decision-date clustered t (``day_cluster_t``, ``n_days``)."""
+    caps = tuple(int(c) for c in caps) or (0,)
+    with_t = any(c > 0 for c in caps)
     te = pd.Timestamp(train_end, tz="UTC") + pd.Timedelta(days=1)
     dev = tab[tab.ts < te].dropna(subset=["net_long"])
     bounds = [pd.Timestamp(x, tz="UTC") for x in folds] + [te]
@@ -224,11 +254,15 @@ def dev_stage(tab: pd.DataFrame, folds: list[str] = DEV_FOLDS, train_end: str = 
         o = pd.concat(oof)
         o = o[session_mask(o.ts)]
         for tau in taus:
-            tk = taken_trades(o, o["pred"].to_numpy(), tau)
-            st = _stats(tk)
-            st["by_fold"] = ({int(k): {"n": int(len(g)), "mean_net_r": round(float(g.net_r.mean()), 4)}
-                              for k, g in tk.assign(fold=_fold_of(tk.ts, bounds)).groupby("fold")} if len(tk) else {})
-            res[f"{name}|{tau}"] = {"config": name, "tau": tau, **st}
+            for cap in caps:
+                tk = taken_trades(o, cap_per_bar(o, o["pred"].to_numpy(), tau, cap), tau)
+                st = _stats(tk)
+                st["by_fold"] = ({int(k): {"n": int(len(g)), "mean_net_r": round(float(g.net_r.mean()), 4)}
+                                  for k, g in tk.assign(fold=_fold_of(tk.ts, bounds)).groupby("fold")} if len(tk) else {})
+                if with_t:
+                    st["day_cluster_t"], st["n_days"] = day_cluster_t(tk)
+                    st["max_per_bar"] = cap
+                res[f"{name}|{tau}" + (f"|cap{cap}" if cap > 0 else "")] = {"config": name, "tau": tau, **st}
     ok = {k: v for k, v in res.items() if v["n"] >= min_oof_n and v["mean_net_r"] is not None}
     best = max(ok.items(), key=lambda kv: kv[1]["mean_net_r"]) if ok else None
     return {"grid": res, "n_selection_draws": len(res), "selection_rule": REGISTERED_SELECTION,
@@ -244,7 +278,7 @@ def _fold_of(ts: pd.Series, bounds) -> np.ndarray:
 def confirm_stage(tab: pd.DataFrame, config: str, tau: float, dev_oof_mean: float, unit: str, ledger_dir: Path,
                   train_end: str = TRAIN_END, start: str = CONFIRM_START, end: str = "2026-10-31", symbols=None,
                   configs: dict = CONFIGS, claim: bool = True, model_tag: str = "", min_mean: float = 0.0,
-                  min_n: int = 0, lb_z: float = 0.0) -> dict:
+                  min_n: int = 0, lb_z: float = 0.0, return_taken: bool = False) -> dict:
     """Refit on rows <= train_end, score [start, end] ONCE, grade against the deflated bar. The read is recorded in the ledger."""
     HL.check_window_disjoint(train_end, start)
     if pd.Timestamp(start) < pd.Timestamp(train_end) + pd.Timedelta(days=EMBARGO_DAYS):
@@ -298,7 +332,8 @@ def confirm_stage(tab: pd.DataFrame, config: str, tau: float, dev_oof_mean: floa
             "month_clustered_se_reported": clustered_se,
             "by_symbol_top": {} if n == 0 else tk.groupby("symbol").net_r.agg(["count", "mean"]).sort_values("count", ascending=False)
             .head(10).round(4).to_dict("index"),
-            "window": {"train_end": train_end, "start": start, "end": end, "embargo_days": EMBARGO_DAYS}}
+            "window": {"train_end": train_end, "start": start, "end": end, "embargo_days": EMBARGO_DAYS},
+            **({"_taken": tk} if return_taken else {})}   # popped by main_run (per-trade rows, PERF-F1-DEMOTION-SIGNAL); never serialised
 
 
 PINNED = {"deterministic": True, "force_row_wise": True, "n_jobs": 1, "bagging_seed": 20261105, "feature_fraction_seed": 20261105,
@@ -430,7 +465,7 @@ def structure_stage(tab: pd.DataFrame, unit: str, ledger_dir: Path, end: str, sy
     if sel is None:
         return {"verdict": "indeterminate", "note": "dev stage selected nothing (no tau with >= %d OOF trades)" % min_oof_n, "dev": d}
     c = confirm_stage(tab, sel["config"], float(sel["tau"]), float(sel["mean_net_r"]), unit, ledger_dir, train_end=train_end,
-                      start=start, end=end, symbols=symbols, configs=configs, claim=claim, model_tag="-STRUCT-" + spec.replace(";", "-").replace("=", "") + (f"-ENS{len(ens_seeds)}" if ens_seeds else ""), min_mean=min_mean)
+                      start=start, end=end, symbols=symbols, configs=configs, claim=claim, model_tag="-STRUCT-" + spec.replace(";", "-").replace("=", "") + (f"-ENS{len(ens_seeds)}" if ens_seeds else ""), min_mean=min_mean, return_taken=True)
     c["dev"] = d
     c["structure_exit"] = spec
     return c
@@ -453,6 +488,95 @@ def forward_stage(tab: pd.DataFrame, unit: str, ledger_dir: Path, end: str, symb
     return c
 
 
+H2H_FAMILY = "ENTRY-EQ-H2H"
+H2H_V1 = "ml/candidates/ml_entry_eq_v1/model.json"                  # ENTRY-EQ-v1, tau 0.20, fixed bracket (ml_entry_eq, alpaca_paper)
+H2H_STRUCT = "ml/candidates/ml_entry_eq_v3_struct_ens5/model.json"  # ens5, tau 0.25, pivot=5;sl_only (ml_entry_eq_struct, alpaca_live + alpaca_portfolio)
+
+
+def _artifact_scorer(path):
+    """Frozen artifact -> (features, tau, predict_fn). The boosters are the shipped texts: nothing is refit."""
+    import lightgbm as lgb
+    art = json.loads((REPO / path).read_text()) if not Path(path).is_absolute() else json.loads(Path(path).read_text())
+    bt = art["booster_txt"]["long"]
+    boosters = [lgb.Booster(model_str=t) for t in (bt if isinstance(bt, list) else [bt])]
+    feats = art["features"]
+
+    def predict(df):
+        return np.mean([b.predict(df[feats]) for b in boosters], axis=0)   # provenance: predict -- mean regressed LONG net R (a regressor, not a probability)
+    return feats, float(art["tau"]), predict, art["model_id"]
+
+
+def _cluster_t(day_sum: pd.Series):
+    k = len(day_sum)
+    if k < 3 or day_sum.std(ddof=1) == 0:
+        return None
+    return float(day_sum.mean() / (day_sum.std(ddof=1) / np.sqrt(k)))
+
+
+def h2h_stage(tab_fixed: pd.DataFrame, tab_struct: pd.DataFrame, v1: tuple, st: tuple, unit: str, ledger_dir: Path, start: str, end: str,
+              symbols=None, train_end: str = TRAIN_END, claim: bool = True, min_n_union: int = 100, t_min: float = 1.3) -> dict:
+    """HEAD-TO-HEAD of two FROZEN equity ENTRY artifacts on the SAME decision bars (symbol, ts) of one window. Each model trades under its OWN live
+    exit (v1: fixed SL2/TP3 ATR bracket; struct: pivot=5;sl_only), net of the same cost stack. Nothing is refit and nothing is tuned here.
+    Per decision bar in the UNION of the two models' trades: c_m = net R of model m's trade there (0 if m does not trade the bar);
+    d = c_struct - c_v1. The statistic is mean(d) with a calendar-DAY-clustered t. Reported, never gating: v1-only / struct-only / both-fire means
+    (the consensus arm), and the same-exit control (both models' trades scored under the struct exit)."""
+    HL.check_window_disjoint(train_end, start)
+    if pd.Timestamp(start) < pd.Timestamp(train_end) + pd.Timedelta(days=EMBARGO_DAYS):
+        raise RuntimeError(f"h2h start {start} is inside the {EMBARGO_DAYS}-day embargo after train_end {train_end}")
+    hs, he = pd.Timestamp(start, tz="UTC"), pd.Timestamp(end, tz="UTC") + pd.Timedelta(days=1)
+    rec = None
+    if claim:
+        ledger_dir.mkdir(parents=True, exist_ok=True)
+        ledger = ledger_dir / "holdout_reads.jsonl"
+        if HL.LEDGER.exists() and not ledger.exists():
+            shutil.copy(HL.LEDGER, ledger)
+        rec = HL.claim_read(f"{H2H_FAMILY}-{v1[3]}-vs-{st[3]}", start, end, unit, "lane ML-PROGRAMME-CONSOLIDATION (research-script-run)", ledger=ledger,
+                            symbols=symbols, train_end=train_end, family=H2H_FAMILY)
+
+    def trades(tab, scorer):
+        feats, tau, predict, _ = scorer
+        w = tab[(tab.ts >= hs) & (tab.ts < he)].dropna(subset=feats + ["net_long"])
+        w = w[session_mask(w.ts)]
+        return w, taken_trades(w, predict(w[feats]), tau)
+
+    wf, tk1 = trades(tab_fixed, v1)
+    ws, tk2 = trades(tab_struct, st)
+    k = ["symbol", "ts"]
+    a = tk1[k + ["net_r"]].rename(columns={"net_r": "c_v1"}) if len(tk1) else pd.DataFrame(columns=k + ["c_v1"])
+    b = tk2[k + ["net_r"]].rename(columns={"net_r": "c_st"}) if len(tk2) else pd.DataFrame(columns=k + ["c_st"])
+    u = a.merge(b, on=k, how="outer")
+    u["fire_v1"], u["fire_st"] = u.c_v1.notna(), u.c_st.notna()
+    u[["c_v1", "c_st"]] = u[["c_v1", "c_st"]].fillna(0.0)
+    u["d"] = u.c_st - u.c_v1
+    # same-exit control: BOTH models' trades valued with the struct-exit outcome of that bar
+    nl = tab_struct.set_index(k)["net_long"]
+    u["same_v1"] = [float(nl.get((r.symbol, r.ts), np.nan)) if r.fire_v1 else 0.0 for r in u.itertuples()]
+    u["same_st"] = [float(nl.get((r.symbol, r.ts), np.nan)) if r.fire_st else 0.0 for r in u.itertuples()]
+    u["day"] = pd.to_datetime(u.ts, utc=True).dt.strftime("%Y-%m-%d")
+    n_union = int(len(u))
+
+    def arm(mask, col):
+        x = u.loc[mask, col]
+        return {"n": int(len(x)), "mean_net_r": None if len(x) == 0 else round(float(x.mean()), 4)}
+    mean_d = float(u.d.mean()) if n_union else None
+    t = _cluster_t(u.groupby("day").d.sum()) if n_union else None
+    same_d = float((u.same_st - u.same_v1).mean()) if n_union else None
+    st_stats = _stats(tk2)
+    if n_union < min_n_union:
+        v, why = "indeterminate", f"union decision bars n={n_union} < {min_n_union}"
+    else:
+        ok = mean_d > 0 and t is not None and t >= t_min and st_stats["mean_net_r"] is not None and st_stats["mean_net_r"] > 0
+        v = "pass" if ok else "fail"
+        why = (f"mean d (struct - v1, per union bar) {mean_d:+.4f} R, day-clustered t {None if t is None else round(t, 2)} (bar {t_min}), "
+               f"struct own mean net R {st_stats['mean_net_r']}, n_union {n_union}")
+    return {"verdict": v, "note": why, "n_union": n_union, "mean_d": mean_d, "day_clustered_t": t, "same_exit_mean_d": same_d,
+            "v1": {"model_id": v1[3], "tau": v1[1], "stats": _stats(tk1)}, "struct": {"model_id": st[3], "tau": st[1], "stats": st_stats},
+            "arms": {"v1_only": arm(u.fire_v1 & ~u.fire_st, "c_v1"), "struct_only": arm(~u.fire_v1 & u.fire_st, "c_st"),
+                     "both_fire_v1_exit": arm(u.fire_v1 & u.fire_st, "c_v1"), "both_fire_struct_exit": arm(u.fire_v1 & u.fire_st, "c_st")},
+            "window": {"train_end": train_end, "start": start, "end": end, "embargo_days": EMBARGO_DAYS},
+            "decision_rows": {"fixed": int(len(wf)), "struct": int(len(ws))}, "ledger_record": rec}
+
+
 def dev_row(d: dict, unit: str, where: str) -> dict:
     """The dev record in the runner's verdict.json contract (script_run.VERDICTS / READ_STATES): a descriptive stage carries
     verdict 'indeterminate' (run 42119511272 wrote 'descriptive' -> malformed; run 42166322024 wrote 'not_applicable' with read_state measured ->
@@ -467,6 +591,61 @@ def dev_row(d: dict, unit: str, where: str) -> dict:
             "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
             "measurement": d, "n": None if sel is None else sel["n"],
             "produced_by": {"tool": "python3 scripts/research/ml_entry_equity.py dev", "where": where}}
+
+
+CAP_T_MARGIN = 0.5        # the capped arm's clustered t must exceed the uncapped arm's by at least this (ml_entry_eq iteration rule)
+
+
+def cap_verdict(grid: dict, config: str, tau: float, k: int, n_folds: int = len(DEV_FOLDS)) -> tuple[str, str]:
+    """The registered rule of the ml_entry_eq concurrency-cap iteration, applied to a dev grid run with caps (0, k, ...).
+    INDETERMINATE if the capped arm has < MIN_OOF_N trades or either clustered t is undefined. PASS iff capped mean net R >= uncapped
+    AND capped day-clustered t >= uncapped + CAP_T_MARGIN AND the capped mean is > 0 in >= n_folds - 1 dev folds. FAIL otherwise."""
+    u, c = grid.get(f"{config}|{tau}"), grid.get(f"{config}|{tau}|cap{k}")
+    if not u or not c or c.get("n", 0) < MIN_OOF_N or c.get("mean_net_r") is None or u.get("mean_net_r") is None:
+        return "indeterminate", f"capped arm cap{k} n={None if not c else c.get('n')} < {MIN_OOF_N} or an arm is missing"
+    if c.get("day_cluster_t") is None or u.get("day_cluster_t") is None:
+        return "indeterminate", "a decision-date clustered t is undefined (< 3 dates)"
+    pos = sum(1 for v in (c.get("by_fold") or {}).values() if v.get("mean_net_r") is not None and v["mean_net_r"] > 0)
+    a = c["mean_net_r"] >= u["mean_net_r"]
+    b = c["day_cluster_t"] >= u["day_cluster_t"] + CAP_T_MARGIN
+    f = pos >= n_folds - 1
+    v = "pass" if (a and b and f) else "fail"
+    return v, (f"{v}: {config}|{tau} cap{k} mean {c['mean_net_r']:+.4f} (n={c['n']}, day-t {c['day_cluster_t']:.2f}, {pos}/{n_folds} folds > 0) "
+               f"vs uncapped {u['mean_net_r']:+.4f} (n={u['n']}, day-t {u['day_cluster_t']:.2f}); mean>=: {a}, t+{CAP_T_MARGIN}: {b}, folds: {f}")
+
+
+def _write_taken(c: dict, a, repro: str) -> None:
+    """PERF-F1-DEMOTION-SIGNAL (2026-11-12): per-trade Stage-0 rows for the r4 demotion gate and live_vs_backtest.
+
+    ``--reproduce-sha`` makes the run a REPRODUCTION of an already-graded confirm read: the ledger read is not claimed
+    (the decision was taken by the graded run; this one re-derives its trades) and the refit must hash to the graded
+    booster, else ``reproduces`` is false and the rows must not be cited as that run's population."""
+    tk = c.pop("_taken", None)
+    if repro:
+        sha = str(c.get("booster_sha256") or "")
+        st = c.get("stats", {}) or {}
+        exp_n, exp_mean = getattr(a, "expect_n", ""), getattr(a, "expect_mean", "")
+        n_ok = (not exp_n) or st.get("n") == int(exp_n)
+        mean_ok = (not exp_mean) or (st.get("mean_net_r") is not None and abs(float(st["mean_net_r"]) - float(exp_mean)) <= 1e-6)
+        c["reproduction"] = {"expect_sha": repro, "booster_sha256": sha, "sha_match": bool(sha) and sha.startswith(repro),
+                             "expect_n": exp_n or None, "n_match": n_ok, "expect_mean": exp_mean or None, "mean_match": mean_ok,
+                             "ledger_claimed": False}
+        c["reproduction"]["reproduces"] = c["reproduction"]["sha_match"] and n_ok and mean_ok
+        c["verdict"] = "pass" if c["reproduction"]["reproduces"] else "fail"
+        c["note"] = (f"reproduction of booster {repro[:16]}: refit sha {sha[:16]} "
+                     f"{'MATCHES' if c['reproduction']['sha_match'] else 'DOES NOT MATCH'}; n={c.get('stats', {}).get('n')} "
+                     f"mean net R {c.get('stats', {}).get('mean_net_r')} (n {'ok' if n_ok else 'MISMATCH'}, mean {'ok' if mean_ok else 'MISMATCH'}); "
+                     f"reproduces={c['reproduction']['reproduces']}; no holdout read claimed")
+    path = getattr(a, "trades_out", "")
+    if path and tk is not None:
+        p = Path(path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        cols = [x for x in ("symbol", "ts", "net_r", "gross_r", "cost_r") if x in tk.columns]
+        with p.open("w") as fh:
+            for _, r in tk[cols].iterrows():
+                fh.write(json.dumps({"leg": "ml_entry_eq_struct", **{k: (str(r[k]) if k in ("symbol", "ts") else float(r[k])) for k in cols}}) + "\n")
+        c["trades_jsonl"] = {"path": str(p), "rows": int(len(tk)), "sum_net_r": float(tk.net_r.sum()) if len(tk) else 0.0}
+        print(f"[trades-out] {len(tk)} rows -> {p}", flush=True)
 
 
 def main_run(a) -> int:
@@ -491,16 +670,30 @@ def main_run(a) -> int:
         if getattr(a, "ensemble_seeds", ""):   # one 5-seed-average model per config (variance-reduction read), alongside nothing else
             cfgs = {f"{k}_ens": {"features": v["features"], "params": {**v["params"], "_ens_seeds": [int(x) for x in a.ensemble_seeds.split(",")]}}
                     for k, v in cfgs.items()}
-        d = dev_stage(tab, taus=[float(x) for x in a.taus.split(",")] if getattr(a, "taus", "") else TAUS, configs=cfgs)
+        caps = tuple(int(x) for x in a.max_per_bar.split(",")) if getattr(a, "max_per_bar", "") else (0,)
+        d = dev_stage(tab, taus=[float(x) for x in a.taus.split(",")] if getattr(a, "taus", "") else TAUS, configs=cfgs, caps=caps)
         d.update({"structure_exit": spec_used if getattr(a, "structure", False) else None, "train_end": TRAIN_END, "pool": {k: v for k, v in prep.items() if k != "excluded"}, "n_pool": len(pool),
                   "costs": {"slippage_bps": slip, "fee_bps": fee, "regulatory_bps": S.REGULATORY_BPS},
                   "configs": {k: {"features": v["features"], "params": v["params"]} for k, v in CONFIGS.items()},
                   "alpaca_calls": client.calls, "runtime_s": round(time.time() - t0, 1)})
         row = dev_row(d, a.unit, a.where)
+        if getattr(a, "cap_grade", ""):   # opt-in: grade the concurrency-cap iteration's registered rule (cap_verdict) instead of the descriptive dev verdict
+            cg_cfg, cg_tau, cg_k = a.cap_grade.split("|")
+            v, why = cap_verdict(d["grid"], cg_cfg, float(cg_tau), int(cg_k))
+            u, c = d["grid"].get(f"{cg_cfg}|{float(cg_tau)}"), d["grid"].get(f"{cg_cfg}|{float(cg_tau)}|cap{int(cg_k)}")
+            row.update({"verdict": v, "note": "DEV concurrency-cap read (walk-forward <= %s; no confirming window loaded). %s" % (TRAIN_END, why),
+                        "n": None if not c else c.get("n"),
+                        "population": (f"DEV stage: purged walk-forward OOF restricted-long decisions of config {cg_cfg} at tau {cg_tau} on the "
+                                       f"{d.get('n_pool')}-ETF Alpaca liquidity pool, dates <= {TRAIN_END}; uncapped n={None if not u else u.get('n')} vs "
+                                       f"top-{cg_k}-per-decision-bar n={None if not c else c.get('n')}"),
+                        "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True}})
     elif a.cmd == "structure":
+        repro = getattr(a, "reproduce_sha", "")
         c = structure_stage(tab, a.unit, out / "ledger", end_day, pool,
                             taus=[float(x) for x in a.taus.split(",")] if a.taus else TAUS,
-                            ens_seeds=a.ensemble_seeds.split(",") if a.ensemble_seeds else None, min_mean=float(a.min_mean))
+                            ens_seeds=a.ensemble_seeds.split(",") if a.ensemble_seeds else None, min_mean=float(a.min_mean),
+                            claim=not repro)
+        _write_taken(c, a, repro)
         row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": c["verdict"], "note": c["note"],
                "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
                "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True},
@@ -520,6 +713,18 @@ def main_run(a) -> int:
                "measurement": {**c, "pool": {k: v for k, v in prep.items() if k != "excluded"}, "n_pool": len(pool),
                                "alpaca_calls": client.calls, "runtime_s": round(time.time() - t0, 1)},
                "n": c.get("stats", {}).get("n"), "produced_by": {"tool": "python3 scripts/research/ml_entry_equity.py forward", "where": a.where}}
+    elif a.cmd == "h2h":
+        tab_s = build_table(bars, pool, slip, fee, struct=STRUCT_SPEC)
+        c = h2h_stage(tab, tab_s, _artifact_scorer(H2H_V1), _artifact_scorer(H2H_STRUCT), a.unit, out / "ledger", a.start, a.end or end_day, pool,
+                      min_n_union=int(a.min_n_union), t_min=float(a.t_min))
+        row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": c["verdict"], "note": c["note"],
+               "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
+               "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True},
+               "population": {"n": c["n_union"], "description": f"frozen ml_entry_eq (v1, tau 0.20) vs ml_entry_eq_struct (ens5, tau 0.25) on the SAME decision bars of the "
+                              f"{len(pool)}-ETF Alpaca liquidity pool, window {a.start}..{a.end or end_day}, each under its own live exit, net of the Alpaca cost stack"},
+               "measurement": {**c, "pool": {k: v for k, v in prep.items() if k != "excluded"}, "n_pool": len(pool), "alpaca_calls": client.calls,
+                               "runtime_s": round(time.time() - t0, 1)},
+               "n": c["n_union"], "produced_by": {"tool": "python3 scripts/research/ml_entry_equity.py h2h", "where": a.where}}
     elif a.cmd == "export":
         if a.ensemble_seeds:
             e = export_ensemble(tab, a.config, float(a.tau), pool, a.expect_sha, out, a.ensemble_seeds.split(","), struct=STRUCT_SPEC if a.structure else "")
@@ -545,6 +750,8 @@ def main_run(a) -> int:
                "measurement": {**c, "pool": {k: v for k, v in prep.items() if k != "excluded"}, "n_pool": len(pool),
                                "alpaca_calls": client.calls, "runtime_s": round(time.time() - t0, 1)},
                "n": c["stats"]["n"], "produced_by": {"tool": "python3 scripts/research/ml_entry_equity.py confirm", "where": a.where}}
+    if isinstance(row.get("measurement"), dict):
+        row["measurement"].pop("_taken", None)
     (out / f"{a.unit}.json").write_text(json.dumps(row, indent=1, default=str))
     (out / "verdict.json").write_text(json.dumps(row, indent=1, default=str) + "\n")
     print(f"{a.cmd.upper()} {row['verdict']}: {row['note']}", flush=True)
@@ -590,6 +797,24 @@ def self_test() -> int:
     assert d["n_selection_draws"] == 4 and d["selected"] is not None, d
     assert max(len(r["by_fold"]) for r in d["grid"].values()) >= 2, "by_fold collapsed into one fold"
     assert tab[tab.ts <= "2023-04-30"].shape[0] < tab.shape[0], "synthetic calendar must extend past train_end"
+    # opt-in concurrency cap: default call is unchanged (no cap keys, no clustered-t fields); k keeps only the top-k per decision bar
+    assert not any("|cap" in k or "day_cluster_t" in v for k, v in d["grid"].items()), "the default dev grid must be unchanged"
+    toy = pd.DataFrame({"ts": pd.to_datetime(["2022-01-03 15:00"] * 4 + ["2022-01-03 19:00"] * 2, utc=True)})
+    cp = cap_per_bar(toy, np.array([0.5, 0.9, 0.1, 0.7, 0.3, 0.4]), 0.2, 2)
+    assert list(cp > 0.2) == [False, True, False, True, True, True], cp
+    assert np.array_equal(cap_per_bar(toy, np.array([0.5, 0.9, 0.1, 0.7, 0.3, 0.4]), 0.2, 0), np.array([0.5, 0.9, 0.1, 0.7, 0.3, 0.4]))
+    dc = dev_stage(tab, folds=["2022-09-01", "2023-01-01"], train_end="2023-04-30", taus=[0.0], configs={"B": small["B"]}, min_oof_n=1,
+                   log=lambda *_: None, caps=(0, 1))
+    gu, gc = dc["grid"]["B|0.0"], dc["grid"]["B|0.0|cap1"]
+    assert gc["n"] <= gu["n"] and gc["max_per_bar"] == 1 and "day_cluster_t" in gu and gc["n_days"] >= 1, (gu, gc)
+    assert gu["n"] == d["grid"]["B|0.0"]["n"] and gu["mean_net_r"] == d["grid"]["B|0.0"]["mean_net_r"], "cap 0 must equal the default arm"
+    fake = {"B|0.2": {"n": 900, "mean_net_r": 0.05, "day_cluster_t": 1.0, "by_fold": {}},
+            "B|0.2|cap3": {"n": 400, "mean_net_r": 0.06, "day_cluster_t": 1.6, "by_fold": {i: {"mean_net_r": 0.1} for i in range(4)}}}
+    assert cap_verdict(fake, "B", 0.2, 3)[0] == "pass"
+    fake["B|0.2|cap3"]["day_cluster_t"] = 1.4
+    assert cap_verdict(fake, "B", 0.2, 3)[0] == "fail"
+    fake["B|0.2|cap3"]["n"] = 299
+    assert cap_verdict(fake, "B", 0.2, 3)[0] == "indeterminate"
     # the confirming window must be refused when it overlaps training or sits inside the embargo
     for bad in ("2023-04-30", "2023-05-05"):
         try:
@@ -645,6 +870,27 @@ def self_test() -> int:
         r2 = forward_stage(ts_tab, "RQ-T", Path(td), "2023-08-31", pool, 0.0, 0.01, ["1", "2"], configs=sm, train_end="2023-04-30", start="2023-05-20",
                            min_mean=0.0, min_n=5, lb_z=1.2816)
         assert r2["verdict"] in ("pass", "fail") and r2["ledger_record"]["model_id"].endswith("-ENS2-FWD") and "lower bound" in r2["note"], r2["note"]
+    with tempfile.TemporaryDirectory() as td:   # head-to-head: two frozen artifacts, same bars, own exits
+        import lightgbm as lgb
+        def _fake(td_, name, tau, struct):
+            tr_ = ts_tab if struct else tab
+            f_ = OWN + XS
+            trn = purge(tr_[tr_.ts < pd.Timestamp("2023-05-01", tz="UTC")], pd.Timestamp("2023-05-01", tz="UTC")).dropna(subset=f_ + ["net_long"])
+            m_ = _lgb({"n_estimators": 20, "min_child_samples": 20}).fit(trn[f_], trn["net_long"])
+            pth = Path(td_) / f"{name}.json"
+            pth.write_text(json.dumps({"model_id": name, "features": f_, "tau": tau, "booster_txt": {"long": m_.booster_.model_to_string()}}))
+            return _artifact_scorer(str(pth))
+        s1, s2 = _fake(td, "fake-v1", 0.0, False), _fake(td, "fake-struct", 0.0, True)
+        r = h2h_stage(tab, ts_tab, s1, s2, "RQ-T", Path(td), "2023-05-20", "2023-08-31", pool, train_end="2023-04-30", min_n_union=5)
+        assert r["verdict"] in ("pass", "fail") and r["n_union"] >= 5 and r["ledger_record"]["family"] == H2H_FAMILY, r["note"]
+        n_both = r["arms"]["both_fire_v1_exit"]["n"]
+        assert r["n_union"] == r["arms"]["v1_only"]["n"] + r["arms"]["struct_only"]["n"] + n_both, "union must partition into three arms"
+        assert abs(r["mean_d"] - ((r["arms"]["struct_only"]["n"] and r["arms"]["struct_only"]["mean_net_r"] * r["arms"]["struct_only"]["n"] or 0)
+                                  + (n_both and r["arms"]["both_fire_struct_exit"]["mean_net_r"] * n_both or 0)
+                                  - (r["arms"]["v1_only"]["n"] and r["arms"]["v1_only"]["mean_net_r"] * r["arms"]["v1_only"]["n"] or 0)
+                                  - (n_both and r["arms"]["both_fire_v1_exit"]["mean_net_r"] * n_both or 0)) / r["n_union"]) < 1e-3, "mean d must equal the arm decomposition"
+        r0 = h2h_stage(tab, ts_tab, s1, s2, "RQ-T", Path(td), "2023-05-20", "2023-08-31", pool, train_end="2023-04-30", min_n_union=10**6, claim=False)
+        assert r0["verdict"] == "indeterminate", r0
     print("self-test ok")
     return 0
 
@@ -653,7 +899,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--self-test", action="store_true")
     sub = ap.add_subparsers(dest="cmd")
-    for name in ("dev", "confirm", "export", "structure", "forward"):
+    for name in ("dev", "confirm", "export", "structure", "forward", "h2h"):
         p = sub.add_parser(name)
         p.add_argument("--cache", required=True)
         p.add_argument("--out", required=True)
@@ -674,6 +920,10 @@ def main(argv=None) -> int:
             p.add_argument("--configs", default="", help="comma list of configs to run (default all)")
             p.add_argument("--ensemble-seeds", dest="ensemble_seeds", default="", help="comma list of seeds: ONE model per config = the mean of pinned fits at these seeds")
             p.add_argument("--seeds", default="", help="comma list of LightGBM seeds: refit every config under PINNED determinism per seed (variance read)")
+            p.add_argument("--max-per-bar", dest="max_per_bar", default="", help="OPT-IN comma list of per-decision-bar caps, e.g. 0,3,5 (0 = uncapped); default off")
+            p.add_argument("--cap-grade", dest="cap_grade", default="", help="OPT-IN 'config|tau|k': grade the concurrency-cap rule (cap_verdict); needs --max-per-bar with 0 and k")
+            p.add_argument("--rule-id", dest="rule_id", default="")
+            p.add_argument("--registered-at", dest="registered_at", default="")
         if name == "forward":
             p.add_argument("--tau", required=True)
             p.add_argument("--dev-oof-mean", required=True)
@@ -684,10 +934,21 @@ def main(argv=None) -> int:
             p.add_argument("--lb-z", dest="lb_z", default="0")
             p.add_argument("--rule-id", required=True)
             p.add_argument("--registered-at", required=True)
+        if name == "h2h":
+            p.add_argument("--start", default=CONFIRM_START)
+            p.add_argument("--end", default="", help="default: the last complete month")
+            p.add_argument("--min-n-union", dest="min_n_union", default="100")
+            p.add_argument("--t-min", dest="t_min", default="1.3")
+            p.add_argument("--rule-id", required=True)
+            p.add_argument("--registered-at", required=True)
         if name == "structure":
             p.add_argument("--taus", default="", help="comma list overriding the tau grid (registered in the unit)")
             p.add_argument("--ensemble-seeds", dest="ensemble_seeds", default="", help="serve ONE model = mean of pinned fits at these seeds")
             p.add_argument("--min-mean", dest="min_mean", default="0", help="extra registered floor on the confirm mean (seed-noise margin)")
+            p.add_argument("--reproduce-sha", dest="reproduce_sha", default="", help="REPRODUCE an already-graded confirm read: claim no holdout read; verdict = refit booster sha matches this (prefix ok)")
+            p.add_argument("--expect-n", dest="expect_n", default="", help="with --reproduce-sha: the graded confirm n")
+            p.add_argument("--expect-mean", dest="expect_mean", default="", help="with --reproduce-sha: the graded confirm mean net R (|d| <= 1e-6)")
+            p.add_argument("--trades-out", dest="trades_out", default="", help="write one JSONL row per confirm-window trade (net_r) to this path")
             p.add_argument("--rule-id", required=True)
             p.add_argument("--registered-at", required=True)
         if name == "confirm":
@@ -697,7 +958,7 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
     if a.self_test:
         return self_test()
-    return main_run(a) if a.cmd in ("dev", "confirm", "export", "structure", "forward") else 2
+    return main_run(a) if a.cmd in ("dev", "confirm", "export", "structure", "forward", "h2h") else 2
 
 
 if __name__ == "__main__":
