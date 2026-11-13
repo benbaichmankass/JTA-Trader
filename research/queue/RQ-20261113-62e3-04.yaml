@@ -15,8 +15,8 @@ question: On 2020-06-01..2024-06-30 (10 liquid perps, 1h bars, one trade per sym
   at the cumulative trial count, against the committed 8-config TP/SL grid?
 why_this_matters: 'movement-capture is an orphan (scripts/research/iteration_orphans.py 2026-11-13). Attempts 1-2 varied entry distance, target/stop
   ratio, range gate and cost (to a 4 bps maker ceiling); every config stays negative. The one quantity no test has measured directly is
-  whether price drifts after a touch at all; if it does not, no bracket geometry can monetise a range forecast and the family moves to convex
-  instruments (vol-premium-proxy).'
+  whether price drifts after a touch at all; if it does not, no bracket geometry can monetise a range forecast and the next lever is a convex
+  instrument (vol-premium-proxy).'
 iteration:
   subject: movement-capture
   subject_kind: strategy_leg
@@ -71,12 +71,12 @@ decision_rule:
     scripts/research/edge_iteration_verdict.py.'
   rule: 'PASS iff the ARM''s selected config clears the UNCHANGED registered rule: net Sharpe >= 0.5 AND stress (2x cost) Sharpe > 0 AND Sharpe
     > 0 in both halves AND bootstrap p05 > 0 AND DSR(N=20) > 0.95 AND the four RR.clause checks (years, concentration, sides, subperiods).
-    FAIL iff the arm computed and does not clear it: there is no post-touch drift large enough to pay the registered cost at these entries
-    (the map then points the family at convex payoffs, a longer horizon or a better entry, never a further bracket tweak). INDETERMINATE iff
+    FAIL iff the arm computed and does not clear it: BO1t, FD1t, BO1gt and FD1gt show no post-touch drift large enough to pay the registered cost at these entries
+    (the next lever is then convex payoffs, a longer horizon or a better entry, not a further bracket tweak). INDETERMINATE iff
     either side did not compute OR the control''s selected config misses the committed net Sharpe -0.72 by more than 0.01
     (--expect-control-sharpe; drift is not a verdict). Holdout not read; a PASS earns ONE holdout read, never a book.'
-  what_it_does_not_do: Edits no config and no roster, places no order, proposes no live leg, reads no data after 2024-06-30. A FAIL closes
-    no lever family; retirement is only by a lever-exhaustion record.
+  what_it_does_not_do: Edits no config and no roster, places no order, proposes no live leg, reads no data after 2024-06-30. A FAIL says only that
+    the four time-exit configs did not clear the rule at 14 bps.
 intervention_controls:
   not_applicable: an offline research ablation of a backtest exit, not an in-trade action on a live position
 practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid with a control, every arm counted,
@@ -94,7 +94,7 @@ value:
   usd_at_stake_per_month: 40
   confidence: 0.05
   bucket: structural
-  basis: 'stand-in: a FAIL here is also valuable (it ends linear-bracket work for this family); an estimate, not a measurement'
+  basis: 'stand-in: a FAIL here is also valuable (it ends further bracket-geometry tweaks at these entries); an estimate, not a measurement'
 run:
   commands:
   - - python3

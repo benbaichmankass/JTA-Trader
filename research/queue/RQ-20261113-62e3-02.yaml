@@ -69,8 +69,8 @@ decision_rule:
     FAIL iff the control computed and reproduced and no arm clears it. INDETERMINATE iff the control series is insufficient OR the control
     A0 net Sharpe misses the committed 1.325 by more than 0.01 (--expect-control-sharpe). By-year sums and side split are REPORTED (the 2021
     share is the diagnostic read), not graded. Holdout not read; a PASS earns ONE holdout read, never a book.'
-  what_it_does_not_do: Edits no config and no roster, places no order, proposes no live leg, reads no data after 2024-06-30. A FAIL closes
-    no lever family.
+  what_it_does_not_do: Edits no config and no roster, places no order, proposes no live leg, reads no data after 2024-06-30. A FAIL says only that
+    RM1 and RM2 on X1 did not clear the rule.
 intervention_controls:
   not_applicable: an offline portfolio research ablation, not an in-trade action
 practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid with control, every arm counted,

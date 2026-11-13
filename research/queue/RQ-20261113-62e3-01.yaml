@@ -72,12 +72,11 @@ decision_rule:
     (9 discovery + 7 attempt-2 arms + these 4).'
   rule: 'PASS iff at least one NON-control arm clears the UNCHANGED discovery rule: net Sharpe >= 0.5 AND stress (2x fee+slippage) Sharpe >
     0 AND Sharpe > 0 in BOTH halves AND bootstrap p05 of annualised mean net > 0 AND DSR > 0.95 at N_cum = 20, on 2020-06-01..2024-06-30.
-    FAIL iff the control computed and reproduced and no arm clears it (the funding lever response is recorded in the map; no family is closed
-    by a FAIL). INDETERMINATE iff the control series is insufficient (< 200 days) OR the control A0 net Sharpe misses the committed 0.761 by
+    FAIL iff the control computed and reproduced and no arm clears it (FS1, FS2 and FL1 on T4 did not clear the rule; their response is written to the lever map). INDETERMINATE iff the control series is insufficient (< 200 days) OR the control A0 net Sharpe misses the committed 0.761 by
     more than 0.01 (--expect-control-sharpe; harness or data drift is not a verdict). The side split and by-year sums are REPORTED, not graded.
     Holdout not read. A PASS earns ONE holdout read (HOLDOUT-LOCK), never a book.'
-  what_it_does_not_do: Edits no config and no roster, places no order, proposes no live leg, reads no data after 2024-06-30. A FAIL closes
-    no lever family; retirement is only by a lever-exhaustion record.
+  what_it_does_not_do: Edits no config and no roster, places no order, proposes no live leg, reads no data after 2024-06-30. A FAIL says only that
+    these three funding-filter configs on T4 did not clear the rule.
 intervention_controls:
   not_applicable: an offline portfolio research ablation, not an in-trade action
 practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid with a control arm, every arm
