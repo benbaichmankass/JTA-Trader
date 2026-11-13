@@ -220,7 +220,9 @@ async def post_plan_edit(request: Request, _session: dict = Depends(require_sess
         if store.get(item["parent_id"]) is None:
             return None
         try:
-            return store.create(item, by="operator (SPA session)")["item"]
+            # The shared session actor ("operator-spa"): never the email (manager 2026-11-13).
+            from src.web.api.auth import SESSION_ACTOR
+            return store.create(item, by=SESSION_ACTOR)["item"]
         except ws.WorkStoreValidationError as exc:
             raise ValueError(str(exc)) from exc
 

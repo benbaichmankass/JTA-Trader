@@ -67,6 +67,7 @@ def test_plan_edit_add_and_edit_file_observations(db):
     assert r.status_code == 200, r.text
     item = r.json()["item"]
     assert item["kind"] == "observation" and item["parent_id"] == "FRONTIER-RESEARCH" and item["state"] == "queued"
+    assert item["updated_by"] == "operator-spa" and "@" not in item["updated_by"]  # never the email
     assert item["extra"]["plan_edit"] == {"section": "frontier", "item_id": None, "kind": "add",
                                           "text": "Try a TSFM on funding.", "status": "new", "reply": None}
     r = c.post("/api/bot/work/plan-edits",
