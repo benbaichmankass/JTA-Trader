@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Research tooling + a new pre-run queue unit. The diff is entirely inside the Tier-1 surface: scripts/research/forming_evidence_regen.py and regime_debt_matrix.py (scripts/research/**), scripts/backtest_pullback.py (scripts/backtest_*.py), tests/test_forming_evidence_regen.py (tests/**), docs/research/RESEARCH-CAPABILITY-INDEX.md (docs/**), and research/queue/RQ-20261113-f251-01.yaml -- a NEW pre-run unit (id == stem, decision_rule.registered_before_run: true, no last_dispatched_at, no existing result), which self-lands per RQ-NEW-UNIT-SELF-LAND. No src/ or order-path file is touched; the regenerated faithful records are NOT written here -- they land through a later PR a session opens after reading the run's evidence/ output. Revert: git revert."
+}
