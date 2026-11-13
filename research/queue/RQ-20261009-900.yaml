@@ -118,6 +118,22 @@ decision_rule:
     THESE legs. Cannot cover the alpaca_live 1d pullback sentinels (too few
     trades).
 
+practice_precedent: >-
+  M4, M6, M12 (docs/reference/trading-and-model-practice-principles.md): the rule,
+  strata and features were registered before any run; the head must beat simple
+  domain baselines (B1..B4) above a shuffled-label null; it is scored per stratum
+  and per leg, never on pooled loss. Added 2026-11-13 at unblock (the move out of
+  blocked/ makes the guard grade this as a new unit); the rule is unchanged.
+ml_consumer:
+  consumer: TP-PREDICT-HEAD
+  decision: >-
+    whether the entry take-profit on these legs comes from a conditional MFE-quantile
+    head (a PASS licenses step 2, RQ-20261009-901) or from the per-leg B4 quantile plus
+    the RQ-20261007-001 extension rule (an honest negative)
+  legs: [trend_donchian_eth_4h, trend_donchian_xrp_4h, xrp_pullback_2h, ada_pullback_2h,
+    trend_donchian_eth_prop, trend_donchian_sol_prop]
+  book: money
+
 routing:
   needs_trainer_resident_data: false
   needs_gpu: false

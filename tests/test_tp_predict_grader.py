@@ -66,14 +66,16 @@ def test_leg_reversal_fails_and_unmeasured_leg_is_indeterminate():
     assert v["rule_verdict"] == "INDETERMINATE" and _states(v) == {"S2": "indeterminate"}
 
 
-def test_leg_sign_check_counts_per_baseline():
+def test_leg_sign_check_any_baseline_per_quantile():
     pooled = tpg._fake_res(100, 5, 0.1)
     leg = tpg._fake_res(60, 0, 0.1)
-    for s in leg["sharpness"][:3]:
-        s["vs_B4_improvement"] = -0.2           # B4 reversed at 3 quantiles, B1-B3 agree
-    assert tpg.leg_sign_check(pooled, leg)["state"] == "reverses"
-    for s in leg["sharpness"][:3]:
-        s["vs_B4_improvement"] = None if s is leg["sharpness"][0] else -0.2   # only 2 comparable reversals
+    leg["sharpness"][0]["vs_B4_improvement"] = -0.2      # q0.5: B4 flips
+    leg["sharpness"][1]["vs_B1_improvement"] = -0.2      # q0.6: B1 flips
+    assert tpg.leg_sign_check(pooled, leg)["state"] == "ok"            # 2 quantiles reversed
+    leg["sharpness"][2]["vs_B2_improvement"] = -0.2      # q0.7: B2 flips -> 3 quantiles, different baselines
+    r = tpg.leg_sign_check(pooled, leg)
+    assert r["state"] == "reverses" and set(r["reversed_quantiles"]) == {"0.5", "0.6", "0.7"}
+    leg["sharpness"][2]["vs_B2_improvement"] = None      # a null is not a reversal
     assert tpg.leg_sign_check(pooled, leg)["state"] == "ok"
 
 

@@ -22,9 +22,9 @@ How each clause is computed (every choice below is a reading of the text, stated
   column, each evaluated on its own rows only (never pooled across strata).
 * "eval n" is the stratum's n_eval at split 0.65, the split the unit's power basis sizes (last 35%: 88 floor).
 * The per-leg sign check: each leg is evaluated ALONE (its own chronological split, own train-fold baselines) at
-  EVERY split. At a split, a leg "reverses the sign of the pooled improvement" when, for some baseline Bk, the sign of
-  the leg's improvement vs Bk is opposite to the stratum's improvement vs Bk at >= 3 of the 5 quantiles (both
-  non-null and non-zero). A leg that reverses at any split fails the stratum. A leg the evaluator could not grade
+  EVERY split. At a quantile, the leg reverses when, for ANY baseline Bk, its improvement vs Bk and the stratum's are
+  both non-null, non-zero and of opposite sign; a leg that reverses at >= 3 of the 5 quantiles, at ANY split, fails the
+  stratum (the strict reading, agreed with the FRONTIER lane's independent draft on branch claude/tp-predict-grader). A leg the evaluator could not grade
   (insufficient_n) leaves the check UNMEASURED, which makes a stratum that otherwise cleared the sharp clause
   INDETERMINATE -- never SHARPER, and never HONEST_NEGATIVE on a check that was not run.
 * Verdict words map to the result contract: PASS -> pass, HONEST_NEGATIVE -> fail, INDETERMINATE -> indeterminate
@@ -96,13 +96,13 @@ def leg_sign_check(stratum_res: Dict[str, Any], leg_res: Dict[str, Any]) -> Dict
         return {"state": "unmeasured", "why": f"leg evaluate verdict {leg_res.get('verdict')!r} "
                 f"(n_eval {(leg_res.get('population') or {}).get('n_eval')})"}
     pooled, leg = _improvements(stratum_res), _improvements(leg_res)
-    reversed_by_b: Dict[str, int] = {}
-    for b in BASELINES:
-        reversed_by_b[b] = sum(1 for q in QUANTILES
-                               if _sign(pooled[b].get(q)) * _sign(leg[b].get(round(q, 4))) == -1)
-    worst = max(reversed_by_b.values()) if reversed_by_b else 0
-    return {"state": "reverses" if worst >= MIN_REVERSED_QUANTILES else "ok",
-            "reversed_quantiles_by_baseline": reversed_by_b}
+    reversed_qs: Dict[str, List[str]] = {}
+    for q in QUANTILES:
+        flipped = [b for b in BASELINES if _sign(pooled[b].get(round(q, 4))) * _sign(leg[b].get(round(q, 4))) == -1]
+        if flipped:
+            reversed_qs[str(q)] = flipped
+    return {"state": "reverses" if len(reversed_qs) >= MIN_REVERSED_QUANTILES else "ok",
+            "reversed_quantiles": reversed_qs}
 
 
 def _summary(res: Dict[str, Any]) -> Dict[str, Any]:
