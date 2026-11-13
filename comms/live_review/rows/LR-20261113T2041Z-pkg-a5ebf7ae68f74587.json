@@ -1,0 +1,123 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261113T2041Z-pkg-a5ebf7ae68f74587",
+ "reviewed_at": "2026-11-13T20:58:00Z",
+ "order_package_id": "pkg-a5ebf7ae68f74587",
+ "trade_id": null,
+ "leg": "slv_trend_1h",
+ "accounts": [
+  "alpaca_portfolio"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-13T20:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-13T20:41:39Z",
+ "state": {
+  "atr_now_over_entry": 0.8745,
+  "bars_held": 5,
+  "giveback_r": 0.0,
+  "open_r": 1.0056,
+  "peak_provenance": "estimated",
+  "peak_r": 1.0056,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 45.02214286,
+  "tp": 41.43714286
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.8745,
+  "bars_since_peak": 0,
+  "giveback_r": 0.0,
+  "open_r": 1.0056,
+  "peak_r": 1.0056,
+  "r_to_stop": 2.0056,
+  "r_to_target": 4.9944
+ },
+ "mechanics": {
+  "evidence": "package sl 45.02214286 / tp 41.43714286 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. Previous forecast (15:48Z: target 43.60, inv 45.16, p 0.40, 6x1h) is unresolved and intact: 43.60 not yet touched (since-entry low 44.05), 45.16 not retaken (since-entry high 44.44). Open +1.01R at the estimated peak (no giveback), 5 1h bars. Table is thin (hold n=14 < floor 20, all cells insufficient_n), so judgement. Mechanics: the venue holds both brackets at full size (see context_flags). HOLD expresses the view: SL 45.02 is 2.0R away, TP 41.44 a real target; tighten has class evidence of -0.097R and is advice only. Carry the target forward, move invalidation to 44.85 (the broken 1h swing low, now resistance)."
+ },
+ "forecast": {
+  "thesis": "1h downtrend continues (lower highs from 45.40, the 44.85 and 44.16 swing lows broken, last close 44.115 near the 44.05 low); I expect 43.60 before 44.85 is retaken, 4h ADX only 21.8 so conviction is modest",
+  "direction": "with_trade",
+  "target_px": 43.6,
+  "p_target": 0.35,
+  "invalidation_px": 44.85,
+  "horizon_bars": 6,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings lows 44.16 (broken), 44.85 (4h swing low)",
+   "chart.since_entry low 44.05 high 44.44",
+   "exit_plan sl 45.0221 tp 41.4371",
+   "context.previous_review forecast target 43.6 inv 45.16"
+  ]
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "mechanics_venue: independent read 20:55:25Z /api/diag/alpaca_open_orders?account_id=alpaca_portfolio read_state orders_read: SLV sell position qty 3428; resting SL stop buy 3428 @ 45.02 (status held, bracket child) and TP limit buy 3428 @ 41.44 (new); package SL 45.02214286 / TP 41.43714286 equal to the cent. Both brackets present at full size",
+  "judgement: hold n=14 below floor 20, cells insufficient_n; not measured",
+  "book: SLV short is in 3+ open packages (alpaca_paper x2 + this mirror) = one metal-beta bet; GLD/IAUM/GDX/MGC/MHG shorts add precious-metals correlation",
+  "live_vs_backtest: mirror book 8 closed, live -7.42R at 4.1st percentile (verdict BELOW_BACKTEST, p5 -6.95); realMoney no live trades; leg backtest +0.593R (n=92)",
+  "tighten_bias: stop-at-price fills flatter any tighten; tighten is advice-only",
+  "atr_ratio: now/entry 0.87",
+  "packet_defect: priced_options.options all_options_unpriced:insufficient_n 7/7"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuJLsSEBXRvoswfFiWp",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [
+  {
+   "count": 7,
+   "denominator": 7,
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:insufficient_n"
+  }
+ ],
+ "packet_sha": "6c5e126aea5a1861feec5e208035d5bb0884dbad9d7a4072e7c0bd85cb4f970d"
+}
