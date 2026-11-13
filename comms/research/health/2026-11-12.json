@@ -1,11 +1,11 @@
 {
  "schema": 1,
- "as_of": "2026-11-12T23:34:13Z",
+ "as_of": "2026-11-12T23:54:27Z",
  "producer": "scripts/research/research_slo.py",
  "config": "scripts/research/research_slo.yaml",
  "counts": {
-  "ok": 16,
-  "breach": 4,
+  "ok": 17,
+  "breach": 3,
   "could_not_look": 0
  },
  "latest": [
@@ -132,7 +132,7 @@
     "converted_basis": "survivor id (or its confirmation parent's id) cited in a file under config/ or comms/strategy_evidence/ -- the pass reached a roster or config change",
     "held_out_model_quality": 34,
     "registered_passes": 355,
-    "graded_in_window": 1644,
+    "graded_in_window": 1645,
     "unknown_holdout": 48,
     "by_holdout": {
      "none": 40,
@@ -309,7 +309,7 @@
     "converted_basis": "survivor id (or its confirmation parent's id) cited in a file under config/ or comms/strategy_evidence/ -- the pass reached a roster or config change",
     "held_out_model_quality": 34,
     "registered_passes": 355,
-    "graded_in_window": 1644,
+    "graded_in_window": 1645,
     "unknown_holdout": 48,
     "by_holdout": {
      "none": 40,
@@ -340,14 +340,14 @@
   {
    "slo": "runnable_floor",
    "state": "ok",
-   "value": 84,
+   "value": 86,
    "op": ">=",
    "threshold": 25,
    "what": "runnable units >= the computed floor (queue_throughput.computed_floor: max(25, ceil(fired_24h x 19/24)))",
    "diagnostic": true,
    "evidence": {
-    "fired_24h_stamps": 22,
-    "queued": 294,
+    "fired_24h_stamps": 24,
+    "queued": 296,
     "basis": "queue_replenish.runnable(); floor = queue_throughput.computed_floor(fired_24h)",
     "read_state": "measured"
    }
@@ -408,7 +408,7 @@
    "evidence": {
     "p50": 1.0,
     "p90": 6.0,
-    "n": 224,
+    "n": 225,
     "ungraded_fresh": 10,
     "basis": "whole days (graded_at is a date); units whose newest result landed in 7 d, newest result -> grading on or after it",
     "read_state": "measured"
@@ -425,7 +425,7 @@
    "evidence": {
     "p50": 1.0,
     "p90": 6.0,
-    "n": 224,
+    "n": 225,
     "ungraded_fresh": 10,
     "basis": "whole days (graded_at is a date); units whose newest result landed in 7 d, newest result -> grading on or after it",
     "read_state": "measured"
@@ -441,7 +441,7 @@
    "diagnostic": true,
    "evidence": {
     "counts": {
-     "graded": 1742,
+     "graded": 1743,
      "in_grace": 5,
      "legacy_prose": 132,
      "needs_review": 86,
@@ -449,7 +449,7 @@
      "retired": 11,
      "ungraded": 2
     },
-    "with_results": 1981,
+    "with_results": 1982,
     "sample": [
      "RQ-20261101-b610-01",
      "RQ-20261112-0be0-01"
@@ -461,15 +461,15 @@
   {
    "slo": "authoring_supply_ratio_7d",
    "state": "ok",
-   "value": 1.69,
+   "value": 1.68,
    "op": ">=",
    "threshold": 1.0,
    "what": "authored (non-generated) units created in 7 d / authored units first-or-re-fired in 7 d",
    "diagnostic": true,
    "evidence": {
-    "authored_7d": 226,
-    "consumed_7d": 134,
-    "authored_since_yesterday": 66,
+    "authored_7d": 229,
+    "consumed_7d": 136,
+    "authored_since_yesterday": 69,
     "basis": "non-generated units: id date in 7 d / last_dispatched_at in 7 d",
     "read_state": "measured"
    }
@@ -561,21 +561,19 @@
   {
    "slo": "blocked_over_age",
    "state": "ok",
-   "value": 5,
+   "value": 3,
    "op": "<=",
    "threshold": 10,
    "what": "blocked units whose id date is older than blocked_age_days (no blocked_at field exists; id date is an upper bound)",
    "diagnostic": true,
    "evidence": {
-    "blocked_total": 75,
+    "blocked_total": 71,
     "oldest_days": 34,
     "age_days": 21.0,
     "sample": [
      "RQ-20261009-900",
      "RQ-20261009-901",
-     "RQ-20261017-9582-01",
-     "RQ-20261018-ef5d-10",
-     "RQ-20261018-ef5d-11"
+     "RQ-20261017-9582-01"
     ],
     "basis": "age from the RQ id date (no blocked_at field)",
     "read_state": "measured"
@@ -584,7 +582,7 @@
   {
    "slo": "dispatcher_age_h",
    "state": "ok",
-   "value": 0.91,
+   "value": 1.25,
    "op": "<=",
    "threshold": 3,
    "what": "hours since the newest dispatcher utilization record on main (one per dispatch cycle that ran; lands ~1 h late)",
@@ -598,7 +596,7 @@
   {
    "slo": "collector_age_h",
    "state": "ok",
-   "value": 0.14,
+   "value": 0.48,
    "op": "<=",
    "threshold": 6,
    "what": "hours since the newest commit on main touching research/results/ (a result landed)",
@@ -612,7 +610,7 @@
   {
    "slo": "grader_age_h",
    "state": "ok",
-   "value": 2.9,
+   "value": 3.24,
    "op": "<=",
    "threshold": 14,
    "what": "hours since the last SUCCESSFUL research-queue-grade.yml run (GitHub; could_not_look without a token)",
@@ -625,15 +623,15 @@
   },
   {
    "slo": "research_ops_age_h",
-   "state": "breach",
-   "value": 8.07,
+   "state": "ok",
+   "value": 2.57,
    "op": "<=",
    "threshold": 8,
    "what": "hours since the newest research-ops pass record (comms/research/ops/*.json finished_at); the pass runs 4x/day",
    "diagnostic": true,
    "evidence": {
-    "newest": "20261112T1530Z.json",
-    "finished_at": "2026-11-12T15:30:00+00:00",
+    "newest": "20261112T2120Z.json",
+    "finished_at": "2026-11-12T21:20:00+00:00",
     "basis": "newest comms/research/ops record",
     "read_state": "measured"
    }
@@ -641,16 +639,15 @@
   {
    "slo": "research_ops_not_run",
    "state": "ok",
-   "value": 2,
+   "value": 1,
    "op": "<=",
    "threshold": 2,
    "what": "steps the newest research-ops pass declared not_run",
    "diagnostic": true,
    "evidence": {
-    "record": "20261112T1530Z.json",
+    "record": "20261112T2120Z.json",
     "not_run": [
-     "analysis (steps 2.2-2.7): no result rows opened, no iteration units authored; this is a too-scripted, baseline-only pass",
-     "D result attribution"
+     "A workflow-run list and stranded-PR check (github-actions MCP down; tree read only)"
     ],
     "basis": "not_run of the newest research-ops record",
     "read_state": "measured"
@@ -659,38 +656,38 @@
   {
    "slo": "hold_pr_wait_h",
    "state": "ok",
-   "value": 13.96,
+   "value": 14.3,
    "op": "<=",
    "threshold": 24,
    "what": "hours the oldest open non-automation PR adding research/queue/ unit files has waited (hold PRs)",
    "diagnostic": true,
    "evidence": {
-    "open_unit_prs": 9,
+    "open_unit_prs": 6,
     "oldest": [
      {
       "pr": 25225,
-      "hours": 13.96,
+      "hours": 14.3,
       "title": "research: PROP-ML-NEW-DATA low-capacity bake-offs 7d41-01/-02 + inventory record [Tier 1]"
      },
      {
       "pr": 25279,
-      "hours": 12.47,
+      "hours": 12.81,
       "title": "research: small-TF cost-breakeven census (M27) - FAIL, no cell clears measured cost"
      },
      {
       "pr": 25320,
-      "hours": 10.12,
+      "hours": 10.46,
       "title": "research(a24c-01): ENTRY universe test graded FAIL on the in-hand window [Tier 1]"
      },
      {
-      "pr": 25462,
-      "hours": 3.3,
-      "title": "research: ML-ENTRY-POPULATION-TEST \u2014 RQ-20261112-2e3b-01 FAIL (ml_entry \u22120.068 R/decision "
+      "pr": 25474,
+      "hours": 3.21,
+      "title": "research: ENTRY maker-entry replay on v1's own decisions (RQ-20261112-1c4e-01): FAIL [Tier"
      },
      {
-      "pr": 25474,
-      "hours": 2.87,
-      "title": "research: ENTRY maker-entry replay on v1's own decisions (RQ-20261112-1c4e-01): FAIL [Tier"
+      "pr": 25539,
+      "hours": 0.62,
+      "title": "research: ENTRY cost levers under the per-symbol cost stack \u2014 RQ-20261112-4654-02 tau / -0"
      }
     ],
     "basis": "open non-automation PRs adding research/queue/*.yaml, age since creation",
@@ -864,6 +861,21 @@
     "grade_latency_p90_d",
     "theme_share_min_ratio",
     "research_ops_age_h"
+   ],
+   "alert": null,
+   "delivered": null
+  },
+  {
+   "at": "2026-11-12T23:54:27Z",
+   "counts": {
+    "ok": 17,
+    "breach": 3,
+    "could_not_look": 0
+   },
+   "not_ok": [
+    "fires_24h",
+    "grade_latency_p90_d",
+    "theme_share_min_ratio"
    ],
    "alert": null,
    "delivered": null
