@@ -142,3 +142,11 @@ def test_labeled_only_workflows_key_on_the_added_label():
         src = (WF / name).read_text(encoding="utf-8")
         assert _on(yaml.safe_load(src))["repository_dispatch"] == {"types": [irm.LABELED_PREFIX + label]}
         assert "github.event.client_payload.label.name" in src and "github.event.label.name" not in src
+
+
+def test_destructive_vm_lifecycle_workflows_stay_on_issues():
+    """Manager decision 2026-11-13 on #25566: a forgeable client_payload author check is not acceptable for these."""
+    for name in irm.KEEP_ON_ISSUES:
+        src = (WF / name).read_text(encoding="utf-8")
+        assert irm.ROUTED_MARK not in src and "issues" in _on(yaml.safe_load(src)), name
+        assert irm.classify(str(WF / name))[0] == "excluded", name

@@ -51,6 +51,10 @@ EXCLUDE = [
     (re.compile(r"GITHUB_EVENT_NAME|GITHUB_EVENT_PATH|toJSON\(\s*github\.event\s*\)"), "reads the raw event"),
     (re.compile(r"context\.payload\.(?!issue\b)"), "reads a non-issue context.payload field"),
 ]
+#: Destructive VM-lifecycle workflows stay on `issues`, where the author gate reads the REAL issue author: under
+#: repository_dispatch the gate reads client_payload, which any token holder with contents:write can forge
+#: (manager decision 2026-11-13 01:15Z on PR #25566). Never routed, whatever their trigger shape.
+KEEP_ON_ISSUES = ("terminate-instance.yml", "reset-instance.yml", "provision-live-vm.yml", "cutover-live.yml")
 #: The client_payload.issue fields the router sends; a migrated workflow may read only these.
 PAYLOAD_FIELDS = ("number", "title", "body", "labels", "user", "html_url", "state")
 
@@ -75,6 +79,8 @@ def classify(path: str) -> tuple[str, list[str], str]:
         return "not_issue", [], ""
     if os.path.basename(path) == ROUTER:
         return "router", [], ""
+    if os.path.basename(path) in KEEP_ON_ISSUES:
+        return "excluded", sorted(set(LABEL_RE.findall(src))), "destructive VM-lifecycle: keeps the real issue-author gate"
     labels = sorted(set(LABEL_RE.findall(src)))
     rd = on.get("repository_dispatch")
     if isinstance(rd, dict) and any(str(t).startswith(LABELED_PREFIX) for t in (rd.get("types") or [])):
