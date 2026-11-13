@@ -114,6 +114,22 @@ def _package(conn: sqlite3.Connection, pkg_id: Optional[str]) -> Optional[Dict[s
     return dict(r) if r is not None else None
 
 
+class DeferredFetch(Exception):
+    """The venue asked us to wait (IB pacing backoff): no request was sent. A re-queued row stays queued untouched;
+    any other row takes the normal retry path."""
+
+
+#: Returned by a fetch instead of rows when it deferred without asking the venue.
+DEFERRED = object()
+
+
+def _num(v: Any) -> Optional[float]:
+    try:
+        return float(v) if v is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
 def candles_for(trade: Dict[str, Any], fetch: Fetch, now: datetime) -> Tuple[Optional[List[Dict[str, Any]]], str]:
     """The window's candles: a historical ``since`` read first; a connector without one gets the most recent
     bars, used only when they reach back to the window start (true for a fresh close, not an old backfill)."""
@@ -125,7 +141,12 @@ def candles_for(trade: Dict[str, Any], fetch: Fetch, now: datetime) -> Tuple[Opt
     step = bh._INTERVAL_S[tf["interval"]]
     need = int(math.ceil((tf["time_to"] - tf["time_from"]).total_seconds() / step)) + 2
     since_ms = int((tf["time_from"].timestamp() - step) * 1000)
-    rows, source = fetch(trade["symbol"], tf["interval"], since_ms, min(need, MAX_LIMIT))
+    extra = {}
+    if getattr(fetch, "accepts_anchor", False):
+        extra["anchor"] = (_num(trade.get("entry_price")), int(opened.timestamp() * 1000))
+    rows, source = fetch(trade["symbol"], tf["interval"], since_ms, min(need, MAX_LIMIT), **extra)
+    if rows is DEFERRED:
+        raise DeferredFetch(f"ib_pacing_backoff:{trade.get('symbol')}")
     if rows:
         return rows, source
     back = int(math.ceil((now - tf["time_from"]).total_seconds() / step)) + 2
@@ -166,6 +187,8 @@ def build_one(conn: sqlite3.Connection, trade: Dict[str, Any], fetch: Fetch, rev
         return "built" if rs == "measured" else "built_partial"
     except Exception as exc:  # noqa: BLE001  # allow-silent: contained per trade, stored as retrying + logged; flagged at FLAG_AFTER
         err = f"{type(exc).__name__}: {exc}"[:300]
+        if requeued and isinstance(exc, DeferredFetch):
+            return "deferred"           # nothing was asked of the venue; the row stays queued for a later batch
         if requeued:
             # Never wipe a stored partial because its optional rebuild failed: put the old row back as built.
             _restore_requeued(conn, trade, f"requeue failed: {err}"[:300])
@@ -306,7 +329,8 @@ def run_batch(db_path: Path, fetch: Fetch, now: Optional[datetime] = None, limit
         reviews = reviews if reviews is not None else srcs.load_reviews()
         receipts = receipts if receipts is not None else srcs.load_receipts()
         for t in todo:
-            counts[build_one(conn, t, fetch, reviews, receipts, now)] += 1
+            got = build_one(conn, t, fetch, reviews, receipts, now)
+            counts[got] = counts.get(got, 0) + 1
     finally:
         conn.close()
     return counts
@@ -322,10 +346,13 @@ _sleep = time.sleep
 _mono = time.monotonic
 
 
-#: The same pacing for IB historical reads (CLOSED-TRADE-SNAPSHOT-FUTURES-CANDLES (c), measured 2026-11-13): one per
-#: 15 s = at most 40 per 10 min, under even IB's strict 60-per-10-min historical rule. The builder uses the web-api's
-#: own read-only IB client, never the trader's.
-IB_SINCE_MIN_INTERVAL_S = 15.0
+#: IB historical reads (CLOSED-TRADE-SNAPSHOT-FUTURES-CANDLES (c), manager GO 2026-11-13 03:25Z): IB's historical
+#: pacing (60 per 10 min) counts per gateway/account, and the live trader uses the same gateway. MEASURED 2026-11-13
+#: from the trader's own ib_insync reqId growth on its market-data client (journal, 4 windows, 2026-11-12): 29-51
+#: requests per 10 min of ALL types (mean 38.9), an upper bound on its historical reads. One builder call per 180 s,
+#: at most 2 bar requests per call (the contract-match retry) = at most 6.7 per 10 min, so worst window + worst builder
+#: = 57.7 < 60. Any 162/420 backs IB since-reads off for ib_connector.PACING_BACKOFF_S (no inline retry).
+IB_SINCE_MIN_INTERVAL_S = 180.0
 _ib_since_last = {"at": None}
 
 
@@ -348,10 +375,13 @@ def _since_pace(client: Any) -> Optional[Tuple[Dict[str, Any], float]]:
     return None
 
 
-def web_api_fetch(symbol: str, interval: str, since_ms: Optional[int], limit: int) -> Tuple[Optional[List[Dict[str, Any]]], str]:
-    """Candles through the web-api's own market-data path, on its single IB-safe worker thread."""
+def web_api_fetch(symbol: str, interval: str, since_ms: Optional[int], limit: int,
+                  anchor: Optional[Tuple[Optional[float], int]] = None) -> Tuple[Any, str]:
+    """Candles through the web-api's own market-data path, on its single IB-safe worker thread. For an IB future's
+    old window the read goes to the contract the trade traded (``IBMarketData.get_ohlcv_at``, matched on the entry
+    fill in ``anchor``); its outcome is logged and named in the returned source."""
     from src.web.api.routers import candles as cr
-    paced: Dict[str, Any] = {"pace": None}
+    paced: Dict[str, Any] = {"pace": None, "source": "bot-exchange"}
 
     def go() -> Any:
         from src.runtime.market_data import fetch_candles
@@ -365,8 +395,20 @@ def web_api_fetch(symbol: str, interval: str, since_ms: Optional[int], limit: in
             if last is not None and _mono() - last < gap:
                 return _THROTTLED   # no venue call; the builder thread waits and resubmits
             state["at"] = _mono()
-        df = fetch_candles(symbol, interval, settings=settings, limit=limit, exchange_client=client,
-                           since=since_ms, bypass_cache=True)
+        if since_ms is not None and _is_ib(client) and hasattr(client, "get_ohlcv_at"):
+            a_price, a_ms = anchor if anchor else (None, since_ms)
+            df, info = client.get_ohlcv_at(symbol, interval, limit, since_ms, a_price, a_ms)
+            IB_OUTCOMES.append({"symbol": symbol, **info})
+            del IB_OUTCOMES[:-200]
+            logger.info("trade snapshot: IB since-read %s %s -> %s contract=%s tried=%s requests=%s", symbol,
+                        interval, info.get("outcome"), info.get("contract"), info.get("tried"), info.get("requests"))
+            if info.get("outcome") == "deferred":
+                return DEFERRED
+            if info.get("contract"):
+                paced["source"] = f"bot-exchange:ib:{info['contract']}"
+        else:
+            df = fetch_candles(symbol, interval, settings=settings, limit=limit, exchange_client=client,
+                               since=since_ms, bypass_cache=True)
         if df is None or len(df) == 0:
             return None
         out = []
@@ -386,12 +428,18 @@ def web_api_fetch(symbol: str, interval: str, since_ms: Optional[int], limit: in
     for _ in range(3):
         out = cr._FETCH_EXECUTOR.submit(go).result(timeout=FETCH_TIMEOUT_S)
         if out is not _THROTTLED:
-            return out, "bot-exchange"
+            return out, paced["source"]
         state, gap = paced["pace"]
         last = state["at"] or _mono()
         _sleep(max(0.0, gap - (_mono() - last)) + 0.05)
     return None, "bot-exchange"
 
+
+web_api_fetch.accepts_anchor = True  # type: ignore[attr-defined]
+
+#: The last IB since-read outcomes (matched / price_mismatch / no_contract / deferred / ...), newest last, for the
+#: per-symbol record on the first build (CLOSED-TRADE-SNAPSHOT-FUTURES-CANDLES (c)).
+IB_OUTCOMES: List[Dict[str, Any]] = []
 
 _started = threading.Lock()
 _thread: Optional[threading.Thread] = None
