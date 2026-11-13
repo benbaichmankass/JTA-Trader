@@ -1,0 +1,132 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261113T1549Z-pkg-b44605ffada045c5",
+ "reviewed_at": "2026-11-13T15:52:10Z",
+ "order_package_id": "pkg-b44605ffada045c5",
+ "trade_id": 7054,
+ "leg": "xrp_pullback_2h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-13T12:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-13T15:49:23Z",
+ "state": {
+  "atr_now_over_entry": 0.9608,
+  "bars_held": 26,
+  "giveback_r": 0.4137,
+  "open_r": 0.9373,
+  "peak_provenance": "estimated",
+  "peak_r": 1.351,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1.10441071,
+  "tp": 0.953258
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.9608,
+  "bars_since_peak": 5,
+  "giveback_r": 0.4137,
+  "open_r": 0.9373,
+  "peak_r": 1.351,
+  "r_to_stop": 1.9373,
+  "r_to_target": 1.3196
+ },
+ "mechanics": {
+  "evidence": "package sl 1.10441071 / tp 0.953258 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 61,
+   "mean_r": 1.3626,
+   "sd_r": 1.4358,
+   "worst_r": -1.1266,
+   "net": null
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 61,
+   "mean_r": 0.8742,
+   "sd_r": 0.027,
+   "worst_r": 0.7731,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261113T1549Z-pkg-b44605ffada045c5.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": 0.45,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. Prior forecast (target 0.9953, invalidation 1.0439, with_trade) held: the 0.9953 low traded and 1.0439 was not retaken inside the horizon. Open +0.94R from est peak 1.35R (0.41R given back), 26 bars; the leg's measured table (n=61 comparable shorts, net) prices HOLD +1.363R worst -1.127R above every measured alternative (tighten best +1.334R, close +0.874R), and the strategy bracket (SL 1.1044 / TP 0.9533) already expresses the view. Carry the forecast forward; 1d downtrend intact (ADX 26.4)."
+ },
+ "judge_prior": 0.45,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "book: crowded short crypto beta (ETH x4, SOL x2, ADA x2, XRP) is one bet",
+  "live_vs_backtest: realMoney 20 closed, live percentile 1.5 BELOW_BACKTEST (live -12.1R vs p5 -8.97); leg is under its band, noted not acted on",
+  "tighten_bias: stop-at-price fills flatter any tighten; tighten advice-only since 2026-10-28",
+  "atr_ratio: now/entry 0.96 (inside 0.67-1.5)"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuMav7jq3LhCKCzq7mL",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [],
+ "packet_sha": "94c1aae1eafba7be403786658a571974a5e6c38b76dfc4c4d82db3d1e4167d45",
+ "forecast": {
+  "thesis": "1d downtrend intact (ADX 26) and 2h lower highs 1.0439/1.0564; I expect a retest of the 0.9953 low before 1.0439 is retaken; carried forward from the previous review",
+  "direction": "with_trade",
+  "target_px": 0.9953,
+  "p_target": 0.45,
+  "invalidation_px": 1.0439,
+  "horizon_bars": 6,
+  "timeframe": "2h",
+  "evidence": [
+   "table hold n=61 mean 1.3626",
+   "chart.swings highs 1.0439/1.0564 lows 0.9953",
+   "chart.htf 1d trending ADX 26.4",
+   "exit_plan sl 1.1044 tp 0.9533"
+  ]
+ }
+}

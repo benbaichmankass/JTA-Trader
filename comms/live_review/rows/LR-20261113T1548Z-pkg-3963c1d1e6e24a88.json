@@ -1,0 +1,139 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261113T1548Z-pkg-3963c1d1e6e24a88",
+ "reviewed_at": "2026-11-13T15:52:10Z",
+ "order_package_id": "pkg-3963c1d1e6e24a88",
+ "trade_id": 7114,
+ "leg": "slv_trend_1h",
+ "accounts": [
+  "alpaca_paper"
+ ],
+ "trigger": {
+  "event": "r_milestone",
+  "level": 1.0,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-13T15:48:58Z",
+ "state": {
+  "atr_now_over_entry": 0.8289,
+  "bars_held": 9,
+  "giveback_r": 0.0,
+  "open_r": 1.5,
+  "peak_provenance": "estimated",
+  "peak_r": 1.5,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 45.765,
+  "tp": 40.720695
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.8289,
+  "bars_since_peak": 0,
+  "giveback_r": 0.0,
+  "open_r": 1.5,
+  "peak_r": 1.5,
+  "r_to_stop": 2.5,
+  "r_to_target": 6.3497
+ },
+ "mechanics": {
+  "evidence": "package sl 45.765 / tp 40.720695 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 11,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261113T1548Z-pkg-3963c1d1e6e24a88.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. Previous forecast held: target 44.85 traded (since-entry low 44.755, price now near +1.5R) and invalidation 45.765 was never touched (high 45.40). Carry the view forward with a lower target. SLV short from 45.195 is +1.5R at its peak (giveback 0), both brackets match the venue (SL 45.765 / TP 40.72), stop 2.5R away; HOLD cell n=11 is below floor 20 (not measured) and every tighten/close is unpriced, so judgement. 1h downtrend continues; a tighten has negative measured evidence anyway and nothing in the packet beats the entry plan."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold cell n=11 below floor 20 (comparable 11 of 73, mean not measured); all tighten/close options n=0 unpriced",
+  "book: crowded short beta; same thesis as alpaca_portfolio SLV short",
+  "atr_ratio: now/entry 0.83 (inside 0.67-1.5)",
+  "tighten_bias: stop-at-price fills flatter any tighten; tighten advice-only since 2026-10-28",
+  "live_vs_backtest: mirror 8 closed, live percentile 8 (below band) vs backtest +0.54R n=73",
+  "packet_defect: priced_options.options all_options_unpriced:no_candles 7/7",
+  "packet_defect: priced_options.candles candles_missing 7/7"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuMav7jq3LhCKCzq7mL",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [
+  {
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:no_candles",
+   "count": 7,
+   "denominator": 7
+  },
+  {
+   "field": "priced_options.candles",
+   "reason": "candles_missing",
+   "count": 7,
+   "denominator": 7
+  }
+ ],
+ "packet_sha": "8b44799fdc6a0f7d83d34c8a8b4e1f681923eb9630f89024fa04dbfec68156b8",
+ "forecast": {
+  "thesis": "Prior 44.85 target traded; 1h downtrend still lower-highs (45.40, 45.16) so I expect 43.90 before 45.16 is retaken; 4h chop caps conviction",
+  "direction": "with_trade",
+  "target_px": 43.9,
+  "p_target": 0.45,
+  "invalidation_px": 45.16,
+  "horizon_bars": 6,
+  "timeframe": "1h",
+  "evidence": [
+   "context.previous_review forecast target 44.85 traded",
+   "chart.since_entry low 44.755 high 45.40",
+   "chart.htf 4h chop ADX 19.6",
+   "exit_plan sl 45.765 tp 40.7207"
+  ]
+ }
+}

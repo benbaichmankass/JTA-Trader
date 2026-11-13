@@ -1,0 +1,132 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261113T1550Z-pkg-8c5ea40296f0432d",
+ "reviewed_at": "2026-11-13T15:52:10Z",
+ "order_package_id": "pkg-8c5ea40296f0432d",
+ "trade_id": 7193,
+ "leg": "ict_scalp_sol_15m",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "daily_floor",
+  "level": "2026-11-13",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-13T15:50:13Z",
+ "state": {
+  "atr_now_over_entry": 1.0775,
+  "bars_held": 3,
+  "giveback_r": 0.3452,
+  "open_r": -0.0123,
+  "peak_provenance": "estimated",
+  "peak_r": 0.3328,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 81.04242857,
+  "tp": 76.98635714
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.0775,
+  "bars_since_peak": 1,
+  "giveback_r": 0.3452,
+  "open_r": -0.0123,
+  "peak_r": 0.3328,
+  "r_to_stop": 0.9877,
+  "r_to_target": 1.5123
+ },
+ "mechanics": {
+  "evidence": "bybit_1: SOLUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-96fb9efae6d24ca3); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 37,
+   "mean_r": 0.2207,
+   "sd_r": 0.9094,
+   "worst_r": -1.2084,
+   "net": null
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 37,
+   "mean_r": -0.1235,
+   "sd_r": 0.0652,
+   "worst_r": -0.3538,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261113T1550Z-pkg-8c5ea40296f0432d.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": 0.42,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. First review of this SOL 15m scalp short from 79.42: -0.01R (peak est +0.33R, 0.35R given back, 3 bars), both brackets match the venue (SL 81.04 / TP 76.99). The leg's measured table (n=37 comparable shorts, net) prices HOLD +0.221R above tighten (+0.121 to +0.177R) and close (-0.124R); 1h trend down (ADX 30.7) but a swing high 80.68 sits near price, so no bracket move beats the entry plan."
+ },
+ "judge_prior": 0.42,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "book: SOL netted with pkg-96fb9efae6d24ca3 and crowded short crypto beta",
+  "live_vs_backtest: backtest -0.14R n=87, no live closes on realMoney/mirror (NO_LIVE_TRADES)",
+  "atr_ratio: now/entry 1.08 (inside 0.67-1.5)",
+  "packet: 1 no_candles in comparable population (36 of 37 used)"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuMav7jq3LhCKCzq7mL",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [],
+ "packet_sha": "a3976d528b00cf55c116792e9f250cc7da9886cec77fa55093f9c5572a9e48c2",
+ "forecast": {
+  "thesis": "15m lower highs under 1h downtrend (ADX 31); I expect the 78.88 since-entry low to retest before the 80.23 bar high is retaken; scalp horizon is short",
+  "direction": "with_trade",
+  "target_px": 78.88,
+  "p_target": 0.45,
+  "invalidation_px": 80.23,
+  "horizon_bars": 4,
+  "timeframe": "15m",
+  "evidence": [
+   "table hold n=37 mean 0.2207",
+   "chart.since_entry low 78.88 high 79.68",
+   "chart.htf 1h trending ADX 30.7",
+   "exit_plan sl 81.0424 tp 76.9864"
+  ]
+ }
+}

@@ -1,0 +1,133 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261113T1549Z-pkg-665b2dff5ef04889",
+ "reviewed_at": "2026-11-13T15:52:10Z",
+ "order_package_id": "pkg-665b2dff5ef04889",
+ "trade_id": 7167,
+ "leg": "trend_donchian_eth_4h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-13T12:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-13T15:49:47Z",
+ "state": {
+  "atr_now_over_entry": 1.1395,
+  "bars_held": 3,
+  "giveback_r": 0.4951,
+  "open_r": 0.6601,
+  "peak_provenance": "estimated",
+  "peak_r": 1.1552,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 2004.15535714,
+  "tp": 1773.81672
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.1395,
+  "bars_since_peak": 1,
+  "giveback_r": 0.4951,
+  "open_r": 0.6601,
+  "peak_r": 1.1552,
+  "r_to_stop": 1.6601,
+  "r_to_target": 2.8505
+ },
+ "mechanics": {
+  "evidence": "bybit_1: ETHUSDT is NETTED across 3 open packages on this account (per side) (this one + pkg-0204c3deb7e84ebe, pkg-f5d668173a7c4f3f); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 98,
+   "mean_r": 1.3994,
+   "sd_r": 2.0688,
+   "worst_r": -1.14,
+   "net": null
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 98,
+   "mean_r": 0.5996,
+   "sd_r": 0.0273,
+   "worst_r": 0.4855,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261113T1549Z-pkg-665b2dff5ef04889.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": 0.45,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. Prior forecast (target 1894.1, invalidation 2018.97, with_trade) held: 1894.1 traded and 2018.97 was not touched (high 1963.76). Open +0.66R from est peak 1.16R (0.50R given back) after 3 4h bars; the leg's measured table (n=98 comparable shorts, net) prices HOLD +1.399R worst -1.140R above every alternative (tighten best +1.375R, close +0.600R). The bracket (SL 2004.16 / TP 1773.82) expresses the view; the 1d trend is down (ADX 26.6)."
+ },
+ "judge_prior": 0.45,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "book: ETHUSDT netted across 3 bybit_1 packages; crowded short crypto beta",
+  "prop: prop_open lists a velotrade_1 ticket for this package; packet account_bounds covers bybit_1 only, so prop accounts are not in account_reads (unknown)",
+  "atr_ratio: now/entry 1.14 (inside 0.67-1.5)",
+  "tighten_bias: stop-at-price fills flatter any tighten; tighten advice-only since 2026-10-28",
+  "mechanics: bybit_1 ETH netted; legs matched by order id"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuMav7jq3LhCKCzq7mL",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [],
+ "packet_sha": "163ed225559a83c4882b74cefbf233351a9c2da4a1e242df340a01e9fb4395cd",
+ "forecast": {
+  "thesis": "1d down ADX 27 and the 4h breakdown through 1982; the bounce is capped by 1963.76, so I expect 1894.1 to retest before 1982.36 is retaken",
+  "direction": "with_trade",
+  "target_px": 1894.1,
+  "p_target": 0.45,
+  "invalidation_px": 1982.36,
+  "horizon_bars": 3,
+  "timeframe": "4h",
+  "evidence": [
+   "table hold n=98 mean 1.3994",
+   "chart.since_entry high 1963.76 low 1894.1",
+   "chart.htf 1d trending ADX 26.6",
+   "exit_plan sl 2004.16 tp 1773.82"
+  ]
+ }
+}

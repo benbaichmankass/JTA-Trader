@@ -1,0 +1,122 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261113T1548Z-pkg-a5ebf7ae68f74587",
+ "reviewed_at": "2026-11-13T15:52:10Z",
+ "order_package_id": "pkg-a5ebf7ae68f74587",
+ "trade_id": 7190,
+ "leg": "slv_trend_1h",
+ "accounts": [
+  "alpaca_portfolio"
+ ],
+ "trigger": {
+  "event": "daily_floor",
+  "level": "2026-11-13",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-13T15:48:33Z",
+ "state": {
+  "atr_now_over_entry": 0.9226,
+  "bars_held": 0,
+  "giveback_r": null,
+  "open_r": 0.3319,
+  "peak_provenance": "estimated",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 45.02214286,
+  "tp": 41.43714286
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.9226,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": 0.3319,
+  "peak_r": null,
+  "r_to_stop": 1.3319,
+  "r_to_target": 5.6681
+ },
+ "mechanics": {
+  "evidence": "package sl 45.02214286 / tp 41.43714286 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.5,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. First review of the first SLV live-book (alpaca_portfolio) short from 44.51: +0.33R at bar 0, both brackets resting at the venue (SL 45.02 / TP 41.44, matched by order id/qty), stop 1.33R away. No outcome table exists for this package (open_r/peak_r/atr_stop_mult not available at entry bar), so the call is judgement. The 1h trend is down (lower highs 45.40 then 45.16, 44.85 low broken), the 4h is chop (ADX 19.6) so conviction is moderate, and the sibling alpaca_paper short from 45.195 is +1.5R on the same thesis; HOLD already expresses the view."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: no outcome table (priced_options null: open_r/peak_r/atr_stop_mult not available for this package)",
+  "book: crowded short metals/crypto beta (MGC, GLD, IAUM, GDX, MHG, SLV x2) all short; SLV pair is two books of one thesis",
+  "htf: 4h chop ADX 19.6 vs 1h trending",
+  "mechanics: venue SL 45.02 / TP 41.44 resting and matched (alpaca_orders, position True); real-money-class SLV bracket present",
+  "missing_input: context_v3.chart.since_entry null (package open time not in journal reads); regime cells null",
+  "packet_defect: priced_options could_not_price 1/1"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuMav7jq3LhCKCzq7mL",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [
+  {
+   "field": "priced_options",
+   "reason": "could_not_price",
+   "count": 1,
+   "denominator": 1
+  }
+ ],
+ "packet_sha": "360b30dcb6aabdfc093ec9c5f1776cdc2ceb8052fc68754a55de377d765f3260",
+ "forecast": {
+  "thesis": "1h downtrend with lower highs 45.40 then 45.16 and the 44.85 low already broken; I expect the 43.60 area to trade before 45.16 is retaken, but the 4h is chop so only moderate conviction",
+  "direction": "with_trade",
+  "target_px": 43.6,
+  "p_target": 0.4,
+  "invalidation_px": 45.16,
+  "horizon_bars": 6,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings highs 45.40/45.16, 1h lows 44.85 broken",
+   "chart.htf 4h trend chop ADX 19.6",
+   "exit_plan sl 45.0221 tp 41.4371",
+   "book: sibling alpaca_paper SLV short +1.5R"
+  ]
+ }
+}
