@@ -7,7 +7,8 @@ A thin HTTPS client over ``/api/bot/work/items`` on the live VM. Stdlib only.
     work.py history <id>                            # its events + the chain check (replaces git log -p)
     work.py list  [--state S] [--due] [--parent P] [--kind K] [--limit N]
     work.py add   <id> --kind build|observation --title T [--field k=v ...]
-    work.py set   <id> k=v [k=v ...]                # JSON values parsed (state=done, tier=2, prs=[1,2])
+    work.py set   <id> k=v [k=v ...]                # JSON values parsed (state=done, tier=2, prs=[1,2]);
+                                                    # owner=/parent_id= on an observation also ROUTES it (route_fields)
     work.py note  <id> "text" [--summary S]
     work.py close <id> --reason R [--state done|dropped]
     work.py reopen <id> [--state queued]            # set state, clear terminal_reason
@@ -354,6 +355,32 @@ def _kv(pairs: list[str]) -> dict:
     return out
 
 
+#: Legacy pipeline words that read as UNROUTED in `work_store_import._project`, whatever the item's
+#: parent or owner (the projection keeps the legacy word when it still maps to the stored state).
+_UNROUTED_LEGACY = ("queued", "due")
+
+
+def route_fields(item: dict, fields: dict) -> dict:
+    """WORK-SET-ROUTE-TRAP (2026-11-13): a ``set`` that gives an observation a parent or an owner
+    must also ROUTE it. Without this, setting ``parent_id``/``owner`` alone left
+    ``extra._legacy_state=queued`` and ``pipeline.unrouted`` still counted the item (MEASURED: 10
+    items re-owned and re-parented, unrouted count unchanged at 34 until ``_legacy_state`` was
+    flipped by hand). Returns ``fields`` plus a merged ``extra`` carrying ``_legacy_state=routed``
+    and ``routed_to`` (the parent, else the owner); unchanged when not applicable or when the caller
+    sets ``extra`` itself."""
+    if item.get("kind") != "observation" or "extra" in fields:
+        return fields
+    target = fields.get("parent_id") or fields.get("owner")
+    if not target:
+        return fields
+    extra = dict(item.get("extra") or {})
+    if extra.get("_legacy_state") not in _UNROUTED_LEGACY:
+        return fields
+    extra["_legacy_state"] = "routed"
+    extra["routed_to"] = str(target)
+    return {**fields, "extra": extra}
+
+
 def build_op(a) -> dict:
     by = _by(a)
     if a.cmd == "add":
@@ -451,6 +478,13 @@ def main(argv: list[str] | None = None) -> int:
             r1 = send(make_op("set", a.id, {"fields": {"due_rule": rule}}, by, base + ":set"), a.via, a.issue)
             r2 = send(make_op("note", a.id, {"text": a.text}, by, base + ":note"), a.via, a.issue)
             out = {"via": r2.get("via"), "writes": [r1, r2]}
+        elif a.cmd == "set" and a.via != "outbox":
+            # Route on owner/parent (route_fields): needs the item's current extra, so direct/auto only.
+            o = build_op(a)
+            fields = o["body"]["fields"]
+            if "parent_id" in fields or "owner" in fields:
+                o["body"]["fields"] = route_fields(get_item(a.id), fields)
+            out = send(o, a.via, a.issue)
         else:
             out = send(build_op(a), a.via, a.issue)
     except WorkError as exc:
