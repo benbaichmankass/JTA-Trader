@@ -16,6 +16,11 @@ Graded statistic (registered in the unit before any run):
                  draws with added_r >= actual
 Verdict: indeterminate if dropped < MIN_DROPPED; PASS iff added_r > 0 AND fold_wins >= 4 AND p <= 0.05; else FAIL.
 Reads nothing live, writes no config.
+
+Opt-in ``--cells-per-leg`` (default OFF; without it the behaviour is byte-identical): each leg's cells are the trend_vol cells
+the policy authors for THAT leg's own name, instead of one ``--cell-strategy`` for every leg. For a gate whose cells name
+several different strategies (e.g. the BTC trend_vol cells on trend_donchian, squeeze_breakout_4h and ict_scalp_5m; unit
+RQ-20261113-b819-01). The statistic, folds, control and verdict are unchanged.
 """
 from __future__ import annotations
 
@@ -72,15 +77,22 @@ def _dropped(rows, cells):
     return [r for r in rows if (r.get("regime"), r.get("vol_regime"), str(r["direction"]).lower()) in cells]
 
 
+def _leg_cells(cells, leg: str) -> set:
+    """``cells`` is one set applied to every leg (default), or a {leg: set} map (opt-in --cells-per-leg)."""
+    return cells.get(leg, set()) if isinstance(cells, dict) else cells
+
+
 def grade(legs: dict[str, list[dict]], cells, draws: int = 5000, seed: int = 20261112,
           folds: int = FOLDS, since: float | None = None) -> dict:
     if since is not None:
         legs = {k: [r for r in v if r["_t"] >= since] for k, v in legs.items()}
-    drops = {k: _dropped(v, cells) for k, v in legs.items()}
+    drops = {k: _dropped(v, _leg_cells(cells, k)) for k, v in legs.items()}
     all_rows = [r for v in legs.values() for r in v]
     n_drop = sum(len(d) for d in drops.values())
     added = -sum(r["net_r"] for d in drops.values() for r in d)
-    out = {"cells": sorted("/".join(c) for c in cells), "legs": {}, "trades_total": len(all_rows),
+    cells_out = ({k: sorted("/".join(c) for c in v) for k, v in sorted(cells.items())} if isinstance(cells, dict)
+                 else sorted("/".join(c) for c in cells))
+    out = {"cells": cells_out, "legs": {}, "trades_total": len(all_rows),
            "dropped_n": n_drop, "added_r": round(added, 4), "min_dropped": MIN_DROPPED, "folds": folds,
            "draws": draws, "seed": seed}
     if not all_rows:
@@ -134,6 +146,16 @@ def _selftest() -> None:
     assert bad["verdict"] == "pass", bad
     assert null["verdict"] == "fail", null
     assert grade({"a": mk(-1.0, 8)}, cells, draws=50)["verdict"] == "indeterminate_underpowered"
+    # opt-in per-leg cells: each leg is gated only by its own cells
+    per_leg = {"a": cells, "b": {("chop", "calm", "long")}}
+    ra, rb = mk(-1.0), mk(0.0)
+    pl = grade({"a": ra, "b": rb}, per_leg, draws=500)
+    a_only = grade({"a": ra}, cells, draws=50)
+    assert pl["legs"]["a"] == a_only["legs"]["a"], (pl, a_only)
+    assert pl["legs"]["b"]["dropped"] == len(_dropped(rb, per_leg["b"])) > 0
+    assert all((r["regime"], r["vol_regime"]) == ("chop", "calm") for r in _dropped(rb, per_leg["b"]))
+    assert isinstance(pl["cells"], dict) and pl["cells"]["b"] == ["chop/calm/long"], pl["cells"]
+    assert grade({"a": mk(-1.0)}, {"zz": cells}, draws=50)["dropped_n"] == 0  # a leg with no cells drops nothing
     print("self-test ok")
 
 
@@ -142,6 +164,8 @@ def main() -> int:
     ap.add_argument("--leg", action="append", default=[], help="LEG=tagged.jsonl (repeatable)")
     ap.add_argument("--policy", default="config/regime_policy.yaml")
     ap.add_argument("--cell-strategy", default="trend_donchian")
+    ap.add_argument("--cells-per-leg", action="store_true",
+                    help="opt-in: gate each leg by the cells the policy authors for its OWN name (ignores --cell-strategy)")
     ap.add_argument("--since", default=None, help="ISO date: grade only trades at/after it (secondary slice)")
     ap.add_argument("--draws", type=int, default=5000)
     ap.add_argument("--self-test", action="store_true")
@@ -150,7 +174,9 @@ def main() -> int:
         _selftest()
         return 0
     legs = load_legs(dict(x.split("=", 1) for x in a.leg))
-    res = grade(legs, load_cells(a.policy, a.cell_strategy), a.draws,
+    cells = ({leg: load_cells(a.policy, leg) for leg in legs} if a.cells_per_leg
+             else load_cells(a.policy, a.cell_strategy))
+    res = grade(legs, cells, a.draws,
                 since=_ts(a.since) if a.since else None)
     print(json.dumps(res, indent=1))
     return 0

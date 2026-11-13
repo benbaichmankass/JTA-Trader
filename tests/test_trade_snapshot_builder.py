@@ -346,3 +346,55 @@ def test_unparseable_times_are_named_not_a_typeerror(db):
     b.run_batch(db, _fetch_ok(), NOW, reviews=EMPTY, receipts=EMPTY)
     err = _row(db, bad)["last_error"]
     assert err.startswith("ValueError: unparseable_times") and "not-a-time" in err
+
+
+def test_ib_requeue_has_its_own_marker_and_only_takes_ib_symbols(db):
+    alp, byb, *_ = _store_partials(db)
+    mgc = _trade(db, symbol="MHGN6", account_id="ib_paper")
+    t = NOW
+    for wait in (0, b.BACKOFF_S[0] + 1, b.BACKOFF_S[1] + 1):
+        t += timedelta(seconds=wait)
+        b.run_batch(db, NONE, t, reviews=EMPTY, receipts=EMPTY, requeue_symbols=set())
+    _fresh_marker(db)
+    conn = _snap(db)
+    assert b.requeue_alpaca_candle_partials(conn, ALP, NOW) == 1
+    assert b.requeue_ib_candle_partials(conn, {"MHG"}, NOW) == 1           # MHGN6 resolves to MHG
+    assert b.requeue_ib_candle_partials(conn, {"MHG"}, NOW) is None
+    rows = dict(conn.execute(f"SELECT snapshot_key, state FROM {store.TABLE}").fetchall())
+    conn.close()
+    assert rows[store.trade_key(mgc)] == b.REQUEUED and rows[store.trade_key(alp)] == b.REQUEUED
+    assert rows[store.trade_key(byb)] == "built"
+
+
+def test_requeued_row_deferred_by_pacing_stays_queued_untouched(db):
+    alp, _, _, t = _store_partials(db)
+    _fresh_marker(db)
+
+    def deferred(symbol, interval, since_ms, limit, anchor=None):
+        return b.DEFERRED, "test"
+    deferred.accepts_anchor = True
+    out = b.run_batch(db, deferred, t, reviews=EMPTY, receipts=EMPTY, requeue_symbols=ALP)
+    assert out.get("deferred") == 1 and out["retrying"] == 0
+    got = _row(db, alp)
+    assert got["state"] == b.REQUEUED and got["payload"]["candles"]["state"] == "unavailable"
+
+
+def test_new_trade_deferred_by_pacing_takes_the_retry_path(db):
+    tid = _trade(db)
+
+    def deferred(symbol, interval, since_ms, limit):
+        return b.DEFERRED, "test"
+    assert b.run_batch(db, deferred, NOW, reviews=EMPTY, receipts=EMPTY)["retrying"] == 1
+    assert "ib_pacing_backoff" in _row(db, tid)["last_error"]
+
+
+def test_anchor_is_the_entry_fill_and_open_time(db):
+    _trade(db, entry_price=123.5)
+    seen = []
+
+    def fetch(symbol, interval, since_ms, limit, anchor=None):
+        seen.append(anchor)
+        return _fetch_ok()(symbol, interval, since_ms, limit)
+    fetch.accepts_anchor = True
+    b.run_batch(db, fetch, NOW, reviews=EMPTY, receipts=EMPTY)
+    assert seen[0] == (123.5, int(datetime(2026, 11, 12, 1, 0, tzinfo=timezone.utc).timestamp() * 1000))

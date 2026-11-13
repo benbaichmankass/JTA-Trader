@@ -242,11 +242,15 @@ def _self_test() -> int:
         # grading branches
         assert grade(1.0, 10, 39) == "indeterminate"
         assert grade(1.0, 40, 39) == "pass" and grade(0.0, 40, 39) == "fail"
-        # a config lookup that cannot find the pair names what exists
+        # a config lookup that cannot find the pair names what exists. Use a config written
+        # here: the real config/pairs.yaml is `pairs: []` since the M22 retirement (#24991).
+        cfg = d / "pairs.yaml"
+        cfg.write_text("pairs:\n  - {name: pairs_test, symbol_a: AUSDT, symbol_b: BUSDT}\n", encoding="utf-8")
+        assert load_pair("pairs_test", cfg)["symbol_a"] == "AUSDT"
         try:
-            load_pair("no_such_pair")
+            load_pair("no_such_pair", cfg)
         except KeyError as exc:
-            assert "pairs_sol_eth" in str(exc)
+            assert "pairs_test" in str(exc)
         else:
             raise AssertionError("load_pair must refuse an unknown pair")
     print("pairs_configured_stage0 self-test OK")

@@ -1152,7 +1152,7 @@ def cmd_baselines(a: argparse.Namespace) -> int:
     rost = rostered_legs(sorted(mkt)) if mkt else {}
     legs, gaps = load_strategy_lists(rost) if mkt else ([], [])
     res = baselines(mkt, missing, legs, gaps, rost, a.seed)
-    recs = [{"leg": f"random_entry_{g}", "population": f"random-entry null, geometry {g}", "n": v["n"],
+    recs = [{"leg": f"random_entry_{g}", "population": f"random-entry null, geometry {g}", "n": v["n"] or None,
              # research_result.validate(): a measured row carries the run's verdict; not_applicable is only for no_data rows
              "verdict": res["verdict"] if v["n"] else "not_applicable",
              "read_state": "measured" if v["n"] else "no_data", "mean_net_r": v.get("mean_net_r")}

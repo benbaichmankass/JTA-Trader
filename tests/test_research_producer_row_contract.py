@@ -3,7 +3,7 @@ research_result.validate, or the run's record is refused at emit and never lands
 
 Each case builds the producer's rows with its OWN code and feeds them through the real validator, plus the
 collector's non-measured-verdict void. The orphans named on the row:
-  RQ-20261026-bf56-02/-03  desk_replay_driver score   (no_data carrying an n; measured with not_applicable)
+  RQ-20261026-bf56-02/-03  desk_replay_driver score   (fixed on main by #25292; the collector chain is pinned here)
   RQ-20261105-d256-03      fidelity_remeasure          (rows with no population / n)
   RQ-20261105-025          leg_corpus_s1               (producer_failed carrying indeterminate)
   RQ-20261014-470a-11      stage0_capital_day_census   (no_data carrying no_action_warranted / an n)
@@ -37,45 +37,28 @@ def _problems(rows: List[Dict[str, Any]]) -> List[str]:
     return out
 
 
-# ── desk_replay_driver ──────────────────────────────────────────────────────────────────────────────────────────────
-def test_desk_replay_score_rows_validate_and_keep_pooled_verdict():
-    from scripts.research import desk_replay_driver as drv
-    res = {"verdict": "fail", "per_leg": [
-        {"leg": "a", "n_obs": 31, "state": "measured", "mean_dR": -0.16, "ci": [-0.58, 0.19]},
-        {"leg": "b", "n_obs": 15, "state": "insufficient_n", "mean_dR": None, "ci": None},   # the bf56 xrp row
-        {"leg": "c", "n_obs": 0, "state": "insufficient_n", "mean_dR": None, "ci": None}]}
-    rows = drv.score_records(res, "in_trade")
+# ── desk_replay_driver: fixed at source on main by #25292 (inline rows + collector _null_unmeasured_row_n). What this
+# row adds is the chain: the committed bf56 rows pass through BOTH collector normalizers and then validate.
+# The refused run's own rows, as committed in comms/research/RQ-20261026-bf56-02/40710666532/records.jsonl (inlined:
+# comms/research/RQ-*/** is push paths-ignore, so a test may not read it -- test_push_paths_ignore_bot_data).
+BF56_02_ROWS = [
+    {"read_state": "measured", "leg": "ada_pullback_2h", "population": "ada_pullback_2h in_trade", "n": 31, "verdict": "not_applicable"},
+    {"read_state": "measured", "leg": "trend_donchian_eth_4h", "population": "trend_donchian_eth_4h in_trade", "n": 103, "verdict": "not_applicable"},
+    {"read_state": "no_data", "leg": "trend_donchian_xrp_4h", "population": "trend_donchian_xrp_4h in_trade", "n": 15, "verdict": "not_applicable"},
+    {"read_state": "measured", "leg": "xrp_pullback_2h", "population": "xrp_pullback_2h in_trade", "n": 27, "verdict": "not_applicable"}]
+
+
+def test_collector_chain_lands_the_bf56_orphan_rows(tmp_path):
+    from scripts.research import collect_runner_results as crr
+    assert _problems(BF56_02_ROWS), "the committed rows must still show the defect (the probe can find a positive)"
+    rf = tmp_path / "records.jsonl"
+    rf.write_text("".join(json.dumps(r) + "\n" for r in BF56_02_ROWS))
+    rec = {"read_state": "measured", "verdict": "fail", "n": "176", "records_file": str(rf)}
+    out = crr._void_nonmeasured_verdict(crr._null_unmeasured_row_n(tmp_path, rec), tmp_path)
+    rows = [json.loads(ln) for ln in Path(out["records_file"]).read_text().splitlines()]
     assert _problems(rows) == []
-    assert [(r["read_state"], r["n"], r["verdict"]) for r in rows] == [
-        ("measured", 31, "fail"), ("measured", 15, "fail"), ("no_data", None, "not_applicable")]
-    assert rows[1]["mean_dR"] is None and "withheld" in rows[1]["population"]
-    assert all("POOLED" in r["population"] for r in rows if r["read_state"] == "measured")
-
-
-# The refused run's own per-leg block, copied verbatim from comms/research/RQ-20261026-bf56-02/40710666532/verdict.json
-# (inlined: comms/research/RQ-*/** is push paths-ignore, so a test may not read it -- test_push_paths_ignore_bot_data).
-BF56_02_PER_LEG = [
-    {"leg": "ada_pullback_2h", "n_obs": 31, "state": "measured", "mean_dR": -0.1635, "ci": [-0.5863, 0.1896]},
-    {"leg": "trend_donchian_eth_4h", "n_obs": 103, "state": "measured", "mean_dR": -0.0051, "ci": [-0.0665, 0.0537]},
-    {"leg": "trend_donchian_xrp_4h", "n_obs": 15, "state": "insufficient_n", "mean_dR": None, "ci": None},
-    {"leg": "xrp_pullback_2h", "n_obs": 27, "state": "measured", "mean_dR": -0.1081, "ci": [-0.4575, 0.229]}]
-
-
-def test_desk_replay_score_rows_from_the_bf56_orphan_measurement_validate():
-    """The real refused run: the pre-fix rows (as committed) fail the validator; the fixed builder's rows pass."""
-    from scripts.research import desk_replay_driver as drv
-    old = [{"read_state": "measured" if r["state"] == "measured" else "no_data", "leg": r["leg"],
-            "population": f"{r['leg']} in_trade", "n": r["n_obs"], "verdict": "not_applicable"} for r in BF56_02_PER_LEG]
-    assert _problems(old), "the pre-fix rows must still show the defect (the probe can find a positive)"
-    assert _problems(drv.score_records({"verdict": "fail", "per_leg": BF56_02_PER_LEG}, "in_trade")) == []
-
-
-def test_desk_replay_selfcheck_rows_never_carry_n_zero_on_no_data():
-    from scripts.research import desk_replay_driver as drv
-    rows = drv.selfcheck_records({"verdict": "pass", "per_leg": {"a": {"trades": 9, "replayed": 9},
-                                                                 "b": {"trades": 3, "replayed": 0}}})
-    assert _problems(rows) == []
-    assert rows[1] == {**rows[1], "n": None, "verdict": "not_applicable", "read_state": "no_data"}
+    assert [r["verdict"] for r in rows if r["read_state"] == "measured"] == ["fail"] * 3
+    assert rows[2]["n"] is None and "15" in rows[2]["population"]
 
 
 # ── fidelity_remeasure ──────────────────────────────────────────────────────────────────────────────────────────────
