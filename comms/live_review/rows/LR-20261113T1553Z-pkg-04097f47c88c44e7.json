@@ -1,0 +1,122 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261113T1553Z-pkg-04097f47c88c44e7",
+ "reviewed_at": "2026-11-13T15:54:16Z",
+ "order_package_id": "pkg-04097f47c88c44e7",
+ "trade_id": 7198,
+ "leg": "ict_scalp_avax_5m",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "daily_floor",
+  "level": "2026-11-13",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-13T15:53:49Z",
+ "state": {
+  "atr_now_over_entry": 1.0213,
+  "bars_held": 1,
+  "giveback_r": null,
+  "open_r": -0.1359,
+  "peak_provenance": "estimated",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 8.28617857,
+  "tp": 8.63573214
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.0213,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": -0.1359,
+  "peak_r": null,
+  "r_to_stop": 0.8641,
+  "r_to_target": 1.6359
+ },
+ "mechanics": {
+  "evidence": "package sl 8.28617857 / tp 8.63573214 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.45,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. First review of a 1-bar-old AVAX 5m scalp long from 8.426: -0.14R, both brackets match the venue (SL 8.286 / TP 8.636, matched by order id), stop 0.86R away. No outcome table (priced_options could_not_price: open_r/peak_r/atr_stop_mult not available at bar 1), so judgement. 5m just printed an 8.408 close off the 8.285 low; 1h is transitional (ADX 21.6) and entry sits under the 8.51 swing high, so no bracket move beats the strategy plan."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: no outcome table (priced_options could_not_price: open_r/peak_r/atr_stop_mult not available for this package)",
+  "atr_ratio: now/entry 1.02 (inside 0.67-1.5)",
+  "htf: 1h transitional (ADX 21.6); regime cells null",
+  "book: only long crypto package against a mostly short crypto book; not part of the short beta stack",
+  "missing_input: context.funding (Bybit funding not reachable from session); context_v3.chart.since_entry null",
+  "packet_defect: priced_options could_not_price 1/1"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuMav7jq3LhCKCzq7mL",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [
+  {
+   "field": "priced_options",
+   "reason": "could_not_price",
+   "count": 1,
+   "denominator": 1
+  }
+ ],
+ "packet_sha": "bbaf8aea8d2b3364f87f9a2e4caf888e19bb705c17fa4ce1e93004e77ac25140",
+ "forecast": {
+  "thesis": "5m reclaimed from the 8.285 low with an 8.408 close; I expect a test of the 8.51 swing high before 8.285 is lost, but the 1h is transitional so conviction is low",
+  "direction": "with_trade",
+  "target_px": 8.51,
+  "p_target": 0.35,
+  "invalidation_px": 8.285,
+  "horizon_bars": 12,
+  "timeframe": "5m",
+  "evidence": [
+   "chart.bars last close 8.408 low 8.285",
+   "chart.swings high 8.51 (1.86 ATR)",
+   "chart.htf 1h transitional ADX 21.6",
+   "exit_plan sl 8.28618 tp 8.63573"
+  ]
+ }
+}
