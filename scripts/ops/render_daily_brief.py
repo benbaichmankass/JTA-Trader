@@ -790,6 +790,12 @@ def _section2(b: dict) -> list[str]:
          "`ask_operator`. **No cap on rows** (a queue outrunning one person argues "
          "for a mandate, not a shorter list); only prose is clipped — full text "
          "`GET /api/bot/work/checklist`._", ""]
+    moved = sorted(str(r.get("id")) for st, rs in b["checklist"]["byState"].items() if st == "landed_unproven"
+                   for r in rs if checklist_store.observation_owed_tier3(r, today))
+    if moved:
+        L += [f"_{len(moved)} landed_unproven tier-3 row(s) past due_by are NOT listed here: their decision "
+              f"already merged and each owes a closing observation (they stay in §0 overdue): "
+              f"{_clip(', '.join(moved), 300)}._", ""]
     if not rows and not ask:
         return L + ["_None._", ""]
     for it in rows:
