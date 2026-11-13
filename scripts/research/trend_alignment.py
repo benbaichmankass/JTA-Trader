@@ -167,6 +167,174 @@ def label_trade(trade: Dict[str, Any], leg_tf: Optional[str], bars_leg: Optional
             "leg_tf": leg_tf, "LEG": leg, "D1": d1, "agreement": agreement(leg, d1)}
 
 
+# ── corpus driver (step 4: RQ-20261113-63af-01) ───────────────────────────────────────────────────────────────────────
+#: The per-leg Stage-0 corpus analysis. Labels every trade in each leg's committed trades file with TREND-ALIGN-V1
+#: (LEG timeframe + 1d), then per leg compares mean net R of with_trend vs counter_trend, with a within-arm bootstrap CI
+#: of the difference, Holm-corrected across legs that clear the per-arm floor. D1 labels are reported, never gated.
+CORPUS_SEED = 20261113
+CORPUS_RESAMPLES = 10_000
+CORPUS_MIN_PER_ARM = 30
+
+
+def _leg_corpora() -> Dict[str, Dict[str, Any]]:
+    """{leg: {symbol, tf, trades_path}} for every config/strategies.yaml leg whose evidence record points at a committed
+    __trades.jsonl. config is RE-PARSED here (never a quoted count)."""
+    import yaml
+    cfg = yaml.safe_load((REPO / "config" / "strategies.yaml").read_text())
+    legs = cfg.get("strategies", cfg)
+    out: Dict[str, Dict[str, Any]] = {}
+    for leg, blk in (legs.items() if isinstance(legs, dict) else []):
+        if not isinstance(blk, dict):
+            continue
+        ev = REPO / "comms" / "strategy_evidence" / f"{leg}.json"
+        if not ev.exists():
+            continue
+        try:
+            sr = (json.loads(ev.read_text()) or {}).get("source_run")
+        except (OSError, ValueError):
+            sr = None
+        if not (sr and str(sr).endswith("__trades.jsonl") and (REPO / sr).exists()):
+            continue
+        syms = blk.get("symbols") or []
+        tf = blk.get("timeframe")
+        if not syms or tf not in TF_DELTA:
+            continue
+        out[leg] = {"symbol": str(syms[0]), "tf": str(tf), "trades_path": str(sr)}
+    return out
+
+
+def _bootstrap_diff_ci(with_r: np.ndarray, counter_r: np.ndarray, *, seed: int = CORPUS_SEED,
+                       resamples: int = CORPUS_RESAMPLES) -> Tuple[float, float, float]:
+    """(D, lo, hi): D = mean(with) - mean(counter); 95% percentile CI resampling WITHIN each arm (paired by index of the
+    resample, independent arms). Deterministic for a fixed seed."""
+    rng = np.random.default_rng(seed)
+    nw, nc = len(with_r), len(counter_r)
+    wi = rng.integers(0, nw, size=(resamples, nw))
+    ci = rng.integers(0, nc, size=(resamples, nc))
+    diffs = with_r[wi].mean(axis=1) - counter_r[ci].mean(axis=1)
+    lo, hi = np.percentile(diffs, [2.5, 97.5])
+    return float(with_r.mean() - counter_r.mean()), float(lo), float(hi)
+
+
+def _holm(pairs: List[Tuple[str, float]], alpha: float = 0.05) -> Dict[str, bool]:
+    """Holm step-down on a {leg: two-sided bootstrap p-for-D-excludes-0}. Here the CI already decides exclusion, so we
+    Holm-correct the EQUIVALENT alpha: sort ascending, reject while p <= alpha/(m-i). Returns {leg: rejected}."""
+    m = len(pairs)
+    out: Dict[str, bool] = {}
+    for i, (leg, pv) in enumerate(sorted(pairs, key=lambda kv: kv[1])):
+        thr = alpha / (m - i)
+        rejected = pv <= thr
+        out[leg] = rejected
+        if not rejected:
+            for leg2, _ in sorted(pairs, key=lambda kv: kv[1])[i:]:
+                out[leg2] = False
+            break
+    return out
+
+
+def _two_sided_p_from_bootstrap(with_r: np.ndarray, counter_r: np.ndarray, *, seed: int = CORPUS_SEED,
+                                resamples: int = CORPUS_RESAMPLES) -> float:
+    """Bootstrap two-sided p that D=0: 2*min(share of resampled D <= 0, share >= 0). Same resample scheme as the CI."""
+    rng = np.random.default_rng(seed + 1)
+    nw, nc = len(with_r), len(counter_r)
+    diffs = with_r[rng.integers(0, nw, size=(resamples, nw))].mean(axis=1) \
+        - counter_r[rng.integers(0, nc, size=(resamples, nc))].mean(axis=1)
+    p_le = float((diffs <= 0).mean())
+    p_ge = float((diffs >= 0).mean())
+    return max(0.0, min(1.0, 2.0 * min(p_le, p_ge)))
+
+
+def corpus(out: Path, cache: Path, legs: Optional[Dict[str, Dict[str, Any]]] = None,
+           trades_by_leg: Optional[Dict[str, List[Dict[str, Any]]]] = None) -> Dict[str, Any]:
+    """Label each leg's committed Stage-0 trades and grade RULE-RQ20261113-63af-01-TREND-ALIGN into verdict.json.
+
+    ``legs`` / ``trades_by_leg`` are injection points for the self-test; production reads both from disk."""
+    out.mkdir(parents=True, exist_ok=True)
+    legs = legs if legs is not None else _leg_corpora()
+    per_leg: Dict[str, Any] = {}
+    labelled_rows: List[Dict[str, Any]] = []
+    now = pd.Timestamp.now(tz="UTC")
+    for leg, meta in sorted(legs.items()):
+        sym, tf = meta["symbol"], meta["tf"]
+        if trades_by_leg is not None:
+            trades = trades_by_leg.get(leg, [])
+            bars_leg = meta.get("bars_leg")
+            bars_d1 = meta.get("bars_d1")
+            leg_err = d1_err = None
+        else:
+            trades = [json.loads(ln) for ln in (REPO / meta["trades_path"]).read_text().splitlines() if ln.strip()]
+            if not trades:
+                per_leg[leg] = {"read_state": "producer_failed", "note": "empty trades file"}
+                continue
+            first = min((parse_ts(t.get("entry_time")) for t in trades if t.get("entry_time")), default=now)
+            days = max(60, int((now - first).days) + 5)
+            bars_leg, leg_err = load_bars(sym, tf, days, cache)
+            bars_d1, d1_err = (load_bars(sym, "1d", days, cache) if tf != "1d" else (bars_leg, leg_err))
+        arms: Dict[str, List[float]] = {"with_trend": [], "counter_trend": []}
+        counts = Counter()
+        for t in trades:
+            lab = label_trade({"id": t.get("id"), "timestamp": t.get("entry_time"), "direction": t.get("direction"),
+                               "strategy_name": leg, "symbol": sym}, tf, bars_leg, bars_d1)
+            L = lab["LEG"]["label"]
+            counts[L if L else ("missing:" + str(lab["LEG"]["missing_reason"]))] += 1
+            counts["D1:" + str(lab["D1"]["label"] or ("missing:" + str(lab["D1"]["missing_reason"])))] += 1
+            r = t.get("net_r")
+            if L in arms and isinstance(r, (int, float)):
+                arms[L].append(float(r))
+            labelled_rows.append({"leg": leg, "trade_id": t.get("id"), "entry_time": t.get("entry_time"),
+                                  "net_r": r, "LEG_label": L, "D1_label": lab["D1"]["label"],
+                                  "agreement": lab["agreement"]})
+        nw, nc = len(arms["with_trend"]), len(arms["counter_trend"])
+        block: Dict[str, Any] = {"symbol": sym, "tf": tf, "n_trades": len(trades),
+                                 "n_with": nw, "n_counter": nc,
+                                 "counts": dict(counts), "leg_err": leg_err, "d1_err": d1_err,
+                                 "mean_net_r_with": round(float(np.mean(arms["with_trend"])), 5) if nw else None,
+                                 "mean_net_r_counter": round(float(np.mean(arms["counter_trend"])), 5) if nc else None}
+        if nw < CORPUS_MIN_PER_ARM or nc < CORPUS_MIN_PER_ARM:
+            block.update(leg_verdict="indeterminate",
+                         why=f"n_with={nw} / n_counter={nc}; floor {CORPUS_MIN_PER_ARM}/arm")
+        else:
+            w, c = np.array(arms["with_trend"]), np.array(arms["counter_trend"])
+            d, lo, hi = _bootstrap_diff_ci(w, c)
+            block.update(D=round(d, 5), ci95=[round(lo, 5), round(hi, 5)],
+                         p_two_sided=round(_two_sided_p_from_bootstrap(w, c), 5))
+        per_leg[leg] = block
+    # Holm across legs that clear the floor, on the bootstrap p.
+    eligible = {leg: b["p_two_sided"] for leg, b in per_leg.items()
+                if b.get("leg_verdict") != "indeterminate" and "p_two_sided" in b}
+    holm = _holm(list(eligible.items())) if eligible else {}
+    for leg, b in per_leg.items():
+        if leg in holm:
+            matters = holm[leg]
+            b["holm_rejected"] = matters
+            if matters:
+                sign = "with_gt_counter" if b["D"] > 0 else "counter_gt_with"
+                b["leg_verdict"] = "alignment_matters"
+                b["sign"] = sign
+            else:
+                b["leg_verdict"] = "no_difference"
+    cleared = [leg for leg, b in per_leg.items() if b.get("leg_verdict") in ("alignment_matters", "no_difference")]
+    matters_legs = [leg for leg, b in per_leg.items() if b.get("leg_verdict") == "alignment_matters"]
+    if not cleared:
+        verdict, why = "indeterminate", "no leg clears the 30/arm floor"
+    elif matters_legs:
+        verdict, why = "pass", f"{len(matters_legs)} leg(s) ALIGNMENT_MATTERS (Holm-corrected): {sorted(matters_legs)}"
+    else:
+        verdict, why = "fail", "every leg that clears the floor is NO_DIFFERENCE under TREND-ALIGN-V1"
+    (out / "labels.jsonl").write_text("".join(json.dumps(r) + "\n" for r in labelled_rows), encoding="utf-8")
+    result = {"verdict": verdict, "read_state": "measured", "definition": DEFINITION_ID,
+              "population": (f"{len(legs)} leg(s) with a committed Stage-0 trades file and a LEG timeframe; "
+                            f"{len(cleared)} clear the {CORPUS_MIN_PER_ARM}/arm floor. Stage-0 backtest trades only, "
+                            "each corpus's own net_r (fee+slippage+funding). D1 labels reported, not gated."),
+              "n": sum(b.get("n_trades", 0) for b in per_leg.values()),
+              "measurement": {"rule": "RULE-RQ20261113-63af-01-TREND-ALIGN", "seed": CORPUS_SEED,
+                              "resamples": CORPUS_RESAMPLES, "min_per_arm": CORPUS_MIN_PER_ARM,
+                              "legs_cleared": sorted(cleared), "by_leg": per_leg},
+              "note": why}
+    (out / "verdict.json").write_text(json.dumps(result, indent=2, default=str), encoding="utf-8")
+    return result
+
+
 # ── backfill ────────────────────────────────────────────────────────────────────────────────────────────────────────
 def fetch_trades(page: int = 1000) -> List[Dict[str, Any]]:
     """Every row of the trades journal, read-only via scripts/ops/diag_fetch.sh, paged by offset within the 1000 clamp."""
@@ -311,6 +479,43 @@ def self_test() -> int:
     d1 = resample(base, "1d")
     chk("resample 1h -> 1d anchors to UTC days", all(ts.hour == 0 for ts in d1["open_time"])
         and (d1["close_time"] - d1["open_time"]).eq(timedelta(days=1)).all())
+    # ── corpus driver ────────────────────────────────────────────────────────────────────────────────────────────
+    import tempfile
+    up = _bars(400, 0.004, tf="1d", start="2022-01-01")             # a sustained up-trend: long=with, short=counter
+    entries = list(up["close_time"].iloc[60:360:3])                 # all have >= 30 closed 1d bars before them
+    rng = np.random.default_rng(1)
+    def trade(i, ts, direction, r):
+        return {"id": i, "entry_time": ts.isoformat(), "direction": direction, "net_r": float(r)}
+    # Leg A: with_trend (long) earns +, counter_trend (short) loses -> D strongly > 0, CI excludes 0.
+    A = [trade(i, ts, "long", 1.0 + rng.normal(0, 0.3)) for i, ts in enumerate(entries[:50])] \
+        + [trade(100 + i, ts, "short", -1.0 + rng.normal(0, 0.3)) for i, ts in enumerate(entries[:50])]
+    # Leg B: both arms drawn from the SAME distribution -> D ~ 0, CI includes 0 (no difference).
+    B = [trade(i, ts, "long", rng.normal(0, 1.0)) for i, ts in enumerate(entries[:50])] \
+        + [trade(200 + i, ts, "short", rng.normal(0, 1.0)) for i, ts in enumerate(entries[:50])]
+    legs = {"legA_matters": {"symbol": "AAA", "tf": "1d", "bars_leg": up, "bars_d1": up},
+            "legB_nodiff": {"symbol": "BBB", "tf": "1d", "bars_leg": up, "bars_d1": up}}
+    with tempfile.TemporaryDirectory() as td:
+        res = corpus(Path(td), Path(td) / "cache", legs=legs, trades_by_leg={"legA_matters": A, "legB_nodiff": B})
+        bl = res["measurement"]["by_leg"]
+        chk("corpus: planted with>counter leg has both arms over the floor",
+            bl["legA_matters"]["n_with"] >= 30 and bl["legA_matters"]["n_counter"] >= 30)
+        chk("corpus: with>counter leg is ALIGNMENT_MATTERS, sign with_gt_counter",
+            bl["legA_matters"]["leg_verdict"] == "alignment_matters" and bl["legA_matters"]["sign"] == "with_gt_counter")
+        chk("corpus: no-difference leg is NO_DIFFERENCE (CI includes 0)",
+            bl["legB_nodiff"]["leg_verdict"] == "no_difference")
+        chk("corpus: unit verdict pass (>= 1 leg matters)", res["verdict"] == "pass")
+        chk("corpus: bootstrap is deterministic for the seed",
+            corpus(Path(td) / "r2", Path(td) / "cache", legs=legs,
+                   trades_by_leg={"legA_matters": A, "legB_nodiff": B})["measurement"]["by_leg"]["legA_matters"]["D"]
+            == bl["legA_matters"]["D"])
+        chk("corpus: labels.jsonl written, one row per trade", sum(1 for _ in (Path(td) / "labels.jsonl").open()) == len(A) + len(B))
+    # A leg below the floor is INDETERMINATE and does not gate the family.
+    with tempfile.TemporaryDirectory() as td:
+        small = {"legC": {"symbol": "CCC", "tf": "1d", "bars_leg": up, "bars_d1": up}}
+        res = corpus(Path(td), Path(td) / "cache", legs=small,
+                     trades_by_leg={"legC": A[:20]})
+        chk("corpus: a sub-floor leg is indeterminate and the family verdict is indeterminate",
+            res["measurement"]["by_leg"]["legC"]["leg_verdict"] == "indeterminate" and res["verdict"] == "indeterminate")
     print("trend_alignment self-test:", "OK" if ok else "FAILED")
     return 0 if ok else 1
 
@@ -322,14 +527,21 @@ def main(argv: Optional[List[str]] = None) -> int:
     b = sub.add_parser("backfill")
     b.add_argument("--out", required=True)
     b.add_argument("--cache", default="/tmp/trend-align-cache")
+    c = sub.add_parser("corpus")
+    c.add_argument("--out", required=True)
+    c.add_argument("--cache", default="/tmp/trend-align-cache")
     a = ap.parse_args(argv)
     if a.self_test:
         return self_test()
-    if a.cmd != "backfill":
-        ap.error("use --self-test or the backfill subcommand")
-    s = backfill(Path(a.out), Path(a.cache))
-    print(json.dumps({k: s[k] for k in ("population", "labels_by_tf", "missing_by_reason")}, indent=1))
-    return 0
+    if a.cmd == "backfill":
+        s = backfill(Path(a.out), Path(a.cache))
+        print(json.dumps({k: s[k] for k in ("population", "labels_by_tf", "missing_by_reason")}, indent=1))
+        return 0
+    if a.cmd == "corpus":
+        r = corpus(Path(a.out), Path(a.cache))
+        print(json.dumps({k: r[k] for k in ("verdict", "read_state", "n", "note")}, indent=1))
+        return 0
+    ap.error("use --self-test or the backfill / corpus subcommand")
 
 
 if __name__ == "__main__":
