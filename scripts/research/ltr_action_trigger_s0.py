@@ -169,13 +169,17 @@ def resolve_candles(man: dict, symbol: str, tf: str, rows: List[dict], cache: Di
     return cache[key]
 
 
+_ATR_CACHE: Dict[int, Dict[Any, Optional[float]]] = {}
+
+
 def atr_r_series(df: Any, path: Dict[str, Any], n: int = 14) -> List[Optional[float]]:
     """Wilder ATR (price units, on the whole frame) at each path bar, divided by the trade's R distance."""
-    if "_atr" not in df.attrs:
+    # cached per frame in a module dict, NOT df.attrs: pandas deep-copies attrs on every slice (_paths slices per trade)
+    m = _ATR_CACHE.get(id(df))
+    if m is None:
         bars = [{"high": float(h), "low": float(lw), "close": float(c)}
                 for h, lw, c in zip(df["high"], df["low"], df["close"])]
-        df.attrs["_atr"] = dict(zip(df.index, s0.wilder_atr(bars, n)))
-    m = df.attrs["_atr"]
+        m = _ATR_CACHE[id(df)] = dict(zip(df.index, s0.wilder_atr(bars, n)))
     return [(m.get(ts) / path["r_dist"]) if m.get(ts) else None for ts in path["idx"]]
 
 
