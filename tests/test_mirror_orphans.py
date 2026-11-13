@@ -4,10 +4,17 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from scripts.ops.check_mirror_orphans import check
+from scripts.ops import check_mirror_orphans as cmo
+from scripts.ops.check_mirror_orphans import check as _check
 from src.config.mirror_exclusions import excluded_trade_ids, load_mirror_exclusions
 
 PAIRS = {"alpaca_live": "alpaca_portfolio"}
+NO_FILTER = lambda account_id, side: False  # noqa: E731 -- a live account with no side_filter
+
+
+def check(payload, exclusions, pairs=None, side_suppressed=NO_FILTER):
+    """The generic checks below model a live account WITHOUT a side_filter."""
+    return _check(payload, exclusions, pairs, side_suppressed=side_suppressed)
 
 
 def _acct(aid, positions, error=None):
@@ -108,3 +115,29 @@ def test_recent_route_drops_excluded_trade_from_mirror_window(tmp_path, monkeypa
     assert m["excludedTradeIds"] == [victim] and m["exclusionsReadState"] == "ok"
     assert m["perStrategy"]["leg_a"]["closedAvailable"] == n0 - 1
     assert all(victim not in b["tradeIds"] for b in m["perStrategy"]["leg_a"]["blocks"])
+
+
+# ── MIRROR-ORPHAN-SIDE-FILTER: the declared superset is noted, not an orphan ─────────────────────────────────────
+
+LONG_ONLY = lambda account_id, side: account_id == "alpaca_live" and side == "short"  # noqa: E731
+
+
+def test_a_mirror_short_the_long_only_live_book_suppressed_is_side_filter_superset_not_orphan():
+    """Run 43512052836: alpaca_portfolio SLV short 3428, live twin 7189 rejected (dry_cause side_filter:long)."""
+    p = {"accounts": [_acct("alpaca_live", []), _acct("alpaca_portfolio", [_pos("SLV", "short")])]}
+    r = check(p, NONE, PAIRS, side_suppressed=LONG_ONLY)
+    assert r["ok"] and r["orphans"] == []
+    assert r["findings"] == [{"pair": "alpaca_live->alpaca_portfolio", "symbol": "SLV", "side": "short",
+                              "size": 1.0, "unrealised_pnl": 1.0, "verdict": "side_filter_superset"}]
+
+
+def test_a_mirror_LONG_with_no_live_twin_is_still_an_orphan_under_a_long_only_filter():
+    p = {"accounts": [_acct("alpaca_live", []), _acct("alpaca_portfolio", [_pos("SLV", "long")])]}
+    r = check(p, NONE, PAIRS, side_suppressed=LONG_ONLY)
+    assert not r["ok"] and r["orphans"][0]["symbol"] == "SLV"
+
+
+def test_the_default_resolver_reads_the_real_alpaca_live_side_filter():
+    """alpaca_live is `side_filter: long` in config/accounts.yaml: a short is suppressed, a long is not."""
+    assert cmo._live_side_suppressed("alpaca_live", "short") is True
+    assert cmo._live_side_suppressed("alpaca_live", "long") is False

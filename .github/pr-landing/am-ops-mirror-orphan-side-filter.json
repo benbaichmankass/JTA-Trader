@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tooling/read path only: scripts/ops/check_mirror_orphans.py (the mirror-orphan-watch checker). Run 43512052836 flagged 'ORPHAN alpaca_live->alpaca_portfolio SLV short' for the 15:22Z slv_trend_1h package, but the live twin (trade 7189) was journalled rejected with dry_cause side_filter:long: alpaca_live is long-only (operator 2026-08-23) and alpaca_portfolio is the superset that also shorts (operator 2026-11-01). A mirror position whose side the LIVE account's own side_filter suppresses is now verdict side_filter_superset (noted, exit 0), via the coordinator's own resolver account_side_filter.account_suppresses_direction. A mirror long with no live twin is still an ORPHAN. 3 new tests (the key one fails with the branch disabled); live re-run against /api/diag/exchange_positions exits 0. No runtime, order-path or config change."
+}
