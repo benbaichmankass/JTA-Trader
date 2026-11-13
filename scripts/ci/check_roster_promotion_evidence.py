@@ -218,8 +218,11 @@ FIDELITY_OPERATOR_WAIVER: Dict[Tuple[str, str], str] = {
     # ("breakout_2", "trend_donchian_sol_4h") removed 2026-11-12: breakout_2 is ON ICE (operator) and its roster is
     # empty (#25306), so the slot no longer exists and the exactness test refuses a waiver that outlives it.
     # Re-entry: if breakout_2 is re-rostered with this leg, restore this exact line (same operator quote).
-    ("tradeify_1", "trend_donchian_sol_4h"): "operator 2026-11-05 ~21:05Z 'Both now, waive both' (prop baseline)",
-    ("velotrade_1", "trend_donchian_sol_4h"): "operator 2026-11-05 ~21:05Z 'Both now, waive both' (prop baseline)",
+    # ("tradeify_1" / "velotrade_1", "trend_donchian_sol_4h") removed 2026-11-13 per the rule above: the record was
+    # regenerated `fidelity: faithful` (omitted_levers []) by RQ-20261113-f251-01 run 43447401545 (forming-bar replay
+    # from Binance 1m, net_r_oos 41.9726 over n 187, RULE-D1 pass; row CRYPTO-FORMING-RDM-FORWARD). The waiver is
+    # EMPTY. Re-entry: if that record ever reads approximate again, restore these lines (same operator quote) or land
+    # a faithful record -- never extend a waiver without the operator.
 }
 
 
@@ -826,11 +829,23 @@ def self_test() -> int:
         #     the named prop slot passes C5 with an "OPERATOR WAIVER" message; the same leg on an
         #     unnamed account still FAILS C5.
         #     (Probe slot moved from breakout_2 to tradeify_1 on 2026-11-12: breakout_2 is on ice and its waiver line is gone.)
-        c5 = dict((c, (o, m)) for c, o, m in clause_verdicts(approx, "tradeify_1", "trend_donchian_sol_4h"))["C5"]
-        check("P9 waived slot passes C5", c5[0], True)
-        check("P9 ...and says OPERATOR WAIVER", "OPERATOR WAIVER" in c5[1], True)
-        check("P9b waived leg on an unnamed account fails C5",
-              dict((c, o) for c, o, _ in clause_verdicts(approx, "bybit_2", "trend_donchian_sol_4h"))["C5"],
+        #     The real waiver is empty since 2026-11-13 (sol_4h regenerated faithful), so the slot is PLANTED for
+        #     these checks and removed again, exactly as P8 plants the baseline (fail closed either way).
+        _wslot = ("tradeify_1", "trend_donchian_sol_4h")
+        _whad = _wslot in FIDELITY_OPERATOR_WAIVER
+        FIDELITY_OPERATOR_WAIVER.setdefault(_wslot, "RQ-SELFTEST-PLANTED operator waiver")
+        try:
+            c5 = dict((c, (o, m)) for c, o, m in clause_verdicts(approx, "tradeify_1", "trend_donchian_sol_4h"))["C5"]
+            check("P9 waived slot passes C5", c5[0], True)
+            check("P9 ...and says OPERATOR WAIVER", "OPERATOR WAIVER" in c5[1], True)
+            check("P9b waived leg on an unnamed account fails C5",
+                  dict((c, o) for c, o, _ in clause_verdicts(approx, "bybit_2", "trend_donchian_sol_4h"))["C5"],
+                  False)
+        finally:
+            if not _whad:
+                FIDELITY_OPERATOR_WAIVER.pop(_wslot, None)
+        check("P9c with the plant removed, the same slot FAILS C5 (the real waiver is empty)",
+              dict((c, o) for c, o, _ in clause_verdicts(approx, "tradeify_1", "trend_donchian_sol_4h"))["C5"],
               False)
 
         # P7: the pairs sleeve — one `account_id:` line.

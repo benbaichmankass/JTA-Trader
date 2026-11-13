@@ -6,44 +6,44 @@
   "config_fingerprint": "sha256:745a2f7a20a3f221eaacf38189954f1e",
   "basis": "harness_timefolds",
   "coverage_state": "measured",
-  "fidelity": "approximate",
+  "fidelity": "faithful",
   "omitted_levers": [],
-  "net_r_oos": 36.8572,
-  "expectancy_r_oos": 0.3177,
-  "n_trades_oos": 116,
+  "net_r_oos": 41.9726,
+  "expectancy_r_oos": 0.2245,
+  "n_trades_oos": 187,
   "folds": 4,
   "fold_detail": [
     {
       "fold": 1,
-      "trades": 29,
-      "net_r": 12.302,
-      "expectancy_r": 0.4242,
-      "start": "2023-11-07 16:00:00+00:00",
-      "end": "2024-07-29 00:00:00+00:00"
+      "trades": 46,
+      "net_r": -7.4741,
+      "expectancy_r": -0.1625,
+      "start": "2023-12-18 00:00:00+00:00",
+      "end": "2024-07-04 00:00:00+00:00"
     },
     {
       "fold": 2,
-      "trades": 29,
-      "net_r": 11.6626,
-      "expectancy_r": 0.4022,
-      "start": "2024-07-31 20:00:00+00:00",
-      "end": "2025-04-02 20:00:00+00:00"
+      "trades": 46,
+      "net_r": 37.7719,
+      "expectancy_r": 0.8211,
+      "start": "2024-07-14 20:00:00+00:00",
+      "end": "2025-04-12 12:00:00+00:00"
     },
     {
       "fold": 3,
-      "trades": 29,
-      "net_r": 16.521,
-      "expectancy_r": 0.5697,
-      "start": "2025-04-06 16:00:00+00:00",
-      "end": "2025-12-18 16:00:00+00:00"
+      "trades": 46,
+      "net_r": 11.1666,
+      "expectancy_r": 0.2428,
+      "start": "2025-04-22 12:00:00+00:00",
+      "end": "2026-01-25 16:00:00+00:00"
     },
     {
       "fold": 4,
-      "trades": 29,
-      "net_r": -3.6284,
-      "expectancy_r": -0.1251,
-      "start": "2025-12-29 00:00:00+00:00",
-      "end": "2026-10-24 12:00:00+00:00"
+      "trades": 49,
+      "net_r": 0.5082,
+      "expectancy_r": 0.0104,
+      "start": "2026-01-29 12:00:00+00:00",
+      "end": "2026-11-08 20:00:00+00:00"
     }
   ],
   "folds_positive": 3,
@@ -51,15 +51,15 @@
   "fee_bps_roundtrip": 11.0,
   "path_stats": {
     "series_location": "source_run (the per-trade rows, in order, with net_r)",
-    "n": 116,
-    "max_drawdown_r": 13.0561,
-    "max_drawdown_at_trade": 116,
-    "final_equity_r": 36.8572,
-    "max_equity_r": 49.9133,
-    "worst_trade_r": -1.1852,
-    "best_trade_r": 6.3356,
-    "worst_day_r": -1.1852,
-    "worst_day_date": "2026-05-04",
+    "n": 187,
+    "max_drawdown_r": 24.6674,
+    "max_drawdown_at_trade": 174,
+    "final_equity_r": 41.9726,
+    "max_equity_r": 51.4537,
+    "worst_trade_r": -1.2297,
+    "best_trade_r": 6.5131,
+    "worst_day_r": -1.2297,
+    "worst_day_date": "2026-08-16",
     "trades_without_exit_time": 0,
     "ordering": "by entry_time ascending; pooled ACROSS folds, so this is the full-window path, not a per-fold one",
     "not_a_verdict": "Descriptive only. No bar is applied here -- the prop bar is B6's to register, and it must be registered before these numbers are read."
@@ -69,9 +69,9 @@
     "slippage": 3.0,
     "funding": 1.0,
     "unit": "bps_roundtrip (funding: bps per funding window)",
-    "source": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_sol_4h__bt.json"
+    "source": "comms/research/RQ-20261113-f251-01/43447401545/evidence_runs/trend_donchian_sol_4h__bt.json"
   },
-  "net_r_oos_fee_only": 40.6009,
+  "net_r_oos_fee_only": 47.4119,
   "decision_rule": {
     "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
     "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
@@ -79,30 +79,42 @@
     "verdict": "pass"
   },
   "param_selection_provenance": "not_established",
-  "generated_at": "2026-10-28T18:49:16.192931+00:00",
+  "generated_at": "2026-11-13T15:00:29.257545+00:00",
   "generated_by": "scripts/ops/build_strategy_evidence.py",
-  "source_run": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_sol_4h__trades.jsonl",
+  "source_run": "comms/research/RQ-20261113-f251-01/43447401545/evidence_runs/trend_donchian_sol_4h__trades.jsonl",
   "error": null,
   "harness": "trend",
-  "venue_bracket_arm": null,
-  "rebaseline_history": [
-    {
-      "superseded_at": "2026-10-28",
-      "reason": "COST-STACK-RECOST-SWEEP: Bybit-linear fee 7.5 -> 11.0 bps round-trip",
-      "net_r_oos": 45.2872,
-      "expectancy_r_oos": 0.3904,
-      "n_trades_oos": 116,
-      "fee_bps_roundtrip": 7.5,
-      "window_days": 1095,
-      "window": [
-        "2023-10-21 04:00:00+00:00",
-        "2026-10-08 12:00:00+00:00"
-      ],
-      "generated_at": "2026-10-12T08:52:58.529501+00:00",
-      "source_run": "comms/strategy_evidence/runs/2026-10-12-1095d/trend_donchian_sol_4h__trades.jsonl",
-      "decision_rule_verdict": "pass",
-      "folds_positive": 3
+  "reproduce": {
+    "window_days": 1095,
+    "window_days_source": "--data-csv span",
+    "folds": 4,
+    "data_start": "2023-11-14 00:00:00+00:00",
+    "data_end": "2026-11-12 20:00:00+00:00",
+    "git_sha": "8cffce56ab294bcf7f06347f68d60181ce5a70b1",
+    "argv": [
+      "python3",
+      "scripts/ops/build_strategy_evidence.py",
+      "--strategy",
+      "trend_donchian_sol_4h",
+      "--days",
+      "1095",
+      "--folds",
+      "4",
+      "--window-start",
+      "2023-11-14 00:00:00+00:00",
+      "--window-end",
+      "2026-11-12 20:00:00+00:00",
+      "--data-csv",
+      "/tmp/forming_regen_e5eo1z5s/trend_donchian_sol_4h__data.csv",
+      "--minutes-1m-csv",
+      "/tmp/forming_regen_e5eo1z5s/SOLUSDT__2023-11-12__2026-11-14__1m.csv"
+    ],
+    "inputs": {
+      "data_csv": "/tmp/forming_regen_e5eo1z5s/trend_donchian_sol_4h__data.csv",
+      "minutes_1m_csv": "/tmp/forming_regen_e5eo1z5s/SOLUSDT__2023-11-12__2026-11-14__1m.csv",
+      "decision_session": null,
+      "decision_bar_modelled": "forming"
     }
-  ],
-  "fidelity_basis": "2026-11-03 STRUCTURE-EXITS-ENABLE (PR #22626): the leg now declares structure_exit 'pivot=5' (live structure SL+TP replacing the chandelier). This record was measured WITHOUT it, so structure_exit is listed in omitted_levers and fidelity is downgraded faithful -> approximate. No measured field was changed; config_fingerprint refreshed to the current config so the record is tied to it as an APPROXIMATE measurement. Re-measure: PI-20261103-MB3OAWAX-0002. | 2026-11-11 STRUCTURE-EXITS-DEFAULT OFF (PROP-VELOTRADE-TP-MISMATCH, operator decision in chat 2026-11-11: \"For Velo Trade, yeah, let's go with one, and you can turn that off like the other strategies\"): structure_exit removed from the leg. The leg again trades the exit this record measured, so structure_exit is no longer an omitted lever; no measured field changed; config_fingerprint refreshed to the current config."
+  },
+  "venue_bracket_arm": null
 }
