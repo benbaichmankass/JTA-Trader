@@ -4,7 +4,7 @@
 id: RQ-20261113-63af-01
 title: 'Trend alignment (TREND-ALIGN-V1): per leg, do Stage-0 trades taken WITH the prevailing trend earn more net R than trades taken AGAINST
   it, net of the full cost stack?'
-status: blocked
+status: queued
 cadence: once
 roadmap:
 - L-PROGRAMMES
@@ -71,17 +71,27 @@ routing:
   est_minutes: 30
   why_runner: Committed corpora + public Binance Vision / Yahoo candles; CPU only.
   basis: 'INFERRED from the step-2 backfill (2,629 trades, candles for ~40 symbol/timeframe pairs, a few minutes once candles are cached).'
-blocked_on:
-- kind: work_item
+cleared_blocker:
+  kind: work_item
   ref: TREND-ALIGNMENT-FEATURE
-  what: 'the per-leg corpus driver: a `corpus` subcommand of scripts/research/trend_alignment.py (built on #25675''s label_trade) that labels
-    every trade in each leg''s committed Stage-0 trades file and writes verdict.json per this rule (bootstrap CI, Holm across legs, per-arm floor)'
-  owner: TREND-ALIGNMENT-FEATURE (lane session_01AFoLuJZ69XcyrjnD8na8ao, or its successor)
-  clears_when: 'pr_merged: the PR that adds the corpus subcommand with a --self-test planting a leg where with > counter and one with no
-    difference; then git mv this file to research/queue/ with run.workflow research-script-run.yml (rule unchanged)'
+  what: 'the per-leg corpus driver: `trend_alignment.py corpus` (built on label_trade), labels every leg''s committed Stage-0
+    __trades.jsonl, bootstrap CI of D=mean(with)-mean(counter) within arm (seed 20261113, 10,000 resamples), Holm across
+    legs clearing 30/arm, writes verdict.json per this rule.'
+  cleared_by: 'this PR adds the corpus subcommand with a --self-test planting a with>counter leg and a no-difference leg, and git-moves this
+    unit from research/queue/blocked/ to research/queue/ with run.workflow research-script-run.yml (rule unchanged).'
 run:
-  workflow: null
-  note: Deliberately null until blocked_on clears.
+  command:
+  - python3
+  - scripts/research/trend_alignment.py
+  - corpus
+  - --out
+  - '{out_dir}'
+  - --cache
+  - '{out_dir}/cache'
+  timeout_minutes: 120
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261113-63af-01
 lands:
   store: research/results/
   assert_field: read_state
