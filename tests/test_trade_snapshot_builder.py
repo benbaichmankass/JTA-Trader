@@ -398,3 +398,14 @@ def test_anchor_is_the_entry_fill_and_open_time(db):
     fetch.accepts_anchor = True
     b.run_batch(db, fetch, NOW, reviews=EMPTY, receipts=EMPTY)
     assert seen[0] == (123.5, int(datetime(2026, 11, 12, 1, 0, tzinfo=timezone.utc).timestamp() * 1000))
+
+
+def test_epoch_ms_closed_at_is_normalised_not_a_permanent_retry(db):
+    """MEASURED 2026-11-13: trade:6131 stores closed_at as epoch-ms text ('1790835474843') and retried forever with
+    'unparseable_times'. The builder normalises it with src.utils.closed_at and builds the snapshot."""
+    ms = str(int(datetime(2026, 11, 12, 7, 0, tzinfo=timezone.utc).timestamp() * 1000))
+    tid = _trade(db, closed=ms)
+    out = b.run_batch(db, _fetch_ok(), NOW, reviews=EMPTY, receipts=EMPTY)
+    assert out["retrying"] == 0 and out["built"] + out["built_partial"] == 1
+    got = _row(db, tid)
+    assert got["state"] == "built" and got["payload"]["trade"]["closed_at"].startswith("2026-11-12T07:00")

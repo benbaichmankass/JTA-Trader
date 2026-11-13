@@ -32,6 +32,7 @@ import ml_decision_entry as E
 import ml_entry_families as F
 
 ARMS = {"A": [], "A2": [], "B": ["F1"], "C": ["F2"], "D": ["F3"], "E": ["F4"], "F": ["F5"], "G": ["F1", "F2", "F3", "F4", "F5"]}
+ARMS["T"] = ["F7"]   # TREND-ALIGNMENT-FEATURE step 5: trend-align directional family, evaluated by the ablation_trend run mode only
 FAM_COLS = {k: [c for c in v if c != "f3_present"] if k == "F3" else v for k, v in F.FAMILIES.items()}
 ALL_FAM_COLS = [c for v in F.FAMILIES.values() for c in v]
 EXTRA_DEV_FOLDS = ["2025-10-01", "2026-01-01", "2026-04-01", "2026-07-01"]   # used ONLY by the forward unit (dev through W1 start)

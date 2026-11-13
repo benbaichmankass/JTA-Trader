@@ -1,0 +1,112 @@
+id: RQ-20261113-1449-01
+title: 'tqqq_trend_long_1d on the FORMING daily bar: D20 vs D30 and Stage-0 net-of-cost, replayed from TQQQ 1m (RULE-EQ-FORMING-TQQQ-20261113),
+  so the leg''s evidence record stops grading approximate for the omitted decision_bar lever'
+status: queued
+cadence: monthly
+kind: experiment
+theme: live_strategy
+priority: 1
+roadmap:
+- L-LADDER
+question: 'Live tqqq_trend_long_1d (real money: alpaca_live + alpaca_portfolio) decides on the FORMING daily bar -- no decision_bar key, so the runtime
+  default (intent_multiplexer: `vcfg.get("decision_bar") or "forming"`). Every Stage-0 number for it, including the committed record RQ-20261113-4654-01
+  and comms/strategy_evidence/tqqq_trend_long_1d.json, measures CLOSED-bar decisions, and since #25228 the record grades `approximate` for exactly that
+  omitted lever. Replaying the leg''s own live order_package on the still-forming bar from TQQQ 1m (scripts/research/forming_bar_entries.py, the ONE forming
+  implementation, in a new US-session mode): on the forming bar, (a) does D20 keep positive expectancy net of the full cost stack, and (b) does it still
+  beat the shipped-config comparison D30?'
+why_this_matters: 'The leg trades real money on the forming bar but is evidenced on the closed bar -- a known fidelity gap (fidelity: approximate, omitted_levers
+  [decision_bar]) that no closed-bar run can close. The operator chose this explicitly (2026-11-13 08:02Z build_replay: "Keep forming; build an equity forming-bar
+  replay first (days)"). A PASS regenerates the record `faithful` and confirms the forming-bar edge; a Stage-0 FAIL routes the closed-bar fallback #25691
+  to the operator; a (b) FAIL routes a revert-to-30 proposal. None is automatic.'
+power:
+  expected_n: 85
+  min_detectable_effect: 0.32
+  effect_units: sd
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, not measured: tqqq_trend_long_1d trades about 8/year (be01-02 held-back 34 over ~4.1 y). Alpaca 1m begins 2016, so the forming replay
+    covers ~10.5 y -> ~85 D30 baseline trades; the harness reports the true n and the rule reads INDETERMINATE below 25. D20 vs D30 is paired on the same
+    bars, so n=85 detects ~0.32 sd at alpha 0.05 power 0.8 (floor 76.6). Said before any run.'
+  sd: null
+  feasibility:
+    source: none
+    accrual_basis: 'Fixed in-hand window: TQQQ 1m from Alpaca, 2016..the --end pinned in the run. Nothing accrues; the whole window is available at run time.'
+evidence_class:
+  holdout: in_sample
+  claim: edge
+run:
+  command:
+  - python3
+  - scripts/research/eq_forming_bar_replay.py
+  - --out
+  - '{out_dir}'
+  - --end
+  - '2026-11-13'
+  - --start
+  - '2015-01-01'
+  - --feed
+  - iex
+  timeout_minutes: 180
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261113-1449-01
+decision_rule:
+  id: RULE-EQ-FORMING-TQQQ-20261113
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  statistic: 'scripts/research/eq_forming_bar_replay.py: tqqq_trend_long_1d replayed on the FORMING daily bar from Alpaca TQQQ 1m (iex, the live feed), cash-session
+    ticks every 2 min. (a) net_r_oos(D20, forming) from build_strategy_evidence (8 folds). (b) exit_lever_ablation --grade sweep, baseline D30 (donchian=30)
+    vs D20 (the shipped donchian=20): net_r(D20)-net_r(D30), maxDD(D20) vs maxDD(D30), D20 fold wins over D30, 4 folds, n floor 25. Full cost stack (fee 0
+    + 5 bps slippage, no funding).'
+  rule: 'Registered 2026-11-13 ~09:35Z on row EQ-FORMING-BAR-REPLAY, before any forming run; copied unchanged. (a) STAGE 0: net_r_oos(D20, forming) > 0 net
+    of the full cost stack. (b) D20 vs D30 on forming: PASS iff net_r(D20)-net_r(D30) >= 0 AND maxDD(D20) <= maxDD(D30) AND D20 wins >= 3 of 4 folds. Unit
+    verdict: INDETERMINATE if n(D30) < 25; else FAIL if (a) fails; else FAIL if (b) fails; else PASS. (c) the regenerated record is faithful -- reported beside
+    the verdict, it grades the record not the edge. The window, arms, feed, cost stack and bars are fixed now and not changed after any result.'
+  what_it_does_not_do: 'Changes no config, roster or order. ON (a) FAIL: the closed-bar fallback #25691 goes to the operator (Tier 3, not automatic). ON (b)
+    FAIL: a revert-to-30 proposal to the operator (Tier 3, not automatic). The record regeneration is a Tier-1 write a session lands after reading the run''s
+    evidence/ output; this unit lands only the E5 verdict + the run outputs.'
+  baseline: 'D30 = donchian=30 (the pre-2026-11-13 shipped value; #25671 moved the live leg to 20) on the SAME forming-bar replay, same TQQQ 1m window, same
+    harness cost stack. The comparison is paired per trade.'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.4
+  basis: 'stand-in: a real-money leg whose evidence is one fidelity grade from faithful; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+ml_consumer:
+  not_applicable: 'Not an ML unit: a harness forming-bar replay of a rule-based Donchian leg. No model is trained, scored or served.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: tqqq_trend_long_1d
+  subject_kind: strategy_leg
+  from_result: comms/strategy_evidence/tqqq_trend_long_1d.json
+  verdict_read: approximate
+  diagnosis: 'The committed evidence record grades fidelity=approximate with omitted_levers=[decision_bar]: the leg decides live on the FORMING daily bar but
+    every number measures the CLOSED bar, and scripts/backtest_trend.py --decision-bar forming could read only Binance 1m archives, so no equity leg could
+    be replayed on the forming bar at all. The gap is structural, not a tuning miss; it is closed by building the equity 1m source and the US-session forming
+    mode, then re-measuring.'
+  hypothesis: 'On the forming bar, replayed from TQQQ 1m, D20 keeps positive net-of-cost expectancy and still clears D30, and the regenerated record reads
+    faithful -- closing the approximate exception the live leg carries.'
+  attempt: 1
+  due_by: '2026-11-20'
+  map_entries:
+  - research/levers/tqqq_trend_long_1d.yaml
+related:
+- RQ-20261113-4654-01
+- MD-PROMOTE-S1-S2
+- comms/strategy_evidence/tqqq_trend_long_1d.json
+- PI-20261113-6YRT1RMK-0001
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): the decision rule is registered before the run, net of the full
+  cost stack, graded ONCE on the fixed in-hand window; the forming-bar replay is the live-fidelity check PI-20260929-VOLSKIP-SIGNAL-0002 established for crypto
+  legs, extended to a US-session equity leg.'
+follow_up: 'On a measured verdict, a session copies <out_dir>/evidence/tqqq_trend_long_1d.json to comms/strategy_evidence/ (Tier 1) after reading it, which
+  lands the faithful record and closes the main-red approximate exception; that is clause (c). A Tier-3 consequence (Stage-0 FAIL -> #25691; (b) FAIL -> revert
+  to 30) goes to the manager via AM-ML, never automatically.'
