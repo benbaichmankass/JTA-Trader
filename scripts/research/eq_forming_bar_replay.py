@@ -193,7 +193,8 @@ def _self_test() -> int:
             raise SystemExit(1)
 
     # grade(): the rule's branches, with no subprocess.
-    arm = lambda n, r, dd, f: {"n": n, "net_r": r, "max_drawdown_r": dd, "folds": f}
+    def arm(n, r, dd, f):
+        return {"n": n, "net_r": r, "max_drawdown_r": dd, "folds": f}
     s_ok = {"arms": {"D30": arm(30, 5.0, 3.0, [1, 1, 1, 2]), "D20": arm(32, 6.0, 2.0, [2, 2, 2, 0])},
             "grade": {"verdict": "pass", "candidates": {"D20": {"passes": True, "fold_wins": 3}}}}
     rec = {"net_r_oos": 6.0, "fidelity": "faithful", "omitted_levers": []}
@@ -218,7 +219,9 @@ def _self_test() -> int:
             c = p * (1 + rng.normal(0.00004, 0.002))
             h, lo = max(p, c) * 1.0004, min(p, c) * 0.9996
             minutes.append({"t": (t0 + pd.Timedelta(minutes=k)).isoformat(), "o": p, "h": h, "l": lo, "c": c, "v": 1})
-            hs.append(h); ls.append(lo); p = c
+            hs.append(h)
+            ls.append(lo)
+            p = c
         daily.append({"t": pd.Timestamp(str(d.date()), tz=src.US_TZ).tz_convert("UTC").isoformat(),
                       "o": o, "h": max(hs), "l": min(ls), "c": p, "v": 78})
     with tempfile.TemporaryDirectory() as td:

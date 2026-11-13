@@ -159,6 +159,7 @@ class _FakeClient:
 
     def bars(self, symbols, timeframe, start, end, feed="iex", adjustment="split"):
         self.calls += 1
+        self.requests = getattr(self, "requests", []) + [(timeframe, start, end, feed, adjustment)]   # the self-test asserts these
         return {symbols[0]: self._d if timeframe == "1Day" else self._m}
 
 
@@ -185,7 +186,11 @@ def _self_test() -> int:
         et_mid = pd.Timestamp(day, tz=US_TZ).tz_convert("UTC")
         daily.append({"t": et_mid.isoformat(), "o": 10, "h": max(hs), "l": 9.9, "c": 10.05, "v": 1950})
     with tempfile.TemporaryDirectory() as td:
-        meta = build(_FakeClient(daily, minutes), "TEST", "2024-03-01", "2024-03-12", "iex", Path(td))
+        fc = _FakeClient(daily, minutes)
+        meta = build(fc, "TEST", "2024-03-01", "2024-03-12", "iex", Path(td))
+        check("the source is asked for 1Day and 1Min over the requested window, feed and split adjustment",
+              fc.requests == [("1Day", "2024-03-01", "2024-03-12", "iex", "split"),
+                              ("1Min", "2024-03-01", "2024-03-12", "iex", "split")])
         check("alignment picks rth when the daily bar excludes extended-hours prints", meta["alignment"]["chosen"] == "rth")
         check("rth match share is 1.0", meta["alignment"]["rth"]["match_share"] == 1.0)
         check("all-minutes match share is 0.0 (the pre-market 99.0 high)", meta["alignment"]["all"]["match_share"] == 0.0)
