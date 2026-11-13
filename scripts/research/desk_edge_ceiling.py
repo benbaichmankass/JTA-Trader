@@ -86,6 +86,21 @@ ERA_FOLDS_POSITIVE_NEEDED = 5                        # of the 8 test folds (the 
 SHORT_GEOMETRIES = (("H1a", 0.5, 1.0, 1), ("H1b", 1.0, 1.0, 1), ("H4", 0.75, 1.5, 4))
 ERA_GEOMETRIES = GEOMETRIES + SHORT_GEOMETRIES
 
+# ----------------------------------------------------------------------------- the UNIVERSE lever (RQ-20261113-d18c-01)
+# Operator 2026-11-13 22:40Z popup on DESK-18D-JUDGE-2, verbatim "Build universe next". The lists, the rule and the
+# family are registered in research/queue/blocked/RQ-20261113-d18c-01.yaml BEFORE any data for the added symbols is
+# pulled; `--universe` swaps ONLY the traded symbol list (and with it the cross-sectional population and the symbol
+# one-hot). Cutoffs, features, learners, folds, embargo, policy, label and controls are unchanged. BTC stays a
+# FEATURE input (cross_asset_btc) in every arm, including R, where it is not traded. The family is 2 arms x 3
+# learners on P+ = 6, which equals N_CONFIGS, so each arm's corrected CI is already at the registered alpha 0.05/6.
+UNIVERSE_ADDED = ("BNBUSDT", "DOGEUSDT", "LINKUSDT", "LTCUSDT", "DOTUSDT", "TRXUSDT", "BCHUSDT", "NEARUSDT", "UNIUSDT",
+                  "ATOMUSDT", "ETCUSDT", "FILUSDT", "APTUSDT", "ARBUSDT", "OPUSDT", "SUIUSDT", "INJUSDT", "AAVEUSDT")
+UNIVERSES = {"SIX": tuple(d.REGISTERED_SYMBOLS), "W": tuple(d.REGISTERED_SYMBOLS) + UNIVERSE_ADDED, "R": UNIVERSE_ADDED}
+UNIVERSE_BAR = 0.25                                  # R: the registered S3 bar (with the corrected CI lower > 0)
+UNIVERSE_FOLDS_NEEDED = 2                            # of the 3 DEV test folds
+BTC = "BTCUSDT"
+_ACTIVE: Dict[str, Any] = {"universe": None, "symbols": tuple(d.REGISTERED_SYMBOLS)}
+
 
 def era_fold(cutoff: int) -> int:
     for k in range(len(ERA_BOUNDS) - 1):
@@ -228,7 +243,8 @@ EXTRA_GROUPS = {
 }
 
 
-def pplus_action_features(ex: Dict[str, Dict[str, float]], sym: str, side: str, cutoff: int) -> Dict[str, float]:
+def pplus_action_features(ex: Dict[str, Dict[str, float]], sym: str, side: str, cutoff: int,
+                          btc: Optional[Dict[str, float]] = None) -> Dict[str, float]:
     sg = 1.0 if side == "long" else -1.0
     e = ex[sym]
     o: Dict[str, float] = {}
@@ -237,7 +253,8 @@ def pplus_action_features(ex: Dict[str, Dict[str, float]], sym: str, side: str, 
     for n in (24, 168, 720):
         o[f"rpos{n}_s"] = sg * (e.get(f"rpos{n}", float("nan")) - 0.5)
     for k in ("ret4", "ret24", "ret168"):
-        o[f"btc_{k}"] = sg * ex["BTCUSDT"].get(k, float("nan")) if "BTCUSDT" in ex else float("nan")
+        b = ex.get(BTC, btc)
+        o[f"btc_{k}"] = sg * b.get(k, float("nan")) if b is not None else float("nan")
     for k in ("ret24", "ret168"):
         xs = np.array([sg * ex[s].get(k, float("nan")) for s in ex])
         own = sg * e.get(k, float("nan"))
@@ -245,7 +262,7 @@ def pplus_action_features(ex: Dict[str, Dict[str, float]], sym: str, side: str, 
     o["mkt_ret24"] = float(np.nanmean([sg * ex[s].get("ret24", float("nan")) for s in ex]))
     dt = datetime.fromtimestamp(cutoff, tz=timezone.utc)
     o["hour_sin"], o["hour_cos"], o["dow"] = math.sin(2 * math.pi * dt.hour / 24), math.cos(2 * math.pi * dt.hour / 24), float(dt.weekday())
-    for s in d.REGISTERED_SYMBOLS:
+    for s in _ACTIVE["symbols"]:
         o[f"sym_{s}"] = 1.0 if s == sym else 0.0
     for k in ("vol24_z", "taker_buy1", "taker_buy4", "taker_buy24", "funding_last", "funding_3d"):
         o.setdefault(k, float("nan"))
@@ -312,6 +329,30 @@ def load_funding(src: Optional[Path], symbols: Sequence[str]) -> Dict[str, Tuple
     return out
 
 
+# ----------------------------------------------------------------------------- universe selection
+def set_universe(name: Optional[str]) -> Tuple[str, ...]:
+    """Activate a registered universe (None = the config pull list, i.e. today's behaviour). Updates the symbol
+    one-hot and EXTRA_GROUPS['symbol'] in place, so importers see the active list."""
+    if name is not None and name not in UNIVERSES:
+        raise SystemExit(f"unknown --universe {name!r}; registered: {sorted(UNIVERSES)}")
+    syms = UNIVERSES[name] if name else tuple(d.REGISTERED_SYMBOLS)
+    _ACTIVE.update(universe=name, symbols=tuple(syms))
+    EXTRA_GROUPS["symbol"] = tuple(f"sym_{s}" for s in syms)
+    return tuple(syms)
+
+
+def resolve_universe(name: Optional[str]) -> List[dict]:
+    """[{symbol, classes}] for the build. None / SIX keep the config entries (and their classes), so SIX packets are
+    byte-identical to today's; an added symbol carries the builder's own default class."""
+    uni, _ = d.parse_universe()
+    if name is None:
+        return uni
+    by = {u["symbol"]: u for u in uni}
+    if name == "SIX" and sorted(by) != sorted(UNIVERSES["SIX"]):
+        raise SystemExit(f"--universe SIX: the config pull list {sorted(by)} is not the registered six")
+    return [by.get(s, {"symbol": s, "classes": ["paper"]}) for s in UNIVERSES[name]]
+
+
 # ----------------------------------------------------------------------------- build (packets -> actions)
 _G: Dict[str, Any] = {}
 
@@ -325,7 +366,11 @@ def _one_cutoff(args: Tuple[int, int, int]) -> Optional[dict]:
         return {"cutoff": ce, "error": str(e)[:200]}
     pf = packet_features(m, key)
     ex = {s: _G["extra"].sym(s, mkt[s].last_closed(ce)) for s in mkt}
-    return {"cutoff": ce, "fold": _G.get("fold_fn", d.fold_of)(ce), "packet_id": m["meta"]["packet_id"], "pf": pf, "ex": ex}
+    out = {"cutoff": ce, "fold": _G.get("fold_fn", d.fold_of)(ce), "packet_id": m["meta"]["packet_id"], "pf": pf, "ex": ex}
+    btc_s = _G.get("btc")
+    if btc_s is not None:
+        out["btc"] = _G["extra"].sym(BTC, btc_s.last_closed(ce))
+    return out
 
 
 def label_actions(mkt: Dict[str, d.Series], cutoffs: List[dict], rng_seed: int = SEED, fold_window=None,
@@ -363,16 +408,25 @@ def label_actions(mkt: Dict[str, d.Series], cutoffs: List[dict], rng_seed: int =
 def cmd_build(a: argparse.Namespace) -> int:
     import multiprocessing as mp
     import pickle
-    uni, _ = d.parse_universe()
+    uname = getattr(a, "universe", None)
+    set_universe(uname)
+    uni = resolve_universe(uname)
     syms = [u["symbol"] for u in uni]
-    mkt, missing = d.load_market(Path(a.candles), syms)
+    feat_syms = syms + ([BTC] if BTC not in syms else [])     # BTC is a feature input in every arm
+    if getattr(a, "fetch_candles", False):
+        _, absent = d.load_market(Path(a.candles), feat_syms)
+        if absent:
+            d.fetch_market(Path(a.candles), absent)
+    full, missing = d.load_market(Path(a.candles), feat_syms)
     if missing:
         raise SystemExit(f"candles missing {missing}")
+    mkt = {s: full[s] for s in syms}
     fdir = Path(a.funding) if a.funding else None
     if fdir is not None and a.fetch_funding:
-        fetch_funding(fdir, syms, datetime(2025, 4, 1, tzinfo=timezone.utc), d.WINDOW_END)
+        fetch_funding(fdir, feat_syms, datetime(2025, 4, 1, tzinfo=timezone.utc), d.WINDOW_END)
     _G.update(mkt=mkt, classes={u["symbol"]: u["classes"] for u in uni},
-              extra=Extra(mkt, load_raw_volume(Path(a.candles), syms), load_funding(fdir, syms)))
+              btc=full[BTC] if BTC not in mkt else None,
+              extra=Extra(full, load_raw_volume(Path(a.candles), feat_syms), load_funding(fdir, feat_syms)))
     j1 = judged1_cutoffs(Path(a.mask_key))
     j1_keys = {int(k["cutoff_epoch"]): k for k in json.loads(Path(a.mask_key).read_text())["keys"]}
     grid = set(era_cutoffs() if a.era else grid_cutoffs())
@@ -389,20 +443,21 @@ def cmd_build(a: argparse.Namespace) -> int:
         res = [r for r in pool.imap_unordered(_one_cutoff, jobs, chunksize=8) if r is not None]
     errs = [r for r in res if "error" in r]
     res = sorted([r for r in res if "error" not in r], key=lambda r: r["cutoff"])
+    same_packets = uname in (None, "SIX")       # another universe builds different packets at the judged-1 cutoffs
     for r in res:
-        if r["cutoff"] in j1 and r["packet_id"] != j1[r["cutoff"]]:
+        if same_packets and r["cutoff"] in j1 and r["packet_id"] != j1[r["cutoff"]]:
             raise SystemExit(f"judged-1 packet drift at {r['cutoff']}: {r['packet_id']} != {j1[r['cutoff']]}")
-        r["judged1"] = r["cutoff"] in j1
+        r["judged1"] = same_packets and r["cutoff"] in j1
     acts = label_actions(mkt, res, fold_window=era_fold_window if a.era else None,
                          geometries=ERA_GEOMETRIES if a.era else GEOMETRIES)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     meta = {"mode": "era" if a.era else "dev", "test_folds": list(ERA_TEST_FOLDS if a.era else TEST_FOLDS),
-            "n_configs": ERA_N_CONFIGS if a.era else N_CONFIGS}
+            "n_configs": ERA_N_CONFIGS if a.era else N_CONFIGS, "universe": uname, "symbols": list(syms)}
     (out / "meta.json").write_text(json.dumps(meta) + "\n")
     (out / "cutoffs.pkl").write_bytes(pickle.dumps(res))
     (out / "actions.pkl").write_bytes(pickle.dumps(acts))
-    print(json.dumps({"cutoffs": len(res), "judged1_cutoffs": sum(r["judged1"] for r in res), "packet_errors": len(errs),
+    print(json.dumps({"universe": uname, "symbols": len(syms), "cutoffs": len(res), "judged1_cutoffs": sum(r["judged1"] for r in res), "packet_errors": len(errs),
                       "actions_filled": len(acts), "funding_symbols": sorted(_G["extra"].funding), "volume_symbols": sorted(_G["extra"].raw)}))
     return 0
 
@@ -418,7 +473,7 @@ def feature_rows(cutoffs: List[dict], acts: List[dict], tier: str) -> Tuple[np.n
             c = by[r["cutoff"]]
             f = p_action_features(c["pf"], r["symbol"], r["side"])
             if tier == "P+":
-                f.update(pplus_action_features(c["ex"], r["symbol"], r["side"], r["cutoff"]))
+                f.update(pplus_action_features(c["ex"], r["symbol"], r["side"], r["cutoff"], c.get("btc")))
             cache[ck] = f
         feats.append(dict(cache[ck], g_sl=r["g_sl"], g_tp_r=r["g_tp_r"], g_h=r["g_h"]))
     names = sorted({k for f in feats for k in f})
@@ -614,6 +669,7 @@ def cmd_run(a: argparse.Namespace) -> int:
     meta = json.loads((src / "meta.json").read_text()) if (src / "meta.json").exists() else {"mode": "dev"}
     if meta["mode"] == "era":
         TEST_FOLDS, N_CONFIGS, FOLDS_POSITIVE_NEEDED = tuple(meta["test_folds"]), int(meta["n_configs"]), ERA_FOLDS_POSITIVE_NEEDED
+    set_universe(meta.get("universe"))
     alpha = ALPHA / N_CONFIGS
     res: Dict[str, Any] = {"design": {"geometries": GEOMETRIES, "test_folds": TEST_FOLDS, "embargo_h": EMBARGO_H, "take_frac": TAKE_FRAC,
                                       "max_per_cutoff": MAX_PER_CUTOFF, "useful_s3": USEFUL_S3, "family": N_CONFIGS, "alpha_corrected": alpha,
@@ -622,7 +678,7 @@ def cmd_run(a: argparse.Namespace) -> int:
                            "population": {"cutoffs": len(cutoffs), "judged1_cutoffs": sum(c["judged1"] for c in cutoffs),
                                           "actions_filled": len(acts),
                                           "test_actions": sum(1 for r in acts if r["fold"] in TEST_FOLDS),
-                                          "mode": meta["mode"],
+                                          "mode": meta["mode"], "universe": meta.get("universe"), "symbols": list(_ACTIVE["symbols"]),
                                           "window": ([ERA_BOUNDS[0].isoformat(), ERA_BOUNDS[-1].isoformat(), d.WINDOW_START.isoformat(), d.WINDOW_END.isoformat()]
                                                      if meta["mode"] == "era" else [d.WINDOW_START.isoformat(), d.WINDOW_END.isoformat()])}}
     te = np.array([r["fold"] in TEST_FOLDS for r in acts])
@@ -745,6 +801,89 @@ def cmd_run(a: argparse.Namespace) -> int:
     return 0
 
 
+def universe_arm_verdict(ceiling: dict) -> dict:
+    """RULE-RQ20261113-D18C-01-UNIVERSE for ONE arm's ceiling.json: instrument_invalid if a control failed (the arm is
+    not read); else pass_arm if some P+ learner has S3 >= +0.25 R, corrected CI lower > 0 and S3 > 0 in >= 2 of 3 folds."""
+    if not ceiling.get("instrument_valid"):
+        return {"arm_verdict": "instrument_invalid", "learners": {}}
+    t = ceiling.get("tier_P+") or {}
+    out = {}
+    for lr, e in (t.get("evals") or {}).items():
+        s3 = e.get("paired_diff_vs_random")
+        ci = e.get("S3_ci_corrected")
+        fs = [v for v in ((t.get("fold_S3") or {}).get(lr) or {}).values() if v is not None]
+        ok = (s3 is not None and s3 >= UNIVERSE_BAR and bool(ci) and ci[0] > 0 and sum(1 for v in fs if v > 0) >= UNIVERSE_FOLDS_NEEDED)
+        out[lr] = {"S3": s3, "S3_ci_corrected": ci, "folds_positive": sum(1 for v in fs if v > 0), "folds_read": len(fs), "passes": ok}
+    if not out:
+        return {"arm_verdict": "could_not_check", "learners": {}}
+    return {"arm_verdict": "pass_arm" if any(v["passes"] for v in out.values()) else "fail_arm", "learners": out}
+
+
+def cmd_universe_verdict(a: argparse.Namespace) -> int:
+    """Combine the W and R arms (each a `run --evidence` dir) into the unit's verdict.json."""
+    arms: Dict[str, Any] = {}
+    for spec in a.arms.split(","):
+        name, _, path = spec.partition("=")
+        f = Path(path) / "ceiling.json"
+        if not f.exists():
+            arms[name] = {"arm_verdict": "could_not_check", "why": f"{f} absent"}
+            continue
+        c = json.loads(f.read_text())
+        arms[name] = dict(universe_arm_verdict(c), universe=(c.get("population") or {}).get("universe"))
+    states = [v["arm_verdict"] for v in arms.values()]
+    if any(s == "pass_arm" for s in states):
+        verdict = "pass"
+    elif states and all(s == "fail_arm" for s in states):
+        verdict = "fail"
+    else:
+        verdict = "inconclusive"
+    read_state = "measured" if states and all(s in ("pass_arm", "fail_arm") for s in states) else "could_not_check"
+    res = {"unit": "RQ-20261113-d18c-01", "decision_rule_id": "RULE-RQ20261113-D18C-01-UNIVERSE", "verdict": verdict,
+           "read_state": read_state, "bar_r": UNIVERSE_BAR, "folds_needed": UNIVERSE_FOLDS_NEEDED,
+           "alpha_corrected": ALPHA / N_CONFIGS, "arms": arms}
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "verdict.json").write_text(json.dumps(res, indent=1, sort_keys=True, default=float) + "\n")
+    print(json.dumps({"verdict": verdict, "read_state": read_state, "arms": {k: v["arm_verdict"] for k, v in arms.items()}}))
+    return 0
+
+
+def universe_self_test() -> int:
+    """Planted cases for the universe plumbing and the arm rule (no data, no network)."""
+    fails = []
+    for name, want in (("SIX", 6), ("W", 24), ("R", 18)):
+        syms = set_universe(name)
+        if len(syms) != want or len(set(syms)) != want:
+            fails.append(f"{name}: {len(syms)} symbols")
+        if EXTRA_GROUPS["symbol"] != tuple(f"sym_{s}" for s in syms):
+            fails.append(f"{name}: EXTRA_GROUPS symbol not updated")
+    if BTC in UNIVERSES["R"] or not set(UNIVERSES["SIX"]) <= set(UNIVERSES["W"]) or set(UNIVERSES["R"]) & set(UNIVERSES["SIX"]):
+        fails.append("arm composition")
+    set_universe("R")
+    ex = {"ETHUSDT": {"ret24": 1.0, "ret168": 2.0, "ret4": 0.5}}
+    f = pplus_action_features(ex, "ETHUSDT", "long", 1_700_000_000, btc={"ret4": 0.3, "ret24": -1.0, "ret168": 4.0})
+    if f.get("btc_ret24") != -1.0 or "sym_BTCUSDT" in f or f.get("sym_ETHUSDT") is not None:
+        fails.append(f"R arm: BTC must be a feature only {f.get('btc_ret24')} {[k for k in f if k.startswith('sym_')][:3]}")
+    set_universe(None)
+    good = {"instrument_valid": True, "tier_P+": {"evals": {"ridge": {"paired_diff_vs_random": 0.30, "S3_ci_corrected": [0.05, 0.55]}},
+                                                  "fold_S3": {"ridge": {"2": 0.2, "3": 0.4, "4": -0.1}}}}
+    if universe_arm_verdict(good)["arm_verdict"] != "pass_arm":
+        fails.append("planted pass did not pass")
+    for mut, why in ((("ridge", "paired_diff_vs_random", 0.24), "below bar"), (("ridge", "S3_ci_corrected", [-0.01, 0.6]), "ci lower <= 0")):
+        b = json.loads(json.dumps(good))
+        b["tier_P+"]["evals"][mut[0]][mut[1]] = mut[2]
+        if universe_arm_verdict(b)["arm_verdict"] != "fail_arm":
+            fails.append(f"planted {why} passed")
+    b = json.loads(json.dumps(good))
+    b["tier_P+"]["fold_S3"]["ridge"] = {"2": 0.2, "3": -0.4, "4": -0.1}
+    if universe_arm_verdict(b)["arm_verdict"] != "fail_arm":
+        fails.append("planted 1-of-3 folds passed")
+    if universe_arm_verdict(dict(good, instrument_valid=False))["arm_verdict"] != "instrument_invalid":
+        fails.append("failed control was read")
+    print("universe self-test:", "OK" if not fails else "FAIL " + "; ".join(fails))
+    return 1 if fails else 0
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="mode", required=True)
@@ -757,6 +896,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     b.add_argument("--workers", type=int, default=4)
     b.add_argument("--limit", type=int, default=0)
     b.add_argument("--era", action="store_true", help="the extended-era run (doc section 4.2)")
+    b.add_argument("--universe", choices=sorted(UNIVERSES), default=None,
+                   help="RQ-20261113-d18c-01: SIX (registered six) | W (24) | R (18 added); default = config pull list")
+    b.add_argument("--fetch-candles", action="store_true", help="fetch absent symbols' Binance Vision 1h candles first")
     b.set_defaults(fn=cmd_build)
     r = sub.add_parser("run")
     r.add_argument("--out", required=True)
@@ -764,6 +906,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     r.add_argument("--mask-key", default=str(REPO / "comms/research/desk_gen_replay/judged-1/mask-key.json"))
     r.add_argument("--judged1-records", default=None)
     r.set_defaults(fn=cmd_run)
+    u = sub.add_parser("universe-verdict", help="RQ-20261113-d18c-01: combine arm evidence dirs into verdict.json")
+    u.add_argument("--arms", required=True, help="W=DIR,R=DIR (each a run --evidence dir)")
+    u.add_argument("--out", required=True)
+    u.set_defaults(fn=cmd_universe_verdict)
+    st = sub.add_parser("self-test", help="universe plumbing + arm-rule planted cases")
+    st.set_defaults(fn=lambda _a: universe_self_test())
     a = ap.parse_args(argv)
     return a.fn(a)
 
