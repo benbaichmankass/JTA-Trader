@@ -13,10 +13,12 @@ question: 'Every Binance trend_donchian* and *pullback* leg on config/strategies
   at all, and the ones written since read approximate with omitted_levers [decision_bar]. Re-measured on the forming bar (scripts/backtest_trend.py / backtest_pullback.py
   --decision-bar forming from Binance-vision 1m, the ONE forming implementation), over each record''s own window and fold count: does each leg keep net_r_oos > 0
   net of the full cost stack (RULE-D1)?'
-why_this_matters: Two production legs are in the set (trend_donchian_sol_prop on the prop book, and the stale-faithful group generally); a leg that trades the forming
-  bar but is evidenced on the closed bar has an unmeasured fidelity gap. The smoke run on trend_donchian_ada_4h (2026-11-13, local) read faithful, forming net_r_oos
-  -3.35 over n 55 vs the closed-bar record -6.34 over n 43, so the bar choice moves the number materially. A PASS lands faithful records; a per-leg FAIL routes that
-  leg to the iteration loop / a Tier-3 proposal via the manager; none is automatic.
+why_this_matters: 'Twelve of the 14 legs carry a closed-bar record: the faithful ones predate #25228 and never modelled the forming bar, the approximate ones omit
+  decision_bar. trend_donchian_sol_prop (real money, prop book) and trend_donchian_eth_4h are the exceptions: #25228 already re-based their records on the forming
+  bar via scripts/ops/rebase_evidence_decision_bar.py (a pooled-regrade proxy); this run re-measures them through the harness forming replay as a cross-check, and
+  its records land only after a session reads them. The smoke run on trend_donchian_ada_4h (2026-11-13, local) read faithful, forming net_r_oos -3.35 over n 55 vs
+  the closed-bar record -6.34 over n 43, so the bar choice moves the number materially. A PASS lands faithful records; a per-leg FAIL is data routed to the manager
+  via AM-ML; none is automatic.'
 power:
   expected_n: 1200
   min_detectable_effect: 0.1
@@ -104,13 +106,13 @@ lands:
   assert_field: read_state
   min_rows: 1
 iteration:
-  subject: trend_donchian_sol_prop
+  subject: trend_donchian_ada_4h
   subject_kind: strategy_leg
-  from_result: comms/strategy_evidence/trend_donchian_sol_prop.json
+  from_result: comms/strategy_evidence/trend_donchian_ada_4h.json
   verdict_read: faithful
-  diagnosis: 'The committed record reads faithful but predates #25228, so it never modelled the forming bar the leg decides on; scripts/backtest_pullback.py could
-    not replay the forming bar from a CSV at all and regime_debt_matrix forwarded forming_1m for the trend harness only. Structural, closed by this PR''s pullback
-    1m path + rdm forward and a re-measure.'
+  diagnosis: 'The committed record (generated 2026-10-28, before #25228) reads faithful but its reproduce command has no --decision-bar forming and no 1m source:
+    it measured the CLOSED 4h bar while the leg decides on the forming one. Structural: scripts/backtest_pullback.py could not replay the forming bar from a CSV and
+    regime_debt_matrix forwarded forming_1m for the trend harness only; closed by this PR''s pullback 1m path + rdm forward and a re-measure.'
   hypothesis: Re-measured on the forming bar from Binance 1m, each leg's record reads faithful; the legs with closed-bar edge keep net_r_oos > 0.
   attempt: 1
   due_by: '2026-11-20'
