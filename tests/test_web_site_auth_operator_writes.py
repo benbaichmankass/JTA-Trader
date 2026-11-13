@@ -57,11 +57,12 @@ def _flip_body():
     return {**FLIP, "key": sorted(wt.TOGGLES)[0]}
 
 
-def test_wake_toggle_flip_with_operator_session_records_session_email(client, session):
+def test_wake_toggle_flip_with_operator_session_records_operator_spa(client, session):
     r = client.post("/api/bot/wake-toggles", json=_flip_body(), headers=bearer(session["session_token"]))
     assert r.status_code == 200, r.text
     last = r.json()["recent_flips"][0]
-    assert last["by"] == f"{base.EMAIL} (SPA session)"            # not the body's "spoofed-name"
+    assert last["by"] == "operator-spa"            # not the body's "spoofed-name", never the email
+    assert "@" not in last["by"]
 
 
 def test_wake_toggle_flip_with_service_token_still_works(client):
@@ -143,11 +144,12 @@ ITEM = {"id": "UIO-TEST-1", "kind": "build", "title": "session write test", "roa
         "due_rule": {"kind": "date", "due_date": "2026-11-30"}}
 
 
-def test_work_items_create_with_operator_session_records_session_email(client, session):
+def test_work_items_create_with_operator_session_records_operator_spa(client, session):
     r = client.post("/api/bot/work/items", headers=bearer(session["session_token"]),
                     json={**ITEM, "by": "spoof"})
     assert r.status_code in (200, 201), r.text
-    assert r.json()["item"]["updated_by"] == f"{base.EMAIL} (SPA session)"
+    assert r.json()["item"]["updated_by"] == "operator-spa"
+    assert "@" not in r.json()["item"]["updated_by"]
 
 
 def test_work_items_create_with_session_needs_no_by(client, session):
@@ -161,6 +163,23 @@ def test_work_items_create_with_work_store_token_still_works(client):
                     json={**ITEM, "id": "UIO-TEST-3", "by": "work.py test"})
     assert r.status_code in (200, 201), r.text
     assert r.json()["item"]["updated_by"] == "work.py test"
+
+
+def test_work_items_set_note_close_with_session_record_operator_spa(client, session):
+    """Every work-item session write stores operator-spa, never the email (manager 2026-11-13)."""
+    h = bearer(session["session_token"])
+    r = client.post("/api/bot/work/items", headers=h, json={**ITEM, "id": "UIO-TEST-4"})
+    assert r.status_code in (200, 201), r.text
+    item = r.json()["item"]
+    for path, body in (("set", {"fields": {"title": "renamed by session"}}),
+                       ("note", {"text": "a session note"}),
+                       ("close", {"state": "done", "reason": "session close test"})):
+        r = client.post(f"/api/bot/work/items/UIO-TEST-4/{path}", json={**body, "by": "spoof"},
+                        headers={**h, "If-Match": str(item["version"])})
+        assert r.status_code == 200, (path, r.text)
+        item = r.json()["item"]
+        assert item["updated_by"] == "operator-spa", path
+        assert "@" not in item["updated_by"], path
 
 
 @pytest.mark.parametrize("path", ["/api/bot/work/items", "/api/bot/work/items/X/set",

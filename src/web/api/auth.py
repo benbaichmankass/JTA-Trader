@@ -220,9 +220,15 @@ async def operator_session_or_none(request: Request) -> Optional[dict]:
         return None
 
 
-def session_actor(claims: dict) -> str:
-    """The ``by`` recorded for a write made with an operator session."""
-    return f"{str(claims.get('email', '')).strip().lower()} (SPA session)"[:80]
+#: The actor recorded for every write made with an operator session (manager 2026-11-13):
+#: decision records, work items and flip logs can reach the repo, and personal details never
+#: go there, so the operator's email is never written into a stored field.
+SESSION_ACTOR = "operator-spa"
+
+
+def session_actor(claims: dict) -> str:  # noqa: ARG001 - claims kept for the call sites' shape
+    """The ``by`` recorded for a write made with an operator session: always ``operator-spa``."""
+    return SESSION_ACTOR
 
 
 # ---------------------------------------------------------------------------

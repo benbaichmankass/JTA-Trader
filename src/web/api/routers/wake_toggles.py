@@ -3,7 +3,7 @@
 ``GET  /api/bot/wake-toggles``  unauthenticated read (Tier 1, same as the other read routes): the posters on
 GitHub runners and the console read it. ``read_state`` first; ``defaults`` = nobody has flipped anything yet.
 ``POST /api/bot/wake-toggles``  ``{key, on, by?}`` with EITHER the operator's SPA session (``Bearer ws_...``;
-``by`` is then the session email, never the body's) OR the fail-closed ``DASHBOARD_API_TOKEN`` bearer (the
+``by`` is then ``operator-spa``, never the email or the body's) OR the fail-closed ``DASHBOARD_API_TOKEN`` bearer (the
 console MCP connector; the ``/api/bot/alerts`` / prop-report pattern). Anonymous or wrong token: 401, token
 unset and no session: 503. Decision: 2026-11-09 operator UI redesign spec, UI-REDESIGN-2026-11 addendum 4 (the
 Admin page's WAKE SWITCHES "view + flip, same backend as set_wake_toggle / GET+POST /api/bot/wake-toggles").
