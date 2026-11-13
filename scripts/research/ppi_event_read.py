@@ -1,6 +1,8 @@
 """PPI pre-event read (PPI-EVENT-DESK-20261113). Hourly bars committed under comms/research; surprises from Bigdata.com economic calendar.
 Measures per symbol: (1) |reaction| event vs same-hour baseline, (2) Spearman IC surprise->reaction, (3) continuation trade entered 1h after release, net of an ESTIMATED round-trip cost."""
 
+# wiring: manual-only - a one-off pre-event read (PPI-EVENT-DESK-20261113); re-run by hand with the arguments in
+# comms/macro/ppi_event_read_20261113/README.md. Descriptive only; no unit, workflow or caller consumes it.
 import json
 import sys
 import glob
@@ -49,7 +51,12 @@ COST_BPS = {
 
 
 def load(s):
-    f = glob.glob(f"{R}comms/research/{SYMS[s]}/*/data/{s}_60.csv")[0]
+    # provenance: SYMS — the committed research run dir pinned per symbol in SYMS; the path read is printed below
+    matches = sorted(glob.glob(f"{R}comms/research/{SYMS[s]}/*/data/{s}_60.csv"))
+    if len(matches) != 1:
+        raise SystemExit(f"{s}: expected exactly one bar file under comms/research/{SYMS[s]}/, found {len(matches)}")
+    f = matches[0]
+    print(f"{s}: bars from {f[len(R):]}", file=sys.stderr)
     d = pd.read_csv(f)
     d["ts"] = pd.to_datetime(d["timestamp"], utc=True)
     return d.set_index("ts").sort_index()
