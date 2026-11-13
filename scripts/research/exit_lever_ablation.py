@@ -239,7 +239,9 @@ def _replace_opt(argv: list[str], flag: str, value: str) -> list[str]:
 
 
 def build_arm_argv(leg: str, cfg: dict[str, Any], csv: str, resample: str, emit: str, jout: str,
-                   extra: list[str], start: str | None, end: str | None) -> tuple[list[str], list[str]]:
+                   extra: list[str], start: str | None, end: str | None,
+                   forming_1m: str | None = None,
+                   forming_session: str | None = None) -> tuple[list[str], list[str]]:
     """The committed-record argv for ``cfg`` (via build_harness_cmd), plus the
     arm's raw flags and the pinned window. Returns (argv, omitted_levers)."""
     import regime_debt_matrix as rdm
@@ -250,7 +252,10 @@ def build_arm_argv(leg: str, cfg: dict[str, Any], csv: str, resample: str, emit:
     if harness not in ("trend", "pullback", "ict_scalp"):
         raise ValueError(f"{leg}: harness {harness!r} -- this ablation covers the trend, pullback and "
                          "ict_scalp harnesses")
-    argv, _faithful, omitted = rdm.build_harness_cmd(leg, cfg, harness, csv, resample, emit, jout)
+    # forming_1m (EQ-FORMING-BAR-REPLAY): replay the leg's live FORMING-bar decision from 1m
+    # data, through the same build_harness_cmd path the evidence builder uses.
+    fkw = {"forming_1m": forming_1m, "forming_session": forming_session} if forming_1m else {}
+    argv, _faithful, omitted = rdm.build_harness_cmd(leg, cfg, harness, csv, resample, emit, jout, **fkw)
     argv = list(argv)
     i = 0
     while i < len(extra):
@@ -792,6 +797,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--start", default=None, help="harness --start (ISO), pinned to the record's data_start")
     ap.add_argument("--end", default=None, help="harness --end (ISO datetime), pinned to the record's data_end")
     ap.add_argument("--data-csv", default=None, help="skip the fetch and use this candle CSV (tests)")
+    ap.add_argument("--minutes-1m-csv", default=None,
+                    help="replay the leg's live FORMING-bar decision from this 1m CSV (trend harness; "
+                         "row EQ-FORMING-BAR-REPLAY). Pair it with --data-csv from the same source")
+    ap.add_argument("--decision-session", choices=("us_equity",), default=None,
+                    help="with --minutes-1m-csv: a US-session daily leg (ET-date alignment, cash-session ticks)")
     ap.add_argument("--non-crypto-source", choices=("auto", "dukascopy"), default="auto",
                     help="non-crypto candle lane: auto = the evidence builder's yfinance fetch; dukascopy = the lane "
                          "research-script-run.yml installs (history from ~2018 for US ETF CFDs)")
@@ -904,6 +914,9 @@ def main(argv: list[str] | None = None) -> int:
     if a.symbol:
         base = {**base, "symbols": [a.symbol]}
     wd = Path(tempfile.mkdtemp(prefix="exit_lever_ablation_"))
+    if a.decision_session and not a.minutes_1m_csv:
+        print("ERROR: --decision-session needs --minutes-1m-csv", file=sys.stderr)
+        return 2
     csv = a.data_csv or str(wd / f"{a.leg}__data.csv")
     feed: dict[str, Any] = {"resample": base.get("timeframe"), "source": "explicit --data-csv"}
     if not a.data_csv:
@@ -977,8 +990,10 @@ def main(argv: list[str] | None = None) -> int:
     for label, sets, unsets, extra in specs:
         cfg = arm_cfg(base, sets, unsets)
         emit, jout = str(arms_dir / f"{label}__trades.jsonl"), str(arms_dir / f"{label}__bt.json")
-        argv_i, omitted = build_arm_argv(a.leg, cfg, csv, str(feed["resample"]), emit, jout, extra, a.start, a.end)
-        shown = [("<data>" if t == csv else t) for t in argv_i]
+        argv_i, omitted = build_arm_argv(a.leg, cfg, csv, str(feed["resample"]), emit, jout, extra, a.start, a.end,
+                                         forming_1m=a.minutes_1m_csv, forming_session=a.decision_session)
+        shown = [("<data>" if t == csv else "<minutes_1m>" if a.minutes_1m_csv and t == a.minutes_1m_csv else t)
+                 for t in argv_i]
         argvs[label] = {"argv": shown, "cfg_set": sets, "cfg_unset": unsets, "extra_flags": extra,
                         "omitted_levers_per_builder": omitted}
         print(f"[{label}] {' '.join(shown)}", flush=True)
