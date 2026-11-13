@@ -1,6 +1,6 @@
 id: RQ-20261113-4654-02
-title: 'Resolvable GRU test (ML-F29): 2x32 GRU over 32-bar windows vs LightGBM given the SAME 10 columns on the BTC/SOL 15m regime heads, graded by a paired
-  row-level block-bootstrap CI of the pooled macro-F1 delta (fold-level sd 0.03 made ff8f-04 undecidable)'
+title: 'MEASUREMENT PILOT (ML-F29): row-level block-bootstrap sd of the GRU-vs-LightGBM pooled macro-F1 delta on the BTC/SOL 15m regime task, same 10 columns
+  both arms -- measures the sd a decision unit needs; NO edge verdict'
 status: queued
 cadence: once
 theme: ml_health
@@ -18,37 +18,42 @@ practice_precedent: 'https://doi.org/10.1080/01621459.1994.10476870 (Politis and
   SECONDARY, known before this pass): a block bootstrap over contiguous out-of-sample rows is the standard interval for a serially dependent paired metric.
   Our harness: scripts/research/ml_bakeoff.py cv.row_bootstrap (#25573).'
 power:
-  expected_n: 72000
+  expected_n: 750
   min_detectable_effect: 0.01
   effect_units: metric
   design: paired
   alpha: 0.05
   power: 0.8
-  basis: 'ESTIMATE, not measured: ~36,000 OOS rows per symbol (tail_rows 60000, min_train_frac 0.4), ~375 blocks of 96 rows. The row-level paired sd of
-    the pooled macro-F1 delta has NEVER been measured on this task (ff8f-04 kept no per-row predictions); a plausible se of 0.004-0.006 gives an 80%-power
-    MDE of ~0.011-0.017, i.e. borderline for the +0.010 bar. This run MEASURES it (deltas.<sym>.cv.gru.lightgbm.boot.sd) and the grading note states it;
-    INDETERMINATE (CI straddles) is the honest reading if it is larger. ML-F29 asked for power from the measured sd: only the fold-level sd exists, so this
-    is declared, not hidden.'
+  basis: 'SOURCED ESTIMATE. Unit of analysis = one 96-row block of the paired out-of-sample macro-F1 delta. The only MEASURED sd on this task is ff8f-04''s
+    fold-level delta sd ~0.03 (folds of ~7,200 test rows = ~75 blocks), so the per-block sd is ~0.03 x sqrt(75) ~= 0.26 if blocks are independent. This
+    unit has ~750 OOS blocks (2 symbols x 36,000 rows / 96): pooled se ~0.0095, and +0.010 at 80% power would need ~5,300 blocks (~500k OOS rows), beyond
+    the trainer''s 330-min cap. So this run is a declared DATA-ACQUISITION / measurement: it measures the real row-level per-block sd (the fold sd may overstate
+    sampling noise via between-fold drift) and cannot answer the +0.010 question. The first draft of this block (se 0.004-0.006) was optimistic and is withdrawn.'
   feasibility:
     source: none
-    accrual_basis: Trainer-resident shards; nothing accrues.
+    accrual_basis: 'Declared measurement run: fixed trainer-resident shards; its output is the measured per-block sd and the implied n for +0.010, never
+      a test result (research_queue accruing semantics).'
+  sd: 0.26
 decision_rule:
-  id: RULE-RQ20261113-4654-02-GRU-ROW-BOOT
+  id: RULE-RQ20261113-4654-02-GRU-SD-PILOT
   registered_at: '2026-11-13'
   registered_before_run: true
   baseline: LightGBM (n_estimators 200, lr 0.05, leaves 31, min_child 50) on the SAME 10 columns, same rows, same purged folds.
-  statistic: 'ml_bakeoff.py cv.row_bootstrap {block_rows 96, n_boot 1000, seed 0}: per symbol, the pooled out-of-sample macro-F1 of gru minus lightgbm over
-    identical rows, its point delta (stat boot_mean) and 95% percentile lower bound (stat boot_ci_low); the fold-level paired mean and the prior-control
-    deltas are reported, not graded.'
-  rule: 'PASS IF on BOTH BTCUSDT and SOLUSDT: boot_ci_low > 0 AND boot_mean >= +0.010 (the ff8f-04 effect bar, unchanged). FAIL IF neither symbol has boot_mean
-    > 0 (closes a 2x32 GRU on this 10-column window for this task, not the deep_sequence family). INDETERMINATE otherwise, or if the gru arm is unavailable,
-    or fewer than 3 usable folds. Thresholds are not changed after any result.'
-  pass_action: the net-of-cost regime-cell walk-forward with the LightGBM head as the baseline (a classification lift is not edge); families.deep_sequence.history
-    appended PASS.
-  fail_action: families.deep_sequence.history appended FAIL for this configuration; close ML-F29.
-  what_it_does_not_do: 'Serves and registers nothing; touches no config. Classification lift only, not money. ETH is excluded: its 15m regime heads were
-    retired (operator Thursday-planning a4, 2026-11-11). Both arms get identical columns (the ff8f-04 confound is removed).'
+  statistic: 'ml_bakeoff.py cv.row_bootstrap {block_rows 96, n_boot 1000, seed 0}: per symbol, boot_mean, boot.sd and ci95 of the pooled OOS macro-F1 delta
+    (gru minus lightgbm, identical rows); derived per-block sd = boot.sd x sqrt(n_blocks); implied blocks for +0.010 at 80% power = ((1.96+0.8416) x per_block_sd
+    / 0.010)^2.'
+  rule: 'MEASUREMENT ONLY -- NO PASS/FAIL ON THE GRU, NO EDGE VERDICT. The run reports, per symbol: boot.sd, boot_mean, the per-block sd and the implied
+    n for +0.010 at 80% power. The ml_bakeoff rule block declares no pass_if / fail clauses, so the harness verdict is always indeterminate by construction;
+    a boot_mean of any size here is NOT evidence for or against the GRU.'
+  what_it_does_not_do: 'Serves, registers and decides nothing; touches no config. Not a test of the GRU: a measurement of the variance a test needs. ETH
+    is excluded (its 15m regime heads retired, operator a4). Both arms get identical columns.'
   min_n: 3 usable CV folds per symbol
+  rule_change: 'Rule changed 2026-11-13 ~05:10Z BEFORE ANY RUN (the unit had never dispatched and read no data), AM-ML approval 05:06Z (option 1). Reason:
+    the honest sd (fold 0.03 -> ~0.26 per block) shows the original +0.010 decision rule (RULE-RQ20261113-4654-02-GRU-ROW-BOOT) needs ~500k OOS rows; the
+    unit is re-registered as a measurement pilot instead of declaring an sd that could not be sourced.'
+  follow_up: THEN register the decision unit (GRU vs LightGBM, +0.010, CI low > 0 on BTC and SOL) with power.sd = this run's measured per-block sd and the
+    n it implies; if that n exceeds what the trainer can run, record the infeasibility on ML-F29 instead. A later session must not read this pilot as evidence
+    about the GRU.
 compute: needs_vm_data
 value:
   bucket: frontier
@@ -129,30 +134,7 @@ ml_bakeoff:
         columns: *id001
   rule:
     min_folds: 3
-    pass_if:
-    - group:
-      - BTCUSDT
-      - SOLUSDT
-      vs: baseline
-      window: cv
-      op: '>'
-      value: 0.0
-      stat: boot_ci_low
-    - group:
-      - BTCUSDT
-      - SOLUSDT
-      vs: baseline
-      window: cv
-      op: '>='
-      value: 0.01
-      stat: boot_mean
-    fail_if_no_candidate_reaches:
-    - group: any
-      vs: baseline
-      window: cv
-      op: '>'
-      value: 0.0
-      stat: boot_mean
+    pass_if: []
   common_rows: false
 run:
   workflow: research-script-run-trainer.yml
@@ -168,7 +150,8 @@ run:
     research_unit: RQ-20261113-4654-02
 ml_consumer:
   consumer: config/regime_policy.yaml
-  decision: (consumer = the 15m regime heads btc/sol-regime-15m-lgbm-fc-pcv-v2 that feed the trend_vol OFF-cells) whether a GRU architecture earns a net-of-cost regime-cell walk-forward against the LightGBM head; no change from this unit
+  decision: (consumer = the 15m regime heads btc/sol-regime-15m-lgbm-fc-pcv-v2 that feed the trend_vol OFF-cells) whether a GRU architecture earns a net-of-cost
+    regime-cell walk-forward against the LightGBM head; no change from this unit
   legs:
   - trend_donchian
   - ict_scalp_5m
