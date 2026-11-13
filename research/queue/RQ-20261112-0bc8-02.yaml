@@ -100,7 +100,8 @@ routing:
     Binance Vision (RQ-20261101-78fc-03 fetched its candles there).
   basis: 'ESTIMATE: 78fc-03 (one leg, one head) and RQ-20260927-002 ran the same walk-forward at ~2.5 GB; this is 3 legs x 3 heads.'
 run:
-  workflow: trainer-vm-diag (issue label trainer-vm-diag-request)
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 300
   command:
   - python3
   - scripts/research/volcomp_exit_head_bakeoff.py
@@ -120,9 +121,7 @@ run:
   - '{out_dir}/verdict.json'
   inputs:
     research_unit: RQ-20261112-0bc8-02
-  note: 'One relay dispatch, as 78fc-03: a temporary git worktree of the committed harness, 1h candles for BTC/ETH/SOL via the trainer
-    resolver (BACKTEST_DATA_PATH), rows from the trainer-resident rows.jsonl; the RESULT_JSON block in the relay comment and the --json
-    file are landed under research/results/.'
+  note: 'Retargeted 2026-11-13 (lane FRONTIER-RESEARCH for AM-ML, PI-20261113-6YRT1RMK-0001): run.workflow named the prose "trainer-vm-diag (issue label ...)" relay, which the dispatcher can never fire. research-script-run-trainer.yml runs this SAME command under script_run.py on the trainer checkout (cwd /home/ubuntu/ict-trading-bot), where datasets-out/exit_head/1h/donchian/rows.jsonl is resident and the harness resolves 1h candles itself; the verdict lands through the standard artifact -> collector -> E5 path. Command, rule and thresholds unchanged.'
 ml_consumer:
   book: demo_floor
   consumer: src/runtime/exit_head_apply.py
