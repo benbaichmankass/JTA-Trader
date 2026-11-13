@@ -2,7 +2,7 @@
 id: RQ-20261101-78fc-11
 title: 'ITERATION 1 of e4_oi_shock_1h (fail): does a stricter shock threshold (oi_z 4.0 / 5.0) turn the thin positive mean into a cluster-CI-positive
   edge?'
-status: blocked
+status: queued
 cadence: once
 theme: live_strategy
 priority: 1
@@ -62,6 +62,27 @@ value:
   confidence: 0.15
   bucket: structural
   basis: planning weight by money rank; an estimate, not a measurement
+run:
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261101-78fc-11
+  commands:
+  - - python3
+    - scripts/research/e4_oi_z_arms.py
+    - --fetch
+    - --root
+    - /tmp/e4-oi-z-{run_id}
+    - --out
+    - '{out_dir}'
+  timeout_minutes: 90
+  note: >-
+    Unblocked 2026-11-13 (lane session_01AFoLuJZ69XcyrjnD8na8ao, AM-ML item 0a). The lever named on row E4-DEMO-LEG was never
+    built; it is now: desk_event_entry_replay.detect(oi_z=...) (default 3.0, the frozen arm, unchanged) and e4_prop_ledger.py
+    --oi-z, graded by scripts/research/e4_oi_z_arms.py. clears_when asked for a self-test that oi_z 3.0 reproduces the committed
+    ledger: offline, the test pins that the default IS the frozen threshold (tests/test_e4_oi_z_arms.py); the row-for-row
+    reproduction needs the fetched data, so it runs INSIDE this run as an instrument control (oi_z 3.0 vs the 856 committed
+    held-out rows of docs/research/e4-prop-sim-2026-10-30/ledgers/e4_full.jsonl) and, if it fails, the arms are not graded
+    (indeterminate). Was blocked_on E4-DEMO-LEG (work_item). RULE UNCHANGED.
 lands:
   store: research/results/
   assert_field: read_state
@@ -70,11 +91,5 @@ related:
 - RESEARCH-ITERATE
 - E4-DEMO-LEG
 what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
-blocked_on:
-- kind: work_item
-  ref: E4-DEMO-LEG
-  what: an --oi-z argument on scripts/research/desk_event_entry_replay.py / e4_prop_ledger.py so the frozen E4 arm can be re-replayed at another
-    threshold
-  clears_when: the argument lands with a self-test that oi_z 3.0 reproduces the committed ledger; then git-mv to research/queue/ (rule unchanged)
 intervention_controls:
   not_applicable: an offline model evaluation; the consumer's own gate applies any action
