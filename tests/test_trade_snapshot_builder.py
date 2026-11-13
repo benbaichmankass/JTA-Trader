@@ -229,3 +229,183 @@ def test_status_before_the_builder_ran_is_null_not_zero(db, monkeypatch):
     assert d["built"] is None and d["failing"] is None and d["pending"] is None
     assert d["total_closed"] == 1 and "snapshot_db_no_table" in d["partial_reasons"]
     assert d["read_state"] == "partial"
+
+
+# ── CLOSED-TRADE-SNAPSHOT-FUTURES-CANDLES: one-off re-queue of Alpaca partials stored without candles
+# (manager GO 2026-11-13 02:45Z). Only trade: rows, built + partial, candles unavailable, Alpaca-routed symbol.
+
+NONE = lambda *a: (None, "test")  # noqa: E731
+ALP = {"AAPL"}
+
+
+def _snap(db):
+    return store.snapshots_rw(str(db.parent / "trade_chart_snapshots.db"), journal_path=str(db))
+
+
+def _store_partials(db):
+    """An Alpaca and a Bybit trade stored built-partial without candles (the pre-#25565 state), plus an Alpaca
+    trade stored WITH candles, plus a prop trade."""
+    alp = _trade(db, symbol="AAPL", account_id="alpaca_paper")
+    byb = _trade(db, symbol="BTCUSDT")
+    t = NOW
+    for wait in (0, b.BACKOFF_S[0] + 1, b.BACKOFF_S[1] + 1):
+        t += timedelta(seconds=wait)
+        b.run_batch(db, NONE, t, reviews=EMPTY, receipts=EMPTY, requeue_symbols=set())
+    alp_ok = _trade(db, symbol="AAPL", account_id="alpaca_paper")
+    b.run_batch(db, _fetch_ok(), t, reviews=EMPTY, receipts=EMPTY, requeue_symbols=set())
+    insert_prop_trade(db)
+    b.run_batch(db, NONE, t, reviews=EMPTY, receipts=EMPTY, requeue_symbols=set())
+    for tid in (alp, byb):
+        got = _row(db, tid)
+        assert got["state"] == "built" and got["payload"]["candles"]["state"] == "unavailable"
+    return alp, byb, alp_ok, t
+
+
+def _fresh_marker(db):
+    conn = _snap(db)
+    conn.execute(f"DELETE FROM {b.MIGRATIONS_TABLE}")
+    conn.commit()
+    conn.close()
+
+
+def test_requeue_selects_only_alpaca_partials_without_candles_and_is_idempotent(db):
+    alp, byb, alp_ok, _ = _store_partials(db)
+    _fresh_marker(db)
+    conn = _snap(db)
+    assert b.requeue_alpaca_candle_partials(conn, ALP, NOW) == 1
+    assert b.requeue_alpaca_candle_partials(conn, ALP, NOW) is None          # recorded once; never again
+    rows = dict(conn.execute(f"SELECT snapshot_key, state FROM {store.TABLE}").fetchall())
+    marker = conn.execute(f"SELECT name, rows FROM {b.MIGRATIONS_TABLE}").fetchall()
+    conn.close()
+    assert rows[store.trade_key(alp)] == b.REQUEUED
+    assert rows[store.trade_key(byb)] == "built" and rows[store.trade_key(alp_ok)] == "built"
+    assert any(k.startswith("prop:") for k in rows)
+    assert all(v != b.REQUEUED for k, v in rows.items() if k.startswith("prop:"))
+    assert [tuple(m) for m in marker] == [(b.REQUEUE_ALPACA_CANDLES, 1)]
+
+
+def test_requeued_row_keeps_serving_its_stored_partial(db):
+    alp, *_ = _store_partials(db)
+    _fresh_marker(db)
+    conn = _snap(db)
+    b.requeue_alpaca_candle_partials(conn, ALP, NOW)
+    conn.close()
+    got = _row(db, alp)
+    assert got["state"] == b.REQUEUED and got["payload"]["candles"]["state"] == "unavailable"
+
+
+def test_requeued_row_rebuilds_with_candles(db):
+    alp, byb, _, t = _store_partials(db)
+    _fresh_marker(db)
+    calls = []
+    out = b.run_batch(db, _fetch_ok(calls), t, reviews=EMPTY, receipts=EMPTY, requeue_symbols=ALP)
+    assert sum(out.values()) == 1 and [c[0] for c in calls] == ["AAPL"]       # only the re-queued trade is fetched
+    got = _row(db, alp)
+    assert got["state"] == "built" and got["payload"]["candles"]["state"] == "measured"
+    assert _row(db, byb)["payload"]["candles"]["state"] == "unavailable"     # other classes untouched
+    assert sum(b.run_batch(db, _fetch_ok(), t, reviews=EMPTY, receipts=EMPTY, requeue_symbols=ALP).values()) == 0
+
+
+def test_requeued_row_without_candles_restores_its_partial_in_one_attempt(db):
+    alp, _, _, t = _store_partials(db)
+    _fresh_marker(db)
+    calls = []
+
+    def none(symbol, interval, since_ms, limit):
+        calls.append(symbol)
+        return None, "test"
+
+    out = b.run_batch(db, none, t, reviews=EMPTY, receipts=EMPTY, requeue_symbols=ALP)
+    assert out["built_partial"] == 1 and out["retrying"] == 0
+    got = _row(db, alp)
+    assert got["state"] == "built" and got["payload"]["candles"]["state"] == "unavailable"   # payload intact
+    assert "still unavailable" in got["last_error"]
+    assert sum(b.run_batch(db, none, t, reviews=EMPTY, receipts=EMPTY, requeue_symbols=ALP).values()) == 0
+
+
+def test_requeued_row_whose_rebuild_raises_keeps_its_partial(db):
+    alp, _, _, t = _store_partials(db)
+    _fresh_marker(db)
+
+    def boom(*a):
+        raise RuntimeError("venue down")
+
+    out = b.run_batch(db, boom, t, reviews=EMPTY, receipts=EMPTY, requeue_symbols=ALP)
+    assert out["retrying"] == 0
+    got = _row(db, alp)
+    assert got["state"] == "built" and got["payload"] is not None and "venue down" in got["last_error"]
+
+
+def test_alpaca_symbols_read_from_instrument_profiles():
+    syms = b._alpaca_symbols()
+    assert syms and "BTCUSDT" not in syms
+
+
+def test_unparseable_times_are_named_not_a_typeerror(db):
+    bad = _trade(db, closed="not-a-time")
+    b.run_batch(db, _fetch_ok(), NOW, reviews=EMPTY, receipts=EMPTY)
+    err = _row(db, bad)["last_error"]
+    assert err.startswith("ValueError: unparseable_times") and "not-a-time" in err
+
+
+def test_ib_requeue_has_its_own_marker_and_only_takes_ib_symbols(db):
+    alp, byb, *_ = _store_partials(db)
+    mgc = _trade(db, symbol="MHGN6", account_id="ib_paper")
+    t = NOW
+    for wait in (0, b.BACKOFF_S[0] + 1, b.BACKOFF_S[1] + 1):
+        t += timedelta(seconds=wait)
+        b.run_batch(db, NONE, t, reviews=EMPTY, receipts=EMPTY, requeue_symbols=set())
+    _fresh_marker(db)
+    conn = _snap(db)
+    assert b.requeue_alpaca_candle_partials(conn, ALP, NOW) == 1
+    assert b.requeue_ib_candle_partials(conn, {"MHG"}, NOW) == 1           # MHGN6 resolves to MHG
+    assert b.requeue_ib_candle_partials(conn, {"MHG"}, NOW) is None
+    rows = dict(conn.execute(f"SELECT snapshot_key, state FROM {store.TABLE}").fetchall())
+    conn.close()
+    assert rows[store.trade_key(mgc)] == b.REQUEUED and rows[store.trade_key(alp)] == b.REQUEUED
+    assert rows[store.trade_key(byb)] == "built"
+
+
+def test_requeued_row_deferred_by_pacing_stays_queued_untouched(db):
+    alp, _, _, t = _store_partials(db)
+    _fresh_marker(db)
+
+    def deferred(symbol, interval, since_ms, limit, anchor=None):
+        return b.DEFERRED, "test"
+    deferred.accepts_anchor = True
+    out = b.run_batch(db, deferred, t, reviews=EMPTY, receipts=EMPTY, requeue_symbols=ALP)
+    assert out.get("deferred") == 1 and out["retrying"] == 0
+    got = _row(db, alp)
+    assert got["state"] == b.REQUEUED and got["payload"]["candles"]["state"] == "unavailable"
+
+
+def test_new_trade_deferred_by_pacing_takes_the_retry_path(db):
+    tid = _trade(db)
+
+    def deferred(symbol, interval, since_ms, limit):
+        return b.DEFERRED, "test"
+    assert b.run_batch(db, deferred, NOW, reviews=EMPTY, receipts=EMPTY)["retrying"] == 1
+    assert "ib_pacing_backoff" in _row(db, tid)["last_error"]
+
+
+def test_anchor_is_the_entry_fill_and_open_time(db):
+    _trade(db, entry_price=123.5)
+    seen = []
+
+    def fetch(symbol, interval, since_ms, limit, anchor=None):
+        seen.append(anchor)
+        return _fetch_ok()(symbol, interval, since_ms, limit)
+    fetch.accepts_anchor = True
+    b.run_batch(db, fetch, NOW, reviews=EMPTY, receipts=EMPTY)
+    assert seen[0] == (123.5, int(datetime(2026, 11, 12, 1, 0, tzinfo=timezone.utc).timestamp() * 1000))
+
+
+def test_epoch_ms_closed_at_is_normalised_not_a_permanent_retry(db):
+    """MEASURED 2026-11-13: trade:6131 stores closed_at as epoch-ms text ('1790835474843') and retried forever with
+    'unparseable_times'. The builder normalises it with src.utils.closed_at and builds the snapshot."""
+    ms = str(int(datetime(2026, 11, 12, 7, 0, tzinfo=timezone.utc).timestamp() * 1000))
+    tid = _trade(db, closed=ms)
+    out = b.run_batch(db, _fetch_ok(), NOW, reviews=EMPTY, receipts=EMPTY)
+    assert out["retrying"] == 0 and out["built"] + out["built_partial"] == 1
+    got = _row(db, tid)
+    assert got["state"] == "built" and got["payload"]["trade"]["closed_at"].startswith("2026-11-12T07:00")

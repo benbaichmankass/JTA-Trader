@@ -236,3 +236,15 @@ def test_ping_issue_is_opened_with_a_pat_not_github_token():
     assert "PING_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}" in wf
     assert 'GH_TOKEN="${PING_TOKEN:-$GH_TOKEN}" gh issue create' in wf
     assert '--pr-json "$pr_arg"' in wf
+
+
+def test_alarm_pings_via_the_direct_channel_first_and_keeps_the_issue_fallback():
+    """HOLD-ALARM-PING-DIRECT: the ping goes to POST /api/bot/ops/actions send-ping first; any non-2xx falls back
+    to the system-actions issue, so the alarm is never dropped (no halting)."""
+    from pathlib import Path
+    src = (Path(__file__).resolve().parents[1] / ".github/workflows/pr-landing-hold-merge-alarm.yml").read_text()
+    i_direct, i_issue = src.index("/api/bot/ops/actions"), src.index("gh issue create --label system-action")
+    assert i_direct < i_issue
+    assert '"action": "send-ping"' in src and "X-Work-Store-Token" in src
+    assert 'WORK_STORE_TOKEN: ${{ secrets.WORK_STORE_TOKEN }}' in src
+    assert '[ "$code" = "202" ] || [ "$code" = "200" ]' in src and '[ "$direct" = "yes" ] && continue' in src

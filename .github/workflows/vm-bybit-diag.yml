@@ -20,8 +20,8 @@ name: vm-bybit-diag
 
 on:
   workflow_dispatch:
-  issues:
-    types: [opened, labeled]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [vm-bybit-diag, labeled:vm-bybit-diag]
 
 permissions:
   contents: read
@@ -35,10 +35,10 @@ jobs:
   diag:
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       (github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'vm-bybit-diag'))
+      (github.event_name == 'repository_dispatch' &&
+       (github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'vm-bybit-diag'))
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:
@@ -53,14 +53,14 @@ jobs:
           [ -n "${NEED_VM_SSH_HOST}" ] || { echo "::error::secret VM_SSH_HOST not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
           exit "$fail"
       - name: Dedup — bail if a bot comment already exists
-        if: github.event_name == 'issues'
+        if: github.event_name == 'repository_dispatch'
         id: dedup
         uses: actions/github-script@v7
         with:
           script: |
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number, per_page: 100,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), per_page: 100,
             });
             core.setOutput('skip',
               comments.some(c => c.user && c.user.login === 'github-actions[bot]') ? 'true' : 'false');
@@ -222,17 +222,17 @@ jobs:
           echo "exit=$?"
 
       - name: Checkout (redactor script only; clean:false keeps the VM output file)
-        if: github.event_name == 'issues' && steps.dedup.outputs.skip != 'true' && always()
+        if: github.event_name == 'repository_dispatch' && steps.dedup.outputs.skip != 'true' && always()
         uses: actions/checkout@v4
         with:
           clean: false
 
       - name: Redact secrets and account ids from output (shared redactor)
-        if: github.event_name == 'issues' && steps.dedup.outputs.skip != 'true' && always()
+        if: github.event_name == 'repository_dispatch' && steps.dedup.outputs.skip != 'true' && always()
         run: python3 scripts/ops/redact_diag_output.py vm_bybit.txt || true
 
       - name: Post result to issue
-        if: github.event_name == 'issues' && steps.dedup.outputs.skip != 'true' && always()
+        if: github.event_name == 'repository_dispatch' && steps.dedup.outputs.skip != 'true' && always()
         uses: actions/github-script@v7
         with:
           script: |
@@ -240,8 +240,8 @@ jobs:
             let out = '(no output)';
             try { out = fs.readFileSync('vm_bybit.txt','utf8'); } catch {}
             const body = ['**vm-bybit-diag** result', '', '```', out.slice(0,6000), '```'].join('\n');
-            await github.rest.issues.createComment({owner:context.repo.owner,repo:context.repo.repo,issue_number:context.issue.number,body});
-            await github.rest.issues.update({owner:context.repo.owner,repo:context.repo.repo,issue_number:context.issue.number,state:'closed'});
+            await github.rest.issues.createComment({owner:context.repo.owner,repo:context.repo.repo,issue_number:(context.payload.client_payload?.issue?.number ?? context.issue.number),body});
+            await github.rest.issues.update({owner:context.repo.owner,repo:context.repo.repo,issue_number:(context.payload.client_payload?.issue?.number ?? context.issue.number),state:'closed'});
 
       - name: Summary (workflow_dispatch)
         if: github.event_name == 'workflow_dispatch' && steps.dedup.outputs.skip != 'true'

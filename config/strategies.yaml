@@ -2222,7 +2222,13 @@ strategies:
     timeframe: "1d"
     symbols:
       - TQQQ
-    donchian: 30
+    # donchian 30 -> 20 (Tier 3, data-backed, unit RQ-20261113-4654-01, rule RULE-RQ20261113-4654-01-TQQQ-D20-SPY-TWIN registered
+    # before the run): SPY-twin symbol holdout 2010-06..2026-10, exit_lever_ablation --grade sweep, same tp_r 1.5 / stops,
+    # harness cost stack (fee 0 + 5 bps slippage). Arm A (30) net +9.37 R n 95 maxDD 5.10 R; D20 net +15.10 R n 96 maxDD 4.27 R;
+    # delta +5.73 R, D20 wins 3/4 folds (fold 3 -2.37 vs +0.18) -> PASS. Record:
+    # research/results/RQ-20261113-4654-01/43368810094.jsonl. Confirms be01-02's C3 off TQQQ.
+    # ROLLBACK: donchian: 30.
+    donchian: 20
     atr_period: 14
     atr_stop_mult: 2.5
     trail_mult: 4.0

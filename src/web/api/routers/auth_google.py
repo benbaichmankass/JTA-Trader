@@ -59,7 +59,7 @@ def _unavailable() -> HTTPException:
 
 def _client_ip(request: Request) -> str:
     host = request.client.host if request.client else ""
-    if host in ("127.0.0.1", "::1", "testclient"):                # behind Caddy
+    if host in ("127.0.0.1", "::1"):                # behind Caddy (HARDEN h: no test host in runtime code)
         fwd = request.headers.get("X-Forwarded-For", "")
         if fwd:
             return fwd.split(",")[0].strip()
@@ -202,8 +202,9 @@ def register_begin(body: RegisterBegin, request: Request) -> dict[str, Any]:
         pre = _preauth(body.preauth_ticket)
         if pre is None:
             raise _fail(ip, status.HTTP_401_UNAUTHORIZED, "invalid_preauth_ticket")
-        # The code is burned here: a phished Google login alone cannot enrol.
-        if not ws.consume_enrol_code(body.enrol_code or ""):
+        # Checked here, BURNED at finish (HARDEN g): a phished Google login alone
+        # still cannot enrol, and a cancelled ceremony no longer wastes the code.
+        if not ws.enrol_code_valid(body.enrol_code or ""):
             raise _fail(ip, status.HTTP_403_FORBIDDEN, "invalid_enrol_code")
         via = "preauth"
 
@@ -223,6 +224,7 @@ def register_begin(body: RegisterBegin, request: Request) -> dict[str, Any]:
     cid = ws.mem_put("challenge", ws.CHALLENGE_TTL_SECONDS, {
         "challenge": options.challenge, "purpose": "register", "via": via,
         "label": body.label, "preauth_ticket": body.preauth_ticket,
+        "enrol_code": body.enrol_code if via == "preauth" else None,
     })
     return {"challenge_id": cid, "options": json.loads(options_to_json(options))}
 
@@ -252,6 +254,8 @@ def register_finish(body: RegisterFinish, request: Request) -> dict[str, Any]:
         raise _fail(ip, status.HTTP_400_BAD_REQUEST, "registration_failed")
 
     cred_id = bytes_to_base64url(v.credential_id)
+    if state["via"] == "preauth" and not ws.consume_enrol_code(state.get("enrol_code") or ""):
+        raise _fail(ip, status.HTTP_403_FORBIDDEN, "invalid_enrol_code")   # used/expired since begin
     try:
         ws.add_passkey(cred_id, v.credential_public_key, v.sign_count, email, state["label"])
     except Exception as exc:  # allow-silent: duplicate credential id (UNIQUE) -> 409, logged by type
@@ -398,6 +402,22 @@ def revoke_device_session_post(handle: str, row: dict = Depends(auth_module.requ
 def revoke_other_sessions(row: dict = Depends(auth_module.require_device_session)) -> dict[str, Any]:
     """'Sign out everywhere' = every session but the current one."""
     return {"revoked": ws.revoke_all_except(row["handle"])}
+
+
+@router.get("/passkeys")
+def list_passkeys(row: dict = Depends(auth_module.require_device_session)) -> dict[str, Any]:
+    """Registered passkeys (no key material). HARDEN (a)."""
+    return {"passkeys": ws.list_passkeys_public()}
+
+
+@router.post("/passkeys/{handle}/revoke")
+def revoke_passkey(handle: str, row: dict = Depends(auth_module.require_device_session)) -> dict[str, Any]:
+    """Revoke a passkey and every device session it issued (HARDEN a). POST (the
+    CORS allow-list is GET/POST)."""
+    n = ws.revoke_passkey(handle)
+    if n is None:
+        raise _err(status.HTTP_404_NOT_FOUND, "passkey_not_found")
+    return {"revoked": handle, "sessions_revoked": n}
 
 
 @router.post("/ws-ticket")

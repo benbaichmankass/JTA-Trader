@@ -1,0 +1,191 @@
+{
+  "engine": "scripts/research/ml_bakeoff.py",
+  "metric": "logloss",
+  "higher_is_better": false,
+  "metric_caveats": [],
+  "delta_sign": "positive = learner better than reference",
+  "baseline": "lgbm",
+  "controls": [
+    "prior"
+  ],
+  "candidates": [
+    "lgbm_yz"
+  ],
+  "arm_status": {
+    "prior": "ok",
+    "lgbm": "ok",
+    "lgbm_yz": "ok"
+  },
+  "groups": {
+    "BTCUSDT_1h": {
+      "n_rows": 43800,
+      "classes": [
+        "range",
+        "volatile"
+      ],
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.5606671766520837,
+                0.5948624057992049,
+                0.4855789236786451,
+                0.5232141439928663,
+                0.41862924483110453
+              ],
+              "n_test_rows": 26280
+            }
+          }
+        },
+        "lgbm": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.46741858556528076,
+                0.4972378469783292,
+                0.365639684003851,
+                0.4300171301288132,
+                0.33075750875819726
+              ],
+              "n_test_rows": 26280
+            }
+          }
+        },
+        "lgbm_yz": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "parkinson_vol",
+            "garman_klass_vol",
+            "rogers_satchell_vol",
+            "yang_zhang_vol"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.4676192222062498,
+                0.4977805884554101,
+                0.36235382339790156,
+                0.42112176454485056,
+                0.32042286679135396
+              ],
+              "n_test_rows": 26280
+            }
+          }
+        }
+      }
+    }
+  },
+  "deltas": {
+    "BTCUSDT_1h": {
+      "cv": {
+        "prior": {
+          "lgbm": {
+            "n_folds": 5,
+            "mean": -0.0983762279038866,
+            "ci95": [
+              -0.11394399220791317,
+              -0.08280846359986004
+            ],
+            "sign_consistent": true
+          },
+          "prior": {
+            "n_folds": 5,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          }
+        },
+        "lgbm_yz": {
+          "lgbm": {
+            "n_folds": 5,
+            "mean": 0.004354498007741081,
+            "ci95": [
+              -0.0019224484318776693,
+              0.010631444447359832
+            ],
+            "sign_consistent": false
+          },
+          "prior": {
+            "n_folds": 5,
+            "mean": 0.10273072591162768,
+            "ci95": [
+              0.08795569152794064,
+              0.11750576029531473
+            ],
+            "sign_consistent": true
+          }
+        }
+      }
+    }
+  },
+  "rule_evaluation": {
+    "verdict": "pass",
+    "why": "candidate(s) ['lgbm_yz'] meet every pass_if clause",
+    "passing": [
+      "lgbm_yz"
+    ],
+    "candidates": {
+      "lgbm_yz": {
+        "evaluated": true,
+        "passes_all": true,
+        "clauses": [
+          {
+            "holds": true,
+            "what": "['BTCUSDT_1h'] >= 0.002 vs lgbm/cv"
+          }
+        ]
+      }
+    }
+  },
+  "headline_checks": [],
+  "licences": {
+    "prior": {
+      "kind": "prior",
+      "licence": "n/a",
+      "research_only": false,
+      "weights": ""
+    },
+    "lgbm": {
+      "kind": "lightgbm",
+      "licence": "MIT",
+      "research_only": false,
+      "weights": ""
+    },
+    "lgbm_yz": {
+      "kind": "lightgbm",
+      "licence": "MIT",
+      "research_only": false,
+      "weights": ""
+    }
+  },
+  "n_folds_cv_min_over_groups": 5,
+  "seconds": 9.2
+}
