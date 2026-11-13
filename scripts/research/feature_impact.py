@@ -217,6 +217,13 @@ def m2_xs_ic(tab, feature: str, label: str, overlap: int = M2_OVERLAP, min_xs: i
             "by_quarter": qmeans}
 
 
+M2_LABEL_NOTE = ("net_long = net R of the 2 ATR / 3 ATR / 24 h long bracket after the full cost stack (the v1 / v1r20261106 label; "
+                 "v2 trains on a 2 / 4 bracket); fwd_ret_24h = raw 24 h log return. READ BOTH: net_long is in R, and cost in R = "
+                 "cost_bps / stop distance, so volatility features rank net_long through cheaper cost per R, not direction (first run "
+                 "2026-11-11: atr_pct IC +0.49 vs net_long, -0.08 vs fwd_ret_24h)")
+M2_SE_BASIS = "rank_ic_xs: sd over timestamps / sqrt(n / %d) (overlapping 24 h labels on a 4 h step)" % M2_OVERLAP
+
+
 def m2_rows(tab, run_id: str, computed_at: str, *, data_end: str, symbols_requested: int) -> List[Dict[str, Any]]:
     """Long-table rows for M2 over one decision table (features + labels per (ts, symbol))."""
     import numpy as np
@@ -229,12 +236,8 @@ def m2_rows(tab, run_id: str, computed_at: str, *, data_end: str, symbols_reques
             "asset_class": "crypto_perp", "venue": "bybit (Binance USD-M proxy bars)", "timeframe": "1h",
             "horizon_bars": mde.HORIZON_H, "regime": "all", "provenance": "MEASURED", "window_end": data_end,
             "source_artifact": "scripts/research/ml_decision_entry.py::build_table",
-            "label_note": "net_long = net R of the 2 ATR / 3 ATR / 24 h long bracket after the full cost stack (the v1 / "
-                          "v1r20261106 label; v2 trains on a 2 / 4 bracket); fwd_ret_24h = raw 24 h log return. READ "
-                          "BOTH: net_long is in R, and cost in R = cost_bps / stop distance, so volatility features rank "
-                          "net_long through cheaper cost per R, not direction (first run 2026-11-11: atr_pct IC +0.49 vs "
-                          "net_long, -0.08 vs fwd_ret_24h)",
-            "se_basis": "rank_ic_xs: sd over timestamps / sqrt(n / %d) (overlapping 24 h labels on a 4 h step)" % M2_OVERLAP}
+            "label_note": "see coverage.m2.label_note",
+            "se_basis": "see coverage.m2.se_basis"}
     out: List[Dict[str, Any]] = []
     n_sym = int(tab["symbol"].nunique())
     for f in mde.FEATURES:
@@ -258,7 +261,7 @@ def m2_rows(tab, run_id: str, computed_at: str, *, data_end: str, symbols_reques
                 n_eff = len(g) / M2_OVERLAP
                 se = (1.0 / np.sqrt(n_eff - 3)) if (ic is not None and n_eff > 3) else None
                 out.append({**row, "measure": "rank_ic_ts", "symbol": sym, "window": "all", "n_obs": int(len(g)),
-                            "value": ic, "se": se, "n_eff_basis": f"n / {M2_OVERLAP} (overlapping 24 h labels on a 4 h step)",
+                            "value": ic, "se": se, "n_eff_div": M2_OVERLAP,
                             "read_state": "measured" if ic is not None else "not_computed",
                             **({} if ic is not None else {"reason": f"< {M2_MIN_TS} decision rows or no variance"})})
     return out
@@ -358,7 +361,7 @@ def m2_generic_rows(tab, *, features: List[str], labels: Dict[str, str], base: D
                     n_eff = len(gg) / overlap
                     se = (1.0 / np.sqrt(n_eff - 3)) if (ic is not None and n_eff > 3) else None
                     out.append({**row, "measure": "rank_ic_ts", "symbol": sym, "window": win, "n_obs": int(len(gg)),
-                                "value": _r(ic), "se": _r(se), "n_eff_basis": f"n / {overlap}",
+                                "value": _r(ic), "se": _r(se), "n_eff_div": overlap,
                                 "read_state": "measured" if ic is not None else "not_computed",
                                 **({} if ic is not None else {"reason": f"< {min_ts} rows or no variance"})})
     return out
@@ -571,7 +574,8 @@ def run(root: Path, out_dir: Path, run_id: Optional[str] = None, m2_cache: Optio
             tab, info = m2_build_table(m2_cache, m2_symbols)
             r2 = m2_rows(tab, run_id, computed_at, data_end=info["data_end"], symbols_requested=info["symbols_requested"])
             rows += r2
-            m2_state = {"state": "measured", "rows": len(r2), **{k: v for k, v in info.items() if k != "fetch"},
+            m2_state = {"state": "measured", "rows": len(r2), "label_note": M2_LABEL_NOTE, "se_basis": M2_SE_BASIS,
+                        **{k: v for k, v in info.items() if k != "fetch"},
                         "missing_months": {s: v.get("missing_months") for s, v in info["fetch"].items()
                                            if v.get("missing_months")}}
         except Exception as exc:  # noqa: BLE001  # allow-silent: M2 failure is recorded in latest.json coverage.m2; M1 still lands
@@ -580,7 +584,8 @@ def run(root: Path, out_dir: Path, run_id: Optional[str] = None, m2_cache: Optio
             rt, ri = regime_table(m2_cache)
             rr = m2_regime_rows(rt, run_id, computed_at, ri)
             rows += rr
-            fams["m2_regime"] = {"state": "measured", "rows": len(rr), **ri, "label_note": REGIME_LABEL_NOTE}
+            fams["m2_regime"] = {"state": "measured", "rows": len(rr), **{("table_rows" if k == "rows" else k): v for k, v in ri.items()},
+                                 "label_note": REGIME_LABEL_NOTE}
         except Exception as exc:  # noqa: BLE001  # allow-silent: recorded in coverage.m2_regime; other families still land
             fams["m2_regime"] = {"state": "not_computed", "why": f"{type(exc).__name__}: {exc}"}
     else:

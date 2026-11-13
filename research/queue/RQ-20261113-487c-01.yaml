@@ -1,0 +1,131 @@
+# Hand-authored 2026-11-13 by lane FRONTIER-RESEARCH (AM-ML), row TREND-ALIGNMENT-FEATURE step 5. Decision rule
+# (ml_entry_v2.combine's admission rule) registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261113-487c-01
+title: 'Trend alignment as an ML ENTRY feature (TREND-ALIGN-V1 directional, family F7): does adding the trend-align family
+  to the pooled ENTRY recipe beat the no-feature baseline on the dev folds, net of the full cost stack?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+kind: experiment
+question: 'Step 5 of TREND-ALIGNMENT-FEATURE. The per-leg Stage-0 corpus study (RQ-20261113-63af-01) asks whether trades
+  taken with the prevailing trend earn more; this asks the complementary ML question: does giving the pooled ENTRY recipe
+  (ml_decision_entry: LightGBM net_long / net_short regressors, the policy picks the better side above tau) the trend
+  state as FEATURES improve it? New feature family F7 (scripts/research/ml_entry_families.py): the TREND-ALIGN-V1
+  directional state on the decision 1h bar and the completed-1d bar -- adx, signed (pdi-mdi), strong-up / strong-down
+  flags on each timeframe, and 1h+1d agreement. Directional, not a with/counter label: the model chooses its own side, so
+  a with/counter label (which needs a side) would be the model''s own output. Arm T (F7) vs baseline A, with the
+  seed-noise floor A2, through ml_entry_v2''s ablation path on the DEV folds only.'
+why_this_matters: 'If the trend state adds predictive value to the entry model net of cost, it is a candidate feature for
+  the next ENTRY iteration (a separate forward read on the sealed window before any live change); if not, trend alignment
+  is recorded as not an ML entry feature under TREND-ALIGN-V1, and the per-leg corpus study (63af-01) is the remaining
+  use. Either way the question is answered on dev evidence, not by intuition.'
+power:
+  expected_n: 60000
+  min_detectable_effect: 0.01
+  effect_units: metric
+  sd: 1.0
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, not measured: the pooled ENTRY dev window (60 perps, 2020-07..2025-09, 1h) carries tens of thousands
+    of decision rows per arm (a508-01 measured ~5,500 on the traded-5 alone). The admission rule is a per-decision delta
+    of +0.010 R over the A2 seed-noise floor across 8 folds, the same materiality bar the F1..F5 ablation (fs01-01)
+    registered. Said before any run; the harness reports the realised n.'
+  feasibility:
+    source: none
+    accrual_basis: 'Replays public Binance Vision history through 2025-09-30 (dev folds only); nothing accrues, no sealed
+      window is read.'
+evidence_class:
+  holdout: none
+  claim: ml_dev_fold_feature_value
+run:
+  command:
+  - python3
+  - scripts/research/ml_entry_v2_run.py
+  - ablation_trend
+  - '{unit}'
+  - '{out_dir}'
+  timeout_minutes: 300
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261113-487c-01
+decision_rule:
+  id: RULE-RQ20261113-487c-01-TREND-ALIGN-F7
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  statistic: 'ml_entry_v2.combine over arms A (20-feature baseline), A2 (arm A, second LightGBM seed = the harness noise
+    floor) and T (A + the F7 trend-align family). Per arm: leave-one-fold-out tau, pooled mean net R per decision across
+    the 8 dev folds, the per-fold means, and the F7 dev coverage. net R is the recipe''s own cost stack (fee + slippage +
+    funding). DEV FOLDS ONLY; no sealed or held-out window is read.'
+  rule: 'The ablation admission rule, registered before any run (ml_entry_v2.combine, unchanged from fs01-01): ADMIT F7
+    iff its pooled LOFO delta vs arm A is >= +0.010 R per decision AND the delta is positive in >= 6 of 8 folds AND it is
+    >= the measured seed-noise floor |A - A2| AND F7 is present on >= 40 percent of dev decision rows. Unit verdict:
+    pass if F7 is ADMITTED; fail if REJECTED; indeterminate if F7 coverage < 40 percent. The thresholds, the arms and the
+    dev window are fixed now and not changed after any result.'
+  proposal_mapping: 'pass -> a separate forward-read unit on the sealed window (HOLDOUT-LOCK) before any live ENTRY
+    recipe change (Tier 3, operator). fail -> trend alignment is recorded as not an ML entry feature under
+    TREND-ALIGN-V1; the per-leg corpus study 63af-01 stands as the remaining use. indeterminate -> F7 is too sparse on
+    the dev population to read; no change.'
+  what_it_does_not_do: 'Reads no sealed or held-out window (dev folds only), serves nothing, promotes nothing, changes no
+    config, places no order, sizes nothing, changes no live feature set. One definition of trend (TREND-ALIGN-V1); a null
+    does not refute trend features under another definition.'
+  min_n: 1000 dev decisions per arm
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.2
+  basis: 'stand-in: the operator priority-1 goal (ML decision makers live) and the operator''s own trend-alignment ask;
+    not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 60
+  why_runner: Keyless public Binance Vision archives; GBDT on CPU.
+  basis: 'INFERRED from a508-01 / fs01-01: one 8-fold arm of the recipe is ~480 s on 4 threads; this unit runs three
+    arms (A, A2, T) in parallel plus the combine.'
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: 'whether the next pooled ENTRY recipe iteration should carry the F7 trend-align family; a pass gates only a
+    forward read on the sealed window, never a live change directly.'
+  legs:
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - ada_pullback_2h
+  - trend_donchian_sol_prop
+  book: money
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: comms/research/trend_alignment/backfill-2026-11-13/
+  verdict_read: not_yet_read
+  diagnosis: 'The trend-alignment framework (TREND-ALIGN-V1) was built and the journal backfill labelled 2,629 closed
+    trades, but no test has yet asked whether the trend state helps the ML entry model (as opposed to the per-leg Stage-0
+    corpus study 63af-01). The entry recipe currently carries no trend-alignment feature.'
+  hypothesis: 'The trend state (adx + signed DI on the 1h decision bar and the completed-1d bar) adds >= +0.010 R per
+    decision over the no-feature baseline on the dev folds, net of cost.'
+  attempt: 1
+  due_by: '2026-11-20'
+  map_entries:
+  - research/levers/ml-entry.yaml
+related:
+- TREND-ALIGNMENT-FEATURE
+- RQ-20261113-63af-01
+- RQ-20261101-fs01-01
+- docs/research/trend-alignment-framework-2026-11-13.md
+- research/levers/ml-entry.yaml
+practice_precedent: 'M4 (rule registered before the run), M6 (net of the full cost stack), T1 (purged + embargoed
+  walk-forward on dev folds only, no sealed window read) in docs/reference/trading-and-model-practice-principles.md; the
+  same ablation admission rule fs01-01 registered for the F1..F5 families.'
+what_it_does_not_do: 'Registers, serves or promotes nothing; changes no config; places no order; sizes nothing; reads no
+  sealed window.'
+last_dispatched_at: '2026-11-13T10:52:51+00:00'

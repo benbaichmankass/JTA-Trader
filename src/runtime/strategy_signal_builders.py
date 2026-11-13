@@ -74,6 +74,30 @@ def _stamp_regime_on_meta(
     return meta
 
 
+def _stamp_trend_align_on_meta(meta: Dict[str, Any], candles_df: Any, *, symbol: Optional[str] = None,
+                               timeframe: Optional[str] = None, direction: Any = None,
+                               fetch_d1: Any = None) -> Dict[str, Any]:
+    """Stamp TREND-ALIGN-V1 (row TREND-ALIGNMENT-FEATURE step 3) onto a signal's meta as ``meta.trend_align``.
+
+    OBSERVE-ONLY: a tag, never a gate — nothing downstream reads it to suppress or size a trade. The LEG label comes from
+    ``candles_df`` (the leg's own decision frame); the D1 label needs 1d candles, fetched best-effort via ``fetch_d1`` (a
+    0-arg callable; for a 1d leg the leg frame is reused). Any failure leaves a null label with a reason and never raises
+    (same contract as ``_stamp_regime_on_meta``). ``setdefault`` so a builder that pre-stamped is not overwritten."""
+    try:
+        from src.runtime.trend_alignment import meta_for_entry
+        d1 = None
+        if str(timeframe) != "1d" and callable(fetch_d1):
+            try:
+                d1 = fetch_d1()
+            except Exception:  # noqa: BLE001 — a 1d fetch failure must not break a tick; D1 stays null
+                d1 = None
+        meta.setdefault("trend_align", meta_for_entry(candles_df, d1, direction, timeframe))
+    except Exception:  # noqa: BLE001 — observability-only, never break a tick
+        meta.setdefault("trend_align", {"definition": "TREND-ALIGN-V1", "LEG": {"label": None, "missing_reason": "error"},
+                                        "D1": {"label": None, "missing_reason": "error"}, "agreement": "other"})
+    return meta
+
+
 def _stamp_regime(payload: Dict[str, Any], candles_df: Any) -> Dict[str, Any]:
     """Stamp the ADX-14 regime detector's output onto an eval audit row.
 
@@ -1449,6 +1473,10 @@ def trend_donchian_signal_builder(settings: dict) -> Dict[str, Any]:
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    # TREND-ALIGNMENT-FEATURE step 3 (observe-only): tag the prevailing-trend alignment of this entry. Never gates.
+    _stamp_trend_align_on_meta(
+        sig["meta"], candles_df, symbol=symbol, timeframe=timeframe, direction=pkg["direction"],
+        fetch_d1=(lambda: fetch_candles(symbol, "1d", exchange_client=exchange, limit=200)) if timeframe != "1d" else None)
     return _with_signal_package("trend_donchian", sig)
 
 

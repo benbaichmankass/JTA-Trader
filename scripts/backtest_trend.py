@@ -344,6 +344,7 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  structure_buffer_atr: float = 0.25,
                  structure_min_r: float = 1.0,
                  structure_fvg: bool = True,
+                 structure_sl_only: bool = False,
                  giveback_frac: float = 0.0,
                  trigger_action: str = "",
                  trigger_file: str = "",
@@ -368,6 +369,7 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  decision_1m: Optional[pd.DataFrame] = None,
                  decision_cfg: Optional[Dict[str, Any]] = None,
                  decision_workers: int = 4,
+                 decision_session: Optional[str] = None,
                  emit_paths_path: Optional[str] = None,
                  emit_features: bool = False,
                  cf: bool = False) -> Dict[str, Any]:
@@ -386,7 +388,8 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
             raise ValueError("decision_bar='forming' needs decision_1m and decision_cfg")
         entry_override = _forming_bar_entries().forming_entry_override(
             df, decision_1m, decision_cfg, family="trend", label=strategy_name,
-            workers=decision_workers)
+            workers=decision_workers,
+            **({"session": decision_session} if decision_session else {}))
         adx_min = adx_max = None
         min_confidence = 0.0
         vol_skip_above_pctl = vol_skip_below_pctl = 0.0
@@ -822,8 +825,10 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
         # GEOM-B1: a finite entry-time target and/or a target that moves
         # (scripts/research/tp_geometry.py). Skipped entirely at default, so the
         # legacy `tp_price` above is untouched.
-        if _sx is not None:
+        if _sx is not None and not structure_sl_only:
             tp_price = _sx.tp              # None -> no resting TP until a level is confirmed
+        # STRUCTURE-EXIT-ITERATE (--structure-sl-only, default off = byte-identical): keep the structure STOP and the
+        # declared (capped) TP -- the live `pivot=5;sl_only` semantic; the structure TP is neither placed nor extended.
         _tpt = None
         if tp_geom.armed:
             tp_price = _tpg.entry_target(
@@ -980,7 +985,9 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                     trail = min(trail, entry)
             if _sx is not None:
                 # bar j has CLOSED: new confirmed levels bind from bar j+1 (ratchet / extend-only)
-                trail, tp_price = _sx.on_bar_close(j, float(df["close"].iloc[j]), trail, tp_price, entry)
+                trail, _sx_tp = _sx.on_bar_close(j, float(df["close"].iloc[j]), trail, tp_price, entry)
+                if not structure_sl_only:
+                    tp_price = _sx_tp
             # GEOM-B1 target revision (off unless --tp-extend-r / --tp-retarget-mode).
             # On the bar's CLOSE, after its own stop/target test; the revised level
             # binds from the NEXT bar. NOT a levered exit: it only moves tp_price.
@@ -1298,6 +1305,8 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
         params.update(structure_exit=structure_exit, structure_buffer_atr=structure_buffer_atr,
                       structure_min_r=structure_min_r, structure_fvg=structure_fvg,
                       structure_no_swing_fallbacks=_sx_fallback)
+        if structure_sl_only:
+            params["structure_sl_only"] = True
     if _trig.on:
         params["trigger_action"] = trigger_action
         params["trigger_all"] = trigger_all
@@ -1845,6 +1854,9 @@ def main(argv: List[str]) -> int:
                    help="Minimum distance of the structure TP from entry, in R.")
     p.add_argument("--structure-no-fvg", action="store_true",
                    help="Structure TP uses swing highs/lows only (no unfilled FVG edges).")
+    p.add_argument("--structure-sl-only", action="store_true",
+                   help="STRUCTURE-EXIT-ITERATE (default off = byte-identical): with --structure-exit, keep the structure "
+                        "stop but not the structure TP (the declared capped TP stays) -- the live pivot=N;sl_only semantic.")
     p.add_argument("--giveback-frac", type=float, default=0.0,
                    help="GIVEBACK-FRAC-FLAG (0 = off, byte-identical): giveback stop as a SHARE of the "
                         "peak -- exit at the bar close when open R <= F x peak R, armed by "
@@ -1902,6 +1914,12 @@ def main(argv: List[str]) -> int:
                         "(needs --klines-1m-dir and --strategy-name <leg>)")
     p.add_argument("--klines-1m-dir", default=None, metavar="DIR",
                    help="Binance USD-M <SYMBOL>-1m-*.zip archives for --decision-bar forming")
+    p.add_argument("--minutes-1m-csv", default=None, metavar="CSV",
+                   help="--decision-bar forming from a 1m CSV (timestamp,open,high,low,close[,volume]; "
+                        "e.g. scripts/research/equity_1m_source.py's output) instead of Binance archives")
+    p.add_argument("--decision-session", choices=["us_equity"], default=None,
+                   help="--decision-bar forming on a US-session daily frame: align minutes by ET date and "
+                        "tick only inside the cash session (scripts/research/forming_bar_entries.py)")
     p.add_argument("--strategy-name", default="trend_donchian", metavar="NAME",
                    help="Leg name stamped on every emitted row's `strategy` "
                         "field. Defaults to the historical literal so an "
@@ -2082,6 +2100,7 @@ def main(argv: List[str]) -> int:
                      structure_buffer_atr=args.structure_buffer_atr,
                      structure_min_r=args.structure_min_r,
                      structure_fvg=not args.structure_no_fvg,
+                     structure_sl_only=args.structure_sl_only,
                      giveback_frac=args.giveback_frac,
                      trigger_action=args.trigger_action,
                      trigger_file=args.trigger_file,
@@ -2100,11 +2119,26 @@ def main(argv: List[str]) -> int:
                      momentum_stale_adx_below=args.momentum_stale_adx_below)
     decision_kw: Dict[str, Any] = {}
     if args.decision_bar == "forming":
-        if not args.klines_1m_dir:
-            print("ERROR: --decision-bar forming requires --klines-1m-dir", file=sys.stderr)
+        if bool(args.klines_1m_dir) == bool(args.minutes_1m_csv):
+            print("ERROR: --decision-bar forming requires exactly one of --klines-1m-dir / "
+                  "--minutes-1m-csv", file=sys.stderr)
             return 1
-        _m1, _block = _forming_bar_entries().cli_inputs(args.klines_1m_dir, args.strategy_name)
-        decision_kw = dict(decision_bar="forming", decision_1m=_m1, decision_cfg=_block)
+        _fbe = _forming_bar_entries()
+        if args.minutes_1m_csv:
+            _m1, _block = _fbe.cli_inputs_csv(args.minutes_1m_csv, args.strategy_name)
+            # The ARM's own entry params decide (an exit_lever_ablation arm such as
+            # donchian=30 vs the YAML's 20 must replay ITS channel, not the YAML's).
+            _block = _fbe.block_with_arm_params(_block, donchian=args.donchian,
+                                                atr_period=args.atr_period,
+                                                atr_stop_mult=args.atr_stop_mult,
+                                                long_only=args.long_only)
+        else:
+            _m1, _block = _fbe.cli_inputs(args.klines_1m_dir, args.strategy_name)
+        decision_kw = dict(decision_bar="forming", decision_1m=_m1, decision_cfg=_block,
+                           decision_session=args.decision_session)
+    elif args.minutes_1m_csv or args.decision_session:
+        print("ERROR: --minutes-1m-csv / --decision-session need --decision-bar forming", file=sys.stderr)
+        return 1
     if args.confidence_sweep:
         out = _confidence_sweep(df, _parse_grid(args.confidence_sweep), bt_kwargs)
         print(_fmt_sweep(out))

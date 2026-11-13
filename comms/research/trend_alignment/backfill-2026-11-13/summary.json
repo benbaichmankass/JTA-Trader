@@ -1,0 +1,342 @@
+{
+  "definition": "TREND-ALIGN-V1",
+  "registered_at": "2026-11-13",
+  "doc": "docs/research/trend-alignment-framework-2026-11-13.md",
+  "population": {
+    "journal_rows_read": 7171,
+    "closed_non_backtest": 2629,
+    "labelled_rows": 2629,
+    "note": "every closed, non-backtest trade in the trades journal at read time; demo and live books both included, split by book"
+  },
+  "labels_by_tf": {
+    "LEG": {
+      "with_trend": 472,
+      "neutral": 925,
+      "counter_trend": 453,
+      "missing": 779
+    },
+    "D1": {
+      "with_trend": 1017,
+      "counter_trend": 712,
+      "neutral": 898,
+      "missing": 2
+    }
+  },
+  "missing_by_reason": {
+    "LEG": {
+      "no_timeframe": 756,
+      "no_candles": 23
+    },
+    "D1": {
+      "no_candles": 2
+    }
+  },
+  "agreement": {
+    "both_with": 213,
+    "other": 2017,
+    "split": 273,
+    "both_counter": 126
+  },
+  "by_leg": {
+    "ada_pullback_2h": {
+      "paper:with_trend": 37,
+      "real_money:with_trend": 14,
+      "paper:counter_trend": 21,
+      "real_money:counter_trend": 4
+    },
+    "avax_pullback_2h": {
+      "paper:counter_trend": 12,
+      "paper:with_trend": 9
+    },
+    "claude_desk": {
+      "paper:missing": 6
+    },
+    "e4_oi_shock_1h": {
+      "paper:neutral": 11,
+      "paper:counter_trend": 6,
+      "paper:with_trend": 4
+    },
+    "eth_pullback_2h": {
+      "paper:with_trend": 29,
+      "paper:counter_trend": 21,
+      "real_money:counter_trend": 6,
+      "real_money:with_trend": 13,
+      "paper:neutral": 4
+    },
+    "eth_pullback_prop_2h": {
+      "paper:with_trend": 5
+    },
+    "fade_breakout_4h": {
+      "real_money:neutral": 9,
+      "paper:neutral": 8
+    },
+    "fvg_range_15m": {
+      "paper:neutral": 1
+    },
+    "gdx_pullback_1d": {
+      "paper:neutral": 4,
+      "paper:with_trend": 2
+    },
+    "gld_pullback_1d": {
+      "paper:counter_trend": 1,
+      "paper:with_trend": 3
+    },
+    "gld_pullback_1h": {
+      "paper:counter_trend": 6,
+      "paper:neutral": 5,
+      "paper:with_trend": 7
+    },
+    "htf_pullback_trend_2h": {
+      "paper:with_trend": 20,
+      "paper:neutral": 13,
+      "paper:counter_trend": 18,
+      "real_money:counter_trend": 4,
+      "real_money:neutral": 2,
+      "real_money:with_trend": 2
+    },
+    "iaum_pullback_1d": {
+      "paper:neutral": 1,
+      "real_money:neutral": 1,
+      "paper:counter_trend": 1,
+      "paper:with_trend": 1
+    },
+    "ict_scalp_5m": {
+      "paper:neutral": 52,
+      "real_money:neutral": 26,
+      "paper:with_trend": 13,
+      "real_money:with_trend": 11,
+      "paper:counter_trend": 9,
+      "real_money:counter_trend": 4
+    },
+    "ict_scalp_avax_5m": {
+      "paper:with_trend": 10,
+      "paper:neutral": 52,
+      "paper:counter_trend": 27
+    },
+    "ict_scalp_eth_15m": {
+      "paper:neutral": 26,
+      "paper:with_trend": 6,
+      "paper:counter_trend": 10
+    },
+    "ict_scalp_mgc_15m": {
+      "paper:missing": 23
+    },
+    "ict_scalp_sol_15m": {
+      "paper:counter_trend": 11,
+      "paper:neutral": 38,
+      "paper:with_trend": 2
+    },
+    "ict_scalp_sol_5m": {
+      "paper:with_trend": 4,
+      "paper:neutral": 35,
+      "paper:counter_trend": 28
+    },
+    "ict_scalp_xrp_15m": {
+      "paper:neutral": 24,
+      "paper:with_trend": 12,
+      "paper:counter_trend": 11
+    },
+    "ict_scalp_xrp_5m": {
+      "paper:neutral": 33,
+      "paper:counter_trend": 12,
+      "paper:with_trend": 2
+    },
+    "ief_pullback_1d": {
+      "paper:with_trend": 1,
+      "paper:neutral": 5,
+      "real_money:neutral": 1
+    },
+    "iwm_trend_long_1d": {
+      "paper:neutral": 7
+    },
+    "mes_trend_long_1d": {
+      "paper:neutral": 4
+    },
+    "mgc_pullback_1d": {
+      "paper:neutral": 3,
+      "paper:counter_trend": 1,
+      "paper:with_trend": 1
+    },
+    "mgc_trend_1h": {
+      "paper:neutral": 20,
+      "paper:with_trend": 1
+    },
+    "mhg_pullback_1d": {
+      "paper:neutral": 6
+    },
+    "ml_entry": {
+      "paper:neutral": 15,
+      "real_money:neutral": 12,
+      "paper:with_trend": 10,
+      "real_money:with_trend": 6,
+      "paper:counter_trend": 5,
+      "real_money:counter_trend": 2
+    },
+    "ml_entry_eq": {
+      "paper:with_trend": 2
+    },
+    "ml_entry_v2": {
+      "paper:with_trend": 3
+    },
+    "orphan_adopt": {
+      "paper:missing": 7,
+      "real_money:missing": 23
+    },
+    "pairs_bnb_btc_a": {
+      "paper:missing": 175
+    },
+    "pairs_bnb_btc_b": {
+      "paper:missing": 173
+    },
+    "pairs_sol_eth_a": {
+      "paper:missing": 187
+    },
+    "pairs_sol_eth_b": {
+      "paper:missing": 185
+    },
+    "qld_trend_long_1d": {
+      "paper:neutral": 2
+    },
+    "qqq_pullback_1h": {
+      "paper:counter_trend": 2,
+      "paper:with_trend": 9,
+      "paper:neutral": 16
+    },
+    "qqq_trend_long_1d": {
+      "paper:neutral": 4
+    },
+    "scha_trend_long_1d": {
+      "paper:neutral": 2
+    },
+    "slv_pullback_1d": {
+      "real_money:neutral": 1,
+      "paper:neutral": 6
+    },
+    "slv_trend_1h": {
+      "paper:with_trend": 13,
+      "paper:neutral": 14
+    },
+    "sol_pullback_2h": {
+      "paper:counter_trend": 19,
+      "paper:with_trend": 10,
+      "paper:neutral": 1
+    },
+    "spy_pullback_1h": {
+      "paper:neutral": 14,
+      "paper:counter_trend": 1,
+      "paper:with_trend": 5
+    },
+    "spy_trend_long_1d": {
+      "paper:neutral": 2
+    },
+    "squeeze_breakout_4h": {
+      "paper:neutral": 10,
+      "real_money:counter_trend": 1,
+      "real_money:with_trend": 2,
+      "paper:counter_trend": 3,
+      "paper:with_trend": 54
+    },
+    "tlt_pullback_1d": {
+      "paper:neutral": 9,
+      "paper:with_trend": 1
+    },
+    "tlt_pullback_1h": {
+      "real_money:neutral": 1,
+      "paper:neutral": 10,
+      "paper:with_trend": 5
+    },
+    "tqqq_trend_long_1d": {
+      "paper:neutral": 1
+    },
+    "trend_donchian": {
+      "paper:with_trend": 9,
+      "paper:neutral": 27,
+      "paper:counter_trend": 11,
+      "real_money:counter_trend": 1,
+      "real_money:neutral": 9,
+      "real_money:with_trend": 7
+    },
+    "trend_donchian_1h": {
+      "paper:neutral": 4,
+      "paper:with_trend": 2
+    },
+    "trend_donchian_ada_4h": {
+      "paper:with_trend": 15,
+      "paper:neutral": 11,
+      "paper:counter_trend": 7
+    },
+    "trend_donchian_avax_4h": {
+      "paper:counter_trend": 2,
+      "paper:neutral": 19,
+      "paper:with_trend": 7
+    },
+    "trend_donchian_eth": {
+      "paper:neutral": 22,
+      "paper:with_trend": 8,
+      "paper:counter_trend": 2
+    },
+    "trend_donchian_eth_4h": {
+      "paper:with_trend": 8,
+      "paper:neutral": 30,
+      "real_money:neutral": 17,
+      "real_money:with_trend": 3,
+      "paper:counter_trend": 2
+    },
+    "trend_donchian_eth_prop": {
+      "paper:with_trend": 6,
+      "paper:neutral": 6
+    },
+    "trend_donchian_sol": {
+      "paper:neutral": 8,
+      "paper:with_trend": 2,
+      "paper:counter_trend": 2
+    },
+    "trend_donchian_sol_4h": {
+      "paper:with_trend": 7,
+      "paper:neutral": 15,
+      "paper:counter_trend": 4
+    },
+    "trend_donchian_sol_prop": {
+      "paper:neutral": 5,
+      "real_money:neutral": 3,
+      "paper:with_trend": 2,
+      "real_money:with_trend": 1
+    },
+    "trend_donchian_xrp_4h": {
+      "paper:with_trend": 3,
+      "real_money:with_trend": 2,
+      "paper:neutral": 12,
+      "real_money:neutral": 7,
+      "paper:counter_trend": 1
+    },
+    "trend_donchian_xrp_adx25": {
+      "paper:with_trend": 1,
+      "paper:neutral": 1
+    },
+    "uso_trend_1h": {
+      "paper:neutral": 9,
+      "paper:with_trend": 13,
+      "paper:counter_trend": 1
+    },
+    "vwap": {
+      "real_money:counter_trend": 129,
+      "paper:counter_trend": 22,
+      "paper:with_trend": 6,
+      "real_money:neutral": 192,
+      "paper:neutral": 12,
+      "real_money:with_trend": 1
+    },
+    "xrp_pullback_2h": {
+      "paper:with_trend": 27,
+      "paper:neutral": 3,
+      "real_money:neutral": 2,
+      "real_money:with_trend": 13,
+      "paper:counter_trend": 18,
+      "real_money:counter_trend": 5
+    }
+  },
+  "candle_fetch_errors": {
+    "MGC/15m": "RuntimeError: yfinance returned no rows for GC=F (yfinance==1.8.0); venue_state=serving, interval_state=window_exceeds_intraday_limit -- GC=F at interval=15m returns rows over 5d and none over the requested window,",
+    "MHGN6/1d": "RuntimeError: yfinance returned no rows for MHGN6 (yfinance==1.8.0); venue_state=serving -- the SPY control returned 5 rows, so the venue is up and this is specific to MHGN6 (delisting, a short listing history, or "
+  }
+}

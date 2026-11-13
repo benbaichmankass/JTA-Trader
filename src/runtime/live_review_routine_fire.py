@@ -179,9 +179,26 @@ def _ts(v: Any) -> Optional[datetime]:
         return None
 
 
+#: LTR-ROUTINE-REVIEWERS-NO-ROWS (2026-11-13): the routine's fired sessions start with NO repository (tags
+#: config:no-git-repo) and so could not land a row; they do carry add_repo. This plain block leads every fire
+#: text so the reviewer attaches and clones the repo first. Harmless if the routine already attaches it. The
+#: due-event JSON follows unchanged after a blank line (``payload_doc`` reads it back).
+BOOTSTRAP = ("STEP 0: call add_repo(owner=benbaichmankass, repo=JTA-Trader, access=push), clone it, then follow "
+             ".claude/skills/live-trade-review/SKILL.md and land your row on live-review/rows; if add_repo or the "
+             "clone fails, say so.")
+_SEP = "\n\n"
+
+
+def payload_doc(text: str) -> Dict[str, Any]:
+    """The due-event JSON document inside a fire text (after the BOOTSTRAP block)."""
+    body = text[len(BOOTSTRAP) + len(_SEP):] if text.startswith(BOOTSTRAP + _SEP) else text
+    return json.loads(body)
+
+
 def build_text(entries: List[Dict[str, Any]], bundles: Optional[Dict[str, Dict[str, Any]]],
                now: datetime) -> str:
-    """The fire payload: the due event as ONE JSON document (the routine receives it as a literal string).
+    """The fire payload: the BOOTSTRAP block, a blank line, then the due event as ONE JSON document (the routine
+    receives it as a literal string; ``payload_doc`` parses the JSON back out).
 
     Per package the same block an ``ltr-wake`` comment carries (``packet``, ``packet_sha``, ``table_path``,
     ``table``) while it fits under the 65,536-char cap; past it the block is left out (``packet_omitted``) and the
@@ -191,7 +208,7 @@ def build_text(entries: List[Dict[str, Any]], bundles: Optional[Dict[str, Dict[s
     doc: Dict[str, Any] = {"kind": "ltr-routine-fire", "fired_at": now.isoformat(),
                            "entries": [{k: e.get(k) for k in ev_keys if e.get(k) is not None} for e in entries],
                            "packets": {}, "packet_omitted": []}
-    budget = MAX_TEXT_CHARS - len(json.dumps(doc, default=str)) - 512
+    budget = MAX_TEXT_CHARS - len(json.dumps(doc, default=str)) - 512 - len(BOOTSTRAP) - len(_SEP)
     for pkg in dict.fromkeys(str(e.get("order_package_id")) for e in entries):
         b = (bundles or {}).get(pkg) or {}
         blk = {k: b.get(k) for k in ("packet_sha", "table_path", "packet", "table")}
@@ -201,7 +218,7 @@ def build_text(entries: List[Dict[str, Any]], bundles: Optional[Dict[str, Dict[s
             budget -= len(s) + len(pkg) + 8
         else:
             doc["packet_omitted"].append(pkg)
-    return json.dumps(doc, sort_keys=True, separators=(",", ":"), default=str)
+    return BOOTSTRAP + _SEP + json.dumps(doc, sort_keys=True, separators=(",", ":"), default=str)
 
 
 def _flag(text: str, send: Optional[Callable[[str], Any]]) -> bool:

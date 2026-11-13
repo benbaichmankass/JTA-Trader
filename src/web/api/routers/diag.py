@@ -1448,8 +1448,8 @@ def _require_diag_token(request: Request) -> None:
     # header is present it alone decides.
     ws_tok = request.headers.get("X-Work-Store-Token")
     if ws_tok is not None:
-        ws_expected = os.environ.get("WORK_STORE_TOKEN", "").strip()
-        if ws_expected and ws_tok.strip() and hmac.compare_digest(ws_tok.strip(), ws_expected):
+        from src.web.api.routers.work_items import work_store_token_ok  # rotation dual-accept (VM-CHANGE-LEDGER)
+        if work_store_token_ok(ws_tok):
             return
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -2751,6 +2751,73 @@ def _deployed_sha_by_unit() -> dict[str, str | None]:
     return out
 
 
+_UNIT_CONFIG_PROPS = ("FragmentPath", "DropInPaths", "ActiveEnterTimestamp", "NeedDaemonReload")
+
+
+def _parse_systemd_ts(value: str) -> datetime | None:
+    """``Thu 2026-11-12 10:20:54 UTC`` -> aware datetime; None when empty/unparseable."""
+    parts = (value or "").split()
+    # Only UTC is parsed (the VMs run UTC); another zone is "could not look", never a guess.
+    if len(parts) != 4 or parts[3] != "UTC":
+        return None
+    try:
+        return datetime.strptime(f"{parts[1]} {parts[2]}", "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def _unit_config_pending(units: list[str],
+                         show: Any = None,
+                         mtime: Any = None) -> dict[str, bool | None]:
+    """DEPLOY-UNIT-RESTART-DETECT: per unit, True when its INSTALLED unit file or a
+    drop-in is newer than the running process (or systemd says a daemon-reload is
+    pending), i.e. the process runs a launch config it never loaded.
+
+    MEASURED 2026-11-12 (#25185): web-api restarted at 10:08:33 on the OLD unit,
+    install_systemd_units rewrote it later, and ``restart_pending`` read False
+    because running sha == checkout sha. The sha diff cannot see this; the unit
+    file's mtime against ``ActiveEnterTimestamp`` can. Three-way, never collapsed:
+    None = could not look (no systemctl, unparseable start time, unreadable file).
+    """
+    show = show or _systemctl_show
+    mtime = mtime or (lambda path: os.stat(path).st_mtime)
+    shown = show(units, _UNIT_CONFIG_PROPS)
+    out: dict[str, bool | None] = {}
+    for unit in units:
+        props = shown.get(unit)
+        if not props:
+            out[unit] = None
+            continue
+        if props.get("NeedDaemonReload", "").lower() == "yes":
+            out[unit] = True
+            continue
+        started = _parse_systemd_ts(props.get("ActiveEnterTimestamp", ""))
+        paths = [p for p in [props.get("FragmentPath", "")] + props.get("DropInPaths", "").split() if p]
+        if started is None or not paths:
+            out[unit] = None
+            continue
+        try:
+            newest = max(mtime(p) for p in paths)
+        except OSError:
+            out[unit] = None
+            continue
+        # systemd timestamps are whole seconds: a file written in the same second
+        # as the start is not counted as newer.
+        out[unit] = newest >= started.timestamp() + 1
+    return out
+
+
+def _either_pending(code: bool | None, config: bool | None) -> bool | None:
+    """The code verdict, escalated to True when the launch config says pending.
+
+    A config check that could not look (``None``, e.g. no systemctl) never
+    downgrades a known code verdict -- it is reported on its own in
+    ``unit_config_pending_by_unit`` -- so the per-unit flag keeps its meaning."""
+    if config is True:
+        return True
+    return code
+
+
 @router.get("/version")
 def get_version(request: Request) -> dict[str, Any]:
     """Diagnostic — git SHA + captured timestamp of the running web-api
@@ -2771,6 +2838,7 @@ def get_version(request: Request) -> dict[str, Any]:
     restart_pending = _restart_pending(_RUNNING_GIT_SHA, on_disk)
     trader_sha = _trader_running_sha()
     trader_pending = _trader_restart_pending(trader_sha, on_disk)
+    unit_cfg = _unit_config_pending([WEB_API_UNIT, TRADER_UNIT])
     return {
         # The sha the RUNNING process was loaded from -- captured once at
         # import. This is what the field name and this endpoint's whole
@@ -2789,10 +2857,14 @@ def get_version(request: Request) -> dict[str, Any]:
         # older sha whose loaded code is identical, so the trader has its own
         # running sha and its own pending flag. Same three-way None.
         "trader_git_sha": trader_sha,
+        # A unit is pending when its CODE differs (sha diff above) OR its installed
+        # launch config (unit file / drop-in) is newer than the running process
+        # (DEPLOY-UNIT-RESTART-DETECT; the cause is in unit_config_pending_by_unit).
         "restart_pending_by_unit": {
-            WEB_API_UNIT: restart_pending,
-            TRADER_UNIT: trader_pending,
+            WEB_API_UNIT: _either_pending(restart_pending, unit_cfg.get(WEB_API_UNIT)),
+            TRADER_UNIT: _either_pending(trader_pending, unit_cfg.get(TRADER_UNIT)),
         },
+        "unit_config_pending_by_unit": unit_cfg,
         "deployed_sha_by_unit": _deployed_sha_by_unit(),
         "captured_at": datetime.now(timezone.utc).isoformat(),
     }

@@ -330,6 +330,7 @@ lines:
       - {record: 'row ML-ENTRY-FINETUNE / ML-ENTRY-LIVE-MONITOR', n: 868, value: 'forward Oct-2026 -0.0193; 10-23..11-05 served -0.0918 (n 342, se 0.059)', provenance: QUOTED}
       - {record: 'comms/research/RQ-20261101-a24c-01/local-20261112/', n: 4272, value: 'universe arm A fwd -0.0492 R/decision, t about -2.9; 5 bybit_2 coins +0.0156 n=971 (reported)', provenance: QUOTED}
       - {record: 'research/results/RQ-20261101-b610-01/local-20261112T1107Z.jsonl (PR #25278)', n: 1857, value: 'frozen v1 +0.0245 on a disjoint symbol x time population (monitoring)', provenance: QUOTED}
+      - {record: 'research/results/RQ-20261112-2e3b-01/43302779170.jsonl (PR #25462)', n: 12746, value: 'POPULATION test FAIL: pooled -0.0680 R/decision (se 0.0098) on the 51-symbol Bybit USDT-perp population (filter fixed pre-run), each symbol its own costs; gross +0.071, cost 0.139 R; 5 bybit_2 coins +0.0103 n=971 (reported only)', provenance: MEASURED}
   levers_tried:
     - {lever: pooled 60-perp LightGBM, ref: RQ-20261101-c692-01, verdict: pass}
     - {lever: expanded feature set (v2 recipe), ref: ML-FS-ENTRY-V2, verdict: 'fail (becomes Foxhound-2)'}
@@ -337,6 +338,7 @@ lines:
     - {lever: recipe regularisation / shadow-feature selection, ref: ML-FS-RECIPE, verdict: done}
     - {lever: HTF counter-trend filter, ref: ML-ENTRY-HTF-COUNTERTREND, verdict: done}
     - {lever: universe breadth, own per-symbol costs, ref: RQ-20261101-a24c-01, verdict: fail}
+    - {lever: 'venue population test (11-04 rule): 51 Bybit USDT perps, own costs, pre-run filter', ref: RQ-20261112-2e3b-01, verdict: 'fail (real-money set stays the c692-06 five coins; Tier-3 record + map-removal patch held for AM-ML)'}
   levers_ahead:
     - lever: diagnose the served -0.13 R window (drift vs regime vs cost)
       ref: CRYPTO-ENTRY-RETRAIN-UNIT
@@ -488,7 +490,11 @@ lines:
   row: MLP-D3-ENTRY-ETF-ON-CRYPTO
   carried_by: [ML-ENTRY-POPULATION-TEST]
   state:
-    summary: Group-level ETF read FAIL; ETF scope read FAIL; the moving TP cannot run there (code read). Testing leg, no edge claim.
+    summary: >-
+      Group-level ETF read FAIL; ETF scope read FAIL; the moving TP cannot run there (code read). Testing leg, no edge claim.
+      2026-11-12 ML-ENTRY-POPULATION-TEST: the crypto population test RQ-20261112-2e3b-01 (Bybit venue only) does NOT cover this
+      book; alpaca_paper keeps its ml_entry.account_symbols entry (canonical rule point 5: a TESTING ML on the paper floor trades
+      the population of its pending test) until this line's disposition (W48) records the ETF population or retires the arm.
     evidence:
       - {record: research/results/RQ-20261104-a41f-01/42091158467.jsonl, n: 1099, value: '-0.0708 R/decision, 173-ETF pool long-only', provenance: MEASURED}
       - {record: RQ-20261101-bdc2-01, value: ETF scope FAIL, provenance: QUOTED}
