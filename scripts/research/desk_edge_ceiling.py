@@ -848,6 +848,25 @@ def cmd_universe_verdict(a: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_universe_run(a: argparse.Namespace) -> int:
+    """The unit's one command: build + run arm W, build + run arm R, then universe-verdict, all under --out.
+    Arms run sequentially (one build at a time, fork pool inside each)."""
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    arms = []
+    for arm in ("W", "R"):
+        bdir, edir = out / f"build-{arm}", out / f"evidence-{arm}"
+        rc = cmd_build(argparse.Namespace(out=str(bdir), candles=a.candles, mask_key=a.mask_key, funding=a.funding,
+                                          fetch_funding=a.fetch_funding, workers=a.workers, limit=a.limit, era=False,
+                                          universe=arm, fetch_candles=a.fetch_candles))
+        if rc == 0:
+            rc = cmd_run(argparse.Namespace(out=str(bdir), evidence=str(edir), mask_key=a.mask_key, judged1_records=None))
+        if rc != 0:
+            print(json.dumps({"arm": arm, "rc": rc}))
+        arms.append(f"{arm}={edir}")
+    return cmd_universe_verdict(argparse.Namespace(arms=",".join(arms), out=str(out)))
+
+
 def universe_self_test() -> int:
     """Planted cases for the universe plumbing and the arm rule (no data, no network)."""
     fails = []
@@ -910,6 +929,16 @@ def main(argv: Optional[List[str]] = None) -> int:
     u.add_argument("--arms", required=True, help="W=DIR,R=DIR (each a run --evidence dir)")
     u.add_argument("--out", required=True)
     u.set_defaults(fn=cmd_universe_verdict)
+    ur = sub.add_parser("universe-run", help="RQ-20261113-d18c-01: build+run W and R, then universe-verdict")
+    ur.add_argument("--out", required=True)
+    ur.add_argument("--candles", required=True)
+    ur.add_argument("--mask-key", default=str(REPO / "comms/research/desk_gen_replay/judged-1/mask-key.json"))
+    ur.add_argument("--funding", default=None)
+    ur.add_argument("--fetch-funding", action="store_true")
+    ur.add_argument("--fetch-candles", action="store_true")
+    ur.add_argument("--workers", type=int, default=4)
+    ur.add_argument("--limit", type=int, default=0)
+    ur.set_defaults(fn=cmd_universe_run)
     st = sub.add_parser("self-test", help="universe plumbing + arm-rule planted cases")
     st.set_defaults(fn=lambda _a: universe_self_test())
     a = ap.parse_args(argv)
