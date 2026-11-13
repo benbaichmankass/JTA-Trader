@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "TREND-ALIGNMENT-FEATURE step 3: entry tagging on the trader path. Adds src/runtime/trend_alignment.py (TREND-ALIGN-V1 pure functions, a live copy pinned bit-for-bit EQUAL to scripts/research/trend_alignment.py by tests/test_trend_align_parity.py) and stamps meta.trend_align = {definition, LEG, D1, agreement, side} on trend_donchian signals via _stamp_trend_align_on_meta (mirrors _stamp_regime_on_meta). OBSERVE-ONLY: nothing reads the field to gate or size; never raises; a missing input (no 1d candles, short history) leaves a null label with a reason. Cost: one extra 1d fetch_candles per non-1d trend_donchian signal tick that produced a package (best-effort, failure -> D1 null). Tier 2 (live builder path): AM-ML routes, operator OK. Revert: git revert.",
+  "why": "Record the prevailing-trend alignment of every live trend_donchian entry so live outcomes can be sliced by it (operator ask 2026-11-13)."
+}
