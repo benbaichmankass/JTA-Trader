@@ -1,0 +1,223 @@
+id: RQ-20261113-f251-14
+title: 'eth_pullback_prop_2h vol-at-entry lever: vol_skip_above_pctl 0.8 vs none on the forming bar, with a confirmation window'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+question: 'eth_pullback_prop_2h fails RULE-D1 on the forming bar (f251-01: -6.57R over n 81); short-only improved it to +2.70R but 2/4 folds (f251-08). vol_skip_above_pctl
+  0.8 passed on the CLOSED bar (RQ-20261031-7b6f-15) and is not in config. On the forming bar over 2025-11-13..2026-11-12: does it pass Stage 0, beat the ungated
+  baseline, and hold on the 2024-11-13..2025-11-12 confirmation window?'
+why_this_matters: 'Demo-floor prop leg; DEMO-FLOOR-ITER 2nd lever (AM-ML GO). The forming replay now carries an arm''s vol_skip (this PR: before it, a vol_skip arm
+  silently equalled its baseline -- smoke 2026-05..11: A n41 -0.34R, V n39 -4.26R, the arms now differ). A PASS still needs the prop survival gate.'
+power:
+  expected_n: 150
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: baseline n 81; the gate keeps ~80%.'
+  sd: null
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window (the leg's own record window); nothing accrues; Binance / Binance-vision 1m covers it at run time.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+run:
+  commands:
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - eth_pullback_prop_2h
+    - --arm
+    - A=
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2025-11-13T00:00:00'
+    - --end
+    - '2026-11-12T22:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '30'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/arm_A'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - eth_pullback_prop_2h
+    - --arm
+    - A=
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2024-11-13T00:00:00'
+    - --end
+    - '2025-11-12T22:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '1'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/pre_A'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - eth_pullback_prop_2h
+    - --arm
+    - V=vol_skip_above_pctl=0.8
+    - --grade
+    - stage0
+    - --baseline
+    - V
+    - --start
+    - '2025-11-13T00:00:00'
+    - --end
+    - '2026-11-12T22:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '30'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/arm_V'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - eth_pullback_prop_2h
+    - --arm
+    - V=vol_skip_above_pctl=0.8
+    - --grade
+    - stage0
+    - --baseline
+    - V
+    - --start
+    - '2024-11-13T00:00:00'
+    - --end
+    - '2025-11-12T22:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '1'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/pre_V'
+  - - python3
+    - scripts/research/timeframe_lever_grade.py
+    - --out
+    - '{out_dir}'
+    - --leg
+    - eth_pullback_prop_2h
+    - --baseline-tf
+    - A
+    - --family
+    - filter
+    - --prefix
+    - arm_
+    - --confirm-prefix
+    - pre_
+    - --tf
+    - A
+    - --tf
+    - V
+  timeout_minutes: 300
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261113-f251-14
+decision_rule:
+  id: RULE-DFI2-ETHPROP-VOLSKIP-20261113
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  statistic: exit_lever_ablation --grade stage0, one run per arm per window (Binance, forming via --forming-1m-fetch); timeframe_lever_grade.py --family filter --prefix
+    arm_ --confirm-prefix pre_.
+  rule: 'AM-ML multiple-testing guard (2026-11-13 18:50Z): successive levers on one window fork the paths, so this rule NAMES the leg''s prior lever attempts on the
+    record window and ALSO requires the pass to hold on the equal-length window before the record window, which no diagnosis or lever pick read. No fold bar is relaxed
+    from the leg''s first DEMO-FLOOR-ITER unit. Prior lever attempts on this window: RQ-20261113-f251-01 (forming baseline, -6.57R), RQ-20261113-f251-08 (short-only,
+    +2.70R, 2/4 folds -- FAIL). The 6 earlier vol_skip_above tests on the lever map ran on the CLOSED bar over other windows. PASS iff the candidate passes its own
+    Stage 0 on the record window (net_r > 0, n >= 30, >= 3/4 folds positive) AND beats the baseline arm''s net_r there, AND on the confirmation window 2024-11-13..2025-11-12
+    (the equal-length window BEFORE the record window, read by no diagnosis or lever pick) its net_r is > 0 and above the baseline arm''s. FAIL iff graded and either
+    clause fails. INDETERMINATE otherwise (a run wrote no verdict, the baseline did not run, the candidate under its n floor on the record window). Arms, windows,
+    folds and floors are fixed now.'
+  what_it_does_not_do: Changes no config, roster, order or evidence record. A PASS is a data-backed Tier-3 proposal routed to the manager via AM-ML (the leg stays
+    on the demo floor until then); a FAIL is recorded on the lever map and the next untested family is picked.
+  baseline: eth_pullback_prop_2h config-exact, forming, ungated, re-run in this unit on both windows.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: a demo-floor (Stage-1 paper) leg failing RULE-D1 on its forming record; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+ml_consumer:
+  not_applicable: 'Not an ML unit: a harness lever test on a rule-based leg.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: eth_pullback_prop_2h
+  subject_kind: strategy_leg
+  from_result: RQ-20261113-f251-08
+  verdict_read: fail
+  diagnosis: 'f251-01 forming ledger: gross -1.2R; long -11.0R, short +4.4R; config already carries adx_min 25. f251-08 short-only +2.70R n45 2/4 folds: the loss
+    is regime-concentrated (fold 2 -7.59R) rather than side-only, which points at a volatility gate.'
+  hypothesis: Skipping hot-tail entries removes the regime-concentrated losses and clears Stage 0.
+  search: 'Lever map: entry pullback_frac, ~30 exit params, filters (adx_min 20/30, adx_max, vol_skip_below, cooldown), direction_filter, structure_exit, momentum_stale,
+    skip_hours TESTED (closed bar); direction TESTED forming (f251-08, FAIL); vol_skip_above on the FORMING bar -> chosen.'
+  attempt: 2
+  due_by: '2026-11-20'
+  levers:
+  - filter
+  lever_arms:
+  - family: filter
+    param: vol_skip_above_pctl
+    values:
+    - 0.8
+    baseline_value: 0.0
+  map_entries:
+  - research/levers/eth_pullback_prop_2h.yaml
+related:
+- RQ-20261113-f251-08
+- RQ-20261031-7b6f-15
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): ONE lever chosen from the leg''s own R diagnosis (scripts/research/leg_r_diagnosis.py),
+  rule registered before the run against the leg''s own record, net of the full cost stack, graded once on its fixed window.'
+follow_up: 'On the verdict a session appends the test to research/levers/eth_pullback_prop_2h.yaml (lever_map.py --append). PASS -> Tier-3 proposal to the manager
+  via AM-ML. FAIL -> this is the leg''s 2nd DEMO-FLOOR-ITER lever: write its lever-family census (tested / untested per family) before authoring a 3rd (AM-ML guard).'

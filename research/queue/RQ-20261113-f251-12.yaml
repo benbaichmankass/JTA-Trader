@@ -1,0 +1,285 @@
+id: RQ-20261113-f251-12
+title: 'turtle_soup symbol-population lever: the live 15m leg on BTCUSDT vs config-exact twins on ETHUSDT / SOLUSDT, with a confirmation window'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+question: 'turtle_soup fails Stage 0 on BTCUSDT at every timeframe tried (78fc-12; f251-04: 15m -81.81R, 1h -31.98R, 4h -3.39R). Its live 15m setup run config-exact
+  on ETHUSDT and SOLUSDT over the same 2024-10-05..2026-10-04 window: does either pass Stage 0 and beat BTCUSDT net of the full cost stack, and hold on the 2022-10-05..2024-10-04
+  confirmation window?'
+why_this_matters: 'Demo-floor leg; DEMO-FLOOR-ITER 2nd lever. The census planned cost/venue next, but cost is INAPPLICABLE: the 15m leg loses before costs (gross
+  -22.3R over n 215; even the fee-only figure is -64.51R), so no venue''s fee can make it pass. Symbol population is the next untested family.'
+power:
+  expected_n: 650
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: BTC 15m n 215 over the window (f251-04); ETH / SOL twins of similar count. At n ~215 a one-sample test detects ~0.19 sd at 80% power.'
+  sd: null
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window (the leg's own record window); nothing accrues; Binance / Binance-vision 1m covers it at run time.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+run:
+  commands:
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - turtle_soup
+    - --arm
+    - A=
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2024-10-05'
+    - --end
+    - '2026-10-04'
+    - --days
+    - '1560'
+    - --folds
+    - '6'
+    - --fold-majority
+    - '4'
+    - --n-floor
+    - '30'
+    - --delta-r
+    - '0'
+    - --symbol
+    - BTCUSDT
+    - --out
+    - '{out_dir}/arm_BTC'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - turtle_soup
+    - --arm
+    - A=
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2022-10-05'
+    - --end
+    - '2024-10-04'
+    - --days
+    - '1560'
+    - --folds
+    - '6'
+    - --fold-majority
+    - '4'
+    - --n-floor
+    - '1'
+    - --delta-r
+    - '0'
+    - --symbol
+    - BTCUSDT
+    - --out
+    - '{out_dir}/pre_BTC'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - turtle_soup
+    - --arm
+    - A=
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2024-10-05'
+    - --end
+    - '2026-10-04'
+    - --days
+    - '1560'
+    - --folds
+    - '6'
+    - --fold-majority
+    - '4'
+    - --n-floor
+    - '30'
+    - --delta-r
+    - '0'
+    - --symbol
+    - ETHUSDT
+    - --out
+    - '{out_dir}/arm_ETH'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - turtle_soup
+    - --arm
+    - A=
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2022-10-05'
+    - --end
+    - '2024-10-04'
+    - --days
+    - '1560'
+    - --folds
+    - '6'
+    - --fold-majority
+    - '4'
+    - --n-floor
+    - '1'
+    - --delta-r
+    - '0'
+    - --symbol
+    - ETHUSDT
+    - --out
+    - '{out_dir}/pre_ETH'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - turtle_soup
+    - --arm
+    - A=
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2024-10-05'
+    - --end
+    - '2026-10-04'
+    - --days
+    - '1560'
+    - --folds
+    - '6'
+    - --fold-majority
+    - '4'
+    - --n-floor
+    - '30'
+    - --delta-r
+    - '0'
+    - --symbol
+    - SOLUSDT
+    - --out
+    - '{out_dir}/arm_SOL'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - turtle_soup
+    - --arm
+    - A=
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2022-10-05'
+    - --end
+    - '2024-10-04'
+    - --days
+    - '1560'
+    - --folds
+    - '6'
+    - --fold-majority
+    - '4'
+    - --n-floor
+    - '1'
+    - --delta-r
+    - '0'
+    - --symbol
+    - SOLUSDT
+    - --out
+    - '{out_dir}/pre_SOL'
+  - - python3
+    - scripts/research/timeframe_lever_grade.py
+    - --out
+    - '{out_dir}'
+    - --leg
+    - turtle_soup
+    - --baseline-tf
+    - BTC
+    - --family
+    - symbol_set
+    - --prefix
+    - arm_
+    - --confirm-prefix
+    - pre_
+    - --tf
+    - BTC
+    - --tf
+    - ETH
+    - --tf
+    - SOL
+  timeout_minutes: 300
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261113-f251-12
+decision_rule:
+  id: RULE-DFI2-TURTLE-SYMBOL-20261113
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  statistic: exit_lever_ablation --grade stage0, one run per arm per window (Binance, config-exact twin via --symbol); timeframe_lever_grade.py --family symbol_set
+    --prefix arm_ --confirm-prefix pre_.
+  rule: 'AM-ML multiple-testing guard (2026-11-13 18:50Z): successive levers on one window fork the paths, so this rule NAMES the leg''s prior lever attempts on the
+    record window and ALSO requires the pass to hold on the equal-length window before the record window, which no diagnosis or lever pick read. No fold bar is relaxed
+    from the leg''s first DEMO-FLOOR-ITER unit. Prior lever attempts on this window: RQ-20261101-78fc-12 (baseline, -81.81R), RQ-20261113-f251-04 (timeframe: 1h,
+    4h -- FAIL). PASS iff the candidate passes its own Stage 0 on the record window (net_r > 0, n >= 30, >= 4/6 folds positive) AND beats the baseline arm''s net_r
+    there, AND on the confirmation window 2022-10-05..2024-10-04 (the equal-length window BEFORE the record window, read by no diagnosis or lever pick) its net_r
+    is > 0 and above the baseline arm''s. FAIL iff graded and either clause fails. INDETERMINATE otherwise (a run wrote no verdict, the baseline did not run, the
+    candidate under its n floor on the record window). Arms, windows, folds and floors are fixed now.'
+  what_it_does_not_do: Changes no config, roster, order or evidence record. A PASS is a data-backed Tier-3 proposal routed to the manager via AM-ML (the leg stays
+    on the demo floor until then); a FAIL is recorded on the lever map and the next untested family is picked.
+  baseline: turtle_soup config-exact on BTCUSDT (its live symbol) at 15m, re-run in this unit on both windows.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: a demo-floor (Stage-1 paper) leg failing RULE-D1 on its forming record; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+ml_consumer:
+  not_applicable: 'Not an ML unit: a harness lever test on a rule-based leg.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: turtle_soup
+  subject_kind: strategy_leg
+  from_result: RQ-20261113-f251-04
+  verdict_read: fail
+  diagnosis: 'f251-04 run 43471211017: 15m -81.81R n215 0/6 folds; fee-only -64.51R; gross -22.3R. The loss is in the setup itself on BTC, at every timeframe and
+    every ADX cell; cost cannot rescue it. The only untested families with a path to a pass are symbol population and entry.'
+  hypothesis: The sweep-and-reversal setup has edge on a different liquid perp even though it has none on BTC.
+  search: 'Census (turtle_soup): timeframe TESTED (f251-04, FAIL); cost/venue INAPPLICABLE (gross < 0); symbol population -> chosen; entry (sweep depth, reclaim window)
+    untested, ranked next; exit/TP blocked by the E25 harness gap; regime cell untested but no positive ADX cell.'
+  attempt: 2
+  due_by: '2026-11-20'
+  levers:
+  - symbol_set
+  lever_arms:
+  - family: symbol_set
+    param: symbol
+    values:
+    - ETHUSDT
+    - SOLUSDT
+    baseline_value: BTCUSDT
+  map_entries:
+  - research/levers/turtle_soup.yaml
+related:
+- RQ-20261113-f251-04
+- RQ-20261101-78fc-12
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): ONE lever chosen from the leg''s own R diagnosis (scripts/research/leg_r_diagnosis.py),
+  rule registered before the run against the leg''s own record, net of the full cost stack, graded once on its fixed window.'
+follow_up: 'On the verdict a session appends the test to research/levers/turtle_soup.yaml (lever_map.py --append). PASS -> Tier-3 proposal to the manager via AM-ML.
+  FAIL -> this is the leg''s 2nd DEMO-FLOOR-ITER lever: write its lever-family census (tested / untested per family) before authoring a 3rd (AM-ML guard).'
