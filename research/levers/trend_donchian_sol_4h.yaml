@@ -9,70 +9,74 @@ books:
 - velotrade_1
 baseline:
   record: comms/strategy_evidence/trend_donchian_sol_4h.json
-  net_r: 36.8572
-  n: 116
-  fidelity: approximate
+  net_r: 41.9726
+  n: 187
+  fidelity: faithful
   rule_verdict: pass
 attribution:
   read_state: measured
-  n: 116
-  net_r: 36.857
-  gross_r: 44.438
-  cost_r: 7.581
-  cost_share_of_gross: 0.171
+  n: 187
+  net_r: 41.973
+  gross_r: 53.85
+  cost_r: 11.878
+  cost_share_of_gross: 0.221
   verdict_hint: gross edge survives cost
   entry_quality:
-    mean_mfe_r: 1.43
-    share_mfe_ge_1r: 0.56
-    n_with_mfe: 116
+    mean_mfe_r: 1.319
+    share_mfe_ge_1r: 0.519
+    n_with_mfe: 187
   exit_capture:
-    median_net_over_mfe_winners: 1.106
-    n_winners: 42
-    losers_that_reached_1r_mfe: 26
+    median_net_over_mfe_winners: 1.103
+    n_winners: 60
+    losers_that_reached_1r_mfe: 41
   by_year:
     '2023':
-      n: 9
-      net_r: 5.045
-      gross_r: 5.361
+      n: 5
+      net_r: 3.147
+      gross_r: 3.298
     '2024':
-      n: 37
-      net_r: 14.5
-      gross_r: 16.671
+      n: 70
+      net_r: 0.788
+      gross_r: 4.379
     '2025':
-      n: 42
-      net_r: 19.856
-      gross_r: 22.519
+      n: 56
+      net_r: 38.013
+      gross_r: 41.535
     '2026':
-      n: 28
-      net_r: -2.544
-      gross_r: -0.113
+      n: 56
+      net_r: 0.025
+      gross_r: 4.638
   by_direction:
     long:
-      n: 71
-      net_r: 14.214
-      gross_r: 18.871
+      n: 92
+      net_r: 20.549
+      gross_r: 26.875
     short:
-      n: 45
-      net_r: 22.643
-      gross_r: 25.567
+      n: 95
+      net_r: 21.423
+      gross_r: 26.976
   by_exit_reason:
     stop:
-      n: 65
-      net_r: -68.635
-      gross_r: -65.0
+      n: 118
+      net_r: -124.845
+      gross_r: -118.0
     take_profit:
-      n: 41
-      net_r: 111.75
-      gross_r: 114.626
+      n: 58
+      net_r: 166.149
+      gross_r: 169.98
+    timeout:
+      n: 1
+      net_r: 3.905
+      gross_r: 4.054
     trail_stop:
       n: 10
-      net_r: -6.257
-      gross_r: -5.188
+      net_r: -3.236
+      gross_r: -2.184
   by_adx_at_entry:
     unknown:
-      n: 116
-      net_r: 36.857
-      gross_r: 44.438
+      n: 187
+      net_r: 41.973
+      gross_r: 53.85
 manifest:
   entry: tested
   exit: tested

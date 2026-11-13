@@ -142,7 +142,17 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--out")
     ap.add_argument("--fetch", action="store_true", help="fetch the held-out window's OI/funding/candles into --root first")
     ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--arms", help="comma list of oi_z arm thresholds (default 4.0,5.0, the 78fc-11 grid)")
+    ap.add_argument("--unit", help="research unit id stamped in the verdict (default RQ-20261101-78fc-11)")
+    ap.add_argument("--rule-id", help="decision rule id stamped in the verdict (default RULE-RQ-20261101-78fc-11)")
     a = ap.parse_args(argv)
+    global UNIT, RULE_ID, ARMS
+    if a.arms:
+        ARMS = tuple(float(x) for x in a.arms.split(","))
+    if a.unit:
+        UNIT = a.unit
+    if a.rule_id:
+        RULE_ID = a.rule_id
     if a.self_test:
         return self_test()
     if not a.root or not a.out:
