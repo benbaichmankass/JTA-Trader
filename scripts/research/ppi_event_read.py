@@ -1,7 +1,11 @@
 """PPI pre-event read (PPI-EVENT-DESK-20261113). Hourly bars committed under comms/research; surprises from Bigdata.com economic calendar.
 Measures per symbol: (1) |reaction| event vs same-hour baseline, (2) Spearman IC surprise->reaction, (3) continuation trade entered 1h after release, net of an ESTIMATED round-trip cost."""
-import json, sys, glob, math
-import pandas as pd, numpy as np
+import json
+import sys
+import glob
+import math
+import pandas as pd
+import numpy as np
 from scipy.stats import spearmanr
 import os
 R=os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))+'/'
@@ -38,7 +42,8 @@ for s in SYMS:
             t=pd.Timestamp(day).tz_localize('UTC')+pd.Timedelta(hours=h); j=idx.searchsorted(t)
             if 0<j<len(idx) and idx[j].date()==day: base.append(abs(c.iloc[j]/c.iloc[j-1]-1)); break
     b=np.median(base) if base else float('nan')
-    ic=lambda x,y: spearmanr(x,y).correlation
+    def ic(x, y):
+        return spearmanr(x,y).correlation
     n=len(df); cost=COST_BPS[s]/1e4
     res=dict(n=n,abs_react_med_bps=round(df.react.abs().median()*1e4,1),base_med_bps=round(b*1e4,1),vol_ratio=round(df.react.abs().median()/b,2) if b else None,
              ic_core_react=round(ic(df.s_core,df.react),2),ic_hl_react=round(ic(df.s_hl,df.react),2),ic_yoy_react=round(ic(df.s_yoy,df.react),2),
