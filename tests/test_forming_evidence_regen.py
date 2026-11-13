@@ -52,7 +52,7 @@ def test_plan_scopes_forming_trend_and_pullback_legs():
     rows = {r["leg"]: r for r in fer.plan(["eth_pullback_2h", "trend_donchian_sol_prop", "slv_trend_1h", "no_such_leg"])}
     assert not rows["eth_pullback_2h"].get("skip") and rows["eth_pullback_2h"]["harness"] == "pullback"
     assert not rows["trend_donchian_sol_prop"].get("skip") and rows["trend_donchian_sol_prop"]["data_start"]
-    assert "intraday" in rows["slv_trend_1h"]["skip"]
+    assert rows["slv_trend_1h"]["mode"] == "us_equity_intraday" and not rows["slv_trend_1h"].get("skip")
     assert rows["no_such_leg"]["skip"]
 
 
@@ -118,8 +118,71 @@ def test_equity_regen_forwards_the_us_session(tmp_path, monkeypatch):
     assert "--decision-session" not in seen["argv"]  # crypto: no session
 
 
-def test_plan_refuses_futures_and_intraday_equity_with_a_reason():
+def test_plan_refuses_futures_with_a_reason():
     rows = {r["leg"]: r for r in fer.plan(["mgc_trend_1h", "mes_trend_long_1d", "slv_trend_1h", "gld_pullback_1d"])}
     assert "futures" in rows["mgc_trend_1h"]["skip"] and "futures" in rows["mes_trend_long_1d"]["skip"]
-    assert "intraday" in rows["slv_trend_1h"]["skip"]
+    assert rows["slv_trend_1h"]["mode"] == "us_equity_intraday"
     assert rows["gld_pullback_1d"]["mode"] == "us_equity_daily" and not rows["gld_pullback_1d"].get("skip")
+
+
+# --- phase B: the intraday US-session forming mode (slv_trend_1h and the other 1h equity legs) ---------------------
+
+def test_intraday_tick_mask_is_the_live_gate():
+    """Ticks count only where src.runtime.market_hours.is_market_open('us_equity') is true at bar start + k: its
+    [open, close) bounds and its DST-month approximation carry over (the live function is called, not re-implemented)."""
+    import pandas as pd
+    import forming_bar_entries as fbe
+    from src.runtime.market_hours import is_market_open
+    bars = pd.DataFrame({"timestamp": pd.to_datetime([
+        "2026-07-15 13:00Z",   # EDT: the 09:00 bar -- ticks from 09:30 (k=30, inclusive)
+        "2026-07-15 19:00Z",   # 15:00 EDT: the whole bar
+        "2026-07-15 20:00Z",   # 16:00 EDT: closed
+        "2026-11-13 14:00Z",   # EST: ticks from 14:30Z
+        "2026-03-20 13:00Z",   # DST in effect, but live's month table reads March as standard time -> closed
+        "2026-07-18 14:00Z",   # Saturday
+    ], utc=True)})
+    ticks = list(range(2, 59, 2))
+    m = fbe.intraday_tick_mask(bars, ticks)
+    on = [[k for k, v in zip(ticks, row) if v] for row in m]
+    assert on[0][0] == 30 and on[0][-1] == 58
+    assert len(on[1]) == len(ticks)
+    assert on[2] == [] and on[4] == [] and on[5] == []
+    assert on[3][0] == 30
+    # exact agreement with the live function on every cell
+    for i, t0 in enumerate(bars["timestamp"]):
+        for j, k in enumerate(ticks):
+            assert m[i, j] == is_market_open("us_equity", (t0 + pd.Timedelta(minutes=k)).to_pydatetime())
+
+
+def test_intraday_mode_maps_minutes_to_clock_aligned_bars():
+    """us_equity_intraday must NOT use the daily ET-date mapping: a 1m row lands in the clock hour that contains it."""
+    import numpy as np
+    import pandas as pd
+    import forming_bar_entries as fbe
+    bars = pd.DataFrame({"timestamp": pd.to_datetime(["2026-07-15 13:00Z", "2026-07-15 14:00Z"], utc=True)})
+    ts = pd.date_range("2026-07-15 13:00Z", periods=120, freq="1min")
+    m1 = pd.DataFrame({"timestamp": ts, "high": np.arange(120.0) + 1, "low": np.arange(120.0), "close": np.arange(120.0)})
+    mats = fbe.minute_matrices(m1, bars, 60, session="us_equity_intraday")
+    assert mats["run_h"][0, 59] == 60.0 and mats["run_h"][1, 0] == 61.0
+    assert mats["last_c"][1, 59] == 119.0
+
+
+def test_equity_source_hourly_alignment_is_measured():
+    import pandas as pd
+    import equity_1m_source as eqs
+    ts = pd.date_range("2026-07-15 08:00Z", periods=12 * 60, freq="1min")  # 04:00..15:59 EDT: extended + cash
+    # each hour peaks in its FIRST minute: in the 09:00 bar that is premarket, which only the "all" set holds
+    m1 = pd.DataFrame({"timestamp": ts, "open": 1.0, "high": [1.0 + (59 - i % 60) / 100 for i in range(len(ts))],
+                       "low": 1.0, "close": 1.0, "volume": 1})
+    hourly = (m1.assign(h=ts.floor("60min")).groupby("h").agg(high=("high", "max"), low=("low", "min"))
+              .reset_index().rename(columns={"h": "timestamp"}))
+    a = eqs.alignment_hourly(hourly, m1)
+    assert a["all"]["match_share"] == 1.0 and a["rth"]["match_share"] < 1.0 and a["chosen"] == "all"
+    assert a["rth"]["hours_compared"] < a["all"]["hours_compared"]  # each set's own denominator
+
+
+def test_plan_routes_1h_equity_to_the_intraday_mode():
+    rows = {r["leg"]: r for r in fer.plan(["slv_trend_1h", "qqq_pullback_1h", "mgc_trend_1h"])}
+    assert rows["slv_trend_1h"]["mode"] == "us_equity_intraday" and not rows["slv_trend_1h"].get("skip")
+    assert rows["qqq_pullback_1h"]["mode"] == "us_equity_intraday"
+    assert "futures" in rows["mgc_trend_1h"]["skip"]

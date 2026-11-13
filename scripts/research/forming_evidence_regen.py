@@ -15,8 +15,11 @@ TWO SOURCES (any other leg is refused with a stated reason, never silently skipp
     ``equity_1m_source.build`` (the RQ-20261113-1449-01 path), replayed with ``--decision-session us_equity``. Alpaca iex
     history starts 2020-07, so a record window reaching further back is CUT to what the source returned; the window used is
     read off the data and reported per leg, never assumed.
-  Refused with a reason: an intraday (1h) Yahoo equity leg (the forming replay's US-session mode is daily-only; an
-  intraday session mode is a separate build) and a futures leg (Yahoo ``=F`` ticker; no 1m source the runner can read).
+  * ``us_equity_intraday`` -- a Yahoo-fed 1h US equity leg: Alpaca iex ``1Hour`` (clock-aligned, extended hours kept --
+    the bars live reads; NOT the Yahoo RTH :30-aligned bars behind the closed-bar record) + 1Min, replayed with
+    ``--decision-session us_equity_intraday`` (ticks masked to the cash session; forming_bar_entries US-INTRADAY MODE).
+  Refused with a reason: a futures leg (Yahoo ``=F`` ticker; no 1m source the runner can read) and any other intraday
+  timeframe.
 
 PER LEG:
   1. the window = the committed record's own reproduce.data_start..data_end (else its window_days back from ``--end``);
@@ -79,10 +82,12 @@ def source_mode(feed: Dict[str, Any], timeframe: str) -> str:
     if src == "yahoo":
         if str(feed.get("ticker", "")).endswith("=F"):
             return f"skip:futures ticker {feed.get('ticker')!r}: no 1m source the research runner can read"
-        if timeframe != "1d":
-            return (f"skip:intraday ({timeframe}) US equity leg: the forming replay's US-session mode is daily-only "
-                    "(intraday session mode is row CRYPTO-FORMING-EQUITY-REGEN phase B)")
-        return "us_equity_daily"
+        if timeframe == "1d":
+            return "us_equity_daily"
+        if timeframe == "1h":
+            return "us_equity_intraday"
+        return (f"skip:{timeframe} US equity leg: the intraday forming mode covers Alpaca 1Hour only "
+                "(row CRYPTO-FORMING-EQUITY-REGEN)")
     return f"skip:feed {src!r}: no forming-bar 1m source"
 
 
@@ -141,7 +146,7 @@ def fetch(row: Dict[str, Any], tmp: Path, log: Path, m1_cache: Dict[str, Path], 
 
     A record without reproduce.data_start/data_end is windowed as window_days back from ``end_pin`` (the unit pins it, so a
     re-run reads the same bars), else from now."""
-    if row.get("mode") == "us_equity_daily":
+    if row.get("mode") in ("us_equity_daily", "us_equity_intraday"):
         return _fetch_us_equity(row, tmp, log, m1_cache, end_pin, client_factory)
     return _fetch_binance(row, tmp, log, m1_cache, end_pin)
 
@@ -175,34 +180,37 @@ def _fetch_binance(row, tmp, log, m1_cache, end_pin) -> Optional[str]:
 
 
 def _fetch_us_equity(row, tmp, log, m1_cache, end_pin, client_factory) -> Optional[str]:
-    """Alpaca iex 1Day + 1Min through equity_1m_source.build (one source for both CSVs, the live feed)."""
+    """Alpaca iex bars + 1Min through equity_1m_source.build (one source for both CSVs, the live feed): 1Day for a
+    daily leg (session-DATE stamps), 1Hour for an intraday leg (clock-aligned, extended hours kept -- what live reads)."""
     import pandas as pd
     import equity_1m_source as eqs
     import regime_debt_matrix as rdm
     start, end = _window(row, end_pin)
     sym = row["symbol"]
     s1, e1 = (start - pd.Timedelta(days=2)).strftime("%Y-%m-%d"), (end + pd.Timedelta(days=2)).strftime("%Y-%m-%d")
-    key = f"eq__{sym}__{s1}__{e1}"
+    intraday = row.get("mode") == "us_equity_intraday"
+    bar_tf, tag = ("1Hour", "1h") if intraday else ("1Day", "1d")
+    key = f"eq{tag}__{sym}__{s1}__{e1}"
     d = tmp / key
     if key not in m1_cache:
         if client_factory is None:
             from alpaca_readonly import AlpacaReadOnly
             client_factory = AlpacaReadOnly.from_env
         try:
-            meta = eqs.build(client_factory(), sym, s1, e1, "iex", d)
+            meta = eqs.build(client_factory(), sym, s1, e1, "iex", d, bar_tf=bar_tf)
         except Exception as exc:  # noqa: BLE001  # allow-silent: returned as the leg's error and landed in verdict.json
-            return f"alpaca 1Day/1Min for {sym}: {type(exc).__name__}: {exc}"
+            return f"alpaca {bar_tf}/1Min for {sym}: {type(exc).__name__}: {exc}"
         m1_cache[key] = d / f"{sym}_1m.csv"
         del meta  # equity_1m_source.build also writes it to <d>/source.json, read below for every leg on this key
     data = tmp / f"{row['leg']}__data.csv"
-    shutil.copyfile(d / f"{sym}_1d.csv", data)
+    shutil.copyfile(d / f"{sym}_{tag}.csv", data)
     rdm.trim_csv_to_window(str(data), str(start), str(end), row["timeframe"])
     row["window_used"] = _window_read(data)
-    row["decision_session"] = "us_equity"
-    row["source"] = "alpaca iex 1Day + 1Min (equity_1m_source.build)"
+    row["decision_session"] = "us_equity_intraday" if intraday else "us_equity"
+    row["source"] = f"alpaca iex {bar_tf} + 1Min (equity_1m_source.build)"
     try:
         sm = json.loads((d / "source.json").read_text())
-        row["source_meta"] = {k: sm.get(k) for k in ("feed", "returned", "rows", "alignment")}
+        row["source_meta"] = {k: sm.get(k) for k in ("feed", "bar_tf", "returned", "rows", "alignment")}
     except (OSError, ValueError):
         row["source_meta"] = None  # reported as missing provenance beside the leg, never as a clean source
     row["m1_csv"] = str(m1_cache[key])
@@ -341,7 +349,8 @@ def _self_test() -> int:
           assemble([lo, leg_record(row, ok, None, n_floor=10)], ["L", "L"])["verdict"] == "pass")
     check("all legs below the floor -> indeterminate", assemble([lo], ["L"])["verdict"] == "indeterminate")
     check("source_mode: futures refused", source_mode({"source": "yahoo", "ticker": "GC=F"}, "1d").startswith("skip:"))
-    check("source_mode: 1h equity refused", source_mode({"source": "yahoo", "ticker": "SLV"}, "1h").startswith("skip:"))
+    check("source_mode: 1h equity -> us_equity_intraday", source_mode({"source": "yahoo", "ticker": "SLV"}, "1h") == "us_equity_intraday")
+    check("source_mode: 2h equity refused", source_mode({"source": "yahoo", "ticker": "SLV"}, "2h").startswith("skip:"))
     check("source_mode: 1d ETF -> us_equity_daily", source_mode({"source": "yahoo", "ticker": "SPY"}, "1d") == "us_equity_daily")
     check("source_mode: binance", source_mode({"source": "binance", "ticker": "SOLUSDT"}, "1h") == "binance")
     print("self-test passed")

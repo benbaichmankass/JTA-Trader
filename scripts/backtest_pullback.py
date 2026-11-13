@@ -1640,7 +1640,7 @@ def main(argv: List[str]) -> int:
     p.add_argument("--minutes-1m-csv", default=None, metavar="CSV",
                    help="--decision-bar forming from a 1m CSV (timestamp,open,high,low,close[,volume]) instead of "
                         "Binance archives (CRYPTO-FORMING-RDM-FORWARD; parity with backtest_trend.py)")
-    p.add_argument("--decision-session", choices=["us_equity"], default=None,
+    p.add_argument("--decision-session", choices=["us_equity", "us_equity_intraday"], default=None,
                    help="--decision-bar forming on a US-session daily frame (scripts/research/forming_bar_entries.py)")
     p.add_argument("--strategy-name", default="htf_pullback_trend_2h", metavar="NAME",
                    help="Leg name stamped on every emitted row's `strategy` "
