@@ -568,6 +568,22 @@ def refresh_if_stale(db_path: str | None = None, root: Path | None = None) -> di
     return refresh(db_path, root)
 
 
+#: UI-WQ-GATES-ALIGN: the audit's recommendation in the POST decision vocabulary, so the SPA's bulk
+#: "accept the recommendation" maps nothing itself. OPERATOR-PREFERENCE (or no recommendation) is
+#: ``None``: there is nothing to accept, and the bulk action counts it as skipped.
+RECOMMENDATION_TO_DECISION = {"KEEP": "keep", "REMOVE": "remove", "MAKE-REPORT-ONLY": "report_only"}
+#: Attention order (design § Tab 4): 1 = real money AND no authorization on record
+#: (``authorization_class == "NONE"``), 2 = other real-money gates, 3 = the rest (including
+#: ``real_money`` null, which is published as null, not guessed).
+SORTS = ("default", "attention")
+
+
+def attention_rank(r: dict) -> int:
+    if r.get("real_money"):
+        return 1 if r.get("authorization_class") == "NONE" else 2
+    return 3
+
+
 def row_to_api(r: sqlite3.Row | dict) -> dict[str, Any]:
     r = dict(r)
     try:
@@ -588,6 +604,8 @@ def row_to_api(r: sqlite3.Row | dict) -> dict[str, Any]:
         "hits_read_state": r.get("hits_read_state"), "hits_note": r.get("hits_note"),
         "added_by": r.get("added_by"), "added_at": r.get("added_at"), "recommendation": r.get("recommendation"),
         "effect": r.get("effect"), "first_seen_at": r.get("first_seen_at"), "updated_at": r.get("updated_at"),
+        "recommended_decision": RECOMMENDATION_TO_DECISION.get(str(r.get("recommendation") or "").upper()),
+        "attention_rank": attention_rank(r),
     }
 
 
@@ -604,8 +622,11 @@ def _parse_bool(v: str | None) -> bool | None:
 
 def list_gates(conn: sqlite3.Connection, *, category: str | None = None, decision: str | None = None,
                state: str | None = None, real_money: str | None = None,
-               decided_since: str | None = None) -> dict[str, Any]:
-    """Filtered rows, drift/unregistered first, plus counts over the WHOLE registry (the population)."""
+               decided_since: str | None = None, sort: str | None = None) -> dict[str, Any]:
+    """Filtered rows, drift/unregistered first (``sort=attention``: by ``attention_rank``), plus counts
+    over the WHOLE registry (the population)."""
+    if sort and sort not in SORTS:
+        raise ValueError(f"sort must be one of {list(SORTS)}")
     if decision and decision not in DECISIONS:
         raise ValueError(f"decision must be one of {list(DECISIONS)}")
     if state and state not in STATE_FILTERS:
@@ -631,6 +652,9 @@ def list_gates(conn: sqlite3.Connection, *, category: str | None = None, decisio
     rows = [r for r in all_rows if keep(r)]
     rows.sort(key=lambda r: (0 if r.get("drift") else 1, 0 if r.get("registry_state") == "unregistered" else 1,
                              0 if r.get("real_money") else 1, str(r.get("category")), r["id"]))
+    if sort == "attention":
+        # Stable: inside a rank the default order (drift, unregistered, category, id) holds.
+        rows.sort(key=attention_rank)
 
     def count(key: str) -> dict[str, int]:
         out: dict[str, int] = {}
@@ -648,7 +672,12 @@ def list_gates(conn: sqlite3.Connection, *, category: str | None = None, decisio
                    "by_category": count("category"), "by_mode": count("mode_in_code"),
                    "real_money": sum(1 for r in all_rows if r.get("real_money")),
                    "drift": sum(1 for r in all_rows if r.get("drift")),
-                   "unregistered": sum(1 for r in all_rows if r.get("registry_state") == "unregistered")},
+                   "unregistered": sum(1 for r in all_rows if r.get("registry_state") == "unregistered"),
+                   "by_attention_rank": {str(k): sum(1 for r in all_rows if attention_rank(r) == k) for k in (1, 2, 3)},
+                   "recommendation_acceptable": sum(
+                       1 for r in all_rows
+                       if RECOMMENDATION_TO_DECISION.get(str(r.get("recommendation") or "").upper()))},
+        "sort": sort or "default",
         "gates": [row_to_api(r) for r in rows],
     }
 

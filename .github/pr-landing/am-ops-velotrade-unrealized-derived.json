@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Prop venue read path (src/prop/platform/dxtrade_api.py read_account + an AccountSnapshot.derived provenance list). When DXtrade metrics omit openPl, unrealized = equity - balance from two read fields, marked derived. No order, size, SL/TP or gate change. Merged under the operator's 2026-11-12 'Merge + deploy on green' grant (docs/plans/operator-grant-merge-deploy-on-green-2026-11-12.md).",
+  "why": "VELOTRADE-STATUS-SNAPSHOT-UNREADABLE: velotrade_1's metrics carry no openPl (20 of 20 account reads in its executor journal, 2026-11-12, unparsed [unrealized, realized_today]), so any read with an open position graded unrealized_unreported and the 11-11/11-12 ml_entry tickets were skipped while tradeify_1 filled. On tradeify_1 (same REST API, sends openPl) equity - balance == openPl on 38 of 38 reads."
+}
