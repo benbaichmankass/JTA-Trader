@@ -51,13 +51,22 @@ def _read_testnet_flag() -> bool:
 
 #: How long a Bybit ``retCode 10006`` (rate limit) keeps ``get_ohlcv`` returning ``None``.
 #: It replaces an in-line ``time.sleep(15)`` of the same length -- see ``BybitConnector.get_ohlcv``.
+#: BACKOFF (row VENUE-KLINE-RATE-LIMIT, 2026-11-13): a 10006 blanked EVERY Bybit read in the process for a flat 15 s,
+#: although the first bybit_10006_context lines (#25825) show this process makes only 1-6 calls in the 5 s before a
+#: 10006 -- the cooldown was the larger cost. Now the first 10006 cools down RATE_LIMIT_COOLDOWN_BASE_S; each further
+#: 10006 started within RATE_LIMIT_STREAK_WINDOW_S of the previous doubles it, capped at RATE_LIMIT_COOLDOWN_S (the old
+#: flat value), so a sustained wall still backs off to 15 s. No sleep, no pacing: only the length of the None window.
 RATE_LIMIT_COOLDOWN_S = 15.0
+RATE_LIMIT_COOLDOWN_BASE_S = 3.0
+RATE_LIMIT_STREAK_WINDOW_S = 60.0
 
 #: Process-wide, deliberately NOT per instance: the limit is per IP / API key, so every connector
 #: instance (one per symbol, per account) hits the same wall, and a cooldown held by one instance
 #: would let the others keep hammering it.
 _RATE_LIMIT_LOCK = threading.Lock()
 _rate_limited_until = 0.0   # time.monotonic() deadline; 0.0 = not cooling down
+_last_cooldown_start = 0.0  # time.monotonic() of the last cooldown START; 0.0 = none yet
+_cooldown_streak = 0        # cooldown starts in the current streak (reset when a start is > window after the last)
 
 
 def _cooldown_remaining() -> float:
@@ -66,14 +75,30 @@ def _cooldown_remaining() -> float:
         return max(0.0, _rate_limited_until - time.monotonic())
 
 
+def _next_cooldown_s(now: float) -> float:
+    """Length of the cooldown a 10006 at *now* starts (caller holds the lock): base, doubled per streak step, capped."""
+    global _cooldown_streak
+    if _last_cooldown_start and now - _last_cooldown_start <= RATE_LIMIT_STREAK_WINDOW_S:
+        _cooldown_streak += 1
+    else:
+        _cooldown_streak = 0
+    return min(RATE_LIMIT_COOLDOWN_S, RATE_LIMIT_COOLDOWN_BASE_S * (2 ** _cooldown_streak))
+
+
 def _start_cooldown() -> bool:
     """Start the shared cooldown; True only for the call that STARTED it (it logs the one line)."""
-    global _rate_limited_until
+    global _rate_limited_until, _last_cooldown_start, _last_cooldown_s
     now = time.monotonic()
     with _RATE_LIMIT_LOCK:
         started = _rate_limited_until <= now
-        _rate_limited_until = max(_rate_limited_until, now + RATE_LIMIT_COOLDOWN_S)
+        if started:
+            _last_cooldown_s = _next_cooldown_s(now)
+            _last_cooldown_start = now
+            _rate_limited_until = now + _last_cooldown_s
     return started
+
+
+_last_cooldown_s = RATE_LIMIT_COOLDOWN_BASE_S   # the length of the most recently STARTED cooldown (for the log line)
 
 
 # -------------------------------------------------------------------------------------------------------------------
@@ -246,8 +271,8 @@ class BybitConnector:
                 if _start_cooldown():
                     logger.warning(
                         "bybit get_ohlcv: rate limit (retCode 10006) hit by thread=%s symbol=%s timeframe=%s -- "
-                        "get_ohlcv returns None for %.0f s (no in-line sleep)",
-                        threading.current_thread().name, symbol, timeframe, RATE_LIMIT_COOLDOWN_S)
+                        "get_ohlcv returns None for %.0f s (no in-line sleep; streak %d)",
+                        threading.current_thread().name, symbol, timeframe, _last_cooldown_s, _cooldown_streak)
                     # Observability only (row VENUE-KLINE-RATE-LIMIT): which endpoint answered 10006, Bybit's own limit
                     # headers, and every Bybit call this process made in the preceding seconds.
                     logger.warning("bybit_10006_context %s",
