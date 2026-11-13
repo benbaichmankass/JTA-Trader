@@ -67,3 +67,11 @@ def test_exit_lever_ablation_refuses_a_finer_timeframe_than_native():
                         "--fold-majority", "3", "--timeframe", "5m", "--out", "/tmp/_dfi_never_written"],
                        cwd=str(REPO), capture_output=True, text=True, timeout=120)
     assert r.returncode == 2 and "finer than the leg's native 15m" in r.stderr
+
+
+def test_forming_equity_fetch_refuses_a_non_equity_leg():
+    r = subprocess.run([sys.executable, str(REPO / "scripts" / "research" / "exit_lever_ablation.py"), "--leg", "turtle_soup",
+                        "--arm", "A=", "--grade", "stage0", "--baseline", "A", "--n-floor", "3", "--delta-r", "0",
+                        "--fold-majority", "3", "--start", "2026-07-01", "--end", "2026-11-01", "--forming-equity-fetch",
+                        "--out", "/tmp/_dfi_never_written"], cwd=str(REPO), capture_output=True, text=True, timeout=120)
+    assert r.returncode == 2 and "US ETF 1d leg" in r.stderr
