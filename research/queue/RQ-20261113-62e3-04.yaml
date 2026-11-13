@@ -1,0 +1,151 @@
+# Hand-authored 2026-11-13 by lane orphans-legs (Tier 1), dispatched by the manager. ITERATION unit (attempt 3) for orphan subject movement-capture, authored from a written diagnosis of its last result (RQ-20261101-d1f3-05). Decision rule registered BEFORE any run (the author ran the harness self-test on SYNTHETIC bars only, no real-data number seen). Gates: none.
+id: RQ-20261113-62e3-04
+title: 'ITERATION 3 of movement-capture (fail): is there post-touch DRIFT to capture at all? Same entries, no target and no stop, exit at the
+  day''s last close, net of the full cost stack'
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-PROGRAMMES
+programme: P6
+kind: experiment
+question: On 2020-06-01..2024-06-30 (10 liquid perps, 1h bars, one trade per symbol-day), does the time-exit-only grid (BO1/FD1 entries, with
+  and without the predicted-range gate, held from the first touch of +/-a*R_hat to the day's last close) clear the unchanged registered rule
+  at the cumulative trial count, against the committed 8-config TP/SL grid?
+why_this_matters: 'movement-capture is an orphan (scripts/research/iteration_orphans.py 2026-11-13). Attempts 1-2 varied entry distance, target/stop
+  ratio, range gate and cost (to a 4 bps maker ceiling); every config stays negative. The one quantity no test has measured directly is
+  whether price drifts after a touch at all; if it does not, no bracket geometry can monetise a range forecast and the family moves to convex
+  instruments (vol-premium-proxy).'
+iteration:
+  subject: movement-capture
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261101-d1f3-05/41814307210.jsonl
+  verdict_read: fail
+  diagnosis: 'RQ-20261101-d1f3-05 (attempt 2; control vs a 4 bps maker-cost ceiling over the same 8-config grid, 10 symbols, n_days=1491, DSR
+    N=16): even at the ceiling the best config FD1g is net Sharpe -0.226 (control -0.72), BO1 -4.08; all 9 checks fail. Discovery attribution
+    (58e4-06): BO1 gross -0.40%/trade with outcome mix SL 42.7% (avg -3.1%) vs TP 17.5% (+4.3%) vs time 39.5% (+0.11%); FD1g gross -0.005%.
+    Volatility IS predictable (Spearman 0.48-0.58 every year). CAUSE (hypothesis): the bracket, not the forecast, destroys value: a stop
+    at c*R_hat inside the expected range is hit by ordinary noise before the move completes, so the SL/TP asymmetry turns zero drift into a
+    loss. COMPETING: there is no post-touch drift in either direction (a stop-order replication of a straddle has zero expected value on a
+    martingale, Carr-Jarrow 1990); then removing the bracket just exposes the full day''s noise, the time-exit arms also lose by about the
+    cost, and the +0.11% time outcomes were selection (days that never travelled far enough to hit a barrier).'
+  hypothesis: removing TP/SL reveals a positive post-touch drift (continuation for breakouts or reversion for fades) that the bracket geometry
+    was cutting off
+  search: 'exit: time-only (no TP, no SL) on BO1 / FD1 / BO1g / FD1g entries; ambiguous both-level bars take the worse direction'
+  levers:
+  - exit
+  attempt: 3
+  due_by: '2026-11-20'
+  map_entries:
+  - research/levers/movement-capture.yaml
+baseline:
+  what: control = the committed 8-config TP/SL grid (BO1..BO3, FD1..FD3, BO1g, FD1g), harness selection (best net Sharpe), re-run in the same
+    unit at the registered cost
+  net_of: 14 bps per trade round trip = 11 bps taker fee + 3 bps slippage, all taker (stress 2x); perp funding is NOT charged (positions open
+    and close inside one UTC day, so at most one or two 8h settlements are crossed - stated, favours the strategy slightly)
+  committed_value: selected FD1g net Sharpe -0.72, ann -0.151 (RQ-20261101-d1f3-05 control; 58e4-06)
+power:
+  expected_n: 1491
+  min_detectable_effect: 1.4
+  effect_units: annualised_sharpe
+  sd: 19.105
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'n=1491 daily portfolio returns (4240-11647 trades per config); harness annualises with 365 days, sd=sqrt(365)=19.105. One-sample,
+    alpha 0.05, power 0.8: required n = 7.84*365/S^2, so at n=1491 the smallest annualised Sharpe separable from zero is ~1.4. The sign of
+    every config has been stable across 5 calendar years, so "all lose" is better powered than any ranking; the rule is the absolute bar with
+    a cumulative-N DSR.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed historical archive (data.binance.vision 1h, capped at 2024-06); nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261113-62e3-04
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  statistic: 'TWO invocations of scripts/research/edge_movement_capture.py at 14 bps round trip, DSR N_cum = 20 in both (8 discovery + 8 attempt-2
+    cost-ceiling configs + these 4): control = the committed CFG grid (--grid base); ARM = CFG_TIME (--grid time_exit): BO1t (bo, a 0.4),
+    FD1t (fd, a 0.5), BO1gt, FD1gt (same with the R_hat >= trailing-60d-median gate), no TP and no SL, exit at the day''s last close; a bar
+    touching both levels takes the worse direction. Selection is the harness''s own (best primary Sharpe). Combined by
+    scripts/research/edge_iteration_verdict.py.'
+  rule: 'PASS iff the ARM''s selected config clears the UNCHANGED registered rule: net Sharpe >= 0.5 AND stress (2x cost) Sharpe > 0 AND Sharpe
+    > 0 in both halves AND bootstrap p05 > 0 AND DSR(N=20) > 0.95 AND the four RR.clause checks (years, concentration, sides, subperiods).
+    FAIL iff the arm computed and does not clear it: there is no post-touch drift large enough to pay the registered cost at these entries
+    (the map then points the family at convex payoffs, a longer horizon or a better entry, never a further bracket tweak). INDETERMINATE iff
+    either side did not compute OR the control''s selected config misses the committed net Sharpe -0.72 by more than 0.01
+    (--expect-control-sharpe; drift is not a verdict). Holdout not read; a PASS earns ONE holdout read, never a book.'
+  what_it_does_not_do: Edits no config and no roster, places no order, proposes no live leg, reads no data after 2024-06-30. A FAIL closes
+    no lever family; retirement is only by a lever-exhaustion record.
+intervention_controls:
+  not_applicable: an offline research ablation of a backtest exit, not an in-trade action on a live position
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid with a control, every arm counted,
+  DSR at the cumulative trial count. Stop-order replication of an option payoff has zero expected value absent drift: Carr & Jarrow 1990
+  RFS "The stop-loss start-gain paradox and option valuation".'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 120
+  why_runner: Public keyless archive; CPU only; same data path as RQ-20261101-d1f3-05.
+  basis: Estimate from RQ-20261101-d1f3-05 (two 8-config invocations, ~90 min); the first run replaces it.
+value:
+  usd_at_stake_per_month: 40
+  confidence: 0.05
+  bucket: structural
+  basis: 'stand-in: a FAIL here is also valuable (it ends linear-bracket work for this family); an estimate, not a measurement'
+run:
+  commands:
+  - - python3
+    - scripts/research/edge_movement_capture.py
+    - --build-data
+    - --data-root
+    - comms/research/_scratch_edge_data
+    - --rt-bps
+    - '14'
+    - --dsr-trials
+    - '20'
+    - --out
+    - '{out_dir}/ctl.json'
+  - - python3
+    - scripts/research/edge_movement_capture.py
+    - --data-root
+    - comms/research/_scratch_edge_data
+    - --grid
+    - time_exit
+    - --rt-bps
+    - '14'
+    - --dsr-trials
+    - '20'
+    - --out
+    - '{out_dir}/arm_time_exit.json'
+  - - python3
+    - scripts/research/edge_iteration_verdict.py
+    - --control
+    - '{out_dir}/ctl.json'
+    - --arm
+    - '{out_dir}/arm_time_exit.json'
+    - --factor
+    - time-exit-only (no TP/SL) on BO1/FD1/BO1g/FD1g entries
+    - --expect-control-sharpe
+    - '-0.72'
+    - --out
+    - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261113-62e3-04
+  timeout_minutes: 180
+  workflow: research-script-run.yml
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/levers/movement-capture.yaml
+- RQ-20261101-58e4-06
+- RQ-20261101-d1f3-05
+- HOLDOUT-LOCK
+- scripts/research/edge_movement_capture.py
+- scripts/research/edge_iteration_verdict.py
+- vol-premium-proxy
+what_it_does_not_do: Edits no config and no roster, places no order, proposes no live leg, reads no holdout data.
