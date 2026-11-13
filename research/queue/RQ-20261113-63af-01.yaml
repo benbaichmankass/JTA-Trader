@@ -4,7 +4,7 @@
 id: RQ-20261113-63af-01
 title: 'Trend alignment (TREND-ALIGN-V1): per leg, do Stage-0 trades taken WITH the prevailing trend earn more net R than trades taken AGAINST
   it, net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROGRAMMES
@@ -104,3 +104,17 @@ what_it_does_not_do: Registers, serves or promotes nothing; changes no config; p
 last_dispatched_at: '2026-11-13T13:03:17+00:00'
 rearmed_at: '2026-11-13T12:55:00+00:00'
 rearm_reason: 'Run 43412558732 (verdict fail, 1/52 legs cleared the floor) was produced by two corpus-driver defects fixed in the same PR as this re-arm: (1) ml_entry__trades.jsonl names the entry instant decision_ts, so all 907 ml_entry trades read no_entry_time; (2) 1d legs fetched a 1h Yahoo base capped at ~730 days, so multi-year 1d corpora read insufficient_history (tqqq 113/136). A third fix labels a pooled corpus per trade symbol (ml_entry spans 5 symbols). RULE, window and command UNCHANGED.'
+grading:
+  attested: RULE-RQ20261113-63af-01-TREND-ALIGN
+  auto: true
+  decision_rule_id: RULE-RQ20261113-63af-01-TREND-ALIGN
+  evidence:
+  - research/results/RQ-20261113-63af-01/43412558732.jsonl
+  - research/results/RQ-20261113-63af-01/43430363297.jsonl
+  graded_at: '2026-11-13'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

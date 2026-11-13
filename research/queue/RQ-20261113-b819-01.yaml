@@ -2,7 +2,7 @@
 id: RQ-20261113-b819-01
 title: 'ITERATION 2 of ml-btc-router-cells (fail): by MONEY, not macro-F1: do the 8 authored BTC trend_vol OFF-cells drop trades that lose more
   net R than the same number dropped at random, on the 3 bybit_1 legs they veto?'
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 2
@@ -182,3 +182,16 @@ intervention_controls:
   not_applicable: an offline consumer evaluation; any cell change is a separate Tier-3 act
 supersedes_note: 'AM-ML 2026-11-13 04:03Z decision: this unit SUPERSEDES the 2026-11-13 retirement of RQ-20261101-78fc-08 (#25541, retired on the reasoning that consolidation Wave 2 decides these heads). Operator Thursday-planning a4 (2026-11-11, verbatim "Schedule the ones whose models survive retirement; kill the rest") outranks that instruction: btc-regime-15m-lgbm-fc-pcv-v2 survives retirement (only the fc-pcv-v1 BTC head is on ml/configs/retired/registry-demote-2026-11-11.txt), so its money test is scheduled here.'
 last_dispatched_at: '2026-11-13T16:23:01+00:00'
+grading:
+  attested: RULE-RQ-20261113-b819-01-BTC-CELLS-KEEP
+  auto: true
+  decision_rule_id: RULE-RQ-20261113-b819-01-BTC-CELLS-KEEP
+  evidence:
+  - research/results/RQ-20261113-b819-01/43462233659.jsonl
+  graded_at: '2026-11-13'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

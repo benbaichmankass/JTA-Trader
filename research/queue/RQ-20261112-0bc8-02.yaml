@@ -2,7 +2,7 @@ id: RQ-20261112-0bc8-02
 title: 'Volume composition -> EXIT head (feature add): does adding the size/count surprise (ss, sn) to exit-head-donchian-1h-v1''s recipe
   improve its out-of-sample replayed R per trade over the champion recipe AND over a plain-volume control? (trend_donchian BTC/ETH/SOL 1h,
   walk-forward, one cost stack)'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-DATA
@@ -150,11 +150,11 @@ grading:
   confirmatory_run: 1
   decision_rule_id: RULE-VOLCOMP-EXITHEAD-01
   evidence:
-  - research/results/RQ-20261112-0bc8-02/trainer-43187689666.jsonl
+  - research/results/RQ-20261112-0bc8-02/43430377344.jsonl
   first_fail: 1 row(s), all measured, all fail
-  graded_at: '2026-11-12'
+  graded_at: '2026-11-13'
   grader: scripts/research/queue_grade.py
-  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
   reason: 1 row(s), all measured, all fail
   rows: 1
   verdict: fail

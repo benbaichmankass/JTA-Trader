@@ -1,7 +1,7 @@
 id: RQ-20261113-4654-02
 title: 'MEASUREMENT PILOT (ML-F29): row-level block-bootstrap sd of the GRU-vs-LightGBM pooled macro-F1 delta on the BTC/SOL 15m regime task, same 10 columns
   both arms -- measures the sd a decision unit needs; NO edge verdict'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 3
@@ -166,3 +166,17 @@ related:
 - FRONTIER-Q-GRU-RESOLVABLE
 - 'PR #25573'
 last_dispatched_at: '2026-11-13T11:57:02+00:00'
+grading:
+  attested: RULE-RQ20261113-4654-02-GRU-SD-PILOT
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261113-4654-02-GRU-SD-PILOT
+  evidence:
+  - research/results/RQ-20261113-4654-02/43421149148.jsonl
+  graded_at: '2026-11-13'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate
