@@ -262,7 +262,7 @@ def corpus(out: Path, cache: Path, legs: Optional[Dict[str, Dict[str, Any]]] = N
             bars_d1 = meta.get("bars_d1")
             leg_err = d1_err = None
         else:
-            trades = [json.loads(l) for l in (REPO / meta["trades_path"]).read_text().splitlines() if l.strip()]
+            trades = [json.loads(ln) for ln in (REPO / meta["trades_path"]).read_text().splitlines() if ln.strip()]
             if not trades:
                 per_leg[leg] = {"read_state": "producer_failed", "note": "empty trades file"}
                 continue
