@@ -6,58 +6,58 @@ status: testing
 books: []
 baseline:
   record: comms/strategy_evidence/tlt_pullback_1h.json
-  net_r: -6.7285
-  n: 94
-  fidelity: approximate
-  rule_verdict: fail
+  net_r: 0.2321
+  n: 101
+  fidelity: faithful
+  rule_verdict: pass
 attribution:
   read_state: measured
-  n: 94
-  net_r: -6.729
-  gross_r: 2.655
-  cost_r: 9.383
-  cost_share_of_gross: 3.534
-  verdict_hint: cost erases a gross edge
+  n: 101
+  net_r: 0.232
+  gross_r: 10.649
+  cost_r: 10.416
+  cost_share_of_gross: 0.978
+  verdict_hint: gross edge survives cost
   entry_quality:
-    mean_mfe_r: 1.403
-    share_mfe_ge_1r: 0.489
-    n_with_mfe: 94
+    mean_mfe_r: 1.188
+    share_mfe_ge_1r: 0.436
+    n_with_mfe: 101
   exit_capture:
-    median_net_over_mfe_winners: 0.41
-    n_winners: 36
-    losers_that_reached_1r_mfe: 10
+    median_net_over_mfe_winners: 0.488
+    n_winners: 41
+    losers_that_reached_1r_mfe: 4
   by_year:
     '2025':
-      n: 48
-      net_r: -12.211
-      gross_r: -7.504
+      n: 40
+      net_r: -7.685
+      gross_r: -3.395
     '2026':
-      n: 46
-      net_r: 5.482
-      gross_r: 10.159
+      n: 61
+      net_r: 7.917
+      gross_r: 14.043
   by_direction:
     long:
-      n: 40
-      net_r: -5.507
-      gross_r: -1.606
+      n: 46
+      net_r: -3.88
+      gross_r: 0.81
     short:
-      n: 54
-      net_r: -1.222
-      gross_r: 4.261
+      n: 55
+      net_r: 4.113
+      gross_r: 9.838
   by_exit_reason:
     stop:
-      n: 38
-      net_r: -41.979
-      gross_r: -38.0
+      n: 36
+      net_r: -40.071
+      gross_r: -36.0
     trail_stop:
-      n: 56
-      net_r: 35.25
-      gross_r: 40.655
+      n: 65
+      net_r: 40.303
+      gross_r: 46.648
   by_adx_at_entry:
     unknown:
-      n: 94
-      net_r: -6.729
-      gross_r: 2.655
+      n: 101
+      net_r: 0.232
+      gross_r: 10.649
 manifest:
   entry: tested
   exit: tested
