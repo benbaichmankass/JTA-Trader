@@ -339,6 +339,49 @@ def _void_nonmeasured_verdict(rec: Dict[str, Any], root: Path = _REPO) -> Dict[s
     return out
 
 
+#: research_result.NON_MEASURED: a row in one of these states must carry `population.n: null`.
+_NON_MEASURED_ROW_STATES = ("no_data", "producer_failed", "not_attempted", "could_not_look")
+
+
+def _null_unmeasured_row_n(root: Path, rec: Dict[str, Any]) -> Dict[str, Any]:
+    """research_result.validate REFUSES a per-row record whose read_state is non-measured but whose `n` is a number.
+    desk_replay_driver / desk_gen_replay_driver wrote exactly that for a leg BELOW its sample floor (read_state no_data,
+    n = the few observations it had: 15 / 8) and, in desk_replay_driver, measured per-leg rows with verdict not_applicable,
+    so the whole run was refused every cycle and its unit sat stamped with no
+    result (RQ-20261026-bf56-02/-03, -e535-03; AUD-20261019-RESEARCH-SLO-RED 2026-11-12). Land the row as what it is:
+    n null, the observed count kept in its population text. Nothing else changes; the producers are fixed in the same PR."""
+    rf = str(rec.get("records_file") or "")
+    path = (root / rf) if rf and not Path(rf).is_absolute() else Path(rf) if rf else None
+    if path is None or not path.is_file():
+        return rec
+    try:
+        rows = [json.loads(ln) for ln in path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    except (OSError, ValueError):
+        return rec
+    run_verdict = str(rec.get("verdict") or "")
+    bad = [r for r in rows if isinstance(r, dict) and (
+        (str(r.get("read_state")) in _NON_MEASURED_ROW_STATES and r.get("n") is not None)
+        or (str(r.get("read_state")) == "measured" and str(r.get("verdict")) == "not_applicable"
+            and run_verdict not in ("", "not_applicable")))]
+    if not bad:
+        return rec
+    import tempfile
+    out = []
+    for r in rows:
+        if r in bad and str(r.get("read_state")) == "measured":
+            # desk_replay_driver's per-leg rows were measured + not_applicable; desk_gen_replay_driver gives a measured
+            # per-leg row the RUN's verdict, which is what the contract asks for -- do the same.
+            r = {**r, "verdict": run_verdict}
+        elif r in bad:
+            r = {**r, "n": None,
+                 "population": f"{r.get('population') or r.get('leg') or 'row'} ({r['n']} observation(s), below the "
+                               f"floor: {r.get('read_state')}, n withheld)"}
+        out.append(r)
+    tmp = Path(tempfile.mkdtemp()) / "records.jsonl"
+    tmp.write_text("".join(json.dumps(r) + "\n" for r in out), encoding="utf-8")
+    return {**rec, "records_file": str(tmp)}
+
+
 def emit_record(root: Path, rec: Dict[str, Any], *, run: Dict[str, Any], repo_slug: str) -> Optional[str]:
     """Write the E5 record through research_result.py; returns its repo path."""
     run_id = str(run["databaseId"])
@@ -346,7 +389,7 @@ def emit_record(root: Path, rec: Dict[str, Any], *, run: Dict[str, Any], repo_sl
            "--workflow", str(run.get("_workflow_name") or WORKFLOW_NAME), "--run-id", run_id, "--run-attempt", "1",
            "--run-url", str(run.get("url") or f"https://github.com/{repo_slug}/actions/runs/{run_id}"),
            "--commit-sha", str(run.get("headSha") or "")]
-    rec = _void_nonmeasured_verdict(_unpair_measured_not_applicable(_scalar_n(rec)), root)
+    rec = _void_nonmeasured_verdict(_null_unmeasured_row_n(root, _unpair_measured_not_applicable(_scalar_n(rec))), root)
     for k in _EMIT_FIELDS:
         cmd += [f"--{k.replace('_', '-')}", str(rec.get(k, "") if rec.get(k) is not None else "null" if k == "n" else "")]
     if root != _REPO:

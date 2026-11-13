@@ -820,42 +820,6 @@ def _legs(a: argparse.Namespace) -> Tuple[List[str], Dict[str, Leg], str]:
     return population, legs, note
 
 
-def score_records(res: Dict[str, Any], role: str) -> List[Dict[str, Any]]:
-    """The per-leg fan-out of a `score` run, consistent with research_result.validate (RESEARCH-PRODUCER-ROW-DEFECTS).
-
-    The registered rule grades the POOLED role population, never a leg on its own; a fanned-out record carries no
-    top-level row, so each measured leg row carries the pooled rule's verdict and says so (the desk_gen_replay_driver
-    precedent, #25606) -- that keeps the pooled verdict in the E5 record and the rows unanimous for queue_grade.
-    A leg with judged points WAS measured, whatever its size: below LEG_N_FLOOR its mean/CI are withheld (null), never
-    re-labelled `no_data` with an n -- the defect that refused RQ-20261026-bf56-02/-03 (runs 40710666532 / 40733370814:
-    trend_donchian_xrp_4h n 15 no_data, and measured rows with verdict not_applicable). `no_data` is only a leg with
-    zero judged points, and then n is null and the verdict not_applicable."""
-    recs = []
-    for r in res.get("per_leg") or []:
-        n_obs = int(r.get("n_obs") or 0)
-        if not n_obs:
-            recs.append({"leg": r["leg"], "population": f"{r['leg']} {role}: no judged decision points", "n": None,
-                         "verdict": "not_applicable", "read_state": "no_data", "mean_dR": None, "ci95": None})
-            continue
-        below = r.get("state") != "measured"
-        recs.append({"leg": r["leg"], "read_state": "measured", "n": n_obs, "verdict": res["verdict"],
-                     "population": (f"{r['leg']} {role}: {n_obs} judged decision points; verdict is the registered rule's "
-                                    f"POOLED verdict (the rule grades the pooled role population, not each leg)"
-                                    + (f"; leg mean withheld below the {LEG_N_FLOOR}-point floor" if below else "")),
-                     "mean_dR": r.get("mean_dR"), "ci95": r.get("ci")})
-    return recs
-
-
-def selfcheck_records(res: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Per-leg fan-out of `selfcheck`: a leg with replayed trades is measured (pooled verdict); a leg with none is
-    `no_data`, n null, verdict not_applicable (research_result.validate refuses n=0 / a verdict on a no_data row)."""
-    return [{"leg": n, "population": f"{n}: {d['trades']} trades, {d['replayed']} replayed",
-             "n": d["replayed"] if d["replayed"] else None,
-             "verdict": res["verdict"] if d["replayed"] else "not_applicable",
-             "read_state": "measured" if d["replayed"] else "no_data"}
-            for n, d in res["per_leg"].items()]
-
-
 def _write_verdict(out: Path, v: Dict[str, Any], population: str, n: Optional[int], measurement: Dict[str, Any],
                    note: str, records: Optional[List[Dict[str, Any]]] = None) -> None:
     out.mkdir(parents=True, exist_ok=True)
@@ -874,7 +838,10 @@ def cmd_selfcheck(a: argparse.Namespace) -> int:
     n_tr = sum(len(legs[n].trades) for n in population)
     pop = (f"{len(population)} real-money non-prop 2h/4h legs ({', '.join(population)}); {n_tr} committed Stage-0 trades "
            f"(comms/strategy_evidence/<leg>.json -> source_run); registered population {REGISTERED_N_TRADES}")
-    recs = selfcheck_records(res)
+    recs = [{"leg": n, "population": f"{n}: {d['trades']} trades, {d['replayed']} replayed", "n": d["replayed"] or None,
+             "verdict": res["verdict"] if d["replayed"] else "not_applicable",
+             "read_state": "measured" if d["replayed"] else "no_data"}
+            for n, d in res["per_leg"].items()]
     _write_verdict(Path(a.out), res, pop, n_tr, res, f"{res['note']} | {pnote}", recs)
     print(json.dumps({"verdict": res["verdict"], "clauses": {k: v["ok"] for k, v in res["clauses"].items()},
                       "replayed": res["clauses"]["a_hold_replay"]["replayed"]}))
@@ -937,7 +904,16 @@ def cmd_score(a: argparse.Namespace) -> int:
     pop = (f"{a.role} role, {res['n_obs']} judged decision points of {res['n_packets']} packets "
            f"(first closed bar with running high >= +1.0 R) over {', '.join(population)}")
     notes = "; ".join(res["reasons"]) or "all registered clauses met"
-    recs = score_records(res, a.role)
+    # A leg below its floor is no_data, and research_result requires n null for it (AUD-20261019-RESEARCH-SLO-RED:
+    # n=15 here got runs 40710666532 / 40733370814 refused); the count stays visible in the population text.
+    recs = [{"leg": r["leg"],
+             "population": f"{r['leg']} {a.role}" if r["state"] == "measured"
+             else f"{r['leg']} {a.role} ({r['n_obs']} observation(s), below the floor)",
+             "n": r["n_obs"] if r["state"] == "measured" else None,
+             # a measured row carries the run's verdict (research_result refuses measured + not_applicable)
+             "verdict": res["verdict"] if r["state"] == "measured" else "not_applicable",
+             "read_state": "measured" if r["state"] == "measured" else "no_data",
+             "mean_dR": r["mean_dR"], "ci95": r["ci"]} for r in res["per_leg"]]
     _write_verdict(Path(a.out), res, pop, res["n_obs"], res, f"{notes} | {pnote}", recs or None)
     print(json.dumps({"verdict": res["verdict"], "n_obs": res["n_obs"], "mean_dR": res["mean_dR"], "ci95": res["ci95"]}))
     return 0

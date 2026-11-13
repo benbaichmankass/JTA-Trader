@@ -251,6 +251,16 @@ def _duration_str(timeframe: str, limit: int) -> str:
     return f"{days} D"
 
 
+def _since_end(timeframe: str, limit: int, since: Optional[int]):
+    """``endDateTime`` for a historical read starting at ``since`` (epoch ms): ``""`` (now) without one, else the
+    UTC datetime ``limit`` bars after it, capped at now (IB rejects a future end)."""
+    if since is None:
+        return ""
+    from datetime import datetime, timezone
+    end_s = int(since) / 1000.0 + _TF_SECONDS.get(timeframe, 300) * max(int(limit), 1)
+    return datetime.fromtimestamp(min(end_s, datetime.now(timezone.utc).timestamp()), tz=timezone.utc)
+
+
 class IBMarketData:
     """Read-only OHLCV connector for Interactive Brokers instruments.
 
@@ -311,6 +321,11 @@ class IBMarketData:
         cached IB connection's socket transport is bound to a single loop.
         Callers are unaffected: this is still a blocking call returning the
         same value, and it still never raises.
+
+        Deliberately NO ``since``: an old window of a future needs the contract
+        that traded then, not today's front month (``get_ohlcv_at``). A
+        ``fetch_candles(since=...)`` against this connector therefore still
+        returns None (window uncovered) rather than mislabelled bars.
         """
         if _on_ib_fetch_thread():
             return self._get_ohlcv_pinned(symbol, timeframe, limit)
@@ -342,6 +357,12 @@ class IBMarketData:
                 "timeframe=%s: %s", symbol, timeframe, exc,
             )
             return None
+
+    def get_ohlcv_at(self, symbol: str, timeframe: str, limit: int, since: int,
+                     anchor_price: Optional[float] = None, anchor_ms: Optional[int] = None) -> tuple:
+        """Historical bars of the CONTRACT the trade traded, for an old window: ``(DataFrame|None, info)``.
+        See ``_ib_get_ohlcv_at`` (closed-trade snapshots only; the live tick never calls this)."""
+        return _ib_get_ohlcv_at(self, symbol, timeframe, limit, since, anchor_price, anchor_ms)
 
     def _get_ohlcv_pinned(
         self, symbol: str, timeframe: str, limit: int = 200
@@ -426,3 +447,197 @@ class IBMarketData:
         if len(df) > limit:
             df = df.iloc[-limit:].reset_index(drop=True)
         return df
+
+
+# ─────────────────────── historical read for an OLD window (closed-trade snapshots)
+#
+# CLOSED-TRADE-SNAPSHOT-FUTURES-CANDLES (c), manager GO 2026-11-13 03:25Z. An old trade's window needs the
+# CONCRETE contract the trade traded, not today's front month: IB refuses an endDateTime on a continuous future, and
+# a pre-roll trade on today's front month would chart a different contract whose prices are offset from the fill.
+# So: list the root's contracts once (includeExpired), try the nearest expiry at/after the trade's open and the one
+# after it, and accept only the contract whose bars around the entry CONTAIN the fill price. Never touches the
+# client's cached front-month contract (``IBClient._contract``), which live chart reads use.
+#
+# Pacing (IB historical limits are per gateway/account, and the trader shares this gateway): the CALLER paces calls
+# (``trade_snapshot_builder.IB_SINCE_MIN_INTERVAL_S``); here, any error 162 or 420 seen on a request starts a
+# ``PACING_BACKOFF_S`` backoff during which ``get_ohlcv_at`` sends nothing and answers ``deferred``.
+
+PACING_BACKOFF_S = 600.0
+_PACING = {"until": 0.0, "last": None}
+_EXPIRIES_TTL_S = 6 * 3600.0
+_EXPIRIES: dict = {}
+_PRICE_TOL = 0.002          # 0.2 %: the entry fill must sit inside the bars around entry, widened by this
+_ANCHOR_BARS = 2            # bars either side of the entry bar checked for the fill
+
+
+def _now_mono() -> float:
+    import time
+    return time.monotonic()
+
+
+def pacing_backoff_remaining() -> float:
+    """Seconds left on the historical-read backoff (0 when none)."""
+    return max(0.0, _PACING["until"] - _now_mono())
+
+
+def _note_pacing(code: int, msg: str) -> None:
+    _PACING["until"] = _now_mono() + PACING_BACKOFF_S
+    _PACING["last"] = {"code": code, "msg": str(msg)[:200]}
+    logger.warning("IBMarketData: historical read got error %s (%s) -- backing off IB since-reads for %.0fs",
+                   code, str(msg)[:120], PACING_BACKOFF_S)
+
+
+def _split_month(symbol: str) -> tuple:
+    """``MHGN6`` -> (``MHG``, ``202607``); ``MGC`` -> (``MGC``, None). Same grammar as connector_for_symbol."""
+    import re
+    s = str(symbol or "").strip().upper()
+    m = re.match(r"^([A-Z]{2,})([FGHJKMNQUVXZ])(\d{1,2})$", s)
+    if not m:
+        return s, None
+    month = "FGHJKMNQUVXZ".index(m.group(2)) + 1
+    yy = int(m.group(3))
+    year = 2020 + yy if yy < 10 else 2000 + yy
+    return m.group(1), f"{year:04d}{month:02d}"
+
+
+def _bars_contain(df: pd.DataFrame, anchor_price: float, anchor_ms: int, step_s: int) -> bool:
+    """True when the bars within ``_ANCHOR_BARS`` of the entry bar span the entry fill (widened by _PRICE_TOL)."""
+    if df is None or not len(df) or anchor_price is None:
+        return False
+    ts = pd.to_datetime(df["timestamp"], utc=True)
+    a = pd.Timestamp(int(anchor_ms), unit="ms", tz="UTC")
+    w = pd.Timedelta(seconds=step_s * (_ANCHOR_BARS + 1))
+    near = df[(ts >= a - w) & (ts <= a + w)]
+    if not len(near):
+        return False
+    lo, hi = float(near["low"].min()), float(near["high"].max())
+    p = float(anchor_price)
+    return lo * (1 - _PRICE_TOL) <= p <= hi * (1 + _PRICE_TOL)
+
+
+def _candidates(expiries: list, month: Optional[str], anchor_ms: int) -> list:
+    """Contracts to try, in order: the explicit month when the symbol names one; else the nearest two whose last
+    trade date is on/after the trade's open."""
+    from datetime import datetime, timezone
+    if month:
+        return [e for e in expiries if e["month"] == month][:1]
+    day = datetime.fromtimestamp(int(anchor_ms) / 1000.0, tz=timezone.utc).strftime("%Y%m%d")
+    return [e for e in expiries if e["last"] >= day][:2]
+
+
+def _ib_get_ohlcv_at(self, symbol: str, timeframe: str, limit: int, since: int,
+                     anchor_price: Optional[float], anchor_ms: Optional[int]) -> tuple:
+    """``(DataFrame|None, info)`` for an OLD window of futures *symbol*; see the block comment above.
+
+    ``info``: ``{"outcome": matched|price_mismatch|no_contract|no_bars|deferred|error|unsupported,
+    "contract": YYYYMM|None, "tried": [YYYYMM...], "requests": n}``. Never raises."""
+    info = {"outcome": "error", "contract": None, "tried": [], "requests": 0}
+    if pacing_backoff_remaining() > 0:
+        info["outcome"] = "deferred"
+        return None, info
+    if _on_ib_fetch_thread():
+        return _ib_get_ohlcv_at_pinned(self, symbol, timeframe, limit, since, anchor_price, anchor_ms, info)
+    try:
+        fut = _IB_FETCH_EXECUTOR.submit(_ib_get_ohlcv_at_pinned, self, symbol, timeframe, limit, since,
+                                        anchor_price, anchor_ms, info)
+        return fut.result(timeout=_IB_FETCH_QUEUE_TIMEOUT_S * 2)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: never raise into the builder; outcome=error names it
+        info["error"] = f"{type(exc).__name__}: {exc}"[:200]
+        return None, info
+
+
+def _ib_get_ohlcv_at_pinned(self, symbol, timeframe, limit, since, anchor_price, anchor_ms, info) -> tuple:
+    from src.units.accounts.ib_instruments import ib_instrument_spec
+    bar_size = _BAR_SIZE.get(timeframe)
+    root, month = _split_month(symbol)
+    try:
+        spec = ib_instrument_spec(root)
+    except ValueError as exc:
+        info.update(outcome="unsupported", error=str(exc)[:200])
+        return None, info
+    if bar_size is None or spec.sec_type != "FUT":
+        info["outcome"] = "unsupported"
+        return None, info
+    step_s = _TF_SECONDS.get(timeframe, 300)
+    anchor = int(anchor_ms if anchor_ms is not None else since)
+    try:
+        with _client_usage_lock(self._client) as got_lock:
+            if not got_lock:
+                info["outcome"] = "deferred"
+                return None, info
+            ib = self._client.connect()
+            self._client._ensure_event_loop()
+            try:
+                from ib_insync import Future  # type: ignore
+            except ImportError:
+                from ib_async import Future  # type: ignore
+            cached = _EXPIRIES.get(root)
+            if cached is None or _now_mono() - cached[0] > _EXPIRIES_TTL_S:
+                details = ib.reqContractDetails(Future(symbol=root, exchange=spec.exchange,
+                                                       currency=spec.currency or "USD", includeExpired=True))
+                info["requests"] += 1
+                rows = []
+                for d in details or []:
+                    c = getattr(d, "contract", None)
+                    last = str(getattr(c, "lastTradeDateOrContractMonth", "") or "")[:8]
+                    mon = str(getattr(d, "contractMonth", "") or last[:6])[:6]
+                    if c is not None and getattr(c, "conId", 0) and len(last) == 8:
+                        rows.append({"conId": c.conId, "last": last, "month": mon})
+                cached = (_now_mono(), sorted(rows, key=lambda r: r["last"]))
+                _EXPIRIES[root] = cached
+            cands = _candidates(cached[1], month, anchor)
+            if not cands:
+                info["outcome"] = "no_contract"
+                return None, info
+            end_dt = _since_end(timeframe, limit, since)
+            outcome = "no_bars"
+            for c in cands:
+                info["tried"].append(c["month"])
+                contract = Future(conId=c["conId"], exchange=spec.exchange, includeExpired=True)
+                errs: list = []
+
+                def _on_err(*a, _errs=errs):
+                    # ib_insync errorEvent: (reqId, errorCode, errorString, contract)
+                    if len(a) >= 3:
+                        _errs.append((a[1], a[2]))
+                ib.errorEvent += _on_err
+                try:
+                    bars = ib.reqHistoricalData(contract, endDateTime=end_dt,
+                                                durationStr=_duration_str(timeframe, limit), barSizeSetting=bar_size,
+                                                whatToShow="TRADES", useRTH=self.use_rth, formatDate=2,
+                                                timeout=_IB_FETCH_TIMEOUT_S)
+                finally:
+                    ib.errorEvent -= _on_err
+                info["requests"] += 1
+                bad = [(code, msg) for code, msg in errs if code in (162, 420)]
+                if bad:
+                    _note_pacing(*bad[0])
+                    info["outcome"] = "deferred"
+                    return None, info
+                df = _bars_frame(bars)
+                if df is None:
+                    continue
+                if _bars_contain(df, anchor_price, anchor, step_s):
+                    ts = pd.to_datetime(df["timestamp"], utc=True)
+                    df = df[ts >= pd.Timestamp(int(since), unit="ms", tz="UTC")].reset_index(drop=True)
+                    if not len(df):
+                        continue
+                    info.update(outcome="matched", contract=c["month"])
+                    return df.iloc[:limit].reset_index(drop=True), info
+                outcome = "price_mismatch"
+            info["outcome"] = outcome
+            return None, info
+    except Exception as exc:  # noqa: BLE001  # allow-silent: never raise into the builder; outcome=error names it
+        info.update(outcome="error", error=f"{type(exc).__name__}: {exc}"[:200])
+        logger.warning("IBMarketData.get_ohlcv_at failed for %s %s: %s", symbol, timeframe, exc)
+        return None, info
+
+
+def _bars_frame(bars) -> Optional[pd.DataFrame]:
+    if not bars:
+        return None
+    rows = [{"timestamp": pd.to_datetime(getattr(b, "date", None)) if getattr(b, "date", None) is not None else pd.NaT,
+             "open": getattr(b, "open", None), "high": getattr(b, "high", None), "low": getattr(b, "low", None),
+             "close": getattr(b, "close", None), "volume": getattr(b, "volume", None)} for b in bars]
+    return pd.DataFrame(rows, columns=["timestamp", "open", "high", "low", "close", "volume"])
+

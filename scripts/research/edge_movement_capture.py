@@ -52,6 +52,17 @@ CFG = {
     "BO1g": dict(mode="bo", a=0.4, b=0.6, c=0.4, gate=True),
     "FD1g": dict(mode="fd", a=0.5, b=0.5, c=0.5, gate=True),
 }
+#: ATTEMPT-3 grid (lane orphans-legs 2026-11-13, unit RQ-20261113-62e3-04), picked by --grid time_exit. ONE factor: the exit. Same
+#: entries as BO1 / FD1 / BO1g / FD1g (same a, same range gate), NO target and NO stop: hold from the first touch to the day's last
+#: close. It measures the post-touch drift itself, which the TP/SL geometry can only monetise if it exists. Both levels touched in one
+#: bar: the WORSE of the two directions' time-exit returns (pessimistic). The default grid is CFG, unchanged.
+CFG_TIME = {
+    "BO1t": dict(mode="bo", a=0.4, exit="time"),
+    "FD1t": dict(mode="fd", a=0.5, exit="time"),
+    "BO1gt": dict(mode="bo", a=0.4, exit="time", gate=True),
+    "FD1gt": dict(mode="fd", a=0.5, exit="time", gate=True),
+}
+GRIDS = {"base": CFG, "time_exit": CFG_TIME}
 LAM, RT_BPS = 0.94, 14.0
 
 
@@ -62,6 +73,12 @@ def sim_day(o, h, lo, c, rh, cfg):
         up, dn = h[i] >= U, lo[i] <= Lv
         if not up and not dn:
             continue
+        if cfg.get("exit") == "time":  # attempt-3 opt-in: no TP/SL, exit at the day's last close
+            sgn = 1 if cfg["mode"] == "bo" else -1
+            r_up, r_dn = sgn * (c[-1] / U - 1), -sgn * (c[-1] / Lv - 1)
+            if up and dn:
+                return min(r_up, r_dn), 0, "amb"
+            return (r_up, sgn, "time") if up else (r_dn, -sgn, "time")
         if up and dn:
             return -cfg["c"] * rh, 0, "amb"
         touch = 1 if up else -1
@@ -107,11 +124,16 @@ def main():
                     help="N for the deflated Sharpe (default = this grid). The cost-ceiling iteration passes the CUMULATIVE count.")
     ap.add_argument("--build-data", action="store_true",
                     help="if <data-root>/klines_1h.pkl is absent, build it from the public Binance Vision 1h archive first")
+    ap.add_argument("--grid", choices=sorted(GRIDS), default="base",
+                    help="config grid (default base = the committed 8-config CFG; time_exit = the attempt-3 no-TP/SL exit grid)")
     a = ap.parse_args()
+    grid = GRIDS[a.grid]
     if a.build_data and not (Path(a.data_root) / "klines_1h.pkl").is_file():
         build_klines_1h(Path(a.data_root))
     ser, _ = pickle.load(open(Path(a.data_root) / "klines_1h.pkl", "rb"))
     out = {"universe": UNIVERSE, "configs": {}, "n_trials": a.dsr_trials}
+    if a.grid != "base":
+        out["grid"] = a.grid
     recs = {}
     pred_rows = []
     for s in UNIVERSE:
@@ -153,7 +175,7 @@ def main():
         float(spearmanr(naive.rh, naive.n)[0]), 3
     )
     idx = pd.date_range(D.EVAL_START, D.END_DISCOVERY, freq="D", tz="UTC")
-    for cid, cfg in CFG.items():
+    for cid, cfg in grid.items():
         res = {}
         for tag, mult in (("primary", 1.0), ("stress", 2.0)):
             net = pd.Series(0.0, index=idx)
@@ -258,4 +280,35 @@ def main():
     )
 
 
-main()
+def _self_test() -> int:
+    ok = True
+
+    def chk(label, cond):
+        nonlocal ok
+        print(("PASS " if cond else "FAIL ") + label)
+        ok = ok and bool(cond)
+    rh = 0.05
+    o = np.array([100.0, 100.0, 101.0, 102.0])
+    h = np.array([100.5, 102.5, 103.0, 102.5])     # bar 1 touches U = 102 (a=0.4)
+    lo = np.array([99.5, 99.8, 100.5, 101.0])
+    c = np.array([100.0, 101.0, 102.0, 101.5])
+    r, d, why = sim_day(o, h, lo, c, rh, CFG_TIME["BO1t"])
+    chk("time exit: breakout long from U held to the last close", why == "time" and d == 1 and abs(r - (101.5 / 102.0 - 1)) < 1e-12)
+    r2, d2, _ = sim_day(o, h, lo, c, rh, dict(CFG_TIME["BO1t"], mode="fd"))
+    chk("time exit: the fade is the exact mirror of the breakout", d2 == -1 and abs(r2 + r) < 1e-12)
+    rb, _, whyb = sim_day(o, h, lo, c, rh, CFG["BO1"])
+    chk("base geometry unchanged: the same day with TP/SL takes the stop (bar 3 low 101.0 <= 102*(1-0.4*0.05))", whyb == "sl"
+        and abs(rb - (102.0 * (1 - 0.4 * rh) / 102.0 - 1)) < 1e-12)
+    h2, lo2 = h.copy(), lo.copy()
+    h2[1], lo2[1] = 102.5, 97.0                    # one bar touches both U=102 and L=98
+    ra, da, whya = sim_day(o, h2, lo2, c, rh, CFG_TIME["BO1t"])
+    chk("time exit: an ambiguous bar takes the WORSE direction", whya == "amb" and da == 0
+        and abs(ra - min(101.5 / 102.0 - 1, -(101.5 / 98.0 - 1))) < 1e-12)
+    chk("no touch: no trade", sim_day(o, np.full(4, 101.0), np.full(4, 99.0), c, rh, CFG_TIME["FD1t"]) is None)
+    chk("grids: default is the committed CFG; the time grid re-uses BO1/FD1 entry distances",
+        GRIDS["base"] is CFG and CFG_TIME["BO1t"]["a"] == CFG["BO1"]["a"] and CFG_TIME["FD1t"]["a"] == CFG["FD1"]["a"])
+    return 0 if ok else 1
+
+
+if __name__ == "__main__":
+    sys.exit(_self_test() if "--self-test" in sys.argv else (main() or 0))
