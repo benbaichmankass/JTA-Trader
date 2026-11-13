@@ -134,6 +134,36 @@ def list_passkeys() -> list[dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
+def list_passkeys_public() -> list[dict[str, Any]]:
+    """Registered passkeys WITHOUT key material: handle, label, created/last used."""
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT handle, label, created_at, last_seen_at FROM web_sessions"
+            " WHERE kind='passkey' AND revoked_at IS NULL ORDER BY created_at"
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def revoke_passkey(handle: str) -> Optional[int]:
+    """Revoke the passkey with this public handle AND every session it issued
+    (HARDEN a). Returns the number of sessions revoked, or None if no live
+    passkey has this handle."""
+    now = _now()
+    with _connect() as conn:
+        r = conn.execute(
+            "SELECT id FROM web_sessions WHERE kind='passkey' AND handle=? AND revoked_at IS NULL",
+            (handle,),
+        ).fetchone()
+        if r is None:
+            return None
+        conn.execute("UPDATE web_sessions SET revoked_at=? WHERE kind='passkey' AND id=?", (now, r["id"]))
+        cur = conn.execute(
+            "UPDATE web_sessions SET revoked_at=? WHERE kind='session' AND passkey_id=?"
+            " AND revoked_at IS NULL", (now, r["id"]),
+        )
+        return cur.rowcount
+
+
 def get_passkey(credential_id: str) -> Optional[dict[str, Any]]:
     with _connect() as conn:
         r = conn.execute(
@@ -171,6 +201,20 @@ def issue_enrol_code(*, ttl: int = ENROL_CODE_TTL_SECONDS) -> str:
             (hash_secret("enrol:" + code), now, now + ttl),
         )
     return code
+
+
+def enrol_code_valid(code: str) -> bool:
+    """Peek: is this a valid, unexpired, unused code? Does NOT burn it (HARDEN g:
+    the code is burned at register/finish, so a cancelled ceremony keeps it)."""
+    if not code:
+        return False
+    with _connect() as conn:
+        r = conn.execute(
+            "SELECT 1 FROM web_sessions WHERE kind='enrol' AND id=? AND used_at IS NULL"
+            " AND expires_at > ?",
+            (hash_secret("enrol:" + code.strip().lower()), _now()),
+        ).fetchone()
+    return r is not None
 
 
 def consume_enrol_code(code: str) -> bool:
@@ -333,19 +377,39 @@ def reset_memory_for_tests() -> None:
 
 
 # Tiny failure limiter for the sign-in endpoints: N failures / window / IP.
+# Bounded (HARDEN f): stale IPs are swept once the map passes _FAIL_LOG_MAX_IPS,
+# and each IP keeps at most FAIL_LIMIT timestamps (more cannot change a verdict).
 _fail_log: dict[str, list[float]] = {}
 FAIL_LIMIT = 10
 FAIL_WINDOW_SECONDS = 300
+_FAIL_LOG_MAX_IPS = 5000
+
+
+def _sweep_fail_log(now: float) -> None:
+    """Drop IPs with no failure inside the window; if still over the cap, drop the
+    oldest-touched. Caller holds ``_lock``."""
+    for ip in [ip for ip, hits in _fail_log.items() if not hits or now - hits[-1] >= FAIL_WINDOW_SECONDS]:
+        _fail_log.pop(ip, None)
+    while len(_fail_log) > _FAIL_LOG_MAX_IPS:
+        _fail_log.pop(min(_fail_log, key=lambda k: _fail_log[k][-1] if _fail_log[k] else 0.0), None)
 
 
 def too_many_failures(ip: str) -> bool:
     now = time.time()
     with _lock:
         hits = [t for t in _fail_log.get(ip, []) if now - t < FAIL_WINDOW_SECONDS]
-        _fail_log[ip] = hits
+        if hits:
+            _fail_log[ip] = hits
+        else:
+            _fail_log.pop(ip, None)          # never grow the map on a read
         return len(hits) >= FAIL_LIMIT
 
 
 def record_failure(ip: str) -> None:
+    now = time.time()
     with _lock:
-        _fail_log.setdefault(ip, []).append(time.time())
+        hits = _fail_log.setdefault(ip, [])
+        hits.append(now)
+        del hits[:-FAIL_LIMIT]
+        if len(_fail_log) > _FAIL_LOG_MAX_IPS:
+            _sweep_fail_log(now)

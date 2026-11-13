@@ -246,6 +246,7 @@ def record_ages(
     raw: List[Dict[str, Any]],
     ids: List[str],
     now: Optional[_dt.datetime] = None,
+    store_updated_at: Optional[Dict[str, str]] = None,
 ) -> Tuple[Dict[str, Optional[float]], Dict[str, int]]:
     """CONTENT AGE IN DAYS, and an observed-record count, per id.
 
@@ -312,6 +313,13 @@ def record_ages(
             ages[row_id] = None
             continue
 
+        # WORK-EXPORT-GUARDS-FROZEN (2026-11-12): an item read from the live work store has no
+        # record file; its content age is the store's own updated_at (every write bumps it).
+        if src.startswith("work_store:"):
+            iso = (store_updated_at or {}).get(row_id)
+            ages[row_id] = (max(0.0, _age_days(iso.replace("Z", "+00:00"), now)) if iso else None)
+            continue
+
         fname_ts = _filename_timestamp(src)
         if fname_ts is not None:
             ages[row_id] = max(0.0, (now - fname_ts).total_seconds() / 86400.0)
@@ -334,6 +342,78 @@ def record_ages(
     return ages, transitions
 
 
+#: The live work store's open read (WSD-S4): the register after the 2026-11-06 freeze.
+WORK_ITEMS_URL = os.environ.get("WORK_STORE_URL", "https://ict-bot.duckdns.org").rstrip("/") + "/api/bot/work/items"
+_PAGE = 1000
+
+
+def _read_live(pipeline):
+    """The pipeline register as the LIVE work store holds it: a ``pipeline.LoadResult`` plus
+    id -> the item's ``updated_at``. Pages ``GET /api/bot/work/items?kind=observation`` (an open
+    read; ordered by updated_at, so a write landing mid-read shows as a duplicate id -> re-page
+    once). Raises OSError when the store cannot be read."""
+    import urllib.parse
+    import urllib.request
+    sys.path.insert(0, str(REPO))
+    from src.runtime import work_store_import as wi  # noqa: PLC0415 -- the store's own projection
+    for _attempt in range(2):
+        items, offset = [], 0
+        while True:
+            q = urllib.parse.urlencode({"kind": "observation", "limit": _PAGE, "offset": offset})
+            req = urllib.request.Request(f"{WORK_ITEMS_URL}?{q}",
+                                         headers={"Accept": "application/json", "User-Agent": "jta-operator-owed/1"})
+            try:
+                with urllib.request.urlopen(req, timeout=60) as r:
+                    payload = json.loads(r.read() or b"{}")
+            except (OSError, ValueError) as exc:
+                raise OSError(f"work store not read: {exc}") from None
+            if payload.get("readState") != "read" or not isinstance(payload.get("items"), list):
+                raise OSError(f"work store answered readState={payload.get('readState')!r}")
+            batch = payload["items"]
+            items += batch
+            if len(batch) < _PAGE:
+                break
+            offset += _PAGE
+        if len({i["id"] for i in items}) == len(items):
+            break
+    else:
+        raise OSError("work store changed while paging twice (duplicate ids)")
+    res = pipeline.LoadResult()
+    updated: Dict[str, str] = {}
+    for it in sorted(items, key=lambda i: i["id"]):
+        rec = wi.to_pipeline_item(it)
+        res.items[rec["id"]] = rec
+        res.raw.append(rec)
+        res.sources[rec["id"]] = f"work_store:v{it.get('version')}"
+        if it.get("updated_at"):
+            updated[rec["id"]] = it["updated_at"]
+    res.records = len(res.raw)
+    return res, updated
+
+
+def _read_register(pipeline, repo: pathlib.Path, path: str, register_path: pathlib.Path, live: bool):
+    """The register this guard grades, and the store's updated_at per id (empty for the files).
+
+    WORK-EXPORT-GUARDS-FROZEN (2026-11-12): since the WSD-S4 freeze the files under
+    ``docs/claude/work/pipeline`` are an EXPORT (newest record 2026-11-06T22:02Z that day), so a
+    row the store had already closed still read as owed and stale. This guard was red on main and
+    on every pipeline-touching PR over PI-20261106-01AFOLUJ-0009, which the store had killed with
+    evidence. ``main()`` grades the live store (``live=True``) for the repo's own register; if the
+    store cannot be read it grades the files exactly as before, under a loud warning. The limit,
+    the verdict and the escalation are unchanged; only the population is current."""
+    canonical = live and path == REGISTER and repo.resolve() == REPO.resolve()
+    if canonical:
+        try:
+            res, updated = _read_live(pipeline)
+            print(f"operator-owed: read from the live work store ({WORK_ITEMS_URL}, {len(res.items)} items)")
+            return res, updated
+        except OSError as exc:
+            print(f"::warning::operator-owed: the live work store could not be read ({exc}); grading the "
+                  f"committed files instead, which are the frozen export and may show a row the store "
+                  f"already moved.")
+    return pipeline.read_log(register_path), {}
+
+
 def owed_rows(rows: Dict[str, Any], pipeline) -> Dict[str, Any]:
     """The open rows this guard grades: owed to the operator."""
     return {rid: r for rid, r in rows.items()
@@ -347,6 +427,7 @@ def check(
     verbose: bool = False,
     path: str = REGISTER,
     now: Optional[_dt.datetime] = None,
+    live: bool = False,
 ) -> int:
     pipeline = _pipeline_module()
     if pipeline is None:
@@ -361,7 +442,7 @@ def check(
               f"2026-09-21 until the E45 re-point.")
         return 2
 
-    res = pipeline.read_log(register_path)
+    res, store_updated_at = _read_register(pipeline, repo, path, register_path, live)
     if not res.healthy:
         locs = ", ".join(f"{loc} ({why})" for loc, why in res.unreadable[:5])
         print(f"operator-owed: COULD NOT LOOK — {path} has {len(res.unreadable)} "
@@ -376,7 +457,7 @@ def check(
 
     commits_total = len(register_commits(repo, path))
     ages, transitions = record_ages(repo, path, res.sources, res.raw,
-                                     list(due), now)
+                                     list(due), now, store_updated_at)
 
     print(f"operator-owed: {len(rows)} row(s) in {path} · {len(owed)} owed to "
           f"the operator · {len(due)} of those DUE now")
@@ -643,7 +724,7 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     if args.self_test:
         return _self_test()
-    return check(REPO, verbose=args.verbose)
+    return check(REPO, verbose=args.verbose, live=True)
 
 
 if __name__ == "__main__":

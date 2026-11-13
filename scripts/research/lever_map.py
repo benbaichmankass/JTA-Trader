@@ -249,11 +249,11 @@ def build(root: Path) -> dict[str, dict[str, Any]]:
     fams = policy.get("lever_families") or {}
     responses = collect_responses(root)
     maps: dict[str, dict[str, Any]] = {}
-    for leg, row in ss.table(root).items():
+    table = ss.table(root)
+    for leg, row in table.items():
         if row["status"] == ss.INACTIVE:
             continue
-        ev = io.evidence_path(root, leg)
-        rec = json.loads(ev.read_text(encoding="utf-8")) if ev.is_file() else {}
+        ev, rec = io.leg_record(root, leg, set(table))   # the leg's OWN evidence (never another configured leg's record)
         levers: dict[str, dict[str, Any]] = defaultdict(dict)
         for r in responses.get(leg, []):
             levers[r["family"]].setdefault(r["lever"], {"tests": []})["tests"].append(
@@ -266,8 +266,10 @@ def build(root: Path) -> dict[str, dict[str, Any]]:
         maps[leg] = {"subject": leg, "kind": "strategy_leg", "status": row["status"], "books": row["books"],
                      "baseline": {"record": str(ev.relative_to(root)) if ev.is_file() else None,
                                   "net_r": rec.get("net_r_oos"), "n": rec.get("n_trades_oos"),
-                                  "fidelity": rec.get("fidelity"), "rule_verdict": (rec.get("decision_rule") or {}).get("verdict")},
-                     "attribution": attribute(_trades(root, rec.get("source_run"))) if rec else {"read_state": "no_record"},
+                                  "fidelity": rec.get("fidelity"), "rule_verdict": (rec.get("decision_rule") or {}).get("verdict"),
+                                  **({"note": rec["_note"]} if rec.get("_note") else {})},
+                     "attribution": (attribute(_trades(root, rec.get("source_run"))) if rec.get("source_run") or
+                                     (rec and not rec.get("_verdict")) else {"read_state": "no_record"}),
                      "manifest": manifest, "levers": {f: dict(v) for f, v in sorted(levers.items())}}
     subj = yaml.safe_load((root / io.SUBJECTS_REL).read_text(encoding="utf-8")) or {}
     for kind in ("ml_model", "ltr_class"):

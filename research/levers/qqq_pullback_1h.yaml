@@ -3,77 +3,118 @@
 subject: qqq_pullback_1h
 kind: strategy_leg
 status: testing
-books: []
+books:
+- alpaca_paper
 baseline:
   record: comms/strategy_evidence/qqq_pullback_1h.json
-  net_r: 10.8351
-  n: 55
+  net_r: 8.0368
+  n: 56
   fidelity: faithful
   rule_verdict: pass
 attribution:
   read_state: measured
-  n: 55
-  net_r: 10.835
-  gross_r: 13.09
-  cost_r: 2.255
-  cost_share_of_gross: 0.172
+  n: 56
+  net_r: 8.037
+  gross_r: 10.331
+  cost_r: 2.294
+  cost_share_of_gross: 0.222
   verdict_hint: gross edge survives cost
   entry_quality:
-    mean_mfe_r: 1.703
-    share_mfe_ge_1r: 0.491
-    n_with_mfe: 55
+    mean_mfe_r: 1.714
+    share_mfe_ge_1r: 0.5
+    n_with_mfe: 56
   exit_capture:
-    median_net_over_mfe_winners: 0.43
-    n_winners: 16
+    median_net_over_mfe_winners: 0.39
+    n_winners: 17
     losers_that_reached_1r_mfe: 11
   by_year:
     '2025':
-      n: 24
-      net_r: 3.223
-      gross_r: 4.264
+      n: 20
+      net_r: -2.028
+      gross_r: -1.098
     '2026':
-      n: 31
-      net_r: 7.612
-      gross_r: 8.827
+      n: 36
+      net_r: 10.065
+      gross_r: 11.429
   by_direction:
     long:
-      n: 36
-      net_r: 18.03
-      gross_r: 19.647
+      n: 35
+      net_r: 10.542
+      gross_r: 12.166
     short:
-      n: 19
-      net_r: -7.195
-      gross_r: -6.557
+      n: 21
+      net_r: -2.505
+      gross_r: -1.835
   by_exit_reason:
     stop:
-      n: 27
-      net_r: -28.064
-      gross_r: -27.0
+      n: 28
+      net_r: -29.09
+      gross_r: -28.0
     take_profit:
       n: 3
-      net_r: 23.382
-      gross_r: 23.506
-    timeout:
-      n: 2
-      net_r: 4.687
-      gross_r: 4.775
+      net_r: 23.459
+      gross_r: 23.581
     trail_stop:
-      n: 23
-      net_r: 10.83
-      gross_r: 11.81
+      n: 25
+      net_r: 13.668
+      gross_r: 14.75
   by_adx_at_entry:
     unknown:
-      n: 55
-      net_r: 10.835
-      gross_r: 13.09
+      n: 56
+      net_r: 8.037
+      gross_r: 10.331
 manifest:
   entry: untested
-  exit: untested
+  exit: tested
   filter: untested
   regime_gating: untested
   timeframe: untested
   symbol_set: untested
-  direction: untested
+  direction: tested
   session: untested
   sizing_vs_cost: untested
-levers: {}
+levers:
+  direction:
+    side_filter:
+      tests:
+      - value: long
+        baseline_value: 'off'
+        arm: S1
+        unit: RQ-20261111-203c-03
+        window: 2020-07-01..2026-10-15
+        n: 131
+        net_r: 47.3465
+        baseline_n: 214
+        baseline_net_r: 31.0315
+        delta_net_r: 16.315
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 12.4753
+        verdict: pass
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: 0.0762
+      fold_stability: 1.0
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
+  exit:
+    be_floor_r:
+      tests:
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: C1
+        unit: RQ-20261111-203c-03
+        window: 2020-07-01..2026-10-15
+        n: 247
+        net_r: 31.8611
+        baseline_n: 214
+        baseline_net_r: 31.0315
+        delta_net_r: 0.8296
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 14.881
+        verdict: pass
+        joint_change: false
+      shape: flat
+      points: 1
+      best_delta_r_per_trade: 0.0039
+      fold_stability: 0.5
+      reading: no response at the tested values

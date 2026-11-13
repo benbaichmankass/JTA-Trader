@@ -95,6 +95,7 @@ if str(REPO_ROOT) not in sys.path:
 # `section0_lines` (ranked, capped) from `pipeline.due` / `due_bucket` /
 # `unrouted_alarm`; `pipeline.render_section_0` remains for `pipeline.py --due`.
 from scripts.ops import pipeline  # noqa: E402
+from src.runtime import checklist_store  # noqa: E402
 
 BRIEF_DIR = REPO_ROOT / "comms" / "briefs"
 
@@ -114,6 +115,7 @@ TOP_DUE = 15            # §0 rows shown
 MOVED_PER_STATE = 5     # §3 rows shown per state
 STALE_AFTER_DAYS = 3    # §4: no row/git activity this long => STALE
 _LINE = 100             # one-line truncation for list rows
+OVERDUE_NAMED_CAP = 40  # §0c: non-operator overdue build rows named by id before a count
 _NOTE = 90             # truncation for a note excerpt in §2
 
 #: Terminal-ish checklist states that read as "moved" rather than "running".
@@ -373,18 +375,44 @@ def checklist_view(doc: Any) -> dict[str, Any]:
     }
 
 
+def overdue_build_lines(items: list, today: date) -> list[str]:
+    """§0c: overdue (non-terminal, past due_by) build rows NAMED by id, oldest due first, so section 0
+    never carries only a bare count (PROPOSAL-ALERT-ROUTING). Rows waiting on the operator are marked."""
+    rows = sorted((r for r in items if isinstance(r, dict) and checklist_store.is_overdue(r, today)),
+                  key=lambda r: (str(checklist_store.effective_due(r)), str(r.get("id"))))
+    if not rows:
+        return ["### §0c — OVERDUE BUILD ROWS: none.", ""]
+    L = [f"### §0c — OVERDUE BUILD ROWS ({len(rows)}), oldest due first; ⚠ = waiting on the operator", ""]
+    rest = []
+    for r in rows:
+        why = checklist_store.awaits_operator(r, today)
+        if why:
+            L.append(f"- ⚠ `{r.get('id')}` [{r.get('state')}] due {checklist_store.effective_due(r)} — {why}")
+        else:
+            rest.append(f"`{r.get('id')}`")
+    if rest:
+        # WR-SIZE-CAP (2026-11-13): name the oldest OVERDUE_NAMED_CAP, count the rest. Listing all 388
+        # ids was ~12 KB and took the 05:30Z work report to 79 KB (> attention_watch's 64 KB bound).
+        # Every ⚠ operator row above is still listed in full; this is never a bare count.
+        shown = rest[:OVERDUE_NAMED_CAP]
+        tail = (f", … and {len(rest) - len(shown)} more (`python3 scripts/ops/work.py list --due --kind build`)"
+                if len(rest) > len(shown) else "")
+        L += ["", "Other overdue (oldest first): " + ", ".join(shown) + tail]
+    return L + [""]
+
+
 def _is_operator_owned(item: dict) -> bool:
     return "operator" in str(item.get("owner") or "").lower()
 
 
-def decisions_for_you(ck: dict[str, Any]) -> list[dict]:
+def decisions_for_you(ck: dict[str, Any], today: date | None = None) -> list[dict]:
     """§2 population: operator-owned rows not yet resolved. NO CAP — a queue
     outrunning one person is an argument for a mandate, not for truncation."""
     out = []
     for state, rows in ck["byState"].items():
         if state in ("done", "dropped"):
             continue
-        out.extend(r for r in rows if _is_operator_owned(r))
+        out.extend(r for r in rows if checklist_store.awaits_operator(r, today))
     return sorted(out, key=lambda r: str(r.get("id") or ""))
 
 
@@ -606,6 +634,7 @@ def build(*, today: date | None = None, root: Path | None = None) -> dict[str, A
     if checklist_state == "read":
         section0 = section0 + derived_due_lines(derived_due(
             pipe_items, (checklist_doc or {}).get("items") or [], today))
+        section0 = section0 + overdue_build_lines((checklist_doc or {}).get("items") or [], today)
     else:
         section0 = section0 + ["### §0b — DERIVED DUE — COULD NOT BE COMPUTED "
                                f"(checklist `{checklist_state}`; we did not look, this is not zero)", ""]
@@ -620,15 +649,29 @@ def build(*, today: date | None = None, root: Path | None = None) -> dict[str, A
     except Exception:  # noqa: BLE001 — unreadable is a state, not a crash
         bw = None
 
+    try:  # UNBLOCK-WATCH: every blocked/waiting item and the condition that clears it
+        from scripts.ops import unblock_watch  # noqa: PLC0415
+        uw = unblock_watch.brief_lines(root)
+    except Exception:  # noqa: BLE001 — unreadable is a state, not a crash
+        uw = None
+
     try:  # SCOREBOARD-PNL-FIRST: unreadable is a state (renders "we could not look"), never a crash or a zero
         from scripts.ops import scoreboard  # noqa: PLC0415
         sb = scoreboard.build(root=root, source="db")
     except Exception as exc:  # noqa: BLE001
         sb = {"readState": "unreadable", "reason": f"scoreboard build failed: {exc!r}"}
 
+    try:  # VM-CHANGE-LEDGER: direct VM changes still awaiting a fold-back into the repo (due via pipeline.py)
+        from src.runtime import ops_actions  # noqa: PLC0415
+        vml = ops_actions.ledger_view()
+    except Exception as exc:  # noqa: BLE001 — unreadable is a state, not a crash
+        vml = {"read_state": "unreadable", "reason": repr(exc)}
+
     return {
+        "vmLedger": vml,
         "scoreboard": sb,
         "blockerWatch": bw,
+        "unblockWatch": uw,
         "schemaVersion": 1,
         "forDate": today.isoformat(),
         "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
@@ -674,6 +717,34 @@ def _section0(b: dict) -> list[str]:
         L += blocker_watch.render_lines(bw)
     elif "blockerWatch" in b:
         L += ["### 🧱 BLOCKER-WATCH — COULD NOT BE RUN (we did not look; this is not zero)", ""]
+    # UNBLOCK-WATCH (operator 2026-11-12): the daily BLOCKED section -- counts, unconditioned, stale manual,
+    # could_not_look and money waits > 7 days. Repo-only per request + the newest VM receipt.
+    if "unblockWatch" in b:
+        L += list(b["unblockWatch"] or ["### ⛓️ BLOCKED — COULD NOT BE EVALUATED (we did not look; this is not zero)", ""])
+    if "vmLedger" in b:
+        L += vm_ledger_lines(b["vmLedger"])
+    return L
+
+
+def vm_ledger_lines(view: dict | None) -> list[str]:
+    """§0 block: VM changes made through the direct ops channel that are not yet expressed in the repo
+    (VM-CHANGE-LEDGER). Due-ness is ``pipeline.vm_ledger_due``; a ledger we could not read says so, never 0."""
+    st = (view or {}).get("read_state")
+    if st not in ("measured", "absent"):
+        return [f"### 🧾 VM CHANGES AWAITING FOLD-BACK — COULD NOT LOOK (ledger `{st}`; this is not zero)", ""]
+    c = (view or {}).get("counts") or {}
+    due = pipeline.vm_ledger_due(view)
+    L = [f"### 🧾 VM CHANGES AWAITING FOLD-BACK — {len(due)} due",
+         "",
+         f"Ledger (`GET /api/bot/ops/ledger`): {c.get('entries', 0)} change(s) recorded · pending "
+         f"{c.get('pending', 0)} · folded {c.get('folded', 0)} · not_needed {c.get('not_needed', 0)}. "
+         f"Population: {(view or {}).get('population', 'the VM change ledger')}.", ""]
+    for it in due[:TOP_DUE]:
+        L.append(f"- **{it['id']}** [{_clip(it.get('age_h'), 8)} h] {_clip(it.get('what'), _LINE)} · `fold_back`")
+    if len(due) > TOP_DUE:
+        L.append(f"- … {len(due) - TOP_DUE} more: `GET /api/bot/ops/ledger?pending=1`")
+    if due:
+        L.append("")
     return L
 
 
@@ -712,16 +783,24 @@ def _section2(b: dict) -> list[str]:
         return ["---", "", "## §2 — DECISIONS FOR YOU", "",
                 f"{_HOLE[b['checklistState']]} — `docs/claude/work/MANAGER-CHECKLIST.json`. "
                 f"(Pipeline `ask_operator` items below are still shown: {len(ask)}.)", ""] + _ask_lines(ask)
-    rows = decisions_for_you(b["checklist"])
+    today = date.fromisoformat(b["forDate"]) if b.get("forDate") else None
+    rows = decisions_for_you(b["checklist"], today)
     L = ["---", "", f"## §2 — DECISIONS FOR YOU ({len(rows)} checklist + {len(ask)} pipeline)", "",
          "_Operator-owned checklist rows, then due pipeline items with "
          "`ask_operator`. **No cap on rows** (a queue outrunning one person argues "
          "for a mandate, not a shorter list); only prose is clipped — full text "
          "`GET /api/bot/work/checklist`._", ""]
+    moved = sorted(str(r.get("id")) for st, rs in b["checklist"]["byState"].items() if st == "landed_unproven"
+                   for r in rs if checklist_store.observation_owed_tier3(r, today))
+    if moved:
+        L += [f"_{len(moved)} landed_unproven tier-3 row(s) past due_by are NOT listed here: their decision "
+              f"already merged and each owes a closing observation (they stay in §0 overdue): "
+              f"{_clip(', '.join(moved), 300)}._", ""]
     if not rows and not ask:
         return L + ["_None._", ""]
     for it in rows:
-        L.append(f"- **{it.get('id')}** [{it.get('state')}] {_clip(it.get('title') or '(untitled)', 90)}")
+        why = checklist_store.awaits_operator(it, today)
+        L.append(f"- **{it.get('id')}** [{it.get('state')}] ({why}) {_clip(it.get('title') or '(untitled)', 90)}")
         if it.get("note"):
             L.append(f"  - {_clip(it['note'], 80)}")
         bo = _blocked_on_text(it)

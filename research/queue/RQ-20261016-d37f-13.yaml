@@ -2,7 +2,7 @@
 # queue_grade.confirmation_unit: the holdout re-run of RQ-20261009-005's PASS (operator 2026-10-16, 'Holdout re-run').
 id: RQ-20261016-d37f-13
 title: 'Holdout re-run of RQ-20261009-005: M20 exit-lever sweep: trend_donchian_xrp_4h (generated, monthly)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -83,6 +83,20 @@ confirmation:
     run for this leg); the sweep re-derives the boundary from the run''s own trades and grows the share
     to the 25-trade floor, capped at 0.40. The default 25% holds only ~36 trades here (< the 25 floor),
     so the share is raised to 0.26.'
+# RE-ARMED 2026-11-12 (lane AUD-20261019-RESEARCH-SLO-RED): run 39015656806 failed (sweep wrote no verdicts.json; every
+# m20-exit-lever-sweep run 10-16 20:52Z..10-17 07:59Z failed) and m20's research_result step wrote no E5 row, so the
+# stamp read 'ran' with nothing to grade for 26 days. Stamp cleared so the dispatcher re-fires it.
+last_dispatched_at: '2026-11-13T03:53:49+00:00'
 grading:
   auto: true
-last_dispatched_at: '2026-10-17T07:58:48+00:00'
+  awaiting: more_data
+  decision_rule_id: RULE-EXIT-REFINEMENT-P2-GATE
+  evidence:
+  - research/results/RQ-20261016-d37f-13/43361996560.jsonl
+  graded_at: '2026-11-13'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

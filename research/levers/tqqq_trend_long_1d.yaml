@@ -191,10 +191,24 @@ levers:
         max_drawdown_r: 3.654
         verdict: fail
         joint_change: false
+      - value: '20'
+        baseline_value: '30'
+        arm: D20
+        unit: RQ-20261113-4654-01
+        window: 2010-06-01..2026-10-22
+        n: 96
+        net_r: 15.1048
+        baseline_n: 95
+        baseline_net_r: 9.3742
+        delta_net_r: 5.7306
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 4.2709
+        verdict: pass
+        joint_change: false
       shape: peaked
-      points: 4
+      points: 5
       best_delta_r_per_trade: 0.0911
-      fold_stability: 0.5
+      fold_stability: 0.55
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
   exit:
     atr_stop_mult:

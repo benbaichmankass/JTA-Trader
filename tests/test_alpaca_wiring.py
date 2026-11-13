@@ -771,7 +771,8 @@ def test_accounts_yaml_alpaca_paper_ships_inert():
         # gld_pullback_1d moved to ib_paper 2026-10-25 (GLD-SOAK-REPLACE): the GLD
         # slot here is held by a kept zombie OCO.
         "iwm_trend_long_1d", "tlt_pullback_1d", "ief_pullback_1d",
-        "slv_trend_1h",
+        # slv_trend_1h left 2026-11-12 (SLV-1H-PROMOTE, operator "I answer that I do want to promote silver."): production on
+        # alpaca_live + alpaca_portfolio, and production is not general paper.
         "slv_pullback_1d", "gdx_pullback_1d",
         "tqqq_trend_long_1d", "qld_trend_long_1d",
         # sub-$100 proxy cells (2026-07-07, Tier-3) — SPYM/IAUM/SCHA paper soak.

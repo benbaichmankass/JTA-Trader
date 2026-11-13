@@ -262,6 +262,11 @@ class DXtradeApiAdapter(PropPlatformAdapter):
     # entry. Browser and phone executors do NOT set this: a marketable click on
     # a terminal (2026-10-04 03:40Z) produced no order, and they keep waiting.
     MARKETABLE_ENTRY_AT_MARKET = True
+    # CAP-PROP-VM-CLOSE (2026-11-12): a partial close is ONE CLOSE market order against the position's
+    # positionCode (design memo velotrade-api-executor-design-2026-10-05.md, step 4 "a CLOSE market order against
+    # positionCode"). The SL / TP children are position-attached (quantity absent), so they stay resting and cover
+    # what remains; ``vm_close.confirm_partial`` reads both back. The browser adapter does not set this.
+    PARTIAL_CLOSE_SUPPORTED = True
     transport: Transport = field(default=urllib_transport)
     sleep: Callable[[float], None] = field(default=time.sleep)
     timeout_s: float = 25.0
@@ -361,6 +366,14 @@ class DXtradeApiAdapter(PropPlatformAdapter):
         snap = AccountSnapshot(balance=_f(m.get("balance")), equity=_f(m.get("equity")),
                                unrealized=_f(m.get("openPl")), margin_used=_f(m.get("margin")),
                                available=_f(m.get("availableFunds")))
+        # VELOTRADE-STATUS-SNAPSHOT-UNREADABLE: velotrade_1's metrics carry no openPl
+        # (20 of 20 reads, 2026-11-12), so every read with an open position graded
+        # unrealized_unreported. On DXtrade equity = balance + open P&L: on tradeify_1,
+        # which does send openPl, (equity - balance) == openPl on 38 of 38 reads
+        # (2026-11-12). Derive it only from two READ fields, and say so.
+        if snap.unrealized is None and snap.balance is not None and snap.equity is not None:
+            snap.unrealized = round(snap.equity - snap.balance, 2)
+            snap.derived.append("unrealized=equity-balance")
         snap.unparsed = [k for k, v in (("balance", snap.balance), ("equity", snap.equity),
                                         ("unrealized", snap.unrealized)) if v is None]
         snap.unparsed.append("realized_today")   # not a REST metrics field: "could not look"
@@ -584,6 +597,40 @@ class DXtradeApiAdapter(PropPlatformAdapter):
                 continue
             break
         return {"ok": r.ok, "clicked": True, "why": "http 200" if r.ok else self.redact(str(r.error()))}
+
+    def reduce_position(self, page: Any, position: Position, quantity: float, *, arm: bool = False,
+                        client_id: Optional[str] = None) -> Dict[str, Any]:
+        """Close PART of one position: a MARKET order, ``positionEffect: CLOSE``, opposite side, against the
+        position's ``positionCode``, for ``quantity`` (< the position's size, on the venue's step). Never closes the
+        whole position (that is :meth:`flatten`) and never touches the SL / TP orders. ``client_id`` makes a re-POST
+        a ``409/100`` (already placed) instead of a second reduce."""
+        sym = position.symbol.upper()
+        vs = VENUE_SPECS.get(sym)
+        if vs is None:
+            return {"ok": False, "clicked": False, "why": f"{sym}: no measured venue spec (refused, never guessed)"}
+        code = (position.raw or {}).get("positionCode") or ""
+        if not code:
+            return {"ok": False, "clicked": False, "why": "no positionCode on the position read: refusing to guess"}
+        size, q = _f(position.quantity), _f(quantity)
+        if size is None or q is None or q <= 0 or q >= size - 1e-12:
+            return {"ok": False, "clicked": False, "why": f"reduce {quantity!r} must be > 0 and < the size {size!r}"}
+        if not _on_step(q, vs["qty_step"]) or q < vs["min_qty"] - 1e-12 or (size - q) < vs["min_qty"] - 1e-12:
+            return {"ok": False, "clicked": False, "why": (f"reduce {q} off the venue step {vs['qty_step']} or "
+                                                           f"leaves a side under the minimum {vs['min_qty']}")}
+        side = _side_for(position.side or "")
+        oc = "".join(ch if ch.isalnum() or ch in "-_." else "-" for ch in str(client_id or ""))[:60]
+        body = {"type": "MARKET", "instrument": sym, "quantity": _num(q), "positionEffect": "CLOSE",
+                "positionCode": code, "side": _opposite(side), "tif": "GTC"}
+        if oc:
+            body = {"orderCode": oc, **body}
+        if not arm:
+            return {"ok": True, "clicked": False, "why": "dry: CLOSE order built, NOT sent", "would_send": body}
+        r = self._request("POST", f"/accounts/{self._acct()}/orders", body)
+        if r.ok:
+            return {"ok": True, "clicked": True, "why": "http 200"}
+        if r.status == 409 and isinstance(r.body, dict) and str(r.body.get("errorCode")) == "100":
+            return {"ok": True, "clicked": True, "why": "already_placed (409/100 duplicate client order id)"}
+        return {"ok": False, "clicked": True, "why": self.redact(str(r.error()))}
 
     def flatten(self, page: Any, symbol: Optional[str] = None, *, arm: bool = False,
                 side: Optional[str] = None, quantity: Optional[float] = None,

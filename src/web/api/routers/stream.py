@@ -6,7 +6,7 @@ VM's read load is O(1) in viewers (the per-connection loop in ``market_ws.py`` i
 
 Frames (Server-Sent Events, ``id: <seq>``, ``event: <type>``, ``data: <json>``)::
 
-    {seq, ts, type, payload}   type in alert | package | trade | position | bracket | health | hello
+    {seq, ts, type, payload}   type in alert | package | trade | position | bracket | pnl | health | hello
 
   * alert     a new row of the alert ledger (``runtime_logs/alerts_ledger.jsonl``, byte-offset cursor;
               a trimmed/rotated ledger is re-read from the last emitted ``ts``)
@@ -15,6 +15,11 @@ Frames (Server-Sent Events, ``id: <seq>``, ``event: <type>``, ``data: <json>``):
   * bracket   an open trade whose stop_loss / take_profit_1 changed (SL/TP lines move on the chart)
   * position  the open-trade set changed (ids opened / closed) -- the client re-reads REST /positions
   * health    the /api/bot/health/latest document, pushed only when it changes (30 s compute)
+  * pnl       a position's uPnL moved >= PNL_MIN_MOVE (or its source/provenance changed) between open-set
+              changes; read every 5 s from the /api/bot/positions snapshot, carrying unrealizedPnlProvenance,
+              as_of and snapshot_age_s. While >= 1 client is connected the broadcaster keeps that snapshot warm
+              itself, through the route's own SWR path, at most once per 15 s in total (one old SPA poll's
+              cadence, independent of viewer count); with 0 clients it refreshes nothing.
   * hello     first frame on every connection: the current seq and what the ring buffer holds
 
 Reconnect: ``Last-Event-ID`` (or ``?last_event_id=``) replays frames from a 10-minute ring buffer.
@@ -43,7 +48,7 @@ import logging
 import sqlite3
 import time
 from collections import deque
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -57,6 +62,10 @@ router = APIRouter(prefix="/api/bot", tags=["stream"])
 
 TICK_S = 1.0
 HEALTH_EVERY_S = 30.0
+PNL_EVERY_S = 5.0
+PNL_MIN_MOVE = 0.5          # account currency: a smaller uPnL change is not pushed
+PNL_STALE_S = 120.0         # the positions snapshot's own stale bound (dashboard._POSITIONS_SWR)
+POS_REFRESH_EVERY_S = 15.0  # while >= 1 client: keep the snapshot warm at ONE old-SPA-poll's cadence, total
 HEARTBEAT_S = 15.0
 RING_SECONDS = 600
 RING_MAX = 5000
@@ -85,6 +94,28 @@ def _default_ledger_path() -> Path:
     return alerts_ledger.ledger_path()
 
 
+def _default_pnl_snapshot() -> tuple[list[dict[str, Any]] | None, float]:
+    """The open-positions snapshot the /positions route ALREADY computed (broker-truth uPnL with its
+    source and provenance), with its age. A peek: it builds nothing and calls no venue, so the stream
+    adds zero broker reads. The include_paper snapshot is preferred (it is a superset); the real-money
+    one is the fallback."""
+    from src.web.api.routers import dashboard
+    for key in (True, False):
+        rows, age = dashboard._POSITIONS_SWR.peek(key)
+        if rows is not None:
+            return rows, age
+    return None, float("inf")
+
+
+async def _default_pos_refresh() -> Any:
+    """Keep the positions snapshot warm through the SAME cache /api/bot/positions uses (_POSITIONS_SWR),
+    AWAITING a real rebuild (``arefresh``) rather than taking ``aget``'s stale return, so the snapshot is
+    at most POS_REFRESH_EVERY_S + one build old while clients are connected. Its single-flight means a
+    REST read and this refresh never build at the same time."""
+    from src.web.api.routers import dashboard
+    return await dashboard.refresh_positions_snapshot(include_paper=True)
+
+
 def _default_health() -> dict[str, Any]:
     from src.web.api.routers import health_snapshots
     return health_snapshots.get_latest()
@@ -96,6 +127,8 @@ class Broadcaster:
     def __init__(self, *, db_path: Callable[[], str] = _default_db_path,
                  ledger_path: Callable[[], Path] = _default_ledger_path,
                  health: Callable[[], dict[str, Any]] = _default_health,
+                 pnl_snapshot: Callable[[], tuple[list[dict[str, Any]] | None, float]] = _default_pnl_snapshot,
+                 pos_refresh: Callable[[], Awaitable[Any]] | None = _default_pos_refresh,
                  clock: Callable[[], float] = time.monotonic) -> None:
         self._db_path, self._ledger_path, self._health, self._clock = db_path, ledger_path, health, clock
         self.seq = 0
@@ -115,6 +148,12 @@ class Broadcaster:
         self._open_pkgs: dict[str, str] = {}
         self._health_hash = ""
         self._health_at = -1e9
+        self._pnl_snapshot = pnl_snapshot
+        self._pnl_at = -1e9
+        self._pnl_last: dict[str, tuple] = {}
+        self._pos_refresh = pos_refresh
+        self._pos_refresh_at = -1e9
+        self._pos_refresh_task: asyncio.Task | None = None
         self._pending: list[tuple[str, Any]] = []
 
     # ── frames ──────────────────────────────────────────────────────────────────────────
@@ -292,22 +331,93 @@ class Broadcaster:
         except Exception as exc:  # noqa: BLE001  # allow-silent: reported as could_not_look in status/hello
             self._mark("health", exc)
 
+    def read_pnl(self, emit: bool = True) -> None:
+        """Push uPnL between open-set changes, from the snapshot the positions route already holds.
+
+        One ``pnl`` frame per position whose uPnL moved by >= PNL_MIN_MOVE, or whose source or provenance
+        changed, since the last push. Every frame carries the value's provenance and the snapshot's
+        ``as_of`` / ``snapshot_age_s``, so a client never shows an old number as live. No snapshot (no one
+        has read /positions lately) is ``could_not_look``, never a frame of zeros.
+        """
+        now = self._clock()
+        if now - self._pnl_at < PNL_EVERY_S:
+            return
+        self._pnl_at = now
+        try:
+            rows, age = self._pnl_snapshot()
+        except Exception as exc:  # noqa: BLE001  # allow-silent: reported as could_not_look in status/hello
+            self._mark("pnl", exc)
+            return
+        if rows is None:
+            self.sources["pnl"] = {"read_state": "could_not_look", "at": _now_iso(), "snapshot_age_s": None,
+                                   "reason": "no positions snapshot cached (nothing has read /api/bot/positions)"}
+            return
+        age_s = round(float(age), 1)
+        as_of = datetime.fromtimestamp(time.time() - float(age), timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+        seen = set()
+        for r in rows:
+            tid = str(r.get("id"))
+            seen.add(tid)
+            val = r.get("unrealizedPnl")
+            key = (r.get("unrealizedPnlSource"), r.get("unrealizedPnlProvenance"))
+            prev = self._pnl_last.get(tid)
+            moved = (prev is None or prev[1] != key or (val is None) != (prev[0] is None)
+                     or (val is not None and prev[0] is not None and abs(float(val) - float(prev[0])) >= PNL_MIN_MOVE))
+            if not moved:
+                continue
+            self._pnl_last[tid] = (val, key)
+            if emit and prev is not None:
+                rb = r.get("r") if isinstance(r.get("r"), dict) else {}
+                self.emit("pnl", {"trade_id": tid, "account": r.get("account"), "symbol": r.get("symbol"),
+                                  "side": r.get("side"), "qty": r.get("qty"), "entryPrice": r.get("entryPrice"),
+                                  "unrealizedPnl": val, "unrealizedPnlSource": key[0],
+                                  "unrealizedPnlProvenance": key[1], "openR": rb.get("openR"),
+                                  "prev_unrealizedPnl": prev[0], "as_of": as_of, "snapshot_age_s": age_s})
+        for tid in [t for t in self._pnl_last if t not in seen]:
+            self._pnl_last.pop(tid, None)
+        self.sources["pnl"] = {"read_state": "stale" if age > PNL_STALE_S else "read", "at": _now_iso(),
+                               "snapshot_age_s": age_s, "positions": len(rows)}
+
+    async def maybe_refresh_positions(self) -> None:
+        """While >= 1 client is connected, refresh the positions snapshot at most once per POS_REFRESH_EVERY_S
+        (total, whatever the client count: O(1) in viewers). With 0 clients: nothing. The refresh runs as a
+        background task with its own single-flight, so a slow cold build never delays this broadcaster's tick."""
+        if not self.clients or self._pos_refresh is None:
+            return
+        if self._pos_refresh_task is not None and not self._pos_refresh_task.done():
+            return
+        now = self._clock()
+        if now - self._pos_refresh_at < POS_REFRESH_EVERY_S:
+            return
+        self._pos_refresh_at = now
+
+        async def _run() -> None:
+            try:
+                await self._pos_refresh()
+                self.sources["pnl_refresh"] = {"read_state": "read", "at": _now_iso(), "every_s": POS_REFRESH_EVERY_S}
+            except Exception as exc:  # noqa: BLE001  # allow-silent: reported in status/hello; the stale snapshot's age shows in every pnl frame
+                self._mark("pnl_refresh", exc)
+        self._pos_refresh_task = asyncio.get_running_loop().create_task(_run())
+
     def tick(self) -> None:
         """One pass over every source. The first pass only primes cursors (emits nothing old)."""
         if not self._primed:
             self.read_ledger(emit=False)
             self.read_journal(emit=False)
+            self.read_pnl(emit=False)
             self._primed = True
             self.read_health(emit=True)
             return
         self.read_ledger()
         self.read_journal()
         self.read_health()
+        self.read_pnl()
 
     # ── lifecycle ───────────────────────────────────────────────────────────────────────
     async def run(self) -> None:
         while True:
             if self.clients:
+                await self.maybe_refresh_positions()
                 try:
                     await asyncio.to_thread(self.tick)
                 except Exception:  # allow-silent: not silent -- logged with stack; the broadcaster never stops

@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Renames research/queue/RQ-20261112-d2ct-01.yaml to RQ-20261112-bcd2-01.yaml (hand edit under research/queue/; AM-ML merges). Rule, question, thresholds and status unchanged; only the id string changes.",
+  "why": "The id 'd2ct' is not hex, so every id regex (dispatch_queue _QUEUE_FILE_RE, collect_runner_results _ARTIFACT_RE, next_rq_id) rejects it: the unit could never have its results collected, and the lane reports pytest-run red on main. bcd2-01 was allocated by scripts/research/next_rq_id.py. Revert: git revert."
+}
