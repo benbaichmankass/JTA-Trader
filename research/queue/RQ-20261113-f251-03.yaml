@@ -83,13 +83,21 @@ decision_rule:
 
     - Nothing changes config without the manager.
 
-    - Fixed now; not changed after any result. || E5 ENCODING (reporting only; the grading above is unchanged): per leg, pass = the outcome maps to closed >= forming
-    within the band (verdict SWITCH_TO_CLOSED, or better NO_MATERIAL_DIFFERENCE) -> propose closed; fail = better FORMING_BETTER -> keep forming + AM-OPS entry-hold
-    fix; indeterminate = not graded. Unit: indeterminate if any leg is; else pass if both pass; else fail. Each leg''s better, verdict, folds and RULE-D1 facts are
-    carried in its record.'
+    - Fixed now; not changed after any result. || AMENDED BEFORE ANY RUN (AM-ML, 2026-11-13 14:53Z, recorded on the row note; rule id kept): the tie case is narrowed
+    -- SWITCH_TO_CLOSED, or NO_MATERIAL_DIFFERENCE with closed PASSING RULE-D1 on the record window -> propose decision_bar: closed (Tier 3, through AM-ML to the
+    manager); NO_MATERIAL_DIFFERENCE with closed FAILING RULE-D1 -> no closed proposal, the tool verdict reported as-is (KEEP_FORMING_REBASE_RECORD if forming passes,
+    DEMOTE_CANDIDATE if neither passes); forming materially better -> unchanged (keep forming; entry-hold fix to AM-OPS). || E5 ENCODING (reporting only; the grading
+    is unchanged): per leg, pass = propose closed, which is exactly the tool verdict SWITCH_TO_CLOSED; fail = no closed proposal (FORMING_BETTER, or a tie / closed-better
+    where closed fails RULE-D1); indeterminate = not graded. Unit: indeterminate if any leg is; else pass if both pass; else fail. Each leg''s better, match_verdict,
+    folds and RULE-D1 facts are carried in its record.'
   what_it_does_not_do: 'Changes no config, roster or order. A switch to decision_bar: closed is a Tier-3 proposal AM-ML makes to the manager with this record; an
     entry-hold fix is a proposal to AM-OPS.'
   baseline: 'The incumbent: each leg''s live forming-bar decision, replayed config-exact on the same 1m history and cost stack (paired per fold).'
+  amended_before_run:
+    at: '2026-11-13T14:53:00Z'
+    by: AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)
+    source: row FORMING-VS-CLOSED-ETH4H-SOL4H note, 2026-11-13 14:53Z
+    what: 'tie where closed fails RULE-D1 no longer proposes closed; the tool verdict is reported as-is. Nothing had run; the unit was undispatched and #25763 unmerged.'
 compute: cpu_light
 value:
   bucket: own_losses
@@ -124,5 +132,5 @@ related:
 - docs/research/evidence/decision-bar-match-2026-10-22.json
 practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): rule registered before the run, net of the full cost stack, paired per fold
   with a materiality floor; the same tool and grading as RQ-20261022-4de5-01 for comparability.'
-follow_up: 'Report per-leg verdicts to AM-ML. Pass -> AM-ML proposes decision_bar: closed (Tier 3) to the manager; fail -> keep forming and propose an entry-hold
-  / no-re-ticket fix to AM-OPS. Change no config.'
+follow_up: 'Report per-leg verdicts to AM-ML. pass (SWITCH_TO_CLOSED) -> AM-ML proposes decision_bar: closed (Tier 3) to the manager; fail -> no closed proposal:
+  FORMING_BETTER -> keep forming + entry-hold / no-re-ticket fix to AM-OPS; KEEP_FORMING_REBASE_RECORD / DEMOTE_CANDIDATE reported as-is. Change no config.'

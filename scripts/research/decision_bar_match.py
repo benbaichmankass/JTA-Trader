@@ -33,10 +33,13 @@ Edits no config, roster or record; places no order. Writes <out>/verdict.json an
 
 E5 (row FORMING-VS-CLOSED-ETH4H-SOL4H, 2026-11-13). ``verdict.json`` also carries the E5 result fields the
 research-script-run collector reads (``verdict``/``read_state``/``population``/``n`` + one ``records`` row per leg run),
-DERIVED from the grades above -- the grading is unchanged. Per leg: ``pass`` = the outcome maps to "closed >= forming
-within the band" (verdict SWITCH_TO_CLOSED, or better NO_MATERIAL_DIFFERENCE); ``fail`` = better FORMING_BETTER;
-``indeterminate`` = the leg could not be graded. Unit: indeterminate if any leg is; else pass if every leg passes; else
-fail (each leg's own call is in ``records``). ``--rule`` names the unit's rule id (default the 2026-10-22 one).
+DERIVED from the grades above -- the grading is unchanged. Per leg: ``pass`` = propose decision_bar: closed, which holds
+exactly when the tool's verdict is SWITCH_TO_CLOSED (closed better, or no material difference, AND closed passes RULE-D1
+on the record window); ``fail`` = no closed proposal (FORMING_BETTER, or a tie / closed-better where closed fails RULE-D1:
+the tool's KEEP_FORMING_REBASE_RECORD or DEMOTE_CANDIDATE, reported as-is); ``indeterminate`` = the leg could not be
+graded. Unit: indeterminate if any leg is; else pass if every leg passes; else fail (each leg's own call is in
+``records``). Amended before any run (row FORMING-VS-CLOSED-ETH4H-SOL4H note, AM-ML 2026-11-13 14:53Z). ``--rule`` names
+the unit's rule id (default the 2026-10-22 one).
 """
 from __future__ import annotations
 
@@ -209,7 +212,7 @@ def e5_fields(results: Dict[str, Any], *, partial: bool) -> Dict[str, Any]:
         if verdict in (None, "INDETERMINATE"):
             v, rs, n = "indeterminate", "producer_failed", None
         else:
-            v = "fail" if better == "FORMING_BETTER" else "pass"
+            v = "pass" if verdict == "SWITCH_TO_CLOSED" else "fail"
             rs = "measured"
             n = (r.get("A_closed") or {}).get("n", 0) + (r.get("B_forming") or {}).get("n", 0)
         d1 = g.get("rule_d1_record_window") or {}
@@ -224,9 +227,11 @@ def e5_fields(results: Dict[str, Any], *, partial: bool) -> Dict[str, Any]:
             "forming": {k: (r.get("B_forming") or {}).get(k) for k in ("n", "net_r")},
             "rule_d1_record_window": {"closed": d1.get("closed"), "forming": d1.get("forming")},
             "note": (f"better={better}, verdict={verdict}: "
-                     + ("closed >= forming within the band -> propose decision_bar: closed (Tier 3, manager)"
-                        if v == "pass" else "forming materially better -> keep forming; propose an entry-hold fix"
-                        if v == "fail" else "not graded")),
+                     + ("propose decision_bar: closed (Tier 3, through AM-ML to the manager)" if v == "pass"
+                        else "forming materially better -> keep forming; entry-hold fix to AM-OPS"
+                        if better == "FORMING_BETTER"
+                        else f"no closed proposal: closed fails RULE-D1 on the record window; tool verdict {verdict} "
+                             f"reported as-is" if v == "fail" else "not graded")),
         })
     measured = [x for x in records if x["read_state"] == "measured"]
     if partial or not records:
@@ -234,10 +239,11 @@ def e5_fields(results: Dict[str, Any], *, partial: bool) -> Dict[str, Any]:
     elif len(measured) < len(records):
         top, rs, why = "indeterminate", "measured", "a leg could not be graded"
     elif all(x["verdict"] == "pass" for x in measured):
-        top, rs, why = "pass", "measured", "every leg: closed >= forming within the band"
+        top, rs, why = "pass", "measured", "every leg: propose decision_bar: closed (verdict SWITCH_TO_CLOSED)"
     else:
-        top, rs, why = "fail", "measured", ("forming materially better on: "
-                                            + ", ".join(x["leg"] for x in measured if x["verdict"] == "fail"))
+        top, rs, why = "fail", "measured", ("no closed proposal on: "
+                                            + ", ".join(f"{x['leg']} ({x['match_verdict']})" for x in measured
+                                                        if x["verdict"] == "fail"))
     return {"verdict": top, "read_state": rs, "n": sum(x["n"] for x in measured) if measured else None,
             "note": why, "records": records}
 
