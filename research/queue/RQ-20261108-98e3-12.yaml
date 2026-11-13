@@ -150,18 +150,20 @@ practice_precedent: 'M6 (docs/reference/trading-and-model-practice-principles.md
 related:
 - ML-ENTRY-EQ-STRUCTURE-RETEST
 not_before: '2026-11-09T14:00:00Z'
-last_dispatched_at: '2026-11-13T02:52:46+00:00'
+last_dispatched_at: null
 grading:
-  owner: RESEARCH-OPS-20261111-2049
-  owner_reason: 'producer_failed with no run-manifest.json (run 42644805813 died before writing one; cause not in the landed files); re-queued 2026-11-11 (last_dispatched_at null); a second producer_failed becomes an infra row, not a re-queue'
   attested: RULE-RQ2026110898e312-REG
   auto: true
+  confirmatory_run: 1
   decision_rule_id: RULE-RQ2026110898e312-REG
   evidence:
   - research/results/RQ-20261108-98e3-12/42644805813.jsonl
-  graded_at: '2026-11-11'
+  - research/results/RQ-20261108-98e3-12/43355201853.jsonl
+  first_fail: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s)
+    superseded)
+  graded_at: '2026-11-13'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
+  reason: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 1
-  verdict: null
+  verdict: fail
