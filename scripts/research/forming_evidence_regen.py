@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Regenerate CRYPTO forming-decision legs' Stage-0 evidence records on the FORMING bar -- row CRYPTO-FORMING-RDM-FORWARD.
+"""Regenerate forming-decision legs' Stage-0 evidence records on the FORMING bar -- rows CRYPTO-FORMING-RDM-FORWARD and
+CRYPTO-FORMING-EQUITY-REGEN.
 
 WHY. Since #25228 regime_debt_matrix lists ``decision_bar`` as an omitted lever for every trend/pullback leg whose live
 decision bar is forming (explicit or absent = the runtime default). Records written before that read ``faithful`` without
@@ -7,13 +8,25 @@ ever modelling the forming bar, so their next regeneration flips them ``approxim
 tqqq_trend_long_1d (fixed by RQ-20261113-1449-01). #25710 added ``build_harness_cmd(forming_1m=...)``; this PR extends
 it to the pullback harness and this script regenerates the records with it.
 
-PER LEG (crypto / Binance feed only; any other feed is refused with a stated reason, never silently skipped):
-  1. the window = the committed record's own reproduce.data_start..data_end (else its window_days back from now);
-  2. leg-timeframe candles through regime_debt_matrix's own fetch (the evidence builder's), 1m candles from
-     Binance-vision over the same window (``scripts/ops/fetch_backtest_candles.py --interval 1``), cached per symbol in a
-     temp dir -- never under ``--out``;
-  3. ``scripts/ops/build_strategy_evidence.py --strategy LEG --data-csv --minutes-1m-csv --folds <record's>`` into
-     ``<out>/evidence/`` (records) and ``<out>/evidence_runs/`` (trades + bt.json, the records' source_run);
+TWO SOURCES (any other leg is refused with a stated reason, never silently skipped):
+  * ``binance``  -- crypto: leg-timeframe candles through regime_debt_matrix's own fetch (the evidence builder's), 1m from
+    Binance-vision over the same window (``scripts/ops/fetch_backtest_candles.py --interval 1``).
+  * ``us_equity_daily`` -- a Yahoo-fed 1d US ETF leg: 1Day AND 1Min from ONE source, Alpaca iex (the live feed), through
+    ``equity_1m_source.build`` (the RQ-20261113-1449-01 path), replayed with ``--decision-session us_equity``. Alpaca iex
+    history starts 2020-07, so a record window reaching further back is CUT to what the source returned; the window used is
+    read off the data and reported per leg, never assumed.
+  * ``us_equity_intraday`` -- a Yahoo-fed 1h US equity leg: Alpaca iex ``1Hour`` (clock-aligned, extended hours kept --
+    the bars live reads; NOT the Yahoo RTH :30-aligned bars behind the closed-bar record) + 1Min, replayed with
+    ``--decision-session us_equity_intraday`` (ticks masked to the cash session; forming_bar_entries US-INTRADAY MODE).
+  Refused with a reason: a futures leg (Yahoo ``=F`` ticker; no 1m source the runner can read) and any other intraday
+  timeframe.
+
+PER LEG:
+  1. the window = the committed record's own reproduce.data_start..data_end (else its window_days back from ``--end``);
+  2. the leg-timeframe CSV and the 1m CSV into a temp dir -- never under ``--out``;
+  3. ``scripts/ops/build_strategy_evidence.py --strategy LEG --data-csv --minutes-1m-csv [--decision-session us_equity]
+     --folds <record's>`` into ``<out>/evidence/`` (records) and ``<out>/evidence_runs/`` (trades + bt.json, the records'
+     source_run);
   4. RULE-D1 on the regenerated record (net_r_oos > 0, net of the full cost stack), beside the committed record's
      closed-bar number.
 
@@ -61,6 +74,23 @@ def leg_window(rec: Dict[str, Any]) -> Dict[str, Any]:
             "folds": rp.get("folds") or rec.get("folds") or 8}
 
 
+def source_mode(feed: Dict[str, Any], timeframe: str) -> str:
+    """"binance" | "us_equity_daily" | "skip:<reason>" -- which 1m source can replay this leg's forming bar."""
+    src = feed.get("source")
+    if src == "binance":
+        return "binance"
+    if src == "yahoo":
+        if str(feed.get("ticker", "")).endswith("=F"):
+            return f"skip:futures ticker {feed.get('ticker')!r}: no 1m source the research runner can read"
+        if timeframe == "1d":
+            return "us_equity_daily"
+        if timeframe == "1h":
+            return "us_equity_intraday"
+        return (f"skip:{timeframe} US equity leg: the intraday forming mode covers Alpaca 1Hour only "
+                "(row CRYPTO-FORMING-EQUITY-REGEN)")
+    return f"skip:feed {src!r}: no forming-bar 1m source"
+
+
 def plan(legs: List[str]) -> List[Dict[str, Any]]:
     import yaml
     import regime_debt_matrix as rdm
@@ -81,8 +111,9 @@ def plan(legs: List[str]) -> List[Dict[str, Any]]:
             row.update(symbol=cfg["symbols"][0], timeframe=cfg["timeframe"], feed=feed, harness=harness,
                        committed={k: rec.get(k) for k in ("fidelity", "omitted_levers", "net_r_oos", "n_trades_oos")},
                        **leg_window(rec))
-            if feed.get("source") != "binance":
-                row["skip"] = f"feed {feed.get('source')!r}: this regen covers the Binance 1m source only"
+            row["mode"] = source_mode(feed, cfg["timeframe"])
+            if row["mode"].startswith("skip:"):
+                row["skip"] = row["mode"][5:]
             elif harness not in ("trend", "pullback"):
                 row["skip"] = f"harness {harness!r}: forming_1m is forwarded for trend + pullback only"
             elif not forming:
@@ -91,16 +122,39 @@ def plan(legs: List[str]) -> List[Dict[str, Any]]:
     return out
 
 
-def fetch(row: Dict[str, Any], tmp: Path, log: Path, m1_cache: Dict[str, Path], end_pin: Optional[str] = None) -> Optional[str]:
-    """Write <tmp>/<leg>__data.csv (leg tf) and ensure a 1m CSV for the symbol covering the window. None or an error.
-
-    A record without reproduce.data_start/data_end is windowed as window_days back from ``end_pin`` (the unit pins it, so a
-    re-run reads the same bars), else from now."""
+def _window(row: Dict[str, Any], end_pin: Optional[str]):
     import pandas as pd
-    import regime_debt_matrix as rdm
     now = pd.to_datetime(end_pin, utc=True) if end_pin else pd.Timestamp.now(tz="UTC")
     start = pd.to_datetime(row["data_start"], utc=True) if row.get("data_start") else now - pd.Timedelta(days=int(row["window_days"]))
     end = pd.to_datetime(row["data_end"], utc=True) if row.get("data_end") else now
+    return start, end
+
+
+def _window_read(csv: Path) -> Optional[List[str]]:
+    """The window the trimmed leg CSV actually holds -- read off the data, never the request."""
+    import pandas as pd
+    try:
+        ts = pd.to_datetime(pd.read_csv(csv, usecols=["timestamp"])["timestamp"], utc=True)
+    except Exception:  # noqa: BLE001  # allow-silent: None is reported as an unreadable window, and the leg then fails measured
+        return None
+    return [str(ts.min()), str(ts.max())] if len(ts) else None
+
+
+def fetch(row: Dict[str, Any], tmp: Path, log: Path, m1_cache: Dict[str, Path], end_pin: Optional[str] = None,
+          client_factory=None) -> Optional[str]:
+    """Write <tmp>/<leg>__data.csv (leg tf) and a 1m CSV covering the window from the leg's source. None or an error.
+
+    A record without reproduce.data_start/data_end is windowed as window_days back from ``end_pin`` (the unit pins it, so a
+    re-run reads the same bars), else from now."""
+    if row.get("mode") in ("us_equity_daily", "us_equity_intraday"):
+        return _fetch_us_equity(row, tmp, log, m1_cache, end_pin, client_factory)
+    return _fetch_binance(row, tmp, log, m1_cache, end_pin)
+
+
+def _fetch_binance(row, tmp, log, m1_cache, end_pin) -> Optional[str]:
+    import pandas as pd
+    import regime_debt_matrix as rdm
+    start, end = _window(row, end_pin)
     days = int((pd.Timestamp.now(tz="UTC") - start).days) + 3
     data = tmp / f"{row['leg']}__data.csv"
     try:
@@ -108,7 +162,7 @@ def fetch(row: Dict[str, Any], tmp: Path, log: Path, m1_cache: Dict[str, Path], 
     except Exception as exc:  # noqa: BLE001  # allow-silent: returned as the leg's error and landed in verdict.json
         return f"leg candles: {type(exc).__name__}: {exc}"
     rdm.trim_csv_to_window(str(data), str(start), str(end), row["timeframe"])
-    row["window_used"] = [str(start), str(end)]
+    row["window_used"] = _window_read(data)
     sym = row["symbol"]
     s1, e1 = (start - pd.Timedelta(days=2)).strftime("%Y-%m-%d"), (end + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
     key = f"{sym}__{s1}__{e1}"  # per window: legs on one symbol carry different windows (sol 365d vs sol_prop 2170d)
@@ -125,10 +179,53 @@ def fetch(row: Dict[str, Any], tmp: Path, log: Path, m1_cache: Dict[str, Path], 
     return None
 
 
+def _fetch_us_equity(row, tmp, log, m1_cache, end_pin, client_factory) -> Optional[str]:
+    """Alpaca iex bars + 1Min through equity_1m_source.build (one source for both CSVs, the live feed): 1Day for a
+    daily leg (session-DATE stamps), 1Hour for an intraday leg (clock-aligned, extended hours kept -- what live reads)."""
+    import pandas as pd
+    import equity_1m_source as eqs
+    import regime_debt_matrix as rdm
+    start, end = _window(row, end_pin)
+    sym = row["symbol"]
+    s1, e1 = (start - pd.Timedelta(days=2)).strftime("%Y-%m-%d"), (end + pd.Timedelta(days=2)).strftime("%Y-%m-%d")
+    intraday = row.get("mode") == "us_equity_intraday"
+    bar_tf, tag = ("1Hour", "1h") if intraday else ("1Day", "1d")
+    key = f"eq{tag}__{sym}__{s1}__{e1}"
+    d = tmp / key
+    if key not in m1_cache:
+        if client_factory is None:
+            from alpaca_readonly import AlpacaReadOnly
+            client_factory = AlpacaReadOnly.from_env
+        try:
+            meta = eqs.build(client_factory(), sym, s1, e1, "iex", d, bar_tf=bar_tf)
+        except Exception as exc:  # noqa: BLE001  # allow-silent: returned as the leg's error and landed in verdict.json
+            return f"alpaca {bar_tf}/1Min for {sym}: {type(exc).__name__}: {exc}"
+        m1_cache[key] = d / f"{sym}_1m.csv"
+        with log.open("a", encoding="utf-8") as fh:  # the build's own record, beside the harness runs' argv
+            fh.write(f"equity_1m_source.build {sym} {bar_tf} iex {s1}..{e1}: returned {meta.get('returned')} "
+                     f"rows {meta.get('rows')} alignment chosen={(meta.get('alignment') or {}).get('chosen')}\n")
+    data = tmp / f"{row['leg']}__data.csv"
+    shutil.copyfile(d / f"{sym}_{tag}.csv", data)
+    rdm.trim_csv_to_window(str(data), str(start), str(end), row["timeframe"])
+    row["window_used"] = _window_read(data)
+    row["decision_session"] = "us_equity_intraday" if intraday else "us_equity"
+    row["source"] = f"alpaca iex {bar_tf} + 1Min (equity_1m_source.build)"
+    try:
+        sm = json.loads((d / "source.json").read_text())
+        row["source_meta"] = {k: sm.get(k) for k in ("feed", "bar_tf", "returned", "rows", "alignment")}
+    except (OSError, ValueError):
+        row["source_meta"] = None  # reported as missing provenance beside the leg, never as a clean source
+    row["m1_csv"] = str(m1_cache[key])
+    row["data_csv"] = str(data)
+    return None
+
+
 def regen(row: Dict[str, Any], out: Path, log: Path) -> Dict[str, Any]:
     argv = [sys.executable, str(REPO / "scripts/ops/build_strategy_evidence.py"), "--strategy", row["leg"],
             "--data-csv", row["data_csv"], "--minutes-1m-csv", row["m1_csv"], "--folds", str(row["folds"]),
             "--out", str(out / "evidence"), "--workdir", str(out / "evidence_runs")]
+    if row.get("decision_session"):
+        argv += ["--decision-session", row["decision_session"]]
     rc = _run(argv, log)
     rec_p = out / "evidence" / f"{row['leg']}.json"
     if rc != 0 or not rec_p.exists():
@@ -136,9 +233,12 @@ def regen(row: Dict[str, Any], out: Path, log: Path) -> Dict[str, Any]:
     return json.loads(rec_p.read_text())
 
 
-def leg_record(row: Dict[str, Any], rec: Optional[Dict[str, Any]], err: Optional[str]) -> Dict[str, Any]:
+def leg_record(row: Dict[str, Any], rec: Optional[Dict[str, Any]], err: Optional[str], n_floor: int = 0) -> Dict[str, Any]:
     leg = row["leg"]
-    base = {"leg": leg, "committed": row.get("committed"), "window": row.get("window_used")}
+    base = {"leg": leg, "committed": row.get("committed"), "window": row.get("window_used"),
+            "requested_window": [row.get("data_start"), row.get("data_end"), row.get("window_days")],
+            "source": row.get("source") or ("binance-vision 1m" if row.get("mode") == "binance" else None),
+            "source_meta": row.get("source_meta")}
     if row.get("skip"):
         return {**base, "verdict": "not_applicable", "read_state": "not_attempted", "n": None,
                 "population": f"{leg}: not regenerated -- {row['skip']}", "note": row["skip"]}
@@ -149,15 +249,21 @@ def leg_record(row: Dict[str, Any], rec: Optional[Dict[str, Any]], err: Optional
     faithful = rec.get("fidelity") == "faithful" and not rec.get("omitted_levers")
     net = rec.get("net_r_oos")
     n = rec.get("n_trades_oos")
+    below = None
     if not faithful:
         v, note = "indeterminate", f"regenerated record is {rec.get('fidelity')} (omits {rec.get('omitted_levers')})"
+    elif n_floor and not (isinstance(n, int) and n >= n_floor):
+        below = True
+        v, note = "indeterminate", (f"record regenerated faithful, but n {n} < the unit's n floor {n_floor}: no RULE-D1 claim "
+                                    f"(forming-bar net_r_oos {net}; committed closed-bar {row['committed'].get('net_r_oos')} "
+                                    f"over n {row['committed'].get('n_trades_oos')})")
     else:
         v = "pass" if isinstance(net, (int, float)) and net > 0 else "fail"
         note = (f"forming-bar net_r_oos {net} over n {n} (committed closed-bar record: {row['committed'].get('net_r_oos')} "
                 f"over n {row['committed'].get('n_trades_oos')}); RULE-D1 -> {v.upper()}")
-    return {**base, "verdict": v, "read_state": "measured", "n": n,
-            "population": f"{leg}: Stage-0 re-measure on the FORMING bar (Binance 1m), window {row.get('window_used')}, "
-                          f"net of fee + slippage + funding",
+    return {**base, "verdict": v, "read_state": "measured", "n": n, "below_n_floor": below,
+            "population": f"{leg}: Stage-0 re-measure on the FORMING bar ({row.get('source') or 'Binance-vision 1m'}), "
+                          f"window read off the data {row.get('window_used')}, net of the harness cost stack",
             "measurement": {k: rec.get(k) for k in ("fidelity", "omitted_levers", "net_r_oos", "n_trades_oos", "folds",
                                                      "folds_positive", "cost_stack", "path_stats")},
             "note": note}
@@ -168,14 +274,17 @@ def assemble(records: List[Dict[str, Any]], legs: List[str]) -> Dict[str, Any]:
     measured = [r for r in tried if r["read_state"] == "measured"]
     if not tried:
         top, why = "not_applicable", "no leg in scope"
-    elif len(measured) < len(tried) or any(r["verdict"] == "indeterminate" for r in measured):
+    elif len(measured) < len(tried) or any(r["verdict"] == "indeterminate" and not r.get("below_n_floor") for r in measured):
         top, why = "indeterminate", "a leg could not be measured or did not regenerate faithful"
+    elif all(r.get("below_n_floor") for r in measured):
+        top, why = "indeterminate", "every leg regenerated faithful but none reaches the n floor -- no RULE-D1 claim"
     elif any(r["verdict"] == "fail" for r in measured):
         top, why = "fail", "a leg fails RULE-D1 on the forming bar: " + ", ".join(r["leg"] for r in measured if r["verdict"] == "fail")
     else:
         top, why = "pass", "every leg clears RULE-D1 on the forming bar"
     return {"verdict": top, "read_state": "measured" if measured else "producer_failed",
-            "population": f"crypto forming-decision legs {legs}, each re-measured on the forming bar over its record's window",
+            "population": f"forming-decision legs {legs}, each re-measured on the forming bar over its record's window "
+                          f"(cut to the source's history where shorter, reported per leg)",
             "n": sum(int(r["n"]) for r in measured if isinstance(r.get("n"), int)) if measured else None,
             "note": why, "records": records}
 
@@ -184,6 +293,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--leg", action="append", default=[])
     ap.add_argument("--out")
+    ap.add_argument("--n-floor", type=int, default=0,
+                    help="a faithful leg with n_trades_oos below this reads indeterminate (no RULE-D1 claim) and does not "
+                         "drive the unit verdict; its record still regenerates (default 0 = no floor)")
     ap.add_argument("--end", help="pin the window end for records without reproduce.data_end (YYYY-MM-DD)")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
@@ -205,7 +317,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             err = fetch(row, tmp, log, m1_cache, a.end)
             if err is None:
                 rec = regen(row, out, log)
-        records.append(leg_record(row, rec, err))
+        records.append(leg_record(row, rec, err, a.n_floor))
         print(f"{row['leg']}: {records[-1]['verdict']} / {records[-1]['read_state']} -- {records[-1]['note'][:160]}", flush=True)
     shutil.rmtree(tmp, ignore_errors=True)
     v = assemble(records, a.leg)
@@ -233,6 +345,16 @@ def _self_test() -> int:
     check("a skipped leg does not block; one fail -> fail", v["verdict"] == "fail" and v["n"] == 96)
     check("one producer failure -> indeterminate", assemble(recs[:1] + [leg_record(row, None, "e")], ["L", "L"])["verdict"] == "indeterminate")
     check("all pass -> pass", assemble(recs[:1], ["L"])["verdict"] == "pass")
+    lo = leg_record(row, {**ok, "n_trades_oos": 4}, None, n_floor=10)
+    check("below the n floor -> indeterminate, flagged", lo["verdict"] == "indeterminate" and lo["below_n_floor"])
+    check("a below-floor leg does not make the unit indeterminate",
+          assemble([lo, leg_record(row, ok, None, n_floor=10)], ["L", "L"])["verdict"] == "pass")
+    check("all legs below the floor -> indeterminate", assemble([lo], ["L"])["verdict"] == "indeterminate")
+    check("source_mode: futures refused", source_mode({"source": "yahoo", "ticker": "GC=F"}, "1d").startswith("skip:"))
+    check("source_mode: 1h equity -> us_equity_intraday", source_mode({"source": "yahoo", "ticker": "SLV"}, "1h") == "us_equity_intraday")
+    check("source_mode: 2h equity refused", source_mode({"source": "yahoo", "ticker": "SLV"}, "2h").startswith("skip:"))
+    check("source_mode: 1d ETF -> us_equity_daily", source_mode({"source": "yahoo", "ticker": "SPY"}, "1d") == "us_equity_daily")
+    check("source_mode: binance", source_mode({"source": "binance", "ticker": "SOLUSDT"}, "1h") == "binance")
     print("self-test passed")
     return 0
 

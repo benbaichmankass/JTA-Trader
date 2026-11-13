@@ -1946,9 +1946,10 @@ def main(argv: List[str]) -> int:
     p.add_argument("--minutes-1m-csv", default=None, metavar="CSV",
                    help="--decision-bar forming from a 1m CSV (timestamp,open,high,low,close[,volume]; "
                         "e.g. scripts/research/equity_1m_source.py's output) instead of Binance archives")
-    p.add_argument("--decision-session", choices=["us_equity"], default=None,
-                   help="--decision-bar forming on a US-session daily frame: align minutes by ET date and "
-                        "tick only inside the cash session (scripts/research/forming_bar_entries.py)")
+    p.add_argument("--decision-session", choices=["us_equity", "us_equity_intraday"], default=None,
+                   help="--decision-bar forming on a US equity frame: us_equity = a daily frame (minutes by ET date, ticks "
+                        "in the cash session); us_equity_intraday = clock-aligned intraday bars (minutes by bar, ticks "
+                        "masked to the cash session) -- scripts/research/forming_bar_entries.py")
     p.add_argument("--strategy-name", default="trend_donchian", metavar="NAME",
                    help="Leg name stamped on every emitted row's `strategy` "
                         "field. Defaults to the historical literal so an "

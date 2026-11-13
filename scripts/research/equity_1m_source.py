@@ -100,6 +100,33 @@ def alignment(daily: pd.DataFrame, m1: pd.DataFrame) -> Dict[str, Any]:
     return out
 
 
+def alignment_hourly(hourly: pd.DataFrame, m1: pd.DataFrame) -> Dict[str, Any]:
+    """1Hour twin of ``alignment``: share of CLOCK-ALIGNED hourly bars (Alpaca stamps a bar at its start) whose high AND
+    low equal the aggregate of each candidate minute set floored to the hour. Compared over the hours present in both,
+    so an extended-hours bar with no cash minutes is simply not compared for "rth"; each set's denominator is reported."""
+    mm = _minute_of_et_day(m1["timestamp"])
+    sets = {"rth": m1[(mm >= RTH_OPEN) & (mm < RTH_CLOSE)], "all": m1}
+    h = hourly.set_index("timestamp")
+    out: Dict[str, Any] = {}
+    for name, sub in sets.items():
+        if sub.empty:
+            out[name] = {"hours_compared": 0, "match_share": None}
+            continue
+        g = (sub.assign(hour=sub["timestamp"].dt.floor("60min")).groupby("hour")
+             .agg(high=("high", "max"), low=("low", "min")))
+        j = g.join(h[["high", "low"]], rsuffix="_h", how="inner")
+        if j.empty:
+            out[name] = {"hours_compared": 0, "match_share": None}
+            continue
+        tol = MATCH_TOL * j["high_h"].abs()
+        ok = ((j["high"] - j["high_h"]).abs() <= tol) & ((j["low"] - j["low_h"]).abs() <= tol)
+        out[name] = {"hours_compared": int(len(j)), "hours_matched": int(ok.sum()),
+                     "match_share": round(float(ok.mean()), 4)}
+    shares = {k: (v.get("match_share") or -1.0) for k, v in out.items()}
+    out["chosen"] = "rth" if shares["rth"] >= shares["all"] else "all"  # same tie rule as the daily mode
+    return out
+
+
 def select_minutes(m1: pd.DataFrame, chosen: str) -> pd.DataFrame:
     if chosen == "all":
         return m1.reset_index(drop=True)
@@ -119,32 +146,46 @@ def coverage_by_year(daily: pd.DataFrame, m1: pd.DataFrame) -> Dict[str, Dict[st
     return out
 
 
-def build(client: Any, symbol: str, start: str, end: str, feed: str, out_dir: Path) -> Dict[str, Any]:
-    d1 = bars_frame(client.bars([symbol], "1Day", start, end, feed=feed).get(symbol, []))
+def build(client: Any, symbol: str, start: str, end: str, feed: str, out_dir: Path,
+          bar_tf: str = "1Day") -> Dict[str, Any]:
+    """``bar_tf="1Day"``: the daily replay (``<SYM>_1d.csv``, session-DATE stamps). ``bar_tf="1Hour"``: an intraday
+    US equity leg (``<SYM>_1h.csv``) -- the venue's CLOCK-ALIGNED hourly bars exactly as live reads them (stamped at
+    the bar start, extended hours included, no restamp), with the minute set chosen by ``alignment_hourly``."""
+    if bar_tf not in ("1Day", "1Hour"):
+        raise ValueError(f"bar_tf must be 1Day or 1Hour, got {bar_tf!r}")
+    bars_raw = bars_frame(client.bars([symbol], bar_tf, start, end, feed=feed).get(symbol, []))
     m1_all = bars_frame(client.bars([symbol], "1Min", start, end, feed=feed).get(symbol, []))
-    daily = session_date_daily(d1) if len(d1) else d1
-    if daily.empty or m1_all.empty:
-        raise RuntimeError(f"{symbol} {feed}: the source returned daily={len(daily)} 1m={len(m1_all)} rows")
-    align = alignment(daily, m1_all)
+    if bar_tf == "1Day":
+        bars = session_date_daily(bars_raw) if len(bars_raw) else bars_raw
+    else:
+        bars = bars_raw
+    if bars.empty or m1_all.empty:
+        raise RuntimeError(f"{symbol} {feed}: the source returned {bar_tf}={len(bars)} 1m={len(m1_all)} rows")
+    align = alignment(bars, m1_all) if bar_tf == "1Day" else alignment_hourly(bars, m1_all)
     m1 = select_minutes(m1_all, align["chosen"])
-    # The replay window: from the first session that has 1m bars (the daily history before it only feeds the
-    # 199-bar lookback; the harness enters nowhere without minutes) to the last daily bar.
+    # The replay window: from the first session that has 1m bars (the bar history before it only feeds the
+    # 199-bar lookback; the harness enters nowhere without minutes) to the last bar.
     out_dir.mkdir(parents=True, exist_ok=True)
-    p1d, p1m = out_dir / f"{symbol}_1d.csv", out_dir / f"{symbol}_1m.csv"
-    daily.to_csv(p1d, index=False)
+    tag = "1d" if bar_tf == "1Day" else "1h"
+    pbar, p1m = out_dir / f"{symbol}_{tag}.csv", out_dir / f"{symbol}_1m.csv"
+    bars.to_csv(pbar, index=False)
     m1.to_csv(p1m, index=False)
     meta = {
-        "symbol": symbol, "feed": feed, "adjustment": "split", "source": "alpaca market data (read-only client)",
+        "symbol": symbol, "feed": feed, "bar_tf": bar_tf, "adjustment": "split", "source": "alpaca market data (read-only client)",
         "key_kind": getattr(client, "key_kind", None),
         "requested": {"start": start, "end": end},
-        "returned": {"daily_first": str(daily["timestamp"].min().date()), "daily_last": str(daily["timestamp"].max().date()),
+        "returned": {"bars_first": str(bars["timestamp"].min()), "bars_last": str(bars["timestamp"].max()),
                      "m1_first": str(m1["timestamp"].min()), "m1_last": str(m1["timestamp"].max())},
-        "rows": {"daily": int(len(daily)), "m1_fetched": int(len(m1_all)), "m1_kept": int(len(m1))},
+        "rows": {"bars": int(len(bars)), "m1_fetched": int(len(m1_all)), "m1_kept": int(len(m1))},
         "alignment": align,
-        "coverage_by_year": coverage_by_year(daily, m1),
-        "files": {"daily": p1d.name, "m1": p1m.name},
+        "files": {"bars": pbar.name, "m1": p1m.name},
         "client": {"calls": getattr(client, "calls", None), "n_429": getattr(client, "n_429", None)},
     }
+    if bar_tf == "1Day":
+        meta["returned"].update(daily_first=str(bars["timestamp"].min().date()), daily_last=str(bars["timestamp"].max().date()))
+        meta["rows"]["daily"] = int(len(bars))
+        meta["files"]["daily"] = pbar.name
+        meta["coverage_by_year"] = coverage_by_year(bars, m1)
     (out_dir / "source.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
     return meta
 

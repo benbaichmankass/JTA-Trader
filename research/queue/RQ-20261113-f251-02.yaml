@@ -1,0 +1,145 @@
+id: RQ-20261113-f251-02
+title: 'The 16 Yahoo-fed forming-decision equity trend/pullback legs whose records read faithful on the CLOSED bar: 13 re-measured on the FORMING bar from Alpaca
+  iex (8 daily ETF legs on 1Day, 5 intraday legs incl. real-money slv_trend_1h on clock-aligned 1Hour), RULE-D1 per leg with n floor 10; the 3 futures legs reported
+  out of reach'
+status: queued
+cadence: monthly
+kind: experiment
+theme: live_strategy
+priority: 1
+roadmap:
+- L-LADDER
+question: 'Sixteen Yahoo-fed trend/pullback legs decide live on the FORMING bar (no decision_bar key, so the runtime default) yet their committed records read fidelity=faithful
+  with a reproduce command that has no --decision-bar forming and no 1m source -- they measured the CLOSED bar, and all were generated before #25228 (AM-ML spot-checked
+  spy/qqq/iwm_trend_long_1d 2026-11-13 13:32Z). The 8 daily ETF legs replay on the forming daily bar from Alpaca iex 1Day + 1Min (US-session mode, RQ-20261113-1449-01).
+  The 5 intraday legs replay on the forming CLOCK-ALIGNED Alpaca 1Hour bar -- the bars live reads (extended hours kept), not the Yahoo RTH :30-aligned bars behind
+  their closed-bar records -- with ticks admitted only where the live gate market_hours.is_market_open("us_equity") is true (forming_bar_entries US-INTRADAY MODE).
+  Re-measured that way over each record''s window: does each record regenerate faithful, and does each leg with n_trades_oos >= 10 keep net_r_oos > 0 net of the harness
+  cost stack (RULE-D1)?'
+why_this_matters: 'slv_trend_1h trades REAL MONEY (alpaca_live + alpaca_portfolio) on a record measured on the wrong bar AND the wrong bar series; the C5 roster test
+  forbids landing a real-money record as approximate, so it can only move by landing FAITHFUL from a forming replay (AM-ML 2026-11-13, PI-20261113-AMML-0002). The
+  other 12 attempted legs are TESTING legs (ib_paper / alpaca_paper) whose edge read feeds any later promotion. Live behaviour of the intraday mode was MEASURED,
+  not assumed: 63 slv_trend_1h_eval rows 2026-11-12 15:00-16:10Z show bar_open 15:00 evaluated 15:02..15:57 with a moving close, then bar 16:00 from 16:03 (/api/diag/audit_query).
+  The 3 futures legs (mes_trend_long_1d, mgc_pullback_1d, mgc_trend_1h) have no 1m source the runner can read and are reported not attempted. Offline wiring runs
+  (2026-11-13, synthetic bars through a fake Alpaca client: spy_trend_long_1d, gld_pullback_1d, slv_trend_1h) regenerated faithful records; their numbers are synthetic
+  and carry no information about edge.'
+power:
+  expected_n: 450
+  min_detectable_effect: 0.13
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, not measured: committed records hold n_trades_oos of about 1-50 for the 8 daily legs (gld_pullback_1d n 8, spy_trend_long_1d n 11) and about 50-120
+    for the 5 intraday legs (slv_trend_1h n 73), roughly 450 pooled. RULE-D1 is graded per leg on its own n and only at n >= 10 (the unit''s floor); below it the
+    record still regenerates faithful and the leg reads INDETERMINATE with no edge claim. Said before any run.'
+  sd: null
+  feasibility:
+    source: none
+    accrual_basis: 'Fixed in-hand windows: each leg''s committed record window (reproduce.data_start..data_end, else window_days back from the pinned --end 2026-11-13),
+      CUT to the Alpaca iex history where shorter (iex begins 2020-07; affects scha_trend_long_1d and tlt_pullback_1d, whose records span 6200 days). The window used
+      is read off the data per leg. Nothing accrues.'
+evidence_class:
+  holdout: in_sample
+  claim: edge
+run:
+  command:
+  - python3
+  - scripts/research/forming_evidence_regen.py
+  - --out
+  - '{out_dir}'
+  - --end
+  - '2026-11-13'
+  - --n-floor
+  - '10'
+  - --leg
+  - spy_trend_long_1d
+  - --leg
+  - qqq_trend_long_1d
+  - --leg
+  - iwm_trend_long_1d
+  - --leg
+  - qld_trend_long_1d
+  - --leg
+  - scha_trend_long_1d
+  - --leg
+  - gld_pullback_1d
+  - --leg
+  - iaum_pullback_1d
+  - --leg
+  - tlt_pullback_1d
+  - --leg
+  - mes_trend_long_1d
+  - --leg
+  - mgc_pullback_1d
+  - --leg
+  - gld_pullback_1h
+  - --leg
+  - qqq_pullback_1h
+  - --leg
+  - tlt_pullback_1h
+  - --leg
+  - uso_trend_1h
+  - --leg
+  - slv_trend_1h
+  - --leg
+  - mgc_trend_1h
+  timeout_minutes: 220
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261113-f251-02
+decision_rule:
+  id: RULE-EQUITY-FORMING-REGEN-20261113
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  statistic: 'scripts/research/forming_evidence_regen.py: per leg, Alpaca iex bars + 1Min through equity_1m_source.build (one source for both CSVs, the live feed;
+    1Day for a daily leg, clock-aligned 1Hour for an intraday leg, the 1Min set chosen by the measured bar-vs-minute alignment), then build_strategy_evidence --data-csv
+    --minutes-1m-csv --decision-session us_equity|us_equity_intraday --folds <record''s>; net_r_oos and n_trades_oos from the regenerated record, the harness cost
+    stack.'
+  rule: 'Registered 2026-11-13 on row CRYPTO-FORMING-EQUITY-REGEN before any regen run of these legs (the offline synthetic wiring runs are disclosed in why_this_matters
+    and do not alter the rule). Per attempted leg: INDETERMINATE iff not measured or the regenerated record is not faithful; else, if n_trades_oos < 10, INDETERMINATE-below-floor
+    (record regenerated faithful, no RULE-D1 claim); else PASS iff net_r_oos > 0, FAIL otherwise. A futures leg is NOT ATTEMPTED with its stated reason and does not
+    enter the verdict. Unit verdict: INDETERMINATE if any attempted leg is not measured or not faithful, or if every measured leg is below the floor; else FAIL if
+    any leg at or above the floor fails (listed); else PASS. Legs, windows, floor, feed, bar series and cost stack are fixed now.'
+  what_it_does_not_do: 'Changes no config, roster or order, and writes no comms/strategy_evidence/ record: the regenerated records land under <out_dir>/evidence and
+    a session copies them in through a later Tier-1 PR after reading them -- slv_trend_1h ONLY if its record is faithful (C5). A per-leg FAIL, slv_trend_1h included,
+    is data reported to the manager via AM-ML; any demotion goes through the manager. It does not replay the 3 futures legs.'
+  baseline: The committed closed-bar record of the same leg (its net_r_oos and n), reported beside each forming number; RULE-D1's bar is zero net of cost.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.3
+  basis: 'stand-in: one real-money leg (slv_trend_1h) and 12 testing legs whose evidence is measured on the wrong bar; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+ml_consumer:
+  not_applicable: 'Not an ML unit: harness forming-bar re-measures of rule-based trend/pullback legs. No model is trained, scored or served.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: slv_trend_1h
+  subject_kind: strategy_leg
+  from_result: comms/strategy_evidence/slv_trend_1h.json
+  verdict_read: faithful
+  diagnosis: 'The committed record (generated 2026-11-12 10:54Z on sha 0c783de9e, before #25228) reads faithful, but it replays Yahoo RTH :30-aligned 1h bars on the
+    CLOSED bar while live decides on the forming clock-aligned Alpaca 1Hour bar (extended hours in the frame). Structural: no intraday equity forming mode existed;
+    closed by the US-INTRADAY MODE + the 1Hour source in this PR and a re-measure.'
+  hypothesis: Re-measured on the forming Alpaca 1Hour bar with the live session gate, each intraday leg's record reads faithful; slv_trend_1h keeps net_r_oos > 0.
+  attempt: 1
+  due_by: '2026-11-20'
+  map_entries:
+  - research/levers/slv_trend_1h.yaml
+related:
+- RQ-20261113-f251-01
+- RQ-20261113-1449-01
+- PI-20261113-TFZXAKEK-0001
+- PI-20261113-AMML-0002
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): rule registered before the run, net of the harness cost stack, graded once
+  on fixed in-hand windows; the same forming-bar re-measure RQ-20261113-1449-01 ran for tqqq_trend_long_1d, extended to the other daily ETF legs.'
+follow_up: On a measured verdict a session reads <out_dir>/evidence/*.json and copies the faithful records to comms/strategy_evidence/ (Tier 1); a faithful slv_trend_1h
+  record closes PI-20261113-AMML-0002. Per-leg FAILs go to the manager via AM-ML. The futures legs need a 1m-source decision.

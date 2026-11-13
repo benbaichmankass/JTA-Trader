@@ -36,6 +36,19 @@ session's own bar (``_fetch_session_frame`` refuses the previous session's bar)
 and an order outside the session does not fill. Default ``session=None`` is the
 crypto behaviour, byte-identical.
 
+US-INTRADAY MODE (``session="us_equity_intraday"``; row CRYPTO-FORMING-EQUITY-REGEN
+phase B, 2026-11-13). An intraday US equity leg (slv_trend_1h) reads the venue's
+CLOCK-ALIGNED bars -- Alpaca ``1Hour``, stamped at the bar's start, extended hours
+included (``alpaca_connector._bars_paged`` applies no session filter) -- and live
+evaluates the still-forming one (MEASURED 2026-11-12 15:00-16:10Z, 63
+``slv_trend_1h_eval`` rows: bar_open 15:00 evaluated 15:02..15:57 with a moving
+close, bar 16:00 from 16:03). So 1m rows map to bars exactly as in crypto (floor to
+the bar), and ticks run every ``tick_step`` minutes across the bar, but a tick
+counts only when the LIVE gate ``market_hours.is_market_open("us_equity")`` is true at
+its decision instant (bar start + k minutes). The live function is called, not
+re-implemented, so its [open, close) bounds and its DST-month approximation carry
+over exactly (``intraday_tick_mask``).
+
 order_package is only called on ticks passing an EXACT necessary direction
 pre-filter (close vs the shift(1) midline/range or Donchian channel — neither
 depends on the forming row), so the result equals calling it on every tick.
@@ -61,7 +74,7 @@ TICK_STEP = 2           # live tick cadence, minutes
 US_TZ = "America/New_York"
 US_OPEN_MIN = 570       # 09:30 ET, minute of the ET day
 US_CLOSE_MIN = 960      # 16:00 ET
-SESSIONS = ("us_equity",)
+SESSIONS = ("us_equity", "us_equity_intraday")
 
 
 def tf_minutes(timeframe: str) -> int:
@@ -105,7 +118,7 @@ def minute_matrices(m1: pd.DataFrame, bars: pd.DataFrame, tf_min: int,
     remaining high / low from that minute on. ``session="us_equity"``: the
     column is the minute of the ET day and the row the bar of that ET date."""
     ts = _utc(m1["ts"] if "ts" in m1 else m1["timestamp"])
-    if session:
+    if session == "us_equity":
         rows, cmin = _session_keys(ts, bars, tf_min, session)
         ok = ~np.isnan(rows)
         r = rows[ok].astype(int)
@@ -250,8 +263,26 @@ def session_ticks(session: Optional[str], tf_min: int, tick_step: int = TICK_STE
     if session:
         if session not in SESSIONS:
             raise ValueError(f"unknown session {session!r}")
-        return list(range(US_OPEN_MIN + tick_step, US_CLOSE_MIN + 1, tick_step))
+        if session == "us_equity":
+            return list(range(US_OPEN_MIN + tick_step, US_CLOSE_MIN + 1, tick_step))
     return list(range(tick_step, tf_min - 1, tick_step))
+
+
+def intraday_tick_mask(bars: pd.DataFrame, ticks: List[int]) -> np.ndarray:
+    """us_equity_intraday: (n_bars, n_ticks) bool -- tick k of bar i is a live decision iff the LIVE gate
+    ``src.runtime.market_hours.is_market_open("us_equity", bar start + k minutes)`` is true. The live function is
+    called, not re-implemented, so its exact semantics carry over: [open, close) on the UTC clock from its DST-month
+    table (March/November read as standard time), weekends closed, no holiday or half-day calendar (a holiday reads
+    open; the venue simply prints no bars then)."""
+    from datetime import timedelta
+    from src.runtime.market_hours import is_market_open
+    starts = pd.DatetimeIndex(_utc(bars["timestamp"])).to_pydatetime()
+    deltas = [timedelta(minutes=int(k)) for k in ticks]
+    out = np.zeros((len(starts), len(ticks)), dtype=bool)
+    for i, t0 in enumerate(starts):
+        for j, dk in enumerate(deltas):
+            out[i, j] = is_market_open("us_equity", t0 + dk)
+    return out
 
 
 def forming_entry_override(bars: pd.DataFrame, m1: pd.DataFrame, block: dict, *,
@@ -269,6 +300,8 @@ def forming_entry_override(bars: pd.DataFrame, m1: pd.DataFrame, block: dict, *,
         mats = minute_matrices(m1, bars, tf_min, session=session)
     ticks = session_ticks(session, tf_min, tick_step)
     pre = direction_prefilter(family, bars, block, mats["last_c"][:, [k - 1 for k in ticks]])
+    if session == "us_equity_intraday":
+        pre = pre & intraday_tick_mask(bars, ticks)
     idx = [i for i in range(WINDOW - 1, len(bars) - 1) if pre[i].any()]
     tks = [[ticks[c] for c in np.flatnonzero(pre[i])] for i in idx]
     out: Dict[int, dict] = {}

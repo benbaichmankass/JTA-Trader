@@ -854,8 +854,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                     help="EQ-FORMING-BAR-REPLAY: a 1m CSV for the leg's symbol, so a forming-decision "
                          "trend leg is replayed on the forming bar and decision_bar is modelled "
                          "(needs --data-csv from the same source).")
-    ap.add_argument("--decision-session", choices=("us_equity",), default=None,
-                    help="with --minutes-1m-csv: a US-session daily leg")
+    ap.add_argument("--decision-session", choices=("us_equity", "us_equity_intraday"), default=None,
+                    help="with --minutes-1m-csv: us_equity = a US-session daily leg; us_equity_intraday = a clock-aligned "
+                         "intraday US equity leg (Alpaca 1Hour), ticks masked to the cash session")
     a = ap.parse_args(argv)
 
     if (a.data_csv or a.minutes_1m_csv) and (not a.strategy or len(a.strategy) != 1):
