@@ -1,0 +1,134 @@
+id: RQ-20261112-ef4c-06
+title: 'D2 regime bake-off BTCUSDT 5m: does btc-regime-5m-lgbm-v2 beat the class-prior baseline on a purged split?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 2
+kind: experiment
+programme: P2
+roadmap:
+- M25
+question: Wave-2 hold from ML-CONSOLIDATION-2026-11-11 (REVIEW rows). btc-regime-5m-lgbm-v2 vs the class prior at BTCUSDT 5m. Registry F1 numbers for these heads sit on different shards/splits
+  and are not comparable; this puts every head of the (symbol, timeframe) on ONE shard and ONE purged 5-fold CV (embargo 24, tail 60000 rows), log-loss, per symbol.
+why_this_matters: 'The 11 held REVIEW heads have no consumer and no open unit; this unit decides keep or retire for each on a like-for-like read. A head that loses here is retired (reason: lost
+  its bake-off, data in research/results). A head that wins goes to the consumer test (does gating the leg it serves improve net R after the full cost stack), which is the only read that can justify
+  more than SHADOW. No served model is touched.'
+ml_consumer:
+  consumer: src/runtime/regime_shadow.py
+  decision: keep or retire btc-regime-5m-lgbm-v2 (D2 regime slot, wave-2 hold)
+  legs:
+  - turtle_soup
+  - trend_donchian_eth_4h
+  book: money
+power:
+  expected_n: 26280
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'tail_rows 60000 (about 26280 out-of-sample over 5 folds; fewer for 1d MES, whose shard is shorter: the run reports the true n); d=0.1 paired needs ~785 rows; bars are autocorrelated
+    so effective n is lower. expected_n is an ESTIMATE, not a measurement.'
+  feasibility:
+    source: none
+    accrual_basis: 'Fixed by construction (tail_rows of a nightly-rebuilt shard): n does not grow with waiting, so an underpowered result is reported as such and the follow-up is a different dataset,
+      not a re-run.'
+decision_rule:
+  id: RULE-RQ20261112ef4c06
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_bakeoff.py: per-group (BTCUSDT_5m) paired CV mean logloss delta of lgbm vs prior (positive = lgbm better), 5 folds, embargo 24, tail 60000 rows.'
+  rule: PASS IF lgbm beats prior by >= +0.002 nats on the CV mean on BTCUSDT_5m. FAIL IF it does not beat it by >= 0. INDETERMINATE otherwise, or if folds < 3 or the shard is stale/unavailable.
+    Thresholds are not changed after any result. FAIL retires the head (it does not beat the class prior); PASS sends it to the consumer test, not to promotion.
+  what_it_does_not_do: No served model, roster or config is read or changed. A log-loss PASS is not edge and not a P&L figure; the full cost stack applies to the later consumer test. A FAIL closes
+    this configuration only.
+  min_n: 5 purged CV folds on the tail shard, >= 3 folds
+intervention_controls:
+  not_applicable: a model-quality bake-off on a static published shard, not an in-trade action or active-management intervention
+compute: auto
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  published_data: null
+  peak_memory_gb: 3.0
+  est_minutes: 30
+  basis: 5m shards are not published; the group reads the trainer-resident v002 shard. Estimate, NOT measured.
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.15
+  basis: 'stand-in planning weight: gates whether a regime/direction head recipe is worth advancing on the money legs; an estimate, not a measured P&L'
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261112-ef4c-06
+ml_bakeoff:
+  task: classification
+  metric: logloss
+  higher_is_better: false
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT_5m:
+        path: datasets-out/market_features/BTCUSDT/5m/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 60000
+  cv:
+    folds: 5
+    embargo_rows: 24
+    min_train_frac: 0.4
+  baseline: prior
+  controls: []
+  candidates:
+  - lgbm
+  learners:
+    prior:
+      kind: prior
+    lgbm:
+      kind: lightgbm
+      params:
+        learning_rate: 0.05
+        min_child_samples: 50
+        n_estimators: 200
+        num_leaves: 31
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - BTCUSDT_5m
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.002
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.0
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+practice_precedent: 'M6 (docs/reference/trading-and-model-practice-principles.md): purged, embargoed walk-forward CV; a log-loss lift is reported per symbol, never pooled; the control arm is the
+  strongest classical feature set, not only the class prior.'
+related:
+- ML-PROGRAMME-CONSOLIDATION
+- docs/plans/ML-CONSOLIDATION-2026-11-11.md
+- btc-regime-5m-lgbm-v2
+last_dispatched_at: '2026-11-13T09:06:19+00:00'

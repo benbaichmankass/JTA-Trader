@@ -1,0 +1,52 @@
+{
+  "run": "RESEARCH-OPS-20261112-1450",
+  "finished_at": "2026-11-12T15:30:00Z",
+  "by": "research-ops lane dispatched by manager session_01AFoLuLyarNRcy3nziCep2U (session_01AFoLuLdNB3ihkFEtoJWiu4)",
+  "floor": 25,
+  "floor_basis": "computed_floor(fired_24h 19), diagnostic only",
+  "throughput": {"runnable": 56, "queued": 289, "fired_24h": 19, "results_landed_24h": 23, "hours_since_last_dispatch": 6.7, "idle_alarm": false, "result_files_unreadable": 0},
+  "mechanism": {
+    "dispatch_receipt": "ok (6.7 h since last dispatch; idle threshold 12 h)",
+    "stranded_stamp_prs": "not listed",
+    "incident": "none opened by this pass",
+    "read_state": "tree_only for workflow runs (github-actions MCP down; SLO ages and receipt read)"
+  },
+  "slo_read": {"breach": ["fires_24h 10 vs >=24", "grade_latency_p90_d 6 vs <=2", "theme_share_min_ratio 0.15 vs >=0.5", "dispatcher_age_h 5.09 vs <=3", "research_ops_age_h 17.55 vs <=8"], "ok": ["blocked_over_age 5 vs <=10", "research_ops_not_run 2 vs <=2"], "note": "no threshold changed"},
+  "results_read": {"note": "verdict level only; no results opened row by row this pass", "needs_review": 98, "unowned": 0, "ungraded": 5, "ungraded_units": ["RQ-20261022-3a84-12", "RQ-20261024-0142-18", "RQ-20261027-b376-02", "RQ-20261101-e5b1-17", "RQ-20261101-e5b1-18"]},
+  "unlocked": [],
+  "retired": [],
+  "blocked_over_age": {"audited": ["RQ-20261009-900", "RQ-20261009-901", "RQ-20261017-9582-01", "RQ-20261018-ef5d-10", "RQ-20261018-ef5d-11"], "disposition": "all five already carry a named lever, an owner and due_by 2026-11-25 from the 20261111-2049 pass; nothing is past its date, so no change made", "stale_block_rows_on_checklist": ["LTR-TIGHTEN-FRESH-GO", "MANAGER-VM-DIRECT-OPS", "ML-AM-NEXT-LIVE", "WEPE-BUILDOUT"], "stale_block_note": "blocker_watch flagged these four checklist rows (blocked_on empty or finished); they are manager-owned rows, not research units, and were not edited here"},
+  "units_authored": [],
+  "followups_filed": [],
+  "authoring": {"queue_depth": null, "nodes_drafted": 0, "skipped_on_purpose": true, "reason": "budget went to the baseline reads and the PR was kept small and self-landing because CI is saturated; nothing authored to meet a count"},
+  "iteration": {
+    "results_attributed": {"count": 0, "of": null, "note": "not done this pass; lever_map.py --backfill was run but its research/levers/* output was discarded, not committed (those paths are not on the Tier-1 surface and would have held the PR)"},
+    "map_entries_added": 0,
+    "next_tests_from_map": 0,
+    "orphans_before": {"strategy_leg": 7, "ml_model": 2, "ltr_class": 5},
+    "orphans_after": {"strategy_leg": 7, "ml_model": 2, "ltr_class": 5},
+    "orphans_named": ["qqq_pullback_1h", "tlt_pullback_1h", "tsmom-crypto", "xsec-crypto", "tsmom-etf", "movement-capture", "vol-premium-proxy", "ml-exit-head-donchian-1h", "ml-eth-vol-head", "ltr-partial-close", "ltr-widen-sl", "ltr-sl-to-structure", "ltr-tp-extend", "ltr-tp-pull-in"],
+    "note": "qqq_pullback_1h (pass_unconfirmed) and tlt_pullback_1h (fail) are new orphans since the last record; the 20261111-2049 record had strategy_leg orphans at 0, so its 85% call on 'orphans(strategy_leg) stays 0' MISSED",
+    "advanced": 0, "survivors": [], "overdue": ["RQ-20261026-e535-03 (claude_desk)", "RQ-20261101-78fc-11 (e4_oi_shock_1h)", "plus the 78fc-34/20/52/53/44/46/37/54 iteration units flagged OVERDUE by iteration_orphans.py"]
+  },
+  "prior_calls_scorecard": [
+    {"call": "the 5 re-queued 73de units land measured, not producer_failed", "outcome": "unresolved", "note": "resolves 2026-11-13; not checked"},
+    {"call": "203c-01/02/03 land INDETERMINATE or FAIL", "outcome": "unresolved", "note": "203c-01 is listed by the packet as fails_without_next, so it has a verdict; 02/03 not opened"},
+    {"call": "blocked_over_age <= 10 and orphans(strategy_leg) stays 0", "outcome": "miss", "note": "blocked_over_age 5 held; strategy_leg orphans are 7 (qqq_pullback_1h and tlt_pullback_1h new)"}
+  ],
+  "checks": {"packet_as_of": "2026-11-12T14:50:33Z", "runnable_by_track": {"TRADING": 32, "MODEL": 14, "INFRA": 10}, "fails_without_next": 2, "needs_review": 98, "stale_units_over_14d": ["RQ-20260930-602", "RQ-20261016-7ea6-01"], "could_not_look": ["workflow runs (github-actions MCP down)"]},
+  "analysis": {"rows_opened": [], "trading": {"meaning": [], "fail_diagnoses": [], "next_tests": []}, "model": {"meaning": [], "fail_diagnoses": [], "next_tests": []}, "cross_track": [], "surprises": ["fires_24h fell to 19 (from 32 in the last record) and fell below the 24 SLO while 56 units are runnable and the last dispatch was 6.7 h ago; cause not diagnosed here"]},
+  "calls": [
+    {"call": "dispatcher_age_h returns to <= 3 within 24 h of this record", "p": 0.7, "check": {"command": "python3 scripts/research/research_slo.py | grep dispatcher_age_h", "rule": "<= 3", "resolves_when": "2026-11-13"}},
+    {"call": "iteration_orphans.py still lists qqq_pullback_1h and tlt_pullback_1h as orphans at the next pass unless a manager lane iterates them", "p": 0.8, "check": {"command": "python3 scripts/research/iteration_orphans.py --levers | grep -E 'orphan.*(qqq|tlt)_pullback_1h'", "rule": "both listed", "resolves_when": "2026-11-13"}}
+  ],
+  "not_run": ["analysis (steps 2.2-2.7): no result rows opened, no iteration units authored; this is a too-scripted, baseline-only pass", "D result attribution"],
+  "limits": ["lever_map backfill output discarded, not committed", "github-actions MCP down: workflow runs not listed"],
+  "handoff": [
+    "manager: 7 strategy_leg orphans, 2 ml_model orphans and 5 ltr_class orphans (named in iteration.orphans_named) are un-iterated; this pass did not reach them. qqq_pullback_1h and tlt_pullback_1h are new since the 20261111-2049 record",
+    "manager: SLO breaches fires_24h 10, dispatcher_age_h 5.09, grade_latency_p90_d 6, theme_share_min_ratio 0.15, research_ops_age_h 17.55: not diagnosed here (CI saturation may explain the dispatcher)",
+    "manager: TP-PREDICT-GRADER, TF-ORB-COST-STACK and TF-IGNITION-HARNESS remain the levers behind the five blocked units; due 2026-11-25",
+    "5 ungraded units listed in results_read are left to the 6-hourly grader",
+    "pipeline.py --due count and routing of due items is the manager's (not a step of this skill)"
+  ]
+}

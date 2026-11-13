@@ -148,7 +148,7 @@ jobs:
             md += `\n</details>\n\nRestore any row: \`git push origin <sha>:refs/heads/<branch>\` (SHAs in the manifest).\n`;
             core.summary.addRaw(md).write();
 
-            if (context.eventName === 'issues') {
+            if (context.eventName === 'repository_dispatch') {
               const n = (context.payload.client_payload?.issue?.number ?? context.issue.number);
               await github.rest.issues.createComment({ owner, repo, issue_number: n, body: md });
               await github.rest.issues.update({ owner, repo, issue_number: n, state: 'closed' });

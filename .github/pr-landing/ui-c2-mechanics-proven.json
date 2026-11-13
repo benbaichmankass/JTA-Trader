@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Console C2: per-leg mechanics_proven on the Ladder tab. New read-only route GET /api/bot/soak/mechanics evaluates scripts/ops/soak_state.py::mechanics_proven on the live VM (where the journal behind soak_states() lives); the trainer connector's system_catalog attaches it per leg. No order path, no new gate; unreadable is could_not_look / null, never false.",
+  "hold_text": "Tier 2 (ict-web-api + trainer connector). The manager merges, then dispatches trainer-console-connector-install. After deploy: GET /api/bot/soak/mechanics returns 200 read_state read with proven + not_proven + unknown = legs; the console Ladder tab shows 'mechanics proven' on a known-proven leg (e.g. tlt_pullback_1d) and 'mechanics not proven' on a known-unproven one."
+}

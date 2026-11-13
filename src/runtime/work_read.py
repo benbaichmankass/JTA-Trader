@@ -186,9 +186,14 @@ def _by(rec: dict) -> str:
 
 
 def _put(item: dict, by: str) -> dict:
-    """Create the item, or set every writable field that differs, as ONE store write."""
+    """Create the item, or set every writable field that differs, as ONE store write.
+
+    Only keys the item CARRIES are written: a key absent from ``item`` is left out of the patch, never sent as
+    null. ``work_store_import.from_row`` maps no ``summary`` (and other store-only fields), so a row round-trip
+    (``checklist.py note``) used to null them on every write (2026-11-12: three FRONTIER-Q summaries nulled by a
+    pointer note; row ML-DEV-PLAN). A key present with value None still clears that field."""
     from src.runtime import work_store as ws
-    fields = {k: item.get(k) for k in ws.WRITABLE_FIELDS}
+    fields = {k: item[k] for k in ws.WRITABLE_FIELDS if k in item}
     store = local_store()
     if store is not None:
         try:
@@ -249,3 +254,18 @@ def put_observation(rec: dict) -> dict:
     kind, ref = owner_of(rec) if rec.get("state") == "routed" else ("", "")
     item = wi.from_pipeline_item(rec, {ref} if kind == "row" else set(), lambda r: (kind, ref))
     return _put(item, _by(rec))
+
+
+def week_lane_totals(items: list[dict]) -> dict[str, dict]:
+    """Every week_lane row in the register (any state): total per lane and per lane x state, so the
+    console (and GET /api/bot/work/lanes) can show done / landed_unproven against the full lane total."""
+    out: dict[str, dict] = {}
+    for r in items:
+        lane = r.get("week_lane")
+        if not lane:
+            continue
+        d = out.setdefault(str(lane), {"total": 0, "by_state": {}})
+        d["total"] += 1
+        st = str(r.get("state"))
+        d["by_state"][st] = d["by_state"].get(st, 0) + 1
+    return out

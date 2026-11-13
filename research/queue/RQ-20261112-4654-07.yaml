@@ -1,0 +1,125 @@
+id: RQ-20261112-4654-07
+title: 'Heterogeneous ensemble for the crypto ENTRY recipe: does the equal-weight average of the LightGBM and a ridge regression, on the same features and
+  raw net-R target, beat LightGBM alone on the trades each would take at actual net R? (13 monthly refits over 2025-10..2026-09)'
+status: queued
+cadence: once
+theme: ml_health
+priority: 3
+roadmap:
+- L-ML-LIVE
+kind: experiment
+origin: new_hypothesis
+practice_precedent: 'https://doi.org/10.1093/rfs/hhaa009 (Gu, Kelly and Xiu, Empirical Asset Pricing via Machine Learning, RFS 2020; SECONDARY, known before
+  this pass, not re-read): combining learners of different families across a cross-section of returns is standard and tree/linear blends are its cheapest
+  form. Our own history: ensemble_stack has 0 open items and a mixed graded history (1 PASS of 6); linear_logit has 1 open item (ml_plan_status.py --diversity,
+  run 2026-11-13).'
+levers:
+- name: learner
+  values:
+  - LightGBM (RAW, baseline)
+  - 0.5 x LightGBM + 0.5 x ridge (ENS, decided)
+  - ridge alone (RIDGE, reported only)
+  hypothesised_effect: ENS raises held-out net R per decision by >= +0.06 vs RAW; RIDGE is reported to show whether any lift is the blend or the linear
+    model
+- name: ridge_alpha
+  values:
+  - 10.0
+  hypothesised_effect: fixed, not swept (declared); median impute + standardise inside each refit
+question: Refit the SAME recipe (ml_decision_entry FEATURES, LGB_PARAMS, E.purge_train, served tau, raw net-R target) at each of 13 monthly origins over
+  the frozen v1's held-out year with three learners -- RAW (LightGBM), ENS (equal-weight average of LightGBM and ridge predictions) and RIDGE (ridge alone,
+  reported) -- and grade each on the decisions it takes at the ACTUAL net R of an outright bracket trade (canonical cost stack). Does ENS beat RAW?
+why_this_matters: Foxhound-1 (D3 ml_entry) trades bybit_2 (real money), its mirror and three prop books on one GBDT; gbdt holds 14/23 open family-tagged
+  ML plan items and 77/106 registered models. A linear component is smoother out of sample and cannot overfit interactions; if the blend lifts per-decision
+  edge it is a cheap serving change (a ridge pipeline beside the booster). A FAIL closes the cheapest ensemble lever for this recipe and is a result for
+  the family-diversity ledger.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+power:
+  expected_n: 13
+  min_detectable_effect: 0.06
+  effect_units: metric
+  sd: 0.074
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE (QUOTED, not re-derived here): as RQ-20261112-4654-01 -- frontier-scan-2026-11-11 K1 gives a paired window sd of 0.074 R/decision for
+    two refits of this recipe over the same 13 x 28-day windows, se = 0.0205, 80%-power MDE at alpha 0.05 two-sided ~0.063 R. ENS and RAW share the booster
+    so the paired sd is likely smaller (declared, not assumed in the MDE). Registered effect +0.06. Fewer than 10 windows with n >= 30 per arm is INDETERMINATE.
+    The window sd is re-measured (paired_extra_vs_raw.ens.sd).'
+  feasibility:
+    source: none
+    accrual_basis: Replays Binance USD-M 1h history 2021..2026-09 already published; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261112-4654-07-ENS-RIDGE
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  baseline: 'RAW: the same LightGBM recipe on the raw net-R target at the same origins, same rows (BTCUSDT excluded), same tau, same cost stack. Net of
+    the full cost stack.'
+  statistic: 'scripts/research/ml_entry_residual.py run --arms raw,ens,ridge: per 28-day window, mean actual net R per taken decision for each arm (E.policy,
+    served tau); d_w = ENS - RAW over windows where both took >= 30 decisions; mean, sd and 95% t-interval of d_w (paired_extra_vs_raw.ens); RIDGE - RAW
+    reported the same way, not decided; pooled means and n.'
+  rule: 'decide_vs_raw on ENS: PASS iff >= 10 paired windows AND mean d >= +0.06 R/decision AND the 95% t-CI lower bound > 0 AND ENS pooled n >= 300. FAIL
+    iff >= 10 paired windows AND mean d <= 0. INDETERMINATE otherwise. RIDGE is reported only and cannot change the verdict. Net of the full cost stack
+    (fee + slippage + funding via ml_decision_entry._cost_r). Thresholds are not changed after any result.'
+  pass_action: 'a Tier-3 proposal note on row ML-ENTRY-FINETUNE: candidate manifest for an ENS ENTRY model (booster + ridge pipeline), plus the promotion-design
+    unit on the full held-out year with the prop survival gate; tag the result ensemble_stack in the diversity ledger.'
+  fail_action: record FAIL for this exact configuration (equal weights, ridge alpha 10, the v1 recipe, served tau); close FRONTIER-Q-ENS-RIDGE-ENTRY; if
+    RIDGE alone beat RAW say so (a linear signal the booster misses) and file it as a separate question.
+  what_it_does_not_do: Changes no served model, tau, roster or config. No blend-weight search (a learned weight is a later unit only on PASS). One seed
+    per refit. BTCUSDT excluded. The window was read before by 98e3-26 and 4654-01 (declared). A PASS is not a promotion.
+  min_n: 10 paired windows with >= 30 decisions per arm; 300 pooled ENS decisions
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.1
+  basis: 'stand-in: Foxhound-1 trades bybit_2 + 3 prop books; a +0.06 R/decision lift at ~40 decisions/month on bybit_2 is the scale; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 90
+  why_runner: Binance public klines plus 39 refits (26 LightGBM, 26 ridge); no trainer-resident data.
+  basis: 'ESTIMATE: RQ-20261108-98e3-26 (13 refits + fetch) ran ~40 min on research-script-run; ridge fits are seconds, so ~2x.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_residual.py
+  - run
+  - --arms
+  - raw,ens,ridge
+  - --cache
+  - /tmp/ml_entry_klines
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --run-date
+  - '2026-11-13'
+  - --rule-id
+  - RULE-RQ20261112-4654-07-ENS-RIDGE
+  - --registered-at
+  - '2026-11-13'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261112-4654-07
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: whether Foxhound-1 (ml_decision_entry) serves a LightGBM + ridge blend; no change from this unit
+  legs:
+  - ml_entry
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261112-4654-01
+- RQ-20261112-4654-06
+- FRONTIER-Q-ENS-RIDGE-ENTRY
+- ML-ENTRY-FINETUNE
+population: The ml_decision_entry universe (Binance USD-M perps in the bp2 manifest, BTCUSDT excluded), both sides at the served tau over 2025-10-01..2026-09-30
+  in 13 x 28-day windows; a recipe comparison, not a promotion read.

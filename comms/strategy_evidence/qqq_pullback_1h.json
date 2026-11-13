@@ -8,54 +8,54 @@
   "coverage_state": "measured",
   "fidelity": "faithful",
   "omitted_levers": [],
-  "net_r_oos": 10.8351,
-  "expectancy_r_oos": 0.197,
-  "n_trades_oos": 55,
+  "net_r_oos": 8.0368,
+  "expectancy_r_oos": 0.1435,
+  "n_trades_oos": 56,
   "folds": 4,
   "fold_detail": [
     {
       "fold": 1,
-      "trades": 13,
-      "net_r": 4.1194,
-      "expectancy_r": 0.3169,
-      "start": "2025-04-28 18:00:00+00:00",
-      "end": "2025-09-03 18:00:00+00:00"
+      "trades": 14,
+      "net_r": -0.2151,
+      "expectancy_r": -0.0154,
+      "start": "2025-06-17 19:00:00+00:00",
+      "end": "2025-10-14 20:00:00+00:00"
     },
     {
       "fold": 2,
-      "trades": 13,
-      "net_r": -2.0635,
-      "expectancy_r": -0.1587,
-      "start": "2025-09-05 17:00:00+00:00",
-      "end": "2026-01-08 17:00:00+00:00"
+      "trades": 14,
+      "net_r": -5.1599,
+      "expectancy_r": -0.3686,
+      "start": "2025-10-16 17:00:00+00:00",
+      "end": "2026-03-02 20:00:00+00:00"
     },
     {
       "fold": 3,
-      "trades": 13,
-      "net_r": 16.3502,
-      "expectancy_r": 1.2577,
-      "start": "2026-01-15 20:00:00+00:00",
-      "end": "2026-05-12 17:00:00+00:00"
+      "trades": 14,
+      "net_r": 15.3184,
+      "expectancy_r": 1.0942,
+      "start": "2026-03-05 20:00:00+00:00",
+      "end": "2026-06-25 19:00:00+00:00"
     },
     {
       "fold": 4,
-      "trades": 16,
-      "net_r": -7.571,
-      "expectancy_r": -0.4732,
-      "start": "2026-05-15 17:00:00+00:00",
-      "end": "2026-09-23 15:00:00+00:00"
+      "trades": 14,
+      "net_r": -1.9066,
+      "expectancy_r": -0.1362,
+      "start": "2026-07-01 19:00:00+00:00",
+      "end": "2026-11-09 18:00:00+00:00"
     }
   ],
-  "folds_positive": 2,
+  "folds_positive": 1,
   "window_days": 365,
   "fee_bps_roundtrip": 0.0,
   "path_stats": {
     "series_location": "source_run (the per-trade rows, in order, with net_r)",
-    "n": 55,
+    "n": 56,
     "max_drawdown_r": 11.1824,
-    "max_drawdown_at_trade": 35,
-    "final_equity_r": 10.8351,
-    "max_equity_r": 19.5166,
+    "max_drawdown_at_trade": 31,
+    "final_equity_r": 8.0368,
+    "max_equity_r": 14.2648,
     "worst_trade_r": -1.0841,
     "best_trade_r": 10.828,
     "worst_day_r": -1.0841,
@@ -69,9 +69,9 @@
     "slippage": 5.0,
     "funding": 0.0,
     "unit": "bps_roundtrip (funding: bps per funding window)",
-    "source": "comms/strategy_evidence/runs/2026-09-24-e55/qqq_pullback_1h__bt.json"
+    "source": "comms/strategy_evidence/runs/2026-11-12/qqq_pullback_1h__bt.json"
   },
-  "net_r_oos_fee_only": 13.0904,
+  "net_r_oos_fee_only": 10.3307,
   "decision_rule": {
     "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
     "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
@@ -79,9 +79,66 @@
     "verdict": "pass"
   },
   "param_selection_provenance": "not_established",
-  "generated_at": "2026-09-24T12:44:56.662597+00:00",
+  "generated_at": "2026-11-12T08:21:33.821501+00:00",
   "generated_by": "scripts/ops/build_strategy_evidence.py",
-  "source_run": "comms/strategy_evidence/runs/2026-09-24-e55/qqq_pullback_1h__trades.jsonl",
+  "source_run": "comms/strategy_evidence/runs/2026-11-12/qqq_pullback_1h__trades.jsonl",
   "error": null,
-  "harness": "pullback"
+  "harness": "pullback",
+  "reproduce": {
+    "window_days": 365,
+    "window_days_source": "--days",
+    "folds": 4,
+    "data_start": "2025-06-02 15:00:00+00:00",
+    "data_end": "2026-11-11 21:00:00+00:00",
+    "git_sha": "5a83952251af9b5f37b32a19482d45c726fca697",
+    "argv": [
+      "python3",
+      "scripts/ops/build_strategy_evidence.py",
+      "--strategy",
+      "qqq_pullback_1h",
+      "--days",
+      "365",
+      "--folds",
+      "4",
+      "--window-start",
+      "2025-06-02 15:00:00+00:00",
+      "--window-end",
+      "2026-11-11 21:00:00+00:00"
+    ]
+  },
+  "venue_bracket_arm": null,
+  "holdout_confirmation": {
+    "verdict": "confirmed",
+    "research_unit": "RQ-20261101-78fc-25",
+    "decision_rule": {
+      "id": "RULE-RQ-20261101-78fc-25",
+      "registered_before_run": true,
+      "registered_at": "2026-11-01"
+    },
+    "selected_label": "A",
+    "selected_config_fingerprint": "sha256:ee7d105c498802a5148f6f1757ccdb64",
+    "selected_from": 1,
+    "evaluations_on_holdout": 1,
+    "discovery": {
+      "start": "2018-06-18 13:00:00+00:00",
+      "end": "2024-09-15 15:14:14+00:00"
+    },
+    "holdout": {
+      "start": "2024-09-15 15:14:15+00:00",
+      "end": "2026-10-15 23:59:00+00:00",
+      "share": 0.25,
+      "short_at_cap": false
+    },
+    "n_holdout": 72,
+    "net_r_holdout": 11.3519,
+    "expectancy_r_holdout": 0.1577,
+    "cost_stack": {
+      "fees": 0.0,
+      "slippage": 5.0,
+      "funding": 0.0,
+      "unit": "bps_roundtrip (funding: bps per funding window)"
+    },
+    "source_run": "comms/research/RQ-20261101-78fc-25/41577257914/verdict.json",
+    "provenance": "Copied 2026-11-12 (lane OPDEC-20261112, operator decisions page p8 'Yes: evidence check, then a proposal per leg') from RQ-20261101-78fc-25's committed verdict, unchanged; the leg's config is unchanged since that run (selected_config_fingerprint == this record's config_fingerprint). By side on the held-back trades (A__trades.jsonl): long n 44 net +14.810 R, short n 28 net -3.459 R."
+  }
 }
