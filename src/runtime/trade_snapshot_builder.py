@@ -203,15 +203,36 @@ REQUEUE_ALPACA_CANDLES = "requeue_alpaca_candles_v1"
 MIGRATIONS_TABLE = "trade_snapshot_migrations"
 
 
-def _alpaca_symbols() -> set:
-    """Symbols whose instrument profile routes candles to Alpaca (``config/instruments.yaml`` ``exchange: alpaca``),
-    read without building any connector (no venue socket is opened)."""
+#: CLOSED-TRADE-SNAPSHOT-FUTURES-CANDLES (c): the same one-off re-queue for IB-routed symbols once IBMarketData
+#: gained a historical ``since`` read. Its own marker, so it runs once even where the Alpaca one already ran.
+REQUEUE_IB_CANDLES = "requeue_ib_candles_v1"
+_IB_VENUES = ("interactive_brokers", "ib")
+
+
+def _venue_symbols(venues: Tuple[str, ...]) -> set:
+    """Symbols whose instrument profile routes candles to one of ``venues`` (``config/instruments.yaml``
+    ``exchange``), read without building any connector (no venue socket is opened)."""
     from src.core.profile_loader import load_instrument_profiles
     out = set()
     for sym, prof in (load_instrument_profiles() or {}).items():
-        if str(getattr(prof, "exchange", "") or "").strip().lower() == "alpaca":
+        if str(getattr(prof, "exchange", "") or "").strip().lower() in venues:
             out.add(sym)
     return out
+
+
+def _alpaca_symbols() -> set:
+    return _venue_symbols(("alpaca",))
+
+
+def _routes_to(sym: Any, syms: set) -> bool:
+    """``sym`` is in ``syms``, or is a futures contract month (``MHGN6``) whose root is -- the same grammar
+    ``market_data.connector_for_symbol`` resolves when it routes the fetch."""
+    import re
+    s = str(sym or "").strip().upper()
+    if s in syms:
+        return True
+    m = re.match(r"^([A-Z]{2,})([FGHJKMNQUVXZ]\d{1,2})$", s)
+    return bool(m and m.group(1) in syms)
 
 
 def requeue_alpaca_candle_partials(conn: sqlite3.Connection, alpaca_symbols: Optional[set] = None,
@@ -219,16 +240,28 @@ def requeue_alpaca_candle_partials(conn: sqlite3.Connection, alpaca_symbols: Opt
     """Put Alpaca-symbol partial snapshots that lack candles back in the queue, once. Returns the number re-queued,
     or None when the migration already ran. The stored payload is kept (the chart keeps serving until rebuilt);
     rebuilds go through the builder's normal path and its 1-per-10 s Alpaca pacing."""
+    return _requeue_candle_partials(conn, REQUEUE_ALPACA_CANDLES,
+                                    alpaca_symbols if alpaca_symbols is not None else _alpaca_symbols(), now)
+
+
+def requeue_ib_candle_partials(conn: sqlite3.Connection, ib_symbols: Optional[set] = None,
+                               now: Optional[datetime] = None) -> Optional[int]:
+    """The IB-routed twin of :func:`requeue_alpaca_candle_partials` (1-per-15 s IB pacing)."""
+    return _requeue_candle_partials(conn, REQUEUE_IB_CANDLES,
+                                    ib_symbols if ib_symbols is not None else _venue_symbols(_IB_VENUES), now)
+
+
+def _requeue_candle_partials(conn: sqlite3.Connection, name: str, syms: set,
+                             now: Optional[datetime]) -> Optional[int]:
     conn.execute(f"CREATE TABLE IF NOT EXISTS main.{MIGRATIONS_TABLE} (name TEXT PRIMARY KEY, applied_at TEXT, "
                  "rows INTEGER)")
-    if conn.execute(f"SELECT 1 FROM main.{MIGRATIONS_TABLE} WHERE name = ?", (REQUEUE_ALPACA_CANDLES,)).fetchone():
+    if conn.execute(f"SELECT 1 FROM main.{MIGRATIONS_TABLE} WHERE name = ?", (name,)).fetchone():
         return None
-    syms = alpaca_symbols if alpaca_symbols is not None else _alpaca_symbols()
     keys = []
     for key, payload, sym in conn.execute(
             f"SELECT s.snapshot_key, s.payload, t.symbol FROM main.{store.TABLE} s JOIN trades t "
             "ON s.snapshot_key = 'trade:' || t.id WHERE s.state = 'built' AND s.read_state = 'partial'").fetchall():
-        if sym not in syms:
+        if not _routes_to(sym, syms):
             continue
         doc = store.decode(payload)
         # the exact rule behind the "candles_unavailable" read-state reason (tcs.snapshot_read_state)
@@ -238,10 +271,9 @@ def requeue_alpaca_candle_partials(conn: sqlite3.Connection, alpaca_symbols: Opt
         conn.execute(f"UPDATE main.{store.TABLE} SET state = '{REQUEUED}', attempts = 0, next_attempt_at = NULL "
                      "WHERE snapshot_key = ? AND state = 'built'", (key,))
     conn.execute(f"INSERT INTO main.{MIGRATIONS_TABLE} (name, applied_at, rows) VALUES (?, ?, ?)",
-                 (REQUEUE_ALPACA_CANDLES, _iso(now or datetime.now(timezone.utc)), len(keys)))
+                 (name, _iso(now or datetime.now(timezone.utc)), len(keys)))
     conn.commit()
-    logger.info("trade snapshot: %s re-queued %d Alpaca partial snapshots without candles",
-                REQUEUE_ALPACA_CANDLES, len(keys))
+    logger.info("trade snapshot: %s re-queued %d partial snapshots without candles", name, len(keys))
     return len(keys)
 
 
@@ -260,10 +292,12 @@ def run_batch(db_path: Path, fetch: Fetch, now: Optional[datetime] = None, limit
     counts = {"built": 0, "built_partial": 0, "retrying": 0}
     conn = store.snapshots_rw(str(snap_path or _snap_path_for(db_path)), journal_path=str(db_path))
     try:
-        try:
-            requeue_alpaca_candle_partials(conn, requeue_symbols, now=now)
-        except Exception:  # noqa: BLE001  # allow-silent: an optional one-off; logged, the batch still runs
-            logger.warning("trade snapshot: %s failed; will retry next batch", REQUEUE_ALPACA_CANDLES, exc_info=True)
+        for name, fn in ((REQUEUE_ALPACA_CANDLES, requeue_alpaca_candle_partials),
+                         (REQUEUE_IB_CANDLES, requeue_ib_candle_partials)):
+            try:
+                fn(conn, requeue_symbols, now=now)
+            except Exception:  # noqa: BLE001  # allow-silent: an optional one-off; logged, the batch still runs
+                logger.warning("trade snapshot: %s failed; will retry next batch", name, exc_info=True)
         todo = pending(conn, now, limit)
         if not todo:
             return counts
@@ -286,24 +320,49 @@ _sleep = time.sleep
 _mono = time.monotonic
 
 
+#: The same pacing for IB historical reads (CLOSED-TRADE-SNAPSHOT-FUTURES-CANDLES (c), measured 2026-11-13): one per
+#: 15 s = at most 40 per 10 min, under even IB's strict 60-per-10-min historical rule. The builder uses the web-api's
+#: own read-only IB client, never the trader's.
+IB_SINCE_MIN_INTERVAL_S = 15.0
+_ib_since_last = {"at": None}
+
+
 def _is_alpaca(client: Any) -> bool:
     from src.exchange.alpaca_connector import AlpacaMarketData
     return isinstance(client, AlpacaMarketData)
 
 
+def _is_ib(client: Any) -> bool:
+    from src.exchange.ib_connector import IBMarketData
+    return isinstance(client, IBMarketData)
+
+
+def _since_pace(client: Any) -> Optional[Tuple[Dict[str, Any], float]]:
+    """``(last-call state, min interval)`` for a venue whose historical reads are paced; None = unpaced."""
+    if _is_alpaca(client):
+        return _alpaca_since_last, ALPACA_SINCE_MIN_INTERVAL_S
+    if _is_ib(client):
+        return _ib_since_last, IB_SINCE_MIN_INTERVAL_S
+    return None
+
+
 def web_api_fetch(symbol: str, interval: str, since_ms: Optional[int], limit: int) -> Tuple[Optional[List[Dict[str, Any]]], str]:
     """Candles through the web-api's own market-data path, on its single IB-safe worker thread."""
     from src.web.api.routers import candles as cr
+    paced: Dict[str, Any] = {"pace": None}
 
     def go() -> Any:
         from src.runtime.market_data import fetch_candles
         settings = cr._settings()
         client = cr._connector(symbol, settings)
-        if since_ms is not None and _is_alpaca(client):
-            last = _alpaca_since_last["at"]
-            if last is not None and _mono() - last < ALPACA_SINCE_MIN_INTERVAL_S:
+        pace = _since_pace(client) if since_ms is not None else None
+        if pace is not None:
+            paced["pace"] = pace
+            state, gap = pace
+            last = state["at"]
+            if last is not None and _mono() - last < gap:
                 return _THROTTLED   # no venue call; the builder thread waits and resubmits
-            _alpaca_since_last["at"] = _mono()
+            state["at"] = _mono()
         df = fetch_candles(symbol, interval, settings=settings, limit=limit, exchange_client=client,
                            since=since_ms, bypass_cache=True)
         if df is None or len(df) == 0:
@@ -326,8 +385,9 @@ def web_api_fetch(symbol: str, interval: str, since_ms: Optional[int], limit: in
         out = cr._FETCH_EXECUTOR.submit(go).result(timeout=FETCH_TIMEOUT_S)
         if out is not _THROTTLED:
             return out, "bot-exchange"
-        last = _alpaca_since_last["at"] or _mono()
-        _sleep(max(0.0, ALPACA_SINCE_MIN_INTERVAL_S - (_mono() - last)) + 0.05)
+        state, gap = paced["pace"]
+        last = state["at"] or _mono()
+        _sleep(max(0.0, gap - (_mono() - last)) + 0.05)
     return None, "bot-exchange"
 
 

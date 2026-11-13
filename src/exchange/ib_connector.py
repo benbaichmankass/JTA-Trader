@@ -251,6 +251,16 @@ def _duration_str(timeframe: str, limit: int) -> str:
     return f"{days} D"
 
 
+def _since_end(timeframe: str, limit: int, since: Optional[int]):
+    """``endDateTime`` for a historical read starting at ``since`` (epoch ms): ``""`` (now) without one, else the
+    UTC datetime ``limit`` bars after it, capped at now (IB rejects a future end)."""
+    if since is None:
+        return ""
+    from datetime import datetime, timezone
+    end_s = int(since) / 1000.0 + _TF_SECONDS.get(timeframe, 300) * max(int(limit), 1)
+    return datetime.fromtimestamp(min(end_s, datetime.now(timezone.utc).timestamp()), tz=timezone.utc)
+
+
 class IBMarketData:
     """Read-only OHLCV connector for Interactive Brokers instruments.
 
@@ -297,7 +307,8 @@ class IBMarketData:
                 host=host, port=int(port), client_id=int(client_id), account=account,
             )
 
-    def get_ohlcv(self, symbol: str, timeframe: str, limit: int = 200) -> Optional[pd.DataFrame]:
+    def get_ohlcv(self, symbol: str, timeframe: str, limit: int = 200,
+                  since: Optional[int] = None) -> Optional[pd.DataFrame]:
         """Return a candle DataFrame for *symbol* / *timeframe*.
 
         Columns: ``["timestamp", "open", "high", "low", "close",
@@ -311,13 +322,18 @@ class IBMarketData:
         cached IB connection's socket transport is bound to a single loop.
         Callers are unaffected: this is still a blocking call returning the
         same value, and it still never raises.
+
+        ``since`` (epoch ms, optional): a HISTORICAL read of ``limit`` bars
+        starting at ``since`` -- IB has no start parameter, so it is sent as
+        ``endDateTime = since + limit bars`` (UTC) with the same duration. Used
+        by the closed-trade snapshot builder for old windows
+        (CLOSED-TRADE-SNAPSHOT-FUTURES-CANDLES); the live tick never passes it.
         """
+        args = (symbol, timeframe, limit) if since is None else (symbol, timeframe, limit, since)
         if _on_ib_fetch_thread():
-            return self._get_ohlcv_pinned(symbol, timeframe, limit)
+            return self._get_ohlcv_pinned(*args)
         try:
-            future = _IB_FETCH_EXECUTOR.submit(
-                self._get_ohlcv_pinned, symbol, timeframe, limit
-            )
+            future = _IB_FETCH_EXECUTOR.submit(self._get_ohlcv_pinned, *args)
             return future.result(timeout=_IB_FETCH_QUEUE_TIMEOUT_S)
         except _FutureTimeout:
             # Degrade exactly like a venue timeout: the caller already handles
@@ -344,13 +360,14 @@ class IBMarketData:
             return None
 
     def _get_ohlcv_pinned(
-        self, symbol: str, timeframe: str, limit: int = 200
+        self, symbol: str, timeframe: str, limit: int = 200, since: Optional[int] = None
     ) -> Optional[pd.DataFrame]:
         """The real fetch. MUST run on the pinned thread — see ``get_ohlcv``."""
         bar_size = _BAR_SIZE.get(timeframe)
         if bar_size is None:
             logger.warning("IBMarketData: unsupported timeframe %r", timeframe)
             return None
+        end_dt = _since_end(timeframe, limit, since)
         try:
             # Invariant 2 (see the module header): exclude the account/order
             # surface, which drives this same persistent loop from the tick and
@@ -394,7 +411,7 @@ class IBMarketData:
                 # graceful no-data result below.
                 bars = ib.reqHistoricalData(
                     contract,
-                    endDateTime="",
+                    endDateTime=end_dt,
                     durationStr=_duration_str(timeframe, limit),
                     barSizeSetting=bar_size,
                     whatToShow="TRADES",
@@ -423,6 +440,12 @@ class IBMarketData:
                 "volume": getattr(b, "volume", None),
             })
         df = pd.DataFrame(rows, columns=["timestamp", "open", "high", "low", "close", "volume"])
+        if since is not None and len(df):
+            # The duration carries session-gap headroom, so bars before the
+            # requested start can come back: keep the window from `since` on.
+            ts = pd.to_datetime(df["timestamp"], utc=True)
+            df = df[ts >= pd.Timestamp(int(since), unit="ms", tz="UTC")].reset_index(drop=True)
+            return df.iloc[:limit].reset_index(drop=True) if len(df) else None
         if len(df) > limit:
             df = df.iloc[-limit:].reset_index(drop=True)
         return df
