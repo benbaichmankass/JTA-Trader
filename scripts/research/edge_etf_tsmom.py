@@ -71,7 +71,7 @@ def dividend_factor(close: pd.DataFrame, fetch=None):
             continue
         try:
             d = fetch(s).dropna()
-        except Exception as exc:  # a failed fetch is a stated read-state, never a silent factor of 1
+        except Exception as exc:  # allow-silent: recorded as parity[s] = {"state": "fetch_failed", "error": ...} in the verdict, never a silent factor of 1
             parity[s] = {"state": "fetch_failed", "error": str(exc)[:200]}
             continue
         if d.empty:
@@ -185,7 +185,7 @@ def _self_test() -> int:
     chk("dividend: a mismatched Close fails parity", dividend_factor(close, fetch=lambda s: bad)[1]["SPY"]["state"] == "parity_failed")
 
     def boom(s):
-        raise RuntimeError("no network")
+        raise RuntimeError(f"no network for {s}")
     chk("dividend: a failed fetch is a stated state, never a silent factor 1", dividend_factor(close, fetch=boom)[1]["SPY"]["state"] == "fetch_failed")
     return 0 if ok else 1
 
