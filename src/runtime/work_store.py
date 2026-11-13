@@ -708,6 +708,47 @@ class WorkStore:
         with self._connect() as conn:
             return [self._decode(r) for r in conn.execute(sql, (*args, int(limit), int(offset)))]
 
+    def latest_notes(self, item_ids: list[str]) -> dict[str, dict]:
+        """Newest ``note`` event per item (UI-WQ-WEEK-ROUTES): ``{id: {"at", "by", "note"}}``.
+
+        One query for the page, so the SPA never fetches ``/events`` per row. Items with no note are absent."""
+        ids = [i for i in dict.fromkeys(item_ids) if i]
+        if not ids:
+            return {}
+        out: dict[str, dict] = {}
+        with self._connect() as conn:
+            for chunk in (ids[i:i + 500] for i in range(0, len(ids), 500)):
+                marks = ",".join("?" * len(chunk))
+                rows = conn.execute(
+                    f"SELECT e.item_id, e.at, e.by, e.patch FROM events e JOIN ("
+                    f" SELECT item_id, MAX(seq) AS seq FROM events WHERE op = 'note' AND item_id IN ({marks})"
+                    f" GROUP BY item_id) m ON e.seq = m.seq", chunk)
+                for r in rows:
+                    try:
+                        note = (json.loads(r["patch"]) or {}).get("note")
+                    except (TypeError, ValueError):
+                        note = None
+                    out[r["item_id"]] = {"at": r["at"], "by": r["by"], "note": note}
+        return out
+
+    def state_moves_since(self, since: str) -> dict[str, str]:
+        """Items whose STATE changed at or after ``since`` (ISO), from the event log: ``{id: last_move_at}``.
+
+        A state change is a ``create``, ``close`` or ``reopen`` event, or a ``set`` whose patch changes ``state``."""
+        out: dict[str, str] = {}
+        with self._connect() as conn:
+            rows = conn.execute("SELECT item_id, at, op, patch FROM events WHERE at >= ? ORDER BY seq", (since,))
+            for r in rows:
+                moved = r["op"] in ("create", "close", "reopen")
+                if not moved and r["op"] == "set":
+                    try:
+                        moved = "state" in ((json.loads(r["patch"]) or {}).get("fields") or {})
+                    except (TypeError, ValueError):
+                        moved = False
+                if moved:
+                    out[r["item_id"]] = r["at"]
+        return out
+
     def count_items(self) -> int:
         with self._connect() as conn:
             return conn.execute("SELECT COUNT(*) FROM items").fetchone()[0]
