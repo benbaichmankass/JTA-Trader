@@ -1,0 +1,113 @@
+id: RQ-20261113-d18c-01
+title: 'Desk structural lever UNIVERSE: does widening (or replacing) the six-symbol universe lift the 1h-packet information ceiling to S3 >= +0.25 R on the same DEV sample? Token-free screen before any judge tokens'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-DESK
+kind: experiment
+question: >-
+  On the DESK-EDGE-PROGRAM information-ceiling instrument (desk_edge_ceiling.py: the DEV window's 2-hour bar-close cutoffs, the P+ feature tier,
+  ridge / logistic / LightGBM with fixed hyper-parameters, the driver's four folds with test folds 2-4 and a 96 h embargo, the desk-like selection
+  policy of best action per symbol, top 2 symbols, act on the top 34% of cutoffs, and S3 = net R minus the same-geometry, same-symbol, same-side,
+  same-fold random-entry mean), does any learner's policy S3 reach >= +0.25 R with the family-corrected CI lower bound > 0 when the symbol universe
+  is (W) WIDENED from the registered six to the 24 registered below, or (R) REPLACED by the 18 non-original symbols alone?
+why_this_matters: >-
+  Operator, 2026-11-13 22:40Z popup on DESK-18D-JUDGE-2, verbatim: "Build universe next". The row stays blocked until a packet arm or model clears
+  S3 >= +0.25 R with CI lower > 0 on the DEV sample, and the manager's 2026-10-27 read named a structural lever (universe, maker fills or event-driven
+  entries) as the likeliest route. MEASURED so far on the six-symbol universe: judged-1 S3 +0.006 R [-0.19, +0.19] (n 1,498 packets); best model
+  on 1h packets about +0.10 R; packet arms A +0.16 / B +0.02 / C +0.015 R (screen_fail, n 100). A cross-sectional selection policy (top 2 of N) gains
+  breadth as N grows, so universe is the lever this instrument can test WITHOUT spending judging tokens. If the fitted ceiling does not move, a judge
+  on the same packets cannot be expected to, and the lever closes before any tokens are spent.
+power:
+  expected_n: 1900
+  min_detectable_effect: 0.25
+  effect_units: R
+  sd: 1.6
+  design: one_sample
+  alpha: 0.0083
+  power: 0.80
+  basis: >-
+    INFERRED from the instrument's own registered population: about 3,816 two-hour DEV cutoffs, test folds 2-4 hold about three quarters of them
+    (about 2,860); the policy acts on 34% with 2 picks each, so about 1,945 selected actions per learner and arm. sd 1.6 R is judged-1's paired sd (the
+    value fe57-03 used). Picks cluster by week, so the effective n is the number of DEV test weeks with a design effect well above 1. At alpha
+    0.05/6 (2 arms x 3 learners) the MDE is near +0.25 R only if the design effect stays at or below about 5 (INFERRED, not measured). STATED: this
+    screen is powered for the operator's bar, not for anything smaller; a FAIL bounds the lever at about +0.25 R, it does not show zero.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Historical candles only: Binance Vision USD-M perp 1h klines and USD-M funding for the 24 symbols (the same source the instrument already
+      uses for the six). Nothing accrues; n is fixed by the registered DEV window, folds and universe.
+decision_rule:
+  id: RULE-RQ20261113-D18C-01-UNIVERSE
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  statistic: >-
+    desk_edge_ceiling.py build + run with a --universe option (to be built; see blocked_on) and NOTHING else changed: same DEV cutoffs, P+
+    features, three learners and hyper-parameters, walk-forward folds and embargo, selection policy, label and the driver's cluster_stats
+    weekly-cluster bootstrap. Per arm (W, R) and learner: policy S3, its CI at two-sided alpha 0.05/6, and policy S3 per test fold. The same two
+    controls as the ceiling run (planted signal must read present; within-week shuffled labels must not) run on each arm.
+  rule: >-
+    instrument_invalid IF either control fails on an arm (that arm is not read). Otherwise PASS IF, for at least one arm, some learner has policy
+    S3 >= +0.25 R AND its corrected CI lower bound > 0 AND policy S3 > 0 in >= 2 of the 3 test folds. A PASS registers, BEFORE any packet is
+    judged, a judged arm U unit: desk packets built over the winning universe on the same DEV sample, the same judge protocol, the same S3 >= +0.25 R
+    / CI lower > 0 bar, as a manager dispatch with a stated token ceiling. FAIL otherwise: the universe lever is closed for 1h packets, the desk
+    edge-program lever table (docs/research/desk-edge-program-2026-10-27.md section 6.4) is updated, and DESK-18D-JUDGE-2 stays blocked on the
+    remaining levers (maker fills, event-driven entries). The universes, learners, policy, folds and bar are not changed after the result.
+  what_it_does_not_do: >-
+    Token-free research. Places nothing; changes no brief, packet, config or roster; spends no judging tokens. A PASS is a lead for a judged arm,
+    not Stage-0 evidence.
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): the rule is registered before the run, net of the
+  full cost stack, on the fixed DEV window; the instrument and its planted/shuffled controls are DESK-EDGE-PROGRAM section 3, reused unchanged
+  except for the symbol list (RULE ONE: the probe must find a positive before a negative counts).'
+ml_consumer:
+  consumer: DESK-18D-JUDGE-2
+  decision: whether the desk (claude_desk) gets a judged universe arm U and DESK-18D-JUDGE-2 unblocks, or the universe lever closes for 1h packets
+  legs: [claude_desk]
+  book: demo_floor
+universe:
+  registered_six: [ADAUSDT, AVAXUSDT, BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT]
+  added_18: [BNBUSDT, DOGEUSDT, LINKUSDT, LTCUSDT, DOTUSDT, TRXUSDT, BCHUSDT, NEARUSDT, UNIUSDT, ATOMUSDT, ETCUSDT, FILUSDT, APTUSDT, ARBUSDT, OPUSDT, SUIUSDT, INJUSDT, AAVEUSDT]
+  arm_W: registered_six + added_18 (24 symbols)
+  arm_R: added_18 only
+  basis: >-
+    Fixed now, before any data is pulled: large, long-listed Binance USD-M perps that also trade on Bybit, each listed before 2024-05-01 so the
+    3,000-bar look-back is complete for the whole DEV window. Renamed tickers (MATIC/POL) are excluded on purpose. A symbol whose candles or
+    funding are missing for part of the window is reported as such and dropped for the whole arm (counted, never imputed); the list itself is not
+    edited after the run.
+blocked_on:
+- kind: build
+  ref: DESK-18D-JUDGE-2
+  what: >-
+    desk_edge_ceiling.py has no universe option: the symbols come from desk_gen_replay_driver.REGISTERED_SYMBOLS (six). Needed: a --universe
+    W|R option on build and run that swaps the symbol list (and the cross-sectional rank features' population) and changes nothing else, a candle
+    and funding fetch for the 18 added symbols, a self-test that --universe SIX reproduces the committed six-symbol ceiling numbers, and the two
+    controls passing per arm. Tier 1 research code; AM-OPS builds it after this unit lands (operator "Build universe next").
+  clears_when: >-
+    The --universe option is on main with its self-test (SIX reproduces the committed ceiling) and run.workflow can name it. Then: git mv this
+    file to research/queue/, fill run / lands, remove blocked_on, set status: queued.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 500
+  confidence: 0.05
+  bucket: ai_trader
+  basis: 'stand-in, not a measurement: the same bound as RQ-20261026-e535-03 and RQ-20261027-fe57-03.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 12.0
+  est_minutes: 240
+  basis: >-
+    INFERRED by scaling: fe57-03 MEASURED about 25 min to build 9,111 packets for six symbols on 4 cores, 6 GB peak; 24 symbols is about 4x the
+    actions per cutoff, so roughly 4x memory for the action matrix and 2-4x the build time. Re-measure on the first run.
+related:
+- DESK-18D-JUDGE-2
+- RQ-20261027-e72b-01
+- RQ-20261027-fe57-03
+- scripts/research/desk_edge_ceiling.py
+- scripts/research/desk_gen_replay_driver.py
+- scripts/research/desk_packet_arms.py
+- docs/research/desk-edge-program-2026-10-27.md
+- docs/research/desk-packet-redesign-2026-10-27.md
+last_dispatched_at: null
