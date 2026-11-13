@@ -475,3 +475,35 @@ levers:
       best_delta_r_per_trade: 0.11
       fold_stability: 0.833
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+levers_tested:
+- family: adx_min (forming bar)
+  varied: adx_min none vs 20 / 25 / 30 on the FORMING bar, window 2025-11-13..2026-11-12, full cost stack
+  response:
+    verdict: fail
+    run: '43471894620'
+    baseline:
+      arm: A
+      n: 105
+      net_r: -23.3731
+      folds_positive: 1/4
+    arms:
+    - adx_min: 20
+      n: 90
+      net_r: -15.1493
+      folds_positive: 0/4
+    - adx_min: 25
+      n: 72
+      net_r: -4.1408
+      folds_positive: 2/4
+    - adx_min: 30
+      n: 56
+      net_r: 0.158
+      folds_positive: 2/4
+    reading: 'smooth monotone improvement with the ADX floor (the closed-bar response carries to the forming bar) but no arm clears Stage 0: adx_min
+      30 is +0.16R over n 56 with 2/4 positive folds (needs 3)'
+  shape: monotone
+  tested_at_power: true
+  unit: RQ-20261113-f251-10
+  lever_family: filter
+units:
+- RQ-20261113-f251-10
