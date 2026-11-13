@@ -1,7 +1,5 @@
 {
   "tier": 1,
-  "landing": "hold",
-  "why": "TREND-ALIGNMENT-FEATURE step 2 (AM-ML relay 2026-11-13 06:55Z, manager 06:50Z). Adds the TREND-ALIGN-V1 labeller scripts/research/trend_alignment.py (+ tests, capability-index row) and its read-only journal backfill output comms/research/trend_alignment/backfill-2026-11-13/ (labels.jsonl: trade id, leg, symbol, account class, direction, entry time, labels -- NO account ids, NO P&L; summary.json: population + missing by reason). Research data + tooling only; no src/, no config/. Stacked on #25668 (the definition, committed alone first). Revert: git revert.",
-  "hold_reason": "changes_landing_machinery",
-  "hold_text": "Only because this branch is STACKED on #25668: until #25668 merges, the diff vs main includes #25668's own landing file (.github/pr-landing/trend-align-v1.json), which R12 reads as editing the landing machinery. This PR adds no landing rule of its own. Once #25668 is on main, main is merged in here and this flips back to self (or a human merges it)."
+  "landing": "self",
+  "why": "TREND-ALIGNMENT-FEATURE step 2 (AM-ML relay 2026-11-13 06:55Z, manager 06:50Z). Adds the TREND-ALIGN-V1 labeller scripts/research/trend_alignment.py (+ tests, capability-index row) and its read-only journal backfill output comms/research/trend_alignment/backfill-2026-11-13/ (labels.jsonl: trade id, leg, symbol, account class, direction, entry time, labels -- NO account ids, NO P&L; summary.json: population + missing by reason). The definition (#25668) is on main. Research data + tooling only; no src/, no config/. Revert: git revert."
 }
