@@ -92,3 +92,17 @@ def test_a_malformed_or_foreign_record_changes_nothing(tmp_path, monkeypatch):
     MU._CACHE.clear()
     assert leg_symbols(cfg, "bybit_2", leg="ml_entry") == leg_symbols(cfg, "bybit_2")
     MU._CACHE.clear()
+
+
+def test_default_write_keeps_other_units_populations(tmp_path, monkeypatch):
+    """base=None writes to RECORD_DIR and must read RECORD_DIR first: a second unit's write never erases the first's."""
+    d = tmp_path / "ml_universe"
+    monkeypatch.setattr(MU, "RECORD_DIR", d)
+    a = {"unit": "RQ-A", "rule_id": "R-A", "verdict": "pass", "result": "r/a", "symbols": {"BTCUSDT": {"venues": ["bybit"]}}}
+    b = {"unit": "RQ-B", "rule_id": "R-B", "verdict": "fail", "result": "r/b", "symbols": {"ZECUSDT": {"venues": ["bybit"]}}}
+    MU.write_population("ml_entry", a)
+    MU.write_population("ml_entry", b)
+    MU.write_population("ml_entry", {**b, "verdict": "indeterminate"})     # same unit replaces, never duplicates
+    pops = MU.load("ml_entry")
+    assert [(p["unit"], p["verdict"]) for p in pops] == [("RQ-A", "pass"), ("RQ-B", "indeterminate")]
+    assert MU.passed_symbols(pops, "bybit") == ["BTCUSDT"]

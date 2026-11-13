@@ -210,3 +210,11 @@ entries:
     owner: CALENDAR-EVENT-REACTION-STUDY
     owner_note: "no consensus column, so the surprise event study cannot grade it; CALENDAR-EVENT-REACTION-STUDY builds the event-window reaction harness (abs return / range vs matched non-event windows)"
     re_entry_test: "the reaction study shows an event-window effect for `treasury_auction` net of the matched-window baseline at a pre-registered n, then a Tier-3 proposal adds it to a symbol_event_classes list"
+  phone_executor_heartbeat:
+    what: "breakout_2 phone executor heartbeat and silent-logout probes (scripts/ops/prop_silence.py probe_phone_heartbeat / probe_phone_login), read by the hourly attention watch, phone_hb_alert and the research watchdog"
+    decision: shadowed
+    trade_path_state: "operator uninstalled the phone app 2026-11-12 (relayed by the manager) and breakout_2 is on ice with an empty strategies roster (#25306); both probes report ok 'roster empty - phone executor shadowed' while the roster READS empty, and page as before when it is non-empty or unreadable"
+    data_artifact: "prop_phone_hb_breakout_2.json beside the prop journal DB (src/prop/phone_executor.py), served as phone_heartbeat on /api/bot/prop/status"
+    freshness_check: {state: exists, path: scripts/ops/prop_silence.py}
+    owner: PROP-SILENCE-ALERTS
+    re_entry_test: "the operator reinstalls the app AND a strategy is rostered on breakout_2: the probe then requires a heartbeat again with no code change (tests/test_prop_silence.py::test_empty_roster_shadows_the_phone_probes_but_unreadable_does_not)"

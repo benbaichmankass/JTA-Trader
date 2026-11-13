@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import json
+import shutil
+import time
+from types import SimpleNamespace
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -428,3 +431,99 @@ def test_desk_wake_switch_off_withholds_the_comment_but_lands_the_packet(tmp_pat
     assert rec["state"] == "suppressed_by_wake_toggle" and rec["commit"] == "c" * 40
     assert net.posts == []
 
+
+
+# ---- DESK-BUILD-HOURLY-UNIT: the hourly build runs in ict-desk-build@ and survives a trader restart -------------------
+
+def _unit_env(monkeypatch, tmp_path):
+    d = tmp_path / "desk"
+    (d / "jobs").mkdir(parents=True)
+    monkeypatch.setattr(dw, "_desk_dir", lambda: d)
+    return d
+
+
+def _fake_run(monkeypatch, returncode, job_result=None, stderr="", raise_timeout=False):
+    calls = []
+
+    def run(cmd, **kw):
+        calls.append(cmd)
+        if cmd[:3] == ["sudo", "-n", "systemctl"]:
+            if raise_timeout:
+                raise dw.subprocess.TimeoutExpired(cmd, 1)
+            job = cmd[-1].split("@")[1].removesuffix(".service")
+            if job_result is not None:
+                (dw._desk_dir() / "jobs" / job / "result.json").write_text(json.dumps(job_result))
+            return SimpleNamespace(returncode=returncode, stdout="", stderr=stderr)
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+    monkeypatch.setattr(dw.subprocess, "run", run)
+    return calls
+
+
+def test_hourly_build_runs_in_the_unit_and_returns_the_stage(tmp_path, monkeypatch):
+    d = _unit_env(monkeypatch, tmp_path)
+    ok = {"state": "ok", "stages": [{"stage": "builder", "outcome": "exit 0", "wall_s": 1}, {"stage": "publisher", "outcome": "exit 0", "wall_s": 1}]}
+    calls = _fake_run(monkeypatch, 0, ok)
+    stage, why = dw.build_packet(NEXT, "")
+    assert why is None and stage.name == "stage" and stage.parent.parent == d / "jobs"
+    assert calls[0][:4] == ["sudo", "-n", "systemctl", "start"] and calls[0][-1].startswith("ict-desk-build@hourly-")
+    assert not (d / "wake_inflight.json").exists()  # finished: nothing to adopt
+
+
+def test_hourly_build_killed_client_is_detached_and_keeps_the_mark(tmp_path, monkeypatch):
+    d = _unit_env(monkeypatch, tmp_path)
+    _fake_run(monkeypatch, -15)
+    stage, why = dw.build_packet(NEXT, "")
+    assert stage is None and why.startswith(dw.DETACHED)
+    mark = json.loads((d / "wake_inflight.json").read_text())
+    assert mark["bar"] == "2026-10-26T17:00:00Z" and mark["job"].startswith("hourly-")
+
+
+def test_hourly_build_without_sudo_falls_back_in_process(tmp_path, monkeypatch):
+    d = _unit_env(monkeypatch, tmp_path)
+    calls = _fake_run(monkeypatch, 1, stderr="sudo: a password is required")
+    stage, why = dw.build_packet(NEXT, "")
+    assert why is None and len(calls) == 3 and calls[1][1].endswith("desk_scan_packet.py")
+    assert not (d / "wake_inflight.json").exists()
+
+
+def test_hourly_unit_timeout_is_a_failure_not_detached(tmp_path, monkeypatch):
+    _unit_env(monkeypatch, tmp_path)
+    _fake_run(monkeypatch, 0, {"state": "timeout", "stages": [{"stage": "builder", "outcome": "timeout", "wall_s": 420.0}]})
+    stage, why = dw.build_packet(NEXT, "")
+    assert stage is None and why.startswith("TimeoutExpired") and not why.startswith(dw.DETACHED)
+
+
+def test_detached_then_adopted_and_posted_without_a_second_build(tmp_path, monkeypatch):
+    d = _unit_env(monkeypatch, tmp_path)
+    net = Net()
+    _fake_run(monkeypatch, -15)
+    first = produce(tmp_path, net, build=dw.build_packet)
+    assert first["state"] == "build_detached" and dw._attempts.get("2026-10-26T17:00:00Z", 0) == 0
+    assert not net.posts
+    # still running, no result yet -> pending, not a rebuild
+    built = []
+    second = produce(tmp_path, net, build=lambda n, t: built.append(1) or (None, "x"))
+    assert second["state"] == "build_pending" and not built
+    # the unit finishes: stage appears + result.json
+    job = json.loads((d / "wake_inflight.json").read_text())["job"]
+    jd = d / "jobs" / job
+    st = make_stage(tmp_path)
+    shutil.copytree(st, jd / "stage")
+    (jd / "result.json").write_text(json.dumps({"state": "ok", "stages": [{"stage": "builder", "outcome": "exit 0"}, {"stage": "publisher", "outcome": "exit 0"}]}))
+    third = produce(tmp_path, net, build=lambda n, t: built.append(1) or (None, "x"))
+    assert third["state"] == "posted" and third.get("adopted") is True and not built and len(net.posts) == 1
+    assert not (d / "wake_inflight.json").exists()
+
+
+def test_stale_detached_mark_is_cleared_and_rebuilt(tmp_path, monkeypatch):
+    d = _unit_env(monkeypatch, tmp_path)
+    (d / "wake_inflight.json").write_text(json.dumps({"bar": "2026-10-26T17:00:00Z", "job": "hourly-1-1", "started_at": time.time() - dw.DETACHED_WAIT_S - 5}))
+    rec = produce(tmp_path, Net())
+    assert rec["state"] == "posted" and not (d / "wake_inflight.json").exists()
+
+
+def test_mark_for_another_bar_is_ignored(tmp_path, monkeypatch):
+    d = _unit_env(monkeypatch, tmp_path)
+    (d / "wake_inflight.json").write_text(json.dumps({"bar": "2026-10-26T16:00:00Z", "job": "hourly-1-1", "started_at": time.time()}))
+    assert dw._adopt_mark("2026-10-26T17:00:00Z", NEXT) is None
+    assert not (d / "wake_inflight.json").exists()
