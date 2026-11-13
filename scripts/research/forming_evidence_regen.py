@@ -201,7 +201,9 @@ def _fetch_us_equity(row, tmp, log, m1_cache, end_pin, client_factory) -> Option
         except Exception as exc:  # noqa: BLE001  # allow-silent: returned as the leg's error and landed in verdict.json
             return f"alpaca {bar_tf}/1Min for {sym}: {type(exc).__name__}: {exc}"
         m1_cache[key] = d / f"{sym}_1m.csv"
-        del meta  # equity_1m_source.build also writes it to <d>/source.json, read below for every leg on this key
+        with log.open("a", encoding="utf-8") as fh:  # the build's own record, beside the harness runs' argv
+            fh.write(f"equity_1m_source.build {sym} {bar_tf} iex {s1}..{e1}: returned {meta.get('returned')} "
+                     f"rows {meta.get('rows')} alignment chosen={(meta.get('alignment') or {}).get('chosen')}\n")
     data = tmp / f"{row['leg']}__data.csv"
     shutil.copyfile(d / f"{sym}_{tag}.csv", data)
     rdm.trim_csv_to_window(str(data), str(start), str(end), row["timeframe"])
