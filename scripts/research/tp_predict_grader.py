@@ -169,11 +169,12 @@ def grade(rows: Sequence[Dict[str, Any]], *, evaluator: Optional[Evaluator] = No
         rule_verdict, verdict = "INDETERMINATE", "indeterminate"
     mixed = len({s["state"] for s in strata}) > 1
     n_eval = sum(s["eval_n"] for s in strata if isinstance(s["eval_n"], int))
+    per_stratum_n = ", ".join(f"{s['stratum']} eval n {s['eval_n']}" for s in strata)   # 3.11: no nested same-quote f-strings
     return {
         "verdict": verdict, "read_state": "measured", "rule_verdict": rule_verdict,
         "n": n_eval,
         "population": (f"RQ-20261009-900: {len(strata)} strata graded separately, never pooled "
-                       f"({', '.join(f'{s['stratum']} eval n {s['eval_n']}' for s in strata)} at split {HEADLINE_SPLIT}); "
+                       f"({per_stratum_n} at split {HEADLINE_SPLIT}); "
                        f"n = summed eval rows at the headline split; outcome mfe_r, 5 quantiles x 3 splits, B1-B4 "
                        f"each gated by the shuffled-label null p95 (control_trials {control_trials})"),
         "note": (f"{RULE_ID}: {rule_verdict}" + (" (MIXED, reported per stratum)" if mixed else "") + " | "
