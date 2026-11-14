@@ -1,4 +1,4 @@
-"""HTF long gate (`--htf-long-sma-days`) in the pullback and trend harnesses (scripts/htf_daily_gate.py).
+"""HTF long gate (`--htf-long-sma-days`) in the pullback and trend harnesses (scripts/research/htf_daily_gate.py).
 
 Row DEMO-FLOOR-ITER-20261113, manager GO 2026-11-14 07:15Z, after RQ-20261114-db1a-03's post-hoc PASS. Pinned here:
   * the gate reads the last COMPLETED UTC daily close (strictly before the bar's date) against the N-day SMA ending at it,
@@ -31,7 +31,7 @@ def _load(name, rel):
     return mod
 
 
-GATE = _load("_htf_gate", "scripts/htf_daily_gate.py")
+GATE = _load("_htf_gate", "scripts/research/htf_daily_gate.py")
 TREND = _load("_htf_trend", "scripts/backtest_trend.py")
 PULLBACK = _load("_htf_pullback", "scripts/backtest_pullback.py")
 

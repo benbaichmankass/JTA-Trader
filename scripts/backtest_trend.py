@@ -198,11 +198,11 @@ def _resample(df: pd.DataFrame, rule: str) -> pd.DataFrame:
 
 
 def _htf_daily_gate():
-    """scripts/htf_daily_gate.py, loaded by FILE and lazily (the flag is opt-in; default runs never load it)."""
+    """scripts/research/htf_daily_gate.py, loaded by FILE and lazily (the flag is opt-in; default runs never load it)."""
     mod = sys.modules.get("htf_daily_gate")
     if mod is None:
         import importlib.util as _ilu
-        _spec = _ilu.spec_from_file_location("htf_daily_gate", Path(__file__).resolve().parent / "htf_daily_gate.py")
+        _spec = _ilu.spec_from_file_location("htf_daily_gate", Path(__file__).resolve().parent / "research" / "htf_daily_gate.py")
         mod = _ilu.module_from_spec(_spec)
         sys.modules["htf_daily_gate"] = mod
         _spec.loader.exec_module(mod)
@@ -700,7 +700,7 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                 (_sf == "short" and direction == "long"):
             i += 1
             continue
-        # HTF long gate (scripts/htf_daily_gate.py; None = off = byte-identical): skip a LONG when the
+        # HTF long gate (scripts/research/htf_daily_gate.py; None = off = byte-identical): skip a LONG when the
         # symbol's last completed daily close is below its N-day SMA. Applies on both decision bars.
         if htf_long_gate is not None and direction == "long" and htf_long_gate.skip(df["timestamp"].iloc[i]):
             i += 1
@@ -1737,7 +1737,7 @@ def main(argv: List[str]) -> int:
     p.add_argument("--htf-long-sma-days", type=int, default=0,
                    help="HTF long gate (default 0 = off, byte-identical): skip a LONG entry when the symbol's last "
                         "completed UTC daily close is below its N-day SMA of daily closes, built from the loaded bars "
-                        "BEFORE the --start/--end trim (scripts/htf_daily_gate.py). Shorts are never gated.")
+                        "BEFORE the --start/--end trim (scripts/research/htf_daily_gate.py). Shorts are never gated.")
     p.add_argument("--adx-min", type=float, default=None,
                    help="Regime filter: skip entries whose Wilder ADX is below this (None=off).")
     p.add_argument("--adx-max", type=float, default=None,
