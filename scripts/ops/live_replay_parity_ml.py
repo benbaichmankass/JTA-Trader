@@ -394,6 +394,19 @@ def _live_eq(rows: list[dict], strategy: str) -> list[dict]:
     return sorted(out, key=lambda x: x["_t"])
 
 
+def _live_eq_none(rows: list[dict], strategy: str) -> list[dict]:
+    """The DECIDED no-package rows (``side: none``) live audits since ML-EQ-NOPKG-AUDIT (2026-11-14): proof live judged a symbol
+    at a close and placed nothing, so a replay that also holds no package is an agreement, not 'nothing comparable'."""
+    out = []
+    for r in rows:
+        if r.get("event") != f"{strategy}_eval" or _norm_side(r.get("side")) != "none":
+            continue
+        t = _epoch(r.get("logged_at_utc"))
+        if t is not None:
+            out.append({**r, "_t": t})
+    return out
+
+
 def compare_eq(live: Mapping | None, pkg: Mapping | None) -> tuple[str | None, dict]:
     if pkg is not None and live is None:
         return "ml_missed_package", {"replay_entry": pkg.get("entry")}
@@ -436,6 +449,7 @@ def analyse_ml_eq(leg: Any, bundle: Mapping, since: float, until: float, *,
         return out
     rows = (evals_override if evals_override is not None else sig.get("rows")) or []
     live = _live_eq(list(rows), leg.name)
+    live_none = _live_eq_none(list(rows), leg.name)
     max_age = float(cfg.get("max_snapshot_age_h", 4.0)) * 3600
     divs: list[dict] = []
     bars: list[dict] = []
@@ -466,8 +480,12 @@ def analyse_ml_eq(leg: Any, bundle: Mapping, since: float, until: float, *,
                 divs.append({"class": cls, "bar": snap["bar_close"], "t": (lv.get(s) or {}).get("logged_at_utc"),
                              "symbol": s, "detail": {**det, "snapshot_built_at": snap.get("built_at")}})
         n_cmp += len(set(pk) | set(lv))
+        # a symbol live DECIDED as no-package at this close (audited none row) that the replay also scored without one
+        agreed_none = {str(r.get("symbol")) for r in live_none if lo <= r["_t"] < hi} - set(pk) - set(lv)
+        agreed_none &= {s for s, v in res.items() if not isinstance(v, dict)}
+        n_cmp += len(agreed_none)
         bars.append({"bar": snap["bar_close"], "status": "divergent" if cls_here else ("matched_signal" if pk else "matched_no_signal"),
-                     "replay_packages": len(pk), "live_packages": len(lv), "scored": len(res),
+                     "replay_packages": len(pk), "live_packages": len(lv), "scored": len(res), "agreed_none": len(agreed_none),
                      **({"classes": sorted(set(cls_here))} if cls_here else {})})
     comparable = [x for x in bars if x["status"] != "not_comparable"]
     if not comparable:

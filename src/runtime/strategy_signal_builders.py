@@ -6946,6 +6946,14 @@ def _ml_entry_eq_build(settings: dict, NAME: str, _DECIDED: set) -> Dict[str, An
     except ValueError as exc:
         if str(exc) != "not_a_decision_bar":
             _DECIDED.add(memo)
+            # ML-EQ-NOPKG-AUDIT (2026-11-14): audit the DECIDED no-package close too (once: the memo above), so live-vs-replay
+            # parity can confirm a close where neither side holds a package. Before this only a buy was audited, and a real-money
+            # leg read could_not_check every day (comms/live_parity 11-11..11-14). Observability only; the decision is unchanged.
+            try:
+                log_signal({"event": f"{NAME}_eval", "strategy": NAME, "symbol": symbol, "timeframe": "1h", "side": "none",
+                            "reason": str(exc), "bar_close": str(snap["bar_close"])})
+            except Exception:  # noqa: BLE001
+                logger.exception("%s: audit emit failed", NAME)
         if len(_DECIDED) > 4096:   # prune OLDER bars only: clearing the current bar's memo could re-emit a package already sent this bar
             for _m in [m for m in _DECIDED if m[1] != snap["bar_close"]]:
                 _DECIDED.discard(_m)
