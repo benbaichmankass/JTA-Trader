@@ -8,19 +8,17 @@
   ],
   "legs": [
     "ml_entry_eq",
-    "tlt_pullback_1d",
-    "tlt_pullback_1h"
+    "tlt_pullback_1d"
   ],
   "weights": {
-    "ml_entry_eq": 0.381978,
-    "tlt_pullback_1d": 0.244687,
-    "tlt_pullback_1h": 0.373335
+    "ml_entry_eq": 0.609541,
+    "tlt_pullback_1d": 0.390459
   },
   "inputs": [
     "src/runtime/allocator_ev.py backtest_input (c_bt = 0.5 + expectancy_r_oos, comms/strategy_evidence/<leg>.json, coverage_state measured) -> compute_conviction -> allocation_weights (score_i / sum score); ml_entry_eq c_bt from comms/research/RQ-20261105-e9a1-02/42143223941/measurement.json (no comms/strategy_evidence file)"
   ],
-  "recorded_at": "2026-11-13",
-  "basis": "Refreshed 2026-11-13 for B38CQPVI-0001 (Manager Session 2026-11-13a; operator 2026-11-11 verbatim \"Put qqq and tlt on the paper floor now\"; OPERATING-PLAN \u00a7 2 demo floor): tlt_pullback_1h added. Same method as the 2026-11-06 and qqq-alpaca_paper 2026-11-11 records (operator popups \"Shared ETFs + weights\"; \"Allocator score (Recommended)\"): score = c_bt = 0.5 + expectancy_r_oos, read through src/runtime/allocator_ev.backtest_input (coverage_state measured); weights = score / sum. c_bt = ml_entry_eq 0.5392 (pooled confirming-window +0.0392, comms/research/RQ-20261105-e9a1-02/42143223941/measurement.json), tlt_pullback_1d 0.3454 (expectancy_r_oos -0.1546, comms/strategy_evidence/tlt_pullback_1d.json), tlt_pullback_1h 0.5270 (expectancy_r_oos +0.0270, comms/strategy_evidence/tlt_pullback_1h.json). The 1d leg's c_bt is re-read from its CURRENT evidence file, so its weight moved from the 2026-11-06 record. A negative expectancy_r_oos lowers a leg's share; it is not a gate (a FAIL record does not take a leg off the floor).",
+  "recorded_at": "2026-11-14",
+  "basis": "Refreshed 2026-11-14 for TLT-1H-PROMOTE (OPERATOR popup ~16:28Z, verbatim \"Promote long-only 3.5R (Recommended)\", relayed by Manager Session 2026-11-13a): tlt_pullback_1h left alpaca_paper for alpaca_live + alpaca_portfolio (production is not general paper, OPERATING-PLAN \u00a7 2), so this record returns to its 2-leg form (the B38CQPVI-0001 ROLLBACK shape). Same method as the 2026-11-06 / 2026-11-13 records (operator popups \"Shared ETFs + weights\"; \"Allocator score (Recommended)\"): score = c_bt = 0.5 + expectancy_r_oos, read through src/runtime/allocator_ev.backtest_input (coverage_state measured); weights = score / sum. c_bt = ml_entry_eq 0.5392 (pooled confirming-window +0.0392, comms/research/RQ-20261105-e9a1-02/42143223941/measurement.json), tlt_pullback_1d 0.3454 (expectancy_r_oos -0.1546, comms/strategy_evidence/tlt_pullback_1d.json, generated 2026-11-13). A negative expectancy_r_oos lowers a leg's share; it is not a gate.",
   "population": "Per leg: its own OOS record (comms/strategy_evidence). ml_entry_eq: pooled over the 173-ETF liquidity pool (n 858 trades on 147 symbols, 2025-07-15..2026-10-31), NOT a per-symbol figure.",
   "not_in_basis": "c_strat, c_setup, c_wr, c_reg are stamped per intent at runtime and c_live reads runtime trade_journal.db (VM only), so none was available here. Not read, not invented. ml_entry_eq's expectancy is a mechanics-soak figure (iid t 0.9), pooled not per-symbol; it is not an edge claim. Paper only (Stage 1); real money not decided.",
   "applies_to_runtime": "no. This is the record the guard reads. Live allocation on alpaca_paper is unchanged (election in src/runtime/intents.py); the record changes no config, roster or sizing.",
