@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# wiring: manual-only - a session runs it against the live journal to read the venue-vs-computed P&L gap population (PNL-GROSS-VS-VENUE-6817 clears_when); it changes nothing and gates nothing
 """List every venue-vs-computed P&L gap the journal records (PNL-GROSS-VS-VENUE-6817).
 
 Operator decision w11 (2026-11-12): "Store the venue's always, it is the single source of
