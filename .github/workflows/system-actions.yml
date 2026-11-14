@@ -81,6 +81,7 @@ on:
           - security-posture-report
           - gateway-disk-report
           - gateway-disk-cleanup
+          - host-security-change
           - pull-latest-logs
           - pull-and-deploy
           - restart-bot-service
@@ -932,7 +933,7 @@ jobs:
             status-check|verify-account-mode|disk-usage-report|vm-cpu-sample|list-listening-ports|gateway-logs|gateway-forensics|security-posture-report|gateway-disk-report|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|send-ping|send-prop-test-ping|phone-dry-test|phone-drill|generate-strategy-review-packets|grade-closed-trades|net-r-regrade|get-env|passkey-enrol-code|live-review-dry-run)
               echo "tier=1" >>"$GITHUB_ENV"
               ;;
-            pull-and-deploy|vm-sparse-bootstrap|init-web-session-pepper|install-web-api-deps|cap-vm-logs|gateway-disk-cleanup|set-journal-trade-qty|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|set-bybit-collateral-switch|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|rearm-ib-protective|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|purge-phone-captures|close-api-port|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|prop-report-skip|prop-report-open|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs|relabel-package-close-reasons|backfill-package-risk-meta|relink-orphan-trade-5209|amend-position-sl|amend-prop-bracket|live-review-apply|run-desk-judge)
+            pull-and-deploy|vm-sparse-bootstrap|init-web-session-pepper|install-web-api-deps|cap-vm-logs|gateway-disk-cleanup|host-security-change|set-journal-trade-qty|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|set-bybit-collateral-switch|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|rearm-ib-protective|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|purge-phone-captures|close-api-port|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|prop-report-skip|prop-report-open|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs|relabel-package-close-reasons|backfill-package-risk-meta|relink-orphan-trade-5209|amend-position-sl|amend-prop-bracket|live-review-apply|run-desk-judge)
               echo "tier=2" >>"$GITHUB_ENV"
               if [ -z "${REASON// }" ]; then
                 echo "::error::Tier-2 action '${ACTION}' requires a non-empty 'reason' input."
@@ -1972,6 +1973,13 @@ jobs:
           # uses), to install the new value as secrets.DIAG_READ_TOKEN.
           ROTATE_OLD_DIAG_TOKEN: ${{ env.ACTION == 'init-diag-token' && secrets.DIAG_READ_TOKEN || '' }}
           ROTATE_GH_TOKEN: ${{ env.ACTION == 'init-diag-token' && secrets.BRANCH_PROTECTION_TOKEN || '' }}
+          # host-security-change ONLY (SEC-HOST-CHANGES-1112): the secrets PAT for
+          # keys-runner-rotate/revert, the saved legacy key for keys-runner-revert /
+          # keys-retire-legacy, and the trainer address (fail2ban ignoreip; key split).
+          HSC_GH_TOKEN: ${{ env.ACTION == 'host-security-change' && secrets.BRANCH_PROTECTION_TOKEN || '' }}
+          HSC_LEGACY_KEY: ${{ env.ACTION == 'host-security-change' && secrets.VM_SSH_KEY_LEGACY || '' }}
+          HSC_TRAINER_IP: ${{ env.ACTION == 'host-security-change' && secrets.TRAINER_VM_IP || '' }}
+          HSC_TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
         run: |
           set -euo pipefail
           # Each action maps to ONE script under scripts/ops/. The
@@ -1992,6 +2000,7 @@ jobs:
             security-posture-report)            SCRIPT="security_posture_report.sh" ;;
             gateway-disk-report)                SCRIPT="gateway_disk_report.sh" ;;
             gateway-disk-cleanup)               SCRIPT="gateway_disk_cleanup.sh" ;;
+            host-security-change)               SCRIPT="host_security_change.sh" ;;
             pull-latest-logs)                   SCRIPT="pull_logs.sh" ;;
             pull-and-deploy)                    SCRIPT="pull_and_deploy.sh" ;;
             restart-bot-service)                SCRIPT="restart_bot.sh" ;;
@@ -2783,6 +2792,24 @@ jobs:
           # ⚠️ ::add-mask:: protects the RUN LOG only — action-output.txt is
           # posted verbatim to the issue on a PUBLIC repo, which is why neither
           # script ever prints the value (tests/ops/test_init_diag_token_rotation.py).
+          # host-security-change is ORCHESTRATED FROM THE RUNNER (SEC-HOST-CHANGES-1112):
+          # every step is an ssh from here, dry-run unless apply: true, each with a
+          # revert target; it prints fingerprints, never key material or addresses.
+          if [ "${ACTION}" = "host-security-change" ]; then
+            set +e
+            ACTION_TARGET="${ACTION_TARGET:-}" ACTION_APPLY="${ACTION_APPLY:-}" \
+            GH_TOKEN="${HSC_GH_TOKEN}" LEGACY_KEY_VALUE="${HSC_LEGACY_KEY}" \
+            TRAINER_IP="${HSC_TRAINER_IP}" TRAINER_USER="${HSC_TRAINER_USER}" \
+            SSH_KEY="${HOME}/.ssh/id_rsa" \
+              bash scripts/ops/host_security_change.sh > action-output.txt 2>&1
+            rc=$?
+            set -e
+            echo "exit_code=${rc}" >>"$GITHUB_OUTPUT"
+            echo ">>> host-security-change exit code: ${rc}"
+            cat action-output.txt
+            exit "${rc}"
+          fi
+
           if [ "${ACTION}" = "init-diag-token" ]; then
             NEW_TOKEN_FILE="${RUNNER_TEMP}/diag_new_token"
             ( umask 077; openssl rand -hex 32 | tr -d '\n' > "${NEW_TOKEN_FILE}" )

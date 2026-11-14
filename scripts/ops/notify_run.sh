@@ -140,6 +140,14 @@ case "${action}" in
             *)     result="FAILED to schedule (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;
+    host-security-change)
+        # SEC-HOST-CHANGES-1112: sshd / fail2ban / gateway reboot / ssh key split.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok"; priority="normal" ;;
+            *) result="FAILED (exit ${exit_code}) — see the issue; each target reports its own rollback"; priority="urgent" ;;
+        esac
+        ;;
     enable-closed-flat-invariant|disable-closed-flat-invariant)
         tier=2
         case "${exit_code}" in
