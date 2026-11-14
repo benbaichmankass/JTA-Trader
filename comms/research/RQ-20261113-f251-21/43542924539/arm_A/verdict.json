@@ -1,0 +1,201 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "trend_donchian_avax_4h: 57 trades in the baseline arm 'A' on AVAXUSDT 4h candles 2025-11-13T00:00:00 .. 2026-11-12T20:00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A']",
+  "n": 57,
+  "measurement": {
+    "leg": "trend_donchian_avax_4h",
+    "label": "stage0_no_edge",
+    "grade": {
+      "verdict": "fail",
+      "label": "stage0_no_edge",
+      "baseline": "A",
+      "net_r": -16.1778,
+      "n": 57,
+      "max_drawdown_r": 23.8902,
+      "folds_positive": 1,
+      "n_folds": 4,
+      "fold_majority": 3,
+      "n_floor": 20,
+      "control": null,
+      "why": "net_r=-16.1778 with 1/4 positive folds (needs > 0 and >= 3)"
+    },
+    "arms": {
+      "A": {
+        "reach_ge_6r": 0.0,
+        "n": 57,
+        "net_r": -16.1778,
+        "net_r_fee_only": -14.9181,
+        "max_drawdown_r": 23.8902,
+        "by_outcome": {
+          "stop": 38,
+          "take_profit": 9,
+          "trail_stop": 10
+        },
+        "mean_bars_held": 6.895,
+        "net_r_per_capital_day": -0.247,
+        "cost_stack": {
+          "fee_bps_roundtrip": 11.0,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": {
+          "donchian": 20,
+          "atr_stop_mult": 1.5,
+          "trail_mult": 5.0,
+          "min_confidence": 0.0,
+          "trail_decay_arm_r": 0.0,
+          "trail_decay_stall_bars": 6,
+          "trail_decay_tight_mult": 2.5
+        },
+        "data_start": "2025-11-13 00:00:00+00:00",
+        "data_end": "2026-11-12 20:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2025-11-13 00:00:00+00:00",
+            "end": "2026-02-12 05:00:00+00:00",
+            "trades": 7,
+            "net_r": 7.4851
+          },
+          {
+            "fold": 2,
+            "start": "2026-02-12 05:00:00+00:00",
+            "end": "2026-05-14 10:00:00+00:00",
+            "trades": 13,
+            "net_r": -11.2169
+          },
+          {
+            "fold": 3,
+            "start": "2026-05-14 10:00:00+00:00",
+            "end": "2026-08-13 15:00:00+00:00",
+            "trades": 15,
+            "net_r": -4.639
+          },
+          {
+            "fold": 4,
+            "start": "2026-08-13 15:00:00+00:00",
+            "end": "2026-11-12 20:00:00+00:00",
+            "trades": 22,
+            "net_r": -7.8073
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "AVAXUSDT",
+          "--resample",
+          "4h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "1.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.7",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261113-f251-21/43542924539/arm_A/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261113-f251-21/43542924539/arm_A/arms/A__bt.json",
+          "--trail-decay-stall-bars",
+          "6",
+          "--trail-decay-tight-mult",
+          "2.5",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--decision-bar",
+          "forming",
+          "--minutes-1m-csv",
+          "<minutes_1m>",
+          "--strategy-name",
+          "trend_donchian_avax_4h",
+          "--start",
+          "2025-11-13T00:00:00",
+          "--end",
+          "2026-11-12T20:00:00"
+        ]
+      }
+    },
+    "window": {
+      "start": "2025-11-13T00:00:00",
+      "end": "2026-11-12T20:00:00",
+      "fetch_days": 800,
+      "feed": {
+        "source": "binance",
+        "ticker": "AVAXUSDT",
+        "interval": "240",
+        "resample": "4h"
+      },
+      "fold_edges": [
+        "2025-11-13 00:00:00+00:00",
+        "2026-02-12 05:00:00+00:00",
+        "2026-05-14 10:00:00+00:00",
+        "2026-08-13 15:00:00+00:00",
+        "2026-11-12 20:00:00+00:00"
+      ]
+    },
+    "argv": {
+      "A": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "AVAXUSDT",
+          "--resample",
+          "4h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "1.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.7",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261113-f251-21/43542924539/arm_A/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261113-f251-21/43542924539/arm_A/arms/A__bt.json",
+          "--trail-decay-stall-bars",
+          "6",
+          "--trail-decay-tight-mult",
+          "2.5",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--decision-bar",
+          "forming",
+          "--minutes-1m-csv",
+          "<minutes_1m>",
+          "--strategy-name",
+          "trend_donchian_avax_4h",
+          "--start",
+          "2025-11-13T00:00:00",
+          "--end",
+          "2026-11-12T20:00:00"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": []
+      }
+    }
+  },
+  "note": "FAIL / stage0_no_edge: net_r=-16.1778 with 1/4 positive folds (needs > 0 and >= 3)"
+}
