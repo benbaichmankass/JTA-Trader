@@ -16690,6 +16690,13 @@ _VENUE_PNL_READS_PER_TICK = 4
 #: ``venue_unmatched`` (a diagnosis item) instead of being re-asked every tick.
 _VENUE_PNL_UNMATCHED_AFTER_MS = 24 * 3600 * 1000
 _VENUE_FILL_EXIT_SOURCES = frozenset({"exchange_fill", "exchange", "broker_leg_fill"})
+#: A (account, symbol, close-hour) window read this recently is served from the last result instead of
+#: re-read. Without it, rows still waiting for their venue record (newest first in the scan) re-read the
+#: same windows every tick and took the whole read budget: after the 2026-11-14 17:36Z deploy, 8 rows
+#: classified by 17:40Z and then none, with 87 Bybit rows from the last 7 days left unclassified and
+#: ``budget_deferred`` 46 per tick. It makes FEWER venue calls, never a delay on one.
+_VENUE_PNL_READ_TTL_MS = 10 * 60 * 1000
+_VENUE_PNL_READ_CACHE: Dict[Tuple[str, str, int], Tuple[int, Optional[Dict[str, Any]]]] = {}
 
 
 def _sweep_venue_net_pnl(
@@ -16774,17 +16781,24 @@ def _sweep_venue_net_pnl(
                 hour = int(closed_ms // 3_600_000)
                 key = (str(row["account_id"]), str(row.get("symbol") or ""), hour)
                 if key not in cache:
-                    if budget[0] <= 0:
-                        summary["budget_deferred"] += 1
-                        continue
-                    budget[0] -= 1
-                    try:
-                        cache[key] = bybit_reader(
-                            cfg, symbol=str(row.get("symbol") or ""),
-                            start_ms=(hour - 2) * 3_600_000, end_ms=(hour + 3) * 3_600_000)
-                    except Exception as exc:  # noqa: BLE001
-                        logger.warning("_sweep_venue_net_pnl: read %s: %s", key, exc)
-                        cache[key] = None
+                    held = _VENUE_PNL_READ_CACHE.get(key)
+                    if held is not None and now_ms - held[0] < _VENUE_PNL_READ_TTL_MS and held[1] is not None:
+                        cache[key] = held[1]                 # read within the TTL: no new venue call
+                    else:
+                        if budget[0] <= 0:
+                            summary["budget_deferred"] += 1
+                            continue
+                        budget[0] -= 1
+                        try:
+                            cache[key] = bybit_reader(
+                                cfg, symbol=str(row.get("symbol") or ""),
+                                start_ms=(hour - 2) * 3_600_000, end_ms=(hour + 3) * 3_600_000)
+                        except Exception as exc:  # noqa: BLE001
+                            logger.warning("_sweep_venue_net_pnl: read %s: %s", key, exc)
+                            cache[key] = None
+                        got0 = cache[key]
+                        if isinstance(got0, dict) and got0.get("query_state") != "could_not_look":
+                            _VENUE_PNL_READ_CACHE[key] = (now_ms, got0)   # a failed read is never held
                 got = cache[key]
                 if not isinstance(got, dict) or got.get("query_state") == "could_not_look":
                     summary["retry"] += 1

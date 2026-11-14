@@ -22,6 +22,14 @@ from src.runtime.net_r_label import _NET_PNL_BASES, net_r_for_trade
 from src.units.db.database import _migrate_add_pnl_basis
 
 
+@pytest.fixture(autouse=True)
+def _fresh_read_cache():
+    """The cross-tick read cache is module state: every test starts with it empty."""
+    om._VENUE_PNL_READ_CACHE.clear()
+    yield
+    om._VENUE_PNL_READ_CACHE.clear()
+
+
 def _db(tmp_path):
     path = tmp_path / "j.db"
     c = sqlite3.connect(path)
@@ -271,3 +279,44 @@ def test_a_row_the_sweep_adds_nothing_to_keeps_its_notes_byte_for_byte(tmp_path)
     om._sweep_venue_net_pnl(db, cfgs=CFGS, bybit_reader=_reader([]))
     r, _ = _get(path, 6817)
     assert r["pnl_basis"] == "venue_fills_net" and r["notes"] == raw
+
+
+def test_rows_still_waiting_do_not_starve_the_older_backlog(tmp_path):
+    """2026-11-14 17:36Z deploy: the 4 newest unmatched rows re-read their windows every tick and took the
+    whole 4-read budget, so older rows sat budget_deferred (8 classified, then none, 87 left). A window read
+    within the TTL is served from the last result, so the budget reaches the older rows on the next tick."""
+    db, path = _db(tmp_path)
+    now = _dt.datetime.now(_dt.timezone.utc)
+    for i in range(4):          # newest: four different close-hours, no venue record yet (retry)
+        _add(path, id=100 + i, sl_order_id=f"none-{i}", tp_order_id=None,
+             closed_at=(now - _dt.timedelta(hours=1 + i)).isoformat())
+    old = []
+    for i in range(2):          # older: their own close order IS in the venue records
+        r = _add(path, id=200 + i, sl_order_id=f"own-{i}", tp_order_id=None,
+                 closed_at=(now - _dt.timedelta(hours=8 + i)).isoformat())
+        old.append(r)
+    calls = []
+
+    def read(cfg, *, symbol, start_ms, end_ms):
+        calls.append(start_ms)
+        recs = []
+        for i, r in enumerate(old):
+            ms = om._isoformat_to_ms(r["closed_at"])
+            if start_ms <= ms <= end_ms:
+                recs.append({"order_id": f"own-{i}", "side": "Sell", "qty": "74160", "closed_pnl": "-888.3",
+                             "updated_time": str(ms)})
+        return {"query_state": "rows_returned" if recs else "no_rows", "records": recs}
+
+    s1 = om._sweep_venue_net_pnl(db, cfgs=CFGS, bybit_reader=read)
+    assert s1["budget_deferred"] >= 1 and all(_get(path, 200 + i)[0]["pnl_basis"] is None for i in range(2))
+    s2 = om._sweep_venue_net_pnl(db, cfgs=CFGS, bybit_reader=read)
+    assert all(_get(path, 200 + i)[0]["pnl_basis"] == "venue_net" for i in range(2)), (s1, s2)
+    assert all(_get(path, 100 + i)[0]["pnl_basis"] is None for i in range(4))   # still waiting, untouched
+
+
+def test_a_failed_read_is_never_held_in_the_cache(tmp_path):
+    db, path = _db(tmp_path)
+    _add(path)
+    om._sweep_venue_net_pnl(db, cfgs=CFGS, bybit_reader=lambda *a, **k: None)
+    om._sweep_venue_net_pnl(db, cfgs=CFGS, bybit_reader=_reader([], state="could_not_look"))
+    assert om._VENUE_PNL_READ_CACHE == {}
