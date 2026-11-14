@@ -1069,6 +1069,34 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261114-db1a-05
   lever_family: exit
+- family: sizing_vs_cost (atr_stop_mult)
+  varied: arm A config-exact (atr_stop_mult 2.5) vs W (3.125), forming decision bar, record 2025-11-13..2026-11-12 + year before, full cost stack
+  response:
+    verdict: fail
+    run: '43598998356'
+    rule: RULE-TD1H-ATRSTOP3125-20261114
+    arm_W: atr_stop_mult 3.125 (baseline 2.5)
+    record:
+      A_net_r: -19.6552
+      A_n: 183
+      X_net_r: -14.5432
+      X_n: 159
+      X_folds_positive: 1
+      X_n_folds: 4
+      X_stage0: false
+      X_beats_A: true
+    prior:
+      A_net_r: -7.8577
+      A_n: 171
+      X_net_r: -8.5506
+      X_n: 153
+      holds: false
+    reading: 'FAIL: W -14.54R n159 (1/4 folds) vs A -19.66R on the record year; year before W -8.55R vs A -7.86R. The closed-bar +9.70R response
+      (RQ-20261106-024) does not transfer to the forming bar: it narrows the record-year loss but stays negative and is worse the year before.'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-07
+  lever_family: sizing_vs_cost
 units:
 - RQ-20261113-f251-05
 - RQ-20261113-f251-17
@@ -1076,6 +1104,7 @@ units:
 - RQ-20261114-db1a-03
 - RQ-20261114-db1a-04
 - RQ-20261114-db1a-05
+- RQ-20261114-db1a-07
 manifest_notes:
   census_2026_11_13: 'DEMO-FLOOR-ITER lever-family census (AM-ML 21:08Z), forming record 2025-11-01..2026-10-31: -10.57R over n 184 (gross +15.4R,
     cost 26.0R; ledger read by scripts/research/leg_r_diagnosis.py, run 43447401545).'
@@ -1107,3 +1136,15 @@ manifest_notes:
   next_2026_11_14: 'SUPERSEDES next. NOT lever-exhausted: the sizing_vs_cost family is untested and is the diagnosed cause. Candidate unit: atr_stop_mult
     3.125 on the live bar, record + the year before, same AM-ML guard. Caveat from db1a-01/-02: lever responses on these legs often flip sign
     between years. No retirement proposal; manager decides.'
+  next_2026_11_14b: 'SUPERSEDES next_2026_11_14. RQ-20261114-db1a-07 (atr_stop_mult 3.125, forming bar) FAIL: record -14.54R n159 1/4 vs A -19.66R; year before
+    -8.55R vs A -7.86R. On the live bar this leg has now failed timeframe (f251-05), regime off-cell (f251-17), ADX cell (db1a-02), harness-native HTF gate
+    (db1a-04), profit lock (db1a-05) and sizing_vs_cost (db1a-07). CORRECTION: structure_exit is NOT untested: the live config already runs with it off (RQ-20261104-005
+    NOSX +14.5R vs pivot=5, applied), and re-adding pivot=5 failed (RQ-20261112-4654-05). Only entry remains, with no diagnostic pointer. The diagnosed families
+    are exhausted on the live bar; the manager decides between a retirement proposal (to the operator first) and keep_demo.'
+  lever_exhaustion_2026_11_14: 'LEVER-EXHAUSTION NOTE (2026-11-14, manager ruling 13:25Z; no retirement PR, the manager puts keep_demo vs retire to the operator).
+    Live (forming) bar, record 2025-11-13..2026-11-12 -19.66R n183, year before -7.86R n171: negative in BOTH years. Attribution: ''cost erases a gross edge''
+    (+15.39R gross vs 25.96R cost, n184). Failed on the live bar: timeframe (RQ-20261113-f251-05), regime off-cell chop (f251-17), pooled ADX cell (RQ-20261114-db1a-02),
+    harness-native HTF SMA200 long gate (db1a-04: -11.25R / -23.24R), conditional profit lock (db1a-05 L2: -5.25R / -10.22R vs A), sizing_vs_cost atr_stop_mult
+    3.125 (db1a-07: -14.54R n159 1/4 / -8.55R). Already applied and not re-testable: structure_exit off (removed 2026-11-05 on RQ-20261105-5e05-03; re-adding
+    pivot=5 failed, RQ-20261112-4654-05). Untested: entry, with no diagnostic pointer (AM-ML guard: no unit without a diagnosis). Closed-bar responders do
+    not transfer to this leg''s forming bar (db1a-01, db1a-07). The leg is on the bybit_1 demo floor only.'
