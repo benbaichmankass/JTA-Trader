@@ -786,7 +786,8 @@ def test_accounts_yaml_alpaca_paper_ships_inert():
         "qqq_pullback_1h",
         # 2026-11-13 B38CQPVI-0001 (Tier-3, paper; operator 2026-11-11 "Put qqq and tlt on the paper floor now" +
         # OPERATING-PLAN § 2 demo floor): TLT / SPY splits by comms/same_symbol_allocation/{tlt,spy}-alpaca_paper.json.
-        "tlt_pullback_1h",
+        # 2026-11-14 TLT-1H-PROMOTE (Tier 3; operator popup "Promote long-only 3.5R (Recommended)"): tlt_pullback_1h left
+        # this floor for alpaca_live + alpaca_portfolio (production is not general paper, OPERATING-PLAN § 2).
         "spy_pullback_1h",
         # 2026-10-27 DESK-PAPER-ACCOUNTS (Tier-3, paper): the Claude desk leg, scoped to SPY/QQQ/IWM/GLD/TLT.
         "claude_desk",
