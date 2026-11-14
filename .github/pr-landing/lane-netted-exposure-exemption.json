@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Operator decision 2026-11-12, decisions page w15: \"Yes: exempt net-reducing orders on netted venues\" (recorded on row ZERO-QTY-EXPOSURE-EXPLAIN). On IB only, the gross-exposure gate and the position_size headroom clamp work on the change in absolute net position: an order against a held opposite position needs no headroom for its reducing units; units past flat are clamped as before. Non-netted venues, an unreadable net, a flat symbol and same-side adds are unchanged. Adds no gate.",
+  "hold_text": "Tier-2 (order path, risk sizing): manager merges. Post-merge check: the next ib_paper entry against a held opposite position while the account is at/over 1.5x equity is sized >0 (up to the held qty) instead of 'GROSS_EXPOSURE_CAP' / exposure_ceiling. Revert: git revert."
+}
