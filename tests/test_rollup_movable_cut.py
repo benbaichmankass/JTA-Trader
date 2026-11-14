@@ -237,7 +237,7 @@ def test_measured_state_2026_08_17():
     # column already pinned above.
     # 108 -> 106 on 2026-10-28: gld_pullback_1h retired by record (STRATEGY-STATUS-MODEL, operator Q4); its two
     # pending tp cells (tp_extend, tp_retarget) left the live population.
-    assert len(movable) == 116   # 106 -> 116 on 2026-10-30 (E4-DEMO-LEG: 10 harness_gap cells of e4_oi_shock_1h); 74 -> 102 on 2026-10-27 (12 legs shadow -> live, DEMO-FLOOR RULE); 102 -> 108 on 2026-10-28 (trend_donchian_1h row: 6 pending cells)
+    assert len(movable) == 114   # 116 -> 114 on 2026-11-14 (avax_pullback_2h retired by record, HELD PR claude/avax-pb-retire-held: its 2 movable cells leave); 106 -> 116 on 2026-10-30 (E4-DEMO-LEG: 10 harness_gap cells of e4_oi_shock_1h); 74 -> 102 on 2026-10-27 (12 legs shadow -> live, DEMO-FLOOR RULE); 102 -> 108 on 2026-10-28 (trend_donchian_1h row: 6 pending cells)
     #
     # E65 (2026-09-24, PR #12868): 4 -> 2. The `exit_ladder` cells on
     # trend_donchian_eth_prop and trend_donchian_sol_prop RESOLVED to
@@ -282,7 +282,7 @@ def test_internal_keys_are_not_printed_as_buckets():
     # ...while the measured count IS rendered (0 since the 2026-09-29
     # out_of_scope_family correction, 1 since the 2026-09-29
     # regime_flip_exit resolution; see test_measured_state_2026_08_17 above).
-    assert "MOVABLE BY A SESSION: 116" in text   # 106 -> 116 on 2026-10-30 (E4-DEMO-LEG); 108 -> 106 on 2026-10-28 (gld_pullback_1h retired); 0 before GEOM-B1 added the two tp columns; 76 -> 73 on 2026-10-18 (three tp cells resolved); 73 -> 74 on 2026-10-22 (xrp_adx25 soak alias mirrors the incumbent tp_extend pending cell)
+    assert "MOVABLE BY A SESSION: 114" in text   # 116 -> 114 on 2026-11-14 (avax_pullback_2h retired by record); 106 -> 116 on 2026-10-30 (E4-DEMO-LEG); 108 -> 106 on 2026-10-28 (gld_pullback_1h retired); 0 before GEOM-B1 added the two tp columns; 76 -> 73 on 2026-10-18 (three tp cells resolved); 73 -> 74 on 2026-10-22 (xrp_adx25 soak alias mirrors the incumbent tp_extend pending cell)
     assert "NO SWEEP PATH AT ALL: 6" in text   # 4 -> 6 on 2026-10-30 (E4-DEMO-LEG)
 
 
