@@ -70,3 +70,74 @@ def test_research_slo_is_kept_planted_and_clean():
     assert t["stale_hours"] == 3
     assert t["self_dedupes"]
     assert "research-slo-not-a-real-workflow.yml" not in sk.TARGETS
+
+
+def _http_err(code):
+    import urllib.error
+    return urllib.error.HTTPError("https://api.github.com/x", code, "err", {}, None)
+
+
+class _Resp:
+    def __init__(self, body):
+        self.body = body
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def read(self):
+        return self.body
+
+
+def test_api_retries_a_transient_502_then_succeeds(monkeypatch):
+    """Run 43598757422 (2026-11-14): one GitHub 502 crashed the keep pass. It is now retried."""
+    calls = []
+
+    def fake(req, timeout):
+        calls.append(req.full_url)
+        if len(calls) < 3:
+            raise _http_err(502)
+        return _Resp(b'{"ok": 1}')
+    monkeypatch.setenv("GH_TOKEN", "x")
+    monkeypatch.setattr(sk.urllib.request, "urlopen", fake)
+    monkeypatch.setattr(sk, "_sleep", lambda s: None)
+    assert sk._api("/x") == {"ok": 1} and len(calls) == 3
+
+
+def test_api_does_not_retry_a_real_4xx_and_gives_up_after_bounded_attempts(monkeypatch):
+    import pytest
+    calls = []
+    monkeypatch.setenv("GH_TOKEN", "x")
+    monkeypatch.setattr(sk, "_sleep", lambda s: None)
+    monkeypatch.setattr(sk.urllib.request, "urlopen", lambda req, timeout: calls.append(1) or (_ for _ in ()).throw(_http_err(404)))
+    with pytest.raises(Exception):
+        sk._api("/x")
+    assert len(calls) == 1
+    calls.clear()
+    monkeypatch.setattr(sk.urllib.request, "urlopen", lambda req, timeout: calls.append(1) or (_ for _ in ()).throw(_http_err(503)))
+    with pytest.raises(Exception):
+        sk._api("/x")
+    assert len(calls) == sk.API_ATTEMPTS
+
+
+def test_keep_skips_one_unreadable_target_and_finishes_the_pass(monkeypatch, tmp_path, capsys):
+    targets = list(sk.TARGETS)
+    bad = targets[0]
+
+    def runs(wf):
+        if wf == bad:
+            raise _http_err(502)
+        return []
+    out = tmp_path / "out"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(out))
+    monkeypatch.setattr(sk, "_runs", runs)
+    monkeypatch.setattr(sk, "_api", lambda *a, **k: None)
+    rc = sk.cmd_keep(type("A", (), {"dry_run": True})())
+    text = capsys.readouterr().out
+    assert rc == 0
+    assert f"could_not_look: {bad}" in text
+    for wf in targets[1:]:
+        assert f"{wf}: slot" in text            # every other target was still decided
+    assert f"could_not_look={bad}" in out.read_text()
