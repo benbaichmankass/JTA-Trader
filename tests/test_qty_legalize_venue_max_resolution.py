@@ -42,7 +42,12 @@ from src.units.accounts import qty_legalize
 from src.units.accounts.qty_legalize import legalize_qty
 
 # bybit_1 as configured: `market_type: linear` (config/accounts.yaml).
-BYBIT_1 = {"exchange": "bybit", "market_type": "linear", "account_id": "bybit_1"}
+# `demo: true` is load-bearing since 2026-11-12: the AVAXUSDT ceiling is scoped
+# to the venue it was measured on (`max_qty_venue: demo`).
+BYBIT_1 = {"exchange": "bybit", "market_type": "linear", "account_id": "bybit_1",
+           "demo": True}
+# A non-demo Bybit account (production venue), e.g. bybit_2.
+BYBIT_PROD = {"exchange": "bybit", "market_type": "linear", "account_id": "bybit_2"}
 
 REJECTED_QTY = 22_995.1   # what went on the wire
 AVAX_VENUE_MAX = 22_000.0  # what Bybit's own error names as the cap
@@ -221,3 +226,86 @@ def test_a_live_absent_ceiling_is_not_overridden_by_the_profile():
     assert r.venue_max_state == "absent"
     assert r.venue_max is None
     assert r.clamped is False and r.qty == pytest.approx(REJECTED_QTY)
+
+
+# --- venue scope of the profile ceiling (ORDER-PATH-RESIDUE-2) -------------
+# BL-20260903-AVAX-VENUE-MAX-CEILING-MEASURED-ON-DEMO-BUT-SYMBOL-SCOPED: the
+# 22000 was measured on Bybit's DEMO venue. A production account resolving
+# AVAXUSDT on a MISSED live lookup must not inherit it.
+
+def test_demo_measured_ceiling_is_not_a_production_fallback():
+    r = legalize_qty(
+        REJECTED_QTY, account_cfg=BYBIT_PROD, symbol="AVAXUSDT",
+        client=_DeadInstrumentsClient(), prefer_live=True,
+    )
+    assert r.venue_max is None
+    assert r.venue_max_state == "could_not_look"
+    assert r.qty != AVAX_VENUE_MAX
+
+
+def test_demo_measured_ceiling_still_serves_the_demo_account():
+    r = legalize_qty(
+        REJECTED_QTY, account_cfg=BYBIT_1, symbol="AVAXUSDT",
+        client=_DeadInstrumentsClient(), prefer_live=True,
+    )
+    assert r.venue_max == AVAX_VENUE_MAX and r.clamped is True
+
+
+def test_unstated_venue_scope_applies_to_every_account():
+    """Back-compat: a profile that does not state `max_qty_venue` serves all."""
+    from src.core.instrument_profile import InstrumentProfile
+    prof = InstrumentProfile(symbol="ZZZUSDT", exchange="bybit", category="linear",
+                             base_asset="ZZZ", quote_currency="USDT",
+                             settlement_currency="USDT", tick_size=0.001,
+                             qty_step=0.1, min_qty=0.1, max_qty=500.0)
+    r = legalize_qty(1000.0, account_cfg=BYBIT_PROD, symbol="ZZZUSDT",
+                     client=None, profiles={"ZZZUSDT": prof})
+    assert r.venue_max == 500.0 and r.venue_max_state == "published"
+
+
+def test_production_scoped_ceiling_is_not_served_to_demo():
+    from src.core.instrument_profile import InstrumentProfile
+    prof = InstrumentProfile(symbol="ZZZUSDT", exchange="bybit", category="linear",
+                             base_asset="ZZZ", quote_currency="USDT",
+                             settlement_currency="USDT", tick_size=0.001,
+                             qty_step=0.1, min_qty=0.1, max_qty=500.0,
+                             max_qty_venue="production")
+    demo = legalize_qty(1000.0, account_cfg=BYBIT_1, symbol="ZZZUSDT",
+                        client=None, profiles={"ZZZUSDT": prof})
+    prod = legalize_qty(1000.0, account_cfg=BYBIT_PROD, symbol="ZZZUSDT",
+                        client=None, profiles={"ZZZUSDT": prof})
+    assert demo.venue_max is None and demo.venue_max_state == "could_not_look"
+    assert prod.venue_max == 500.0
+
+
+def test_the_yaml_states_the_avax_measurement_venue():
+    from src.core.profile_loader import load_instrument_profiles
+    assert load_instrument_profiles()["AVAXUSDT"].max_qty_venue == "demo"
+
+
+# --- a missed ceiling lookup never refuses (no-new-gates; AM 2026-11-12) ----
+
+def test_missing_max_qty_still_places_the_order_at_normal_size():
+    """A live production account whose ceiling lookup misses AND whose profile
+    ceiling does not apply must still get an order at the risk-sized qty."""
+    normal = 22_995.1
+    r = legalize_qty(normal, account_cfg=BYBIT_PROD, symbol="AVAXUSDT",
+                     client=_DeadInstrumentsClient(), prefer_live=True)
+    assert r.ok is True
+    assert r.qty == normal and float(r.qty_str) == normal
+    assert r.clamped is False
+    assert r.venue_max_state == "could_not_look"
+
+
+def test_could_not_look_is_recorded_as_an_unverified_label_only():
+    from src.runtime.provenance import UNVERIFIED
+    from src.units.accounts.execute import venue_max_label
+    r = legalize_qty(100.0, account_cfg=BYBIT_PROD, symbol="AVAXUSDT",
+                     client=_DeadInstrumentsClient(), prefer_live=True)
+    assert r.ok is True and r.qty == 100.0
+    assert venue_max_label(r) == {"venue_max": {
+        "state": "could_not_look", "provenance": UNVERIFIED,
+        "source": "instrument_profile"}}
+    published = legalize_qty(100.0, account_cfg=BYBIT_1, symbol="AVAXUSDT",
+                             client=_DeadInstrumentsClient(), prefer_live=True)
+    assert venue_max_label(published) is None

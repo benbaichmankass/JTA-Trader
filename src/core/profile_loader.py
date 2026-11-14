@@ -92,6 +92,11 @@ def load_instrument_profiles(
                     if data.get("max_qty") not in (None, "")
                     else None
                 ),
+                max_qty_venue=(
+                    str(data["max_qty_venue"]).strip().lower()
+                    if data.get("max_qty_venue") not in (None, "")
+                    else None
+                ),
             )
         return profiles
     except FileNotFoundError:
