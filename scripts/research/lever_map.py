@@ -135,7 +135,7 @@ def _fill_adx(trades: list[dict[str, Any]], bars_csv: str) -> tuple[list[dict[st
         df = pd.DataFrame({"entry_time": pd.to_datetime([r.get("entry_time") for r in trades], utc=True),
                            "adx_at_entry": pd.to_numeric([r.get("adx_at_entry") for r in trades], errors="coerce")})
         src = lrd.attach_adx(df, bars_csv)
-    except Exception as exc:  # noqa: BLE001 -- an unreadable bars file leaves the rows as they were, and says so
+    except (OSError, ValueError, KeyError, IndexError) as exc:  # allow-silent: not silent -- the failure is reported in adx_source and the rows stay unknown
         return trades, f"unavailable: {type(exc).__name__} reading {Path(bars_csv).name}"
     out = []
     for r, v in zip(trades, df["adx_at_entry"].tolist()):
@@ -147,14 +147,21 @@ def _fill_adx(trades: list[dict[str, Any]], bars_csv: str) -> tuple[list[dict[st
 
 def _bars_for(root: Path, src: str | None) -> Path | None:
     """The bars a committed run used, when they were committed beside its ledger: a ``data/`` or ``candles/`` CSV, or a
-    ``*__data.csv``, searched from the ledger's directory up to its run directory (at most 3 levels). None when absent."""
+    ``*__data.csv``, searched from the ledger's directory up to its run directory (at most 3 levels).
+
+    Only an UNAMBIGUOUS match is used: exactly one candidate at the nearest level that has any. Two or more (e.g. a run
+    that stored several timeframes) return None rather than guess, so the ADX stays "unknown" instead of being read off
+    the wrong bars. The chosen file's name is reported in the map's ``adx_source`` (via ``_fill_adx``)."""
     if not src:
         return None
     d = (root / src).parent
     for _ in range(4):
-        hits = sorted([*d.glob("data/*.csv"), *d.glob("candles/*.csv"), *d.glob("*__data.csv")])
-        if hits:
+        # provenance: _fill_adx — the one chosen file is named in adx_source; an ambiguous level returns None
+        hits = [*d.glob("data/*.csv"), *d.glob("candles/*.csv"), *d.glob("*__data.csv")]
+        if len(hits) == 1:
             return hits[0]
+        if len(hits) > 1:
+            return None
         if d == root or d.name in ("research", "runs"):
             break
         d = d.parent
@@ -415,7 +422,6 @@ def _self_test() -> int:
     check("attribution: a loser that reached 1R MFE is counted", a["exit_capture"]["losers_that_reached_1r_mfe"] == 1)
     check("attribution: split by year and ADX bucket", set(a["by_year"]) == {"2024", "2025"} and "30-40" in a["by_adx_at_entry"])
     # ADX from the run's bars when the ledger lacks it (the harnesses record it only under an ADX gate).
-    import math
     import tempfile
     with tempfile.TemporaryDirectory() as td:
         bars = Path(td) / "bars.csv"
@@ -439,6 +445,8 @@ def _self_test() -> int:
         check("bars lookup: a data/ CSV beside the ledger is found",
               (lambda r: (r / "runs/x/data").mkdir(parents=True) or (r / "runs/x/data/B.csv").write_text("t") or
                (r / "runs/x/arms").mkdir() or _bars_for(r, "runs/x/arms/A__trades.jsonl") == r / "runs/x/data/B.csv")(Path(td)))
+        check("bars lookup: two candidate bar files -> None (never guess which)",
+              (lambda r: (r / "runs/x/data/C.csv").write_text("t") or _bars_for(r, "runs/x/arms/A__trades.jsonl") is None)(Path(td)))
     rec = {"research_unit": "RQ-x", "verdict": "fail", "measurement": {"leg": "L", "grade": {"baseline": "A"}, "arms": {
         "A": {"argv": ["py", "h.py", "--data", "d", "--adx-min", "25", "--tp-r", "3"], "n": 100, "net_r": 10.0,
               "folds": [{"net_r": 1}, {"net_r": 2}]},
