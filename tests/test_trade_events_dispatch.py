@@ -97,3 +97,35 @@ def test_notify_never_raises(monkeypatch: pytest.MonkeyPatch) -> None:
 
     # Must not raise.
     trade_events.notify_trade_event("trade_closed", {"symbol": "BTCUSDT"})
+
+
+def _close_payload(monkeypatch, tmp_path, pnl):
+    from src.units.db import database as db_module
+    db = db_module.Database(db_path=str(tmp_path / "j.db"))
+    seen = []
+    monkeypatch.setattr(trade_events, "notify_trade_event", lambda kind, p: seen.append((kind, p)))
+    monkeypatch.setattr(db, "_fire_trade_opened_event", lambda tid: None)
+    tid = db.insert_trade({"timestamp": "2026-11-14T10:00:00+00:00", "symbol": "ADAUSDT", "direction": "short", "entry_price": 0.1784, "position_size": 153220.0,
+                           "status": "open", "strategy_name": "ada", "account_id": "bybit_portfolio",
+                           "account_class": "paper", "is_backtest": 0})
+    upd = {"status": "closed", "exit_price": 0.1607, "exit_reason": "tp"}
+    if pnl is not None:
+        upd["pnl"] = pnl
+    db.update_trade(tid, upd)
+    closes = [p for k, p in seen if k == trade_events.TRADE_CLOSED]
+    assert len(closes) == 1
+    return closes[0]
+
+
+def test_close_alert_estimates_pnl_when_the_close_path_left_it_to_the_sweep(monkeypatch, tmp_path):
+    """Trade 7003 (2026-11-14): the netting own-leg close wrote no pnl, so the alert read 'PnL —'."""
+    p = _close_payload(monkeypatch, tmp_path, None)
+    assert p["pnl_estimated"] is True and abs(p["pnl"] - 2711.994) < 1e-6 and p["pnl_percent"] is not None
+    assert "PnL 2,711.994" in trade_events.format_trade_event_message(trade_events.TRADE_CLOSED, p)
+    assert " est" in trade_events.format_trade_event_message(trade_events.TRADE_CLOSED, p)
+
+
+def test_close_alert_keeps_a_journal_pnl_and_never_labels_it_est(monkeypatch, tmp_path):
+    p = _close_payload(monkeypatch, tmp_path, 2700.0)
+    assert p["pnl"] == 2700.0 and p["pnl_estimated"] is False
+    assert " est" not in trade_events.format_trade_event_message(trade_events.TRADE_CLOSED, p)

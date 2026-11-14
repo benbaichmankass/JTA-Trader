@@ -1355,7 +1355,7 @@ class Database:
             cur = conn.execute(
                 "SELECT symbol, direction, pnl, pnl_percent, exit_reason, "
                 "strategy_name, account_id, is_backtest, is_demo, account_class, "
-                "order_package_id "
+                "order_package_id, entry_price, exit_price, position_size "
                 "FROM trades WHERE id = ?",
                 (trade_id,),
             )
@@ -1370,14 +1370,34 @@ class Database:
         # consumer can tag the message [paper] / [live].
         if row["is_backtest"]:
             return
+        pnl, pnl_pct, pnl_estimated = row["pnl"], row["pnl_percent"], False
+        if pnl is None:
+            # Most flat-finalise paths (e.g. order_monitor._netting_close_from_own_leg) close the row and
+            # leave pnl to the later PnL sweep, so the alert read NULL and printed "PnL —" (trade 7003,
+            # bybit_portfolio ADA TP 2026-11-14 13:04Z; the journal got 2711.994 a pass later). The alert
+            # shows a gross local estimate, labelled est; the journal row is not touched here.
+            try:
+                from src.runtime import local_pnl
+                cvu = local_pnl.contract_value_usd_for(row["symbol"])
+                est = local_pnl.compute_realized_pnl(
+                    entry_price=row["entry_price"], exit_price=row["exit_price"],
+                    qty=row["position_size"], direction=row["direction"], contract_value_usd=cvu)
+                if est is not None:
+                    pnl, pnl_estimated = est, True
+                    pnl_pct = local_pnl.compute_pnl_percent(
+                        pnl=est, entry_price=row["entry_price"], qty=row["position_size"],
+                        contract_value_usd=cvu)
+            except Exception:  # noqa: BLE001  # allow-silent: an estimate failure leaves the alert at "PnL —"
+                pass
         notify_trade_event(
             TRADE_CLOSED,
             {
                 "trade_id": trade_id,
                 "symbol": row["symbol"],
                 "direction": row["direction"],
-                "pnl": row["pnl"],
-                "pnl_percent": row["pnl_percent"],
+                "pnl": pnl,
+                "pnl_percent": pnl_pct,
+                "pnl_estimated": pnl_estimated,
                 "exit_reason": row["exit_reason"],
                 "strategy": row["strategy_name"],
                 "account": row["account_id"],
