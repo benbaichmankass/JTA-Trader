@@ -32,7 +32,7 @@ UNIT = "RQ-20261114-db1a-05"
 RULE = "RULE-PROFIT-LOCK-CONDITIONAL-20261114"
 PRIMARY = "L2"
 LOCK_ARMS = ("L2", "L25", "L2T")
-MIN_LEGS = 15
+MIN_LEGS = 14
 
 
 def read_arms(run_dir: Path) -> Optional[Dict[str, Dict[str, Any]]]:
@@ -133,13 +133,13 @@ def _self_test() -> int:
     assert leg_grade("x", dict(rec, L2=arm(10, 4.0, [1] * 4)), pre, 30, 3)["verdict"] == "indeterminate"
     assert leg_grade("x", None, pre, 30, 3)["read_state"] == "producer_failed"
     assert leg_grade("x", {"A": rec["A"]}, pre, 30, 3)["read_state"] == "producer_failed"
-    u = grade_unit([g] * 15)
-    assert u["verdict"] == "pass" and u["pooled"]["L2"]["delta_record"] == 150.0, u
-    assert u["pooled"]["L2"]["delta_prior"] == 15.0 and u["pooled"]["L25"]["verdict"] == "fail"
+    u = grade_unit([g] * 14)
+    assert u["verdict"] == "pass" and u["pooled"]["L2"]["delta_record"] == 140.0, u
+    assert u["pooled"]["L2"]["delta_prior"] == 14.0 and u["pooled"]["L25"]["verdict"] == "fail"
     assert u["pooled"]["L2T"]["verdict"] == "fail"  # zero delta is not > 0
     bad = leg_grade("y", rec, dict(pre, L2=arm(70, 5.0, [1] * 4)), 30, 3)
-    assert grade_unit([bad] * 15)["verdict"] == "fail"
-    assert grade_unit([g] * 14)["verdict"] == "indeterminate"
+    assert grade_unit([bad] * 14)["verdict"] == "fail"
+    assert grade_unit([g] * 13)["verdict"] == "indeterminate"
     print("profit_lock_grade self-test: ok")
     return 0
 

@@ -1,5 +1,5 @@
 id: RQ-20261114-db1a-05
-title: 'CONDITIONAL PROFIT LOCK: once open >= kR stop to (k-1)R (k 2, 2.5) and a TP-near-gated k=2 variant vs config-exact, 19 rostered crypto pullback/trend legs (demo floor + real
+title: 'CONDITIONAL PROFIT LOCK: once open >= kR stop to (k-1)R (k 2, 2.5) and a TP-near-gated k=2 variant vs config-exact, 18 rostered crypto pullback/trend legs (demo floor + real
   money), record + year before'
 status: queued
 cadence: once
@@ -8,23 +8,25 @@ theme: live_strategy
 priority: 1
 roadmap:
 - L-LADDER
-question: Across the 19 rostered crypto pullback/Donchian legs, does locking profit once a trade has SEEN kR (stop to entry + (k-1)R; k = 2, the primary, and 2.5), or the k=2 lock armed
+question: Across the 18 rostered crypto pullback/Donchian legs, does locking profit once a trade has SEEN kR (stop to entry + (k-1)R; k = 2, the primary, and 2.5), or the k=2 lock armed
   only while the resting TP is within 0.5R of the extreme, improve pooled net R vs each leg config-exact on the record year 2025-11-13..2026-11-12 AND the year before, net of the full
   cost stack, and which legs pass Stage 0 with a lock while holding on the year before?
 why_this_matters: 'Row PROFIT-LOCK-CONDITIONAL-TEST; manager 2026-11-14 09:07Z. Operator ~08:53Z on the real-money ada_pullback_2h short at +2.63R open (+2.86R peak) with its stop only
   +0.47R past entry: "there''s no way that we can leave this much R on the table"; the manager applied a directed +2R lock at 08:56Z. Tightens are advice-only since 2026-10-28 on a POOLED
   population (981 tightens, -0.097R mean) that never tested a lock CONDITIONAL on open >= 2R near the TP. A per-leg pass is a Tier-3 exit-param candidate (exit-refinement skill), including
-  the real-money legs ada_pullback_2h, trend_donchian_sol_prop, trend_donchian_xrp_4h and trend_donchian_xrp_adx25.'
+  the real-money legs ada_pullback_2h, trend_donchian_sol_prop, trend_donchian_xrp_4h and trend_donchian_xrp_adx25. avax_pullback_2h is out of scope (operator keep_demo 2026-11-14: data
+  only, no further research).'
 power:
-  expected_n: 2900
+  expected_n: 2750
   min_detectable_effect: 0.2
   effect_units: sd
   design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: 'MEASURED for 15 of the 19 legs in RQ-20261114-db1a-02/-04: 1,343 record and 1,313 prior trades (arm A). The 4 real-money legs add an ESTIMATED ~250 per window (not yet measured
-    on these windows). The lock only changes trades whose MFE reaches kR, so the effective n is that subset, which this unit does not measure; per-leg n floor 30 (trend_donchian_avax_4h
-    20), the f251 floors.'
+  basis: 'MEASURED for 14 of the 18 legs in RQ-20261114-db1a-02/-04 (arm A, the 15 there minus avax_pullback_2h, about 2,650 trades over the two windows); the 4 real-money legs add an
+    ESTIMATED ~100 per window (not yet measured on these windows). The lock only changes trades whose MFE reaches kR, so the effective n is that subset, which this unit does not measure;
+    per-leg n floor 30 (trend_donchian_avax_4h 20), the f251 floors. avax_pullback_2h is excluded: operator 2026-11-14 RETIRE-AVAX-PB-2H answer keep_demo, kept on the demo for data with
+    no further research effort.'
   sd: null
   feasibility:
     source: none
@@ -34,72 +36,6 @@ evidence_class:
   claim: edge
 run:
   commands:
-  - - python3
-    - scripts/research/exit_lever_ablation.py
-    - --leg
-    - avax_pullback_2h
-    - --arm
-    - A=
-    - --arm
-    - L2=--be-floor-r=2;--be-floor-lock-r=1
-    - --arm
-    - L25=--be-floor-r=2.5;--be-floor-lock-r=1.5
-    - --arm
-    - L2T=--be-floor-r=2;--be-floor-lock-r=1;--be-floor-tp-within-r=0.5
-    - --grade
-    - stage0
-    - --baseline
-    - A
-    - --start
-    - '2025-11-13T00:00:00'
-    - --end
-    - '2026-11-12T22:00:00'
-    - --days
-    - '800'
-    - --folds
-    - '4'
-    - --fold-majority
-    - '3'
-    - --n-floor
-    - '1'
-    - --delta-r
-    - '0'
-    - --forming-1m-fetch
-    - --out
-    - '{out_dir}/rec_avax_pullback_2h'
-  - - python3
-    - scripts/research/exit_lever_ablation.py
-    - --leg
-    - avax_pullback_2h
-    - --arm
-    - A=
-    - --arm
-    - L2=--be-floor-r=2;--be-floor-lock-r=1
-    - --arm
-    - L25=--be-floor-r=2.5;--be-floor-lock-r=1.5
-    - --arm
-    - L2T=--be-floor-r=2;--be-floor-lock-r=1;--be-floor-tp-within-r=0.5
-    - --grade
-    - stage0
-    - --baseline
-    - A
-    - --start
-    - '2024-11-13T00:00:00'
-    - --end
-    - '2025-11-12T22:00:00'
-    - --days
-    - '800'
-    - --folds
-    - '4'
-    - --fold-majority
-    - '3'
-    - --n-floor
-    - '1'
-    - --delta-r
-    - '0'
-    - --forming-1m-fetch
-    - --out
-    - '{out_dir}/pre_avax_pullback_2h'
   - - python3
     - scripts/research/exit_lever_ablation.py
     - --leg
@@ -1297,8 +1233,6 @@ run:
     - --fold-majority
     - '3'
     - --leg
-    - avax_pullback_2h
-    - --leg
     - eth_pullback_2h
     - --leg
     - eth_pullback_prop_2h
@@ -1346,8 +1280,8 @@ decision_rule:
     live tightens). Three lock arms are tested and all three are disclosed; the parameters are fixed by the operator''s directive and the row (k in {2, 2.5}, lock k-1, TP gate 0.5R),
     none chosen here. ARMS: L2 = --be-floor-r 2 --be-floor-lock-r 1; L25 = --be-floor-r 2.5 --be-floor-lock-r 1.5; L2T = L2 + --be-floor-tp-within-r 0.5 (the floor arms only while a
     resting TP sits within 0.5R of the extreme). The floor is armed off the since-entry peak (MFE), binds from the next bar (SL-first) and only ever tightens. UNIT PASS iff the PRIMARY
-    arm L2''s pooled sum over graded legs of (L2 net_r - A net_r) is > 0 on the record window AND > 0 on the prior window; FAIL iff graded and not; INDETERMINATE iff fewer than 15 of
-    the 19 legs are graded on both windows. L25 and L2T get the same pooled clause as records of their own and never change the unit verdict. PER-LEG PASS per arm (its own record) iff
+    arm L2''s pooled sum over graded legs of (L2 net_r - A net_r) is > 0 on the record window AND > 0 on the prior window; FAIL iff graded and not; INDETERMINATE iff fewer than 14 of
+    the 18 legs are graded on both windows. L25 and L2T get the same pooled clause as records of their own and never change the unit verdict. PER-LEG PASS per arm (its own record) iff
     the arm passes Stage 0 on the record window (net_r > 0, n >= the leg''s floor (30; trend_donchian_avax_4h 20), >= 3/4 folds positive) AND beats A there, AND on the prior window its
     net_r > 0 and > A''s; under the n floor is indeterminate. No threshold is relaxed.'
   what_it_does_not_do: 'Changes no config, roster, order, live unit, live-trade-review policy or evidence record, and does not lift the advice-only status of live tightens. A per-leg
