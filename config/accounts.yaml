@@ -1635,7 +1635,7 @@ accounts:
                                        # single-trade exposure at risk_pct 0.02 is 4.70x MEDIAN
                                        # (entry/risk_distance median 234.9 over the 33 long packages),
                                        # i.e. the sizer asks for ~11x the account and the 0.9 cash
-                                       # wall clamps it to 2 shares (~$165 of a $200.10 book). Realised
+                                       # wall clamps it to 2 shares (~$165 of a [balance removed] book). Realised
                                        # risk at the declared stop is therefore ~$0.75, NOT the $4.00
                                        # the 2% implies. Do not "fix" the apparent mismatch by raising
                                        # risk_pct — the reachable set is IDENTICAL at 2% and 5% because
@@ -1720,7 +1720,7 @@ accounts:
       # rarely taken.
       #
       # RISK: $0.89-$3.90 per trade at the declared stop = 0.4-1.9% of the
-      # $200.22 equity read 2026-09-10 — the min and max across all 407 observed
+      # [balance removed] equity read 2026-09-10 — the min and max across all 407 observed
       # setups, not a central estimate. The structural ceiling is UNCHANGED at
       # the round-up bound `1.5 x $4.0044 = $6.01` (3.0% of that equity), an
       # arithmetic property of the sizer rather than a measurement; no Option A

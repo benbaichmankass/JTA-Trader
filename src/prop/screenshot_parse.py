@@ -352,7 +352,7 @@ def _call_vision_gemini_once(model_id: str, image_b64: str, media_type: str) -> 
     if not api_key:
         raise ScreenshotParseError(
             "screenshot reading is unavailable (no GEMINI_API_KEY set) — "
-            "type the report instead, e.g. `bal 4982.86 4982.86`.")
+            "type the report instead, e.g. `bal 1234.56 1234.56`.")
     try:
         import httpx  # lazy, mirroring the anthropic branch
     except ImportError as exc:  # pragma: no cover - env-dependent

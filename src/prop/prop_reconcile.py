@@ -313,10 +313,9 @@ def reconstruct_equity(
     The manual bridge has no broker feed, so the account-status snapshot ages —
     but the journal keeps receiving CLOSED prop fills, each carrying a realized
     ``pnl``, and the cushion computed from the snapshot alone ignores every one
-    of them. Measured 2026-08-18 on ``breakout_1``: a 694h-old snapshot of
-    4825.61 rendered a $125.61 cushion to the $4700 static floor while two
-    closed fills reported since it (−18.06, −50.55) reconstruct 4757.00 against
-    an operator terminal truth of 4747.00 — the panel was 167% too generous
+    of them. Measured 2026-08-18 on ``breakout_1``: a 694h-old snapshot
+    rendered a cushion to the static floor while two closed fills reported
+    since it (−18.06, −50.55) were ignored — the panel was 167% too generous
     about the distance to an account-killer, and a two-row query in the same DB
     would have got within $10.
 
