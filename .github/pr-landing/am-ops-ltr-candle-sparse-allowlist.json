@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 2: changes what the live VM checks out (deploy/vm-sparse-checkout, re-applied by deploy_pull_restart.sh on every sync): it re-includes 30 exact committed candle files (about 77 MB on the VM disk; the disk had 15G free on 11-13). decision: 2026-11-12 operator-popup \"Merge + deploy on green\". The manager merges and batches it with other trader-restarting merges.",
+  "why": "LTR-GRADER-COVERAGE option (b), manager pick 2026-11-13: the live-review pricer replays each live leg's corpus over the leg's own committed research candles, but the VM sparse checkout hides every comms/research/**/candles/ and **/*.csv file, so the pricer falls back to a network fetch that is blocked or rate-limited there (Bybit 403, Yahoo 429 measured from a sandbox) and the options read no_candles. scripts/ops/ltr_candle_allowlist.py writes one exact-file re-include per candle file the pricer selects for a live-rostered leg (30 files for 34 leg:symbol pairs), with no data copied into the repo. The remaining 20 leg:symbol (equity/ETF/futures: GDX, GLD, TLT, SPY, QQQ, MGC, MHG, ...) have no committed candles anywhere and still need a networked source: stated, not solved here. Revert: git revert."
+}
