@@ -57,6 +57,32 @@ def _is_real_user(entry: dict) -> bool:
         isinstance(c, dict) and c.get("type") == "tool_result" for c in content or [])
 
 
+def current_manager(users: list[dict]) -> str | None:
+    """The manager id named in the MOST RECENT user turn that names one.
+
+    STOP-HOOK-STALE-MANAGER (2026-11-14): this read the FIRST match in the whole transcript, so a lane dispatched by
+    Manager Session 2026-11-11a (session_01AFoLuLyarNRcy3nziCep2U, retired 11-13) was still told to wake that dead session
+    after a rotation handed it to 2026-11-13a. A rotation names the new manager in a later user turn; the latest one wins."""
+    for u in reversed(users):
+        ids = MANAGER_ID.findall(_text_of((u.get("message") or {}).get("content")))
+        if ids:
+            return ids[-1]
+    return None
+
+
+def _titled_manager(entries: list[dict]) -> bool:
+    """True when this session titled itself "Manager Session ..." (manager SKILL § Start of session, step 1): a session
+    whose first prompt does not read as a manager brief (a handoff doc, a resumed context) is still the manager."""
+    for e in entries:
+        if e.get("type") != "assistant":
+            continue
+        for c in (e.get("message") or {}).get("content") or []:
+            if isinstance(c, dict) and c.get("type") == "tool_use" and "set_session_title" in str(c.get("name", "")):
+                if re.match(r"\s*Manager Session\b", str((c.get("input") or {}).get("title") or "")):
+                    return True
+    return False
+
+
 def decide(entries: list[dict]) -> str | None:
     """Return a block reason, or None to let the session stop."""
     users = [e for e in entries if _is_real_user(e)]
@@ -69,6 +95,8 @@ def decide(entries: list[dict]) -> str | None:
     if MANAGER_SELF.search(first) \
             and not re.search(r"\bYou are lane\b", first):
         return None                                  # the manager itself, not a lane
+    if _titled_manager(entries):
+        return None                                  # it titled ITSELF "Manager Session ..." (manager skill step 1)
     last_user_idx = max(i for i, e in enumerate(entries) if _is_real_user(e))
     turn = entries[last_user_idx + 1:]
     for e in turn:
@@ -87,8 +115,7 @@ def decide(entries: list[dict]) -> str | None:
     tail = last_text.strip()[-1200:]
     if not tail or not (WAITING.search(tail) or tail.rstrip().endswith("?")):
         return None
-    m = MANAGER_ID.search(all_user)
-    mgr = m.group(1) if m else "<manager session id from your dispatch prompt>"
+    mgr = current_manager(users) or "<manager session id from your dispatch prompt>"
     return ("You are a dispatched lane and this turn ends waiting on a decision or blocked, but you have not told the manager. "
             "Lanes cannot be seen while idle: the manager only polls every 3 h (operator 2026-11-08, after a 2.5 h silent stall). "
             f"Before stopping: create_trigger(persistent_session_id=\"{mgr}\", prompt=<what you need, the options, your "
@@ -168,6 +195,15 @@ def self_test() -> int:
         ("a report in an EARLIER turn does not count", [lane, _a(None, "fire_trigger"), _tr(), _a("reported"),
                                                          _u("From Manager: GO. re-export."), _a("Re-export failed again; awaiting your go-ahead.")], True),
         ("empty transcript passes", [], False),
+        ("a session that titled itself Manager Session never blocks (a handoff-doc start)",
+         [_u("Read docs/claude/work/MANAGER-HANDOFF-2026-11-14.md. From Manager lane:GENERAL is AM-OPS."),
+          {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__x__set_session_title",
+                                                          "input": {"title": "Manager Session 2026-11-13a"}}]}},
+          _tr(), _a("Waiting on the operator's go-ahead?")], False),
+        ("a lane that titles a CHILD session is still a lane",
+         [lane, {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__x__set_session_title",
+                                                                "input": {"title": "AM-OPS catch-up"}}]}},
+          _tr(), _a("Blocked; awaiting your go-ahead.")], True),
     ]
     bad = 0
     for name, entries, want in cases:
@@ -180,7 +216,15 @@ def self_test() -> int:
         bad += 1
     else:
         print("PASS block reason names the manager session id")
-    print(f"{len(cases) + 1 - bad}/{len(cases) + 1} ok")
+    rotated = [lane, _a("ok"), _u("From Manager: you now report to Manager Session 2026-11-13a (session_01AFoLuKXonDBdED7cNK7FhN)."),
+               _a("Blocked; awaiting your go-ahead.")]
+    r = decide(rotated)
+    if not r or "session_01AFoLuKXonDBdED7cNK7FhN" not in r or "session_01AFoLuJ3yguifJsDomuAzGx" in r:
+        print("FAIL after a rotation the block reason names the NEW manager, never the dispatching one")
+        bad += 1
+    else:
+        print("PASS after a rotation the block reason names the NEW manager, never the dispatching one")
+    print(f"{len(cases) + 2 - bad}/{len(cases) + 2} ok")
     return 1 if bad else 0
 
 
