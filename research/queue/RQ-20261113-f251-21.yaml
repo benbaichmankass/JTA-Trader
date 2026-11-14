@@ -1,0 +1,222 @@
+id: RQ-20261113-f251-21
+title: 'trend_donchian_avax_4h filter lever: skip low-volatility entries (vol_skip_below_pctl 0.3) vs none on the forming bar, with a confirmation window'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+question: 'trend_donchian_avax_4h fails RULE-D1 on the forming bar. Prior lever attempts on its record window: RQ-20261113-f251-07 (forming baseline -16.18R n 57;
+  long-only -4.09R -- FAIL). On the forming bar over 2025-11-13..2026-11-12: does vol_skip_below_pctl 0.3 pass Stage 0, beat the baseline, and hold on the equal-length
+  window before it, net of the full cost stack?'
+why_this_matters: Demo-floor leg; DEMO-FLOOR-ITER next lever, authored at the 2026-11-14 01:00Z checkpoint from the leg's own forming ledger and its closed-bar lever
+  map (RQ-20261027-3e41-03). One arm, one value; a structure-exit reading is never used (no leg here runs a structure exit live).
+power:
+  expected_n: 150
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: MEASURED baseline from RQ-20261113-f251-07; the arm keeps or cuts n as the lever implies.
+  sd: null
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window (the leg's own record window); nothing accrues; Binance / Binance-vision 1m covers it at run time.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+run:
+  commands:
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - trend_donchian_avax_4h
+    - --arm
+    - A=
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2025-11-13T00:00:00'
+    - --end
+    - '2026-11-12T20:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '20'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/arm_A'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - trend_donchian_avax_4h
+    - --arm
+    - A=
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2024-11-13T00:00:00'
+    - --end
+    - '2025-11-12T20:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '1'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/pre_A'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - trend_donchian_avax_4h
+    - --arm
+    - VL30=--vol-skip-below-pctl=0.3
+    - --grade
+    - stage0
+    - --baseline
+    - VL30
+    - --start
+    - '2025-11-13T00:00:00'
+    - --end
+    - '2026-11-12T20:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '20'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/arm_VL30'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - trend_donchian_avax_4h
+    - --arm
+    - VL30=--vol-skip-below-pctl=0.3
+    - --grade
+    - stage0
+    - --baseline
+    - VL30
+    - --start
+    - '2024-11-13T00:00:00'
+    - --end
+    - '2025-11-12T20:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '1'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/pre_VL30'
+  - - python3
+    - scripts/research/timeframe_lever_grade.py
+    - --out
+    - '{out_dir}'
+    - --leg
+    - trend_donchian_avax_4h
+    - --baseline-tf
+    - A
+    - --family
+    - filter
+    - --prefix
+    - arm_
+    - --confirm-prefix
+    - pre_
+    - --tf
+    - A
+    - --tf
+    - VL30
+  timeout_minutes: 300
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261113-f251-21
+decision_rule:
+  id: RULE-DFI3-TREND-DONCHIAN-AVAX-4H-20261114
+  registered_at: '2026-11-14'
+  registered_before_run: true
+  statistic: exit_lever_ablation --grade stage0 --forming-1m-fetch, one run per arm per window; timeframe_lever_grade.py --family filter --confirm-prefix pre_.
+  rule: 'AM-ML multiple-testing guard: successive levers on one window fork the paths, so this rule NAMES the leg''s prior lever attempts on the record window (RQ-20261113-f251-07
+    (forming baseline -16.18R n 57; long-only -4.09R -- FAIL)) and ALSO requires the pass to hold on the equal-length window before the record window (2024-11-13..2025-11-12),
+    which no diagnosis or lever pick read. No fold bar is relaxed. ONE arm, ONE value (vol_skip_below_pctl 0.3), chosen from the closed-bar map before this run. PASS
+    iff the candidate passes its own Stage 0 on the record window (net_r > 0, n >= 20, >= 3/4 folds positive) AND beats the baseline arm''s net_r there, AND on the
+    confirmation window its net_r is > 0 and above the baseline arm''s. FAIL iff graded and either clause fails. INDETERMINATE otherwise (a run wrote no verdict,
+    the baseline did not run, or the candidate is under its n floor on the record window). Arms, windows, folds and floors are fixed now.'
+  what_it_does_not_do: Changes no config, roster, order or evidence record. A PASS is a data-backed Tier-3 proposal routed to the manager (the leg stays on the demo
+    floor until then); a FAIL is recorded on the lever map and the census is written before any next lever.
+  baseline: eth_pullback_prop_2h config-exact, forming, ungated, re-run in this unit on both windows.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: a demo-floor (Stage-1 paper) leg failing RULE-D1 on its forming record; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+ml_consumer:
+  not_applicable: 'Not an ML unit: a harness lever test on a rule-based leg.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: trend_donchian_avax_4h
+  subject_kind: strategy_leg
+  from_result: RQ-20261113-f251-07
+  verdict_read: fail
+  diagnosis: 'f251-07 forming ledger (n 57): gross -12.8R, both sides lose (long -3.1R, short -13.1R), stop exits -40.2R (n 38). Closed bar 2020-09..2026-10: vol_skip_below_pctl
+    0.2/0.25/0.3/0.35 = +48.5/+53.0/+54.8/+53.9R vs +32.1R (RQ-20261027-3e41-03, RQ-20261028-b37d-01, pass), a smooth plateau, not a single point. Breakouts in compressed
+    volatility are the stop-outs.'
+  hypothesis: Dropping breakouts taken in the bottom 30% of volatility removes the false breakouts that stop out, clearing Stage 0 on the forming record and the year
+    before.
+  search: 'Lever map research/levers/trend_donchian_avax_4h.yaml: forming levers tested so far listed in the rule; filter vol_skip_below_pctl is the strongest closed-bar
+    responder that the live leg does not already carry and that never ran on the forming bar.'
+  attempt: 2
+  due_by: '2026-11-21'
+  levers:
+  - filter
+  lever_arms:
+  - family: filter
+    param: vol_skip_below_pctl
+    values:
+    - 0.3
+    baseline_value: null
+  map_entries:
+  - research/levers/trend_donchian_avax_4h.yaml
+related:
+- RQ-20261113-f251-07
+- RQ-20261027-3e41-03
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): ONE lever chosen from the leg''s own R diagnosis (scripts/research/leg_r_diagnosis.py),
+  rule registered before the run against the leg''s own record, net of the full cost stack, graded once on its fixed window.'
+follow_up: On the verdict a session appends the test to research/levers/trend_donchian_avax_4h.yaml (lever_map.py --append). PASS -> Tier-3 proposal to the manager.
+  FAIL -> write the leg's lever-family census (tested / untested / inapplicable) before a further lever (AM-ML guard).
