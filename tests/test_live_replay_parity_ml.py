@@ -312,3 +312,15 @@ def test_served_epoch_is_trusted_in_full_history_and_refused_at_a_shallow_root(t
     assert real_epoch(shallow) != full_epoch          # the naive read is wrong here...
     why = real_unknown(shallow)
     assert why and "shallow" in why                            # ...and is detected, not trusted
+
+
+def test_no_package_on_either_side_is_named_and_keeps_the_replayed_closes():
+    """PARITY-CONTROLS-1114: ml_entry_eq_struct (real money) read could_not_check all week with 'nothing comparable'.
+    Closes WERE replayed with no package on either side; live audits only package decisions, so that is named."""
+    out = {"leg": "ml_entry_eq_struct", "state": "could_not_check"}
+    bars = [{"bar": "2026-11-10T20:00:00+00:00", "status": "matched_no_signal", "replay_packages": 0, "live_packages": 0}]
+    r = M._finish(out, 0, [], bars, 0, extra={})
+    assert r["state"] == "could_not_check"
+    assert r["reason"].startswith("nothing to diff: 1 decision close(s) replayed") and r["bars"] == bars
+    r2 = M._finish({"leg": "x", "state": "could_not_check"}, 0, [], [], 0, extra={})
+    assert r2["reason"].startswith("nothing comparable") and "bars" not in r2
