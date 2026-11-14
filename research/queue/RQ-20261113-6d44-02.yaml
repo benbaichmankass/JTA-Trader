@@ -3,7 +3,7 @@
 id: RQ-20261113-6d44-02
 title: 'ITERATION 1 of ml_entry_eq (pass, unconfirmed): does capping entries to the top 3 scores per decision bar remove the clustered losses
   without cutting the mean? DEV walk-forward only (config B, tau 0.20, fixed 2/3 bracket)'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -155,3 +155,16 @@ what_it_does_not_do: Changes no config, roster or served artifact; places no ord
 intervention_controls:
   not_applicable: an offline entry-filter test on dev folds; no in-trade intervention is tested
 last_dispatched_at: '2026-11-14T03:43:04+00:00'
+grading:
+  attested: RULE-RQ20261113-6d44-02-EQ-CAP
+  auto: true
+  decision_rule_id: RULE-RQ20261113-6d44-02-EQ-CAP
+  evidence:
+  - research/results/RQ-20261113-6d44-02/43553076726.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

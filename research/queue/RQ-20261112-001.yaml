@@ -5,7 +5,7 @@ id: RQ-20261112-001
 title: 'ITERATION 3 of htf_pullback_trend_2h (iteration 2 PASS: AD30NX, adx_min 30 + no structure exit,
   +20.0 R vs AD30 -16.2 R, 5 of 6 folds positive): does adx_min 30 on the leg AS NOW DECLARED (structure
   exit removed 2026-11-05, #23485) confirm on a held-back latest 25%?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROGRAMMES
@@ -153,3 +153,13 @@ generated:
   params:
     node: P3-ITER3-htf-pullback-trend-2h-ad30-holdout
 last_dispatched_at: '2026-11-14T03:23:22+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P3-ITER3-htf-pullback-trend-2h-ad30-holdout
+  evidence:
+  - research/results/RQ-20261112-001/43551404724.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

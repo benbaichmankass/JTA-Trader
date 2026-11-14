@@ -4,7 +4,7 @@ id: RQ-20261112-d9c0-01
 title: 'ml_entry_eq_struct per-trade Stage-0 rows: reproduce the graded RQ-20261107-98e3-06 confirm read (booster 0afc49948a41671a, n 207,
   mean +0.492207 R) with no holdout claim and write one net_r row per trade, so the r4 demotion gate and live_vs_backtest can bootstrap
   the real-money leg'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -112,3 +112,16 @@ related:
 population: 'The registered POOL_RULE of scripts/research/ml_entry_alpaca_score.py, UNCHANGED (sha256 e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2),
   confirm window 2025-07-15..2026-10-31, restricted-LONG decisions of the graded ensemble, net of the Alpaca cost stack (slippage 5 bps provisional + 0.5 bps regulatory).'
 last_dispatched_at: '2026-11-13T23:45:24+00:00'
+grading:
+  attested: RULE-RQ20261112-d9c0-01-REPRO
+  auto: true
+  decision_rule_id: RULE-RQ20261112-d9c0-01-REPRO
+  evidence:
+  - research/results/RQ-20261112-d9c0-01/43529495956.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

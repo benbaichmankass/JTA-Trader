@@ -195,6 +195,32 @@ def test_tree_scanning_tests_are_always_selected(repo):
     assert mode == "affected" and "tests/test_scan.py" in tests
 
 
+def test_a_test_that_runs_a_tree_scanning_guard_is_selected(repo):
+    """GUARD-SCANNER-SELECTION, the #25935 miss reproduced: a scripts/ops change, and a test that runs a guard script
+    (built path, no glob in the test's own text) whose source rglob()s every script -> the test must run."""
+    _write(repo, "scripts/check_loaders.py",
+            "from pathlib import Path\nBAD = [p for p in Path('scripts').rglob('*.py') if 'safe_load' in p.read_text()]\n")
+    _write(repo, "tests/test_check_loaders.py",
+            "import subprocess, sys\nfrom pathlib import Path\nR = Path(__file__).parents[1]\n"
+            "def test_clean():\n    subprocess.run([sys.executable, str(R / 'scripts' / 'check_loaders.py')], check=True)\n")
+    _write(repo, "scripts/ci/check_lsfiles.py", "import subprocess\nF = subprocess.run(['git', 'ls-files'], capture_output=True)\n")
+    _write(repo, "tests/test_check_lsfiles.py", "import check_lsfiles  # noqa: F401\n")
+    _write(repo, "scripts/check_narrow.py", "X = 1\n")   # names nothing, walks nothing
+    _write(repo, "tests/test_check_narrow.py", "N = 'check_narrow'\n")
+    mode, reason, tests = _aff(repo, "pkg/leaf.py")
+    assert mode == "affected", reason
+    assert "tests/test_check_loaders.py" in tests       # the exact #25935 shape
+    assert "tests/test_check_lsfiles.py" in tests       # `git ls-files` counts as a walk in a guard
+    assert "tests/test_check_narrow.py" not in tests    # a guard that walks nothing adds nothing
+
+
+def test_real_repo_selects_the_canonical_loader_guard_test_for_a_scripts_ops_change():
+    """The live miss: #25935's scripts/ops change must select tests/test_check_canonical_config_loaders.py."""
+    mode, reason, tests = scope.classify_affected(["scripts/ops/ltr_candle_allowlist.py"], RELEVANT, scope.ImportGraph())
+    assert mode == "affected", reason
+    assert "tests/test_check_canonical_config_loaders.py" in tests
+
+
 # --- the CLI: only pull_request may select fewer than all ------------------------
 
 def _cli(monkeypatch, tmp_path, stdin: str, *args: str) -> dict[str, str]:
