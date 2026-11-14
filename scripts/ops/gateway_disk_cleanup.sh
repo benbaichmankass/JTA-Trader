@@ -96,6 +96,15 @@ health_report() {
         st="$(systemctl show -p ExecMainStatus --value "${u}.service" 2>/dev/null || true)"
         echo "${u}.service: result=${res:-?} exit=${st:-?} last_exit=$(systemctl show -p ExecMainExitTimestamp --value "${u}.service" 2>/dev/null)"
     done
+    local cst tst t
+    cst="$(sudo -n docker inspect -f '{{.State.Status}} started={{.State.StartedAt}} restarts={{.RestartCount}}' ib-gateway 2>/dev/null || true)"
+    echo "ib-gateway container: ${cst:-could_not_look}"
+    case "${cst}" in running*) ;; *) echo "FAIL: ib-gateway container not running"; rc=1 ;; esac
+    for t in ict-ib-gateway-watchdog.timer ict-git-sync.timer ict-ib-gateway-reset.timer; do
+        tst="$(systemctl is-active "${t}" 2>/dev/null || true)"
+        echo "${t}: ${tst:-unknown} next=$(systemctl show -p NextElapseUSecRealtime --value "${t}" 2>/dev/null || true)"
+        [ "${tst}" = "active" ] || { echo "FAIL: ${t} is not active"; rc=1; }
+    done
     mkdir -p /tmp/gwdisk-swap
     [ -f "${LIVE}/runtime_logs/ib_gateway_watchdog_state.json" ] && cp -f "${LIVE}/runtime_logs/ib_gateway_watchdog_state.json" /tmp/gwdisk-swap/state.json
     local out
@@ -103,7 +112,7 @@ health_report() {
           --probe-script scripts/ops/ib_gateway_local_probe.py --state /tmp/gwdisk-swap/state.json \
           --restart-after 2 --max-restarts 3 --cooldown-min 20 --max-backoff-min 60 --dry-run 2>&1 | tail -n 3)" || { echo "FAIL: check_ib_gateway.py --dry-run rc=$?"; rc=1; }
     echo "check_ib_gateway: ${out}"
-    printf '%s' "${out}" | grep -q "healthy=True" || { echo "WARN: gateway probe not healthy=True (container state, not the checkout)"; }
+    printf "%s" "${out}" | grep -q "healthy=True" || { echo "FAIL: gateway probe not healthy=True (ib_paper read did not answer)"; rc=1; }
     return "${rc}"
 }
 

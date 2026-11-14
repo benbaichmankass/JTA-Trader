@@ -1,0 +1,8 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Read-only additions to gateway-disk-cleanup's health_report (used by swap-status / swap-sideclone / old-remove): the ib-gateway container must be running, the ict-ib-gateway-watchdog / ict-git-sync / ict-ib-gateway-reset timers must be active, and check_ib_gateway --dry-run must report healthy=True. Any miss now FAILS the step, so swap-sideclone auto-reverts. Asked for by Manager Session 2026-11-05a's per-step verification list. No VM change on merge. Revert: git revert.",
+  "why": "Swap verification must cover the container, the timers and the ib_paper read, not only the checkout.",
+  "recorded_decision": {"kind": "operator_decision", "ref": "GATEWAY-DISK-CLEANUP PI-20261104-GWDISK-0001"}
+}
