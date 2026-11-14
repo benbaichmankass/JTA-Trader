@@ -1953,6 +1953,7 @@ units:
 - RQ-20261113-f251-07
 - RQ-20261113-f251-21
 - RQ-20261114-db1a-01
+- RQ-20261114-db1a-02
 levers_tested:
 - family: prop-stack fit (account sizing vs firm DD limits and the prop cost stack)
   varied: prop cost stack, 3 prop accounts x 2 arms x 2 windows, 5 seeds x 1000 lives
@@ -2073,6 +2074,37 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261114-db1a-01
   lever_family: timeframe
+- family: regime_gating (pooled ADX cell x direction)
+  varied: ungated vs the worst pooled (ADX regime x direction) cell across 15 crypto demo-floor legs, picked on 2025-11-13..2026-11-12, checked
+    on 2024-11-13..2025-11-12, live decision bar, full cost stack
+  response:
+    verdict: fail
+    run: '43562273934'
+    rule: RULE-DFR-COMMON-LOSS-REGIME-20261114
+    leg_record:
+      n: 57
+      net_r: -16.1778
+    leg_prior:
+      n: 55
+      net_r: 26.0921
+    part_a_common: true
+    part_a: 12/15 legs negative on the record window; pooled -142.3426R vs prior 106.089R
+    selected_cell: chop/long
+    cell_record:
+      n: 229
+      net_r: -75.3822
+    cell_prior:
+      n: 220
+      net_r: 25.5925
+    leg_ex_cell:
+      record_net_r: -17.9131
+      prior_net_r: 21.312
+    reading: 'the record-year loss is common (Part A) but the worst ADX cell (chop/long) wins the year before: no trend-regime cell separates
+      it; the record-year loss sits on the LONG side in every ADX cell'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-02
+  lever_family: regime_gating
 manifest_notes:
   census_2026_11_14: 'DEMO-FLOOR-ITER lever-family census after the 2nd forming-bar lever failed (AM-ML guard). Forming record (2025-11-13..2026-11-12):
     -16.18R over n 57, gross -12.77R, cost 3.41R; short -13.07R n33, long -3.10R n24. The equal-length window before it (2024-11-13..2025-11-12,
@@ -2094,8 +2126,9 @@ manifest_notes:
     Remaining closed-bar responders never run forming: session skip_hours 0-7, entry donchian 15. Before a 3rd unit, read the record-vs-prior-year
     regime split: +26.09R to -16.18R on similar n is a regime shift, and a lever that fixes the record year may only cost the prior year (as vol_skip_below
     did). Not exhausted; manager decides.'
-  decision_bar_2026_11_14: 'Closed bar (RQ-20261114-db1a-01, FAIL): C -15.52R n46 1/4 vs F -16.18R; prior year C +17.35R vs F +26.09R (closed WORSE the year
-    before). C_VL30 is +0.01R n33 2/4 on the record. Closed lever deltas vs C on the record keep the forming sign (long +7.5 vs +12.1, vol_skip_below 0.3
-    +15.5 vs +9.1); the year before, long is -8.5 and vol_skip_below +0.1. C/F entry overlap 0.49 (the 4h breakout mostly fires on the same bars).'
-  next_2026_11_14: SUPERSEDES next. decision_bar closed is not the lever (db1a-01). The record-year loss is common to both bars and every lever; with +26.1R
-    the year before, this reads as a regime shift. Recommended next is a regime-level question, not a 3rd per-leg lever. Manager decides.
+  decision_bar_2026_11_14: 'Closed bar (RQ-20261114-db1a-01, FAIL): C -15.52R n46 1/4 vs F -16.18R; prior year C +17.35R vs F +26.09R (closed
+    WORSE the year before). C_VL30 is +0.01R n33 2/4 on the record. Closed lever deltas vs C on the record keep the forming sign (long +7.5 vs
+    +12.1, vol_skip_below 0.3 +15.5 vs +9.1); the year before, long is -8.5 and vol_skip_below +0.1. C/F entry overlap 0.49 (the 4h breakout mostly
+    fires on the same bars).'
+  next_2026_11_14: SUPERSEDES next. decision_bar closed is not the lever (db1a-01). The record-year loss is common to both bars and every lever;
+    with +26.1R the year before, this reads as a regime shift. Recommended next is a regime-level question, not a 3rd per-leg lever. Manager decides.

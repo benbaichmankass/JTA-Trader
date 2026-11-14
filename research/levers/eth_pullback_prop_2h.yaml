@@ -2050,11 +2050,43 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261114-db1a-01
   lever_family: timeframe
+- family: regime_gating (pooled ADX cell x direction)
+  varied: ungated vs the worst pooled (ADX regime x direction) cell across 15 crypto demo-floor legs, picked on 2025-11-13..2026-11-12, checked
+    on 2024-11-13..2025-11-12, live decision bar, full cost stack
+  response:
+    verdict: fail
+    run: '43562273934'
+    rule: RULE-DFR-COMMON-LOSS-REGIME-20261114
+    leg_record:
+      n: 81
+      net_r: -6.5744
+    leg_prior:
+      n: 71
+      net_r: 7.319
+    part_a_common: true
+    part_a: 12/15 legs negative on the record window; pooled -142.3426R vs prior 106.089R
+    selected_cell: chop/long
+    cell_record:
+      n: 229
+      net_r: -75.3822
+    cell_prior:
+      n: 220
+      net_r: 25.5925
+    leg_ex_cell:
+      record_net_r: -6.574
+      prior_net_r: 7.3191
+    reading: 'the record-year loss is common (Part A) but the worst ADX cell (chop/long) wins the year before: no trend-regime cell separates
+      it; the record-year loss sits on the LONG side in every ADX cell'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-02
+  lever_family: regime_gating
 units:
 - RQ-20261113-f251-08
 - RQ-20261113-f251-14
 - RQ-20261113-f251-23
 - RQ-20261114-db1a-01
+- RQ-20261114-db1a-02
 manifest_notes:
   census_2026_11_14: 'DEMO-FLOOR-ITER lever-family census after the 3rd forming-bar lever failed (AM-ML guard). Forming record (2025-11-13..2026-11-12):
     -6.57R over n 81, gross -1.23R, cost 5.35R; long -10.96R n40, short +4.39R n41. The equal-length window before it (2024-11-13..2025-11-12,
@@ -2074,8 +2106,9 @@ manifest_notes:
     0.8, pullback_frac 0.625) made the leg WORSE: on this leg the closed-bar corpus does not predict forming-bar response. Remaining closed-bar
     passes never run forming: session skip_hours 20-23, filter adx_max 40. The prop leg must also clear the prop survival superset. Not exhausted;
     no 4th unit without a diagnosis of why closed-bar responses invert on the forming bar. Manager decides.'
-  decision_bar_2026_11_14: 'Closed bar (RQ-20261114-db1a-01, FAIL): C -4.53R n65 1/4 vs F -6.57R; prior year C +7.87R vs F +7.32R. No closed arm clears Stage
-    0 on the record (best C_V80 +0.89R 1/4; C_S -1.75R 3/4). Closed lever deltas vs C on the record: short +2.8 (forming +9.3, same sign), vol_skip_above
-    0.8 +5.4 (forming -6.5, OPPOSITE), pullback_frac 0.625 -1.4 (forming -9.6, same). All three are negative the year before. C/F entry overlap 0.14.'
-  next_2026_11_14: 'SUPERSEDES next. decision_bar closed is not the lever (db1a-01): closed is marginally less bad but has no edge. Only vol_skip_above inverts
-    between bars; the other closed-bar inversions were the window. No 4th unit proposed; manager decides (prop superset still applies).'
+  decision_bar_2026_11_14: 'Closed bar (RQ-20261114-db1a-01, FAIL): C -4.53R n65 1/4 vs F -6.57R; prior year C +7.87R vs F +7.32R. No closed arm
+    clears Stage 0 on the record (best C_V80 +0.89R 1/4; C_S -1.75R 3/4). Closed lever deltas vs C on the record: short +2.8 (forming +9.3, same
+    sign), vol_skip_above 0.8 +5.4 (forming -6.5, OPPOSITE), pullback_frac 0.625 -1.4 (forming -9.6, same). All three are negative the year before.
+    C/F entry overlap 0.14.'
+  next_2026_11_14: 'SUPERSEDES next. decision_bar closed is not the lever (db1a-01): closed is marginally less bad but has no edge. Only vol_skip_above
+    inverts between bars; the other closed-bar inversions were the window. No 4th unit proposed; manager decides (prop superset still applies).'

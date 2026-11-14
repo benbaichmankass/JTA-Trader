@@ -621,11 +621,43 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261114-db1a-01
   lever_family: timeframe
+- family: regime_gating (pooled ADX cell x direction)
+  varied: ungated vs the worst pooled (ADX regime x direction) cell across 15 crypto demo-floor legs, picked on 2025-11-13..2026-11-12, checked
+    on 2024-11-13..2025-11-12, live decision bar, full cost stack
+  response:
+    verdict: fail
+    run: '43562273934'
+    rule: RULE-DFR-COMMON-LOSS-REGIME-20261114
+    leg_record:
+      n: 105
+      net_r: -23.3731
+    leg_prior:
+      n: 83
+      net_r: 2.9423
+    part_a_common: true
+    part_a: 12/15 legs negative on the record window; pooled -142.3426R vs prior 106.089R
+    selected_cell: chop/long
+    cell_record:
+      n: 229
+      net_r: -75.3822
+    cell_prior:
+      n: 220
+      net_r: 25.5925
+    leg_ex_cell:
+      record_net_r: -20.5088
+      prior_net_r: 5.0403
+    reading: 'the record-year loss is common (Part A) but the worst ADX cell (chop/long) wins the year before: no trend-regime cell separates
+      it; the record-year loss sits on the LONG side in every ADX cell'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-02
+  lever_family: regime_gating
 units:
 - RQ-20261113-f251-10
 - RQ-20261113-f251-15
 - RQ-20261113-f251-19
 - RQ-20261114-db1a-01
+- RQ-20261114-db1a-02
 manifest_notes:
   census_2026_11_14: 'DEMO-FLOOR-ITER lever-family census after the 2nd forming-bar lever failed (AM-ML guard); CORRECTED 2026-11-14 00:30Z, superseding
     the 00:00Z draft that read only the one-year forming window and wrongly concluded lever exhaustion. Forming record (f251-01, 2025-11-13..2026-11-12):
@@ -653,9 +685,10 @@ manifest_notes:
     +10.1R response does not carry to the forming bar.'
   entry_sibling_forming: 'pullback_frac 0.625 tested forming on sibling eth_pullback_prop_2h (RQ-20261113-f251-23, FAIL): -16.16R n91 1/4 vs -6.57R
     n81; prior year -2.18R vs +7.32R. Informs option (b) here negatively.'
-  decision_bar_2026_11_14: 'Closed bar (RQ-20261114-db1a-01, FAIL): C -17.39R n90 0/4 vs F -23.37R; prior year C +16.89R vs F +2.94R. C_D30 is the only closed
-    arm to clear Stage 0 on the record (+4.22R n45 3/4) and it loses the prior year (-4.91R): the confirmation guard caught it. Closed lever deltas vs C on
-    the record keep the forming sign (long +5.0, adx_min 30 +21.6, tp_target_r 4 -1.5) and flip the year before (-11.4, -21.8, -0.05). C/F entry overlap 0.13.'
-  next_2026_11_14: SUPERSEDES next. decision_bar closed is not the lever (db1a-01). Lever responses on this leg flip sign between the record year and the
-    year before, so a one-year lever pick is fitting the regime. Option (c) stays on hold; recommended next is a regime-level question across the demo-floor
-    legs rather than a 4th per-leg lever. Manager decides.
+  decision_bar_2026_11_14: 'Closed bar (RQ-20261114-db1a-01, FAIL): C -17.39R n90 0/4 vs F -23.37R; prior year C +16.89R vs F +2.94R. C_D30 is
+    the only closed arm to clear Stage 0 on the record (+4.22R n45 3/4) and it loses the prior year (-4.91R): the confirmation guard caught it.
+    Closed lever deltas vs C on the record keep the forming sign (long +5.0, adx_min 30 +21.6, tp_target_r 4 -1.5) and flip the year before (-11.4,
+    -21.8, -0.05). C/F entry overlap 0.13.'
+  next_2026_11_14: SUPERSEDES next. decision_bar closed is not the lever (db1a-01). Lever responses on this leg flip sign between the record year
+    and the year before, so a one-year lever pick is fitting the regime. Option (c) stays on hold; recommended next is a regime-level question
+    across the demo-floor legs rather than a 4th per-leg lever. Manager decides.

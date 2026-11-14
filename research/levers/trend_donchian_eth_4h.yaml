@@ -3873,6 +3873,7 @@ levers:
       reading: no response at the tested values
 units:
 - RQ-20261104-e4a1-01
+- RQ-20261114-db1a-02
 levers_tested:
 - family: exit head (ML early-exit, E1/E1.5)
   varied: 19 head arms (tau grid + below_half_r/pre_mfe1/age8/age8_below_half_r shapes) vs the declared exit, selected on discovery, read once
@@ -3891,3 +3892,34 @@ levers_tested:
   tested_at_power: false
   unit: RQ-20261104-e4a1-01
   lever_family: exit
+- family: regime_gating (pooled ADX cell x direction)
+  varied: ungated vs the worst pooled (ADX regime x direction) cell across 15 crypto demo-floor legs, picked on 2025-11-13..2026-11-12, checked
+    on 2024-11-13..2025-11-12, live decision bar, full cost stack
+  response:
+    verdict: fail
+    run: '43562273934'
+    rule: RULE-DFR-COMMON-LOSS-REGIME-20261114
+    leg_record:
+      n: 54
+      net_r: -15.2931
+    leg_prior:
+      n: 42
+      net_r: 22.3695
+    part_a_common: true
+    part_a: 12/15 legs negative on the record window; pooled -142.3426R vs prior 106.089R
+    selected_cell: chop/long
+    cell_record:
+      n: 229
+      net_r: -75.3822
+    cell_prior:
+      n: 220
+      net_r: 25.5925
+    leg_ex_cell:
+      record_net_r: -11.4082
+      prior_net_r: 13.3296
+    reading: 'the record-year loss is common (Part A) but the worst ADX cell (chop/long) wins the year before: no trend-regime cell separates
+      it; the record-year loss sits on the LONG side in every ADX cell'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-02
+  lever_family: regime_gating

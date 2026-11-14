@@ -1914,6 +1914,7 @@ units:
 - RQ-20261101-e5b1-11
 - RQ-20261113-f251-06
 - RQ-20261113-f251-20
+- RQ-20261114-db1a-02
 levers_tested:
 - family: prop-stack fit (account sizing vs firm DD limits and the prop cost stack)
   varied: prop cost stack (fee 8 / slip 3 / funding 5 bps), 3 prop accounts x 2 arms x 2 windows, 5 seeds x 1000 lives
@@ -1932,9 +1933,9 @@ levers_tested:
       '2024': -5.334
       '2025': 10.627
       '2026': -5.457
-  shape: 'FAIL on all 3 accounts: 3y edge mean_r +0.038 R (CI -0.21..+0.28, n=127), 365d -0.205 R (n=45); life breach prob 0.84-0.93 vs ceilings 0.73-0.89. Attribution
-    (the 127-trade ledger, base cost): shorts +5.2 R vs longs -1.0 R; 2024 -5.3 R, 2026 -5.5 R vs 2025 +10.6 R; stops -74 R vs TP +85 R; 21 of 71 stops had reached
-    1R MFE. Loss is regime/side-concentrated edge near zero, not sizing alone.'
+  shape: 'FAIL on all 3 accounts: 3y edge mean_r +0.038 R (CI -0.21..+0.28, n=127), 365d -0.205 R (n=45); life breach prob 0.84-0.93 vs ceilings
+    0.73-0.89. Attribution (the 127-trade ledger, base cost): shorts +5.2 R vs longs -1.0 R; 2024 -5.3 R, 2026 -5.5 R vs 2025 +10.6 R; stops -74
+    R vs TP +85 R; 21 of 71 stops had reached 1R MFE. Loss is regime/side-concentrated edge near zero, not sizing alone.'
   tested_at_power: false
   unit: RQ-20261101-e5b1-11
 - family: side_filter
@@ -1953,7 +1954,8 @@ levers_tested:
       net_r: 1.8843
       folds_positive: 2/4
       max_drawdown_r: 4.1773
-    reading: 'long-only turns the leg positive (+1.88R, +5.24R vs both sides, DD 4.2 vs 10.2) but 2/4 folds (needs 3): improvement without a Stage-0 edge'
+    reading: 'long-only turns the leg positive (+1.88R, +5.24R vs both sides, DD 4.2 vs 10.2) but 2/4 folds (needs 3): improvement without a Stage-0
+      edge'
   shape: single_point
   tested_at_power: true
   unit: RQ-20261113-f251-06
@@ -1977,26 +1979,59 @@ levers_tested:
       folds_positive: 1/4
       confirm_n: 60
       confirm_net_r: 13.8795
-    reading: 'tightening after a stall makes the forming record WORSE (-10.5R vs -3.4R): it clips winners before they reach the take-profit; the closed-bar +11.9R
-      does not carry. Prior year is flat (+13.9R vs +13.4R).'
+    reading: 'tightening after a stall makes the forming record WORSE (-10.5R vs -3.4R): it clips winners before they reach the take-profit; the
+      closed-bar +11.9R does not carry. Prior year is flat (+13.9R vs +13.4R).'
   shape: flat
   tested_at_power: true
   unit: RQ-20261113-f251-20
   lever_family: exit
+- family: regime_gating (pooled ADX cell x direction)
+  varied: ungated vs the worst pooled (ADX regime x direction) cell across 15 crypto demo-floor legs, picked on 2025-11-13..2026-11-12, checked
+    on 2024-11-13..2025-11-12, live decision bar, full cost stack
+  response:
+    verdict: fail
+    run: '43562273934'
+    rule: RULE-DFR-COMMON-LOSS-REGIME-20261114
+    leg_record:
+      n: 55
+      net_r: -3.3545
+    leg_prior:
+      n: 59
+      net_r: 13.443
+    part_a_common: true
+    part_a: 12/15 legs negative on the record window; pooled -142.3426R vs prior 106.089R
+    selected_cell: chop/long
+    cell_record:
+      n: 229
+      net_r: -75.3822
+    cell_prior:
+      n: 220
+      net_r: 25.5925
+    leg_ex_cell:
+      record_net_r: -2.3529
+      prior_net_r: 9.2735
+    reading: 'the record-year loss is common (Part A) but the worst ADX cell (chop/long) wins the year before: no trend-regime cell separates
+      it; the record-year loss sits on the LONG side in every ADX cell'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-02
+  lever_family: regime_gating
 manifest_notes:
-  census_2026_11_14: 'DEMO-FLOOR-ITER census after the 2nd forming lever failed. Forming record (f251-06, 2025-11-13..2026-11-12): -3.35R n 55, gross -0.53R before
-    2.83R of cost; long +5.03R vs short -8.39R; stops -33.5R (n 32), take-profits +35.8R (n 17). Prior year +13.4R (n 59): the leg was clearly positive the year before.'
+  census_2026_11_14: 'DEMO-FLOOR-ITER census after the 2nd forming lever failed. Forming record (f251-06, 2025-11-13..2026-11-12): -3.35R n 55,
+    gross -0.53R before 2.83R of cost; long +5.03R vs short -8.39R; stops -33.5R (n 32), take-profits +35.8R (n 17). Prior year +13.4R (n 59):
+    the leg was clearly positive the year before.'
   direction: 'TESTED forming (RQ-20261113-f251-06, FAIL): long-only +1.88R, 2/4 folds (needs 3): the closest any ada lever has come.'
-  exit: 'TESTED forming (RQ-20261113-f251-20, FAIL): stall-armed trail decay -10.46R vs -3.35R; it clips winners before the take-profit. momentum_stale (closed +12.4R)
-    is the same exit idea and is not expected to differ.'
-  structure_exit: 'INAPPLICABLE: the "structure_exit off" closed-bar responder reproduces the live configuration (the live leg runs no structure exit).'
+  exit: 'TESTED forming (RQ-20261113-f251-20, FAIL): stall-armed trail decay -10.46R vs -3.35R; it clips winners before the take-profit. momentum_stale
+    (closed +12.4R) is the same exit idea and is not expected to differ.'
+  structure_exit: 'INAPPLICABLE: the "structure_exit off" closed-bar responder reproduces the live configuration (the live leg runs no structure
+    exit).'
   entry: UNTESTED forming; no closed-bar entry responder on the map.
   filter: UNTESTED forming; no closed-bar filter responder on the map.
-  sizing_vs_cost: 'PLAUSIBLE but unmeasured: gross is near flat (-0.53R) and cost is 2.83R, so a cheaper route could matter; needs a measured venue cost, never an
-    assumed one.'
-  next: 'Regime is inapplicable; the only live pointer is direction, and long-only already ran (f251-06: +1.88R, 2/4). A measured venue cost is the one untested lever
-    with a pointer (gross -0.53R before 2.83R of cost). The leg was +13.4R on the prior year. Manager decides.'
+  sizing_vs_cost: 'PLAUSIBLE but unmeasured: gross is near flat (-0.53R) and cost is 2.83R, so a cheaper route could matter; needs a measured
+    venue cost, never an assumed one.'
+  next: 'Regime is inapplicable; the only live pointer is direction, and long-only already ran (f251-06: +1.88R, 2/4). A measured venue cost is
+    the one untested lever with a pointer (gross -0.53R before 2.83R of cost). The leg was +13.4R on the prior year. Manager decides.'
   regime_gating: 'READ 2026-11-14, INAPPLICABLE: regime_tag_emitted on the f251-20 arm A forming ledger (n 55), ADAUSDT 4h bars (comms/research/RQ-20261016-012/38965312507/candles/ADAUSDT_4h_390d.csv,
-    2025-09-21..2026-10-15), ADX-14: trending -2.59R n 22, transitional +1.00R n 14, chop -1.76R n 19. No regime cell concentrates the loss; the split that does is
-    direction (shorts lose in every cell: -3.01 / -4.62 / -0.76R; longs +0.41 / +5.62 / -1.00R). FRAGILE (30% of |R| near a cutoff); 6 trades (-2.98R) enter after
-    the bars end.'
+    2025-09-21..2026-10-15), ADX-14: trending -2.59R n 22, transitional +1.00R n 14, chop -1.76R n 19. No regime cell concentrates the loss; the
+    split that does is direction (shorts lose in every cell: -3.01 / -4.62 / -0.76R; longs +0.41 / +5.62 / -1.00R). FRAGILE (30% of |R| near a
+    cutoff); 6 trades (-2.98R) enter after the bars end.'
