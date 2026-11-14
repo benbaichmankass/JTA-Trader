@@ -9,7 +9,7 @@ from pathlib import Path
 import yaml
 
 from src.config import ml_universe as MU
-from src.config.symbol_sets import leg_symbols, roster_symbols
+from src.config.symbol_sets import leg_symbols
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -22,18 +22,27 @@ def _accts():
     return yaml.safe_load((REPO / "config/accounts.yaml").read_text())["accounts"]
 
 
-def test_no_record_exists_today_so_every_leg_and_account_is_unchanged():
+# The pre-record per-account sets (strategies.yaml ml_entry.account_symbols before RQ-20261112-2e3b-01's Tier-3 PR): the record
+# must reproduce them exactly on every rostered account, because the population test FAILED and nothing widens.
+_ML_ENTRY_BEFORE = {"bybit_2": ["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"],
+                    "bybit_portfolio": ["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"]}
+
+
+def test_only_ml_entry_has_a_record_and_it_changes_no_rostered_account():
     cfgs, accts = _cfgs(), _accts()
-    assert not list(MU.RECORD_DIR.glob("*.json")), "a record would change what trades: it must arrive by its own unit"
+    assert sorted(p.name for p in MU.RECORD_DIR.glob("*.json")) == ["ml_entry.json"], "a record must arrive by its own unit"
     for name, scfg in cfgs.items():
-        if not isinstance(scfg, dict):
+        if not isinstance(scfg, dict) or name == "ml_entry":
             continue
         assert leg_symbols(scfg, None, leg=name) == leg_symbols(scfg, None)
         for a in accts:
             assert leg_symbols(scfg, a, leg=name) == leg_symbols(scfg, a), (name, a)
-    for a, acct in accts.items():
-        roster = acct.get("strategies") or []
-        assert roster_symbols(roster, cfgs, a) == [s for s in _old_roster(roster, cfgs, a)], a
+    rostered = [a for a, acct in accts.items() if "ml_entry" in (acct.get("strategies") or [])]
+    assert set(_ML_ENTRY_BEFORE) <= set(rostered)
+    for a in rostered:
+        got = leg_symbols(cfgs["ml_entry"], a, leg="ml_entry")
+        want = _ML_ENTRY_BEFORE.get(a) or cfgs["ml_entry"]["account_symbols"][a]
+        assert sorted(got) == sorted(want), (a, got, want)
 
 
 def _old_roster(roster, cfgs, account_id):
@@ -73,8 +82,9 @@ def test_record_flows_through_leg_symbols_with_the_account_venue(tmp_path, monke
         _pop("fail", {"ETHUSDT": ["bybit"]}, "RQ-OTHER")]})
     monkeypatch.setattr(MU, "RECORD_DIR", d)
     MU._CACHE.clear()
-    cfg = _cfgs()["ml_entry"]
     five = ["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"]
+    cfg = dict(_cfgs()["ml_entry"])   # a configured bybit_2 scope of its own: this tests the resolver, not today's config
+    cfg["account_symbols"] = {**(cfg.get("account_symbols") or {}), "bybit_2": five}
     assert leg_symbols(cfg, "bybit_2", leg="ml_entry") == five + ["AAVEUSDT"]       # widened, never narrowed
     assert "AAVEUSDT" not in leg_symbols(cfg, "alpaca_paper", leg="ml_entry")     # not listed on alpaca
     assert "AAVEUSDT" in leg_symbols(cfg, None, leg="ml_entry")                    # the builder's union sees it
@@ -106,3 +116,14 @@ def test_default_write_keeps_other_units_populations(tmp_path, monkeypatch):
     pops = MU.load("ml_entry")
     assert [(p["unit"], p["verdict"]) for p in pops] == [("RQ-A", "pass"), ("RQ-B", "indeterminate")]
     assert MU.passed_symbols(pops, "bybit") == ["BTCUSDT"]
+
+
+def test_coordinator_scope_keeps_a_record_resolved_account(monkeypatch):
+    """The coordinator's leg_account_scope must contain bybit_2 / bybit_portfolio for ml_entry although the map no longer names
+    them: _scope.get(account, []) would otherwise drop every ml_entry package on the real-money books."""
+    import src.core.coordinator as C
+    monkeypatch.setattr(C, "_LEG_SCOPE_CACHE", None)
+    sc = C._leg_account_scope("ml_entry")
+    for a, want in _ML_ENTRY_BEFORE.items():
+        assert sorted(sc.get(a) or []) == sorted(want), (a, sc.get(a))
+    assert sorted(sc["alpaca_paper"]) == sorted(_cfgs()["ml_entry"]["account_symbols"]["alpaca_paper"])
