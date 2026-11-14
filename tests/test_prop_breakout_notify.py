@@ -125,3 +125,12 @@ def test_telegram_routes_to_prop_bot_token(monkeypatch, ticket_telegram_unretire
     tg.clear()
     breakout_notify.emit_prop_signal(_ticket())
     assert tg["kw"].get("bot_token") == "CLAUDEBOT456"
+
+
+def test_ticket_header_names_the_accounts_own_venue():
+    """PROP-TICKET-TRUTH: tradeify_1 / velotrade_1 tickets must not say Breakout."""
+    from src.prop.breakout_ticket import venue_label
+    assert venue_label("tradeify_1") == "Tradeify"
+    assert venue_label("velotrade_1") == "Velotrade"
+    assert venue_label("breakout_1") == "Breakout"
+    assert venue_label(None) == "Breakout"
