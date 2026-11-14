@@ -2113,6 +2113,43 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261114-db1a-03
   lever_family: regime_gating
+- family: regime_gating (HTF daily SMA200 long gate, harness-native)
+  varied: arm A config-exact vs arm H --htf-long-sma-days 200 inside the harness, record 2025-11-13..2026-11-12 + year before, live decision bar,
+    full cost stack
+  response:
+    verdict: fail
+    unit_verdict: fail
+    run: '43575944709'
+    rule: RULE-DFR-HTF-NATIVE-20261114
+    arm_H: --htf-long-sma-days 200 (inside the harness)
+    record:
+      A_net_r: -6.5744
+      A_n: 81
+      H_net_r: -1.3665
+      H_n: 54
+      H_folds_positive: 2
+      H_n_folds: 4
+      H_stage0: false
+      H_beats_A: true
+    prior:
+      A_net_r: 7.319
+      A_n: 71
+      H_net_r: 7.6781
+      H_n: 59
+      holds: true
+    pooled:
+      A_record: -142.3426
+      H_record: -57.0308
+      A_prior: 106.089
+      H_prior: 105.4607
+      delta_record: 85.3118
+      delta_prior: -0.6283
+    reading: 'harness-native: the gate cuts the record-year loss but is neutral-to-negative the year before (pooled H-A prior -0.63R); unit FAIL,
+      no per-leg pass'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-04
+  lever_family: regime_gating
 units:
 - RQ-20261113-f251-08
 - RQ-20261113-f251-14
@@ -2120,6 +2157,7 @@ units:
 - RQ-20261114-db1a-01
 - RQ-20261114-db1a-02
 - RQ-20261114-db1a-03
+- RQ-20261114-db1a-04
 manifest_notes:
   census_2026_11_14: 'DEMO-FLOOR-ITER lever-family census after the 3rd forming-bar lever failed (AM-ML guard). Forming record (2025-11-13..2026-11-12):
     -6.57R over n 81, gross -1.23R, cost 5.35R; long -10.96R n40, short +4.39R n41. The equal-length window before it (2024-11-13..2025-11-12,
