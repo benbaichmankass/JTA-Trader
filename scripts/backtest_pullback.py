@@ -160,6 +160,20 @@ def _resample(df: pd.DataFrame, rule: str) -> pd.DataFrame:
             .dropna().reset_index())
 
 
+
+def bef_tp_gate_open(is_long, ext, tp_price, risk, within_r):
+    """scripts/research/profit_lock_gate.py's tp_gate_open, loaded by FILE and lazily (only an armed
+    --be-floor-tp-within-r ever calls it; default runs never load it)."""
+    mod = sys.modules.get("profit_lock_gate")
+    if mod is None:
+        import importlib.util as _ilu
+        _spec = _ilu.spec_from_file_location("profit_lock_gate", Path(__file__).resolve().parent / "research" / "profit_lock_gate.py")
+        mod = _ilu.module_from_spec(_spec)
+        sys.modules["profit_lock_gate"] = mod
+        _spec.loader.exec_module(mod)
+    return mod.tp_gate_open(is_long, ext, tp_price, risk, within_r)
+
+
 def _htf_daily_gate():
     """scripts/research/htf_daily_gate.py, loaded by FILE and lazily (the flag is opt-in; default runs never load it)."""
     mod = sys.modules.get("htf_daily_gate")
@@ -275,6 +289,7 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                  cell_tighten_random_p: float = 0.5,
                  cell_tighten_seed: int = 0,
                  be_floor_lock_r: float = 0.0,
+                 be_floor_tp_within_r: float = 0.0,
                  stale_exit_bars: Optional[int] = None,
                  stale_exit_below_r: float = 0.0,
                  flip_exit_bars: Optional[int] = None,
@@ -818,6 +833,14 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                     return tp_price, "take_profit"
             return None
 
+        def _bef_armed(is_long: bool) -> bool:
+            # PROFIT-LOCK-CONDITIONAL-TEST: the TP-distance gate on the --be-floor-r lock. 0.0 = off (the floor arms
+            # on MFE alone, byte-identical). > 0: it arms only while a resting TP exists and the trade's extreme sits
+            # within this many R of it -- "open >= kR AND near the TP". No TP (None) never arms.
+            if be_floor_tp_within_r <= 0.0:
+                return True
+            return bef_tp_gate_open(is_long, ext, tp_price, risk, be_floor_tp_within_r)
+
         def _ratchet(h: float, lo: float) -> None:
             # Advances ext/mfe/trail over ONE window — a leg bar in arm A,
             # a sub-bar in B/C. `ext_j` stays a LEG-bar index so the
@@ -844,7 +867,9 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                 # ADA-LIVE-EXIT-REVIEW-1024 profit-lock STEP: with
                 # be_floor_lock_r = k > 0 the armed floor sits at entry + k R
                 # instead of entry (0.0 = the plain break-even floor, unchanged).
-                if be_floor_r > 0.0 and mfe >= be_floor_r:
+                # PROFIT-LOCK-CONDITIONAL-TEST: be_floor_tp_within_r > 0 also requires the TP within that
+                # many R of the extreme (see _bef_armed); 0.0 = unconditional, byte-identical.
+                if be_floor_r > 0.0 and mfe >= be_floor_r and _bef_armed(True):
                     trail = max(trail, entry + be_floor_lock_r * risk)
             else:
                 if lo < ext:
@@ -857,7 +882,7 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                     trail = min(trail, ext + trail_level_tight_mult * atr)
                 mfe = max(mfe, (entry - ext) / risk)
                 # MI-165 break-even FLOOR — short side; `min()` tightens here.
-                if be_floor_r > 0.0 and mfe >= be_floor_r:
+                if be_floor_r > 0.0 and mfe >= be_floor_r and _bef_armed(False):
                     trail = min(trail, entry - be_floor_lock_r * risk)
             if _sx is not None:
                 trail = _trail_prev        # structure replaces the chandelier (stop moves on bar close only)
@@ -865,7 +890,7 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                 # the structure stop exactly as in scripts/backtest_trend.py (override, THEN floor).
                 # Before PI-20261114-TFZXAKEK-0001 this override silently discarded the floor, so a
                 # --be-floor-r arm on a --structure-exit leg was inert (RQ-20261110-73de-04 C1, 0.0R).
-                if be_floor_r > 0.0 and mfe >= be_floor_r:
+                if be_floor_r > 0.0 and mfe >= be_floor_r and _bef_armed(direction == "long"):
                     trail = (max(trail, entry + be_floor_lock_r * risk) if direction == "long"
                              else min(trail, entry - be_floor_lock_r * risk))
             # momentum_trail attribution: was the stop last moved on a bar the
@@ -1152,6 +1177,8 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                                   "cell_tighten_seed": cell_tighten_seed} if cell_tighten_min_r > 0.0 else {}),
                               **({"be_floor_lock_r": be_floor_lock_r}
                                  if be_floor_r > 0.0 and be_floor_lock_r > 0.0 else {}),
+                              **({"be_floor_tp_within_r": be_floor_tp_within_r}
+                                 if be_floor_r > 0.0 and be_floor_tp_within_r > 0.0 else {}),
                               "min_confidence": min_confidence}
     if confirm_bars > 0:
         params["confirm_bars"] = confirm_bars
@@ -1468,7 +1495,10 @@ def main(argv: List[str]) -> int:
     p.add_argument("--be-floor-lock-r", type=float, default=0.0,
                    help="Profit-lock STEP for --be-floor-r (0=off, byte-identical): "
                         "the armed floor sits at entry + this many R instead of "
-                        "entry. Must be < --be-floor-r. Pullback harness only.")
+                        "entry. Must be < --be-floor-r.")
+    p.add_argument("--be-floor-tp-within-r", type=float, default=0.0,
+                   help="PROFIT-LOCK-CONDITIONAL-TEST TP-distance gate for --be-floor-r (0=off, byte-identical): "
+                        "the floor arms only while a resting TP exists within this many R of the trade's extreme.")
     p.add_argument("--trail-mult", type=float, default=5.0,
                    help="Chandelier trail distance in ATR (live default 5.0).")
     p.add_argument("--timeout-bars", type=int, default=200)
@@ -1884,6 +1914,7 @@ def main(argv: List[str]) -> int:
                        cell_tighten_random_p=args.cell_tighten_random_p,
                        cell_tighten_seed=args.cell_tighten_seed,
                        be_floor_lock_r=args.be_floor_lock_r,
+                       be_floor_tp_within_r=args.be_floor_tp_within_r,
                        timeout_bars=args.timeout_bars,
                        cooldown_bars=args.cooldown_bars,
                        timeframe=args.resample or args.timeframe,
