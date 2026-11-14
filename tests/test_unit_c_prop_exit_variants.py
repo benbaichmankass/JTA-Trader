@@ -65,10 +65,11 @@ def test_variants_present_with_tightened_exits():
         # Same entry params as the un-tightened siblings (only exits differ).
         assert (b["donchian"], b["atr_period"], b["atr_stop_mult"]) == (20, 14, 2.5)
         # sol 0.6 -> 0.8 per the M21 E-2 depth cell (wf 5/6 on the prop twin,
-        # 6/6 on the sol sibling, sweep 2026-07-13); eth stays 0.6 (no pass).
-        # Sibling parity is enforced by test_entries_unchanged... below.
-        assert b["min_confidence"] == (0.80 if name == "trend_donchian_sol_prop"
-                                       else 0.60)
+        # 6/6 on the sol sibling, sweep 2026-07-13). eth_prop 0.6 -> 0.8 on 2026-11-14 (Tier-3, data-backed, demo
+        # floor only): RQ-20261114-db1a-06 PASS on its closed bar, record year and the year before
+        # (research/results/RQ-20261114-db1a-06/43596786598.jsonl), a deliberate, evidence-backed departure
+        # from its sibling trend_donchian_eth (still 0.6, untested at 0.8 on its forming bar).
+        assert b["min_confidence"] == 0.80
 
 
 def test_exit_recipe_matches_validated_prop_sibling():
@@ -88,8 +89,13 @@ def test_entries_unchanged_vs_untightened_siblings():
     s = _strategies()
     pairs = (("trend_donchian_sol_prop", "trend_donchian_sol"),
              ("trend_donchian_eth_prop", "trend_donchian_eth"))
+    # 2026-11-14: trend_donchian_eth_prop.min_confidence departs from its sibling on evidence (RQ-20261114-db1a-06,
+    # see test_variants_present_with_tightened_exits); every other entry param stays pinned to the sibling.
+    evidenced = {("trend_donchian_eth_prop", "min_confidence")}
     for variant, base in pairs:
         for k in ("donchian", "atr_period", "atr_stop_mult", "min_confidence", "timeframe"):
+            if (variant, k) in evidenced:
+                continue
             assert s[variant][k] == s[base][k], f"{variant}.{k} drifted from {base}"
         # SOL is long-only (its edge holds long-only); ETH stays two-sided.
         assert s["trend_donchian_sol_prop"].get("long_only") is True

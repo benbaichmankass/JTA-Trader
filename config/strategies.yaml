@@ -1391,7 +1391,14 @@ strategies:
                             # here than on sol (-$465 at 2.5 vs -$135). Lowering
                             # tp_r is a real geometry change, Tier-3; the measured
                             # answer was DO NOT TIGHTEN.
-    min_confidence: 0.60
+    # min_confidence 0.60 -> 0.80 (Tier 3, DATA-BACKED, demo floor only; unit RQ-20261114-db1a-06, rule
+    # RULE-ETHPROP-MINCONF08-20261114 registered before the run): exit_lever_ablation --grade stage0, closed decision bar,
+    # full cost stack. Record year 2025-11-13..2026-11-12: 0.80 +10.97 R n 134 (4/4 folds, maxDD 8.58 R) vs 0.60 -9.61 R
+    # n 166 (maxDD 15.06 R). Year before: 0.80 +8.06 R n 140 (2/4 folds) vs 0.60 -4.52 R n 183. PASS. In-sample: 0.80
+    # was picked in RQ-20261101-78fc-14 (2020-07..2026-10) over a window overlapping both. Record:
+    # research/results/RQ-20261114-db1a-06/43596786598.jsonl.
+    # ROLLBACK: min_confidence: 0.60.
+    min_confidence: 0.80
     # stale_exit_bars: 12 / stale_exit_below_r: 0.0 REMOVED 2026-10-07 (Tier-3, data-backed standing
     #   authorization 2026-09-27; lane EXIT-LEVER-STRIP, findings PI-20261006-KX6ZKFNA-0001).
     #   Declared a close-type lever the prop paths cannot execute. Measured WITH vs WITHOUT over 730d
