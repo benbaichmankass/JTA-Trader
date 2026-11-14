@@ -91,16 +91,19 @@ population: 'The registered POOL_RULE of scripts/research/ml_entry_alpaca_score.
   hash differs.'
 last_dispatched_at: '2026-11-13T20:47:42+00:00'
 grading:
-  owner: RESEARCH-OPS-20261111-2049
-  owner_reason: 'producer_failed: alpaca GET /v2/stocks/bars throttled/unavailable after 8 attempts (transient, log cmd-0.log); re-queued 2026-11-11 (last_dispatched_at null); a second producer_failed becomes an infra row, not a re-queue'
   attested: RULE-RQ20261108-98e3-15-PIVOT3
   auto: true
   decision_rule_id: RULE-RQ20261108-98e3-15-PIVOT3
   evidence:
   - research/results/RQ-20261108-98e3-15/42483502138.jsonl
-  graded_at: '2026-11-11'
+  - research/results/RQ-20261108-98e3-15/43504856587.jsonl
+  graded_at: '2026-11-14'
   grader: scripts/research/queue_grade.py
   needs_review: true
+  owner: RESEARCH-OPS-20261111-2049
+  owner_reason: 'producer_failed: alpaca GET /v2/stocks/bars throttled/unavailable after 8 attempts (transient,
+    log cmd-0.log); re-queued 2026-11-11 (last_dispatched_at null); a second producer_failed becomes an
+    infra row, not a re-queue'
   reason: 'read_state not unanimously measured: [''producer_failed'']'
-  rows: 1
+  rows: 2
   verdict: null

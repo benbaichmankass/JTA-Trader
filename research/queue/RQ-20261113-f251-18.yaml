@@ -1,6 +1,6 @@
 id: RQ-20261113-f251-18
 title: 'tlt_pullback_1d exit lever: break-even floor at +1R MFE (be_floor_r 1.0) vs none on the forming bar (Alpaca 1Day + 1Min)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -170,3 +170,16 @@ practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-princip
 follow_up: On the verdict a session appends the test to research/levers/tlt_pullback_1d.yaml (lever_map.py --append) and updates the census. PASS -> Tier-3 proposal
   to the manager. FAIL -> the census picks the next family or records exhaustion; retirement only through the manager (and the operator this week).
 last_dispatched_at: '2026-11-14T00:44:46+00:00'
+grading:
+  attested: RULE-DFI3-TLT-BEFLOOR-20261114
+  auto: true
+  decision_rule_id: RULE-DFI3-TLT-BEFLOOR-20261114
+  evidence:
+  - research/results/RQ-20261113-f251-18/43536260399.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

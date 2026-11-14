@@ -1,7 +1,7 @@
 id: RQ-20261112-4654-03
 title: 'ENTRY cost lever: does a wider bracket (SL/TP 3/4.5 or 4/6 ATR: the same trade, larger in R) beat 2/3 ATR under each symbol''s own cost stack on
   the dev folds?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -116,3 +116,16 @@ related:
 population: The frozen 2e3b-01 population (51 Bybit USDT perps, F1-F5) on the c692-01 dev folds 2022-01-01..2025-09-30; a lever comparison, not a promotion
   read.
 last_dispatched_at: '2026-11-13T23:45:24+00:00'
+grading:
+  attested: RULE-RQ20261112-4654-03-ENTRY-COST-BRACKET
+  auto: true
+  decision_rule_id: RULE-RQ20261112-4654-03-ENTRY-COST-BRACKET
+  evidence:
+  - research/results/RQ-20261112-4654-03/43529493178.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

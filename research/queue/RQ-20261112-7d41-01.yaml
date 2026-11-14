@@ -2,7 +2,7 @@
 id: RQ-20261112-7d41-01
 title: 'P5-MLPROP-BASIS-LOWCAP-BV: does the funding/basis stream (premiumIndexKlines) carry a net-of-cost ETH+SOL entry signal at LOW model capacity (regularised logistic head) on the sealed backward
   held-out 2020-07-01..2021-12-21, and does it clear V3 on breakout_2 and velotrade_1?'
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 1
@@ -166,3 +166,16 @@ iteration:
   - feature_family_basis
   map_entries: []
 last_dispatched_at: '2026-11-13T23:45:24+00:00'
+grading:
+  attested: RULE-RQ20261112-7d41-01-BASIS-LOWCAP-V3
+  auto: true
+  decision_rule_id: RULE-RQ20261112-7d41-01-BASIS-LOWCAP-V3
+  evidence:
+  - research/results/RQ-20261112-7d41-01/43529499330.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

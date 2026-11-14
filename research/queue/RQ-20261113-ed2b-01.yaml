@@ -2,7 +2,7 @@
 id: RQ-20261113-ed2b-01
 title: 'ITERATION 1 of ltr-partial-close (pending, n=0 live): does banking half the position at the first +1R / near-target / stall trigger clear
   RULE-AM-RISK-ADJUSTED-V1 vs hold and vs a random-time partial, on the Stage-0 corpus?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -143,3 +143,16 @@ intervention_controls:
     how: leave-one-calendar-fold-out over V1's 6 folds (intervention_controls.best_static_rule); REPORTED, never a pass clause
   bootstrap_group: trade
 last_dispatched_at: '2026-11-13T19:28:10+00:00'
+grading:
+  attested: RULE-RQ-20261113-ed2b-01
+  auto: true
+  decision_rule_id: RULE-RQ-20261113-ed2b-01
+  evidence:
+  - research/results/RQ-20261113-ed2b-01/43492518743.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
