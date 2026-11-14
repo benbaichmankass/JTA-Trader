@@ -1,0 +1,51 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "n": 96,
+  "population": "trend_donchian_eth_4h: arm T4 vs A (config-exact), record 2025-11-13 to 2026-11-12 and prior 2024-11-13 to 2025-11-12, full cost stack",
+  "arm": "T4",
+  "note": "trend_donchian_eth_4h pass: record T4 -15.2931 (n 54, 1/4) vs A -15.2931; prior T4 24.3247 vs A 22.3695",
+  "legs": [
+    {
+      "leg": "trend_donchian_eth_4h",
+      "verdict": "pass",
+      "read_state": "measured",
+      "non_inferiority": {
+        "margin_r": 2.0,
+        "record_ok": true,
+        "prior_ok": true
+      },
+      "n": 96,
+      "record": {
+        "A_net_r": -15.2931,
+        "A_n": 54,
+        "X_net_r": -15.2931,
+        "X_n": 54,
+        "X_folds_positive": 1,
+        "X_n_folds": 4,
+        "X_stage0": false,
+        "X_beats_A": false
+      },
+      "prior": {
+        "A_net_r": 22.3695,
+        "A_n": 42,
+        "X_net_r": 24.3247,
+        "X_n": 42,
+        "holds": true
+      },
+      "note": "record T4 -15.2931 (n 54, 1/4) vs A -15.2931; prior T4 24.3247 vs A 22.3695"
+    }
+  ],
+  "research_unit": "RQ-20261114-db1a-08",
+  "rule": "RULE-ETH4H-TP4-NONINF-20261114",
+  "records": [
+    {
+      "leg": "trend_donchian_eth_4h",
+      "verdict": "pass",
+      "read_state": "measured",
+      "n": 96,
+      "population": "trend_donchian_eth_4h: arm T4 vs A, record + prior windows",
+      "note": "record T4 -15.2931 (n 54, 1/4) vs A -15.2931; prior T4 24.3247 vs A 22.3695"
+    }
+  ]
+}
