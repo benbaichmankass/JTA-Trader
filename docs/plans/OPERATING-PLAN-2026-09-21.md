@@ -185,6 +185,33 @@ help by cleaning up duplicate trades in the books and creating a more integrated
 5. **Inactive legs** — *"No shadow logging (Recommended)"*. Market-data collection continues under "Off the trade path is not off the
    data path".
 
+#### Open positions on a book move (row `STATUS-MOVE-OPEN-POSITIONS`, 2026-11-12)
+
+**Gates this adds or changes:** none. A status move changes what OPENS. This rule says what happens to positions that are
+ALREADY open. It decides no entry, and it adds no switch.
+
+The operator's words, which this applies. 2026-10-29, on ADA trade 6734, left open on `bybit_1` after #21038 promoted
+`ada_pullback_2h`: *"There shouldn't be three versions of this trade. There should be at most two."* 2026-11-12, planning page p3:
+*"We already said that things get promoted to real money based on backtesting, shadow on paper is only for something that is demoted and
+in iteration, not a step on the way to real money"*.
+
+| move | positions open at the merge | what happens |
+|---|---|---|
+| **promotion** (testing → production) | the leg's general-paper copy, where the same trade is also open on real money or the mirror | **closed on the paper book.** It is the third version, and the mirror already carries the same trade, so no record is lost. Use the paper account's `flatten-<venue>-position` system-action, then `mark-operator-flattened` so exit analyses exclude it. If another open position shares that account and symbol, a whole-symbol flatten would close it too, so the close is per row instead. |
+| promotion | a general-paper copy with no real-money or mirror sibling | **runs to its own exit.** It is the only copy of that trade. Closing it would cut a record short, and a status change is not a market signal. |
+| **demotion** (production → testing) | the real-money and mirror copies | **run to their own exits.** They keep open, block new: SL/TP stay resting and the exit monitor keeps managing them (E21, `order_monitor.exit_population`). New entries go to the floor only: new real-money entries stop because the leg leaves the real-money roster (`Coordinator.multi_account_execute` drops a package for an account whose roster does not list the leg, `strategy_not_assigned`), not through a new flag. The trade desk can still act on any of them on its own merits (`MD-TRADE-DESK`). A status change does not choose an exit time on real money. Operator decision, 2026-11-12 decisions page x3, verbatim: *"Let them run to their own exits; block new real-money entries"*. |
+| **retirement** (→ inactive) | any copy | **runs to its own exit** (E21). |
+
+That is at most two copies of any trade on the judged books (general paper, real money, mirror). Prop and options accounts sit outside
+the status model and are reported, not judged.
+
+**The positions read** is `python3 scripts/ops/status_move_positions.py`, logic in `scripts/ops/status_move.py`. It is the runtime half of
+`strategy-status-guard`: the guard reads rosters in CI, where positions cannot be read. It classifies every open position as `on_book` ·
+`not_judged` · `close_duplicate` · `close_netted` · `run_out` · `unexplained`, and it lists any trade open more than twice. It reads
+`/api/bot/positions?include_paper=true`, which carries no order-package id, so siblings are matched on leg + symbol + side and labelled
+ESTIMATED. A journal `trades` export, with `order_package_id`, matches exactly (MEASURED). **Whoever merges a roster PR runs it after the
+merge** and handles each `close_*` row as in the table.
+
 ### Stage 1 is the DEMO FLOOR: every non-retired leg trades there (operator, 2026-10-27, binding)
 
 ⚠️ **AMENDED 2026-10-28 by "Three strategy statuses" above:** the floor is the home of every TESTING leg. A PRODUCTION leg
