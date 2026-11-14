@@ -67,7 +67,7 @@ NON_RUNTIME_PATHS_RE = re.compile(
     r"|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/"
     r"|comms/(desk|live_review|live_parity|cloud|prop_survival|claude_judgments|reviews|ops|ci|ml-plan|news_alpha|strategy_reviews|reports|data_lake)/"
     r"|comms/claude_strategy_scores\.jsonl$"
-    r"|tools/phone-executor/|tools/phone-probe/|deploy/trainer/)"
+    r"|tools/phone-executor/|tools/phone-probe/|deploy/trainer/|\.gitignore$|\.gitattributes$)"
 )
 
 #: ...except these scripts/research modules, which the WEB-API imports in-process

@@ -208,9 +208,13 @@ the status model and are reported, not judged.
 **The positions read** is `python3 scripts/ops/status_move_positions.py`, logic in `scripts/ops/status_move.py`. It is the runtime half of
 `strategy-status-guard`: the guard reads rosters in CI, where positions cannot be read. It classifies every open position as `on_book` ·
 `not_judged` · `close_duplicate` · `close_netted` · `run_out` · `unexplained`, and it lists any trade open more than twice. It reads
-`/api/bot/positions?include_paper=true`, which carries no order-package id, so siblings are matched on leg + symbol + side and labelled
-ESTIMATED. A journal `trades` export, with `order_package_id`, matches exactly (MEASURED). **Whoever merges a roster PR runs it after the
-merge** and handles each `close_*` row as in the table.
+`/api/bot/positions?include_paper=true`, whose rows carry `orderPackageId` since 2026-11-14 (#25993, row POSITIONS-API-ORDER-PACKAGE-ID),
+so siblings are matched by package (MEASURED); a row without one falls back to leg + symbol + side, labelled ESTIMATED. **Whoever merges a roster PR runs it after the
+merge** and handles each `close_*` row as in the table. Since STATUS-MOVE-AUTO-PAPER-CLOSE (2026-11-14) the deploy does the promotion
+close itself: a sync that changes `config/accounts.yaml` runs `scripts/ops/status_move_apply.py --apply`, which closes each MEASURED
+`close_*` row per trade on its general-paper account only (never real money or a mirror), through the directed-action ->
+`live_review_apply` path (the account's own risk manager, venue read-back, one ping), then marks it operator-flattened. A row it
+refuses (ESTIMATED match, non-paper target) is printed and stays for the merger.
 
 ### Stage 1 is the DEMO FLOOR: every non-retired leg trades there (operator, 2026-10-27, binding)
 

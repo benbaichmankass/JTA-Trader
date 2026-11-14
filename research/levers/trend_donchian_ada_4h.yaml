@@ -1917,6 +1917,7 @@ units:
 - RQ-20261114-db1a-02
 - RQ-20261114-db1a-03
 - RQ-20261114-db1a-04
+- RQ-20261114-db1a-05
 levers_tested:
 - family: prop-stack fit (account sizing vs firm DD limits and the prop cost stack)
   varied: prop cost stack (fee 8 / slip 3 / funding 5 bps), 3 prop accounts x 2 arms x 2 windows, 5 seeds x 1000 lives
@@ -2087,6 +2088,63 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261114-db1a-04
   lever_family: regime_gating
+- family: 'exit (conditional profit lock: stop to entry + (k-1)R once MFE >= kR)'
+  varied: arm A config-exact vs L2 (k 2), L25 (k 2.5), L2T (k 2 armed only with the TP within 0.5R), record 2025-11-13..2026-11-12 + year before,
+    live decision bar, full cost stack
+  response:
+    verdict: fail
+    unit_verdict: fail
+    run: '43589684532'
+    rule: RULE-PROFIT-LOCK-CONDITIONAL-20261114
+    arms: L2 --be-floor-r 2 --be-floor-lock-r 1 (primary); L25 --be-floor-r 2.5 --be-floor-lock-r 1.5; L2T L2 + --be-floor-tp-within-r 0.5
+    A:
+      record_net_r: -3.3545
+      record_n: 55
+      prior_net_r: 13.443
+      prior_n: 59
+    L2:
+      verdict: fail
+      record_net_r: -6.8123
+      record_n: 56
+      record_folds_positive: 2
+      delta_record: -3.4578
+      prior_net_r: 13.5567
+      delta_prior: 0.1137
+    L25:
+      verdict: fail
+      record_net_r: -8.0635
+      record_n: 56
+      record_folds_positive: 2
+      delta_record: -4.709
+      prior_net_r: 10.7934
+      delta_prior: -2.6496
+    L2T:
+      verdict: fail
+      record_net_r: -3.3545
+      record_n: 55
+      record_folds_positive: 2
+      delta_record: 0.0
+      prior_net_r: 16.138
+      delta_prior: 2.695
+    pooled:
+      L2:
+        delta_record: -30.2489
+        delta_prior: -18.9327
+        verdict: fail
+      L25:
+        delta_record: -37.5409
+        delta_prior: -22.8675
+        verdict: fail
+      L2T:
+        delta_record: -9.1846
+        delta_prior: 1.5882
+        verdict: fail
+    reading: 'unit FAIL: an MFE-armed lock gives back more R than it saves, pooled over 18 crypto legs on both windows (L2 -30.25R record / -18.93R
+      year before); the TP-gated variant is near-neutral (-9.18R / +1.59R); no per-leg pass on any arm'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-05
+  lever_family: exit
 manifest_notes:
   census_2026_11_14: 'DEMO-FLOOR-ITER census after the 2nd forming lever failed. Forming record (f251-06, 2025-11-13..2026-11-12): -3.35R n 55,
     gross -0.53R before 2.83R of cost; long +5.03R vs short -8.39R; stops -33.5R (n 32), take-profits +35.8R (n 17). Prior year +13.4R (n 59):

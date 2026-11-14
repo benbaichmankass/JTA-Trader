@@ -1012,12 +1012,70 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261114-db1a-04
   lever_family: regime_gating
+- family: 'exit (conditional profit lock: stop to entry + (k-1)R once MFE >= kR)'
+  varied: arm A config-exact vs L2 (k 2), L25 (k 2.5), L2T (k 2 armed only with the TP within 0.5R), record 2025-11-13..2026-11-12 + year before,
+    live decision bar, full cost stack
+  response:
+    verdict: fail
+    unit_verdict: fail
+    run: '43589684532'
+    rule: RULE-PROFIT-LOCK-CONDITIONAL-20261114
+    arms: L2 --be-floor-r 2 --be-floor-lock-r 1 (primary); L25 --be-floor-r 2.5 --be-floor-lock-r 1.5; L2T L2 + --be-floor-tp-within-r 0.5
+    A:
+      record_net_r: -19.6552
+      record_n: 183
+      prior_net_r: -7.8577
+      prior_n: 171
+    L2:
+      verdict: fail
+      record_net_r: -24.9084
+      record_n: 198
+      record_folds_positive: 0
+      delta_record: -5.2532
+      prior_net_r: -18.0802
+      delta_prior: -10.2225
+    L25:
+      verdict: fail
+      record_net_r: -21.7042
+      record_n: 195
+      record_folds_positive: 0
+      delta_record: -2.049
+      prior_net_r: -16.2734
+      delta_prior: -8.4157
+    L2T:
+      verdict: fail
+      record_net_r: -19.6552
+      record_n: 183
+      record_folds_positive: 1
+      delta_record: 0.0
+      prior_net_r: -7.3168
+      delta_prior: 0.5409
+    pooled:
+      L2:
+        delta_record: -30.2489
+        delta_prior: -18.9327
+        verdict: fail
+      L25:
+        delta_record: -37.5409
+        delta_prior: -22.8675
+        verdict: fail
+      L2T:
+        delta_record: -9.1846
+        delta_prior: 1.5882
+        verdict: fail
+    reading: 'unit FAIL: an MFE-armed lock gives back more R than it saves, pooled over 18 crypto legs on both windows (L2 -30.25R record / -18.93R
+      year before); the TP-gated variant is near-neutral (-9.18R / +1.59R); no per-leg pass on any arm'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-05
+  lever_family: exit
 units:
 - RQ-20261113-f251-05
 - RQ-20261113-f251-17
 - RQ-20261114-db1a-02
 - RQ-20261114-db1a-03
 - RQ-20261114-db1a-04
+- RQ-20261114-db1a-05
 manifest_notes:
   census_2026_11_13: 'DEMO-FLOOR-ITER lever-family census (AM-ML 21:08Z), forming record 2025-11-01..2026-10-31: -10.57R over n 184 (gross +15.4R,
     cost 26.0R; ledger read by scripts/research/leg_r_diagnosis.py, run 43447401545).'
@@ -1038,13 +1096,14 @@ manifest_notes:
   next: 'Two forming-bar levers have failed (timeframe f251-05, regime f251-17). The remaining diagnosis-backed family is sizing_vs_cost (gross
     +15.4R before 26.0R of cost); it needs a MEASURED venue cost (maker fill rate / fee tier) before any unit, never an assumed one. A chop-long-only
     off-cell is a candidate only with its own confirmation split. Not exhausted: no retirement note.'
-  census_2026_11_14: 'Lever-family census after the round-4 regime work (manager ruling 2026-11-14 06:08Z). Live-bar record (2025-11-13..2026-11-12) -19.67R
-    n183; year before -7.68R n171: negative in BOTH years. Committed evidence attribution (n184): gross +15.39R, cost 25.96R, verdict ''cost erases a gross
-    edge''; cost is about 0.14R per trade. Tested on the live-bar windows: timeframe (RQ-20261113-f251-05, FAIL), regime off-cell chop (f251-17, FAIL), pooled
-    ADX cell (db1a-02, FAIL), HTF SMA200 long gate (db1a-03 post-hoc PASS pooled; db1a-04 harness-native FAIL, this leg H -11.25R / -23.24R, WORSE the year
-    before).'
-  sizing_vs_cost_2026_11_14: 'UNTESTED on the live bar, and it is the attribution''s own pointer: the leg has a gross edge that cost removes. The closed-bar
-    map''s only cost-per-R responder is atr_stop_mult 3.125 (+9.70R n691, pass; 1.875 -24.12R): a wider stop lowers cost per R. Not run on the record window.'
+  census_2026_11_14: 'Lever-family census after the round-4 regime work (manager ruling 2026-11-14 06:08Z). Live-bar record (2025-11-13..2026-11-12)
+    -19.67R n183; year before -7.68R n171: negative in BOTH years. Committed evidence attribution (n184): gross +15.39R, cost 25.96R, verdict
+    ''cost erases a gross edge''; cost is about 0.14R per trade. Tested on the live-bar windows: timeframe (RQ-20261113-f251-05, FAIL), regime
+    off-cell chop (f251-17, FAIL), pooled ADX cell (db1a-02, FAIL), HTF SMA200 long gate (db1a-03 post-hoc PASS pooled; db1a-04 harness-native
+    FAIL, this leg H -11.25R / -23.24R, WORSE the year before).'
+  sizing_vs_cost_2026_11_14: 'UNTESTED on the live bar, and it is the attribution''s own pointer: the leg has a gross edge that cost removes.
+    The closed-bar map''s only cost-per-R responder is atr_stop_mult 3.125 (+9.70R n691, pass; 1.875 -24.12R): a wider stop lowers cost per R.
+    Not run on the record window.'
   next_2026_11_14: 'SUPERSEDES next. NOT lever-exhausted: the sizing_vs_cost family is untested and is the diagnosed cause. Candidate unit: atr_stop_mult
-    3.125 on the live bar, record + the year before, same AM-ML guard. Caveat from db1a-01/-02: lever responses on these legs often flip sign between years.
-    No retirement proposal; manager decides.'
+    3.125 on the live bar, record + the year before, same AM-ML guard. Caveat from db1a-01/-02: lever responses on these legs often flip sign
+    between years. No retirement proposal; manager decides.'
