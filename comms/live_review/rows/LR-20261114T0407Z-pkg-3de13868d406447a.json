@@ -1,0 +1,206 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261114T0407Z-pkg-3de13868d406447a",
+ "reviewed_at": "2026-11-14T04:13:00Z",
+ "order_package_id": "pkg-3de13868d406447a",
+ "trade_id": null,
+ "leg": "ada_pullback_2h",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "new_peak",
+  "level": 2.73,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-14T04:07:20Z",
+ "state": {
+  "atr_now_over_entry": 0.8638,
+  "bars_held": 54,
+  "giveback_r": 0.2676,
+  "open_r": 2.4588,
+  "peak_provenance": "estimated",
+  "peak_r": 2.7264,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.18202857,
+  "tp": 0.1607384
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.8638,
+  "bars_since_peak": 0,
+  "giveback_r": 0.2676,
+  "open_r": 2.4588,
+  "peak_r": 2.7264,
+  "r_to_stop": 3.0657,
+  "r_to_target": 0.4954
+ },
+ "mechanics": {
+  "evidence": "package sl 0.18202857 / tp 0.1607384 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 41,
+   "mean_r": 2.8295,
+   "sd_r": 1.5822,
+   "worst_r": -0.5155,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 41,
+   "mean_r": 2.4968,
+   "sd_r": 0.6438,
+   "worst_r": 1.2578,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 41,
+   "mean_r": 2.4388,
+   "sd_r": 0.7899,
+   "worst_r": 1.2578,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 41,
+   "mean_r": 2.5433,
+   "sd_r": 0.9635,
+   "worst_r": 1.2578,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 41,
+   "mean_r": 2.778,
+   "sd_r": 1.5908,
+   "worst_r": -0.2421,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 41,
+   "mean_r": 2.7612,
+   "sd_r": 1.3217,
+   "worst_r": 0.7756,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 41,
+   "mean_r": 2.6528,
+   "sd_r": 1.2644,
+   "worst_r": 1.0656,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 41,
+   "mean_r": 2.6023,
+   "sd_r": 0.9335,
+   "worst_r": 1.2578,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 41,
+   "mean_r": 2.3699,
+   "sd_r": 0.0302,
+   "worst_r": 2.2685,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261114T0407Z-pkg-3de13868d406447a.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold at the new peak. Re-priced at peak 2.73R / open 2.46R (n=41 comparable ADA shorts, net of full cost stack): HOLD +2.830R (sd 1.58, worst -0.52R) vs close +2.370R (ev cost 0.46R, SE ~0.2), tighten r:1 +2.761, r:0 +2.778, r:1.23 +2.653, r:2 +2.602, atr:2.0 +2.543, atr:1.0 +2.497, atr:1.5 +2.439R; no tighten beats hold at this state (r:1/r:0 within 0.05-0.07R, well inside SE), and each buys worst case at that cost. The new peak is a 2h wick low 0.1621 with the bar closing 0.1634 (giveback 0.27R), TP 0.1607 is 0.78 ATR away and a real target; ATR ratio 0.86 gives no case for moving it. The venue stop moving 0.1844 -> 0.1820 is the strategy's own trail (I applied nothing; this lane never moves orders). Partial and move_tp are judged, not priced."
+ },
+ "forecast": {
+  "thesis": "New 2h wick low 0.1621 (peak 2.73R) with the bar closing 0.1634 above it; the 0.1658 shelf is broken and 1d ADX 35.8 is down, so I expect TP 0.1607 (0.78 ATR below) before a reclaim of 0.1688, but a long lower wick after a shelf break makes a bounce plausible",
+  "direction": "with_trade",
+  "target_px": 0.1607,
+  "p_target": 0.45,
+  "invalidation_px": 0.1688,
+  "horizon_bars": 6,
+  "timeframe": "2h",
+  "evidence": [
+   "table hold n=41 mean 2.8295 worst -0.5155; close 2.3699; tighten r:1 2.7612",
+   "chart.bars_ohlc last 2h bar L 0.1621 C 0.1634",
+   "chart.htf 1d trending ADX 35.8",
+   "exit_plan sl_now 0.182029 tp 0.160738 (strategy trail moved the stop)",
+   "state peak_r 2.7264 estimated, giveback 0.2676"
+  ]
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "tighten_bias: stop-at-price fills flatter any tighten; tighten is advice-only",
+  "venue_sl_moved: venue and package SL now 0.18202857 (was 0.18437857) and agree on every readable account; this is the strategy's own trail, not an action by this reviewer",
+  "correlated: ADA shorts x3 (this, mirror, trend_donchian_ada_4h) with ETH x6, SOL, XRP, BTC x3 shorts = one crypto-beta bet",
+  "atr_ratio: now/entry 0.86; regime trend_now transitional, 1d trending ADX 35.8",
+  "live_vs_backtest: realMoney 18 closed CONSISTENT (10.8th pct, live -3.44R); mirror 12 closed CONSISTENT (21.6th pct)",
+  "calendar: no events next 24h; funding not readable",
+  "trigger: new_peak 2.73R answers the same bar as the 04:00Z near_target row; separate row because the packet and table differ"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuNi-live-review-lane-0400Z",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [],
+ "packet_sha": "b261e6d40b93c91c68bbea9c501fac92c12a0f4b73cddc96a3ddff141ea82630"
+}
