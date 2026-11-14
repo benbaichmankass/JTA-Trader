@@ -5,7 +5,7 @@ id: RQ-20261112-002
 title: 'ITERATION 3 of trend_donchian_1h (iteration 2 PASS: NOSX, no structure exit, +14.5 R vs A -91.5
   R; the structure exit was removed from the leg on 2026-11-05 by #23485): does the leg AS NOW DECLARED
   confirm on a held-back latest 25% (2020-07..2026-10, full cost stack)?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROGRAMMES
@@ -151,3 +151,15 @@ generated:
   params:
     node: P3-ITER3-trend-donchian-1h-declared-holdout
 last_dispatched_at: '2026-11-14T10:44:54+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P3-ITER3-trend-donchian-1h-declared-holdout
+  evidence:
+  - research/results/RQ-20261112-002/43586751782.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

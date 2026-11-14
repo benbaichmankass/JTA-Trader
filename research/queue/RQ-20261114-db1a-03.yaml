@@ -1,7 +1,7 @@
 id: RQ-20261114-db1a-03
 title: 'DEMO-FLOOR direction-regime unit: does ONE higher-timeframe trend filter on LONGS (own-symbol prior daily close below SMA200 -> skip the long) separate the common record-year
   loss of the 15 crypto demo-floor legs, holding on the year before?'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -945,3 +945,14 @@ follow_up: 'On the verdict a session reports to the manager: the gated-long cell
   / trend_donchian_eth_prop turn positive on both windows. PASS -> a harness-native unit (filter inside the harness) before any Tier-3. FAIL -> per-leg censuses (trend_donchian_1h,
   trend_donchian_eth_prop) proceed to dispositions.'
 last_dispatched_at: '2026-11-14T06:39:03+00:00'
+grading:
+  attested: RULE-DFR-HTF-LONG-FILTER-20261114
+  auto: true
+  decision_rule_id: RULE-DFR-HTF-LONG-FILTER-20261114
+  evidence:
+  - research/results/RQ-20261114-db1a-03/43567392380.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
