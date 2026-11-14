@@ -147,6 +147,23 @@ def _infer_step(bars: Optional[pd.DataFrame]) -> Optional[pd.Timedelta]:
     return pd.Timedelta(d.median()) if len(d) else None
 
 
+#: Why a package carries NO computed label at all (row TREND-ALIGN-LABEL-ALL). Distinct from MISSING_REASONS (which are the
+#: research definition's per-timeframe reasons and stay pinned to scripts/research/trend_alignment.py): these say the label
+#: was never computed for the package, so a reader renders "—", never neutral.
+UNSTAMPED_REASONS = ("not_stamped_by_builder", "snapshot_scored_no_candles")
+
+
+def unlabelled(reason: str, side: Any = None) -> Dict[str, Any]:
+    """A ``meta.trend_align`` of the full shape with BOTH labels null and ``reason`` -- for a package whose builder computed
+    nothing (an unwired path, or a leg scored from a snapshot with no candle frame on the tick). Never neutral, never 0."""
+    assert reason in UNSTAMPED_REASONS, reason
+    s = side_of(side)
+    tf = {"label": None, "missing_reason": reason, "adx": None, "pdi": None, "mdi": None, "regime_label": None,
+          "bar_close_used": None, "n_bars_used": None}
+    return {"definition": DEFINITION_ID, "LEG": dict(tf), "D1": dict(tf), "agreement": "other",
+            "side": "long" if s == 1 else "short" if s == -1 else None}
+
+
 def meta_for_entry(candles_leg: Any, candles_d1: Any, direction: Any, timeframe: Optional[str]) -> Dict[str, Any]:
     """The ``meta.trend_align`` dict for an entry: the LEG-timeframe label (from the leg's own frame) and the D1 label
     (from a 1d frame), plus their agreement. The entry time is the leg frame's last bar close, so only CLOSED bars are

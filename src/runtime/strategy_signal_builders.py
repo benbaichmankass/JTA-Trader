@@ -98,6 +98,33 @@ def _stamp_trend_align_on_meta(meta: Dict[str, Any], candles_df: Any, *, symbol:
     return meta
 
 
+def _stamp_trend_align_on_signal(sig: Dict[str, Any], candles_df: Any, *, symbol: Optional[str] = None,
+                                 timeframe: Optional[str] = None, exchange: Any = None,
+                                 candle_symbol: Optional[str] = None) -> Dict[str, Any]:
+    """Row TREND-ALIGN-LABEL-ALL: stamp ``meta.trend_align`` (TREND-ALIGN-V1, LEG + D1) on an ACTIONABLE signal.
+
+    LABEL ONLY -- nothing reads it to decide, size or bracket; it changes no key of ``sig`` other than
+    ``sig["meta"]["trend_align"]`` (pinned by tests/test_trend_align_label_all.py). A non-actionable signal
+    (side none) is returned untouched, so a tick that emits nothing costs nothing. The D1 frame is ONE
+    ``fetch_candles(<symbol>, "1d", limit=200)`` through the builder's own exchange client, only on an actionable
+    signal; it goes through the shared candle cache (a Bybit symbol shares one slot across legs and accounts) and a
+    failure leaves D1 null with a reason. Never raises (``_stamp_trend_align_on_meta``'s contract)."""
+    try:
+        side = str(sig.get("side") or "").strip().lower()
+        if side not in ("buy", "sell"):
+            return sig
+        fetch_d1 = None
+        if exchange is not None and str(timeframe) != "1d":
+            def fetch_d1() -> Any:
+                from src.runtime.market_data import fetch_candles as _fc
+                return _fc(candle_symbol or symbol, "1d", exchange_client=exchange, limit=200)
+        _stamp_trend_align_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe,
+                                   direction=side, fetch_d1=fetch_d1)
+    except Exception:  # noqa: BLE001 -- observability-only, never break a tick
+        logger.debug("trend_align stamp failed for %s", symbol, exc_info=True)
+    return sig
+
+
 def _stamp_regime(payload: Dict[str, Any], candles_df: Any) -> Dict[str, Any]:
     """Stamp the ADX-14 regime detector's output onto an eval audit row.
 
@@ -709,6 +736,7 @@ def turtle_soup_signal_builder(settings: dict) -> Dict[str, Any]:
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("turtle_soup", sig)
 
 
@@ -854,6 +882,7 @@ def ict_scalp_signal_builder(settings: dict) -> Dict[str, Any]:
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("ict_scalp_5m", sig)
 
 
@@ -1060,6 +1089,7 @@ def _ict_scalp_variant_builder(name: str, settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds(name, sig, vcfg, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package(name, sig)
 
 
@@ -1304,6 +1334,7 @@ def vwap_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001
         logger.exception("VWAP: dedicated audit emit failed")
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("vwap", sig)
 
 
@@ -1473,10 +1504,7 @@ def trend_donchian_signal_builder(settings: dict) -> Dict[str, Any]:
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
-    # TREND-ALIGNMENT-FEATURE step 3 (observe-only): tag the prevailing-trend alignment of this entry. Never gates.
-    _stamp_trend_align_on_meta(
-        sig["meta"], candles_df, symbol=symbol, timeframe=timeframe, direction=pkg["direction"],
-        fetch_d1=(lambda: fetch_candles(symbol, "1d", exchange_client=exchange, limit=200)) if timeframe != "1d" else None)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("trend_donchian", sig)
 
 
@@ -1619,6 +1647,7 @@ def fade_breakout_4h_signal_builder(settings: dict) -> Dict[str, Any]:
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("fade_breakout_4h", sig)
 
 
@@ -1759,6 +1788,7 @@ def htf_pullback_trend_2h_signal_builder(settings: dict) -> Dict[str, Any]:
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("htf_pullback_trend_2h", sig)
 
 
@@ -1898,6 +1928,7 @@ def trend_donchian_1h_signal_builder(settings: dict) -> Dict[str, Any]:
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("trend_donchian_1h", sig)
 
 
@@ -2291,6 +2322,7 @@ def _trend_donchian_variant_builder(name: str, settings: dict) -> Dict[str, Any]
     }
     _emit_shadow_preds(name, sig, vcfg, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package(name, sig)
 
 
@@ -2527,6 +2559,7 @@ def mes_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("mes_trend_long_1d", sig)
 
 
@@ -2662,6 +2695,7 @@ def _metals_pullback_signal_builder(
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package(strategy_name, sig)
 
 
@@ -2822,6 +2856,7 @@ def squeeze_breakout_4h_signal_builder(settings: dict) -> Dict[str, Any]:
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("squeeze_breakout_4h", sig)
 
 
@@ -2972,6 +3007,7 @@ def fvg_range_15m_signal_builder(settings: dict) -> Dict[str, Any]:
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("fvg_range_15m", sig)
 
 
@@ -3118,6 +3154,7 @@ def xauusd_trend_1h_signal_builder(settings: dict) -> Dict[str, Any]:
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("xauusd_trend_1h", sig)
 
 
@@ -3252,6 +3289,7 @@ def mgc_trend_1h_signal_builder(settings: dict) -> Dict[str, Any]:
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("mgc_trend_1h", sig)
 
 
@@ -3451,6 +3489,7 @@ def spy_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("spy_trend_long_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("spy_trend_long_1d", sig)
 
 
@@ -3602,6 +3641,7 @@ def iwm_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("iwm_trend_long_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("iwm_trend_long_1d", sig)
 
 
@@ -3753,6 +3793,7 @@ def splg_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("splg_trend_long_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("splg_trend_long_1d", sig)
 
 
@@ -3905,6 +3946,7 @@ def scha_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("scha_trend_long_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("scha_trend_long_1d", sig)
 
 
@@ -4053,6 +4095,7 @@ def qqq_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("qqq_trend_long_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("qqq_trend_long_1d", sig)
 
 
@@ -4200,6 +4243,7 @@ def tqqq_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("tqqq_trend_long_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("tqqq_trend_long_1d", sig)
 
 
@@ -4343,6 +4387,7 @@ def qld_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("qld_trend_long_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("qld_trend_long_1d", sig)
 
 
@@ -4470,6 +4515,7 @@ def gld_pullback_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("gld_pullback_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("gld_pullback_1d", sig)
 
 
@@ -4600,6 +4646,7 @@ def iaum_pullback_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("iaum_pullback_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("iaum_pullback_1d", sig)
 
 
@@ -4730,6 +4777,7 @@ def tlt_pullback_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("tlt_pullback_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("tlt_pullback_1d", sig)
 
 
@@ -4860,6 +4908,7 @@ def slv_pullback_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("slv_pullback_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("slv_pullback_1d", sig)
 
 
@@ -4990,6 +5039,7 @@ def gdx_pullback_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("gdx_pullback_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("gdx_pullback_1d", sig)
 
 
@@ -5121,6 +5171,7 @@ def ief_pullback_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("ief_pullback_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("ief_pullback_1d", sig)
 
 
@@ -5253,6 +5304,7 @@ def gld_pullback_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("gld_pullback_1h", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("gld_pullback_1h", sig)
 
 
@@ -5389,6 +5441,7 @@ def slv_trend_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("slv_trend_1h", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("slv_trend_1h", sig)
 
 
@@ -5521,6 +5574,7 @@ def spy_pullback_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("spy_pullback_1h", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("spy_pullback_1h", sig)
 
 
@@ -5654,6 +5708,7 @@ def qqq_pullback_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("qqq_pullback_1h", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("qqq_pullback_1h", sig)
 
 
@@ -5808,6 +5863,7 @@ def tlt_pullback_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("tlt_pullback_1h", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("tlt_pullback_1h", sig)
 
 
@@ -5964,6 +6020,7 @@ def uso_trend_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("uso_trend_1h", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("uso_trend_1h", sig)
 
 
@@ -6167,6 +6224,7 @@ def _htf_pullback_variant_builder(
     }
     _emit_shadow_preds(name, sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package(name, sig)
 
 
@@ -6537,6 +6595,7 @@ def e4_oi_shock_1h_signal_builder(settings: dict) -> Dict[str, Any]:
                  "direction": pkg["direction"], "timeframe": timeframe},
     }
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package(name, sig)
 
 
@@ -6809,6 +6868,8 @@ def ml_entry_signal_builder(settings: dict) -> Dict[str, Any]:
            "stop_loss": pkg["sl"], "take_profit": pkg["tp"], "pattern": NAME,
            "meta": {**pkg["meta"], "strategy_name": NAME, "confidence": pkg["confidence"],
                     "direction": pkg["direction"], "timeframe": timeframe}}
+    _stamp_trend_align_on_signal(sig, frame, symbol=symbol, timeframe=timeframe, exchange=exchange,  # TREND-ALIGN-LABEL-ALL, label only
+                                 candle_symbol=_ml_entry_candle_symbol(symbol, exchange, _venue))
     return _with_signal_package(NAME, sig)
 
 
@@ -6883,6 +6944,8 @@ def ml_entry_v2_signal_builder(settings: dict) -> Dict[str, Any]:
            "stop_loss": pkg["sl"], "take_profit": pkg["tp"], "pattern": NAME,
            "meta": {**pkg["meta"], "strategy_name": NAME, "confidence": pkg["confidence"],
                     "direction": pkg["direction"], "timeframe": timeframe}}
+    _stamp_trend_align_on_signal(sig, frame, symbol=symbol, timeframe=timeframe, exchange=exchange,  # TREND-ALIGN-LABEL-ALL, label only
+                                 candle_symbol=_ml_entry_candle_symbol(symbol, exchange, _venue))
     return _with_signal_package(NAME, sig)
 
 
@@ -6988,4 +7051,8 @@ def _ml_entry_eq_build(settings: dict, NAME: str, _DECIDED: set) -> Dict[str, An
     sig = {"symbol": symbol, "side": "buy", "price": pkg["entry"], "entry_price": pkg["entry"], "stop_loss": pkg["sl"],
            "take_profit": pkg["tp"], "pattern": NAME,
            "meta": {**pkg["meta"], "strategy_name": NAME, "confidence": pkg["confidence"], "direction": "long", "timeframe": "1h"}}
+    # TREND-ALIGN-LABEL-ALL (label only): this leg scores from the pool snapshot with NO candle frame on the tick (no fetch,
+    # by design), so the package carries an explicit null label with its reason -- rendered "—", never neutral.
+    from src.runtime.trend_alignment import unlabelled as _ta_unlabelled
+    sig["meta"].setdefault("trend_align", _ta_unlabelled("snapshot_scored_no_candles", "buy"))
     return _with_signal_package(NAME, sig)
