@@ -34,9 +34,8 @@ END = "# <<< LTR-CANDLE-ALLOWLIST end"
 
 
 def live_legs(accounts_path: Path = REPO / "config" / "accounts.yaml") -> List[str]:
-    import yaml
-    a = yaml.safe_load(accounts_path.read_text(encoding="utf-8")) or {}
-    accs = a.get("accounts", a)
+    from src.config.accounts_loader import load_accounts_dict  # the canonical loader (canonical-config-loaders guard)
+    accs = load_accounts_dict(accounts_path)
     out = set()
     for cfg in accs.values():
         if isinstance(cfg, dict) and cfg.get("mode") == "live":
