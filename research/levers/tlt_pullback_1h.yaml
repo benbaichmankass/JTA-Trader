@@ -182,3 +182,31 @@ levers:
       best_delta_r_per_trade: -0.0577
       fold_stability: 0.0
       reading: every tested value is worse than the baseline
+levers_tested:
+- family: exit (entry tp_r 3.5 K*) + direction (side_filter long), live-faithful corpus
+  varied: A config-exact vs K35 (tp_r 3.5, both sides, + conservative short borrow/dividend add-on) vs pre-registered L35 (tp_r 3.5, long only),
+    Alpaca iex 1Hour+1Min forming 2025-06-02..2026-11-11, control reproduced the committed record
+  response:
+    verdict: pass
+    proposal_arm: L35
+    A:
+      net_r: 4.0263
+      n: 149
+      net_r_adj: -1.5199
+    K35:
+      net_r: 7.3799
+      n: 152
+      net_r_adj: 2.1509
+    L35:
+      net_r: 8.1699
+      n: 75
+      t: 0.72
+      folds_positive: 4
+    reading: 'PASS, proposal arm L35 (long only, tp_r 3.5): +8.17R n75, 4/4 calendar folds, t 0.72 (not distinguishable from zero); prior config
+      -1.52R after the ESTIMATED short-carry add-on. Operator approved real-money promotion of L35 2026-11-14 (held PR #26094).'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-10
+  lever_family: exit
+units:
+- RQ-20261114-db1a-10

@@ -3878,6 +3878,8 @@ units:
 - RQ-20261114-db1a-04
 - RQ-20261114-db1a-05
 - RQ-20261114-db1a-08
+- RQ-20261114-db1a-09
+- RQ-20261114-db1a-13
 levers_tested:
 - family: exit head (ML early-exit, E1/E1.5)
   varied: 19 head arms (tau grid + below_half_r/pre_mfe1/age8/age8_below_half_r shapes) vs the declared exit, selected on discovery, read once
@@ -4085,4 +4087,59 @@ levers_tested:
   shape: single_point
   tested_at_power: true
   unit: RQ-20261114-db1a-08
+  lever_family: exit
+- family: prop EV/survival (entry tp_r 4, prop superset)
+  varied: A config-exact vs T4 (tp_r 4) trade ledgers 2023-11-05..2026-11-05 scored by prop_ev_sim on breakout_2/tradeify_1/velotrade_1, seeds
+    1..5 x 1000 lives, strict non-inferiority (no margin)
+  response:
+    verdict: fail
+    accounts:
+      breakout_2:
+        ev_A: 38.91
+        ev_B: 45.68
+        p_breach_A: 0.5016
+        p_breach_B: 0.5166
+        verdict: fail
+      tradeify_1:
+        ev_A: 119.56
+        ev_B: 130.63
+        p_breach_A: 0.3366
+        p_breach_B: 0.3362
+        verdict: pass
+      velotrade_1:
+        ev_A: 76.11
+        ev_B: 87.83
+        p_breach_A: 0.264
+        p_breach_B: 0.2618
+        verdict: pass
+    reading: FAIL as registered on breakout_2 alone, an account that does NOT roster the leg (scoping error at registration); EV up on all three
+      firms; stays FAIL, not re-graded (manager ruling (c) 2026-11-14 15:49Z)
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-09
+  lever_family: exit
+- family: prop EV/survival (entry tp_r 4, prop superset, rostered firms)
+  varied: 'db1a-09b re-registration: same A/T4 ledgers on tradeify_1/velotrade_1 only, fresh seeds 6..10 x 1000 lives, strict non-inferiority
+    (no margin)'
+  response:
+    verdict: fail
+    accounts:
+      tradeify_1:
+        ev_A: 105.17
+        ev_B: 151.36
+        p_breach_A: 0.329
+        p_breach_B: 0.3268
+        verdict: pass
+      velotrade_1:
+        ev_A: 79.57
+        ev_B: 98.1
+        p_breach_A: 0.251
+        p_breach_B: 0.255
+        verdict: fail
+    reading: FAIL as registered on velotrade_1 p_breach +0.004, inside the sim Monte Carlo SE (~0.006 at 5x1000 lives; db1a-09 read -0.0022 on
+      seeds 1..5); EV up on both. A zero-margin rule on a MC breach probability is noise-limited; manager approved a powered re-test (~20k lives/arm,
+      common random numbers, MC-SE margin) at low priority
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-13
   lever_family: exit
