@@ -35,6 +35,10 @@ evidence_class:
   holdout: in_sample
   claim: edge
 run:
+  timeout_minutes: 300
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261114-db1a-05
   commands:
   - - python3
     - scripts/research/exit_lever_ablation.py
