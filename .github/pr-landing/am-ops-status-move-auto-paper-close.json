@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "STATUS-MOVE-AUTO-PAPER-CLOSE: scripts/ops/status_move_apply.py closes each MEASURED close_duplicate/close_netted row from status_move.classify, per trade, on its general-paper account ONLY (asserted + tested: a real-money or mirror account is never a target), through the existing directed_action._apply_record -> live_review_apply path (account RiskManager, venue read-back, one ping), then mark_operator_flattened. deploy_pull_restart.sh runs it (bounded, never fails the deploy) after a sync that changed config/accounts.yaml. Order path + deploy script: the manager merges, batched with #26000. Revert: git revert.",
+  "why": "Operator rule (OPERATING-PLAN 2): at most two copies of a trade; the promoted leg's paper copy closes automatically."
+}

@@ -1111,4 +1111,15 @@ else
     echo ">>> WARNING: could not write deploy marker ${DEPLOYED_SHA_FILE}"
 fi
 
+# STATUS-MOVE-AUTO-PAPER-CLOSE (2026-11-14): a sync that changed config/accounts.yaml may have PROMOTED a leg. Close
+# the general-paper copy of any trade also open on real money / the mirror (OPERATING-PLAN 2 "Open positions on a
+# book move"), per row, through the existing directed-action -> live_review_apply path. Paper books only (the script
+# refuses a real-money or mirror target). Bounded, and it never fails the deploy: a close that does not run is
+# logged and re-tried on the next roster sync; the daily status-move read still lists it.
+if printf '%s\n' "${CHANGED_FILES:-}" | grep -qx 'config/accounts.yaml'; then
+    echo ">>> config/accounts.yaml changed: running the status-move paper close (scripts/ops/status_move_apply.py --apply)"
+    timeout 300 /usr/bin/python3 "${REPO_DIR}/scripts/ops/status_move_apply.py" --apply 2>&1 | sed 's/^/>>>   /' \
+        || echo ">>>   status-move paper close did not complete (deploy unaffected)"
+fi
+
 echo "===== DEPLOY COMPLETE: $(date) ====="
