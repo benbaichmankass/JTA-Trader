@@ -196,3 +196,26 @@ levers:
       best_delta_r_per_trade: -0.0149
       fold_stability: 0.25
       reading: every tested value is worse than the baseline
+levers_tested:
+- family: direction (side_filter long) + exit (trail_mult 4.0), live-faithful corpus
+  varied: A config-exact (both sides, trail 5) vs T1 (long only, trail 4.0; f090-02 holdout pick), Alpaca iex 1Hour+1Min forming 2025-06-02..2026-11-11,
+    control reproduced the committed record
+  response:
+    verdict: pass
+    A:
+      net_r: 5.4889
+      n: 73
+      t: 0.34
+    T1:
+      net_r: 3.4783
+      n: 62
+      t: 0.27
+      folds_positive: 2
+    reading: PASS by RULE-D1 but T1 earns LESS than the live config on the live feed (+3.48R n62 vs +5.49R n73); f090-02 dukascopy closed-bar
+      preference for T1 does not carry over. qqq T1 promotion path dropped (manager 2026-11-14 17:22Z); db1a-12 (T1 TP derive) withdrawn.
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-11
+  lever_family: direction
+units:
+- RQ-20261114-db1a-11
