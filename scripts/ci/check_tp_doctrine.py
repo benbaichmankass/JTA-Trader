@@ -327,7 +327,6 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # absent / unreachable (a blocker for exit-refinement, prioritised below real-money legs), `R` = a real declared TP but nothing revises it.
     # Nothing here fakes a TP; the guard ratchet only shrinks from this point.
     "alpaca_paper/uso_trend_1h": R,
-    "bybit_1/avax_pullback_2h": ER,
     "bybit_1/eth_pullback_2h": ER,
     "bybit_1/eth_pullback_prop_2h": ER,
     "bybit_1/fade_breakout_4h": ER,
