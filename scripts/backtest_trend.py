@@ -197,6 +197,18 @@ def _resample(df: pd.DataFrame, rule: str) -> pd.DataFrame:
             .dropna().reset_index())
 
 
+def _htf_daily_gate():
+    """scripts/research/htf_daily_gate.py, loaded by FILE and lazily (the flag is opt-in; default runs never load it)."""
+    mod = sys.modules.get("htf_daily_gate")
+    if mod is None:
+        import importlib.util as _ilu
+        _spec = _ilu.spec_from_file_location("htf_daily_gate", Path(__file__).resolve().parent / "research" / "htf_daily_gate.py")
+        mod = _ilu.module_from_spec(_spec)
+        sys.modules["htf_daily_gate"] = mod
+        _spec.loader.exec_module(mod)
+    return mod
+
+
 def _date_filter(df: pd.DataFrame, start: Optional[str], end: Optional[str]) -> pd.DataFrame:
     if start:
         df = df[df["timestamp"] >= pd.Timestamp(start, tz="UTC")]
@@ -314,6 +326,7 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  min_confidence: float = 0.0,
                  long_only: bool = False,
                  side_filter: str = "both",
+                 htf_long_gate: Optional[Any] = None,
                  adx_min: Optional[float] = None,
                  adx_max: Optional[float] = None,
                  adx_period: int = 14,
@@ -685,6 +698,11 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
         _sf = "long" if long_only else side_filter
         if (_sf == "long" and direction == "short") or \
                 (_sf == "short" and direction == "long"):
+            i += 1
+            continue
+        # HTF long gate (scripts/research/htf_daily_gate.py; None = off = byte-identical): skip a LONG when the
+        # symbol's last completed daily close is below its N-day SMA. Applies on both decision bars.
+        if htf_long_gate is not None and direction == "long" and htf_long_gate.skip(df["timestamp"].iloc[i]):
             i += 1
             continue
         # Direction-aware regime gate (Phase 2): skip a long whose direction read
@@ -1298,6 +1316,8 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                     default=str) + "\n")
     params: Dict[str, Any] = {"donchian": donchian, "atr_stop_mult": atr_stop_mult,
                               "trail_mult": trail_mult, "min_confidence": min_confidence}
+    if htf_long_gate is not None:
+        params["htf_long_sma_days"] = htf_long_gate.days
     if adx_min is not None:
         params["adx_min"] = adx_min
     if adx_max is not None:
@@ -1714,6 +1734,10 @@ def main(argv: List[str]) -> int:
                    help="Config-exact directional gate matching the live builder's "
                         "side_filter: skip shorts (long) / skip longs (short) / no gate "
                         "(both, default). --long-only overrides to 'long'.")
+    p.add_argument("--htf-long-sma-days", type=int, default=0,
+                   help="HTF long gate (default 0 = off, byte-identical): skip a LONG entry when the symbol's last "
+                        "completed UTC daily close is below its N-day SMA of daily closes, built from the loaded bars "
+                        "BEFORE the --start/--end trim (scripts/research/htf_daily_gate.py). Shorts are never gated.")
     p.add_argument("--adx-min", type=float, default=None,
                    help="Regime filter: skip entries whose Wilder ADX is below this (None=off).")
     p.add_argument("--adx-max", type=float, default=None,
@@ -2074,6 +2098,8 @@ def main(argv: List[str]) -> int:
         df = _load_candles(args.data)
         if args.resample:
             df = _resample(df, args.resample)
+        # built BEFORE the window trim so the daily SMA keeps its warm-up (None when the flag is off)
+        htf_gate = _htf_daily_gate().build_gate(df, args.htf_long_sma_days)
         df = _date_filter(df, args.start, args.end)
     except Exception as exc:  # noqa: BLE001
         print(f"ERROR: load failed: {exc}", file=sys.stderr)
@@ -2086,6 +2112,7 @@ def main(argv: List[str]) -> int:
                      timeframe=args.resample or args.timeframe, symbol=args.symbol,
                      long_only=args.long_only,
                      side_filter=args.side_filter,
+                     htf_long_gate=htf_gate,
                      adx_min=args.adx_min, adx_max=args.adx_max,
                      adx_period=args.adx_period,
                      adx_soft_weight_floor=args.adx_soft_weight_floor,

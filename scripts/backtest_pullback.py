@@ -160,6 +160,18 @@ def _resample(df: pd.DataFrame, rule: str) -> pd.DataFrame:
             .dropna().reset_index())
 
 
+def _htf_daily_gate():
+    """scripts/research/htf_daily_gate.py, loaded by FILE and lazily (the flag is opt-in; default runs never load it)."""
+    mod = sys.modules.get("htf_daily_gate")
+    if mod is None:
+        import importlib.util as _ilu
+        _spec = _ilu.spec_from_file_location("htf_daily_gate", Path(__file__).resolve().parent / "research" / "htf_daily_gate.py")
+        mod = _ilu.module_from_spec(_spec)
+        sys.modules["htf_daily_gate"] = mod
+        _spec.loader.exec_module(mod)
+    return mod
+
+
 def _date_filter(df: pd.DataFrame, start: Optional[str], end: Optional[str]) -> pd.DataFrame:
     if start:
         df = df[df["timestamp"] >= pd.Timestamp(start, tz="UTC")]
@@ -312,6 +324,7 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                  momentum_stale_bars: int = 0,
                  momentum_stale_adx_below: float = 0.0,
                  side_filter: str = "both",
+                 htf_long_gate: Optional[Any] = None,
                  tp_geometry: Optional[_tpg.TPGeometrySpec] = None,
                  subbar_df: Optional[pd.DataFrame] = None,
                  exit_grain: str = "leg",
@@ -609,6 +622,11 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
         # (docs/research/crypto-finetune-proposals-2026-07-30.md).
         if (side_filter == "long" and direction == "short") or \
                 (side_filter == "short" and direction == "long"):
+            i += 1
+            continue
+        # HTF long gate (scripts/research/htf_daily_gate.py; None = off = byte-identical): skip a LONG when the
+        # symbol's last completed daily close is below its N-day SMA. Applies on both decision bars.
+        if htf_long_gate is not None and direction == "long" and htf_long_gate.skip(df["timestamp"].iloc[i]):
             i += 1
             continue
         # Direction-aware regime gate (Phase 2): skip a long whose direction read
@@ -1143,6 +1161,8 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
         params["vol_skip_above_pctl"] = vol_skip_above_pctl
         params["vol_skip_below_pctl"] = vol_skip_below_pctl
         params["vol_pctl_window"] = vol_pctl_window
+    if htf_long_gate is not None:
+        params["htf_long_sma_days"] = htf_long_gate.days
     if vol_trail_on:
         params["trail_vol_above_pctl"] = trail_vol_above_pctl
         params["trail_vol_below_pctl"] = trail_vol_below_pctl
@@ -1665,6 +1685,10 @@ def main(argv: List[str]) -> int:
                    help="Config-exact directional gate matching the live builder's "
                         "side_filter: skip shorts (long) / skip longs (short) / no gate "
                         "(both, default). Used for the crypto short-only fine-tunes.")
+    p.add_argument("--htf-long-sma-days", type=int, default=0,
+                   help="HTF long gate (default 0 = off, byte-identical): skip a LONG entry when the symbol's last "
+                        "completed UTC daily close is below its N-day SMA of daily closes, built from the loaded bars "
+                        "BEFORE the --start/--end trim (scripts/research/htf_daily_gate.py). Shorts are never gated.")
     p.add_argument("--json", dest="json_out", default=None)
     p.add_argument("--decision-bar", choices=["closed", "forming"], default="closed",
                    help="closed (default, Stage 0) or forming: replay the LIVE unit's "
@@ -1793,6 +1817,8 @@ def main(argv: List[str]) -> int:
         df = _load_candles(args.data)
         if args.resample:
             df = _resample(df, args.resample)
+        # built BEFORE the window trim so the daily SMA keeps its warm-up (None when the flag is off)
+        htf_gate = _htf_daily_gate().build_gate(df, args.htf_long_sma_days)
         df = _date_filter(df, args.start, args.end)
     except Exception as exc:  # noqa: BLE001
         print(f"ERROR: load failed: {exc}", file=sys.stderr)
@@ -1924,6 +1950,7 @@ def main(argv: List[str]) -> int:
                        momentum_stale_bars=args.momentum_stale_bars,
                        momentum_stale_adx_below=args.momentum_stale_adx_below,
                        side_filter=args.side_filter,
+                       htf_long_gate=htf_gate,
                        tp_geometry=args.tp_geometry,
                        subbar_df=subbar_df,
                        exit_grain=args.exit_grain)
