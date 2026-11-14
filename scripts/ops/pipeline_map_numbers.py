@@ -29,7 +29,7 @@ from typing import Any
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from src.runtime import pipeline_map
+from src.runtime import pipeline_map  # noqa: E402  (after the sys.path insert above)
 
 API = os.environ.get("PIPELINE_MAP_API", "https://ict-bot.duckdns.org") + "/api/bot/performance?window=all"
 
