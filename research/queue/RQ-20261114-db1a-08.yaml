@@ -1,0 +1,172 @@
+id: RQ-20261114-db1a-08
+title: 'TP doctrine COMPLIANCE: trend_donchian_eth_4h finite entry TP 4R (tp_r 4) vs config-exact 50R sentinel, closed bar, record + year before, NON-INFERIORITY within 2.0R'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 1
+roadmap:
+- L-LADDER
+question: Is trend_donchian_eth_4h with a finite predictive entry take-profit at 4R (tp_r 4, the declared measured-move revision kept) non-inferior to config-exact (50R sentinel) within
+  2.0R net, on its closed decision bar, on the record year 2025-11-13..2026-11-12 AND the year before, net of the full cost stack?
+why_this_matters: 'Row RM-AM-ETH4H-ENTRYTP (manager 2026-11-14 14:02Z; TP doctrine, operator 2026-10-06). check_tp_doctrine.py reads FAIL:entry_tp (sentinel 50R) for this leg on bybit_1,
+  tradeify_1 and velotrade_1. The doctrine requires a REAL predictive take-profit at entry. This is a COMPLIANCE question (does the doctrine-compliant setting cost R), not an edge question:
+  RQ-20261028-a7c3-04 passed T4 by +0.78R over 2020-07..2026-10 and RQ-20261104-c6f1-04 failed by its rule because the finite targets tie the incumbent on discovery (the declared measured
+  move binds first). The leg trades the CLOSED bar since #25853, which neither earlier unit tested.'
+power:
+  expected_n: 96
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED: arm A n 54 record / 42 prior on the 1100-day fetch (RQ-20261114-db1a-05, forming); closed-bar n similar (record 135 over 3 years in the committed record). A non-inferiority
+    test at a fixed 2.0R margin per window; per-window n is small, so this is a doctrine-compliance read, not an edge measurement.'
+  sd: null
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand windows; nothing accrues; Binance / Binance-vision covers them at run time.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+run:
+  timeout_minutes: 300
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261114-db1a-08
+  commands:
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - trend_donchian_eth_4h
+    - --arm
+    - A=
+    - --arm
+    - T4=tp_r=4
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2025-11-13T00:00:00'
+    - --end
+    - '2026-11-12T22:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '1'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/rec_trend_donchian_eth_4h'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - trend_donchian_eth_4h
+    - --arm
+    - A=
+    - --arm
+    - T4=tp_r=4
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2024-11-13T00:00:00'
+    - --end
+    - '2025-11-12T22:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '1'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/pre_trend_donchian_eth_4h'
+  - - python3
+    - scripts/research/two_window_lever_grade.py
+    - --out
+    - '{out_dir}'
+    - --arm
+    - T4
+    - --leg
+    - trend_donchian_eth_4h
+    - --unit
+    - RQ-20261114-db1a-08
+    - --rule
+    - RULE-ETH4H-TP4-NONINF-20261114
+    - --n-floor
+    - '20'
+    - --fold-majority
+    - '3'
+    - --non-inferiority-margin
+    - '2.0'
+decision_rule:
+  id: RULE-ETH4H-TP4-NONINF-20261114
+  registered_at: '2026-11-14'
+  registered_before_run: true
+  statistic: 'exit_lever_ablation --grade stage0 --days 800, arms A (config-exact: tp_r 50 sentinel + declared donchian_measured_move revision) and T4 (tp_r 4, revision kept) per window
+    on the leg''s closed decision bar; two_window_lever_grade.py --non-inferiority-margin 2.0 applies the rule.'
+  rule: 'Multiple-testing guard: names the prior attempts on this lever (RQ-20261028-a7c3-04 T3/T4 PASS +0.78R on 2020-07..2026-10, forming basis; RQ-20261104-c6f1-04 FAIL by its rule:
+    tie on discovery; T4 read 15.92R vs 13.97R on its held-out span, n 76, REPORTED NOT GRADED). T4 is chosen because it is the doctrine-compliant finite target already tested and the
+    held-out leader; because that choice saw held-out data, this unit tests NON-INFERIORITY only and can never support an edge claim. The margin 2.0R per window is fixed here before
+    any run. PASS iff T4 net_r >= A net_r - 2.0 on the record window AND T4 net_r >= A net_r - 2.0 on the prior window; FAIL iff graded and not; INDETERMINATE iff T4 n < 20 on the record
+    window, a run or arm is missing, or the harness refuses the arm (two TP movers). No threshold is relaxed.'
+  what_it_does_not_do: Changes no config, roster, order or evidence record and makes no edge claim. A PASS is a Tier-3 doctrine-compliance proposal (tp_r 50.0 -> 4.0 + tp_intent mode
+    r_multiple) for trend_donchian_eth_4h via the manager; the leg is on prop (tradeify_1, velotrade_1) and the bybit_1 demo floor, so the prop superset rule requires a prop EV re-run
+    at tp_r 4 before any prop change.
+  baseline: the leg config-exact on its closed decision bar (arm A), both windows, run in this unit.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: a doctrine-compliance change on a prop + demo leg; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+ml_consumer:
+  not_applicable: 'Not an ML unit: an entry take-profit parameter on a rule-based leg.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: trend_donchian_eth_4h
+  subject_kind: strategy_leg
+  from_result: RQ-20261104-c6f1-04
+  verdict_read: fail
+  diagnosis: 'check_tp_doctrine FAIL:entry_tp (50R sentinel) on all three routings; the declared measured-move revision binds first, so a finite entry target ties the incumbent on the
+    forming basis (c6f1-04). The closed decision bar (since #25853) changes the trade set and is untested for this lever.'
+  hypothesis: A finite 4R entry target is doctrine-compliant and costs no more than 2.0R per year net of cost on the closed bar.
+  search: Fixed at tp_r 4 (the tested compliant value); margin 2.0R fixed before the run.
+  attempt: 1
+  due_by: '2026-11-21'
+  levers:
+  - exit
+  lever_arms:
+  - family: exit
+    param: tp_r
+    values:
+    - 4.0
+    baseline_value: 50.0
+  map_entries:
+  - research/levers/trend_donchian_eth_4h.yaml
+related:
+- RQ-20261028-a7c3-04
+- RQ-20261104-c6f1-04
+- RQ-20261114-db1a-05
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): ONE lever chosen from the leg''s own R diagnosis (scripts/research/leg_r_diagnosis.py), rule
+  registered before the run against the leg''s own record, net of the full cost stack, graded once on its fixed window.'
+follow_up: On the verdict a session reports to the manager with both windows; a PASS is a Tier-3 doctrine-compliance proposal via the manager plus a prop EV re-run at tp_r 4.
