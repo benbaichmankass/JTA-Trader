@@ -328,7 +328,10 @@ def intent_allocation_score(
     cfg = config or load_allocation_config()
     strategy = str(getattr(intent, "strategy", "") or "")
     meta = getattr(intent, "meta", None) or {}
-    stamped = (meta.get("conviction") or {}) if isinstance(meta, dict) else {}
+    # ML-SHADOW-NO-ORDER-HANDLE: slice weights size real orders, so they read the order-path block,
+    # built from advisory+ model scores only (never the observe-only ``conviction`` blend, which
+    # includes shadow-stage scores).
+    stamped = (meta.get("conviction_influencing") or {}) if isinstance(meta, dict) else {}
     inputs: dict = {}
     states: dict = {}
     for k, v in ((stamped.get("inputs_used") or {}) if isinstance(stamped, dict) else {}).items():

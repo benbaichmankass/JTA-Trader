@@ -16,6 +16,8 @@ from pathlib import Path
 # say so.
 logger = logging.getLogger(__name__)
 
+_TABLES_VERIFIED: set = set()  # DB paths whose create_tables() already logged in this process
+
 
 def _migrate_add_strategy_name(cursor: sqlite3.Cursor) -> bool:
     """Add ``strategy_name`` column to ``trades`` table if absent.
@@ -381,7 +383,9 @@ def _migrate_add_protection_repair(cursor: sqlite3.Cursor) -> bool:
                                          *anchor at first observation* rule.
     * ``protection_repair_last_at``      ISO of the most recent one.
     * ``protection_repair_last_kind``    WHICH mechanism: ``naked_rearm`` ·
-                                         ``partial_topup`` · ``reassert``.
+                                         ``partial_topup`` · ``reassert`` ·
+                                         ``partial_tp_replace`` (Alpaca: our partially
+                                         filled target replaced by a fresh OCO).
     * ``protection_repair_last_verified`` what we CHECKED afterwards, sharing
                                          ``order_monitor._reassert_applied_state``'s
                                          vocabulary rather than inventing a
@@ -1007,7 +1011,13 @@ class Database:
         conn.commit()
         conn.close()
 
-        print("✓ Database tables created/verified")
+        # HEALTH-20261112-LIVE-DISK-OTHER-GROWERS: this ran on every Database() open and printed to stdout,
+        # 335 of 2000 sampled ict-trader-live journal lines (all duplicated into /var/log/syslog). Log it once
+        # per process per DB path, through logging (stdout stays clean for --json callers).
+        key = str(self.db_path)
+        if key not in _TABLES_VERIFIED:
+            _TABLES_VERIFIED.add(key)
+            logger.info("Database tables created/verified: %s", key)
     
     def insert_trade(self, trade_data):
         """
@@ -1188,7 +1198,7 @@ class Database:
     #: warning rather than stored verbatim — a typo written through would make
     #: ``WHERE ... last_kind = 'reassert'`` miss the row silently, which is
     #: worse than a label that announces itself.
-    PROTECTION_REPAIR_KINDS = ("naked_rearm", "partial_topup", "reassert")
+    PROTECTION_REPAIR_KINDS = ("naked_rearm", "partial_topup", "reassert", "partial_tp_replace")
 
     #: What we CHECKED after the repair. Shares
     #: ``order_monitor._reassert_applied_state``'s vocabulary deliberately —

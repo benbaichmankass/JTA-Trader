@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "FUT-CME-INTRADAY-HIST: research loader fix. tradeify_futures_fit.load_ibkr_percontract picked the max-volume contract and ratcheted the monotonic floor BEFORE the front-month filter, so one session where a far contract out-traded the nearer ones on file locked the floor; run 43361991285 kept MNQ only from 2025-12-10 (= 2026-03-20 expiry - 100 d) out of contracts served from 2023-09, and silently skipped days. Now the window restricts candidates first and a session with no candidate is counted. Also read_state 'complete' -> 'measured' + top-level n (script_run's vocabulary; the run landed producer_failed). New test fails on the old code. Research script only; no runtime path."
+}

@@ -1,0 +1,288 @@
+{
+  "rule": {
+    "id": "RULE-AM-RISK-ADJUSTED-V1",
+    "registered_at": "2026-10-29",
+    "doctrine": "docs/ARCHITECTURE-CANONICAL.md \u00a7 Active management, clause 4",
+    "max_r_cost_per_trade": 0.05,
+    "min_dd_cut_pct": 0.15,
+    "min_cvar5_cut_pct": 0.15,
+    "cvar_tail": 0.05,
+    "cvar_basis": "book_iso_week_of_exit",
+    "folds": 6,
+    "fold_majority": 4,
+    "fold_min_risk_cut_pct": 0.0,
+    "n_floor": 39,
+    "random_control": "required",
+    "min_control_beat_frac": 0.9944,
+    "measurement_of_record": "book_usd_sim_per_account (row BOOK-SIM-REAL-SIZER)",
+    "reported_measurements": [
+      "giveback_r_mean_p95 (peak MFE R - realised net R, per trade)",
+      "net_pnl_pct_per_account_and_book (net of the full cost stack)",
+      "net_pnl_usd_per_account_and_book (only from a book_usd_sim; never committed from a per-trade translation, and balances are never committed to this public repo)"
+    ]
+  },
+  "baseline_book": {
+    "n": 3921,
+    "net_r": 462.198053,
+    "max_drawdown_r": 70.432504,
+    "cvar5_week_r": -10.281777,
+    "cvar5_trade_r": -1.129178,
+    "weeks": 370,
+    "giveback": {
+      "n_measured": 3921,
+      "n_missing_mfe": 0,
+      "mean_r": 1.091718,
+      "p95_r": 2.407291
+    }
+  },
+  "candidates": {
+    "sl_to_structure@new_peak": {
+      "verdict": "pass",
+      "label": "risk_adjusted_pass",
+      "r_cost_per_trade": 0.021488,
+      "dd_cut_pct": 0.190284,
+      "cvar5_cut_pct": 0.133208,
+      "folds_held": 4,
+      "n_folds": 6,
+      "clauses": {
+        "R1_cost": true,
+        "R2_risk_cut": true,
+        "R3_folds": true,
+        "R4_control": true
+      },
+      "controls": {
+        "n": 200,
+        "beaten": 200
+      },
+      "L1_drop_best_leg": {
+        "best_leg": "ml_entry",
+        "r_cost_per_trade_without": 0.036291,
+        "holds": true
+      },
+      "s0_report": {
+        "n_fired": 2083,
+        "mean_dT_vs_hold": -0.0404,
+        "mean_edge_vs_random": 0.0489,
+        "ci95_dT": [
+          -0.0726,
+          -0.0107
+        ],
+        "ci95_edge": [
+          0.0254,
+          0.0727
+        ],
+        "ci_bonf_edge": [
+          0.0182,
+          0.0841
+        ],
+        "by_leg": {
+          "ada_pullback_2h": {
+            "n": 216,
+            "sum_dT": -16.919
+          },
+          "iaum_pullback_1d": {
+            "n": 45,
+            "sum_dT": -12.445
+          },
+          "ml_entry": {
+            "n": 502,
+            "sum_dT": 25.961
+          },
+          "trend_donchian_eth_4h": {
+            "n": 222,
+            "sum_dT": -8.446
+          },
+          "trend_donchian_eth_prop": {
+            "n": 543,
+            "sum_dT": -19.751
+          },
+          "trend_donchian_sol_prop": {
+            "n": 318,
+            "sum_dT": -5.633
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 32,
+            "sum_dT": -1.424
+          },
+          "xrp_pullback_2h": {
+            "n": 205,
+            "sum_dT": -45.596
+          }
+        }
+      },
+      "vs_best_static_mean_dR": -0.021488
+    },
+    "sl_to_structure@r_milestone": {
+      "verdict": "fail",
+      "label": "fails_R2_R3",
+      "r_cost_per_trade": 0.010441,
+      "dd_cut_pct": 0.022754,
+      "cvar5_cut_pct": 0.039651,
+      "folds_held": 0,
+      "n_folds": 6,
+      "clauses": {
+        "R1_cost": true,
+        "R2_risk_cut": false,
+        "R3_folds": false,
+        "R4_control": false
+      },
+      "controls": {
+        "n": 200,
+        "beaten": 0
+      },
+      "L1_drop_best_leg": {
+        "best_leg": "ml_entry",
+        "r_cost_per_trade_without": 0.014971,
+        "holds": true
+      },
+      "s0_report": {
+        "n_fired": 1420,
+        "mean_dT_vs_hold": -0.0288,
+        "mean_edge_vs_random": 0.154,
+        "ci95_dT": [
+          -0.0603,
+          0.0015
+        ],
+        "ci95_edge": [
+          0.1274,
+          0.1822
+        ],
+        "ci_bonf_edge": [
+          0.1167,
+          0.1953
+        ],
+        "by_leg": {
+          "ada_pullback_2h": {
+            "n": 158,
+            "sum_dT": -14.72
+          },
+          "iaum_pullback_1d": {
+            "n": 33,
+            "sum_dT": -1.073
+          },
+          "ml_entry": {
+            "n": 349,
+            "sum_dT": 4.526
+          },
+          "trend_donchian_eth_4h": {
+            "n": 174,
+            "sum_dT": -4.0
+          },
+          "trend_donchian_eth_prop": {
+            "n": 354,
+            "sum_dT": -11.051
+          },
+          "trend_donchian_sol_prop": {
+            "n": 207,
+            "sum_dT": 3.213
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 15,
+            "sum_dT": 0.406
+          },
+          "xrp_pullback_2h": {
+            "n": 130,
+            "sum_dT": -18.241
+          }
+        }
+      },
+      "vs_best_static_mean_dR": -0.010441
+    },
+    "sl_to_structure@swing": {
+      "verdict": "fail",
+      "label": "fails_R2_R3",
+      "r_cost_per_trade": 0.006896,
+      "dd_cut_pct": 0.000639,
+      "cvar5_cut_pct": 0.006716,
+      "folds_held": 0,
+      "n_folds": 6,
+      "clauses": {
+        "R1_cost": true,
+        "R2_risk_cut": false,
+        "R3_folds": false,
+        "R4_control": false
+      },
+      "controls": {
+        "n": 200,
+        "beaten": 0
+      },
+      "L1_drop_best_leg": {
+        "best_leg": "iaum_pullback_1d",
+        "r_cost_per_trade_without": 0.00753,
+        "holds": true
+      },
+      "s0_report": {
+        "n_fired": 586,
+        "mean_dT_vs_hold": -0.0461,
+        "mean_edge_vs_random": 0.1791,
+        "ci95_dT": [
+          -0.093,
+          -0.0001
+        ],
+        "ci95_edge": [
+          0.1262,
+          0.2316
+        ],
+        "ci_bonf_edge": [
+          0.109,
+          0.2553
+        ],
+        "by_leg": {
+          "ada_pullback_2h": {
+            "n": 51,
+            "sum_dT": 0.979
+          },
+          "iaum_pullback_1d": {
+            "n": 15,
+            "sum_dT": 1.986
+          },
+          "ml_entry": {
+            "n": 122,
+            "sum_dT": -1.771
+          },
+          "trend_donchian_eth_4h": {
+            "n": 40,
+            "sum_dT": -6.876
+          },
+          "trend_donchian_eth_prop": {
+            "n": 140,
+            "sum_dT": -5.032
+          },
+          "trend_donchian_sol_prop": {
+            "n": 103,
+            "sum_dT": -0.182
+          },
+          "xrp_pullback_2h": {
+            "n": 115,
+            "sum_dT": -16.145
+          }
+        }
+      },
+      "vs_best_static_mean_dR": -0.006896
+    }
+  },
+  "best_static_reported": {
+    "grid": [
+      "hold",
+      "sl_to_structure@new_peak",
+      "sl_to_structure@r_milestone",
+      "sl_to_structure@swing"
+    ],
+    "excludes_test_folds": true,
+    "chosen_by_fold": {
+      "0": "hold",
+      "1": "hold",
+      "2": "hold",
+      "3": "hold",
+      "4": "hold",
+      "5": "hold"
+    },
+    "sum_dR_vs_hold": 0.0,
+    "mean_dR_vs_hold": 0.0
+  },
+  "passing": [
+    "sl_to_structure@new_peak"
+  ],
+  "min_control_beat_frac": 0.9944,
+  "n_comparisons": 9
+}

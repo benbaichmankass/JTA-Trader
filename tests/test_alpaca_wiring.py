@@ -771,7 +771,8 @@ def test_accounts_yaml_alpaca_paper_ships_inert():
         # gld_pullback_1d moved to ib_paper 2026-10-25 (GLD-SOAK-REPLACE): the GLD
         # slot here is held by a kept zombie OCO.
         "iwm_trend_long_1d", "tlt_pullback_1d", "ief_pullback_1d",
-        "slv_trend_1h",
+        # slv_trend_1h left 2026-11-12 (SLV-1H-PROMOTE, operator "I answer that I do want to promote silver."): production on
+        # alpaca_live + alpaca_portfolio, and production is not general paper.
         "slv_pullback_1d", "gdx_pullback_1d",
         "tqqq_trend_long_1d", "qld_trend_long_1d",
         # sub-$100 proxy cells (2026-07-07, Tier-3) — SPYM/IAUM/SCHA paper soak.
@@ -783,6 +784,10 @@ def test_accounts_yaml_alpaca_paper_ships_inert():
         # THURSDAY-PLANNING b1 2026-11-11 (operator verbatim "Put qqq and tlt on the paper floor now; promote tlt to
         # real money"): qqq_pullback_1h back on its demo floor; QQQ split by comms/same_symbol_allocation/qqq-alpaca_paper.json.
         "qqq_pullback_1h",
+        # 2026-11-13 B38CQPVI-0001 (Tier-3, paper; operator 2026-11-11 "Put qqq and tlt on the paper floor now" +
+        # OPERATING-PLAN § 2 demo floor): TLT / SPY splits by comms/same_symbol_allocation/{tlt,spy}-alpaca_paper.json.
+        "tlt_pullback_1h",
+        "spy_pullback_1h",
         # 2026-10-27 DESK-PAPER-ACCOUNTS (Tier-3, paper): the Claude desk leg, scoped to SPY/QQQ/IWM/GLD/TLT.
         "claude_desk",
         # 2026-11-01 ALPACA-LIVE-ACTIVITY-ML (Tier-3, paper; operator "Paper now, v2 for live (Rec.)"):

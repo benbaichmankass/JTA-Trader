@@ -1,6 +1,6 @@
 id: RQ-20261110-73de-09
 title: HOLDOUT-SELECTED structure exit (pivot 3 / 5 / 8) on eth_pullback_prop_2h, net of cost at the prop cost stack
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROP
@@ -111,18 +111,18 @@ programme: P5
 practice_precedent: 'T1/M13 (docs/reference/trading-and-model-practice-principles.md): select on discovery, read a held-back span once; operator 2026-11-05 RESEARCH-NO-WAIT.'
 intervention_controls:
   not_applicable: lever sweep against the declared config on the same trades over the harness (A/B arms), not an active-management action on live check-ins; hold_to_bracket is arm A itself
-last_dispatched_at: null
+last_dispatched_at: '2026-11-13T09:06:19+00:00'
 grading:
-  owner: PI-20261111-RO2049-0001
-  owner_reason: 'producer_failed 2026-11-10/11: Kaggle-routed covered-feed run could not resolve data.binance.vision; pinned runner_only and re-queued 2026-11-11 (PI-20261111-RO2049-0001), the re-run supersedes this row'
   attested: RULE-RQ2026111073de09-NEW_STRATEGY_PROP
   auto: true
   decision_rule_id: RULE-RQ2026111073de09-NEW_STRATEGY_PROP
   evidence:
   - research/results/RQ-20261110-73de-09/42766634816.jsonl
-  graded_at: '2026-11-11'
+  - research/results/RQ-20261110-73de-09/43398566495.jsonl
+  graded_at: '2026-11-13'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 1
-  verdict: null
+  verdict: fail

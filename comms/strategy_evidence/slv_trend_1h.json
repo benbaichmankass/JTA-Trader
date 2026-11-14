@@ -3,63 +3,63 @@
   "strategy": "slv_trend_1h",
   "symbol": "SLV",
   "timeframe": "1h",
-  "config_fingerprint": "sha256:8d50ba1b7f1e6ed0ccd1a8487cbaf3b4",
+  "config_fingerprint": "sha256:eab5e2b837006499c757a8d8335fa810",
   "basis": "harness_timefolds",
   "coverage_state": "measured",
   "fidelity": "faithful",
   "omitted_levers": [],
-  "net_r_oos": 53.1431,
-  "expectancy_r_oos": 0.7815,
-  "n_trades_oos": 68,
+  "net_r_oos": 54.5246,
+  "expectancy_r_oos": 0.5927,
+  "n_trades_oos": 92,
   "folds": 4,
   "fold_detail": [
     {
       "fold": 1,
-      "trades": 17,
-      "net_r": 11.6398,
-      "expectancy_r": 0.6847,
-      "start": "2025-04-23 15:00:00+00:00",
-      "end": "2025-09-12 14:00:00+00:00"
+      "trades": 23,
+      "net_r": 25.3817,
+      "expectancy_r": 1.1036,
+      "start": "2025-07-10 18:00:00+00:00",
+      "end": "2025-10-15 14:00:00+00:00"
     },
     {
       "fold": 2,
-      "trades": 17,
-      "net_r": 28.3303,
-      "expectancy_r": 1.6665,
-      "start": "2025-09-19 18:00:00+00:00",
-      "end": "2026-01-26 17:00:00+00:00"
+      "trades": 23,
+      "net_r": 14.8378,
+      "expectancy_r": 0.6451,
+      "start": "2025-10-17 16:00:00+00:00",
+      "end": "2026-01-22 17:00:00+00:00"
     },
     {
       "fold": 3,
-      "trades": 17,
-      "net_r": 12.0471,
-      "expectancy_r": 0.7087,
-      "start": "2026-01-30 15:00:00+00:00",
-      "end": "2026-06-05 18:00:00+00:00"
+      "trades": 23,
+      "net_r": 23.8993,
+      "expectancy_r": 1.0391,
+      "start": "2026-01-26 15:00:00+00:00",
+      "end": "2026-06-18 14:00:00+00:00"
     },
     {
       "fold": 4,
-      "trades": 17,
-      "net_r": 1.1259,
-      "expectancy_r": 0.0662,
-      "start": "2026-06-15 14:00:00+00:00",
-      "end": "2026-09-23 14:00:00+00:00"
+      "trades": 23,
+      "net_r": -9.5942,
+      "expectancy_r": -0.4171,
+      "start": "2026-06-24 17:00:00+00:00",
+      "end": "2026-11-09 19:00:00+00:00"
     }
   ],
-  "folds_positive": 4,
-  "window_days": 365,
+  "folds_positive": 3,
+  "window_days": 528,
   "fee_bps_roundtrip": 0.0,
   "path_stats": {
     "series_location": "source_run (the per-trade rows, in order, with net_r)",
-    "n": 68,
-    "max_drawdown_r": 6.6274,
-    "max_drawdown_at_trade": 60,
-    "final_equity_r": 53.1431,
-    "max_equity_r": 57.1388,
-    "worst_trade_r": -1.1054,
-    "best_trade_r": 9.2371,
-    "worst_day_r": -1.1054,
-    "worst_day_date": "2025-08-20",
+    "n": 92,
+    "max_drawdown_r": 15.7674,
+    "max_drawdown_at_trade": 87,
+    "final_equity_r": 54.5246,
+    "max_equity_r": 64.1188,
+    "worst_trade_r": -2.5924,
+    "best_trade_r": 7.7092,
+    "worst_day_r": -2.6871,
+    "worst_day_date": "2025-12-05",
     "trades_without_exit_time": 0,
     "ordering": "by entry_time ascending; pooled ACROSS folds, so this is the full-window path, not a per-fold one",
     "not_a_verdict": "Descriptive only. No bar is applied here -- the prop bar is B6's to register, and it must be registered before these numbers are read."
@@ -69,9 +69,9 @@
     "slippage": 5.0,
     "funding": 0.0,
     "unit": "bps_roundtrip (funding: bps per funding window)",
-    "source": "comms/strategy_evidence/runs/2026-09-24-e55/slv_trend_1h__bt.json"
+    "source": "comms/research/RQ-20261113-f251-02/43452855935/evidence_runs/slv_trend_1h__bt.json"
   },
-  "net_r_oos_fee_only": 55.9026,
+  "net_r_oos_fee_only": 58.3316,
   "decision_rule": {
     "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
     "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
@@ -79,9 +79,44 @@
     "verdict": "pass"
   },
   "param_selection_provenance": "not_established",
-  "generated_at": "2026-09-24T12:45:01.325450+00:00",
+  "generated_at": "2026-11-13T15:32:20.141827+00:00",
   "generated_by": "scripts/ops/build_strategy_evidence.py",
-  "source_run": "comms/strategy_evidence/runs/2026-09-24-e55/slv_trend_1h__trades.jsonl",
+  "source_run": "comms/research/RQ-20261113-f251-02/43452855935/evidence_runs/slv_trend_1h__trades.jsonl",
   "error": null,
-  "harness": "trend"
+  "harness": "trend",
+  "reproduce": {
+    "window_days": 528,
+    "window_days_source": "--data-csv span",
+    "folds": 4,
+    "data_start": "2025-06-02 15:00:00+00:00",
+    "data_end": "2026-11-11 20:00:00+00:00",
+    "git_sha": "ec82624b99188dd9e695aa4e669cc2da70510247",
+    "argv": [
+      "python3",
+      "scripts/ops/build_strategy_evidence.py",
+      "--strategy",
+      "slv_trend_1h",
+      "--days",
+      "528",
+      "--folds",
+      "4",
+      "--window-start",
+      "2025-06-02 15:00:00+00:00",
+      "--window-end",
+      "2026-11-11 20:00:00+00:00",
+      "--data-csv",
+      "/tmp/forming_regen_ih50_d69/slv_trend_1h__data.csv",
+      "--minutes-1m-csv",
+      "/tmp/forming_regen_ih50_d69/eq1h__SLV__2025-05-31__2026-11-13/SLV_1m.csv",
+      "--decision-session",
+      "us_equity_intraday"
+    ],
+    "inputs": {
+      "data_csv": "/tmp/forming_regen_ih50_d69/slv_trend_1h__data.csv",
+      "minutes_1m_csv": "/tmp/forming_regen_ih50_d69/eq1h__SLV__2025-05-31__2026-11-13/SLV_1m.csv",
+      "decision_session": "us_equity_intraday",
+      "decision_bar_modelled": "forming"
+    }
+  },
+  "venue_bracket_arm": null
 }

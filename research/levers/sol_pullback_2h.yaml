@@ -7,66 +7,62 @@ books:
 - bybit_1
 baseline:
   record: comms/strategy_evidence/sol_pullback_2h.json
-  net_r: 6.9287
-  n: 17
-  fidelity: approximate
+  net_r: 3.1859
+  n: 34
+  fidelity: faithful
   rule_verdict: pass
 attribution:
   read_state: measured
-  n: 17
-  net_r: 6.929
-  gross_r: 7.996
-  cost_r: 1.067
-  cost_share_of_gross: 0.133
+  n: 34
+  net_r: 3.186
+  gross_r: 5.248
+  cost_r: 2.062
+  cost_share_of_gross: 0.393
   verdict_hint: gross edge survives cost
   entry_quality:
-    mean_mfe_r: 1.174
-    share_mfe_ge_1r: 0.588
-    n_with_mfe: 17
+    mean_mfe_r: 1.026
+    share_mfe_ge_1r: 0.441
+    n_with_mfe: 34
   exit_capture:
-    median_net_over_mfe_winners: 1.05
-    n_winners: 8
-    losers_that_reached_1r_mfe: 2
+    median_net_over_mfe_winners: 1.039
+    n_winners: 12
+    losers_that_reached_1r_mfe: 4
   by_year:
     '2025':
-      n: 4
-      net_r: -1.839
-      gross_r: -1.692
+      n: 3
+      net_r: -2.316
+      gross_r: -2.122
     '2026':
-      n: 13
-      net_r: 8.768
-      gross_r: 9.688
+      n: 31
+      net_r: 5.502
+      gross_r: 7.37
   by_direction:
     short:
-      n: 17
-      net_r: 6.929
-      gross_r: 7.996
+      n: 34
+      net_r: 3.186
+      gross_r: 5.248
   by_exit_reason:
     stop:
-      n: 7
-      net_r: -7.353
-      gross_r: -7.0
+      n: 17
+      net_r: -17.975
+      gross_r: -17.0
     take_profit:
-      n: 7
-      net_r: 15.064
-      gross_r: 15.534
+      n: 10
+      net_r: 21.453
+      gross_r: 22.035
     timeout:
-      n: 1
-      net_r: 0.375
-      gross_r: 0.471
-    trail_stop:
       n: 2
-      net_r: -1.158
-      gross_r: -1.009
+      net_r: 0.209
+      gross_r: 0.301
+    trail_stop:
+      n: 5
+      net_r: -0.501
+      gross_r: -0.088
   by_adx_at_entry:
-    30-40:
-      n: 8
-      net_r: 0.904
-      gross_r: 1.431
-    '>=40':
-      n: 9
-      net_r: 6.025
-      gross_r: 6.565
+    unknown:
+      n: 34
+      net_r: 3.186
+      gross_r: 5.248
 manifest:
   entry: tested
   exit: tested
@@ -1892,6 +1888,9 @@ levers:
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
 units:
 - RQ-20261101-e5b1-13
+- RQ-20261114-db1a-02
+- RQ-20261114-db1a-03
+- RQ-20261114-db1a-04
 levers_tested:
 - family: prop-stack fit (account sizing vs firm DD limits and the prop cost stack)
   varied: prop cost stack, 3 prop accounts x 2 arms x 2 windows, 5 seeds x 1000 lives
@@ -1910,3 +1909,103 @@ levers_tested:
     read.'
   tested_at_power: false
   unit: RQ-20261101-e5b1-13
+- family: regime_gating (pooled ADX cell x direction)
+  varied: ungated vs the worst pooled (ADX regime x direction) cell across 15 crypto demo-floor legs, picked on 2025-11-13..2026-11-12, checked
+    on 2024-11-13..2025-11-12, live decision bar, full cost stack
+  response:
+    verdict: fail
+    run: '43562273934'
+    rule: RULE-DFR-COMMON-LOSS-REGIME-20261114
+    leg_record:
+      n: 34
+      net_r: 3.1859
+    leg_prior:
+      n: 26
+      net_r: -6.7948
+    part_a_common: true
+    part_a: 12/15 legs negative on the record window; pooled -142.3426R vs prior 106.089R
+    selected_cell: chop/long
+    cell_record:
+      n: 229
+      net_r: -75.3822
+    cell_prior:
+      n: 220
+      net_r: 25.5925
+    leg_ex_cell:
+      record_net_r: 3.1859
+      prior_net_r: -6.7949
+    reading: 'the record-year loss is common (Part A) but the worst ADX cell (chop/long) wins the year before: no trend-regime cell separates
+      it; the record-year loss sits on the LONG side in every ADX cell'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-02
+  lever_family: regime_gating
+- family: regime_gating (HTF daily SMA200 long filter, post-hoc)
+  varied: ungated vs longs skipped when the prior daily close < SMA200 (own symbol), pooled over 15 crypto demo-floor legs, record 2025-11-13..2026-11-12
+    + year before, live decision bar, full cost stack
+  response:
+    verdict: pass
+    run: '43567392380'
+    rule: RULE-DFR-HTF-LONG-FILTER-20261114
+    filter: skip a long when the symbol's prior completed daily close < its 200-day SMA (Binance daily); shorts untouched
+    leg:
+      record_net_r: 3.1859
+      record_n: 34
+      filtered_record_net_r: 3.1859
+      filtered_record_n: 34
+      prior_net_r: -6.7949
+      prior_n: 26
+      filtered_prior_net_r: -6.7949
+      filtered_prior_n: 26
+    pooled:
+      gated_record:
+        n: 572
+        net_r: -88.0639
+      gated_prior:
+        n: 259
+        net_r: -5.3393
+      kept_record_net_r: -54.2763
+      kept_prior_net_r: 111.4287
+    reading: 'PASS pooled (gated longs lose both years, stable drag) but POST-HOC: a harness-native run is required before any Tier-3; the year-before
+      drag is thin (-5.3R over 259, about -0.02R/trade)'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-03
+  lever_family: regime_gating
+- family: regime_gating (HTF daily SMA200 long gate, harness-native)
+  varied: arm A config-exact vs arm H --htf-long-sma-days 200 inside the harness, record 2025-11-13..2026-11-12 + year before, live decision bar,
+    full cost stack
+  response:
+    verdict: fail
+    unit_verdict: fail
+    run: '43575944709'
+    rule: RULE-DFR-HTF-NATIVE-20261114
+    arm_H: --htf-long-sma-days 200 (inside the harness)
+    record:
+      A_net_r: 3.1859
+      A_n: 34
+      H_net_r: 3.1859
+      H_n: 34
+      H_folds_positive: 3
+      H_n_folds: 4
+      H_stage0: true
+      H_beats_A: false
+    prior:
+      A_net_r: -6.7948
+      A_n: 26
+      H_net_r: -6.7948
+      H_n: 26
+      holds: false
+    pooled:
+      A_record: -142.3426
+      H_record: -57.0308
+      A_prior: 106.089
+      H_prior: 105.4607
+      delta_record: 85.3118
+      delta_prior: -0.6283
+    reading: 'harness-native: the gate cuts the record-year loss but is neutral-to-negative the year before (pooled H-A prior -0.63R); unit FAIL,
+      no per-leg pass'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-04
+  lever_family: regime_gating

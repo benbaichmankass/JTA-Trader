@@ -115,7 +115,7 @@ def decision_rows(frames: Mapping[str, pd.DataFrame], symbols: Iterable[str]) ->
     for s, fr in frames.items():
         if fr is None or len(fr) < 25:
             continue
-        ff = F.features_symbol(fr.iloc[-200:].reset_index(drop=True)).iloc[-1]
+        ff = F.features_symbol(F.regrid_hourly(fr.iloc[-200:].reset_index(drop=True))).iloc[-1]
         ref[s] = (fr["ts"].iloc[-1], ff["ret24_raw"], ff["vol24"])
     out: Dict[str, Optional[Dict[str, float]]] = {}
     for symbol in symbols:
@@ -124,7 +124,7 @@ def decision_rows(frames: Mapping[str, pd.DataFrame], symbols: Iterable[str]) ->
             out[symbol] = None
             continue
         t = own["ts"].iloc[-1]
-        fo = F.features_symbol(own).iloc[-1]
+        fo = F.features_symbol(F.regrid_hourly(own)).iloc[-1]
         r24 = {s: v[1] for s, v in ref.items() if v[0] == t}
         v24 = {s: v[2] for s, v in ref.items() if v[0] == t}
         if "BTCUSDT" not in r24 or symbol not in r24:
@@ -290,7 +290,7 @@ def refresh_cache(symbol: str, cache_dir: Path, b: pd.Timestamp, *, get=None) ->
 
 
 def run_once(*, now: Optional[pd.Timestamp] = None, log_path: Optional[Path] = None, cache_dir: Optional[Path] = None,
-             get=None, models: Optional[Mapping[str, Dict[str, Any]]] = None) -> dict:
+             get=None, models: Optional[Mapping[str, Dict[str, Any]]] = None, retry_pause_s: float = 3.0) -> dict:
     """Fetch, score, append. Returns a summary (counts, read_state split, measured cost). Never raises per symbol."""
     import resource
 
@@ -307,8 +307,17 @@ def run_once(*, now: Optional[pd.Timestamp] = None, log_path: Optional[Path] = N
                 universe.append(str(s))
     cache_dir = cache_dir or (runtime_state_dir() / "ml_decision_shadow_cache")
     prepared: Dict[str, SymbolBars] = {}
+    fetched: Dict[str, tuple] = {s: refresh_cache(s, cache_dir, b, get=get) for s in universe}
+    # ONE retry per failed symbol, after a short pause (PI-20261103-SHADOWFETCH-0001, row VENUE-KLINE-RATE-LIMIT):
+    # a fetch_failed is almost always a transient venue answer (retCode 10006, a timeout), and a missing symbol
+    # shrinks every symbol's reference set for this bar. Bounded: one extra call per failed symbol, never a loop.
+    failed = [s for s, (st, _df) in fetched.items() if st.startswith("fetch_failed")]
+    if failed:
+        time.sleep(retry_pause_s)
+        for s in failed:
+            fetched[s] = refresh_cache(s, cache_dir, b, get=get)
     for s in universe:
-        st, df = refresh_cache(s, cache_dir, b, get=get)
+        st, df = fetched[s]
         prepared[s] = prepare(s, df, b, fetch_state="ok" if st == "ok" else st.split(":")[0])
     listed = {s: sb for s, sb in prepared.items() if sb.read_state != "not_listed"}
     t_fetch = time.monotonic() - t0
@@ -322,7 +331,8 @@ def run_once(*, now: Optional[pd.Timestamp] = None, log_path: Optional[Path] = N
             "symbols_not_listed": sorted(s for s, sb in prepared.items() if sb.read_state == "not_listed"),
             "read_state": split, "wall_s": round(time.monotonic() - t0, 2), "fetch_wall_s": round(t_fetch, 2),
             "cpu_s": round((c1.ru_utime - c0.ru_utime) + (c1.ru_stime - c0.ru_stime), 2),
-            "trading_rows": sum(1 for r in rows if r["trading_bar"])}
+            "trading_rows": sum(1 for r in rows if r["trading_bar"]), "retried": sorted(failed),
+            "retry_recovered": sorted(s for s in failed if fetched[s][0] == "ok")}
 
 
 def freshness(path: Path, *, now_s: Optional[float] = None, fresh_s: int = FRESH_S) -> Dict[str, Any]:

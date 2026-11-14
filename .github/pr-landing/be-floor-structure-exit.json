@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "PI-20261114-TFZXAKEK-0001: research harness fix, off the trade path. scripts/backtest_pullback.py re-applies the MI-165 break-even floor after the --structure-exit override (as scripts/backtest_trend.py already does), so a be_floor_r arm on a structure-exit leg is no longer silently inert. Tests pin it: the new composition test FAILS on the old harness and passes on the fix, and the existing 'changes outcomes' test now compares outcomes rather than the params echo. Byte-identical at default (be_floor_r 0) and on every leg without a structure exit. Revert: git revert."
+}

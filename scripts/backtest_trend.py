@@ -197,6 +197,18 @@ def _resample(df: pd.DataFrame, rule: str) -> pd.DataFrame:
             .dropna().reset_index())
 
 
+def _htf_daily_gate():
+    """scripts/research/htf_daily_gate.py, loaded by FILE and lazily (the flag is opt-in; default runs never load it)."""
+    mod = sys.modules.get("htf_daily_gate")
+    if mod is None:
+        import importlib.util as _ilu
+        _spec = _ilu.spec_from_file_location("htf_daily_gate", Path(__file__).resolve().parent / "research" / "htf_daily_gate.py")
+        mod = _ilu.module_from_spec(_spec)
+        sys.modules["htf_daily_gate"] = mod
+        _spec.loader.exec_module(mod)
+    return mod
+
+
 def _date_filter(df: pd.DataFrame, start: Optional[str], end: Optional[str]) -> pd.DataFrame:
     if start:
         df = df[df["timestamp"] >= pd.Timestamp(start, tz="UTC")]
@@ -263,6 +275,19 @@ def _adx(df: pd.DataFrame, period: int) -> pd.Series:
 _effective_trail_mult = effective_trail_mult
 
 
+def _cell_tighten():
+    """scripts/research/cell_tighten.py, loaded by FILE (shared with backtest_pullback.py)."""
+    mod = sys.modules.get("cell_tighten")
+    if mod is None:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "cell_tighten", Path(__file__).resolve().parent / "research" / "cell_tighten.py")
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules["cell_tighten"] = mod
+        spec.loader.exec_module(mod)
+    return mod
+
+
 def _forming_bar_entries():
     """scripts/research/forming_bar_entries.py, loaded by FILE (the decision
     mode's one implementation; see run_backtest(decision_bar=...))."""
@@ -301,6 +326,7 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  min_confidence: float = 0.0,
                  long_only: bool = False,
                  side_filter: str = "both",
+                 htf_long_gate: Optional[Any] = None,
                  adx_min: Optional[float] = None,
                  adx_max: Optional[float] = None,
                  adx_period: int = 14,
@@ -344,6 +370,7 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  structure_buffer_atr: float = 0.25,
                  structure_min_r: float = 1.0,
                  structure_fvg: bool = True,
+                 structure_sl_only: bool = False,
                  giveback_frac: float = 0.0,
                  trigger_action: str = "",
                  trigger_file: str = "",
@@ -358,6 +385,11 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  momentum_stale_bars: int = 0,
                  momentum_stale_adx_below: float = 0.0,
                  be_floor_r: float = 0.0,
+                 cell_tighten_min_r: float = 0.0,
+                 cell_tighten_room_atr: float = 1.0,
+                 cell_tighten_mode: str = "first",
+                 cell_tighten_random_p: float = 0.5,
+                 cell_tighten_seed: int = 0,
                  tp_revision: str = "",
                  tp_revision_width_mult: float = 1.0,
                  tp_geometry: Optional[_tpg.TPGeometrySpec] = None,
@@ -368,6 +400,7 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  decision_1m: Optional[pd.DataFrame] = None,
                  decision_cfg: Optional[Dict[str, Any]] = None,
                  decision_workers: int = 4,
+                 decision_session: Optional[str] = None,
                  emit_paths_path: Optional[str] = None,
                  emit_features: bool = False,
                  cf: bool = False) -> Dict[str, Any]:
@@ -386,7 +419,8 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
             raise ValueError("decision_bar='forming' needs decision_1m and decision_cfg")
         entry_override = _forming_bar_entries().forming_entry_override(
             df, decision_1m, decision_cfg, family="trend", label=strategy_name,
-            workers=decision_workers)
+            workers=decision_workers,
+            **({"session": decision_session} if decision_session else {}))
         adx_min = adx_max = None
         min_confidence = 0.0
         vol_skip_above_pctl = vol_skip_below_pctl = 0.0
@@ -666,6 +700,11 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                 (_sf == "short" and direction == "long"):
             i += 1
             continue
+        # HTF long gate (scripts/research/htf_daily_gate.py; None = off = byte-identical): skip a LONG when the
+        # symbol's last completed daily close is below its N-day SMA. Applies on both decision bars.
+        if htf_long_gate is not None and direction == "long" and htf_long_gate.skip(df["timestamp"].iloc[i]):
+            i += 1
+            continue
         # Direction-aware regime gate (Phase 2): skip a long whose direction read
         # is DOWN and a short whose read is UP. NaN (warm-up) → never skip.
         if dir_di_plus is not None:
@@ -822,8 +861,10 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
         # GEOM-B1: a finite entry-time target and/or a target that moves
         # (scripts/research/tp_geometry.py). Skipped entirely at default, so the
         # legacy `tp_price` above is untouched.
-        if _sx is not None:
+        if _sx is not None and not structure_sl_only:
             tp_price = _sx.tp              # None -> no resting TP until a level is confirmed
+        # STRUCTURE-EXIT-ITERATE (--structure-sl-only, default off = byte-identical): keep the structure STOP and the
+        # declared (capped) TP -- the live `pivot=5;sl_only` semantic; the structure TP is neither placed nor extended.
         _tpt = None
         if tp_geom.armed:
             tp_price = _tpg.entry_target(
@@ -900,6 +941,9 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                                                 df["timestamp"].iloc[entry_i], direction),
                         entry_i=entry_i, entry=entry, risk=risk,
                         is_long=(direction == "long"))
+        # CELL TIGHTEN (RQ-20261101-78fc-09; 0 = off, byte-identical): one-shot late-cell stop move, per trade.
+        _ct = _cell_tighten().for_trade(cell_tighten_min_r, cell_tighten_room_atr, cell_tighten_mode,
+                                        cell_tighten_random_p, cell_tighten_seed, entry_i)
         for j in range(entry_i + 1, min(entry_i + timeout_bars + 1, n)) if _rest_hit is None else ():
             if _prec is not None:
                 # Closes bar j-1's row with the state as it stands now (its end
@@ -978,9 +1022,14 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                 # tightening direction here, mirroring the ratchet above.
                 if be_floor_r > 0.0 and mfe >= be_floor_r:
                     trail = min(trail, entry)
+            if _ct.on:
+                # after the ratchet + BE floor on bar j's CLOSE: binds from bar j+1 (SL-first), only ever tightens
+                trail = _ct.on_close(j, float(df["close"].iloc[j]), entry, risk, atr, trail, direction == "long")
             if _sx is not None:
                 # bar j has CLOSED: new confirmed levels bind from bar j+1 (ratchet / extend-only)
-                trail, tp_price = _sx.on_bar_close(j, float(df["close"].iloc[j]), trail, tp_price, entry)
+                trail, _sx_tp = _sx.on_bar_close(j, float(df["close"].iloc[j]), trail, tp_price, entry)
+                if not structure_sl_only:
+                    tp_price = _sx_tp
             # GEOM-B1 target revision (off unless --tp-extend-r / --tp-retarget-mode).
             # On the bar's CLOSE, after its own stop/target test; the revised level
             # binds from the NEXT bar. NOT a levered exit: it only moves tp_price.
@@ -1267,6 +1316,8 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                     default=str) + "\n")
     params: Dict[str, Any] = {"donchian": donchian, "atr_stop_mult": atr_stop_mult,
                               "trail_mult": trail_mult, "min_confidence": min_confidence}
+    if htf_long_gate is not None:
+        params["htf_long_sma_days"] = htf_long_gate.days
     if adx_min is not None:
         params["adx_min"] = adx_min
     if adx_max is not None:
@@ -1298,6 +1349,8 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
         params.update(structure_exit=structure_exit, structure_buffer_atr=structure_buffer_atr,
                       structure_min_r=structure_min_r, structure_fvg=structure_fvg,
                       structure_no_swing_fallbacks=_sx_fallback)
+        if structure_sl_only:
+            params["structure_sl_only"] = True
     if _trig.on:
         params["trigger_action"] = trigger_action
         params["trigger_all"] = trigger_all
@@ -1330,6 +1383,10 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
         params["adx_period"] = adx_period
     if be_floor_r > 0.0:
         params["be_floor_r"] = be_floor_r
+    if cell_tighten_min_r > 0.0:
+        params.update(cell_tighten_min_r=cell_tighten_min_r, cell_tighten_room_atr=cell_tighten_room_atr,
+                      cell_tighten_mode=cell_tighten_mode, cell_tighten_random_p=cell_tighten_random_p,
+                      cell_tighten_seed=cell_tighten_seed)
     params.update(tp_geom.params())
     if confirm_bars:
         params["confirm_bars"] = confirm_bars
@@ -1677,6 +1734,10 @@ def main(argv: List[str]) -> int:
                    help="Config-exact directional gate matching the live builder's "
                         "side_filter: skip shorts (long) / skip longs (short) / no gate "
                         "(both, default). --long-only overrides to 'long'.")
+    p.add_argument("--htf-long-sma-days", type=int, default=0,
+                   help="HTF long gate (default 0 = off, byte-identical): skip a LONG entry when the symbol's last "
+                        "completed UTC daily close is below its N-day SMA of daily closes, built from the loaded bars "
+                        "BEFORE the --start/--end trim (scripts/research/htf_daily_gate.py). Shorts are never gated.")
     p.add_argument("--adx-min", type=float, default=None,
                    help="Regime filter: skip entries whose Wilder ADX is below this (None=off).")
     p.add_argument("--adx-max", type=float, default=None,
@@ -1754,6 +1815,7 @@ def main(argv: List[str]) -> int:
     p.add_argument("--trail-decay-tight-mult", type=float, default=0.0,
                    help="The tightened trail mult once armed (0 disables the "
                         "whole decay lever, byte-identical).")
+    _cell_tighten().add_cli(p)
     p.add_argument("--be-floor-r", type=float, default=0.0,
                    help="MI-165 break-even FLOOR (0=off, byte-identical): once "
                         "the trade has SEEN this many R of open profit, the "
@@ -1845,6 +1907,9 @@ def main(argv: List[str]) -> int:
                    help="Minimum distance of the structure TP from entry, in R.")
     p.add_argument("--structure-no-fvg", action="store_true",
                    help="Structure TP uses swing highs/lows only (no unfilled FVG edges).")
+    p.add_argument("--structure-sl-only", action="store_true",
+                   help="STRUCTURE-EXIT-ITERATE (default off = byte-identical): with --structure-exit, keep the structure "
+                        "stop but not the structure TP (the declared capped TP stays) -- the live pivot=N;sl_only semantic.")
     p.add_argument("--giveback-frac", type=float, default=0.0,
                    help="GIVEBACK-FRAC-FLAG (0 = off, byte-identical): giveback stop as a SHARE of the "
                         "peak -- exit at the bar close when open R <= F x peak R, armed by "
@@ -1902,6 +1967,13 @@ def main(argv: List[str]) -> int:
                         "(needs --klines-1m-dir and --strategy-name <leg>)")
     p.add_argument("--klines-1m-dir", default=None, metavar="DIR",
                    help="Binance USD-M <SYMBOL>-1m-*.zip archives for --decision-bar forming")
+    p.add_argument("--minutes-1m-csv", default=None, metavar="CSV",
+                   help="--decision-bar forming from a 1m CSV (timestamp,open,high,low,close[,volume]; "
+                        "e.g. scripts/research/equity_1m_source.py's output) instead of Binance archives")
+    p.add_argument("--decision-session", choices=["us_equity", "us_equity_intraday"], default=None,
+                   help="--decision-bar forming on a US equity frame: us_equity = a daily frame (minutes by ET date, ticks "
+                        "in the cash session); us_equity_intraday = clock-aligned intraday bars (minutes by bar, ticks "
+                        "masked to the cash session) -- scripts/research/forming_bar_entries.py")
     p.add_argument("--strategy-name", default="trend_donchian", metavar="NAME",
                    help="Leg name stamped on every emitted row's `strategy` "
                         "field. Defaults to the historical literal so an "
@@ -2026,6 +2098,8 @@ def main(argv: List[str]) -> int:
         df = _load_candles(args.data)
         if args.resample:
             df = _resample(df, args.resample)
+        # built BEFORE the window trim so the daily SMA keeps its warm-up (None when the flag is off)
+        htf_gate = _htf_daily_gate().build_gate(df, args.htf_long_sma_days)
         df = _date_filter(df, args.start, args.end)
     except Exception as exc:  # noqa: BLE001
         print(f"ERROR: load failed: {exc}", file=sys.stderr)
@@ -2038,6 +2112,7 @@ def main(argv: List[str]) -> int:
                      timeframe=args.resample or args.timeframe, symbol=args.symbol,
                      long_only=args.long_only,
                      side_filter=args.side_filter,
+                     htf_long_gate=htf_gate,
                      adx_min=args.adx_min, adx_max=args.adx_max,
                      adx_period=args.adx_period,
                      adx_soft_weight_floor=args.adx_soft_weight_floor,
@@ -2057,6 +2132,11 @@ def main(argv: List[str]) -> int:
                      trail_decay_tight_mult=args.trail_decay_tight_mult,
                      rr_floor=args.rr_floor,
                      be_floor_r=args.be_floor_r,
+                     cell_tighten_min_r=args.cell_tighten_min_r,
+                     cell_tighten_room_atr=args.cell_tighten_room_atr,
+                     cell_tighten_mode=args.cell_tighten_mode,
+                     cell_tighten_random_p=args.cell_tighten_random_p,
+                     cell_tighten_seed=args.cell_tighten_seed,
                      confirm_bars=args.confirm_bars,
                      skip_hours=args.skip_hours,
                      flat_at_utc=args.flat_at_utc,
@@ -2082,6 +2162,7 @@ def main(argv: List[str]) -> int:
                      structure_buffer_atr=args.structure_buffer_atr,
                      structure_min_r=args.structure_min_r,
                      structure_fvg=not args.structure_no_fvg,
+                     structure_sl_only=args.structure_sl_only,
                      giveback_frac=args.giveback_frac,
                      trigger_action=args.trigger_action,
                      trigger_file=args.trigger_file,
@@ -2100,11 +2181,31 @@ def main(argv: List[str]) -> int:
                      momentum_stale_adx_below=args.momentum_stale_adx_below)
     decision_kw: Dict[str, Any] = {}
     if args.decision_bar == "forming":
-        if not args.klines_1m_dir:
-            print("ERROR: --decision-bar forming requires --klines-1m-dir", file=sys.stderr)
+        if bool(args.klines_1m_dir) == bool(args.minutes_1m_csv):
+            print("ERROR: --decision-bar forming requires exactly one of --klines-1m-dir / "
+                  "--minutes-1m-csv", file=sys.stderr)
             return 1
-        _m1, _block = _forming_bar_entries().cli_inputs(args.klines_1m_dir, args.strategy_name)
-        decision_kw = dict(decision_bar="forming", decision_1m=_m1, decision_cfg=_block)
+        _fbe = _forming_bar_entries()
+        if args.minutes_1m_csv:
+            _m1, _block = _fbe.cli_inputs_csv(args.minutes_1m_csv, args.strategy_name)
+            # The ARM's own entry params decide (an exit_lever_ablation arm such as
+            # donchian=30 vs the YAML's 20 must replay ITS channel, not the YAML's).
+            _block = _fbe.block_with_arm_params(_block, donchian=args.donchian,
+                                                atr_period=args.atr_period,
+                                                atr_stop_mult=args.atr_stop_mult,
+                                                long_only=args.long_only,
+                                                side_filter=args.side_filter)
+            # ...and the vol-at-entry gate the trend order_package applies from the block (forming mode zeroes the
+            # harness's own copy, so an arm's --vol-skip-above-pctl would otherwise equal its baseline).
+            _block = _fbe.block_with_entry_gates(_block, vol_skip_above_pctl=args.vol_skip_above_pctl,
+                                                 vol_skip_below_pctl=args.vol_skip_below_pctl)
+        else:
+            _m1, _block = _fbe.cli_inputs(args.klines_1m_dir, args.strategy_name)
+        decision_kw = dict(decision_bar="forming", decision_1m=_m1, decision_cfg=_block,
+                           decision_session=args.decision_session)
+    elif args.minutes_1m_csv or args.decision_session:
+        print("ERROR: --minutes-1m-csv / --decision-session need --decision-bar forming", file=sys.stderr)
+        return 1
     if args.confidence_sweep:
         out = _confidence_sweep(df, _parse_grid(args.confidence_sweep), bt_kwargs)
         print(_fmt_sweep(out))

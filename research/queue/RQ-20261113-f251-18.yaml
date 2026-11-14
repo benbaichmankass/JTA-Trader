@@ -1,0 +1,185 @@
+id: RQ-20261113-f251-18
+title: 'tlt_pullback_1d exit lever: break-even floor at +1R MFE (be_floor_r 1.0) vs none on the forming bar (Alpaca 1Day + 1Min)'
+status: done
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+question: 'tlt_pullback_1d fails RULE-D1 on the forming bar (f251-02: -6.96R over n 45). Two forming levers failed: short-only (f251-11, +4.55R, 3/8 folds) and vol_skip_above
+  0.8 (f251-16, -4.28R, 3/8). The forming ledger shows 12 of 34 losers reached +1.08..+1.79R MFE and then exited on the trail at a loss (-7.25R together). Over 2020-07-27..2026-11-13:
+  does a break-even floor armed at +1R MFE pass Stage 0 at the SAME 5/8 fold bar and beat the baseline net of the full cost stack?'
+why_this_matters: 'Demo-floor paper leg; DEMO-FLOOR-ITER 3rd lever (manager GO 2026-11-14 00:09Z, after the 2nd-lever census on research/levers/tlt_pullback_1d.yaml).
+  The only prior be_floor_r test on this leg (RQ-20261110-73de-04, closed bar, delta 0.0R, indeterminate) ran WITH --structure-exit pivot=5, and the pullback harness
+  replaces the chandelier (and the floor folded into it) with the structure stop on every bar (`if _sx is not None: trail = _trail_prev`), so that arm was inert.
+  This unit tests the floor on the config-exact leg (no structure exit), where it can bind. No confirmation window exists (1Min coverage begins at the record window
+  start), so the guard is met by the same 5/8 fold bar, not relaxed.'
+power:
+  expected_n: 45
+  min_detectable_effect: 0.5
+  effect_units: sd
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: MEASURED baseline n 45 (f251-16 arm A); the floor changes exits, not entries, so n is unchanged.
+  sd: null
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window (the leg's own record window); nothing accrues; Binance / Binance-vision 1m covers it at run time.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+run:
+  commands:
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - tlt_pullback_1d
+    - --arm
+    - A=
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2020-07-27'
+    - --end
+    - '2026-11-13'
+    - --days
+    - '2400'
+    - --folds
+    - '8'
+    - --fold-majority
+    - '5'
+    - --n-floor
+    - '20'
+    - --delta-r
+    - '0'
+    - --forming-equity-fetch
+    - --out
+    - '{out_dir}/arm_A'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - tlt_pullback_1d
+    - --arm
+    - B=--be-floor-r=1.0
+    - --grade
+    - stage0
+    - --baseline
+    - B
+    - --start
+    - '2020-07-27'
+    - --end
+    - '2026-11-13'
+    - --days
+    - '2400'
+    - --folds
+    - '8'
+    - --fold-majority
+    - '5'
+    - --n-floor
+    - '20'
+    - --delta-r
+    - '0'
+    - --forming-equity-fetch
+    - --out
+    - '{out_dir}/arm_B'
+  - - python3
+    - scripts/research/timeframe_lever_grade.py
+    - --out
+    - '{out_dir}'
+    - --leg
+    - tlt_pullback_1d
+    - --baseline-tf
+    - A
+    - --family
+    - exit
+    - --prefix
+    - arm_
+    - --tf
+    - A
+    - --tf
+    - B
+  timeout_minutes: 300
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261113-f251-18
+decision_rule:
+  id: RULE-DFI3-TLT-BEFLOOR-20261114
+  registered_at: '2026-11-14'
+  registered_before_run: true
+  statistic: exit_lever_ablation --grade stage0 --forming-equity-fetch, one run per arm; timeframe_lever_grade.py --family exit.
+  rule: 'AM-ML multiple-testing guard: successive levers on one window fork the paths, so this rule NAMES the leg''s prior lever attempts on the record window and
+    ALSO requires the pass to hold at the SAME fold-consistency bar (no earlier forming-replayable window: 1Min coverage begins at the record window''s start). No
+    fold bar is relaxed. Prior lever attempts on this window: RQ-20261113-f251-02 (forming baseline, -6.96R n 45), RQ-20261113-f251-11 (short-only, +4.55R, 3/8 folds
+    -- FAIL), RQ-20261113-f251-16 (vol_skip_above 0.8, -4.28R, 3/8 folds -- FAIL). ONE arm, ONE value (be_floor_r 1.0, lock 0), chosen from the ledger before the
+    run. PASS iff the floor arm passes its own Stage 0 (net_r > 0, n >= 20, >= 5/8 folds positive) AND beats the baseline arm''s net_r. FAIL iff graded and not. INDETERMINATE
+    otherwise (a run wrote no verdict or the baseline did not run). If the floor arm''s trades come back identical to the baseline''s, the session reading it records
+    the arm as inert on the lever map (no lever response), not as evidence against the floor. Arms, window, folds and floors are fixed now.'
+  what_it_does_not_do: Changes no config, roster, order or evidence record. A PASS is a data-backed Tier-3 proposal routed to the manager (the leg stays on the demo
+    floor until then); a FAIL is recorded on the lever map with the census updated.
+  baseline: tlt_pullback_1d config-exact, forming, no floor, re-run in this unit.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: a demo-floor (Stage-1 paper) leg failing RULE-D1 on its forming record; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+ml_consumer:
+  not_applicable: 'Not an ML unit: a harness lever test on a rule-based leg.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: tlt_pullback_1d
+  subject_kind: strategy_leg
+  from_result: RQ-20261113-f251-16
+  verdict_read: fail
+  diagnosis: 'f251-16 forming ledger (arm A, n 45): 34 losers -29.65R; 12 of them reached MFE +1.08..+1.79R and exited on the trail at -0.22..-0.94R (-7.25R together),
+    days to weeks after the peak, so the peak and the exit are on different bars and a floor armed at +1R can bind. A floor at entry turns each into about -cost (roughly
+    +7R before the cost of those exits).'
+  hypothesis: 'A break-even floor at +1R MFE removes the round-trip losers (12 trades, -7.25R). Its risk is the winners that dip back to entry after +1R before running
+    to target: the floor stops those at about 0, which the run measures. PASS needs the net effect to clear Stage 0 at the same fold bar.'
+  search: 'Lever-family census on research/levers/tlt_pullback_1d.yaml (2026-11-14): direction and filter TESTED forming (FAIL); exit UNTESTED on the forming bar
+    and the closed-bar be_floor_r test was inert (structure exit) -> chosen; sizing_vs_cost inapplicable (cost 0.83R); regime unreadable (ADX unknown).'
+  attempt: 3
+  due_by: '2026-11-21'
+  levers:
+  - exit
+  lever_arms:
+  - family: exit
+    param: be_floor_r
+    values:
+    - 1.0
+    baseline_value: 0.0
+  map_entries:
+  - research/levers/tlt_pullback_1d.yaml
+related:
+- RQ-20261113-f251-11
+- RQ-20261113-f251-16
+- RQ-20261110-73de-04
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): ONE lever chosen from the leg''s own R diagnosis (scripts/research/leg_r_diagnosis.py),
+  rule registered before the run against the leg''s own record, net of the full cost stack, graded once on its fixed window.'
+follow_up: On the verdict a session appends the test to research/levers/tlt_pullback_1d.yaml (lever_map.py --append) and updates the census. PASS -> Tier-3 proposal
+  to the manager. FAIL -> the census picks the next family or records exhaustion; retirement only through the manager (and the operator this week).
+last_dispatched_at: '2026-11-14T00:44:46+00:00'
+grading:
+  attested: RULE-DFI3-TLT-BEFLOOR-20261114
+  auto: true
+  decision_rule_id: RULE-DFI3-TLT-BEFLOOR-20261114
+  evidence:
+  - research/results/RQ-20261113-f251-18/43536260399.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

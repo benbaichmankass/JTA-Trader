@@ -69,7 +69,13 @@ TARGET="${ENV_FILE_TARGET:-}"
 # safe to READ) — this is the set of keys someone has reviewed as safe to
 # DELETE. Start with exactly the two E35 (#12924) retired; extending this
 # list is a reviewed code change, never a caller-supplied value.
-RETIRABLE_KEYS="ARBITRATION_FANOUT_MODE ARBITRATION_FANOUT_ACCOUNTS"
+# LIVE_REVIEW_ROUTINE_ID (2026-11-13, operator popup "1, but you pause it"): removing it
+# makes src/runtime/live_review_routine_fire.fire() return not_configured, which PAUSES the
+# "JTA live review" routine fire while the ltr-wake comment path keeps working (not a gate:
+# nothing is withheld, the manager dispatches from the comment). Resume = set-env the same key;
+# the unset backup keeps the old value on the VM. LIVE_REVIEW_ROUTINE_TOKEN is deliberately NOT
+# retirable (a credential).
+RETIRABLE_KEYS="ARBITRATION_FANOUT_MODE ARBITRATION_FANOUT_ACCOUNTS LIVE_REVIEW_ROUTINE_ID"
 
 # Services this action is allowed to restart. Same bounded blast radius as
 # set_env.sh / scrub_env_noncompliant.sh — never the order path beyond the

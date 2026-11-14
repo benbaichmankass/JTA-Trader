@@ -776,3 +776,108 @@ levers:
       best_delta_r_per_trade: 0.0336
       fold_stability: 0.667
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+levers_tested:
+- family: regime_gating (pooled ADX cell x direction)
+  varied: ungated vs the worst pooled (ADX regime x direction) cell across 15 crypto demo-floor legs, picked on 2025-11-13..2026-11-12, checked
+    on 2024-11-13..2025-11-12, live decision bar, full cost stack
+  response:
+    verdict: fail
+    run: '43562273934'
+    rule: RULE-DFR-COMMON-LOSS-REGIME-20261114
+    leg_record:
+      n: 162
+      net_r: -7.0935
+    leg_prior:
+      n: 166
+      net_r: 7.0013
+    part_a_common: true
+    part_a: 12/15 legs negative on the record window; pooled -142.3426R vs prior 106.089R
+    selected_cell: chop/long
+    cell_record:
+      n: 229
+      net_r: -75.3822
+    cell_prior:
+      n: 220
+      net_r: 25.5925
+    leg_ex_cell:
+      record_net_r: 10.089
+      prior_net_r: -8.1189
+    reading: 'the record-year loss is common (Part A) but the worst ADX cell (chop/long) wins the year before: no trend-regime cell separates
+      it; the record-year loss sits on the LONG side in every ADX cell'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-02
+  lever_family: regime_gating
+- family: regime_gating (HTF daily SMA200 long filter, post-hoc)
+  varied: ungated vs longs skipped when the prior daily close < SMA200 (own symbol), pooled over 15 crypto demo-floor legs, record 2025-11-13..2026-11-12
+    + year before, live decision bar, full cost stack
+  response:
+    verdict: pass
+    run: '43567392380'
+    rule: RULE-DFR-HTF-LONG-FILTER-20261114
+    filter: skip a long when the symbol's prior completed daily close < its 200-day SMA (Binance daily); shorts untouched
+    leg:
+      record_net_r: -7.0929
+      record_n: 162
+      filtered_record_net_r: -10.7283
+      filtered_record_n: 95
+      prior_net_r: 7.0014
+      prior_n: 166
+      filtered_prior_net_r: 8.8317
+      filtered_prior_n: 130
+    pooled:
+      gated_record:
+        n: 572
+        net_r: -88.0639
+      gated_prior:
+        n: 259
+        net_r: -5.3393
+      kept_record_net_r: -54.2763
+      kept_prior_net_r: 111.4287
+    reading: 'PASS pooled (gated longs lose both years, stable drag) but POST-HOC: a harness-native run is required before any Tier-3; the year-before
+      drag is thin (-5.3R over 259, about -0.02R/trade)'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-03
+  lever_family: regime_gating
+- family: regime_gating (HTF daily SMA200 long gate, harness-native)
+  varied: arm A config-exact vs arm H --htf-long-sma-days 200 inside the harness, record 2025-11-13..2026-11-12 + year before, live decision bar,
+    full cost stack
+  response:
+    verdict: fail
+    unit_verdict: fail
+    run: '43575944709'
+    rule: RULE-DFR-HTF-NATIVE-20261114
+    arm_H: --htf-long-sma-days 200 (inside the harness)
+    record:
+      A_net_r: -7.0935
+      A_n: 162
+      H_net_r: -11.7266
+      H_n: 107
+      H_folds_positive: 1
+      H_n_folds: 4
+      H_stage0: false
+      H_beats_A: false
+    prior:
+      A_net_r: 7.0013
+      A_n: 166
+      H_net_r: 12.7217
+      H_n: 133
+      holds: true
+    pooled:
+      A_record: -142.3426
+      H_record: -57.0308
+      A_prior: 106.089
+      H_prior: 105.4607
+      delta_record: 85.3118
+      delta_prior: -0.6283
+    reading: 'harness-native: the gate cuts the record-year loss but is neutral-to-negative the year before (pooled H-A prior -0.63R); unit FAIL,
+      no per-leg pass'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-04
+  lever_family: regime_gating
+units:
+- RQ-20261114-db1a-02
+- RQ-20261114-db1a-03
+- RQ-20261114-db1a-04

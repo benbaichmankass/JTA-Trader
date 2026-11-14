@@ -278,5 +278,7 @@ class TestCoverageStatesStayDistinct:
                           if isinstance(c, dict) and c.get("enabled")
                           and rdm.classify(c) is None)
         assert unrouted, "no enabled leg is unrouted — `no_harness` is now unreachable"
-        assert "turtle_soup" in unrouted
-        assert rdm.classify(S["turtle_soup"]) is None
+        planted = {"enabled": True, "symbols": ["BTCUSDT"], "timeframe": "1h"}
+        assert rdm.classify(planted) is None, "a leg with no harness-family params must stay unroutable"
+        # the positive side of the same control: the leg that was spent now routes
+        assert rdm.classify(S["turtle_soup"]) == "turtle_soup"

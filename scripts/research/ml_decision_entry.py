@@ -269,14 +269,26 @@ FEATURES = ["ret_1", "ret_4", "ret_12", "ret_24", "ret_72", "ret_168", "vol24", 
             "xs_rank_ret24", "btc_ret24", "btc_vol24", "breadth_up24", "rel_vol"]
 
 
+def regrid_hourly(df: pd.DataFrame) -> pd.DataFrame:
+    """Reindex one symbol's bars onto a complete hourly grid so a data hole becomes NaN bars, not a seam. Without it the
+    positional rolling features (ret_k, vol_ratio, vol_z, range_pos, atr) silently span the hole (ENTRY-GRADE-REPRO)."""
+    full = pd.date_range(df["ts"].min(), df["ts"].max(), freq="1h", tz="UTC")
+    return df.set_index("ts").reindex(full).rename_axis("ts").reset_index()
+
+
 def build_table(cache: Path, symbols: list[str], xs_symbols: list[str] | None = None,
-                recost_inputs: bool = False) -> pd.DataFrame:
+                recost_inputs: bool = False, hole_safe: bool = True) -> pd.DataFrame:
     """``xs_symbols`` None: cross-sectional context over ``symbols`` (the c692-01 recipe, unchanged). Given: context is
     computed against that fixed REFERENCE set for every row, so a row's inputs do not depend on which other symbols are
-    in the table (the c692-04 training-universe arms)."""
+    in the table (the c692-04 training-universe arms).
+    ``hole_safe`` (default True since ML-ENTRY-HOLE-SAFE-ADOPT, 2026-11-12): bars are regridded hourly so a data hole is NaN
+    bars, never a seam in the positional rolling features; rows touching it are dropped, not refused. ``False`` reproduces the
+    legacy build. Hourly crypto only: equity sessions are legitimately non-contiguous, never pass it there."""
     rows, feats = [], {}
     for sym in symbols:
         df = pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True)
+        if hole_safe:   # default ON (ML-ENTRY-HOLE-SAFE-ADOPT); hole_safe=False reproduces a pre-2026-11-12 table byte-for-byte
+            df = regrid_hourly(df)
         f = features_symbol(df)
         feats[sym] = f
         lab = label_symbol(df, recost_inputs=recost_inputs)
@@ -908,7 +920,7 @@ def universe_costed(args) -> int:
         taken_flag = np.maximum(pl, ps) > tau
         from ml.promotion.cost_gate import evaluate_cost_gate
         g = evaluate_cost_gate(list(zip(taken_flag.tolist(), net.astype(float).tolist())),
-                               eval_cost_bases={"net_of_cost": len(fw)}, value_column="net_r", threshold=tau,
+                               eval_cost_bases={"net": len(fw)}, value_column="net_r", threshold=tau,
                                enforced=False, n_trials=UC_N_TRIALS)
         gate = g.to_dict()
         # reported, never gating

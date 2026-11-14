@@ -1,0 +1,89 @@
+# Hand-authored 2026-11-12 by lane CRYPTO-ENTRY-DIAG (rows CRYPTO-ENTRY-RETRAIN-UNIT + ML-DECISION-LABEL-VOL-CONFOUND, Tier 1), dispatched by the ML assistant manager. Decision rule registered BEFORE any run; pushed before the run. Gates this adds or changes: none.
+id: RQ-20261112-cd01-01
+title: 'Served crypto ml_entry (v1r20261106) negative replay: regime vs selection vs cost on the recent window, against the clean frozen v1, plus the gross-label feature ranking'
+status: done
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml_health
+priority: 1
+kind: experiment
+compute: cpu_light
+evidence_class:
+  holdout: holdout_window
+  claim: model_quality
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 60
+  basis: INFERRED from RQ-20261112-a7e8-03 (same fetch, table and frozen scoring; this unit scores two boosters and groups).
+  why_runner: Keyless public Binance Vision klines and committed boosters; CPU. Runs in the dispatched lane's session container, reproducible on research-script-run.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+question: 'The served model (ml_decision_entry_v1r20261106, tau 0.1) replays -0.13 R net (n=317) on 2026-10-25..2026-11-07 (shorts +0.017, longs -0.90). Prior units cut that window by side/decay/exit (98e3-23) and showed the frozen v1 fortnights are WITHIN-BAND (98e3-25); a7e8-03 showed the frozen v1 clean-year selection is NOT a cost-per-R tilt (tilt share 0.06). Open: is the recent shortfall the MARKET (the same-time same-side candidate pool paid less), the SELECTION (excess over that pool fell), or COST; does the clean frozen v1 read the same on the same window (refit damage vs shared regime); and does the gross-R label rank on atr_pct like the net label?'
+why_this_matters: 'Decides whether the -0.13 R is a model problem (iterate / demotion signal to the manager) or the market of that fortnight (no model action), and whether the net-label atr_pct ranking (+0.49) is cost-per-R arithmetic. Feeds ML-ENTRY-PROP and ML-ENTRY-UNIVERSE-LEVER.'
+power:
+  expected_n: 317
+  min_detectable_effect: 0.15
+  effect_units: metric
+  sd: 1.09
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: sd of net R per decision ~1.09 (audit 3.1). With n taken ~317 (window B) the smallest net-R mean resolvable at one-sided 5% / 80% power is (1.645+0.84)*1.09/sqrt(317)=0.152 R; with n=11,240 (window A) it is 0.026 R; a 3-day forward slice (n ~70) resolves only 0.32 R. Components are reported with ts-clustered se and labelled UNRESOLVED when |t| < 2; no component below its MDE is called a driver.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on public candles over pinned windows; nothing accrues.
+practice_precedent: 'M4 / M6 (docs/reference/trading-and-model-practice-principles.md): attribution before a model claim; Brinson-style split against the same-time same-side pool; clean-model-on-same-window control'
+intervention_controls:
+  not_applicable: an attribution read of frozen models' decisions, not an in-trade action
+decision_rule:
+  id: RULE-RQ20261112-cd01-01-REGIME-SELECT-COST
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_regime_split.py. Models: S = served v1r20261106 (train_end 2026-10-14), V = frozen ml_decision_entry_v1 (train_end 2025-09-22; clean on every window below). Windows: A = 2025-10-01..2026-09-29 (V reference year), B = 2026-10-25..2026-11-07 (S post-train replay window), F = 2026-11-08..last labelled decision (fresh forward, descriptive). For each (model, window) the policy E.policy at tau 0.1 gives taken decisions; per taken k: pool_k = mean over every candidate row at the same ts with a side-s label (regime read), excess_k = r_k - pool_k, split into atr_pct-tercile tilt and within-tercile select (as a7e8-03), in net, gross and cost R; ts-clustered (CR1) se.'
+  rule: |
+    R1 (attribution): gap = mean_net(S,B) - mean_net(V,A). If gap >= -0.05: NO-GAP. Else with dpool = pool(S,B)-pool(V,A) and dex = excess(S,B)-excess(V,A) (net R; gap = dpool + dex exactly): REGIME iff -dpool >= 0.5*(-gap); SELECTION iff -dex >= 0.5*(-gap); MIXED otherwise (REGIME and SELECTION cannot both hold unless equal halves, then MIXED). Suffix -UNRESOLVED if the leading component's |t| < 2 (se = root sum of squares of the two windows' ts-clustered se). Separately COST-NOT-DRIVER iff (cost(S,B)-cost(V,A)) < 0.25*|gap|, else COST-CONTRIBUTES.
+    R2 (clean-model control, window B): REFIT-DAMAGE iff mean_net(S,B) - mean_net(V,B) <= -0.10 AND the upper limit of the 95% day-cluster bootstrap CI of that difference (2000 draws, seed 20261112) is < 0; REGIME-SHARED iff not REFIT-DAMAGE and mean_net(V,B) <= -0.05; REFIT-NEUTRAL otherwise. n taken of either arm < 100 -> INDETERMINATE.
+    R3 (gross-label ranking, full table 2020-07..2026-09, the M2 population): mean per-ts cross-sectional Spearman of atr_pct vs the NET label and vs the GROSS label (long and short averaged). COST-ARTIFACT iff IC(atr_pct,gross) < 0.15 AND < 0.5*IC(atr_pct,net); SAME-RANKING iff IC(atr_pct,gross) >= 0.5*IC(atr_pct,net) and >= 0.15; MIXED otherwise.
+    R4 (window F): reported only, INDETERMINATE by rule (n below MDE).
+    Thresholds are not changed after any result; a holdout read of each window is claimed through holdout_lock.py (families ENTRY, models ENTRY-v1-regime-split and ENTRY-v1r20261106-regime-split) BEFORE any outcome is read, and the N-th read is graded against the deflated bar the ledger prints.
+  proposal_mapping: 'REGIME / REGIME-SHARED -> no model action; the manager is told the -0.13 R is the market of that fortnight. SELECTION or REFIT-DAMAGE -> a demotion/iteration SIGNAL goes to the manager (no demotion by this lane). COST-ARTIFACT on R3 -> row ML-DECISION-LABEL-VOL-CONFOUND closes: the net-label atr_pct ranking is cost-per-R arithmetic and the served selection is not a tilt (with a7e8-03).'
+  what_it_does_not_do: 'Changes no config, roster, model or tau; does not model the live TP revision or live structure exit; pool includes symbols the policy could not take (busy); re-reads windows already read by other units (recorded in the ledger).'
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.4
+  basis: 'stand-in: decides whether a real-money leg''s negative replay is a model or a market effect; not a P&L measurement.'
+ml_consumer:
+  consumer: ml/served/ml_decision_entry_v1r20261106/model.json
+  decision: whether the served ml_entry gets a demotion/iteration signal or none, and whether the net-label cost-per-R ranking is artifact
+  legs:
+  - ml_entry
+  book: money
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_regime_split.py
+  - --cache
+  - /tmp/ml_entry_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261112-cd01-01
+grading:
+  auto: true
+related:
+- CRYPTO-ENTRY-RETRAIN-UNIT
+- ML-DECISION-LABEL-VOL-CONFOUND
+- RQ-20261112-a7e8-03
+- RQ-20261108-98e3-23
+- RQ-20261108-98e3-25
+last_dispatched_at: '2026-11-12T15:00:00+00:00'

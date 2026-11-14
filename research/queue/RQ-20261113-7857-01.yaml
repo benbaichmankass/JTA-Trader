@@ -1,0 +1,116 @@
+# Hand-authored 2026-11-13 by research-ops pass RESEARCH-OPS-20261113-2050 (Tier 1). ITERATION unit authored from a written diagnosis of e4_oi_shock_1h's last result. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261113-7857-01
+title: 'ITERATION 2 of e4_oi_shock_1h (fail): the oi_z response was monotone (3.0 +0.022, 4.0 +0.071, 5.0 +0.145 R/trade) -- do stricter thresholds 6.0 / 7.0 / 8.0
+  clear the cluster CI?'
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-PROGRAMMES
+programme: P3
+kind: experiment
+question: On the E4 ledger held-out window, re-replayed at oi_z 6.0, 7.0 and 8.0 (all else frozen), does any arm reach n >= 30, mean net R > 0 and a 95% ISO-week
+  cluster CI lower bound > 0?
+why_this_matters: 'ITERATION 2 of e4_oi_shock_1h (research-ops 2026-11-13 2050Z). Iteration 1 (RQ-20261101-78fc-11, FAIL) read a smooth, monotone threshold response:
+  oi_z 3.0 n 856 +0.022 R/trade, 4.0 n 451 +0.071 CI [-0.045, 0.187], 5.0 n 256 +0.145 CI [-0.035, 0.322]; control reproduces the committed 856 rows. The CI includes
+  zero at every point because n shrinks as the mean rises: the lever has not yet been walked to where either bound crosses. DENOMINATOR: 3 new arms on top of the
+  2 already read (5 thresholds in all, one family). Held-out window is the same 2024-11..2025-10 span, so this is a deeper read of the same data; a PASS is a discovery
+  needing a disjoint-window confirmation (pre-dev history or another symbol set) before any Tier-3 note.'
+iteration:
+  subject: e4_oi_shock_1h
+  subject_kind: strategy_leg
+  from_result: RQ-20261101-78fc-11
+  verdict_read: fail
+  diagnosis: '78fc-11 rows: mean net R/trade rises monotonically with the shock threshold (0.022 -> 0.071 -> 0.145) while n falls 856 -> 451 -> 256 and the week-clustered
+    CI stays across zero (52 weeks). Most likely cause: power, with design (a threshold still too low) second and noise third: a monotone, smooth response is not
+    a single-point spike. Gross is 182.6 R over 1619 replayed trades with MFE >= 1R on 52% of them, so entry quality is present; cost and the 887 stop-outs absorb
+    it.'
+  search: 'oi_z family only, extended along the observed gradient: 6.0, 7.0, 8.0. Horizon/side families come next if the gradient turns over.'
+  levers:
+  - filter
+  map_entries:
+  - research/levers/e4_oi_shock_1h.yaml
+  attempt: 2
+  due_by: '2026-11-20'
+power:
+  expected_n: 150
+  min_detectable_effect: 0.02
+  effect_units: metric
+  sd: 1.0
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: n extrapolated from 856/451/256 at oi_z 3/4/5 (about 150 / 90 / 55 at 6/7/8); the rule INDETERMINATE floor (n < 30 per arm) governs.'
+  feasibility:
+    source: none
+    accrual_basis: Replays existing corpora; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261113-7857-01
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  statistic: 'scripts/research/e4_oi_z_arms.py --arms 6.0,7.0,8.0: On the E4 ledger held-out window, re-replayed at oi_z 6.0 / 7.0 / 8.0 (all else frozen), does any
+    arm reach n >= 30, mean net R > 0 and a 95% ISO-week cluster CI lower bound > 0?'
+  rule: 'PASS iff an arm has n >= 30 AND mean net R > 0 AND 95% ISO-week cluster CI LB > 0 on the held-out rows (the E18G-03 rule, unchanged, per arm; denominator
+    3 arms this unit, 5 thresholds across iterations 1-2). The oi_z 3.0 control must reproduce the committed rows or the result is INDETERMINATE. FAIL: the oi_z family
+    is closed on this window at 6.0-8.0 only; next lever = horizon / side. INDETERMINATE if every arm has n < 30. Fixed now. Regime-robustness clause (per-year/side
+    table) applies to any PASS before it is forwarded.'
+  what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order. A PASS is a discovery, not a confirmation, and not a Tier-3 case.
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 120
+  basis: Estimate; the first run replaces it.
+  why_runner: Replays committed or public corpora on CPU.
+value:
+  usd_at_stake_per_month: 60
+  confidence: 0.15
+  bucket: structural
+  basis: planning weight by money rank; an estimate, not a measurement
+run:
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261113-7857-01
+  commands:
+  - - python3
+    - scripts/research/e4_oi_z_arms.py
+    - --fetch
+    - --root
+    - /tmp/e4-oi-z-{run_id}
+    - --out
+    - '{out_dir}'
+    - --arms
+    - 6.0,7.0,8.0
+    - --unit
+    - RQ-20261113-7857-01
+    - --rule-id
+    - RULE-RQ-20261113-7857-01
+  timeout_minutes: 90
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261101-78fc-11
+- research/levers/e4_oi_shock_1h.yaml
+- scripts/research/e4_oi_z_arms.py
+what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+intervention_controls:
+  not_applicable: an offline model evaluation; the consumer's own gate applies any action
+status: done
+last_dispatched_at: '2026-11-14T03:43:04+00:00'
+grading:
+  attested: RULE-RQ-20261113-7857-01
+  auto: true
+  decision_rule_id: RULE-RQ-20261113-7857-01
+  evidence:
+  - research/results/RQ-20261113-7857-01/43553072765.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -225,6 +225,13 @@ SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv"}
 # Text trees that name modules by dotted string for runtime loading.
 CONFIG_TREES = ("config", "ml/configs")
 TREE_SCAN = re.compile(r"\brglob\(|\bos\.walk\(|\bglob\.glob\(|\.glob\(|\bglob\(")
+# GUARD-SCANNER-SELECTION (Manager Session 2026-11-13a, 2026-11-14): a test that RUNS a guard script (subprocess, or
+# spec_from_file_location) whose own source walks the tree checks every file in the repo, but its own text has no glob,
+# so TREE_SCAN missed it. #25935 merged green while tests/test_check_canonical_config_loaders.py (runs
+# scripts/check_canonical_config_loaders.py, which rglob()s) failed on main. A guard script is scripts/ci/*.py or
+# scripts/check_*.py; `git ls-files` counts as a walk there. A test is selected when it names the guard's stem.
+GUARD_SCRIPT = re.compile(r"^scripts/(?:ci/[\w-]+|check_[\w-]+)\.py$")
+GUARD_TREE_SCAN = re.compile(TREE_SCAN.pattern + r"|ls-files")
 DOTTED_STR = re.compile(r"[\"']([A-Za-z_][\w]*(?:\.[A-Za-z_]\w*)+)[\"']")  # fallback for unparseable files
 DYN_PREFIX = re.compile(r"import_module\(\s*f?[\"']([A-Za-z_][\w.]*\.)\{")
 
@@ -238,6 +245,15 @@ def _module_name(rel: str) -> str | None:
     if not parts or not all(p.isidentifier() for p in parts):
         return None
     return ".".join(parts)
+
+
+def tree_scanning_guard_tests(graph: "ImportGraph", tests: list[str]) -> set[str]:
+    """Tests that name (by stem) a guard script whose source walks the tree: GUARD-SCANNER-SELECTION above."""
+    stems = {Path(r).stem for r, src in graph.text.items() if GUARD_SCRIPT.match(r) and GUARD_TREE_SCAN.search(src)}
+    if not stems:
+        return set()
+    pat = re.compile(r"\b(?:" + "|".join(sorted(map(re.escape, stems))) + r")\b")
+    return {t for t in tests if pat.search(graph.text.get(t, ""))}
 
 
 def guard_scripts(repo: Path = REPO) -> set[str]:
@@ -292,9 +308,20 @@ class ImportGraph:
         self.dyn_prefixes: list[tuple[str, str]] = []  # (prefix, loader path)
         for rel, src in self.text.items():
             self._scan(rel, src)
-        # rev[m] = files (repo-relative) that import / load m
+        # rev[m] = files (repo-relative) that import / load m.
+        # CI-SCOPE-LAZY-EDGES (2026-11-12). decision: 2026-11-12 operator chat "each item is only getting the
+        # checks it needs" + manager approval of CI-SCOPE-LAZY-EDGES (selection narrowed to import-time edges;
+        # main backstop catches misses). A LIBRARY module contributes only its import-time edges (`eager`): an
+        # import inside one of its function bodies runs only when that function is called, and following those
+        # edges transitively joined ~half the source tree into one blob that reached ~990-1200 of ~1830 test
+        # files, so 43 of 59 PR heads (73%, 2026-11-12 09:30-11:19Z) fell back to the full suite. Code under
+        # tests/ (test functions, conftest/plugin fixture bodies, helpers) RUNS when the test runs, so it keeps
+        # every edge. GIVES UP: a test that reaches a library's function-local import only THROUGH another
+        # library module is no longer selected for a change to that import; the 2-hourly full-suite backstop on
+        # main (pytest-run.yml schedule) catches it post-merge.
         self.rev: dict[str, set[str]] = {}
-        for rel, mods in self.fwd.items():
+        for rel in self.fwd:
+            mods = self.fwd[rel] if rel.startswith("tests/") else self.eager[rel]
             for m in mods:
                 self.rev.setdefault(m, set()).add(rel)
             mod = _module_name(rel)
@@ -407,7 +434,8 @@ class ImportGraph:
                 if f in seen:
                     continue
                 seen.add(f)
-                stack.extend(self.fwd.get(f, ()))
+                # CI-SCOPE-LAZY-EDGES: a reached library module runs its IMPORT-TIME code only.
+                stack.extend((self.fwd if f.startswith("tests/") else self.eager).get(f, ()))
         return seen
 
     def _files_for(self, mod: str) -> list[str]:
@@ -468,6 +496,16 @@ class ImportGraph:
             for other, src in self.text.items():
                 if other != rel and (rel in src or base in src):
                     reach(other)
+            if not seen and not rel.endswith(".py"):
+                # CI-SCOPE-LAZY-EDGES: a data file nothing names by path or basename is usually built from
+                # its directory (`FIXTURES / f"snapshot_{kind}_v1.json"`): the files naming that directory
+                # (its repo path, or its last segment as a quoted string) are its readers.
+                parent = Path(rel).parent
+                if parent.name:
+                    seg = re.compile(r"[\"']" + re.escape(parent.name) + r"[/\"']")
+                    for other, src in self.text.items():
+                        if parent.as_posix() + "/" in src or seg.search(src):
+                            reach(other)
         done: set[str] = set()
         while frontier:
             m = frontier.pop()
@@ -520,8 +558,8 @@ def classify_affected(
             return "full", f"affected: {f} is conftest/requirements/.github/scripts/ci -> full suite", []
         if f in guards:
             return "full", f"affected: {f} is run by the guards job -> full suite", []
-        if not f.endswith(".py"):
-            return "full", f"affected: {f} is a suite-read non-Python file -> full suite", []
+        # CI-SCOPE-LAZY-EDGES: a suite-read non-Python file is no longer FULL by itself; it selects the files
+        # that read it (by path, basename, or its directory) below, and is FULL only when nothing names it.
     graph = graph or ImportGraph()
     tests_all = graph.test_files()
     limit = max(1, int(len(tests_all) * FANIN_FULL_FRACTION))
@@ -548,6 +586,7 @@ def classify_affected(
             return "full", f"affected: cannot place {f} in the import graph -> full suite", []
         selected |= reach
     selected |= {t for t in tests_all if TREE_SCAN.search(graph.text.get(t, ""))}
+    selected |= tree_scanning_guard_tests(graph, tests_all)
     if data_files:
         selected |= set(select_tests(graph.repo / "tests", changed=data_files))
     selected = {t for t in selected if (graph.repo / t).exists() and t not in IGNORED}
@@ -556,7 +595,7 @@ def classify_affected(
     reason = (
         f"affected: {len(code_files)} code file(s) + {len(data_files)} data file(s) -> "
         f"{len(selected)} of {len(tests_all)} test files (importers, path readers, tree "
-        "scanners); push to main runs the full suite"
+        "scanners, tree-scanning guard runners); push to main runs the full suite"
     )
     return "affected", reason, sorted(selected)
 

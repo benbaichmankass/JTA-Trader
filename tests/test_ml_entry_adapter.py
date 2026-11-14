@@ -321,3 +321,55 @@ def test_eval_reasons_carry_the_audit_inputs_and_change_no_decision():
 def test_audit_tail_never_raises():
     assert M._audit_inputs({}, _frame(1), 5) == "" or M._audit_inputs({}, _frame(1), 5).startswith(";feat=")
     assert M._audit_inputs({"ret_1": "x"}, None, 5) == ""
+
+
+# --- ML-ENTRY-SERVING-HOLE-GUARD: the perp path regrids a holed frame (research hole_safe twin) -----------------------
+def _holed(df: pd.DataFrame, at_from_end: int, width: int = 3) -> pd.DataFrame:
+    """``df`` with ``width`` bars removed ``at_from_end`` bars before the last bar (the last bar is kept)."""
+    n = len(df)
+    return df.drop(index=range(n - at_from_end, n - at_from_end + width)).reset_index(drop=True)
+
+
+def test_regrid_returns_a_contiguous_frame_as_is():
+    df = _frame(1)
+    assert F.regrid_hourly(df) is df
+
+
+def test_regrid_matches_the_research_twin_on_a_holed_frame():
+    H = _harness()
+    holed = _holed(_frame(1), 50)
+    a = F.regrid_hourly(holed)
+    b = H.regrid_hourly(holed)
+    pd.testing.assert_frame_equal(a.reset_index(drop=True), b.reset_index(drop=True), check_freq=False)
+    assert len(a) == len(_frame(1)) and a["close"].isna().sum() == 3
+
+
+def test_a_recent_hole_skips_the_symbol_and_an_old_one_does_not():
+    frames = {"BTCUSDT": _frame(1), "ETHUSDT": _frame(2), "XRPUSDT": _frame(3)}
+    clean = F.decision_row("ETHUSDT", frames)
+    assert clean is not None
+    # a hole 20 bars back: vol24 / ret windows span it -> per-tick skip (None), never a seam-stitched row
+    assert F.decision_row("ETHUSDT", {**frames, "ETHUSDT": _holed(frames["ETHUSDT"], 20)}) is None
+    # a hole older than every window (> 168 + 24 bars back) leaves the own features exactly as the clean frame's
+    long_frames = {s: _frame(i, n=800) for i, s in enumerate(["BTCUSDT", "ETHUSDT", "XRPUSDT"], 1)}
+    base = F.decision_row("ETHUSDT", long_frames)
+    old = F.decision_row("ETHUSDT", {**long_frames, "ETHUSDT": _holed(long_frames["ETHUSDT"], 600)})
+    assert base is not None and old is not None
+    for k in ("ret_1", "ret_24", "ret_168", "vol24", "vol_ratio", "atr_pct", "range_pos_168", "vol_z", "rsi14"):
+        assert old[k] == pytest.approx(base[k]), k
+
+
+def test_a_holed_reference_drops_out_of_the_cross_section_not_the_decision():
+    frames = {"BTCUSDT": _frame(1), "ETHUSDT": _frame(2), "XRPUSDT": _frame(3), "SOLUSDT": _frame(4)}
+    row = F.decision_row("ETHUSDT", {**frames, "XRPUSDT": _holed(frames["XRPUSDT"], 10)})
+    assert row is not None
+    assert row["_n_reference"] == 4                     # still counted (its last bar has the same ts) ...
+    # ... its 24h return is read across the TRUE 24 h (both end bars exist), so breadth and rank equal the clean frame's;
+    # its rolling vol24 spans the hole, is NaN, and drops out of the median behind rel_vol (research's pivot does the same)
+    full = F.decision_row("ETHUSDT", frames)
+    assert row["breadth_up24"] == pytest.approx(full["breadth_up24"])
+    assert row["xs_rank_ret24"] == pytest.approx(full["xs_rank_ret24"])
+    v = {s: F.features_symbol(frames[s].iloc[-200:].reset_index(drop=True))["vol24"].iloc[-1]
+         for s in ("BTCUSDT", "ETHUSDT", "SOLUSDT")}
+    assert row["rel_vol"] == pytest.approx(v["ETHUSDT"] / float(pd.Series(v).median()))
+    assert row["rel_vol"] != pytest.approx(full["rel_vol"])

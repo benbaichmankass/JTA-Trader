@@ -8,158 +8,78 @@ books:
 - ib_paper
 baseline:
   record: comms/strategy_evidence/tlt_pullback_1d.json
-  net_r: 12.6901
-  n: 134
-  fidelity: approximate
-  rule_verdict: pass
+  net_r: -6.9567
+  n: 45
+  fidelity: faithful
+  rule_verdict: fail
 attribution:
   read_state: measured
-  n: 134
-  net_r: 12.69
-  gross_r: 15.298
-  cost_r: 2.607
-  cost_share_of_gross: 0.17
-  verdict_hint: gross edge survives cost
+  n: 45
+  net_r: -6.957
+  gross_r: -6.126
+  cost_r: 0.83
+  cost_share_of_gross: 0.135
+  verdict_hint: 'no gross edge: the loss is entry/exit, not cost'
   entry_quality:
-    mean_mfe_r: 1.392
-    share_mfe_ge_1r: 0.567
-    n_with_mfe: 134
+    mean_mfe_r: 1.172
+    share_mfe_ge_1r: 0.511
+    n_with_mfe: 45
   exit_capture:
-    median_net_over_mfe_winners: 1.011
-    n_winners: 44
-    losers_that_reached_1r_mfe: 32
+    median_net_over_mfe_winners: 1.032
+    n_winners: 11
+    losers_that_reached_1r_mfe: 12
   by_year:
-    '2002':
-      n: 2
-      net_r: -2.031
-      gross_r: -1.997
-    '2003':
-      n: 7
-      net_r: -5.184
-      gross_r: -5.053
-    '2004':
-      n: 6
-      net_r: 0.448
-      gross_r: 0.611
-    '2005':
-      n: 6
-      net_r: -2.196
-      gross_r: -2.04
-    '2006':
-      n: 8
-      net_r: 0.757
-      gross_r: 1.0
-    '2007':
-      n: 7
-      net_r: 2.964
-      gross_r: 3.136
-    '2008':
-      n: 4
-      net_r: -3.483
-      gross_r: -3.426
-    '2009':
-      n: 6
-      net_r: 4.023
-      gross_r: 4.099
-    '2010':
-      n: 4
-      net_r: 0.1
-      gross_r: 0.147
-    '2011':
-      n: 7
-      net_r: -4.078
-      gross_r: -3.988
-    '2012':
-      n: 7
-      net_r: 1.421
-      gross_r: 1.553
-    '2013':
-      n: 2
-      net_r: -0.269
-      gross_r: -0.235
-    '2014':
-      n: 4
-      net_r: 6.322
-      gross_r: 6.41
-    '2015':
-      n: 6
-      net_r: 2.879
-      gross_r: 2.971
-    '2016':
-      n: 3
-      net_r: 3.267
-      gross_r: 3.317
-    '2017':
-      n: 6
-      net_r: -3.364
-      gross_r: -3.204
-    '2018':
-      n: 7
-      net_r: -2.2
-      gross_r: -2.016
-    '2019':
-      n: 7
-      net_r: 6.581
-      gross_r: 6.72
-    '2020':
-      n: 2
-      net_r: -1.132
-      gross_r: -1.124
     '2021':
-      n: 5
-      net_r: 1.791
-      gross_r: 1.877
-    '2022':
-      n: 7
-      net_r: 4.75
-      gross_r: 4.83
-    '2023':
-      n: 6
-      net_r: 2.836
-      gross_r: 2.924
-    '2024':
-      n: 6
-      net_r: 0.914
-      gross_r: 1.013
-    '2025':
       n: 4
-      net_r: -2.734
-      gross_r: -2.654
+      net_r: -2.314
+      gross_r: -2.231
+    '2022':
+      n: 9
+      net_r: 3.759
+      gross_r: 3.872
+    '2023':
+      n: 7
+      net_r: 1.817
+      gross_r: 1.911
+    '2024':
+      n: 12
+      net_r: -2.49
+      gross_r: -2.251
+    '2025':
+      n: 6
+      net_r: -4.976
+      gross_r: -4.852
     '2026':
-      n: 5
-      net_r: 0.308
-      gross_r: 0.427
+      n: 7
+      net_r: -2.754
+      gross_r: -2.575
   by_direction:
     long:
-      n: 71
-      net_r: 0.782
-      gross_r: 2.171
+      n: 17
+      net_r: -9.299
+      gross_r: -8.994
     short:
-      n: 63
-      net_r: 11.908
-      gross_r: 13.127
+      n: 28
+      net_r: 2.342
+      gross_r: 2.868
   by_exit_reason:
     stop:
-      n: 57
-      net_r: -58.127
-      gross_r: -57.0
+      n: 22
+      net_r: -22.399
+      gross_r: -22.0
     take_profit:
-      n: 25
-      net_r: 77.116
-      gross_r: 77.61
-    timeout:
-      n: 1
-      net_r: -0.128
-      gross_r: -0.124
+      n: 7
+      net_r: 20.437
+      gross_r: 20.541
     trail_stop:
-      n: 51
-      net_r: -6.172
-      gross_r: -5.188
+      n: 16
+      net_r: -4.994
+      gross_r: -4.667
   by_adx_at_entry:
     unknown:
-      n: 134
-      net_r: 12.69
-      gross_r: 15.298
+      n: 45
+      net_r: -6.957
+      gross_r: -6.126
 manifest:
   entry: tested
   exit: tested
@@ -952,3 +872,96 @@ levers:
       best_delta_r_per_trade: -0.0373
       fold_stability: 0.333
       reading: every tested value is worse than the baseline
+levers_tested:
+- family: side_filter
+  varied: side_filter both vs short-only, forming bar from Alpaca iex 1Day + 1Min, window 2020-07-27..2026-11-13, full cost stack
+  response:
+    verdict: fail
+    run: '43479916308'
+    baseline:
+      arm: A
+      n: 45
+      net_r: -6.9566
+      folds_positive: 2/8
+    arms:
+    - side_filter: short
+      n: 29
+      net_r: 4.5532
+      folds_positive: 3/8
+      max_drawdown_r: 6.3479
+    reading: 'short-only turns the leg positive (+4.55R, +11.51R vs both sides, DD 6.3 vs 11.2) but only 3/8 folds are positive (rule needs 5): improvement without
+      a Stage-0 edge'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261113-f251-11
+  lever_family: direction
+- family: vol_skip_above (forming bar)
+  varied: vol_skip_above_pctl none vs 0.8 on the FORMING bar (Alpaca 1Day + 1Min), window 2020-07-27..2026-11-13, full cost stack; same 5/8 fold bar (no prior window
+    exists)
+  response:
+    verdict: fail
+    run: '43521659440'
+    baseline:
+      arm: A
+      n: 45
+      net_r: -6.9566
+      folds_positive: 2/8
+    arms:
+    - vol_skip_above_pctl: 0.8
+      n: 42
+      net_r: -4.2835
+      folds_positive: 3/8
+    reading: 'skipping the hot-volatility tail drops 3 trades and trims 2.7R but leaves the leg negative at 3/8 folds: the fold inconsistency is not a volatility-regime
+      effect'
+  shape: flat
+  tested_at_power: true
+  unit: RQ-20261113-f251-16
+  lever_family: filter
+- family: be_floor_r (forming bar)
+  varied: be_floor_r none vs 1.0 (lock 0) on the FORMING bar (Alpaca 1Day + 1Min), window 2020-07-27..2026-11-13, full cost stack; same 5/8 fold bar
+  response:
+    verdict: fail
+    run: '43536260399'
+    baseline:
+      arm: A
+      n: 45
+      net_r: -6.9566
+      folds_positive: 2/8
+    arms:
+    - be_floor_r: 1.0
+      n: 47
+      net_r: -1.7152
+      folds_positive: 4/8
+      max_drawdown_r: 6.5298
+    reading: 'the break-even floor recovers +5.2R of the round-trip losers (the diagnosis predicted about +7R) and halves the drawdown, but the leg stays negative
+      at 4/8 folds (needs 5): the best tlt lever so far, still no Stage-0 edge'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261113-f251-18
+  lever_family: exit
+units:
+- RQ-20261113-f251-11
+- RQ-20261113-f251-16
+- RQ-20261113-f251-18
+manifest_notes:
+  census_2026_11_13: 'DEMO-FLOOR-ITER lever-family census after the 2nd forming-bar lever failed. Forming baseline (f251-02) 2020-07-27..2026-11-13: -6.96R over n
+    45, gross -6.13R (cost only 0.83R), long -9.30R / short +2.34R, stop exits -22.40R, 12 of 34 losers reached +1R MFE first. n 45 over six years is thin: any arm
+    splitting the population falls under n 30.'
+  direction: 'TESTED forming (RQ-20261113-f251-11, FAIL): short-only +4.55R n 29, 3/8 folds (needs 5): improvement, single point, no Stage-0 edge.'
+  filter: 'TESTED forming (RQ-20261113-f251-16, FAIL): vol_skip_above 0.8 -4.28R n 42, 3/8 folds; the fold inconsistency is not a volatility-regime effect.'
+  exit: 'TESTED forming (RQ-20261113-f251-18, FAIL): be_floor_r 1.0 -1.72R n 47, 4/8 folds (needs 5) vs -6.96R 2/8; recovers +5.2R of the round-trip losers and halves
+    the drawdown. The best tlt lever so far, a near-miss.'
+  sizing_vs_cost: 'INAPPLICABLE: cost is 0.83R of a -6.13R gross loss.'
+  regime_gating: 'READ 2026-11-14 (manager GO 02:38Z), INAPPLICABLE: scripts/research/regime_tag_emitted.py tags the f251-18 arm A forming ledger (n 45) on TLT daily
+    bars (comms/research/RQ-20261016-014/39103759555/data/TLT_1d.csv, 2017-12..2026-10-16), ADX-14: trending -1.57R n 14, transitional -5.22R n 9, chop -0.17R n 22.
+    The loss sits in a 9-trade transitional band, all 9 within 2 ADX of a cutoff (the tool reads the grade FRAGILE, 30% of |R| near a boundary); 2 trades (-2.04R)
+    enter after the bars end. No cell has the n for a regime off-cell (regime-selectivity: no cosmetic cell), so no regime unit.'
+  timeframe: 'INAPPLICABLE as a forming lever: the leg is a daily equity leg with one decision per session.'
+  entry: UNTESTED forming; no diagnosis points at the entry (mean MFE 1.17R, 51% reach +1R).
+  next: With regime read as inapplicable, every family is tested, inapplicable or (entry) untested with no diagnostic pointer. The nearest result is the exit be_floor
+    near-miss (4/8). A lever-exhaustion proposal is the manager's call; v3 would still want entry covered or shown irrelevant.
+  inert_arms_2026_11_14: 'RQ-20261110-73de-04 arm C1 (be_floor_r 1.0, closed bar) is INERT, not a lever reading: it ran with --structure-exit pivot=5, and scripts/backtest_pullback.py
+    discarded the break-even floor whenever a structure exit was set (PI-20261114-TFZXAKEK-0001, fixed in #25887). The generated levers.exit.be_floor_r entry ("no
+    response at the tested values", delta 0.0R) therefore means UNTESTED, not flat. Read be_floor_r on this leg as untested until a run on the fixed harness.'
+  census_update_2026_11_14: 'After the 3rd forming lever failed: direction, filter (vol_skip_above) and exit (be_floor) are TESTED on the forming bar, all FAIL; sizing_vs_cost
+    and timeframe INAPPLICABLE; regime UNREADABLE (ADX at entry unknown for every trade); entry UNTESTED with no diagnostic pointer.'

@@ -1,0 +1,150 @@
+{
+  "leg": "avax_pullback_2h",
+  "grade": {
+    "verdict": "fail",
+    "label": "stage0_no_edge",
+    "baseline": "AD30",
+    "net_r": -5.3761,
+    "n": 69,
+    "max_drawdown_r": 14.0966,
+    "folds_positive": 2,
+    "n_folds": 4,
+    "fold_majority": 3,
+    "n_floor": 1,
+    "control": null,
+    "why": "net_r=-5.3761 with 2/4 positive folds (needs > 0 and >= 3)"
+  },
+  "arms": {
+    "AD30": {
+      "reach_ge_6r": 0.0,
+      "n": 69,
+      "net_r": -5.3761,
+      "net_r_fee_only": -4.2771,
+      "max_drawdown_r": 14.0966,
+      "by_outcome": {
+        "take_profit": 14,
+        "trail_stop": 33,
+        "stop": 22
+      },
+      "mean_bars_held": 17.333,
+      "net_r_per_capital_day": -0.0539,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 10,
+        "pullback_frac": 0.5,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2024-11-13 00:00:00+00:00",
+      "data_end": "2025-11-12 22:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2024-11-13 00:00:00+00:00",
+          "end": "2025-02-12 05:30:00+00:00",
+          "trades": 14,
+          "net_r": 2.6404
+        },
+        {
+          "fold": 2,
+          "start": "2025-02-12 05:30:00+00:00",
+          "end": "2025-05-14 11:00:00+00:00",
+          "trades": 16,
+          "net_r": -4.2809
+        },
+        {
+          "fold": 3,
+          "start": "2025-05-14 11:00:00+00:00",
+          "end": "2025-08-13 16:30:00+00:00",
+          "trades": 19,
+          "net_r": -6.5503
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-13 16:30:00+00:00",
+          "end": "2025-11-12 22:00:00+00:00",
+          "trades": 20,
+          "net_r": 2.815
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "AVAXUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261113-f251-22/43545531590/pre_AD30/arms/AD30__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261113-f251-22/43545531590/pre_AD30/arms/AD30__bt.json",
+        "--adx-min",
+        "30",
+        "--vol-skip-below-pctl",
+        "0.1",
+        "--trail-decay-arm-r",
+        "4.86",
+        "--trail-decay-stall-bars",
+        "6",
+        "--trail-decay-tight-mult",
+        "2.5",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--decision-bar",
+        "forming",
+        "--minutes-1m-csv",
+        "<minutes_1m>",
+        "--strategy-name",
+        "avax_pullback_2h",
+        "--start",
+        "2024-11-13T00:00:00",
+        "--end",
+        "2025-11-12T22:00:00"
+      ]
+    }
+  },
+  "window": {
+    "start": "2024-11-13T00:00:00",
+    "end": "2025-11-12T22:00:00",
+    "fetch_days": 800,
+    "feed": {
+      "source": "binance",
+      "ticker": "AVAXUSDT",
+      "interval": "120",
+      "resample": "2h"
+    },
+    "fold_edges": [
+      "2024-11-13 00:00:00+00:00",
+      "2025-02-12 05:30:00+00:00",
+      "2025-05-14 11:00:00+00:00",
+      "2025-08-13 16:30:00+00:00",
+      "2025-11-12 22:00:00+00:00"
+    ]
+  }
+}

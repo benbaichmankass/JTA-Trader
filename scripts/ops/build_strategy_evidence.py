@@ -411,7 +411,10 @@ def build_record(name: str, cfg: Dict[str, Any], *, workdir: str,
                  days: int, folds: int,
                  research_emits: bool = False,
                  window_days_source: str = "--days",
-                 window: Optional[tuple] = None) -> Dict[str, Any]:
+                 window: Optional[tuple] = None,
+                 data_csv: Optional[str] = None,
+                 forming_1m: Optional[str] = None,
+                 forming_session: Optional[str] = None) -> Dict[str, Any]:
     """Produce one leg's evidence record. Never raises on a leg-level failure."""
     import regime_debt_matrix as rdm  # local: pulls pandas transitively
 
@@ -474,7 +477,12 @@ def build_record(name: str, cfg: Dict[str, Any], *, workdir: str,
         # caller (or test double) of run_one without the kwarg is unaffected.
         row = rdm.run_one(name, cfg, workdir, days=days,
                           **({"research_emits": True} if research_emits else {}),
-                          **({"window": window} if window else {}))
+                          **({"window": window} if window else {}),
+                          # EQ-FORMING-BAR-REPLAY: an explicit candle file and a 1m
+                          # source for the forming-bar replay. Omitted = byte-identical.
+                          **({"data_csv": data_csv} if data_csv else {}),
+                          **({"forming_1m": forming_1m, "forming_session": forming_session}
+                             if forming_1m else {}))
     except Exception as e:  # noqa: BLE001 - a leg-level failure must not stop the sweep
         rec["coverage_state"] = "harness_failed"
         rec["error"] = f"{type(e).__name__}: {e}"
@@ -576,8 +584,17 @@ def build_record(name: str, cfg: Dict[str, Any], *, workdir: str,
                  "--days", str(days), "--folds", str(folds)]
                 + (["--window-start", str(bt["data_start"]),
                     "--window-end", str(bt["data_end"])]
-                   if bt.get("data_start") and bt.get("data_end") else []),
+                   if bt.get("data_start") and bt.get("data_end") else [])
+                + (["--data-csv", str(data_csv)] if data_csv else [])
+                + (["--minutes-1m-csv", str(forming_1m)] if forming_1m else [])
+                + (["--decision-session", str(forming_session)] if forming_session else []),
     }
+    if data_csv or forming_1m:
+        # EQ-FORMING-BAR-REPLAY: the measurement read explicit input files, not the
+        # feed's fetch. The files are named so a rebuild knows what to supply.
+        rec["reproduce"]["inputs"] = {"data_csv": data_csv, "minutes_1m_csv": forming_1m,
+                                      "decision_session": forming_session,
+                                      "decision_bar_modelled": row.get("decision_bar_modelled")}
     rec["decision_rule"] = {
         "id": DECISION_RULE_ID,
         "rule": DECISION_RULE_TEXT,
@@ -830,8 +847,29 @@ def main(argv: Optional[List[str]] = None) -> int:
                          "trend/pullback legs also write <leg>__paths.jsonl and carry "
                          "mae_r + the decision-time f_* columns on every trade row. "
                          "Grading is unchanged; off = byte-identical.")
+    ap.add_argument("--data-csv", default=None,
+                    help="EQ-FORMING-BAR-REPLAY: use this candle CSV instead of the feed's fetch "
+                         "(one --strategy only). window_days then reads the file's own span.")
+    ap.add_argument("--minutes-1m-csv", default=None,
+                    help="EQ-FORMING-BAR-REPLAY: a 1m CSV for the leg's symbol, so a forming-decision "
+                         "trend leg is replayed on the forming bar and decision_bar is modelled "
+                         "(needs --data-csv from the same source).")
+    ap.add_argument("--decision-session", choices=("us_equity", "us_equity_intraday"), default=None,
+                    help="with --minutes-1m-csv: us_equity = a US-session daily leg; us_equity_intraday = a clock-aligned "
+                         "intraday US equity leg (Alpaca 1Hour), ticks masked to the cash session")
     a = ap.parse_args(argv)
 
+    if (a.data_csv or a.minutes_1m_csv) and (not a.strategy or len(a.strategy) != 1):
+        print("--data-csv / --minutes-1m-csv describe ONE leg's data: pass exactly one --strategy",
+              file=sys.stderr)
+        return 2
+    if a.minutes_1m_csv and not a.data_csv:
+        print("--minutes-1m-csv needs --data-csv from the same source (one price scale for the "
+              "forming bar and its history)", file=sys.stderr)
+        return 2
+    if a.decision_session and not a.minutes_1m_csv:
+        print("--decision-session needs --minutes-1m-csv", file=sys.stderr)
+        return 2
     if bool(a.window_start) != bool(a.window_end):
         print("--window-start and --window-end go together", file=sys.stderr)
         return 2
@@ -867,9 +905,15 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(f"  {n:34s} harness={str(h):10s} {state}")
             continue
         days, days_src = resolve_window_days(n, out_dir, a.days)
+        if a.data_csv:
+            import pandas as pd
+            _ts = pd.to_datetime(pd.read_csv(a.data_csv, usecols=["timestamp"])["timestamp"], utc=True)
+            days, days_src = int((_ts.max() - _ts.min()).days) + 1, "--data-csv span"
         rec = build_record(n, legs[n], workdir=wd, days=days, folds=a.folds,
                            research_emits=a.research_emits,
-                           window_days_source=days_src, window=window)
+                           window_days_source=days_src, window=window,
+                           data_csv=a.data_csv, forming_1m=a.minutes_1m_csv,
+                           forming_session=a.decision_session)
         counts[rec["coverage_state"]] += 1
         _, decision = write_record(rec, out_dir, refusal_dir=Path(wd))
         if decision != "write":

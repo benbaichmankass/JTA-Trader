@@ -127,19 +127,26 @@ def verdict(c: dict[str, Any], n_floor: int, fold_share: float) -> dict[str, Any
     read = [r for r in c["rows"] if r["grade"] != "no_record"]
     legs = sorted({r["leg"] for r in c["rows"]})
     return {
-        "verdict": "no_action_warranted" if read else "indeterminate",
+        # research_result.validate: a no_data run / row carries verdict not_applicable and n null -- `no_action_warranted`
+        # on a no_record row refused every RQ-20261014-470a-11 run at emit (RESEARCH-PRODUCER-ROW-DEFECTS).
+        "verdict": "no_action_warranted" if read else "not_applicable",
         "read_state": "measured" if read else "no_data",
         "population": (f"{len(c['rows'])} (account, leg) routings on live-mode accounts in config/accounts.yaml, "
                        f"{len(legs)} distinct legs; each leg's committed evidence record + the __bt.json it names; "
                        f"split by account class {sorted(c['by_class'])}, never pooled"),
-        "n": len(read),
+        "n": len(read) if read else None,
         "note": ("Stage-0 census at CONFIGURED params: " + "; ".join(
             f"{k}: {v['pulls_weight']} pull weight / {v['drag']} drag / {v['underpowered']} underpowered / "
             f"{v['no_record']} no record (of {v['legs']})" for k, v in c["by_class"].items())
             + f". Grades use n_floor={n_floor}, fold_share={fold_share}; windows differ per record (see rows)."),
         "measurement": {"by_class": c["by_class"], "n_floor": n_floor, "fold_share": fold_share},
-        "records": [{"population": f"{r['class']}/{r['account']}/{r['leg']}", "n": r.get("n"),
-                     "verdict": "no_action_warranted", "read_state": "measured" if r["grade"] != "no_record" else "no_data",
+        "records": [{"population": f"{r['class']}/{r['account']}/{r['leg']}",
+                     "n": r.get("n") if r["grade"] != "no_record" else None,
+                     # a no_record row's census metric (net R per capital-day) was not read; the record's own trade count
+                     # is kept here, never as the row's n (research_result: no_data requires n null)
+                     "record_n_trades_oos": r.get("n"),
+                     "verdict": "no_action_warranted" if r["grade"] != "no_record" else "not_applicable",
+                     "read_state": "measured" if r["grade"] != "no_record" else "no_data",
                      **{k: r.get(k) for k in ("class", "account", "leg", "grade", "window_days", "net_r",
                                               "net_r_per_capital_day", "capital_days", "folds", "folds_positive",
                                               "fidelity", "record", "bt", "why")}}

@@ -1,0 +1,175 @@
+{
+  "leg": "tlt_pullback_1d",
+  "grade": {
+    "verdict": "fail",
+    "label": "stage0_no_edge",
+    "baseline": "B",
+    "net_r": -1.7152,
+    "n": 47,
+    "max_drawdown_r": 6.5298,
+    "folds_positive": 4,
+    "n_folds": 8,
+    "fold_majority": 5,
+    "n_floor": 20,
+    "control": null,
+    "why": "net_r=-1.7152 with 4/8 positive folds (needs > 0 and >= 5)"
+  },
+  "arms": {
+    "B": {
+      "reach_ge_6r": 0.0,
+      "n": 47,
+      "net_r": -1.7152,
+      "net_r_fee_only": -0.8592,
+      "max_drawdown_r": 6.5298,
+      "by_outcome": {
+        "stop": 24,
+        "trail_stop": 16,
+        "take_profit": 7
+      },
+      "mean_bars_held": 21.426,
+      "net_r_per_capital_day": -0.0017,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 10,
+        "pullback_frac": 0.618,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 5.0,
+        "be_floor_r": 1.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2020-07-27 00:00:00+00:00",
+      "data_end": "2026-11-13 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2020-07-27 00:00:00+00:00",
+          "end": "2021-05-10 12:00:00+00:00",
+          "trades": 0,
+          "net_r": 0
+        },
+        {
+          "fold": 2,
+          "start": "2021-05-10 12:00:00+00:00",
+          "end": "2022-02-22 00:00:00+00:00",
+          "trades": 6,
+          "net_r": -2.3583
+        },
+        {
+          "fold": 3,
+          "start": "2022-02-22 00:00:00+00:00",
+          "end": "2022-12-06 12:00:00+00:00",
+          "trades": 7,
+          "net_r": 4.5344
+        },
+        {
+          "fold": 4,
+          "start": "2022-12-06 12:00:00+00:00",
+          "end": "2023-09-20 00:00:00+00:00",
+          "trades": 7,
+          "net_r": 2.1055
+        },
+        {
+          "fold": 5,
+          "start": "2023-09-20 00:00:00+00:00",
+          "end": "2024-07-03 12:00:00+00:00",
+          "trades": 10,
+          "net_r": 0.5332
+        },
+        {
+          "fold": 6,
+          "start": "2024-07-03 12:00:00+00:00",
+          "end": "2025-04-17 00:00:00+00:00",
+          "trades": 7,
+          "net_r": -5.1327
+        },
+        {
+          "fold": 7,
+          "start": "2025-04-17 00:00:00+00:00",
+          "end": "2026-01-29 12:00:00+00:00",
+          "trades": 3,
+          "net_r": 0.1833
+        },
+        {
+          "fold": 8,
+          "start": "2026-01-29 12:00:00+00:00",
+          "end": "2026-11-13 00:00:00+00:00",
+          "trades": 7,
+          "net_r": -1.5806
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "TLT",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261113-f251-18/43536260399/arm_B/arms/B__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261113-f251-18/43536260399/arm_B/arms/B__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "3.5",
+        "--decision-bar",
+        "forming",
+        "--minutes-1m-csv",
+        "<minutes_1m>",
+        "--strategy-name",
+        "tlt_pullback_1d",
+        "--decision-session",
+        "us_equity",
+        "--be-floor-r",
+        "1.0",
+        "--start",
+        "2020-07-27",
+        "--end",
+        "2026-11-13"
+      ]
+    }
+  },
+  "window": {
+    "start": "2020-07-27",
+    "end": "2026-11-13",
+    "fetch_days": 2400,
+    "feed": {
+      "resample": "1d",
+      "source": "explicit --data-csv"
+    },
+    "fold_edges": [
+      "2020-07-27 00:00:00+00:00",
+      "2021-05-10 12:00:00+00:00",
+      "2022-02-22 00:00:00+00:00",
+      "2022-12-06 12:00:00+00:00",
+      "2023-09-20 00:00:00+00:00",
+      "2024-07-03 12:00:00+00:00",
+      "2025-04-17 00:00:00+00:00",
+      "2026-01-29 12:00:00+00:00",
+      "2026-11-13 00:00:00+00:00"
+    ]
+  }
+}

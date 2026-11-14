@@ -280,7 +280,10 @@ def test_every_configured_infra_workflow_name_exists():
     import yaml
     cfg = yaml.safe_load((REPO / "scripts/research/research_compute.yaml").read_text())
     names = cfg["limits"]["infra_workflows"]
-    assert "system-actions" in names and "phone-executor-apk" in names
+    assert "system-actions" in names
+    # phone-executor-apk was removed 2026-11-12 (phone app retired, operator; manager 22:33Z): its queued APK builds were half of
+    # the infra backlog that deferred every research fire for ~5 h.
+    assert "phone-executor-apk" not in names
     have = {yaml.safe_load(p.read_text()).get("name") for p in (REPO / ".github/workflows").glob("*.yml")}
     missing = [n for n in names if n not in have]
     assert not missing, missing
@@ -413,6 +416,57 @@ def test_infra_yield_and_an_unreadable_gh_are_never_lifted():
     assert infra["block"] and dq.starvation_override(infra, _jobs_with_stamp(None), now, 1.5) is None and infra["block"]
     blind = dq.backpressure(RESEARCH, max_inflight=8, max_queued=10, runs_by_status={"queued": None, "in_progress": []})
     assert dq.starvation_override(blind, _jobs_with_stamp(None), now, 1.5) is None and blind["block"]
+
+
+# ── infra starvation floor (manager 2026-11-12 22:33Z, RESEARCH-DISPATCH-INFRA-STARVE) ──
+# MEASURED 2026-11-12: the infra yield deferred every fire 17:43Z..22:33Z (0 units, ~5 h) with >= 2 fresh infra runs always queued.
+def _infra_block(now):
+    from datetime import timedelta
+    queued = _evruns([("system-actions", "workflow_dispatch")] * 3)
+    for r in queued:
+        r["createdAt"] = (now - timedelta(minutes=10)).isoformat().replace("+00:00", "Z")
+    return dq.backpressure(RESEARCH, max_inflight=8, max_queued=100, infra_names=["system-actions"], infra_yield_at=2,
+                           now=now, runs_by_status={"queued": queued, "in_progress": []})
+
+
+def test_infra_block_lifts_once_nothing_was_dispatched_for_the_infra_floor():
+    from datetime import datetime, timedelta, timezone
+    now = datetime(2026, 11, 12, 22, 33, tzinfo=timezone.utc)
+    p = _infra_block(now)
+    assert p["block_kind"] == "infra" and p["block"]
+    why = dq.starvation_override(p, _jobs_with_stamp((now - timedelta(hours=4, minutes=50)).isoformat()), now, 0.75, 2.0)
+    assert why and "starvation floor" in why and "infra block" in why and "4.8 h" in why
+    assert p["block"] is None and p["starvation_override"] == why
+
+
+def test_infra_block_holds_when_a_unit_fired_inside_the_infra_floor():
+    from datetime import datetime, timedelta, timezone
+    now = datetime(2026, 11, 12, 22, 33, tzinfo=timezone.utc)
+    p = _infra_block(now)
+    # fired 1.5 h ago: past the 0.75 h repo-queued floor but inside the 2 h infra floor -> the infra yield stands
+    assert dq.starvation_override(p, _jobs_with_stamp((now - timedelta(hours=1.5)).isoformat()), now, 0.75, 2.0) is None
+    assert p["block"] and "starvation_override" not in p
+
+
+def test_infra_floor_zero_or_omitted_never_lifts_and_no_stamp_counts_as_starved():
+    from datetime import datetime, timezone
+    now = datetime(2026, 11, 12, 22, 33, tzinfo=timezone.utc)
+    assert dq.starvation_override(_infra_block(now), _jobs_with_stamp(None), now, 0.75) is None        # default 0 = off
+    assert dq.starvation_override(_infra_block(now), _jobs_with_stamp(None), now, 0.75, 0.0) is None
+    assert dq.starvation_override(_infra_block(now), _jobs_with_stamp(None), now, 0.75, 2.0)            # never dispatched
+
+
+def test_infra_floor_never_lifts_an_unreadable_gh_or_the_inflight_cap():
+    from datetime import datetime, timezone
+    now = datetime(2026, 11, 12, 22, 33, tzinfo=timezone.utc)
+    blind = dq.backpressure(RESEARCH, max_inflight=8, max_queued=10, runs_by_status={"queued": None, "in_progress": []})
+    assert dq.starvation_override(blind, _jobs_with_stamp(None), now, 0.75, 2.0) is None and blind["block"]
+
+
+def test_the_committed_config_arms_the_infra_floor_at_two_hours():
+    import yaml
+    cfg = yaml.safe_load((REPO / "scripts/research/research_compute.yaml").read_text())
+    assert float(cfg["limits"]["infra_starvation_hours"]) == 2.0 == dq.INFRA_STARVATION_HOURS
 
 
 def test_a_starved_saturated_cycle_fires_exactly_one_unit(tmp_path, monkeypatch):

@@ -2,7 +2,10 @@ name: feature-impact
 
 # FEATURE-IMPACT-MAP v0 (docs/design/ui-workplan-2026-11.md section 15): the weekly long table of per-feature
 # impact, M1 (model-internal split/gain share) from the committed ml/served + ml/candidates artifacts, and M2
-# (model-free rank IC, crypto decision-entry family). Off-VM, no Claude; network: pip + keyless data.binance.vision (M2 only); scripts/research/feature_impact.py reads repo files and writes
+# (model-free rank IC: crypto decision-entry, equity ENTRY-EQ pool, 1h regime heads) and M3 (drop-column ablation on the
+# crypto + equity money heads). Off-VM, no Claude; network: pip + keyless data.binance.vision + the read-only Alpaca data
+# API (the PAPER key pair, as research-script-run passes it; market data only, no order surface, DEV window only);
+# scripts/research/feature_impact.py reads repo files and writes
 # comms/feature_impact/<run_id>.jsonl + latest.json, landed on main by commit-to-main.
 
 on:
@@ -36,15 +39,20 @@ jobs:
       - name: Install lightgbm (the repo pin; gain shares need it) + M2 deps (pandas, numpy, requests; requirements.txt floors)
         # M2 imports these lazily, so a missing one only showed at run time: the 2026-11-11 23:25Z dispatch
         # failed its self-test on `No module named 'pandas'` and landed nothing (M1 included).
-        run: pip install --quiet "lightgbm==4.6.0" "pandas>=2.0.0" "numpy>=1.24.0" "requests>=2.31.0"
+        run: pip install --quiet "lightgbm==4.6.0" "pandas>=2.0.0" "numpy>=1.24.0" "requests>=2.31.0" "scikit-learn>=1.3.0"
 
-      - name: Compute the M1 long table
+      - name: Compute the long table (M1 + M2 + M3)
+        env:
+          ALPACA_API_KEY_ID: ${{ secrets.ALPACA_API_KEY_ID }}
+          ALPACA_API_SECRET_KEY: ${{ secrets.ALPACA_API_SECRET_KEY }}
         run: |
           set -euo pipefail
           python3 scripts/research/feature_impact.py --self-test
           # --m2: model-free rank IC for the crypto decision-entry family (keyless Binance Vision klines, ~5 min).
-          # An M2 failure is recorded in latest.json coverage.m2 and M1 still lands (no halting).
-          python3 scripts/research/feature_impact.py --out-dir comms/feature_impact --m2 --m2-cache "$RUNNER_TEMP/fi_klines"
+          # --eq-cache: equity entry M2 + M3 (Alpaca bars, dev window). --m3: drop-column ablation (~20-40 min of LightGBM fits).
+          # A failure in any family is recorded in latest.json coverage.<family> and the rest still lands (no halting).
+          python3 scripts/research/feature_impact.py --out-dir comms/feature_impact --m2 --m2-cache "$RUNNER_TEMP/fi_klines" \
+            --eq-cache "$RUNNER_TEMP/fi_eq_bars" --m3
           { echo '## feature-impact'; echo '```json'; cat comms/feature_impact/latest.json; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Land the run on main

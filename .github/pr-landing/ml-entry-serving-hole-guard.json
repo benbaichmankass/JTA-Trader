@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Runtime read path of the real-money ml_entry leg (src/runtime/ml_decision_features.py + ml_decision_shadow.py): the perp equal-timestamp path regrids a holed 1h frame before the positional rolling features (research build_table(hole_safe=True) twin). Contiguous frames are returned as the same object, so every hole-free decision is byte-identical; a hole makes the symbol skip ticks until its windows clear it. Live incidence measured 0 holes over 57 feeds x 1000 bars (2026-11-12). Needs one AM-ML/operator OK; revert: git revert.",
+  "why": "ML-ENTRY-SERVING-HOLE-GUARD steps 2-3: stop seam-stitched features reaching a real-money ENTRY decision if a bar hole ever appears."
+}

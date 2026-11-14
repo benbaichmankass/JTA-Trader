@@ -22,6 +22,7 @@ import argparse
 import json
 import re
 import sys
+import os
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -37,6 +38,15 @@ BRIEF_URL = "https://ict-bot.duckdns.org/api/bot/work/brief"
 LINE = re.compile(r"^- \*\*(?P<id>SOAK-[^*]+)\*\* (?P<leg>\S+) @(?P<accounts>\S+) · "
                   r"(?P<state>[a-z_]+) · started (?P<started>\S+) · day (?P<day>\d+) · "
                   r"(?P<progress>[^·]+?) · (?:ends (?P<end>\S+) · )?(?P<reason>.*)$")
+
+
+def _service_headers() -> dict:
+    """``Authorization: Bearer $DASHBOARD_API_TOKEN`` when the token is in the
+    environment, else nothing: the read-only service credential the site gate
+    accepts on GET/HEAD once ``SITE_AUTH_ENFORCE`` is on (UI-OAUTH-SIGNIN; ignored
+    while it is off). Only ever sent to this project's own API."""
+    tok = os.environ.get("DASHBOARD_API_TOKEN", "").strip()
+    return {"Authorization": f"Bearer {tok}"} if tok else {}
 
 
 def parse(brief: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -67,7 +77,8 @@ def main(argv=None) -> int:
     if a.from_file:
         brief = json.loads(Path(a.from_file).read_text(encoding="utf-8"))
     else:
-        with urllib.request.urlopen(a.url, timeout=30) as r:  # noqa: S310 (fixed https URL)
+        req = urllib.request.Request(a.url, headers=_service_headers())
+        with urllib.request.urlopen(req, timeout=30) as r:  # noqa: S310 (fixed https URL)
             brief = json.loads(r.read().decode("utf-8"))
     if not brief.get("present") or not brief.get("generatedAt"):
         raise SystemExit(f"brief not present ({brief.get('reason')!r}) -- could not look")

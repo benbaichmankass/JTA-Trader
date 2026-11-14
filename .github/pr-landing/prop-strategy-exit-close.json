@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "PROP-VM-STRATEGY-EXIT-CLOSE: when a prop leg's order package closes on a strategy decision while the venue position is still open, the system closes it (VM: vm_close watched close, id pkgexit-<ticket>; phone: one phone_cancel.request_close). Includes #25230 (stacked, merged-in main). Operator 2026-11-12 chat approved (decisions page x1). AM-DEVOPS merges. Revert: git revert.",
+  "why": "The strategy's own exit must close the prop position, as in the backtest."
+}

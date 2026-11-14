@@ -7,74 +7,66 @@ books:
 - bybit_1
 baseline:
   record: comms/strategy_evidence/avax_pullback_2h.json
-  net_r: -8.2515
-  n: 52
-  fidelity: approximate
+  net_r: -15.7394
+  n: 95
+  fidelity: faithful
   rule_verdict: fail
 attribution:
   read_state: measured
-  n: 52
-  net_r: -8.252
-  gross_r: -4.824
-  cost_r: 3.427
-  cost_share_of_gross: 0.71
+  n: 95
+  net_r: -15.739
+  gross_r: -10.114
+  cost_r: 5.625
+  cost_share_of_gross: 0.556
   verdict_hint: 'no gross edge: the loss is entry/exit, not cost'
   entry_quality:
-    mean_mfe_r: 1.115
-    share_mfe_ge_1r: 0.462
-    n_with_mfe: 52
+    mean_mfe_r: 1.035
+    share_mfe_ge_1r: 0.421
+    n_with_mfe: 95
   exit_capture:
-    median_net_over_mfe_winners: 1.01
-    n_winners: 14
-    losers_that_reached_1r_mfe: 10
+    median_net_over_mfe_winners: 0.457
+    n_winners: 25
+    losers_that_reached_1r_mfe: 15
   by_year:
     '2025':
-      n: 12
-      net_r: 3.033
-      gross_r: 3.701
+      n: 9
+      net_r: 0.623
+      gross_r: 1.14
     '2026':
-      n: 40
-      net_r: -11.284
-      gross_r: -8.525
+      n: 86
+      net_r: -16.363
+      gross_r: -11.255
   by_direction:
     long:
-      n: 19
-      net_r: -11.588
-      gross_r: -10.417
+      n: 40
+      net_r: -19.064
+      gross_r: -16.896
     short:
-      n: 33
-      net_r: 3.336
-      gross_r: 5.593
+      n: 55
+      net_r: 3.324
+      gross_r: 6.781
   by_exit_reason:
     stop:
-      n: 30
-      net_r: -31.688
-      gross_r: -30.0
+      n: 38
+      net_r: -40.042
+      gross_r: -38.0
     take_profit:
-      n: 11
-      net_r: 25.998
-      gross_r: 26.64
+      n: 10
+      net_r: 28.372
+      gross_r: 28.966
     timeout:
-      n: 2
-      net_r: 0.462
-      gross_r: 0.633
+      n: 1
+      net_r: -0.319
+      gross_r: -0.278
     trail_stop:
-      n: 9
-      net_r: -3.024
-      gross_r: -2.097
+      n: 46
+      net_r: -3.751
+      gross_r: -0.802
   by_adx_at_entry:
-    20-30:
-      n: 15
-      net_r: -5.044
-      gross_r: -3.946
-    30-40:
-      n: 21
-      net_r: -3.567
-      gross_r: -2.108
-    '>=40':
-      n: 16
-      net_r: 0.36
-      gross_r: 1.23
+    unknown:
+      n: 95
+      net_r: -15.739
+      gross_r: -10.114
 manifest:
   entry: tested
   exit: tested
@@ -1295,3 +1287,132 @@ levers:
       best_delta_r_per_trade: 0.0128
       fold_stability: 0.75
       reading: no response at the tested values
+levers_tested:
+- family: side_filter
+  varied: side_filter both vs short-only, forming bar from Binance 1m, window 2025-11-13..2026-11-12, full cost stack
+  response:
+    verdict: fail
+    run: '43483019614'
+    baseline:
+      arm: A
+      n: 95
+      net_r: -15.7396
+      folds_positive: 1/4
+    arms:
+    - side_filter: short
+      n: 57
+      net_r: 2.3538
+      folds_positive: 1/4
+      max_drawdown_r: 10.9525
+    reading: 'short-only turns the leg positive (+2.35R, +18.09R vs both sides) but only 1/4 folds positive: the gain is concentrated, not consistent'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261113-f251-09
+  lever_family: direction
+- family: adx_min (forming bar)
+  varied: adx_min none vs 30 on the FORMING bar, record 2025-11-13..2026-11-12 + confirmation 2024-11-13..2025-11-12, full cost stack
+  response:
+    verdict: fail
+    run: '43545531590'
+    baseline:
+      arm: A
+      n: 95
+      net_r: -15.7396
+      folds_positive: 1/4
+      confirm_n: 102
+      confirm_net_r: -3.2181
+    arms:
+    - adx_min: 30
+      n: 61
+      net_r: -11.5879
+      folds_positive: 1/4
+      confirm_n: 69
+      confirm_net_r: -5.3761
+    reading: 'the trend-strength floor trims the loss (-11.6R vs -15.7R) without making the leg positive (1/4), and is worse on the prior year
+      (-5.4R vs -3.2R): as on htf (f251-10), adx_min does not carry to the forming bar'
+  shape: flat
+  tested_at_power: true
+  unit: RQ-20261113-f251-22
+  lever_family: filter
+- family: decision_bar (closed vs forming)
+  varied: decision_bar forming (live) vs closed, bare and with each round-3 lever, record 2025-11-13..2026-11-12 + confirmation 2024-11-13..2025-11-12,
+    one feed, full cost stack
+  response:
+    verdict: fail
+    run: '43558522192'
+    rule: RULE-DBINV-FORMING-INVERSION-20261114
+    baseline:
+      arm: F (forming, config-exact)
+      net_r: -15.7396
+      confirm_net_r: -3.2181
+    arms:
+    - arm: C
+      n: 60
+      net_r: -14.6883
+      folds_positive: 0/4
+      confirm_n: 68
+      confirm_net_r: -1.0104
+      pass: false
+    - arm: C_AD30
+      n: 42
+      net_r: -17.6091
+      folds_positive: 0/4
+      confirm_n: 52
+      confirm_net_r: -8.1215
+      pass: false
+    - arm: C_S
+      n: 36
+      net_r: -4.2123
+      folds_positive: 2/4
+      confirm_n: 34
+      confirm_net_r: 2.7999
+      pass: false
+    bar_effect_C_minus_F:
+      record: 1.0513
+      confirmation: 2.2077
+    entry_jaccard_C_F:
+      record: 0.1923
+      confirmation: 0.1409
+    closed_lever_delta_vs_C:
+      record:
+        C_S: 10.476
+        C_AD30: -2.9208
+      confirmation:
+        C_S: 3.8103
+        C_AD30: -7.1111
+    reading: 'no closed arm passes Stage 0, beats F and holds on the year before: decision_bar closed is not the lever for this leg; within the
+      record window the closed lever deltas have the same sign as the forming ones on most levers, so the round-3 inversion is the WINDOW, not
+      the bar'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-01
+  lever_family: timeframe
+units:
+- RQ-20261113-f251-09
+- RQ-20261113-f251-22
+- RQ-20261114-db1a-01
+manifest_notes:
+  census_2026_11_14: 'DEMO-FLOOR-ITER lever-family census after the 2nd forming-bar lever failed (AM-ML guard). Forming record (2025-11-13..2026-11-12):
+    -15.74R over n 95, gross -10.11R, cost 5.63R; long -19.06R n40, short +3.32R n55. The equal-length window before it (2024-11-13..2025-11-12,
+    read in f251-22) is -3.22R over n 102: unlike htf and avax_4h, this leg was negative in BOTH years, so the loss is not just one bad regime.'
+  direction: 'TESTED forming: short-only (f251-09, FAIL): +2.35R 1/4 folds; the gain is concentrated. The short side is gross-positive in the
+    record (+6.78R).'
+  filter: 'TESTED forming: adx_min 30 (f251-22, FAIL): -11.59R n61 1/4; prior year -5.38R vs -3.22R. TESTED closed 2020-07..2026-10: adx_min 30/35
+    pass but net negative (-1.2R/-3.5R), adx_max 40 +27.0R fail, vol_skip_above 0.9 +13.0R fail, vol_skip_below flat, cooldown monotone fail.'
+  entry: 'TESTED closed: pullback_frac 0.625 -4.70R n446 fail, 0.375 -30.98R fail. UNTESTED forming.'
+  exit: 'TESTED closed: tp_extend_r 0.5/1 (+25.9/+26.6R n422) PASS; structure_exit off +7.18R pass; bank_frac 0.25 +29.4R fail; stale_exit, timeout,
+    trail_* and be_floor flat or monotone fail. UNTESTED forming: tp_extend is the one closed-bar exit pass never run forming.'
+  session: 'TESTED closed: skip_hours 0-7 +13.1R fail, 20-23 +6.0R fail. UNTESTED forming.'
+  regime_gating: UNTESTED; the leg loses in both years on the forming bar, so a regime cell would need to isolate a loss common to both.
+  sizing_vs_cost: 'INAPPLICABLE: gross is negative before cost on the forming record (-10.11R).'
+  timeframe: UNTESTED; no diagnostic pointer.
+  symbol_set: UNTESTED; no diagnostic pointer.
+  next: Two forming levers have failed (short-only, adx_min 30). The leg is negative on the forming bar in both years, and the long side carries
+    the loss. The remaining closed-bar pass never run forming is exit tp_extend_r (+26R n422). A 3rd unit is defensible only on that diagnosis;
+    the honest alternative is a retirement proposal through the manager (to the operator first this week). Not exhausted; manager decides.
+  decision_bar_2026_11_14: 'Closed bar (RQ-20261114-db1a-01, FAIL): C -14.69R n60 0/4 vs F -15.74R; prior year C -1.01R vs F -3.22R. Best closed arm C_S -4.21R
+    n36 2/4, prior year +2.80R. Closed lever deltas vs C: short +10.5 record / +3.8 prior (forming +18.1, same sign); adx_min 30 -2.9 / -7.1 (forming +4.2,
+    OPPOSITE). C/F entry overlap 0.19.'
+  next_2026_11_14: SUPERSEDES next. decision_bar closed is not the lever (db1a-01). The leg loses on both bars in both years, and short-only is the one response
+    stable across bars and years, but it is short of Stage 0 (2/4 folds). The tp_extend unit stays on hold; manager decides between a short-side unit and
+    a retirement proposal (to the operator first this week).

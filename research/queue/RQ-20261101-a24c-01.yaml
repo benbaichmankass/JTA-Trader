@@ -1,0 +1,191 @@
+# Hand-authored 2026-11-01 ~20:10Z by lane ML-ENTRY-GOLIVE-UNBLOCK (Tier 1), on the operator popup ~19:50Z (verbatim, relayed by Manager
+# Session 2026-11-01a): "Test it properly first (Rec.)" for widening ml_entry beyond the 5 bybit_2 symbols. Decision rule registered BEFORE
+# any run. Gates: none (a measurement; a PASS feeds a Tier-3 universe PR, it does not widen anything itself).
+id: RQ-20261101-a24c-01
+title: 'ENTRY universe, tested properly: with each symbol charged its OWN historical spread + square-root impact (not a flat 3 bps), and a liquidity
+  rule chosen on the dev folds only, does the frozen ENTRY model clear the bar on that rule''s Bybit-listed universe on a FRESH forward window --
+  under both the c692-01 tau policy and the v2 cost gate (ml/promotion/cost_gate.py)?'
+status: done
+cadence: once
+theme: ml_health
+priority: 1
+programme: P2
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T1, M6, M10 (docs/reference/trading-and-model-practice-principles.md): promote on out-of-sample decision value NET OF THE FULL
+  COST STACK against take-all / take-none / matched-random on the same rows; Corwin & Schultz (2012) high-low spread estimator; square-root market
+  impact (Almgren et al. 2005; Toth et al. 2011); purged + embargoed walk-forward with a sealed forward window read once (HOLDOUT-LOCK).'
+question: 'The operator rule (ML-ENTRY-ALL-ACCOUNTS, 2026-11-01): a general ML trades every market it is VALIDATED on and that our venues list.
+  MEASURED 2026-11-01 (comms/research/ML-ENTRY-UNIVERSE/local-20261101T1830Z): on the c692-01 held-out decisions of the 51 symbols Bybit lists,
+  the pooled mean is +0.0065 R/decision at the flat 3 bps slippage the evidence charged, and -0.0050 when each symbol pays its measured Bybit
+  spread (one tickers snapshot; 27 of 51 quote > 3 bps). That snapshot is one Sunday-evening read and that window is no longer sealed (read by
+  c692-01, c692-02 and that re-cost: variants_on_window 3). This unit asks the question properly. (1) COST MODEL, historical, per symbol and month:
+  round-trip cost = fee 11 bps + funding as c692-01 + spread_bps + impact_bps, where spread_bps is the Corwin-Schultz high-low estimate from the
+  same 1h Binance Vision klines (monthly median, floored at one tick of the symbol''s Bybit tickSize at that month''s median price), and
+  impact_bps = 1e4 x sigma_daily x sqrt(Q / ADV_bybit) per side x 2, with Q = the REFERENCE ORDER NOTIONAL registered below and ADV_bybit = the
+  symbol''s Binance 30-day median quote volume x that symbol''s Bybit/Binance 24h-turnover ratio (from the committed Bybit snapshot
+  bybit_specs_20261101.json and the same-day Binance 24h ticker; a symbol with no ratio is dropped and counted). (2) LIQUIDITY RULE, chosen on
+  the DEV FOLDS ONLY (c692-01 DEV_FOLDS, nothing at or after 2025-10-01 read): a symbol is IN when its dev-period median round-trip cost
+  (1) <= C bps; C is the value in {10, 15, 20, 30, 50, inf} that maximises the pooled dev-fold mean net R per decision re-costed by (1), with dev
+  n >= 1000; tie -> larger C. (3) The frozen c692-01 model and tau (ml/served/ml_decision_entry_v1, unchanged), scored on the rule''s universe
+  restricted to symbols Bybit lists as Trading USDT LinearPerpetual at run time, every decision re-costed by (1). (4) Two decision arms on the
+  same rows: A = the c692-01 tau policy (one position per symbol); B = the v2 cost gate (ml.promotion.cost_gate.evaluate_cost_gate on (taken,
+  net_r) pairs of every opportunity row: strictly above take_all, take_none and matched_random).'
+why_this_matters: 'The operator wants the general ENTRY model on every market it is validated on (17:55Z, 18:00Z) and chose "Test it properly
+  first (Rec.)" (19:50Z). The flat-3-bps evidence over-states the edge on thin symbols by up to 0.09 R/trade (BAND, ZRX), larger than the
+  +0.0073 pooled edge itself, so widening on c692-01 alone would put real money on a universe whose net edge is unmeasured. ML-RECIPE ENTRY v2
+  is gated by the same cost_gate, so arm B answers the universe question for v2 as well; the unit re-runs on v2 when its artifact exists.'
+power:
+  expected_n: 900
+  min_detectable_effect: 0.12
+  effect_units: metric
+  sd: 1.3
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED proxy: c692-01 took ~940 held-out decisions a month on 53 symbols (11,240 / 12; by_month 702..1,197); per-decision net R sd ~1.3
+    (SL -1R plus cost, TP +1.5R, time stops). One forward month 2026-10 gives n ~ 900 and SE ~ 0.043 R, so only an effect >= ~0.12 R is detectable
+    at 80 percent power; the pooled c692-01 edge (+0.0073) is far below that. STATED BEFORE THE RUN: a one-month forward read is UNDERPOWERED
+    for the expected effect; the rule therefore reads the point estimate (the operator bar) and the run is repeated monthly (cadence below is
+    once; a monthly re-read is a new claim on a new forward month).'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history; the forward window accrues one month per calendar month (Binance Vision publishes the monthly zip in the
+      first days of the next month).
+decision_rule:
+  id: RULE-RQ20261101-a24c-01-ENTRY-UNIVERSE-COSTED
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: 'On the forward window 2026-10-01..2026-10-31 (claimed via scripts/research/holdout_lock.py, model id ENTRY-v1-universe-costed),
+    for the dev-chosen universe U(C): arm A held-out mean net R per decision re-costed by (1), n, distinct symbols, per-symbol n and mean, the
+    same statistic at the flat 3 bps (for comparison); arm B the cost_gate result (value, take_all, take_none, matched_random, PSR, DSR with
+    n_trials = 6 C values x 2 arms). Reported, never gating: the same on the 5 bybit_2 symbols; C and |U(C)|; the snapshot-vs-model spread error
+    per symbol.'
+  rule: 'INDETERMINATE IF no C reaches dev n >= 1000, OR forward n < 300, OR |U(C)| < 10, OR the cost model is missing for more than 10 percent
+    of U(C)''s decisions, OR the forward window cannot be claimed (already read). PASS IF arm A forward mean net R per decision (re-costed) >= 0
+    AND arm B cost_gate passes. FAIL otherwise. A PASS is the evidence a Tier-3 PR cites to widen ml_entry (bybit_2 + bybit_portfolio) to U(C);
+    a FAIL keeps the 5 symbols and is reported to the manager. C, the cost model and the arms are fixed here and never changed after any result.'
+  what_it_does_not_do: No sizing, no config change, no order, no refit. Does not re-choose tau. Does not read 2025-10-01..2026-09-30 (no longer
+    sealed).
+  min_n: 300 forward decisions on >= 10 symbols
+  reference_order_notional_usd: 5000
+  reference_order_notional_basis: 'Registered before the run as the impact model''s Q. A stand-in for one default-risk ml_entry order (1.5 percent
+    at a median 2.5 percent stop is ~0.6 x equity); the account balance is not stated in this public repo. The run also reports the pooled result
+    at Q x 0.25 and Q x 4 as a sensitivity (reported, not gating).'
+operator_2026_11_04: 'GROUP-LEVEL universe (operator popup ~19:33Z, verbatim "Group-level (Recommended)", REPLACING "Per-symbol passes" /
+  "Per-symbol tests" (~19:08Z) and "Shrunk >= 0, n >= 100" (~19:18Z); context ~19:25Z verbatim: "Maybe it shouldn''t be gated at a per symbol
+  basis, but rather it should be kept more general ... I didn''t mean to make the rules stricter than they had and the ML had been designed for.").
+  This unit stays the POOLED test above (rule unchanged, nothing added before any run): a PASS adds the dev-chosen universe U(C) (the Bybit-listed
+  population minus the cost/liquidity filter fixed on the dev folds) to ml_entry''s traded set on the Bybit accounts, written as the population
+  record comms/ml_universe/ml_entry.json (src/config/ml_universe.py); per-symbol results are REPORTED only. Until it reports, bybit_2 /
+  bybit_portfolio keep the 5 coins of the c692-06 pooled PASS. Added 2026-11-04 by lane ML-ENTRY-ALL-ACCOUNTS.'
+re_registration_2026_11_05:
+  registered_at: '2026-11-05'
+  registered_before_run: true
+  authority: 'Manager Session 2026-11-05a (session_01AFoLuJnejB97CXXc8yn9oA), decision on lane ML-WEEK-1105 report 1, 10:02Z, data-settled
+    under CLAUDE-RULES-CANONICAL "Data-backed Tier-2/3 decisions" (no graded run of this unit has happened, so this is registration BEFORE the run)'
+  evidence: comms/research/RQ-20261101-a24c-01/local-20261105/RESULT.md
+  supersedes: 'decision_rule.statistic window 2026-10-01..2026-10-31 and question (1) spread_bps (Corwin-Schultz). Everything else in
+    decision_rule (C grid, dev rule, arms A and B, floors, Q, n_trials) is UNCHANGED.'
+  spread_bps: 'the Bybit QUOTED spread per symbol from the committed snapshot bybit_specs_20261101.json (spread_bps), floored at one tick
+    of the symbol''s tickSize at each month''s median price; held constant across months (one snapshot: its error vs the true monthly spread
+    is unmeasured and stated, not hidden). A symbol with no quoted spread is dropped and counted. Corwin-Schultz is reported per month
+    (cs_bps_reported), never charged. Reason (MEASURED 2026-11-05): CS on 1h klines read BTC 13.2 bps dev median vs 0.01 quoted, ETH 18.6 vs 0.04.'
+  forward_window: '2026-11-01..2026-11-30 (decisions whose 24 h ends by 2026-11-30T23:59Z); read on or after 2026-12-01 when Binance Vision
+    publishes the November zips. Reason: frozen v1 already read 2026-10 (holdout ledger ENTRY-v1-frozen-ref-b609, 2026-11-01T20:12:13Z).'
+  harness: scripts/research/ml_decision_entry.py universe-costed --spread-source quoted --fwd-start 2026-11-01 --fwd-end 2026-11-30
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 800
+  confidence: 0.2
+  basis: 'stand-in: the operator priority-1 goal (the general ENTRY model on every validated market); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 60
+  why_runner: Keyless public Binance Vision klines; GBDT scoring on CPU; the Bybit specs come from the committed snapshot, so no Bybit call.
+  basis: 'INFERRED: the c692-01 fetch (~4,500 monthly zips) plus one month; scoring only (the frozen artifact, no refit); the cost model is
+    vectorised over ~0.8M rows.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_decision_entry.py
+  - universe-costed
+  - --spread-source
+  - quoted
+  - --fwd-start
+  - '2025-10-01'
+  - --fwd-end
+  - '2026-10-31'
+  - --bybit-specs
+  - comms/research/ML-ENTRY-UNIVERSE/local-20261101T1830Z/bybit_specs_20261101.json
+  - --cache
+  - /tmp/ml_decision_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261101-a24c-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-ENTRY-ALL-ACCOUNTS
+- ML-ENTRY-LIVE-ADAPTER
+- ML-RECIPE
+- RQ-20261101-c692-01
+- RQ-20261101-c692-05
+- comms/research/ML-ENTRY-UNIVERSE/local-20261101T1830Z/summary.json
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
+blocked_on:
+- kind: harness
+  ref: scripts/research/ml_decision_entry.py
+  what: 'the universe-costed subcommand: Corwin-Schultz spread + square-root impact cost model per symbol-month, the dev-fold liquidity rule over
+    the registered C grid, arm A (tau policy) and arm B (ml.promotion.cost_gate.evaluate_cost_gate) on the same forward rows, and the
+    holdout_lock claim before any forward outcome is read'
+  clears_when: 'the subcommand lands on main with a self-test (a planted illiquid symbol is excluded by the dev rule; a planted one-tick spread
+    floors the estimate); the lane git-mvs this file to research/queue/ with status queued, rule unchanged'
+  cleared: '2026-11-05 lane ML-WEEK-1105: universe-costed landed with its self-test; dry run INDETERMINATE (window clause)'
+- kind: harness
+  ref: scripts/research/ml_decision_entry.py universe-costed (window = --fwd-start/--fwd-end)
+  what: window option; the symbol-holdout window is withdrawn by the 2026-11-12 amendment, so no new option is needed
+  cleared: '2026-11-12 lane ML-ENTRY-UNIVERSE-LEVER: the existing --fwd-start/--fwd-end read the amended in-hand window; the unit is run locally by the lane (kept in blocked/ so the runner does not double-claim the ledger)'
+ml_consumer:
+  consumer: ML-ENTRY-ALL-ACCOUNTS
+  decision: 'whether ml_entry on bybit_2 + bybit_portfolio widens from BTC/ETH/XRP/ADA/SOL to the rule''s universe U(C) beside the rostered legs
+    below, which share the account risk book (margin, the 3 percent daily-DD switch)'
+  legs:
+  - ml_entry
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - ada_pullback_2h
+  - trend_donchian_sol_prop
+  book: money
+amendments:
+- at: '2026-11-05'
+  before_any_run: true
+  by: lane RESEARCH-NO-WAIT
+  text:
+  - 'RESEARCH-NO-WAIT (lane of Manager Session 2026-11-05b). Operator 2026-11-05 ~17:08Z, verbatim: "Why does it need to wait for November? That''s not the workflow - we iterate in the data we have till we find what works, we don''t wait for new months of data". Window registered BEFORE any run; no outcome inside it was read by this lane; the rule text and every threshold are NOT edited.'
+  - 'WINDOW CHANGE: the read registered on the "forward window" / "fresh window" (2026-11) is REPLACED by the in-hand window below. S = symbol holdout: the 20 lexicographically first Binance USDT-M perps NOT in manifest bp2-f4271084b120 that have >= 3 years of 1h bars, over 2022-01-01..2026-10-31; list frozen by the driver and written to the result before any outcome is read; claimed through holdout_lock.py with an explicit symbols list (a disjoint symbol claim: correlated with the 60-perp windows, reported as such).'
+  - 'The data/accrual blocker is removed: nothing here waits for a month to elapse. What remains is the driver option that reads this window (named in blocked_on, owner lane ML-DECISION-MODELS / the unit''s own lane).'
+- at: '2026-11-12'
+  before_any_run: true
+  by: lane ML-ENTRY-UNIVERSE-LEVER (session_01AFoLuMMg8vLQ8uZRMhBr68), dispatched by ML assistant manager session_01AFoLuJkXEM1EigH9mSfz1F
+  text:
+  - 'No outcome of THIS unit has been read: the only graded-style reads before this amendment are the 2026-11-05 INDETERMINATE dry run (no forward outcome read) and the one-snapshot re-cost in comms/research/ML-ENTRY-UNIVERSE/local-20261101T1830Z (pooled -0.0050 R/decision at the Sunday Bybit quoted spreads on the 51 listed symbols, 2025-10..2026-09). That prior look is disclosed; the ledger deflation below is what answers it. The rule text, C grid, arms A and B, floors, Q and n_trials are NOT edited.'
+  - 'WINDOW (supersedes the 2026-11 forward window AND the 2026-11-05 symbol-holdout window): 2025-10-01..2026-10-31, the in-hand window every date of which is after the frozen artifact train_end (ml/served/ml_decision_entry_v1 train_end_exclusive 2025-09-22; claim train_end 2025-09-30). Reason: (a) operator 2026-11-05 ~17:08Z, verbatim: "we iterate in the data we have till we find what works, we don''t wait for new months of data" and operator 2026-11-12 (p3): "things get promoted to real money based on backtesting"; (b) the symbol holdout over 2022-01-01..2026-10-31 would be REFUSED by holdout_lock (M13 rule 4, PI-20261105-GEXSLEAK-0001: a symbol holdout over training dates is refused); (c) the operator rule of 2026-11-04 fixes the tested population as the ML''s own passed population (the Bybit-listed 60-perp reference), not a different symbol set.'
+  - 'DEFLATION (HOLDOUT-DEFLATED-REUSE, M13): the read is claimed through holdout_lock.claim_read BEFORE any outcome is touched and is graded against the N-th-read point bar it returns (the ENTRY family has read this window many times; arm A passes only if mean/se >= that hurdle, not merely mean >= 0). Arm B (cost_gate) is unchanged. No new gate is added: this is the already-adopted ledger rule applied to the unit.'
+  - 'Run: python3 scripts/research/ml_decision_entry.py universe-costed --spread-source quoted --fwd-start 2025-10-01 --fwd-end 2026-10-31 (the run.command above is edited to match). Universe-costed harness and its planted-illiquid / one-tick-floor self-test are on main since 2026-11-05 (#23236); self-test re-run green 2026-11-12.'
+result:
+  verdict: fail
+  evidence: comms/research/RQ-20261101-a24c-01/local-20261112/RESULT.md
+  graded_at: '2026-11-12'

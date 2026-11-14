@@ -7,62 +7,62 @@ books:
 - bybit_1
 baseline:
   record: comms/strategy_evidence/trend_donchian_avax_4h.json
-  net_r: -11.0224
-  n: 47
-  fidelity: approximate
+  net_r: -16.1781
+  n: 57
+  fidelity: faithful
   rule_verdict: fail
 attribution:
   read_state: measured
-  n: 47
-  net_r: -11.022
-  gross_r: -8.324
-  cost_r: 2.698
-  cost_share_of_gross: 0.324
+  n: 57
+  net_r: -16.178
+  gross_r: -12.771
+  cost_r: 3.407
+  cost_share_of_gross: 0.267
   verdict_hint: 'no gross edge: the loss is entry/exit, not cost'
   entry_quality:
-    mean_mfe_r: 0.968
-    share_mfe_ge_1r: 0.34
-    n_with_mfe: 47
+    mean_mfe_r: 0.932
+    share_mfe_ge_1r: 0.439
+    n_with_mfe: 57
   exit_capture:
-    median_net_over_mfe_winners: 1.06
-    n_winners: 12
-    losers_that_reached_1r_mfe: 4
+    median_net_over_mfe_winners: 1.153
+    n_winners: 13
+    losers_that_reached_1r_mfe: 12
   by_year:
     '2025':
-      n: 9
-      net_r: 0.168
-      gross_r: 0.728
+      n: 2
+      net_r: -2.112
+      gross_r: -2.0
     '2026':
-      n: 38
-      net_r: -11.19
-      gross_r: -9.052
+      n: 55
+      net_r: -14.066
+      gross_r: -10.771
   by_direction:
     long:
-      n: 25
-      net_r: -7.747
-      gross_r: -6.308
+      n: 24
+      net_r: -3.104
+      gross_r: -1.673
     short:
-      n: 22
-      net_r: -3.275
-      gross_r: -2.016
+      n: 33
+      net_r: -13.074
+      gross_r: -11.098
   by_exit_reason:
     stop:
-      n: 33
-      net_r: -34.808
-      gross_r: -33.0
+      n: 38
+      net_r: -40.208
+      gross_r: -38.0
     take_profit:
-      n: 7
-      net_r: 18.941
-      gross_r: 19.307
+      n: 9
+      net_r: 25.369
+      gross_r: 25.867
     trail_stop:
-      n: 7
-      net_r: 4.845
-      gross_r: 5.369
+      n: 10
+      net_r: -1.339
+      gross_r: -0.637
   by_adx_at_entry:
     unknown:
-      n: 47
-      net_r: -11.022
-      gross_r: -8.324
+      n: 57
+      net_r: -16.178
+      gross_r: -12.771
 manifest:
   entry: tested
   exit: tested
@@ -71,7 +71,7 @@ manifest:
   timeframe: untested
   symbol_set: untested
   direction: untested
-  session: untested
+  session: tested
   sizing_vs_cost: untested
 levers:
   entry:
@@ -1898,8 +1898,64 @@ levers:
       best_delta_r_per_trade: -0.0111
       fold_stability: 0.667
       reading: every tested value is worse than the baseline
+  session:
+    skip_hours:
+      tests:
+      - value: 0,1,2,3,4,5,6,7
+        baseline_value: 'off'
+        arm: H1
+        unit: RQ-20261110-73de-15
+        window: 2020-07-01..2026-10-15
+        n: 190
+        net_r: 41.1327
+        baseline_n: 263
+        baseline_net_r: 28.3266
+        delta_net_r: 12.8061
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 8.9009
+        verdict: pass
+        joint_change: false
+      - value: 20,21,22,23
+        baseline_value: 'off'
+        arm: H2
+        unit: RQ-20261110-73de-15
+        window: 2020-07-01..2026-10-15
+        n: 223
+        net_r: 38.769
+        baseline_n: 263
+        baseline_net_r: 28.3266
+        delta_net_r: 10.4424
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 13.1055
+        verdict: pass
+        joint_change: false
+      - value: 12,13,14,15,16
+        baseline_value: 'off'
+        arm: H3
+        unit: RQ-20261110-73de-15
+        window: 2020-07-01..2026-10-15
+        n: 191
+        net_r: -25.6417
+        baseline_n: 263
+        baseline_net_r: 28.3266
+        delta_net_r: -53.9683
+        folds_ge_baseline: 0/4
+        max_drawdown_r: 35.1971
+        verdict: pass
+        joint_change: false
+      shape: noisy
+      points: 3
+      best_delta_r_per_trade: 0.0487
+      fold_stability: 0.417
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
 units:
 - RQ-20261101-e5b1-12
+- RQ-20261113-f251-07
+- RQ-20261113-f251-21
+- RQ-20261114-db1a-01
+- RQ-20261114-db1a-02
+- RQ-20261114-db1a-03
+- RQ-20261114-db1a-04
 levers_tested:
 - family: prop-stack fit (account sizing vs firm DD limits and the prop cost stack)
   varied: prop cost stack, 3 prop accounts x 2 arms x 2 windows, 5 seeds x 1000 lives
@@ -1921,3 +1977,229 @@ levers_tested:
     +7.1, 2025 +17.4, 2026 -10.6 R; stops -76 R vs TP +88 R. Edge positive but CI spans zero and 2026 is losing: not separable from zero at n=138.'
   tested_at_power: false
   unit: RQ-20261101-e5b1-12
+- family: side_filter
+  varied: side_filter both vs long-only, forming bar from Binance 1m, window 2025-11-13..2026-11-12, full cost stack
+  response:
+    verdict: fail
+    run: '43483014959'
+    baseline:
+      arm: A
+      n: 57
+      net_r: -16.1778
+      folds_positive: 1/4
+    arms:
+    - side_filter: long
+      n: 26
+      net_r: -4.0917
+      folds_positive: 2/4
+      max_drawdown_r: 10.3058
+    reading: 'long-only cuts the loss (-4.09R vs -16.18R) but stays negative: both sides lose on this window'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261113-f251-07
+  lever_family: direction
+- family: vol_skip_below (forming bar)
+  varied: vol_skip_below_pctl none vs 0.3 on the FORMING bar, record 2025-11-13..2026-11-12 + confirmation 2024-11-13..2025-11-12, full cost stack
+  response:
+    verdict: fail
+    run: '43542924539'
+    baseline:
+      arm: A
+      n: 57
+      net_r: -16.1778
+      folds_positive: 1/4
+      confirm_n: 55
+      confirm_net_r: 26.0921
+    arms:
+    - vol_skip_below_pctl: 0.3
+      n: 41
+      net_r: -7.0884
+      folds_positive: 1/4
+      confirm_n: 40
+      confirm_net_r: 16.4902
+    reading: 'skipping low-vol breakouts trims the record-window loss (-7.1R vs -16.2R) but stays 1/4 folds, and on the prior year it removes
+      winners (+16.5R vs +26.1R): the closed-bar plateau does not carry to the forming bar'
+  shape: flat
+  tested_at_power: true
+  unit: RQ-20261113-f251-21
+  lever_family: filter
+- family: decision_bar (closed vs forming)
+  varied: decision_bar forming (live) vs closed, bare and with each round-3 lever, record 2025-11-13..2026-11-12 + confirmation 2024-11-13..2025-11-12,
+    one feed, full cost stack
+  response:
+    verdict: fail
+    run: '43558522192'
+    rule: RULE-DBINV-FORMING-INVERSION-20261114
+    baseline:
+      arm: F (forming, config-exact)
+      net_r: -16.1778
+      confirm_net_r: 26.0921
+    arms:
+    - arm: C
+      n: 46
+      net_r: -15.5185
+      folds_positive: 1/4
+      confirm_n: 43
+      confirm_net_r: 17.3474
+      pass: false
+    - arm: C_L
+      n: 25
+      net_r: -7.9909
+      folds_positive: 1/4
+      confirm_n: 24
+      confirm_net_r: 8.847
+      pass: false
+    - arm: C_VL30
+      n: 33
+      net_r: 0.0116
+      folds_positive: 2/4
+      confirm_n: 30
+      confirm_net_r: 17.4782
+      pass: false
+    bar_effect_C_minus_F:
+      record: 0.6593
+      confirmation: -8.7447
+    entry_jaccard_C_F:
+      record: 0.4928
+      confirmation: 0.4848
+    closed_lever_delta_vs_C:
+      record:
+        C_L: 7.5276
+        C_VL30: 15.5301
+      confirmation:
+        C_L: -8.5004
+        C_VL30: 0.1308
+    reading: 'no closed arm passes Stage 0, beats F and holds on the year before: decision_bar closed is not the lever for this leg; within the
+      record window the closed lever deltas have the same sign as the forming ones on most levers, so the round-3 inversion is the WINDOW, not
+      the bar'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-01
+  lever_family: timeframe
+- family: regime_gating (pooled ADX cell x direction)
+  varied: ungated vs the worst pooled (ADX regime x direction) cell across 15 crypto demo-floor legs, picked on 2025-11-13..2026-11-12, checked
+    on 2024-11-13..2025-11-12, live decision bar, full cost stack
+  response:
+    verdict: fail
+    run: '43562273934'
+    rule: RULE-DFR-COMMON-LOSS-REGIME-20261114
+    leg_record:
+      n: 57
+      net_r: -16.1778
+    leg_prior:
+      n: 55
+      net_r: 26.0921
+    part_a_common: true
+    part_a: 12/15 legs negative on the record window; pooled -142.3426R vs prior 106.089R
+    selected_cell: chop/long
+    cell_record:
+      n: 229
+      net_r: -75.3822
+    cell_prior:
+      n: 220
+      net_r: 25.5925
+    leg_ex_cell:
+      record_net_r: -17.9131
+      prior_net_r: 21.312
+    reading: 'the record-year loss is common (Part A) but the worst ADX cell (chop/long) wins the year before: no trend-regime cell separates
+      it; the record-year loss sits on the LONG side in every ADX cell'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-02
+  lever_family: regime_gating
+- family: regime_gating (HTF daily SMA200 long filter, post-hoc)
+  varied: ungated vs longs skipped when the prior daily close < SMA200 (own symbol), pooled over 15 crypto demo-floor legs, record 2025-11-13..2026-11-12
+    + year before, live decision bar, full cost stack
+  response:
+    verdict: pass
+    run: '43567392380'
+    rule: RULE-DFR-HTF-LONG-FILTER-20261114
+    filter: skip a long when the symbol's prior completed daily close < its 200-day SMA (Binance daily); shorts untouched
+    leg:
+      record_net_r: -16.1781
+      record_n: 57
+      filtered_record_net_r: -14.5096
+      filtered_record_n: 38
+      prior_net_r: 26.092
+      prior_n: 55
+      filtered_prior_net_r: 21.5132
+      filtered_prior_n: 39
+    pooled:
+      gated_record:
+        n: 572
+        net_r: -88.0639
+      gated_prior:
+        n: 259
+        net_r: -5.3393
+      kept_record_net_r: -54.2763
+      kept_prior_net_r: 111.4287
+    reading: 'PASS pooled (gated longs lose both years, stable drag) but POST-HOC: a harness-native run is required before any Tier-3; the year-before
+      drag is thin (-5.3R over 259, about -0.02R/trade)'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-03
+  lever_family: regime_gating
+- family: regime_gating (HTF daily SMA200 long gate, harness-native)
+  varied: arm A config-exact vs arm H --htf-long-sma-days 200 inside the harness, record 2025-11-13..2026-11-12 + year before, live decision bar,
+    full cost stack
+  response:
+    verdict: fail
+    unit_verdict: fail
+    run: '43575944709'
+    rule: RULE-DFR-HTF-NATIVE-20261114
+    arm_H: --htf-long-sma-days 200 (inside the harness)
+    record:
+      A_net_r: -16.1778
+      A_n: 57
+      H_net_r: -10.6456
+      H_n: 38
+      H_folds_positive: 1
+      H_n_folds: 4
+      H_stage0: false
+      H_beats_A: true
+    prior:
+      A_net_r: 26.0921
+      A_n: 55
+      H_net_r: 20.4745
+      H_n: 40
+      holds: false
+    pooled:
+      A_record: -142.3426
+      H_record: -57.0308
+      A_prior: 106.089
+      H_prior: 105.4607
+      delta_record: 85.3118
+      delta_prior: -0.6283
+    reading: 'harness-native: the gate cuts the record-year loss but is neutral-to-negative the year before (pooled H-A prior -0.63R); unit FAIL,
+      no per-leg pass'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-04
+  lever_family: regime_gating
+manifest_notes:
+  census_2026_11_14: 'DEMO-FLOOR-ITER lever-family census after the 2nd forming-bar lever failed (AM-ML guard). Forming record (2025-11-13..2026-11-12):
+    -16.18R over n 57, gross -12.77R, cost 3.41R; short -13.07R n33, long -3.10R n24. The equal-length window before it (2024-11-13..2025-11-12,
+    read in f251-21) is +26.09R over n 55: the leg was strongly positive the year before, so the record year looks like a bad regime, not proof
+    of no edge.'
+  direction: 'TESTED forming: long-only (f251-07, FAIL): -4.09R n26 2/4 vs -16.18R. No prior-year read for this arm.'
+  filter: 'TESTED forming: vol_skip_below 0.3 (f251-21, FAIL): -7.09R n41 1/4; prior year +16.49R vs +26.09R (it removes winners). TESTED closed
+    2020-07..2026-10: vol_skip_below 0.2-0.35 pass (peaked, best 0.3 +54.8R n173), vol_skip_above monotone fail, adx_max flat, adx_min 25 +4.7R
+    n119 single point, cooldown flat.'
+  entry: 'TESTED closed: donchian 15 +11.75R n183 pass, 25 -4.82R pass, 40 +19.58R fail (noisy); min_confidence 0.525/0.875 pass. UNTESTED forming.'
+  exit: 'TESTED closed: about 25 exit params, all fail and mostly flat around +30..+40R (tp_target_r 3 peaked +41.96R, be_floor_r monotone). UNTESTED
+    forming.'
+  session: 'TESTED closed: skip_hours 0-7 +41.13R n190 pass, 20-23 +38.77R pass, 12-16 -25.64R. UNTESTED forming.'
+  regime_gating: UNTESTED; both forming arms lose on both sides in the record year, so no cell is obviously separable without a regime read.
+  sizing_vs_cost: 'INAPPLICABLE: gross is negative before cost on the forming record (-12.77R).'
+  timeframe: UNTESTED; no diagnostic pointer.
+  symbol_set: UNTESTED; no diagnostic pointer.
+  next: 'Two forming levers have failed (long-only, vol_skip_below 0.3). The closed-bar vol_skip_below plateau did not carry to the forming bar.
+    Remaining closed-bar responders never run forming: session skip_hours 0-7, entry donchian 15. Before a 3rd unit, read the record-vs-prior-year
+    regime split: +26.09R to -16.18R on similar n is a regime shift, and a lever that fixes the record year may only cost the prior year (as vol_skip_below
+    did). Not exhausted; manager decides.'
+  decision_bar_2026_11_14: 'Closed bar (RQ-20261114-db1a-01, FAIL): C -15.52R n46 1/4 vs F -16.18R; prior year C +17.35R vs F +26.09R (closed
+    WORSE the year before). C_VL30 is +0.01R n33 2/4 on the record. Closed lever deltas vs C on the record keep the forming sign (long +7.5 vs
+    +12.1, vol_skip_below 0.3 +15.5 vs +9.1); the year before, long is -8.5 and vol_skip_below +0.1. C/F entry overlap 0.49 (the 4h breakout mostly
+    fires on the same bars).'
+  next_2026_11_14: SUPERSEDES next. decision_bar closed is not the lever (db1a-01). The record-year loss is common to both bars and every lever;
+    with +26.1R the year before, this reads as a regime shift. Recommended next is a regime-level question, not a 3rd per-leg lever. Manager decides.

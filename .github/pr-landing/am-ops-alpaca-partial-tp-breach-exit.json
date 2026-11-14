@@ -1,0 +1,6 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "ALPACA-PARTIAL-TP-BREACH-EXIT (manager review of #25790, 2026-11-13). Order path. After a partially filled target is gone the venue holds PART of the one row, so _alpaca_rearm_preflight takes its deficit branch; when that row's stop is already through the market it returned all_stops_breached (page only), so the remainder had no stop and no exit. Now that one case runs the same breach check as the attributable path: a confirmed fresh trade -> exit_breached (trade-scoped close, labelled sl; AlpacaClient.close with qty >= held closes exactly the remainder); quote-only -> the bounded deferral; outside RTH -> protect (a GTC stop rests). Multi-row and mixed books are unchanged. A pending partial-TP retry is cleared when the row exits. 4 new tests (3 fail with the change neutralised); 174 tests across the 10 files that touch these paths pass. Manager merges; revert = git revert."
+}

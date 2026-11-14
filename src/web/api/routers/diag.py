@@ -278,6 +278,12 @@ _CANONICAL_UNITS: tuple[str, ...] = (
     # confirm it is firing and read what it counted.
     "ict-security-watch.service",
     "ict-security-watch.timer",
+    # MANAGER-VM-DIRECT-OPS (2026-11-12): the direct ops channel's runner and
+    # its queue watch. Queryable so a session can confirm the path unit is
+    # watching and read the runner's journal when a job reads
+    # runner_not_picking_up.
+    "ict-ops-runner.service",
+    "ict-ops-runner.path",
     # MI-83 (2026-09-02). The hourly work digest, moved off GitHub Actions
     # cron onto the VM's own clock: work-digest.yml declares `20 * * * *` and
     # fired 5 times in a day at :19/:10/:33/:47 over its complete run history.
@@ -429,6 +435,10 @@ _TARGET_EXTENSION_SOAK_LOG = runtime_logs_dir() / "target_extension_soak.jsonl"
 # unreadable on the one surface a relay-bound session can reach, which is the
 # defect #8778 shipped with `exit_loop_health`.
 _PROTECTION_REASSERT_SOAK_LOG = runtime_logs_dir() / "protection_reassert_soak.jsonl"
+# ALPACA-PARTIAL-TP-STOP-GAP: every step of replacing our own partially filled Alpaca target
+# (detect -> cancel -> post_cancel_read -> oco | fallback_stop), with the order ids
+# (src.runtime.order_monitor._alpaca_partial_tp_log_path).
+_ALPACA_PARTIAL_TP_LOG = runtime_logs_dir() / "alpaca_partial_tp_replace.jsonl"
 _STRAY_OCA_SOAK_LOG = runtime_logs_dir() / "stray_oca_soak.jsonl"
 # MI-150 — the ict_scalp exit-head consumer's staged soak. Allowlisted in the
 # SAME commit that ships the writer: an env-gated path whose only observation
@@ -594,6 +604,10 @@ _ATTENTION_WATCH_RECEIPT = (
     Path(repo_root()) / "runtime_logs" / "attention_watch_receipt.json"
 )
 
+# UNBLOCK-WATCH (2026-11-12). The blocked-item evaluator's receipt: counts per status, alerts planned/appended.
+# Rides ict-work-digest (scripts/ops/unblock_watch.py::tick), anchored to repo_root() like the attention receipt.
+_UNBLOCK_WATCH_RECEIPT = Path(repo_root()) / "runtime_logs" / "unblock_watch_receipt.json"
+
 # LTR-1B B2b (2026-10-26). The live trader's in-process ltr-wake poster's
 # receipt: posted / could_not_post (+ http_code) / already_posted / nothing_due
 # / due_could_not_look, so "did not post" and "could not post" are readable
@@ -663,6 +677,10 @@ _LTR_FIRST_PROOF = Path(repo_root()) / "runtime_logs" / "ltr_first_proof.json"
 # one line per package per closed bar, for per-trigger grading. Same anchor as the
 # writer (src.runtime.live_review_wake_post.prescreen_log_path).
 _LTR_PRESCREEN_LOG = Path(repo_root()) / "runtime_logs" / "live_review" / "prescreen.jsonl"
+# TRADE-ACTION-DIRECT-PATH phase 3: every live-review routine fire (fired / rate_limited / could_not_fire /
+# rate_limited_backoff), with the session id and due -> fire latency. Same anchor as the writer
+# (src.runtime.live_review_routine_fire.fires_log_path). Carries no part of the token.
+_LTR_FIRES_LOG = Path(repo_root()) / "runtime_logs" / "live_review" / "fires.jsonl"
 
 # TRAIL-OBSERVABILITY (2026-10-07, PI-20261006-KX6ZKFNA-0003). The prop trail's
 # former pause latch (`modify_rollout.json`; retired by NO-HALT 2026-10-09, so
@@ -695,6 +713,8 @@ _LOG_FILES: dict[str, Path] = {
     "telegram_settings": _TELEGRAM_SETTINGS,
     # WORK-SYSTEM. "Did the attention watch run, and what did it send?"
     "attention_watch_receipt": _ATTENTION_WATCH_RECEIPT,
+    # UNBLOCK-WATCH: did the evaluator run, what cleared, what did it alert.
+    "unblock_watch_receipt": _UNBLOCK_WATCH_RECEIPT,
     # LTR-1B B2b: did the VM post the ltr-wake comment, and if not, why.
     "ltr_wake_post_receipt": _LTR_WAKE_POST_RECEIPT,
     # DESK-6B: did the packet landing post the desk-wake, and if not, why.
@@ -705,6 +725,7 @@ _LOG_FILES: dict[str, Path] = {
     # LTR C1: did the VM apply a rows-branch row, with what verdict and latency.
     "live_review_rows_watch": _LTR_ROWS_WATCH_LOG,
     "ltr_prescreen": _LTR_PRESCREEN_LOG,
+    "live_review_fires": _LTR_FIRES_LOG,
     "live_review_rows_watch_status": _LTR_ROWS_WATCH_STATUS,
     # DESK-4-INTAKE: what happened to each desk decision row on the VM, and why.
     "desk_intake": _DESK_INTAKE_LOG,
@@ -793,6 +814,7 @@ _LOG_FILES: dict[str, Path] = {
     "overlay_shadow": _OVERLAY_SHADOW_LOG,
     "target_extension_soak": _TARGET_EXTENSION_SOAK_LOG,
     "protection_reassert_soak": _PROTECTION_REASSERT_SOAK_LOG,
+    "alpaca_partial_tp_replace": _ALPACA_PARTIAL_TP_LOG,
     "stray_oca_soak": _STRAY_OCA_SOAK_LOG,
     "ict_scalp_exit_head_soak": _ICT_SCALP_EXIT_HEAD_SOAK_LOG,
     "bybit_coverage_soak": _BYBIT_COVERAGE_SOAK_LOG,
@@ -1424,6 +1446,20 @@ def _require_diag_token(request: Request) -> None:
     # the session's Authorization header (measured: 401 from a fresh ICT-env session
     # whose DIAG_READ_TOKEN fingerprint matched the VM's), so sessions send it here.
     # When present it alone decides, so the two carriers can never disagree silently.
+    # DIAG-DIRECT-READ (operator 2026-11-12: "you need to be able to read the logs of all the VMs and apps
+    # directly, without going through git"): the work-store credential the session proxy injects on every
+    # request to this host also opens the read-only diag routes. It already authorizes the ops channel's
+    # Tier-2 actions (routers/ops_channel.py), so a read is strictly narrower. Checked first; when that
+    # header is present it alone decides.
+    ws_tok = request.headers.get("X-Work-Store-Token")
+    if ws_tok is not None:
+        from src.web.api.routers.work_items import work_store_token_ok  # rotation dual-accept (VM-CHANGE-LEDGER)
+        if work_store_token_ok(ws_tok):
+            return
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"error": "invalid_token"},
+        )
     header_tok = request.headers.get(DIAG_TOKEN_HEADER)
     if header_tok is not None:
         if not header_tok.strip() or not hmac.compare_digest(header_tok.strip(), expected):
@@ -2720,6 +2756,73 @@ def _deployed_sha_by_unit() -> dict[str, str | None]:
     return out
 
 
+_UNIT_CONFIG_PROPS = ("FragmentPath", "DropInPaths", "ActiveEnterTimestamp", "NeedDaemonReload")
+
+
+def _parse_systemd_ts(value: str) -> datetime | None:
+    """``Thu 2026-11-12 10:20:54 UTC`` -> aware datetime; None when empty/unparseable."""
+    parts = (value or "").split()
+    # Only UTC is parsed (the VMs run UTC); another zone is "could not look", never a guess.
+    if len(parts) != 4 or parts[3] != "UTC":
+        return None
+    try:
+        return datetime.strptime(f"{parts[1]} {parts[2]}", "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def _unit_config_pending(units: list[str],
+                         show: Any = None,
+                         mtime: Any = None) -> dict[str, bool | None]:
+    """DEPLOY-UNIT-RESTART-DETECT: per unit, True when its INSTALLED unit file or a
+    drop-in is newer than the running process (or systemd says a daemon-reload is
+    pending), i.e. the process runs a launch config it never loaded.
+
+    MEASURED 2026-11-12 (#25185): web-api restarted at 10:08:33 on the OLD unit,
+    install_systemd_units rewrote it later, and ``restart_pending`` read False
+    because running sha == checkout sha. The sha diff cannot see this; the unit
+    file's mtime against ``ActiveEnterTimestamp`` can. Three-way, never collapsed:
+    None = could not look (no systemctl, unparseable start time, unreadable file).
+    """
+    show = show or _systemctl_show
+    mtime = mtime or (lambda path: os.stat(path).st_mtime)
+    shown = show(units, _UNIT_CONFIG_PROPS)
+    out: dict[str, bool | None] = {}
+    for unit in units:
+        props = shown.get(unit)
+        if not props:
+            out[unit] = None
+            continue
+        if props.get("NeedDaemonReload", "").lower() == "yes":
+            out[unit] = True
+            continue
+        started = _parse_systemd_ts(props.get("ActiveEnterTimestamp", ""))
+        paths = [p for p in [props.get("FragmentPath", "")] + props.get("DropInPaths", "").split() if p]
+        if started is None or not paths:
+            out[unit] = None
+            continue
+        try:
+            newest = max(mtime(p) for p in paths)
+        except OSError:
+            out[unit] = None
+            continue
+        # systemd timestamps are whole seconds: a file written in the same second
+        # as the start is not counted as newer.
+        out[unit] = newest >= started.timestamp() + 1
+    return out
+
+
+def _either_pending(code: bool | None, config: bool | None) -> bool | None:
+    """The code verdict, escalated to True when the launch config says pending.
+
+    A config check that could not look (``None``, e.g. no systemctl) never
+    downgrades a known code verdict -- it is reported on its own in
+    ``unit_config_pending_by_unit`` -- so the per-unit flag keeps its meaning."""
+    if config is True:
+        return True
+    return code
+
+
 @router.get("/version")
 def get_version(request: Request) -> dict[str, Any]:
     """Diagnostic — git SHA + captured timestamp of the running web-api
@@ -2740,6 +2843,7 @@ def get_version(request: Request) -> dict[str, Any]:
     restart_pending = _restart_pending(_RUNNING_GIT_SHA, on_disk)
     trader_sha = _trader_running_sha()
     trader_pending = _trader_restart_pending(trader_sha, on_disk)
+    unit_cfg = _unit_config_pending([WEB_API_UNIT, TRADER_UNIT])
     return {
         # The sha the RUNNING process was loaded from -- captured once at
         # import. This is what the field name and this endpoint's whole
@@ -2758,10 +2862,14 @@ def get_version(request: Request) -> dict[str, Any]:
         # older sha whose loaded code is identical, so the trader has its own
         # running sha and its own pending flag. Same three-way None.
         "trader_git_sha": trader_sha,
+        # A unit is pending when its CODE differs (sha diff above) OR its installed
+        # launch config (unit file / drop-in) is newer than the running process
+        # (DEPLOY-UNIT-RESTART-DETECT; the cause is in unit_config_pending_by_unit).
         "restart_pending_by_unit": {
-            WEB_API_UNIT: restart_pending,
-            TRADER_UNIT: trader_pending,
+            WEB_API_UNIT: _either_pending(restart_pending, unit_cfg.get(WEB_API_UNIT)),
+            TRADER_UNIT: _either_pending(trader_pending, unit_cfg.get(TRADER_UNIT)),
         },
+        "unit_config_pending_by_unit": unit_cfg,
         "deployed_sha_by_unit": _deployed_sha_by_unit(),
         "captured_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -4234,6 +4342,57 @@ def get_live_review_due(request: Request) -> dict[str, Any]:
     from src.runtime.live_review_due import live_review_due
     from src.runtime.local_pnl import last_mark_price  # prop uPnL estimate feed, same as the dashboard's
     return live_review_due(mark_fn=last_mark_price)
+
+
+def _ml_pool_snapshot_dir() -> Path:
+    """Where the ml_entry_eq* pool snapshots live (``ML_ENTRY_EQ_SNAPSHOT`` overrides the live file, as in the refresher; the archive sits beside it)."""
+    env = os.environ.get("ML_ENTRY_EQ_SNAPSHOT")
+    if env:
+        return Path(env).parent
+    from src.utils.paths import data_dir
+    return Path(data_dir()) / "ml_entry_eq"
+
+
+_ML_POOL_BAR_RE = re.compile(r"^\d{8}T\d{4}Z$")
+
+
+@router.get("/ml_pool_snapshots")
+def get_ml_pool_snapshots(request: Request, bar: str | None = None, limit: int = 40) -> dict[str, Any]:
+    """The ARCHIVED ml_entry_eq* pool snapshots (row ML-LIVE-PARITY-ML-LEGS), the input the live-vs-replay parity job re-scores.
+
+    No ``bar``: the index, newest first -- ``{bar, bytes, bar_close, built_at, covered, pool_size}`` per ``history/<bar>.json`` (``limit`` <= 200).
+    ``bar=20261111T1900Z``: that one snapshot, verbatim. ``read_state`` is ``looked`` / ``could_not_look``; ``snapshots`` is ``null`` -- not ``[]`` --
+    when the directory could not be read, and ``present: false`` says the archive does not exist (yet). Pure file read, no socket, no order path. Tier 1.
+    """
+    _require_diag_token(request)
+    hist = _ml_pool_snapshot_dir() / "history"
+    if bar is not None:
+        if not _ML_POOL_BAR_RE.match(bar):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error": "bad_bar", "want": "YYYYMMDDTHHMMZ"})
+        f = hist / f"{bar}.json"
+        try:
+            return {"read_state": "looked", "bar": bar, "snapshot": json.loads(f.read_text(encoding="utf-8"))}
+        except FileNotFoundError:
+            return {"read_state": "looked", "bar": bar, "snapshot": None, "present": False}
+        except (OSError, ValueError) as exc:
+            return {"read_state": "could_not_look", "bar": bar, "snapshot": None, "error": f"{type(exc).__name__}: {exc}"}
+    n = _clamp(limit, 40, 200)
+    if not hist.is_dir():
+        return {"read_state": "looked", "present": False, "snapshots": [], "count": 0}
+    try:
+        files = sorted(hist.glob("*.json"), reverse=True)
+    except OSError as exc:
+        return {"read_state": "could_not_look", "present": None, "snapshots": None, "error": f"{type(exc).__name__}: {exc}"}
+    rows: list[dict[str, Any]] = []
+    for f in files[:n]:
+        row: dict[str, Any] = {"bar": f.stem, "bytes": f.stat().st_size}
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+            row.update({k: d.get(k) for k in ("bar_close", "built_at", "covered", "pool_size")})
+        except (OSError, ValueError) as exc:
+            row["error"] = f"{type(exc).__name__}: {exc}"
+        rows.append(row)
+    return {"read_state": "looked", "present": True, "snapshots": rows, "count": len(rows), "total_in_archive": len(files)}
 
 
 @router.get("/tick_cost")

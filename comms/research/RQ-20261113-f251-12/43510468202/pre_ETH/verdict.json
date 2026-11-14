@@ -1,0 +1,200 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "turtle_soup: 47 trades in the baseline arm 'A' on ETHUSDT 15m candles 2022-10-05 .. 2024-10-04, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A']",
+  "n": 47,
+  "measurement": {
+    "leg": "turtle_soup",
+    "label": "stage0_no_edge",
+    "grade": {
+      "verdict": "fail",
+      "label": "stage0_no_edge",
+      "baseline": "A",
+      "net_r": -8.6065,
+      "n": 47,
+      "max_drawdown_r": 12.3917,
+      "folds_positive": 0,
+      "n_folds": 6,
+      "fold_majority": 4,
+      "n_floor": 1,
+      "control": null,
+      "why": "net_r=-8.6065 with 0/6 positive folds (needs > 0 and >= 4)"
+    },
+    "arms": {
+      "A": {
+        "reach_ge_6r": null,
+        "n": 47,
+        "net_r": -8.6065,
+        "net_r_fee_only": -5.5779,
+        "max_drawdown_r": 12.3917,
+        "by_outcome": {
+          "tp": 21,
+          "sl": 26
+        },
+        "mean_bars_held": null,
+        "net_r_per_capital_day": null,
+        "cost_stack": {
+          "fee_bps_roundtrip": 7.5,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": null,
+        "data_start": "2022-10-05 00:00:00+00:00",
+        "data_end": "2024-10-04 00:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2022-10-05 00:00:00+00:00",
+            "end": "2023-02-03 16:00:00+00:00",
+            "trades": 47,
+            "net_r": -8.6065
+          },
+          {
+            "fold": 2,
+            "start": "2023-02-03 16:00:00+00:00",
+            "end": "2023-06-05 08:00:00+00:00",
+            "trades": 0,
+            "net_r": 0
+          },
+          {
+            "fold": 3,
+            "start": "2023-06-05 08:00:00+00:00",
+            "end": "2023-10-05 00:00:00+00:00",
+            "trades": 0,
+            "net_r": 0
+          },
+          {
+            "fold": 4,
+            "start": "2023-10-05 00:00:00+00:00",
+            "end": "2024-02-03 16:00:00+00:00",
+            "trades": 0,
+            "net_r": 0
+          },
+          {
+            "fold": 5,
+            "start": "2024-02-03 16:00:00+00:00",
+            "end": "2024-06-04 08:00:00+00:00",
+            "trades": 0,
+            "net_r": 0
+          },
+          {
+            "fold": 6,
+            "start": "2024-06-04 08:00:00+00:00",
+            "end": "2024-10-04 00:00:00+00:00",
+            "trades": 0,
+            "net_r": 0
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_turtle_soup.py",
+          "--data",
+          "<data>",
+          "--symbol",
+          "ETHUSDT",
+          "--resample",
+          "15m",
+          "--emit-trades",
+          "comms/research/RQ-20261113-f251-12/43510468202/pre_ETH/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261113-f251-12/43510468202/pre_ETH/arms/A__bt.json",
+          "--override",
+          "sweep_lookback_15m=60",
+          "--override",
+          "min_sweep_buffer_bps=10",
+          "--override",
+          "min_body_to_range=0.6",
+          "--override",
+          "atr_period=14",
+          "--override",
+          "atr_stop_mult=0.3",
+          "--override",
+          "be_at_r=0.75",
+          "--override",
+          "be_offset_bps=15",
+          "--override",
+          "tp1_at_r=1.0",
+          "--override",
+          "tp2_at_r=3.0",
+          "--override",
+          "partial_close_pct=0.25",
+          "--override",
+          "setup_lookback_bars=4",
+          "--start",
+          "2022-10-05",
+          "--end",
+          "2024-10-04"
+        ]
+      }
+    },
+    "window": {
+      "start": "2022-10-05",
+      "end": "2024-10-04",
+      "fetch_days": 1560,
+      "feed": {
+        "source": "binance",
+        "ticker": "ETHUSDT",
+        "interval": "15",
+        "resample": "15m"
+      },
+      "fold_edges": [
+        "2022-10-05 00:00:00+00:00",
+        "2023-02-03 16:00:00+00:00",
+        "2023-06-05 08:00:00+00:00",
+        "2023-10-05 00:00:00+00:00",
+        "2024-02-03 16:00:00+00:00",
+        "2024-06-04 08:00:00+00:00",
+        "2024-10-04 00:00:00+00:00"
+      ]
+    },
+    "argv": {
+      "A": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_turtle_soup.py",
+          "--data",
+          "<data>",
+          "--symbol",
+          "ETHUSDT",
+          "--resample",
+          "15m",
+          "--emit-trades",
+          "comms/research/RQ-20261113-f251-12/43510468202/pre_ETH/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261113-f251-12/43510468202/pre_ETH/arms/A__bt.json",
+          "--override",
+          "sweep_lookback_15m=60",
+          "--override",
+          "min_sweep_buffer_bps=10",
+          "--override",
+          "min_body_to_range=0.6",
+          "--override",
+          "atr_period=14",
+          "--override",
+          "atr_stop_mult=0.3",
+          "--override",
+          "be_at_r=0.75",
+          "--override",
+          "be_offset_bps=15",
+          "--override",
+          "tp1_at_r=1.0",
+          "--override",
+          "tp2_at_r=3.0",
+          "--override",
+          "partial_close_pct=0.25",
+          "--override",
+          "setup_lookback_bars=4",
+          "--start",
+          "2022-10-05",
+          "--end",
+          "2024-10-04"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": []
+      }
+    }
+  },
+  "note": "FAIL / stage0_no_edge: net_r=-8.6065 with 0/6 positive folds (needs > 0 and >= 4)"
+}

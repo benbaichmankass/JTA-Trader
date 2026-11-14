@@ -27,7 +27,8 @@ RELAY SIZE: a `journal?table=trades&limit=30` comment is already ~51 kB against 
         [--account bybit_portfolio] [--out joined.jsonl] [--cusum]
     python3 scripts/ops/overlay_cusum_join.py --self-test
 """
-# wiring: manual-only - run by the manager (or a lane) over one batched diag-relay pull; PI-20261029-XME2GXW7-0001
+# wiring: manual-only - run weekly by the /ml-review lane as fixed check C11 (.claude/skills/ml-review/SKILL.md) over one batched
+# diag-relay pull; no cron (manager 2026-11-12); PI-20261029-XME2GXW7-0001
 from __future__ import annotations
 
 import argparse

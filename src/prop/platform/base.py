@@ -53,6 +53,9 @@ class AccountSnapshot:
     available: Optional[float] = None
     currency: Optional[str] = None
     unparsed: List[str] = field(default_factory=list)
+    # Fields computed from other read fields rather than read directly, each as
+    # "<field>=<formula>" (provenance: derived from measured inputs, never a guess).
+    derived: List[str] = field(default_factory=list)
 
     def as_dict(self) -> Dict[str, Any]:
         return asdict(self)
