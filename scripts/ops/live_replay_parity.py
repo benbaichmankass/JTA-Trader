@@ -932,6 +932,9 @@ def analyse_leg(leg: Leg, bundle: dict, since: float, until: float, *,
         b_end = b0 + tf_s
         pre_join = leg_live_from is not None and b0 < leg_live_from
         status = None
+        # PARITY-CONTROLS-1114: could THIS bar be judged lost_bar at all? The planted_defect control may only plant a
+        # lost bar where the verdict is not withheld (a pre-join bar, a closed US-equity session, the audit cap).
+        lost_observable = False
         kinds: list[str] = []
         signal_evals: list[EvalRow] = []
         fresh = float(leg.cfg.get("decision_bar_fresh_seconds") or 360)
@@ -945,8 +948,9 @@ def analyse_leg(leg: Leg, bundle: dict, since: float, until: float, *,
             evs = evals_between(b_end, b_end + fresh + 120)
             if i + 1 >= len(tf_rows):
                 continue
-            if not evs and not pre_join and not (
-                    audit_until is not None and b_end + fresh + 120 > audit_until):
+            lost_observable = not pre_join and not (
+                audit_until is not None and b_end + fresh + 120 > audit_until)
+            if not evs and lost_observable:
                 kinds.append("lost_bar")
                 divs.append({"class": "lost_bar", "bar": iso(b0),
                              "detail": f"no {leg.name}_eval in the {fresh:.0f}s window after close"})
@@ -995,6 +999,7 @@ def analyse_leg(leg: Leg, bundle: dict, since: float, until: float, *,
                 bar_rows.append({"bar": iso(b0), "status": "not_comparable",
                                  "why": "before the 15m candle reach"})
                 continue
+            lost_observable = bool(traded) and not pre_join
             if traded and not evs and not pre_join:
                 kinds.append("lost_bar")
                 divs.append({"class": "lost_bar", "bar": iso(b0),
@@ -1120,7 +1125,7 @@ def analyse_leg(leg: Leg, bundle: dict, since: float, until: float, *,
         else:
             status = "matched_no_signal"
         bar_rows.append({"bar": iso(b0), "status": status, "evals": len(evs),
-                         "signal_evals": len(signal_evals),
+                         "signal_evals": len(signal_evals), "lost_bar_observable": lost_observable,
                          **({"classes": sorted(set(kinds))} if kinds else {}),
                          **({"downstream": down} if down else {})})
     by_class = {k: sum(1 for d in divs if d["class"] == k) for k in DIVERGENCE_CLASSES}
@@ -1351,6 +1356,7 @@ def historical_positive(results: list[dict], bundle: dict) -> dict:
             anchors.append({**a, "state": "matched" if bar["status"] == "matched_signal" else "FAILED",
                             "bar_status": bar["status"]})
     n_ok = sum(1 for c in checked if c["matched"])
+    unmatched = [c for c in checked if not c["matched"]]
     n_down = sum(1 for c in checked if c.get("downstream_class"))
     a_fail = [a for a in anchors if a["state"] == "FAILED"]
     a_ok = [a for a in anchors if a["state"] == "matched"]
@@ -1362,7 +1368,10 @@ def historical_positive(results: list[dict], bundle: dict) -> dict:
         state = "fail"
     return {"state": state, "packages_checked": len(checked), "packages_matched": n_ok,
             "packages_matched_signal_downstream_divergent": n_down,
-            "packages": checked[:40], "anchors": anchors}
+            # every UNMATCHED package first, then matched ones up to 40 (PARITY-CONTROLS-1114: the 2026-11-14 run
+            # failed on 1 of 166 and the truncated list did not name it)
+            "packages": unmatched + [c for c in checked if c["matched"]][:max(0, 40 - len(unmatched))],
+            "packages_unmatched": len(unmatched), "anchors": anchors}
 
 
 def _bar_of(r: dict | None, t: float | None) -> dict | None:
@@ -1434,7 +1443,10 @@ def planted_defect(legs: list[Leg], results: list[dict], bundle: dict,
         r = by_leg.get(lg.name)
         if not r or r["state"] != "checked" or lg.decision_bar != "forming":
             continue
-        quiet = [b for b in r["bars"] if b["status"] == "matched_no_signal" and b.get("evals")]
+        # only a bar whose lost_bar verdict is NOT withheld (PARITY-CONTROLS-1114: run 2026-11-14 planted
+        # slv_trend_1h's 2026-11-09T14:00Z bar, a Sunday before the leg's 11-12 roster join, and read it as a fail)
+        quiet = [b for b in r["bars"] if b["status"] == "matched_no_signal" and b.get("evals")
+                 and b.get("lost_bar_observable")]
         if not quiet:
             continue
         b0 = to_epoch(quiet[0]["bar"])

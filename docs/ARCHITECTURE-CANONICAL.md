@@ -765,6 +765,15 @@ own RiskManager). Guard: `scripts/ci/check_no_action_rate_cap.py`.
    regime, a scheduled event, or a liquidity level. It is never the trade's P&L alone, and never the clock alone.
 3. **Both brackets always exist.** No action removes the SL or the TP. A widen, a pull-in or a partial close leaves a live,
    predictive SL and TP on what remains (TP doctrine clause 1).
+   ⚠️ **Advice-only ENDED 2026-11-14 for reviewed actions** (operator directive, manager chat ~09:25Z, relayed by Manager
+   Session 2026-11-13a, verbatim *"Just turn on, like, no advice only. All those decisions should be implemented. And I should
+   just get a ping when those changes are implemented based on LTR lane"*). Every in-trade class a reviewed row recommends
+   (`route: recommended`) is **APPLIED** under `MD-TRADE-DESK` through the existing path (rows watcher / desk intake →
+   `live_review_dispatch.py` → `live_review_apply.py` → each account's own `RiskManager.approve_amend` / `approve_action` →
+   venue read-back), with **one trade-update ping per applied leg** (mandate + review_id). `live_review_rows.ADVICE_ONLY_ACTIONS`
+   and `MD-TRADE-DESK.functions.in_trade.advice_only` are both empty. Clause 4 below no longer gates execution; it remains the
+   per-class grading and reporting rule, and putting a class back is one line in each list. Gates this adds or changes: removes
+   the advice-only gate; adds none.
 4. **Each action class graduates on its OWN test, under a RISK-ADJUSTED rule** (operator decision 2026-10-29, below). An action
    class is advice-only until a test registered before the run, net of the full cost stack, passes for that class under
    **`RULE-AM-RISK-ADJUSTED-V1`**. Then it may be executed, through the usual Tier-3 / mandate path. One class failing says nothing
