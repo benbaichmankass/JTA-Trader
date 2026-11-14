@@ -1387,10 +1387,42 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261114-db1a-01
   lever_family: timeframe
+- family: regime_gating (pooled ADX cell x direction)
+  varied: ungated vs the worst pooled (ADX regime x direction) cell across 15 crypto demo-floor legs, picked on 2025-11-13..2026-11-12, checked
+    on 2024-11-13..2025-11-12, live decision bar, full cost stack
+  response:
+    verdict: fail
+    run: '43562273934'
+    rule: RULE-DFR-COMMON-LOSS-REGIME-20261114
+    leg_record:
+      n: 95
+      net_r: -15.7396
+    leg_prior:
+      n: 102
+      net_r: -3.2181
+    part_a_common: true
+    part_a: 12/15 legs negative on the record window; pooled -142.3426R vs prior 106.089R
+    selected_cell: chop/long
+    cell_record:
+      n: 229
+      net_r: -75.3822
+    cell_prior:
+      n: 220
+      net_r: 25.5925
+    leg_ex_cell:
+      record_net_r: -15.7394
+      prior_net_r: -3.2175
+    reading: 'the record-year loss is common (Part A) but the worst ADX cell (chop/long) wins the year before: no trend-regime cell separates
+      it; the record-year loss sits on the LONG side in every ADX cell'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-02
+  lever_family: regime_gating
 units:
 - RQ-20261113-f251-09
 - RQ-20261113-f251-22
 - RQ-20261114-db1a-01
+- RQ-20261114-db1a-02
 manifest_notes:
   census_2026_11_14: 'DEMO-FLOOR-ITER lever-family census after the 2nd forming-bar lever failed (AM-ML guard). Forming record (2025-11-13..2026-11-12):
     -15.74R over n 95, gross -10.11R, cost 5.63R; long -19.06R n40, short +3.32R n55. The equal-length window before it (2024-11-13..2025-11-12,
@@ -1410,21 +1442,26 @@ manifest_notes:
   next: Two forming levers have failed (short-only, adx_min 30). The leg is negative on the forming bar in both years, and the long side carries
     the loss. The remaining closed-bar pass never run forming is exit tp_extend_r (+26R n422). A 3rd unit is defensible only on that diagnosis;
     the honest alternative is a retirement proposal through the manager (to the operator first this week). Not exhausted; manager decides.
-  decision_bar_2026_11_14: 'Closed bar (RQ-20261114-db1a-01, FAIL): C -14.69R n60 0/4 vs F -15.74R; prior year C -1.01R vs F -3.22R. Best closed arm C_S -4.21R
-    n36 2/4, prior year +2.80R. Closed lever deltas vs C: short +10.5 record / +3.8 prior (forming +18.1, same sign); adx_min 30 -2.9 / -7.1 (forming +4.2,
-    OPPOSITE). C/F entry overlap 0.19.'
-  next_2026_11_14: SUPERSEDES next. decision_bar closed is not the lever (db1a-01). The leg loses on both bars in both years, and short-only is the one response
-    stable across bars and years, but it is short of Stage 0 (2/4 folds). The tp_extend unit stays on hold; manager decides between a short-side unit and
-    a retirement proposal (to the operator first this week).
-  lever_exhaustion_2026_11_14: 'LEVER-EXHAUSTION NOTE (2026-11-14, manager ruling 05:16Z option a). Forming record (2025-11-13..2026-11-12) -15.74R n95, gross
-    -10.11R; year before -3.22R n102: negative in BOTH years on the live bar. Closed bar: -14.69R n60 0/4 / -1.01R n68 (db1a-01). Levers tested on the record
-    window: direction short-only forming +2.35R n57 1/4 (f251-09) and closed -4.21R n36 2/4, year before +2.80R (db1a-01); filter adx_min 30 forming -11.59R
-    1/4, year before -5.38R (f251-22) and closed -17.61R 0/4, year before -8.12R (db1a-01); timeframe/decision_bar closed (db1a-01, FAIL). Closed 2020-07..2026-10
-    map: tp_extend_r +26R n422 pass and structure_exit off pass (already live since 2026-11-05); everything else fails or is flat. tp_extend_r is NOT tested
-    on the forming bar; it is held by manager ruling because db1a-01 showed lever responses flip sign between the record year and the year before on 5/10
-    levers, so a pooled 6-year pass does not predict a one-year response. POWER: per-trade sd about 1.35R, observed short-only edge about +0.04..+0.08R/trade,
-    about 55 short trades a year; 80% power at alpha 0.05 needs about 1,100 trades for +0.1R/trade; an untouched 2-year window (about 110 trades) has MDE
-    about 0.32R/trade, so no further window can settle it. The 2026-09-22 re-promotion record already showed the recency problem (last 9 months -2.72R).'
+  decision_bar_2026_11_14: 'Closed bar (RQ-20261114-db1a-01, FAIL): C -14.69R n60 0/4 vs F -15.74R; prior year C -1.01R vs F -3.22R. Best closed
+    arm C_S -4.21R n36 2/4, prior year +2.80R. Closed lever deltas vs C: short +10.5 record / +3.8 prior (forming +18.1, same sign); adx_min 30
+    -2.9 / -7.1 (forming +4.2, OPPOSITE). C/F entry overlap 0.19.'
+  next_2026_11_14: SUPERSEDES next. decision_bar closed is not the lever (db1a-01). The leg loses on both bars in both years, and short-only is
+    the one response stable across bars and years, but it is short of Stage 0 (2/4 folds). The tp_extend unit stays on hold; manager decides between
+    a short-side unit and a retirement proposal (to the operator first this week).
+  lever_exhaustion_2026_11_14: 'LEVER-EXHAUSTION NOTE (2026-11-14, manager ruling 05:16Z option a). Forming record (2025-11-13..2026-11-12) -15.74R
+    n95, gross -10.11R; year before -3.22R n102: negative in BOTH years on the live bar. Closed bar: -14.69R n60 0/4 / -1.01R n68 (db1a-01). Levers
+    tested on the record window: direction short-only forming +2.35R n57 1/4 (f251-09) and closed -4.21R n36 2/4, year before +2.80R (db1a-01);
+    filter adx_min 30 forming -11.59R 1/4, year before -5.38R (f251-22) and closed -17.61R 0/4, year before -8.12R (db1a-01); timeframe/decision_bar
+    closed (db1a-01, FAIL). Closed 2020-07..2026-10 map: tp_extend_r +26R n422 pass and structure_exit off pass (already live since 2026-11-05);
+    everything else fails or is flat. tp_extend_r is NOT tested on the forming bar; it is held by manager ruling because db1a-01 showed lever
+    responses flip sign between the record year and the year before on 5/10 levers, so a pooled 6-year pass does not predict a one-year response.
+    POWER: per-trade sd about 1.35R, observed short-only edge about +0.04..+0.08R/trade, about 55 short trades a year; 80% power at alpha 0.05
+    needs about 1,100 trades for +0.1R/trade; an untouched 2-year window (about 110 trades) has MDE about 0.32R/trade, so no further window can
+    settle it. The 2026-09-22 re-promotion record already showed the recency problem (last 9 months -2.72R).'
   retirement_gate_2026_11_14: 'RETIREMENT PROPOSAL HELD (Tier 3, PR claude/avax-pb-retire-held). GATE: it goes to the operator ONLY if RQ-20261114-db1a-02
-    (regime-level unit, this leg in its population) does not rescue it. Rescue = Part B PASS AND avax_pullback_2h''s ex-cell net_r > 0 on BOTH the record
-    window and the year before. Otherwise the manager takes the proposal to the operator (retirements to the operator first this week).'
+    (regime-level unit, this leg in its population) does not rescue it. Rescue = Part B PASS AND avax_pullback_2h''s ex-cell net_r > 0 on BOTH
+    the record window and the year before. Otherwise the manager takes the proposal to the operator (retirements to the operator first this week).'
+  retirement_gate_result_2026_11_14: 'GATE READ (RQ-20261114-db1a-02, run 43562273934, FAIL): no rescue. Part A: the record-year loss is common (12/15 legs
+    negative, pooled -142.3R vs +106.1R the year before). Part B: the selected cell chop/long loses the record year (-75.4R n229) but wins the year before
+    (+25.6R n220), so it fails. This leg has no chop/long trades (adx_min 25), so its ex-cell result is unchanged: -15.74R n95 / -3.22R n102. The retirement
+    proposal goes to the operator via the manager.'
