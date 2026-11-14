@@ -1,0 +1,150 @@
+{
+ "schema_version": 1,
+ "trade_id": null,
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuFSwReview-live-review-lane-1200Z",
+ "prompt_sha": null,
+ "skill_sha": "9f79ae111e125aa92787fda19356d821d5200a64",
+ "review_id": "LR-20261114T1206Z-pkg-3de13868d406447a",
+ "reviewed_at": "2026-11-14T12:20:00Z",
+ "order_package_id": "pkg-3de13868d406447a",
+ "leg": "ada_pullback_2h",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "manual",
+  "level": null,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-14T12:06:04Z",
+ "state": {
+  "atr_now_over_entry": 0.7168,
+  "bars_held": 58,
+  "giveback_r": 0.4014,
+  "open_r": 2.4588,
+  "peak_provenance": "estimated",
+  "peak_r": 2.8602,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.1664,
+  "tp": 0.1607384
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.7168,
+  "bars_since_peak": 2,
+  "giveback_r": 0.4014,
+  "open_r": 2.4588,
+  "peak_r": 2.8602,
+  "r_to_stop": 0.4516,
+  "r_to_target": 0.4954
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "package sl 0.1664 / tp 0.1607384 agree with every readable account"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 39,
+   "mean_r": 2.8214,
+   "sd_r": 1.6203,
+   "worst_r": -0.5155,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 39,
+   "mean_r": 2.6044,
+   "sd_r": 0.6425,
+   "worst_r": 1.2879,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 39,
+   "mean_r": 2.3655,
+   "sd_r": 0.0336,
+   "worst_r": 2.2685,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261114T1206Z-pkg-3de13868d406447a.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "suggestive",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. The tie-break would pick atr:1.0 on the table (hold +2.821R sd 1.62 n=39 vs atr:1.0 +2.604R sd 0.64: gap 0.217 < SE 0.279, worst -0.516 vs +1.288 = +1.80R), but that option is not executable and its tail premise is void. atr:1.0 puts the stop at ~0.1653, 0.0016 (0.56 ATR) above the 0.1637 mark, inside the 1-ATR noise floor (mark + 0.002857 = ~0.1666); the current stop 0.1664 already sits at that floor, so no legal tighten exists (r:2.5 = 0.1635 is at or through the mark and the table marks atr:1.5/2.0 invalid_level). The table's hold worst -0.52R is also for the original stop; the real stop after the 08:56Z move locks +2.0R, so the actual worst case is ~+2R and the tail gain over hold is ~0, not 1.8R. Close +2.366R is 0.456R below hold (gap 1.76 SE), so no close. Remaining bracket is symmetric: SL 0.1664 is 0.0027 above the 0.1635 close (+2.0R locked), TP 0.1607 (r_to_target 0.50R) is 0.0028 below; trend (1d ADX 35.8, 2h lower lows, 1d swing low 0.1775 already broken) tilts it with the short. Previous forecast (TP 0.1607 before 0.1688 in 6 bars from 08:00Z): neither touched, since-entry low 0.1613; carried forward at p 0.5."
+ },
+ "forecast": {
+  "thesis": "Price bounced off 0.1613 to 0.1635 inside a 2h downtrend with 1d ADX 35.8; I expect the 0.1607 TP to trade before the stop 0.1664 reclaims, but the bracket is about 1 ATR each way so it is a coin flip with a trend tilt.",
+  "direction": "with_trade",
+  "target_px": 0.1607,
+  "p_target": 0.5,
+  "invalidation_px": 0.1664,
+  "horizon_bars": 6,
+  "timeframe": "2h",
+  "evidence": [
+   "state open_r 2.4588 peak_r 2.8602 (estimated) r_to_target 0.4954 r_to_stop 0.4516",
+   "chart last_close 0.1635 atr 0.00285714 since-entry low 0.1613",
+   "table hold n=39 mean 2.8214; close 2.3655; atr:1.0 2.6044 worst 1.2879",
+   "exit_plan sl_now 0.1664 tp_now 0.160738",
+   "previous review forecast target 0.1607 untouched"
+  ]
+ },
+ "context_flags": [
+  "tighten_floor: min_buffer_atr 1.0 x ATR 0.00285714 above mark ~0.1637 gives ~0.1666; current stop 0.1664 already at the floor, so no tighten is legal (operator suggestion r:2.5 is at/through the mark)",
+  "table_hold_stale: table hold worst -0.52R reflects the original 1.5-ATR stop, not the +2R lock moved 08:56Z (operator-directed), so tail tie-break premise does not hold",
+  "tighten_bias: stop-at-price fills flatter any tighten",
+  "correlated: ADA shorts x3 with ETH, SOL, XRP, BTC shorts = one crypto-beta bet",
+  "atr_ratio: now/entry 0.72; funding not readable; calendar no events next 24h",
+  "no_wake_marker: reviewed on manager dispatch, packet generated from origin/main (generator current)"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "packet_sha": "941b2b41d171712ec1cf4e40cc42aa416e6a11e80880cdb1e6bc6fae1dcd0256"
+}
