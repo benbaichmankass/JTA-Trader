@@ -1,0 +1,129 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261114T0401Z-pkg-d8838f396234477c",
+ "reviewed_at": "2026-11-14T04:10:00Z",
+ "order_package_id": "pkg-d8838f396234477c",
+ "trade_id": null,
+ "leg": "trend_donchian_eth_4h",
+ "accounts": [
+  "tradeify_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-14T04:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-14T04:01:48Z",
+ "state": {
+  "atr_now_over_entry": 1.2503,
+  "bars_held": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_provenance": "unverified",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1988.64892857,
+  "tp": 1742.9845
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.2503,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "mechanics": {
+  "evidence": "order_packages status=emitted close_reason=prop_ticket_emitted; no account carries this package in the reads (no trade / ticket row): nothing compared",
+  "verdict": "could_not_look"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. The closed 4h bar (00:00-04:00) ranged 1875.78-1936.86 and closed 1883.6, breaking the 1894.1 swing low the previous forecast targeted (target resolved: touched). Open ~+0.94R (derived from last close 1883.6, entry 1934.5, stop 1988.65; not a measurement), peak >= +1.09R lower bound, ~6 bars. Self-priced with live_review_outcomes.py --leg trend_donchian_eth_4h --side short --open-r 0.94 --peak-r 1.09 --bars-held 6 --atr-stop-mult 1.5 (comparable n=48 of 208 corpus, Stage-0 history): HOLD mean +1.616R (sd 2.26, worst -1.10R); tighten atr:1.0 +1.119, atr:1.5 +1.114, atr:2.0 +1.348R, each costing 0.27-0.50R; r-level arms invalid at this state; close not priced by the tool (judged: gives up the hold tail for a certain ~+0.9R). Trend leg with 1d ADX trending and 4h ADX 55.7 favours letting the 3.5R target work; SL 1988.65 sits above the 1988.67 swing high and TP 1742.98 stays real. Venue bracket equals the package. Packet is degraded (could_not_price, open_r null) and mechanics could_not_look, so a hold routes none; nothing is amended."
+ },
+ "forecast": {
+  "thesis": "The closed 4h bar broke the 1894.1 swing low and closed 1883.6 near its low; 4h ADX 55.7 and a 1d downtrend favour continuation. I expect 1838 (one ATR below) to trade before a reclaim of 1936.86, the last bar's high, but a one-bar breakdown can snap back",
+  "direction": "with_trade",
+  "target_px": 1838.0,
+  "p_target": 0.45,
+  "invalidation_px": 1936.86,
+  "horizon_bars": 3,
+  "timeframe": "4h",
+  "evidence": [
+   "chart.bars_ohlc last 4h bar H 1936.86 L 1875.78 C 1883.6; 1894.1 swing low broken",
+   "regime adx_now 55.65 trending, atr_now/entry 1.25",
+   "self-priced table: hold n=48 mean 1.6162 worst -1.1028; tighten atr:2.0 1.3478",
+   "exit_plan sl 1988.65 tp 1742.98",
+   "context.previous_review forecast target 1894.1 resolved: touched"
+  ]
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "mechanics_unread: packet verdict could_not_look (order_packages status=emitted, no account carries the package in the generator's reads); the previous review's venue read matched the package, but this session made no independent venue read. Hold routes none; the VM dispatches only match rows",
+  "priced_options: packet could_not_price; self-priced from the leg's own Stage-0 corpus with inputs derived from last close and since-entry low (peak is a lower bound); stops fill at stop price so tightens are flattered; not committed as a table (the reviewer never writes tables); judgement basis",
+  "correlated: ETH shorts x6 on the book, plus ADA x3, SOL, XRP, BTC x3 shorts = one crypto-beta bet",
+  "atr_ratio: now/entry 1.25; funding not readable; calendar no events next 24h",
+  "packet_defect: priced_options could_not_price 1/1",
+  "packet_defect: state.open_r context_null:state.open_r 1/1"
+ ],
+ "account_reads": [
+  {
+   "account_id": "tradeify_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuNi-live-review-lane-0400Z",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [
+  {
+   "count": 1,
+   "denominator": 1,
+   "field": "priced_options",
+   "reason": "could_not_price"
+  },
+  {
+   "count": 1,
+   "denominator": 1,
+   "field": "state.open_r",
+   "reason": "context_null:state.open_r"
+  }
+ ],
+ "packet_sha": "98de9e8b6e95f86f1aa8063d71f2aaf2ca18fec815b1d51ce4cc0f87722b2929"
+}

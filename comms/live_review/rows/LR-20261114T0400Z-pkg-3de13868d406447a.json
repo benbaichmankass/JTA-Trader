@@ -1,0 +1,205 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261114T0400Z-pkg-3de13868d406447a",
+ "reviewed_at": "2026-11-14T04:08:00Z",
+ "order_package_id": "pkg-3de13868d406447a",
+ "trade_id": null,
+ "leg": "ada_pullback_2h",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "near_target",
+  "level": 0.5,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-14T04:00:38Z",
+ "state": {
+  "atr_now_over_entry": 0.8638,
+  "bars_held": 53,
+  "giveback_r": 0.0,
+  "open_r": 2.4588,
+  "peak_provenance": "estimated",
+  "peak_r": 2.4588,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.18437857,
+  "tp": 0.1607384
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.8638,
+  "bars_since_peak": 11,
+  "giveback_r": 0.0,
+  "open_r": 2.4588,
+  "peak_r": 2.4588,
+  "r_to_stop": 3.4588,
+  "r_to_target": 0.4954
+ },
+ "mechanics": {
+  "evidence": "package sl 0.18437857 / tp 0.1607384 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 54,
+   "mean_r": 2.6555,
+   "sd_r": 1.628,
+   "worst_r": -0.8755,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 54,
+   "mean_r": 2.3496,
+   "sd_r": 0.6159,
+   "worst_r": 1.2578,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 54,
+   "mean_r": 2.3898,
+   "sd_r": 0.796,
+   "worst_r": 1.2578,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 54,
+   "mean_r": 2.4994,
+   "sd_r": 0.9388,
+   "worst_r": 1.1157,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 54,
+   "mean_r": 2.6564,
+   "sd_r": 1.5516,
+   "worst_r": -0.2421,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 54,
+   "mean_r": 2.6997,
+   "sd_r": 1.2478,
+   "worst_r": 0.7756,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 54,
+   "mean_r": 2.5789,
+   "sd_r": 1.186,
+   "worst_r": 1.0656,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 54,
+   "mean_r": 2.3875,
+   "sd_r": 0.8031,
+   "worst_r": 1.2578,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 54,
+   "mean_r": 2.3767,
+   "sd_r": 0.0297,
+   "worst_r": 2.2695,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261114T0400Z-pkg-3de13868d406447a.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold, 0.50R from TP. Measured table (n=54 comparable shorts, net of full cost stack): HOLD +2.656R (sd 1.63, worst -0.88R) vs close +2.377R (worst +2.27R, ev cost 0.28R SE 0.22), tighten atr:1.0 +2.350, atr:1.5 +2.390, atr:2.0 +2.499, r:2 +2.388, r:1.23 +2.579, r:0 +2.656, r:1 +2.700R. Only r:1 is above hold and by 0.044R against SE 0.13, a statistical tie bought with a 1R stop that gives back 1.46R of open profit; every tighter arm costs 0.16-0.31R. Close gives up 0.28R of mean to remove a worst case that is already -0.88R against +2.46R banked. Open +2.46R is at its peak (giveback 0), price 0.1634 broke the 0.1658-0.1673 shelf (2h low 0.1621) and TP 0.1607 is 0.78 ATR away; moving the TP is not supported (ATR ratio 0.86, no vol expansion, no structure below to target). Partial/move_tp are judged, not priced (table prices hold/tighten/close only). HOLD already expresses the view."
+ },
+ "forecast": {
+  "thesis": "Previous forecast (target 0.164, invalidation 0.1747) was nearly met: 2h low 0.1621 broke the 0.1658 shelf and price closed 0.1634. 1d downtrend (ADX 35.8) intact, 2h ADX 21 transitional. I expect TP 0.1607 (0.78 ATR below) to fill before a reclaim of 0.1688, but the shelf break is one bar old and a bounce is plausible",
+  "direction": "with_trade",
+  "target_px": 0.1607,
+  "p_target": 0.45,
+  "invalidation_px": 0.1688,
+  "horizon_bars": 6,
+  "timeframe": "2h",
+  "evidence": [
+   "table hold n=54 mean 2.6555 worst -0.8755; close 2.3767; tighten r:1 2.6997 (SE 0.13)",
+   "chart.bars_ohlc last 2h bar L 0.1621 C 0.1634; shelf 0.1658-0.1673 broken",
+   "chart.htf 1d trending ADX 35.8",
+   "exit_plan sl 0.184379 tp 0.160738",
+   "context.previous_review forecast target 0.164 resolved: touched (0.1621)"
+  ]
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "tighten_bias: stop-at-price fills flatter any tighten; tighten is advice-only",
+  "mechanics_venue: packet generator read bybit_2 and bybit_portfolio SL 0.1844 / TP 0.1607 matching package by order id; no independent venue read this session",
+  "correlated: ADA shorts x3 (this, mirror, trend_donchian_ada_4h) with ETH x6, SOL, XRP, BTC x3 shorts = one crypto-beta bet",
+  "atr_ratio: now/entry 0.86; regime trend_now transitional (2h ADX 21), 1d trending ADX 35.8",
+  "live_vs_backtest: realMoney 18 closed CONSISTENT (10.8th pct, live -3.44R); mirror 12 closed CONSISTENT (21.6th pct)",
+  "calendar: no events next 24h; funding not readable"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuNi-live-review-lane-0400Z",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [],
+ "packet_sha": "c8968e98d5a2add397533c773e15df279e19ce4bff1df88a925bc8d5df4a9c6e"
+}
