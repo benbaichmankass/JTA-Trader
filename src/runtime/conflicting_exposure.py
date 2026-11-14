@@ -94,14 +94,43 @@ def timeframe_of(strategy: Any, declared: dict[str, str]) -> str | None:
     return f"{m.group(1)}{m.group(2)}" if m else None
 
 
-def open_r(direction: Any, entry: Any, sl: Any, mark: Any) -> float | None:
-    """Open R from a mark: (mark - entry) x side / |entry - sl|. None when any input is missing."""
+def open_r(direction: Any, entry: Any, sl: Any, mark: Any, risk: Any = None) -> float | None:
+    """Open R from a mark: (mark - entry) x side / 1R. None when any input is missing.
+
+    1R is the package's signal-time ``risk_per_unit`` (``risk``, from ``order_packages.meta`` via
+    ``r_provenance.declared_initial_risk``) when it is known: a trailed stop cannot move it. Only without it does
+    1R fall back to ``|entry - sl|``, and ``sl`` is the CURRENT stop, which shrinks as the stop trails toward entry
+    (2026-11-14 16:07Z: trend_donchian_1h BTC short pkg-13ec01223e304ad4 read '+60.52R est' while its packets read
+    about +1.7R).
+    """
     side = side_of(direction)
-    e, s, m = _f(entry), _f(sl), _f(mark)
-    if side is None or e is None or s is None or m is None or e == s:
+    e, s, m, rk = _f(entry), _f(sl), _f(mark), _f(risk)
+    if side is None or e is None or m is None:
+        return None
+    unit = rk if rk is not None and rk > 0 else (abs(e - s) if s is not None else None)
+    if not unit:
         return None
     sign = 1.0 if side == "long" else -1.0
-    return round((m - e) * sign / abs(e - s), 2)
+    return round((m - e) * sign / unit, 2)
+
+
+def _initial_risks(conn: sqlite3.Connection, pkg_ids: Iterable[str]) -> dict[str, float]:
+    """``{order_package_id: signal-time risk_per_unit}`` for the packages that declared one. Best-effort."""
+    from src.runtime.r_provenance import declared_initial_risk
+    ids = [p for p in pkg_ids if p]
+    out: dict[str, float] = {}
+    if not ids:
+        return out
+    try:
+        marks = ",".join("?" for _ in ids)
+        for pid, meta in conn.execute(
+                f"SELECT order_package_id, meta FROM order_packages WHERE order_package_id IN ({marks})", ids):
+            r = declared_initial_risk(meta)
+            if r is not None:
+                out[str(pid)] = r
+    except sqlite3.Error as exc:  # allow-silent: no declared risk -> the current-stop fallback, labelled
+        logger.debug("conflicting_exposure: order_packages risk read failed: %s", exc)
+    return out
 
 
 def read_open_legs(db_path: str | None = None,
@@ -142,6 +171,7 @@ def read_open_legs(db_path: str | None = None,
                 "SELECT order_package_id, strategy, symbol, direction, entry, sl, account_id FROM prop_tickets "
                 "WHERE status = 'filled' AND order_package_id IS NOT NULL AND order_package_id != ''"
             ).fetchall() if has_prop else []
+            risks = _initial_risks(conn, {str(r["order_package_id"]) for r in list(rows) + list(prop_rows)})
         finally:
             conn.close()
         books["journal"] = {"state": "read", "rows": len(rows)}
@@ -162,6 +192,9 @@ def read_open_legs(db_path: str | None = None,
         if aid not in d["accounts"]:
             d["accounts"].append(aid)
             d["account_classes"][aid] = "prop"
+    for pid, d in pkgs.items():
+        d["risk"] = risks.get(pid)
+        d["open_r_basis"] = "initial_risk" if d["risk"] is not None else "current_stop"
     marks: dict[str, float | None] = {}
     for d in pkgs.values():
         d["open_r"], d["open_r_state"] = None, "could_not_look"
@@ -175,7 +208,7 @@ def read_open_legs(db_path: str | None = None,
             except Exception as exc:  # noqa: BLE001  # allow-silent: one unread mark is labelled, never 0
                 marks[sym] = None
                 logger.debug("conflicting_exposure: mark read failed for %s: %s", sym, exc)
-        r = open_r(d["direction"], d["entry"], d["sl"], marks[sym])
+        r = open_r(d["direction"], d["entry"], d["sl"], marks[sym], d.get("risk"))
         if r is None:
             d["open_r_reason"] = "mark_or_bracket_missing"
         else:
@@ -229,7 +262,9 @@ def render_alert(conflict: dict[str, Any]) -> str:
     for x in conflict["legs"]:
         accts = ", ".join(x.get("accounts") or []) or "—"
         lines.append(f"• {str(x.get('direction')).upper()} {x.get('leg')} ({x.get('timeframe') or '—'}) "
-                     f"on {accts}: open {_fmt_r(x.get('open_r'))} est, pkg {x['order_package_id']}")
+                     f"on {accts}: open {_fmt_r(x.get('open_r'))} est"
+                     f"{' (1R from the current stop)' if x.get('open_r_basis') == 'current_stop' and x.get('open_r') is not None else ''}"
+                     f", pkg {x['order_package_id']}")
     lines.append(f"key {conflict['key']}")
     return "\n".join(lines)
 
@@ -271,7 +306,7 @@ def fill_open_r(found: dict[str, Any], mark_fn: Callable[[Any], float | None]) -
                 except Exception as exc:  # noqa: BLE001  # allow-silent: one unread mark is labelled, never 0
                     marks[sym] = None
                     logger.debug("conflicting_exposure: mark read failed for %s: %s", sym, exc)
-            r = open_r(x.get("direction"), x.get("entry"), x.get("sl"), marks[sym])
+            r = open_r(x.get("direction"), x.get("entry"), x.get("sl"), marks[sym], x.get("risk"))
             if r is not None:
                 x["open_r"], x["open_r_state"], x["mark"] = r, "estimated", marks[sym]
                 x.pop("open_r_reason", None)

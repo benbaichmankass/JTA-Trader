@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Conflicting-exposure alert open R: 1R is now the package's signal-time risk_per_unit (order_packages.meta via r_provenance.declared_initial_risk, which a trailing amend cannot reach), falling back to |entry - current stop| only when no risk was declared, and the alert line says '(1R from the current stop)' then. Cause: the 16:07Z alert read trend_donchian_1h BTC short pkg-13ec01223e304ad4 at +60.52R est against about +1.7R in its packets; the stop had trailed close to entry and was the denominator. Alert text only, no decision reads it. src/runtime/conflicting_exposure.py is in the trader import closure: merging restarts the trader, so batch it with the other restart-causing merges. Revert: git revert.",
+  "why": "The conflict alert inflated open R ~35x on a trailed stop."
+}
