@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tooling fix (manager 2026-11-14 01:20Z): scripts/ops/pipeline.py --mint-id read the FROZEN local export after the WSD-S4 freeze and re-issued PI-20261114-TFZXAKEK-0001, which the live store already held (append() refused it, safely). mint_id() now unions the live store's ids (work API) when the canonical store is frozen and no work_store.db is local, and raises PipelineError (CLI exit 1) rather than minting from a stale export when the live store cannot be read. 3 tests, each shown failing on the pre-change code. End-to-end against the live store from a frozen checkout: OK. Revert: git revert."
+}
