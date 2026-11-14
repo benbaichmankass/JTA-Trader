@@ -1450,12 +1450,50 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261114-db1a-03
   lever_family: regime_gating
+- family: regime_gating (HTF daily SMA200 long gate, harness-native)
+  varied: arm A config-exact vs arm H --htf-long-sma-days 200 inside the harness, record 2025-11-13..2026-11-12 + year before, live decision bar,
+    full cost stack
+  response:
+    verdict: fail
+    unit_verdict: fail
+    run: '43575944709'
+    rule: RULE-DFR-HTF-NATIVE-20261114
+    arm_H: --htf-long-sma-days 200 (inside the harness)
+    record:
+      A_net_r: -15.7396
+      A_n: 95
+      H_net_r: -1.4059
+      H_n: 65
+      H_folds_positive: 1
+      H_n_folds: 4
+      H_stage0: false
+      H_beats_A: true
+    prior:
+      A_net_r: -3.2181
+      A_n: 102
+      H_net_r: 2.2002
+      H_n: 78
+      holds: true
+    pooled:
+      A_record: -142.3426
+      H_record: -57.0308
+      A_prior: 106.089
+      H_prior: 105.4607
+      delta_record: 85.3118
+      delta_prior: -0.6283
+    reading: 'harness-native: the gate cuts the record-year loss but is neutral-to-negative the year before (pooled H-A prior -0.63R); unit FAIL,
+      no per-leg pass'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-04
+  lever_family: regime_gating
 units:
 - RQ-20261113-f251-09
 - RQ-20261113-f251-22
 - RQ-20261114-db1a-01
 - RQ-20261114-db1a-02
 - RQ-20261114-db1a-03
+- RQ-20261114-db1a-04
 manifest_notes:
   census_2026_11_14: 'DEMO-FLOOR-ITER lever-family census after the 2nd forming-bar lever failed (AM-ML guard). Forming record (2025-11-13..2026-11-12):
     -15.74R over n 95, gross -10.11R, cost 5.63R; long -19.06R n40, short +3.32R n55. The equal-length window before it (2024-11-13..2025-11-12,
@@ -1498,7 +1536,10 @@ manifest_notes:
     (12/15 legs negative, pooled -142.3R vs +106.1R the year before). Part B: the selected cell chop/long loses the record year (-75.4R n229)
     but wins the year before (+25.6R n220), so it fails. This leg has no chop/long trades (adx_min 25), so its ex-cell result is unchanged: -15.74R
     n95 / -3.22R n102. The retirement proposal goes to the operator via the manager.'
-  htf_filter_read_2026_11_14: 'RQ-20261114-db1a-03 (HTF daily-SMA200 long filter, PASS pooled, POST-HOC): on this leg the filter takes the record year from
-    -15.74R n95 to -0.44R n63 and the year before from -3.22R n102 to +2.20R n78. Still not positive on the record year, and post-hoc (no harness-native run
-    yet). It does NOT change the db1a-02 gate read (that gate was registered on db1a-02), but it is material to the operator''s RETIRE-AVAX-PB-2H decision:
-    the held retirement may be premature if the harness-native filter unit confirms.'
+  htf_filter_read_2026_11_14: 'RQ-20261114-db1a-03 (HTF daily-SMA200 long filter, PASS pooled, POST-HOC): on this leg the filter takes the record
+    year from -15.74R n95 to -0.44R n63 and the year before from -3.22R n102 to +2.20R n78. Still not positive on the record year, and post-hoc
+    (no harness-native run yet). It does NOT change the db1a-02 gate read (that gate was registered on db1a-02), but it is material to the operator''s
+    RETIRE-AVAX-PB-2H decision: the held retirement may be premature if the harness-native filter unit confirms.'
+  htf_native_read_2026_11_14: 'RQ-20261114-db1a-04 (harness-native HTF SMA200 long gate, run 43575944709): unit FAIL and this leg FAILS per leg: H record
+    -1.41R n65 (1/4 folds; A -15.74R) / prior +2.20R (A -3.22R). The harness-native gate brings the leg near breakeven but not to a Stage-0 pass on the record
+    year. The operator''s RETIRE-AVAX-PB-2H HOLD condition (wait for db1a-04) is now resolved: db1a-04 does not rescue this leg.'
