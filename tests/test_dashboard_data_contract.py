@@ -228,6 +228,7 @@ def test_positions_returns_open_trade_against_canonical_schema(
         "stopLoss": None,
         "takeProfit": None,
         "pattern": None,
+        "orderPackageId": None,  # POSITIONS-API-ORDER-PACKAGE-ID: the row carries no package
         "isDemo": False,  # 2026-06-04 reporting-cleanup
         "accountClass": "real_money",  # account_class convention (2026-06-15)
         "assetClass": "crypto",  # coarse reporting bucket (BTCUSDT → crypto)
@@ -470,3 +471,14 @@ def test_positions_excludes_closed_and_backtest_trades(
     )
     resp = client.get("/api/bot/positions")
     assert resp.json() == []
+
+
+def test_positions_carries_the_order_package_id(client: TestClient, isolate_paths: Path) -> None:
+    """POSITIONS-API-ORDER-PACKAGE-ID: siblings on other books share the package, so status_move matches them exactly."""
+    db = isolate_paths / "trade_journal.db"
+    _make_canonical_trades_db(db)
+    _insert_trade(db, timestamp="2026-05-09T10:00:00Z", symbol="ADAUSDT", direction="short", entry_price=0.5,
+                  position_size=10.0, status="open", is_backtest=0, account_id="bybit_2",
+                  created_at="2026-05-09T10:00:00Z", order_package_id="pkg-abc")
+    body = client.get("/api/bot/positions").json()
+    assert body[0]["orderPackageId"] == "pkg-abc"

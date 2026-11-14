@@ -802,7 +802,8 @@ def _fetch_open_position_rows(effective_include: bool) -> list:
                 SELECT id, account_id, symbol, direction, position_size,
                        entry_price, created_at,
                        stop_loss, take_profit_1, strategy_name,
-                       COALESCE(is_demo, 0), account_class, notes
+                       COALESCE(is_demo, 0), account_class, notes,
+                       order_package_id
                 FROM trades
                 WHERE status = 'open'
                   AND COALESCE(is_backtest, 0) = 0
@@ -987,6 +988,9 @@ async def _build_positions(effective_include: bool) -> list[dict[str, Any]]:
             "stopLoss": float(r[7]) if r[7] is not None else None,
             "takeProfit": float(r[8]) if r[8] is not None else None,
             "pattern": r[9] if r[9] else None,
+            # The order package this leg belongs to (POSITIONS-API-ORDER-PACKAGE-ID): siblings on other books share it,
+            # so a consumer matches them exactly instead of on leg + symbol + side. null = the row carries none.
+            "orderPackageId": (r[13] or None) if len(r) > 13 else None,
             "isDemo": bool(r[10]),
             "accountClass": _account_class_wire(r[11], r[10]),
             # ``assetClass`` ("crypto"|"index"|"commodity"|"bond"|"equity"|
