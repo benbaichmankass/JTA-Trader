@@ -3495,3 +3495,21 @@ units:
 - RQ-20261114-db1a-02
 - RQ-20261114-db1a-03
 - RQ-20261114-db1a-04
+manifest_notes:
+  census_2026_11_14: 'Lever-family census (manager ruling 2026-11-14 06:08Z). Decides on the CLOSED bar (decision_bar: closed). Record (2025-11-13..2026-11-12)
+    -9.75R n166; year before -4.52R n183: negative in BOTH years. Committed evidence attribution (n165): gross +14.48R, cost 14.73R, ''cost erases a gross
+    edge''; about 0.09R of cost per trade; long -2.97R vs short +2.72R. On bybit_1 only (no prop account). Tested on these windows: pooled ADX cell (db1a-02,
+    FAIL), HTF SMA200 long gate (db1a-03 post-hoc PASS pooled; db1a-04 harness-native FAIL, this leg H -2.01R / +3.72R).'
+  entry: 'TESTED closed 2020..2026: min_confidence 0.7 +50.2R / 0.8 +75.7R (pass, monotone). UNTESTED on the record window.'
+  exit: 'TESTED closed: trail_mult 4.5 +122.0R n1070 (pass, single point), trail_adx_below 25 pass, momentum_stale 8 pass; many exit levers fail but sit
+    at +40..+80R. UNTESTED on the record window.'
+  filter: 'TESTED closed: cooldown_bars 4/8 pass (+21..+38R), adx_min 20 pass (-0.95R), vol gates fail. UNTESTED on the record window.'
+  direction: UNTESTED; shorts are positive in the evidence (+2.72R) and longs negative (-2.97R).
+  sizing_vs_cost: UNTESTED and the attribution's pointer (gross edge, cost removes it). Closed-bar atr_stop_mult 3.125 -9.91R (pass) vs 1.875 -52.37R.
+  session: 'TESTED closed: skip_hours 0-7 +33.8R, 12-15 +55.7R, both fail.'
+  regime_gating: 'TESTED on the record window: ADX cell (db1a-02) and HTF gate (db1a-03/-04), both FAIL.'
+  timeframe: UNTESTED; no diagnostic pointer.
+  symbol_set: UNTESTED; no diagnostic pointer.
+  next_2026_11_14: 'NOT lever-exhausted: no closed-bar responder (min_confidence 0.8, trail_mult 4.5, cooldown) has run on the record window, and sizing_vs_cost
+    is the diagnosed cause. Candidate unit: min_confidence 0.8 or atr_stop_mult 3.125 on the record + year-before windows, same AM-ML guard; the db1a-01/-02
+    caveat applies (lever responses flip between years). No retirement proposal; manager decides.'
