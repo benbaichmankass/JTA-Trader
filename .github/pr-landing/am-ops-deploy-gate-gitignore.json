@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Deploy restart gate: the ROOT .gitignore / .gitattributes join the non-runtime set in scripts/deploy_pull_restart.sh, and its two lock-step copies (diag.py _NON_RUNTIME_PATHS_RE, trader_import_closure.py NON_RUNTIME_PATHS_RE) stay equal. #25995 (.gitignore + .github landing files) restarted the trader at 10:41Z for nothing. Itself touches scripts/ + src/web/api, so it restarts once: manager batches with #25994. Revert: git revert.",
+  "why": "Stop non-runtime root files from restarting the trader."
+}

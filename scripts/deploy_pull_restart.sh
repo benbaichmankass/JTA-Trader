@@ -486,14 +486,14 @@ if [ "${DEPLOY_FORCE_RESTART:-0}" != "1" ]; then
     if [ -n "${CHANGED_FILES}" ]; then
         # Strip the known-safe non-runtime paths; anything left needs a restart.
         RUNTIME_CHANGES="$(printf '%s\n' "${CHANGED_FILES}" \
-            | grep -vE '^(docs/|tests/|\.claude/|\.github/|[^/]+\.md$|research/|runtime_logs/|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/|comms/(desk|live_review|live_parity|cloud|prop_survival|claude_judgments|reviews|ops|ci|ml-plan|news_alpha|strategy_reviews|reports|data_lake)/|comms/claude_strategy_scores\.jsonl$|tools/phone-executor/|tools/phone-probe/|deploy/trainer/)' || true)"
+            | grep -vE '^(docs/|tests/|\.claude/|\.github/|[^/]+\.md$|research/|runtime_logs/|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/|comms/(desk|live_review|live_parity|cloud|prop_survival|claude_judgments|reviews|ops|ci|ml-plan|news_alpha|strategy_reviews|reports|data_lake)/|comms/claude_strategy_scores\.jsonl$|tools/phone-executor/|tools/phone-probe/|deploy/trainer/|\.gitignore$|\.gitattributes$)' || true)"
         # Add back the scripts/research modules the web-api imports in-process
         # (the EXCEPTION above). Without this the brief serves stale code.
         IN_PROCESS_CHANGES="$(printf '%s\n' "${CHANGED_FILES}" \
             | grep -E '^scripts/research/(dispatch_queue|e35_bracket_geometry_sweep|m20_fleet_exit_sweep|m20_wf_effective|queue_grade|queue_replenish|queue_throughput|research_queue)\.py$' || true)"
         RUNTIME_CHANGES="${RUNTIME_CHANGES}${IN_PROCESS_CHANGES}"
         if [ -z "${RUNTIME_CHANGES}" ]; then
-            echo ">>> Non-runtime commit (${RUNTIME_BASE:0:7} -> ${POST_SYNC_HEAD:0:7}): only non-runtime paths changed (docs/tests/.claude/.github/top-level-md/research/runtime_logs/scripts/{research,ci}/comms/{research,strategy_evidence,macro,desk,live_review,live_parity,cloud,prop_survival,claude_judgments,reviews,ops,ci,ml-plan,news_alpha,strategy_reviews,reports,data_lake}/comms/claude_strategy_scores.jsonl/tools/{phone-executor,phone-probe}/deploy/trainer)"
+            echo ">>> Non-runtime commit (${RUNTIME_BASE:0:7} -> ${POST_SYNC_HEAD:0:7}): only non-runtime paths changed (docs/tests/.claude/.github/top-level-md/research/runtime_logs/scripts/{research,ci}/comms/{research,strategy_evidence,macro,desk,live_review,live_parity,cloud,prop_survival,claude_judgments,reviews,ops,ci,ml-plan,news_alpha,strategy_reviews,reports,data_lake}/comms/claude_strategy_scores.jsonl/tools/{phone-executor,phone-probe}/deploy/trainer/.gitignore/.gitattributes)"
             echo ">>> Code synced + pings sent; skipping dependency install, unit refresh, and service restart (BL-20260529-002)."
             printf '%s\n' "${CHANGED_FILES}" | sed 's/^/>>>   changed: /'
             # The running processes' RUNTIME code already matches POST (only
