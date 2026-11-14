@@ -369,6 +369,8 @@ lines:
     - {lever: 'venue population test (11-04 rule): 51 Bybit USDT perps, own costs, pre-run filter', ref: RQ-20261112-2e3b-01, verdict: 'fail (real-money set stays the c692-06 five coins; Tier-3 record + map-removal patch held for AM-ML)'}
     - {lever: '0.5 LightGBM + 0.5 ridge ensemble on the ENTRY recipe, 13 monthly refits (ML-F30)', ref: RQ-20261112-4654-07, verdict: 'indeterminate (paired ens-raw +0.0195, CI95 [-0.104, +0.143], k 13, n 3556; research/results/RQ-20261112-4654-07/43504860302.jsonl)'}
     - {lever: 'conformal mu/sigma selection at matched coverage (ML-F31)', ref: RQ-20261112-4654-08, verdict: 'fail (paired conf-raw -0.0022, CI95 [-0.016, +0.011], k 13, n 10756; research/results/RQ-20261112-4654-08/43553074642.jsonl)'}
+    - {lever: 'diagnose the served -0.13 R window (regime vs selection vs cost)', ref: RQ-20261112-cd01-01, verdict: 'indeterminate by rule: gap vs frozen v1 -0.211 R (se 0.186) = regime -0.200 + selection -0.011, cost +0.003 (COST-NOT-DRIVER); clean frozen v1 lost -0.324 on the same 14 days (REGIME-SHARED); n 375 (comms/research/RQ-20261112-cd01-01/local-20261112T1500Z/verdict.json). Read by ML-PRIMARY 11-14: a shared regime drawdown at the measured se, not refit drift and not cost'}
+    - {lever: 'is the held-out selection a cost-per-R (vol) tilt? Brinson split', ref: RQ-20261112-a7e8-03, verdict: 'indeterminate: tilt share 0.061 (< 0.5, so NOT mainly a vol tilt); within-bucket gross selection +0.0051 R (t 0.84, not significant). The net-R LABEL is cost-driven on atr_pct (IC net 0.497 vs gross 0.003, cd01-01 R3): the target lever is the residual / gross-anchored label (FRONTIER-Q-RESID-ENTRY, PR #25344)'}
     - {lever: 'ridge vs LightGBM, same features + target (ML-F32)', ref: RQ-20261112-4654-09, verdict: 'fail (paired ridge-raw -0.1001, CI95 [-0.254, +0.053], k 10, n 851; research/results/RQ-20261112-4654-09/43462223910.jsonl)'}
   levers_ahead:
     - lever: diagnose the served -0.13 R window (drift vs regime vs cost)
@@ -397,7 +399,7 @@ lines:
       pass: Tier-3 widening packet (a real-money widening needs its own population test - operator 2026-11-04)
       fail: per-account symbol map is replaced by the recorded result; bybit_2 keeps the tested 5
   next_weeks:
-    W47: 'retrain-unit + vol-confound reads land (dispatched 11-12, due 11-15); RESID-ENTRY registered and run'
+    W47: 'diagnosis landed (cd01-01 + a7e8-03, both indeterminate; regime-shared, cost not driver); drive RESID-ENTRY (#25344) to a grade; author the regime-as-feature arm (MLP-D2-REVIEW-HEADS) into ML-LEVER-PLAN'
     W48: 'combined held-out read under ML-LEVER-PLAN if any lever passed dev folds; weekly forward grade continues'
     W49: 'population test (filter registered first)'
     W50: 'review the forward grade series as the demotion read'
@@ -790,9 +792,9 @@ lines:
       - {record: docs/plans/ML-ROADMAP-MECE-2026-11.md § 4, provenance: QUOTED}
   levers_tried: []
   levers_ahead:
-    - lever: VOI census (14-day refusals by reason; Stage-0 concurrent same-symbol episodes)
-      ref: PI-20261104-BCZDXJNR-0002
-      baseline: n/a (census)
+    - lever: VOI census (Stage-0 concurrent same-symbol trades on the 5 crypto real-money pairs, two windows)
+      ref: 'RQ-20261114-82fd-02 (ML-PRIMARY; RULE-RQ20261114-82fd-02-D5-VOI; folds PI-20261104-BCZDXJNR-0002 TODO 1)'
+      baseline: n/a (census; materiality = >= 20 concurrent trades and share >= 15 percent in both windows)
       pass: the harness + rule arms (AGG-HARNESS, needs_authoring) are built
       fail: the slot stays a rule
     - lever: same-symbol head-to-head re-runs
@@ -800,7 +802,7 @@ lines:
       baseline: today's slices, 1/N, best-single, net of cost
       pass: Tier-3 allocation change
       fail: slices stay
-  next_weeks: {W47: census, W48: 'harness only if material concurrency', W49: none, W50: none}
+  next_weeks: {W47: 'grade 82fd-02 (authored + dispatched 11-14); PASS -> A0..A4 rule-arm unit', W48: 'harness only if material concurrency', W49: none, W50: none}
   exhaustion: the census shows concurrency too rare to move net P&L (threshold set in its own registration).
   owner: AM-ML
   plan_items: []
@@ -820,9 +822,9 @@ lines:
   levers_tried:
     - {lever: brackets as predictions (doctrine), ref: BRACKETS-AS-PREDICTIONS, verdict: done}
   levers_ahead:
-    - lever: Pointer v0 -- tp-revision-v1 at bar 0 of Foxhound-1 entries
-      ref: needs_authoring (MECE P5, parent RQ-20261101-383f-01)
-      baseline: the fixed 3-ATR TP at the same entries, frozen held-out window, net of cost
+    - lever: Pointer v0 -- the tp-revision recipe extended with check-in 0, one static entry-time TP per ml_entry trade
+      ref: RQ-20261114-82fd-01 (ML-PRIMARY 2026-11-14; RULE-RQ20261114-82fd-01-POINTER-V0, two windows, non-inferiority -0.02 R)
+      baseline: the fixed 3-ATR TP at the same entries and SL, net of the full cost stack, prior + record year
       pass: Tier-3 bracket proposal for ml_entry
       fail: Pointer v0 closes; the predict head below continues
     - lever: move-extent predict head, step 1 sharper than baseline
@@ -835,9 +837,9 @@ lines:
       baseline: the leg's fixed bracket
       pass: as above
       fail: as above
-  next_weeks: {W47: author Pointer v0, W48: run + drive RQ-20261009-900, W49: grade, W50: 'ML-FS-BRACKETS-HOLD (ranked LATER @11-30)'}
+  next_weeks: {W47: 'grade 82fd-01 (authored + dispatched 11-14); PASS -> held Tier-3 PR', W48: 'drive RQ-20261009-900 if 82fd-01 FAILs', W50: 'ML-FS-BRACKETS-HOLD (ranked LATER @11-30)'}
   exhaustion: Pointer v0 and the predict head FAIL on their registered reads.
-  owner: AM-TRADING (row) / AM-ML (Pointer v0)
+  owner: ML-PRIMARY
   plan_items: [ML-X1, ML-X2]
 
 # =====================================================================================================================
@@ -933,6 +935,11 @@ lines:
     - {lever: out-of-family value, ref: RQ-20261101-78fc-03, verdict: fail}
     - {lever: volume composition, ref: RQ-20261112-0bc8-02, verdict: fail}
   levers_ahead:
+    - lever: 'exit-now v0 on ml_entry: the Labrador-1b first-passage model values hold vs close at each 4h check-in, TP fixed'
+      ref: RQ-20261114-1ae8-01 (ML-PRIMARY 2026-11-15; RULE-RQ20261114-1ae8-01-EXIT-NOW-V0, two windows, non-inferiority -0.02 R)
+      baseline: hold to the fixed 2/3 ATR bracket on the same ml_entry trades, net of the full cost stack, prior + record year
+      pass: held Tier-3 exit-now proposal for ml_entry (real-money D8 model)
+      fail: exit-now on ml_entry closes; the eth_4h variant below is next
     - lever: variant for trend_donchian_eth_4h
       ref: PI-20261104-NHN7JV7U-0001
       baseline: hold to bracket on the same trades, net of cost
@@ -943,7 +950,7 @@ lines:
       baseline: as above
       pass: as above
       fail: as above
-  next_weeks: {W47: author the eth_4h variant, W48: run, W49: grade, W50: none}
+  next_weeks: {W47: 'grade 1ae8-01 (authored + dispatched 11-15); author the eth_4h variant iff it FAILs', W48: run, W49: grade, W50: none}
   exhaustion: the eth_4h variant and the desk-label variant FAIL; with today's FAILs the head's feature set then has no lever left.
   owner: AM-ML
   plan_items: [ML-X3, ML-X4, ML-N4]
@@ -1473,10 +1480,10 @@ infra_queue:
 # declared power, on two windows (record year + the year before). A fee-only corpus never counts. A PASS -> a HELD Tier-3 PR.
 # =====================================================================================================================
 slot_baselines:
-  - {slot: D6, line: MLP-D6-POINTER, unit: 'Pointer v0 (entry-time TP from the first-passage model) vs the fixed 3 ATR TP on ml_entry entries', status: authoring}
-  - {slot: D5, line: MLP-D5-MASTIFF, unit: 'VOI census, then rule arms A0 slices / A1 1/N netting / A2 best-single on the same tick stream', status: authoring}
+  - {slot: D6, line: MLP-D6-POINTER, unit: 'RQ-20261114-82fd-01 Pointer v0 (entry-time TP) vs fixed 3 ATR TP on ml_entry trades', status: queued}
+  - {slot: D5, line: MLP-D5-MASTIFF, unit: 'RQ-20261114-82fd-02 VOI census; then rule arms A0 slices / A1 1/N netting / A2 best-single', status: queued}
   - {slot: D3, line: MLP-D3-FOXHOUND-1, unit: 'served-window diagnosis + cost-per-R selector (CRYPTO-ENTRY-RETRAIN-UNIT, ML-DECISION-LABEL-VOL-CONFOUND)', status: in_flight (due 11-15)}
-  - {slot: D8, line: MLP-D8-LABRADOR-2, unit: 'exit head vs hold-to-bracket on two windows', status: next}
+  - {slot: D8, line: MLP-D8-LABRADOR-2, unit: 'RQ-20261114-1ae8-01 exit-now v0 on ml_entry vs hold-to-bracket', status: queued}
   - {slot: D9, line: MLP-D9-WHIPPET, unit: 'maker-first vs taker fill replay', status: next}
   - {slot: D10, line: MLP-D10-BASSET, unit: 'grade-vs-CUSUM early decay', status: later}
 
