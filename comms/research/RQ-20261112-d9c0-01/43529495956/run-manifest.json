@@ -1,0 +1,84 @@
+{
+  "unit": "RQ-20261112-d9c0-01",
+  "run_id": "43529495956",
+  "commit_sha": "dc6c16bcba0c98d8a111e645f26e4ab828a7321d",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/43529495956",
+  "timeout_minutes": 240,
+  "runner": {
+    "cpu_model": "AMD EPYC 9V45 96-Core Processor",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "avx512_vnni",
+      "avx512bw",
+      "avx512f",
+      "avx512vl",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1019-azure",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261111.196.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "7e434c4c74a8",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/ml_entry_equity.py",
+        "structure",
+        "--cache",
+        "/tmp/ml_entry_equity",
+        "--out",
+        "comms/research/RQ-20261112-d9c0-01/43529495956",
+        "--unit",
+        "RQ-20261112-d9c0-01",
+        "--where",
+        "research-script-run",
+        "--ensemble-seeds",
+        "1,2,3,4,5",
+        "--taus",
+        "0.25",
+        "--min-mean",
+        "0.04",
+        "--reproduce-sha",
+        "0afc49948a41671a",
+        "--expect-n",
+        "207",
+        "--expect-mean",
+        "0.4922070639835765",
+        "--trades-out",
+        "comms/research/RQ-20261112-d9c0-01/43529495956/ml_entry_eq_struct__trades.jsonl",
+        "--rule-id",
+        "RULE-RQ20261112-d9c0-01-REPRO",
+        "--registered-at",
+        "2026-11-12"
+      ],
+      "log": "comms/research/RQ-20261112-d9c0-01/43529495956/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 6515.1
+    }
+  ],
+  "all_ok": true
+}
