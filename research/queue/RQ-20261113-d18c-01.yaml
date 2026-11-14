@@ -1,6 +1,6 @@
 id: RQ-20261113-d18c-01
 title: 'Desk structural lever UNIVERSE: does widening (or replacing) the six-symbol universe lift the 1h-packet information ceiling to S3 >= +0.25 R on the same DEV sample? Token-free screen before any judge tokens'
-status: blocked
+status: queued
 cadence: once
 theme: live_strategy
 priority: 1
@@ -26,7 +26,7 @@ power:
   effect_units: R
   sd: 1.6
   design: one_sample
-  alpha: 0.0083
+  alpha: 0.01
   power: 0.80
   basis: >-
     INFERRED from the instrument's own registered population: about 3,816 two-hour DEV cutoffs, test folds 2-4 hold about three quarters of them
@@ -34,6 +34,8 @@ power:
     value fe57-03 used). Picks cluster by week, so the effective n is the number of DEV test weeks with a design effect well above 1. At alpha
     0.05/6 (2 arms x 3 learners) the MDE is near +0.25 R only if the design effect stays at or below about 5 (INFERRED, not measured). STATED: this
     screen is powered for the operator's bar, not for anything smaller; a FAIL bounds the lever at about +0.25 R, it does not show zero.
+    The power FLOOR is computed at alpha 0.01, the nearest level the queue's floor tabulates (0.10/0.05/0.01); the decision rule's own
+    corrected CI stays at 0.05/6 = 0.0083, so the floor is slightly optimistic, which is stated rather than hidden.
   feasibility:
     source: none
     accrual_basis: >-
@@ -76,17 +78,6 @@ universe:
     3,000-bar look-back is complete for the whole DEV window. Renamed tickers (MATIC/POL) are excluded on purpose. A symbol whose candles or
     funding are missing for part of the window is reported as such and dropped for the whole arm (counted, never imputed); the list itself is not
     edited after the run.
-blocked_on:
-- kind: build
-  ref: DESK-18D-JUDGE-2
-  what: >-
-    desk_edge_ceiling.py has no universe option: the symbols come from desk_gen_replay_driver.REGISTERED_SYMBOLS (six). Needed: a --universe
-    W|R option on build and run that swaps the symbol list (and the cross-sectional rank features' population) and changes nothing else, a candle
-    and funding fetch for the 18 added symbols, a self-test that --universe SIX reproduces the committed six-symbol ceiling numbers, and the two
-    controls passing per arm. Tier 1 research code; AM-OPS builds it after this unit lands (operator "Build universe next").
-  clears_when: >-
-    The --universe option is on main with its self-test (SIX reproduces the committed ceiling) and run.workflow can name it. Then: git mv this
-    file to research/queue/, fill run / lands, remove blocked_on, set status: queued.
 compute: cpu_long
 value:
   usd_at_stake_per_month: 500
@@ -101,6 +92,26 @@ routing:
   basis: >-
     INFERRED by scaling: fe57-03 MEASURED about 25 min to build 9,111 packets for six symbols on 4 cores, 6 GB peak; 24 symbols is about 4x the
     actions per cutoff, so roughly 4x memory for the action matrix and 2-4x the build time. Re-measure on the first run.
+run:
+  command:
+  - python3
+  - scripts/research/desk_edge_ceiling.py
+  - universe-run
+  - --out
+  - '{out_dir}'
+  - --candles
+  - /tmp/desk_universe_candles
+  - --fetch-candles
+  - --funding
+  - /tmp/desk_universe_funding
+  - --fetch-funding
+  inputs:
+    research_unit: RQ-20261113-d18c-01
+  timeout_minutes: 330
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
 related:
 - DESK-18D-JUDGE-2
 - RQ-20261027-e72b-01
