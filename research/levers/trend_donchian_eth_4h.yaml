@@ -3874,6 +3874,7 @@ levers:
 units:
 - RQ-20261104-e4a1-01
 - RQ-20261114-db1a-02
+- RQ-20261114-db1a-03
 levers_tested:
 - family: exit head (ML early-exit, E1/E1.5)
   varied: 19 head arms (tau grid + below_half_r/pre_mfe1/age8/age8_below_half_r shapes) vs the declared exit, selected on discovery, read once
@@ -3922,4 +3923,36 @@ levers_tested:
   shape: single_point
   tested_at_power: true
   unit: RQ-20261114-db1a-02
+  lever_family: regime_gating
+- family: regime_gating (HTF daily SMA200 long filter, post-hoc)
+  varied: ungated vs longs skipped when the prior daily close < SMA200 (own symbol), pooled over 15 crypto demo-floor legs, record 2025-11-13..2026-11-12
+    + year before, live decision bar, full cost stack
+  response:
+    verdict: pass
+    run: '43567392380'
+    rule: RULE-DFR-HTF-LONG-FILTER-20261114
+    filter: skip a long when the symbol's prior completed daily close < its 200-day SMA (Binance daily); shorts untouched
+    leg:
+      record_net_r: -15.2927
+      record_n: 54
+      filtered_record_net_r: -4.122
+      filtered_record_n: 31
+      prior_net_r: 22.3697
+      prior_n: 42
+      filtered_prior_net_r: 20.5926
+      filtered_prior_n: 31
+    pooled:
+      gated_record:
+        n: 572
+        net_r: -88.0639
+      gated_prior:
+        n: 259
+        net_r: -5.3393
+      kept_record_net_r: -54.2763
+      kept_prior_net_r: 111.4287
+    reading: 'PASS pooled (gated longs lose both years, stable drag) but POST-HOC: a harness-native run is required before any Tier-3; the year-before
+      drag is thin (-5.3R over 259, about -0.02R/trade)'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-03
   lever_family: regime_gating
