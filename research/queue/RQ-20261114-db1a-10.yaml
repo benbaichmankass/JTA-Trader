@@ -1,5 +1,5 @@
 id: RQ-20261114-db1a-10
-title: 'tlt_pullback_1h real-money promotion: re-measure the live-faithful record (Alpaca iex 1Hour + 1Min, forming bar) at the measured predictive TP K* 3.5R (tp_r 3.5) under RULE-D1, control = the committed record'
+title: 'tlt_pullback_1h real-money promotion: re-measure the live-faithful record (Alpaca iex 1Hour + 1Min, forming bar) at the measured predictive TP K* 3.5R, both sides with a conservative short borrow + dividend add-on vs a pre-registered long-only arm, RULE-D1, control = the committed record'
 status: queued
 cadence: once
 kind: experiment
@@ -8,7 +8,7 @@ priority: 1
 roadmap:
 - L-LADDER
 question: With tp_r 3.5 (the predictive K* RQ-20261112-5ab1-01 measured, calibration gap 0.005) in place of the 50R sentinel, does tlt_pullback_1h still clear RULE-D1 (net R > 0 net of the full
-  cost stack) on its committed record's window and corpus (Alpaca iex clock-aligned 1Hour + 1Min, live forming decision bar, us_equity_intraday session, 2025-06-02 15:00 .. 2026-11-11 20:00)?
+  cost stack, with a conservative short-side borrow + dividend add-on), and does the pre-registered long-only variant (tp_r 3.5, long side only) clear it, on its committed record's window and corpus (Alpaca iex clock-aligned 1Hour + 1Min, live forming decision bar, us_equity_intraday session, 2025-06-02 15:00 .. 2026-11-11 20:00)?
 why_this_matters: 'Manager 2026-11-14 15:13Z: assemble the real-money promotion check for tlt_pullback_1h (operator 2026-11-11 verbatim "promote tlt to real money", conditional on a holdout
   confirmation that RQ-20261113-f090-01 has now given: arm A = the live config, +7.02R n145 held back). tp-doctrine-guard fails a NEW real-money routing carrying the 50R sentinel / tp_intent
   none, so promotion needs a declared finite TP. 5ab1-01 measured K* 3.5R and put it to the operator to DECLARE; this unit measures what the declared value does to the record the promotion
@@ -43,6 +43,8 @@ run:
     - A=
     - --arm
     - K35=tp_r=3.5
+    - --arm
+    - L35=tp_r=3.5;--side-filter=long
     - --grade
     - stage0
     - --baseline
@@ -67,18 +69,48 @@ run:
     - --research-unit
     - RQ-20261114-db1a-10
     - --out
+    - '{out_dir}/abl'
+  - - python3
+    - scripts/research/short_cost_addon_grade.py
+    - --ablation-out
+    - '{out_dir}/abl'
+    - --both-arm
+    - K35
+    - --long-arm
+    - L35
+    - --report-arm
+    - A
+    - --div-pa
+    - '0.05'
+    - --borrow-pa
+    - '0.01'
+    - --n-floor
+    - '10'
+    - --leg
+    - tlt_pullback_1h
+    - --unit
+    - RQ-20261114-db1a-10
+    - --rule
+    - RULE-TLT1H-TP35-D1-20261114
+    - --out
     - '{out_dir}'
 decision_rule:
   id: RULE-TLT1H-TP35-D1-20261114
   registered_at: '2026-11-14'
   registered_before_run: true
-  statistic: 'exit_lever_ablation --grade stage0 --baseline K35 on tlt_pullback_1h over 2025-06-02 15:00 .. 2026-11-11 20:00, --forming-equity-fetch (Alpaca iex clock-aligned 1Hour + 1Min,
-    decision session us_equity_intraday: the corpus and decision bar of the committed record), net of the harness cost stack for the venue (fee 0, slippage 5 bps round trip, funding 0).
-    Arms: A = config-exact (tp_r 50 sentinel); K35 = tp_r 3.5, every other field unchanged. --control A = the committed record''s own __bt.json (n 149, net +4.0263R): A must reproduce it
-    within 2% of n and 0.5R.'
-  rule: 'RULE-D1 restated on K35: PASS iff K35 net_r > 0 with n >= 10 (fold-majority 1 is exactly RULE-D1''s net > 0, which has no fold clause); FAIL iff n >= 10 and K35 net_r <= 0;
-    INDETERMINATE iff the control arm A does not reproduce the committed record (the corpus differs, so nothing is read), K35 n < 10, or a run is missing. K35 - A and the per-fold table are
-    REPORTED, NOT GRADED (5ab1-01 already measured the OOS cost of K* vs the sentinel: -0.020 R/trade, CI95 [-0.082, +0.032]). No threshold is relaxed after any result.'
+  statistic: 'exit_lever_ablation over 2025-06-02 15:00 .. 2026-11-11 20:00, --forming-equity-fetch (Alpaca iex clock-aligned 1Hour + 1Min, decision session us_equity_intraday:
+    the corpus and decision bar of the committed record), net of the harness cost stack for the venue (fee 0, slippage 5 bps round trip, funding 0). Arms: A = config-exact (tp_r 50
+    sentinel, both sides); K35 = tp_r 3.5, both sides; L35 = tp_r 3.5 + --side-filter long. --control A = the committed record''s own __bt.json (n 149, net +4.0263R): A must reproduce it
+    within 2% of n and 0.5R. Then short_cost_addon_grade.py applies a SHORT-SIDE CARRY ADD-ON (manager 2026-11-14 15:21Z; ESTIMATED provenance): per short trade, (0.05 dividend +
+    0.01 borrow per annum) x calendar hold days / 365 x entry / stop distance, in R. 0.05 is above TLT''s roughly 4%/yr distribution and 0.01 is above an easy-to-borrow rate, both
+    conservative; the bars are split-adjusted only, so an ex-date drop is a gain to the short that it owes back as the dividend. A worst case (every short pays one full monthly
+    dividend) is reported, not graded. Long trades carry no add-on.'
+  rule: 'INDETERMINATE iff the control arm A does not reproduce the committed record (the corpus differs, so nothing is read), any arm ledger is missing, or K35 or L35 holds < 10
+    trades. BOTH clause: PASS iff K35 net R AFTER the short add-on > 0 (RULE-D1 with the add-on in the cost stack). LONG clause: PASS iff L35 net R > 0 (RULE-D1; no shorts). The
+    long-only arm is PRE-REGISTERED here, before any result, because the committed record''s shorts read -1.33R (n 77) on this window; it is not a post-hoc pick. PROPOSAL ARM: K35 if
+    its clause passes AND its adjusted net >= L35 net; else L35 if its clause passes; else none. Unit PASS iff a proposal arm exists; FAIL otherwise. Two arms are compared on one
+    window, in-sample (the window holds the record the 1751-01/f090 direction readings also touched); the proposal says so. K35 - A is reported, not graded (5ab1-01 measured the OOS
+    cost of K* vs the sentinel: -0.020 R/trade, CI95 [-0.082, +0.032]). No threshold is relaxed after any result.'
   what_it_does_not_do: Changes no config, roster, order or evidence record. A PASS supplies the re-measured number for the Tier-3 real-money proposal the manager takes to the operator
     (tp_r 50 -> 3.5 + tp_intent r_multiple as the operator's DECLARATION of K*, roster alpaca_live + alpaca_portfolio, a TLT same-symbol allocation record with ml_entry_eq_struct). It
     makes no claim that the edge is statistically distinguishable from zero.
@@ -107,17 +139,23 @@ iteration:
   diagnosis: 'check_tp_doctrine FAIL:entry_tp+tp_revision (50R sentinel, tp_intent none) on alpaca_paper, and a new real-money routing would fail the guard outright. 5ab1-01 measured a
     calibrated predictive K* 3.5R (reach IS 0.107 / OOS 0.112) whose OOS cost vs the sentinel straddles its -0.05 margin, so it was put to the operator to declare.'
   hypothesis: At tp_r 3.5 the live-faithful record keeps a positive net R net of cost.
-  search: Fixed at tp_r 3.5 (the measured K*); nothing searched.
+  search: Fixed at tp_r 3.5 (the measured K*), both sides vs long only (pre-registered, manager 15:21Z); 2 graded arms is the denominator.
   attempt: 1
   due_by: '2026-11-21'
   levers:
   - exit
+  - direction
   lever_arms:
   - family: exit
     param: tp_r
     values:
     - 3.5
     baseline_value: 50.0
+  - family: direction
+    param: side_filter
+    values:
+    - long
+    baseline_value: both
   map_entries:
   - research/levers/tlt_pullback_1h.yaml
 related:
