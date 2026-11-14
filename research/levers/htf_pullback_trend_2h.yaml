@@ -537,17 +537,24 @@ units:
 - RQ-20261113-f251-10
 - RQ-20261113-f251-15
 manifest_notes:
-  census_2026_11_13: 'DEMO-FLOOR-ITER lever-family census after the 2nd forming-bar lever failed (AM-ML multiple-testing guard). Forming baseline RQ-20261113-f251-01
-    over 2025-11-13..2026-11-12: -23.37R over n 105, gross -14.2R (negative BEFORE cost), every ADX cell negative.'
-  filter: 'TESTED forming: adx_min 20/25/30 (RQ-20261113-f251-10, FAIL): smooth monotone, best +0.16R n56 2/4 folds. Closed bar: adx_min/adx_max/vol_skip tested earlier.'
-  direction: 'TESTED forming: long-only (RQ-20261113-f251-15, FAIL): -12.88R n68 1/4 folds; confirmation window +2.46R vs both-sides +2.94R. Closed-bar long-only
-    pass (RQ-20261104-004) does not carry to the forming bar.'
-  entry: 'TESTED (closed bar): pullback_frac, trend_lookback; no forming-bar diagnosis points at the entry.'
-  exit: 'TESTED (closed bar): atr_stop_mult, tp_r, structure_exit; gross is negative, so an exit lever would have to create edge rather than keep it.'
-  regime_gating: 'INAPPLICABLE as an off-cell: every ADX cell is negative on the forming ledger, so no cell is left to keep; gating would gate the whole leg.'
-  sizing_vs_cost: 'INAPPLICABLE: gross is negative before cost (-14.2R), so a cheaper venue cannot clear it.'
-  timeframe: 'UNTESTED forming, no diagnostic pointer: nothing in the ledger isolates the 2h bar as the cause.'
-  symbol_set: UNTESTED, no diagnostic pointer.
-  next: 'The only diagnosis-backed candidate left is extending the adx_min monotone response past 30 (adx_min 35), but the arm would fall to about n 40, under the
-    power floor. No lever has a diagnosis that points at a pass at adequate power. Proposed to the manager: a lever-exhaustion note (retirement proposal ONLY through
-    the manager); no 3rd unit authored.'
+  census_2026_11_14: 'DEMO-FLOOR-ITER lever-family census after the 2nd forming-bar lever failed (AM-ML guard); CORRECTED 2026-11-14 00:30Z, superseding the 00:00Z
+    draft that read only the one-year forming window and wrongly concluded lever exhaustion. Forming record (f251-01, 2025-11-13..2026-11-12): -23.37R over n 105,
+    gross -14.2R. The equal-length window before it (2024-11-13..2025-11-12, read in f251-15) is +2.94R over n 83: the leg was positive the year before, so the record
+    year is a bad regime, not proof of no edge.'
+  filter: 'TESTED forming: adx_min 20/25/30 (f251-10, FAIL, smooth monotone, best +0.16R n56 2/4). TESTED closed 2020-07..2026-10: adx_min 25-40 monotone, vol_skip_below
+    0.2 +10.45R n421, adx_max 40 +0.64R, vol_skip_above 0.9 -15.4R. vol_skip_below is UNTESTED on the forming bar.'
+  direction: 'TESTED forming: long-only (f251-15, FAIL): -12.88R n68 1/4; year before +2.46R vs +2.94R. Closed bar: long-only +3.09R n165 pass (RQ-20261104-004, single
+    point).'
+  entry: 'TESTED closed: pullback_frac 0.625 +12.11R n388 (live 0.5), 0.375 +0.54R; trend_lookback 80. UNTESTED on the forming bar: pullback_frac 0.625 is a closed-bar
+    responder that never ran forming.'
+  exit: 'TESTED closed: structure_exit off +20.03R n281 / +10.12R n463 (pass), tp_target_r 3/4/6 +2.8/+10.1/+10.0R n~465, be_floor_r 1.0 +3.9R, atr_stop_mult 2/4
+    and tp_r 37.5/62.5 negative. The live tp_r 50 is the fictional-TP shape the TP doctrine flags (tp-doctrine-guard). UNTESTED on the forming bar: tp_target_r 4.'
+  regime_gating: 'INAPPLICABLE as an off-cell on the forming record: every ADX cell is negative there.'
+  sizing_vs_cost: 'INAPPLICABLE: gross is negative before cost on the forming record (-14.2R).'
+  timeframe: UNTESTED forming; no diagnostic pointer.
+  symbol_set: UNTESTED; no diagnostic pointer.
+  session: UNTESTED; 24/7 crypto, no session split isolates the loss.
+  next: 'NOT exhausted: no retirement proposal (the v3 family-retirement policy needs every lever family tested or irrelevant). The closed-bar responders that never
+    ran on the forming bar are the next candidates, in value order: exit tp_target_r 4 (a REAL predictive TP replacing the fictional tp_r 50; also a TP-doctrine fix),
+    entry pullback_frac 0.625, filter vol_skip_below 0.2. A 3rd lever on the forming record window must name f251-01/-10/-15 and also pass on the 2024-11-13..2025-11-12
+    confirmation window (AM-ML guard); manager decides which.'
