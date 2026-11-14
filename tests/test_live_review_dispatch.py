@@ -304,7 +304,7 @@ def test_the_action_wrapper_runs_the_dispatcher():
 # evidence_not_committed under MD-LTR-PAPER-AUTO while the same package's judgement close applied.
 
 PACKET = f"comms/live_review/packets/{RID}.json"
-_REAL_ADVICE_ONLY = rows_lib.ADVICE_ONLY_ACTIONS   # read at import, before the autouse fixture empties it
+_REAL_ADVICE_ONLY = rows_lib.ADVICE_ONLY_LEGACY_ACTIONS   # the pre-2026-11-14 set (advice-only ended): the lift needs a non-empty one
 
 
 def _short_hold(action: str) -> Dict[str, Any]:
@@ -346,7 +346,7 @@ def test_a_table_tighten_never_falls_back_to_the_packet(world):
 
 
 def test_the_real_paper_mandate_lifts_advice_only_and_the_tighten_reaches_the_apply(world, monkeypatch):
-    """End to end on the REAL config/mandates.yaml and the REAL advice-only tuple: a bybit_1 judgement tighten
+    """End to end on the REAL config/mandates.yaml and the LEGACY advice-only tuple: a bybit_1 judgement tighten
     is scoped by MD-LTR-PAPER-AUTO, dispatched (not advice_only, not evidence_not_committed) and handed to the
     apply under that mandate."""
     monkeypatch.setattr(rows_lib, "ADVICE_ONLY_ACTIONS", _REAL_ADVICE_ONLY)
