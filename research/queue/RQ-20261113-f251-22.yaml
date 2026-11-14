@@ -1,6 +1,6 @@
 id: RQ-20261113-f251-22
 title: 'avax_pullback_2h filter lever: trend-strength floor (adx_min 30) vs none on the forming bar, with a confirmation window'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -221,3 +221,16 @@ practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-princip
 follow_up: On the verdict a session appends the test to research/levers/avax_pullback_2h.yaml (lever_map.py --append). PASS -> Tier-3 proposal to the manager. FAIL
   -> write the leg's lever-family census (tested / untested / inapplicable) before a further lever (AM-ML guard).
 last_dispatched_at: '2026-11-14T02:17:53+00:00'
+grading:
+  attested: RULE-DFI3-AVAX-PULLBACK-2H-20261114
+  auto: true
+  decision_rule_id: RULE-DFI3-AVAX-PULLBACK-2H-20261114
+  evidence:
+  - research/results/RQ-20261113-f251-22/43545531590.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail
