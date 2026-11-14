@@ -16690,6 +16690,67 @@ _VENUE_PNL_READS_PER_TICK = 4
 #: ``venue_unmatched`` (a diagnosis item) instead of being re-asked every tick.
 _VENUE_PNL_UNMATCHED_AFTER_MS = 24 * 3600 * 1000
 _VENUE_FILL_EXIT_SOURCES = frozenset({"exchange_fill", "exchange", "broker_leg_fill"})
+#: A (account, symbol, close-hour) window read this recently is served from the last result instead of
+#: re-read. Without it, rows still waiting for their venue record (newest first in the scan) re-read the
+#: same windows every tick and took the whole read budget: after the 2026-11-14 17:36Z deploy, 8 rows
+#: classified by 17:40Z and then none, with 87 Bybit rows from the last 7 days left unclassified and
+#: ``budget_deferred`` 46 per tick. It makes FEWER venue calls, never a delay on one.
+_VENUE_PNL_READ_TTL_MS = 10 * 60 * 1000
+_VENUE_PNL_READ_CACHE: Dict[Tuple[str, str, int], Tuple[int, Optional[Dict[str, Any]]]] = {}
+
+
+def _venue_read_window(row: Dict[str, Any], closed_ms: int) -> Tuple[int, int]:
+    """(start_ms, end_ms) for a Bybit closed-pnl read covering this row.
+
+    Bybit filters ``/v5/position/closed-pnl`` on the record's ``created_time``, which is when the CLOSING
+    order was placed, and a bracket's TP/SL leg is placed at ENTRY. MEASURED 2026-11-14: bybit_1 XRP
+    record 084e4c9f (trade 7054) created 11-11 12:02, filled 11-14 16:46. A window around the close
+    (close-2h .. +3h) misses every trade held longer than ~2 h, and those rows would land venue_unmatched.
+    So the window starts an hour before the row's own entry, clamped to Bybit's 7-day maximum span."""
+    end = (int(closed_ms // 3_600_000) + 3) * 3_600_000
+    start = (int(closed_ms // 3_600_000) - 2) * 3_600_000
+    opened_ms = _isoformat_to_ms(row.get("created_at"))
+    if opened_ms is not None:
+        start = min(start, (int(opened_ms // 3_600_000) - 1) * 3_600_000)
+    start = max(start, end - (7 * 24 - 1) * 3_600_000)
+    return start, end
+
+
+def _venue_gap_notes(db, row: Dict[str, Any], rec: Dict[str, Any], stored: Any, computed: Any) -> Dict[str, Any]:
+    """The venue record's own figures plus, on a gap, why: every gap explains itself.
+
+    ``netting_position_avg_entry``: the venue entry differs from the row's AND another row of the same
+    account/symbol/side was open at the same time (a netting account prices a close at the POSITION's
+    average entry, trade 7216). ``entry_fill_differs``: the venue entry differs and nothing else was open
+    (the journal entry_price is the planned entry, not the fill, trade 7224). ``unexplained``: anything else."""
+    from src.runtime import venue_pnl as vp
+    out: Dict[str, Any] = {"venue_avg_entry": _safe_float(rec.get("avg_entry_price")),
+                           "venue_avg_exit": _safe_float(rec.get("avg_exit_price")),
+                           "venue_qty": _safe_float(rec.get("qty"))}
+    if stored is None or computed is None or not vp.is_gap(stored, computed):
+        return out
+    ve, je = out["venue_avg_entry"], _safe_float(row.get("entry_price"))
+    reason = "unexplained"
+    if ve is not None and je is not None and abs(ve - je) > max(1e-9, 1e-4 * abs(je)):
+        reason = "entry_fill_differs"
+        try:
+            conn = db.connect()
+            try:
+                sib = conn.execute(
+                    "SELECT 1 FROM trades WHERE account_id = ? AND symbol = ? AND direction = ? AND id != ? "
+                    "   AND COALESCE(is_backtest, 0) = 0 "
+                    "   AND datetime(created_at) < datetime(?) "
+                    "   AND (status = 'open' OR datetime(COALESCE(closed_at, created_at)) > datetime(?)) LIMIT 1",
+                    (row.get("account_id"), row.get("symbol"), row.get("direction"), int(row["id"]),
+                     row.get("closed_at") or row.get("created_at"), row.get("created_at"))).fetchone()
+            finally:
+                conn.close()
+            if sib:
+                reason = "netting_position_avg_entry"
+        except Exception as exc:  # noqa: BLE001  # allow-silent: the reason degrades to entry_fill_differs
+            logger.debug("_venue_gap_notes: sibling read for %s: %s", row.get("id"), exc)
+    out["pnl_gap_reason"] = reason
+    return out
 
 
 def _sweep_venue_net_pnl(
@@ -16747,8 +16808,6 @@ def _sweep_venue_net_pnl(
         logger.warning("_sweep_venue_net_pnl: scan failed: %s", exc)
         summary["errors"] += 1
         return summary
-    if not rows:
-        return summary
     summary["scanned"] = len(rows)
     if bybit_reader is None:
         from src.units.accounts.clients import account_bybit_raw_closed_pnl
@@ -16766,25 +16825,32 @@ def _sweep_venue_net_pnl(
             computed = vp.computed_net(row)
             updates: Dict[str, Any] = {}
             basis: Optional[str] = None
+            matched_rec: Optional[Dict[str, Any]] = None
             if ex == "bybit":
                 closed_ms = _isoformat_to_ms(row.get("closed_at") or row.get("created_at"))
                 if closed_ms is None:
                     summary["retry"] += 1
                     continue
-                hour = int(closed_ms // 3_600_000)
-                key = (str(row["account_id"]), str(row.get("symbol") or ""), hour)
+                w_start, w_end = _venue_read_window(row, closed_ms)
+                key = (str(row["account_id"]), str(row.get("symbol") or ""), w_start, w_end)
                 if key not in cache:
-                    if budget[0] <= 0:
-                        summary["budget_deferred"] += 1
-                        continue
-                    budget[0] -= 1
-                    try:
-                        cache[key] = bybit_reader(
-                            cfg, symbol=str(row.get("symbol") or ""),
-                            start_ms=(hour - 2) * 3_600_000, end_ms=(hour + 3) * 3_600_000)
-                    except Exception as exc:  # noqa: BLE001
-                        logger.warning("_sweep_venue_net_pnl: read %s: %s", key, exc)
-                        cache[key] = None
+                    held = _VENUE_PNL_READ_CACHE.get(key)
+                    if held is not None and now_ms - held[0] < _VENUE_PNL_READ_TTL_MS and held[1] is not None:
+                        cache[key] = held[1]                 # read within the TTL: no new venue call
+                    else:
+                        if budget[0] <= 0:
+                            summary["budget_deferred"] += 1
+                            continue
+                        budget[0] -= 1
+                        try:
+                            cache[key] = bybit_reader(
+                                cfg, symbol=str(row.get("symbol") or ""), start_ms=w_start, end_ms=w_end)
+                        except Exception as exc:  # noqa: BLE001
+                            logger.warning("_sweep_venue_net_pnl: read %s: %s", key, exc)
+                            cache[key] = None
+                        got0 = cache[key]
+                        if isinstance(got0, dict) and got0.get("query_state") != "could_not_look":
+                            _VENUE_PNL_READ_CACHE[key] = (now_ms, got0)   # a failed read is never held
                 got = cache[key]
                 if not isinstance(got, dict) or got.get("query_state") == "could_not_look":
                     summary["retry"] += 1
@@ -16811,6 +16877,7 @@ def _sweep_venue_net_pnl(
                 else:
                     venue = float(rec["closed_pnl"])
                     basis = vp.BASIS_VENUE_NET
+                    matched_rec = rec
                     updates["pnl"] = venue
                     notes["venue_pnl_match"] = how
                     if _safe_float(row.get("pnl")) is not None:
@@ -16840,6 +16907,8 @@ def _sweep_venue_net_pnl(
                     updates["pnl_gap_usd"] = round(stored - computed, 8)
                     if vp.is_gap(stored, computed):
                         summary["gaps"] += 1
+            if matched_rec is not None:
+                notes.update(_venue_gap_notes(db, row, matched_rec, _safe_float(updates.get("pnl")), computed))
             if notes != _decode_notes(row.get("notes")):
                 # Only when this sweep added a key, and at the close paths' own 2000 cap: a 500 cap re-wrote every
                 # classified row's existing close notes (closed_by, exit sources) down to 500 characters.
@@ -16860,9 +16929,92 @@ def _sweep_venue_net_pnl(
         except Exception as exc:  # noqa: BLE001
             logger.warning("_sweep_venue_net_pnl: row %s: %s", row.get("id"), exc)
             summary["errors"] += 1
-    if summary["venue_net"] or summary["gaps"] or summary["errors"] or summary["unmatched"]:
+    _backfill_venue_gap_notes(db, cfgs or {}, bybit_reader, budget, cache, now_ms, summary)
+    if summary["venue_net"] or summary["gaps"] or summary["errors"] or summary["unmatched"] \
+            or summary.get("backfilled"):
         logger.info("_sweep_venue_net_pnl: %s", summary)
     return summary
+
+
+def _backfill_venue_gap_notes(db, cfgs, bybit_reader, budget, cache, now_ms, summary) -> None:
+    """Rows classified venue_net before the gap notes existed get them, with the read budget left over.
+
+    Notes keys ONLY, through a guarded UPDATE (WHERE pnl_basis = 'venue_net' and the notes unchanged since
+    read): the stored pnl, pnl_computed and pnl_gap_usd are never touched. Best-effort; never raises."""
+    from src.runtime import venue_pnl as vp
+    try:
+        conn = db.connect()
+        try:
+            conn.row_factory = __import__("sqlite3").Row
+            rows = [dict(r) for r in conn.execute(
+                "SELECT id, account_id, symbol, direction, position_size, entry_price, exit_price, pnl, "
+                "       pnl_computed, notes, setup_type, closed_at, created_at, sl_order_id, tp_order_id, "
+                "       broker_order_id FROM trades "
+                " WHERE pnl_basis = 'venue_net' AND COALESCE(notes, '') NOT LIKE '%\"venue_avg_entry\"%' "
+                "   AND datetime(COALESCE(closed_at, created_at)) >= datetime('now', '-7 days') "
+                " ORDER BY datetime(COALESCE(closed_at, created_at)) ASC LIMIT 20").fetchall()]
+        finally:
+            conn.close()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("_backfill_venue_gap_notes: scan failed: %s", exc)
+        return
+    for row in rows:
+        try:
+            cfg = cfgs.get(str(row.get("account_id") or "")) or {}
+            if str(cfg.get("exchange") or "").lower() != "bybit":
+                continue
+            closed_ms = _isoformat_to_ms(row.get("closed_at") or row.get("created_at"))
+            if closed_ms is None:
+                continue
+            w_start, w_end = _venue_read_window(row, closed_ms)
+            key = (str(row["account_id"]), str(row.get("symbol") or ""), w_start, w_end)
+            if key not in cache:
+                held = _VENUE_PNL_READ_CACHE.get(key)
+                if held is not None and now_ms - held[0] < _VENUE_PNL_READ_TTL_MS and held[1] is not None:
+                    cache[key] = held[1]
+                else:
+                    if budget[0] <= 0:
+                        return
+                    budget[0] -= 1
+                    try:
+                        cache[key] = bybit_reader(cfg, symbol=str(row.get("symbol") or ""),
+                                                  start_ms=w_start, end_ms=w_end)
+                    except Exception as exc:  # noqa: BLE001
+                        logger.debug("_backfill_venue_gap_notes: read %s: %s", key, exc)
+                        cache[key] = None
+                    if isinstance(cache[key], dict) and cache[key].get("query_state") != "could_not_look":
+                        _VENUE_PNL_READ_CACHE[key] = (now_ms, cache[key])
+            got = cache[key]
+            if not isinstance(got, dict) or got.get("query_state") == "could_not_look":
+                continue
+            notes = _decode_notes(row.get("notes"))
+            own = [row.get("sl_order_id"), row.get("tp_order_id")]
+            if str(row.get("setup_type") or "") == "partial_close":
+                own.append(row.get("broker_order_id"))
+            for k in ("own_leg_fill", "exit_fill"):
+                if isinstance(notes.get(k), dict):
+                    own.append(notes[k].get("order_id"))
+            rec, _how = vp.match_venue_record(
+                got.get("records") or [], own_order_ids=own, qty=row.get("position_size"),
+                closed_at_ms=closed_ms,
+                close_side={"long": "sell", "short": "buy"}.get(str(row.get("direction") or "").lower()))
+            if rec is None:
+                continue
+            notes.update(_venue_gap_notes(db, row, rec, _safe_float(row.get("pnl")),
+                                          _safe_float(row.get("pnl_computed"))))
+            wconn = db.connect()
+            try:
+                cur = wconn.execute(
+                    "UPDATE trades SET notes = ? WHERE id = ? AND pnl_basis = 'venue_net' "  # writer-conformance: allow guarded notes-only backfill of venue gap notes; WHERE pins basis + the notes read
+                    "   AND COALESCE(notes, '') = COALESCE(?, '')",
+                    (dump_capped(notes, 2000), int(row["id"]), row.get("notes")))
+                wconn.commit()
+                if cur.rowcount:
+                    summary["backfilled"] = summary.get("backfilled", 0) + 1
+            finally:
+                wconn.close()
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("_backfill_venue_gap_notes: row %s: %s", row.get("id"), exc)
 
 
 # ── ALPACA-CLOSE-BROKER-TRUTH (2026-11-12) ──────────────────────────────────
