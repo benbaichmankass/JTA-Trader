@@ -1988,26 +1988,94 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261113-f251-23
   lever_family: entry
+- family: decision_bar (closed vs forming)
+  varied: decision_bar forming (live) vs closed, bare and with each round-3 lever, record 2025-11-13..2026-11-12 + confirmation 2024-11-13..2025-11-12,
+    one feed, full cost stack
+  response:
+    verdict: fail
+    run: '43558522192'
+    rule: RULE-DBINV-FORMING-INVERSION-20261114
+    baseline:
+      arm: F (forming, config-exact)
+      net_r: -6.5744
+      confirm_net_r: 7.319
+    arms:
+    - arm: C
+      n: 65
+      net_r: -4.5337
+      folds_positive: 1/4
+      confirm_n: 60
+      confirm_net_r: 7.8689
+      pass: false
+    - arm: C_PF625
+      n: 74
+      net_r: -5.9098
+      folds_positive: 1/4
+      confirm_n: 65
+      confirm_net_r: 4.9356
+      pass: false
+    - arm: C_S
+      n: 35
+      net_r: -1.7527
+      folds_positive: 3/4
+      confirm_n: 31
+      confirm_net_r: 1.4673
+      pass: false
+    - arm: C_V80
+      n: 57
+      net_r: 0.8905
+      folds_positive: 1/4
+      confirm_n: 46
+      confirm_net_r: 1.6892
+      pass: false
+    bar_effect_C_minus_F:
+      record: 2.0407
+      confirmation: 0.5499
+    entry_jaccard_C_F:
+      record: 0.1406
+      confirmation: 0.213
+    closed_lever_delta_vs_C:
+      record:
+        C_S: 2.781
+        C_V80: 5.4242
+        C_PF625: -1.3761
+      confirmation:
+        C_S: -6.4016
+        C_V80: -6.1797
+        C_PF625: -2.9333
+    reading: 'no closed arm passes Stage 0, beats F and holds on the year before: decision_bar closed is not the lever for this leg; within the
+      record window the closed lever deltas have the same sign as the forming ones on most levers, so the round-3 inversion is the WINDOW, not
+      the bar'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-01
+  lever_family: timeframe
 units:
 - RQ-20261113-f251-08
 - RQ-20261113-f251-14
 - RQ-20261113-f251-23
+- RQ-20261114-db1a-01
 manifest_notes:
   census_2026_11_14: 'DEMO-FLOOR-ITER lever-family census after the 3rd forming-bar lever failed (AM-ML guard). Forming record (2025-11-13..2026-11-12):
-    -6.57R over n 81, gross -1.23R, cost 5.35R; long -10.96R n40, short +4.39R n41. The equal-length window before it (2024-11-13..2025-11-12, read in f251-23)
-    is +7.32R over n 71: the leg was positive the year before.'
+    -6.57R over n 81, gross -1.23R, cost 5.35R; long -10.96R n40, short +4.39R n41. The equal-length window before it (2024-11-13..2025-11-12,
+    read in f251-23) is +7.32R over n 71: the leg was positive the year before.'
   direction: 'TESTED forming: short-only (f251-08, FAIL): +2.70R n45 2/4 (rule needs 3), lower DD. No prior-year read for this arm.'
-  filter: 'TESTED forming: vol_skip_above 0.8 (f251-14, FAIL): -13.09R n80 vs -6.57R. TESTED closed 2020-07..2026-10: vol_skip_above 0.8 +17.7R pass, adx_max
-    40 +16.3R pass, adx_min/vol_skip_below/cooldown fail.'
-  entry: 'TESTED forming: pullback_frac 0.625 (f251-23, FAIL): -16.16R n91 1/4; prior year -2.18R vs +7.32R. TESTED closed: pullback_frac 0.625 +1.89R n431
-    pass, 0.375 -13.95R.'
+  filter: 'TESTED forming: vol_skip_above 0.8 (f251-14, FAIL): -13.09R n80 vs -6.57R. TESTED closed 2020-07..2026-10: vol_skip_above 0.8 +17.7R
+    pass, adx_max 40 +16.3R pass, adx_min/vol_skip_below/cooldown fail.'
+  entry: 'TESTED forming: pullback_frac 0.625 (f251-23, FAIL): -16.16R n91 1/4; prior year -2.18R vs +7.32R. TESTED closed: pullback_frac 0.625
+    +1.89R n431 pass, 0.375 -13.95R.'
   exit: 'TESTED closed: structure_exit off +3.11R pass; tp_target_r, tp_r, atr_stop_mult, trail_*, be_floor, bank fail. UNTESTED forming.'
   session: 'TESTED closed: skip_hours 20-23 +22.73R n402 pass, 0-7 -2.69R. UNTESTED forming.'
   sizing_vs_cost: 'TESTED closed (cost stack sweep). Forming: cost is 5.35R against gross -1.23R, so cost alone does not explain the loss.'
   regime_gating: UNTESTED.
   timeframe: UNTESTED; no diagnostic pointer.
   symbol_set: UNTESTED; no diagnostic pointer.
-  next: 'Three forming levers have failed (short-only, vol_skip_above 0.8, pullback_frac 0.625). Both closed-bar passes re-run forming (vol_skip_above 0.8,
-    pullback_frac 0.625) made the leg WORSE: on this leg the closed-bar corpus does not predict forming-bar response. Remaining closed-bar passes never
-    run forming: session skip_hours 20-23, filter adx_max 40. The prop leg must also clear the prop survival superset. Not exhausted; no 4th unit without
-    a diagnosis of why closed-bar responses invert on the forming bar. Manager decides.'
+  next: 'Three forming levers have failed (short-only, vol_skip_above 0.8, pullback_frac 0.625). Both closed-bar passes re-run forming (vol_skip_above
+    0.8, pullback_frac 0.625) made the leg WORSE: on this leg the closed-bar corpus does not predict forming-bar response. Remaining closed-bar
+    passes never run forming: session skip_hours 20-23, filter adx_max 40. The prop leg must also clear the prop survival superset. Not exhausted;
+    no 4th unit without a diagnosis of why closed-bar responses invert on the forming bar. Manager decides.'
+  decision_bar_2026_11_14: 'Closed bar (RQ-20261114-db1a-01, FAIL): C -4.53R n65 1/4 vs F -6.57R; prior year C +7.87R vs F +7.32R. No closed arm clears Stage
+    0 on the record (best C_V80 +0.89R 1/4; C_S -1.75R 3/4). Closed lever deltas vs C on the record: short +2.8 (forming +9.3, same sign), vol_skip_above
+    0.8 +5.4 (forming -6.5, OPPOSITE), pullback_frac 0.625 -1.4 (forming -9.6, same). All three are negative the year before. C/F entry overlap 0.14.'
+  next_2026_11_14: 'SUPERSEDES next. decision_bar closed is not the lever (db1a-01): closed is marginally less bad but has no edge. Only vol_skip_above inverts
+    between bars; the other closed-bar inversions were the window. No 4th unit proposed; manager decides (prop superset still applies).'

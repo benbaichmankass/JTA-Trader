@@ -499,14 +499,15 @@ levers_tested:
       n: 56
       net_r: 0.158
       folds_positive: 2/4
-    reading: 'smooth monotone improvement with the ADX floor (the closed-bar response carries to the forming bar) but no arm clears Stage 0: adx_min 30 is +0.16R
-      over n 56 with 2/4 positive folds (needs 3)'
+    reading: 'smooth monotone improvement with the ADX floor (the closed-bar response carries to the forming bar) but no arm clears Stage 0: adx_min
+      30 is +0.16R over n 56 with 2/4 positive folds (needs 3)'
   shape: monotone
   tested_at_power: true
   unit: RQ-20261113-f251-10
   lever_family: filter
 - family: direction (forming bar)
-  varied: both sides (A) vs long-only (L) on the FORMING bar, record window 2025-11-13..2026-11-12 + confirmation window 2024-11-13..2025-11-12, full cost stack
+  varied: both sides (A) vs long-only (L) on the FORMING bar, record window 2025-11-13..2026-11-12 + confirmation window 2024-11-13..2025-11-12,
+    full cost stack
   response:
     verdict: fail
     run: '43518614942'
@@ -527,8 +528,8 @@ levers_tested:
       L:
         n: 59
         net_r: 2.4561
-    reading: 'long-only cuts the record-window loss (-12.9R vs -23.4R) but stays stage0_no_edge (1/4 folds) and does not beat both-sides on the confirmation window
-      (+2.46R vs +2.94R): the short side is not where the loss lives'
+    reading: 'long-only cuts the record-window loss (-12.9R vs -23.4R) but stays stage0_no_edge (1/4 folds) and does not beat both-sides on the
+      confirmation window (+2.46R vs +2.94R): the short side is not where the loss lives'
   shape: flat
   tested_at_power: true
   unit: RQ-20261113-f251-15
@@ -552,39 +553,109 @@ levers_tested:
       folds_positive: 1/4
       confirm_n: 85
       confirm_net_r: 3.6743
-    reading: a 4R target does not rescue the forming record (-25.2R vs -23.4R, 1/4 folds); the closed-bar +10.1R response does not carry to the forming bar. On the
-      prior year it is marginally better (+3.67R vs +2.94R).
+    reading: a 4R target does not rescue the forming record (-25.2R vs -23.4R, 1/4 folds); the closed-bar +10.1R response does not carry to the
+      forming bar. On the prior year it is marginally better (+3.67R vs +2.94R).
   shape: flat
   tested_at_power: true
   unit: RQ-20261113-f251-19
   lever_family: exit
+- family: decision_bar (closed vs forming)
+  varied: decision_bar forming (live) vs closed, bare and with each round-3 lever, record 2025-11-13..2026-11-12 + confirmation 2024-11-13..2025-11-12,
+    one feed, full cost stack
+  response:
+    verdict: fail
+    run: '43558522192'
+    rule: RULE-DBINV-FORMING-INVERSION-20261114
+    baseline:
+      arm: F (forming, config-exact)
+      net_r: -23.3731
+      confirm_net_r: 2.9423
+    arms:
+    - arm: C
+      n: 90
+      net_r: -17.39
+      folds_positive: 0/4
+      confirm_n: 63
+      confirm_net_r: 16.893
+      pass: false
+    - arm: C_D30
+      n: 45
+      net_r: 4.2216
+      folds_positive: 3/4
+      confirm_n: 39
+      confirm_net_r: -4.909
+      pass: false
+    - arm: C_L
+      n: 53
+      net_r: -12.4114
+      folds_positive: 1/4
+      confirm_n: 47
+      confirm_net_r: 5.5093
+      pass: false
+    - arm: C_T4
+      n: 90
+      net_r: -18.9398
+      folds_positive: 0/4
+      confirm_n: 65
+      confirm_net_r: 16.844
+      pass: false
+    bar_effect_C_minus_F:
+      record: 5.9831
+      confirmation: 13.9507
+    entry_jaccard_C_F:
+      record: 0.1337
+      confirmation: 0.1587
+    closed_lever_delta_vs_C:
+      record:
+        C_L: 4.9786
+        C_D30: 21.6116
+        C_T4: -1.5498
+      confirmation:
+        C_L: -11.3837
+        C_D30: -21.802
+        C_T4: -0.049
+    reading: 'no closed arm passes Stage 0, beats F and holds on the year before: decision_bar closed is not the lever for this leg; within the
+      record window the closed lever deltas have the same sign as the forming ones on most levers, so the round-3 inversion is the WINDOW, not
+      the bar'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-01
+  lever_family: timeframe
 units:
 - RQ-20261113-f251-10
 - RQ-20261113-f251-15
 - RQ-20261113-f251-19
+- RQ-20261114-db1a-01
 manifest_notes:
-  census_2026_11_14: 'DEMO-FLOOR-ITER lever-family census after the 2nd forming-bar lever failed (AM-ML guard); CORRECTED 2026-11-14 00:30Z, superseding the 00:00Z
-    draft that read only the one-year forming window and wrongly concluded lever exhaustion. Forming record (f251-01, 2025-11-13..2026-11-12): -23.37R over n 105,
-    gross -14.2R. The equal-length window before it (2024-11-13..2025-11-12, read in f251-15) is +2.94R over n 83: the leg was positive the year before, so the record
-    year is a bad regime, not proof of no edge.'
-  filter: 'TESTED forming: adx_min 20/25/30 (f251-10, FAIL, smooth monotone, best +0.16R n56 2/4). TESTED closed 2020-07..2026-10: adx_min 25-40 monotone, vol_skip_below
-    0.2 +10.45R n421, adx_max 40 +0.64R, vol_skip_above 0.9 -15.4R. vol_skip_below is UNTESTED on the forming bar.'
-  direction: 'TESTED forming: long-only (f251-15, FAIL): -12.88R n68 1/4; year before +2.46R vs +2.94R. Closed bar: long-only +3.09R n165 pass (RQ-20261104-004, single
-    point).'
-  entry: 'TESTED closed: pullback_frac 0.625 +12.11R n388 (live 0.5), 0.375 +0.54R; trend_lookback 80. UNTESTED on the forming bar: pullback_frac 0.625 is a closed-bar
-    responder that never ran forming.'
-  exit: 'TESTED closed: structure_exit off +20.03R n281 / +10.12R n463 (pass), tp_target_r 3/4/6 +2.8/+10.1/+10.0R n~465, be_floor_r 1.0 +3.9R, atr_stop_mult 2/4
-    and tp_r 37.5/62.5 negative. The live tp_r 50 is the fictional-TP shape the TP doctrine flags (tp-doctrine-guard). UNTESTED on the forming bar: tp_target_r 4.'
+  census_2026_11_14: 'DEMO-FLOOR-ITER lever-family census after the 2nd forming-bar lever failed (AM-ML guard); CORRECTED 2026-11-14 00:30Z, superseding
+    the 00:00Z draft that read only the one-year forming window and wrongly concluded lever exhaustion. Forming record (f251-01, 2025-11-13..2026-11-12):
+    -23.37R over n 105, gross -14.2R. The equal-length window before it (2024-11-13..2025-11-12, read in f251-15) is +2.94R over n 83: the leg
+    was positive the year before, so the record year is a bad regime, not proof of no edge.'
+  filter: 'TESTED forming: adx_min 20/25/30 (f251-10, FAIL, smooth monotone, best +0.16R n56 2/4). TESTED closed 2020-07..2026-10: adx_min 25-40
+    monotone, vol_skip_below 0.2 +10.45R n421, adx_max 40 +0.64R, vol_skip_above 0.9 -15.4R. vol_skip_below is UNTESTED on the forming bar.'
+  direction: 'TESTED forming: long-only (f251-15, FAIL): -12.88R n68 1/4; year before +2.46R vs +2.94R. Closed bar: long-only +3.09R n165 pass
+    (RQ-20261104-004, single point).'
+  entry: 'TESTED closed: pullback_frac 0.625 +12.11R n388 (live 0.5), 0.375 +0.54R; trend_lookback 80. UNTESTED on the forming bar: pullback_frac
+    0.625 is a closed-bar responder that never ran forming.'
+  exit: 'TESTED closed: structure_exit off +20.03R n281 / +10.12R n463 (pass), tp_target_r 3/4/6 +2.8/+10.1/+10.0R n~465, be_floor_r 1.0 +3.9R,
+    atr_stop_mult 2/4 and tp_r 37.5/62.5 negative. The live tp_r 50 is the fictional-TP shape the TP doctrine flags (tp-doctrine-guard). UNTESTED
+    on the forming bar: tp_target_r 4.'
   regime_gating: 'INAPPLICABLE as an off-cell on the forming record: every ADX cell is negative there.'
   sizing_vs_cost: 'INAPPLICABLE: gross is negative before cost on the forming record (-14.2R).'
   timeframe: UNTESTED forming; no diagnostic pointer.
   symbol_set: UNTESTED; no diagnostic pointer.
   session: UNTESTED; 24/7 crypto, no session split isolates the loss.
-  next: 'Three forming levers have failed (adx_min, long-only, tp_target_r 4). Option (b), entry pullback_frac 0.625, is NOT recommended: the same lever
-    FAILED forming on the sibling eth_pullback_prop_2h (f251-23: -16.16R n91 1/4 vs -6.57R; prior year -2.18R vs +7.32R), the second sibling case of a closed-bar
-    pass inverting on the forming bar. Remaining: filter vol_skip_below 0.2, which also failed forming on trend_donchian_avax_4h (f251-21). Not exhausted by count;
-    manager decides (c) or a retirement proposal (to the operator first this week).'
-  exit_forming: 'TESTED forming (RQ-20261113-f251-19, FAIL): tp_target_r 4 -25.16R n 105 1/4 vs -23.37R; prior year +3.67R vs +2.94R. The closed-bar +10.1R response
-    does not carry to the forming bar.'
-  entry_sibling_forming: 'pullback_frac 0.625 tested forming on sibling eth_pullback_prop_2h (RQ-20261113-f251-23, FAIL): -16.16R n91 1/4 vs -6.57R n81;
-    prior year -2.18R vs +7.32R. Informs option (b) here negatively.'
+  next: 'Three forming levers have failed (adx_min, long-only, tp_target_r 4). Option (b), entry pullback_frac 0.625, is NOT recommended: the
+    same lever FAILED forming on the sibling eth_pullback_prop_2h (f251-23: -16.16R n91 1/4 vs -6.57R; prior year -2.18R vs +7.32R), the second
+    sibling case of a closed-bar pass inverting on the forming bar. Remaining: filter vol_skip_below 0.2, which also failed forming on trend_donchian_avax_4h
+    (f251-21). Not exhausted by count; manager decides (c) or a retirement proposal (to the operator first this week).'
+  exit_forming: 'TESTED forming (RQ-20261113-f251-19, FAIL): tp_target_r 4 -25.16R n 105 1/4 vs -23.37R; prior year +3.67R vs +2.94R. The closed-bar
+    +10.1R response does not carry to the forming bar.'
+  entry_sibling_forming: 'pullback_frac 0.625 tested forming on sibling eth_pullback_prop_2h (RQ-20261113-f251-23, FAIL): -16.16R n91 1/4 vs -6.57R
+    n81; prior year -2.18R vs +7.32R. Informs option (b) here negatively.'
+  decision_bar_2026_11_14: 'Closed bar (RQ-20261114-db1a-01, FAIL): C -17.39R n90 0/4 vs F -23.37R; prior year C +16.89R vs F +2.94R. C_D30 is the only closed
+    arm to clear Stage 0 on the record (+4.22R n45 3/4) and it loses the prior year (-4.91R): the confirmation guard caught it. Closed lever deltas vs C on
+    the record keep the forming sign (long +5.0, adx_min 30 +21.6, tp_target_r 4 -1.5) and flip the year before (-11.4, -21.8, -0.05). C/F entry overlap 0.13.'
+  next_2026_11_14: SUPERSEDES next. decision_bar closed is not the lever (db1a-01). Lever responses on this leg flip sign between the record year and the
+    year before, so a one-year lever pick is fitting the regime. Option (c) stays on hold; recommended next is a regime-level question across the demo-floor
+    legs rather than a 4th per-leg lever. Manager decides.

@@ -1952,6 +1952,7 @@ units:
 - RQ-20261101-e5b1-12
 - RQ-20261113-f251-07
 - RQ-20261113-f251-21
+- RQ-20261114-db1a-01
 levers_tested:
 - family: prop-stack fit (account sizing vs firm DD limits and the prop cost stack)
   varied: prop cost stack, 3 prop accounts x 2 arms x 2 windows, 5 seeds x 1000 lives
@@ -2019,22 +2020,82 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261113-f251-21
   lever_family: filter
+- family: decision_bar (closed vs forming)
+  varied: decision_bar forming (live) vs closed, bare and with each round-3 lever, record 2025-11-13..2026-11-12 + confirmation 2024-11-13..2025-11-12,
+    one feed, full cost stack
+  response:
+    verdict: fail
+    run: '43558522192'
+    rule: RULE-DBINV-FORMING-INVERSION-20261114
+    baseline:
+      arm: F (forming, config-exact)
+      net_r: -16.1778
+      confirm_net_r: 26.0921
+    arms:
+    - arm: C
+      n: 46
+      net_r: -15.5185
+      folds_positive: 1/4
+      confirm_n: 43
+      confirm_net_r: 17.3474
+      pass: false
+    - arm: C_L
+      n: 25
+      net_r: -7.9909
+      folds_positive: 1/4
+      confirm_n: 24
+      confirm_net_r: 8.847
+      pass: false
+    - arm: C_VL30
+      n: 33
+      net_r: 0.0116
+      folds_positive: 2/4
+      confirm_n: 30
+      confirm_net_r: 17.4782
+      pass: false
+    bar_effect_C_minus_F:
+      record: 0.6593
+      confirmation: -8.7447
+    entry_jaccard_C_F:
+      record: 0.4928
+      confirmation: 0.4848
+    closed_lever_delta_vs_C:
+      record:
+        C_L: 7.5276
+        C_VL30: 15.5301
+      confirmation:
+        C_L: -8.5004
+        C_VL30: 0.1308
+    reading: 'no closed arm passes Stage 0, beats F and holds on the year before: decision_bar closed is not the lever for this leg; within the
+      record window the closed lever deltas have the same sign as the forming ones on most levers, so the round-3 inversion is the WINDOW, not
+      the bar'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-01
+  lever_family: timeframe
 manifest_notes:
   census_2026_11_14: 'DEMO-FLOOR-ITER lever-family census after the 2nd forming-bar lever failed (AM-ML guard). Forming record (2025-11-13..2026-11-12):
-    -16.18R over n 57, gross -12.77R, cost 3.41R; short -13.07R n33, long -3.10R n24. The equal-length window before it (2024-11-13..2025-11-12, read in
-    f251-21) is +26.09R over n 55: the leg was strongly positive the year before, so the record year looks like a bad regime, not proof of no edge.'
+    -16.18R over n 57, gross -12.77R, cost 3.41R; short -13.07R n33, long -3.10R n24. The equal-length window before it (2024-11-13..2025-11-12,
+    read in f251-21) is +26.09R over n 55: the leg was strongly positive the year before, so the record year looks like a bad regime, not proof
+    of no edge.'
   direction: 'TESTED forming: long-only (f251-07, FAIL): -4.09R n26 2/4 vs -16.18R. No prior-year read for this arm.'
-  filter: 'TESTED forming: vol_skip_below 0.3 (f251-21, FAIL): -7.09R n41 1/4; prior year +16.49R vs +26.09R (it removes winners). TESTED closed 2020-07..2026-10:
-    vol_skip_below 0.2-0.35 pass (peaked, best 0.3 +54.8R n173), vol_skip_above monotone fail, adx_max flat, adx_min 25 +4.7R n119 single point, cooldown
-    flat.'
+  filter: 'TESTED forming: vol_skip_below 0.3 (f251-21, FAIL): -7.09R n41 1/4; prior year +16.49R vs +26.09R (it removes winners). TESTED closed
+    2020-07..2026-10: vol_skip_below 0.2-0.35 pass (peaked, best 0.3 +54.8R n173), vol_skip_above monotone fail, adx_max flat, adx_min 25 +4.7R
+    n119 single point, cooldown flat.'
   entry: 'TESTED closed: donchian 15 +11.75R n183 pass, 25 -4.82R pass, 40 +19.58R fail (noisy); min_confidence 0.525/0.875 pass. UNTESTED forming.'
-  exit: 'TESTED closed: about 25 exit params, all fail and mostly flat around +30..+40R (tp_target_r 3 peaked +41.96R, be_floor_r monotone). UNTESTED forming.'
+  exit: 'TESTED closed: about 25 exit params, all fail and mostly flat around +30..+40R (tp_target_r 3 peaked +41.96R, be_floor_r monotone). UNTESTED
+    forming.'
   session: 'TESTED closed: skip_hours 0-7 +41.13R n190 pass, 20-23 +38.77R pass, 12-16 -25.64R. UNTESTED forming.'
   regime_gating: UNTESTED; both forming arms lose on both sides in the record year, so no cell is obviously separable without a regime read.
   sizing_vs_cost: 'INAPPLICABLE: gross is negative before cost on the forming record (-12.77R).'
   timeframe: UNTESTED; no diagnostic pointer.
   symbol_set: UNTESTED; no diagnostic pointer.
-  next: 'Two forming levers have failed (long-only, vol_skip_below 0.3). The closed-bar vol_skip_below plateau did not carry to the forming bar. Remaining
-    closed-bar responders never run forming: session skip_hours 0-7, entry donchian 15. Before a 3rd unit, read the record-vs-prior-year regime split: +26.09R
-    to -16.18R on similar n is a regime shift, and a lever that fixes the record year may only cost the prior year (as vol_skip_below did). Not exhausted;
-    manager decides.'
+  next: 'Two forming levers have failed (long-only, vol_skip_below 0.3). The closed-bar vol_skip_below plateau did not carry to the forming bar.
+    Remaining closed-bar responders never run forming: session skip_hours 0-7, entry donchian 15. Before a 3rd unit, read the record-vs-prior-year
+    regime split: +26.09R to -16.18R on similar n is a regime shift, and a lever that fixes the record year may only cost the prior year (as vol_skip_below
+    did). Not exhausted; manager decides.'
+  decision_bar_2026_11_14: 'Closed bar (RQ-20261114-db1a-01, FAIL): C -15.52R n46 1/4 vs F -16.18R; prior year C +17.35R vs F +26.09R (closed WORSE the year
+    before). C_VL30 is +0.01R n33 2/4 on the record. Closed lever deltas vs C on the record keep the forming sign (long +7.5 vs +12.1, vol_skip_below 0.3
+    +15.5 vs +9.1); the year before, long is -8.5 and vol_skip_below +0.1. C/F entry overlap 0.49 (the 4h breakout mostly fires on the same bars).'
+  next_2026_11_14: SUPERSEDES next. decision_bar closed is not the lever (db1a-01). The record-year loss is common to both bars and every lever; with +26.1R
+    the year before, this reads as a regime shift. Recommended next is a regime-level question, not a 3rd per-leg lever. Manager decides.
