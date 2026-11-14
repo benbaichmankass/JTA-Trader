@@ -1,7 +1,7 @@
 id: RQ-20261114-db1a-01
 title: 'FORMING-BAR INVERSION diagnosis: would htf / eth_prop / avax_pullback_2h / avax_4h pass deciding on the CLOSED bar (bare switch and with each round-3 lever), same windows,
   full cost stack'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -400,3 +400,16 @@ follow_up: 'On the verdict a session appends the decision_bar test to each leg''
   and the closed lever deltas vs the forming ones. PASS -> data-backed Tier-3 decision_bar proposal (manager -> operator). FAIL with same-sign closed deltas -> the inversion
   is the window; the HELD units (avax_pullback_2h tp_extend, htf (c)) resume on the forming bar.'
 last_dispatched_at: '2026-11-14T04:49:08+00:00'
+grading:
+  attested: RULE-DBINV-FORMING-INVERSION-20261114
+  auto: true
+  decision_rule_id: RULE-DBINV-FORMING-INVERSION-20261114
+  evidence:
+  - research/results/RQ-20261114-db1a-01/43558522192.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 4 row(s), all measured, all fail
+  rows: 4
+  verdict: fail
