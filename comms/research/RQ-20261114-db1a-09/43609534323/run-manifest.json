@@ -1,0 +1,110 @@
+{
+  "unit": "RQ-20261114-db1a-09",
+  "run_id": "43609534323",
+  "commit_sha": "9695710725f052009472fa6379697ead86fad041",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/43609534323",
+  "timeout_minutes": 300,
+  "runner": {
+    "cpu_model": "AMD EPYC 7763 64-Core Processor",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1019-azure",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261111.196.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "d5aeef1fabd2",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_lever_ablation.py",
+        "--leg",
+        "trend_donchian_eth_4h",
+        "--arm",
+        "A=",
+        "--arm",
+        "T4=tp_r=4",
+        "--grade",
+        "stage0",
+        "--baseline",
+        "A",
+        "--start",
+        "2023-11-05T00:00:00",
+        "--end",
+        "2026-11-05T20:00:00",
+        "--days",
+        "1200",
+        "--folds",
+        "4",
+        "--fold-majority",
+        "3",
+        "--n-floor",
+        "1",
+        "--delta-r",
+        "0",
+        "--forming-1m-fetch",
+        "--out",
+        "comms/research/RQ-20261114-db1a-09/43609534323/abl"
+      ],
+      "log": "comms/research/RQ-20261114-db1a-09/43609534323/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 70.3
+    },
+    {
+      "index": 1,
+      "argv": [
+        "python3",
+        "scripts/research/prop_ev_ab_grade.py",
+        "--leg",
+        "trend_donchian_eth_4h",
+        "--a-trades",
+        "comms/research/RQ-20261114-db1a-09/43609534323/abl/arms/A__trades.jsonl",
+        "--b-trades",
+        "comms/research/RQ-20261114-db1a-09/43609534323/abl/arms/T4__trades.jsonl",
+        "--out",
+        "comms/research/RQ-20261114-db1a-09/43609534323",
+        "--seeds",
+        "1,2,3,4,5",
+        "--n-floor",
+        "60",
+        "--ev-margin-frac",
+        "0",
+        "--breach-margin",
+        "0",
+        "--unit",
+        "RQ-20261114-db1a-09",
+        "--rule",
+        "RULE-ETH4H-TP4-PROPEV-NONINF-20261114"
+      ],
+      "log": "comms/research/RQ-20261114-db1a-09/43609534323/logs/cmd-1.log",
+      "exit_code": 0,
+      "seconds": 563.8
+    }
+  ],
+  "all_ok": true
+}
