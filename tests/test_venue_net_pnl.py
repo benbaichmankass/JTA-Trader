@@ -320,3 +320,63 @@ def test_a_failed_read_is_never_held_in_the_cache(tmp_path):
     om._sweep_venue_net_pnl(db, cfgs=CFGS, bybit_reader=lambda *a, **k: None)
     om._sweep_venue_net_pnl(db, cfgs=CFGS, bybit_reader=_reader([], state="could_not_look"))
     assert om._VENUE_PNL_READ_CACHE == {}
+
+
+def _bybit_like_reader(records):
+    """Filters on created_time, as /v5/position/closed-pnl does (MEASURED 2026-11-14, record 084e4c9f)."""
+    def read(cfg, *, symbol, start_ms, end_ms):
+        hits = [r for r in records if start_ms <= int(r["created_time"]) <= end_ms]
+        return {"query_state": "rows_returned" if hits else "no_rows", "records": hits}
+    return read
+
+
+def test_a_trade_held_longer_than_the_close_window_is_still_found(tmp_path):
+    """Trade 7054: TP order (the closing record) created at ENTRY 11-11 12:02, filled 11-14 16:46. The old
+    close-2h..+3h window could never see it; the window now starts before the row's own entry."""
+    db, path = _db(tmp_path)
+    now = _dt.datetime.now(_dt.timezone.utc)
+    row = _add(path, created_at=(now - _dt.timedelta(hours=58)).isoformat())   # held 30 h, closed 28 h ago
+    opened_ms, closed_ms = om._isoformat_to_ms(row["created_at"]), om._isoformat_to_ms(row["closed_at"])
+    rec = {"order_id": "e043d46b", "side": "Sell", "qty": "74160", "closed_pnl": "-888.3026",
+           "avg_entry_price": "1.2582", "avg_exit_price": "1.2476",
+           "created_time": str(opened_ms + 60_000), "updated_time": str(closed_ms)}
+    om._sweep_venue_net_pnl(db, cfgs=CFGS, bybit_reader=_bybit_like_reader([rec]))
+    r, n = _get(path, 6817)
+    assert r["pnl_basis"] == "venue_net" and r["pnl"] == pytest.approx(-888.3026)
+    assert n["venue_avg_entry"] == 1.2582 and n["venue_qty"] == 74160.0
+    assert "pnl_gap_reason" not in n                   # inside tolerance: no gap, no reason
+
+
+def test_gap_reason_netting_vs_entry_fill(tmp_path):
+    db, path = _db(tmp_path)
+    now = _dt.datetime.now(_dt.timezone.utc)
+    a = _add(path, id=1)                               # entry 1.2582, venue says position avg 1.30
+    _add(path, id=2, sl_order_id="sib-sl", tp_order_id="sib-tp", entry_price=1.40,   # sibling open at the same time
+         created_at=(now - _dt.timedelta(hours=40)).isoformat(), closed_at=(now - _dt.timedelta(hours=1)).isoformat(),
+         pnl=None)
+    b = _add(path, id=3, account_id="bybit_2", sl_order_id="b-sl", tp_order_id="b-tp")  # alone on its account
+    recs = [{"order_id": "e043d46b", "side": "Sell", "qty": "74160", "closed_pnl": "-3400.0",
+             "avg_entry_price": "1.30", "avg_exit_price": "1.2476",
+             "created_time": str(om._isoformat_to_ms(a["created_at"])), "updated_time": str(om._isoformat_to_ms(a["closed_at"]))},
+            {"order_id": "b-sl", "side": "Sell", "qty": "74160", "closed_pnl": "-1500.0",
+             "avg_entry_price": "1.2660", "avg_exit_price": "1.2476",
+             "created_time": str(om._isoformat_to_ms(b["created_at"])), "updated_time": str(om._isoformat_to_ms(b["closed_at"]))}]
+    om._sweep_venue_net_pnl(db, cfgs=CFGS, bybit_reader=_bybit_like_reader(recs))
+    assert _get(path, 1)[1]["pnl_gap_reason"] == "netting_position_avg_entry"
+    assert _get(path, 3)[1]["pnl_gap_reason"] == "entry_fill_differs"
+
+
+def test_backfill_adds_gap_notes_to_rows_classified_before_and_never_touches_pnl(tmp_path):
+    db, path = _db(tmp_path)
+    row = _add(path, pnl=1331.0, pnl_basis="venue_net", pnl_computed=409.73, pnl_gap_usd=921.27,
+               notes=json.dumps({"venue_pnl_match": "order_id", "pnl_prior": 421.12}))
+    rec = {"order_id": "e043d46b", "side": "Sell", "qty": "74160", "closed_pnl": "1331.0",
+           "avg_entry_price": "1.03", "avg_exit_price": "1.2476",
+           "created_time": str(om._isoformat_to_ms(row["created_at"])), "updated_time": str(om._isoformat_to_ms(row["closed_at"]))}
+    s = om._sweep_venue_net_pnl(db, cfgs=CFGS, bybit_reader=_bybit_like_reader([rec]))
+    r, n = _get(path, 6817)
+    assert s.get("backfilled") == 1 and n["venue_avg_entry"] == 1.03 and n["pnl_prior"] == 421.12
+    assert n["pnl_gap_reason"] == "entry_fill_differs"
+    assert (r["pnl"], r["pnl_computed"], r["pnl_gap_usd"], r["pnl_basis"]) == (1331.0, 409.73, 921.27, "venue_net")
+    om._sweep_venue_net_pnl(db, cfgs=CFGS, bybit_reader=_bybit_like_reader([rec]))   # already backfilled: once
+    assert _get(path, 6817)[1] == n
