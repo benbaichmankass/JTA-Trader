@@ -843,6 +843,13 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                     trail = min(trail, entry - be_floor_lock_r * risk)
             if _sx is not None:
                 trail = _trail_prev        # structure replaces the chandelier (stop moves on bar close only)
+                # ...but NOT the MI-165 break-even floor: it only ever tightens, so it composes with
+                # the structure stop exactly as in scripts/backtest_trend.py (override, THEN floor).
+                # Before PI-20261114-TFZXAKEK-0001 this override silently discarded the floor, so a
+                # --be-floor-r arm on a --structure-exit leg was inert (RQ-20261110-73de-04 C1, 0.0R).
+                if be_floor_r > 0.0 and mfe >= be_floor_r:
+                    trail = (max(trail, entry + be_floor_lock_r * risk) if direction == "long"
+                             else min(trail, entry - be_floor_lock_r * risk))
             # momentum_trail attribution: was the stop last moved on a bar the
             # ADX condition fired on?
             if mom_trail_on and trail != _trail_prev:
