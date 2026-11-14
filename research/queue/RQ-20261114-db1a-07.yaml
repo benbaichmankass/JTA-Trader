@@ -1,0 +1,171 @@
+id: RQ-20261114-db1a-07
+title: trend_donchian_1h atr_stop_mult 3.125 vs config-exact 2.5 on its forming decision bar, record + year before (census candidate, sizing_vs_cost)
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 1
+roadmap:
+- L-LADDER
+question: Does widening trend_donchian_1h's initial stop from 2.5 to 3.125 ATR make the leg pass Stage 0 on the record year 2025-11-13..2026-11-12 on its live forming bar and beat config-exact
+  there, while holding (positive and above config-exact) on the year before, net of the full cost stack?
+why_this_matters: 'Census 2026-11-14: trend_donchian_1h is negative in both years (-19.67R n183 / -7.68R n171) and its attribution reads ''cost erases a gross edge'' (gross +15.39R,
+  cost 25.96R, n184; about 0.14R of cost per trade). A wider stop lowers cost per R. The leg''s only sizing_vs_cost responder is closed-bar atr_stop_mult 3.125 (+9.70R n691 vs -6.83R,
+  3/4 folds, RQ-20261106-024; 1.875 -24.12R, monotone in the right direction). Regime gating (db1a-02/-04), timeframe (f251-05), regime off-cell (f251-17) and the profit lock (db1a-05)
+  all failed on this leg.'
+power:
+  expected_n: 340
+  min_detectable_effect: 0.15
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED: arm A n 183 record / 171 prior (RQ-20261114-db1a-05). A wider stop with the same entries keeps roughly the same trade count (691 vs 919 at 1.875 in RQ-20261106-024;
+    fewer stop-outs free fewer re-entries), so about 150-180 per window with W; MDE about 0.15sd per trade pooled; per-leg Stage-0 floor 30.'
+  sd: null
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand windows; nothing accrues; Binance / Binance-vision covers them at run time.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+run:
+  timeout_minutes: 300
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261114-db1a-07
+  commands:
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - trend_donchian_1h
+    - --arm
+    - A=
+    - --arm
+    - W=atr_stop_mult=3.125
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2025-11-13T00:00:00'
+    - --end
+    - '2026-11-12T22:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '1'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/rec_trend_donchian_1h'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - trend_donchian_1h
+    - --arm
+    - A=
+    - --arm
+    - W=atr_stop_mult=3.125
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2024-11-13T00:00:00'
+    - --end
+    - '2025-11-12T22:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '1'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/pre_trend_donchian_1h'
+  - - python3
+    - scripts/research/two_window_lever_grade.py
+    - --out
+    - '{out_dir}'
+    - --arm
+    - W
+    - --leg
+    - trend_donchian_1h
+    - --unit
+    - RQ-20261114-db1a-07
+    - --rule
+    - RULE-TD1H-ATRSTOP3125-20261114
+    - --n-floor
+    - '30'
+    - --fold-majority
+    - '3'
+decision_rule:
+  id: RULE-TD1H-ATRSTOP3125-20261114
+  registered_at: '2026-11-14'
+  registered_before_run: true
+  statistic: exit_lever_ablation --grade stage0 --forming-1m-fetch --days 800, arms A (config-exact, atr_stop_mult 2.5) and W (atr_stop_mult 3.125) per window on the leg's live forming
+    decision bar; two_window_lever_grade.py applies the rule.
+  rule: 'Multiple-testing guard: names the prior attempts on this leg and these windows (RQ-20261114-db1a-05 profit lock FAIL, -04 harness-native HTF gate FAIL, -03 post-hoc HTF filter,
+    -02 ADX cell FAIL, RQ-20261113-f251-05 timeframe FAIL, f251-17 regime off-cell FAIL) and the selection: 3.125 is the better of two values (1.875, 3.125) in RQ-20261106-024 over 2021-11..2026-11
+    on the CLOSED bar, which overlaps both windows here; this leg decides on the FORMING bar and RQ-20261114-db1a-01 found closed-bar lever responses flip sign on the forming bar for
+    half the levers, so this tests whether the response transfers. The value is fixed (3.125), not chosen here. PASS iff W passes Stage 0 on the record window (net_r > 0, n >= 30, >=
+    3/4 folds positive) AND W net_r > A net_r there, AND on the prior window W net_r > 0 AND > A net_r. FAIL iff graded and not; INDETERMINATE iff W n < 30 on the record window or a
+    run/arm is missing. No threshold is relaxed.'
+  what_it_does_not_do: Changes no config, roster, order or evidence record. A PASS is a Tier-3 parameter proposal (atr_stop_mult 2.5 -> 3.125) for trend_donchian_1h on the bybit_1 demo
+    floor, via the manager.
+  baseline: the leg config-exact (atr_stop_mult 2.5) on its forming decision bar (arm A), both windows, run in this unit.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  basis: 'stand-in: one demo-floor leg losing in both years; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+ml_consumer:
+  not_applicable: 'Not an ML unit: a stop-geometry parameter on a rule-based leg.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: trend_donchian_1h
+  subject_kind: strategy_leg
+  from_result: RQ-20261114-db1a-05
+  verdict_read: fail
+  diagnosis: 'Census 2026-11-14 (research/levers/trend_donchian_1h.yaml): negative in both years; ''cost erases a gross edge'' (+15.39R gross vs 25.96R cost); timeframe, regime off-cell,
+    ADX cell, HTF gate and profit lock (db1a-05 L2 -5.25R / -10.22R) all fail. sizing_vs_cost is the diagnosed family and is untested on the live bar.'
+  hypothesis: A 3.125 ATR initial stop cuts cost per R (wider R, same fee and slippage per trade) and stops fewer trades out on noise, turning the gross edge net-positive in both recent
+    years.
+  search: Fixed at 3.125 (RQ-20261106-024's passing value; 1.875 failed); no other value run.
+  attempt: 1
+  due_by: '2026-11-21'
+  levers:
+  - sizing_vs_cost
+  lever_arms:
+  - family: sizing_vs_cost
+    param: atr_stop_mult
+    values:
+    - 3.125
+    baseline_value: 2.5
+  map_entries:
+  - research/levers/trend_donchian_1h.yaml
+related:
+- RQ-20261106-024
+- RQ-20261114-db1a-05
+- RQ-20261114-db1a-01
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): ONE lever chosen from the leg''s own R diagnosis (scripts/research/leg_r_diagnosis.py), rule
+  registered before the run against the leg''s own record, net of the full cost stack, graded once on its fixed window.'
+follow_up: On the verdict a session reports to the manager with the per-window numbers; a PASS becomes a Tier-3 parameter proposal via the manager.
