@@ -533,9 +533,35 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261113-f251-15
   lever_family: direction
+- family: tp_target_r (forming bar)
+  varied: a real take-profit at 4R (tp_target_r 4) vs the fictional tp_r 50 on the FORMING bar, record 2025-11-13..2026-11-12 + confirmation 2024-11-13..2025-11-12,
+    full cost stack
+  response:
+    verdict: fail
+    run: '43538341953'
+    baseline:
+      arm: A
+      n: 105
+      net_r: -23.3731
+      folds_positive: 1/4
+      confirm_net_r: 2.9423
+    arms:
+    - tp_target_r: 4
+      n: 105
+      net_r: -25.1558
+      folds_positive: 1/4
+      confirm_n: 85
+      confirm_net_r: 3.6743
+    reading: a 4R target does not rescue the forming record (-25.2R vs -23.4R, 1/4 folds); the closed-bar +10.1R response does not carry to the forming bar. On the
+      prior year it is marginally better (+3.67R vs +2.94R).
+  shape: flat
+  tested_at_power: true
+  unit: RQ-20261113-f251-19
+  lever_family: exit
 units:
 - RQ-20261113-f251-10
 - RQ-20261113-f251-15
+- RQ-20261113-f251-19
 manifest_notes:
   census_2026_11_14: 'DEMO-FLOOR-ITER lever-family census after the 2nd forming-bar lever failed (AM-ML guard); CORRECTED 2026-11-14 00:30Z, superseding the 00:00Z
     draft that read only the one-year forming window and wrongly concluded lever exhaustion. Forming record (f251-01, 2025-11-13..2026-11-12): -23.37R over n 105,
@@ -554,7 +580,8 @@ manifest_notes:
   timeframe: UNTESTED forming; no diagnostic pointer.
   symbol_set: UNTESTED; no diagnostic pointer.
   session: UNTESTED; 24/7 crypto, no session split isolates the loss.
-  next: 'NOT exhausted: no retirement proposal (the v3 family-retirement policy needs every lever family tested or irrelevant). The closed-bar responders that never
-    ran on the forming bar are the next candidates, in value order: exit tp_target_r 4 (a REAL predictive TP replacing the fictional tp_r 50; also a TP-doctrine fix),
-    entry pullback_frac 0.625, filter vol_skip_below 0.2. A 3rd lever on the forming record window must name f251-01/-10/-15 and also pass on the 2024-11-13..2025-11-12
-    confirmation window (AM-ML guard); manager decides which.'
+  next: 'Three forming levers have failed (adx_min, long-only, tp_target_r 4). Remaining closed-bar responders never run forming: entry pullback_frac 0.625, filter
+    vol_skip_below 0.2. f251-23 tests pullback_frac 0.625 on the sibling eth_pullback_prop_2h; its result should inform (b) here before a 4th htf unit. Not exhausted;
+    manager decides (b)/(c).'
+  exit_forming: 'TESTED forming (RQ-20261113-f251-19, FAIL): tp_target_r 4 -25.16R n 105 1/4 vs -23.37R; prior year +3.67R vs +2.94R. The closed-bar +10.1R response
+    does not carry to the forming bar.'
