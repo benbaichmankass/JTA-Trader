@@ -1,0 +1,450 @@
+{
+  "leg": "trend_donchian_1h",
+  "grade": {
+    "verdict": "fail",
+    "label": "stage0_no_edge",
+    "baseline": "A",
+    "net_r": -7.8577,
+    "n": 171,
+    "max_drawdown_r": 18.1079,
+    "folds_positive": 2,
+    "n_folds": 4,
+    "fold_majority": 3,
+    "n_floor": 1,
+    "control": null,
+    "why": "net_r=-7.8577 with 2/4 positive folds (needs > 0 and >= 3)"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0234,
+      "n": 171,
+      "net_r": -7.8577,
+      "net_r_fee_only": 1.1926,
+      "max_drawdown_r": 18.1079,
+      "by_outcome": {
+        "stop": 91,
+        "trail_stop": 67,
+        "take_profit": 8,
+        "timeout": 5
+      },
+      "mean_bars_held": 40.86,
+      "net_r_per_capital_day": -0.027,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2024-11-13 00:00:00+00:00",
+      "data_end": "2025-11-12 22:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2024-11-13 00:00:00+00:00",
+          "end": "2025-02-12 05:30:00+00:00",
+          "trades": 43,
+          "net_r": -11.5367
+        },
+        {
+          "fold": 2,
+          "start": "2025-02-12 05:30:00+00:00",
+          "end": "2025-05-14 11:00:00+00:00",
+          "trades": 35,
+          "net_r": 14.9428
+        },
+        {
+          "fold": 3,
+          "start": "2025-05-14 11:00:00+00:00",
+          "end": "2025-08-13 16:30:00+00:00",
+          "trades": 48,
+          "net_r": -11.7137
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-13 16:30:00+00:00",
+          "end": "2025-11-12 22:00:00+00:00",
+          "trades": 45,
+          "net_r": 0.449
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261114-db1a-05/43589684532/pre_trend_donchian_1h/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261114-db1a-05/43589684532/pre_trend_donchian_1h/arms/A__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--decision-bar",
+        "forming",
+        "--minutes-1m-csv",
+        "<minutes_1m>",
+        "--strategy-name",
+        "trend_donchian_1h",
+        "--start",
+        "2024-11-13T00:00:00",
+        "--end",
+        "2025-11-12T22:00:00"
+      ]
+    },
+    "L2": {
+      "reach_ge_6r": 0.0217,
+      "n": 184,
+      "net_r": -18.0802,
+      "net_r_fee_only": -8.7505,
+      "max_drawdown_r": 24.173,
+      "by_outcome": {
+        "stop": 99,
+        "trail_stop": 74,
+        "take_profit": 5,
+        "timeout": 6
+      },
+      "mean_bars_held": 38.098,
+      "net_r_per_capital_day": -0.0619,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0,
+        "be_floor_r": 2.0,
+        "be_floor_lock_r": 1.0
+      },
+      "data_start": "2024-11-13 00:00:00+00:00",
+      "data_end": "2025-11-12 22:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2024-11-13 00:00:00+00:00",
+          "end": "2025-02-12 05:30:00+00:00",
+          "trades": 45,
+          "net_r": -15.0816
+        },
+        {
+          "fold": 2,
+          "start": "2025-02-12 05:30:00+00:00",
+          "end": "2025-05-14 11:00:00+00:00",
+          "trades": 38,
+          "net_r": 13.2134
+        },
+        {
+          "fold": 3,
+          "start": "2025-05-14 11:00:00+00:00",
+          "end": "2025-08-13 16:30:00+00:00",
+          "trades": 47,
+          "net_r": -9.4265
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-13 16:30:00+00:00",
+          "end": "2025-11-12 22:00:00+00:00",
+          "trades": 54,
+          "net_r": -6.7864
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261114-db1a-05/43589684532/pre_trend_donchian_1h/arms/L2__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261114-db1a-05/43589684532/pre_trend_donchian_1h/arms/L2__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--decision-bar",
+        "forming",
+        "--minutes-1m-csv",
+        "<minutes_1m>",
+        "--strategy-name",
+        "trend_donchian_1h",
+        "--be-floor-r",
+        "2",
+        "--be-floor-lock-r",
+        "1",
+        "--start",
+        "2024-11-13T00:00:00",
+        "--end",
+        "2025-11-12T22:00:00"
+      ]
+    },
+    "L25": {
+      "reach_ge_6r": 0.0167,
+      "n": 180,
+      "net_r": -16.2734,
+      "net_r_fee_only": -7.0784,
+      "max_drawdown_r": 19.0853,
+      "by_outcome": {
+        "stop": 97,
+        "trail_stop": 72,
+        "take_profit": 8,
+        "timeout": 3
+      },
+      "mean_bars_held": 38.594,
+      "net_r_per_capital_day": -0.0562,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0,
+        "be_floor_r": 2.5,
+        "be_floor_lock_r": 1.5
+      },
+      "data_start": "2024-11-13 00:00:00+00:00",
+      "data_end": "2025-11-12 22:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2024-11-13 00:00:00+00:00",
+          "end": "2025-02-12 05:30:00+00:00",
+          "trades": 45,
+          "net_r": -13.7919
+        },
+        {
+          "fold": 2,
+          "start": "2025-02-12 05:30:00+00:00",
+          "end": "2025-05-14 11:00:00+00:00",
+          "trades": 40,
+          "net_r": 9.6464
+        },
+        {
+          "fold": 3,
+          "start": "2025-05-14 11:00:00+00:00",
+          "end": "2025-08-13 16:30:00+00:00",
+          "trades": 50,
+          "net_r": -10.4186
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-13 16:30:00+00:00",
+          "end": "2025-11-12 22:00:00+00:00",
+          "trades": 45,
+          "net_r": -1.7106
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261114-db1a-05/43589684532/pre_trend_donchian_1h/arms/L25__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261114-db1a-05/43589684532/pre_trend_donchian_1h/arms/L25__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--decision-bar",
+        "forming",
+        "--minutes-1m-csv",
+        "<minutes_1m>",
+        "--strategy-name",
+        "trend_donchian_1h",
+        "--be-floor-r",
+        "2.5",
+        "--be-floor-lock-r",
+        "1.5",
+        "--start",
+        "2024-11-13T00:00:00",
+        "--end",
+        "2025-11-12T22:00:00"
+      ]
+    },
+    "L2T": {
+      "reach_ge_6r": 0.0234,
+      "n": 171,
+      "net_r": -7.3168,
+      "net_r_fee_only": 1.7304,
+      "max_drawdown_r": 18.1079,
+      "by_outcome": {
+        "stop": 91,
+        "trail_stop": 67,
+        "take_profit": 8,
+        "timeout": 5
+      },
+      "mean_bars_held": 40.854,
+      "net_r_per_capital_day": -0.0251,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0,
+        "be_floor_r": 2.0,
+        "be_floor_lock_r": 1.0,
+        "be_floor_tp_within_r": 0.5
+      },
+      "data_start": "2024-11-13 00:00:00+00:00",
+      "data_end": "2025-11-12 22:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2024-11-13 00:00:00+00:00",
+          "end": "2025-02-12 05:30:00+00:00",
+          "trades": 43,
+          "net_r": -11.5367
+        },
+        {
+          "fold": 2,
+          "start": "2025-02-12 05:30:00+00:00",
+          "end": "2025-05-14 11:00:00+00:00",
+          "trades": 35,
+          "net_r": 15.4838
+        },
+        {
+          "fold": 3,
+          "start": "2025-05-14 11:00:00+00:00",
+          "end": "2025-08-13 16:30:00+00:00",
+          "trades": 48,
+          "net_r": -11.7137
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-13 16:30:00+00:00",
+          "end": "2025-11-12 22:00:00+00:00",
+          "trades": 45,
+          "net_r": 0.449
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261114-db1a-05/43589684532/pre_trend_donchian_1h/arms/L2T__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261114-db1a-05/43589684532/pre_trend_donchian_1h/arms/L2T__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--decision-bar",
+        "forming",
+        "--minutes-1m-csv",
+        "<minutes_1m>",
+        "--strategy-name",
+        "trend_donchian_1h",
+        "--be-floor-r",
+        "2",
+        "--be-floor-lock-r",
+        "1",
+        "--be-floor-tp-within-r",
+        "0.5",
+        "--start",
+        "2024-11-13T00:00:00",
+        "--end",
+        "2025-11-12T22:00:00"
+      ]
+    }
+  },
+  "window": {
+    "start": "2024-11-13T00:00:00",
+    "end": "2025-11-12T22:00:00",
+    "fetch_days": 800,
+    "feed": {
+      "source": "binance",
+      "ticker": "BTCUSDT",
+      "interval": "60",
+      "resample": "1h"
+    },
+    "fold_edges": [
+      "2024-11-13 00:00:00+00:00",
+      "2025-02-12 05:30:00+00:00",
+      "2025-05-14 11:00:00+00:00",
+      "2025-08-13 16:30:00+00:00",
+      "2025-11-12 22:00:00+00:00"
+    ]
+  }
+}
