@@ -1377,16 +1377,22 @@ class Database:
             # bybit_portfolio ADA TP 2026-11-14 13:04Z; the journal got 2711.994 a pass later). The alert
             # shows a gross local estimate, labelled est; the journal row is not touched here.
             try:
-                from src.runtime import local_pnl
-                cvu = local_pnl.contract_value_usd_for(row["symbol"])
-                est = local_pnl.compute_realized_pnl(
-                    entry_price=row["entry_price"], exit_price=row["exit_price"],
-                    qty=row["position_size"], direction=row["direction"], contract_value_usd=cvu)
-                if est is not None:
-                    pnl, pnl_estimated = est, True
-                    pnl_pct = local_pnl.compute_pnl_percent(
-                        pnl=est, entry_price=row["entry_price"], qty=row["position_size"],
-                        contract_value_usd=cvu)
+                # Inline (not src.runtime.local_pnl: that module reaches src.runtime.market_data, which
+                # the units layer may not import -- .importlinter). Same formula as
+                # local_pnl.compute_realized_pnl / compute_pnl_percent.
+                from src.core.profile_loader import contract_value_usd_for
+                entry, exit_, qty = (float(row["entry_price"]), float(row["exit_price"]),
+                                     float(row["position_size"]))
+                side = str(row["direction"] or "").lower()
+                if qty > 0 and entry > 0 and side in ("long", "buy", "short", "sell"):
+                    try:
+                        cvu = float(contract_value_usd_for(str(row["symbol"] or ""))) or 1.0
+                    except Exception:  # noqa: BLE001  # allow-silent: crypto-perp default
+                        cvu = 1.0
+                    sign = 1.0 if side in ("long", "buy") else -1.0
+                    pnl = round((exit_ - entry) * qty * cvu * sign, 6)
+                    pnl_pct = round(pnl / (entry * qty * cvu) * 100.0, 4)
+                    pnl_estimated = True
             except Exception:  # noqa: BLE001  # allow-silent: an estimate failure leaves the alert at "PnL —"
                 pass
         notify_trade_event(
