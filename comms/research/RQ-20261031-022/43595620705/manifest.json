@@ -1,0 +1,100 @@
+{
+  "family": "trend_1h",
+  "legs": [
+    "slv_trend_1h",
+    "trend_donchian_sol_prop"
+  ],
+  "metas": {
+    "slv_trend_1h": {
+      "bt_timeframe": "1h",
+      "config_hash": "6205a46f3ed86e7a",
+      "config_timeframe": "1h",
+      "cost": {
+        "complete": 141,
+        "share": 1.0,
+        "trades": 141
+      },
+      "family": "trend_1h",
+      "feed": {
+        "interval": "60m",
+        "resample": "1h",
+        "source": "yahoo"
+      },
+      "generated_at": "2026-11-14T12:37:22Z",
+      "leg": "slv_trend_1h",
+      "n_trades": 141,
+      "params": {
+        "config_hash": "d17565109ae23933",
+        "harness_hash": "d17565109ae23933",
+        "hash_equal": true,
+        "keys": [
+          "atr_stop_mult",
+          "donchian",
+          "min_confidence",
+          "trail_mult"
+        ],
+        "mismatch": {}
+      },
+      "state": "ok",
+      "symbol": "SLV",
+      "timeframe_equal": true
+    },
+    "trend_donchian_sol_prop": {
+      "bt_timeframe": "1h",
+      "config_hash": "227aadbdee1e58cc",
+      "config_timeframe": "1h",
+      "cost": {
+        "complete": 390,
+        "share": 1.0,
+        "trades": 390
+      },
+      "family": "trend_1h",
+      "feed": {
+        "interval": "60",
+        "resample": "1h",
+        "source": "binance"
+      },
+      "generated_at": "2026-11-14T12:37:22Z",
+      "leg": "trend_donchian_sol_prop",
+      "n_trades": 390,
+      "params": {
+        "config_hash": "dff05e091b10a2c8",
+        "harness_hash": "dff05e091b10a2c8",
+        "hash_equal": true,
+        "keys": [
+          "atr_stop_mult",
+          "donchian",
+          "min_confidence",
+          "trail_mult"
+        ],
+        "mismatch": {}
+      },
+      "state": "ok",
+      "symbol": "SOLUSDT",
+      "timeframe_equal": true
+    }
+  },
+  "station_metrics": {
+    "cost_completeness": {
+      "complete": 531,
+      "of": 531,
+      "share": 1.0
+    },
+    "coverage": {
+      "covered": 2,
+      "legs": [
+        "slv_trend_1h",
+        "trend_donchian_sol_prop"
+      ],
+      "not_covered": {},
+      "of": 2,
+      "share": 1.0
+    },
+    "fidelity": {
+      "hash_equal": 2,
+      "of": 2,
+      "share": 1.0
+    },
+    "population": "2 money legs (re-parsed from config)"
+  }
+}
