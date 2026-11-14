@@ -640,6 +640,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--auto-bound-r", type=float, default=AUTO_BOUND_R)
     ap.add_argument("--shadow-bound-r", type=float, default=SHADOW_BOUND_R)
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--out", help="also write the table JSON here (a reviewer commits it next to its row as "
+                                  "comms/live_review/tables/<review_id>.json and names it in outcome_table_source; "
+                                  "the dispatcher reads the table at the row's commit)")
     a = ap.parse_args(argv)
     trades, src = load_trades(a.leg, corpus=a.corpus)
     cpath: Any = a.candles
@@ -678,6 +681,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     man = REPO / LTR_CORPUS_DIR / f"{a.leg}__corpus.json"
     if str(src).startswith(LTR_CORPUS_DIR) and man.is_file():
         res["corpus_note"] = json.loads(man.read_text()).get("note")   # what this corpus does NOT model, stated
+    if a.out:
+        out = Path(a.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(res, indent=2, default=str) + "\n")
     print(json.dumps(res, indent=2) if a.json else render_text(res))
     return 0
 
