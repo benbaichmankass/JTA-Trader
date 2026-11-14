@@ -1,0 +1,144 @@
+id: RQ-20261114-db1a-09
+title: 'PROP superset for the eth_4h tp_r 4 compliance change: prop EV/survival of tp_r 4 vs config-exact on breakout_2 / tradeify_1 / velotrade_1, NON-INFERIORITY'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 1
+roadmap:
+- L-LADDER
+question: With trend_donchian_eth_4h's entry TP at 4R (tp_r 4) instead of the 50R sentinel, is the leg's prop EV and survival non-inferior to config-exact on every firm ruleset it trades
+  (breakout_turbo_1step, tradeify_247_1step, velotrade_classic_1step), on the prop record's own 3-year window?
+why_this_matters: 'Row RM-AM-ETH4H-ENTRYTP, manager 2026-11-14 14:05Z: RQ-20261114-db1a-08 PASSED the tp_r 4 doctrine-compliance non-inferiority on the real-money cost stack; ''a prop
+  EV re-run (prop superset) before anything ships''. The leg is rostered on tradeify_1 and velotrade_1 (operator_exception baseline, 2026-11-05), and the prop superset rule (operator
+  2026-10-15) means a change must not worsen its prop EV/survival.'
+power:
+  expected_n: 270
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED: the 2026-11-06 prop retest graded this leg on 136 trades over 2023-11-05..2026-11-05 (comms/prop_survival/trend_donchian_eth_4h.json); each arm ledger here is about
+    that size. The sim''s Monte Carlo SE on ev is about 12 USD per cell (5 seeds x 1000 lives).'
+  sd: null
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window; nothing accrues; Binance / Binance-vision covers it at run time.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+run:
+  timeout_minutes: 300
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261114-db1a-09
+  commands:
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - trend_donchian_eth_4h
+    - --arm
+    - A=
+    - --arm
+    - T4=tp_r=4
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2023-11-05T00:00:00'
+    - --end
+    - '2026-11-05T20:00:00'
+    - --days
+    - '1200'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '1'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/abl'
+  - - python3
+    - scripts/research/prop_ev_ab_grade.py
+    - --leg
+    - trend_donchian_eth_4h
+    - --a-trades
+    - '{out_dir}/abl/arms/A__trades.jsonl'
+    - --b-trades
+    - '{out_dir}/abl/arms/T4__trades.jsonl'
+    - --out
+    - '{out_dir}'
+    - --seeds
+    - 1,2,3,4,5
+    - --n-floor
+    - '60'
+    - --ev-margin-frac
+    - '0.10'
+    - --breach-margin
+    - '0.02'
+    - --unit
+    - RQ-20261114-db1a-09
+    - --rule
+    - RULE-ETH4H-TP4-PROPEV-NONINF-20261114
+decision_rule:
+  id: RULE-ETH4H-TP4-PROPEV-NONINF-20261114
+  registered_at: '2026-11-14'
+  registered_before_run: true
+  statistic: 'exit_lever_ablation arms A (config-exact) and T4 (tp_r 4) on 2023-11-05..2026-11-05 20:00 write one trade ledger each; prop_ev_ab_grade.py scores both with prop_ev_sim
+    path mode, 5 seeds x 1000 lives, with the 2026-11-06 retest''s per-account cells (''cur'' cost arm: commission 11.0 / slippage 3.0 bps rt, swap 0.0003, sizing start, dd switch 0.8;
+    breakout_2 risk 0.0035, tradeify_1 and velotrade_1 risk 0.005, lev cap 5). The grader reproduces the committed retest cell eth4h__3y__tradeify_1__cur__s1 exactly (ev 102.3, p_breach
+    0.333; checked locally before registration).'
+  rule: 'Multiple-testing guard: follows RQ-20261114-db1a-08 (PASS, compliance only; the 4R target never bound on the record year) and names RQ-20261028-a7c3-04 / RQ-20261104-c6f1-04.
+    Margins fixed here before any run. PER ACCOUNT: PASS iff mean over seeds of T4''s ev_net_usd_per_life >= A''s - 0.10 x |A''s| AND mean T4 p_breach (max-DD + daily-loss) <= A''s +
+    0.02. UNIT PASS iff every account passes; FAIL iff any account fails; INDETERMINATE iff any cell is missing or either ledger has fewer than 60 rows. No threshold is relaxed.'
+  what_it_does_not_do: Changes no config, roster, order, prop record or evidence record. A PASS completes the evidence for a Tier-3 doctrine-compliance proposal (tp_r 50.0 -> 4.0 + tp_intent
+    mode r_multiple) that goes to the operator via the manager; it does not change the leg's prop admission (operator_exception) or its fail_edge grade.
+  baseline: the leg config-exact (arm A) on the same window and the same sim cells, run in this unit.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: a compliance change on a prop + demo leg; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+ml_consumer:
+  not_applicable: 'Not an ML unit: an entry take-profit parameter on a rule-based leg.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: trend_donchian_eth_4h
+  subject_kind: strategy_leg
+  from_result: RQ-20261114-db1a-08
+  verdict_read: pass
+  diagnosis: 'db1a-08: tp_r 4 is non-inferior on the real-money cost stack (identical on the record year, +1.96R the year before); the prop superset rule requires the prop EV check too.'
+  hypothesis: A 4R entry target leaves the leg's prop EV and breach probability unchanged within the registered margins on all three firms.
+  search: 'Fixed: tp_r 4, the three firm rulesets the leg''s prop record uses, the retest''s cells.'
+  attempt: 1
+  due_by: '2026-11-21'
+  levers:
+  - exit
+  lever_arms:
+  - family: exit
+    param: tp_r
+    values:
+    - 4.0
+    baseline_value: 50.0
+  map_entries:
+  - research/levers/trend_donchian_eth_4h.yaml
+related:
+- RQ-20261114-db1a-08
+- RQ-20261028-a7c3-04
+- RQ-20261104-c6f1-04
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): ONE lever chosen from the leg''s own R diagnosis (scripts/research/leg_r_diagnosis.py), rule
+  registered before the run against the leg''s own record, net of the full cost stack, graded once on its fixed window.'
+follow_up: On the verdict a session reports to the manager per account; a PASS lets the manager take the tp_r 4 compliance proposal to the operator.
