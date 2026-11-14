@@ -95,12 +95,22 @@ IN_PROCESS_RUNTIME_PATHS_RE = re.compile(
 #:     files exist in the tree.
 #:   - ``config/trader_import_closure.txt``: read by this gate and diag, never
 #:     by the trader.
+#:   - ``comms/gates/``: operator gate-decision records and the gate registry's
+#:     inputs. Their only reader is ``src/runtime/gate_registry.py`` (globs
+#:     ``comms/gates/gate_decisions_*.json``), imported by the WEB-API
+#:     (``src/web/api/routers/gates.py``) and ``scripts/ops/gates.py`` -- NOT in
+#:     the trader's closure; ``telegram_channels.py`` (in the closure) only names
+#:     the module path as a string. Every ``comms/gates`` mention under src/ is a
+#:     comment citing a record. MEASURED 2026-11-14: #26135 (one new
+#:     gate_decisions_2026-11-14.json) forced an unbatched trader restart at
+#:     21:36Z. The web-api's restart rule is unchanged (it is the deploy's set).
 #: MEASURED on 2026-11-12 00:00-19:54Z: 4 of the 42 trader restarts that
 #: ict-git-sync's gate ordered were forced ONLY by these paths (replay
 #: of each restart's base..head diff with the head tree's closure).
 TRADER_UNLOADED_NON_PY_RE = re.compile(
     r"^(?:.*\.sh$"
     r"|config/trader_import_closure\.txt$"
+    r"|comms/gates/"
     r"|deploy/(?!ict-trader-live\.service$|dropins/|vm-sparse-checkout$)[^/]+$"
     r"|deploy/caddy/)"
 )

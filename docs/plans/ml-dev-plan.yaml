@@ -41,7 +41,7 @@
 #   plan_items    the ml-plan-items.yaml ids this line absorbs (the reader flags an open item no line absorbs)
 #   proposed_disposition  optional; a kill/retire PROPOSAL with reason + data. Applying it is the manager's / operator's act.
 schema: 1
-updated: '2026-11-12'
+updated: '2026-11-14'
 as_of_main: 5a0bd82b9
 review_days: 7
 weeks: {W47: '2026-11-16', W48: '2026-11-23', W49: '2026-11-30', W50: '2026-12-07'}
@@ -178,20 +178,32 @@ lines:
   row: MLP-D2-ADVISORY-NO-CONSUMER
   carried_by: [ML-PROGRAMME-CONSOLIDATION]
   state:
-    summary: Advisory with nothing to change. Value added - none measurable.
+    summary: >-
+      Advisory with nothing to change. Value added - none measurable. 2026-11-14 (ML-PRIMARY): the gate-consumer design the
+      lever below waited on FAILED (bcd2-01: BTC-authored TD OFF-cells applied to SOL TD dropped 91 of 195 trades that would have
+      made +11.69 R pooled, 3 of 6 folds, p 0.82 vs matched random). The exhaustion clause for the GATE form of a consumer is met.
+      DECISION: no gate consumer is authored for SOL/MES; the one consumer still worth testing is the regime read as an INPUT
+      FEATURE of the D3 entry recipe (a different design, not a repeat), registered under MLP-D2-REVIEW-HEADS. Heads stay in
+      shadow as data collectors (off the trade path is not off the data path).
     evidence:
       - {record: docs/research/ml-deep-audit-2026-11-12.md § 1.1, provenance: QUOTED}
-  levers_tried: []
+      - {record: research/results/RQ-20261112-bcd2-01/43304656810.jsonl, n: 195, value: 'FAIL: dropped trades +11.69 R pooled, p 0.82 vs random drop', provenance: QUOTED}
+  levers_tried:
+    - {lever: 'gate consumer (TD OFF-cells, pooled)', ref: RQ-20261112-bcd2-01, verdict: fail}
   levers_ahead:
     - lever: a consumer for each head = the bcd2-01 design applied to the SOL / MES leg families
       ref: needs_authoring (only after bcd2-01 grades; authoring before is a bake-off with no customer)
       baseline: the leg family ungated, net of cost, matched-random cell control
       pass: Tier-3 proposal for a first cell naming that leg
       fail: proposed retirement of the head (manager)
-  next_weeks: {W47: none, W48: 'author the SOL/MES consumer unit iff bcd2-01 PASS', W49: run, W50: grade}
+  next_weeks: {W47: 'none (bcd2-01 FAIL; gate-consumer unit NOT authored)', W48: 'feature-consumer read rides MLP-D2-REVIEW-HEADS', W49: none, W50: none}
   exhaustion: bcd2-01 FAIL (no consumer design worth repeating), or the per-family consumer test FAILs.
-  owner: AM-ML
+  owner: ML-PRIMARY
   plan_items: []
+  proposed_disposition: >-
+    2026-11-14 ML-PRIMARY: exhaustion met for the gate consumer (bcd2-01 FAIL). Propose demote advisory -> shadow for
+    sol-regime-15m-lgbm-fc-pcv-v2 and mes-regime-5m-lgbm-v2 (they change no order today; MEASURED no trend_vol cell names a SOL or
+    MES leg). De-risking, revertible, Tier-2 registry act for the manager. Heads keep logging.
 
 - id: MLP-D2-REVIEW-HEADS
   slot: D2
@@ -218,12 +230,28 @@ lines:
       baseline: the Mutt for that cell (or the class prior where none exists), same rows
       pass: the winner is the only head of that cell kept for a consumer test
       fail: head goes to retire wave 3 (Tier-2 archive, manager)
-  next_weeks: {W47: 'ef4c-01..08 run after #25242 lands', W48: grade + wave-3 list, W49: none, W50: none}
+  bakeoff_grades_20261114:   # read by ML-PRIMARY from research/results/RQ-20261112-ef4c-0N/*.jsonl (graded by each unit's rule)
+    - {unit: ef4c-01, cell: BTC 15m yz vs v2, verdict: indeterminate}
+    - {unit: ef4c-02, cell: BTC 1h yz vs v2, verdict: 'pass (lgbm_yz)'}
+    - {unit: ef4c-03, cell: ETH 1h vs class prior, verdict: pass}
+    - {unit: ef4c-04, cell: ETH 15m vs class prior, verdict: pass}
+    - {unit: ef4c-05, cell: MES 1d vs class prior, verdict: pass}
+    - {unit: ef4c-06, cell: BTC 5m vs class prior, verdict: 'fail (no candidate reaches the floor)'}
+    - {unit: ef4c-07, cell: ETH 5m vs class prior, verdict: 'fail (no candidate reaches the floor)'}
+    - {unit: ef4c-08, cell: SOL 5m vs class prior, verdict: pass}
+  next_lever_after_bcd2_fail:
+    lever: 'regime-as-feature consumer: add the cell winners'' OOS class probabilities (as-of, no lookahead) to the Foxhound-1 recipe; one combined held-out read'
+    ref: needs_authoring (rides ML-LEVER-PLAN; authored by ML-PRIMARY W47)
+    baseline: frozen v1 on the same held-out rows, net of the full cost stack
+    pass: the feature enters the ML-LEVER-PLAN combined read
+    fail: D2 heads have no consumer of either form; group retires to shadow-only data collection (exhaustion)
+  next_weeks: {W47: 'graded (see bakeoff_grades_20261114); BTC 5m + ETH 5m heads -> wave-3 retire proposal', W48: regime-as-feature unit, W49: grade, W50: none}
   exhaustion: per head, losing its cell's bake-off; for the group, bcd2-01 FAIL (no consumer for any head).
   owner: AM-ML
   plan_items: [ML-R3]
   proposed_disposition: >-
-    RETIRE now (consolidation wave-2 proposal, data in the addendum): btc/sol-regime-15m-lgbm-fc-pcv-v1 (superseded by v2),
+    2026-11-14 ML-PRIMARY adds wave 3 (bake-off FAILs ef4c-06 BTC 5m, ef4c-07 ETH 5m: no candidate reaches the class-prior floor).
+    Earlier: RETIRE now (consolidation wave-2 proposal, data in the addendum): btc/sol-regime-15m-lgbm-fc-pcv-v1 (superseded by v2),
     btc-regime-5m-lgbm-yz-v1 (macro-F1 0.5564 = v2 0.5564 on the same shard). Manager's Tier-2 call.
 
 - id: MLP-D2-XRP-5M-FROZEN
@@ -339,6 +367,9 @@ lines:
     - {lever: HTF counter-trend filter, ref: ML-ENTRY-HTF-COUNTERTREND, verdict: done}
     - {lever: universe breadth, own per-symbol costs, ref: RQ-20261101-a24c-01, verdict: fail}
     - {lever: 'venue population test (11-04 rule): 51 Bybit USDT perps, own costs, pre-run filter', ref: RQ-20261112-2e3b-01, verdict: 'fail (real-money set stays the c692-06 five coins; Tier-3 record + map-removal patch held for AM-ML)'}
+    - {lever: '0.5 LightGBM + 0.5 ridge ensemble on the ENTRY recipe, 13 monthly refits (ML-F30)', ref: RQ-20261112-4654-07, verdict: 'indeterminate (paired ens-raw +0.0195, CI95 [-0.104, +0.143], k 13, n 3556; research/results/RQ-20261112-4654-07/43504860302.jsonl)'}
+    - {lever: 'conformal mu/sigma selection at matched coverage (ML-F31)', ref: RQ-20261112-4654-08, verdict: 'fail (paired conf-raw -0.0022, CI95 [-0.016, +0.011], k 13, n 10756; research/results/RQ-20261112-4654-08/43553074642.jsonl)'}
+    - {lever: 'ridge vs LightGBM, same features + target (ML-F32)', ref: RQ-20261112-4654-09, verdict: 'fail (paired ridge-raw -0.1001, CI95 [-0.254, +0.053], k 10, n 851; research/results/RQ-20261112-4654-09/43462223910.jsonl)'}
   levers_ahead:
     - lever: diagnose the served -0.13 R window (drift vs regime vs cost)
       ref: CRYPTO-ENTRY-RETRAIN-UNIT
@@ -374,8 +405,8 @@ lines:
     the mirror net-of-cost window crosses the declared demotion read (ML-D3-HEAD-TO-HEAD § "Declared demotion signals": mean < 0 at
     day-clustered t <= -2, n >= 100, refit not better on the same replay) AND no lever in levers_ahead passes its dev-fold read -- then
     the leg demotes to the demo floor (testing) and iterates there; a retirement needs its own record.
-  owner: AM-ML
-  plan_items: [ML-S2]
+  owner: ML-PRIMARY
+  plan_items: [ML-S2, ML-F30, ML-F31, ML-F32]
 
 - id: MLP-D3-FOXHOUND-2
   slot: D3
@@ -1364,6 +1395,90 @@ lines:
   exhaustion: infra.
   owner: AM-ML
   plan_items: []
+
+# =====================================================================================================================
+# RANKED ML INFRA QUEUE (lane ML-PRIMARY, 2026-11-14; operator 11-14 ~22:10Z: "ML research is the TOP priority").
+# Ranked by what the NEXT iterations need. Each entry is a live work-store row (or a unit) with owner ML-PRIMARY, a next step
+# and a done-when; the row is the live state, this block is the order. Gates this adds: none.
+# =====================================================================================================================
+infra_queue:
+  - rank: 1
+    row: ML-LIVE-PARITY-ML-LEGS
+    line: MLP-P-PARITY
+    why: live-vs-replay parity on the real-money ML legs; a model whose live features drift from replay invalidates every forward grade
+    state: >-
+      MEASURED comms/live_parity/latest.md (2026-11-14T07:21Z, window 11-07..11-14): ml_entry CHECKED (42 bars, 1 lost_bar divergence);
+      ml_entry_eq_struct COULD NOT CHECK (no (symbol, bar) with both a live record and a replay). Side finding (not ML):
+      tqqq_trend_long_1d real money, 161 candle_mismatch divergences of 1948 evals.
+    next: make the eq_struct pairing work from the #24889 pool-snapshot archive; explain the 1 ml_entry lost_bar
+    done_when: the weekly parity checks every real-money ML leg with a planted-defect control flagged
+  - rank: 2
+    row: ML-DRIFT-COVERED-SPAN
+    line: MLP-N-DRIFT-SPLIT
+    why: the Foxhound-1 served-window diagnosis (drift vs regime vs cost) cannot rest on a drift verdict whose denominator may be truncated
+    next: publish reference_window_covered beside the declared window on /api/bot/shadow/drift (Tier-2 web API, HELD PR), then re-grade
+    done_when: the endpoint carries the covered span and the before/after verdict counts of every head are on the row
+  - rank: 3
+    row: FEATURE-IMPACT-MAP
+    line: MLP-DATA-FEATURES
+    why: the feature map is the input to every feature lever on D3/D6/D7
+    state: >-
+      MEASURED (GitHub Actions, workflow feature-impact.yml): 3 runs ever, none completed -- 43119630585 failure (11-11),
+      43231126766 schedule cancelled after ~64 min (11-12), 43294163898 dispatch cancelled after ~131 min (11-12). comms/feature_impact/latest.json
+      is run 20261112T2013Z in the OLD coverage shape (no table_rows); the #25518 shape is merged, NOT observed.
+    next: split the weekly job (M2 / M3 as separate jobs or a trainer run) so it finishes inside the job timeout; land one run
+    done_when: a scheduled run lands latest.json carrying coverage.m2_regime.table_rows
+  - rank: 4
+    row: TP-PREDICT-HEAD
+    line: MLP-D6-POINTER
+    why: D6 harness -- a bar-0 (entry-time) arm in scripts/research/ml_entry_tp_revision.py so Pointer v0 can be graded on two years
+    next: add the entry-time arm (TP model trained with check-in 0 rows, scored at the decision bar) and register Pointer v0
+    done_when: Pointer v0 unit graded by its rule
+  - rank: 5
+    row: MLP-D5-MASTIFF
+    line: MLP-D5-MASTIFF
+    why: D5 value-of-information census decides whether an aggregator is worth building at all
+    next: Stage-0 concurrent same-symbol episode census across every rostered leg's emits + the 14-day live refusal census by reason
+    done_when: census unit graded by its registered materiality threshold
+  - rank: 6
+    row: ML-PRODUCERS
+    line: MLP-D4-CONVICTION-META
+    why: the D4 metalabel lines are blocked on signal-time inputs
+    next: rescope to the heads still on a plan line (setup-quality retired by the operator 10-09); Tier-2 producer PR held for the manager
+    done_when: each remaining head's inputs exist at signal time (shadow log rows carry them), or the line closes with a reason
+  - rank: 7
+    row: FUNDING-OI-DATASETS-ETH-SOL
+    why: funding / OI features for the pooled crypto entry family (Foxhound) and RQ-20260929-109/-110
+    next: trainer join of the archived Binance Vision fundingRate + metrics into market_features (owner AM-OPS, ML-PRIMARY consumes)
+    done_when: ETH/SOL market_features carry funding/OI columns and the two units re-dispatch
+  - rank: 8
+    row: ML-PARITY-FC-SHADOWLOG
+    why: >-
+      DEPRIORITISED 11-14: the fc_* heads are D2 shadow heads with no consumer after bcd2-01 FAIL; parity is worth its cost where a
+      head changes an order. Re-entry test: a D2 head gains a consumer (the regime-as-feature read in MLP-D2-REVIEW-HEADS passes).
+    next: none until the re-entry test fires
+    done_when: as the row states (both fc heads' table printed and RQ-20261011-17f4-01 graded)
+  - rank: 9
+    row: ML-RUNPOD-RESULT-LANDING
+    why: exposure bounded -- the RunPod fallback fires only with GPU_BURST_ARMED set (row note); no current unit needs GPU
+    next: land the E5 record from gpu-burst-train.yml when a GPU unit is next queued
+    done_when: a RunPod-run unit shows a landed result record
+  - rank: closed
+    row: ML-SHADOW-NEVER-ORDERS
+    why: 'deliverable done -- #25260 merged as a report-only test (operator Gates-tab decision); structural guarantee is ML-SHADOW-NO-ORDER-HANDLE (done)'
+
+# =====================================================================================================================
+# SLOT BASELINES THIS WEEK (W46-W47). The bar (manager dispatch 11-14): a Stage-0 backtest at least NOT LOSING net of the full cost
+# stack, beating or non-inferior to the slot's current RULE on the same trades, against a rule registered BEFORE the run, at the
+# declared power, on two windows (record year + the year before). A fee-only corpus never counts. A PASS -> a HELD Tier-3 PR.
+# =====================================================================================================================
+slot_baselines:
+  - {slot: D6, line: MLP-D6-POINTER, unit: 'Pointer v0 (entry-time TP from the first-passage model) vs the fixed 3 ATR TP on ml_entry entries', status: authoring}
+  - {slot: D5, line: MLP-D5-MASTIFF, unit: 'VOI census, then rule arms A0 slices / A1 1/N netting / A2 best-single on the same tick stream', status: authoring}
+  - {slot: D3, line: MLP-D3-FOXHOUND-1, unit: 'served-window diagnosis + cost-per-R selector (CRYPTO-ENTRY-RETRAIN-UNIT, ML-DECISION-LABEL-VOL-CONFOUND)', status: in_flight (due 11-15)}
+  - {slot: D8, line: MLP-D8-LABRADOR-2, unit: 'exit head vs hold-to-bracket on two windows', status: next}
+  - {slot: D9, line: MLP-D9-WHIPPET, unit: 'maker-first vs taker fill replay', status: next}
+  - {slot: D10, line: MLP-D10-BASSET, unit: 'grade-vs-CUSUM early decay', status: later}
 
 labelled_gates_not_planned:
   - {id: G1, from: docs/research/ml-deep-audit-2026-11-12.md § 6, text: 'raise the real-money bar for an ML promotion (clustered t >= 2 / fresh window)', status: not planned; needs the operator's explicit permission}
