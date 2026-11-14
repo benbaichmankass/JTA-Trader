@@ -3345,9 +3345,22 @@ strategies:
     # shadow_model_ids OMITTED (symbol-aware auto-wire). Observe-only.
 
   avax_pullback_2h:
+    # RETIRED 2026-11-14 -- INACTIVE (PROPOSED, HELD; Tier 3, operator decides). GATE: this lands ONLY if
+    # RQ-20261114-db1a-02 (regime-level unit, this leg in its population) does not rescue the leg, rescue =
+    # Part B PASS AND this leg's ex-cell net_r > 0 on both the record window and the year before.
+    # RETIREMENT RECORD (research it rests on): forming record 2025-11-13..2026-11-12 -15.74R n95, year before
+    # -3.22R n102 (negative in BOTH years); closed bar -14.69R / -1.01R (RQ-20261114-db1a-01, FAIL); levers
+    # short-only (RQ-20261113-f251-09 forming 1/4; db1a-01 closed 2/4), adx_min 30 (RQ-20261113-f251-22; db1a-01),
+    # decision_bar closed (db1a-01) all FAIL the record window with the year-before guard. Short-only is
+    # underpowered to settle: about 55 trades/yr at sd ~1.35R vs an observed +0.04..+0.08R/trade (lever-exhaustion
+    # note + power arithmetic in research/levers/avax_pullback_2h.yaml manifest_notes). RE-ENTRY TEST: a fresh
+    # Stage-0 record at comms/strategy_evidence/avax_pullback_2h.json on its live decision bar, net of the full
+    # cost stack, clearing a rule registered before the run on a record window AND the equal-length window before
+    # it. Inactive legs run no shadow; AVAXUSDT candles keep being pulled for trend_donchian_avax_4h and the ML
+    # population. ROLLBACK: enabled: true + re-add to bybit_1 strategies.
     model: null
     signal_prefixes: [avax_pullback, avax_pullback_2h]
-    enabled: true
+    enabled: false
     execution: live          # shadow-guard: allow — DEMOTED 2026-07-22 (Tier-3, operator-approved  # DEMO-FLOOR RULE 2026-10-27 (Tier-3): shadow -> live; ROLLBACK = shadow
                              # same session): 3rd-consecutive-review-confirmed diversified-paper-book
                              # laggard (this window -$3976.67/7t/14.3%WR; unchanged-negative since
