@@ -3491,25 +3491,84 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261114-db1a-04
   lever_family: regime_gating
+- family: 'exit (conditional profit lock: stop to entry + (k-1)R once MFE >= kR)'
+  varied: arm A config-exact vs L2 (k 2), L25 (k 2.5), L2T (k 2 armed only with the TP within 0.5R), record 2025-11-13..2026-11-12 + year before,
+    live decision bar, full cost stack
+  response:
+    verdict: fail
+    unit_verdict: fail
+    run: '43589684532'
+    rule: RULE-PROFIT-LOCK-CONDITIONAL-20261114
+    arms: L2 --be-floor-r 2 --be-floor-lock-r 1 (primary); L25 --be-floor-r 2.5 --be-floor-lock-r 1.5; L2T L2 + --be-floor-tp-within-r 0.5
+    A:
+      record_net_r: -9.6104
+      record_n: 166
+      prior_net_r: -4.5233
+      prior_n: 183
+    L2:
+      verdict: fail
+      record_net_r: -13.1724
+      record_n: 166
+      record_folds_positive: 1
+      delta_record: -3.562
+      prior_net_r: -5.3134
+      delta_prior: -0.7901
+    L25:
+      verdict: fail
+      record_net_r: -9.0417
+      record_n: 166
+      record_folds_positive: 1
+      delta_record: 0.5687
+      prior_net_r: -5.4083
+      delta_prior: -0.885
+    L2T:
+      verdict: fail
+      record_net_r: -9.6104
+      record_n: 166
+      record_folds_positive: 1
+      delta_record: 0.0
+      prior_net_r: -4.2952
+      delta_prior: 0.2281
+    pooled:
+      L2:
+        delta_record: -30.2489
+        delta_prior: -18.9327
+        verdict: fail
+      L25:
+        delta_record: -37.5409
+        delta_prior: -22.8675
+        verdict: fail
+      L2T:
+        delta_record: -9.1846
+        delta_prior: 1.5882
+        verdict: fail
+    reading: 'unit FAIL: an MFE-armed lock gives back more R than it saves, pooled over 18 crypto legs on both windows (L2 -30.25R record / -18.93R
+      year before); the TP-gated variant is near-neutral (-9.18R / +1.59R); no per-leg pass on any arm'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-05
+  lever_family: exit
 units:
 - RQ-20261114-db1a-02
 - RQ-20261114-db1a-03
 - RQ-20261114-db1a-04
+- RQ-20261114-db1a-05
 manifest_notes:
   census_2026_11_14: 'Lever-family census (manager ruling 2026-11-14 06:08Z). Decides on the CLOSED bar (decision_bar: closed). Record (2025-11-13..2026-11-12)
-    -9.75R n166; year before -4.52R n183: negative in BOTH years. Committed evidence attribution (n165): gross +14.48R, cost 14.73R, ''cost erases a gross
-    edge''; about 0.09R of cost per trade; long -2.97R vs short +2.72R. On bybit_1 only (no prop account). Tested on these windows: pooled ADX cell (db1a-02,
-    FAIL), HTF SMA200 long gate (db1a-03 post-hoc PASS pooled; db1a-04 harness-native FAIL, this leg H -2.01R / +3.72R).'
+    -9.75R n166; year before -4.52R n183: negative in BOTH years. Committed evidence attribution (n165): gross +14.48R, cost 14.73R, ''cost erases
+    a gross edge''; about 0.09R of cost per trade; long -2.97R vs short +2.72R. On bybit_1 only (no prop account). Tested on these windows: pooled
+    ADX cell (db1a-02, FAIL), HTF SMA200 long gate (db1a-03 post-hoc PASS pooled; db1a-04 harness-native FAIL, this leg H -2.01R / +3.72R).'
   entry: 'TESTED closed 2020..2026: min_confidence 0.7 +50.2R / 0.8 +75.7R (pass, monotone). UNTESTED on the record window.'
-  exit: 'TESTED closed: trail_mult 4.5 +122.0R n1070 (pass, single point), trail_adx_below 25 pass, momentum_stale 8 pass; many exit levers fail but sit
-    at +40..+80R. UNTESTED on the record window.'
+  exit: 'TESTED closed: trail_mult 4.5 +122.0R n1070 (pass, single point), trail_adx_below 25 pass, momentum_stale 8 pass; many exit levers fail
+    but sit at +40..+80R. UNTESTED on the record window.'
   filter: 'TESTED closed: cooldown_bars 4/8 pass (+21..+38R), adx_min 20 pass (-0.95R), vol gates fail. UNTESTED on the record window.'
   direction: UNTESTED; shorts are positive in the evidence (+2.72R) and longs negative (-2.97R).
-  sizing_vs_cost: UNTESTED and the attribution's pointer (gross edge, cost removes it). Closed-bar atr_stop_mult 3.125 -9.91R (pass) vs 1.875 -52.37R.
+  sizing_vs_cost: UNTESTED and the attribution's pointer (gross edge, cost removes it). Closed-bar atr_stop_mult 3.125 -9.91R (pass) vs 1.875
+    -52.37R.
   session: 'TESTED closed: skip_hours 0-7 +33.8R, 12-15 +55.7R, both fail.'
   regime_gating: 'TESTED on the record window: ADX cell (db1a-02) and HTF gate (db1a-03/-04), both FAIL.'
   timeframe: UNTESTED; no diagnostic pointer.
   symbol_set: UNTESTED; no diagnostic pointer.
-  next_2026_11_14: 'NOT lever-exhausted: no closed-bar responder (min_confidence 0.8, trail_mult 4.5, cooldown) has run on the record window, and sizing_vs_cost
-    is the diagnosed cause. Candidate unit: min_confidence 0.8 or atr_stop_mult 3.125 on the record + year-before windows, same AM-ML guard; the db1a-01/-02
-    caveat applies (lever responses flip between years). No retirement proposal; manager decides.'
+  next_2026_11_14: 'NOT lever-exhausted: no closed-bar responder (min_confidence 0.8, trail_mult 4.5, cooldown) has run on the record window,
+    and sizing_vs_cost is the diagnosed cause. Candidate unit: min_confidence 0.8 or atr_stop_mult 3.125 on the record + year-before windows,
+    same AM-ML guard; the db1a-01/-02 caveat applies (lever responses flip between years). No retirement proposal; manager decides.'
