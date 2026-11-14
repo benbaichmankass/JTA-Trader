@@ -798,12 +798,16 @@ def _fetch_open_position_rows(effective_include: bool) -> list:
             # (Bybit/IB unrealised_pnl), with ``None`` as the honest
             # fallback when the broker call fails or there is no
             # matching position.
-            sql = """
+            # order_package_id is read only when the table has the column (POSITIONS-API-ORDER-PACKAGE-ID): an older
+            # journal schema must keep serving positions, with orderPackageId null, never an empty list.
+            cols = {row[1] for row in conn.execute("PRAGMA table_info(trades)")}
+            pkg_col = "order_package_id" if "order_package_id" in cols else "NULL"
+            sql = f"""
                 SELECT id, account_id, symbol, direction, position_size,
                        entry_price, created_at,
                        stop_loss, take_profit_1, strategy_name,
                        COALESCE(is_demo, 0), account_class, notes,
-                       order_package_id
+                       {pkg_col}
                 FROM trades
                 WHERE status = 'open'
                   AND COALESCE(is_backtest, 0) = 0
