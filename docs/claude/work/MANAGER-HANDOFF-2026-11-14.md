@@ -24,10 +24,25 @@ manager: read the manager skill's rotation sections plus this section. The morni
 4. Send ML-PRIMARY and AM-OPS one trigger each naming you (`Manager Session ... (session_<you>)`) as their manager.
 5. Tell the operator in one line that you are in control.
 
+### ⚠️ CORRECTIONS from the operator at ~22:20Z (these override anything below that conflicts)
+- **Lane sequencing:** "finish the pipeline first and then get the ML lane running again; we don't need to stop something that's in
+  process." So right now: **AM-OPS** (general) + **PIPELINE-MAP** (`session_01AFoLuJEArj5fnhkwehXFPU`, un-paused, finishing the map).
+  **ML-PRIMARY** (`session_01AFoLuKuu4bMh6SG5oyAC9h`) is HOLDING idle with its next steps written down. **Wake ML-PRIMARY the moment the
+  pipeline map lands** (all its PRs merged); from then on, the ML lane is the standing working lane and is never stood down.
+- **Queue priority whenever only one working lane runs:** (1) live money or genuinely urgent; (2) ML work and anything that supports ML;
+  (3) the rest. AM-OPS has been told this.
+- **Assistant managers:** "multiple assistant managers is for during a surge, when lots of lanes run. If we're down to one lane, we
+  definitely don't need more than one." Today there are two: **AM-OPS** (`session_01AFoLuJUGfpon2bNgwFbFmx`, also the general lane) and the
+  Sonnet **"Assistant Manager — routine supervision"** (`session_011c3qoaBvGBioDWkPVToQSb`). Consolidate to ONE: re-bind the Sonnet AM's
+  routines to yourself (`trig_01HmhkB9Suw5KF97hDPjK47c` weekly reset Wed 18:05Z; `trig_01QhYHMBFSnMB5CYYAyy7MH6` Thursday planning Thu
+  06:17Z; `trig_01UnRpzN513KbMjvJWFAf911` research-ops dispatch 14:47Z; `trig_01HxRVXSy6GGqWaWQXmGdJ97` 12h lane check-in, which you
+  can DELETE because your 3h check-in covers it). Their prompts start with a "STEP 0: forward to the current manager"; drop that step when
+  they fire into you directly. Then archive the Sonnet AM once it owns no open PR (check `list_sessions` and its last summary first).
+
 ### Operator rules set or changed today (binding)
 - **The ML lane is TOP priority and never stands down** (operator ~22:10Z, verbatim: "ML research is the top priority, and that is the lane
   that doesn't get stood down. Everything else gets paused before that. If we're down to one lane, other things can come into the work
-  queue, but it should mostly be prioritized for ML."). Two lanes: **ML-PRIMARY** + **AM-OPS**. The outgoing manager wrongly stood FRONTIER
+  queue, but it should mostly be prioritized for ML."). Two lanes (see CORRECTIONS above for the current sequencing). The outgoing manager wrongly stood FRONTIER
   down for usage at ~19:10Z (FRONTIER is archived; its open items are below). Do not repeat that.
 - **ML plan for this week** (operator ~22:10Z): (A) the ML infra items queued and worked first; (B) a baseline ML **live on real money for
   most decision slots this week**, each at least not losing net of the full cost stack in a pre-registered Stage-0 backtest, with **D5
