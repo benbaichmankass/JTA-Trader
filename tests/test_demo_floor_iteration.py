@@ -74,7 +74,17 @@ def test_forming_equity_fetch_refuses_a_non_equity_leg():
                         "--arm", "A=", "--grade", "stage0", "--baseline", "A", "--n-floor", "3", "--delta-r", "0",
                         "--fold-majority", "3", "--start", "2026-07-01", "--end", "2026-11-01", "--forming-equity-fetch",
                         "--out", "/tmp/_dfi_never_written"], cwd=str(REPO), capture_output=True, text=True, timeout=120)
-    assert r.returncode == 2 and "US ETF 1d leg" in r.stderr
+    assert r.returncode == 2 and "US ETF 1d or 1h leg" in r.stderr
+
+
+def test_forming_equity_fetch_admits_a_1h_equity_leg():
+    # tlt/qqq_pullback_1h promotion check (2026-11-14): a 1h Yahoo-fed equity leg passes the leg gate (Alpaca 1Hour,
+    # us_equity_intraday) and stops only at the next check -- no --start/--end -- before any fetch.
+    r = subprocess.run([sys.executable, str(REPO / "scripts" / "research" / "exit_lever_ablation.py"), "--leg", "tlt_pullback_1h",
+                        "--arm", "A=", "--grade", "stage0", "--baseline", "A", "--n-floor", "3", "--delta-r", "0",
+                        "--fold-majority", "3", "--forming-equity-fetch",
+                        "--out", "/tmp/_dfi_never_written_1h"], cwd=str(REPO), capture_output=True, text=True, timeout=120)
+    assert r.returncode == 2 and "needs --start and --end" in r.stderr and "US ETF" not in r.stderr
 
 
 def test_vol_skip_arm_reaches_the_forming_block_narrow_only():
