@@ -72,8 +72,12 @@ def test_incomplete_hour_is_dropped_not_padded():
 
 
 def _models():
+    """Shallow COPIES of the served models. ``load_model()`` returns the module-cached dict, so a test that rebinds
+    ``m["meta"]`` (the universe tests below) would otherwise rewrite the cache for every later test in the worker:
+    TEST-PARITY-ML-ORDER-DEP, 2026-11-14 -- ml_entry's cached ``xs_reference`` became this file's 10 SYMS and
+    tests/test_live_replay_parity_ml.py then refused every bar ``reference_symbols:10<40``."""
     from src.units.strategies import ml_entry, ml_entry_v2
-    return {"ml_entry": ml_entry.load_model(), "ml_entry_v2": ml_entry_v2.load_model()}
+    return {"ml_entry": dict(ml_entry.load_model()), "ml_entry_v2": dict(ml_entry_v2.load_model())}
 
 
 def _prepared(b):
@@ -280,3 +284,15 @@ def test_run_once_retries_a_rate_limited_symbol_once(tmp_path):
     rows = [json.loads(x) for x in (tmp_path / "log.jsonl").read_text().splitlines()]
     by_sym = {r["symbol"]: r["read_state"] for r in rows}
     assert by_sym[flaky] == "ok" and by_sym[stuck] == "fetch_failed"
+
+
+def test_models_are_copies_so_a_universe_override_never_rewrites_the_served_cache():
+    """TEST-PARITY-ML-ORDER-DEP: rebinding ``meta`` on _models()' dicts must leave ``load_model()`` (module-cached) intact."""
+    pytest.importorskip("lightgbm")
+    from src.units.strategies import ml_entry, ml_entry_v2
+    before = {n: list(mod.load_model()["meta"]["xs_reference"]) for n, mod in (("ml_entry", ml_entry), ("ml_entry_v2", ml_entry_v2))}
+    for m in _models().values():
+        m["meta"] = dict(m["meta"], xs_reference=list(SYMS))
+    assert ml_entry.load_model()["meta"]["xs_reference"] == before["ml_entry"]
+    assert ml_entry_v2.load_model()["meta"]["xs_reference"] == before["ml_entry_v2"]
+    assert len(before["ml_entry"]) > len(SYMS)
