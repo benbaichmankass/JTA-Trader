@@ -48,6 +48,27 @@ class AccountLeg:
     reason: str = ""              # why skipped (when decision == "skip")
 
 
+_VENUE_NAMES = {"breakout": "Breakout", "tradeify_247": "Tradeify 247",
+                "velotrade": "Velotrade", "propr": "Propr", "hyrotrader": "HyroTrader"}
+
+
+def _firm_fields(unit) -> dict:
+    """Venue name + limits from the account's own ruleset (never another firm's)."""
+    rs = getattr(unit, "ruleset", None)
+    if rs is None or getattr(unit, "kind", "prop") != "prop":
+        return {}
+    key = str(getattr(rs, "ruleset", "") or "")
+    if key == "breakout" and getattr(rs, "plan", "") == "1-step-classic":
+        return {}   # the legacy default text IS this firm/plan (byte-identical golden)
+    lim = getattr(rs, "limits", None)
+    return {
+        "venue_name": _VENUE_NAMES.get(key) or (key.replace("_", " ").title() or None),
+        "plan_label": getattr(rs, "plan", None) or None,
+        "daily_loss_pct": getattr(lim, "daily_loss_pct", None),
+        "max_drawdown_pct": getattr(lim, "max_drawdown_pct", None),
+    }
+
+
 def build_account_leg(
     signal: BreakoutSignal,
     unit: AccountBacktestUnit,
@@ -84,7 +105,9 @@ def build_account_leg(
                     f"({unit.size_state}: {unit.size_reason or 'no reason recorded'}) "
                     f"— refusing to size a ticket from an unestablished balance"),
         )
+    firm = _firm_fields(unit)
     cfg = TicketConfig(
+        **firm,
         account_size_usd=unit.account_size_usd,
         risk_pct=unit.risk_pct,
         dxtrade_symbol=dxtrade_symbol,

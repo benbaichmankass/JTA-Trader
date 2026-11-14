@@ -132,3 +132,25 @@ def test_render_carries_live_balance_sizing_instruction():
     assert "SUGGESTED size at the nominal" in out
     # per-unit risk = stop distance (1200) × contract_value (1.0) = $1200.0000
     assert "1200.0000" in out
+
+
+def test_ticket_names_own_firm_and_limits():
+    """PROP-TICKET-FIRM-TEMPLATE: each account's ticket carries ITS venue + limits."""
+    from src.config.accounts_loader import load_accounts_dict
+    from src.prop.account_rulesets import unit_for_account
+    from src.prop.multi_account_ticket import build_account_leg
+
+    accts = load_accounts_dict("config/accounts.yaml")
+    out = {}
+    for aid in ("tradeify_1", "velotrade_1", "breakout_1"):
+        unit = unit_for_account(aid, accts[aid])
+        leg = build_account_leg(_long_sig(), unit)
+        out[aid] = render_ticket(leg.ticket, account_id=aid)
+    assert "TRADEIFY 247 TRADE SETUP" in out["tradeify_1"]
+    assert "Tradeify 247 terminal" in out["tradeify_1"]
+    assert "(3%)" in out["tradeify_1"] and "(6% " in out["tradeify_1"]
+    assert "VELOTRADE TRADE SETUP" in out["velotrade_1"]
+    assert "Velotrade terminal" in out["velotrade_1"]
+    assert "(4%)" in out["velotrade_1"] and "(7% " in out["velotrade_1"]
+    assert "Breakout" not in out["velotrade_1"] and "Breakout" not in out["tradeify_1"]
+    assert "BREAKOUT TRADE SETUP" in out["breakout_1"]
