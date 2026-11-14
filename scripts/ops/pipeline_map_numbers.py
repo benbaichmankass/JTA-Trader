@@ -40,7 +40,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "scripts" / "ops"))
 
-import strategy_status
+import strategy_status  # noqa: E402  (after the sys.path insert above)
 
 try:  # the provenance vocabulary is the one source; fall back to the literals only if the import fails
     from src.runtime.provenance import (  # type: ignore
