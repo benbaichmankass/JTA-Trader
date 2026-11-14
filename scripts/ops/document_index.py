@@ -604,6 +604,15 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
         "prop columns re-read from code at ca16a2781b; non-prop columns carried "
         "from f0b9698bbf; re-read when #25230/#25272/#25295 merge",
     ),
+    # Authored by lane PIPELINE-MAP 2026-11-14 at the operator's request: every cited path
+    # checked to exist on main; numbers live only in its generated block
+    # (scripts/ops/pipeline_map_numbers.py), re-run weekly by doc-freshness.
+    "docs/reference/trading-pipeline-map.md": (
+        "live",
+        "read:PIPELINE-MAP-authored-paths-checked-on-main-2026-11-14",
+        "the trading pipeline map shown on the Work tab; generated block refreshed "
+        "weekly by doc-freshness (pipeline_map_numbers.py)",
+    ),
 }
 
 # ---------------------------------------------------------------------------

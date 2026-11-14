@@ -671,6 +671,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/reference/console-connector-tools.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | Tool names and response schemas of the read-only JTA console connector (workplan, ml_roadmap, performance, system_health, data_query, inbox options) and which need the Google sign-in. |
 | `docs/reference/signal-catalog-review.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
 | `docs/reference/trading-and-model-practice-principles.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
+| `docs/reference/trading-pipeline-map.md` | lookup | live | — | 2026-11-14 | `dir:reference-is-lookup / read:PIPELINE-MAP-authored-paths-checked-on-main-2026-11-14` | the trading pipeline map shown on the Work tab; generated block refreshed weekly by doc-freshness (pipeline_map_numbers.py) |
 | `docs/reference/verifying-what-is-trading.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
 | `docs/reference/vm-topology.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
 | `docs/reports/system-report-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
