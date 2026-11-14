@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Manager ask 18:31Z. The rows mirror (run 43626602500) refused LR-20261114T1801Z-pkg-08872ab1f9174ad1 (ml_entry ETH long HOLD, bybit_2) on packet_sha. Diagnosed: the packet is untouched (poster commit 2972a93fea, byte-identical at the tip; the lane's 3ee5e5fb63 changed only the row). The lane computed the sha itself with ensure_ascii=False; the packet holds a non-ASCII ellipsis, so that hash (ec41cc1e..., reproduced exactly) differs from the validator's ASCII-escaped canonical hash (11fa59d6...). Not a generator bug: the prop row from the same wake copied the block sha and matches. The rows branch is create-only, so per the killed_rows.json precedent (LR-20261031T1529Z, same failure class) the row is dispositioned there with the reason and both hashes; it is a hold, nothing to apply. SKILL.md and REVIEWER-BRIEF.md now say copy, never compute, and give the exact hashing line. tests/test_live_review_rows_mirror.py + test_live_review_records.py 27 passed; skills-index OK. Revert: git revert."
+}
