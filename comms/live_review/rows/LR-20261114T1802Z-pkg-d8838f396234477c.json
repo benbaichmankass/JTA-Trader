@@ -1,0 +1,195 @@
+{
+ "schema_version": 1,
+ "trade_id": null,
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": true,
+  "tighten_r": 0.0
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": true,
+  "would_apply": null,
+  "tighten_r": 0.0
+ },
+ "disposition": {
+  "route": "recommended",
+  "mandate": "MD-LIVE-TIGHTEN-SL",
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuKRPpW2mnVotK9x3TX",
+ "prompt_sha": null,
+ "skill_sha": "f94534b767af35233ff68f27171d0876c8166c80",
+ "review_id": "LR-20261114T1802Z-pkg-d8838f396234477c",
+ "reviewed_at": "2026-11-14T18:12:00Z",
+ "order_package_id": "pkg-d8838f396234477c",
+ "leg": "trend_donchian_eth_4h",
+ "accounts": [
+  "tradeify_1"
+ ],
+ "trigger": {
+  "event": "conflicting_exposure",
+  "level": "ETHUSDT#7dfa240842",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-14T18:02:09Z",
+ "state": {
+  "atr_now_over_entry": 1.367,
+  "bars_held": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_provenance": "unverified",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1988.64892857,
+  "tp": 1742.9845
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.367,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "Prop venue terminal read via /api/bot/prop/status for tradeify_1 (reported 18:03:42Z, MEASURED, positions_provenance MEASURED): one ETHUSDT short 0.18 @1934.5, sl 1988.649, tp 1742.984, equal to package sl 1988.64892857 / tp 1742.9845 at 3dp; open-risk row ticket_sl 1988.64892857; ticket prop-manual-117fcf591c99 status filled. The packet said could_not_look only because its reads carry no trade row for a prop-only package. velotrade_1 ticket for the package is suppressed (open_position), not a leg."
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 54,
+   "mean_r": 2.2674,
+   "sd_r": 2.0767,
+   "worst_r": -1.14,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 54,
+   "mean_r": 1.6471,
+   "sd_r": 0.8623,
+   "worst_r": -0.2855,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 54,
+   "mean_r": 1.5621,
+   "sd_r": 0.884,
+   "worst_r": -0.2855,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 54,
+   "mean_r": 1.8832,
+   "sd_r": 1.5435,
+   "worst_r": -0.2855,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": 1934.5,
+   "n": 54,
+   "mean_r": 2.2828,
+   "sd_r": 1.9759,
+   "worst_r": -0.2855,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 54,
+   "mean_r": 1.8452,
+   "sd_r": 1.6837,
+   "worst_r": -0.2855,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 54,
+   "mean_r": 1.847,
+   "sd_r": 1.6413,
+   "worst_r": -0.2855,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261114T1802Z-pkg-d8838f396234477c.json",
+ "recommendation": {
+  "action": "tighten_sl",
+  "level": 1934.5,
+  "level_atr": 1.93,
+  "ev_delta_r": 0.0154,
+  "worst_case_delta_r": 0.8545,
+  "basis": "preference_within_bound",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Keep the short but tighten SL to entry 1934.5 (r:0 breakeven, 1.93 ATR above the ~1839 mark; TP 1742.984 untouched). Own table from live_review_outcomes.py --leg trend_donchian_eth_4h --side short --open-r 1.76 --peak-r 2.06 --bars-held 8 --atr-stop-mult 1.5 --corpus auto, n=54 net of cost, committed at the outcome_table_source path: r:0 mean +2.2828 (sd 1.98, worst -0.2855) vs HOLD +2.2674 (sd 2.08, worst -1.14), so r:0 is the max-mean option and its worst case is 0.855 R better; every other lock costs 0.38-0.71 R (atr:2.0 +1.883, r:1 +1.847). Conflict: the shorts are opposed by e4_oi_shock_1h LONG and ml_entry LONG (1h), but accounts do not net, those are 1h legs on other books, and this 4h trend leg is judged on its own table, so the conflict neither adds nor blocks the call; breakeven only removes the loss tail on a trade 1.76 R open."
+ },
+ "forecast": {
+  "thesis": "ETH 4h trend leg: the 12-16Z bar broke the 1875.78 swing low and closed 1840.33, ADX 56 trending, 1d downtrend; the 1h longs are a counter-trend bounce inside it. After a 2 ATR drop a bounce toward 1880 is about as likely as a push to 1790, so lock breakeven and keep the 3.5R target.",
+  "direction": "with_trade",
+  "target_px": 1790.0,
+  "p_target": 0.4,
+  "invalidation_px": 1911.11,
+  "horizon_bars": 3,
+  "timeframe": "4h",
+  "evidence": [
+   "chart.bars_ohlc 12-16Z bar H 1911.11 L 1823.22 C 1840.33",
+   "chart.swings lows 1875.78 and 1894.1 broken",
+   "regime adx_now 56.1 trending, atr_now/entry 1.37",
+   "self-priced table r:0 +2.2828 vs hold +2.2674 n=54, worst -0.2855 vs -1.14",
+   "prop status upnl 17.18 on 0.18 ETH = mark ~1839"
+  ]
+ },
+ "context_flags": [
+  "derived_inputs: open_r 1.76 from venue upnl +17.18 on 0.18 ETH (mark ~1839.1, 1R=54.15); peak_r 2.06 is a lower bound from the 12-16Z low 1823.22; bars_held 8 from context_v3 since_entry (no new 4h close since 16Z); no telemetry for this prop-only package; none filled with 0",
+  "table_committed: priced by this lane, committed at tables/LR-20261114T1802Z-pkg-d8838f396234477c.json in the same push (the 16:00Z row was refused evidence_not_committed)",
+  "conflicting_exposure: ETH shorts (6 packages) vs e4_oi_shock_1h LONG 1h (+0.096R) and ml_entry LONG 1h (+0.112R, bybit_2); accounts do not net, timeframes differ; ETH, ADA, SOL, BTC shorts remain one crypto-beta bet",
+  "tighten_bias: stop-at-price fills flatter any tighten; r:0 mean gap +0.015 R is well inside its SE, the case rests on the 0.855 R better worst case and equal mean",
+  "population_note: manager 2026-11-14 says mechanical profit locks lose R on a population test (RQ-20261114-db1a-05); only r:0 is chosen, not a higher lock, and the leg's own table does not penalise it",
+  "atr_ratio: now/entry 1.37; funding not readable (missing_inputs); calendar no events next 24h",
+  "packet_defect: priced_options could_not_price 1/1",
+  "packet_defect: state.open_r context_null:state.open_r 1/1"
+ ],
+ "account_reads": [
+  {
+   "account_id": "tradeify_1",
+   "account_class": "prop",
+   "read": "unknown",
+   "evidence": "prop accounts have a tighten path (meta.sl_floor / amend channel); the dry-run cannot see the VM's open package from this session, so unknown"
+  }
+ ],
+ "packet_defects": [
+  {
+   "count": 1,
+   "denominator": 1,
+   "field": "priced_options",
+   "reason": "could_not_price"
+  },
+  {
+   "count": 1,
+   "denominator": 1,
+   "field": "state.open_r",
+   "reason": "context_null:state.open_r"
+  }
+ ],
+ "packet_sha": "c4e1f58a6cfc8b941b3cf91a680f24d7d791877db99b9481b3adcbda29735683"
+}
