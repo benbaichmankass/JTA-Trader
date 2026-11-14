@@ -1,0 +1,151 @@
+{
+ "schema_version": 1,
+ "trade_id": null,
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuL714dDZohFk1zx2DF",
+ "prompt_sha": null,
+ "skill_sha": "9091cee7fbb5ed4adf073c3a37178317780a1dbc",
+ "review_id": "LR-20261114T2001Z-pkg-5a806ef08c824bbf",
+ "reviewed_at": "2026-11-14T20:09:27Z",
+ "order_package_id": "pkg-5a806ef08c824bbf",
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "structure_break",
+  "level": "2026-11-14T19:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-14T20:01:38Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 6,
+  "giveback_r": 0.8997,
+  "open_r": -0.6583,
+  "peak_provenance": "estimated",
+  "peak_r": 0.2414,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.15264285714285714,
+  "tp": 0.16403571428571428
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 5,
+  "giveback_r": 0.8997,
+  "open_r": -0.6583,
+  "peak_r": 0.2414,
+  "r_to_stop": 0.3417,
+  "r_to_target": 2.1583
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "package sl 0.15264285714285714 / tp 0.16403571428571428 agree with every readable account (bybit_2 and bybit_portfolio resting SL 0.1526 / TP 0.164, matched by order_id)"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 235,
+   "mean_r": 0.4027,
+   "sd_r": 1.1559,
+   "worst_r": -1.1269,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 235,
+   "mean_r": -0.7193,
+   "sd_r": 0.0241,
+   "worst_r": -0.8141,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 235,
+   "mean_r": 0.3561,
+   "sd_r": 0.9338,
+   "worst_r": -1.3467,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261114T2001Z-pkg-5a806ef08c824bbf.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. ADAUSDT long, venue SL/TP match the package. Re-priced from the CURRENT state (open -0.66 R, peak +0.24 R, 6 bars; ml_entry long, n=235, net of cost): HOLD mean +0.403 R (sd 1.156, worst -1.127) vs close -0.719 R (sd 0.024, worst -0.814): close gives up 1.12 R of expected value (SE 0.076) for a 0.31 R tail gain. The only applicable tighten, atr:2.0 (stop -0.76 R), is +0.356 R (sd 0.934) with a WORSE worst case (-1.347 vs -1.127), so no tail tie-break; atr:1.0 and 1.5 sit above the mark (stop_level_not_below_price). The 19:00Z structure break is already in the state the table prices (the stop is now 0.34 R away vs 0.21 R at the 19:25Z review, price recovered from the 0.1534 low to 0.1540 close); a mechanical lock loses R in RQ-20261114-db1a-05."
+ },
+ "forecast": {
+  "thesis": "4h trend down (ADX 37 4h, 50 on 1h); the long is a counter-trend sweep-reclaim now below entry after the 19:00Z close broke the since-entry low (0.1534). Stop 0.0014 away (0.34 R, about 0.6 1h ATR), so the stop is hit more often than the target; hold still prices above close because rebounds from deep adverse states carry the mean",
+  "direction": "with_trade",
+  "target_px": 0.16403571428571428,
+  "p_target": 0.15,
+  "invalidation_px": 0.15264285714285714,
+  "horizon_bars": 8,
+  "timeframe": "1h",
+  "evidence": [
+   "priced_options hold n=235 mean +0.403 vs close -0.719",
+   "exit_plan sl/tp",
+   "chart.since_entry low 0.1534",
+   "htf adx 37 trending down",
+   "book: ETH/BTC ml_entry longs same basket"
+  ]
+ },
+ "context_flags": [
+  "structure_break: 19:00Z close broke the since-entry low close by more than 0.1 ATR; low 0.1534 (-0.25 ATR vs the earlier since-entry low)",
+  "correlated: five ml_entry longs (BTC, ETH, SOL, XRP, ADA) opened 16:01-16:05Z, one crypto-beta bet; SOL and XRP already stopped; BTC and ETH still open",
+  "htf: 4h trend down, ADX 37; the long is counter-trend",
+  "atr_ratio: atr_now_over_entry null (entry meta atr not recorded); regime cell entry/now null",
+  "tighten: atr:1.0/1.5 unpriced (stop_level_not_below_price, 2/4 options inapplicable); applicable atr:2.0 mean +0.356, worst -1.347 vs hold worst -1.127 (stop fills at the stop price would flatter it)",
+  "population_note: mechanical profit locks lose R in RQ-20261114-db1a-05; none recommended",
+  "calendar: no events in next 24h or no event classes for symbol"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "packet_sha": "aae5ede9dc4cf5187ac72497a3d12e2f0add0eec92b329e0889558e15c1422da"
+}

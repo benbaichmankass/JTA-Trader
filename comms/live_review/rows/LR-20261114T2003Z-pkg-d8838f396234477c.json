@@ -1,0 +1,159 @@
+{
+ "schema_version": 1,
+ "trade_id": null,
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuL714dDZohFk1zx2DF",
+ "prompt_sha": null,
+ "skill_sha": "9091cee7fbb5ed4adf073c3a37178317780a1dbc",
+ "review_id": "LR-20261114T2003Z-pkg-d8838f396234477c",
+ "reviewed_at": "2026-11-14T20:09:27Z",
+ "order_package_id": "pkg-d8838f396234477c",
+ "leg": "trend_donchian_eth_4h",
+ "accounts": [
+  "tradeify_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-14T20:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-14T20:03:14Z",
+ "state": {
+  "atr_now_over_entry": 1.3862,
+  "bars_held": 9,
+  "giveback_r": 0.42,
+  "open_r": 1.88,
+  "peak_provenance": "estimated",
+  "peak_r": 2.32,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1934.5,
+  "tp": 1742.9845
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.3862,
+  "bars_since_peak": null,
+  "giveback_r": 0.42,
+  "open_r": 1.88,
+  "peak_r": 2.32,
+  "r_to_stop": 1.88,
+  "r_to_target": 1.65
+ },
+ "mechanics": {
+  "verdict": "could_not_look",
+  "evidence": "Packet verdict could_not_look (prop-only package, no trade row). Compared by hand against /api/bot/prop/status tradeify_1 (reported 20:06:40Z, positions_provenance MEASURED): ETHUSDT short 0.18 @1934.5, terminal sl 1934.5, tp 1742.984, upnl +18.51. SL = breakeven as set by LR-20261114T1802Z (package/ticket still carry the original 1988.649 stop; open-risk shows loss_to_stop 0), TP equals package 1742.9845 at 3dp. Bracket matches the intended post-move state; verdict left as the packet gave it."
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 45,
+   "mean_r": 2.4502,
+   "sd_r": 2.0899,
+   "worst_r": -1.14,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": 1934.5,
+   "n": 45,
+   "mean_r": 2.4732,
+   "sd_r": 1.9843,
+   "worst_r": -0.1396,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 45,
+   "mean_r": 2.1222,
+   "sd_r": 1.7712,
+   "worst_r": 0.7301,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261114T2003Z-pkg-d8838f396234477c.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold at the breakeven stop (SL 1934.5 / TP 1742.984 on the terminal, both brackets present). Own table (live_review_outcomes.py --leg trend_donchian_eth_4h --side short --open-r 1.88 --peak-r 2.32 --bars-held 9 --atr-stop-mult 1.5 --corpus auto; n=45 net of cost, committed): the stop is already at entry, so the live position IS the r:0 cell: mean +2.473 R (sd 1.98, worst -0.140). Next lock r:1 is +2.122 R (sd 1.77, worst +0.730): cost 0.35 R vs r:0 (SE about 0.35) for a 0.87 R better worst case, under the 1 R the tail tie-break needs; atr:2.0 +2.124, atr:1.0 +2.063, atr:1.5 +1.918. A mechanical lock loses R in RQ-20261114-db1a-05, so no further lock. Open R 1.88 derived from the terminal (mark about 1831.7 = 1934.5 - 18.51/0.18; 1R = 54.149), not filled with 0."
+ },
+ "forecast": {
+  "thesis": "ETH 4h trend leg, short 0.18 from 1934.5, ADX 57, 4h closes 1840 and 1834 below the broken 1875.78 and 1894.1 swing lows; 1d still down. Stop at breakeven removes the loss tail, the 3.5 R target at 1743 is about 90 below the mark, 1.65 R away",
+  "direction": "with_trade",
+  "target_px": 1742.9845,
+  "p_target": 0.35,
+  "invalidation_px": 1934.5,
+  "horizon_bars": 3,
+  "timeframe": "4h",
+  "evidence": [
+   "self-priced table r:0 +2.473 n=45",
+   "prop status tradeify_1 upnl +18.51 on 0.18 ETH",
+   "chart.since_entry low 1809.0",
+   "regime adx 56.8 trending, atr_now/entry 1.39",
+   "exit_plan tp 1742.98"
+  ]
+ },
+ "context_flags": [
+  "derived_inputs: open_r 1.88 from terminal upnl +18.51 on 0.18 ETH (mark about 1831.7, 1R = 54.149; last 4h close 1833.72 gives 1.86); peak_r 2.32 is a lower bound from the since-entry low 1809.0; bars_held 9 from context_v3 since_entry; no telemetry for this prop-only package; none filled with 0",
+  "table_committed: priced by this lane, committed at tables/LR-20261114T2003Z-pkg-d8838f396234477c.json in the same push",
+  "tail_tiebreak: because the stop is already at breakeven the comparison base is the r:0 cell; r:1 worst-case gain 0.87 R < 1 R, so no further tighten",
+  "tighten_bias: stop-at-price fills flatter any tighten",
+  "conflicting_exposure: ETH shorts vs ml_entry / e4_oi_shock_1h longs on other books, accounts do not net",
+  "atr_ratio: now/entry 1.39; funding not readable (missing_inputs); calendar no events next 24h",
+  "packet_defect: priced_options could_not_price 1/1",
+  "packet_defect: state.open_r context_null:state.open_r 1/1"
+ ],
+ "account_reads": [
+  {
+   "account_id": "tradeify_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "packet_sha": "15d95def7569b46239f87421fc643b24ad509df24b164bd5c5101290e7e94547",
+ "packet_defects": [
+  {
+   "count": 1,
+   "denominator": 1,
+   "field": "priced_options",
+   "reason": "could_not_price"
+  },
+  {
+   "count": 1,
+   "denominator": 1,
+   "field": "state.open_r",
+   "reason": "context_null:state.open_r"
+  }
+ ]
+}

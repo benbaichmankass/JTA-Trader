@@ -1,0 +1,150 @@
+{
+ "schema_version": 1,
+ "trade_id": null,
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuL714dDZohFk1zx2DF",
+ "prompt_sha": null,
+ "skill_sha": "9091cee7fbb5ed4adf073c3a37178317780a1dbc",
+ "review_id": "LR-20261114T2002Z-pkg-cc3ef769fd684109",
+ "reviewed_at": "2026-11-14T20:09:27Z",
+ "order_package_id": "pkg-cc3ef769fd684109",
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-14T20:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-14T20:02:24Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 6,
+  "giveback_r": 0.3504,
+  "open_r": 0.0038,
+  "peak_provenance": "estimated",
+  "peak_r": 0.3542,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 64438.90000000001,
+  "tp": 67650.65000000001
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 3,
+  "giveback_r": 0.3504,
+  "open_r": 0.0038,
+  "peak_r": 0.3542,
+  "r_to_stop": 1.0038,
+  "r_to_target": 1.4962
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "package sl 64438.90000000001 / tp 67650.65000000001 agree with every readable account"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 204,
+   "mean_r": 0.5884,
+   "sd_r": 1.1181,
+   "worst_r": -1.1269,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 204,
+   "mean_r": 0.5013,
+   "sd_r": 0.7964,
+   "worst_r": -0.2976,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 204,
+   "mean_r": -0.0576,
+   "sd_r": 0.0241,
+   "worst_r": -0.152,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261114T2002Z-pkg-cc3ef769fd684109.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. BTCUSDT long, venue SL/TP match the package. Re-priced from the current state (open +0.00 R, peak +0.35 R, 6 bars; ml_entry long, n=204, net of cost): HOLD mean +0.588 R (sd 1.118, worst -1.127). Nearest bracket move r:0 (breakeven) is +0.501 R (sd 0.796, worst -0.298): gap 0.087 R is inside 1 SE (0.096) but the tail gain is 0.83 R, under the 1 R the tie-break requires, so the tie-break does not apply; atr:1.0 -0.170, atr:1.5 -0.136, atr:2.0 -0.073 R, close -0.646 R. Mechanical locks lose R in RQ-20261114-db1a-05, and the stop is 1.0 R away on a 1.5 R target. Cadence review, nothing new beyond a flat mark."
+ },
+ "forecast": {
+  "thesis": "4h trend down (ADX 60 4h, 52 on 1h); the long bought a 1h sweep and has chopped around entry (peak +0.35 R, now flat at 65696). A reclaim of the 66178 swing high is needed to build toward the 67650 target while the 4h trend is down, so a bounce is plausible but a full run to target is the minority outcome; the leg's own table prices hold above every lock and close",
+  "direction": "with_trade",
+  "target_px": 67650.65000000001,
+  "p_target": 0.25,
+  "invalidation_px": 64438.90000000001,
+  "horizon_bars": 12,
+  "timeframe": "1h",
+  "evidence": [
+   "priced_options hold n=204 mean +0.588",
+   "exit_plan sl/tp",
+   "chart.swings highs 66178.6",
+   "htf adx 60 trending down",
+   "book: ETH/ADA ml_entry longs same basket"
+  ]
+ },
+ "context_flags": [
+  "correlated: five ml_entry longs opened 16:01-16:05Z (BTC, ETH, SOL, XRP, ADA), one crypto-beta bet; SOL and XRP stopped, ADA at -0.66 R",
+  "htf: 4h trend down, ADX 60; the long is counter-trend",
+  "atr_ratio: atr_now_over_entry null (entry meta atr not recorded); regime cell entry/now null",
+  "tail_tiebreak: r:0 vs hold gap 0.087 R < 1 SE (0.096) but worst-case gain 0.83 R < 1 R, so the tie-break does not apply; stop fills at the stop price would flatter any tighten",
+  "population_note: mechanical profit locks lose R in RQ-20261114-db1a-05",
+  "calendar: read, no events in next 24h"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "packet_sha": "e9310a2dea34fba384ae03d517f8781fe84d197840fb67e3d0c334a288fcba3d"
+}
