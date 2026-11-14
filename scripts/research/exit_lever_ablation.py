@@ -810,11 +810,13 @@ def main(argv: list[str] | None = None) -> int:
                     help="fetch Binance-vision 1m over [--start, --end] into a temp dir and replay the FORMING bar "
                          "(fills --minutes-1m-csv; crypto feeds only)")
     ap.add_argument("--forming-equity-fetch", action="store_true",
-                    help="a US ETF 1d leg: fetch Alpaca iex 1Day AND 1Min over [--start, --end] through "
-                         "equity_1m_source.build (the forming_evidence_regen path) and replay the FORMING bar with "
-                         "--decision-session us_equity (fills --data-csv and --minutes-1m-csv; needs Alpaca read keys)")
-    ap.add_argument("--decision-session", choices=("us_equity",), default=None,
-                    help="with --minutes-1m-csv: a US-session daily leg (ET-date alignment, cash-session ticks)")
+                    help="a US ETF 1d or 1h leg: fetch Alpaca iex 1Day (1d) or clock-aligned 1Hour (1h) AND 1Min over "
+                         "[--start, --end] through equity_1m_source.build (the forming_evidence_regen path) and replay the "
+                         "FORMING bar with --decision-session us_equity (1d) or us_equity_intraday (1h) (fills --data-csv "
+                         "and --minutes-1m-csv; needs Alpaca read keys)")
+    ap.add_argument("--decision-session", choices=("us_equity", "us_equity_intraday"), default=None,
+                    help="with --minutes-1m-csv: us_equity = a US-session daily leg (ET-date alignment, cash-session "
+                         "ticks); us_equity_intraday = a 1h US leg (ticks masked to the cash session)")
     ap.add_argument("--non-crypto-source", choices=("auto", "dukascopy"), default="auto",
                     help="non-crypto candle lane: auto = the evidence builder's yfinance fetch; dukascopy = the lane "
                          "research-script-run.yml installs (history from ~2018 for US ETF CFDs)")
@@ -970,9 +972,12 @@ def main(argv: list[str] | None = None) -> int:
         import regime_debt_matrix as rdm
         import pandas as pd
         sym, tf = (base.get("symbols") or [None])[0], base.get("timeframe")
-        if not sym or str(tf) != "1d" or rdm.resolve_feed(sym, tf).get("source") != "yahoo":
-            print("ERROR: --forming-equity-fetch is for a US ETF 1d leg (yahoo feed in config)", file=sys.stderr)
+        if not sym or str(tf) not in ("1d", "1h") or rdm.resolve_feed(sym, tf).get("source") != "yahoo":
+            print("ERROR: --forming-equity-fetch is for a US ETF 1d or 1h leg (yahoo feed in config)", file=sys.stderr)
             return 2
+        # 1h (tlt/qqq_pullback_1h promotion check, 2026-11-14): the committed 1h records are forming_evidence_regen
+        # us_equity_intraday replays of Alpaca iex clock-aligned 1Hour + 1Min; an arm reads the SAME source and session.
+        bar_tf, tag, session = ("1Hour", "1h", "us_equity_intraday") if str(tf) == "1h" else ("1Day", "1d", "us_equity")
         if not (a.start and a.end):
             print("ERROR: --forming-equity-fetch needs --start and --end", file=sys.stderr)
             return 2
@@ -980,18 +985,18 @@ def main(argv: list[str] | None = None) -> int:
         from alpaca_readonly import AlpacaReadOnly
         s1 = (pd.Timestamp(a.start) - pd.Timedelta(days=2)).strftime("%Y-%m-%d")
         e1 = (pd.Timestamp(a.end) + pd.Timedelta(days=2)).strftime("%Y-%m-%d")
-        d = wd / f"eq1d__{sym}"
+        d = wd / f"eq{tag}__{sym}"
         try:
-            meta = eqs.build(AlpacaReadOnly.from_env(), sym, s1, e1, "iex", d, bar_tf="1Day")
+            meta = eqs.build(AlpacaReadOnly.from_env(), sym, s1, e1, "iex", d, bar_tf=bar_tf)
         except Exception as exc:  # noqa: BLE001  # allow-silent: not silent -- printed, written to failure.json, exit 1
-            print(f"ERROR: alpaca 1Day/1Min for {sym}: {type(exc).__name__}: {exc}", file=sys.stderr)
+            print(f"ERROR: alpaca {bar_tf}/1Min for {sym}: {type(exc).__name__}: {exc}", file=sys.stderr)
             _write_failure(out, {"stage": "forming_equity_fetch", "error": f"{type(exc).__name__}: {exc}"})
             return 1
-        print(f"equity_1m_source.build {sym} 1Day iex {s1}..{e1}: returned {meta.get('returned')} rows "
+        print(f"equity_1m_source.build {sym} {bar_tf} iex {s1}..{e1}: returned {meta.get('returned')} rows "
               f"{meta.get('rows')} alignment chosen={(meta.get('alignment') or {}).get('chosen')}")
-        a.data_csv = str(d / f"{sym}_1d.csv")
+        a.data_csv = str(d / f"{sym}_{tag}.csv")
         a.minutes_1m_csv = str(d / f"{sym}_1m.csv")
-        a.decision_session = "us_equity"
+        a.decision_session = session
     if a.decision_session and not a.minutes_1m_csv:
         print("ERROR: --decision-session needs --minutes-1m-csv", file=sys.stderr)
         return 2

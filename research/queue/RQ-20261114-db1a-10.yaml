@@ -1,0 +1,130 @@
+id: RQ-20261114-db1a-10
+title: 'tlt_pullback_1h real-money promotion: re-measure the live-faithful record (Alpaca iex 1Hour + 1Min, forming bar) at the measured predictive TP K* 3.5R (tp_r 3.5) under RULE-D1, control = the committed record'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 1
+roadmap:
+- L-LADDER
+question: With tp_r 3.5 (the predictive K* RQ-20261112-5ab1-01 measured, calibration gap 0.005) in place of the 50R sentinel, does tlt_pullback_1h still clear RULE-D1 (net R > 0 net of the full
+  cost stack) on its committed record's window and corpus (Alpaca iex clock-aligned 1Hour + 1Min, live forming decision bar, us_equity_intraday session, 2025-06-02 15:00 .. 2026-11-11 20:00)?
+why_this_matters: 'Manager 2026-11-14 15:13Z: assemble the real-money promotion check for tlt_pullback_1h (operator 2026-11-11 verbatim "promote tlt to real money", conditional on a holdout
+  confirmation that RQ-20261113-f090-01 has now given: arm A = the live config, +7.02R n145 held back). tp-doctrine-guard fails a NEW real-money routing carrying the 50R sentinel / tp_intent
+  none, so promotion needs a declared finite TP. 5ab1-01 measured K* 3.5R and put it to the operator to DECLARE; this unit measures what the declared value does to the record the promotion
+  would rest on, BEFORE the operator is asked, so the proposal carries the re-measured number rather than the sentinel''s.'
+power:
+  expected_n: 149
+  min_detectable_effect: 0.23
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED: the committed record holds n 149 on this window (comms/strategy_evidence/tlt_pullback_1h.json, sd 1.32 R/trade, mean 0.027, t 0.25). RULE-D1 is a sign test on the
+    pooled net, not a significance test; at this n an edge of 0.027 R/trade is NOT distinguishable from zero, and the proposal says so. Said before any run.'
+  sd: 1.32
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window (the committed record's); nothing accrues; Alpaca iex 1Hour + 1Min cover it at run time.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+run:
+  timeout_minutes: 120
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261114-db1a-10
+  commands:
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - tlt_pullback_1h
+    - --arm
+    - A=
+    - --arm
+    - K35=tp_r=3.5
+    - --grade
+    - stage0
+    - --baseline
+    - K35
+    - --control
+    - A=comms/research/RQ-20261113-f251-02/43452855935/evidence_runs/tlt_pullback_1h__bt.json
+    - --start
+    - '2025-06-02 15:00:00'
+    - --end
+    - '2026-11-11 20:00:00'
+    - --days
+    - '540'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '1'
+    - --n-floor
+    - '10'
+    - --delta-r
+    - '0'
+    - --forming-equity-fetch
+    - --research-unit
+    - RQ-20261114-db1a-10
+    - --out
+    - '{out_dir}'
+decision_rule:
+  id: RULE-TLT1H-TP35-D1-20261114
+  registered_at: '2026-11-14'
+  registered_before_run: true
+  statistic: 'exit_lever_ablation --grade stage0 --baseline K35 on tlt_pullback_1h over 2025-06-02 15:00 .. 2026-11-11 20:00, --forming-equity-fetch (Alpaca iex clock-aligned 1Hour + 1Min,
+    decision session us_equity_intraday: the corpus and decision bar of the committed record), net of the harness cost stack for the venue (fee 0, slippage 5 bps round trip, funding 0).
+    Arms: A = config-exact (tp_r 50 sentinel); K35 = tp_r 3.5, every other field unchanged. --control A = the committed record''s own __bt.json (n 149, net +4.0263R): A must reproduce it
+    within 2% of n and 0.5R.'
+  rule: 'RULE-D1 restated on K35: PASS iff K35 net_r > 0 with n >= 10 (fold-majority 1 is exactly RULE-D1''s net > 0, which has no fold clause); FAIL iff n >= 10 and K35 net_r <= 0;
+    INDETERMINATE iff the control arm A does not reproduce the committed record (the corpus differs, so nothing is read), K35 n < 10, or a run is missing. K35 - A and the per-fold table are
+    REPORTED, NOT GRADED (5ab1-01 already measured the OOS cost of K* vs the sentinel: -0.020 R/trade, CI95 [-0.082, +0.032]). No threshold is relaxed after any result.'
+  what_it_does_not_do: Changes no config, roster, order or evidence record. A PASS supplies the re-measured number for the Tier-3 real-money proposal the manager takes to the operator
+    (tp_r 50 -> 3.5 + tp_intent r_multiple as the operator's DECLARATION of K*, roster alpaca_live + alpaca_portfolio, a TLT same-symbol allocation record with ml_entry_eq_struct). It
+    makes no claim that the edge is statistically distinguishable from zero.
+  baseline: the leg config-exact (arm A), which must reproduce the committed record (control), on the same corpus in this unit.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  basis: 'stand-in: the evidence gate for a small real-money ETF leg; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+ml_consumer:
+  not_applicable: 'Not an ML unit: an entry take-profit parameter on a rule-based leg.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: tlt_pullback_1h
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261112-5ab1-01
+  verdict_read: indeterminate
+  diagnosis: 'check_tp_doctrine FAIL:entry_tp+tp_revision (50R sentinel, tp_intent none) on alpaca_paper, and a new real-money routing would fail the guard outright. 5ab1-01 measured a
+    calibrated predictive K* 3.5R (reach IS 0.107 / OOS 0.112) whose OOS cost vs the sentinel straddles its -0.05 margin, so it was put to the operator to declare.'
+  hypothesis: At tp_r 3.5 the live-faithful record keeps a positive net R net of cost.
+  search: Fixed at tp_r 3.5 (the measured K*); nothing searched.
+  attempt: 1
+  due_by: '2026-11-21'
+  levers:
+  - exit
+  lever_arms:
+  - family: exit
+    param: tp_r
+    values:
+    - 3.5
+    baseline_value: 50.0
+  map_entries:
+  - research/levers/tlt_pullback_1h.yaml
+related:
+- RQ-20261112-5ab1-01
+- RQ-20261113-f090-01
+- RQ-20261113-f251-02
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): one value fixed from a prior measurement, rule registered before the run against the leg''s own record
+  on the record''s own corpus, net of the full cost stack, graded once.'
+follow_up: On the verdict a session reports to the manager; a PASS completes the evidence for the Tier-3 real-money proposal (row PROMOTE-1H-SURVIVORS-20261104), which the manager takes to the
+  operator. The config PR regenerates comms/strategy_evidence/tlt_pullback_1h.json with forming_evidence_regen after the tp_r change.
