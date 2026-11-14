@@ -492,6 +492,13 @@ def _finish(out: dict, n_cmp: int, divs: list[dict], bars: list[dict], not_compa
     comparable = [b for b in bars if b.get("status") != "not_comparable"]
     if not comparable or n_cmp == 0:
         out["reason"] = "nothing comparable: no (symbol, decision bar) held both a live record and a replay"
+        if comparable:
+            # PARITY-CONTROLS-1114: closes WERE replayed but neither side held a package. Live audits only the
+            # package decisions (refusals go to the journal), so agreement on "none" cannot be shown: say so, and
+            # keep the replayed closes so the report shows what was looked at.
+            out["reason"] = (f"nothing to diff: {len(comparable)} decision close(s) replayed, 0 packages on either side; "
+                             "live audits only package decisions, so a no-package close cannot be confirmed")
+            out["bars"] = bars
         return out
     out.update({
         "state": "checked", "reason": None, "bars_checked": len(comparable), "evals_checked": n_cmp,
