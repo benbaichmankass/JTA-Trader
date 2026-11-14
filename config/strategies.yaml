@@ -2714,7 +2714,7 @@ strategies:
     shadow_model_ids: []
 
   tlt_pullback_1h:
-    # TLT INTRADAY (1h) HTF-pullback (bidirectional) — round 2b completing the
+    # TLT INTRADAY (1h) HTF-pullback — LONG ONLY since 2026-11-14 (side_filter below; real-money promotion) — round 2b completing the
     # intraday ETF sleeve (gld_pullback_1h sibling on the long-duration Treasury
     # bond ETF; frac 0.5, trail 3.0 — see the trail_mult note below).
     # PROVENANCE (rollout): intraday 1h ETF sweep 2026-06-20 § 0e — TLT pullback
@@ -2753,15 +2753,25 @@ strategies:
     trail_mult: 3.0
     trail_decay_stall_bars: 6   # M20 P4.1 decay cell (stall6 tight1.5 wf 5/6; sweep 2026-07-12, PR #6251)
     trail_decay_tight_mult: 1.5
-    # Was absent, therefore inherited htf_pullback_trend_2h._DEFAULTS["tp_r"] = 50.0.
-    # Written out so the sentinel is visible to `grep tp_r`. RUNTIME-IDENTICAL.
-    tp_r: 50.0
+    # REAL-MONEY PROMOTION, LONG ONLY + 3.5R PREDICTIVE TP (Tier-3; OPERATOR popup 2026-11-14 ~16:28Z, relayed by
+    # Manager Session 2026-11-13a, verbatim choice "Promote long-only 3.5R (Recommended)").
+    # EVIDENCE: RQ-20261114-db1a-10 (research-script-run 43614795160; rule RULE-TLT1H-TP35-D1-20261114 registered
+    # before the run), Alpaca iex 1Hour + 1Min forming replay 2025-06-02..2026-11-11 (the committed record's corpus;
+    # control arm reproduced it exactly), net of fee 0 + slippage 5 bps rt: arm L35 (this config) +8.17 R n 75, 4/4
+    # folds, maxDD 7.0 R, t 0.72; both-sides K35 +7.38 R -> +2.15 R after a conservative short borrow + dividend
+    # add-on; the prior config -1.52 R after that add-on. K* 3.5 R: RQ-20261112-5ab1-01 (calibration gap 0.005),
+    # declared here by the operator's choice. Holdout: RQ-20261113-f090-01 (8-yr dukascopy, the both-sides config).
+    # CAVEATS: t 0.72 (not distinguishable from zero); long-only is a regime-dependent in-sample read (the 2018-20
+    # iteration RQ-20261113-1751-01 found SHORT-only the edge); the carry add-on is ESTIMATED.
+    # side_filter is honoured by tlt_pullback_1h_signal_builder from this PR on (it was not read before).
+    # ROLLBACK: delete side_filter, restore `tp_r: 50.0` + the prior tp_intent {mode: none, reason:
+    # trail_is_the_profit_exit, evidence: no_gate_passing_timeout_free_tp_cell} block (git history).
+    side_filter: long
+    tp_r: 3.5
     tp_intent:
-      mode: none
-      reason: trail_is_the_profit_exit
-      # MEASURED: this leg has NEVER carried a tp_r key, across all 110 revisions of this
-      # file (2026-04-29 -> 2026-09-06). Never declared — NOT intended-and-lost.
-      evidence: no_gate_passing_timeout_free_tp_cell
+      mode: r_multiple
+      basis: RQ-20261112-5ab1-01_kstar_3.5R
+      calibrated: true           # OOS calibration gap 0.005 (RQ-20261112-5ab1-01)
     min_confidence: 0.0
     shadow_model_ids: []
 

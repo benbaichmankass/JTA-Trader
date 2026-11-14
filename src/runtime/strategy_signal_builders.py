@@ -5749,6 +5749,27 @@ def tlt_pullback_1h_signal_builder(settings: dict) -> Dict[str, Any]:
             "meta": {"strategy_name": "tlt_pullback_1h", "reason": str(exc)},
         })
 
+    # DIRECTIONAL gate (side_filter), the same _resolve_side_filter / _side_filter_suppresses pair the trend and
+    # _htf_pullback_variant_builder legs use. Added 2026-11-14 with the tlt_pullback_1h real-money promotion
+    # (operator popup "Promote long-only 3.5R (Recommended)"; RQ-20261114-db1a-10 arm L35): this builder never read
+    # side_filter, so the long-only config would have been INERT and live would still have traded shorts. No key
+    # (or `both`) is byte-for-byte unchanged.
+    _side_filter = _resolve_side_filter(cfg_yaml)
+    if _side_filter_suppresses(pkg["direction"], _side_filter):
+        _reason = _side_filter_reason(_side_filter)
+        logger.info("tlt_pullback_1h: signal suppressed (side_filter=%s)", _side_filter)
+        try:
+            log_signal(_stamp_regime({
+                "event": "tlt_pullback_1h_eval", "strategy": "tlt_pullback_1h", "symbol": symbol,
+                "timeframe": timeframe, "side": "none", "reason": _reason,
+            }, candles_df))
+        except Exception:  # noqa: BLE001
+            logger.exception("tlt_pullback_1h: dedicated audit emit failed")
+        return _with_signal_package("tlt_pullback_1h", {
+            "symbol": symbol, "side": "none",
+            "meta": {"strategy_name": "tlt_pullback_1h", "reason": _reason},
+        })
+
     side = "buy" if pkg["direction"] == "long" else "sell"
     logger.info(
         "tlt_pullback_1h: %s signal at %s (entry=%s sl=%s tp=%s confidence=%.3f)",
