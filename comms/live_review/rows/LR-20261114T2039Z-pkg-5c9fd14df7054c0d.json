@@ -1,0 +1,150 @@
+{
+ "schema_version": 1,
+ "trade_id": null,
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuLt8vYqCoUjYDCwbLK",
+ "prompt_sha": null,
+ "skill_sha": "9091cee7fbb5ed4adf073c3a37178317780a1dbc",
+ "review_id": "LR-20261114T2039Z-pkg-5c9fd14df7054c0d",
+ "reviewed_at": "2026-11-14T20:43:00Z",
+ "order_package_id": "pkg-5c9fd14df7054c0d",
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "adverse_r",
+  "level": -0.5,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-14T20:39:22Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 2,
+  "giveback_r": 0.8027,
+  "open_r": -0.6459,
+  "peak_provenance": "estimated",
+  "peak_r": 0.1568,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.9260142857142857,
+  "tp": 0.9929785714285714
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 0,
+  "giveback_r": 0.8027,
+  "open_r": -0.6459,
+  "peak_r": 0.1568,
+  "r_to_stop": 0.3541,
+  "r_to_target": 2.1459
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "package sl 0.9260142857142857 / tp 0.9929785714285714 agree with every readable account (bybit_2 and bybit_portfolio resting SL/TP matched by order_id)"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 251,
+   "mean_r": 0.3116,
+   "sd_r": 1.1721,
+   "worst_r": -1.1269,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 251,
+   "mean_r": 0.2689,
+   "sd_r": 0.9587,
+   "worst_r": -1.3467,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 251,
+   "mean_r": -0.706,
+   "sd_r": 0.0237,
+   "worst_r": -0.8017,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261114T2039Z-pkg-5c9fd14df7054c0d.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. XRPUSDT long, venue SL 0.9260 / TP 0.9930 match the package. Re-priced from the current state (open -0.65 R, peak +0.16 R, 2 bars; ml_entry long, n=251, net of cost): HOLD +0.312 R (sd 1.172, worst -1.127) vs close -0.706 R (worst -0.802); the only valid tighten, atr:2.0, is +0.269 R with worst -1.347 (worse than hold), so no tail tie-break; atr:1.0 and 1.5 stops sit above price (invalid). Today's earlier basket stop-outs are context only."
+ },
+ "forecast": {
+  "thesis": "1h long at 0.9528 just above the 0.9453 low; 4h ADX trending, swing highs far above, so the 0.993 target needs a reclaim; the stop is 0.35 R away and may be hit first, but the leg's own history from this state prices hold above close and above the valid tighten",
+  "direction": "with_trade",
+  "target_px": 0.9929785714285714,
+  "p_target": 0.2,
+  "invalidation_px": 0.9260142857142857,
+  "horizon_bars": 8,
+  "timeframe": "1h",
+  "evidence": [
+   "priced_options hold n=251 mean +0.312",
+   "exit_plan sl/tp",
+   "chart.swings",
+   "htf adx 57",
+   "book: other XRP longs"
+  ]
+ },
+ "context_flags": [
+  "adverse_r: open_r -0.65 crossed -0.5R",
+  "duplicate_exposure: XRPUSDT also long via ml_entry_v2 (pkg-6fa95441c0bf4ad5) and e4_oi_shock_1h; reported only",
+  "correlated: ml_entry longs BTC/ETH/ADA/SOL/XRP are one crypto-beta basket; today's first basket lost SOL, XRP, ADA at stops (context only, not used in the call)",
+  "tighten: atr:2.0 worst -1.347 vs hold -1.127; stop fills at the stop price flatter tightens",
+  "atr_ratio: atr_now_over_entry null; regime cell null",
+  "calendar: no events in next 24h"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "packet_sha": "ec4f164a271f74782ee37012b7ed0473804906a24389cdc64c32e510982fb692"
+}
