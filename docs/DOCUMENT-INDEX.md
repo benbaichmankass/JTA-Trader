@@ -553,6 +553,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/design/alpaca-trade-scoped-close-PROPOSAL.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/b6-split-packet-2026-08-29.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/boot-read-size-PROPOSAL.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
+| `docs/design/m18-allocator-reevaluation-2026-11-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/desk-entry-review-redesign-2026-11-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/site-auth-consumer-inventory-2026-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/trade-action-direct-path-2026-11.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
