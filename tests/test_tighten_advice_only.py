@@ -1,21 +1,15 @@
-"""In-trade classes are ADVICE ONLY until each passes its own test.
+"""Advice-only ENDED 2026-11-14: every in-trade class a reviewed row recommends is APPLIED.
 
-Operator 2026-10-28 ~20:35Z, popup "Advice-only tightens (Recommended)"; extended ~21:07Z to every in-trade
-class, popup "Advice-only until tested" (row DESK-V1-MGMT-ADVICE-ONLY; plan docs/plans/desk-v1-production-plan-2026-10-29.md
-§ 5b). GRADUATION removes ONE class from rows_lib.ADVICE_ONLY_ACTIONS and the mandate's list together; the
-"graduated" tests below simulate that with monkeypatch.
+Operator directive, manager chat 2026-11-14 ~09:25Z (relayed by Manager Session 2026-11-13a), verbatim "Just turn
+on, like, no advice only. All those decisions should be implemented. And I should just get a ping when those changes
+are implemented based on LTR lane". rows_lib.ADVICE_ONLY_ACTIONS and MD-TRADE-DESK functions.in_trade.advice_only
+are both EMPTY; every class goes through the existing path (rows watcher / desk intake -> live_review_dispatch ->
+live_review_apply -> each account's RiskManager), one ping per applied leg. The PRODUCTION tests below pin that.
 
-Evidence: comms/research/ltr_tighten_optimize/verdict.json (LTR-TIGHTEN-OPTIMIZE; DESK-LIFECYCLE-S0, PR #20967).
-A recommended tighten row is recorded and graded but NEVER dispatched, on any route and on all three automatic
-paths (the VM rows watcher, the dispatcher and desk intake); every other trade action is unchanged.
-These tests run with the production value of rows_lib.ADVICE_ONLY_ACTIONS (no patching).
-
-ONE exception, per package (MD-LTR-ADA-AUTO, operator 2026-10-29): a granted ``kind: ltr_auto_apply`` entry in
-config/mandates.yaml lifts advice-only for the ONE order package it names (src/runtime/ltr_auto_mandate.py;
-behaviour in tests/test_ltr_auto_mandate.py). The last tests below pin that this is the ONLY way out: every such
-exception is a granted, single-package, operator-sourced mandate entry, and the global set is unchanged.
-An ACCOUNT-scoped exception (MD-LTR-PAPER-AUTO, operator 2026-11-01) lifts it for packages carried by a PAPER
-account it names, on that account's leg only; the tests pin it to paper accounts.
+History: advice-only from 2026-10-28 (popups "Advice-only tightens (Recommended)" / "Advice-only until tested",
+row DESK-V1-MGMT-ADVICE-ONLY). The mechanism (the tuple, ADVICE_ONLY_VERDICT, every reader, the per-package and
+per-account ltr_auto_apply exceptions) is kept, so the LEGACY tests below re-populate the tuple with the
+``legacy_advice_only`` fixture and pin that the gate still works if a class is ever put back.
 """
 from __future__ import annotations
 
@@ -36,19 +30,72 @@ from tests.test_live_review_dispatch import RID, TABLE_ROW, _set_row, world  # n
 IN_TRADE_CLASSES = ("tighten_sl", "widen_sl", "move_tp", "partial_close", "close", "change_size", "add_entry")
 
 
-def test_the_production_set_is_every_in_trade_class():
-    assert rows_lib.ADVICE_ONLY_ACTIONS == IN_TRADE_CLASSES
+@pytest.fixture
+def legacy_advice_only(monkeypatch):
+    """The pre-2026-11-14 production value, for the tests that pin the (kept) gate mechanism."""
+    monkeypatch.setattr(rows_lib, "ADVICE_ONLY_ACTIONS", IN_TRADE_CLASSES)
+
+
+# ------------------------------------------------------------------ PRODUCTION: advice-only ended 2026-11-14
+
+def test_the_production_set_is_empty():
+    assert rows_lib.ADVICE_ONLY_ACTIONS == ()
     assert rows_lib.ADVICE_ONLY_VERDICT == "advice_only"
 
 
-def test_every_class_the_watcher_could_send_is_advice_only():
-    """No in-trade class the code knows how to send escapes the list by omission."""
-    assert set(w.DISPATCHABLE_ACTIONS) <= set(rows_lib.ADVICE_ONLY_ACTIONS)
-    assert set(di.APPLY_ACTION.values()) <= set(rows_lib.ADVICE_ONLY_ACTIONS)
+def test_no_class_the_code_can_send_is_advice_only():
+    assert set(IN_TRADE_CLASSES) <= set(w.DISPATCHABLE_ACTIONS)
+    assert not set(w.DISPATCHABLE_ACTIONS) & set(rows_lib.ADVICE_ONLY_ACTIONS)
+    assert not set(di.APPLY_ACTION.values()) & set(rows_lib.ADVICE_ONLY_ACTIONS)
 
 
 @pytest.mark.parametrize("action", IN_TRADE_CLASSES)
-def test_watcher_logs_every_class_as_advice(tmp_path, action):
+def test_watcher_dispatches_every_class_on_a_recommended_row(tmp_path, action):
+    disp = trw.FakeDispatch()
+    w.run_pass(git=trw.FakeGit([]), dispatch=disp, now_fn=lambda: trw.T0, logs=tmp_path)
+    w.run_pass(git=trw.FakeGit([trw.row("LR-a", action=action)]), dispatch=disp, now_fn=lambda: trw.T0, logs=tmp_path)
+    assert disp.calls == [("LR-a", trw.TIP)]
+    (rec,) = trw.log(tmp_path)
+    assert rec["verdict"] == "dispatched"
+
+
+@pytest.mark.parametrize("action", IN_TRADE_CLASSES)
+def test_an_unscoped_package_is_dispatchable_with_the_production_file(action):
+    """trw.row is pkg-1, which no ltr_auto_apply entry scopes: it no longer needs one."""
+    assert w.dispatchable(trw.row("LR-u", action=action)) is None
+
+
+def test_dispatcher_hands_a_tighten_to_the_apply_under_md_trade_desk(world):  # noqa: F811
+    res = d.dispatch(RID, apply=True)
+    assert res["verdict"] == "dispatched" and world["calls"]
+
+
+def test_dispatcher_hands_a_close_to_the_apply(world):  # noqa: F811
+    row = copy.deepcopy(TABLE_ROW)
+    row["recommendation"] = {"action": "close", "reason": "structure broke against the trade",
+                             "evidence_source": "judgement", "basis": "judgement", "judgement_confidence": 0.6}
+    _set_row(world, row)
+    res = d.dispatch(RID, apply=True)
+    assert res["verdict"] == "dispatched"
+    pairs = dict(zip(world["calls"][0][::2], world["calls"][0][1::2]))
+    assert pairs["--action"] == "close" and pairs["--mandate"] == d.TRADE_MANDATE_ID
+
+
+def test_desk_intake_no_longer_answers_advice_only(tmp_path):
+    tdi.seeded(tmp_path)
+    a = tdi.FakeApply()
+    tdi.run(tmp_path, [tdi.in_trade_row()], apply_fn=a)
+    (rec,) = tdi.log(tmp_path)
+    assert rec["detail"] != "advice_only"
+
+
+# ------------------------------------------------------------------ LEGACY: the kept gate, re-populated
+
+
+
+
+@pytest.mark.parametrize("action", IN_TRADE_CLASSES)
+def test_watcher_logs_every_class_as_advice(tmp_path, action, legacy_advice_only):
     disp = trw.FakeDispatch()
     w.run_pass(git=trw.FakeGit([]), dispatch=disp, now_fn=lambda: trw.T0, logs=tmp_path)
     w.run_pass(git=trw.FakeGit([trw.row("LR-a", action=action)]), dispatch=disp, now_fn=lambda: trw.T0, logs=tmp_path)
@@ -60,7 +107,7 @@ def test_watcher_logs_every_class_as_advice(tmp_path, action):
 # ------------------------------------------------------------------ VM rows watcher
 
 @pytest.mark.parametrize("route", ["recommended", "auto_applied", "operator_ask"])
-def test_watcher_never_dispatches_a_recommended_tighten_and_logs_it_as_advice(tmp_path, route):
+def test_watcher_never_dispatches_a_recommended_tighten_and_logs_it_as_advice(tmp_path, route, legacy_advice_only):
     disp = trw.FakeDispatch()
     w.run_pass(git=trw.FakeGit([]), dispatch=disp, now_fn=lambda: trw.T0, logs=tmp_path)
     w.run_pass(git=trw.FakeGit([trw.row("LR-t", action="tighten_sl", route=route)]),
@@ -86,13 +133,13 @@ def test_watcher_dispatches_a_graduated_close(tmp_path, monkeypatch):
 
 # ------------------------------------------------------------------ dispatcher (incl. the manual system-action)
 
-def test_dispatcher_refuses_a_tighten_as_advice_without_running_the_apply_or_pinging(world):  # noqa: F811
+def test_dispatcher_refuses_a_tighten_as_advice_without_running_the_apply_or_pinging(world, legacy_advice_only):  # noqa: F811
     res = d.dispatch(RID, apply=True)
     assert res["verdict"] == "advice_only" and res["exit"] == d.EXIT_REFUSED
     assert world["calls"] == [] and world["pings"] == []
 
 
-def test_dispatcher_refuses_an_ungraduated_close(world):  # noqa: F811
+def test_dispatcher_refuses_an_ungraduated_close(world, legacy_advice_only):  # noqa: F811
     row = copy.deepcopy(TABLE_ROW)
     row["recommendation"] = {"action": "close", "reason": "structure broke against the trade",
                              "evidence_source": "judgement", "basis": "judgement", "judgement_confidence": 0.6}
@@ -116,7 +163,7 @@ def test_dispatcher_hands_a_graduated_close_to_the_apply(world, monkeypatch):  #
 
 # ------------------------------------------------------------------ desk intake
 
-def test_desk_intake_records_a_tighten_as_advice_and_never_applies_it(tmp_path):
+def test_desk_intake_records_a_tighten_as_advice_and_never_applies_it(tmp_path, legacy_advice_only):
     tdi.seeded(tmp_path)
     a = tdi.FakeApply()
     tdi.run(tmp_path, [tdi.in_trade_row()], apply_fn=a)
@@ -184,17 +231,17 @@ def test_every_exception_is_a_granted_single_package_or_paper_account_operator_m
 
 
 def test_the_global_set_is_unchanged_by_any_exception():
-    """An exception is per package; it never shrinks ADVICE_ONLY_ACTIONS or MD-TRADE-DESK's list."""
+    """An exception never edits the global set; since 2026-11-14 that set (code and mandate) is empty."""
     from src.runtime import ltr_auto_mandate as am
 
     # MD-LTR-ADA-AUTO expired with its package (2026-10-29T10:47:53Z): no exception is active now
     assert not any(m.get("id") == "MD-LTR-ADA-AUTO" for m in am.active(_mandates()))
-    assert rows_lib.ADVICE_ONLY_ACTIONS == IN_TRADE_CLASSES
+    assert rows_lib.ADVICE_ONLY_ACTIONS == ()
     test_the_mandate_records_the_same_advice_only_set_as_the_code()
 
 
 @pytest.mark.parametrize("action", IN_TRADE_CLASSES)
-def test_an_unscoped_package_stays_advice_only_with_the_production_file(tmp_path, action):
+def test_an_unscoped_package_stays_advice_only_under_the_legacy_set(tmp_path, action, legacy_advice_only):
     """trw.row is pkg-1, which no granted mandate scopes: advice only, against the real config/mandates.yaml."""
     from src.runtime import ltr_auto_mandate as am
 
