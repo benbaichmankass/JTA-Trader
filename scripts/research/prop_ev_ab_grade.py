@@ -80,11 +80,16 @@ def grade(cells: Dict[str, Dict[str, List[Optional[dict]]]], ev_margin_frac: flo
 
 
 def run(leg: str, a: Path, b: Path, out: Path, seeds: List[int], n_floor: int, ev_margin_frac: float,
-        breach_margin: float, unit: str, rule: str, runner: Callable = run_cell) -> Dict[str, Any]:
+        breach_margin: float, unit: str, rule: str, runner: Callable = run_cell,
+        accounts: Optional[List[str]] = None) -> Dict[str, Any]:
+    accts = list(accounts) if accounts else list(ACCOUNTS)
+    unknown = [x for x in accts if x not in ACCOUNTS]
+    if unknown:
+        raise ValueError(f"unknown account(s) {unknown}; known: {sorted(ACCOUNTS)}")
     rows = {k: sum(1 for ln in p.read_text(encoding="utf-8").splitlines() if ln.strip()) if p.exists() else 0
             for k, p in (("A", a), ("B", b))}
     pop = (f"{leg}: ledgers A={a.name} (n {rows['A']}) and B={b.name} (n {rows['B']}); prop_ev_sim path mode, seeds {seeds}, "
-           f"1000 lives, 2026-11-06 retest cells ('cur' cost arm), accounts {sorted(ACCOUNTS)}")
+           f"1000 lives, 2026-11-06 retest cells ('cur' cost arm), accounts {sorted(accts)}")
     base = {"research_unit": unit, "rule": rule, "population": pop}
     if min(rows.values()) < n_floor:
         v = {"verdict": "indeterminate", "read_state": "producer_failed", "n": None,
@@ -92,7 +97,7 @@ def run(leg: str, a: Path, b: Path, out: Path, seeds: List[int], n_floor: int, e
     else:
         (out / "cells").mkdir(parents=True, exist_ok=True)
         cells: Dict[str, Dict[str, List[Optional[dict]]]] = {}
-        for acct in ACCOUNTS:
+        for acct in accts:
             cells[acct] = {}
             for arm, path in (("A", a), ("B", b)):
                 cells[acct][arm] = []
@@ -128,6 +133,13 @@ def _self_test() -> int:
         assert run(*args, runner=fake(100, 85, 0.30, 0.30))["verdict"] == "fail"       # ev down > 10%
         assert run(*args, runner=fake(100, 100, 0.30, 0.33))["verdict"] == "fail"      # breach up > 0.02
         assert run(*args, runner=lambda argv, out: None)["verdict"] == "indeterminate"
+        two = run(*args, runner=fake(100, 95, 0.30, 0.31), accounts=["tradeify_1", "velotrade_1"])
+        assert sorted(two["accounts"]) == ["tradeify_1", "velotrade_1"], two["accounts"]
+        try:
+            run(*args, runner=fake(100, 95, 0.30, 0.31), accounts=["nope"])
+            raise AssertionError("an unknown account must be refused")
+        except ValueError:
+            pass
         b.write_text("{}\n" * 10)
         assert run(*args, runner=fake(100, 100, 0.3, 0.3))["verdict"] == "indeterminate"  # under the n floor
     print("prop_ev_ab_grade self-test: ok")
@@ -141,6 +153,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--b-trades")
     ap.add_argument("--out")
     ap.add_argument("--seeds", default="1,2,3,4,5")
+    ap.add_argument("--accounts", default=None,
+                    help="comma list of accounts to score (default: all of ACCOUNTS). Score only the firms that roster "
+                         "the leg in config/accounts.yaml (db1a-09 scoped breakout_2 in by mistake; db1a-09b).")
     ap.add_argument("--n-floor", type=int, default=60)
     ap.add_argument("--ev-margin-frac", type=float, default=0.10)
     ap.add_argument("--breach-margin", type=float, default=0.02)
@@ -154,7 +169,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         ap.error("--leg, --a-trades, --b-trades, --out, --unit and --rule are required")
     out = Path(a.out)
     v = run(a.leg, Path(a.a_trades), Path(a.b_trades), out, [int(s) for s in a.seeds.split(",")], a.n_floor,
-            a.ev_margin_frac, a.breach_margin, a.unit, a.rule)
+            a.ev_margin_frac, a.breach_margin, a.unit, a.rule,
+            accounts=[x.strip() for x in a.accounts.split(",") if x.strip()] if a.accounts else None)
     out.mkdir(parents=True, exist_ok=True)
     (out / "verdict.json").write_text(json.dumps(v, indent=2, default=str) + "\n", encoding="utf-8")
     print(f"unit: {v['verdict']} (n {v['n']}) {v.get('note')}")

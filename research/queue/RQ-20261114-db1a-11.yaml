@@ -1,0 +1,138 @@
+id: RQ-20261114-db1a-11
+title: 'qqq_pullback_1h real-money promotion: replay the holdout-selected T1 config (long only, trail_mult 4.0) on the live-faithful Alpaca forming corpus (iex 1Hour + 1Min) under RULE-D1, control = the committed record'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+question: Does qqq_pullback_1h in the T1 configuration RQ-20261113-f090-02 selected on discovery and confirmed on its held-back span (long only, trail_mult 4.0, every other field
+  unchanged) clear RULE-D1 (net R > 0 net of the full cost stack) on the committed record's window and corpus (Alpaca iex clock-aligned 1Hour + 1Min, live forming decision bar,
+  us_equity_intraday session, 2025-06-02 15:00 .. 2026-11-11 21:00)?
+why_this_matters: 'Manager 2026-11-14 15:13Z / 15:21Z (qqq/tlt real-money promotion check). f090-02 confirmed T1 (+8.72R, n 45 held back) on dukascopy CLOSED bars, but the live config
+  trades BOTH sides at trail_mult 5.0 and the committed faithful record (+5.49R n 73, shorts -6.36R n 33) measures THAT config. Promoting T1 is a config change, so T1 needs its own
+  faithful forming-bar record on the live feed before any proposal. This unit measures it; a separate unit derives T1''s predictive TP (tp-doctrine-guard fails a new real-money routing
+  with the 50R sentinel; RQ-20261104-7fdb-01 FAILED on the live config).'
+power:
+  expected_n: 40
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED proxy: the committed record holds 40 long trades of 73 on this window (sd 1.87 R/trade over all 73). T1 (trail 4.0) trades about as often as long-only A did on the
+    8-year series (155 vs 131, f090-02), so ~40-50 expected. RULE-D1 is a sign test on the pooled net, not a significance test; at this n a small edge is not distinguishable from zero,
+    and any proposal says so. Said before any run.'
+  sd: 1.87
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window (the committed record's); nothing accrues; Alpaca iex 1Hour + 1Min cover it at run time.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+run:
+  timeout_minutes: 120
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261114-db1a-11
+  commands:
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - qqq_pullback_1h
+    - --arm
+    - A=
+    - --arm
+    - T1=--side-filter=long;--trail-mult=4.0
+    - --grade
+    - stage0
+    - --baseline
+    - T1
+    - --control
+    - A=comms/research/RQ-20261113-f251-02/43452855935/evidence_runs/qqq_pullback_1h__bt.json
+    - --start
+    - '2025-06-02 15:00:00'
+    - --end
+    - '2026-11-11 21:00:00'
+    - --days
+    - '540'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '1'
+    - --n-floor
+    - '10'
+    - --delta-r
+    - '0'
+    - --forming-equity-fetch
+    - --research-unit
+    - RQ-20261114-db1a-11
+    - --out
+    - '{out_dir}'
+decision_rule:
+  id: RULE-QQQ1H-T1-D1-20261114
+  registered_at: '2026-11-14'
+  registered_before_run: true
+  statistic: 'exit_lever_ablation --grade stage0 --baseline T1 on qqq_pullback_1h over 2025-06-02 15:00 .. 2026-11-11 21:00, --forming-equity-fetch (Alpaca iex clock-aligned 1Hour +
+    1Min, decision session us_equity_intraday: the corpus and decision bar of the committed record), net of the harness cost stack for the venue (fee 0, slippage 5 bps round trip,
+    funding 0). Arms: A = config-exact (both sides, trail_mult 5.0, tp_r 50); T1 = --side-filter long + --trail-mult 4.0, every other field unchanged (exactly f090-02''s T1). --control
+    A = the committed record''s own __bt.json (n 73, net +5.4889R): A must reproduce it within 2% of n and 0.5R. T1 is long only, so no short carry add-on applies.'
+  rule: 'RULE-D1 restated on T1: PASS iff T1 net_r > 0 with n >= 10 (fold-majority 1 is exactly RULE-D1''s net > 0, which has no fold clause); FAIL iff n >= 10 and T1 net_r <= 0;
+    INDETERMINATE iff the control arm A does not reproduce the committed record, T1 n < 10, or a run is missing. T1 - A and the per-fold table are REPORTED, NOT GRADED. T1 was chosen on
+    f090-02''s discovery span, which overlaps this window; this is a fidelity read (does the selected config keep a positive net on the live feed and bar), not an independent edge
+    test, and the proposal says so. No threshold is relaxed after any result.'
+  what_it_does_not_do: Changes no config, roster, order or evidence record. A PASS is ONE of two inputs a qqq real-money proposal needs; the other is T1's predictive take-profit
+    (tp-doctrine-guard), a separate unit. Makes no claim that the edge is statistically distinguishable from zero.
+  baseline: the leg config-exact (arm A), which must reproduce the committed record (control), on the same corpus in this unit.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: the evidence gate for a small real-money ETF leg; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+ml_consumer:
+  not_applicable: 'Not an ML unit: direction + trail parameters on a rule-based leg.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: qqq_pullback_1h
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261113-f090-02
+  verdict_read: pass
+  diagnosis: 'f090-02 PASS confirmed T1 (long only, trail 4.0) on dukascopy closed bars; the committed faithful record measures the live both-sides trail-5.0 config, whose shorts read
+    -6.36R (n 33) on this window. T1 has no faithful forming-bar record on the live feed.'
+  hypothesis: T1 keeps a positive net R on the live feed and decision bar.
+  search: Fixed at f090-02's T1; nothing searched.
+  attempt: 1
+  due_by: '2026-11-21'
+  levers:
+  - direction
+  - exit
+  lever_arms:
+  - family: direction
+    param: side_filter
+    values:
+    - long
+    baseline_value: both
+  - family: exit
+    param: trail_mult
+    values:
+    - 4.0
+    baseline_value: 5.0
+  map_entries:
+  - research/levers/qqq_pullback_1h.yaml
+related:
+- RQ-20261113-f090-02
+- RQ-20261113-f251-02
+- RQ-20261104-7fdb-01
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): the holdout-selected configuration re-read on the live feed and decision bar against the leg''s
+  own committed record, rule registered before the run, net of the full cost stack, graded once.'
+follow_up: On the verdict a session reports to the manager; a PASS plus a passing predictive-TP derive for T1 make a Tier-3 real-money proposal (row PROMOTE-1H-SURVIVORS-20261104) the
+  manager takes to the operator.

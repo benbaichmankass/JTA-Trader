@@ -1,0 +1,116 @@
+id: RQ-20261114-db1a-12
+title: 'qqq_pullback_1h real-money promotion: does the holdout-selected T1 config (long only, trail_mult 4.0) carry a PREDICTIVE take-profit (tp_prediction_derive, dukascopy 1h 2020-07..2026-10-15) to replace the 50R sentinel?'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+question: Run on the T1 configuration RQ-20261113-f090-02 confirmed (long only, trail_mult 4.0; every other field as declared), does tp_prediction_derive find a predictive take-profit K* that
+  reaches often enough, is calibrated, and costs no more than 0.05 R/trade OOS versus the 50R sentinel, net of the full cost stack?
+why_this_matters: 'Manager 2026-11-14 15:13Z / 15:21Z (qqq real-money promotion check). tp-doctrine-guard fails a NEW real-money routing carrying the 50R sentinel / tp_intent none. The
+  last TP attempt on this leg, RQ-20261104-7fdb-01, FAILED (T3 -2.32R on 87 held-back trades) on the both-sides trail-5.0 config; promotion would move the leg to T1, a different trade
+  set, so T1 needs its own predictive TP. This is the second of two inputs a qqq proposal needs (the first is RQ-20261114-db1a-11, T1 on the live-faithful corpus).'
+power:
+  expected_n: 155
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED: f090-02 counted 155 T1 trades on dukascopy 1h 2020-07-01..2026-10-15. 40% OOS ~ 62 >= the instrument''s floor 39 ((1.96+0.8416)^2/0.45^2 = 38.8). DISCLOSED: before
+    registering, the lane had seen f090-02''s per-arm totals and folds (T1 net +50.42R n 155; by_outcome 89 trail_stop / 58 stop / 6 take_profit / 2 timeout) and 7fdb-01''s FAIL on the
+    live config; it has NOT seen any reach curve or tp_r arm for T1. The K grid, floors and rule are the instrument''s unchanged constants. T1 was selected on f090-02''s discovery span,
+    which overlaps this window''s IS 60%.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on dukascopy 1h candles over a pinned window; nothing accrues.
+evidence_class:
+  holdout: final_fold
+  claim: other
+run:
+  timeout_minutes: 90
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261114-db1a-12
+  commands:
+  - - python3
+    - scripts/research/tp_prediction_derive.py
+    - --legs
+    - qqq_pullback_1h
+    - --cfg-set
+    - side_filter=long
+    - --cfg-set
+    - trail_mult=4.0
+    - --days
+    - '2297'
+    - --end
+    - '2026-10-15'
+    - --out
+    - '{out_dir}'
+decision_rule:
+  id: RULE-QQQ1H-T1-PREDICTIVE-TP-20261114
+  registered_at: '2026-11-14'
+  registered_before_run: true
+  statistic: 'Exactly RQ-20261106-7850-02''s / RQ-20261112-5ab1-01''s statistic for one leg (tp_prediction_derive.py, constants unchanged: K grid 1-8 R, IS 60% chronological, reach floor
+    0.10, calibration tolerance 0.10, non-inferiority margin 0.05 R/trade, bootstrap 2000 seed 20261015, K* must rest below the median IS venue cap) over qqq_pullback_1h with --cfg-set
+    side_filter=long --cfg-set trail_mult=4.0 (the T1 candidate, stamped into the verdict''s population), --days 2297 --end 2026-10-15 (2020-07-01..2026-10-15, f090-02''s window; the
+    instrument fetches dukascopy then yfinance), net of the harness''s full cost stack (equity fee 0 + slippage 5 bps rt + funding 0 via execution_costs).'
+  rule: 'INDETERMINATE IF n_oos < 39 OR no K eligible. FAIL IF reach_OOS(K*) < 0.10 OR calibration gap > 0.10 OR CI upper < -0.05 R/trade. PASS IF reach_OOS(K*) >= 0.10 AND gap <= 0.10
+    AND CI lower >= -0.05 -> K* is T1''s predictive TP, an input to the qqq Tier-3 real-money proposal (the manager takes it to the operator). Anything but PASS: no data-backed TP; the
+    lane declares none and the TP choice goes to the operator with the measured K*.'
+  what_it_does_not_do: Touches no config by itself. The counterfactual is the instrument's (exact given the path; lagged mfe under-states reach; the slot an earlier TP frees is not
+    modelled). tp_revision (the second doctrine dimension) is a separate question. The candidate config is an override for this run only.
+compute: cpu_light
+value:
+  bucket: structural
+  usd_at_stake_per_month: 30
+  confidence: 0.2
+  basis: 'stand-in: one small real-money leg on alpaca_live; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  basis: Same instrument and shape as RQ-20261112-5ab1-01 (dukascopy-python, the research-script-run.yml pin); an estimate.
+  why_runner: Keyless public candles for a pinned window; reads no trainer data.
+ml_consumer:
+  not_applicable: 'Not an ML unit: an entry take-profit parameter on a rule-based leg.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+intervention_controls:
+  not_applicable: an offline counterfactual over replayed trades, not an in-trade action
+iteration:
+  subject: qqq_pullback_1h
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261104-7fdb-01
+  verdict_read: fail
+  diagnosis: 'check_tp_doctrine FAIL:entry_tp+tp_revision (50R sentinel, tp_intent none); 7fdb-01 FAILED its finite-TP arms on the both-sides trail-5.0 config; the holdout-confirmed T1
+    (f090-02) is a different trade set with no TP measurement.'
+  hypothesis: T1 has a calibrated predictive TP that costs no more than 0.05 R/trade OOS versus the sentinel.
+  search: The instrument's fixed K grid 1-8 R on T1; nothing else searched.
+  attempt: 1
+  due_by: '2026-11-21'
+  levers:
+  - exit
+  lever_arms:
+  - family: exit
+    param: tp_r
+    values:
+    - 1.0
+    - 8.0
+    baseline_value: 50.0
+  map_entries:
+  - research/levers/qqq_pullback_1h.yaml
+related:
+- RQ-20261113-f090-02
+- RQ-20261104-7fdb-01
+- RQ-20261112-5ab1-01
+- RQ-20261114-db1a-11
+- scripts/research/tp_prediction_derive.py
+practice_precedent: 'RQ-20261106-7850-02 (tqqq_trend_long_1d tp_r 1.5) and RQ-20261112-5ab1-01 (tlt_pullback_1h K* 3.5): same instrument, constants and rule shape; M4, M5 (pre-registered
+  rule, held-out grade).'
+follow_up: On the verdict a session reports to the manager; with RQ-20261114-db1a-11 it decides whether a qqq Tier-3 real-money proposal goes up (row PROMOTE-1H-SURVIVORS-20261104).
