@@ -246,3 +246,28 @@ def test_no_rows_is_a_real_answer_not_a_retry_of_the_read(tmp_path):
     assert s["retry"] + s["unmatched"] == 1
     r, _ = _get(path, 6817)
     assert r["pnl_basis"] != "venue_net"
+
+
+def test_the_replaced_figure_is_kept_and_long_close_notes_are_not_cut_to_500(tmp_path):
+    """Review of #25270 (2026-11-14): the overwrite kept no trace of the prior pnl, and every classified row's notes were
+    re-written with a 500-character cap, cutting the close paths' 2000-capped notes (closed_by, exit sources)."""
+    db, path = _db(tmp_path)
+    long_notes = {"exit_price_source": "exchange_fill", "pnl_source": "local_compute",
+                  "closed_by": "netting_own_leg_fill", "closed_reason": "x" * 1200}
+    row = _add(path, notes=json.dumps(long_notes))
+    closed_ms = om._isoformat_to_ms(row["closed_at"])
+    rec = {"order_id": "e043d46b", "side": "Sell", "qty": "74160", "closed_pnl": "-888.3026",
+           "updated_time": str(closed_ms + 5000)}
+    om._sweep_venue_net_pnl(db, cfgs=CFGS, bybit_reader=_reader([rec]))
+    r, n = _get(path, 6817)
+    assert n["pnl_prior"] == pytest.approx(-786.096) and r["pnl"] == pytest.approx(-888.3026)
+    assert n["closed_by"] == "netting_own_leg_fill" and n["closed_reason"] == "x" * 1200
+
+
+def test_a_row_the_sweep_adds_nothing_to_keeps_its_notes_byte_for_byte(tmp_path):
+    db, path = _db(tmp_path)
+    raw = json.dumps({"exit_price_source": "broker_leg_fill", "closed_reason": "y" * 900}, separators=(",", ":"))
+    _add(path, account_id="alpaca_paper", symbol="SPY", notes=raw)
+    om._sweep_venue_net_pnl(db, cfgs=CFGS, bybit_reader=_reader([]))
+    r, _ = _get(path, 6817)
+    assert r["pnl_basis"] == "venue_fills_net" and r["notes"] == raw

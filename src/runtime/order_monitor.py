@@ -16813,6 +16813,8 @@ def _sweep_venue_net_pnl(
                     basis = vp.BASIS_VENUE_NET
                     updates["pnl"] = venue
                     notes["venue_pnl_match"] = how
+                    if _safe_float(row.get("pnl")) is not None:
+                        notes["pnl_prior"] = _safe_float(row.get("pnl"))   # the figure this replaces, kept
                     if "pnl_source" in notes and notes.get("pnl_source") != "bybit_closed_pnl":
                         notes["pnl_source_prior"] = notes.get("pnl_source")
                     notes["pnl_source"] = "bybit_closed_pnl"
@@ -16838,8 +16840,10 @@ def _sweep_venue_net_pnl(
                     updates["pnl_gap_usd"] = round(stored - computed, 8)
                     if vp.is_gap(stored, computed):
                         summary["gaps"] += 1
-            if notes:
-                updates["notes"] = dump_capped(notes, 500)
+            if notes != _decode_notes(row.get("notes")):
+                # Only when this sweep added a key, and at the close paths' own 2000 cap: a 500 cap re-wrote every
+                # classified row's existing close notes (closed_by, exit sources) down to 500 characters.
+                updates["notes"] = dump_capped(notes, 2000)
             wconn = db.connect()
             try:
                 cols = sorted(updates)
