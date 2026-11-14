@@ -1421,6 +1421,7 @@ def _book_rosters() -> Dict[str, Any]:
 @router.get("/performance/recent")
 def get_performance_recent(
     n: int = Query(RECENT_N_DEFAULT, ge=RECENT_BLOCK, le=RECENT_N_MAX),
+    since: Optional[str] = Query(None, max_length=64),
 ) -> Dict[str, Any]:
     """Each leg's LAST ``n`` closed trades, split into non-overlapping
     ``RECENT_BLOCK``-trade blocks, on the real-money book and on the
@@ -1443,6 +1444,13 @@ def get_performance_recent(
     ``closedAvailable: 0`` if it never closed. ``newestClosedAt`` per book lets
     a consumer refuse a stale read (a stalled trader re-serves the same 40).
 
+    ``since`` (optional, ISO-8601; PERF-F1-DEMOTION-SIGNAL 2026-11-12) keeps only
+    rows closed at/after it BEFORE the last ``n`` are taken -- the config-date cut
+    ``scripts/research/live_vs_backtest.py`` applies so a leg re-promoted on a new
+    config is read on that config's trades only. It is echoed as ``since`` so a
+    consumer can tell a cut read from an uncut one; unparseable -> 400. Absent,
+    the route behaves exactly as before (the R4 gate never sends it).
+
     ``n`` must be a multiple of ``RECENT_BLOCK`` (400 otherwise). A DB read
     failure returns ``error: true`` with both books ``readState: "error"`` --
     "we could not look" is never an empty ``perStrategy`` that reads as "no
@@ -1453,8 +1461,16 @@ def get_performance_recent(
             status_code=400,
             detail=f"n={n} is not a multiple of the {RECENT_BLOCK}-trade block",
         )
+    if not isinstance(since, str):   # a direct (non-HTTP) call leaves the Query() default object
+        since = None
+    if since is not None:
+        try:
+            datetime.fromisoformat(since.replace("Z", "+00:00"))
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"since={since!r} is not ISO-8601")
     env: Dict[str, Any] = {
         "n": n,
+        "since": since,
         "block": RECENT_BLOCK,
         "error": False,
         "basis": ("last n closed non-backtest trades per strategy_name, ordered by close "
@@ -1468,7 +1484,7 @@ def get_performance_recent(
         return env
     try:
         rosters = _book_rosters()
-        real_rows = _query(_DB_PATH, None, demo=False)
+        real_rows = _query(_DB_PATH, since, demo=False)
         env["realMoney"] = {
             "readState": "ok",
             "rosterReadState": rosters["readState"],
@@ -1480,7 +1496,7 @@ def get_performance_recent(
             # "We could not read the config" -- never "none declared".
             env["mirror"]["readState"] = "accounts_unreadable"
         elif portfolio_ids:
-            pp_rows = _query(_DB_PATH, None, demo=True, account_ids=portfolio_ids)
+            pp_rows = _query(_DB_PATH, since, demo=True, account_ids=portfolio_ids)
             # Operator decision 2026-10-05 (PI-20261004-J4SFBKU9-0001): legacy
             # mirror-only trades with no live twin are not part of the Gate-2
             # window. Published, never silent; an unreadable file is surfaced.

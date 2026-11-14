@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Additive read-only query param on GET /api/bot/performance/recent: since=<ISO> keeps rows closed at/after it before the last n are taken, echoed as `since`; unparseable -> 400. Absent, the route is byte-identical (golden tests) and the R4 gate never sends it. Needed by the config-date cut in scripts/research/live_vs_backtest.py (PERF-F1-DEMOTION-SIGNAL, companion PR claude/perf-f1-demotion-signal). Deploy = ict-web-api restart. Revert: git revert.",
+  "why": "So legs re-promoted on new configs (ada_pullback_2h, trend_donchian_xrp_4h, trend_donchian_sol_prop on 2026-11-06) are read against their current config's trades only (perf review 2026-11-11 F1 / C2)."
+}

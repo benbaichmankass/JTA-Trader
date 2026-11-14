@@ -211,3 +211,28 @@ def test_missing_db_reads_absent(tmp_path, monkeypatch):
     monkeypatch.setattr(P, "_DB_PATH", tmp_path / "nope.db")
     out = P.get_performance_recent(n=40)
     assert out["realMoney"]["readState"] == "absent" and out["error"] is False
+
+
+# ── since= (PERF-F1-DEMOTION-SIGNAL, 2026-11-12: the config-date cut) ─────
+def test_since_keeps_only_rows_closed_at_or_after_it_and_is_echoed(db):
+    path = db()
+    rows = [r for r in P._query(path, None, demo=False) if r["strategy_name"] == "leg_a"]
+    assert len(rows) == 70   # positive control: the uncut population is wider than the cut
+    cut = rows[-25]   # 25 newest rows survive (closes are distinct in the seed unless tied)
+    since = P._rget(cut, "closed_at")
+    want = [r for r in P._query(path, since, demo=False) if r["strategy_name"] == "leg_a"]
+    out = P.get_performance_recent(n=40, since=since)
+    assert out["since"] == since
+    leg = out["realMoney"]["perStrategy"]["leg_a"]
+    assert 0 < leg["closedAvailable"] == len(want) < 70
+    assert leg["last"] == P._strip_envelope(P._aggregate(want[-40:], "recent", None))
+    # uncut read is unchanged and says so
+    assert P.get_performance_recent(n=40)["since"] is None
+    assert P.get_performance_recent(n=40)["realMoney"]["perStrategy"]["leg_a"]["closedAvailable"] == 70
+
+
+def test_since_unparseable_is_400(db):
+    db()
+    with pytest.raises(HTTPException) as e:
+        P.get_performance_recent(n=40, since="last tuesday")
+    assert e.value.status_code == 400
