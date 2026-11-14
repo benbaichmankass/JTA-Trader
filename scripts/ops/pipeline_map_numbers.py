@@ -34,17 +34,21 @@ import subprocess
 import sys
 import urllib.request
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "scripts" / "ops"))
 
-import strategy_status  # noqa: E402
+import strategy_status
 
 try:  # the provenance vocabulary is the one source; fall back to the literals only if the import fails
-    from src.runtime.provenance import ESTIMATED, MEASURED, UNVERIFIED  # type: ignore  # noqa: E402
-except Exception:  # pragma: no cover
+    from src.runtime.provenance import (  # type: ignore
+        ESTIMATED,
+        MEASURED,
+        UNVERIFIED,
+    )
+except ImportError:  # pragma: no cover
     MEASURED, ESTIMATED, UNVERIFIED = "measured", "estimated", "unverified"
 
 DOC = REPO / "docs" / "reference" / "trading-pipeline-map.md"
@@ -62,13 +66,14 @@ def _fmt(v: Any, nd: int = 2) -> str:
     return str(v)
 
 
-def load_evidence() -> Dict[str, Dict[str, Any]]:
+def load_evidence() -> dict[str, dict[str, Any]]:
     """leg -> its evidence record. Keyed on the record's own ``strategy`` field (field beats filename)."""
-    out: Dict[str, Dict[str, Any]] = {}
+    out: dict[str, dict[str, Any]] = {}
     for f in sorted(glob.glob(str(REPO / "comms" / "strategy_evidence" / "*.json"))):
         try:
             d = json.loads(Path(f).read_text(encoding="utf-8"))
-        except Exception:
+        except (OSError, ValueError) as e:
+            print(f"pipeline_map_numbers: skipped unreadable evidence record {f}: {e}", file=sys.stderr)
             continue
         leg = d.get("strategy")
         if isinstance(leg, str):
@@ -77,7 +82,7 @@ def load_evidence() -> Dict[str, Dict[str, Any]]:
     return out
 
 
-def cost_basis(ev: Dict[str, Any]) -> str:
+def cost_basis(ev: dict[str, Any]) -> str:
     cs = ev.get("cost_stack")
     if isinstance(cs, dict) and all(cs.get(k) is not None for k in ("fees", "slippage", "funding")):
         return "full"
@@ -86,7 +91,7 @@ def cost_basis(ev: Dict[str, Any]) -> str:
     return DASH
 
 
-def fetch_live(path: Optional[str], offline: bool) -> Tuple[Optional[Dict[str, Any]], str]:
+def fetch_live(path: str | None, offline: bool) -> tuple[dict[str, Any] | None, str]:
     if offline:
         return None, "not read (--offline)"
     if path:
@@ -96,40 +101,44 @@ def fetch_live(path: Optional[str], offline: bool) -> Tuple[Optional[Dict[str, A
         with urllib.request.urlopen(urllib.request.Request(API, headers={"User-Agent": "pipeline-map"}),
                                     timeout=30, context=ctx) as r:
             return json.loads(r.read().decode("utf-8")), "read"
-    except Exception as e:  # unreadable is a state, never a zero
+    except (OSError, ValueError) as e:  # unreadable is a state, never a zero
         return None, f"unreadable ({type(e).__name__})"
 
 
-def per_strategy(block: Optional[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+def per_strategy(block: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
     if not isinstance(block, dict):
         return {}
     return {r.get("name"): r for r in block.get("perStrategy") or [] if isinstance(r, dict)}
 
 
-def live_cell(row: Optional[Dict[str, Any]], read_state: str) -> str:
+def live_cell(row: dict[str, Any] | None, read_state: str) -> str:
     if read_state != "read" and not read_state.startswith("read from"):
         return DASH
     if not row:
         return "0 trades"
     n = row.get("trades")
     rp = row.get("rProvenance") or {}
-    unv = rp.get("unverified")
-    tag = f" · R {UNVERIFIED} on {unv}/{n}" if unv else ""
+    # Every r_provenance state the route reports, so none collapse into another
+    # (contaminated / confirmed_initial / unverified / no_basis).
+    states = [("confirmed", rp.get("confirmedInitial")), (UNVERIFIED, rp.get("unverified")),
+              ("contaminated", rp.get("contaminated")), ("no basis", rp.get("noBasis"))]
+    parts = [f"{k} {v}" for k, v in states if v]
+    tag = f" · R basis: {', '.join(parts)}" if parts else (" · R basis —" if not rp else "")
     return f"n={n} · ΣR {_fmt(row.get('totalR'))} · E[R] {_fmt(row.get('expectancyR'))}{tag}"
 
 
 def tp_summary() -> str:
     try:
         p = subprocess.run([sys.executable, str(REPO / "scripts" / "ci" / "check_tp_doctrine.py")], cwd=REPO,
-                           capture_output=True, text=True, timeout=120)
+                           capture_output=True, text=True, timeout=120, check=False)
         lines = [ln.rstrip() for ln in (p.stdout + p.stderr).splitlines()
                  if ln.startswith(("population:", "  real_money", "  prop", "  mirror", "  paper"))]
         return "\n".join(lines) if lines else "unreadable (no summary lines)"
-    except Exception as e:
+    except (OSError, subprocess.SubprocessError) as e:
         return f"unreadable ({type(e).__name__})"
 
 
-def build(live_path: Optional[str], offline: bool) -> str:
+def build(live_path: str | None, offline: bool) -> str:
     today = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d %H:%MZ")
     status = strategy_status.table(REPO)
     strategies = strategy_status.load(REPO)[1]
@@ -139,7 +148,7 @@ def build(live_path: Optional[str], offline: bool) -> str:
     paper = per_strategy((live or {}).get("paper"))
     trust = (live or {}).get("journalTrust") or {}
 
-    counts: Dict[str, int] = {}
+    counts: dict[str, int] = {}
     for r in status.values():
         counts[r["status"]] = counts.get(r["status"], 0) + 1
     order = {"production": 0, "testing": 1, "inactive": 2}
