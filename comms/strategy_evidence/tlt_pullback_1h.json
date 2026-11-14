@@ -3,63 +3,63 @@
   "strategy": "tlt_pullback_1h",
   "symbol": "TLT",
   "timeframe": "1h",
-  "config_fingerprint": "sha256:741a91aaa5df103977ff8890b2f1822c",
+  "config_fingerprint": "sha256:e4e373ded0531f81ad9dd194e00ead4b",
   "basis": "harness_timefolds",
   "coverage_state": "measured",
   "fidelity": "faithful",
   "omitted_levers": [],
-  "net_r_oos": 4.0263,
-  "expectancy_r_oos": 0.027,
-  "n_trades_oos": 149,
+  "net_r_oos": 8.1699,
+  "expectancy_r_oos": 0.1089,
+  "n_trades_oos": 75,
   "folds": 4,
   "fold_detail": [
     {
       "fold": 1,
-      "trades": 37,
-      "net_r": -4.222,
-      "expectancy_r": -0.1141,
-      "start": "2025-07-09 15:00:00+00:00",
-      "end": "2025-11-04 16:00:00+00:00"
+      "trades": 18,
+      "net_r": 5.3741,
+      "expectancy_r": 0.2986,
+      "start": "2025-07-23 14:00:00+00:00",
+      "end": "2025-10-17 19:00:00+00:00"
     },
     {
       "fold": 2,
-      "trades": 37,
-      "net_r": -4.5178,
-      "expectancy_r": -0.1221,
-      "start": "2025-11-06 15:00:00+00:00",
-      "end": "2026-02-20 17:00:00+00:00"
+      "trades": 18,
+      "net_r": -5.8583,
+      "expectancy_r": -0.3255,
+      "start": "2025-10-22 15:00:00+00:00",
+      "end": "2026-01-29 15:00:00+00:00"
     },
     {
       "fold": 3,
-      "trades": 37,
-      "net_r": 12.3645,
-      "expectancy_r": 0.3342,
-      "start": "2026-02-25 20:00:00+00:00",
-      "end": "2026-07-09 18:00:00+00:00"
+      "trades": 18,
+      "net_r": 4.2342,
+      "expectancy_r": 0.2352,
+      "start": "2026-02-06 19:00:00+00:00",
+      "end": "2026-05-29 18:00:00+00:00"
     },
     {
       "fold": 4,
-      "trades": 38,
-      "net_r": 0.4016,
-      "expectancy_r": 0.0106,
-      "start": "2026-07-14 14:00:00+00:00",
-      "end": "2026-11-11 18:00:00+00:00"
+      "trades": 21,
+      "net_r": 4.4199,
+      "expectancy_r": 0.2105,
+      "start": "2026-06-01 15:00:00+00:00",
+      "end": "2026-11-09 17:00:00+00:00"
     }
   ],
-  "folds_positive": 2,
+  "folds_positive": 3,
   "window_days": 528,
   "fee_bps_roundtrip": 0.0,
   "path_stats": {
     "series_location": "source_run (the per-trade rows, in order, with net_r)",
-    "n": 149,
-    "max_drawdown_r": 15.8484,
-    "max_drawdown_at_trade": 69,
-    "final_equity_r": 4.0263,
-    "max_equity_r": 7.433,
+    "n": 75,
+    "max_drawdown_r": 7.0102,
+    "max_drawdown_at_trade": 37,
+    "final_equity_r": 8.1699,
+    "max_equity_r": 10.1775,
     "worst_trade_r": -1.1893,
-    "best_trade_r": 5.2045,
-    "worst_day_r": -2.3308,
-    "worst_day_date": "2025-12-24",
+    "best_trade_r": 3.4085,
+    "worst_day_r": -1.9775,
+    "worst_day_date": "2026-10-28",
     "trades_without_exit_time": 0,
     "ordering": "by entry_time ascending; pooled ACROSS folds, so this is the full-window path, not a per-fold one",
     "not_a_verdict": "Descriptive only. No bar is applied here -- the prop bar is B6's to register, and it must be registered before these numbers are read."
@@ -69,9 +69,9 @@
     "slippage": 5.0,
     "funding": 0.0,
     "unit": "bps_roundtrip (funding: bps per funding window)",
-    "source": "comms/research/RQ-20261113-f251-02/43452855935/evidence_runs/tlt_pullback_1h__bt.json"
+    "source": "comms/research/RQ-20261114-db1a-14/43620924535/evidence_runs/tlt_pullback_1h__bt.json"
   },
-  "net_r_oos_fee_only": 20.914,
+  "net_r_oos_fee_only": 16.7626,
   "decision_rule": {
     "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
     "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
@@ -79,9 +79,9 @@
     "verdict": "pass"
   },
   "param_selection_provenance": "not_established",
-  "generated_at": "2026-11-13T15:31:50.082758+00:00",
+  "generated_at": "2026-11-14T17:25:50.486603+00:00",
   "generated_by": "scripts/ops/build_strategy_evidence.py",
-  "source_run": "comms/research/RQ-20261113-f251-02/43452855935/evidence_runs/tlt_pullback_1h__trades.jsonl",
+  "source_run": "comms/research/RQ-20261114-db1a-14/43620924535/evidence_runs/tlt_pullback_1h__trades.jsonl",
   "error": null,
   "harness": "pullback",
   "reproduce": {
@@ -90,7 +90,7 @@
     "folds": 4,
     "data_start": "2025-06-02 15:00:00+00:00",
     "data_end": "2026-11-11 20:00:00+00:00",
-    "git_sha": "ec82624b99188dd9e695aa4e669cc2da70510247",
+    "git_sha": "e109913111c4abe19969f95d1c9e0110e0662b05",
     "argv": [
       "python3",
       "scripts/ops/build_strategy_evidence.py",
@@ -105,18 +105,33 @@
       "--window-end",
       "2026-11-11 20:00:00+00:00",
       "--data-csv",
-      "/tmp/forming_regen_ih50_d69/tlt_pullback_1h__data.csv",
+      "/tmp/forming_regen_jk6zk0ki/tlt_pullback_1h__data.csv",
       "--minutes-1m-csv",
-      "/tmp/forming_regen_ih50_d69/eq1h__TLT__2025-05-31__2026-11-13/TLT_1m.csv",
+      "/tmp/forming_regen_jk6zk0ki/eq1h__TLT__2025-05-31__2026-11-13/TLT_1m.csv",
       "--decision-session",
-      "us_equity_intraday"
+      "us_equity_intraday",
+      "--cfg-set",
+      "tlt_pullback_1h.side_filter=\"long\"",
+      "--cfg-set",
+      "tlt_pullback_1h.tp_r=3.5",
+      "--cfg-set",
+      "tlt_pullback_1h.tp_intent={\"basis\": \"RQ-20261112-5ab1-01_kstar_3.5R\", \"calibrated\": true, \"mode\": \"r_multiple\"}"
     ],
     "inputs": {
-      "data_csv": "/tmp/forming_regen_ih50_d69/tlt_pullback_1h__data.csv",
-      "minutes_1m_csv": "/tmp/forming_regen_ih50_d69/eq1h__TLT__2025-05-31__2026-11-13/TLT_1m.csv",
+      "data_csv": "/tmp/forming_regen_jk6zk0ki/tlt_pullback_1h__data.csv",
+      "minutes_1m_csv": "/tmp/forming_regen_jk6zk0ki/eq1h__TLT__2025-05-31__2026-11-13/TLT_1m.csv",
       "decision_session": "us_equity_intraday",
       "decision_bar_modelled": "forming"
     }
   },
-  "venue_bracket_arm": null
+  "venue_bracket_arm": null,
+  "cfg_overrides": {
+    "side_filter": "long",
+    "tp_r": 3.5,
+    "tp_intent": {
+      "mode": "r_multiple",
+      "basis": "RQ-20261112-5ab1-01_kstar_3.5R",
+      "calibrated": true
+    }
+  }
 }

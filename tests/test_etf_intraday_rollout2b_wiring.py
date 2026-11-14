@@ -196,8 +196,13 @@ def test_account_routing_and_descriptions():
         # money"): qqq_pullback_1h is back too, its QQQ share set by comms/same_symbol_allocation/qqq-alpaca_paper.json.
         # B38CQPVI-0001 2026-11-13 (same operator words + OPERATING-PLAN § 2 demo floor): tlt_pullback_1h and
         # spy_pullback_1h join, their shares set by comms/same_symbol_allocation/{tlt,spy}-alpaca_paper.json.
+        # TLT-1H-PROMOTE 2026-11-14 (operator popup "Promote long-only 3.5R (Recommended)"): tlt_pullback_1h left the
+        # demo floor for real money (alpaca_live + its mirror); production is not general paper (OPERATING-PLAN § 2).
         assert (name in acct["strategies"]) == (
-            name in ("uso_trend_1h", "qqq_pullback_1h", "tlt_pullback_1h", "spy_pullback_1h")), name
+            name in ("uso_trend_1h", "qqq_pullback_1h", "spy_pullback_1h")), name
+    accounts = yaml.safe_load(open("config/accounts.yaml"))["accounts"]
+    for book in ("alpaca_live", "alpaca_portfolio"):
+        assert "tlt_pullback_1h" in accounts[book]["strategies"], book
     assert "USO" in acct["symbols"]
     # SPY/QQQ/TLT already routed; the 1h pullback cells reuse them.
     for sym in ("SPY", "QQQ", "TLT"):

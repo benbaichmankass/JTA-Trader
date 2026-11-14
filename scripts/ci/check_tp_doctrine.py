@@ -244,6 +244,11 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # +33.37 R n 108; corroborated by RQ-20261112-5ab1-02 K* 6 R, calibrated). Only tp_revision is owed (no revision rule tested on this leg).
     "alpaca_live/slv_trend_1h": R,
     "alpaca_portfolio/slv_trend_1h": R,
+    # 2026-11-14 TLT-1H-PROMOTE (Tier 3; OPERATOR popup ~16:28Z, verbatim "Promote long-only 3.5R (Recommended)", relayed by Manager
+    # Session 2026-11-13a): tlt_pullback_1h moves alpaca_paper -> alpaca_live + its mirror MINUS the entry debt: tp_r 50 -> 3.5 declared in
+    # the same PR (K* RQ-20261112-5ab1-01, calibration gap 0.005; L35 arm RQ-20261114-db1a-10). Only tp_revision is owed (no revision rule).
+    "alpaca_live/tlt_pullback_1h": R,
+    "alpaca_portfolio/tlt_pullback_1h": R,
     # 2026-11-08 ML-ENTRY-PROP-BASELINE (Tier-3, operator chat ~23:35Z): ml_entry on the prop books as a measured baseline. The ENTRY bracket is compliant (real predictive 3 ATR TP,
     # declared); the extend-only TP revision cannot reach a phone / manual-ticket venue (revision path absent), so only the revision is owed. velotrade_1 (VM executor) is plumbed and
     # passes. The SL-only structure stop does propagate through the prop trail (src/prop/prop_trail.py structure_exit). Follow-up row ML-ENTRY-PROP-BASELINE.
@@ -281,7 +286,7 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # the demo floor with the debt they carried before their 10-05 cut (tp_r 50 sentinel, tp_intent none). Visible, deliberate lines.
     # tlt: the predictive-TP test RQ-20261112-5ab1-01 read INDETERMINATE (n 579); spy: no real-TP test yet (pipeline item filed with this PR).
     # A PASS that sets a real tp_r replaces each line.
-    "alpaca_paper/tlt_pullback_1h": ER,
+    # alpaca_paper/tlt_pullback_1h ER REMOVED 2026-11-14: the leg left alpaca_paper for real money (TLT-1H-PROMOTE; its R lines are under real_money).
     "alpaca_paper/spy_pullback_1h": ER,
     "alpaca_paper/qld_trend_long_1d": ER,
     "alpaca_paper/qqq_trend_long_1d": R,
