@@ -1,0 +1,223 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "avax_pullback_2h: 61 trades in the baseline arm 'AD30' on AVAXUSDT 2h candles 2025-11-13T00:00:00 .. 2026-11-12T22:00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['AD30']",
+  "n": 61,
+  "measurement": {
+    "leg": "avax_pullback_2h",
+    "label": "stage0_no_edge",
+    "grade": {
+      "verdict": "fail",
+      "label": "stage0_no_edge",
+      "baseline": "AD30",
+      "net_r": -11.5879,
+      "n": 61,
+      "max_drawdown_r": 19.1191,
+      "folds_positive": 1,
+      "n_folds": 4,
+      "fold_majority": 3,
+      "n_floor": 30,
+      "control": null,
+      "why": "net_r=-11.5879 with 1/4 positive folds (needs > 0 and >= 3)"
+    },
+    "arms": {
+      "AD30": {
+        "reach_ge_6r": 0.0,
+        "n": 61,
+        "net_r": -11.5879,
+        "net_r_fee_only": -10.2353,
+        "max_drawdown_r": 19.1191,
+        "by_outcome": {
+          "take_profit": 7,
+          "stop": 24,
+          "trail_stop": 29,
+          "timeout": 1
+        },
+        "mean_bars_held": 19.77,
+        "net_r_per_capital_day": -0.1153,
+        "cost_stack": {
+          "fee_bps_roundtrip": 11.0,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": {
+          "trend_lookback": 40,
+          "pullback_lookback": 10,
+          "pullback_frac": 0.5,
+          "atr_stop_mult": 2.0,
+          "trail_mult": 5.0,
+          "min_confidence": 0.0
+        },
+        "data_start": "2025-11-13 00:00:00+00:00",
+        "data_end": "2026-11-12 22:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2025-11-13 00:00:00+00:00",
+            "end": "2026-02-12 05:30:00+00:00",
+            "trades": 20,
+            "net_r": 6.0505
+          },
+          {
+            "fold": 2,
+            "start": "2026-02-12 05:30:00+00:00",
+            "end": "2026-05-14 11:00:00+00:00",
+            "trades": 13,
+            "net_r": -5.2095
+          },
+          {
+            "fold": 3,
+            "start": "2026-05-14 11:00:00+00:00",
+            "end": "2026-08-13 16:30:00+00:00",
+            "trades": 17,
+            "net_r": -8.3287
+          },
+          {
+            "fold": 4,
+            "start": "2026-08-13 16:30:00+00:00",
+            "end": "2026-11-12 22:00:00+00:00",
+            "trades": 11,
+            "net_r": -4.0999
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "40",
+          "--pullback-lookback",
+          "10",
+          "--pullback-frac",
+          "0.5",
+          "--data",
+          "<data>",
+          "--symbol",
+          "AVAXUSDT",
+          "--resample",
+          "2h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261113-f251-22/43545531590/arm_AD30/arms/AD30__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261113-f251-22/43545531590/arm_AD30/arms/AD30__bt.json",
+          "--adx-min",
+          "30",
+          "--vol-skip-below-pctl",
+          "0.1",
+          "--trail-decay-arm-r",
+          "4.86",
+          "--trail-decay-stall-bars",
+          "6",
+          "--trail-decay-tight-mult",
+          "2.5",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--decision-bar",
+          "forming",
+          "--minutes-1m-csv",
+          "<minutes_1m>",
+          "--strategy-name",
+          "avax_pullback_2h",
+          "--start",
+          "2025-11-13T00:00:00",
+          "--end",
+          "2026-11-12T22:00:00"
+        ]
+      }
+    },
+    "window": {
+      "start": "2025-11-13T00:00:00",
+      "end": "2026-11-12T22:00:00",
+      "fetch_days": 800,
+      "feed": {
+        "source": "binance",
+        "ticker": "AVAXUSDT",
+        "interval": "120",
+        "resample": "2h"
+      },
+      "fold_edges": [
+        "2025-11-13 00:00:00+00:00",
+        "2026-02-12 05:30:00+00:00",
+        "2026-05-14 11:00:00+00:00",
+        "2026-08-13 16:30:00+00:00",
+        "2026-11-12 22:00:00+00:00"
+      ]
+    },
+    "argv": {
+      "AD30": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "40",
+          "--pullback-lookback",
+          "10",
+          "--pullback-frac",
+          "0.5",
+          "--data",
+          "<data>",
+          "--symbol",
+          "AVAXUSDT",
+          "--resample",
+          "2h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261113-f251-22/43545531590/arm_AD30/arms/AD30__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261113-f251-22/43545531590/arm_AD30/arms/AD30__bt.json",
+          "--adx-min",
+          "30",
+          "--vol-skip-below-pctl",
+          "0.1",
+          "--trail-decay-arm-r",
+          "4.86",
+          "--trail-decay-stall-bars",
+          "6",
+          "--trail-decay-tight-mult",
+          "2.5",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--decision-bar",
+          "forming",
+          "--minutes-1m-csv",
+          "<minutes_1m>",
+          "--strategy-name",
+          "avax_pullback_2h",
+          "--start",
+          "2025-11-13T00:00:00",
+          "--end",
+          "2026-11-12T22:00:00"
+        ],
+        "cfg_set": {
+          "adx_min": 30
+        },
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": []
+      }
+    }
+  },
+  "note": "FAIL / stage0_no_edge: net_r=-11.5879 with 1/4 positive folds (needs > 0 and >= 3)"
+}
