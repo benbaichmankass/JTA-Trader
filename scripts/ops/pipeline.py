@@ -811,7 +811,10 @@ def mint_id(session_ref: str, *, today: date | None = None, store: Path = STORE,
     # store is frozen and not local, also ask the LIVE store; if it cannot be read, refuse LOUDLY rather
     # than mint from a stale export.
     from src.runtime import work_read as _wr
-    if _wr.is_canonical(store, _wr.PIPELINE_STORE) and _wr.frozen(_wr.REPO) and _wr.local_store() is None:
+    in_test = (live_ids is None and bool(os.environ.get("PYTEST_CURRENT_TEST"))
+               and not os.environ.get("WORK_STORE_URL"))   # tests never reach the live API (work_read._work_cli)
+    if (not in_test and _wr.is_canonical(store, _wr.PIPELINE_STORE) and _wr.frozen(_wr.REPO)
+            and _wr.local_store() is None):
         try:
             existing |= set((live_ids or _live_store_ids)())
         except Exception as exc:  # noqa: BLE001 -- the message is the payload
