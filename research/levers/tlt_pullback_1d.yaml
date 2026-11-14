@@ -952,13 +952,14 @@ manifest_notes:
   exit: 'TESTED forming (RQ-20261113-f251-18, FAIL): be_floor_r 1.0 -1.72R n 47, 4/8 folds (needs 5) vs -6.96R 2/8; recovers +5.2R of the round-trip losers and halves
     the drawdown. The best tlt lever so far, a near-miss.'
   sizing_vs_cost: 'INAPPLICABLE: cost is 0.83R of a -6.13R gross loss.'
-  regime_gating: 'UNREADABLE on this ledger: ADX at entry is unknown for every trade (by_adx_at_entry unknown n 45); tagging is a prerequisite, not a lever.'
+  regime_gating: 'READ 2026-11-14 (manager GO 02:38Z), INAPPLICABLE: scripts/research/regime_tag_emitted.py tags the f251-18 arm A forming ledger (n 45) on TLT daily
+    bars (comms/research/RQ-20261016-014/39103759555/data/TLT_1d.csv, 2017-12..2026-10-16), ADX-14: trending -1.57R n 14, transitional -5.22R n 9, chop -0.17R n 22.
+    The loss sits in a 9-trade transitional band, all 9 within 2 ADX of a cutoff (the tool reads the grade FRAGILE, 30% of |R| near a boundary); 2 trades (-2.04R)
+    enter after the bars end. No cell has the n for a regime off-cell (regime-selectivity: no cosmetic cell), so no regime unit.'
   timeframe: 'INAPPLICABLE as a forming lever: the leg is a daily equity leg with one decision per session.'
   entry: UNTESTED forming; no diagnosis points at the entry (mean MFE 1.17R, 51% reach +1R).
-  next: 'Two honest options, manager decides: (1) make the regime family readable by tagging ADX at entry on the equity ledger (a prerequisite, not a lever), then
-    test a regime off-cell; (2) a lever-exhaustion proposal, which the v3 retirement policy would still refuse while entry and regime are untested. A 4th lever on
-    this window (e.g. a be_floor neighbour) would be narrowing a near-miss on a window already tested three times: only with the manager''s OK and an independent
-    split. No unit authored.'
+  next: With regime read as inapplicable, every family is tested, inapplicable or (entry) untested with no diagnostic pointer. The nearest result is the exit be_floor
+    near-miss (4/8). A lever-exhaustion proposal is the manager's call; v3 would still want entry covered or shown irrelevant.
   inert_arms_2026_11_14: 'RQ-20261110-73de-04 arm C1 (be_floor_r 1.0, closed bar) is INERT, not a lever reading: it ran with --structure-exit pivot=5, and scripts/backtest_pullback.py
     discarded the break-even floor whenever a structure exit was set (PI-20261114-TFZXAKEK-0001, fixed in #25887). The generated levers.exit.be_floor_r entry ("no
     response at the tested values", delta 0.0R) therefore means UNTESTED, not flat. Read be_floor_r on this leg as untested until a run on the fixed harness.'
