@@ -1,0 +1,401 @@
+id: RQ-20261114-db1a-01
+title: 'FORMING-BAR INVERSION diagnosis: would htf / eth_prop / avax_pullback_2h / avax_4h pass deciding on the CLOSED bar (bare switch and with each round-3 lever), same windows,
+  full cost stack'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 1
+roadmap:
+- L-LADDER
+question: 'Round 3 re-ran six closed-bar responders on the forming bar and none passed (f251-10, -14, -19, -21, -22, -23). Is the inversion the DECISION BAR (a closed-bar edge
+  needs the close) or the WINDOW (closed passes were measured over 2020..2026, the forming re-runs over one year)? On the same candle CSV and 1m feed, over the record window
+  2025-11-13..2026-11-12 and the equal-length window before it, net of the full cost stack: does any closed-bar arm (decision_bar: closed alone, or with one lever already run
+  forming) pass Stage 0, beat the forming incumbent and hold on the confirmation window?'
+why_this_matters: 'Manager ruling 2026-11-14 04:07Z: top priority before any further per-leg lever. A pass makes a per-leg decision_bar switch a data-backed Tier-3 proposal
+  (the shape the operator approved for trend_donchian_eth_4h / sol_4h in #25853); a fail with same-sign closed lever deltas says the levers fail on the window, not the bar,
+  and the census readings stand.'
+power:
+  expected_n: 300
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: MEASURED forming baselines from f251-21/22/23 and f251-19 (n 57..105 per leg on the record window); the closed arms keep n of the same order.
+  sd: null
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand windows; nothing accrues; Binance / Binance-vision covers them at run time.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+run:
+  commands:
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - htf_pullback_trend_2h
+    - --arm
+    - F=
+    - --arm
+    - C=decision_bar=closed
+    - --arm
+    - C_L=decision_bar=closed;side_filter=long
+    - --arm
+    - C_D30=decision_bar=closed;adx_min=30
+    - --arm
+    - C_T4=decision_bar=closed;--tp-target-r=4
+    - --grade
+    - stage0
+    - --baseline
+    - F
+    - --start
+    - '2025-11-13T00:00:00'
+    - --end
+    - '2026-11-12T22:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '30'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/rec_htf_pullback_trend_2h'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - htf_pullback_trend_2h
+    - --arm
+    - F=
+    - --arm
+    - C=decision_bar=closed
+    - --arm
+    - C_L=decision_bar=closed;side_filter=long
+    - --arm
+    - C_D30=decision_bar=closed;adx_min=30
+    - --arm
+    - C_T4=decision_bar=closed;--tp-target-r=4
+    - --grade
+    - stage0
+    - --baseline
+    - F
+    - --start
+    - '2024-11-13T00:00:00'
+    - --end
+    - '2025-11-12T22:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '1'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/pre_htf_pullback_trend_2h'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - eth_pullback_prop_2h
+    - --arm
+    - F=
+    - --arm
+    - C=decision_bar=closed
+    - --arm
+    - C_S=decision_bar=closed;side_filter=short
+    - --arm
+    - C_V80=decision_bar=closed;vol_skip_above_pctl=0.8
+    - --arm
+    - C_PF625=decision_bar=closed;pullback_frac=0.625
+    - --grade
+    - stage0
+    - --baseline
+    - F
+    - --start
+    - '2025-11-13T00:00:00'
+    - --end
+    - '2026-11-12T22:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '30'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/rec_eth_pullback_prop_2h'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - eth_pullback_prop_2h
+    - --arm
+    - F=
+    - --arm
+    - C=decision_bar=closed
+    - --arm
+    - C_S=decision_bar=closed;side_filter=short
+    - --arm
+    - C_V80=decision_bar=closed;vol_skip_above_pctl=0.8
+    - --arm
+    - C_PF625=decision_bar=closed;pullback_frac=0.625
+    - --grade
+    - stage0
+    - --baseline
+    - F
+    - --start
+    - '2024-11-13T00:00:00'
+    - --end
+    - '2025-11-12T22:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '1'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/pre_eth_pullback_prop_2h'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - avax_pullback_2h
+    - --arm
+    - F=
+    - --arm
+    - C=decision_bar=closed
+    - --arm
+    - C_S=decision_bar=closed;side_filter=short
+    - --arm
+    - C_AD30=decision_bar=closed;adx_min=30
+    - --grade
+    - stage0
+    - --baseline
+    - F
+    - --start
+    - '2025-11-13T00:00:00'
+    - --end
+    - '2026-11-12T22:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '30'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/rec_avax_pullback_2h'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - avax_pullback_2h
+    - --arm
+    - F=
+    - --arm
+    - C=decision_bar=closed
+    - --arm
+    - C_S=decision_bar=closed;side_filter=short
+    - --arm
+    - C_AD30=decision_bar=closed;adx_min=30
+    - --grade
+    - stage0
+    - --baseline
+    - F
+    - --start
+    - '2024-11-13T00:00:00'
+    - --end
+    - '2025-11-12T22:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '1'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/pre_avax_pullback_2h'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - trend_donchian_avax_4h
+    - --arm
+    - F=
+    - --arm
+    - C=decision_bar=closed
+    - --arm
+    - C_L=decision_bar=closed;side_filter=long
+    - --arm
+    - C_VL30=decision_bar=closed;--vol-skip-below-pctl=0.3
+    - --grade
+    - stage0
+    - --baseline
+    - F
+    - --start
+    - '2025-11-13T00:00:00'
+    - --end
+    - '2026-11-12T20:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '20'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/rec_trend_donchian_avax_4h'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - trend_donchian_avax_4h
+    - --arm
+    - F=
+    - --arm
+    - C=decision_bar=closed
+    - --arm
+    - C_L=decision_bar=closed;side_filter=long
+    - --arm
+    - C_VL30=decision_bar=closed;--vol-skip-below-pctl=0.3
+    - --grade
+    - stage0
+    - --baseline
+    - F
+    - --start
+    - '2024-11-13T00:00:00'
+    - --end
+    - '2025-11-12T20:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '1'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/pre_trend_donchian_avax_4h'
+  - - python3
+    - scripts/research/decision_bar_inversion_grade.py
+    - --out
+    - '{out_dir}'
+    - --forming
+    - F
+    - --n-floor
+    - '30'
+    - --fold-majority
+    - '3'
+    - --leg
+    - htf_pullback_trend_2h
+    - --leg
+    - eth_pullback_prop_2h
+    - --leg
+    - avax_pullback_2h
+    - --leg
+    - trend_donchian_avax_4h
+    - --n-floor-leg
+    - trend_donchian_avax_4h=20
+  timeout_minutes: 330
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261114-db1a-01
+decision_rule:
+  id: RULE-DBINV-FORMING-INVERSION-20261114
+  registered_at: '2026-11-14'
+  registered_before_run: true
+  statistic: exit_lever_ablation --grade stage0 --forming-1m-fetch, ONE run per leg per window carrying every arm on the same feed; decision_bar_inversion_grade.py applies
+    the rule.
+  rule: 'AM-ML multiple-testing guard: this rule NAMES every prior lever attempt on these record windows (RQ-20261113-f251-07 (avax_4h long-only, FAIL), -08 (eth_prop short-only,
+    FAIL), -09 (avax_pullback_2h short-only, FAIL), -10 (htf adx_min 20/25/30, FAIL), -14 (eth_prop vol_skip_above 0.8, FAIL), -15 (htf long-only, FAIL), -19 (htf tp_target_r
+    4, FAIL), -21 (avax_4h vol_skip_below 0.3, FAIL), -22 (avax_pullback_2h adx_min 30, FAIL), -23 (eth_prop pullback_frac 0.625, FAIL)) and requires every pass to hold on
+    the equal-length window before the record window (2024-11-13..2025-11-12). No fold bar is relaxed. Arms fixed now, per leg: F = config-exact forming (the incumbent); C
+    = decision_bar: closed; C_<x> = decision_bar: closed plus ONE lever already run forming in round 3 at its forming value (htf: long-only, adx_min 30, tp_target_r 4; eth_prop:
+    short-only, vol_skip_above 0.8, pullback_frac 0.625; avax_pullback_2h: short-only, adx_min 30; avax_4h: long-only, vol_skip_below 0.3). A closed arm PASSES iff on the record
+    window net_r > 0, n >= the leg''s f251 floor (30; avax_4h 20), >= 3/4 folds positive and net_r > F''s, AND on the confirmation window net_r > 0 and > F''s. Leg PASS iff
+    any closed arm passes; FAIL iff every closed arm is graded and none passes; INDETERMINATE iff a run or F is missing or a non-passing arm is under its n floor. Unit: indeterminate
+    if any leg is, else pass if any leg passes, else fail. C is the primary (a bare decision_bar switch); a passing C_<x> is a two-change proposal and is reported as such,
+    never as C.'
+  what_it_does_not_do: 'Changes no config, roster, order or evidence record. A leg PASS is a data-backed Tier-3 decision_bar proposal routed to the manager, who takes it to
+    the operator; the evidence record would be re-measured on the closed basis with build_strategy_evidence first (as #25853 did). Descriptive outputs (bar effect C-F, C/F
+    entry Jaccard, closed lever delta C_<x>-C) carry no verdict.'
+  baseline: each leg config-exact on the forming bar (F), re-run in this unit on both windows.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 400
+  confidence: 0.25
+  basis: 'stand-in: four demo-floor legs failing RULE-D1 on their forming records plus the per-leg lever programme this unblocks; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+ml_consumer:
+  not_applicable: 'Not an ML unit: a decision-bar test on rule-based legs.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: htf_pullback_trend_2h
+  subject_kind: strategy_leg
+  from_result: RQ-20261113-f251-23
+  verdict_read: fail
+  diagnosis: 0/6 closed-bar responders survived a forming re-run (f251-10, -14, -19, -21, -22, -23); on eth_prop both closed passes made the forming leg WORSE. The closed passes
+    were measured on 2020..2026 while the forming re-runs read one year, so window and bar are confounded; this unit separates them on one feed.
+  hypothesis: 'Some of these legs'' edge needs the bar''s close: the closed bar passes on the record window and holds the year before, where the forming bar does not.'
+  search: The four legs whose round-3 forming levers failed; each lever already run forming re-run on the closed bar at the same value; no new lever value.
+  attempt: 1
+  due_by: '2026-11-21'
+  levers:
+  - timeframe
+  lever_arms:
+  - family: timeframe
+    param: decision_bar
+    values:
+    - closed
+    baseline_value: forming
+  map_entries:
+  - research/levers/htf_pullback_trend_2h.yaml
+  - research/levers/eth_pullback_prop_2h.yaml
+  - research/levers/avax_pullback_2h.yaml
+  - research/levers/trend_donchian_avax_4h.yaml
+related:
+- RQ-20261113-f251-03
+- RQ-20261113-f251-19
+- RQ-20261113-f251-21
+- RQ-20261113-f251-22
+- RQ-20261113-f251-23
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): ONE lever chosen from the leg''s own R diagnosis (scripts/research/leg_r_diagnosis.py),
+  rule registered before the run against the leg''s own record, net of the full cost stack, graded once on its fixed window.'
+follow_up: 'On the verdict a session appends the decision_bar test to each leg''s lever map (lever_map.py --append) and reports to the manager: per leg pass/fail, the bar effect
+  and the closed lever deltas vs the forming ones. PASS -> data-backed Tier-3 decision_bar proposal (manager -> operator). FAIL with same-sign closed deltas -> the inversion
+  is the window; the HELD units (avax_pullback_2h tp_extend, htf (c)) resume on the forming bar.'
