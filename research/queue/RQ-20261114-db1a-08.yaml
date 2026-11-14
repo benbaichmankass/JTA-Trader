@@ -1,6 +1,6 @@
 id: RQ-20261114-db1a-08
 title: 'TP doctrine COMPLIANCE: trend_donchian_eth_4h finite entry TP 4R (tp_r 4) vs config-exact 50R sentinel, closed bar, record + year before, NON-INFERIORITY within 2.0R'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -171,3 +171,14 @@ practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-princip
   registered before the run against the leg''s own record, net of the full cost stack, graded once on its fixed window.'
 follow_up: On the verdict a session reports to the manager with both windows; a PASS is a Tier-3 doctrine-compliance proposal via the manager plus a prop EV re-run at tp_r 4.
 last_dispatched_at: '2026-11-14T14:31:16+00:00'
+grading:
+  attested: RULE-ETH4H-TP4-NONINF-20261114
+  auto: true
+  decision_rule_id: RULE-ETH4H-TP4-NONINF-20261114
+  evidence:
+  - research/results/RQ-20261114-db1a-08/43605303646.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
