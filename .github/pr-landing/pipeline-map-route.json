@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "Manager dispatch for lane PIPELINE-MAP (Manager Session 2026-11-13a, relaying the operator's 2026-11-14 request): 'Read path = Tier 1, but it restarts the web-api, not the trader ... Mark the PR a hold for the manager's merge.' New read-only route GET /api/bot/work/pipeline-map (src/web/api/routers/work_pipeline_map.py) + its include in src/web/api/main.py + tests. trader_import_closure.py decide -> SKIP (none loaded by the trader); the deploy restarts ict-web-api only. Stacked on #26142 (the doc it serves); the route degrades to read_state 'missing' if merged first. Revert: git revert.",
+  "why": "Serve the trading pipeline map to the dashboard's Work tab (ict-trader-dashboard #270)."
+}
