@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Executor open-risk read (order path): when a venue position row's Open P&L cell does not read, loss-to-stop is now marked from that row's own Current Price instead of refusing the ticket as cushion_unknown; no mark -> still refused. The refusal text names the real cause. /prop/tickets adds ticket_sl (emitted stop). No gate added, no delay, size/entry/stop/target untouched. AM-DEVOPS merges. Revert: git revert.",
+  "why": "velotrade_1 ml_entry tickets (11-11 20:03Z, 11-12 08:02Z) were skipped: open SOL short had unrealized_pnl null, so open_risk was unreadable - the account snapshot was fresh and graded within_cushion. decision: manager 2026-11-12 — prop ticket correctness (AM-TRADING rows)"
+}
