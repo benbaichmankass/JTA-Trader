@@ -68,11 +68,19 @@ _SKIP_FLAGS = {"--data", "--emit-trades", "--json", "--start", "--end", "--symbo
 
 
 # ── attribution: why the baseline wins or loses, from its own trade rows ─────────────────────────────────────────────
-def attribute(trades: list[dict[str, Any]]) -> dict[str, Any]:
+def attribute(trades: list[dict[str, Any]], bars_csv: str | Path | None = None) -> dict[str, Any]:
     """Decompose net R: entry quality (MFE / gross), exit capture (net vs MFE), cost share, and splits by year, direction,
-    exit reason, ADX bucket. Every number names its population (n). Reads only fields the harness emits."""
+    exit reason, ADX bucket. Every number names its population (n). Reads only fields the harness emits.
+
+    ADX at entry: the pullback / trend harnesses record ``adx_at_entry`` only when an ADX gate is active, so most
+    ledgers read "unknown". When ``bars_csv`` (the bars the run used) is given, missing values are computed by
+    ``leg_r_diagnosis.attach_adx`` (ADX-14, last CLOSED bar before entry; NaN past the bars' end) and the map says
+    where they came from (``adx_source``). Rows that carry their own value are never overwritten."""
     if not trades:
         return {"read_state": "no_trades"}
+    adx_source = None
+    if bars_csv and any(r.get("adx_at_entry") is None for r in trades):
+        trades, adx_source = _fill_adx(trades, str(bars_csv))
     def s(rows, k):
         return round(sum(float(r.get(k) or 0.0) for r in rows), 3)
     n = len(trades)
@@ -113,7 +121,51 @@ def attribute(trades: list[dict[str, Any]]) -> dict[str, Any]:
         "by_exit_reason": split(lambda r: r.get("exit_reason") or "unknown"),
         "by_adx_at_entry": split(adx_bucket),
     }
+    if adx_source:
+        out["adx_source"] = adx_source
     return out
+
+
+def _fill_adx(trades: list[dict[str, Any]], bars_csv: str) -> tuple[list[dict[str, Any]], str]:
+    """Copies of ``trades`` with missing ``adx_at_entry`` filled from ``bars_csv`` (see ``attribute``)."""
+    import math
+    import pandas as pd
+    import leg_r_diagnosis as lrd
+    try:
+        df = pd.DataFrame({"entry_time": pd.to_datetime([r.get("entry_time") for r in trades], utc=True),
+                           "adx_at_entry": pd.to_numeric([r.get("adx_at_entry") for r in trades], errors="coerce")})
+        src = lrd.attach_adx(df, bars_csv)
+    except (OSError, ValueError, KeyError, IndexError) as exc:  # allow-silent: not silent -- the failure is reported in adx_source and the rows stay unknown
+        return trades, f"unavailable: {type(exc).__name__} reading {Path(bars_csv).name}"
+    out = []
+    for r, v in zip(trades, df["adx_at_entry"].tolist()):
+        if r.get("adx_at_entry") is None and v is not None and not (isinstance(v, float) and math.isnan(v)):
+            r = {**r, "adx_at_entry": round(float(v), 4)}
+        out.append(r)
+    return out, src
+
+
+def _bars_for(root: Path, src: str | None) -> Path | None:
+    """The bars a committed run used, when they were committed beside its ledger: a ``data/`` or ``candles/`` CSV, or a
+    ``*__data.csv``, searched from the ledger's directory up to its run directory (at most 3 levels).
+
+    Only an UNAMBIGUOUS match is used: exactly one candidate at the nearest level that has any. Two or more (e.g. a run
+    that stored several timeframes) return None rather than guess, so the ADX stays "unknown" instead of being read off
+    the wrong bars. The chosen file's name is reported in the map's ``adx_source`` (via ``_fill_adx``)."""
+    if not src:
+        return None
+    d = (root / src).parent
+    for _ in range(4):
+        # provenance: _fill_adx — the one chosen file is named in adx_source; an ambiguous level returns None
+        hits = [*d.glob("data/*.csv"), *d.glob("candles/*.csv"), *d.glob("*__data.csv")]
+        if len(hits) == 1:
+            return hits[0]
+        if len(hits) > 1:
+            return None
+        if d == root or d.name in ("research", "runs"):
+            break
+        d = d.parent
+    return None
 
 
 # ── lever responses from exit_lever_ablation records ─────────────────────────────────────────────────────────────────
@@ -268,7 +320,8 @@ def build(root: Path) -> dict[str, dict[str, Any]]:
                                   "net_r": rec.get("net_r_oos"), "n": rec.get("n_trades_oos"),
                                   "fidelity": rec.get("fidelity"), "rule_verdict": (rec.get("decision_rule") or {}).get("verdict"),
                                   **({"note": rec["_note"]} if rec.get("_note") else {})},
-                     "attribution": (attribute(_trades(root, rec.get("source_run"))) if rec.get("source_run") or
+                     "attribution": (attribute(_trades(root, rec.get("source_run")), _bars_for(root, rec.get("source_run")))
+                                     if rec.get("source_run") or
                                      (rec and not rec.get("_verdict")) else {"read_state": "no_record"}),
                      "manifest": manifest, "levers": {f: dict(v) for f, v in sorted(levers.items())}}
     subj = yaml.safe_load((root / io.SUBJECTS_REL).read_text(encoding="utf-8")) or {}
@@ -368,6 +421,32 @@ def _self_test() -> int:
     check("attribution: gross 0 -> no gross edge", a["gross_r"] == 0.0 and a["verdict_hint"].startswith("no gross edge"))
     check("attribution: a loser that reached 1R MFE is counted", a["exit_capture"]["losers_that_reached_1r_mfe"] == 1)
     check("attribution: split by year and ADX bucket", set(a["by_year"]) == {"2024", "2025"} and "30-40" in a["by_adx_at_entry"])
+    # ADX from the run's bars when the ledger lacks it (the harnesses record it only under an ADX gate).
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        bars = Path(td) / "bars.csv"
+        rows = ["timestamp,open,high,low,close"]
+        for i in range(120):                                   # a steady up-trend: ADX climbs well above 25
+            px = 100.0 + i
+            rows.append(f"{(__import__('datetime').datetime(2024, 1, 1) + __import__('datetime').timedelta(hours=i)).isoformat()}+00:00,"
+                        f"{px},{px + 1.5},{px - 0.5},{px + 1.0}")
+        bars.write_text("\n".join(rows) + "\n")
+        no_adx = [{**t, "adx_at_entry": None} for t in tr]
+        no_adx[0]["entry_time"] = "2024-01-04T10:00:00Z"        # inside the bars
+        no_adx[1]["entry_time"] = "2024-02-01T00:00:00Z"        # after the bars end -> must stay unknown
+        a2 = attribute(no_adx, bars)
+        check("attribution: bars fill a missing ADX and say where it came from",
+              a2.get("adx_source", "").startswith("computed") and ">=40" in a2["by_adx_at_entry"])
+        check("attribution: a trade past the bars' end stays unknown, never the last bar's ADX",
+              a2["by_adx_at_entry"].get("unknown", {}).get("n") == 1)
+        check("attribution: a row's own adx_at_entry is never overwritten",
+              "adx_source" not in attribute(tr, bars) and "30-40" in attribute(tr, bars)["by_adx_at_entry"])
+        check("attribution: no bars -> unchanged output (no adx_source key)", "adx_source" not in attribute(no_adx))
+        check("bars lookup: a data/ CSV beside the ledger is found",
+              (lambda r: (r / "runs/x/data").mkdir(parents=True) or (r / "runs/x/data/B.csv").write_text("t") or
+               (r / "runs/x/arms").mkdir() or _bars_for(r, "runs/x/arms/A__trades.jsonl") == r / "runs/x/data/B.csv")(Path(td)))
+        check("bars lookup: two candidate bar files -> None (never guess which)",
+              (lambda r: (r / "runs/x/data/C.csv").write_text("t") or _bars_for(r, "runs/x/arms/A__trades.jsonl") is None)(Path(td)))
     rec = {"research_unit": "RQ-x", "verdict": "fail", "measurement": {"leg": "L", "grade": {"baseline": "A"}, "arms": {
         "A": {"argv": ["py", "h.py", "--data", "d", "--adx-min", "25", "--tp-r", "3"], "n": 100, "net_r": 10.0,
               "folds": [{"net_r": 1}, {"net_r": 2}]},
