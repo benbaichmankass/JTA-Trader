@@ -97,7 +97,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--leg", action="append", default=[])
     ap.add_argument("--unit")
     ap.add_argument("--rule")
-    ap.add_argument("--population", default="")
+    ap.add_argument("--population", default=None,
+                    help="population text; default names the legs, the arm and the two windows (a run token may not "
+                         "contain '..', so the unit leaves this to the default)")
     ap.add_argument("--n-floor", type=int, default=30)
     ap.add_argument("--fold-majority", type=int, default=3)
     ap.add_argument("--self-test", action="store_true")
@@ -109,7 +111,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     out = Path(a.out)
     legs = [leg_grade(leg, a.arm, read_arms(out / f"rec_{leg}"), read_arms(out / f"pre_{leg}"), a.n_floor,
                       a.fold_majority) for leg in a.leg]
-    v = grade_unit(legs, a.arm, a.population)
+    pop = a.population or (f"{', '.join(a.leg)}: arm {a.arm} vs A (config-exact), record 2025-11-13 to 2026-11-12 and "
+                           "prior 2024-11-13 to 2025-11-12, full cost stack")
+    v = grade_unit(legs, a.arm, pop)
     v.update({"research_unit": a.unit, "rule": a.rule,
               "records": [{"leg": g["leg"], "verdict": g["verdict"], "read_state": g["read_state"], "n": g["n"],
                            "population": f"{g['leg']}: arm {a.arm} vs A, record + prior windows", "note": g.get("note")}
