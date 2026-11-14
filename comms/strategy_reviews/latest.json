@@ -1,14 +1,14 @@
 {
  "schema": "stage_aware_v1",
- "generated_at": "2026-11-13T05:40:25.693690+00:00",
- "utc_date": "2026-11-13",
+ "generated_at": "2026-11-14T05:25:42.604019+00:00",
+ "utc_date": "2026-11-14",
  "generated_by": "scripts/ops/strategy_review_stage_aware.py",
- "graded": 54,
+ "graded": 56,
  "verdict_reached": 4,
  "actionable": 1,
  "by_action": {
   "S1:healthy": 3,
-  "S1:insufficient-data": 42,
+  "S1:insufficient-data": 44,
   "S1:tweak": 1,
   "S2:abstain": 8
  },
@@ -33,7 +33,7 @@
   ],
   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
   "window_hours": 168,
-  "n_legs": 46,
+  "n_legs": 48,
   "verdict_reached": 4,
   "actionable": 1,
   "mechanics_read_state": "measured",
@@ -120,9 +120,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "mechanics read_state=unreadable (could not query intents and/or received source this run) — we did not look, not 'nothing happened'"
+   "n_needed": "needs 5 more entry fill(s) and 7 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=5, exit=3); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=5, exit n=3; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -148,9 +148,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "mechanics read_state=unreadable (could not query intents and/or received source this run) — we did not look, not 'nothing happened'"
+   "n_needed": "a per-tick account-election read (e.g. the conviction_arbitration/arbitration_fanout_soak log, or a live dispatch trace) showing this leg either winning at least once, or never winning across a large contested-tick sample",
+   "eta": "re-check next scheduled pass",
+   "reason": "starved (12 intent(s), 0 received, no open position) but contends its symbol on this SAME account against live sibling(s) ['claude_desk', 'e4_oi_shock_1h', 'fade_breakout_4h', 'htf_pullback_trend_2h', 'ict_scalp_5m', 'ml_entry_v2', 'squeeze_breakout_4h', 'trend_donchian', 'trend_donchian_1h', 'turtle_soup'] — src/runtime/intents.py elects only ONE strategy per (account, symbol) per tick, so losing that election every time produces this exact shape without the leg ever being mechanically dead. Cannot be graded kill without a live per-tick election trace."
   },
   {
    "stage": "S1",
@@ -178,7 +178,7 @@
    "execution": "live",
    "n_needed": "a per-tick account-election read (e.g. the conviction_arbitration/arbitration_fanout_soak log, or a live dispatch trace) showing this leg either winning at least once, or never winning across a large contested-tick sample",
    "eta": "re-check next scheduled pass",
-   "reason": "starved (482 intent(s), 0 received, no open position) but contends its symbol on this SAME account against live sibling(s) ['claude_desk', 'e4_oi_shock_1h', 'fade_breakout_4h', 'fvg_range_15m', 'ict_scalp_5m', 'ml_entry_v2', 'squeeze_breakout_4h', 'trend_donchian', 'trend_donchian_1h', 'turtle_soup'] — src/runtime/intents.py elects only ONE strategy per (account, symbol) per tick, so losing that election every time produces this exact shape without the leg ever being mechanically dead. Cannot be graded kill without a live per-tick election trace."
+   "reason": "starved (330 intent(s), 0 received, no open position) but contends its symbol on this SAME account against live sibling(s) ['claude_desk', 'e4_oi_shock_1h', 'fade_breakout_4h', 'fvg_range_15m', 'ict_scalp_5m', 'ml_entry_v2', 'squeeze_breakout_4h', 'trend_donchian', 'trend_donchian_1h', 'turtle_soup'] — src/runtime/intents.py elects only ONE strategy per (account, symbol) per tick, so losing that election every time produces this exact shape without the leg ever being mechanically dead. Cannot be graded kill without a live per-tick election trace."
   },
   {
    "stage": "S1",
@@ -220,7 +220,7 @@
    "execution": "live",
    "n_needed": null,
    "eta": null,
-   "reason": "flowing (intents=37, received=2); cost fidelity consistent (n=62, roundtrip_mean=-0.145bps vs modelled 3.0bps)"
+   "reason": "flowing (intents=24, received=2); cost fidelity consistent (n=63, roundtrip_mean=-0.102bps vs modelled 3.0bps)"
   },
   {
    "stage": "S1",
@@ -232,9 +232,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "needs 0 more entry fill(s) and 1 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=29, exit=9); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "n_needed": "needs 0 more entry fill(s) and 1 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=28, exit=9); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
    "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity insufficient_n (entry n=29, exit n=9; need >= 10 each)"
+   "reason": "flowing; cost fidelity insufficient_n (entry n=28, exit n=9; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -248,7 +248,7 @@
    "execution": "live",
    "n_needed": null,
    "eta": null,
-   "reason": "flowing (intents=20, received=2); cost fidelity consistent (n=16, roundtrip_mean=1.165bps vs modelled 3.0bps)"
+   "reason": "flowing (intents=29, received=3); cost fidelity consistent (n=18, roundtrip_mean=0.495bps vs modelled 3.0bps)"
   },
   {
    "stage": "S1",
@@ -262,7 +262,7 @@
    "execution": "live",
    "n_needed": null,
    "eta": null,
-   "reason": "flowing (intents=16, received=1); cost fidelity consistent (n=28, roundtrip_mean=-1.601bps vs modelled 3.0bps)"
+   "reason": "flowing (intents=21, received=2); cost fidelity consistent (n=29, roundtrip_mean=-1.673bps vs modelled 3.0bps)"
   },
   {
    "stage": "S1",
@@ -276,7 +276,7 @@
    "execution": "live",
    "n_needed": "a per-tick account-election read (e.g. the conviction_arbitration/arbitration_fanout_soak log, or a live dispatch trace) showing this leg either winning at least once, or never winning across a large contested-tick sample",
    "eta": "re-check next scheduled pass",
-   "reason": "starved (23 intent(s), 0 received, no open position) but contends its symbol on this SAME account against live sibling(s) ['claude_desk', 'e4_oi_shock_1h', 'ict_scalp_xrp_5m', 'ml_entry_v2', 'xrp_pullback_2h'] — src/runtime/intents.py elects only ONE strategy per (account, symbol) per tick, so losing that election every time produces this exact shape without the leg ever being mechanically dead. Cannot be graded kill without a live per-tick election trace."
+   "reason": "starved (7 intent(s), 0 received, no open position) but contends its symbol on this SAME account against live sibling(s) ['claude_desk', 'e4_oi_shock_1h', 'ict_scalp_xrp_5m', 'ml_entry_v2', 'xrp_pullback_2h'] — src/runtime/intents.py elects only ONE strategy per (account, symbol) per tick, so losing that election every time produces this exact shape without the leg ever being mechanically dead. Cannot be graded kill without a live per-tick election trace."
   },
   {
    "stage": "S1",
@@ -288,9 +288,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "more fills on both sides than currently measured (n=24); no fixed floor for this state",
+   "n_needed": "a per-tick account-election read (e.g. the conviction_arbitration/arbitration_fanout_soak log, or a live dispatch trace) showing this leg either winning at least once, or never winning across a large contested-tick sample",
    "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity inconclusive: CI95 [-1.239, 5.382] straddles the 5.0bps threshold over n=24 — more fills would resolve it"
+   "reason": "starved (3 intent(s), 0 received, no open position) but contends its symbol on this SAME account against live sibling(s) ['claude_desk', 'e4_oi_shock_1h', 'ict_scalp_xrp_15m', 'ml_entry_v2', 'xrp_pullback_2h'] — src/runtime/intents.py elects only ONE strategy per (account, symbol) per tick, so losing that election every time produces this exact shape without the leg ever being mechanically dead. Cannot be graded kill without a live per-tick election trace."
   },
   {
    "stage": "S1",
@@ -330,9 +330,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "needs 0 more entry fill(s) and 5 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=12, exit=5); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "n_needed": "needs 0 more entry fill(s) and 3 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=12, exit=7); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
    "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity insufficient_n (entry n=12, exit n=5; need >= 10 each)"
+   "reason": "flowing; cost fidelity insufficient_n (entry n=12, exit n=7; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -386,9 +386,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "needs 2 more entry fill(s) and 6 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=8, exit=4); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "n_needed": "needs 1 more entry fill(s) and 5 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=9, exit=5); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
    "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity insufficient_n (entry n=8, exit n=4; need >= 10 each)"
+   "reason": "flowing; cost fidelity insufficient_n (entry n=9, exit n=5; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -442,9 +442,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "needs 5 more entry fill(s) and 7 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=5, exit=3); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "n_needed": "needs 4 more entry fill(s) and 7 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=6, exit=3); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
    "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity insufficient_n (entry n=5, exit n=3; need >= 10 each)"
+   "reason": "flowing; cost fidelity insufficient_n (entry n=6, exit n=3; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -459,6 +459,20 @@
    "n_needed": null,
    "eta": "wait for a signal; re-check next scheduled pass",
    "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
+  },
+  {
+   "stage": "S1",
+   "account": "alpaca_paper",
+   "strategy": "spy_pullback_1h",
+   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
+   "proposed_action": "S1:insufficient-data",
+   "verdict_reached": false,
+   "actionable": false,
+   "disposition": "insufficient-data",
+   "execution": "live",
+   "n_needed": "a per-tick account-election read (e.g. the conviction_arbitration/arbitration_fanout_soak log, or a live dispatch trace) showing this leg either winning at least once, or never winning across a large contested-tick sample",
+   "eta": "re-check next scheduled pass",
+   "reason": "starved (226 intent(s), 0 received, no open position) but contends its symbol on this SAME account against live sibling(s) ['claude_desk', 'ml_entry', 'ml_entry_eq', 'spy_trend_long_1d'] — src/runtime/intents.py elects only ONE strategy per (account, symbol) per tick, so losing that election every time produces this exact shape without the leg ever being mechanically dead. Cannot be graded kill without a live per-tick election trace."
   },
   {
    "stage": "S1",
@@ -498,9 +512,23 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "needs 6 more entry fill(s) and 8 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=4, exit=2); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "n_needed": "needs 6 more entry fill(s) and 7 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=4, exit=3); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
    "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity insufficient_n (entry n=4, exit n=2; need >= 10 each)"
+   "reason": "flowing; cost fidelity insufficient_n (entry n=4, exit n=3; need >= 10 each)"
+  },
+  {
+   "stage": "S1",
+   "account": "alpaca_paper",
+   "strategy": "tlt_pullback_1h",
+   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
+   "proposed_action": "S1:insufficient-data",
+   "verdict_reached": false,
+   "actionable": false,
+   "disposition": "insufficient-data",
+   "execution": "live",
+   "n_needed": "a per-tick account-election read (e.g. the conviction_arbitration/arbitration_fanout_soak log, or a live dispatch trace) showing this leg either winning at least once, or never winning across a large contested-tick sample",
+   "eta": "re-check next scheduled pass",
+   "reason": "starved (199 intent(s), 0 received, no open position) but contends its symbol on this SAME account against live sibling(s) ['claude_desk', 'ml_entry', 'ml_entry_eq', 'tlt_pullback_1d'] — src/runtime/intents.py elects only ONE strategy per (account, symbol) per tick, so losing that election every time produces this exact shape without the leg ever being mechanically dead. Cannot be graded kill without a live per-tick election trace."
   },
   {
    "stage": "S1",
@@ -540,9 +568,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "needs 3 more entry fill(s) and 5 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=7, exit=5); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "n_needed": "needs 2 more entry fill(s) and 5 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=8, exit=5); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
    "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity insufficient_n (entry n=7, exit n=5; need >= 10 each)"
+   "reason": "flowing; cost fidelity insufficient_n (entry n=8, exit n=5; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -568,9 +596,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "needs 0 more entry fill(s) and 5 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=16, exit=5); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
-   "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity insufficient_n (entry n=16, exit n=5; need >= 10 each)"
+   "n_needed": null,
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
@@ -582,9 +610,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "more fills on both sides than currently measured (n=13); no fixed floor for this state",
+   "n_needed": "more fills on both sides than currently measured (n=14); no fixed floor for this state",
    "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity inconclusive: CI95 [-2.14, 11.678] straddles the 5.0bps threshold over n=13 — more fills would resolve it"
+   "reason": "flowing; cost fidelity inconclusive: CI95 [0.638, 52.824] straddles the 5.0bps threshold over n=14 — more fills would resolve it"
   },
   {
    "stage": "S1",
@@ -610,9 +638,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "more fills on both sides than currently measured (n=11); no fixed floor for this state",
+   "n_needed": "more fills on both sides than currently measured (n=12); no fixed floor for this state",
    "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity inconclusive: CI95 [-5.206, 7.56] straddles the 5.0bps threshold over n=11 — more fills would resolve it"
+   "reason": "flowing; cost fidelity inconclusive: CI95 [-5.281, 7.5] straddles the 5.0bps threshold over n=12 — more fills would resolve it"
   },
   {
    "stage": "S1",
@@ -638,9 +666,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "needs 0 more entry fill(s) and 8 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=14, exit=2); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "n_needed": "needs 0 more entry fill(s) and 7 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=15, exit=3); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
    "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity insufficient_n (entry n=14, exit n=2; need >= 10 each)"
+   "reason": "flowing; cost fidelity insufficient_n (entry n=15, exit n=3; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -770,7 +798,7 @@
    "net_r_net_of_full_cost": null,
    "r_population": null,
    "t3_windows_r": [],
-   "t3_p10": -6.58,
+   "t3_p10": -3.61188,
    "abstain": "thin",
    "reason": "fewer than 40 closed trades on either book: no closed rows for this leg in this source/window"
   },
@@ -792,7 +820,7 @@
    "net_r_net_of_full_cost": null,
    "r_population": null,
    "t3_windows_r": [],
-   "t3_p10": -1.9,
+   "t3_p10": -1.29022,
    "abstain": "thin",
    "reason": "fewer than 40 closed trades on either book: no closed rows for this leg in this source/window"
   },
