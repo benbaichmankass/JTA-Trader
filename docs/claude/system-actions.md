@@ -1029,6 +1029,19 @@ Then poll the issue's comments for the github-actions[bot] reply.
 
 ## 7.2 DISPATCH ONE AT A TIME — a batch silently drops the middle
 
+> **Changed 2026-11-12 (operator gate decisions, decisions page Gates tab —
+> SYSTEM-ACTION-CONCURRENCY-LANES: MAKE REPORT-ONLY).** The shared mutating lane
+> is gone: **every** action now runs in a concurrency group of its own
+> (`system-actions-<run_id>`; reads keep `system-actions-ro-<run_id>`), so no
+> request waits behind another and none is dropped by GitHub's one-pending-run
+> limit. Overlap is **reported** instead: the `route` job lists other
+> system-actions runs in flight, prints a `::warning::`, and the outcome comment
+> on the issue carries an **"Overlap (report-only)"** note. The cost the operator
+> accepted: two mutations can now run on the VM at the same time. Order still
+> matters to you: if two requests must apply in sequence (e.g. two `set-env` on
+> one key), wait for the first comment before filing the second. The text below
+> describes the earlier serial lane and is kept as history.
+
 > **Changed 2026-10-04 (OA-17, lane OPS-AUDIT).** The drop below recurred on
 > 2026-10-04 on two OA-03/OA-01 de-risk steps (#16251, #16263), so it is now
 > mitigated in the workflow rather than only by this contract:

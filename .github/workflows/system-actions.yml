@@ -306,7 +306,11 @@ permissions:
 #     so it can neither displace nor be displaced;
 #   * every other action keeps the shared "system-actions" group, so two
 #     mutations on the VM still never run at once.
-# The shared lane can still drop a pending run; system-actions-cancel-guard.yml
+#   ⚠️ SUPERSEDED 2026-11-12 (operator, SYSTEM-ACTION-CONCURRENCY-LANES: MAKE
+#     REPORT-ONLY): every action now gets a group of its own
+#     (system-actions-<run_id>), so nothing queues or is displaced; the route
+#     job REPORTS other runs in flight instead (warning + issue comment).
+# The shared lane could drop a pending run; system-actions-cancel-guard.yml
 # then comments "CANCELLED, NOT RUN" on its issue and sends one alert. It never
 # re-queues (that would run the older request after the newer one that displaced it).
 # (verify-account-mode is read-only, so it no longer needs its per-account
@@ -330,8 +334,10 @@ jobs:
     timeout-minutes: 3
     permissions:
       contents: read
+      actions: read   # list in-flight system-actions runs for the overlap report
     outputs:
       group: ${{ steps.r.outputs.group }}
+      overlap: ${{ steps.ov.outputs.overlap }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -347,6 +353,37 @@ jobs:
           python3 scripts/ops/system_action_route.py --event "${{ github.event_name }}" --run-id "${{ github.run_id }}" | tee -a "$GITHUB_OUTPUT"
           mkdir -p request
           printf '%s\n' "${ISSUE_NUMBER:-}" > request/issue_number
+      # SYSTEM-ACTION-CONCURRENCY-LANES: REPORT-ONLY (operator 2026-11-12). Every run has a
+      # group of its own, so nothing waits; this step REPORTS other system-actions runs in
+      # flight (warning + one issue comment). It never waits, cancels or fails the run.
+      # SYSTEM-ACTION-CONCURRENCY-LANES: REPORT-ONLY (operator 2026-11-12). Every run has a
+      # group of its own, so nothing waits; this step REPORTS other system-actions runs in
+      # flight: a ::warning:: here, and an "Overlap" note in the outcome comment the
+      # system-action job posts (one comment per request, so issue pollers are not misled).
+      # It never waits, cancels or fails the run.
+      - name: Report overlapping system-actions runs (report-only)
+        id: ov
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          api="https://api.github.com/repos/${{ github.repository }}"
+          runs=$(mktemp); all=$(mktemp)
+          for st in queued in_progress; do
+            if curl -sSf -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" \
+                 "$api/actions/workflows/system-actions.yml/runs?status=${st}&per_page=50" > "$runs"; then
+              python3 scripts/ops/system_action_route.py --event x --run-id "${{ github.run_id }}" --overlap-from "$runs" >> "$all"
+            else
+              echo "could not look (runs API, status=${st})" >> "$all"
+            fi
+          done
+          if [ -s "$all" ]; then
+            while IFS= read -r line; do echo "::warning::system-action overlap: ${line}"; done < "$all"
+          else
+            echo "no other system-actions run in flight"
+          fi
+          { echo "overlap<<OVERLAP_EOF"; cat "$all"; echo "OVERLAP_EOF"; } >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         with:
           name: system-action-request
@@ -3080,6 +3117,7 @@ jobs:
         uses: actions/github-script@v7
         env:
           EXIT_CODE: ${{ steps.exec.outputs.exit_code }}
+          OVERLAP: ${{ needs.route.outputs.overlap }}
         with:
           script: |
             const fs = require('fs');
@@ -3140,6 +3178,12 @@ jobs:
                 `The run page has the full audit bundle ` +
                 `(audit-bundle.json + pre/post-state.json + action-output.txt).\n` +
                 `\n\`\`\`\n${tail}\n\`\`\``;
+            }
+            // SYSTEM-ACTION-CONCURRENCY-LANES: report-only (operator 2026-11-12).
+            const overlap = (process.env.OVERLAP || '').trim();
+            if (overlap) {
+              body += `\n\n**Overlap (report-only):** other system-actions runs were in flight ` +
+                `when this one started. Nothing waited or was cancelled.\n\`\`\`\n${overlap}\n\`\`\``;
             }
             await github.rest.issues.createComment({
               owner: context.repo.owner,
