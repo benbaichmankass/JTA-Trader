@@ -1,0 +1,160 @@
+{
+ "schema_version": 1,
+ "trade_id": null,
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuMdkXFkebnqkuwJ42j",
+ "prompt_sha": null,
+ "skill_sha": "9f79ae111e125aa92787fda19356d821d5200a64",
+ "review_id": "LR-20261114T1610Z-pkg-5a806ef08c824bbf",
+ "reviewed_at": "2026-11-14T16:27:31Z",
+ "order_package_id": "pkg-5a806ef08c824bbf",
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "conflicting_exposure",
+  "level": "ADAUSDT#a41b176184",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-14T16:10:13Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 2,
+  "giveback_r": 0.5486,
+  "open_r": -0.3072,
+  "peak_provenance": "estimated",
+  "peak_r": 0.2414,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.15264285714285714,
+  "tp": 0.16403571428571428
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 1,
+  "giveback_r": 0.5486,
+  "open_r": -0.3072,
+  "peak_r": 0.2414,
+  "r_to_stop": 0.6928,
+  "r_to_target": 1.8072
+ },
+ "mechanics": {
+  "evidence": "package sl 0.15264285714285714 / tp 0.16403571428571428 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 235,
+   "mean_r": 0.4027,
+   "sd_r": 1.1559,
+   "worst_r": -1.1269,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 235,
+   "mean_r": 0.3234,
+   "sd_r": 0.797,
+   "worst_r": -1.3467,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 235,
+   "mean_r": 0.3561,
+   "sd_r": 0.9338,
+   "worst_r": -1.3467,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 235,
+   "mean_r": -0.3682,
+   "sd_r": 0.0241,
+   "worst_r": -0.463,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261114T1610Z-pkg-5a806ef08c824bbf.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. ADAUSDT long, venue SL/TP match the package. ml_entry long history from this state (n=235, net of cost): HOLD mean +0.403 R (sd 1.1559, worst -1.1269) vs best tighten +0.356 R (sd 0.9338, worst -1.3467) vs close -0.368 R. HOLD beats the best tighten by 0.047 R, which is 0.5 SE (SE 0.097); tail gain of the tighten -0.22 R is under the 1 R tie-break threshold, so no bracket move or close is priced better than HOLD. Brackets stay as the strategy set them. CONFLICTING EXPOSURE (answered): keep both. The opposing shorts are 1h-4h trend legs on the demo and prop books with their own brackets, and ml_entry's evidence prices only this long: closing it costs 0.77 R of expected value versus HOLD (n=235), while nothing in ml_entry's own history prices a close as better because an opposing position exists. Closing the real-money long would not reduce the other books' risk, so it only removes an entry whose measured expectancy is positive."
+ },
+ "forecast": {
+  "thesis": "4h trend down (ADX 35.3); entered on a 1h close at the 0.1553 sweep low; the strategy buys the sweep and the 1.5R target needs a reclaim of the last 1h swing highs while the 4h trend is still down, so I expect a bounce more often than not but a full run to target only about three times in ten",
+  "direction": "with_trade",
+  "target_px": 0.16403571428571428,
+  "p_target": 0.3,
+  "invalidation_px": 0.15264285714285714,
+  "horizon_bars": 12,
+  "timeframe": "1h",
+  "evidence": [
+   "priced_options hold n=235 mean +0.403",
+   "exit_plan sl/tp",
+   "chart.swings",
+   "htf adx/trend",
+   "book"
+  ]
+ },
+ "context_flags": [
+  "correlated: five ml_entry longs (BTC, ETH, SOL, XRP, ADA) on bybit_2/bybit_portfolio opened 16:01-16:05Z, one crypto-beta bet; every other open crypto package (demo bybit_1, prop) is short, cross-account, no account nets",
+  "htf: 4h trend down (adx 35.33); long is a counter-trend sweep-reclaim, as the strategy's own history trades it",
+  "atr_ratio: atr_now_over_entry null (could not look, entry meta atr not recorded); regime cell entry/now null",
+  "judgement: open_r -0.3072 peak_r 0.2414 (estimated) after 2 bars; mechanical locks lose R in the population test RQ-20261114-db1a-05, so none recommended",
+  "tighten: stop fills at the stop price flatters every tighten; atr:1.0 (and atr:1.5 where noted) unpriced: stop_level_not_below_price (inapplicable at the current mark)",
+  "conflicting_exposure: key ADAUSDT#a41b176184; opposing legs are shorts on other books (demo, prop), cross-account",
+  "calendar: no events in next 24h or no event classes for symbol"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "packet_sha": "bbefeff8ffbb976e5301fddc32c57ce1b54678eeef059f5d1810438d6cbbd3f8"
+}
