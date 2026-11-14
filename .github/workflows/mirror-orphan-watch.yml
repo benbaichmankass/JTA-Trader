@@ -62,5 +62,8 @@ jobs:
         # XRPUSDT short size=160.9" and concluded success (MIRROR-QTY-DIVERGE).
         run: |
           set -o pipefail
-          pip install -q pyyaml
+          # pandas: a side_filter_superset verdict (the SLV short on alpaca_portfolio) goes through
+          # account_side_filter -> strategy_signal_builders, which imports pandas (run 43637007962 failed on it).
+          # pyyaml + pandas is the measured minimum: the checker passes in a clean venv with exactly these two.
+          pip install -q pyyaml pandas
           python3 scripts/ops/check_mirror_orphans.py positions.json | tee -a "$GITHUB_STEP_SUMMARY"
