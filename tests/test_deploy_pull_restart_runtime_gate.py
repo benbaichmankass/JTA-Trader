@@ -265,6 +265,9 @@ def test_empty_diff_fails_safe_to_restart(fake_repo):
     "comms/strategy_reviews/2026-09-01/INDEX.json",
     "comms/reports/index.json",
     "comms/data_lake/health.json",
+    # DEPLOY-GATE-GITIGNORE 2026-11-14: #25995 (.gitignore + .github/ landing files) restarted the trader at 10:41Z
+    ".gitignore",
+    ".gitattributes",
 ])
 def test_widened_non_runtime_paths_skip_restart(fake_repo, path):
     fake_repo["diff_files"].write_text(f"docs/x.md\n{path}\n")
@@ -289,6 +292,8 @@ def test_widened_non_runtime_paths_skip_restart(fake_repo, path):
     "scripts/research/m20_fleet_exit_sweep.py",
     "researchy/x.py",                      # prefix must be a directory
     "config/strategies.yaml",
+    "data/.gitignore",                     # only the ROOT .gitignore is anchored
+    ".gitignore.bak",
 ])
 def test_runtime_paths_next_to_the_widened_set_still_restart(fake_repo, path):
     fake_repo["diff_files"].write_text(f"research/queue/x.yaml\n{path}\n")
