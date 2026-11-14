@@ -211,3 +211,31 @@ def test_config_exempts_the_event_from_the_bar_cooldown():
     import yaml
     due = yaml.safe_load(Path("config/live_trade_review.yaml").read_text())["due"]
     assert ce.EVENT in due["cooldown_exempt"]
+
+
+def test_open_r_measures_1r_from_the_initial_risk_not_the_trailed_stop(tmp_path, strategies_yaml):
+    """2026-11-14 16:07Z: trend_donchian_1h BTC short pkg-13ec01223e304ad4 read '+60.52R est' while its packets read
+    about +1.7R: 1R was |entry - CURRENT stop|, and the stop had trailed to within a few dollars of entry."""
+    trades = [("pkg-s", "trend_donchian", "BTCUSDT", "short", 100000.0, 99950.0, "bybit_1", "paper", "open"),
+              ("pkg-l", "ml_entry", "BTCUSDT", "long", 97000.0, 96000.0, "bybit_2", "real_money", "open"),
+              ("pkg-n", "ml_entry", "BTCUSDT", "long", 97500.0, 96500.0, "bybit_1", "paper", "open")]
+    db = _db(tmp_path, trades)
+    c = sqlite3.connect(db)
+    c.execute("CREATE TABLE order_packages (order_package_id TEXT, meta TEXT)")
+    c.execute("INSERT INTO order_packages VALUES (?, ?)", ("pkg-s", json.dumps({"risk_per_unit": 1750.0})))
+    c.execute("INSERT INTO order_packages VALUES (?, ?)", ("pkg-l", "not json"))
+    c.commit()
+    c.close()
+    legs = ce.read_open_legs(db, mark_fn=lambda s: 97000.0, strategies_path=strategies_yaml)
+    by = {x["order_package_id"]: x for x in legs["legs"]}
+    assert by["pkg-s"]["open_r"] == pytest.approx(1.71, abs=0.01)          # 3000 / 1750, not 3000 / 50 = 60
+    assert by["pkg-s"]["open_r_basis"] == "initial_risk"
+    assert by["pkg-l"]["open_r_basis"] == "current_stop" and by["pkg-l"]["open_r"] == pytest.approx(0.0)
+    text = ce.render_alert(ce.find_conflicts(legs["legs"])[0])
+    assert "+1.71R est, pkg pkg-s" in text and "(1R from the current stop)" in text
+
+
+def test_no_order_packages_table_falls_back_to_the_stop_and_says_so(tmp_path, strategies_yaml):
+    db = _db(tmp_path, SOL_TRADES, SOL_TICKETS)
+    legs = ce.read_open_legs(db, mark_fn=lambda s: 84.2, strategies_path=strategies_yaml)
+    assert {x["open_r_basis"] for x in legs["legs"]} == {"current_stop"}
