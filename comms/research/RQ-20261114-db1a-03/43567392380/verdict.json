@@ -1,0 +1,256 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "n": 2656,
+  "research_unit": "RQ-20261114-db1a-03",
+  "rule": "RULE-DFR-HTF-LONG-FILTER-20261114",
+  "population": "15 crypto demo-floor pullback/trend legs (testing, bybit_1), each config-exact on its live decision bar; record 2025-11-13..2026-11-12 and prior 2024-11-13..2025-11-12; full cost stack; longs gated when the prior daily close < SMA200 (own symbol, Binance daily)",
+  "filter": {
+    "sma_days": 200,
+    "symbol": "own",
+    "bar": "last completed UTC daily bar before entry"
+  },
+  "cells": {
+    "gated_record": {
+      "n": 572,
+      "net_r": -88.0639
+    },
+    "gated_prior": {
+      "n": 259,
+      "net_r": -5.3393
+    },
+    "kept_record_net_r": -54.2763,
+    "kept_prior_net_r": 111.4287,
+    "ungated_record_net_r": -142.3402,
+    "ungated_prior_net_r": 106.0894,
+    "longs": 1477,
+    "unknown_longs": 0,
+    "unknown_share": 0.0,
+    "record_negative": true,
+    "prior_holds": true,
+    "walkforward": {
+      "target_regime": "htf_below_sma200",
+      "target_vol": null,
+      "cell": "htf_below_sma200",
+      "regime_trades": 831,
+      "long_trades": 831,
+      "short_trades": 0,
+      "fold_panel": [
+        3,
+        4,
+        5
+      ],
+      "per_fold_count": {
+        "3": {
+          "short_folds_negative": 0,
+          "long_folds_negative": 3,
+          "of_folds": 3,
+          "short_populated_folds": 0,
+          "long_populated_folds": 3,
+          "short_majority_negative": false,
+          "long_majority_negative": true
+        },
+        "4": {
+          "short_folds_negative": 0,
+          "long_folds_negative": 4,
+          "of_folds": 4,
+          "short_populated_folds": 0,
+          "long_populated_folds": 4,
+          "short_majority_negative": false,
+          "long_majority_negative": true
+        },
+        "5": {
+          "short_folds_negative": 0,
+          "long_folds_negative": 4,
+          "of_folds": 5,
+          "short_populated_folds": 0,
+          "long_populated_folds": 5,
+          "short_majority_negative": false,
+          "long_majority_negative": true
+        }
+      },
+      "pooled_short_r": 0,
+      "pooled_long_r": -93.4032,
+      "min_direction_trades": 10,
+      "long_insufficient_n": false,
+      "short_insufficient_n": true,
+      "long_verdict": "stable_drag",
+      "short_verdict": "no_trades",
+      "short_stable_drag": false,
+      "long_stable_drag": true,
+      "short_fold_sensitive": false,
+      "long_fold_sensitive": false
+    },
+    "walkforward_stable_drag": true,
+    "verdict": "pass",
+    "note": "gated longs: record -88.0639 n572; prior -5.3393 n259; walk-forward stable_drag"
+  },
+  "per_leg": {
+    "avax_pullback_2h": {
+      "record_net_r": -15.7394,
+      "record_n": 95,
+      "prior_net_r": -3.2175,
+      "prior_n": 102,
+      "filtered_record_net_r": -0.4353,
+      "filtered_record_n": 63,
+      "filtered_prior_net_r": 2.2006,
+      "filtered_prior_n": 78
+    },
+    "eth_pullback_2h": {
+      "record_net_r": 1.3856,
+      "record_n": 83,
+      "prior_net_r": 16.3604,
+      "prior_n": 78,
+      "filtered_record_net_r": 2.5584,
+      "filtered_record_n": 53,
+      "filtered_prior_net_r": 18.2094,
+      "filtered_prior_n": 65
+    },
+    "eth_pullback_prop_2h": {
+      "record_net_r": -6.574,
+      "record_n": 81,
+      "prior_net_r": 7.3191,
+      "prior_n": 71,
+      "filtered_record_net_r": -0.5658,
+      "filtered_record_n": 52,
+      "filtered_prior_net_r": 7.678,
+      "filtered_prior_n": 59
+    },
+    "htf_pullback_trend_2h": {
+      "record_net_r": -23.3732,
+      "record_n": 105,
+      "prior_net_r": 2.9423,
+      "prior_n": 83,
+      "filtered_record_net_r": -17.2488,
+      "filtered_record_n": 69,
+      "filtered_prior_net_r": 2.293,
+      "filtered_prior_n": 79
+    },
+    "sol_pullback_2h": {
+      "record_net_r": 3.1859,
+      "record_n": 34,
+      "prior_net_r": -6.7949,
+      "prior_n": 26,
+      "filtered_record_net_r": 3.1859,
+      "filtered_record_n": 34,
+      "filtered_prior_net_r": -6.7949,
+      "filtered_prior_n": 26
+    },
+    "xrp_pullback_2h": {
+      "record_net_r": 9.9194,
+      "record_n": 52,
+      "prior_net_r": 2.3084,
+      "prior_n": 65,
+      "filtered_record_net_r": 13.0698,
+      "filtered_record_n": 32,
+      "filtered_prior_net_r": 2.7977,
+      "filtered_prior_n": 55
+    },
+    "trend_donchian": {
+      "record_net_r": -31.973,
+      "record_n": 102,
+      "prior_net_r": 5.1023,
+      "prior_n": 89,
+      "filtered_record_net_r": -5.1461,
+      "filtered_record_n": 25,
+      "filtered_prior_net_r": -1.4753,
+      "filtered_prior_n": 75
+    },
+    "trend_donchian_1h": {
+      "record_net_r": -19.6705,
+      "record_n": 183,
+      "prior_net_r": -7.6854,
+      "prior_n": 171,
+      "filtered_record_net_r": -1.0071,
+      "filtered_record_n": 108,
+      "filtered_prior_net_r": -9.8948,
+      "filtered_prior_n": 155
+    },
+    "trend_donchian_ada_4h": {
+      "record_net_r": -3.3544,
+      "record_n": 55,
+      "prior_net_r": 13.4429,
+      "prior_n": 59,
+      "filtered_record_net_r": -11.4918,
+      "filtered_record_n": 34,
+      "filtered_prior_net_r": 14.4803,
+      "filtered_prior_n": 42
+    },
+    "trend_donchian_avax_4h": {
+      "record_net_r": -16.1781,
+      "record_n": 57,
+      "prior_net_r": 26.092,
+      "prior_n": 55,
+      "filtered_record_net_r": -14.5096,
+      "filtered_record_n": 38,
+      "filtered_prior_net_r": 21.5132,
+      "filtered_prior_n": 39
+    },
+    "trend_donchian_eth": {
+      "record_net_r": -7.0929,
+      "record_n": 162,
+      "prior_net_r": 7.0014,
+      "prior_n": 166,
+      "filtered_record_net_r": -10.7283,
+      "filtered_record_n": 95,
+      "filtered_prior_net_r": 8.8317,
+      "filtered_prior_n": 130
+    },
+    "trend_donchian_eth_4h": {
+      "record_net_r": -15.2927,
+      "record_n": 54,
+      "prior_net_r": 22.3697,
+      "prior_n": 42,
+      "filtered_record_net_r": -4.122,
+      "filtered_record_n": 31,
+      "filtered_prior_net_r": 20.5926,
+      "filtered_prior_n": 31
+    },
+    "trend_donchian_eth_prop": {
+      "record_net_r": -9.7518,
+      "record_n": 166,
+      "prior_net_r": -4.5234,
+      "prior_n": 183,
+      "filtered_record_net_r": -5.72,
+      "filtered_record_n": 99,
+      "filtered_prior_net_r": 4.7723,
+      "filtered_prior_n": 144
+    },
+    "trend_donchian_sol": {
+      "record_net_r": -2.9132,
+      "record_n": 80,
+      "prior_net_r": 3.266,
+      "prior_n": 83,
+      "filtered_record_net_r": -3.4443,
+      "filtered_record_n": 19,
+      "filtered_prior_net_r": 5.9615,
+      "filtered_prior_n": 46
+    },
+    "trend_donchian_sol_4h": {
+      "record_net_r": -4.9179,
+      "record_n": 34,
+      "prior_net_r": 22.1061,
+      "prior_n": 40,
+      "filtered_record_net_r": 1.3287,
+      "filtered_record_n": 19,
+      "filtered_prior_net_r": 20.2634,
+      "filtered_prior_n": 30
+    }
+  },
+  "legs_filtered_positive_both_windows": [
+    "eth_pullback_2h",
+    "trend_donchian_sol_4h",
+    "xrp_pullback_2h"
+  ],
+  "records": [
+    {
+      "leg": "HTF_LONG_FILTER:below_sma200_longs",
+      "verdict": "pass",
+      "read_state": "measured",
+      "n": 2656,
+      "population": "gated longs of 15 legs, record + prior windows",
+      "note": "gated longs: record -88.0639 n572; prior -5.3393 n259; walk-forward stable_drag"
+    }
+  ],
+  "pointer_only": "post-hoc trade filter; a PASS points at a harness-native Tier-3 proposal, not a change"
+}

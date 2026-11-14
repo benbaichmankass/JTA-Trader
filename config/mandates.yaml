@@ -534,6 +534,18 @@ mandates:
       soak_passed: true
       # 2026-11-01 (PROMOTION-NO-SOAK): soak_passed is satisfied by mechanics_proven (see amended_at above).
       mechanics_proven: true
+      # 2026-11-12 (lane ML-STAGE-RETIRE, HELD Tier-3 PR for the manager/operator). The operator, chat
+      # 2026-11-12 ~16:35Z, verbatim: "you're going to retire the step from the ML. Everything goes through
+      # the new flow, back testing, live money, and then if it gets demoted, it soaks to still generate data
+      # while we iterate on it. That is the only acceptable flow. There is nothing in between proving edge on
+      # back testing and real money. Absolutely no steps. Make sure that nothing in the repo is going to keep
+      # on holding us back from operating correctly, and make sure again that nothing is soaking right now
+      # according to the old rules when it's not relevant anymore."
+      # `soak_step: retired` makes mandate_resolver decide S1 -> S2 on the Stage-0 record alone: soak_passed
+      # and mechanics_proven above are no longer preconditions (mechanics are still RECORDED as evidence).
+      # Every Stage-0 clause (n, folds, fidelity, holdout, cost stack, venue cost, affordability, 25% cap,
+      # prop superset, mirror equality) is unchanged. Revert = delete this line.
+      soak_step: retired
       cost_basis: venue_symbol
       # OPERATOR DECISION 2026-10-16 (popup "Require holdout", relayed by Manager
       # Session 2026-10-16 session_01VduHYzdaXe27wTDBLSu8ao; verbatim on checklist
@@ -1258,21 +1270,16 @@ mandates:
         what: the live trade review -- managing OPEN order packages (live-trade-review SKILL; REVIEWER-BRIEF for a repo-less reviewer)
         actions: [tighten_sl, close, partial_close, move_tp, widen_sl, change_size, add_entry]
         state: armed (apply_mode in config/live_trade_review.yaml decides per account)
-        # ADVICE ONLY (operator popup 2026-10-28 ~20:35Z, relayed by Manager session_01AFoLuJi1vLTnYv9LbP6539,
-        # verbatim "Advice-only tightens (Recommended)"): tighten_sl may be RECOMMENDED and is graded, but no
-        # automatic path executes it (src/runtime/live_review_rows.py::ADVICE_ONLY_ACTIONS; the rows watcher,
-        # live_review_dispatch.py and desk_intake.py log it advice_only). Evidence:
-        # comms/research/ltr_tighten_optimize/verdict.json over DESK-LIFECYCLE-S0 (#20967): 981 Claude tightens
-        # -0.097 R [-0.140, -0.047] net of the full cost stack; no registered tighten rule beat hold OOS.
-        # EXTENDED 2026-10-28 ~21:07Z to EVERY in-trade class (operator popup to ask A1, verbatim "Advice-only
-        # until tested", relayed by Manager session_01AFoLuJi1vLTnYv9LbP6539; row DESK-V1-MGMT-ADVICE-ONLY;
-        # evidence DESK-LIFECYCLE-S0 #20967: Claude whole-trade management -0.159 / -0.124 R vs hold). Each
-        # class is recorded and graded, never executed, until its OWN registered test passes under the risk-adjusted
-        # rule RULE-AM-RISK-ADJUSTED-V1 (operator 2026-10-29; docs/ARCHITECTURE-CANONICAL.md § "Active management"
-        # clause 4; scripts/research/am_risk_adjusted.py). GRADUATION = remove ONE class here AND from rows_lib.ADVICE_ONLY_ACTIONS in one PR citing its
-        # passed-test record (tests/test_tighten_advice_only.py pins equality). Entries, the claude_desk
-        # max-hold exit and venue brackets are not in_trade actions and are unaffected.
-        advice_only: [tighten_sl, widen_sl, move_tp, partial_close, close, change_size, add_entry]
+        # ADVICE-ONLY ENDED 2026-11-14 (operator directive, manager chat ~09:25Z, relayed by Manager Session
+        # 2026-11-13a, verbatim "Just turn on, like, no advice only. All those decisions should be implemented.
+        # And I should just get a ping when those changes are implemented based on LTR lane"). Every in-trade class
+        # a reviewed row recommends is APPLIED under this mandate through the existing path (rows watcher / desk
+        # intake -> live_review_dispatch -> live_review_apply -> each account's own RiskManager approve_amend /
+        # approve_action -> venue read-back), one trade-update ping per applied leg (mandate + review_id). No new
+        # path and no new gate. History: advice-only since 2026-10-28 (popups "Advice-only tightens (Recommended)" /
+        # "Advice-only until tested", row DESK-V1-MGMT-ADVICE-ONLY). Must equal
+        # src/runtime/live_review_rows.py::ADVICE_ONLY_ACTIONS (tests/test_tighten_advice_only.py pins equality).
+        advice_only: []
       entry_generation:
         what: desk-generated NEW entries from the desk's scan packet (trading-desk SKILL)
         actions: [propose_entry]
@@ -1613,6 +1620,85 @@ mandates:
       account_scope.accounts. An applied close, partial close or filled size
       change cannot be undone; a moved bracket can be moved back by the
       operator's amend-position-sl system-action.
+
+  # ── PER-ACCOUNT AUTO-APPLY ON PROP (kind: ltr_auto_apply, account_scope; operator 2026-11-12) ──
+  #
+  # The same mechanism as MD-LTR-PAPER-AUTO, scoped to the three live prop
+  # accounts and the three de-risking in-trade classes the operator granted
+  # (close, partial_close, tighten_sl). A package also carried by real money or a
+  # mirror is applied on the prop legs ONLY; bybit_2 / bybit_portfolio /
+  # alpaca_live / alpaca_portfolio stay advice-only and are not touched
+  # (ltr_auto_mandate.account_scope; live_review_apply.run filters the legs).
+  - id: MD-LTR-PROP-AUTO
+    kind: ltr_auto_apply
+    grants: every live-review close, partial close or stop-tighten call on a package carried by a live prop account (tradeify_1, velotrade_1; breakout_2 dropped 2026-11-12, account on ice) is applied automatically by the VM, on that account's leg only, and reported after it is applied; real money and the mirrors stay advice-only
+    direction: derisk_only
+    direction_note: >-
+      close / partial_close / tighten_sl all reduce risk on the prop leg. widen_sl,
+      move_tp, change_size and add_entry are NOT granted here and stay
+      advice-only on prop.
+    proposed_by: Manager Session 2026-11-11a (session_01AFoLuLyarNRcy3nziCep2U), on the operator's words below
+    proposed_at: '2026-11-12'
+    granted_by: operator (Ben)
+    granted_at: '2026-11-12'
+    source: >-
+      Operator chat with Manager Session 2026-11-11a, 2026-11-12. Context: the
+      breakout_2 live review (09:15Z) called close SOL to protect the static DD
+      floor; close was advice-only on prop, so the system could not apply it.
+      Operator, ~09:20Z, verbatim: "Yeah, but you can still execute the clause
+      that needs to be executed. The system needs to be able to do that on its
+      own. I'm not doing it manually anymore. Enough is enough." Operator,
+      ~09:24Z, verbatim: "This has to happen automatically without me having to
+      take you off auto mode. It's honestly just as bad as me having to do it
+      manually. That defeats the whole purpose." The manager then asked,
+      verbatim: "Do you grant the standing permission? It would let the VM apply
+      live-review decisions on breakout_2, tradeify_1 and velotrade_1 for close,
+      partial close and stop-tighten, with each action reported to you after it's
+      applied." Operator answer, ~09:26Z, verbatim: "Standing permission granted".
+      No calendar expiry: the operator's words name none.
+    parent: MD-TRADE-DESK
+    account_scope:
+      # breakout_2 dropped 2026-11-12: account breached and ON ICE (operator chat ~11:56Z via Manager Session
+      # 2026-11-11a, verbatim: "Breakout is breached - we're going to keep it on ice for now"). Narrows scope only.
+      # REVERT on operator reactivation: add breakout_2 back.
+      accounts: [tradeify_1, velotrade_1]
+      actions: [tighten_sl, partial_close, close]
+    executor_note: >-
+      Each account still needs an existing executor per action
+      (live_review_apply.ACTION_PATHS); without one the apply refuses it as
+      no_action_path:<action>, named in the writeback, with one ping. At grant
+      time the phone executor (breakout_2) lists close / reduce; prop_vm
+      (tradeify_1, velotrade_1) lists move_tp only, so close / reduce there
+      refuse until CAP-PROP-VM-CLOSE lands (TRADING assistant manager, surge).
+      Prop tighten goes through the LTR-8-PROP-TIGHTEN path. A phone close also
+      needs a clean Positions read (PHONE-POSITIONS-READ, #25197); an unread
+      position refuses (never acts on a read that could not look).
+    mechanism: >-
+      Same as MD-LTR-PAPER-AUTO: the VM rows watcher (~45 s poll) sees a
+      committed `recommended` row on live-review/rows whose `accounts` names a
+      scoped account and whose action is scoped, and dispatches it through
+      live_review_dispatch.py --ref to live_review_apply.py --mandate
+      MD-LTR-PROP-AUTO, which acts on the scoped prop legs only. No Claude
+      session places or orders anything.
+    fires_when:
+      - a committed live-review row on live-review/rows, read at a pinned commit, whose `accounts` names a scoped account, whose action is in account_scope.actions and whose route is recommended or auto_applied
+      - MD-TRADE-DESK's package-level clauses hold (mechanics match, a reason, a judgement confidence in [0, 1] or a table EV, the action's own target)
+      - config/live_trade_review.yaml apply_mode == apply for the account, and that account's own approve_amend / approve_action returns approve or clip
+      - every bound below holds
+    bounds:
+      - both_brackets -- both brackets exist at the venue after every action (TP doctrine clause 3); a tighten, widen, move_tp or reduce that leaves either unread is apply_failed
+      - widen_within_1r -- a widen_sl never puts the stop beyond the original entry risk (-1R = entry -/+ order_packages.meta.risk_per_unit); unread risk refuses the widen
+      - tp_live_target -- the TP stays a live predictive target (beyond the mark, beyond entry, never the 50R sentinel)
+      - idempotent_per_review_id -- a row applies at most once (the same review_id is refused); there is NO per-bar or time-window action cap [removed 2026-10-29, operator, row REMOVE-PER-BAR-CAP]
+      - venue_readback -- every leg is read back from the venue; a mismatch is apply_failed
+      - one_ping_per_action -- ONE Telegram trade-update per action naming account(s), symbol, action, level and review_id
+    never: [act on a leg held by any account outside account_scope.accounts (real money, a mirror, paper or any other prop account), widen a stop or move a TP or add size under this entry, move the shared package stop, act on a read that could not look, act on a mechanics mismatch, remove or null a stop-loss or a take-profit, bypass an account's own risk manager / sizing cap / exposure cap / daily-DD switch / breach guard, route one account's action through another's executor, write mode or execution, commit a packet from a reviewer]
+    notify: ONE trade-update ping per applied or refused action (account, symbol, action, level, review_id); brief section 1 line with the row
+    revert: >-
+      Delete this entry (or set expired_at): the prop accounts return to
+      advice-only on the next watcher pass. Narrow it by removing an account or
+      an action. An applied close or partial close cannot be undone; a tightened
+      stop can be moved back by the operator's amend-position-sl system-action.
 
 proposed:
 

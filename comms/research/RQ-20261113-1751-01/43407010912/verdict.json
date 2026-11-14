@@ -1,0 +1,189 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "tlt_pullback_1h: 65 trades in the baseline arm 'S1' on TLT 1h candles 2018-06-01 .. 2020-06-30 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['S1']",
+  "n": 65,
+  "measurement": {
+    "leg": "tlt_pullback_1h",
+    "label": "stage0_edge",
+    "grade": {
+      "verdict": "pass",
+      "label": "stage0_edge",
+      "baseline": "S1",
+      "net_r": 13.7978,
+      "n": 65,
+      "max_drawdown_r": 5.2599,
+      "folds_positive": 2,
+      "n_folds": 2,
+      "fold_majority": 2,
+      "n_floor": 25,
+      "control": null,
+      "why": "net_r=13.7978 > 0 with 2/2 positive folds at this arm's cost stack"
+    },
+    "arms": {
+      "S1": {
+        "reach_ge_6r": 0.0308,
+        "n": 65,
+        "net_r": 13.7978,
+        "net_r_fee_only": 19.7672,
+        "max_drawdown_r": 5.2599,
+        "by_outcome": {
+          "stop": 22,
+          "trail_stop": 42,
+          "take_profit": 1
+        },
+        "mean_bars_held": 12.169,
+        "net_r_per_capital_day": 0.4186,
+        "cost_stack": {
+          "fee_bps_roundtrip": 0.0,
+          "slippage_bps_roundtrip": 5.0,
+          "funding_bps_per_window": 0.0
+        },
+        "params": {
+          "trend_lookback": 60,
+          "pullback_lookback": 12,
+          "pullback_frac": 0.5,
+          "atr_stop_mult": 2.0,
+          "trail_mult": 3.0,
+          "min_confidence": 0.0
+        },
+        "data_start": "2018-06-28 13:00:00+00:00",
+        "data_end": "2020-06-30 19:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2018-06-28 13:00:00+00:00",
+            "end": "2019-06-30 06:29:30+00:00",
+            "trades": 32,
+            "net_r": 2.6006
+          },
+          {
+            "fold": 2,
+            "start": "2019-06-30 06:29:30+00:00",
+            "end": "2020-06-30 23:59:00+00:00",
+            "trades": 33,
+            "net_r": 11.1972
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "60",
+          "--pullback-lookback",
+          "12",
+          "--pullback-frac",
+          "0.5",
+          "--data",
+          "<data>",
+          "--symbol",
+          "TLT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.0",
+          "--trail-mult",
+          "3.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261113-1751-01/43407010912/arms/S1__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261113-1751-01/43407010912/arms/S1__bt.json",
+          "--trail-decay-stall-bars",
+          "6",
+          "--trail-decay-tight-mult",
+          "1.5",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--side-filter",
+          "short",
+          "--start",
+          "2018-06-01",
+          "--end",
+          "2020-06-30 23:59"
+        ]
+      }
+    },
+    "window": {
+      "start": "2018-06-01",
+      "end": "2020-06-30 23:59",
+      "fetch_days": 3060,
+      "feed": {
+        "source": "dukascopy",
+        "ticker": "TLT",
+        "interval": "60m",
+        "resample": "1h"
+      },
+      "fold_edges": [
+        "2018-06-28 13:00:00+00:00",
+        "2019-06-30 06:29:30+00:00",
+        "2020-06-30 23:59:00+00:00"
+      ]
+    },
+    "argv": {
+      "S1": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "60",
+          "--pullback-lookback",
+          "12",
+          "--pullback-frac",
+          "0.5",
+          "--data",
+          "<data>",
+          "--symbol",
+          "TLT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.0",
+          "--trail-mult",
+          "3.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261113-1751-01/43407010912/arms/S1__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261113-1751-01/43407010912/arms/S1__bt.json",
+          "--trail-decay-stall-bars",
+          "6",
+          "--trail-decay-tight-mult",
+          "1.5",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--side-filter",
+          "short",
+          "--start",
+          "2018-06-01",
+          "--end",
+          "2020-06-30 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [
+          "--side-filter",
+          "short"
+        ],
+        "omitted_levers_per_builder": [
+          "decision_bar"
+        ]
+      }
+    }
+  },
+  "note": "PASS / stage0_edge: net_r=13.7978 > 0 with 2/2 positive folds at this arm's cost stack"
+}

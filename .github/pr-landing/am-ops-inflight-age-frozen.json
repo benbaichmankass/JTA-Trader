@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "WR-1113 item 5 (14 'stale' in_flight rows) is a false alarm. attention_watch.probe_inflight dates a row by the last git commit on docs/claude/work/checklist/<id>.json, but after the WSD-S4 freeze row writes go to work_store.db and the file is never committed again, so every row ages from the freeze. The brief said ML-SHADOW-NEVER-ORDERS 15d; the store shows it written 2026-11-12T14:49Z; work.py list --state in_flight shows 0 of 76 rows older than 3d. Fix: when the checklist is frozen, the probe uses each row's updated_at (the rows are read from the store); unreadable timestamps are counted, not called stale; no git read, so a shallow clone works too. Pre-freeze paths unchanged. Tests: tests/test_attention_watch_inflight_frozen.py. Observability only. Revert: git revert."
+}

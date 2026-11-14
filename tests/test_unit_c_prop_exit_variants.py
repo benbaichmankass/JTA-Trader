@@ -65,10 +65,11 @@ def test_variants_present_with_tightened_exits():
         # Same entry params as the un-tightened siblings (only exits differ).
         assert (b["donchian"], b["atr_period"], b["atr_stop_mult"]) == (20, 14, 2.5)
         # sol 0.6 -> 0.8 per the M21 E-2 depth cell (wf 5/6 on the prop twin,
-        # 6/6 on the sol sibling, sweep 2026-07-13); eth stays 0.6 (no pass).
-        # Sibling parity is enforced by test_entries_unchanged... below.
-        assert b["min_confidence"] == (0.80 if name == "trend_donchian_sol_prop"
-                                       else 0.60)
+        # 6/6 on the sol sibling, sweep 2026-07-13). eth_prop 0.6 -> 0.8 on 2026-11-14 (Tier-3, data-backed, demo
+        # floor only): RQ-20261114-db1a-06 PASS on its closed bar, record year and the year before
+        # (research/results/RQ-20261114-db1a-06/43596786598.jsonl), a deliberate, evidence-backed departure
+        # from its sibling trend_donchian_eth (still 0.6, untested at 0.8 on its forming bar).
+        assert b["min_confidence"] == 0.80
 
 
 def test_exit_recipe_matches_validated_prop_sibling():
@@ -88,8 +89,13 @@ def test_entries_unchanged_vs_untightened_siblings():
     s = _strategies()
     pairs = (("trend_donchian_sol_prop", "trend_donchian_sol"),
              ("trend_donchian_eth_prop", "trend_donchian_eth"))
+    # 2026-11-14: trend_donchian_eth_prop.min_confidence departs from its sibling on evidence (RQ-20261114-db1a-06,
+    # see test_variants_present_with_tightened_exits); every other entry param stays pinned to the sibling.
+    evidenced = {("trend_donchian_eth_prop", "min_confidence")}
     for variant, base in pairs:
         for k in ("donchian", "atr_period", "atr_stop_mult", "min_confidence", "timeframe"):
+            if (variant, k) in evidenced:
+                continue
             assert s[variant][k] == s[base][k], f"{variant}.{k} drifted from {base}"
         # SOL is long-only (its edge holds long-only); ETH stays two-sided.
         assert s["trend_donchian_sol_prop"].get("long_only") is True
@@ -191,7 +197,7 @@ def test_routed_to_breakout_2_and_breakout_1_retired():
     a = _accounts()["breakout_2"]
     # 2026-10-29 (Tier-3, operator): sol_prop pulled from breakout_2 (V2 prop gate); the variant stays defined.
     # 2026-11-05 (Tier-3, operator 'Pull from prop (Recommended)', row PROP-PULL-ETHPROP): trend_donchian_eth_prop pulled (RQ-20261031-422a-01 FAIL); roster is an explicit []. REVERT: re-add eth_prop here.
-    assert a["strategies"] == ["trend_donchian_eth_4h", "trend_donchian_sol_4h", "ml_entry"]  # +ml_entry 2026-11-08 ML-ENTRY-PROP-BASELINE (operator chat ~23:35Z); was ["trend_donchian_eth_4h", "trend_donchian_sol_4h"] # 2026-11-05 ~21:05Z (Tier-3, operator "Baseline at min size (Rec.)" + "Both now, waive both"): min-size BASELINE roster. 2026-11-06 ~20:18Z operator "Keep sol_4h on all prop books (Recommended)" (supersedes the ~19:40Z pull). REVERT: [].
+    assert a["strategies"] == []  # 2026-11-12 ON ICE (operator: "Breakout is breached - we're going to keep it on ice for now"), roster emptied #25306. Was ["trend_donchian_eth_4h", "trend_donchian_sol_4h", "ml_entry"]; REVERT on reactivation.
     assert "trend_donchian_eth_prop" not in a["strategies"]
     assert "trend_donchian_sol_prop" not in a["strategies"]
 

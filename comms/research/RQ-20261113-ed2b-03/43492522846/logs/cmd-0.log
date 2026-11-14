@@ -1,0 +1,2 @@
+3921 trades priced of 4076 in 8 committed Stage-0 corpora (ada_pullback_2h, iaum_pullback_1d, ml_entry, trend_donchian_eth_4h, trend_donchian_eth_prop, trend_donchian_sol_prop, trend_donchian_xrp_4h, xrp_pullback_2h); action sl_to_structure; triggers ['new_peak', 'r_milestone', 'swing']
+pass SCREEN under RULE-AM-RISK-ADJUSTED-V1 (per-trade R; graduation_eligible false). sl_to_structure@new_peak: pass (risk_adjusted_pass); sl_to_structure@r_milestone: fail (fails_R2_R3); sl_to_structure@swing: fail (fails_R2_R3)

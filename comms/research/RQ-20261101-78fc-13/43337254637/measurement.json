@@ -1,0 +1,169 @@
+{
+  "leg": "ict_scalp_mgc_15m",
+  "label": "stage0_no_edge",
+  "grade": {
+    "verdict": "fail",
+    "label": "stage0_no_edge",
+    "baseline": "W",
+    "net_r": -176.1031,
+    "n": 526,
+    "max_drawdown_r": 176.7273,
+    "folds_positive": 0,
+    "n_folds": 6,
+    "fold_majority": 4,
+    "n_floor": 30,
+    "control": null,
+    "why": "net_r=-176.1031 with 0/6 positive folds (needs > 0 and >= 4)"
+  },
+  "arms": {
+    "W": {
+      "reach_ge_6r": 0.0038,
+      "n": 526,
+      "net_r": -176.1031,
+      "net_r_fee_only": -103.383,
+      "max_drawdown_r": 176.7273,
+      "by_outcome": {
+        "sl_hit": 156,
+        "timeout": 268,
+        "tp_hit": 78,
+        "be_stop": 24
+      },
+      "mean_bars_held": 18.196,
+      "net_r_per_capital_day": -1.7664,
+      "cost_stack": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": null,
+      "data_start": "2019-01-01 23:00:00",
+      "data_end": "2026-10-30 20:45:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2019-01-01 00:00:00+00:00",
+          "end": "2020-04-21 19:59:50+00:00",
+          "trades": 64,
+          "net_r": -19.2962
+        },
+        {
+          "fold": 2,
+          "start": "2020-04-21 19:59:50+00:00",
+          "end": "2021-08-11 15:59:40+00:00",
+          "trades": 91,
+          "net_r": -35.5002
+        },
+        {
+          "fold": 3,
+          "start": "2021-08-11 15:59:40+00:00",
+          "end": "2022-12-01 11:59:30+00:00",
+          "trades": 79,
+          "net_r": -17.7044
+        },
+        {
+          "fold": 4,
+          "start": "2022-12-01 11:59:30+00:00",
+          "end": "2024-03-22 07:59:20+00:00",
+          "trades": 66,
+          "net_r": -30.9621
+        },
+        {
+          "fold": 5,
+          "start": "2024-03-22 07:59:20+00:00",
+          "end": "2025-07-12 03:59:10+00:00",
+          "trades": 98,
+          "net_r": -42.6304
+        },
+        {
+          "fold": 6,
+          "start": "2025-07-12 03:59:10+00:00",
+          "end": "2026-10-31 23:59:00+00:00",
+          "trades": 128,
+          "net_r": -30.0095
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "MGC",
+        "--timeframe",
+        "15m",
+        "--strategy-name",
+        "ict_scalp_mgc_15m",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261101-78fc-13/43337254637/arms/W__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261101-78fc-13/43337254637/arms/W__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven",
+        "--start",
+        "2019-01-01",
+        "--end",
+        "2026-10-31 23:59"
+      ]
+    }
+  },
+  "window": {
+    "start": "2019-01-01",
+    "end": "2026-10-31 23:59",
+    "fetch_days": 2900,
+    "feed": {
+      "source": "dukascopy",
+      "ticker": "MGC",
+      "interval": "15m",
+      "resample": "15m"
+    },
+    "fold_edges": [
+      "2019-01-01 00:00:00+00:00",
+      "2020-04-21 19:59:50+00:00",
+      "2021-08-11 15:59:40+00:00",
+      "2022-12-01 11:59:30+00:00",
+      "2024-03-22 07:59:20+00:00",
+      "2025-07-12 03:59:10+00:00",
+      "2026-10-31 23:59:00+00:00"
+    ]
+  },
+  "argv": {
+    "W": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "MGC",
+        "--timeframe",
+        "15m",
+        "--strategy-name",
+        "ict_scalp_mgc_15m",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261101-78fc-13/43337254637/arms/W__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261101-78fc-13/43337254637/arms/W__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven",
+        "--start",
+        "2019-01-01",
+        "--end",
+        "2026-10-31 23:59"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": []
+    }
+  }
+}

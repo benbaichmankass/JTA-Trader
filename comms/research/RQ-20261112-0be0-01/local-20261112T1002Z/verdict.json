@@ -1,0 +1,225 @@
+{
+ "verdict": "fail",
+ "read_state": "measured",
+ "n": 10641,
+ "measurement": {
+  "schema": "ml_decision_manage_reverse/1",
+  "unit": "RQ-20261112-0be0-01",
+  "entry_tau": 0.1,
+  "base": "static 2.0/4.0 ATR, 24h",
+  "dev": {
+   "trades": 66820,
+   "hold_mean_net_r": 0.02094931068299342,
+   "rules": {
+    "own_le0": {
+     "delta": -0.014311424486001322,
+     "folds_positive": 3,
+     "n_folds": 8,
+     "by_fold": {
+      "2022-01-01": 0.00578,
+      "2022-07-01": -0.0029,
+      "2023-01-01": -0.05448,
+      "2023-07-01": 0.03327,
+      "2024-01-01": -0.02235,
+      "2024-07-01": -0.05425,
+      "2025-01-01": -0.0272,
+      "2025-07-01": 0.01513
+     },
+     "share_closed": 0.777267285243939,
+     "check_in_coverage": 0.9995360670457947
+    },
+    "opp_gt_tau": {
+     "delta": 0.00035267905643812994,
+     "folds_positive": 5,
+     "n_folds": 8,
+     "by_fold": {
+      "2022-01-01": 0.01105,
+      "2022-07-01": 0.0041,
+      "2023-01-01": -0.01026,
+      "2023-07-01": 0.00222,
+      "2024-01-01": -0.0042,
+      "2024-07-01": -0.01066,
+      "2025-01-01": 0.00516,
+      "2025-07-01": 0.00441
+     },
+     "share_closed": 0.26384316073032027,
+     "check_in_coverage": 0.9995360670457947
+    },
+    "either": {
+     "delta": -0.014678924758452299,
+     "folds_positive": 3,
+     "n_folds": 8,
+     "by_fold": {
+      "2022-01-01": 0.00415,
+      "2022-07-01": -0.00337,
+      "2023-01-01": -0.05527,
+      "2023-07-01": 0.03312,
+      "2024-01-01": -0.0211,
+      "2024-07-01": -0.05417,
+      "2025-01-01": -0.02746,
+      "2025-07-01": 0.01513
+     },
+     "share_closed": 0.7804399880275367,
+     "check_in_coverage": 0.9995360670457947
+    }
+   },
+   "chosen": "opp_gt_tau"
+  },
+  "heldout": {
+   "n": 10641,
+   "mean_net_r": 0.0074558259163469785,
+   "delta_vs_hold": -0.006956032236045978,
+   "win_rate": 0.4352034583215863,
+   "p05_net_r": -1.0996857988165676,
+   "min_net_r": -1.3976611976048026,
+   "n_symbols": 53,
+   "share_changed": 0.0637158161826896,
+   "hold": {
+    "n": 10641,
+    "mean_net_r": 0.014411858152392952,
+    "delta_vs_hold": 0.0,
+    "win_rate": 0.43285405507001223,
+    "p05_net_r": -1.1002162162162124,
+    "min_net_r": -1.3976611976048026,
+    "n_symbols": 53,
+    "share_changed": 0.0
+   },
+   "delta_ci": [
+    -0.013516945113105402,
+    -0.0007045087301299073
+   ],
+   "ci_tag": "CI99.16 (deflated, read 6)",
+   "n_closed": 1377,
+   "mean_delta_per_closed": -0.05375391359750563,
+   "closed_at_checkin": {
+    "4": 229,
+    "8": 234,
+    "12": 384,
+    "16": 238,
+    "20": 292
+   },
+   "day_clustered": {
+    "n_day_clusters": 353,
+    "se": 0.008192412324919475,
+    "t": -0.8490822922678456
+   },
+   "matched_random": {
+    "draws": 200,
+    "mean": -0.0010528156843119768,
+    "p95": 0.0023239916505668626
+   },
+   "peek": {
+    "peeked_symbols": [
+     "ADAUSDT",
+     "BCHUSDT",
+     "BTCUSDT",
+     "ETCUSDT",
+     "ETHUSDT",
+     "LINKUSDT",
+     "LTCUSDT",
+     "TRXUSDT",
+     "XLMUSDT"
+    ],
+    "n_ex_peeked": 9125,
+    "delta_vs_hold_ex_peeked": -0.007300616365108072
+   },
+   "by_month_delta": {
+    "2025-10": {
+     "n": 1145,
+     "delta": 0.0097
+    },
+    "2025-11": {
+     "n": 941,
+     "delta": 0.0068
+    },
+    "2025-12": {
+     "n": 839,
+     "delta": -0.0122
+    },
+    "2026-01": {
+     "n": 1085,
+     "delta": -0.0221
+    },
+    "2026-02": {
+     "n": 990,
+     "delta": -0.0803
+    },
+    "2026-03": {
+     "n": 853,
+     "delta": 0.0418
+    },
+    "2026-04": {
+     "n": 717,
+     "delta": -0.0074
+    },
+    "2026-05": {
+     "n": 746,
+     "delta": -0.0037
+    },
+    "2026-06": {
+     "n": 1056,
+     "delta": 0.0024
+    },
+    "2026-07": {
+     "n": 664,
+     "delta": 0.0011
+    },
+    "2026-08": {
+     "n": 838,
+     "delta": -0.01
+    },
+    "2026-09": {
+     "n": 767,
+     "delta": -0.0003
+    }
+   },
+   "by_side_delta": {
+    "long": -0.021573451217258927,
+    "short": -0.0003503709363083219
+   },
+   "giveback_r": 1.0195389242367248,
+   "giveback_r_hold": 1.0357851113649352
+  },
+  "holdout_claim": {
+   "model_id": "MANAGE-reverse-opp_gt_tau",
+   "family": "MANAGE",
+   "start": "2025-10-01",
+   "end": "2026-09-30",
+   "train_end": "2025-09-30",
+   "unit": "RQ-20261112-0be0-01",
+   "reader": "lane ML-DECISION-MODELS local session_01AFoLuHrh2txGoKFBMCuhC9",
+   "read_at": "2026-11-12T10:02:02Z",
+   "backfilled": false,
+   "symbols": null,
+   "variants_on_window": 19,
+   "n_tries": 6,
+   "bar": {
+    "n_tries": 6,
+    "alpha_one_sided": 0.004211,
+    "ci_level": 0.991579,
+    "ci_z": 2.6347,
+    "ci_lo_percentile": 0.4211,
+    "point_t_min": 1.3001,
+    "method": "Sidak-corrected CI (alpha_N = 1-(1-0.025)^(1/N), one-sided) for CI bars; Bailey-Lopez de Prado expected max of N null t-stats for point bars"
+   },
+   "next_bar": {
+    "n_tries": 7,
+    "alpha_one_sided": 0.00361,
+    "ci_level": 0.992779,
+    "ci_z": 2.6865,
+    "ci_lo_percentile": 0.361,
+    "point_t_min": 1.3868,
+    "method": "Sidak-corrected CI (alpha_N = 1-(1-0.025)^(1/N), one-sided) for CI bars; Bailey-Lopez de Prado expected max of N null t-stats for point bars"
+   }
+  },
+  "git_sha": "9660560eada7c1ae4a469b5062d3155b7b86556f",
+  "elapsed_s": 112
+ },
+ "note": "rule opp_gt_tau: delta vs hold-to-bracket -0.0070 R/trade, CI99.16 (deflated, read 6) [-0.0135, -0.0007] does not clear 0 at n=10641",
+ "decision_rule": {
+  "id": "RULE-RQ20261112-0be0-01-REVCLOSE",
+  "registered_at": "2026-11-12",
+  "registered_before_run": true
+ },
+ "population": "frozen ENTRY (tau 0.1) trades, static 2.0/4.0 ATR 24h, 60-perp bp2-f4271084b120; dev 2022-01-01..2025-10-01 (walk-forward OOS); held-out 2025-10-01..2026-09-30; full cost stack; paired vs hold-to-bracket"
+}

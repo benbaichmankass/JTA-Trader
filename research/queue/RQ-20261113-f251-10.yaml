@@ -1,0 +1,240 @@
+id: RQ-20261113-f251-10
+title: 'htf_pullback_trend_2h adx_min lever on the FORMING bar: 20 / 25 / 30 vs none over the record window -- does the closed-bar gain carry to the bar the leg trades?'
+status: done
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+question: 'htf_pullback_trend_2h fails RULE-D1 on the forming bar (f251-01: -23.37R over n 105). adx_min passed on the CLOSED bar (RQ-20261101-78fc-33 25/30, RQ-20261104-004
+  35) but was never adopted and never measured on the forming bar. With adx_min 20, 25 and 30 over 2025-11-13..2026-11-12 (forming, Binance 1m), does any arm pass
+  Stage 0 and beat the ungated baseline net of the full cost stack?'
+why_this_matters: Demo-floor leg, one iteration from its diagnosis (row DEMO-FLOOR-ITER-20261113). The filter family's adx_min has three closed-bar passes but no
+  forming-bar measurement; the forming replay applies an arm's adx_min (this PR's block_with_entry_gates).
+power:
+  expected_n: 200
+  min_detectable_effect: 0.4
+  effect_units: sd
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: baseline n 105 (f251-01); a gated arm keeps ~40-70%. At n ~50 a one-sample test detects ~0.4 sd at 80% power.'
+  sd: null
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window (the leg's own record window); nothing accrues; Binance / Binance-vision 1m covers it at run time.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+run:
+  commands:
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - htf_pullback_trend_2h
+    - --arm
+    - A=
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2025-11-13T00:00:00'
+    - --end
+    - '2026-11-12T22:00:00'
+    - --days
+    - '400'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '30'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/arm_A'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - htf_pullback_trend_2h
+    - --arm
+    - D20=adx_min=20
+    - --grade
+    - stage0
+    - --baseline
+    - D20
+    - --start
+    - '2025-11-13T00:00:00'
+    - --end
+    - '2026-11-12T22:00:00'
+    - --days
+    - '400'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '30'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/arm_D20'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - htf_pullback_trend_2h
+    - --arm
+    - D25=adx_min=25
+    - --grade
+    - stage0
+    - --baseline
+    - D25
+    - --start
+    - '2025-11-13T00:00:00'
+    - --end
+    - '2026-11-12T22:00:00'
+    - --days
+    - '400'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '30'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/arm_D25'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - htf_pullback_trend_2h
+    - --arm
+    - D30=adx_min=30
+    - --grade
+    - stage0
+    - --baseline
+    - D30
+    - --start
+    - '2025-11-13T00:00:00'
+    - --end
+    - '2026-11-12T22:00:00'
+    - --days
+    - '400'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '30'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/arm_D30'
+  - - python3
+    - scripts/research/timeframe_lever_grade.py
+    - --out
+    - '{out_dir}'
+    - --leg
+    - htf_pullback_trend_2h
+    - --baseline-tf
+    - A
+    - --family
+    - filter
+    - --prefix
+    - arm_
+    - --tf
+    - A
+    - --tf
+    - D20
+    - --tf
+    - D25
+    - --tf
+    - D30
+  timeout_minutes: 240
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261113-f251-10
+decision_rule:
+  id: RULE-DFI-HTF-ADX-20261113
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  statistic: exit_lever_ablation --grade stage0 --forming-1m-fetch, one run per arm (A ungated, D20/D25/D30 adx_min); timeframe_lever_grade.py --family filter over
+    the four.
+  rule: Registered 2026-11-13 on row DEMO-FLOOR-ITER-20261113 before any run of this arm set (no arm was run on this window before registration). Each arm runs as
+    its OWN Stage-0 run through exit_lever_ablation --grade stage0 on the same pinned window, feed and full cost stack (fee + slippage + funding from resolve_run_costs);
+    timeframe_lever_grade.py grades them together. PASS iff some candidate passes its own Stage 0 (net_r > 0, n >= 30, >= 3/4 folds positive) AND its net_r exceeds
+    the baseline arm's net_r. FAIL iff every candidate is graded (n >= 30) and none passes both. INDETERMINATE otherwise (a run wrote no verdict, the baseline did
+    not run, a candidate under its n floor). Arms, window, folds and floors are fixed now.
+  what_it_does_not_do: Changes no config, roster, order or evidence record. A PASS is a data-backed Tier-3 proposal routed to the manager via AM-ML (the leg stays
+    on the demo floor until then); a FAIL is recorded on the lever map and the next untested family is picked.
+  baseline: htf_pullback_trend_2h config-exact (no adx_min), forming, re-run in this unit (f251-01 read -23.37R over n 105).
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: a demo-floor (Stage-1 paper) leg failing RULE-D1 on its forming record; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+ml_consumer:
+  not_applicable: 'Not an ML unit: a harness lever test on a rule-based leg.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: htf_pullback_trend_2h
+  subject_kind: strategy_leg
+  from_result: RQ-20261113-f251-01
+  verdict_read: fail
+  diagnosis: 'Gross -14.2R. ADX cells: 20-25 -11.7R, <20 -6.7R, >=25 -5.0R -- every cell negative, the least so above 25. Closed-bar evidence: adx_min 25/30/35 each
+    a fold-stable gain (78fc-33, 004).'
+  hypothesis: An ADX floor on the forming bar removes enough of the losing low-trend entries to clear Stage 0, as on the closed bar.
+  search: 'Lever map: direction side_filter long (004, single-point pass, closed bar), entry pullback_frac / trend_lookback, exit atr_stop_mult / tp_r, filter adx_min
+    (25/30/35 closed-bar passes), structure_exit -- tested on the closed bar only. Chosen: adx_min on the forming bar, the most-evidenced lever never adopted. Direction
+    long-only ranked next.'
+  attempt: 1
+  due_by: '2026-11-20'
+  levers:
+  - filter
+  lever_arms:
+  - family: filter
+    param: adx_min
+    values:
+    - 20
+    - 25
+    - 30
+    baseline_value: null
+  map_entries:
+  - research/levers/htf_pullback_trend_2h.yaml
+related:
+- RQ-20261113-f251-01
+- RQ-20261101-78fc-33
+- RQ-20261104-004
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): ONE lever chosen from the leg''s own R diagnosis (scripts/research/leg_r_diagnosis.py),
+  rule registered before the run against the leg''s own record, net of the full cost stack, graded once on its fixed window.'
+follow_up: On the verdict a session writes the tests to research/levers/htf_pullback_trend_2h.yaml. PASS -> Tier-3 proposal to the manager via AM-ML; FAIL -> the
+  next untested lever family from the map (row DEMO-FLOOR-ITER-20261113).
+last_dispatched_at: '2026-11-13T17:20:39+00:00'
+grading:
+  attested: RULE-DFI-HTF-ADX-20261113
+  auto: true
+  decision_rule_id: RULE-DFI-HTF-ADX-20261113
+  evidence:
+  - research/results/RQ-20261113-f251-10/43471894620.jsonl
+  graded_at: '2026-11-13'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 4 row(s), all measured, all fail
+  rows: 4
+  verdict: fail

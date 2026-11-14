@@ -23,6 +23,32 @@ the package's ATR; later ticks of the bar are ignored. ``rest_high/rest_low``
 = the bar's range after the entry tick (the harness exits there on a touched
 stop/target).
 
+US-SESSION MODE (``session="us_equity"``; row EQ-FORMING-BAR-REPLAY, 2026-11-13).
+A US equity daily bar is a SESSION, not a 1440-minute UTC block. Its harness
+timestamp is the session DATE at 00:00Z (the Yahoo/lake convention, which the
+harnesses' right-closed 1d resample leaves unchanged), so ``floor("1440min")`` on
+a 1m timestamp would put every minute in the wrong bar. In session mode each 1m
+row is assigned to the bar whose DATE equals the minute's America/New_York
+date, and its column is the minute of the ET day (09:30 ET = 570). Ticks run
+only inside the cash session (``US_OPEN_MIN`` + tick_step .. ``US_CLOSE_MIN``),
+the leg's US-session gate: the live builder decides after the open on the
+session's own bar (``_fetch_session_frame`` refuses the previous session's bar)
+and an order outside the session does not fill. Default ``session=None`` is the
+crypto behaviour, byte-identical.
+
+US-INTRADAY MODE (``session="us_equity_intraday"``; row CRYPTO-FORMING-EQUITY-REGEN
+phase B, 2026-11-13). An intraday US equity leg (slv_trend_1h) reads the venue's
+CLOCK-ALIGNED bars -- Alpaca ``1Hour``, stamped at the bar's start, extended hours
+included (``alpaca_connector._bars_paged`` applies no session filter) -- and live
+evaluates the still-forming one (MEASURED 2026-11-12 15:00-16:10Z, 63
+``slv_trend_1h_eval`` rows: bar_open 15:00 evaluated 15:02..15:57 with a moving
+close, bar 16:00 from 16:03). So 1m rows map to bars exactly as in crypto (floor to
+the bar), and ticks run every ``tick_step`` minutes across the bar, but a tick
+counts only when the LIVE gate ``market_hours.is_market_open("us_equity")`` is true at
+its decision instant (bar start + k minutes). The live function is called, not
+re-implemented, so its [open, close) bounds and its DST-month approximation carry
+over exactly (``intraday_tick_mask``).
+
 order_package is only called on ticks passing an EXACT necessary direction
 pre-filter (close vs the shift(1) midline/range or Donchian channel — neither
 depends on the forming row), so the result equals calling it on every tick.
@@ -45,6 +71,10 @@ if str(ROOT) not in sys.path[:1]:
 
 WINDOW = 200            # live fetch_candles(limit=200)
 TICK_STEP = 2           # live tick cadence, minutes
+US_TZ = "America/New_York"
+US_OPEN_MIN = 570       # 09:30 ET, minute of the ET day
+US_CLOSE_MIN = 960      # 16:00 ET
+SESSIONS = ("us_equity", "us_equity_intraday")
 
 
 def tf_minutes(timeframe: str) -> int:
@@ -63,17 +93,43 @@ def _utc(ts: pd.Series) -> pd.Series:
     return t
 
 
-def minute_matrices(m1: pd.DataFrame, bars: pd.DataFrame, tf_min: int) -> Dict[str, np.ndarray]:
+def _session_keys(ts: pd.Series, bars: pd.DataFrame, tf_min: int, session: str):
+    """(bar row or NaN, minute-of-ET-day) per 1m row, for a US-session daily frame."""
+    if session not in SESSIONS:
+        raise ValueError(f"unknown session {session!r} (expected one of {SESSIONS})")
+    if tf_min != 1440:
+        raise ValueError(f"session={session!r} is defined for daily bars only, got {tf_min} min")
+    bts = pd.DatetimeIndex(_utc(bars["timestamp"]))
+    if len(bts) and ((bts - bts.normalize()) != pd.Timedelta(0)).any():
+        raise ValueError("session mode needs daily bars stamped at the session DATE 00:00Z "
+                         "(the Yahoo/lake convention); got intraday-stamped bars")
+    et = ts.dt.tz_convert(US_TZ)
+    day = et.dt.tz_localize(None).dt.normalize().dt.tz_localize("UTC")
+    row_of = pd.Series(np.arange(len(bars)), index=bts)
+    rows = row_of.reindex(pd.DatetimeIndex(day)).to_numpy()
+    cols = (et.dt.hour * 60 + et.dt.minute).to_numpy()
+    return rows, cols
+
+
+def minute_matrices(m1: pd.DataFrame, bars: pd.DataFrame, tf_min: int,
+                    session: Optional[str] = None) -> Dict[str, np.ndarray]:
     """Per bar (row, aligned to ``bars``) × minute-into-bar (col): the running
     high / low / last close the live fetch sees after that minute, and the
-    remaining high / low from that minute on."""
+    remaining high / low from that minute on. ``session="us_equity"``: the
+    column is the minute of the ET day and the row the bar of that ET date."""
     ts = _utc(m1["ts"] if "ts" in m1 else m1["timestamp"])
-    key = ts.dt.floor(f"{tf_min}min")
-    row_of = pd.Series(np.arange(len(bars)), index=pd.DatetimeIndex(_utc(bars["timestamp"])))
-    rows = row_of.reindex(key).to_numpy()
-    ok = ~np.isnan(rows)
-    r = rows[ok].astype(int)
-    c = ((ts - key).dt.total_seconds() // 60).astype(int).to_numpy()[ok]
+    if session == "us_equity":
+        rows, cmin = _session_keys(ts, bars, tf_min, session)
+        ok = ~np.isnan(rows)
+        r = rows[ok].astype(int)
+        c = cmin[ok].astype(int)
+    else:
+        key = ts.dt.floor(f"{tf_min}min")
+        row_of = pd.Series(np.arange(len(bars)), index=pd.DatetimeIndex(_utc(bars["timestamp"])))
+        rows = row_of.reindex(key).to_numpy()
+        ok = ~np.isnan(rows)
+        r = rows[ok].astype(int)
+        c = ((ts - key).dt.total_seconds() // 60).astype(int).to_numpy()[ok]
     shape = (len(bars), tf_min)
     H = np.full(shape, np.nan)
     L = np.full(shape, np.nan)
@@ -200,19 +256,52 @@ def _pool(workers: int, family: str, label: str, block: dict, bars: pd.DataFrame
                                initargs=(family, label, block, bars, mats))
 
 
+def session_ticks(session: Optional[str], tf_min: int, tick_step: int = TICK_STEP) -> List[int]:
+    """Tick k = minutes [0, k) of the bar seen. Crypto: every tick_step minutes
+    across the bar. us_equity: the cash session only, first tick tick_step
+    minutes after the 09:30 ET open, last at the 16:00 ET close."""
+    if session:
+        if session not in SESSIONS:
+            raise ValueError(f"unknown session {session!r}")
+        if session == "us_equity":
+            return list(range(US_OPEN_MIN + tick_step, US_CLOSE_MIN + 1, tick_step))
+    return list(range(tick_step, tf_min - 1, tick_step))
+
+
+def intraday_tick_mask(bars: pd.DataFrame, ticks: List[int]) -> np.ndarray:
+    """us_equity_intraday: (n_bars, n_ticks) bool -- tick k of bar i is a live decision iff the LIVE gate
+    ``src.runtime.market_hours.is_market_open("us_equity", bar start + k minutes)`` is true. The live function is
+    called, not re-implemented, so its exact semantics carry over: [open, close) on the UTC clock from its DST-month
+    table (March/November read as standard time), weekends closed, no holiday or half-day calendar (a holiday reads
+    open; the venue simply prints no bars then)."""
+    from datetime import timedelta
+    from src.runtime.market_hours import is_market_open
+    starts = pd.DatetimeIndex(_utc(bars["timestamp"])).to_pydatetime()
+    deltas = [timedelta(minutes=int(k)) for k in ticks]
+    out = np.zeros((len(starts), len(ticks)), dtype=bool)
+    for i, t0 in enumerate(starts):
+        for j, dk in enumerate(deltas):
+            out[i, j] = is_market_open("us_equity", t0 + dk)
+    return out
+
+
 def forming_entry_override(bars: pd.DataFrame, m1: pd.DataFrame, block: dict, *,
                            family: str, label: str, workers: int = 4,
                            tick_step: int = TICK_STEP,
-                           mats: Optional[Dict[str, np.ndarray]] = None) -> Dict[int, dict]:
+                           mats: Optional[Dict[str, np.ndarray]] = None,
+                           session: Optional[str] = None) -> Dict[int, dict]:
     """The live forming-bar entry decision for every bar of ``bars`` (positional
     index, harness frame), from 1m data ``m1`` (columns ts|timestamp, high,
-    low, close) and the leg's config/strategies.yaml ``block``."""
+    low, close) and the leg's config/strategies.yaml ``block``.
+    ``session="us_equity"``: see the module docstring (US-SESSION MODE)."""
     bars = bars.reset_index(drop=True)
     tf_min = tf_minutes(block.get("timeframe"))
     if mats is None:
-        mats = minute_matrices(m1, bars, tf_min)
-    ticks = list(range(tick_step, tf_min - 1, tick_step))
+        mats = minute_matrices(m1, bars, tf_min, session=session)
+    ticks = session_ticks(session, tf_min, tick_step)
     pre = direction_prefilter(family, bars, block, mats["last_c"][:, [k - 1 for k in ticks]])
+    if session == "us_equity_intraday":
+        pre = pre & intraday_tick_mask(bars, ticks)
     idx = [i for i in range(WINDOW - 1, len(bars) - 1) if pre[i].any()]
     tks = [[ticks[c] for c in np.flatnonzero(pre[i])] for i in idx]
     out: Dict[int, dict] = {}
@@ -257,3 +346,75 @@ def cli_inputs(klines_dir: str, strategy_name: str) -> Tuple[pd.DataFrame, dict]
         sys.modules["vol_skip_forming_bar_replay"] = vs
         spec.loader.exec_module(vs)
     return vs.load_1m(klines_dir, sym), block
+
+
+def _yaml_block(strategy_name: str) -> dict:
+    import yaml
+    cfg = yaml.safe_load((ROOT / "config/strategies.yaml").read_text())
+    block = cfg.get("strategies", cfg).get(strategy_name)
+    if not block:
+        raise SystemExit(f"--decision-bar forming: no config/strategies.yaml block "
+                         f"named {strategy_name!r} (pass --strategy-name <leg>)")
+    return dict(block)
+
+
+def load_1m_csv(path: str) -> pd.DataFrame:
+    """A 1m CSV (timestamp, open, high, low, close[, volume]) as the frame
+    ``minute_matrices`` reads: tz-aware UTC ``timestamp``, numeric OHLC, sorted,
+    de-duplicated."""
+    df = pd.read_csv(path)
+    tcol = "timestamp" if "timestamp" in df.columns else "ts"
+    df = df.rename(columns={tcol: "timestamp"})
+    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+    for c in ("open", "high", "low", "close"):
+        df[c] = pd.to_numeric(df[c], errors="coerce")
+    df = df.dropna(subset=["high", "low", "close"])
+    return df.sort_values("timestamp").drop_duplicates("timestamp").reset_index(drop=True)
+
+
+def cli_inputs_csv(csv_path: str, strategy_name: str) -> Tuple[pd.DataFrame, dict]:
+    """(1m frame, YAML block) for ``--decision-bar forming --minutes-1m-csv``."""
+    return load_1m_csv(csv_path), _yaml_block(strategy_name)
+
+
+def block_with_arm_params(block: dict, *, donchian: int, atr_period: int,
+                          atr_stop_mult: float, long_only: bool, side_filter: Optional[str] = None) -> dict:
+    """The YAML block with the harness arm's ENTRY params, so the forming
+    decision replays the arm under test (the unit reads donchian/atr_period/
+    atr_stop_mult from the block; long_only from ``cfg``). ``long_only`` only
+    ever narrows: an arm cannot widen a long-only leg.
+
+    ``side_filter`` (DEMO-FLOOR-ITER, 2026-11-13): in forming mode the harness switches its own side gate OFF and the
+    replay reads the builder's side_filter from THIS block, so an arm's ``--side-filter long|short`` was silently
+    dropped (every direction arm equalled its baseline). A ``long``/``short`` arm now reaches the replay. Narrow-only,
+    like long_only: ``both`` (the CLI default) leaves the block's own value, so an arm cannot widen a YAML side gate."""
+    out = dict(block)
+    out.update(donchian=int(donchian), atr_period=int(atr_period), atr_stop_mult=float(atr_stop_mult))
+    if long_only:
+        out["long_only"] = True
+    if side_filter in ("long", "short"):
+        out["side_filter"] = side_filter
+    return out
+
+
+def block_with_entry_gates(block: dict, *, side_filter: Optional[str] = None, adx_min: Optional[float] = None,
+                           adx_max: Optional[float] = None, vol_skip_above_pctl: Optional[float] = None,
+                           vol_skip_below_pctl: Optional[float] = None) -> dict:
+    """Pullback twin of the side_filter carry above, plus the regime gate: htf_pullback_trend_2h's order_package
+    applies adx_min / adx_max itself (from the block), and in forming mode the harness's own ADX gate is off, so an
+    arm's ``--adx-min`` / ``--adx-max`` must reach the block or it is a dead arm. Narrow-only: None leaves the block."""
+    out = dict(block)
+    if side_filter in ("long", "short"):
+        out["side_filter"] = side_filter
+    if adx_min is not None:
+        out["adx_min"] = float(adx_min)
+    if adx_max is not None:
+        out["adx_max"] = float(adx_max)
+    # vol-at-entry gate (DEMO-FLOOR-ITER round 2, 2026-11-13): both the pullback and the trend order_package apply
+    # vol_skip_above_pctl / vol_skip_below_pctl from the block, and forming mode zeroes the harness's own copies, so an
+    # arm's --vol-skip-above-pctl was a dead arm. A positive arm value reaches the block; 0 / None leaves the YAML's.
+    if vol_skip_above_pctl:
+        out["vol_skip_above_pctl"] = float(vol_skip_above_pctl)
+    if vol_skip_below_pctl:
+        out["vol_skip_below_pctl"] = float(vol_skip_below_pctl)
+    return out

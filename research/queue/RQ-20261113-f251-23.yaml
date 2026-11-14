@@ -1,0 +1,238 @@
+id: RQ-20261113-f251-23
+title: 'eth_pullback_prop_2h entry lever: deeper pullback (pullback_frac 0.625 vs live 0.5) on the forming bar, with a confirmation window'
+status: done
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+question: 'eth_pullback_prop_2h fails RULE-D1 on the forming bar. Prior lever attempts on its record window: RQ-20261113-f251-08 (forming baseline -6.57R n 81; short-only
+  +2.70R, 2/4 folds -- FAIL), RQ-20261113-f251-14 (vol_skip_above 0.8, -13.09R -- FAIL). On the forming bar over 2025-11-13..2026-11-12: does pullback_frac 0.625
+  pass Stage 0, beat the baseline, and hold on the equal-length window before it, net of the full cost stack?'
+why_this_matters: Demo-floor leg; DEMO-FLOOR-ITER next lever, authored at the 2026-11-14 01:00Z checkpoint from the leg's own forming ledger and its closed-bar lever
+  map (RQ-20261105-020). One arm, one value; a structure-exit reading is never used (no leg here runs a structure exit live).
+power:
+  expected_n: 150
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: MEASURED baseline from RQ-20261113-f251-08; the arm keeps or cuts n as the lever implies.
+  sd: null
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window (the leg's own record window); nothing accrues; Binance / Binance-vision 1m covers it at run time.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+run:
+  commands:
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - eth_pullback_prop_2h
+    - --arm
+    - A=
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2025-11-13T00:00:00'
+    - --end
+    - '2026-11-12T22:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '30'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/arm_A'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - eth_pullback_prop_2h
+    - --arm
+    - A=
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2024-11-13T00:00:00'
+    - --end
+    - '2025-11-12T22:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '1'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/pre_A'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - eth_pullback_prop_2h
+    - --arm
+    - PF625=pullback_frac=0.625
+    - --grade
+    - stage0
+    - --baseline
+    - PF625
+    - --start
+    - '2025-11-13T00:00:00'
+    - --end
+    - '2026-11-12T22:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '30'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/arm_PF625'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - eth_pullback_prop_2h
+    - --arm
+    - PF625=pullback_frac=0.625
+    - --grade
+    - stage0
+    - --baseline
+    - PF625
+    - --start
+    - '2024-11-13T00:00:00'
+    - --end
+    - '2025-11-12T22:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '1'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/pre_PF625'
+  - - python3
+    - scripts/research/timeframe_lever_grade.py
+    - --out
+    - '{out_dir}'
+    - --leg
+    - eth_pullback_prop_2h
+    - --baseline-tf
+    - A
+    - --family
+    - entry
+    - --prefix
+    - arm_
+    - --confirm-prefix
+    - pre_
+    - --tf
+    - A
+    - --tf
+    - PF625
+  timeout_minutes: 300
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261113-f251-23
+decision_rule:
+  id: RULE-DFI3-ETH-PULLBACK-PROP-2H-20261114
+  registered_at: '2026-11-14'
+  registered_before_run: true
+  statistic: exit_lever_ablation --grade stage0 --forming-1m-fetch, one run per arm per window; timeframe_lever_grade.py --family entry --confirm-prefix pre_.
+  rule: 'AM-ML multiple-testing guard: successive levers on one window fork the paths, so this rule NAMES the leg''s prior lever attempts on the record window (RQ-20261113-f251-08
+    (forming baseline -6.57R n 81; short-only +2.70R, 2/4 folds -- FAIL), RQ-20261113-f251-14 (vol_skip_above 0.8, -13.09R -- FAIL)) and ALSO requires the pass to
+    hold on the equal-length window before the record window (2024-11-13..2025-11-12), which no diagnosis or lever pick read. No fold bar is relaxed. ONE arm, ONE
+    value (pullback_frac 0.625), chosen from the closed-bar map before this run. PASS iff the candidate passes its own Stage 0 on the record window (net_r > 0, n
+    >= 30, >= 3/4 folds positive) AND beats the baseline arm''s net_r there, AND on the confirmation window its net_r is > 0 and above the baseline arm''s. FAIL iff
+    graded and either clause fails. INDETERMINATE otherwise (a run wrote no verdict, the baseline did not run, or the candidate is under its n floor on the record
+    window). Arms, windows, folds and floors are fixed now.'
+  what_it_does_not_do: Changes no config, roster, order or evidence record. A PASS is a data-backed Tier-3 proposal routed to the manager (the leg stays on the demo
+    floor until then); a FAIL is recorded on the lever map and the census is written before any next lever.
+  baseline: eth_pullback_prop_2h config-exact, forming, ungated, re-run in this unit on both windows.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: a demo-floor (Stage-1 paper) leg failing RULE-D1 on its forming record; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+ml_consumer:
+  not_applicable: 'Not an ML unit: a harness lever test on a rule-based leg.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: eth_pullback_prop_2h
+  subject_kind: strategy_leg
+  from_result: RQ-20261113-f251-08
+  verdict_read: fail
+  diagnosis: 'f251-14 / f251-08 forming ledger (n 81): gross -1.2R before 5.3R of cost; long -11.0R vs short +4.4R; 25 winners keep 0.49 of MFE. Closed bar 2021-11..2026-11:
+    pullback_frac 0.625 +1.9R vs -14.7R over n 431 (RQ-20261105-020, pass); the same value also lifted htf_pullback_trend_2h (+12.1R n 388), the sibling pullback
+    leg. Chosen over the timeframe family named in the 2026-11-13 22:50Z census: no ledger reading points at the bar length, while the entry depth has a passing closed-bar
+    response.'
+  hypothesis: Waiting for a deeper retracement buys a better entry price, so the same bracket clears cost; the gain holds on the forming record and the year before.
+  search: 'Lever map research/levers/eth_pullback_prop_2h.yaml: forming levers tested so far listed in the rule; entry pullback_frac is the strongest closed-bar responder
+    that the live leg does not already carry and that never ran on the forming bar.'
+  attempt: 3
+  due_by: '2026-11-21'
+  levers:
+  - entry
+  lever_arms:
+  - family: entry
+    param: pullback_frac
+    values:
+    - 0.625
+    baseline_value: null
+  map_entries:
+  - research/levers/eth_pullback_prop_2h.yaml
+related:
+- RQ-20261113-f251-08
+- RQ-20261113-f251-14
+- RQ-20261105-020
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): ONE lever chosen from the leg''s own R diagnosis (scripts/research/leg_r_diagnosis.py),
+  rule registered before the run against the leg''s own record, net of the full cost stack, graded once on its fixed window.'
+follow_up: On the verdict a session appends the test to research/levers/eth_pullback_prop_2h.yaml (lever_map.py --append). PASS -> Tier-3 proposal to the manager.
+  FAIL -> write the leg's lever-family census (tested / untested / inapplicable) before a further lever (AM-ML guard).
+last_dispatched_at: '2026-11-14T02:44:08+00:00'
+grading:
+  attested: RULE-DFI3-ETH-PULLBACK-PROP-2H-20261114
+  auto: true
+  decision_rule_id: RULE-DFI3-ETH-PULLBACK-PROP-2H-20261114
+  evidence:
+  - research/results/RQ-20261113-f251-23/43547942426.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

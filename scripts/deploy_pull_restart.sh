@@ -408,7 +408,7 @@ fi
 # (desk mirror, live-review mirror, forecast-grade, ...), none a human code
 # merge. Fifteen bot-written comms/ data trees joined the safe set:
 #   comms/{desk,live_review,live_parity,cloud,prop_survival,claude_judgments,
-#   reviews,ops,ci,ml-plan,news_alpha,strategy_reviews,reports,data_lake}/
+#   reviews,ops,ci,ml-plan,news_alpha,strategy_reviews,reports,data_lake,backups}/
 #   and the one file comms/claude_strategy_scores.jsonl (anchored with $).
 # IMPORT-TIME PROOF (AST scan of src/, scripts/{ops,ml,prop}/, scripts/*.py,
 # ml/, bin/ for every string naming these trees, plus an `open` audit hook
@@ -486,14 +486,14 @@ if [ "${DEPLOY_FORCE_RESTART:-0}" != "1" ]; then
     if [ -n "${CHANGED_FILES}" ]; then
         # Strip the known-safe non-runtime paths; anything left needs a restart.
         RUNTIME_CHANGES="$(printf '%s\n' "${CHANGED_FILES}" \
-            | grep -vE '^(docs/|tests/|\.claude/|\.github/|[^/]+\.md$|research/|runtime_logs/|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/|comms/(desk|live_review|live_parity|cloud|prop_survival|claude_judgments|reviews|ops|ci|ml-plan|news_alpha|strategy_reviews|reports|data_lake)/|comms/claude_strategy_scores\.jsonl$|tools/phone-executor/|tools/phone-probe/|deploy/trainer/)' || true)"
+            | grep -vE '^(docs/|tests/|\.claude/|\.github/|[^/]+\.md$|research/|runtime_logs/|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/|comms/(desk|live_review|live_parity|cloud|prop_survival|claude_judgments|reviews|ops|ci|ml-plan|news_alpha|strategy_reviews|reports|data_lake|backups)/|comms/claude_strategy_scores\.jsonl$|tools/phone-executor/|tools/phone-probe/|deploy/trainer/|\.gitignore$|\.gitattributes$)' || true)"
         # Add back the scripts/research modules the web-api imports in-process
         # (the EXCEPTION above). Without this the brief serves stale code.
         IN_PROCESS_CHANGES="$(printf '%s\n' "${CHANGED_FILES}" \
             | grep -E '^scripts/research/(dispatch_queue|e35_bracket_geometry_sweep|m20_fleet_exit_sweep|m20_wf_effective|queue_grade|queue_replenish|queue_throughput|research_queue)\.py$' || true)"
         RUNTIME_CHANGES="${RUNTIME_CHANGES}${IN_PROCESS_CHANGES}"
         if [ -z "${RUNTIME_CHANGES}" ]; then
-            echo ">>> Non-runtime commit (${RUNTIME_BASE:0:7} -> ${POST_SYNC_HEAD:0:7}): only non-runtime paths changed (docs/tests/.claude/.github/top-level-md/research/runtime_logs/scripts/{research,ci}/comms/{research,strategy_evidence,macro,desk,live_review,live_parity,cloud,prop_survival,claude_judgments,reviews,ops,ci,ml-plan,news_alpha,strategy_reviews,reports,data_lake}/comms/claude_strategy_scores.jsonl/tools/{phone-executor,phone-probe}/deploy/trainer)"
+            echo ">>> Non-runtime commit (${RUNTIME_BASE:0:7} -> ${POST_SYNC_HEAD:0:7}): only non-runtime paths changed (docs/tests/.claude/.github/top-level-md/research/runtime_logs/scripts/{research,ci}/comms/{research,strategy_evidence,macro,desk,live_review,live_parity,cloud,prop_survival,claude_judgments,reviews,ops,ci,ml-plan,news_alpha,strategy_reviews,reports,data_lake,backups}/comms/claude_strategy_scores.jsonl/tools/{phone-executor,phone-probe}/deploy/trainer/.gitignore/.gitattributes)"
             echo ">>> Code synced + pings sent; skipping dependency install, unit refresh, and service restart (BL-20260529-002)."
             printf '%s\n' "${CHANGED_FILES}" | sed 's/^/>>>   changed: /'
             # The running processes' RUNTIME code already matches POST (only
@@ -587,6 +587,13 @@ else
     echo ">>> WARNING: install_systemd_units.sh exited nonzero — see journal."
 fi
 
+# VM-CHANGE-LEDGER fold-back: host config that lives in deploy/ (not a unit) converges here, so a rebuilt VM
+# matches. Best-effort and idempotent (a VM that already matches is a no-op); a failure is printed, never fatal.
+if [ -x "${REPO_DIR}/scripts/ops/install_syslog_cap.sh" ]; then
+    REPO_DIR="${REPO_DIR}" bash "${REPO_DIR}/scripts/ops/install_syslog_cap.sh" \
+        || echo ">>> WARN: install_syslog_cap.sh failed (non-fatal; the deploy continues)"
+fi
+
 heal_devnull || true  # re-heal before the unit enumeration (its 2>/dev/null degraded to the 3-unit fallback on 2026-08-02)
 if "${SYSTEMCTL[@]}" list-units 'claude-vm-runner@*.service' --state=active --no-legend 2>/dev/null | grep -q .; then
     echo ">>> A claude-vm-runner unit is active — deferring service restart to the next sync tick to avoid killing an in-flight /vm invocation."
@@ -650,11 +657,22 @@ fi
 # ict-trainer-disk-alarm.timer (hourly). A deploy restart would only fire an
 # unscheduled extra check; let the timer own it.
 # ict-security-watch.service (SEC-DETECTORS D1): same shape, 5-min timer.
+# ict-ops-runner.service (MANAGER-VM-DIRECT-OPS) is a oneshot owned by
+# ict-ops-runner.path. It MUST be skipped: a `sync-now` ops job runs THIS script
+# from inside that unit, and restarting it here would kill the job mid-deploy.
+# ict-work-digest.service (MI-83, 5-min timer) and ict-work-report.service
+# (WORK-SYSTEM, daily 05:30Z timer) are timer-owned oneshots. `systemctl
+# restart` on a oneshot runs it to completion INSIDE this loop: MEASURED
+# 2026-11-12 in the ict-git-sync journal, work-digest held the loop 6m38s and
+# 6m23s and work-report 7m32s and 7m36s (17:05-17:19Z and 18:05-18:19Z), so
+# every deploy that restarts units took ~18 min and a 900 s `sync-now` ops job
+# timed out holding the single runner (GITSYNC-SLOW-ONESHOTS). Their timers
+# run them on the new code at the next tick; let the timers own them.
 # ict-notify-failure@<unit>.service instances (FIX-SA-08) are NOT listed here
 # because instance names vary: the restart loop below skips every `@` unit
 # outright, since restarting one would send a bogus "unit FAILED" ping.
 # ---------------------------------------------------------------------------
-DEFAULT_SKIP="ict-smoke-once.service ict-env-check.service ict-hourly-snapshot.service ict-heartbeat.service ict-git-sync.service ict-mes-ibkr-pull.service ict-exchange-fills-pull.service ict-alpaca-fills-pull.service ict-ib-executions-pull.service ict-prop-feed.service ict-prop-executor.service ict-trainer-disk-alarm.service ict-security-watch.service ict-phone-capture-purge.service ict-ml-decision-shadow.service"
+DEFAULT_SKIP="ict-smoke-once.service ict-env-check.service ict-hourly-snapshot.service ict-heartbeat.service ict-git-sync.service ict-mes-ibkr-pull.service ict-exchange-fills-pull.service ict-alpaca-fills-pull.service ict-ib-executions-pull.service ict-prop-feed.service ict-prop-executor.service ict-trainer-disk-alarm.service ict-security-watch.service ict-phone-capture-purge.service ict-ml-decision-shadow.service ict-ops-runner.service ict-work-digest.service ict-work-report.service"
 SKIP_LIST="${DEPLOY_RESTART_SKIP:-${DEFAULT_SKIP}}"
 
 # list-units --all surfaces inactive units too; --type=service excludes
@@ -887,6 +905,33 @@ for unit in "${ICT_UNITS[@]}"; do
     if stop_note="$(stopped_unit_note "${unit}")"; then
         echo ">>>   starting stopped ${unit} (${stop_note}). To keep the trader stopped use stop-bot-service."
     fi
+    TRADER_LOCK_FD=""
+    if [ "${unit}" = "${TRADER_UNIT}" ] && command -v flock >/dev/null 2>&1 \
+            && ( : >> "${REPO_DIR}/runtime_logs/trader_restart.lock" ) 2>&-; then
+        # TRADER-DEPLOY-DOUBLE-RESTART: ict-git-sync and the pull-and-deploy system
+        # action both run THIS script, and the trader marker is only written AFTER
+        # the restart, so two overlapping runs both read a stale marker and both
+        # bounced the trader for one deploy batch. Dedupe on the deployed sha, no
+        # delay or wait: a non-blocking lock held across restart+marker. A run that
+        # finds it held skips (the holder is restarting the trader right now, onto
+        # this or a newer sha; a missed newer sha is re-diffed from the marker on
+        # the next tick). A run that gets it re-reads the marker first: if the sha
+        # is already running, skip. The lock dies with its holder, so it can never
+        # strand a restart. No flock / unwritable lock file => restart as before.
+        exec {TRADER_LOCK_FD}>>"${REPO_DIR}/runtime_logs/trader_restart.lock"
+        if ! flock -n "${TRADER_LOCK_FD}"; then
+            echo ">>>   skip ${unit} (another deploy run is restarting the trader right now; not restarting it twice)"
+            exec {TRADER_LOCK_FD}>&-
+            continue
+        fi
+        if [ "${DEPLOY_FORCE_RESTART:-0}" != "1" ] \
+                && [ "$(tr -d '[:space:]' < "${TRADER_DEPLOYED_SHA_FILE}" 2>/dev/null || true)" = "${POST_SYNC_HEAD}" ] \
+                && [ "$("${SYSTEMCTL[@]}" is-active "${unit}" 2>/dev/null || true)" = "active" ]; then
+            echo ">>>   skip ${unit} (already restarted onto ${POST_SYNC_HEAD:0:7} by a concurrent deploy run)"
+            exec {TRADER_LOCK_FD}>&-
+            continue
+        fi
+    fi
     if [ "${unit}" = "${TRADER_UNIT}" ]; then
         # TELEGRAM-RESTART-MSG: tell the trader's boot ping WHY it is starting
         # (src/runtime/restart_cause.py reads + consumes this). Best-effort.
@@ -917,6 +962,7 @@ for unit in "${ICT_UNITS[@]}"; do
             fi
         done
     fi
+    if [ -n "${TRADER_LOCK_FD}" ]; then exec {TRADER_LOCK_FD}>&-; fi
 done
 
 # ---------------------------------------------------------------------------
@@ -1063,6 +1109,17 @@ if printf '%s\n' "${POST_SYNC_HEAD}" > "${DEPLOYED_SHA_FILE}" 2>/dev/null; then
     echo ">>> Recorded deploy marker: ${POST_SYNC_HEAD:0:7}"
 else
     echo ">>> WARNING: could not write deploy marker ${DEPLOYED_SHA_FILE}"
+fi
+
+# STATUS-MOVE-AUTO-PAPER-CLOSE (2026-11-14): a sync that changed config/accounts.yaml may have PROMOTED a leg. Close
+# the general-paper copy of any trade also open on real money / the mirror (OPERATING-PLAN 2 "Open positions on a
+# book move"), per row, through the existing directed-action -> live_review_apply path. Paper books only (the script
+# refuses a real-money or mirror target). Bounded, and it never fails the deploy: a close that does not run is
+# logged and re-tried on the next roster sync; the daily status-move read still lists it.
+if printf '%s\n' "${CHANGED_FILES:-}" | grep -qx 'config/accounts.yaml'; then
+    echo ">>> config/accounts.yaml changed: running the status-move paper close (scripts/ops/status_move_apply.py --apply)"
+    timeout 300 /usr/bin/python3 "${REPO_DIR}/scripts/ops/status_move_apply.py" --apply 2>&1 | sed 's/^/>>>   /' \
+        || echo ">>>   status-move paper close did not complete (deploy unaffected)"
 fi
 
 echo "===== DEPLOY COMPLETE: $(date) ====="

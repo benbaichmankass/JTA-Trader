@@ -157,6 +157,22 @@ def test_importer_never_writes_back_over_a_native_write(env):
     assert rep["clean"]
 
 
+def test_a_native_write_during_an_import_run_is_not_reverted(env):
+    """WORK-STORE-IMPORTER-RACE: the importer builds its entries from a snapshot, then migrates.
+    A session write landing between the two must survive (it reverted 3 drain writes 2026-11-12)."""
+    repo, store = env
+    _freeze(repo)
+    src = wi.read_sources(repo)
+    entries = wi.build_entries(repo, src, store)          # snapshot: R-OPEN is importer-owned
+    it = store.get("R-OPEN")
+    store.set("R-OPEN", {"title": "native mid-run"}, by="session_x", expected_version=it["version"])
+    out = store.migrate(entries, by=wi.IMPORTER)
+    assert out["errors"] == []
+    assert out["skipped_native"] >= 1
+    assert store.get("R-OPEN")["title"] == "native mid-run"
+    assert store.get("R-OPEN")["updated_by"] == "session_x"
+
+
 def test_checklist_route_shape_is_unchanged_fixture_diff(env, monkeypatch):
     """THE SHAPE PROOF: the SPA's /work/checklist envelope served from the store equals the one
     served from the files for the same data -- every key, every item, the summary."""

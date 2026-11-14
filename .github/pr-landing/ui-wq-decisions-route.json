@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "UI-WQ-DECISIONS-ROUTE: GET /api/bot/work/decisions also reads extra.decision_requests on work-store items (sources.workStore; per-request source, evidence, recommended). decision_requests becomes writable by name on the work store (validated, merged into extra). New POST /api/bot/work/decision/session behind require_session: same body, validation, transit append and 409 rule as the token route; submitted_by fixed to operator-spa. No order path, no new gate.",
+  "hold_text": "Tier 2 operator-write route on ict-web-api; needs one operator OK. After deploy: GET /api/bot/work/decisions shows sources.workStore.state read and writeGate.session.acceptsWrites true; once the manager writes a planning question onto an item, it appears in requests[] with source work_store and answerState not_submitted; a signed-in SPA POST to /api/bot/work/decision/session returns 200 answerState in_transit."
+}

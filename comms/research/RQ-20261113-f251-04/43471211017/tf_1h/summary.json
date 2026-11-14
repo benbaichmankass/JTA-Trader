@@ -1,0 +1,144 @@
+{
+  "leg": "turtle_soup",
+  "grade": {
+    "verdict": "fail",
+    "label": "stage0_no_edge",
+    "baseline": "A",
+    "net_r": -31.9847,
+    "n": 146,
+    "max_drawdown_r": 44.3907,
+    "folds_positive": 2,
+    "n_folds": 6,
+    "fold_majority": 4,
+    "n_floor": 30,
+    "control": null,
+    "why": "net_r=-31.9847 with 2/6 positive folds (needs > 0 and >= 4)"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": null,
+      "n": 146,
+      "net_r": -31.9847,
+      "net_r_fee_only": -23.0829,
+      "max_drawdown_r": 44.3907,
+      "by_outcome": {
+        "sl": 86,
+        "tp": 60
+      },
+      "mean_bars_held": null,
+      "net_r_per_capital_day": null,
+      "cost_stack": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": null,
+      "data_start": "2024-10-05 00:00:00+00:00",
+      "data_end": "2026-10-04 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2024-10-05 00:00:00+00:00",
+          "end": "2025-02-03 12:00:00+00:00",
+          "trades": 20,
+          "net_r": -10.3411
+        },
+        {
+          "fold": 2,
+          "start": "2025-02-03 12:00:00+00:00",
+          "end": "2025-06-05 00:00:00+00:00",
+          "trades": 26,
+          "net_r": -9.6403
+        },
+        {
+          "fold": 3,
+          "start": "2025-06-05 00:00:00+00:00",
+          "end": "2025-10-04 12:00:00+00:00",
+          "trades": 21,
+          "net_r": -23.4278
+        },
+        {
+          "fold": 4,
+          "start": "2025-10-04 12:00:00+00:00",
+          "end": "2026-02-03 00:00:00+00:00",
+          "trades": 27,
+          "net_r": 12.2921
+        },
+        {
+          "fold": 5,
+          "start": "2026-02-03 00:00:00+00:00",
+          "end": "2026-06-04 12:00:00+00:00",
+          "trades": 28,
+          "net_r": 5.6047
+        },
+        {
+          "fold": 6,
+          "start": "2026-06-04 12:00:00+00:00",
+          "end": "2026-10-04 00:00:00+00:00",
+          "trades": 24,
+          "net_r": -6.4723
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_turtle_soup.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--resample",
+        "1h",
+        "--emit-trades",
+        "comms/research/RQ-20261113-f251-04/43471211017/tf_1h/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261113-f251-04/43471211017/tf_1h/arms/A__bt.json",
+        "--override",
+        "sweep_lookback_15m=60",
+        "--override",
+        "min_sweep_buffer_bps=10",
+        "--override",
+        "min_body_to_range=0.6",
+        "--override",
+        "atr_period=14",
+        "--override",
+        "atr_stop_mult=0.3",
+        "--override",
+        "be_at_r=0.75",
+        "--override",
+        "be_offset_bps=15",
+        "--override",
+        "tp1_at_r=1.0",
+        "--override",
+        "tp2_at_r=3.0",
+        "--override",
+        "partial_close_pct=0.25",
+        "--override",
+        "setup_lookback_bars=4",
+        "--start",
+        "2024-10-05",
+        "--end",
+        "2026-10-04"
+      ]
+    }
+  },
+  "window": {
+    "start": "2024-10-05",
+    "end": "2026-10-04",
+    "fetch_days": 800,
+    "feed": {
+      "source": "binance",
+      "ticker": "BTCUSDT",
+      "interval": "15",
+      "resample": "1h"
+    },
+    "fold_edges": [
+      "2024-10-05 00:00:00+00:00",
+      "2025-02-03 12:00:00+00:00",
+      "2025-06-05 00:00:00+00:00",
+      "2025-10-04 12:00:00+00:00",
+      "2026-02-03 00:00:00+00:00",
+      "2026-06-04 12:00:00+00:00",
+      "2026-10-04 00:00:00+00:00"
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+equity_1m_source.build TLT 1Day iex 2020-07-25..2026-11-15: returned {'bars_first': '2020-07-27 00:00:00+00:00', 'bars_last': '2026-11-13 00:00:00+00:00', 'm1_first': '2020-07-27 13:43:00+00:00', 'm1_last': '2026-11-13 20:59:00+00:00', 'daily_first': '2020-07-27', 'daily_last': '2026-11-13'} rows {'bars': 1585, 'm1_fetched': 505940, 'm1_kept': 488967, 'daily': 1585} alignment chosen=rth
+[A] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 10 --pullback-frac 0.618 --data <data> --symbol TLT --resample 1d --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261113-f251-16/43521659440/arm_A/arms/A__trades.jsonl --json comms/research/RQ-20261113-f251-16/43521659440/arm_A/arms/A__bt.json --tp-cap-pct 0.099 --tp-r 3.5 --decision-bar forming --minutes-1m-csv <minutes_1m> --strategy-name tlt_pullback_1d --decision-session us_equity --start 2020-07-27 --end 2026-11-13
+{
+ "verdict": "fail",
+ "label": "stage0_no_edge",
+ "why": "net_r=-6.9566 with 2/8 positive folds (needs > 0 and >= 5)"
+}

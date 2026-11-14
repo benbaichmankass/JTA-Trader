@@ -82,6 +82,10 @@ ml/shadow/factory.py
 ml/shadow/inspector.py
 scripts/__init__.py
 scripts/notify_on_pull.py
+scripts/ops/amend_position_sl.py
+scripts/ops/directed_action.py
+scripts/ops/journal_backup.py
+scripts/ops/live_review_apply.py
 scripts/ops/migrate_pipeline_to_dir.py
 scripts/ops/pipeline.py
 scripts/ops/prop_ticket_reissue.py
@@ -89,6 +93,7 @@ scripts/ops/strategy_status.py
 scripts/ops/trader_import_closure.py
 scripts/ops/work_digest.py
 scripts/ops/work_phase_ping.py
+scripts/ops/work_store_import.py
 scripts/send_ping.py
 src/__init__.py
 src/bot/__init__.py
@@ -149,6 +154,7 @@ src/news/news_score.py
 src/news/news_symbols.py
 src/prop/__init__.py
 src/prop/account_rulesets.py
+src/prop/bracket_request.py
 src/prop/breakout_executor.py
 src/prop/breakout_notify.py
 src/prop/breakout_ticket.py
@@ -192,8 +198,10 @@ src/prop/prop_trail.py
 src/prop/qualifying_days.py
 src/prop/ruleset.py
 src/prop/standard_account_size.py
+src/prop/strategy_exit_close.py
 src/prop/symbol_map.py
 src/prop/telegram_commands.py
+src/prop/vm_close.py
 src/research/__init__.py
 src/research/trail_levers.py
 src/runtime/__init__.py
@@ -271,6 +279,7 @@ src/runtime/journal_sync.py
 src/runtime/liquidity_state.py
 src/runtime/live_review_due.py
 src/runtime/live_review_intent.py
+src/runtime/live_review_routine_fire.py
 src/runtime/live_review_rows.py
 src/runtime/live_review_rows_watch.py
 src/runtime/live_review_wake_post.py
@@ -303,6 +312,7 @@ src/runtime/net_r_label.py
 src/runtime/news_sizing.py
 src/runtime/notify.py
 src/runtime/oi_feed.py
+src/runtime/ops_actions.py
 src/runtime/order_bridge.py
 src/runtime/order_monitor.py
 src/runtime/orphan_attribution.py
@@ -367,6 +377,8 @@ src/runtime/trail_decay.py
 src/runtime/trail_vol.py
 src/runtime/trail_vol_shadow.py
 src/runtime/trainer_reachability_alert.py
+src/runtime/trend_alignment.py
+src/runtime/unblock_conditions.py
 src/runtime/validation.py
 src/runtime/venue_pnl.py
 src/runtime/venue_protection_snapshot.py
@@ -475,8 +487,11 @@ src/web/api/auth.py
 src/web/api/routers/__init__.py
 src/web/api/routers/alerts.py
 src/web/api/routers/diag.py
+src/web/api/routers/live_review_direct.py
 src/web/api/routers/prop.py
 src/web/api/routers/shadow.py
 src/web/api/routers/status.py
+src/web/api/routers/work_items.py
 src/web/api/web_sessions.py
+src/web/api/work_store_rotation.py
 src/web/runtime_status.py

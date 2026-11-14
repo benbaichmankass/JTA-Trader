@@ -8,58 +8,58 @@
   "coverage_state": "measured",
   "fidelity": "faithful",
   "omitted_levers": [],
-  "net_r_oos": -11.0224,
-  "expectancy_r_oos": -0.2345,
-  "n_trades_oos": 47,
+  "net_r_oos": -16.1781,
+  "expectancy_r_oos": -0.2838,
+  "n_trades_oos": 57,
   "folds": 4,
   "fold_detail": [
     {
       "fold": 1,
-      "trades": 11,
-      "net_r": -1.934,
-      "expectancy_r": -0.1758,
-      "start": "2025-11-03 12:00:00+00:00",
-      "end": "2026-01-03 00:00:00+00:00"
-    },
-    {
-      "fold": 2,
-      "trades": 11,
-      "net_r": -2.4971,
-      "expectancy_r": -0.227,
-      "start": "2026-01-18 20:00:00+00:00",
+      "trades": 14,
+      "net_r": 1.3277,
+      "expectancy_r": 0.0948,
+      "start": "2025-12-18 16:00:00+00:00",
       "end": "2026-04-01 04:00:00+00:00"
     },
     {
-      "fold": 3,
-      "trades": 11,
-      "net_r": -5.2122,
-      "expectancy_r": -0.4738,
+      "fold": 2,
+      "trades": 14,
+      "net_r": -2.2555,
+      "expectancy_r": -0.1611,
       "start": "2026-04-06 00:00:00+00:00",
-      "end": "2026-08-01 16:00:00+00:00"
+      "end": "2026-06-18 12:00:00+00:00"
+    },
+    {
+      "fold": 3,
+      "trades": 14,
+      "net_r": -9.0716,
+      "expectancy_r": -0.648,
+      "start": "2026-07-08 00:00:00+00:00",
+      "end": "2026-09-06 20:00:00+00:00"
     },
     {
       "fold": 4,
-      "trades": 14,
-      "net_r": -1.3791,
-      "expectancy_r": -0.0985,
-      "start": "2026-08-04 00:00:00+00:00",
-      "end": "2026-10-18 16:00:00+00:00"
+      "trades": 15,
+      "net_r": -6.1787,
+      "expectancy_r": -0.4119,
+      "start": "2026-09-10 12:00:00+00:00",
+      "end": "2026-11-08 20:00:00+00:00"
     }
   ],
-  "folds_positive": 0,
+  "folds_positive": 1,
   "window_days": 365,
   "fee_bps_roundtrip": 11.0,
   "path_stats": {
     "series_location": "source_run (the per-trade rows, in order, with net_r)",
-    "n": 47,
-    "max_drawdown_r": 16.8641,
-    "max_drawdown_at_trade": 42,
-    "final_equity_r": -11.0224,
-    "max_equity_r": 2.8777,
-    "worst_trade_r": -1.0814,
-    "best_trade_r": 4.1249,
-    "worst_day_r": -1.0814,
-    "worst_day_date": "2026-09-01",
+    "n": 57,
+    "max_drawdown_r": 23.8904,
+    "max_drawdown_at_trade": 57,
+    "final_equity_r": -16.1781,
+    "max_equity_r": 7.7123,
+    "worst_trade_r": -1.0899,
+    "best_trade_r": 4.2052,
+    "worst_day_r": -2.1237,
+    "worst_day_date": "2026-02-25",
     "trades_without_exit_time": 0,
     "ordering": "by entry_time ascending; pooled ACROSS folds, so this is the full-window path, not a per-fold one",
     "not_a_verdict": "Descriptive only. No bar is applied here -- the prop bar is B6's to register, and it must be registered before these numbers are read."
@@ -69,9 +69,9 @@
     "slippage": 3.0,
     "funding": 1.0,
     "unit": "bps_roundtrip (funding: bps per funding window)",
-    "source": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_avax_4h__bt.json"
+    "source": "comms/research/RQ-20261113-f251-01/43447401545/evidence_runs/trend_donchian_avax_4h__bt.json"
   },
-  "net_r_oos_fee_only": -9.9914,
+  "net_r_oos_fee_only": -14.9184,
   "decision_rule": {
     "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
     "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
@@ -79,30 +79,42 @@
     "verdict": "fail"
   },
   "param_selection_provenance": "not_established",
-  "generated_at": "2026-10-28T18:38:46.577980+00:00",
+  "generated_at": "2026-11-13T15:05:41.733325+00:00",
   "generated_by": "scripts/ops/build_strategy_evidence.py",
-  "source_run": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_avax_4h__trades.jsonl",
+  "source_run": "comms/research/RQ-20261113-f251-01/43447401545/evidence_runs/trend_donchian_avax_4h__trades.jsonl",
   "error": null,
   "harness": "trend",
-  "venue_bracket_arm": null,
-  "rebaseline_history": [
-    {
-      "superseded_at": "2026-10-28",
-      "reason": "COST-STACK-RECOST-SWEEP: Bybit-linear fee 7.5 -> 11.0 bps round-trip",
-      "net_r_oos": -9.1414,
-      "expectancy_r_oos": -0.1828,
-      "n_trades_oos": 50,
-      "fee_bps_roundtrip": 7.5,
-      "window_days": 365,
-      "window": [
-        "2025-10-07 12:00:00+00:00",
-        "2026-09-20 12:00:00+00:00"
-      ],
-      "generated_at": "2026-09-24T17:22:37.923927+00:00",
-      "source_run": "comms/strategy_evidence/runs/2026-09-24-e69/trend_donchian_avax_4h__trades.jsonl",
-      "decision_rule_verdict": "fail",
-      "folds_positive": 0
+  "reproduce": {
+    "window_days": 365,
+    "window_days_source": "--data-csv span",
+    "folds": 4,
+    "data_start": "2025-11-13 00:00:00+00:00",
+    "data_end": "2026-11-12 20:00:00+00:00",
+    "git_sha": "8cffce56ab294bcf7f06347f68d60181ce5a70b1",
+    "argv": [
+      "python3",
+      "scripts/ops/build_strategy_evidence.py",
+      "--strategy",
+      "trend_donchian_avax_4h",
+      "--days",
+      "365",
+      "--folds",
+      "4",
+      "--window-start",
+      "2025-11-13 00:00:00+00:00",
+      "--window-end",
+      "2026-11-12 20:00:00+00:00",
+      "--data-csv",
+      "/tmp/forming_regen_e5eo1z5s/trend_donchian_avax_4h__data.csv",
+      "--minutes-1m-csv",
+      "/tmp/forming_regen_e5eo1z5s/AVAXUSDT__2025-11-11__2026-11-14__1m.csv"
+    ],
+    "inputs": {
+      "data_csv": "/tmp/forming_regen_e5eo1z5s/trend_donchian_avax_4h__data.csv",
+      "minutes_1m_csv": "/tmp/forming_regen_e5eo1z5s/AVAXUSDT__2025-11-11__2026-11-14__1m.csv",
+      "decision_session": null,
+      "decision_bar_modelled": "forming"
     }
-  ],
-  "fidelity_basis": "2026-11-03 STRUCTURE-EXITS-ENABLE (PR #22626): the leg now declares structure_exit 'pivot=5' (live structure SL+TP replacing the chandelier). This record was measured WITHOUT it, so structure_exit is listed in omitted_levers and fidelity is downgraded faithful -> approximate. No measured field was changed; config_fingerprint refreshed to the current config so the record is tied to it as an APPROXIMATE measurement. Re-measure: PI-20261103-MB3OAWAX-0002."
+  },
+  "venue_bracket_arm": null
 }

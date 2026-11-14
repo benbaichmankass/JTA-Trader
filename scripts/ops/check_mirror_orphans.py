@@ -16,6 +16,11 @@ Per mirror pair the verdict for each mirror position (symbol, side) is:
   live_twin     the live account holds the same symbol+side            -> fine
   acknowledged  no twin, but listed in config/mirror_window_exclusions.yaml
                 (an operator-decided, stop-managed legacy position)    -> noted
+  side_filter_superset
+                no twin, and the LIVE account's own ``side_filter`` suppresses
+                that side (alpaca_live is ``side_filter: long``, operator
+                2026-08-23; the mirror is a SUPERSET that also shorts, operator
+                2026-11-01) -- the live twin was demoted to dry by design -> noted
   ORPHAN        no twin, not acknowledged                              -> FINDING
 
 and each acknowledgement whose position is gone is ``stale_ack`` (remove the
@@ -31,7 +36,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
@@ -47,10 +52,24 @@ def _key(p: Dict[str, Any]) -> Tuple[str, str]:
             _SIDES.get(str(p.get("side") or "").lower(), str(p.get("side") or "").lower()))
 
 
+def _live_side_suppressed(account_id: str, side: str) -> bool:
+    """Does the LIVE account's own ``accounts.yaml::side_filter`` suppress *side*? The one resolver the coordinator
+    uses to demote such a package to dry (``account_side_filter.account_suppresses_direction``) -- not a re-derivation."""
+    from src.runtime.account_side_filter import account_suppresses_direction
+    return bool(account_suppresses_direction(account_id, side)[0])
+
+
 def check(payload: Dict[str, Any], exclusions: Dict[str, Any],
-          pairs: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
-    """Pure: ``/api/diag/exchange_positions`` body + exclusions -> verdicts."""
+          pairs: Optional[Dict[str, str]] = None,
+          side_suppressed: Optional[Callable[[str, str], bool]] = None) -> Dict[str, Any]:
+    """Pure: ``/api/diag/exchange_positions`` body + exclusions -> verdicts.
+
+    MIRROR-ORPHAN-SIDE-FILTER (2026-11-13): run 43512052836 flagged ``ORPHAN alpaca_live->alpaca_portfolio SLV short``
+    for the 15:22Z slv_trend_1h package. The live twin (trade 7189) was journalled ``rejected`` with
+    ``dry_cause: side_filter:long`` -- the declared superset, not an orphan. ``side_suppressed(live_id, side)``
+    answers whether the live account's side_filter suppresses that side (default: the coordinator's own resolver)."""
     pairs = MIRROR_OF if pairs is None else pairs
+    side_suppressed = _live_side_suppressed if side_suppressed is None else side_suppressed
     by_id = {a.get("account_id"): a for a in payload.get("accounts") or []}
     acks = exclusions.get("exclusions") or []
     findings: List[Dict[str, Any]] = []
@@ -75,6 +94,8 @@ def check(payload: Dict[str, Any], exclusions: Dict[str, Any],
             if k in ack_keys:
                 seen_ack.add(k)
                 findings.append({**row, "verdict": "acknowledged"})
+            elif side_suppressed(live_id, k[1]):
+                findings.append({**row, "verdict": "side_filter_superset"})
             else:
                 findings.append({**row, "verdict": "ORPHAN"})
         for k in sorted(ack_keys - seen_ack):

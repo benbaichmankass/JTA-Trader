@@ -201,3 +201,8 @@ data/options_history/
 
 # live-review on-demand venue bars (LTR-GRADER-COVERAGE): runtime cache, never committed
 data/ltr_candles/
+
+# tests/test_isolation_audit.py writes a throwaway probe test under tests/ (it must sit under the rootdir conftest) and
+# removes it. Under xdist another worker running tests/test_guards_uncommitted_work.py saw it as UNCOMMITTED work and
+# failed (pytest-run on PR #25993, 2026-11-14). Never committed, so ignored.
+tests/_iso_probe_*/

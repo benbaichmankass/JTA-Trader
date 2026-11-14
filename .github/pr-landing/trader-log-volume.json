@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "Tier 2 (log levels in the live trader runtime; no order-path logic change). Lane dispatch: 'Tier 2 = landing: hold'; AM-OPS merges on green guards under the manager's standing OK. Revert: git revert (lines return to INFO, the DB banner prints per open).",
+  "why": "Cut the live trader's journal (and /var/log/syslog duplicate) volume: per-tick no-op lines to DEBUG and the per-open DB banner to once per process per path. HEALTH-20261112-LIVE-DISK-OTHER-GROWERS."
+}

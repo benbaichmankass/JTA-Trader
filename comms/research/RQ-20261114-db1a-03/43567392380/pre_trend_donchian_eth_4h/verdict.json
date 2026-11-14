@@ -1,0 +1,201 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "trend_donchian_eth_4h: 42 trades in the baseline arm 'A' on ETHUSDT 4h candles 2024-11-13T00:00:00 .. 2025-11-12T20:00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A']",
+  "n": 42,
+  "measurement": {
+    "leg": "trend_donchian_eth_4h",
+    "label": "stage0_edge",
+    "grade": {
+      "verdict": "pass",
+      "label": "stage0_edge",
+      "baseline": "A",
+      "net_r": 22.3695,
+      "n": 42,
+      "max_drawdown_r": 6.4367,
+      "folds_positive": 3,
+      "n_folds": 4,
+      "fold_majority": 3,
+      "n_floor": 1,
+      "control": null,
+      "why": "net_r=22.3695 > 0 with 3/4 positive folds at this arm's cost stack"
+    },
+    "arms": {
+      "A": {
+        "reach_ge_6r": 0.0952,
+        "n": 42,
+        "net_r": 22.3695,
+        "net_r_fee_only": 23.7744,
+        "max_drawdown_r": 6.4367,
+        "by_outcome": {
+          "trail_stop": 16,
+          "stop": 21,
+          "take_profit": 5
+        },
+        "mean_bars_held": 12.667,
+        "net_r_per_capital_day": 0.2523,
+        "cost_stack": {
+          "fee_bps_roundtrip": 11.0,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": {
+          "donchian": 20,
+          "atr_stop_mult": 1.5,
+          "trail_mult": 6.0,
+          "min_confidence": 0.6,
+          "trail_decay_arm_r": 0.0,
+          "trail_decay_stall_bars": 10,
+          "trail_decay_tight_mult": 1.8,
+          "tp_revision": "donchian_measured_move",
+          "tp_revision_width_mult": 0.5,
+          "tp_revisions_applied": 490,
+          "tp_revisions_clamped": 211
+        },
+        "data_start": "2024-11-13 00:00:00+00:00",
+        "data_end": "2025-11-12 20:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2024-11-13 00:00:00+00:00",
+            "end": "2025-02-12 05:00:00+00:00",
+            "trades": 11,
+            "net_r": -2.7002
+          },
+          {
+            "fold": 2,
+            "start": "2025-02-12 05:00:00+00:00",
+            "end": "2025-05-14 10:00:00+00:00",
+            "trades": 12,
+            "net_r": 4.1525
+          },
+          {
+            "fold": 3,
+            "start": "2025-05-14 10:00:00+00:00",
+            "end": "2025-08-13 15:00:00+00:00",
+            "trades": 10,
+            "net_r": 11.112
+          },
+          {
+            "fold": 4,
+            "start": "2025-08-13 15:00:00+00:00",
+            "end": "2025-11-12 20:00:00+00:00",
+            "trades": 9,
+            "net_r": 9.8054
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "ETHUSDT",
+          "--resample",
+          "4h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "1.5",
+          "--trail-mult",
+          "6.0",
+          "--min-confidence",
+          "0.6",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261114-db1a-03/43567392380/pre_trend_donchian_eth_4h/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261114-db1a-03/43567392380/pre_trend_donchian_eth_4h/arms/A__bt.json",
+          "--trail-decay-stall-bars",
+          "10",
+          "--trail-decay-tight-mult",
+          "1.8",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--tp-revision",
+          "donchian_measured_move",
+          "--tp-revision-width-mult",
+          "0.5",
+          "--start",
+          "2024-11-13T00:00:00",
+          "--end",
+          "2025-11-12T20:00:00"
+        ]
+      }
+    },
+    "window": {
+      "start": "2024-11-13T00:00:00",
+      "end": "2025-11-12T20:00:00",
+      "fetch_days": 800,
+      "feed": {
+        "source": "binance",
+        "ticker": "ETHUSDT",
+        "interval": "240",
+        "resample": "4h"
+      },
+      "fold_edges": [
+        "2024-11-13 00:00:00+00:00",
+        "2025-02-12 05:00:00+00:00",
+        "2025-05-14 10:00:00+00:00",
+        "2025-08-13 15:00:00+00:00",
+        "2025-11-12 20:00:00+00:00"
+      ]
+    },
+    "argv": {
+      "A": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "ETHUSDT",
+          "--resample",
+          "4h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "1.5",
+          "--trail-mult",
+          "6.0",
+          "--min-confidence",
+          "0.6",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261114-db1a-03/43567392380/pre_trend_donchian_eth_4h/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261114-db1a-03/43567392380/pre_trend_donchian_eth_4h/arms/A__bt.json",
+          "--trail-decay-stall-bars",
+          "10",
+          "--trail-decay-tight-mult",
+          "1.8",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--tp-revision",
+          "donchian_measured_move",
+          "--tp-revision-width-mult",
+          "0.5",
+          "--start",
+          "2024-11-13T00:00:00",
+          "--end",
+          "2025-11-12T20:00:00"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": []
+      }
+    }
+  },
+  "note": "PASS / stage0_edge: net_r=22.3695 > 0 with 3/4 positive folds at this arm's cost stack"
+}

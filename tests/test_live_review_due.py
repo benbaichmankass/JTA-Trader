@@ -489,10 +489,11 @@ def test_trigger_first_unreadable_inputs_and_unknown_class_fire_with_a_reason():
 
 def test_trigger_first_unknown_asset_class_reads_open_and_says_why(monkeypatch):
     import src.runtime.market_hours as mh
-    monkeypatch.setattr(mh, "asset_class_for_symbol", lambda s: "weird_class")
+    # the seam is the memoized profile exchange -> market_hours.asset_class_for_exchange (RM-AM-DUE-COULDNOTLOOK)
+    monkeypatch.setattr(mh, "asset_class_for_exchange", lambda e: "weird_class")
     ok, cls, why = lrd.package_market_state("X", TF_NOW)
     assert ok and cls == "weird_class" and "not modelled" in why
-    monkeypatch.setattr(mh, "asset_class_for_symbol", lambda s: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setattr(lrd, "profile_exchange", lambda s: (_ for _ in ()).throw(RuntimeError("boom")))
     ok, cls, why = lrd.package_market_state("X", TF_NOW)
     assert ok and "market_hours_unreadable" in why
 
@@ -686,13 +687,15 @@ def test_missing_mark_is_could_not_look_not_absence(tmp_path):
 
 
 def test_prop_package_in_live_review_due_payload_and_due_with_accounts(tmp_path, monkeypatch):
+    # Accounts are the two LIVE prop books: breakout_2 is on ice (2026-11-12, #25306) and off the daily_floor
+    # list, and a prop package is reviewed only when its account is on that list.
     db = str(tmp_path / "j.db")
     _db(db, [])  # telemetry table, no rows
     _journal(db, [])
     c = sqlite3.connect(db)
     c.execute("CREATE TABLE prop_tickets (ticket_id, account_id, strategy, symbol, direction, entry, sl, tp, "
               "qty, status, order_package_id, created_at)")
-    for t in (_tk(1, "breakout_2"), _tk(2, "tradeify_1")):
+    for t in (_tk(1, "tradeify_1"), _tk(2, "velotrade_1")):
         c.execute("INSERT INTO prop_tickets VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", t)
     c.commit()
     c.close()
@@ -703,9 +706,9 @@ def test_prop_package_in_live_review_due_payload_and_due_with_accounts(tmp_path,
     assert out["prop_open"][0]["accounts"][0]["telemetry"]["provenance"] == "estimated"
     assert [p["order_package_id"] for p in out["prop_open"]] == ["pkg-prop"]
     less = out["telemetry_less"][0]
-    assert less["prop"] is True and less["accounts"] == ["breakout_2", "tradeify_1"]
+    assert less["prop"] is True and less["accounts"] == ["tradeify_1", "velotrade_1"]
     due = {d["order_package_id"]: d for d in out["due"]}
-    assert due["pkg-prop"]["accounts"] == ["breakout_2", "tradeify_1"]
+    assert due["pkg-prop"]["accounts"] == ["tradeify_1", "velotrade_1"]
 
 
 def test_prop_action_paths_mirror_live_review_apply():

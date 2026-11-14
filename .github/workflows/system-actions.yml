@@ -71,6 +71,7 @@ on:
         options:
           - status-check
           - disk-usage-report
+          - vm-cpu-sample
           - prune-db-backups
           - vm-sparse-bootstrap
           - cap-vm-logs
@@ -928,7 +929,7 @@ jobs:
         run: |
           set -euo pipefail
           case "${ACTION}" in
-            status-check|verify-account-mode|disk-usage-report|list-listening-ports|gateway-logs|gateway-forensics|security-posture-report|gateway-disk-report|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|send-ping|send-prop-test-ping|phone-dry-test|phone-drill|generate-strategy-review-packets|grade-closed-trades|net-r-regrade|get-env|passkey-enrol-code|live-review-dry-run)
+            status-check|verify-account-mode|disk-usage-report|vm-cpu-sample|list-listening-ports|gateway-logs|gateway-forensics|security-posture-report|gateway-disk-report|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|send-ping|send-prop-test-ping|phone-dry-test|phone-drill|generate-strategy-review-packets|grade-closed-trades|net-r-regrade|get-env|passkey-enrol-code|live-review-dry-run)
               echo "tier=1" >>"$GITHUB_ENV"
               ;;
             pull-and-deploy|vm-sparse-bootstrap|init-web-session-pepper|install-web-api-deps|cap-vm-logs|gateway-disk-cleanup|set-journal-trade-qty|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|set-bybit-collateral-switch|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|rearm-ib-protective|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|purge-phone-captures|close-api-port|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|prop-report-skip|prop-report-open|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs|relabel-package-close-reasons|backfill-package-risk-meta|relink-orphan-trade-5209|amend-position-sl|amend-prop-bracket|live-review-apply|run-desk-judge)
@@ -1960,6 +1961,11 @@ jobs:
           # Consumed by the set-mobile-push-secrets action (and by set-env
           # when env_key=FCM_SERVICE_ACCOUNT_JSON + env_value blank).
           SECRET_FCM_SERVICE_ACCOUNT_JSON: ${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}
+          # LIVE_REVIEW_ROUTINE_TOKEN is the per-routine bearer token of the live-review
+          # reviewer routine (TRADE-ACTION-DIRECT-PATH phase 3, operator decision page m5
+          # 2026-11-12). set-env env_key=LIVE_REVIEW_ROUTINE_TOKEN with env_value blank
+          # installs it in the VM .env without it reaching the issue body or run log.
+          SECRET_LIVE_REVIEW_ROUTINE_TOKEN: ${{ secrets.LIVE_REVIEW_ROUTINE_TOKEN }}
           # init-diag-token ONLY (resolved empty for every other action): the
           # CURRENT diag bearer, to prove it dies (old -> 401), and the repo PAT
           # that can write Actions secrets (same one init-actions-secrets.yml
@@ -1974,6 +1980,7 @@ jobs:
           case "${ACTION}" in
             status-check)                       SCRIPT="status_check.sh" ;;
             disk-usage-report)                  SCRIPT="disk_usage_report.sh" ;;
+            vm-cpu-sample)                      SCRIPT="vm_cpu_sample.sh" ;;
             prune-db-backups)                   SCRIPT="prune_db_backups.sh" ;;
             purge-phone-captures)               SCRIPT="purge_phone_captures_action.sh" ;;
             close-api-port)                     SCRIPT="close_api_port_action.sh" ;;
@@ -2247,13 +2254,15 @@ jobs:
             # adapter + IB _build_contract map (MES/MGC/MHG) — the pull writes
             # market_raw/<SYMBOL>/<tf>/<version>/data.jsonl.
             if [ -z "${ACTION_SYMBOL// }" ]; then
-              echo "::error::pull-ibkr-history requires 'symbol: <MES|MGC|MHG>' (issue body)."
+              echo "::error::pull-ibkr-history requires 'symbol: <MES|MNQ|MGC|MHG>' (issue body)."
               exit 1
             fi
+            # MNQ added 2026-11-12 (FUT-CME-INTRADAY-HIST): read-only history
+            # for the Tradeify futures research; CME-listed like MES.
             case "${ACTION_SYMBOL}" in
-              MES|MGC|MHG) : ;;
+              MES|MNQ|MGC|MHG) : ;;
               *)
-                echo "::error::pull-ibkr-history symbol '${ACTION_SYMBOL}' not supported (allowed: MES, MGC, MHG — the IB futures roots _build_contract maps)."
+                echo "::error::pull-ibkr-history symbol '${ACTION_SYMBOL}' not supported (allowed: MES, MNQ, MGC, MHG)."
                 exit 1
                 ;;
             esac
@@ -3057,6 +3066,15 @@ jobs:
       # is the authoritative success signal; job-level success()/failure()
       # are not used here because they can't survive post-exec step failures.
       # ────────────────────────────────────────────────────────────
+      - name: Redact secrets and balances from the action output (DIAG-RELAY-EQUITY-LEAK)
+        if: always() && github.event_name == 'issues'
+        # Before the reply below posts action-output.txt into a PUBLIC issue. Shared redactor; prints rule=count only.
+        continue-on-error: true
+        run: |
+          for f in action-output.txt mode-pr.txt; do
+            [ -f "$f" ] && python3 scripts/ops/redact_diag_output.py "$f" || true
+          done
+
       - name: Reply to issue with outcome
         if: always() && github.event_name == 'issues'
         uses: actions/github-script@v7

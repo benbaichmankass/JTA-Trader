@@ -3,77 +3,196 @@
 subject: qqq_pullback_1h
 kind: strategy_leg
 status: testing
-books: []
+books:
+- alpaca_paper
 baseline:
   record: comms/strategy_evidence/qqq_pullback_1h.json
-  net_r: 10.8351
-  n: 55
+  net_r: 5.4886
+  n: 73
   fidelity: faithful
   rule_verdict: pass
 attribution:
   read_state: measured
-  n: 55
-  net_r: 10.835
-  gross_r: 13.09
-  cost_r: 2.255
-  cost_share_of_gross: 0.172
+  n: 73
+  net_r: 5.489
+  gross_r: 8.668
+  cost_r: 3.179
+  cost_share_of_gross: 0.367
   verdict_hint: gross edge survives cost
   entry_quality:
-    mean_mfe_r: 1.703
-    share_mfe_ge_1r: 0.491
-    n_with_mfe: 55
+    mean_mfe_r: 1.708
+    share_mfe_ge_1r: 0.521
+    n_with_mfe: 73
   exit_capture:
-    median_net_over_mfe_winners: 0.43
-    n_winners: 16
-    losers_that_reached_1r_mfe: 11
+    median_net_over_mfe_winners: 0.441
+    n_winners: 23
+    losers_that_reached_1r_mfe: 15
   by_year:
     '2025':
-      n: 24
-      net_r: 3.223
-      gross_r: 4.264
+      n: 22
+      net_r: 1.256
+      gross_r: 2.339
     '2026':
-      n: 31
-      net_r: 7.612
-      gross_r: 8.827
+      n: 51
+      net_r: 4.232
+      gross_r: 6.33
   by_direction:
     long:
-      n: 36
-      net_r: 18.03
-      gross_r: 19.647
+      n: 40
+      net_r: 11.852
+      gross_r: 13.84
     short:
-      n: 19
-      net_r: -7.195
-      gross_r: -6.557
+      n: 33
+      net_r: -6.363
+      gross_r: -5.172
   by_exit_reason:
     stop:
-      n: 27
-      net_r: -28.064
-      gross_r: -27.0
+      n: 35
+      net_r: -36.465
+      gross_r: -35.0
     take_profit:
-      n: 3
-      net_r: 23.382
-      gross_r: 23.506
-    timeout:
       n: 2
-      net_r: 4.687
-      gross_r: 4.775
+      net_r: 16.401
+      gross_r: 16.489
     trail_stop:
-      n: 23
-      net_r: 10.83
-      gross_r: 11.81
+      n: 36
+      net_r: 25.552
+      gross_r: 27.18
   by_adx_at_entry:
     unknown:
-      n: 55
-      net_r: 10.835
-      gross_r: 13.09
+      n: 73
+      net_r: 5.489
+      gross_r: 8.668
 manifest:
   entry: untested
-  exit: untested
-  filter: untested
+  exit: tested
+  filter: tested
   regime_gating: untested
   timeframe: untested
   symbol_set: untested
-  direction: untested
+  direction: tested
   session: untested
   sizing_vs_cost: untested
-levers: {}
+levers:
+  direction:
+    side_filter:
+      tests:
+      - value: long
+        baseline_value: 'off'
+        arm: S1
+        unit: RQ-20261111-203c-03
+        window: 2020-07-01..2026-10-15
+        n: 131
+        net_r: 47.3465
+        baseline_n: 214
+        baseline_net_r: 31.0315
+        delta_net_r: 16.315
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 12.4753
+        verdict: pass
+        joint_change: false
+      - value: long
+        baseline_value: 'off'
+        arm: F1
+        unit: RQ-20261113-1751-02
+        window: 2020-07-01..2026-10-15
+        n: 113
+        net_r: 27.852
+        baseline_n: 214
+        baseline_net_r: 31.0315
+        delta_net_r: -3.1795
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 10.7855
+        verdict: pass
+        joint_change: true
+      - value: long
+        baseline_value: 'off'
+        arm: F2
+        unit: RQ-20261113-1751-02
+        window: 2020-07-01..2026-10-15
+        n: 88
+        net_r: 9.8677
+        baseline_n: 214
+        baseline_net_r: 31.0315
+        delta_net_r: -21.1638
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 15.7777
+        verdict: pass
+        joint_change: true
+      - value: long
+        baseline_value: 'off'
+        arm: S1
+        unit: RQ-20261113-1751-02
+        window: 2020-07-01..2026-10-15
+        n: 131
+        net_r: 47.3465
+        baseline_n: 214
+        baseline_net_r: 31.0315
+        delta_net_r: 16.315
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 12.4753
+        verdict: pass
+        joint_change: false
+      shape: noisy
+      points: 4
+      best_delta_r_per_trade: 0.0762
+      fold_stability: 0.625
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+  exit:
+    be_floor_r:
+      tests:
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: C1
+        unit: RQ-20261111-203c-03
+        window: 2020-07-01..2026-10-15
+        n: 247
+        net_r: 31.8611
+        baseline_n: 214
+        baseline_net_r: 31.0315
+        delta_net_r: 0.8296
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 14.881
+        verdict: pass
+        joint_change: false
+      shape: flat
+      points: 1
+      best_delta_r_per_trade: 0.0039
+      fold_stability: 0.5
+      reading: no response at the tested values
+  filter:
+    adx_min:
+      tests:
+      - value: '20'
+        baseline_value: 'off'
+        arm: F1
+        unit: RQ-20261113-1751-02
+        window: 2020-07-01..2026-10-15
+        n: 113
+        net_r: 27.852
+        baseline_n: 214
+        baseline_net_r: 31.0315
+        delta_net_r: -3.1795
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 10.7855
+        verdict: pass
+        joint_change: true
+      - value: '25'
+        baseline_value: 'off'
+        arm: F2
+        unit: RQ-20261113-1751-02
+        window: 2020-07-01..2026-10-15
+        n: 88
+        net_r: 9.8677
+        baseline_n: 214
+        baseline_net_r: 31.0315
+        delta_net_r: -21.1638
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 15.7777
+        verdict: pass
+        joint_change: true
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: -0.0149
+      fold_stability: 0.25
+      reading: every tested value is worse than the baseline

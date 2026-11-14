@@ -1391,7 +1391,14 @@ strategies:
                             # here than on sol (-$465 at 2.5 vs -$135). Lowering
                             # tp_r is a real geometry change, Tier-3; the measured
                             # answer was DO NOT TIGHTEN.
-    min_confidence: 0.60
+    # min_confidence 0.60 -> 0.80 (Tier 3, DATA-BACKED, demo floor only; unit RQ-20261114-db1a-06, rule
+    # RULE-ETHPROP-MINCONF08-20261114 registered before the run): exit_lever_ablation --grade stage0, closed decision bar,
+    # full cost stack. Record year 2025-11-13..2026-11-12: 0.80 +10.97 R n 134 (4/4 folds, maxDD 8.58 R) vs 0.60 -9.61 R
+    # n 166 (maxDD 15.06 R). Year before: 0.80 +8.06 R n 140 (2/4 folds) vs 0.60 -4.52 R n 183. PASS. In-sample: 0.80
+    # was picked in RQ-20261101-78fc-14 (2020-07..2026-10) over a window overlapping both. Record:
+    # research/results/RQ-20261114-db1a-06/43596786598.jsonl.
+    # ROLLBACK: min_confidence: 0.60.
+    min_confidence: 0.80
     # stale_exit_bars: 12 / stale_exit_below_r: 0.0 REMOVED 2026-10-07 (Tier-3, data-backed standing
     #   authorization 2026-09-27; lane EXIT-LEVER-STRIP, findings PI-20261006-KX6ZKFNA-0001).
     #   Declared a close-type lever the prop paths cannot execute. Measured WITH vs WITHOUT over 730d
@@ -1465,12 +1472,16 @@ strategies:
     # OCO there, PI-20261025-ALQWWPXT-0001). Evidence context, not a gate: frozen v1 on alpaca_live's ETFs FAILED its
     # one read (RQ-20261101-bdc2-01, -0.308 R/decision long-only, n=128). ROLLBACK: drop alpaca_paper here, the ETFs
     # from symbols:, and ml_entry from alpaca_paper's roster.
+    # ⚠️ OPERATOR RULE 2026-11-04 (binding; canonical § "An account configures strategies, never symbols"): a per-account
+    # symbol map like this one is account configuration placed on the leg, which the rule says should not exist. It is a
+    # known open item, NOT a sanctioned pattern: owner row ML-UNIVERSE-RULE. Removing it is a Tier-3 FIELD change; do
+    # not extend it on precedent. (Comment added 2026-11-12, lane DEMOTION-NOT-BAN; no field changed.)
     account_symbols:
       bybit_2: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]
       bybit_portfolio: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]
       # 2026-11-08 ML-ENTRY-PROP-BASELINE: the prop books trade the ETH+SOL slice (the population comms/prop_survival/ml_entry.json scored; the venue routing
       # files also list BTC/ADA/XRP for some firms, unconfirmed in-terminal). Other symbols drop with the named exclusion leg_account_scope. Widening = one line.
-      breakout_2: [ETHUSDT, SOLUSDT]
+      # breakout_2 removed 2026-11-12: account ON ICE (operator), roster emptied in accounts.yaml.
       tradeify_1: [ETHUSDT, SOLUSDT]
       velotrade_1: [ETHUSDT, SOLUSDT]
       alpaca_paper: [SPY, QQQ, IWM, TLT, IEF, SLV, USO, GDX, TQQQ, QLD, SPYM, IAUM, SCHA]
@@ -1576,6 +1587,7 @@ strategies:
     model: null
     signal_prefixes: [trend_donchian_eth_4h, donchian_eth_4h]
     enabled: true
+    decision_bar: closed     # Tier-3, OPERATOR 2026-11-13 Decisions inbox FORMING-VS-CLOSED-4H-PROP = "both_closed" (21:16Z; work item FORMING-VS-CLOSED-ETH4H-SOL4H): decide on the CLOSED 4h bar. Evidence: RQ-20261113-f251-03 run 43451968959 (no material difference; closed passes RULE-D1 on the record window) + the closed-basis evidence record. Revert = delete this line (default forming).
     execution: live          # LIVE on REAL-MONEY bybit_2 AND paper bybit_1/
                              # bybit_portfolio (config/accounts.yaml). Corrected
                              # 2026-09-28 (lane EXIT-OPS, PI-20260926-X3QEGPJL-0002):
@@ -1640,6 +1652,7 @@ strategies:
     model: null
     signal_prefixes: [trend_donchian_sol_4h, donchian_sol_4h]
     enabled: true
+    decision_bar: closed     # Tier-3, OPERATOR 2026-11-13 Decisions inbox FORMING-VS-CLOSED-4H-PROP = "both_closed" (21:16Z; work item FORMING-VS-CLOSED-ETH4H-SOL4H): decide on the CLOSED 4h bar. Evidence: RQ-20261113-f251-03 run 43451968959 (no material difference; closed passes RULE-D1 on the record window) + the closed-basis evidence record. Revert = delete this line (default forming).
     execution: live          # shadow-guard: allow — operator decision 2026-09-28  # DEMO-FLOOR RULE 2026-10-27 (Tier-3): shadow -> live; ROLLBACK = shadow
                              # (relayed via manager to lane EXIT-OPS on
                              # PI-20260924-TJTOJHYE-0001): "Demote all 3 to
@@ -2218,7 +2231,13 @@ strategies:
     timeframe: "1d"
     symbols:
       - TQQQ
-    donchian: 30
+    # donchian 30 -> 20 (Tier 3, data-backed, unit RQ-20261113-4654-01, rule RULE-RQ20261113-4654-01-TQQQ-D20-SPY-TWIN registered
+    # before the run): SPY-twin symbol holdout 2010-06..2026-10, exit_lever_ablation --grade sweep, same tp_r 1.5 / stops,
+    # harness cost stack (fee 0 + 5 bps slippage). Arm A (30) net +9.37 R n 95 maxDD 5.10 R; D20 net +15.10 R n 96 maxDD 4.27 R;
+    # delta +5.73 R, D20 wins 3/4 folds (fold 3 -2.37 vs +0.18) -> PASS. Record:
+    # research/results/RQ-20261113-4654-01/43368810094.jsonl. Confirms be01-02's C3 off TQQQ.
+    # ROLLBACK: donchian: 30.
+    donchian: 20
     atr_period: 14
     atr_stop_mult: 2.5
     trail_mult: 4.0
@@ -2568,8 +2587,14 @@ strategies:
     # having to re-derive the leg from scratch. This is the sanctioned demotion
     # per CLAUDE.md § "The two execution gates".
     #
-    # NOTE it routes to `alpaca_live` (real_money) as well as the paper books —
-    # so this also removes the fleet's worst leg from the account being funded.
+    # ⚠️ SUPERSEDED 2026-11-12 (SLV-1H-PROMOTE, Tier 3; OPERATOR chat ~10:32Z, relayed by Manager Session 2026-11-11a,
+    # verbatim "I answer that I do want to promote silver."): the 08-24 demote above is LIFTED. It was decided on paper-book
+    # P&L whose closes (per AM-TRADING's relay of the 09-29 review) all exited exchange_flat_reconciled, the fleet
+    # exit-protection defect; a book never establishes edge. The leg is now PRODUCTION on alpaca_live + alpaca_portfolio
+    # (off alpaca_paper) on comms/strategy_evidence/slv_trend_1h.json (rebuilt 2026-11-12, +44.71 R n 69, 4/4 folds) + holdout
+    # RQ-20261101-78fc-18 (+35.99 R n 104). The paragraph above is kept as the record of an EVIDENCE-BASED LADDER MOVE (a
+    # demotion on the data then believed), never a ban; it was reopened 2026-11-04 ~22:05Z (operator popup, verbatim "Reopen,
+    # promote if it clears (Recommended)") and confirmed 2026-11-12 ("I answer that I do want to promote silver.").
     model: null
     signal_prefixes: [slv_trend]
     enabled: true
@@ -2581,7 +2606,15 @@ strategies:
     atr_period: 14
     atr_stop_mult: 1.5  # M20 B4 bracket geometry: cell sm1.5 (path_b_wf_pass, wf 5/6); was 2.5
     trail_mult: 4.0
-    tp_r: 50.0
+    # 2026-11-12 SLV-1H-PROMOTE (Tier 3): REAL take-profit replacing the 50 R sentinel. RQ-20261112-5ab1-03 (RQ-20261104-7fdb-01 design,
+    # dukascopy 1h 2018-06..2026-10-15) selected T6 from {2,3,4,6} R on discovery (n 329, +30.83 R, 3/4 folds) and CONFIRMED it on the
+    # held-back span (2024-09-17..2026-10-15, n 108, +33.37 R, read once). Corroborated by RQ-20261112-5ab1-02 (tp_prediction_derive K* 6 R,
+    # reach_OOS 0.175, calibrated, gap 0.045). DISCLOSED: the held-back span holds the parameter-choice data and was read before for arm A
+    # (78fc-18); the fresh-span confirmation is RQ-20261104-7fdb-02. ROLLBACK: restore `tp_r: 50.0` and drop tp_intent (git history).
+    # tp_intent (basis): r_multiple, RQ-20261112-5ab1-03 holdout T6, calibrated per RQ-20261112-5ab1-02. Kept as a COMMENT on purpose: a
+    # `tp_intent:` key enters config_fingerprint, and the holdout's selected_config_fingerprint (sha256:eab5e2b8...) is this block without it,
+    # so a key here would unbind the record from its holdout confirmation (mandate_resolver R-HOLDOUT reads a mismatch as NEEDS_DATA).
+    tp_r: 6.0
     # 0.0 -> 0.3 (2026-08-01, PB-20260801-SLV-TREND-DEGENERATE-CONFIDENCE): 2
     # consecutive reviews of should_skip-grade entries (conf 0.04-0.15), 5
     # graded entries all losses. The builder was emitting entries its own
@@ -3419,6 +3452,10 @@ strategies:
                              # rostering account trades (src/config/symbol_sets.py::leg_symbols; the coordinator refuses
                              # a desk package on any other account x symbol as leg_account_scope). Each venue's set is
                              # instruments that account ALREADY pulls and has an instrument profile for.
+    # ⚠️ OPERATOR RULE 2026-11-04 (binding; canonical § "An account configures strategies, never symbols"): a per-account
+    # symbol map like this one is account configuration placed on the leg, which the rule says should not exist. It is a
+    # known open item, NOT a sanctioned pattern: owner row ML-UNIVERSE-RULE. Removing it is a Tier-3 FIELD change; do
+    # not extend it on precedent. (Comment added 2026-11-12, lane DEMOTION-NOT-BAN; no field changed.)
     account_symbols:
       bybit_1: [BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, ADAUSDT, AVAXUSDT]  # the DESK-WIDEN six (declared slice)
       alpaca_paper: [SPY, QQQ, IWM, GLD, TLT]  # broad US index, small caps, gold, long rates: the most liquid

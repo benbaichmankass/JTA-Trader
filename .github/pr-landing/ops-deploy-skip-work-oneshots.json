@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "touches scripts/deploy_pull_restart.sh (deploy path); AM-DEVOPS merges after an OK",
+  "why": "ict-git-sync deploys take ~18 min because the restart loop synchronously re-runs two timer-owned oneshots (work-digest ~6.5 min, work-report ~7.5 min); a 900 s sync-now timed out holding the single runner. Adds both to DEFAULT_SKIP, the existing pattern for timer-owned oneshots. Trader/web-api/telegram restart behaviour unchanged (pinned by a test)."
+}

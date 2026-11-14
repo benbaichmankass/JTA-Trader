@@ -1,7 +1,7 @@
 # Hand-authored 2026-11-12 by the ML standing lane part 3 (FRONTIER-STATIC-MARKETS, Tier 1), dispatched by Manager Session 2026-11-11a. Decision rule registered BEFORE any run; no arm of this unit has been run on real data. Gates: none.
 id: RQ-20261112-a7e8-02
 title: 'Static-market frontier #2: the repo''s fade (failed-breakout reversion) family at the 1d bar on nine liquid ETFs, base vs a 5-day channel, net of cost'
-status: queued
+status: done
 cadence: once
 origin: new_hypothesis
 roadmap:
@@ -89,9 +89,20 @@ run:
   timeout_minutes: 240
   inputs:
     research_unit: RQ-20261112-a7e8-02
-grading:
-  auto: true
 related:
 - RQ-20261112-a7e8-01
 - RQ-20261103-b3c9-11
-last_dispatched_at: '2026-11-12T06:15:51+00:00'
+last_dispatched_at: '2026-11-13T07:53:17+00:00'
+grading:
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ20261112a7e802
+  evidence:
+  - research/results/RQ-20261112-a7e8-02/43389005203.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-11-13'
+  grader: scripts/research/queue_grade.py
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -387,6 +387,28 @@ else
     "$(iso_now)" "$rc")"
 fi
 
+# --- IBKR per-contract shards (roll-adjustment input) ---------------------
+# 2026-11-12 (FUT-CME-INTRADAY-HIST): `pull-ibkr-history per_contract: 1`
+# writes market_raw_percontract/<SYM>/<tf>/<ver>/data.jsonl (each bar tagged
+# with its contract month, overlaps kept) — the input to
+# scripts/research/build_continuous_contract.py. The block above syncs only
+# market_raw/, so per-contract shards never reached the trainer. Same
+# non-fatal contract: absence (no per-contract pull yet) is expected.
+LIVE_VM_IBKR_PC_PATH="${LIVE_VM_IBKR_PC_PATH:-/data/bot-data/ibkr_datasets/market_raw_percontract/}"
+mkdir -p "${DATA_DIR}/ibkr_datasets/market_raw_percontract"
+set +e
+rsync -az --checksum -e "ssh ${SSH_OPTS}" \
+  "${VM_SSH_USER}@${LIVE_VM_IP}:${LIVE_VM_IBKR_PC_PATH}" \
+  "${DATA_DIR}/ibkr_datasets/market_raw_percontract/"
+rc=$?
+set -e
+if [ "$rc" -eq 0 ]; then
+  emit "$(printf '{"ts":"%s","status":"ok","artifact":"ibkr_market_raw_percontract"}' "$(iso_now)")"
+else
+  emit "$(printf '{"ts":"%s","status":"skipped","artifact":"ibkr_market_raw_percontract","detail":"not present on live VM (no per-contract pull yet)","exit_code":%d}' \
+    "$(iso_now)" "$rc")"
+fi
+
 emit "$(printf '{"ts":"%s","status":"sync_done","overall_rc":%d,"data_dir":"%s"}' \
   "$(iso_now)" "$overall_rc" "$DATA_DIR")"
 exit "$overall_rc"

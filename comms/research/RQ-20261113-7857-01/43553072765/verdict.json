@@ -1,0 +1,51 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "n": 293,
+  "population": "RQ-20261113-7857-01: frozen E4 arm re-replayed on the held-out window (2024-11-01..2025-10-25) at oi_z 6.0, 7.0, 8.0; n = summed filled trades over the 3 arms; net R = driver net (full cost stack); control oi_z 3.0 vs committed ledger: reproduces",
+  "note": "RULE-RQ-20261113-7857-01: fail -- no arm clears n >= 30 with mean > 0 and cluster CI LB > 0; oi_z 6.0: n 154 mean -0.012820681818181828 ci95 [-0.24616551196911193, 0.23166973160147789] -> fail; oi_z 7.0: n 82 mean -0.016541060975609752 ci95 [-0.3102531555096696, 0.2840356725948592] -> fail; oi_z 8.0: n 57 mean 0.10178661403508774 ci95 [-0.24984169611629878, 0.4251077727419354] -> fail",
+  "measurement": {
+    "rule_id": "RULE-RQ-20261113-7857-01",
+    "control": {
+      "reproduces": true,
+      "n_replayed": 856,
+      "n_committed": 856,
+      "only_replayed": 0,
+      "only_committed": 0
+    },
+    "arms": {
+      "6.0": {
+        "n": 154,
+        "weeks": 49,
+        "mean_net_r": -0.012820681818181828,
+        "ci95": [
+          -0.24616551196911193,
+          0.23166973160147789
+        ],
+        "state": "fail"
+      },
+      "7.0": {
+        "n": 82,
+        "weeks": 37,
+        "mean_net_r": -0.016541060975609752,
+        "ci95": [
+          -0.3102531555096696,
+          0.2840356725948592
+        ],
+        "state": "fail"
+      },
+      "8.0": {
+        "n": 57,
+        "weeks": 29,
+        "mean_net_r": 0.10178661403508774,
+        "ci95": [
+          -0.24984169611629878,
+          0.4251077727419354
+        ],
+        "state": "fail"
+      }
+    },
+    "alpha": 0.05,
+    "n_min": 30
+  }
+}

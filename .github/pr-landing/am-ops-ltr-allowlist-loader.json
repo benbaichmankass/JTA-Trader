@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "manager_merge",
+  "hold_text": "Fixes main red (tests/test_check_canonical_config_loaders.py::test_main_repo_is_clean): scripts/ops/ltr_candle_allowlist.py live_legs now uses src.config.accounts_loader.load_accounts_dict instead of a hand-rolled yaml parse. Touches scripts/ops, so git-sync restarts the trader: the manager merges. Revert: git revert.",
+  "why": "Main is red on the canonical-config-loaders guard since #25935."
+}

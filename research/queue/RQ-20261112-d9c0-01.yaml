@@ -1,0 +1,127 @@
+# Hand-authored 2026-11-12 by lane PERF-F1-DEMOTION-SIGNAL (Manager Session 2026-11-11a; operator decisions page p2 "Both in parallel",
+# record docs/plans/thursday-planning-2026-11-12-answers.md). Tier 1 tooling: a REPRODUCTION that writes per-trade rows; no new read.
+id: RQ-20261112-d9c0-01
+title: 'ml_entry_eq_struct per-trade Stage-0 rows: reproduce the graded RQ-20261107-98e3-06 confirm read (booster 0afc49948a41671a, n 207,
+  mean +0.492207 R) with no holdout claim and write one net_r row per trade, so the r4 demotion gate and live_vs_backtest can bootstrap
+  the real-money leg'
+status: done
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-LADDER
+kind: experiment
+practice_precedent: 'T8 (docs/reference/trading-and-model-practice-principles.md): a demotion signal needs the leg''s own per-trade distribution
+  net of the full cost stack; this re-derives the graded population, it selects nothing.'
+intervention_controls:
+  not_applicable: 'REPRODUCTION of an already-graded read (RQ-20261107-98e3-06, run 42432561069) to emit its per-trade rows; it grades no
+    intervention and credits nothing.'
+question: 'Does the deterministic refit of the 5-seed structure ensemble (config B, tau 0.25, rows <= 2025-06-30) reproduce the graded
+  booster sha256 0afc49948a41671a and the graded confirm population exactly (n 207, mean net R +0.4922070639835765), and if so what are its
+  207 per-trade net R rows?'
+why_this_matters: 'Performance review 2026-11-11 finding F1 (draft PR #24953): ml_entry_eq_struct is a real-money leg (alpaca_live) whose
+  evidence record cites a workflow URL as source_run, so mandate_resolver.stage0_block_p10 returns no p10 and the MD-DEMOTE-S2-S1 gate and
+  live_vs_backtest.py can never read it (NO_BACKTEST). Row PERF-F1-DEMOTION-SIGNAL.'
+power:
+  expected_n: 207
+  min_detectable_effect: 1.0
+  effect_units: metric
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'DESCRIPTIVE reproduction: no statistical test; the check is an exact sha256 + n + mean reproduction of a graded read.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Alpaca 1h RTH history to the last complete month (2026-10-31 while the run happens in November 2026); nothing accrues.
+decision_rule:
+  id: RULE-RQ20261112-d9c0-01-REPRO
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_equity.py structure --ensemble-seeds 1,2,3,4,5 --taus 0.25 --reproduce-sha 0afc49948a41671a
+    --expect-n 207 --expect-mean 0.4922070639835765 --trades-out: measurement.reproduction {sha_match, n_match, mean_match, reproduces} and
+    measurement.trades_jsonl {rows, sum_net_r}.'
+  rule: 'PASS IF reproduction.reproduces is true (booster sha256 starts with 0afc49948a41671a AND n == 207 AND |mean - 0.4922070639835765|
+    <= 1e-6) AND trades_jsonl.rows == 207: the per-trade file may then be cited as comms/strategy_evidence/ml_entry_eq_struct.json source_run.
+    FAIL IF any of the three does not match: the rows are NOT the graded population and must not be cited (report which mismatched; a run
+    after 2026-11-30 reads a different window and is expected to FAIL n/mean). INDETERMINATE (null) if the run produces no verdict.json.'
+  what_it_does_not_do: 'Claims no holdout read (ledger untouched: the decision was taken by the graded run). No selection, no config change,
+    no order, no roster change, no demotion.'
+  min_n: n/a (reproduction)
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.3
+  basis: 'stand-in: a real-money leg with no working demotion signal; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 150
+  why_runner: Alpaca market data (read-only, paper key) + LightGBM 5-seed ensemble fits; 4 vCPU / 16 GB runner.
+  basis: 'MEASURED: the graded structure run (two taus) took 8260 s (run 42432561069 run-manifest); one tau trims the dev stage.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_equity.py
+  - structure
+  - --cache
+  - /tmp/ml_entry_equity
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --ensemble-seeds
+  - 1,2,3,4,5
+  - --taus
+  - '0.25'
+  - --min-mean
+  - '0.04'
+  - --reproduce-sha
+  - 0afc49948a41671a
+  - --expect-n
+  - '207'
+  - --expect-mean
+  - '0.4922070639835765'
+  - --trades-out
+  - '{out_dir}/ml_entry_eq_struct__trades.jsonl'
+  - --rule-id
+  - RULE-RQ20261112-d9c0-01-REPRO
+  - --registered-at
+  - '2026-11-12'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261112-d9c0-01
+ml_consumer:
+  consumer: scripts/ops/r4_demotion_gate.py
+  decision: whether MD-DEMOTE-S2-S1 (and scripts/research/live_vs_backtest.py) can read ml_entry_eq_struct on alpaca_live at all -- a usable Stage-0 p10 instead of a permanent abstain
+  legs:
+  - ml_entry_eq_struct
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- PERF-F1-DEMOTION-SIGNAL
+- RQ-20261107-98e3-06
+- STAGE2-OFFLINE-DEMOTION-SIGNAL
+population: 'The registered POOL_RULE of scripts/research/ml_entry_alpaca_score.py, UNCHANGED (sha256 e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2),
+  confirm window 2025-07-15..2026-10-31, restricted-LONG decisions of the graded ensemble, net of the Alpaca cost stack (slippage 5 bps provisional + 0.5 bps regulatory).'
+last_dispatched_at: '2026-11-13T23:45:24+00:00'
+grading:
+  attested: RULE-RQ20261112-d9c0-01-REPRO
+  auto: true
+  decision_rule_id: RULE-RQ20261112-d9c0-01-REPRO
+  evidence:
+  - research/results/RQ-20261112-d9c0-01/43529495956.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

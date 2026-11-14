@@ -1,0 +1,70 @@
+{
+  "unit": "RQ-20261112-4654-06",
+  "run_id": "43492531169",
+  "commit_sha": "b60a993bf5ac13aafcb7dc322565dc2fa676c467",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/43492531169",
+  "timeout_minutes": 300,
+  "runner": {
+    "cpu_model": "AMD EPYC 7763 64-Core Processor",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1019-azure",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261111.196.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "d5aeef1fabd2",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/ml_entry_residual.py",
+        "run",
+        "--arms",
+        "raw,xsdemean",
+        "--cache",
+        "/tmp/ml_entry_klines",
+        "--out",
+        "comms/research/RQ-20261112-4654-06/43492531169",
+        "--unit",
+        "RQ-20261112-4654-06",
+        "--where",
+        "research-script-run",
+        "--run-date",
+        "2026-11-13",
+        "--rule-id",
+        "RULE-RQ20261112-4654-06-XSDEMEAN-TARGET",
+        "--registered-at",
+        "2026-11-13"
+      ],
+      "log": "comms/research/RQ-20261112-4654-06/43492531169/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 614.0
+    }
+  ],
+  "all_ok": true
+}

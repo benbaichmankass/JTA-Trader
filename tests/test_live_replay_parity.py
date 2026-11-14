@@ -457,6 +457,24 @@ def test_bars_before_a_legs_join_are_not_lost_bars():
     assert lost and all(P.to_epoch(d["bar"]) >= UNTIL - 2 * TF_S for d in lost)
 
 
+def test_lost_bar_plant_skips_a_pre_join_bar_and_still_proves_the_check():
+    """PARITY-CONTROLS-1114: the planted_defect control planted slv_trend_1h's 2026-11-09T14:00Z bar, before the leg's
+    2026-11-12 roster join, where the lost_bar verdict is withheld by design, and so reported a fail. The plant must
+    pick a bar whose verdict is observable, and each bar says whether it is."""
+    leg = _leg()
+    rows, _ = _consistent_evals(leg)
+    leg.roster_from = {"bybit_2": UNTIL - 3 * TF_S}
+    b = _bundle(rows)
+    doc = P.run(b, [leg], SINCE, UNTIL)
+    lost = [p for p in doc["controls"]["planted_defect"]["plants"] if p["plant"] == "lost_bar"]
+    assert lost and all(p["flagged"] is True for p in lost), lost     # unfixed: the pre-join bar, flagged False
+    assert all(P.to_epoch(p["bar"]) >= UNTIL - 3 * TF_S for p in lost)
+    res = P.analyse_leg(leg, b, SINCE, UNTIL)
+    obs = {x["bar"]: x["lost_bar_observable"] for x in res["bars"] if "lost_bar_observable" in x}
+    assert obs and any(obs.values()) and not all(obs.values())
+    assert all(v is False for k, v in obs.items() if P.to_epoch(k) < UNTIL - 3 * TF_S + P.ROSTER_DEPLOY_GRACE_S)
+
+
 def _closed_rows(skip_bar=None, also_decide=False):
     """One closed-mode eval per bar, 60 s after its close; ``skip_bar`` gets a
     closed_bar_skip audit row instead (optionally followed by a decision)."""
@@ -521,3 +539,15 @@ def test_a_lost_election_is_a_named_outcome_not_dropped_no_package():
     # control: a failed allocator read never reads as "lost the election"
     b["allocator"] = {"ETHUSDT": {"rows": [], "error": "fetch_failed: x"}}
     assert P.analyse_leg(leg, b, SINCE, UNTIL)["by_class"]["dropped_no_package"] > 0
+
+
+def test_historical_positive_lists_every_unmatched_package_first():
+    """PARITY-CONTROLS-1114: 165/166 matched and the 40-row list did not name the one that failed."""
+    res = {"leg": "L", "state": "checked", "timeframe": "1h", "decision_bar": "forming",
+           "bars": [{"bar": P.iso(SINCE + 3600 * i), "status": "matched_signal" if i else "divergent",
+                     "signal_evals": 0} for i in range(60)]}
+    pk = [{"order_package_id": f"p{i}", "strategy_name": "L", "created_at": P.iso(SINCE + 3600 * i + 60)}
+          for i in range(60)]
+    out = P.historical_positive([res], {"order_packages": {"rows": pk[1:] + pk[:1]}})
+    assert out["state"] == "fail" and out["packages_unmatched"] == 1
+    assert out["packages"][0]["package"] == "p0" and len(out["packages"]) == 40

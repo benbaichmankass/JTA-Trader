@@ -8,82 +8,78 @@ books:
 - bybit_portfolio
 baseline:
   record: comms/strategy_evidence/trend_donchian_sol_prop.json
-  net_r: 52.3713
-  n: 380
+  net_r: 49.8124
+  n: 538
   fidelity: faithful
   rule_verdict: pass
 attribution:
   read_state: measured
-  n: 380
-  net_r: 52.371
-  gross_r: 74.127
-  cost_r: 21.756
-  cost_share_of_gross: 0.293
+  n: 538
+  net_r: 49.812
+  gross_r: 80.692
+  cost_r: 30.879
+  cost_share_of_gross: 0.383
   verdict_hint: gross edge survives cost
   entry_quality:
-    mean_mfe_r: 1.304
-    share_mfe_ge_1r: 0.516
-    n_with_mfe: 380
+    mean_mfe_r: 1.23
+    share_mfe_ge_1r: 0.496
+    n_with_mfe: 538
   exit_capture:
-    median_net_over_mfe_winners: 1.011
-    n_winners: 136
-    losers_that_reached_1r_mfe: 76
+    median_net_over_mfe_winners: 1.001
+    n_winners: 191
+    losers_that_reached_1r_mfe: 96
   by_year:
     '2020':
-      n: 5
-      net_r: 3.945
-      gross_r: 4.166
+      n: 7
+      net_r: 3.291
+      gross_r: 3.619
     '2021':
-      n: 75
-      net_r: 20.841
-      gross_r: 23.322
+      n: 115
+      net_r: 15.078
+      gross_r: 18.859
     '2022':
-      n: 56
-      net_r: 0.457
-      gross_r: 3.48
+      n: 69
+      net_r: 14.044
+      gross_r: 17.826
     '2023':
-      n: 72
-      net_r: 17.537
-      gross_r: 21.42
+      n: 102
+      net_r: 13.935
+      gross_r: 19.632
     '2024':
-      n: 59
-      net_r: 1.903
-      gross_r: 5.426
+      n: 86
+      net_r: -7.644
+      gross_r: -2.425
     '2025':
-      n: 62
-      net_r: 8.866
-      gross_r: 13.295
+      n: 91
+      net_r: 3.799
+      gross_r: 9.768
     '2026':
-      n: 51
-      net_r: -1.176
-      gross_r: 3.018
+      n: 68
+      net_r: 7.31
+      gross_r: 13.413
   by_direction:
     long:
-      n: 380
-      net_r: 52.371
-      gross_r: 74.127
+      n: 538
+      net_r: 49.812
+      gross_r: 80.692
   by_exit_reason:
     stop:
-      n: 147
-      net_r: -154.34
-      gross_r: -147.0
+      n: 233
+      net_r: -244.711
+      gross_r: -233.0
     take_profit:
-      n: 86
-      net_r: 210.454
-      gross_r: 214.613
-    timeout:
-      n: 1
-      net_r: 0.481
-      gross_r: 0.581
+      n: 117
+      net_r: 288.301
+      gross_r: 293.842
     trail_stop:
-      n: 146
-      net_r: -4.224
-      gross_r: 5.933
+      n: 188
+      net_r: 6.223
+      gross_r: 19.85
   by_adx_at_entry:
     unknown:
-      n: 380
-      net_r: 52.371
-      gross_r: 74.127
+      n: 538
+      net_r: 49.812
+      gross_r: 80.692
 manifest:
   entry: tested
   exit: tested
@@ -3425,3 +3421,63 @@ levers:
       best_delta_r_per_trade: -0.034
       fold_stability: 0.417
       reading: every tested value is worse than the baseline
+levers_tested:
+- family: 'exit (conditional profit lock: stop to entry + (k-1)R once MFE >= kR)'
+  varied: arm A config-exact vs L2 (k 2), L25 (k 2.5), L2T (k 2 armed only with the TP within 0.5R), record 2025-11-13..2026-11-12 + year before,
+    live decision bar, full cost stack
+  response:
+    verdict: fail
+    unit_verdict: fail
+    run: '43589684532'
+    rule: RULE-PROFIT-LOCK-CONDITIONAL-20261114
+    arms: L2 --be-floor-r 2 --be-floor-lock-r 1 (primary); L25 --be-floor-r 2.5 --be-floor-lock-r 1.5; L2T L2 + --be-floor-tp-within-r 0.5
+    A:
+      record_net_r: 4.9694
+      record_n: 81
+      prior_net_r: -3.0027
+      prior_n: 88
+    L2:
+      verdict: fail
+      record_net_r: 2.7922
+      record_n: 82
+      record_folds_positive: 2
+      delta_record: -2.1772
+      prior_net_r: 0.8952
+      delta_prior: 3.8979
+    L25:
+      verdict: fail
+      record_net_r: 1.959
+      record_n: 84
+      record_folds_positive: 2
+      delta_record: -3.0104
+      prior_net_r: -4.8388
+      delta_prior: -1.8361
+    L2T:
+      verdict: fail
+      record_net_r: 4.4163
+      record_n: 82
+      record_folds_positive: 2
+      delta_record: -0.5531
+      prior_net_r: -3.0027
+      delta_prior: 0.0
+    pooled:
+      L2:
+        delta_record: -30.2489
+        delta_prior: -18.9327
+        verdict: fail
+      L25:
+        delta_record: -37.5409
+        delta_prior: -22.8675
+        verdict: fail
+      L2T:
+        delta_record: -9.1846
+        delta_prior: 1.5882
+        verdict: fail
+    reading: 'unit FAIL: an MFE-armed lock gives back more R than it saves, pooled over 18 crypto legs on both windows (L2 -30.25R record / -18.93R
+      year before); the TP-gated variant is near-neutral (-9.18R / +1.59R); no per-leg pass on any arm'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-05
+  lever_family: exit
+units:
+- RQ-20261114-db1a-05

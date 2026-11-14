@@ -195,6 +195,32 @@ def test_tree_scanning_tests_are_always_selected(repo):
     assert mode == "affected" and "tests/test_scan.py" in tests
 
 
+def test_a_test_that_runs_a_tree_scanning_guard_is_selected(repo):
+    """GUARD-SCANNER-SELECTION, the #25935 miss reproduced: a scripts/ops change, and a test that runs a guard script
+    (built path, no glob in the test's own text) whose source rglob()s every script -> the test must run."""
+    _write(repo, "scripts/check_loaders.py",
+            "from pathlib import Path\nBAD = [p for p in Path('scripts').rglob('*.py') if 'safe_load' in p.read_text()]\n")
+    _write(repo, "tests/test_check_loaders.py",
+            "import subprocess, sys\nfrom pathlib import Path\nR = Path(__file__).parents[1]\n"
+            "def test_clean():\n    subprocess.run([sys.executable, str(R / 'scripts' / 'check_loaders.py')], check=True)\n")
+    _write(repo, "scripts/ci/check_lsfiles.py", "import subprocess\nF = subprocess.run(['git', 'ls-files'], capture_output=True)\n")
+    _write(repo, "tests/test_check_lsfiles.py", "import check_lsfiles  # noqa: F401\n")
+    _write(repo, "scripts/check_narrow.py", "X = 1\n")   # names nothing, walks nothing
+    _write(repo, "tests/test_check_narrow.py", "N = 'check_narrow'\n")
+    mode, reason, tests = _aff(repo, "pkg/leaf.py")
+    assert mode == "affected", reason
+    assert "tests/test_check_loaders.py" in tests       # the exact #25935 shape
+    assert "tests/test_check_lsfiles.py" in tests       # `git ls-files` counts as a walk in a guard
+    assert "tests/test_check_narrow.py" not in tests    # a guard that walks nothing adds nothing
+
+
+def test_real_repo_selects_the_canonical_loader_guard_test_for_a_scripts_ops_change():
+    """The live miss: #25935's scripts/ops change must select tests/test_check_canonical_config_loaders.py."""
+    mode, reason, tests = scope.classify_affected(["scripts/ops/ltr_candle_allowlist.py"], RELEVANT, scope.ImportGraph())
+    assert mode == "affected", reason
+    assert "tests/test_check_canonical_config_loaders.py" in tests
+
+
 # --- the CLI: only pull_request may select fewer than all ------------------------
 
 def _cli(monkeypatch, tmp_path, stdin: str, *args: str) -> dict[str, str]:
@@ -229,3 +255,53 @@ def test_real_repo_high_fan_in_module_runs_the_full_suite():
 def test_data_only_diff_is_unchanged_by_the_event(monkeypatch, tmp_path):
     out = _cli(monkeypatch, tmp_path, "research/results/x.json\n", "--event", "pull_request")
     assert out["mode"] == "data"
+
+
+# --- CI-SCOPE-LAZY-EDGES (2026-11-12): selection follows IMPORT-TIME edges of library code ----------------------
+# decision: 2026-11-12 operator chat "each item is only getting the checks it needs" + manager approval of
+# CI-SCOPE-LAZY-EDGES (selection narrowed to import-time edges; main backstop catches misses).
+
+def test_a_library_modules_function_local_import_does_not_widen_the_selection(repo):
+    # pkg.hub has 6 test importers; a function-body import of pkg.leaf inside it must not drag them in
+    _write(repo, "pkg/hub.py", "X = 1\ndef later():\n    from pkg import leaf\n    return leaf.f()\n")
+    mode, reason, tests = _aff(repo, "pkg/leaf.py")
+    assert mode == "affected", reason
+    assert not any(t.startswith("tests/test_hub") for t in tests)
+    assert {"tests/test_leaf.py", "tests/test_mid.py"} <= set(tests)
+
+
+def test_an_import_inside_a_test_function_still_selects_that_test(repo):
+    _write(repo, "tests/test_lazy_in_test.py", "def test_x():\n    from pkg import leaf\n    assert leaf.f() == 1\n")
+    mode, _, tests = _aff(repo, "pkg/leaf.py")
+    assert mode == "affected" and "tests/test_lazy_in_test.py" in tests
+
+
+def test_a_conftest_lazy_import_only_widens_through_import_time_edges(repo):
+    # conftest imports pkg.eager at import time; a FUNCTION-LOCAL import inside pkg.eager is not every-test
+    _write(repo, "pkg/eager.py", "Y = 2\ndef later():\n    from pkg import leaf\n    return leaf\n")
+    mode, reason, tests = _aff(repo, "pkg/leaf.py")
+    assert mode == "affected", reason
+
+
+def test_a_non_python_file_selects_the_tests_that_read_it_not_the_full_suite(repo):
+    # docs/api-tier-policy.md: 11 of the 43 FULL PR heads on 2026-11-12 were this one file
+    _write(repo, "docs/api-tier-policy.md", "# policy\n")
+    _write(repo, "tests/test_reads_policy.py", 'P = "docs/api-tier-policy.md"\n')
+    mode, reason, tests = _aff(repo, "docs/api-tier-policy.md")
+    assert mode == "affected", reason
+    assert "tests/test_reads_policy.py" in tests and not any(t.startswith("tests/test_hub") for t in tests)
+
+
+def test_a_non_python_file_named_by_nothing_is_read_through_its_directory(repo):
+    _write(repo, "tests/snapdata/snap_prop_v1.json", "{}\n")
+    _write(repo, "tests/test_snaps.py", 'from pathlib import Path\nD = Path(__file__).parent / "snapdata"\n'
+                                         'def test_s():\n    assert (D / f"snap_{\'prop\'}_v1.json").exists()\n')
+    mode, reason, tests = _aff(repo, "tests/snapdata/snap_prop_v1.json")
+    assert mode == "affected", reason
+    assert "tests/test_snaps.py" in tests
+
+
+def test_a_non_python_file_nothing_reads_still_runs_the_full_suite(repo):
+    _write(repo, "deploy/orphan-unit.service", "x\n")
+    mode, reason, _ = _aff(repo, "deploy/orphan-unit.service")
+    assert mode == "full" and "cannot place" in reason

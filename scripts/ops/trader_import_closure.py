@@ -65,9 +65,9 @@ CLOSURE_REL = "config/trader_import_closure.txt"
 NON_RUNTIME_PATHS_RE = re.compile(
     r"^(docs/|tests/|\.claude/|\.github/|[^/]+\.md$|research/|runtime_logs/"
     r"|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/"
-    r"|comms/(desk|live_review|live_parity|cloud|prop_survival|claude_judgments|reviews|ops|ci|ml-plan|news_alpha|strategy_reviews|reports|data_lake)/"
+    r"|comms/(desk|live_review|live_parity|cloud|prop_survival|claude_judgments|reviews|ops|ci|ml-plan|news_alpha|strategy_reviews|reports|data_lake|backups)/"
     r"|comms/claude_strategy_scores\.jsonl$"
-    r"|tools/phone-executor/|tools/phone-probe/|deploy/trainer/)"
+    r"|tools/phone-executor/|tools/phone-probe/|deploy/trainer/|\.gitignore$|\.gitattributes$)"
 )
 
 #: ...except these scripts/research modules, which the WEB-API imports in-process
@@ -76,6 +76,33 @@ NON_RUNTIME_PATHS_RE = re.compile(
 #: them like any other scripts/ .py.
 IN_PROCESS_RUNTIME_PATHS_RE = re.compile(
     r"^scripts/research/(dispatch_queue|e35_bracket_geometry_sweep|m20_fleet_exit_sweep|m20_wf_effective|queue_grade|queue_replenish|queue_throughput|research_queue)\.py$"
+)
+
+#: TRADER-RESTART-CHURN (2026-11-12): non-.py paths that are RUNTIME for the
+#: deploy (other units load them) but that the TRADER process never loads.
+#: Trader gate only: the deploy's NON_RUNTIME_PATHS_RE (lockstep-pinned) and
+#: every other unit's restart rule stay as they were.
+#:   - ``*.sh``: a shell script is read when it is EXECUTED; the trader runs any
+#:     it uses through a subprocess, so the next exec picks up the new file with
+#:     no restart. No src/ module opens a .sh at import.
+#:   - ``deploy/<unit>`` for every unit except the trader's own
+#:     (``deploy/ict-trader-live.service``) and its drop-ins (``deploy/dropins/``):
+#:     systemd reads unit files, not the trader; install_systemd_units.sh
+#:     installs them and the deploy restarts the units that own them. The two
+#:     src/ readers of deploy/ (data_loaders.list_trader_services fallback,
+#:     cloud_notifier._known_systemd_units) list the dir on each call, with no
+#:     cache. ``deploy/vm-sparse-checkout`` stays RUNTIME: it changes which
+#:     files exist in the tree.
+#:   - ``config/trader_import_closure.txt``: read by this gate and diag, never
+#:     by the trader.
+#: MEASURED on 2026-11-12 00:00-19:54Z: 4 of the 42 trader restarts that
+#: ict-git-sync's gate ordered were forced ONLY by these paths (replay
+#: of each restart's base..head diff with the head tree's closure).
+TRADER_UNLOADED_NON_PY_RE = re.compile(
+    r"^(?:.*\.sh$"
+    r"|config/trader_import_closure\.txt$"
+    r"|deploy/(?!ict-trader-live\.service$|dropins/|vm-sparse-checkout$)[^/]+$"
+    r"|deploy/caddy/)"
 )
 
 RESTART = "RESTART"
@@ -369,6 +396,8 @@ def classify_path(path: str, closure: Set[str],
     if non_runtime_re.match(path):
         return None
     if not path.endswith(".py"):
+        if TRADER_UNLOADED_NON_PY_RE.match(path):
+            return None
         return "non_py_runtime"
     if not path.startswith(("src/", "scripts/")):
         return "py_outside_src_scripts"

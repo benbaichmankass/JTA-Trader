@@ -1,0 +1,136 @@
+# Hand-authored 2026-11-13 by lane orphans-legs (Tier 1), dispatched by the manager. ITERATION unit (attempt 3) for orphan subject xsec-crypto, authored from a written diagnosis of its last result (RQ-20261101-d1f3-02). Decision rule registered BEFORE any run (the author ran the harness on a SYNTHETIC panel only, no real-data arm number seen). Gates: none.
+id: RQ-20261113-62e3-02
+title: 'ITERATION 3 of xsec-crypto (fail): does RESIDUAL momentum (28d return net of BTC beta) replace the 2021 alt-beta episode with selection
+  that holds in both halves, net of fee + slippage + signed funding?'
+status: done
+cadence: once
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-PROGRAMMES
+programme: P6
+kind: experiment
+question: On 2020-06-01..2024-06-30 (Binance USD-M archive, point-in-time top-20, weekly), does ranking on the 28d residual return vs BTC (RM1
+  raw sum, RM2 sum / residual sd; beta from the trailing 90d) clear the unchanged discovery rule at the cumulative trial count, against the X1
+  raw-momentum control?
+why_this_matters: 'xsec-crypto is an orphan (scripts/research/iteration_orphans.py 2026-11-13). Attempt 2 tested regime, rebalance and universe;
+  none fixed the concentration in one bull episode. Whether the family has SELECTION skill or only beta timing is the open question, and
+  residual momentum is the standard way to separate the two.'
+iteration:
+  subject: xsec-crypto
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261101-d1f3-02/41753804464.jsonl
+  verdict_read: fail
+  diagnosis: 'RQ-20261101-d1f3-02 (attempt 2; 7 arms incl. control, daily net, 2020-06-01..2024-06-30, n_days=1491, DSR N_cum=17): every arm
+    FAILS. Control X1 net Sharpe 1.325, halves 2.132 / 0.259, DSR 0.80; by year 2020 +0.50, 2021 +1.09, 2022 +0.01, 2023 +0.08, 2024H1 -0.07
+    (2021 = 68% of net, discovery attribution); long leg +1.84, short -0.23. R2 (flat when BTC < 200d) lifts Sharpe to 1.49 but h2 turns -0.017;
+    R1 kills the short loss (-0.006) yet total Sharpe falls to 1.13. Robustness cuts (58e4-02 followups): ex-2021 Sharpe 0.65, ex top-3
+    (AXS, SOL, LINK) 0.74. CAUSE (hypothesis): raw 28d momentum in an alt-season ranks on BETA (high-beta alts lead a rising market), so the
+    return is one beta episode, not selection. COMPETING: genuine idiosyncratic continuation (narrative flows into specific alts) that happened
+    to cluster in 2021; then the residual ranking keeps the 2021 return and holds h2 too.'
+  hypothesis: ranking on the BTC-residual return removes the beta loading, so whatever selection skill exists shows in BOTH halves rather than
+    in one bull episode
+  search: 'entry signal: residual momentum vs BTC (RM1 raw residual sum, RM2 residual sum / residual sd), beta window 90d, formation 28d'
+  levers:
+  - entry
+  attempt: 3
+  due_by: '2026-11-20'
+  map_entries:
+  - research/levers/xsec-crypto.yaml
+baseline:
+  what: control A0 = discovery primary X1 (raw 28d return, top/bottom 30%, long-short, equal weight, weekly, top-20), re-run in the same invocation
+  net_of: fee 11.0 bps round trip charged per side + slippage 3 bps round trip + SIGNED settled funding (long pays, short receives); stress
+    arm = 2x fee+slippage
+  committed_value: net Sharpe 1.325, halves 2.132 / 0.259, DSR 0.805 at N=17, side net sums long +1.843 / short -0.230 (RQ-20261101-d1f3-02 A0)
+power:
+  expected_n: 1491
+  min_detectable_effect: 1.4
+  effect_units: annualised_sharpe
+  sd: 19.105
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'n=1491 daily net returns; harness annualises with 365 days so sd=sqrt(365)=19.105. One-sample, alpha 0.05, power 0.8: required n
+    = 7.84*365/S^2, so at n=1491 the smallest annualised Sharpe separable from zero is ~1.4. The pass bar is the absolute registered rule
+    with a cumulative-N DSR, not an arm-vs-control delta (differences below ~0.7 Sharpe are not separable; 2021 alone is 68% of the control).'
+  feasibility:
+    source: none
+    accrual_basis: Fixed historical archive (data.binance.vision, capped at 2024-06); nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261113-62e3-02
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  statistic: 'ARMS (3 incl. control, all counted; grid fixed in scripts/research/edge_portfolio_discovery.py ITER_GRIDS["62e3"]["xsec"]):
+    A0 = X1 control; RM1 = X1 ranked on the residual sum over the same 28 formation rows, residual = r - beta*r_BTC with beta from the trailing
+    90 daily returns through t-1; RM2 = RM1 score divided by the residual sd. Same quantiles, weights, rebalance, universe and cost stack.
+    Per arm: net Sharpe, stress Sharpe, half Sharpes, bootstrap p05, DSR at N_cum = 20 (10 discovery + 7 attempt-2 arms + these 3).'
+  rule: 'PASS iff at least one NON-control arm clears the UNCHANGED discovery rule: net Sharpe >= 0.5 AND stress (2x fee+slippage) Sharpe >
+    0 AND Sharpe > 0 in BOTH halves AND bootstrap p05 of annualised mean net > 0 AND DSR > 0.95 at N_cum = 20, on 2020-06-01..2024-06-30.
+    FAIL iff the control computed and reproduced and no arm clears it. INDETERMINATE iff the control series is insufficient OR the control
+    A0 net Sharpe misses the committed 1.325 by more than 0.01 (--expect-control-sharpe). By-year sums and side split are REPORTED (the 2021
+    share is the diagnostic read), not graded. Holdout not read; a PASS earns ONE holdout read, never a book.'
+  what_it_does_not_do: Edits no config and no roster, places no order, proposes no live leg, reads no data after 2024-06-30. A FAIL says only that
+    RM1 and RM2 on X1 did not clear the rule.
+intervention_controls:
+  not_applicable: an offline portfolio research ablation, not an in-trade action
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid with control, every arm counted,
+  DSR at the cumulative trial count. Residual momentum: Blitz, Huij & Martens 2011 J. Empirical Finance "Residual momentum"; crypto
+  momentum payer: Liu, Tsyvinski & Wu 2022 J. Finance "Common risk factors in cryptocurrency".'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 90
+  why_runner: Public keyless archive; CPU only; same data path as RQ-20261101-d1f3-02.
+  basis: Estimate from RQ-20261101-d1f3-02; the first run replaces it.
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.08
+  bucket: structural
+  basis: 'stand-in: a documented-payer family; an estimate, not a measurement'
+run:
+  command:
+  - python3
+  - scripts/research/edge_portfolio_discovery.py
+  - --family
+  - xsec
+  - --iteration
+  - --grid
+  - 62e3
+  - --expect-control-sharpe
+  - '1.325'
+  - --build-data
+  - --data-root
+  - comms/research/_scratch_edge_data
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261113-62e3-02
+  timeout_minutes: 150
+  workflow: research-script-run.yml
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/levers/xsec-crypto.yaml
+- RQ-20261101-58e4-02
+- RQ-20261101-d1f3-02
+- HOLDOUT-LOCK
+- scripts/research/edge_portfolio_discovery.py
+what_it_does_not_do: Edits no config and no roster, places no order, proposes no live leg, reads no holdout data.
+last_dispatched_at: '2026-11-14T03:23:22+00:00'
+grading:
+  attested: RULE-RQ-20261113-62e3-02
+  auto: true
+  decision_rule_id: RULE-RQ-20261113-62e3-02
+  evidence:
+  - research/results/RQ-20261113-62e3-02/43551403128.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -5,7 +5,7 @@ id: RQ-20261112-003
 title: 'ITERATION 3 of spy_pullback_1h (iteration 2 not_replicated: discovery +68.4 R n 252, 4 of 4 folds,
   holdout -8.5 R n 95): does ONE trend/vol filter selected on the discovery span (ADX 20 / ADX 25 / vol-skip
   top decile / long-only) survive the held-back latest 25%?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROGRAMMES
@@ -162,4 +162,14 @@ generated:
   key: programme:P3-ITER3-spy-pullback-1h-regime-select-holdout
   params:
     node: P3-ITER3-spy-pullback-1h-regime-select-holdout
-last_dispatched_at: null
+last_dispatched_at: '2026-11-14T10:44:54+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P3-ITER3-spy-pullback-1h-regime-select-holdout
+  evidence:
+  - research/results/RQ-20261112-003/43586753855.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  reason: 2 row(s), all measured, all pass
+  rows: 2
+  verdict: pass
