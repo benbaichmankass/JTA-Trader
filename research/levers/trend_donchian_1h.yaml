@@ -872,8 +872,48 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261113-f251-05
   lever_family: timeframe
+- family: regime off-cell chop (forming bar)
+  varied: drop the chop (ADX<20) cell, both sides, on the router 1-D ADX axis, forming replay; record 2025-11-01..2026-10-31 + confirmation 2024-11-01..2025-10-31,
+    full cost stack
+  response:
+    verdict: fail
+    run: '43521663112'
+    baseline:
+      arm: ungated
+      n: 184
+      net_r: -10.5698
+      confirm_net_r: -1.115
+    arms:
+    - arm: chop_off
+      n: 118
+      net_r: -6.235
+      folds_positive: 2/4
+      confirm_net_r: -1.1578
+      confirm_n: 97
+    dropped_cell:
+      n: 66
+      net_r: -4.3348
+      long_pooled: -12.5004
+      long_stable_drag: true
+      short_pooled: 8.1656
+      short_stable_drag: false
+      confirm_net_r: 0.0428
+      confirm_n: 71
+    clauses:
+      R1_no_cosmetic_cell: false
+      R2_gated_stage0: false
+      R3_beats_ungated: true
+      C1_cell_loses_on_confirmation: false
+      C2_gated_book_holds_on_confirmation: false
+    reading: 'gating chop trims the record loss (-6.2R vs -10.6R) but the gated book is 2/4 folds and the cell is flat (+0.04R) on the confirmation year: cosmetic,
+      not a generalizing off-cell. Intra-bar vs completed-ADX label disagreement check not run (only required before a PASS).'
+  shape: flat
+  tested_at_power: true
+  unit: RQ-20261113-f251-17
+  lever_family: regime_gating
 units:
 - RQ-20261113-f251-05
+- RQ-20261113-f251-17
 manifest_notes:
   census_2026_11_13: 'DEMO-FLOOR-ITER lever-family census (AM-ML 21:08Z), forming record 2025-11-01..2026-10-31: -10.57R over n 184 (gross +15.4R, cost 26.0R; ledger
     read by scripts/research/leg_r_diagnosis.py, run 43447401545).'
@@ -883,10 +923,13 @@ manifest_notes:
   timeframe: 'TESTED forming: 2h -20.67R, 4h -14.08R, both 0/4 folds (RQ-20261113-f251-05, FAIL).'
   direction: 'INAPPLICABLE as a pass lever: both sides lose on the forming record (long -9.5R, short -1.0R). f251-13 (short-only) was dropped before running (AM-ML
     21:08Z) because it would only confirm a known negative.'
-  regime_gating: 'UNTESTED, PLAUSIBLE: by ADX-14 at entry the loss sits in adx<20 (-16.1R over n 75); 20-25 is +5.8R over n 42 and >=25 is -0.2R over n 67. A regime
-    off-cell (config/regime_policy.yaml, the live-capable path) is the candidate; it is a regime-selectivity unit (walk-forward before any Tier-3).'
+  regime_gating: 'TESTED forming (RQ-20261113-f251-17, FAIL): dropping the chop (ADX<20) cell gives -6.24R over n 118, 2/4 folds (ungated -10.57R); on the confirmation
+    year the cell is +0.04R (n 71) and the gated book -1.16R vs -1.12R ungated: cosmetic. Within the cell, chop-long is a stable drag (-12.5R) and chop-short is +8.2R,
+    but a side-split cell was read off this result, so a unit on it would need its own confirmation split.'
   sizing_vs_cost: 'UNTESTED, PLAUSIBLE: gross is POSITIVE (+15.4R) and cost (26.0R) takes it negative, so a cheaper execution route (maker entry / lower-fee venue)
     could clear it; this needs a measured venue cost, never an assumed one.'
   symbol_set: 'INAPPLICABLE as a lever on this leg: its sibling symbols at 1h are separate rostered legs (trend_donchian_sol, _eth).'
   session: 'UNTESTED: no hour-block split isolates the loss in the diagnosis; ranked last.'
-  next: 'regime_gating first (largest isolated loss cell), then sizing_vs_cost. Not exhausted: no retirement note.'
+  next: 'Two forming-bar levers have failed (timeframe f251-05, regime f251-17). The remaining diagnosis-backed family is sizing_vs_cost (gross +15.4R before 26.0R
+    of cost); it needs a MEASURED venue cost (maker fill rate / fee tier) before any unit, never an assumed one. A chop-long-only off-cell is a candidate only with
+    its own confirmation split. Not exhausted: no retirement note.'

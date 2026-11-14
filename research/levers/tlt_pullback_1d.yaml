@@ -889,11 +889,48 @@ levers_tested:
       net_r: 4.5532
       folds_positive: 3/8
       max_drawdown_r: 6.3479
-    reading: 'short-only turns the leg positive (+4.55R, +11.51R vs both sides, DD 6.3 vs 11.2) but only 3/8 folds are positive (rule needs 5):
-      improvement without a Stage-0 edge'
+    reading: 'short-only turns the leg positive (+4.55R, +11.51R vs both sides, DD 6.3 vs 11.2) but only 3/8 folds are positive (rule needs 5): improvement without
+      a Stage-0 edge'
   shape: single_point
   tested_at_power: true
   unit: RQ-20261113-f251-11
   lever_family: direction
+- family: vol_skip_above (forming bar)
+  varied: vol_skip_above_pctl none vs 0.8 on the FORMING bar (Alpaca 1Day + 1Min), window 2020-07-27..2026-11-13, full cost stack; same 5/8 fold bar (no prior window
+    exists)
+  response:
+    verdict: fail
+    run: '43521659440'
+    baseline:
+      arm: A
+      n: 45
+      net_r: -6.9566
+      folds_positive: 2/8
+    arms:
+    - vol_skip_above_pctl: 0.8
+      n: 42
+      net_r: -4.2835
+      folds_positive: 3/8
+    reading: 'skipping the hot-volatility tail drops 3 trades and trims 2.7R but leaves the leg negative at 3/8 folds: the fold inconsistency is not a volatility-regime
+      effect'
+  shape: flat
+  tested_at_power: true
+  unit: RQ-20261113-f251-16
+  lever_family: filter
 units:
 - RQ-20261113-f251-11
+- RQ-20261113-f251-16
+manifest_notes:
+  census_2026_11_13: 'DEMO-FLOOR-ITER lever-family census after the 2nd forming-bar lever failed. Forming baseline (f251-02) 2020-07-27..2026-11-13: -6.96R over n
+    45, gross -6.13R (cost only 0.83R), long -9.30R / short +2.34R, stop exits -22.40R, 12 of 34 losers reached +1R MFE first. n 45 over six years is thin: any arm
+    splitting the population falls under n 30.'
+  direction: 'TESTED forming (RQ-20261113-f251-11, FAIL): short-only +4.55R n 29, 3/8 folds (needs 5): improvement, single point, no Stage-0 edge.'
+  filter: 'TESTED forming (RQ-20261113-f251-16, FAIL): vol_skip_above 0.8 -4.28R n 42, 3/8 folds; the fold inconsistency is not a volatility-regime effect.'
+  exit: 'UNTESTED, PLAUSIBLE: 12 losers reached +1R MFE before stopping out and stop exits carry -22.4R; a break-even / trail-activation lever at 1R is the diagnosis-backed
+    candidate. It keeps n 45 (no population split), so power is not lost.'
+  sizing_vs_cost: 'INAPPLICABLE: cost is 0.83R of a -6.13R gross loss.'
+  regime_gating: 'UNREADABLE on this ledger: ADX at entry is unknown for every trade (by_adx_at_entry unknown n 45); tagging is a prerequisite, not a lever.'
+  timeframe: 'INAPPLICABLE as a forming lever: the leg is a daily equity leg with one decision per session.'
+  entry: UNTESTED forming; no diagnosis points at the entry (mean MFE 1.17R, 51% reach +1R).
+  next: 'exit (break-even / trail activation at +1R MFE) is the one remaining diagnosis-backed lever at full n; a 3rd unit needs the manager''s OK under the AM-ML
+    guard (names f251-02, -11, -16 on this window; same 5/8 fold bar). Not exhausted: no retirement note.'
