@@ -58,6 +58,7 @@ FWD_START, FWD_END = "2026-10-01", "2026-10-31"
 DEV_END = "2026-10-01"                                 # exclusive; the forward window starts here
 TP_FOLDS = ["2022-01-01", "2023-01-01", "2024-01-01", "2025-01-01", "2025-10-01", "2026-10-01"]
 N_FLOOR, SYMBOL_FLOOR, MOVED_FLOOR = 300, 10, 30
+CLOSE = -1                                             # chooser sentinel: close the position at this check-in (D8)
 RANDOM_DRAWS = 200
 SEED = 20261101
 TP_LGB = {"objective": "multiclass", "num_class": N_CLASS, "n_estimators": 200, "learning_rate": 0.05,
@@ -427,6 +428,9 @@ def walk(Ob, Hh, L, C, entry, atr, side, chooser, tie=None, sl_path=None):
                 return C[j - 1], j, 1, moves       # the ratcheted stop is through the close: close at price
         if j in CHECKINS and chooser is not None:
             nq = chooser(j, q)
+            if nq == CLOSE:
+                moves.append((j, q, CLOSE))
+                return C[j - 1], j, 3, moves       # exit-now (D8 exit-now-v0): market close at the check-in close
             if nq is not None and nq != q:
                 moves.append((j, q, nq))
                 q = nq
@@ -916,6 +920,11 @@ def _self_test() -> None:
     assert resolve_same_bar({"time": 0}, 3600, mins[:30], True, 103.0, 98.0) is None
     mins[3] = {"time": 180, "high": 104.0, "low": 97.0}
     assert resolve_same_bar({"time": 0}, 3600, mins, True, 103.0, 98.0) is None
+    # exit-now (D8): CLOSE at a check-in exits at that bar's close, reason 3
+    px, j, r, mv = walk(o, hh, ll, cc + 0.4, 100.0, 1.0, 1, lambda jc, q: CLOSE if jc == 8 else None)
+    assert (px, j, r) == (100.4, 8, 3) and mv == [(8, GRID.index(3.0), CLOSE)], (px, j, r, mv)
+    cv = close_value_r(1, 100.0, 1.0, 102.0)                   # +1 R open (2 ATR SL), minus a small positive cost
+    assert 0.9 < cv < 1.0 and close_value_r(-1, 100.0, 1.0, 102.0) < -1.0, cv
     # Pointer v0 (D6): check-in 0 rows sit on the decision bar, see no path, and label the same first passage
     nb = 3 * H + 10
     tsx = pd.date_range("2024-01-01", periods=nb, freq="h", tz="UTC")
@@ -1331,9 +1340,133 @@ def pointer_v0(args) -> int:
         raise
 
 
+
+# ------------------------------------------------------------------------------------------------ Exit-now v0 (D8)
+# Unit RQ-20261114-1ae8-01 (lane ML-PRIMARY). Rule RULE-RQ20261114-1ae8-01-EXIT-NOW-V0, registered in the unit BEFORE the run.
+# D8 = close all now. At each 4h check-in (bars 4..20, SL not hit) the 1b first-passage model (check-ins CHECKINS, walk-forward)
+# gives the expected net R of HOLDING to the resting 3 ATR bracket; closing now is worth the open R minus the exit cost. Close
+# iff close - hold > m. TP never moves (D7 isolated out); graded vs hold-to-bracket on the same trades, same two windows.
+EN_TIMESTOPS = CHECKINS                              # best-static control: close every trade at one fixed check-in
+
+
+def close_value_r(side: int, entry: float, atr: float, close: float) -> float:
+    """Net R of closing at ``close`` now: open R minus the round-trip cost of that exit (execution_costs arithmetic)."""
+    from src.runtime.execution_costs import resolve_cost_policy
+    slip_bps, fund_bps = resolve_cost_policy("BTCUSDT")
+    risk = E.SL_ATR * atr
+    per_r = ((abs(entry) + abs(close)) / 2.0) / risk
+    return side * (close - entry) / risk - (E.FEE_BPS + slip_bps + 1.5 * fund_bps) / 1e4 * per_r
+
+
+def en_score(sc: "Scorer", probs: dict, margin: float) -> list:
+    def fac(k, t, s, entry, C):
+        pr = probs.get(k)
+
+        def ch(jc, q):
+            if pr is None or jc not in pr[0]:
+                return None
+            hold = expected_net_r(pr[0][jc], pr[1], level_cost(entry, t.atr, s))[q]
+            return CLOSE if close_value_r(s, entry, t.atr, C[jc - 1]) - hold > margin else None
+        return ch
+    return [sc._one(k, fac) for k in sc.trades.index]
+
+
+def exit_now_v0(args) -> int:
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    t0 = time.time()
+    try:
+        cache = Path(args.cache)
+        art = json.loads(SERVED.read_text())
+        syms = E.universe()
+        E.fetch(cache, syms)
+        tab = E.build_table(cache, syms)
+        bars = load_bars(cache, syms)
+        panel = feature_panel(bars)
+        trades = pd.concat([entry_trades_wf(tab, float(art["tau"])), served_trades(tab, E.HOLDOUT_START, DEV_END, art)],
+                           ignore_index=True)
+        sc = Scorer(trades, bars, {}, np.zeros(N_CLASS))
+        base_all = np.array([x[0] for x in sc.fixed(BASE_TP)])
+        assert np.abs(base_all - trades.net_r.to_numpy()).max() < 1e-9      # walker parity with the label
+        rows = trade_checkins(trades, bars, panel)
+        probs, folds = {}, []
+        bounds = [pd.Timestamp(x, tz="UTC") for x in TP_FOLDS]
+        for a, b in itertools.pairwise(bounds):
+            cut = a - pd.Timedelta(days=E.EMBARGO_DAYS) - pd.Timedelta(hours=H + 1)
+            tm = fit_tp_model(training_rows(tab, bars, panel, cut, SEED))
+            tts = pd.to_datetime(trades.loc[rows.k, "ts"].to_numpy(), utc=True)
+            sel = rows[(tts >= a) & (tts < b)]
+            if len(sel):
+                for k, v in probs_by_trade(sel, predict_probs(tm, sel)).items():
+                    probs[k] = (v, tm["class_mean_net_r"])
+            folds.append({"test_start": str(a.date()), "n_train": tm["n_train"], "n_checkins": int(len(sel))})
+            print(json.dumps(folds[-1]), f"t={time.time()-t0:.0f}s", flush=True)
+        ts = pd.to_datetime(trades.ts, utc=True)
+        selm = ((ts >= pd.Timestamp(PV0_MARGIN_SELECT[0], tz="UTC")) & (ts < pd.Timestamp(PV0_MARGIN_SELECT[1], tz="UTC"))).to_numpy()
+        ks_sel = [k for k in trades.index[selm] if k in probs]
+        sc_sel = Scorer(trades.loc[ks_sel], bars, {}, np.zeros(N_CLASS))
+        pr_sel = {i: probs[k] for i, k in enumerate(ks_sel)}
+        by_margin = {}
+        for m in MARGINS:
+            r = en_score(sc_sel, pr_sel, m)
+            pol = np.array([x[0] for x in r])
+            by_margin[str(m)] = {"n": len(r), "mean_delta": float((pol - base_all[ks_sel]).mean()),
+                                 "n_closed": int(sum(x[1] == 3 for x in r))}
+            print("margin", m, by_margin[str(m)], f"t={time.time()-t0:.0f}s", flush=True)
+        m_star = max(MARGINS, key=lambda m: (by_margin[str(m)]["mean_delta"], m))
+
+        def timestop(scx, jstop):
+            return np.array([x[0] for x in [scx._one(k, lambda k_, t_, s_, e_, C_: (lambda jc, q: CLOSE if jc == jstop else None))
+                                            for k in scx.trades.index]])
+        st = {j: float(timestop(sc_sel, j).mean()) for j in EN_TIMESTOPS}
+        j_static = max(st, key=lambda j: (st[j], j))
+        rng = np.random.default_rng(SEED)
+        wins = {}
+        for name, (lo_s, hi_s) in PV0_WINDOWS.items():
+            wm = ((ts >= pd.Timestamp(lo_s, tz="UTC")) & (ts < pd.Timestamp(hi_s, tz="UTC"))).to_numpy()
+            ks = [k for k in trades.index[wm] if k in probs]
+            sub = trades.loc[ks]
+            scw = Scorer(sub, bars, {}, np.zeros(N_CLASS))
+            prw = {i: probs[k] for i, k in enumerate(ks)}
+            r = en_score(scw, prw, m_star)
+            pol = np.array([x[0] for x in r])
+            closed = np.array([x[1] == 3 for x in r])
+            n_alive = sum(len(prw[i][0]) for i in prw)
+            rate = closed.sum() / max(n_alive, 1)                          # per-check-in close rate
+            rnd = []
+            for _ in range(PV0_RANDOM_DRAWS):
+                rr = [scw._one(k, lambda k_, t_, s_, e_, C_: (lambda jc, q: CLOSE if rng.random() < rate else None))
+                      for k in scw.trades.index]
+                rnd.append(np.array([x[0] for x in rr]))
+            static = timestop(scw, j_static)
+            wins[name] = pv0_window(name, sub, pol, base_all[ks], closed, rnd, static, rng)
+            print(json.dumps(wins[name], default=str), flush=True)
+        clauses = [w["clause"] for w in wins.values()]
+        verdict_ = "fail" if "fail" in clauses else ("pass" if all(c == "pass" for c in clauses) else "indeterminate")
+        res = {"schema": "ml_entry_tp_revision/exit_now_v0/1", "unit": args.unit, "verdict": verdict_, "m_star": m_star,
+               "best_static_timestop": {"checkin": j_static, "by_checkin_on_select": st},
+               "margin_select": {"window": PV0_MARGIN_SELECT, "by_margin": by_margin}, "tp_folds": folds, "windows": wins,
+               "note_moved": "n_moved = trades closed early by the policy", "runtime_s": round(time.time() - t0)}
+        (out / "exit_now_v0.json").write_text(json.dumps(res, indent=1, default=str))
+        note = "; ".join(f"{w['window']}: {w['clause']} (delta {w['mean_delta']:+.4f} CI95 [{w['delta_ci95_day_clustered'][0]:+.4f}, "
+                         f"{w['delta_ci95_day_clustered'][1]:+.4f}], policy {w['policy_mean_net_r']:+.4f} R, n {w['n']}, closed {w['n_moved']})"
+                         for w in wins.values())
+        (out / "verdict.json").write_text(json.dumps({"verdict": verdict_, "read_state": "measured",
+                                                      "population": "ml_entry served-policy trades, pooled 60-perp replay",
+                                                      "n": sum(w["n"] for w in wins.values()), "measurement": res,
+                                                      "note": f"m*={m_star}; {note}"}, default=str))
+        print(f"VERDICT {verdict_} m*={m_star}; {note}", flush=True)
+        return 0
+    except Exception as exc:  # allow-silent: landed as read_state=producer_failed with the reason in verdict.json
+        (out / "verdict.json").write_text(json.dumps({"verdict": "not_applicable", "read_state": "producer_failed",
+                                                      "population": "ml_entry served-policy trades", "n": None,
+                                                      "note": f"{type(exc).__name__}: {exc}"}))
+        raise
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "export", "entry-forward", "evidence-extend-only", "pointer-v0"])
+    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "export", "entry-forward", "evidence-extend-only", "pointer-v0", "exit-now-v0"])
     ap.add_argument("--cache", default="/tmp/ml_decision_klines")
     ap.add_argument("--out", default="/tmp/ml_entry_tp_revision_out")
     ap.add_argument("--unit", default=UNIT)
@@ -1356,6 +1489,8 @@ def main(argv=None) -> int:
         return entry_forward(a)
     if a.cmd == "pointer-v0":
         return pointer_v0(a)
+    if a.cmd == "exit-now-v0":
+        return exit_now_v0(a)
     return export(a) if a.cmd == "export" else run(a)
 
 

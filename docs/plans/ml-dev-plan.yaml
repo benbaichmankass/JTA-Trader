@@ -935,6 +935,11 @@ lines:
     - {lever: out-of-family value, ref: RQ-20261101-78fc-03, verdict: fail}
     - {lever: volume composition, ref: RQ-20261112-0bc8-02, verdict: fail}
   levers_ahead:
+    - lever: 'exit-now v0 on ml_entry: the Labrador-1b first-passage model values hold vs close at each 4h check-in, TP fixed'
+      ref: RQ-20261114-1ae8-01 (ML-PRIMARY 2026-11-15; RULE-RQ20261114-1ae8-01-EXIT-NOW-V0, two windows, non-inferiority -0.02 R)
+      baseline: hold to the fixed 2/3 ATR bracket on the same ml_entry trades, net of the full cost stack, prior + record year
+      pass: held Tier-3 exit-now proposal for ml_entry (real-money D8 model)
+      fail: exit-now on ml_entry closes; the eth_4h variant below is next
     - lever: variant for trend_donchian_eth_4h
       ref: PI-20261104-NHN7JV7U-0001
       baseline: hold to bracket on the same trades, net of cost
@@ -945,7 +950,7 @@ lines:
       baseline: as above
       pass: as above
       fail: as above
-  next_weeks: {W47: author the eth_4h variant, W48: run, W49: grade, W50: none}
+  next_weeks: {W47: 'grade 1ae8-01 (authored + dispatched 11-15); author the eth_4h variant iff it FAILs', W48: run, W49: grade, W50: none}
   exhaustion: the eth_4h variant and the desk-label variant FAIL; with today's FAILs the head's feature set then has no lever left.
   owner: AM-ML
   plan_items: [ML-X3, ML-X4, ML-N4]
@@ -1478,7 +1483,7 @@ slot_baselines:
   - {slot: D6, line: MLP-D6-POINTER, unit: 'RQ-20261114-82fd-01 Pointer v0 (entry-time TP) vs fixed 3 ATR TP on ml_entry trades', status: queued}
   - {slot: D5, line: MLP-D5-MASTIFF, unit: 'RQ-20261114-82fd-02 VOI census; then rule arms A0 slices / A1 1/N netting / A2 best-single', status: queued}
   - {slot: D3, line: MLP-D3-FOXHOUND-1, unit: 'served-window diagnosis + cost-per-R selector (CRYPTO-ENTRY-RETRAIN-UNIT, ML-DECISION-LABEL-VOL-CONFOUND)', status: in_flight (due 11-15)}
-  - {slot: D8, line: MLP-D8-LABRADOR-2, unit: 'exit head vs hold-to-bracket on two windows', status: next}
+  - {slot: D8, line: MLP-D8-LABRADOR-2, unit: 'RQ-20261114-1ae8-01 exit-now v0 on ml_entry vs hold-to-bracket', status: queued}
   - {slot: D9, line: MLP-D9-WHIPPET, unit: 'maker-first vs taker fill replay', status: next}
   - {slot: D10, line: MLP-D10-BASSET, unit: 'grade-vs-CUSUM early decay', status: later}
 
