@@ -1,0 +1,160 @@
+{
+ "schema_version": 1,
+ "trade_id": null,
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuMdkXFkebnqkuwJ42j",
+ "prompt_sha": null,
+ "skill_sha": "f94534b767af35233ff68f27171d0876c8166c80",
+ "review_id": "LR-20261114T1631Z-pkg-f86ce49fec4f4dbe",
+ "reviewed_at": "2026-11-14T16:45:33Z",
+ "order_package_id": "pkg-f86ce49fec4f4dbe",
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "adverse_r",
+  "level": -0.5,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-14T16:31:16Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 2,
+  "giveback_r": 0.7271,
+  "open_r": -0.5069,
+  "peak_provenance": "estimated",
+  "peak_r": 0.2202,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 71.89714285714285,
+  "tp": 76.7792857142857
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 1,
+  "giveback_r": 0.7271,
+  "open_r": -0.5069,
+  "peak_r": 0.2202,
+  "r_to_stop": 0.4931,
+  "r_to_target": 2.0069
+ },
+ "mechanics": {
+  "evidence": "package sl 71.89714285714285 / tp 76.7792857142857 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 241,
+   "mean_r": 0.3665,
+   "sd_r": 1.1637,
+   "worst_r": -1.1269,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 241,
+   "mean_r": 0.2931,
+   "sd_r": 0.8049,
+   "worst_r": -1.3467,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 241,
+   "mean_r": 0.3225,
+   "sd_r": 0.9442,
+   "worst_r": -1.3467,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 241,
+   "mean_r": -0.5674,
+   "sd_r": 0.0239,
+   "worst_r": -0.6627,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261114T1631Z-pkg-f86ce49fec4f4dbe.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. SOLUSDT long, venue SL/TP match the package. ml_entry long history from this state (n=241, net of cost): HOLD mean +0.366 R (sd 1.1637, worst -1.1269) vs best tighten +0.323 R (sd 0.9442, worst -1.3467) vs close -0.567 R. HOLD beats the best tighten by 0.044 R, which is 0.5 SE (SE 0.097); the tighten tail change -0.22 R is not a 1 R gain, so the tie-break does not apply; no bracket move or close is priced better than HOLD. Brackets stay as the strategy set them. ADVERSE R (answered): open -0.51 R after the -0.5 R cross; the table's HOLD cell still beats close by 0.93 R and no priced tighten beats HOLD, so an adverse mark alone is not a reason to exit (the stop is 1R and 1.5R target stay). CONFLICTING EXPOSURE (still the same answer): keep both. The opposing shorts are 1h-4h trend legs on the demo and prop books with their own brackets, and ml_entry's evidence prices only this long: closing it costs 0.93 R of expected value versus HOLD (n=241), while nothing in ml_entry's own history prices a close as better because an opposing position exists. Closing the real-money long would not reduce the other books' risk, so it only removes an entry whose measured expectancy is positive."
+ },
+ "forecast": {
+  "thesis": "4h trend down (ADX 51.7); entered on a 1h close at the 73.08 sweep low; the strategy buys the sweep and the 1.5R target needs a reclaim of the last 1h swing highs while the 4h trend is still down, so I expect a bounce more often than not but a full run to target only about three times in ten",
+  "direction": "with_trade",
+  "target_px": 76.7792857142857,
+  "p_target": 0.3,
+  "invalidation_px": 71.89714285714285,
+  "horizon_bars": 12,
+  "timeframe": "1h",
+  "evidence": [
+   "priced_options hold n=241 mean +0.366",
+   "exit_plan sl/tp",
+   "chart.swings",
+   "htf adx/trend",
+   "book"
+  ]
+ },
+ "context_flags": [
+  "correlated: five ml_entry longs (BTC, ETH, SOL, XRP, ADA) on bybit_2/bybit_portfolio opened 16:01-16:05Z, one crypto-beta bet; every other open crypto package (demo bybit_1, prop) is short, cross-account, no account nets",
+  "htf: 4h trend down (adx 51.71); long is a counter-trend sweep-reclaim, as the strategy's own history trades it",
+  "atr_ratio: atr_now_over_entry null (could not look, entry meta atr not recorded); regime cell entry/now null",
+  "judgement: open_r -0.5069 peak_r 0.2202 (estimated) after 2 bars; mechanical locks lose R in the population test RQ-20261114-db1a-05, so none recommended",
+  "tighten: stop fills at the stop price flatters every tighten; atr:1.0 (and atr:1.5 where noted) unpriced: stop_level_not_below_price (inapplicable at the current mark)",
+  "adverse_r: open -0.5069 crossed -0.5 R, re-priced from the current packet; conflicting_exposure: key SOLUSDT#12fe4d4ea2; opposing legs are shorts on other books (demo, prop), cross-account",
+  "calendar: no events in next 24h or no event classes for symbol"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "packet_sha": "6b91451b7e733781f6f8d2643b62a92341794b52b42bfd9933758f8da873a4f7"
+}
