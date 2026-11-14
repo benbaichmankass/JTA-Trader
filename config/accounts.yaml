@@ -1856,11 +1856,15 @@ accounts:
       # by running THIS config through RiskManager.position_size at $200 equity
       # (prices + ATR14 stop proxies from yfinance-lane-proof), the reachable
       # set is IDENTICAL at 2% and at 5%:
-      #   reachable : TLT IEF SLV USO IAUM GDX
-      #   refused   : SPY $745.01 · QQQ $688.87 · GLD $371.52 · IWM $303.03
-      #               — all CASH-bound (one share exceeds the whole account),
-      #               so no risk setting reaches them. Only funding, a cheaper
-      #               proxy, or a fractional-capable venue does.
+      #   [2026-08-25 SNAPSHOT — STALE BY CONSTRUCTION, DO NOT QUOTE AS CURRENT]
+      #   reachable then : TLT IEF SLV USO IAUM GDX
+      #   refused then   : SPY QQQ GLD IWM — CASH-bound (one share exceeded the
+      #               whole account), so no risk setting reached them.
+      #   ⚠️ REACHABILITY IS NOT A CONSTANT: it moves with price, stop distance,
+      #   balance and the roster. READ IT ON DEMAND, never from this comment:
+      #     python3 scripts/ops/account_reachable_set.py --account alpaca_live
+      #   (runs RiskManager.position_size at the live balance + live prices;
+      #   row SMALL-ACCOUNT-RISK, BL-20260910 option a).
       #
       # ⚠️ DO NOT REPEAT THE CLAIM THAT 5% "ADDS GDX" — it is false and was
       # asserted here for one commit. GDX ($74.59, ~$5.28/share stop) was
