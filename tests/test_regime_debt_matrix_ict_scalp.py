@@ -178,7 +178,8 @@ def test_every_enabled_leg_routes_except_the_non_harness_legs():
     # 58 -> 59 on 2026-11-08: ml_entry_eq_struct (ML-ENTRY-EQ-STRUCT-LIVE), unrouted for the same reason as ml_entry_eq.
     # 2026-11-13 (build gap b, #25743): turtle_soup now ROUTES (scripts/backtest_turtle_soup.py), so it leaves the
     # unrouted list; every leg still unrouted is one with no harness-family params by design.
-    assert len(legs) == 59
+    # 59 -> 58 on 2026-11-14: avax_pullback_2h retired by record (HELD PR claude/avax-pb-retire-held, gated on the operator's RETIRE-AVAX-PB-2H answer).
+    assert len(legs) == 58
     assert unrouted == ["claude_desk", "e4_oi_shock_1h", "ml_entry", "ml_entry_eq", "ml_entry_eq_struct", "ml_entry_v2"]
     assert rdm.classify(legs["turtle_soup"]) == "turtle_soup"
 

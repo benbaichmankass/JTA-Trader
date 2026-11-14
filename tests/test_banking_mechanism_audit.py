@@ -57,7 +57,8 @@ def test_population_is_enabled_and_live(mod):
     # 56 -> 57 on 2026-11-01: ml_entry_v2 (bybit_1 demo TESTING leg; carries record_position_telemetry through the shared module).
     # 57 -> 58 on 2026-11-06: ml_entry_eq joins the enabled+live population (ML-ENTRY-ALL-ACCOUNTS, #23715; alpaca_paper).
     # 58 -> 59 on 2026-11-08: ml_entry_eq_struct (ML-ENTRY-EQ-STRUCT-LIVE; alpaca_live + alpaca_portfolio; same monitor module as ml_entry_eq).
-    assert len(legs) == 59, f"population drifted from the 2026-11-08 denominator: {len(legs)}"
+    # 59 -> 58 on 2026-11-14: avax_pullback_2h retired by record (HELD PR claude/avax-pb-retire-held; enabled: false).
+    assert len(legs) == 58, f"population drifted from the 2026-11-14 denominator: {len(legs)}"
     for name, cfg in legs.items():
         assert cfg.get("enabled") is True, name
         assert str(cfg.get("execution", "live")).lower() == "live", name
