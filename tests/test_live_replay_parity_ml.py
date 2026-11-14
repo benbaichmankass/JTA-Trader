@@ -324,3 +324,22 @@ def test_no_package_on_either_side_is_named_and_keeps_the_replayed_closes():
     assert r["reason"].startswith("nothing to diff: 1 decision close(s) replayed") and r["bars"] == bars
     r2 = M._finish({"leg": "x", "state": "could_not_check"}, 0, [], [], 0, extra={})
     assert r2["reason"].startswith("nothing comparable") and "bars" not in r2
+
+
+def test_audited_none_rows_make_a_no_package_close_checked():
+    """ML-EQ-NOPKG-AUDIT: live audits a DECIDED no-package close (side none). With no package on either side the close is an
+    agreement, so the leg reads checked (was could_not_check: 'nothing comparable')."""
+    leg, bundle, rows, pk = _eq_setup()
+    refused = [s for s in leg.cfg["symbols"] if s not in pk][:3]
+    nones = [{"event": "ml_entry_eq_struct_eval", "strategy": "ml_entry_eq_struct", "symbol": s, "side": "none",
+              "reason": "below_threshold", "id": 900 + i, "logged_at_utc": M._iso(_ep(EQ_CLOSE) + 60 + i)}
+             for i, s in enumerate(refused)]
+    r = M.analyse_ml_eq(leg, bundle, EQ_SINCE, EQ_UNTIL, evals_override=rows + nones)
+    assert r["state"] == "checked" and r["divergences"] == 0
+    assert r["evals_checked"] == len(pk) + len(refused) and r["bars"][0]["agreed_none"] == len(refused)
+    # a none row for a symbol the replay DID package is still a missed package, never an agreement
+    if pk:
+        s0 = next(iter(pk))
+        r2 = M.analyse_ml_eq(leg, bundle, EQ_SINCE, EQ_UNTIL, evals_override=[x for x in rows if x["symbol"] != s0] + [
+            {**nones[0], "symbol": s0}])
+        assert r2["by_class"]["ml_missed_package"] == 1
