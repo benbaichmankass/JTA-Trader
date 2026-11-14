@@ -26,7 +26,11 @@ MANAGER_ID = re.compile(r"(?:Manager[^\n]{0,80}?|manager:)(session_[A-Za-z0-9]{1
 #: blocked the manager's own stop with lane wording.
 MANAGER_SELF = re.compile(
     r"\bYou are Manager Session\b|^\s*Manager Session \d{4}-\d{2}-\d{2}[a-z]|^\s*Run the operating loop"
-    r"|\bYou are the (?:JTA[ -]Trader |Metis(?: Insights)? |ICT(?: bot)? )?manager\b(?!['’]s)",
+    r"|\bYou are the (?:JTA[ -]Trader |Metis(?: Insights)? |ICT(?: bot)? )?manager\b(?!['’]s)"
+    # STOP-HOOK-ROTATED-MANAGER (2026-11-14): a rotated-in manager starts from "read MANAGER-HANDOFF-<date>.md"
+    # / "you are the next manager" (the handoff doc's own wording), and before it titles itself the hook read
+    # it as a lane and named its predecessor (session_01AFoLuLyarNRcy3nziCep2U). No lane is handed that doc.
+    r"|\bare the next manager\b|\bMANAGER-HANDOFF-\d{4}-\d{2}-\d{2}\.md\b",
     re.IGNORECASE)
 REPORT_TOOLS = re.compile(r"fire_trigger|send_later|add_issue_comment|add_reply_to_pull_request_comment|send_message", re.IGNORECASE)
 WAITING = re.compile(
@@ -200,6 +204,14 @@ def self_test() -> int:
           {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__x__set_session_title",
                                                           "input": {"title": "Manager Session 2026-11-13a"}}]}},
           _tr(), _a("Waiting on the operator's go-ahead?")], False),
+        ("a rotated-in manager briefed with the handoff doc never blocks (before it titles itself)",
+         [_u("Rotation. Read docs/claude/work/MANAGER-HANDOFF-2026-11-14.md first. From Manager Session 2026-11-11a "
+             "(session_01AFoLuLyarNRcy3nziCep2U); lane:GENERAL is AM-OPS."), _a("Waiting on the operator's go-ahead?")], False),
+        ("'**You** are the next manager' never blocks",
+         [_u("**You** are the next manager. From Manager lane:X"), _a("Should I merge #5?")], False),
+        ("a lane told about the handoff doc in a LATER turn is still a lane (only the first prompt decides)",
+         [_u("You are lane GENERAL, dispatched by Manager Session 2026-11-13a (session_01AFoLuKXonDBdED7cNK7FhN)."),
+          _a("ok"), _u("From Manager: see MANAGER-HANDOFF-2026-11-14.md section 4."), _a("Blocked; awaiting your go-ahead.")], True),
         ("a lane that titles a CHILD session is still a lane",
          [lane, {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__x__set_session_title",
                                                                 "input": {"title": "AM-OPS catch-up"}}]}},
