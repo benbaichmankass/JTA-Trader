@@ -2,7 +2,7 @@
 id: RQ-20261112-7d41-02
 title: 'P5-MLPROP-OIFLOW-LOWCAP-BV: does open-interest / long-short / taker-flow positioning carry a net-of-cost ETH+SOL entry signal at LOW model capacity (regularised logistic head) on the time-disjoint
   2025-01..2025-09 held-out, and does it clear V3 on breakout_2 and velotrade_1?'
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 1
@@ -159,3 +159,17 @@ iteration:
   - feature_family_oi_flow
   map_entries: []
 last_dispatched_at: '2026-11-13T22:43:45+00:00'
+grading:
+  attested: RULE-RQ20261112-7d41-02-OIFLOW-LOWCAP-V3
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261112-7d41-02-OIFLOW-LOWCAP-V3
+  evidence:
+  - research/results/RQ-20261112-7d41-02/43521666560.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

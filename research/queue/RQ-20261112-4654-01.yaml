@@ -1,7 +1,7 @@
 id: RQ-20261112-4654-01
 title: 'Market-residual target for the crypto ENTRY recipe: does training on the asset''s move minus beta x BTC beat training on the raw net R, graded on
   the trades each would take at actual net R? (13 monthly refits over 2025-10..2026-09, shuffled-market placebo)'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -122,3 +122,16 @@ related:
 population: The ml_decision_entry universe (Binance USD-M perps in the bp2 manifest, BTCUSDT excluded), both-sides at the served tau over
   2025-10-01..2026-09-30 in 13 x 28-day windows; a recipe comparison, not a promotion read.
 last_dispatched_at: '2026-11-13T18:28:24+00:00'
+grading:
+  attested: RULE-RQ20261112-4654-01-RESID-TARGET
+  auto: true
+  decision_rule_id: RULE-RQ20261112-4654-01-RESID-TARGET
+  evidence:
+  - research/results/RQ-20261112-4654-01/43483024281.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

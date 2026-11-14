@@ -2,7 +2,7 @@
 id: RQ-20261113-62e3-03
 title: 'ITERATION 3 of tsmom-etf (fail): does the ETF trend sleeve clear the rule on TOTAL-RETURN (dividend-adjusted) closes instead of the
   price-only closes every earlier test used?'
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 2
@@ -119,3 +119,16 @@ related:
 - scripts/research/edge_etf_tsmom.py
 what_it_does_not_do: Edits no config and no roster, places no order, proposes no live leg, reads no holdout data.
 last_dispatched_at: '2026-11-13T23:45:24+00:00'
+grading:
+  attested: RULE-RQ-20261113-62e3-03
+  auto: true
+  decision_rule_id: RULE-RQ-20261113-62e3-03
+  evidence:
+  - research/results/RQ-20261113-62e3-03/43529490098.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

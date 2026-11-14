@@ -1,7 +1,7 @@
 id: RQ-20261113-f251-17
 title: 'trend_donchian_1h regime off-cell lever: drop the chop (ADX<20) cell on the router''s 1-D axis, walk-forward-gated on the forming bar, with a confirmation
   window'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -171,3 +171,16 @@ practice_precedent: 'R5 + M10 and the regime-selectivity skill (rules 1-3): the 
 follow_up: On the verdict a session appends the test to research/levers/trend_donchian_1h.yaml. PASS -> Tier-3 regime_policy proposal (the cell + the walk-forward
   evidence) to the manager via AM-ML, never a flip by a session. FAIL -> sizing_vs_cost once a venue cost is measured, else a lever-exhaustion note through AM-ML.
 last_dispatched_at: '2026-11-13T22:43:45+00:00'
+grading:
+  attested: RULE-DFI3-TD1H-CHOP-OFFCELL-20261113
+  auto: true
+  decision_rule_id: RULE-DFI3-TD1H-CHOP-OFFCELL-20261113
+  evidence:
+  - research/results/RQ-20261113-f251-17/43521663112.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 3 row(s), all measured, all fail
+  rows: 3
+  verdict: fail

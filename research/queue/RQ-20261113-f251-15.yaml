@@ -1,6 +1,6 @@
 id: RQ-20261113-f251-15
 title: 'htf_pullback_trend_2h direction lever: long-only vs both sides on the forming bar, with a confirmation window'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -221,3 +221,16 @@ practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-princip
 follow_up: 'On the verdict a session appends the test to research/levers/htf_pullback_trend_2h.yaml (lever_map.py --append). PASS -> Tier-3 proposal to the manager
   via AM-ML. FAIL -> this is the leg''s 2nd DEMO-FLOOR-ITER lever: write its lever-family census (tested / untested per family) before authoring a 3rd (AM-ML guard).'
 last_dispatched_at: '2026-11-13T22:21:16+00:00'
+grading:
+  attested: RULE-DFI2-HTF-DIR-20261113
+  auto: true
+  decision_rule_id: RULE-DFI2-HTF-DIR-20261113
+  evidence:
+  - research/results/RQ-20261113-f251-15/43518614942.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail
