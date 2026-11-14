@@ -3548,11 +3548,41 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261114-db1a-05
   lever_family: exit
+- family: entry (min_confidence)
+  varied: arm A config-exact (min_confidence 0.6) vs M (0.8), closed decision bar, record 2025-11-13..2026-11-12 + year before, full cost stack
+  response:
+    verdict: pass
+    run: '43596786598'
+    rule: RULE-ETHPROP-MINCONF08-20261114
+    arm_M: min_confidence 0.8 (baseline 0.6)
+    record:
+      A_net_r: -9.6104
+      A_n: 166
+      X_net_r: 10.9721
+      X_n: 134
+      X_folds_positive: 4
+      X_n_folds: 4
+      X_stage0: true
+      X_beats_A: true
+    prior:
+      A_net_r: -4.5233
+      A_n: 183
+      X_net_r: 8.0637
+      X_n: 140
+      holds: true
+    reading: 'PASS: M +10.97R n134 4/4 folds vs A -9.61R on the record year (max DD 8.58R vs 15.06R); year before M +8.06R n140 vs A -4.52R (folds
+      2/4). IN-SAMPLE confirmation: 0.8 was chosen in RQ-20261101-78fc-14 over a window overlapping both. Tier-3 proposal (min_confidence 0.6
+      -> 0.8, bybit_1 demo floor) goes to the operator via the manager.'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-06
+  lever_family: entry
 units:
 - RQ-20261114-db1a-02
 - RQ-20261114-db1a-03
 - RQ-20261114-db1a-04
 - RQ-20261114-db1a-05
+- RQ-20261114-db1a-06
 manifest_notes:
   census_2026_11_14: 'Lever-family census (manager ruling 2026-11-14 06:08Z). Decides on the CLOSED bar (decision_bar: closed). Record (2025-11-13..2026-11-12)
     -9.75R n166; year before -4.52R n183: negative in BOTH years. Committed evidence attribution (n165): gross +14.48R, cost 14.73R, ''cost erases
@@ -3572,3 +3602,7 @@ manifest_notes:
   next_2026_11_14: 'NOT lever-exhausted: no closed-bar responder (min_confidence 0.8, trail_mult 4.5, cooldown) has run on the record window,
     and sizing_vs_cost is the diagnosed cause. Candidate unit: min_confidence 0.8 or atr_stop_mult 3.125 on the record + year-before windows,
     same AM-ML guard; the db1a-01/-02 caveat applies (lever responses flip between years). No retirement proposal; manager decides.'
+  minconf_2026_11_14: 'RQ-20261114-db1a-06 PASS (run 43596786598): min_confidence 0.8 turns the leg positive in both recent years on its closed decision bar,
+    net of the full cost stack: record +10.97R n134 (4/4 folds; A -9.61R n166), year before +8.06R n140 (2/4 folds; A -4.52R n183); max DD roughly halves.
+    In-sample confirmation (0.8 was picked in RQ-20261101-78fc-14 over 2020-07..2026-10). Tier-3 proposal min_confidence 0.6 -> 0.8 sent to the manager for
+    the operator; the leg stays on the bybit_1 demo floor. SUPERSEDES next_2026_11_14''s candidate list for this leg.'
