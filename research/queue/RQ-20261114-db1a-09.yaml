@@ -78,9 +78,9 @@ run:
     - --n-floor
     - '60'
     - --ev-margin-frac
-    - '0.10'
+    - '0'
     - --breach-margin
-    - '0.02'
+    - '0'
     - --unit
     - RQ-20261114-db1a-09
     - --rule
@@ -94,8 +94,9 @@ decision_rule:
     breakout_2 risk 0.0035, tradeify_1 and velotrade_1 risk 0.005, lev cap 5). The grader reproduces the committed retest cell eth4h__3y__tradeify_1__cur__s1 exactly (ev 102.3, p_breach
     0.333; checked locally before registration).'
   rule: 'Multiple-testing guard: follows RQ-20261114-db1a-08 (PASS, compliance only; the 4R target never bound on the record year) and names RQ-20261028-a7c3-04 / RQ-20261104-c6f1-04.
-    Margins fixed here before any run. PER ACCOUNT: PASS iff mean over seeds of T4''s ev_net_usd_per_life >= A''s - 0.10 x |A''s| AND mean T4 p_breach (max-DD + daily-loss) <= A''s +
-    0.02. UNIT PASS iff every account passes; FAIL iff any account fails; INDETERMINATE iff any cell is missing or either ledger has fewer than 60 rows. No threshold is relaxed.'
+    Rule as set by the manager (2026-11-14 14:38Z), with NO margin, fixed before any run. PER ACCOUNT: PASS iff mean over seeds of T4''s ev_net_usd_per_life >= A''s AND mean T4 p_breach
+    (max-DD + daily-loss) <= A''s. Both arms use the same seeds; a T4 trade stream identical to A''s therefore grades equal and passes. UNIT PASS iff every account passes; FAIL iff any
+    account fails; INDETERMINATE iff any cell is missing or either ledger has fewer than 60 rows. No threshold is relaxed.'
   what_it_does_not_do: Changes no config, roster, order, prop record or evidence record. A PASS completes the evidence for a Tier-3 doctrine-compliance proposal (tp_r 50.0 -> 4.0 + tp_intent
     mode r_multiple) that goes to the operator via the manager; it does not change the leg's prop admission (operator_exception) or its fail_edge grade.
   baseline: the leg config-exact (arm A) on the same window and the same sim cells, run in this unit.
