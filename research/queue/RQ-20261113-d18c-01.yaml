@@ -125,3 +125,16 @@ related:
 - docs/research/desk-packet-redesign-2026-10-27.md
 last_dispatched_at: '2026-11-14T18:13:23+00:00'  # re-arm 3 2026-11-14 17:35Z AM-OPS via rearmed_at: #26023 fixed the producer (universe-verdict now writes population/n) after run 43580685219 measured fail but landed producer_failed; the dispatcher's retry cap (3 non-verdict rows) then refused the plain re-arm and re-stamped it (run 43602339850)
 rearmed_at: '2026-11-14T17:35:00+00:00'  # dispatch_queue.py: rows landed before this predate the #26023 producer fix and do not count against the cap
+grading:
+  attested: RULE-RQ20261113-D18C-01-UNIVERSE
+  auto: true
+  decision_rule_id: RULE-RQ20261113-D18C-01-UNIVERSE
+  evidence:
+  - research/results/RQ-20261113-d18c-01/43551406624.jsonl
+  - research/results/RQ-20261113-d18c-01/43580685219.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  needs_review: true
+  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  rows: 3
+  verdict: null
