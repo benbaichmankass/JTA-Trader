@@ -14842,6 +14842,20 @@ def _sweep_venue_entry(cfg: Optional[Dict[str, Any]],
     return value
 
 
+def _own_leg_ids(db, trade_id: Any) -> tuple:
+    """The row's own bracket legs (``sl_order_id``, ``tp_order_id``), read on their own so a journal without the
+    columns (or a failed read) only loses the exact key, never the sweep. ``()`` when none."""
+    try:
+        c = db.connect()
+        try:
+            r = c.execute("SELECT sl_order_id, tp_order_id FROM trades WHERE id = ?", (int(trade_id),)).fetchone()
+        finally:
+            c.close()
+    except Exception:  # noqa: BLE001 — no leg ids: the heuristics alone, as before
+        return ()
+    return tuple(str(x) for x in (tuple(r) if r else ()) if x)
+
+
 def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
     """Fill ``pnl`` / ``exit_price`` / the broker-PnL note for any DB-closed
     trade that hasn't yet been reconciled against its broker's authoritative
@@ -14979,6 +14993,12 @@ def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
                 continue
 
             journal_entry = _safe_float(row.get("entry_price"))
+            # VENUE-PNL-ORDERID-MATCH (2026-11-14): the row's own bracket legs are an exact key, tried first.
+            # bybit_1 7054 sat pnl NULL with still_pending every pass: on a netted position the cumulative
+            # fills read refused (sibling 7216's TP fill in the window) and the record's avgEntryPrice is the
+            # POSITION average, which the entry filter refuses.
+            own_ids = _own_leg_ids(db, row.get("id"))
+            own_kw: Dict[str, Any] = {"own_order_ids": own_ids} if own_ids else {}   # a row with no legs: call unchanged
             try:
                 rec = account_closed_pnl_for_trade(
                     cfg,
@@ -14987,6 +15007,7 @@ def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
                     opened_at_ms=opened_at_ms,
                     qty=_safe_float(row.get("position_size")),
                     entry_price=journal_entry,
+                    **own_kw,
                 )
                 # CLOSE-PNL-NULL (2026-10-12): WATCHDOG-PAST-STOP (2026-10-10)
                 # taught the reconciler and the watchdog to match the venue's
@@ -15012,6 +15033,7 @@ def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
                             opened_at_ms=opened_at_ms,
                             qty=_safe_float(row.get("position_size")),
                             entry_price=venue_entry,
+                            **own_kw,
                         )
             except Exception as exc:  # noqa: BLE001
                 logger.warning(
@@ -16695,6 +16717,7 @@ _VENUE_FILL_EXIT_SOURCES = frozenset({"exchange_fill", "exchange", "broker_leg_f
 #: same windows every tick and took the whole read budget: after the 2026-11-14 17:36Z deploy, 8 rows
 #: classified by 17:40Z and then none, with 87 Bybit rows from the last 7 days left unclassified and
 #: ``budget_deferred`` 46 per tick. It makes FEWER venue calls, never a delay on one.
+_BUDGET = object()   # _sweep_venue_net_pnl: the tick's read budget is spent
 _VENUE_PNL_READ_TTL_MS = 10 * 60 * 1000
 _VENUE_PNL_READ_CACHE: Dict[Tuple[str, str, int], Tuple[int, Optional[Dict[str, Any]]]] = {}
 
@@ -16714,6 +16737,22 @@ def _venue_read_window(row: Dict[str, Any], closed_ms: int) -> Tuple[int, int]:
         start = min(start, (int(opened_ms // 3_600_000) - 1) * 3_600_000)
     start = max(start, end - (7 * 24 - 1) * 3_600_000)
     return start, end
+
+
+def _venue_entry_window(row: Dict[str, Any], first_start_ms: int) -> Optional[Tuple[int, int]]:
+    """A second read window anchored at the row's ENTRY, for a hold the first window cannot cover.
+
+    :func:`_venue_read_window` clamps to Bybit's 7-day span ending after the close, so for a hold longer
+    than ~7 days the record (created when the bracket leg was placed, i.e. at entry) lies before it.
+    MEASURED 2026-11-14: bybit_1 trade 6788 (SOL, entry 10-29, closed 11-08) landed venue_unmatched that
+    way. ``None`` when the entry is already inside the first window (no extra read is needed)."""
+    opened_ms = _isoformat_to_ms(row.get("created_at"))
+    if opened_ms is None:
+        return None
+    start = (int(opened_ms // 3_600_000) - 1) * 3_600_000
+    if start >= first_start_ms:
+        return None
+    return start, min(start + (7 * 24 - 1) * 3_600_000, first_start_ms)
 
 
 def _venue_gap_notes(db, row: Dict[str, Any], rec: Dict[str, Any], stored: Any, computed: Any) -> Dict[str, Any]:
@@ -16832,26 +16871,34 @@ def _sweep_venue_net_pnl(
                     summary["retry"] += 1
                     continue
                 w_start, w_end = _venue_read_window(row, closed_ms)
-                key = (str(row["account_id"]), str(row.get("symbol") or ""), w_start, w_end)
-                if key not in cache:
-                    held = _VENUE_PNL_READ_CACHE.get(key)
-                    if held is not None and now_ms - held[0] < _VENUE_PNL_READ_TTL_MS and held[1] is not None:
-                        cache[key] = held[1]                 # read within the TTL: no new venue call
-                    else:
-                        if budget[0] <= 0:
-                            summary["budget_deferred"] += 1
-                            continue
-                        budget[0] -= 1
-                        try:
-                            cache[key] = bybit_reader(
-                                cfg, symbol=str(row.get("symbol") or ""), start_ms=w_start, end_ms=w_end)
-                        except Exception as exc:  # noqa: BLE001
-                            logger.warning("_sweep_venue_net_pnl: read %s: %s", key, exc)
-                            cache[key] = None
-                        got0 = cache[key]
-                        if isinstance(got0, dict) and got0.get("query_state") != "could_not_look":
-                            _VENUE_PNL_READ_CACHE[key] = (now_ms, got0)   # a failed read is never held
-                got = cache[key]
+
+                def _read(ws: int, we: int, _row=row, _cfg=cfg) -> Any:
+                    """The window's read result, ``_BUDGET`` when the tick's budget is spent. Cached per tick and,
+                    when the read succeeded, for _VENUE_PNL_READ_TTL_MS across ticks."""
+                    key = (str(_row["account_id"]), str(_row.get("symbol") or ""), ws, we)
+                    if key not in cache:
+                        held = _VENUE_PNL_READ_CACHE.get(key)
+                        if held is not None and now_ms - held[0] < _VENUE_PNL_READ_TTL_MS and held[1] is not None:
+                            cache[key] = held[1]             # read within the TTL: no new venue call
+                        else:
+                            if budget[0] <= 0:
+                                return _BUDGET
+                            budget[0] -= 1
+                            try:
+                                cache[key] = bybit_reader(
+                                    _cfg, symbol=str(_row.get("symbol") or ""), start_ms=ws, end_ms=we)
+                            except Exception as exc:  # noqa: BLE001
+                                logger.warning("_sweep_venue_net_pnl: read %s: %s", key, exc)
+                                cache[key] = None
+                            got0 = cache[key]
+                            if isinstance(got0, dict) and got0.get("query_state") != "could_not_look":
+                                _VENUE_PNL_READ_CACHE[key] = (now_ms, got0)   # a failed read is never held
+                    return cache[key]
+
+                got = _read(w_start, w_end)
+                if got is _BUDGET:
+                    summary["budget_deferred"] += 1
+                    continue
                 if not isinstance(got, dict) or got.get("query_state") == "could_not_look":
                     summary["retry"] += 1
                     continue
@@ -16861,12 +16908,25 @@ def _sweep_venue_net_pnl(
                 for k in ("own_leg_fill", "exit_fill"):
                     if isinstance(notes.get(k), dict):
                         own.append(notes[k].get("order_id"))
+                close_side = {"long": "sell", "short": "buy"}.get(str(row.get("direction") or "").lower())
                 rec, how = vp.match_venue_record(
                     got.get("records") or [], own_order_ids=own,
-                    qty=row.get("position_size"), closed_at_ms=closed_ms,
-                    close_side={"long": "sell", "short": "buy"}.get(
-                        str(row.get("direction") or "").lower()),
+                    qty=row.get("position_size"), closed_at_ms=closed_ms, close_side=close_side,
                 )
+                entry_w = _venue_entry_window(row, w_start) if rec is None else None
+                if entry_w is not None:
+                    # A hold longer than the first window: its record was created at entry, before it.
+                    got_e = _read(*entry_w)
+                    if got_e is _BUDGET:
+                        summary["budget_deferred"] += 1
+                        continue
+                    if not isinstance(got_e, dict) or got_e.get("query_state") == "could_not_look":
+                        summary["retry"] += 1
+                        continue
+                    rec, how = vp.match_venue_record(
+                        got_e.get("records") or [], own_order_ids=own,
+                        qty=row.get("position_size"), closed_at_ms=closed_ms, close_side=close_side,
+                    )
                 if rec is None or _safe_float(rec.get("closed_pnl")) is None:
                     if now_ms - closed_ms < _VENUE_PNL_UNMATCHED_AFTER_MS:
                         summary["retry"] += 1

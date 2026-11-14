@@ -380,3 +380,100 @@ def test_backfill_adds_gap_notes_to_rows_classified_before_and_never_touches_pnl
     assert (r["pnl"], r["pnl_computed"], r["pnl_gap_usd"], r["pnl_basis"]) == (1331.0, 409.73, 921.27, "venue_net")
     om._sweep_venue_net_pnl(db, cfgs=CFGS, bybit_reader=_bybit_like_reader([rec]))   # already backfilled: once
     assert _get(path, 6817)[1] == n
+
+
+# ── VENUE-PNL-ORDERID-MATCH (2026-11-14) ───────────────────────────────────────────────────────────────
+
+def test_a_hold_longer_than_seven_days_is_found_with_one_entry_anchored_read(tmp_path):
+    """bybit_1 6788 (SOL, entry 10-29, closed 11-08): its record was created at ENTRY, before the 7-day
+    span the first window is clamped to, so it went venue_unmatched. One more read, anchored at the entry."""
+    db, path = _db(tmp_path)
+    now = _dt.datetime.now(_dt.timezone.utc)
+    row = _add(path, created_at=(now - _dt.timedelta(days=11)).isoformat(),
+               closed_at=(now - _dt.timedelta(hours=30)).isoformat())
+    opened_ms, closed_ms = om._isoformat_to_ms(row["created_at"]), om._isoformat_to_ms(row["closed_at"])
+    rec = {"order_id": "9826d97e", "side": "Sell", "qty": "74160", "closed_pnl": "3082.36",
+           "avg_entry_price": "1.2582", "avg_exit_price": "1.30",
+           "created_time": str(opened_ms + 60_000), "updated_time": str(closed_ms)}
+    calls = []
+    inner = _bybit_like_reader([rec])
+
+    def reader(cfg, *, symbol, start_ms, end_ms):
+        calls.append((start_ms, end_ms))
+        return inner(cfg, symbol=symbol, start_ms=start_ms, end_ms=end_ms)
+
+    w_start, _ = om._venue_read_window(row, closed_ms)
+    assert opened_ms < w_start, "the fixture's entry must lie before the first window"
+    om._sweep_venue_net_pnl(db, cfgs=CFGS, bybit_reader=reader)
+    r, n = _get(path, 6817)
+    assert r["pnl_basis"] == "venue_net" and r["pnl"] == pytest.approx(3082.36) and n["venue_pnl_match"] == "order_id"
+    assert len(calls) == 2 and calls[1][0] <= opened_ms <= calls[1][1]       # exactly one extra, bounded read
+    assert all(e - s <= 7 * 24 * 3_600_000 for s, e in calls)                # each within Bybit's 7-day span
+
+
+def test_a_hold_inside_the_first_window_costs_no_extra_read(tmp_path):
+    db, path = _db(tmp_path)
+    calls = []
+    row = _add(path)
+    om._sweep_venue_net_pnl(db, cfgs=CFGS, bybit_reader=_reader([], calls=calls))
+    assert len(calls) == 1                                                  # no record yet: retry, no entry read
+    assert om._venue_entry_window(row, om._venue_read_window(row, om._isoformat_to_ms(row["closed_at"]))[0]) is None
+
+
+def test_closed_pnl_lookup_matches_the_rows_own_bracket_leg_despite_a_position_average_entry():
+    """Netting: the record's avgEntryPrice is the POSITION average (7054: 1.0319 vs the row's 1.058), which the
+    10 bps entry filter refuses. The row's own tp leg is the exact key and wins first."""
+    from src.units.accounts import clients as C
+
+    rec = {"orderId": "084e4c9f", "side": "Buy", "qty": "18118.5", "avgEntryPrice": "1.03192707",
+           "avgExitPrice": "0.9533", "closedPnl": "1408.85692323", "createdTime": "1794398546494",
+           "updatedTime": "1794674785242"}
+
+    class _Client:
+        def get_closed_pnl(self, **kw):
+            return {"result": {"list": [rec]}}
+
+    kw = {"category": "linear", "symbol": "XRPUSDT", "side": "Buy", "start_ts_ms": 1794394800000,
+          "end_ts_ms": 1794686400000, "qty_target": 18118.5, "entry_price_target": 1.058,
+          "opened_at_ms": 1794398546000}
+    assert C._bybit_closed_pnl_lookup(_Client(), **kw) is None                       # the old refusal
+    assert C._bybit_closed_pnl_lookup(_Client(), own_order_ids=("f24702cb", "084e4c9f"), **kw) is rec
+    assert C._bybit_closed_pnl_lookup(_Client(), own_order_ids=("084e4c9f",), **{**kw, "side": "Sell"}) is None  # side must agree
+
+
+def test_demo_fills_read_falls_back_to_the_rows_own_order_when_the_cumulative_read_refuses(monkeypatch):
+    """bybit_1 7054: sibling 7216's TP fill sat in the window, so exit_from_fills refused (qty overshoot) and the
+    pending sweep logged still_pending every pass. The row's own bracket order prices it."""
+    from src.runtime import fills_pnl as FP
+    from src.units.accounts import clients as C
+
+    seen = {}
+    monkeypatch.setattr(C, "account_has_broker_pnl_reader", lambda a: True)
+    monkeypatch.setattr(FP, "exit_from_fills", lambda **kw: None)
+
+    def one(**kw):
+        seen.update(kw)
+        return {"avg_exit_price": 0.9533, "qty": 18118.5, "order_id": "084e4c9f", "match": "own_bracket_order"}
+    monkeypatch.setattr(FP, "exit_from_one_order_fills", one)
+    acct = {"account_id": "bybit_1", "exchange": "bybit", "demo": True}
+    base = {"symbol": "XRPUSDT", "direction": "short", "opened_at_ms": 1794398546000, "qty": 18118.5,
+            "entry_price": 1.058}
+    assert C.account_closed_pnl_for_trade(acct, **base) is None                       # no own ids: unchanged
+    got = C.account_closed_pnl_for_trade(acct, own_order_ids=("f24702cb", "084e4c9f"), **base)
+    assert got["avg_exit_price"] == 0.9533 and seen["own_order_ids"] == ("f24702cb", "084e4c9f")
+    assert isinstance(seen["closed_at_ms"], int)                                       # never open-ended
+
+
+def test_pending_sweep_reads_the_rows_own_legs_and_tolerates_a_journal_without_them(tmp_path):
+    db, path = _db(tmp_path)
+    _add(path, id=7054, sl_order_id="f24702cb", tp_order_id="084e4c9f")
+    _add(path, id=7055, sl_order_id=None, tp_order_id=None)
+    assert om._own_leg_ids(db, 7054) == ("f24702cb", "084e4c9f")
+    assert om._own_leg_ids(db, 7055) == ()
+
+    class _Bare:                                       # an older journal: no leg columns at all
+        def connect(self):
+            k = sqlite3.connect(":memory:")
+            k.execute("CREATE TABLE trades (id INTEGER PRIMARY KEY)")
+            return k
+    assert om._own_leg_ids(_Bare(), 1) == ()
