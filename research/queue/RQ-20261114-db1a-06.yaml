@@ -1,0 +1,171 @@
+id: RQ-20261114-db1a-06
+title: trend_donchian_eth_prop min_confidence 0.8 vs config-exact 0.6 on its closed decision bar, record + year before (census candidate)
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 1
+roadmap:
+- L-LADDER
+question: Does raising trend_donchian_eth_prop's min_confidence from 0.6 to 0.8 make the leg pass Stage 0 on the record year 2025-11-13..2026-11-12 and beat config-exact there, while
+  holding (positive and above config-exact) on the year before, net of the full cost stack?
+why_this_matters: 'Manager ruling 2026-11-14 09:19Z: after the profit-lock unit, pick between the census candidates. trend_donchian_eth_prop is negative in both years (-9.75R n166 /
+  -4.52R n183) and its attribution reads ''cost erases a gross edge'' (gross +14.48R, cost 14.73R). Its strongest responder on its OWN decision bar (closed) is min_confidence: 0.7 +50.2R
+  and 0.8 +75.7R vs +8.7R (RQ-20261101-78fc-14, 2020-07..2026-10, n 865 at 0.8, 6/6 folds, monotone). Chosen over trend_donchian_1h atr_stop_mult 3.125 because that evidence is closed-bar
+  while trend_donchian_1h decides on the forming bar, where db1a-01 showed closed-bar responses often flip.'
+power:
+  expected_n: 280
+  min_detectable_effect: 0.17
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED: arm A n 166 record / 183 prior (RQ-20261114-db1a-05). 0.8 kept 865 of 1,085 trades (80%) in RQ-20261101-78fc-14, so about 130-145 per window with M. MDE about 0.17sd
+    per-trade over ~280 M trades pooled; the per-leg Stage-0 floor is 30.'
+  sd: null
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand windows; nothing accrues; Binance / Binance-vision covers them at run time.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+run:
+  timeout_minutes: 300
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261114-db1a-06
+  commands:
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - trend_donchian_eth_prop
+    - --arm
+    - A=
+    - --arm
+    - M=min_confidence=0.8
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2025-11-13T00:00:00'
+    - --end
+    - '2026-11-12T22:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '1'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/rec_trend_donchian_eth_prop'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - trend_donchian_eth_prop
+    - --arm
+    - A=
+    - --arm
+    - M=min_confidence=0.8
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2024-11-13T00:00:00'
+    - --end
+    - '2025-11-12T22:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '1'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/pre_trend_donchian_eth_prop'
+  - - python3
+    - scripts/research/two_window_lever_grade.py
+    - --out
+    - '{out_dir}'
+    - --arm
+    - M
+    - --leg
+    - trend_donchian_eth_prop
+    - --unit
+    - RQ-20261114-db1a-06
+    - --rule
+    - RULE-ETHPROP-MINCONF08-20261114
+    - --n-floor
+    - '30'
+    - --fold-majority
+    - '3'
+decision_rule:
+  id: RULE-ETHPROP-MINCONF08-20261114
+  registered_at: '2026-11-14'
+  registered_before_run: true
+  statistic: exit_lever_ablation --grade stage0 --forming-1m-fetch --days 800, arms A (config-exact, min_confidence 0.6) and M (min_confidence 0.8) per window; two_window_lever_grade.py
+    applies the rule.
+  rule: 'Multiple-testing guard: names the prior attempts on this leg and these windows (RQ-20261114-db1a-05 profit lock FAIL, -04 harness-native HTF gate FAIL, -03 post-hoc HTF filter,
+    -02 ADX cell FAIL, -01 decision_bar) and the selection: 0.8 is the best of two values (0.7, 0.8) in RQ-20261101-78fc-14 over 2020-07..2026-10, a window that OVERLAPS both windows
+    graded here, so this is an in-sample confirmation on the two most recent years, not an out-of-sample test. The value is fixed (0.8), not chosen here. PASS iff M passes Stage 0 on
+    the record window (net_r > 0, n >= 30, >= 3/4 folds positive) AND M net_r > A net_r there, AND on the prior window M net_r > 0 AND > A net_r. FAIL iff graded and not; INDETERMINATE
+    iff M n < 30 on the record window or a run/arm is missing. No threshold is relaxed.'
+  what_it_does_not_do: Changes no config, roster, order or evidence record. A PASS is a Tier-3 parameter proposal (min_confidence 0.6 -> 0.8) for trend_donchian_eth_prop on bybit_1,
+    via the manager. The leg is on no prop account.
+  baseline: the leg config-exact (min_confidence 0.6) on its closed decision bar (arm A), both windows, run in this unit.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 150
+  confidence: 0.25
+  basis: 'stand-in: one demo-floor leg losing in both years; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+ml_consumer:
+  not_applicable: 'Not an ML unit: an entry-filter parameter on a rule-based leg.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: trend_donchian_eth_prop
+  subject_kind: strategy_leg
+  from_result: RQ-20261114-db1a-05
+  verdict_read: fail
+  diagnosis: 'Census 2026-11-14 (research/levers/trend_donchian_eth_prop.yaml): negative in both years, ''cost erases a gross edge'' (+14.48R gross vs 14.73R cost, about 0.09R cost per
+    trade); regime gating (db1a-02/-04) and the profit lock (db1a-05: L2 -3.56R / -0.79R) fail. The entry filter min_confidence is the strongest closed-bar responder and has never run
+    on the record window.'
+  hypothesis: Raising min_confidence to 0.8 drops the low-confidence trades whose gross edge is below their cost, turning the leg positive on both recent years.
+  search: Fixed at 0.8 (RQ-20261101-78fc-14's best, monotone 0.6 -> 0.7 -> 0.8); no other value run.
+  attempt: 1
+  due_by: '2026-11-21'
+  levers:
+  - entry
+  lever_arms:
+  - family: entry
+    param: min_confidence
+    values:
+    - 0.8
+    baseline_value: 0.6
+  map_entries:
+  - research/levers/trend_donchian_eth_prop.yaml
+related:
+- RQ-20261101-78fc-14
+- RQ-20261114-db1a-05
+- RQ-20261114-db1a-04
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): ONE lever chosen from the leg''s own R diagnosis (scripts/research/leg_r_diagnosis.py), rule
+  registered before the run against the leg''s own record, net of the full cost stack, graded once on its fixed window.'
+follow_up: On the verdict a session reports to the manager with the per-window numbers; a PASS becomes a Tier-3 parameter proposal via the manager. Then trend_donchian_1h's sizing_vs_cost
+  candidate per the manager's ruling.
