@@ -197,6 +197,20 @@ def _resample(df: pd.DataFrame, rule: str) -> pd.DataFrame:
             .dropna().reset_index())
 
 
+
+def bef_tp_gate_open(is_long, ext, tp_price, risk, within_r):
+    """scripts/research/profit_lock_gate.py's tp_gate_open, loaded by FILE and lazily (only an armed
+    --be-floor-tp-within-r ever calls it; default runs never load it)."""
+    mod = sys.modules.get("profit_lock_gate")
+    if mod is None:
+        import importlib.util as _ilu
+        _spec = _ilu.spec_from_file_location("profit_lock_gate", Path(__file__).resolve().parent / "research" / "profit_lock_gate.py")
+        mod = _ilu.module_from_spec(_spec)
+        sys.modules["profit_lock_gate"] = mod
+        _spec.loader.exec_module(mod)
+    return mod.tp_gate_open(is_long, ext, tp_price, risk, within_r)
+
+
 def _htf_daily_gate():
     """scripts/research/htf_daily_gate.py, loaded by FILE and lazily (the flag is opt-in; default runs never load it)."""
     mod = sys.modules.get("htf_daily_gate")
@@ -385,6 +399,8 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  momentum_stale_bars: int = 0,
                  momentum_stale_adx_below: float = 0.0,
                  be_floor_r: float = 0.0,
+                 be_floor_lock_r: float = 0.0,
+                 be_floor_tp_within_r: float = 0.0,
                  cell_tighten_min_r: float = 0.0,
                  cell_tighten_room_atr: float = 1.0,
                  cell_tighten_mode: str = "first",
@@ -996,8 +1012,13 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                 # Applied AFTER the ratchet and BEFORE the next bar's stop test,
                 # so it binds from the bar following the one that armed it —
                 # the conservative reading, consistent with SL-first.
-                if be_floor_r > 0.0 and mfe >= be_floor_r:
-                    trail = max(trail, entry)
+                # PROFIT-LOCK-CONDITIONAL-TEST: be_floor_lock_r = k > 0 puts the armed floor at entry + k R
+                # (0.0 = plain break-even, byte-identical), as in scripts/backtest_pullback.py; be_floor_tp_within_r
+                # > 0 also requires a resting TP within that many R of the extreme (0.0 = off, byte-identical).
+                if be_floor_r > 0.0 and mfe >= be_floor_r and (
+                        be_floor_tp_within_r <= 0.0
+                        or bef_tp_gate_open(True, ext, tp_price, risk, be_floor_tp_within_r)):
+                    trail = max(trail, entry + be_floor_lock_r * risk)
             else:
                 if bl < ext:
                     peak_j = j
@@ -1020,8 +1041,10 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                 mfe = max(mfe, (entry - ext) / risk)
                 # MI-165 break-even FLOOR — short side. `min()` is the
                 # tightening direction here, mirroring the ratchet above.
-                if be_floor_r > 0.0 and mfe >= be_floor_r:
-                    trail = min(trail, entry)
+                if be_floor_r > 0.0 and mfe >= be_floor_r and (
+                        be_floor_tp_within_r <= 0.0
+                        or bef_tp_gate_open(False, ext, tp_price, risk, be_floor_tp_within_r)):
+                    trail = min(trail, entry - be_floor_lock_r * risk)
             if _ct.on:
                 # after the ratchet + BE floor on bar j's CLOSE: binds from bar j+1 (SL-first), only ever tightens
                 trail = _ct.on_close(j, float(df["close"].iloc[j]), entry, risk, atr, trail, direction == "long")
@@ -1383,6 +1406,10 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
         params["adx_period"] = adx_period
     if be_floor_r > 0.0:
         params["be_floor_r"] = be_floor_r
+        if be_floor_lock_r > 0.0:
+            params["be_floor_lock_r"] = be_floor_lock_r
+        if be_floor_tp_within_r > 0.0:
+            params["be_floor_tp_within_r"] = be_floor_tp_within_r
     if cell_tighten_min_r > 0.0:
         params.update(cell_tighten_min_r=cell_tighten_min_r, cell_tighten_room_atr=cell_tighten_room_atr,
                       cell_tighten_mode=cell_tighten_mode, cell_tighten_random_p=cell_tighten_random_p,
@@ -1822,6 +1849,12 @@ def main(argv: List[str]) -> int:
                         "trailing stop may never again sit below entry. "
                         "max()-ed against the chandelier candidate so it can "
                         "only ever TIGHTEN, preserving the monotone ratchet.")
+    p.add_argument("--be-floor-lock-r", type=float, default=0.0,
+                   help="Profit-lock STEP for --be-floor-r (0=off, byte-identical): the armed floor sits at "
+                        "entry + this many R instead of entry. Must be < --be-floor-r.")
+    p.add_argument("--be-floor-tp-within-r", type=float, default=0.0,
+                   help="PROFIT-LOCK-CONDITIONAL-TEST TP-distance gate for --be-floor-r (0=off, byte-identical): "
+                        "the floor arms only while a resting TP exists within this many R of the trade's extreme.")
     p.add_argument("--rr-floor", type=float, default=0.0,
                    help="M31 P5 candidate (0=off, byte-identical): close at bar "
                         "CLOSE once rr_from_here = r_to_target / r_to_stop falls "
@@ -2132,6 +2165,8 @@ def main(argv: List[str]) -> int:
                      trail_decay_tight_mult=args.trail_decay_tight_mult,
                      rr_floor=args.rr_floor,
                      be_floor_r=args.be_floor_r,
+                     be_floor_lock_r=args.be_floor_lock_r,
+                     be_floor_tp_within_r=args.be_floor_tp_within_r,
                      cell_tighten_min_r=args.cell_tighten_min_r,
                      cell_tighten_room_atr=args.cell_tighten_room_atr,
                      cell_tighten_mode=args.cell_tighten_mode,
