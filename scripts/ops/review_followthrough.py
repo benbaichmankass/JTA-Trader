@@ -258,6 +258,10 @@ def render(g: dict, meta: dict, sources: list[str]) -> str:
              (f"POPULATION: {meta['pipeline_items']} pipeline items (store {meta['pipeline_state']}, "
               f"{meta['pipeline_unreadable']} unreadable) + {meta['checklist_rows']} checklist rows; "
               f"source classified from id/origin/title text (see SOURCES)"),
+             "READ FROM: " + (", ".join(f"{k}={v.get('source')}"
+                                        + (f" (FROZEN EXPORT, newest {v.get('export_newest')})"
+                                           if v.get("source") == "export" else "")
+                                        for k, v in (meta.get("read_from") or {}).items()) or "—"),
              "",
              f"{'source':<19}| cohort(filed {w}d): filed done kill open ≤{n}d | backlog(now): open due% med-age no-owner",
              "-" * 104]
@@ -289,6 +293,8 @@ def run(today: date, window_days: int, closed_within_days: int, oldest: int,
             "closed_within_days": closed_within_days, "pipeline_items": pstate["items"],
             "pipeline_state": pstate["state"], "pipeline_unreadable": pstate["unreadable"],
             "checklist_rows": len(crecs)}
+    from src.runtime import work_read  # what was actually read: live store, or the frozen export
+    meta["read_from"] = work_read.read_state()
     if source:
         g = {source: g[source]}
     return g, meta
