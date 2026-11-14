@@ -1941,5 +1941,27 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261113-f251-08
   lever_family: direction
+- family: vol_skip_above_pctl (forming)
+  varied: vol_skip_above_pctl none vs 0.8 on the FORMING bar, window 2025-11-13..2026-11-12, confirmation window 2024-11-13..2025-11-12, full
+    cost stack
+  response:
+    verdict: fail
+    run: '43514434840'
+    baseline:
+      arm: A
+      n: 81
+      net_r: -6.5744
+      folds_positive: 2/4
+    arms:
+    - vol_skip_above_pctl: 0.8
+      n: 80
+      net_r: -13.0907
+      folds_positive: 2/4
+    reading: the hot-tail gate makes the forming leg WORSE (-13.09R vs -6.57R); the closed-bar pass (7b6f-15) does not carry to the forming bar
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261113-f251-14
+  lever_family: filter
 units:
 - RQ-20261113-f251-08
+- RQ-20261113-f251-14
