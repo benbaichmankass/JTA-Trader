@@ -1,0 +1,89 @@
+{
+  "unit": "RQ-20261112-001",
+  "run_id": "43551404724",
+  "commit_sha": "ae92c0a025bf7b883e7378572ea3287e423f7b28",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/43551404724",
+  "timeout_minutes": 150,
+  "runner": {
+    "cpu_model": "Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "avx512_vnni",
+      "avx512bw",
+      "avx512f",
+      "avx512vl",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1019-azure",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261111.196.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "ed17042f7967",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_lever_ablation.py",
+        "--leg",
+        "htf_pullback_trend_2h",
+        "--arm",
+        "A=",
+        "--arm",
+        "AD30=adx_min=30",
+        "--days",
+        "2400",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-26 23:59",
+        "--grade",
+        "holdout",
+        "--baseline",
+        "A",
+        "--delta-r",
+        "0",
+        "--holdout-frac",
+        "0.25",
+        "--holdout-min-trades",
+        "25",
+        "--holdout-max-frac",
+        "0.40",
+        "--folds",
+        "4",
+        "--fold-majority",
+        "3",
+        "--n-floor",
+        "39",
+        "--out",
+        "comms/research/RQ-20261112-001/43551404724"
+      ],
+      "log": "comms/research/RQ-20261112-001/43551404724/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 40.6
+    }
+  ],
+  "all_ok": true
+}
