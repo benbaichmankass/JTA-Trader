@@ -28,7 +28,7 @@ Versions: a "trade" is (leg, symbol, side) across the books the status model jud
 trade is a breach of the operator's rule, whatever the verdicts say.
 
 Sibling matching. With ``order_package_id`` on the row (the journal ``trades`` table) the match is exact: MEASURED.
-``/api/bot/positions`` does not carry the package id, so the CLI falls back to leg + symbol + side, labelled ESTIMATED.
+``/api/bot/positions`` carries ``orderPackageId`` since POSITIONS-API-ORDER-PACKAGE-ID; a row without one falls back to leg + symbol + side, labelled ESTIMATED.
 A fallback match can pair two separate trades of one leg; it never invents a sibling across legs or symbols.
 
 Pure functions, stdlib only (plus strategy_status for the book definitions). No broker, no DB, no order path.
@@ -65,7 +65,7 @@ def _norm(p: dict[str, Any]) -> dict[str, Any]:
         "leg": p.get("strategy") or p.get("pattern") or p.get("strategy_name"),
         "symbol": p.get("symbol"),
         "side": str(p.get("side") or p.get("direction") or "").lower().replace("long", "buy").replace("short", "sell"),
-        "package": p.get("order_package_id"),
+        "package": p.get("order_package_id") or p.get("orderPackageId"),
     }
 
 
