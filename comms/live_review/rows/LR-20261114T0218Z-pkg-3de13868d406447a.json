@@ -1,0 +1,207 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261114T0218Z-pkg-3de13868d406447a",
+ "reviewed_at": "2026-11-14T02:30:00Z",
+ "order_package_id": "pkg-3de13868d406447a",
+ "trade_id": null,
+ "leg": "ada_pullback_2h",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "r_milestone",
+  "level": 2.0,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-14T02:18:35Z",
+ "state": {
+  "atr_now_over_entry": 0.7993,
+  "bars_held": 53,
+  "giveback_r": 0.0836,
+  "open_r": 2.0239,
+  "peak_provenance": "estimated",
+  "peak_r": 2.1075,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.18437857,
+  "tp": 0.1607384
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.7993,
+  "bars_since_peak": 11,
+  "giveback_r": 0.0836,
+  "open_r": 2.0239,
+  "peak_r": 2.1075,
+  "r_to_stop": 3.0239,
+  "r_to_target": 0.9303
+ },
+ "mechanics": {
+  "evidence": "package sl 0.18437857 / tp 0.1607384 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 62,
+   "mean_r": 2.5711,
+   "sd_r": 1.6735,
+   "worst_r": -1.0591,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 62,
+   "mean_r": 2.0584,
+   "sd_r": 0.6196,
+   "worst_r": 0.983,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 62,
+   "mean_r": 2.1044,
+   "sd_r": 0.8668,
+   "worst_r": 0.983,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 62,
+   "mean_r": 2.2945,
+   "sd_r": 1.0783,
+   "worst_r": 0.7357,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 62,
+   "mean_r": 2.4038,
+   "sd_r": 1.6713,
+   "worst_r": -0.2421,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 62,
+   "mean_r": 2.4195,
+   "sd_r": 1.3153,
+   "worst_r": 0.7756,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 62,
+   "mean_r": 2.4236,
+   "sd_r": 1.3106,
+   "worst_r": 0.7856,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 62,
+   "mean_r": 2.0297,
+   "sd_r": 0.6518,
+   "worst_r": 0.983,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 62,
+   "mean_r": 1.9446,
+   "sd_r": 0.0293,
+   "worst_r": 1.8402,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261114T0218Z-pkg-3de13868d406447a.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold at +2R. Measured table (n=62 comparable shorts, net of full cost stack): HOLD +2.571R (sd 1.67, worst -1.06R) beats every priced alternative: tighten r:1 +2.420, r:0 +2.404, atr:2.0 +2.295, atr:1.5 +2.104, atr:1.0 +2.058, r:2 +2.030, and close +1.945R (worst +1.84R). Tightening and closing buy a better worst case (+0.7 to +1.8R) at 0.15 to 0.63R of mean; ev_cost SE 0.12-0.21 so only the atr/r:2 arms and close are clearly below hold. Partial and move_tp could not be priced from this session (candle files are VM-only, tool returned n=15 insufficient_n): judgement only, a partial interpolates between hold and close so it cannot beat hold on mean, and move_tp is not supported because TP 1.35R below price is a real structure-free measured target and ATR ratio 0.80 shows no vol expansion. Open +2.02R vs est. peak 2.11R (giveback 0.08R) at 53 2h bars, price 0.1671 sits on the 0.1658-0.1673 swing-low shelf: the previous forecast target 0.1673 was reached (2h low 0.1663) and invalidation 0.1756 never taken, so the call was right; price is now at a shelf where a bounce is plausible, but the 1d downtrend (ADX 36) and lower highs persist and a +2R state already clears a 62-trade distribution whose mean is above the current open R. HOLD already expresses the view."
+ },
+ "forecast": {
+  "thesis": "Previous target 0.1673 was hit (2h low 0.1663) and 0.1756 never taken. 1d downtrend (ADX 36) with 2h lower highs 0.1747/0.1756 intact; price 0.1671 sits on the 0.1658-0.1673 shelf, so I expect a pause or bounce first, then a break to 0.1640 below the shelf before 0.1747 is taken; 2h ADX 19.6 chop keeps the odds modest",
+  "direction": "with_trade",
+  "target_px": 0.164,
+  "p_target": 0.35,
+  "invalidation_px": 0.1747,
+  "horizon_bars": 6,
+  "timeframe": "2h",
+  "evidence": [
+   "table hold n=62 mean 2.5711 worst -1.0591; close +1.9446; tighten r:1 +2.4195",
+   "chart.swings 2h lows 0.1691 / 0.1658 / 0.1673, highs 0.1747 / 0.1756 / 0.1742",
+   "chart.htf 1d trending ADX 35.8, last close 0.1685",
+   "exit_plan sl 0.184379 tp 0.160738",
+   "context.previous_review forecast target 0.1673 inv 0.1756 resolved: target touched"
+  ]
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: partial_close and move_tp not priced here (no_candles, n=15 insufficient_n from a session without VM candle files); judged, not measured",
+  "mechanics_venue: packet generator read bybit_2 and bybit_portfolio SL 0.1844 / TP 0.1607 matching package SL 0.18437857 / TP 0.1607384 by order id; no independent venue read this session",
+  "tighten_bias: stop-at-price fills flatter any tighten; tighten is advice-only",
+  "trigger: r_milestone +2R and judgement_cadence slot 2026-11-14T00:00Z both due; one row answers both",
+  "correlated: ADA shorts x3 (this, its mirror, trend_donchian_ada_4h) with ETH, SOL, XRP, AVAX shorts = one crypto-beta bet",
+  "atr_ratio: now/entry 0.80",
+  "live_vs_backtest: realMoney 18 closed CONSISTENT (10.8th pct, live -3.44R); mirror 12 closed CONSISTENT (21.6th pct)",
+  "calendar: no events next 24h"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuKXonDBdED7cNK7FhN-live-review-lane",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "packet_defects": [],
+ "packet_sha": "8bedb6b04adf3a0ed1dcddf165bcd1ae4a0aa727f18a2ab26bd0ef8edebe3de5"
+}
