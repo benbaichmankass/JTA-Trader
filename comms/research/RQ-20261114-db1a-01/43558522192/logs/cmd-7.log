@@ -1,0 +1,38 @@
+Fetching AVAXUSDT 240 candles 2024-09-05 -> 2026-11-14 (source=binance_vision) …
+  vision monthly 2024-09: 180 bars (156 kept)
+  vision monthly 2024-10: 186 bars (342 kept)
+  vision monthly 2024-11: 180 bars (522 kept)
+  vision monthly 2024-12: 186 bars (708 kept)
+  vision monthly 2025-01: 186 bars (894 kept)
+  vision monthly 2025-02: 168 bars (1062 kept)
+  vision monthly 2025-03: 186 bars (1248 kept)
+  vision monthly 2025-04: 180 bars (1428 kept)
+  vision monthly 2025-05: 186 bars (1614 kept)
+  vision monthly 2025-06: 180 bars (1794 kept)
+  vision monthly 2025-07: 186 bars (1980 kept)
+  vision monthly 2025-08: 186 bars (2166 kept)
+  vision monthly 2025-09: 180 bars (2346 kept)
+  vision monthly 2025-10: 186 bars (2532 kept)
+  vision monthly 2025-11: 180 bars (2712 kept)
+  vision monthly 2025-12: 186 bars (2898 kept)
+  vision monthly 2026-01: 186 bars (3084 kept)
+  vision monthly 2026-02: 168 bars (3252 kept)
+  vision monthly 2026-03: 186 bars (3438 kept)
+  vision monthly 2026-04: 180 bars (3618 kept)
+  vision monthly 2026-05: 186 bars (3804 kept)
+  vision monthly 2026-06: 180 bars (3984 kept)
+  vision monthly 2026-07: 186 bars (4170 kept)
+  vision monthly 2026-08: 186 bars (4356 kept)
+  vision monthly 2026-09: 180 bars (4536 kept)
+  vision monthly 2026-10: 186 bars (4722 kept)
+  vision daily 2026-11: 4794 bars kept so far
+Wrote 4794 rows (2024-09-05 -> 2026-11-12) to /tmp/exit_lever_ablation_r1o0j1dn/trend_donchian_avax_4h__data.csv
+[F] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol AVAXUSDT --resample 4h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 5.0 --min-confidence 0.7 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261114-db1a-01/43558522192/pre_trend_donchian_avax_4h/arms/F__trades.jsonl --json comms/research/RQ-20261114-db1a-01/43558522192/pre_trend_donchian_avax_4h/arms/F__bt.json --trail-decay-stall-bars 6 --trail-decay-tight-mult 2.5 --tp-cap-pct 0.099 --tp-r 50.0 --decision-bar forming --minutes-1m-csv <minutes_1m> --strategy-name trend_donchian_avax_4h --start 2024-11-13T00:00:00 --end 2025-11-12T20:00:00
+[C] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol AVAXUSDT --resample 4h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 5.0 --min-confidence 0.7 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261114-db1a-01/43558522192/pre_trend_donchian_avax_4h/arms/C__trades.jsonl --json comms/research/RQ-20261114-db1a-01/43558522192/pre_trend_donchian_avax_4h/arms/C__bt.json --trail-decay-stall-bars 6 --trail-decay-tight-mult 2.5 --tp-cap-pct 0.099 --tp-r 50.0 --start 2024-11-13T00:00:00 --end 2025-11-12T20:00:00
+[C_L] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol AVAXUSDT --resample 4h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 5.0 --min-confidence 0.7 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261114-db1a-01/43558522192/pre_trend_donchian_avax_4h/arms/C_L__trades.jsonl --json comms/research/RQ-20261114-db1a-01/43558522192/pre_trend_donchian_avax_4h/arms/C_L__bt.json --side-filter long --trail-decay-stall-bars 6 --trail-decay-tight-mult 2.5 --tp-cap-pct 0.099 --tp-r 50.0 --start 2024-11-13T00:00:00 --end 2025-11-12T20:00:00
+[C_VL30] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol AVAXUSDT --resample 4h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 5.0 --min-confidence 0.7 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261114-db1a-01/43558522192/pre_trend_donchian_avax_4h/arms/C_VL30__trades.jsonl --json comms/research/RQ-20261114-db1a-01/43558522192/pre_trend_donchian_avax_4h/arms/C_VL30__bt.json --trail-decay-stall-bars 6 --trail-decay-tight-mult 2.5 --tp-cap-pct 0.099 --tp-r 50.0 --vol-skip-below-pctl 0.3 --start 2024-11-13T00:00:00 --end 2025-11-12T20:00:00
+{
+ "verdict": "pass",
+ "label": "stage0_edge",
+ "why": "net_r=26.0921 > 0 with 3/4 positive folds at this arm's cost stack"
+}
