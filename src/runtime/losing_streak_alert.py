@@ -69,6 +69,19 @@ smallest substantive run observed ($3,166), but it necessarily under-serves a
 small real-money account for which a sub-$500 bleed would still matter. Filed
 rather than papered over.
 
+PER-ACCOUNT FLOOR (operator, 2026-11-12, Tier 3; row SMALL-ACCOUNT-RISK part b;
+decision: 2026-11-12 operator decisions page x2 "Per account: min($500, 5% of
+equity)"). Each account's size floor is ``min(LOSING_STREAK_MIN_LOSS_USD,
+0.05 x that account's equity)``, with equity read from the same
+``runtime_logs/balance_snapshots.json`` the RiskManager reads. The floor can only
+go DOWN from the fleet value, never up, so this ADDS alerting and never suppresses
+any (option (a) of BL-20260911). Where equity cannot be read, the account keeps the
+fleet floor and is LABELLED ``equity_unreadable``; that is a label, not a refusal
+and not a skipped grade. WHAT IT DOES WHEN HIT: exactly what the fleet floor
+already did. The account grades ``streak_active`` and ONE latched WARNING goes out
+(Telegram + FCM). Nothing is refused, resized, closed or switched off, and the
+RiskManager does not read this.
+
 THE STATES ARE NOT COLLAPSED. Four conditions produce "no alert" and mean
 different things:
 
@@ -126,7 +139,8 @@ switch the watch off:
   ``LOSING_STREAK_CHECK_SECONDS``   cadence between reads (default 3600)
   ``LOSING_STREAK_LOOKBACK_DAYS``   how far back to read (default 30)
   ``LOSING_STREAK_MIN_DAYS``        consecutive losing days (default 4)
-  ``LOSING_STREAK_MIN_LOSS_USD``    absolute cumulative-loss floor (default 500)
+  ``LOSING_STREAK_MIN_LOSS_USD``    fleet cumulative-loss CEILING on the floor (default 500);
+                                    each account's floor is min(this, 5% of its equity)
   ``LOSING_STREAK_MAX_GAP_DAYS``    silence that ends a run (default 3)
   ``LOSING_STREAK_SKIP``            CSV escape hatch, mirrors ACCOUNT_DOWN_ALERT_SKIP
 
@@ -398,22 +412,86 @@ def current_run(days: Dict[str, Any], *, max_gap_days: int) -> Dict[str, Any]:
             "end": end if length else None, "graded_days": len(gradeable)}
 
 
+#: The operator's fraction (2026-11-12 x2): an account's floor is
+#: ``min(fleet floor, PER_ACCOUNT_EQUITY_FRACTION x equity)``.
+PER_ACCOUNT_EQUITY_FRACTION = 0.05
+
+FLOOR_BASIS_EQUITY = "min(fleet, 5% of equity)"
+FLOOR_BASIS_UNREADABLE = "fleet (equity_unreadable)"
+
+
+def account_floor_usd(fleet_floor_usd: float, equity_usd: Optional[float]) -> Tuple[float, str]:
+    """``(floor, basis)`` for one account. PURE.
+
+    ``min(fleet, 5% x equity)`` when equity is a finite positive reading. Otherwise
+    the fleet floor, labelled ``equity_unreadable``: an unreadable balance never
+    lowers, raises or removes the watch.
+    """
+    try:
+        eq = float(equity_usd) if equity_usd is not None else None
+    except (TypeError, ValueError):
+        eq = None
+    if eq is None or eq != eq or eq in (float("inf"), float("-inf")) or eq <= 0:
+        return float(fleet_floor_usd), FLOOR_BASIS_UNREADABLE
+    return min(float(fleet_floor_usd), PER_ACCOUNT_EQUITY_FRACTION * eq), FLOOR_BASIS_EQUITY
+
+
+def _read_equities() -> Dict[str, float]:
+    """``{account: equity}`` from ``runtime_logs/balance_snapshots.json``, the same
+    file ``RiskManager._account_equity_from_snapshot`` reads. Best-effort. An
+    account missing here falls to the labelled fleet floor and is never skipped."""
+    try:
+        p = runtime_logs_dir() / "balance_snapshots.json"
+        raw = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+    except Exception as exc:  # noqa: BLE001  # allow-silent: an unreadable snapshot degrades to the labelled fleet floor, never to no watch
+        logger.warning("losing_streak_alert: balance snapshot unreadable: %s", exc)
+        return {}
+    out: Dict[str, float] = {}
+    if isinstance(raw, dict):
+        for acct, entry in raw.items():
+            if isinstance(entry, dict) and entry.get("balance") is not None:
+                try:
+                    out[str(acct)] = float(entry["balance"])
+                except (TypeError, ValueError):
+                    continue
+    return out
+
+
+def account_floors(accounts: Iterable[str], fleet_floor_usd: float,
+                   equities: Optional[Dict[str, float]] = None) -> Dict[str, Dict[str, Any]]:
+    """``{account: {floor_usd, basis, equity_usd}}`` for every account given."""
+    eqs = _read_equities() if equities is None else equities
+    out: Dict[str, Dict[str, Any]] = {}
+    for acct in accounts:
+        eq = eqs.get(acct)
+        floor, basis = account_floor_usd(fleet_floor_usd, eq)
+        out[acct] = {"floor_usd": round(floor, 2), "basis": basis,
+                     "equity_usd": None if basis == FLOOR_BASIS_UNREADABLE else eq}
+    return out
+
+
 def assess(
     rows: Sequence[Any],
     *,
     min_days: int,
     min_loss_usd: float,
     max_gap_days: int,
+    floors: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> Dict[str, Dict[str, Any]]:
     """Grade every account that produced closed rows in the window.
 
     PURE. An account absent from ``rows`` was NOT OBSERVED and is deliberately
     absent from the result rather than graded healthy — the distinction
     ``silent_refusal_alert`` had to be corrected into keeping.
+
+    ``floors`` (from :func:`account_floors`) gives each account its own size floor.
+    An account absent from it uses ``min_loss_usd``, the fleet value.
     """
     graded: Dict[str, Dict[str, Any]] = {}
     for acct, days in daily_pnl(rows).items():
         run = current_run(days, max_gap_days=max_gap_days)
+        fl = (floors or {}).get(acct) or {}
+        acct_floor = float(fl.get("floor_usd", min_loss_usd))
         counts = {
             k: sum(int(c.get(k, 0)) for c in days.values())
             for k in ("measured", "estimated", "unverified", "fabricated")
@@ -429,7 +507,7 @@ def assess(
             state = STREAK_UNREADABLE
         elif run["graded_days"] < min_days:
             state = STREAK_INSUFFICIENT
-        elif run["length"] >= min_days and abs(run["loss"]) >= min_loss_usd:
+        elif run["length"] >= min_days and abs(run["loss"]) >= acct_floor:
             state = STREAK_ACTIVE
         else:
             state = STREAK_NONE
@@ -452,7 +530,10 @@ def assess(
             # collapses "below the day threshold" into "below the size floor"
             # into "we could not look", and those have different remedies.
             "below_min_days": run["length"] < min_days,
-            "below_min_loss": abs(run["loss"]) < min_loss_usd,
+            "below_min_loss": abs(run["loss"]) < acct_floor,
+            # Which floor graded this account, and why: never an unexplained number.
+            "min_loss_usd_applied": round(acct_floor, 2),
+            "floor_basis": fl.get("basis", "fleet"),
         }
     return graded
 
@@ -493,6 +574,8 @@ def describe(account_id: str, a: Dict[str, Any]) -> str:
         f"${abs(a['streak_loss_usd']):,.2f} — {cov_text}."
         f"{fab_text} Population: {a['graded_days']} gradeable day(s) of "
         f"activity in the whole window, from {a['rows']} closed row(s). "
+        f"Size floor ${float(a.get('min_loss_usd_applied') or 0):,.2f} "
+        f"({a.get('floor_basis', 'fleet')}). "
         f"This is a WARN, not a position-safety page: the book is trading and "
         f"losing, not unprotected."
     )
@@ -581,8 +664,10 @@ def run_losing_streak_check(
             logger.warning("losing_streak_alert: journal read failed: %s", exc)
             return {"checked": False, "reason": "read_failed"}
 
+    accts = {str(r["account_id"] or "") for r in rows}
+    floors = account_floors(sorted(a for a in accts if a), min_loss)
     graded = assess(rows, min_days=min_days, min_loss_usd=min_loss,
-                    max_gap_days=max_gap)
+                    max_gap_days=max_gap, floors=floors)
     state[_LAST_CHECK_KEY] = now.isoformat()
     alerted: List[str] = []
     recovered: List[str] = []
