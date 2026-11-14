@@ -1,0 +1,404 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "n": 1089,
+  "research_unit": "RQ-20261114-db1a-01",
+  "rule": "RULE-DBINV-FORMING-INVERSION-20261114",
+  "population": "closed-bar arms vs the forming incumbent for htf_pullback_trend_2h, eth_pullback_prop_2h, avax_pullback_2h, trend_donchian_avax_4h; record + confirmation windows; full cost stack",
+  "records": [
+    {
+      "leg": "htf_pullback_trend_2h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 383,
+      "population": "htf_pullback_trend_2h: closed-bar arms vs the forming incumbent 'F' on the same candle CSV and 1m feed, record window + the equal-length window before it, net of the full cost stack",
+      "note": "no closed arm passes Stage 0, beats the forming incumbent and holds on the confirmation window"
+    },
+    {
+      "leg": "eth_pullback_prop_2h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 312,
+      "population": "eth_pullback_prop_2h: closed-bar arms vs the forming incumbent 'F' on the same candle CSV and 1m feed, record window + the equal-length window before it, net of the full cost stack",
+      "note": "no closed arm passes Stage 0, beats the forming incumbent and holds on the confirmation window"
+    },
+    {
+      "leg": "avax_pullback_2h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 233,
+      "population": "avax_pullback_2h: closed-bar arms vs the forming incumbent 'F' on the same candle CSV and 1m feed, record window + the equal-length window before it, net of the full cost stack",
+      "note": "no closed arm passes Stage 0, beats the forming incumbent and holds on the confirmation window"
+    },
+    {
+      "leg": "trend_donchian_avax_4h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 161,
+      "population": "trend_donchian_avax_4h: closed-bar arms vs the forming incumbent 'F' on the same candle CSV and 1m feed, record window + the equal-length window before it, net of the full cost stack",
+      "note": "no closed arm passes Stage 0, beats the forming incumbent and holds on the confirmation window"
+    }
+  ],
+  "legs": [
+    {
+      "leg": "htf_pullback_trend_2h",
+      "population": "htf_pullback_trend_2h: closed-bar arms vs the forming incumbent 'F' on the same candle CSV and 1m feed, record window + the equal-length window before it, net of the full cost stack",
+      "n": 383,
+      "read_state": "measured",
+      "forming_record_net_r": -23.3731,
+      "forming_confirm_net_r": 2.9423,
+      "arms": [
+        {
+          "arm": "C",
+          "record": {
+            "n": 90,
+            "net_r": -17.39,
+            "folds_positive": 0,
+            "n_folds": 4,
+            "stage0": false,
+            "under_floor": false
+          },
+          "beats_forming_record": true,
+          "confirm_net_r": 16.893,
+          "confirm_n": 63,
+          "holds_on_confirmation": true,
+          "pass": false
+        },
+        {
+          "arm": "C_D30",
+          "record": {
+            "n": 45,
+            "net_r": 4.2216,
+            "folds_positive": 3,
+            "n_folds": 4,
+            "stage0": true,
+            "under_floor": false
+          },
+          "beats_forming_record": true,
+          "confirm_net_r": -4.909,
+          "confirm_n": 39,
+          "holds_on_confirmation": false,
+          "pass": false
+        },
+        {
+          "arm": "C_L",
+          "record": {
+            "n": 53,
+            "net_r": -12.4114,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "under_floor": false
+          },
+          "beats_forming_record": true,
+          "confirm_net_r": 5.5093,
+          "confirm_n": 47,
+          "holds_on_confirmation": true,
+          "pass": false
+        },
+        {
+          "arm": "C_T4",
+          "record": {
+            "n": 90,
+            "net_r": -18.9398,
+            "folds_positive": 0,
+            "n_folds": 4,
+            "stage0": false,
+            "under_floor": false
+          },
+          "beats_forming_record": true,
+          "confirm_net_r": 16.844,
+          "confirm_n": 65,
+          "holds_on_confirmation": true,
+          "pass": false
+        }
+      ],
+      "descriptive": {
+        "record": {
+          "bar_effect_C_minus_F": 5.9831,
+          "entry_jaccard_C_F": 0.1337,
+          "closed_lever_delta_vs_C": {
+            "C_L": 4.9786,
+            "C_D30": 21.6116,
+            "C_T4": -1.5498
+          }
+        },
+        "confirmation": {
+          "bar_effect_C_minus_F": 13.9507,
+          "entry_jaccard_C_F": 0.1587,
+          "closed_lever_delta_vs_C": {
+            "C_L": -11.3837,
+            "C_D30": -21.802,
+            "C_T4": -0.049
+          }
+        }
+      },
+      "verdict": "fail",
+      "closed_only_pass": false,
+      "note": "no closed arm passes Stage 0, beats the forming incumbent and holds on the confirmation window"
+    },
+    {
+      "leg": "eth_pullback_prop_2h",
+      "population": "eth_pullback_prop_2h: closed-bar arms vs the forming incumbent 'F' on the same candle CSV and 1m feed, record window + the equal-length window before it, net of the full cost stack",
+      "n": 312,
+      "read_state": "measured",
+      "forming_record_net_r": -6.5744,
+      "forming_confirm_net_r": 7.319,
+      "arms": [
+        {
+          "arm": "C",
+          "record": {
+            "n": 65,
+            "net_r": -4.5337,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "under_floor": false
+          },
+          "beats_forming_record": true,
+          "confirm_net_r": 7.8689,
+          "confirm_n": 60,
+          "holds_on_confirmation": true,
+          "pass": false
+        },
+        {
+          "arm": "C_PF625",
+          "record": {
+            "n": 74,
+            "net_r": -5.9098,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "under_floor": false
+          },
+          "beats_forming_record": true,
+          "confirm_net_r": 4.9356,
+          "confirm_n": 65,
+          "holds_on_confirmation": false,
+          "pass": false
+        },
+        {
+          "arm": "C_S",
+          "record": {
+            "n": 35,
+            "net_r": -1.7527,
+            "folds_positive": 3,
+            "n_folds": 4,
+            "stage0": false,
+            "under_floor": false
+          },
+          "beats_forming_record": true,
+          "confirm_net_r": 1.4673,
+          "confirm_n": 31,
+          "holds_on_confirmation": false,
+          "pass": false
+        },
+        {
+          "arm": "C_V80",
+          "record": {
+            "n": 57,
+            "net_r": 0.8905,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "under_floor": false
+          },
+          "beats_forming_record": true,
+          "confirm_net_r": 1.6892,
+          "confirm_n": 46,
+          "holds_on_confirmation": false,
+          "pass": false
+        }
+      ],
+      "descriptive": {
+        "record": {
+          "bar_effect_C_minus_F": 2.0407,
+          "entry_jaccard_C_F": 0.1406,
+          "closed_lever_delta_vs_C": {
+            "C_S": 2.781,
+            "C_V80": 5.4242,
+            "C_PF625": -1.3761
+          }
+        },
+        "confirmation": {
+          "bar_effect_C_minus_F": 0.5499,
+          "entry_jaccard_C_F": 0.213,
+          "closed_lever_delta_vs_C": {
+            "C_S": -6.4016,
+            "C_V80": -6.1797,
+            "C_PF625": -2.9333
+          }
+        }
+      },
+      "verdict": "fail",
+      "closed_only_pass": false,
+      "note": "no closed arm passes Stage 0, beats the forming incumbent and holds on the confirmation window"
+    },
+    {
+      "leg": "avax_pullback_2h",
+      "population": "avax_pullback_2h: closed-bar arms vs the forming incumbent 'F' on the same candle CSV and 1m feed, record window + the equal-length window before it, net of the full cost stack",
+      "n": 233,
+      "read_state": "measured",
+      "forming_record_net_r": -15.7396,
+      "forming_confirm_net_r": -3.2181,
+      "arms": [
+        {
+          "arm": "C",
+          "record": {
+            "n": 60,
+            "net_r": -14.6883,
+            "folds_positive": 0,
+            "n_folds": 4,
+            "stage0": false,
+            "under_floor": false
+          },
+          "beats_forming_record": true,
+          "confirm_net_r": -1.0104,
+          "confirm_n": 68,
+          "holds_on_confirmation": false,
+          "pass": false
+        },
+        {
+          "arm": "C_AD30",
+          "record": {
+            "n": 42,
+            "net_r": -17.6091,
+            "folds_positive": 0,
+            "n_folds": 4,
+            "stage0": false,
+            "under_floor": false
+          },
+          "beats_forming_record": false,
+          "confirm_net_r": -8.1215,
+          "confirm_n": 52,
+          "holds_on_confirmation": false,
+          "pass": false
+        },
+        {
+          "arm": "C_S",
+          "record": {
+            "n": 36,
+            "net_r": -4.2123,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "under_floor": false
+          },
+          "beats_forming_record": true,
+          "confirm_net_r": 2.7999,
+          "confirm_n": 34,
+          "holds_on_confirmation": true,
+          "pass": false
+        }
+      ],
+      "descriptive": {
+        "record": {
+          "bar_effect_C_minus_F": 1.0513,
+          "entry_jaccard_C_F": 0.1923,
+          "closed_lever_delta_vs_C": {
+            "C_S": 10.476,
+            "C_AD30": -2.9208
+          }
+        },
+        "confirmation": {
+          "bar_effect_C_minus_F": 2.2077,
+          "entry_jaccard_C_F": 0.1409,
+          "closed_lever_delta_vs_C": {
+            "C_S": 3.8103,
+            "C_AD30": -7.1111
+          }
+        }
+      },
+      "verdict": "fail",
+      "closed_only_pass": false,
+      "note": "no closed arm passes Stage 0, beats the forming incumbent and holds on the confirmation window"
+    },
+    {
+      "leg": "trend_donchian_avax_4h",
+      "population": "trend_donchian_avax_4h: closed-bar arms vs the forming incumbent 'F' on the same candle CSV and 1m feed, record window + the equal-length window before it, net of the full cost stack",
+      "n": 161,
+      "read_state": "measured",
+      "forming_record_net_r": -16.1778,
+      "forming_confirm_net_r": 26.0921,
+      "arms": [
+        {
+          "arm": "C",
+          "record": {
+            "n": 46,
+            "net_r": -15.5185,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "under_floor": false
+          },
+          "beats_forming_record": true,
+          "confirm_net_r": 17.3474,
+          "confirm_n": 43,
+          "holds_on_confirmation": false,
+          "pass": false
+        },
+        {
+          "arm": "C_L",
+          "record": {
+            "n": 25,
+            "net_r": -7.9909,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "under_floor": false
+          },
+          "beats_forming_record": true,
+          "confirm_net_r": 8.847,
+          "confirm_n": 24,
+          "holds_on_confirmation": false,
+          "pass": false
+        },
+        {
+          "arm": "C_VL30",
+          "record": {
+            "n": 33,
+            "net_r": 0.0116,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "under_floor": false
+          },
+          "beats_forming_record": true,
+          "confirm_net_r": 17.4782,
+          "confirm_n": 30,
+          "holds_on_confirmation": false,
+          "pass": false
+        }
+      ],
+      "descriptive": {
+        "record": {
+          "bar_effect_C_minus_F": 0.6593,
+          "entry_jaccard_C_F": 0.4928,
+          "closed_lever_delta_vs_C": {
+            "C_L": 7.5276,
+            "C_VL30": 15.5301
+          }
+        },
+        "confirmation": {
+          "bar_effect_C_minus_F": -8.7447,
+          "entry_jaccard_C_F": 0.4848,
+          "closed_lever_delta_vs_C": {
+            "C_L": -8.5004,
+            "C_VL30": 0.1308
+          }
+        }
+      },
+      "verdict": "fail",
+      "closed_only_pass": false,
+      "note": "no closed arm passes Stage 0, beats the forming incumbent and holds on the confirmation window"
+    }
+  ],
+  "params": {
+    "n_floor": 30,
+    "n_floor_leg": {
+      "trend_donchian_avax_4h": 20
+    },
+    "fold_majority": 3,
+    "forming_arm": "F"
+  }
+}
