@@ -268,6 +268,9 @@ def test_empty_diff_fails_safe_to_restart(fake_repo):
     # DEPLOY-GATE-GITIGNORE 2026-11-14: #25995 (.gitignore + .github/ landing files) restarted the trader at 10:41Z
     ".gitignore",
     ".gitattributes",
+    # DEPLOY-GATE-COMMS-BACKUPS 2026-11-14: the kaggle-backups freshness stamp (written by the workflow, read by the
+    # health review from the repo; no VM process reads it) restarted the trader at 11:50Z (4e8e8f2f)
+    "comms/backups/kaggle_latest.json",
 ])
 def test_widened_non_runtime_paths_skip_restart(fake_repo, path):
     fake_repo["diff_files"].write_text(f"docs/x.md\n{path}\n")
@@ -292,6 +295,7 @@ def test_widened_non_runtime_paths_skip_restart(fake_repo, path):
     "scripts/research/m20_fleet_exit_sweep.py",
     "researchy/x.py",                      # prefix must be a directory
     "config/strategies.yaml",
+    "comms/backupsX/x.json",               # prefix must be the comms/backups/ directory
     "data/.gitignore",                     # only the ROOT .gitignore is anchored
     ".gitignore.bak",
 ])
