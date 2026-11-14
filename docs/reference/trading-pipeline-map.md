@@ -2,7 +2,7 @@
 
 > **Doc status:** `live` · category `lookup` · last verified `2026-11-14` · registered in [`docs/DOCUMENT-INDEX.md`](../../docs/DOCUMENT-INDEX.md)
 
-> **Generated 2026-11-14 22:47Z** from `docs/reference/trading-pipeline-map.skeleton.md` by `src/runtime/pipeline_map.py`. Edit the skeleton, never this output; the generated blocks are rebuilt from their sources on every build.
+> **Generated 2026-11-14 23:19Z** from `docs/reference/trading-pipeline-map.skeleton.md` by `src/runtime/pipeline_map.py`. Edit the skeleton, never this output; the generated blocks are rebuilt from their sources on every build.
 
 **Gates this adds or changes:** none. This is a map, not a rule; it adds no CI guard, gate or required check.
 

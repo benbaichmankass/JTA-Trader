@@ -19,7 +19,7 @@
 > checks it in CI (diff-scoped, in the `guards` job); `--all` is the standing
 > audit and `--list` prints measured coverage.
 >
-> **Coverage, computed rather than counted: 214 of 214 routes documented (100%).**
+> **Coverage, computed rather than counted: 215 of 215 routes documented (100%).**
 > *Population — every `@router.<verb>("...")` under `src/web/api/routers/`
 > joined to its `APIRouter(prefix=...)`. Verified against the live FastAPI
 > route table (`app.routes`): the enumerator finds exactly those 96 with no
