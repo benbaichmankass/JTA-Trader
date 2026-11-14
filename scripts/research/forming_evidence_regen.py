@@ -220,12 +220,15 @@ def _fetch_us_equity(row, tmp, log, m1_cache, end_pin, client_factory) -> Option
     return None
 
 
-def regen(row: Dict[str, Any], out: Path, log: Path) -> Dict[str, Any]:
+def regen(row: Dict[str, Any], out: Path, log: Path, cfg_set: Optional[List[str]] = None) -> Dict[str, Any]:
     argv = [sys.executable, str(REPO / "scripts/ops/build_strategy_evidence.py"), "--strategy", row["leg"],
             "--data-csv", row["data_csv"], "--minutes-1m-csv", row["m1_csv"], "--folds", str(row["folds"]),
             "--out", str(out / "evidence"), "--workdir", str(out / "evidence_runs")]
     if row.get("decision_session"):
         argv += ["--decision-session", row["decision_session"]]
+    for it in cfg_set or []:
+        if it.partition(".")[0] == row["leg"]:
+            argv += ["--cfg-set", it]
     rc = _run(argv, log)
     rec_p = out / "evidence" / f"{row['leg']}.json"
     if rc != 0 or not rec_p.exists():
@@ -297,6 +300,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                     help="a faithful leg with n_trades_oos below this reads indeterminate (no RULE-D1 claim) and does not "
                          "drive the unit verdict; its record still regenerates (default 0 = no floor)")
     ap.add_argument("--end", help="pin the window end for records without reproduce.data_end (YYYY-MM-DD)")
+    ap.add_argument("--cfg-set", action="append", default=[], metavar="LEG.KEY=VAL",
+                    help="passed through to build_strategy_evidence for that leg: regenerate the record at a CANDIDATE "
+                         "config (the record then carries cfg_overrides)")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
@@ -316,7 +322,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         if not row.get("skip"):
             err = fetch(row, tmp, log, m1_cache, a.end)
             if err is None:
-                rec = regen(row, out, log)
+                rec = regen(row, out, log, a.cfg_set)
         records.append(leg_record(row, rec, err, a.n_floor))
         print(f"{row['leg']}: {records[-1]['verdict']} / {records[-1]['read_state']} -- {records[-1]['note'][:160]}", flush=True)
     shutil.rmtree(tmp, ignore_errors=True)

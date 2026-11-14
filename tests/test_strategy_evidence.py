@@ -518,3 +518,40 @@ def test_trim_csv_keeps_every_source_row_inside_the_last_leg_bar(tmp_path):
     import pytest
     with pytest.raises(RuntimeError):
         rdm.trim_csv_to_window(str(csv), "2027-01-01", "2027-01-02", "4h")
+
+
+# ── --cfg-set: a record measured at a CANDIDATE config (TLT-1H-PROMOTE, 2026-11-14) ──
+def test_cfg_set_parses_leg_key_value_with_yaml_values():
+    ov = bse.parse_cfg_set(["tlt_pullback_1h.tp_r=3.5", "tlt_pullback_1h.side_filter=long",
+                            "tlt_pullback_1h.tp_intent={mode: r_multiple, calibrated: true}"])
+    assert ov == {"tlt_pullback_1h": {"tp_r": 3.5, "side_filter": "long",
+                                      "tp_intent": {"mode": "r_multiple", "calibrated": True}}}
+    for bad in ("tp_r=3.5", "tlt_pullback_1h.tp_r", ".tp_r=1", "leg.=1"):
+        try:
+            bse.parse_cfg_set([bad])
+            raise AssertionError(f"{bad!r} must be refused")
+        except ValueError:
+            pass
+
+
+def test_cfg_overrides_merge_without_mutating_and_fingerprint_matches_the_landed_block():
+    legs = {"a": {"tp_r": 50.0, "trail_mult": 3.0, "execution": "live"}, "b": {"tp_r": 6.0}}
+    out = bse.apply_cfg_overrides(legs, {"a": {"tp_r": 3.5, "side_filter": "long"}})
+    assert legs["a"]["tp_r"] == 50.0 and "side_filter" not in legs["a"]          # input untouched
+    assert out["a"] == {"tp_r": 3.5, "trail_mult": 3.0, "execution": "live", "side_filter": "long"}
+    assert out["b"] is legs["b"]
+    # the overridden record's fingerprint is the fingerprint of the block once those values land in YAML
+    landed = {"execution": "live", "trail_mult": 3.0, "side_filter": "long", "tp_r": 3.5}
+    assert bse.config_fingerprint(out["a"]) == bse.config_fingerprint(landed)
+    assert bse.config_fingerprint(out["a"]) != bse.config_fingerprint(legs["a"])
+
+
+def test_stamp_cfg_overrides_says_so_on_the_record():
+    rec = {"reproduce": {"argv": ["python3", "x", "--strategy", "a"]}}
+    bse.stamp_cfg_overrides(rec, "a", {"tp_r": 3.5, "tp_intent": {"mode": "r_multiple"}})
+    assert rec["cfg_overrides"] == {"tp_r": 3.5, "tp_intent": {"mode": "r_multiple"}}
+    assert rec["reproduce"]["argv"][-4:] == ["--cfg-set", "a.tp_r=3.5", "--cfg-set", 'a.tp_intent={"mode": "r_multiple"}']
+    # the stamped argv round-trips through the parser
+    toks = rec["reproduce"]["argv"]
+    items = [toks[i + 1] for i, t in enumerate(toks) if t == "--cfg-set"]
+    assert bse.parse_cfg_set(items) == {"a": rec["cfg_overrides"]}
