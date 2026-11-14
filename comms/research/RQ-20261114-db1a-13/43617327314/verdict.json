@@ -1,0 +1,47 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "n": 272,
+  "accounts": {
+    "tradeify_1": {
+      "verdict": "pass",
+      "ev_A": 105.17,
+      "ev_B": 151.36,
+      "p_breach_A": 0.329,
+      "p_breach_B": 0.3268,
+      "ev_ok": true,
+      "breach_ok": true
+    },
+    "velotrade_1": {
+      "verdict": "fail",
+      "ev_A": 79.57,
+      "ev_B": 98.1,
+      "p_breach_A": 0.251,
+      "p_breach_B": 0.255,
+      "ev_ok": true,
+      "breach_ok": false
+    }
+  },
+  "note": "tradeify_1 pass ev 105.17->151.36 breach 0.329->0.3268; velotrade_1 fail ev 79.57->98.1 breach 0.251->0.255",
+  "research_unit": "RQ-20261114-db1a-13",
+  "rule": "RULE-ETH4H-TP4-PROPEV-NONINF-ROSTERED-20261114",
+  "population": "trend_donchian_eth_4h: ledgers A=A__trades.jsonl (n 136) and B=T4__trades.jsonl (n 136); prop_ev_sim path mode, seeds [6, 7, 8, 9, 10], 1000 lives, 2026-11-06 retest cells ('cur' cost arm), accounts ['tradeify_1', 'velotrade_1']",
+  "records": [
+    {
+      "leg": "trend_donchian_eth_4h:tradeify_1",
+      "verdict": "pass",
+      "read_state": "measured",
+      "n": 272,
+      "population": "trend_donchian_eth_4h: ledgers A=A__trades.jsonl (n 136) and B=T4__trades.jsonl (n 136); prop_ev_sim path mode, seeds [6, 7, 8, 9, 10], 1000 lives, 2026-11-06 retest cells ('cur' cost arm), accounts ['tradeify_1', 'velotrade_1']",
+      "note": "{\"verdict\": \"pass\", \"ev_A\": 105.17, \"ev_B\": 151.36, \"p_breach_A\": 0.329, \"p_breach_B\": 0.3268, \"ev_ok\": true, \"breach_ok\": true}"
+    },
+    {
+      "leg": "trend_donchian_eth_4h:velotrade_1",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 272,
+      "population": "trend_donchian_eth_4h: ledgers A=A__trades.jsonl (n 136) and B=T4__trades.jsonl (n 136); prop_ev_sim path mode, seeds [6, 7, 8, 9, 10], 1000 lives, 2026-11-06 retest cells ('cur' cost arm), accounts ['tradeify_1', 'velotrade_1']",
+      "note": "{\"verdict\": \"fail\", \"ev_A\": 79.57, \"ev_B\": 98.1, \"p_breach_A\": 0.251, \"p_breach_B\": 0.255, \"ev_ok\": true, \"breach_ok\": false}"
+    }
+  ]
+}
