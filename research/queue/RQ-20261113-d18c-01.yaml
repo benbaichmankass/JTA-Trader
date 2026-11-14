@@ -89,6 +89,8 @@ routing:
   needs_gpu: false
   peak_memory_gb: 12.0
   est_minutes: 240
+  needs_internet: true
+  why_runner: fetches Binance Vision candles + funding at run time; the Kaggle kernel has no internet (run 43551406624 producer_failed)
   basis: >-
     INFERRED by scaling: fe57-03 MEASURED about 25 min to build 9,111 packets for six symbols on 4 cores, 6 GB peak; 24 symbols is about 4x the
     actions per cutoff, so roughly 4x memory for the action matrix and 2-4x the build time. Re-measure on the first run.
@@ -121,4 +123,4 @@ related:
 - scripts/research/desk_packet_arms.py
 - docs/research/desk-edge-program-2026-10-27.md
 - docs/research/desk-packet-redesign-2026-10-27.md
-last_dispatched_at: '2026-11-14T03:23:22+00:00'
+last_dispatched_at: null  # re-arm 2026-11-14 AM-OPS: run 43551406624 routed to kaggle_cpu (no internet, no .claude/ in the bundle) and died at import; now runner-only
