@@ -73,8 +73,10 @@ def test_default_pairs_cover_both_mirrors():
     assert len(r["unreadable"]) == 2
 
 
-def test_committed_exclusions_parse_and_name_both_trades():
-    assert excluded_trade_ids() == [4195, 5912]
+def test_committed_exclusions_parse_and_are_empty_once_both_legacy_trades_closed():
+    """5912 (TLT) and 4195 (IEF) closed 2026-10-15 and were dropped 2026-11-14 (check_mirror_orphans stale_ack);
+    the file stays a readable empty list, never absent."""
+    assert excluded_trade_ids() == []
     assert load_mirror_exclusions()["readState"] == "ok"
 
 
