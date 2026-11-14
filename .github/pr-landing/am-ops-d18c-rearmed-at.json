@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "RQ-20261113-d18c-01: the plain re-arm in #26023 was refused by the dispatcher's retry cap (run 43602339850: '3 landed rows are all non-verdict outcomes -- needs a human') and re-stamped. This uses dispatch_queue.py's sanctioned dated re-arm: rearmed_at 2026-11-14T17:35Z + last_dispatched_at null, because all 3 rows predate the #26023 producer fix (run 43580685219 measured fail but landed producer_failed for a missing population/n). dispatch_queue._is_due on this file reads (True, 're-armed at 2026-11-14T17:35:00+00:00: 3 earlier row(s) predate the fix ...'). A new non-verdict row still counts, so it cannot loop. Revert: git revert.",
+  "why": "Let the fixed producer write the unit's measured FAIL record."
+}
