@@ -787,6 +787,34 @@ def write_record(rec: Dict[str, Any], out_dir: Path, *,
     return p, decision
 
 
+def parse_cfg_set(items: List[str]) -> Dict[str, Dict[str, Any]]:
+    """``["tlt_pullback_1h.tp_r=3.5"]`` -> ``{"tlt_pullback_1h": {"tp_r": 3.5}}`` (values YAML-parsed)."""
+    import yaml
+    out: Dict[str, Dict[str, Any]] = {}
+    for it in items:
+        lhs, sep, val = it.partition("=")
+        leg, dot, key = lhs.partition(".")
+        if not sep or not dot or not leg.strip() or not key.strip():
+            raise ValueError(f"--cfg-set {it!r} must be LEG.KEY=VAL")
+        out.setdefault(leg.strip(), {})[key.strip()] = yaml.safe_load(val)
+    return out
+
+
+def apply_cfg_overrides(legs: Dict[str, Dict[str, Any]],
+                        overrides: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    """A copy of ``legs`` with each leg's overrides merged over its block (the input is not mutated)."""
+    return {n: ({**b, **overrides[n]} if n in overrides else b) for n, b in legs.items()}
+
+
+def stamp_cfg_overrides(rec: Dict[str, Any], name: str, ov: Dict[str, Any]) -> None:
+    """Make an overridden measurement say so: ``cfg_overrides`` + the flags in ``reproduce.argv``."""
+    rec["cfg_overrides"] = dict(ov)
+    rep = rec.get("reproduce")
+    if isinstance(rep, dict) and isinstance(rep.get("argv"), list):
+        for k, v in ov.items():
+            rep["argv"] += ["--cfg-set", f"{name}.{k}={json.dumps(v, sort_keys=True)}"]
+
+
 def load_legs() -> Dict[str, Dict[str, Any]]:
     import yaml
     cfg = yaml.safe_load((ROOT / "config" / "strategies.yaml").read_text())
@@ -857,8 +885,19 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--decision-session", choices=("us_equity", "us_equity_intraday"), default=None,
                     help="with --minutes-1m-csv: us_equity = a US-session daily leg; us_equity_intraday = a clock-aligned "
                          "intraday US equity leg (Alpaca 1Hour), ticks masked to the cash session")
+    ap.add_argument("--cfg-set", action="append", default=[], metavar="LEG.KEY=VAL",
+                    help="override one config key of one leg before the measurement (YAML-parsed value), for a "
+                         "CANDIDATE config not yet in config/strategies.yaml (TLT-1H-PROMOTE, 2026-11-14: the record a "
+                         "real-money promotion must carry is measured at the config that promotion lands). The record "
+                         "carries cfg_overrides and the reproduce argv repeats them; its config_fingerprint is of the "
+                         "overridden block, so it matches config/strategies.yaml only once the same values land there.")
     a = ap.parse_args(argv)
 
+    try:
+        overrides = parse_cfg_set(a.cfg_set)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
     if (a.data_csv or a.minutes_1m_csv) and (not a.strategy or len(a.strategy) != 1):
         print("--data-csv / --minutes-1m-csv describe ONE leg's data: pass exactly one --strategy",
               file=sys.stderr)
@@ -880,6 +919,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     if missing:
         print(f"unknown or disabled leg(s): {missing}", file=sys.stderr)
         return 2
+    stray = sorted(set(overrides) - set(names))
+    if stray:
+        print(f"--cfg-set names leg(s) not being measured: {stray}", file=sys.stderr)
+        return 2
+    legs = apply_cfg_overrides(legs, overrides)
 
     out_dir = Path(a.out)
     # Repo-relative by default so `source_run` is a locator a later session can
@@ -914,6 +958,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                            window_days_source=days_src, window=window,
                            data_csv=a.data_csv, forming_1m=a.minutes_1m_csv,
                            forming_session=a.decision_session)
+        if overrides.get(n):
+            stamp_cfg_overrides(rec, n, overrides[n])
         counts[rec["coverage_state"]] += 1
         _, decision = write_record(rec, out_dir, refusal_dir=Path(wd))
         if decision != "write":
