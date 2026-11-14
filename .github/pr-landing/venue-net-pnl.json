@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 2: DB writer on the live trader's close path. decision: 2026-11-12 operator decisions page w11 \"Yes: store the venue's net closed P&L where trusted\" (note: \"Store the venue's always, it is the single source of truth and if we have a gap we need to understand why\"). New trades columns pnl_basis / pnl_computed / pnl_gap_usd (idempotent migration). New tick sweep stores the venue's net closed P&L as pnl on every Bybit account (demo included), IB realised as venue_net, Alpaca fill-priced rows as venue_fills_net; our own figure beside it; gaps above max(0.25 USD, 1%) recorded and listed by scripts/ops/venue_pnl_gaps.py, never reconciled. net_r_label stops costing a venue-net row twice. No backfill: only rows closed in the last 7 days are classified as the sweep reaches them. The manager lands it. Revert: git revert (the added columns stay, unused).",
+  "why": "PNL-GROSS-VS-VENUE-6817: one meaning for trades.pnl (the venue's net figure), with our computed figure and the gap kept beside it."
+}

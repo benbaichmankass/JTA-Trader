@@ -88,6 +88,9 @@ _EXPECTED_TRADES_COLS = {
     "protection_repairs", "protection_repair_first_at",
     "protection_repair_last_at", "protection_repair_last_kind",
     "protection_repair_last_verified",
+    # PNL-GROSS-VS-VENUE-6817 (#25270, operator w11 2026-11-12): pnl holds the venue's net closed P&L;
+    # pnl_basis names where it came from, pnl_computed is our own figure and pnl_gap_usd the difference.
+    "pnl_basis", "pnl_computed", "pnl_gap_usd",
 }
 
 _EXPECTED_ORDER_PACKAGES_COLS = {

@@ -419,6 +419,36 @@ def _migrate_add_protection_repair(cursor: sqlite3.Cursor) -> bool:
     return True
 
 
+def _migrate_add_pnl_basis(cursor: sqlite3.Cursor) -> bool:
+    """Add the P&L basis columns to ``trades`` if absent (PNL-GROSS-VS-VENUE-6817).
+
+    Operator decision 2026-11-12 (decisions page w11, "Store the venue's always, it
+    is the single source of truth and if we have a gap we need to understand why"):
+    ``pnl`` holds the VENUE's net closed P&L wherever the venue serves one, and our
+    own figure sits beside it.
+
+    * ``pnl_basis``    -- what ``pnl`` is: ``venue_net`` (the venue's own realised
+                          P&L record, net of its fees/funding), ``venue_fills_net``
+                          (no per-trade venue P&L exists, e.g. Alpaca; computed from
+                          the venue's fills net of their fees), or NULL (not yet
+                          classified; readers keep their old interpretation).
+    * ``pnl_computed`` -- our independent figure: gross from the journal's entry and
+                          exit times qty, minus the row's own cost columns.
+    * ``pnl_gap_usd``  -- ``pnl - pnl_computed`` when both exist; a gap above the
+                          stated tolerance is a diagnosis item, never reconciled away.
+
+    Idempotent: returns True only on the run that actually adds the columns.
+    """
+    cursor.execute("PRAGMA table_info(trades)")
+    columns = {row[1] for row in cursor.fetchall()}
+    if "pnl_basis" in columns:
+        return False
+    cursor.execute("ALTER TABLE trades ADD COLUMN pnl_basis TEXT")
+    cursor.execute("ALTER TABLE trades ADD COLUMN pnl_computed REAL")
+    cursor.execute("ALTER TABLE trades ADD COLUMN pnl_gap_usd REAL")
+    return True
+
+
 def _migrate_add_order_package_model_scores(cursor: sqlite3.Cursor) -> bool:
     """Add ``model_scores`` column to ``order_packages`` if absent.
 
@@ -574,6 +604,7 @@ class Database:
         _migrate_add_broker_order_id(cursor)
         _migrate_add_tpsl_leg_ids(cursor)
         _migrate_add_protection_repair(cursor)
+        _migrate_add_pnl_basis(cursor)
         # NOTE: ``_migrate_add_telemetry_terminal`` is deliberately NOT called
         # here — this block migrates ``trades``, and ``position_telemetry`` is
         # not created until further down. It runs immediately after that DDL.
