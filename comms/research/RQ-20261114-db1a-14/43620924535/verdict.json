@@ -1,0 +1,92 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "forming-decision legs ['tlt_pullback_1h'], each re-measured on the forming bar over its record's window (cut to the source's history where shorter, reported per leg)",
+  "n": 75,
+  "note": "every leg clears RULE-D1 on the forming bar",
+  "records": [
+    {
+      "leg": "tlt_pullback_1h",
+      "committed": {
+        "fidelity": "faithful",
+        "omitted_levers": [],
+        "net_r_oos": 4.0263,
+        "n_trades_oos": 149
+      },
+      "window": [
+        "2025-06-02 15:00:00+00:00",
+        "2026-11-11 20:00:00+00:00"
+      ],
+      "requested_window": [
+        "2025-06-02 15:00:00+00:00",
+        "2026-11-11 20:00:00+00:00",
+        528
+      ],
+      "source": "alpaca iex 1Hour + 1Min (equity_1m_source.build)",
+      "source_meta": {
+        "feed": "iex",
+        "bar_tf": "1Hour",
+        "returned": {
+          "bars_first": "2025-06-02 12:00:00+00:00",
+          "bars_last": "2026-11-13 21:00:00+00:00",
+          "m1_first": "2025-06-02 12:00:00+00:00",
+          "m1_last": "2026-11-13 21:09:00+00:00"
+        },
+        "rows": {
+          "bars": 3179,
+          "m1_fetched": 135475,
+          "m1_kept": 135475
+        },
+        "alignment": {
+          "rth": {
+            "hours_compared": 2562,
+            "hours_matched": 2354,
+            "match_share": 0.9188
+          },
+          "all": {
+            "hours_compared": 3179,
+            "hours_matched": 3179,
+            "match_share": 1.0
+          },
+          "chosen": "all"
+        }
+      },
+      "verdict": "pass",
+      "read_state": "measured",
+      "n": 75,
+      "below_n_floor": null,
+      "population": "tlt_pullback_1h: Stage-0 re-measure on the FORMING bar (alpaca iex 1Hour + 1Min (equity_1m_source.build)), window read off the data ['2025-06-02 15:00:00+00:00', '2026-11-11 20:00:00+00:00'], net of the harness cost stack",
+      "measurement": {
+        "fidelity": "faithful",
+        "omitted_levers": [],
+        "net_r_oos": 8.1699,
+        "n_trades_oos": 75,
+        "folds": 4,
+        "folds_positive": 3,
+        "cost_stack": {
+          "fees": 0.0,
+          "slippage": 5.0,
+          "funding": 0.0,
+          "unit": "bps_roundtrip (funding: bps per funding window)",
+          "source": "comms/research/RQ-20261114-db1a-14/43620924535/evidence_runs/tlt_pullback_1h__bt.json"
+        },
+        "path_stats": {
+          "series_location": "source_run (the per-trade rows, in order, with net_r)",
+          "n": 75,
+          "max_drawdown_r": 7.0102,
+          "max_drawdown_at_trade": 37,
+          "final_equity_r": 8.1699,
+          "max_equity_r": 10.1775,
+          "worst_trade_r": -1.1893,
+          "best_trade_r": 3.4085,
+          "worst_day_r": -1.9775,
+          "worst_day_date": "2026-10-28",
+          "trades_without_exit_time": 0,
+          "ordering": "by entry_time ascending; pooled ACROSS folds, so this is the full-window path, not a per-fold one",
+          "not_a_verdict": "Descriptive only. No bar is applied here -- the prop bar is B6's to register, and it must be registered before these numbers are read."
+        }
+      },
+      "note": "forming-bar net_r_oos 8.1699 over n 75 (committed closed-bar record: 4.0263 over n 149); RULE-D1 -> PASS"
+    }
+  ]
+}
