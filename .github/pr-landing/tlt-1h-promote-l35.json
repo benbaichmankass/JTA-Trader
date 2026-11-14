@@ -1,0 +1,11 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Real-money promotion of tlt_pullback_1h, OPERATOR-APPROVED (popup 2026-11-14 ~16:28Z, verbatim \"Promote long-only 3.5R (Recommended)\", relayed by Manager Session 2026-11-13a). Config (strategies.yaml): side_filter long, tp_r 50 -> 3.5, tp_intent r_multiple. Rosters: alpaca_live + alpaca_portfolio gain the leg, alpaca_paper drops it. ORDER PATH (Tier 2, read the hunk): tlt_pullback_1h_signal_builder now honours side_filter via the shared _resolve_side_filter/_side_filter_suppresses gate (it never read the key; byte-identical with no key). Evidence: comms/strategy_evidence/tlt_pullback_1h.json regenerated at this exact config by RQ-20261114-db1a-14 (faithful, +8.17 R n 75, 3/4 folds, fingerprint matches), RQ-20261114-db1a-10 (L35, rule registered pre-run), RQ-20261113-f090-01, RQ-20261112-5ab1-01. The manager reviews and merges in a restart batch.",
+  "why": "Tier-3 by content (strategy params + real-money roster) plus a Tier-2 order-path builder change; operator approval recorded in hold_text. Held for the manager's merge.",
+  "recorded_decision": {
+    "kind": "operator_decision",
+    "ref": "operator popup 2026-11-14 ~16:28Z \"Promote long-only 3.5R (Recommended)\" (Manager Session 2026-11-13a relay, trigger trig_01Cysu33UpGTZfYnNeK5PdxC)"
+  }
+}
