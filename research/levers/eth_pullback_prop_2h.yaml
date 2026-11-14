@@ -1962,6 +1962,52 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261113-f251-14
   lever_family: filter
+- family: pullback_frac (forming bar)
+  varied: pullback_frac 0.5 (live) vs 0.625 on the FORMING bar, record 2025-11-13..2026-11-12 + confirmation 2024-11-13..2025-11-12, full cost
+    stack
+  response:
+    verdict: fail
+    run: '43547942426'
+    baseline:
+      arm: A
+      n: 81
+      net_r: -6.5744
+      folds_positive: 2/4
+      confirm_n: 71
+      confirm_net_r: 7.319
+    arms:
+    - pullback_frac: 0.625
+      n: 91
+      net_r: -16.1589
+      folds_positive: 1/4
+      confirm_n: 81
+      confirm_net_r: -2.1805
+    reading: 'a deeper pullback makes the leg WORSE on both windows (-16.2R vs -6.6R; prior year -2.2R vs +7.3R) and adds trades: the closed-bar
+      pass does not carry to the forming bar'
+  shape: flat
+  tested_at_power: true
+  unit: RQ-20261113-f251-23
+  lever_family: entry
 units:
 - RQ-20261113-f251-08
 - RQ-20261113-f251-14
+- RQ-20261113-f251-23
+manifest_notes:
+  census_2026_11_14: 'DEMO-FLOOR-ITER lever-family census after the 3rd forming-bar lever failed (AM-ML guard). Forming record (2025-11-13..2026-11-12):
+    -6.57R over n 81, gross -1.23R, cost 5.35R; long -10.96R n40, short +4.39R n41. The equal-length window before it (2024-11-13..2025-11-12, read in f251-23)
+    is +7.32R over n 71: the leg was positive the year before.'
+  direction: 'TESTED forming: short-only (f251-08, FAIL): +2.70R n45 2/4 (rule needs 3), lower DD. No prior-year read for this arm.'
+  filter: 'TESTED forming: vol_skip_above 0.8 (f251-14, FAIL): -13.09R n80 vs -6.57R. TESTED closed 2020-07..2026-10: vol_skip_above 0.8 +17.7R pass, adx_max
+    40 +16.3R pass, adx_min/vol_skip_below/cooldown fail.'
+  entry: 'TESTED forming: pullback_frac 0.625 (f251-23, FAIL): -16.16R n91 1/4; prior year -2.18R vs +7.32R. TESTED closed: pullback_frac 0.625 +1.89R n431
+    pass, 0.375 -13.95R.'
+  exit: 'TESTED closed: structure_exit off +3.11R pass; tp_target_r, tp_r, atr_stop_mult, trail_*, be_floor, bank fail. UNTESTED forming.'
+  session: 'TESTED closed: skip_hours 20-23 +22.73R n402 pass, 0-7 -2.69R. UNTESTED forming.'
+  sizing_vs_cost: 'TESTED closed (cost stack sweep). Forming: cost is 5.35R against gross -1.23R, so cost alone does not explain the loss.'
+  regime_gating: UNTESTED.
+  timeframe: UNTESTED; no diagnostic pointer.
+  symbol_set: UNTESTED; no diagnostic pointer.
+  next: 'Three forming levers have failed (short-only, vol_skip_above 0.8, pullback_frac 0.625). Both closed-bar passes re-run forming (vol_skip_above 0.8,
+    pullback_frac 0.625) made the leg WORSE: on this leg the closed-bar corpus does not predict forming-bar response. Remaining closed-bar passes never
+    run forming: session skip_hours 20-23, filter adx_max 40. The prop leg must also clear the prop survival superset. Not exhausted; no 4th unit without
+    a diagnosis of why closed-bar responses invert on the forming bar. Manager decides.'
