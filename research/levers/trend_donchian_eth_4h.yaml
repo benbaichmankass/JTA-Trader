@@ -3877,6 +3877,7 @@ units:
 - RQ-20261114-db1a-03
 - RQ-20261114-db1a-04
 - RQ-20261114-db1a-05
+- RQ-20261114-db1a-08
 levers_tested:
 - family: exit head (ML early-exit, E1/E1.5)
   varied: 19 head arms (tau grid + below_half_r/pre_mfe1/age8/age8_below_half_r shapes) vs the declared exit, selected on discovery, read once
@@ -4051,4 +4052,37 @@ levers_tested:
   shape: single_point
   tested_at_power: true
   unit: RQ-20261114-db1a-05
+  lever_family: exit
+- family: exit (entry tp_r, TP-doctrine compliance)
+  varied: arm A config-exact (tp_r 50 sentinel + measured-move) vs T4 (tp_r 4), closed decision bar, record 2025-11-13..2026-11-12 + year before,
+    full cost stack, non-inferiority 2.0R
+  response:
+    verdict: pass
+    run: '43605303646'
+    rule: RULE-ETH4H-TP4-NONINF-20261114
+    arm_T4: tp_r 4 (baseline 50 sentinel), declared measured-move revision kept
+    record:
+      A_net_r: -15.2931
+      A_n: 54
+      X_net_r: -15.2931
+      X_n: 54
+      X_folds_positive: 1
+      X_n_folds: 4
+      X_stage0: false
+      X_beats_A: false
+    prior:
+      A_net_r: 22.3695
+      A_n: 42
+      X_net_r: 24.3247
+      X_n: 42
+      holds: true
+    non_inferiority:
+      margin_r: 2.0
+      record_ok: true
+      prior_ok: true
+    reading: 'PASS (non-inferiority within 2.0R, compliance only, no edge claim): record T4 -15.29R n54 IDENTICAL to A (the 4R target never bound;
+      the declared measured-move binds first); year before T4 +24.32R vs A +22.37R (T4 bound in one fold). Compliance costs nothing on these windows.'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-08
   lever_family: exit
