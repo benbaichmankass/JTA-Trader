@@ -1,0 +1,194 @@
+{
+ "schema_version": 1,
+ "trade_id": null,
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuKXonDBdED7cNK7FhN-live-review-lane-0800Z",
+ "prompt_sha": null,
+ "skill_sha": "abe00c3351237e5e7a9a581825577381ff75cffd",
+ "review_id": "LR-20261114T0804Z-pkg-d8838f396234477c",
+ "reviewed_at": "2026-11-14T08:18:00Z",
+ "order_package_id": "pkg-d8838f396234477c",
+ "leg": "trend_donchian_eth_4h",
+ "accounts": [
+  "tradeify_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-14T08:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-14T08:04:22Z",
+ "state": {
+  "atr_now_over_entry": 1.2152,
+  "bars_held": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_provenance": "unverified",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1988.64892857,
+  "tp": 1742.9845
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.2152,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "mechanics": {
+  "evidence": "Bracket verified against the venue terminal: /api/bot/prop/status for tradeify_1 (positions_state read, source venue_terminal, MEASURED, reported 08:08Z) shows one ETHUSDT short 0.18 @1934.5 with sl 1988.649 and tp 1742.984, equal to the package sl 1988.64892857 / tp 1742.9845 at the terminal's 3dp. Journal, ticket and venue agree the trade is open. Packet itself said could_not_look because its reads carry no trade row",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 84,
+   "mean_r": 1.4559,
+   "sd_r": 2.1391,
+   "worst_r": -1.14,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 84,
+   "mean_r": 1.0189,
+   "sd_r": 0.9382,
+   "worst_r": -0.3662,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 84,
+   "mean_r": 1.0121,
+   "sd_r": 1.0389,
+   "worst_r": -0.3662,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 84,
+   "mean_r": 1.2402,
+   "sd_r": 1.5161,
+   "worst_r": -0.3662,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 84,
+   "mean_r": 1.3931,
+   "sd_r": 1.8795,
+   "worst_r": -0.3662,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 84,
+   "mean_r": 1.2872,
+   "sd_r": 1.6764,
+   "worst_r": -0.3662,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 84,
+   "mean_r": 0.577,
+   "sd_r": 0.0281,
+   "worst_r": 0.4654,
+   "net": true
+  }
+ ],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. The packet could not price (open_r null), so I priced it myself with live_review_outcomes.py --leg trend_donchian_eth_4h --side short --open-r 0.64 --peak-r 1.08 --bars-held 7 --atr-stop-mult 1.5 --corpus auto (n=84 comparable ETH shorts of 446, net of cost). Inputs are derived, not measured: open ~+0.64R from the venue's unrealised +6.2 on 0.18 ETH (price ~1900), 0.69R at the last 4h close 1896.99; peak >=1.08R from the since-entry low 1875.78; 1R = 54.15. HOLD +1.456R (sd 2.14, worst -1.14R) vs close +0.577R (cost 0.88R), tighten r:0 +1.393 (cost 0.06, worst -0.37), r:0.32 +1.287, atr:2.0 +1.240, atr:1.0 +1.019, atr:1.5 +1.012. Hold has the highest EV; breakeven is the cheapest insurance but costs 0.06R and gives up the tail the trend leg is built to harvest. The closed 4h bar (04-08Z) held above the prior low (L 1877.56 vs 1875.78) and closed 1896.99, inside the prior range, so no new information against the short; SL 1988.65 sits above the 1988.67 swing high and TP 1742.98 (3.5R) is real. Nothing was applied."
+ },
+ "forecast": {
+  "thesis": "The prior 4h bar broke 1894.1 and the latest closed bar (H 1910.45 L 1877.56 C 1896.99) retraced about 0.3 ATR without taking out its high; 4h ADX 55.8 and the 1d downtrend favour continuation, so I expect 1838 to trade before a reclaim of 1936.86, but a lower-high inside bar is a coil that can break either way",
+  "direction": "with_trade",
+  "target_px": 1838.0,
+  "p_target": 0.4,
+  "invalidation_px": 1936.86,
+  "horizon_bars": 3,
+  "timeframe": "4h",
+  "evidence": [
+   "chart.bars_ohlc last closed 4h bar H 1910.45 L 1877.56 C 1896.99; since-entry low 1875.78",
+   "regime adx_now 55.8 trending, atr_now/entry 1.22",
+   "self-priced table hold n=84 mean 1.4559 worst -1.14; tighten r:0 1.3931; close 0.577",
+   "prop venue terminal sl 1988.649 tp 1742.984 matches package",
+   "previous review forecast target 1838 not yet touched (low 1875.78)"
+  ]
+ },
+ "context_flags": [
+  "derived_inputs: open_r/peak_r/bars_held derived from the venue unrealised, last close and since-entry low, not from telemetry (none for this package); peak is a lower bound; stops fill at stop price so tightens are flattered; table quoted, not committed",
+  "bracket_verified: previous review's UNVERIFIED bracket now read from the prop venue terminal via the public prop status route (MEASURED), equal to the package; it is the terminal's report, not an exchange open-orders read",
+  "decision_bar: leg decides on the CLOSED 4h bar (#25853); the 08:00Z bar was still open at review, so only the 04-08Z bar was used",
+  "correlated: ETH shorts x6 on the book plus ADA x3, SOL, XRP, BTC x3 shorts = one crypto-beta bet",
+  "atr_ratio: now/entry 1.22; funding not readable; calendar no events next 24h",
+  "packet_defect: priced_options could_not_price 1/1",
+  "packet_defect: state.open_r context_null:state.open_r 1/1"
+ ],
+ "account_reads": [
+  {
+   "account_id": "tradeify_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "packet_defects": [
+  {
+   "count": 1,
+   "denominator": 1,
+   "field": "priced_options",
+   "reason": "could_not_price"
+  },
+  {
+   "count": 1,
+   "denominator": 1,
+   "field": "state.open_r",
+   "reason": "context_null:state.open_r"
+  }
+ ],
+ "packet_sha": "3761a6103f161c0009fe197c149ce737832950b902075478ed139482ed617d62"
+}
