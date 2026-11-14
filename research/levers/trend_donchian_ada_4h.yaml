@@ -1913,6 +1913,7 @@ levers:
 units:
 - RQ-20261101-e5b1-11
 - RQ-20261113-f251-06
+- RQ-20261113-f251-20
 levers_tested:
 - family: prop-stack fit (account sizing vs firm DD limits and the prop cost stack)
   varied: prop cost stack (fee 8 / slip 3 / funding 5 bps), 3 prop accounts x 2 arms x 2 windows, 5 seeds x 1000 lives
@@ -1931,9 +1932,9 @@ levers_tested:
       '2024': -5.334
       '2025': 10.627
       '2026': -5.457
-  shape: 'FAIL on all 3 accounts: 3y edge mean_r +0.038 R (CI -0.21..+0.28, n=127), 365d -0.205 R (n=45); life breach prob 0.84-0.93 vs ceilings
-    0.73-0.89. Attribution (the 127-trade ledger, base cost): shorts +5.2 R vs longs -1.0 R; 2024 -5.3 R, 2026 -5.5 R vs 2025 +10.6 R; stops -74
-    R vs TP +85 R; 21 of 71 stops had reached 1R MFE. Loss is regime/side-concentrated edge near zero, not sizing alone.'
+  shape: 'FAIL on all 3 accounts: 3y edge mean_r +0.038 R (CI -0.21..+0.28, n=127), 365d -0.205 R (n=45); life breach prob 0.84-0.93 vs ceilings 0.73-0.89. Attribution
+    (the 127-trade ledger, base cost): shorts +5.2 R vs longs -1.0 R; 2024 -5.3 R, 2026 -5.5 R vs 2025 +10.6 R; stops -74 R vs TP +85 R; 21 of 71 stops had reached
+    1R MFE. Loss is regime/side-concentrated edge near zero, not sizing alone.'
   tested_at_power: false
   unit: RQ-20261101-e5b1-11
 - family: side_filter
@@ -1952,9 +1953,46 @@ levers_tested:
       net_r: 1.8843
       folds_positive: 2/4
       max_drawdown_r: 4.1773
-    reading: 'long-only turns the leg positive (+1.88R, +5.24R vs both sides, DD 4.2 vs 10.2) but 2/4 folds (needs 3): improvement without a Stage-0
-      edge'
+    reading: 'long-only turns the leg positive (+1.88R, +5.24R vs both sides, DD 4.2 vs 10.2) but 2/4 folds (needs 3): improvement without a Stage-0 edge'
   shape: single_point
   tested_at_power: true
   unit: RQ-20261113-f251-06
   lever_family: direction
+- family: trail_decay (forming bar)
+  varied: stall-armed trail decay (stall 20 bars, tight 2.5 ATR) vs none on the FORMING bar, record 2025-11-13..2026-11-12 + confirmation 2024-11-13..2025-11-12,
+    full cost stack
+  response:
+    verdict: fail
+    run: '43540349255'
+    baseline:
+      arm: A
+      n: 55
+      net_r: -3.3545
+      folds_positive: 2/4
+      confirm_net_r: 13.443
+    arms:
+    - trail_decay: stall 20 / tight 2.5
+      n: 60
+      net_r: -10.4597
+      folds_positive: 1/4
+      confirm_n: 60
+      confirm_net_r: 13.8795
+    reading: 'tightening after a stall makes the forming record WORSE (-10.5R vs -3.4R): it clips winners before they reach the take-profit; the closed-bar +11.9R
+      does not carry. Prior year is flat (+13.9R vs +13.4R).'
+  shape: flat
+  tested_at_power: true
+  unit: RQ-20261113-f251-20
+  lever_family: exit
+manifest_notes:
+  census_2026_11_14: 'DEMO-FLOOR-ITER census after the 2nd forming lever failed. Forming record (f251-06, 2025-11-13..2026-11-12): -3.35R n 55, gross -0.53R before
+    2.83R of cost; long +5.03R vs short -8.39R; stops -33.5R (n 32), take-profits +35.8R (n 17). Prior year +13.4R (n 59): the leg was clearly positive the year before.'
+  direction: 'TESTED forming (RQ-20261113-f251-06, FAIL): long-only +1.88R, 2/4 folds (needs 3): the closest any ada lever has come.'
+  exit: 'TESTED forming (RQ-20261113-f251-20, FAIL): stall-armed trail decay -10.46R vs -3.35R; it clips winners before the take-profit. momentum_stale (closed +12.4R)
+    is the same exit idea and is not expected to differ.'
+  structure_exit: 'INAPPLICABLE: the "structure_exit off" closed-bar responder reproduces the live configuration (the live leg runs no structure exit).'
+  entry: UNTESTED forming; no closed-bar entry responder on the map.
+  filter: UNTESTED forming; no closed-bar filter responder on the map.
+  sizing_vs_cost: 'PLAUSIBLE but unmeasured: gross is near flat (-0.53R) and cost is 2.83R, so a cheaper route could matter; needs a measured venue cost, never an
+    assumed one.'
+  next: 'No remaining family has a passing closed-bar response. The leg was +13.4R on the prior year, so the record year looks like a regime, not a dead idea. Candidates
+    for the manager: a regime off-cell (needs ADX tagging on the ledger) or a measured cost reading. No unit authored.'

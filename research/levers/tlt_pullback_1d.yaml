@@ -917,23 +917,50 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261113-f251-16
   lever_family: filter
+- family: be_floor_r (forming bar)
+  varied: be_floor_r none vs 1.0 (lock 0) on the FORMING bar (Alpaca 1Day + 1Min), window 2020-07-27..2026-11-13, full cost stack; same 5/8 fold bar
+  response:
+    verdict: fail
+    run: '43536260399'
+    baseline:
+      arm: A
+      n: 45
+      net_r: -6.9566
+      folds_positive: 2/8
+    arms:
+    - be_floor_r: 1.0
+      n: 47
+      net_r: -1.7152
+      folds_positive: 4/8
+      max_drawdown_r: 6.5298
+    reading: 'the break-even floor recovers +5.2R of the round-trip losers (the diagnosis predicted about +7R) and halves the drawdown, but the leg stays negative
+      at 4/8 folds (needs 5): the best tlt lever so far, still no Stage-0 edge'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261113-f251-18
+  lever_family: exit
 units:
 - RQ-20261113-f251-11
 - RQ-20261113-f251-16
+- RQ-20261113-f251-18
 manifest_notes:
   census_2026_11_13: 'DEMO-FLOOR-ITER lever-family census after the 2nd forming-bar lever failed. Forming baseline (f251-02) 2020-07-27..2026-11-13: -6.96R over n
     45, gross -6.13R (cost only 0.83R), long -9.30R / short +2.34R, stop exits -22.40R, 12 of 34 losers reached +1R MFE first. n 45 over six years is thin: any arm
     splitting the population falls under n 30.'
   direction: 'TESTED forming (RQ-20261113-f251-11, FAIL): short-only +4.55R n 29, 3/8 folds (needs 5): improvement, single point, no Stage-0 edge.'
   filter: 'TESTED forming (RQ-20261113-f251-16, FAIL): vol_skip_above 0.8 -4.28R n 42, 3/8 folds; the fold inconsistency is not a volatility-regime effect.'
-  exit: 'UNTESTED, PLAUSIBLE: 12 losers reached +1R MFE before stopping out and stop exits carry -22.4R; a break-even / trail-activation lever at 1R is the diagnosis-backed
-    candidate. It keeps n 45 (no population split), so power is not lost.'
+  exit: 'TESTED forming (RQ-20261113-f251-18, FAIL): be_floor_r 1.0 -1.72R n 47, 4/8 folds (needs 5) vs -6.96R 2/8; recovers +5.2R of the round-trip losers and halves
+    the drawdown. The best tlt lever so far, a near-miss.'
   sizing_vs_cost: 'INAPPLICABLE: cost is 0.83R of a -6.13R gross loss.'
   regime_gating: 'UNREADABLE on this ledger: ADX at entry is unknown for every trade (by_adx_at_entry unknown n 45); tagging is a prerequisite, not a lever.'
   timeframe: 'INAPPLICABLE as a forming lever: the leg is a daily equity leg with one decision per session.'
   entry: UNTESTED forming; no diagnosis points at the entry (mean MFE 1.17R, 51% reach +1R).
-  next: 'exit (break-even / trail activation at +1R MFE) is the one remaining diagnosis-backed lever at full n; a 3rd unit needs the manager''s OK under the AM-ML
-    guard (names f251-02, -11, -16 on this window; same 5/8 fold bar). Not exhausted: no retirement note.'
+  next: 'Two honest options, manager decides: (1) make the regime family readable by tagging ADX at entry on the equity ledger (a prerequisite, not a lever), then
+    test a regime off-cell; (2) a lever-exhaustion proposal, which the v3 retirement policy would still refuse while entry and regime are untested. A 4th lever on
+    this window (e.g. a be_floor neighbour) would be narrowing a near-miss on a window already tested three times: only with the manager''s OK and an independent
+    split. No unit authored.'
   inert_arms_2026_11_14: 'RQ-20261110-73de-04 arm C1 (be_floor_r 1.0, closed bar) is INERT, not a lever reading: it ran with --structure-exit pivot=5, and scripts/backtest_pullback.py
     discarded the break-even floor whenever a structure exit was set (PI-20261114-TFZXAKEK-0001, fixed in #25887). The generated levers.exit.be_floor_r entry ("no
     response at the tested values", delta 0.0R) therefore means UNTESTED, not flat. Read be_floor_r on this leg as untested until a run on the fixed harness.'
+  census_update_2026_11_14: 'After the 3rd forming lever failed: direction, filter (vol_skip_above) and exit (be_floor) are TESTED on the forming bar, all FAIL; sizing_vs_cost
+    and timeframe INAPPLICABLE; regime UNREADABLE (ADX at entry unknown for every trade); entry UNTESTED with no diagnostic pointer.'
