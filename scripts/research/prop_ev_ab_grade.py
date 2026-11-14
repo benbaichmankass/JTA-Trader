@@ -114,7 +114,7 @@ def run(leg: str, a: Path, b: Path, out: Path, seeds: List[int], n_floor: int, e
 def _self_test() -> int:
     import tempfile
     def fake(evA, evB, brA, brB):
-        def runner(argv, out):
+        def runner(argv, out):  # inert: argv — the fake returns canned metrics; only the out path names the arm
             arm = Path(out).name.split("__")[1]
             return {"ev": evA if arm == "A" else evB, "p_breach": brA if arm == "A" else brB, "p_alive": 0.5}
         return runner
