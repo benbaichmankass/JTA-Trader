@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "decided_at": "2026-11-14T21:23:00Z",
+  "decided_by": "operator",
+  "source": "manager popup (Manager Session 2026-11-13a, session_01AFoLuKXonDBdED7cNK7FhN), relayed to AM-OPS 2026-11-14 21:24Z",
+  "population": "one gate, re-asked against live state: GATE-PROP-RISK-CUSHION for tradeify_1",
+  "meaning": {
+    "KEEP AS IS": "re-affirm the standing decision; no code or config change"
+  },
+  "reaffirms": "comms/gates/gate_decisions_2026-11-12.json on branch gate-decisions (a040d7aa0d): GATE-PROP-RISK-CUSHION choice MAKE REPORT-ONLY",
+  "decisions": [
+    {
+      "id": "GATE-PROP-RISK-CUSHION",
+      "choice": "KEEP AS IS",
+      "verbatim": "Keep as is",
+      "effect": "the static-DD / daily-loss cushion check stays REPORT-ONLY at $50 risk per ticket: src/prop/prop_executor.py evaluate_guards and src/prop/phone_executor.py live_cushion_refusals grade and ping, never refuse",
+      "context": {
+        "account_id": "tradeify_1",
+        "trigger": "the 21:11:45Z prop SL hit (SOL long, ticket prop-manual-7bc75cd2d4dd, -$50) left the account near its static floor",
+        "equity_usd": 9614.35,
+        "balance_usd": 9584.39,
+        "static_dd_floor_usd": 9400.0,
+        "distance_to_floor_usd": 214.35,
+        "risk_per_ticket_usd": 50.0,
+        "losses_to_floor_at_1r": 4,
+        "status_reported_at": "2026-11-14T21:16:23Z",
+        "daily_dd_switch": "armed (daily limit only)"
+      },
+      "cat": "runtime-order-path",
+      "where": "src/prop/prop_risk_gate.py (grade_ticket_risk); consumers src/prop/prop_executor.py evaluate_guards, src/prop/phone_executor.py live_cushion_refusals"
+    }
+  ]
+}
