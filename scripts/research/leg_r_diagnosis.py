@@ -80,7 +80,11 @@ def attach_adx(df: pd.DataFrame, candles_csv: Optional[str]) -> str:
     closed = adx.copy()
     closed.index = closed.index + step          # ADX known at the bar's CLOSE
     pos = closed.index.searchsorted(df["entry_time"], side="right") - 1
-    vals = [float(closed.iloc[i]) if i >= 0 else np.nan for i in pos]
+    # A trade that enters after the bars end would otherwise take the LAST bar's ADX (searchsorted clamps to the
+    # final index): a stale tag, not a reading. Past the last close + one bar it stays NaN ("unknown").
+    horizon = closed.index[-1] + step if len(closed) else None
+    vals = [float(closed.iloc[i]) if i >= 0 and (horizon is None or t <= horizon) else np.nan
+            for i, t in zip(pos, df["entry_time"])]
     if "adx_at_entry" in df:
         df["adx_at_entry"] = df["adx_at_entry"].fillna(pd.Series(vals, index=df.index))
     else:
@@ -201,6 +205,16 @@ def _self_test() -> int:
     d = {x["key"]: x for x in r["direction"]}
     check("direction split carries the loss", d["long"]["net_r"] == -30.0 and d["long"]["loss_share"] == 2.0)
     check("regime from the row", r["regime_source"] == "row" and {x["key"] for x in r["regime"]} == {"adx<20", "adx>=25"})
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        bars = Path(td) / "b.csv"
+        ts = pd.date_range("2024-01-01", periods=60, freq="h", tz="UTC")
+        pd.DataFrame({"timestamp": ts, "open": range(60), "high": [x + 1.5 for x in range(60)],
+                      "low": [x - 0.5 for x in range(60)], "close": [x + 1.0 for x in range(60)]}).to_csv(bars, index=False)
+        late = pd.DataFrame({"entry_time": pd.to_datetime(["2024-01-02T06:00:00Z", "2024-03-01T00:00:00Z"], utc=True)})
+        attach_adx(late, str(bars))
+        check("attach_adx: inside the bars -> a value; past the bars' end -> NaN, not the last bar's ADX",
+              not np.isnan(late["adx_at_entry"].iloc[0]) and np.isnan(late["adx_at_entry"].iloc[1]))
     check("gross <= 0 reads as an entry/exit problem", r["cost"]["gross_positive"] is False and "ENTRY/EXIT" in r["cost"]["reading"])
     check("six calendar folds", len(r["folds"]) == 6)
     check("mfe: losers that reached 1R counted", r["mfe"]["losers_that_reached_1r"] == 15)
