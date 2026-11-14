@@ -832,7 +832,11 @@ def cmd_universe_verdict(a: argparse.Namespace) -> int:
             arms[name] = {"arm_verdict": "could_not_check", "why": f"{f} absent"}
             continue
         c = json.loads(f.read_text())
-        arms[name] = dict(universe_arm_verdict(c), universe=(c.get("population") or {}).get("universe"))
+        pop = c.get("population") or {}
+        ns = [e.get("n") for e in ((c.get("tier_P+") or {}).get("evals") or {}).values() if e.get("n") is not None]
+        arms[name] = dict(universe_arm_verdict(c), universe=pop.get("universe"), n=min(ns) if ns else None,
+                          symbols=len(pop.get("symbols") or []), cutoffs=pop.get("cutoffs"),
+                          test_actions=pop.get("test_actions"), window=pop.get("window"))
     states = [v["arm_verdict"] for v in arms.values()]
     if any(s == "pass_arm" for s in states):
         verdict = "pass"
@@ -841,9 +845,17 @@ def cmd_universe_verdict(a: argparse.Namespace) -> int:
     else:
         verdict = "inconclusive"
     read_state = "measured" if states and all(s in ("pass_arm", "fail_arm") for s in states) else "could_not_check"
+    # script_run refuses a verdict.json without `population` and `n` (run 43580685219 measured `fail` and was
+    # recorded producer_failed for exactly that). n = the smallest P+ learner's policy-trade count over the arms read.
+    arm_ns = [v.get("n") for v in arms.values() if v.get("n") is not None]
+    population = "; ".join(
+        f"arm {k}: {v.get('symbols') or '—'} symbols, {v.get('cutoffs') or '—'} cutoffs, "
+        f"{v.get('test_actions') or '—'} test actions, P+ policy n={v.get('n') if v.get('n') is not None else '—'}, "
+        f"window {'..'.join(v.get('window') or []) or '—'}" for k, v in arms.items()) or "no arm read"
     res = {"unit": "RQ-20261113-d18c-01", "decision_rule_id": "RULE-RQ20261113-D18C-01-UNIVERSE", "verdict": verdict,
            "read_state": read_state, "bar_r": UNIVERSE_BAR, "folds_needed": UNIVERSE_FOLDS_NEEDED,
-           "alpha_corrected": ALPHA / N_CONFIGS, "arms": arms}
+           "alpha_corrected": ALPHA / N_CONFIGS, "arms": arms, "population": population,
+           "n": min(arm_ns) if arm_ns and read_state == "measured" else None}
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     (out / "verdict.json").write_text(json.dumps(res, indent=1, sort_keys=True, default=float) + "\n")
