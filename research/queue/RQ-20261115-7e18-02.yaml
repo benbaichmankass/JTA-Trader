@@ -1,0 +1,138 @@
+# Hand-authored 2026-11-15 by lane ML-PRIMARY-3 (session_01AFoLuMkZYvbttnmb2gtVcA, Tier 1), dispatched by Manager Session 2026-11-15a
+# (ML design pass, operator ~13:36Z). ITERATION unit from a written diagnosis. Rule registered BEFORE any run. Gates: none.
+id: RQ-20261115-7e18-02
+title: 'Foxhound-1 DECOMPOSED score: does LightGBM on GROSS R minus the known pre-trade cost per R beat the served recipe''s net-R target on the
+  trades each would take at actual net R? (13 monthly refits over 2025-10..2026-09; diagnosis cd01-01 R3)'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+origin: iteration
+practice_precedent: 'M6 (docs/reference/trading-and-model-practice-principles.md): one-factor lever, same rows, purge, tau and cost stack as the
+  baseline, paired by window; the RQ-20261112-4654 family design (ml_entry_residual.py) with only the target / score changed.'
+levers:
+- name: target_and_score
+  values:
+  - net-R target, score = predicted net R (RAW, the served recipe, baseline)
+  - gross-R target, score = predicted gross R - k_side / (SL_ATR x atr_pct), k_side fitted on the refit's own training rows (GROSS, decided)
+  hypothesised_effect: GROSS raises held-out net R per decision by >= +0.06 vs RAW
+question: 'Refit the SAME recipe (ml_decision_entry FEATURES, LGB_PARAMS, E.purge_train, served tau, BTCUSDT excluded) at each of 13 monthly
+  origins over the frozen v1''s held-out year with two scores -- RAW (LightGBM on net_long / net_short; the served recipe) and GROSS (LightGBM
+  on gross_long / gross_short, then minus the decision-time cost per R c_hat = k_side / (SL_ATR x atr_pct), where k_side = sum(cost_side) /
+  sum(1 / (SL_ATR x atr_pct)) on that refit''s training rows) -- and grade each on the decisions it takes at the ACTUAL net R of an outright
+  bracket trade (canonical cost stack). Does the decomposed score beat the net-R target?'
+why_this_matters: 'Foxhound-1 trades bybit_2 real money, its mirror and the prop books, and every ranked ENTRY lever has failed its held-out read
+  (residual target, ridge, ensemble, conformal, vol24 abstention, cost gate). The diagnosis no lever has tested: the net-R LABEL is cost-driven
+  on atr_pct (cd01-01 R3: IC net 0.497 vs gross 0.003), so the model may spend its capacity learning the known cost-per-R structure instead of
+  direction. Separating the two (learn gross, subtract the known cost) is the one-factor test of that diagnosis. It decides the line''s next
+  lever either way: PASS -> a decomposed-score candidate for the combined held-out read (ML-LEVER-PLAN); FAIL -> the target family closes for
+  crypto ENTRY (with RESID already FAIL) and the next lever must be new information (features / data), not another target.'
+iteration:
+  subject: ml-decision-entry-v1
+  subject_kind: ml_model
+  from_result: RQ-20261112-cd01-01
+  verdict_read: indeterminate
+  diagnosis: 'cd01-01 R3 COST-ARTIFACT: the net-R target''s information coefficient is 0.497 against net R but 0.003 against gross R, with
+    atr_pct the driver; a7e8-03 Brinson: tilt share 0.061 and within-bucket gross selection +0.0051 R (t 0.84). The residual-market target
+    (4654-01) FAILED; the learner changes (4654-07/-08/-09) FAILED or were INDETERMINATE. No unit has separated the deterministic cost term from
+    the learned gross term.'
+  hypothesis: removing the known cost-per-R structure from the learned target lets the booster spend its splits on gross direction, raising net R per decision
+  attempt: 1
+  due_by: '2026-11-22'
+power:
+  expected_n: 13
+  min_detectable_effect: 0.06
+  effect_units: metric
+  sd: 0.074
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE (QUOTED, as RQ-20261112-4654-09): paired window sd 0.074 R/decision for two refits of this recipe over the same 13 x 28-day
+    windows (frontier-scan-2026-11-11 K1), se 0.0205, 80%-power MDE ~0.063 R at alpha 0.05 two-sided. Registered effect +0.06. Fewer than 10
+    windows with n >= 30 per arm is INDETERMINATE. The window sd is re-measured (paired_extra_vs_raw.gross.sd).'
+  feasibility:
+    source: none
+    accrual_basis: Replays Binance USD-M 1h history already published; nothing accrues.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261115-7e18-02-GROSS-DECOMP
+  registered_at: '2026-11-15'
+  registered_before_run: true
+  baseline: 'RAW: the same LightGBM recipe on the raw net-R target at the same origins, same rows (BTCUSDT excluded), same tau, same cost stack.
+    Net of the full cost stack.'
+  statistic: 'scripts/research/ml_entry_residual.py run --arms raw,gross: per 28-day window, mean actual net R per taken decision for each arm
+    (E.policy, served tau); d_w = GROSS - RAW over windows where both took >= 30 decisions; mean, sd and 95% t-interval of d_w
+    (paired_extra_vs_raw.gross); pooled means and n; each window''s k_long / k_short (gross_info).'
+  rule: 'decide_vs_raw on GROSS: PASS iff >= 10 paired windows AND mean d >= +0.06 R/decision AND the 95% t-CI lower bound > 0 AND GROSS pooled n
+    >= 300. FAIL iff >= 10 paired windows AND mean d <= 0. INDETERMINATE otherwise. Net of the full cost stack (fee + slippage + funding via
+    ml_decision_entry._cost_r). Thresholds are not changed after any result.'
+  pass_action: 'the decomposed score becomes a candidate in ML-LEVER-PLAN''s ONE combined held-out read (frozen-v1 baseline, holdout_lock family
+    ENTRY on the deflated bar); a PASS there is the Tier-3 candidate-to-served packet. Never a promotion from this unit.'
+  fail_action: 'the TARGET family closes for crypto ENTRY (RESID 4654-01 FAIL + GROSS FAIL); MLP-D3-FOXHOUND-1''s next lever must add information
+    (features or data, e.g. MLP-D3-RANKING-TARGETS taker flow), recorded on the plan line.'
+  what_it_does_not_do: Changes no served model, tau, roster or config. No search over the cost model (k is a single training-set ratio per side,
+    fixed form). The served tau was tuned on the RAW prediction scale; GROSS decision counts are reported (n < 300 is INDETERMINATE, declared).
+    BTCUSDT excluded. The window was read before by 98e3-26 and the 4654 family (declared). A PASS is not a promotion.
+  min_n: 10 paired windows with >= 30 decisions per arm; 300 pooled GROSS decisions
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.12
+  basis: 'stand-in as RQ-20261112-4654-09 (Foxhound-1 on bybit_2 + prop books; +0.06 R/decision at ~40 decisions/month on bybit_2); not a P&L
+    measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 50
+  why_runner: Binance public klines plus 13 x 2 LightGBM pairs; no trainer-resident data.
+  basis: 'ESTIMATE: RQ-20261112-4654-09 (13 refits x 2 arms + fetch) registered at 50 min on research-script-run.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_residual.py
+  - run
+  - --arms
+  - raw,gross
+  - --cache
+  - /tmp/ml_entry_klines
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --run-date
+  - '2026-11-15'
+  - --rule-id
+  - RULE-RQ20261115-7e18-02-GROSS-DECOMP
+  - --registered-at
+  - '2026-11-15'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261115-7e18-02
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: 'the next lever of Foxhound-1 (ml_decision_entry) -- a decomposed-score candidate for the combined held-out read, or the target family closes; no change from this unit'
+  legs:
+  - ml_entry
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261112-cd01-01
+- RQ-20261112-a7e8-03
+- RQ-20261112-4654-01
+- RQ-20261112-4654-09
+- MLP-D3-FOXHOUND-1
+- ML-LEVER-PLAN
+population: The ml_decision_entry universe (Binance USD-M perps in the bp2 manifest, BTCUSDT excluded), both sides at the served tau over
+  2025-10-01..2026-09-30 in 13 x 28-day windows; a recipe comparison, not a promotion read.
