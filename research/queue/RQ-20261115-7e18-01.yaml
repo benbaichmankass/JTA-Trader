@@ -72,6 +72,16 @@ decision_rule:
   what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order. The purged folds are walk-forward slices of the
     test corpus, read before by 3144-02 at Stage A; a PASS is explicitly pending a fresh window, which is the claimed held-out read.
   min_n: 2,000 test trades; >= 200 check-ins per fold
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    how: 'tm_bench B4: the same per-check-in action rate and action mix as the lgbm policy on each test fold, random eligible check-ins, sequential'
+  best_static:
+    grid: [be_at_1r, lock1_at_2r, be_lock_ladder, chandelier_2atr, chandelier_3atr, channel_10, channel_20]   # tm_bench.B1_GRID ids
+    excludes_test_folds: true
+    how: 'tm_bench B1: the one static rule with the best TRAIN-fold value, scored once on the test fold'
+  bootstrap_group: trade
 practice_precedent: 'M6 + T1 (docs/reference/trading-and-model-practice-principles.md): an in-trade intervention judged against hold-to-bracket, a
   best static rule and a matched random intervention, purged walk-forward grouped by trade, margin chosen on inner folds only.'
 compute: cpu_long
@@ -137,7 +147,7 @@ run:
   inputs:
     research_unit: RQ-20261115-7e18-01
 ml_consumer:
-  consumer: none yet (advice-only in-trade management, ARCHITECTURE-CANONICAL "Active management")
+  consumer: ML-AM-NEXT-LIVE
   decision: whether ml-tm-action-value proceeds to a fresh-window confirmation for close / partial_close_50 on the money legs
   legs:
   - ada_pullback_2h
