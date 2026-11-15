@@ -261,7 +261,7 @@ def test_adapter_capability_flags_match_the_paths():
     from src.prop.platform.dxtrade import DXtradeAdapter
     from src.prop.platform.dxtrade_api import DXtradeApiAdapter
     assert DXtradeApiAdapter.TP_AMEND_SUPPORTED is True
-    assert DXtradeAdapter.TP_AMEND_SUPPORTED is False      # rollout guard: SL-only tightens
+    assert DXtradeAdapter.TP_AMEND_SUPPORTED is True       # CAP-TRADEIFY-TP-AMEND: a TP-only rollout step
     from src.prop.platform.dxtrade import rollout_tighten_mismatch
     bad = rollout_tighten_mismatch("long", 95.0, 110.0, 96.0, 107.5, {"bid": 109, "ask": 109.1})
     assert any("take profit unchanged" in b for b in bad)

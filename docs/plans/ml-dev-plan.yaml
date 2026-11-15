@@ -457,6 +457,7 @@ lines:
   levers_tried:
     - {lever: structure exit vs fixed 2/3 ATR, ref: ML-ENTRY-EQ-STRUCTURE-RETEST, verdict: done}
     - {lever: 5-seed ensemble, ref: ML-ENTRY-EQ-STRUCT-LIVE, verdict: landed_unproven}
+    - {lever: HTF counter-trend split on the graded ensemble (skip longs against a strong daily downtrend), ref: RQ-20261112-8d20-02, verdict: 'INDETERMINATE by rule (research/results/RQ-20261112-8d20-02/43692034676.jsonl): CT40 cell n 16 < 40, underpowered as the unit expected; no change. Scored the COMMITTED graded ensemble (sha_match true, 0afc4994), so ML-ENTRY-EQ-REPRO-DRIFT is observed fixed. All-trades read n 221, +0.296 R, date-clustered t 1.40.'}
   levers_ahead:
     - lever: head-to-head vs ml_entry_eq on the same decision bars
       ref: 'RQ-20261112-ef4c-09 (PR #25242)'
@@ -830,6 +831,8 @@ lines:
   levers_tried:
     - {lever: brackets as predictions (doctrine), ref: BRACKETS-AS-PREDICTIONS, verdict: done}
     - {lever: 'Pointer v0: entry-time TP from the first-passage model vs fixed 3 ATR, ml_entry trades', ref: RQ-20261114-82fd-01, verdict: 'FAIL by rule (research/results/RQ-20261114-82fd-01/43661151535.jsonl): record year policy -0.0036 R/trade, delta -0.0109 CI95 [-0.046, +0.025], n 11,240; prior year delta +0.0061 CI95 [-0.035, +0.048], n 15,233; the policy put 6,544 of 11,240 record-year trades at 6 ATR. HARNESS DEFECT disclosed: m* selection read NaN for 3 of 4 margins (walks into 2022 archive holes) and max() returned 0.0; fixed, disclosed re-run RQ-20261115-a474-01 (veto window to 07:00Z). The FAIL stands.'}
+    - {lever: 'Pointer v0, defect-corrected re-run (disclosed 2nd test of 82fd-01)', ref: RQ-20261115-a474-01, verdict: 'FAIL by rule (run 43688146403, landing in batch PR #26261): record year policy -0.0023 R/trade, delta -0.0096 CI95 [-0.043, +0.024], n 11,240; prior year INDETERMINATE delta +0.0050 CI95 [-0.033, +0.045], n 15,233; m*=0.02. Pointer v0 closes.'}
+    - {lever: move-extent predict head step 1 (entry-time MFE-quantile head vs naive TP baselines), ref: RQ-20261009-900, verdict: 'FAIL (graded 2026-11-13, research/results/RQ-20261009-900/43381824145.jsonl): HONEST_NEGATIVE per stratum -- S1 bybit_2 donchian 4h indeterminate (eval n 74 < 88), S2 bybit_2 pullback 2h not_sharper, S3 prop donchian 1h not_sharper. Step 2 (901) not reached.'}
   levers_ahead:
     - lever: Pointer v0 -- the tp-revision recipe extended with check-in 0, one static entry-time TP per ml_entry trade
       ref: RQ-20261114-82fd-01 (ML-PRIMARY 2026-11-14; RULE-RQ20261114-82fd-01-POINTER-V0, two windows, non-inferiority -0.02 R)
@@ -846,7 +849,7 @@ lines:
       baseline: the leg's fixed bracket
       pass: as above
       fail: as above
-  next_weeks: {W47: '82fd-01 FAIL (graded 11-15); defect-corrected re-run a474-01; if it FAILs, RQ-20261009-900 (move-extent head) is next', W48: 'drive RQ-20261009-900 if 82fd-01 FAILs', W50: 'ML-FS-BRACKETS-HOLD (ranked LATER @11-30)'}
+  next_weeks: {W47: 'a474-01 FAIL (11-15) and RQ-20261009-900 FAIL (11-13): Pointer v0 and the move-extent head are both closed; exhaustion clause MET for those two levers', W48: none, W50: 'ML-FS-BRACKETS-HOLD (ranked LATER @11-30) is the only D6 lever left'}
   exhaustion: Pointer v0 and the predict head FAIL on their registered reads.
   owner: ML-PRIMARY
   plan_items: [ML-X1, ML-X2]
@@ -943,6 +946,7 @@ lines:
     - {lever: BTC head B4, ref: ML-EXITHEAD-VALUE, verdict: 'fail -0.0141 R/trade n 1041 (QUOTED)'}
     - {lever: out-of-family value, ref: RQ-20261101-78fc-03, verdict: fail}
     - {lever: volume composition, ref: RQ-20261112-0bc8-02, verdict: fail}
+    - {lever: 'pooled donchian-4h exit head (eth/sol/xrp/ada/avax_4h discovery, eth_4h held-out primary)', ref: RQ-20261115-a474-03, verdict: 'FAIL by rule (research/results/RQ-20261115-a474-03/43698788477.jsonl): B selected on the pooled discovery (843 trades, 14 usable folds, mean OOS AUC 0.613 -- the head ranks, but no arm beats B: best age8_below_half_r_tau_0.1 152.4 vs B 170.7 R walk-forward, 5 of 14 folds >= B, needs 10). eth_4h held-out B reproduces e4a1-01 (13.97 R, n 76). Closes for the donchian-4h family.'}
   levers_ahead:
     - lever: 'exit-now v0 on ml_entry: the Labrador-1b first-passage model values hold vs close at each 4h check-in, TP fixed'
       ref: RQ-20261114-1ae8-01 (ML-PRIMARY 2026-11-15; RULE-RQ20261114-1ae8-01-EXIT-NOW-V0, two windows, non-inferiority -0.02 R)
@@ -960,7 +964,7 @@ lines:
       baseline: as above
       pass: as above
       fail: as above
-  next_weeks: {W47: '1ae8-01 INDETERMINATE (graded 11-15, no gain); eth_4h pooled variant RQ-20261115-a474-03 registered (11-15)', W48: 'run + grade a474-03', W49: none, W50: none}
+  next_weeks: {W47: '1ae8-01 INDETERMINATE (no gain); a474-03 pooled donchian-4h head FAIL (11-15, B selected, AUC 0.613 but no arm beats B net of cost); only the desk-label variant (PI-20261029-IHFQDB3W-0004) is left', W48: 'desk-label variant: author or retire', W49: none, W50: none}
   exhaustion: the eth_4h variant and the desk-label variant FAIL; with today's FAILs the head's feature set then has no lever left.
   owner: AM-ML
   plan_items: [ML-X3, ML-X4, ML-N4]
