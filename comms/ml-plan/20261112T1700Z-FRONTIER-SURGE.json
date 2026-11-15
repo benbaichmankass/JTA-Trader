@@ -1,0 +1,185 @@
+{
+ "run": "lane FRONTIER-RESEARCH session_01AFoLuMfGoUaVmVtfzXaKEK (surge pass 1)",
+ "finished_at": "2026-11-12T17:00:00Z",
+ "frontier": {
+  "run": "lane FRONTIER-RESEARCH (surge pass 1)",
+  "finished_at": "2026-11-12T17:00:00Z",
+  "previous_scan_read": [
+   {
+    "unit": "K1 (proposal, 2026-11-11)",
+    "verdict": "not-run",
+    "family": "gbdt"
+   }
+  ],
+  "diversity": {
+   "command": "ml_plan_status.py --diversity",
+   "findings": [
+    "CONCENTRATION: gbdt holds 14/23 open family-tagged plan items (>60%)",
+    "MANIFEST-CONCENTRATION: gbdt 77/106 registered models",
+    "UNMAPPED-TRAINER: 8 served artifacts carry no model_family"
+   ]
+  },
+  "sources_checked": [
+   {
+    "source": "hf-papers-daily",
+    "date": "2026-11-12",
+    "state": "checked",
+    "note": "no finance/time-series papers"
+   },
+   {
+    "source": "hf-papers-search",
+    "date": "2026-11-12",
+    "state": "checked",
+    "note": "3 queries; KiT 2609.34507, CryptoGAT 2606.27670, 2512.12924"
+   },
+   {
+    "source": "arxiv-via-hf",
+    "date": "2026-11-12",
+    "state": "checked",
+    "note": "2611.13572 re-read (PRIMARY)"
+   },
+   {
+    "source": "lab-releases",
+    "date": "2026-11-12",
+    "state": "checked",
+    "note": "secondary only; no November TSFM release"
+   },
+   {
+    "source": "quant-practitioner",
+    "date": "2026-11-12",
+    "state": "checked",
+    "note": "thin; one secondary null funding-IC page, not carried"
+   },
+   {
+    "source": "github",
+    "date": "2026-11-12",
+    "state": "could-not-look",
+    "note": "time-boxed; checked 2026-11-04"
+   },
+   {
+    "source": "competitions",
+    "date": "2026-11-12",
+    "state": "could-not-look",
+    "note": "time-boxed; checked 2026-11-04"
+   }
+  ],
+  "candidates": [
+   {
+    "name": "market-residual target for crypto ENTRY",
+    "family": "gbdt",
+    "licence": "n/a (method)",
+    "gate_failed": "none",
+    "kept": true,
+    "unit_or_row": "RQ-20261112-4654-01 / FRONTIER-Q-RESID-ENTRY",
+    "baseline": "raw-target refit, same origins",
+    "kill": "paired mean <= 0 or placebo >= resid",
+    "business_question": "refit Foxhound-1 (bybit_2 real money) on a residual target?",
+    "power": {
+     "unit": "windows",
+     "n": 13,
+     "mde": 0.063,
+     "ok": true
+    },
+    "p_pass": 0.15
+   },
+   {
+    "name": "market-residual target for ETF ENTRY",
+    "family": "gbdt",
+    "licence": "n/a",
+    "gate_failed": "none",
+    "kept": true,
+    "unit_or_row": "FRONTIER-Q-RESID-ENTRY-EQ (idea, waits on K1)",
+    "baseline": "Foxhound-4 raw target",
+    "kill": "follows K1",
+    "business_question": "Foxhound-4 on alpaca_live",
+    "power": null,
+    "p_pass": 0.15
+   },
+   {
+    "name": "path-signature state for in-trade action-value",
+    "family": "ssl_representation-adjacent",
+    "licence": "iisignature MIT (secondary)",
+    "gate_failed": "none (sequenced)",
+    "kept": true,
+    "unit_or_row": "FRONTIER-Q-SIGNATURE-INTRADE (blocked behind RQ-20261112-3144-02)",
+    "baseline": "R1 + path_state, stage_a_folds vs permutation",
+    "kill": "0/6 folds beat null",
+    "business_question": "live_review_apply advice on six money legs",
+    "power": {
+     "unit": "trades",
+     "n": 2627,
+     "mde": 0.03,
+     "ok": true
+    },
+    "p_pass": 0.08
+   },
+   {
+    "name": "meta-label sizing for ENTRY",
+    "family": "conformal_calibration",
+    "licence": "n/a",
+    "gate_failed": "power",
+    "kept": false,
+    "unit_or_row": "FRONTIER-Q-METALABEL-SIZE (dropped)",
+    "baseline": "flat tau=0.1",
+    "kill": "-",
+    "business_question": "ml_entry sizing",
+    "power": {
+     "unit": "trades",
+     "n": 450,
+     "mde": 0.14,
+     "ok": false
+    },
+    "p_pass": null
+   },
+   {
+    "name": "Granite ensemble-r1 / KiT TSFM inputs",
+    "family": "ts_foundation_model",
+    "licence": "Apache-2.0 (primary card, Granite)",
+    "gate_failed": "leakage",
+    "kept": false,
+    "unit_or_row": "FRONTIER-Q-TSFM-GRANITE-TP (dropped, re-open 2027-02-01)",
+    "baseline": "-",
+    "kill": "-",
+    "business_question": "D7",
+    "power": null,
+    "p_pass": null
+   },
+   {
+    "name": "cross-sectional funding carry",
+    "family": "rule_baseline",
+    "licence": "n/a",
+    "gate_failed": "business question (already covered)",
+    "kept": false,
+    "unit_or_row": "FRONTIER-Q-FUNDING-XSEC (dropped)",
+    "baseline": "-",
+    "kill": "-",
+    "business_question": "funding-carry subject exists",
+    "power": null,
+    "p_pass": null
+   },
+   {
+    "name": "BTC-to-alt lead-lag 5m",
+    "family": "rule_baseline",
+    "licence": "n/a",
+    "gate_failed": "business question (no consumer)",
+    "kept": false,
+    "unit_or_row": "FRONTIER-Q-LEADLAG / FRONTIER-LEVER-LEADLAG (manager decides)",
+    "baseline": "time-shuffled placebo",
+    "kill": "-",
+    "business_question": "none named",
+    "power": null,
+    "p_pass": null
+   }
+  ],
+  "grades": [
+   {
+    "candidate": "K1 (2026-11-11)",
+    "call": "kept",
+    "grade": "unresolved",
+    "evidence": "registered as RQ-20261112-4654-01, not run"
+   }
+  ],
+  "strategy_ideas": [],
+  "none_because": null
+ }
+}

@@ -944,6 +944,9 @@ jobs:
         env:
           SWEEP_RESULT: ${{ needs.sweep.result }}
           LEG_PLAN: ${{ needs.plan.outputs.legs }}
+          # Read ONLY when `plan` published no legs (it failed on an unroutable leg): the same two sources `plan`
+          # reads, so the run still writes a producer_failed row per leg it was asked for.
+          INPUT_LEGS: ${{ inputs.legs }}
         run: |
           set -euo pipefail
           # A THROWAWAY corpus, NOT `docs/research/m20-sweep-corpus.jsonl`. The
@@ -986,6 +989,8 @@ jobs:
             --corpus rr/run_corpus.jsonl \
             --out rr/records.jsonl \
             --legs "${LEGS}" \
+            --input-legs "${INPUT_LEGS}" \
+            --sentinel .github/exit-lever-sweep-request \
             --sweep-result "${SWEEP_RESULT}"
 
       - name: Land the per-leg results on main

@@ -22,13 +22,13 @@ import desk_event_entry_replay as m  # noqa: E402
 import desk_gen_replay_driver as gr  # noqa: E402
 
 
-def rows_for(root: Path, window) -> list:
+def rows_for(root: Path, window, oi_z: float = m.OI_Z) -> list:
     mkt, missing = gr.load_market(root / "candles", list(m.SYMS))
     if missing:
         raise SystemExit(f"candles missing {missing}")
     lo, hi = gr._epoch(window[0]), gr._epoch(window[1])
     out = []
-    for ev in sorted(m.detect(root, mkt)["E4"], key=lambda e: (e["cutoff"], e["sym"])):
+    for ev in sorted(m.detect(root, mkt, oi_z=oi_z)["E4"], key=lambda e: (e["cutoff"], e["sym"])):
         if not (lo <= ev["cutoff"] < hi):
             continue
         s = mkt[ev["sym"]]
@@ -52,9 +52,17 @@ def rows_for(root: Path, window) -> list:
     return out
 
 
-def main() -> int:
-    dev_root, ho_root, out = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])
-    rows = rows_for(ho_root, m.HOLDOUT) + rows_for(dev_root, m.DEV)
+def main(argv: list | None = None) -> int:
+    import argparse
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("dev_root")
+    ap.add_argument("ho_root")
+    ap.add_argument("out")
+    ap.add_argument("--oi-z", type=float, default=m.OI_Z,
+                    help="E4 OI-shock z threshold (default 3.0 = the frozen arm that built the committed ledger)")
+    a = ap.parse_args(argv)
+    dev_root, ho_root, out = Path(a.dev_root), Path(a.ho_root), Path(a.out)
+    rows = rows_for(ho_root, m.HOLDOUT, a.oi_z) + rows_for(dev_root, m.DEV, a.oi_z)
     rows.sort(key=lambda r: r["entry_time"])
     out.mkdir(parents=True, exist_ok=True)
     end = max(r["entry_time"] for r in rows)

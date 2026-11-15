@@ -34,7 +34,8 @@ class _Pkg:
         if meta is None:
             meta = {}
             if conviction is not None:
-                meta["conviction"] = {"conviction": conviction}
+                # the order-path block (ML-SHADOW-NO-ORDER-HANDLE)
+                meta["conviction_influencing"] = {"conviction": conviction}
         self.meta = meta
 
 

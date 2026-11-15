@@ -229,3 +229,12 @@ python3 scripts/ops/build_strategy_evidence.py --strategy <leg> \
 For a record written before this change, the window is in
 `cost_stack.source` (the run's `__bt.json` `data_start` / `data_end`).
 `tests/test_strategy_evidence.py` fails on a record from this builder that lacks the pins.
+
+## C5 pending re-measure (since 2026-11-13)
+
+`scripts/ci/check_roster_promotion_evidence.py::FIDELITY_PENDING_REMEASURE` is a third C5 exception class. It is **not** a waiver and **not** a baseline; the guard's module docstring is the rule's home.
+- **What it lists:** an already-rostered slot whose record honestly reads `approximate`, because a lever it runs cannot be modelled yet.
+- **Conditions:** the slot is owned by a dated build row, and the entry expires.
+- **Effect:** no C5 verdict reads it, so every promotion stays fail-closed. Only the exactness test reads it, and that test fails on the expiry date.
+- **Current entries: none.** The only entry ever made (`alpaca_live` / `tqqq_trend_long_1d`, row `EQ-FORMING-BAR-REPLAY`, manager OK 2026-11-13 ~09:27Z) was deleted the same day: `RQ-20261113-1449-01` run 43421052545 regenerated the record `faithful` on the forming-bar replay (`omitted_levers: []`).
+- **Adding an entry:** needs a manager OK.

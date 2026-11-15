@@ -1,0 +1,6 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Row CONFLICTING-EXPOSURE-ALERT. Manager decision 2026-11-15 03:08Z: a leg LEAVING a conflict must not re-fire the alert or the paid review. Measured 2026-11-15: one ETHUSDT conflict (ml_entry_v2 long vs eth_4h short) re-fired 3 times in 3 hours (keys f9b0dbe1d5 / 43d62acadb / 71bffc9581). Each time, a short package exited and the sorted-package hash changed. New pure carry_forward(): a live conflict whose package set is a SUBSET of a set already alerted for that symbol keeps the alerted key. It is applied in detect(), which feeds the live_review_due event level, and in alert(). A package that JOINS (not in the alerted set) still gets a new key and alerts. An emptied side still resolves the conflict, and a recurrence alerts again. An unreadable state carries nothing forward (fails toward telling). Alert and review-wake path only: no order, bracket or gate is touched (no new gate). Tests pin tonight's 3 ETH keys giving ONE alert, joiners on either side still alerting, and the review level staying put. conflicting_exposure.py is in the trader import closure (order_monitor imports live_review_due), so merge in a restart batch. Revert: git revert."
+}

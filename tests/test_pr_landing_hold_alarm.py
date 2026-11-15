@@ -236,3 +236,65 @@ def test_ping_issue_is_opened_with_a_pat_not_github_token():
     assert "PING_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}" in wf
     assert 'GH_TOKEN="${PING_TOKEN:-$GH_TOKEN}" gh issue create' in wf
     assert '--pr-json "$pr_arg"' in wf
+
+
+def test_alarm_pings_via_the_direct_channel_first_and_keeps_the_issue_fallback():
+    """HOLD-ALARM-PING-DIRECT: the ping goes to POST /api/bot/ops/actions send-ping first; any non-2xx falls back
+    to the system-actions issue, so the alarm is never dropped (no halting)."""
+    from pathlib import Path
+    src = (Path(__file__).resolve().parents[1] / ".github/workflows/pr-landing-hold-merge-alarm.yml").read_text()
+    i_direct, i_issue = src.index("/api/bot/ops/actions"), src.index("gh issue create --label system-action")
+    assert i_direct < i_issue
+    assert '"action": "send-ping"' in src and "X-Work-Store-Token" in src
+    assert 'WORK_STORE_TOKEN: ${{ secrets.WORK_STORE_TOKEN }}' in src
+    assert '[ "$code" = "202" ] || [ "$code" = "200" ]' in src and '[ "$direct" = "yes" ] && continue' in src
+
+
+# --- a SPARSE checkout must still resolve a real path in the commit (#25799, run 43476136968;
+#     operator decision 2026-11-13 "fix_a", PR-ALARM-RESOLVER-FIX) ---
+def _git(*a, cwd):
+    import os
+    import subprocess
+    env = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t",
+           "GIT_COMMITTER_EMAIL": "t@t", "PATH": os.environ["PATH"], "HOME": str(cwd)}
+    return subprocess.run(["git", *a], cwd=str(cwd), capture_output=True, text=True, check=True,
+                          env=env).stdout.strip()
+
+
+def test_sparse_checkout_resolves_the_25799_ref_and_still_rejects_a_fake_path(tmp_path):
+    """Reproduces the #25799 page on REAL git: the alarm workflow's checkout is sparse, so research/
+    and comms/ are absent from the working tree though present in the commit. The ref and the
+    evidence must resolve; a path the commit does not hold, and a directory, must not."""
+    src = tmp_path / "src"
+    for rel in ("research/queue/RQ-20261113-f251-02.yaml",
+                "comms/research/RQ-20261113-f251-02/43452855935/evidence/slv_trend_1h.json",
+                "scripts/ops/pr_landing_hold_alarm.py"):
+        f = src / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text("x\n")
+    _git("init", "-q", "-b", "main", cwd=src)
+    _git("add", "-A", cwd=src)
+    _git("commit", "-q", "-m", "c", cwd=src)
+    sparse = tmp_path / "sparse"
+    _git("clone", "-q", "--no-checkout", "--filter=blob:none", f"file://{src}", str(sparse), cwd=tmp_path)
+    _git("sparse-checkout", "set", "--no-cone", "/scripts/ops/pr_landing_hold_alarm.py", cwd=sparse)
+    _git("checkout", "-q", "main", cwd=sparse)
+    assert not (sparse / "research").exists(), "sanity: the checkout really is sparse"
+    r = pla.make_resolver(str(sparse))
+    ref = ("2026-09-27 data-backed authorization CRYPTO-FORMING-EQUITY-REGEN "
+           "(unit research/queue/RQ-20261113-f251-02.yaml)")
+    ev = "comms/research/RQ-20261113-f251-02/43452855935/evidence/slv_trend_1h.json"
+    assert any(r(t) for t in ref.split())               # the exact #25799 ref now resolves
+    assert r(ev)
+    assert not r("research/queue/RQ-NOPE.yaml")         # still strict: absent from the commit
+    assert not r("research/queue")                      # a directory is not a record
+    v = pla.grade({"tier": 3, "landing": "hold",
+                   "recorded_decision": {"kind": "standing_authorization", "ref": ref, "evidence": ev}},
+                  decl_unreadable=False, reviews=[], reviews_unreadable=False, resolve=r)
+    assert v.state == pla.CLEAN
+
+
+def test_resolver_outside_a_git_repo_never_guesses(tmp_path):
+    """No git repo under root: a repo path that is not on disk must NOT resolve (False on any git error)."""
+    r = pla.make_resolver(str(tmp_path))
+    assert not r("research/queue/RQ-20261113-f251-02.yaml")

@@ -25,7 +25,8 @@ Modes:
 Identifiers come from the environment and the API at runtime, never the repo:
   OCI_CLI_USER / OCI_CLI_KEY_CONTENT / OCI_CLI_FINGERPRINT / OCI_CLI_TENANCY /
   OCI_CLI_REGION   API key (Actions secrets)
-  OCI_COMPARTMENT_OCID  compartment to search
+  OCI_COMPARTMENT_OCID  compartment to search (falls back to COMPARTMENT_ID, then
+                        the tenancy OCID = root compartment, as oci_inventory.py does)
   LIVE_INSTANCE_NAME    instance display name (default ict-bot-arm)
 Output never prints an OCID or an address: security lists and NSGs are named
 by display name only (the output is posted to a public issue).
@@ -86,6 +87,12 @@ def main(argv: list[str]) -> int:
     if args.self_test:
         return _self_test()
 
+    # Same compartment resolution as scripts/ops/oci_inventory.py: an explicit
+    # compartment wins; otherwise the tenancy (root compartment). Measured
+    # 2026-11-12 (run 43211799160): the OCI_COMPARTMENT_OCID secret is empty.
+    if not os.environ.get("OCI_COMPARTMENT_OCID"):
+        os.environ["OCI_COMPARTMENT_OCID"] = (os.environ.get("COMPARTMENT_ID")
+                                              or os.environ.get("OCI_CLI_TENANCY") or "")
     need = ("OCI_CLI_USER", "OCI_CLI_KEY_CONTENT", "OCI_CLI_FINGERPRINT", "OCI_CLI_TENANCY",
             "OCI_CLI_REGION", "OCI_COMPARTMENT_OCID")
     missing = [k for k in need if not os.environ.get(k)]

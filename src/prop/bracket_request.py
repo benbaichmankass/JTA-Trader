@@ -11,7 +11,7 @@ existing guard binds it: the bounded rollout step, the venue-quote buffer, the r
 
 * TP -> ``meta.tp_target``. Applied by ``prop_trail._tp_step``; it wins over any declared TP rule while it is set
   (``clear_tp`` removes it). Only an adapter that declares ``TP_AMEND_SUPPORTED`` can carry it: ``dxtrade_api``
-  (velotrade_1). Everything else is REFUSED here with the reason, never queued where it would sit unread.
+  (velotrade_1) and, since CAP-TRADEIFY-TP-AMEND (2026-11-12), browser ``dxtrade`` (tradeify_1). Everything else is REFUSED here with the reason, never queued where it would sit unread.
 * SL -> ``meta.sl_floor``, exactly what ``live_review_apply._exec_prop_vm`` writes. Tighten-only: a stop looser
   than the ticket's own is refused (both prop executors refuse a looser stop by construction).
 
@@ -57,9 +57,9 @@ def amend_capability(account_id: str, platforms_path: Optional[Path] = None) -> 
     if platform == "dxtrade_api":
         return {"tp": True, "sl": True, "why": "dxtrade_api: the executor's trail amends TP and SL over REST"}
     if platform == "dxtrade":
-        return {"tp": False, "sl": True, "why": (
-            f"{account_id} is browser dxtrade: its modify guard admits only SL-only tightens "
-            "(TP_AMEND_SUPPORTED is false), so a TP amend would be refused before any click")}
+        return {"tp": True, "sl": True, "why": (
+            "browser dxtrade: the trail amends a TP as a TP-only rollout step and an SL as a tighten-only step "
+            "(CAP-TRADEIFY-TP-AMEND, operator 2026-11-12)")}
     return {"tp": False, "sl": False, "why": f"platform {platform!r} has no executor amend path"}
 
 

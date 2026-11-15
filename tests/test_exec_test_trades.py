@@ -84,6 +84,12 @@ def test_every_bound_refuses(monkeypatch):
     monkeypatch.setattr(et, "_day_loss", lambda a, n: {"loss_usd": None, "limit_usd": None, "fraction": None})
     assert et.check_bounds("breakout_2", "ETHUSDT", now=NOW)["refusals"] == [
         "day_loss_unreadable: the daily-DD switch has no readable loss/limit for today (a null is not 0; never a test trade blind)"]
+    # awaiting_day_start (the day just reset, first reading not in yet) is a LABEL, never a
+    # refusal (DD-SWITCH-OVERRIDE; no new gates): only the armed switch past its threshold blocks.
+    monkeypatch.setattr(et, "_day_loss", lambda a, n: {"loss_usd": None, "limit_usd": None, "fraction": None,
+                                                       "tripped": False, "read_state": "awaiting_day_start"})
+    v = et.check_bounds("breakout_2", "ETHUSDT", now=NOW)
+    assert v["ok"] is True and v["refusals"] == [] and v["day_loss_label"] == "awaiting_day_start"
     monkeypatch.setattr(et, "_day_loss", lambda a, n: {"loss_usd": 70.0, "limit_usd": 120.0, "fraction": 70 / 120, "tripped": False})
     assert et.check_bounds("breakout_2", "ETHUSDT", now=NOW)["refusals"][0].startswith("day_loss_past_bound")
     monkeypatch.setattr(et, "_day_loss", lambda a, n: {"loss_usd": 1.0, "limit_usd": 120.0, "fraction": 1 / 120, "tripped": True})

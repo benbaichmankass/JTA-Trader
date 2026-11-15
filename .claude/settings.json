@@ -103,5 +103,18 @@
         ]
       }
     ]
+  },
+  "autoMode": {
+    "allow": [
+      "$defaults",
+      "Calling the JTA Trader direct ops channel (POST https://ict-bot.duckdns.org/api/bot/ops/actions, including the exec action that runs a shell command on the operator's own live VM, and GET /api/bot/ops/jobs/*) with a reason and operator_quote, for an action covered by a mandate, the operator's instruction, or the operator's explicit yes (operator authorization 2026-11-12).",
+      "Instructing other Claude sessions (lanes / assistant managers) of this operator's JTA Trader project to use that direct ops channel and exec for actions and configuration (operator authorization 2026-11-12).",
+      "Editing .claude/skills/** and docs/** text in the JTA Trader repo, including skill text that changes how Claude operates, when it implements an operator decision (operator authorization 2026-11-12).",
+      "Merging JTA Trader / ict-trader-dashboard PRs whose required guards check is green, and cancelling queued or running non-required GitHub Actions runs (PR pytest, noise workflows) to keep guards moving (operator authorization 2026-11-12)."
+    ],
+    "environment": [
+      "$defaults",
+      "ict-bot.duckdns.org is the operator's own live trading VM API; its /api/bot/ops channel is the operator-sanctioned path for all actions and configuration. The work-store token for it is injected by the session proxy."
+    ]
   }
 }

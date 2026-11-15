@@ -74,6 +74,13 @@ TELEMETRY_EVENTS = ("r_milestone", "new_peak", "giveback", "near_target")
 #: Events computed from market inputs (history / funding / calendar).
 MARKET_EVENTS = ("swing", "vol_regime", "funding", "calendar")
 
+#: vol_regime's entry ATR when the path history lacks the entry bar: the strategy's signal-time ATR stamped on the
+#: package (order_packages.meta.atr). Always named in the event's ``why`` so it never reads as path-measured.
+ENTRY_ATR_PACKAGE_META = "package_meta"
+#: Package-meta keys that carry the strategy's signal-time ATR, in read order (13 legs stamp `atr`; ml_entry,
+#: ml_entry_eq and e4_oi_shock_1h stamp `atr14`). The key read is named wherever the value is used.
+ENTRY_ATR_META_KEYS = ("atr", "atr14")
+
 #: Pre-screen events (LTR-PRACTICE-REDESIGN): evaluated only when configured.
 #: The per-package auto mandate's review cadence (src/runtime/ltr_auto_mandate.py::CADENCE_EVENT).
 CADENCE_EVENT = "mandate_cadence"
@@ -89,13 +96,40 @@ SKIPPED_CLOSED = "skipped_closed_market"
 SKIPPED_NOTHING_NEW = "skipped_nothing_new"
 
 
+# RM-AM-DUE-COULDNOTLOOK (measured 2026-11-12 on the VM after #25234): compute_due took 8-20 s of the route's
+# 9-30 s because every package_market_state call went through market_hours.asset_class_for_symbol, which re-parses
+# config/instruments.yaml (load_instrument_profiles is not memoized): 41 parses = 13.7 s of a 13.8 s compute_due on
+# 20 packages, profiled locally. The exchange per symbol is now read once per PROFILE_TTL_S and shared by every call
+# in the process. Same mapping as asset_class_for_symbol (profile exchange -> asset class; unprofiled -> crypto); a
+# failed profile read is not cached, so the next call retries.
+PROFILE_TTL_S = 300.0
+_PROFILE_EXCHANGE: Dict[str, Optional[str]] = {}
+_PROFILE_LOADED_AT: Optional[float] = None
+_PROFILE_LOCK = threading.Lock()
+
+
+def profile_exchange(symbol: Any) -> Optional[str]:
+    """The instrument profile's ``exchange`` for *symbol* (``config/instruments.yaml``), None when unprofiled.
+    Raises when the profiles cannot be read (callers already treat that as could-not-read)."""
+    global _PROFILE_LOADED_AT
+    now = time.monotonic()
+    with _PROFILE_LOCK:
+        if _PROFILE_LOADED_AT is None or now - _PROFILE_LOADED_AT > PROFILE_TTL_S:
+            from src.core.profile_loader import load_instrument_profiles
+            profs = load_instrument_profiles() or {}
+            _PROFILE_EXCHANGE.clear()
+            _PROFILE_EXCHANGE.update({str(k).upper(): getattr(v, "exchange", None) for k, v in profs.items()})
+            _PROFILE_LOADED_AT = now
+        return _PROFILE_EXCHANGE.get(str(symbol or "").strip().upper())
+
+
 def package_market_state(symbol: Any, now: datetime) -> Tuple[bool, str, str]:
     """``(open, asset_class, why)`` for the package's instrument at *now*, from the one session helper
     (``src.runtime.market_hours``). Crypto perps are always open. An unreadable helper or an asset class it
     does not model reads OPEN, with the reason: a review that fires is the safe side (Prime Directive)."""
     try:
-        from src.runtime.market_hours import ASSET_CLASSES, asset_class_for_symbol, is_market_open
-        cls = asset_class_for_symbol(str(symbol or ""))
+        from src.runtime.market_hours import ASSET_CLASSES, asset_class_for_exchange, is_market_open
+        cls = asset_class_for_exchange(profile_exchange(symbol) or "")
         if cls not in ASSET_CLASSES:
             return True, str(cls), f"asset class {cls!r} not modelled: treated as open"
         return bool(is_market_open(cls, now)), cls, f"{cls} market {'open' if is_market_open(cls, now) else 'closed'}"
@@ -423,10 +457,49 @@ def merge_branch_rows(main_rows: List[Dict[str, Any]], branch_rows: Iterable[Dic
     return list(main_rows) + extra
 
 
+def read_direct_rows(root: Optional[str] = None) -> Dict[str, Any]:
+    """Rows a reviewer POSTed DIRECTLY to the VM (``POST /api/bot/live-review/rows``, TRADE-ACTION-DIRECT-PATH;
+    REVIEWER-BRIEF § 4a makes that the primary submit and says not to also write the branch file).
+
+    They live only in ``runtime_logs/live_review/direct/comms/live_review/rows/<review_id>.json``: nothing
+    exports them to ``live-review/rows`` or main, so without this read the due index and the packet's
+    ``previous_review`` never see them (LTR-DIRECT-ROWS-INVISIBLE). Local read, no network. ``state``
+    read | absent (no direct dir yet) | could_not_look; an unreadable single file is skipped and counted.
+    """
+    try:
+        from src.runtime import live_review_rows as rows_lib
+        if root is None:
+            from src.runtime import live_review_rows_watch as watch
+            root = str(watch.direct_root())
+        d = os.path.join(root, rows_lib.ROWS_DIR)
+        if not os.path.isdir(d):
+            return {"state": "absent", "rows": [], "bad_files": 0}
+        rows: List[Dict[str, Any]] = []
+        bad = 0
+        for name in sorted(os.listdir(d)):
+            if not name.endswith(".json"):
+                continue
+            try:
+                with open(os.path.join(d, name), "r", encoding="utf-8") as fh:
+                    obj = json.load(fh)
+            except (OSError, ValueError):
+                bad += 1
+                continue
+            if isinstance(obj, dict) and obj.get("review_id"):
+                rows.append(obj)
+            else:
+                bad += 1
+        return {"state": "read", "rows": rows, "bad_files": bad}
+    except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as direct_state could_not_look; main+branch stand
+        return {"state": "could_not_look", "rows": [], "reason": f"direct_error: {type(exc).__name__}: {exc}"}
+
+
 def read_reviews_merged(path: Optional[str] = None,
-                        branch: Optional[Callable[[], Dict[str, Any]]] = None) -> Dict[str, Any]:
-    """:func:`read_reviews` plus the branch rows; ``branch_state`` / ``branch_added`` say what it did.
-    A branch read that fails leaves the main-only answer (never blocks a wake)."""
+                        branch: Optional[Callable[[], Dict[str, Any]]] = None,
+                        direct: Optional[Callable[[], Dict[str, Any]]] = None) -> Dict[str, Any]:
+    """:func:`read_reviews` plus the branch rows plus the direct-POST rows (deduped by review_id);
+    ``branch_state``/``branch_added`` and ``direct_state``/``direct_added`` say what it did. A branch or direct
+    read that fails leaves what was read (never blocks a wake)."""
     rv = read_reviews(path)
     br = (branch or read_branch_rows)()
     rv["branch_state"] = br["state"]
@@ -435,6 +508,16 @@ def read_reviews_merged(path: Optional[str] = None,
     if br["state"] == "read" and rv["state"] != "unreadable":
         merged = merge_branch_rows(rv["rows"], br["rows"])
         rv["branch_added"] = len(merged) - len(rv["rows"])
+        rv["rows"] = merged
+        if rv["state"] == "absent" and merged:
+            rv["state"] = "read"
+    dr = (direct or read_direct_rows)()
+    rv["direct_state"] = dr["state"]
+    rv["direct_reason"] = dr.get("reason")
+    rv["direct_added"] = 0
+    if dr["state"] == "read" and rv["state"] != "unreadable":
+        merged = merge_branch_rows(rv["rows"], dr["rows"])
+        rv["direct_added"] = len(merged) - len(rv["rows"])
         rv["rows"] = merged
         if rv["state"] == "absent" and merged:
             rv["state"] = "read"
@@ -590,6 +673,23 @@ def _base_of(symbol: Any) -> str:
     return base
 
 
+def review_calendar_classes(symbol: Any, base: str, cc: Dict[str, Any], now: datetime) -> Set[str]:
+    """LTR-CALENDAR-CLASSES (b): the REVIEW-ONLY event classes for *symbol* from ``events.calendar`` in
+    config/live_trade_review.yaml -- ``review_classes_by_base[base]``, else
+    ``review_classes_by_asset_class[<asset class of its instrument profile>]``. An unprofiled symbol (or an
+    unreadable profile) gets none, so it stays could_not_look. The trader's event risk never reads this."""
+    by_base = cc.get("review_classes_by_base") or {}
+    if base in by_base:
+        return {str(c).lower() for c in by_base.get(base) or []}
+    try:
+        if profile_exchange(symbol) is None:
+            return set()
+    except Exception:  # noqa: BLE001  # allow-silent: no default; the event stays could_not_look with its reason
+        return set()
+    _, cls, _ = package_market_state(symbol, now)
+    return {str(c).lower() for c in (cc.get("review_classes_by_asset_class") or {}).get(cls) or []}
+
+
 def _is_perp(symbol: Any) -> bool:
     try:
         from src.runtime.execution_costs import is_perp
@@ -657,16 +757,30 @@ def market_events(row: Dict[str, Any], ctx: Optional[Dict[str, Any]],
         else:
             entry_bar = last_ts - timedelta(seconds=bars_held * tf_seconds)
             late = (first_ts - entry_bar).total_seconds()
-            if late > tf_seconds + 60:
-                miss("vol_regime", f"history starts {late / tf_seconds:.1f} bars after entry")
+            a1 = _f(atrs[-1]["atr"])
+            a0, src = None, None
+            if late <= tf_seconds + 60:
+                a0, src = _f(atrs[0]["atr"]), "path_history"
             else:
-                a0, a1 = _f(atrs[0]["atr"]), _f(atrs[-1]["atr"])
+                # LTR-VOLREGIME-ENTRY-ATR (AM-TRADING decision 2026-11-12 13:50Z): the path history lacks the
+                # entry bar, so take the entry ATR the strategy stamped on the package (order_packages.meta.atr,
+                # computed at signal time), LABELLED as such so it never reads as path-measured. Review path only.
+                venue = ctx.get("venue") or {}
+                m = _f(venue.get("meta_atr")) if venue.get("state") == "read" else None
+                if m is not None and m > 0:
+                    a0, src = m, ENTRY_ATR_PACKAGE_META
+                else:
+                    miss("vol_regime", f"history starts {late / tf_seconds:.1f} bars after entry "
+                                       "and the package carries no entry ATR")
+            if a0 is not None and a0 > 0 and a1 is not None:
                 ratio = a1 / a0
+                key = (ctx.get("venue") or {}).get("meta_atr_key") or "atr"
+                tag = "" if src == "path_history" else f" (entry_atr_source={src}, meta.{key}: not path-measured)"
                 up, dn = float(vr.get("expand_ratio", 1.5)), float(vr.get("contract_ratio", 0.67))
                 if ratio >= up:
-                    out.append(("vol_regime", "expand", f"ATR now/entry {ratio:.2f} >= {up:g}"))
+                    out.append(("vol_regime", "expand", f"ATR now/entry {ratio:.2f} >= {up:g}{tag}"))
                 elif ratio <= dn:
-                    out.append(("vol_regime", "contract", f"ATR now/entry {ratio:.2f} <= {dn:g}"))
+                    out.append(("vol_regime", "contract", f"ATR now/entry {ratio:.2f} <= {dn:g}{tag}"))
 
     # -- funding: crypto perps only ------------------------------------------
     sym = row.get("symbol")
@@ -698,6 +812,7 @@ def market_events(row: Dict[str, Any], ctx: Optional[Dict[str, Any]],
     else:
         base = _base_of(sym)
         classes = {str(c).lower() for c in (cal.get("classes") or {}).get(base) or []}
+        classes |= review_calendar_classes(sym, base, cc, now)
         if not classes:
             miss("calendar", f"no event classes declared for {base}")
         else:
@@ -931,7 +1046,17 @@ def prescreen(row: Dict[str, Any], prior: Dict[str, Any], ctx: Optional[Dict[str
         need = stall_bars(sc, tf_seconds)
         max_peak = float(sc.get("max_peak_r", 0.5))
         if held is None or peak_r is None:
-            miss("stall", tel_reason or "bars_held / peak_r unknown")
+            # thin_window = fewer than 2 bars since entry (trail_decay): a YOUNG package, said so, so the
+            # done bar counts it as youth (AM-TRADING OK 2026-11-12 14:32Z; honest label, no new behaviour).
+            if tel_reason is None and peak_r is None and held is not None \
+                    and row.get("peak_state") == "thin_window":
+                miss("stall", f"peak_r thin_window: {int(held)} bar(s) since entry; need 2")
+            elif tel_reason is None and peak_r is None and row.get("peak_state") == "unanchored":
+                # Not youth: telemetry cannot anchor the since-entry window because the package meta carries no
+                # entry_time (the strategy does not publish one), so peak_r is never measured for this leg.
+                miss("stall", "peak_r unanchored: package meta has no entry_time (the strategy does not publish it)")
+            else:
+                miss("stall", tel_reason or "bars_held / peak_r unknown")
         else:
             hit = held >= need and peak_r < max_peak
             lvl = int(held // need) * need if hit else None
@@ -1317,8 +1442,7 @@ def _prop_telemetry(symbol: Any, direction: Any, entry: Any, qty: Any,
     if not isinstance(mark, (int, float)) or mark <= 0:
         return dict(base, reason="mark_unavailable", mark=None)
     try:  # the instrument profile's exchange, as prop_overview labels it (not imported: layer-guard)
-        from src.core.profile_loader import load_instrument_profiles
-        ex = getattr((load_instrument_profiles() or {}).get(str(symbol).upper()), "exchange", None)
+        ex = profile_exchange(symbol)
     except Exception:  # noqa: BLE001  # allow-silent: an unread profile is labelled, not guessed
         ex = None
     src = f"{str(ex).lower() if ex else 'bot_feed'}_last_close_5m"
@@ -1535,10 +1659,17 @@ def read_venue_context(pkgs: List[str], db_path: Optional[str] = None) -> Dict[s
         if lv is None:
             out[p] = {"state": "could_not_look", "reason": "package_not_in_order_packages"}
             continue
-        meta_atr = None
+        meta_atr, meta_atr_key = None, None
         try:
             m = json.loads(lv["meta"]) if lv["meta"] else {}
-            meta_atr = _f(m.get("atr")) if isinstance(m, dict) else None
+            # The strategy's signal-time ATR: most legs stamp `atr`; ml_entry / ml_entry_eq / e4_oi_shock_1h stamp
+            # `atr14` (same meaning, ATR14 at the decision bar). RM-AM-DUE-COULDNOTLOOK re-score 2026-11-12 21:13Z:
+            # two ml_entry packages read "no entry ATR" because only `atr` was read.
+            for key in ENTRY_ATR_META_KEYS:
+                v = _f(m.get(key)) if isinstance(m, dict) else None
+                if v is not None and v > 0:
+                    meta_atr, meta_atr_key = v, key
+                    break
         except (ValueError, TypeError):
             meta_atr = None  # allow-silent: an unreadable meta is "no entry ATR", reported as such downstream
         # LTR-MECH-PROP-MIRROR-BRACKET: when the package stop last moved -- the stamped mover record only. A package
@@ -1547,7 +1678,8 @@ def read_venue_context(pkgs: List[str], db_path: Optional[str] = None) -> Dict[s
         from src.runtime.sl_mover import last_sl_move_ts
         moved_at = last_sl_move_ts(lv["meta"])
         out[p] = {"state": "read", "snapshots": snaps.get(p, []), "pkg_sl": _f(lv["sl"]),
-                  "pkg_tp": _f(lv["tp"]), "meta_atr": meta_atr, "pkg_sl_changed_at": moved_at}
+                  "pkg_tp": _f(lv["tp"]), "meta_atr": meta_atr, "meta_atr_key": meta_atr_key,
+                  "pkg_sl_changed_at": moved_at}
     return out
 
 
@@ -1592,7 +1724,8 @@ def live_review_due(db_path: Optional[str] = None,
                     funding_db_path: Optional[str] = None,
                     calendar_path: Optional[str] = None,
                     branch: Optional[Callable[[], Dict[str, Any]]] = None,
-                    mark_fn: Optional[Callable[[Any], Optional[float]]] = None) -> Dict[str, Any]:
+                    mark_fn: Optional[Callable[[Any], Optional[float]]] = None,
+                    direct: Optional[Callable[[], Dict[str, Any]]] = None) -> Dict[str, Any]:
     """The route payload. ``mark_fn`` = the bot-feed mark (``local_pnl.last_mark_price``) the ROUTE supplies for
     prop uPnL estimates; None -> those fields are could_not_look ``no_mark_source_supplied``. Never raises. With the default reviews path the prior-review index also
     holds the rows on ``live-review/rows`` that main lacks (``branch`` overrides that read)."""
@@ -1615,10 +1748,13 @@ def live_review_due(db_path: Optional[str] = None,
     env["thresholds_source"] = CONFIG_REL.replace(os.sep, "/")
 
     t_rv = time.monotonic()
-    if reviews_path is None or branch is not None:
-        rv = read_reviews_merged(reviews_path, branch)
+    if reviews_path is None or branch is not None or direct is not None:
+        rv = read_reviews_merged(reviews_path, branch, direct)
         env["branch_state"], env["branch_reason"] = rv["branch_state"], rv["branch_reason"]
         env["branch_rows_added"] = rv["branch_added"]
+        # LTR-DIRECT-ROWS-INVISIBLE: direct-POST reviews count toward dedupe / cadence like any other row
+        env["direct_state"], env["direct_reason"] = rv["direct_state"], rv["direct_reason"]
+        env["direct_rows_added"] = rv["direct_added"]
     else:
         rv = read_reviews(reviews_path)
     timings["reviews"] = _ms(t_rv)

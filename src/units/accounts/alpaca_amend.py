@@ -65,6 +65,7 @@ import argparse
 import json
 import logging
 import math
+import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -245,6 +246,25 @@ def _patch(client: Any, leg_id: str, field: str, price: float) -> Dict[str, Any]
             "replaces": res.get("replaces")}
 
 
+#: ALPACA-AMEND-REPLACE-RACE (2026-11-13): a PATCH replace is ASYNCHRONOUS at Alpaca -- it returns the NEW order id
+#: while the OLD leg still reads as resting for a few seconds. Reading back once, immediately, called real amends
+#: apply_failed (alpaca_paper SLV 7114, 17:00:18Z and 21:00:20Z; the next tick read the new level each time). When the
+#: read-back shows exactly that -- the old leg still resting after a PATCH that returned a different new id -- re-read
+#: every _REPLACE_SETTLE_STEP_S for up to _REPLACE_SETTLE_MAX_S before judging. Every other outcome is judged at once.
+_REPLACE_SETTLE_STEP_S = 0.5
+_REPLACE_SETTLE_MAX_S = 5.0
+_sleep = time.sleep   # seam for tests
+
+
+def _replace_pending(after: Dict[str, Any], kind: str, sent: Dict[str, Any], old_id: str) -> bool:
+    """True while the read-back still shows the OLD leg after a PATCH that returned a different new id."""
+    if after.get("read_state") != "resolved":
+        return False
+    leg = after.get("stop_leg" if kind == "stop" else "target_leg")
+    want_id = sent.get("new_id")
+    return bool(leg and want_id and want_id != old_id and leg.get("id") == old_id)
+
+
 def _verify(after: Dict[str, Any], kind: str, level: float, sent: Dict[str, Any],
             old_id: str) -> Optional[str]:
     """``None`` when the read-back shows *level* on this trade's *kind* leg,
@@ -340,11 +360,20 @@ def tighten(client: Any, *, symbol: str, direction: str, qty: float,
         if not sent.get("ok"):
             return {**out, "result": X_APPLY_FAILED,
                     "detail": f"PATCH {step['kind']} leg {step['leg_id']} refused: {sent.get('retMsg')}"}
-        try:
-            after = read_trade_legs(client, symbol=symbol, direction=direction, qty=qty)
-        except Exception as exc:  # noqa: BLE001
-            after = {"read_state": "read_failed", "detail": str(exc)}
+        waited = 0.0
+        while True:
+            try:
+                after = read_trade_legs(client, symbol=symbol, direction=direction, qty=qty)
+            except Exception as exc:  # noqa: BLE001
+                after = {"read_state": "read_failed", "detail": str(exc)}
+            if not _replace_pending(after, step["kind"], sent, step["leg_id"]) \
+                    or waited >= _REPLACE_SETTLE_MAX_S:
+                break
+            _sleep(_REPLACE_SETTLE_STEP_S)
+            waited += _REPLACE_SETTLE_STEP_S
         out["after"] = after
+        if waited:
+            out.setdefault("replace_settle_s", {})[step["kind"]] = waited
         why = _verify(after, step["kind"], step["to"], sent, step["leg_id"])
         if why:
             return {**out, "result": X_APPLY_FAILED, "detail": why}

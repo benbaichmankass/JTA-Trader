@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 3, operator-approved. decision: 2026-11-12 operator decisions page x2 \"Per account: min($500, 5% of equity)\". src/runtime/losing_streak_alert.py: each account's size floor = min(LOSING_STREAK_MIN_LOSS_USD, 0.05 x equity from runtime_logs/balance_snapshots.json). The floor only goes down, so this adds alerting and never suppresses it; unreadable equity keeps the fleet floor with an equity_unreadable label. When hit: one latched WARNING (Telegram + FCM), exactly as before; nothing refused, resized, closed or switched off; the RiskManager does not read it. Revert: git revert.",
+  "why": "A sub-$500 bleed on a small real-money account was invisible to the losing-streak alert by construction (BL-20260911)."
+}

@@ -71,6 +71,7 @@ on:
         options:
           - status-check
           - disk-usage-report
+          - vm-cpu-sample
           - prune-db-backups
           - vm-sparse-bootstrap
           - cap-vm-logs
@@ -80,6 +81,7 @@ on:
           - security-posture-report
           - gateway-disk-report
           - gateway-disk-cleanup
+          - host-security-change
           - pull-latest-logs
           - pull-and-deploy
           - restart-bot-service
@@ -305,7 +307,11 @@ permissions:
 #     so it can neither displace nor be displaced;
 #   * every other action keeps the shared "system-actions" group, so two
 #     mutations on the VM still never run at once.
-# The shared lane can still drop a pending run; system-actions-cancel-guard.yml
+#   ⚠️ SUPERSEDED 2026-11-12 (operator, SYSTEM-ACTION-CONCURRENCY-LANES: MAKE
+#     REPORT-ONLY): every action now gets a group of its own
+#     (system-actions-<run_id>), so nothing queues or is displaced; the route
+#     job REPORTS other runs in flight instead (warning + issue comment).
+# The shared lane could drop a pending run; system-actions-cancel-guard.yml
 # then comments "CANCELLED, NOT RUN" on its issue and sends one alert. It never
 # re-queues (that would run the older request after the newer one that displaced it).
 # (verify-account-mode is read-only, so it no longer needs its per-account
@@ -329,8 +335,10 @@ jobs:
     timeout-minutes: 3
     permissions:
       contents: read
+      actions: read   # list in-flight system-actions runs for the overlap report
     outputs:
       group: ${{ steps.r.outputs.group }}
+      overlap: ${{ steps.ov.outputs.overlap }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -346,6 +354,34 @@ jobs:
           python3 scripts/ops/system_action_route.py --event "${{ github.event_name }}" --run-id "${{ github.run_id }}" | tee -a "$GITHUB_OUTPUT"
           mkdir -p request
           printf '%s\n' "${ISSUE_NUMBER:-}" > request/issue_number
+      # SYSTEM-ACTION-CONCURRENCY-LANES: REPORT-ONLY (operator 2026-11-12). Every run has a
+      # group of its own, so nothing waits; this step REPORTS other system-actions runs in
+      # flight: a ::warning:: here, and an "Overlap" note in the outcome comment the
+      # system-action job posts (one comment per request, so issue pollers are not misled).
+      # It never waits, cancels or fails the run.
+      - name: Report overlapping system-actions runs (report-only)
+        id: ov
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          api="https://api.github.com/repos/${{ github.repository }}"
+          runs=$(mktemp); all=$(mktemp)
+          for st in queued in_progress; do
+            if curl -sSf -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" \
+                 "$api/actions/workflows/system-actions.yml/runs?status=${st}&per_page=50" > "$runs"; then
+              python3 scripts/ops/system_action_route.py --event x --run-id "${{ github.run_id }}" --overlap-from "$runs" >> "$all"
+            else
+              echo "could not look (runs API, status=${st})" >> "$all"
+            fi
+          done
+          if [ -s "$all" ]; then
+            while IFS= read -r line; do echo "::warning::system-action overlap: ${line}"; done < "$all"
+          else
+            echo "no other system-actions run in flight"
+          fi
+          { echo "overlap<<OVERLAP_EOF"; cat "$all"; echo "OVERLAP_EOF"; } >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         with:
           name: system-action-request
@@ -928,10 +964,10 @@ jobs:
         run: |
           set -euo pipefail
           case "${ACTION}" in
-            status-check|verify-account-mode|disk-usage-report|list-listening-ports|gateway-logs|gateway-forensics|security-posture-report|gateway-disk-report|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|send-ping|send-prop-test-ping|phone-dry-test|phone-drill|generate-strategy-review-packets|grade-closed-trades|net-r-regrade|get-env|passkey-enrol-code|live-review-dry-run)
+            status-check|verify-account-mode|disk-usage-report|vm-cpu-sample|list-listening-ports|gateway-logs|gateway-forensics|security-posture-report|gateway-disk-report|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|send-ping|send-prop-test-ping|phone-dry-test|phone-drill|generate-strategy-review-packets|grade-closed-trades|net-r-regrade|get-env|passkey-enrol-code|live-review-dry-run)
               echo "tier=1" >>"$GITHUB_ENV"
               ;;
-            pull-and-deploy|vm-sparse-bootstrap|init-web-session-pepper|install-web-api-deps|cap-vm-logs|gateway-disk-cleanup|set-journal-trade-qty|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|set-bybit-collateral-switch|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|rearm-ib-protective|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|purge-phone-captures|close-api-port|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|prop-report-skip|prop-report-open|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs|relabel-package-close-reasons|backfill-package-risk-meta|relink-orphan-trade-5209|amend-position-sl|amend-prop-bracket|live-review-apply|run-desk-judge)
+            pull-and-deploy|vm-sparse-bootstrap|init-web-session-pepper|install-web-api-deps|cap-vm-logs|gateway-disk-cleanup|host-security-change|set-journal-trade-qty|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|set-bybit-collateral-switch|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|rearm-ib-protective|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|purge-phone-captures|close-api-port|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|prop-report-skip|prop-report-open|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs|relabel-package-close-reasons|backfill-package-risk-meta|relink-orphan-trade-5209|amend-position-sl|amend-prop-bracket|live-review-apply|run-desk-judge)
               echo "tier=2" >>"$GITHUB_ENV"
               if [ -z "${REASON// }" ]; then
                 echo "::error::Tier-2 action '${ACTION}' requires a non-empty 'reason' input."
@@ -1971,6 +2007,13 @@ jobs:
           # uses), to install the new value as secrets.DIAG_READ_TOKEN.
           ROTATE_OLD_DIAG_TOKEN: ${{ env.ACTION == 'init-diag-token' && secrets.DIAG_READ_TOKEN || '' }}
           ROTATE_GH_TOKEN: ${{ env.ACTION == 'init-diag-token' && secrets.BRANCH_PROTECTION_TOKEN || '' }}
+          # host-security-change ONLY (SEC-HOST-CHANGES-1112): the secrets PAT for
+          # keys-runner-rotate/revert, the saved legacy key for keys-runner-revert /
+          # keys-retire-legacy, and the trainer address (fail2ban ignoreip; key split).
+          HSC_GH_TOKEN: ${{ env.ACTION == 'host-security-change' && secrets.BRANCH_PROTECTION_TOKEN || '' }}
+          HSC_LEGACY_KEY: ${{ env.ACTION == 'host-security-change' && secrets.VM_SSH_KEY_LEGACY || '' }}
+          HSC_TRAINER_IP: ${{ env.ACTION == 'host-security-change' && secrets.TRAINER_VM_IP || '' }}
+          HSC_TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
         run: |
           set -euo pipefail
           # Each action maps to ONE script under scripts/ops/. The
@@ -1979,6 +2022,7 @@ jobs:
           case "${ACTION}" in
             status-check)                       SCRIPT="status_check.sh" ;;
             disk-usage-report)                  SCRIPT="disk_usage_report.sh" ;;
+            vm-cpu-sample)                      SCRIPT="vm_cpu_sample.sh" ;;
             prune-db-backups)                   SCRIPT="prune_db_backups.sh" ;;
             purge-phone-captures)               SCRIPT="purge_phone_captures_action.sh" ;;
             close-api-port)                     SCRIPT="close_api_port_action.sh" ;;
@@ -1990,6 +2034,7 @@ jobs:
             security-posture-report)            SCRIPT="security_posture_report.sh" ;;
             gateway-disk-report)                SCRIPT="gateway_disk_report.sh" ;;
             gateway-disk-cleanup)               SCRIPT="gateway_disk_cleanup.sh" ;;
+            host-security-change)               SCRIPT="host_security_change.sh" ;;
             pull-latest-logs)                   SCRIPT="pull_logs.sh" ;;
             pull-and-deploy)                    SCRIPT="pull_and_deploy.sh" ;;
             restart-bot-service)                SCRIPT="restart_bot.sh" ;;
@@ -2252,13 +2297,15 @@ jobs:
             # adapter + IB _build_contract map (MES/MGC/MHG) — the pull writes
             # market_raw/<SYMBOL>/<tf>/<version>/data.jsonl.
             if [ -z "${ACTION_SYMBOL// }" ]; then
-              echo "::error::pull-ibkr-history requires 'symbol: <MES|MGC|MHG>' (issue body)."
+              echo "::error::pull-ibkr-history requires 'symbol: <MES|MNQ|MGC|MHG>' (issue body)."
               exit 1
             fi
+            # MNQ added 2026-11-12 (FUT-CME-INTRADAY-HIST): read-only history
+            # for the Tradeify futures research; CME-listed like MES.
             case "${ACTION_SYMBOL}" in
-              MES|MGC|MHG) : ;;
+              MES|MNQ|MGC|MHG) : ;;
               *)
-                echo "::error::pull-ibkr-history symbol '${ACTION_SYMBOL}' not supported (allowed: MES, MGC, MHG — the IB futures roots _build_contract maps)."
+                echo "::error::pull-ibkr-history symbol '${ACTION_SYMBOL}' not supported (allowed: MES, MNQ, MGC, MHG)."
                 exit 1
                 ;;
             esac
@@ -2779,6 +2826,24 @@ jobs:
           # ⚠️ ::add-mask:: protects the RUN LOG only — action-output.txt is
           # posted verbatim to the issue on a PUBLIC repo, which is why neither
           # script ever prints the value (tests/ops/test_init_diag_token_rotation.py).
+          # host-security-change is ORCHESTRATED FROM THE RUNNER (SEC-HOST-CHANGES-1112):
+          # every step is an ssh from here, dry-run unless apply: true, each with a
+          # revert target; it prints fingerprints, never key material or addresses.
+          if [ "${ACTION}" = "host-security-change" ]; then
+            set +e
+            ACTION_TARGET="${ACTION_TARGET:-}" ACTION_APPLY="${ACTION_APPLY:-}" \
+            GH_TOKEN="${HSC_GH_TOKEN}" LEGACY_KEY_VALUE="${HSC_LEGACY_KEY}" \
+            TRAINER_IP="${HSC_TRAINER_IP}" TRAINER_USER="${HSC_TRAINER_USER}" \
+            SSH_KEY="${HOME}/.ssh/id_rsa" \
+              bash scripts/ops/host_security_change.sh > action-output.txt 2>&1
+            rc=$?
+            set -e
+            echo "exit_code=${rc}" >>"$GITHUB_OUTPUT"
+            echo ">>> host-security-change exit code: ${rc}"
+            cat action-output.txt
+            exit "${rc}"
+          fi
+
           if [ "${ACTION}" = "init-diag-token" ]; then
             NEW_TOKEN_FILE="${RUNNER_TEMP}/diag_new_token"
             ( umask 077; openssl rand -hex 32 | tr -d '\n' > "${NEW_TOKEN_FILE}" )
@@ -3076,6 +3141,7 @@ jobs:
         uses: actions/github-script@v7
         env:
           EXIT_CODE: ${{ steps.exec.outputs.exit_code }}
+          OVERLAP: ${{ needs.route.outputs.overlap }}
         with:
           script: |
             const fs = require('fs');
@@ -3136,6 +3202,12 @@ jobs:
                 `The run page has the full audit bundle ` +
                 `(audit-bundle.json + pre/post-state.json + action-output.txt).\n` +
                 `\n\`\`\`\n${tail}\n\`\`\``;
+            }
+            // SYSTEM-ACTION-CONCURRENCY-LANES: report-only (operator 2026-11-12).
+            const overlap = (process.env.OVERLAP || '').trim();
+            if (overlap) {
+              body += `\n\n**Overlap (report-only):** other system-actions runs were in flight ` +
+                `when this one started. Nothing waited or was cancelled.\n\`\`\`\n${overlap}\n\`\`\``;
             }
             await github.rest.issues.createComment({
               owner: context.repo.owner,

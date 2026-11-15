@@ -70,7 +70,7 @@ if [ "${action}" = "send-ping" ]; then
 fi
 
 case "${action}" in
-    status-check|disk-usage-report|list-listening-ports|gateway-logs|gateway-forensics|security-posture-report|gateway-disk-report|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|generate-strategy-review-packets|send-prop-test-ping|phone-dry-test|phone-drill|grade-closed-trades|net-r-regrade|get-env)
+    status-check|disk-usage-report|vm-cpu-sample|list-listening-ports|gateway-logs|gateway-forensics|security-posture-report|gateway-disk-report|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|generate-strategy-review-packets|send-prop-test-ping|phone-dry-test|phone-drill|grade-closed-trades|net-r-regrade|get-env)
         tier=1
         if [ "${exit_code}" -eq 0 ]; then
             result="ok"
@@ -138,6 +138,14 @@ case "${action}" in
         case "${exit_code}" in
             0|255) result="scheduled (shutdown -r +1)"; priority="high" ;;
             *)     result="FAILED to schedule (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
+    host-security-change)
+        # SEC-HOST-CHANGES-1112: sshd / fail2ban / gateway reboot / ssh key split.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok"; priority="normal" ;;
+            *) result="FAILED (exit ${exit_code}) — see the issue; each target reports its own rollback"; priority="urgent" ;;
         esac
         ;;
     enable-closed-flat-invariant|disable-closed-flat-invariant)

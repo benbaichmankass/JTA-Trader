@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Row LTR-PROP-PACKET-OPEN-R (tooling). Every live-review packet for a prop-only package read state.open_r null (priced_options could_not_price), because the prop executor runs prop positions and no telemetry row exists (seen on pkg-d8838f396234477c tradeify_1 and pkg-48c5cfab364e430c velotrade_1). scripts/ops/live_review_packet.py now derives open_r / peak_r / giveback / bars_held / r_to_stop / r_to_target from the FILLED prop ticket, the declared initial risk (else ticket entry-to-stop), and the last CLOSED bar the packet already fetches. It is stamped provenance prop_ticket_mark (estimated), and the estimate is named in missing_inputs. Read-only tooling; no runtime, no order path. 3 tests (2 fail on the old code); 115 packet/LTR tests pass. Revert: git revert."
+}

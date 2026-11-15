@@ -15,6 +15,10 @@ What this does, and nothing more:
 * **Alerts once.** One Telegram alert per distinct conflict (symbol + the set of packages on each side), through
   the ``telegram_channels`` chokepoint, so it lands in the alert ledger. It names each leg, its timeframe, its
   accounts and its open R. A conflict that resolves and comes back alerts again; a standing one never repeats.
+  **A leg LEAVING is not a new conflict** (2026-11-15, ``carry_forward``): when the live package set is a subset
+  of a set already alerted for that symbol (both sides still non-empty), the conflict keeps the alerted key, so
+  neither the alert nor the review re-fires. Only a package JOINING (not in the alerted set) makes a new key.
+  (Measured 2026-11-15: one ETHUSDT conflict re-fired 3x in 3h, each time because a short leg exited.)
 * **Queues a review.** ``live_review_due`` adds the due event ``conflicting_exposure`` (level = the conflict key)
   to every package in the conflict, so the live-trade review prices "keep both" vs "close one side" for the
   package set, once per conflict.
@@ -94,14 +98,43 @@ def timeframe_of(strategy: Any, declared: dict[str, str]) -> str | None:
     return f"{m.group(1)}{m.group(2)}" if m else None
 
 
-def open_r(direction: Any, entry: Any, sl: Any, mark: Any) -> float | None:
-    """Open R from a mark: (mark - entry) x side / |entry - sl|. None when any input is missing."""
+def open_r(direction: Any, entry: Any, sl: Any, mark: Any, risk: Any = None) -> float | None:
+    """Open R from a mark: (mark - entry) x side / 1R. None when any input is missing.
+
+    1R is the package's signal-time ``risk_per_unit`` (``risk``, from ``order_packages.meta`` via
+    ``r_provenance.declared_initial_risk``) when it is known: a trailed stop cannot move it. Only without it does
+    1R fall back to ``|entry - sl|``, and ``sl`` is the CURRENT stop, which shrinks as the stop trails toward entry
+    (2026-11-14 16:07Z: trend_donchian_1h BTC short pkg-13ec01223e304ad4 read '+60.52R est' while its packets read
+    about +1.7R).
+    """
     side = side_of(direction)
-    e, s, m = _f(entry), _f(sl), _f(mark)
-    if side is None or e is None or s is None or m is None or e == s:
+    e, s, m, rk = _f(entry), _f(sl), _f(mark), _f(risk)
+    if side is None or e is None or m is None:
+        return None
+    unit = rk if rk is not None and rk > 0 else (abs(e - s) if s is not None else None)
+    if not unit:
         return None
     sign = 1.0 if side == "long" else -1.0
-    return round((m - e) * sign / abs(e - s), 2)
+    return round((m - e) * sign / unit, 2)
+
+
+def _initial_risks(conn: sqlite3.Connection, pkg_ids: Iterable[str]) -> dict[str, float]:
+    """``{order_package_id: signal-time risk_per_unit}`` for the packages that declared one. Best-effort."""
+    from src.runtime.r_provenance import declared_initial_risk
+    ids = [p for p in pkg_ids if p]
+    out: dict[str, float] = {}
+    if not ids:
+        return out
+    try:
+        marks = ",".join("?" for _ in ids)
+        for pid, meta in conn.execute(
+                f"SELECT order_package_id, meta FROM order_packages WHERE order_package_id IN ({marks})", ids):
+            r = declared_initial_risk(meta)
+            if r is not None:
+                out[str(pid)] = r
+    except sqlite3.Error as exc:  # allow-silent: no declared risk -> the current-stop fallback, labelled
+        logger.debug("conflicting_exposure: order_packages risk read failed: %s", exc)
+    return out
 
 
 def read_open_legs(db_path: str | None = None,
@@ -142,6 +175,7 @@ def read_open_legs(db_path: str | None = None,
                 "SELECT order_package_id, strategy, symbol, direction, entry, sl, account_id FROM prop_tickets "
                 "WHERE status = 'filled' AND order_package_id IS NOT NULL AND order_package_id != ''"
             ).fetchall() if has_prop else []
+            risks = _initial_risks(conn, {str(r["order_package_id"]) for r in list(rows) + list(prop_rows)})
         finally:
             conn.close()
         books["journal"] = {"state": "read", "rows": len(rows)}
@@ -162,6 +196,9 @@ def read_open_legs(db_path: str | None = None,
         if aid not in d["accounts"]:
             d["accounts"].append(aid)
             d["account_classes"][aid] = "prop"
+    for pid, d in pkgs.items():
+        d["risk"] = risks.get(pid)
+        d["open_r_basis"] = "initial_risk" if d["risk"] is not None else "current_stop"
     marks: dict[str, float | None] = {}
     for d in pkgs.values():
         d["open_r"], d["open_r_state"] = None, "could_not_look"
@@ -175,7 +212,7 @@ def read_open_legs(db_path: str | None = None,
             except Exception as exc:  # noqa: BLE001  # allow-silent: one unread mark is labelled, never 0
                 marks[sym] = None
                 logger.debug("conflicting_exposure: mark read failed for %s: %s", sym, exc)
-        r = open_r(d["direction"], d["entry"], d["sl"], marks[sym])
+        r = open_r(d["direction"], d["entry"], d["sl"], marks[sym], d.get("risk"))
         if r is None:
             d["open_r_reason"] = "mark_or_bracket_missing"
         else:
@@ -209,6 +246,34 @@ def find_conflicts(legs: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
+def carry_forward(conflicts: list[dict[str, Any]], known: dict[str, Any]) -> list[dict[str, Any]]:
+    """Give a conflict that only SHRANK the key it was already alerted under. Mutates and returns ``conflicts``.
+
+    ``known`` = the alert state's ``alerted`` map (key -> {symbol, packages, first_alerted_at}). A live conflict
+    whose own key is unknown takes the key of a known record for the SAME symbol whose packages are a superset
+    of the live packages (earliest first_alerted_at wins). The live conflict's own key is kept as ``raw_key``.
+    A package that was never alerted on is not in any superset, so a genuine joiner keeps its new key and alerts.
+    Pure; never raises on a malformed record (it is skipped).
+    """
+    for c in conflicts:
+        if c.get("key") in known:
+            continue
+        live = set(c.get("packages") or [])
+        best: tuple[str, str] | None = None
+        for k, rec in known.items():
+            try:
+                if rec.get("symbol") != c.get("symbol") or not live <= set(rec.get("packages") or []):
+                    continue
+                cand = (str(rec.get("first_alerted_at") or ""), k)
+            except Exception:  # noqa: BLE001  # allow-silent: a malformed record is skipped, never fatal
+                continue
+            if best is None or cand < best:
+                best = cand
+        if best is not None:
+            c["raw_key"], c["key"], c["carried_from"] = c["key"], best[1], best[1]
+    return conflicts
+
+
 def why(conflict: dict[str, Any], pkg: str) -> str:
     other = [x for x in conflict["legs"] if x["order_package_id"] != pkg]
     me = next((x for x in conflict["legs"] if x["order_package_id"] == pkg), {})
@@ -229,7 +294,9 @@ def render_alert(conflict: dict[str, Any]) -> str:
     for x in conflict["legs"]:
         accts = ", ".join(x.get("accounts") or []) or "—"
         lines.append(f"• {str(x.get('direction')).upper()} {x.get('leg')} ({x.get('timeframe') or '—'}) "
-                     f"on {accts}: open {_fmt_r(x.get('open_r'))} est, pkg {x['order_package_id']}")
+                     f"on {accts}: open {_fmt_r(x.get('open_r'))} est"
+                     f"{' (1R from the current stop)' if x.get('open_r_basis') == 'current_stop' and x.get('open_r') is not None else ''}"
+                     f", pkg {x['order_package_id']}")
     lines.append(f"key {conflict['key']}")
     return "\n".join(lines)
 
@@ -271,7 +338,7 @@ def fill_open_r(found: dict[str, Any], mark_fn: Callable[[Any], float | None]) -
                 except Exception as exc:  # noqa: BLE001  # allow-silent: one unread mark is labelled, never 0
                     marks[sym] = None
                     logger.debug("conflicting_exposure: mark read failed for %s: %s", sym, exc)
-            r = open_r(x.get("direction"), x.get("entry"), x.get("sl"), marks[sym])
+            r = open_r(x.get("direction"), x.get("entry"), x.get("sl"), marks[sym], x.get("risk"))
             if r is not None:
                 x["open_r"], x["open_r_state"], x["mark"] = r, "estimated", marks[sym]
                 x.pop("open_r_reason", None)
@@ -297,7 +364,7 @@ def alert(found: dict[str, Any], *, path: Path | None = None,
         send = send or _default_send
         st = _read_state(path)
         known: dict[str, Any] = st.get("alerted") or {}
-        live = {c["key"]: c for c in found.get("conflicts") or []}
+        live = {c["key"]: c for c in carry_forward(list(found.get("conflicts") or []), known)}
         kept = {k: v for k, v in known.items() if k in live}
         for k, c in live.items():
             if k in kept:
@@ -324,13 +391,25 @@ def alert(found: dict[str, Any], *, path: Path | None = None,
 
 
 def detect(db_path: str | None = None,
-           mark_fn: Callable[[Any], float | None] | None = None) -> dict[str, Any]:
-    """Read every book and return ``{state, reason, books, conflicts}``. Never raises."""
+           mark_fn: Callable[[Any], float | None] | None = None,
+           state: Path | None = None) -> dict[str, Any]:
+    """Read every book and return ``{state, reason, books, conflicts}``. Never raises.
+
+    Conflict keys are carried forward against the alert state (``carry_forward``), so the review event's level
+    (``live_review_due``) and the alert agree: a conflict that only shrank keeps its alerted key. An unreadable
+    state carries nothing forward (fails toward re-alerting).
+    """
     try:
         legs = read_open_legs(db_path, mark_fn)
     except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as could_not_look
         return {"state": "could_not_look", "reason": f"{type(exc).__name__}: {exc}", "books": {}, "conflicts": []}
     if legs["state"] != "read":
         return {"state": legs["state"], "reason": legs.get("reason"), "books": legs.get("books"), "conflicts": []}
+    conflicts = find_conflicts(legs["legs"])
+    try:
+        known = _read_state(state or state_path()).get("alerted") or {}
+        carry_forward(conflicts, known if isinstance(known, dict) else {})
+    except Exception as exc:  # noqa: BLE001  # allow-silent: no carry-forward = the raw key, which re-alerts
+        logger.debug("conflicting_exposure: carry_forward skipped: %s", exc)
     return {"state": "read", "reason": None, "books": legs["books"], "open_legs": len(legs["legs"]),
-            "conflicts": find_conflicts(legs["legs"])}
+            "conflicts": conflicts}

@@ -322,3 +322,110 @@ def test_export_writes_header_keys_back(env, tmp_path):
                                    header_meta=work_cli._header_meta(store.path))
     assert out["header_keys_written"] == ["last_review"]
     assert json.loads((root / cs.STORE / cs.HEADER).read_text())["last_review"] == LR
+
+
+# ── HEALTH-20261111-EXPORT-READS-STALE: off the VM, bulk reads come from the LIVE store ─────
+
+
+class _FakeAPI:
+    """``work.py``'s http() over a real local WorkStore -- the API's own list contract."""
+
+    def __init__(self, store, fail=False, torn_times=0):
+        self.store, self.fail, self.torn_times, self.calls = store, fail, torn_times, 0
+        self.API = work_cli.API
+        self.META_API = work_cli.META_API
+        self.WorkError = work_cli.WorkError
+
+    def http(self, method, path, body=None, timeout=20.0, **_):
+        from urllib.parse import parse_qs, urlparse
+        self.calls += 1
+        if self.fail:
+            raise work_cli.Unreachable("store not reached: test")
+        if urlparse(path).path.startswith(self.META_API + "/"):   # GET /work/meta/<key> (WSD-S4-READERS-FLIP)
+            m = self.store.meta_get(urlparse(path).path.rsplit("/", 1)[1])
+            return (200, {"meta": m}, {}) if m else (404, {"detail": "no meta key"}, {})
+        q = {k: v[0] for k, v in parse_qs(urlparse(path).query).items()}
+        items = self.store.list_items(kind=q.get("kind"), due=q.get("due") == "true",
+                                      limit=int(q["limit"]), offset=int(q["offset"]))
+        if self.torn_times and items:
+            self.torn_times -= 1
+            items = items + items[:1]  # a write landed mid-page: a duplicate id
+        return 200, {"readState": "read", "items": items, "total": self.store.count_items()}, {}
+
+
+@pytest.fixture()
+def remote(env, monkeypatch, tmp_path):
+    repo, store = env
+    _freeze(repo)
+    monkeypatch.setenv("WORK_STORE_DB", str(tmp_path / "absent.db"))  # off the VM
+    monkeypatch.setenv(wr.SOURCE_ENV, "api")
+    monkeypatch.setattr(wr.RemoteStore, "_cache", {})
+    wr.LAST_READ.clear()
+    api = _FakeAPI(store)
+    monkeypatch.setattr(wr, "_work_cli", lambda: api)
+    return repo, store, api
+
+
+def test_off_vm_reads_the_live_store_not_the_export(remote):
+    repo, store, api = remote
+    it = store.get("R-OPEN")
+    store.set("R-OPEN", {"title": "edited today"}, by="session_x", expected_version=it["version"])
+    rows = cs.load(repo)["items"]
+    assert rows[0]["title"] == "edited today"              # positive control: today's write is seen
+    assert _files_rows(repo)[0]["title"] == "open row"      # the export still holds the stale value
+    assert wr.read_state()["checklist"]["source"] == "work_store_api"
+
+
+def test_off_vm_header_reads_last_review_from_the_store(remote):
+    """WSD-S4-READERS-FLIP x HEALTH-20261111-EXPORT-READS-STALE: off the VM, last_review comes from the store's
+    meta route, and a store without the key leaves the header file's value showing through."""
+    repo, store, _ = remote
+    before = cs.load(repo).get("last_review")
+    assert before != LR                                    # positive control: not yet in the store
+    store.meta_set("last_review", LR, by="s")
+    wr.RemoteStore._cache.clear()
+    assert cs.load(repo)["last_review"] == LR
+
+
+def test_off_vm_unreachable_is_could_not_look_never_the_export(remote):
+    repo, _, api = remote
+    api.fail = True
+    with pytest.raises(wr.WorkReadError, match="could_not_look"):
+        cs.load(repo)
+
+
+def test_a_torn_snapshot_is_re_paged_then_refused(remote, monkeypatch):
+    repo, _, api = remote
+    monkeypatch.setattr(wr.RemoteStore, "PAGE", 1)  # every row its own page
+    api.torn_times = 1
+    assert [r["id"] for r in cs.load(repo)["items"]] == ["R-OPEN", "R-UNDATED", "R-DONE"]
+    monkeypatch.setattr(wr.RemoteStore, "_cache", {})
+    api.torn_times = 99
+    with pytest.raises(wr.WorkReadError, match="changed while paging"):
+        cs.load(repo)
+
+
+def test_the_export_is_read_only_when_asked_and_is_stamped(env, monkeypatch, tmp_path):
+    repo, _ = env
+    _freeze(repo)
+    monkeypatch.setenv("WORK_STORE_DB", str(tmp_path / "absent.db"))
+    monkeypatch.setenv(wr.SOURCE_ENV, "export")
+    wr.LAST_READ.clear()
+    assert [r["id"] for r in cs.load(repo)["items"]] == ["R-OPEN", "R-UNDATED", "R-DONE"]
+    st = wr.read_state()["checklist"]
+    assert st["source"] == "export" and st["read_state"] == "export_frozen"
+
+
+def test_read_source_resolution(monkeypatch):
+    monkeypatch.delenv(wr.SOURCE_ENV, raising=False)
+    assert wr.read_source() == "export"          # under pytest: never the live API
+    monkeypatch.setenv(wr.SOURCE_ENV, "api")
+    assert wr.read_source() == "api"
+    monkeypatch.setenv(wr.SOURCE_ENV, "bogus")
+    with pytest.raises(wr.WorkReadError):
+        wr.read_source()
+
+
+def test_the_guard_harness_reads_the_export_explicitly():
+    from scripts.ci import run_guards
+    assert run_guards._child_env().get(wr.SOURCE_ENV) in ("export", "api")

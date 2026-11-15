@@ -819,6 +819,13 @@ def grade_unit_full(root: Path, unit_id: str, text: str,
     # re-dispatch -- re-reading run 1's own rows would "confirm" the FAIL with
     # itself (review fix 2026-09-29).
     since = _parse_ts(unit.get("last_dispatched_at")) if (unit.get("cadence") in _RECURRING or confirmatory) else None
+    # RESEARCH-FLOW re-arm (dispatch_queue: `rearmed_at` says every row landed BEFORE it came from a defect that has
+    # since been fixed). Those rows are not evidence for this unit any more, so they are never graded: the window
+    # starts no earlier than the re-arm. Seen 2026-11-15 on RQ-20261112-8d20-02 (re-armed 02:30Z by #26225): the grader
+    # read the pre-fix row 43646720569 and wrote a needs_review grade the re-arm had disowned.
+    rearmed = _parse_ts(unit.get("rearmed_at")) if unit.get("rearmed_at") else None
+    if rearmed is not None and (since is None or rearmed > since):
+        since = rearmed
     rule_id = str((unit.get("decision_rule") or {}).get("id") or "")
     lands = unit.get("lands") or {}
     if rule_id.startswith("RULE-TPL-E35-BRACKET-"):

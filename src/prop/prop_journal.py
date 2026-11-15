@@ -547,6 +547,10 @@ def list_outbound_tickets(
             "direction": op.get("direction") or tk.get("direction"),
             "entry": op.get("entry") if op.get("entry") is not None else tk.get("entry"),
             "sl": op.get("sl") if op.get("sl") is not None else tk.get("sl"),
+            # PROP-TICKET-STOP-TEXT-MISMATCH: `sl` above is the package's CURRENT stop (it moves with
+            # structure/trail amends, e.g. 2022.06 -> 2030.41 31 s after open); the ticket TEXT's Stop
+            # line is the stop AS EMITTED. `ticket_sl` is that emitted stop, so the two are comparable.
+            "ticket_sl": tk.get("sl"),
             "tp": op.get("tp") if op.get("tp") is not None else tk.get("tp"),
             "qty": tk.get("qty"),
             "risk_usd": tk.get("risk_usd"),

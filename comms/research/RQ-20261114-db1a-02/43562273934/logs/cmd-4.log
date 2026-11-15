@@ -1,0 +1,35 @@
+Fetching ETHUSDT 120 candles 2024-09-05 -> 2026-11-14 (source=binance_vision) …
+  vision monthly 2024-09: 360 bars (312 kept)
+  vision monthly 2024-10: 372 bars (684 kept)
+  vision monthly 2024-11: 360 bars (1044 kept)
+  vision monthly 2024-12: 372 bars (1416 kept)
+  vision monthly 2025-01: 372 bars (1788 kept)
+  vision monthly 2025-02: 336 bars (2124 kept)
+  vision monthly 2025-03: 372 bars (2496 kept)
+  vision monthly 2025-04: 360 bars (2856 kept)
+  vision monthly 2025-05: 372 bars (3228 kept)
+  vision monthly 2025-06: 360 bars (3588 kept)
+  vision monthly 2025-07: 372 bars (3960 kept)
+  vision monthly 2025-08: 372 bars (4332 kept)
+  vision monthly 2025-09: 360 bars (4692 kept)
+  vision monthly 2025-10: 372 bars (5064 kept)
+  vision monthly 2025-11: 360 bars (5424 kept)
+  vision monthly 2025-12: 372 bars (5796 kept)
+  vision monthly 2026-01: 372 bars (6168 kept)
+  vision monthly 2026-02: 336 bars (6504 kept)
+  vision monthly 2026-03: 372 bars (6876 kept)
+  vision monthly 2026-04: 360 bars (7236 kept)
+  vision monthly 2026-05: 372 bars (7608 kept)
+  vision monthly 2026-06: 360 bars (7968 kept)
+  vision monthly 2026-07: 372 bars (8340 kept)
+  vision monthly 2026-08: 372 bars (8712 kept)
+  vision monthly 2026-09: 360 bars (9072 kept)
+  vision monthly 2026-10: 372 bars (9444 kept)
+  vision daily 2026-11: 9588 bars kept so far
+Wrote 9588 rows (2024-09-05 -> 2026-11-12) to /tmp/exit_lever_ablation_8r017_8d/eth_pullback_prop_2h__data.csv
+[A] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 10 --pullback-frac 0.5 --data <data> --symbol ETHUSDT --resample 2h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 3.5 --min-confidence 0.0 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261114-db1a-02/43562273934/rec_eth_pullback_prop_2h/arms/A__trades.jsonl --json comms/research/RQ-20261114-db1a-02/43562273934/rec_eth_pullback_prop_2h/arms/A__bt.json --adx-min 25 --tp-cap-pct 0.099 --tp-r 6.0 --decision-bar forming --minutes-1m-csv <minutes_1m> --strategy-name eth_pullback_prop_2h --start 2025-11-13T00:00:00 --end 2026-11-12T22:00:00
+{
+ "verdict": "fail",
+ "label": "stage0_no_edge",
+ "why": "net_r=-6.5744 with 2/4 positive folds (needs > 0 and >= 3)"
+}

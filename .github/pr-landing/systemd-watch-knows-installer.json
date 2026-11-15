@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "SYSTEMD-WATCH-KNOWS-INSTALLER (follow-up to SEC-8001-LOCKDOWN, operator decisions page m3). Touches the deploy path (scripts/install_systemd_units.sh) and the live security watch. install_systemd_units.sh now records the sha256 of every systemd file it edits in place in a root-owned receipt, and security_watch.py treats a matching receipt line as an expected change; a foreign edit still pages. Gates this adds or changes: none. Tier-2 PRs route through AM-OPS to AM-DEVOPS.",
+  "why": "Stop the security watch paging a RED FLAG for an approved installer edit (10:21Z 2026-11-12, venv.conf --host rewrite) while keeping foreign edits paging."
+}

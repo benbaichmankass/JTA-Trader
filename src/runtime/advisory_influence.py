@@ -34,9 +34,10 @@ Non-negotiables enforced by construction:
   and that every other order field is untouched.
 - **Stage is the only gate.** A model influences orders iff it is at an
   influence stage (``advisory`` / ``limited_live`` / ``live_approved``);
-  ``shadow`` only logs. Promotion past shadow turns influence ON, demotion
-  back to ``shadow`` turns it OFF — one operator-gated mechanism, no
-  separate enable flag. The per-strategy ``advisory_policy`` is **pure
+  ``shadow`` only logs. Promotion into ``advisory`` (on offline evidence —
+  there is no shadow step, retired 2026-11-12) turns influence ON, demotion
+  back to ``shadow`` (soak for data while iterating) turns it OFF — one
+  mechanism, no separate enable flag. The per-strategy ``advisory_policy`` is **pure
   config with a permissive default** (per the Prime Directive — omitting
   it never strands capability): omit it ⇒ ``annotate`` (log the would-be
   downsize, never resize); ``mode: off`` opts a strategy out; ``mode:
@@ -64,10 +65,11 @@ _MAJORITY = "majority"
 
 # Default policy MODE when a strategy omits ``advisory_policy``. Permissive
 # per the Prime Directive: omitting a config never strands capability, so a
-# model promoted past shadow influences by default — but in the SAFEST way,
-# ``annotate`` (log what it WOULD downsize, never actually resize). The
-# operator flips a strategy to ``downsize`` once a soak of
-# advisory_decisions.jsonl looks clean. An explicit ``mode: off`` opts out.
+# model promoted to advisory influences by default — but in the SAFEST way,
+# ``annotate`` (log what it WOULD downsize, never actually resize). A strategy
+# flips to ``downsize`` when that action class passes its own net-of-cost test
+# (ARCHITECTURE-CANONICAL § "Active management": each action class is
+# advice-only until its own net-of-cost test passes) — not after a soak. An explicit ``mode: off`` opts out.
 DEFAULT_MODE = "annotate"
 
 

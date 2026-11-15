@@ -3,7 +3,47 @@
 # for a decision; a demotion_signal is a LABEL in a report, never wired to act. Gates this adds or changes: none.
 # Provenance per figure: MEASURED = read from the named evidence file; QUOTED = from docs/research/ml-deep-audit-2026-11-12.md
 # (itself reading the cited record); a blank/absent field renders "—" (unknown), never 0.
+# ML-SLOT-BASELINES-DECLARE (lane ML-SLOT-MAP, 2026-11-12): the `slots:` block below declares, per decision slot, the baseline a model must
+# beat NET OF COST and the competition metric; each `models:` entry gains `slot`, `baseline` (a key of `slots`) and a structured
+# `demotion_read`. All of it is a DECLARED READ for reports (ml-review C3 prints it); none of it is wired to act. Gates this adds or
+# changes: none (no mode, roster, tau or artifact moves; acting on a demotion read is the manager's/operator's call under the tiers).
 # Keyed by registry model_id (GET /api/bot/ml/registry rows[].model_id). Add a line when a model gains a consumer.
+slots:
+  D2:
+    decision: "regime / trend-vol gate: drops intents in off-cells"
+    baseline: "the matched Mutt (majority-class predictor; f1_volatile 0.0, macro F1 0.36-0.50) on the SAME shard and split"
+    baseline_ref: "docs/plans/ML-CONSOLIDATION-2026-11-11.md addendum 2026-11-11"
+    competition_metric: "head macro F1 / log-loss vs its Mutt (necessary, not edge)"
+    cost_net_metric: "none exists for any D2 head (cost_gate_applicable 0). The consumer test is the cost-net read: gated vs ungated net R of the real-money TD family (RQ-20261101-78fc-08, blocked; RQ-20261112-0f87-01 for the no-cell heads)"
+    status: "partial: Mutt floor declared, cost-net metric still to be MEASURED"
+  D3:
+    decision: "entry: take long/short/none per bar"
+    baseline: "(a) take-nothing: mean net R >= 0 on the held-out window; (b) the incumbent on the same rows (frozen v1 for crypto; ml_entry_eq v1 for equity)"
+    baseline_ref: "docs/plans/ML-D3-HEAD-TO-HEAD-2026-11-12.md; RQ-20261101-b609-01; RQ-20261112-ef4c-09"
+    competition_metric: "mean net R per trade (day-clustered t), full cost stack, held-out window"
+    cost_net_metric: "mean net R (cost stack = the venue's fee + slippage + funding)"
+    status: "declared"
+  D4:
+    decision: "overlay: reduce qty x0.5 below tau on trend_donchian legs"
+    baseline: "the unreduced book (multiplier 1.0) on the same trades"
+    baseline_ref: "RULE-ML-OVERLAY-NONINFERIOR-V2 (RQ-20261029-5785-02, TD family PASS, PB2H FAIL)"
+    competition_metric: "delta net R vs take-all (one-sided 95% LB > -0.02 R), maxDD and CVaR5 not worse, beats 90th pct of 2000 same-rate random reduces"
+    cost_net_metric: "net_r is fee+slippage+funding cost-net, R of initial risk"
+    status: "declared (a non-inferiority rule: no mean R is claimed)"
+  D7:
+    decision: "tp-revision: extend the entry TP at 4h check-ins"
+    baseline: "the original TP held (no revision) on the same trades"
+    baseline_ref: "RULE-RQ20261101-383f-01-ML-ENTRY-TP-REVISION (RQ-20261101-383f-01)"
+    competition_metric: "held-out mean delta net R per trade, revised vs held TP"
+    cost_net_metric: "delta net R after the full cost stack"
+    status: "declared"
+  D8:
+    decision: "exit head: close advice on trend_donchian legs"
+    baseline: "the leg's declared exit with no head (ML-EXITHEAD-VALUE)"
+    baseline_ref: "row ML-EXITHEAD-VALUE (BTC FAIL -0.0141 n 1041; SOL FAIL -0.0246 IS n 286; ETH +0.0215 IS only)"
+    competition_metric: "delta net R per trade, head vs no head, out of sample"
+    cost_net_metric: "delta net R after the full cost stack"
+    status: "declared"
 models:
   ml-decision-entry-v1r20261106:
     order_effect: "yes"            # opens long/short
@@ -12,7 +52,10 @@ models:
     sd_r: 1.09                   # QUOTED audit section 0 item 4
     clustered_se: null
     evidence: comms/strategy_evidence/ml_entry.json
-    demotion_signal: "mirror net-of-cost window (OPERATING-PLAN section 2); live read = ml_entry_live_monitor_state"
+    slot: D3
+    baseline: D3              # key of slots:
+    demotion_read: "mirror net-of-cost mean net R over the trailing window the mirror reports < 0 with day-clustered t <= -2 at n >= 100 AND the refit is not better on the same replay (docs/plans/ML-D3-HEAD-TO-HEAD-2026-11-12.md)"
+    demotion_signal: "mirror net-of-cost mean net R over the trailing window the mirror reports < 0 with day-clustered t <= -2 at n >= 100 AND the refit is not better on the same replay (docs/plans/ML-D3-HEAD-TO-HEAD-2026-11-12.md)"
   ml-decision-entry-v1:
     order_effect: "yes"            # same lineage; the pointer ml/served/ENTRY_SERVED.json serves the refit
     mean_net_r: 0.0371
@@ -20,7 +63,10 @@ models:
     sd_r: 1.09
     clustered_se: null
     evidence: comms/strategy_evidence/ml_entry.json
-    demotion_signal: "same lineage as ml-decision-entry-v1r20261106"
+    slot: D3
+    baseline: D3              # key of slots:
+    demotion_read: "same lineage as ml-decision-entry-v1r20261106 (one served pointer)"
+    demotion_signal: "same lineage as ml-decision-entry-v1r20261106 (one served pointer)"
   ml-entry-eq-struct-ens5-v1:
     order_effect: "yes"            # opens long, ETFs
     mean_net_r: 0.4922           # MEASURED comms/strategy_evidence/ml_entry_eq_struct.json expectancy_r_oos
@@ -28,7 +74,10 @@ models:
     sd_r: 1.09                   # ESTIMATED = iid se 0.076 (QUOTED audit 1.1) x sqrt(207)
     clustered_se: 0.239          # QUOTED audit 1.1, month-clustered
     evidence: comms/strategy_evidence/ml_entry_eq_struct.json
-    demotion_signal: "mirror net-of-cost window (OPERATING-PLAN section 2); none registered per model yet"
+    slot: D3
+    baseline: D3              # key of slots:
+    demotion_read: "RQ-20261112-ef4c-09 FAIL, or mirror net-of-cost mean net R < 0 at day-clustered t <= -2 at n >= 100 (docs/plans/ML-D3-HEAD-TO-HEAD-2026-11-12.md)"
+    demotion_signal: "RQ-20261112-ef4c-09 FAIL, or mirror net-of-cost mean net R < 0 at day-clustered t <= -2 at n >= 100 (docs/plans/ML-D3-HEAD-TO-HEAD-2026-11-12.md)"
   ml-decision-entry-v2:
     order_effect: "yes"            # bybit_1 (paper) testing leg
     mean_net_r: -0.1161          # QUOTED audit 1.1 (MECE section 3), n=320
@@ -36,7 +85,10 @@ models:
     sd_r: null
     clustered_se: null
     evidence: ml/served/ml_decision_entry_v2/model.json
-    demotion_signal: "n/a: testing leg in iteration (OPERATING-PLAN section 2)"
+    slot: D3
+    baseline: D3              # key of slots:
+    demotion_read: "already FAILED W1 (-0.1161 vs frozen v1 -0.0405, RQ-20261101-b609-01); stays at the demo floor for the b610 forward read; retire on a b610 FAIL"
+    demotion_signal: "already FAILED W1 (-0.1161 vs frozen v1 -0.0405, RQ-20261101-b609-01); stays at the demo floor for the b610 forward read; retire on a b610 FAIL"
   ml-entry-eq-v1:
     order_effect: "yes"            # alpaca_paper testing leg
     mean_net_r: 0.0392           # QUOTED audit 1.1 (row ML-ENTRY-ALL-ACCOUNTS), pooled confirm
@@ -44,7 +96,10 @@ models:
     sd_r: null
     clustered_se: null
     evidence: null
-    demotion_signal: "n/a: testing leg in iteration (OPERATING-PLAN section 2)"
+    slot: D3
+    baseline: D3              # key of slots:
+    demotion_read: "RQ-20261112-ef4c-09 shows struct beats it (v1 retires unless its v1-only arm has mean net R > 0 at n >= 30)"
+    demotion_signal: "RQ-20261112-ef4c-09 shows struct beats it (v1 retires unless its v1-only arm has mean net R > 0 at n >= 30)"
   ml-entry-tp-revision-v1:
     order_effect: "yes"            # extends the entry TP at 4h check-ins
     mean_net_r: 0.0081           # QUOTED audit 1.1 (RQ-20261101-383f-01), forward read
@@ -52,7 +107,10 @@ models:
     sd_r: null
     clustered_se: null
     evidence: ml/served/ml_entry_tp_revision_v1/model.json
-    demotion_signal: "mirror net-of-cost window (OPERATING-PLAN section 2); none registered per model yet"
+    slot: D7
+    baseline: D7              # key of slots:
+    demotion_read: "mirror: mean delta net R (revised minus held TP) over the trailing mirror window < 0 at day-clustered t <= -2 and n >= 100 (declared by lane ML-SLOT-MAP 2026-11-12, same form as the D3 reads)"
+    demotion_signal: "mirror: mean delta net R (revised minus held TP) over the trailing mirror window < 0 at day-clustered t <= -2 and n >= 100 (declared by lane ML-SLOT-MAP 2026-11-12, same form as the D3 reads)"
   overlay-td-v1:
     order_effect: "yes"            # reduce: qty x0.5 below tau on trend_donchian legs
     mean_net_r: null
@@ -60,7 +118,10 @@ models:
     sd_r: null
     clustered_se: null
     evidence: null
-    demotion_signal: "mirror net-of-cost window (OPERATING-PLAN section 2); none registered per model yet"
+    slot: D4
+    baseline: D4              # key of slots:
+    demotion_read: "mirror: reduced trades' mean net R > take-all mean over the trailing mirror window at n_reduced >= 30, i.e. the overlay is reducing winners (declared by lane ML-SLOT-MAP 2026-11-12; the V2 rule's check (d) turned into a live read)"
+    demotion_signal: "mirror: reduced trades' mean net R > take-all mean over the trailing mirror window at n_reduced >= 30, i.e. the overlay is reducing winners (declared by lane ML-SLOT-MAP 2026-11-12; the V2 rule's check (d) turned into a live read)"
   exit-head-donchian-1h-v1:
     order_effect: "no"             # exit_head_action is annotate on all 3 legs (MEASURED strategies.yaml, audit 1.1)
     mean_net_r: -0.0141          # QUOTED audit 1.1, BTC head failed B4, n=1041
@@ -68,4 +129,51 @@ models:
     sd_r: null
     clustered_se: null
     evidence: null
+    slot: D8
+    baseline: D8              # key of slots:
+    demotion_read: "changes no order today (annotate); acts only on ETH bybit_1. Declared read: ETH out-of-sample delta net R < 0 at n >= 30 -> annotate. No ETH OOS read exists yet (UNVERIFIED)"
+    demotion_signal: "changes no order today (annotate); acts only on ETH bybit_1. Declared read: ETH out-of-sample delta net R < 0 at n >= 30 -> annotate. No ETH OOS read exists yet (UNVERIFIED)"
+  btc-regime-15m-lgbm-fc-pcv-v2:
+    order_effect: "yes"            # trend_vol off-cells drop intents on 3 BTC legs, all bybit_1 (QUOTED docs/research/ml-deep-audit-2026-11-12.md)
+    mean_net_r: null             # no cost-net figure exists for any D2 head
+    n: null
+    sd_r: null
+    clustered_se: null
+    evidence: null
+    slot: D2
+    baseline: D2
+    demotion_read: "consumer test RQ-20261101-78fc-08 (gated vs ungated TD-family net R) FAILS non-inferiority; until it reads, no cost-net read exists (—)"
+    demotion_signal: "consumer test RQ-20261101-78fc-08 FAILS non-inferiority; until it reads, no cost-net read exists"
+  sol-regime-15m-lgbm-fc-pcv-v2:
+    order_effect: "no"             # no trend_vol cell names a SOL leg (MEASURED regime_policy.yaml, audit 1.1)
+    mean_net_r: null
+    n: null
+    sd_r: null
+    clustered_se: null
+    evidence: null
+    slot: D2
+    baseline: D2
+    demotion_read: "n/a: changes no order today; retire if no consumer cell exists when the D2 consumer test reads"
     demotion_signal: "n/a: changes no order today"
+  mes-regime-5m-lgbm-v2:
+    order_effect: "no"             # no trend_vol cell names a MES leg (MEASURED regime_policy.yaml, audit 1.1)
+    mean_net_r: null
+    n: null
+    sd_r: null
+    clustered_se: null
+    evidence: null
+    slot: D2
+    baseline: D2
+    demotion_read: "n/a: changes no order today; retire if no consumer cell exists when the D2 consumer test reads"
+    demotion_signal: "n/a: changes no order today"
+  eth-regime-1h-lgbm-xasset-v1:
+    order_effect: "no"             # SHADOW, no consuming leg (consolidation 2026-11-11 cons_strat empty)
+    mean_net_r: null
+    n: null
+    sd_r: null
+    clustered_se: null
+    evidence: null
+    slot: D2
+    baseline: D2
+    demotion_read: "n/a: no consumer; kept only for the bake-off RQ-20261112-ef4c-03"
+    demotion_signal: "n/a: no consumer"

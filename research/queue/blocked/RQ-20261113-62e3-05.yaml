@@ -1,0 +1,130 @@
+# Hand-authored 2026-11-13 by lane orphans-legs (Tier 1), dispatched by the manager. ITERATION unit (attempt 3) for orphan subject vol-premium-proxy, authored from a written diagnosis of its last result (RQ-20261101-d1f3-06). BLOCKED: the top lever (a PRICED straddle test) needs a historical option chain and a pricing mode, neither in hand. Decision rule registered BEFORE any run; nothing has been run. Gates: none.
+id: RQ-20261113-62e3-05
+title: 'ITERATION 3 of vol-premium-proxy (fail): does the tail-gated short-variance premium (S2) survive REAL SPY option bid/ask as a short
+  ATM straddle, 2019-02..2024-06?'
+status: blocked
+cadence: once
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-PROGRAMMES
+programme: P6
+kind: experiment
+question: On SPY, every 21 trading days from the first DoltHub chain date in 2019-02 to 2024-06-30, does selling one ATM straddle at the BID
+  (expiry nearest 30 calendar days within 21-45 DTE) and buying it back at the ASK 21 trading days later, flat when VIX is above its trailing-252d
+  0.9 quantile (the S2 gate, unchanged), earn a positive net premium that clears the registered rule?
+why_this_matters: 'vol-premium-proxy is an orphan (scripts/research/iteration_orphans.py 2026-11-13). Attempt 2 found the premium is real on
+  the variance-swap PROXY (S2 cleared 8 of 9 checks, failing only DSR 0.928 < 0.95) but the proxy is not a tradable price: bid/ask, skew
+  and the gamma path can erase it. The priced test is the only one that turns the proxy into a decision.'
+iteration:
+  subject: vol-premium-proxy
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261101-d1f3-06/41771142704.jsonl
+  verdict_read: fail
+  diagnosis: 'RQ-20261101-d1f3-06 (attempt 2; 4 arms incl. control, 6 underlyings, 21d periods, 2008-07-01..2024-06-30, n=191 periods, DSR
+    N_cum=12): the forecast-gap control V2 is net Sharpe 0.506 / stress -0.007; always-short S0 0.664; tail-gated S1 0.918 and S2 0.981 (halves
+    0.878 / 1.116, stress 0.337) clear every check except DSR (0.928 < 0.95). Discovery attribution (58e4-07): the long-variance side lost
+    (-17.2) and the profit is the base short-variance premium (+87.9); 2020 was the worst year (-18.9). CAUSE (hypothesis): implied vol is
+    persistently overpriced vs realised (the variance risk premium) and a trailing-IV tail gate removes the worst crash entries. COMPETING:
+    the proxy prices variance at the index level with a flat 1-vol-point haircut; real ATM straddles pay the bid/ask spread (wide in stress),
+    carry skew and a path-dependent gamma P&L, so the priced premium may be near zero net and the proxy pass is an artefact of the haircut.'
+  hypothesis: the tail-gated short-variance premium survives real SPY straddle bid/ask, net of cost
+  search: 'instrument: priced short ATM straddle on real chains (S2 gate unchanged) instead of the variance-swap proxy'
+  levers:
+  - sizing_vs_cost
+  attempt: 3
+  due_by: '2026-11-20'
+  map_entries:
+  - research/levers/vol-premium-proxy.yaml
+baseline:
+  what: the S2 rule on the variance-swap proxy, SPY leg only, recomputed on the same entry dates (REPORTED as a parity read, not graded);
+    the graded quantity is the priced straddle P&L itself
+  net_of: entry at the call BID + put BID, exit at the call ASK + put ASK (the full quoted spread both ways) + 0.65 USD per contract per leg
+    per side; STRESS = an extra half-spread against the strategy at entry and at exit; no funding (cash-settled premium, margin interest not
+    modelled - stated)
+  committed_value: proxy S2 net Sharpe 0.981, stress 0.337, DSR 0.928 at N=12 over 6 underlyings (RQ-20261101-d1f3-06); the SPY-only priced
+    value is unmeasured
+power:
+  expected_n: 64
+  min_detectable_effect: 1.2
+  effect_units: annualised_sharpe
+  sd: 3.4641
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'SPY only (DoltHub covers SPY and XLE of the 10 underlyings tested; docs/research/options-iv-history-sources-2026-11-01.md), 2019-02..2024-06
+    ~ 1350 trading days / 21 = ~64 non-overlapping periods, fewer after the tail gate. 12 periods a year, so sd = sqrt(12) = 3.4641 converts
+    an annualised Sharpe to a per-period d; one-sample alpha 0.05 power 0.8: required n = 7.84*12/S^2, so at n=64 the smallest separable
+    annualised Sharpe is ~1.2. UNDERPOWERED for a DSR pass by design: the rule therefore separates "the priced premium is gone" (FAIL) from
+    "it survives cost but n cannot confirm it" (INDETERMINATE).'
+  feasibility:
+    source: none
+    accrual_basis: Historical archive (DoltHub post-no-preference/options, 2019-02 onward, capped at 2024-06-30 here); nothing accrues - the
+      block is a tool and an import, not future data.
+decision_rule:
+  id: RULE-RQ-20261113-62e3-05
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  statistic: 'Per 21-trading-day period on SPY: net P&L = (call bid + put bid at entry) - (call ask + put ask at exit, or intrinsic from the
+    committed SPY close if the contracts expired first) - commissions, divided by the entry SPY close (fraction of notional); 0 when the S2
+    gate is flat (FRED VIXCLS > its trailing-252d 0.9 quantile, history strictly before the entry date, >= 100 obs). Strike = nearest to
+    the committed SPY close; expiry = nearest to 30 calendar days within 21-45 DTE. Reported per period series: n_priced, mean, annualised
+    Sharpe (12 periods/yr), half Sharpes, stationary-bootstrap p05 of the mean, stress Sharpe, DSR at N_cum = 13 (12 proxy trials + this),
+    and the proxy S2 SPY-leg P&L on the same dates (parity, not graded).'
+  rule: 'PASS iff n_priced >= 40 AND mean net > 0 AND stress Sharpe > 0 AND net Sharpe >= 0.5 AND Sharpe > 0 in both halves AND bootstrap
+    p05 > 0 AND DSR > 0.95 at N_cum = 13. FAIL iff n_priced >= 40 AND (mean net <= 0 OR stress Sharpe <= 0): the premium does not survive
+    real bid/ask, and the proxy pass is an artefact of its haircut. INDETERMINATE iff n_priced < 40 (chain density) OR mean net > 0 and stress
+    > 0 but any of the Sharpe / halves / bootstrap / DSR checks fails (the priced premium survives cost; n cannot confirm it - next is more
+    underlyings or a longer chain window, never a book). Holdout (2024-07 on) not read.'
+  what_it_does_not_do: Edits no config and no roster, places no order, proposes no live leg or options account; does not model margin, early
+    assignment or intraday hedging; reads no data after 2024-06-30. Even a PASS is a research result on SPY only.
+intervention_controls:
+  not_applicable: an offline priced backtest, not an in-trade action
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): one pre-registered arm, every trial counted, DSR at the
+  cumulative count. Variance risk premium and its option-priced harvest: Carr & Wu 2009 RFS "Variance risk premiums"; Bakshi & Kapadia
+  2003 RFS "Delta-hedged gains and the negative market volatility risk premium". Source inventory:
+  docs/research/options-iv-history-sources-2026-11-01.md.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 30
+  why_runner: Once the chain extract exists, a CPU pass over ~64 dates x 4 contracts.
+  basis: Estimate; the first run replaces it.
+value:
+  usd_at_stake_per_month: 60
+  confidence: 0.1
+  bucket: structural
+  basis: 'stand-in: the only subject in this family with a proxy near-pass; an estimate, not a measurement'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/levers/vol-premium-proxy.yaml
+- RQ-20261101-58e4-07
+- RQ-20261101-d1f3-06
+- OPTIONS-IV-HISTORY-GAP
+- scripts/research/edge_vol_premium.py
+- scripts/data_lake/free_sources.py
+- docs/research/options-iv-history-sources-2026-11-01.md
+what_it_does_not_do: Edits no config and no roster, places no order, proposes no live leg; changes no harness on its own (the pricing mode
+  is the blocking work item).
+blocked_on:
+- kind: data
+  ref: OPTIONS-IV-HISTORY-GAP
+  what: 'SPY option_chain rows (date, expiration, strike, call_put, bid, ask) 2019-02..2024-06 from DoltHub post-no-preference/options (keyless;
+    the public SQL API times out on aggregates, so a `dolt clone` or bounded per-date pulls), imported with `scripts/data_lake/free_sources.py
+    import-csv --kind chain`. Free and reachable (measured 2026-11-01) but NOT in hand: no extract exists in the repo or the lake manifest
+    this lane could read, and per-day density between the probed dates is unestablished.'
+  clears_when: an extract (lake manifest or committed csv) shows SPY chain rows with bid AND ask populated for an ATM strike at a 21-45 DTE
+    expiry on at least 40 of the ~64 entry dates and on their matching exit dates
+- kind: work_item
+  ref: scripts/research/edge_vol_premium.py
+  what: an opt-in, default-off `--priced-straddle <chain path>` mode implementing exactly the statistic above (S2 gate unchanged), writing
+    verdict.json in the research-script-run shape
+  clears_when: 'the mode lands with a self-test (synthetic chain: credit-minus-debit arithmetic on the right bid/ask sides, expired-contract
+    intrinsic settlement, gate uses history strictly before t, stress widens against the strategy) AND the default `--iteration` path still
+    reproduces S2 net Sharpe 0.981; then add run.workflow research-script-run.yml + run.command and git mv this unit to research/queue/
+    (rule unchanged)'

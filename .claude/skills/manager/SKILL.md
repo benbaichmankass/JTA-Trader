@@ -217,6 +217,7 @@ A Tier-1 lane self-lands: `.github/pr-landing/<slug>.json` (`tier: 1`, `landing:
 `gh api -X PUT repos/<owner>/<repo>/pulls/<n>/ccr/auto_merge -f merge_method=squash`. If the classifier refuses the arming ("Merge Without
 Review"), the lane re-declares `landing: hold` with `hold_reason: operator_asked_to_hold`, reports the exact refused command in one line, and the
 manager lands it — in auto mode, no operator window (allow rules for the JTA-Trader merge path + `mcp__github__merge_pull_request`, #24221; proven on #24236, 2026-11-08): touch `/tmp/.claude-merge-claim-<session>-<PR>`, un-draft, merge with `expectedHeadSha`. A merge refusal after a repo rename means `.claude/settings.json` allow rules still name the old slug. Tier-2/3 lane PRs always carry `landing: hold` (manager for Tier 2, the operator's recorded approval for Tier 3).
+**Keep the pipeline map current** (a habit, not a gate; operator 2026-11-14): when a merged change alters something on the pipeline map (a stage's code, a decision-maker, a broker), update its skeleton `docs/reference/trading-pipeline-map.skeleton.md` in the same or a follow-up PR; the weekly audit's C15 catches what slips.
 **Push less, push checked** (a habit, not a gate; CI-THROUGHPUT-20261029): before every push `python3 scripts/ci/prepush.py`; never push to a PR while its CI runs unless fixing a red check;
 batch register commits into one push. **No new gates** (operator, 2026-10-29, binding): never add, or dispatch a lane to add, a gate without the
 operator's explicit permission; canonical § "No new gates without the operator's permission".
@@ -405,6 +406,7 @@ with no lane, and a UI lane briefed from an older row rebuilt the wrong chart la
      decisions page).
   5. It reports to the manager on a fixed cadence (TRADING every 2 h, the others every 3 h) and at once on a real-money risk, a lane it cannot
      unblock, a merge for the manager or an operator question.
+  6. **Blocked/waiting = a structured `clears_when` condition + owner, never prose only** (operator, 2026-11-12, row `UNBLOCK-WATCH`; gates: none). `scripts/ops/unblock_watch.py` evaluates every condition hourly on the `ict-work-digest` tick; a NEW clear lands on the alert ledger -> the PR #17895 alert-watch and is handled at once like any alert. The brief's BLOCKED section lists unconditioned, stale-manual (> 7 d), could_not_look and money-blocking waits > 7 d; **each money wait goes onto the decisions page as a question — no session chooses a long wait on a money item silently.** Weekly planning reads the same section.
 - **What the manager keeps:** live trade reviews and every alert (operator m12, 2026-11-12: *"The manager needs to get these alerts and
   handle immediately"*), Tier-2/3 merge calls, the decisions page, the operator conversation, and supervising the assistant managers (read
   each report; check one claim per report against the register or live data).
