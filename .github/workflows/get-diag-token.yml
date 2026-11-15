@@ -222,7 +222,9 @@ jobs:
           # Write the env block to a file (NOT to the log).
           {
             printf 'DIAG_READ_TOKEN=%s\n' "$val"
-            printf 'DIAG_BASE_URL=http://%s:8001\n' "$VM_SSH_HOST"
+            # SEC-8001-LOCKDOWN (operator decisions page m3, 2026-11-12): the API is
+            # reached only through Caddy's HTTPS front; :8001 binds to localhost.
+            printf 'DIAG_BASE_URL=https://ict-bot.duckdns.org\n'
           } > diag-env.txt
           chmod 600 diag-env.txt
 

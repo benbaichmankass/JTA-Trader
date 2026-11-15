@@ -6,7 +6,7 @@
   // PHONE-EXEC-OBSERVABLE-1018: this file is also served SIGNED by our own API and swapped in at runtime
   // (RemoteJs.kt): a newer version replaces the installed helpers on the next ensure(); the same version is
   // never injected twice. Bump on every change (CI signs the file; the app pins by version).
-  var EXEC_VERSION = "2026-11-11.1";
+  var EXEC_VERSION = "2026-11-12.2";
   if (window.__ex && window.__ex.version === EXEC_VERSION) return;
   function hostOk() { return /(^|\.)breakoutprop\.com$/.test(location.hostname || ""); }
   function vis(el) { if (!el) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }
@@ -303,7 +303,7 @@
     ["upnl", /^u\.?\s*p\s*&\s*l|u\.?\s*pnl|unreali[sz]ed|^p\s*&\s*l|^pnl/i], ["mark", /^mark(?!et)|^last|^current/i],
     ["entry", /entry|avg|average|open(ing)? price/i],
     ["sl", /^(sl|s\/l|stop)/i], ["tp", /^(tp|t\/p|take)/i], ["side", /^(side|direction|dir)$/i],
-    ["qty", /^(size|qty|quantity|amount|position|contracts?)\b/i], ["lev", /^lev/i],
+    ["qty", /^(open )?(size|qty|quantity|amount|position|contracts?)\b/i], ["lev", /^lev/i],
     ["symbol", /^(symbol|market|instrument|contract|asset|pair|coin|name)$/i], ["time", /time|date|opened/i]];
   // Closed orders: UNMEASURED layout (no live capture yet); the div-grid reader below is generic, and a miss posts
   // its digit-masked headers (closed_ prefix) exactly like Positions.
@@ -556,6 +556,63 @@
     });
     return out;
   }
+  // ---- CARDS (PHONE-POSITIONS-CARDS, 2026-11-12): with positions open, Breakout's Trade view draws NO table and NO
+  // header row. The ONE <div role="region" aria-label="Positions"> holds one CARD per position: the base symbol as a
+  // heading ("ETH"), the side as a word ("Long"), "Net P&L", then a <dl> of <dt>/<dd> pairs ("Open quantity" "0.61 ETH",
+  // "Notional value", "Opening price", "Current price") and the buttons "Manage TP/SL for ETH/USD" / "Close ETH/USD long
+  // position" / "Open position details for ETH/USD" (capture positions-no_table-20261112T082111Z, app 1b.373, fixture
+  // breakout-positions-cards-two-longs). Until this, every read with a position open posted no_table from 08:21Z, so the
+  // venue could not confirm the two journal tickets. Each <dt> label is mapped with the same column map as a header;
+  // the symbol is the card's FIRST ticker word and the side its own Long / Short word, cross-checked against the
+  // card's control labels (a disagreement makes the card unparsed, never guessed). A card is the highest ancestor of
+  // its <dl> inside the region that holds no other <dl>. Only inside a region labelled by THIS tab's name.
+  function readCards(cols, need, emptyRe, tabRe, count, strict) {
+    var regions = all("[role=region]").filter(function (rg) { return tabRe.test((rg.getAttribute("aria-label") || "").trim()); });
+    if (regions.length !== 1) return null;
+    var rg = regions[0], dls = Array.prototype.slice.call(rg.querySelectorAll("dl")).filter(vis);
+    if (!dls.length) return null;
+    var cards = [];
+    dls.forEach(function (dl) {
+      var c = dl;
+      for (var a = dl.parentElement; a && a !== rg && rg.contains(a); a = a.parentElement) {
+        if (Array.prototype.slice.call(a.querySelectorAll("dl")).filter(vis).length > 1) break;
+        c = a;
+      }
+      if (cards.indexOf(c) < 0) cards.push(c);
+    });
+    var keys = ["symbol", "side"], seen = {}, raw = [], els = [], out = [], bad = 0, hs = [];
+    var parsed = cards.map(function (c) {
+      var dl = Array.prototype.slice.call(c.querySelectorAll("dl")).filter(vis)[0], f = {};
+      Array.prototype.slice.call(dl.querySelectorAll("dt")).filter(vis).forEach(function (dt) {
+        var dd = dt.nextElementSibling; if (!dd || dd.tagName !== "DD") return;
+        var k = colKey(t(dt), cols); if (hs.indexOf(t(dt)) < 0) hs.push(t(dt));
+        if (!k || k === "skip" || f[k] !== undefined) return;
+        f[k] = dd; if (!seen[k]) { seen[k] = 1; keys.push(k); }
+      });
+      // the leaves BEFORE the <dl> (the card's head): the ticker word and the side word
+      var head = Array.prototype.slice.call(c.querySelectorAll("*")).filter(function (x) {
+        return !x.children.length && vis(x) && !dl.contains(x) && before(x, dl) && !x.closest("button,[role=button]");
+      }).map(t).filter(Boolean);
+      var sym = head.filter(function (x) { return /^[A-Z0-9]{2,12}(\/[A-Z]{2,5})?$/.test(x); }), sd = head.filter(function (x) { return /^(long|short)$/i.test(x); });
+      var lab = Array.prototype.slice.call(c.querySelectorAll("button,[role=button]")).map(function (b) { return b.getAttribute("aria-label") || ""; }).join(" | ");
+      // every BASE/QUOTE pair the controls name ("for ETH/USD", "Close ETH/USD long position"); "TP/SL" is a button word
+      var pairs = (lab.match(/\b[A-Z0-9]{2,12}\/[A-Z]{2,5}\b/g) || []).filter(function (x) { return !/^(TP\/SL|SL\/TP)$/.test(x); }).map(function (x) { return x.split("/")[0]; });
+      var lsym = pairs.length ? pairs[0] : null, lmix = pairs.some(function (x) { return x !== lsym; }), lside = (/\b(long|short) position\b/i.exec(lab) || [])[1] || null;
+      // the FIRST ticker leaf is the heading (a later "USD" is the Net P&L unit)
+      var s0 = sym.length ? sym[0].split("/")[0] : null, d0 = sd.length === 1 ? sd[0].toLowerCase() : null;
+      if (s0 && (lmix || (lsym && s0 !== lsym))) s0 = null;
+      if (d0 && lside && d0 !== lside.toLowerCase()) d0 = null;
+      return {f: f, sym: s0, side: d0};
+    });
+    parsed.forEach(function (p) {
+      var cells = keys.map(function (k) { return k === "symbol" ? (p.sym || "") : k === "side" ? (p.side || "") : (p.f[k] ? t(p.f[k]) : ""); });
+      var ce = keys.map(function (k) { return p.f[k] || null; });
+      raw.push(cells); els.push(ce); out.push(parseRow(cells, keys, cells, keys.map(function () { return ""; })));
+    });
+    var r = finishRead(out, bad, hs, count, need, strict, emptyRe.test(t(rg)) && !out.length, raw, keys, els);
+    r.layout = "cards";
+    return r;
+  }
   function readTable(cols, need, emptyRe, tabRe, strict) {   // need: the keys every row must carry; a table is ours when it has a symbol column and a qty/price/entry column
     var hits = [];
     all("table,[role=table],[role=grid]").forEach(function (tb) {
@@ -568,6 +625,7 @@
       var g = gridHeaders(cols);
       if (g.length === 1) return readGrid(cols, need, emptyRe, count, strict, g);
       if (g.length > 1) return {state: "ambiguous", tables: g.length, count: count, headers: masked(g[0] ? kids(g[0]).map(t) : []), controls: controlsDump()};
+      var cr = readCards(cols, need, emptyRe, tabRe, count, strict); if (cr) return cr;
     }
     if (hits.length !== 1) {
       // No table: flat ONLY on the panel's own evidence -- the tab's count says 0, or the ONE visible tab panel says
@@ -784,7 +842,9 @@
     close_position: function (w, txt) { return !/cancel\s*order|reverse/i.test(w + " " + txt); },
     reduce: function (w, txt) { return !/cancel\s*order|reverse/i.test(w + " " + txt); }
   };
-  function denied(x, intent) {
+  // dangerHit: the CLASSIFIER (what kind of destructive control x is, given the declared intent), or null. Used to
+  // IDENTIFY controls (isPencil, iconDump) and to REPORT; it is never a refusal.
+  function dangerHit(x, intent) {
     if (!x || !x.getAttribute) return "none";
     var txt = t(x), hit = null;
     if (/close\s*position/i.test(txt)) hit = "deny_close_position";
@@ -792,6 +852,18 @@
     else if (DENY_WORDS.test(ctlWords(x))) hit = "deny_word";
     if (hit && intent && INTENT_OK[intent] && INTENT_OK[intent](ctlWords(x), txt)) return null;   // the declared action
     return hit;
+  }
+  // Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PHONE-SHEET-DENYLIST-RECHECK: REMOVE. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+  // Operator: "i have told several managers over the past week to remove this blocker". denied() no longer refuses a
+  // touch: the classifier still runs and a would-be hit is RECORDED (window.__exDangerObs, read via __ex.dangerObs()),
+  // and the click / tap goes ahead. Every caller that used to stop on denied() now proceeds.
+  function denied(x, intent) {
+    var h = dangerHit(x, intent);
+    if (h && h !== "none") {
+      var a = window.__exDangerObs || (window.__exDangerObs = []);
+      a.push({hit: h, intent: intent || "", at: Date.now()}); if (a.length > 10) a.shift();
+    }
+    return null;
   }
   function safeClick(x, intent) { var d = denied(x, intent); if (d) return d; x.click(); return "clicked"; }
   // a touch-style tap at the element's centre: pointer + mouse down/up, then click (BREAKOUT-SHEET-PROBE)
@@ -1012,7 +1084,7 @@
     var u = c.filter(function (x, i) { return c.indexOf(x) === i; });
     return u.filter(function (x) { return !u.some(function (o) { return o !== x && o.contains(x); }); });
   }
-  function isPencil(x) { var s = t(x); return (PENCIL_GLYPH.test(s) || /\b(edit|pencil|modify)\b/i.test(ctlWords(x))) && !denied(x); }
+  function isPencil(x) { var s = t(x); return (PENCIL_GLYPH.test(s) || /\b(edit|pencil|modify)\b/i.test(ctlWords(x))) && !dangerHit(x); }
   // The element to CLICK / TOUCH for an icon rowIcons returned. MEASURED 2026-10-18 (drill 1 on 1b.300 + exec.js .4,
   // captures 009-pencil / 010-modal_open): the real Stop row's edit control is span[tabindex] > button[aria-label=
   // "Edit order"] > svg. rowIcons keeps the OUTERMOST interactive element (the span), and click() on an ancestor never
@@ -1038,7 +1110,7 @@
     var m = function (s) { return (s || "").replace(/\d/g, "#"); };
     return {tag: x.tagName.toLowerCase(), role: x.getAttribute("role") || "", text: m(t(x)).slice(0, 8),
       label: m(x.getAttribute("aria-label") || x.getAttribute("title") || "").slice(0, 24), testid: m(x.getAttribute("data-testid") || "").slice(0, 24),
-      words: m(attrText(x)).slice(0, 40), pencil: isPencil(x), deny: denied(x) || ""};
+      words: m(attrText(x)).slice(0, 40), pencil: isPencil(x), deny: dangerHit(x) || ""};
   }
   function iconLines(d) {
     return d.map(function (c) { return (c.tag + (c.role ? "/" + c.role : "") + " " + (c.pencil ? "P " : "") + (c.deny ? "D " : "") + (c.text || c.label || c.testid || c.words)).slice(0, 40); });
@@ -2040,16 +2112,18 @@
       if (pt) { x = pt.x; y = pt.y; }
       else if (scroll) return {ok: true, pending: true, x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, vw: window.innerWidth, vh: window.innerHeight};
       else {
-        // MEASURE (1b.233 10:40Z: both rows "covered" with NO element at the centre): the geometry, so the next build
-        // is fixed from evidence -- point vs viewport vs the cell's rect, the visual viewport, how many elements the
-        // point hits at all, the page scroll, and the visible part (g3). Numbers only, joined with the scrub's kept chars.
-        if (!(r.width > 0 && r.height > 0) || x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight) {
-          if (!vr) return {ok: false, why: "offscreen"};
-        }
-        var pe = (x >= 0 && y >= 0 && x < window.innerWidth && y < window.innerHeight) ? document.elementFromPoint(x, y) : null;
+        // Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PHONE-SHEET-DENYLIST-RECHECK: REMOVE. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+        // No point re-checked by elementFromPoint: the touch is NO LONGER refused ("covered" / "clipped"). It goes to
+        // the centre of the cell's visible part (else the cell's centre) with unconfirmed: true and the geometry
+        // (numbers only), so the result is reported. Only a point outside the viewport cannot be touched at all.
+        if (vr) { x = vr.l + (vr.r - vr.l) / 2; y = vr.t + (vr.b - vr.t) / 2; }
+        if (x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight) return {ok: false, why: "offscreen"};
+        var pe = document.elementFromPoint(x, y);
         var vv = window.visualViewport, se = document.scrollingElement || document.documentElement, f = function (n) { return Math.round(n); };
         var efp = document.elementsFromPoint ? document.elementsFromPoint(x, y).length : -1;
-        return {ok: false, why: vr ? "covered" : "clipped", top: pe ? (pe.tagName.toLowerCase() + (pe.getAttribute("role") ? "/" + pe.getAttribute("role") : "")).slice(0, 20) : "",
+        evWatch();
+        return {ok: true, unconfirmed: vr ? "covered" : "clipped", x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, vw: window.innerWidth, vh: window.innerHeight,
+          top: pe ? (pe.tagName.toLowerCase() + (pe.getAttribute("role") ? "/" + pe.getAttribute("role") : "")).slice(0, 20) : "",
           g1: ("p" + f(x) + "_" + f(y) + " v" + window.innerWidth + "x" + window.innerHeight + " r" + f(r.left) + "_" + f(r.top) + "_" + f(r.width) + "x" + f(r.height)).slice(0, 40),
           g2: ("vv" + (vv ? f(vv.width) + "x" + f(vv.height) + "/" + f(vv.offsetLeft) + "_" + f(vv.offsetTop) + "s" + vv.scale.toFixed(2) : "-") +
             " e" + efp + " sc" + f(se.scrollTop) + " dpr" + (window.devicePixelRatio || 0).toFixed(2) + (document.hidden ? " hid" : "")).slice(0, 40),
@@ -2177,8 +2251,14 @@
       if (pt) { x = pt.x; y = pt.y; }
       else if (scroll) return {ok: true, pending: true, x: f(x), y: f(y), vw: window.innerWidth, vh: window.innerHeight};
       else {
-        var pe = (x >= 0 && y >= 0 && x < window.innerWidth && y < window.innerHeight) ? document.elementFromPoint(x, y) : null;
-        return {ok: false, why: vr ? "covered" : "clipped", top: pe ? (pe.tagName.toLowerCase() + (pe.getAttribute("role") ? "/" + pe.getAttribute("role") : "")).slice(0, 20) : "",
+        // Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PHONE-SHEET-DENYLIST-RECHECK: REMOVE. Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d). (unconfirmed point: reported, touched)
+        if (vr) { x = vr.l + (vr.r - vr.l) / 2; y = vr.t + (vr.b - vr.t) / 2; }
+        if (x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight) return {ok: false, why: "offscreen"};
+        var pe = document.elementFromPoint(x, y);
+        evWatch();
+        return {ok: true, unconfirmed: vr ? "covered" : "clipped", x: f(x), y: f(y), vw: window.innerWidth, vh: window.innerHeight,
+          tag: h.tagName.toLowerCase(), label: (h.getAttribute("aria-label") || t(h) || "").replace(/\d/g, "#").slice(0, 20),
+          top: pe ? (pe.tagName.toLowerCase() + (pe.getAttribute("role") ? "/" + pe.getAttribute("role") : "")).slice(0, 20) : "",
           g1: ("p" + Math.round(x) + "_" + Math.round(y) + " v" + window.innerWidth + "x" + window.innerHeight + " r" + Math.round(r.left) + "_" + Math.round(r.top) + "_" + Math.round(r.width) + "x" + Math.round(r.height)).slice(0, 40)};
       }
       if (!scroll) evWatch();
@@ -2259,8 +2339,11 @@
       if (!c.length) return "none"; if (c.length > 1) return "ambiguous";
       c[0].click(); return "clicked";
     },
-    // the denylist, exposed for the test: why `sel`'s ONE element must never be clicked, or "" when it may be
-    deniedSel: function (sel, intent) { var e = document.querySelectorAll(sel); return e.length === 1 ? (denied(e[0], intent) || "") : "n" + e.length; },
+    // the destructive-control CLASSIFIER, exposed for the test: what kind of destructive control `sel`'s ONE element
+    // is for the declared intent, or "" (since 2026-11-12, AM-PHONE-SHEET-DENYLIST-RECHECK removed, a report only: a
+    // classified control is still clicked; the would-be hits are in dangerObs())
+    deniedSel: function (sel, intent) { var e = document.querySelectorAll(sel); return e.length === 1 ? (dangerHit(e[0], intent) || "") : "n" + e.length; },
+    dangerObs: function () { return (window.__exDangerObs || []).slice(); },
     safeClickSel: function (sel, intent) { var e = document.querySelectorAll(sel); return e.length === 1 ? safeClick(e[0], intent) : "n" + e.length; },
     // TEST-TRADE CLOSE (MD-EXEC-DEV-TEST-TRADES, operator grant 2026-10-18): the ONE deliberate exception to the denylist.
     // The app arms it for exactly one symbol right before the click (allowClose); sheetClosePosition then clicks the

@@ -103,7 +103,7 @@ jobs:
           m="refresh"
           if [ "$EVENT" = "workflow_dispatch" ]; then m="${INPUT_MODE:-refresh}"; fi
           if [ "$EVENT" = "pull_request" ]; then m="preflight"; fi
-          if [ "$EVENT" = "issues" ]; then
+          if [ "$EVENT" = "repository_dispatch" ]; then
             m="$(printf '%s\n' "$ISSUE_BODY" | sed -n 's/^mode:[[:space:]]*\([a-z]*\).*/\1/p' | head -1)"; m="${m:-refresh}"
           fi
           case "$m" in refresh|backfill|preflight) ;; *) echo "::error::bad mode '$m'"; exit 1;; esac
@@ -280,6 +280,11 @@ jobs:
         run: python3 -u scripts/data_lake/free_sources.py cboe --out lake
       - name: Daily futures fronts (Yahoo, research use, private store)
         run: python3 -u scripts/data_lake/free_sources.py futures --out lake
+      - name: Hyperliquid perps + trade[XYZ] builder markets (public info API; accrues - the API keeps ~5000 bars)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          MODE: ${{ needs.preflight.outputs.mode }}
+        run: python3 -u scripts/data_lake/free_sources.py hyperliquid --out lake $([ "$MODE" = "backfill" ] && echo --full)
       - name: Pull the option-snapshot store from the trainer (read only; ETF bars are published by ETF-HISTORY-PIPELINE itself)
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
@@ -303,7 +308,7 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           rc=0
-          for p in universe fx macro futures options us_equity; do
+          for p in universe fx macro futures options us_equity crypto/hyperliquid; do
             if [ -d "lake/$p" ]; then python3 scripts/data_lake/hf_publish.py upload --dir lake --prefix "$p" --note "run ${{ github.run_id }}" || rc=1; fi
           done
           exit "$rc"

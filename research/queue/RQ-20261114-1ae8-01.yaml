@@ -1,0 +1,127 @@
+# Hand-authored 2026-11-15 by lane ML-PRIMARY (session_01AFoLuKuu4bMh6SG5oyAC9h), plan line MLP-D8-LABRADOR-2.
+# Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261114-1ae8-01
+title: 'D8 exit-now v0: does closing an ml_entry position at a 4h check-in, when the first-passage ML model values holding
+  below closing net of the exit cost, beat or match holding to the fixed bracket, net of the full cost stack, on the
+  record year AND the year before?'
+status: done
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+kind: experiment
+question: 'D8 (close all now) has no real-money model; ml_entry holds to its fixed 2 ATR SL / 3 ATR TP for up to 24 bars.
+  The TM line''s one-step exit-now policy FAILED on money (RQ-20261014-d6e7-06) on a different harness and leg set, and
+  the BTC exit head fails B4. Exit-now v0 reuses the Labrador-1b first-passage recipe (18 classes, check-ins 4..20,
+  walk-forward refits): at each check-in with the SL not hit, hold = the model''s expected net R of keeping the 3 ATR
+  bracket; close = open R at the check-in close minus the exit cost. Close iff close - hold > m. The TP never moves (D7
+  isolated out). Same trades, same SL, same cost stack as the baseline.'
+why_this_matters: 'If a model-driven early close is non-inferior and not losing on ml_entry, it is the first D8 model and a
+  held Tier-3 proposal; if it fails, exit-now on ml_entry closes and D8''s next lever is the eth_4h exit-head variant
+  (PI-20261104-NHN7JV7U-0001).'
+power:
+  expected_n: 1800
+  min_detectable_effect: 0.04
+  effect_units: R_per_trade
+  sd: 0.6
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, not measured (same population as RQ-20261114-82fd-01). Declared power clause in the rule: a window
+    whose day-clustered CI95 of the delta is wider than 0.08 R reads INDETERMINATE (underpowered), never PASS.'
+  feasibility:
+    source: none
+    accrual_basis: 'Replays public Binance Vision 1h klines through 2026-09-30; nothing accrues.'
+evidence_class:
+  holdout: walk_forward_oos
+  claim: stage0_exit_now
+ml_consumer:
+  consumer: ML-EXITHEAD-VALUE
+  decision: 'whether ml_entry closes an open position early at a 4h check-in on its real-money and prop books'
+  legs: [ml_entry]
+  book: money
+run:
+  command:
+  - python3
+  - scripts/research/ml_entry_tp_revision.py
+  - exit-now-v0
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  - --cache
+  - /tmp/ml_decision_klines
+  timeout_minutes: 330
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261114-1ae8-01
+decision_rule:
+  id: RULE-RQ20261114-1ae8-01-EXIT-NOW-V0
+  registered_at: '2026-11-15'
+  registered_before_run: true
+  statistic: 'Population: every ml_entry served-policy trade of the pooled replay (c692-01 walk-forward fold trades
+    2022-01..2025-09 at the served tau + the served artifact on 2025-10-01..2026-09-30, out of sample), held to the fixed
+    2/3 ATR bracket or closed at a check-in by the policy, net of ml_decision_entry._cost_r (fee 11 bps + slippage +
+    funding; BTCUSDT policy on every symbol, as the 1b harness). The first-passage model (check-ins 4..20) is refit per
+    TP fold (2022, 2023, 2024, 2025-01..09, 2025-10..2026-09) on candidate rows ending a 7-day embargo + 25 h before
+    the fold. Margin m* from {0, 0.02, 0.05, 0.10} is chosen on trades dated 2022-01-01..2024-09-30 only. Per window:
+    delta = policy - hold-to-bracket net R per trade, mean and day-clustered bootstrap CI95 (5000 draws); policy mean
+    net R and CI95; n, symbols, closed-early count; a matched-random close at the same per-check-in rate (100 draws)
+    and a best static time-stop chosen on the selection window (reported). The bybit_2 five are reported, never graded.'
+  rule: 'Windows: PRIOR = 2024-10-01..2025-09-30, RECORD = 2025-10-01..2026-09-30 (by decision bar). Per window: PASS
+    iff policy mean net R >= 0 AND mean delta >= 0 AND delta CI95 lower >= -0.02 R AND delta CI95 width <= 0.08 R AND
+    n >= 300 AND symbols >= 10 AND closed-early >= 30. FAIL iff policy mean net R < 0, OR the delta CI95 upper < 0, OR
+    (mean delta < 0 AND CI95 lower < -0.02). Otherwise INDETERMINATE. Unit verdict: PASS iff BOTH windows PASS; FAIL iff
+    EITHER window FAILs; else INDETERMINATE. Fixed now; not changed after any result.'
+  proposal_mapping: 'pass -> HELD Tier-3 PR: ml_entry exit-now at check-ins from the exported model (serve path, per-account
+    read), manager reviews; real money per CLAUDE.md "Data-backed Tier-2/3 decisions". fail -> exit-now on ml_entry
+    closes; D8 goes to the eth_4h exit-head variant (FAIL stays FAIL). indeterminate -> the starved clause becomes the
+    next unit, not a re-read.'
+  what_it_does_not_do: 'Moves no TP, changes no SL, serves nothing, places no order, changes no config. Reads no window after
+    2026-09-30. The record year was read by earlier ml_entry units; this is the first exit-now read on it.'
+  min_n: 300 trades per window
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.15
+intervention_controls:
+  bootstrap_group: day
+  hold_to_bracket: 'hold to the fixed 2/3 ATR bracket, as ml_entry trades today (walker parity with the label asserted)'
+  matched_random:
+    draws: 100
+  best_static:
+    grid: [4, 8, 12, 16, 20]
+    excludes_test_folds: true
+practice_precedent: 'RQ-20261101-383f-01 (Labrador-1b: same recipe, harness and cost stack; PASSED its forward read) and
+  the failed exit-now line RQ-20261014-d6e7-06; M4, M5 (pre-registered rule, out-of-sample grade).'
+follow_up: 'ML-PRIMARY grades on landing and updates MLP-D8-LABRADOR-2; PASS -> held Tier-3 PR reported to the manager.'
+smoke_disclosure: 'This rule was written while a 3-symbol (BTC/ETH/SOL) code-path smoke of exit-now-v0 ran, before its
+  output was read. The smoke exercises both windows on that subset; its numbers are not evidence and change nothing above.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 120
+  why_runner: Keyless public Binance Vision archives; GBDT on CPU (GitHub runner).
+  basis: 'INFERRED from a 3-symbol local smoke of the same subcommand (~1 min) scaled to the 60-perp universe with 5 TP refits plus 100 random-close draws.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+last_dispatched_at: '2026-11-15T01:02:20+00:00'
+grading:
+  attested: RULE-RQ20261114-1ae8-01-EXIT-NOW-V0
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261114-1ae8-01-EXIT-NOW-V0
+  evidence:
+  - research/results/RQ-20261114-1ae8-01/43661155486.jsonl
+  graded_at: '2026-11-15'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

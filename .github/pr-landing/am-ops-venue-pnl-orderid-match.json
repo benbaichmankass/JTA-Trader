@@ -1,0 +1,6 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "VENUE-PNL-ORDERID-MATCH, manager GO 19:45Z. src/runtime/order_monitor.py and src/units/accounts/clients.py are in the trader import closure, so merging restarts the trader: next restart batch. (a) The pending-pnl sweep now passes the row's own sl/tp order ids: the Bybit closed-pnl lookup returns the record whose orderId is the row's own leg before any heuristic (a netting record's avgEntryPrice is the POSITION average and the 10 bps filter refused it), and the demo/fills path falls back to exit_from_one_order_fills when the cumulative fills read refuses on a netted position (bybit_1 7054, still_pending every pass). (b) The venue sweep makes ONE extra read anchored at the entry for a hold longer than its 7-day window (bybit_1 6788, venue_unmatched). Real-money check: bybit_2 0 of 52 closed rows NULL or unmatched. Revert: git revert."
+}

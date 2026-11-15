@@ -30,6 +30,19 @@ logger = logging.getLogger(__name__)
 # ``STRATEGY_REFUSAL_COOLDOWN_SECONDS`` in the systemd unit.
 _DEFAULT_REFUSAL_COOLDOWN_SECONDS = 300
 
+# ---------------------------------------------------------------------------
+# GATE DECISIONS, operator 2026-11-12 decisions page, Gates tab. Record:
+# comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+#   * GATE-REFUSAL-COOLDOWN: REMOVE   -> ``_recent_refusal_for_strategy`` is an
+#     observation only; ``pipeline._monocle_gate`` logs it and dispatches.
+#   * GATE-BAR-DEBOUNCE: REMOVE       -> ``_same_bar_entry_for_strategy`` (and the
+#     intent layer's ``_debounce_emissions``) observe only; nothing is dropped.
+#   * GATE-EMPTY-SIZING-BRAKE: MAKE REPORT-ONLY -> ``_empty_sizing_refusal_for_signal``
+#     names the prior cause; the caller logs it and dispatches.
+# The helper names are kept (callers and tests import them); none of them
+# refuses anything any more. The open-package helpers above still gate.
+# ---------------------------------------------------------------------------
+
 
 def _refusal_cooldown_seconds() -> int:
     raw = os.environ.get("STRATEGY_REFUSAL_COOLDOWN_SECONDS")
@@ -549,8 +562,9 @@ def _same_bar_entry_for_strategy(
 #   * ``_same_bar_entry_for_strategy`` needs the strategy's configured
 #     ``timeframe`` to resolve; when it does not, it returns None and the
 #     debounce silently is not there.
-# So an empty sizing map had no ceiling of its own. This gate is that ceiling,
-# and it keys on the thing that actually went wrong.
+# So an empty sizing map had no ceiling of its own. This gate was that ceiling,
+# and it keyed on the thing that actually went wrong. Since 2026-11-12
+# (GATE-EMPTY-SIZING-BRAKE: MAKE REPORT-ONLY) it only REPORTS the repeat.
 #
 # ⚠️ IT DOES NOT SUPPRESS SILENTLY. It fires only on a package that recorded a
 # NAMED cause (``meta.empty_sizing_refusal.cause``, written by

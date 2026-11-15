@@ -102,6 +102,12 @@ def resolve_vol_specs(*, force: bool = False) -> dict:
 
     Never raises: any failure (no registry, import error, empty shadow set)
     yields ``{}`` so the detector degrades to ``unknown`` everywhere.
+
+    Observe-only by construction: these are SHADOW-stage edges, so the label
+    they produce (``intent.vol_regime``) never reaches the enforcing
+    ``intents._hard_regime_gate`` verdict, which takes its vol label from the
+    ADVISORY head only (REGIME-VOL-SPEC-ADVISORY-ONLY). It feeds the
+    observe-only ``regime_shadow_gate`` / ``regime_ml_vol_shadow`` rows.
     """
     global _VOL_SPEC_CACHE
     if _VOL_SPEC_CACHE is not None and not force:

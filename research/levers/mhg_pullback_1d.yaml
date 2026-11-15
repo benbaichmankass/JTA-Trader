@@ -65,7 +65,7 @@ attribution:
       gross_r: 4.465
 manifest:
   entry: tested
-  exit: untested
+  exit: tested
   filter: untested
   regime_gating: untested
   timeframe: untested
@@ -109,4 +109,75 @@ levers:
       points: 2
       best_delta_r_per_trade: 0.1486
       fold_stability: 0.625
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+  exit:
+    trail_decay_stall_bars:
+      tests:
+      - value: '20'
+        baseline_value: '10'
+        arm: D20
+        unit: RQ-20261113-e44a-03
+        window: 2018-06-01..2026-11-12
+        n: 69
+        net_r: 10.7492
+        baseline_n: 70
+        baseline_net_r: 11.6407
+        delta_net_r: -0.8915
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 7.5363
+        verdict: pass
+        joint_change: false
+      shape: flat
+      points: 1
+      best_delta_r_per_trade: -0.0127
+      fold_stability: 0.25
+      reading: no response at the tested values
+    timeout_bars:
+      tests:
+      - value: '20'
+        baseline_value: 'off'
+        arm: T20
+        unit: RQ-20261113-e44a-03
+        window: 2018-06-01..2026-11-12
+        n: 73
+        net_r: 14.599
+        baseline_n: 70
+        baseline_net_r: 11.6407
+        delta_net_r: 2.9583
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 6.7858
+        verdict: pass
+        joint_change: false
+      - value: '30'
+        baseline_value: 'off'
+        arm: T30
+        unit: RQ-20261113-e44a-03
+        window: 2018-06-01..2026-11-12
+        n: 70
+        net_r: 10.0105
+        baseline_n: 70
+        baseline_net_r: 11.6407
+        delta_net_r: -1.6302
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 6.9331
+        verdict: pass
+        joint_change: false
+      - value: '40'
+        baseline_value: 'off'
+        arm: T40
+        unit: RQ-20261113-e44a-03
+        window: 2018-06-01..2026-11-12
+        n: 70
+        net_r: 11.6407
+        baseline_n: 70
+        baseline_net_r: 11.6407
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 6.9331
+        verdict: pass
+        joint_change: false
+      shape: noisy
+      points: 3
+      best_delta_r_per_trade: 0.0423
+      fold_stability: 0.75
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'

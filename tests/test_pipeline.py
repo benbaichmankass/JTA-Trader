@@ -311,6 +311,43 @@ def test_mint_id_is_gapless_and_readable_within_one_session(tmp_path):
     assert second.startswith(first.rsplit("-", 1)[0] + "-")
 
 
+def _frozen_not_local(monkeypatch):
+    from src.runtime import work_read as wr
+    monkeypatch.setattr(wr, "is_canonical", lambda base, rel: True)
+    monkeypatch.setattr(wr, "frozen", lambda repo=None: True)
+    monkeypatch.setattr(wr, "local_store", lambda: None)
+
+
+def test_mint_id_asks_the_live_store_when_the_export_is_frozen(tmp_path, monkeypatch):
+    """2026-11-14: the frozen export lagged the live store and --mint-id re-issued an id the store already
+    held. Planted: the export is empty, the live store holds -0001 for this session; the mint must be -0002."""
+    _frozen_not_local(monkeypatch)
+    ref = "session_DDDDDDDDDDDDDDDD"
+    tag = P._session_tag(ref)
+    got = P.mint_id(ref, today=date(2026, 11, 14), store=tmp_path / "pipeline",
+                    live_ids=lambda: [f"PI-20261114-{tag}-0001", "PI-20261114-OTHER000-0007"])
+    assert got == f"PI-20261114-{tag}-0002"
+
+
+def test_mint_id_refuses_loudly_when_frozen_and_the_live_store_is_unreadable(tmp_path, monkeypatch):
+    _frozen_not_local(monkeypatch)
+
+    def boom():
+        raise RuntimeError("HTTP 502")
+    with pytest.raises(P.PipelineError, match="stale"):
+        P.mint_id("session_EEEEEEEEEEEEEEEE", today=date(2026, 11, 14), store=tmp_path / "pipeline", live_ids=boom)
+
+
+def test_mint_id_does_not_reach_the_live_store_when_not_frozen(tmp_path, monkeypatch):
+    from src.runtime import work_read as wr
+    monkeypatch.setattr(wr, "frozen", lambda repo=None: False)
+
+    def never():
+        raise AssertionError("the live store was read for an unfrozen store")
+    got = P.mint_id("session_FFFFFFFFFFFFFFFF", today=date(2026, 11, 14), store=tmp_path / "pipeline", live_ids=never)
+    assert got.endswith("-0001")
+
+
 # ── the actual property lane E64 exists to buy ───────────────────────────────
 def test_two_branches_each_appending_one_record_merge_cleanly(tmp_path):
     """POSITIVE CONTROL: simulate two branches each appending one record and

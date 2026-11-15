@@ -177,6 +177,32 @@ def test_snapshot_partitions(monkeypatch):
     assert sum(body["counts"].values()) == body["total"] == len(items)
 
 
+def test_snapshot_flags_quiet_in_flight_rows(monkeypatch):
+    """WORK-INFLIGHT-STALE-OWNERS (2026-11-15): the Overview 'In flight now' card counted every in_flight row,
+    including 21 left by archived/finished lanes. A row with no write for > 48 h is flagged quiet; a row without
+    a readable updated_at is unknown (None), never active."""
+    from datetime import datetime, timedelta, timezone
+    now = datetime.now(timezone.utc)
+    iso = lambda h: (now - timedelta(hours=h)).isoformat().replace("+00:00", "Z")  # noqa: E731
+    _fake_store(monkeypatch, [
+        {"id": "ACTIVE", "state": "in_flight", "updated_at": iso(2)},
+        {"id": "EDGE", "state": "in_flight", "updated_at": iso(47)},
+        {"id": "QUIET", "state": "in_flight", "updated_at": iso(80)},
+        {"id": "NOTS", "state": "in_flight"},
+        {"id": "BADTS", "state": "in_flight", "updated_at": "yesterday-ish"},
+        {"id": "Q", "state": "queued", "updated_at": iso(500)},
+    ])
+    body = wk.get_work_snapshot()
+    by = {r["id"]: r for r in body["openNow"]}
+    assert set(by) == {"ACTIVE", "EDGE", "QUIET", "NOTS", "BADTS"}
+    assert by["ACTIVE"]["quiet"] is False and by["EDGE"]["quiet"] is False
+    assert by["QUIET"]["quiet"] is True and by["QUIET"]["quietHours"] >= 79
+    assert by["NOTS"]["quiet"] is None and by["BADTS"]["quiet"] is None and by["NOTS"]["quietHours"] is None
+    c = body["openNowCounts"]
+    assert (c["total"], c["active"], c["quiet"], c["unknown"]) == (5, 2, 1, 2)
+    assert c["active"] + c["quiet"] + c["unknown"] == c["total"] and c["quietAfterHours"] == 48.0
+
+
 def test_snapshot_next_is_the_ranked_runnable_queue(monkeypatch):
     """`next` is what the manager dispatches next: ranked rows first, blocked rows excluded."""
     items = ([{"id": f"Q{i}", "state": "queued"} for i in range(3)]

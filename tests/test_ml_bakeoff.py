@@ -494,3 +494,36 @@ def test_group_placeholder_and_peer_skip_serve_every_symbol(tmp_path):
     pd.DataFrame({"ts": df["ts"], "fc_ret_med": 1.0}).to_json(side, orient="records", lines=True, date_format="iso")
     j = mb.block_join_columns(df, {"path": str(tmp_path / "side_{group}.jsonl"), "columns": ["fc_ret_med"]})
     assert np.allclose(j["fc_ret_med"], 1.0)
+
+
+# --- FRONTIER-Q-GRU-RESOLVABLE: opt-in row-level block bootstrap ------------------------------------------------------
+def test_row_bootstrap_absent_leaves_the_verdict_byte_identical():
+    a = mb.run_spec(_spec(), unit="t")
+    b = mb.run_spec(_spec(), unit="t")
+    for v in (a, b):
+        v["measurement"].pop("seconds")
+    assert json.dumps(a, sort_keys=True) == json.dumps(b, sort_keys=True)
+    assert "boot" not in json.dumps(a["measurement"]["deltas"])
+
+
+def test_row_bootstrap_gives_a_ci_the_rule_can_read():
+    cv = {"folds": 4, "embargo_rows": 10, "min_train_frac": 0.4,
+          "row_bootstrap": {"block_rows": 20, "n_boot": 200, "seed": 3}}
+    rule = {"min_folds": 3, "pass_if": [{"group": ["A", "B"], "vs": "baseline", "op": ">", "value": 0.0,
+                                         "stat": "boot_ci_low"}]}
+    v = mb.run_spec(_spec(cv=cv, rule=rule), unit="t")
+    boot = v["measurement"]["deltas"]["A"]["cv"]["logit"]["prior"]["boot"]
+    assert boot["n_rows"] == v["measurement"]["groups"]["A"]["arms"]["prior"]["windows"]["cv"]["n_test_rows"]
+    assert boot["ci95"][0] > 0 and v["verdict"] == "pass"
+    json.dumps(v)   # the in-memory OOS arrays never reach the verdict
+
+
+def test_row_bootstrap_null_case_spans_zero_and_unknown_stat_raises():
+    rng = np.random.default_rng(0)
+    y = rng.integers(0, 3, 600)
+    pa = rng.dirichlet(np.ones(3), 600)
+    pb = rng.dirichlet(np.ones(3), 600)
+    d = mb.block_bootstrap_delta(y, pa, pb, "macro_f1", [0, 1, 2], 1.0, 20, 300, 0)
+    assert d["ci95"][0] < 0 < d["ci95"][1]
+    with pytest.raises(ValueError):
+        mb._clause_value({"stat": "bogus"}, {"mean": 0.1})

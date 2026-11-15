@@ -5,7 +5,7 @@ Runs on the trainer VM (or free GitHub compute) with ZERO Anthropic usage. Contr
   pass. A failed job is retried on a backoff; after ``RED_FLAG_AFTER`` consecutive failures ONE
   ``lifecycle_red_flag`` event is written (once per episode) while retries continue.
 * Gates nothing on the trade path; never promotes. The ``update`` job only PROPOSES (gate-check
-  reports; promotion past shadow stays operator Tier-3).
+  reports; promotion is decided on offline evidence; the shadow step was retired 2026-11-12).
 * One MEASURED result record per attempted job -> <runtime_logs>/trainer/lifecycle_results.jsonl.
   A due job is skipped (recorded once per reason, status=skipped, not counted as done) when the
   model has no registry entry yet or its dataset is empty (rc 78).

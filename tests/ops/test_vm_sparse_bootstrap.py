@@ -158,3 +158,35 @@ def test_apply_refuses_without_patterns(world):
     assert r.returncode == 2
     for rel in CACHE:
         assert (vm / rel).exists()
+
+
+def _run_with_b64(vm: Path, fakebin: Path, b64: str) -> subprocess.CompletedProcess:
+    env = {**os.environ, "REPO_DIR": str(vm), "PATH": f"{fakebin}:{os.environ['PATH']}",
+           "ACTION_APPLY": "true", "SPARSE_PATTERNS_B64": b64}
+    with SCRIPT.open("rb") as fh:
+        return subprocess.run(["bash", "-s"], stdin=fh, cwd="/", env=env,
+                              capture_output=True, text=True)
+
+
+def test_apply_refuses_a_pattern_file_without_the_root_line(world):
+    """CI-SPARSE-BOOTSTRAP-FLAKE: the '/*' check is a bash match, not a pipe."""
+    seed, vm, fakebin, log = world
+    body = b"\n".join(ln for ln in PATTERNS.read_bytes().splitlines() if ln.strip() != b"/*") + b"\n"
+    r = _run_with_b64(vm, fakebin, base64.b64encode(body).decode())
+    assert r.returncode == 2 and "no '/*' line" in r.stderr, r.stderr
+    for rel in CACHE:
+        assert (vm / rel).exists()
+
+
+def test_apply_refuses_undecodable_patterns(world):
+    seed, vm, fakebin, log = world
+    r = _run_with_b64(vm, fakebin, "!!!not-base64!!!")
+    assert r.returncode == 2 and "not valid base64" in r.stderr, r.stderr
+
+
+def test_repeated_applies_never_refuse_valid_patterns(world):
+    """Five back-to-back applies with the real pattern file all succeed (the CI flake was run 2 refusing)."""
+    seed, vm, fakebin, log = world
+    for i in range(5):
+        r = _run(vm, fakebin, apply=True)
+        assert r.returncode == 0, f"run {i + 1}: {r.stdout}{r.stderr}"

@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "src/web/api/routers/diag.py is Tier-2 by path (R5). Read-path only: GET /api/diag/version adds unit_config_pending_by_unit and ORs it into restart_pending_by_unit; restart_pending (the code-only flag the deploy compares) is unchanged; no deploy, unit, timer or order-path change. Merged under the operator's 2026-11-12 'Merge + deploy on green' grant (docs/plans/operator-grant-merge-deploy-on-green-2026-11-12.md).",
+  "why": "DEPLOY-UNIT-RESTART-DETECT: on 2026-11-12 (#25185) web-api restarted at 10:08:33 on the old unit before install_systemd_units rewrote it, and /api/diag/version read restart_pending=false because the running sha equalled the checkout. Comparing the installed unit file/drop-in mtimes with ActiveEnterTimestamp makes that state visible."
+}

@@ -1,6 +1,6 @@
 id: RQ-20261025-7ee1-01
 title: 'Frontier: Timestral-209M (Mistral, Modified-MIT) as a frozen forecaster arm on the BTC/ETH/SOL 15m volatility-regime head -- a NEW unit that amends nothing in RQ-20261011-9da8-01'
-status: blocked
+status: retired
 cadence: once
 theme: regime
 priority: 2
@@ -117,3 +117,4 @@ blocked_review:
   due_by: '2026-11-15'
   note: 'kept: blocker still live (FRONTIER-LEVER-TSFM-TIMESTRAL=queued); re-dated, not dropped'
   reviewed: '2026-11-01'
+retired_reason: "2026-11-12 lane OPDEC-20261112 (operator decision 2026-11-11, Thursday-planning a6, verbatim \"Accept, and diversify the queue\": kill lever rows FRONTIER-LEVER-TABULAR and FRONTIER-LEVER-TSFM-TIMESTRAL; operator note 2026-11-12 \"all killed items need a reason and supporting data attached\"). This unit was blocked_on FRONTIER-LEVER-TSFM-TIMESTRAL, now dropped, so it is not dispatchable and will not be: never run (no verdict), so it closes nothing about the ts_foundation_model family or about Timestral itself. Supporting data (population stated): the only graded TSFM-forecaster unit, RQ-20261011-9da8-01 (Chronos-2 zero-shot, BTC/ETH/SOL 15m vol head, n 78,735 rows, 5 CV folds), FAILED twice, BTC cv delta vs incumbent -0.0057, 95% CI [-0.0146, +0.0033]; consumer: ml-review C3 (comms/reviews/ml-review-20261111-200000.json) shows the regime heads this forecaster feeds change 0 rostered pairs, and 38 of 38 bake-off records since 2026-11-04 target regime_label or direction_label; cost: the lever needed a Tier-2 pinned pip install on a 1-vCPU / 5.9 GB trainer, a new forecast backend and a 209M-parameter build (unit estimate 240 min, 8 GB). The licence is NOT a reason: the operator's standing answer (2026-10-25) is that the serving entity stays <= USD 20M/month. Full data on the row's note events (python3 scripts/ops/work.py history FRONTIER-LEVER-TSFM-TIMESTRAL) and docs/research/frontier-scan-2026-11-11.md sec 5. Re-entry test: a named consumer that acts on a point forecast (scan K4: TP revision with Granite ensemble-r1, re-open at >= 2027-02-01) -- author a NEW unit from that consumer, citing the lever map."

@@ -61,6 +61,7 @@ EXEMPT: dict[str, str] = {
     "ict-notify-failure@.service": "systemd TEMPLATE (FIX-SA-08) fired only via OnFailure= as ict-notify-failure@<unit>.service; it has no bare instance to report state for, and its output is the pushed ping + runtime_logs/unit_failures.jsonl",
     "ict-prop-feed@.service": "systemd TEMPLATE (TRADEIFY-WIRE 2026-09-30) with no bare instance; its INSTANCES (ict-prop-feed@tradeify_1.service/.timer) are in _CANONICAL_UNITS so the per-account feed stays visible to /api/diag/services",
     "ict-prop-executor@.service": "systemd TEMPLATE (TRADEIFY-EXECUTOR 2026-10-03) with no bare instance; its INSTANCES (ict-prop-executor@tradeify_1.service/.timer) are in _CANONICAL_UNITS so the per-account executor stays visible to /api/diag/services",
+    "ict-desk-build@.service": "systemd TEMPLATE (DESK-TRIGGER-SCAN-TIMEOUT 2026-11-12) with no bare instance and no timer: the trader starts ONE short-lived oneshot instance per desk trigger build (ict-desk-build@<job>.service) so a trader restart cannot kill it; instance names are unique job ids, and its record is runtime_logs/desk/jobs/<job>/result.json plus the desk_trigger_receipt/labels (isolation, stages, interrupted)",
     "ict-smoke-once.service": "one-shot smoke test fired manually/at deploy, not a recurring monitored unit (no timer)",
 }
 

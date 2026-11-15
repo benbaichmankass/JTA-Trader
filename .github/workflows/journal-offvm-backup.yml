@@ -90,7 +90,10 @@ jobs:
         id: mode
         run: |
           m="${{ inputs.mode }}"
-          if [ "${{ github.event_name }}" = "issues" ]; then
+          # Issue-routed runs arrive as repository_dispatch (issue-router.yml), never as `issues`:
+          # read `mode:` from the issue body for both (HEALTH-20261112-JOURNAL-BAK-RETENTION; before
+          # this a `mode: restore-test` issue silently ran a backup).
+          if [ "${{ github.event_name }}" = "issues" ] || [ "${{ github.event_name }}" = "repository_dispatch" ]; then
             m="$(printf '%s' "$ISSUE_BODY" | sed -n 's/^mode:[[:space:]]*//p' | head -1 | tr -d '\r ')"
           fi
           case "$m" in backup|status|restore-test) ;; *) m=backup ;; esac
@@ -104,6 +107,24 @@ jobs:
           export SCRATCH="$RUNNER_TEMP/journal_backup"; mkdir -p "$SCRATCH"
           bash scripts/ops/journal_offvm_backup.sh "${{ steps.mode.outputs.mode }}" 2>&1 | tee "$RUNNER_TEMP/out.txt"
 
+      # Scheduled on-VM journal-backup prune (HEALTH-20261112-JOURNAL-BAK-RETENTION; operator 2026-11-11:
+      # "we can prune the old journal backups on the live VM if we have the new ones set and we know
+      # that they're safe"). Runs ONLY after this run's backup verified (journal_offvm_backup.sh exits 0
+      # only when the trade_journal snapshot uploaded AND its restore test passed: integrity ok,
+      # 0 count mismatches). Keeps the newest backup always and anything under 1 day old; every older
+      # <db>.bak-* / <db>.*-bak-* is covered by the verified, versioned off-VM dailies. Same wrapper as
+      # the prune-db-backups system-action. A prune failure is reported, never fails the backup run.
+      - name: Prune old on-VM journal backups (only after a verified off-VM backup)
+        id: prune
+        if: steps.run.outcome == 'success' && steps.mode.outputs.mode == 'backup'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          { echo; echo ">>> on-VM backup prune (keep newest 1, protect < 1 day)"; } | tee -a "$RUNNER_TEMP/out.txt"
+          ssh -i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=yes -o ConnectTimeout=20 -o BatchMode=yes "${VM_USER}@${VM_HOST}" \
+            "ACTION_APPLY=true ACTION_KEEP=1 ACTION_DAYS=1 bash /home/ubuntu/ict-trading-bot/scripts/ops/prune_db_backups.sh" 2>&1 \
+            | grep -vE '[0-9]{1,3}(\.[0-9]{1,3}){3}' | tee -a "$RUNNER_TEMP/out.txt"
+
       - name: Report
         if: always()
         uses: actions/github-script@v7
@@ -112,9 +133,9 @@ jobs:
             const fs = require('fs');
             let out = '(no output)';
             try { out = fs.readFileSync(process.env.RUNNER_TEMP + '/out.txt', 'utf8').slice(-3500); } catch (e) {}
-            const body = `journal-offvm-backup (${{ steps.mode.outputs.mode }}): **${{ steps.run.outcome }}**\n\n\`\`\`\n${out}\n\`\`\`\n\n[run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
+            const body = `journal-offvm-backup (${{ steps.mode.outputs.mode }}): **${{ steps.run.outcome }}** (on-VM prune: ${{ steps.prune.outcome || 'not run' }})\n\n\`\`\`\n${out}\n\`\`\`\n\n[run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
             await core.summary.addRaw(body).write();
-            if (context.eventName === 'issues') {
+            if (context.eventName === 'issues' || context.eventName === 'repository_dispatch') {
               await github.rest.issues.createComment({...context.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), body});
               await github.rest.issues.update({...context.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), state: 'closed'});
             }

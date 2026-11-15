@@ -727,7 +727,8 @@ def enqueue_daily_dd_switch_alert(
 ) -> Optional[Path]:
     """Drop a Telegram ping for a daily-DD switch transition.
 
-    ``kind``: ``"trip"`` (armed switch tripped — NEW entries refused until the
+    ``kind``: ``"override"`` (the operator's one-time override cleared today's
+    trip), ``"trip"`` (armed switch tripped — NEW entries refused until the
     next day boundary; open positions keep their brackets), ``"reset"`` (the
     day rolled over, the account is taking entries again) or ``"unreadable"``
     (the red flag: equity could not be read for several consecutive checks on
@@ -748,6 +749,13 @@ def enqueue_daily_dd_switch_alert(
         elif kind == "reset":
             head = "✅ Daily drawdown switch reset"
             tail = "New day: the account is taking new entries again."
+        elif kind == "override":
+            o = r.get("override") or {}
+            head = "🟠 Daily drawdown switch OVERRIDDEN (one-time, operator)"
+            tail = (f"By {o.get('by', '—')} at {o.get('at', '—')}"
+                    + (f" — reason: {o['reason']}" if o.get("reason") else "")
+                    + ". New entries are allowed again for the rest of this trading day; "
+                    "the switch re-arms at the next daily reset.")
         else:
             head = "🚩 Daily drawdown switch cannot read equity"
             tail = (f"{r.get('unreadable_streak', '?')} consecutive checks could not read "

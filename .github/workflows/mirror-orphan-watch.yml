@@ -34,10 +34,27 @@ jobs:
       - name: Read positions
         env:
           DIAG_READ_TOKEN: ${{ secrets.DIAG_READ_TOKEN }}
+        # ONE account per request (MIRROR-ORPHAN-WATCH-502, 2026-11-14). The all-accounts read walks every account
+        # in sequence on one worker (4-7 s each, MEASURED) and passed the proxy's ~30 s upstream limit: runs 38 and
+        # 39 failed "we could not look" (a 10 s client timeout, then 502 at ~30 s). Only the mirror pairs are read,
+        # from mandate_resolver.MIRROR_OF (the checker's own list). An account whose read fails is left out, which
+        # the checker reports as an unreadable pair (exit 1): could-not-look is never folded into "no orphans".
         run: |
           set -uo pipefail
-          bash scripts/ops/diag_fetch.sh 'exchange_positions' > positions.json 2> positions.err \
-            || { echo "::error::exchange_positions read failed -- we could not look"; exit 2; }
+          pip install -q pyyaml
+          ids=$(python3 -c "from scripts.ops.mandate_resolver import MIRROR_OF as M; print(' '.join(sorted(set(M) | set(M.values()))))") \
+            || { echo "::error::could not list the mirror pairs -- we could not look"; exit 2; }
+          got=0
+          for a in $ids; do
+            if DIAG_FETCH_MAX_TIME=25 bash scripts/ops/diag_fetch.sh "exchange_positions?account_id=$a" > "pos_$a.json" 2>> positions.err; then
+              got=$((got + 1))
+            else
+              echo "::warning::exchange_positions read failed for $a -- that pair will report unreadable"
+              rm -f "pos_$a.json"
+            fi
+          done
+          [ "$got" -gt 0 ] || { echo "::error::every exchange_positions read failed -- we could not look"; exit 2; }
+          python3 -c "import glob, json; json.dump({'accounts': [a for f in sorted(glob.glob('pos_*.json')) for a in (json.load(open(f)).get('accounts') or [])]}, open('positions.json', 'w'))"
       - name: Compare mirror to live
         # pipefail is LOAD-BEARING: the default `bash -e {0}` shell takes the
         # pipeline's exit from `tee` (0), so an ORPHAN (exit 1) went GREEN:
@@ -45,5 +62,8 @@ jobs:
         # XRPUSDT short size=160.9" and concluded success (MIRROR-QTY-DIVERGE).
         run: |
           set -o pipefail
-          pip install -q pyyaml
+          # pandas: a side_filter_superset verdict (the SLV short on alpaca_portfolio) goes through
+          # account_side_filter -> strategy_signal_builders, which imports pandas (run 43637007962 failed on it).
+          # pyyaml + pandas is the measured minimum: the checker passes in a clean venv with exactly these two.
+          pip install -q pyyaml pandas
           python3 scripts/ops/check_mirror_orphans.py positions.json | tee -a "$GITHUB_STEP_SUMMARY"

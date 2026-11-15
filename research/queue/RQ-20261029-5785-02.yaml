@@ -41,6 +41,10 @@ power:
   feasibility:
     source: none
     accrual_basis: Replays pinned history on freshly fetched public candles; nothing accrues.
+evidence_class:  # RESEARCH-SLO-SURVIVOR-CONVERSION 2026-11-12: the rule reads a held-out window once (see decision_rule)
+  holdout: holdout_window
+  claim: edge
+  subject: new
 decision_rule:
   id: RULE-ML-OVERLAY-NONINFERIOR-V2
   registered_at: '2026-10-29'

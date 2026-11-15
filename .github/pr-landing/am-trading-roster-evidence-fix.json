@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tier-1 CI/test-truth fix for main red left by #25306 (breakout_2 on ice). (1) scripts/ci/check_roster_promotion_evidence.py: the breakout_2 line of FIDELITY_OPERATOR_WAIVER is removed (with the operator quote kept in a comment for re-entry), because breakout_2's roster is empty and test_c5_baseline_is_exactly_the_approximate_risk_bearing_slots refuses a waiver that outlives its slot; the self-test P9 probe slot moves to tradeify_1, which carries the same waiver. (2) comms/strategy_evidence/ml_entry.json config_fingerprint re-stamped via scripts/ops/refresh_strategy_evidence_fingerprint.py: #25306 removed only account_symbols.breakout_2 [ETHUSDT, SOLUSDT]; every other key is unchanged and ETH/SOL remain on tradeify_1/velotrade_1/bybit, so no measured field changes. No config/, no src/, no order path. Gates this adds or changes: none (it removes a waiver for a slot that no longer exists; the tradeify_1/velotrade_1 waivers are unchanged)."
+}

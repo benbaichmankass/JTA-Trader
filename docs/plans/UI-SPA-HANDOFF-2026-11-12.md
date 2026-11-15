@@ -84,4 +84,22 @@ R1 (`UI-SPA-RETIRE-CONSOLE-PAGES`, 11-27) retires 17 pages once the console has 
 - **Reports**
 - Data, ML roadmap, Performance, Research queue, Wake switches, System
 
-Console URL: `https://claude.ai/artifact/YU4ZwddDFB1AD2xWV2oE3g`, v24.
+Console URL: `https://claude.ai/artifact/YU4ZwddDFB1AD2xWV2oE3g`, v26, which adds the Ladder tab and Ask Claude.
+
+## 6. The SPA Work page = the console Overview, as is (`UI-REDESIGN-2026-11`, "WORK")
+
+The operator's spec (2026-11-09) reads: *"implement the JTA console's overview page as the design spec, as is; keep workflow + roadmap; Learning stays for now."* The console's Overview page (v26, the URL above) is therefore the layout for the SPA's Work page.
+
+Below is what that page renders, card by card, and the live `/api/bot/*` route the SPA reads for each. Every route is a browser-direct GET through Caddy, and CORS already covers it.
+
+| Card (order on the page) | What it shows | SPA source route | Collapsed-state rule |
+|---|---|---|---|
+| **Needs from you** (panel above the cards; hidden when empty) | Asks raised by sessions, each with its steps and input fields. Answers go back to the manager. | The console keeps asks in its page `db`; the SPA equivalent is `GET /api/bot/work/items?state=queued&kind=observation` filtered to `next_action == "ask_operator"`. | Show "could not look" when the read fails, never "nothing needed". |
+| **Inbox** | Decisions waiting on the operator (checklist rows `blocked_on` an `operator_decision`), asks (`next_action: ask_operator`) and urgent alerts. Each row has **Mark done** / **Reopen** and a **Reply** box. Done rows fold away. | `GET /api/bot/work/decisions`, `GET /api/bot/work/items?due=1`, `GET /api/bot/alerts?since=<24h>` (keep channel `system` or priority `high`) | A source that says `could_not_look` gets a one-line note naming it, never `0`. |
+| **This week** | Progress strip (done · landed unproven · of N), then rows grouped by `week_lane` (surge / throttle / standing), each with a progress meter. Rows can be reordered or moved between lanes; on the SPA that writes the same move request the console writes. | `GET /api/bot/work/items?state=…` (the week's rows carry `extra.week_lane`). `/api/bot/work/checklist` is an alternative, but its row ages are stale until `WORK-ROW-AGE-STALE` lands. | "—" for a missing count. |
+| **Roadmap** | Open rows **not** in this week's plan, grouped by their first `roadmap` ref. Rows with no ref go under **General backlog**, with a count of those that have no recorded reason. | Same item read as This week; group by `roadmap[0]`. | — |
+| **Health** | Resources in money-path order (trader VM, IB gateway, phone app), then trainer VM, Kaggle, Hugging Face (operator 2026-11-09). | `GET /api/bot/health/latest` now; the `health` frames of `/api/bot/stream` once #25173 is deployed (T4). | Per card, a source that cannot be read shows "could not look". |
+
+Also on that page: a **General note** composer, which writes a note for the manager, and Workflow + Roadmap toggles, which the operator said to keep.
+
+The page keeps no state of its own. The work store is the register of record (WORK-STORE S4, since 2026-11-07), so the SPA reads it through `/api/bot/work/items` and never through the repo's row files, which are a frozen export.
