@@ -1304,18 +1304,16 @@ def _snapshot_row(row: dict[str, Any]) -> dict[str, Any]:
         "lane": row.get("lane"),
         "tier": row.get("tier"),
         "priorityRank": row.get("priority_rank"),
+        "queuePos": row.get("queue_pos"),
         "updatedAt": row.get("updated_at"),
     }
 
 
-def _rank_sorted(rows, key_of=lambda r: r.get("priority_rank")) -> list[dict[str, Any]]:
-    """Rows by priority rank ascending (lower = higher in the list), unranked last; a stable sort,
-    so ties keep register order. The same meaning as ``checklist_store.queue``."""
-    def key(r):
-        rk = key_of(r)
-        ok = isinstance(rk, (int, float)) and not isinstance(rk, bool) and rk > 0
-        return (0, rk) if ok else (1, 0)
-    return sorted(rows, key=key)
+def _rank_sorted(rows, key_of=lambda r: r) -> list[dict[str, Any]]:
+    """Rows in the ONE display order (``work_reorder.display_key``): priority rank ascending, unranked
+    last, then ``queue_pos`` (else register order), then id. ``key_of`` maps a row to its checklist shape."""
+    from src.web.api.work_reorder import display_key
+    return sorted(rows, key=lambda r: display_key(key_of(r)))
 
 
 def _operator_edges(row: dict[str, Any]) -> list[dict[str, Any]]:
@@ -1338,7 +1336,7 @@ def _work_snapshot_payload() -> dict[str, Any]:
     closed = sorted((r for r in rows if r.get("state") in _SNAPSHOT_CLOSED),
                     key=lambda r: str(r.get("updated_at") or ""), reverse=True)
     waiting = []
-    for r in rows:
+    for r in _rank_sorted(rows):
         if r.get("state") in _SNAPSHOT_CLOSED:
             continue
         edges = _operator_edges(r)
@@ -1346,15 +1344,14 @@ def _work_snapshot_payload() -> dict[str, Any]:
             waiting.append({**_snapshot_row(r),
                             "asks": [{"what": e.get("what"), "ref": e.get("ref")}
                                      for e in edges]})
-    waiting = _rank_sorted(waiting, key_of=lambda w: w.get("priorityRank"))
     return {
         "present": True,
         "reason": None,
         "total": len(rows),
         "counts": counts,
         "closedRecent": [_snapshot_row(r) for r in closed[:5]],
-        "openNow": [_snapshot_row(r) for r in _rank_sorted(r for r in rows if r.get("state") == "in_flight")],
-        "next": [_snapshot_row(r) for r in checklist_store.queue({"items": rows})[:5]],
+        "openNow": [_snapshot_row(r) for r in _rank_sorted([r for r in rows if r.get("state") == "in_flight"])],
+        "next": [_snapshot_row(r) for r in _rank_sorted(checklist_store.queue({"items": rows}))[:5]],
         "waitingOnOperator": waiting,
     }
 
@@ -1385,11 +1382,12 @@ def get_work_snapshot() -> dict[str, Any]:
 # ── POST /reorder — the Overview work queue's up/down control (WORK-REORDER-ROUTE) ──
 #
 # **Tier 2, operator write.** The SPA cannot call ``POST /work/items/{id}/set`` (it needs ``If-Match``,
-# which the CORS allow-list refuses), so this route takes only ``{"id", "direction": "up"|"down"}``
-# and does the read-modify-write server-side in ONE work-store transaction
-# (``WorkStore.reorder``; population, ordering and null-rank rules are documented there).
+# which the CORS allow-list refuses), so this route takes only ``{"id", "direction": "up"|"down", "over"?}``
+# and does the read-modify-write server-side (``src/web/api/work_reorder.py``: contract, order key and
+# write count are documented there). It writes ONLY the moved row (``priority_rank`` is a shared priority
+# class, never renumbered): rank := over's rank, ``extra.queue_pos`` := between over and its neighbour.
 # ``over`` (optional): the card's visible neighbour -- the cards are FILTERED views, so the row is placed
-# directly beside ``over`` in the full open order instead of swapping with an unseen neighbour.
+# directly beside ``over`` instead of swapping with an unseen neighbour; without it, the row's own list.
 # Auth: ``require_session`` -- the operator's signed-in session, exactly as ``/decision/session``
 # and ``/plan-edits``. Recorded actor: ``operator-spa`` (never the email). Adds no gate; CORS unchanged.
 
@@ -1432,23 +1430,24 @@ async def post_work_reorder(
 
     def _move():
         from src.runtime import work_read
+        from src.web.api import work_reorder
         from src.web.api.auth import SESSION_ACTOR
         store = work_read.local_store()
         if store is None:
             raise FileNotFoundError("work store is absent on this host")
-        return store.reorder(item_id.strip(), direction, by=SESSION_ACTOR, expected_version=version, over=over)
+        return work_reorder.reorder(store, item_id.strip(), direction, by=SESSION_ACTOR, over=over,
+                                    expected_version=version)
 
     from src.runtime import work_store as ws
+    from src.web.api.work_reorder import ReorderError
     try:
         res = await run_in_threadpool(_move)
-    except ws.NotFoundError as exc:
-        return _reorder_error(404, "unknown_over" if "(over)" in str(exc) else "unknown_id", str(exc))
-    except ws.ReorderBoundary as exc:
-        edge = "top" if direction == "up" else "bottom"
-        return _reorder_error(409, "no_change" if over else f"at_{edge}", str(exc),
-                              position=exc.position, population=exc.population)
+    except ReorderError as exc:
+        return _reorder_error(exc.status, exc.code, exc.detail, **exc.extra)
     except ws.ConflictError as exc:
         return _reorder_error(409, "version_conflict", str(exc))
+    except ws.NotFoundError as exc:
+        return _reorder_error(404, "unknown_id", str(exc))
     except ws.WorkStoreValidationError as exc:
         return _reorder_error(422, "refused", str(exc)[:300])
     except Exception as exc:  # noqa: BLE001  # allow-silent: logged at ERROR and returned as 503 -- a move the operator thinks landed and did not is refused loudly.
