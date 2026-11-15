@@ -187,28 +187,46 @@ def rank_problem(value) -> str | None:
     return None
 
 
+def _num(v):
+    return float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+
+
+def _field(row: dict, key: str):
+    """A key from a checklist-shaped row (top level) or a work-store item (under ``extra``)."""
+    if key in row:
+        return row[key]
+    ex = row.get("extra")
+    return ex.get(key) if isinstance(ex, dict) else None
+
+
+def order_rank(row: dict) -> float | None:
+    """The row's priority class (a positive number), else None (unranked)."""
+    r = _num(row.get(RANK))
+    return r if r is not None and r > 0 else None
+
+
+def order_position(row: dict, default: float = float("inf")) -> float:
+    """Position inside the priority class: ``queue_pos`` (the operator's reorder, set by
+    ``POST /api/bot/work/reorder``), else the register order ``_seq``, else ``default``."""
+    q, seq = _num(_field(row, "queue_pos")), _num(_field(row, "_seq"))
+    return q if q is not None else (seq if seq is not None else default)
+
+
+def order_key(row: dict) -> tuple:
+    """THE one display/dispatch order: ``(unranked, rank, position)``. Callers append their own
+    tiebreak. Shared by :func:`queue` and ``src/web/api/work_reorder`` (the Overview reorder)."""
+    r = order_rank(row)
+    return (r is None, r or 0.0, order_position(row))
+
+
 def queue(data: dict) -> list[dict]:
     """The runnable queue in dispatch order: ``queued`` rows with nothing in ``blocked_on``,
-    by ``priority_rank`` (unranked last), then ``queue_pos`` (the operator's reorder; else ``_seq``),
+    by :func:`order_key` (``priority_rank`` with unranked last, then ``queue_pos`` else ``_seq``),
     then register order. ``data`` is ``load()``'s shape."""
     rows = [r for r in (data.get("items") or [])
             if isinstance(r, dict) and r.get("state") == "queued" and not r.get("blocked_on")]
     order = {id(r): n for n, r in enumerate(rows)}
-
-    def num(v):
-        return float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else None
-
-    def key(r):
-        # (rank class, position within the class, register order): the SAME key as the Overview's
-        # ``src/web/api/work_reorder.display_key``. ``queue_pos`` is the operator's reorder (set by
-        # POST /api/bot/work/reorder); a row never moved falls back to its register order ``_seq``.
-        rank = r.get(RANK)
-        ranked = rank_problem(rank) is None and rank is not None
-        q, seq = num(r.get("queue_pos")), num(r.get("_seq"))
-        pos = q if q is not None else seq
-        return (0 if ranked else 1, rank if ranked else 0, pos if pos is not None else float("inf"),
-                order[id(r)])
-    return sorted(rows, key=key)
+    return sorted(rows, key=lambda r: (*order_key(r), order[id(r)]))
 
 
 def _dump(obj) -> str:
