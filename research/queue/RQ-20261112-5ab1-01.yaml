@@ -1,0 +1,104 @@
+# Hand-authored 2026-11-12 by lane OPDEC-20261112 / PROMOTE-TLT-1H-REAL-MONEY (dispatched by Manager Session 2026-11-11a).
+# Decision rule registered BEFORE any run of this instrument on this leg. Gates this adds or changes: none.
+id: RQ-20261112-5ab1-01
+title: 'tlt_pullback_1h real-money promotion: does the leg carry a PREDICTIVE take-profit (tp_prediction_derive, dukascopy 1h 2018-06..2026-10-26) to replace the 50 R sentinel before it reaches alpaca_live + alpaca_portfolio?'
+status: done
+cadence: once
+roadmap:
+- L-LADDER
+- L-ATM
+theme: live_strategy
+priority: 1
+kind: experiment
+practice_precedent: 'docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md; M4, M5 (pre-registered rule, held-out grade). RQ-20261106-7850-02 (tqqq_trend_long_1d tp_r 1.5 before its alpaca_live probe) and RQ-20261016-014 (iaum_pullback_1d tp_r 3.5): same instrument, constants and rule shape.'
+question: 'Operator 2026-11-12 decisions page m9, verbatim "Rebuild the evidence record, then promote when it passes":
+  tlt_pullback_1h goes to real money (alpaca_live + alpaca_portfolio) and the TP doctrine forbids a fictional target
+  there; the leg runs tp_r 50 + tp_intent none (sentinel). Replaying the leg config-exact with NO take-profit and NO
+  venue cap on dukascopy TLT 1h over 2018-06-01..2026-10-26 (the RQ-20261104-003 holdout window), is there a K* on the
+  instrument''s fixed grid that is reached by >= 10% of trades OOS, calibrated (|reach_OOS - reach_IS| <= 0.10) and
+  non-inferior to the current bracket (paired OOS delta CI95 lower >= -0.05 R/trade)?'
+why_this_matters: 'Decision it changes: whether tlt_pullback_1h''s real-money roster PR carries a data-backed declared TP
+  (PASS -> tp_r K* in that PR, the evidence record rebuilt on the new config) or the sentinel debt goes to the
+  operator as a visible baseline line (FAIL / INDETERMINATE -> no data-backed TP; this lane does not declare one).'
+power:
+  expected_n: 579
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'RQ-20261104-003 measured n 579 trades for the leg as declared on this window (dukascopy). 40% OOS ~ 230 >> floor 39
+    ((1.96+0.8416)^2/0.45^2 = 38.8). DISCLOSED: before registering, the lane had seen RQ-20261104-003 (by_outcome: 402 trail_stop /
+    176 stop / 1 take_profit) and a 365d faithful evidence rebuild (net_r_oos +0.23 R, n 101); it has NOT seen any reach curve or
+    tp_r arm for this leg. The K grid, floors and rule are the instrument''s unchanged constants.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on dukascopy 1h candles over a pinned window; nothing accrues.
+evidence_class:
+  holdout: final_fold
+  claim: other
+decision_rule:
+  id: RULE-TLT1H-PREDICTIVE-TP
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'Exactly RQ-20261106-7850-02''s statistic for one leg (tp_prediction_derive.py, constants unchanged: K grid
+    1-8 R, IS 60% chronological, reach floor 0.10, calibration tolerance 0.10, non-inferiority margin 0.05 R/trade,
+    bootstrap 2000 seed 20261015, K* must rest below the median IS venue cap) over tlt_pullback_1h, --days 3069 --end
+    2026-10-26 (2018-06-01..2026-10-26; the instrument fetches dukascopy then yfinance), net of the harness''s full cost
+    stack (equity fee 0 + slippage 5 bps rt + funding 0 via execution_costs).'
+  rule: 'INDETERMINATE IF n_oos < 39 OR no K eligible. FAIL IF reach_OOS(K*) < 0.10 OR calibration gap > 0.10 OR CI upper
+    < -0.05 R/trade. PASS IF reach_OOS(K*) >= 0.10 AND gap <= 0.10 AND CI lower >= -0.05 -> K* is the leg''s predictive TP
+    and is declared on tlt_pullback_1h in its real-money roster PR (Tier 3, data-backed; the manager merges). Anything but
+    PASS: no data-backed TP; the lane does not declare one and the TP choice goes to the operator.'
+  what_it_does_not_do: Touches no config by itself. The counterfactual is the instrument's (exact given the path; lagged mfe
+    under-states reach; the slot an earlier TP frees is not modelled). tp_revision (the second doctrine dimension) is a
+    separate question.
+compute: cpu_light
+value:
+  bucket: structural
+  usd_at_stake_per_month: 30
+  confidence: 0.2
+  basis: 'stand-in: one small real-money leg on alpaca_live; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  basis: Lane sandbox run (dukascopy-python 4.0.1, the research-script-run.yml pin).
+  why_runner: Keyless public candles for a pinned window; reads no trainer data.
+run:
+  command:
+  - python3
+  - scripts/research/tp_prediction_derive.py
+  - --legs
+  - tlt_pullback_1h
+  - --days
+  - '3069'
+  - --end
+  - '2026-10-26'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261112-5ab1-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+intervention_controls:
+  not_applicable: an offline counterfactual over replayed trades, not an in-trade action
+related:
+- PROMOTE-TLT-1H-REAL-MONEY
+- PR1111-SURVIVOR-PROMOTIONS
+- RQ-20261104-003
+- RQ-20261106-7850-02
+- scripts/research/tp_prediction_derive.py
+grading:
+  verdict: indeterminate
+  graded_at: '2026-11-12'
+  reason: 'MEASURED: tlt_pullback_1h dukascopy 1h 2018-06-01..2026-10-26, config-exact uncapped no-TP replay, n 579 / n_oos 232;
+    K* 3.5 R (median IS venue cap 14.2 R), reach_IS 0.107 / reach_OOS 0.112, calibration gap 0.005, OOS mean net 0.204 (K*) vs
+    0.225 (sentinel) R/trade, delta -0.020, CI95 [-0.082, +0.032] straddles the -0.05 margin. Not a PASS: per the rule the lane
+    declares nothing; 3.5 R is put to the operator to DECLARE (the RQ-20261106-7850-02 / tqqq 1.5 R precedent).'
+  evidence:
+  - research/results/RQ-20261112-5ab1-01/local-20261112.jsonl

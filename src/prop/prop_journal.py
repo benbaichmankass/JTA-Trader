@@ -400,6 +400,12 @@ def _tp_target_meta(meta: Any) -> Optional[float]:
     return tp_target_from(meta)
 
 
+def _close_request_meta(meta: Any) -> Optional[Dict[str, Any]]:
+    """``prop_tickets.meta.close_request`` (CAP-PROP-VM-CLOSE), None when absent or unreadable."""
+    from src.prop.vm_close import close_request_from
+    return close_request_from(meta)
+
+
 def _sl_floor_meta(meta: Any) -> Optional[float]:
     """``prop_tickets.meta.sl_floor.level`` (LTR-6R), None when absent or unreadable (never 0)."""
     from src.runtime.live_review_intent import sl_floor_from
@@ -541,6 +547,10 @@ def list_outbound_tickets(
             "direction": op.get("direction") or tk.get("direction"),
             "entry": op.get("entry") if op.get("entry") is not None else tk.get("entry"),
             "sl": op.get("sl") if op.get("sl") is not None else tk.get("sl"),
+            # PROP-TICKET-STOP-TEXT-MISMATCH: `sl` above is the package's CURRENT stop (it moves with
+            # structure/trail amends, e.g. 2022.06 -> 2030.41 31 s after open); the ticket TEXT's Stop
+            # line is the stop AS EMITTED. `ticket_sl` is that emitted stop, so the two are comparable.
+            "ticket_sl": tk.get("sl"),
             "tp": op.get("tp") if op.get("tp") is not None else tk.get("tp"),
             "qty": tk.get("qty"),
             "risk_usd": tk.get("risk_usd"),
@@ -567,6 +577,9 @@ def list_outbound_tickets(
             # PROP-BRACKET-APPLY: the TP the system asked this ticket to rest at; the VM executor's trail applies it
             # through its own amend code. None = no pin.
             "tp_target": _tp_target_meta(tk.get("meta")),
+            # CAP-PROP-VM-CLOSE: the close / partial-close the system asked this ticket's executor to carry out
+            # ({id, fraction, ...}; fraction None = the whole position). None = no request.
+            "close_request": _close_request_meta(tk.get("meta")),
         }
 
     for r in op_rows:

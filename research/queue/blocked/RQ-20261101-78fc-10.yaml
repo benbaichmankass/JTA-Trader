@@ -2,7 +2,7 @@
 id: RQ-20261101-78fc-10
 title: 'ITERATION 1 of ltr-close (indeterminate): does the live-review FULL CLOSE class, found positive on one window, pass RULE-AM-RISK-ADJUSTED-V1
   on a disjoint window it was not found on?'
-status: blocked
+status: retired
 cadence: once
 theme: live_strategy
 priority: 1
@@ -86,3 +86,4 @@ intervention_controls:
     - close_at_1R
     excludes_test_folds: true
   bootstrap_group: trade
+retired_reason: '2026-11-13 lane FRONTIER-RESEARCH (AM-ML 03:17Z item 3, PI-20261113-6YRT1RMK-0001): RETIRED without a run, SUPERSEDED. Its lever LTR-CLOSE-CLASS-TEST was dropped 2026-11-06 (BACKLOG-DRAIN) as superseded by LTR-TRIGGER-CLOSE-S0, which answered this question offline over 6 months: comms/research/ltr_trigger_close_s0/VERDICT.md (PR #22151; 552 priced packages, crypto, 2026-05-26..11-01): no close trigger passes; adverse_r -0.5 closes are -0.41 R worse than a random-time close (n 281, Bonf. CI [-0.535,-0.298], FAIL); the live W44 hold-loss did not generalise. The re-measured source signal (comms/research/ltr_class_grade/VERDICT.md) was 4 packages, +0.79 R/package, INDETERMINATE. Next iteration for ltr-close: the stall time-stop, LTR-STALL-TIMESTOP-S0 (queued, AM-TRADING): stall beat hold (+0.359 R, Bonf. CI LB +0.028) but not random.'

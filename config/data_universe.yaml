@@ -198,3 +198,18 @@ options:
                 AAPL, MSFT, NVDA, AMZN, GOOGL, META, TSLA, AMD, NFLX, JPM, BAC, XOM]
   expiries: 3
   moneyness: 0.06
+
+hyperliquid:
+  # VENUE-SCOPE-HYPERLIQUID / HL-DATA-FETCHER (manager 2026-11-11: daily accrual, research data only, no runtime).
+  # The public info API keeps only ~5000 recent bars per interval, so history ACCRUES from the first run: every run
+  # merges into the lake's year files (scripts/data_lake/free_sources.py hyperliquid). 1m is the finest grain (daily
+  # refresh covers ~3.5 days of 1m, so a missed day never gaps); 1h gives the ~7-month head start the blocked units
+  # RQ-20261111-9b09-02 (trade[XYZ] SILVER/GOLD/CL/XYZ100) and -03 (HL vs Bybit funding, 6 perps) need now.
+  source: api.hyperliquid.xyz/info (public, keyless)
+  licence: "Hyperliquid public API terms; private stores only"
+  perps: [BTC, ETH, SOL, XRP, ADA, AVAX]
+  builder: ["xyz:SILVER", "xyz:GOLD", "xyz:CL", "xyz:XYZ100"]
+  candles: [1m, 1h]
+  funding: true
+  funding_since: "2023-05-01"   # --full (backfill) start; HL fundingHistory is public from 2023-05-12 (BTC)
+  funding_refresh_days: 30      # refresh window; the merge keeps everything older

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -40,7 +40,8 @@ def _accounts() -> Dict[str, Any]:
     return load_accounts_dict(_ACCOUNTS_YAML)
 
 
-def _trade_rows(conn: sqlite3.Connection, account_ids: List[str], since: Optional[str]) -> Dict[str, Any]:
+def _trade_rows(conn: sqlite3.Connection, account_ids: List[str], since: Optional[str],
+                until: Optional[str] = None) -> Dict[str, Any]:
     if not account_ids:
         return {"rows": [], "n_null_pnl": 0}
     ph = ",".join("?" for _ in account_ids)
@@ -55,6 +56,9 @@ def _trade_rows(conn: sqlite3.Connection, account_ids: List[str], since: Optiona
     if since:
         base += f" AND {_CT} >= datetime(?)"
         params.append(since)
+    if until:
+        base += f" AND {_CT} < datetime(?)"
+        params.append(until)
     conn.row_factory = sqlite3.Row
     n_null = conn.execute("SELECT COUNT(*) " + base + " AND t.pnl IS NULL", params).fetchone()[0]
     rows = conn.execute(
@@ -72,12 +76,13 @@ def _prop_stop(opener: Dict[str, Any]) -> Optional[float]:
     return b.get("entry_sl") if b.get("entry_sl") is not None else b.get("final_sl")
 
 
-def _prop_rows(account_ids: List[str], since: Optional[str]) -> Dict[str, Any]:
+def _prop_rows(account_ids: List[str], since: Optional[str], until: Optional[str] = None) -> Dict[str, Any]:
     """Closed prop trades from prop_fills: the CLOSING row carries pnl/exit; the opener carries entry/qty/stop/open time."""
     from src.prop import prop_journal, prop_overview
     out: List[Dict[str, Any]] = []
     n_null = 0
     cutoff = datetime.fromisoformat(since) if since else None
+    ceiling = datetime.fromisoformat(until) if until else None
     for aid in account_ids:
         fills = prop_journal.list_fills(account_id=aid, limit=5000)
         prop_overview.annotate_trade_state(fills)
@@ -88,6 +93,8 @@ def _prop_rows(account_ids: List[str], since: Optional[str]) -> Dict[str, Any]:
                 continue
             c = pc._dt(f.get("closed_at") or f.get("reported_at"))
             if cutoff and (c is None or c < cutoff):
+                continue
+            if ceiling and (c is None or c >= ceiling):
                 continue
             if f.get("pnl") is None:
                 n_null += 1
@@ -100,7 +107,8 @@ def _prop_rows(account_ids: List[str], since: Optional[str]) -> Dict[str, Any]:
     return {"rows": out, "n_null_pnl": n_null}
 
 
-def _snapshots(conn: sqlite3.Connection, account_ids: List[str], since: Optional[str]) -> Dict[str, Dict[str, Any]]:
+def _snapshots(conn: sqlite3.Connection, account_ids: List[str], since: Optional[str],
+               until: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
     out: Dict[str, Dict[str, Any]] = {}
     for aid in account_ids:
         q = "SELECT COUNT(balance), AVG(balance) FROM balance_snapshots WHERE account_id = ? AND api_ok = 1"
@@ -108,24 +116,55 @@ def _snapshots(conn: sqlite3.Connection, account_ids: List[str], since: Optional
         if since:
             q += " AND datetime(ts) >= datetime(?)"
             p.append(since)
+        if until:
+            q += " AND datetime(ts) < datetime(?)"
+            p.append(until)
         n, mean = conn.execute(q, p).fetchone()
         out[aid] = {"n": n or 0, "mean_balance": mean}
     return out
 
 
+def _parse_range(window: str, start: Optional[str], end: Optional[str], now: datetime) -> Dict[str, Any]:
+    """``start``/``end`` (ISO dates, both inclusive, UTC days) win over ``window``. Unknown / inverted -> HTTP 400."""
+    if start is None and end is None:
+        if window not in _WINDOWS:
+            raise HTTPException(status_code=400, detail=f"unknown window {window!r}; valid: {sorted(_WINDOWS)}")
+        days = _WINDOWS[window]
+        since = (now - timedelta(days=days)).isoformat() if days else None
+        return {"since": since, "until": None, "days": float(days) if days else None, "window": window,
+                "start": since[:10] if since else None, "end": None}
+    try:
+        d0 = date.fromisoformat(start) if start else None
+        d1 = date.fromisoformat(end) if end else now.date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"start/end must be ISO dates (YYYY-MM-DD), got start={start!r} end={end!r}")
+    if d0 is None:
+        raise HTTPException(status_code=400, detail="end given without start; send both (or neither, to use window)")
+    if d1 < d0:
+        raise HTTPException(status_code=400, detail=f"inverted range: start {d0} is after end {d1}")
+    since = datetime(d0.year, d0.month, d0.day, tzinfo=timezone.utc)
+    until = datetime(d1.year, d1.month, d1.day, tzinfo=timezone.utc) + timedelta(days=1)
+    return {"since": since.isoformat(), "until": until.isoformat(), "days": (until - since).total_seconds() / 86400.0,
+            "window": None, "start": d0.isoformat(), "end": d1.isoformat()}
+
+
 @router.get("/performance/categories")
-def get_performance_categories(window: str = "30d") -> Dict[str, Any]:
-    if window not in _WINDOWS:
-        raise HTTPException(status_code=400, detail=f"unknown window {window!r}; valid: {sorted(_WINDOWS)}")
+def get_performance_categories(window: str = "30d", start: Optional[str] = None, end: Optional[str] = None,
+                               breakdown: Optional[str] = None) -> Dict[str, Any]:
+    """One row per book. ``start``+``end`` (ISO dates, inclusive) or the legacy ``window``; optional
+    ``breakdown=strategy|asset_class|account`` adds ``groups[]`` to each row (same metric definitions)."""
+    if breakdown is not None and breakdown not in pc.BREAKDOWNS:
+        raise HTTPException(status_code=400, detail=f"unknown breakdown {breakdown!r}; valid: {list(pc.BREAKDOWNS)}")
     now = datetime.now(timezone.utc)
-    days = _WINDOWS[window]
-    since = (now - timedelta(days=days)).isoformat() if days else None
+    rng = _parse_range(window, start, end, now)
+    days, since, until = rng["days"], rng["since"], rng["until"]
+    echo = {"window": rng["window"], "start": rng["start"], "end": rng["end"], "breakdown": breakdown}
     as_of = now.isoformat()
     try:
         cats, excluded = pc.categorize(_accounts())
     except Exception:  # noqa: BLE001  # allow-silent: an unreadable accounts.yaml is a stated read_state, not a 5xx
         logger.warning("performance/categories: accounts.yaml unreadable", exc_info=True)
-        return {"as_of": as_of, "window": window, "read_state": "accounts_unreadable", "categories": [], "excluded": [],
+        return {"as_of": as_of, **echo, "read_state": "accounts_unreadable", "categories": [], "excluded": [],
                 "population": None}
     out: List[Dict[str, Any]] = []
     try:
@@ -133,53 +172,107 @@ def get_performance_categories(window: str = "30d") -> Dict[str, Any]:
         try:
             for cat in pc.CATEGORIES:
                 ids = cats[cat]
-                data = _prop_rows(ids, since) if cat == "prop" else _trade_rows(conn, ids, since)
+                data = _prop_rows(ids, since, until) if cat == "prop" else _trade_rows(conn, ids, since, until)
                 # all-time: window length = span from the first close to now (None when no rows)
-                wd = float(days) if days else None
+                wd = days
                 if wd is None and data["rows"]:
                     first = min(pc._dt(r["closed_at"]) or now for r in data["rows"])
                     wd = max((now - first).total_seconds() / 86400.0, 1e-9)
-                m = pc.category_metrics(data["rows"], category=cat, window_days=wd,
-                                        snapshots=_snapshots(conn, ids, since) if ids else None)
-                m.update({"accounts": ids, "n_excluded_null_pnl": data["n_null_pnl"],
-                          "read_state": "measured" if ids else "no_accounts"})
+                snaps = _snapshots(conn, ids, since, until) if ids else None
+                cap_start = pc._dt(since) if since else (min((pc._dt(r["closed_at"]) for r in data["rows"] if pc._dt(r["closed_at"])),
+                                                              default=None))   # "all": the book's first close
+                cap = _start_capital(conn, ids, cap_start)
+                m = pc.category_metrics(data["rows"], category=cat, window_days=wd, snapshots=snaps)
+                m.update({"label": pc.BOOK_LABELS[cat], "accounts": ids, "n_excluded_null_pnl": data["n_null_pnl"],
+                          "read_state": "measured" if ids else "no_accounts", **_capital_fields(cap),
+                          "pct": _pct(m["net_pnl_usd"], cap["usd"]), "measured_pct": _pct(m["measured_usd"], cap["usd"])})
+                if breakdown:
+                    m["groups"] = pc.breakdown_metrics(data["rows"], category=cat, by=breakdown, window_days=wd,
+                                                       snapshots=snaps)
                 out.append(m)
         finally:
             conn.close()
     except sqlite3.Error:  # allow-silent: logs the stack and answers read_state journal_unreadable with population null, never an empty table that reads as "no trades"
         logger.warning("performance/categories: journal read failed", exc_info=True)
-        return {"as_of": as_of, "window": window, "read_state": "journal_unreadable", "categories": [], "excluded": excluded,
+        return {"as_of": as_of, **echo, "read_state": "journal_unreadable", "categories": [], "excluded": excluded,
                 "population": None}
-    return {"as_of": as_of, "window": window, "read_state": "measured", "categories": out, "excluded": excluded,
-            "population": {"window": window, "since": since, "accounts": {c: cats[c] for c in pc.CATEGORIES},
-                           "n_closed": sum(c["n_closed"] for c in out),
+    n_closed = sum(c["n_closed"] for c in out)
+    total = pc.total_row(out)
+    # total capital: every book that holds accounts needs a base, else None (a partial sum would understate it)
+    holding = [c for c in out if c["accounts"]]
+    t_usd = (round(sum(c["start_capital_usd"] for c in holding), 4)
+             if holding and all(c["start_capital_usd"] is not None for c in holding) else None)
+    t_states = {c["capital_read_state"] for c in holding}
+    total.update({"start_capital_usd": t_usd,
+                  "capital_read_state": ("no_capital_record" if t_usd is None else
+                                         "first_after_start" if "first_after_start" in t_states else "measured"),
+                  "pct": _pct(total["net_pnl_usd"], t_usd), "measured_pct": _pct(total["measured_usd"], t_usd)})
+    span = (f"{rng['start']}..{rng['end']}" if rng["window"] is None else rng["window"])
+    return {"as_of": as_of, **echo, "read_state": "measured", "categories": out, "total": total,
+            "capital_flows": pc.CAPITAL_FLOWS, "excluded": excluded,
+            "population": {"window": rng["window"], "since": since, "until": until,
+                           "accounts": {c: cats[c] for c in pc.CATEGORIES},
+                           "n_closed": n_closed,
                            "rows_excluded_null_pnl": sum(c["n_excluded_null_pnl"] for c in out),
-                           "also_excluded": "backtest, superseded, reconciler pseudo-strategy, reset-flat, reduce legs"}}
+                           "also_excluded": "backtest, superseded, reconciler pseudo-strategy, reset-flat, reduce legs",
+                           "text": f"{span} · closed trades on {sum(len(v) for v in cats.values())} accounts in "
+                                   f"{len(pc.CATEGORIES)} books · n_closed={n_closed} · excluded: null-pnl rows counted per book, "
+                                   f"backtest/superseded/reconciler/reset-flat/reduce legs"}}
 
 
 _SERIES_MAX_DAYS = 400   # "all" is capped here (pnl_history.MAX_DAYS is 90 and serves the older flat route)
 
 
-def _start_capital(conn: sqlite3.Connection, account_ids: List[str], start: datetime) -> Dict[str, Any]:
-    """Sum over accounts of the balance at-or-before ``start``; first row after it when none earlier (flagged)."""
-    total, n_ok, n_after = 0.0, 0, 0
+def _start_capital(conn: sqlite3.Connection, account_ids: List[str], start: Optional[datetime]) -> Dict[str, Any]:
+    """Capital at the start of the chosen window (operator u3), summed over the category's accounts.
+
+    Per account: the nearest ``balance_snapshots`` reading AT OR BEFORE ``start`` (state ``measured``); none -> the nearest
+    reading AFTER ``start`` (state ``first_after_start``, its timestamp published); neither -> no reading. The category
+    figure needs a reading on EVERY account (a partial sum would understate the base), else ``usd`` is None with
+    ``no_capital_record`` -- never 0. ``accounts[]`` names each account's reading and timestamp so nothing is hidden."""
+    src = "balance_snapshots (api_ok=1): nearest reading at or before start, else nearest after"
+    if not account_ids:
+        return {"usd": None, "read_state": "no_accounts", "source": src, "as_of": None, "accounts": []}
+    if start is None:
+        return {"usd": None, "read_state": "no_window_start", "source": src, "as_of": None,
+                "accounts": [{"account_id": a, "balance": None, "ts": None, "state": "no_window_start"} for a in account_ids]}
+    detail: List[Dict[str, Any]] = []
+    total = 0.0
     for aid in account_ids:
-        row = conn.execute("SELECT balance FROM balance_snapshots WHERE account_id = ? AND api_ok = 1 AND balance IS NOT NULL "
-                           "AND datetime(ts) <= datetime(?) ORDER BY datetime(ts) DESC LIMIT 1", (aid, start.isoformat())).fetchone()
+        base = ("SELECT balance, ts FROM balance_snapshots WHERE account_id = ? AND api_ok = 1 AND balance IS NOT NULL "
+                "AND datetime(ts) {op} datetime(?) ORDER BY datetime(ts) {order} LIMIT 1")
+        row = conn.execute(base.format(op="<=", order="DESC"), (aid, start.isoformat())).fetchone()
+        state = "measured"
         if row is None:
-            row = conn.execute("SELECT balance FROM balance_snapshots WHERE account_id = ? AND api_ok = 1 AND balance IS NOT NULL "
-                               "ORDER BY datetime(ts) ASC LIMIT 1", (aid,)).fetchone()
-            n_after += row is not None
-        if row is not None:
-            total += float(row[0])
-            n_ok += 1
-    if not account_ids or n_ok < len(account_ids) or total <= 0:
-        return {"usd": None, "read_state": "no_capital_record" if n_ok < len(account_ids) or not account_ids else "non_positive"}
-    return {"usd": round(total, 4), "read_state": "first_snapshot_after_start" if n_after else "measured"}
+            row = conn.execute(base.format(op=">", order="ASC"), (aid, start.isoformat())).fetchone()
+            state = "first_after_start"
+        if row is None:
+            detail.append({"account_id": aid, "balance": None, "ts": None, "state": "no_capital_record"})
+            continue
+        detail.append({"account_id": aid, "balance": round(float(row[0]), 4), "ts": row[1], "state": state})
+        total += float(row[0])
+    if any(d["balance"] is None for d in detail):
+        return {"usd": None, "read_state": "no_capital_record", "source": src, "as_of": None, "accounts": detail}
+    if total <= 0:
+        return {"usd": None, "read_state": "non_positive", "source": src, "as_of": None, "accounts": detail}
+    after = [d for d in detail if d["state"] == "first_after_start"]
+    return {"usd": round(total, 4), "read_state": "first_after_start" if after else "measured", "source": src,
+            "as_of": max(d["ts"] for d in detail), "accounts": detail}
+
+
+def _pct(numer: Optional[float], capital: Optional[float]) -> Optional[float]:
+    """Percentage points (x100, like ``cum_pct``); None when either side is None or the capital is not positive."""
+    return round(numer / capital * 100.0, 4) if numer is not None and capital and capital > 0 else None
+
+
+def _capital_fields(cap: Dict[str, Any]) -> Dict[str, Any]:
+    return {"start_capital_usd": cap["usd"], "capital_read_state": cap["read_state"],
+            "capital_source": cap["source"], "capital_as_of": cap["as_of"], "capital_accounts": cap["accounts"]}
 
 
 @router.get("/performance/pnl-series")
-def get_pnl_series(window: str = "30d", category: Optional[str] = None, account_id: Optional[str] = None,
+def get_pnl_series(window: str = "30d", start: Optional[str] = None, end: Optional[str] = None,
+                   category: Optional[str] = None, account_id: Optional[str] = None,
                    strategy: Optional[str] = None, symbol: Optional[str] = None, asset_class: Optional[str] = None,
                    measured_only: bool = True) -> Dict[str, Any]:
     """Cumulative P&L per category: ``points[{date, pnl_usd, cum_pnl_usd, cum_pct|null, n, cum_pnl_all_rows_usd}]``.
@@ -188,22 +281,26 @@ def get_pnl_series(window: str = "30d", category: Optional[str] = None, account_
     ``measured_only`` (default true) skips non-MEASURED rows; the all-rows curve rides alongside. Last point's
     ``cum_pnl_usd`` equals ``/performance/categories`` ``measured_usd`` (or ``net_pnl_usd`` with measured_only=false)."""
     from src.core.instrument_class import asset_class_for_symbol
-    if window not in _WINDOWS:
-        raise HTTPException(status_code=400, detail=f"unknown window {window!r}; valid: {sorted(_WINDOWS)}")
     wanted = [c.strip() for c in category.split(",") if c.strip()] if category else list(pc.CATEGORIES)
     bad = [c for c in wanted if c not in pc.CATEGORIES]
     if bad:
         raise HTTPException(status_code=400, detail=f"unknown category {bad}; valid: {list(pc.CATEGORIES)}")
     now = datetime.now(timezone.utc)
-    days = _WINDOWS[window] or _SERIES_MAX_DAYS
-    start = now - timedelta(days=days)
-    since = start.isoformat()
+    rng = _parse_range(window, start, end, now)       # same rules as /performance/categories: dates win, 400 on bad input
+    until = rng["until"]
+    if rng["since"] is None:                          # window=all: capped at _SERIES_MAX_DAYS
+        start_dt = now - timedelta(days=_SERIES_MAX_DAYS)
+    else:
+        start_dt = pc._dt(rng["since"])
+    since = start_dt.isoformat()
+    per_trade = (rng["days"] or _SERIES_MAX_DAYS) <= 7
+    echo = {"window": rng["window"], "start": rng["start"] or start_dt.date().isoformat(), "end": rng["end"]}
     as_of = now.isoformat()
     try:
         cats, _excluded = pc.categorize(_accounts())
     except Exception:  # noqa: BLE001  # allow-silent: an unreadable accounts.yaml is a stated read_state, not a 5xx
         logger.warning("performance/pnl-series: accounts.yaml unreadable", exc_info=True)
-        return {"as_of": as_of, "window": window, "read_state": "accounts_unreadable", "series": [], "population": None}
+        return {"as_of": as_of, **echo, "read_state": "accounts_unreadable", "series": [], "population": None}
     series: List[Dict[str, Any]] = []
     n_rows = 0
     try:
@@ -211,26 +308,26 @@ def get_pnl_series(window: str = "30d", category: Optional[str] = None, account_
         try:
             for cat in wanted:
                 ids = [a for a in cats[cat] if not account_id or a == account_id]
-                data = _prop_rows(ids, since) if cat == "prop" else _trade_rows(conn, ids, since)
+                data = _prop_rows(ids, since, until) if cat == "prop" else _trade_rows(conn, ids, since, until)
                 rows = [r for r in data["rows"]
                         if (not strategy or r.get("strategy_name") == strategy) and (not symbol or r.get("symbol") == symbol)
                         and (not asset_class or asset_class_for_symbol(r.get("symbol")) == asset_class)]
-                cap = _start_capital(conn, ids, start) if ids else {"usd": None, "read_state": "no_accounts"}
-                pts = pc.pnl_series(rows, category=cat, per_trade=(window == "7d"), measured_only=measured_only,
+                cap = _start_capital(conn, ids, start_dt)
+                pts = pc.pnl_series(rows, category=cat, per_trade=per_trade, measured_only=measured_only,
                                     start_capital=cap["usd"])
                 n_rows += len(rows)
-                series.append({"category": cat, "accounts": ids, "start_capital_usd": cap["usd"],
-                               "capital_read_state": cap["read_state"], "n_rows": len(rows), "points": pts,
+                series.append({"category": cat, "accounts": ids, **_capital_fields(cap), "n_rows": len(rows), "points": pts,
                                "read_state": "measured" if ids else "no_accounts"})
         finally:
             conn.close()
     except sqlite3.Error:  # allow-silent: logs the stack and answers read_state journal_unreadable with no series, never an empty chart that reads as "no P&L"
         logger.warning("performance/pnl-series: journal read failed", exc_info=True)
-        return {"as_of": as_of, "window": window, "read_state": "journal_unreadable", "series": [], "population": None}
-    return {"as_of": as_of, "window": window, "read_state": "measured", "measured_only": measured_only,
-            "bucket": "trade" if window == "7d" else "utc_day", "series": series,
-            "population": {"window": window, "since": since, "categories": wanted, "n_rows": n_rows,
+        return {"as_of": as_of, **echo, "read_state": "journal_unreadable", "series": [], "population": None}
+    return {"as_of": as_of, **echo, "read_state": "measured", "measured_only": measured_only,
+            "bucket": "trade" if per_trade else "utc_day", "series": series,
+            "capital_flows": pc.CAPITAL_FLOWS,
+            "population": {"window": rng["window"], "since": since, "until": until, "categories": wanted, "n_rows": n_rows,
                            "filters": {"account_id": account_id, "strategy": strategy, "symbol": symbol,
                                        "asset_class": asset_class},
-                           "capital": "balance_snapshots at-or-before window start (prop and any account without a "
-                                      "snapshot -> null, $ only)"}}
+                           "capital": "balance_snapshots: nearest reading at or before start, else nearest after (first_after_start, "
+                                      "timestamp published); an account with none -> null, $ only"}}

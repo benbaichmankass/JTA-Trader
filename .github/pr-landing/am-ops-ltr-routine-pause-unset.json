@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 2: extends the system-actions unset-env allowlist (a VM env mutation path). Operator decision 2026-11-13 operator-popup \"1, but you pause it\" (recorded by the manager on the work item). The manager reads the diff and merges; then AM-OPS runs unset-env env_key=LIVE_REVIEW_ROUTINE_ID service=none and the key takes effect at the next batched trader restart.",
+  "why": "Pause the live-review routine fire from the VM side (operator popup 22:40Z, verbatim \"1, but you pause it\"): add LIVE_REVIEW_ROUTINE_ID, and only that key, to RETIRABLE_KEYS in scripts/ops/unset_env.sh, plus the matching docs/claude/system-actions.md row. With the key unset, live_review_routine_fire.fire() returns not_configured (an existing branch, not a new flag or gate); the ltr-wake comment path is unchanged, so the manager dispatches catch-up reviews from the comment. The routine TOKEN stays non-retirable (test pins both). Resume = set-env LIVE_REVIEW_ROUTINE_ID; the unset backup keeps the old value. Revert: git revert."
+}

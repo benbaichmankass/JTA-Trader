@@ -52,6 +52,8 @@ EXPECTED_ACTIONS = {
     "status-check": "status_check.sh",
     # Read-only du breakdown of the live VM disk (PI-20261017-VSMHZYHF-0001).
     "disk-usage-report": "disk_usage_report.sh",
+    # Read-only per-process / per-unit CPU over a /proc sample window (LIVE-VM-CPU-SATURATION-1112).
+    "vm-cpu-sample": "vm_cpu_sample.sh",
     # Read-only listening-port + host-firewall inventory (security audit 2026-06-28).
     "list-listening-ports": "list_listening_ports.sh",
     "pull-latest-logs": "pull_logs.sh",
@@ -292,6 +294,9 @@ EXPECTED_ACTIONS = {
     "prune-db-backups": "prune_db_backups.sh",
     # 2026-11-07 — delete NAMED phone capture runs of one account (operator: purge images that showed an unmasked amount). Tier 2, dry-run default.
     "purge-phone-captures": "purge_phone_captures_action.sh",
+    # 2026-11-12 — SEC-8001-LOCKDOWN step 3: drop the host firewall ACCEPT rules for
+    # TCP/8001. Refuses unless :8001 listens on loopback only. Fixed port, no params.
+    "close-api-port": "close_api_port_action.sh",
     # 2026-11-02 — VM-SPARSE-SYNC one-time recovery; piped over ssh stdin.
     "vm-sparse-bootstrap": "vm_sparse_bootstrap.sh",
     # 2026-07-06 — one-shot repair of the mis-linked ETH prop close
@@ -495,6 +500,7 @@ TIER_2_ACTIONS = {
     "backfill-own-fill-exits",
     "prune-db-backups",
     "purge-phone-captures",
+    "close-api-port",
     "vm-sparse-bootstrap",
     "fix-prop-mislinked-close",
     "prop-ticket-expire",

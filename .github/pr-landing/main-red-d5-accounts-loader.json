@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Fixes main red: tests/test_check_canonical_config_loaders.py::test_main_repo_is_clean fails on main since #26237 (46d7a0db) because scripts/research/d5_aggregator_arms.py:181 hand-parses config/accounts.yaml; it now reads through src.config.accounts_loader.load_accounts_dict (the canonical loader; same {account_id: cfg} shape the code already used). Also drops the duplicated 3-line SYSTEM-ACTION-CONCURRENCY-LANES comment block in system-actions.yml left by #25325 (comment-only; manager 15a asked to fold it into the next Tier-1 PR). Research script + workflow comment; no runtime path. Gates this adds or changes: none."
+}

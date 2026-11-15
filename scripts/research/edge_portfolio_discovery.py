@@ -344,10 +344,13 @@ def xsec_weights(
                 e, b = t - 1 - cfg["skip"], t - 1 - cfg["skip"] - cfg["L"]
                 if b >= 0:
                     sc = {}
-                    for s in uni:
-                        a, c0 = close[s].iloc[e], close[s].iloc[b]
-                        if a > 0 and c0 > 0:
-                            sc[s] = a / c0 - 1
+                    if cfg.get("resid"):  # attempt-3 opt-in (unit RQ-20261113-62e3-02); absent key = the committed raw ranking
+                        sc = residual_scores(ret, uni, e, cfg["L"], cfg.get("beta_win", 90), cfg["resid"])
+                    else:
+                        for s in uni:
+                            a, c0 = close[s].iloc[e], close[s].iloc[b]
+                            if a > 0 and c0 > 0:
+                                sc[s] = a / c0 - 1
                     if len(sc) >= 8:
                         rk = pd.Series(sc).sort_values(ascending=False)
                         k = max(1, int(round(cfg["q"] * len(rk))))
@@ -486,13 +489,94 @@ ITER_ARMS = {
 }
 
 
-def iteration_verdict(it: Dict[str, Any], what: str) -> Dict[str, Any]:
+#: ATTEMPT-3 grids (lane orphans-legs 2026-11-13; units RQ-20261113-62e3-01 tsmom, RQ-20261113-62e3-02 xsec), picked by --grid.
+#: The DEFAULT grid "d1f3" IS the ITER_ARMS object above (same arms, same prior trial count), so the committed d1f3 results
+#: reproduce byte-for-byte on the default path. Every arm is counted; prior = discovery configs + every d1f3 arm already run.
+#:   tsmom FS1/FS2: keep a SHORT only when the symbol's trailing-7d mean daily settled funding (sum of the day's 8h settlements,
+#:   through t-1) is >= 0 / >= 0.0003 (= the 0.01%/8h base rate: longs are paying, shorts are not crowded). FL1: drop a LONG when
+#:   that trailing funding is > 0.0009 (3x base: crowded longs, the largest cost item). Unknown funding keeps the position.
+#:   xsec RM1/RM2: rank on the 28d RESIDUAL return vs BTC (beta from the trailing 90d of daily returns through t-1), raw sum (RM1)
+#:   or sum / residual sd (RM2, the Blitz-Huij-Martens standardisation) instead of the raw 28d return.
+ITER_GRIDS = {
+    "d1f3": ITER_ARMS,
+    "62e3": {
+        "tsmom": {
+            "A0": dict(base="T4"),
+            "FS1": dict(base="T4", fund="shorts_fund_ge", fth=0.0),
+            "FS2": dict(base="T4", fund="shorts_fund_ge", fth=0.0003),
+            "FL1": dict(base="T4", fund="longs_fund_le", fth=0.0009),
+        },
+        "xsec": {
+            "A0": dict(base="X1"),
+            "RM1": dict(base="X1", resid="raw", beta_win=90),
+            "RM2": dict(base="X1", resid="std", beta_win=90),
+        },
+    },
+}
+ITER_GRID_PRIOR = {"d1f3": ITER_PRIOR_TRIALS, "62e3": {"tsmom": 9 + 7, "xsec": 10 + 7}}
+
+
+def residual_scores(ret: pd.DataFrame, names: List[str], e: int, L: int, beta_win: int, kind: str,
+                    ref: str = "BTCUSDT") -> Dict[str, float]:
+    """Residual momentum score per name at decision row e (= t-1-skip): beta of the name's daily return on ``ref`` over the
+    ``beta_win`` rows ending e, residual = r - beta*r_ref over the L formation rows ending e (the same rows the raw score
+    close[e]/close[e-L]-1 spans). kind 'raw' = residual sum; 'std' = residual sum / residual sd. Data through e only."""
+    if ref not in ret.columns or e - max(L, beta_win) < 0:
+        return {}
+    m = ret[ref]
+    bw, fw = slice(e - beta_win + 1, e + 1), slice(e - L + 1, e + 1)
+    out: Dict[str, float] = {}
+    for s in names:
+        y, x = ret[s].iloc[bw], m.iloc[bw]
+        ok = y.notna() & x.notna()
+        if ok.sum() < max(20, beta_win // 2) or not x[ok].var(ddof=1) > 0:
+            continue
+        beta = float(np.cov(y[ok], x[ok], ddof=1)[0, 1] / x[ok].var(ddof=1))
+        res = (ret[s].iloc[fw] - beta * m.iloc[fw]).dropna()
+        if len(res) < max(2, L // 2):
+            continue
+        if kind == "std":
+            sd = float(res.std(ddof=1))
+            if not sd > 0:
+                continue
+            out[s] = float(res.sum()) / sd
+        elif kind == "raw":
+            out[s] = float(res.sum())
+        else:
+            raise ValueError(f"unknown residual kind {kind!r}")
+    return out
+
+
+def apply_funding_filter(W: pd.DataFrame, F: pd.DataFrame, mode: Optional[str], th: Optional[float],
+                         win: int = 7) -> pd.DataFrame:
+    """Funding-aware side filter on a weight panel. F = daily SUM of settled funding rates (long pays). Decision-time: the
+    trailing ``win``-day mean through t-1 (shift(1)); a symbol-day with no trailing value (missing funding) is left unchanged."""
+    if not mode:
+        return W
+    trail = F.reindex_like(W).rolling(win, min_periods=win).mean().shift(1)
+    known = trail.notna()
+    if mode == "shorts_fund_ge":         # keep a short only while trailing funding >= th
+        drop = (W < 0) & known & (trail < th)
+    elif mode == "longs_fund_le":        # keep a long only while trailing funding <= th
+        drop = (W > 0) & known & (trail > th)
+    else:
+        raise ValueError(f"unknown funding filter {mode!r}")
+    return W.mask(drop, 0.0)
+
+
+CONTROL_DRIFT_TOL = 0.01   # |A0 net Sharpe - the committed control| above this = harness/data drift, read INDETERMINATE
+
+
+def iteration_verdict(it: Dict[str, Any], what: str, expect_control_sharpe: Optional[float] = None) -> Dict[str, Any]:
     """The unit's registered reading of an arm grid: PASS iff >=1 non-control arm clears the UNCHANGED registered rule at the cumulative
     trial count (then ONE holdout read is the next step, never a book); FAIL iff the control computed and no arm cleared it (the lever
     families tried are recorded in the map, no family is closed by this); INDETERMINATE iff the control series was insufficient."""
     ctl = it["arms"]["A0"]["primary"]
     if ctl.get("state") != "computed":
         v, note = "indeterminate", "control series insufficient"
+    elif expect_control_sharpe is not None and abs(ctl["sharpe_net"] - expect_control_sharpe) > CONTROL_DRIFT_TOL:
+        v, note = "indeterminate", (f"control A0 net Sharpe {ctl['sharpe_net']} does not reproduce the committed {expect_control_sharpe} "
+                                    f"(tol {CONTROL_DRIFT_TOL}): harness or data drift, not a verdict")
     elif it["passing_arms"]:
         v, note = "pass", f"arm(s) {it['passing_arms']} clear the registered rule at N_cum={it['n_trials_cumulative']}"
     else:
@@ -532,16 +616,17 @@ def apply_gate(W: pd.DataFrame, close: pd.DataFrame, mode: Optional[str], ma: in
     raise ValueError(f"unknown gate {mode!r}")
 
 
-def run_iteration(family: str, close, qv, ret, F, fee_rt: float) -> Dict[str, Any]:
-    arms = ITER_ARMS[family]
-    n_cum = ITER_PRIOR_TRIALS[family] + len(arms)
+def run_iteration(family: str, close, qv, ret, F, fee_rt: float, grid: str = "d1f3") -> Dict[str, Any]:
+    arms = ITER_GRIDS[grid][family]
+    n_cum = ITER_GRID_PRIOR[grid][family] + len(arms)
     base_cfgs = TSMOM_CONFIGS if family == "tsmom" else XSEC_CONFIGS
-    out: Dict[str, Any] = {"control": "A0", "n_arms": len(arms), "n_trials_cumulative": n_cum, "arms": {}}
+    out: Dict[str, Any] = {"control": "A0", "grid": grid, "n_arms": len(arms), "n_trials_cumulative": n_cum, "arms": {}}
     for aid, spec in arms.items():
-        cfg = base_cfgs[spec["base"]]
+        cfg = {**base_cfgs[spec["base"]], **{k: spec[k] for k in ("resid", "beta_win") if k in spec}}
         kw = {"rebalance": spec.get("rb", 7), "n_univ": spec.get("n", 20)}
         W = tsmom_weights(close, qv, cfg, **kw) if family == "tsmom" else xsec_weights(close, qv, cfg, **kw)
         W = apply_gate(W, close, spec.get("gate"))
+        W = apply_funding_filter(W, F, spec.get("fund"), spec.get("fth"))
         res: Dict[str, Any] = {"spec": spec}
         for tag, mult in (("primary", 1.0), ("stress", 2.0)):
             net, to, parts = net_from_weights(W, ret, F, mult, fee_rt)
@@ -594,6 +679,43 @@ def _self_test() -> int:
     chk("arms: control is first and both families register A0", all(list(v)[0] == "A0" for v in ITER_ARMS.values()))
     chk("arms: every arm names a registered base config", all(a["base"] in (TSMOM_CONFIGS if f == "tsmom" else XSEC_CONFIGS)
                                                               for f, d in ITER_ARMS.items() for a in d.values()))
+    # attempt-3 grids (62e3)
+    chk("grids: the default grid IS the committed d1f3 ITER_ARMS with the committed prior counts",
+        ITER_GRIDS["d1f3"] is ITER_ARMS and ITER_GRID_PRIOR["d1f3"] is ITER_PRIOR_TRIALS)
+    chk("grids: every grid's families start with control A0 on a registered base",
+        all(list(arms)[0] == "A0" and all(a["base"] in (TSMOM_CONFIGS if f == "tsmom" else XSEC_CONFIGS) for a in arms.values())
+            for g in ITER_GRIDS.values() for f, arms in g.items()))
+    Wf = pd.DataFrame({"S0USDT": [-1.0] * 12, "S1USDT": [-1.0] * 12, "S2USDT": [1.0] * 12, "S3USDT": [-1.0] * 12}, index=idx[:12])
+    Ff = pd.DataFrame({"S0USDT": [-0.001] * 12, "S1USDT": [0.0005] * 12, "S2USDT": [0.002] * 12}, index=idx[:12])
+    Ff.iloc[9, 1] = -1.0          # a huge negative print ON day 9 must not move day 9 (decision uses t-1 only)
+    g1 = apply_funding_filter(Wf, Ff, "shorts_fund_ge", 0.0)
+    chk("funding: a short with trailing funding < th is dropped (after the 7d warm-up)", (g1["S0USDT"].iloc[8:] == 0).all())
+    chk("funding: warm-up days (no trailing value) are unchanged", (g1.iloc[:7] == Wf.iloc[:7]).all().all())
+    chk("funding: day t ignores day t's own print (shift 1), day t+1 sees it",
+        g1["S1USDT"].iloc[9] == -1.0 and g1["S1USDT"].iloc[10] == 0.0)
+    chk("funding: a short with trailing funding >= th is kept", g1["S1USDT"].iloc[8] == -1.0)
+    chk("funding: longs untouched by the short filter", (g1["S2USDT"] == 1.0).all())
+    chk("funding: a symbol with no funding series is unchanged", (g1["S3USDT"] == -1.0).all())
+    g2 = apply_funding_filter(Wf, Ff, "longs_fund_le", 0.0009)
+    chk("funding: a long with trailing funding > th is dropped; shorts untouched",
+        (g2["S2USDT"].iloc[8:] == 0).all() and (g2[["S0USDT", "S1USDT", "S3USDT"]] == Wf[["S0USDT", "S1USDT", "S3USDT"]]).all().all())
+    chk("funding: None is the identity", apply_funding_filter(Wf, Ff, None, None) is Wf)
+    rr = pd.DataFrame({"BTCUSDT": rng.normal(0, 0.03, 200)}, index=idx[:200])
+    idio = rng.normal(0.004, 0.01, 200)
+    rr["AUSDT"], rr["BUSDT"] = 2.0 * rr["BTCUSDT"], 1.5 * rr["BTCUSDT"] + idio
+    sc = residual_scores(rr, ["BTCUSDT", "AUSDT", "BUSDT"], 150, 28, 90, "raw")
+    chk("resid: pure 2x BTC has ~zero residual score", abs(sc["AUSDT"]) < 1e-9)
+    chk("resid: BTC vs itself is ~zero", abs(sc["BTCUSDT"]) < 1e-9)
+    chk("resid: the idiosyncratic drift is what remains", abs(sc["BUSDT"] - idio[123:151].sum()) < 0.02)
+    chk("resid: 'std' divides by the residual sd", abs(residual_scores(rr, ["BUSDT"], 150, 28, 90, "std")["BUSDT"]
+                                                      - sc["BUSDT"] / np.std(idio[123:151], ddof=1)) < 0.5)
+    chk("resid: no score before beta_win rows exist", residual_scores(rr, ["BUSDT"], 50, 28, 90, "raw") == {})
+    itd = {"arms": {"A0": {"primary": {"state": "computed", "sharpe_net": 0.761, "n_days": 9, "first": "a", "last": "b"}}},
+           "passing_arms": [], "n_trials_cumulative": 20, "n_arms": 4, "delta_sharpe_vs_control": {}}
+    chk("drift: a reproduced control grades normally", iteration_verdict(itd, "t", 0.761)["verdict"] == "fail")
+    chk("drift: no expectation = the committed behaviour", iteration_verdict(itd, "t")["verdict"] == "fail")
+    chk("drift: a control off by > tol reads INDETERMINATE even with a passing arm",
+        iteration_verdict({**itd, "passing_arms": ["FS1"]}, "t", 0.70)["verdict"] == "indeterminate")
     return 0 if ok else 1
 
 
@@ -618,6 +740,10 @@ def main() -> int:
                     help="if <data-root>/klines_all.pkl is absent, build it from the public Binance Vision archive first")
     ap.add_argument("--iteration", action="store_true",
                     help="run the pre-registered one-factor ITER_ARMS grid (tsmom/xsec) against the primary as control")
+    ap.add_argument("--grid", choices=sorted(ITER_GRIDS), default="d1f3",
+                    help="which pre-registered --iteration arm grid (default d1f3 = the committed attempt-2 grid; 62e3 = attempt 3)")
+    ap.add_argument("--expect-control-sharpe", type=float, default=None,
+                    help="--iteration: the committed control net Sharpe; an A0 that misses it by > CONTROL_DRIFT_TOL reads INDETERMINATE")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args()
     root = Path(a.data_root)
@@ -648,10 +774,10 @@ def main() -> int:
     out["funding_missing_symbols"] = sorted(ever - set(F.columns))
 
     if a.iteration:
-        if a.family not in ITER_ARMS:
+        if a.family not in ITER_GRIDS[a.grid]:
             print(f"--iteration has no arm grid for family {a.family!r}", file=sys.stderr)
             return 2
-        out["iteration"] = run_iteration(a.family, close, qv, ret, F, fee_rt)
+        out["iteration"] = run_iteration(a.family, close, qv, ret, F, fee_rt, grid=a.grid)
         it = out["iteration"]
         it["measurement"] = {"control": "A0", "delta_sharpe_vs_control": it["delta_sharpe_vs_control"], "passing_arms": it["passing_arms"],
                              "arms": {k: {"spec": r["spec"], "sharpe": r["primary"].get("sharpe_net"), "h1": r["primary"].get("sharpe_h1"),
@@ -659,7 +785,9 @@ def main() -> int:
                                           "stress_sharpe": r["stress"].get("sharpe_net"), "side_net_sum": r.get("side_net_sum"),
                                           "by_year_net_sum": r.get("by_year_net_sum"), "verdict": r["verdict"]["verdict"]}
                                       for k, r in it["arms"].items()}}
-        write_run_outputs(a.out, out, {**iteration_verdict(it, f"{a.family} iteration"), "measurement": it["measurement"]})
+        it["measurement"]["grid"] = a.grid
+        what = f"{a.family} iteration" if a.grid == "d1f3" else f"{a.family} iteration grid {a.grid}"
+        write_run_outputs(a.out, out, {**iteration_verdict(it, what, a.expect_control_sharpe), "measurement": it["measurement"]})
         print(json.dumps({"family": a.family, "passing_arms": it["passing_arms"], "n_arms": it["n_arms"],
                           "delta_sharpe_vs_control": it["delta_sharpe_vs_control"]}, indent=1))
         for aid, r in it["arms"].items():

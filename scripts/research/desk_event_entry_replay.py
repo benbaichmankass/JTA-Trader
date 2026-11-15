@@ -118,9 +118,12 @@ def ceil_hour(k: int) -> int:
     return int(math.ceil(k / SEC) * SEC)
 
 
-def detect(root: Path, mkt: Dict[str, gr.Series], upto: Optional[int] = None) -> Dict[str, List[dict]]:
+def detect(root: Path, mkt: Dict[str, gr.Series], upto: Optional[int] = None, oi_z: float = OI_Z) -> Dict[str, List[dict]]:
     """{'E3': [...], 'E4': [...]} events, each {sym, known, cutoff, side(+1/-1)}. Reads only data stamped <= `upto`
-    (default: everything), so the no-lookahead control can truncate the history and compare."""
+    (default: everything), so the no-lookahead control can truncate the history and compare.
+
+    `oi_z` is the E4 shock threshold. The default (OI_Z 3.0) is the frozen, registered arm, byte-identical to before; another
+    value re-replays the same arm at a different threshold (RQ-20261101-78fc-11, oi_z 4.0 / 5.0; all else frozen)."""
     out: Dict[str, List[dict]] = {"E3": [], "E4": []}
     for s in SYMS:
         ser = mkt[s]
@@ -158,7 +161,7 @@ def detect(root: Path, mkt: Dict[str, gr.Series], upto: Optional[int] = None) ->
             if v <= 0:
                 continue
             known = t[i] + 300
-            if (ch[i] - m) / math.sqrt(v) >= OI_Z and known - last >= OI_COOL_S:
+            if (ch[i] - m) / math.sqrt(v) >= oi_z and known - last >= OI_COOL_S:
                 cut = ceil_hour(int(known))
                 j = ser.last_closed(cut)                       # the last CLOSED 1h bar at the decision cutoff
                 if j >= 1:

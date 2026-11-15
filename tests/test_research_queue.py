@@ -97,6 +97,11 @@ def test_two_sample_needs_twice_the_n_per_group():
     assert required_n(0.5, design="two_sample") == pytest.approx(2 * required_n(0.5))
 
 
+def test_paired_design_is_the_one_sample_floor_on_the_differences():
+    assert required_n(0.5, design="paired") == pytest.approx(required_n(0.5))
+    assert required_n(0.5, design="paired") == pytest.approx(required_n(0.5, design="two_sample") / 2)
+
+
 def test_required_n_refuses_an_untabulated_alpha_rather_than_interpolating():
     """Interpolating a quantile would put a made-up number under the gate."""
     with pytest.raises(KeyError):

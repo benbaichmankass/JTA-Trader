@@ -15,7 +15,7 @@ Quiet, plumbing-healthy week in a chop regime. Real money (bybit_2, the only liv
 1. eth_pullback_2h real-money leg bleeding — worst leg this week (-$8.69, 0/2), fires long into chop — Add the ADX/regime entry gate PB-20260618-015 / PB-20260614-001 propose. Real-money ETH pullback long keeps entering chop; grade C 'late' on the executed close.
 2. sol-regime-15m-lgbm-fc-pcv-v1 (advisory) flagged for DEMOTE — significant score drift — Today's promotion-readiness recommends advisory->shadow. Fresh-data v2 sibling is soaking (n=486). Decide: demote v1, or gate-check + swap v2 in.
 3. Promotion pipeline stalled — readiness can't compute oos_edge (no datasets_root / 6GB trainer OOM) — 92 models, 0 promote signals derivable because the readiness sweep ran without datasets. MB-20260719-PROMOREADY-OOSEDGE-OOM blocks every shadow->advisory promote decision.
-4. Prop breakout_1: thin DD cushion (~$125 to floor) + 6-day-stale balance — equity $4825.61 vs $4700 static-DD floor = $125.61 cushion; last account-status 2026-07-20. Request a fresh balance report-back; 1 open ticket awaiting_report.
+4. Prop breakout_1: thin DD cushion (~$125 to floor) + 6-day-stale balance — equity [balance removed] vs $4700 static-DD floor = $125.61 cushion; last account-status 2026-07-20. Request a fresh balance report-back; 1 open ticket awaiting_report.
 5. Degenerate low-confidence emissions — uso_trend_1h / slv_trend_1h at conf ~0.03 — 3 D-grade packages this window emitted at conf 0.03-0.04 'should_skip' (never filled). Review the confidence floor / emission on these legs (PERF-20260601-010).
 
 ## Review coverage

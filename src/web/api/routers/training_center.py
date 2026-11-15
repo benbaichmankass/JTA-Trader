@@ -27,9 +27,10 @@ from __future__ import annotations
 import json
 import logging
 import re
+import threading
 import time
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -331,8 +332,55 @@ def _enrich_registry_row(
     return enriched
 
 
+#: UI-API-HEAVY-ROUTES-502. Measured 2026-11-13 00:0xZ: GET /registry = 8,876,184 B in 5.6 s, and it 502'd
+#: under the SPA's concurrent page load (2026-11-12 16:05-16:15Z). Every request re-read and re-enriched the
+#: whole mirror; 99% of the bytes are per-row ``runs`` (6.97 MB) and ``history`` (1.86 MB). So: (1) the built
+#: payload is memoized while ``registry.jsonl`` is unchanged (mtime_ns + size) and for at most
+#: ``_REGISTRY_TTL_S`` (the serving inventory also reads config), single-flight under a lock; (2) an opt-in
+#: ``?runs_tail=N`` returns each row with only its last N ``runs`` / ``history`` entries plus their totals.
+#: A call without it returns the unchanged full shape.
+_REGISTRY_TTL_S = 60.0
+_registry_lock = threading.Lock()
+_registry_memo: dict[str, Any] = {}
+
+
+def _registry_key() -> tuple[str, int, int] | None:
+    path = _mirror_root() / "registry.jsonl"
+    try:
+        st = path.stat()
+        return str(path), st.st_mtime_ns, st.st_size
+    except OSError:
+        return None
+
+
+def _registry_payload() -> dict[str, Any]:
+    """The full registry body (without the freshness envelope), memoized; see above."""
+    key = _registry_key()
+    with _registry_lock:
+        memo = _registry_memo.get("full")
+        if memo and memo["key"] == key and key is not None and time.monotonic() - memo["at"] < _REGISTRY_TTL_S:
+            return memo["body"]
+        body = _build_registry_body()
+        _registry_memo["full"] = {"key": key, "at": time.monotonic(), "body": body}
+        return body
+
+
+def _tail_row(row: dict[str, Any], n: int) -> dict[str, Any]:
+    out = dict(row)
+    for field in ("runs", "history"):
+        seq = row.get(field)
+        if isinstance(seq, list):
+            out[field] = seq[-n:] if n else []
+            out[f"{field}_total"] = len(seq)
+        else:
+            out[f"{field}_total"] = None
+    return out
+
+
 @router.get("/registry")
-def get_registry() -> dict[str, Any]:
+def get_registry(
+    runs_tail: Annotated[int | None, Query(ge=0, le=500)] = None,
+) -> dict[str, Any]:
     """Model registry rows — append-only history from the trainer mirror
     `runtime_logs/trainer_mirror/registry.jsonl` (`_mirror_root()/'registry.jsonl'`),
     NOT `ml/registry-store/registry.jsonl` (the trainer VM's own copy — this
@@ -366,6 +414,15 @@ def get_registry() -> dict[str, Any]:
     same shape with extra keys, never missing ones. Enriched fields are
     nullable; renderers must treat missing manifest data as "—".
     """
+    if not isinstance(runs_tail, int):  # a direct Python call passes no Query value
+        runs_tail = None
+    body = _registry_payload()
+    if runs_tail is not None:
+        body = {**body, "rows": [_tail_row(r, runs_tail) for r in body["rows"]], "runs_tail": runs_tail}
+    return {**_mirror_meta(), **body}
+
+
+def _build_registry_body() -> dict[str, Any]:
     root = _mirror_root()
     rows = _read_jsonl_tail(root / "registry.jsonl", limit=0)
     shadow_map = _load_shadow_wiring_map()
@@ -388,7 +445,6 @@ def get_registry() -> dict[str, Any]:
         logger.warning("training_center: serving inventory failed: %s", exc)
         inventory_state = "error"
     return {
-        **_mirror_meta(),
         "rows": enriched,
         "count": mirror_count,  # unchanged meaning: trainer-mirror registry rows
         "total_count": len(enriched),

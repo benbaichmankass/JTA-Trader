@@ -88,3 +88,71 @@ def test_real_corpus_loads_for_stage2_legs():
     """Reads the repo's own committed evidence (not a fixture)."""
     bt = lvb.load_backtest_r("xrp_pullback_2h")
     assert len(bt["xs"]) >= 30 and bt["why"] is None
+
+
+# ── the config-date cut (PERF-F1-DEMOTION-SIGNAL, 2026-11-12) ──────────────
+def _recent(total_r, since=None, n=20):
+    book = {"readState": "ok", "perStrategy": {"leg_a": {"last": {"perStrategy": [_row(total_r, n)]}}}}
+    return {"since": since, "realMoney": book, "mirror": book}
+
+
+def test_cut_applied_reads_the_cut_payload_not_the_uncut_one(tmp_path):
+    root = _root(tmp_path)
+    cuts = {"leg_a": {"since": "2026-11-06T21:52:07Z", "fingerprint": None}}
+    rows = lvb.run(_recent(-30.0), [("acct", "leg_a")], root, draws=2000, cuts=cuts,
+                   cut_payloads={"2026-11-06T21:52:07Z": _recent(10.0, since="2026-11-06T21:52:07Z")})
+    assert {r["config_cut"] for r in rows} == {"applied"}
+    assert {r["verdict"] for r in rows} == {lvb.CONSISTENT}      # uncut would read BELOW
+
+
+def test_cut_payload_without_since_echo_is_unavailable_never_the_uncut_rows(tmp_path):
+    root = _root(tmp_path)
+    cuts = {"leg_a": {"since": "2026-11-06T21:52:07Z", "fingerprint": None}}
+    rows = lvb.run(_recent(-30.0), [("acct", "leg_a")], root, draws=2000, cuts=cuts,
+                   cut_payloads={"2026-11-06T21:52:07Z": _recent(10.0, since=None)})   # old route: no echo
+    assert {r["verdict"] for r in rows} == {lvb.CUT_UNAVAILABLE}
+    assert {r["config_cut"] for r in rows} == {"unavailable"}
+
+
+def test_unknown_cut_reads_uncut_and_says_so(tmp_path):
+    rows = lvb.run(_recent(10.0), [("acct", "leg_a")], _root(tmp_path), draws=2000,
+                   cuts={"leg_a": {"since": None, "fingerprint": None, "why": "shallow"}}, cut_payloads={})
+    assert {r["config_cut"] for r in rows} == {"unknown"} and {r["verdict"] for r in rows} == {lvb.CONSISTENT}
+
+
+def test_stale_backtest_when_record_fingerprint_differs(tmp_path):
+    root = _root(tmp_path)
+    rec = root / "comms/strategy_evidence/leg_a.json"
+    rec.write_text(json.dumps({**json.loads(rec.read_text()), "config_fingerprint": "sha256:old"}))
+    r = lvb.check_leg("leg_a", "realMoney", _row(10.0), root, draws=2000, current_fp="sha256:new")
+    assert r["verdict"] == lvb.STALE_BT
+    assert lvb.check_leg("leg_a", "realMoney", _row(10.0), root, draws=2000,
+                         current_fp="sha256:old")["verdict"] == lvb.CONSISTENT
+
+
+def test_config_since_finds_the_commit_that_set_the_current_fingerprint(tmp_path):
+    import subprocess
+
+    def git(*a, date=None):
+        env = {"GIT_COMMITTER_DATE": date, "GIT_AUTHOR_DATE": date} if date else {}
+        import os
+        subprocess.run(["git", "-C", str(tmp_path), *a], check=True, capture_output=True,
+                       env={**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
+                            "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t", **env})
+    git("init", "-q")
+    cfg = tmp_path / "config/strategies.yaml"
+    cfg.parent.mkdir(parents=True)
+    steps = [("2026-11-01T00:00:00+00:00", {"leg_a": {"lookback": 10}, "leg_b": {"x": 1}}),
+             ("2026-11-06T21:52:07+00:00", {"leg_a": {"lookback": 20}, "leg_b": {"x": 1}}),
+             # a gate-only change keeps the fingerprint (execution is excluded from it)
+             ("2026-11-08T00:00:00+02:00", {"leg_a": {"lookback": 20, "execution": "live"}, "leg_b": {"x": 1}})]
+    import yaml
+    for date, body in steps:
+        cfg.write_text(yaml.safe_dump({"strategies": body}))
+        git("add", "-A")
+        git("commit", "-q", "-m", date, date=date)
+    out = lvb.config_since(["leg_a", "leg_b", "leg_gone"], tmp_path)
+    assert out["leg_a"]["state"] == "derived" and out["leg_a"]["since"] == "2026-11-06T21:52:07Z"
+    # leg_b never changed: the history ends before a change -> unknown, never the root's date
+    assert out["leg_b"]["state"] == "unknown" and out["leg_b"]["since"] is None and out["leg_b"]["why"]
+    assert out["leg_gone"]["since"] is None and "not in" in out["leg_gone"]["why"]

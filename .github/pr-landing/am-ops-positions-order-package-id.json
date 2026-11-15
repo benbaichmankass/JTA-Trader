@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Additive read-path field: /api/bot/positions rows gain orderPackageId (trades.order_package_id; null when absent). scripts/ops/status_move.py reads it, so an /api/bot/positions row matches siblings by package (MEASURED) instead of leg+symbol+side (ESTIMATED). src/web/api restarts ict-web-api, not the trader; the SPA ignores an unknown field. Manager merges. Revert: git revert.",
+  "why": "Row POSITIONS-API-ORDER-PACKAGE-ID (follow-on of STATUS-MOVE-OPEN-POSITIONS)."
+}

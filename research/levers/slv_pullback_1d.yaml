@@ -278,10 +278,24 @@ levers:
         max_drawdown_r: 10.9419
         verdict: fail
         joint_change: false
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: BE
+        unit: RQ-20261111-203c-05
+        window: 2018-03-01..2026-10-15
+        n: 84
+        net_r: 19.1073
+        baseline_n: 82
+        baseline_net_r: 20.0343
+        delta_net_r: -0.927
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 7.7932
+        verdict: indeterminate
+        joint_change: false
       shape: flat
-      points: 1
+      points: 2
       best_delta_r_per_trade: 0.0
-      fold_stability: 1.0
+      fold_stability: 0.75
       reading: no response at the tested values
     bank_at_r:
       tests:
@@ -657,10 +671,24 @@ levers:
         max_drawdown_r: 13.09
         verdict: fail
         joint_change: false
+      - value: '40'
+        baseline_value: 'off'
+        arm: AX40
+        unit: RQ-20261111-203c-05
+        window: 2018-03-01..2026-10-15
+        n: 81
+        net_r: 20.0403
+        baseline_n: 82
+        baseline_net_r: 20.0343
+        delta_net_r: 0.006
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 5.8712
+        verdict: indeterminate
+        joint_change: false
       shape: flat
-      points: 3
-      best_delta_r_per_trade: 0.0
-      fold_stability: 0.667
+      points: 4
+      best_delta_r_per_trade: 0.0001
+      fold_stability: 0.625
       reading: no response at the tested values
     cooldown_bars:
       tests:
@@ -713,10 +741,24 @@ levers:
         max_drawdown_r: 11.1947
         verdict: fail
         joint_change: false
+      - value: '0.9'
+        baseline_value: 'off'
+        arm: VH90
+        unit: RQ-20261111-203c-05
+        window: 2018-03-01..2026-10-15
+        n: 76
+        net_r: 22.4078
+        baseline_n: 82
+        baseline_net_r: 20.0343
+        delta_net_r: 2.3735
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 6.344
+        verdict: indeterminate
+        joint_change: false
       shape: monotone
-      points: 2
-      best_delta_r_per_trade: 0.0183
-      fold_stability: 0.5
+      points: 3
+      best_delta_r_per_trade: 0.0289
+      fold_stability: 0.583
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
   other:
     momentum_stale_bars:
@@ -845,3 +887,7 @@ levers:
       best_delta_r_per_trade: 0.2971
       fold_stability: 0.833
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
+manifest_notes:
+  inert_arms_2026_11_14: 'RQ-20261110-73de-01 arm C1 (be_floor_r 1.0, closed bar) is INERT, not a lever reading: it ran with --structure-exit pivot=5, and scripts/backtest_pullback.py
+    discarded the break-even floor whenever a structure exit was set (PI-20261114-TFZXAKEK-0001, fixed in #25887). The generated levers.exit.be_floor_r entry ("no
+    response at the tested values", delta 0.0R) therefore means UNTESTED, not flat. Read be_floor_r on this leg as untested until a run on the fixed harness.'

@@ -42,6 +42,9 @@ from src.units.accounts.risk import (
 logger = logging.getLogger(__name__)
 
 
+# Gate decision: operator 2026-11-12 decisions page, Gates tab —
+# GATE-EXECUTE-ZEROQTY-WHOLEUNIT: KEEP (now operator-authorized; covers this
+# below-venue-minimum refusal). Record: comms/gates/gate_decisions_2026-11-12.json.
 class BelowVenueMinQtyRefusal(RuntimeError):
     """A risk-sized qty that floors below the exchange lot minimum after
     step-alignment — a BENIGN per-trade refusal (never oversize), NOT an
@@ -389,6 +392,9 @@ def execute_pkg(
     else:
         qty = size_order_from_cfg(pkg, account_cfg, balance_usdt)
 
+    # Gate decision: operator 2026-11-12 decisions page, Gates tab —
+    # GATE-EXECUTE-ZEROQTY-WHOLEUNIT: KEEP (now operator-authorized). Record:
+    # comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
     # 5. Refuse zero-qty orders before hitting the exchange.
     if qty <= 0 and not is_dry and not _is_test_order(pkg):
         raise RuntimeError(
@@ -2732,6 +2738,20 @@ def _log_trade_to_journal(
                 notes_payload["entry_price_source"] = str(
                     _vf.get("source") or "venue_fill")
                 notes_payload["package_entry"] = float(pkg.entry)
+        # ENTRY-FILL-WRITEBACK (manager decision 2026-11-15, option a): every row says where entry_price came from.
+        # A row that did not get a venue fill above books the PLAN, labelled so, with the reason. A live Bybit entry
+        # is marked fill_pending_writeback: order_monitor._sweep_entry_fill_writeback reads that entry order's own
+        # avgPrice by orderId off the order path and rewrites entry_price (DB field only, no bracket side effects).
+        if "entry_price_source" not in notes_payload:
+            _ex = str((account_cfg or {}).get("exchange") or "bybit").lower()
+            notes_payload["entry_price_source"] = "plan"
+            notes_payload["entry_price_source_reason"] = (
+                "dry_run" if is_dry
+                else "fill_pending_writeback" if (status == "open" and _ex == "bybit" and trade_id
+                                                  and not intent_reduce)
+                else "no_venue_fill_read" if status == "open"
+                else f"status_{status}"
+            )
         trade_row_id = db.insert_trade({
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "symbol": pkg.symbol,

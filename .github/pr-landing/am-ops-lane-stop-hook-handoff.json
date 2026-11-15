@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Follow-up to #26097 (manager ask, 17:55Z). The hook reads only the transcript, never parent_session_id. But a rotated-in manager's first prompt is its predecessor's brief ('read MANAGER-HANDOFF-<date>.md', naming the old manager's id), so until it titles itself it was read as a lane and told to wake its predecessor (session_01AFoLuLyarNRcy3nziCep2U). The title skip from #26097 is lost when a context compaction starts a fresh transcript. MANAGER_SELF now also matches a first prompt saying 'are the next manager' or naming MANAGER-HANDOFF-<date>.md (the handoff doc's own wording; no lane is handed that doc). A lane told about the doc in a later turn is still a lane: only the first prompt decides. Self-test 21/21 (3 new cases), tests/test_lane_report_stop_hook.py 3 passed. Revert: git revert."
+}
