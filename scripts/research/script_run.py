@@ -361,6 +361,26 @@ def _runner_fingerprint() -> Dict[str, Any]:
         return {"read_state": "could_not_look", "error": f"{type(exc).__name__}: {exc}", "class_id": None}
 
 
+HOLDOUT_LEDGER_REL = Path("comms") / "research" / "holdout_reads.jsonl"
+HOLDOUT_CLAIMS_NAME = "holdout_claims.jsonl"
+
+
+def _copy_new_ledger_lines(ledger: Path, before: Optional[List[str]], dest: Path) -> Optional[int]:
+    """Write the lines appended to ``ledger`` since ``before`` into ``dest``; returns how many (None = could not look)."""
+    if before is None:
+        return None
+    try:
+        after = ledger.read_text(encoding="utf-8").splitlines() if ledger.exists() else []
+    except OSError:
+        return None
+    new = [x for x in after[len(before):] if x.strip()] if after[:len(before)] == before else \
+        [x for x in after if x.strip() and x not in set(before)]
+    if new:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text("\n".join(new) + "\n", encoding="utf-8")
+    return len(new)
+
+
 def execute(p: Plan, *, repo: Path = _REPO) -> Dict[str, Any]:
     """Run the plan's commands in order; write `<out_dir>/run-manifest.json`.
     Returns the manifest. Never raises for a failing command — the failure is
@@ -371,6 +391,13 @@ def execute(p: Plan, *, repo: Path = _REPO) -> Dict[str, Any]:
     env = dict(os.environ)
     env.update({"RESEARCH_UNIT": p.unit, "RESEARCH_OUT_DIR": p.out_dir.as_posix(),
                 "PYTHONPATH": str(repo) + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")})
+    # HOLDOUT-LEDGER-RUNNER-CLAIMS: a reader that claims a holdout read appends to THIS checkout's ledger, which is not part of
+    # the artifact. Snapshot it so every line the commands append is copied into the run dir, which the collector merges.
+    ledger = repo / HOLDOUT_LEDGER_REL
+    try:
+        ledger_before = ledger.read_text(encoding="utf-8").splitlines() if ledger.exists() else []
+    except OSError:
+        ledger_before = None
     deadline = time.monotonic() + p.timeout_minutes * 60
     rows: List[Dict[str, Any]] = []
     for i, argv in enumerate(p.commands):
@@ -399,6 +426,7 @@ def execute(p: Plan, *, repo: Path = _REPO) -> Dict[str, Any]:
             # Stop at the first failure: a later command reading a missing
             # input would report a different, misleading error.
             break
+    holdout_claims = _copy_new_ledger_lines(ledger, ledger_before, out_dir / HOLDOUT_CLAIMS_NAME)
     manifest = {
         "unit": p.unit, "run_id": p.out_dir.name, "commit_sha": os.environ.get("GITHUB_SHA"),
         "run_url": (f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/"
@@ -408,6 +436,7 @@ def execute(p: Plan, *, repo: Path = _REPO) -> Dict[str, Any]:
         "runner": _runner_fingerprint(),
         "commands": rows,
         "all_ok": bool(rows) and all(r.get("exit_code") == 0 for r in rows) and len(rows) == len(p.commands),
+        "holdout_claims": holdout_claims,
     }
     (out_dir / "run-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     return manifest
