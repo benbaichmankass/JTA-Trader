@@ -15225,6 +15225,132 @@ _BROKER_PNL_RECOVERY_MS = 7 * 24 * 60 * 60 * 1000  # Bybit closed-pnl retention
 _LOCAL_PNL_BROKER_DEFER_MS = 6 * 60 * 60 * 1000  # 6h — match INV-2 grace
 
 
+
+# ── ENTRY-FILL-WRITEBACK (manager decision 2026-11-15, option a) ─────────────────────────────────────────────────
+# trades.entry_price was the PACKAGE's planned entry, not the fill (ENTRY-FILL-BIAS-30D measured the gap, PR #26166).
+# Alpaca already books its confirm-poll fill as entry_price (ALPACA-LIVE-MECHANICS, 11-06). For Bybit this sweep reads
+# the ENTRY ORDER's own avgPrice by orderId (trades.broker_order_id) once the order is terminal and rewrites
+# entry_price, keeping the plan in notes.package_entry, exactly the Alpaca shape. Conditions (manager, each pinned by
+# tests/test_entry_fill_writeback.py):
+#   1. the entry order's OWN avgPrice by orderId, never a position average; a fill that cannot be isolated (not found,
+#      no average, filled qty not the row's qty) is NOT written: entry_price_source stays "plan" with the reason;
+#   2. a DB field update only: no order is placed, amended or cancelled, and no SL/TP or slice is recomputed;
+#   3. entry_price_source is on every row (execute._log_trade_to_journal stamps it at insert);
+#   4. no history backfill: only OPEN rows the insert marked fill_pending_writeback are read.
+ENTRY_FILL_PENDING = "fill_pending_writeback"
+ENTRY_FILL_SOURCE_BYBIT = "bybit_order_history"
+_ENTRY_FILL_QTY_TOL = 0.02
+_ENTRY_FILL_NONTERMINAL = frozenset({"New", "PartiallyFilled", "Untriggered", "Created", "Triggered"})
+
+
+def entry_fill_decision(row: Dict[str, Any], order: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Pure: what to do with one pending row, given ``clients.account_order_status``'s answer for its entry order.
+
+    Returns ``{"action": "write" | "plan" | "wait", "entry": float|None, "reason": str}``. ``wait`` = ask again next
+    tick (read failed, or the order is not terminal yet); ``plan`` = stop asking and keep the planned entry, labelled."""
+    if order is None:
+        return {"action": "wait", "entry": None, "reason": "order_status_read_failed"}
+    status = str(order.get("status") or "")
+    if status == "not_found":
+        return {"action": "plan", "entry": None, "reason": "entry_order_not_found"}
+    if status in _ENTRY_FILL_NONTERMINAL:
+        return {"action": "wait", "entry": None, "reason": f"entry_order_{status or 'unknown'}"}
+    avg = _safe_float(order.get("avg_price"))
+    if avg is None or avg <= 0:
+        return {"action": "plan", "entry": None, "reason": f"no_avg_price_status_{status or 'unknown'}"}
+    qty = _safe_float(row.get("position_size"))
+    filled = _safe_float(order.get("filled_qty"))
+    if qty and qty > 0 and (filled is None or abs(filled - qty) / qty > _ENTRY_FILL_QTY_TOL):
+        # The order's fills are not this row's size: the fill cannot be isolated to the row. Keep the plan.
+        return {"action": "plan", "entry": None, "reason": "entry_order_qty_mismatch"}
+    return {"action": "write", "entry": avg, "reason": ENTRY_FILL_SOURCE_BYBIT}
+
+
+def _sweep_entry_fill_writeback(db, *, order_status: Any = None, limit: int = 20) -> Dict[str, int]:
+    """Rewrite entry_price from the entry order's own fill for OPEN Bybit rows marked fill_pending_writeback.
+
+    DB field update only (entry_price + notes): it never touches an order, a bracket or a slice. Best-effort, never
+    raises. ``order_status`` is injectable for tests (default ``clients.account_order_status``)."""
+    summary: Dict[str, int] = {"scanned": 0, "written": 0, "kept_plan": 0, "waiting": 0, "errors": 0}
+    try:
+        conn = db.connect()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT id, account_id, symbol, position_size, entry_price, broker_order_id, notes FROM trades "
+                " WHERE status = 'open' AND COALESCE(is_backtest, 0) = 0 "
+                "   AND broker_order_id IS NOT NULL AND notes LIKE ? "
+                " ORDER BY id DESC LIMIT ?",
+                (f"%{ENTRY_FILL_PENDING}%", int(limit)))
+            rows = [dict(r) for r in cur.fetchall()]
+        finally:
+            try:
+                conn.close()
+            except Exception:  # noqa: BLE001
+                pass
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("_sweep_entry_fill_writeback: scan failed: %s", exc)
+        return summary
+    if not rows:
+        return summary
+    if order_status is None:
+        try:
+            from src.units.accounts.clients import account_order_status as order_status
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("_sweep_entry_fill_writeback: clients import failed: %s", exc)
+            summary["errors"] = len(rows)
+            return summary
+    try:
+        cfgs = _load_account_cfgs_for_reconcile()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("_sweep_entry_fill_writeback: account cfg load failed: %s", exc)
+        summary["errors"] = len(rows)
+        return summary
+    from src.utils.json_notes import dump_capped
+    for row in rows:
+        summary["scanned"] += 1
+        try:
+            notes = json.loads(row.get("notes") or "{}") if row.get("notes") else {}
+            if not isinstance(notes, dict) or notes.get("entry_price_source_reason") != ENTRY_FILL_PENDING:
+                continue  # the LIKE matched elsewhere in the blob; not ours
+            cfg = (cfgs or {}).get(row.get("account_id"))
+            if cfg is None or str(cfg.get("exchange") or "bybit").lower() != "bybit":
+                summary["waiting"] += 1
+                continue
+            d = entry_fill_decision(row, order_status(cfg, str(row["broker_order_id"])))
+            if d["action"] == "wait":
+                summary["waiting"] += 1
+                continue
+            if d["action"] == "write":
+                notes["package_entry"] = _safe_float(row.get("entry_price"))
+                notes["entry_price_source"] = ENTRY_FILL_SOURCE_BYBIT
+                notes.pop("entry_price_source_reason", None)
+                new_entry = d["entry"]
+            else:
+                notes["entry_price_source"] = "plan"
+                notes["entry_price_source_reason"] = d["reason"]
+                new_entry = None
+            blob = dump_capped(notes, max(500, len(row.get("notes") or "")))
+            conn = db.connect()
+            try:
+                if new_entry is not None:
+                    conn.execute("UPDATE trades SET entry_price = ?, notes = ? WHERE id = ? AND status = 'open'",
+                                 (new_entry, blob, row["id"]))
+                else:
+                    conn.execute("UPDATE trades SET notes = ? WHERE id = ? AND status = 'open'", (blob, row["id"]))
+                conn.commit()
+            finally:
+                conn.close()
+            summary["written" if new_entry is not None else "kept_plan"] += 1
+            if new_entry is not None:
+                logger.info("entry_fill_writeback: trade %s %s entry %s -> %s (entry order's own avgPrice)",
+                            row["id"], row.get("symbol"), row.get("entry_price"), new_entry)
+        except Exception as exc:  # noqa: BLE001
+            summary["errors"] += 1
+            logger.warning("_sweep_entry_fill_writeback: trade %s raised %s", row.get("id"), exc)
+    return summary
+
+
 def _exit_anchor_fetches_per_tick() -> int:
     """How many close-time candle fetches `_sweep_local_pnl_for_unpriced` may
     make per monitor tick (``EXIT_ANCHOR_FETCHES_PER_TICK``, default 3).
@@ -18020,6 +18146,16 @@ def run_reconciliation_tick(
         logger.warning(
             "run_monitor_tick: pending-pnl sweep raised: %s", exc,
         )
+
+    # ENTRY-FILL-WRITEBACK: the entry order's own fill replaces the planned entry on open Bybit rows marked
+    # fill_pending_writeback. DB field update only (no order, bracket or slice is touched).
+    try:
+        with _phase("sweep_entry_fill_writeback"):
+            entry_fill = _sweep_entry_fill_writeback(db)
+        if entry_fill.get("written") or entry_fill.get("kept_plan") or entry_fill.get("errors"):
+            summaries["__entry_fill_writeback__"] = entry_fill
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("run_monitor_tick: entry-fill writeback sweep raised: %s", exc)
 
     # 2026-06-16: local-PnL fallback sweep — the universal half of the
     # PnL-resolution contract (prefer broker truth, else local compute). The
