@@ -1308,6 +1308,16 @@ def _snapshot_row(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _rank_sorted(rows, key_of=lambda r: r.get("priority_rank")) -> list[dict[str, Any]]:
+    """Rows by priority rank ascending (lower = higher in the list), unranked last; a stable sort,
+    so ties keep register order. The same meaning as ``checklist_store.queue``."""
+    def key(r):
+        rk = key_of(r)
+        ok = isinstance(rk, (int, float)) and not isinstance(rk, bool) and rk > 0
+        return (0, rk) if ok else (1, 0)
+    return sorted(rows, key=key)
+
+
 def _operator_edges(row: dict[str, Any]) -> list[dict[str, Any]]:
     edges = row.get("blocked_on")
     if not isinstance(edges, list):
@@ -1336,13 +1346,14 @@ def _work_snapshot_payload() -> dict[str, Any]:
             waiting.append({**_snapshot_row(r),
                             "asks": [{"what": e.get("what"), "ref": e.get("ref")}
                                      for e in edges]})
+    waiting = _rank_sorted(waiting, key_of=lambda w: w.get("priorityRank"))
     return {
         "present": True,
         "reason": None,
         "total": len(rows),
         "counts": counts,
         "closedRecent": [_snapshot_row(r) for r in closed[:5]],
-        "openNow": [_snapshot_row(r) for r in rows if r.get("state") == "in_flight"],
+        "openNow": [_snapshot_row(r) for r in _rank_sorted(r for r in rows if r.get("state") == "in_flight")],
         "next": [_snapshot_row(r) for r in checklist_store.queue({"items": rows})[:5]],
         "waitingOnOperator": waiting,
     }
@@ -1369,6 +1380,74 @@ def get_work_snapshot() -> dict[str, Any]:
                 "next": [], "waitingOnOperator": []}
     _snapshot_cache = (now, payload)
     return payload
+
+
+# ── POST /reorder — the Overview work queue's up/down control (WORK-REORDER-ROUTE) ──
+#
+# **Tier 2, operator write.** The SPA cannot call ``POST /work/items/{id}/set`` (it needs ``If-Match``,
+# which the CORS allow-list refuses), so this route takes only ``{"id", "direction": "up"|"down"}``
+# and does the read-modify-write server-side in ONE work-store transaction
+# (``WorkStore.reorder``; population, ordering and null-rank rules are documented there).
+# Auth: ``require_session`` -- the operator's signed-in session, exactly as ``/decision/session``
+# and ``/plan-edits``. Recorded actor: ``operator-spa`` (never the email). Adds no gate; CORS unchanged.
+
+def _reorder_error(status_code: int, error: str, detail: str, **extra: Any):
+    from fastapi.responses import JSONResponse
+    return JSONResponse(status_code=status_code,
+                        content={"accepted": False, "error": error, "detail": detail, **extra})
+
+
+@router.post("/reorder")
+async def post_work_reorder(
+    request: Request,
+    _session: dict = Depends(require_session),  # noqa: B008
+) -> Any:
+    """Move one work row up or down. 200 ``{accepted, item, changed, renumbered, population, order}``;
+    400 bad body / direction; 404 unknown id; 409 ``at_top``/``at_bottom``/``version_conflict``;
+    422 finished row; 503 store absent or write failed. Every refusal is JSON with ``error`` + ``detail``."""
+    from fastapi.concurrency import run_in_threadpool
+    try:
+        body = await request.json()
+    except (ValueError, TypeError):
+        return _reorder_error(400, "bad_body", "body is not JSON")
+    if not isinstance(body, dict):
+        return _reorder_error(400, "bad_body", "body must be a JSON object")
+    item_id, direction = body.get("id"), body.get("direction")
+    if not isinstance(item_id, str) or not item_id.strip():
+        return _reorder_error(400, "bad_body", "id is required (a work row id)")
+    if direction not in ("up", "down"):
+        return _reorder_error(400, "bad_direction", "direction must be 'up' or 'down'")
+    version = body.get("version")
+    if version is not None and (isinstance(version, bool) or not isinstance(version, int)):
+        return _reorder_error(400, "bad_body", "version, when given, must be an integer")
+
+    def _move():
+        from src.runtime import work_read
+        from src.web.api.auth import SESSION_ACTOR
+        store = work_read.local_store()
+        if store is None:
+            raise FileNotFoundError("work store is absent on this host")
+        return store.reorder(item_id.strip(), direction, by=SESSION_ACTOR, expected_version=version)
+
+    from src.runtime import work_store as ws
+    try:
+        res = await run_in_threadpool(_move)
+    except ws.NotFoundError as exc:
+        return _reorder_error(404, "unknown_id", str(exc))
+    except ws.ReorderBoundary as exc:
+        edge = "top" if direction == "up" else "bottom"
+        return _reorder_error(409, f"at_{edge}", str(exc), position=exc.position, population=exc.population)
+    except ws.ConflictError as exc:
+        return _reorder_error(409, "version_conflict", str(exc))
+    except ws.WorkStoreValidationError as exc:
+        return _reorder_error(422, "refused", str(exc)[:300])
+    except Exception as exc:  # noqa: BLE001  # allow-silent: logged at ERROR and returned as 503 -- a move the operator thinks landed and did not is refused loudly.
+        logger.error("work reorder did not persist: %s", exc, exc_info=True)
+        return _reorder_error(503, "store_unavailable", f"reorder did not persist: {str(exc)[:200]}")
+    global _snapshot_cache, _checklist_cache
+    _snapshot_cache = None   # the next Overview read must show the move, not a 20 s-old list
+    _checklist_cache = None
+    return {"accepted": True, "read_back": "/api/bot/work/snapshot", **res}
 
 
 #: Operator-facing wording per answer state. PRESENTATION for this surface; the

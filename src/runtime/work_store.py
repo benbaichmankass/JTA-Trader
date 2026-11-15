@@ -48,6 +48,7 @@ __all__ = [
     "WRITABLE_FIELDS",
     "ConflictError",
     "NotFoundError",
+    "ReorderBoundary",
     "WorkStore",
     "WorkStoreError",
     "WorkStoreValidationError",
@@ -153,6 +154,14 @@ class WorkStoreValidationError(WorkStoreError):
 
 class NotFoundError(WorkStoreError):
     status = 404
+
+
+class ReorderBoundary(WorkStoreError):
+    """The row is already first/last of its list (nothing to swap with)."""
+
+    def __init__(self, msg: str, position: int | None = None, population: int | None = None):
+        super().__init__(msg)
+        self.position, self.population = position, population
 
 
 class ConflictError(WorkStoreError):
@@ -522,49 +531,122 @@ class WorkStore:
         self._need_by(by)
         self._check_patch_keys(fields)
         with self._tx() as conn:
-            if (r := self._replayed(conn, op_id)) is not None:
-                return r
-            prior = self._get(conn, item_id)
-            if prior is None:
-                raise NotFoundError(f"no item {item_id!r}")
-            fields = self._fold_extra_keys(fields, prior.get("extra"))
-            if expected_version is None:
-                raise WorkStoreValidationError("If-Match: the item version this write is based on is required")
-            if int(expected_version) != prior["version"]:
+            return self._update_in_tx(conn, item_id, fields, op=op, by=by, op_id=op_id,
+                                      expected_version=expected_version, today=today, note=note)
+
+    def _update_in_tx(self, conn, item_id: str, fields: dict, *, op: str, by: str, op_id: str | None,
+                      expected_version: int | None, today: date | None, note: str | None = None) -> dict:
+        """The body of one versioned write, inside a transaction the caller owns (``_update`` and
+        ``reorder`` share it, so a reorder's several rows are written by the SAME rules)."""
+        if (r := self._replayed(conn, op_id)) is not None:
+            return r
+        prior = self._get(conn, item_id)
+        if prior is None:
+            raise NotFoundError(f"no item {item_id!r}")
+        fields = self._fold_extra_keys(fields, prior.get("extra"))
+        if expected_version is None:
+            raise WorkStoreValidationError("If-Match: the item version this write is based on is required")
+        if int(expected_version) != prior["version"]:
+            raise ConflictError(
+                f"item {item_id!r} is at version {prior['version']}, the write was based on "
+                f"{expected_version}; re-read and re-apply", prior)
+        item = dict(prior)
+        item.update(fields)
+        if item.get("parent_id") and item["parent_id"] != prior.get("parent_id") \
+                and self._get(conn, item["parent_id"]) is None:
+            raise WorkStoreValidationError(f"parent_id: no item {item['parent_id']!r}")
+        if op == "reopen":
+            item["terminal_reason"] = None
+        filled = _validate(item, prior, today)
+        at = _now()
+        item.update(due_at=compute_due_at(item, now=at), version=prior["version"] + 1,
+                    updated_at=at, updated_by=by)
+        # WORK-ROW-AGE-STALE: an item imported from a checklist row carries the row's OWN
+        # updated_at/updated_by in `extra`, which every row reader serves (SPA Work page,
+        # attention_watch, blocker_watch, work_digest). Only the item-level stamp moved on a
+        # write, so rows read days old (MANAGER-VM-DIRECT-OPS: 2026-11-05 served vs 2026-11-12
+        # stored). Moving the row's stamp with the write keeps store, export and files equal.
+        ex = item.get("extra")
+        if isinstance(ex, dict) and "updated_at" in ex:
+            item["extra"] = dict(ex, updated_at=at, updated_by=by)
+        self._write_item(conn, item, insert=False)
+        if op == "note":
+            patch: Any = {"note": note}
+            if fields:
+                patch["fields"] = fields
+        else:
+            changed = {k: item[k] for k in WRITABLE_FIELDS if item.get(k) != prior.get(k)}
+            patch = {"fields": changed}
+        if filled:
+            patch["filled"] = filled
+        ev = self._append_event(conn, item_id=item_id, at=at, by=by, op=op, patch=patch, op_id=op_id)
+        return {"item": self._get(conn, item_id), "event": ev, "replayed": False}
+
+    #: Terminal states: a finished row is not in anyone's queue, so it is never a neighbour.
+    _REORDER_CLOSED = ("done", "dropped", "killed", "retired", "archived")
+
+    def reorder(self, item_id: str, direction: str, *, by: str, expected_version: int | None = None,
+                today: date | None = None) -> dict:
+        """Move a build row one place up or down its list. ONE transaction, versioned writes.
+
+        Population (WORK-REORDER-ROUTE): the non-terminal ``build`` rows with the same ``state`` and
+        the same blocked-ness (``blocked_on`` empty vs not) as the row. For ``queued`` that is
+        exactly the runnable queue the manager dispatches from, and the Overview "next" card.
+        Order: ``priority_rank`` ascending (lower = higher), null last, then register order
+        (``extra._seq``), then id. If the two rows to swap lack distinct ranks, every row of the
+        population is renumbered 1..N in that same order first (order-preserving), so a move
+        always works; then the pair swaps. ``expected_version`` (optional) guards the moved row.
+
+        Raises NotFoundError (unknown id / not a build), WorkStoreValidationError (bad direction),
+        ReorderBoundary (already first/last; carries the position). Returns
+        ``{"item", "changed": [ids], "renumbered", "population", "order": [{id, priority_rank}]}``."""
+        self._need_by(by)
+        if direction not in ("up", "down"):
+            raise WorkStoreValidationError("direction must be 'up' or 'down'")
+        with self._tx() as conn:
+            row = self._get(conn, item_id)
+            if row is None or row.get("kind") != "build":
+                raise NotFoundError(f"no work row {item_id!r}")
+            if expected_version is not None and int(expected_version) != row["version"]:
                 raise ConflictError(
-                    f"item {item_id!r} is at version {prior['version']}, the write was based on "
-                    f"{expected_version}; re-read and re-apply", prior)
-            item = dict(prior)
-            item.update(fields)
-            if item.get("parent_id") and item["parent_id"] != prior.get("parent_id") \
-                    and self._get(conn, item["parent_id"]) is None:
-                raise WorkStoreValidationError(f"parent_id: no item {item['parent_id']!r}")
-            if op == "reopen":
-                item["terminal_reason"] = None
-            filled = _validate(item, prior, today)
-            at = _now()
-            item.update(due_at=compute_due_at(item, now=at), version=prior["version"] + 1,
-                        updated_at=at, updated_by=by)
-            # WORK-ROW-AGE-STALE: an item imported from a checklist row carries the row's OWN
-            # updated_at/updated_by in `extra`, which every row reader serves (SPA Work page,
-            # attention_watch, blocker_watch, work_digest). Only the item-level stamp moved on a
-            # write, so rows read days old (MANAGER-VM-DIRECT-OPS: 2026-11-05 served vs 2026-11-12
-            # stored). Moving the row's stamp with the write keeps store, export and files equal.
-            ex = item.get("extra")
-            if isinstance(ex, dict) and "updated_at" in ex:
-                item["extra"] = dict(ex, updated_at=at, updated_by=by)
-            self._write_item(conn, item, insert=False)
-            if op == "note":
-                patch: Any = {"note": note}
-                if fields:
-                    patch["fields"] = fields
-            else:
-                changed = {k: item[k] for k in WRITABLE_FIELDS if item.get(k) != prior.get(k)}
-                patch = {"fields": changed}
-            if filled:
-                patch["filled"] = filled
-            ev = self._append_event(conn, item_id=item_id, at=at, by=by, op=op, patch=patch, op_id=op_id)
-            return {"item": self._get(conn, item_id), "event": ev, "replayed": False}
+                    f"item {item_id!r} is at version {row['version']}, the move was based on "
+                    f"{expected_version}; re-read and retry", row)
+            if row.get("state") in self._REORDER_CLOSED:
+                raise WorkStoreValidationError(f"{item_id!r} is {row['state']}; a finished row is not in the queue")
+            blocked = bool(row.get("blocked_on"))
+            pop = [self._decode(r) for r in conn.execute(
+                "SELECT * FROM items WHERE kind = 'build' AND state = ?", (row["state"],))]
+            pop = [r for r in pop if bool(r.get("blocked_on")) == blocked]
+
+            def key(r):
+                rk = r.get("priority_rank")
+                seq = (r.get("extra") or {}).get("_seq")
+                return (rk is None, rk if rk is not None else 0,
+                        seq if isinstance(seq, (int, float)) else 1 << 60, r["id"])
+            pop.sort(key=key)
+            ids = [r["id"] for r in pop]
+            i = ids.index(item_id)
+            j = i - 1 if direction == "up" else i + 1
+            if j < 0 or j >= len(pop):
+                raise ReorderBoundary(
+                    f"{item_id!r} is already at the {'top' if direction == 'up' else 'bottom'} of its list "
+                    f"({len(pop)} rows)", position=i + 1, population=len(pop))
+            ranks = [r.get("priority_rank") for r in pop]
+            renumbered = ranks[i] is None or ranks[j] is None or ranks[i] == ranks[j]
+            if renumbered:
+                ranks = list(range(1, len(pop) + 1))
+            ranks[i], ranks[j] = ranks[j], ranks[i]
+            changed = []
+            for r, new in zip(pop, ranks):
+                if r.get("priority_rank") == new:
+                    continue
+                self._update_in_tx(conn, r["id"], {"priority_rank": new}, op="set", by=by, op_id=None,
+                                   expected_version=r["version"], today=today)
+                changed.append(r["id"])
+            order = [{"id": r["id"], "priority_rank": new} for r, new in
+                     sorted(zip(pop, ranks), key=lambda t: t[1])]
+            return {"item": self._get(conn, item_id), "changed": changed, "renumbered": renumbered,
+                    "population": len(pop), "order": order}
 
     def set(self, item_id: str, fields: dict, *, by: str, expected_version: int | None,
             op_id: str | None = None, today: date | None = None) -> dict:

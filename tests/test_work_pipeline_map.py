@@ -93,3 +93,52 @@ def test_route_serves_structured(monkeypatch):
     wpm._cache.update(at=0.0, body=None)
     body = _client().get("/api/bot/work/pipeline-map").json()
     assert body["structured"]["steps"] and body["structured"]["loops"] and body["markdown"]
+
+
+# ── v2 backend fixes (WORK-REORDER-ROUTE / PIPELINE-MAP-V2, 2026-11-15) ─────────────────────────────
+def _structured():
+    from src.runtime import pipeline_map as pm
+    return pm.build_structured()
+
+
+def test_structured_element_ids_are_unique_across_the_payload():
+    d = _structured()
+    ids = [e["id"] for s in d["steps"] for e in s["technical"] + s["trading"]]
+    assert len(ids) > 100 and len(ids) == len(set(ids))
+    assert all(e["id"].startswith(s["id"] + "/") for s in d["steps"] for e in s["technical"] + s["trading"])
+
+
+def test_state_is_filled_from_a_real_source_and_null_elsewhere():
+    d = _structured()
+    els = [e for s in d["steps"] for e in s["technical"] + s["trading"]]
+    assert all("state" in e for e in els)                      # the key is always present
+    assert all(e["state"] is None for e in els if e["kind"] == "rule")   # no source: "—", never invented
+    assert all(e["state"] is not None for e in els if e["kind"] in ("leg", "account", "model", "mandate"))
+    mods = [e for e in els if e["kind"] == "module" and e["path"]]
+    # None = a token with no repo source (a VM-only path, a git branch): "—", never guessed.
+    assert mods and {e["state"] for e in mods} <= {"in trader", "off trader", "present", "missing", None}
+    assert sum(e["state"] in ("in trader", "off trader") for e in mods) > 20
+    assert all(e["details"].get("state source") for e in els if e["kind"] in ("module", "service") and e["state"])
+    assert sum(1 for e in els if e["state"] is None) < 100     # was 189 of 287
+
+
+def test_groups_cover_every_element_exactly_once_and_are_few():
+    d = _structured()
+    for s in d["steps"]:
+        for side in ("technical", "trading"):
+            groups, els = s[f"{side}_groups"], s[side]
+            assert sorted(i for g in groups for i in g["element_ids"]) == sorted(e["id"] for e in els)
+            assert all(g["count"] == len(g["element_ids"]) == sum(g["state_counts"].values()) for g in groups)
+    s3 = next(s for s in d["steps"] if s["n"] == 3)
+    assert len(s3["trading_groups"]) <= 12 and len(s3["technical_groups"]) <= 8
+
+
+def test_collapse_groups_keeps_counts_and_shrinks_the_chips():
+    from src.runtime import pipeline_map as pm
+    d = _structured()
+    c = pm.collapse_groups(d)
+    s3 = next(s for s in c["steps"] if s["n"] == 3)
+    assert len(s3["trading"]) <= 12 and len(s3["technical"]) <= 8
+    assert sum(e.get("count", 1) for e in s3["trading"]) == len(next(s for s in d["steps"] if s["n"] == 3)["trading"])
+    assert all(isinstance(e["details"], dict) for e in s3["trading"] if e["kind"] == "group")
+    assert c["grouped"] is True and "grouped" not in d       # pure: the input is untouched
