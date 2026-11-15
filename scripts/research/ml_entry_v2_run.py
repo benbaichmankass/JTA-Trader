@@ -169,7 +169,11 @@ def write_verdict(unit: str, out: Path) -> bool:
                         "no_action_warranted, not_viable/does_not_reproduce->fail, indeterminate/smoke_not_judged->indeterminate",
             }, indent=2) + "\n")
             return True
-        cells = d.get("cells") if isinstance(d.get("cells"), dict) else None
+        # ``arms`` (b604 calibration, b607 recipe/ensemble: {"<arm>": {"verdict": win|no_win|indeterminate, "n": [...]}}) is the
+        # same per-cell shape under another key; without it those runs landed producer_failed and were re-dispatched (ML-PRIMARY-3,
+        # 2026-11-15: b604 ran 3x, b607 4x with real results on main).
+        cells = (d.get("cells") if isinstance(d.get("cells"), dict)
+                 else d.get("arms") if isinstance(d.get("arms"), dict) else None)
         for c in (cells.values() if cells else [d]):
             w = c.get("verdict") if isinstance(c, dict) else None
             if w in (None, "base"):
