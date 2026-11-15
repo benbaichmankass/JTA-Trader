@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "checklist_store.queue() (the manager's dispatch order) sorts by (rank class, queue_pos else _seq, register order), the same key as the Overview reorder (#26277), so the operator's move drives dispatch. Unmoved rows keep today's order (queue_pos absent -> _seq). No order path, no new gate. trader_import_closure decide = RESTART: src/runtime/checklist_store.py is in the trader closure.",
+  "hold_text": "Pure sort-key change in a trader-loaded module (restart gate fires). Land after #26277; after deploy, move a queued row via POST /api/bot/work/reorder and confirm python3 -c 'from src.runtime import checklist_store as c; print([r[\"id\"] for r in c.queue(c.load())[:5]])' shows it."
+}

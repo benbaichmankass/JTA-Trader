@@ -462,6 +462,29 @@ def recollect_orphans(root: Path, *, repo_slug: str) -> List[Dict[str, Any]]:
     return done
 
 
+def merge_holdout_claims(root: Path, dest: Path) -> int:
+    """Merge a landed run's holdout claims into the repo ledger (row HOLDOUT-LEDGER-RUNNER-CLAIMS, 2026-11-15).
+
+    Sources: ``holdout_claims.jsonl`` (written by script_run.execute from the lines the run appended to its checkout's
+    ledger) and any ``holdout_reads.jsonl`` copy a reader wrote under its out dir. De-duplicated against the ledger by
+    holdout_lock.claim_key, so a copy that also carries main's older rows adds only the run's own claims. The ledger is
+    under comms/research/, so the dispatcher's batch bundles it with the run. Returns the number of rows added."""
+    sources = sorted(dest.rglob("holdout_claims.jsonl")) + sorted(dest.rglob("holdout_reads.jsonl"))
+    if not sources:
+        return 0
+    sys.path.insert(0, str(root / "scripts" / "research"))
+    try:
+        import holdout_lock  # noqa: E402  (research tooling module, not a package)
+    finally:
+        sys.path.pop(0)
+    ledger = root / "comms" / "research" / "holdout_reads.jsonl"
+    added = holdout_lock.merge_claims(sources, ledger)
+    for row in added:
+        print(f"holdout claim landed from {dest.name}: {row.get('model_id')} {row.get('start')}..{row.get('end')} "
+              f"n_tries={row.get('n_tries')}")
+    return len(added)
+
+
 def collect(root: Path, *, repo_slug: str, runs: Optional[List[Dict[str, Any]]] = None,
             artifacts_for=run_artifacts, downloader=download, dry_run: bool = False,
             pending: Optional[set] = None) -> Dict[str, Any]:
@@ -517,6 +540,9 @@ def collect(root: Path, *, repo_slug: str, runs: Optional[List[Dict[str, Any]]] 
         except (OSError, ValueError) as exc:
             out["lost"].append({"run_id": run_id, "unit": unit, "why": f"record-inputs.json unreadable: {exc}"})
             continue
+        claims = merge_holdout_claims(root, dest)
+        if claims:
+            out.setdefault("holdout_claims", []).append({"run_id": run_id, "unit": unit, "added": claims})
         record = emit_record(root, rec, run=run, repo_slug=repo_slug)
         if not record:
             out["lost"].append({"run_id": run_id, "unit": unit, "why": "record emit refused (see ::error above)"})

@@ -8,6 +8,12 @@
 
 Payload: ``{path, read_state, source, built_at, markdown, structured, live_state, last_commit, file_mtime}``.
 ``structured`` (v2) = ``{steps: [{id, n, name, technical[], trading[]}], loops: [{from, to, label}]}`` for the spine UI.
+2026-11-15 (WORK-REORDER-ROUTE, additive + one value change): element ``id`` is unique across the payload
+(``step-N/<old id>``); element ``state`` is filled where a real source exists (legs: status, accounts: mode,
+models: stage, mandates: granted/auto-land, module/config: repo tree + trader import closure, service: unit
+file) and stays null otherwise; each step gains ``technical_groups`` / ``trading_groups``
+(``{id,label,kind,count,state_counts,element_ids}``); ``?grouped=true`` returns ``technical``/``trading``
+with each multi-member group collapsed into one ``kind: "group"`` element.
 ``source`` is ``live`` (just built) or ``snapshot`` (the committed
 ``docs/reference/trading-pipeline-map.md``, served only when the live build fails, with the failure
 in ``build_error``). ``last_commit`` is the skeleton's last commit -- when the hand-written part last
@@ -104,12 +110,19 @@ def _build(root: Path) -> dict[str, Any]:
 
 
 @router.get("/pipeline-map")
-def get_pipeline_map(refresh: bool = False) -> dict[str, Any]:
+def get_pipeline_map(refresh: bool = False, grouped: bool = False) -> dict[str, Any]:
+    """``grouped=true`` collapses each multi-member group of ``structured`` into one ``kind: "group"``
+    element (same shape the deployed UI renders); the default payload is unchanged apart from the
+    additive fields documented in the module docstring."""
     now = time.monotonic()
     with _lock:
         if not refresh and _cache["body"] is not None and now - _cache["at"] < CACHE_S:
-            return {**_cache["body"], "cache_age_s": round(now - _cache["at"])}
-        body = _build(Path(repo_root()))
-        if body.get("source") == "live":
-            _cache.update(at=now, body=body)
-        return {**body, "cache_age_s": 0}
+            body, age = _cache["body"], round(now - _cache["at"])
+        else:
+            body, age = _build(Path(repo_root())), 0
+            if body.get("source") == "live":
+                _cache.update(at=now, body=body)
+    if grouped and isinstance(body.get("structured"), dict) and body["structured"].get("steps"):
+        from src.runtime import pipeline_map
+        body = {**body, "structured": pipeline_map.collapse_groups(body["structured"])}
+    return {**body, "cache_age_s": age}
