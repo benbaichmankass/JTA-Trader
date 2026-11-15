@@ -219,7 +219,14 @@ instruments:
     # demo-measured number silently becomes a production fallback ceiling that
     # was never measured on production. Re-measure before that happens; do not
     # let this comment's existence substitute for the measurement.
+    #
+    # ENFORCED 2026-11-12 (ORDER-PATH-RESIDUE-2): `max_qty_venue: demo` scopes
+    # the 22000 to demo accounts. A non-demo account resolving AVAXUSDT on a
+    # missed live lookup grades `could_not_look` instead of inheriting it
+    # (tests/test_qty_legalize_venue_max_resolution.py). A production ceiling
+    # needs its own venue-published measurement.
     max_qty: 22000
+    max_qty_venue: demo
     contract_value_usd: 1.0
     max_leverage: 100
     display_name: "AVAX/USDT Perp (Bybit)"
