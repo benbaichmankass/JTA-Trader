@@ -15331,16 +15331,12 @@ def _sweep_entry_fill_writeback(db, *, order_status: Any = None, limit: int = 20
                 notes["entry_price_source_reason"] = d["reason"]
                 new_entry = None
             blob = dump_capped(notes, max(500, len(row.get("notes") or "")))
-            conn = db.connect()
-            try:
-                if new_entry is not None:
-                    conn.execute("UPDATE trades SET entry_price = ?, notes = ? WHERE id = ? AND status = 'open'",
-                                 (new_entry, blob, row["id"]))
-                else:
-                    conn.execute("UPDATE trades SET notes = ? WHERE id = ? AND status = 'open'", (blob, row["id"]))
-                conn.commit()
-            finally:
-                conn.close()
+            # The canonical writer (writer-conformance). Its observer hooks fire only on status='closed' or an sl/tp
+            # key, so an entry_price/notes update triggers no notification, cost stamp or bracket path.
+            fields: Dict[str, Any] = {"notes": blob}
+            if new_entry is not None:
+                fields["entry_price"] = new_entry
+            db.update_trade(row["id"], fields)
             summary["written" if new_entry is not None else "kept_plan"] += 1
             if new_entry is not None:
                 logger.info("entry_fill_writeback: trade %s %s entry %s -> %s (entry order's own avgPrice)",

@@ -139,6 +139,9 @@ def test_sweep_writes_the_entry_orders_fill_and_nothing_else(journal, monkeypatc
     for name in ("modify_open_order", "_submit_order", "execute_pkg"):
         if hasattr(ex, name):
             monkeypatch.setattr(ex, name, lambda *a, **k: (_ for _ in ()).throw(AssertionError("order path touched")))
+    # the canonical writer's observer hooks (trade-updated / trade-closed notifications, cost stamp) must not fire
+    for hook in ("_fire_trade_updated_event", "_fire_trade_closed_event", "_record_trade_cost_estimate"):
+        monkeypatch.setattr(Database, hook, lambda *a, **k: (_ for _ in ()).throw(AssertionError(f"{hook} fired")))
     summary = om._sweep_entry_fill_writeback(Database(str(journal)), order_status=_status)
     after = {r["id"]: r for r in _rows(journal)}
     b = {r["id"]: r for r in before}
