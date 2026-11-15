@@ -1,4 +1,4 @@
-> **Doc status:** `live` · category `evidence` · last verified `2026-11-12` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
+> **Doc status:** `unknown` · category `evidence` · last verified `2026-11-12` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
 
 # ict-trader-live restart accounting, 2026-11-11T14:59Z .. 2026-11-12T10:45Z (row TRADER-RESTART-ACCOUNTING-1112)
 
