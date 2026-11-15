@@ -1574,7 +1574,8 @@ def _self_test() -> int:
     check(PropRules().drawdown_type == "static" and PropRules().trailing_lock_buffer_pct is None,
           "trailing (e): default ruleset is static with no lock (back-compat pin)")
     # (f) a typo in drawdown_type is refused, never silently static
-    import tempfile as _tf, yaml as _y
+    import tempfile as _tf
+    import yaml as _y
     bad = {"account_size_usd": 5000, "profit_split": 0.8, "phases": {"evaluation": {"profit_target_pct": 0.1}},
            "limits": {"daily_loss_pct": 0.04, "max_drawdown_pct": 0.06, "drawdown_type": "eod_trailng"},
            "economics": {"account_fee_usd": 50, "payout": {"first_payout_after_days": 14, "payout_frequency_days": 7}}}
