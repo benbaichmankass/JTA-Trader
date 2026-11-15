@@ -93,6 +93,9 @@ def state_at(rows: list[dict[str, Any]], t: int, w: int, entry_sd: float | None 
     return {"open_r": openr, "peak_r": peak, "bsp_t": float(r["bars_since_peak"]), "bars_in": float(t + 1),
             "er_w": er, "chop_w": chop, "vol_ratio_t": sd_t / entry_sd, "atr_ratio_t": atr_ratio,
             "dist_atr_t": dist_atr, "dd_frac_t": (peak - openr) / peak if peak > 0 else 0.0,
+            # LTR-FAST-MOVE-LOCKIN: R gained over the last w closes (the impulse / velocity of the move, in R;
+            # negative when the window moved against the trade). Rows <= t only, like every feature here.
+            "vel_w": net,
             "stop_room_r": float(r.get("dist_to_stop_r") or 0.0), "t": t}
 
 

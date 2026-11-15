@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "SEC-VM-POSTURE-READ: adds the Tier-1 read-only system-action `security-posture-report` (wrapper scripts/ops/security_posture_report.sh, workflow allowlist entry, notify_run tier-1 case, EXPECTED_ACTIONS test entry, docs/claude/system-actions.md row). It reads and prints host posture on the live trader and the IB gateway: counts, modes, sshd -T keys, fail2ban counts, and SHA256 fingerprints of authorized keys. It never prints secret values, key bodies or comments, and masks IPv4 addresses and account ids. It mutates nothing on either host and touches no order path, strategy, risk cap, config or runtime service."
+}

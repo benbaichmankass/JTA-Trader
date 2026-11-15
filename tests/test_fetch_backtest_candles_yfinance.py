@@ -143,21 +143,19 @@ def test_the_inverse_proxies_resolve_to_themselves(sym):
 
 
 @pytest.mark.parametrize("sym", _INVERSE_PROXIES)
-def test_the_inverse_proxies_are_not_yet_tradeable(sym):
-    """Fetchable != declared. Nothing may route to these until the gate clears."""
-    instruments = (_ROOT / "config" / "instruments.yaml").read_text()
-    strategies = (_ROOT / "config" / "strategies.yaml").read_text()
-    # A crude substring test is the right strength here: it cannot miss a
-    # declaration, and a false positive (the letters appearing inside another
-    # token) would only make the test fail loudly rather than pass wrongly.
-    for name, text in (("instruments.yaml", instruments), ("strategies.yaml", strategies)):
-        for line in text.splitlines():
-            bare = line.split("#", 1)[0]
-            assert f"{sym}USD" not in bare and not _names_symbol(bare, sym), (
-                f"{sym} now appears in config/{name} — if that is the deliberate "
-                f"Tier-3 wiring, update this test in the same PR; if it is not, "
-                f"an inverse instrument has been declared by accident"
-            )
+def test_the_inverse_proxies_are_tradeable_only_as_ml_pool_members(sym):
+    """UPDATED DELIBERATELY in the wiring PR (row ML-ENTRY-EQ-STRUCT-FULL-POOL, 2026-11-11; operator verbatim "we want it to be trading everything it
+    was trained on."): SH / PSQ are members of the 173-ETF pool the ml_entry_eq_struct ensemble PASSED its pooled test on (RQ-20261107-98e3-06), so
+    they are now declared -- as that leg's LONG candidates, never as a short proxy for another leg. Still falsifiable: any OTHER strategy naming
+    them (the M15 short-proxy build the original gate was about) fails here."""
+    import yaml
+    strategies = yaml.safe_load((_ROOT / "config" / "strategies.yaml").read_text())
+    strategies = strategies.get("strategies") or strategies
+    naming = sorted(n for n, c in strategies.items() if isinstance(c, dict) and sym in (c.get("symbols") or []))
+    assert naming == ["ml_entry_eq_struct"], f"{sym} is named by {naming}: only the full-pool ML leg may trade it without its own evidence"
+    assert strategies["ml_entry_eq_struct"].get("pool_scored") is True
+    ins = yaml.safe_load((_ROOT / "config" / "instruments.yaml").read_text())["instruments"]
+    assert ins[sym]["exchange"] == "alpaca" and f"{sym}USD" not in ins
 
 
 # The 2026-08-25 affordability candidates (map size 24 -> 74). Same contract as
@@ -195,7 +193,20 @@ def test_the_affordability_candidates_are_not_yet_tradeable(sym):
 
     Written to go RED when that wiring lands — that is the signal to update it
     deliberately in the same PR, not a reason to loosen it.
+
+    UPDATED DELIBERATELY 2026-11-11 (row ML-ENTRY-EQ-STRUCT-FULL-POOL): a candidate that is a member of the ml_entry_eq 173-ETF pool is now
+    declared as one of that leg's pool symbols (its pooled test RQ-20261107-98e3-06 is the evidence). It may be named by NO other strategy --
+    an affordability-proxy promotion still needs its own evidence, and still goes red here.
     """
+    import json
+    pool = set(json.loads((_ROOT / "ml" / "candidates" / "ml_entry_eq_v3_struct_ens5" / "model.json").read_text())["pool_symbols"])
+    if sym in pool:
+        import yaml
+        strategies = yaml.safe_load((_ROOT / "config" / "strategies.yaml").read_text())
+        strategies = strategies.get("strategies") or strategies
+        naming = sorted(n for n, c in strategies.items() if isinstance(c, dict) and sym in (c.get("symbols") or []))
+        assert naming in ([], ["ml_entry_eq_struct"]), f"{sym} is named by {naming}: only the full-pool ML leg may trade it without its own evidence"
+        return
     instruments = (_ROOT / "config" / "instruments.yaml").read_text()
     strategies = (_ROOT / "config" / "strategies.yaml").read_text()
     for name, text in (("instruments.yaml", instruments), ("strategies.yaml", strategies)):

@@ -23,6 +23,8 @@
 # notes.backfilled_by='backfill_monitor_closed_pnl_script'; the
 # revert removes that stamp, so re-runs find nothing.
 set -euo pipefail
+# read-only SQL without the sqlite3 CLI (not installed on the VM): scripts/ops/db_read.py
+_DBR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/db_read.py"
 
 SCRIPT_NAME="revert_backfill_monitor_closed_pnl"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -48,7 +50,7 @@ if [ ! -f "${DB_PATH}" ]; then
 fi
 
 # Pre-snapshot: count of rows still carrying the backfill stamp.
-pre_count="$(sqlite3 "${DB_PATH}" \
+pre_count="$(python3 "${_DBR}" "${DB_PATH}" \
     "SELECT COUNT(*) FROM trades \
      WHERE notes LIKE '%\"backfilled_by\": \"backfill_monitor_closed_pnl_script\"%' \
        AND COALESCE(is_backtest,0)=0;" 2>/dev/null || echo "?")"
@@ -70,7 +72,7 @@ TRADE_JOURNAL_DB="${DB_PATH}" python3 "${PY_SCRIPT}" --apply
 exit_code=$?
 set -e
 
-post_count="$(sqlite3 "${DB_PATH}" \
+post_count="$(python3 "${_DBR}" "${DB_PATH}" \
     "SELECT COUNT(*) FROM trades \
      WHERE notes LIKE '%\"backfilled_by\": \"backfill_monitor_closed_pnl_script\"%' \
        AND COALESCE(is_backtest,0)=0;" 2>/dev/null || echo "?")"

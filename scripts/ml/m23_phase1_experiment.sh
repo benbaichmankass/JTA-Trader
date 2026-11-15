@@ -110,7 +110,7 @@ except Exception as e:
 PY
 
 log "STEP 5: train setup-candidates-metalabel-backtest-v1 (live_holdout eval)"
-python3 -m ml train ml/configs/setup-candidates-metalabel-backtest-v1.yaml \
+python3 -m ml train ml/configs/retired/setup-candidates-metalabel-backtest-v1.yaml \
   --datasets-root datasets-out --no-register > /tmp/m23_train.out 2>>"$RESULT"
 log "STEP 6: GATE VERDICT"
 python3 - /tmp/m23_train.out <<'PY' 2>>"$RESULT" | tee -a "$RESULT"

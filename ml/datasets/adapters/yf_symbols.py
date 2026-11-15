@@ -53,6 +53,12 @@ _DEFAULT_TICKER_MAP: Mapping[str, str] = {
     **{t: t for t in (
         "GDX", "GLD", "IAUM", "IEF", "IWM", "QLD", "QQQ",
         "SCHA", "SLV", "SPYM", "SPY", "TLT", "TQQQ", "USO",
+        # DIA: research-only fetch (RQ-20261112-a7e8-01/-02's registered basket, 2026-11-12); being
+        # fetchable is not being on any roster.
+        "DIA",
+        # Sector SPDRs not mapped elsewhere (XLK, XLE are): research-only fetch for the FRONTIER-STATIC-MARKETS
+        # symbol-disjoint IBS test (2026-11-12). Fetchable is not rostered.
+        "XLB", "XLF", "XLI", "XLP", "XLU", "XLV", "XLY",
     )},
     # --- INVERSE ETFs: fetchable for RESEARCH, deliberately NOT tradeable ----
     # SH (-1x S&P 500) and PSQ (-1x QQQ) are the M15 alpaca short-PROXY

@@ -29,6 +29,8 @@
 #     script output for operator follow-up.
 #   - the running ict-trader-live.service (no restart required)
 set -euo pipefail
+# read-only SQL without the sqlite3 CLI (not installed on the VM): scripts/ops/db_read.py
+_DBR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/db_read.py"
 
 SCRIPT_NAME="backfill_closed_null_pnl"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -53,7 +55,7 @@ if [ ! -f "${DB_PATH}" ]; then
     exit 1
 fi
 
-pre_count="$(sqlite3 "${DB_PATH}" \
+pre_count="$(python3 "${_DBR}" "${DB_PATH}" \
     "SELECT COUNT(*) FROM trades \
      WHERE status='closed' \
        AND pnl IS NULL \
@@ -76,7 +78,7 @@ TRADE_JOURNAL_DB="${DB_PATH}" python3 "${PY_SCRIPT}" --apply
 exit_code=$?
 set -e
 
-post_count="$(sqlite3 "${DB_PATH}" \
+post_count="$(python3 "${_DBR}" "${DB_PATH}" \
     "SELECT COUNT(*) FROM trades \
      WHERE status='closed' \
        AND pnl IS NULL \

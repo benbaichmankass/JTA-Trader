@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "SEC-8001-LOCKDOWN step 3. No allowlisted system-action could drop a firewall rule, so the dispatch said 'write the exact action and stop'. This PR is that action. It is not run here. Tier-2 OK: operator decisions page m3, saved 2026-11-12 07:49:12Z. The manager merges it after step 2 (#25185) has deployed, then dispatches it with an operator-quoted reason.",
+  "why": "Add Tier-2 system-action close-api-port: delete the host firewall ACCEPT rules for TCP/8001 and persist them; it refuses unless :8001 listens on loopback only."
+}

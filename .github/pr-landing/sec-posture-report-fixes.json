@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "SEC-VM-POSTURE-READ follow-up after the first run (#25070), Tier 1: the read-only report changes only what it prints. (1) mask() keeps 0.0.0.0 and 127.0.0.x, because whether 8001/111/2019/4002 bind publicly was unreadable with them masked; every other IPv4 address and the account ids stay masked. (2) /etc/sudoers.d is listed with sudo; a plain glob cannot read the 0750 dir. (3) The gateway ssh gets -o LogLevel=ERROR, so the client's known-hosts warning can no longer print the gateway address into the public issue. Still read-only on both hosts; no order path, strategy, config or service change."
+}

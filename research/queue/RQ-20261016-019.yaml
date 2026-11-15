@@ -34,6 +34,9 @@ power:
   feasibility:
     source: none
     accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+evidence_class:  # EVIDENCE-CLASS-BACKFILL 2026-11-11, rule E2 (scripts/research/backfill_evidence_class.py)
+  holdout: in_sample
+  claim: edge
 decision_rule:
   id: RULE-P1-Q4-QQQ-TREND-LONG-1D-SOAK-CONFIRM
   statistic: 'From scripts/research/exit_lever_ablation.py --grade replace on qqq_trend_long_1d, window

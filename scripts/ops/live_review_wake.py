@@ -18,7 +18,7 @@ channel is an Actions poller (no new VM credential): every ~5 min
    ``scripts/research/research_watchdog.py``);
 4. posts ONE comment for everything newly due. The manager is subscribed to the
    PR, so the comment wakes it; it dispatches one LIVE-REVIEW lane per package
-   (``.claude/skills/manager/SKILL.md`` § "Live-review wake").
+   (``docs/plans/manager-runbooks.md`` § A, the ``ltr-wake`` recipe).
 
 ``daily_floor`` never wakes: it is a time floor, not a market event, and the
 hourly routine (the backstop) already covers it.
@@ -54,7 +54,7 @@ NO_WAKE_EVENTS = {"daily_floor"}
 #: Deduped on package|event|level only, never by the per-event cooldown: the per-package auto mandate's
 #: review cadence (MD-LTR-ADA-AUTO) is one wake per slot, and its level IS the slot, so a late wake for
 #: one slot must not hold back the next one (latency of the round trip, operator 2026-10-29).
-LEVEL_DEDUPED_EVENTS = {"mandate_cadence", "judgement_cadence"}  # judgement_cadence: DESK-AM-REFOCUS, one slot per level
+LEVEL_DEDUPED_EVENTS = {"mandate_cadence", "judgement_cadence", "conflicting_exposure"}  # conflicting_exposure: one wake per conflict key (CONFLICTING-EXPOSURE-ALERT)  # judgement_cadence: DESK-AM-REFOCUS, one slot per level
 #: At most one wake per package+event in this window, unless the event is
 #: cooldown-exempt in config (giveback, mechanics). INFERRED default: one 2h bar.
 COOLDOWN_MIN = 120
@@ -384,6 +384,20 @@ def health_line(pkg: str, packet: Optional[Dict[str, Any]]) -> str:
     return f"PACKET HEALTH `{pkg}`: {h.get('status')}" + (f" ({ds})" if ds else " (no defects)")
 
 
+def _routine_started(e: Dict[str, Any]) -> bool:
+    """TRADE-ACTION-DIRECT-PATH phase 3: the VM poster fired the routine for this entry (now or on an earlier pass)."""
+    return str((e.get("routine_fire") or {}).get("state")) in ("fired", "already_fired")
+
+
+def _routine_note(e: Dict[str, Any]) -> str:
+    rf = e.get("routine_fire") or {}
+    if _routine_started(e):
+        return f"; **reviewer started by routine** `{rf.get('session_id')}`: do not dispatch"
+    if rf.get("state") and rf.get("state") not in ("not_configured",):
+        return f"; routine fire `{rf.get('state')}` ({rf.get('reason') or '-'}): dispatch as usual"
+    return ""
+
+
 def render(p: Dict[str, Any], now: datetime, run_url: str,
            bundles: Optional[Dict[str, Dict[str, Any]]] = None) -> str:
     blocks: List[str] = []
@@ -415,14 +429,23 @@ def render(p: Dict[str, Any], now: datetime, run_url: str,
             cls = _wt.ltr_label(p["entries"])
         except Exception:  # noqa: BLE001
             cls = "real-money/prop"
-        head = (f"**LTR wake: {len(p['entries'])} live-review event(s) newly due** on {cls} "
-                "packages. Manager: dispatch ONE Sonnet LIVE-REVIEW lane per package "
-                "(`.claude/skills/manager/SKILL.md` § Live-review wake).")
+        n_fired = sum(1 for e in p["entries"] if _routine_started(e))
+        if n_fired == len(p["entries"]):
+            head = (f"**LTR wake: {len(p['entries'])} live-review event(s) newly due** on {cls} packages. "
+                    "Every reviewer was ALREADY STARTED by the routine API trigger (session ids below). "
+                    "Manager: do NOT dispatch; this comment is the dedupe record "
+                    "(`docs/plans/manager-runbooks.md` § A, `ltr-wake` recipe).")
+        else:
+            head = (f"**LTR wake: {len(p['entries'])} live-review event(s) newly due** on {cls} "
+                    "packages. Manager: dispatch ONE Sonnet LIVE-REVIEW lane per package "
+                    + (f"NOT marked as started by the routine ({n_fired} were) " if n_fired else "")
+                    + "(`docs/plans/manager-runbooks.md` § A, `ltr-wake` recipe).")
         lines = [f"- `{e['order_package_id']}` {e['leg']} {e['symbol']} on {', '.join(map(str, e['accounts']))}: "
                  f"**{e['event']}** @ {e['level']} — {e['why']} (due_at {e['due_at']})"
                  + (f"; evidence on `{ROWS_BRANCH}`: **{e['evidence_state']}**"
                     + (f" `{str(e['evidence_commit'])[:12]}`" if e.get("evidence_commit") else "")
                     if e.get("evidence_state") else "")
+                 + _routine_note(e)
                  for e in p["entries"]]
     return "\n".join([head, "", *lines, "", *health, "", *blocks, "", f"Run: {run_url}", "",
                       f"<!-- {MARKER} {json.dumps(marker, separators=(',', ':'), default=str)} -->",

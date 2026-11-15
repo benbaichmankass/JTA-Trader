@@ -29,8 +29,8 @@ on:
         description: "Why this run is happening (audit only)."
         required: false
         default: "manual operator dispatch"
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [vm-ib-gateway-watchdog-enable]
 
 permissions:
   contents: read
@@ -44,10 +44,10 @@ jobs:
   enable:
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       (github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'vm-ib-gateway-watchdog-enable'))
+      (github.event_name == 'repository_dispatch' &&
+       (github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'vm-ib-gateway-watchdog-enable'))
     runs-on: ubuntu-latest
     timeout-minutes: 4
     env:
@@ -117,7 +117,7 @@ jobs:
           exit "${rc}"
 
       - name: Reply to issue with success
-        if: github.event_name == 'issues' && success()
+        if: github.event_name == 'repository_dispatch' && success()
         uses: actions/github-script@v7
         env:
           EXIT_CODE: ${{ steps.exec.outputs.exit_code }}
@@ -127,16 +127,16 @@ jobs:
             const output = fs.readFileSync('action-output.txt', 'utf8');
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             await github.rest.issues.createComment({
-              owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number,
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               body: `✅ **vm-ib-gateway-watchdog-enable** completed.\nRun: ${runUrl}\nExit code: ${process.env.EXIT_CODE}\n\n\`\`\`\n${output}\n\`\`\``
             });
             await github.rest.issues.update({
-              owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number,
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               state: 'closed', state_reason: 'completed'
             });
 
       - name: Reply to issue with failure
-        if: github.event_name == 'issues' && failure()
+        if: github.event_name == 'repository_dispatch' && failure()
         uses: actions/github-script@v7
         env:
           EXIT_CODE: ${{ steps.exec.outputs.exit_code }}
@@ -147,10 +147,10 @@ jobs:
             try { output = fs.readFileSync('action-output.txt', 'utf8'); } catch (_) { output = '(no output — failure before SSH ran)'; }
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             await github.rest.issues.createComment({
-              owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number,
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               body: `❌ **vm-ib-gateway-watchdog-enable failed.**\nRun: ${runUrl}\nExit code: ${process.env.EXIT_CODE || '(setup failed)'}\n\nCommon causes: VM_SSH_KEY unset; SSH unreachable; systemctl perms.\n\n\`\`\`\n${output}\n\`\`\``
             });
             await github.rest.issues.update({
-              owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number,
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               state: 'closed', state_reason: 'not_planned'
             });

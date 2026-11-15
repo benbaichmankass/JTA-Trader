@@ -25,11 +25,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-FEATURES = ("er", "chop", "atr_ratio", "dist_atr")
-_STATE_KEY = {"er": "er_w", "chop": "chop_w", "atr_ratio": "atr_ratio_t", "dist_atr": "dist_atr_t"}
+# ``vel`` (LTR-FAST-MOVE-LOCKIN, operator 2026-11-10: "these seem like good points to be locking in, considering
+# how quickly things are moving and the fact that they'll probably end up bouncing back fast"): the R gained over
+# the last ``window`` closes, so ``--trail-state-feature vel --trail-state-op gt --trail-state-thr X`` tightens the
+# trail after an impulse of more than X R in that window. Default-off like every feature here.
+FEATURES = ("er", "chop", "atr_ratio", "dist_atr", "vel")
+_STATE_KEY = {"er": "er_w", "chop": "chop_w", "atr_ratio": "atr_ratio_t", "dist_atr": "dist_atr_t", "vel": "vel_w"}
 OPS = ("lt", "gt")
 # --chop-stop-op default: the direction in which each feature reads "the move has gone sideways".
-DEFAULT_OP = {"er": "lt", "chop": "gt", "atr_ratio": "lt", "dist_atr": "gt"}
+DEFAULT_OP = {"er": "lt", "chop": "gt", "atr_ratio": "lt", "dist_atr": "gt", "vel": "lt"}
 
 
 @dataclass(frozen=True)

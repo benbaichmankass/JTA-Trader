@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 3 by path (config/strategies.yaml: ml_entry_eq_struct's traded universe) + Tier 2 runtime (tick symbol set, pool scorer, refresher snapshot archive). Operator approval, verbatim, 2026-11-11 ~09:20Z: \"regarding Alpaca, yes, we want it to be trading everything it was trained on.\" and ~09:25Z: \"make sure that that gets kicked off really as soon as the reset happens\"; relayed by Manager Session 2026-11-09a (row ML-ENTRY-EQ-STRUCT-FULL-POOL). Merged by the lane/manager on green against that approval; Tier 3 never self-lands.",
+  "why": "ml_entry_eq_struct trades the whole population its registered pooled test passed on (RQ-20261107-98e3-06, 173-ETF POOL_RULE) minus TQQQ/GLD, on alpaca_live + alpaca_portfolio together; the pool is scored once per decision close from the existing snapshot so 171 symbols do not add 171 tick passes."
+}

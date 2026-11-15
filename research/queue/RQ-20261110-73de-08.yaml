@@ -1,6 +1,6 @@
 id: RQ-20261110-73de-08
 title: 'HOLDOUT-SELECTED real take-profit on htf_pullback_trend_2h (declared tp_r 50): tp 3R / 4R / 6R and a be-floor, net of cost'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROP
@@ -46,6 +46,7 @@ value:
   confidence: 0.2
   basis: stand-in planning weight from the programme node TP-doctrine compliance on legs declared tp_r 50 (canonical TP doctrine; check_tp_doctrine.py); an estimate, not a measurement.
 routing:
+  runner_only: true   # 2026-11-11 research-ops: the Kaggle CPU route (candle dataset covers this feed) failed 5/5 with data.binance.vision NameResolutionError; pinned to the runner until PI-20261111-RO2049-0001 is fixed
   needs_trainer_resident_data: false
   needs_gpu: false
   peak_memory_gb: 2.0
@@ -111,16 +112,18 @@ programme: P5
 practice_precedent: 'T1/M13 (docs/reference/trading-and-model-practice-principles.md): select on discovery, read a held-back span once; operator 2026-11-05 RESEARCH-NO-WAIT.'
 intervention_controls:
   not_applicable: lever sweep against the declared config on the same trades over the harness (A/B arms), not an active-management action on live check-ins; hold_to_bracket is arm A itself
-last_dispatched_at: '2026-11-10T04:16:11+00:00'
+last_dispatched_at: '2026-11-13T07:53:17+00:00'
 grading:
   attested: RULE-RQ2026111073de08-NEW_STRATEGY_PROP
   auto: true
   decision_rule_id: RULE-RQ2026111073de08-NEW_STRATEGY_PROP
   evidence:
   - research/results/RQ-20261110-73de-08/42754927397.jsonl
-  graded_at: '2026-11-11'
+  - research/results/RQ-20261110-73de-08/43389002105.jsonl
+  graded_at: '2026-11-13'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 1
-  verdict: null
+  verdict: fail

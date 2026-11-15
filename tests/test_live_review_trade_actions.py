@@ -4,7 +4,8 @@ Operator 2026-10-26 (mandate MD-TRADE-DESK, verbatim): "we also need to expand t
 mandate so include all trade actions, as long as they have reasoning and confidence attached";
 accounts "All accounts now". Each account decides through its OWN RiskManager.approve_action; an
 action that adds risk passes the same check a fresh entry would; an account with no executor for
-an action refuses it, named (no_action_path:<action>).
+an action is still decided by its own RiskManager; the executor router reports "no executor wired"
+(AM-PROP-VM-ACTION-MATRIX removed, operator 2026-11-12).
 """
 from __future__ import annotations
 
@@ -166,12 +167,13 @@ def test_close_on_every_account_class(act):
     res = _run(db, act, _ti("close"))
     by = _by(res)
     assert by["bybit_2"]["executed"] and by["alpaca_live"]["executed"]
-    assert by["tradeify_1"]["reason"] == "no_action_path:close"      # prop VM: no executor
+    # prop VM: a close reaches the account's executor (CAP-PROP-VM-CLOSE, operator 2026-11-12; was no_action_path)
+    assert by["tradeify_1"]["executed"] and by["tradeify_1"]["account_class"] == "prop_vm"
     # phone: a close reaches the phone's server-issued action channel (operator 2026-11-09; was "TP only")
     assert by["breakout_2"]["executed"] and by["breakout_2"].get("reason") != "no_action_path:close"
-    assert sorted(a[1] for a in act["actions"]) == ["alpaca_live", "breakout_2", "bybit_2"]
+    assert sorted(a[1] for a in act["actions"]) == ["alpaca_live", "breakout_2", "bybit_2", "tradeify_1"]
     assert res["package_sl_moved"] is False                          # a close never moves the shared stop
-    assert {a for a, _ in act["alerts"]} == {"tradeify_1"}           # the one remaining refusal pinged once
+    assert act["alerts"] == []                                       # every account class has a close path now
     assert res["writeback"]["action"] == "close"
     assert res["writeback"]["disposition"]["mandate"] == lri.TRADE_MANDATE_ID
 
@@ -186,19 +188,60 @@ def test_move_tp_reaches_bybit_alpaca_and_phone(act):
     by = _by(res)
     assert by["bybit_2"]["executed"] and by["breakout_2"]["executed"]
     assert by["alpaca_live"]["executed"]                              # DESK-3: alpaca move_tp cell
-    assert by["tradeify_1"]["reason"] == "no_action_path:move_tp"
+    # tradeify_1 is a VM prop account: since PROP-BRACKET-APPLY (operator 2026-11-11) move_tp has a path for the class, so
+    # the cell reaches the executor (stubbed here). The per-account refusal (browser dxtrade cannot amend a TP) is the
+    # executor's, pinned in tests/test_prop_bracket_request.py::test_live_review_prop_vm_move_tp_...
+    assert by["tradeify_1"]["executed"] and by["tradeify_1"]["account_class"] == "prop_vm"
+    assert ("prop_vm", "tradeify_1", "move_tp", 0.185, None) in act["actions"]
 
 
 def test_widen_and_add_paths(act):
     db = tla._ApplyDB([_tr(1, "bybit_2"), _tr(2, "alpaca_live")], tla.PKG)
+    # AM-PROP-VM-ACTION-MATRIX removed 2026-11-12: every account decides; the executor router (stubbed here) is the
+    # only place "no executor wired" is answered (see the routing tests below).
     by = _by(_run(db, act, _ti("widen_sl", new_sl=0.2300)))
-    assert by["bybit_2"]["executed"] and by["alpaca_live"]["reason"] == "no_action_path:widen_sl"
+    assert by["bybit_2"]["executed"] and by["alpaca_live"]["executed"]
     by = _by(_run(db, act, _ti("add_entry", size_fraction=0.5)))
-    assert by["bybit_2"]["reason"] == "no_action_path:add_size"     # no add-to-position executor anywhere
-    assert by["alpaca_live"]["reason"] == "no_action_path:add_size"
+    assert by["bybit_2"]["executed"] and by["alpaca_live"]["executed"]
+    assert by["bybit_2"]["qty"] == pytest.approx(5.0)                # still capped at the fresh-entry size
     by = _by(_run(db, act, _ti("change_size", size_multiplier=0.5)))
     assert by["bybit_2"]["executed"] and by["bybit_2"]["qty"] == pytest.approx(5.0)
-    assert by["alpaca_live"]["reason"] == "no_action_path:reduce"
+    assert by["alpaca_live"]["executed"]
+
+
+# --------------------------------------------------------------- the executor router (AM-PROP-VM-ACTION-MATRIX)
+
+def _route_leg(aid, kind):
+    return {"account_id": aid, "kind": kind, "row": {"account_id": aid, "ticket_id": "t1", "id": 1}}
+
+
+@pytest.mark.parametrize("cls,aid,kind,action,kw", [
+    ("prop_vm", "tradeify_1", "ticket", "add_entry", {"size_fraction": 0.5}),
+    ("prop_vm", "tradeify_1", "ticket", "widen_sl", {"new_sl": 0.23}),
+    ("alpaca", "alpaca_live", "trade", "partial_close", {"size_fraction": 0.5}),
+    ("bybit", "bybit_2", "trade", "add_entry", {"size_fraction": 0.5}),
+    ("other", "ib_paper", "trade", "close", {}),
+])
+def test_an_approved_action_with_no_executor_wired_is_reported_not_sent(monkeypatch, cls, aid, kind, action, kw):
+    called = []
+    for name in ("_exec_bybit_action", "_exec_alpaca_close", "_exec_alpaca_tp", "_exec_phone_tp",
+                 "_exec_prop_vm_tp", "_exec_phone_sl_widen", "_exec_phone_close"):
+        monkeypatch.setattr(lra, name, lambda *a, _n=name, **k: called.append(_n) or {"result": lra.X_APPLIED})
+    v = lri.AmendVerdict(aid, lri.V_APPROVE, 0.23, "within_bounds", qty=5.0)
+    out = lra._exec_trade_action(None, _route_leg(aid, kind), {"order_package_id": "P"}, cls, v, _ti(action, **kw))
+    assert out["result"] == lra.X_REFUSED and "no executor wired" in out["detail"]
+    assert called == []   # an approved add never reaches the Bybit reduce branch
+
+
+def test_an_approved_action_with_an_executor_reaches_it(monkeypatch):
+    called = []
+    monkeypatch.setattr(lra, "_exec_bybit_action", lambda *a, **k: called.append("bybit") or {"result": lra.X_APPLIED})
+    monkeypatch.setattr(lra, "_exec_phone_close", lambda *a, **k: called.append("phone") or {"result": lra.X_APPLIED})
+    v = lri.AmendVerdict("bybit_2", lri.V_APPROVE, None, "within_bounds", qty=10.0)
+    assert lra._exec_trade_action(None, _route_leg("bybit_2", "trade"), {}, "bybit", v, _ti("close"))["result"] == lra.X_APPLIED
+    assert lra._exec_trade_action(None, _route_leg("breakout_2", "ticket"), {}, "phone", v, _ti("close"))["result"] \
+        == lra.X_APPLIED
+    assert called == ["bybit", "phone"]
 
 
 def test_widen_refused_by_the_accounts_own_fresh_entry_check(act, monkeypatch):
@@ -249,6 +292,10 @@ class _Ex:
         monkeypatch.setattr(om, "_send_close_to_exchange", lambda t: self.sent.append(("close",)) or {"ok": ok})
         monkeypatch.setattr(om, "_send_partial_close_to_exchange",
                             lambda t, q: self.sent.append(("partial", q)) or {"ok": ok})
+        self.resized = []
+        monkeypatch.setattr(lra, "resize_legs_after_reduce",
+                            lambda c, cfg, t, rem: self.resized.append(rem) or
+                            {"legs": {}, "readback": {}, "ok": True, "detail": "resized and read back"})
 
 
 def _leg():
@@ -423,3 +470,88 @@ def test_bybit_reduce_is_floored_to_the_venue_lot_step(monkeypatch):
     v = lri.AmendVerdict("bybit_2", "approve", None, "within_bounds", qty=0.05)
     r = lra._exec_bybit_action(db, _leg(), tla.PKG, v, _ti("partial_close", size_fraction=0.005))
     assert r["result"] == lra.X_REFUSED and ex.sent == []
+
+
+# --------------------------------------------------------------- partial close resizes the protective legs
+# TRADE-ACTION-FAST-PATH follow-up (operator 2026-11-09 "we just need to fix the partial close mechanism"): the XRP
+# 50% partial left a 107.6 SL leg on bybit_2's 53.8 position; the reduce now resizes THIS row's legs and reads back.
+
+def test_a_partial_close_resizes_the_rows_legs_to_the_remaining_size(monkeypatch):
+    ex = _Ex(monkeypatch, after_size=6.0, venue_sl=0.22, venue_tp=0.19)
+    db = tla._ApplyDB([tla._trade(1, "bybit_2")], tla.PKG)
+    v = lri.AmendVerdict("bybit_2", "approve", None, "within_bounds", qty=4.0)
+    r = lra._exec_bybit_action(db, _leg(), tla.PKG, v, _ti("partial_close", size_fraction=0.4))
+    assert r["result"] == lra.X_APPLIED and ex.resized == [pytest.approx(6.0)]
+    audit = json.loads(db.trade_writes[0][1]["notes"])["live_review_actions"][0]
+    assert audit["leg_resize"]["ok"] is True
+
+
+def test_a_failed_leg_resize_keeps_the_reduce_applied_and_alerts_once(monkeypatch):
+    _Ex(monkeypatch, after_size=6.0, venue_sl=0.22, venue_tp=0.19)
+    monkeypatch.setattr(lra, "resize_legs_after_reduce",
+                        lambda *a: {"legs": {"sl": {"state": "failed"}}, "readback": None, "ok": False,
+                                    "detail": "sl:failed(Qty invalid)"})
+    alerts = []
+    monkeypatch.setattr(lra, "_alert", lambda pkg, aid, line: alerts.append((aid, line)))
+    db = tla._ApplyDB([tla._trade(1, "bybit_2")], tla.PKG)
+    v = lri.AmendVerdict("bybit_2", "approve", None, "within_bounds", qty=4.0)
+    r = lra._exec_bybit_action(db, _leg(), tla.PKG, v, _ti("partial_close", size_fraction=0.4))
+    assert r["result"] == lra.X_APPLIED            # the reduce happened: never retried as a failure
+    assert db.trade_writes[0][1]["position_size"] == pytest.approx(6.0)
+    assert len(alerts) == 1 and "not resized to 6" in alerts[0][1]
+
+
+class _Book:
+    """A Bybit open-orders book: {orderId: qty}."""
+    def __init__(self, legs):
+        self.legs = dict(legs)
+
+    def get_open_orders(self, **kw):
+        return {"result": {"list": [{"orderId": k, "qty": str(v)} for k, v in self.legs.items()]}}
+
+
+def _seam(book, states=None):
+    def f(client, cfg, *, symbol, new_qty, sl_order_id=None, tp_order_id=None, trade_id=None):
+        out = {}
+        for k, oid in (("sl", sl_order_id), ("tp", tp_order_id)):
+            st = (states or {}).get(k, "resized")
+            if oid is None:
+                out[k] = {"state": "no_tracked_id", "order_id": None, "qty_sent": None, "error": None}
+                continue
+            if st == "resized":
+                book.legs[oid] = new_qty
+            out[k] = {"state": st, "order_id": oid, "qty_sent": str(new_qty) if st == "resized" else None,
+                      "error": None if st == "resized" else "Qty invalid"}
+        return out
+    return f
+
+
+def _xrp_row(**kw):
+    return {"id": 7, "symbol": "XRPUSDT", "sl_order_id": "S1", "tp_order_id": "T1", **kw}
+
+
+def test_resize_legs_reads_back_each_resized_leg(monkeypatch):
+    from src.units.accounts import execute
+    book = _Book({"S1": 107.6, "T1": 107.6})
+    monkeypatch.setattr(execute, "resize_tracked_protective_legs", _seam(book))
+    monkeypatch.setattr(execute, "_bybit_category", lambda cfg: "linear")
+    rz = lra.resize_legs_after_reduce(book, {"exchange": "bybit"}, _xrp_row(), 53.8)
+    assert rz["ok"] is True and rz["readback"] == {"S1": 53.8, "T1": 53.8}
+
+
+def test_resize_legs_flags_a_venue_refusal_and_a_readback_mismatch(monkeypatch):
+    from src.units.accounts import execute
+    monkeypatch.setattr(execute, "_bybit_category", lambda cfg: "linear")
+    book = _Book({"S1": 107.6, "T1": 107.6})
+    monkeypatch.setattr(execute, "resize_tracked_protective_legs", _seam(book, {"sl": "failed"}))
+    rz = lra.resize_legs_after_reduce(book, {}, _xrp_row(), 53.8)
+    assert rz["ok"] is False and "sl:failed" in rz["detail"]
+    # accepted, but the venue still shows the old size: a mismatch, never "resized"
+    book2 = _Book({"S1": 107.6})
+
+    def lying(client, cfg, **kw):
+        return {"sl": {"state": "resized", "order_id": "S1", "qty_sent": "53.8", "error": None},
+                "tp": {"state": "no_tracked_id", "order_id": None, "qty_sent": None, "error": None}}
+    monkeypatch.setattr(execute, "resize_tracked_protective_legs", lying)
+    rz2 = lra.resize_legs_after_reduce(book2, {}, _xrp_row(tp_order_id=None), 53.8)
+    assert rz2["ok"] is False and "readback:S1 reads 107.6" in rz2["detail"]

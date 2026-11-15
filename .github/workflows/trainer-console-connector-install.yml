@@ -16,8 +16,8 @@ name: trainer-console-connector-install
 
 on:
   workflow_dispatch:
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [trainer-console-connector-install]
 
 permissions:
   contents: read
@@ -31,10 +31,10 @@ jobs:
   install:
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       (github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'trainer-console-connector-install'))
+      (github.event_name == 'repository_dispatch' &&
+       (github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'trainer-console-connector-install'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -105,12 +105,12 @@ jobs:
           REMOTE
 
       - name: Report on the issue
-        if: always() && github.event_name == 'issues'
+        if: always() && github.event_name == 'repository_dispatch'
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
             let out = '(none)'; try { out = fs.readFileSync('/tmp/install.txt', 'utf8').slice(-4000); } catch (e) {}
             const body = `**trainer-console-connector-install** ${{ job.status }}\nRun: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}\n\n` + "```\n" + out + "\n```";
-            await github.rest.issues.createComment({owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body});
-            await github.rest.issues.update({owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, state: 'closed'});
+            await github.rest.issues.createComment({owner: context.repo.owner, repo: context.repo.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), body});
+            await github.rest.issues.update({owner: context.repo.owner, repo: context.repo.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), state: 'closed'});

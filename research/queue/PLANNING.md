@@ -147,6 +147,25 @@ is then graded on the deflated bar the ledger returns (`python3 scripts/research
 re-point or park a unit because its window "was read"; that rule is retired. The full rule is in
 `docs/reference/trading-and-model-practice-principles.md` M13. *Gates this adds or changes:* none; this removes the one-read block.
 
+## 1e. A unit says what kind of evidence a PASS would be (`evidence_class`, row RESEARCH-SLO-HELDOUT-SURVIVORS, 2026-11-11)
+
+**Gates this adds or changes: none.** The field is optional and no guard requires it.
+
+The operator's survivor definition (2026-11-04) is *a registered-rule PASS on held-out data*.
+`scripts/research/research_slo.py` counts it as the diagnostic `heldout_registered_passes_30d`, and it reads only
+STRUCTURED fields, never prose. A new unit declares:
+
+```yaml
+evidence_class:
+  holdout: walk_forward | final_fold | holdout_window | in_sample | none
+  claim: edge | model_quality | mechanics | other   # edge = net-of-cost P&L / R; model_quality = logloss / AUC / accuracy
+```
+
+A unit without the field is counted as `unknown_holdout`, never as held-out. The only inferred cases are an
+`ml_bakeoff` block (read as walk_forward + model_quality) and `kind: deterministic` (read as none + other).
+MEASURED 2026-11-11 over the passes graded in the previous 30 days: 382 registered-rule passes, 34 classifiable as held-out
+(all model_quality, inferred), 314 unknown. Declaring the field is how that unknown shrinks.
+
 ## 2. Weights
 - `research/THEMES.yaml` is the only place weights live. They are a share of fire slots, not an order.
 - Set at the operator's direction (2026-09-30: regime 5, live_strategy 4, ml_health 3, new_strategy_prop 2,

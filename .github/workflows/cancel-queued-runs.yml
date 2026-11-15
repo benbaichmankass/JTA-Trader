@@ -29,8 +29,8 @@ name: cancel-queued-runs
 
 on:
   workflow_dispatch:
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [cancel-queued-runs]
 
 permissions:
   actions: write   # required to cancel workflow runs
@@ -45,10 +45,10 @@ jobs:
   cancel:
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       (github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'cancel-queued-runs'))
+      (github.event_name == 'repository_dispatch' &&
+       (github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'cancel-queued-runs'))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -86,9 +86,9 @@ jobs:
           printf 'ids<<EOF\n%s\nEOF\n' "$ids" >> "$GITHUB_OUTPUT"
 
       - name: Comment back + close issue
-        if: github.event_name == 'issues'
+        if: github.event_name == 'repository_dispatch'
         env:
-          NUM: ${{ github.event.issue.number }}
+          NUM: ${{ github.event.client_payload.issue.number }}
           COUNT: ${{ steps.cancel.outputs.count }}
           IDS: ${{ steps.cancel.outputs.ids }}
         run: |

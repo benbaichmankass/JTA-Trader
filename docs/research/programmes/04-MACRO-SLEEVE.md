@@ -4,6 +4,28 @@
 
 **Standing (operator):** the news layer and WEPE are **not retired** (NEWS-ALPHA-PROGRAM directive 2026-10-12; WEPE-BUILDOUT 2026-10-08). The research queue is fed only from programme plans; this is P4's.
 
+## Programme review 2026-11-11 (lane PROGRAMME-REVIEW-20261111) — TRADING track
+
+Population: units with a result row generated 2026-11-04T19:30Z..2026-11-11T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`; 2,183 units read, 0 unreadable; 455 result rows): **311 units with rows** — 72 pass, 134 fail, 42 indeterminate, 5 no_action_warranted, 1 not_applicable, 57 with no unit verdict yet (28 ungraded). 119 carry a programme field (P1 38, P2 50, P3 14, P4 2, P5 9, P6 6, P7 0); **192 do not** (live_strategy 110, new_strategy_prop 37, ml_health 31, infra 11, timeframes 2, none 1) and are assigned below by what they ask. Every PASS is a discovery until its confirmation passes; batch denominators are from the packet's `batches`.
+
+**P4 in the window:** 2 programmed units (1 pass, 1 fail), the calendar event studies 73de-19/-20.
+
+**What was learned.** **The PPI y/y surprise vs the point-in-time consensus predicts ES 5-day forward returns with a negative sign** (73de-19: strongest IC -0.316 at 5 d, t -3.91, overlap-corrected, max n 140). A hotter PPI print means a weaker ES over the following week. This is a discovery on one target and one batch, and its own note says costs, tradeable timing and a placebo are still owed. It agrees in sign with the earlier PPI → RTY IC pass, whose placebo was clean (P4-Q2). Core CPI → TLT failed (73de-20). Belief: the PPI channel is the one surprise series with a repeatable equity-index response in our consensus store. Core CPI on rates has not shown one. Noise competes on a single series × target: 2 targets read, 1 pass.
+
+**Failed first tests — diagnosis.** core_cpi → TLT: *idea or window*. The rates response to inflation surprise is regime-dependent (2022 vs after). The variant is a split by policy regime, fixed before the run. Research-ops can author it; this review ranks it below the ES economics rung.
+
+**Answered / unlocked / retired.** Unlocked: the ES twin of P4-Q2-ppi-rty-econ (placebo → exposure-matched economic rung). Nothing retired.
+
+**Next 3–4 weeks**
+
+| node / unit | decision it changes | on PASS | on FAIL | cost | pre-mortem |
+|---|---|---|---|---|---|
+| PPI → ES placebo (shuffled release dates), research-ops to author | whether 73de-19 is a calendar artefact | economic rung | the IC is a date artefact; close the ES twin | runner | the overlap correction under-counts clustered releases |
+| P4-Q2-ppi-rty-econ (authoring queue) | first exposure-matched macro trade rule | build row for a tradeable sleeve leg | PPI stays a feature, not a leg | runner | an index book cannot beat long unless the index falls after the print |
+| P4-Q4-g2-rerun (not before the PM collector reaches its n) | whether PM-implied surprise beats consensus | — | n-bound | runner | n still < floor |
+
+**Feeds.** P4 → P2: the PPI surprise is a candidate event feature for the regime / entry heads, with the consumer named first.
+
 ## Programme review 2026-11-04 (lane PROGRAMME-REVIEW-20261104) — TRADING track
 
 Population: units with a result row generated 2026-10-28T19:41Z..2026-11-04T19:41Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,932 units read, 0 unreadable, 662 result rows): **447 units with rows** — 107 pass, 210 fail, 25 indeterminate, 11 no_action_warranted, 94 with no unit verdict yet (76 ungraded + 18 needs_review/null). 302 carry a programme field (P1 53, P2 54, P3 95, P4 24, P5 48, P6 18, P7 10), 145 do not (live_strategy 70, new_strategy_prop 32, infra 13, ml_health 13, timeframes 6, macro 5, regime 5, none 1) — assigned below by what they ask. Every PASS is a discovery until its confirmation passes.

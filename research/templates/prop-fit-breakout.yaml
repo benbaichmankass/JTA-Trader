@@ -57,6 +57,10 @@ power:
     source: none
     accrual_basis: >-
       Re-grading of committed trade evidence; nothing accrues.
+# EVIDENCE-CLASS-BACKFILL 2026-11-11: what a PASS from this family is (EV simulation over the leg's committed historical trades; no held-out span).
+evidence_class:
+  holdout: in_sample
+  claim: edge
 decision_rule:
   id: "RULE-TPL-PROP-FIT-B6V2-ARMS-{leg}"
   statistic: >-

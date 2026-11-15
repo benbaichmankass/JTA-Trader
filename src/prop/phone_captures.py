@@ -221,6 +221,12 @@ def store_capture(account_id: str, body: Dict[str, Any], *, now: Optional[dateti
         "image_type": ctype or None, "image_bytes": len(image) if image is not None else 0,
         "dom": f"{stem}.dom.json" if dom_text is not None else None,
         "dom_bytes": len(dom_text.encode("utf-8")) if dom_text is not None else 0,
+        # PHONE-SELF-DIAGNOSE: whether the image is a real page. device_img_std = the app's own luma std measured
+        # before redaction (APK 2026-11-11+; absent on older builds); img_why = why there is or is not an image;
+        # image_check = the server's own read of the stored bytes (read_state explicit, never a silent 0).
+        "device_img_std": _num(body.get("img_std")),
+        "img_why": scrub_text(body.get("img_why"), 60) or None,
+        "image_check": image_check(image) if image is not None else None,
     }
     if image is not None:
         (run_dir / meta["image"]).write_bytes(image)
@@ -234,6 +240,83 @@ def store_capture(account_id: str, body: Dict[str, Any], *, now: Optional[dateti
     except OSError:
         pass
     return {"ok": True, "stored": True, "capture": meta}
+
+
+BLANK_STD = 4.0
+
+
+def _num(v: Any) -> Optional[float]:
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return None
+    return float(v) if 0 <= float(v) <= 255 else None
+
+
+def image_check(data: Optional[bytes]) -> Dict[str, Any]:
+    """Is a stored step image a real page or a blank draw? Grey-level std over a 64x128 thumbnail; ``blank`` when
+    it is below BLANK_STD (an all-white / all-black frame). Note the stored image is already REDACTED on the device
+    (black boxes), so a blank draw with redaction boxes can read non-blank here; ``device_img_std`` (measured
+    before redaction) is the stronger signal when present. ``read_state`` is ``measured`` or names why not."""
+    if not data:
+        return {"read_state": "no_image", "std": None, "mean": None, "blank": None}
+    # Pillow is optional on the VM: absent = an explicit read-state, never a 0
+    try:
+        from io import BytesIO
+
+        from PIL import Image, ImageStat
+    except Exception:  # noqa: BLE001
+        return {"read_state": "pillow_unavailable", "std": None, "mean": None, "blank": None}
+    try:
+        im = Image.open(BytesIO(data)).convert("L")
+        im.thumbnail((64, 128))
+        st = ImageStat.Stat(im)
+        std, mean = round(float(st.stddev[0]), 2), round(float(st.mean[0]), 1)
+        return {"read_state": "measured", "std": std, "mean": mean, "blank": std < BLANK_STD,
+                "w": im.size[0], "h": im.size[1]}
+    except Exception as exc:  # noqa: BLE001
+        return {"read_state": "undecodable", "error": type(exc).__name__, "std": None, "mean": None, "blank": None}
+
+
+def _blank_verdict(m: Dict[str, Any]) -> Optional[bool]:
+    """One step's blank verdict: the device's pre-redaction std when present, else the server's check, else None."""
+    d = m.get("device_img_std")
+    if isinstance(d, (int, float)):
+        return float(d) < BLANK_STD
+    ic = m.get("image_check") or {}
+    return ic.get("blank") if ic.get("read_state") == "measured" else None
+
+
+def step_view(account_id: str, *, limit: int = 10, run_id: Optional[str] = None,
+              root: Optional[Path] = None) -> Dict[str, Any]:
+    """The LANE read (bot tier, no diag token; PHONE-SELF-DIAGNOSE): the newest runs with every step's seq / step /
+    ok / note / page and whether it carries a real image -- never the image bytes or the DOM (those stay on the diag
+    tier, /api/diag/phone_capture_file). Old metas without an image check are checked on read."""
+    acct_dir = (root / account_id) if root is not None else account_dir(account_id)
+    if not acct_dir.exists():
+        return {"account_id": account_id, "present": False, "runs": [], "ttl_days": TTL_DAYS}
+    if run_id is not None:
+        if not _RUN_RE.match(str(run_id)):
+            raise ValueError("run_id invalid")
+        dirs = [acct_dir / run_id] if (acct_dir / run_id).is_dir() else []
+    else:
+        dirs = sorted((p for p in acct_dir.iterdir() if p.is_dir()), key=lambda p: p.stat().st_mtime, reverse=True)
+        dirs = dirs[:max(1, min(int(limit), 50))]
+    runs = []
+    for d in dirs:
+        steps = []
+        for m in _step_metas(d):
+            if m.get("image") and m.get("image_check") is None:
+                img = d / str(m["image"])
+                m["image_check"] = image_check(img.read_bytes() if img.is_file() else None)
+            steps.append({k: m.get(k) for k in ("at", "seq", "step", "ok", "note", "page", "app_version", "image",
+                                                 "image_bytes", "device_img_std", "img_why", "image_check")}
+                         | {"image_blank": _blank_verdict(m) if m.get("image") else None})
+        with_img = [s for s in steps if s["image"]]
+        runs.append({**_summary(d), "steps_detail": steps,
+                     "images_real": sum(1 for s in with_img if s["image_blank"] is False),
+                     "images_blank": sum(1 for s in with_img if s["image_blank"] is True),
+                     "images_unchecked": sum(1 for s in with_img if s["image_blank"] is None)})
+    return {"account_id": account_id, "present": True, "ttl_days": TTL_DAYS, "runs": runs,
+            "image_route": "/api/diag/phone_capture_file?run_id=<run_id>&name=<image> (diag token)"}
 
 
 def _drop_oldest(runs: List[Path], n: int) -> None:

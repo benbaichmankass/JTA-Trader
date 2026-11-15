@@ -4,6 +4,37 @@
 
 Numbers marked MEASURED were measured in this lane on 2026-10-14 from the file or command named beside them. Re-run the command rather than quoting the figure. Seeds: [`.claude/skills/perf-followup/SKILL.md`](../../../.claude/skills/perf-followup/SKILL.md) (the four tracks), `comms/reviews/performance-review-20261010-191000.json` and its follow-up record `comms/perf_followup/perf-followup-20261010-191000.json`, `research/THEMES.yaml`, `research/queue/PLANNING.md`, `docs/roadmap/milestones.yaml`.
 
+## Programme review 2026-11-11 (lane PROGRAMME-REVIEW-20261111) — TRADING track
+
+Population: units with a result row generated 2026-11-04T19:30Z..2026-11-11T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`; 2,183 units read, 0 unreadable; 455 result rows): **311 units with rows** — 72 pass, 134 fail, 42 indeterminate, 5 no_action_warranted, 1 not_applicable, 57 with no unit verdict yet (28 ungraded). 119 carry a programme field (P1 38, P2 50, P3 14, P4 2, P5 9, P6 6, P7 0); **192 do not** (live_strategy 110, new_strategy_prop 37, ml_health 31, infra 11, timeframes 2, none 1) and are assigned below by what they ask. Every PASS is a discovery until its confirmation passes; batch denominators are from the packet's `batches`.
+
+**P3 in the window:** 14 programmed units (5 pass, 5 fail, 4 ungraded) plus the unprogrammed live_strategy iteration work: the ict_scalp iteration-1 batch (78fc-44..-53), the M22 pairs honest-R batch (7d6c, 470a-12), the pullback-2h family walk-forward (b2f7-01) and the 4h pooled perps (73de-17/-18, which are P7 by what they ask).
+
+**What was learned (beliefs, with evidence)**
+- **The iteration-2 holdouts gave one new survivor and two clear no's.** tlt_pullback_1h CONFIRMED (RQ-20261104-003): discovery +113.8 R over n 433 with 4 of 4 folds, holdout +6.4 R over n 146. Expectancy on the holdout is only +0.044 R, which is thin. It is the fourth 1h ETF survivor after slv_trend_1h, uso_trend_1h and qqq_pullback_1h. spy_pullback_1h was NOT replicated (002): discovery +68.4 R with 4 of 4 folds, holdout -8.5 R over n 95. mgc_trend_1h on the dukascopy XAU proxy had no discovery (001: -122.8 R). Belief: the 1h ETF pullback edge is real on rates (TLT) and tech (QQQ) and has not held on SPY since 2024-09. Noise is a live competitor for SPY, since -8.5 R over 95 trades is about 1 sd.
+- **On trend_donchian_1h and htf_pullback_trend_2h the structure exit, not the entry, was the cost.** NOSX turns trend_donchian_1h from -91.5 R into +14.5 R (005). AD30NX turns htf from -16.2 R into +20.0 R (004). Both legs lost the structure exit on 2026-11-05. NOSX is positive in only 3 of 6 folds and its latest fold is the worst (-20.7 R). AD30NX is positive in 5 of 6.
+- **M22 pairs fail on the honest R scale, 4 of 4** (470a-12, 7d6c-01/-02/-03). This is the decision P3-M22-pairs-roster was waiting for. Its pre-registered branch on FAIL is "the retire case per pair through the manager" (config/pairs.yaml is the sleeve's own gate). Last week's call graded this as a proposal, not a retirement by this review.
+- **ict_scalp iteration 1: two 5m legs found a passing arm (78fc-45 sol_5m, -47 avax_5m); the 15m legs found none (-48/-49/-50).** The 5m PASSes are discoveries and each needs ONE holdout.
+
+**Failed first tests — diagnosis.** spy_pullback_1h: *regime / window* vs *noise*. The variant is a regime or side filter selected on discovery only (authored as P3-ITER3-spy-pullback-1h-regime-select-holdout). mgc_trend_1h: *idea on this proxy*. The leg has now failed on two feeds; its next iteration moves to the entry family (trend lookback). Research-ops owns it, and it is not authored here. Pairs: *idea at honest scale*. The R-scale fix landed, so this is a measured fail.
+
+**Answered / unlocked / retired.** Answered: P3-ITER2-* (all five nodes, units RQ-20261104-001..005). Unlocked: three iteration-3 nodes (below). Retired: none by this review. The M22 retire case goes to the manager as Tier 3.
+
+**Authored this review (3 nodes, `research/programmes/03-strategy-improvement.yaml`)**: P3-ITER3-trend-donchian-1h-declared-holdout, P3-ITER3-htf-pullback-trend-2h-ad30-holdout, P3-ITER3-spy-pullback-1h-regime-select-holdout. Each is a select-then-confirm holdout through `exit_lever_ablation.py --grade holdout`, with the rule registered 2026-11-11 before any run.
+
+**Next 3–4 weeks (value-ranked)**
+
+| node / unit | decision it changes | on PASS | on FAIL | cost | pre-mortem |
+|---|---|---|---|---|---|
+| Survivor promotion proposals: tlt/qqq/slv/uso 1h (manager, Tier 3; open since 2026-11-04) | whether four confirmed 1h ETF legs reach Stage 2 | mandate_resolver S1→S2 with mirror | — | proposal | qqq/tlt are `testing` on NO book (strategy_status.py), so they cannot even soak |
+| P3-ITER3-htf-pullback-trend-2h-ad30-holdout | whether adx_min 30 is declared on htf | Tier-3 declare proposal | regime-gate family (73de-14) | runner 60 min | the 2024-26 holdout falls in the weak fold |
+| P3-ITER3-trend-donchian-1h-declared-holdout | whether the structure-free leg has edge | promotion proposal | entry family (D55 moved closest) | runner 60 min | 3 of 6 folds: no_discovery on a 4-fold discovery |
+| P3-ITER3-spy-pullback-1h-regime-select-holdout | whether SPY 1h is recoverable with ONE filter | Tier-3 declare of that filter | sizing/session families | runner 90 min | 5 arms on discovery, and the filter fits 2018-24 noise |
+| P3-M22-pairs-roster retire case (manager) | whether the M22 sleeve keeps trading | — | per-pair retire through config/pairs.yaml | proposal | a pair passes at a different hedge window, but that is a new unit, not this case |
+| ict_scalp sol_5m / avax_5m holdouts (research-ops) | whether either 5m arm is a candidate | confirm → exit-process | configuration closed | runner ×2 | the 5m cost drag eats the edge on the holdout |
+
+**Feeds.** P3 → P1: every survivor (tlt/qqq/slv/uso 1h) is exit-processed before its proposal. P3 → P2: confirmed legs are labelled training rows. spy 1h's not-replicated holdout is a regime-change example for the D2 regime consumer.
+
 ## Programme review 2026-11-04 (lane PROGRAMME-REVIEW-20261104) — TRADING track
 
 Population: units with a result row generated 2026-10-28T19:41Z..2026-11-04T19:41Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,932 units read, 0 unreadable, 662 result rows): **447 units with rows** — 107 pass, 210 fail, 25 indeterminate, 11 no_action_warranted, 94 with no unit verdict yet (76 ungraded + 18 needs_review/null). 302 carry a programme field (P1 53, P2 54, P3 95, P4 24, P5 48, P6 18, P7 10), 145 do not (live_strategy 70, new_strategy_prop 32, infra 13, ml_health 13, timeframes 6, macro 5, regime 5, none 1) — assigned below by what they ask. Every PASS is a discovery until its confirmation passes.

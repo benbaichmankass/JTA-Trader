@@ -133,27 +133,35 @@ def test_submitted_logs_info_no_telegram(reporter, tmp_path):
     assert not reporter.outcomes_log.exists()
 
 
-def test_dispatch_disabled_refuses_and_never_touches_exchange(reporter):
-    """E1-F1 (full-system audit 2026-07-09): with MULTI_ACCOUNT_DISPATCH
-    pinned off, a full-SL/TP actionable signal reaches the legacy
-    single-client branch. That branch used to invoke the injected exchange
-    client (here a _BoomClient that raises) via safe_place_order — the exact
-    live-money bypass being removed. It now REFUSES (``status:refused`` reason
-    ``multi_account_dispatch_disabled``): the _BoomClient is never called (no
-    RuntimeError escapes), and a refusal is INFO — no ERROR page, nothing
-    persisted to the WARN+ outcomes log."""
+def test_dispatch_env_off_no_longer_refuses_and_never_touches_exchange(reporter, monkeypatch):
+    """GATE-MULTI-ACCOUNT-DISPATCH-ENV: MAKE REPORT-ONLY (operator 2026-11-12
+    decisions page, Gates tab; comms/gates/gate_decisions_2026-11-12.json).
+
+    With MULTI_ACCOUNT_DISPATCH pinned off, a full-SL/TP actionable signal used
+    to be REFUSED (``multi_account_dispatch_disabled``). The env no longer
+    decides: the signal goes down the one sanctioned order path,
+    ``Coordinator.multi_account_execute`` (stubbed here). E1-F1 still holds —
+    the injected exchange client (a _BoomClient that raises) is never called
+    directly by the pipeline."""
+    calls = []
+
+    class _Venue:
+        def multi_account_execute(self, pkg, account_scope=None, **_kw):
+            calls.append(pkg.strategy)
+            return []
+    monkeypatch.setattr("src.core.coordinator.Coordinator", lambda: _Venue())
+    monkeypatch.setattr("src.runtime.pipeline._monocle_gate", lambda *a, **k: None)
+    monkeypatch.setattr("src.runtime.pipeline._open_package_round",
+                        lambda signal, scope: (None, scope))
     with patch("src.runtime.pipeline.os.path.exists", return_value=False), \
-            patch("src.runtime.outcomes._Reporter._send_telegram_or_queue") as send:
+            patch("src.runtime.outcomes._Reporter._send_telegram_or_queue"):
         result = run_pipeline(
             settings=_settings(MULTI_ACCOUNT_DISPATCH="false"),
             exchange_client=_BoomClient(),
             signal_builder=_signal_stub(_ACTIONABLE),
         )
-    assert result["order_result"]["status"] == "refused"
-    assert result["order_result"]["reason"] == "multi_account_dispatch_disabled"
-    # Refusal is INFO → no operator page, nothing in the WARN+ log.
-    send.assert_not_called()
-    assert not reporter.outcomes_log.exists()
+    assert result["order_result"].get("reason") != "multi_account_dispatch_disabled"
+    assert len(calls) == 1
 
 
 def test_failed_validation_logs_warn_no_telegram(reporter):

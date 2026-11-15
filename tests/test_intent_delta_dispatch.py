@@ -652,10 +652,13 @@ class TestIntentModeDispatchBranch:
         # The new audit key must NOT be present on a legacy package.
         assert "execution_delta" not in (pkg.meta or {})
 
-    def test_intent_mode_min_qty_dust_is_noop(
+    def test_intent_mode_sub_min_top_up_sizes_up_to_the_minimum(
         self, coord, accounts_yaml, trade_db, monkeypatch,
     ):
-        """Position within one min-lot of target → noop (avoid dust orders)."""
+        """A top-up below the minimum lot is SIZED UP to it (operator popup
+        2026-11-10 "Size up top-ups too", MIRROR-QTY-DIVERGE), no longer a noop.
+        Overshoot is bounded to one lot: the next delta is a reduce, and a
+        sub-min reduce stays a noop."""
         captured = []
         _patch_dispatch_deps(monkeypatch, captured)
 
@@ -671,8 +674,65 @@ class TestIntentModeDispatchBranch:
             pkg, accounts_path=accounts_yaml,
             balance_fetcher=self._balance_fetcher,
         )
+        assert len(captured) == 1 and captured[0]["reduce_only"] is False
+        assert captured[0]["qty_override"] == pytest.approx(0.001)
+        assert pkg.meta["execution_delta"]["qty_resize"]["outcome"] == "qty_sized_up_to_venue_min"
+        assert "intent_sub_min_qty_delta" not in (results[0]["error"] or "")
+
+    def test_size_up_past_one_venue_lot_is_capped_and_dropped(
+        self, coord, accounts_yaml, trade_db, monkeypatch,
+    ):
+        """CAP (operator popup 2026-11-11 "Approve with a cap (Recommended)"): a raised
+        top-up may never overshoot the target by more than ONE venue minimum lot. A
+        size-up that would (forced here: the legalizer answers 0.005 for a 0.0001 delta
+        on a 0.001 lot) is refused and the top-up drops as before."""
+        import dataclasses as _dc
+
+        from src.units.accounts import qty_legalize as ql
+        captured = []
+        _patch_dispatch_deps(monkeypatch, captured)
+        real = ql.legalize_qty
+
+        def inflated(qty, **kw):
+            r = real(qty, **kw)
+            if kw.get("size_up"):
+                return _dc.replace(r, qty=0.005, ok=True, resized_from=float(qty) or 0.0,
+                                   resize_binding="min_qty", venue_min=0.001, step=0.001)
+            return r
+        monkeypatch.setattr(ql, "legalize_qty", inflated)
+        _insert_trade(
+            trade_db, account_id="bybit_2", symbol="BTCUSDT",
+            direction="long", position_size=0.1999,
+        )
+        pkg = _intent_pkg(direction="long")
+        results = coord.multi_account_execute(
+            pkg, accounts_path=accounts_yaml,
+            balance_fetcher=self._balance_fetcher,
+        )
         assert captured == []
         assert "intent_sub_min_qty_delta" in (results[0]["error"] or "")
+        assert "qty_resize" not in pkg.meta["execution_delta"]
+
+
+class TestTopupMinLot:
+    """One venue minimum lot = max(min qty, min order value / price), step-aligned up."""
+
+    def _lz(self, vmin, step, notional=None):
+        from types import SimpleNamespace
+        return SimpleNamespace(venue_min=vmin, step=step, min_notional=notional)
+
+    def test_min_qty_binds(self):
+        from src.core.coordinator import topup_min_lot
+        assert topup_min_lot(self._lz(0.01, 0.01, 5.0), 2077.57) == pytest.approx(0.01)
+
+    def test_min_notional_binds_and_rounds_up_to_the_step(self):
+        from src.core.coordinator import topup_min_lot
+        # 5 USDT / 0.18 = 27.78 ADA -> 28 at step 1, above min qty 1
+        assert topup_min_lot(self._lz(1.0, 1.0, 5.0), 0.18) == pytest.approx(28.0)
+
+    def test_unknown_minimum_is_none(self):
+        from src.core.coordinator import topup_min_lot
+        assert topup_min_lot(self._lz(None, None, None), 100.0) is None
 
 
 class TestIntentModeReduceClose:
@@ -707,6 +767,28 @@ class TestIntentModeReduceClose:
         assert captured[0]["qty_override"] == pytest.approx(0.3, abs=1e-3)
         assert results[0]["error"] is None
         assert pkg.meta["execution_delta"]["action"] == "reduce"
+
+    def test_sub_min_reduce_is_still_a_noop_never_sized_up(
+        self, coord, accounts_yaml, trade_db, monkeypatch,
+    ):
+        """The top-up size-up (operator 2026-11-10) covers opening deltas ONLY:
+        a reduce smaller than the lot (existing 0.2001 vs target 0.2) is dust,
+        a noop, never raised to a full lot that would cut more than asked."""
+        captured = []
+        _patch_dispatch_deps(monkeypatch, captured)
+        _insert_trade(
+            trade_db, account_id="bybit_2", symbol="BTCUSDT",
+            direction="long", position_size=0.2001,
+        )
+        pkg = _intent_pkg(direction="long")
+        results = coord.multi_account_execute(
+            pkg, accounts_path=accounts_yaml,
+            balance_fetcher=self._balance_fetcher,
+        )
+        assert captured == []
+        assert "intent_sub_min_qty_delta" in (results[0]["error"] or "")
+        assert pkg.meta["execution_delta"]["action"] == "reduce"
+        assert "qty_resize" not in pkg.meta["execution_delta"]
 
     def test_intent_mode_spot_account_holds_reduce_to_bracket(
         self, tmp_path, monkeypatch,
@@ -1244,7 +1326,7 @@ class TestIntentModeVenueMinDelta:
         precision._LOT_CACHE.clear()
         precision._LIVE_CACHE.clear()
 
-    def test_sub_venue_min_eth_delta_is_noop_not_dispatched(
+    def test_sub_venue_min_eth_top_up_sizes_up_to_the_venue_lot(
         self, coord, eth_accounts_yaml, trade_db, monkeypatch,
     ):
         captured = []
@@ -1267,23 +1349,22 @@ class TestIntentModeVenueMinDelta:
             pkg, accounts_path=eth_accounts_yaml,
             balance_fetcher=self._balance_fetcher,
         )
-        # The 0.009 delta (< ETHUSDT 0.01 venue lot) must NOT be dispatched
-        # to the pre-flight; it is a clean noop.
-        assert captured == [], (
-            "sub-venue-min delta must be a noop, never dispatched to pre-flight"
-        )
-        assert "intent_sub_min_qty_delta" in (results[0]["error"] or "")
+        # The 0.009 delta (< ETHUSDT 0.01 venue lot) is SIZED UP to the lot
+        # (operator 2026-11-10 "Size up top-ups too"), a legal order, never a
+        # pre-flight reject; the audit keeps the computed delta and the resize.
+        assert len(captured) == 1 and captured[0]["qty_override"] == pytest.approx(0.01)
+        assert "intent_sub_min_qty_delta" not in (results[0]["error"] or "")
         assert pkg.meta["execution_delta"]["action"] == "increase"
         assert pkg.meta["execution_delta"]["qty_delta"] == pytest.approx(
             0.009, abs=1e-6,
         )
+        assert pkg.meta["execution_delta"]["qty_resize"]["to"] == pytest.approx(0.01)
 
-    def test_btc_sub_account_min_delta_still_noop_regression(
+    def test_btc_sub_min_top_up_sizes_up_to_the_lot(
         self, coord, accounts_yaml, trade_db, monkeypatch,
     ):
-        """Fallback-path guard: on BTCUSDT (venue lot == account min 0.001)
-        the behaviour is unchanged — a delta below 0.001 is still a noop, and
-        the folded venue minimum equals the account min (no regression)."""
+        """On BTCUSDT (venue lot == account min 0.001) a delta below 0.001 is
+        sized up to 0.001 (operator 2026-11-10), not dropped."""
         captured = []
         _patch_dispatch_deps(monkeypatch, captured)
         _insert_trade(
@@ -1295,8 +1376,8 @@ class TestIntentModeVenueMinDelta:
             pkg, accounts_path=accounts_yaml,
             balance_fetcher=self._balance_fetcher,
         )
-        assert captured == []
-        assert "intent_sub_min_qty_delta" in (results[0]["error"] or "")
+        assert len(captured) == 1 and captured[0]["qty_override"] == pytest.approx(0.001)
+        assert "intent_sub_min_qty_delta" not in (results[0]["error"] or "")
 
 
 class TestPackageIsIntentModeHelper:

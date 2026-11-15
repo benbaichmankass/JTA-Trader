@@ -1,7 +1,7 @@
 id: RQ-20261016-65ff-29
 title: 'Regime good-vs-bad on the REAL-MONEY equity legs (alpaca_live: ief_pullback_1d, slv_pullback_1d, iaum_pullback_1d): does a hot- or cold-volatility
   entry skip beat the declared leg net of the full cost stack over 10 years of daily history?'
-status: blocked
+status: retired
 cadence: once
 theme: regime
 priority: 2
@@ -68,8 +68,8 @@ related:
 - scripts/research/regime_debt_matrix.py
 - P2-AI-REGIME-BACKLOG-1016
 blocked_review:
-  by: RESEARCH-OPS-20261101-0940
-  disposition: kept
-  due_by: '2026-11-15'
-  note: 'kept: blocker still live (REGIME-EQUITY-LEG-FETCH=queued); re-dated, not dropped'
-  reviewed: '2026-11-01'
+  by: RESEARCH-OPS-20261111-2049
+  disposition: retired
+  reviewed: '2026-11-11'
+  note: 'retired at config level; reason in retired_reason'
+retired_reason: '2026-11-11 RESEARCH-OPS-20261111-2049 (blocked_over_age UNBLOCK-OR-RETIRE): retired at CONFIG level, superseded by its own cleared lever. REGIME-EQUITY-LEG-FETCH asked for a non-crypto fetch on the runner; exit_lever_ablation.py --non-crypto-source dukascopy (P1-ATM-BACKLOG-1016) is that fetch and has landed measured results on these exact legs (RQ-20261110-73de-01/02/03, qqq 73de-16). The regime question is NOT closed or retired for the alpaca_live legs: it re-enters as per-leg units. Unit-level decision only.'

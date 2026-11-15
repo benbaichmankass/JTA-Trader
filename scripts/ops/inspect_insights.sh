@@ -21,6 +21,8 @@
 #   action: inspect-insights
 #   reason: <text>
 set -euo pipefail
+# read-only SQL without the sqlite3 CLI (not installed on the VM): scripts/ops/db_read.py
+_DBR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/db_read.py"
 
 SCRIPT_NAME="inspect_insights"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -72,16 +74,16 @@ echo "=== AI ANALYST — HISTORY TABLE ==="
 echo "db: ${DB_PATH}"
 if [ -f "${DB_PATH}" ]; then
     # Total + last-24h count
-    total=$(sqlite3 "file:${DB_PATH}?mode=ro" -readonly \
+    total=$(python3 "${_DBR}" "${DB_PATH}" \
         "SELECT COUNT(*) FROM insights_history" 2>/dev/null || echo "(error)")
-    last_24h=$(sqlite3 "file:${DB_PATH}?mode=ro" -readonly \
+    last_24h=$(python3 "${_DBR}" "${DB_PATH}" \
         "SELECT COUNT(*) FROM insights_history WHERE generated_at >= datetime('now', '-1 day')" 2>/dev/null || echo "(error)")
     echo "total rows: ${total}"
     echo "rows in last 24h: ${last_24h}"
 
     echo ""
     echo "most recent 10 rows:"
-    sqlite3 "file:${DB_PATH}?mode=ro" -readonly -header -column \
+    python3 "${_DBR}" --table "${DB_PATH}" \
         "SELECT id, generated_at, endpoint, strategy_name, model_id, grade,
                 substr(summary_md, 1, 60) AS snippet
          FROM insights_history
@@ -97,13 +99,13 @@ if [ -f "${DB_PATH}" ]; then
     month_start=$(date -u +%Y-%m-01T00:00:00+00:00)
     echo "month_start: ${month_start}"
     echo "INSIGHTS_MONTHLY_BUDGET_USD env: ${INSIGHTS_MONTHLY_BUDGET_USD:-<unset, default 5.00>}"
-    spent=$(sqlite3 "file:${DB_PATH}?mode=ro" -readonly \
+    spent=$(python3 "${_DBR}" "${DB_PATH}" \
         "SELECT COALESCE(printf('%.4f', SUM(estimated_cost_usd)), '0.0000')
          FROM insights_usage WHERE ts >= '${month_start}'" 2>/dev/null || echo "(error)")
-    tokens=$(sqlite3 "file:${DB_PATH}?mode=ro" -readonly \
+    tokens=$(python3 "${_DBR}" "${DB_PATH}" \
         "SELECT COALESCE(SUM(input_tokens + output_tokens), 0)
          FROM insights_usage WHERE ts >= '${month_start}'" 2>/dev/null || echo "(error)")
-    calls=$(sqlite3 "file:${DB_PATH}?mode=ro" -readonly \
+    calls=$(python3 "${_DBR}" "${DB_PATH}" \
         "SELECT COUNT(*) FROM insights_usage WHERE ts >= '${month_start}'" 2>/dev/null || echo "(error)")
     echo "spent so far: \$${spent}"
     echo "tokens: ${tokens}"
@@ -111,7 +113,7 @@ if [ -f "${DB_PATH}" ]; then
 
     echo ""
     echo "per-endpoint:"
-    sqlite3 "file:${DB_PATH}?mode=ro" -readonly -header -column \
+    python3 "${_DBR}" --table "${DB_PATH}" \
         "SELECT endpoint, status, COUNT(*) AS calls,
                 COALESCE(printf('%.4f', SUM(estimated_cost_usd)), '0.0000') AS spent_usd,
                 COALESCE(SUM(input_tokens), 0) AS in_tok,

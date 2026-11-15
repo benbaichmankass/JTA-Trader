@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "SEC-DETECTORS D1 (SECURITY-HARDENING-AUDIT, operator ask 2026-11-11 ~21:55Z for alerts on suspicious activity). Adds scripts/ops/security_watch.py and a 5-min oneshot timer on the live VM that sends one red-flag ping for an SSH login with an identity outside the recorded baseline, a failed-login burst, or an unreadable journal. Reads only: no gate, no halt, nothing blocked. Tier 2 because the installer enables the new timer on the next deploy and the diag unit allowlist (web-api) gains two names.",
+  "hold_text": "Tier-2: manager merges. The deploy installs and starts ict-security-watch.timer. Post-merge checks: (1) /api/diag/services shows ict-security-watch.timer active; (2) journalctl?unit=ict-security-watch shows one JSON line per run with read_state=read; (3) the alert ledger holds ONE '[INFO] ... SSH baseline recorded' row and no '[RED FLAG]' rows from the first hour. Revert: revert the PR; the installer does not remove the unit, so also disable the timer."
+}

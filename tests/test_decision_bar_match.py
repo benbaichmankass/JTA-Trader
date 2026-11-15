@@ -89,3 +89,39 @@ def test_harness_kwargs_unpacks_yaml_tp_revision_dict():
     assert kw["tp_revision"] == "donchian_measured_move"
     assert kw["tp_revision_width_mult"] == 0.5
     assert "tp_revision" not in unmodelled
+
+
+# --- E5 fields (row FORMING-VS-CLOSED-ETH4H-SOL4H): derived from the grades, grading unchanged --------------------
+
+def _res(better, verdict, nc=10, nf=12):
+    return {"A_closed": {"n": nc, "net_r": 5.0}, "B_forming": {"n": nf, "net_r": 6.0},
+            "grade": {"better": better, "verdict": verdict, "reason": "x", "window": ["a", "b"],
+                      "folds_closed": 1, "folds_forming": 2, "folds_tie": 3, "delta_r_full": -1.0,
+                      "rule_d1_record_window": {"closed": True, "forming": True, "window": ["c", "d"]}}}
+
+
+def test_e5_fields_map_the_row_rule():
+    import decision_bar_match as dbm
+    e = dbm.e5_fields({"L": _res("NO_MATERIAL_DIFFERENCE", "SWITCH_TO_CLOSED"),
+                       "M": _res("CLOSED_BETTER", "SWITCH_TO_CLOSED")}, partial=False)
+    assert e["verdict"] == "pass" and e["read_state"] == "measured" and e["n"] == 44
+    assert [r["verdict"] for r in e["records"]] == ["pass", "pass"]
+    # AMENDED pre-run (AM-ML 14:53Z): a tie where closed FAILS RULE-D1 makes no closed proposal; the tool's
+    # verdict is reported as-is
+    k = dbm.e5_fields({"L": _res("NO_MATERIAL_DIFFERENCE", "KEEP_FORMING_REBASE_RECORD")}, partial=False)["records"][0]
+    assert k["verdict"] == "fail" and k["match_verdict"] == "KEEP_FORMING_REBASE_RECORD" and "no closed proposal" in k["note"]
+    d = dbm.e5_fields({"L": _res("NO_MATERIAL_DIFFERENCE", "DEMOTE_CANDIDATE")}, partial=False)["records"][0]
+    assert d["verdict"] == "fail" and d["match_verdict"] == "DEMOTE_CANDIDATE"
+    f = dbm.e5_fields({"L": _res("FORMING_BETTER", "KEEP_FORMING_REBASE_RECORD"),
+                       "M": _res("NO_MATERIAL_DIFFERENCE", "SWITCH_TO_CLOSED")}, partial=False)
+    assert f["verdict"] == "fail" and "L (KEEP_FORMING_REBASE_RECORD)" in f["note"]
+    assert "entry-hold" in f["records"][0]["note"]
+
+
+def test_e5_fields_never_claim_on_an_ungraded_or_partial_run():
+    import decision_bar_match as dbm
+    i = dbm.e5_fields({"L": _res(None, "INDETERMINATE"), "M": _res("NO_MATERIAL_DIFFERENCE", "SWITCH_TO_CLOSED")},
+                      partial=False)
+    assert i["verdict"] == "indeterminate" and i["records"][0]["n"] is None
+    p = dbm.e5_fields({"M": _res("NO_MATERIAL_DIFFERENCE", "SWITCH_TO_CLOSED")}, partial=True)
+    assert p["read_state"] == "producer_failed" and p["verdict"] == "not_applicable"

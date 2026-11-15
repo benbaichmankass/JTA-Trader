@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "read paths only in the system-action wrappers (scripts/ops): their BEFORE/AFTER and count SELECTs move from the sqlite3 CLI (absent on the VM) to a read-only python helper; every mutation step (the python helpers each wrapper runs) is unchanged"
+}

@@ -15,6 +15,15 @@ for `ict-bot.duckdns.org | :8001 | BOT_API_URL`, and one read of the Caddy journ
 * **Consequence (the main finding): a non-public `POST` carrying a service token is rejected.** Routes that check their own write token inside the router
   (`alerts`, `work/items*`, `work/decision`, `wake-toggles`) are NOT in the public list, so the site gate runs first and returns 401 before the router's
   token is read. Only `prop/report` + `prop/phone/*` were carved out. `GET` consumers with `DASHBOARD_API_TOKEN` pass.
+* **Update 2026-11-11 (SITE-AUTH step (i)):** `auth.SITE_PUBLIC_POST_PATHS` / `SITE_PUBLIC_POST_PREFIXES` now carve out, **for POST only**,
+  `/api/bot/alerts`, `/api/bot/wake-toggles`, `/api/bot/work/decision` and `/api/bot/work/items[/…]`. Each router fails closed on its own token
+  (pinned in `tests/test_web_site_auth_write_carveouts.py`), and the GET reads on the same paths stay gated. This clears the POST half of rows 5, 6, 7 and 8 below.
+  `POST /api/bot/devices/register` is NOT carved out yet. Add it once #25007 (its own fail-closed bearer) has merged, or the Android app's POST gets 401.
+* **Consumer count, reconciled 2026-11-11:** `PI-20261011-CFUJ7YFR-0002` says "26 anonymous groups". That number comes from the finer-grained
+  table in `docs/plans/ui-upgrade-1-auth-and-keys-design.md` § 2b (33 groups B1–B33; 26 of them anonymous). The 15 rows below cover the same population
+  more coarsely: rows 10 and 11 alone fold in the anonymous workflows and 29 script files. Same population, two granularities; neither count was re-measured.
+* **Correction 2026-11-11:** row 1 lists the SPA as a `POST /api/bot/devices/register` caller. `ict-trader-dashboard/webapp/src` has 0 references to
+  `devices/register` (a grep that finds the SPA's other `devices` strings). The only register caller is the Android companion app, which sends the bearer.
 
 ## 2. Consumers
 

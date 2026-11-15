@@ -1,0 +1,93 @@
+# Lifecycle plan -- see ml/lifecycle/plan.py for the schema; seeded by scripts/ops/seed_lifecycle_plans.py (2026-11-07).
+plan_version: 1
+plan_id: btc-regime-15m-lgbm-vt003-pin-v1
+model_id: btc-regime-15m-lgbm-vt003-pin-v1
+manifest: ml/configs/retired/btc-regime-15m-lgbm-vt003-pin-v1.yaml
+population_basis: every top-level ml/configs manifest (the nightly-cycle roster; registry stage lives on the trainer VM and can exceed the manifest's
+  declared stage)
+manifest_stage_at_seed: candidate
+datasets:
+- family: market_features
+  symbol_scope: BTCUSDT
+  timeframe: 15m
+  version: v513
+  source: scripts/ops/build_trainer_datasets.sh (trainer VM, nightly in ict-trainer.service; datasets-out/)
+  window: full available history, recency-weighted by the manifest sample_weight
+  point_in_time: bar-close features only; labels use the declared forward horizon; train/eval split is chronological (no shuffling); forecast
+    side-stream rebuilt nightly
+retrain:
+  cadence_days: 30
+  cadence_provenance: ESTIMATED
+  triggers:
+  - kind: calendar
+  timeout_s: 1800
+  command:
+  - '{py}'
+  - -m
+  - ml
+  - train
+  - '{manifest}'
+  - --datasets-root
+  - '{datasets_root}'
+  - --experiments-root
+  - '{experiments_root}'
+  - --registry-root
+  - '{registry_root}'
+  note: 'backstop to the nightly cycle: due only if neither this scheduler nor a cycle manifest_ok row is inside the cadence'
+retest:
+- id: drift_check
+  cadence_days: 7
+  cadence_provenance: ESTIMATED
+  what: score drift on the shadow log (insufficient_data until the head scores live)
+  command:
+  - '{py}'
+  - -m
+  - ml
+  - shadow-drift
+  - --model-id
+  - '{model_id}'
+- id: labelled_decay
+  cadence_days: 7
+  cadence_provenance: ESTIMATED
+  what: shadow scores joined to realised outcomes (AUC/Brier vs base rate) -- labelled decay
+  command:
+  - '{py}'
+  - -m
+  - ml
+  - model-attribution
+  - --db
+  - '{journal_db}'
+  - --model-id
+  - '{model_id}'
+- id: serve_parity
+  cadence_days: 7
+  cadence_provenance: ESTIMATED
+  what: training-row vs live-row feature distribution parity
+  command:
+  - '{py}'
+  - scripts/ml/_feature_parity_probe.py
+  - --model-id
+  - '{model_id}'
+  - --symbol
+  - '{symbol}'
+  - --timeframe
+  - '{timeframe}'
+update:
+  cadence_days: 7
+  cadence_provenance: ESTIMATED
+  promote_past_shadow: operator_tier3
+  rule: 'PROPOSE only: gate-check writes the go/no-go packet; hold if gates fail or data is insufficient; flag for /ml-review when a result changes
+    the verdict. Never calls promote-stage.'
+  command:
+  - '{py}'
+  - -m
+  - ml
+  - gate-check
+  - '{model_id}'
+  - --registry-root
+  - '{registry_root}'
+reporting:
+  results: runtime_logs/trainer/lifecycle_results.jsonl (one MEASURED record per job)
+  state: runtime_logs/trainer/lifecycle_state.json
+  red_flag: lifecycle_red_flag event in runtime_logs/training_cycle.jsonl after 3 consecutive failures (once per episode; retries continue)
+  reviewed_by: /ml-review layer 1 (python scripts/ops/lifecycle_report.py)

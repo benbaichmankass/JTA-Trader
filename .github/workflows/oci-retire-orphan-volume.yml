@@ -23,8 +23,8 @@ on:
       mode: { description: "plan | execute", required: true, default: "plan" }
       volume_id: { description: "OCID printed by plan (execute only)", required: false, default: "" }
       confirm: { description: "'yes' required for execute", required: false, default: "" }
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [oci-retire-orphan-volume]
 
 permissions:
   contents: read
@@ -38,10 +38,10 @@ jobs:
   retire:
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       (github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'oci-retire-orphan-volume'))
+      (github.event_name == 'repository_dispatch' &&
+       (github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'oci-retire-orphan-volume'))
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -50,7 +50,7 @@ jobs:
       - name: Parse request
         id: parse
         env:
-          ISSUE_BODY: ${{ github.event.issue.body || '' }}
+          ISSUE_BODY: ${{ github.event.client_payload.issue.body || '' }}
           IN_MODE: ${{ inputs.mode || '' }}
           IN_VID: ${{ inputs.volume_id || '' }}
           IN_CONFIRM: ${{ inputs.confirm || '' }}
@@ -93,7 +93,7 @@ jobs:
           exit "$rc"
 
       - name: Comment result on the issue
-        if: always() && github.event_name == 'issues'
+        if: always() && github.event_name == 'repository_dispatch'
         uses: actions/github-script@v7
         with:
           script: |
@@ -101,9 +101,9 @@ jobs:
             const out = fs.existsSync('report.txt') ? fs.readFileSync('report.txt', 'utf8') : '(no report produced)';
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             await github.rest.issues.createComment({
-              owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number,
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               body: `**oci-retire-orphan-volume** — job status: \`${{ job.status }}\` · rc: \`${{ steps.run.outputs.rc || 'n/a' }}\`\nRun: ${runUrl}\n\n\`\`\`\n${out.slice(-60000)}\n\`\`\``,
             });
             await github.rest.issues.update({
-              owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, state: 'closed',
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), state: 'closed',
             });

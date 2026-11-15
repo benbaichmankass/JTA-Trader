@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "changes_landing_machinery",
+  "hold_text": "Edits the pr-landing hold-merge alarm's resolver (scripts/ops/pr_landing_hold_alarm.py), the detector that pages the operator. Operator decision 2026-11-13 'fix_a' (PR-ALARM-RESOLVER-FIX, Decisions inbox 21:16:21Z): add a git ls-tree exact-path blob fallback so a ref/evidence path that exists in the commit resolves under the workflow's SPARSE checkout (#25799 paged falsely, run 43476136968). Strict: blob only, exact path, False on any git error, no network. The manager merges.",
+  "why": "Stop false operator pages for real citations outside the alarm's sparse checkout, without loosening must-resolve."
+}

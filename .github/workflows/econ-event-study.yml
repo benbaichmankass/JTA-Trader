@@ -44,8 +44,8 @@ on:
       start:
         description: "Price-panel start date"
         default: "2005-01-01"
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [econ-event-study-now]
 
 permissions:
   contents: write
@@ -60,9 +60,9 @@ jobs:
     if: |
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       github.event.issue.user.login == github.repository_owner &&
-       contains(github.event.issue.labels.*.name, 'econ-event-study-now'))
+      (github.event_name == 'repository_dispatch' &&
+       github.event.client_payload.issue.user.login == github.repository_owner &&
+       contains(github.event.client_payload.issue.labels.*.name, 'econ-event-study-now'))
     runs-on: ubuntu-latest
     timeout-minutes: 97  # was 67: shared commit-to-main wait 50->80 (W41)
     steps:
@@ -91,7 +91,7 @@ jobs:
       # to be kept in sync by hand.
       - name: Resolve kinds + symbols
         env:
-          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_BODY: ${{ github.event.client_payload.issue.body }}
           IN_KINDS: ${{ github.event.inputs.kinds }}
           IN_SNAPS: ${{ github.event.inputs.snapshots }}
           IN_START: ${{ github.event.inputs.start }}
@@ -244,7 +244,7 @@ jobs:
           verify-merged: "true"
 
       - name: Comment + close issue (issue-driven path)
-        if: github.event_name == 'issues'
+        if: github.event_name == 'repository_dispatch'
         uses: actions/github-script@v7
         env:
           SUMMARY: ${{ steps.study.outputs.summary }}
@@ -267,9 +267,9 @@ jobs:
             ].join('\n');
             await github.rest.issues.createComment({
               owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number, body,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), body,
             });
             await github.rest.issues.update({
               owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number, state: 'closed',
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), state: 'closed',
             });

@@ -50,15 +50,26 @@ def test_builders_disabled_gate(monkeypatch):
 
 
 def test_builders_us_session_gate(monkeypatch):
+    """GATE-MARKET-HOURS: MAKE REPORT-ONLY (operator 2026-11-12 decisions page,
+    Gates tab; comms/gates/gate_decisions_2026-11-12.json). A closed US market
+    no longer returns ``side=none``/``us_market_closed``: the builder carries on
+    to its candle fetch (stubbed empty here, so it raises its own no-data
+    error), and the closed state is reported, not returned."""
+    import pytest
     monkeypatch.setattr(
         "src.units.strategies.load_strategy_config",
         lambda: {name: {"enabled": True} for name in _BUILDERS},
     )
     monkeypatch.setattr("src.runtime.market_hours.is_market_open", lambda cls: False)
+    monkeypatch.setattr("src.runtime.market_data.fetch_candles", lambda *a, **k: None)
+    reports = []
+    monkeypatch.setattr("src.runtime.strategy_signal_builders.log_signal",
+                        lambda r: reports.append(r))
     for name, builder in _BUILDERS.items():
-        out = builder({})
-        assert out["side"] == "none"
-        assert out["meta"]["reason"] == "us_market_closed"
+        with pytest.raises(RuntimeError, match="no candle data"):
+            builder({})
+        assert reports and reports[-1]["event"] == "market_closed_report_only"
+        assert reports[-1]["cause"] == "us_market_closed"
 
 
 def test_intent_roster_and_priorities_registered():
@@ -181,7 +192,17 @@ def test_account_routing_and_descriptions():
     # DEMO-FLOOR RULE 2026-10-27 (operator rule relayed by the manager; Tier-3, held PR): uso_trend_1h is back on its demo floor (alpaca_paper);
     # the three pullback cells stay off (same-symbol with a 1d leg, no slice support on this account).
     for name in _BUILDERS:
-        assert (name in acct["strategies"]) == (name == "uso_trend_1h"), name
+        # THURSDAY-PLANNING b1 2026-11-11 (operator verbatim "Put qqq and tlt on the paper floor now; promote tlt to real
+        # money"): qqq_pullback_1h is back too, its QQQ share set by comms/same_symbol_allocation/qqq-alpaca_paper.json.
+        # B38CQPVI-0001 2026-11-13 (same operator words + OPERATING-PLAN § 2 demo floor): tlt_pullback_1h and
+        # spy_pullback_1h join, their shares set by comms/same_symbol_allocation/{tlt,spy}-alpaca_paper.json.
+        # TLT-1H-PROMOTE 2026-11-14 (operator popup "Promote long-only 3.5R (Recommended)"): tlt_pullback_1h left the
+        # demo floor for real money (alpaca_live + its mirror); production is not general paper (OPERATING-PLAN § 2).
+        assert (name in acct["strategies"]) == (
+            name in ("uso_trend_1h", "qqq_pullback_1h", "spy_pullback_1h")), name
+    accounts = yaml.safe_load(open("config/accounts.yaml"))["accounts"]
+    for book in ("alpaca_live", "alpaca_portfolio"):
+        assert "tlt_pullback_1h" in accounts[book]["strategies"], book
     assert "USO" in acct["symbols"]
     # SPY/QQQ/TLT already routed; the 1h pullback cells reuse them.
     for sym in ("SPY", "QQQ", "TLT"):

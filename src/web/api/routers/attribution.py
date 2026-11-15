@@ -22,9 +22,9 @@ import logging
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter
 
 from src.runtime.positions import net_positions_by_symbol
 from src.utils.paths import trade_journal_db_path
@@ -56,13 +56,7 @@ _DB_PATH = Path(trade_journal_db_path())
 
 
 @router.get("/positions/net")
-def get_net_positions(
-    db_path: Optional[str] = Query(
-        default=None,
-        description="Override path to trade_journal.db (testing / staging only).",
-        include_in_schema=False,
-    ),
-) -> Dict[str, Any]:
+def get_net_positions() -> Dict[str, Any]:
     """Current signed net qty per symbol across all live accounts.
 
     Reads ``trade_journal.db`` for open, non-backtest rows. Symbols with
@@ -72,7 +66,10 @@ def get_net_positions(
     -------
     ``{positions: [{symbol, net_qty}], count: int}``
     """
-    resolved_path = db_path or str(_DB_PATH)
+    # SEC-API-DBPATH-PARAM (2026-11-11): this route used to take ``db_path`` from
+    # the query string with no auth, so any caller could point sqlite at any file
+    # the process can open. The path is the canonical journal, nothing else.
+    resolved_path = str(_DB_PATH)
     try:
         raw = net_positions_by_symbol(db_path=resolved_path)
     except Exception as exc:  # noqa: BLE001  # allow-silent: best-effort read; missing/corrupt DB must never 5xx the endpoint
@@ -98,7 +95,8 @@ def _query_attribution(db_path: Path) -> List[Dict[str, Any]]:
         return []
 
     try:
-        conn = sqlite3.connect(str(db_path))
+        # Read-only: an aggregate read must not be able to create or write a file.
+        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
         conn.row_factory = sqlite3.Row
         try:
             # Real-money only (account_class authoritative, is_demo fallback;
@@ -243,13 +241,7 @@ def _query_attribution(db_path: Path) -> List[Dict[str, Any]]:
 
 
 @router.get("/strategy/attribution")
-def get_strategy_attribution(
-    db_path: Optional[str] = Query(
-        default=None,
-        description="Override path to trade_journal.db (testing / staging only).",
-        include_in_schema=False,
-    ),
-) -> Dict[str, Any]:
+def get_strategy_attribution() -> Dict[str, Any]:
     """Per-strategy lifetime trade statistics.
 
     Aggregates closed trades from ``trade_journal.db`` (non-backtest only)
@@ -261,7 +253,7 @@ def get_strategy_attribution(
     ``{strategies: [{strategy, open_trades, closed_trades, winning_trades,
     losing_trades, win_rate, total_pnl}], generated_at: ISO-8601}``
     """
-    resolved_path = Path(db_path) if db_path else _DB_PATH
+    resolved_path = _DB_PATH   # canonical journal only (SEC-API-DBPATH-PARAM)
     strategies = _query_attribution(resolved_path)
     return {
         "strategies": strategies,

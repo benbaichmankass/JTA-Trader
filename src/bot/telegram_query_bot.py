@@ -578,6 +578,16 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if result is not None:
                 await query.edit_message_text(result["reply"])
 
+        elif action == "tapv":
+            # Trade approval (TRADE-ACTION-DIRECT-PATH phase 1): the fallback destination when the Claude decision
+            # bot does not claim the prefix. Same shared handler; is_authorised() already passed above.
+            from src.runtime import trade_approvals
+
+            result = await asyncio.to_thread(trade_approvals.handle_callback, raw, authorised=True)
+            if result is not None:
+                prior = query.message.text if query.message else ""
+                await query.edit_message_text(f"{prior}\n\n{result['reply']}"[-4000:])
+
         elif action == "propexp":
             # Prop ticket-expiry Yes/No answer. The prompt is normally sent to
             # (and answered on) the prop bot, but breakout_notify._prop_bot_token
@@ -871,7 +881,7 @@ def main():
         record_poll,
     )
 
-    _polled_prefixes = (CB_PREFIX, "propexp", "ns")
+    _polled_prefixes = (CB_PREFIX, "propexp", "ns", "tapv")  # tapv: trade approvals (TRADE-ACTION-DIRECT-PATH)
 
     async def _register_poll(_ctx) -> None:
         await asyncio.to_thread(

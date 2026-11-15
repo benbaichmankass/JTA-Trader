@@ -52,6 +52,8 @@ EXPECTED_ACTIONS = {
     "status-check": "status_check.sh",
     # Read-only du breakdown of the live VM disk (PI-20261017-VSMHZYHF-0001).
     "disk-usage-report": "disk_usage_report.sh",
+    # Read-only per-process / per-unit CPU over a /proc sample window (LIVE-VM-CPU-SATURATION-1112).
+    "vm-cpu-sample": "vm_cpu_sample.sh",
     # Read-only listening-port + host-firewall inventory (security audit 2026-06-28).
     "list-listening-ports": "list_listening_ports.sh",
     "pull-latest-logs": "pull_logs.sh",
@@ -59,6 +61,9 @@ EXPECTED_ACTIONS = {
     "gateway-logs": "gateway_logs.sh",
     # Read-only restart forensics for the ib-gateway container + its watchdog/reset timers.
     "gateway-forensics": "gateway_forensics.sh",
+    # SEC-VM-POSTURE-READ (2026-11-11): read-only posture of the trader AND
+    # the gateway, piped over ssh stdin; counts, modes, fingerprints only.
+    "security-posture-report": "security_posture_report.sh",
     "gateway-disk-report": "gateway_disk_report.sh",
     "gateway-disk-cleanup": "gateway_disk_cleanup.sh",
     "inspect-closed-pnl": "inspect_closed_pnl_action.sh",
@@ -289,6 +294,9 @@ EXPECTED_ACTIONS = {
     "prune-db-backups": "prune_db_backups.sh",
     # 2026-11-07 — delete NAMED phone capture runs of one account (operator: purge images that showed an unmasked amount). Tier 2, dry-run default.
     "purge-phone-captures": "purge_phone_captures_action.sh",
+    # 2026-11-12 — SEC-8001-LOCKDOWN step 3: drop the host firewall ACCEPT rules for
+    # TCP/8001. Refuses unless :8001 listens on loopback only. Fixed port, no params.
+    "close-api-port": "close_api_port_action.sh",
     # 2026-11-02 — VM-SPARSE-SYNC one-time recovery; piped over ssh stdin.
     "vm-sparse-bootstrap": "vm_sparse_bootstrap.sh",
     # 2026-07-06 — one-shot repair of the mis-linked ETH prop close
@@ -310,6 +318,7 @@ EXPECTED_ACTIONS = {
     # 2026-11-05 — BREAKOUT-UNRECORDED-1101: journal ONE never-filled prop ticket
     # as `skipped` via ingest_report. DRY-RUN by default; apply needs confirm: <ticket_id>.
     "prop-report-skip": "prop_report_skip_action.sh",
+    "prop-report-open": "prop_report_open_action.sh",
     # 2026-08-20 — prop-journal hygiene for fills admitted with NO direction
     # (BL-20260820-PROP-FILL-DIRECTION-ADMISSION-GAP). _position_key needs
     # (account, symbol, direction) but ingest_report only validates the first
@@ -391,6 +400,8 @@ EXPECTED_ACTIONS = {
     # 2026-10-24 — AMEND-SL-ACTION: tighten one live Bybit stop, venue +
     # journal (order_packages.sl + trades.stop_loss) together; refuses looser.
     "amend-position-sl": "amend_position_sl_action.sh",
+    # 2026-11-11 — PROP-BRACKET-APPLY: record a TP/SL request on a VM-prop ticket; the executor applies it.
+    "amend-prop-bracket": "amend_prop_bracket_action.sh",
     # 2026-10-25 — LTR-6R-APPLY-PATH: READ-ONLY per-account dry-run of the
     # live-review apply path (scripts/ops/live_review_apply.py --dry-run).
     "live-review-dry-run": "live_review_dry_run_action.sh",
@@ -489,12 +500,14 @@ TIER_2_ACTIONS = {
     "backfill-own-fill-exits",
     "prune-db-backups",
     "purge-phone-captures",
+    "close-api-port",
     "vm-sparse-bootstrap",
     "fix-prop-mislinked-close",
     "prop-ticket-expire",
     "prop-ticket-reissue",
     "prop-report-close",
     "prop-report-skip",
+    "prop-report-open",
     "repair-prop-fill-direction",
     "breakout-login-check",
     "breakout-terminal-probe",
@@ -517,6 +530,7 @@ TIER_2_ACTIONS = {
     "backfill-package-risk-meta",
     "relink-orphan-trade-5209",
     "amend-position-sl",
+    "amend-prop-bracket",
     "live-review-dry-run",
     "live-review-apply",
     "run-desk-judge",
@@ -1183,3 +1197,51 @@ def test_prune_db_backups_forwards_every_action_var_its_script_reads() -> None:
     assert {"ACTION_APPLY", "ACTION_DAYS", "ACTION_KEEP"} <= read & forwarded
     assert {"ACTION_FILE", "ACTION_CONFIRM"} <= read, "script no longer reads file/confirm?"
     assert not (read - forwarded), f"read but not forwarded: {sorted(read - forwarded)}"
+
+
+def test_security_posture_report_is_read_only_and_never_prints_key_material():
+    """SEC-VM-POSTURE-READ: the posture script reads, masks and fingerprints.
+
+    Pinned properties: no write/restart/package verbs; key lines go through
+    ssh-keygen -l and only bits/fingerprint/type are printed; output is masked.
+    """
+    import re
+    from pathlib import Path
+
+    src = (Path(__file__).resolve().parents[2]
+           / "scripts/ops/security_posture_report.sh").read_text()
+    code = "\n".join(ln for ln in src.splitlines() if not ln.lstrip().startswith("#"))
+    for verb in (r"\brm\b", r"systemctl (restart|stop|start|enable|disable)",
+                 r"apt(-get)? (install|upgrade|remove|update)", r"\bchmod\b",
+                 r"\bchown\b", r"fail2ban-client (set|unban|stop)", r">\s*/etc/"):
+        assert not re.search(verb, code), verb
+    assert "ssh-keygen -lf -" in code
+    assert "awk '{print $1, $2, $NF}'" in code  # bits, fingerprint, (TYPE)
+    assert "} 2>&1 | mask" in code
+    assert "Banned IP list" not in code
+
+
+def test_security_posture_mask_keeps_wildcard_and_loopback_only():
+    """First run (#25070): masking 0.0.0.0/127.0.0.1 hid whether a port is public."""
+    import re
+    import subprocess
+    from pathlib import Path
+
+    src = (Path(__file__).resolve().parents[2]
+           / "scripts/ops/security_posture_report.sh").read_text()
+    fn = re.search(r"^mask\(\) \{.*?^\}", src, re.S | re.M).group(0)
+    sample = ("tcp 0.0.0.0:8001 python\ntcp 127.0.0.1:2019 caddy\n"
+              "tcp 10.0.0.251:4002 docker-proxy\nfrom 141.145.193.91 port 22\nacct DU1234567\n")
+    out = subprocess.run(["bash", "-c", fn + "\nmask"], input=sample,
+                         capture_output=True, text=True, check=True).stdout
+    assert "0.0.0.0:8001" in out and "127.0.0.1:2019" in out
+    assert "10.0.0.251" not in out and "141.145.193.91" not in out and "DU1234567" not in out
+    assert out.count("<ip>") == 2 and "<acct>" in out
+
+
+def test_security_posture_gateway_ssh_is_quiet():
+    """The client's known-hosts warning leaked the gateway address (#25070)."""
+    text = WORKFLOW.read_text()
+    seg = text[text.index('elif [ "${ACTION}" = "security-posture-report" ]'):]
+    seg = seg[: seg.index("action-output.txt")]
+    assert "LogLevel=ERROR" in seg

@@ -1,0 +1,637 @@
+{
+ "run": "PROGRAMME-REVIEW-2026-11-11",
+ "finished_at": "2026-11-11T20:40:00Z",
+ "by": "session_01AFoLuKesRwH6Kx8bt53e2i",
+ "dispatched_by": "Manager Session 2026-11-11a (session_01AFoLuLyarNRcy3nziCep2U), reset protocol 2026-11-11 job programme-review",
+ "population": "Population: units with a result row generated 2026-11-04T19:30Z..2026-11-11T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`; 2,183 units read, 0 unreadable; 455 result rows): **311 units with rows** \u2014 72 pass, 134 fail, 42 indeterminate, 5 no_action_warranted, 1 not_applicable, 57 with no unit verdict yet (28 ungraded). 119 carry a programme field (P1 38, P2 50, P3 14, P4 2, P5 9, P6 6, P7 0); **192 do not** (live_strategy 110, new_strategy_prop 37, ml_health 31, infra 11, timeframes 2, none 1) and are assigned below by what they ask. Every PASS is a discovery until its confirmation passes; batch denominators are from the packet's `batches`.",
+ "prior_calls_scorecard": [
+  {
+   "call": ">= 1 of P3-ITER2-spy-pullback-1h-holdout / P3-ITER2-tlt-pullback-1h-holdout grades PASS (confirmed)",
+   "p": 0.55,
+   "check_rerun": "grading.verdict of RQ-20261104-002 / RQ-20261104-003",
+   "outcome": "hit",
+   "action_happened": true,
+   "why": "RQ-20261104-003 (tlt) pass/confirmed: holdout n 146, +6.41 R; RQ-20261104-002 (spy) fail/not_replicated."
+  },
+  {
+   "call": "P3-ITER2-trend-donchian-1h: no arm (A, D40, D55, ADX25, NOSX) is net-positive in absolute terms",
+   "p": 0.8,
+   "check_rerun": "comms/research/RQ-20261104-005/41951809830/verdict.json",
+   "outcome": "miss",
+   "action_happened": true,
+   "why": "NOSX net +14.50 R (n 990); D40/D55/ADX25/A negative. The structure exit, not the entry, was the cost; the 5e05 batch had not been read into the call."
+  },
+  {
+   "call": "None of RQ-20261101-5e01-02/-03/-04 grades PASS",
+   "p": 0.75,
+   "check_rerun": "grading.verdict in research/queue/RQ-20261101-5e01-0{2,3,4}.yaml",
+   "outcome": "hit",
+   "action_happened": true,
+   "why": "3 of 3 graded fail (measured rows, earlier producer_failed rows superseded)."
+  },
+  {
+   "call": "P3-ITER2-mgc-trend-1h-dukascopy-holdout lands a MEASURED verdict",
+   "p": 0.6,
+   "check_rerun": "grading of RQ-20261104-001",
+   "outcome": "hit",
+   "action_happened": true,
+   "why": "fail/no_discovery, measured (discovery -122.8 R, n 677)."
+  },
+  {
+   "call": ">= 1 of P2-MECE-D5/-D6/-D2 is authored into a queue unit",
+   "p": 0.4,
+   "check_rerun": "queue_replenish.py --programme-state, nodes P2-MECE-*",
+   "outcome": "miss",
+   "action_happened": false,
+   "why": "all three still state ready, unit null on 2026-11-11."
+  },
+  {
+   "call": "needs_review count in next week's packet <= 40",
+   "p": 0.3,
+   "check_rerun": "research_ops_checks.py --kind programme_review --since 7d -> needs_review.count",
+   "outcome": "miss",
+   "action_happened": false,
+   "why": "97 (16 with no owner), up from 72."
+  }
+ ],
+ "brier": {
+  "value": 0.2192,
+  "n": 6,
+  "basis": "mean (p - outcome)^2 over 6 calls, hit=1 miss=0"
+ },
+ "ranking_error": "Last week's call 2 (p 0.8 that no trend_donchian_1h arm is net-positive) ignored the structure-exit evidence already in flight (5e02/5e01, #22907): the arm that removed the structure exit was the winner. The low-ranked 5e05 reverse batch turned out to be the week's most consequential test (+587 R summed delta, 9 legs flipped OFF by #23485).",
+ "checks": {
+  "graded_by_window": {
+   "7d": {
+    "INFRA": {
+     "pass": 7,
+     "fail": 1
+    },
+    "MODEL": {
+     "pass": 29,
+     "indeterminate": 13,
+     "fail": 36
+    },
+    "TRADING": {
+     "no_action_warranted": 34,
+     "pass": 63,
+     "fail": 135,
+     "indeterminate": 31,
+     "not_applicable": 1
+    }
+   },
+   "30d": {
+    "INFRA": {
+     "pass": 10,
+     "indeterminate": 1,
+     "fail": 2
+    },
+    "MODEL": {
+     "pass": 78,
+     "fail": 98,
+     "indeterminate": 76
+    },
+    "TRADING": {
+     "pass": 294,
+     "indeterminate": 148,
+     "no_action_warranted": 53,
+     "fail": 865,
+     "not_applicable": 1
+    }
+   },
+   "lifetime": {
+    "INFRA": {
+     "pass": 10,
+     "indeterminate": 1,
+     "fail": 2
+    },
+    "MODEL": {
+     "fail": 99,
+     "pass": 78,
+     "indeterminate": 76
+    },
+    "TRADING": {
+     "pass": 325,
+     "indeterminate": 196,
+     "no_action_warranted": 55,
+     "fail": 896,
+     "not_applicable": 1
+    }
+   }
+  },
+  "runnable_by_track": {
+   "TRADING": 0,
+   "MODEL": 5,
+   "INFRA": 0,
+   "total": 5
+  },
+  "fails_without_next": 109,
+  "batches_quoted": [
+   "RQ-20261105-5e05 (17: 9 pass, 6 fail, 2 indet)",
+   "RQ-20261107-47b6 (20: 4 pass, 16 fail)",
+   "RQ-20261110-c4f1 (13: 4 pass, 6 fail, 3 indet)",
+   "RQ-20261110-73de (16: 4 pass, 9 fail, 3 indet)",
+   "RQ-20261104-c6f1 (6: 2 pass, 4 fail)",
+   "RQ-20261105-c692 (8: 2 pass, 6 fail)"
+  ],
+  "needs_review": 97,
+  "pipeline": {
+   "as_of": "2026-11-11T19:30:43.033696+00:00",
+   "runnable": 5,
+   "queued": 268,
+   "units": 2183,
+   "fired_24h": 33,
+   "fired_7d": 303,
+   "results_landed_24h": 34,
+   "result_files_unreadable": 0,
+   "last_dispatched_at": "2026-11-11T19:00:41.117439+00:00",
+   "hours_since_last_dispatch": 0.5,
+   "idle_threshold_hours": 12.0,
+   "idle_alarm": false,
+   "floor": 27
+  },
+  "followthrough": "review_followthrough.py --source programme-review --window-days 7: cohort 7 filed, 2 done, 0 killed, 5 open; backlog 14 open, 57% due, median age 10 d, 2 no-owner; oldest DATA-INTRADE-LABEL-STORE 28 d blocked (schedule-or-kill: manager)",
+  "could_not_look": [
+   "live trade tables (DIAG_READ_TOKEN rotated 2026-11-11; not needed for this review)",
+   "trial_ledger.py --real-money-table not run (budget)"
+  ]
+ },
+ "iteration": {
+  "orphans_before": {
+   "strategy_leg": 8,
+   "ml_model": 0,
+   "ltr_class": 5
+  },
+  "orphans_after": {
+   "strategy_leg": 7,
+   "ml_model": 0,
+   "ltr_class": 5,
+   "basis": "after the replenisher emits P3-ITER3-spy-pullback-1h-regime-select-holdout; qqq/tlt 1h stay listed until their promotion proposal (PR1111-SURVIVOR-PROMOTIONS); 5 58e4 family subjects handed to research-ops"
+  },
+  "overdue": {
+   "strategy_leg": 2,
+   "ml_model": 8,
+   "ltr_class": 2
+  },
+  "advanced": 5,
+  "advanced_basis": "trend_donchian_1h, htf_pullback_trend_2h, spy_pullback_1h (iteration-3 nodes) + tlt_pullback_1h (new survivor) + the 9-leg structure-OFF (already acted, #23485)",
+  "survivors": [
+   {
+    "subject": "tlt_pullback_1h",
+    "evidence": "RQ-20261104-003",
+    "next": "promotion proposal (Tier 3, manager) - PR1111-SURVIVOR-PROMOTIONS"
+   },
+   {
+    "subject": "qqq_pullback_1h",
+    "evidence": "RQ-20261101-78fc-25",
+    "next": "same; on no book"
+   },
+   {
+    "subject": "slv_trend_1h",
+    "evidence": "78fc-18 + 5a03-02",
+    "next": "same"
+   },
+   {
+    "subject": "uso_trend_1h",
+    "evidence": "78fc-19",
+    "next": "same"
+   }
+  ],
+  "lever_coverage": {
+   "trend_donchian_1h": {
+    "tested": [
+     "entry (donchian length, adx_min)",
+     "exit (structure)"
+    ],
+    "remaining": [
+     "regime_gating",
+     "sizing_vs_cost",
+     "session"
+    ]
+   },
+   "htf_pullback_trend_2h": {
+    "tested": [
+     "entry (adx_min, side)",
+     "exit (structure, tp)"
+    ],
+    "remaining": [
+     "regime_gating (73de-14 queued)",
+     "session"
+    ]
+   },
+   "spy_pullback_1h": {
+    "tested": [
+     "exit (sl, trail, timeout)",
+     "session (skip_hours 19,20 declared)"
+    ],
+    "remaining": [
+     "regime_gating",
+     "side",
+     "sizing_vs_cost"
+    ]
+   },
+   "trend_donchian_sol_4h/ada_4h/avax_4h": {
+    "tested": [
+     "exit (structure, trail tighten x2 families, tp)"
+    ],
+    "remaining": [
+     "stop widen (C2)",
+     "regime_gating"
+    ]
+   }
+  },
+  "retirement_proposals": [],
+  "lever_map": "lever_map.py --backfill: 82 maps written (strategy_leg 66 subjects, 46 with lever responses; ml_model 9, 7; ltr_class 7, 2); 39 regenerated maps committed in this PR"
+ },
+ "analysis": {
+  "programmes": {
+   "P1": {
+    "learned": [
+     "structure exit pivot 5 is a drag on 16 of 17 legs (5e05, summed delta ~+587 R, 9 pass the fold rule; 6 fold-stability fails with positive deltas; tlt_pullback_1d -1.5 R the only reversal); 9 legs OFF by #23485",
+     "trail tighten on 4h Donchians 0 of 5 across ER and ADX triggers (47b6-16..20)",
+     "fixed TP fails the holdout on 4h Donchians (0 of 3) and confirms on xrp_pullback_2h X31 (+14.65 R, n 94); iaum X351 'confirmed' on n 14 = underpowered",
+     "1d ETF holdout exit levers power-bound (73de-01..05,-21)"
+    ],
+    "fail_diagnoses": [
+     {
+      "cluster": "47b6 tighten",
+      "cause": "idea",
+      "variant": "stop widen family C2"
+     },
+     {
+      "cluster": "c6f1 donchian TP",
+      "cause": "design",
+      "variant": "measured-move target (P1-Q6 MM05)"
+     },
+     {
+      "cluster": "73de 1d ETF",
+      "cause": "power",
+      "variant": "pooled 1d sleeve paired read"
+     },
+     {
+      "cluster": "5e01 dynamic structure",
+      "cause": "idea",
+      "variant": "SL-only on ml_entry only (P5-MLV-GATE-STRUCT)"
+     }
+    ],
+    "answered": [
+     "structure exit as default (no)"
+    ],
+    "retired": [],
+    "next": [
+     {
+      "node_or_unit": "STRUCTURE-EXITS-DEFAULT observation",
+      "decision_changed": "OFF flip observed",
+      "on_pass": "row closes",
+      "on_fail": "Tier-2 fix",
+      "cost": "diag read",
+      "premortem": "no OFF-leg package closes in window"
+     },
+     {
+      "node_or_unit": "P1-Q6-eth4h-measured-move-w05-declare",
+      "decision_changed": "first moving TP on real money",
+      "on_pass": "Tier-3 declare",
+      "on_fail": "Q8",
+      "cost": "doctrine read",
+      "premortem": "clamped_share >= 0.5"
+     },
+     {
+      "node_or_unit": "N0 holdout sol_pullback_2h + mgc_pullback_1d (research-ops)",
+      "decision_changed": "structure OFF on fold-fail legs",
+      "on_pass": "Tier-3 OFF",
+      "on_fail": "keep",
+      "cost": "runner x2",
+      "premortem": "mgc n < 25"
+     }
+    ]
+   },
+   "P2": {
+    "learned": [
+     "regime head skill is same-asset vol persistence; cross-asset 0 of 4 (c4f1-01..04); HAR-RV adds at 1h (c4f1-06,-11); no consumer yet",
+     "direction heads at the prior (98e3-21,-24, c4f1-12)",
+     "ML SL revision dev +0.0029 R/trade at the grid edge, held-out +0.0005 CI spans 0 (c692-12/-15), confirmations 0 of 2",
+     "ML ENTRY at 1h only: b620-01 harness reproduces; 15m/4h 0 of 4",
+     "e9a1-02 PASS is t~0.93 under a t_min 0 rule: non-negative, not edge",
+     "served ml_entry decline: not age, not regime, no cadence lever (98e3-26)"
+    ],
+    "fail_diagnoses": [
+     {
+      "cluster": "cross-asset regime",
+      "cause": "idea"
+     },
+     {
+      "cluster": "direction",
+      "cause": "idea/features"
+     },
+     {
+      "cluster": "ML SL",
+      "cause": "design (grid-edge selection)"
+     }
+    ],
+    "answered": [
+     "cross-asset regime lift (no)",
+     "ML ENTRY timeframe (1h)",
+     "ML SL revision (not material)"
+    ],
+    "retired": [
+     "further regime-head feature/learner and price-feature direction units (moot by answer)"
+    ],
+    "next": [
+     {
+      "node_or_unit": "served ml_entry decline decomposition",
+      "decision_changed": "ml_entry live slot",
+      "on_pass": "keep+fix",
+      "on_fail": "demote to floor (Tier 3)",
+      "cost": "runner",
+      "premortem": "5 live closes is noise"
+     },
+     {
+      "node_or_unit": "P2-MECE-D2-regime-real-money",
+      "decision_changed": "regime head on a money leg",
+      "on_pass": "Tier-3 packet",
+      "on_fail": "advisory",
+      "cost": "runner",
+      "premortem": "too few gated trades"
+     },
+     {
+      "node_or_unit": "RQ-20261111-3a23-01 grade",
+      "decision_changed": "M23 catalog head",
+      "on_pass": "continue",
+      "on_fail": "close config",
+      "cost": "runner",
+      "premortem": "timestamp leakage"
+     }
+    ]
+   },
+   "P3": {
+    "learned": [
+     "tlt_pullback_1h confirmed (holdout +6.4 R, n 146, exp +0.044): 4th 1h ETF survivor",
+     "spy_pullback_1h not replicated (holdout -8.5 R n 95, ~1 sd)",
+     "mgc_trend_1h no_discovery on dukascopy (-122.8 R)",
+     "trend_donchian_1h / htf: structure exit was the cost (NOSX +14.5 R 3/6 folds; AD30NX +20.0 R 5/6 folds)",
+     "M22 pairs 0 of 4 at honest R scale",
+     "ict_scalp iter1: sol_5m, avax_5m found passing arms; 15m 0 of 3"
+    ],
+    "fail_diagnoses": [
+     {
+      "cluster": "spy 1h holdout",
+      "cause": "regime/window vs noise",
+      "variant": "P3-ITER3-spy-pullback-1h-regime-select-holdout"
+     },
+     {
+      "cluster": "mgc 1h",
+      "cause": "idea on proxy",
+      "variant": "entry family (research-ops)"
+     },
+     {
+      "cluster": "M22 pairs",
+      "cause": "idea at honest scale",
+      "variant": "retire case (manager)"
+     }
+    ],
+    "answered": [
+     "P3-ITER2-* (RQ-20261104-001..005)"
+    ],
+    "retired": [],
+    "next": [
+     {
+      "node_or_unit": "P3-ITER3-htf-pullback-trend-2h-ad30-holdout",
+      "decision_changed": "declare adx_min 30",
+      "on_pass": "Tier-3 proposal",
+      "on_fail": "regime family (73de-14)",
+      "cost": "runner 60 min",
+      "premortem": "holdout in weak fold"
+     },
+     {
+      "node_or_unit": "P3-ITER3-trend-donchian-1h-declared-holdout",
+      "decision_changed": "structure-free leg has edge",
+      "on_pass": "promotion proposal",
+      "on_fail": "entry family",
+      "cost": "runner 60 min",
+      "premortem": "3 of 6 folds -> no_discovery"
+     },
+     {
+      "node_or_unit": "P3-ITER3-spy-pullback-1h-regime-select-holdout",
+      "decision_changed": "SPY 1h recoverable with one filter",
+      "on_pass": "Tier-3 filter declare",
+      "on_fail": "sizing/session families",
+      "cost": "runner 90 min",
+      "premortem": "filter fits 2018-24 noise"
+     }
+    ]
+   },
+   "P4": {
+    "learned": [
+     "PPI y/y surprise -> ES 5d IC -0.316, t -3.91 (73de-19), discovery; core CPI -> TLT fail (73de-20)"
+    ],
+    "fail_diagnoses": [
+     {
+      "cluster": "core CPI TLT",
+      "cause": "idea/window",
+      "variant": "policy-regime split"
+     }
+    ],
+    "answered": [],
+    "retired": [],
+    "next": [
+     {
+      "node_or_unit": "PPI->ES placebo (research-ops)",
+      "decision_changed": "whether 73de-19 is a date artefact",
+      "on_pass": "economic rung",
+      "on_fail": "close ES twin",
+      "cost": "runner",
+      "premortem": "overlap correction under-counts clustering"
+     }
+    ]
+   },
+   "P5": {
+    "learned": [
+     "prop ML entry: 0 pass across d256/fd68 (2 indeterminate at 4h/8h); new data families oi_flow/basis/book 0 of 6 (98e3-31..38) though the data builders passed",
+     "fixed tp_r 3 on prop Donchians 1 of 5 incl. twins; GTD120 0 of 2"
+    ],
+    "fail_diagnoses": [
+     {
+      "cluster": "prop ML entry",
+      "cause": "idea, near exhaustion",
+      "variant": "family review record, not more variants"
+     }
+    ],
+    "answered": [
+     "new data families lift prop ML entry (no)"
+    ],
+    "retired": [],
+    "next": [
+     {
+      "node_or_unit": "prop ML ENTRY family review",
+      "decision_changed": "whether the line keeps receiving units",
+      "on_pass": "one powered 4h/8h read",
+      "on_fail": "closed by record",
+      "cost": "review",
+      "premortem": "an untested firm-DD label reopens it"
+     }
+    ]
+   },
+   "P6": {
+    "learned": [
+     "machinery 5 of 6 probes pass; disposition census fails: needs_review 97 (16 no owner), research-ops record gap 38 h (weekly audit)"
+    ],
+    "answered": [],
+    "retired": [],
+    "next": []
+   },
+   "P7": {
+    "learned": [
+     "4h squeeze and 4h pullback on twelve perps fail pooled (73de-17/-18); ML ENTRY 15m/4h fail"
+    ],
+    "answered": [
+     "declared rules transfer to 4h on a perp pool (no)"
+    ],
+    "retired": [],
+    "next": []
+   }
+  },
+  "tracks": {
+   "TRADING": "The money result this week is an exit result: the structure exit was a drag on 16 of 17 legs and came off 9 on 2026-11-05, turning two losing legs positive in-sample. A fourth 1h ETF survivor confirmed, but none of the four has a promotion proposal and two sit on no book. Runnable TRADING units were 0 at review time; three iteration-3 holdouts are authored here.",
+   "MODEL": "Answers, not edge: regime skill without a consumer, direction at the prior, ML SL a dev artefact, ML ENTRY at 1h only, prop ML with no signal in three new data families. 8 of 9 ML iteration units are blocked past due; the consolidation (#24897) should schedule or kill them. The served ml_entry decline is unexplained and is the most valuable open MODEL question on a live consumer."
+  },
+  "feeds": [
+   {
+    "from": "P1",
+    "to": "P2",
+    "what": "structure-OFF + tighten fails as MANAGE negative class",
+    "dest": "MANAGE head labels",
+    "state": "open"
+   },
+   {
+    "from": "P3",
+    "to": "P1",
+    "what": "exit-process survivors",
+    "dest": "PR1111-SURVIVOR-PROMOTIONS",
+    "state": "open"
+   },
+   {
+    "from": "P5",
+    "to": "P2",
+    "what": "0 of 6 new data families",
+    "dest": "P2 feature backlog",
+    "state": "recorded"
+   },
+   {
+    "from": "P4",
+    "to": "P2",
+    "what": "PPI surprise event feature",
+    "dest": "after ES placebo",
+    "state": "waiting"
+   },
+   {
+    "from": "P1",
+    "to": "P2",
+    "what": "ml_entry still declares pivot=5;sl_only while trading found structure harmful",
+    "dest": "ENTRY-EQ structure-label line (98e3-14..16)",
+    "state": "open"
+   }
+  ],
+  "surprises": [
+   "The 5e05 batch: the structure exit, adopted as a default on 2026-11-01, cost more than any lever this programme has tested, on 16 of 17 legs.",
+   "e9a1-02 graded PASS at t ~0.93 (rule t_min 0.0): a permissive confirmation bar on a MODEL unit.",
+   "c6f1-06 (iaum TP) graded confirmed on n 14 held-back trades.",
+   "qqq_pullback_1h and tlt_pullback_1h: confirmed survivors that are testing on no book (strategy_status.py)."
+  ]
+ },
+ "calls": [
+  {
+   "call": "P3-ITER3-htf-pullback-trend-2h-ad30-holdout grades PASS (confirmed)",
+   "p": 0.45,
+   "track": "TRADING",
+   "check": {
+    "command": "python3 scripts/research/queue_replenish.py --programme-state | python3 -c \"import json,sys;print([x for x in json.load(sys.stdin) if x['node']=='P3-ITER3-htf-pullback-trend-2h-ad30-holdout'])\" then the emitted unit's grading.verdict",
+    "rule": "hit iff grading.verdict == pass",
+    "resolves_when": "2026-11-18"
+   }
+  },
+  {
+   "call": "P3-ITER3-trend-donchian-1h-declared-holdout grades PASS",
+   "p": 0.25,
+   "track": "TRADING",
+   "check": {
+    "command": "same, node P3-ITER3-trend-donchian-1h-declared-holdout",
+    "rule": "hit iff grading.verdict == pass",
+    "resolves_when": "2026-11-18"
+   }
+  },
+  {
+   "call": "P3-ITER3-spy-pullback-1h-regime-select-holdout grades PASS",
+   "p": 0.25,
+   "track": "TRADING",
+   "check": {
+    "command": "same, node P3-ITER3-spy-pullback-1h-regime-select-holdout",
+    "rule": "hit iff grading.verdict == pass",
+    "resolves_when": "2026-11-18"
+   }
+  },
+  {
+   "call": ">= 1 of P2-MECE-D2/-D5/-D6 is in_queue or answered",
+   "p": 0.35,
+   "track": "MODEL",
+   "check": {
+    "command": "python3 scripts/research/queue_replenish.py --programme-state | python3 -c \"import json,sys;print([x for x in json.load(sys.stdin) if x['node'].startswith('P2-MECE-')])\"",
+    "rule": "hit iff any state in {in_queue, answered}",
+    "resolves_when": "2026-11-18"
+   }
+  },
+  {
+   "call": "ml_model overdue count in iteration_orphans.py drops below 8",
+   "p": 0.5,
+   "track": "MODEL",
+   "check": {
+    "command": "python3 scripts/research/iteration_orphans.py --legacy --json | python3 -c \"import json,sys;print(json.load(sys.stdin)['counts']['ml_model'])\"",
+    "rule": "hit iff overdue < 8",
+    "resolves_when": "2026-11-18"
+   }
+  },
+  {
+   "call": "needs_review count in next week's packet <= 60",
+   "p": 0.3,
+   "track": "INFRA",
+   "check": {
+    "command": "python3 scripts/research/research_ops_checks.py --kind programme_review --since 7d --out /tmp/c.json && python3 -c \"import json;print(json.load(open('/tmp/c.json'))['needs_review']['count'])\"",
+    "rule": "hit iff <= 60",
+    "resolves_when": "2026-11-18"
+   }
+  }
+ ],
+ "nodes_authored": [
+  "P3-ITER3-trend-donchian-1h-declared-holdout",
+  "P3-ITER3-htf-pullback-trend-2h-ad30-holdout",
+  "P3-ITER3-spy-pullback-1h-regime-select-holdout"
+ ],
+ "nodes_added": [],
+ "nodes_answered": [
+  "P3-ITER2-htf-pullback-trend-2h",
+  "P3-ITER2-trend-donchian-1h",
+  "P3-ITER2-spy-pullback-1h-holdout",
+  "P3-ITER2-tlt-pullback-1h-holdout",
+  "P3-ITER2-mgc-trend-1h-dukascopy-holdout (state answered via units RQ-20261104-001..005)"
+ ],
+ "rows_filed": [
+  "PR1111-SURVIVOR-PROMOTIONS (work store, owner manager, Tier 3)",
+  "PR1111-M22-PAIRS-RETIRE-CASE (work store, owner manager, Tier 3)"
+ ],
+ "sidecars": "all 7 programmes have a research/programmes/<NN>-*.yaml tree; none added",
+ "not_run": [
+  "trial_ledger.py --real-money-table (budget)",
+  "P2-MECE-D2/-D5/-D6 not authored here: D5 needs live refusal counts (needs_vm_data), D6 needs the served Labrador-1b model; D2 belongs with the ML consolidation lane so its consumer matches the surviving heads (#24897)",
+  "the top authoring-queue nodes P3-Q1-live-bt-stage-b (instrument row LIVE-BT-STAGE-B) and P1-Q6-* declares (Tier-3 / parity, not units) are not unit-authorable"
+ ],
+ "handoff": [
+  "MANAGER (Tier 3, due 2026-11-18): PR1111-SURVIVOR-PROMOTIONS - promotion proposals for tlt/qqq/slv/uso 1h (open since the 2026-11-04 handoff); qqq_pullback_1h and tlt_pullback_1h are testing on NO book, a demo-floor breach (OPERATING-PLAN \u00a7 2).",
+  "MANAGER (Tier 3, due 2026-11-18): PR1111-M22-PAIRS-RETIRE-CASE - per-pair retire case via config/pairs.yaml (4 of 4 FAIL at honest R scale).",
+  "MANAGER + ML-PROGRAMME-CONSOLIDATION (#24897): schedule or kill the 8 blocked ML iteration units RQ-20261101-78fc-01..08 (due 2026-11-05..11-08).",
+  "MANAGER: needs_review 97 (16 no owner; 46 on PI-20261105-WDWYHZCN-0001) and the research-ops record gap (weekly audit RESEARCH-OPS-NO-RECORD) - restore the 4x/day pass.",
+  "MANAGER (Tier 3): xrp_pullback_2h X31 TP declare proposal from RQ-20261104-c6f1-02 (+14.65 R over n 94 held-back).",
+  "RESEARCH-OPS: N0 (prior exit) holdout reads on sol_pullback_2h and mgc_pullback_1d (5e05 fold-fail legs still declaring structure_exit); holdouts for ict_scalp sol_5m (78fc-45) and avax_5m (78fc-47); PPI->ES placebo (73de-19); pooled 1d-ETF-pullback exit read.",
+  "RESEARCH-OPS: strategy-leg orphans tsmom-crypto, xsec-crypto, tsmom-etf, movement-capture, vol-premium-proxy - next iteration on each 58e4 record's named top untested lever (long-only / regime gate / dividend-adjusted / breakout entry / short-variance); harness takes a scratch data root, so author as hand units.",
+  "LTR: 5 ltr_class orphans stay with PI-20261104-SVCWDSDX-0002 / lane LTR-CLASS-GRADE.",
+  "PROP lane: a family-review record for the prop ML ENTRY line (0 of 6 new data families + price, two firms, three bar sizes)."
+ ]
+}

@@ -36,6 +36,7 @@ The read endpoints are Tier-1; the POST is Tier-2 (a DB write + notification).
 """
 from __future__ import annotations
 
+import hmac
 import asyncio
 import logging
 import os
@@ -74,7 +75,8 @@ def _require_write_token(authorization: str | None) -> None:
         raise HTTPException(status_code=401, detail="missing authorization")
     if not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=401, detail="bearer scheme required")
-    if authorization[7:].strip() != expected:
+    # Constant-time: != leaks how many leading characters matched (SEC-API-DEVICE-REGISTER-OPEN).
+    if not hmac.compare_digest(authorization[7:].strip().encode(), expected.encode()):
         raise HTTPException(status_code=401, detail="bad token")
 
 
@@ -116,12 +118,14 @@ def get_fills(account_id: str | None = None, limit: int = 100) -> dict[str, Any]
 
     limit = max(1, min(int(limit), 500))
     try:
-        from src.prop.prop_overview import annotate_trade_state
+        from src.prop.prop_overview import annotate_trade_state, attach_trade_brackets
 
         rows = prop_journal.list_fills(account_id=account_id, limit=limit)
         # rows are fill EVENTS: an opening row keeps status "open" after its trade closes (BREAKOUT-UNRECORDED-1101);
         # trade_state / trade_open_count say what the TRADE is, so a reader never counts a closed trade as open
         n_open = annotate_trade_state(rows)
+        # PROP-UI-BRACKETS-CLOSED: a closing row's own sl/tp is usually NULL; join the opening row's levels + amendments
+        attach_trade_brackets(rows, opener_lookup=lambda a, t, e: prop_journal.get_opening_fill(a, t, e))
         return {"present": bool(prop_journal.tables_present()), "count": len(rows),
                 "trade_open_count": n_open, "fills": rows}
     except Exception:  # noqa: BLE001  # allow-silent: degrade to present:false, not a 500
@@ -239,6 +243,24 @@ def get_status(account_id: str | None = None) -> dict[str, Any]:
                 "rule_distance": None}
 
 
+@router.get("/phone_steps")
+def phone_steps(account_id: str = "breakout_2", limit: int = 5, run_id: str | None = None) -> dict[str, Any]:
+    """The phone executor's step captures, LANE view (PHONE-SELF-DIAGNOSE, operator 2026-11-11: "take screenshots of
+    everything that it's doing so that it can send it back to a lane"): the newest runs (or one ``run_id``), every
+    step's seq / step / ok / note / page, whether it carries an image and whether that image is a real page or a
+    blank draw (``image_blank``; null = not checked, with ``image_check.read_state`` saying why). Same read tier as
+    ``/prop/status`` -- no image bytes and no DOM here; those stay on ``/api/diag/phone_capture_file``."""
+    from src.prop import phone_captures as pcap
+    from src.prop import phone_executor
+    acct = account_id.strip() or "breakout_2"
+    if not phone_executor.is_phone_account(acct):
+        raise HTTPException(status_code=404, detail="not a phone account")
+    try:
+        return pcap.step_view(acct, limit=limit, run_id=run_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @router.get("/overview")
 def get_overview(window: str = "7d") -> dict[str, Any]:
     from src.prop import prop_overview
@@ -303,9 +325,10 @@ async def _json_body(request: Request) -> dict[str, Any]:
 
 
 def _accepts(raw: Any) -> tuple:
-    """The app's declared capabilities (``["amend"]``); anything else is ignored."""
+    """The app's declared capabilities (``["amend"]``); anything else is ignored. ``reduce`` = the build executes a
+    partial close (PHONE-CLOSE-CARDS); without it a reduce is refused at claim, never served."""
     items = raw if isinstance(raw, list) else str(raw or "").split(",")
-    return tuple(sorted({str(x).strip().lower() for x in items} & {"amend", "cancel", "close"}))
+    return tuple(sorted({str(x).strip().lower() for x in items} & {"amend", "cancel", "close", "reduce"}))
 
 
 @router.post("/phone/claim")
@@ -345,6 +368,11 @@ async def phone_pending(accepts: str = "",
     if expired:
         await asyncio.to_thread(pe.alert_expired, dev.account_id, expired)
     from src.prop import phone_drill
+    if pe.kill_switch(dev.account_id) == "off":
+        # PHONE-OFF-QUIET (operator 2026-11-12: "it keeps on popping up in the middle of me trying to record a
+        # message"): with the kill switch off the app has nothing to do, so it is told nothing that would bring it
+        # forward -- no tickets, no stale-status age (the login-check wake), no drill -- and is told the switch is off.
+        return {"ok": True, "pending": 0, "status_age_hours": None, "drill": None, "kill_switch": "off"}
     return {"ok": True, "pending": await asyncio.to_thread(pe.pending_count, dev, None, _accepts(accepts)),
             "status_age_hours": await asyncio.to_thread(pe.account_status_age_hours, dev.account_id),
             # PHONE-EXEC-OBSERVABLE-1018: a REHEARSAL drill waiting for this device's account ({id} or null)

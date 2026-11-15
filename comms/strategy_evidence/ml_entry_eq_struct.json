@@ -1,9 +1,9 @@
 {
  "schema_version": 2,
  "strategy": "ml_entry_eq_struct",
- "symbol": "173-ETF Alpaca liquidity pool (113 symbols traded in the window); the leg's staged rollout list is a subset of the pool",
+ "symbol": "173-ETF Alpaca liquidity pool (113 symbols traded in the window); the leg trades the whole pool minus pool_exclude (TQQQ, GLD) since row ML-ENTRY-EQ-STRUCT-FULL-POOL",
  "timeframe": "1h (decision at every 4th closed RTH bar)",
- "config_fingerprint": "sha256:070b60e4e25102e0e4c5f2798150f39f",
+ "config_fingerprint": "sha256:e71a718bef0e064a85a24c89174224b8",
  "basis": "heldout_window",
  "coverage_state": "measured",
  "fidelity": "faithful",
@@ -53,5 +53,12 @@
   "booster_sha256": "0afc49948a41671add8880d180e8924c45b8c087ceec496e2359869fbaf199d3",
   "reproduced_by": "research-script-run 42492596157 (RQ-20261108-a7d3-01)"
  },
- "error": null
+ "error": null,
+ "fingerprint_restamped": {
+  "at": "2026-11-11",
+  "from": "sha256:070b60e4e25102e0e4c5f2798150f39f",
+  "to": "sha256:e71a718bef0e064a85a24c89174224b8",
+  "row": "ML-ENTRY-EQ-STRUCT-FULL-POOL",
+  "why": "universe-only change: symbols widened from the 9-ETF rollout stage to the artifact's pool_symbols minus pool_exclude, plus the pool_scored dispatch key. Model, tau, bracket and structure_exit are unchanged, and the evidence population IS this pool (RQ-20261107-98e3-06, pooled over the 173-ETF POOL_RULE). Operator 2026-11-11 ~09:20Z: \"we want it to be trading everything it was trained on.\""
+ }
 }

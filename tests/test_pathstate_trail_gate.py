@@ -52,7 +52,7 @@ def test_gate_features_are_the_trade_states_features():
     for t, s in by_t.items():
         st = psg.state_at(rows[:t + 1], t, 6)          # ONLY rows 0..t are visible
         assert st is not None
-        for k in ("er_w", "chop_w", "atr_ratio_t", "dist_atr_t", "vol_ratio_t", "open_r", "peak_r"):
+        for k in ("er_w", "chop_w", "atr_ratio_t", "dist_atr_t", "vol_ratio_t", "vel_w", "open_r", "peak_r"):
             assert st[k] == s[k], (t, k)
 
 
@@ -77,6 +77,36 @@ def _run_gate(closes, **kw):
     for row in _path(closes):
         fired.append(g.on_bar_close(row))
     return g, fired
+
+
+# ── vel: the impulse feature (LTR-FAST-MOVE-LOCKIN) ──────────────────────────
+IMPULSE = [0.1, 0.2, 0.1, 0.2, 0.3, 0.2, 1.4, 2.6, 2.7, 2.6]    # quiet, then +2.4 R in two closes
+
+
+def test_vel_is_the_r_gained_over_the_window_from_rows_up_to_t():
+    rows = _path(IMPULSE)
+    st = psg.state_at(rows[:8], 7, 3)               # closes 0.3 (t=4) -> 2.6 (t=7)
+    assert st["vel_w"] == pytest.approx(2.6 - 0.3)
+    assert psg.state_at(rows[:6], 5, 3)["vel_w"] == pytest.approx(0.2 - 0.1)    # closes t=2 -> t=5
+
+
+def _vel_seen(closes):
+    g = gate.build_gate("vel", 3, "gt", 1.0, 1.0, 2.5, "", 6, "", 0.0, 0.0, "", 6, "", 0.0, 0, 0.0, 1.0)
+    g.start()
+    seen = []
+    for row in _path(closes):
+        g.on_bar_close(row)
+        seen.append(g.tight(5.0))
+    return seen
+
+
+def test_trail_gate_on_vel_tightens_only_after_an_impulse():
+    seen = _vel_seen(IMPULSE)
+    # read at the impulse bar's own close (t=6: 1.4 - 0.2 = 1.2 R over 3 closes), binding from the next bar
+    assert seen[:6] == [5.0] * 6 and seen[6] == 2.5
+    slow = [0.25 * (i + 1) for i in range(12)]            # +0.75 R per 3 closes: a trend, never an impulse > 1 R
+    assert min(_vel_seen(slow)) == 5.0
+    assert "vel" in gate.FEATURES and gate.DEFAULT_OP["vel"] == "lt"
 
 
 def test_trail_gate_tightens_in_chop_and_not_in_a_clean_trend():

@@ -200,6 +200,8 @@ jobs:
 
       - name: Is a digest due?
         id: due
+        env:
+          DASHBOARD_API_TOKEN: ${{ secrets.DASHBOARD_API_TOKEN }}   # UI-OAUTH-SIGNIN: GET service bearer for the ledger read
         run: python3 scripts/ops/digest_due.py --emit-github-output
 
       # RESOLVED HERE so the digest job and the gate cannot disagree about the
@@ -283,6 +285,8 @@ jobs:
       # before the wait cannot describe the world after it.
       - name: Still due?
         id: recheck
+        env:
+          DASHBOARD_API_TOKEN: ${{ secrets.DASHBOARD_API_TOKEN }}   # UI-OAUTH-SIGNIN: GET service bearer for the ledger read
         run: python3 scripts/ops/digest_due.py --emit-github-output
 
       - name: Resolve the window

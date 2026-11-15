@@ -305,7 +305,10 @@ def self_test() -> int:  # noqa: C901
         # block), and strategies.yaml goes through this module's own loader.
         from src.config.accounts_loader import load_accounts_dict  # noqa: PLC0415
         acc = load_accounts_dict() or {}
-        strat = load_strategies_cfg()
+        # The STATIC fetch set: pool_scored legs' symbols are fetched by their own refresher and ticked only when picked (row
+        # ML-ENTRY-EQ-STRUCT-FULL-POOL), so they are excluded exactly as src/main.py::_resolve_tick_symbols excludes them.
+        from src.config.symbol_sets import tick_strategies_cfg  # noqa: PLC0415
+        strat = tick_strategies_cfg(load_strategies_cfg())
         diverged = []
         for name, cfg in acc.items():
             cfg = cfg or {}

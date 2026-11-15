@@ -46,4 +46,36 @@
 ict-bot.duckdns.org {
 	encode zstd gzip
 	reverse_proxy localhost:8001
+
+	# Access log (SITE-AUTH step (iii), 2026-11-11). Before this the site block
+	# had no `log` directive, so Caddy wrote warnings only and no consumer could
+	# be inventoried from evidence (docs/design/site-auth-consumer-inventory-2026-11.md
+	# section 3). A site `log` gets its OWN logger, so the global filter above does
+	# not cover it: the same credential headers are deleted here, plus the
+	# credential-bearing query keys (the single-use WS ticket and any token
+	# param). Output: stderr -> the caddy.service journal, read through the diag
+	# relay (/api/diag/journalctl?unit=caddy.service), with no new file to rotate.
+	# install_caddy.sh runs `caddy validate` and refuses to reload on failure.
+	log {
+		output stderr
+		format filter {
+			wrap json
+			fields {
+				request>headers>X-Diag-Token delete
+				request>headers>X-Work-Store-Token delete
+				request>headers>Authorization delete
+				request>headers>Proxy-Authorization delete
+				request>headers>Cookie delete
+				request>headers>X-Api-Key delete
+				request>headers>X-Goog-Api-Key delete
+				resp_headers>Set-Cookie delete
+				request>uri query {
+					delete ticket
+					delete token
+					delete access_token
+					delete key
+				}
+			}
+		}
+	}
 }

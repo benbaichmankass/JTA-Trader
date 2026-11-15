@@ -9,7 +9,7 @@ baseline:
   record: comms/strategy_evidence/mgc_pullback_1d.json
   net_r: 3.8725
   n: 8
-  fidelity: approximate
+  fidelity: faithful
   rule_verdict: pass
 attribution:
   read_state: measured
@@ -65,7 +65,7 @@ attribution:
       gross_r: 4.088
 manifest:
   entry: tested
-  exit: untested
+  exit: tested
   filter: untested
   regime_gating: untested
   timeframe: untested
@@ -110,6 +110,168 @@ levers:
       best_delta_r_per_trade: -0.2593
       fold_stability: 0.125
       reading: every tested value is worse than the baseline
+  exit:
+    trail_decay_stall_bars:
+      tests:
+      - value: '20'
+        baseline_value: 'off'
+        arm: D20
+        unit: RQ-20261113-e44a-02
+        window: 2018-06-01..2026-11-12
+        n: 70
+        net_r: 31.5938
+        baseline_n: 59
+        baseline_net_r: 33.0635
+        delta_net_r: -1.4697
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 7.6071
+        verdict: pass
+        joint_change: true
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: -0.0249
+      fold_stability: 0.5
+      reading: every tested value is worse than the baseline
+    trail_decay_tight_mult:
+      tests:
+      - value: '1.5'
+        baseline_value: 'off'
+        arm: D20
+        unit: RQ-20261113-e44a-02
+        window: 2018-06-01..2026-11-12
+        n: 70
+        net_r: 31.5938
+        baseline_n: 59
+        baseline_net_r: 33.0635
+        delta_net_r: -1.4697
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 7.6071
+        verdict: pass
+        joint_change: true
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: -0.0249
+      fold_stability: 0.5
+      reading: every tested value is worse than the baseline
+    timeout_bars:
+      tests:
+      - value: '20'
+        baseline_value: 'off'
+        arm: T20
+        unit: RQ-20261113-e44a-02
+        window: 2018-06-01..2026-11-12
+        n: 85
+        net_r: 30.7279
+        baseline_n: 59
+        baseline_net_r: 33.0635
+        delta_net_r: -2.3356
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 8.2914
+        verdict: pass
+        joint_change: false
+      - value: '30'
+        baseline_value: 'off'
+        arm: T30
+        unit: RQ-20261113-e44a-02
+        window: 2018-06-01..2026-11-12
+        n: 73
+        net_r: 29.5069
+        baseline_n: 59
+        baseline_net_r: 33.0635
+        delta_net_r: -3.5566
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 6.5771
+        verdict: pass
+        joint_change: false
+      - value: '40'
+        baseline_value: 'off'
+        arm: T40
+        unit: RQ-20261113-e44a-02
+        window: 2018-06-01..2026-11-12
+        n: 69
+        net_r: 30.9987
+        baseline_n: 59
+        baseline_net_r: 33.0635
+        delta_net_r: -2.0648
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 8.7077
+        verdict: pass
+        joint_change: false
+      shape: noisy
+      points: 3
+      best_delta_r_per_trade: -0.035
+      fold_stability: 0.333
+      reading: every tested value is worse than the baseline
+    atr_stop_mult:
+      tests:
+      - value: '1.875'
+        baseline_value: '1.5'
+        arm: atr_stop_mult_hi
+        unit: RQ-20261106-023
+        window: 2020-11-02..2026-11-06
+        n: 45
+        net_r: 15.3976
+        baseline_n: 46
+        baseline_net_r: 16.0541
+        delta_net_r: -0.6565
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 2.8819
+        verdict: fail
+        joint_change: false
+      - value: '1.125'
+        baseline_value: '1.5'
+        arm: atr_stop_mult_lo
+        unit: RQ-20261106-023
+        window: 2020-11-02..2026-11-06
+        n: 47
+        net_r: 18.7045
+        baseline_n: 46
+        baseline_net_r: 16.0541
+        delta_net_r: 2.6504
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 2.979
+        verdict: fail
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: 0.0576
+      fold_stability: 0.875
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+    tp_r:
+      tests:
+      - value: '7.5'
+        baseline_value: '6.0'
+        arm: tp_r_hi
+        unit: RQ-20261106-023
+        window: 2020-11-02..2026-11-06
+        n: 46
+        net_r: 16.0541
+        baseline_n: 46
+        baseline_net_r: 16.0541
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 2.9715
+        verdict: fail
+        joint_change: false
+      - value: '4.5'
+        baseline_value: '6.0'
+        arm: tp_r_lo
+        unit: RQ-20261106-023
+        window: 2020-11-02..2026-11-06
+        n: 46
+        net_r: 16.0541
+        baseline_n: 46
+        baseline_net_r: 16.0541
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 2.9715
+        verdict: fail
+        joint_change: false
+      shape: flat
+      points: 2
+      best_delta_r_per_trade: 0.0
+      fold_stability: 1.0
+      reading: no response at the tested values
   other:
     structure_exit:
       tests:

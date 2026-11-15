@@ -1,0 +1,13 @@
+/var/log/syslog
+{
+	rotate 7
+	daily
+	maxsize 200M
+	missingok
+	notifempty
+	compress
+	delaycompress
+	postrotate
+		/usr/lib/rsyslog/rsyslog-rotate
+	endscript
+}

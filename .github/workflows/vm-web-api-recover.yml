@@ -56,8 +56,8 @@ on:
         description: "Why this run is happening (audit only)."
         required: false
         default: "manual operator dispatch"
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [vm-web-api-recover]
 
 permissions:
   contents: read
@@ -82,17 +82,17 @@ permissions:
 # traffic can no longer block it. `workflow_dispatch` runs (no issue) fall
 # back to run_id (always-unique group = unrestricted).
 concurrency:
-  group: vm-web-api-recover-${{ github.event.issue.number || github.run_id }}
+  group: vm-web-api-recover-${{ github.event.client_payload.issue.number || github.run_id }}
   cancel-in-progress: false
 
 jobs:
   recover:
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       (github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'vm-web-api-recover'))
+      (github.event_name == 'repository_dispatch' &&
+       (github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'vm-web-api-recover'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -213,7 +213,7 @@ jobs:
       # ────────────────────────────────────────────────────────────
 
       - name: Reply to issue with success
-        if: github.event_name == 'issues' && success()
+        if: github.event_name == 'repository_dispatch' && success()
         uses: actions/github-script@v7
         env:
           EXIT_CODE: ${{ steps.exec.outputs.exit_code }}
@@ -238,19 +238,19 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               body
             });
             await github.rest.issues.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               state: 'closed',
               state_reason: 'completed'
             });
 
       - name: Reply to issue with failure
-        if: github.event_name == 'issues' && failure()
+        if: github.event_name == 'repository_dispatch' && failure()
         uses: actions/github-script@v7
         env:
           EXIT_CODE: ${{ steps.exec.outputs.exit_code }}
@@ -277,13 +277,13 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               body
             });
             await github.rest.issues.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               state: 'closed',
               state_reason: 'not_planned'
             });

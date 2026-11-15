@@ -64,8 +64,17 @@ def test_inbox_unserved_sections_say_could_not_look_never_zero():
     alerts = out["sections"]["alerts"]
     assert alerts["read_state"] == "could_not_look" and alerts["count"] is None
     assert out["sections"]["decisions_checklist"]["read_state"] == "read"
-    wi = _call("work_items")["result"]["structuredContent"]
-    assert wi["read_state"] == "could_not_look" and wi["count"] is None
+
+
+def test_work_items_upstream_down_is_could_not_look_never_empty(monkeypatch):
+    from src.console_connector import tabs
+
+    def down(*a):
+        raise OSError("connection refused")
+    monkeypatch.setattr(tabs, "FETCH", down)
+    monkeypatch.setattr(server, "CACHE", data.TTLCache())
+    wi = _call("work_items", {"view": "due", "limit": 3})["result"]["structuredContent"]
+    assert wi["read_state"] == "could_not_look" and wi["count"] is None and wi["items"] is None
 
 
 def test_shared_cache_builds_each_key_once_per_ttl():

@@ -26,7 +26,7 @@ neither the fetch/harness half nor the record half:
    `Database(db_path=...)` (on a runner there is no journal to copy).
 
 **Roster — VERIFIED against the pinned pooled manifest**
-`ml/configs/setup-candidates-metalabel-p2pool-v1.yaml` (M23 P2, `symbol_scope:
+`ml/configs/retired/setup-candidates-metalabel-p2pool-v1.yaml` (M23 P2, `symbol_scope:
 all`, `split_strategy: live_holdout`): the 3-strategy harness roster replayed
 per symbol. The manifest's build command encodes it explicitly
 (`market_raw_paths=<BTC 1h>,<ETH 1h>,<SOL 1h>` + `backtest_trades_db=<tmp.db>`).
@@ -66,7 +66,7 @@ _REPO = Path(__file__).resolve().parents[2]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-# Roster VERIFIED against ml/configs/setup-candidates-metalabel-p2pool-v1.yaml
+# Roster VERIFIED against ml/configs/retired/setup-candidates-metalabel-p2pool-v1.yaml
 # (2026-08-02). Re-verify against the pinned manifest before a run (docstring).
 DEFAULT_ROSTER = ("trend_donchian", "squeeze_breakout_4h", "htf_pullback_trend_2h")
 DEFAULT_SYMBOLS = ("BTCUSDT", "ETHUSDT", "SOLUSDT")
@@ -156,7 +156,7 @@ def run(args: argparse.Namespace) -> int:
     payload = {
         "generated_at": generated_at, "run_tag": run_tag, "db": str(db_path),
         "days": args.days, "roster": roster, "symbols": symbols,
-        "manifest": "ml/configs/setup-candidates-metalabel-p2pool-v1.yaml",
+        "manifest": "ml/configs/retired/setup-candidates-metalabel-p2pool-v1.yaml",
         "legs_total": len(legs), "legs_ok": len(ok),
         "legs_failed": len(legs) - len(ok),
         "total_recorded_is_backtest_rows": total_recorded, "legs": legs,

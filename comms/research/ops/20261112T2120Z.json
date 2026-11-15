@@ -1,0 +1,275 @@
+{
+  "run": "RESEARCH-OPS-20261112-2050",
+  "finished_at": "2026-11-12T21:20:00Z",
+  "by": "session_01AFoLuFRESEARCHOPS (dispatched by manager session_01AFoLuLyarNRcy3nziCep2U)",
+  "floor": 25,
+  "floor_basis": "computed_floor(fired_24h 15) -> max(25, 12)",
+  "authoring_queue_depth": null,
+  "idle_backends": [
+    "github_runner_data",
+    "kaggle"
+  ],
+  "needs_review_triaged": 0,
+  "needs_review_left": 102,
+  "throughput": {
+    "runnable_before": 87,
+    "runnable_after": 89,
+    "queued": 306,
+    "fired_24h": 15,
+    "results_landed_24h": 30,
+    "hours_since_last_dispatch": 3.1,
+    "idle_alarm": false,
+    "result_files_unreadable": 0
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok (last dispatch 3.1 h ago, dispatcher_age_h 1.4 <= 3)",
+    "collector": "ok (collector_age_h 0.35)",
+    "stranded_stamp_prs": null,
+    "incident": null,
+    "read_state": "tree_only for workflow runs and stranded PRs (github-actions MCP failed to connect; not listed)"
+  },
+  "results_read": {
+    "pass": 2,
+    "fail": 0,
+    "indeterminate": 0,
+    "units": [
+      "RQ-20261111-203c-03 (qqq_pullback_1h S1 long-only, holdout n=38 net +11.56 R)",
+      "RQ-20261111-203c-02 (tlt_pullback_1h arm A, holdout n=111 net +4.48 R)"
+    ],
+    "note": "verdict.json of both opened; 18 e35 recurring rows in research_disposition --unread-only (power accruing/infeasible) are left to the grader"
+  },
+  "unlocked": [],
+  "retired": [
+    {
+      "unit": "RQ-20261018-ef5d-10",
+      "reason": "config-level: blocked 25 d on TF-ORB-COST-STACK (queued, no owner, nothing scheduled); family opening-range breakout stays open"
+    },
+    {
+      "unit": "RQ-20261018-ef5d-11",
+      "reason": "config-level: blocked 25 d on TF-IGNITION-HARNESS (queued, no owner, nothing scheduled); family momentum ignition stays open"
+    }
+  ],
+  "blocked_over_age_audit": {
+    "population": "status: blocked units with RQ id date > 21 d old (research_slo blocked_age_days 21), 5 before, 3 after; SLO threshold untouched",
+    "dispositions": {
+      "RQ-20261009-900": "kept blocked: lever TP-PREDICT-GRADER overdue since 11-10, was owner-less -> owner manager, due 11-19 (grader must implement the registered S1-S3 x 5-quantile x 3-split x B1-B4 rule; not a pass-sized build)",
+      "RQ-20261009-901": "kept blocked: waits on 900 + a TP overlay lever; same row/owner",
+      "RQ-20261017-9582-01": "kept blocked: PAIRS-R-SCALE done but --entry-trigger arm in backtest_pairs.py does not exist (0 grep hits); filed PAIRS-ENTRY-TRIGGER-LEVER once, owner manager, due 11-26",
+      "RQ-20261018-ef5d-10": "retired (config level)",
+      "RQ-20261018-ef5d-11": "retired (config level)"
+    }
+  },
+  "levers_filed": [
+    {
+      "lever": "backtest_pairs.py --entry-trigger {rolling,fixed_beta}",
+      "ref": "PAIRS-ENTRY-TRIGGER-LEVER"
+    }
+  ],
+  "units_authored": [
+    "RQ-20261112-c1b4-01",
+    "RQ-20261112-c1b4-02"
+  ],
+  "followups_filed": [
+    "TP-PREDICT-GRADER re-owned",
+    "TF-ORB-COST-STACK/TF-IGNITION-HARNESS noted"
+  ],
+  "authoring": {
+    "queue_depth": null,
+    "nodes_drafted": 0,
+    "skipped_on_purpose": true,
+    "note": "no plan node drafted; the two units are iteration units (core mandate), not plan nodes"
+  },
+  "checks": {
+    "packet_as_of": "2026-11-12T20:50:39Z",
+    "since": "20261112T1530Z",
+    "runnable_by_track": {
+      "TRADING": 50,
+      "MODEL": 27,
+      "INFRA": 10
+    },
+    "fails_without_next": 0,
+    "needs_review": 102,
+    "followups": {
+      "graded:fail": 10,
+      "graded:indeterminate": 3,
+      "graded:pass": 6,
+      "not_fired:queued": 8
+    },
+    "slo_not_ok": [
+      "fires_24h 7 (>=24)",
+      "grade_latency_p90_d 6 (<=2)",
+      "theme_share_min_ratio 0.15 (>=0.5)",
+      "hold_pr_wait_h could not look"
+    ],
+    "could_not_look": [
+      "workflow runs / stranded stamp PRs (github-actions MCP down)",
+      "hold_pr_wait_h"
+    ]
+  },
+  "iteration": {
+    "results_attributed": {
+      "count": 2,
+      "of": 2,
+      "note": "the two orphan-leg PASSes landed since the last record, plus lever_map --backfill over all committed results (15 research/levers files changed/added, committed this time)"
+    },
+    "map_entries_added": "15 lever-map files updated (qqq_pullback_1h side_filter long: S1 n=131 net +47.3 vs A n=214 net +31.0, 4/4 folds >= baseline; tlt_pullback_1h and 8 others refreshed; 5 new subject files)",
+    "next_tests_from_map": 2,
+    "lever_coverage": {
+      "strategy_leg": {
+        "covered": "52 of 59 subjects have a live iteration (iteration_orphans.py)"
+      }
+    },
+    "orphans_before": {
+      "strategy_leg": 7,
+      "ml_model": 1,
+      "ltr_class": 5
+    },
+    "orphans_after": {
+      "strategy_leg": 5,
+      "ml_model": 1,
+      "ltr_class": 5
+    },
+    "orphans_named_left": [
+      "tsmom-crypto",
+      "xsec-crypto",
+      "tsmom-etf",
+      "movement-capture",
+      "vol-premium-proxy",
+      "ml-eth-vol-head",
+      "ltr-partial-close",
+      "ltr-widen-sl",
+      "ltr-sl-to-structure",
+      "ltr-tp-extend",
+      "ltr-tp-pull-in"
+    ],
+    "results_iterated": [
+      {
+        "result": "RQ-20261111-203c-03",
+        "verdict": "pass",
+        "subject": "qqq_pullback_1h",
+        "next": "RQ-20261112-c1b4-01",
+        "attempt": 2
+      },
+      {
+        "result": "RQ-20261111-203c-02",
+        "verdict": "pass",
+        "subject": "tlt_pullback_1h",
+        "next": "RQ-20261112-c1b4-02",
+        "attempt": 2
+      }
+    ],
+    "advanced": 2,
+    "survivors": [],
+    "overdue": [
+      "RQ-20261026-e535-03 (claude_desk)",
+      "RQ-20261101-78fc-11 (e4_oi_shock_1h)",
+      "78fc-01/02/05/06 ml-* iterations, 78fc-34/20/52/53/44/46/37/54 leg iterations (iteration_orphans.py OVERDUE; not re-dated this pass)"
+    ],
+    "retired_by_review": []
+  },
+  "prior_calls_scorecard": [
+    {
+      "call": "dispatcher_age_h returns to <= 3 within 24 h",
+      "p": 0.7,
+      "check_rerun": "research_slo.py | grep dispatcher_age_h",
+      "outcome": "hit (1.45 h at 20:51Z)",
+      "action_happened": false
+    },
+    {
+      "call": "iteration_orphans.py still lists qqq_pullback_1h and tlt_pullback_1h as orphans unless a manager lane iterates them",
+      "p": 0.8,
+      "check_rerun": "iteration_orphans.py --levers | grep orphan",
+      "outcome": "hit (both orphans at pass start; no manager lane iterated them) -- now covered by this pass",
+      "action_happened": false
+    }
+  ],
+  "analysis": {
+    "rows_opened": [
+      "RQ-20261111-203c-03 verdict.json",
+      "RQ-20261111-203c-02 verdict.json",
+      "RQ-20261017-9582-01",
+      "RQ-20261009-900"
+    ],
+    "trading": {
+      "meaning": [
+        "qqq_pullback_1h: S1 (long-only) was chosen from 3 arms on 2020-07..2025-03 and read once on the held-back span: n=38, +11.56 R (0.30 R/trade), so the discovery longs-vs-shorts split from the lever map (+18.0 vs -7.2 R) held out of sample; the arm is a LEAD (non-A, 1 of 3 arms), and carries raw --side-filter flags the config fingerprint cannot see, so no evidence record can bind to it yet -- fingerprint binding is a gap to close before any Tier-3 note.",
+        "tlt_pullback_1h: arm A read once on held-back n=111 at +4.48 R (0.04 R/trade) while full-window A is +79.9 R net vs +112.3 R fee-only (cost takes 29% of fee-only edge); so the earlier 365 d FAIL (cost 3.5x gross) was a window artifact, but a 0.04 R/trade held-back edge is thin enough that a second disjoint window is the proportionate next read, not a promotion."
+      ],
+      "fail_diagnoses": [],
+      "next_tests": [
+        {
+          "id_or_node": "RQ-20261112-c1b4-01",
+          "decision_changed": "whether a qqq long-only side-filter Tier-3 note is worth filing",
+          "on_pass": "LEAD note on the owning row (after fingerprint binding)",
+          "on_fail": "S1 closed on this window only; map stays open on exit/regime levers",
+          "premortem": "pre-dev window overlaps 78fc-25's discovery for arm A and n may be < 25 (INDETERMINATE, extend earlier)"
+        },
+        {
+          "id_or_node": "RQ-20261112-c1b4-02",
+          "decision_changed": "whether tlt_pullback_1h's edge survives disjoint history at full cost",
+          "on_pass": "keep leg on its Stage-1 floor; cost-share lever next",
+          "on_fail": "closes arm A on this window; frequency/cost levers next",
+          "premortem": "2018-2020 rates regime differs; low n"
+        }
+      ]
+    },
+    "model": {
+      "meaning": [],
+      "fail_diagnoses": [],
+      "next_tests": []
+    },
+    "cross_track": [
+      {
+        "from": "TRADING",
+        "finding": "a side-filter that holds out of sample is a candidate label/feature for ml_entry on equity ETF pullbacks",
+        "feeds": "no node yet: noted for the next ML-review"
+      }
+    ],
+    "surprises": [
+      "The previous record's 85% call 'strategy_leg orphans stays 0' had missed; the orphans were the product of two same-day PASSes with no follow-up authored, i.e. a PASS creates an orphan until its confirmation unit exists."
+    ]
+  },
+  "calls": [
+    {
+      "call": "RQ-20261112-c1b4-01 and -02 both dispatch and land a measured row by 2026-11-14",
+      "p": 0.7,
+      "check": {
+        "command": "ls research/results/RQ-20261112-c1b4-01 research/results/RQ-20261112-c1b4-02",
+        "rule": "both exist with read_state measured",
+        "resolves_when": "2026-11-14"
+      }
+    },
+    {
+      "call": "RQ-20261112-c1b4-01 grades PASS (S1 long-only holds on 2018-06..2020-06)",
+      "p": 0.45,
+      "check": {
+        "command": "python3 scripts/research/queue_grade.py --health",
+        "rule": "unit verdict pass",
+        "resolves_when": "2026-11-16"
+      }
+    },
+    {
+      "call": "strategy_leg orphans fall to 0 by the next pass only if a lane iterates tsmom-crypto/xsec-crypto/tsmom-etf/movement-capture/vol-premium-proxy",
+      "p": 0.2,
+      "check": {
+        "command": "python3 scripts/research/iteration_orphans.py | grep -c '^orphan *strategy_leg'",
+        "rule": "0",
+        "resolves_when": "2026-11-14"
+      }
+    }
+  ],
+  "not_run": [
+    "A workflow-run list and stranded-PR check (github-actions MCP down; tree read only)"
+  ],
+  "limits": [
+    "next_rq_id.py --fetch hung (no network git fetch); ids minted from the local hash scheme without --fetch",
+    "needs_review triage not done this pass (UNOWNED 3 / UNGRADED 1 per health line left to the grader)"
+  ],
+  "handoff": [
+    "manager: 5 strategy_leg orphans (tsmom-crypto, xsec-crypto, tsmom-etf, movement-capture, vol-premium-proxy), ml-eth-vol-head and 5 ltr classes need iterations authored from a diagnosis; this pass reached only the two with fresh PASSes",
+    "manager: TP-PREDICT-GRADER (due 11-19), PAIRS-ENTRY-TRIGGER-LEVER (11-26), TF-ORB-COST-STACK, TF-IGNITION-HARNESS need a build lane",
+    "manager: qqq S1 --side-filter is invisible to the config fingerprint (raw_flag_warning); an evidence record needs that binding first",
+    "SLO breaches fires_24h 7, grade_latency_p90_d 6, theme_share_min_ratio 0.15 are red and due; dispatcher itself is healthy (1.4 h)",
+    "pipeline.py --due routing is the manager's"
+  ]
+}

@@ -84,8 +84,8 @@ on:
         required: false
         type: boolean
         default: false
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [trainer-capture-watch-now]
 
 permissions:
   contents: read
@@ -100,10 +100,10 @@ jobs:
     if: |
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       (github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'trainer-capture-watch-now'))
+      (github.event_name == 'repository_dispatch' &&
+       (github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'trainer-capture-watch-now'))
     runs-on: ubuntu-latest
     # Above commit-to-main's 30-minute verify-merged budget, or the job dies
     # mid-wait and the receipt never lands (the reason research-queue dispatch

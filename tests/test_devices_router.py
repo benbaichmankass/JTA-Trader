@@ -9,7 +9,8 @@ Key invariants:
   than creating a duplicate row.
 - Response never echoes the full FCM token (only its last-8 suffix).
 - ``DASHBOARD_API_TOKEN`` gates list / delete / patch when set;
-  register stays open so a fresh app can register on first launch.
+  register needs the same bearer and fails closed (503) when it is unset
+  (SEC-API-DEVICE-REGISTER-OPEN, 2026-11-11).
 - Subscription value validation (list / dict / null only).
 """
 from __future__ import annotations
@@ -37,9 +38,40 @@ def isolated_db(
     return db
 
 
+_TOKEN = "t3st-service-token"
+
+
 @pytest.fixture
-def client() -> TestClient:
+def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
+    # POST /register needs the service bearer (SEC-API-DEVICE-REGISTER-OPEN), so
+    # the default client carries it; the auth tests below build their own.
+    monkeypatch.setenv("DASHBOARD_API_TOKEN", _TOKEN)
+    return TestClient(api_main.app, raise_server_exceptions=False,
+                      headers={"Authorization": f"Bearer {_TOKEN}"})
+
+
+@pytest.fixture
+def anon(monkeypatch: pytest.MonkeyPatch) -> TestClient:
+    monkeypatch.setenv("DASHBOARD_API_TOKEN", _TOKEN)
     return TestClient(api_main.app, raise_server_exceptions=False)
+
+
+def test_register_without_bearer_is_401_and_writes_nothing(
+    anon: TestClient, client: TestClient, isolated_db: Path
+) -> None:
+    assert anon.post("/api/bot/devices/register", json={"token": "x" * 20}).status_code == 401
+    bad = anon.post("/api/bot/devices/register", json={"token": "x" * 20},
+                    headers={"Authorization": "Bearer wrong"})
+    assert bad.status_code == 401
+    assert client.get("/api/bot/devices").json()["count"] == 0
+
+
+def test_register_fails_closed_when_token_unset(
+    isolated_db: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("DASHBOARD_API_TOKEN", raising=False)
+    c = TestClient(api_main.app, raise_server_exceptions=False)
+    assert c.post("/api/bot/devices/register", json={"token": "x" * 20}).status_code == 503
 
 
 # ---------------------------------------------------------------------------

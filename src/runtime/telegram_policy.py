@@ -31,7 +31,7 @@ import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Mapping, Optional
+from typing import Any, Dict, List, Mapping, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -105,11 +105,118 @@ def recurring_off(kind: str, policy: Optional[Mapping] = None) -> bool:
     return str(kind or "") in set(pol.get("recurring_off") or [])
 
 
-def digest_event_lines(msgs: list, policy: Optional[Mapping] = None) -> list:
-    """The attention messages of an hourly digest that are EVENTS (still sent)."""
+def digest_event_lines(msgs: list, policy: Optional[Mapping] = None,
+                       accounts: Optional[Mapping] = None) -> list:
+    """The attention messages of an hourly digest that are EVENTS (still sent).
+
+    TELEGRAM-TRIM phase 3 (operator popup 2026-11-10 "Keep b, trim c"): a soak-state message (prefix in
+    ``digest_paper_soak_prefixes``, default ``🧪``) is dropped unless it names an account that is NOT testing
+    paper. Soaks run on the Stage-1 testing-paper floor only (OPERATING-PLAN § 2), so these lines are paper
+    noise; they stay in the ledger / UI (the digest itself is recorded)."""
     pol = load_policy() if policy is None else policy
     drop = tuple(pol.get("digest_event_drop_prefixes") or ("📋", "🔎"))
-    return [m for m in (msgs or []) if m and not str(m).startswith(drop)]
+    soak = tuple(pol.get("digest_paper_soak_prefixes") or ())
+    out = []
+    for m in (msgs or []):
+        if not m or str(m).startswith(drop):
+            continue
+        if soak and str(m).startswith(soak):
+            named = accounts_named(str(m), accounts)
+            if not any(account_class(a, accounts) != TESTING_PAPER for a in named):
+                continue
+        out.append(m)
+    return out
+
+
+def accounts_named(text: str, accounts: Optional[Mapping] = None) -> List[str]:
+    """The configured account ids that appear in *text* as whole tokens (``alpaca_paper`` never matches inside
+    ``alpaca_paper_x``). Order-free; empty when none is named."""
+    import re
+
+    accs = _accounts() if accounts is None else accounts
+    t = str(text or "")
+    return sorted(a for a in accs if re.search(r"(?<![A-Za-z0-9_])" + re.escape(str(a)) + r"(?![A-Za-z0-9_])", t))
+
+
+# ── C. paper-account alerts: the manager first, the operator only if unfixed ──
+#
+# Operator popup 2026-11-10 ~09:45Z "Only me; you if unfixed (Recommended)", after the operator's 09:40Z
+# "You should still be getting all those pings, so that if there's an issue on a paper account you can fix it.
+# I just want to cut down the noise so that if I see an alert I can be more sure that it's really worth my
+# attention". An ALERT about testing-paper accounts only is recorded ``suppressed_by_policy`` with priority
+# HIGH (so ``alerts_ledger.wakes_manager`` wakes the manager to fix it) instead of reaching Telegram; when the
+# SAME alert is still firing ``escalate_after_minutes`` after its first sighting, the operator gets it ONCE as
+# a red flag. Narrow by construction and fail-open (send): never the trades channel, never an operator ask
+# (``_PAPER_ALERT_NEVER_KINDS``), only text that opens with an alert level marker, and only when EVERY account
+# it names is testing paper (a mirror / real-money / prop account, or no account at all, sends as before).
+
+PAPER_ALERT_MANAGER, PAPER_ALERT_ESCALATE, PAPER_ALERT_SEND = "manager", "escalate", "send"
+_PAPER_ALERT_NEVER_KINDS = frozenset({"decision", "claude_ping", "system_action", "red_flag"})
+_ALERT_MARKER = ("🔴", "🟡", "🟠", "⚠️", "⚠", "🚨", "❌", "‼️", "[WARN]", "[ERROR]", "[CRITICAL]", "[ALERT]",
+                 "WARN", "ERROR", "CRITICAL")
+
+
+def _alert_signature(kind: Optional[str], text: str) -> str:
+    import hashlib
+    import re
+
+    first = re.sub(r"<[^>]+>", "", str(text or "")).strip().splitlines()[0] if str(text or "").strip() else ""
+    masked = re.sub(r"\d[\d.,]*", "#", first)[:160]   # a number of any size is one token
+    return hashlib.sha256(f"{kind or 'unclassified'}|{masked}".encode()).hexdigest()[:20]
+
+
+def paper_alert_route(kind: Optional[str], text: str, channel: Optional[str], *,
+                      now: Optional[float] = None, policy: Optional[Mapping] = None,
+                      accounts: Optional[Mapping] = None, directory: Optional[Path] = None) -> str:
+    """``send`` (not a paper-only alert, or the policy is off) | ``manager`` (record suppressed, priority high:
+    the manager is woken to fix it) | ``escalate`` (still firing after the manager's window: send ONCE, flagged).
+    Never raises: any failure answers ``send``."""
+    import json as _json
+    import re
+    import time as _time
+
+    try:
+        pol = load_policy() if policy is None else policy
+        cfg = pol.get("paper_alerts") or {}
+        if str(cfg.get("route") or "") != "manager_then_escalate":
+            return PAPER_ALERT_SEND
+        if str(channel or "") == "trades" or str(kind or "") in _PAPER_ALERT_NEVER_KINDS:
+            return PAPER_ALERT_SEND
+        head = re.sub(r"<[^>]+>", "", str(text or "")).lstrip()
+        if not head.startswith(_ALERT_MARKER):
+            return PAPER_ALERT_SEND
+        named = accounts_named(text, accounts)
+        if not named or any(account_class(a, accounts) != TESTING_PAPER for a in named):
+            return PAPER_ALERT_SEND
+        t = float(now if now is not None else _time.time())
+        after = float(cfg.get("escalate_after_minutes") or 120) * 60.0
+        reset = float(cfg.get("reset_after_hours") or 24) * 3600.0
+        d = (directory or _claims_dir()) / "paper_alerts"
+        d.mkdir(parents=True, exist_ok=True)
+        f = d / f"{_alert_signature(kind, text)}.json"
+        st = _json.loads(f.read_text()) if f.exists() else {}
+        if not st or st.get("last") is None or t - float(st["last"]) > reset:
+            st = {"first": t, "last": t, "flagged": False, "n": 1}
+            route = PAPER_ALERT_MANAGER
+        else:
+            st["last"], st["n"] = t, int(st.get("n") or 0) + 1
+            first = float(st["first"]) if st.get("first") is not None else t
+            if not st.get("flagged") and t - first >= after:
+                st["flagged"], route = True, PAPER_ALERT_ESCALATE
+            else:
+                route = PAPER_ALERT_MANAGER
+        tmp = f.with_suffix(".tmp")
+        tmp.write_text(_json.dumps(st))
+        tmp.replace(f)
+        return route
+    except Exception as exc:  # noqa: BLE001 -- a broken policy or store over-sends, never silences
+        logger.warning("telegram_policy: paper-alert route failed (%s) — sending", exc)
+        return PAPER_ALERT_SEND
+
+
+def escalation_text(text: str, minutes: float) -> str:
+    return (f"🚩 STILL FAILING after the manager's attempt (testing-paper alert, first seen about "
+            f"{int(minutes)} min ago; the manager was woken at the first one):\n{text}")
 
 
 # ── B. account classification (config/accounts.yaml) ──────────────────────
@@ -359,5 +466,7 @@ __all__ = [
     "load_policy", "recurring_off", "digest_event_lines", "account_class",
     "mirror_note", "portfolio_leg_on_real_money", "trade_decision", "should_send_trade",
     "claim", "rejection_ledger_only", "record_suppressed", "suppressed_log_path",
+    "accounts_named", "paper_alert_route", "escalation_text", "PAPER_ALERT_MANAGER", "PAPER_ALERT_ESCALATE",
+    "PAPER_ALERT_SEND",
     "TradeDecision", "SUPPRESSED",
 ]

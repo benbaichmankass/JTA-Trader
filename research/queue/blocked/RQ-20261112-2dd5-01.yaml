@@ -1,0 +1,114 @@
+id: RQ-20261112-2dd5-01
+title: 'Fast-move lock-in: on the first IMPULSE bar of an open trade (favourable extreme +0.75 R beyond the prior bar while peak >= 1 R), does tightening the stop (or moving the take-profit) beat HOLD, the same action at random non-impulse bars and the best static rule, net of the full cost stack?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-OPS
+kind: experiment
+practice_precedent: 'T1 and T10 in docs/reference/trading-and-model-practice-principles.md (judge an in-trade intervention against hold AND a matched random intervention; partials and TP moves are arms, never defaults)'
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 1000
+  best_static:
+    grid: ['atr:1.0', 'atr:1.5', 'r:0.0', 'r:0.5']
+    excludes_test_folds: true
+  bootstrap_group: trade
+evidence_class:
+  holdout: final_fold
+  claim: edge
+question: >-
+  The operator asked (2026-11-10 ~15:25Z, row LTR-FAST-MOVE-LOCKIN) whether a big, fast impulse in an open trade is a use case for a quicker, more aggressive stop lock-in, and
+  (addition, ~15:50Z) whether moving the TAKE-PROFIT helps too. At the FIRST closed bar of a trade where the running favourable extreme advanced by >= 0.75 R beyond the previous
+  bar's running extreme while the running peak is >= 1.0 R (the IMPULSE state), does the pre-registered primary action P1 (ratchet the stop at 1.0 entry-ATR behind the running
+  extreme, tighten-only) produce a positive paired dR versus the leg's own untouched exit, net of the full cost stack and a stop-fill charge, AND does it beat the SAME action applied at
+  random non-impulse bars of the same trades (does impulse timing matter, or is any tighten at a >= 1 R peak equivalent) AND the best static tighten chosen without the test fold?
+  Secondary action classes (each its own class under the Active-management doctrine, ARCHITECTURE-CANONICAL "Active management"): S1 stop at +0.0 R (breakeven), S2 stop at +0.5 R,
+  S3 stop ratchet at 1.5 ATR, T1 TP pulled in to the current open R (bank before the bounce), T2 TP extended (+1.0 R beyond the leg's TP). Secondary arms are REPORTED and cannot make
+  the unit PASS.
+why_this_matters: >-
+  LTR-FAST-MOVE-LOCKIN (operator 2026-11-10) and the TP-move addition. Today's live-review table conditions on peak, open R and bars held, not on move SPEED, so it cannot see a fast
+  bounce. Case evidence on the row (labelled, NOT in this corpus, reported descriptively only): XRP half bybit_2 +2.89 R peak, locked stop kept about +1.74 R (closed 2026-11-10 18:29Z, sl,
+  +$2.45); ADA bybit_2 peaked +1.37 R and gave back 0.52 R within minutes (2026-11-10 16:11Z). What the answer would change: (a) whether a 'fast-move wake' (an R-velocity trigger that wakes
+  the live review at once, instead of the 4h cadence or the 0.5 R new_peak step) is worth building; (b) whether impulse lock-ins are a candidate for a PROPOSED mandate (the operator grants,
+  never a session) and a sub-minute directed path (TRADE-ACTION-FAST-PATH). LOOK-BEFORE-YOU-RE-TEST (2026-11-12): neighbours are RQ-20261026-bf56-02 (desk in-trade, conditions on +1.0 R,
+  not on speed, judged by Claude) and the live_review_outcomes.py cells (peak/open/bars); PEAK-FLOOR-OPEN-R (done) fixed the peak_r floor. No unit conditions on bar-to-bar favourable velocity
+  (grep of research/queue and blocked/ for 'impulse' and 'velocity' on exit questions, 2026-11-12). MULTIPLE-TESTING DENOMINATOR: ONE primary arm (P1) is graded; 5 secondary arms are
+  reported and a secondary 'lead' needs a 95% CI that excludes 0 at alpha 0.05/6.
+power:
+  expected_n: 60
+  min_detectable_effect: 0.36
+  effect_units: R
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    UPPER BOUND MEASURED 2026-11-12 from the committed Stage-0 trade lists (comms/strategy_evidence/<leg>.json -> source_run, field mfe_r >= 1.0; population: the four non-ML legs on bybit_2
+    and its mirror bybit_portfolio, re-parsed from config/accounts.yaml): trend_donchian_xrp_4h 19 of 46, ada_pullback_2h 33 of 67, trend_donchian_sol_prop 196 of 380, trend_donchian_xrp_adx25
+    15 of 46 = 263 trades that reach the +1 R peak state. The impulse subset is smaller and is NOT measured (the lists carry no bars-to-peak column); it is what the harness build
+    (LTR-IMPULSE-HARNESS) counts first. expected_n 60 is therefore the registered FLOOR, not an estimate of the count. MEASURED hold sd among the 263: 1.606 R (net_r, same population);
+    the paired dR sd is smaller than that (dR = action - hold) and is INFERRED at 1.0 R, chosen before any paired dR exists, as RQ-20261026-bf56-02 did. At n = 60, MDE = 2.8 * 1.0 / sqrt(60) = 0.36 R.
+    The first run records the OBSERVED paired sd; the rule grades on the observed CI, not on this assumption.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      expected_n counts committed historical trades, so nothing accrues. No paired-dR data exists for any impulse action on any leg (what this unit establishes), so the sd is declared,
+      not corroborated. Live impulse events (the labelled 2026-11-10 cases above) are NOT pooled into the test.
+decision_rule:
+  id: RULE-RQ20261112-2DD5-01-IMPULSE-LOCKIN
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: >-
+    Population: the four legs above; trades from each leg's committed Stage-0 record (net_r already net of fee + slippage + funding, fee stack as the record names it). ONE decision
+    point per trade: the first closed bar t where favourable_extreme(t) - favourable_extreme(t-1) >= 0.75 R AND running peak >= 1.0 R, before the trade's recorded exit bar. Per decision
+    point, dR = net_r(P1 replayed on the committed candles from bar t+1: stop ratchets at 1.0 entry-ATR behind the running extreme, never loosens, SL-first, a gap fills at the open,
+    plus an extra 0.05 R per stop-out of the tightened stop, live_review_outcomes.py --stop-fill-slip-r) - net_r(HOLD = the leg's recorded exit). Statistic = mean dR, 95% CI by a
+    trade-resampling bootstrap (10,000 draws, seed registered in the run inputs). Controls, same decision points and same cost stack: (B1) HOLD, dR = 0; (B2) the SAME action P1 applied
+    at a random closed bar of the same trade where the running peak >= 1.0 R and the bar is NOT an impulse bar, 1,000 draws; (B3) the best single static tighten from {atr:1.0, atr:1.5,
+    r:0.0, r:0.5} applied at the first bar the running peak reaches 1.0 R, chosen on the OTHER folds (leave-one-fold-out) and scored on the held-out fold. Folds = the evidence record's own 4
+    folds per leg (fold_detail), pooled by fold index; the FINAL fold (index 4) is the held-out read. Sensitivities, REPORTED and not deciding: impulse threshold 0.5 R and 1.0 R; stop-fill
+    charge 0 and 0.10 R; fee 11.0 bps round trip (the merged Bybit linear taker fee) with hold and action both repriced.
+  rule: >-
+    PASS IF n_obs (pooled impulse decision points) >= 60 AND mean dR (P1 vs HOLD) has a 95% CI lower bound > 0 AND mean dR(P1) > mean dR(B2) with the paired CI of the difference
+    excluding 0 AND mean dR(P1) >= mean dR(B3) AND dR > 0 in >= 3 of 4 pooled folds AND the final fold's point estimate > 0 (its n reported; if its n < 15 the PASS is labelled 'final
+    fold underpowered, lead only'). FAIL IF n_obs >= 60 AND (mean dR <= 0 OR the 95% CI upper bound < 0): that closes THIS trigger and THIS action on THIS corpus, never the lever family
+    (refinements that follow: a higher threshold, an ATR-scaled threshold, the secondary arms). INDETERMINATE otherwise; if n_obs < 60 the record says 'insufficient_n' with the count by
+    leg and the follow-up is more history per leg (a longer harness window), never a lowered bar. A leg with n < 15 is reported 'insufficient_n', never 0. The registered numbers (0.75 R,
+    1.0 R, 60, 0.05 R, 3 of 4, the action vocabulary, the B3 grid) are not changed after any result.
+  what_it_does_not_do: >-
+    Edits no config, roster or record and places no order. A PASS is Stage-0 evidence for ONE action class (a tighten at an impulse bar) on four legs; it is not a mandate, does not wake or
+    apply anything live, and does not cover the TP-move arms (those stay advice-only until each passes its own net-of-cost test, ARCHITECTURE-CANONICAL "Active management"). It is not a
+    Tier-3 case; a granted impulse mandate would be the operator's act (config/mandates.yaml 'proposed:' -> 'mandates:'). It does not touch entries, sizing or the prop legs (prop has no
+    apply path yet, LTR-8 gap).
+blocked_on:
+- kind: build
+  ref: LTR-IMPULSE-HARNESS
+  what: scripts/research/live_review_outcomes.py has no velocity condition (its comparable state is 'reached peak_r', or 'reached peak_r then retraced to open_r'); the impulse trigger, the per-trade
+    paired-dR emit with fold index and bars-to-impulse, and the descriptive giveback-frequency table (operator question 4) do not exist.
+  clears_when: 'LTR-IMPULSE-HARNESS is done and tested. Then git mv this file to research/queue/, set run.workflow (research-script-run.yml) and run.command for the new arm, add lands:
+    {store: research/results/, assert_field: read_state, min_rows: 1}, set status: queued and drop blocked_on and requires_result.'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  bucket: own_losses
+  basis: 'stand-in: bounds what faster lock-ins could save on real-money legs of bybit_2 (the XRP 2026-11-10 lock kept +1.74 R of a +2.89 R peak, one labelled case); an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: null
+  why_runner: Replays committed Stage-0 trade lists on keyless public candles for a pinned window; reads no trainer data. est_minutes is null because the arm does not exist yet.
+  basis: 'est_minutes null rather than guessed: the harness arm is the blocker.'
+related:
+- LTR-FAST-MOVE-LOCKIN
+- LTR-IMPULSE-HARNESS
+- PEAK-FLOOR-OPEN-R
+- TRADE-ACTION-FAST-PATH
+- LTR-ACCOUNT-SCOPED-ACTIONS
+- RQ-20261026-bf56-02
+- scripts/research/live_review_outcomes.py
+- scripts/research/intervention_controls.py

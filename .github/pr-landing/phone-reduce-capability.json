@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "PHONE-DRILL-TP-CLOSE: a phone REDUCE (partial close) is served only to an app build that declares 'reduce' in its claim; otherwise it ends refused at claim with ONE ping, and the position is unchanged. Builds up to 1b.380 do not execute a reduce: their reduce branch clicks the armed Close position to measure the dialog, then dismisses it and reports failed. Once PR #25226 opens the sheet on the cards layout, a one-tap venue Close would turn a reduce into a FULL close reported as failed. A full close is unaffected. Capability negotiation, the same pattern as amend/cancel/close. Adds no execution gate.",
+  "hold_text": "Tier-2 per AM-TRADING (prop order-action path). Merge BEFORE or WITH #25226. Verify: tests/test_phone_cancel.py green in CI; after deploy, any live-review reduce on breakout_2 shows phone_close.status=refused with the 'does not execute a reduce' reason until the reduce-capable APK is installed."
+}
