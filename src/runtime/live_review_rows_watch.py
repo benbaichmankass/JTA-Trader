@@ -151,6 +151,19 @@ def _git(*args: str, timeout: int = FETCH_TIMEOUT_S) -> Tuple[int, str]:
     return r.returncode, (r.stdout if r.returncode == 0 else r.stderr).strip()
 
 
+#: How many non-``>>>`` output lines of a dispatch are kept in the log line. LTR-APPLY-EXIT2 (2026-11-15): the
+#: apply's refusal reason was a bare line, so the receipt kept only "no applied.jsonl entry" and nobody could see
+#: why a real-money close exited 2. The full stdout/stderr tail is now logged with every dispatched row.
+OUT_TAIL_LINES = 40
+
+
+def output_tail(stdout: Optional[str], stderr: Optional[str] = None, n: int = OUT_TAIL_LINES) -> list:
+    """The last ``n`` non-``>>>`` lines of a dispatch's stdout, then its stderr, each line capped at 500 chars."""
+    out = [ln[:500] for ln in (stdout or "").splitlines() if ln.strip() and not ln.startswith(">>>")]
+    err = [f"[stderr] {ln[:500]}" for ln in (stderr or "").splitlines() if ln.strip()]
+    return (out + err)[-n:]
+
+
 def _dispatch(review_id: str, ref: str) -> Dict[str, Any]:
     """Run the dispatcher with --apply at the pinned ref. Never raises."""
     try:
@@ -168,7 +181,7 @@ def _dispatch(review_id: str, ref: str) -> Dict[str, Any]:
             except ValueError:
                 pass
     return {"exit": r.returncode, "verdict": summary.get("verdict"), "detail": summary.get("detail"),
-            "lines": lines[-20:]}
+            "lines": lines[-20:], "out_tail": output_tail(r.stdout, r.stderr)}
 
 
 #: tighten_sl plus the trade-desk actions (LTR-ALL-ACTIONS); every one is re-checked by the dispatcher.
@@ -272,7 +285,7 @@ def process_row(row: Dict[str, Any], *, ref: str, seen_at: datetime, pending: Di
         res = dispatch(rid)
         done = now_fn()
         rec.update(exit=res.get("exit"), verdict=res.get("verdict"), detail=res.get("detail"),
-                   lines=res.get("lines"), done_at=done.isoformat(),
+                   lines=res.get("lines"), out_tail=res.get("out_tail"), done_at=done.isoformat(),
                    seen_to_done_s=round((done - first).total_seconds(), 1))
         rv = _ts(row.get("reviewed_at"))
         if rv:
@@ -418,7 +431,7 @@ def _dispatch_direct(review_id: str) -> Dict[str, Any]:
             except ValueError:
                 pass
     return {"exit": r.returncode, "verdict": summary.get("verdict"), "detail": summary.get("detail"),
-            "lines": lines[-20:]}
+            "lines": lines[-20:], "out_tail": output_tail(r.stdout, r.stderr)}
 
 
 def run_direct_pass(dispatch: Callable[[str], Dict[str, Any]] = _dispatch_direct,
