@@ -70,3 +70,26 @@ def test_registered_on_the_app(monkeypatch):
     wpm._cache.update(at=0.0, body=None)
     r = TestClient(app).get("/api/bot/work/pipeline-map")
     assert r.status_code == 200 and r.json()["read_state"] == "read"
+
+
+def test_structured_steps_loops_and_elements():
+    d = pm.build_structured(REPO, live=None, live_state="not read (test)")
+    steps = d["steps"]
+    assert [s["n"] for s in steps] == sorted(s["n"] for s in steps) and len(steps) >= 11   # ordered spine
+    assert all(s["technical"] and s["trading"] for s in steps)                              # both columns filled
+    # a generated trading element from a source of truth, and a technical element resolved to a repo path
+    assert any(e["kind"] == "leg" for s in steps for e in s["trading"])
+    assert any(e["kind"] == "account" for s in steps for e in s["trading"])
+    paths = [e["path"] for s in steps for e in s["technical"] if e.get("path") and e["path"].endswith(".py")]
+    assert paths and all((REPO / p).exists() for p in paths[:20])
+    ids = {s["id"] for s in steps}
+    assert d["loops"] and all(lp["from"] in ids and lp["to"] in ids for lp in d["loops"])  # loops tie to real steps
+    assert len({lp["id"] for lp in d["loops"]}) == len(d["loops"])
+    # no secrets / balances in the payload
+
+
+def test_route_serves_structured(monkeypatch):
+    monkeypatch.setattr(wpm, "_live_performance", lambda: (None, "not read (test)"))
+    wpm._cache.update(at=0.0, body=None)
+    body = _client().get("/api/bot/work/pipeline-map").json()
+    assert body["structured"]["steps"] and body["structured"]["loops"] and body["markdown"]
