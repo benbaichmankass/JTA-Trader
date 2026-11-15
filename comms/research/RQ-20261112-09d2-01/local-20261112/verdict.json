@@ -1,0 +1,226 @@
+{
+ "research_unit": "RQ-20261112-09d2-01",
+ "generated_at": "2026-11-12T08:24:16+00:00",
+ "produced_by": "scripts/research/tradeify_futures_fit.py",
+ "stage": "stage0",
+ "population": {
+  "MES_OR15": 1945,
+  "MES_OR30": 1927,
+  "MNQ_OR15": 1944,
+  "MNQ_OR30": 1898,
+  "MGC_OR15": 1976,
+  "MGC_OR30": 1911
+ },
+ "window": {
+  "discovery": [
+   "2019-01-01",
+   "2024-12-31"
+  ],
+  "holdout": [
+   "2025-01-01",
+   "2026-10-31"
+  ]
+ },
+ "data": "dukascopy 5m bid proxies (see module doc)",
+ "cells": {
+  "MES_OR15": {
+   "n_disc": 1490,
+   "net_r_disc": 13.952,
+   "folds": {
+    "2019": -8.131,
+    "2020": -23.247,
+    "2021": 25.774,
+    "2022": 10.989,
+    "2023": 13.694,
+    "2024": -5.127
+   },
+   "folds_positive": 3,
+   "edge_ci_disc": {
+    "n": 1490,
+    "mean": 0.00936,
+    "se": 0.03283,
+    "lo": -0.07725,
+    "hi": 0.09598,
+    "z": 2.638
+   },
+   "n_hold": 455,
+   "net_r_hold": 9.966,
+   "mean_r_hold": 0.0219,
+   "gross_r_disc": 114.294,
+   "cost_r_disc": 100.341,
+   "median_risk_usd_1c": 79.37,
+   "by_reason": {
+    "stop": 974,
+    "take_profit": 425,
+    "session_flat": 546
+   },
+   "verdict": "fail"
+  },
+  "MES_OR30": {
+   "n_disc": 1474,
+   "net_r_disc": -16.697,
+   "folds": {
+    "2019": -22.627,
+    "2020": -13.493,
+    "2021": -9.697,
+    "2022": 17.39,
+    "2023": 20.689,
+    "2024": -8.96
+   },
+   "folds_positive": 2,
+   "edge_ci_disc": {
+    "n": 1474,
+    "mean": -0.01133,
+    "se": 0.02849,
+    "lo": -0.08648,
+    "hi": 0.06383,
+    "z": 2.638
+   },
+   "n_hold": 453,
+   "net_r_hold": -2.44,
+   "mean_r_hold": -0.00539,
+   "gross_r_disc": 64.824,
+   "cost_r_disc": 81.521,
+   "median_risk_usd_1c": 99.63,
+   "by_reason": {
+    "stop": 759,
+    "take_profit": 249,
+    "session_flat": 919
+   },
+   "verdict": "fail"
+  },
+  "MNQ_OR15": {
+   "n_disc": 1488,
+   "net_r_disc": 89.264,
+   "folds": {
+    "2019": 6.632,
+    "2020": -12.185,
+    "2021": 39.254,
+    "2022": 22.874,
+    "2023": 8.734,
+    "2024": 23.955
+   },
+   "folds_positive": 5,
+   "edge_ci_disc": {
+    "n": 1488,
+    "mean": 0.05999,
+    "se": 0.03042,
+    "lo": -0.02026,
+    "hi": 0.14024,
+    "z": 2.638
+   },
+   "n_hold": 456,
+   "net_r_hold": 11.329,
+   "mean_r_hold": 0.02484,
+   "gross_r_disc": 123.134,
+   "cost_r_disc": 33.87,
+   "median_risk_usd_1c": 170.75,
+   "by_reason": {
+    "stop": 850,
+    "take_profit": 312,
+    "session_flat": 782
+   },
+   "verdict": "fail"
+  },
+  "MNQ_OR30": {
+   "n_disc": 1455,
+   "net_r_disc": 49.865,
+   "folds": {
+    "2019": 7.063,
+    "2020": -12.471,
+    "2021": 15.666,
+    "2022": 13.156,
+    "2023": 16.833,
+    "2024": 9.618
+   },
+   "folds_positive": 5,
+   "edge_ci_disc": {
+    "n": 1455,
+    "mean": 0.03427,
+    "se": 0.02589,
+    "lo": -0.03403,
+    "hi": 0.10257,
+    "z": 2.638
+   },
+   "n_hold": 443,
+   "net_r_hold": -1.007,
+   "mean_r_hold": -0.00227,
+   "gross_r_disc": 77.017,
+   "cost_r_disc": 27.152,
+   "median_risk_usd_1c": 211.82,
+   "by_reason": {
+    "stop": 620,
+    "take_profit": 155,
+    "session_flat": 1123
+   },
+   "verdict": "fail"
+  },
+  "MGC_OR15": {
+   "n_disc": 1510,
+   "net_r_disc": -62.982,
+   "folds": {
+    "2019": 21.435,
+    "2020": 11.497,
+    "2021": -37.003,
+    "2022": -14.176,
+    "2023": -17.691,
+    "2024": -27.045
+   },
+   "folds_positive": 2,
+   "edge_ci_disc": {
+    "n": 1510,
+    "mean": -0.04171,
+    "se": 0.02946,
+    "lo": -0.11943,
+    "hi": 0.03601,
+    "z": 2.638
+   },
+   "n_hold": 466,
+   "net_r_hold": 1.281,
+   "mean_r_hold": 0.00275,
+   "gross_r_disc": 62.379,
+   "cost_r_disc": 125.361,
+   "median_risk_usd_1c": 70.1,
+   "by_reason": {
+    "stop": 842,
+    "take_profit": 350,
+    "session_flat": 784
+   },
+   "verdict": "fail"
+  },
+  "MGC_OR30": {
+   "n_disc": 1459,
+   "net_r_disc": -51.918,
+   "folds": {
+    "2019": -1.469,
+    "2020": -10.351,
+    "2021": -15.05,
+    "2022": -10.437,
+    "2023": -0.389,
+    "2024": -14.223
+   },
+   "folds_positive": 0,
+   "edge_ci_disc": {
+    "n": 1459,
+    "mean": -0.03558,
+    "se": 0.02464,
+    "lo": -0.10058,
+    "hi": 0.02941,
+    "z": 2.638
+   },
+   "n_hold": 452,
+   "net_r_hold": 16.364,
+   "mean_r_hold": 0.0362,
+   "gross_r_disc": 43.869,
+   "cost_r_disc": 95.787,
+   "median_risk_usd_1c": 88.05,
+   "by_reason": {
+    "stop": 558,
+    "take_profit": 189,
+    "session_flat": 1164
+   },
+   "verdict": "fail"
+  }
+ },
+ "verdict": "fail"
+}

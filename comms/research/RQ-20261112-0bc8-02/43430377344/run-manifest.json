@@ -1,0 +1,66 @@
+{
+  "unit": "RQ-20261112-0bc8-02",
+  "run_id": "43430377344",
+  "commit_sha": null,
+  "run_url": null,
+  "timeout_minutes": 300,
+  "runner": {
+    "cpu_model": null,
+    "cpu_simd": [
+      "asimd"
+    ],
+    "cores_logical": 1,
+    "cores_usable": 1,
+    "machine": "aarch64",
+    "os": "Ubuntu 22.04.5 LTS",
+    "kernel": "6.8.0-1060-oracle",
+    "image": {
+      "ImageOS": null,
+      "ImageVersion": null,
+      "RUNNER_OS": null,
+      "RUNNER_ARCH": null,
+      "RUNNER_ENVIRONMENT": null
+    },
+    "python": "3.11.0rc1",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.4",
+      "pandas": "3.0.3",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.8.0"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [
+      "cpu_model"
+    ],
+    "class_id": "8b8eea7d004b",
+    "read_state": "partial"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/volcomp_exit_head_bakeoff.py",
+        "--rows",
+        "datasets-out/exit_head/1h/donchian/rows.jsonl",
+        "--num-folds",
+        "5",
+        "--embargo-days",
+        "7",
+        "--lookback",
+        "500",
+        "--kline-start",
+        "2019-09",
+        "--kline-end",
+        "2026-10",
+        "--json",
+        "comms/research/RQ-20261112-0bc8-02/43430377344/verdict.json"
+      ],
+      "log": "comms/research/RQ-20261112-0bc8-02/43430377344/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 576.4
+    }
+  ],
+  "all_ok": true
+}

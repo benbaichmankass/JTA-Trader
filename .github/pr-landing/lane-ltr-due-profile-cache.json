@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "src/runtime/live_review_due.py serves GET /api/diag/live_review_due (web-api) and the in-trader LTR wake poster. Tier 2 by the lane dispatch (RM-AM-DUE-COULDNOTLOOK): landing hold for the manager. Read path only; compute_due output is byte-identical on a 20-package fixture (old vs new).",
+  "why": "Measured on the VM after #25234: the route answers (200) but in 9-30 s; timings_ms shows compute_due 8-20 s. Profiled: every package_market_state call re-parsed config/instruments.yaml (41 parses = 13.7 s of 13.8 s). The symbol->exchange map is now read once per 300 s; compute_due 13.8 s -> 0.67 s locally."
+}

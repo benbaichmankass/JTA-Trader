@@ -171,13 +171,18 @@ def e5_rows(root: Path, unit_id: str, since: Optional[datetime]) -> List[Tuple[s
 
 
 def rule_attested(root: Path, unit_id: str, unit: Dict[str, Any]) -> bool:
-    """True when a hand-written `once` unit's E5 rows ALL carry its own rule id.
+    """True when a hand-written unit's E5 rows ALL carry its own rule id.
 
     That stamp is how a producer says it graded the run under this unit's
     registered rule; a generic producer rule id (or none) means it did not, so
-    the unit stays with a session. No rows -> False (nothing to attest)."""
+    the unit stays with a session. No rows -> False (nothing to attest).
+    Recurring units attest too (AUD-20261019-RESEARCH-SLO-RED, 2026-11-12): the
+    `once`-only check left hand-written daily self-tests (RQ-20261022-3a84-12,
+    -b376-02, -e5b1-17/-18, -0142-18/-19) landing self-graded rows that nobody
+    ever graded -- 6 of the 18 undispositioned_24h findings that day. A recurring
+    unit still reads only its latest window and never closes on a FAIL."""
     rid = str((unit.get("decision_rule") or {}).get("id") or "").strip()
-    if not rid or str(unit.get("cadence") or "once") != "once":
+    if not rid:
         return False
     seen = 0
     for _f, r in e5_rows(root, unit_id, None):
@@ -814,6 +819,13 @@ def grade_unit_full(root: Path, unit_id: str, text: str,
     # re-dispatch -- re-reading run 1's own rows would "confirm" the FAIL with
     # itself (review fix 2026-09-29).
     since = _parse_ts(unit.get("last_dispatched_at")) if (unit.get("cadence") in _RECURRING or confirmatory) else None
+    # RESEARCH-FLOW re-arm (dispatch_queue: `rearmed_at` says every row landed BEFORE it came from a defect that has
+    # since been fixed). Those rows are not evidence for this unit any more, so they are never graded: the window
+    # starts no earlier than the re-arm. Seen 2026-11-15 on RQ-20261112-8d20-02 (re-armed 02:30Z by #26225): the grader
+    # read the pre-fix row 43646720569 and wrote a needs_review grade the re-arm had disowned.
+    rearmed = _parse_ts(unit.get("rearmed_at")) if unit.get("rearmed_at") else None
+    if rearmed is not None and (since is None or rearmed > since):
+        since = rearmed
     rule_id = str((unit.get("decision_rule") or {}).get("id") or "")
     lands = unit.get("lands") or {}
     if rule_id.startswith("RULE-TPL-E35-BRACKET-"):
@@ -879,6 +891,17 @@ def grade_unit_full(root: Path, unit_id: str, text: str,
             child = (cid, confirmation_unit(unit, g, cid))
     new = apply_text(text, d)
     if new == text:
+        return None
+    # AUD-20261019-RESEARCH-SLO-RED (2026-11-12): a re-grade that changes NOTHING but the date is not a grading.
+    # Re-stamping it moved `graded_at` forward every day on ~200 unchanged units (#25060: 196 files), so
+    # grade_latency read a same-day grading as 6 d late (p90) and every graded_at window (research_slo's held-out
+    # census, research_ops_checks' 7d/30d) counted old verdicts as new. Keep the original stamp: graded_at is
+    # when THIS verdict was reached.
+    prior_g = unit.get("grading") if isinstance(unit.get("grading"), dict) else {}
+    prior_at = str(prior_g.get("graded_at") or "")
+    if (prior_at and not child and isinstance(d.get("grading"), dict)
+            and str(d["grading"].get("graded_at") or "") != prior_at
+            and apply_text(text, {**d, "grading": {**d["grading"], "graded_at": prior_at}}) == text):
         return None
     # the edit must still parse and must have changed only what it claims
     back = yaml.safe_load(new)

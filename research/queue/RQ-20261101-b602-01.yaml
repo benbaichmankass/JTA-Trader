@@ -1,7 +1,7 @@
 # Authored 2026-11-01 by lane ML-RECIPE (Tier 1) for the ENTRY lever plan (manager/operator 17:55Z). Decision rule registered BEFORE any run. Gates: none.
 id: RQ-20261101-b602-01
 title: 'ENTRY lever 2, selectivity: do a score-band cap, a tau choice rule, regime abstention or a side filter lift the dev mean when selected on dev only?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -106,18 +106,16 @@ programme_node:
 last_dispatched_at: '2026-11-02T10:51:55+00:00'
 grading:
   attested: RULE-20261101-b602-01
-  auto: true
+  auto: false
   decision_rule_id: RULE-20261101-b602-01
   evidence:
   - research/results/RQ-20261101-b602-01/41361136552.jsonl
   - research/results/RQ-20261101-b602-01/41363526114.jsonl
   - research/results/RQ-20261101-b602-01/41393282305.jsonl
-  graded_at: '2026-11-12'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: PI-20261105-WDWYHZCN-0001
-  owner_reason: producer_failed (no_verdict) on the newest row, 3 identical re-fires; failure mode and
-    fix path named in PI-20261105-WDWYHZCN-0001 (RESEARCH-OPS-20261105-1449 triage)
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
-  rows: 3
-  verdict: null
+  - comms/research/RQ-20261101-b602-01/41393282305/b602_result.json
+  graded_at: '2026-11-15'
+  grader: lane ML-PRIMARY-2 (session read of the registered clauses 1-4 against the producer's own per-arm output, b602_result.json; the producer computed each clause but wrote no verdict.json)
+  verdict: pass
+  candidates:
+  - C_vol24_abstain_t0
+  reason: 'ONE dev CANDIDATE, identical in all 3 runs (41361136552 / 41363526114 / 41393282305): C_vol24_abstain_t0 (abstain when vol24 is in the lowest dev tercile) -- (1) min fold n 2098 >= 1000; (2) seed mean +0.0212 vs base +0.0080, delta +0.0133 >= 0.0117 = 2 x the recomputed base seed range 0.0058 (larger than the registered 0.0034, so used per the rule); (3) better than base in 6 of 8 dev folds; (4) delta positive in 4 of 4 years (2022 +0.002, 2023 +0.028, 2024 +0.007, 2025 +0.041). Every other arm no_win (A_cap q0.80/q0.90, B_tau 0.05/0.15, C_btc_ret24 t0-t2, C_vol24 t1/t2, D_drop_long: 2 of 4 years); D_drop_short INDETERMINATE (min fold n 450). Population: pooled frozen-60, dev folds only, n ~46k scored decisions per seed for the winner (~72k base); no held-out or sealed window read. Per the rule a winner is ONLY a candidate for the ONE combined held-out read (ML-BAR-ONE-READ); this grade promotes nothing.'

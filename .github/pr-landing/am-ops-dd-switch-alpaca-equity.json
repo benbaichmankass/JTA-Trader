@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Order-path file src/core/coordinator.py (Tier 2): the daily-DD switch equity feed also takes this dispatch round's live Alpaca/OANDA account equity (the same /v2/account equity read the sizer already uses), not only Bybit linear totalEquity. No threshold, arming, cap or sizing change; a failed read still falls back to the balance snapshot. Merged under the operator's 2026-11-12 'Merge + deploy on green' grant (docs/plans/operator-grant-merge-deploy-on-green-2026-11-12.md).",
+  "why": "PI-20261009-BKKVRSVQ-0002: the switch is armed on alpaca_live and alpaca_portfolio (real money) but read only the hourly balance snapshot (accepted up to 2 h old), so a 3% loss could be seen up to ~1 h late and the trip land well past 3%."
+}

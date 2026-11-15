@@ -1,0 +1,86 @@
+{
+  "unit": "RQ-20261112-c1b4-02",
+  "run_id": "43349867894",
+  "commit_sha": "1774dfa6b3d00a354c21a1c93c1245ea06cda137",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/43349867894",
+  "timeout_minutes": 90,
+  "runner": {
+    "cpu_model": "Intel(R) Xeon(R) 6975P-C",
+    "cpu_simd": [
+      "amx_tile",
+      "avx",
+      "avx2",
+      "avx512_vnni",
+      "avx512bw",
+      "avx512f",
+      "avx512vl",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1016-aws",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261111.82.6",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "526b395f4fe0",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_lever_ablation.py",
+        "--leg",
+        "tlt_pullback_1h",
+        "--arm",
+        "A=",
+        "--days",
+        "3060",
+        "--start",
+        "2018-06-01",
+        "--end",
+        "2020-06-30 23:59",
+        "--non-crypto-source",
+        "dukascopy",
+        "--grade",
+        "stage0",
+        "--baseline",
+        "A",
+        "--delta-r",
+        "0",
+        "--folds",
+        "2",
+        "--fold-majority",
+        "2",
+        "--n-floor",
+        "25",
+        "--research-unit",
+        "RQ-20261112-c1b4-02",
+        "--out",
+        "comms/research/RQ-20261112-c1b4-02/43349867894"
+      ],
+      "log": "comms/research/RQ-20261112-c1b4-02/43349867894/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 3.8
+    }
+  ],
+  "all_ok": true
+}

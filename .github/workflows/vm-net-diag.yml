@@ -85,6 +85,34 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           echo "HTTPS_RC=$rc" >> "$GITHUB_ENV"
 
+      - name: WebSocket handshake through the HTTPS front (expected 101)
+        id: ws_probe
+        run: |
+          set +e
+          # /ws/market is the SPA's live socket (wss through Caddy). A 101 proves
+          # Caddy passes the Upgrade end to end. curl cannot speak WebSocket, so it
+          # sees the 101 and then waits until --max-time; exit 28 is normal there.
+          # Run before AND after SEC-8001-LOCKDOWN's bind change (manager 2026-11-12).
+          curl -sS --http1.1 --max-time 6 -o /dev/null \
+            -H "Connection: Upgrade" -H "Upgrade: websocket" \
+            -H "Sec-WebSocket-Version: 13" \
+            -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
+            -w 'http_code=%{http_code}\n' \
+            "https://ict-bot.duckdns.org/ws/market?symbols=BTCUSDT" > ws_meta.txt 2>/dev/null
+          rc=$?
+          set -e
+          code="$(sed -n 's/^http_code=//p' ws_meta.txt)"
+          verdict="FAIL (expected 101)"; [ "$code" = "101" ] && verdict="OK (101 Switching Protocols)"
+          {
+            echo "## WebSocket handshake (GH runner -> wss://ict-bot.duckdns.org/ws/market)"
+            echo ""
+            echo '```'
+            echo "http_code: ${code:-none}   curl exit: $rc   verdict: $verdict"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "WS_CODE=${code:-none}" >> "$GITHUB_ENV"
+          echo "WS_VERDICT=$verdict" >> "$GITHUB_ENV"
+
       - name: Exposure check -- raw port from GitHub runner (expected CLOSED)
         id: public_probe
         run: |
@@ -253,6 +281,11 @@ jobs:
               ``,
               `Body (first 500 bytes):`,
               httpsBody || '(empty)',
+              '```',
+              ``,
+              `### WebSocket handshake (wss://ict-bot.duckdns.org/ws/market, expected 101)`,
+              '```',
+              `http_code: ${process.env.WS_CODE}   verdict: ${process.env.WS_VERDICT}`,
               '```',
               ``,
               `### Exposure check, expected CLOSED (GH runner -> raw VM port)`,

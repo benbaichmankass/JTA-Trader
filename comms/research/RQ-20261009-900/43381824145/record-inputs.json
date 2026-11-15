@@ -1,0 +1,18 @@
+{
+  "artifact_locator": "comms/research/RQ-20261009-900/43381824145/ (run-manifest.json + verdict.json + logs/)",
+  "artifact_store": "comms/research/RQ-20261009-900/43381824145",
+  "data_fingerprint": "{\"files\": [{\"bytes\": 1246630, \"path\": \"comms/research/RQ-20261014-736c-01/38738465656/ml2_live_leg_corpus.jsonl\", \"sha256\": \"a1503b305b1e9cf6dea4bacb883fd0c5585384e8fea9863c8bbf8245ff871914\"}], \"n_files\": 1, \"sha256\": \"ac70bf93973101668f22a654b3ae822c46d4c2bb3fe55100596b751f1418eaae\", \"state\": \"fingerprinted\", \"truncated\": false, \"window\": null}",
+  "decision_rule_id": "RULE-RQ1009-900-MFE-HEAD-VS-NAIVE-TP",
+  "decision_rule_registered_at": "2026-10-09",
+  "measurement_file": "comms/research/RQ-20261009-900/43381824145/measurement.json",
+  "min_rows": "1",
+  "n": "642",
+  "note": "RULE-RQ1009-900-MFE-HEAD-VS-NAIVE-TP: HONEST_NEGATIVE (MIXED, reported per stratum) | S1_bybit2_donchian_4h=indeterminate (eval n 74 < 88 at split 0.65); S2_bybit2_pullback_2h=not_sharper (head does not beat all four baselines above the null at >= 3 of 5 quantiles at every split: 0.55: 0/5, 0.65: 1/5, 0.75: 2/5); S3_prop_donchian_1h=not_sharper (head does not beat all four baselines above the null at >= 3 of 5 quantiles at every split: 0.55: 1/5, 0.65: 3/5, 0.75: 4/5) | prediction quality only, NOT evidence of P&L (step 2 is RQ-20261009-901)",
+  "population": "RQ-20261009-900: 3 strata graded separately, never pooled (S1_bybit2_donchian_4h eval n 74, S2_bybit2_pullback_2h eval n 153, S3_prop_donchian_1h eval n 415 at split 0.65); n = summed eval rows at the headline split; outcome mfe_r, 5 quantiles x 3 splits, B1-B4 each gated by the shuffled-label null p95 (control_trials 20)",
+  "power_state": "accruing",
+  "read_state": "measured",
+  "records_file": "",
+  "research_unit": "RQ-20261009-900",
+  "tool": "python3 scripts/research/tp_predict_grader.py",
+  "verdict": "fail"
+}

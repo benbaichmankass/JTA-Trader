@@ -39,7 +39,7 @@ Live pull, 2026-09-13, `alpaca_live` rows in window: **33**, all `status: reject
 | 2 | `account_mode_dry_run` | 4 | 08-26 → 08-27 |
 | 3 | `sizing_refused` | 1 | 08-27 |
 | 4 | `account_mode_dry_run` | 5 | 08-27 → 08-28 |
-| 5 | `sizing_refused` (`balance=200.10`) | 3 | 08-28 |
+| 5 | `sizing_refused` (`balance=[balance removed]`) | 3 | 08-28 |
 | 6 | `account_mode_dry_run` | 3 | 08-28 |
 | **7** | **`dry_run_no_order_placed`** | **4** | **2026-09-01 → 09-11** |
 
@@ -49,7 +49,7 @@ Window census: `sizing_refused` 17 · `account_mode_dry_run` 12 · `dry_run_no_o
 
 > ⚠️ **The row is not wrong about what it saw.** Its window (08-13 → 09-09) reached further back and caught more era-1/5 rows, and it did report `3x dry_run_no_order_placed`. What it did was characterise the account by the modal cause rather than the current one. That is why this instrument reports **eras** and grades the newest, and why a census alone is the reading that produced the defect.
 >
-> ⚠️ **Two other claims in the row are also stale.** *"alpaca_live's only routed real-money leg"* — the roster went 1 → **5 legs** on 2026-09-10 (`e88ef612a`, Option A). And `balance=0.10`, not `200.10`, is what the 13 oldest refusals quote: the account was funded between 08-21 and 08-25.
+> ⚠️ **Two other claims in the row are also stale.** *"alpaca_live's only routed real-money leg"* — the roster went 1 → **5 legs** on 2026-09-10 (`e88ef612a`, Option A). And `balance=0.10`, not `[balance removed]`, is what the 13 oldest refusals quote: the account was funded between 08-21 and 08-25.
 
 ---
 
@@ -165,7 +165,7 @@ So an account can read `live: true` on the only surface that answers *is this ac
 **Also eliminated, by MI-200 on 2026-09-08 and reproduced here:** the
 `account_state.yaml` fold (no `alpaca_live` key → the accessor returns `None`),
 and the credentials/`configured=False` path (the venue answered `ACTIVE`,
-`trading_blocked: false`, `buying_power 200.22`).
+`trading_blocked: false`, `buying_power [balance removed]`).
 
 **Remaining, and it is the one MI-200 named:** the **`dry_run=` parameter passed
 into `multi_account_execute`** (`coordinator.py:1314` — `if dry_run is not None:

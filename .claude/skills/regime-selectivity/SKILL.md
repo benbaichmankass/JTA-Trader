@@ -60,8 +60,11 @@ majority-negative under EVERY member of the fixed internal panel `FOLD_PANEL = (
 runtime — reported honestly.**
 
 - Vol-label resolution is **per-SYMBOL** via `ml_vol_regime_for_symbol` (the advisory head),
-  NOT per-`(symbol, timeframe)`. A symbol with no advisory head resolves `unknown` → frozen
-  (permissive). Under `REGIME_ML_VERDICT_MODE=use` the gate substitutes the head's
+  NOT per-`(symbol, timeframe)`. A symbol with no advisory head resolves `unknown`, and the
+  HARD gate evaluates no vol cell for it (permissive): the frozen `vol_detector` label is
+  built from SHADOW-stage heads, which are observe-only, so it reaches only the observe-only
+  `regime_shadow_gate` / `regime_ml_vol_shadow` rows, never the enforcing verdict
+  (REGIME-VOL-SPEC-ADVISORY-ONLY; `tests/test_regime_vol_gate_advisory_only.py`). Under `REGIME_ML_VERDICT_MODE=use` the gate substitutes the head's
   `predict_proba(row)["volatile"]` (thresholded at `ML_VOL_VERDICT_THRESHOLD`).
 - A diagnostic about the gate must report **`predict_proba(row)["volatile"]`**, never
   `max(proba)` — every regime head is multiclass, so `max(proba)` prints HIGH for a

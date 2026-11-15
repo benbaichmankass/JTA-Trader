@@ -21,18 +21,22 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 REVIEWS_PATH = "comms/live_review/reviews.jsonl"
 ROWS_DIR = "comms/live_review/rows"
 
-#: Actions a review row (or a desk decision) may RECOMMEND but no automatic path may EXECUTE.
-#: Operator 2026-10-28 ~20:35Z, popup verbatim "Advice-only tightens (Recommended)", on the evidence of
-#: LTR-TIGHTEN-OPTIMIZE (comms/research/ltr_tighten_optimize/verdict.json; DESK-LIFECYCLE-S0, PR #20967):
-#: no stop-tighten cell or rule beat hold-to-bracket net of cost. Read by live_review_rows_watch,
-#: live_review_dispatch and desk_intake; each logs the row as ADVICE_ONLY_VERDICT so it stays graded.
-#: 2026-10-28 ~21:07Z EXTENDED to every in-trade class (operator popup to ask A1, verbatim "Advice-only until
-#: tested", relayed by Manager session_01AFoLuJi1vLTnYv9LbP6539; row DESK-V1-MGMT-ADVICE-ONLY): each class is
-#: recorded and graded but not executed until its OWN registered test passes (OOS, vs hold AND a matched random
-#: intervention of the same class, net of cost; docs/plans/desk-v1-production-plan-2026-10-29.md § 5b).
-#: GRADUATION = removing ONE class from this tuple AND from MD-TRADE-DESK functions.in_trade.advice_only in the
-#: same PR, citing that class's committed passed-test record (tests/test_tighten_advice_only.py pins equality).
-ADVICE_ONLY_ACTIONS = ("tighten_sl", "widen_sl", "move_tp", "partial_close", "close", "change_size", "add_entry")
+#: Actions a review row (or a desk decision) may RECOMMEND but no automatic path may EXECUTE. EMPTY since
+#: 2026-11-14: advice-only ENDED by operator directive (manager chat ~09:25Z, relayed by Manager Session
+#: 2026-11-13a), verbatim "Just turn on, like, no advice only. All those decisions should be implemented. And I
+#: should just get a ping when those changes are implemented based on LTR lane". Every in-trade class a reviewed
+#: row recommends is now APPLIED under MD-TRADE-DESK through the existing path (rows watcher / desk intake ->
+#: live_review_dispatch -> live_review_apply -> each account's own RiskManager -> venue read-back), with one
+#: trade-update ping per applied leg (mandate + review_id). History: advice-only since 2026-10-28 (popups
+#: "Advice-only tightens" / "Advice-only until tested", DESK-V1-MGMT-ADVICE-ONLY). The name, the verdict and
+#: every reader stay, so re-adding a class (with the same entry in MD-TRADE-DESK functions.in_trade.advice_only,
+#: tests/test_tighten_advice_only.py pins equality) is a one-line change.
+ADVICE_ONLY_ACTIONS: tuple = ()
+#: For HISTORY readers (the trade chart's decision markers): the classes that were advice-only before the directive,
+#: and when it was given. A row reviewed before this instant was advice-only. Rows between the directive and the
+#: deploy that applied it were still answered advice_only in fact; the rows watcher's own log carries the real verdict.
+ADVICE_ONLY_LEGACY_ACTIONS = ("tighten_sl", "widen_sl", "move_tp", "partial_close", "close", "change_size", "add_entry")
+ADVICE_ONLY_ENDED_AT = "2026-11-14T09:25:00+00:00"
 ADVICE_ONLY_VERDICT = "advice_only"
 
 #: ``git(*args) -> (returncode, stdout-or-stderr)``, the live_review_rows_watch seam.

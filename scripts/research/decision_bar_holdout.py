@@ -228,6 +228,7 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
     import yaml
     import forming_bar_pooled_regrade as fbr
     vs = fbr.vs
+    vs.FEE_BPS_OVERRIDE = getattr(args, "fee_bps", None)  # None = harness default (7.5)
     cfg = yaml.safe_load((ROOT / "config/strategies.yaml").read_text())
     cfg = cfg.get("strategies", cfg)
     legs = list(args.leg)
@@ -308,6 +309,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--end", default=None, help="pin the window end (UTC, e.g. '2026-10-16 23:59')")
     ap.add_argument("--research-unit", default=UNIT)
+    ap.add_argument("--fee-bps", type=float, default=None,
+                    help="round-trip fee in bps (default: the harness default 7.5); the committed Bybit-linear "
+                         "Stage-0 records use 11.0. The fee actually used is printed in each leg's costs.")
     args = ap.parse_args(argv)
     out = run(args)
     print(json.dumps({lg: r["grade"]["verdict"] for lg, r in out["legs"].items()}))

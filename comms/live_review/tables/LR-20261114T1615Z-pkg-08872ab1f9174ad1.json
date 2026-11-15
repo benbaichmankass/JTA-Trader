@@ -1,0 +1,138 @@
+{
+  "state": {
+    "side": "long",
+    "open_r": -0.4262,
+    "peak_r": 0.3716,
+    "bars_held": 2,
+    "atr_stop_mult": 2.0,
+    "condition": "peak",
+    "dist_to_stop_atr": null,
+    "dist_to_target_atr": null
+  },
+  "population": {
+    "corpus_trades": 907,
+    "side_filter": "long",
+    "side_excluded": 596,
+    "no_candles": 0,
+    "never_reached_peak": 105,
+    "beyond_bars_slack": 0,
+    "comparable": 198,
+    "mfe_replay_mismatch": 8,
+    "no_pullback_after_peak": 0,
+    "symbol_filter": null,
+    "symbol_excluded": 0,
+    "symbols": [
+      "ADAUSDT",
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ]
+  },
+  "n_floor": 20,
+  "bounds_r": {
+    "auto_apply": 0.25,
+    "shadow": 0.5
+  },
+  "options": [
+    {
+      "action": "hold",
+      "n": 198,
+      "state": "measured",
+      "n_floor": 20,
+      "mean_r": 0.6355,
+      "sd_r": 1.1001,
+      "worst_r": -1.1065,
+      "p05_r": -1.06,
+      "p_giveback_gt_half": 0.3283
+    },
+    {
+      "action": "tighten",
+      "spec": "atr:1.0",
+      "stop_at_r_now": -0.1284,
+      "n": 198,
+      "state": "invalid_level",
+      "reason": "stop_level_not_below_price",
+      "mean_r": null,
+      "sd_r": null,
+      "worst_r": null,
+      "p05_r": null,
+      "p_giveback_gt_half": null,
+      "ev_cost_r": null,
+      "ev_cost_se_r": null,
+      "worst_case_gain_r": null,
+      "within_auto_bound": null,
+      "within_shadow_bound": null
+    },
+    {
+      "action": "tighten",
+      "spec": "atr:1.5",
+      "stop_at_r_now": -0.3784,
+      "n": 198,
+      "state": "invalid_level",
+      "reason": "stop_level_not_below_price",
+      "mean_r": null,
+      "sd_r": null,
+      "worst_r": null,
+      "p05_r": null,
+      "p_giveback_gt_half": null,
+      "ev_cost_r": null,
+      "ev_cost_se_r": null,
+      "worst_case_gain_r": null,
+      "within_auto_bound": null,
+      "within_shadow_bound": null
+    },
+    {
+      "action": "tighten",
+      "spec": "atr:2.0",
+      "stop_at_r_now": -0.6284,
+      "n": 198,
+      "state": "measured",
+      "n_floor": 20,
+      "mean_r": 0.5603,
+      "sd_r": 0.8822,
+      "worst_r": -0.7074,
+      "p05_r": -0.6127,
+      "p_giveback_gt_half": 0.4242,
+      "ev_cost_r": 0.0752,
+      "ev_cost_se_r": 0.0458,
+      "worst_case_gain_r": 0.3991,
+      "within_auto_bound": true,
+      "within_shadow_bound": true
+    },
+    {
+      "action": "close",
+      "spec": "close",
+      "n": 198,
+      "state": "measured",
+      "n_floor": 20,
+      "mean_r": -0.487,
+      "sd_r": 0.0238,
+      "worst_r": -0.582,
+      "p05_r": -0.5238,
+      "p_giveback_gt_half": 1.0,
+      "ev_cost_r": 1.1226,
+      "ev_cost_se_r": 0.0785,
+      "worst_case_gain_r": 0.5245,
+      "within_auto_bound": false,
+      "within_shadow_bound": false
+    }
+  ],
+  "biases": [
+    "stop fills at the stop price (a gap fills at the open): flatters every tighten, so the real cost of tightening is, if anything, larger",
+    "the original trail path is not recorded: on the recorded exit bar a touched tightened stop is taken as hit (SL-first)",
+    "live peak_r is a lower bound on true MFE",
+    "one leg, one window, i.i.d. trades; parameter selection on the window is not undone"
+  ],
+  "read_state": "measured",
+  "leg": "ml_entry",
+  "corpus": "comms/strategy_evidence/ltr_corpus/ml_entry__trades.jsonl",
+  "candles": {
+    "ADAUSDT": "/home/user/JTA-Trader/comms/research/RQ-20261022-4b82-07/40095360985/data/ADAUSDT_60.csv",
+    "BTCUSDT": "/home/user/JTA-Trader/comms/research/RQ-20261022-4b82-02/39965645154/data/BTCUSDT_60.csv",
+    "ETHUSDT": "/home/user/JTA-Trader/comms/research/RQ-20261026-f679-02/40574160194/data/ETHUSDT_60.csv",
+    "SOLUSDT": "/home/user/JTA-Trader/comms/research/RQ-20261026-f679-02/40574160194/data/SOLUSDT_60.csv",
+    "XRPUSDT": "/home/user/JTA-Trader/comms/research/RQ-20261026-f679-02/40574160194/data/XRPUSDT_60.csv"
+  },
+  "corpus_note": "ml_entry pooled Stage-0 held-out ledger (2025-10-01..2026-09-30, the 5 bybit_2 symbols; c692-06 population, extend-only TP arm = arm A of RQ-20261103-5e04-01, which reproduces the record's 0.0271). The committed record's current arm F adds the structure SL (pivot=5, mean 0.0371 over the same 907 decisions); this corpus does NOT model that SL, so HOLD here is the extend-only exit. Row ML-ENTRY-LTR-OUTCOME-TABLE."
+}

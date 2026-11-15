@@ -28,9 +28,10 @@ never delays a ticket:
    current prediction (``src/runtime/tp_revision.py::plan_tp_revision`` -- the
    same function the exchange ``monitor()`` and the harness use), as a TP-only
    ``modify_bracket(page, p, None, tp)``, then re-read and confirmed. Only an
-   adapter declaring ``TP_AMEND_SUPPORTED`` is asked (``dxtrade_api``); the
-   browser ``dxtrade`` adapter's rollout guard admits SL-only tightens, so it
-   is skipped with a logged reason. The phone path (breakout_2) receives the
+   adapter declaring ``TP_AMEND_SUPPORTED`` is asked: ``dxtrade_api`` and,
+   since CAP-TRADEIFY-TP-AMEND (operator 2026-11-12), the browser ``dxtrade``
+   adapter, whose rollout guard takes a TP-only step (``rollout_tp_mismatch``,
+   SL untouched, next-read verified). The phone path (breakout_2) receives the
    same ``plan_tp_revision`` output through its own amend channel (lane
    PROP-TRAIL-PHONE), never through this function.
 
@@ -573,14 +574,27 @@ def run_trail_step(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mo
                 res.alerts.append(f"{tid}: {venue} trail skipped: {plan.why} (feed {plan.detail.get('feed')}); "
                                   "stops and targets stay as they rest until the feed is sane")
                 tst["feed_alerted"] = True
-            if _f(t.get("tp_target")) is not None:
-                # PROP-BRACKET-APPLY: a pinned TP reads no candles (only the venue quote), so a corrupt feed does
-                # not block it; only the stop-trailing stays off.
-                _tp_step(p=p, leg=leg, tid=tid, venue=venue, bot_sym=bot_sym, entry=entry,
-                         initial_sl=isl, signal_time=sig_t, candles=None, tst=tst,
-                         tp_target=_f(t.get("tp_target")))
-            return
-        tst.pop("feed_alerted", None)
+            # PROP-FLOOR-ON-BAD-FEED (operator 2026-11-12: "we should hold the trade, but we shouldn't hold the
+            # SL"): an approved stop floor (meta.sl_floor) reads no candles, only the venue quote, so a corrupt
+            # feed must not strand it. It goes through the SAME tighten path below (venue-quote buffer, backoff,
+            # bounded ModifyRollout step, re-read); only the candle replay stays off.
+            floor = _f(t.get("sl_floor"))
+            fstep = _f((cfg.symbols.get(bot_sym) or {}).get("price_step"))
+            if floor is not None and floor > 0 and tightens(p.side or "", p.stop_loss, floor, fstep):
+                res.log("trail_floor_on_bad_feed", ticket_id=tid, venue=venue, sl_floor=floor,
+                        resting_sl=p.stop_loss)
+                plan = TrailPlan("tighten", "sl_floor applied while the candle feed is implausible",
+                                 sl=floor, detail={"sl_floor": floor, "source": "sl_floor_bad_feed"})
+            else:
+                if _f(t.get("tp_target")) is not None:
+                    # PROP-BRACKET-APPLY: a pinned TP reads no candles (only the venue quote), so a corrupt feed
+                    # does not block it; only the stop-trailing stays off.
+                    _tp_step(p=p, leg=leg, tid=tid, venue=venue, bot_sym=bot_sym, entry=entry,
+                             initial_sl=isl, signal_time=sig_t, candles=None, tst=tst,
+                             tp_target=_f(t.get("tp_target")))
+                return
+        else:
+            tst.pop("feed_alerted", None)
         if plan.close_lever and not tst.get("close_lever_alerted"):
             res.alerts.append(
                 f"{tid}: {venue} declared close lever `{plan.close_lever}` WOULD exit now "
@@ -707,12 +721,17 @@ def run_trail_step(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mo
         RED_FLAG_AFTER in a row -- NO-HALT); one that disturbs the SL is
         alerted. Nothing here can loosen or remove the stop."""
         _sx_params = _structure_declared(leg)
+        if _sx_params is not None and _sx_params.get("sl_only"):
+            # PROP-VELO-SOL-TP-DIVERGE: "pivot=N;sl_only" means the structure exit moves ONLY the stop and the
+            # declared tp_revision rule stays the TP's one owner (structure_exit_live.replay drops the TP the
+            # same way, so the exchange monitor never moved it). This path used to ignore the flag and amended
+            # velotrade_1's SOL TP 76.626 -> 76.16 (pkg-ec406687dc6d449f) while bybit_2 kept the package TP.
+            _sx_params = None
         if declared_rule(leg) is None and _sx_params is None and tp_target is None:
             return
         if not getattr(adapter, "TP_AMEND_SUPPORTED", False):
-            # dxtrade (browser): the rollout guard admits SL-only tightens, so a
-            # TP amend would be refused before any click. Logged, never alerted:
-            # it is a known path limit, measured by tp-doctrine-guard.
+            # An adapter without a TP amend (none of the VM adapters since CAP-TRADEIFY-TP-AMEND): logged, never
+            # alerted -- a known path limit, measured by tp-doctrine-guard.
             res.log("trail_tp_skip", ticket_id=tid, venue=venue,
                     why=f"adapter {getattr(adapter, 'platform', '?')!r} cannot amend a TP")
             return

@@ -26,8 +26,8 @@ on:
   schedule:
     - cron: "23 4 * * *"   # models: registry-store + ml/served, daily
     - cron: "41 9 * * 0"   # db: weekly trade-journal snapshot (Sunday 09:41Z, after the trainer's nightly replica pull)
-  issues:
-    types: [labeled]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [labeled:kaggle-backup-request]
   pull_request:
     paths:
       - ".github/workflows/kaggle-backups.yml"
@@ -61,9 +61,9 @@ jobs:
       - id: g
         env:
           EVENT: ${{ github.event_name }}
-          LABEL: ${{ github.event.label.name }}
-          ISSUE_BODY: ${{ github.event.issue.body }}
-          ISSUE_USER: ${{ github.event.issue.user.login }}
+          LABEL: ${{ github.event.client_payload.label.name }}
+          ISSUE_BODY: ${{ github.event.client_payload.issue.body }}
+          ISSUE_USER: ${{ github.event.client_payload.issue.user.login }}
           OWNER: ${{ github.repository_owner }}
           SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
           SCHEDULE: ${{ github.event.schedule }}
@@ -80,7 +80,7 @@ jobs:
             case "$msg" in *"[kaggle-backup-dbsize]"*) d=true;; esac
             case "$msg" in *"[kaggle-backup-db]"*) b=true;; esac
           fi
-          if [ "$EVENT" = "issues" ] && [ "$LABEL" = "kaggle-backup-request" ] && { [ "$ISSUE_USER" = "$OWNER" ] || [ "$ISSUE_USER" = "github-actions[bot]" ]; }; then
+          if [ "$EVENT" = "repository_dispatch" ] && [ "$LABEL" = "kaggle-backup-request" ] && { [ "$ISSUE_USER" = "$OWNER" ] || [ "$ISSUE_USER" = "github-actions[bot]" ]; }; then
             mode="$(printf '%s\n' "$ISSUE_BODY" | sed -n 's/^mode:[[:space:]]*\([a-z]*\).*/\1/p' | head -1)"; mode="${mode:-models}"
             case "$mode" in models) m=true;; dbsize) d=true;; db) b=true;; esac
           fi
@@ -88,7 +88,7 @@ jobs:
 
   dbsize:
     needs: gate
-    if: needs.gate.outputs.dbsize == 'true' && (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'kaggle-backup-request')))
+    if: needs.gate.outputs.dbsize == 'true' && (github.event_name != 'repository_dispatch' || ((github.event.client_payload.issue.user.login == github.repository_owner || github.event.client_payload.issue.user.login == 'github-actions[bot]') && contains(github.event.client_payload.issue.labels.*.name, 'kaggle-backup-request')))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -125,7 +125,7 @@ jobs:
 
   db:
     needs: gate
-    if: needs.gate.outputs.db == 'true' && (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'kaggle-backup-request')))
+    if: needs.gate.outputs.db == 'true' && (github.event_name != 'repository_dispatch' || ((github.event.client_payload.issue.user.login == github.repository_owner || github.event.client_payload.issue.user.login == 'github-actions[bot]') && contains(github.event.client_payload.issue.labels.*.name, 'kaggle-backup-request')))
     runs-on: ubuntu-latest
     timeout-minutes: 150
     permissions:
@@ -321,7 +321,7 @@ jobs:
 
   models:
     needs: gate
-    if: needs.gate.outputs.models == 'true' && (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'kaggle-backup-request')))
+    if: needs.gate.outputs.models == 'true' && (github.event_name != 'repository_dispatch' || ((github.event.client_payload.issue.user.login == github.repository_owner || github.event.client_payload.issue.user.login == 'github-actions[bot]') && contains(github.event.client_payload.issue.labels.*.name, 'kaggle-backup-request')))
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:

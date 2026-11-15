@@ -162,3 +162,34 @@ def test_refresher_archives_a_dated_copy_per_close(tmp_path):
     back, why = F.read_snapshot(tmp_path / "history" / "20261106T1600Z.json", pd.Timestamp("2026-11-06T16:05:00+00:00"))
     assert why is None and back["bar_close"] == "2026-11-06T16:00:00+00:00"
     assert R.archive_snapshot(live, {"bar_close": None}) is None
+
+
+def test_builder_audits_each_decided_no_package_close_once(monkeypatch, tmp_path):
+    """ML-EQ-NOPKG-AUDIT: a refused symbol at a decision close writes ONE side-none audit row (with the reason and the close), so
+    live-vs-replay parity can confirm it; a buy still writes its buy row; a repeat tick on the same close writes nothing."""
+    from src.runtime import strategy_signal_builders as B
+    snap = _snap()
+    p = tmp_path / "snap.json"
+    F.write_snapshot(p, snap)
+    monkeypatch.setenv("ML_ENTRY_EQ_SNAPSHOT", str(p))
+    monkeypatch.setattr(pd.Timestamp, "now", classmethod(lambda cls, tz=None: pd.Timestamp("2026-11-05T20:05:00+00:00")))
+    leg = {"enabled": True, "pool_scored": True, "symbols": list(snap["symbols"]), "max_snapshot_age_h": 4.0, **CFG}
+    monkeypatch.setattr("src.units.strategies.load_strategy_config", lambda *a, **k: {"ml_entry_eq_struct": leg})
+    logged = []
+    monkeypatch.setattr(B, "log_signal", lambda rec: logged.append(rec))
+    PS._CACHE.clear()
+    B._ML_ENTRY_EQ_STRUCT_DECIDED.clear()
+    for s in snap["symbols"]:
+        B.ml_entry_eq_struct_signal_builder({"SYMBOL": s})
+    res = PS.batch("ml_entry_eq_struct", leg, snap)
+    evals = [r for r in logged if r.get("event") == "ml_entry_eq_struct_eval"]
+    nones = [r for r in evals if r["side"] == "none"]
+    buys = [r for r in evals if r["side"] == "buy"]
+    assert len(buys) == sum(isinstance(v, dict) for v in res.values())
+    assert nones and {r["symbol"] for r in nones} == {s for s, v in res.items() if isinstance(v, str)}
+    assert all(r["reason"] and r["bar_close"] == str(snap["bar_close"]) for r in nones)
+    n = len(logged)
+    for s in snap["symbols"]:
+        B.ml_entry_eq_struct_signal_builder({"SYMBOL": s})
+    assert len(logged) == n
+    B._ML_ENTRY_EQ_STRUCT_DECIDED.clear()

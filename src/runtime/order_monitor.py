@@ -10400,7 +10400,7 @@ def _iso_age_seconds(ts: Any, now: datetime) -> float | None:
 
 def _page_rearm_refusal(kind: str, account_id: str, symbol: str,
                         trade_id: Any, reason: str, *, verb: str = "refused",
-                        info_only: bool = False) -> None:
+                        info_only: bool = False, no_cooldown: bool = False) -> None:
     """Log every refusal; page CRITICAL (per symbol+kind cooldown).
 
     *verb* names what happened when it was not a refusal — the escalated
@@ -10427,8 +10427,11 @@ def _page_rearm_refusal(kind: str, account_id: str, symbol: str,
             logger.exception("_page_rearm_refusal: info report failed for %s/%s",
                              account_id, symbol)
         return
-    if not _cooldown_admits("alpaca_rearm_refused", f"{account_id}|{symbol}|{kind}",
-                            _ALPACA_REARM_REFUSAL_PAGE_COOLDOWN_S):
+    # no_cooldown (ALPACA-PARTIAL-TP-STOP-GAP): a position we left with NO stop after cancelling
+    # our own target pages CRITICAL on EVERY tick until it is protected again.
+    if not no_cooldown and not _cooldown_admits(
+            "alpaca_rearm_refused", f"{account_id}|{symbol}|{kind}",
+            _ALPACA_REARM_REFUSAL_PAGE_COOLDOWN_S):
         return
     try:
         from src.runtime.outcomes import Level, report
@@ -10569,6 +10572,185 @@ def _breach_state(client, symbol: str, side: str, stop: float,
     return "clear", info
 
 
+# ── ALPACA-PARTIAL-TP-STOP-GAP (2026-11-13, manager "build (a)") ───────────────────────────────
+# On a take-profit PARTIAL fill Alpaca cancels the bracket's stop leg, and the still-resting
+# target holds the remaining shares. `protect_venue_holding` then posts an ADDITIVE OCO for them,
+# which the venue refuses while our own target holds them, and retries only every
+# _ALPACA_TOPUP_COOLDOWN_S (900 s): the remainder sat with NO STOP until the target completed,
+# unbounded if price turned. Measured on alpaca_paper 2026-11-13: QLD 7142 (40 s), TQQQ 7141
+# (2.7 s). The same path serves alpaca_live and alpaca_portfolio (no class gate).
+#
+# The replacement, in order, never leaving the position naked:
+#   1. SCOPE: exactly one open row on this account+symbol (unambiguous ownership), its entry
+#      bracket (row.broker_order_id) read BY ORDER ID shows OUR target resting and NO stop.
+#   2. Cancel that target and CONFIRM the cancel at the venue. A cancel that is not confirmed
+#      does nothing further this tick (the target is still there) and retries next tick.
+#   3. Re-read the venue holding. Flat (the target filled first): post nothing; the reconcile
+#      path closes the row from the fill.
+#   4. Post a fresh OCO (row stop + row target) for the held qty. Refused -> a plain STOP at once.
+#      Both refused -> CRITICAL page EVERY tick, and the chain is retried every tick (the target
+#      is gone now, so _ALPACA_PARTIAL_TP_PENDING carries the case past the next detection).
+# Every step is journaled to runtime_logs/alpaca_partial_tp_replace.jsonl and stamped on the row.
+
+#: (account_id, SYMBOL, trade_id) whose target WE cancelled but which is not yet protected again.
+_ALPACA_PARTIAL_TP_PENDING: Dict[Tuple[str, str, Any], Dict[str, Any]] = {}
+
+
+def _alpaca_partial_tp_log_path() -> str:
+    from src.utils.paths import runtime_logs_dir
+    return os.path.join(runtime_logs_dir(), "alpaca_partial_tp_replace.jsonl")
+
+
+def _alpaca_partial_tp_log(rec: Dict[str, Any]) -> None:
+    """Append one step record. Never raises (a log failure must not reach the repair)."""
+    try:
+        rec = {"ts": datetime.now(timezone.utc).isoformat(), **rec}
+        path = _alpaca_partial_tp_log_path()
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(rec, sort_keys=True, default=str) + "\n")
+    except Exception:  # noqa: BLE001
+        logger.warning("_alpaca_partial_tp_log: write failed", exc_info=True)
+
+
+def _row_broker_order_id(db, trade_id: Any) -> Optional[str]:
+    """The row's entry-bracket parent id, or None when the column/row cannot be read."""
+    try:
+        conn = db.connect()
+        try:
+            r = conn.execute("SELECT broker_order_id FROM trades WHERE id = ?", (trade_id,)).fetchone()
+        finally:
+            conn.close()
+    except Exception:  # noqa: BLE001
+        return None
+    v = r[0] if r else None
+    return str(v).strip() or None if v else None
+
+
+def _stamp_partial_tp(db, trade_id: Any, verified: str) -> None:
+    try:
+        stamp = getattr(db, "stamp_protection_repair", None)
+        if callable(stamp):
+            stamp(trade_id, "partial_tp_replace", verified)
+    except Exception:  # noqa: BLE001
+        logger.warning("_stamp_partial_tp: stamp failed for trade_id=%s", trade_id, exc_info=True)
+
+
+def _alpaca_protect_after_target_cancel(db, client, account_id: str, symbol: str, row,
+                                        side: str, qty: int, sl: float, tp: Optional[float],
+                                        key: Tuple[str, str, Any]) -> str:
+    """Steps 4: OCO, else plain stop, else CRITICAL every tick. Returns the outcome."""
+    tid = row["id"]
+    if qty < 1:
+        _alpaca_partial_tp_log({"step": "protect", "account_id": account_id, "symbol": symbol,
+                                "trade_id": tid, "outcome": "below_one_share", "qty": qty})
+        _ALPACA_PARTIAL_TP_PENDING.pop(key, None)
+        return "below_one_share"
+    oco = None
+    if sl and tp:
+        oco = client.place_protective({"symbol": symbol, "direction": side, "qty": qty,
+                                       "sl": sl, "tp": tp, "additive": True,
+                                       "oca_key": str(tid), "account_id": account_id})
+    if oco and oco.get("retCode") == 0:
+        oid = (oco.get("result") or {}).get("orderId")
+        _alpaca_partial_tp_log({"step": "oco", "account_id": account_id, "symbol": symbol,
+                                "trade_id": tid, "outcome": "placed", "oco_order_id": oid,
+                                "qty": qty, "sl": sl, "tp": tp})
+        _stamp_partial_tp(db, tid, "unverified")
+        _ALPACA_PARTIAL_TP_PENDING.pop(key, None)
+        return "oco_placed"
+    _alpaca_partial_tp_log({"step": "oco", "account_id": account_id, "symbol": symbol,
+                            "trade_id": tid, "outcome": "refused", "qty": qty, "sl": sl, "tp": tp,
+                            "ret_msg": (oco or {}).get("retMsg") if oco else "no sl/tp for an OCO"})
+    stop = client.place_stop_only(symbol, side, qty, sl) if sl else None
+    if stop and stop.get("retCode") == 0:
+        sid = (stop.get("result") or {}).get("orderId")
+        _alpaca_partial_tp_log({"step": "fallback_stop", "account_id": account_id,
+                                "symbol": symbol, "trade_id": tid, "outcome": "placed",
+                                "stop_order_id": sid, "qty": qty, "sl": sl})
+        _stamp_partial_tp(db, tid, "unverified")
+        _ALPACA_PARTIAL_TP_PENDING.pop(key, None)
+        _page_rearm_refusal("partial_tp_stop_only", account_id, symbol, tid,
+                            f"OCO refused after our target was cancelled; a plain stop "
+                            f"{sl} rests for {qty} (no target)", verb="stop_only")
+        return "stop_placed"
+    _alpaca_partial_tp_log({"step": "fallback_stop", "account_id": account_id, "symbol": symbol,
+                            "trade_id": tid, "outcome": "refused", "qty": qty, "sl": sl,
+                            "ret_msg": (stop or {}).get("retMsg") if stop else "no stop level"})
+    _stamp_partial_tp(db, tid, "call_failed")
+    _ALPACA_PARTIAL_TP_PENDING[key] = {"qty": qty, "sl": sl, "tp": tp, "side": side}
+    _page_rearm_refusal("partial_tp_unprotected", account_id, symbol, tid,
+                        f"our target was cancelled and BOTH the OCO and the plain stop were "
+                        f"refused: {qty} share(s) have NO STOP (retried every tick)",
+                        no_cooldown=True)
+    return "unprotected"
+
+
+def _alpaca_replace_partial_target(db, client, account_id: str, symbol: str, row,
+                                   rows: list, side: str, sl: Optional[float],
+                                   tp: Optional[float]) -> str:
+    """Steps 1-4 of the replacement. ``not_applicable`` hands back to the existing path."""
+    tid = row["id"]
+    key = (account_id, symbol.upper(), tid)
+    if key in _ALPACA_PARTIAL_TP_PENDING:
+        # Our target is already gone and the last attempt left it unprotected: retry the
+        # protection now, every tick, at the venue's CURRENT holding.
+        pq = client.position_quote(symbol)
+        if pq.get("state") == "flat":
+            _alpaca_partial_tp_log({"step": "retry", "account_id": account_id, "symbol": symbol,
+                                    "trade_id": tid, "outcome": "flat"})
+            _ALPACA_PARTIAL_TP_PENDING.pop(key, None)
+            return "flat_after_cancel"
+        held = pq.get("qty") if pq.get("state") == "open" else _ALPACA_PARTIAL_TP_PENDING[key]["qty"]
+        return _alpaca_protect_after_target_cancel(
+            db, client, account_id, symbol, row, side, int(math.floor(float(held) + 1e-9)),
+            sl, tp, key)
+    same = [r for r in rows if str(r["account_id"] or "") == account_id
+            and str(r["symbol"] or "").upper() == symbol.upper()]
+    if len(same) != 1 or same[0]["id"] != tid:
+        return "not_applicable"
+    parent = _row_broker_order_id(db, tid)
+    if not parent:
+        return "not_applicable"
+    hold = client.partial_target_holding(parent, side)
+    if hold.get("state") != "tp_only":
+        return "not_applicable"
+    tp_id = hold.get("tp_order_id")
+    _alpaca_partial_tp_log({"step": "detect", "account_id": account_id, "symbol": symbol,
+                            "trade_id": tid, "parent_order_id": parent, "tp_order_id": tp_id,
+                            "tp_qty": hold.get("tp_qty"), "tp_filled": hold.get("tp_filled"),
+                            "tp_remaining": hold.get("tp_remaining")})
+    cancel = client.cancel_order_confirmed(tp_id)
+    _alpaca_partial_tp_log({"step": "cancel", "account_id": account_id, "symbol": symbol,
+                            "trade_id": tid, "tp_order_id": tp_id, "outcome": cancel.get("state"),
+                            "status": cancel.get("status"), "filled_qty": cancel.get("filled_qty")})
+    if cancel.get("state") == "failed":
+        # The target may still rest: do nothing further this tick; retry next tick.
+        return "cancel_failed"
+    pq = client.position_quote(symbol)
+    if pq.get("state") == "flat":
+        _alpaca_partial_tp_log({"step": "post_cancel_read", "account_id": account_id,
+                                "symbol": symbol, "trade_id": tid, "outcome": "flat"})
+        return "flat_after_cancel"
+    if pq.get("state") == "open":
+        held = float(pq.get("qty") or 0.0)
+    else:
+        # Could not read the holding: the cancel is CONFIRMED, so nothing else can have filled
+        # since; the target's own unfilled remainder is exactly what it was holding.
+        try:
+            held = float(hold.get("tp_qty") or 0.0) - float(cancel.get("filled_qty") or 0.0)
+        except (TypeError, ValueError):
+            held = float(hold.get("tp_remaining") or 0.0)
+    if cancel.get("state") == "filled" and held <= 0:
+        return "flat_after_cancel"
+    qty = int(math.floor(held + 1e-9))
+    _alpaca_partial_tp_log({"step": "post_cancel_read", "account_id": account_id,
+                            "symbol": symbol, "trade_id": tid, "outcome": pq.get("state"),
+                            "held_qty": held})
+    return _alpaca_protect_after_target_cancel(db, client, account_id, symbol, row, side, qty,
+                                               sl, tp, key)
+
+
 def _alpaca_rearm_preflight(client, account_id: str, symbol: str, row,
                             sym_rows: List[Any], sl: float) -> Tuple[str, Dict[str, Any]]:
     """Decide what the naked sweep may do for *row*: ``(verdict, info)``.
@@ -10663,6 +10845,37 @@ def _alpaca_rearm_preflight(client, account_id: str, symbol: str, row,
                 s_ = _safe_float(r["stop_loss"])
                 if s_ and s_ > 0 and not _stop_is_marketable(want, s_, last, bid, ask):
                     cands.append(r)
+            if (not cands and not mixed and len(same) == 1
+                    and same[0]["id"] == row["id"] and 0 < venue_qty < row_qty):
+                # ALPACA-PARTIAL-TP-BREACH-EXIT (manager review of #25790, 2026-11-13):
+                # ONE row, the venue holds PART of it (a partially filled target whose
+                # stop leg the venue cancelled) and that row's stop is already through
+                # the market. Returning all_stops_breached here only paged: no stop
+                # could be posted and the exit_breached flow below was never reached,
+                # so the remainder sat with NO stop and NO exit. Run the same breach
+                # check the attributable path runs; the exit closes the venue's whole
+                # holding on this symbol (AlpacaClient.close: qty >= held -> whole
+                # symbol), which is exactly this one row's remainder.
+                s_row = _safe_float(row["stop_loss"])
+                if s_row and s_row > 0:
+                    bstate, binfo = _breach_state(client, symbol, want, float(s_row),
+                                                  last, bid, ask)
+                    if bstate == "confirmed":
+                        return "exit_breached", binfo
+                    remainder = {"row": row, "qty": venue_qty, "side": want}
+                    if bstate == "unconfirmed":
+                        esc, _n = _breach_deferral(account_id, symbol, row["id"])
+                        if not esc:
+                            return "deferred_unconfirmed_breach", binfo
+                        _page_rearm_refusal(
+                            "breach_deferral_escalated", account_id, symbol, row["id"],
+                            f"partial remainder {venue_qty} of {row_qty}: stop {s_row} "
+                            f"looked breached for {_n} sweeps with no fresh trade — "
+                            "posting protection for the held qty", verb="escalated")
+                        return "protect_venue_holding", {**remainder, "escalated": True}
+                    if bstate == "session_closed":
+                        # A GTC stop RESTS outside RTH and triggers at the open.
+                        return "protect_venue_holding", remainder
             if not cands:
                 _page_rearm_refusal(
                     "all_stops_breached", account_id, symbol, row["id"],
@@ -10975,6 +11188,13 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
         "cap_exits": 0,
         "venue_holding_protected": 0,
         "venue_holding_cooldown": 0,
+        # ALPACA-PARTIAL-TP-STOP-GAP outcomes (one per row that took the replacement path)
+        "partial_tp_oco_placed": 0,
+        "partial_tp_stop_placed": 0,
+        "partial_tp_unprotected": 0,
+        "partial_tp_cancel_failed": 0,
+        "partial_tp_flat_after_cancel": 0,
+        "partial_tp_below_one_share": 0,
         "rearm_refused_deferred_unconfirmed_breach": 0,
         "exit_deferred": 0,
         # The breach exit's extended-hours close-limit is working at the broker;
@@ -11393,6 +11613,9 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
                              "than left naked"))
                     _ok_key = "cap_exits"
                 if _res == "exited":
+                    # A partial-TP retry left for this row is moot once it exits.
+                    _ALPACA_PARTIAL_TP_PENDING.pop(
+                        (account_id, symbol.upper(), row["id"]), None)
                     summary[_ok_key] += 1
                 elif _res == "working":
                     # An extended-hours close-limit is resting at the broker.
@@ -11417,6 +11640,19 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
                     summary["venue_holding_duplicate"] += 1
                     continue
                 _venue_protected.add(_key)
+                # ALPACA-PARTIAL-TP-STOP-GAP: when the held shares are reserved by OUR OWN
+                # partially filled target, replace it (cancel -> confirm -> OCO, else stop)
+                # before the additive path below, and WITHOUT its 900 s cooldown: that OCO is
+                # exactly the one the venue refuses while our target holds the shares.
+                _pt_pick = _pf_info["row"]
+                _pt_sl = _safe_float(_pt_pick["stop_loss"])
+                _pt_tp = _safe_float(_pt_pick["take_profit_1"])
+                _pt = _alpaca_replace_partial_target(
+                    db, client, account_id, symbol, _pt_pick, rows, _pf_info["side"],
+                    _pt_sl, _pt_tp)
+                if _pt != "not_applicable":
+                    summary[f"partial_tp_{_pt}"] = summary.get(f"partial_tp_{_pt}", 0) + 1
+                    continue
                 # One attempt per symbol per cooldown: a refused additive OCO
                 # (e.g. a target-only leg holding the shares) must not be
                 # re-POSTed every tick (REVIEW-14241 round 2).
@@ -14606,6 +14842,20 @@ def _sweep_venue_entry(cfg: Optional[Dict[str, Any]],
     return value
 
 
+def _own_leg_ids(db, trade_id: Any) -> tuple:
+    """The row's own bracket legs (``sl_order_id``, ``tp_order_id``), read on their own so a journal without the
+    columns (or a failed read) only loses the exact key, never the sweep. ``()`` when none."""
+    try:
+        c = db.connect()
+        try:
+            r = c.execute("SELECT sl_order_id, tp_order_id FROM trades WHERE id = ?", (int(trade_id),)).fetchone()
+        finally:
+            c.close()
+    except Exception:  # noqa: BLE001 — no leg ids: the heuristics alone, as before
+        return ()
+    return tuple(str(x) for x in (tuple(r) if r else ()) if x)
+
+
 def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
     """Fill ``pnl`` / ``exit_price`` / the broker-PnL note for any DB-closed
     trade that hasn't yet been reconciled against its broker's authoritative
@@ -14743,6 +14993,12 @@ def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
                 continue
 
             journal_entry = _safe_float(row.get("entry_price"))
+            # VENUE-PNL-ORDERID-MATCH (2026-11-14): the row's own bracket legs are an exact key, tried first.
+            # bybit_1 7054 sat pnl NULL with still_pending every pass: on a netted position the cumulative
+            # fills read refused (sibling 7216's TP fill in the window) and the record's avgEntryPrice is the
+            # POSITION average, which the entry filter refuses.
+            own_ids = _own_leg_ids(db, row.get("id"))
+            own_kw: Dict[str, Any] = {"own_order_ids": own_ids} if own_ids else {}   # a row with no legs: call unchanged
             try:
                 rec = account_closed_pnl_for_trade(
                     cfg,
@@ -14751,6 +15007,7 @@ def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
                     opened_at_ms=opened_at_ms,
                     qty=_safe_float(row.get("position_size")),
                     entry_price=journal_entry,
+                    **own_kw,
                 )
                 # CLOSE-PNL-NULL (2026-10-12): WATCHDOG-PAST-STOP (2026-10-10)
                 # taught the reconciler and the watchdog to match the venue's
@@ -14776,6 +15033,7 @@ def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
                             opened_at_ms=opened_at_ms,
                             qty=_safe_float(row.get("position_size")),
                             entry_price=venue_entry,
+                            **own_kw,
                         )
             except Exception as exc:  # noqa: BLE001
                 logger.warning(
@@ -14965,6 +15223,128 @@ _BROKER_PNL_RECOVERY_MS = 7 * 24 * 60 * 60 * 1000  # Bybit closed-pnl retention
 # owns the row there); this only catches rows the broker sweep abandons. Keep
 # coupled to ``check_db_integrity.DEFAULT_PNL_GRACE_HOURS``.
 _LOCAL_PNL_BROKER_DEFER_MS = 6 * 60 * 60 * 1000  # 6h — match INV-2 grace
+
+
+
+# ── ENTRY-FILL-WRITEBACK (manager decision 2026-11-15, option a) ─────────────────────────────────────────────────
+# trades.entry_price was the PACKAGE's planned entry, not the fill (ENTRY-FILL-BIAS-30D measured the gap, PR #26166).
+# Alpaca already books its confirm-poll fill as entry_price (ALPACA-LIVE-MECHANICS, 11-06). For Bybit this sweep reads
+# the ENTRY ORDER's own avgPrice by orderId (trades.broker_order_id) once the order is terminal and rewrites
+# entry_price, keeping the plan in notes.package_entry, exactly the Alpaca shape. Conditions (manager, each pinned by
+# tests/test_entry_fill_writeback.py):
+#   1. the entry order's OWN avgPrice by orderId, never a position average; a fill that cannot be isolated (not found,
+#      no average, filled qty not the row's qty) is NOT written: entry_price_source stays "plan" with the reason;
+#   2. a DB field update only: no order is placed, amended or cancelled, and no SL/TP or slice is recomputed;
+#   3. entry_price_source is on every row (execute._log_trade_to_journal stamps it at insert);
+#   4. no history backfill: only OPEN rows the insert marked fill_pending_writeback are read.
+ENTRY_FILL_PENDING = "fill_pending_writeback"
+ENTRY_FILL_SOURCE_BYBIT = "bybit_order_history"
+_ENTRY_FILL_QTY_TOL = 0.02
+_ENTRY_FILL_NONTERMINAL = frozenset({"New", "PartiallyFilled", "Untriggered", "Created", "Triggered"})
+
+
+def entry_fill_decision(row: Dict[str, Any], order: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Pure: what to do with one pending row, given ``clients.account_order_status``'s answer for its entry order.
+
+    Returns ``{"action": "write" | "plan" | "wait", "entry": float|None, "reason": str}``. ``wait`` = ask again next
+    tick (read failed, or the order is not terminal yet); ``plan`` = stop asking and keep the planned entry, labelled."""
+    if order is None:
+        return {"action": "wait", "entry": None, "reason": "order_status_read_failed"}
+    status = str(order.get("status") or "")
+    if status == "not_found":
+        return {"action": "plan", "entry": None, "reason": "entry_order_not_found"}
+    if status in _ENTRY_FILL_NONTERMINAL:
+        return {"action": "wait", "entry": None, "reason": f"entry_order_{status or 'unknown'}"}
+    avg = _safe_float(order.get("avg_price"))
+    if avg is None or avg <= 0:
+        return {"action": "plan", "entry": None, "reason": f"no_avg_price_status_{status or 'unknown'}"}
+    qty = _safe_float(row.get("position_size"))
+    filled = _safe_float(order.get("filled_qty"))
+    if qty and qty > 0 and (filled is None or abs(filled - qty) / qty > _ENTRY_FILL_QTY_TOL):
+        # The order's fills are not this row's size: the fill cannot be isolated to the row. Keep the plan.
+        return {"action": "plan", "entry": None, "reason": "entry_order_qty_mismatch"}
+    return {"action": "write", "entry": avg, "reason": ENTRY_FILL_SOURCE_BYBIT}
+
+
+def _sweep_entry_fill_writeback(db, *, order_status: Any = None, limit: int = 20) -> Dict[str, int]:
+    """Rewrite entry_price from the entry order's own fill for OPEN Bybit rows marked fill_pending_writeback.
+
+    DB field update only (entry_price + notes): it never touches an order, a bracket or a slice. Best-effort, never
+    raises. ``order_status`` is injectable for tests (default ``clients.account_order_status``)."""
+    summary: Dict[str, int] = {"scanned": 0, "written": 0, "kept_plan": 0, "waiting": 0, "errors": 0}
+    try:
+        conn = db.connect()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT id, account_id, symbol, position_size, entry_price, broker_order_id, notes FROM trades "
+                " WHERE status = 'open' AND COALESCE(is_backtest, 0) = 0 "
+                "   AND broker_order_id IS NOT NULL AND notes LIKE ? "
+                " ORDER BY id DESC LIMIT ?",
+                (f"%{ENTRY_FILL_PENDING}%", int(limit)))
+            rows = [dict(r) for r in cur.fetchall()]
+        finally:
+            try:
+                conn.close()
+            except Exception:  # noqa: BLE001
+                pass
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("_sweep_entry_fill_writeback: scan failed: %s", exc)
+        return summary
+    if not rows:
+        return summary
+    if order_status is None:
+        try:
+            from src.units.accounts.clients import account_order_status as order_status
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("_sweep_entry_fill_writeback: clients import failed: %s", exc)
+            summary["errors"] = len(rows)
+            return summary
+    try:
+        cfgs = _load_account_cfgs_for_reconcile()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("_sweep_entry_fill_writeback: account cfg load failed: %s", exc)
+        summary["errors"] = len(rows)
+        return summary
+    from src.utils.json_notes import dump_capped
+    for row in rows:
+        summary["scanned"] += 1
+        try:
+            notes = json.loads(row.get("notes") or "{}") if row.get("notes") else {}
+            if not isinstance(notes, dict) or notes.get("entry_price_source_reason") != ENTRY_FILL_PENDING:
+                continue  # the LIKE matched elsewhere in the blob; not ours
+            cfg = (cfgs or {}).get(row.get("account_id"))
+            if cfg is None or str(cfg.get("exchange") or "bybit").lower() != "bybit":
+                summary["waiting"] += 1
+                continue
+            d = entry_fill_decision(row, order_status(cfg, str(row["broker_order_id"])))
+            if d["action"] == "wait":
+                summary["waiting"] += 1
+                continue
+            if d["action"] == "write":
+                notes["package_entry"] = _safe_float(row.get("entry_price"))
+                notes["entry_price_source"] = ENTRY_FILL_SOURCE_BYBIT
+                notes.pop("entry_price_source_reason", None)
+                new_entry = d["entry"]
+            else:
+                notes["entry_price_source"] = "plan"
+                notes["entry_price_source_reason"] = d["reason"]
+                new_entry = None
+            blob = dump_capped(notes, max(500, len(row.get("notes") or "")))
+            # The canonical writer (writer-conformance). Its observer hooks fire only on status='closed' or an sl/tp
+            # key, so an entry_price/notes update triggers no notification, cost stamp or bracket path.
+            fields: Dict[str, Any] = {"notes": blob}
+            if new_entry is not None:
+                fields["entry_price"] = new_entry
+            db.update_trade(row["id"], fields)
+            summary["written" if new_entry is not None else "kept_plan"] += 1
+            if new_entry is not None:
+                logger.info("entry_fill_writeback: trade %s %s entry %s -> %s (entry order's own avgPrice)",
+                            row["id"], row.get("symbol"), row.get("entry_price"), new_entry)
+        except Exception as exc:  # noqa: BLE001
+            summary["errors"] += 1
+            logger.warning("_sweep_entry_fill_writeback: trade %s raised %s", row.get("id"), exc)
+    return summary
 
 
 def _exit_anchor_fetches_per_tick() -> int:
@@ -16447,6 +16827,712 @@ def _sweep_correct_closed_at_from_own_fill(
     return summary
 
 
+# ── PNL-GROSS-VS-VENUE-6817: the venue's net closed P&L is ``pnl`` ───────────
+#: Bybit closed-pnl reads per monitor tick. Small: this runs on the live tick.
+_VENUE_PNL_READS_PER_TICK = 4
+#: A Bybit row still unmatched this long after its close is recorded
+#: ``venue_unmatched`` (a diagnosis item) instead of being re-asked every tick.
+_VENUE_PNL_UNMATCHED_AFTER_MS = 24 * 3600 * 1000
+_VENUE_FILL_EXIT_SOURCES = frozenset({"exchange_fill", "exchange", "broker_leg_fill"})
+#: A (account, symbol, close-hour) window read this recently is served from the last result instead of
+#: re-read. Without it, rows still waiting for their venue record (newest first in the scan) re-read the
+#: same windows every tick and took the whole read budget: after the 2026-11-14 17:36Z deploy, 8 rows
+#: classified by 17:40Z and then none, with 87 Bybit rows from the last 7 days left unclassified and
+#: ``budget_deferred`` 46 per tick. It makes FEWER venue calls, never a delay on one.
+_BUDGET = object()   # _sweep_venue_net_pnl: the tick's read budget is spent
+_VENUE_PNL_READ_TTL_MS = 10 * 60 * 1000
+_VENUE_PNL_READ_CACHE: Dict[Tuple[str, str, int], Tuple[int, Optional[Dict[str, Any]]]] = {}
+
+
+def _venue_read_window(row: Dict[str, Any], closed_ms: int) -> Tuple[int, int]:
+    """(start_ms, end_ms) for a Bybit closed-pnl read covering this row.
+
+    Bybit filters ``/v5/position/closed-pnl`` on the record's ``created_time``, which is when the CLOSING
+    order was placed, and a bracket's TP/SL leg is placed at ENTRY. MEASURED 2026-11-14: bybit_1 XRP
+    record 084e4c9f (trade 7054) created 11-11 12:02, filled 11-14 16:46. A window around the close
+    (close-2h .. +3h) misses every trade held longer than ~2 h, and those rows would land venue_unmatched.
+    So the window starts an hour before the row's own entry, clamped to Bybit's 7-day maximum span."""
+    end = (int(closed_ms // 3_600_000) + 3) * 3_600_000
+    start = (int(closed_ms // 3_600_000) - 2) * 3_600_000
+    opened_ms = _isoformat_to_ms(row.get("created_at"))
+    if opened_ms is not None:
+        start = min(start, (int(opened_ms // 3_600_000) - 1) * 3_600_000)
+    start = max(start, end - (7 * 24 - 1) * 3_600_000)
+    return start, end
+
+
+def _venue_entry_window(row: Dict[str, Any], first_start_ms: int) -> Optional[Tuple[int, int]]:
+    """A second read window anchored at the row's ENTRY, for a hold the first window cannot cover.
+
+    :func:`_venue_read_window` clamps to Bybit's 7-day span ending after the close, so for a hold longer
+    than ~7 days the record (created when the bracket leg was placed, i.e. at entry) lies before it.
+    MEASURED 2026-11-14: bybit_1 trade 6788 (SOL, entry 10-29, closed 11-08) landed venue_unmatched that
+    way. ``None`` when the entry is already inside the first window (no extra read is needed)."""
+    opened_ms = _isoformat_to_ms(row.get("created_at"))
+    if opened_ms is None:
+        return None
+    start = (int(opened_ms // 3_600_000) - 1) * 3_600_000
+    if start >= first_start_ms:
+        return None
+    return start, min(start + (7 * 24 - 1) * 3_600_000, first_start_ms)
+
+
+def _venue_gap_notes(db, row: Dict[str, Any], rec: Dict[str, Any], stored: Any, computed: Any) -> Dict[str, Any]:
+    """The venue record's own figures plus, on a gap, why: every gap explains itself.
+
+    ``netting_position_avg_entry``: the venue entry differs from the row's AND another row of the same
+    account/symbol/side was open at the same time (a netting account prices a close at the POSITION's
+    average entry, trade 7216). ``entry_fill_differs``: the venue entry differs and nothing else was open
+    (the journal entry_price is the planned entry, not the fill, trade 7224). ``unexplained``: anything else."""
+    from src.runtime import venue_pnl as vp
+    out: Dict[str, Any] = {"venue_avg_entry": _safe_float(rec.get("avg_entry_price")),
+                           "venue_avg_exit": _safe_float(rec.get("avg_exit_price")),
+                           "venue_qty": _safe_float(rec.get("qty"))}
+    if stored is None or computed is None or not vp.is_gap(stored, computed):
+        return out
+    ve, je = out["venue_avg_entry"], _safe_float(row.get("entry_price"))
+    reason = "unexplained"
+    if ve is not None and je is not None and abs(ve - je) > max(1e-9, 1e-4 * abs(je)):
+        reason = "entry_fill_differs"
+        try:
+            conn = db.connect()
+            try:
+                sib = conn.execute(
+                    "SELECT 1 FROM trades WHERE account_id = ? AND symbol = ? AND direction = ? AND id != ? "
+                    "   AND COALESCE(is_backtest, 0) = 0 "
+                    "   AND datetime(created_at) < datetime(?) "
+                    "   AND (status = 'open' OR datetime(COALESCE(closed_at, created_at)) > datetime(?)) LIMIT 1",
+                    (row.get("account_id"), row.get("symbol"), row.get("direction"), int(row["id"]),
+                     row.get("closed_at") or row.get("created_at"), row.get("created_at"))).fetchone()
+            finally:
+                conn.close()
+            if sib:
+                reason = "netting_position_avg_entry"
+        except Exception as exc:  # noqa: BLE001  # allow-silent: the reason degrades to entry_fill_differs
+            logger.debug("_venue_gap_notes: sibling read for %s: %s", row.get("id"), exc)
+    out["pnl_gap_reason"] = reason
+    return out
+
+
+def _sweep_venue_net_pnl(
+    db, *, cfgs: Optional[Dict[str, Dict[str, Any]]] = None,
+    bybit_reader: Optional[Callable[..., Optional[Dict[str, Any]]]] = None,
+) -> Dict[str, int]:
+    """Store the venue's net closed P&L as ``pnl`` and our own figure beside it.
+
+    Operator decision w11 (2026-11-12): "Store the venue's always, it is the single
+    source of truth and if we have a gap we need to understand why". Rules and
+    population are in :mod:`src.runtime.venue_pnl`. For each closed, priced,
+    non-backtest row closed in the last 7 days (Bybit's closed-pnl retention) with
+    no ``pnl_basis`` yet:
+
+    * Bybit (real AND demo): read the raw closed-pnl records around the close,
+      match this row's own record (own close order id first, then a unique qty +
+      side + 15-min match), write ``pnl`` = its ``closed_pnl``,
+      ``pnl_basis='venue_net'``. Unmatched after 24 h -> ``venue_unmatched``;
+      a failed read writes nothing and retries.
+    * IBKR rows priced from ``ib_execution``: already the venue's realised P&L ->
+      ``venue_net``. Alpaca and other fills-only venues with a venue-fill exit ->
+      ``venue_fills_net`` (``pnl`` unchanged). Anything else ->
+      ``computed_estimate``.
+
+    Every classified row also gets ``pnl_computed`` (journal entry/exit x qty minus
+    the row's own costs) and ``pnl_gap_usd``. Best-effort; never raises.
+    """
+    from src.runtime import venue_pnl as vp
+    from src.runtime.local_pnl import compute_pnl_percent, contract_value_usd_for
+
+    summary: Dict[str, int] = {"scanned": 0, "venue_net": 0, "venue_fills_net": 0,
+                               "computed_estimate": 0, "unmatched": 0, "gaps": 0,
+                               "retry": 0, "budget_deferred": 0, "errors": 0}
+    try:
+        if cfgs is None:
+            cfgs = _load_account_cfgs_for_reconcile()
+        conn = db.connect()
+        try:
+            conn.row_factory = __import__("sqlite3").Row
+            rows = [dict(r) for r in conn.execute(
+                "SELECT id, account_id, symbol, direction, position_size, entry_price, "
+                "       exit_price, pnl, notes, setup_type, closed_at, created_at, "
+                "       sl_order_id, tp_order_id, broker_order_id, "
+                "       fee_taker_usd, fee_maker_usd, funding_paid_usd "
+                "  FROM trades "
+                " WHERE status = 'closed' AND COALESCE(is_backtest, 0) = 0 "
+                "   AND pnl IS NOT NULL AND pnl_basis IS NULL "
+                "   AND COALESCE(setup_type, '') != 'intent_reduce' "
+                "   AND datetime(COALESCE(closed_at, created_at)) >= datetime('now', '-7 days') "
+                " ORDER BY datetime(COALESCE(closed_at, created_at)) DESC LIMIT 50"
+            ).fetchall()]
+        finally:
+            conn.close()
+    except Exception as exc:  # noqa: BLE001 — incl. a DB without the pnl_basis column yet
+        logger.warning("_sweep_venue_net_pnl: scan failed: %s", exc)
+        summary["errors"] += 1
+        return summary
+    summary["scanned"] = len(rows)
+    if bybit_reader is None:
+        from src.units.accounts.clients import account_bybit_raw_closed_pnl
+        bybit_reader = account_bybit_raw_closed_pnl
+    budget = [_VENUE_PNL_READS_PER_TICK]
+    cache: Dict[Tuple[str, str, int], Optional[Dict[str, Any]]] = {}
+    now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+
+    for row in rows:
+        try:
+            cfg = (cfgs or {}).get(str(row.get("account_id") or "")) or {}
+            ex = str(cfg.get("exchange") or "").lower()
+            notes = _decode_notes(row.get("notes"))
+            exit_src = str(notes.get("exit_price_source") or "")
+            computed = vp.computed_net(row)
+            updates: Dict[str, Any] = {}
+            basis: Optional[str] = None
+            matched_rec: Optional[Dict[str, Any]] = None
+            if ex == "bybit":
+                closed_ms = _isoformat_to_ms(row.get("closed_at") or row.get("created_at"))
+                if closed_ms is None:
+                    summary["retry"] += 1
+                    continue
+                w_start, w_end = _venue_read_window(row, closed_ms)
+
+                def _read(ws: int, we: int, _row=row, _cfg=cfg) -> Any:
+                    """The window's read result, ``_BUDGET`` when the tick's budget is spent. Cached per tick and,
+                    when the read succeeded, for _VENUE_PNL_READ_TTL_MS across ticks."""
+                    key = (str(_row["account_id"]), str(_row.get("symbol") or ""), ws, we)
+                    if key not in cache:
+                        held = _VENUE_PNL_READ_CACHE.get(key)
+                        if held is not None and now_ms - held[0] < _VENUE_PNL_READ_TTL_MS and held[1] is not None:
+                            cache[key] = held[1]             # read within the TTL: no new venue call
+                        else:
+                            if budget[0] <= 0:
+                                return _BUDGET
+                            budget[0] -= 1
+                            try:
+                                cache[key] = bybit_reader(
+                                    _cfg, symbol=str(_row.get("symbol") or ""), start_ms=ws, end_ms=we)
+                            except Exception as exc:  # noqa: BLE001
+                                logger.warning("_sweep_venue_net_pnl: read %s: %s", key, exc)
+                                cache[key] = None
+                            got0 = cache[key]
+                            if isinstance(got0, dict) and got0.get("query_state") != "could_not_look":
+                                _VENUE_PNL_READ_CACHE[key] = (now_ms, got0)   # a failed read is never held
+                    return cache[key]
+
+                got = _read(w_start, w_end)
+                if got is _BUDGET:
+                    summary["budget_deferred"] += 1
+                    continue
+                if not isinstance(got, dict) or got.get("query_state") == "could_not_look":
+                    summary["retry"] += 1
+                    continue
+                own = [row.get("sl_order_id"), row.get("tp_order_id")]
+                if str(row.get("setup_type") or "") == "partial_close":
+                    own.append(row.get("broker_order_id"))
+                for k in ("own_leg_fill", "exit_fill"):
+                    if isinstance(notes.get(k), dict):
+                        own.append(notes[k].get("order_id"))
+                close_side = {"long": "sell", "short": "buy"}.get(str(row.get("direction") or "").lower())
+                rec, how = vp.match_venue_record(
+                    got.get("records") or [], own_order_ids=own,
+                    qty=row.get("position_size"), closed_at_ms=closed_ms, close_side=close_side,
+                )
+                entry_w = _venue_entry_window(row, w_start) if rec is None else None
+                if entry_w is not None:
+                    # A hold longer than the first window: its record was created at entry, before it.
+                    got_e = _read(*entry_w)
+                    if got_e is _BUDGET:
+                        summary["budget_deferred"] += 1
+                        continue
+                    if not isinstance(got_e, dict) or got_e.get("query_state") == "could_not_look":
+                        summary["retry"] += 1
+                        continue
+                    rec, how = vp.match_venue_record(
+                        got_e.get("records") or [], own_order_ids=own,
+                        qty=row.get("position_size"), closed_at_ms=closed_ms, close_side=close_side,
+                    )
+                if rec is None or _safe_float(rec.get("closed_pnl")) is None:
+                    if now_ms - closed_ms < _VENUE_PNL_UNMATCHED_AFTER_MS:
+                        summary["retry"] += 1
+                        continue
+                    basis = vp.BASIS_VENUE_UNMATCHED
+                    notes["venue_pnl_match"] = how
+                    summary["unmatched"] += 1
+                else:
+                    venue = float(rec["closed_pnl"])
+                    basis = vp.BASIS_VENUE_NET
+                    matched_rec = rec
+                    updates["pnl"] = venue
+                    notes["venue_pnl_match"] = how
+                    if _safe_float(row.get("pnl")) is not None:
+                        notes["pnl_prior"] = _safe_float(row.get("pnl"))   # the figure this replaces, kept
+                    if "pnl_source" in notes and notes.get("pnl_source") != "bybit_closed_pnl":
+                        notes["pnl_source_prior"] = notes.get("pnl_source")
+                    notes["pnl_source"] = "bybit_closed_pnl"
+                    pct = compute_pnl_percent(
+                        pnl=venue, entry_price=_safe_float(row.get("entry_price")),
+                        qty=_safe_float(row.get("position_size")),
+                        contract_value_usd=contract_value_usd_for(row.get("symbol")))
+                    if pct is not None:
+                        updates["pnl_percent"] = pct
+            elif exit_src == "ib_execution":
+                basis = vp.BASIS_VENUE_NET
+            elif exit_src in _VENUE_FILL_EXIT_SOURCES:
+                # Each of these is a venue fill (exchange_fill / exchange are MEASURED in
+                # provenance; broker_leg_fill is the Alpaca filled-leg read, PR #25240).
+                basis = vp.BASIS_VENUE_FILLS_NET
+            else:
+                basis = vp.BASIS_COMPUTED_ESTIMATE
+            updates["pnl_basis"] = basis
+            if computed is not None:
+                updates["pnl_computed"] = computed
+                stored = _safe_float(updates.get("pnl", row.get("pnl")))
+                if stored is not None and basis in vp.NET_BASES:
+                    updates["pnl_gap_usd"] = round(stored - computed, 8)
+                    if vp.is_gap(stored, computed):
+                        summary["gaps"] += 1
+            if matched_rec is not None:
+                notes.update(_venue_gap_notes(db, row, matched_rec, _safe_float(updates.get("pnl")), computed))
+            if notes != _decode_notes(row.get("notes")):
+                # Only when this sweep added a key, and at the close paths' own 2000 cap: a 500 cap re-wrote every
+                # classified row's existing close notes (closed_by, exit sources) down to 500 characters.
+                updates["notes"] = dump_capped(notes, 2000)
+            wconn = db.connect()
+            try:
+                cols = sorted(updates)
+                cur = wconn.execute(
+                    "UPDATE trades SET " + ", ".join(f"{c} = ?" for c in cols) +  # writer-conformance: allow guarded venue-P&L classification; WHERE pins pnl_basis IS NULL so it runs once, and update_trade cannot guard on a prior value
+                    " WHERE id = ? AND pnl_basis IS NULL",
+                    (*[updates[c] for c in cols], int(row["id"])))
+                wconn.commit()
+                changed = cur.rowcount
+            finally:
+                wconn.close()
+            if changed and basis != vp.BASIS_VENUE_UNMATCHED:
+                summary[basis] = summary.get(basis, 0) + 1
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("_sweep_venue_net_pnl: row %s: %s", row.get("id"), exc)
+            summary["errors"] += 1
+    _backfill_venue_gap_notes(db, cfgs or {}, bybit_reader, budget, cache, now_ms, summary)
+    if summary["venue_net"] or summary["gaps"] or summary["errors"] or summary["unmatched"] \
+            or summary.get("backfilled"):
+        logger.info("_sweep_venue_net_pnl: %s", summary)
+    return summary
+
+
+def _backfill_venue_gap_notes(db, cfgs, bybit_reader, budget, cache, now_ms, summary) -> None:
+    """Rows classified venue_net before the gap notes existed get them, with the read budget left over.
+
+    Notes keys ONLY, through a guarded UPDATE (WHERE pnl_basis = 'venue_net' and the notes unchanged since
+    read): the stored pnl, pnl_computed and pnl_gap_usd are never touched. Best-effort; never raises."""
+    from src.runtime import venue_pnl as vp
+    try:
+        conn = db.connect()
+        try:
+            conn.row_factory = __import__("sqlite3").Row
+            rows = [dict(r) for r in conn.execute(
+                "SELECT id, account_id, symbol, direction, position_size, entry_price, exit_price, pnl, "
+                "       pnl_computed, notes, setup_type, closed_at, created_at, sl_order_id, tp_order_id, "
+                "       broker_order_id FROM trades "
+                " WHERE pnl_basis = 'venue_net' AND COALESCE(notes, '') NOT LIKE '%\"venue_avg_entry\"%' "
+                "   AND datetime(COALESCE(closed_at, created_at)) >= datetime('now', '-7 days') "
+                " ORDER BY datetime(COALESCE(closed_at, created_at)) ASC LIMIT 20").fetchall()]
+        finally:
+            conn.close()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("_backfill_venue_gap_notes: scan failed: %s", exc)
+        return
+    for row in rows:
+        try:
+            cfg = cfgs.get(str(row.get("account_id") or "")) or {}
+            if str(cfg.get("exchange") or "").lower() != "bybit":
+                continue
+            closed_ms = _isoformat_to_ms(row.get("closed_at") or row.get("created_at"))
+            if closed_ms is None:
+                continue
+            w_start, w_end = _venue_read_window(row, closed_ms)
+            key = (str(row["account_id"]), str(row.get("symbol") or ""), w_start, w_end)
+            if key not in cache:
+                held = _VENUE_PNL_READ_CACHE.get(key)
+                if held is not None and now_ms - held[0] < _VENUE_PNL_READ_TTL_MS and held[1] is not None:
+                    cache[key] = held[1]
+                else:
+                    if budget[0] <= 0:
+                        return
+                    budget[0] -= 1
+                    try:
+                        cache[key] = bybit_reader(cfg, symbol=str(row.get("symbol") or ""),
+                                                  start_ms=w_start, end_ms=w_end)
+                    except Exception as exc:  # noqa: BLE001
+                        logger.debug("_backfill_venue_gap_notes: read %s: %s", key, exc)
+                        cache[key] = None
+                    if isinstance(cache[key], dict) and cache[key].get("query_state") != "could_not_look":
+                        _VENUE_PNL_READ_CACHE[key] = (now_ms, cache[key])
+            got = cache[key]
+            if not isinstance(got, dict) or got.get("query_state") == "could_not_look":
+                continue
+            notes = _decode_notes(row.get("notes"))
+            own = [row.get("sl_order_id"), row.get("tp_order_id")]
+            if str(row.get("setup_type") or "") == "partial_close":
+                own.append(row.get("broker_order_id"))
+            for k in ("own_leg_fill", "exit_fill"):
+                if isinstance(notes.get(k), dict):
+                    own.append(notes[k].get("order_id"))
+            rec, _how = vp.match_venue_record(
+                got.get("records") or [], own_order_ids=own, qty=row.get("position_size"),
+                closed_at_ms=closed_ms,
+                close_side={"long": "sell", "short": "buy"}.get(str(row.get("direction") or "").lower()))
+            if rec is None:
+                continue
+            notes.update(_venue_gap_notes(db, row, rec, _safe_float(row.get("pnl")),
+                                          _safe_float(row.get("pnl_computed"))))
+            wconn = db.connect()
+            try:
+                cur = wconn.execute(
+                    "UPDATE trades SET notes = ? WHERE id = ? AND pnl_basis = 'venue_net' "  # writer-conformance: allow guarded notes-only backfill of venue gap notes; WHERE pins basis + the notes read
+                    "   AND COALESCE(notes, '') = COALESCE(?, '')",
+                    (dump_capped(notes, 2000), int(row["id"]), row.get("notes")))
+                wconn.commit()
+                if cur.rowcount:
+                    summary["backfilled"] = summary.get("backfilled", 0) + 1
+            finally:
+                wconn.close()
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("_backfill_venue_gap_notes: row %s: %s", row.get("id"), exc)
+
+
+# ── ALPACA-CLOSE-BROKER-TRUTH (2026-11-12) ──────────────────────────────────
+#: Exit reasons a broker-leg read may replace: the two FLAT DETECTORS (how the
+#: close was noticed, never why) and the generic reconciler labels. A row a
+#: price sweep already relabelled ``sl``/``tp`` off a detector is also eligible
+#: (selected by its ``pre_label_exit_reason``), so the inferred label is upgraded
+#: to the broker's own.
+_BROKER_LEG_REPLACEABLE_REASONS = (
+    _SNAPSHOT_FLAT_REASON, "stuck_strategy_watchdog", "", "reconciler_filled",
+)
+#: `exit_reason_source` / `exit_price_source` / `closed_by` stamp for a close
+#: taken from the filled bracket leg of the row's own Alpaca parent order.
+#: MEASURED: the venue says which leg filled, at what price and when.
+BROKER_LEG_FILL_SOURCE = "broker_leg_fill"
+#: Notes key saying this row's parent order WAS read (value = outcome), which
+#: also makes it ineligible for another read. A transient ``could_not_look``
+#: writes nothing, so the next tick retries (NO-HALT).
+_BROKER_LEG_READ_KEY = "broker_leg_read"
+_BROKER_LEG_READ_NOTES_LIKE = '%"broker_leg_read"%'
+#: Broker reads per monitor tick (one parent read, plus one per REPLACED leg
+#: hop). Small on purpose: this runs on the live trader's tick.
+_BROKER_LEG_READS_PER_TICK = 6
+_BROKER_LEG_MAX_REPLACE_HOPS = 3
+#: A leg fill later than the detected close by more than this is not the event
+#: that closed the row.
+_BROKER_LEG_CLOSE_SKEW_MS = 120_000
+_ALPACA_STOP_LEG_TYPES = frozenset({"stop", "stop_limit", "trailing_stop"})
+
+
+def _pick_alpaca_exit_leg(
+    parent: Optional[Dict[str, Any]], *, direction: Any, qty: Any,
+    opened_ms: Optional[int], closed_ms: Optional[int],
+    replaced_reader: Optional[Callable[[str], Optional[Dict[str, Any]]]] = None,
+) -> Tuple[Optional[Dict[str, Any]], str]:
+    """Return ``(exit, state)`` from an Alpaca parent order's nested legs.
+
+    ``exit`` is ``{"reason": "sl"|"tp", "exit_price", "filled_at",
+    "leg_order_id", "leg_type"}`` when exactly one exit-side leg filled the
+    whole position inside ``[opened, closed + skew]``; otherwise ``None`` and
+    ``state`` names why (``no_filled_leg`` / ``ambiguous`` / ``qty_mismatch`` /
+    ``fill_outside_window`` / ``could_not_look``). A leg Alpaca REPLACED (an
+    amended stop) is followed through ``replaced_by`` with ``replaced_reader``,
+    at most ``_BROKER_LEG_MAX_REPLACE_HOPS`` hops; a hop that cannot be read
+    returns ``could_not_look`` so the caller retries. Pure apart from that
+    reader; never raises.
+    """
+    if not isinstance(parent, dict):
+        return None, "could_not_look"
+    exit_side = {"long": "sell", "short": "buy"}.get(
+        str(direction or "").strip().lower())
+    want_qty = _safe_float(qty)
+    if not exit_side or not want_qty:
+        return None, "no_filled_leg"
+
+    legs: List[Dict[str, Any]] = []
+    for leg in parent.get("legs") or []:
+        cur = leg
+        hops = 0
+        while (
+            isinstance(cur, dict)
+            and str(cur.get("status") or "").lower() == "replaced"
+            and cur.get("replaced_by")
+        ):
+            if replaced_reader is None or hops >= _BROKER_LEG_MAX_REPLACE_HOPS:
+                break
+            nxt = replaced_reader(str(cur["replaced_by"]))
+            hops += 1
+            if nxt is None:
+                return None, "could_not_look"
+            cur = nxt
+        if isinstance(cur, dict):
+            legs.append(cur)
+
+    filled = [
+        lg for lg in legs
+        if str(lg.get("status") or "").lower() == "filled"
+        and str(lg.get("side") or "").lower() == exit_side
+        and (_safe_float(lg.get("filled_qty")) or 0.0) > 0
+    ]
+    if not filled:
+        return None, "no_filled_leg"
+    if len(filled) > 1:
+        return None, "ambiguous"
+    leg = filled[0]
+    fqty = _safe_float(leg.get("filled_qty")) or 0.0
+    if abs(fqty - want_qty) > max(1e-6, 1e-3 * want_qty):
+        return None, "qty_mismatch"
+    px = _safe_float(leg.get("filled_avg_price"))
+    fill_iso = normalize_closed_at_value(leg.get("filled_at"))
+    fill_ms = _isoformat_to_ms(fill_iso)
+    if not px or px <= 0 or fill_ms is None:
+        return None, "no_filled_leg"
+    if (opened_ms is not None and fill_ms < opened_ms) or (
+        closed_ms is not None and fill_ms > closed_ms + _BROKER_LEG_CLOSE_SKEW_MS
+    ):
+        return None, "fill_outside_window"
+    ltype = str(leg.get("order_type") or "").lower()
+    if ltype in _ALPACA_STOP_LEG_TYPES:
+        reason = "sl"
+    elif ltype == "limit":
+        reason = "tp"
+    else:
+        return None, "no_filled_leg"
+    return {
+        "reason": reason, "exit_price": float(px), "filled_at": fill_iso,
+        "leg_order_id": leg.get("order_id"), "leg_type": ltype,
+    }, "filled_leg"
+
+
+def _sweep_alpaca_close_from_broker_leg(
+    db, *, history_reader: Optional[Callable[..., Optional[Dict[str, Any]]]] = None,
+    cfgs: Optional[Dict[str, Dict[str, Any]]] = None,
+) -> Dict[str, int]:
+    """Close an Alpaca row with the BROKER's own exit reason, price and time.
+
+    ALPACA-CLOSE-BROKER-TRUTH. On Alpaca the bracket rests AT THE BROKER, so a
+    stop or target that fills there is only ever noticed by a flat detector
+    (``position_snapshot_reconciler`` → ``exchange_flat_reconciled``, or the
+    ``stuck_strategy_watchdog``). Those write the DETECTION time and no reason;
+    a later price sweep infers ``sl``/``tp`` from price vs the package bracket
+    (``price_vs_pkg_bracket``, ESTIMATED). MEASURED 2026-11-12 (/api/diag/
+    alpaca_order_history, by id): trades 7011 IWM and 7012 GDX were journal-
+    closed 14:36:00Z, while their stop legs filled at 14:33:31Z / 14:33:39Z at
+    279.450338 / 88.706208 -- the venue had the answer all along under
+    ``/v2/orders/{broker_order_id}?nested=true``.
+
+    Rule: a closed, non-backtest Alpaca row (account ``exchange: alpaca``) with
+    a ``broker_order_id``, closed in the last 14 days, whose reason is a
+    detector / generic label (or ``sl``/``tp`` relabelled off a detector), and
+    whose parent order has not been read yet. Read the parent with its legs;
+    when exactly one exit-side leg filled the whole position
+    (:func:`_pick_alpaca_exit_leg`), set ``exit_reason`` = sl/tp by leg type,
+    ``exit_price`` = the leg's ``filled_avg_price``, ``closed_at`` = its
+    ``filled_at``, and ``pnl`` from that price (Alpaca equity fills carry no
+    fee); stamp ``exit_reason_source`` / ``exit_price_source`` / ``closed_by``
+    = ``broker_leg_fill`` and keep the detector in ``pre_label_exit_reason``,
+    the detection time in ``closed_at_detected`` and the leg in ``exit_leg_id``. Otherwise record the outcome
+    in ``broker_leg_read`` and leave the row to the existing inference. A
+    failed read writes nothing and is retried next tick. Best-effort; never
+    raises.
+    """
+    summary: Dict[str, int] = {
+        "scanned": 0, "closed_from_leg": 0, "no_leg": 0,
+        "could_not_look": 0, "budget_deferred": 0, "lost_race": 0, "errors": 0,
+    }
+    try:
+        if cfgs is None:
+            cfgs = _load_account_cfgs_for_reconcile()
+        alpaca_ids = sorted(
+            aid for aid, c in (cfgs or {}).items()
+            if str((c or {}).get("exchange") or "").lower() == "alpaca"
+        )
+        if not alpaca_ids:
+            return summary
+        if history_reader is None:
+            from src.units.accounts.clients import account_alpaca_order_history
+            history_reader = account_alpaca_order_history
+        from src.runtime.local_pnl import (
+            compute_pnl_percent, compute_realized_pnl, contract_value_usd_for,
+        )
+        relabelled_like = [
+            f'%"pre_label_exit_reason": "{r}"%'
+            for r in (_SNAPSHOT_FLAT_REASON, "stuck_strategy_watchdog")
+        ]
+        marks = ",".join("?" for _ in alpaca_ids)
+        rmarks = ",".join("?" for _ in _BROKER_LEG_REPLACEABLE_REASONS)
+        conn = db.connect()
+        try:
+            conn.row_factory = __import__("sqlite3").Row
+            rows = [dict(r) for r in conn.execute(
+                "SELECT id, account_id, symbol, direction, position_size, "
+                "       entry_price, created_at, closed_at, exit_reason, notes, "
+                "       broker_order_id "
+                "  FROM trades "
+                " WHERE status = 'closed' "
+                "   AND COALESCE(is_backtest, 0) = 0 "
+                f"  AND account_id IN ({marks}) "
+                "   AND COALESCE(broker_order_id, '') != '' "
+                "   AND COALESCE(setup_type, '') != 'intent_reduce' "
+                "   AND COALESCE(notes, '') NOT LIKE '%\"intent_reduce\": true%' "
+                "   AND COALESCE(notes, '') NOT LIKE ? "
+                f"  AND (COALESCE(exit_reason, '') IN ({rmarks}) "
+                "        OR (exit_reason IN ('sl', 'tp') "
+                "            AND (COALESCE(notes, '') LIKE ? "
+                "                 OR COALESCE(notes, '') LIKE ?))) "
+                "   AND datetime(COALESCE(closed_at, created_at)) "
+                "       >= datetime('now', '-14 days') "
+                " ORDER BY datetime(COALESCE(closed_at, created_at)) DESC "
+                " LIMIT 50",
+                (*alpaca_ids, _BROKER_LEG_READ_NOTES_LIKE,
+                 *_BROKER_LEG_REPLACEABLE_REASONS, *relabelled_like),
+            ).fetchall()]
+        finally:
+            conn.close()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("_sweep_alpaca_close_from_broker_leg: scan failed: %s", exc)
+        summary["errors"] += 1
+        return summary
+    if not rows:
+        return summary
+    summary["scanned"] = len(rows)
+    budget = [_BROKER_LEG_READS_PER_TICK]
+
+    def _read_one(cfg: Dict[str, Any], oid: str) -> Tuple[Optional[Dict[str, Any]], str]:
+        budget[0] -= 1
+        try:
+            res = history_reader(cfg, order_ids=[oid])
+        except ValueError:
+            return None, "bad_order_id"
+        if not isinstance(res, dict):
+            return None, "could_not_look"
+        ent = (res.get("by_id") or {}).get(oid) or {}
+        state = str(ent.get("read_state") or "could_not_look")
+        if state == "order_read" and isinstance(ent.get("order"), dict):
+            return ent["order"], "order_read"
+        return None, state
+
+    for row in rows:
+        if budget[0] <= 0:
+            summary["budget_deferred"] += 1
+            continue
+        try:
+            cfg = cfgs.get(row["account_id"]) or {}
+            oid = str(row.get("broker_order_id") or "").strip()
+            parent, pstate = _read_one(cfg, oid)
+            outcome: Optional[Dict[str, Any]] = None
+            if parent is not None:
+
+                def _hop(rid: str, _cfg=cfg) -> Optional[Dict[str, Any]]:
+                    if budget[0] <= 0:
+                        return None
+                    o, _s = _read_one(_cfg, rid)
+                    return o
+
+                outcome, pstate = _pick_alpaca_exit_leg(
+                    parent, direction=row.get("direction"),
+                    qty=row.get("position_size"),
+                    opened_ms=_isoformat_to_ms(row.get("created_at")),
+                    closed_ms=_isoformat_to_ms(row.get("closed_at")),
+                    replaced_reader=_hop,
+                )
+            if pstate == "could_not_look":
+                summary["could_not_look"] += 1
+                continue
+
+            prior_reason = row.get("exit_reason")
+            prior_closed_at = row.get("closed_at")
+            notes = _decode_notes(row.get("notes"))
+            notes[_BROKER_LEG_READ_KEY] = pstate
+            updates: Dict[str, Any] = {}
+            if outcome is not None:
+                symbol = str(row.get("symbol") or "")
+                entry = _safe_float(row.get("entry_price"))
+                qty = _safe_float(row.get("position_size"))
+                cvu = contract_value_usd_for(symbol)
+                exit_px = outcome["exit_price"]
+                pnl = compute_realized_pnl(
+                    entry_price=entry, exit_price=exit_px, qty=qty,
+                    direction=row.get("direction"), contract_value_usd=cvu,
+                )
+                detector = str(prior_reason or "").strip()
+                if detector in ("sl", "tp"):
+                    detector = str(notes.get("pre_label_exit_reason") or detector)
+                # The detector stays readable from `pre_label_exit_reason`
+                # (protected); notes are capped at 500 chars, so nothing here
+                # repeats what another key already says.
+                notes["pre_label_exit_reason"] = detector
+                # The detector's long prose (protected, so never shed) is
+                # replaced by a short statement of what actually happened; that
+                # is what leaves room for the detection time and the leg id
+                # (the detector itself is in `pre_label_exit_reason`).
+                notes["closed_reason"] = f"{outcome.get('leg_type')} leg filled at broker"
+                notes["closed_by"] = BROKER_LEG_FILL_SOURCE
+                notes["exit_reason_source"] = BROKER_LEG_FILL_SOURCE
+                notes["exit_price_source"] = BROKER_LEG_FILL_SOURCE
+                notes.pop("exit_reason_price_basis", None)
+                notes.pop("unmeasured_reason", None)
+                notes["closed_at_detected"] = notes.get("closed_at") or prior_closed_at
+                notes["closed_at"] = outcome["filled_at"]
+                notes["exit_leg_id"] = str(outcome.get("leg_order_id") or "")
+                updates = {
+                    "exit_reason": outcome["reason"],
+                    "exit_price": exit_px,
+                    "closed_at": outcome["filled_at"],
+                }
+                if pnl is not None:
+                    notes["pnl_source"] = "local_compute"
+                    notes["contract_value_usd"] = cvu
+                    updates["pnl"] = pnl
+                    pct = compute_pnl_percent(
+                        pnl=pnl, entry_price=entry, qty=qty,
+                        contract_value_usd=cvu,
+                    )
+                    if pct is not None:
+                        updates["pnl_percent"] = pct
+            updates["notes"] = dump_capped(notes, 500)
+            cols = sorted(updates)
+            wconn = db.connect()
+            try:
+                cur = wconn.execute(
+                    "UPDATE trades SET " + ", ".join(f"{c} = ?" for c in cols) +  # writer-conformance: allow conditional broker-leg close correction; guarded on the prior reason/closed_at so a concurrent close path wins, and must not fire a second close notification
+                    " WHERE id = ? AND status = 'closed' "
+                    "   AND COALESCE(exit_reason, '') = ? "
+                    "   AND closed_at IS ? "
+                    "   AND COALESCE(notes, '') NOT LIKE ?",
+                    (*[updates[c] for c in cols], int(row["id"]),
+                     str(prior_reason or ""), prior_closed_at,
+                     _BROKER_LEG_READ_NOTES_LIKE),
+                )
+                wconn.commit()
+                changed = cur.rowcount
+            finally:
+                wconn.close()
+            if not changed:
+                summary["lost_race"] += 1
+            elif outcome is not None:
+                summary["closed_from_leg"] += 1
+                logger.info(
+                    "_sweep_alpaca_close_from_broker_leg: trade %s %s -> %s @ %s "
+                    "(leg %s filled %s; detected %s)",
+                    row["id"], prior_reason, outcome["reason"],
+                    outcome["exit_price"], outcome.get("leg_order_id"),
+                    outcome["filled_at"], prior_closed_at,
+                )
+            else:
+                summary["no_leg"] += 1
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "_sweep_alpaca_close_from_broker_leg: row %s: %s", row.get("id"), exc)
+            summary["errors"] += 1
+    if summary["closed_from_leg"] or summary["errors"]:
+        logger.info("_sweep_alpaca_close_from_broker_leg: %s", summary)
+    return summary
+
+
 def _options_executor_for(account_cfg: Dict[str, Any]):
     """Build an :class:`AlpacaOptionsExecutor` for an options-expressing account.
 
@@ -17025,6 +18111,19 @@ def run_reconciliation_tick(
             "run_monitor_tick: reverse reconciler raised: %s", exc,
         )
 
+    # ALPACA-CLOSE-BROKER-TRUTH: an Alpaca row a flat detector just closed
+    # takes the broker's own filled bracket leg (reason, price, time) before
+    # either PnL sweep infers one. A failed read falls back to that inference.
+    try:
+        with _phase("sweep_alpaca_close_from_broker_leg"):
+            leg_close = _sweep_alpaca_close_from_broker_leg(db)
+        if leg_close.get("closed_from_leg") or leg_close.get("errors"):
+            summaries["__alpaca_broker_leg_close__"] = leg_close
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "run_monitor_tick: alpaca broker-leg close sweep raised: %s", exc,
+        )
+
     # 2026-05-18 SSOT PnL refactor: pending-pnl sweep. Picks up any
     # closed-but-pending row whose ``pnl`` is still NULL (because the
     # monitor-side close path no longer computes gross PnL locally)
@@ -17044,6 +18143,16 @@ def run_reconciliation_tick(
             "run_monitor_tick: pending-pnl sweep raised: %s", exc,
         )
 
+    # ENTRY-FILL-WRITEBACK: the entry order's own fill replaces the planned entry on open Bybit rows marked
+    # fill_pending_writeback. DB field update only (no order, bracket or slice is touched).
+    try:
+        with _phase("sweep_entry_fill_writeback"):
+            entry_fill = _sweep_entry_fill_writeback(db)
+        if entry_fill.get("written") or entry_fill.get("kept_plan") or entry_fill.get("errors"):
+            summaries["__entry_fill_writeback__"] = entry_fill
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("run_monitor_tick: entry-fill writeback sweep raised: %s", exc)
+
     # 2026-06-16: local-PnL fallback sweep — the universal half of the
     # PnL-resolution contract (prefer broker truth, else local compute). The
     # Bybit sweep above recovers fee-accurate PnL for integrations that declare
@@ -17062,6 +18171,17 @@ def run_reconciliation_tick(
         logger.warning(
             "run_monitor_tick: local-pnl sweep raised: %s", exc,
         )
+
+    # PNL-GROSS-VS-VENUE-6817 (operator w11): the venue's net closed P&L becomes
+    # ``pnl`` (our own figure kept in ``pnl_computed``, the gap in ``pnl_gap_usd``).
+    # Runs after both PnL sweeps, so it classifies a row the tick after it is priced.
+    try:
+        with _phase("sweep_venue_net_pnl"):
+            venue_pnl = _sweep_venue_net_pnl(db)
+        if venue_pnl.get("venue_net") or venue_pnl.get("gaps") or venue_pnl.get("errors"):
+            summaries["__venue_net_pnl__"] = venue_pnl
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("run_monitor_tick: venue net-pnl sweep raised: %s", exc)
 
     # PERF-FU-REDUCE-PNL: settle intent_reduce legs' realised PnL from venue
     # fills (a partially-consumed parent is shrunk, so nothing else books it).

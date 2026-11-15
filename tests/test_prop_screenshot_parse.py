@@ -41,21 +41,21 @@ def test_position_screen_yields_a_single_fill() -> None:
 
 def test_account_screen_yields_account_status() -> None:
     model = {"reports": [{
-        "type": "account_status", "balance": 5116, "equity": 5118,
+        "type": "account_status", "balance": 5200, "equity": 5202,
         "realized_today": 0, "unrealized": 1.9,
     }]}
     reports = sp._reports_from_model_json(model, default_account="breakout_1")
     assert len(reports) == 1
     r = reports[0]
     assert r["kind"] == "account_status"
-    assert r["balance"] == pytest.approx(5116.0)
-    assert r["equity"] == pytest.approx(5118.0)
+    assert r["balance"] == pytest.approx(5200.0)
+    assert r["equity"] == pytest.approx(5202.0)
 
 
 def test_both_a_fill_and_a_balance_from_one_screen() -> None:
     model = {"reports": [
         {"type": "fill", "symbol": "ETHUSD", "direction": "buy", "entry_price": 1812},
-        {"type": "account_status", "balance": 5116, "equity": 5118},
+        {"type": "account_status", "balance": 5200, "equity": 5202},
     ]}
     reports = sp._reports_from_model_json(model, default_account="breakout_1")
     kinds = [("account_status" if r.get("kind") == "account_status" else "fill")
@@ -65,11 +65,11 @@ def test_both_a_fill_and_a_balance_from_one_screen() -> None:
 
 def test_number_coercion_handles_commas_and_currency() -> None:
     model = {"reports": [{
-        "type": "account_status", "balance": "5,116.00", "equity": "$5,118 USD",
+        "type": "account_status", "balance": "5,200.00", "equity": "$5,202 USD",
     }]}
     r = sp._reports_from_model_json(model, default_account="breakout_1")[0]
-    assert r["balance"] == pytest.approx(5116.0)
-    assert r["equity"] == pytest.approx(5118.0)
+    assert r["balance"] == pytest.approx(5200.0)
+    assert r["equity"] == pytest.approx(5202.0)
 
 
 def test_missing_fields_are_omitted_not_zeroed() -> None:
@@ -127,7 +127,7 @@ def test_parse_screenshot_monkeypatched(monkeypatch: pytest.MonkeyPatch) -> None
 
 
 def test_parse_screenshot_fenced_json(monkeypatch: pytest.MonkeyPatch) -> None:
-    canned = '```json\n{"reports": [{"type":"account_status","balance":5116}]}\n```'
+    canned = '```json\n{"reports": [{"type":"account_status","balance":5200}]}\n```'
     monkeypatch.setattr(sp, "_call_vision", lambda b64, mt: canned)
     reports = sp.parse_screenshot(b"img", "image/jpeg", default_account="breakout_1")
     assert reports[0]["kind"] == "account_status"

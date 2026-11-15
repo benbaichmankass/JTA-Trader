@@ -1,0 +1,91 @@
+# Hand-authored 2026-11-12 by lane session_01AFoLuLwRU7eg9KzpMcxWu for rows PROP-PLAN-EV-6M + TRADEIFY-FUTURES-EVAL (Q4), dispatched by Manager Session 2026-11-11a. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261112-09d2-06
+title: 'PROP-PLAN-EV-6M: standing 6-month expected return per prop firm and plan, for the book our prop accounts actually run, net of the full cost stack and against the zero-edge null'
+status: done
+cadence: weekly
+theme: new_strategy_prop
+priority: 1
+roadmap:
+- L-PROP
+programme: P5
+kind: experiment
+origin: new_hypothesis
+question: For every prop ruleset in config/prop_rulesets/ (Breakout 1-step Turbo and 2-step, Velotrade Classic and Pro, Tradeify 247 1-step,
+  Propr Classic and Turbo, HyroTrader strict and lenient), which plan gives the highest expected net return to the operator over ~6 months
+  (182 days) per account bought? The model is prop_ev_sim.py's account life (fees, evaluation, payout rules, static DD, daily loss, profit
+  split, rebuy-free) driven by the book our live prop accounts run (trend_donchian_eth_4h + trend_donchian_sol_4h + ml_entry). Is any plan's
+  6-month EV above both zero and the zero-edge null? Tradeify FUTURES plans are listed at EV = -fee because no leg is eligible
+  (RQ-20261112-09d2-01..03).
+why_this_matters: 'Operator 2026-11-10: "which one gives the highest expected return over, say a 6 month period? (we should probably add
+  this to all prop accounts and run it on the existing ones as well)". Rows PROP-PLAN-EV-6M (standing ranking) and TRADEIFY-FUTURES-EVAL Q4.'
+lever_manifest:
+  variables:
+    ruleset: [breakout_turbo_1step, breakout, velotrade_classic_1step, velotrade_pro_1step, tradeify_247_1step, propr_classic_1step, propr_turbo_1step, hyrotrader, hyrotrader_lenient]
+    book: [ROSTER (eth4h_3y + sol4h_3y + ml_entry_ethsol), ETH4H (eth4h_3y), ML (ml_entry_ethsol)]
+  fixed: {horizon_days: 182, sizing: start, risk_pct: 0.005, dd_switch_frac: 0.8, lev_cap: {eth4h: 5, sol4h: 2, ml: 2}, cost_arm: 'cur (commission 11 bps RT, slippage 3 bps RT, swap 0.0003/day prorated), the conservative current stack, uniform across firms', seeds: [1, 2, 3], lives: 1000, outer: 2, lives_per_outer: 100, mode: path, funded_start: fresh, primary_book: ROSTER}
+  hypothesised_effect: plans with cheaper fees and wider static drawdowns rank higher for a low-frequency trend book
+power:
+  expected_n: 3000
+  min_detectable_effect: 10
+  effect_units: USD EV per purchase over 182 days
+  sd: 100
+  design: Monte Carlo, 3 seeds x 1000 lives per cell
+  alpha: 0.05
+  power: 0.8
+  basis: INFERRED; the trial cell (tradeify_247_1step, ROSTER-less 2-leg book) reported mc_se $1.25 per life.
+  feasibility:
+    source: none
+    accrual_basis: Re-prices committed ledgers (docs/research/prop-retest-2026-11-06/ledgers, docs/research/ml-entry-prop-gate-2026-11-02/ledgers); re-run weekly as ledgers refresh.
+decision_rule:
+  id: RULE-RQ-20261112-09d2-06
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'scripts/research/prop_plan_ev_6m.py: per (ruleset, book) cell, prop_ev_sim.py results.path.ev_net_usd_per_life at horizon 182
+    (EV per purchase over 6 months), its ev_net_usd_per_365d_with_rebuy / 2 (rebuy policy, reported), p_pass_eval, p_breach_max_dd; the same
+    cell on the zero-edge null ledger (prop_gate.demean_rows, cur arm); the book''s per-trade net-R 95% CI (prop_gate.edge_ci, cur arm).'
+  rule: 'Per (ruleset, book): BUYABLE iff EV_6m > 0 at all 3 seeds AND mean EV_6m > mean null EV_6m AND the book''s edge CI lower bound > 0
+    (the V3 edge clause). The ranking orders every cell by mean EV_6m and reports all of them. The answer to "which plan has the highest 6-month
+    expected return" is the highest-mean-EV BUYABLE cell on the PRIMARY book (ROSTER). If none is BUYABLE, the answer is "no plan is buyable
+    with the book we run", with the least-negative plan named and labelled NOT BUYABLE. Unit verdict: pass iff >= 1 ROSTER cell is BUYABLE,
+    else fail. Not changed after any result; a weekly re-run applies the same rule to refreshed ledgers.'
+  what_it_does_not_do: Buys nothing, changes no roster, account or sizing; writes no comms/prop_survival record.
+practice_precedent: 'M4 + docs/research/prop-gate-edge-regrade-2026-10-31/RESULT.md: the V3 prop gate (EV > 0 at every seed plus the edge
+  clause plus the zero-edge null), here at a 182-day horizon and across every ruleset the repo carries.'
+intervention_controls:
+  not_applicable: an offline simulation; nothing is applied
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  basis: one cell ~8 s measured (2026-11-12); 9 rulesets x 3 books x 3 seeds x 2 (null) = 162 cells over 4 workers.
+  why_runner: CPU over committed ledgers.
+value:
+  usd_at_stake_per_month: 300
+  confidence: 0.3
+  bucket: structural
+  basis: fees across the three live prop accounts and the plan choice for the next purchase; an estimate, not a measurement
+run:
+  command: [python3, scripts/research/prop_plan_ev_6m.py, --unit, RQ-20261112-09d2-06, --out, '{out_dir}']
+  timeout_minutes: 90
+  inputs: {research_unit: RQ-20261112-09d2-06}
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- PROP-PLAN-EV-6M
+- TRADEIFY-FUTURES-EVAL
+- RQ-20261112-09d2-02
+what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+last_dispatched_at: '2026-11-12'
+grading:
+  verdict: fail
+  decision_rule_id: RULE-RQ-20261112-09d2-06
+  graded_at: '2026-11-12'
+  grader: session_01AFoLuLwRU7eg9KzpMcxWu (lane TRADEIFY-FUTURES-EVAL / PROP-PLAN-EV-6M), by hand under the registered rule
+  evidence:
+  - research/results/RQ-20261112-09d2-06/local-20261112.jsonl
+  - comms/research/RQ-20261112-09d2-06/local-20261112/verdict.json
+  reason: 'No ROSTER cell is BUYABLE: every 6-month EV per purchase is negative and the book edge CI lower bound is -0.050 (n=620). Least-negative ROSTER plans: propr_turbo_1step -$9.06 (null -$18.78), breakout_turbo_1step -$9.79 (null -$16.03). The low-frequency trend book seldom passes an evaluation inside 182 days (ROSTER p_pass_eval 0.09-0.20), so the fee dominates. Weekly cadence: the same rule re-applies to refreshed ledgers.'

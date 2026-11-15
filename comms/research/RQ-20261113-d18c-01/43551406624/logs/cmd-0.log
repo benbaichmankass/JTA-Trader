@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "/tmp/repo/scripts/research/desk_edge_ceiling.py", line 50, in <module>
+    from scripts.research import desk_gen_replay_driver as d  # noqa: E402
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/repo/scripts/research/desk_gen_replay_driver.py", line 87, in <module>
+    import check_desk_records as cdr  # noqa: E402  (the proposal guard)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/repo/scripts/ci/check_desk_records.py", line 54, in <module>
+    _spec.loader.exec_module(desk_write)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 1019, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1156, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1214, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/repo/.claude/skills/trading-desk/desk_write.py'

@@ -38,7 +38,9 @@ def test_connector_has_no_write_tool():
     assert "set_wake_toggle" not in names and {"research_queue", "wake_toggles"} <= set(names)
 
 
-def test_replies_stay_small_for_the_pages_calls():
+def test_replies_stay_small_for_the_pages_calls(monkeypatch):
+    from tests.console_offline import isolate
+    isolate(monkeypatch)  # CI-CONSOLE-READS-LIVE-NETWORK: never read the live work store from CI
     for name, args in [("work_rows", {"view": "all", "limit": 6}), ("workplan", {"limit": 6}), ("ml_roadmap", {"limit": 15}),
                        ("system_catalog", {"signals_limit": 10}), ("research_queue", {"status": "pipeline", "limit": 30}),
                        ("inbox", {"limit": 25})]:
