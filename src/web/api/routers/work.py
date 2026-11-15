@@ -1276,7 +1276,15 @@ def get_work_checklist(source: str = "default") -> dict[str, Any]:
 #
 #   closedRecent    last 5 rows in a terminal state (done | dropped), newest
 #                   `updated_at` first.
-#   openNow         every in_flight row (a lane is on it now).
+#   openNow         every in_flight row. Each carries ``quiet`` / ``quietHours``: a row
+#                   with no write for more than _SNAPSHOT_QUIET_AFTER_H hours is flagged
+#                   quiet, and ``openNowCounts`` splits the total into active and quiet,
+#                   so the card shows rows with recent activity, not every row
+#                   an archived lane left in_flight (WORK-INFLIGHT-STALE-OWNERS,
+#                   2026-11-15: 21 of 65 in_flight rows had archived or finished owners).
+#                   The VM cannot see Claude session status, so this is ROW
+#                   ACTIVITY, not owner liveness. A missing or unparseable
+#                   updated_at reads ``quiet: null`` (unknown), never false.
 #   next            the first 5 rows of the RANKED RUNNABLE QUEUE
 #                   (`checklist_store.queue`: queued, nothing in blocked_on, by
 #                   `priority_rank`, unranked last in `_seq` order) -- the order
@@ -1290,6 +1298,7 @@ def get_work_checklist(source: str = "default") -> dict[str, Any]:
 # as closed — it is not `done` (CLAUDE.md § Every session, step 5).
 
 _SNAPSHOT_CLOSED = ("done", "dropped")
+_SNAPSHOT_QUIET_AFTER_H = 48.0
 _SNAPSHOT_OPERATOR_KINDS = ("operator_decision", "operator")
 _SNAPSHOT_CACHE_TTL_S = 20.0
 _snapshot_cache: tuple[float, dict[str, Any]] | None = None
@@ -1306,6 +1315,40 @@ def _snapshot_row(row: dict[str, Any]) -> dict[str, Any]:
         "priorityRank": row.get("priority_rank"),
         "updatedAt": row.get("updated_at"),
     }
+
+
+def _quiet_hours(row: dict[str, Any], now: datetime) -> float | None:
+    """Hours since the row's last write, or None when its updated_at is missing or unparseable."""
+    raw = str(row.get("updated_at") or "").strip()
+    if not raw:
+        return None
+    try:
+        ts = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    return max(0.0, (now - ts).total_seconds() / 3600.0)
+
+
+def _open_now(rows: list[dict[str, Any]], now: datetime) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for r in rows:
+        if r.get("state") != "in_flight":
+            continue
+        h = _quiet_hours(r, now)
+        out.append({**_snapshot_row(r),
+                    "quietHours": None if h is None else round(h, 1),
+                    "quiet": None if h is None else h > _SNAPSHOT_QUIET_AFTER_H})
+    counts = {
+        "total": len(out),
+        "active": sum(1 for r in out if r["quiet"] is False),
+        "quiet": sum(1 for r in out if r["quiet"] is True),
+        "unknown": sum(1 for r in out if r["quiet"] is None),
+        "quietAfterHours": _SNAPSHOT_QUIET_AFTER_H,
+        "basis": "row activity (hours since updated_at), not owner-session liveness",
+    }
+    return out, counts
 
 
 def _operator_edges(row: dict[str, Any]) -> list[dict[str, Any]]:
@@ -1327,6 +1370,7 @@ def _work_snapshot_payload() -> dict[str, Any]:
         counts[key] = counts.get(key, 0) + 1
     closed = sorted((r for r in rows if r.get("state") in _SNAPSHOT_CLOSED),
                     key=lambda r: str(r.get("updated_at") or ""), reverse=True)
+    open_now, open_now_counts = _open_now(rows, datetime.now(timezone.utc))
     waiting = []
     for r in rows:
         if r.get("state") in _SNAPSHOT_CLOSED:
@@ -1342,7 +1386,8 @@ def _work_snapshot_payload() -> dict[str, Any]:
         "total": len(rows),
         "counts": counts,
         "closedRecent": [_snapshot_row(r) for r in closed[:5]],
-        "openNow": [_snapshot_row(r) for r in rows if r.get("state") == "in_flight"],
+        "openNow": open_now,
+        "openNowCounts": open_now_counts,
         "next": [_snapshot_row(r) for r in checklist_store.queue({"items": rows})[:5]],
         "waitingOnOperator": waiting,
     }
