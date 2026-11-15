@@ -948,8 +948,8 @@ lines:
       pass: held Tier-3 exit-now proposal for ml_entry (real-money D8 model)
       graded: 'INDETERMINATE by rule (research/results/RQ-20261114-1ae8-01/43661155486.jsonl): delta prior -0.0017 CI95 [-0.016, +0.013] n 13,243; record -0.0038 CI95 [-0.016, +0.008] n 9,939; non-inferior within -0.02 but mean < 0 -> exit-now adds nothing on ml_entry. Not starved (CI width 0.03 < 0.08). The line moves to the eth_4h variant.'
       fail: exit-now on ml_entry closes; the eth_4h variant below is next
-    - lever: variant for trend_donchian_eth_4h
-      ref: PI-20261104-NHN7JV7U-0001
+    - lever: variant for trend_donchian_eth_4h (POOLED donchian-4h family head: discovery pooled over eth/sol/xrp/ada/avax_4h, eth_4h held-out primary)
+      ref: 'RQ-20261115-a474-03 (ML-PRIMARY-2; RULE-RQ20261115-a474-03-POOLED-EXITHEAD; scripts/research/exit_head_holdout.py --legs; closes PI-20261104-NHN7JV7U-0001)'
       baseline: hold to bracket on the same trades, net of cost
       pass: Tier-3 close proposal on that leg
       fail: closes for the 4h family
@@ -958,7 +958,7 @@ lines:
       baseline: as above
       pass: as above
       fail: as above
-  next_weeks: {W47: '1ae8-01 INDETERMINATE (graded 11-15, no gain); author the eth_4h variant', W48: run, W49: grade, W50: none}
+  next_weeks: {W47: '1ae8-01 INDETERMINATE (graded 11-15, no gain); eth_4h pooled variant RQ-20261115-a474-03 registered (11-15)', W48: 'run + grade a474-03', W49: none, W50: none}
   exhaustion: the eth_4h variant and the desk-label variant FAIL; with today's FAILs the head's feature set then has no lever left.
   owner: AM-ML
   plan_items: [ML-X3, ML-X4, ML-N4]
