@@ -57,6 +57,8 @@ TRAIN_FRAC = 0.10
 FWD_START, FWD_END = "2026-10-01", "2026-10-31"
 DEV_END = "2026-10-01"                                 # exclusive; the forward window starts here
 TP_FOLDS = ["2022-01-01", "2023-01-01", "2024-01-01", "2025-01-01", "2025-10-01", "2026-10-01"]
+EXTEND_ONLY = False                                    # run-extend-only-year: dev margin choice + forward policy refuse pull-ins
+FWD_FROM_DEV_CACHE = False                             # run-extend-only-year: the forward window is inside the dev cache (no daily fetch)
 N_FLOOR, SYMBOL_FLOOR, MOVED_FLOOR = 300, 10, 30
 CLOSE = -1                                             # chooser sentinel: close the position at this check-in (D8)
 RANDOM_DRAWS = 200
@@ -712,7 +714,8 @@ def dev_stage(cache: Path) -> dict:
     print(f"dev table rows={len(tab)} panel parity max|diff|={worst:.2e} t={time.time()-t0:.0f}s", flush=True)
     tau = float(art["tau"])
     wf = entry_trades_wf(tab, tau)
-    sv = served_trades(tab, E.HOLDOUT_START, DEV_END, art)
+    # run-extend-only-year moves DEV_END back to HOLDOUT_START: no served-model rows remain inside dev
+    sv = served_trades(tab, E.HOLDOUT_START, DEV_END, art) if E.HOLDOUT_START < DEV_END else wf.iloc[0:0]
     trades = pd.concat([wf, sv], ignore_index=True)
     # walker parity: the fixed 3 ATR walk reproduces the c692-01 label net R on every dev trade
     sc0 = Scorer(trades, bars, {}, np.zeros(N_CLASS))
@@ -746,7 +749,7 @@ def dev_stage(cache: Path) -> dict:
             ks = [k for k, v in probs.items() if v[1] is fm]
             sub = trades.loc[ks]
             sc = Scorer(sub, bars, {kk: probs[k][0] for kk, k in zip(range(len(ks)), ks)}, fm)
-            res += [(a0[0] - b0, len(a0[2]) > 0) for a0, b0 in zip(sc.policy(m), sub.net_r.to_numpy())]
+            res += [(a0[0] - b0, len(a0[2]) > 0) for a0, b0 in zip(sc.policy(m, extend_only=EXTEND_ONLY), sub.net_r.to_numpy())]
         d = np.array([x[0] for x in res])
         by_margin[str(m)] = {"n": len(d), "mean_delta": float(d.mean()), "n_moved": int(sum(x[1] for x in res))}
         print("margin", m, by_margin[str(m)], f"t={time.time()-t0:.0f}s", flush=True)
@@ -769,9 +772,12 @@ def forward_stage(cache: Path, out: Path, dev: dict) -> dict:
     t0 = time.time()
     art = json.loads(SERVED.read_text())
     syms = E.universe()
-    fwd = out / "fwd_klines"
-    rep = forward_cache(cache, fwd, syms)
-    have = [s for s in syms if rep[s].get("oct_days")]
+    if FWD_FROM_DEV_CACHE:                      # run-extend-only-year: the window is already in the dev cache
+        fwd, have = cache, [s for s in syms if (cache / f"{s}.pkl").exists()]
+    else:
+        fwd = out / "fwd_klines"
+        rep = forward_cache(cache, fwd, syms)
+        have = [s for s in syms if rep[s].get("oct_days")]
     # dev rows for the final TP fit come from the DEV cache (bars < 2026-10-01); forward rows from the forward cache
     tab_dev = E.build_table(cache, syms)
     bars_dev = load_bars(cache, syms)
@@ -783,7 +789,7 @@ def forward_stage(cache: Path, out: Path, dev: dict) -> dict:
     # cross-sectional context needs every universe symbol present at a ts: symbols without October simply drop out of it,
     # exactly as a delisted symbol drops out of the live reference set
     for s in syms:
-        if s not in have:
+        if s not in have and not FWD_FROM_DEV_CACHE:
             (fwd / f"{s}.pkl").write_bytes((cache / f"{s}.pkl").read_bytes())
     tab = E.build_table(fwd, syms)
     bars = load_bars(fwd, syms)
@@ -816,7 +822,7 @@ def forward_stage(cache: Path, out: Path, dev: dict) -> dict:
         return r
     walk = _spy
     try:
-        pol = sc.policy(dev["margin_star"], log)
+        pol = sc.policy(dev["margin_star"], log, extend_only=EXTEND_ONLY)
     finally:
         walk = _walk0
     try:
@@ -851,6 +857,27 @@ def forward_stage(cache: Path, out: Path, dev: dict) -> dict:
                       "class_mean_net_r": [round(float(x), 4) for x in tm["class_mean_net_r"]]}
     h["elapsed_s"] = round(time.time() - t0)
     return h
+
+
+YEAR_WINDOW = ("2025-10-01", "2026-09-30")   # ENTRY v1's held-out year; the refit TP recipe trains strictly before it
+
+
+def configure_extend_only_year() -> None:
+    """RQ-20261101-383f-02 as amended 2026-11-15 (ML-PRIMARY-3): the TP RECIPE refit with its dev cut at 2025-10-01, the margin
+    re-chosen on pre-2025-10 dev with the EXTEND-ONLY chooser, read once per claim on 2025-10-01..2026-09-30. The served
+    ml_entry_tp_revision_v1 artifact was fit on rows up to 2026-09-30, so this window can only be read by a refit (holdout_lock
+    refuses a window that overlaps training). Module globals only; every other subcommand keeps the October defaults."""
+    global FWD_START, FWD_END, DEV_END, TP_FOLDS, EXTEND_ONLY, FWD_FROM_DEV_CACHE
+    FWD_START, FWD_END = YEAR_WINDOW
+    DEV_END = E.HOLDOUT_START
+    TP_FOLDS = [f for f in TP_FOLDS if f <= DEV_END]
+    EXTEND_ONLY = FWD_FROM_DEV_CACHE = True
+    assert FWD_END <= E.END and TP_FOLDS[-1] == DEV_END == FWD_START
+
+
+def run_extend_only_year(args) -> int:
+    configure_extend_only_year()
+    return run(args)
 
 
 def run(args) -> int:
@@ -983,6 +1010,20 @@ def _self_test() -> None:
         c2 = claim_read(Path(td), "RQ-SELFTEST", "self-test")
         assert c2["n_tries"] == c1["n_tries"] + 1 and c1["family"] == "TPREV"
         assert (HL.LEDGER.read_text() if HL.LEDGER.exists() else None) == before   # the repo ledger is never written
+    # run-extend-only-year (383f-02 amended 2026-11-15): the refit window is claimable (no overlap with the refit's training)
+    g0 = (FWD_START, FWD_END, DEV_END, list(TP_FOLDS), EXTEND_ONLY, FWD_FROM_DEV_CACHE)
+    configure_extend_only_year()
+    try:
+        assert (FWD_START, FWD_END, DEV_END) == ("2025-10-01", "2026-09-30", "2025-10-01") and EXTEND_ONLY and FWD_FROM_DEV_CACHE
+        assert TP_FOLDS[-1] == "2025-10-01" and all(f <= DEV_END for f in TP_FOLDS)
+        HL.check_window_disjoint(str((pd.Timestamp(FWD_START) - pd.Timedelta(days=1)).date()), FWD_START)
+        try:
+            HL.check_window_disjoint("2026-09-30", "2025-10-01")    # the served v1 artifact's training end: refused
+            raise AssertionError("an overlapping window must be refused")
+        except HL.WindowOverlapsTraining:
+            pass
+    finally:
+        globals().update(dict(zip(("FWD_START", "FWD_END", "DEV_END", "TP_FOLDS", "EXTEND_ONLY", "FWD_FROM_DEV_CACHE"), g0)))
     print("self-test ok")
 
 
@@ -1518,7 +1559,8 @@ def exit_now_v0(args) -> int:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "export", "entry-forward", "evidence-extend-only", "pointer-v0", "exit-now-v0"])
+    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "run-extend-only-year", "export", "entry-forward", "evidence-extend-only",
+                                                                     "pointer-v0", "exit-now-v0"])
     ap.add_argument("--cache", default="/tmp/ml_decision_klines")
     ap.add_argument("--out", default="/tmp/ml_entry_tp_revision_out")
     ap.add_argument("--unit", default=UNIT)
@@ -1536,6 +1578,8 @@ def main(argv=None) -> int:
     if a.self_test:
         _self_test()
         return 0
+    if a.cmd == "run-extend-only-year":
+        return run_extend_only_year(a)
     if a.cmd == "evidence-extend-only":
         return evidence_extend_only(a)
     if a.cmd == "entry-forward":

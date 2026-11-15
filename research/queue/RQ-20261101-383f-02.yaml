@@ -1,7 +1,7 @@
 # Hand-authored 2026-11-01 by lane ML-ENTRY-TP-REVISION (Tier 1), dispatched by Manager Session 2026-11-01a (session_01AFoLuJ1apgy8sfngu4WyNH).
 # Filed 2026-11-01 from the RQ-20261101-383f-01 result (pull-ins lost on dev and forward). Rule registered BEFORE any run. Gates: none.
 id: RQ-20261101-383f-02
-status: blocked
+status: queued
 cadence: once
 theme: ml_health
 priority: 1
@@ -83,7 +83,7 @@ run:
   command:
   - python3
   - scripts/research/ml_entry_tp_revision.py
-  - run-extend-only
+  - run-extend-only-year
   - --cache
   - /tmp/ml_decision_klines
   - --unit
@@ -110,16 +110,6 @@ ml_consumer:
   legs:
   - ml_entry
   book: money
-blocked_on:
-- kind: harness
-  ref: scripts/research/ml_entry_tp_revision.py
-  what: a run-extend-only subcommand (forward window parameterised; the chooser refuses pull-ins)
-  clears_when: lands with a self-test
-- kind: harness
-  ref: scripts/research/ml_entry_tp_revision.py run-extend-only --window symbol-holdout
-  what: run-extend-only reads window S (the frozen model never saw these symbols)
-  clears_when: lands with a self-test that no symbol of manifest bp2 is scored
-  owner: lane ML-DECISION-MODELS (or the unit's owning ML lane)
 what_it_does_not_do: Registers, serves and promotes nothing; changes no config; places no order; sizes nothing; never moves the SL.
 amendments:
 - at: '2026-11-05'
@@ -129,3 +119,27 @@ amendments:
   - 'RESEARCH-NO-WAIT (lane of Manager Session 2026-11-05b). Operator 2026-11-05 ~17:08Z, verbatim: "Why does it need to wait for November? That''s not the workflow - we iterate in the data we have till we find what works, we don''t wait for new months of data". Window registered BEFORE any run; no outcome inside it was read by this lane; the rule text and every threshold are NOT edited.'
   - 'WINDOW CHANGE: the read registered on the "forward window" / "fresh window" (2026-11) is REPLACED by the in-hand window below. S = symbol holdout: the 20 lexicographically first Binance USDT-M perps NOT in manifest bp2-f4271084b120 that have >= 3 years of 1h bars, over 2022-01-01..2026-10-31; list frozen by the driver and written to the result before any outcome is read; claimed through holdout_lock.py with an explicit symbols list (a disjoint symbol claim: correlated with the 60-perp windows, reported as such).'
   - 'The data/accrual blocker is removed: nothing here waits for a month to elapse. What remains is the driver option that reads this window (named in blocked_on, owner lane ML-DECISION-MODELS / the unit''s own lane).'
+- at: '2026-11-15'
+  before_any_run: true
+  by: lane ML-PRIMARY-3 (session_01AFoLuMkZYvbttnmb2gtVcA), dispatched by Manager Session 2026-11-15a
+  text:
+  - 'WINDOW RE-POINT (supersedes the 2026-11-05 window S). Both registered windows are unreadable for this unit under holdout_lock (HOLDOUT-DEFLATED-REUSE,
+    operator 2026-11-05 "Adopt (Rec.)"): the served TP model ml/served/ml_entry_tp_revision_v1 was fit on dev rows up to 2026-09-30, so window S
+    (2022-01..2026-10, other symbols over training dates) and a re-read of 2025-10..2026-09 both overlap its training and are REFUSED
+    (check_window_disjoint, the one hard refusal). October 2026 is contaminated for this variant: extend-only was chosen from the October
+    post-hoc split (+0.029 R, n 296).'
+  - 'NEW HELD-OUT WINDOW, in-hand (operator 2026-11-05 "we iterate in the data we have"): decisions 2025-10-01..2026-09-30 whose 24 h ends inside it,
+    the frozen ENTRY v1 (train_end 2025-09-22) trades exactly as before. The TP RECIPE is refit (same features, grid, classes, LightGBM params,
+    cost stack) with its dev cut moved to 2025-10-01: TP walk-forward folds 2022-01..2025-10 only, the margin chosen on that dev with the
+    EXTEND-ONLY chooser, the final fit on rows before 2025-10-01 minus the embargo. Harness: ml_entry_tp_revision.py run-extend-only-year
+    (configure_extend_only_year; module globals only, every other subcommand keeps the October defaults; self-test asserts the window is
+    claimable and the v1 window is refused).'
+  - 'RULE (thresholds unchanged): the read is claimed through holdout_lock BEFORE any held-out outcome (family TPREV, model TPREV-RQ-20261101-383f-02,
+    train_end 2025-09-30); TPREV has no prior read on this window, so N = 1 and the point bar is exactly the registered one (mean delta >= 0).
+    INDETERMINATE floors unchanged (300 trades, 10 symbols, 30 moved). The ONE-READ language above is replaced by the ledger (a re-read is
+    allowed and graded on the deflated bar). The two-way re-score is reported, not ruled on.'
+  - 'POWER (restated before the run): c692-01 took 11,240 decisions on this year (MEASURED, comms/research/ML-ENTRY-UNIVERSE/local-20261101T1830Z);
+    at the registered per-trade delta sd ~0.3 R, SE ~0.003 R, MDE at 80 percent one-sided ~0.007 R, well inside the registered 0.02.'
+  - 'WHAT IT DOES NOT TEST: the served artifact itself (a refit of its recipe is graded), nor the live structure SL (5e04 arm F). A PASS supports keeping the
+    extend-only policy live (it already is, operator 2026-11-01 "Extend-only, now"); a FAIL is routed to ML-ENTRY-TP-REVISION as an evidence
+    record against the live extend-only TP, Tier-3, the manager''s.'
