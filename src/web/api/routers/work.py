@@ -1388,6 +1388,8 @@ def get_work_snapshot() -> dict[str, Any]:
 # which the CORS allow-list refuses), so this route takes only ``{"id", "direction": "up"|"down"}``
 # and does the read-modify-write server-side in ONE work-store transaction
 # (``WorkStore.reorder``; population, ordering and null-rank rules are documented there).
+# ``over`` (optional): the card's visible neighbour -- the cards are FILTERED views, so the row is placed
+# directly beside ``over`` in the full open order instead of swapping with an unseen neighbour.
 # Auth: ``require_session`` -- the operator's signed-in session, exactly as ``/decision/session``
 # and ``/plan-edits``. Recorded actor: ``operator-spa`` (never the email). Adds no gate; CORS unchanged.
 
@@ -1417,6 +1419,13 @@ async def post_work_reorder(
         return _reorder_error(400, "bad_body", "id is required (a work row id)")
     if direction not in ("up", "down"):
         return _reorder_error(400, "bad_direction", "direction must be 'up' or 'down'")
+    over = body.get("over")
+    if over is not None:
+        if not isinstance(over, str) or not over.strip():
+            return _reorder_error(400, "bad_body", "over, when given, must be a row id")
+        if over.strip() == item_id.strip():
+            return _reorder_error(400, "same_id", "over must be a different row than id")
+        over = over.strip()
     version = body.get("version")
     if version is not None and (isinstance(version, bool) or not isinstance(version, int)):
         return _reorder_error(400, "bad_body", "version, when given, must be an integer")
@@ -1427,16 +1436,17 @@ async def post_work_reorder(
         store = work_read.local_store()
         if store is None:
             raise FileNotFoundError("work store is absent on this host")
-        return store.reorder(item_id.strip(), direction, by=SESSION_ACTOR, expected_version=version)
+        return store.reorder(item_id.strip(), direction, by=SESSION_ACTOR, expected_version=version, over=over)
 
     from src.runtime import work_store as ws
     try:
         res = await run_in_threadpool(_move)
     except ws.NotFoundError as exc:
-        return _reorder_error(404, "unknown_id", str(exc))
+        return _reorder_error(404, "unknown_over" if "(over)" in str(exc) else "unknown_id", str(exc))
     except ws.ReorderBoundary as exc:
         edge = "top" if direction == "up" else "bottom"
-        return _reorder_error(409, f"at_{edge}", str(exc), position=exc.position, population=exc.population)
+        return _reorder_error(409, "no_change" if over else f"at_{edge}", str(exc),
+                              position=exc.position, population=exc.population)
     except ws.ConflictError as exc:
         return _reorder_error(409, "version_conflict", str(exc))
     except ws.WorkStoreValidationError as exc:

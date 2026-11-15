@@ -129,3 +129,52 @@ def test_snapshot_lists_sort_by_rank_nulls_last(db):
     body = TestClient(main.app).get("/api/bot/work/snapshot").json()
     assert [r["id"] for r in body["openNow"]] == ["Z", "Y", "X"]
     assert [r["id"] for r in body["next"]] == ["Q2", "Q1"]
+
+
+# ── `over`: the card's visible neighbour (manager 15a contract change) ───────────────────────────────
+def _order(s, ids):
+    rows = [s.get(i) for i in ids]
+    return [r["id"] for r in sorted(rows, key=lambda r: (r["priority_rank"] is None, r["priority_rank"] or 0, r["id"]))]
+
+
+def test_over_places_row_directly_beside_a_non_adjacent_visible_neighbour(db):
+    # A, X (hidden by the card's filter), B, C -- the card shows A, B, C.
+    s = _store(db, [("A", 1, "queued"), ("X", 2, "in_flight"), ("B", 3, "queued"), ("C", 4, "queued")])
+    r = _auth().post(URL, json={"id": "B", "direction": "up", "over": "A"})
+    assert r.status_code == 200, r.text
+    assert _order(s, ["A", "X", "B", "C"]) == ["B", "A", "X", "C"]
+    r = _auth().post(URL, json={"id": "C", "direction": "up", "over": "A"})   # jumps past X: directly above A
+    assert _order(s, ["A", "X", "B", "C"]) == ["B", "C", "A", "X"] and r.json()["renumbered"] is True
+
+
+def test_over_down_and_adjacent_swap(db):
+    s = _store(db, [("A", 1, "queued"), ("B", 2, "queued"), ("C", 3, "queued")])
+    r = _auth().post(URL, json={"id": "A", "direction": "down", "over": "B"})
+    assert r.status_code == 200 and r.json()["renumbered"] is False and sorted(r.json()["changed"]) == ["A", "B"]
+    assert _order(s, ["A", "B", "C"]) == ["B", "A", "C"]
+
+
+def test_over_with_null_and_tied_ranks(db):
+    s = _store(db, [("A", 5, "queued"), ("B", 5, "queued"), ("N1", None, "queued"), ("N2", None, "in_flight")])
+    assert _auth().post(URL, json={"id": "N1", "direction": "up", "over": "A"}).status_code == 200
+    assert _order(s, ["A", "B", "N1", "N2"])[:2] == ["N1", "A"]
+    assert all(s.get(i)["priority_rank"] is not None for i in ("A", "B", "N1", "N2"))
+    assert _auth().post(URL, json={"id": "B", "direction": "down", "over": "N2"}).status_code == 200
+    o = _order(s, ["A", "B", "N1", "N2"])
+    assert o.index("B") == o.index("N2") + 1
+
+
+def test_over_refusals(db):
+    s = _store(db, [("A", 1, "queued"), ("B", 2, "queued"), ("D", 9, "done")])
+    c = _auth()
+    for body, code, err in [
+        ({"id": "A", "direction": "up", "over": "A"}, 400, "same_id"),
+        ({"id": "A", "direction": "up", "over": "NOPE"}, 404, "unknown_over"),
+        ({"id": "NOPE", "direction": "up", "over": "A"}, 404, "unknown_id"),
+        ({"id": "A", "direction": "up", "over": "D"}, 422, "refused"),
+        ({"id": "A", "direction": "up", "over": "B"}, 409, "no_change"),    # A is already directly above B
+        ({"id": "B", "direction": "up", "over": "A", "version": 99}, 409, "version_conflict"),
+    ]:
+        r = c.post(URL, json=body)
+        assert r.status_code == code and r.json()["error"] == err, (body, r.text)
+    assert (_rank(s, "A"), _rank(s, "B")) == (1, 2)

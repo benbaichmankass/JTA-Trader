@@ -586,7 +586,7 @@ class WorkStore:
     _REORDER_CLOSED = ("done", "dropped", "killed", "retired", "archived")
 
     def reorder(self, item_id: str, direction: str, *, by: str, expected_version: int | None = None,
-                today: date | None = None) -> dict:
+                today: date | None = None, over: str | None = None) -> dict:
         """Move a build row one place up or down its list. ONE transaction, versioned writes.
 
         Population (WORK-REORDER-ROUTE): the non-terminal ``build`` rows with the same ``state`` and
@@ -599,10 +599,19 @@ class WorkStore:
 
         Raises NotFoundError (unknown id / not a build), WorkStoreValidationError (bad direction),
         ReorderBoundary (already first/last; carries the position). Returns
-        ``{"item", "changed": [ids], "renumbered", "population", "order": [{id, priority_rank}]}``."""
+        ``{"item", "changed": [ids], "renumbered", "population", "order": [{id, priority_rank}]}``.
+
+        ``over`` (the card's VISIBLE neighbour; the cards are filtered views): the population is every
+        non-terminal build row in one order; ``item_id`` is placed directly before (``up``) or directly
+        after (``down``) ``over``. If the two are already adjacent with distinct ranks it is a plain swap;
+        otherwise the whole open order is renumbered 1..N (only rows whose rank changes are written).
+        Refusals: same id (validation), unknown/finished ``over`` (NotFound / validation), already there
+        (ReorderBoundary)."""
         self._need_by(by)
         if direction not in ("up", "down"):
             raise WorkStoreValidationError("direction must be 'up' or 'down'")
+        if over is not None and over == item_id:
+            raise WorkStoreValidationError("same_id: 'over' must be a different row than 'id'")
         with self._tx() as conn:
             row = self._get(conn, item_id)
             if row is None or row.get("kind") != "build":
@@ -613,10 +622,19 @@ class WorkStore:
                     f"{expected_version}; re-read and retry", row)
             if row.get("state") in self._REORDER_CLOSED:
                 raise WorkStoreValidationError(f"{item_id!r} is {row['state']}; a finished row is not in the queue")
-            blocked = bool(row.get("blocked_on"))
-            pop = [self._decode(r) for r in conn.execute(
-                "SELECT * FROM items WHERE kind = 'build' AND state = ?", (row["state"],))]
-            pop = [r for r in pop if bool(r.get("blocked_on")) == blocked]
+            if over is not None:
+                orow = self._get(conn, over)
+                if orow is None or orow.get("kind") != "build":
+                    raise NotFoundError(f"no work row {over!r} (over)")
+                if orow.get("state") in self._REORDER_CLOSED:
+                    raise WorkStoreValidationError(f"{over!r} is {orow['state']}; a finished row is not in the queue")
+                pop = [self._decode(r) for r in conn.execute("SELECT * FROM items WHERE kind = 'build'")]
+                pop = [r for r in pop if r.get("state") not in self._REORDER_CLOSED]
+            else:
+                blocked = bool(row.get("blocked_on"))
+                pop = [self._decode(r) for r in conn.execute(
+                    "SELECT * FROM items WHERE kind = 'build' AND state = ?", (row["state"],))]
+                pop = [r for r in pop if bool(r.get("blocked_on")) == blocked]
 
             def key(r):
                 rk = r.get("priority_rank")
@@ -626,7 +644,31 @@ class WorkStore:
             pop.sort(key=key)
             ids = [r["id"] for r in pop]
             i = ids.index(item_id)
-            j = i - 1 if direction == "up" else i + 1
+            if over is not None:
+                k = ids.index(over)
+                want = k - 1 if direction == "up" else k + 1   # id's index when directly beside `over`
+                if want == i:
+                    raise ReorderBoundary(
+                        f"{item_id!r} is already directly {'above' if direction == 'up' else 'below'} {over!r}",
+                        position=i + 1, population=len(pop))
+                rk = [r.get("priority_rank") for r in pop]
+                if abs(i - k) == 1 and rk[i] is not None and rk[k] is not None and rk[i] != rk[k]:
+                    j = k            # already adjacent: the plain swap
+                else:
+                    new = [r for r in pop if r["id"] != item_id]
+                    pos = next(n for n, r in enumerate(new) if r["id"] == over)
+                    new.insert(pos if direction == "up" else pos + 1, pop[i])
+                    changed = []
+                    for n, r in enumerate(new, start=1):
+                        if r.get("priority_rank") != n:
+                            self._update_in_tx(conn, r["id"], {"priority_rank": n}, op="set", by=by, op_id=None,
+                                               expected_version=r["version"], today=today)
+                            changed.append(r["id"])
+                    return {"item": self._get(conn, item_id), "changed": changed, "renumbered": True,
+                            "population": len(new),
+                            "order": [{"id": r["id"], "priority_rank": n} for n, r in enumerate(new, start=1)]}
+            else:
+                j = i - 1 if direction == "up" else i + 1
             if j < 0 or j >= len(pop):
                 raise ReorderBoundary(
                     f"{item_id!r} is already at the {'top' if direction == 'up' else 'bottom'} of its list "
