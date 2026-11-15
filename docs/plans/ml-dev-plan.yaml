@@ -937,7 +937,7 @@ lines:
   kind: model
   subject: exit-head-donchian-1h-v1 (Labrador-2)
   consumer: {class: none, note: 'exit_head_action annotate on all 3 legs (MEASURED config/strategies.yaml); changes no order'}
-  stage: iterating
+  stage: stuck
   row: ML-EXITHEAD-VALUE
   state:
     summary: Fails out of the leg family it was trained on, and the volume-composition feature add failed today.
@@ -966,8 +966,9 @@ lines:
       baseline: as above
       pass: as above
       fail: as above
-  next_weeks: {W47: '1ae8-01 INDETERMINATE (no gain); a474-03 pooled donchian-4h head FAIL (11-15, B selected, AUC 0.613 but no arm beats B net of cost); only the desk-label variant (PI-20261029-IHFQDB3W-0004) is left', W48: 'desk-label variant: author or retire', W49: none, W50: none}
-  exhaustion: the eth_4h variant and the desk-label variant FAIL; with today's FAILs the head's feature set then has no lever left.
+      parked: "PARKED ON POWER, not authored (ML-PRIMARY-3, 2026-11-15). Population MEASURED from comms/research/desk_lifecycle/full-c4e: 12,500 check-in labels on 507 pairs / 1,040 entries (520 claude-judged, 520 random), 6 symbols, 32 weeks; folds 1/2/3/4 = 320/632/70/18 entries, so at most 720 OOS trades walk-forward. Per-trade hold-vs-close delta sd ~0.85 R (backed out of 1ae8-01: CI95 half-width ~0.015 at n 13,243). SE ~0.032, MDE ~0.08 R at 80 percent power, against every exit-head effect seen so far within +/-0.06 R (a474-03, 1ae8-01, 0bc8-02, 78fc-03): INDETERMINATE by construction. Growing n needs more LLM-judged walks (plan capacity per label). RE-ENTRY TEST: desk labels on >= ~5,000 OOS trades (MDE <= 0.03 R), or a cheap mechanical label source of that size."
+  next_weeks: {W47: '1ae8-01 INDETERMINATE (no gain); a474-03 pooled donchian-4h head FAIL (11-15, B selected, AUC 0.613 but no arm beats B net of cost); desk-label variant PARKED on power (n <= 720 OOS trades, MDE ~0.08 R)', W48: 'none (re-entry test on the desk-label lever)', W49: none, W50: none}
+  exhaustion: 'the eth_4h variant and the desk-label variant FAIL; with today''s FAILs the head''s feature set then has no lever left. 2026-11-15: eth_4h variant FAILED (a474-03); desk-label variant parked on power, so the line waits on that re-entry test (and on MLP-D7-ACTION-VALUE for the D8 question).'
   owner: AM-ML
   plan_items: [ML-X3, ML-X4, ML-N4]
 
