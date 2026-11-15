@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Manager ask: the lane stop hook told lanes to wake session_01AFoLuLyarNRcy3nziCep2U, the retired Manager Session 2026-11-11a. scripts/ops/lane_report_stop_hook.py took the FIRST 'Manager ... session_X' match anywhere in the user turns, so a lane dispatched or briefed under 11-11a kept that id after a rotation. Now current_manager() takes the id named in the MOST RECENT user turn that names one (a rotation names the new manager later). It also fired in the manager session: _titled_manager() now skips any session that titled itself 'Manager Session ...' via set_session_title (manager skill step 1), whatever its first prompt. No new registry (the session registry and the manager lease are retired). Self-test 18/18 (3 new cases, incl. the rotation case naming the new id and never the old), tests/test_lane_report_stop_hook.py 3 passed. Tooling only, fails open as before. Revert: git revert."
+}

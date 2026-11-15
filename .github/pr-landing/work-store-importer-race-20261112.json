@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "src/runtime/work_store.py runs on the VM (ict-work-store-import timer + web API). Data-integrity fix: the importer re-checks inside its write transaction that an item is still importer-owned, so a session write landing mid-run is no longer reverted to the frozen export. No order-path change.",
+  "why": "WORK-STORE-IMPORTER-RACE. MEASURED 2026-11-12: 3 of 319 BACKLOG-DRAIN-20261112 writes were reverted by 'work-store-importer' reconcile events 2 s after landing (e.g. PI-20261106-01AFOLUJ-0002 seq 10666 set -> seq 10668 migrate). Test: test_a_native_write_during_an_import_run_is_not_reverted fails on origin/main, passes here."
+}

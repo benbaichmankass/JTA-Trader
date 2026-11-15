@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "src/runtime/live_review_due.py (web-api route + in-trader LTR wake poster): read path only, Tier 2 per the lane dispatch (RM-AM-DUE-COULDNOTLOOK). Reads the package entry ATR from meta.atr14 when meta.atr is absent, and names the unanchored stall cause. No order, SL/TP, size or gate change.",
+  "why": "AM-TRADING post-deploy re-score 2026-11-12 21:13Z: 3 of 23 non-youth could_not_look. Two ml_entry packages carry meta.atr14 (1.1696 / 1.1554, read live) but the fallback read only meta.atr; the e4_oi_shock_1h stall read 'bars_held / peak_r unknown' while the real cause is peak_state=unanchored (no entry_time in its meta)."
+}

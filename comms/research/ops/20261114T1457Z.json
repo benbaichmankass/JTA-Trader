@@ -1,0 +1,68 @@
+{
+ "run": "RESEARCH-OPS-20261114-1450", "finished_at": "2026-11-14T14:57:00Z", "by": "lane RESEARCH-OPS-20261114-1450 (dispatched by manager session_01AFoLuKXonDBdED7cNK7FhN)",
+ "floor": 71, "floor_basis": "computed_floor(fired_24h 89)",
+ "idle_backends": [], "needs_review_triaged": 0, "needs_review_left": 112,
+ "throughput": {"runnable_before": 55, "runnable_after": 55, "queued": 273, "fired_24h": 89, "results_landed_24h": 218, "hours_since_last_dispatch": 0.3, "idle_alarm": false},
+ "mechanism": {"dispatch_receipt": "ok (last dispatch 0.3 h before the pass)", "collector": "ok", "stranded_stamp_prs": [], "incident": null,
+  "watchdog": "newest rows: stamps escalated 03:38Z (#25874 > 3 h, healed_by dispatch) and resolved 11:00Z; no open incident",
+  "workflow_runs": "read_state tree_only: Actions run list not read; throughput, receipt and watchdog rows used"},
+ "results_read": {"pass": 21, "fail": 26, "indeterminate": 2, "units": ["RQ-20261113-7857-01", "RQ-20261113-f090-01", "RQ-20261113-f090-02", "RQ-20261113-1751-02", "RQ-20261112-003", "RQ-20261113-f251-04", "RQ-20261113-f251-12", "RQ-20261113-6d44-02", "RQ-20261113-b819-01", "RQ-20261114-db1a-06"],
+  "note": "checks packet graded counts since the previous record (49 graded units). Rows opened for the ten units listed; the other graded units are named by cluster in analysis, not opened. 8 ungraded and 5 needs_review_unowned are in handoff."},
+ "unlocked": [], "retired": [], "levers_filed": [{"lever": "e4_oi_z_arms.py horizon/side arm option", "ref": "PI-20261114-7CNK7FHN-0001"}],
+ "units_authored": [], "followups_filed": ["PI-20261114-7CNK7FHN-0001"],
+ "authoring": {"queue_depth": null, "nodes_drafted": 0, "skipped_on_purpose": true, "reason": "no hand-authored queue unit: the pass's budget went to attribution of the confirmed pullback_1h results and the e4 fail; the one next test with a stated mechanism (e4 horizon/side) has no driver and is filed as a lever; promotion proposals are the manager's"},
+ "blocked_audit": {"blocked_over_age": 0, "slo_state": "ok (<= 10)", "blocker_watch": "STALE_BLOCK 5 (checklist rows FREE-CAPACITY-PLAN, LTR-TIGHTEN-FRESH-GO, MANAGER-VM-DIRECT-OPS, ML-AM-NEXT-LIVE, WEPE-BUILDOUT, not research units), NOT_RUNNING 3, UNPROVEN_OVERDUE 241 (counted, not re-audited)",
+  "disposition": "nothing over age, so no unit unblocked or retired; the 5 STALE_BLOCK rows are checklist rows the manager owns (ML-AM-NEXT-LIVE and WEPE-BUILDOUT name finished blockers) and are listed in handoff; WEPE and the news layer are not retired"},
+ "iteration": {
+  "results_attributed": {"count": 10, "of": 49, "note": "10 of the 49 graded units opened at the row level; the rest attributed by verdict and cluster only"},
+  "map_entries_added": "backfill refreshed the lever maps in the working tree, NOT committed (research/levers is outside the Tier-1 surface; entry count not measured)",
+  "next_tests_from_map": 0,
+  "lever_coverage": {"strategy_leg": {"note": "iteration_orphans.py --levers run; not re-counted"}},
+  "orphans_before": {"strategy_leg": 7, "ml_model": 3, "ltr_class": 0},
+  "orphans_after": {"strategy_leg": 7, "ml_model": 3, "ltr_class": 0},
+  "orphans_named_left": ["claude_desk", "e4_oi_shock_1h", "ml_entry_eq", "qqq_pullback_1h", "spy_pullback_1h", "tlt_pullback_1h", "turtle_soup", "ml-exit-head-donchian-1h", "ml-tm-action-value", "ml-btc-router-cells"],
+  "results_iterated": [{"result": "RQ-20261113-7857-01", "verdict": "fail", "subject": "e4_oi_shock_1h", "next": "PI-20261114-7CNK7FHN-0001 (lever gap: horizon/side driver)", "attempt": 3}],
+  "advanced": 1, "survivors": [], "overdue": ["ml-brackets", "ml-setup-metalabel-p2pool", "ml-holdbias-exit"], "retired_by_review": []},
+ "prior_calls_scorecard": [
+  {"call": "RQ-20261113-7857-01 lands a measured row with at least 2 of 3 arms n >= 30", "p": 0.6, "check_rerun": "cat research/results/RQ-20261113-7857-01/*.jsonl", "outcome": "hit", "action_happened": true, "note": "all three arms n >= 30 (154, 82, 57)"},
+  {"call": "No arm of RQ-20261113-7857-01 clears the cluster-CI floor", "p": 0.65, "check_rerun": "same", "outcome": "hit", "action_happened": true, "note": "FAIL; 8.0 arm mean +0.102 R n 57 but CI includes 0"},
+  {"call": "RQ-20261113-f090-01 and -02 land measured rows by 2026-11-16", "p": 0.6, "check_rerun": "ls research/results/RQ-20261113-f090-0*", "outcome": "hit", "action_happened": true, "note": "both landed PASS (label confirmed) 2026-11-13T21:24Z"},
+  {"call": "qqq and tlt pullback_1h are orphans again once the f090 units are done", "p": 0.7, "check_rerun": "python3 scripts/research/iteration_orphans.py | grep -E 'orphan.*(qqq|tlt)_pullback_1h'", "outcome": "hit", "action_happened": false, "note": "both orphan now, with verdict pass_unconfirmed; the next step is a promotion proposal, not a unit"}],
+ "checks": {"packet_as_of": "2026-11-14T14:50:52Z", "since": "2026-11-13T21:30:00Z", "runnable_by_track": {"TRADING": 50, "MODEL": 5, "INFRA": 0},
+  "graded": {"pass": 21, "fail": 26, "indeterminate": 2, "ungraded": 8}, "fails_without_next": 15, "needs_review": 112,
+  "slo": {"runnable_floor": "55 vs 71 BREACH", "undispositioned_24h": "10 vs 5 BREACH", "theme_share_min_ratio": "0.11 vs 0.5 BREACH", "research_ops_age_h": "17.4 vs 8 BREACH (this record clears it)", "blocked_over_age": "0 ok", "research_ops_not_run": "1 ok", "hold_pr_wait_h": "could not look"},
+  "could_not_look": ["GitHub Actions run list", "hold_pr_wait_h"]},
+ "analysis": {
+  "rows_opened": ["RQ-20261113-7857-01", "RQ-20261113-f090-01", "RQ-20261113-f090-02", "RQ-20261113-1751-02", "RQ-20261112-003"],
+  "trading": {
+   "meaning": [
+    "tlt_pullback_1h (f090-01: holdout +7.02 R n 145, expectancy +0.048 R/trade, discovery +0.265 R/trade, one fold -5.3 R) and qqq_pullback_1h (f090-02: holdout +8.72 R n 45, +0.194 R/trade; 1751-02: +11.56 R n 38) both read 'confirmed' on one held-back evaluation, so each is a holdout-confirmed discovery; but the holdout expectancy is a fifth (tlt) to half (qqq) of the discovery expectancy, the cost stack is 5 bps slippage with zero fees on a Dukascopy feed, and n 45 / 38 is small, so a promotion proposal should carry the shrinkage and the feed-fidelity gap rather than the headline R.",
+    "spy_pullback_1h (RQ-20261112-003): the LONG arm was chosen from 5 arms and confirmed on a holdout of +3.84 R n 54 (+0.071 R/trade against +0.28 in discovery), so the 'confirmed' label rests on a thin, shrunk read and one selection from 5; it needs a second window before any proposal.",
+    "e4_oi_shock_1h iteration 2 (7857-01, FAIL): the oi_z response that looked monotone through 5.0 (+0.145 R, CI incl 0) turned over at 6.0 (-0.013 n 154) and 7.0 (-0.017 n 82) and rose again at 8.0 (+0.102 n 57, CI incl 0), so the iteration-1 gradient was noise or a single-point peak, not an edge that more threshold would reach; configuration closed: oi_z 3.0-8.0 on the 2024-11..2025-10 window; family e4_oi_shock_1h stays open; next test = horizon / side arms, which have no driver yet (PI-20261114-7CNK7FHN-0001).",
+    "f251 forming-bar lever batch: 11 of 11 (batch f251 in the packet) FAIL on the legs it tested (turtle_soup timeframe and symbol, trend_donchian_1h, tlt_pullback_1d, htf_pullback, avax/eth pullback), so a lever tried one at a time on the forming bar gives no survivors for these legs; turtle_soup stays an orphan with two families (timeframe, symbol-population) now flat."
+   ],
+   "fail_diagnoses": [
+    {"cluster": "e4_oi_shock_1h oi_z 6.0-8.0", "hypotheses": ["noise", "power (n 57-154)", "design (threshold is the wrong lever)", "idea wrong"], "test": "horizon / side arms (no driver)", "survivor": "noise", "next": "PI-20261114-7CNK7FHN-0001"},
+    {"cluster": "f251 forming-bar single-lever batch (11 FAIL)", "hypotheses": ["noise", "idea wrong for these legs", "forming-bar harness defect"], "test": "not opened row by row this pass", "survivor": "undetermined", "next": "handoff: next pass to open the f251 rows per leg"}
+   ],
+   "next_tests": [
+    {"id_or_node": "tlt_pullback_1h and qqq_pullback_1h promotion proposals", "decision_changed": "whether the manager takes either leg to a Tier-3 proposal", "on_pass": "manager writes the proposal with holdout shrinkage and feed fidelity stated", "on_fail": "n/a: the confirmation already passed; a fidelity replay on the live feed would be the next unit", "premortem": "holdout n 45 and 38 are small and expectancy shrinks 2-5x from discovery, so the live book could show a flat mean"}
+   ]},
+  "model": {"meaning": ["ml_entry_eq iteration 1 (6d44-02, top-3-per-bar cap) FAIL and ml-btc-router-cells iteration 2 (b819-01) FAIL: both subjects are orphans again with a failed first iteration; not opened row by row this pass, so no diagnosis is claimed (handoff)."], "fail_diagnoses": [], "next_tests": []},
+  "cross_track": [{"from": "TRADING", "finding": "a holdout-confirmed lever on a leg (tlt/qqq trail and ADX) is a label candidate; a noisy threshold response (e4) is a negative class", "feeds": "no node filed this pass; handoff"}],
+  "surprises": ["the e4 oi_z response reversed sign between 5.0 and 7.0 after a smooth rise, which is why attribution of a monotone response on n 256 was premature"]},
+ "calls": [
+  {"call": "tlt_pullback_1h and qqq_pullback_1h each have a manager-owned promotion proposal or retirement note on a checklist row within 7 days", "p": 0.5, "check": {"command": "python3 scripts/research/iteration_orphans.py | grep -E '(qqq|tlt)_pullback_1h'", "rule": "neither listed as orphan", "resolves_when": "2026-11-21"}},
+  {"call": "PI-20261114-7CNK7FHN-0001 is cleared (e4 driver plus iteration-3 unit) within 7 days", "p": 0.4, "check": {"command": "python3 scripts/research/iteration_orphans.py | grep e4_oi_shock_1h", "rule": "covered or retired", "resolves_when": "2026-11-21"}}],
+ "not_run": ["E: no unit authored (value of information stated in authoring)", "C: needs_review triage writes (research/queue edits would hold the PR; 5 unowned units listed in handoff)"],
+ "limits": ["GitHub Actions run list not read; tree-only", "lever_map entry count not measured", "only 10 of 49 graded units opened at row level", "f251 FAIL batch and the ml_entry_eq / ml-btc-router-cells FAILs not diagnosed from rows"],
+ "handoff": [
+  "Manager: tlt_pullback_1h (RQ-20261113-f090-01, RQ-20261113-1751-01) and qqq_pullback_1h (RQ-20261113-f090-02, RQ-20261113-1751-02) are holdout-confirmed discoveries; promotion proposal is Tier 3 and yours; carry the holdout shrinkage, small n (145/45) and 5 bps slippage / zero-fee Dukascopy cost basis.",
+  "Manager: spy_pullback_1h confirmed on a thin holdout (+3.84 R n 54, selected from 5): second window before any proposal.",
+  "Orphans not iterated: claude_desk, turtle_soup, ml_entry_eq, ml-btc-router-cells, ml-tm-action-value, ml-exit-head-donchian-1h; overdue ML: ml-brackets, ml-setup-metalabel-p2pool, ml-holdbias-exit.",
+  "Unowned needs_review: RQ-20261031-020, RQ-20261111-207f-03, RQ-20261114-db1a-02, -04, -05; ungraded: RQ-20261112-cd01-01, RQ-20261113-1449-01, RQ-20261113-e44a-01.",
+  "Checklist STALE_BLOCK rows for the manager: FREE-CAPACITY-PLAN, LTR-TIGHTEN-FRESH-GO, MANAGER-VM-DIRECT-OPS (no blocked_on), ML-AM-NEXT-LIVE and WEPE-BUILDOUT (blockers finished).",
+  "SLO breaches: runnable_floor 55 vs 71 (diagnostic, no unit authored to fill it), undispositioned_24h 10 vs 5, theme_share_min_ratio 0.11 vs 0.5: need an authoring lane per the manager's research SLO escalation.",
+  "pipeline --due: 744 due items counted, routing is the manager's."
+ ]
+}

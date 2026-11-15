@@ -1,0 +1,1778 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "test corpus tmb-73f5c3660014 (emitted path files comms/research/RQ-20261030-c7a1-01/41134401720/tm_bench_v1_4t7ondlz/*__paths.jsonl): 2627 trades on 6 legs passing the peak_r==mfe_r parity control; train corpus tmb-d6c7005cf876 (combined shard dir corpus_v2), 146158 trades, cross-symbol purged; as traded (harness paths), full cost stack, 6 purged calendar folds by entry",
+  "n": 2627,
+  "measurement": {
+    "schema": "tm_bench/1",
+    "selfcheck": {
+      "pass": true,
+      "checks": [
+        {
+          "check": "synthetic: frozen corpus re-reads to the same corpus_id",
+          "pass": true,
+          "detail": "tmb-4e14430561be, 900 trades"
+        },
+        {
+          "check": "synthetic: B0 - B0 == 0 exactly",
+          "pass": true,
+          "detail": "0.0"
+        },
+        {
+          "check": "synthetic: engine replays B0 to the harness exit_r on >= 99% of trades",
+          "pass": true,
+          "detail": "1.0"
+        },
+        {
+          "check": "synthetic: action-value ceiling >= every labelled action per trade",
+          "pass": true,
+          "detail": "max excess 0.00e+00"
+        },
+        {
+          "check": "synthetic: census oracle == first_passage_paths.census",
+          "pass": true,
+          "detail": ""
+        },
+        {
+          "check": "synthetic-planted: frozen corpus re-reads to the same corpus_id",
+          "pass": true,
+          "detail": "tmb-a164b47a7dde, 900 trades"
+        },
+        {
+          "check": "synthetic-planted: B0 - B0 == 0 exactly",
+          "pass": true,
+          "detail": "0.0"
+        },
+        {
+          "check": "synthetic-planted: engine replays B0 to the harness exit_r on >= 99% of trades",
+          "pass": true,
+          "detail": "1.0"
+        },
+        {
+          "check": "synthetic-planted: action-value ceiling >= every labelled action per trade",
+          "pass": true,
+          "detail": "max excess 0.00e+00"
+        },
+        {
+          "check": "synthetic-planted: census oracle == first_passage_paths.census",
+          "pass": true,
+          "detail": ""
+        },
+        {
+          "check": "planted: lgbm action-value beats B0 (CI lower > 0)",
+          "pass": true,
+          "detail": "0.37298 [0.31186, 0.44038]"
+        },
+        {
+          "check": "null: lgbm action-value does not pass on a driftless walk (CI lower <= 0)",
+          "pass": true,
+          "detail": "null 0.04112 [-0.08612, 0.1563]"
+        },
+        {
+          "check": "Stage A: planted corpus has a passing action class, driftless null has none",
+          "pass": true,
+          "detail": "planted passes ['close', 'partial_close_50', 'tighten_sl_be', 'tighten_sl_atr1', 'tighten_sl_atr2', 'tp_pull_in_0p5r', 'tp_pull_in_1r']; null passes []"
+        },
+        {
+          "check": "null: logit action-value does not pass on a driftless walk (CI lower <= 0)",
+          "pass": true,
+          "detail": "null -0.02492 [-0.18847, 0.12346]"
+        },
+        {
+          "check": "path_state: every feature at state s is unchanged when the trade is cut after bar s (causal)",
+          "pass": true,
+          "detail": "2954 truncations, max |diff| 0.0"
+        },
+        {
+          "check": "path_state: positive control -- a feature reading bar s+1 FAILS the truncation test",
+          "pass": true,
+          "detail": "leaky max |diff| inf"
+        },
+        {
+          "check": "signature: every feature at state s is unchanged when the trade is cut after bar s (causal)",
+          "pass": true,
+          "detail": "2954 truncations, max |diff| 0.0"
+        },
+        {
+          "check": "signature: Chen's identity -- a straight-line path's signature equals the tensor exponential of its increment",
+          "pass": true,
+          "detail": "39 columns"
+        },
+        {
+          "check": "stage_a_folds: planted reads pass, driftless null reads fail",
+          "pass": true,
+          "detail": "planted 4/6, null 0/6"
+        },
+        {
+          "check": "horizon label == full label when H >= the remaining bars",
+          "pass": true,
+          "detail": "max |diff| 0.0"
+        },
+        {
+          "check": "horizon label differs from the full label when H < the remaining bars (positive control)",
+          "pass": true,
+          "detail": "45/45 trades differ at H=2"
+        },
+        {
+          "check": "stage_a_folds at horizon 12: planted reads pass, driftless null does not",
+          "pass": true,
+          "detail": "planted pass, null fail"
+        },
+        {
+          "check": "cross-symbol purge leaves no overlapping train trade",
+          "pass": true,
+          "detail": "0 leaks; purged [20, 23, 23, 23, 22, 22]"
+        },
+        {
+          "check": "same trade_key in train and test is de-duplicated",
+          "pass": true,
+          "detail": ""
+        },
+        {
+          "check": "train-sample: seeded -- same seed gives the same sample, another seed a different one",
+          "pass": true,
+          "detail": "seed 11 sizes [250, 244, 244, 246, 244, 244]"
+        },
+        {
+          "check": "train-sample: trade-grouped -- whole trades, no repeats, every state of a sampled trade is in the fit",
+          "pass": true,
+          "detail": "1472 trades over 6 folds"
+        },
+        {
+          "check": "train-sample: purged -- no sampled trade overlaps its test fold window + embargo (and the pool had overlappers)",
+          "pass": true,
+          "detail": "0 leaks; 349 pool trades overlap a window; purged [50, 53, 54, 52, 54, 53]"
+        },
+        {
+          "check": "train-sample: de-duplicated vs v1 -- by trade_key AND by (leg, symbol, entry, direction) under a different key string",
+          "pass": true,
+          "detail": "0 duplicates sampled; dropped per fold [30, 30, 30, 30, 30, 30] of 30 planted (25 re-keyed + 5 same key)"
+        },
+        {
+          "check": "train-sample: size = K x v1 train-fold trades, or the whole purged pool if smaller",
+          "pass": true,
+          "detail": "target [250, 244, 244, 246, 244, 244] pool [550, 547, 546, 548, 546, 547]"
+        },
+        {
+          "check": "train-sample: score() trains on exactly that sample and reports it",
+          "pass": true,
+          "detail": "folds [250, 244, 244, 246, 244, 244]"
+        }
+      ]
+    },
+    "test_corpus": {
+      "corpus_id": "tmb-73f5c3660014",
+      "source": "emitted path files comms/research/RQ-20261030-c7a1-01/41134401720/tm_bench_v1_4t7ondlz/*__paths.jsonl",
+      "legs": [
+        {
+          "leg": "ada_pullback_2h",
+          "n_trade_rows": 402,
+          "n_path_rows": 8876,
+          "n_trades": 402,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 402,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "2h"
+        },
+        {
+          "leg": "trend_donchian_eth_4h",
+          "n_trade_rows": 275,
+          "n_path_rows": 3594,
+          "n_trades": 275,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 275,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "4h"
+        },
+        {
+          "leg": "trend_donchian_eth_prop",
+          "n_trade_rows": 1085,
+          "n_path_rows": 15381,
+          "n_trades": 1085,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 1085,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00011,
+          "state": "included",
+          "timeframe": "1h"
+        },
+        {
+          "leg": "trend_donchian_sol_prop",
+          "n_trade_rows": 403,
+          "n_path_rows": 8287,
+          "n_trades": 403,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 403,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "1h"
+        },
+        {
+          "leg": "trend_donchian_xrp_4h",
+          "n_trade_rows": 68,
+          "n_path_rows": 545,
+          "n_trades": 68,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 68,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "4h"
+        },
+        {
+          "leg": "xrp_pullback_2h",
+          "n_trade_rows": 394,
+          "n_path_rows": 16870,
+          "n_trades": 394,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 394,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "2h"
+        }
+      ],
+      "failed": [],
+      "runs": {},
+      "parity_ok": true
+    },
+    "train_corpus": {
+      "corpus_id": "tmb-d6c7005cf876",
+      "source": "combined shard dir corpus_v2",
+      "legs": [
+        {
+          "leg": "ada_pullback_2h",
+          "n_trade_rows": 22855,
+          "n_path_rows": 464278,
+          "n_trades": 22855,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 22855,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "2h"
+        },
+        {
+          "leg": "trend_donchian_eth_4h",
+          "n_trade_rows": 15172,
+          "n_path_rows": 171744,
+          "n_trades": 15172,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 15172,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "4h"
+        },
+        {
+          "leg": "trend_donchian_eth_prop",
+          "n_trade_rows": 59010,
+          "n_path_rows": 841026,
+          "n_trades": 59010,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 59010,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00011,
+          "state": "included",
+          "timeframe": "1h"
+        },
+        {
+          "leg": "trend_donchian_sol_prop",
+          "n_trade_rows": 22730,
+          "n_path_rows": 407381,
+          "n_trades": 22730,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 22730,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "1h"
+        },
+        {
+          "leg": "trend_donchian_xrp_4h",
+          "n_trade_rows": 4217,
+          "n_path_rows": 36963,
+          "n_trades": 4217,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 4217,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "4h"
+        },
+        {
+          "leg": "xrp_pullback_2h",
+          "n_trade_rows": 22174,
+          "n_path_rows": 796546,
+          "n_trades": 22174,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 22174,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "2h"
+        }
+      ],
+      "failed": [],
+      "parity_ok": true,
+      "materialise": {
+        "schema": "corpus_v2_materialise/1",
+        "corpus_id": "bp2-f4271084b120",
+        "state": "regenerated",
+        "attempts": [
+          {
+            "tried": "artifact",
+            "artifact_name": "broad-paths-bp2-f4271084b120-data",
+            "n_listed_unexpired": 0,
+            "found": false
+          },
+          {
+            "tried": "regenerate",
+            "universe_id_reproduced": true,
+            "recomputed_corpus_id": "bp2-f4271084b120",
+            "source_tree": "manifest git_sha",
+            "git_sha": "0fa9a0c0a8d26c09390583931685074415b6ea26",
+            "shard_exit_codes": {
+              "0": 0,
+              "2": 0,
+              "1": 0,
+              "3": 0,
+              "4": 0,
+              "5": 0
+            },
+            "shard_seconds": 2660,
+            "merge_exit": 0,
+            "could_not_run": 0,
+            "cells_run": 360
+          }
+        ],
+        "present": true,
+        "trade_key_sha256_expected": "a9f58fb2eaf7c706d9cc5d19b7c66d5663a9c380d9a680053eec04bd8d8b39fe",
+        "trade_key_sha256_observed": "a9f58fb2eaf7c706d9cc5d19b7c66d5663a9c380d9a680053eec04bd8d8b39fe",
+        "trade_key_sha256_match": true,
+        "n_trades_expected": 146158,
+        "n_trades_observed": 146158,
+        "n_trades_match": true,
+        "manifest_git_sha": "0fa9a0c0a8d26c09390583931685074415b6ea26",
+        "manifest_run_id": "40999208713",
+        "population": "corpus bp2-f4271084b120: 60 symbols x 6 legs"
+      }
+    },
+    "corpus_id": "tmb-73f5c3660014",
+    "train_corpus_id": "tmb-d6c7005cf876",
+    "train_sample": {
+      "mult": 4.0,
+      "seed": 11,
+      "embargo_hours_by_leg_v2": {
+        "ada_pullback_2h": 400.0,
+        "trend_donchian_eth_4h": 800.0,
+        "trend_donchian_eth_prop": 200.0,
+        "trend_donchian_sol_prop": 200.0,
+        "trend_donchian_xrp_4h": 552.0,
+        "xrp_pullback_2h": 400.0
+      },
+      "per_fold": [
+        {
+          "fold": 0,
+          "n_v1_train_with_states": 2106,
+          "n_v2_target": 8424,
+          "n_v2_pool": 114957,
+          "n_v1_purged": 0,
+          "n_v2_purged": 24956,
+          "n_v2_dedup": 2606,
+          "n_v2_sampled": 8424
+        },
+        {
+          "fold": 1,
+          "n_v1_train_with_states": 2122,
+          "n_v2_target": 8488,
+          "n_v2_pool": 112355,
+          "n_v1_purged": 12,
+          "n_v2_purged": 27305,
+          "n_v2_dedup": 2606,
+          "n_v2_sampled": 8488
+        },
+        {
+          "fold": 2,
+          "n_v1_train_with_states": 2122,
+          "n_v2_target": 8488,
+          "n_v2_pool": 114375,
+          "n_v1_purged": 11,
+          "n_v2_purged": 25231,
+          "n_v2_dedup": 2606,
+          "n_v2_sampled": 8488
+        },
+        {
+          "fold": 3,
+          "n_v1_train_with_states": 2133,
+          "n_v2_target": 8532,
+          "n_v2_pool": 114501,
+          "n_v1_purged": 18,
+          "n_v2_purged": 25204,
+          "n_v2_dedup": 2606,
+          "n_v2_sampled": 8532
+        },
+        {
+          "fold": 4,
+          "n_v1_train_with_states": 2121,
+          "n_v2_target": 8484,
+          "n_v2_pool": 114821,
+          "n_v1_purged": 10,
+          "n_v2_purged": 24821,
+          "n_v2_dedup": 2606,
+          "n_v2_sampled": 8484
+        },
+        {
+          "fold": 5,
+          "n_v1_train_with_states": 2123,
+          "n_v2_target": 8492,
+          "n_v2_pool": 118494,
+          "n_v1_purged": 12,
+          "n_v2_purged": 21097,
+          "n_v2_dedup": 2606,
+          "n_v2_sampled": 8492
+        }
+      ],
+      "sample_sha256_by_fold": {
+        "0": "5ab9eb9928a766d1d5e1acdfa11e0061cc59df3f6ad22f80944c4808402510f0",
+        "1": "6eb9a9e396fb1f5a3b61fe77f343a4e5c616c105a3395f1318a5b5344015e531",
+        "2": "8ccca450c01855fa4c90ac1b661612617d9a1d2bdc28d6a32022badab67b2579",
+        "3": "b5f861f1ce130abd4de4756d6ce6da984d57fa9c3cae08fc101deaec6150e38a",
+        "4": "0f02f7fb8fb9e726b7d5f36330a9a24038285862483ed92d317a0dd1c78c3d15",
+        "5": "3d97e60d9ded4f30fd6f42ea67392ebdf44dc79b2f08f1a508fd043741b87f76"
+      }
+    },
+    "n_trades": 2627,
+    "n_states": 50926,
+    "n_oos_trades": 2627,
+    "engine": "scripts/research/cf_core.py::simulate+net_of (CF-B0)",
+    "engine_fidelity": {
+      "share_within_tol": 1.0,
+      "tol_r": 0.01
+    },
+    "oracle": {
+      "census_best_close_saving_r_per_trade": 0.7799,
+      "census": {
+        "n_trades": 2627,
+        "exit_reasons": {
+          "stop": 933,
+          "take_profit": 459,
+          "trail_stop": 1198,
+          "timeout": 8,
+          "stale_stop": 29
+        },
+        "n_states": 50926,
+        "as_traded_label_rate": 0.5883,
+        "oracle_best_close_saving_r_per_trade": 0.7799,
+        "net_r_per_trade": 0.1023
+      },
+      "action_value_ceiling_r_per_trade_all": 0.91678,
+      "action_value_ceiling_r_per_trade_oos": 0.91678
+    },
+    "folds": {
+      "k": 6,
+      "embargo_hours_by_leg": {
+        "ada_pullback_2h": 304.0,
+        "trend_donchian_eth_4h": 368.0,
+        "trend_donchian_eth_prop": 77.0,
+        "trend_donchian_sol_prop": 178.0,
+        "trend_donchian_xrp_4h": 100.0,
+        "xrp_pullback_2h": 400.0
+      },
+      "rule": "v1 train fold (leg-embargo purged) + a seeded trade-grouped sample of v2; every train trade of either corpus purged if [entry, exit + its leg max hold] overlaps the test fold window (any symbol); v2 trades whose trade_key or (leg, symbol, entry, direction) is in the test corpus dropped",
+      "per_fold": [
+        {
+          "fold": 0,
+          "lo": "2020-07-02 15:00:00+00:00",
+          "hi": "2021-07-20 07:50:00+00:00",
+          "test": 462,
+          "train": 10589,
+          "n_purged": 24956,
+          "n_dedup": 2606
+        },
+        {
+          "fold": 1,
+          "lo": "2021-07-20 07:50:00+00:00",
+          "hi": "2022-08-07 00:40:00+00:00",
+          "test": 432,
+          "train": 10671,
+          "n_purged": 27317,
+          "n_dedup": 2606
+        },
+        {
+          "fold": 2,
+          "lo": "2022-08-07 00:40:00+00:00",
+          "hi": "2023-08-24 17:30:00+00:00",
+          "test": 438,
+          "train": 10666,
+          "n_purged": 25242,
+          "n_dedup": 2606
+        },
+        {
+          "fold": 3,
+          "lo": "2023-08-24 17:30:00+00:00",
+          "hi": "2024-09-10 10:20:00+00:00",
+          "test": 417,
+          "train": 10724,
+          "n_purged": 25222,
+          "n_dedup": 2606
+        },
+        {
+          "fold": 4,
+          "lo": "2024-09-10 10:20:00+00:00",
+          "hi": "2025-09-28 03:10:00+00:00",
+          "test": 438,
+          "train": 10663,
+          "n_purged": 24831,
+          "n_dedup": 2606
+        },
+        {
+          "fold": 5,
+          "lo": "2025-09-28 03:10:00+00:00",
+          "hi": "2026-10-15 20:00:00+00:00",
+          "test": 440,
+          "train": 10667,
+          "n_purged": 21109,
+          "n_dedup": 2606
+        }
+      ]
+    },
+    "action_enum": [
+      "hold",
+      "close",
+      "partial_close_50",
+      "tighten_sl_be",
+      "tighten_sl_atr1",
+      "tighten_sl_atr2",
+      "tp_pull_in_0p5r",
+      "tp_pull_in_1r"
+    ],
+    "checkin_grid": [
+      "every_bar"
+    ],
+    "entry_source": "E1",
+    "calibration": {
+      "definition": "OOS Spearman rho(predicted advantage, realized label) over every state of every OOS trade; CI = trade-clustered bootstrap; null = labels permuted within trade; pass = CI lower > null p95",
+      "n_oos_trades_with_states": 2558,
+      "actions": {
+        "close": {
+          "read_state": "measured",
+          "rho": 0.02582,
+          "ci95": [
+            0.00358,
+            0.04792
+          ],
+          "perm_null_p95": -0.04579,
+          "perm_null_sd": 0.00306,
+          "n_states": 50926,
+          "n_trades": 2558,
+          "n_boot": 2000,
+          "n_perm": 200,
+          "pass": true
+        },
+        "partial_close_50": {
+          "read_state": "measured",
+          "rho": 0.02582,
+          "ci95": [
+            0.00331,
+            0.04807
+          ],
+          "perm_null_p95": -0.04663,
+          "perm_null_sd": 0.00263,
+          "n_states": 50926,
+          "n_trades": 2558,
+          "n_boot": 2000,
+          "n_perm": 200,
+          "pass": true
+        },
+        "tighten_sl_be": {
+          "read_state": "measured",
+          "rho": -0.0193,
+          "ci95": [
+            -0.03891,
+            0.00041
+          ],
+          "perm_null_p95": 0.00392,
+          "perm_null_sd": 0.00362,
+          "n_states": 50926,
+          "n_trades": 2558,
+          "n_boot": 2000,
+          "n_perm": 200,
+          "pass": false
+        },
+        "tighten_sl_atr1": {
+          "read_state": "measured",
+          "rho": 0.01074,
+          "ci95": [
+            -0.0071,
+            0.02885
+          ],
+          "perm_null_p95": -0.00568,
+          "perm_null_sd": 0.00337,
+          "n_states": 50926,
+          "n_trades": 2558,
+          "n_boot": 2000,
+          "n_perm": 200,
+          "pass": false
+        },
+        "tighten_sl_atr2": {
+          "read_state": "measured",
+          "rho": 0.00026,
+          "ci95": [
+            -0.01807,
+            0.01937
+          ],
+          "perm_null_p95": -0.01248,
+          "perm_null_sd": 0.00401,
+          "n_states": 50926,
+          "n_trades": 2558,
+          "n_boot": 2000,
+          "n_perm": 200,
+          "pass": false
+        },
+        "tp_pull_in_0p5r": {
+          "read_state": "measured",
+          "rho": -0.00618,
+          "ci95": [
+            -0.02494,
+            0.0134
+          ],
+          "perm_null_p95": -0.028,
+          "perm_null_sd": 0.00342,
+          "n_states": 50926,
+          "n_trades": 2558,
+          "n_boot": 2000,
+          "n_perm": 200,
+          "pass": true
+        },
+        "tp_pull_in_1r": {
+          "read_state": "measured",
+          "rho": -0.01528,
+          "ci95": [
+            -0.03292,
+            0.00267
+          ],
+          "perm_null_p95": -0.02208,
+          "perm_null_sd": 0.00392,
+          "n_states": 50926,
+          "n_trades": 2558,
+          "n_boot": 2000,
+          "n_perm": 200,
+          "pass": false
+        }
+      },
+      "passing": [
+        "close",
+        "partial_close_50",
+        "tp_pull_in_0p5r"
+      ],
+      "per_fold": {
+        "0": {
+          "n_checkins": 7784,
+          "n_trades": 452,
+          "actions": {
+            "close": {
+              "rho": 0.07284,
+              "ci95": [
+                0.02155,
+                0.12267
+              ],
+              "perm_null_p95": -0.03487,
+              "beats_null_point": true,
+              "beats_null": true
+            },
+            "partial_close_50": {
+              "rho": 0.07284,
+              "ci95": [
+                0.02273,
+                0.12851
+              ],
+              "perm_null_p95": -0.0325,
+              "beats_null_point": true,
+              "beats_null": true
+            },
+            "tighten_sl_be": {
+              "rho": 0.04478,
+              "ci95": [
+                -0.00681,
+                0.09515
+              ],
+              "perm_null_p95": 0.03855,
+              "beats_null_point": true,
+              "beats_null": false
+            },
+            "tighten_sl_atr1": {
+              "rho": 0.04261,
+              "ci95": [
+                0.00141,
+                0.08342
+              ],
+              "perm_null_p95": 0.0274,
+              "beats_null_point": true,
+              "beats_null": false
+            },
+            "tighten_sl_atr2": {
+              "rho": 0.01049,
+              "ci95": [
+                -0.03731,
+                0.06075
+              ],
+              "perm_null_p95": -0.00101,
+              "beats_null_point": true,
+              "beats_null": false
+            },
+            "tp_pull_in_0p5r": {
+              "rho": 0.04404,
+              "ci95": [
+                -0.01172,
+                0.09948
+              ],
+              "perm_null_p95": 0.01436,
+              "beats_null_point": true,
+              "beats_null": false
+            },
+            "tp_pull_in_1r": {
+              "rho": 0.00149,
+              "ci95": [
+                -0.04217,
+                0.04485
+              ],
+              "perm_null_p95": 0.01043,
+              "beats_null_point": false,
+              "beats_null": false
+            }
+          }
+        },
+        "1": {
+          "n_checkins": 8440,
+          "n_trades": 424,
+          "actions": {
+            "close": {
+              "rho": -0.00106,
+              "ci95": [
+                -0.05437,
+                0.05272
+              ],
+              "perm_null_p95": -0.06097,
+              "beats_null_point": true,
+              "beats_null": true
+            },
+            "partial_close_50": {
+              "rho": -0.00106,
+              "ci95": [
+                -0.0552,
+                0.05569
+              ],
+              "perm_null_p95": -0.06245,
+              "beats_null_point": true,
+              "beats_null": true
+            },
+            "tighten_sl_be": {
+              "rho": -0.01861,
+              "ci95": [
+                -0.07053,
+                0.03282
+              ],
+              "perm_null_p95": 0.0178,
+              "beats_null_point": false,
+              "beats_null": false
+            },
+            "tighten_sl_atr1": {
+              "rho": -0.01757,
+              "ci95": [
+                -0.05706,
+                0.02316
+              ],
+              "perm_null_p95": -0.00507,
+              "beats_null_point": false,
+              "beats_null": false
+            },
+            "tighten_sl_atr2": {
+              "rho": -0.00882,
+              "ci95": [
+                -0.05741,
+                0.03962
+              ],
+              "perm_null_p95": -0.01557,
+              "beats_null_point": true,
+              "beats_null": false
+            },
+            "tp_pull_in_0p5r": {
+              "rho": -0.00078,
+              "ci95": [
+                -0.04755,
+                0.04331
+              ],
+              "perm_null_p95": -0.03661,
+              "beats_null_point": true,
+              "beats_null": false
+            },
+            "tp_pull_in_1r": {
+              "rho": 0.03007,
+              "ci95": [
+                -0.00874,
+                0.06954
+              ],
+              "perm_null_p95": 0.00126,
+              "beats_null_point": true,
+              "beats_null": false
+            }
+          }
+        },
+        "2": {
+          "n_checkins": 8031,
+          "n_trades": 425,
+          "actions": {
+            "close": {
+              "rho": 0.02623,
+              "ci95": [
+                -0.03052,
+                0.08452
+              ],
+              "perm_null_p95": 0.01106,
+              "beats_null_point": true,
+              "beats_null": false
+            },
+            "partial_close_50": {
+              "rho": 0.02623,
+              "ci95": [
+                -0.02924,
+                0.08657
+              ],
+              "perm_null_p95": 0.01011,
+              "beats_null_point": true,
+              "beats_null": false
+            },
+            "tighten_sl_be": {
+              "rho": -0.04906,
+              "ci95": [
+                -0.10214,
+                0.0059
+              ],
+              "perm_null_p95": 0.00558,
+              "beats_null_point": false,
+              "beats_null": false
+            },
+            "tighten_sl_atr1": {
+              "rho": -0.01209,
+              "ci95": [
+                -0.05233,
+                0.03319
+              ],
+              "perm_null_p95": 0.0168,
+              "beats_null_point": false,
+              "beats_null": false
+            },
+            "tighten_sl_atr2": {
+              "rho": -0.03191,
+              "ci95": [
+                -0.08174,
+                0.01782
+              ],
+              "perm_null_p95": 0.00056,
+              "beats_null_point": false,
+              "beats_null": false
+            },
+            "tp_pull_in_0p5r": {
+              "rho": 0.00202,
+              "ci95": [
+                -0.04201,
+                0.04774
+              ],
+              "perm_null_p95": -0.00272,
+              "beats_null_point": true,
+              "beats_null": false
+            },
+            "tp_pull_in_1r": {
+              "rho": -0.07424,
+              "ci95": [
+                -0.11606,
+                -0.03516
+              ],
+              "perm_null_p95": -0.0294,
+              "beats_null_point": false,
+              "beats_null": false
+            }
+          }
+        },
+        "3": {
+          "n_checkins": 9179,
+          "n_trades": 407,
+          "actions": {
+            "close": {
+              "rho": 0.03127,
+              "ci95": [
+                -0.02562,
+                0.08355
+              ],
+              "perm_null_p95": -0.04198,
+              "beats_null_point": true,
+              "beats_null": true
+            },
+            "partial_close_50": {
+              "rho": 0.03127,
+              "ci95": [
+                -0.02491,
+                0.08348
+              ],
+              "perm_null_p95": -0.04254,
+              "beats_null_point": true,
+              "beats_null": true
+            },
+            "tighten_sl_be": {
+              "rho": 0.0101,
+              "ci95": [
+                -0.03221,
+                0.05201
+              ],
+              "perm_null_p95": 0.01334,
+              "beats_null_point": false,
+              "beats_null": false
+            },
+            "tighten_sl_atr1": {
+              "rho": 0.03215,
+              "ci95": [
+                -0.01018,
+                0.07579
+              ],
+              "perm_null_p95": -0.02739,
+              "beats_null_point": true,
+              "beats_null": true
+            },
+            "tighten_sl_atr2": {
+              "rho": -0.00161,
+              "ci95": [
+                -0.04761,
+                0.04036
+              ],
+              "perm_null_p95": -0.01669,
+              "beats_null_point": true,
+              "beats_null": false
+            },
+            "tp_pull_in_0p5r": {
+              "rho": -0.04506,
+              "ci95": [
+                -0.09081,
+                0.00058
+              ],
+              "perm_null_p95": -0.02796,
+              "beats_null_point": false,
+              "beats_null": false
+            },
+            "tp_pull_in_1r": {
+              "rho": -0.02439,
+              "ci95": [
+                -0.0692,
+                0.01907
+              ],
+              "perm_null_p95": -0.00999,
+              "beats_null_point": false,
+              "beats_null": false
+            }
+          }
+        },
+        "4": {
+          "n_checkins": 8691,
+          "n_trades": 427,
+          "actions": {
+            "close": {
+              "rho": -0.0126,
+              "ci95": [
+                -0.06233,
+                0.04094
+              ],
+              "perm_null_p95": -0.05874,
+              "beats_null_point": true,
+              "beats_null": false
+            },
+            "partial_close_50": {
+              "rho": -0.0126,
+              "ci95": [
+                -0.0607,
+                0.03769
+              ],
+              "perm_null_p95": -0.06008,
+              "beats_null_point": true,
+              "beats_null": false
+            },
+            "tighten_sl_be": {
+              "rho": -0.04011,
+              "ci95": [
+                -0.09182,
+                0.00775
+              ],
+              "perm_null_p95": 0.00984,
+              "beats_null_point": false,
+              "beats_null": false
+            },
+            "tighten_sl_atr1": {
+              "rho": -0.0169,
+              "ci95": [
+                -0.0592,
+                0.02609
+              ],
+              "perm_null_p95": 0.01888,
+              "beats_null_point": false,
+              "beats_null": false
+            },
+            "tighten_sl_atr2": {
+              "rho": 0.0204,
+              "ci95": [
+                -0.0238,
+                0.06524
+              ],
+              "perm_null_p95": 0.01482,
+              "beats_null_point": true,
+              "beats_null": false
+            },
+            "tp_pull_in_0p5r": {
+              "rho": -0.02082,
+              "ci95": [
+                -0.06583,
+                0.02361
+              ],
+              "perm_null_p95": -0.02162,
+              "beats_null_point": true,
+              "beats_null": false
+            },
+            "tp_pull_in_1r": {
+              "rho": 0.00159,
+              "ci95": [
+                -0.044,
+                0.04758
+              ],
+              "perm_null_p95": 0.0041,
+              "beats_null_point": false,
+              "beats_null": false
+            }
+          }
+        },
+        "5": {
+          "n_checkins": 8801,
+          "n_trades": 423,
+          "actions": {
+            "close": {
+              "rho": 0.04887,
+              "ci95": [
+                -0.00716,
+                0.10479
+              ],
+              "perm_null_p95": -0.04193,
+              "beats_null_point": true,
+              "beats_null": true
+            },
+            "partial_close_50": {
+              "rho": 0.04887,
+              "ci95": [
+                -0.00838,
+                0.10491
+              ],
+              "perm_null_p95": -0.04249,
+              "beats_null_point": true,
+              "beats_null": true
+            },
+            "tighten_sl_be": {
+              "rho": -0.06356,
+              "ci95": [
+                -0.11584,
+                -0.0157
+              ],
+              "perm_null_p95": -0.00963,
+              "beats_null_point": false,
+              "beats_null": false
+            },
+            "tighten_sl_atr1": {
+              "rho": 0.03329,
+              "ci95": [
+                -0.01008,
+                0.07822
+              ],
+              "perm_null_p95": -0.00785,
+              "beats_null_point": true,
+              "beats_null": false
+            },
+            "tighten_sl_atr2": {
+              "rho": 0.01081,
+              "ci95": [
+                -0.03349,
+                0.05781
+              ],
+              "perm_null_p95": -0.00413,
+              "beats_null_point": true,
+              "beats_null": false
+            },
+            "tp_pull_in_0p5r": {
+              "rho": 0.02999,
+              "ci95": [
+                -0.01797,
+                0.07703
+              ],
+              "perm_null_p95": -0.00124,
+              "beats_null_point": true,
+              "beats_null": false
+            },
+            "tp_pull_in_1r": {
+              "rho": 0.00604,
+              "ci95": [
+                -0.03057,
+                0.04727
+              ],
+              "perm_null_p95": -0.01486,
+              "beats_null_point": true,
+              "beats_null": false
+            }
+          }
+        }
+      },
+      "folds_beating_null": {
+        "close": 4,
+        "partial_close_50": 4,
+        "tighten_sl_be": 0,
+        "tighten_sl_atr1": 1,
+        "tighten_sl_atr2": 0,
+        "tp_pull_in_0p5r": 0,
+        "tp_pull_in_1r": 0
+      },
+      "folds_beating_null_point": {
+        "close": 6,
+        "partial_close_50": 6,
+        "tighten_sl_be": 1,
+        "tighten_sl_atr1": 3,
+        "tighten_sl_atr2": 5,
+        "tp_pull_in_0p5r": 5,
+        "tp_pull_in_1r": 2
+      },
+      "min_checkins_per_fold": 7784
+    },
+    "actions_allowed": null,
+    "inner_folds": 0,
+    "feature_block": "path_state",
+    "label": {
+      "kind": "horizon",
+      "horizon_bars": 12,
+      "note": "policy arms are scored on the horizon label: Stage A is the read; arm deltas are not net-of-cost policy values"
+    },
+    "features": [
+      "open_r",
+      "peak_r",
+      "log_bars",
+      "log_since_peak",
+      "stop_atr",
+      "target_atr",
+      "no_target",
+      "mom3_atr",
+      "mom6_atr",
+      "adx",
+      "adx_slope3",
+      "range3_atr",
+      "clv",
+      "leg_fixed_effects",
+      "mae_r",
+      "atr_ratio_entry",
+      "swing_hi_dist_atr",
+      "swing_lo_dist_atr"
+    ],
+    "arms": [
+      {
+        "arm_id": "B0_hold",
+        "n": 2627,
+        "read_state": "measured",
+        "net_r": 0.1023,
+        "b0_net_r": 0.1023,
+        "delta_vs_b0_r": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ],
+        "p_one_sided": 1.0,
+        "folds": {
+          "0": 0.0,
+          "1": 0.0,
+          "2": 0.0,
+          "3": 0.0,
+          "4": 0.0,
+          "5": 0.0
+        },
+        "folds_positive": 0,
+        "action_rate": 0.0,
+        "delta_acted_r": null,
+        "n_acted": 0,
+        "n_invalid_scored_hold": 0,
+        "maxdd_per_leg": {
+          "ada_pullback_2h": {
+            "n": 402,
+            "b0_maxdd_r": 21.897,
+            "arm_maxdd_r": 21.897,
+            "ok": true
+          },
+          "trend_donchian_eth_4h": {
+            "n": 275,
+            "b0_maxdd_r": 21.141,
+            "arm_maxdd_r": 21.141,
+            "ok": true
+          },
+          "trend_donchian_eth_prop": {
+            "n": 1085,
+            "b0_maxdd_r": 37.509,
+            "arm_maxdd_r": 37.509,
+            "ok": true
+          },
+          "trend_donchian_sol_prop": {
+            "n": 403,
+            "b0_maxdd_r": 13.613,
+            "arm_maxdd_r": 13.613,
+            "ok": true
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 68,
+            "b0_maxdd_r": 4.641,
+            "arm_maxdd_r": 4.641,
+            "ok": true
+          },
+          "xrp_pullback_2h": {
+            "n": 394,
+            "b0_maxdd_r": 16.499,
+            "arm_maxdd_r": 16.499,
+            "ok": true
+          }
+        },
+        "maxdd_ok": true,
+        "net_r_per_capital_day": 0.07032,
+        "b0_net_r_per_capital_day": 0.07032,
+        "strata": {
+          "pullback|vol_hi|crypto": {
+            "n": 404,
+            "delta_r": 0.0
+          },
+          "pullback|vol_lo|crypto": {
+            "n": 301,
+            "delta_r": 0.0
+          },
+          "pullback|vol_mid|crypto": {
+            "n": 91,
+            "delta_r": 0.0
+          },
+          "trend_donchian|vol_hi|crypto": {
+            "n": 471,
+            "delta_r": 0.0
+          },
+          "trend_donchian|vol_lo|crypto": {
+            "n": 575,
+            "delta_r": 0.0
+          },
+          "trend_donchian|vol_mid|crypto": {
+            "n": 785,
+            "delta_r": 0.0
+          }
+        },
+        "provenance": "ESTIMATED (harness paths, engine replay, full cost stack)",
+        "b0_minus_b0_r": 0.0
+      },
+      {
+        "arm_id": "B1_best_static_rule",
+        "n": 2627,
+        "read_state": "measured",
+        "net_r": 0.07078,
+        "b0_net_r": 0.1023,
+        "delta_vs_b0_r": -0.03152,
+        "ci95": [
+          -0.05119,
+          -0.01236
+        ],
+        "p_one_sided": 0.9985,
+        "folds": {
+          "0": -0.041,
+          "1": -0.02137,
+          "2": 0.0193,
+          "3": -0.07061,
+          "4": -0.01829,
+          "5": -0.05827
+        },
+        "folds_positive": 1,
+        "action_rate": 1.0,
+        "delta_acted_r": -0.03152,
+        "n_acted": 2627,
+        "n_invalid_scored_hold": 0,
+        "maxdd_per_leg": {
+          "ada_pullback_2h": {
+            "n": 402,
+            "b0_maxdd_r": 21.897,
+            "arm_maxdd_r": 20.833,
+            "ok": true
+          },
+          "trend_donchian_eth_4h": {
+            "n": 275,
+            "b0_maxdd_r": 21.141,
+            "arm_maxdd_r": 19.139,
+            "ok": true
+          },
+          "trend_donchian_eth_prop": {
+            "n": 1085,
+            "b0_maxdd_r": 37.509,
+            "arm_maxdd_r": 50.888,
+            "ok": false
+          },
+          "trend_donchian_sol_prop": {
+            "n": 403,
+            "b0_maxdd_r": 13.613,
+            "arm_maxdd_r": 13.495,
+            "ok": true
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 68,
+            "b0_maxdd_r": 4.641,
+            "arm_maxdd_r": 5.791,
+            "ok": false
+          },
+          "xrp_pullback_2h": {
+            "n": 394,
+            "b0_maxdd_r": 16.499,
+            "arm_maxdd_r": 15.069,
+            "ok": true
+          }
+        },
+        "maxdd_ok": false,
+        "net_r_per_capital_day": 0.04865,
+        "b0_net_r_per_capital_day": 0.07032,
+        "strata": {
+          "pullback|vol_hi|crypto": {
+            "n": 404,
+            "delta_r": -0.07967
+          },
+          "pullback|vol_lo|crypto": {
+            "n": 301,
+            "delta_r": 0.00573
+          },
+          "pullback|vol_mid|crypto": {
+            "n": 91,
+            "delta_r": -0.04895
+          },
+          "trend_donchian|vol_hi|crypto": {
+            "n": 471,
+            "delta_r": -0.02062
+          },
+          "trend_donchian|vol_lo|crypto": {
+            "n": 575,
+            "delta_r": -0.03169
+          },
+          "trend_donchian|vol_mid|crypto": {
+            "n": 785,
+            "delta_r": -0.02543
+          }
+        },
+        "provenance": "ESTIMATED (harness paths, engine replay, full cost stack)",
+        "chosen_by_leg_fold": {
+          "ada_pullback_2h": {
+            "0": "lock1_at_2r",
+            "1": "chandelier_3atr",
+            "2": "lock1_at_2r",
+            "3": "lock1_at_2r",
+            "4": "lock1_at_2r",
+            "5": "lock1_at_2r"
+          },
+          "trend_donchian_eth_4h": {
+            "0": "lock1_at_2r",
+            "1": "lock1_at_2r",
+            "2": "lock1_at_2r",
+            "3": "lock1_at_2r",
+            "4": "lock1_at_2r",
+            "5": "lock1_at_2r"
+          },
+          "trend_donchian_eth_prop": {
+            "0": "channel_20",
+            "1": "channel_20",
+            "2": "lock1_at_2r",
+            "3": "channel_20",
+            "4": "lock1_at_2r",
+            "5": "lock1_at_2r"
+          },
+          "trend_donchian_sol_prop": {
+            "0": "be_at_1r",
+            "1": "lock1_at_2r",
+            "2": "lock1_at_2r",
+            "3": "lock1_at_2r",
+            "4": "lock1_at_2r",
+            "5": "lock1_at_2r"
+          },
+          "trend_donchian_xrp_4h": {
+            "0": "lock1_at_2r",
+            "1": "be_lock_ladder",
+            "2": "lock1_at_2r",
+            "3": "lock1_at_2r",
+            "4": "lock1_at_2r",
+            "5": "lock1_at_2r"
+          },
+          "xrp_pullback_2h": {
+            "0": "lock1_at_2r",
+            "1": "lock1_at_2r",
+            "2": "lock1_at_2r",
+            "3": "lock1_at_2r",
+            "4": "lock1_at_2r",
+            "5": "lock1_at_2r"
+          }
+        },
+        "grid": [
+          "be_at_1r",
+          "lock1_at_2r",
+          "be_lock_ladder",
+          "chandelier_2atr",
+          "chandelier_3atr",
+          "channel_10",
+          "channel_20"
+        ],
+        "checkin": "continuous (rule)"
+      },
+      {
+        "arm_id": "B2_distance_logit@every_bar",
+        "n": 2627,
+        "read_state": "measured",
+        "net_r": 0.08605,
+        "b0_net_r": 0.1023,
+        "delta_vs_b0_r": -0.01625,
+        "ci95": [
+          -0.0275,
+          -0.00618
+        ],
+        "p_one_sided": 0.999,
+        "folds": {
+          "0": -0.00788,
+          "1": -0.00336,
+          "2": -0.01243,
+          "3": -0.02695,
+          "4": -0.02075,
+          "5": -0.02688
+        },
+        "folds_positive": 0,
+        "action_rate": 0.134,
+        "delta_acted_r": -0.12128,
+        "n_acted": 352,
+        "n_invalid_scored_hold": 0,
+        "maxdd_per_leg": {
+          "ada_pullback_2h": {
+            "n": 402,
+            "b0_maxdd_r": 21.897,
+            "arm_maxdd_r": 21.897,
+            "ok": true
+          },
+          "trend_donchian_eth_4h": {
+            "n": 275,
+            "b0_maxdd_r": 21.141,
+            "arm_maxdd_r": 21.141,
+            "ok": true
+          },
+          "trend_donchian_eth_prop": {
+            "n": 1085,
+            "b0_maxdd_r": 37.509,
+            "arm_maxdd_r": 48.133,
+            "ok": false
+          },
+          "trend_donchian_sol_prop": {
+            "n": 403,
+            "b0_maxdd_r": 13.613,
+            "arm_maxdd_r": 19.971,
+            "ok": false
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 68,
+            "b0_maxdd_r": 4.641,
+            "arm_maxdd_r": 4.641,
+            "ok": true
+          },
+          "xrp_pullback_2h": {
+            "n": 394,
+            "b0_maxdd_r": 16.499,
+            "arm_maxdd_r": 17.1,
+            "ok": false
+          }
+        },
+        "maxdd_ok": false,
+        "net_r_per_capital_day": 0.06195,
+        "b0_net_r_per_capital_day": 0.07032,
+        "strata": {
+          "pullback|vol_hi|crypto": {
+            "n": 404,
+            "delta_r": 0.00068
+          },
+          "pullback|vol_lo|crypto": {
+            "n": 301,
+            "delta_r": -0.00195
+          },
+          "pullback|vol_mid|crypto": {
+            "n": 91,
+            "delta_r": -0.01016
+          },
+          "trend_donchian|vol_hi|crypto": {
+            "n": 471,
+            "delta_r": -0.00203
+          },
+          "trend_donchian|vol_lo|crypto": {
+            "n": 575,
+            "delta_r": -0.02456
+          },
+          "trend_donchian|vol_mid|crypto": {
+            "n": 785,
+            "delta_r": -0.0336
+          }
+        },
+        "provenance": "ESTIMATED (harness paths, engine replay, full cost stack)",
+        "b4_matched_random": {
+          "mode": "causal",
+          "delta_vs_b0_r": -0.00647,
+          "margin_r": -0.00978,
+          "margin_ci95": [
+            -0.0216,
+            0.00043
+          ],
+          "p_random_ge_arm": 1.0
+        },
+        "p_star_by_fold": {
+          "0": 0.9,
+          "1": 0.9,
+          "2": 0.9,
+          "3": 0.9,
+          "4": 0.9,
+          "5": 0.9
+        },
+        "checkin": "every_bar"
+      },
+      {
+        "arm_id": "B6_vol_rescale@every_bar",
+        "n": 2627,
+        "read_state": "measured",
+        "net_r": 0.09907,
+        "b0_net_r": 0.1023,
+        "delta_vs_b0_r": -0.00323,
+        "ci95": [
+          -0.00932,
+          0.00173
+        ],
+        "p_one_sided": 0.8855,
+        "folds": {
+          "0": -0.00546,
+          "1": -0.00234,
+          "2": -0.00342,
+          "3": -0.01202,
+          "4": 0.00681,
+          "5": -0.00325
+        },
+        "folds_positive": 1,
+        "action_rate": 0.0666,
+        "delta_acted_r": -0.04853,
+        "n_acted": 175,
+        "n_invalid_scored_hold": 0,
+        "maxdd_per_leg": {
+          "ada_pullback_2h": {
+            "n": 402,
+            "b0_maxdd_r": 21.897,
+            "arm_maxdd_r": 21.897,
+            "ok": true
+          },
+          "trend_donchian_eth_4h": {
+            "n": 275,
+            "b0_maxdd_r": 21.141,
+            "arm_maxdd_r": 20.883,
+            "ok": true
+          },
+          "trend_donchian_eth_prop": {
+            "n": 1085,
+            "b0_maxdd_r": 37.509,
+            "arm_maxdd_r": 35.831,
+            "ok": true
+          },
+          "trend_donchian_sol_prop": {
+            "n": 403,
+            "b0_maxdd_r": 13.613,
+            "arm_maxdd_r": 13.468,
+            "ok": true
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 68,
+            "b0_maxdd_r": 4.641,
+            "arm_maxdd_r": 4.641,
+            "ok": true
+          },
+          "xrp_pullback_2h": {
+            "n": 394,
+            "b0_maxdd_r": 16.499,
+            "arm_maxdd_r": 15.92,
+            "ok": true
+          }
+        },
+        "maxdd_ok": true,
+        "net_r_per_capital_day": 0.0681,
+        "b0_net_r_per_capital_day": 0.07032,
+        "strata": {
+          "pullback|vol_hi|crypto": {
+            "n": 404,
+            "delta_r": -0.00357
+          },
+          "pullback|vol_lo|crypto": {
+            "n": 301,
+            "delta_r": 0.00362
+          },
+          "pullback|vol_mid|crypto": {
+            "n": 91,
+            "delta_r": -0.00194
+          },
+          "trend_donchian|vol_hi|crypto": {
+            "n": 471,
+            "delta_r": -0.01228
+          },
+          "trend_donchian|vol_lo|crypto": {
+            "n": 575,
+            "delta_r": -0.00409
+          },
+          "trend_donchian|vol_mid|crypto": {
+            "n": 785,
+            "delta_r": 0.00022
+          }
+        },
+        "provenance": "ESTIMATED (harness paths, engine replay, full cost stack)",
+        "checkin": "every_bar"
+      },
+      {
+        "arm_id": "lgbm_action_value@every_bar",
+        "n": 2627,
+        "read_state": "measured",
+        "net_r": 0.07355,
+        "b0_net_r": 0.1023,
+        "delta_vs_b0_r": -0.02875,
+        "ci95": [
+          -0.05382,
+          -0.00442
+        ],
+        "p_one_sided": 0.9865,
+        "folds": {
+          "0": 0.02852,
+          "1": -0.05744,
+          "2": -0.00587,
+          "3": -0.06514,
+          "4": -0.0484,
+          "5": -0.02944
+        },
+        "folds_positive": 1,
+        "action_rate": 0.614,
+        "delta_acted_r": -0.04683,
+        "n_acted": 1613,
+        "n_invalid_scored_hold": 19,
+        "maxdd_per_leg": {
+          "ada_pullback_2h": {
+            "n": 402,
+            "b0_maxdd_r": 21.897,
+            "arm_maxdd_r": 15.815,
+            "ok": true
+          },
+          "trend_donchian_eth_4h": {
+            "n": 275,
+            "b0_maxdd_r": 21.141,
+            "arm_maxdd_r": 14.102,
+            "ok": true
+          },
+          "trend_donchian_eth_prop": {
+            "n": 1085,
+            "b0_maxdd_r": 37.509,
+            "arm_maxdd_r": 42.322,
+            "ok": false
+          },
+          "trend_donchian_sol_prop": {
+            "n": 403,
+            "b0_maxdd_r": 13.613,
+            "arm_maxdd_r": 19.206,
+            "ok": false
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 68,
+            "b0_maxdd_r": 4.641,
+            "arm_maxdd_r": 4.605,
+            "ok": true
+          },
+          "xrp_pullback_2h": {
+            "n": 394,
+            "b0_maxdd_r": 16.499,
+            "arm_maxdd_r": 20.25,
+            "ok": false
+          }
+        },
+        "maxdd_ok": false,
+        "net_r_per_capital_day": 0.06139,
+        "b0_net_r_per_capital_day": 0.07032,
+        "strata": {
+          "pullback|vol_hi|crypto": {
+            "n": 404,
+            "delta_r": -0.02506
+          },
+          "pullback|vol_lo|crypto": {
+            "n": 301,
+            "delta_r": -0.02856
+          },
+          "pullback|vol_mid|crypto": {
+            "n": 91,
+            "delta_r": -0.02726
+          },
+          "trend_donchian|vol_hi|crypto": {
+            "n": 471,
+            "delta_r": -0.05481
+          },
+          "trend_donchian|vol_lo|crypto": {
+            "n": 575,
+            "delta_r": 0.00384
+          },
+          "trend_donchian|vol_mid|crypto": {
+            "n": 785,
+            "delta_r": -0.03914
+          }
+        },
+        "provenance": "ESTIMATED (harness paths, engine replay, full cost stack)",
+        "b4_matched_random": {
+          "mode": "causal",
+          "delta_vs_b0_r": -0.01313,
+          "margin_r": -0.01562,
+          "margin_ci95": [
+            -0.03659,
+            0.00556
+          ],
+          "p_random_ge_arm": 1.0
+        },
+        "act_threshold": 0.05,
+        "act_threshold_by_fold": null,
+        "act_margin_selection": "fixed",
+        "inner_folds": 0,
+        "actions_allowed": null,
+        "p_holm_family": 0.9865,
+        "checkin": "every_bar",
+        "s_offline": {
+          "verdict": "fail",
+          "why": "gain_ge_0.03_over_max_b0_b1=False, ci_lo_gt_0=False, folds_ge_5=False, maxdd_ok=False, capday_ok=False, beats_b2=False, beats_own_b4=False, holm_p_lt_0.05=False"
+        }
+      },
+      {
+        "arm_id": "B3_desk",
+        "read_state": "not_available",
+        "reason": "no --desk-policy file (DESK-LABEL-JOIN not landed)"
+      },
+      {
+        "arm_id": "B5_rescore_exit",
+        "read_state": "not_available",
+        "reason": "the entry model does not replay point-in-time from the harness emit"
+      }
+    ]
+  },
+  "note": "tm_bench score/stage_a_folds: folds beating the permutation p95 per action {'close': 4, 'partial_close_50': 4, 'tighten_sl_be': 0, 'tighten_sl_atr1': 1, 'tighten_sl_atr2': 0, 'tp_pull_in_0p5r': 0, 'tp_pull_in_1r': 0}; best close 4/6 (needs >= 4)"
+}

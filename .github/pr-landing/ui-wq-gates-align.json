@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "UI-WQ-GATES-ALIGN: read-only additions to GET /api/bot/gates for the Admin Gates panel: per-row attention_rank and recommended_decision, ?sort=attention, counts.by_attention_rank and counts.recommendation_acceptable. Default order and every existing field unchanged. No writes, no order path, no new gate. Held only because R5 cannot certify src/web/api and src/runtime paths.",
+  "hold_text": "Read-only route change on ict-web-api. The manager merges. After deploy: GET /api/bot/gates?sort=attention returns rows with non-decreasing attention_rank and sort=attention; counts.by_attention_rank sums to population.total; a plain GET is unchanged apart from the two new per-row fields."
+}

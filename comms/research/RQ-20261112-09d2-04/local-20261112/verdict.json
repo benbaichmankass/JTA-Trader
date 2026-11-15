@@ -1,0 +1,317 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "ict_scalp_mgc_15m config-exact on ['MGC', 'MES', 'MNQ'] (dukascopy proxies: see each feed), discovery [2019-01-01, 2025-01-01) / holdout [2025-01-01, 2026-10-31 23:59], session-flat at 16:35 ET, per-contract commission + 1.0 tick per market/stop fill; n = discovery trades summed over instruments",
+  "n": 1260,
+  "data_inputs": [],
+  "measurement": {
+    "leg": "ict_scalp_mgc_15m",
+    "research_unit": "RQ-20261112-09d2-04",
+    "why": "every instrument fails; per instrument {'MGC': 'fail', 'MES': 'fail', 'MNQ': 'fail'}",
+    "per_instrument": {
+      "MGC": {
+        "verdict": "fail",
+        "label": "stage0_no_edge",
+        "why": "discovery net_r=-6.0105 <= 0; 2/6 folds positive < 4; discovery CI lower bound -0.13129 <= 0 at z=2.394",
+        "discovery": {
+          "n": 348,
+          "net_r": -6.0105,
+          "expectancy_r": -0.0173,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2019-01-01 00:00:00+00:00",
+              "end": "2020-01-01 00:00:00+00:00",
+              "trades": 33,
+              "net_r": 1.9337
+            },
+            {
+              "fold": 2,
+              "start": "2020-01-01 00:00:00+00:00",
+              "end": "2021-01-01 00:00:00+00:00",
+              "trades": 79,
+              "net_r": -3.1354
+            },
+            {
+              "fold": 3,
+              "start": "2021-01-01 00:00:00+00:00",
+              "end": "2022-01-01 00:00:00+00:00",
+              "trades": 61,
+              "net_r": -8.23
+            },
+            {
+              "fold": 4,
+              "start": "2022-01-01 00:00:00+00:00",
+              "end": "2023-01-01 00:00:00+00:00",
+              "trades": 62,
+              "net_r": -1.0777
+            },
+            {
+              "fold": 5,
+              "start": "2023-01-01 00:00:00+00:00",
+              "end": "2024-01-01 00:00:00+00:00",
+              "trades": 53,
+              "net_r": 8.8352
+            },
+            {
+              "fold": 6,
+              "start": "2024-01-01 00:00:00+00:00",
+              "end": "2025-01-01 00:00:00+00:00",
+              "trades": 60,
+              "net_r": -4.3363
+            }
+          ],
+          "folds_positive": 2
+        },
+        "holdout": {
+          "n": 176,
+          "net_r": -10.4449,
+          "expectancy_r": -0.0593
+        },
+        "discovery_ci_lower_r_per_trade": -0.13129,
+        "by_outcome": {
+          "sl_hit": 146,
+          "session_flat": 109,
+          "timeout": 168,
+          "tp_hit": 77,
+          "be_stop": 24
+        },
+        "session_flat": {
+          "flat_et": "16:35",
+          "reopen_et": "18:00",
+          "n_session_flat_exits": 109,
+          "rule": "close at the last bar whose close <= flat_et ET (after its own SL/TP test); no entry on that bar or on a bar closing in [flat_et, 18:00) ET"
+        },
+        "cost_stack": {
+          "fee_bps_roundtrip": null,
+          "slippage_bps_roundtrip": null,
+          "funding_bps_per_window": 0.0,
+          "cost_model": "per_contract",
+          "contract_cost": {
+            "commission_usd_rt": 2.12,
+            "point_value": 10.0,
+            "tick_size": 0.1,
+            "slip_ticks_per_fill": 1.0
+          }
+        },
+        "feed": {
+          "source": "dukascopy",
+          "ticker": "MGC",
+          "interval": "15m",
+          "resample": "15m"
+        },
+        "data_start": "2019-01-01 23:00:00",
+        "data_end": "2026-10-30 20:45:00"
+      },
+      "MES": {
+        "verdict": "fail",
+        "label": "stage0_no_edge",
+        "why": "2/6 folds positive < 4; discovery CI lower bound -0.07431 <= 0 at z=2.394",
+        "discovery": {
+          "n": 404,
+          "net_r": 12.3274,
+          "expectancy_r": 0.0305,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2019-01-01 00:00:00+00:00",
+              "end": "2020-01-01 00:00:00+00:00",
+              "trades": 45,
+              "net_r": -3.0528
+            },
+            {
+              "fold": 2,
+              "start": "2020-01-01 00:00:00+00:00",
+              "end": "2021-01-01 00:00:00+00:00",
+              "trades": 106,
+              "net_r": 18.3253
+            },
+            {
+              "fold": 3,
+              "start": "2021-01-01 00:00:00+00:00",
+              "end": "2022-01-01 00:00:00+00:00",
+              "trades": 46,
+              "net_r": 4.5069
+            },
+            {
+              "fold": 4,
+              "start": "2022-01-01 00:00:00+00:00",
+              "end": "2023-01-01 00:00:00+00:00",
+              "trades": 116,
+              "net_r": -2.5086
+            },
+            {
+              "fold": 5,
+              "start": "2023-01-01 00:00:00+00:00",
+              "end": "2024-01-01 00:00:00+00:00",
+              "trades": 54,
+              "net_r": -2.7096
+            },
+            {
+              "fold": 6,
+              "start": "2024-01-01 00:00:00+00:00",
+              "end": "2025-01-01 00:00:00+00:00",
+              "trades": 37,
+              "net_r": -2.2338
+            }
+          ],
+          "folds_positive": 2
+        },
+        "holdout": {
+          "n": 108,
+          "net_r": -20.4312,
+          "expectancy_r": -0.1892
+        },
+        "discovery_ci_lower_r_per_trade": -0.07431,
+        "by_outcome": {
+          "session_flat": 176,
+          "timeout": 96,
+          "be_stop": 19,
+          "sl_hit": 141,
+          "tp_hit": 80
+        },
+        "session_flat": {
+          "flat_et": "16:35",
+          "reopen_et": "18:00",
+          "n_session_flat_exits": 176,
+          "rule": "close at the last bar whose close <= flat_et ET (after its own SL/TP test); no entry on that bar or on a bar closing in [flat_et, 18:00) ET"
+        },
+        "cost_stack": {
+          "fee_bps_roundtrip": null,
+          "slippage_bps_roundtrip": null,
+          "funding_bps_per_window": 0.0,
+          "cost_model": "per_contract",
+          "contract_cost": {
+            "commission_usd_rt": 1.82,
+            "point_value": 5.0,
+            "tick_size": 0.25,
+            "slip_ticks_per_fill": 1.0
+          }
+        },
+        "feed": {
+          "source": "dukascopy",
+          "ticker": "MES",
+          "interval": "15m",
+          "resample": "15m"
+        },
+        "data_start": "2019-01-01 23:00:00",
+        "data_end": "2026-10-30 20:00:00"
+      },
+      "MNQ": {
+        "verdict": "fail",
+        "label": "stage0_no_edge",
+        "why": "discovery net_r=-32.7717 <= 0; 1/6 folds positive < 4; discovery CI lower bound -0.16807 <= 0 at z=2.394",
+        "discovery": {
+          "n": 508,
+          "net_r": -32.7717,
+          "expectancy_r": -0.0645,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2019-01-01 00:00:00+00:00",
+              "end": "2020-01-01 00:00:00+00:00",
+              "trades": 60,
+              "net_r": -12.878
+            },
+            {
+              "fold": 2,
+              "start": "2020-01-01 00:00:00+00:00",
+              "end": "2021-01-01 00:00:00+00:00",
+              "trades": 108,
+              "net_r": -5.7912
+            },
+            {
+              "fold": 3,
+              "start": "2021-01-01 00:00:00+00:00",
+              "end": "2022-01-01 00:00:00+00:00",
+              "trades": 74,
+              "net_r": 2.4567
+            },
+            {
+              "fold": 4,
+              "start": "2022-01-01 00:00:00+00:00",
+              "end": "2023-01-01 00:00:00+00:00",
+              "trades": 115,
+              "net_r": -2.4304
+            },
+            {
+              "fold": 5,
+              "start": "2023-01-01 00:00:00+00:00",
+              "end": "2024-01-01 00:00:00+00:00",
+              "trades": 85,
+              "net_r": -4.9002
+            },
+            {
+              "fold": 6,
+              "start": "2024-01-01 00:00:00+00:00",
+              "end": "2025-01-01 00:00:00+00:00",
+              "trades": 66,
+              "net_r": -9.2286
+            }
+          ],
+          "folds_positive": 1
+        },
+        "holdout": {
+          "n": 167,
+          "net_r": -20.607,
+          "expectancy_r": -0.1234
+        },
+        "discovery_ci_lower_r_per_trade": -0.16807,
+        "by_outcome": {
+          "session_flat": 234,
+          "tp_hit": 91,
+          "sl_hit": 216,
+          "timeout": 106,
+          "be_stop": 28
+        },
+        "session_flat": {
+          "flat_et": "16:35",
+          "reopen_et": "18:00",
+          "n_session_flat_exits": 234,
+          "rule": "close at the last bar whose close <= flat_et ET (after its own SL/TP test); no entry on that bar or on a bar closing in [flat_et, 18:00) ET"
+        },
+        "cost_stack": {
+          "fee_bps_roundtrip": null,
+          "slippage_bps_roundtrip": null,
+          "funding_bps_per_window": 0.0,
+          "cost_model": "per_contract",
+          "contract_cost": {
+            "commission_usd_rt": 1.82,
+            "point_value": 2.0,
+            "tick_size": 0.25,
+            "slip_ticks_per_fill": 1.0
+          }
+        },
+        "feed": {
+          "source": "dukascopy",
+          "ticker": "MNQ",
+          "interval": "15m",
+          "resample": "15m"
+        },
+        "data_start": "2019-01-01 23:00:00",
+        "data_end": "2026-10-30 20:00:00"
+      }
+    },
+    "instruments": [
+      {
+        "symbol": "MGC",
+        "commission_usd_rt": 2.12,
+        "point_value": 10.0,
+        "tick_size": 0.1
+      },
+      {
+        "symbol": "MES",
+        "commission_usd_rt": 1.82,
+        "point_value": 5.0,
+        "tick_size": 0.25
+      },
+      {
+        "symbol": "MNQ",
+        "commission_usd_rt": 1.82,
+        "point_value": 2.0,
+        "tick_size": 0.25
+      }
+    ],
+    "roll_up": "pass iff >= 1 instrument passes; fail iff all fail; else indeterminate"
+  }
+}

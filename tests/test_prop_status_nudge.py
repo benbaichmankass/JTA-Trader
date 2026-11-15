@@ -51,7 +51,7 @@ def test_fresh_balance_suppresses_nudge(isolated_env: Path) -> None:
     from src.prop.telegram_report_handler import handle_command
 
     # Record a balance first, then a fill — the fill ack should NOT nag.
-    handle_command("bal 5116 5118", default_account="breakout_1")
+    handle_command("bal 5200 5202", default_account="breakout_1")
     reply = handle_command("open ETHUSD 1812 1 long", default_account="breakout_1")
     assert reply is not None and reply.startswith("✅")
     assert "account balance" not in reply.lower()
@@ -60,7 +60,7 @@ def test_fresh_balance_suppresses_nudge(isolated_env: Path) -> None:
 def test_status_report_never_nudges(isolated_env: Path) -> None:
     from src.prop.telegram_report_handler import handle_command
 
-    reply = handle_command("bal 5116 5118", default_account="breakout_1")
+    reply = handle_command("bal 5200 5202", default_account="breakout_1")
     assert reply is not None and reply.startswith("✅ account status")
     assert "Also send" not in reply
 
@@ -93,7 +93,7 @@ def test_handle_screenshot_ingests_fill_and_balance(
             {"account_id": default_account, "symbol": "ETHUSD",
              "direction": "buy", "status": "filled", "entry_price": 1812.04, "qty": 1},
             {"kind": "account_status", "account_id": default_account,
-             "balance": 5116, "equity": 5118},
+             "balance": 5200, "equity": 5202},
         ]
 
     monkeypatch.setattr(screenshot_parse, "parse_screenshot", fake_parse)
@@ -106,7 +106,7 @@ def test_handle_screenshot_ingests_fill_and_balance(
     assert "Also send" not in reply
 
     assert len(prop_journal.list_fills()) == 1
-    assert prop_journal.latest_account_status("breakout_1")["balance"] == pytest.approx(5116.0)
+    assert prop_journal.latest_account_status("breakout_1")["balance"] == pytest.approx(5200.0)
 
 
 def test_handle_screenshot_fill_only_nudges(

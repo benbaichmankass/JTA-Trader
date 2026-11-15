@@ -103,7 +103,7 @@ jobs:
           m="refresh"
           if [ "$EVENT" = "workflow_dispatch" ]; then m="${INPUT_MODE:-refresh}"; fi
           if [ "$EVENT" = "pull_request" ]; then m="preflight"; fi
-          if [ "$EVENT" = "issues" ]; then
+          if [ "$EVENT" = "repository_dispatch" ]; then
             m="$(printf '%s\n' "$ISSUE_BODY" | sed -n 's/^mode:[[:space:]]*\([a-z]*\).*/\1/p' | head -1)"; m="${m:-refresh}"
           fi
           case "$m" in refresh|backfill|preflight) ;; *) echo "::error::bad mode '$m'"; exit 1;; esac

@@ -3,61 +3,61 @@
   "strategy": "trend_donchian_eth_prop",
   "symbol": "ETHUSDT",
   "timeframe": "1h",
-  "config_fingerprint": "sha256:9ee278e90c2ff10f3c89fbdc890d4e61",
+  "config_fingerprint": "sha256:9495a7c2c3f434dde7dda1ac9607fe40",
   "basis": "harness_timefolds",
   "coverage_state": "measured",
   "fidelity": "faithful",
   "omitted_levers": [],
-  "net_r_oos": -0.2512,
-  "expectancy_r_oos": -0.0015,
-  "n_trades_oos": 165,
+  "net_r_oos": 10.296,
+  "expectancy_r_oos": 0.0763,
+  "n_trades_oos": 135,
   "folds": 4,
   "fold_detail": [
     {
       "fold": 1,
-      "trades": 41,
-      "net_r": -4.4838,
-      "expectancy_r": -0.1094,
-      "start": "2025-10-30 13:00:00+00:00",
-      "end": "2026-01-27 16:00:00+00:00"
+      "trades": 33,
+      "net_r": 2.5562,
+      "expectancy_r": 0.0775,
+      "start": "2025-11-16 16:00:00+00:00",
+      "end": "2026-02-15 12:00:00+00:00"
     },
     {
       "fold": 2,
-      "trades": 41,
-      "net_r": 13.9562,
-      "expectancy_r": 0.3404,
-      "start": "2026-01-27 20:00:00+00:00",
-      "end": "2026-04-26 14:00:00+00:00"
+      "trades": 33,
+      "net_r": 6.037,
+      "expectancy_r": 0.1829,
+      "start": "2026-02-22 13:00:00+00:00",
+      "end": "2026-05-15 13:00:00+00:00"
     },
     {
       "fold": 3,
-      "trades": 41,
-      "net_r": -6.0857,
-      "expectancy_r": -0.1484,
-      "start": "2026-04-27 15:00:00+00:00",
-      "end": "2026-07-27 22:00:00+00:00"
+      "trades": 33,
+      "net_r": 4.1011,
+      "expectancy_r": 0.1243,
+      "start": "2026-05-17 23:00:00+00:00",
+      "end": "2026-08-21 08:00:00+00:00"
     },
     {
       "fold": 4,
-      "trades": 42,
-      "net_r": -3.6379,
-      "expectancy_r": -0.0866,
-      "start": "2026-07-31 07:00:00+00:00",
-      "end": "2026-10-23 22:00:00+00:00"
+      "trades": 36,
+      "net_r": -2.3983,
+      "expectancy_r": -0.0666,
+      "start": "2026-08-21 21:00:00+00:00",
+      "end": "2026-11-13 03:00:00+00:00"
     }
   ],
-  "folds_positive": 1,
+  "folds_positive": 3,
   "window_days": 365,
   "fee_bps_roundtrip": 11.0,
   "path_stats": {
     "series_location": "source_run (the per-trade rows, in order, with net_r)",
-    "n": 165,
-    "max_drawdown_r": 14.1011,
-    "max_drawdown_at_trade": 35,
-    "final_equity_r": -0.2512,
-    "max_equity_r": 10.3553,
+    "n": 135,
+    "max_drawdown_r": 8.5801,
+    "max_drawdown_at_trade": 20,
+    "final_equity_r": 10.296,
+    "max_equity_r": 15.7955,
     "worst_trade_r": -1.3692,
-    "best_trade_r": 5.8652,
+    "best_trade_r": 3.8525,
     "worst_day_r": -2.1846,
     "worst_day_date": "2026-10-18",
     "trades_without_exit_time": 0,
@@ -69,19 +69,19 @@
     "slippage": 3.0,
     "funding": 1.0,
     "unit": "bps_roundtrip (funding: bps per funding window)",
-    "source": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_eth_prop__bt.json"
+    "source": "comms/strategy_evidence/runs/2026-11-14-minconf08/trend_donchian_eth_prop__bt.json"
   },
-  "net_r_oos_fee_only": 4.0024,
+  "net_r_oos_fee_only": 13.8312,
   "decision_rule": {
     "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
     "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
     "registered_at": "2026-09-22T05:34:08Z",
-    "verdict": "fail"
+    "verdict": "pass"
   },
   "param_selection_provenance": "not_established",
-  "generated_at": "2026-10-28T18:40:28.587492+00:00",
+  "generated_at": "2026-11-14T13:58:22.222263+00:00",
   "generated_by": "scripts/ops/build_strategy_evidence.py",
-  "source_run": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_eth_prop__trades.jsonl",
+  "source_run": "comms/strategy_evidence/runs/2026-11-14-minconf08/trend_donchian_eth_prop__trades.jsonl",
   "error": null,
   "harness": "trend",
   "venue_bracket_arm": {
@@ -123,8 +123,44 @@
       "source_run": "comms/strategy_evidence/runs/2026-10-07/trend_donchian_eth_prop__trades.jsonl",
       "decision_rule_verdict": "pass",
       "folds_positive": 2
+    },
+    {
+      "superseded_at": "2026-11-14",
+      "reason": "MINCONF-0.80 (RQ-20261114-db1a-06 PASS, data-backed Tier-3, demo floor): min_confidence 0.60 -> 0.80; config fingerprint changed",
+      "net_r_oos": -0.2512,
+      "expectancy_r_oos": -0.0015,
+      "n_trades_oos": 165,
+      "fee_bps_roundtrip": 11.0,
+      "window_days": 365,
+      "generated_at": "2026-10-28T18:40:28.587492+00:00",
+      "source_run": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_eth_prop__trades.jsonl",
+      "config_fingerprint": "sha256:9ee278e90c2ff10f3c89fbdc890d4e61",
+      "decision_rule_verdict": "fail",
+      "folds_positive": 1
     }
   ],
   "decision_bar_note": "The Stage-0 harness scores the CLOSED bar, and since 2026-10-22 the leg trades it (config decision_bar: closed, operator \"Split: 3 to closed, 2 stay\", checklist DECISION-BAR-MATCH; evidence docs/research/evidence/decision-bar-match-2026-10-22.json). Measured fields unchanged; config_fingerprint re-stamped (inert, tests/test_decision_bar_closed_fingerprint_inert.py).",
-  "decision_bar": "closed"
+  "decision_bar": "closed",
+  "reproduce": {
+    "window_days": 365,
+    "window_days_source": "committed_record",
+    "folds": 4,
+    "data_start": "2025-11-14 00:00:00+00:00",
+    "data_end": "2026-11-13 23:00:00+00:00",
+    "git_sha": "324dc5273fc2d0365b2f5930af957851580d4cc3",
+    "argv": [
+      "python3",
+      "scripts/ops/build_strategy_evidence.py",
+      "--strategy",
+      "trend_donchian_eth_prop",
+      "--days",
+      "365",
+      "--folds",
+      "4",
+      "--window-start",
+      "2025-11-14 00:00:00+00:00",
+      "--window-end",
+      "2026-11-13 23:00:00+00:00"
+    ]
+  }
 }

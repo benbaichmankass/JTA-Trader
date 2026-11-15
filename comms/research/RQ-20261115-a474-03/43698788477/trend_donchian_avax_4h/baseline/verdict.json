@@ -1,0 +1,464 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "trend_donchian_avax_4h: 265 trades in the baseline arm 'B' on AVAXUSDT 4h candles 2020-07-01 .. 2026-11-03 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['B', 'T4']; holdout boundary 2025-04-24 18:59:15+00:00 (share 0.25), selection on discovery trades only, the selected arm read once on the held-back span",
+  "n": 265,
+  "measurement": {
+    "leg": "trend_donchian_avax_4h",
+    "label": "not_replicated",
+    "grade": {
+      "verdict": "fail",
+      "label": "not_replicated",
+      "selected": "B",
+      "selected_from": 2,
+      "discovery": {
+        "B": {
+          "n": 195,
+          "net_r": 28.216,
+          "expectancy_r": 0.1447,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2020-09-23 04:00:00+00:00",
+              "end": "2021-11-15 19:44:48.750000+00:00",
+              "trades": 48,
+              "net_r": -4.0699
+            },
+            {
+              "fold": 2,
+              "start": "2021-11-15 19:44:48.750000+00:00",
+              "end": "2023-01-08 11:29:37.500000+00:00",
+              "trades": 48,
+              "net_r": 8.9036
+            },
+            {
+              "fold": 3,
+              "start": "2023-01-08 11:29:37.500000+00:00",
+              "end": "2024-03-02 03:14:26.250000+00:00",
+              "trades": 46,
+              "net_r": 9.2686
+            },
+            {
+              "fold": 4,
+              "start": "2024-03-02 03:14:26.250000+00:00",
+              "end": "2025-04-24 18:59:15+00:00",
+              "trades": 53,
+              "net_r": 14.1137
+            }
+          ],
+          "folds_positive": 3,
+          "eligible": true
+        },
+        "T4": {
+          "n": 195,
+          "net_r": 27.9009,
+          "expectancy_r": 0.1431,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2020-09-23 04:00:00+00:00",
+              "end": "2021-11-15 19:44:48.750000+00:00",
+              "trades": 48,
+              "net_r": -4.0699
+            },
+            {
+              "fold": 2,
+              "start": "2021-11-15 19:44:48.750000+00:00",
+              "end": "2023-01-08 11:29:37.500000+00:00",
+              "trades": 48,
+              "net_r": 8.9036
+            },
+            {
+              "fold": 3,
+              "start": "2023-01-08 11:29:37.500000+00:00",
+              "end": "2024-03-02 03:14:26.250000+00:00",
+              "trades": 46,
+              "net_r": 8.9535
+            },
+            {
+              "fold": 4,
+              "start": "2024-03-02 03:14:26.250000+00:00",
+              "end": "2025-04-24 18:59:15+00:00",
+              "trades": 53,
+              "net_r": 14.1137
+            }
+          ],
+          "folds_positive": 3,
+          "eligible": true
+        }
+      },
+      "plan": {
+        "boundary": "2025-04-24 18:59:15+00:00",
+        "share": 0.25,
+        "baseline_n_holdout": 69,
+        "grown": false,
+        "short_at_cap": false,
+        "discovery_fold_edges": [
+          "2020-09-23 04:00:00+00:00",
+          "2021-11-15 19:44:48.750000+00:00",
+          "2023-01-08 11:29:37.500000+00:00",
+          "2024-03-02 03:14:26.250000+00:00",
+          "2025-04-24 18:59:15+00:00"
+        ],
+        "straddling_excluded": {
+          "B": 1,
+          "T4": 1
+        }
+      },
+      "holdout": {
+        "n": 69,
+        "net_r": -1.7623,
+        "expectancy_r": -0.0255
+      },
+      "holdout_min_trades": 25,
+      "discovery_n_floor": 39,
+      "evaluations_on_holdout": 1,
+      "why": "B reads net_r=-1.7623 over n=69 held-back trades: the configuration does not replicate (closes the configuration, never the family)"
+    },
+    "arms": {
+      "B": {
+        "reach_ge_6r": 0.0,
+        "n": 265,
+        "net_r": 26.2488,
+        "net_r_fee_only": 31.1435,
+        "max_drawdown_r": 18.353,
+        "by_outcome": {
+          "trail_stop": 39,
+          "take_profit": 86,
+          "stop": 140
+        },
+        "mean_bars_held": 8.838,
+        "net_r_per_capital_day": 0.0672,
+        "cost_stack": {
+          "fee_bps_roundtrip": 11.0,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": {
+          "donchian": 20,
+          "atr_stop_mult": 1.5,
+          "trail_mult": 5.0,
+          "min_confidence": 0.7,
+          "trail_decay_arm_r": 0.0,
+          "trail_decay_stall_bars": 6,
+          "trail_decay_tight_mult": 2.5
+        },
+        "data_start": "2020-09-23 04:00:00+00:00",
+        "data_end": "2026-11-03 20:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2020-09-23 04:00:00+00:00",
+            "end": "2022-04-04 08:59:45+00:00",
+            "trades": 63,
+            "net_r": 1.5229
+          },
+          {
+            "fold": 2,
+            "start": "2022-04-04 08:59:45+00:00",
+            "end": "2023-10-14 13:59:30+00:00",
+            "trades": 61,
+            "net_r": 9.5232
+          },
+          {
+            "fold": 3,
+            "start": "2023-10-14 13:59:30+00:00",
+            "end": "2025-04-24 18:59:15+00:00",
+            "trades": 72,
+            "net_r": 16.9648
+          },
+          {
+            "fold": 4,
+            "start": "2025-04-24 18:59:15+00:00",
+            "end": "2026-11-03 23:59:00+00:00",
+            "trades": 69,
+            "net_r": -1.7623
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "AVAXUSDT",
+          "--resample",
+          "4h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "1.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.7",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261115-a474-03/43698788477/trend_donchian_avax_4h/baseline/arms/B__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261115-a474-03/43698788477/trend_donchian_avax_4h/baseline/arms/B__bt.json",
+          "--trail-decay-stall-bars",
+          "6",
+          "--trail-decay-tight-mult",
+          "2.5",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--start",
+          "2020-07-01",
+          "--end",
+          "2026-11-03 23:59"
+        ]
+      },
+      "T4": {
+        "reach_ge_6r": 0.0,
+        "n": 265,
+        "net_r": 25.7288,
+        "net_r_fee_only": 30.6235,
+        "max_drawdown_r": 18.558,
+        "by_outcome": {
+          "trail_stop": 39,
+          "take_profit": 86,
+          "stop": 140
+        },
+        "mean_bars_held": 8.838,
+        "net_r_per_capital_day": 0.0659,
+        "cost_stack": {
+          "fee_bps_roundtrip": 11.0,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": {
+          "donchian": 20,
+          "atr_stop_mult": 1.5,
+          "trail_mult": 5.0,
+          "min_confidence": 0.7,
+          "trail_decay_arm_r": 0.0,
+          "trail_decay_stall_bars": 6,
+          "trail_decay_tight_mult": 2.5
+        },
+        "data_start": "2020-09-23 04:00:00+00:00",
+        "data_end": "2026-11-03 20:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2020-09-23 04:00:00+00:00",
+            "end": "2022-04-04 08:59:45+00:00",
+            "trades": 63,
+            "net_r": 1.5229
+          },
+          {
+            "fold": 2,
+            "start": "2022-04-04 08:59:45+00:00",
+            "end": "2023-10-14 13:59:30+00:00",
+            "trades": 61,
+            "net_r": 9.2081
+          },
+          {
+            "fold": 3,
+            "start": "2023-10-14 13:59:30+00:00",
+            "end": "2025-04-24 18:59:15+00:00",
+            "trades": 72,
+            "net_r": 16.9648
+          },
+          {
+            "fold": 4,
+            "start": "2025-04-24 18:59:15+00:00",
+            "end": "2026-11-03 23:59:00+00:00",
+            "trades": 69,
+            "net_r": -1.9673
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "AVAXUSDT",
+          "--resample",
+          "4h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "1.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.7",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261115-a474-03/43698788477/trend_donchian_avax_4h/baseline/arms/T4__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261115-a474-03/43698788477/trend_donchian_avax_4h/baseline/arms/T4__bt.json",
+          "--trail-decay-stall-bars",
+          "6",
+          "--trail-decay-tight-mult",
+          "2.5",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "4",
+          "--start",
+          "2020-07-01",
+          "--end",
+          "2026-11-03 23:59"
+        ]
+      }
+    },
+    "window": {
+      "start": "2020-07-01",
+      "end": "2026-11-03 23:59",
+      "fetch_days": 2350,
+      "feed": {
+        "source": "binance",
+        "ticker": "AVAXUSDT",
+        "interval": "240",
+        "resample": "4h"
+      },
+      "fold_edges": [
+        "2020-09-23 04:00:00+00:00",
+        "2022-04-04 08:59:45+00:00",
+        "2023-10-14 13:59:30+00:00",
+        "2025-04-24 18:59:15+00:00",
+        "2026-11-03 23:59:00+00:00"
+      ]
+    },
+    "argv": {
+      "B": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "AVAXUSDT",
+          "--resample",
+          "4h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "1.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.7",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261115-a474-03/43698788477/trend_donchian_avax_4h/baseline/arms/B__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261115-a474-03/43698788477/trend_donchian_avax_4h/baseline/arms/B__bt.json",
+          "--trail-decay-stall-bars",
+          "6",
+          "--trail-decay-tight-mult",
+          "2.5",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--start",
+          "2020-07-01",
+          "--end",
+          "2026-11-03 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": [
+          "decision_bar"
+        ]
+      },
+      "T4": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "AVAXUSDT",
+          "--resample",
+          "4h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "1.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.7",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261115-a474-03/43698788477/trend_donchian_avax_4h/baseline/arms/T4__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261115-a474-03/43698788477/trend_donchian_avax_4h/baseline/arms/T4__bt.json",
+          "--trail-decay-stall-bars",
+          "6",
+          "--trail-decay-tight-mult",
+          "2.5",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "4",
+          "--start",
+          "2020-07-01",
+          "--end",
+          "2026-11-03 23:59"
+        ],
+        "cfg_set": {
+          "tp_r": 4
+        },
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": [
+          "decision_bar"
+        ]
+      }
+    },
+    "holdout_confirmation": {
+      "verdict": "not_replicated",
+      "research_unit": null,
+      "decision_rule": {
+        "id": null,
+        "registered_before_run": true
+      },
+      "selected_label": "B",
+      "selected_config_fingerprint": "sha256:0364e4e79b5b6bfe9042c57843ed2c35",
+      "selected_from": 2,
+      "evaluations_on_holdout": 1,
+      "discovery": {
+        "start": "2020-09-23 04:00:00+00:00",
+        "end": "2025-04-24 18:59:14+00:00"
+      },
+      "holdout": {
+        "start": "2025-04-24 18:59:15+00:00",
+        "end": "2026-11-03 23:59:00+00:00",
+        "share": 0.25,
+        "short_at_cap": false
+      },
+      "n_holdout": 69,
+      "net_r_holdout": -1.7623,
+      "expectancy_r_holdout": -0.0255,
+      "cost_stack": {
+        "fees": 11.0,
+        "slippage": 3.0,
+        "funding": 1.0,
+        "unit": "bps_roundtrip (funding: bps per funding window)"
+      },
+      "source_run": null
+    }
+  },
+  "note": "FAIL / not_replicated: B reads net_r=-1.7623 over n=69 held-back trades: the configuration does not replicate (closes the configuration, never the family)"
+}

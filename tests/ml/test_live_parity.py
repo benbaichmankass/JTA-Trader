@@ -279,7 +279,8 @@ def test_gate_insufficient_when_no_artifact_fresh_rows(tmp_path: Path):
     th = regime_classifier_thresholds()
     result = _gate_live_parity(parity, th)
     assert result.status == "insufficient_data"
-    assert result.required is True
+    # stage step retired 2026-11-12: reported, never required for promotion
+    assert result.required is False
     assert "since the current artifact" in result.detail
 
 

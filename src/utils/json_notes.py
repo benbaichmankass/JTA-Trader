@@ -97,6 +97,13 @@ _DEFAULT_PROTECTED: tuple[str, ...] = (
     # PARTIAL-CLOSE-PNL-NOT-JOURNALED: a partial-close child row's link to its
     # parent and its pricing state. Short strings a reader branches on.
     "parent_trade_id", "partial_close_source", "partial_close_state",
+    # ALPACA-CLOSE-BROKER-TRUTH: the short outcome string saying this row's
+    # Alpaca parent order was already read for its filled leg. It is what keeps
+    # the row from being re-read on every tick, so it must survive the shrink.
+    "broker_leg_read",
+    # ENTRY-FILL-WRITEBACK (2026-11-15): where entry_price came from (fill | plan), the plan it replaced, and the
+    # short reason / pending marker the writeback sweep branches on. All three are small and must survive the shrink.
+    "entry_price_source", "entry_price_source_reason", "package_entry",
 )
 _ELLIPSIS = "…"
 # Hard stop on the trim loop so a pathological payload can never spin.

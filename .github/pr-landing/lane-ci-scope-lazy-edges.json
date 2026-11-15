@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "scripts/ci/pytest_run_scope.py + its tests: pytest-run affected mode follows IMPORT-TIME edges of library modules (tests/ code keeps every edge), and a suite-read non-.py file selects the files that read it (path, basename, or its directory) instead of the full suite; FULL only when nothing names it. order_path stays FULL. MEASURED on the 59 PR heads of 2026-11-12 09:30-11:19Z: FULL 43 -> 32 (all remaining FULL = order_path 23, .github/scripts/ci 5, guards 4), affected 9 -> 20 with 122-274 test files (one 736) of ~1830. Approved by the manager 2026-11-12 11:38Z (row CI-SCOPE-LAZY-EDGES); held for AM-DEVOPS to merge on green. decision: 2026-11-12 operator chat \"each item is only getting the checks it needs\" + manager approval of CI-SCOPE-LAZY-EDGES (selection narrowed to import-time edges; main backstop catches misses). Gates this adds or changes: none (narrows a required check's selection; the 2-hourly main full-suite backstop is unchanged).",
+  "hold_text": "Tier 2 (narrows a required check's test selection): approved by the manager 2026-11-12 11:38Z; AM-DEVOPS (session_01AFoLuMr7uensVVinDEwryw) merges on green."
+}

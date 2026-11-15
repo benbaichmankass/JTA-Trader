@@ -1,0 +1,40 @@
+{
+  "harness": "scripts/backtest_turtle_soup.py",
+  "strategy": "turtle_soup",
+  "total_trades": 47,
+  "net_total_r": -8.6065,
+  "net_total_r_fee_only": -5.5779,
+  "max_drawdown_r": 12.3917,
+  "by_outcome": {
+    "tp": 21,
+    "sl": 26
+  },
+  "data_start": "2022-10-05 00:00:00+00:00",
+  "data_end": "2024-10-04 00:00:00+00:00",
+  "fee_bps_roundtrip": 7.5,
+  "slippage_bps_roundtrip": 3.0,
+  "funding_bps_per_window": 1.0,
+  "cost_policy": {
+    "source": "execution_costs.resolve_cost_policy",
+    "symbol": "ETHUSDT",
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0,
+    "term_sources": {
+      "fee": "execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP",
+      "funding": "venue_default",
+      "slippage": "venue_default"
+    },
+    "fee_only_arm_declared": false,
+    "prop_declared": {},
+    "status": "resolved",
+    "cost_incomplete": false
+  },
+  "monitor_errors": {
+    "total": 0,
+    "by_owner": {},
+    "examples": {}
+  },
+  "engine_closed_fills": 47
+}

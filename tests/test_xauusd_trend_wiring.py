@@ -34,6 +34,11 @@ def test_builder_disabled_returns_none(monkeypatch):
 
 
 def test_builder_weekend_gate(monkeypatch):
+    """GATE-MARKET-HOURS: MAKE REPORT-ONLY (operator 2026-11-12 decisions page,
+    Gates tab). A closed FX market no longer returns ``fx_market_closed``: the
+    builder carries on to its candle fetch (stubbed empty, so it raises its own
+    no-data error) and the closed state is reported."""
+    import pytest
     monkeypatch.setattr(
         "src.units.strategies.load_strategy_config",
         lambda: {"xauusd_trend_1h": {"enabled": True}},
@@ -41,9 +46,13 @@ def test_builder_weekend_gate(monkeypatch):
     monkeypatch.setattr(
         "src.runtime.market_hours.is_market_open", lambda cls: False
     )
-    out = xauusd_trend_1h_signal_builder({})
-    assert out["side"] == "none"
-    assert out["meta"]["reason"] == "fx_market_closed"
+    monkeypatch.setattr("src.runtime.market_data.fetch_candles", lambda *a, **k: None)
+    reports = []
+    monkeypatch.setattr("src.runtime.strategy_signal_builders.log_signal",
+                        lambda r: reports.append(r))
+    with pytest.raises(RuntimeError, match="no candle data"):
+        xauusd_trend_1h_signal_builder({})
+    assert reports and reports[-1]["cause"] == "fx_market_closed"
 
 
 def test_market_hours_fx_actually_closed_on_saturday():

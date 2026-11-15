@@ -1,0 +1,243 @@
+{
+  "_comment": "Wire-shape fixture for GET /api/bot/prop-trades/{fill_id}/snapshot (prop trades, keyed by the OPENING prop_fills id; a closing-row id resolves to the same trade). Same snapshot shape as trade_chart_snapshot_v1.json; trade_id is null, prop_fill_id/ticket_id set, brackets come from the prop ticket's SL+TP amendments (tp_history recorded). Illustrative values.",
+  "as_of": "2026-11-12T10:00:00+00:00",
+  "trade_id": null,
+  "prop_fill_id": 501,
+  "read_state": "measured",
+  "partial_reasons": [],
+  "snapshot": {
+    "schema": "trade_chart_snapshot/v1",
+    "built_at": "2026-11-12T09:40:12+00:00",
+    "trade": {
+      "trade_id": null,
+      "prop_fill_id": 501,
+      "ticket_id": "tk-1",
+      "order_package_id": "pkg-0000000000000003",
+      "account_id": "breakout_2",
+      "account_class": "prop",
+      "strategy_name": "ml_entry",
+      "symbol": "SOLUSDT",
+      "direction": "short",
+      "qty": 6.82,
+      "opened_at": "2026-11-12T01:00:00+00:00",
+      "closed_at": "2026-11-12T07:00:00+00:00",
+      "entry_price": 87.64,
+      "exit_price": 86.0,
+      "exit_reason": "tp",
+      "pnl": 11.2,
+      "pnl_provenance": null
+    },
+    "frame": {
+      "interval": "5m",
+      "time_from": "2026-11-12T00:06:00+00:00",
+      "time_to": "2026-11-12T07:54:00+00:00",
+      "price_low": 1.034,
+      "price_high": 1.056,
+      "basis": {
+        "open_close_span_s": 21600,
+        "time_pad_frac": 0.15,
+        "price_pad_frac": 0.1,
+        "high": 1.054,
+        "low": 1.036,
+        "high_low_over": "candles between opened_at and closed_at"
+      },
+      "levels_outside_frame": []
+    },
+    "candles": {
+      "state": "measured",
+      "source": "bot-exchange",
+      "rows": [
+        {
+          "time": 1762905960,
+          "open": 1.039,
+          "high": 1.0395,
+          "low": 1.0385,
+          "close": 1.0392,
+          "volume": 1200.0
+        },
+        {
+          "time": 1762906260,
+          "open": 1.0392,
+          "high": 1.0401,
+          "low": 1.0388,
+          "close": 1.0399,
+          "volume": 980.0
+        }
+      ]
+    },
+    "indicators": {
+      "state": "measured",
+      "source": "computed_from_candles",
+      "series": [
+        {
+          "name": "ema_20",
+          "pane": "price",
+          "points": [
+            {
+              "time": 1762906260,
+              "value": 1.0391
+            }
+          ]
+        },
+        {
+          "name": "ema_50",
+          "pane": "price",
+          "points": [
+            {
+              "time": 1762906260,
+              "value": null
+            }
+          ]
+        },
+        {
+          "name": "rsi_14",
+          "pane": "rsi",
+          "points": [
+            {
+              "time": 1762906260,
+              "value": null
+            }
+          ]
+        },
+        {
+          "name": "atr_14",
+          "pane": "atr",
+          "points": [
+            {
+              "time": 1762906260,
+              "value": null
+            }
+          ]
+        }
+      ]
+    },
+    "entry": {
+      "ts": "2026-11-12T01:00:00+00:00",
+      "bar_ts": "2026-11-12T01:00:00+00:00",
+      "price": 1.04,
+      "provenance": "MEASURED"
+    },
+    "exit": {
+      "ts": "2026-11-12T07:00:00+00:00",
+      "bar_ts": "2026-11-12T07:00:00+00:00",
+      "price": 1.052,
+      "reason": "tp_hit",
+      "provenance": "MEASURED"
+    },
+    "entry_signal": {
+      "state": "measured",
+      "decision_bar": "2026-11-12T00:00:00+00:00",
+      "bar_ts": "2026-11-12T00:00:00+00:00",
+      "timeframe": "1h",
+      "model_id": "ml-decision-entry-v1r20261106",
+      "confidence": 1.0,
+      "p_long": 0.16,
+      "p_short": -0.02,
+      "tp_intent": "predictive",
+      "tp_basis": "3 x ATR14 first-passage target",
+      "contributing_strategies": [
+        "ml_entry"
+      ],
+      "features": {
+        "rsi14": 0.29,
+        "atr_pct": 0.0095,
+        "ret_24": -0.6
+      },
+      "model_scores": null
+    },
+    "brackets": {
+      "read_state": "measured",
+      "partial_reasons": [],
+      "tp_history": "recorded",
+      "levels": [
+        {
+          "kind": "sl",
+          "price": 90.0,
+          "from_ts": "2026-11-12T01:00:00+00:00",
+          "to_ts": "2026-11-12T03:00:00+00:00",
+          "source": "open",
+          "detail": "",
+          "provenance": "MEASURED"
+        },
+        {
+          "kind": "sl",
+          "price": 89.0,
+          "from_ts": "2026-11-12T03:00:00+00:00",
+          "to_ts": null,
+          "source": "prop_amend",
+          "detail": "live review tighten",
+          "provenance": "MEASURED"
+        },
+        {
+          "kind": "tp",
+          "price": 80.0,
+          "from_ts": "2026-11-12T01:00:00+00:00",
+          "to_ts": null,
+          "source": "open",
+          "detail": "",
+          "provenance": "MEASURED"
+        }
+      ],
+      "updates": [
+        {
+          "ts": "2026-11-12T03:00:00+00:00",
+          "kind": "sl",
+          "from": 90.0,
+          "to": 89.0,
+          "source": "prop_amend",
+          "detail": "live review tighten",
+          "bar_ts": "2026-11-12T03:00:00+00:00",
+          "scope": "account"
+        }
+      ]
+    },
+    "decisions": {
+      "read_state": "measured",
+      "sources": {
+        "reviews": "read",
+        "receipts": "read"
+      },
+      "markers": [
+        {
+          "kind": "ltr_review",
+          "id": "LR-20261112T0200Z-pkg-0000000000000001",
+          "ts": "2026-11-12T02:05:00+00:00",
+          "bar_ts": "2026-11-12T02:05:00+00:00",
+          "action": "hold",
+          "level": null,
+          "confidence": 0.6,
+          "summary": "hold: structure intact",
+          "route": "none",
+          "disposition": "no_action",
+          "account_read": "no_action"
+        },
+        {
+          "kind": "ltr_review",
+          "id": "LR-20261112T0400Z-pkg-0000000000000001",
+          "ts": "2026-11-12T04:05:00+00:00",
+          "bar_ts": "2026-11-12T04:05:00+00:00",
+          "action": "tighten_sl",
+          "level": 1.04,
+          "confidence": 0.7,
+          "summary": "tighten to breakeven",
+          "route": "recommended",
+          "disposition": "advice_only",
+          "account_read": "would_apply"
+        },
+        {
+          "kind": "directed_action",
+          "id": "DA-20261112T040900Z-tighten_sl-abcdef",
+          "ts": "2026-11-12T04:09:00+00:00",
+          "bar_ts": "2026-11-12T04:05:00+00:00",
+          "action": "tighten_sl",
+          "level": 1.04,
+          "confidence": null,
+          "summary": "operator-directed tighten",
+          "route": "directed",
+          "disposition": "applied",
+          "account_read": "applied"
+        }
+      ]
+    }
+  }
+}

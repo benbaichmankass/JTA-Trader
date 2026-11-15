@@ -19,9 +19,16 @@ L = importlib.util.module_from_spec(_spec)
 sys.modules["lrp"] = L  # dataclasses resolves annotations through sys.modules
 _spec.loader.exec_module(L)
 
-GOLD = {json.loads(f.read_text())["order_package_id"]: json.loads(f.read_text())
-        for f in (REPO / "comms/live_review/packets").glob("*.json")}
 NOW = datetime(2026, 10, 25, 16, 16, 30, tzinfo=timezone.utc)
+# The hand-built goldens are the packets of ONE review, the one at NOW (LR-20261025T1616Z-*). The directory
+# also holds every later production packet (20 for the MGC package alone, written by the live-review wake),
+# and several of those carry a moved level (MGC SL 4270.03 -> 4160.33 after the 2026-10-31 tighten). Keying
+# an unsorted glob("*.json") by package id let the LAST file in directory order win, which varies between
+# checkouts, so CI read a 4160 SL against the fixture's 4270 STP about 1 run in 3 and failed
+# test_mgc_ib_stop_and_target_match with 'mismatch' (CI-MGC-IB-STOP-TARGET-INTERMITTENT). Pin to the review.
+GOLDEN_REVIEW = f"LR-{NOW:%Y%m%dT%H%M}Z"
+GOLD = {json.loads(f.read_text())["order_package_id"]: json.loads(f.read_text())
+        for f in sorted((REPO / "comms/live_review/packets").glob(f"{GOLDEN_REVIEW}-*.json"))}
 # The goldens land with PR #20121 (the skill + comms/live_review/); until then the golden-dependent cases skip.
 needs_gold = pytest.mark.skipif(not GOLD, reason="comms/live_review/packets goldens not on this branch yet")
 ADA, MGC, ETH, GDX = "pkg-465a5d7d27644027", "pkg-011a7bf85ee54a6f", "pkg-2c3f338d9477499b", "pkg-23929c3f526440c3"
@@ -125,9 +132,9 @@ def test_eth_prop_closed_package_with_open_prop_position_is_a_mismatch():
         {"kind": "heartbeat", "reason": "amend prop-manual-2e786ef17c05a6 REFUSED: sheet volume 0.4 = ticket qty 0.* (sheet close: escape)"}]}
     trail = {"amend_id": "prop-manual-2e786ef17c05#a6", "amend_status": "refused", "fails": 6,
              "last_plan_action": "exit", "last_plan_why": "trail crossed"}
-    tickets = {"tickets": [{"order_package_id": ETH, "account_id": "breakout_2", "status": "filled", "close_reason": "sl_cross", "phone_trail": trail},
-                           {"order_package_id": ETH, "account_id": "tradeify_1", "status": "closed", "close_reason": "sl_cross", "phone_trail": None},
-                           {"order_package_id": ETH, "account_id": "velotrade_1", "status": "closed", "close_reason": "sl_cross", "phone_trail": None}]}
+    tickets = {"tickets": [{"order_package_id": ETH, "ticket_id": "T-b2", "account_id": "breakout_2", "status": "filled", "close_reason": "sl_cross", "phone_trail": trail},
+                           {"order_package_id": ETH, "ticket_id": "T-t1", "account_id": "tradeify_1", "status": "closed", "close_reason": "sl_cross", "phone_trail": None},
+                           {"order_package_id": ETH, "ticket_id": "T-v1", "account_id": "velotrade_1", "status": "closed", "close_reason": "sl_cross", "phone_trail": None}]}
     s = _snap(prop_tickets=tickets, **{"prop_status:breakout_2": status})
     s.packages[ETH] = _pkg(g, "ETHUSDT", "short", status="closed",
                            meta={"regime": "chop", "vol_regime": "calm", "timeframe": "4h"})
@@ -670,6 +677,21 @@ def test_the_0700z_eth_packet_shape_is_degraded():
     assert any(d["reason"] == "candles_missing" and (d["count"], d["denominator"]) == (3, 5) for d in h["defects"])
 
 
+def test_rungs_above_price_on_a_losing_trade_are_inapplicable_not_a_defect():
+    """2026-11-13 (LTR-GRADER-COVERAGE): a losing long whose R rungs all sit at/above price read 'degraded' though
+    nothing was missing. Those rungs are counted as inapplicable; real gaps beside them still degrade."""
+    g = L
+    rung = ("invalid_level", "stop_level_not_below_price", None)
+    h = g.packet_health(_pk(_opts(*[rung] * 4)))
+    assert h["status"] == "ok" and h["defects"] == []
+    assert h["inapplicable_options"] == {"reason": "stop_level_not_below_price", "count": 4, "denominator": 4}
+    h = g.packet_health(_pk(_opts(rung, rung, ("could_not_look", "no_candles", None), ("could_not_look", "no_candles", None))))
+    assert h["status"] == "degraded"
+    assert {"field": "priced_options.options", "reason": "all_options_unpriced:no_candles", "count": 2, "denominator": 2} in h["defects"]
+    assert {"field": "priced_options.candles", "reason": "candles_missing", "count": 2, "denominator": 2} in h["defects"]
+    assert h["inapplicable_options"]["count"] == 2
+
+
 def test_other_defects_carry_a_reason_count_and_denominator():
     g = L
     h = g.packet_health(_pk(None, generator={"state": "stale_vs_origin_main"},
@@ -829,6 +851,25 @@ def test_a_synthetic_prop_ticket_row_is_not_an_account(monkeypatch):
     assert all(a["account_id"] for a in accts)
 
 
+def test_a_real_prop_ticket_stamped_source_order_package_is_still_an_account():
+    """MEASURED 2026-11-15: /api/bot/prop/tickets stamps source "order_package" on REAL tickets too (90/100 rows had a
+    ticket_id, an account_id AND that source). The old source filter dropped them all: LR-20261115T0401Z (pkg-48c5cfab,
+    filled on velotrade_1 + tradeify_1) had account_bounds [] and open_r null. Only a null ticket_id/account_id is synthetic."""
+    pkg = "pkg-48c5cfab364e430c"
+    s = L.Snapshot()
+    s.packages[pkg] = {"order_package_id": pkg, "status": "emitted", "direction": "short"}
+    s.reads["prop_tickets"] = {"tickets": [
+        {"order_package_id": pkg, "ticket_id": "prop-manual-a98ef880f712", "account_id": "velotrade_1",
+         "status": "filled", "source": "order_package"},
+        {"order_package_id": pkg, "ticket_id": "prop-manual-7b974b559759", "account_id": "tradeify_1",
+         "status": "filled", "source": "order_package"},
+        {"order_package_id": pkg, "ticket_id": None, "account_id": None, "status": "open", "source": "order_package"}]}
+    view = L._package_view(s, pkg)
+    assert sorted(t["account_id"] for t in view["tickets"]) == ["tradeify_1", "velotrade_1"]
+    accts = L._accounts_for(view, {})
+    assert sorted(a["account_id"] for a in accts) == ["tradeify_1", "velotrade_1"] and all(a["account_id"] for a in accts)
+
+
 def test_price_returns_a_named_state_when_the_outcomes_stdout_is_not_json(monkeypatch):
     """LR wake 2026-11-06T01:56Z: an exit-0 outcomes run with non-JSON stdout raised out of the builder (could_not_build)."""
     monkeypatch.setattr(L, "LTR_CORPUS_DIR", L.LTR_CORPUS_DIR)
@@ -908,3 +949,83 @@ def test_no_carrying_account_is_could_not_look_not_a_vacuous_match():
     m = L._mechanics(s, view, [], 89.1, 78.96, "short", "SOLUSDT")[0]
     assert m["verdict"] == "could_not_look"
     assert "nothing compared" in m["evidence"]
+
+
+@needs_gold
+def test_goldens_are_the_pinned_review_not_a_later_packet():
+    """CI-MGC-IB-STOP-TARGET-INTERMITTENT: every golden comes from the review at NOW, whatever later packets for
+    the same package sit in the directory (and in whatever order the filesystem lists them)."""
+    assert all(g["review_id"].startswith(GOLDEN_REVIEW) for g in GOLD.values()), sorted(g["review_id"] for g in GOLD.values())
+    later = [f for f in (REPO / "comms/live_review/packets").glob(f"*-{MGC}.json")
+             if not f.name.startswith(GOLDEN_REVIEW)]
+    assert later, "the directory no longer holds a later MGC packet; this guard has nothing to guard"
+    assert GOLD[MGC]["state"]["sl"] == pytest.approx(4270.02857143)
+
+
+# ── LTR-PROP-PACKET-OPEN-R (2026-11-15): prop-only packages get an ESTIMATED state from the filled ticket ──
+# Every prop packet read state.open_r null (priced_options could_not_price) because the prop executor, not the trader
+# exit loop, runs prop positions: there is no telemetry row. Seen on pkg-d8838f396234477c (tradeify_1) and
+# pkg-48c5cfab364e430c (velotrade_1, reviewer LIVE-REVIEW-20261115-0011).
+
+def _prop_only_snapshot(direction="short", entry=1768.52, sl=1850.50464286, tp=1593.43652, risk_per_unit=81.9846,
+                        closes=(1760.0, 1740.0, 1755.0), status="filled"):
+    pkg = "pkg-proponly"
+    t0 = int(datetime(2026, 11, 15, 0, 0, tzinfo=timezone.utc).timestamp())
+    now = datetime(2026, 11, 15, 12, 30, tzinfo=timezone.utc)
+    s = L.Snapshot()
+    s.packages[pkg] = {"order_package_id": pkg, "strategy_name": "trend_donchian_eth_4h", "symbol": "ETHUSDT",
+                       "direction": direction, "entry": str(entry), "sl": str(sl), "tp": str(tp), "status": "emitted",
+                       "close_reason": "prop_ticket_emitted",
+                       "meta": json.dumps({"timeframe": "4h", "risk_per_unit": risk_per_unit})}
+    s.reads["prop_tickets"] = {"tickets": [{"order_package_id": pkg, "ticket_id": "prop-T1", "account_id": "velotrade_1",
+                                            "status": status, "source": "ticket", "direction": direction,
+                                            "entry": entry, "sl": sl, "tp": tp,
+                                            "created_at": "2026-11-15T00:02:51+00:00"}]}
+    # 40 history bars before the fill, then 3 closed 4h bars after it (the last one closes at 12:00Z), then a forming bar
+    bars = [{"time": t0 - (40 - i) * 14400, "open": 1800.0, "high": 1810.0, "low": 1790.0, "close": 1800.0}
+            for i in range(40)]
+    for i, c in enumerate(closes):
+        bars.append({"time": t0 + i * 14400, "open": c + 5, "high": c + 8, "low": c - 30 if i == 1 else c - 5, "close": c})
+    bars.append({"time": t0 + 3 * 14400, "open": 1700.0, "high": 1700.0, "low": 1600.0, "close": 1601.0})  # forming
+    s.candles["ETHUSDT|4h"] = {"candles": bars}
+    return s, pkg, now
+
+
+def test_prop_only_package_gets_an_estimated_open_r_from_the_ticket():
+    s, pkg, now = _prop_only_snapshot()
+    p = L.build_packet(pkg, s, now, price=False)
+    st, f = p["state"], p["features_at_review"]
+    # short from 1768.52, mark = last CLOSED close 1755.0 (the forming bar's 1601 is ignored), 1R = 81.9846
+    assert st["open_r"] == round((1755.0 - 1768.52) * -1 / 81.9846, 3)
+    # peak: lowest low of the held closed bars = 1740 - 30 = 1710
+    assert st["peak_r"] == round((1710.0 - 1768.52) * -1 / 81.9846, 3)
+    assert st["giveback_r"] == round(st["peak_r"] - st["open_r"], 3)
+    assert st["bars_held"] == 2      # bars OPENED after the 00:02:51Z fill (the 00:00Z bar holds pre-fill prices); since_entry's rule
+    assert st["peak_provenance"] == "prop_ticket_mark"
+    assert f["prop_ticket_state"]["measurement"] == "estimated" and f["prop_ticket_state"]["risk_basis"] == "declared_initial_risk"
+    assert f["r_to_stop"] == round((1755.0 - 1850.50464286) * -1 / 81.9846, 3)
+    assert f["r_to_target"] == round((1593.43652 - 1755.0) * -1 / 81.9846, 3)
+    # the gap is closed, and the estimate is still SAID (never passed off as measured)
+    assert not any(d.get("reason") == "context_null:state.open_r" for d in p["packet_health"].get("defects", []))
+    notes = [m for m in p["missing_inputs"] if m["field"] == "state.open_r"]
+    assert notes and "ESTIMATED" in notes[0]["reason"]
+
+
+def test_prop_only_long_and_ticket_risk_fallback():
+    s, pkg, now = _prop_only_snapshot(direction="long", entry=1700.0, sl=1650.0, tp=1800.0, risk_per_unit=None,
+                                      closes=(1710.0, 1720.0, 1725.0))
+    meta = json.loads(s.packages[pkg]["meta"])
+    meta.pop("risk_per_unit")
+    s.packages[pkg]["meta"] = json.dumps(meta)
+    p = L.build_packet(pkg, s, now, price=False)
+    assert p["state"]["open_r"] == round((1725.0 - 1700.0) / 50.0, 3)
+    assert p["features_at_review"]["prop_ticket_state"]["risk_basis"] == "ticket_entry_to_stop"
+
+
+def test_an_unfilled_prop_ticket_keeps_open_r_null_with_the_reason():
+    s, pkg, now = _prop_only_snapshot(status="emitted")
+    p = L.build_packet(pkg, s, now, price=False)
+    assert p["state"]["open_r"] is None
+    note = [m for m in p["missing_inputs"] if m["field"] == "state.open_r"][0]["reason"]
+    assert "no filled prop ticket" in note
+    assert any(d.get("reason") == "context_null:state.open_r" for d in p["packet_health"].get("defects", []))

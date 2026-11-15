@@ -465,7 +465,7 @@ def _retire_skipped_latches(
     ``__last_check__`` was ``2026-09-10T07:58:20Z`` and all seven other accounts
     carried that fresh stamp — 20 days. ``get-env`` (Actions run 34455224799)
     read ``SILENT_REFUSAL_SKIP = 'alpaca_live'`` off ``/proc/<MainPID>/environ``.
-    The latched cause was from a zero-balance era; the account held $200.22 and
+    The latched cause was from a zero-balance era; the account held funds and
     its refusals were ``side_filter`` suppressions, a different cause entirely.
 
     ⚠️ THE SKIP ITSELF IS CORRECT AND IS NOT WHAT THIS CHANGES.

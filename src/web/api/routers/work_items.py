@@ -17,6 +17,8 @@ from __future__ import annotations
 import hmac
 import logging
 import os
+import re
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException, Query, Request
@@ -50,6 +52,38 @@ def _store() -> ws.WorkStore:
 WORK_STORE_HEADER = "X-Work-Store-Token"
 
 
+def accepted_work_store_tokens(now: float | None = None) -> list[str]:
+    """Every value the work-store token check accepts right now (VM-CHANGE-LEDGER 4b, the rotation dual-accept).
+
+    ``WORK_STORE_TOKEN`` always; ``WORK_STORE_TOKEN_PREV`` too while ``WORK_STORE_TOKEN_PREV_UNTIL`` (ISO-8601 UTC)
+    is in the future, so a rotation never cuts off a holder of the old value mid-switch. A PREV with no parseable
+    UNTIL is NOT accepted (an open-ended second token is not a rotation). Empty list = writes not configured.
+    """
+    import time as _time
+    from datetime import datetime as _dt
+
+    out = [t for t in [os.environ.get("WORK_STORE_TOKEN", "").strip()] if t]
+    prev = os.environ.get("WORK_STORE_TOKEN_PREV", "").strip()
+    until = os.environ.get("WORK_STORE_TOKEN_PREV_UNTIL", "").strip()
+    if out and prev and until:
+        try:
+            exp = _dt.fromisoformat(until.replace("Z", "+00:00")).timestamp()
+        except ValueError:
+            exp = 0.0
+        if (now if now is not None else _time.time()) < exp:
+            out.append(prev)
+    return out
+
+
+def work_store_token_ok(presented: str) -> bool:
+    """Constant-time match of ``presented`` against every accepted value."""
+    p = (presented or "").strip()
+    ok = False
+    for t in accepted_work_store_tokens():
+        ok = hmac.compare_digest(p, t) or ok
+    return bool(p) and ok
+
+
 def _require_work_store_token(authorization: str | None, x_work_store_token: str | None = None) -> None:
     """Fail-closed token gate (design G2), the ``_require_decision_write_token`` pattern.
 
@@ -58,20 +92,19 @@ def _require_work_store_token(authorization: str | None, x_work_store_token: str
     When the dedicated header is present it alone decides: a wrong value there is 401 even if
     ``Authorization`` would pass, so the two carriers can never disagree silently.
     """
-    expected = os.environ.get("WORK_STORE_TOKEN", "").strip()
-    if not expected:
+    if not accepted_work_store_tokens():
         raise HTTPException(status_code=503, detail="work store is not configured to accept writes")
     if x_work_store_token is not None:
         if not x_work_store_token.strip():
             raise HTTPException(status_code=401, detail=f"empty {WORK_STORE_HEADER}")
-        if not hmac.compare_digest(x_work_store_token.strip(), expected):
+        if not work_store_token_ok(x_work_store_token):
             raise HTTPException(status_code=401, detail="bad token")
         return
     if not authorization:
         raise HTTPException(status_code=401, detail="missing authorization")
     if not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=401, detail="bearer scheme required")
-    if not hmac.compare_digest(authorization[7:].strip(), expected):
+    if not work_store_token_ok(authorization[7:]):
         raise HTTPException(status_code=401, detail="bad token")
 
 
@@ -95,8 +128,23 @@ async def _body(request: Request) -> dict[str, Any]:
     return body
 
 
-def _by(body: dict) -> str:
+async def _writer(request: Request, authorization: str | None,
+                  x_work_store_token: str | None) -> dict | None:
+    """The operator's SPA session (returned, so ``by`` comes from it) or the fail-closed
+    work-store token (``None`` returned). UI-OAUTH-SIGNIN: the operator edits rows from the
+    signed-in dashboard; work.py and the outbox keep ``WORK_STORE_TOKEN``."""
+    from src.web.api.auth import operator_session_or_none
+    session = await operator_session_or_none(request)
+    if session is None:
+        _require_work_store_token(authorization, x_work_store_token)
+    return session
+
+
+def _by(body: dict, session: dict | None = None) -> str:
     by = body.pop("by", None)
+    if session is not None:
+        from src.web.api.auth import session_actor
+        return session_actor(session)
     if not isinstance(by, str) or not by.strip():
         raise HTTPException(status_code=400, detail="`by` is required (who is writing)")
     return by.strip()
@@ -118,9 +166,9 @@ def _answer(fn, *, created: bool = False) -> JSONResponse:
 async def create_item(request: Request, authorization: str | None = Header(default=None),
                    x_work_store_token: str | None = Header(default=None, alias=WORK_STORE_HEADER)):
     """Create one item. Body: ``{id, kind, title, ..., by, op_id?}``. 201, or 200 on a replayed op_id."""
-    _require_work_store_token(authorization, x_work_store_token)
+    session = await _writer(request, authorization, x_work_store_token)
     body = await _body(request)
-    by, op_id = _by(body), body.pop("op_id", None)
+    by, op_id = _by(body, session), body.pop("op_id", None)
     return _answer(lambda: _store().create(body, by=by, op_id=op_id), created=True)
 
 
@@ -129,9 +177,9 @@ async def set_item(item_id: str, request: Request, authorization: str | None = H
                    x_work_store_token: str | None = Header(default=None, alias=WORK_STORE_HEADER),
                    if_match: str | None = Header(default=None)):
     """Patch fields. Body: ``{fields: {...}, by, op_id?}``; ``If-Match: <version>`` required."""
-    _require_work_store_token(authorization, x_work_store_token)
+    session = await _writer(request, authorization, x_work_store_token)
     body = await _body(request)
-    by, op_id = _by(body), body.pop("op_id", None)
+    by, op_id = _by(body, session), body.pop("op_id", None)
     fields = body.get("fields")
     if not isinstance(fields, dict) or not fields:
         raise HTTPException(status_code=400, detail="`fields` must be a non-empty object")
@@ -144,9 +192,9 @@ async def note_item(item_id: str, request: Request, authorization: str | None = 
                    x_work_store_token: str | None = Header(default=None, alias=WORK_STORE_HEADER),
                     if_match: str | None = Header(default=None)):
     """Append a note event. Body: ``{text, summary?, by, op_id?}``; ``If-Match`` required."""
-    _require_work_store_token(authorization, x_work_store_token)
+    session = await _writer(request, authorization, x_work_store_token)
     body = await _body(request)
-    by, op_id = _by(body), body.pop("op_id", None)
+    by, op_id = _by(body, session), body.pop("op_id", None)
     return _answer(lambda: _store().note(item_id, body.get("text"), summary=body.get("summary"),
                                          by=by, op_id=op_id, expected_version=_version(if_match)))
 
@@ -156,30 +204,156 @@ async def close_item(item_id: str, request: Request, authorization: str | None =
                    x_work_store_token: str | None = Header(default=None, alias=WORK_STORE_HEADER),
                      if_match: str | None = Header(default=None)):
     """Close with a stated reason. Body: ``{state: done|dropped, reason, by, op_id?}``."""
-    _require_work_store_token(authorization, x_work_store_token)
+    session = await _writer(request, authorization, x_work_store_token)
     body = await _body(request)
-    by, op_id = _by(body), body.pop("op_id", None)
+    by, op_id = _by(body, session), body.pop("op_id", None)
     return _answer(lambda: _store().close(item_id, state=body.get("state", "done"), reason=body.get("reason"),
                                           by=by, op_id=op_id, expected_version=_version(if_match)))
+
+
+def _week_lane(it: dict) -> str | None:
+    ex = it.get("extra") if isinstance(it.get("extra"), dict) else {}
+    v = ex.get("week_lane") if isinstance(ex, dict) else None
+    return str(v) if v else None
+
+
+_AM_RE = re.compile(r"^(AM-[A-Za-z0-9-]+)")
+
+
+def _am_of(owner: Any) -> str:
+    """The assistant manager an owner string belongs to (``AM-UI (session_...)`` -> ``AM-UI``); else ``other``."""
+    m = _AM_RE.match(str(owner or "").strip())
+    return m.group(1).upper() if m else "other"
+
+
+def _matches(it: dict, *, owner_prefix: str | None, week_lane: str | None, q: str | None,
+             note: dict | None) -> bool:
+    if owner_prefix and not str(it.get("owner") or "").lower().startswith(owner_prefix.lower()):
+        return False
+    if week_lane and _week_lane(it) != week_lane:
+        return False
+    if q:
+        hay = " ".join(str(x or "") for x in (it.get("id"), it.get("title"), it.get("summary"),
+                                                (note or {}).get("note"))).lower()
+        if q.lower() not in hay:
+            return False
+    return True
 
 
 @router.get("/items")
 def list_items(state: str | None = None, due: bool = False, parent: str | None = None,
                since: str | None = None, kind: str | None = None,
-               limit: int = Query(default=200, ge=1, le=1000), offset: int = Query(default=0, ge=0)):
-    """Open read. ``due=1`` reads the ``due_now`` view. ``readState`` says whether we could look."""
+               limit: int = Query(default=200, ge=1, le=1000), offset: int = Query(default=0, ge=0),
+               owner_prefix: str | None = None, week_lane: str | None = None, q: str | None = None,
+               counts: bool = False, latest_note: bool = False):
+    """Open read. ``due=1`` reads the ``due_now`` view. ``readState`` says whether we could look.
+
+    UI-WQ-WEEK-ROUTES (Work queue "This week" tab): ``state=open`` (every non-terminal state),
+    ``owner_prefix`` (e.g. ``AM-UI``), ``week_lane`` (from ``extra.week_lane``), ``q`` (id / title /
+    summary / latest note, case-insensitive), ``counts=1`` (owner x state over the WHOLE filtered set,
+    before paging) and ``latest_note=1`` (each returned item carries its newest note event)."""
+    open_state = state == "open"
+    if state and not open_state and state not in ws.ITEM_STATES:
+        raise HTTPException(status_code=400, detail=f"state must be 'open' or one of {list(ws.ITEM_STATES)}")
+    extended = open_state or owner_prefix or week_lane or q or counts
     try:
         s = _store()
-        items = s.list_items(state=state, due=due, parent=parent, since=since, kind=kind,
-                             limit=limit, offset=offset)
         total = s.count_items()
+        if not extended:
+            items = s.list_items(state=state, due=due, parent=parent, since=since, kind=kind,
+                                 limit=limit, offset=offset)
+            matched = None
+            count_block = None
+        else:
+            pool = s.list_items(state=None if open_state else state, due=due, parent=parent, since=since,
+                                kind=kind, limit=max(total, 1), offset=0)
+            if open_state:
+                pool = [it for it in pool if it.get("state") not in ws.TERMINAL]
+            notes = s.latest_notes([it["id"] for it in pool]) if q else {}
+            hits = [it for it in pool if _matches(it, owner_prefix=owner_prefix, week_lane=week_lane, q=q,
+                                                    note=notes.get(it["id"]))]
+            matched = len(hits)
+            count_block = None
+            if counts:
+                by: dict[str, dict[str, int]] = {}
+                for it in hits:
+                    row = by.setdefault(_am_of(it.get("owner")), {})
+                    row[it["state"]] = row.get(it["state"], 0) + 1
+                count_block = {"by_owner_state": by, "basis": "owner grouped to its AM-* prefix, else 'other'",
+                               "matched": matched}
+            items = hits[offset:offset + limit]
+        if latest_note:
+            got = s.latest_notes([it["id"] for it in items])
+            for it in items:
+                it["latest_note"] = got.get(it["id"])
     except Exception as exc:  # allow-silent: not silent -- logged with stack + 503 readState could_not_look, items null (never "0 items")
         logger.exception("work_items: list read failed")
         return JSONResponse(status_code=503, content={
             "readState": "could_not_look", "error": str(exc), "items": None, "total": None})
-    return {"readState": "read", "items": items, "returned": len(items), "total": total,
-            "canonical": False,
-            "note": "S1: the checklist + pipeline files stay canonical until S2 parity and the S4 reader flip"}
+    out = {"readState": "read", "items": items, "returned": len(items), "total": total,
+           "canonical": False,
+           "note": "S1: the checklist + pipeline files stay canonical until S2 parity and the S4 reader flip"}
+    if matched is not None:
+        out["matched"] = matched
+    if count_block is not None:
+        out["counts"] = count_block
+    return out
+
+
+@router.get("/lanes")
+def lanes(next_n: int = Query(default=5, ge=1, le=50), list_cap: int = Query(default=25, ge=1, le=200)):
+    """Per-AM lane cards for the Work queue "This week" tab (UI-WQ-WEEK-ROUTES).
+
+    For each assistant manager (owner grouped by its ``AM-*`` prefix; the rest under ``other``):
+    ``moved_today`` (a state change since 00:00Z, from the event log), ``working_now`` (``in_flight``),
+    ``stuck`` (``blocked``, or open with ``blocked_on`` set) and ``next`` (queued, by ``priority_rank``
+    then ``due_at``). Each list is ``{read_state, count, items[{id, title, state, updated_at}]}``;
+    ``count`` is the full count, ``items`` capped at ``list_cap`` (``next`` at ``next_n``).
+    ``week_lanes`` reuses ``work_read.week_lane_totals`` (the console's function). ``headline`` is null with
+    ``headline_read_state: absent`` until the AM writes one (prose, never derived here)."""
+    now = datetime.now(timezone.utc)
+    midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    since = midnight.isoformat(timespec="seconds").replace("+00:00", "Z")
+    try:
+        s = _store()
+        items = s.list_items(limit=max(s.count_items(), 1))
+        moves = s.state_moves_since(since)
+    except Exception as exc:  # allow-silent: not silent -- logged + 503 read_state could_not_look, lanes null (never an empty board)
+        logger.exception("work_items: lanes read failed")
+        return JSONResponse(status_code=503, content={
+            "read_state": "could_not_look", "error": str(exc), "lanes": None, "week_lanes": None})
+    by_id = {it["id"]: it for it in items}
+
+    def slim(it: dict) -> dict:
+        return {"id": it["id"], "title": it.get("title"), "state": it.get("state"), "updated_at": it.get("updated_at")}
+
+    def block(rows: list[dict], cap: int) -> dict:
+        return {"read_state": "read", "count": len(rows), "items": [slim(r) for r in rows[:cap]]}
+
+    groups: dict[str, list[dict]] = {}
+    for it in items:
+        groups.setdefault(_am_of(it.get("owner")), []).append(it)
+    out_lanes = []
+    for am in sorted(groups, key=lambda k: (k == "other", k)):
+        rows = groups[am]
+        open_rows = [r for r in rows if r.get("state") not in ws.TERMINAL]
+        moved = sorted((r for r in rows if r["id"] in moves), key=lambda r: moves[r["id"]], reverse=True)
+        working = [r for r in open_rows if r.get("state") == "in_flight"]
+        stuck = [r for r in open_rows if r.get("state") == "blocked" or (r.get("blocked_on") and r.get("state") != "in_flight")]
+        queued = sorted((r for r in open_rows if r.get("state") == "queued"),
+                        key=lambda r: (r.get("priority_rank") is None, r.get("priority_rank") or 0,
+                                       r.get("due_at") is None, r.get("due_at") or ""))
+        out_lanes.append({"am": am, "open": len(open_rows), "headline": None, "headline_read_state": "absent",
+                          "moved_today": block(moved, list_cap), "working_now": block(working, list_cap),
+                          "stuck": block(stuck, list_cap), "next": block(queued, next_n)})
+    from src.runtime.work_read import week_lane_totals
+    wl = week_lane_totals([{"week_lane": _week_lane(it), "state": it.get("state")} for it in items])
+    return {"read_state": "read", "as_of": now.isoformat(timespec="seconds").replace("+00:00", "Z"),
+            "moved_since": since, "lanes": out_lanes, "week_lanes": wl,
+            "population": {"items": len(items), "lanes": len(out_lanes), "moved_today": len(moves),
+                           "moved_today_unknown_items": sum(1 for i in moves if i not in by_id)},
+            "provenance": {"measure": "MEASURED", "source": "work_store items + events (hash-chained)",
+                           "grouping": "owner -> AM-* prefix, else 'other'"}}
 
 
 @router.get("/items/{item_id}")

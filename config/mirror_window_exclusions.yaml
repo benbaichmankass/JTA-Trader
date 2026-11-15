@@ -19,21 +19,7 @@
 #
 # REMOVE an entry when its trade has closed -- check_mirror_orphans.py reports an
 # acknowledgement whose position is gone as `stale_ack` so this file cannot rot.
-exclusions:
-  - trade_id: 5912
-    account_id: alpaca_portfolio
-    symbol: TLT
-    side: short
-    leg: tlt_pullback_1d
-    package: pkg-dfe2ec1e82fd46c8
-    opened: "2026-09-18"
-    reason: "leg pulled from both rosters by A6 (#12673) 2026-09-21; position outlived the cut"
-  - trade_id: 4195
-    account_id: alpaca_portfolio
-    symbol: IEF
-    side: short
-    leg: ief_pullback_1d
-    package: pkg-5e636e3adddf4a83
-    opened: "2026-07-29"
-    reason: "alpaca_live twin (trade 4196) was rejected; mirror filled alone"
-    decision: "operator 2026-10-05, PI-20261004-J4SFBKU9-0001"
+# 2026-11-14 (AM-OPS, manager ask): both legacy entries REMOVED. trade 5912 (TLT short) closed 2026-10-15T13:35Z
+# sl_cross +797.25 and trade 4195 (IEF short) closed 2026-10-15T13:41Z sl +439.78 (diag journal, read 20:2xZ);
+# check_mirror_orphans.py reported both as stale_ack. Kept as an empty list so the readers stay "ok", not absent.
+exclusions: []

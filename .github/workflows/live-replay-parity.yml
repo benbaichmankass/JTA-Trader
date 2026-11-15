@@ -122,6 +122,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          # Full commit history (blobless: no file contents beyond HEAD's) so live_replay_parity_ml.served_epoch() can see the
+          # real last change to ml/served/ENTRY_SERVED.json. A depth-1 clone reports the graft root instead, which marked every
+          # ML decision bar "decided by the previous served artifact" (2026-11-13, PI-20261113-TFZXAKEK-0002).
+          fetch-depth: 0
+          filter: blob:none
 
       - name: Resolve inputs (days, optional script ref)
         id: inp
@@ -152,7 +157,10 @@ jobs:
       - name: Install replay dependencies
         run: |
           set -euo pipefail
-          python -m pip install --quiet "pandas>=2.0.0" "numpy>=1.24.0" "pyyaml>=6.0"
+          # lightgbm: the ML legs (ml_entry, ml_entry_eq_struct) load their served LightGBM artifact to replay a decision.
+          # Without it both real-money ML legs read could_not_check "No module named lightgbm" (run 43469233791,
+          # 2026-11-13). Pinned to requirements.txt (lightgbm==4.6.0) so the replay scores with the trader's version.
+          python -m pip install --quiet "pandas>=2.0.0" "numpy>=1.24.0" "pyyaml>=6.0" "lightgbm==4.6.0"
 
       - name: Set up SSH key + tunnel to the live web-api
         run: |

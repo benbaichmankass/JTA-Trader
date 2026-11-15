@@ -628,8 +628,15 @@ def pending_closes(account_id: str, now: Optional[datetime] = None) -> int:
     return n
 
 
-def claim_close(device: Any, now: Optional[datetime] = None) -> Optional[Dict[str, Any]]:
-    """Atomically claim the oldest emitted close/reduce for the device's account."""
+def claim_close(device: Any, now: Optional[datetime] = None, *, accepts_reduce: bool = False,
+                send: Optional[Callable[..., Any]] = None) -> Optional[Dict[str, Any]]:
+    """Atomically claim the oldest emitted close/reduce for the device's account.
+
+    A REDUCE is served only to an app that declares ``"reduce"`` in its claim (PHONE-CLOSE-CARDS, 2026-11-12): builds
+    up to 1b.380 do not execute one -- their reduce branch clicks the armed Close position to MEASURE the dialog, then
+    dismisses it and reports ``failed`` -- so serving them a reduce changes nothing at best and, on a venue whose Close
+    is one tap, closes the WHOLE position while reporting failed. Such a reduce ends ``refused`` with ONE ping naming
+    why (capability negotiation, the same pattern as ``amend`` / ``cancel`` / ``close``); a full close is unaffected."""
     from src.prop import phone_executor as pe
     now = now or _now()
     acct = device.account_id
@@ -643,6 +650,16 @@ def claim_close(device: Any, now: Optional[datetime] = None) -> Optional[Dict[st
             c = dict(m.get(CLOSE_KEY) or {})
             vu = _parse(c.get("valid_until"))
             if c.get("status") != "emitted" or vu is None or vu <= now:
+                continue
+            if c.get("action") == "reduce" and not accepts_reduce:
+                c.update(status="refused", finished_at=now.isoformat(), last_result="refused",
+                         last_reason="app build does not execute a reduce (claim lacks 'reduce')")
+                _hist(c, {"at": now.isoformat(), "result": "refused", "close_id": c.get("id"),
+                          "reason": "app build does not execute a reduce"})
+                if _cas(conn, r["ticket_id"], r["meta"], {**m, CLOSE_KEY: c}):
+                    _send(f"📱 phone {acct}: [{r['ticket_id']}] reduce of {(c.get('spec') or {}).get('venue_symbol')} "
+                          f"REFUSED, not executed: this phone app build does not execute a partial close. The position is "
+                          f"unchanged.", send)
                 continue
             c.update(status="claimed", claimed_at=now.isoformat(), device_id=device.device_id)
             if not _cas(conn, r["ticket_id"], r["meta"], {**m, CLOSE_KEY: c}):

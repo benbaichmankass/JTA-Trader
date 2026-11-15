@@ -325,9 +325,10 @@ def stats(
     (BL-20260810-SHADOW-STATS-FIRSTSEEN-IS-LOG-ROTATION-NOT-SOAK-START). The
     prediction log is rotated, so for any model already running when the last
     rotation fired, ``first_seen`` is the ROTATION BOUNDARY — a lower bound on
-    the soak, not its start. Since ``first_seen`` is the denominator of the
-    shadow->advisory promotion gate, and the error makes long soaks look short,
-    a promotion that is DUE would read as not-yet-ready.
+    the soak, not its start. (``first_seen`` used to be the denominator of the
+    shadow->advisory promotion gate; that step was retired 2026-11-12 and
+    promotion is offline-evidence only — the window caveat still matters for
+    anyone reading soak data.)
 
     The envelope therefore also states the retained window it was measured
     against (``log_coverage``), and each row carries ``soak_start_basis`` ∈

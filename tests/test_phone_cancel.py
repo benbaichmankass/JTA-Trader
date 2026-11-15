@@ -414,3 +414,36 @@ def test_live_review_close_reaches_the_phone_like_a_vm_account():
     assert out["result"] == lra.X_APPLIED and _xc()["status"] == "emitted"
     out2 = lra._exec_phone_close(leg, "close", intent)
     assert out2["result"] == lra.X_REFUSED                                       # not duplicated
+
+
+# ---------------------------------------------------------------- reduce capability (PHONE-CLOSE-CARDS, 2026-11-12)
+def test_a_reduce_is_refused_not_served_to_an_app_that_does_not_declare_it(_iso):
+    _held()
+    pc.request_close("breakout_2", "H1", fraction=0.5, reason="review R2", now=NOW)
+    assert pe.claim_next(_dev(), now=NOW, accepts=("amend", "cancel", "close")) is None
+    x = _xc()
+    assert x["status"] == "refused" and "does not execute a reduce" in x["last_reason"]
+    assert sum("REFUSED, not executed" in m for m in _iso) == 1                  # ONE ping, says why
+    assert pc.plan_closes("breakout_2", now=NOW + timedelta(hours=9)) == 0      # never re-armed into the old app
+    assert pe.claim_next(_dev(), now=NOW + timedelta(hours=9), accepts=("close",)) is None
+    assert pc.request_close("breakout_2", "H1", fraction=0.5, now=NOW + timedelta(hours=9))["ok"]  # a new request may follow
+
+
+def test_a_reduce_is_served_to_an_app_that_declares_it_with_its_fraction():
+    _held()
+    pc.request_close("breakout_2", "H1", fraction=0.5, now=NOW)
+    g = pe.claim_next(_dev(), now=NOW, accepts=("close", "reduce"))
+    assert g["kind"] == "close" and g["action"] == "reduce" and g["spec"]["fraction"] == 0.5
+    assert _rx({"ticket_id": "H1", "close_id": g["close_id"], "result": "done", "reason": "qty 0.39 -> 0.2"})["ok"]
+
+
+def test_a_full_close_still_reaches_an_app_without_the_reduce_capability():
+    _held()
+    pc.request_close("breakout_2", "H1", now=NOW)
+    g = pe.claim_next(_dev(), now=NOW, accepts=("close",))
+    assert g is not None and g["action"] == "close"
+
+
+def test_the_router_accepts_the_reduce_capability():
+    from src.web.api.routers import prop as router
+    assert router._accepts(["close", "reduce", "junk"]) == ("close", "reduce")

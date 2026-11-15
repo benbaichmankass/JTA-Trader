@@ -25,7 +25,7 @@ guards are the safety net, not a manual confirm step.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -68,6 +68,13 @@ class TicketConfig:
     # the live balance + cushion. ``None`` (the default, and ``flat`` mode)
     # keeps the original risk_pct x account_size_usd formula untouched.
     risk_usd_override: Optional[float] = None
+    # FIRM identity (PROP-TICKET-FIRM-TEMPLATE): keyed on the account's
+    # ruleset (config/accounts.yaml::backtest_ruleset). ``None`` keeps the
+    # original Breakout 1-Step Classic text (3% / 6%) for legacy callers.
+    venue_name: Optional[str] = field(default=None, repr=False)      # e.g. "Tradeify 247", "Velotrade"
+    plan_label: Optional[str] = field(default=None, repr=False)      # e.g. "1-step-10k"
+    daily_loss_pct: Optional[float] = field(default=None, repr=False)    # FRACTION (0.04 == 4%)
+    max_drawdown_pct: Optional[float] = field(default=None, repr=False)  # FRACTION (0.07 == 7%)
 
 
 @dataclass(frozen=True)
@@ -141,8 +148,16 @@ def render_ticket(t: Ticket, *, now: Optional[datetime] = None,
     s = t.signal
     c = t.cfg
     sym = c.dxtrade_symbol or s.symbol
-    daily_cap = 0.03 * c.account_size_usd
-    dd_floor = 0.06 * c.account_size_usd
+    _dl = getattr(c, "daily_loss_pct", None)
+    _dd = getattr(c, "max_drawdown_pct", None)
+    d_pct = _dl if _dl is not None else 0.03
+    dd_pct = _dd if _dd is not None else 0.06
+    daily_cap = d_pct * c.account_size_usd
+    dd_floor = dd_pct * c.account_size_usd
+    venue = getattr(c, "venue_name", None) or "Breakout"
+    plan = getattr(c, "plan_label", None) or "1-Step Classic"
+    d_txt = f"{d_pct * 100:g}%"
+    dd_txt = f"{dd_pct * 100:g}%"
     base_coin = s.symbol.replace("USDT", "")
     # Risk per 1 unit at the stop ($). The bot CANNOT see the live platform
     # balance (prop accounts have no balance API), so qty_units below is only a
@@ -217,7 +232,7 @@ def render_ticket(t: Ticket, *, now: Optional[datetime] = None,
             )
 
     lines = [
-        "BREAKOUT TRADE SETUP — place a BRACKET order on the Breakout terminal.",
+        f"{venue.upper()} TRADE SETUP — place a BRACKET order on the {venue} terminal.",
         "RULES (do all): attach SL **and** TP at entry; never place without both. "
         "If now is past 'Valid until' "
         "OR the live price is outside the entry band, DO NOT place — reply "
@@ -240,9 +255,9 @@ def render_ticket(t: Ticket, *, now: Optional[datetime] = None,
         f"  Signal time: {s.signal_time.astimezone(timezone.utc).isoformat()}",
         f"  Valid until: {t.valid_until.astimezone(timezone.utc).isoformat()}",
         "",
-        f"  Prop context (${c.account_size_usd:.0f} 1-Step Classic): this risks "
+        f"  Prop context ({venue + ', ' if getattr(c, 'venue_name', None) else ''}${c.account_size_usd:.0f} {plan}): this risks "
         f"{context_risk}. Account killers — daily "
-        f"loss ${daily_cap:.0f} (3%), static drawdown floor ${dd_floor:.0f} (6% "
+        f"loss ${daily_cap:.0f} ({d_txt}), static drawdown floor ${dd_floor:.0f} ({dd_txt} "
         f"off start). Breaching either permanently disables the account.",
     ]
     # Report-back block — the inbound half of the manual bridge. After acting,

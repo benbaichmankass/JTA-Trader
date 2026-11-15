@@ -1,0 +1,120 @@
+{
+  "schema_version": 2,
+  "strategy": "eth_pullback_2h",
+  "symbol": "ETHUSDT",
+  "timeframe": "2h",
+  "config_fingerprint": "sha256:efe3d4b5036cade9dc568654e640c604",
+  "basis": "harness_timefolds",
+  "coverage_state": "measured",
+  "fidelity": "faithful",
+  "omitted_levers": [],
+  "net_r_oos": 1.3856,
+  "expectancy_r_oos": 0.0167,
+  "n_trades_oos": 83,
+  "folds": 4,
+  "fold_detail": [
+    {
+      "fold": 1,
+      "trades": 20,
+      "net_r": 5.171,
+      "expectancy_r": 0.2586,
+      "start": "2025-12-02 00:00:00+00:00",
+      "end": "2026-02-16 10:00:00+00:00"
+    },
+    {
+      "fold": 2,
+      "trades": 20,
+      "net_r": -5.3593,
+      "expectancy_r": -0.268,
+      "start": "2026-02-24 16:00:00+00:00",
+      "end": "2026-05-08 12:00:00+00:00"
+    },
+    {
+      "fold": 3,
+      "trades": 20,
+      "net_r": 1.1767,
+      "expectancy_r": 0.0588,
+      "start": "2026-05-13 02:00:00+00:00",
+      "end": "2026-07-28 16:00:00+00:00"
+    },
+    {
+      "fold": 4,
+      "trades": 23,
+      "net_r": 0.3972,
+      "expectancy_r": 0.0173,
+      "start": "2026-08-02 02:00:00+00:00",
+      "end": "2026-11-09 22:00:00+00:00"
+    }
+  ],
+  "folds_positive": 3,
+  "window_days": 365,
+  "fee_bps_roundtrip": 11.0,
+  "path_stats": {
+    "series_location": "source_run (the per-trade rows, in order, with net_r)",
+    "n": 83,
+    "max_drawdown_r": 10.8182,
+    "max_drawdown_at_trade": 63,
+    "final_equity_r": 1.3856,
+    "max_equity_r": 8.5454,
+    "worst_trade_r": -1.1209,
+    "best_trade_r": 5.7156,
+    "worst_day_r": -2.0752,
+    "worst_day_date": "2026-02-25",
+    "trades_without_exit_time": 0,
+    "ordering": "by entry_time ascending; pooled ACROSS folds, so this is the full-window path, not a per-fold one",
+    "not_a_verdict": "Descriptive only. No bar is applied here -- the prop bar is B6's to register, and it must be registered before these numbers are read."
+  },
+  "cost_stack": {
+    "fees": 11.0,
+    "slippage": 3.0,
+    "funding": 1.0,
+    "unit": "bps_roundtrip (funding: bps per funding window)",
+    "source": "comms/research/RQ-20261113-f251-01/43447401545/evidence_runs/eth_pullback_2h__bt.json"
+  },
+  "net_r_oos_fee_only": 3.6702,
+  "decision_rule": {
+    "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
+    "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
+    "registered_at": "2026-09-22T05:34:08Z",
+    "verdict": "pass"
+  },
+  "param_selection_provenance": "not_established",
+  "generated_at": "2026-11-13T15:06:05.109847+00:00",
+  "generated_by": "scripts/ops/build_strategy_evidence.py",
+  "source_run": "comms/research/RQ-20261113-f251-01/43447401545/evidence_runs/eth_pullback_2h__trades.jsonl",
+  "error": null,
+  "harness": "pullback",
+  "reproduce": {
+    "window_days": 365,
+    "window_days_source": "--data-csv span",
+    "folds": 4,
+    "data_start": "2025-11-13 00:00:00+00:00",
+    "data_end": "2026-11-12 22:00:00+00:00",
+    "git_sha": "8cffce56ab294bcf7f06347f68d60181ce5a70b1",
+    "argv": [
+      "python3",
+      "scripts/ops/build_strategy_evidence.py",
+      "--strategy",
+      "eth_pullback_2h",
+      "--days",
+      "365",
+      "--folds",
+      "4",
+      "--window-start",
+      "2025-11-13 00:00:00+00:00",
+      "--window-end",
+      "2026-11-12 22:00:00+00:00",
+      "--data-csv",
+      "/tmp/forming_regen_e5eo1z5s/eth_pullback_2h__data.csv",
+      "--minutes-1m-csv",
+      "/tmp/forming_regen_e5eo1z5s/ETHUSDT__2025-11-11__2026-11-14__1m.csv"
+    ],
+    "inputs": {
+      "data_csv": "/tmp/forming_regen_e5eo1z5s/eth_pullback_2h__data.csv",
+      "minutes_1m_csv": "/tmp/forming_regen_e5eo1z5s/ETHUSDT__2025-11-11__2026-11-14__1m.csv",
+      "decision_session": null,
+      "decision_bar_modelled": "forming"
+    }
+  },
+  "venue_bracket_arm": null
+}

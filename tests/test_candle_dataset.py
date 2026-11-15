@@ -97,3 +97,25 @@ def test_build_records_failure_and_continues(tmp_path, monkeypatch):
     rec = cd.coverage_record(man)
     assert rec["feeds"][cd.feed_id(("binance", "BADUSDT", "240"))]["status"] == "failed"
     assert (tmp_path / cd.MANIFEST_NAME).is_file()
+
+
+def test_strategies_is_parsed_once_per_file_version(tmp_path, monkeypatch):
+    """RQ-DISPATCHER-ONLY-FULL-SCAN: the dispatcher calls `_strategies()` once per queue unit; re-parsing the YAML each time
+    cost ~97% of a single-unit dry run (71 s). Same file version -> one parse; an edited file -> re-read."""
+    import yaml
+    from scripts.research import candle_dataset as cd
+
+    (tmp_path / "config").mkdir()
+    f = tmp_path / "config" / "strategies.yaml"
+    f.write_text("strategies:\n  a: {timeframe: '15'}\n", encoding="utf-8")
+    monkeypatch.setattr(cd, "_REPO", tmp_path)
+    cd._STRATEGIES_CACHE.clear()
+    calls = []
+    real = yaml.safe_load
+    monkeypatch.setattr(yaml, "safe_load", lambda *a, **k: calls.append(1) or real(*a, **k))
+    assert cd._strategies() == {"a": {"timeframe": "15"}}
+    assert cd._strategies() is cd._strategies()
+    assert len(calls) == 1
+    f.write_text("strategies:\n  b: {timeframe: '60'}\n  c: {}\n", encoding="utf-8")
+    assert set(cd._strategies()) == {"b", "c"} and len(calls) == 2
+    cd._STRATEGIES_CACHE.clear()

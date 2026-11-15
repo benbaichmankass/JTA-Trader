@@ -90,3 +90,65 @@ def test_heldout_census_counts_only_classified_heldout_registered_passes():
     assert c["registered_passes"] == 4
     assert c["unknown_holdout"] == 1
     assert c["by_holdout"]["in_sample"] == 1
+
+
+def test_heldout_census_keys_on_result_date_and_counts_a_confirmation_once():
+    """AUD-20261019-RESEARCH-SLO-RED: a re-stamped graded_at must not pull an old verdict into the window, and a
+    holdout re-run of a counted discovery is one survivor, not two."""
+    from datetime import datetime, timezone
+
+    from scripts.research.research_slo import heldout_pass_census
+
+    now = datetime(2026, 11, 12, tzinfo=timezone.utc)
+    rbr = {"registered_before_run": True}
+    ec = {"holdout": "holdout_window", "claim": "edge"}
+    g = {"verdict": "pass", "graded_at": "2026-11-12"}           # every stamp re-written today
+    units = {
+        "OLD": {"id": "OLD", "grading": g, "decision_rule": rbr, "evidence_class": ec},
+        "NEW": {"id": "NEW", "grading": g, "decision_rule": rbr, "evidence_class": ec},
+        "NEW-CONF": {"id": "NEW-CONF", "grading": g, "decision_rule": rbr, "evidence_class": ec,
+                     "confirmation": {"of": "NEW", "mode": "holdout_rerun"}},
+    }
+    landed = {"OLD": datetime(2026, 9, 30, tzinfo=timezone.utc), "NEW": datetime(2026, 11, 1, tzinfo=timezone.utc),
+              "NEW-CONF": datetime(2026, 11, 2, tzinfo=timezone.utc)}
+    c = heldout_pass_census(units, now, days=30, verdict_at=lambda uid, ga: landed[uid])
+    assert c["held_out_edge"] == 2 and c["held_out_edge_distinct"] == 1 and c["held_out_edge_ids"] == ["NEW"]
+    assert c["window_keyed_on"] == {"result_date": 2, "graded_at_fallback": 0}
+    # without dated results the graded_at fallback applies (and says so)
+    c2 = heldout_pass_census(units, now, days=30)
+    assert c2["held_out_edge"] == 3 and c2["window_keyed_on"]["graded_at_fallback"] == 3
+
+
+def test_census_excludes_unconfirmed_splits_subjects_and_counts_conversion():
+    """RESEARCH-SLO-SURVIVOR-CONVERSION: a pass whose own held-out read failed is not a survivor; survivors split by
+    subject from structured fields; conversion = cited by the config tree (report-only)."""
+    from datetime import datetime, timezone
+
+    from scripts.research.research_slo import classify_subject, heldout_pass_census
+
+    now = datetime(2026, 11, 12, tzinfo=timezone.utc)
+    rbr = {"registered_before_run": True}
+    ec = {"holdout": "holdout_window", "claim": "edge"}
+
+    def g(conf=None):
+        return {"verdict": "pass", "graded_at": "2026-11-10", **({"confirmation": conf} if conf else {})}
+
+    units = {
+        "LEV": {"id": "LEV", "grading": g("confirmed"), "decision_rule": rbr, "evidence_class": ec,
+                "generated": {"family": "m20-exit-lever"}},
+        "LEV-FAIL": {"id": "LEV-FAIL", "grading": g("not_replicated"), "decision_rule": rbr, "evidence_class": ec,
+                     "generated": {"family": "m20-exit-lever"}},
+        "LEV-THIN": {"id": "LEV-THIN", "grading": g("underpowered"), "decision_rule": rbr, "evidence_class": ec},
+        "ML": {"id": "ML", "grading": g(), "decision_rule": rbr, "evidence_class": {**ec, "subject": "new"}},
+        "REVAL": {"id": "REVAL", "grading": g(), "decision_rule": rbr, "evidence_class": {**ec, "subject": "revalidation"}},
+        "BARE": {"id": "BARE", "grading": g(), "decision_rule": rbr, "evidence_class": ec},
+    }
+    c = heldout_pass_census(units, now, days=30, cited=lambda uid: uid == "ML")
+    assert c["excluded_unconfirmed"] == {"not_replicated": 1, "underpowered": 1}
+    assert c["held_out_edge_distinct"] == 4
+    assert c["by_subject"] == {"lever": 1, "new": 1, "revalidation": 1, "unknown": 1}
+    assert c["converted"] == "1/4" and c["converted_ids"] == ["ML"]
+    # a holdout re-run inherits its parent's lever family
+    assert classify_subject({"confirmation": {"of": "LEV"}}, units) == "lever"
+    # no tree -> conversion is not measured, never 0
+    assert heldout_pass_census(units, now, days=30)["converted"] is None

@@ -257,6 +257,15 @@ def _size_unbounded(
 # instruments.yaml is missing or partial.
 
 
+#: Venues that hold ONE net position per contract, where an opposite-side
+#: order reduces the held position (the netted-venue exposure exemption,
+#: ``RiskManager._net_reducing_qty``). IB only, deliberately: Bybit nets in
+#: one-way mode but runs a hedge-mode allowlist (``bybit_position_mode``), and
+#: Alpaca was not part of the 2026-11-12 decision's evidence. Widening this set
+#: is its own decision.
+NETTED_EXCHANGES: frozenset = frozenset({"interactive_brokers", "ib"})
+
+
 def contract_value_usd_for(symbol: str) -> float:
     """Return the USD-per-point contract value for *symbol* (default 1.0).
 
@@ -359,7 +368,14 @@ class RiskManager:
         *,
         dry_run: bool = False,
         account_id: str = "",
+        exchange: Optional[str] = None,
     ) -> None:
+        # The account's venue (``accounts.yaml::<acct>.exchange``). Read ONLY by
+        # the netted-venue exposure exemption (``_net_reducing_qty``); ``None``
+        # (a caller that does not pass it) keeps every pre-2026-11-12 path.
+        self.exchange: Optional[str] = (
+            str(exchange).strip().lower() if exchange else None
+        )
         self.max_dd_pct: float = float(config.get("max_dd_pct", 0.05))
         self.max_daily_loss_usd: float = float(config.get("daily_usd", 100.0))
         # Percentage-based daily-loss cap (operator-approved 2026-05-28).
@@ -657,6 +673,61 @@ class RiskManager:
             return base * contract_value_usd_for(symbol)  # same basis as the total
         except Exception:  # noqa: BLE001  # allow-silent: unknown, not zero — the caller branches on None
             return None
+
+    def _open_net_qty_for_symbol(self, symbol: str) -> Optional[float]:
+        """Signed net open quantity for ONE symbol (long +, short -), from the
+        journal, same filters as ``_open_notional_for_symbol``. ``None`` = could
+        not look (never 0.0, which means "flat")."""
+        if not self.account_id or not symbol:
+            return None
+        try:
+            import sqlite3
+            uri = "file:%s?mode=ro" % self._risk_db_path()
+            with sqlite3.connect(uri, uri=True, timeout=5) as conn:
+                row = conn.execute(
+                    "SELECT COALESCE(SUM(CASE LOWER(COALESCE(direction, '')) "
+                    "  WHEN 'long' THEN COALESCE(position_size, 0) "
+                    "  WHEN 'short' THEN -COALESCE(position_size, 0) "
+                    "  ELSE 0 END), 0.0), "
+                    "SUM(CASE WHEN LOWER(COALESCE(direction, '')) "
+                    "  IN ('long', 'short') THEN 0 ELSE 1 END) "
+                    "FROM trades "
+                    "WHERE account_id=? AND status='open' AND symbol=? "
+                    "AND COALESCE(is_backtest, 1) = 0",
+                    (self.account_id, symbol),
+                ).fetchone()
+            if row is None:
+                return None
+            if row[1]:
+                return None  # a row with no readable side: the net is unknown
+            return float(row[0] or 0.0)
+        except Exception:  # noqa: BLE001  # allow-silent: unknown, not flat — the caller branches on None
+            return None
+
+    def _net_reducing_qty(self, package: OrderPackage) -> float:
+        """How much of *package* REDUCES this account's absolute net position on
+        its symbol, in units. Netted venues only; 0.0 everywhere else.
+
+        Operator decision 2026-11-12 (decisions page w15, "Yes: exempt
+        net-reducing orders on netted venues"; row ZERO-QTY-EXPOSURE-EXPLAIN,
+        evidence PI-20261104-KKPOFDJQ-0004). On a venue that nets one position
+        per contract, an order against a held opposite position shrinks
+        |net| for its first ``|net_qty|`` units, so those units need no
+        exposure headroom; only the part that flips past flat opens new
+        exposure and is clamped. ``0.0`` (no exemption: the pre-decision
+        behaviour) when the venue does not net, the net cannot be read, the
+        account is flat on the symbol, or the order adds to the held side.
+        """
+        if self.exchange not in NETTED_EXCHANGES:
+            return 0.0
+        direction = str(getattr(package, "direction", "") or "").lower()
+        if direction not in ("long", "short"):
+            return 0.0
+        net = self._open_net_qty_for_symbol(getattr(package, "symbol", "") or "")
+        if net is None or net == 0:
+            return 0.0
+        opposes = (net < 0) if direction == "long" else (net > 0)
+        return abs(net) if opposes else 0.0
 
     def _pledged_margin_estimate(
         self, leverage: int, exclude_symbol: Optional[str] = None
@@ -1014,7 +1085,11 @@ class RiskManager:
         # instead of rejecting. An undeclared ceiling and an unmeasurable
         # exposure both resolve to ALLOW inside exposure_verdict().
         if self.exposure_verdict().action == _exposure.REFUSE:
-            return False, "GROSS_EXPOSURE_CAP"
+            # Netted-venue exemption (operator 2026-11-12, w15): an order that
+            # reduces the account's absolute net position on its symbol is not
+            # new exposure. position_size() caps it at the reducing quantity.
+            if self._net_reducing_qty(order) <= 0:
+                return False, "GROSS_EXPOSURE_CAP"
 
         return True, None
 
@@ -1439,7 +1514,14 @@ class RiskManager:
         # the correct composition.
         headroom = self.exposure_headroom_usd()
         if headroom is not None and package.entry:
-            max_qty_by_exposure = headroom / (package.entry * cvu)
+            # Netted venues (operator 2026-11-12, w15): clamp on the change in
+            # ABSOLUTE NET exposure. The first ``reducing`` units shrink |net|
+            # and need no headroom; only units past flat consume it. 0.0 on a
+            # non-netted venue or an unreadable net -> the pre-decision clamp.
+            reducing = self._net_reducing_qty(package)
+            max_qty_by_exposure = reducing + max(float(headroom), 0.0) / (
+                package.entry * cvu
+            )
             if qty > max_qty_by_exposure:
                 capped = _floor_to_step(max_qty_by_exposure, eff_precision)
                 if capped < eff_min_qty:

@@ -17,9 +17,9 @@ manifest:
   entry: underpowered
   exit: untested
   filter: untested
-  regime_gating: untested
-  timeframe: untested
-  symbol_set: untested
+  regime_gating: underpowered
+  timeframe: underpowered
+  symbol_set: underpowered
   direction: underpowered
   session: untested
   sizing_vs_cost: tested
@@ -27,6 +27,7 @@ levers: {}
 title: Vol-targeted time-series momentum portfolio, top-20 liquid USD-M perps, daily, weekly rebalance
 units:
 - RQ-20261101-58e4-01
+- RQ-20261101-d1f3-01
 doctrine: 'operator 2026-11-01 14:00-14:09Z: nothing that failed is closed; attribute first; next tests are one-factor/ablation chosen from this
   map; retire only when every lever family has been tested at power, net of cost, with no effect'
 verdict_so_far: 'fail: primary T4 net Sharpe 0.76, halves 1.37 / -0.04, DSR(N=9) 0.51; clause fail'
@@ -136,6 +137,37 @@ levers_tested:
       stress_sharpe: 0.728
   shape: 'Sharpe unchanged (0.76 / 0.76): scale-invariant, as expected; no information'
   tested_at_power: true
+- family: regime_gating
+  varied: regime gate R1/R2 vs control T4 (attempt 2)
+  response:
+    delta_sharpe:
+      R1: 0.075
+      R2: 0.218
+    verdict: fail
+    note: no arm clears the registered rule at N_cum=16
+  shape: noisy
+  tested_at_power: false
+  unit: RQ-20261101-d1f3-01
+- family: timeframe
+  varied: rebalance frequency F1/F2 (attempt 2)
+  response:
+    delta_sharpe:
+      F1: 0.107
+      F2: -0.162
+    verdict: fail
+  shape: noisy
+  tested_at_power: false
+  unit: RQ-20261101-d1f3-01
+- family: symbol_set
+  varied: universe size U1/U2 (attempt 2)
+  response:
+    delta_sharpe:
+      U1: 0.233
+      U2: 0.029
+    verdict: fail
+  shape: noisy
+  tested_at_power: false
+  unit: RQ-20261101-d1f3-01
 lever_families_untested:
 - regime filter (BTC trend / vol-state gate on shorts or on the whole book)
 - short-side funding awareness (skip shorts when funding makes them costly, or pay-receive asymmetry)
