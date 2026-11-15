@@ -4,7 +4,7 @@ id: RQ-20261114-1ae8-01
 title: 'D8 exit-now v0: does closing an ml_entry position at a 4h check-in, when the first-passage ML model values holding
   below closing net of the exit cost, beat or match holding to the fixed bracket, net of the full cost stack, on the
   record year AND the year before?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -111,3 +111,17 @@ lands:
   assert_field: read_state
   min_rows: 1
 last_dispatched_at: '2026-11-15T01:02:20+00:00'
+grading:
+  attested: RULE-RQ20261114-1ae8-01-EXIT-NOW-V0
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261114-1ae8-01-EXIT-NOW-V0
+  evidence:
+  - research/results/RQ-20261114-1ae8-01/43661155486.jsonl
+  graded_at: '2026-11-15'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

@@ -94,3 +94,15 @@ ml_consumer:
   book: money
 rearmed_at: '2026-11-15T02:30:00+00:00'   # #26184 merged 02:30Z: producer now scores the committed 0afc4994 ensemble
 last_dispatched_at: '2026-11-15T07:54:23+00:00'   # re-armed 2026-11-15 ML-PRIMARY-2: stamp_lost re-stamped #26184's null from the pre-fix row 43646720569
+grading:
+  attested: RULE-RQ20261112-8d20-02-HTF-CT-EQ
+  auto: true
+  decision_rule_id: RULE-RQ20261112-8d20-02-HTF-CT-EQ
+  evidence:
+  - research/results/RQ-20261112-8d20-02/43646720569.jsonl
+  graded_at: '2026-11-15'
+  grader: scripts/research/queue_grade.py
+  needs_review: true
+  reason: 'read_state not unanimously measured: [''not_attempted'']'
+  rows: 1
+  verdict: null
