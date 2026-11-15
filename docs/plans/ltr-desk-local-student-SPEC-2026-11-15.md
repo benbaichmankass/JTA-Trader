@@ -2,7 +2,7 @@
 
 > **Doc status:** `unknown` · category `unknown` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
 
-**State: SPEC, queued for after the 2026-11-18 18:00Z weekly reset.** Build row: `LTR-LOCAL-STUDENT` (Tier 1 for
+**State: SPEC, ON HOLD until after the 2026-11-18 18:00Z weekly reset (operator 2026-11-15 ~15:15Z: build after the reset, aiming at an ML that proves it will not lose money).** Build row: `LTR-LOCAL-STUDENT` (Tier 1 for
 stages S0–S1, which only write shadow records). Builds on, and does not replace,
 [`ml-claude-distillation-DESIGN.md`](ml-claude-distillation-DESIGN.md) (the `claude_judgments` pipe) and
 [`.claude/skills/trading-desk/SKILL.md`](../../.claude/skills/trading-desk/SKILL.md) § 6 stage 4 ("students take over
@@ -108,13 +108,21 @@ them without new code paths.
 - The per-bar student also produces decisions where no teacher row exists. Those are graded against hold only.
 - Writes `comms/live_review/student_grade.json`, which the Wednesday `/ml-review` reads as a fixed check.
 
-## 4. How the students move up (existing rules, nothing new)
+## 4. How the students move up
 
-1. **S-shadow** (this build): rows written, nothing applied.
-2. **S-advisory**: the student's non-hold calls ping the operator alongside the LTR's. This needs the S1 unit PASS.
-3. **S-drives**: the student's calls are applied through `live_review_apply.py` under `MD-TRADE-DESK`. This needs
-   net R per capital-day, out of sample, margin 0 vs Claude (trading-desk § 6 stage 4, operator-DECIDED), per action
-   class.
+**Operator decision 2026-11-15 ~15:15Z (chat), binding for this line:** the first local version does **not** have to
+beat Claude. It runs at a higher cadence as an urgent check and a fallback, so the bar for it to go live is that it
+**proves it will not lose money**: non-inferior to hold, net of the full cost stack, out of sample, on a rule
+registered before the run. It then serves as the live baseline that later versions are measured against. The S0 rule
+was measured at +0.004 R/decision vs hold, 95% CI [-0.002, +0.009] (n 167 graded reviews, counterfactual) with its
+tightens unpriced, so it is not built ahead of the reset; the first live candidate is the S1 model after the reset.
+
+1. **S-shadow**: rows written, nothing applied (only while the no-loss test is being run).
+2. **S-drives (fallback)**: the student's calls are applied through `live_review_apply.py` under `MD-TRADE-DESK` at
+   its own cadence, beside the LTR, once its pre-registered **no-loss test vs hold** passes per action class (the
+   operator's 2026-11-15 bar above). This narrows trading-desk § 6 stage 4's "margin 0 vs Claude" for this line only;
+   beating Claude is the bar for the S3 step (§ 5), where the student replaces Claude's wakes, not for running as a
+   fallback beside them.
 
 ## 5. The capacity payoff, and the one operator decision it needs
 
