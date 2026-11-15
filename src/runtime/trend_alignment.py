@@ -152,6 +152,12 @@ def _infer_step(bars: Optional[pd.DataFrame]) -> Optional[pd.Timedelta]:
 #: was never computed for the package, so a reader renders "—", never neutral.
 UNSTAMPED_REASONS = ("not_stamped_by_builder", "snapshot_scored_no_candles")
 
+#: Why D1 is null on a NON-DAILY leg's live package (row TREND-ALIGN-D1-LATENCY-TEST, pre-registered rule TRIPPED 2026-11-15
+#: 16:21Z: 3 legs with n>=3 rose >30 s in bar-close latency and 4 post-deploy packages exceeded 300 s after #26149 put a 1d
+#: fetch on every actionable signal). The live path no longer fetches 1d candles for a non-daily leg; the ESTIMATED backfill
+#: labeller computes D1 off-path. The LEG label is unchanged. Never neutral: a reader renders "—".
+D1_OFF_PATH_REASON = "d1_off_path"
+
 
 def unlabelled(reason: str, side: Any = None) -> Dict[str, Any]:
     """A ``meta.trend_align`` of the full shape with BOTH labels null and ``reason`` -- for a package whose builder computed
