@@ -361,6 +361,54 @@ def test_branch_read_failure_falls_back_to_main_only(tmp_path):
     assert raising["state"] == "could_not_look"
 
 
+# --- LTR-DIRECT-ROWS-INVISIBLE: rows POSTed directly to the VM (REVIEWER-BRIEF § 4a) ------------------
+
+def _direct(rows):
+    return lambda: {"state": "read", "rows": rows}
+
+
+def test_direct_only_review_suppresses_rewake_like_a_branch_row(tmp_path):
+    db = str(tmp_path / "j.db")
+    _db(db, [("pkg-1", "7", "ada_pullback_2h", "ADAUSDT", "bybit_2", "short",
+              2.2, 2.3, "measured", 0.1, 3.0, NOW.isoformat())])
+    main = tmp_path / "main.jsonl"
+    main.write_text(json.dumps(dict(review(at=NOW - timedelta(hours=30), peak=1.8), review_id="old")) + "\n")
+    empty_branch = _branch([])
+    alone = lrd.live_review_due(db_path=db, reviews_path=str(main), now=NOW, branch=empty_branch,
+                                direct=_direct([]))
+    assert any(e["event"] == "new_peak" for d in alone["due"] for e in d["events"])
+    row = _branch_row("LR-direct-1", NOW - timedelta(minutes=5), 2.14)
+    out = lrd.live_review_due(db_path=db, reviews_path=str(main), now=NOW, branch=empty_branch,
+                              direct=_direct([row]))
+    assert out["direct_state"] == "read" and out["direct_rows_added"] == 1
+    assert not any(e["event"] in ("new_peak", "r_milestone") for d in out["due"] for e in d["events"])
+
+
+def test_read_reviews_merged_counts_direct_rows_and_survives_a_failed_direct_read(tmp_path):
+    main = tmp_path / "main.jsonl"
+    main.write_text(json.dumps({"review_id": "a", "order_package_id": "p"}) + "\n")
+    rv = lrd.read_reviews_merged(str(main), _branch([{"review_id": "b"}]),
+                                 _direct([{"review_id": "b"}, {"review_id": "c", "order_package_id": "p"}]))
+    assert [r["review_id"] for r in rv["rows"]] == ["a", "b", "c"]
+    assert rv["branch_added"] == 1 and rv["direct_added"] == 1 and rv["direct_state"] == "read"
+    bad = lambda: {"state": "could_not_look", "rows": [], "reason": "direct_error: x"}  # noqa: E731
+    rv2 = lrd.read_reviews_merged(str(main), _branch([]), bad)
+    assert [r["review_id"] for r in rv2["rows"]] == ["a"] and rv2["direct_state"] == "could_not_look"
+
+
+def test_read_direct_rows_reads_the_vm_tree_skipping_bad_files(tmp_path):
+    from src.runtime import live_review_rows as rows_lib
+    assert lrd.read_direct_rows(str(tmp_path))["state"] == "absent"
+    d = tmp_path / rows_lib.ROWS_DIR
+    d.mkdir(parents=True)
+    (d / "LR-1.json").write_text(json.dumps({"review_id": "LR-1", "order_package_id": "pkg-858c60dc674d418f"}))
+    (d / "LR-2.json").write_text("{not json")
+    (d / "LR-3.json").write_text(json.dumps({"no_review_id": True}))
+    (d / "notes.txt").write_text("ignored")
+    got = lrd.read_direct_rows(str(tmp_path))
+    assert got["state"] == "read" and [r["review_id"] for r in got["rows"]] == ["LR-1"] and got["bad_files"] == 2
+
+
 # ----------------------------------------------------------------------------- DESK-AM-REFOCUS judgement_cadence
 
 # The slot mechanics are tested against an explicit cadence, not the shipped value: the shipped hours may be
