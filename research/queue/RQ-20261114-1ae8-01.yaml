@@ -99,3 +99,14 @@ practice_precedent: 'RQ-20261101-383f-01 (Labrador-1b: same recipe, harness and 
 follow_up: 'ML-PRIMARY grades on landing and updates MLP-D8-LABRADOR-2; PASS -> held Tier-3 PR reported to the manager.'
 smoke_disclosure: 'This rule was written while a 3-symbol (BTC/ETH/SOL) code-path smoke of exit-now-v0 ran, before its
   output was read. The smoke exercises both windows on that subset; its numbers are not evidence and change nothing above.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 120
+  why_runner: Keyless public Binance Vision archives; GBDT on CPU (GitHub runner).
+  basis: 'INFERRED from a 3-symbol local smoke of the same subcommand (~1 min) scaled to the 60-perp universe with 5 TP refits plus 100 random-close draws.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1

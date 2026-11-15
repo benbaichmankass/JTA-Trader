@@ -111,3 +111,14 @@ follow_up: 'ML-PRIMARY grades on landing and updates MLP-D6-POINTER in docs/plan
 smoke_disclosure: 'Before commit, lane ML-PRIMARY ran a code-path smoke of pointer-v0 on a 3-symbol universe (BTC/ETH/SOL,
   5 random draws) AFTER this rule text was written; it exercised both read windows on that subset. Its numbers are not
   evidence and changed nothing above; the registered population is the full served universe.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 120
+  why_runner: Keyless public Binance Vision archives; GBDT on CPU (GitHub runner).
+  basis: 'INFERRED from a 3-symbol local smoke of the same subcommand (~1 min) scaled to the 60-perp universe with 5 TP refits; the c692 table build dominates.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1

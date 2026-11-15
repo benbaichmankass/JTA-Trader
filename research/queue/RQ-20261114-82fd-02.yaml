@@ -9,7 +9,11 @@ theme: ml_health
 priority: 1
 roadmap:
 - L-ML-LIVE
-kind: census
+kind: deterministic
+why_not_inferential: >-
+  A count, not a test of an effect: the census counts overlapping trades on fixed, fully replayed solo streams over
+  two fixed windows. Re-running it returns the same count; there is no sampling distribution to power. The verdict
+  is a materiality threshold on that count (>= 20 concurrent trades AND share >= 15 percent in both windows).
 question: 'D5 (position aggregation) is a rule today: slices (config/slice_allocation.yaml) split a per-(account, symbol)
   budget across live packages. ML-ROADMAP-MECE § 4.7: before a harness or a model, count concurrency. For each declared
   real-money pair, replay every rostered leg ALONE on the same window (rule legs: backtest_system solo arm, full cost
@@ -99,3 +103,14 @@ value:
 smoke_disclosure: 'Before commit, lane ML-PRIMARY ran a code-path smoke AFTER this rule was written, on a pair NOT in the
   declared list (bybit_2 SOLUSDT, trend_donchian_sol_prop + trend_donchian_sol_4h, rule legs only, two windows). It is
   not evidence for this unit and changed nothing above. The ml_entry stream path was smoked through pointer-v0.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 180
+  why_runner: Keyless public Binance Vision archives; GBDT on CPU (GitHub runner).
+  basis: 'INFERRED from a local one-pair smoke (~12 min incl. the 5m fetch for one symbol) x 5 pairs (4 symbols) plus the ml_entry served replay.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
