@@ -139,3 +139,14 @@ def test_cli_writes_files_and_a_manifest(tmp_path):
     man = json.loads((out / "manifest.json").read_text())
     assert [(d["collection"], d["doc_id"]) for d in man["docs"]] == [("lanestatus", "current")]
     assert "json" in json.loads(Path(man["docs"][0]["path"]).read_text())
+
+
+def test_workplan_source_is_pinnable_and_always_printed(tmp_path, capsys):
+    for wk in ("2026-11-05", "2026-11-12"):
+        p = tmp_path / f"docs/plans/weekly/{wk}/WORKPLAN.md"
+        p.parent.mkdir(parents=True)
+        p.write_text(PLAN)
+    newest = B.latest_workplan(root=tmp_path)
+    assert newest.parent.name == "2026-11-12" and "newest of 2 weekly plan(s)" in capsys.readouterr().err
+    pin = tmp_path / "docs/plans/weekly/2026-11-05/WORKPLAN.md"
+    assert B.latest_workplan(root=tmp_path, pinned=pin) == pin and "pinned (--plan)" in capsys.readouterr().err

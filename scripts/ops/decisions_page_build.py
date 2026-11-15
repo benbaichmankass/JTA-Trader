@@ -91,9 +91,19 @@ def _row(it: Optional[dict]) -> Dict[str, Any]:
 
 
 # ── workplan ──────────────────────────────────────────────────────────────────────────────────────────────────────
-def latest_workplan(root: Path = REPO) -> Optional[Path]:
-    weeks = sorted(p for p in (root / "docs/plans/weekly").glob("*/WORKPLAN.md"))
-    return weeks[-1] if weeks else None
+def latest_workplan(root: Path = REPO, pinned: Optional[Path] = None) -> Optional[Path]:
+    """The weekly plan to read: ``pinned`` (``--plan``) when given, else the newest ``docs/plans/weekly/<week>/``.
+    The choice is printed to stderr and recorded as the payload's ``plan`` field, so a fallback is never silent."""
+    if pinned is not None:
+        chosen: Optional[Path] = pinned
+        how = "pinned (--plan)"
+    else:
+        # provenance: latest_workplan — newest weekly plan by ISO week directory name (YYYY-MM-DD sorts by date);
+        # the path is printed below and written into the payload's "plan" field
+        weeks = sorted(p for p in (root / "docs/plans/weekly").glob("*/WORKPLAN.md"))
+        chosen, how = (weeks[-1] if weeks else None), f"newest of {len(weeks)} weekly plan(s)"
+    print(f"decisions_page_build: workplan source = {chosen} ({how})", file=sys.stderr)
+    return chosen
 
 
 def parse_workplan(text: str) -> List[Dict[str, Any]]:
@@ -306,6 +316,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("what", choices=("all", "workplan", "lanestatus", "rdreg", "plans"))
     ap.add_argument("--out", required=True, type=Path)
     ap.add_argument("--items-json", type=Path, help="read work items from this file instead of the API (tests)")
+    ap.add_argument("--plan", type=Path, help="pin the WORKPLAN.md to read (default: the newest weekly plan, printed)")
     a = ap.parse_args(argv)
     if a.items_json:
         items, rs = json.loads(a.items_json.read_text()), "read (file)"
@@ -313,7 +324,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         items, rs = fetch_items()
     manifest: List[dict] = []
     if a.what in ("all", "workplan"):
-        wp = build_workplan(items, latest_workplan(), rs)
+        wp = build_workplan(items, latest_workplan(pinned=a.plan), rs)
         write_out(a.out, "workplan", chunk_docs(wp, "p", wp["generated_at"]), manifest)
     if a.what in ("all", "lanestatus"):
         write_out(a.out, "lanestatus", [("current", {"json": json.dumps(build_lanestatus(items, rs))})], manifest)
