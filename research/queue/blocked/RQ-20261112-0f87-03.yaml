@@ -1,0 +1,76 @@
+# Hand-authored 2026-11-12 by lane ML-SLOT-MAP (Tier 1), dispatched by AM-ML for Manager Session 2026-11-11a. ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered before any run.
+id: RQ-20261112-0f87-03
+title: 'ITERATION 1 of ml-entry-tp-revision-v1 (D7): on a fresh count-closed window after the frozen model, is the mean delta net R (revised TP
+  minus held TP) >= 0?'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+question: On a count-closed forward window opened after 2026-11-12, over trades with at least one TP revision, is the mean delta net R per trade
+  (policy minus the fixed 3 ATR TP) >= 0 with a day-clustered 95% CI reported?
+why_this_matters: ml-entry-tp-revision-v1 changes real-money TPs on 6 books and its only evidence is one point estimate of +0.0081 R; this unit
+  takes the second, independent read the slot baseline (original TP held) calls for (row ML-SLOT-BASELINES-DECLARE).
+practice_precedent: 'M1, M2 (docs/reference/trading-and-model-practice-principles.md): confirm a small effect on a window the model never saw'
+iteration:
+  subject: ml-entry-tp-revision-v1
+  subject_kind: ml_model
+  from_result: RQ-20261101-383f-01 (RULE-RQ20261101-383f-01-ML-ENTRY-TP-REVISION, graded PASS 2026-11-03)
+  verdict_read: pass_unconfirmed
+  diagnosis: RQ-20261101-383f-01 graded PASS on a held-out window read once under a point-estimate >= 0 bar; the power table carries mean delta
+    net R +0.0081 (n 868), which is 0.8% of an R and has no clustered SE recorded (sd null). A point-estimate bar on an effect that small is inside
+    noise, and the window was read once and is now burned. The model is served live on 6 books with no demotion read and no second window.
+  hypothesis: the revision still has delta net R >= 0 on a fresh window the frozen model never saw; a negative read triggers the declared demotion
+    read as a manager proposal
+  attempt: 1
+  due_by: '2026-11-26'
+power:
+  expected_n: 300
+  min_detectable_effect: 0.0
+  effect_units: metric
+  sd: 1.0
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATED: the floors are the sister unit own (RULE-RQ20261101-383f-01); a point-estimate bar needs no power target.'
+  feasibility:
+    source: none
+    accrual_basis: Replays existing corpora or reads the VM journal; see blocked_on.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+decision_rule:
+  id: RULE-RQ202611120f8703
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: Per trade delta net R = policy net R - held-TP net R on the same trade, full cost stack, scripts/research/ml_entry_tp_revision.py
+    on the forward window.
+  rule: INDETERMINATE IF forward trades < 300 OR distinct symbols < 10 OR trades with >= 1 TP move < 30. PASS IF the forward mean delta net R
+    per trade (policy minus fixed TP) >= 0, point estimate, the same operator bar as RQ-20261101-383f-01. FAIL otherwise. The window is read ONCE;
+    thresholds are not changed after any result; the clustered CI is REPORTED, not gating.
+  what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order. A result is a data-backed proposal for the manager,
+    never an action.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: Estimate; the first run replaces it.
+  why_runner: CPU replay or a journal read.
+intervention_controls:
+  not_applicable: an offline model evaluation; the consumer own gate applies any action
+blocked_on:
+- kind: accrual
+  ref: ml_entry forward window
+  what: '>= 300 closed ml_entry trades across >= 10 symbols with >= 30 revised-TP trades after 2026-11-12'
+  clears_when: 'the count is met on the mirror journal; then git-mv to research/queue/ and add run: (ml_entry_tp_revision.py run on the new window),
+    rule unchanged'
+ml_consumer:
+  consumer: src/runtime/tp_revision.py
+  decision: extend the entry TP
+  legs:
+  - ml_entry
+  book: money

@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "why": "Tier-1 research tooling/maps (AM-ML 04:03Z item 3): iteration_orphans.py + lever_map.py read each testing leg's OWN evidence -- never a sibling configured leg's record (ml_entry_v2/ml_entry_eq read ml_entry.json, v1's PASS, hiding v2's b610-01 FAIL); an explicit leg_evidence block in iteration_subjects.yaml points v2 -> b610-01 (FAIL) and eq -> e9a1-02 (PASS). Regenerated maps change only those two. Records the d1f3 attempt-2 FAILs in the 5 candidate-leg lever maps via lever_map.py --append. Self-tests pass. No config, gate or runtime path.",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Tier-1 research tooling + lever maps (AM-ML 04:03Z item 3). research/levers/* is outside the R5 Tier-1 surface, so this holds for AM-ML. iteration_orphans.py/lever_map.py read each leg's OWN evidence (leg_evidence override in iteration_subjects.yaml; no fallback to a sibling configured leg's record): ml_entry_v2 -> b610-01 FAIL (was v1's PASS), ml_entry_eq -> e9a1-02 PASS; regenerated maps change only those two; d1f3 attempt-2 FAILs appended to 5 candidate-leg maps via lever_map.py --append. Self-tests pass. Revert: git revert."
+}

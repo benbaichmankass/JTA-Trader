@@ -177,7 +177,7 @@ def _intent():
 
 
 def test_live_review_prop_vm_move_tp_is_queued_for_velotrade_and_refused_for_tradeify():
-    assert lra.ACTION_PATHS["prop_vm"] == frozenset({"move_tp"})
+    assert "move_tp" in lra.ACTION_PATHS["prop_vm"]          # close / reduce joined it (CAP-PROP-VM-CLOSE)
     _ticket("prop-manual-ffffff", "velotrade_1")
     _ticket("prop-manual-abcdef", "tradeify_1")
 

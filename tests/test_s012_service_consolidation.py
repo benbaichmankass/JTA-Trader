@@ -143,6 +143,9 @@ EXPECTED_SERVICES = {
     # installed and enabled only by breakout-login-check apply:
     # executor-enable-timer for a non-breakout account.
     "ict-prop-executor@.service",
+    # 2026-11-12 (DESK-TRIGGER-SCAN-TIMEOUT): template the trader starts to run a desk build outside its cgroup.
+    # install_systemd_units.sh copies it (skips *@*); never enabled, started on demand.
+    "ict-desk-build@.service",
     # 2026-07-19: daily Bybit funding pull (BL-20260719-FUNDING-NO-TIMER, PR #6901).
     # Timer-fired oneshot (ict-exchange-funding-pull.timer) that runs the funding
     # puller so the M24 go-forward fee+funding capture accrues without manual runs.

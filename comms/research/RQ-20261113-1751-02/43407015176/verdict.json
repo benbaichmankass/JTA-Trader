@@ -1,0 +1,864 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "qqq_pullback_1h: 214 trades in the baseline arm 'A' on QQQ 1h candles 2020-07-01 .. 2026-10-15 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'S1', 'F1', 'F2']; holdout boundary 2025-03-20 11:59:15+00:00 (share 0.25), selection on discovery trades only, the selected arm read once on the held-back span",
+  "n": 214,
+  "measurement": {
+    "leg": "qqq_pullback_1h",
+    "label": "confirmed",
+    "grade": {
+      "verdict": "pass",
+      "label": "confirmed",
+      "selected": "S1",
+      "selected_from": 4,
+      "discovery": {
+        "A": {
+          "n": 157,
+          "net_r": 21.3571,
+          "expectancy_r": 0.136,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2020-07-01 00:00:00+00:00",
+              "end": "2021-09-04 20:59:48.750000+00:00",
+              "trades": 33,
+              "net_r": 11.6375
+            },
+            {
+              "fold": 2,
+              "start": "2021-09-04 20:59:48.750000+00:00",
+              "end": "2022-11-09 17:59:37.500000+00:00",
+              "trades": 48,
+              "net_r": -2.9244
+            },
+            {
+              "fold": 3,
+              "start": "2022-11-09 17:59:37.500000+00:00",
+              "end": "2024-01-14 14:59:26.250000+00:00",
+              "trades": 37,
+              "net_r": 9.1927
+            },
+            {
+              "fold": 4,
+              "start": "2024-01-14 14:59:26.250000+00:00",
+              "end": "2025-03-20 11:59:15+00:00",
+              "trades": 39,
+              "net_r": 3.4513
+            }
+          ],
+          "folds_positive": 3,
+          "eligible": true
+        },
+        "S1": {
+          "n": 92,
+          "net_r": 36.1436,
+          "expectancy_r": 0.3929,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2020-07-01 00:00:00+00:00",
+              "end": "2021-09-04 20:59:48.750000+00:00",
+              "trades": 20,
+              "net_r": 15.5327
+            },
+            {
+              "fold": 2,
+              "start": "2021-09-04 20:59:48.750000+00:00",
+              "end": "2022-11-09 17:59:37.500000+00:00",
+              "trades": 26,
+              "net_r": -2.3153
+            },
+            {
+              "fold": 3,
+              "start": "2022-11-09 17:59:37.500000+00:00",
+              "end": "2024-01-14 14:59:26.250000+00:00",
+              "trades": 23,
+              "net_r": 18.3964
+            },
+            {
+              "fold": 4,
+              "start": "2024-01-14 14:59:26.250000+00:00",
+              "end": "2025-03-20 11:59:15+00:00",
+              "trades": 23,
+              "net_r": 4.5298
+            }
+          ],
+          "folds_positive": 3,
+          "eligible": true
+        },
+        "F1": {
+          "n": 80,
+          "net_r": 18.4324,
+          "expectancy_r": 0.2304,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2020-07-01 00:00:00+00:00",
+              "end": "2021-09-04 20:59:48.750000+00:00",
+              "trades": 18,
+              "net_r": 9.0235
+            },
+            {
+              "fold": 2,
+              "start": "2021-09-04 20:59:48.750000+00:00",
+              "end": "2022-11-09 17:59:37.500000+00:00",
+              "trades": 17,
+              "net_r": -1.1058
+            },
+            {
+              "fold": 3,
+              "start": "2022-11-09 17:59:37.500000+00:00",
+              "end": "2024-01-14 14:59:26.250000+00:00",
+              "trades": 23,
+              "net_r": 10.5756
+            },
+            {
+              "fold": 4,
+              "start": "2024-01-14 14:59:26.250000+00:00",
+              "end": "2025-03-20 11:59:15+00:00",
+              "trades": 22,
+              "net_r": -0.0609
+            }
+          ],
+          "folds_positive": 2,
+          "eligible": false
+        },
+        "F2": {
+          "n": 64,
+          "net_r": 11.586,
+          "expectancy_r": 0.181,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2020-07-01 00:00:00+00:00",
+              "end": "2021-09-04 20:59:48.750000+00:00",
+              "trades": 15,
+              "net_r": 1.7898
+            },
+            {
+              "fold": 2,
+              "start": "2021-09-04 20:59:48.750000+00:00",
+              "end": "2022-11-09 17:59:37.500000+00:00",
+              "trades": 13,
+              "net_r": 2.9648
+            },
+            {
+              "fold": 3,
+              "start": "2022-11-09 17:59:37.500000+00:00",
+              "end": "2024-01-14 14:59:26.250000+00:00",
+              "trades": 18,
+              "net_r": 8.684
+            },
+            {
+              "fold": 4,
+              "start": "2024-01-14 14:59:26.250000+00:00",
+              "end": "2025-03-20 11:59:15+00:00",
+              "trades": 18,
+              "net_r": -1.8526
+            }
+          ],
+          "folds_positive": 3,
+          "eligible": true
+        }
+      },
+      "plan": {
+        "boundary": "2025-03-20 11:59:15+00:00",
+        "share": 0.25,
+        "baseline_n_holdout": 56,
+        "grown": false,
+        "short_at_cap": false,
+        "discovery_fold_edges": [
+          "2020-07-01 00:00:00+00:00",
+          "2021-09-04 20:59:48.750000+00:00",
+          "2022-11-09 17:59:37.500000+00:00",
+          "2024-01-14 14:59:26.250000+00:00",
+          "2025-03-20 11:59:15+00:00"
+        ],
+        "straddling_excluded": {
+          "A": 1,
+          "S1": 1,
+          "F1": 0,
+          "F2": 0
+        }
+      },
+      "holdout": {
+        "n": 38,
+        "net_r": 11.5587,
+        "expectancy_r": 0.3042
+      },
+      "holdout_min_trades": 25,
+      "discovery_n_floor": 25,
+      "evaluations_on_holdout": 1,
+      "why": "S1 (selected from 4 on discovery) reads net_r=11.5587 over n=38 held-back trades, read once",
+      "raw_flag_warning": "S1 carries raw harness flags ['--side-filter', 'long'] the config fingerprint does not see: a record cannot be bound to it"
+    },
+    "arms": {
+      "A": {
+        "reach_ge_6r": 0.028,
+        "n": 214,
+        "net_r": 31.0315,
+        "net_r_fee_only": 38.5256,
+        "max_drawdown_r": 12.1477,
+        "by_outcome": {
+          "stop": 107,
+          "trail_stop": 91,
+          "take_profit": 11,
+          "timeout": 5
+        },
+        "mean_bars_held": 38.374,
+        "net_r_per_capital_day": 0.0907,
+        "cost_stack": {
+          "fee_bps_roundtrip": 0.0,
+          "slippage_bps_roundtrip": 5.0,
+          "funding_bps_per_window": 0.0
+        },
+        "params": {
+          "trend_lookback": 60,
+          "pullback_lookback": 12,
+          "pullback_frac": 0.618,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 5.0,
+          "min_confidence": 0.0
+        },
+        "data_start": "2020-07-01 13:00:00+00:00",
+        "data_end": "2026-10-15 19:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2020-07-01 00:00:00+00:00",
+            "end": "2022-01-26 11:59:45+00:00",
+            "trades": 50,
+            "net_r": 15.5409
+          },
+          {
+            "fold": 2,
+            "start": "2022-01-26 11:59:45+00:00",
+            "end": "2023-08-23 23:59:30+00:00",
+            "trades": 55,
+            "net_r": 5.0683
+          },
+          {
+            "fold": 3,
+            "start": "2023-08-23 23:59:30+00:00",
+            "end": "2025-03-20 11:59:15+00:00",
+            "trades": 53,
+            "net_r": -0.2739
+          },
+          {
+            "fold": 4,
+            "start": "2025-03-20 11:59:15+00:00",
+            "end": "2026-10-15 23:59:00+00:00",
+            "trades": 56,
+            "net_r": 10.6958
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "60",
+          "--pullback-lookback",
+          "12",
+          "--pullback-frac",
+          "0.618",
+          "--data",
+          "<data>",
+          "--symbol",
+          "QQQ",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261113-1751-02/43407015176/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261113-1751-02/43407015176/arms/A__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--start",
+          "2020-07-01",
+          "--end",
+          "2026-10-15 23:59"
+        ]
+      },
+      "S1": {
+        "reach_ge_6r": 0.0382,
+        "n": 131,
+        "net_r": 47.3465,
+        "net_r_fee_only": 52.3735,
+        "max_drawdown_r": 12.4753,
+        "by_outcome": {
+          "stop": 60,
+          "trail_stop": 61,
+          "take_profit": 7,
+          "timeout": 3
+        },
+        "mean_bars_held": 44.084,
+        "net_r_per_capital_day": 0.1968,
+        "cost_stack": {
+          "fee_bps_roundtrip": 0.0,
+          "slippage_bps_roundtrip": 5.0,
+          "funding_bps_per_window": 0.0
+        },
+        "params": {
+          "trend_lookback": 60,
+          "pullback_lookback": 12,
+          "pullback_frac": 0.618,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 5.0,
+          "min_confidence": 0.0
+        },
+        "data_start": "2020-07-01 13:00:00+00:00",
+        "data_end": "2026-10-15 19:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2020-07-01 00:00:00+00:00",
+            "end": "2022-01-26 11:59:45+00:00",
+            "trades": 30,
+            "net_r": 16.088
+          },
+          {
+            "fold": 2,
+            "start": "2022-01-26 11:59:45+00:00",
+            "end": "2023-08-23 23:59:30+00:00",
+            "trades": 33,
+            "net_r": 11.3676
+          },
+          {
+            "fold": 3,
+            "start": "2023-08-23 23:59:30+00:00",
+            "end": "2025-03-20 11:59:15+00:00",
+            "trades": 30,
+            "net_r": 8.332
+          },
+          {
+            "fold": 4,
+            "start": "2025-03-20 11:59:15+00:00",
+            "end": "2026-10-15 23:59:00+00:00",
+            "trades": 38,
+            "net_r": 11.5587
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "60",
+          "--pullback-lookback",
+          "12",
+          "--pullback-frac",
+          "0.618",
+          "--data",
+          "<data>",
+          "--symbol",
+          "QQQ",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261113-1751-02/43407015176/arms/S1__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261113-1751-02/43407015176/arms/S1__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--side-filter",
+          "long",
+          "--start",
+          "2020-07-01",
+          "--end",
+          "2026-10-15 23:59"
+        ]
+      },
+      "F1": {
+        "reach_ge_6r": 0.0354,
+        "n": 113,
+        "net_r": 27.852,
+        "net_r_fee_only": 32.6455,
+        "max_drawdown_r": 10.7855,
+        "by_outcome": {
+          "stop": 55,
+          "trail_stop": 51,
+          "timeout": 2,
+          "take_profit": 5
+        },
+        "mean_bars_held": 41.097,
+        "net_r_per_capital_day": 0.1439,
+        "cost_stack": {
+          "fee_bps_roundtrip": 0.0,
+          "slippage_bps_roundtrip": 5.0,
+          "funding_bps_per_window": 0.0
+        },
+        "params": {
+          "trend_lookback": 60,
+          "pullback_lookback": 12,
+          "pullback_frac": 0.618,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 5.0,
+          "min_confidence": 0.0,
+          "adx_min": 20.0,
+          "adx_period": 14
+        },
+        "data_start": "2020-07-01 13:00:00+00:00",
+        "data_end": "2026-10-15 19:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2020-07-01 00:00:00+00:00",
+            "end": "2022-01-26 11:59:45+00:00",
+            "trades": 25,
+            "net_r": 12.9887
+          },
+          {
+            "fold": 2,
+            "start": "2022-01-26 11:59:45+00:00",
+            "end": "2023-08-23 23:59:30+00:00",
+            "trades": 26,
+            "net_r": 4.5183
+          },
+          {
+            "fold": 3,
+            "start": "2023-08-23 23:59:30+00:00",
+            "end": "2025-03-20 11:59:15+00:00",
+            "trades": 29,
+            "net_r": 0.9254
+          },
+          {
+            "fold": 4,
+            "start": "2025-03-20 11:59:15+00:00",
+            "end": "2026-10-15 23:59:00+00:00",
+            "trades": 33,
+            "net_r": 9.4192
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "60",
+          "--pullback-lookback",
+          "12",
+          "--pullback-frac",
+          "0.618",
+          "--data",
+          "<data>",
+          "--symbol",
+          "QQQ",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261113-1751-02/43407015176/arms/F1__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261113-1751-02/43407015176/arms/F1__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--side-filter",
+          "long",
+          "--adx-min",
+          "20",
+          "--start",
+          "2020-07-01",
+          "--end",
+          "2026-10-15 23:59"
+        ]
+      },
+      "F2": {
+        "reach_ge_6r": 0.0341,
+        "n": 88,
+        "net_r": 9.8677,
+        "net_r_fee_only": 13.8051,
+        "max_drawdown_r": 15.7777,
+        "by_outcome": {
+          "stop": 47,
+          "trail_stop": 36,
+          "timeout": 2,
+          "take_profit": 3
+        },
+        "mean_bars_held": 37.795,
+        "net_r_per_capital_day": 0.0712,
+        "cost_stack": {
+          "fee_bps_roundtrip": 0.0,
+          "slippage_bps_roundtrip": 5.0,
+          "funding_bps_per_window": 0.0
+        },
+        "params": {
+          "trend_lookback": 60,
+          "pullback_lookback": 12,
+          "pullback_frac": 0.618,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 5.0,
+          "min_confidence": 0.0,
+          "adx_min": 25.0,
+          "adx_period": 14
+        },
+        "data_start": "2020-07-01 13:00:00+00:00",
+        "data_end": "2026-10-15 19:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2020-07-01 00:00:00+00:00",
+            "end": "2022-01-26 11:59:45+00:00",
+            "trades": 20,
+            "net_r": 7.7771
+          },
+          {
+            "fold": 2,
+            "start": "2022-01-26 11:59:45+00:00",
+            "end": "2023-08-23 23:59:30+00:00",
+            "trades": 19,
+            "net_r": 5.5119
+          },
+          {
+            "fold": 3,
+            "start": "2023-08-23 23:59:30+00:00",
+            "end": "2025-03-20 11:59:15+00:00",
+            "trades": 25,
+            "net_r": -1.703
+          },
+          {
+            "fold": 4,
+            "start": "2025-03-20 11:59:15+00:00",
+            "end": "2026-10-15 23:59:00+00:00",
+            "trades": 24,
+            "net_r": -1.7186
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "60",
+          "--pullback-lookback",
+          "12",
+          "--pullback-frac",
+          "0.618",
+          "--data",
+          "<data>",
+          "--symbol",
+          "QQQ",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261113-1751-02/43407015176/arms/F2__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261113-1751-02/43407015176/arms/F2__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--side-filter",
+          "long",
+          "--adx-min",
+          "25",
+          "--start",
+          "2020-07-01",
+          "--end",
+          "2026-10-15 23:59"
+        ]
+      }
+    },
+    "window": {
+      "start": "2020-07-01",
+      "end": "2026-10-15 23:59",
+      "fetch_days": 2330,
+      "feed": {
+        "source": "dukascopy",
+        "ticker": "QQQ",
+        "interval": "60m",
+        "resample": "1h"
+      },
+      "fold_edges": [
+        "2020-07-01 00:00:00+00:00",
+        "2022-01-26 11:59:45+00:00",
+        "2023-08-23 23:59:30+00:00",
+        "2025-03-20 11:59:15+00:00",
+        "2026-10-15 23:59:00+00:00"
+      ]
+    },
+    "argv": {
+      "A": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "60",
+          "--pullback-lookback",
+          "12",
+          "--pullback-frac",
+          "0.618",
+          "--data",
+          "<data>",
+          "--symbol",
+          "QQQ",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261113-1751-02/43407015176/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261113-1751-02/43407015176/arms/A__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--start",
+          "2020-07-01",
+          "--end",
+          "2026-10-15 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": [
+          "decision_bar"
+        ]
+      },
+      "S1": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "60",
+          "--pullback-lookback",
+          "12",
+          "--pullback-frac",
+          "0.618",
+          "--data",
+          "<data>",
+          "--symbol",
+          "QQQ",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261113-1751-02/43407015176/arms/S1__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261113-1751-02/43407015176/arms/S1__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--side-filter",
+          "long",
+          "--start",
+          "2020-07-01",
+          "--end",
+          "2026-10-15 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [
+          "--side-filter",
+          "long"
+        ],
+        "omitted_levers_per_builder": [
+          "decision_bar"
+        ]
+      },
+      "F1": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "60",
+          "--pullback-lookback",
+          "12",
+          "--pullback-frac",
+          "0.618",
+          "--data",
+          "<data>",
+          "--symbol",
+          "QQQ",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261113-1751-02/43407015176/arms/F1__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261113-1751-02/43407015176/arms/F1__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--side-filter",
+          "long",
+          "--adx-min",
+          "20",
+          "--start",
+          "2020-07-01",
+          "--end",
+          "2026-10-15 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [
+          "--side-filter",
+          "long",
+          "--adx-min",
+          "20"
+        ],
+        "omitted_levers_per_builder": [
+          "decision_bar"
+        ]
+      },
+      "F2": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "60",
+          "--pullback-lookback",
+          "12",
+          "--pullback-frac",
+          "0.618",
+          "--data",
+          "<data>",
+          "--symbol",
+          "QQQ",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261113-1751-02/43407015176/arms/F2__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261113-1751-02/43407015176/arms/F2__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--side-filter",
+          "long",
+          "--adx-min",
+          "25",
+          "--start",
+          "2020-07-01",
+          "--end",
+          "2026-10-15 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [
+          "--side-filter",
+          "long",
+          "--adx-min",
+          "25"
+        ],
+        "omitted_levers_per_builder": [
+          "decision_bar"
+        ]
+      }
+    },
+    "holdout_confirmation": {
+      "verdict": "confirmed",
+      "research_unit": "RQ-20261113-1751-02",
+      "decision_rule": {
+        "id": "RULE-RQ-20261113-1751-02",
+        "registered_before_run": true
+      },
+      "selected_label": "S1",
+      "selected_config_fingerprint": "sha256:ee7d105c498802a5148f6f1757ccdb64",
+      "selected_from": 4,
+      "evaluations_on_holdout": 1,
+      "discovery": {
+        "start": "2020-07-01 00:00:00+00:00",
+        "end": "2025-03-20 11:59:14+00:00"
+      },
+      "holdout": {
+        "start": "2025-03-20 11:59:15+00:00",
+        "end": "2026-10-15 23:59:00+00:00",
+        "share": 0.25,
+        "short_at_cap": false
+      },
+      "n_holdout": 38,
+      "net_r_holdout": 11.5587,
+      "expectancy_r_holdout": 0.3042,
+      "cost_stack": {
+        "fees": 0.0,
+        "slippage": 5.0,
+        "funding": 0.0,
+        "unit": "bps_roundtrip (funding: bps per funding window)"
+      },
+      "source_run": null
+    }
+  },
+  "note": "PASS / confirmed: S1 (selected from 4 on discovery) reads net_r=11.5587 over n=38 held-back trades, read once"
+}

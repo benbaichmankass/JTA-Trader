@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Follow-up to #26119, found by observing it: the dispatched run 43637007962 passed the read step (the #26119 fix works: per-account reads OK) and then failed in the compare step with ModuleNotFoundError: pandas. A side_filter_superset verdict (the SLV short on alpaca_portfolio, live long-only) goes through account_side_filter -> strategy_signal_builders, which imports pandas, and the step installs only pyyaml. Install pyyaml + pandas, the measured minimum (the checker passes in a clean venv with exactly these two: OK, SLV side_filter_superset). Revert: git revert."
+}

@@ -1,0 +1,6 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Row ENTRY-FILL-OPEN-R-BASIS. Manager decision 2026-11-15 04:18Z: once ENTRY-FILL-WRITEBACK has written the fill into trades.entry_price, open R measures from the FILL, with 1R = |fill - initial SL|. MEASURED: trade 7260 (bybit_2 ADAUSDT) had r.openR -0.0631 on the plan entry 0.1506 while the broker showed uPnL +0.07 on the fill 0.1501 (about +0.03R on the fill). record_position_telemetry now reads the linked trade (one PK read on a read-only connection, cached once a fill is known, plan rows rechecked every 60 s). If its notes carry a fill entry_price_source, the TELEMETRY inputs are re-based on copies: entry = fill, risk_per_unit = |fill - (plan entry -/+ plan risk)|. The caller's open_pkg/meta are never mutated, so exit levers, SL/TP and brackets are untouched. Plan, pending and unstamped rows keep plan R; no backfill. Unreadable journal: plan basis, never raises. Trader import closure (position_telemetry is called by the strategy exit managers): merge in a restart batch. Revert: git revert."
+}

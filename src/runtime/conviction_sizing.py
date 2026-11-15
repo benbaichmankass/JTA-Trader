@@ -27,8 +27,9 @@ Computation (design § 3.3 / § 10): ``conviction × per_trade_risk_budget (2%)`
 bounded above by the available-margin ceiling and a proportional free-margin
 throttle. Risk basis is the **free balance** (matches
 ``risk.py::_size_unbounded`` so the would-be number is a true drop-in
-comparison for today's ``effective_risk_pct`` sizing). Reads the observe-only
-``meta.conviction`` stamped at signal time.
+comparison for today's ``effective_risk_pct`` sizing). The apply path reads
+``meta.conviction_influencing`` (built from advisory+ model scores only; ML-SHADOW-NO-ORDER-HANDLE);
+the flagless annotator soaks the observe-only ``meta.conviction`` blend.
 
 Fail-permissive: any error / missing conviction / un-computable inputs → the
 ``sized_qty`` is returned unchanged and nothing is logged.
@@ -58,44 +59,30 @@ def _clip01(v: float) -> float:
     return 0.0 if v < 0.0 else 1.0 if v > 1.0 else v
 
 
-def _shadow_fed(provenance: Any) -> bool:
-    """True when the stamp's provenance names a model below the influence stage."""
-    from src.runtime.conviction_inputs import INFLUENCE_STAGES
-
-    if not isinstance(provenance, dict):
-        return False
-    for slot in provenance.values():
-        for rec in (slot if isinstance(slot, list) else []):
-            if isinstance(rec, dict) and rec.get("model_id") \
-                    and rec.get("stage") not in INFLUENCE_STAGES:
-                return True
-    return False
+#: The pkg.meta block the ORDER PATH reads (ML-SHADOW-NO-ORDER-HANDLE, operator 2026-11-12: "handled
+#: through structuring the functionality correctly, not with a gate"). It is built at signal time from
+#: advisory+ model scores only (``strategy_signal_builders.influencing_conviction_block``), so no
+#: shadow-stage score is an input to anything this path reads. It is the DEFAULT below: a caller that
+#: names no block gets the order-path view.
+ORDER_PATH_BLOCK = "conviction_influencing"
+#: The observe-only blend (shadow scores included). Read ONLY by the flagless soak annotator, which by
+#: construction always returns the RiskManager qty unchanged.
+OBSERVED_BLOCK = "conviction"
 
 
-def _conviction_from_pkg(pkg: Any, *, influencing_only: bool = False) -> float | None:
-    """Read the observe-only calibrated conviction stamped at signal time.
+def _conviction_from_pkg(pkg: Any, *, block: str = ORDER_PATH_BLOCK) -> float | None:
+    """``pkg.meta[block]['conviction']`` as a float, or ``None`` (absent / unreadable).
 
-    ``pkg.meta['conviction']['conviction']`` is the calibrated v1 blend; ``None``
-    / absent → no would-be size (returns ``None``).
-
-    ``influencing_only`` (I7, ML-SHADOW-NEVER-ORDERS): the blend includes
-    shadow-stage model scores, so the order-changing apply path reads
-    ``['influencing']`` — the advisory+-only blend stamped beside it. A stamp
-    without that key is used only when its provenance shows no below-advisory
-    model fed it; otherwise ``None`` (fail-inert: the order is not resized).
+    A package with no ``conviction_influencing`` block (e.g. stamped before it existed) yields
+    ``None``: no would-be size, the qty is not resized (fail-inert).
     """
     meta = getattr(pkg, "meta", None)
     if not isinstance(meta, dict):
         return None
-    block = meta.get("conviction")
-    if not isinstance(block, dict):
+    stamp = meta.get(block)
+    if not isinstance(stamp, dict):
         return None
-    if influencing_only and "influencing" in block:
-        val = block.get("influencing")
-    elif influencing_only and _shadow_fed(block.get("provenance")):
-        return None
-    else:
-        val = block.get("conviction")
+    val = stamp.get("conviction")
     if val is None:
         return None
     try:
@@ -115,7 +102,7 @@ def compute_conviction_sizing(
     market_type: str = "spot",
     min_qty: float = 0.0,
     qty_precision: int = 3,
-    influencing_only: bool = False,
+    block: str = ORDER_PATH_BLOCK,
 ) -> tuple[float | None, dict]:
     """Resolve the would-be conviction-sized qty (``desired`` clamped to
     feasibility).
@@ -126,7 +113,7 @@ def compute_conviction_sizing(
     """
     from src.units.accounts.risk import _floor_to_step, contract_value_usd_for
 
-    conviction = _conviction_from_pkg(pkg, influencing_only=influencing_only)
+    conviction = _conviction_from_pkg(pkg, block=block)
     if conviction is None:
         return None, {"action": "no_conviction"}
     conviction = _clip01(conviction)
@@ -244,6 +231,9 @@ def annotate_conviction_sizing(
             market_type=market_type,
             min_qty=min_qty,
             qty_precision=qty_precision,
+            # Observe-only soak of the full blend (shadow scores included); this
+            # function always returns sized_qty unchanged, so it is no order handle.
+            block=OBSERVED_BLOCK,
         )
         if would_be is None:
             return sized_qty  # no would-be size to record
@@ -346,10 +336,9 @@ def apply_conviction_sizing(
             market_type=market_type,
             min_qty=min_qty,
             qty_precision=qty_precision,
-            # I7: only advisory+ models may change an order; shadow scores in
-            # the observed blend never reach this path (annotate here shows the
-            # number apply WOULD use, so it reads the same view).
-            influencing_only=True,
+            # ML-SHADOW-NO-ORDER-HANDLE: the default block, built from advisory+
+            # scores only; there is no shadow input for this path to read.
+            block=ORDER_PATH_BLOCK,
         )
         # No would-be size to act on (missing conviction / un-computable inputs)
         # → fail-inert, return the RiskManager qty unchanged.
@@ -511,7 +500,7 @@ def _journal_below_floor_refusal(pkg: Any, account_name: str, record: dict) -> N
         )
 
 
-def _conviction_components(pkg: Any) -> dict:
+def _conviction_components(pkg: Any, block: str = OBSERVED_BLOCK) -> dict:
     """Component view of the stamped conviction for the soak log (never raises).
 
     The soak log used to carry only the blended ``conviction``, so a ``c_reg``
@@ -520,15 +509,15 @@ def _conviction_components(pkg: Any) -> dict:
     never ``{}``, when the package carries no conviction block.
     """
     try:
-        block = (getattr(pkg, "meta", None) or {}).get("conviction")
-        if not isinstance(block, dict):
+        stamp = (getattr(pkg, "meta", None) or {}).get(block)
+        if not isinstance(stamp, dict):
             return {"inputs_used": None, "weights_used": None,
                     "blend_note": None, "provenance": None}
         return {
-            "inputs_used": block.get("inputs_used"),
-            "weights_used": block.get("weights_used"),
-            "blend_note": block.get("note"),
-            "provenance": block.get("provenance"),
+            "inputs_used": stamp.get("inputs_used"),
+            "weights_used": stamp.get("weights_used"),
+            "blend_note": stamp.get("note"),
+            "provenance": stamp.get("provenance"),
         }
     except Exception:  # noqa: BLE001 — logging only
         return {"inputs_used": None, "weights_used": None,
@@ -571,7 +560,7 @@ def _log_conviction_apply(
             "final_qty": final_qty,
             "daily_loss_clamp": clamp_note,
             "decision": record,
-            **_conviction_components(pkg),
+            **_conviction_components(pkg, ORDER_PATH_BLOCK),
         }
         with path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(payload, default=str) + "\n")

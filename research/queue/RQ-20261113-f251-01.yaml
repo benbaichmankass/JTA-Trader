@@ -1,0 +1,143 @@
+id: RQ-20261113-f251-01
+title: The 14 crypto forming-decision legs re-measured on the FORMING bar from Binance 1m (RULE-D1 per leg), so their evidence records stop reading faithful without
+  modelling the bar they decide on
+status: queued
+cadence: monthly
+kind: experiment
+theme: live_strategy
+priority: 1
+roadmap:
+- L-LADDER
+question: 'Every Binance trend_donchian* and *pullback* leg on config/strategies.yaml decides live on the FORMING bar (no decision_bar key, so the runtime default
+  "forming"). Their committed Stage-0 records measure CLOSED-bar decisions: the ones written before #25228 read fidelity=faithful without modelling the forming bar
+  at all, and the ones written since read approximate with omitted_levers [decision_bar]. Re-measured on the forming bar (scripts/backtest_trend.py / backtest_pullback.py
+  --decision-bar forming from Binance-vision 1m, the ONE forming implementation), over each record''s own window and fold count: does each leg keep net_r_oos > 0
+  net of the full cost stack (RULE-D1)?'
+why_this_matters: 'Twelve of the 14 legs carry a closed-bar record: the faithful ones predate #25228 and never modelled the forming bar, the approximate ones omit
+  decision_bar. trend_donchian_sol_prop (real money, prop book) and trend_donchian_eth_4h are the exceptions: #25228 already re-based their records on the forming
+  bar via scripts/ops/rebase_evidence_decision_bar.py (a pooled-regrade proxy); this run re-measures them through the harness forming replay as a cross-check, and
+  its records land only after a session reads them. The smoke run on trend_donchian_ada_4h (2026-11-13, local) read faithful, forming net_r_oos -3.35 over n 55 vs
+  the closed-bar record -6.34 over n 43, so the bar choice moves the number materially. A PASS lands faithful records; a per-leg FAIL is data routed to the manager
+  via AM-ML; none is automatic.'
+power:
+  expected_n: 1200
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, not measured: the 14 committed records hold n_trades_oos of roughly 40-200 each (ada_4h 43 closed / 55 forming), so the fan-out pools ~1,200 OOS
+    trades; RULE-D1 is graded per leg on its own n, and the record reports the true n beside each verdict. Said before any run.'
+  sd: null
+  feasibility:
+    source: none
+    accrual_basis: 'Fixed in-hand windows: each leg''s committed record window (reproduce.data_start..data_end, else window_days back from the pinned --end 2026-11-13).
+      Nothing accrues; Binance-vision 1m covers every window at run time.'
+evidence_class:
+  holdout: in_sample
+  claim: edge
+run:
+  command:
+  - python3
+  - scripts/research/forming_evidence_regen.py
+  - --out
+  - '{out_dir}'
+  - --end
+  - '2026-11-13'
+  - --leg
+  - trend_donchian
+  - --leg
+  - trend_donchian_1h
+  - --leg
+  - trend_donchian_sol
+  - --leg
+  - trend_donchian_eth
+  - --leg
+  - trend_donchian_sol_4h
+  - --leg
+  - trend_donchian_sol_prop
+  - --leg
+  - trend_donchian_eth_4h
+  - --leg
+  - trend_donchian_ada_4h
+  - --leg
+  - trend_donchian_avax_4h
+  - --leg
+  - htf_pullback_trend_2h
+  - --leg
+  - eth_pullback_2h
+  - --leg
+  - eth_pullback_prop_2h
+  - --leg
+  - avax_pullback_2h
+  - --leg
+  - sol_pullback_2h
+  timeout_minutes: 220
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261113-f251-01
+decision_rule:
+  id: RULE-CRYPTO-FORMING-REGEN-20261113
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  statistic: 'scripts/research/forming_evidence_regen.py: per leg, build_strategy_evidence --data-csv (leg tf, Binance) --minutes-1m-csv (Binance-vision 1m, same
+    window) --folds <record''s folds>; net_r_oos and n_trades_oos from the regenerated record, full cost stack (fee + slippage + funding from resolve_run_costs).'
+  rule: 'Registered 2026-11-13 on row CRYPTO-FORMING-RDM-FORWARD before any regen run of the 14 legs (the one local smoke run, trend_donchian_ada_4h, is disclosed
+    in why_this_matters and does not alter the rule). Per leg: PASS iff the regenerated record is faithful with no omitted levers AND net_r_oos > 0 (RULE-D1); FAIL
+    iff faithful AND net_r_oos <= 0; INDETERMINATE iff not faithful or not measured. Unit verdict: INDETERMINATE if any leg is not measured or not faithful; else
+    FAIL if any leg fails (listed); else PASS. Legs, windows, folds, feed and cost stack are fixed now.'
+  what_it_does_not_do: 'Changes no config, roster or order, and writes no comms/strategy_evidence/ record: the regenerated records land under <out_dir>/evidence and
+    a session copies them in through a later Tier-1 PR after reading them. A per-leg FAIL is routed to the manager via AM-ML (Tier 3), never automatic.'
+  baseline: The committed closed-bar record of the same leg (its net_r_oos and n), reported beside each forming number; RULE-D1's bar is zero net of cost.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.3
+  basis: 'stand-in: 14 legs (one production prop leg) whose evidence omits the decision bar they trade; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+ml_consumer:
+  not_applicable: 'Not an ML unit: harness forming-bar re-measures of rule-based trend/pullback legs. No model is trained, scored or served.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: trend_donchian_ada_4h
+  subject_kind: strategy_leg
+  from_result: comms/strategy_evidence/trend_donchian_ada_4h.json
+  verdict_read: faithful
+  diagnosis: 'The committed record (generated 2026-10-28, before #25228) reads faithful but its reproduce command has no --decision-bar forming and no 1m source:
+    it measured the CLOSED 4h bar while the leg decides on the forming one. Structural: scripts/backtest_pullback.py could not replay the forming bar from a CSV and
+    regime_debt_matrix forwarded forming_1m for the trend harness only; closed by this PR''s pullback 1m path + rdm forward and a re-measure.'
+  hypothesis: Re-measured on the forming bar from Binance 1m, each leg's record reads faithful; the legs with closed-bar edge keep net_r_oos > 0.
+  attempt: 1
+  due_by: '2026-11-20'
+related:
+- RQ-20261113-1449-01
+- RQ-20261105-d256-03
+- PI-20260929-VOLSKIP-SIGNAL-0002
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): rule registered before the run, net of the full cost stack, graded once on
+  fixed in-hand windows; the same forming-bar re-measure RQ-20261113-1449-01 ran for the equity leg tqqq_trend_long_1d.'
+follow_up: On a measured verdict a session reads <out_dir>/evidence/*.json and copies the faithful records to comms/strategy_evidence/ (Tier 1). Per-leg FAILs go
+  to the manager via AM-ML.
+last_dispatched_at: '2026-11-13T14:55:15+00:00'
+grading:
+  attested: RULE-CRYPTO-FORMING-REGEN-20261113
+  auto: true
+  decision_rule_id: RULE-CRYPTO-FORMING-REGEN-20261113
+  evidence:
+  - research/results/RQ-20261113-f251-01/43447401545.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  needs_review: true
+  owner: RESEARCH-OPS-20261113-2050
+  owner_reason: '14 per-leg RULE-D1 rows, mixed by design (5 pass, 6 fail, 3 indeterminate as approximate:
+    exit-head fields omitted); per-leg dispositions in comms/research/ops/20261113T2130Z.json, no single
+    unit verdict applies'
+  reason: 'verdicts not unanimous-mechanical: [''fail'', ''indeterminate'', ''pass'']'
+  rows: 14
+  verdict: null

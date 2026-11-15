@@ -56,6 +56,7 @@ jobs:
       - name: Wake
         env:
           WAKE_TOGGLES_REMOTE: "1"  # console wake switches (per account class), read live over HTTP; unreadable => post
+          DASHBOARD_API_TOKEN: ${{ secrets.DASHBOARD_API_TOKEN }}  # UI-OAUTH-SIGNIN: GET service bearer for the wake-toggles read
         # pipefail is load-bearing: without it `tee` decides the step's exit.
         run: |
           set -o pipefail

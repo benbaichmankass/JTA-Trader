@@ -222,8 +222,17 @@ def live_frame_pctls(bars: pd.DataFrame, partial: pd.DataFrame | None,
     return out
 
 
-def _set_costs(mod: Any, symbol: str) -> Dict[str, float]:
-    mod.FEE_BPS_ROUNDTRIP = execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP
+#: Set by a CLI (``decision_bar_holdout.py --fee-bps``) to price a run at the venue fee the committed
+#: Stage-0 records use (bybit linear 11.0) instead of the harness default. ``None`` = the legacy default,
+#: so every existing caller is byte-identical. A module-level value, not an in-process monkeypatch of
+#: execution_costs, because ``as_traded_stage0.py`` runs the holdout harness in a SUBPROCESS and a patch
+#: in the parent never reaches it (EVIDENCE-FORMING-ARMS-REALMONEY, 2026-11-12).
+FEE_BPS_OVERRIDE: float | None = None
+
+
+def _set_costs(mod: Any, symbol: str, fee_bps_roundtrip: float | None = None) -> Dict[str, float]:
+    fee = fee_bps_roundtrip if fee_bps_roundtrip is not None else FEE_BPS_OVERRIDE
+    mod.FEE_BPS_ROUNDTRIP = execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP if fee is None else float(fee)
     mod.SLIPPAGE_BPS_ROUNDTRIP = execution_costs.slippage_bps_roundtrip_for(symbol)
     mod.FUNDING_BPS_PER_WINDOW = execution_costs.funding_bps_per_window_for(symbol)
     mod.FUNDING_WINDOW_HOURS = execution_costs.FUNDING_WINDOW_HOURS

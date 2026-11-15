@@ -1,0 +1,185 @@
+{
+ "schema": "entry_fill_bias/v1",
+ "row": "ENTRY-FILL-BIAS-30D",
+ "generated_at": "2026-11-15T00:47:56Z",
+ "produced_by": "python3 scripts/research/entry_fill_bias.py",
+ "population": {
+  "window": "closed_at >= 2026-10-16T00:47:56Z (last 30d)",
+  "filter": "status closed, not backtest",
+  "n_closed": 298,
+  "journal_rows_read": 2000,
+  "oldest_row_read": "2026-08-30T23:46:39.398908+00:00",
+  "note": "rows opened before oldest_row_read and closed in the window are not in this read"
+ },
+ "definition": {
+  "plan": "trades.entry_price",
+  "fill": "Bybit closed-pnl avg_entry_price / Alpaca filled_avg_price",
+  "r_bias": "(fill - plan) x side / initial risk; > 0 = adverse fill (R computed from the plan is overstated)",
+  "overlap": "row overlapped another row on the same account+symbol: the venue entry is the position average"
+ },
+ "accounts": {
+  "alpaca_paper": {
+   "n_closed": 27,
+   "n_measured": 11,
+   "n_unmatched": 16,
+   "n_could_not_look": 0,
+   "risk_basis": {
+    "declared_initial_risk": 11
+   },
+   "clean": {
+    "n": 1,
+    "abs_bps_median": 0.0,
+    "abs_bps_p90": 0.0,
+    "r_bias_n": 1,
+    "r_bias_mean": 0.0,
+    "r_bias_median": 0.0,
+    "r_bias_p10": 0.0,
+    "r_bias_p90": 0.0,
+    "abs_r_bias_over_0p05": 0
+   },
+   "overlap": {
+    "n": 10,
+    "abs_bps_median": 0.0,
+    "abs_bps_p90": 16.77,
+    "r_bias_n": 10,
+    "r_bias_mean": 0.0034,
+    "r_bias_median": 0.0,
+    "r_bias_p10": -0.0,
+    "r_bias_p90": 0.0276,
+    "abs_r_bias_over_0p05": 2
+   }
+  },
+  "bybit_1": {
+   "n_closed": 174,
+   "n_measured": 164,
+   "n_unmatched": 10,
+   "n_could_not_look": 0,
+   "risk_basis": {
+    "declared_initial_risk": 149,
+    "trade_stop_loss": 15
+   },
+   "clean": {
+    "n": 4,
+    "abs_bps_median": 4.35,
+    "abs_bps_p90": 8.76,
+    "r_bias_n": 4,
+    "r_bias_mean": 0.0004,
+    "r_bias_median": 0.0004,
+    "r_bias_p10": -0.0001,
+    "r_bias_p90": 0.0009,
+    "abs_r_bias_over_0p05": 0
+   },
+   "overlap": {
+    "n": 160,
+    "abs_bps_median": 11.73,
+    "abs_bps_p90": 244.44,
+    "r_bias_n": 160,
+    "r_bias_mean": -0.089,
+    "r_bias_median": 0.0,
+    "r_bias_p10": -0.7771,
+    "r_bias_p90": 0.5508,
+    "abs_r_bias_over_0p05": 85
+   }
+  },
+  "bybit_2": {
+   "n_closed": 46,
+   "n_measured": 45,
+   "n_unmatched": 1,
+   "n_could_not_look": 0,
+   "risk_basis": {
+    "declared_initial_risk": 44,
+    "trade_stop_loss": 1
+   },
+   "clean": {
+    "n": 23,
+    "abs_bps_median": 0.0,
+    "abs_bps_p90": 23.63,
+    "r_bias_n": 23,
+    "r_bias_mean": 0.0001,
+    "r_bias_median": -0.0,
+    "r_bias_p10": -0.0507,
+    "r_bias_p90": 0.0375,
+    "abs_r_bias_over_0p05": 4
+   },
+   "overlap": {
+    "n": 22,
+    "abs_bps_median": 5.64,
+    "abs_bps_p90": 30.97,
+    "r_bias_n": 22,
+    "r_bias_mean": -0.0061,
+    "r_bias_median": 0.0,
+    "r_bias_p10": -0.1001,
+    "r_bias_p90": 0.0705,
+    "abs_r_bias_over_0p05": 7
+   }
+  },
+  "bybit_portfolio": {
+   "n_closed": 47,
+   "n_measured": 37,
+   "n_unmatched": 10,
+   "n_could_not_look": 0,
+   "risk_basis": {
+    "declared_initial_risk": 36,
+    "trade_stop_loss": 1
+   },
+   "clean": {
+    "n": 21,
+    "abs_bps_median": 0.0,
+    "abs_bps_p90": 26.16,
+    "r_bias_n": 21,
+    "r_bias_mean": 0.0028,
+    "r_bias_median": -0.0,
+    "r_bias_p10": -0.0262,
+    "r_bias_p90": 0.0398,
+    "abs_r_bias_over_0p05": 3
+   },
+   "overlap": {
+    "n": 16,
+    "abs_bps_median": 7.73,
+    "abs_bps_p90": 50.89,
+    "r_bias_n": 16,
+    "r_bias_mean": 0.0305,
+    "r_bias_median": 0.0,
+    "r_bias_p10": -0.1031,
+    "r_bias_p90": 0.105,
+    "abs_r_bias_over_0p05": 6
+   }
+  },
+  "ib_paper": {
+   "n_closed": 4,
+   "n_measured": 0,
+   "n_unmatched": 0,
+   "n_could_not_look": 4,
+   "risk_basis": {},
+   "clean": {
+    "n": 0,
+    "abs_bps_median": null,
+    "abs_bps_p90": null,
+    "r_bias_n": 0,
+    "r_bias_mean": null,
+    "r_bias_median": null,
+    "r_bias_p10": null,
+    "r_bias_p90": null,
+    "abs_r_bias_over_0p05": 0
+   },
+   "overlap": {
+    "n": 0,
+    "abs_bps_median": null,
+    "abs_bps_p90": null,
+    "r_bias_n": 0,
+    "r_bias_mean": null,
+    "r_bias_median": null,
+    "r_bias_p10": null,
+    "r_bias_p90": null,
+    "abs_r_bias_over_0p05": 0
+   }
+  }
+ },
+ "match_methods": {
+  "null": 41,
+  "broker_order_id": 11,
+  "order_id:sl_order_id": 139,
+  "order_id:tp_order_id": 55,
+  "side+qty+close_time": 52
+ }
+}

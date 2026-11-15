@@ -1,0 +1,18 @@
+{
+  "artifact_locator": "comms/research/RQ-20261111-f5c8-01/43462228304/ (run-manifest.json + verdict.json + logs/)",
+  "artifact_store": "comms/research/RQ-20261111-f5c8-01/43462228304",
+  "data_fingerprint": "{\"state\": \"not_established\", \"why\": \"the run named no existing input file or directory in its argv or in verdict.json data_inputs\"}",
+  "decision_rule_id": "RULE-VOLCOMP-DIRECTION-01",
+  "decision_rule_registered_at": "2026-11-11",
+  "measurement_file": "comms/research/RQ-20261111-f5c8-01/43462228304/measurement.json",
+  "min_rows": "1",
+  "n": "27",
+  "note": "FAIL: |held-out IC| 0.0154 < 0.02; |held-out t| 1.93 < 2.5; |discovery t| 1.24 < 2.0; held-out composition rule net -6.521458746422177 bps/trade <= 0; composition rule -6.52 <= baseline rule -4.78 bps/trade. target=direction, bar=4h, h=1 bar(s). Held-out 2024-07..2026-09: mean partial rank IC +0.0154, t +1.93, 27 months. Discovery 2021-01..2024-06: +0.0060, t +1.24. 6/6 symbols measured. Binance USD-M 1h klines (trade count field), PROXY for Bybit linear. Held-out rule net of full cost: composition -6.52 bps/trade (n=6015), plain-volume baseline -4.78 bps/trade (n=6087).",
+  "population": "Binance USD-M perps BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT 1h klines 2021-01..2026-09 resampled to 4h; discovery 2021-01..2024-06, held-out 2024-07..2026-09; target direction, horizon 1 bar(s); IC unit = (symbol, month), pooled per month across symbols",
+  "power_state": "accruing",
+  "read_state": "measured",
+  "records_file": "",
+  "research_unit": "RQ-20261111-f5c8-01",
+  "tool": "python3 scripts/research/volume_composition_ic.py",
+  "verdict": "fail"
+}
