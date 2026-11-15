@@ -201,7 +201,7 @@ def test_cors_preflight_passes_with_authorization_and_content_type_only(db):
 
 
 def test_snapshot_lists_sort_by_the_same_key(db):
-    s = _store(db, [("X", None, "in_flight"), ("Y", 7, "in_flight"), ("Z", 2, "in_flight"),
+    _store(db, [("X", None, "in_flight"), ("Y", 7, "in_flight"), ("Z", 2, "in_flight"),
                     ("Q1", 3, "queued"), ("Q2", 3, "queued"), ("Q3", None, "queued")])
     c = _auth()
     body = c.get("/api/bot/work/snapshot").json()
