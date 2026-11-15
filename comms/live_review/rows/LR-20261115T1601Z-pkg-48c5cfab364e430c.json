@@ -1,0 +1,155 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261115T1601Z-pkg-48c5cfab364e430c",
+ "reviewed_at": "2026-11-15T16:12:00Z",
+ "order_package_id": "pkg-48c5cfab364e430c",
+ "trade_id": null,
+ "leg": "trend_donchian_eth_4h",
+ "accounts": [
+  "tradeify_1",
+  "velotrade_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-15T16:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-15T16:01:09Z",
+ "state": {
+  "open_r": -0.504,
+  "peak_r": -0.043,
+  "peak_provenance": "estimated",
+  "giveback_r": 0.461,
+  "bars_held": 3,
+  "sl": 1850.50464286,
+  "tp": 1593.43652,
+  "atr_now_over_entry": 1.118,
+  "regime_cell_now": null,
+  "regime_cell_entry": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.118,
+  "bars_since_peak": null,
+  "giveback_r": 0.461,
+  "open_r": -0.504,
+  "peak_r": -0.043,
+  "r_to_stop": 0.496,
+  "r_to_target": 2.639
+ },
+ "mechanics": {
+  "evidence": "order_packages status=emitted close_reason=prop_ticket_emitted; package sl 1850.50464286 / tp 1593.43652 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 61,
+   "mean_r": -0.784,
+   "sd_r": 0.6878,
+   "worst_r": -1.1301,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 61,
+   "mean_r": -0.7108,
+   "sd_r": 0.0996,
+   "worst_r": -0.9343,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 61,
+   "mean_r": -0.5585,
+   "sd_r": 0.0233,
+   "worst_r": -0.6298,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261115T1601Z-pkg-48c5cfab364e430c.json",
+ "recommendation": {
+  "action": "close",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": 0.2255,
+  "worst_case_delta_r": 0.5003,
+  "basis": "ev_positive",
+  "confidence": "suggestive",
+  "evidence_source": "table",
+  "judgement_confidence": 0.62,
+  "reason": "CLOSE at market. The state-conditioned table (ETH short, pullback state, n=61 comparable of 446, floor 20, measured) no longer ties: hold mean -0.7840 R (sd 0.688, worst -1.1301, 87% gave back >half) vs close -0.5585 R (sd 0.023, worst -0.6298), so close beats hold by +0.2255 R (SE of the difference 0.087, 2.6 SE) and improves the worst case by +0.50 R. That is an EV call, not the tail tie-break (the 12:07Z tie was n=20, diff 0.051 vs SE 0.135; the 1 R tail bar is not what decides this one). The only valid tighten (atr:1.0, stop 1826.7, -0.71 R) is a tie with hold (+0.073 R, SE 0.084) and sits 0.28 ATR from the 1809.82 mark, inside the 1 ATR noise floor, and tighten fills are flattered; atr:1.5 / atr:2.0 are invalid_level. Overlay: 4h ADX 60 / 1d ADX 31 downtrend still favours the short, but the leg's own history from this exact state (open -0.50 R, peak -0.04 R, 3 bars, no real favourable excursion) mostly ends at the stop; price is 0.50 R from 1850.50 and the 12:00Z bounce high 1844.43 came within 0.26 ATR of it. Caveats: open_r is ESTIMATED from the prop ticket mark, trades are treated as i.i.d. on one window, 26 corpus trades were mfe_replay_mismatch-excluded. Closing pays the -0.06 R cost now and gives up the 1593.44 target tail (p_target 0.12 at 12:07Z); the table prices that tail in. The pending 50R->4R entry-TP change does not alter this review.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "table: state-conditioned, n=61 comparable (446 corpus, side_excluded 238, no_candles 7, mfe_replay_mismatch 26, no_pullback_after_peak 114); read_state measured; quoted from the tool, not recomputed",
+  "tighten: atr:1.0 measured -0.7108 R (ev_cost -0.0732, SE 0.0842, a tie) but 0.28 ATR from price (< min_buffer 1 ATR); atr:1.5 and atr:2.0 invalid_level (stop_level_not_above_current_stop); tighten fills at the stop price, so it is flattered",
+  "prop: open_r ESTIMATED from prop ticket prop-manual-a98ef880f712 + last closed 4h bar close 1809.82 (risk basis declared_initial_risk); not a venue mark",
+  "previous_review: LR-20261115T1201Z hold, statistical tie at n=20; this table is n=61 and no longer ties (close +0.2255 R, 2.6 SE)",
+  "correlated: 3 other ETH shorts plus SOL/AVAX/ADA/BTC crypto shorts and metals shorts are open; same crypto short-beta book, informational, no account-level argument made",
+  "overlay: 4h ADX 60.69, 1d ADX 30.68 trending down, ATR ratio 1.118 (inside 0.67-1.5), no calendar events in 24h, news neutral, regime cells null",
+  "live_vs_backtest: realMoney CONSISTENT (19 closed, pct 55.3), mirror CONSISTENT (17 closed, pct 7.9); no divergence to overlay",
+  "pending: entry TP change 50R->4R is in an unmerged PR and does not alter this review",
+  "missing: funding (no diag route); regime.vol_now frozen edges; regime.cell_entry (entry vol_regime unknown)",
+  "mandate: MD-TRADE-DESK is named in schema/checker but config/mandates.yaml on this checkout carries 0 MD-TRADE entries; apply left to the VM rows watcher, not verified here",
+  "schema: packet peak_provenance prop_ticket_mark recorded as estimated; features_at_review.prop_ticket_state object omitted (schema number|null)"
+ ],
+ "account_reads": [
+  {
+   "account_id": "tradeify_1",
+   "account_class": "prop",
+   "read": "unknown",
+   "evidence": "close: apply paths close, move_tp, reduce, tighten (live_review_apply.py); positions read: 1 open ETH short, SL/TP equal package; whether the account's own risk layer approves the close is not readable here"
+  },
+  {
+   "account_id": "velotrade_1",
+   "account_class": "prop",
+   "read": "unknown",
+   "evidence": "close: apply paths close, move_tp, reduce, tighten (live_review_apply.py); positions read: 1 open ETH short, SL/TP equal package; whether the account's own risk layer approves the close is not readable here"
+  }
+ ],
+ "disposition": {
+  "route": "recommended",
+  "mandate": "MD-TRADE-DESK",
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuKqd5rXf3qicMFStK8",
+ "prompt_sha": null,
+ "skill_sha": "08de91657856591aae84123faaf270b2a9d7f876",
+ "packet_defects": [],
+ "packet_sha": "e85966caba752b336ca4444f0cc48bd89b962212040d8b8fe08b726262967d43",
+ "forecast": {
+  "thesis": "From this state (open -0.50 R, peak -0.04 R, 3 bars) the leg's own history mostly drifts to the 1850.50 stop (hold mean -0.78 R); I expect the bounce to retest the 1844 high and the stop more often than the 1593.44 target, with the downtrend the minority-continuation path.",
+  "direction": "against_trade",
+  "target_px": 1850.50464286,
+  "p_target": 0.45,
+  "invalidation_px": 1772.02,
+  "horizon_bars": 6,
+  "timeframe": "4h",
+  "evidence": [
+   "priced_options: hold n=61 -0.7840 vs close -0.5585, diff 2.6 SE",
+   "chart.since_entry: high 1844.43 low 1772.02",
+   "htf: 1d trending ADX 30.68; 4h ADX 60.69",
+   "context.previous_review: 12:07Z hold on a tie at n=20"
+  ]
+ }
+}
