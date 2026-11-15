@@ -941,3 +941,72 @@ def test_goldens_are_the_pinned_review_not_a_later_packet():
              if not f.name.startswith(GOLDEN_REVIEW)]
     assert later, "the directory no longer holds a later MGC packet; this guard has nothing to guard"
     assert GOLD[MGC]["state"]["sl"] == pytest.approx(4270.02857143)
+
+
+# ── LTR-PROP-PACKET-OPEN-R (2026-11-15): prop-only packages get an ESTIMATED state from the filled ticket ──
+# Every prop packet read state.open_r null (priced_options could_not_price) because the prop executor, not the trader
+# exit loop, runs prop positions: there is no telemetry row. Seen on pkg-d8838f396234477c (tradeify_1) and
+# pkg-48c5cfab364e430c (velotrade_1, reviewer LIVE-REVIEW-20261115-0011).
+
+def _prop_only_snapshot(direction="short", entry=1768.52, sl=1850.50464286, tp=1593.43652, risk_per_unit=81.9846,
+                        closes=(1760.0, 1740.0, 1755.0), status="filled"):
+    pkg = "pkg-proponly"
+    t0 = int(datetime(2026, 11, 15, 0, 0, tzinfo=timezone.utc).timestamp())
+    now = datetime(2026, 11, 15, 12, 30, tzinfo=timezone.utc)
+    s = L.Snapshot()
+    s.packages[pkg] = {"order_package_id": pkg, "strategy_name": "trend_donchian_eth_4h", "symbol": "ETHUSDT",
+                       "direction": direction, "entry": str(entry), "sl": str(sl), "tp": str(tp), "status": "emitted",
+                       "close_reason": "prop_ticket_emitted",
+                       "meta": json.dumps({"timeframe": "4h", "risk_per_unit": risk_per_unit})}
+    s.reads["prop_tickets"] = {"tickets": [{"order_package_id": pkg, "ticket_id": "prop-T1", "account_id": "velotrade_1",
+                                            "status": status, "source": "ticket", "direction": direction,
+                                            "entry": entry, "sl": sl, "tp": tp,
+                                            "created_at": "2026-11-15T00:02:51+00:00"}]}
+    # 40 history bars before the fill, then 3 closed 4h bars after it (the last one closes at 12:00Z), then a forming bar
+    bars = [{"time": t0 - (40 - i) * 14400, "open": 1800.0, "high": 1810.0, "low": 1790.0, "close": 1800.0}
+            for i in range(40)]
+    for i, c in enumerate(closes):
+        bars.append({"time": t0 + i * 14400, "open": c + 5, "high": c + 8, "low": c - 30 if i == 1 else c - 5, "close": c})
+    bars.append({"time": t0 + 3 * 14400, "open": 1700.0, "high": 1700.0, "low": 1600.0, "close": 1601.0})  # forming
+    s.candles["ETHUSDT|4h"] = {"candles": bars}
+    return s, pkg, now
+
+
+def test_prop_only_package_gets_an_estimated_open_r_from_the_ticket():
+    s, pkg, now = _prop_only_snapshot()
+    p = L.build_packet(pkg, s, now, price=False)
+    st, f = p["state"], p["features_at_review"]
+    # short from 1768.52, mark = last CLOSED close 1755.0 (the forming bar's 1601 is ignored), 1R = 81.9846
+    assert st["open_r"] == round((1755.0 - 1768.52) * -1 / 81.9846, 3)
+    # peak: lowest low of the held closed bars = 1740 - 30 = 1710
+    assert st["peak_r"] == round((1710.0 - 1768.52) * -1 / 81.9846, 3)
+    assert st["giveback_r"] == round(st["peak_r"] - st["open_r"], 3)
+    assert st["bars_held"] == 2      # bars OPENED after the 00:02:51Z fill (the 00:00Z bar holds pre-fill prices); since_entry's rule
+    assert st["peak_provenance"] == "prop_ticket_mark"
+    assert f["prop_ticket_state"]["measurement"] == "estimated" and f["prop_ticket_state"]["risk_basis"] == "declared_initial_risk"
+    assert f["r_to_stop"] == round((1755.0 - 1850.50464286) * -1 / 81.9846, 3)
+    assert f["r_to_target"] == round((1593.43652 - 1755.0) * -1 / 81.9846, 3)
+    # the gap is closed, and the estimate is still SAID (never passed off as measured)
+    assert not any(d.get("reason") == "context_null:state.open_r" for d in p["packet_health"].get("defects", []))
+    notes = [m for m in p["missing_inputs"] if m["field"] == "state.open_r"]
+    assert notes and "ESTIMATED" in notes[0]["reason"]
+
+
+def test_prop_only_long_and_ticket_risk_fallback():
+    s, pkg, now = _prop_only_snapshot(direction="long", entry=1700.0, sl=1650.0, tp=1800.0, risk_per_unit=None,
+                                      closes=(1710.0, 1720.0, 1725.0))
+    meta = json.loads(s.packages[pkg]["meta"])
+    meta.pop("risk_per_unit")
+    s.packages[pkg]["meta"] = json.dumps(meta)
+    p = L.build_packet(pkg, s, now, price=False)
+    assert p["state"]["open_r"] == round((1725.0 - 1700.0) / 50.0, 3)
+    assert p["features_at_review"]["prop_ticket_state"]["risk_basis"] == "ticket_entry_to_stop"
+
+
+def test_an_unfilled_prop_ticket_keeps_open_r_null_with_the_reason():
+    s, pkg, now = _prop_only_snapshot(status="emitted")
+    p = L.build_packet(pkg, s, now, price=False)
+    assert p["state"]["open_r"] is None
+    note = [m for m in p["missing_inputs"] if m["field"] == "state.open_r"][0]["reason"]
+    assert "no filled prop ticket" in note
+    assert any(d.get("reason") == "context_null:state.open_r" for d in p["packet_health"].get("defects", []))
