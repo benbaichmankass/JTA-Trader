@@ -250,7 +250,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Cost of removing it:** no evidence found
 - **Effect: BOTH.** Stops new entries past the daily loss limit, but also blocks valid entries on a day with a losing early drawdown.
 - **Recommendation: KEEP.** The ONE sanctioned exception, verbatim operator quote.
-- **Question:** Keep this gate? Armed account: once day loss >= limit (3% or 0.8x firm limit), NEW entries refused until next day boundary. *(KEEP / REMOVE / MAKE REPORT-ONLY)*
+- **Question:** Keep this gate? Armed account: once day loss >= limit (3% or 0.8x firm limit), NEW entries refused until next day boundary. *(KEEP / REMOVE / MAKE REPORT-ONLY)* <!-- population-ok: a configured threshold, not a measured figure -->
 
 #### `GATE-DDSWITCH-AWAITING-DAY-START` (RM)
 
@@ -1080,7 +1080,7 @@ Each row ends with the decisions-page question. `RM` = can block or narrow a rea
 - **Cost of removing it:** Bounded steps limit a bad modify to 25% of the stop distance during early rollout; a wrong price on a live prop account is unrecoverable.
 - **Effect: BOTH.** Bounds a bad modify price to 25% of the stop distance, but slows valid tightening toward a stop.
 - **Recommendation: OPERATOR-PREFERENCE.** A pure rollout-caution cap by the manager; a stale rollout limit that slows tightening toward a stop on a losing leg is the operator's call to keep or lift.
-- **Question:** Keep this gate? Each armed VM stop amend moves at most 25% of the stop's distance from the venue price (ModifyRollout / rollout_tighten_mismatch), SL-only, tighten-only, must be re-read; *(KEEP / REMOVE / MAKE REPORT-ONLY)*
+- **Question:** Keep this gate? Each armed VM stop amend moves at most 25% of the stop's distance from the venue price (ModifyRollout / rollout_tighten_mismatch), SL-only, tighten-only, must be re-read; *(KEEP / REMOVE / MAKE REPORT-ONLY)* <!-- population-ok: a configured threshold, not a measured figure -->
 
 #### `AM-PROP-ROSTER-SURVIVAL-GATE` (RM)
 
