@@ -720,6 +720,12 @@ def run_trail_step(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mo
         RED_FLAG_AFTER in a row -- NO-HALT); one that disturbs the SL is
         alerted. Nothing here can loosen or remove the stop."""
         _sx_params = _structure_declared(leg)
+        if _sx_params is not None and _sx_params.get("sl_only"):
+            # PROP-VELO-SOL-TP-DIVERGE: "pivot=N;sl_only" means the structure exit moves ONLY the stop and the
+            # declared tp_revision rule stays the TP's one owner (structure_exit_live.replay drops the TP the
+            # same way, so the exchange monitor never moved it). This path used to ignore the flag and amended
+            # velotrade_1's SOL TP 76.626 -> 76.16 (pkg-ec406687dc6d449f) while bybit_2 kept the package TP.
+            _sx_params = None
         if declared_rule(leg) is None and _sx_params is None and tp_target is None:
             return
         if not getattr(adapter, "TP_AMEND_SUPPORTED", False):
