@@ -4,7 +4,7 @@ id: RQ-20261115-7e18-01
 title: 'ml-tm-action-value STAGE B: on the money legs, does acting on the corpus-v2-trained per-action value (only the Stage-A passers close and
   partial_close_50, inner-fold act margin) beat hold-to-rules, the best static rule, the distance logit and a matched random intervention,
   net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -166,3 +166,16 @@ related:
 - ML-AM-NEXT-LIVE
 population: TM-BENCH v1 (tmb-73f5c3660014), the six money legs as traded, 2,627 test trades in 6 purged calendar folds by entry.
 last_dispatched_at: '2026-11-15T14:26:12+00:00'
+grading:
+  attested: RULE-RQ-20261115-7e18-01-STAGE-B
+  auto: true
+  decision_rule_id: RULE-RQ-20261115-7e18-01-STAGE-B
+  evidence:
+  - research/results/RQ-20261115-7e18-01/43724365456.jsonl
+  graded_at: '2026-11-15'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

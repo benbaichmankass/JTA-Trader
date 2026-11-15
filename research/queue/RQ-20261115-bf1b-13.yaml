@@ -1,6 +1,6 @@
 id: RQ-20261115-bf1b-13
 title: 'Queue-fill iteration: one-factor sweep of trail_mult (exit family) on uso_trend_1h (untested lever; pass_unconfirmed), 1830 d, net of full cost stack'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -105,3 +105,16 @@ iteration:
   due_by: '2026-11-25'
 follow_up: Grader applies the rule mechanically; a PASS goes to a holdout-read confirmation unit (M13), a FAIL moves the next iteration to the next untested family.
 last_dispatched_at: '2026-11-15T17:48:33+00:00'
+grading:
+  attested: RULE-QFILL-TRAIL-MULT-USO-TREND-1H-SWEEP
+  auto: true
+  decision_rule_id: RULE-QFILL-TRAIL-MULT-USO-TREND-1H-SWEEP
+  evidence:
+  - research/results/RQ-20261115-bf1b-13/43743202730.jsonl
+  graded_at: '2026-11-15'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

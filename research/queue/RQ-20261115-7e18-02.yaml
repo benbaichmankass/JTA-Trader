@@ -3,7 +3,7 @@
 id: RQ-20261115-7e18-02
 title: 'Foxhound-1 DECOMPOSED score: does LightGBM on GROSS R minus the known pre-trade cost per R beat the served recipe''s net-R target on the
   trades each would take at actual net R? (13 monthly refits over 2025-10..2026-09; diagnosis cd01-01 R3)'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -137,3 +137,17 @@ related:
 population: The ml_decision_entry universe (Binance USD-M perps in the bp2 manifest, BTCUSDT excluded), both sides at the served tau over
   2025-10-01..2026-09-30 in 13 x 28-day windows; a recipe comparison, not a promotion read.
 last_dispatched_at: '2026-11-15T14:26:12+00:00'
+grading:
+  attested: RULE-RQ20261115-7e18-02-GROSS-DECOMP
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261115-7e18-02-GROSS-DECOMP
+  evidence:
+  - research/results/RQ-20261115-7e18-02/43724367585.jsonl
+  graded_at: '2026-11-15'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate
