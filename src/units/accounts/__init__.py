@@ -113,7 +113,8 @@ def load_accounts(config_path: str = _DEFAULT_ACCOUNTS_YAML) -> "List":
             # write back on each record_trade_result.
             rm = PropRiskManager(cfg, account_name=name, dry_run=dry_run)
         else:
-            rm = RiskManager(cfg.get("risk") or {}, dry_run=dry_run, account_id=name)
+            rm = RiskManager(cfg.get("risk") or {}, dry_run=dry_run, account_id=name,
+                             exchange=cfg.get("exchange"))
         # Forward-compat: skip accounts explicitly disabled in YAML
         # (``enabled: false``).
         if cfg.get("enabled") is False:
