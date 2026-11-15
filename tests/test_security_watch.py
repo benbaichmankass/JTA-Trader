@@ -222,3 +222,12 @@ def test_load_receipt_parses_and_ignores_junk():
     got = w.load_receipt(reader=lambda p: data, path="/r")
     assert got == {VENV: good}
     assert w.load_receipt(reader=lambda p: None, path="/r") == {}
+
+
+def test_sent_alerts_are_loud_and_idempotent():
+    """Operator 2026-11-15: security alerts get a siren header; applying it twice adds it once."""
+    from scripts.ops import security_watch as sw
+    out = sw.loud("[RED FLAG] ssh_keys file CHANGED on host: x")
+    assert out.startswith("\U0001F6A8\U0001F510 SECURITY ALERT")
+    assert out.endswith("[RED FLAG] ssh_keys file CHANGED on host: x")
+    assert sw.loud(out) == out
