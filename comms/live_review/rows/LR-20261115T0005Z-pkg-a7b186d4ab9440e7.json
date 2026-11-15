@@ -1,0 +1,167 @@
+{
+ "schema_version": 1,
+ "trade_id": null,
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuJWMwH2Kgt9FdfjCu3",
+ "prompt_sha": null,
+ "skill_sha": "5a5211a6947f24c23a312cd8856dde9c57f4f4a4",
+ "review_id": "LR-20261115T0005Z-pkg-a7b186d4ab9440e7",
+ "reviewed_at": "2026-11-15T00:20:00Z",
+ "order_package_id": "pkg-a7b186d4ab9440e7",
+ "leg": "trend_donchian_xrp_4h",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "conflicting_exposure",
+  "level": "XRPUSDT#948bdda03d",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-15T00:05:09Z",
+ "state": {
+  "atr_now_over_entry": 1.0,
+  "bars_held": 1,
+  "giveback_r": null,
+  "open_r": 0.0,
+  "peak_provenance": "estimated",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.95642857,
+  "tp": 0.8232437
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.0,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": 0.0,
+  "peak_r": null,
+  "r_to_stop": 1.0,
+  "r_to_target": 2.117
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "packet mechanics verdict match: bybit_2 and bybit_portfolio venue SL 0.9564 / TP 0.8232 matched by order_id to the package; XRPUSDT netted across 2 open packages per side (this + sibling), each package's own qty-scoped legs matched by id, not level"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 46,
+   "mean_r": 0.177,
+   "sd_r": 1.3346,
+   "worst_r": -1.0675,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 46,
+   "mean_r": -0.0318,
+   "sd_r": 0.721,
+   "worst_r": -1.008,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 46,
+   "mean_r": -0.0384,
+   "sd_r": 0.9122,
+   "worst_r": -1.008,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 46,
+   "mean_r": 0.0771,
+   "sd_r": 1.2024,
+   "worst_r": -1.3159,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261115T0005Z-pkg-a7b186d4ab9440e7.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Keep both shorts (timeframe separation); do not close or reduce. DEGRADED PACKET (could_not_price @ priced_options 1/1: open_r/peak_r/atr_stop_mult not available), so the table was run by hand at the entry state the packet does show (open_r 0.0, peak_r 0.0 assumed = no excursion yet, bars_held 1, declared atr_stop_mult 1.5); it is the leg's near-unconditional Stage-0 cell, n=46, not a state-specific price. Table (trend_donchian_xrp_4h__trades.jsonl): HOLD mean +0.177 R (sd 1.3346, worst -1.0675, n=46, net of cost). tighten atr:1.5 mean -0.038 R (cost 0.215, se 0.134), atr:1.0 -0.032 (cost 0.209), atr:2.0 +0.077 (cost 0.100, worst -1.316). Every measured tighten has a mean at or below hold (EV cost 0.10-0.29 R, tool-quoted), so none beats holding; close is not priced by the tool at this state, and closing near 0 R forgoes the hold EV (cost not quantified). Conflict: the opposing ml_entry_v2 1h XRPUSDT long is +0.0135 R open, a different leg and timeframe with no table in this packet; nothing here argues this short's 4h thesis has failed (4h and 1d trending, ADX 58 / 31, last 4h bar closed 0.9137 at a new low). The exposure is net short XRP, which the trend legs intend; the long is the contrarian side. If less XRP-short risk is wanted, that is an account-level sizing call, not a package exit."
+ },
+ "forecast": {
+  "thesis": "4h and 1d downtrend (ADX 58 / 31) with the latest 4h bar a roughly 4 pct drop to a new low (close 0.9137); trend short has TP 0.8232 (2.117 R away) vs stop 0.9564. Continuation is more likely than not, but history says most winners give back (p_giveback_gt_half 0.70), so the target is the minority path.",
+  "direction": "with_trade",
+  "target_px": 0.8232437,
+  "p_target": 0.3,
+  "invalidation_px": 0.95642857,
+  "horizon_bars": 12,
+  "timeframe": "4h",
+  "evidence": [
+   "hold n=46 mean +0.177 vs every measured tighten lower or equal",
+   "4h bars: new low 0.8918 intrabar, close 0.9137",
+   "htf 1d trending, adx_now 30.64",
+   "mechanics match on both accounts"
+  ]
+ },
+ "context_flags": [
+  "packet_defect: priced_options could_not_price 1/1 (open_r/peak_r/atr_stop_mult not available for this package); priced by hand at the entry state, labelled as such",
+  "correlated: 14 other open packages are shorts incl. BTC/ETH/SOL/ADA/AVAX (crypto-beta) plus a same-symbol sibling short on XRPUSDT (pkg-ea232fa1aa864a5e); trend_donchian_xrp_adx25 is the soak alias of trend_donchian_xrp_4h, so XRP short is effectively double-stacked at the same entry 0.9137 with different stops (0.9564 / 0.9707); account-level risk, not a package exit",
+  "conflict: opposing ml_entry_v2 1h XRPUSDT long open_r +0.0135; its account is not in the packet",
+  "regime: cell entry/now null (vol_regime unknown; vol edges not reachable read-only); 1d trend_now trending",
+  "bias: table tightens are flattered (stop fills at stop price); live peak_r null, so no giveback state was priced",
+  "live-vs-backtest: realMoney 9 closed +0.457 R vs backtest +0.076 (CONSISTENT); mirror 6 closed -1.118 R (CONSISTENT)",
+  "missing: funding (geo-blocked, no diag route); chart.since_entry (package open time not in journal reads); calendar: no event classes for symbol"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "packet_sha": "4026c95e9d8a1cc76a5fac26269ca0afe4ddd765831660433fec3d691d5ebc56",
+ "packet_defects": [
+  {
+   "field": "priced_options",
+   "reason": "could_not_price",
+   "count": 1,
+   "denominator": 1
+  }
+ ]
+}
