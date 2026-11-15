@@ -96,7 +96,7 @@ EXIT_DEFERRED = 7
 #: 5931584062 on #14947: "if a live ticket is waiting, the tick wins").
 #: ``close_position_*`` is NOT here: closing a position is never deferred.
 YIELD_MODES = frozenset({"probe", "instrument_probe", "instrument_search_dump", "instrument_info_dry",
-                         "instrument_info_probe", "symbol_switch_dry", "quote_spread", "link_state_dump", "page_status", "widget_menu_probe", "add_watchlist_widget", "watchlist_submenu_probe",
+                         "instrument_info_probe", "symbol_switch_dry", "quote_spread", "link_state_dump", "page_status", "widget_menu_probe", "add_watchlist_widget", "select_workspace", "watchlist_submenu_probe",
                          "add_watchlist_symbol_dry", "add_watchlist_symbol",
                          "instrument_page_dump", "order_surface_dump", "probe_ticket_ask",
                          "edit_dialog_dry", "edit_dialog_probe", "edit_surface_probe",
@@ -168,6 +168,8 @@ def resolve_mode(args: argparse.Namespace, env: Optional[Dict[str, str]] = None)
         return "widget_menu_probe"
     if getattr(args, "add_watchlist_widget", False):
         return "add_watchlist_widget"
+    if getattr(args, "select_workspace", False):
+        return "select_workspace"
     if getattr(args, "watchlist_submenu_probe", False):
         return "watchlist_submenu_probe"
     if getattr(args, "add_watchlist_symbol_dry", ""):
@@ -543,6 +545,10 @@ def main(argv: Optional[list] = None) -> int:
     g.add_argument("--add-watchlist-widget", action="store_true",
                    help="add the Watchlist widget to 'My Trading Account': the '+' then the measured "
                         "'Watchlist' menu entry only; refused unless one-click reads OFF; verified click-free")
+    g.add_argument("--select-workspace", action="store_true",
+                   help="re-select the 'My Trading Account' workspace tab: ONE click on its name; refused "
+                        "unless one-click reads OFF and exactly one such tab exists; no-op if current; "
+                        "verified by the tab reading current and the watchlist reading back")
     g.add_argument("--watchlist-submenu-probe", action="store_true",
                    help="MEASURE the Watchlist submenu: '+', 'Watchlist' (both measured), then HOVER each of "
                         "Private/Public and dump; clicks no submenu entry; Escape + layout re-read")
@@ -811,6 +817,12 @@ def main(argv: Optional[list] = None) -> int:
                 emit({"watchlist_submenu_probe": got}, *secrets)
                 ok = got.get("refused") is None and got.get("restored") is True and "error" not in got
                 return EXIT_OK if ok else EXIT_UNPARSED
+
+            if mode == "select_workspace":
+                got = adapter.select_workspace(page)
+                emit({"select_workspace": got}, *secrets)
+                ok = (got.get("selected") or got.get("already_current")) and got.get("watchlist_ok")
+                return EXIT_OK if ok and "error" not in got else EXIT_UNPARSED
 
             if mode == "add_watchlist_widget":
                 got = adapter.add_watchlist_widget(page)
