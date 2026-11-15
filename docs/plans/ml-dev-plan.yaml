@@ -798,12 +798,17 @@ lines:
       baseline: n/a (census; materiality = >= 20 concurrent trades and share >= 15 percent in both windows)
       pass: the harness + rule arms (AGG-HARNESS, needs_authoring) are built
       fail: the slot stays a rule
+    - lever: AGG-HARNESS rule arms A0 today's rule (slices / election per position_model) vs A1 1/N netting / A2 best-single / A3 forecast combination / A4 matched random, 5 census pairs, two windows
+      ref: 'RQ-20261115-a474-02 (ML-PRIMARY-2; RULE-RQ20261115-a474-02-D5-ARMS; harness scripts/research/d5_aggregator_arms.py)'
+      baseline: A0 = what the accounts do today, same solo streams, one budget per pair, net of the full cost stack
+      pass: one arm beats A0 by >= 5 R (summed over pairs) AND A4 p95 AND keeps maxDD within 1.25x in BOTH windows -> it is the baseline for a learned aggregator arm A5 and a HELD Tier-3 allocation proposal
+      fail: no arm beats A0 in both windows -> the slot stays the slices / election rule (rule-exhausted until a roster change)
     - lever: same-symbol head-to-head re-runs
       ref: RQ-20261015-1631-01, RQ-20261015-1631-02
       baseline: today's slices, 1/N, best-single, net of cost
       pass: Tier-3 allocation change
       fail: slices stay
-  next_weeks: {W47: '82fd-02 PASS (11-15) -> build AGG-HARNESS (same-symbol multi-leg replay incl. ml_entry) + register the A0..A4 rule-arm unit RQ-20261115-a474-02 (id reserved)', W48: 'harness only if material concurrency', W49: none, W50: none}
+  next_weeks: {W47: '82fd-02 PASS (11-15) -> AGG-HARNESS built (scripts/research/d5_aggregator_arms.py) + RQ-20261115-a474-02 registered (11-15); grade on landing', W48: 'a474-02 PASS -> register learned arm A5 vs the passing rule arm; FAIL -> rule-exhausted', W49: none, W50: none}
   exhaustion: the census shows concurrency too rare to move net P&L (threshold set in its own registration).
   owner: AM-ML
   plan_items: []
