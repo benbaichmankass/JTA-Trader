@@ -102,8 +102,32 @@ def standardise(Xtr: np.ndarray, *others: np.ndarray):
 
 
 # ----------------------------------------------------------------------------------------------- corpus
-def build_corpus(legs: list[str], *, start: str, end: str, days: int, wd: Path) -> tuple[dict, dict]:
-    """Run each leg's config-exact harness with --emit-paths (one argv builder, path_metric_giveback)."""
+SPOT_WARMUP_DAYS = 120  # candles fetched before `start` so indicators are warm when the window opens
+
+
+def fetch_spot_proxy_csv(leg: str, base: dict, *, start: str, end: str, csv: Path) -> dict:
+    """Binance SPOT candles for a USDT crypto leg (PI-20261029-XME2GXW7-0003). Spot is a PROXY for the perp the leg
+    trades (same exchange + symbol, no funding in the price); the harness still charges the full cost stack."""
+    import subprocess
+    import regime_debt_matrix as rdm
+    sym, tf = (base.get("symbols") or [None])[0], base.get("timeframe")
+    if not sym or not tf:
+        raise ValueError(f"{leg}: no symbols[0]/timeframe in config")
+    feed = rdm.resolve_feed(sym, tf)
+    if feed["source"] != "binance":
+        raise ValueError(f"{leg}: spot proxy needs a USDT crypto leg, got feed source {feed['source']!r}")
+    t0 = (pd.Timestamp(start) - pd.Timedelta(days=SPOT_WARMUP_DAYS)).strftime("%Y-%m-%d")
+    t1 = pd.Timestamp(end).strftime("%Y-%m-%d")
+    subprocess.run([sys.executable, str(REPO / "scripts/ops/fetch_backtest_candles.py"), "--symbol", feed["ticker"],
+                    "--interval", feed["interval"], "--start-date", t0, "--end-date", t1, "--output", str(csv),
+                    "--source", "binance_vision", "--vision-market", "spot"], check=True, cwd=str(REPO))
+    return {**feed, "source": "binance_spot_proxy", "window": [t0, t1]}
+
+
+def build_corpus(legs: list[str], *, start: str, end: str, days: int, wd: Path,
+                 market: str = "perp") -> tuple[dict, dict]:
+    """Run each leg's config-exact harness with --emit-paths (one argv builder, path_metric_giveback).
+    market="spot" pre-fetches Binance SPOT candles (a labelled perp proxy) and feeds them as the harness CSV."""
     import yaml
     from path_metric_giveback import run_leg_paths
     cfgs = yaml.safe_load((REPO / "config" / "strategies.yaml").read_text(encoding="utf-8"))
@@ -115,8 +139,14 @@ def build_corpus(legs: list[str], *, start: str, end: str, days: int, wd: Path) 
             runs[leg] = {"state": "not_in_config"}
             continue
         try:
-            _paths, meta = run_leg_paths(leg, base, days=days, start=start, end=end, wd=wd, data_csv=None,
-                                         non_crypto_source="auto")
+            spot_feed, data_csv = None, None
+            if market == "spot":
+                data_csv = wd / f"{leg}__data.csv"
+                spot_feed = fetch_spot_proxy_csv(leg, base, start=start, end=end, csv=data_csv)
+            _paths, meta = run_leg_paths(leg, base, days=days, start=start, end=end, wd=wd,
+                                         data_csv=str(data_csv) if data_csv else None, non_crypto_source="auto")
+            if spot_feed is not None:
+                meta["feed"] = spot_feed
         except Exception as exc:  # noqa: BLE001  # allow-silent: recorded per leg; the family verdict goes INDETERMINATE when a gate leg fails
             runs[leg] = {"state": "harness_failed", "error": str(exc)[:400]}
             continue
@@ -468,7 +498,8 @@ def run_holdout(gate: list[str], train_df: pd.DataFrame, h: dict, cfg: dict | No
     art = export_model(train_df, cfg or PRIMARY)
     wd = h["wd"]
     if h.get("build", True):
-        _o, runs = build_corpus(gate, start=h["start"], end=h["end"], days=h["days"], wd=wd)
+        _o, runs = build_corpus(gate, start=h["start"], end=h["end"], days=h["days"], wd=wd,
+                                market=h.get("market", "perp"))
     else:
         runs = {}
     frames = []
@@ -500,7 +531,7 @@ def run_holdout(gate: list[str], train_df: pd.DataFrame, h: dict, cfg: dict | No
                                     "brier_const_train_base": round(float(np.mean((base - y) ** 2)), 4)}
     ck = {k: ev["checks"][k] for k in ("a_noninferior", "b_risk", "c_beats_random", "d_not_vacuous")}
     return {"state": "CONFIRMS" if all(ck.values()) else "FAILS", "reasons": [k for k, v in ck.items() if not v],
-            "window": [h["start"], str(h["before"])], "n": len(df),
+            "window": [h["start"], str(h["before"])], "n": len(df), "market": h.get("market", "perp"),
             "n_by_leg": df["leg"].value_counts().to_dict(), "checks": ck,
             "eval": {k: v for k, v in ev.items() if k not in ("checks", "pass")}, "runs": runs}
 
@@ -736,6 +767,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--holdout-days", type=int, default=None)
     ap.add_argument("--holdout-corpus-dir", default=None,
                     help="reuse an already-built holdout corpus (same window) instead of re-running the harness")
+    ap.add_argument("--holdout-market", choices=("perp", "spot"), default="perp",
+                    help="spot = build the holdout from Binance SPOT candles, a labelled perp PROXY (RQ-20261029-5785-05)")
     ap.add_argument("--refine", choices=("calibration", "nested"), default=None,
                     help="V2 follow-up units: RULE-ML-OVERLAY-CALIBRATION-V1 / RULE-ML-OVERLAY-NESTED-SELECT-V1")
     ap.add_argument("--out", required=True)
@@ -756,7 +789,7 @@ def main(argv: list[str] | None = None) -> int:
         hwd = Path(a.holdout_corpus_dir) if a.holdout_corpus_dir else out / "holdout_corpus"
         hwd.mkdir(parents=True, exist_ok=True)
         holdout = {"start": a.holdout_start, "end": a.holdout_end, "days": a.holdout_days, "wd": hwd,
-                   "build": not a.holdout_corpus_dir,
+                   "build": not a.holdout_corpus_dir, "market": a.holdout_market,
                    "before": pd.Timestamp(a.start, tz="UTC") - pd.Timedelta(days=EMBARGO_DAYS)}
     if a.refine:
         rr = [run_refine(a.refine, n, legs, g, corpus, holdout) for n, legs, g in fams]

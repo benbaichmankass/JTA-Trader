@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "why": "Builds PI-20261029-XME2GXW7-0003 (Binance SPOT candles as a labelled perp proxy) and unblocks RQ-20261029-5785-05, the larger-holdout read for real-money Beagle-1, whose current holdout is n 105, one leg dominating.",
+  "hold_text": "Moves research/queue/blocked/RQ-20261029-5785-05.yaml to queued; R5 cannot vouch research/queue/, so the manager merges. Unit change is run.command only: --holdout-corpus-dir (never builds) -> --holdout-market spot. Rule, window and statistic unchanged and still registered before any run. Code: fetch_backtest_candles --vision-market {um,spot} (spot refused outside --source binance_vision, so it never rides the auto chain); ml_overlay_noninferior --holdout-market spot pre-fetches spot CSVs into the holdout corpus and labels feed source binance_spot_proxy + holdout market. No src/, no config/; trader_import_closure decide = SKIP. Revert: git revert."
+}
