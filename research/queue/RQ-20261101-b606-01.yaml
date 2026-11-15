@@ -1,7 +1,7 @@
 # Authored 2026-11-01 by lane ML-RECIPE (Tier 1) from round-1 attribution. Decision rule registered BEFORE the extension run; the 0.06/0.08/0.10 arms were looked at exploratorily first (stated in the question). Gates: none.
 id: RQ-20261101-b606-01
 title: 'ENTRY lever 3b, cost-aware gate: does abstaining when the estimated cost per R is high lift the dev mean, and where does the dose-response stop? One factor, dev folds only'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -102,18 +102,16 @@ programme_node:
 last_dispatched_at: '2026-11-02T10:51:38+00:00'
 grading:
   attested: RULE-20261101-b606-01
-  auto: true
+  auto: false
   decision_rule_id: RULE-20261101-b606-01
   evidence:
   - research/results/RQ-20261101-b606-01/41351027294.jsonl
   - research/results/RQ-20261101-b606-01/41368745400.jsonl
   - research/results/RQ-20261101-b606-01/41385978261.jsonl
-  graded_at: '2026-11-12'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: PI-20261105-WDWYHZCN-0001
-  owner_reason: producer_failed (no_verdict) on the newest row, 3 identical re-fires; failure mode and
-    fix path named in PI-20261105-WDWYHZCN-0001 (RESEARCH-OPS-20261105-1449 triage)
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
-  rows: 3
-  verdict: null
+  - comms/research/RQ-20261101-b606-01/41385978261/b606_result.json
+  graded_at: '2026-11-15'
+  grader: lane ML-PRIMARY-2 (session read of the registered clauses against the producers own per-arm output; the producer computed each clause but wrote no verdict.json)
+  verdict: pass
+  candidates:
+  - gate_0.06
+  reason: 'ONE dev CANDIDATE, gate_0.06 (abstain when estimated cost per R > 0.06), a win in all 3 runs (41351027294 / 41368745400 / 41385978261): delta +0.0115 / +0.0115 / +0.0124 vs threshold 0.0068 / 0.0068 / 0.0117 (2 x base seed range: registered 0.0034, recomputed larger 0.0058 in the third run); better in 6/8 dev folds; sign positive in 3/4 years; min fold n 1697 / 1697 / 1679 >= 1000. SMOOTH (hand-checked, third run): neighbours gate_0.05 +0.0127 and gate_0.08 +0.0043 each within 0.01 of +0.0124, and the response is monotone over 0.06 -> 0.08 -> 0.10 (+0.0124, +0.0043, +0.0025). gate_0.05 indeterminate (min fold n 956 < 1000); 0.03/0.04 indeterminate; 0.08/0.10 no_win. Candidate only, for the ONE combined held-out read.'
