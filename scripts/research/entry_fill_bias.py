@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# wiring: manual-only - a measurement for row ENTRY-FILL-BIAS-30D, re-run by hand after ENTRY-FILL-WRITEBACK lands to confirm new rows carry the fill; no schedule by design
 """ENTRY-FILL-BIAS-30D: planned entry (journal ``entry_price``) vs the venue's entry fill, per account.
 
 Why: the journal's ``entry_price`` is the PACKAGE's planned entry, not the fill (row ENTRY-FILL-WRITEBACK; 2026-11-14
