@@ -5044,7 +5044,11 @@ def _close_modal_mismatch(modal: Mapping[str, Any], symbol: str, side: Optional[
     if not modal.get("ok"):
         return [str(modal.get("why") or "modal not read")]
     head = str(modal.get("heading") or "")
-    if symbol.upper() not in head.upper():
+    # The live terminal writes the pair with a slash: "Close SOL/USD Buy Position" (PROP-CLOSE-MODAL-SLASH,
+    # 2026-11-15: tradeify_1's SOLUSD close was refused on every tick from 11:44Z and the position stayed open).
+    # Accept the heading as written or with only its "/" removed; no other separator is dropped, so words never
+    # run together into a false match.
+    if symbol.upper() not in head.upper() and symbol.upper() not in head.upper().replace("/", ""):
         bad.append(f"heading {head!r} does not name {symbol}")
     if side is not None:
         want = "buy" if side == "long" else "sell"

@@ -67,7 +67,7 @@ def test_live_config_declares_no_profile_for_the_bybit_symbols():
     """The real-money path: bybit_2 / bybit_portfolio's symbols resolve to the defaults, undeclared."""
     leg = _leg()
     for s in BYBIT_SYMS:
-        p = PR.resolve(leg, s)
+        p = PR.resolve(leg, s, "ml_entry")   # the runtime call (strategy_signal_builders passes NAME): record-aware
         assert p["declared"] is False and p["conflict"] is None, (s, p)
         assert (p["reference_venue"], p["reference_universe"], p["anchor"], p["session"], p["cost_basis"],
                 p["side_filter"]) == ("bybit", None, None, None, None, "both")

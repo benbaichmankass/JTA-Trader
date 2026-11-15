@@ -165,7 +165,7 @@ def cause_of(row: dict) -> str:
         return "dry_run_no_order_placed"
     if "account_mode_dry_run" in text:
         return "account_mode_dry_run"
-    if "risk_refused" in text or "sizing_skip" in text:
+    if "risk_refused" in text or "exposure_ceiling" in text or "sizing_skip" in text:
         return "sizing_refused"
     if str(row.get("status") or "").lower() != "rejected":
         return "placed"

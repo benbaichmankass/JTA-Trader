@@ -250,7 +250,8 @@ def test_ml_entry_scope_on_alpaca_paper_is_etfs_only():
     cfg = yaml.safe_load((REPO / "config/strategies.yaml").read_text())["strategies"]["ml_entry"]
     paper = leg_symbols(cfg, "alpaca_paper")
     assert paper and not any(s.endswith("USDT") for s in paper) and "GLD" not in paper
-    assert leg_symbols(cfg, "bybit_2") == ["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"]
+    # bybit_2 trades the population record (comms/ml_universe/ml_entry.json), resolved with the leg's NAME as the runtime does
+    assert sorted(leg_symbols(cfg, "bybit_2", leg="ml_entry")) == sorted(["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"])
     accts = yaml.safe_load((REPO / "config/accounts.yaml").read_text())["accounts"]
     assert "ml_entry" in accts["alpaca_paper"]["strategies"]
     assert "ml_entry" not in (accts["alpaca_live"].get("strategies") or [])        # no real-money ML on Alpaca

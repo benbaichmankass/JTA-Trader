@@ -396,15 +396,15 @@ lines:
       baseline: frozen v1 held-out record
       pass: refit served through the retrain workflow's candidate rule (ML-ENTRY-RETRAIN-CADENCE)
       fail: v1 stays served; lever list re-ranked from the dev-fold ablations
-    - lever: population test over the venue-tradable population with a filter fixed before the run
+    - lever: "re-run the population test on the SERVED refit v1r20261106 (train_end 2026-10-14) once its out-of-time window is powered (the frozen-v1 test RQ-20261112-2e3b-01 already FAILED; this would be the 2nd population read of the lineage, on the deflated bar)"
       ref: ML-ENTRY-POPULATION-TEST
       baseline: the 5-coin read on the same window, net of each symbol's own costs
       pass: Tier-3 widening packet (a real-money widening needs its own population test - operator 2026-11-04)
-      fail: per-account symbol map is replaced by the recorded result; bybit_2 keeps the tested 5
+      fail: the c692-06 five coins stay the population (record in comms/ml_universe/ml_entry.json, PR #25535)
   next_weeks:
     W47: 'RESID-ENTRY FAIL (4654-01); b602/b606 dev candidates PASS but the combined held-out read a474-04 FAIL (11-15, VG -0.039 vs base +0.007); every ranked ENTRY lever tried so far has failed its held-out read; next: population test (filter registered first) and the weekly forward grade as the demotion read'
     W48: 'combined held-out read under ML-LEVER-PLAN if any lever passed dev folds; weekly forward grade continues'
-    W49: 'population test (filter registered first)'
+    W49: 'population test done (2e3b-01 FAIL on frozen v1); served-refit re-test not powered before ~2027-03 (n ~4,900 needed for +0.037 R at t=2)'
     W50: 'review the forward grade series as the demotion read'
   exhaustion: >-
     the mirror net-of-cost window crosses the declared demotion read (ML-D3-HEAD-TO-HEAD § "Declared demotion signals": mean < 0 at
@@ -937,7 +937,7 @@ lines:
   kind: model
   subject: exit-head-donchian-1h-v1 (Labrador-2)
   consumer: {class: none, note: 'exit_head_action annotate on all 3 legs (MEASURED config/strategies.yaml); changes no order'}
-  stage: iterating
+  stage: stuck
   row: ML-EXITHEAD-VALUE
   state:
     summary: Fails out of the leg family it was trained on, and the volume-composition feature add failed today.
@@ -966,8 +966,9 @@ lines:
       baseline: as above
       pass: as above
       fail: as above
-  next_weeks: {W47: '1ae8-01 INDETERMINATE (no gain); a474-03 pooled donchian-4h head FAIL (11-15, B selected, AUC 0.613 but no arm beats B net of cost); only the desk-label variant (PI-20261029-IHFQDB3W-0004) is left', W48: 'desk-label variant: author or retire', W49: none, W50: none}
-  exhaustion: the eth_4h variant and the desk-label variant FAIL; with today's FAILs the head's feature set then has no lever left.
+      parked: "PARKED ON POWER, not authored (ML-PRIMARY-3, 2026-11-15). Population MEASURED from comms/research/desk_lifecycle/full-c4e: 12,500 check-in labels on 507 pairs / 1,040 entries (520 claude-judged, 520 random), 6 symbols, 32 weeks; folds 1/2/3/4 = 320/632/70/18 entries, so at most 720 OOS trades walk-forward. Per-trade hold-vs-close delta sd ~0.85 R (backed out of 1ae8-01: CI95 half-width ~0.015 at n 13,243). SE ~0.032, MDE ~0.08 R at 80 percent power, against every exit-head effect seen so far within +/-0.06 R (a474-03, 1ae8-01, 0bc8-02, 78fc-03): INDETERMINATE by construction. Growing n needs more LLM-judged walks (plan capacity per label). RE-ENTRY TEST: desk labels on >= ~5,000 OOS trades (MDE <= 0.03 R), or a cheap mechanical label source of that size."
+  next_weeks: {W47: '1ae8-01 INDETERMINATE (no gain); a474-03 pooled donchian-4h head FAIL (11-15, B selected, AUC 0.613 but no arm beats B net of cost); desk-label variant PARKED on power (n <= 720 OOS trades, MDE ~0.08 R)', W48: 'none (re-entry test on the desk-label lever)', W49: none, W50: none}
+  exhaustion: 'the eth_4h variant and the desk-label variant FAIL; with today''s FAILs the head''s feature set then has no lever left. 2026-11-15: eth_4h variant FAILED (a474-03); desk-label variant parked on power, so the line waits on that re-entry test (and on MLP-D7-ACTION-VALUE for the D8 question).'
   owner: AM-ML
   plan_items: [ML-X3, ML-X4, ML-N4]
 
@@ -1092,14 +1093,15 @@ lines:
   state:
     summary: Instrument landed_unproven; not yet run on a money model.
     evidence: []
-  levers_tried: []
+  levers_tried:
+    - {lever: "Foxhound-1 served-window split (regime vs selection vs cost)", ref: RQ-20261112-cd01-01, verdict: "superseded the run-on-Foxhound-1 lever (manager 15a, 2026-11-15). Indeterminate by rule: gap -0.211 R = regime -0.200 (t -1.13) + selection -0.011, cost +0.003; frozen v1 -0.324 on the same 14 days (REGIME-SHARED), n 375; research/results/RQ-20261112-cd01-01/local-20261112T1500Z.jsonl. No demotion case."}
   levers_ahead:
-    - lever: run on Foxhound-1's forward series
+    - lever: run drift_regime_mix.py itself once (SOL KS ~0.230 reproduced) so the instrument closes
       ref: ML-DRIFT-SPLIT-INSTRUMENT
       baseline: n/a (instrument)
       pass: the split appears in /ml-review C7 for the money models
       fail: defect row
-  next_weeks: {W47: run on Foxhound-1, W48: none, W49: none, W50: none}
+  next_weeks: {W47: "Foxhound-1 lever superseded by cd01-01", W48: none, W49: none, W50: none}
   exhaustion: instrument; closes when it runs in C7.
   owner: AM-ML
   plan_items: [ML-N5, ML-V4]
