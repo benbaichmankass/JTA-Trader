@@ -655,8 +655,12 @@ def _package_view(s: Snapshot, pkg: str) -> dict:
     # packages that have no prop ticket: 8 of the 100 rows in the 2026-11-06 read. Counting one as a ticket made an
     # account entry keyed None with a blank exchange, graded "could not read" on every non-prop package
     # (pkg-f76bb92289d143e5: venue_read_unreachable 1/2; row LTR-PACKET-READ-REACH, MECH-FOLLOWUPS-1105).
+    # The synthetic rows are told apart by their NULL ticket_id/account_id, never by ``source``: the route stamps
+    # ``source: "order_package"`` on REAL tickets too (2026-11-15 read: 90 of 100 rows had a ticket_id AND an account_id
+    # AND source order_package). Filtering on source dropped every real ticket, so every prop-only packet had no account
+    # rows (mechanics could_not_look) and the prop open-R derivation (#26164) never ran (LR-20261115T0401Z, pkg-48c5cfab).
     tickets = [t for t in (s.get("prop_tickets") or {}).get("tickets", [])
-               if t.get("order_package_id") == pkg and t.get("account_id") and t.get("source") != "order_package"]
+               if t.get("order_package_id") == pkg and t.get("account_id") and t.get("ticket_id")]
     return {"package": p, "trades": trade_rows, "telemetry": tel, "tickets": tickets}
 
 
