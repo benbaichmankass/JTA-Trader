@@ -19,6 +19,7 @@ Failure modes:
 """
 from __future__ import annotations
 
+import asyncio
 import functools
 import hmac
 import json
@@ -39,7 +40,11 @@ from src.runtime.exit_loop_health import (
     STATE_FILE_NAME as EXIT_LOOP_HEALTH_STATE_FILE,
 )
 from src.utils.paths import repo_root, runtime_logs_dir, trade_journal_db_path
-from src.web.api._account_read_executor import run_account_read
+from src.web.api._account_read_executor import (
+    is_ib_account,
+    run_account_read,
+    run_account_read_parallel,
+)
 from src.web.runtime_status import _resolve_git_sha
 
 logger = logging.getLogger(__name__)
@@ -3155,6 +3160,7 @@ async def get_exchange_positions(
     request: Request,
     account_id: str | None = None,
     symbol: str | None = None,
+    deadline_s: float = 8.0,
 ) -> dict[str, Any]:
     """Read-only **exchange-side** open positions per account — the BROKER's
     truth, not the journal.
@@ -3199,6 +3205,20 @@ async def get_exchange_positions(
     ``requested_symbol`` is echoed so a reader can prove the parameter was
     honoured. Still places, modifies and cancels nothing.
 
+    **Parallel, with a per-account deadline** (row DIAG-EXCHANGE-POSITIONS-SLOW,
+    2026-11-14). Accounts used to be read one after another, and the all-accounts
+    form passed the proxy's 30 s upstream limit (HTTP 502 for every caller). Now
+    non-IB accounts are read side by side on ``run_account_read_parallel``. IB
+    accounts stay on the single-worker ``run_account_read`` lane
+    (BL-20260706-IBCONCURRENCY), concurrently with the rest. Each account gets
+    ``deadline_s`` (default 8, clamped 1..25), and each row carries
+    ``read_state``:
+      * ``ok``: read answered (positions may still be ``null`` = could-not-read
+        by the venue helper);
+      * ``timed_out``: no answer within the deadline (positions ``null``);
+      * ``error``: the read raised (``error`` names it).
+    ``elapsed_s`` is per account. One slow account never fails or stalls the call.
+
     Tier 1 — read-only, token-gated, best-effort per account.
     """
     _require_diag_token(request)
@@ -3214,21 +3234,31 @@ async def get_exchange_positions(
         ) from exc
 
     accounts = _diag_accounts("get_exchange_positions", list_accounts, account_id)
+    try:
+        deadline = min(max(float(deadline_s), 1.0), 25.0)
+    except (TypeError, ValueError):
+        deadline = 8.0
 
-    out: list[dict[str, Any]] = []
-    for acc in accounts:
+    async def _read(acc: Any, fn: Any, *args: Any) -> Any:
+        # Offloaded (BL-20260706-IBCONCURRENCY): IB on the single-worker lane,
+        # everything else on the parallel lane. Never call the helper directly.
+        runner = run_account_read if is_ib_account(acc) else run_account_read_parallel
+        return await asyncio.wait_for(runner(fn, acc, *args), timeout=deadline)
+
+    async def _one(acc: Any) -> dict[str, Any]:
         aid = (acc or {}).get("account_id")
-        if account_id and aid != account_id:
-            continue
+        t0 = time.monotonic()
         positions: Any = None
         err: str | None = None
+        read_state = "ok"
         try:
-            # Offloaded — see the docstring above + _account_read_executor
-            # module docstring (BL-20260706-IBCONCURRENCY): a direct call
-            # here would drive ib_insync's own event loop on top of
-            # uvicorn's already-running one under concurrent requests.
-            positions = await run_account_read(account_open_positions, acc)
-        except Exception as exc:  # noqa: BLE001  # allow-silent: per-account error surfaced in the row (error + positions=null), logged; one account must not fail the call
+            positions = await _read(acc, account_open_positions)
+        except asyncio.TimeoutError:
+            read_state = "timed_out"
+            err = f"timed_out after {deadline:g}s"
+            logger.warning("get_exchange_positions: %s timed out after %ss", aid, deadline)
+        except Exception as exc:  # noqa: BLE001  # allow-silent: per-account error surfaced in the row (read_state error + positions=null), logged; one account must not fail the call
+            read_state = "error"
             err = f"{type(exc).__name__}: {exc}"
             logger.warning("get_exchange_positions: %s raised %s", aid, exc)
         row: dict[str, Any] = {
@@ -3246,8 +3276,11 @@ async def get_exchange_positions(
             books_err: str | None = None
             if is_bybit:
                 try:
-                    books = await run_account_read(
-                        account_bybit_symbol_books, acc, want_symbol)
+                    books = await _read(acc, account_bybit_symbol_books, want_symbol)
+                except asyncio.TimeoutError:
+                    books_err = f"timed_out after {deadline:g}s"
+                    logger.warning(
+                        "get_exchange_positions: %s symbol read %s timed out", aid, want_symbol)
                 except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced in the row (symbol_read=could_not_look + error), logged
                     books_err = f"{type(exc).__name__}: {exc}"
                     logger.warning(
@@ -3268,11 +3301,18 @@ async def get_exchange_positions(
         row["positions"] = positions
         row["count"] = len(positions) if isinstance(positions, list) else None
         row["error"] = err
-        out.append(row)
+        row["read_state"] = read_state
+        row["elapsed_s"] = round(time.monotonic() - t0, 3)
+        return row
+
+    wanted = [acc for acc in accounts
+              if not account_id or (acc or {}).get("account_id") == account_id]
+    out: list[dict[str, Any]] = list(await asyncio.gather(*(_one(acc) for acc in wanted)))
     return {
         "captured_at": datetime.now(timezone.utc).isoformat(),
         "requested_account_id": account_id,
         "requested_symbol": want_symbol,
+        "deadline_s": deadline,
         "accounts": out,
     }
 
