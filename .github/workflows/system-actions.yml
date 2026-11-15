@@ -355,9 +355,6 @@ jobs:
           printf '%s\n' "${ISSUE_NUMBER:-}" > request/issue_number
       # SYSTEM-ACTION-CONCURRENCY-LANES: REPORT-ONLY (operator 2026-11-12). Every run has a
       # group of its own, so nothing waits; this step REPORTS other system-actions runs in
-      # flight (warning + one issue comment). It never waits, cancels or fails the run.
-      # SYSTEM-ACTION-CONCURRENCY-LANES: REPORT-ONLY (operator 2026-11-12). Every run has a
-      # group of its own, so nothing waits; this step REPORTS other system-actions runs in
       # flight: a ::warning:: here, and an "Overlap" note in the outcome comment the
       # system-action job posts (one comment per request, so issue pollers are not misled).
       # It never waits, cancels or fails the run.

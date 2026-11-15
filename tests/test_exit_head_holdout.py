@@ -86,3 +86,7 @@ def test_summarize_drawdown_and_counts():
                      {"r": 0.5, "mfe": 1.0, "bars": 2, "cut": 0}], 14400)
     assert s["n"] == 3 and s["net_r"] == pytest.approx(-0.5) and s["max_dd_r"] == pytest.approx(2.0)
     assert s["n_truncated"] == 1
+
+
+def test_pooled_family_variant_self_test():
+    h._self_test_pooled()
