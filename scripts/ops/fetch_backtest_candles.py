@@ -299,9 +299,18 @@ def fetch_klines_binance_vision(
     rows: list[dict] = []
     seen_ms: set[int] = set()
 
+    # Spot only: the 2017-2018 spot archive carries bars stamped off the interval grid (ETHUSDT 1h on 2018-02-09
+    # opens at :28:14.800 for 43 bars, an exchange-outage artefact). They break the harness's bar alignment and mixed
+    # the CSV's timestamp format (RQ-20261029-5785-05 run 43758915452). Drop them and say how many. Perps are untouched.
+    grid_ms = _interval_ms(interval) if market == "spot" and not interval.strip().upper().endswith(("D", "W")) else None
+    off_grid: list[int] = []
+
     def _absorb(batch: list[dict]) -> None:
         for r in batch:
             ms = r["_ts_ms"]
+            if grid_ms and ms % grid_ms:
+                off_grid.append(ms)
+                continue
             if start_ms <= ms < end_ms and ms not in seen_ms:
                 seen_ms.add(ms)
                 rows.append(r)
@@ -336,6 +345,9 @@ def fetch_klines_binance_vision(
             print(f"  vision daily {ym}: {len(rows)} bars kept so far",
                   file=sys.stderr)
 
+    if off_grid:
+        print(f"  vision {market}: dropped {len(off_grid)} off-grid bar(s) (first "
+              f"{datetime.fromtimestamp(min(off_grid) / 1000, tz=timezone.utc).isoformat()})", file=sys.stderr)
     rows.sort(key=lambda r: r["_ts_ms"])
     for r in rows:
         r.pop("_ts_ms", None)

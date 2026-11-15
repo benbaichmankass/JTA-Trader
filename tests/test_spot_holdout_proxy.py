@@ -63,3 +63,18 @@ def test_build_corpus_spot_feeds_the_proxy_csv(monkeypatch, tmp_path):
                               wd=tmp_path, market="spot")
     assert seen["data_csv"] == str(tmp_path / "trend_donchian_eth_4h__data.csv") == seen["fetch"][3]
     assert runs["trend_donchian_eth_4h"]["feed"]["source"] == "binance_spot_proxy"
+
+
+def test_spot_drops_off_grid_bars_perp_keeps_them(monkeypatch):
+    """Run 43758915452: ETHUSDT 1h spot 2018-02-09 opens at :28:14.800 for 43 bars."""
+    fbc = _fbc()
+    on, off = 1518163200000, 1518168494800  # 2018-02-09 08:00:00 and 09:28:14.800 UTC
+
+    def fake(url):
+        return [{"_ts_ms": on, "timestamp": None}, {"_ts_ms": off, "timestamp": None}]
+
+    monkeypatch.setattr(fbc, "_download_vision_zip", fake)
+    spot = fbc.fetch_klines_binance_vision("ETHUSDT", "60", on, on + 86_400_000, market="spot")
+    assert len(spot) == 1
+    perp = fbc.fetch_klines_binance_vision("ETHUSDT", "60", on, on + 86_400_000)
+    assert len(perp) == 2
