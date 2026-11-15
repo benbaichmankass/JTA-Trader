@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "Dispatch (lane OPDEC-20261112, row WORK-GAP-ALERTS): Tier 1 unless a runtime path is touched, then hold for the manager (src/web/api/main.py and the new router are Tier-2 by path). This PR adds a call in scripts/ops/work_digest_now.py (VM timer path) and a new read route needing a web-api restart; the manager merges and deploys.",
+  "why": "Tier-2 by path (web-api router registration). Read-only gap counts (insights with no link, milestones with no topic) routed to the alert ledger; observability, no order path, no config, no new gate."
+}
