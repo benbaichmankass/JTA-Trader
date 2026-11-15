@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "src/runtime/live_review_due.py serves GET /api/diag/live_review_due (web-api) and the in-trader LTR wake poster. Tier 2 by the lane dispatch (RM-AM-DUE-COULDNOTLOOK, AM-TRADING): landing hold for the manager. Read path only: no order, SL/TP, size or gate change; the due list and its read states are computed exactly as before.",
+  "why": "The route made one serial bot-feed candle fetch (Bybit / IB / Alpaca) per prop symbol and, since #25022, per open symbol, inside the request: 19.1 s at 01:46Z, then a Caddy 502 at ~31 s from 09:19Z; no 200 since 06:20:50Z. Marks now run in parallel under one 4 s budget, telemetry last_price first for the conflict check; a late mark is labelled, never 0. Adds timings_ms per phase."
+}

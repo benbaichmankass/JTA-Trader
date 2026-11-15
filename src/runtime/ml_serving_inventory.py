@@ -131,8 +131,33 @@ def _artifact_index(root: Path) -> dict[str, tuple[str, str]]:
     return idx
 
 
+SERVED_MODELS_REL = "ml/served/SERVED_MODELS.yaml"
+
+
+def load_served_models(root: Path) -> dict[str, dict]:
+    """{model_id: entry} from ml/served/SERVED_MODELS.yaml (row ML-REGISTRY-SERVED-MODELS-NO-STAGE). {} if absent."""
+    d = _yaml(root / SERVED_MODELS_REL)
+    m = d.get("models") if isinstance(d, dict) else None
+    return {str(k): v for k, v in (m or {}).items() if isinstance(v, dict)}
+
+
+def apply_served_declaration(row: dict, served: dict[str, dict]) -> None:
+    """Stamp target_deployment_stage + headline_metric on an inventory row from the declaration, in place.
+
+    Undeclared -> both stay None (renders "—") and ``stage_read_state`` says "undeclared", never a guessed stage."""
+    ent = served.get(row["model_id"])
+    if not ent:
+        row.update({"target_deployment_stage": None, "headline_metric": None, "stage_read_state": "undeclared",
+                    "stage_source": None})
+        return
+    row.update({"target_deployment_stage": ent.get("stage"), "stage_basis": ent.get("stage_basis"),
+                "headline_metric": ent.get("headline_metric"), "stage_read_state": "declared",
+                "stage_source": SERVED_MODELS_REL})
+
+
 def inventory_rows(root: Path) -> list[dict]:
     breeds, models = load_names(root)
+    served = load_served_models(root)
     strategies = _yaml(root / "config" / "strategies.yaml")
     strategies = strategies.get("strategies") or strategies
     accounts = (_yaml(root / "config" / "accounts.yaml") or {}).get("accounts") or {}
@@ -164,6 +189,8 @@ def inventory_rows(root: Path) -> list[dict]:
                 rows[-1]["pointer_sibling"] = True
                 rows[-1]["notes"] = "refit artifact the ENTRY_SERVED.json pointer serves for ml-decision-entry-v1"
         rows.append(row)
+    for r in rows:
+        apply_served_declaration(r, served)
     return rows
 
 

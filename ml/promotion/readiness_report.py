@@ -12,12 +12,16 @@ OOS-edge baseline auto-selected for regime heads in
 ``promote`` / ``demote`` / ``hold`` buckets, and renders a JSON +
 Markdown report.
 
-**Reports only — never auto-promotes.** The ``shadow → advisory`` flip
-stays Tier-3 (operator-gated): a ``promote`` proposal here is an
-invitation, not an action. The companion orchestrator
-(``scripts/ops/run_promotion_readiness.sh``) consumes the JSON and pings
-the operator when any shadow model crosses the ready bar — that ping is
-the entire automation surface.
+**Reports only — never mutates the registry.** A ``promote`` proposal is a
+pre-production model (``candidate`` or ``shadow``) whose OFFLINE evidence
+clears the required gates, proposed straight to ``advisory`` (production).
+The stage step is RETIRED (operator, chat 2026-11-12, verbatim: "There is
+nothing in between proving edge on back testing and real money. Absolutely no
+steps."): acting on a proposal is a data-backed Tier-3 change under
+docs/CLAUDE-RULES-CANONICAL.md § "Data-backed Tier-2/3 decisions" — ship on
+the committed record, then notify the operator. The companion orchestrator
+(``scripts/ops/run_promotion_readiness.sh``) consumes the JSON and pings when
+any model crosses the ready bar.
 
 Pure decision-support: this module reads the registry / shadow log /
 trade DB and writes a report file. It never registers a model, edits a
@@ -192,12 +196,12 @@ def format_markdown(report: ReadinessReport) -> str:
     if report.datasets_root_used is None:
         lines.append("")
         lines.append(
-            "> ⚠️ No `datasets_root` supplied — shadow-stage models hold "
+            "> ⚠️ No `datasets_root` supplied — pre-production models hold "
             "on `oos_edge` insufficient-data. Run on the trainer VM to "
             "compute the offline champion-challenger evidence."
         )
     lines.append("")
-    lines.append("## Promote (shadow → advisory)")
+    lines.append("## Promote (candidate / shadow → advisory, no intermediate step)")
     if report.promote_ready:
         for p in report.promote_ready:
             lines.append(_proposal_row(p))
@@ -225,8 +229,9 @@ def format_markdown(report: ReadinessReport) -> str:
         lines.append("- _none_")
     lines.append("")
     lines.append(
-        "_Reports only. Promotion past `shadow` is Tier-3 (operator-gated): "
-        "run `python -m ml promote-stage <id> --new-stage advisory ...` to act._"
+        "_Reports only. Promotion is decided on OFFLINE evidence; there is no "
+        "shadow step (retired 2026-11-12). Act under the data-backed Tier-3 rule: "
+        "`python -m ml promote-stage <id> --new-stage advisory ...`, then notify._"
     )
     return "\n".join(lines)
 

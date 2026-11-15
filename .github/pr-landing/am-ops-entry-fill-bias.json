@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Row ENTRY-FILL-BIAS-30D (measurement; feeds ENTRY-FILL-WRITEBACK). New read-only script scripts/research/entry_fill_bias.py plus its committed record comms/research/entry_fill_bias/2026-11-15.json. It compares the planned entry (trades.entry_price) to the venue entry fill (Bybit closed-pnl avg_entry_price matched by closing order id, else side+qty+close time; Alpaca filled_avg_price) per account over the last 30d of live closes. It splits rows that overlapped another row on the same symbol (venue entry = position average) and reports the R bias over the declared initial risk. Read-only diag reads; no runtime, no order path, no config. Cross-checked on 7224 (venue 73.60 vs plan 73.85, the known case). 3 unit tests. Revert: git revert."
+}

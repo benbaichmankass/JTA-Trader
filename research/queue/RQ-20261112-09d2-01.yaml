@@ -1,0 +1,90 @@
+# Hand-authored 2026-11-12 by lane TRADEIFY-FUTURES-FRONTIER (Tier 1), dispatched by Manager Session 2026-11-11a. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261112-09d2-01
+title: 'Tradeify futures Stage 0: does an opening-range-breakout leg on MES / MNQ / MGC, flat by 16:40 ET, clear Stage 0 net of Tradeify per-contract costs?'
+status: done
+cadence: once
+theme: new_strategy_prop
+priority: 1
+roadmap:
+- L-PROP
+programme: P5
+kind: experiment
+origin: new_hypothesis
+question: Net of Tradeify's all-in round-turn commission ($1.82 MES/MNQ, $2.12 MGC) plus one tick of slippage on every market or stop fill,
+  does a 15- or 30-minute opening-range breakout (US cash open 09:30 ET, stop at the far side of the range, TP 2R, one decision per day,
+  no entry at or after 15:00 ET, forced flat 16:40 ET) on MES, MNQ or MGC clear Stage 0 on 2019-2024 and hold up on 2025-01..2026-10?
+why_this_matters: 'Operator 2026-11-12 ~08:05Z: "see if we have things, if we can trade things there within the parameters of the account".
+  Tradeify futures forces every position flat by 16:45 ET (help-center article 10495876, fetched 2026-11-12), so none of our futures legs
+  fit: mgc_pullback_1d and mes_trend_long_1d hold a median 14.5 and 45 days (their Stage-0 ledgers, RQ-20261101-78fc-38 / -57). A
+  session-flat leg is the precondition for buying the account. ORB is the canonical session-bounded futures setup (Crabel 1990;
+  Zarattini & Aziz 2023 on QQQ ORB) and the cheapest honest first test.'
+lever_manifest:
+  variables:
+    instrument: [MES, MNQ, MGC]
+    opening_range_minutes: [15, 30]
+  fixed: {tp_r: 2.0, stop: far side of the range, entry_cutoff_et: '15:00', flat_et: '16:40', min_stop_ticks: 4, tie: stop wins}
+  hypothesised_effect: the breakout direction of the first 15-30 minutes carries into the session often enough to pay 2R winners net of costs
+power:
+  expected_n: 1400
+  min_detectable_effect: 0.08
+  effect_units: R per trade
+  sd: 1.2
+  design: one-sample, per cell
+  alpha: 0.00833
+  power: 0.8
+  basis: INFERRED -- ~250 RTH sessions/yr x 6 yr discovery, ~95% breakout days per cell; sd of a 2R-capped ledger ~1.2R. n=1400 detects
+    ~0.1R at the Bonferroni alpha.
+  feasibility:
+    source: dukascopy
+    accrual_basis: Replays a public corpus; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261112-09d2-01
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'scripts/research/tradeify_futures_fit.py --stage stage0: per cell (6 cells = 3 instruments x 2 range lengths) net R per trade
+    after costs; discovery 2019-01-01..2024-12-31 in 6 calendar-year folds; holdout 2025-01-01..2026-10-31.'
+  rule: 'Per cell: PASS iff discovery n >= 100 AND discovery net R > 0 AND >= 4 of 6 yearly folds net-positive AND the discovery per-trade
+    net-R 95% CI lower bound > 0 at the Bonferroni z = 2.638 (alpha 0.05 / 6 cells; the V3 edge clause) AND holdout n >= 30 AND holdout
+    net R > 0. FAIL if discovery n >= 100 and any clause fails. INDETERMINATE if discovery n < 100, or holdout n < 30 with every discovery
+    clause met. The unit PASSes if any cell PASSes; the PASSing cells are what RQ-20261112-09d2-02 grades. Not changed after any result.'
+  what_it_does_not_do: A PASS is a PROXY Stage 0 (Dukascopy CFD/spot, not the futures contract); it promotes nothing, adds no leg to any
+    roster and places no order. Confirming on the real contract (CME micro history) is the follow-up the memo names.
+practice_precedent: 'M4 (docs/reference/trading-and-model-practice-principles.md): a declared, config-exact rule set with costs fixed before
+  the run; multiplicity controlled by Bonferroni across the 6 cells.'
+intervention_controls:
+  not_applicable: an offline backtest; nothing is applied
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  basis: Estimate; the first run replaces it.
+  why_runner: Replays a public corpus on CPU; runs locally in the authoring session or on a runner (fetches the corpus itself).
+value:
+  usd_at_stake_per_month: 1500
+  confidence: 0.15
+  bucket: structural
+  basis: one Tradeify 50K funded account's payout caps ($1.5k-$3k per payout, help-center 11083796); an estimate, not a measurement
+run:
+  command: [python3, scripts/research/tradeify_futures_fit.py, --stage, stage0, --unit, RQ-20261112-09d2-01, --out, '{out_dir}']
+  timeout_minutes: 60
+  inputs: {research_unit: RQ-20261112-09d2-01}
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- TRADEIFY-FUTURES-FRONTIER
+- RQ-20261112-09d2-02
+- RQ-20261112-09d2-03
+what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+grading:
+  verdict: fail
+  decision_rule_id: RULE-RQ-20261112-09d2-01
+  graded_at: '2026-11-12'
+  grader: session_01AFoLuLwRU7eg9KzpMcxWu (lane TRADEIFY-FUTURES-FRONTIER), by hand under the registered rule
+  evidence:
+  - research/results/RQ-20261112-09d2-01/local-20261112.jsonl
+  - comms/research/RQ-20261112-09d2-01/local-20261112/verdict.json
+  reason: '0 of 6 cells PASS under RULE-RQ-20261112-09d2-01. Every cell has discovery n >= 1455 (powered). Closest: MNQ_OR15, net +89.3R, 5/6 folds, but its Bonferroni CI lower bound is -0.020 (edge clause fails). MNQ_OR30 also fails the edge clause (lower bound -0.034). MES_OR15: net +14.0R, 3/6 folds. MES_OR30, MGC_OR15, MGC_OR30: net-negative. Costs on MES/MGC are roughly the size of the gross edge (MES_OR15 gross 114.3R vs cost 100.3R). Next iteration: RQ-20261112-09d2-05 (blocked: MNQ on the real CME contract).'

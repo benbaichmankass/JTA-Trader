@@ -1,6 +1,6 @@
 id: RQ-20261026-bf56-03
 title: 'Desk D-S0 exit: on a masked blind replay of the four real-money 2h/4h legs, does Claude''s close / partial_close beat holding to the bracket, a frequency-matched random-timing baseline and the best static exit, net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -104,3 +104,16 @@ related:
 - scripts/ops/desk_scan_packet.py
 - docs/plans/claude-trading-desk-DESIGN.md
 last_dispatched_at: '2026-10-28T17:11:41+00:00'
+grading:
+  attested: RULE-RQ20261026-BF56-03-DESK-EXIT-S0
+  auto: true
+  decision_rule_id: RULE-RQ20261026-BF56-03-DESK-EXIT-S0
+  evidence:
+  - research/results/RQ-20261026-bf56-03/40733370814.jsonl
+  graded_at: '2026-11-13'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 3 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
+  rows: 3
+  verdict: fail

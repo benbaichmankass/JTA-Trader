@@ -8,6 +8,13 @@ never fire — accrue **zero** shadow track record and can never earn a
 ``shadow -> advisory`` promotion on order-influencing evidence. The S9
 range-vol (yz) heads promoted to ``shadow`` on 2026-06-04 hit the same wall.
 
+⚠️ 2026-11-12: the ``shadow -> advisory`` step is RETIRED (operator, verbatim:
+"There is nothing in between proving edge on back testing and real money.
+Absolutely no steps."). Promotion is decided on OFFLINE evidence; shadow
+scoring here is DATA COLLECTION (a demoted head soaks to keep generating data
+while it is iterated on), never a track record a head must earn first. The
+historical "gate" language below is context only.
+
 This module scores every ``shadow``-stage **regime** head on its **own**
 ``(symbol, timeframe)`` bar cadence, independent of any signal. Each tick it:
 

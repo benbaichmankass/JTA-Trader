@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "RESEARCH-PRODUCER-ROW-DEFECTS part 2: re-arms ONE queue unit, RQ-20261105-d256-03 (last_dispatched_at: null with a re-arm comment + rearmed_at), so the fixed fidelity_remeasure re-runs it: its committed run 42134900236 has rows with no n / population, which no collector normalizer may invent, so only a re-run lands it. (bf56-02, bf56-03 and e535-03 were dropped from this PR: #25292 + #25626 now land their existing runs.) RULE, window and command UNCHANGED. A queue-unit edit that is not stamp-only holds under E57 (check_pr_landing STAMP_ONLY_SURFACE). Stacked on #25626, so merging this lands the producer fix too. Revert: git revert.",
+  "why": "AM-ML dispatch 2026-11-13, item 1."
+}

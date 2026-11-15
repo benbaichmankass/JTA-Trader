@@ -74,6 +74,57 @@ def _stamp_regime_on_meta(
     return meta
 
 
+def _stamp_trend_align_on_meta(meta: Dict[str, Any], candles_df: Any, *, symbol: Optional[str] = None,
+                               timeframe: Optional[str] = None, direction: Any = None,
+                               fetch_d1: Any = None) -> Dict[str, Any]:
+    """Stamp TREND-ALIGN-V1 (row TREND-ALIGNMENT-FEATURE step 3) onto a signal's meta as ``meta.trend_align``.
+
+    OBSERVE-ONLY: a tag, never a gate — nothing downstream reads it to suppress or size a trade. The LEG label comes from
+    ``candles_df`` (the leg's own decision frame); the D1 label needs 1d candles, fetched best-effort via ``fetch_d1`` (a
+    0-arg callable; for a 1d leg the leg frame is reused). Any failure leaves a null label with a reason and never raises
+    (same contract as ``_stamp_regime_on_meta``). ``setdefault`` so a builder that pre-stamped is not overwritten."""
+    try:
+        from src.runtime.trend_alignment import meta_for_entry
+        d1 = None
+        if str(timeframe) != "1d" and callable(fetch_d1):
+            try:
+                d1 = fetch_d1()
+            except Exception:  # noqa: BLE001 — a 1d fetch failure must not break a tick; D1 stays null
+                d1 = None
+        meta.setdefault("trend_align", meta_for_entry(candles_df, d1, direction, timeframe))
+    except Exception:  # noqa: BLE001 — observability-only, never break a tick
+        meta.setdefault("trend_align", {"definition": "TREND-ALIGN-V1", "LEG": {"label": None, "missing_reason": "error"},
+                                        "D1": {"label": None, "missing_reason": "error"}, "agreement": "other"})
+    return meta
+
+
+def _stamp_trend_align_on_signal(sig: Dict[str, Any], candles_df: Any, *, symbol: Optional[str] = None,
+                                 timeframe: Optional[str] = None, exchange: Any = None,
+                                 candle_symbol: Optional[str] = None) -> Dict[str, Any]:
+    """Row TREND-ALIGN-LABEL-ALL: stamp ``meta.trend_align`` (TREND-ALIGN-V1, LEG + D1) on an ACTIONABLE signal.
+
+    LABEL ONLY -- nothing reads it to decide, size or bracket; it changes no key of ``sig`` other than
+    ``sig["meta"]["trend_align"]`` (pinned by tests/test_trend_align_label_all.py). A non-actionable signal
+    (side none) is returned untouched, so a tick that emits nothing costs nothing. The D1 frame is ONE
+    ``fetch_candles(<symbol>, "1d", limit=200)`` through the builder's own exchange client, only on an actionable
+    signal; it goes through the shared candle cache (a Bybit symbol shares one slot across legs and accounts) and a
+    failure leaves D1 null with a reason. Never raises (``_stamp_trend_align_on_meta``'s contract)."""
+    try:
+        side = str(sig.get("side") or "").strip().lower()
+        if side not in ("buy", "sell"):
+            return sig
+        fetch_d1 = None
+        if exchange is not None and str(timeframe) != "1d":
+            def fetch_d1() -> Any:
+                from src.runtime.market_data import fetch_candles as _fc
+                return _fc(candle_symbol or symbol, "1d", exchange_client=exchange, limit=200)
+        _stamp_trend_align_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe,
+                                   direction=side, fetch_d1=fetch_d1)
+    except Exception:  # noqa: BLE001 -- observability-only, never break a tick
+        logger.debug("trend_align stamp failed for %s", symbol, exc_info=True)
+    return sig
+
+
 def _stamp_regime(payload: Dict[str, Any], candles_df: Any) -> Dict[str, Any]:
     """Stamp the ADX-14 regime detector's output onto an eval audit row.
 
@@ -130,6 +181,32 @@ def _publish_liquidity_state(symbol: str, candles_df: Any) -> None:
         write_state(symbol, candles_df)
     except Exception:
         logger.exception("liquidity state publish failed for symbol=%s", symbol)
+
+
+def _log_market_closed_report_only(strategy_id: str, symbol: Any, reason: str) -> None:
+    """GATE-MARKET-HOURS, report-only (operator 2026-11-12 decisions page, Gates tab).
+
+    Record: ``comms/gates/gate_decisions_2026-11-12.json``. Until 2026-11-12 every
+    us_equity / fx builder returned ``side=none`` when ``market_hours.is_market_open``
+    read closed. The operator decided it may exist as a check but not a gate: *"If the
+    market is closed the trade won't go through, it can exist as a check but not a
+    gate."* So the builder now carries on and builds its signal, and this logs the
+    market state with a named cause. The venue's own answer (reject, or queue for the
+    open) is the outcome. Best-effort: an audit failure never changes the signal.
+    """
+    logger.info(
+        "%s: market reads closed (%s) for %s — building the signal anyway "
+        "(GATE-MARKET-HOURS report-only; the venue answers)", strategy_id, reason, symbol,
+    )
+    try:
+        log_signal({
+            "event": "market_closed_report_only",
+            "strategy": strategy_id,
+            "symbol": symbol,
+            "cause": reason,
+        })
+    except Exception:  # a report never changes the signal
+        logger.exception("%s: market-closed report emit failed", strategy_id)
 
 
 def _with_signal_package(strategy_id: str, sig: dict) -> dict:
@@ -297,6 +374,35 @@ def _resolve_shadow_predictors(strategy_name: str, strat_cfg: dict) -> list:
         return []
 
 
+def influencing_conviction_block(
+    strategy_name: str,
+    confidence: float,
+    captured: Dict[str, Any],
+    *,
+    direction: str,
+    calibrators: Any = None,
+    regime_alignment: Any = None,
+) -> Dict[str, Any]:
+    """The ``meta["conviction_influencing"]`` block: the ONLY conviction the order path reads.
+
+    ML-SHADOW-NO-ORDER-HANDLE (operator 2026-11-12, "handled through structuring the functionality
+    correctly, not with a gate"): built from ``influencing_scores(captured)`` -- the advisory+ subset --
+    so a shadow-stage score is never an input to it. ``conviction_sizing`` (apply and annotate) and
+    ``allocator_ev.intent_allocation_score`` (slice allocation) read this block and nothing else; the
+    observe-only blend that includes shadow scores stays in ``meta["conviction"]`` for the soak and
+    analytics, where no order-path reader looks.
+    """
+    from src.runtime.conviction import compute_conviction
+    from src.runtime.conviction_inputs import build_conviction_inputs, influencing_scores
+
+    inputs, prov = build_conviction_inputs(
+        strategy_name, confidence, influencing_scores(captured),
+        calibrators=calibrators, direction=direction,
+        regime_alignment=regime_alignment,
+    )
+    return {**compute_conviction(inputs).to_dict(), "provenance": prov}
+
+
 def conviction_stamp(
     strategy_name: str,
     confidence: float,
@@ -306,14 +412,12 @@ def conviction_stamp(
     calibrators: Any = None,
     regime_alignment: Any = None,
 ) -> Dict[str, Any]:
-    """The ``meta["conviction"]`` block stamped at signal time.
+    """The OBSERVE-ONLY ``meta["conviction"]`` block stamped at signal time.
 
-    ``conviction`` blends every captured score, SHADOW-stage included: it is the
-    observe-only soak number. ``influencing`` is the same blend over advisory+
-    models only (I7, ML-SHADOW-NEVER-ORDERS, plan
-    docs/plans/ml-live-promotion-plan-2026-10-29.md § 6): the order-changing
-    apply path (``conviction_sizing.apply_conviction_sizing``) reads it, so a
-    shadow promotion can never resize an order through conviction.
+    ``conviction`` blends every captured score, SHADOW-stage included: it is the soak number and is
+    read by analytics only. ``influencing`` repeats the advisory+-only conviction for those readers.
+    No order-path function reads this block: they read ``meta["conviction_influencing"]``
+    (``influencing_conviction_block``), which is built without shadow inputs.
     """
     from src.runtime.conviction import compute_conviction
     from src.runtime.conviction_inputs import build_conviction_inputs
@@ -323,17 +427,15 @@ def conviction_stamp(
         calibrators=calibrators, direction=direction,
         regime_alignment=regime_alignment,
     )
-    infl_inputs, infl_prov = build_conviction_inputs(
-        strategy_name, confidence, captured,
-        calibrators=calibrators, direction=direction,
-        regime_alignment=regime_alignment, influencing_only=True,
-    )
     conv = compute_conviction(conv_inputs)
-    infl = compute_conviction(infl_inputs)
+    infl = influencing_conviction_block(
+        strategy_name, confidence, captured, direction=direction,
+        calibrators=calibrators, regime_alignment=regime_alignment,
+    )
     return {
         **conv.to_dict(), "provenance": conv_prov,
-        "influencing": infl.conviction,
-        "influencing_provenance": infl_prov,
+        "influencing": infl["conviction"],
+        "influencing_provenance": infl["provenance"],
     }
 
 
@@ -457,8 +559,8 @@ def _emit_shadow_preds(
         # strategy's calibrated signal confidence with the captured model scores
         # (each gated by its own stage) into a single conviction, stamped on meta
         # alongside model_scores. The observed blend is never read back into an
-        # order; only its advisory+-only ``influencing`` view feeds the
-        # CONVICTION_SIZING_MODE=apply path (I7, ``conviction_stamp``).
+        # order; the order path reads ``conviction_influencing``, built from
+        # advisory+ scores only (ML-SHADOW-NO-ORDER-HANDLE).
         try:
             from src.runtime.conviction_inputs import (
                 load_calibrators_cached,
@@ -467,11 +569,17 @@ def _emit_shadow_preds(
 
             sig_meta2 = sig.get("meta")
             if isinstance(sig_meta2, dict):
+                _cals, _ra = load_calibrators_cached(), load_regime_alignment_cached()
                 sig_meta2["conviction"] = conviction_stamp(
                     strategy_name, base_row["confidence"], captured,
                     direction=base_row["direction"],
-                    calibrators=load_calibrators_cached(),
-                    regime_alignment=load_regime_alignment_cached(),
+                    calibrators=_cals, regime_alignment=_ra,
+                )
+                # The order path's conviction: built from advisory+ scores only.
+                sig_meta2["conviction_influencing"] = influencing_conviction_block(
+                    strategy_name, base_row["confidence"], captured,
+                    direction=base_row["direction"],
+                    calibrators=_cals, regime_alignment=_ra,
                 )
         except Exception:  # noqa: BLE001 — observe-only, never strand a signal
             pass
@@ -628,6 +736,7 @@ def turtle_soup_signal_builder(settings: dict) -> Dict[str, Any]:
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("turtle_soup", sig)
 
 
@@ -773,6 +882,7 @@ def ict_scalp_signal_builder(settings: dict) -> Dict[str, Any]:
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("ict_scalp_5m", sig)
 
 
@@ -979,6 +1089,7 @@ def _ict_scalp_variant_builder(name: str, settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds(name, sig, vcfg, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package(name, sig)
 
 
@@ -1223,6 +1334,7 @@ def vwap_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001
         logger.exception("VWAP: dedicated audit emit failed")
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("vwap", sig)
 
 
@@ -1392,6 +1504,7 @@ def trend_donchian_signal_builder(settings: dict) -> Dict[str, Any]:
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("trend_donchian", sig)
 
 
@@ -1534,6 +1647,7 @@ def fade_breakout_4h_signal_builder(settings: dict) -> Dict[str, Any]:
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("fade_breakout_4h", sig)
 
 
@@ -1674,6 +1788,7 @@ def htf_pullback_trend_2h_signal_builder(settings: dict) -> Dict[str, Any]:
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("htf_pullback_trend_2h", sig)
 
 
@@ -1813,6 +1928,7 @@ def trend_donchian_1h_signal_builder(settings: dict) -> Dict[str, Any]:
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("trend_donchian_1h", sig)
 
 
@@ -2206,6 +2322,7 @@ def _trend_donchian_variant_builder(name: str, settings: dict) -> Dict[str, Any]
     }
     _emit_shadow_preds(name, sig, vcfg, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package(name, sig)
 
 
@@ -2442,6 +2559,7 @@ def mes_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("mes_trend_long_1d", sig)
 
 
@@ -2577,6 +2695,7 @@ def _metals_pullback_signal_builder(
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package(strategy_name, sig)
 
 
@@ -2737,6 +2856,7 @@ def squeeze_breakout_4h_signal_builder(settings: dict) -> Dict[str, Any]:
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("squeeze_breakout_4h", sig)
 
 
@@ -2887,6 +3007,7 @@ def fvg_range_15m_signal_builder(settings: dict) -> Dict[str, Any]:
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("fvg_range_15m", sig)
 
 
@@ -2945,15 +3066,10 @@ def xauusd_trend_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         fx_open = True
     if not fx_open:
-        logger.info("xauusd_trend_1h: FX market closed (weekend) - side=none")
-        return _with_signal_package("xauusd_trend_1h", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {
-                "strategy_name": "xauusd_trend_1h",
-                "reason": "fx_market_closed",
-            },
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("xauusd_trend_1h", symbol, "fx_market_closed")
 
     timeframe = str(xau_cfg.get("timeframe") or "1h")
 
@@ -3038,6 +3154,7 @@ def xauusd_trend_1h_signal_builder(settings: dict) -> Dict[str, Any]:
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("xauusd_trend_1h", sig)
 
 
@@ -3172,6 +3289,7 @@ def mgc_trend_1h_signal_builder(settings: dict) -> Dict[str, Any]:
         timeframe=timeframe, candles_df=candles_df,
     )
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("mgc_trend_1h", sig)
 
 
@@ -3264,12 +3382,10 @@ def spy_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("spy_trend_long_1d: US market closed - side=none")
-        return _with_signal_package("spy_trend_long_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "spy_trend_long_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("spy_trend_long_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -3373,6 +3489,7 @@ def spy_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("spy_trend_long_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("spy_trend_long_1d", sig)
 
 
@@ -3417,12 +3534,10 @@ def iwm_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("iwm_trend_long_1d: US market closed - side=none")
-        return _with_signal_package("iwm_trend_long_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "iwm_trend_long_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("iwm_trend_long_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -3526,6 +3641,7 @@ def iwm_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("iwm_trend_long_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("iwm_trend_long_1d", sig)
 
 
@@ -3570,12 +3686,10 @@ def splg_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("splg_trend_long_1d: US market closed - side=none")
-        return _with_signal_package("splg_trend_long_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "splg_trend_long_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("splg_trend_long_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -3679,6 +3793,7 @@ def splg_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("splg_trend_long_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("splg_trend_long_1d", sig)
 
 
@@ -3724,12 +3839,10 @@ def scha_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("scha_trend_long_1d: US market closed - side=none")
-        return _with_signal_package("scha_trend_long_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "scha_trend_long_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("scha_trend_long_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -3833,6 +3946,7 @@ def scha_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("scha_trend_long_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("scha_trend_long_1d", sig)
 
 
@@ -3874,12 +3988,10 @@ def qqq_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("qqq_trend_long_1d: US market closed - side=none")
-        return _with_signal_package("qqq_trend_long_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "qqq_trend_long_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("qqq_trend_long_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -3983,6 +4095,7 @@ def qqq_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("qqq_trend_long_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("qqq_trend_long_1d", sig)
 
 
@@ -4025,12 +4138,10 @@ def tqqq_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("tqqq_trend_long_1d: US market closed - side=none")
-        return _with_signal_package("tqqq_trend_long_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "tqqq_trend_long_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("tqqq_trend_long_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -4132,6 +4243,7 @@ def tqqq_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("tqqq_trend_long_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("tqqq_trend_long_1d", sig)
 
 
@@ -4170,12 +4282,10 @@ def qld_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("qld_trend_long_1d: US market closed - side=none")
-        return _with_signal_package("qld_trend_long_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "qld_trend_long_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("qld_trend_long_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -4277,6 +4387,7 @@ def qld_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("qld_trend_long_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("qld_trend_long_1d", sig)
 
 
@@ -4318,12 +4429,10 @@ def gld_pullback_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("gld_pullback_1d: US market closed - side=none")
-        return _with_signal_package("gld_pullback_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "gld_pullback_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("gld_pullback_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -4406,6 +4515,7 @@ def gld_pullback_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("gld_pullback_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("gld_pullback_1d", sig)
 
 
@@ -4450,12 +4560,10 @@ def iaum_pullback_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("iaum_pullback_1d: US market closed - side=none")
-        return _with_signal_package("iaum_pullback_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "iaum_pullback_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("iaum_pullback_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -4538,6 +4646,7 @@ def iaum_pullback_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("iaum_pullback_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("iaum_pullback_1d", sig)
 
 
@@ -4582,12 +4691,10 @@ def tlt_pullback_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("tlt_pullback_1d: US market closed - side=none")
-        return _with_signal_package("tlt_pullback_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "tlt_pullback_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("tlt_pullback_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -4670,6 +4777,7 @@ def tlt_pullback_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("tlt_pullback_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("tlt_pullback_1d", sig)
 
 
@@ -4714,12 +4822,10 @@ def slv_pullback_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("slv_pullback_1d: US market closed - side=none")
-        return _with_signal_package("slv_pullback_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "slv_pullback_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("slv_pullback_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -4802,6 +4908,7 @@ def slv_pullback_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("slv_pullback_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("slv_pullback_1d", sig)
 
 
@@ -4846,12 +4953,10 @@ def gdx_pullback_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("gdx_pullback_1d: US market closed - side=none")
-        return _with_signal_package("gdx_pullback_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "gdx_pullback_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("gdx_pullback_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -4934,6 +5039,7 @@ def gdx_pullback_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("gdx_pullback_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("gdx_pullback_1d", sig)
 
 
@@ -4979,12 +5085,10 @@ def ief_pullback_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("ief_pullback_1d: US market closed - side=none")
-        return _with_signal_package("ief_pullback_1d", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "ief_pullback_1d", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("ief_pullback_1d", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1d")
 
@@ -5067,6 +5171,7 @@ def ief_pullback_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("ief_pullback_1d", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("ief_pullback_1d", sig)
 
 
@@ -5113,12 +5218,10 @@ def gld_pullback_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("gld_pullback_1h: US market closed - side=none")
-        return _with_signal_package("gld_pullback_1h", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "gld_pullback_1h", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("gld_pullback_1h", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1h")
 
@@ -5201,6 +5304,7 @@ def gld_pullback_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("gld_pullback_1h", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("gld_pullback_1h", sig)
 
 
@@ -5248,12 +5352,10 @@ def slv_trend_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("slv_trend_1h: US market closed - side=none")
-        return _with_signal_package("slv_trend_1h", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "slv_trend_1h", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("slv_trend_1h", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1h")
 
@@ -5339,6 +5441,7 @@ def slv_trend_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("slv_trend_1h", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("slv_trend_1h", sig)
 
 
@@ -5385,12 +5488,10 @@ def spy_pullback_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("spy_pullback_1h: US market closed - side=none")
-        return _with_signal_package("spy_pullback_1h", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "spy_pullback_1h", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("spy_pullback_1h", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1h")
 
@@ -5473,6 +5574,7 @@ def spy_pullback_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("spy_pullback_1h", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("spy_pullback_1h", sig)
 
 
@@ -5520,12 +5622,10 @@ def qqq_pullback_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("qqq_pullback_1h: US market closed - side=none")
-        return _with_signal_package("qqq_pullback_1h", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "qqq_pullback_1h", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("qqq_pullback_1h", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1h")
 
@@ -5608,6 +5708,7 @@ def qqq_pullback_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("qqq_pullback_1h", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("qqq_pullback_1h", sig)
 
 
@@ -5655,12 +5756,10 @@ def tlt_pullback_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("tlt_pullback_1h: US market closed - side=none")
-        return _with_signal_package("tlt_pullback_1h", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "tlt_pullback_1h", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("tlt_pullback_1h", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1h")
 
@@ -5705,6 +5804,27 @@ def tlt_pullback_1h_signal_builder(settings: dict) -> Dict[str, Any]:
             "meta": {"strategy_name": "tlt_pullback_1h", "reason": str(exc)},
         })
 
+    # DIRECTIONAL gate (side_filter), the same _resolve_side_filter / _side_filter_suppresses pair the trend and
+    # _htf_pullback_variant_builder legs use. Added 2026-11-14 with the tlt_pullback_1h real-money promotion
+    # (operator popup "Promote long-only 3.5R (Recommended)"; RQ-20261114-db1a-10 arm L35): this builder never read
+    # side_filter, so the long-only config would have been INERT and live would still have traded shorts. No key
+    # (or `both`) is byte-for-byte unchanged.
+    _side_filter = _resolve_side_filter(cfg_yaml)
+    if _side_filter_suppresses(pkg["direction"], _side_filter):
+        _reason = _side_filter_reason(_side_filter)
+        logger.info("tlt_pullback_1h: signal suppressed (side_filter=%s)", _side_filter)
+        try:
+            log_signal(_stamp_regime({
+                "event": "tlt_pullback_1h_eval", "strategy": "tlt_pullback_1h", "symbol": symbol,
+                "timeframe": timeframe, "side": "none", "reason": _reason,
+            }, candles_df))
+        except Exception:  # noqa: BLE001
+            logger.exception("tlt_pullback_1h: dedicated audit emit failed")
+        return _with_signal_package("tlt_pullback_1h", {
+            "symbol": symbol, "side": "none",
+            "meta": {"strategy_name": "tlt_pullback_1h", "reason": _reason},
+        })
+
     side = "buy" if pkg["direction"] == "long" else "sell"
     logger.info(
         "tlt_pullback_1h: %s signal at %s (entry=%s sl=%s tp=%s confidence=%.3f)",
@@ -5743,6 +5863,7 @@ def tlt_pullback_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("tlt_pullback_1h", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("tlt_pullback_1h", sig)
 
 
@@ -5791,12 +5912,10 @@ def uso_trend_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     except Exception:  # noqa: BLE001 — gate is best-effort, never strands
         us_open = True
     if not us_open:
-        logger.info("uso_trend_1h: US market closed - side=none")
-        return _with_signal_package("uso_trend_1h", {
-            "symbol": symbol,
-            "side": "none",
-            "meta": {"strategy_name": "uso_trend_1h", "reason": "us_market_closed"},
-        })
+        # Gate decision: operator 2026-11-12 decisions page, Gates tab — GATE-MARKET-HOURS: MAKE REPORT-ONLY.
+        # Record: comms/gates/gate_decisions_2026-11-12.json. Operator: "If the market is closed the trade
+        # won't go through, it can exist as a check but not a gate." The signal is built anyway; the venue answers.
+        _log_market_closed_report_only("uso_trend_1h", symbol, "us_market_closed")
 
     timeframe = str(cfg_yaml.get("timeframe") or "1h")
 
@@ -5901,6 +6020,7 @@ def uso_trend_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _emit_shadow_preds("uso_trend_1h", sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package("uso_trend_1h", sig)
 
 
@@ -6104,6 +6224,7 @@ def _htf_pullback_variant_builder(
     }
     _emit_shadow_preds(name, sig, cfg_yaml, symbol, timeframe=timeframe, candles_df=candles_df)
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package(name, sig)
 
 
@@ -6141,8 +6262,8 @@ def eth_pullback_prop_2h_signal_builder(settings: dict) -> Dict[str, Any]:
     never emits a prop ticket). Funded-EV gate: full-period 12-mo EV +$538
     @72.7% P(net>0), walk-forward 4/4 folds EV-positive — but realised post-swap
     is regime-dependent (negative in 2/4 folds), so this is a soak candidate, NOT
-    a live-money promotion. Promotion past shadow is the operator-gated Tier-3
-    switch. Eval: docs/research/eth-pullback-prop-swap-aware-2026-06-25.md.
+    a live-money promotion. (2026-11-12: there is no shadow step — a leg goes to
+    real money when its committed backtest evidence clears the bar.) Eval: docs/research/eth-pullback-prop-swap-aware-2026-06-25.md.
     Delegates to the shared ``_htf_pullback_variant_builder`` (reads the
     ``eth_pullback_prop_2h`` config block, which pins the swap-robust exits).
     """
@@ -6474,6 +6595,7 @@ def e4_oi_shock_1h_signal_builder(settings: dict) -> Dict[str, Any]:
                  "direction": pkg["direction"], "timeframe": timeframe},
     }
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # TREND-ALIGN-LABEL-ALL, label only
     return _with_signal_package(name, sig)
 
 
@@ -6746,6 +6868,8 @@ def ml_entry_signal_builder(settings: dict) -> Dict[str, Any]:
            "stop_loss": pkg["sl"], "take_profit": pkg["tp"], "pattern": NAME,
            "meta": {**pkg["meta"], "strategy_name": NAME, "confidence": pkg["confidence"],
                     "direction": pkg["direction"], "timeframe": timeframe}}
+    _stamp_trend_align_on_signal(sig, frame, symbol=symbol, timeframe=timeframe, exchange=exchange,  # TREND-ALIGN-LABEL-ALL, label only
+                                 candle_symbol=_ml_entry_candle_symbol(symbol, exchange, _venue))
     return _with_signal_package(NAME, sig)
 
 
@@ -6820,6 +6944,8 @@ def ml_entry_v2_signal_builder(settings: dict) -> Dict[str, Any]:
            "stop_loss": pkg["sl"], "take_profit": pkg["tp"], "pattern": NAME,
            "meta": {**pkg["meta"], "strategy_name": NAME, "confidence": pkg["confidence"],
                     "direction": pkg["direction"], "timeframe": timeframe}}
+    _stamp_trend_align_on_signal(sig, frame, symbol=symbol, timeframe=timeframe, exchange=exchange,  # TREND-ALIGN-LABEL-ALL, label only
+                                 candle_symbol=_ml_entry_candle_symbol(symbol, exchange, _venue))
     return _with_signal_package(NAME, sig)
 
 
@@ -6861,7 +6987,8 @@ def _ml_entry_eq_build(settings: dict, NAME: str, _DECIDED: set) -> Dict[str, An
 
     NO network and no candle fetch on this tick: the 173-symbol pass is the refresher thread's job (src/runtime/ml_entry_eq_refresher.py, MEASURED
     #23619: an unpaced pass = 104 x 429). A stale / incomplete / missing snapshot is a named per-trade refusal, never a halt. One decision per
-    (symbol, snapshot bar_close): an in-process memo, so a repeated tick on the same bar cannot re-emit the same package."""
+    (symbol, snapshot bar_close): a memo PERSISTED to data_dir (src/runtime/ml_pool_scoring.py::DecidedMemo, row ML-ENTRY-EQ-RESTART-REDECIDE), so
+    neither a repeated tick on the same bar nor a trader restart can re-emit the same package."""
     import pandas as pd
     from src.units.strategies import load_strategy_config
     from src.units.strategies import ml_entry_eq as L
@@ -6895,9 +7022,22 @@ def _ml_entry_eq_build(settings: dict, NAME: str, _DECIDED: set) -> Dict[str, An
             pkg = L.order_package({"symbol": symbol, **vcfg}, snap)
         elif isinstance(pkg, str):
             raise ValueError(pkg)
+        elif memo in PS.refused_set(NAME):
+            # the pool refused this symbol when it first scored this close (before a restart): the close is already decided
+            # (row ML-ENTRY-EQ-RESTART-REDECIDE) -- a restarted process's new answer is not entered late
+            _DECIDED.add(memo)
+            return _none("already_decided_this_bar", symbol, str(snap["bar_close"]))
     except ValueError as exc:
         if str(exc) != "not_a_decision_bar":
             _DECIDED.add(memo)
+            # ML-EQ-NOPKG-AUDIT (2026-11-14): audit the DECIDED no-package close too (once: the memo above), so live-vs-replay
+            # parity can confirm a close where neither side holds a package. Before this only a buy was audited, and a real-money
+            # leg read could_not_check every day (comms/live_parity 11-11..11-14). Observability only; the decision is unchanged.
+            try:
+                log_signal({"event": f"{NAME}_eval", "strategy": NAME, "symbol": symbol, "timeframe": "1h", "side": "none",
+                            "reason": str(exc), "bar_close": str(snap["bar_close"])})
+            except Exception:  # noqa: BLE001
+                logger.exception("%s: audit emit failed", NAME)
         if len(_DECIDED) > 4096:   # prune OLDER bars only: clearing the current bar's memo could re-emit a package already sent this bar
             for _m in [m for m in _DECIDED if m[1] != snap["bar_close"]]:
                 _DECIDED.discard(_m)
@@ -6911,4 +7051,8 @@ def _ml_entry_eq_build(settings: dict, NAME: str, _DECIDED: set) -> Dict[str, An
     sig = {"symbol": symbol, "side": "buy", "price": pkg["entry"], "entry_price": pkg["entry"], "stop_loss": pkg["sl"],
            "take_profit": pkg["tp"], "pattern": NAME,
            "meta": {**pkg["meta"], "strategy_name": NAME, "confidence": pkg["confidence"], "direction": "long", "timeframe": "1h"}}
+    # TREND-ALIGN-LABEL-ALL (label only): this leg scores from the pool snapshot with NO candle frame on the tick (no fetch,
+    # by design), so the package carries an explicit null label with its reason -- rendered "—", never neutral.
+    from src.runtime.trend_alignment import unlabelled as _ta_unlabelled
+    sig["meta"].setdefault("trend_align", _ta_unlabelled("snapshot_scored_no_candles", "buy"))
     return _with_signal_package(NAME, sig)

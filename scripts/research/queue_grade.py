@@ -171,13 +171,18 @@ def e5_rows(root: Path, unit_id: str, since: Optional[datetime]) -> List[Tuple[s
 
 
 def rule_attested(root: Path, unit_id: str, unit: Dict[str, Any]) -> bool:
-    """True when a hand-written `once` unit's E5 rows ALL carry its own rule id.
+    """True when a hand-written unit's E5 rows ALL carry its own rule id.
 
     That stamp is how a producer says it graded the run under this unit's
     registered rule; a generic producer rule id (or none) means it did not, so
-    the unit stays with a session. No rows -> False (nothing to attest)."""
+    the unit stays with a session. No rows -> False (nothing to attest).
+    Recurring units attest too (AUD-20261019-RESEARCH-SLO-RED, 2026-11-12): the
+    `once`-only check left hand-written daily self-tests (RQ-20261022-3a84-12,
+    -b376-02, -e5b1-17/-18, -0142-18/-19) landing self-graded rows that nobody
+    ever graded -- 6 of the 18 undispositioned_24h findings that day. A recurring
+    unit still reads only its latest window and never closes on a FAIL."""
     rid = str((unit.get("decision_rule") or {}).get("id") or "").strip()
-    if not rid or str(unit.get("cadence") or "once") != "once":
+    if not rid:
         return False
     seen = 0
     for _f, r in e5_rows(root, unit_id, None):
@@ -879,6 +884,17 @@ def grade_unit_full(root: Path, unit_id: str, text: str,
             child = (cid, confirmation_unit(unit, g, cid))
     new = apply_text(text, d)
     if new == text:
+        return None
+    # AUD-20261019-RESEARCH-SLO-RED (2026-11-12): a re-grade that changes NOTHING but the date is not a grading.
+    # Re-stamping it moved `graded_at` forward every day on ~200 unchanged units (#25060: 196 files), so
+    # grade_latency read a same-day grading as 6 d late (p90) and every graded_at window (research_slo's held-out
+    # census, research_ops_checks' 7d/30d) counted old verdicts as new. Keep the original stamp: graded_at is
+    # when THIS verdict was reached.
+    prior_g = unit.get("grading") if isinstance(unit.get("grading"), dict) else {}
+    prior_at = str(prior_g.get("graded_at") or "")
+    if (prior_at and not child and isinstance(d.get("grading"), dict)
+            and str(d["grading"].get("graded_at") or "") != prior_at
+            and apply_text(text, {**d, "grading": {**d["grading"], "graded_at": prior_at}}) == text):
         return None
     # the edit must still parse and must have changed only what it claims
     back = yaml.safe_load(new)

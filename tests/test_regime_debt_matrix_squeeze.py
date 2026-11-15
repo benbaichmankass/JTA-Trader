@@ -210,7 +210,7 @@ class TestSideFilterIsForwarded:
         """A modelled lever must not also count as omitted — otherwise the row
         degrades to `approximate` and blocks a cell it should be able to source."""
         cfg = {"symbols": ["XRPUSDT"], "donchian": 20, "side_filter": "short",
-               "atr_period": 14}
+               "atr_period": 14, "decision_bar": "closed"}  # absent == forming (EVIDENCE-DECISION-BAR-DEFAULT)
         _, faithful, omitted = _build(cfg)
         assert "side_filter" not in omitted and faithful
 

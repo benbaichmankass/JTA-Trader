@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "research_queue_edit",
+  "hold_text": "RQ-20261113-d18c-01: runner run 43580685219 completed (exit 0, 9192 s) and measured verdict fail (arms W and R both fail_arm), but script_run recorded producer_failed because desk_edge_ceiling universe-verdict wrote no population/n. The producer now writes both (regression test added; the real artifact re-graded locally reads fail/measured, n=2304). The unit is re-armed (last_dispatched_at null) in the same PR so the re-run cannot use the old producer. No runtime path. Revert: git revert.",
+  "why": "A measured research result was dropped as producer_failed over two missing verdict.json fields."
+}

@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "UI-TRADING-PUSH push step: /api/bot/stream gains 'pnl' frames (uPnL between open-set changes) read every 5 s from the snapshot /api/bot/positions already holds. Adds SWRCache.peek (read-only). No venue call, no order path, no new gate; the broadcaster stays O(1) in viewers.",
+  "hold_text": "Tier 2 (ict-web-api). The manager merges; after deploy: with a client on /api/bot/stream and the positions snapshot warm (the SPA or /ws/market reading /positions), a uPnL move >= 0.5 on an open position arrives as a pnl frame carrying unrealizedPnlProvenance, as_of and snapshot_age_s; /stream/status shows sources.pnl read_state read."
+}

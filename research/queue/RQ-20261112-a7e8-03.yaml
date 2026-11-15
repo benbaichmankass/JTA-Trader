@@ -1,7 +1,7 @@
 # Hand-authored 2026-11-12 by the ML standing lane part 3 (row ML-DECISION-LABEL-VOL-CONFOUND, Tier 1), dispatched by Manager Session 2026-11-11a. Decision rule registered BEFORE any run; pushed before the run. Gates this adds or changes: none.
 id: RQ-20261112-a7e8-03
 title: 'ml_decision_entry v1: is its held-out selection a volatility (cost-per-R) tilt or a within-bucket directional pick? Brinson split of net and gross R'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -72,9 +72,20 @@ run:
   timeout_minutes: 240
   inputs:
     research_unit: RQ-20261112-a7e8-03
-grading:
-  auto: true
 related:
 - ML-DECISION-LABEL-VOL-CONFOUND
 - RQ-20261112-8d20-01
 last_dispatched_at: '2026-11-12T03:56:43+00:00'
+grading:
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261112-a7e8-03-VOL-DECOMP
+  evidence:
+  - research/results/RQ-20261112-a7e8-03/local-20261112T0356Z.jsonl
+  graded_at: '2026-11-12'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

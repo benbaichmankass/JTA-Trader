@@ -19,7 +19,7 @@ name: desk-decisions-mirror
 #      named data feed the packet lacks -> comms/desk/feed_gaps.jsonl + ONE pipeline item per NEW gap name. A failure
 #      is a warning, never a stop (Prime Directive rule 7);
 #   4. lands it in ONE self-landing PR (commit-to-main, verify-merged).
-# One run at a time (concurrency group; each run waits for its PR to merge).
+# One run at a time (concurrency group; no in-run merge wait -- the next run verifies arrival, CI-SUITE-SLOWDOWN 2026-11-12).
 # ⚠️ A `push` run uses the workflow file AS IT EXISTS ON THE PUSHED BRANCH, and desk/decisions was cut
 # from main before step 3b existed, so a push run NEVER grades (measured 2026-10-27: every run since
 # #20501 was a stale-file push run; the cron also fired late or not at all). The full workflow therefore
@@ -46,13 +46,46 @@ concurrency:
 jobs:
   mirror:
     runs-on: ubuntu-latest
-    timeout-minutes: 110  # commit-to-main verify-merged waits up to 80 min (tests/test_commit_to_main_callers.py)
+    timeout-minutes: 30  # no in-run merge wait since CI-SUITE-SLOWDOWN (2026-11-12): checkout + mirror + pricing only
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
           token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+
+      # CI-SUITE-SLOWDOWN (2026-11-12): NO IN-RUN MERGE WAIT. This job used to hold a hosted runner for up to
+      # 80 min in commit-to-main's verify-merged while its own PR waited on the queued checks, and that wait
+      # was itself one of the 20 slots the checks were queued behind (MEASURED 2026-11-12: this mirror and its
+      # sibling each held a slot ~90 min while 20/20 slots were busy and ~600 jobs queued). Arrival is now
+      # verified ONE CYCLE LATER, here: an open mirror PR younger than 4 h means "still landing" -> this
+      # run computes and validates but does not open a second PR; one older than that is STRANDED -> it is
+      # closed, this run re-lands everything main still lacks (the mirror is idempotent by id), and the run
+      # goes red once (Prime Directive rule 7: keep going, one flag). Fails open: an API error lands anyway.
+      # Pinned in tests/test_commit_to_main_callers.py::DEFERRED_VERIFY.
+      - name: Check for an in-flight mirror PR (deferred merge verification)
+        id: inflight
+        env:
+          GH_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          PREFIX: automation/desk-decisions-mirror
+          MAX_AGE_S: "14400"
+        run: |
+          set -uo pipefail
+          prs="$(gh api "repos/${GITHUB_REPOSITORY}/pulls?state=open&per_page=100" --paginate \
+                --jq '.[] | select(.head.ref | startswith(env.PREFIX)) | "\((now - (.created_at | fromdateiso8601)) | floor) \(.number)"')" \
+            || { echo "::warning::could not list open PRs; landing anyway"; echo "skip=0" >> "$GITHUB_OUTPUT"; exit 0; }
+          skip=0; stranded=""
+          while read -r age n; do
+            [ -n "${n:-}" ] || continue
+            if [ "$age" -gt "$MAX_AGE_S" ]; then
+              stranded="$stranded #$n"
+              gh pr close "$n" --repo "$GITHUB_REPOSITORY" --comment "Closed by $GITHUB_WORKFLOW run $GITHUB_RUN_ID: this mirror PR did not merge within 4 h (stranded). The run re-lands every row main still lacks in a fresh PR." || true
+            else
+              skip=1; echo "::notice::mirror PR #$n (${age}s old) is still landing; not opening a second one this run"
+            fi
+          done <<< "$prs"
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+          echo "stranded=$stranded" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-python@v5
         with:
@@ -96,7 +129,7 @@ jobs:
           if [ -n "$(git status --porcelain comms/desk docs/claude/work/pipeline)" ]; then echo "changed=1" >> "$GITHUB_OUTPUT"; else echo "changed=0" >> "$GITHUB_OUTPUT"; fi
 
       - name: Land on main (one self-landing PR)
-        if: steps.mirror.outputs.changed == '1' || steps.grade.outputs.changed == '1' || steps.gaps.outputs.changed == '1'
+        if: steps.inflight.outputs.skip != '1' && (steps.mirror.outputs.changed == '1' || steps.grade.outputs.changed == '1' || steps.gaps.outputs.changed == '1')
         uses: ./.github/actions/commit-to-main
         with:
           token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
@@ -106,10 +139,19 @@ jobs:
           message: "desk: mirror decisions from desk/decisions + replayed outcomes"
           pr-title: "desk: mirror decisions from desk/decisions + replayed outcomes"
           pr-body: "Automated mirror (auto-merge): rows on desk/decisions that main's comms/desk/decisions.jsonl lacks, merged by decision_id, plus the packets they cite; and outcomes.jsonl rows for shadow proposals whose horizon has passed (replayed on real candles, net of the full cost stack). scripts/ops/desk_branch.py, scripts/ops/desk_outcomes.py."
-          verify-merged: "true"
+          verify-merged: "false"  # deferred: the next run's in-flight check verifies arrival (above)
+          branch-prefix: automation/desk-decisions-mirror
 
       - name: Fail the run if a row was skipped
         if: steps.mirror.outputs.rc == '1'
         run: |
           echo "::error::a desk/decisions row was skipped; see the mirror summary"
+          exit 1
+
+      - name: Fail the run if a previous mirror PR stranded
+        # Deferred verification's red: the PR an earlier run opened did not merge in time. Its rows were
+        # re-landed above; this is the one flag that the landing path itself needs a look.
+        if: steps.inflight.outputs.stranded != ''
+        run: |
+          echo "::error::closed stranded mirror PR(s):${{ steps.inflight.outputs.stranded }} (not merged within the deferred-verification window)"
           exit 1
