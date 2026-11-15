@@ -1,0 +1,117 @@
+# Hand-authored 2026-11-14 by lane ML-PRIMARY (session_01AFoLuKuu4bMh6SG5oyAC9h), plan line MLP-D5-MASTIFF, row MLP-D5-MASTIFF.
+# Materiality rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261114-82fd-02
+title: 'D5 value-of-information census: on the real-money (account, symbol) pairs that roster 2+ legs, how often are 2+
+  legs open at once on the Stage-0 trade streams, on the record year and the year before -- is an aggregator worth building?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: deterministic
+why_not_inferential: >-
+  A count, not a test of an effect: the census counts overlapping trades on fixed, fully replayed solo streams over
+  two fixed windows. Re-running it returns the same count; there is no sampling distribution to power. The verdict
+  is a materiality threshold on that count (>= 20 concurrent trades AND share >= 15 percent in both windows).
+question: 'D5 (position aggregation) is a rule today: slices (config/slice_allocation.yaml) split a per-(account, symbol)
+  budget across live packages. ML-ROADMAP-MECE § 4.7: before a harness or a model, count concurrency. For each declared
+  real-money pair, replay every rostered leg ALONE on the same window (rule legs: backtest_system solo arm, full cost
+  stack; ml_entry: its served-policy replay at the fixed 2/3 ATR bracket) and count the trades that open while another
+  leg on the pair is open, their net R, the opposite-direction overlaps (where netting saves cost), and the hours with
+  2+ legs open. The existing same-symbol head-to-heads (RQ-20261015-1631-01/-02, RQ-20261018-001) already show the live
+  election drops trades vs the solo sum (ETH 484 -> 371, XRP 189 -> 165, SOL 211 -> 177, OOS), but on non-real-money
+  leg sets and one window.'
+why_this_matters: 'If 2+ legs are rarely open together on real money, the aggregator''s ceiling is small and D5 stays a
+  rule (no harness, no model); if they often are, the A0..A4 rule arms (slices / 1-over-N netting / best-single / forecast
+  combination / matched random) are built and graded before any learned arm. This decides whether D5 gets build effort
+  this month.'
+power:
+  expected_n: 600
+  min_detectable_effect: 0.15
+  effect_units: share
+  sd: 0.5
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: a census, not a test of an effect. The materiality bar (>= 20 concurrent trades AND share >= 15 percent
+    per window) is the declared resolution; trade counts per pair-year are ~100-500 from the head-to-head precedents.'
+  feasibility:
+    source: none
+    accrual_basis: 'Replays public Binance Vision 5m / 1h history through 2026-09-30; nothing accrues.'
+evidence_class:
+  holdout: none
+  claim: stage0_concurrency_census
+ml_consumer:
+  consumer: config/slice_allocation.yaml
+  decision: 'whether the per-(account, symbol) budget split for 2+ packages gets an aggregator harness and model, or stays the slices rule'
+  legs: [ml_entry, trend_donchian_xrp_4h, trend_donchian_xrp_adx25, ada_pullback_2h, trend_donchian_sol_prop]
+  book: money
+census:
+  pairs:
+  - {accounts: [bybit_2, bybit_portfolio], symbol: XRPUSDT, legs: [trend_donchian_xrp_4h, trend_donchian_xrp_adx25, ml_entry]}
+  - {accounts: [bybit_2, bybit_portfolio], symbol: ADAUSDT, legs: [ada_pullback_2h, ml_entry]}
+  - {accounts: [bybit_2, bybit_portfolio], symbol: SOLUSDT, legs: [trend_donchian_sol_prop, ml_entry]}
+  - {accounts: [tradeify_1, velotrade_1], symbol: ETHUSDT, legs: [trend_donchian_eth_4h, ml_entry]}
+  - {accounts: [tradeify_1, velotrade_1], symbol: SOLUSDT, legs: [trend_donchian_sol_4h, ml_entry]}
+  not_covered: 'alpaca_live / alpaca_portfolio SLV (ml_entry_eq_struct + slv_trend_1h) and TLT (ml_entry_eq_struct +
+    tlt_pullback_1h): equity legs are outside backtest_system; TLT already carries an allocation record
+    (comms/same_symbol_allocation/tlt-alpaca_live-alpaca_portfolio.json). Pairs re-parsed from config/accounts.yaml
+    2026-11-14 (lane read); the verdict covers the five pairs above only.'
+run:
+  command:
+  - python3
+  - scripts/research/d5_concurrency_census.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  - --cache
+  - /tmp/ml_decision_klines
+  timeout_minutes: 330
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261114-82fd-02
+decision_rule:
+  id: RULE-RQ20261114-82fd-02-D5-VOI
+  registered_at: '2026-11-14'
+  registered_before_run: true
+  statistic: 'Per declared pair and window (PRIOR 2024-10-01..2025-09-30, RECORD 2025-10-01..2026-09-30, by entry time):
+    n_concurrent = trades (all legs) whose [entry, exit) overlaps another leg''s open trade on the pair; share =
+    n_concurrent / n_trades; plus net R of the concurrent trades, opposite-direction overlaps and hours with 2+ open
+    (reported). Rule legs at the full cost stack (resolve_run_costs, require_full_costs); ml_entry net R from its own
+    cost stack (ml_decision_entry._cost_r).'
+  rule: 'PASS (build) iff at least one pair has n_concurrent >= 20 AND share >= 0.15 in BOTH windows. FAIL (stays a
+    rule) iff every pair is measured and none meets that in both windows. INDETERMINATE iff no measured pair meets it and
+    at least one pair could not be measured. Thresholds fixed now, not changed after any result.'
+  proposal_mapping: 'pass -> build AGG-HARNESS and register the A0..A4 rule-arm unit (net R per capital-day, max DD no
+    worse, two windows) on the material pairs; a learned arm only after the rule arms are graded. fail -> MLP-D5-MASTIFF
+    stays a rule; the census re-runs when a real-money roster adds a second leg on a symbol. indeterminate -> the
+    unmeasured leg is registered in the harness and the census re-runs.'
+  what_it_does_not_do: 'Tests no allocation policy, changes no slice weight, places no order, changes no config. Solo
+    streams overstate the concurrency the live book sees (slices refuse or shrink some packages); that is the point of a
+    ceiling read.'
+  min_n: 20 concurrent trades per pair-window for materiality
+compute: cpu_long
+practice_precedent: 'M4; docs/research/M18-allocator-backtest-findings-2026-06-29.md (pick-one routing agrees ~96 percent; netting untested) and ML-ROADMAP-MECE § 4.7 (value of information first); the same-symbol
+  head-to-heads RQ-20261015-1631-01/-02 and RQ-20261018-001 (same harness call for the solo arms).'
+follow_up: 'ML-PRIMARY grades on landing, updates MLP-D5-MASTIFF, reports to the manager.'
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.3
+smoke_disclosure: 'Before commit, lane ML-PRIMARY ran a code-path smoke AFTER this rule was written, on a pair NOT in the
+  declared list (bybit_2 SOLUSDT, trend_donchian_sol_prop + trend_donchian_sol_4h, rule legs only, two windows). It is
+  not evidence for this unit and changed nothing above. The ml_entry stream path was smoked through pointer-v0.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 180
+  why_runner: Keyless public Binance Vision archives; GBDT on CPU (GitHub runner).
+  basis: 'INFERRED from a local one-pair smoke (~12 min incl. the 5m fetch for one symbol) x 5 pairs (4 symbols) plus the ml_entry served replay.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+last_dispatched_at: '2026-11-15T01:02:20+00:00'

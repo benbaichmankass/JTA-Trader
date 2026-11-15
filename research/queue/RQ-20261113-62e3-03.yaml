@@ -1,0 +1,134 @@
+# Hand-authored 2026-11-13 by lane orphans-legs (Tier 1), dispatched by the manager. ITERATION unit (attempt 3) for orphan subject tsmom-etf, authored from a written diagnosis of its last result (RQ-20261101-d1f3-04). Decision rule registered BEFORE any run (the author ran the harness self-test on SYNTHETIC data only, no real-data arm number seen). Gates: none.
+id: RQ-20261113-62e3-03
+title: 'ITERATION 3 of tsmom-etf (fail): does the ETF trend sleeve clear the rule on TOTAL-RETURN (dividend-adjusted) closes instead of the
+  price-only closes every earlier test used?'
+status: done
+cadence: once
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-PROGRAMMES
+programme: P6
+kind: experiment
+question: On 2008-01-02..2024-06-28 (11 liquid ETFs + copper proxy, daily), does E5 computed on total-return closes (committed close x the
+  yfinance dividend factor) clear the unchanged registered rule at the cumulative trial count, against E5 on the committed price-only closes?
+why_this_matters: 'tsmom-etf is an orphan (scripts/research/iteration_orphans.py 2026-11-13). Every result so far (58e4-05, d1f3-04) was computed
+  on unadjusted closes, which the harness itself states understates long carry on bond/equity ETFs and flatters shorts. Every further lever
+  is measured on that series, so the data fix comes first.'
+iteration:
+  subject: tsmom-etf
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261101-d1f3-04/41771139984.jsonl
+  verdict_read: fail
+  diagnosis: 'RQ-20261101-d1f3-04 (attempt 2; 5 arms incl. control, daily net, 2008-01-02..2024-06-28, n_days=4151, DSR N_cum=14): every
+    arm FAILS. Control E5 net Sharpe 0.418 (< 0.5), halves 0.495 / 0.342, DSR 0.48; long leg +0.319, short -0.023; asset-class gating hurt
+    (equity-only 0.40, non-equity 0.27); R2 (flat when SPY < 200d) is best at 0.609, DSR 0.77, failing only the DSR bar. The edge is stable
+    but SMALL. CAUSE (hypothesis): part of the shortfall is measurement - the series are price-only (harness docstring), so the long book,
+    which is the side that earns, is missing its distributions (bond ETFs TLT/IEF and equity ETFs pay; a long-biased trend book on 16.5 years
+    carries that every year), while shorts are not charged them. COMPETING: distributions are a small level shift (single-digit bps per day
+    at the sleeve weights) that lifts longs and penalises shorts about equally across the sample, leaving Sharpe near 0.42-0.6 and the DSR
+    bar out of reach; then the binding constraint is breadth (11 assets), not the series.'
+  hypothesis: total-return closes lift the long book's carry enough to move the E5 Sharpe toward the bar without any parameter change
+  search: 'data: total-return series (committed close x yfinance Adj Close / Close dividend factor), signals and costs unchanged'
+  levers:
+  - entry
+  attempt: 3
+  due_by: '2026-11-20'
+  map_entries:
+  - research/levers/tsmom-etf.yaml
+baseline:
+  what: control A0 = E5 (lookbacks 63/126/252 d, sleeve vol 0.10, long-short, 5-day rebalance, 11 symbols) on the committed price-only closes,
+    re-run in the same invocation
+  net_of: 2 bps per side slippage per unit |delta w| (commission-free ETFs; stress 2x = 4 bps); no funding on this sleeve (cash ETFs; no
+    borrow or financing charge on shorts - stated, favours the strategy); TR1 additionally charges shorts the distributions they would owe
+  committed_value: net Sharpe 0.418, halves 0.495 / 0.342, DSR 0.484 at N=14, side net sums long +0.319 / short -0.023 (RQ-20261101-d1f3-04 A0)
+power:
+  expected_n: 4151
+  min_detectable_effect: 0.7
+  effect_units: annualised_sharpe
+  sd: 15.875
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'n=4151 daily net returns (16.5 years); harness annualises with 252 days, so sd=sqrt(252)=15.875. One-sample, alpha 0.05, power 0.8:
+    required n = 7.84*252/S^2, so at n=4151 the smallest annualised Sharpe separable from zero is ~0.69. The best-powered subject in this
+    family, still above the 0.5 bar, so the rule is absolute with a cumulative-N DSR, not a delta.'
+  feasibility:
+    source: none
+    accrual_basis: Committed runner closes + a historical yfinance dividend series to 2024-06-30; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261113-62e3-03
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  statistic: 'ARMS (2, both counted; grid fixed in scripts/research/edge_etf_tsmom.py ITER_GRIDS["62e3"]): A0 = E5 on committed price-only
+    closes; TR1 = E5 on total-return closes = committed close x (yfinance Adj Close / Close) forward-filled onto the committed dates, factor
+    1 for the MHG futures proxy. Per arm: net Sharpe, stress Sharpe, half Sharpes, bootstrap p05, DSR at N_cum = 16 (9 discovery + 5 attempt-2
+    arms + these 2). Dividend parity is checked per symbol: median |daily return diff| between yfinance Close and the committed close <= 5 bps.'
+  rule: 'PASS iff TR1 clears the UNCHANGED registered rule: net Sharpe >= 0.5 AND stress (2x slippage) Sharpe > 0 AND Sharpe > 0 in BOTH halves
+    AND bootstrap p05 of annualised mean net > 0 AND DSR > 0.95 at N_cum = 16, on 2008-01-02..2024-06-28. FAIL iff the control computed and
+    reproduced and TR1 does not clear it (the series lever response is recorded; the next lever is measured on whichever series is correct).
+    INDETERMINATE iff the control series is insufficient, OR the control A0 net Sharpe misses the committed 0.418 by more than 0.01
+    (--expect-control-sharpe), OR any distribution-paying symbol''s dividend factor cannot be established (fetch failed / no rows / parity
+    failed): a part-price-only arm is not a verdict. Holdout not read; a PASS earns ONE holdout read, never a book.'
+  what_it_does_not_do: Edits no config and no roster, places no order, proposes no live leg, reads no data after 2024-06-30. Does not model
+    short borrow or cash financing (stated in the harness). A FAIL says only that TR1 (E5 on total-return closes) did not clear the rule.
+intervention_controls:
+  not_applicable: an offline portfolio research ablation, not an in-trade action
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid with control, every arm counted,
+  DSR at the cumulative trial count. Total-return series as the standard TSMOM input: Moskowitz-Ooi-Pedersen 2012 JFE and Hurst-Ooi-Pedersen
+  2017 JPM use excess total returns, not price returns.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  why_runner: Committed closes under comms/research + yfinance (installed on research-script-run, network reachable); CPU only.
+  basis: Estimate from RQ-20261101-d1f3-04 (5 arms, same closes) plus 10 yfinance 1d downloads; the first run replaces it.
+value:
+  usd_at_stake_per_month: 60
+  confidence: 0.1
+  bucket: structural
+  basis: 'stand-in: the best-powered trend sleeve in this family; an estimate, not a measurement'
+run:
+  command:
+  - python3
+  - scripts/research/edge_etf_tsmom.py
+  - --data-dir
+  - comms/research
+  - --iteration
+  - --grid
+  - 62e3
+  - --expect-control-sharpe
+  - '0.418'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261113-62e3-03
+  timeout_minutes: 60
+  workflow: research-script-run.yml
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/levers/tsmom-etf.yaml
+- RQ-20261101-58e4-05
+- RQ-20261101-d1f3-04
+- HOLDOUT-LOCK
+- scripts/research/edge_etf_tsmom.py
+what_it_does_not_do: Edits no config and no roster, places no order, proposes no live leg, reads no holdout data.
+last_dispatched_at: '2026-11-13T23:45:24+00:00'
+grading:
+  attested: RULE-RQ-20261113-62e3-03
+  auto: true
+  decision_rule_id: RULE-RQ-20261113-62e3-03
+  evidence:
+  - research/results/RQ-20261113-62e3-03/43529490098.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -55,6 +55,11 @@ _LOOKBACK_BUFFER_DAYS = 10
 # Bars pagination (row ML-ENTRY-ALPACA-BAR-PARITY): Alpaca's per-request cap, and a bound on pages per fetch.
 _PAGE_LIMIT_MAX = 10000
 _MAX_PAGES = 10
+# Multi-symbol bars (row ML-EQ-ENTRY-TIMING): symbols per request (keeps the URL short), and a bound on pages per chunk. Pages come back far
+# smaller than ``limit`` (MEASURED 2026-11-12: a ~235-day window for 100 ETFs did not finish in 200 pages), so this endpoint serves only the
+# refresher's INCREMENTAL read (~32 bars per symbol); full-window seeds stay per symbol (ml_entry_eq_refresher.BarCache.update).
+_MULTI_CHUNK = 100
+_MULTI_MAX_PAGES = 200
 
 # ── 429 / 5xx handling (PI-20261106-5A1BGFHC-0001; MEASURED RQ-20261106-d5a1-01 run 42145318852: one unpaced 173-symbol
 # 1h pass made 217 calls, 104 returned 429 and 82 symbols came back EMPTY, because a first-page HTTPError was re-raised and
@@ -132,6 +137,31 @@ def _lookback_start(timeframe_key: str, limit: int) -> str:
     return start.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _bars_frame(bars: list) -> pd.DataFrame:
+    """Alpaca bar dicts -> the canonical frame (``timestamp, open, high, low, close, volume``; tz-aware UTC, deduplicated, sorted).
+    ONE builder for ``get_ohlcv`` and ``get_bars_multi`` so both paths hand callers identical frames for identical bars."""
+    df = pd.DataFrame(
+        [
+            {
+                "timestamp": b.get("t"),
+                "open": b.get("o"),
+                "high": b.get("h"),
+                "low": b.get("l"),
+                "close": b.get("c"),
+                "volume": b.get("v"),
+            }
+            for b in bars
+        ]
+    )
+    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
+    return (
+        df.dropna(subset=["timestamp"])
+        .drop_duplicates("timestamp", keep="last")   # a page boundary must never double a bar
+        .sort_values("timestamp")
+        .reset_index(drop=True)
+    )
+
+
 class AlpacaMarketData:
     """Read-only OHLCV fetcher for US stocks/ETFs via Alpaca Data v2."""
 
@@ -152,9 +182,13 @@ class AlpacaMarketData:
         with _STATE_LOCK:
             READ_STATE_COUNTS[state] += 1
 
-    def _get(self, url: str, params: dict):
+    def _get(self, url: str, params: dict, share_cooldown: bool = True):
         """One GET, never a sleep. Raises AlpacaRateLimited while a cooldown runs (no call made) or when this call answers
-        429/5xx (which starts the cooldown); otherwise returns the response for raise_for_status to judge."""
+        429/5xx (which starts the cooldown); otherwise returns the response for raise_for_status to judge.
+
+        ``share_cooldown=False`` (only the historical ``since`` read, CLOSED-TRADE-SNAPSHOT-FUTURES-CANDLES): the call still
+        HONOURS a running cooldown (no call made), but its own 429/5xx raises WITHOUT starting or extending the shared
+        cooldown, so a background backfill can never put this process's other Alpaca bars reads into cooldown."""
         left = _cooldown_remaining()
         if left > 0.0:
             raise AlpacaRateLimited(f"cooldown {left:.1f}s left (no call made)")
@@ -166,6 +200,8 @@ class AlpacaMarketData:
         status = getattr(resp, "status_code", 200)   # raise_for_status still judges the answer
         if status in _RETRY_STATUSES:
             secs = _retry_after_s(resp)
+            if not share_cooldown:
+                raise AlpacaRateLimited(f"HTTP {status} on a since read; shared cooldown NOT started")
             if _start_cooldown(secs):
                 logger.warning("alpaca: HTTP %s on %s (thread=%s) -- Alpaca bars calls return read_state=rate_limited for "
                                "%.0f s (no in-line sleep)", status, url.rsplit("/", 2)[-2], threading.current_thread().name,
@@ -173,12 +209,17 @@ class AlpacaMarketData:
             raise AlpacaRateLimited(f"HTTP {status}; cooldown {secs:.0f}s")
         return resp
 
-    def get_ohlcv(self, symbol: str, timeframe: str = "5m", limit: int = 100):
+    def get_ohlcv(self, symbol: str, timeframe: str = "5m", limit: int = 100, since: int | None = None):
         """Return the most recent *limit* bars as a canonical DataFrame.
 
         Columns: ``timestamp, open, high, low, close, volume`` —
         timestamps are tz-aware UTC. Returns ``None`` on any error or
         empty response (the ``fetch_candles`` contract).
+
+        ``since`` (optional, epoch MILLISECONDS, the CCXT/Bybit convention ``fetch_candles`` passes): return up to
+        *limit* bars FORWARD from that instant instead of the most recent ones (CLOSED-TRADE-SNAPSHOT-FUTURES-CANDLES,
+        AM-UI Q10 option (b)). A call without it takes exactly the path it always took. A since read never starts the
+        shared rate-limit cooldown (see ``_get``).
         """
         tf_key = str(timeframe).lower()
         tf = _TIMEFRAME_MAP.get(tf_key)
@@ -186,7 +227,10 @@ class AlpacaMarketData:
             logger.warning("alpaca: unsupported timeframe %r", timeframe)
             return None
         try:
-            bars = self._bars_paged(symbol, tf, tf_key, int(limit))
+            if since is not None:
+                bars = self._bars_since(symbol, tf, int(since), int(limit))
+            else:
+                bars = self._bars_paged(symbol, tf, tf_key, int(limit))
             if not bars:
                 self._record(symbol, "empty")
                 logger.warning(
@@ -194,27 +238,9 @@ class AlpacaMarketData:
                     "returning None", symbol, timeframe, limit, self.feed,
                 )
                 return None
-            df = pd.DataFrame(
-                [
-                    {
-                        "timestamp": b.get("t"),
-                        "open": b.get("o"),
-                        "high": b.get("h"),
-                        "low": b.get("l"),
-                        "close": b.get("c"),
-                        "volume": b.get("v"),
-                    }
-                    for b in bars
-                ]
-            )
-            df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
+            df = _bars_frame(bars)
             self._record(symbol, "ok")
-            return (
-                df.dropna(subset=["timestamp"])
-                .drop_duplicates("timestamp", keep="last")   # a page boundary must never double a bar
-                .sort_values("timestamp")
-                .reset_index(drop=True)
-            )
+            return df
         except AlpacaRateLimited as exc:
             self._record(symbol, "rate_limited")
             logger.warning("alpaca: read_state=rate_limited %s %s (%s) — NOT 'no bars'; returning None",
@@ -271,6 +297,94 @@ class AlpacaMarketData:
             logger.info("alpaca: %s %s %d/%d bars after %d page(s), next_page_token=%s",
                         symbol, tf, len(out), limit, page + 1, "set" if token else "none")
         return out[:limit]
+
+    def _bars_since(self, symbol: str, tf: str, since_ms: int, limit: int) -> list:
+        """Up to ``limit`` bars from ``since_ms`` forward (ascending), following ``next_page_token``; bounded by
+        ``_MAX_PAGES``. Uses ``_get(share_cooldown=False)``. The first page failing raises to the caller; a later page
+        failing keeps the bars already read (logged) -- the same rule as ``_bars_paged``."""
+        start = datetime.fromtimestamp(since_ms / 1000.0, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        out: list = []
+        token = None
+        for page in range(_MAX_PAGES):
+            params = {"timeframe": tf, "limit": max(1, min(limit - len(out), _PAGE_LIMIT_MAX)), "start": start,
+                      "adjustment": "split", "feed": self.feed, "sort": "asc"}
+            if token:
+                params["page_token"] = token
+            try:
+                resp = self._get(f"{self.base_url}/v2/stocks/{symbol}/bars", params, share_cooldown=False)
+                resp.raise_for_status()
+                body = resp.json() or {}
+            except Exception as exc:  # noqa: BLE001
+                if page == 0:
+                    raise
+                logger.warning("alpaca: since page %d of %s %s failed (%s) — keeping %d bars already read",
+                               page + 1, symbol, tf, exc, len(out))
+                break
+            out.extend(body.get("bars") or [])
+            token = body.get("next_page_token")
+            if len(out) >= limit or not token:
+                break
+        return out[:limit]
+
+    def get_bars_multi(self, symbols, timeframe: str, start: str, chunk: int = _MULTI_CHUNK) -> tuple:
+        """Bars for MANY symbols in a few requests: ``GET /v2/stocks/bars?symbols=A,B,...`` from ``start`` to now, every page
+        (row ML-EQ-ENTRY-TIMING, Tier 2; the per-symbol ``get_ohlcv`` pass took ~11 min for 173 ETFs).
+
+        Returns ``(frames, states)``: ``frames[symbol]`` is a canonical DataFrame (the ``get_ohlcv`` columns and cleaning) of EVERY bar the
+        venue holds for that symbol in ``[start, now]``; ``states[symbol]`` is one of ``READ_STATES``. A chunk whose pages do not ALL read
+        is dropped whole (``rate_limited`` / ``could_not_look``) -- a symbol cut mid-page would look complete. Never sleeps (the shared
+        non-blocking cooldown applies), never raises."""
+        tf_key = str(timeframe).lower()
+        tf = _TIMEFRAME_MAP.get(tf_key)
+        frames: dict = {}
+        states: dict = {}
+        syms = [str(s) for s in symbols]
+        if tf is None:
+            return frames, {s: "could_not_look" for s in syms}
+        for i in range(0, len(syms), max(1, int(chunk))):
+            part = syms[i:i + max(1, int(chunk))]
+            bars: dict = {}
+            token = None
+            state = "ok"
+            for _page in range(_MULTI_MAX_PAGES):
+                params = {"symbols": ",".join(part), "timeframe": tf, "start": start, "limit": _PAGE_LIMIT_MAX,
+                          "adjustment": "split", "feed": self.feed, "sort": "asc"}
+                if token:
+                    params["page_token"] = token
+                try:
+                    resp = self._get(f"{self.base_url}/v2/stocks/bars", params)
+                    resp.raise_for_status()
+                    body = resp.json() or {}
+                except AlpacaRateLimited as exc:
+                    state = "rate_limited"
+                    logger.warning("alpaca: multi-bars read_state=rate_limited (%d symbols, %s) -- chunk dropped", len(part), exc)
+                    break
+                except Exception as exc:  # noqa: BLE001
+                    state = "could_not_look"
+                    logger.warning("alpaca: multi-bars read_state=could_not_look (%d symbols, %s) -- chunk dropped", len(part), exc)
+                    break
+                for sym, rows in (body.get("bars") or {}).items():
+                    bars.setdefault(str(sym), []).extend(rows or [])
+                token = body.get("next_page_token")
+                if not token:
+                    break
+            else:
+                state = "could_not_look"
+                logger.warning("alpaca: multi-bars stopped at %d pages (%d symbols) -- chunk dropped", _MULTI_MAX_PAGES, len(part))
+            for sym in part:
+                if state != "ok":
+                    self._record(sym, state)
+                    states[sym] = state
+                    continue
+                rows = bars.get(sym) or []
+                if not rows:
+                    self._record(sym, "empty")
+                    states[sym] = "empty"
+                    continue
+                frames[sym] = _bars_frame(rows)
+                self._record(sym, "ok")
+                states[sym] = "ok"
+        return frames, states
 
     def get_price(self, symbol: str):
         """Latest trade price, or ``None`` on error."""

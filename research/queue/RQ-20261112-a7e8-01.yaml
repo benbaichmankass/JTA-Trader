@@ -93,9 +93,17 @@ run:
   timeout_minutes: 60
   inputs:
     research_unit: RQ-20261112-a7e8-01
-grading:
-  auto: true
 related:
 - RQ-20261112-a7e8-02
 - RQ-20261103-b3c9-11
-last_dispatched_at: '2026-11-12T06:15:51+00:00'
+last_dispatched_at: '2026-11-12T18:11:11+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261112a7e801
+  evidence:
+  - research/results/RQ-20261112-a7e8-01/local-20261112T0650Z.jsonl
+  graded_at: '2026-11-13'
+  grader: session RESEARCH-OPS-20261113-0250
+  reason: 'two rows: GitHub-runner row 43272693504 producer_failed (not a verdict), local row measured fail: L net_r/trade 0.0508 and LT 0.0513 beat the every-day-long control 0.0016 by 0.0492/0.0497, under the 0.05 materiality bar; S -0.0197; configuration closed, IBS family stays open'
+  rows: 1
+  verdict: fail

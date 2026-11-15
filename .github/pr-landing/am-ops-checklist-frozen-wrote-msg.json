@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Manager 06:34Z ask: in the live-review lane, scripts/ops/checklist.py note --append looked like a silent no-op. Traced: it is not. After the WSD-S4 freeze, write_row routes the row to work_store.db and leaves the row file (the export) untouched, but main() printed 'checklist: wrote docs/claude/work/checklist/<id>.json'. The lane saw an unchanged mtime, re-ran the note, and the same text landed 3x on LTR-GRADER-COVERAGE (work.py history, 06:23Z). Fix: the line now says the work store took the write, that the file is NOT changed, and how to read the row back. Header writes and pre-freeze writes keep the file line. Tests: tests/test_checklist_frozen_wrote_msg.py. Tooling output only. Revert: git revert."
+}

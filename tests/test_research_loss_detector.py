@@ -152,3 +152,16 @@ def test_both_paths_down_stays_could_not_read():
 def test_gdelt_panel_producer_is_not_research():
     assert rld.is_research_workflow("news-gdelt-panel.yml") is False
     assert rld.is_research_workflow("research-exit-head-build.yml") is True
+
+
+# ---- RESEARCH-LOSS-M20-UNLANDED: a recorded disposition closes a run that can never land ----
+def test_disposition_requires_a_reason_and_is_counted(tmp_path):
+    d = tmp_path / "docs/claude/work"
+    d.mkdir(parents=True)
+    (d / "RESEARCH-LOSS-DISPOSITIONS.json").write_text(_json.dumps({
+        "1": {"disposition": "retired", "reason": "died in plan; nothing to land", "ref": "X"},
+        "2": {"disposition": "retired", "reason": "  "},
+        "3": "not a dict"}))
+    got = rld.load_dispositions(tmp_path)
+    assert set(got) == {"1"}
+    assert rld.load_dispositions(tmp_path / "missing") == {}

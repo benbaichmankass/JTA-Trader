@@ -1,0 +1,1177 @@
+{
+ "stage": 1,
+ "n_models": 16,
+ "n_scored": 16,
+ "results": [
+  {
+   "model_id": "mes-regime-1d-lgbm-v2",
+   "symbol": "MES",
+   "timeframe": "1d",
+   "dataset": "market_features/MES/1d/v002",
+   "label_mode": "dataset_regime_label_join",
+   "n_scored": 2962,
+   "n_skipped": 0,
+   "overall": {
+    "n": 2962,
+    "base_rate": 0.5,
+    "auc": 0.9164,
+    "brier": 0.11786,
+    "brier_base": 0.25,
+    "brier_lift": 0.13214,
+    "mean_score": 0.5336
+   },
+   "folds": [
+    {
+     "n": 740,
+     "base_rate": 0.3216,
+     "auc": 0.9734,
+     "brier": 0.07899,
+     "brier_base": 0.21818,
+     "brier_lift": 0.13919,
+     "mean_score": 0.3942,
+     "window": [
+      "2015-01-30T00:00:00Z",
+      "2018-01-09T00:00:00Z"
+     ]
+    },
+    {
+     "n": 740,
+     "base_rate": 0.5203,
+     "auc": 0.9646,
+     "brier": 0.08687,
+     "brier_base": 0.24959,
+     "brier_lift": 0.16272,
+     "mean_score": 0.5815,
+     "window": [
+      "2018-01-10T00:00:00Z",
+      "2020-12-16T00:00:00Z"
+     ]
+    },
+    {
+     "n": 740,
+     "base_rate": 0.6554,
+     "auc": 0.9528,
+     "brier": 0.0888,
+     "brier_base": 0.22585,
+     "brier_lift": 0.13705,
+     "mean_score": 0.6587,
+     "window": [
+      "2020-12-17T00:00:00Z",
+      "2023-11-24T00:00:00Z"
+     ]
+    },
+    {
+     "n": 742,
+     "base_rate": 0.5027,
+     "auc": 0.7319,
+     "brier": 0.2165,
+     "brier_base": 0.24999,
+     "brier_lift": 0.03349,
+     "mean_score": 0.5001,
+     "window": [
+      "2023-11-27T00:00:00Z",
+      "2026-11-06T00:00:00Z"
+     ]
+    }
+   ],
+   "auc_verdict": "TRUSTWORTHY_SIGNAL"
+  },
+  {
+   "model_id": "sol-regime-5m-lgbm-v1",
+   "symbol": "SOLUSDT",
+   "timeframe": "5m",
+   "dataset": "market_features/SOLUSDT/5m/v002",
+   "label_mode": "dataset_regime_label_join",
+   "n_scored": 30023,
+   "n_skipped": 2,
+   "overall": {
+    "n": 30023,
+    "base_rate": 0.0105,
+    "auc": 0.8508,
+    "brier": 0.05316,
+    "brier_base": 0.01038,
+    "brier_lift": -0.04277,
+    "mean_score": 0.1151
+   },
+   "folds": [
+    {
+     "n": 7505,
+     "base_rate": 0.0145,
+     "auc": 0.8899,
+     "brier": 0.0555,
+     "brier_base": 0.01431,
+     "brier_lift": -0.04118,
+     "mean_score": 0.112,
+     "window": [
+      "2026-08-01T17:40:00Z",
+      "2026-08-27T19:00:00Z"
+     ]
+    },
+    {
+     "n": 7505,
+     "base_rate": 0.0091,
+     "auc": 0.8573,
+     "brier": 0.05362,
+     "brier_base": 0.00898,
+     "brier_lift": -0.04464,
+     "mean_score": 0.1195,
+     "window": [
+      "2026-08-27T19:05:00Z",
+      "2026-09-22T20:25:00Z"
+     ]
+    },
+    {
+     "n": 7505,
+     "base_rate": 0.0093,
+     "auc": 0.8215,
+     "brier": 0.05216,
+     "brier_base": 0.00924,
+     "brier_lift": -0.04292,
+     "mean_score": 0.1134,
+     "window": [
+      "2026-09-22T20:30:00Z",
+      "2026-10-18T21:50:00Z"
+     ]
+    },
+    {
+     "n": 7508,
+     "base_rate": 0.0091,
+     "auc": 0.8087,
+     "brier": 0.05135,
+     "brier_base": 0.00897,
+     "brier_lift": -0.04237,
+     "mean_score": 0.1153,
+     "window": [
+      "2026-10-18T21:55:00Z",
+      "2026-11-13T23:30:00Z"
+     ]
+    }
+   ],
+   "auc_verdict": "TRUSTWORTHY_SIGNAL"
+  },
+  {
+   "model_id": "btc-regime-1h-lgbm-yz-v1",
+   "symbol": "BTCUSDT",
+   "timeframe": "1h",
+   "dataset": "market_features/BTCUSDT/1h/v002",
+   "label_mode": "dataset_regime_label_join",
+   "n_scored": 30023,
+   "n_skipped": 2,
+   "overall": {
+    "n": 30023,
+    "base_rate": 0.1943,
+    "auc": 0.8431,
+    "brier": 0.13781,
+    "brier_base": 0.15652,
+    "brier_lift": 0.01871,
+    "mean_score": 0.3177
+   },
+   "folds": [
+    {
+     "n": 7505,
+     "base_rate": 0.1836,
+     "auc": 0.8009,
+     "brier": 0.15787,
+     "brier_base": 0.1499,
+     "brier_lift": -0.00798,
+     "mean_score": 0.3199,
+     "window": [
+      "2023-06-12T20:00:00Z",
+      "2024-04-20T12:00:00Z"
+     ]
+    },
+    {
+     "n": 7505,
+     "base_rate": 0.2574,
+     "auc": 0.8215,
+     "brier": 0.16337,
+     "brier_base": 0.19116,
+     "brier_lift": 0.02779,
+     "mean_score": 0.3813,
+     "window": [
+      "2024-04-20T13:00:00Z",
+      "2025-02-27T05:00:00Z"
+     ]
+    },
+    {
+     "n": 7505,
+     "base_rate": 0.1667,
+     "auc": 0.9542,
+     "brier": 0.07801,
+     "brier_base": 0.1389,
+     "brier_lift": 0.06089,
+     "mean_score": 0.278,
+     "window": [
+      "2025-02-27T06:00:00Z",
+      "2026-01-05T22:00:00Z"
+     ]
+    },
+    {
+     "n": 7508,
+     "base_rate": 0.1693,
+     "auc": 0.7777,
+     "brier": 0.15198,
+     "brier_base": 0.14063,
+     "brier_lift": -0.01135,
+     "mean_score": 0.2916,
+     "window": [
+      "2026-01-05T23:00:00Z",
+      "2026-11-14T18:00:00Z"
+     ]
+    }
+   ],
+   "auc_verdict": "TRUSTWORTHY_SIGNAL"
+  },
+  {
+   "model_id": "btc-regime-1h-lgbm-v2",
+   "symbol": "BTCUSDT",
+   "timeframe": "1h",
+   "dataset": "market_features/BTCUSDT/1h/v002",
+   "label_mode": "dataset_regime_label_join",
+   "n_scored": 30023,
+   "n_skipped": 2,
+   "overall": {
+    "n": 30023,
+    "base_rate": 0.1943,
+    "auc": 0.8286,
+    "brier": 0.13892,
+    "brier_base": 0.15652,
+    "brier_lift": 0.01759,
+    "mean_score": 0.3126
+   },
+   "folds": [
+    {
+     "n": 7505,
+     "base_rate": 0.1836,
+     "auc": 0.7916,
+     "brier": 0.14947,
+     "brier_base": 0.1499,
+     "brier_lift": 0.00043,
+     "mean_score": 0.2985,
+     "window": [
+      "2023-06-12T20:00:00Z",
+      "2024-04-20T12:00:00Z"
+     ]
+    },
+    {
+     "n": 7505,
+     "base_rate": 0.2574,
+     "auc": 0.809,
+     "brier": 0.16391,
+     "brier_base": 0.19116,
+     "brier_lift": 0.02725,
+     "mean_score": 0.3693,
+     "window": [
+      "2024-04-20T13:00:00Z",
+      "2025-02-27T05:00:00Z"
+     ]
+    },
+    {
+     "n": 7505,
+     "base_rate": 0.1667,
+     "auc": 0.939,
+     "brier": 0.09012,
+     "brier_base": 0.1389,
+     "brier_lift": 0.04878,
+     "mean_score": 0.293,
+     "window": [
+      "2025-02-27T06:00:00Z",
+      "2026-01-05T22:00:00Z"
+     ]
+    },
+    {
+     "n": 7508,
+     "base_rate": 0.1693,
+     "auc": 0.7628,
+     "brier": 0.1522,
+     "brier_base": 0.14063,
+     "brier_lift": -0.01157,
+     "mean_score": 0.2895,
+     "window": [
+      "2026-01-05T23:00:00Z",
+      "2026-11-14T18:00:00Z"
+     ]
+    }
+   ],
+   "auc_verdict": "TRUSTWORTHY_SIGNAL"
+  },
+  {
+   "model_id": "btc-regime-15m-lgbm-yz-v1",
+   "symbol": "BTCUSDT",
+   "timeframe": "15m",
+   "dataset": "market_features/BTCUSDT/15m/v002",
+   "label_mode": "dataset_regime_label_join",
+   "n_scored": 30023,
+   "n_skipped": 2,
+   "overall": {
+    "n": 30023,
+    "base_rate": 0.0273,
+    "auc": 0.8259,
+    "brier": 0.04982,
+    "brier_base": 0.02657,
+    "brier_lift": -0.02326,
+    "mean_score": 0.0967
+   },
+   "folds": [
+    {
+     "n": 7505,
+     "base_rate": 0.059,
+     "auc": 0.8038,
+     "brier": 0.08845,
+     "brier_base": 0.05554,
+     "brier_lift": -0.03291,
+     "mean_score": 0.166,
+     "window": [
+      "2026-01-06T05:00:00Z",
+      "2026-03-25T09:00:00Z"
+     ]
+    },
+    {
+     "n": 7505,
+     "base_rate": 0.0233,
+     "auc": 0.8181,
+     "brier": 0.04376,
+     "brier_base": 0.02277,
+     "brier_lift": -0.02099,
+     "mean_score": 0.0865,
+     "window": [
+      "2026-03-25T09:15:00Z",
+      "2026-06-11T13:15:00Z"
+     ]
+    },
+    {
+     "n": 7505,
+     "base_rate": 0.0133,
+     "auc": 0.7603,
+     "brier": 0.03647,
+     "brier_base": 0.01315,
+     "brier_lift": -0.02333,
+     "mean_score": 0.0703,
+     "window": [
+      "2026-06-11T13:30:00Z",
+      "2026-08-28T17:30:00Z"
+     ]
+    },
+    {
+     "n": 7508,
+     "base_rate": 0.0136,
+     "auc": 0.8227,
+     "brier": 0.0306,
+     "brier_base": 0.0134,
+     "brier_lift": -0.0172,
+     "mean_score": 0.0642,
+     "window": [
+      "2026-08-28T17:45:00Z",
+      "2026-11-14T22:30:00Z"
+     ]
+    }
+   ],
+   "auc_verdict": "TRUSTWORTHY_SIGNAL"
+  },
+  {
+   "model_id": "eth-regime-5m-lgbm-v1",
+   "symbol": "ETHUSDT",
+   "timeframe": "5m",
+   "dataset": "market_features/ETHUSDT/5m/v002",
+   "label_mode": "dataset_regime_label_join",
+   "n_scored": 30023,
+   "n_skipped": 2,
+   "overall": {
+    "n": 30023,
+    "base_rate": 0.0059,
+    "auc": 0.8195,
+    "brier": 0.03503,
+    "brier_base": 0.00583,
+    "brier_lift": -0.02921,
+    "mean_score": 0.0915
+   },
+   "folds": [
+    {
+     "n": 7505,
+     "base_rate": 0.0072,
+     "auc": 0.8791,
+     "brier": 0.0325,
+     "brier_base": 0.00714,
+     "brier_lift": -0.02535,
+     "mean_score": 0.083,
+     "window": [
+      "2026-08-01T17:40:00Z",
+      "2026-08-27T19:00:00Z"
+     ]
+    },
+    {
+     "n": 7505,
+     "base_rate": 0.0053,
+     "auc": 0.7752,
+     "brier": 0.03696,
+     "brier_base": 0.0053,
+     "brier_lift": -0.03166,
+     "mean_score": 0.0932,
+     "window": [
+      "2026-08-27T19:05:00Z",
+      "2026-09-22T20:25:00Z"
+     ]
+    },
+    {
+     "n": 7505,
+     "base_rate": 0.004,
+     "auc": 0.7818,
+     "brier": 0.03052,
+     "brier_base": 0.00398,
+     "brier_lift": -0.02654,
+     "mean_score": 0.0812,
+     "window": [
+      "2026-09-22T20:30:00Z",
+      "2026-10-18T21:50:00Z"
+     ]
+    },
+    {
+     "n": 7508,
+     "base_rate": 0.0069,
+     "auc": 0.8073,
+     "brier": 0.04016,
+     "brier_base": 0.00688,
+     "brier_lift": -0.03328,
+     "mean_score": 0.1086,
+     "window": [
+      "2026-10-18T21:55:00Z",
+      "2026-11-13T23:30:00Z"
+     ]
+    }
+   ],
+   "auc_verdict": "TRUSTWORTHY_SIGNAL"
+  },
+  {
+   "model_id": "btc-regime-15m-lgbm-v2",
+   "symbol": "BTCUSDT",
+   "timeframe": "15m",
+   "dataset": "market_features/BTCUSDT/15m/v002",
+   "label_mode": "dataset_regime_label_join",
+   "n_scored": 30023,
+   "n_skipped": 2,
+   "overall": {
+    "n": 30023,
+    "base_rate": 0.0273,
+    "auc": 0.8091,
+    "brier": 0.0546,
+    "brier_base": 0.02657,
+    "brier_lift": -0.02804,
+    "mean_score": 0.1073
+   },
+   "folds": [
+    {
+     "n": 7505,
+     "base_rate": 0.059,
+     "auc": 0.7826,
+     "brier": 0.09333,
+     "brier_base": 0.05554,
+     "brier_lift": -0.03778,
+     "mean_score": 0.1744,
+     "window": [
+      "2026-01-06T05:00:00Z",
+      "2026-03-25T09:00:00Z"
+     ]
+    },
+    {
+     "n": 7505,
+     "base_rate": 0.0233,
+     "auc": 0.8012,
+     "brier": 0.05063,
+     "brier_base": 0.02277,
+     "brier_lift": -0.02785,
+     "mean_score": 0.0994,
+     "window": [
+      "2026-03-25T09:15:00Z",
+      "2026-06-11T13:15:00Z"
+     ]
+    },
+    {
+     "n": 7505,
+     "base_rate": 0.0133,
+     "auc": 0.7585,
+     "brier": 0.03966,
+     "brier_base": 0.01315,
+     "brier_lift": -0.02651,
+     "mean_score": 0.0819,
+     "window": [
+      "2026-06-11T13:30:00Z",
+      "2026-08-28T17:30:00Z"
+     ]
+    },
+    {
+     "n": 7508,
+     "base_rate": 0.0136,
+     "auc": 0.7983,
+     "brier": 0.03481,
+     "brier_base": 0.0134,
+     "brier_lift": -0.02141,
+     "mean_score": 0.0734,
+     "window": [
+      "2026-08-28T17:45:00Z",
+      "2026-11-14T22:30:00Z"
+     ]
+    }
+   ],
+   "auc_verdict": "TRUSTWORTHY_SIGNAL"
+  },
+  {
+   "model_id": "eth-regime-1h-lgbm-v1",
+   "symbol": "ETHUSDT",
+   "timeframe": "1h",
+   "dataset": "market_features/ETHUSDT/1h/v002",
+   "label_mode": "dataset_regime_label_join",
+   "n_scored": 30023,
+   "n_skipped": 2,
+   "overall": {
+    "n": 30023,
+    "base_rate": 0.338,
+    "auc": 0.8018,
+    "brier": 0.24069,
+    "brier_base": 0.22376,
+    "brier_lift": -0.01693,
+    "mean_score": 0.5919
+   },
+   "folds": [
+    {
+     "n": 7505,
+     "base_rate": 0.2512,
+     "auc": 0.7697,
+     "brier": 0.23906,
+     "brier_base": 0.18808,
+     "brier_lift": -0.05098,
+     "mean_score": 0.5179,
+     "window": [
+      "2023-06-12T20:00:00Z",
+      "2024-04-20T12:00:00Z"
+     ]
+    },
+    {
+     "n": 7505,
+     "base_rate": 0.3859,
+     "auc": 0.7634,
+     "brier": 0.25684,
+     "brier_base": 0.23698,
+     "brier_lift": -0.01987,
+     "mean_score": 0.6339,
+     "window": [
+      "2024-04-20T13:00:00Z",
+      "2025-02-27T05:00:00Z"
+     ]
+    },
+    {
+     "n": 7505,
+     "base_rate": 0.4357,
+     "auc": 0.8998,
+     "brier": 0.1923,
+     "brier_base": 0.24587,
+     "brier_lift": 0.05357,
+     "mean_score": 0.6468,
+     "window": [
+      "2025-02-27T06:00:00Z",
+      "2026-01-05T22:00:00Z"
+     ]
+    },
+    {
+     "n": 7508,
+     "base_rate": 0.2793,
+     "auc": 0.7264,
+     "brier": 0.27453,
+     "brier_base": 0.20129,
+     "brier_lift": -0.07323,
+     "mean_score": 0.569,
+     "window": [
+      "2026-01-05T23:00:00Z",
+      "2026-11-14T18:00:00Z"
+     ]
+    }
+   ],
+   "auc_verdict": "TRUSTWORTHY_SIGNAL"
+  },
+  {
+   "model_id": "btc-regime-5m-lgbm-v2",
+   "symbol": "BTCUSDT",
+   "timeframe": "5m",
+   "dataset": "market_features/BTCUSDT/5m/v002",
+   "label_mode": "dataset_regime_label_join",
+   "n_scored": 30023,
+   "n_skipped": 2,
+   "overall": {
+    "n": 30023,
+    "base_rate": 0.0019,
+    "auc": 0.7953,
+    "brier": 0.00544,
+    "brier_base": 0.00189,
+    "brier_lift": -0.00355,
+    "mean_score": 0.0145
+   },
+   "folds": [
+    {
+     "n": 7505,
+     "base_rate": 0.0029,
+     "auc": 0.8422,
+     "brier": 0.00708,
+     "brier_base": 0.00292,
+     "brier_lift": -0.00415,
+     "mean_score": 0.0154,
+     "window": [
+      "2026-08-02T17:40:00Z",
+      "2026-08-28T19:00:00Z"
+     ]
+    },
+    {
+     "n": 7505,
+     "base_rate": 0.0016,
+     "auc": 0.7457,
+     "brier": 0.00626,
+     "brier_base": 0.0016,
+     "brier_lift": -0.00466,
+     "mean_score": 0.0157,
+     "window": [
+      "2026-08-28T19:05:00Z",
+      "2026-09-23T20:25:00Z"
+     ]
+    },
+    {
+     "n": 7505,
+     "base_rate": 0.0019,
+     "auc": 0.7929,
+     "brier": 0.00424,
+     "brier_base": 0.00186,
+     "brier_lift": -0.00238,
+     "mean_score": 0.0116,
+     "window": [
+      "2026-09-23T20:30:00Z",
+      "2026-10-19T21:50:00Z"
+     ]
+    },
+    {
+     "n": 7508,
+     "base_rate": 0.0012,
+     "auc": 0.7538,
+     "brier": 0.00419,
+     "brier_base": 0.0012,
+     "brier_lift": -0.003,
+     "mean_score": 0.0154,
+     "window": [
+      "2026-10-19T21:55:00Z",
+      "2026-11-14T23:30:00Z"
+     ]
+    }
+   ],
+   "auc_verdict": "TRUSTWORTHY_SIGNAL"
+  },
+  {
+   "model_id": "eth-regime-15m-lgbm-selfonly-v901ctrl",
+   "symbol": "ETHUSDT",
+   "timeframe": "15m",
+   "dataset": "market_features/ETHUSDT/15m/v901",
+   "label_mode": "dataset_regime_label_join",
+   "n_scored": 18695,
+   "n_skipped": 2,
+   "overall": {
+    "n": 18695,
+    "base_rate": 0.236,
+    "auc": 0.7772,
+    "brier": 0.3918,
+    "brier_base": 0.1803,
+    "brier_lift": -0.2115,
+    "mean_score": 0.6898
+   },
+   "folds": [
+    {
+     "n": 4673,
+     "base_rate": 0.3114,
+     "auc": 0.823,
+     "brier": 0.36472,
+     "brier_base": 0.21442,
+     "brier_lift": -0.1503,
+     "mean_score": 0.728,
+     "window": [
+      "2026-01-05T05:00:00Z",
+      "2026-02-22T21:00:00Z"
+     ]
+    },
+    {
+     "n": 4673,
+     "base_rate": 0.2983,
+     "auc": 0.7076,
+     "brier": 0.42103,
+     "brier_base": 0.20932,
+     "brier_lift": -0.21171,
+     "mean_score": 0.7499,
+     "window": [
+      "2026-02-22T21:15:00Z",
+      "2026-04-12T13:15:00Z"
+     ]
+    },
+    {
+     "n": 4673,
+     "base_rate": 0.1042,
+     "auc": 0.7399,
+     "brier": 0.37379,
+     "brier_base": 0.09335,
+     "brier_lift": -0.28043,
+     "mean_score": 0.5807,
+     "window": [
+      "2026-04-12T13:30:00Z",
+      "2026-05-31T05:30:00Z"
+     ]
+    },
+    {
+     "n": 4676,
+     "base_rate": 0.2301,
+     "auc": 0.7536,
+     "brier": 0.40767,
+     "brier_base": 0.17716,
+     "brier_lift": -0.23051,
+     "mean_score": 0.7008,
+     "window": [
+      "2026-05-31T05:45:00Z",
+      "2026-07-18T22:30:00Z"
+     ]
+    }
+   ],
+   "auc_verdict": "TRUSTWORTHY_SIGNAL"
+  },
+  {
+   "model_id": "btc-regime-5m-baseline-v1",
+   "symbol": "BTCUSDT",
+   "timeframe": "5m",
+   "dataset": "market_features/BTCUSDT/5m/None",
+   "label_mode": "dataset_regime_label_join",
+   "n_scored": 30023,
+   "n_skipped": 2,
+   "overall": {
+    "n": 30023,
+    "base_rate": 0.0019,
+    "auc": 0.7514,
+    "brier": 0.00194,
+    "brier_base": 0.00189,
+    "brier_lift": -5e-05,
+    "mean_score": 0.0056
+   },
+   "folds": [
+    {
+     "n": 7505,
+     "base_rate": 0.0029,
+     "auc": 0.8902,
+     "brier": 0.00291,
+     "brier_base": 0.00292,
+     "brier_lift": 1e-05,
+     "mean_score": 0.0056,
+     "window": [
+      "2026-08-02T17:40:00Z",
+      "2026-08-28T19:00:00Z"
+     ]
+    },
+    {
+     "n": 7505,
+     "base_rate": 0.0016,
+     "auc": 0.6363,
+     "brier": 0.00164,
+     "brier_base": 0.0016,
+     "brier_lift": -4e-05,
+     "mean_score": 0.005,
+     "window": [
+      "2026-08-28T19:05:00Z",
+      "2026-09-23T20:25:00Z"
+     ]
+    },
+    {
+     "n": 7505,
+     "base_rate": 0.0019,
+     "auc": 0.6828,
+     "brier": 0.00192,
+     "brier_base": 0.00186,
+     "brier_lift": -5e-05,
+     "mean_score": 0.0049,
+     "window": [
+      "2026-09-23T20:30:00Z",
+      "2026-10-19T21:50:00Z"
+     ]
+    },
+    {
+     "n": 7508,
+     "base_rate": 0.0012,
+     "auc": 0.6765,
+     "brier": 0.0013,
+     "brier_base": 0.0012,
+     "brier_lift": -0.0001,
+     "mean_score": 0.0068,
+     "window": [
+      "2026-10-19T21:55:00Z",
+      "2026-11-14T23:30:00Z"
+     ]
+    }
+   ],
+   "auc_verdict": "TRUSTWORTHY_SIGNAL"
+  },
+  {
+   "model_id": "eth-regime-1h-lgbm-xasset-v1",
+   "symbol": "ETHUSDT",
+   "timeframe": "1h",
+   "dataset": "market_features/ETHUSDT/1h/v002",
+   "label_mode": "dataset_regime_label_join",
+   "n_scored": 30023,
+   "n_skipped": 2,
+   "overall": {
+    "n": 30023,
+    "base_rate": 0.338,
+    "auc": 0.7397,
+    "brier": 0.18848,
+    "brier_base": 0.22376,
+    "brier_lift": 0.03527,
+    "mean_score": 0.3459
+   },
+   "folds": [
+    {
+     "n": 7505,
+     "base_rate": 0.2512,
+     "auc": 0.7404,
+     "brier": 0.16378,
+     "brier_base": 0.18808,
+     "brier_lift": 0.02431,
+     "mean_score": 0.3022,
+     "window": [
+      "2023-06-12T20:00:00Z",
+      "2024-04-20T12:00:00Z"
+     ]
+    },
+    {
+     "n": 7505,
+     "base_rate": 0.3859,
+     "auc": 0.7112,
+     "brier": 0.20596,
+     "brier_base": 0.23698,
+     "brier_lift": 0.03101,
+     "mean_score": 0.3662,
+     "window": [
+      "2024-04-20T13:00:00Z",
+      "2025-02-27T05:00:00Z"
+     ]
+    },
+    {
+     "n": 7505,
+     "base_rate": 0.4357,
+     "auc": 0.7557,
+     "brier": 0.20233,
+     "brier_base": 0.24587,
+     "brier_lift": 0.04354,
+     "mean_score": 0.3868,
+     "window": [
+      "2025-02-27T06:00:00Z",
+      "2026-01-05T22:00:00Z"
+     ]
+    },
+    {
+     "n": 7508,
+     "base_rate": 0.2793,
+     "auc": 0.7148,
+     "brier": 0.18187,
+     "brier_base": 0.20129,
+     "brier_lift": 0.01942,
+     "mean_score": 0.3286,
+     "window": [
+      "2026-01-05T23:00:00Z",
+      "2026-11-14T18:00:00Z"
+     ]
+    }
+   ],
+   "auc_verdict": "TRUSTWORTHY_SIGNAL"
+  },
+  {
+   "model_id": "btc-regime-15m-baseline-v1",
+   "symbol": "BTCUSDT",
+   "timeframe": "15m",
+   "dataset": "market_features/BTCUSDT/15m/None",
+   "label_mode": "dataset_regime_label_join",
+   "n_scored": 16871,
+   "n_skipped": 2,
+   "overall": {
+    "n": 16871,
+    "base_rate": 0.0395,
+    "auc": 0.7108,
+    "brier": 0.03709,
+    "brier_base": 0.03797,
+    "brier_lift": 0.00088,
+    "mean_score": 0.0437
+   },
+   "folds": [
+    {
+     "n": 4217,
+     "base_rate": 0.0688,
+     "auc": 0.7016,
+     "brier": 0.06202,
+     "brier_base": 0.06404,
+     "brier_lift": 0.00202,
+     "mean_score": 0.0518,
+     "window": [
+      "2026-01-06T05:00:00Z",
+      "2026-02-19T03:00:00Z"
+     ]
+    },
+    {
+     "n": 4217,
+     "base_rate": 0.0434,
+     "auc": 0.5962,
+     "brier": 0.04206,
+     "brier_base": 0.04151,
+     "brier_lift": -0.00054,
+     "mean_score": 0.0555,
+     "window": [
+      "2026-02-19T03:15:00Z",
+      "2026-04-04T01:15:00Z"
+     ]
+    },
+    {
+     "n": 4217,
+     "base_rate": 0.0111,
+     "auc": 0.6348,
+     "brier": 0.01196,
+     "brier_base": 0.01102,
+     "brier_lift": -0.00094,
+     "mean_score": 0.0277,
+     "window": [
+      "2026-04-04T01:30:00Z",
+      "2026-05-17T23:30:00Z"
+     ]
+    },
+    {
+     "n": 4220,
+     "base_rate": 0.0348,
+     "auc": 0.7584,
+     "brier": 0.03234,
+     "brier_base": 0.03362,
+     "brier_lift": 0.00128,
+     "mean_score": 0.04,
+     "window": [
+      "2026-05-17T23:45:00Z",
+      "2026-06-30T22:30:00Z"
+     ]
+    }
+   ],
+   "auc_verdict": "TRUSTWORTHY_SIGNAL"
+  },
+  {
+   "model_id": "eth-regime-15m-lgbm-xasset-v1",
+   "symbol": "ETHUSDT",
+   "timeframe": "15m",
+   "dataset": "market_features/ETHUSDT/15m/v901",
+   "label_mode": "dataset_regime_label_join",
+   "n_scored": 18695,
+   "n_skipped": 2,
+   "overall": {
+    "n": 18695,
+    "base_rate": 0.236,
+    "auc": 0.7056,
+    "brier": 0.17063,
+    "brier_base": 0.1803,
+    "brier_lift": 0.00967,
+    "mean_score": 0.2812
+   },
+   "folds": [
+    {
+     "n": 4673,
+     "base_rate": 0.3114,
+     "auc": 0.7078,
+     "brier": 0.19232,
+     "brier_base": 0.21442,
+     "brier_lift": 0.0221,
+     "mean_score": 0.2956,
+     "window": [
+      "2026-01-05T05:00:00Z",
+      "2026-02-22T21:00:00Z"
+     ]
+    },
+    {
+     "n": 4673,
+     "base_rate": 0.2983,
+     "auc": 0.6669,
+     "brier": 0.20175,
+     "brier_base": 0.20932,
+     "brier_lift": 0.00757,
+     "mean_score": 0.3132,
+     "window": [
+      "2026-02-22T21:15:00Z",
+      "2026-04-12T13:15:00Z"
+     ]
+    },
+    {
+     "n": 4673,
+     "base_rate": 0.1042,
+     "auc": 0.7162,
+     "brier": 0.11714,
+     "brier_base": 0.09335,
+     "brier_lift": -0.02379,
+     "mean_score": 0.2323,
+     "window": [
+      "2026-04-12T13:30:00Z",
+      "2026-05-31T05:30:00Z"
+     ]
+    },
+    {
+     "n": 4676,
+     "base_rate": 0.2301,
+     "auc": 0.6969,
+     "brier": 0.17131,
+     "brier_base": 0.17716,
+     "brier_lift": 0.00585,
+     "mean_score": 0.2838,
+     "window": [
+      "2026-05-31T05:45:00Z",
+      "2026-07-18T22:30:00Z"
+     ]
+    }
+   ],
+   "auc_verdict": "TRUSTWORTHY_SIGNAL"
+  },
+  {
+   "model_id": "mes-regime-5m-baseline-v1",
+   "symbol": "MES",
+   "timeframe": "5m",
+   "dataset": "market_features/MES/5m/None",
+   "label_mode": "dataset_regime_label_join",
+   "n_scored": 30023,
+   "n_skipped": 2,
+   "overall": {
+    "n": 30023,
+    "base_rate": 0.3193,
+    "auc": 0.674,
+    "brier": 0.21281,
+    "brier_base": 0.21734,
+    "brier_lift": 0.00453,
+    "mean_score": 0.2257
+   },
+   "folds": [
+    {
+     "n": 7505,
+     "base_rate": 0.2745,
+     "auc": 0.695,
+     "brier": 0.18608,
+     "brier_base": 0.19914,
+     "brier_lift": 0.01306,
+     "mean_score": 0.1991,
+     "window": [
+      "2026-06-15T13:25:00Z",
+      "2026-07-23T03:00:00Z"
+     ]
+    },
+    {
+     "n": 7505,
+     "base_rate": 0.1936,
+     "auc": 0.6082,
+     "brier": 0.15268,
+     "brier_base": 0.15612,
+     "brier_lift": 0.00344,
+     "mean_score": 0.2042,
+     "window": [
+      "2026-07-23T03:05:00Z",
+      "2026-08-31T07:25:00Z"
+     ]
+    },
+    {
+     "n": 7505,
+     "base_rate": 0.3142,
+     "auc": 0.6255,
+     "brier": 0.21496,
+     "brier_base": 0.21547,
+     "brier_lift": 0.00051,
+     "mean_score": 0.2408,
+     "window": [
+      "2026-08-31T07:30:00Z",
+      "2026-10-07T15:50:00Z"
+     ]
+    },
+    {
+     "n": 7508,
+     "base_rate": 0.4948,
+     "auc": 0.6869,
+     "brier": 0.29749,
+     "brier_base": 0.24997,
+     "brier_lift": -0.04752,
+     "mean_score": 0.2585,
+     "window": [
+      "2026-10-07T15:55:00Z",
+      "2026-11-13T21:30:00Z"
+     ]
+    }
+   ],
+   "auc_verdict": "TRUSTWORTHY_SIGNAL"
+  },
+  {
+   "model_id": "mes-regime-15m-baseline-v1",
+   "symbol": "MES",
+   "timeframe": "15m",
+   "dataset": "market_features/MES/15m/None",
+   "label_mode": "dataset_regime_label_join",
+   "n_scored": 17390,
+   "n_skipped": 0,
+   "overall": {
+    "n": 17390,
+    "base_rate": 0.3101,
+    "auc": 0.6119,
+    "brier": 0.20724,
+    "brier_base": 0.21392,
+    "brier_lift": 0.00668,
+    "mean_score": 0.2824
+   },
+   "folds": [
+    {
+     "n": 4347,
+     "base_rate": 0.2073,
+     "auc": 0.561,
+     "brier": 0.16583,
+     "brier_base": 0.16431,
+     "brier_lift": -0.00152,
+     "mean_score": 0.2499,
+     "window": [
+      "2025-11-14T21:45:00Z",
+      "2026-04-28T06:45:00Z"
+     ]
+    },
+    {
+     "n": 4347,
+     "base_rate": 0.306,
+     "auc": 0.6085,
+     "brier": 0.20621,
+     "brier_base": 0.21235,
+     "brier_lift": 0.00614,
+     "mean_score": 0.2763,
+     "window": [
+      "2026-04-28T07:00:00Z",
+      "2026-07-06T03:30:00Z"
+     ]
+    },
+    {
+     "n": 4347,
+     "base_rate": 0.2938,
+     "auc": 0.5976,
+     "brier": 0.20189,
+     "brier_base": 0.20747,
+     "brier_lift": 0.00558,
+     "mean_score": 0.2828,
+     "window": [
+      "2026-07-06T03:45:00Z",
+      "2026-09-09T13:15:00Z"
+     ]
+    },
+    {
+     "n": 4349,
+     "base_rate": 0.4332,
+     "auc": 0.544,
+     "brier": 0.25502,
+     "brier_base": 0.24554,
+     "brier_lift": -0.00948,
+     "mean_score": 0.3205,
+     "window": [
+      "2026-09-09T13:30:00Z",
+      "2026-11-13T20:30:00Z"
+     ]
+    }
+   ],
+   "auc_verdict": "TRUSTWORTHY_SIGNAL"
+  }
+ ],
+ "errors": [],
+ "note": "STAGE 1 (candle-replay, dataset-label parity): validates model+feature-fn+label. Live-feed fidelity is STAGE 2 (RG4)."
+}

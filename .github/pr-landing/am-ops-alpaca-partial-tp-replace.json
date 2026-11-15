@@ -1,0 +1,6 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "ALPACA-PARTIAL-TP-STOP-GAP (manager 2026-11-13 'build (a)'). Order path. On an Alpaca take-profit PARTIAL fill the venue cancels the bracket stop, our still-resting target holds the remaining shares, and the existing protect_venue_holding path posts an additive OCO the venue refuses, retried only every 900 s: the remainder could sit with NO STOP indefinitely, on alpaca_live / alpaca_portfolio as on paper (no class gate). Now, when (and only when) exactly one open row holds the symbol and its entry bracket, read BY ORDER ID, shows our target resting with no stop: cancel it, confirm the cancel at the venue, re-read the holding, post an OCO at the row's levels; refused -> plain stop at once; both refused -> CRITICAL every tick and retry every tick. Flat after the cancel -> post nothing. Every step journaled (runtime_logs/alpaca_partial_tp_replace.jsonl, diag-allowlisted) and stamped (protection_repair kind partial_tp_replace). 15 new tests, one per requirement; 9 fail with the routine neutralised. Manager merges; revert = git revert."
+}

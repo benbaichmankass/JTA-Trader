@@ -204,10 +204,34 @@ def test_unreadable_reviews_file_is_could_not_look(world):
     assert d.dispatch(RID, apply=True)["exit"] == d.EXIT_UNREADABLE
 
 
-def test_uncommitted_evidence_is_refused(world):
+def test_a_named_table_not_yet_at_the_ref_is_could_not_look_then_applies_once_it_lands(world):
+    """LR-20261114T1600Z-pkg-d8838f... (2026-11-14): a refusal is final (rows_watch marks it seen), so a row whose
+    table landed in a later commit than the row could never apply. The row NAMES its table: until the table is at
+    the ref it is could_not_look (exit 3, retried by rows_watch), never sent, and the same checks run on it after."""
+    table = world["files"].pop(TABLE)
+    res = d.dispatch(RID, apply=True)
+    assert res["verdict"] == "could_not_look" and res["exit"] == d.EXIT_UNREADABLE
+    assert "evidence_not_yet_at_ref" in res["detail"] and world["calls"] == []
+    world["files"][TABLE] = table
+    res = d.dispatch(RID, apply=True)
+    assert res["verdict"] == "dispatched" and len(world["calls"]) == 1
+
+
+def test_a_table_row_naming_no_table_is_still_refused(world):
+    row = copy.deepcopy(TABLE_ROW)
+    row["outcome_table_source"] = None
+    _set_row(world, row)
+    res = d.dispatch(RID, apply=True)
+    assert res["verdict"] == "refused" and "evidence_not_committed" in res["detail"] and world["calls"] == []
+
+
+def test_a_named_but_absent_table_still_fails_every_other_check_first(world):
+    row = copy.deepcopy(TABLE_ROW)
+    row["mechanics"]["verdict"] = "mismatch"
+    _set_row(world, row)
     world["files"].pop(TABLE)
     res = d.dispatch(RID, apply=True)
-    assert "evidence_not_committed" in res["detail"] and world["calls"] == []
+    assert res["verdict"] == "refused" and "mechanics_mismatch" in res["detail"]
 
 
 # ------------------------------------------------------------------ idempotency + notification
@@ -304,7 +328,7 @@ def test_the_action_wrapper_runs_the_dispatcher():
 # evidence_not_committed under MD-LTR-PAPER-AUTO while the same package's judgement close applied.
 
 PACKET = f"comms/live_review/packets/{RID}.json"
-_REAL_ADVICE_ONLY = rows_lib.ADVICE_ONLY_ACTIONS   # read at import, before the autouse fixture empties it
+_REAL_ADVICE_ONLY = rows_lib.ADVICE_ONLY_LEGACY_ACTIONS   # the pre-2026-11-14 set (advice-only ended): the lift needs a non-empty one
 
 
 def _short_hold(action: str) -> Dict[str, Any]:
@@ -346,7 +370,7 @@ def test_a_table_tighten_never_falls_back_to_the_packet(world):
 
 
 def test_the_real_paper_mandate_lifts_advice_only_and_the_tighten_reaches_the_apply(world, monkeypatch):
-    """End to end on the REAL config/mandates.yaml and the REAL advice-only tuple: a bybit_1 judgement tighten
+    """End to end on the REAL config/mandates.yaml and the LEGACY advice-only tuple: a bybit_1 judgement tighten
     is scoped by MD-LTR-PAPER-AUTO, dispatched (not advice_only, not evidence_not_committed) and handed to the
     apply under that mandate."""
     monkeypatch.setattr(rows_lib, "ADVICE_ONLY_ACTIONS", _REAL_ADVICE_ONLY)

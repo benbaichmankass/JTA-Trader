@@ -95,7 +95,14 @@ def test_workflow_triggers_on_the_rows_branch_and_lands_one_pr():
     assert wf["concurrency"]["cancel-in-progress"] is False
     steps = wf["jobs"]["mirror"]["steps"]
     land = [s for s in steps if s.get("uses") == "./.github/actions/commit-to-main"]
-    assert len(land) == 1 and land[0]["with"]["verify-merged"] == "true"
+    # CI-SUITE-SLOWDOWN (2026-11-12): arrival is verified by the NEXT run (deferred), never by holding a runner
+    # through the merge wait; the in-flight step gates the landing so an open mirror PR is never duplicated.
+    assert len(land) == 1 and land[0]["with"]["verify-merged"] == "false"
+    assert land[0]["with"]["branch-prefix"] == "automation/live-review-rows-mirror"
+    assert "steps.inflight.outputs.skip != '1'" in land[0]["if"]
+    inflight = [s for s in steps if s.get("id") == "inflight"]
+    assert len(inflight) == 1 and steps.index(inflight[0]) < steps.index(land[0])
+    assert inflight[0]["env"]["PREFIX"] == land[0]["with"]["branch-prefix"]
 
 
 def test_a_schema_invalid_row_is_skipped_visibly_and_later_rows_still_mirror(tmp_path):

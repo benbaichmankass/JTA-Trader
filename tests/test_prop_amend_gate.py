@@ -1,6 +1,6 @@
 """DESK-2-RISK-GATE: PropRiskManager.approve_amend / approve_action -- the firm's layer.
 
-Each verdict state on a prop account: approve, refuse (DD headroom, leverage cap, human hold, a
+Each verdict state on a prop account: approve, refuse (DD headroom, leverage cap, a
 bracket left missing), could_not_look (stale cushion, unreadable ruleset, unread leverage basis,
 a cushion reader that raised). A tighten is never refused for the DD cushion or the daily-DD switch
 (operator 2026-10-09: "keep open, block new").
@@ -92,9 +92,20 @@ def test_an_amend_that_would_leave_a_leg_without_a_bracket_is_refused():
     assert _decide(_intent("widen_sl", new_sl=94.0), _view(leg_tp=None)).reason == f"{lri.R_BRACKETS}:tp"
 
 
-def test_a_humans_stop_is_never_fought():
+def test_human_hold_no_longer_refuses_the_amend():
+    # Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PROP-HUMAN-HOLD: REMOVE.
     v = _decide(_intent(), _view(account_class="phone", extra={"human_hold": "sl 96.5 by hand"}))
-    assert (v.verdict, v.reason) == (lri.V_REFUSE, pag.R_HUMAN_HOLD)
+    assert v.verdict == lri.V_APPROVE and v.level == 97.0
+    assert v.reason != pag.R_HUMAN_HOLD
+
+
+def test_human_hold_positive_control_remaining_checks_still_apply():
+    # The base verdict (tighten-only) and the firm's DD cushion still refuse with a human_hold present.
+    hold = {"symbol": "SOLUSDT", "human_hold": "by hand"}
+    loosen = _decide(_intent(new_sl=94.0), _view(account_class="phone", extra=hold))
+    assert (loosen.verdict, loosen.reason) == (lri.V_REFUSE, lri.R_LOOSENS)
+    widen = _decide(_intent("widen_sl", new_sl=90.0), _view(account_class="phone", extra=hold), cushion=_exceeds)
+    assert (widen.verdict, widen.reason) == (lri.V_REFUSE, f"{pag.R_DD_HEADROOM}:daily_loss")
 
 
 # ------------------------------------------------------------------ actions that add risk

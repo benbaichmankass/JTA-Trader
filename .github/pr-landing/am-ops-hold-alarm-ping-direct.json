@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "Transport-only change to the operator's JC-CA-04 hold-merge alarm (pr-landing-hold-merge-alarm.yml): the ping is sent through the direct ops channel's send-ping action first (202 = queued), with the existing system-actions issue as the fallback on anything else. The detector (scripts/ops/pr_landing_hold_alarm.py) and what it alarms on are unchanged. Held for the manager's read because it is the operator's chosen alarm; AM-OPS merges by hand (workflow file).",
+  "why": "HOLD-ALARM-PING-DIRECT (option b, manager 2026-11-12 22:45Z): each hold-merge alarm opened a system-actions issue, costing a runner plus the issue fan-out; 10 of 11 system-actions runs 21:00-22:36Z were these pings."
+}

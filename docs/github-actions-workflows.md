@@ -844,14 +844,18 @@ mcp__github__issue_write
 **Trigger:** `issues.opened` (label `vm-net-fix-request`),
 `workflow_dispatch`.
 
-**Purpose:** Opens TCP/8001 via `ufw allow` + `iptables -I INPUT ACCEPT`;
-verifies post-fix.
+**Purpose:** Opens ONE named TCP port via `ufw allow` + `iptables -I INPUT ACCEPT`;
+verifies post-fix. **Opens nothing by default** and **refuses 8001** (SEC-8001,
+operator decisions page m3, 2026-11-12: ict-web-api binds 127.0.0.1 and is
+reached only through Caddy's HTTPS front). The port comes from the required
+`port` input or a `port: NNN` line in the issue body; pinned by
+`tests/test_vm_net_fix_workflow.py`.
 
 **MCP trigger (Pattern A, after operator approval):**
 ```
 mcp__github__issue_write
-  title: "[vm-net-fix] open port 8001"
-  body: "Operator approved. Opening ufw + iptables for dashboard API port."
+  title: "[vm-net-fix] open port 443"
+  body: "Operator approved. Opening ufw + iptables for the Caddy HTTPS front.\nport: 443"
   labels: ["vm-net-fix-request"]
 ```
 
@@ -1148,7 +1152,7 @@ header before triggering a mutating one).
 | `research-slo.yml` | Research ops | AUTONOMOUS | cron (`41 */2 * * *`) + dispatch | RESEARCH-PIPELINE-SLO (operator 2026-10-16): measures the research-pipeline SLOs in `scripts/research/research_slo.yaml` (floor, fires, lands, grading latency, undispositioned results, authoring supply, programme coverage, theme share, blocked age, stage liveness, hold-PR wait, research-ops completeness), writes `comms/research/health/<date>.json` via commit-to-main, and on a change of the not-ok set sends ONE message to the system Telegram channel + ONE `research-slo` comment on the ops-flags PR (reminder at most every 24 h; recovery message). Leaves out SLOs the watchdog already escalated. Never halts anything. Logic in `scripts/research/research_slo.py`. |
 | `oci-capacity-report.yml` | Infra audit | AUTONOMOUS | label `oci-capacity-report` / dispatch | Read-only (list_*/get_* only) OCI report: boot + block volumes with attachments, backups, tenancy Limits API values/availability for block-storage and A1 compute, object-storage usage; per-section read_state, unreadable = `could_not_look`. Added by lane OCI-FREE-CAPACITY 2026-11-02; script `scripts/ops/oci_capacity_report.py`. |
 | `oci-inventory.yml` | Infra audit | AUTONOMOUS | cron (weekly Mon 06:00) + label / dispatch | Read-only OCI compute inventory diffed against the topology this repo declares (`comms/cloud/expected_topology.json`) — the canonical docs described VM topology in prose and nothing checked it. ⚠️ Currently watched by nothing (`BL-20260821-OCI-INVENTORY-CRON-UNWATCHED`). |
-| `journal-offvm-backup.yml` | Infra backup | AUTONOMOUS | cron (daily 03:23) + label / dispatch | Versioned, private off-VM backup of the live `trade_journal.db`: read-only online-backup snapshot over SSH, integrity check, upload to the OCI bucket `ict-journal-backups` (NoPublicAccess, versioning on), 30-day daily + 12-week weekly pruning, restore test every run. Modes `backup` / `status` / `restore-test`. Output is sizes and counts only. JOURNAL-OFFVM-BACKUP (Tier 2, operator-approved 2026-10-13). |
+| `journal-offvm-backup.yml` | Infra backup | AUTONOMOUS | cron (daily 03:23) + label / dispatch | Versioned, private off-VM backup of the live `trade_journal.db`: read-only online-backup snapshot over SSH, integrity check, upload to the OCI bucket `ict-journal-backups` (NoPublicAccess, versioning on), 30-day daily + 12-week weekly pruning, restore test every run. Modes `backup` / `status` / `restore-test` (an issue's `mode:` line is honoured for issue-routed `repository_dispatch` runs, which also get the result comment). After a VERIFIED `backup` run (upload + restore test ok) it prunes old on-VM journal backups via `scripts/ops/prune_db_backups.sh` (keep newest 1, protect < 1 day; HEALTH-20261112-JOURNAL-BAK-RETENTION, operator 2026-11-11). Output is sizes and counts only. JOURNAL-OFFVM-BACKUP (Tier 2, operator-approved 2026-10-13). |
 | `macro-producer-liveness.yml` | Ops audit | AUTONOMOUS | cron (daily 12:00) + label / dispatch | Dead-man switch for the scheduled macro producers — kills the "silently-skipped scheduled job" class by alarming when a registered producer stops landing rows. |
 | `replay-pregate-nightly.yml` | ML | AUTONOMOUS | cron (daily 04:00) + label / dispatch | Session-independent runner for the ML replay pre-gate (RG3): baselines the shadow-stage regime fleet on the trainer VM and commits the report. |
 | `soak-book-grade-weekly.yml` | Research | AUTONOMOUS | cron (weekly Sun 03:00) + label / dispatch | Checklist row R5 — grades every Stage-1 soak leg (`bybit_1`, `alpaca_paper`) on mechanics (reuses E18's `leg_flow_report`) and cost fidelity (reuses R3's `r3_cost_fidelity`) into healthy/tweak/kill/insufficient-data via `scripts/ops/soak_book_grade.py`. Not expectancy — Stage 1 never decides edge. Lands the result under `comms/research/soak_book_grade/` via the shared `research-result` action. |

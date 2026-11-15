@@ -157,3 +157,64 @@ def test_drain_applies_trusted_once_and_skips_untrusted(api, monkeypatch):
     assert ("POST", "https://api.github.com/repos/o/r/issues/comments/1/reactions", {"content": "rocket"}) in posted
     out2 = cli.drain(7)  # the rocket marks it done: a second drain applies nothing
     assert out2["applied"] == [] and out2["already_done"] == 1
+
+
+# ── WORK-SET-ROUTE-TRAP: a set that gives an observation an owner/parent also routes it ──────────
+
+
+def _obs(legacy="queued", **kw):
+    return {"id": "PI-X", "kind": "observation", "extra": {"_legacy_state": legacy, "_source": "pipeline",
+                                                           "_absent": ["tier"]}, **kw}
+
+
+def test_route_fields_flips_legacy_state_on_parent_and_keeps_extra():
+    out = cli.route_fields(_obs(), {"parent_id": "ROW-A", "owner": "AM-OPS"})
+    assert out["extra"] == {"_legacy_state": "routed", "_source": "pipeline", "_absent": ["tier"],
+                            "routed_to": "ROW-A"}
+    assert out["parent_id"] == "ROW-A" and out["owner"] == "AM-OPS"
+
+
+def test_route_fields_owner_alone_routes_to_the_owner():
+    out = cli.route_fields(_obs("due"), {"owner": "research-ops"})
+    assert out["extra"]["_legacy_state"] == "routed" and out["extra"]["routed_to"] == "research-ops"
+
+
+@pytest.mark.parametrize("item,fields", [
+    ({"id": "B", "kind": "build", "extra": {"_legacy_state": "queued"}}, {"owner": "x"}),  # builds: no routing
+    (_obs("routed"), {"owner": "x"}),                       # already routed: untouched
+    (_obs("done"), {"owner": "x"}),                         # terminal legacy word: untouched
+    (_obs(), {"state": "blocked"}),                         # no owner/parent in the set
+    (_obs(), {"owner": None}),                              # clearing the owner never routes
+    (_obs(), {"owner": "x", "extra": {"k": 1}}),            # caller sets extra itself: theirs wins
+])
+def test_route_fields_leaves_other_sets_alone(item, fields):
+    assert cli.route_fields(item, fields) is fields
+
+
+def test_route_fields_routed_item_leaves_the_unrouted_count():
+    """The due condition, end to end over the real projection + pipeline.unrouted."""
+    from scripts.ops import pipeline
+    from src.runtime.work_store_import import to_pipeline_item
+    item = {"id": "PI-20261113-ROUTE-0001", "kind": "observation", "state": "queued", "parent_id": None,
+            "owner": "manager", "title": "t", "due_at": "2026-11-01T00:00:00Z",
+            "due_rule": {"kind": "observation", "check_every_days": 7, "clears_when": "x"},
+            "origin": {"kind": "test", "ref": "r", "rerun": "true"},
+            "extra": {"_legacy_state": "queued", "_source": "pipeline"}}
+    before = pipeline.unrouted([to_pipeline_item(item)])
+    routed = {**item, **cli.route_fields(item, {"owner": "research-ops"})}
+    after = pipeline.unrouted([to_pipeline_item(routed)])
+    assert [i["id"] for i in before] == [item["id"]] and after == []
+
+
+def test_cli_set_owner_routes_through_the_api(api, capsys):
+    rc, _, err = _run(capsys, "add", "PI-20261113-ROUTE-0002", "--kind", "observation", "--title", "t",
+                      "--field", "extra={\"_legacy_state\":\"queued\",\"_source\":\"pipeline\"}",
+                      "--field", "origin={\"kind\":\"session\",\"ref\":\"r\",\"rerun\":\"true\"}",
+                      "--field", "due_rule={\"kind\":\"observation\",\"check_every_days\":7,\"clears_when\":\"x\"}",
+                      "--field", "next_action=check_observation", "--by", "test")
+    assert rc == 0, err
+    rc, out, err = _run(capsys, "--via", "direct", "set", "PI-20261113-ROUTE-0002", "owner=research-ops",
+                        "--by", "test")
+    assert rc == 0, err
+    assert out["item"]["extra"]["_legacy_state"] == "routed"
+    assert out["item"]["extra"]["routed_to"] == "research-ops"
