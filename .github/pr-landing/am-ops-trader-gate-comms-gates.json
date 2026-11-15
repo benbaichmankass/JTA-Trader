@@ -1,0 +1,6 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Manager ask 21:44Z. #26135 (one new comms/gates/gate_decisions_2026-11-14.json) forced an unbatched trader restart at 21:36Z because trader_import_closure classified it non_py_runtime. Checked: the trader never reads comms/gates/. The only reader is src/runtime/gate_registry.py (globs comms/gates/gate_decisions_*.json), imported by the web-api (src/web/api/routers/gates.py) and scripts/ops/gates.py; it is NOT in config/trader_import_closure.txt. telegram_channels.py (in the closure) only names the module path as a string, and every other comms/gates mention in src/ is a comment. Fix: add comms/gates/ to TRADER_UNLOADED_NON_PY_RE (the trader-only exemption). The deploy's own NON_RUNTIME_PATHS_RE is untouched, so the web-api still restarts on a gates change. 2 tests (one fails on the old code, one pins gate_registry out of the closure); test_trader_import_closure + the restart-pending lockstep test: 27 passed. Hold: it changes a deploy restart decision (Tier 2 by nature, though it only removes needless restarts). Revert: git revert."
+}

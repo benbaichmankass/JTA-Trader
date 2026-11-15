@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_deploy_path",
+  "hold_text": "Tier 2 deploy path (trader restart gate + set-env.sh). Trader gate stops restarting the trader for non-.py paths it never loads: *.sh, deploy/ units other than ict-trader-live.service, dropins/ and vm-sparse-checkout, and config/trader_import_closure.txt. set-env writes the restart-cause intent when it restarts the trader. Replay of 2026-11-12: 4 of 42 gate-ordered trader restarts avoided. No delay, no new gate. Post-state check: after deploy, the next merge touching only scripts/ops/*.sh shows 'Trader restart gate: skip' in the ict-git-sync journal. Revert: git revert.",
+  "why": "Cut trader restarts that drop in-process state for files the trader does not load."
+}

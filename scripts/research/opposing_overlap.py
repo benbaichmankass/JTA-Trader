@@ -169,6 +169,46 @@ def analyse(trades: list[dict[str, Any]], n_floor: int = 30) -> dict[str, Any]:
             "n_floor": n_floor, "buckets": res}
 
 
+RULE_ID = "RULE-CE-OPPOSED-NEWCOMER-01"
+RULE_REGISTERED_AT = "2026-11-11"
+#: The unit asks "does the opposed NEWCOMER keep positive expectancy?"; the unit-level verdict is the ALL bucket's
+#: (what this script has always printed), mapped onto the E5 vocabulary. Per-bucket verdicts stay in measurement.
+E5_VERDICT = {"KEEP_BOTH_OK": "pass", "CLOSE_NEWCOMER": "fail", "INDETERMINATE": "indeterminate"}
+#: The level the live-review rule of thumb is written from (the unit's rule); deeper keys are discoveries.
+RULE_LEVEL_KEYS = ("gap=2-4x|newcomer_shorter_tf", "gap=2-4x|newcomer_longer_tf", "gap=>4x|newcomer_shorter_tf",
+                   "gap=>4x|newcomer_longer_tf", "gap=same|same_tf")
+
+
+def verdict_record(res: dict[str, Any], unit: str | None) -> dict[str, Any]:
+    """The E5 verdict.json for this run (ce01-01 landed producer_failed for want of one)."""
+    allb = res["buckets"].get("ALL")
+    if not allb or not allb["newcomer"]["n"]:
+        return {"schema_version": 1, "research_unit": unit, "read_state": "no_data", "verdict": "not_applicable",
+                "n": None, "population": {"n": None, "description": "no opposed newcomer trade in the corpus"},
+                "note": "no_data: looked, found no opposed pair", "decision_rule": {"id": RULE_ID,
+                "registered_at": RULE_REGISTERED_AT, "registered_before_run": True}, "measurement": res}
+    allv = allb["verdict"]
+    rule_level = {k: res["buckets"][k]["verdict"] for k in RULE_LEVEL_KEYS if k in res["buckets"]}
+    decided = {k: v for k, v in rule_level.items() if v != "INDETERMINATE"}
+    n = int(allb["newcomer"]["n"])
+    return {
+        "schema_version": 1, "research_unit": unit, "read_state": "measured", "verdict": E5_VERDICT[allv], "n": n,
+        "population": {"n": n, "description": (
+            f"unique NEWCOMER trades opposed by an open opposite-direction trade of a different leg on the same symbol, "
+            f"{res['pairs']} opposed pairs over {res['trades']} committed Stage-0 trades ({sum(1 for v in (res.get('sources') or {}).values() if isinstance(v, dict) and v.get('state') == 'loaded')} legs loaded); "
+            "net_r net of each corpus's full cost stack")},
+        "note": (f"ALL bucket {allv} (newcomer mean {allb['newcomer']['mean_r']:+.4f} R, CI95 {allb['newcomer']['ci95']}, "
+                 f"n {n}) -> E5 {E5_VERDICT[allv]} (the question: does the opposed newcomer keep positive expectancy?). "
+                 f"Rule-level (gap|role) decided buckets: {decided or 'none'}; every other rule-level bucket INDETERMINATE "
+                 "(reviewer's priced judgement). gap|role|vol verdicts are discoveries pending a disjoint window."),
+        "decision_rule": {"id": RULE_ID, "registered_at": RULE_REGISTERED_AT, "registered_before_run": True},
+        "rule_level_verdicts": rule_level,
+        "data_inputs": sorted({str(v["source"]) for v in (res.get("sources") or {}).values()
+                               if isinstance(v, dict) and v.get("state") == "loaded" and v.get("source")}),
+        "measurement": res,
+    }
+
+
 def self_test() -> int:
     H = 3600
     tr = [
@@ -191,6 +231,11 @@ def self_test() -> int:
     ok &= verdict({"n": 40, "ci95": [0.1, 0.3]}, 30) == "KEEP_BOTH_OK"
     ok &= verdict({"n": 40, "ci95": [-0.4, -0.1]}, 30) == "CLOSE_NEWCOMER"
     ok &= verdict({"n": 10, "ci95": [0.1, 0.3]}, 30) == "INDETERMINATE"
+    v = verdict_record(r, "RQ-TEST")
+    ok &= v["read_state"] == "measured" and v["verdict"] in ("pass", "fail", "indeterminate") and v["n"] >= 1
+    ok &= verdict_record({"pairs": 0, "trades": 0, "buckets": {}}, "RQ-TEST")["read_state"] == "no_data"
+    ok &= E5_VERDICT["CLOSE_NEWCOMER"] == "fail" and E5_VERDICT["KEEP_BOTH_OK"] == "pass"
+    json.dumps(v, default=str)
     print("self-test", "PASS" if ok else "FAIL")
     return 0 if ok else 1
 
@@ -216,6 +261,8 @@ def main(argv: list[str] | None = None) -> int:
         out = Path(a.out)
         out.mkdir(parents=True, exist_ok=True)
         (out / "result.json").write_text(text)
+        # the E5 record the collector grades (RQ-20261111-ce01-01 run 43172978800 landed producer_failed without it)
+        (out / "verdict.json").write_text(json.dumps(verdict_record(res, a.unit), indent=1, sort_keys=True, default=str))
     print(f"RESULT verdict={allv} pairs={res['pairs']} trades={res['trades']}")
     return 0
 

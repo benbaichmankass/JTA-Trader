@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Manager-filed LTR packet defect (3), 2026-11-13: packet_health counted tighten rungs at/above price on a LOSING position (live_review_outcomes invalid_level / stop_level_not_below_price: correct, a stop at/above price is no stop) as unpriced options, so TLT x2, ETH 1h, BTC 1h and SOL 5m packets read 'degraded' with nothing missing. Those rungs are now reported as inapplicable_options {reason, count, denominator} beside the verdict and kept out of the defect arithmetic; real gaps (no_candles etc.) beside them still degrade. The 0700Z precedent (invalid_level with no reason) is unchanged. Tests in tests/test_live_review_packet.py. Packet health is observability only; never a gate. Revert: git revert."
+}

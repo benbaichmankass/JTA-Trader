@@ -623,8 +623,20 @@ def programme_tier(entry: Dict[str, Any], cfg: Dict[str, Any]) -> int:
     len(list) for every unit outside it. PROGRAMME PRIORITY (operator 2026-10-18, ~06:20Z): P1 active trade
     management and P2 AI trader rank first on every backend, above other themes and programmes."""
     order = [str(x) for x in (cfg.get("value", {}).get("programme_priority") or [])]
-    prog = programme_of(entry)
+    prog = effective_programme(entry, cfg)
     return order.index(prog) if prog and prog in order else len(order)
+
+
+def effective_programme(entry: Dict[str, Any], cfg: Dict[str, Any]) -> str:
+    """`programme_of`, else the programme the unit's value bucket maps to (`value.bucket_programme`)."""
+    prog = programme_of(entry)
+    if not prog:
+        # RESEARCH-QUEUE-ML-STARVATION (lane ML-PRIMARY, 2026-11-15): an untagged unit inherits the programme its value
+        # BUCKET maps to (`value.bucket_programme`, e.g. ai_trader -> P2). MEASURED 2026-11-14 ~22:05Z: ML / ai_trader
+        # units carry no programme_node, so they ranked on the money score behind 44 template refills while the runner
+        # sat at 4/4, and RQ-20261112-8d20-02 waited ~65 h for a slot. Ordering only; nothing is refused.
+        prog = str((cfg.get("value", {}).get("bucket_programme") or {}).get(cr.bucket_of(entry, cfg), "") or "")
+    return prog
 
 
 def fair_order(jobs: List[Any], now: datetime, themes_doc: Dict[str, Any],
@@ -702,7 +714,7 @@ def fair_order(jobs: List[Any], now: datetime, themes_doc: Dict[str, Any],
                 r["starved"] = waited > starve
                 r["waited_h"] = round(waited.total_seconds() / 3600.0, 1)
                 r["refill"] = is_refill(x.raw)
-                r["programme"] = programme_of(x.raw)
+                r["programme"] = effective_programme(x.raw, cfg)
                 r["programme_tier"] = programme_tier(x.raw, cfg)
                 x.raw["_rank"] = r
                 # Programme priority first (operator 2026-10-18: P1, P2), then asked before refill inside a theme
@@ -1193,15 +1205,33 @@ def backpressure(research_names: Dict[str, str], *, max_inflight: int, max_queue
 STARVATION_HOURS = 0.75
 
 
+#: INFRA STARVATION FLOOR (manager 2026-11-12 22:33Z, RESEARCH-DISPATCH-INFRA-STARVE). The infra yield (limits.infra_yield_at)
+#: deferred EVERY fire from 17:43Z to 22:33Z (~5 h, 0 units): ~6 system-actions + a phone-executor-apk run kept >= 2 fresh infra
+#: runs queued, so the yield was effectively always met. A yield that can defer forever is a halt (Prime Directive 7), so once
+#: nothing has been dispatched for this long the infra block is lifted for EXACTLY ONE fire per cycle (the top-scored unit),
+#: mirroring the repo-queued floor. 0 disables it. Config: limits.infra_starvation_hours.
+INFRA_STARVATION_HOURS = 2.0
+
+
 def starvation_override(pressure: Dict[str, Any], jobs: List[Any], now: datetime,
-                        after_hours: float) -> Optional[str]:
-    """Lift a ``repo_queued`` block when no unit has been dispatched for ``after_hours``.
+                        after_hours: float, infra_after_hours: float = 0.0) -> Optional[str]:
+    """Lift a ``repo_queued`` block when no unit has been dispatched for ``after_hours``, or an ``infra`` (yield) block
+    when none has been dispatched for ``infra_after_hours`` (0 = the infra yield is never lifted).
 
     Mutates ``pressure`` (block -> None, ``starvation_override`` -> the reason) and returns the reason, or None
-    when the block stays. Only ``block_kind == "repo_queued"`` is liftable. The age is the newest
-    ``last_dispatched_at`` stamp across the queue; no stamp at all counts as starved."""
-    if pressure.get("block_kind") != "repo_queued" or after_hours <= 0:
+    when the block stays. Only ``block_kind`` ``repo_queued`` / ``infra`` is liftable (an unreadable ``gh`` and the
+    in-flight cap never are). The age is the newest ``last_dispatched_at`` stamp across the queue; no stamp at all
+    counts as starved. Either lift allows exactly ONE fire this cycle (the caller caps max_inflight)."""
+    kind = pressure.get("block_kind")
+    if kind == "repo_queued":
+        threshold = after_hours
+    elif kind == "infra":
+        threshold = infra_after_hours
+    else:
         return None
+    if threshold <= 0:
+        return None
+    after_hours = threshold
     newest: Optional[datetime] = None
     for j in jobs:
         ts = _parse_ts(j.raw.get("last_dispatched_at"))
@@ -1211,7 +1241,7 @@ def starvation_override(pressure: Dict[str, Any], jobs: List[Any], now: datetime
     if age_h is not None and age_h < after_hours:
         return None
     since = "no dispatch stamp on record" if age_h is None else f"nothing dispatched for {age_h:.1f} h"
-    reason = (f"starvation floor: {since} (>= {after_hours:g} h) -- lifting the repo-queued block "
+    reason = (f"starvation floor: {since} (>= {after_hours:g} h) -- lifting the {kind.replace('_', '-')} block "
               f"({pressure['block']}) for ONE fire this cycle")
     pressure["starvation_override"] = reason
     pressure["block"] = None
@@ -1567,7 +1597,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"backpressure: {pressure.get('detail') or pressure.get('block')}", file=sys.stderr)
         _starve_h = args.starvation_hours if args.starvation_hours is not None else \
             float((cfg or {}).get("limits", {}).get("starvation_hours", STARVATION_HOURS))
-        _floor = starvation_override(pressure, jobs, now, _starve_h)
+        _infra_starve_h = float((cfg or {}).get("limits", {}).get("infra_starvation_hours", INFRA_STARVATION_HOURS))
+        _floor = starvation_override(pressure, jobs, now, _starve_h, _infra_starve_h)
         if _floor:
             print(f"::warning::research-queue-dispatch {_floor}", file=sys.stderr)
             max_inflight = int(pressure.get("inflight_research") or 0) + 1   # exactly one fire

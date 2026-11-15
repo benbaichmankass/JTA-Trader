@@ -1,7 +1,7 @@
 # Authored 2026-11-01 by lane ML-RECIPE (Tier 1) for the ENTRY lever plan (manager/operator 17:55Z). Decision rule registered BEFORE any run. Gates: none.
 id: RQ-20261101-b601-01
 title: 'ENTRY lever 1, bracket geometry: does a wider TP (SL/TP grid around the live 2/3) lift the dev mean on the pooled population, one factor at a time, with a smooth response?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -102,18 +102,14 @@ programme_node:
 last_dispatched_at: '2026-11-02T10:52:35+00:00'
 grading:
   attested: RULE-20261101-b601-01
-  auto: true
+  auto: false
   decision_rule_id: RULE-20261101-b601-01
   evidence:
   - research/results/RQ-20261101-b601-01/41397568396.jsonl
   - research/results/RQ-20261101-b601-01/41403732657.jsonl
   - research/results/RQ-20261101-b601-01/41410384811.jsonl
-  graded_at: '2026-11-12'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: PI-20261105-WDWYHZCN-0001
-  owner_reason: producer_failed (no_verdict) on the newest row, 3 identical re-fires; failure mode and
-    fix path named in PI-20261105-WDWYHZCN-0001 (RESEARCH-OPS-20261105-1449 triage)
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
-  rows: 3
-  verdict: null
+  - comms/research/RQ-20261101-b601-01/41410384811/b601_result.json
+  graded_at: '2026-11-15'
+  grader: lane ML-PRIMARY-2 (session read of the registered clauses against the producers own per-arm output; the producer computed each clause but wrote no verdict.json)
+  verdict: fail
+  reason: 'No bracket cell clears the rule on the dev folds in any of the 3 runs (41397568396 / 41403732657 / 41410384811; producer summary ''no bracket cell clears the rule on the dev folds''). No candidate: bracket 2/4 does NOT enter the combined held-out read on this unit. Population: pooled frozen-60, dev folds only; no held-out window read.'

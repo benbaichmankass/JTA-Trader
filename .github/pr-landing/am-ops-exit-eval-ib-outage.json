@@ -1,0 +1,8 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_runtime",
+  "hold_text": "Exit-evaluation path (src/main.py per-pass IB breaker) + IBClient link state: Tier 2. The manager reviews the diff and merges on green (operator popup 2026-11-12 'Merge + deploy on green'). Merging is the deploy (ict-git-sync) and restarts the trader.",
+  "recorded_decision": {"kind": "operator_decision", "ref": "docs/plans/operator-grant-merge-deploy-on-green-2026-11-12.md"},
+  "why": "EXIT-EVAL-IB-OUTAGE-STALL half 2: pre-trip the existing per-pass IB breaker when IBClient reports Error 1100 or a disconnected socket; clears on 1101/1102 or reconnect. Gates this adds or changes: none (per-read containment on the existing breaker, same rollback EXIT_LOOP_IB_BREAKER_DISABLED; nothing switches trading off)."
+}

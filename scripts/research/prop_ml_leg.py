@@ -401,7 +401,29 @@ def arm_cols(fam: dict, name: str) -> list[str]:
     return cols
 
 
+MODEL = "lgbm"                         # --model: "lgbm" = the registered fixed LightGBM (default, every earlier unit); "logit" = low-capacity arm (unit RQ-20261112-7d41-01/-02)
+LOGIT_C = 0.05                         # L2 inverse strength of the low-capacity arm, fixed here BEFORE any run (no tuning loop)
+
+
+def _fit_predict_logit(train: pd.DataFrame, test: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
+    """Low-capacity head: median-impute + standardise + L2 logistic regression for the win label; the TP head is ONE constant per side
+    (q60 of the training MFE, clipped like the LightGBM head), so the only per-bar information is the entry score."""
+    from sklearn.impute import SimpleImputer
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
+    out = pd.DataFrame(index=test.index)
+    for side in ("long", "short"):
+        m = make_pipeline(SimpleImputer(strategy="median"), StandardScaler(), LogisticRegression(C=LOGIT_C, max_iter=500))
+        m.fit(train[cols], train[f"y_{side}"])
+        out[f"p_{side}"] = m.predict_proba(test[cols])[:, 1]
+        out[f"tp_{side}"] = float(np.clip(np.nanquantile(train[f"mfe_{side}"].to_numpy(float), TP_Q), TP_LO, TP_HI))
+    return out
+
+
 def fit_predict(train: pd.DataFrame, test: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
+    if MODEL == "logit":
+        return _fit_predict_logit(train, test, cols)
     import lightgbm as lgb
     out = pd.DataFrame(index=test.index)
     for side in ("long", "short"):
@@ -592,7 +614,8 @@ def selectable(grid: dict, select_from: str) -> list[dict]:
 
 
 def run(a) -> int:
-    global HOLDOUT_START, HOLDOUT_END, N_HELD_FLOOR, H, BAR_H, TAUS, DEV_START_FOLDS, DISC_END, DISC_FLOOR_TS, NEED_BASIS, NEED_BOOK
+    global HOLDOUT_START, HOLDOUT_END, N_HELD_FLOOR, H, BAR_H, TAUS, DEV_START_FOLDS, DISC_END, DISC_FLOOR_TS, NEED_BASIS, NEED_BOOK, MODEL
+    MODEL = getattr(a, "model", "lgbm")
     BAR_H = int(a.bar_hours); H = 48 // BAR_H
     NEED_BASIS = "F0+BASIS" in [x.strip() for x in (a.arms or "").split(",")]     # opt-in only: no other unit downloads or adds the basis columns
     NEED_BOOK = "F0+BOOK" in [x.strip() for x in (a.arms or "").split(",")]       # opt-in only: no other unit downloads or adds the book-depth columns
@@ -787,6 +810,13 @@ def _self_test() -> int:
     # opt-in arms (2026-11-09): F0+OI is selectable by name only, carries the OI/flow columns and NOT the funding columns; the default arm list is unchanged
     fam_t = {"F0": ["a"], "F1": ["fund", "fund_z", "oi_chg24", "taker_ratio"], "F2": ["m_x"], "F3": [], "F1o": ["oi_chg24", "taker_ratio"]}
     default_arms = [n for n in FEATURE_SETS if not (n.endswith("F3") or "F3" in FEATURE_SETS[n])]
+    _r = np.random.default_rng(1); _t = pd.DataFrame({"a": _r.normal(size=400), "b": _r.normal(size=400)}); _t.loc[::7, "b"] = np.nan
+    for _s in ("long", "short"):
+        _t[f"y_{_s}"] = (_t["a"] + _r.normal(size=400) > 0).astype(int); _t[f"mfe_{_s}"] = np.abs(_r.normal(2, 1, 400))
+    _p = _fit_predict_logit(_t.iloc[:300], _t.iloc[300:], ["a", "b"])
+    check("--model logit: NaN-safe, probabilities in (0,1), ONE constant TP per side inside [TP_LO, TP_HI]",
+          _p[["p_long", "p_short"]].notna().all().all() and _p["p_long"].between(0, 1).all() and _p["tp_long"].nunique() == 1 and TP_LO <= _p["tp_long"].iloc[0] <= TP_HI)
+    check("--model default is the registered LightGBM", MODEL == "lgbm")
     check("F0+OI is NOT in the default arm list", "F0+OI" not in default_arms and default_arms == ["F0", "F0+F1", "F0+F1+F2"])
     check("F0+OI = F0 + the OI/flow columns, no funding", arm_cols(fam_t, "F0+OI") == ["a", "oi_chg24", "taker_ratio"])
     check("F0 (price-only control) resolves to its own columns, not a KeyError", arm_cols(fam_t, "F0") == ["a"])
@@ -879,7 +909,7 @@ def main(argv=None) -> int:
     ap.add_argument("--self-test", action="store_true")
     sub = ap.add_subparsers(dest="cmd")
     r = sub.add_parser("run"); r.add_argument("--profile", choices=sorted(PROFILES), required=True); r.add_argument("--out", required=True)
-    r.add_argument("--cache", default="/tmp/prop_ml_cache"); r.add_argument("--smoke", action="store_true"); r.add_argument("--rehearsal", action="store_true"); r.add_argument("--bar-hours", type=int, default=1, choices=[1, 2, 4, 8]); r.add_argument("--taus", default=""); r.add_argument("--require-positive-sum", action="store_true"); r.add_argument("--arms", default=""); r.add_argument("--no-heldout", action="store_true"); r.add_argument("--ref-ledger", nargs="*", default=[])
+    r.add_argument("--cache", default="/tmp/prop_ml_cache"); r.add_argument("--smoke", action="store_true"); r.add_argument("--rehearsal", action="store_true"); r.add_argument("--bar-hours", type=int, default=1, choices=[1, 2, 4, 8]); r.add_argument("--taus", default=""); r.add_argument("--require-positive-sum", action="store_true"); r.add_argument("--arms", default=""); r.add_argument("--no-heldout", action="store_true"); r.add_argument("--model", choices=["lgbm", "logit"], default="lgbm", help="entry head: lgbm (registered default) or logit (low-capacity, RQ-20261112-7d41)"); r.add_argument("--ref-ledger", nargs="*", default=[])
     r.add_argument("--select-from", default="", help="comma list of arms the discovery selection may pick; other arms are graded controls and never selected (default: all)")
     r.add_argument("--heldout-span", default="", help="START:END (ISO dates); default the registered 2025-10-01:2026-09-30")
     r.add_argument("--discovery-start", default="", help="rows before it are excluded from discovery; with a held-out span ending before it = backward design")

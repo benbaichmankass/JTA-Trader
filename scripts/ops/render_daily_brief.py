@@ -115,6 +115,7 @@ TOP_DUE = 15            # §0 rows shown
 MOVED_PER_STATE = 5     # §3 rows shown per state
 STALE_AFTER_DAYS = 3    # §4: no row/git activity this long => STALE
 _LINE = 100             # one-line truncation for list rows
+OVERDUE_NAMED_CAP = 40  # §0c: non-operator overdue build rows named by id before a count
 _NOTE = 90             # truncation for a note excerpt in §2
 
 #: Terminal-ish checklist states that read as "moved" rather than "running".
@@ -390,7 +391,13 @@ def overdue_build_lines(items: list, today: date) -> list[str]:
         else:
             rest.append(f"`{r.get('id')}`")
     if rest:
-        L += ["", "Other overdue: " + ", ".join(rest)]
+        # WR-SIZE-CAP (2026-11-13): name the oldest OVERDUE_NAMED_CAP, count the rest. Listing all 388
+        # ids was ~12 KB and took the 05:30Z work report to 79 KB (> attention_watch's 64 KB bound).
+        # Every ⚠ operator row above is still listed in full; this is never a bare count.
+        shown = rest[:OVERDUE_NAMED_CAP]
+        tail = (f", … and {len(rest) - len(shown)} more (`python3 scripts/ops/work.py list --due --kind build`)"
+                if len(rest) > len(shown) else "")
+        L += ["", "Other overdue (oldest first): " + ", ".join(shown) + tail]
     return L + [""]
 
 
@@ -654,7 +661,14 @@ def build(*, today: date | None = None, root: Path | None = None) -> dict[str, A
     except Exception as exc:  # noqa: BLE001
         sb = {"readState": "unreadable", "reason": f"scoreboard build failed: {exc!r}"}
 
+    try:  # VM-CHANGE-LEDGER: direct VM changes still awaiting a fold-back into the repo (due via pipeline.py)
+        from src.runtime import ops_actions  # noqa: PLC0415
+        vml = ops_actions.ledger_view()
+    except Exception as exc:  # noqa: BLE001 — unreadable is a state, not a crash
+        vml = {"read_state": "unreadable", "reason": repr(exc)}
+
     return {
+        "vmLedger": vml,
         "scoreboard": sb,
         "blockerWatch": bw,
         "unblockWatch": uw,
@@ -707,6 +721,30 @@ def _section0(b: dict) -> list[str]:
     # could_not_look and money waits > 7 days. Repo-only per request + the newest VM receipt.
     if "unblockWatch" in b:
         L += list(b["unblockWatch"] or ["### ⛓️ BLOCKED — COULD NOT BE EVALUATED (we did not look; this is not zero)", ""])
+    if "vmLedger" in b:
+        L += vm_ledger_lines(b["vmLedger"])
+    return L
+
+
+def vm_ledger_lines(view: dict | None) -> list[str]:
+    """§0 block: VM changes made through the direct ops channel that are not yet expressed in the repo
+    (VM-CHANGE-LEDGER). Due-ness is ``pipeline.vm_ledger_due``; a ledger we could not read says so, never 0."""
+    st = (view or {}).get("read_state")
+    if st not in ("measured", "absent"):
+        return [f"### 🧾 VM CHANGES AWAITING FOLD-BACK — COULD NOT LOOK (ledger `{st}`; this is not zero)", ""]
+    c = (view or {}).get("counts") or {}
+    due = pipeline.vm_ledger_due(view)
+    L = [f"### 🧾 VM CHANGES AWAITING FOLD-BACK — {len(due)} due",
+         "",
+         f"Ledger (`GET /api/bot/ops/ledger`): {c.get('entries', 0)} change(s) recorded · pending "
+         f"{c.get('pending', 0)} · folded {c.get('folded', 0)} · not_needed {c.get('not_needed', 0)}. "
+         f"Population: {(view or {}).get('population', 'the VM change ledger')}.", ""]
+    for it in due[:TOP_DUE]:
+        L.append(f"- **{it['id']}** [{_clip(it.get('age_h'), 8)} h] {_clip(it.get('what'), _LINE)} · `fold_back`")
+    if len(due) > TOP_DUE:
+        L.append(f"- … {len(due) - TOP_DUE} more: `GET /api/bot/ops/ledger?pending=1`")
+    if due:
+        L.append("")
     return L
 
 
@@ -752,6 +790,12 @@ def _section2(b: dict) -> list[str]:
          "`ask_operator`. **No cap on rows** (a queue outrunning one person argues "
          "for a mandate, not a shorter list); only prose is clipped — full text "
          "`GET /api/bot/work/checklist`._", ""]
+    moved = sorted(str(r.get("id")) for st, rs in b["checklist"]["byState"].items() if st == "landed_unproven"
+                   for r in rs if checklist_store.observation_owed_tier3(r, today))
+    if moved:
+        L += [f"_{len(moved)} landed_unproven tier-3 row(s) past due_by are NOT listed here: their decision "
+              f"already merged and each owes a closing observation (they stay in §0 overdue): "
+              f"{_clip(', '.join(moved), 300)}._", ""]
     if not rows and not ask:
         return L + ["_None._", ""]
     for it in rows:

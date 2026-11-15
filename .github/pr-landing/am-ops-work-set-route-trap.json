@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "WORK-SET-ROUTE-TRAP (manager 2026-11-13 'fix it in the tool if it is a small Tier-1 change'). Tooling only: scripts/ops/work.py `set` that gives an observation an owner or parent_id now also writes extra._legacy_state=routed and extra.routed_to (keeping the rest of extra), because the projection keeps a legacy 'queued' word and pipeline.unrouted kept counting re-owned items (MEASURED 2026-11-13: 10 items re-owned and re-parented, unrouted stayed 34 until _legacy_state was flipped by hand). Builds, already-routed/terminal items, owner clears and a caller-supplied extra are left alone. 6 new tests in tests/test_work_cli.py; 4 fail with the routing neutralised. No runtime, order-path or config change."
+}

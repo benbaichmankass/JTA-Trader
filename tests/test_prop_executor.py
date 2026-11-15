@@ -316,6 +316,18 @@ def test_open_risk_positions_and_orders():
                                   stop_loss=None, unrealized_pnl=0)], [], c)[1] == "stop_unknown"
 
 
+def test_open_risk_marks_from_current_price_when_open_pnl_unread():
+    c = cfg()
+    base = dict(symbol="SOLUSD", quantity=1.0, entry_price=120.0, unrealized_pnl=None)
+    lo = Position(side="long", stop_loss=118.0, raw={"Current Price": "121.0"}, **base)
+    sh = Position(side="short", stop_loss=122.0, raw={"Current Price": "119.0"}, **base)
+    r_lo, r_sh = pe.open_risk([lo], [], c), pe.open_risk([sh], [], c)
+    assert r_lo[1] == r_sh[1] == "measured"
+    assert r_lo[0] == r_sh[0] == 3.0  # (121-118) and (122-119) x cvpp 1.0 (cfg SOLUSD)
+    nomark = Position(side="long", stop_loss=118.0, raw={}, **base)
+    assert pe.open_risk([nomark], [], c) == (None, "unrealized_unreported")
+
+
 SPEC = {"ticket_id": "t1", "venue_symbol": "SOLUSD", "side": "long", "quantity": 0.5,
         "stop_loss": 118.0, "take_profit": 126.0, "limit_price": 120.0}
 

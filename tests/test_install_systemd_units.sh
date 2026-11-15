@@ -96,17 +96,48 @@ run_test_refresh_on_change() {
 }
 
 # ---------------------------------------------------------------------------
-# 4. Template units (with @ in the name) are skipped.
+# 4. Template units (with @ in the name): the generic loop skips them, and ONLY the
+#    templates the installer is meant to install explicitly are ever copied.
+#
+#    The rule (scripts/install_systemd_units.sh): a template is installed only by its own
+#    named block -- ict-notify-failure@.service (OnFailure= alerting, FIX-SA-08) and
+#    ict-desk-build@.service (the desk trigger build outside the trader's cgroup,
+#    DESK-TRIGGER-SCAN-TIMEOUT). Any other @ template, including one that merely sits in
+#    deploy/, must still be skipped. This test used to assert that NO @ unit was ever copied;
+#    that stopped being the rule when ict-desk-build@ was added on purpose.
 # ---------------------------------------------------------------------------
+
+INTENDED_TEMPLATES="ict-desk-build@.service ict-notify-failure@.service"
+
+installed_templates() {  # sorted basenames of every @ service the installer copied into $1
+    ls "$1/"*@*.service 2>/dev/null | xargs -r -n1 basename | sort | tr '\n' ' ' | sed 's/ $//'
+}
 
 run_test_template_skipped() {
     local tmp; tmp=$(setup_temp_systemd)
+    # The planted control: a foreign template that is NOT on the intended list. If the installer's generic
+    # loop (or any new block) ever starts copying arbitrary @ units, this reaches systemd.
+    cat > "$tmp/deploy/ict-foreign-planted@.service" <<'UNIT'
+[Unit]
+Description=planted foreign template (must never be installed)
+[Service]
+Type=oneshot
+ExecStart=/bin/true
+UNIT
     REPO_DIR="$tmp" SYSTEMD_DIR="$tmp/systemd" bash "$tmp/install.sh" >/dev/null 2>&1
-    if ls "$tmp/systemd/"*@*.service 2>/dev/null | grep -q .; then
-        FAIL=$((FAIL + 1)); echo "FAIL template-skipped  template unit was copied"
-    else
-        PASS=$((PASS + 1)); echo "ok  template units (claude-vm-runner@) are not auto-installed"
-    fi
+    local got; got=$(installed_templates "$tmp/systemd")
+    # (a) the intended desk-build template IS installed (the installer copies it on purpose)
+    assert_eq "ict-desk-build@ template is installed (intended)" \
+        "$([ -f "$tmp/systemd/ict-desk-build@.service" ] && echo yes || echo no)" yes
+    # (b) the planted foreign template is NOT
+    assert_eq "a foreign @ template in deploy/ is still skipped (planted control)" \
+        "$([ -e "$tmp/systemd/ict-foreign-planted@.service" ] && echo copied || echo skipped)" skipped
+    # (c) nothing outside the intended list was copied (catches a THIRD template sneaking in)
+    local extra="" t
+    for t in $got; do
+        case " $INTENDED_TEMPLATES " in *" $t "*) ;; *) extra="$extra $t" ;; esac
+    done
+    assert_eq "only intended templates are copied (extras: none)" "${extra# }" ""
     rm -rf "$tmp"
 }
 

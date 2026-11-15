@@ -63,3 +63,35 @@ async def run_account_read(fn: Callable[..., Any], *args: Any) -> Any:
     """
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(_ACCOUNT_READ_EXECUTOR, fn, *args)
+
+
+# ── parallel lane for NON-IB account reads (row DIAG-EXCHANGE-POSITIONS-SLOW) ──
+# MEASURED 2026-11-14 20:05-20:09Z: the all-accounts /api/diag/exchange_positions
+# read walked every account in sequence through the single worker above. Per-account
+# reads are 4-7 s (bybit_portfolio 5.2, alpaca_portfolio 7.4, bybit_2 5.7,
+# alpaca_live 4.3), so the whole call passed the proxy's 30 s upstream limit and
+# every caller got HTTP 502 ("could not look").
+#
+# The single worker exists for IB (BL-20260706-IBCONCURRENCY: ib_insync's sync API
+# drives its own event loop and must not race on one client). Bybit / Alpaca /
+# other REST reads open their own short-lived client and drive no event loop, so
+# they can run side by side. IB accounts MUST keep using ``run_account_read``;
+# ``is_ib_account`` is the one place that decides which lane an account takes.
+_ACCOUNT_READ_PARALLEL = ThreadPoolExecutor(
+    max_workers=8, thread_name_prefix="account-read-par",
+)
+
+_IB_EXCHANGES = frozenset({"interactive_brokers", "ib", "ibkr"})
+
+
+def is_ib_account(acc: Any) -> bool:
+    """True when *acc* is IB-backed and so must stay on the single-worker lane."""
+    return str((acc or {}).get("exchange") or "").strip().lower() in _IB_EXCHANGES
+
+
+async def run_account_read_parallel(fn: Callable[..., Any], *args: Any) -> Any:
+    """Await *fn(*args)* on the multi-worker lane. NON-IB accounts only: an IB
+    read here would reintroduce BL-20260706-IBCONCURRENCY. Callers route by
+    ``is_ib_account`` (see ``run_account_read_for``)."""
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(_ACCOUNT_READ_PARALLEL, fn, *args)

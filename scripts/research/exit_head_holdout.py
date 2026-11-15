@@ -35,7 +35,7 @@ Usage::
         --boundary '2025-04-03 15:00:00+00:00' --tf 4h --json <out>/verdict.json
 """
 # wiring: manual-only - the one-off held-out exit-head read for research/queue/RQ-20261104-e4a1-01.yaml
-# (run.note); dispatched by a lane, not called from CI.
+# (run.note); dispatched by a lane, not called from CI. --legs: research/queue/RQ-20261115-a474-03.yaml (pooled variant).
 from __future__ import annotations
 
 import argparse
@@ -225,6 +225,212 @@ def prepare(a) -> str:
     return v["measurement"]["grade"]["plan"]["boundary"]
 
 
+# ── POOLED family variant (PI-20261104-NHN7JV7U-0001, RQ-20261115-a474-03) ──────────────────────────────────────
+# e4a1-01 FAILED only on its matched random control with 2 usable discovery folds (underpowered discovery). The
+# variant pools the donchian-4h family for DISCOVERY (each leg at its own declared exit, its own baseline arm and
+# its own cost stack), selects one arm on the pooled walk-forward, and reads every leg ONCE on the held-out span of
+# the registered calendar boundary. The PRIMARY leg's held-out read (the same six clauses as e4a1-01) is the unit's
+# verdict; the other legs are reported, never graded into it.
+
+class MultiPricer:
+    """Routes each trade key to its own leg's Pricer (own cost stack)."""
+
+    def __init__(self, pricers: dict[str, "Pricer"], leg_of: dict[str, str]):
+        self.pricers, self.leg_of = pricers, leg_of
+
+    def net(self, tk: str, bars: list[dict] | None, idx: int | None) -> dict[str, float]:
+        return self.pricers[self.leg_of[tk]].net(tk, bars, idx)
+
+
+def control_p(held: list[str], resolv: dict[str, list[dict]], pricer: Any, k: int, seed: int) -> dict[str, float]:
+    rng = random.Random(seed)
+    pool = [tk for tk in held if tk in resolv and len(resolv[tk]) >= 2]
+    draws = []
+    for _ in range(CONTROL_DRAWS):
+        cut = set(rng.sample(pool, min(k, len(pool))))
+        tot = 0.0
+        for tk in held:
+            idx = rng.randrange(0, len(resolv[tk]) - 1) if tk in cut else None
+            tot += pricer.net(tk, resolv.get(tk), idx)["r"]
+        draws.append(tot)
+    return {"median": float(np.median(draws)), "p95": float(np.percentile(draws, CONTROL_PCTL))}
+
+
+def leg_clauses(ho: dict[str, dict], selected: str, ctl_p95: float | None) -> dict[str, bool]:
+    sel = ho[selected]
+    hard = max(ho["stale_8_0"]["net_r"], ho["giveback_1_1"]["net_r"])
+    return {
+        "c1_selected_is_head": selected != "B",
+        "c2_held_out_n_ge_25": sel["n"] >= 25,
+        "c3_net_ge_B": sel["net_r"] >= ho["B"]["net_r"],
+        "c4_net_ge_best_hard": sel["net_r"] >= hard,
+        "c5_dd_within_tol": sel["max_dd_r"] <= ho["B"]["max_dd_r"] * DD_TOL,
+        "c6_beats_control_p95": ctl_p95 is not None and sel["net_r"] > ctl_p95,
+    }
+
+
+def pooled_main(a) -> int:
+    import copy
+    legs = [x.strip() for x in a.legs.split(",") if x.strip()]
+    primary = a.primary_leg or legs[0]
+    if primary not in legs:
+        raise SystemExit(f"--primary-leg {primary} not in --legs")
+    out_dir = Path(a.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    tf_s = TF_S[a.tf]
+    boundary = _epoch(a.boundary)
+    out: dict[str, Any] = {"unit": a.unit, "legs": legs, "primary_leg": primary, "boundary": a.boundary, "per_leg": {}}
+    emit: dict[str, dict] = {}
+    resolv: dict[str, list[dict]] = {}
+    leg_of: dict[str, str] = {}
+    pricers: dict[str, Pricer] = {}
+    could_not_look: dict[str, str] = {}
+    keys = ("fee_bps_roundtrip", "slippage_bps_roundtrip", "funding_bps_per_window")
+    for leg in legs:
+        la = copy.copy(a)
+        la.leg, la.out, la.json = leg, str(out_dir / leg), None
+        try:
+            hb = prepare(la)
+        except (SystemExit, Exception) as exc:  # allow-silent: one leg failing is contained, named in could_not_look
+            could_not_look[leg] = f"prepare failed: {type(exc).__name__}: {exc}"
+            continue
+        bt = json.loads(Path(la.bt).read_text())
+        stack = {k: float(bt[k]) for k in keys} if all(bt.get(k) is not None for k in keys) else {}
+        le = {}
+        for line in Path(la.trades).read_text().splitlines():
+            if line.strip():
+                e = json.loads(line)
+                le[f"{e['strategy']}:{e['symbol']}:{int(_epoch(e['entry_time']))}"] = e
+        lr = {tk: b for tk, b in te.group_trades(te.load_rows(Path(la.rows))).items() if tk in le}
+        pr = Pricer(le, stack, tf_s)
+        gaps = [pr.baseline_gap(e) for e in le.values()]
+        info = {"harness_boundary": hb, "cost_stack": stack, "n_emitted": len(le), "n_resolvable": len(lr),
+                "cost_selfcheck_max_gap_r": round(max(gaps), 6) if gaps else None}
+        out["per_leg"][leg] = info
+        if not stack or not gaps or max(gaps) > COST_TOL:
+            could_not_look[leg] = "cost_policy_mismatch: recomputed cost differs from the emitted cost"
+            continue
+        pricers[leg] = pr
+        for tk in le:
+            leg_of[tk] = leg
+        emit.update(le)
+        resolv.update(lr)
+    out["could_not_look"] = could_not_look
+    pricer = MultiPricer(pricers, leg_of)
+
+    def done(verdict: str, why: str) -> int:
+        out["rule_verdict"], out["rule_why"] = verdict, why
+        prim = (out.get("held_out_per_leg") or {}).get(primary, {})
+        rec = {"verdict": verdict if verdict in ("pass", "fail") else "indeterminate",
+               "read_state": "measured" if verdict in ("pass", "fail") else "insufficient",
+               "population": (f"donchian-4h family {legs} (pooled discovery; each leg config-exact at its own declared "
+                              f"exit and cost stack); primary {primary} held-out n {prim.get('n')} at boundary "
+                              f"{a.boundary}; could not look: {sorted(could_not_look) or 'none'}"),
+               "n": prim.get("n") or len(emit), "measurement": out, "note": why}
+        Path(a.json or out_dir / "verdict.json").write_text(json.dumps(rec, indent=1, default=str))
+        print(json.dumps({"verdict": verdict, "why": why}, indent=1))
+        return 0
+
+    if primary in could_not_look:
+        return done("indeterminate", f"primary leg could not be measured: {could_not_look[primary]}")
+    ent = {tk: _epoch(e["entry_time"]) for tk, e in emit.items()}
+    ext = {tk: _epoch(e["exit_time"]) for tk, e in emit.items()}
+    disc = sorted([tk for tk in emit if ent[tk] < boundary and ext[tk] < boundary], key=ent.get)
+    held_by_leg = {leg: sorted([tk for tk in emit if leg_of[tk] == leg and ent[tk] >= boundary], key=ent.get)
+                   for leg in pricers}
+    out["n_discovery"] = len(disc)
+    out["n_discovery_per_leg"] = {leg: sum(1 for tk in disc if leg_of[tk] == leg) for leg in pricers}
+    d_res = {tk: resolv[tk] for tk in disc if tk in resolv}
+    blocks = te.fold_blocks(d_res, "trades", BLOCK_N, lambda b: b[0]["bar_t"])
+    arms = arm_names()
+    folds = []
+    for label, _y, test, y0 in blocks:
+        train_rows = [r for b in d_res.values() if b[-1]["bar_t"] < y0 - te.EMBARGO_S for r in b]
+        if len(test) < BLOCK_N or len(train_rows) < te._MIN_FOLD_TRAIN_ROWS:
+            folds.append({"fold": label, "skipped": True, "n_test": len(test), "train_rows": len(train_rows)})
+            continue
+        model = te.train_model(train_rows)
+        probs = score(model, test)
+        _, y = te.matrix([r for b in test.values() for r in b])
+        p = np.concatenate([probs[tk] for tk in test])
+        ks = sorted(test, key=lambda k: ent[k])
+        f = {"fold": label, "n_test": len(test), "train_rows": len(train_rows), "auc": te.auc_score(y, p), "arms": {}}
+        for arm in ["B", "stale_8_0", "giveback_1_1"] + arms:
+            f["arms"][arm] = summarize(run_arm(arm, ks, resolv, probs, pricer), tf_s)
+        folds.append(f)
+    out["discovery_folds"] = folds
+    usable = [f for f in folds if not f.get("skipped")]
+    out["n_usable_folds"] = len(usable)
+    if len(usable) < 2:
+        return done("indeterminate", f"underpowered: {len(usable)} usable discovery fold(s) < 2")
+    aucs = [f["auc"] for f in usable if f["auc"] is not None]
+    out["discovery_mean_auc"] = round(float(np.mean(aucs)), 4) if aucs else None
+    need = math.ceil(2 * len(usable) / 3)
+    table = {}
+    for arm in ["stale_8_0", "giveback_1_1"] + arms:
+        tot = sum(f["arms"][arm]["net_r"] for f in usable)
+        btot = sum(f["arms"]["B"]["net_r"] for f in usable)
+        wins = sum(1 for f in usable if f["arms"][arm]["net_r"] >= f["arms"]["B"]["net_r"])
+        fires = sum(f["arms"][arm]["n_truncated"] for f in usable)
+        elig = (arm in arms and tot > btot and wins >= need and fires > 0
+                and out["discovery_mean_auc"] is not None and out["discovery_mean_auc"] > AUC_FLOOR)
+        table[arm] = {"wf_net_r": round(tot, 4), "B_wf_net_r": round(btot, 4), "folds_ge_B": wins,
+                      "folds_needed": need, "n_truncated": fires, "eligible": elig}
+    out["discovery_table"] = table
+    elig = [k for k, v in table.items() if v["eligible"]]
+    selected = max(elig, key=lambda k: table[k]["wf_net_r"]) if elig else "B"
+    out["selected"] = selected
+    fin_rows = [r for b in d_res.values() if b[-1]["bar_t"] < boundary - te.EMBARGO_S for r in b]
+    model = te.train_model(fin_rows)
+    out["held_out_per_leg"], out["clauses_per_leg"] = {}, {}
+    for i, (leg, held) in enumerate(sorted(held_by_leg.items())):
+        h_res = {tk: resolv[tk] for tk in held if tk in resolv}
+        hprobs = score(model, h_res)
+        ho = {arm: summarize(run_arm(arm, held, resolv, hprobs, pricer), tf_s)
+              for arm in ["B", "stale_8_0", "giveback_1_1"] + arms}
+        ctl = None
+        if selected != "B" and ho[selected].get("n_truncated"):
+            c = control_p(held, resolv, pricer, ho[selected]["n_truncated"], CONTROL_SEED + i)
+            ctl = c["p95"]
+            ho["_control"] = {"draws": CONTROL_DRAWS, "seed": CONTROL_SEED + i, "median_net_r": round(c["median"], 4),
+                              f"p{CONTROL_PCTL:g}_net_r": round(c["p95"], 4)}
+        out["held_out_per_leg"][leg] = {"n": ho["B"].get("n"), "arms": ho}
+        if selected != "B":
+            out["clauses_per_leg"][leg] = leg_clauses(ho, selected, ctl)
+    if selected == "B":
+        return done("fail", "B selected on the pooled discovery: no head arm eligible (beats B on the walk-forward in "
+                    f">= {need} of {len(usable)} folds with mean OOS AUC > {AUC_FLOOR})")
+    prim_ho = out["held_out_per_leg"][primary]["arms"]
+    if not prim_ho[selected].get("n_truncated"):
+        return done("indeterminate", f"{selected} never fires on {primary}'s held-out span (byte-identical to B)")
+    cl = out["clauses_per_leg"][primary]
+    if all(cl.values()):
+        return done("pass", f"{selected} on {primary} held-out net {prim_ho[selected]['net_r']} vs B "
+                    f"{prim_ho['B']['net_r']} (n {prim_ho[selected]['n']}), control p95 "
+                    f"{prim_ho['_control'][f'p{CONTROL_PCTL:g}_net_r']}")
+    return done("fail", f"{selected} selected on the pooled discovery but fails {primary} held-out clause(s) "
+                f"{[c for c, ok in cl.items() if not ok]}")
+
+
+def _self_test_pooled() -> None:
+    ho = {"B": {"n": 30, "net_r": 10.0, "max_dd_r": 5.0}, "stale_8_0": {"net_r": 9.0}, "giveback_1_1": {"net_r": 8.0},
+          "tau_0.2": {"n": 30, "net_r": 12.0, "max_dd_r": 6.0}}
+    assert all(leg_clauses(ho, "tau_0.2", 11.0).values())
+    assert not leg_clauses(ho, "tau_0.2", 12.5)["c6_beats_control_p95"]
+    assert not leg_clauses(ho, "tau_0.2", None)["c6_beats_control_p95"]
+    assert not leg_clauses({**ho, "tau_0.2": {**ho["tau_0.2"], "max_dd_r": 7.0}}, "tau_0.2", 11.0)["c5_dd_within_tol"]
+
+    class P:
+        def __init__(self, r):
+            self.r = r
+
+        def net(self, tk, bars, idx):
+            return {"r": self.r if idx is None else -1.0, "tk": tk, "n_bars": len(bars or [])}
+    mp = MultiPricer({"a": P(1.0), "b": P(2.0)}, {"x": "a", "y": "b"})
+    assert mp.net("x", None, None)["r"] == 1.0 and mp.net("y", None, None)["r"] == 2.0
+    print("pooled self-test ok")
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--leg", default=None, help="full chain: fetch + baseline arm + E0 build, then grade")
@@ -235,10 +441,23 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--rows", default=None)
     ap.add_argument("--trades", default=None)
     ap.add_argument("--bt", default=None)
-    ap.add_argument("--boundary", required=True, help="the REGISTERED held-out boundary")
-    ap.add_argument("--tf", required=True, choices=sorted(TF_S))
+    ap.add_argument("--legs", default=None, help="POOLED family variant: comma-separated legs (discovery pooled)")
+    ap.add_argument("--primary-leg", default=None, help="pooled: the leg whose held-out read is the verdict")
+    ap.add_argument("--unit", default="RQ-20261104-e4a1-01")
+    ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--boundary", default=None, help="the REGISTERED held-out boundary")
+    ap.add_argument("--tf", default=None, choices=sorted(TF_S))
     ap.add_argument("--json", default=None)
     a = ap.parse_args(argv[1:])
+    if a.self_test:
+        _self_test_pooled()
+        return 0
+    if not a.boundary or not a.tf:
+        ap.error("--boundary and --tf are required")
+    if a.legs:
+        if not a.out:
+            ap.error("--legs needs --out")
+        return pooled_main(a)
     tf_s = TF_S[a.tf]
     harness_boundary = None
     if a.leg:

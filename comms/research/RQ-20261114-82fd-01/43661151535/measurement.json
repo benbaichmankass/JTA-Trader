@@ -1,0 +1,162 @@
+{
+  "schema": "ml_entry_tp_revision/pointer_v0/1",
+  "unit": "RQ-20261114-82fd-01",
+  "verdict": "fail",
+  "m_star": 0.0,
+  "best_static": {
+    "level_atr": 3.0,
+    "by_level_on_select": {
+      "1.0": -0.028373422084491985,
+      "1.5": -0.021044684486732836,
+      "2.0": -0.014471544071771036,
+      "2.5": -0.011737491357357575,
+      "3.0": -0.011391644864768149,
+      "4.0": NaN,
+      "5.0": NaN,
+      "6.0": NaN
+    }
+  },
+  "margin_select": {
+    "window": [
+      "2022-01-01",
+      "2024-10-01"
+    ],
+    "by_margin": {
+      "0.0": {
+        "n": 56101,
+        "mean_delta": NaN,
+        "n_moved": 51505
+      },
+      "0.02": {
+        "n": 56101,
+        "mean_delta": NaN,
+        "n_moved": 45085
+      },
+      "0.05": {
+        "n": 56101,
+        "mean_delta": NaN,
+        "n_moved": 33197
+      },
+      "0.1": {
+        "n": 56101,
+        "mean_delta": -0.0007581133181939338,
+        "n_moved": 19200
+      }
+    }
+  },
+  "tp_folds": [
+    {
+      "test_start": "2022-01-01",
+      "n_train": 157492,
+      "n_bar0": 23774
+    },
+    {
+      "test_start": "2023-01-01",
+      "n_train": 270332,
+      "n_bar0": 19926
+    },
+    {
+      "test_start": "2024-01-01",
+      "n_train": 385438,
+      "n_bar0": 16415
+    },
+    {
+      "test_start": "2025-01-01",
+      "n_train": 498006,
+      "n_bar0": 11219
+    },
+    {
+      "test_start": "2025-10-01",
+      "n_train": 579224,
+      "n_bar0": 11240
+    }
+  ],
+  "windows": {
+    "prior_year": {
+      "window": "prior_year",
+      "n": 15233,
+      "n_symbols": 59,
+      "n_moved": 14167,
+      "baseline_mean_net_r": 0.05592169713336927,
+      "policy_mean_net_r": 0.062047864168071266,
+      "policy_ci95_day_clustered": [
+        -0.025420412091318442,
+        0.15450110404032677
+      ],
+      "mean_delta": 0.0061261670347019905,
+      "delta_ci95_day_clustered": [
+        -0.03529440984465315,
+        0.04787845540517772
+      ],
+      "mean_delta_moved": 0.00658713223968486,
+      "control_matched_random": {
+        "draws": 100,
+        "mean_delta_p50": -0.014407699692325249,
+        "policy_delta_pctile_vs_random": 1.0
+      },
+      "control_best_static_delta": 0.0,
+      "real_money_5_reported": {
+        "n": 1105,
+        "baseline": -0.019615489703365296,
+        "policy": 0.003069303624096676
+      },
+      "clause": "indeterminate",
+      "why": "between the pass bar and the fail floor, or underpowered",
+      "level_mix": {
+        "1.0": 1769,
+        "1.5": 922,
+        "2.0": 740,
+        "2.5": 895,
+        "3.0": 1066,
+        "4.0": 1297,
+        "5.0": 1898,
+        "6.0": 6646
+      }
+    },
+    "record_year": {
+      "window": "record_year",
+      "n": 11240,
+      "n_symbols": 53,
+      "n_moved": 10606,
+      "baseline_mean_net_r": 0.007301455114681035,
+      "policy_mean_net_r": -0.0036479896493242536,
+      "policy_ci95_day_clustered": [
+        -0.09630386405783227,
+        0.09105201684859625
+      ],
+      "mean_delta": -0.010949444764005287,
+      "delta_ci95_day_clustered": [
+        -0.04554758930741971,
+        0.02464152219585399
+      ],
+      "mean_delta_moved": -0.011603975028042562,
+      "control_matched_random": {
+        "draws": 100,
+        "mean_delta_p50": -0.0002225304985266785,
+        "policy_delta_pctile_vs_random": 0.01
+      },
+      "control_best_static_delta": 0.0,
+      "real_money_5_reported": {
+        "n": 907,
+        "baseline": 0.026283168276339256,
+        "policy": 0.01112559454363331
+      },
+      "clause": "fail",
+      "why": "policy loses net of cost, or the delta CI95 is wholly below 0",
+      "level_mix": {
+        "1.0": 916,
+        "1.5": 444,
+        "2.0": 485,
+        "2.5": 370,
+        "3.0": 634,
+        "4.0": 690,
+        "5.0": 1157,
+        "6.0": 6544
+      }
+    }
+  },
+  "cost_stack": "ml_decision_entry._cost_r: fee 11 bps + execution_costs slippage + funding (BTCUSDT policy applied to every symbol, as the 1b harness)",
+  "tau": 0.1,
+  "n_trades_all": 82574,
+  "runtime_s": 3692
+}

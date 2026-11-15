@@ -75,7 +75,9 @@ sys.path.insert(0, str(_REPO))
 from scripts.research.queue_grade import health  # noqa: E402
 
 DEFAULT_MIN_RUNNABLE = 25
-DEFAULT_MAX_IDLE_HOURS = 12.0
+# 12 h -> 4 h (manager 2026-11-12 22:33Z): the infra-yield stall of 2026-11-12 (0 units fired 17:43Z..22:33Z) never paged at
+# 12 h. With the infra starvation floor (2 h) a healthy dispatcher fires at least once per ~2 h, so 4 h idle is a real stall.
+DEFAULT_MAX_IDLE_HOURS = 4.0
 #: Exit code when the ONLY problem is an H1 the templates can fill: the caller
 #: fires research-queue-replenish.yml instead of paging. Measured 2026-09-29
 #: 10:07Z (manager, via lane M19-S1): runnable 8 of 58 on main with 153

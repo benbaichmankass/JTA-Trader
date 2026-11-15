@@ -72,6 +72,15 @@ API_BASE = os.environ.get("PROP_SILENCE_API_BASE", "http://127.0.0.1:8001")
 Fetch = Callable[[str], "tuple[str, Any]"]
 
 
+def _service_headers() -> dict:
+    """``Authorization: Bearer $DASHBOARD_API_TOKEN`` when the token is in the
+    environment, else nothing: the read-only service credential the site gate
+    accepts on GET/HEAD once ``SITE_AUTH_ENFORCE`` is on (UI-OAUTH-SIGNIN; ignored
+    while it is off). Only ever sent to this project's own API."""
+    tok = os.environ.get("DASHBOARD_API_TOKEN", "").strip()
+    return {"Authorization": f"Bearer {tok}"} if tok else {}
+
+
 def idle_key(account: str) -> str:
     return f"prop_idle_{account}"
 
@@ -94,7 +103,8 @@ LABELS: dict[str, str] = {
 def api_get(path: str) -> tuple[str, Any]:
     """``("read", json)`` or ``("unreadable", reason)``. Never raises."""
     try:
-        with urllib.request.urlopen(API_BASE + path, timeout=10) as r:  # noqa: S310
+        req = urllib.request.Request(API_BASE + path, headers=_service_headers())
+        with urllib.request.urlopen(req, timeout=10) as r:  # noqa: S310
             return "read", json.loads(r.read().decode("utf-8"))
     except (urllib.error.URLError, OSError, ValueError) as exc:
         return "unreadable", f"{type(exc).__name__}: {exc}"
@@ -175,14 +185,35 @@ def account_mode(account: str) -> str | None:
         return None
 
 
+def account_roster(account: str) -> list | None:
+    """``config/accounts.yaml::<account>.strategies`` or None when it cannot be read."""
+    try:
+        from src.config.accounts_loader import load_accounts_dict  # noqa: PLC0415
+        roster = load_accounts_dict()[account].get("strategies")
+        return list(roster) if isinstance(roster, (list, tuple)) else None
+    except Exception:  # noqa: BLE001 — unreadable == unknown, never "empty"
+        return None
+
+
+# The phone executor is SHADOWED (docs/reference/shadowed-features.yaml::phone_executor_heartbeat):
+# the operator uninstalled the app on 2026-11-12 and breakout_2 is on ice with an empty roster.
+# An account that routes no strategy sends no ticket the phone could carry, so its heartbeat is
+# not required. Only a READ empty roster says so; an unreadable roster keeps the old behaviour.
+_SHADOWED_DETAIL = ("roster empty — phone executor shadowed, heartbeat not required "
+                    "(re-entry: operator reinstalls the app and a strategy is rostered)")
+
+
 def probe_phone_heartbeat(now: datetime, fetch: Fetch = api_get,
-                          mode_reader: Callable[[str], str | None] = account_mode) -> dict:
+                          mode_reader: Callable[[str], str | None] = account_mode,
+                          roster_reader: Callable[[str], list | None] = account_roster) -> dict:
     mode = mode_reader(PHONE_ACCOUNT)
     if mode is None:
         return _probe(UNKNOWN, f"{PHONE_ACCOUNT}: mode unreadable — cannot tell if the "
                                f"heartbeat is expected")
     if mode != "live":
         return _probe(OK, f"{PHONE_ACCOUNT}: mode {mode} — heartbeat not required")
+    if roster_reader(PHONE_ACCOUNT) == []:
+        return _probe(OK, f"{PHONE_ACCOUNT}: {_SHADOWED_DETAIL}")
     st, data = fetch(f"/api/bot/prop/status?account_id={PHONE_ACCOUNT}")
     if st != "read" or not isinstance(data, dict) or "phone_heartbeat" not in data:
         # a missing key is the route's own error envelope — we did not look
@@ -203,13 +234,16 @@ def probe_phone_heartbeat(now: datetime, fetch: Fetch = api_get,
 
 
 def probe_phone_login(now: datetime, fetch: Fetch = api_get,
-                      mode_reader: Callable[[str], str | None] = account_mode) -> dict:
+                      mode_reader: Callable[[str], str | None] = account_mode,
+                      roster_reader: Callable[[str], list | None] = account_roster) -> dict:
     """Heartbeat alive + account_status stale = the phone runs but is not logged in on the terminal."""
     mode = mode_reader(PHONE_ACCOUNT)
     if mode is None:
         return _probe(UNKNOWN, f"{PHONE_ACCOUNT}: mode unreadable — cannot tell if a login is expected")
     if mode != "live":
         return _probe(OK, f"{PHONE_ACCOUNT}: mode {mode} — login not required")
+    if roster_reader(PHONE_ACCOUNT) == []:
+        return _probe(OK, f"{PHONE_ACCOUNT}: {_SHADOWED_DETAIL}")
     st, data = fetch(f"/api/bot/prop/status?account_id={PHONE_ACCOUNT}")
     if st != "read" or not isinstance(data, dict) or "phone_heartbeat" not in data:
         return _probe(UNKNOWN, f"{PHONE_ACCOUNT}: could not read prop status ({data})")

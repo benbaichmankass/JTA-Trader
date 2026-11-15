@@ -149,7 +149,8 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     "src/runtime/trainer_reachability_alert.py": ("alert",),
     "src/runtime/decision_channel_alert.py": ("alert",),
     "src/runtime/exit_loop_health.py": ("alert",),
-    "src/runtime/reconcile_loop.py": ("alert",),   # TICK-STAGE2-RECONCILE-OFFTICK: ONE latched flag when the off-tick reconciliation loop is failing/stale, plus its recovery
+    "src/runtime/reconcile_loop.py": ("alert",),
+    "src/runtime/gate_registry.py": ("alert",),   # GATE-REGISTRY: ONE alert per drifting / unregistered gate row (alerted_at latch), via notify.send_via_alert_manager   # TICK-STAGE2-RECONCILE-OFFTICK: ONE latched flag when the off-tick reconciliation loop is failing/stale, plus its recovery
     "src/runtime/ltr_first_proof.py": ("alert",),   # LTR first-proof pings, one per stage, once ever (operator 2026-10-26)
     "src/runtime/live_review_rows_watch.py": ("alert",),   # LTR-ROWS-SWAP-TRUNCATION: ONE flag per incident when the rows branch shrank (tip refused)
     "src/runtime/losing_streak_alert.py": ("alert",),
@@ -201,6 +202,7 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     "scripts/notify_session.py": ("session",),
     "scripts/ops/work_digest_now.py": ("manager_update",),
     "src/runtime/telegram_decisions.py": ("decision",),
+    "src/runtime/ops_actions.py": ("system_action",),   # VM-CHANGE-LEDGER: ONE notification per exec/set-env job that writes (a ping, never a gate)
     "src/runtime/trade_approvals.py": ("decision", "alert"),   # TRADE-ACTION-DIRECT-PATH: the Approve/Reject ask (decision); the no-answerable-bot fallback (alert)
     "src/runtime/manager_status.py": ("command_reply",),
     # REPLY (polled bots answering the operator in-conversation)

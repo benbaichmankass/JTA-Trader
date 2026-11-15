@@ -664,7 +664,7 @@ def _affordability_from_legs(leg: str, account: str, record: Dict[str, Any], sna
 
 def _no_balance(text: str) -> str:
     """Strip every account-money figure from a message bound for a committed file: the sizer's refuse text names
-    the equity / buying power it read (``(equity $197.28, buying power $197.28, ...)``)."""
+    the equity / buying power it read (``(equity $123.45, buying power $123.45, ...)``)."""
     import re
     text = re.sub(r"\(equity \$[^)]*\)", "(balance read, not committed)", text)
     return re.sub(r"\$\s?[0-9][0-9,]*(\.[0-9]+)?", "$<redacted>", text)
@@ -1065,10 +1065,18 @@ def _add_risk(leg: str, frm: str, to: str, account: str, exchange: str,
     # execution mechanics are already proven (soak_state.mechanics_proven, from records) skips the paper soak.
     # Only an entry whose `bar:` states `mechanics_proven: true` reads this; the Stage-0 bar below is untouched.
     mech = None
-    if (frm, to) == ("S1", "S2") and bar.get("mechanics_proven"):
+    if (frm, to) == ("S1", "S2") and (bar.get("mechanics_proven") or bar.get("soak_step") == "retired"):
         mech = _mechanics_proven(leg, root, acfg)
         ctx["evidence"]["mechanics"] = mech
-    if (frm, to) == ("S1", "S2") and not (mech and mech.get("proven")):
+    # SOAK STEP RETIRED (operator, chat 2026-11-12 ~16:35Z, verbatim: "There is nothing in between proving
+    # edge on back testing and real money. Absolutely no steps."). An entry whose `bar:` states
+    # `soak_step: retired` decides S1 -> S2 on the Stage-0 record alone: no soak roster membership, no
+    # `execution: live` precondition, no SOAKS.json pass, no mechanics_proven. Mechanics are still RECORDED
+    # as evidence (above) -- monitoring, never a precondition. Entries without the field are unchanged.
+    soak_retired = (frm, to) == ("S1", "S2") and bar.get("soak_step") == "retired"
+    if soak_retired:
+        ctx["evidence"]["soak_step"] = "retired (operator 2026-11-12: no step between backtest and real money)"
+    if (frm, to) == ("S1", "S2") and not soak_retired and not (mech and mech.get("proven")):
         soak = SOAK_ACCOUNT.get(exchange)
         if not soak or leg not in rosters.get(soak, {}).get("legs", []):
             raise _NeedsData("R-NOT-SOAKED", f"{leg} is not on the Stage-1 soak roster {soak!r}; "

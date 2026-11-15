@@ -1,0 +1,144 @@
+{
+  "rule": "RULE-EQ-FORMING-TQQQ-20261113",
+  "clauses": {
+    "a_stage0": {
+      "net_r_oos_D20_forming": 12.7698,
+      "pass": true,
+      "cross_check_sweep_D20_net_r": 12.7699,
+      "on_fail": "the closed-bar fallback #25691 goes to the operator"
+    },
+    "b_d20_vs_d30": {
+      "delta_net_r": 3.1616,
+      "maxdd_D20": 3.654,
+      "maxdd_D30": 4.6601,
+      "folds_D20": [
+        {
+          "fold": 1,
+          "start": "2020-07-27 00:00:00+00:00",
+          "end": "2022-02-21 18:00:00+00:00",
+          "trades": 7,
+          "net_r": 3.7281
+        },
+        {
+          "fold": 2,
+          "start": "2022-02-21 18:00:00+00:00",
+          "end": "2023-09-19 12:00:00+00:00",
+          "trades": 14,
+          "net_r": 2.5133
+        },
+        {
+          "fold": 3,
+          "start": "2023-09-19 12:00:00+00:00",
+          "end": "2025-04-16 06:00:00+00:00",
+          "trades": 14,
+          "net_r": 5.1975
+        },
+        {
+          "fold": 4,
+          "start": "2025-04-16 06:00:00+00:00",
+          "end": "2026-11-12 00:00:00+00:00",
+          "trades": 19,
+          "net_r": 1.3309
+        }
+      ],
+      "folds_D30": [
+        {
+          "fold": 1,
+          "start": "2020-07-27 00:00:00+00:00",
+          "end": "2022-02-21 18:00:00+00:00",
+          "trades": 7,
+          "net_r": 0.2795
+        },
+        {
+          "fold": 2,
+          "start": "2022-02-21 18:00:00+00:00",
+          "end": "2023-09-19 12:00:00+00:00",
+          "trades": 9,
+          "net_r": 0.7853
+        },
+        {
+          "fold": 3,
+          "start": "2023-09-19 12:00:00+00:00",
+          "end": "2025-04-16 06:00:00+00:00",
+          "trades": 12,
+          "net_r": 4.9407
+        },
+        {
+          "fold": 4,
+          "start": "2025-04-16 06:00:00+00:00",
+          "end": "2026-11-12 00:00:00+00:00",
+          "trades": 15,
+          "net_r": 3.6026
+        }
+      ],
+      "fold_wins_D20": 3,
+      "harness_grade": {
+        "verdict": "pass",
+        "label": "reachable_lever_beats_removed",
+        "why": "D20 beats the removed-lever baseline by 3.1616 R with no worse drawdown and >= 3/4 fold wins: a Tier-3 proposal to declare it (not done here)"
+      },
+      "pass": true,
+      "on_fail": "a revert-to-30 proposal to the operator; never automatic"
+    },
+    "c_record_faithful": {
+      "fidelity": "faithful",
+      "omitted_levers": [],
+      "pass": true
+    }
+  },
+  "n": {
+    "D30": 43,
+    "D20": 54
+  },
+  "verdict": "pass",
+  "read_state": "measured",
+  "why": "(a) and (b) pass",
+  "exit_codes": {
+    "sweep": 0,
+    "evidence": 0
+  },
+  "source_alignment": {
+    "rth": {
+      "days_compared": 1583,
+      "days_matched": 1582,
+      "match_share": 0.9994
+    },
+    "all": {
+      "days_compared": 1583,
+      "days_matched": 1077,
+      "match_share": 0.6804
+    },
+    "chosen": "rth"
+  },
+  "coverage_by_year": {
+    "2020": {
+      "daily_bars": 111,
+      "days_with_1m": 111
+    },
+    "2021": {
+      "daily_bars": 252,
+      "days_with_1m": 252
+    },
+    "2022": {
+      "daily_bars": 251,
+      "days_with_1m": 251
+    },
+    "2023": {
+      "daily_bars": 250,
+      "days_with_1m": 250
+    },
+    "2024": {
+      "daily_bars": 252,
+      "days_with_1m": 252
+    },
+    "2025": {
+      "daily_bars": 250,
+      "days_with_1m": 249
+    },
+    "2026": {
+      "daily_bars": 218,
+      "days_with_1m": 218
+    }
+  },
+  "sensitivity": null
+}

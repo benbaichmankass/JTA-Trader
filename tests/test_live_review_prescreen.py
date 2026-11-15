@@ -240,5 +240,8 @@ def test_stall_thin_window_is_labelled_as_youth_and_matches_the_done_bar_regex()
     # any other unknown keeps the old, non-youth reason
     _, cnl, _ = ps(row(bars_held=None, peak_r=None, peak_state="thin_window"))
     assert [c["reason"] for c in cnl if c["event"] == "stall"] == ["bars_held / peak_r unknown"]
+    # unanchored is NOT youth: it now names its cause (no entry_time in the package meta), never the youth form
     _, cnl, _ = ps(row(bars_held=3, peak_r=None, peak_state="unanchored"))
-    assert [c["reason"] for c in cnl if c["event"] == "stall"] == ["bars_held / peak_r unknown"]
+    r = [c["reason"] for c in cnl if c["event"] == "stall"]
+    assert r == ["peak_r unanchored: package meta has no entry_time (the strategy does not publish it)"]
+    assert not youth.match(r[0])

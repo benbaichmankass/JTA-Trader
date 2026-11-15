@@ -3,7 +3,7 @@
 id: RQ-20261112-cdb2-07
 title: 'SLV-ITERATION C1 vs LIVE (tp_r 50, main''s value and C1''s holdout config): does slv_trend_1h with atr_stop_mult 1.0 (C1, the arm RQ-20261103-5a03-02
   selected and confirmed) beat the declared 1.5 at tp_r 50, on 2019-01..2025-04-22 bars C1 was never selected on?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -152,3 +152,17 @@ related:
 - RQ-20261106-010
 - RQ-20261112-cdb2-01
 - SLV-ITERATION
+last_dispatched_at: '2026-11-12T20:18:30+00:00'
+grading:
+  attested: RULE-RQ-20261112-cdb2-07
+  auto: true
+  decision_rule_id: RULE-RQ-20261112-cdb2-07
+  evidence:
+  - research/results/RQ-20261112-cdb2-07/43299116487.jsonl
+  graded_at: '2026-11-12'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail
