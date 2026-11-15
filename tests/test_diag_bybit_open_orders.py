@@ -135,3 +135,71 @@ def test_rows_survive_intact(client, monkeypatch):
     row = _by_id(client.get("/api/diag/bybit_open_orders", headers=_bearer()).json())["bybit_2"]
     assert row["result"] == result
     assert row["result"]["positions"][0]["stop_loss"] == 1.41
+
+
+# --------------------------------------------------------------------------
+# DIAG-BYBIT-OPEN-ORDERS-SLOW (2026-11-15): parallel reads with a per-account deadline
+# --------------------------------------------------------------------------
+
+_BYBITS = [{"account_id": f"bybit_{i}", "exchange": "bybit", "mode": "live", "account_class": "paper",
+            "market_type": "linear"} for i in range(4)]
+
+
+def _patch_slow(monkeypatch, accounts, delays, seen_threads=None):
+    import threading
+    import time as _t
+
+    import src.units.ui.data_loaders as dl
+    monkeypatch.setattr(dl, "list_accounts", lambda: accounts)
+
+    def _reader(acc):
+        aid = acc.get("account_id")
+        if seen_threads is not None:
+            seen_threads[aid] = threading.current_thread().name
+        _t.sleep(delays.get(aid, 0.0))
+        return {"category": "linear", "positions": [], "orders": []}
+
+    monkeypatch.setattr(accounts_clients, "account_bybit_open_orders", _reader)
+
+
+def test_bybit_accounts_are_read_in_parallel(client, monkeypatch):
+    """Measured 2026-11-15: ~6 s per account, the all-accounts call 21-31 s (502 at the proxy). Sequential is gone."""
+    import time as _t
+    seen = {}
+    _patch_slow(monkeypatch, _BYBITS, {a["account_id"]: 0.6 for a in _BYBITS}, seen_threads=seen)
+    t0 = _t.monotonic()
+    resp = client.get("/api/diag/bybit_open_orders", headers=_bearer())
+    took = _t.monotonic() - t0
+    assert resp.status_code == 200
+    rows = resp.json()["accounts"]
+    assert [r["read_state"] for r in rows] == ["orders_read"] * 4
+    assert all(isinstance(r["elapsed_s"], float) for r in rows)
+    assert took < 1.8, f"4 x 0.6 s reads took {took:.2f}s: still sequential"
+    assert all(n.startswith("account-read-par") for n in seen.values())
+
+
+def test_a_slow_bybit_account_times_out_alone_as_could_not_look(client, monkeypatch):
+    import time as _t
+    _patch_slow(monkeypatch, _BYBITS[:3], {"bybit_0": 3.0})
+    t0 = _t.monotonic()
+    resp = client.get("/api/diag/bybit_open_orders?deadline_s=1", headers=_bearer())
+    took = _t.monotonic() - t0
+    assert resp.status_code == 200
+    by_id = _by_id(resp.json())
+    slow = by_id["bybit_0"]
+    assert slow["read_state"] == "timed_out" and slow["result"] is None
+    assert slow["order_count"] is None and slow["position_count"] is None      # could-not-look, never "nothing resting"
+    assert "timed_out" in slow["error"]
+    assert by_id["bybit_1"]["read_state"] == by_id["bybit_2"]["read_state"] == "orders_read"
+    assert by_id["bybit_1"]["order_count"] == 0
+    assert took < 2.5
+
+
+def test_open_orders_deadline_is_clamped_and_echoed_and_account_filter_holds(client, monkeypatch):
+    _patch_slow(monkeypatch, _BYBITS[:2] + [{"account_id": "ib_paper", "exchange": "interactive_brokers"}], {})
+    body = client.get("/api/diag/bybit_open_orders?deadline_s=999", headers=_bearer()).json()
+    assert body["deadline_s"] == 25.0
+    by_id = _by_id(body)
+    assert by_id["ib_paper"]["read_state"] == "not_bybit" and by_id["ib_paper"]["elapsed_s"] is None
+    body = client.get("/api/diag/bybit_open_orders?deadline_s=0&account_id=bybit_1", headers=_bearer()).json()
+    assert body["deadline_s"] == 1.0 and [r["account_id"] for r in body["accounts"]] == ["bybit_1"]
