@@ -1,0 +1,6 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "trader restart (src/core/coordinator.py, src/runtime/execution_diagnostics.py in the trader import closure); the manager batches it into one sync window",
+  "why": "Alerting only: an all-accounts-failed roll-up whose every result is slice_budget_exhausted (the risk layer declining on purpose) no longer fires, and in a mixed round that refusal is labelled a policy hold. No order-path, sizing, risk or config change; the rejection is still journalled. Operator asked in chat 2026-11-15."
+}

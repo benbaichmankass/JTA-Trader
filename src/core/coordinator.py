@@ -3520,6 +3520,12 @@ class Coordinator:
                 # refused on purpose, with its own journal row — a declared
                 # policy refusal, not a dispatch failure (2026-09-28).
                 or err == "broker_shorting_disabled"
+                # The account's per-slice risk budget is used up, so the risk
+                # layer declined the order on purpose (positions.slice_qty).
+                # A declared risk refusal, not a dispatch failure (operator
+                # 2026-11-15: "I don't need to keep getting these alerts for
+                # this reason"). The rejection is still journalled.
+                or "slice_budget_exhausted" in err
             )
 
         # MIRROR-QTY-DIVERGE: the direction the mirror gate cannot prevent —

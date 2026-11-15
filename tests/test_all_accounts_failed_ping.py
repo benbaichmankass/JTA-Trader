@@ -81,6 +81,21 @@ class TestEnqueueAllAccountsFailed:
         assert "bybit_2: RuntimeError: Bybit ErrCode 170131" in body
         assert "bybit_3: zero_balance" in body
 
+    def test_slice_budget_exhausted_is_labelled_a_hold_in_a_mixed_round(self, pings_dir):
+        """Operator 2026-11-15: a slice-budget refusal is a declared risk hold,
+        so a mixed round lists it under 'Policy holds', not as a failure."""
+        enqueue_all_accounts_failed_dispatch(
+            strategy="sol_pullback_2h", symbol="SOLUSDT", side="sell",
+            results=[
+                {"name": "bybit_1", "trade_id": None, "error": "slice_budget_exhausted"},
+                {"name": "bybit_2", "trade_id": None, "error": "RuntimeError: exchange rejected"},
+            ],
+        )
+        body = _read_payloads(pings_dir)[0]["body"]
+        assert "1/2 accounts failed to dispatch" in body
+        assert "Policy holds (not failures): bybit_1" in body
+        assert "bybit_1: slice_budget_exhausted" not in body
+
     def test_empty_results_is_noop(self, pings_dir):
         path = enqueue_all_accounts_failed_dispatch(
             strategy="vwap", symbol="BTCUSDT", side="buy",
@@ -266,6 +281,7 @@ class TestBenignNoopSuppression:
                 or err == "intent_sub_min_qty_delta"
                 or err.startswith("reentry_suppressed_netting_guard:")
                 or is_expected_dispatch_skip(err)
+                or "slice_budget_exhausted" in err
             )
 
         any_trade_placed = any(r.get("trade_id") is not None for r in results)
@@ -310,6 +326,22 @@ class TestBenignNoopSuppression:
                  "error": f"reentry_suppressed_netting_guard:{action}"},
             ]
             assert self._should_fire(results) is False
+
+    def test_slice_budget_exhausted_round_does_not_fire(self):
+        """Operator 2026-11-15: sol_pullback_2h on bybit_1 refused with
+        slice_budget_exhausted fired the roll-up. The risk layer declined on
+        purpose; it must not trip the alarm."""
+        results = [
+            {"name": "bybit_1", "trade_id": None, "error": "slice_budget_exhausted"},
+        ]
+        assert self._should_fire(results) is False
+
+    def test_slice_budget_exhausted_with_real_failure_still_fires(self):
+        results = [
+            {"name": "bybit_1", "trade_id": None, "error": "slice_budget_exhausted"},
+            {"name": "bybit_2", "trade_id": None, "error": "RuntimeError: exchange rejected"},
+        ]
+        assert self._should_fire(results) is True
 
     def test_genuine_failure_still_fires(self):
         """A real error must still trip the alarm — the noop carve-out
