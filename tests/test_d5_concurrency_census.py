@@ -24,3 +24,11 @@ def test_pointer_v0_self_test_covers_bar0():
     spec.loader.exec_module(m)
     m._self_test()
     assert m.PV0_CHECKINS[0] == 0 and m.PV0_RANDOM_DRAWS >= 100
+
+
+def test_aggregator_arms_self_test():
+    p = Path(__file__).resolve().parents[1] / "scripts" / "research" / "d5_aggregator_arms.py"
+    spec = importlib.util.spec_from_file_location("d5_aggregator_arms", p)
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    m._self_test()
