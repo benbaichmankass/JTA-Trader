@@ -1,0 +1,523 @@
+{
+ "schema": "ml_entry_tp_revision/1",
+ "unit": "RQ-20261101-383f-02",
+ "verdict": "fail",
+ "why": "held-out mean delta net R per trade -0.0029 misses the deflated point bar (t_min 0.0, se 0.005256438230914969) at n=11240, 53 symbols, 7686 moved",
+ "git_sha": "81e0fc808cacfc063c939269b5dc917d1f909de2",
+ "variants_read_on_window": 30,
+ "n_tries": 1,
+ "holdout_bar": {
+  "n_tries": 1,
+  "alpha_one_sided": 0.025,
+  "ci_level": 0.95,
+  "ci_z": 1.96,
+  "ci_lo_percentile": 2.5,
+  "point_t_min": 0.0,
+  "method": "Sidak-corrected CI (alpha_N = 1-(1-0.025)^(1/N), one-sided) for CI bars; Bailey-Lopez de Prado expected max of N null t-stats for point bars"
+ },
+ "config": {
+  "GRID": [
+   1.0,
+   1.5,
+   2.0,
+   2.5,
+   3.0,
+   4.0,
+   5.0,
+   6.0
+  ],
+  "BASE_TP": 3.0,
+  "CHECKINS": [
+   4,
+   8,
+   12,
+   16,
+   20
+  ],
+  "MIN_GAP_ATR": 0.25,
+  "VENUE_CAP_PCT": 0.099,
+  "MARGINS": [
+   0.0,
+   0.02,
+   0.05,
+   0.1
+  ],
+  "TRAIN_FRAC": 0.1,
+  "TRAIN_MAX_ROWS": 1500000,
+  "FWD_START": "2025-10-01",
+  "FWD_END": "2026-09-30",
+  "TP_FOLDS": [
+   "2022-01-01",
+   "2023-01-01",
+   "2024-01-01",
+   "2025-01-01",
+   "2025-10-01"
+  ],
+  "N_FLOOR": 300,
+  "SYMBOL_FLOOR": 10,
+  "MOVED_FLOOR": 30,
+  "RANDOM_DRAWS": 200,
+  "SEED": 20261101,
+  "TP_LGB": {
+   "objective": "multiclass",
+   "num_class": 18,
+   "n_estimators": 200,
+   "learning_rate": 0.05,
+   "num_leaves": 31,
+   "min_child_samples": 500,
+   "subsample": 0.8,
+   "subsample_freq": 1,
+   "colsample_bytree": 0.8,
+   "reg_lambda": 5.0,
+   "random_state": 20261101,
+   "verbose": -1,
+   "n_jobs": 4
+  },
+  "TP_FEATURES": [
+   "ret_1",
+   "ret_4",
+   "ret_12",
+   "ret_24",
+   "ret_72",
+   "ret_168",
+   "vol24",
+   "vol_ratio",
+   "atr_pct",
+   "range_pos_24",
+   "range_pos_168",
+   "vol_z",
+   "rsi14",
+   "hour",
+   "dow",
+   "xs_rank_ret24",
+   "btc_ret24",
+   "btc_vol24",
+   "breadth_up24",
+   "rel_vol",
+   "side",
+   "bars_held",
+   "open_r",
+   "mfe_r",
+   "mae_r",
+   "dist_sl_atr",
+   "atr_ratio",
+   "sret_4",
+   "sret_24"
+  ]
+ },
+ "dev": {
+  "tab_rows": 775946,
+  "dev_trades": 71334,
+  "dev_trades_scored": 71334,
+  "tp_folds": [
+   {
+    "test_start": "2022-01-01",
+    "n_train": 121573,
+    "n_checkins": 81522
+   },
+   {
+    "test_start": "2023-01-01",
+    "n_train": 208519,
+    "n_checkins": 70979
+   },
+   {
+    "test_start": "2024-01-01",
+    "n_train": 297374,
+    "n_checkins": 56893
+   },
+   {
+    "test_start": "2025-01-01",
+    "n_train": 383882,
+    "n_checkins": 39048
+   }
+  ],
+  "dev_by_margin": {
+   "0.0": {
+    "n": 62400,
+    "mean_delta": NaN,
+    "n_moved": 46374
+   },
+   "0.02": {
+    "n": 62400,
+    "mean_delta": NaN,
+    "n_moved": 35924
+   },
+   "0.05": {
+    "n": 62400,
+    "mean_delta": NaN,
+    "n_moved": 25399
+   },
+   "0.1": {
+    "n": 62400,
+    "mean_delta": NaN,
+    "n_moved": 15378
+   }
+  },
+  "margin_star": 0.0,
+  "dev_static_by_level": {
+   "1.0": {
+    "n": 71334,
+    "mean_net_r": -0.02154757640597321
+   },
+   "1.5": {
+    "n": 71334,
+    "mean_net_r": -0.012909417933221444
+   },
+   "2.0": {
+    "n": 71334,
+    "mean_net_r": -0.0038853629024383825
+   },
+   "2.5": {
+    "n": 71334,
+    "mean_net_r": 0.0009633932900552243
+   },
+   "3.0": {
+    "n": 71334,
+    "mean_net_r": 0.0029827647948279423
+   },
+   "4.0": {
+    "n": 71334,
+    "mean_net_r": NaN
+   },
+   "5.0": {
+    "n": 71334,
+    "mean_net_r": NaN
+   },
+   "6.0": {
+    "n": 71334,
+    "mean_net_r": NaN
+   }
+  },
+  "best_static_level": 3.0,
+  "tau": 0.1,
+  "data_fingerprint": "379101b765c24519"
+ },
+ "heldout": {
+  "n": 11240,
+  "n_symbols": 53,
+  "baseline_mean_net_r": 0.00796823669831093,
+  "policy_mean_net_r": 0.005060818465947588,
+  "mean_delta_per_trade": -0.0029074182323633427,
+  "bootstrap_ci95_delta_by_trade_reported": [
+   -0.01310492047615756,
+   0.007500317389029116
+  ],
+  "n_trades_moved": 7686,
+  "mean_delta_per_moved_trade": -0.004251806002050996,
+  "n_moves": 8587,
+  "n_pull_in": 0,
+  "n_extend": 8587,
+  "delta_by_first_move": {
+   "out": {
+    "n": 7686,
+    "mean_delta": -0.004251806002050996
+   }
+  },
+  "exit_reasons_policy": {
+   "0": 4302,
+   "1": 5188,
+   "2": 1750
+  },
+  "exit_reasons_baseline": {
+   "0": 2788,
+   "1": 4998,
+   "2": 3454
+  },
+  "by_side": {
+   "long": {
+    "n": 3500,
+    "mean_delta": 0.05616632290275485
+   },
+   "short": {
+    "n": 7740,
+    "mean_delta": -0.02962035027020748
+   }
+  },
+  "ledger_ethsol": {
+   "rows": 381,
+   "read_state": "emitted",
+   "window": "forward served-trade window (policy arm)"
+  },
+  "matched_random": {
+   "draws": 200,
+   "move_rate_per_eligible_checkin": 0.5756519407387545,
+   "p_pull_in": 0.0,
+   "mean_delta_of_draws": 0.0030609969985117445,
+   "p5": -0.0022769227261046254,
+   "p95": 0.008482297644822286,
+   "policy_percentile": 0.04
+  },
+  "best_static_dev_chosen": {
+   "level_atr": 3.0,
+   "mean_net_r": 0.00796823669831093,
+   "mean_delta_vs_base": 0.0
+  },
+  "calibration_reported": {
+   "n_checkins": 39722,
+   "level_atr": 3.0,
+   "classes": {
+    "target_first": {
+     "brier": 0.12781,
+     "base_rate": 0.3631,
+     "brier_climatology": 0.23126,
+     "reliability": [
+      {
+       "bin": 0,
+       "n": 7897,
+       "mean_pred": 0.0524,
+       "realized": 0.041
+      },
+      {
+       "bin": 1,
+       "n": 7149,
+       "mean_pred": 0.1484,
+       "realized": 0.1206
+      },
+      {
+       "bin": 2,
+       "n": 5696,
+       "mean_pred": 0.2473,
+       "realized": 0.2135
+      },
+      {
+       "bin": 3,
+       "n": 4084,
+       "mean_pred": 0.3478,
+       "realized": 0.3107
+      },
+      {
+       "bin": 4,
+       "n": 3034,
+       "mean_pred": 0.4476,
+       "realized": 0.4103
+      },
+      {
+       "bin": 5,
+       "n": 2187,
+       "mean_pred": 0.5478,
+       "realized": 0.5121
+      },
+      {
+       "bin": 6,
+       "n": 1721,
+       "mean_pred": 0.648,
+       "realized": 0.6322
+      },
+      {
+       "bin": 7,
+       "n": 1422,
+       "mean_pred": 0.7468,
+       "realized": 0.7124
+      },
+      {
+       "bin": 8,
+       "n": 1002,
+       "mean_pred": 0.8471,
+       "realized": 0.8164
+      },
+      {
+       "bin": 9,
+       "n": 5530,
+       "mean_pred": 0.9888,
+       "realized": 0.989
+      }
+     ]
+    },
+    "stop_first": {
+     "brier": 0.1384,
+     "base_rate": 0.242,
+     "brier_climatology": 0.18343,
+     "reliability": [
+      {
+       "bin": 0,
+       "n": 14314,
+       "mean_pred": 0.0292,
+       "realized": 0.0362
+      },
+      {
+       "bin": 1,
+       "n": 6193,
+       "mean_pred": 0.1479,
+       "realized": 0.1687
+      },
+      {
+       "bin": 2,
+       "n": 5488,
+       "mean_pred": 0.2487,
+       "realized": 0.2416
+      },
+      {
+       "bin": 3,
+       "n": 4411,
+       "mean_pred": 0.3473,
+       "realized": 0.3466
+      },
+      {
+       "bin": 4,
+       "n": 3303,
+       "mean_pred": 0.4481,
+       "realized": 0.4366
+      },
+      {
+       "bin": 5,
+       "n": 2516,
+       "mean_pred": 0.5473,
+       "realized": 0.5223
+      },
+      {
+       "bin": 6,
+       "n": 1635,
+       "mean_pred": 0.6464,
+       "realized": 0.6128
+      },
+      {
+       "bin": 7,
+       "n": 1058,
+       "mean_pred": 0.7498,
+       "realized": 0.7316
+      },
+      {
+       "bin": 8,
+       "n": 656,
+       "mean_pred": 0.8411,
+       "realized": 0.8049
+      },
+      {
+       "bin": 9,
+       "n": 148,
+       "mean_pred": 0.9193,
+       "realized": 0.9054
+      }
+     ]
+    },
+    "timeout": {
+     "brier": 0.17239,
+     "base_rate": 0.3949,
+     "brier_climatology": 0.23895,
+     "reliability": [
+      {
+       "bin": 0,
+       "n": 6902,
+       "mean_pred": 0.021,
+       "realized": 0.0217
+      },
+      {
+       "bin": 1,
+       "n": 4635,
+       "mean_pred": 0.1536,
+       "realized": 0.1802
+      },
+      {
+       "bin": 2,
+       "n": 6086,
+       "mean_pred": 0.2506,
+       "realized": 0.2846
+      },
+      {
+       "bin": 3,
+       "n": 5557,
+       "mean_pred": 0.3486,
+       "realized": 0.3941
+      },
+      {
+       "bin": 4,
+       "n": 4444,
+       "mean_pred": 0.4485,
+       "realized": 0.5009
+      },
+      {
+       "bin": 5,
+       "n": 3480,
+       "mean_pred": 0.5485,
+       "realized": 0.5799
+      },
+      {
+       "bin": 6,
+       "n": 3046,
+       "mean_pred": 0.649,
+       "realized": 0.6425
+      },
+      {
+       "bin": 7,
+       "n": 2509,
+       "mean_pred": 0.7493,
+       "realized": 0.7577
+      },
+      {
+       "bin": 8,
+       "n": 2236,
+       "mean_pred": 0.8479,
+       "realized": 0.8421
+      },
+      {
+       "bin": 9,
+       "n": 827,
+       "mean_pred": 0.9294,
+       "realized": 0.9601
+      }
+     ]
+    }
+   }
+  },
+  "ties": {
+   "no_tie": 0,
+   "1m": 862,
+   "still_ambiguous": 179,
+   "no_1m_data": 0,
+   "resolver": "scripts/research/forecast_first_passage.py::resolve_same_bar"
+  },
+  "window": [
+   "2025-10-01 03:00:00+00:00",
+   "2026-09-29 23:00:00+00:00"
+  ],
+  "forward_fetch": {
+   "symbols_with_october": 60,
+   "symbols_without": []
+  },
+  "final_fit": {
+   "n_train": 446871,
+   "class_counts": [
+    44310,
+    29824,
+    33110,
+    33004,
+    30617,
+    49912,
+    34221,
+    22958,
+    47884,
+    81290,
+    13406,
+    9133,
+    5965,
+    4065,
+    4132,
+    1684,
+    697,
+    659
+   ],
+   "class_mean_net_r": [
+    -0.2671,
+    0.0373,
+    0.231,
+    0.4219,
+    0.6258,
+    0.9412,
+    1.3573,
+    1.7953,
+    NaN,
+    -1.0621,
+    -1.0677,
+    -1.0706,
+    -1.0725,
+    -1.0759,
+    -1.0774,
+    -1.0867,
+    -1.086,
+    -1.0969
+   ]
+  },
+  "elapsed_s": 444
+ },
+ "elapsed_s": 1491
+}
