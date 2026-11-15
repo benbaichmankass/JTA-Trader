@@ -1636,16 +1636,20 @@ strategies:
     tp_revision:
       rule: donchian_measured_move
       width_mult: 0.5
-    tp_r: 50.0
+    # tp_r 50.0 sentinel -> 4.0 (Tier-3, lane ETH4H-TP4-PROP, row RM-AM-ETH4H-ENTRYTP; TP doctrine clause 1).
+    #   Entry TP only: the declared tp_revision (measured move) above is KEPT and still moves the TP after entry;
+    #   open positions carry their own package meta and are unaffected. Applies to every account rostering the leg.
+    #   Evidence: RQ-20261114-db1a-08 PASS (rule RULE-ETH4H-TP4-NONINF-20261114, closed bar, record + prior year).
+    #   Prop superset RQ-20261114-db1a-09 (seeds 1-5; breakout_2/tradeify_1/velotrade_1) and -13 (seeds 6-10;
+    #   tradeify_1/velotrade_1): EV higher in every cell, but the p_breach non-inferiority clause FAILED narrowly
+    #   (db1a-09 breakout_2 0.5166 vs 0.5016; db1a-13 one firm 0.255 vs 0.251). ACCEPTED by the operator.
+    #   decision: 2026-11-15 operator-chat "We can go with the higher reward, higher risk option on that."
+    #   ROLLBACK: restore `tp_r: 50.0` + the prior `tp_intent: {mode: none, reason: trail_is_the_profit_exit, ...}` (git history).
+    tp_r: 4.0
     tp_intent:
-      mode: none
-      # DELIBERATE: the trail is the sole profit-exit. Stated in the unit docstring
-      # (trend_donchian.py:25 / htf_pullback_trend_2h.py "NOT a tight target"), never
-      # in config — which is why 50.0 read as an omission rather than as a decision.
-      # The 50R value is retained ONLY so the venue rests an exchange-valid order at
-      # 9.9%; it is NOT a prediction and must never be read as one.
-      reason: trail_is_the_profit_exit
-      evidence: no_gate_passing_timeout_free_tp_cell   # e35 corpus, leg's latest sweep
+      mode: r_multiple
+      basis: RQ-20261114-db1a-08_noninferior_4R_closed_bar
+      calibrated: false          # non-inferiority vs the sentinel, not a calibrated reach curve; revisit with a tp_prediction_derive pool
     min_confidence: 0.60
     # shadow_model_ids OMITTED (soak-everything, symbol-aware auto-wire): ETHUSDT
     # signals auto-wire the symbol-agnostic decision/meta models; the symbol

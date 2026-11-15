@@ -312,7 +312,7 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     "bybit_portfolio/trend_donchian_xrp_4h": R,
     "bybit_2/trend_donchian_sol_prop": ER,
     "bybit_portfolio/trend_donchian_sol_prop": ER,
-    "bybit_1/trend_donchian_eth_4h": E,  # 2026-10-18 tp_revision declared (TIER3-PACKETS-1018); entry_tp still the 50 R sentinel
+    # 2026-11-15 ETH4H-TP4-PROP: bybit_1/tradeify_1/velotrade_1 trend_donchian_eth_4h left the baseline (tp_r 4.0 declared, reach 0.216; fully compliant).
     "bybit_1/trend_donchian_1h": ER,
     "bybit_1/trend_donchian_eth_prop": ER,
     # 2026-10-22 OPERATOR-DECISIONS-1022: the incumbent leaves bybit_1 for its soak alias (same tp_r 3,
@@ -387,9 +387,7 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # extend your baseline exception to sol_4h's approximate evidence."). The ETH/SOL 4h trend legs exit by
     # trail; on breakout_2/tradeify_1 the prop ticket path has no TP-revision plumbing (path=absent), on
     # velotrade_1 it is plumbed. Same exit recipe as bybit_2/eth_4h (E) and bybit_1/sol_4h (ER). Record: ML-PROP-ITERATE.
-    "tradeify_1/trend_donchian_eth_4h": E,    # ER -> E 2026-11-12: TP revision plumbed (CAP-TRADEIFY-TP-AMEND)
     "tradeify_1/trend_donchian_sol_4h": ER,
-    "velotrade_1/trend_donchian_eth_4h": E,
     "velotrade_1/trend_donchian_sol_4h": ER,
 }
 
