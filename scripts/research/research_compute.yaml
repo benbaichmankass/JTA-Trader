@@ -214,6 +214,11 @@ value:
   # dispatch plan, so [P1, P2] does not delay them and the order is left as is. If P1 programme-tagged units come due and push the ENTRY
   # tests down, change this list to [P2, P1]. Revisit at Thursday planning, 2026-11-05.
   programme_priority: [P1, P2]
+  # 2026-11-15 (lane ML-PRIMARY, row RESEARCH-QUEUE-ML-STARVATION; operator 2026-11-14 ~22:10Z, verbatim "ML research is the TOP
+  # priority"): an UNTAGGED unit inherits the programme its value bucket maps to, so every ai_trader-bucket unit ranks as P2 (above
+  # every non-programme unit and template refill; P1 keeps its place; a starved unit still goes first). Ordering only: nothing is
+  # refused. MEASURED before: RQ-20261112-8d20-02 (ai_trader) waited ~65 h behind 44 refills with the runner at 4/4.
+  bucket_programme: {ai_trader: P2}
   default_confidence: 0.3
   priority_usd: {1: 300, 2: 100, 3: 30}     # stand-ins when a unit carries no value block; derived from priority only
   hand_written_boost: 1.25

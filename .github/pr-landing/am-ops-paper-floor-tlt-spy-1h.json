@@ -1,0 +1,8 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Roster change on alpaca_paper (paper money only; no real-money book touched). Manager Session 2026-11-13a merges at the reviewed head on a green full pytest-run.",
+  "recorded_decision": {"kind": "operator_decision", "ref": "PI-20261112-B38CQPVI-0001 ALPACA-SLICES-REHOME-1H operator 2026-11-11 \"Put qqq and tlt on the paper floor now\"", "evidence": "docs/claude/work/checklist/ALPACA-SLICES-REHOME-1H.json"},
+  "why": "B38CQPVI-0001 (rosterless testing legs, assigned by Manager Session 2026-11-13a). tlt_pullback_1h and spy_pullback_1h are TESTING (enabled, on no book); OPERATING-PLAN 2 'Stage 1 is the DEMO FLOOR' puts every testing leg on its floor and only a retirement record removes one (neither has enabled:false). tlt_pullback_1h also carries the operator's 2026-11-11 verbatim 'Put qqq and tlt on the paper floor now'. Both share a symbol with a 1d leg + ml_entry_eq on this non-slice account, so the TLT / SPY allocation records are refreshed by the same allocator method (c_bt = 0.5 + expectancy_r_oos via allocator_ev.backtest_input). UNHOMED in check_strategy_status.py empties; its self-test keeps its own fixture. Gates this adds or changes: none. ROLLBACK: git revert."
+}

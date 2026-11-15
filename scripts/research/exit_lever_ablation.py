@@ -238,8 +238,14 @@ def _replace_opt(argv: list[str], flag: str, value: str) -> list[str]:
     return out
 
 
+#: bar sizes the --timeframe lever accepts, in minutes (a coarser bar is resampled from the native fetch).
+_TF_MIN = {"5m": 5, "15m": 15, "30m": 30, "1h": 60, "2h": 120, "4h": 240, "1d": 1440}
+
+
 def build_arm_argv(leg: str, cfg: dict[str, Any], csv: str, resample: str, emit: str, jout: str,
-                   extra: list[str], start: str | None, end: str | None) -> tuple[list[str], list[str]]:
+                   extra: list[str], start: str | None, end: str | None,
+                   forming_1m: str | None = None,
+                   forming_session: str | None = None) -> tuple[list[str], list[str]]:
     """The committed-record argv for ``cfg`` (via build_harness_cmd), plus the
     arm's raw flags and the pinned window. Returns (argv, omitted_levers)."""
     import regime_debt_matrix as rdm
@@ -247,10 +253,13 @@ def build_arm_argv(leg: str, cfg: dict[str, Any], csv: str, resample: str, emit:
     # ict_scalp joined 2026-10-13 (QUEUE-FILL-1013): its argv builder is the same
     # rdm.build_harness_cmd branch the evidence builder runs, and the arm tokens it
     # needs (--cooldown-bars, --timeout-bars, --min-confidence) are plain raw flags.
-    if harness not in ("trend", "pullback", "ict_scalp"):
-        raise ValueError(f"{leg}: harness {harness!r} -- this ablation covers the trend, pullback and "
-                         "ict_scalp harnesses")
-    argv, _faithful, omitted = rdm.build_harness_cmd(leg, cfg, harness, csv, resample, emit, jout)
+    if harness not in ("trend", "pullback", "ict_scalp", "turtle_soup"):
+        raise ValueError(f"{leg}: harness {harness!r} -- this ablation covers the trend, pullback, "
+                         "ict_scalp and turtle_soup harnesses")
+    # forming_1m (EQ-FORMING-BAR-REPLAY): replay the leg's live FORMING-bar decision from 1m
+    # data, through the same build_harness_cmd path the evidence builder uses.
+    fkw = {"forming_1m": forming_1m, "forming_session": forming_session} if forming_1m else {}
+    argv, _faithful, omitted = rdm.build_harness_cmd(leg, cfg, harness, csv, resample, emit, jout, **fkw)
     argv = list(argv)
     i = 0
     while i < len(extra):
@@ -792,6 +801,22 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--start", default=None, help="harness --start (ISO), pinned to the record's data_start")
     ap.add_argument("--end", default=None, help="harness --end (ISO datetime), pinned to the record's data_end")
     ap.add_argument("--data-csv", default=None, help="skip the fetch and use this candle CSV (tests)")
+    ap.add_argument("--minutes-1m-csv", default=None,
+                    help="replay the leg's live FORMING-bar decision from this 1m CSV (trend harness; "
+                         "row EQ-FORMING-BAR-REPLAY). Pair it with --data-csv from the same source")
+    ap.add_argument("--timeframe", default=None,
+                    help="run the leg at THIS bar size instead of its config timeframe (the timeframe lever family)")
+    ap.add_argument("--forming-1m-fetch", action="store_true",
+                    help="fetch Binance-vision 1m over [--start, --end] into a temp dir and replay the FORMING bar "
+                         "(fills --minutes-1m-csv; crypto feeds only)")
+    ap.add_argument("--forming-equity-fetch", action="store_true",
+                    help="a US ETF 1d or 1h leg: fetch Alpaca iex 1Day (1d) or clock-aligned 1Hour (1h) AND 1Min over "
+                         "[--start, --end] through equity_1m_source.build (the forming_evidence_regen path) and replay the "
+                         "FORMING bar with --decision-session us_equity (1d) or us_equity_intraday (1h) (fills --data-csv "
+                         "and --minutes-1m-csv; needs Alpaca read keys)")
+    ap.add_argument("--decision-session", choices=("us_equity", "us_equity_intraday"), default=None,
+                    help="with --minutes-1m-csv: us_equity = a US-session daily leg (ET-date alignment, cash-session "
+                         "ticks); us_equity_intraday = a 1h US leg (ticks masked to the cash session)")
     ap.add_argument("--non-crypto-source", choices=("auto", "dukascopy"), default="auto",
                     help="non-crypto candle lane: auto = the evidence builder's yfinance fetch; dukascopy = the lane "
                          "research-script-run.yml installs (history from ~2018 for US ETF CFDs)")
@@ -903,11 +928,83 @@ def main(argv: list[str] | None = None) -> int:
 
     if a.symbol:
         base = {**base, "symbols": [a.symbol]}
+    native_tf = base.get("timeframe")
+    if a.timeframe:
+        # DEMO-FLOOR-ITER (2026-11-13): the TIMEFRAME lever family. The leg's own config at a COARSER bar size: the
+        # candles are fetched at the leg's native bar and the harness resamples them up (the resample and every arm's
+        # cfg follow --timeframe). Fetching at the target bar instead starves the fill engines, which simulate on the
+        # fine base series: turtle_soup at 4h read 0 trades from a 4h CSV and 4 from the same window's 15m CSV
+        # (2026-07-01..11-01, measured 2026-11-13). A finer bar than native cannot be built from the native fetch.
+        if _TF_MIN.get(str(a.timeframe)) is None or _TF_MIN.get(str(native_tf)) is None:
+            print(f"ERROR: --timeframe {a.timeframe!r} / native {native_tf!r}: not one of {sorted(_TF_MIN)}", file=sys.stderr)
+            return 2
+        if _TF_MIN[str(a.timeframe)] < _TF_MIN[str(native_tf)]:
+            print(f"ERROR: --timeframe {a.timeframe} is finer than the leg's native {native_tf}: it cannot be resampled "
+                  f"from the native fetch", file=sys.stderr)
+            return 2
+        base = {**base, "timeframe": a.timeframe}
     wd = Path(tempfile.mkdtemp(prefix="exit_lever_ablation_"))
+    if a.forming_1m_fetch and not a.minutes_1m_csv:
+        import regime_debt_matrix as rdm
+        sym, tf = (base.get("symbols") or [None])[0], base.get("timeframe")
+        if not sym or rdm.resolve_feed(sym, tf).get("source") != "binance":
+            print("ERROR: --forming-1m-fetch reads Binance-vision 1m; this leg's feed is not binance", file=sys.stderr)
+            return 2
+        if not (a.start and a.end):
+            print("ERROR: --forming-1m-fetch needs --start and --end (the 1m window is the pinned window)", file=sys.stderr)
+            return 2
+        import pandas as pd
+        s1 = (pd.Timestamp(a.start) - pd.Timedelta(days=2)).strftime("%Y-%m-%d")
+        e1 = (pd.Timestamp(a.end) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+        m1 = wd / f"{sym}__1m.csv"
+        r1 = subprocess.run([sys.executable, str(REPO / "scripts/ops/fetch_backtest_candles.py"), "--symbol", sym,
+                             "--interval", "1", "--start-date", s1, "--end-date", e1, "--output", str(m1),
+                             "--source", "binance_vision"], cwd=str(REPO), capture_output=True, text=True, check=False)
+        if r1.returncode != 0 or not m1.exists():
+            print(f"ERROR: 1m fetch for {sym} {s1}..{e1} exited {r1.returncode}: {(r1.stderr or '')[-400:]}", file=sys.stderr)
+            _write_failure(out, {"stage": "forming_1m_fetch", "error": f"exit {r1.returncode}"})
+            return 1
+        a.minutes_1m_csv = str(m1)
+    if a.forming_equity_fetch and not a.minutes_1m_csv:
+        # DEMO-FLOOR-ITER (2026-11-13, AM-ML 17:48Z): tlt_pullback_1d's faithful record is a forming-bar replay of
+        # Alpaca iex 1Day + 1Min (forming_evidence_regen us_equity_daily). An arm on that leg must read the SAME source,
+        # or the arm and the record measure different corpora.
+        import regime_debt_matrix as rdm
+        import pandas as pd
+        sym, tf = (base.get("symbols") or [None])[0], base.get("timeframe")
+        if not sym or str(tf) not in ("1d", "1h") or rdm.resolve_feed(sym, tf).get("source") != "yahoo":
+            print("ERROR: --forming-equity-fetch is for a US ETF 1d or 1h leg (yahoo feed in config)", file=sys.stderr)
+            return 2
+        # 1h (tlt/qqq_pullback_1h promotion check, 2026-11-14): the committed 1h records are forming_evidence_regen
+        # us_equity_intraday replays of Alpaca iex clock-aligned 1Hour + 1Min; an arm reads the SAME source and session.
+        bar_tf, tag, session = ("1Hour", "1h", "us_equity_intraday") if str(tf) == "1h" else ("1Day", "1d", "us_equity")
+        if not (a.start and a.end):
+            print("ERROR: --forming-equity-fetch needs --start and --end", file=sys.stderr)
+            return 2
+        import equity_1m_source as eqs
+        from alpaca_readonly import AlpacaReadOnly
+        s1 = (pd.Timestamp(a.start) - pd.Timedelta(days=2)).strftime("%Y-%m-%d")
+        e1 = (pd.Timestamp(a.end) + pd.Timedelta(days=2)).strftime("%Y-%m-%d")
+        d = wd / f"eq{tag}__{sym}"
+        try:
+            meta = eqs.build(AlpacaReadOnly.from_env(), sym, s1, e1, "iex", d, bar_tf=bar_tf)
+        except Exception as exc:  # noqa: BLE001  # allow-silent: not silent -- printed, written to failure.json, exit 1
+            print(f"ERROR: alpaca {bar_tf}/1Min for {sym}: {type(exc).__name__}: {exc}", file=sys.stderr)
+            _write_failure(out, {"stage": "forming_equity_fetch", "error": f"{type(exc).__name__}: {exc}"})
+            return 1
+        print(f"equity_1m_source.build {sym} {bar_tf} iex {s1}..{e1}: returned {meta.get('returned')} rows "
+              f"{meta.get('rows')} alignment chosen={(meta.get('alignment') or {}).get('chosen')}")
+        a.data_csv = str(d / f"{sym}_{tag}.csv")
+        a.minutes_1m_csv = str(d / f"{sym}_1m.csv")
+        a.decision_session = session
+    if a.decision_session and not a.minutes_1m_csv:
+        print("ERROR: --decision-session needs --minutes-1m-csv", file=sys.stderr)
+        return 2
     csv = a.data_csv or str(wd / f"{a.leg}__data.csv")
     feed: dict[str, Any] = {"resample": base.get("timeframe"), "source": "explicit --data-csv"}
     if not a.data_csv:
-        feed = fetch_candles(a.leg, base, a.days, csv, non_crypto_source=a.non_crypto_source)
+        feed = fetch_candles(a.leg, {**base, "timeframe": native_tf}, a.days, csv, non_crypto_source=a.non_crypto_source)
+        feed["resample"] = base.get("timeframe")
     split = a.grade == "stage0" and a.stage0_holdout_start is not None
     if (a.stage0_ci_z is not None or a.stage0_yearly_folds) and not split:
         print("ERROR: --stage0-ci-z / --stage0-yearly-folds need --grade stage0 with --stage0-holdout-start",
@@ -977,8 +1074,10 @@ def main(argv: list[str] | None = None) -> int:
     for label, sets, unsets, extra in specs:
         cfg = arm_cfg(base, sets, unsets)
         emit, jout = str(arms_dir / f"{label}__trades.jsonl"), str(arms_dir / f"{label}__bt.json")
-        argv_i, omitted = build_arm_argv(a.leg, cfg, csv, str(feed["resample"]), emit, jout, extra, a.start, a.end)
-        shown = [("<data>" if t == csv else t) for t in argv_i]
+        argv_i, omitted = build_arm_argv(a.leg, cfg, csv, str(feed["resample"]), emit, jout, extra, a.start, a.end,
+                                         forming_1m=a.minutes_1m_csv, forming_session=a.decision_session)
+        shown = [("<data>" if t == csv else "<minutes_1m>" if a.minutes_1m_csv and t == a.minutes_1m_csv else t)
+                 for t in argv_i]
         argvs[label] = {"argv": shown, "cfg_set": sets, "cfg_unset": unsets, "extra_flags": extra,
                         "omitted_levers_per_builder": omitted}
         print(f"[{label}] {' '.join(shown)}", flush=True)

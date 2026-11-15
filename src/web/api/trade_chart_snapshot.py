@@ -321,9 +321,19 @@ def applied_ids(notes: Dict[str, Any]) -> set:
     return ids
 
 
-def _advice_only() -> Tuple[str, ...]:
-    from src.runtime.live_review_rows import ADVICE_ONLY_ACTIONS
-    return ADVICE_ONLY_ACTIONS
+def _advice_only(row: Dict[str, Any]) -> Tuple[str, ...]:
+    """The advice-only set that applied WHEN the row was reviewed: today's (empty since 2026-11-14) or, for a row
+    reviewed before advice-only ended, the legacy set it was answered under."""
+    from datetime import datetime
+
+    from src.runtime import live_review_rows as rl
+    try:
+        at = datetime.fromisoformat(str(row.get("reviewed_at") or "").replace("Z", "+00:00"))
+        if at < datetime.fromisoformat(rl.ADVICE_ONLY_ENDED_AT):
+            return rl.ADVICE_ONLY_LEGACY_ACTIONS
+    except (TypeError, ValueError):
+        pass
+    return rl.ADVICE_ONLY_ACTIONS
 
 
 def review_disposition(row: Dict[str, Any], account_id: Any, applied: set) -> Tuple[str, Optional[str]]:
@@ -338,7 +348,7 @@ def review_disposition(row: Dict[str, Any], account_id: Any, applied: set) -> Tu
         return "refused", read
     if action in NO_ACTION:
         return "no_action", read
-    if action in _advice_only():
+    if action in _advice_only(row):
         return "advice_only", read
     if route == "operator_ask":
         return "operator_ask", read

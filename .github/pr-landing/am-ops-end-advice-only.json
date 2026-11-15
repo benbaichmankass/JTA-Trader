@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Ends advice-only for reviewed in-trade actions (operator directive 2026-11-14 ~09:25Z, relayed by Manager Session 2026-11-13a, verbatim \"Just turn on, like, no advice only. All those decisions should be implemented\"). src/runtime/live_review_rows.py ADVICE_ONLY_ACTIONS = () and config/mandates.yaml MD-TRADE-DESK functions.in_trade.advice_only: []. Every recommended row of any in-trade class now goes through the existing dispatch -> live_review_apply -> each account's RiskManager on every account MD-TRADE-DESK scopes (real money, mirrors, prop, paper), one ping per applied leg. src/ + config/ restart the trader: the manager batches and merges. Revert: git revert (restores the tuple and the mandate list).",
+  "why": "Operator directive: implement every reviewed live-trade decision, ping per apply."
+}

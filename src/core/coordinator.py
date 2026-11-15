@@ -22,7 +22,7 @@ import logging
 import os
 import uuid
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Mapping, Optional
 
 import yaml
 
@@ -2453,10 +2453,14 @@ class Coordinator:
             # latching daily-loss-cap ping that lived here was retired with the
             # DAILY_LOSS_CAP it reported on; the switch sends its own ONE trip
             # and ONE reset alert. Only a TOTAL-equity reading is fed (Bybit
-            # linear ``totalEquity``); otherwise the switch reads the balance
-            # snapshot (prop: the reported status row). Best-effort.
+            # linear ``totalEquity``, or this round's Alpaca/OANDA account
+            # equity, see ``_dd_switch_live_equity``); otherwise the switch
+            # reads the balance snapshot (prop: the reported status row).
+            # Best-effort.
             try:
-                account.risk_manager.note_live_equity(total_account_usd)
+                account.risk_manager.note_live_equity(_dd_switch_live_equity(
+                    account, total_account_usd, live_balances,
+                    effective_dry=effective_dry))
             except Exception as _dd_exc:  # noqa: BLE001
                 logger.debug(
                     "multi_account_execute: dd-switch equity feed failed for %s: %s",
@@ -4540,6 +4544,36 @@ def _explain_empty_sizing_map(
         f"none was excluded by a recorded rule, yet the dispatch loop produced "
         f"no sizing entry ({len(results)} result row(s)) — cause unattributed"
     )
+
+
+# Venues whose balance read (``get_account_balances`` -> ``total_usdt``) IS the
+# account's TOTAL equity: Alpaca ``/v2/account`` ``equity`` and OANDA NAV
+# (``alpaca_client.balance`` / ``oanda_client.balance``). IB is not listed: its
+# balance diagnostic has not been checked to be NetLiquidation, and the switch
+# must never fold a free-cash figure as equity.
+_DD_EQUITY_IS_BALANCE_EXCHANGES = frozenset({"alpaca", "oanda"})
+
+
+def _dd_switch_live_equity(account: Any, total_account_usd: Optional[float],
+                           live_balances: Mapping[str, Optional[float]], *,
+                           effective_dry: bool) -> Optional[float]:
+    """The live TOTAL equity this dispatch feeds the daily-DD switch, or None.
+
+    PI-20261009-BKKVRSVQ-0002: only Bybit linear ``totalEquity`` was fed, so
+    every armed non-Bybit account (alpaca_live and alpaca_portfolio, real money)
+    fell back to the HOURLY balance snapshot, accepted up to 2 h old: a 3 % loss
+    could be seen up to ~1 h late. Alpaca's balance read at the top of this
+    dispatch round is already the account's total equity, so it is fed the
+    same way. None (could not look) keeps the snapshot fallback; a cached or
+    test-injected balance is never fed, only this round's live read.
+    """
+    if total_account_usd is not None:
+        return total_account_usd
+    if effective_dry:
+        return None
+    if str(getattr(account, "exchange", "") or "").lower() not in _DD_EQUITY_IS_BALANCE_EXCHANGES:
+        return None
+    return live_balances.get(getattr(account, "name", None))
 
 
 def _explain_zero_sized_qty(

@@ -167,8 +167,10 @@ def generate(now: datetime | None = None) -> dict:
 
     def _due() -> tuple[Any, bool]:
         s = view["stats"]
+        # WR-SIZE-CAP (2026-11-13): 15 rows of 140 chars, matching the brief's own §0 top-15. The full
+        # ranked list is `python3 scripts/ops/attention_watch.py`; the counts below stay complete.
         top = [{"id": i["id"], "state": i.get("state"), "next_action": i.get("next_action"),
-                "what": _short(i.get("what"))} for i in view["ranked"][:25]]
+                "what": _short(i.get("what"), 140)} for i in view["ranked"][:15]]
         return {"due": s["due"], "unrouted": s["unrouted"],
                 "routing_alarm": s["unrouted_alarm"]["breached"], "top": top}, not top
 
@@ -221,9 +223,19 @@ def render(now: datetime, sections: dict) -> str:
     L += ["", "## Soaks"]
     s = sections.get("soaks", {})
     if s.get("state") == "ok":
+        # WR-SIZE-CAP (2026-11-13): the brief's own soak rule -- only states that owe something are
+        # listed in full; quiet states (no signal yet, no deadline) are counted. 43 of 53 soaks were
+        # awaiting_first_trade and their full rows were ~5 KB of a 79 KB report.
+        quiet = ("awaiting_first_trade", "in_progress", "pending")
         for r in s["data"]:
+            if str(r.get("state")) in quiet:
+                continue
             L.append(f"- **{r.get('state')}** `{r.get('id')}` {r.get('progress') or '—'} "
                      f"· {_short(r.get('reason'), 120)}")
+        for st in quiet:
+            n = sum(1 for r in s["data"] if str(r.get("state")) == st)
+            if n:
+                L.append(f"- _{n} {st.replace('_', ' ')} (quiet, no deadline; listed in the brief)_")
     elif s.get("state") == "empty":
         L.append("- soak_states() returned no soaks")
     elif s.get("state") == "absent":

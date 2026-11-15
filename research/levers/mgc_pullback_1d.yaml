@@ -111,6 +111,97 @@ levers:
       fold_stability: 0.125
       reading: every tested value is worse than the baseline
   exit:
+    trail_decay_stall_bars:
+      tests:
+      - value: '20'
+        baseline_value: 'off'
+        arm: D20
+        unit: RQ-20261113-e44a-02
+        window: 2018-06-01..2026-11-12
+        n: 70
+        net_r: 31.5938
+        baseline_n: 59
+        baseline_net_r: 33.0635
+        delta_net_r: -1.4697
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 7.6071
+        verdict: pass
+        joint_change: true
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: -0.0249
+      fold_stability: 0.5
+      reading: every tested value is worse than the baseline
+    trail_decay_tight_mult:
+      tests:
+      - value: '1.5'
+        baseline_value: 'off'
+        arm: D20
+        unit: RQ-20261113-e44a-02
+        window: 2018-06-01..2026-11-12
+        n: 70
+        net_r: 31.5938
+        baseline_n: 59
+        baseline_net_r: 33.0635
+        delta_net_r: -1.4697
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 7.6071
+        verdict: pass
+        joint_change: true
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: -0.0249
+      fold_stability: 0.5
+      reading: every tested value is worse than the baseline
+    timeout_bars:
+      tests:
+      - value: '20'
+        baseline_value: 'off'
+        arm: T20
+        unit: RQ-20261113-e44a-02
+        window: 2018-06-01..2026-11-12
+        n: 85
+        net_r: 30.7279
+        baseline_n: 59
+        baseline_net_r: 33.0635
+        delta_net_r: -2.3356
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 8.2914
+        verdict: pass
+        joint_change: false
+      - value: '30'
+        baseline_value: 'off'
+        arm: T30
+        unit: RQ-20261113-e44a-02
+        window: 2018-06-01..2026-11-12
+        n: 73
+        net_r: 29.5069
+        baseline_n: 59
+        baseline_net_r: 33.0635
+        delta_net_r: -3.5566
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 6.5771
+        verdict: pass
+        joint_change: false
+      - value: '40'
+        baseline_value: 'off'
+        arm: T40
+        unit: RQ-20261113-e44a-02
+        window: 2018-06-01..2026-11-12
+        n: 69
+        net_r: 30.9987
+        baseline_n: 59
+        baseline_net_r: 33.0635
+        delta_net_r: -2.0648
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 8.7077
+        verdict: pass
+        joint_change: false
+      shape: noisy
+      points: 3
+      best_delta_r_per_trade: -0.035
+      fold_stability: 0.333
+      reading: every tested value is worse than the baseline
     atr_stop_mult:
       tests:
       - value: '1.875'

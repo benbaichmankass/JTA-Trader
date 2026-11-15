@@ -22,21 +22,22 @@
   "updated_at": "2026-10-07T18:50:00Z",
   "updated_by": "session_01MM8o5js6TcDFeNAPBY4Ntv",
   "last_review": {
-    "report_id": "WR-20261112-0530Z",
-    "reviewed_at": "2026-11-12T05:58:00Z",
-    "by": "Manager Session 2026-11-11a (session_01AFoLuLyarNRcy3nziCep2U)",
+    "report_id": "WR-20261115-0530Z",
+    "reviewed_at": "2026-11-15T05:55:00Z",
+    "by": "Manager Session 2026-11-14a (session_01AFoLuHypACDvKhJgBWYZKV); recorded by AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
     "counts": {
-      "due": 729,
-      "unrouted": 318,
-      "ask_operator_open": 2,
+      "present": true,
+      "erroredSections": 0,
+      "digestLog": 24,
+      "ideas_inbox_new": 0,
       "alarms_breached": [
-        "inflight",
         "manager",
-        "desk_wake_post",
-        "desk_row_missing"
+        "inflight",
+        "report",
+        "live_review_due_stale"
       ]
     },
-    "notes": "report present, no errored sections. INCIDENT desk_wake_post: VM receipt last_posted DP-20261107T2201Z (4.5 d without a desk-wake marker; desk is bybit_1 paper) -> lane DESK-WAKE-SILENT-1112 (session_01AFoLuN5QsGXVfpU2V2CTwm). manager alarm: 11-11 review not recorded (this record clears it). inflight MANAGER-VM-DIRECT-OPS 7d: wave-1 lane ran 11-12 00:23-02:15Z, review_ready. ideas inbox: 0 new (9 bullets, all synced). 4b backlog drain DEFERRED: Actions queue ~199 queued (frozen backlog, operator morning decision m1) - a drain lane adds PR CI load and competes with research; dispatch once m1 is decided. ML standing lane part 4 dispatched (session_01AFoLuLgB6QYrzGYrQtJZki)."
+    "notes": "Daily review 05:52Z. Report present, 0 errored sections, digestLog 24; Ideas inbox 0 new (all 9 bullets already in IDEAS.md). The 'manager breached: checklist last written 47h ago' flag is cleared by this record. Gap: the 2026-11-14 review (WR-20261114-0530Z) was never recorded by the previous manager. Breaches handed to AM-OPS for disposition: inflight (6 stale rows -> queued/blocked), report size (WR-20261114 67 KB / today 66 KB > 64 KB -> trim filed on the generator owner), live_review_due_stale (6 demo/paper events -> record-only filed), 4 alpaca_paper Stage-1 soaks mechanical_fail -> owner row checked/filed. Backlog drain assigned to AM-OPS."
   },
   "cycle": "CY-20260921-OPERATING-RESET",
   "cycle_intent": "Make the promotion ladder mechanical and the research loop terminate in a decision. Edge is decided offline; a book only ever checks mechanics and cost.",

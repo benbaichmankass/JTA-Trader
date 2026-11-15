@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "live_review_dispatch: a row whose outcome_table_source NAMES a table that is not yet at the row's ref returns could_not_look (exit 3) instead of a final evidence_not_committed refusal, so rows_watch retries it at the newer tip for RETRY_WINDOW_S (1 h) and the same checks run once the table lands. Nothing is loosened: nothing is sent without the table, every other clause still refuses first (test), and a table row naming no table is still refused. Cause: LR-20261114T1600Z-pkg-d8838f396234477c was refused for good (rows_watch marks a refusal seen). live_review_dispatch.py is not in config/trader_import_closure.txt: the deploy does not restart the trader. Revert: git revert.",
+  "why": "A table pushed one commit after its row was refused for good; now it is retried until the table is there."
+}

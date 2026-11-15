@@ -47,6 +47,7 @@ OVERLAP_BARS = 32            # newest cached bars re-read on every incremental f
 TRUST_TAIL = 2               # the newest cached bars may have been partial when read: they are replaced, never compared
 INC_MAX_DAYS = 10            # a cache older than this is re-seeded instead of caught up
 RESEED_H = 20.0              # an idle refresher re-reads the whole window once the cache is older than this (bounds deep-history drift)
+RESEED_QUIET_S = 30 * 60     # ...but only when the next candidate decision close is further away than this (a per-symbol re-seed takes ~11 min)
 _lock = threading.Lock()
 _thread: Optional[threading.Thread] = None
 
@@ -271,14 +272,11 @@ class BarCache:
                     fallback.append(s)
                 else:
                     current[s] = self._cut(m, floor)
-        if seed:
-            got, _st = self.md.get_bars_multi(seed, "1h", _iso(floor))
-            calls += 1
-            for s in seed:
-                if s in got and len(got[s]):
-                    current[s] = self._cut(got[s], floor)
-                else:
-                    fallback.append(s)
+        # A SEED (no usable cache) is read per symbol, the pre-change path: a full ~235-day window through the multi-symbol endpoint is hundreds
+        # of pages (MEASURED 2026-11-12 21:47-21:54Z on the live trader: both chunks, 100 and 73 symbols, hit the 200-page cap and were dropped,
+        # ~7 min of wasted reads before the per-symbol fallback ran anyway). Seeds are rare (the cache persists across restarts) and run off the
+        # close (idle re-seed), so only the incremental read -- one page or a few -- goes through ``get_bars_multi``.
+        fallback.extend(seed)
         for i, s in enumerate(fallback):                             # the pre-change path, per symbol, paced
             raw = self.md.get_ohlcv(s, "1h", limit=LIMIT_BARS)
             calls += 1
@@ -320,6 +318,14 @@ def _is_rth_decision_close(c: pd.Timestamp) -> bool:
     et = pd.Timestamp(c).tz_convert("America/New_York")
     mins = et.hour * 60 + et.minute
     return et.dayofweek < 5 and 9 * 60 < mins <= 16 * 60 and F.is_decision_close(c)
+
+
+def secs_to_next_candidate_close(now: pd.Timestamp) -> float:
+    """Seconds until the next UTC hour with ``hour % 4 == 0`` (every possible decision close, RTH or not)."""
+    now = pd.Timestamp(now)
+    hour = now.floor("h")
+    nxt = hour - pd.Timedelta(hours=int(hour.hour) % 4) + pd.Timedelta(hours=4)
+    return float((nxt - now).total_seconds())
 
 
 def next_sleep_s(now: pd.Timestamp, ref_close: Optional[pd.Timestamp]) -> float:
@@ -368,7 +374,7 @@ def _loop() -> None:  # pragma: no cover -- thread body; refresh_once is the tes
                 if res["wrote"] and res["covered"] < F.MIN_COVERAGE * len(pool):
                     time.sleep(RETRY_S)                  # the missing symbols are fetched again on the next loop, same close
                     continue
-            elif state.startswith("current") and cache.needs_reseed(now):
+            elif state.startswith("current") and cache.needs_reseed(now) and secs_to_next_candidate_close(now) > RESEED_QUIET_S:
                 st = cache.update(pool, now, reseed=True)  # idle: re-read the whole window off the close, so drift in old bars is bounded
                 logger.info("ml_entry_eq_refresher bar cache re-seeded: %s", st)
         except Exception:  # noqa: BLE001 -- the refresher must never die; the snapshot just goes stale (named refusals)

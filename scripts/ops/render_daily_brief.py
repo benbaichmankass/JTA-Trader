@@ -115,6 +115,7 @@ TOP_DUE = 15            # §0 rows shown
 MOVED_PER_STATE = 5     # §3 rows shown per state
 STALE_AFTER_DAYS = 3    # §4: no row/git activity this long => STALE
 _LINE = 100             # one-line truncation for list rows
+OVERDUE_NAMED_CAP = 40  # §0c: non-operator overdue build rows named by id before a count
 _NOTE = 90             # truncation for a note excerpt in §2
 
 #: Terminal-ish checklist states that read as "moved" rather than "running".
@@ -390,7 +391,13 @@ def overdue_build_lines(items: list, today: date) -> list[str]:
         else:
             rest.append(f"`{r.get('id')}`")
     if rest:
-        L += ["", "Other overdue: " + ", ".join(rest)]
+        # WR-SIZE-CAP (2026-11-13): name the oldest OVERDUE_NAMED_CAP, count the rest. Listing all 388
+        # ids was ~12 KB and took the 05:30Z work report to 79 KB (> attention_watch's 64 KB bound).
+        # Every ⚠ operator row above is still listed in full; this is never a bare count.
+        shown = rest[:OVERDUE_NAMED_CAP]
+        tail = (f", … and {len(rest) - len(shown)} more (`python3 scripts/ops/work.py list --due --kind build`)"
+                if len(rest) > len(shown) else "")
+        L += ["", "Other overdue (oldest first): " + ", ".join(shown) + tail]
     return L + [""]
 
 
@@ -783,6 +790,12 @@ def _section2(b: dict) -> list[str]:
          "`ask_operator`. **No cap on rows** (a queue outrunning one person argues "
          "for a mandate, not a shorter list); only prose is clipped — full text "
          "`GET /api/bot/work/checklist`._", ""]
+    moved = sorted(str(r.get("id")) for st, rs in b["checklist"]["byState"].items() if st == "landed_unproven"
+                   for r in rs if checklist_store.observation_owed_tier3(r, today))
+    if moved:
+        L += [f"_{len(moved)} landed_unproven tier-3 row(s) past due_by are NOT listed here: their decision "
+              f"already merged and each owes a closing observation (they stay in §0 overdue): "
+              f"{_clip(', '.join(moved), 300)}._", ""]
     if not rows and not ask:
         return L + ["_None._", ""]
     for it in rows:

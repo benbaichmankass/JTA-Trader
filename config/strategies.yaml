@@ -1391,7 +1391,14 @@ strategies:
                             # here than on sol (-$465 at 2.5 vs -$135). Lowering
                             # tp_r is a real geometry change, Tier-3; the measured
                             # answer was DO NOT TIGHTEN.
-    min_confidence: 0.60
+    # min_confidence 0.60 -> 0.80 (Tier 3, DATA-BACKED, demo floor only; unit RQ-20261114-db1a-06, rule
+    # RULE-ETHPROP-MINCONF08-20261114 registered before the run): exit_lever_ablation --grade stage0, closed decision bar,
+    # full cost stack. Record year 2025-11-13..2026-11-12: 0.80 +10.97 R n 134 (4/4 folds, maxDD 8.58 R) vs 0.60 -9.61 R
+    # n 166 (maxDD 15.06 R). Year before: 0.80 +8.06 R n 140 (2/4 folds) vs 0.60 -4.52 R n 183. PASS. In-sample: 0.80
+    # was picked in RQ-20261101-78fc-14 (2020-07..2026-10) over a window overlapping both. Record:
+    # research/results/RQ-20261114-db1a-06/43596786598.jsonl.
+    # ROLLBACK: min_confidence: 0.60.
+    min_confidence: 0.80
     # stale_exit_bars: 12 / stale_exit_below_r: 0.0 REMOVED 2026-10-07 (Tier-3, data-backed standing
     #   authorization 2026-09-27; lane EXIT-LEVER-STRIP, findings PI-20261006-KX6ZKFNA-0001).
     #   Declared a close-type lever the prop paths cannot execute. Measured WITH vs WITHOUT over 730d
@@ -1580,6 +1587,7 @@ strategies:
     model: null
     signal_prefixes: [trend_donchian_eth_4h, donchian_eth_4h]
     enabled: true
+    decision_bar: closed     # Tier-3, OPERATOR 2026-11-13 Decisions inbox FORMING-VS-CLOSED-4H-PROP = "both_closed" (21:16Z; work item FORMING-VS-CLOSED-ETH4H-SOL4H): decide on the CLOSED 4h bar. Evidence: RQ-20261113-f251-03 run 43451968959 (no material difference; closed passes RULE-D1 on the record window) + the closed-basis evidence record. Revert = delete this line (default forming).
     execution: live          # LIVE on REAL-MONEY bybit_2 AND paper bybit_1/
                              # bybit_portfolio (config/accounts.yaml). Corrected
                              # 2026-09-28 (lane EXIT-OPS, PI-20260926-X3QEGPJL-0002):
@@ -1644,6 +1652,7 @@ strategies:
     model: null
     signal_prefixes: [trend_donchian_sol_4h, donchian_sol_4h]
     enabled: true
+    decision_bar: closed     # Tier-3, OPERATOR 2026-11-13 Decisions inbox FORMING-VS-CLOSED-4H-PROP = "both_closed" (21:16Z; work item FORMING-VS-CLOSED-ETH4H-SOL4H): decide on the CLOSED 4h bar. Evidence: RQ-20261113-f251-03 run 43451968959 (no material difference; closed passes RULE-D1 on the record window) + the closed-basis evidence record. Revert = delete this line (default forming).
     execution: live          # shadow-guard: allow — operator decision 2026-09-28  # DEMO-FLOOR RULE 2026-10-27 (Tier-3): shadow -> live; ROLLBACK = shadow
                              # (relayed via manager to lane EXIT-OPS on
                              # PI-20260924-TJTOJHYE-0001): "Demote all 3 to
@@ -2222,7 +2231,13 @@ strategies:
     timeframe: "1d"
     symbols:
       - TQQQ
-    donchian: 30
+    # donchian 30 -> 20 (Tier 3, data-backed, unit RQ-20261113-4654-01, rule RULE-RQ20261113-4654-01-TQQQ-D20-SPY-TWIN registered
+    # before the run): SPY-twin symbol holdout 2010-06..2026-10, exit_lever_ablation --grade sweep, same tp_r 1.5 / stops,
+    # harness cost stack (fee 0 + 5 bps slippage). Arm A (30) net +9.37 R n 95 maxDD 5.10 R; D20 net +15.10 R n 96 maxDD 4.27 R;
+    # delta +5.73 R, D20 wins 3/4 folds (fold 3 -2.37 vs +0.18) -> PASS. Record:
+    # research/results/RQ-20261113-4654-01/43368810094.jsonl. Confirms be01-02's C3 off TQQQ.
+    # ROLLBACK: donchian: 30.
+    donchian: 20
     atr_period: 14
     atr_stop_mult: 2.5
     trail_mult: 4.0
@@ -2699,7 +2714,7 @@ strategies:
     shadow_model_ids: []
 
   tlt_pullback_1h:
-    # TLT INTRADAY (1h) HTF-pullback (bidirectional) — round 2b completing the
+    # TLT INTRADAY (1h) HTF-pullback — LONG ONLY since 2026-11-14 (side_filter below; real-money promotion) — round 2b completing the
     # intraday ETF sleeve (gld_pullback_1h sibling on the long-duration Treasury
     # bond ETF; frac 0.5, trail 3.0 — see the trail_mult note below).
     # PROVENANCE (rollout): intraday 1h ETF sweep 2026-06-20 § 0e — TLT pullback
@@ -2738,15 +2753,25 @@ strategies:
     trail_mult: 3.0
     trail_decay_stall_bars: 6   # M20 P4.1 decay cell (stall6 tight1.5 wf 5/6; sweep 2026-07-12, PR #6251)
     trail_decay_tight_mult: 1.5
-    # Was absent, therefore inherited htf_pullback_trend_2h._DEFAULTS["tp_r"] = 50.0.
-    # Written out so the sentinel is visible to `grep tp_r`. RUNTIME-IDENTICAL.
-    tp_r: 50.0
+    # REAL-MONEY PROMOTION, LONG ONLY + 3.5R PREDICTIVE TP (Tier-3; OPERATOR popup 2026-11-14 ~16:28Z, relayed by
+    # Manager Session 2026-11-13a, verbatim choice "Promote long-only 3.5R (Recommended)").
+    # EVIDENCE: RQ-20261114-db1a-10 (research-script-run 43614795160; rule RULE-TLT1H-TP35-D1-20261114 registered
+    # before the run), Alpaca iex 1Hour + 1Min forming replay 2025-06-02..2026-11-11 (the committed record's corpus;
+    # control arm reproduced it exactly), net of fee 0 + slippage 5 bps rt: arm L35 (this config) +8.17 R n 75, 4/4
+    # folds, maxDD 7.0 R, t 0.72; both-sides K35 +7.38 R -> +2.15 R after a conservative short borrow + dividend
+    # add-on; the prior config -1.52 R after that add-on. K* 3.5 R: RQ-20261112-5ab1-01 (calibration gap 0.005),
+    # declared here by the operator's choice. Holdout: RQ-20261113-f090-01 (8-yr dukascopy, the both-sides config).
+    # CAVEATS: t 0.72 (not distinguishable from zero); long-only is a regime-dependent in-sample read (the 2018-20
+    # iteration RQ-20261113-1751-01 found SHORT-only the edge); the carry add-on is ESTIMATED.
+    # side_filter is honoured by tlt_pullback_1h_signal_builder from this PR on (it was not read before).
+    # ROLLBACK: delete side_filter, restore `tp_r: 50.0` + the prior tp_intent {mode: none, reason:
+    # trail_is_the_profit_exit, evidence: no_gate_passing_timeout_free_tp_cell} block (git history).
+    side_filter: long
+    tp_r: 3.5
     tp_intent:
-      mode: none
-      reason: trail_is_the_profit_exit
-      # MEASURED: this leg has NEVER carried a tp_r key, across all 110 revisions of this
-      # file (2026-04-29 -> 2026-09-06). Never declared — NOT intended-and-lost.
-      evidence: no_gate_passing_timeout_free_tp_cell
+      mode: r_multiple
+      basis: RQ-20261112-5ab1-01_kstar_3.5R
+      calibrated: true           # OOS calibration gap 0.005 (RQ-20261112-5ab1-01)
     min_confidence: 0.0
     shadow_model_ids: []
 

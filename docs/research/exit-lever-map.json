@@ -129,9 +129,13 @@
       "state": "needs_column",
       "reason": "MI-165 break-even FLOOR, present on donchian + pullback + squeeze: once the trade has SEEN this many R, the trailing stop may never again sit below entry. It is max()-ed against the chandelier candidate, so it is a one-directional RATCHET distinct from trail_geometry rather than a setting of it. The string `be_floor` appears ZERO times anywhere in the matrix."
     },
+    "--be-floor-tp-within-r": {
+      "state": "needs_column",
+      "reason": "TP-distance GATE for --be-floor-r, trend + pullback harnesses (PROFIT-LOCK-CONDITIONAL-TEST, 2026-11-14; scripts/research/profit_lock_gate.py): the floor arms only while a resting TP sits within this many R of the trade's extreme; 0.0 = off, byte-identical. A SUB-KNOB of --be-floor-r like --be-floor-lock-r, so the be_floor column should carry it as that column's arming condition. First consumer: research/queue/RQ-20261114-db1a-05.yaml."
+    },
     "--be-floor-lock-r": {
       "state": "needs_column",
-      "reason": "Profit-lock STEP for --be-floor-r, pullback harness only (ADA-LIVE-EXIT-REVIEW-1024, 2026-10-24): the armed floor sits at entry + k R instead of entry; 0.0 = the plain break-even floor, byte-identical. It is a SUB-KNOB of --be-floor-r, so whoever adds the be_floor column should carry it as that column's lock level rather than a column of its own. First consumer: research/queue/RQ-20261024-4ef5-01.yaml."
+      "reason": "Profit-lock STEP for --be-floor-r, pullback harness since ADA-LIVE-EXIT-REVIEW-1024 (2026-10-24), trend harness since PROFIT-LOCK-CONDITIONAL-TEST (2026-11-14): the armed floor sits at entry + k R instead of entry; 0.0 = the plain break-even floor, byte-identical. It is a SUB-KNOB of --be-floor-r, so whoever adds the be_floor column should carry it as that column's lock level rather than a column of its own. First consumer: research/queue/RQ-20261024-4ef5-01.yaml."
     },
     "--sim-breakeven": {
       "state": "needs_column",

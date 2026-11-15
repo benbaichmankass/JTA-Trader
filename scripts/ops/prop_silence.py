@@ -72,6 +72,15 @@ API_BASE = os.environ.get("PROP_SILENCE_API_BASE", "http://127.0.0.1:8001")
 Fetch = Callable[[str], "tuple[str, Any]"]
 
 
+def _service_headers() -> dict:
+    """``Authorization: Bearer $DASHBOARD_API_TOKEN`` when the token is in the
+    environment, else nothing: the read-only service credential the site gate
+    accepts on GET/HEAD once ``SITE_AUTH_ENFORCE`` is on (UI-OAUTH-SIGNIN; ignored
+    while it is off). Only ever sent to this project's own API."""
+    tok = os.environ.get("DASHBOARD_API_TOKEN", "").strip()
+    return {"Authorization": f"Bearer {tok}"} if tok else {}
+
+
 def idle_key(account: str) -> str:
     return f"prop_idle_{account}"
 
@@ -94,7 +103,8 @@ LABELS: dict[str, str] = {
 def api_get(path: str) -> tuple[str, Any]:
     """``("read", json)`` or ``("unreadable", reason)``. Never raises."""
     try:
-        with urllib.request.urlopen(API_BASE + path, timeout=10) as r:  # noqa: S310
+        req = urllib.request.Request(API_BASE + path, headers=_service_headers())
+        with urllib.request.urlopen(req, timeout=10) as r:  # noqa: S310
             return "read", json.loads(r.read().decode("utf-8"))
     except (urllib.error.URLError, OSError, ValueError) as exc:
         return "unreadable", f"{type(exc).__name__}: {exc}"

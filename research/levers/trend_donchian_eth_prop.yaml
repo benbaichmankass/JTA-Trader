@@ -3390,3 +3390,219 @@ levers:
       best_delta_r_per_trade: -0.0141
       fold_stability: 0.25
       reading: every tested value is worse than the baseline
+levers_tested:
+- family: regime_gating (pooled ADX cell x direction)
+  varied: ungated vs the worst pooled (ADX regime x direction) cell across 15 crypto demo-floor legs, picked on 2025-11-13..2026-11-12, checked
+    on 2024-11-13..2025-11-12, live decision bar, full cost stack
+  response:
+    verdict: fail
+    run: '43562273934'
+    rule: RULE-DFR-COMMON-LOSS-REGIME-20261114
+    leg_record:
+      n: 166
+      net_r: -9.7529
+    leg_prior:
+      n: 183
+      net_r: -4.5233
+    part_a_common: true
+    part_a: 12/15 legs negative on the record window; pooled -142.3426R vs prior 106.089R
+    selected_cell: chop/long
+    cell_record:
+      n: 229
+      net_r: -75.3822
+    cell_prior:
+      n: 220
+      net_r: 25.5925
+    leg_ex_cell:
+      record_net_r: -8.4149
+      prior_net_r: -5.1114
+    reading: 'the record-year loss is common (Part A) but the worst ADX cell (chop/long) wins the year before: no trend-regime cell separates
+      it; the record-year loss sits on the LONG side in every ADX cell'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-02
+  lever_family: regime_gating
+- family: regime_gating (HTF daily SMA200 long filter, post-hoc)
+  varied: ungated vs longs skipped when the prior daily close < SMA200 (own symbol), pooled over 15 crypto demo-floor legs, record 2025-11-13..2026-11-12
+    + year before, live decision bar, full cost stack
+  response:
+    verdict: pass
+    run: '43567392380'
+    rule: RULE-DFR-HTF-LONG-FILTER-20261114
+    filter: skip a long when the symbol's prior completed daily close < its 200-day SMA (Binance daily); shorts untouched
+    leg:
+      record_net_r: -9.7518
+      record_n: 166
+      filtered_record_net_r: -5.72
+      filtered_record_n: 99
+      prior_net_r: -4.5234
+      prior_n: 183
+      filtered_prior_net_r: 4.7723
+      filtered_prior_n: 144
+    pooled:
+      gated_record:
+        n: 572
+        net_r: -88.0639
+      gated_prior:
+        n: 259
+        net_r: -5.3393
+      kept_record_net_r: -54.2763
+      kept_prior_net_r: 111.4287
+    reading: 'PASS pooled (gated longs lose both years, stable drag) but POST-HOC: a harness-native run is required before any Tier-3; the year-before
+      drag is thin (-5.3R over 259, about -0.02R/trade)'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-03
+  lever_family: regime_gating
+- family: regime_gating (HTF daily SMA200 long gate, harness-native)
+  varied: arm A config-exact vs arm H --htf-long-sma-days 200 inside the harness, record 2025-11-13..2026-11-12 + year before, live decision bar,
+    full cost stack
+  response:
+    verdict: fail
+    unit_verdict: fail
+    run: '43575944709'
+    rule: RULE-DFR-HTF-NATIVE-20261114
+    arm_H: --htf-long-sma-days 200 (inside the harness)
+    record:
+      A_net_r: -9.7529
+      A_n: 166
+      H_net_r: -2.0106
+      H_n: 101
+      H_folds_positive: 1
+      H_n_folds: 4
+      H_stage0: false
+      H_beats_A: true
+    prior:
+      A_net_r: -4.5233
+      A_n: 183
+      H_net_r: 3.723
+      H_n: 145
+      holds: true
+    pooled:
+      A_record: -142.3426
+      H_record: -57.0308
+      A_prior: 106.089
+      H_prior: 105.4607
+      delta_record: 85.3118
+      delta_prior: -0.6283
+    reading: 'harness-native: the gate cuts the record-year loss but is neutral-to-negative the year before (pooled H-A prior -0.63R); unit FAIL,
+      no per-leg pass'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-04
+  lever_family: regime_gating
+- family: 'exit (conditional profit lock: stop to entry + (k-1)R once MFE >= kR)'
+  varied: arm A config-exact vs L2 (k 2), L25 (k 2.5), L2T (k 2 armed only with the TP within 0.5R), record 2025-11-13..2026-11-12 + year before,
+    live decision bar, full cost stack
+  response:
+    verdict: fail
+    unit_verdict: fail
+    run: '43589684532'
+    rule: RULE-PROFIT-LOCK-CONDITIONAL-20261114
+    arms: L2 --be-floor-r 2 --be-floor-lock-r 1 (primary); L25 --be-floor-r 2.5 --be-floor-lock-r 1.5; L2T L2 + --be-floor-tp-within-r 0.5
+    A:
+      record_net_r: -9.6104
+      record_n: 166
+      prior_net_r: -4.5233
+      prior_n: 183
+    L2:
+      verdict: fail
+      record_net_r: -13.1724
+      record_n: 166
+      record_folds_positive: 1
+      delta_record: -3.562
+      prior_net_r: -5.3134
+      delta_prior: -0.7901
+    L25:
+      verdict: fail
+      record_net_r: -9.0417
+      record_n: 166
+      record_folds_positive: 1
+      delta_record: 0.5687
+      prior_net_r: -5.4083
+      delta_prior: -0.885
+    L2T:
+      verdict: fail
+      record_net_r: -9.6104
+      record_n: 166
+      record_folds_positive: 1
+      delta_record: 0.0
+      prior_net_r: -4.2952
+      delta_prior: 0.2281
+    pooled:
+      L2:
+        delta_record: -30.2489
+        delta_prior: -18.9327
+        verdict: fail
+      L25:
+        delta_record: -37.5409
+        delta_prior: -22.8675
+        verdict: fail
+      L2T:
+        delta_record: -9.1846
+        delta_prior: 1.5882
+        verdict: fail
+    reading: 'unit FAIL: an MFE-armed lock gives back more R than it saves, pooled over 18 crypto legs on both windows (L2 -30.25R record / -18.93R
+      year before); the TP-gated variant is near-neutral (-9.18R / +1.59R); no per-leg pass on any arm'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-05
+  lever_family: exit
+- family: entry (min_confidence)
+  varied: arm A config-exact (min_confidence 0.6) vs M (0.8), closed decision bar, record 2025-11-13..2026-11-12 + year before, full cost stack
+  response:
+    verdict: pass
+    run: '43596786598'
+    rule: RULE-ETHPROP-MINCONF08-20261114
+    arm_M: min_confidence 0.8 (baseline 0.6)
+    record:
+      A_net_r: -9.6104
+      A_n: 166
+      X_net_r: 10.9721
+      X_n: 134
+      X_folds_positive: 4
+      X_n_folds: 4
+      X_stage0: true
+      X_beats_A: true
+    prior:
+      A_net_r: -4.5233
+      A_n: 183
+      X_net_r: 8.0637
+      X_n: 140
+      holds: true
+    reading: 'PASS: M +10.97R n134 4/4 folds vs A -9.61R on the record year (max DD 8.58R vs 15.06R); year before M +8.06R n140 vs A -4.52R (folds
+      2/4). IN-SAMPLE confirmation: 0.8 was chosen in RQ-20261101-78fc-14 over a window overlapping both. Tier-3 proposal (min_confidence 0.6
+      -> 0.8, bybit_1 demo floor) goes to the operator via the manager.'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-06
+  lever_family: entry
+units:
+- RQ-20261114-db1a-02
+- RQ-20261114-db1a-03
+- RQ-20261114-db1a-04
+- RQ-20261114-db1a-05
+- RQ-20261114-db1a-06
+manifest_notes:
+  census_2026_11_14: 'Lever-family census (manager ruling 2026-11-14 06:08Z). Decides on the CLOSED bar (decision_bar: closed). Record (2025-11-13..2026-11-12)
+    -9.75R n166; year before -4.52R n183: negative in BOTH years. Committed evidence attribution (n165): gross +14.48R, cost 14.73R, ''cost erases
+    a gross edge''; about 0.09R of cost per trade; long -2.97R vs short +2.72R. On bybit_1 only (no prop account). Tested on these windows: pooled
+    ADX cell (db1a-02, FAIL), HTF SMA200 long gate (db1a-03 post-hoc PASS pooled; db1a-04 harness-native FAIL, this leg H -2.01R / +3.72R).'
+  entry: 'TESTED closed 2020..2026: min_confidence 0.7 +50.2R / 0.8 +75.7R (pass, monotone). UNTESTED on the record window.'
+  exit: 'TESTED closed: trail_mult 4.5 +122.0R n1070 (pass, single point), trail_adx_below 25 pass, momentum_stale 8 pass; many exit levers fail
+    but sit at +40..+80R. UNTESTED on the record window.'
+  filter: 'TESTED closed: cooldown_bars 4/8 pass (+21..+38R), adx_min 20 pass (-0.95R), vol gates fail. UNTESTED on the record window.'
+  direction: UNTESTED; shorts are positive in the evidence (+2.72R) and longs negative (-2.97R).
+  sizing_vs_cost: UNTESTED and the attribution's pointer (gross edge, cost removes it). Closed-bar atr_stop_mult 3.125 -9.91R (pass) vs 1.875
+    -52.37R.
+  session: 'TESTED closed: skip_hours 0-7 +33.8R, 12-15 +55.7R, both fail.'
+  regime_gating: 'TESTED on the record window: ADX cell (db1a-02) and HTF gate (db1a-03/-04), both FAIL.'
+  timeframe: UNTESTED; no diagnostic pointer.
+  symbol_set: UNTESTED; no diagnostic pointer.
+  next_2026_11_14: 'NOT lever-exhausted: no closed-bar responder (min_confidence 0.8, trail_mult 4.5, cooldown) has run on the record window,
+    and sizing_vs_cost is the diagnosed cause. Candidate unit: min_confidence 0.8 or atr_stop_mult 3.125 on the record + year-before windows,
+    same AM-ML guard; the db1a-01/-02 caveat applies (lever responses flip between years). No retirement proposal; manager decides.'
+  minconf_2026_11_14: 'RQ-20261114-db1a-06 PASS (run 43596786598): min_confidence 0.8 turns the leg positive in both recent years on its closed decision bar,
+    net of the full cost stack: record +10.97R n134 (4/4 folds; A -9.61R n166), year before +8.06R n140 (2/4 folds; A -4.52R n183); max DD roughly halves.
+    In-sample confirmation (0.8 was picked in RQ-20261101-78fc-14 over 2020-07..2026-10). Tier-3 proposal min_confidence 0.6 -> 0.8 sent to the manager for
+    the operator; the leg stays on the bybit_1 demo floor. SUPERSEDES next_2026_11_14''s candidate list for this leg.'
