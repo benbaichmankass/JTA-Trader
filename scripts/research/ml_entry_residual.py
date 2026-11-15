@@ -52,7 +52,11 @@ PLACEBO_SEED = 20261112
 ARMS = ("raw", "resid", "placebo")
 #: FRONTIER-Q-XSEC-RANK-ENTRY (not part of RQ-20261112-4654-01): the ranking objective in regression form -- each side's net R
 #: minus its cross-sectional mean over the symbols at the same decision timestamp, so only the relative order at a time is learned.
-EXTRA_ARMS = ("xsdemean", "ens", "ridge", "conf")
+EXTRA_ARMS = ("xsdemean", "ens", "ridge", "conf", "gross")
+# gross (ML-PRIMARY-3, 2026-11-15; diagnosis cd01-01 R3: the net-R label is cost-driven, IC net 0.497 vs gross 0.003): the
+# DECOMPOSED score. LightGBM learns GROSS R per side; the decision score subtracts the KNOWN pre-trade cost per R,
+# c_hat = k_side / (SL_ATR x atr_pct), where k_side = sum(cost) / sum(1 / (SL_ATR x atr_pct)) on the refit's OWN training rows.
+# Only the score changes; graded at the realised net R like every other arm. Point-in-time: atr_pct is a decision-time feature.
 # ens / ridge (FRONTIER-Q-ENS-RIDGE-ENTRY): the RAW target with a different learner -- ridge alone, or the equal-weight
 # average of the LightGBM and ridge predictions (a heterogeneous ensemble). They change the learner, not the target.
 LEARNER_ARMS = {"ens": "raw", "ridge": "raw"}
@@ -106,6 +110,7 @@ def add_targets(tab: pd.DataFrame, cache: Path) -> pd.DataFrame:
         t[f"y_long_{arm}"] = t["net_long"].to_numpy() - m
         t[f"y_short_{arm}"] = t["net_short"].to_numpy() + m
     t["y_long_raw"], t["y_short_raw"] = t["net_long"], t["net_short"]
+    t["y_long_gross"], t["y_short_gross"] = t["gross_long"], t["gross_short"]
     for side in ("long", "short"):           # xsdemean: market-neutral by construction (relative order at each timestamp)
         t[f"y_{side}_xsdemean"] = t[f"net_{side}"] - t.groupby("ts")[f"net_{side}"].transform("mean")
     keep = np.isfinite(t[[f"y_{s}_{a}" for s in ("long", "short") for a in ARMS]].to_numpy()).all(axis=1)
@@ -118,6 +123,8 @@ def fit_arm(train: pd.DataFrame, arm: str, sample: int | None = None, tau: float
         train = train.sample(min(len(train), sample), random_state=0)
     if arm == "conf":
         return fit_conf(train, tau if tau is not None else 0.0)
+    if arm == "gross":
+        return fit_gross(train)
     target = LEARNER_ARMS.get(arm, arm)
     out = {}
     for side in ("long", "short"):
@@ -193,6 +200,40 @@ class _Normalised:
     def predict(self, x):
         # provenance: predict -- the RAW booster's regressed net R over the sigma model's absolute-residual scale, shifted
         return self.mu.predict(x) / np.maximum(self.sigma.predict(x), self.floor) - self.s_star + self.tau
+
+
+def _per_r_hat(x: pd.DataFrame) -> np.ndarray:
+    """Price per R at decision time, entry / (SL_ATR x ATR) ~= 1 / (SL_ATR x atr_pct): the multiplier every bps cost scales by."""
+    a = x["atr_pct"].to_numpy(float)
+    return 1.0 / (E.SL_ATR * np.where(a > 0, a, np.nan))
+
+
+def fit_gross(train: pd.DataFrame) -> dict:
+    import lightgbm as lgb
+    out, ks = {}, {}
+    pr = _per_r_hat(train)
+    ok = np.isfinite(pr)
+    for side in ("long", "short"):
+        fin = np.isfinite(train[f"y_{side}_gross"].to_numpy(float))
+        m = lgb.LGBMRegressor(**E.LGB_PARAMS).fit(train.loc[fin, E.FEATURES], train.loc[fin, f"y_{side}_gross"])
+        c = train[f"cost_{side}"].to_numpy(float)
+        k = float(np.nansum(c[ok]) / np.nansum(pr[ok]))
+        ks[side] = k
+        out[side] = _GrossMinusCost(m, k)
+    out["_gross"] = {"k_long": ks["long"], "k_short": ks["short"]}
+    return out
+
+
+class _GrossMinusCost:
+    """Regressed GROSS R minus the known pre-trade cost per R (k / (SL_ATR x atr_pct)); NaN atr_pct scores -inf (never taken)."""
+
+    def __init__(self, m, k):
+        self.m, self.k = m, k
+
+    def predict(self, x):
+        # provenance: predict -- the LightGBM regressed GROSS R of one side, minus the decision-time cost per R; not a probability
+        c = self.k * _per_r_hat(x)
+        return np.where(np.isfinite(c), self.m.predict(x[E.FEATURES]) - c, -np.inf)
 
 
 class _Blend:
@@ -276,6 +317,8 @@ def replay(tab: pd.DataFrame, tau: float, frozen: dict | None = None, start: str
             row[arm] = _stats(taken)
             if "_conf" in m:                 # conf: the matched threshold and slice sizes behind this window's decisions
                 row[f"{arm}_info"] = m["_conf"]
+            if "_gross" in m:                # gross: the training-set cost-per-R slopes behind this window's scores
+                row[f"{arm}_info"] = m["_gross"]
             alls[arm].append(taken)
         if frozen is not None:
             # provenance: predict -- the frozen v1 booster's regressed net R of each side (policy() thresholds at tau), not a probability
@@ -397,6 +440,16 @@ def self_test() -> int:
     assert decide_vs_raw({"k": 13, "mean": 0.08, "ci95": [0.02, 0.14]}, {"n": 400}) == "PASS"
     assert decide_vs_raw({"k": 13, "mean": -0.01, "ci95": [-0.05, 0.03]}, {"n": 400}) == "FAIL"
     assert decide_vs_raw({"k": 8, "mean": 0.2, "ci95": [0.1, 0.3]}, {"n": 400}) == "INDETERMINATE"
+    # gross (ML-PRIMARY-3): the decomposed score = gross prediction minus k x per-R; k reproduces the training mean cost per R
+    assert {"y_long_gross", "y_short_gross", "cost_long", "cost_short"} <= set(tab.columns)
+    mgr = fit_gross(tab.sample(min(len(tab), 15000), random_state=0))
+    kk = mgr["_gross"]
+    assert kk["k_long"] > 0 and kk["k_short"] > 0, kk
+    xg = tab.head(50)
+    # provenance: predict -- the gross booster's regressed gross R (a self-test identity check of the decomposition)
+    assert np.allclose(mgr["long"].predict(xg), mgr["long"].m.predict(xg[E.FEATURES]) - kk["k_long"] * _per_r_hat(xg), equal_nan=True)
+    d5 = replay(tab, 0.0, start=start, end=end, step_days=14, fit=fit, arms=("raw", "gross"))
+    assert "gross" in d5["paired_extra_vs_raw"] and d5["verdict"] in ("PASS", "FAIL", "INDETERMINATE")
     print("self-test ok")
     return 0
 
