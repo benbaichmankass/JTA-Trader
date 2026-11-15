@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Research tooling fix (2026-11-15 research-queue-grade incident). scripts/research/queue_grade.py graded one-shot units with no time window, so a unit re-armed with `rearmed_at` (dispatch_queue's RESEARCH-FLOW re-arm, which disowns every earlier row) was still graded on the rows it disowned: RQ-20261112-8d20-02 (re-armed 02:30Z, #26225) got a needs_review grade from the pre-fix row 43646720569 (runs 43689172680 and 43697404130). The window now starts no earlier than rearmed_at. New tests/test_queue_grade_rearm_window.py: planted (pre-rearm row not graded) + clean (no rearm -> read; post-rearm row graded); both fail on main. 25 grader tests + self-test pass. The stale auto grade on 8d20-02 is replaced by the grader when its 07:54Z re-dispatch result lands (auto:true is not session-owned). Gates this adds or changes: none."
+}
