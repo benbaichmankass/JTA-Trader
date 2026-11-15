@@ -1,0 +1,168 @@
+{
+ "schema_version": 1,
+ "trade_id": null,
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuLFmebfvViP9QuqU4n",
+ "prompt_sha": null,
+ "skill_sha": "5a5211a6947f24c23a312cd8856dde9c57f4f4a4",
+ "review_id": "LR-20261115T0011Z-pkg-48c5cfab364e430c",
+ "reviewed_at": "2026-11-15T00:16:00Z",
+ "order_package_id": "pkg-48c5cfab364e430c",
+ "leg": "trend_donchian_eth_4h",
+ "accounts": [
+  "velotrade_1"
+ ],
+ "trigger": {
+  "event": "conflicting_exposure",
+  "level": "ETHUSDT#f9b0dbe1d5",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-15T00:11:16Z",
+ "state": {
+  "atr_now_over_entry": 1.0,
+  "bars_held": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_provenance": "unverified",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1850.50464286,
+  "tp": 1593.43652
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.0,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "mechanics": {
+  "verdict": "could_not_look",
+  "evidence": "packet mechanics could_not_look: order_packages status=emitted close_reason=prop_ticket_emitted; no account carries this package in the reads (no trade / ticket row), so nothing was compared. This is a prop manual-bridge ticket, not a venue order; no mechanics fault is asserted."
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 76,
+   "mean_r": 0.6899,
+   "sd_r": 2.1949,
+   "worst_r": -1.1028,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 76,
+   "mean_r": 0.1981,
+   "sd_r": 0.9962,
+   "worst_r": -1.0685,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 76,
+   "mean_r": 0.3328,
+   "sd_r": 1.2705,
+   "worst_r": -1.0685,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 76,
+   "mean_r": 0.5185,
+   "sd_r": 1.7633,
+   "worst_r": -1.3515,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261115T0011Z-pkg-48c5cfab364e430c.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Keep the short (timeframe separation); do not close or tighten. DEGRADED PACKET (could_not_price @ priced_options 1/1; context_null:state.open_r 1/1, LTR-PROP-PACKET-OPEN-R gap), so open_r is NOT known and no price was fabricated. The table was run by hand at the state the packet does support: exit_plan entry 1768.52 equals the last closed 4h bar close (the 20:00Z bar, closed 00:00Z) and sl_now equals the initial stop (1768.52 + 1.5 x ATR 54.66 = 1850.50), so the ticket is ~12 min old and open_r is about 0 R, treated as open_r 0, peak_r 0, bars_held 0, atr_stop_mult 1.5. The +3.75 R in the packet book is the book row for a DIFFERENT ETHUSDT trend_donchian_eth_4h short (the book lists OTHER open packages), not this ticket. Table (trend_donchian_eth_4h__trades.jsonl, short side, n=76 comparable of 208, net of cost, tool-quoted): HOLD mean +0.6899 R (sd 2.1949, worst -1.1028). tighten atr:1.0 +0.1981 (EV cost 0.4918), atr:1.5 +0.3328 (cost 0.3571), atr:2.0 +0.5185 (cost 0.1714); every measured tighten is below hold, and the table tightens are flattered by stop-price fills. The only within-0.25 R bound tighten (atr:2.0) loosens the stop to 2.0 ATR from the 1.5 ATR stop (stop_at_r_now -1.33), so it is not a tighten at all. Close is not priced by the tool; closing at ~0 R forgoes the hold EV. Conflict: ml_entry_v2 1h ETHUSDT long (-0.134 R in the book) is another leg and timeframe, with no table here; the 4h/1d trend is down (ADX 58 / 31, last 4h bar a ~3.6 pct drop to a new low 1726.89, close 1768.52), so nothing argues this thesis has failed. Net-short ETH is what the trend legs intend; reducing it is an account-level sizing call. Prop distance to the firm drawdown limit: NOT in the packet (account_bounds is empty), so it is not stated. Correlated: 14 other open shorts incl. 3 other ETH shorts."
+ },
+ "forecast": {
+  "thesis": "4h and 1d downtrend (ADX 58 / 31); the latest 4h bar made a new low (low 1726.89, close 1768.52). Continuation is more likely than not, but p_giveback_gt_half is 0.54 so the 2.14 R target is the minority path.",
+  "direction": "with_trade",
+  "target_px": 1593.43652,
+  "p_target": 0.3,
+  "invalidation_px": 1850.50464286,
+  "horizon_bars": 12,
+  "timeframe": "4h",
+  "evidence": [
+   "hold n=76 mean +0.6899 vs every measured tighten lower",
+   "htf 1d trending adx_now 30.68",
+   "4h last close 1768.52 at a new swing low",
+   "entry equals last closed bar close, stop untrailed"
+  ]
+ },
+ "context_flags": [
+  "packet_defect: priced_options could_not_price 1/1 and state.open_r context_null 1/1; priced by hand at the inferred entry state (open_r 0, peak 0, bars_held 0), labelled as such, not a state-specific price",
+  "attribution: the +3.75 R figure in the book is another ETHUSDT trend_donchian_eth_4h short package; this ticket's entry equals the last close",
+  "correlated: 15 other open packages are shorts incl. 3 other ETHUSDT shorts (pkg-665b2dff5ef04889, pkg-edd087a2c21c4421, pkg-fd52297225d14860) plus BTC/SOL/ADA/AVAX/XRP: one crypto-beta bet; account-level risk, not a package exit",
+  "conflict: ml_entry_v2 1h ETHUSDT long -0.134 R in the book, a different leg/book with no table; contrarian side of the same market",
+  "prop: account_bounds [] so distance to firm drawdown limits not stated (could not look); package is a prop ticket status emitted, no venue/ticket row compared",
+  "bias: table tightens are flattered (stop fills at stop price); live peak_r null so no giveback state priced",
+  "live-vs-backtest: realMoney CONSISTENT (live +4.66 R, 19 trades, pct 55); mirror CONSISTENT (live -7.58 R, 17 trades, pct 7.9, low edge of the band)",
+  "regime: cell entry/now null (vol edges unreachable read-only); 1d trending",
+  "missing: funding (no diag route); chart.since_entry; calendar no events next 24h; news neutral"
+ ],
+ "account_reads": [
+  {
+   "account_id": "velotrade_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "packet_sha": "a146fff5593b85dfb11f780b850f9b8b0a71c2b9e5bfab482f64aac5e976f87b",
+ "packet_defects": [
+  {
+   "field": "priced_options",
+   "reason": "could_not_price",
+   "count": 1,
+   "denominator": 1
+  },
+  {
+   "field": "state.open_r",
+   "reason": "context_null:state.open_r",
+   "count": 1,
+   "denominator": 1
+  }
+ ]
+}
