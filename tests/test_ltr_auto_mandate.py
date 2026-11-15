@@ -3,6 +3,10 @@
 Operator 2026-10-29 ~07:40Z, verbatim on checklist row MD-LTR-ADA-AUTO: "I want to put a standing mandate
 for ltr lanes recommendations on this trade to be applied automatically"; popups: scope "Every action",
 mechanism "VM applies it directly". Every other package stays advice-only (tests/test_tighten_advice_only.py).
+
+Since 2026-11-14 advice-only has ENDED (operator directive, "Just turn on, like, no advice only"): the global set
+is empty, so an exception lifts nothing (a no-op lift). These tests pin the kept MECHANISM, so the module runs
+with the legacy set (``_legacy_advice_only``); the production no-op is pinned at the end.
 """
 from __future__ import annotations
 
@@ -27,6 +31,13 @@ from tests.test_live_review_dispatch import RID, TABLE_ROW, _judged, _set_row, w
 IN_TRADE_CLASSES = ("tighten_sl", "widen_sl", "move_tp", "partial_close", "close", "change_size", "add_entry")
 ADA = "pkg-465a5d7d27644027"
 REAL = yaml.safe_load((Path(__file__).resolve().parents[1] / "config" / "mandates.yaml").read_text())
+
+
+@pytest.fixture(autouse=True)
+def _legacy_advice_only(monkeypatch):
+    """The pre-2026-11-14 global set: the exception mechanism is only observable against a non-empty one."""
+    from src.runtime import live_review_rows as rows_lib
+    monkeypatch.setattr(rows_lib, "ADVICE_ONLY_ACTIONS", rows_lib.ADVICE_ONLY_LEGACY_ACTIONS)
 
 
 def doc(pkg="pkg-1", actions=IN_TRADE_CLASSES, **kw):
@@ -654,3 +665,11 @@ def test_the_paper_bounds_still_bind(wired, monkeypatch):  # noqa: F811
                   review_cfg={"apply_mode": "apply"}, granted=set(), write_log=False, state={}, mandates_doc=REAL)
     assert "both_brackets" in res["detail"]
     assert len(wired["exec"]) == 1                                             # only the first tighten was sent
+
+
+def test_production_lift_is_a_no_op_since_advice_only_ended(monkeypatch):
+    """With the real (empty) global set every package is dispatchable with or without an exception."""
+    from src.runtime import live_review_rows as rows_lib
+    monkeypatch.setattr(rows_lib, "ADVICE_ONLY_ACTIONS", ())
+    for action in IN_TRADE_CLASSES:
+        assert w.dispatchable(trw.row("LR-n", action=action)) is None

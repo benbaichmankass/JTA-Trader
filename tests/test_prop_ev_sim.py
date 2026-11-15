@@ -96,8 +96,9 @@ sys.path.insert(0, str(REPO / "scripts" / "research"))
 
 
 def test_book_resolver_matches_current_config():
-    paths, prov = sim.resolve_book("breakout_2")
+    paths, prov = sim.resolve_book("tradeify_1")  # breakout_2 on ice 2026-11-12; the baseline legs live on tradeify_1/velotrade_1
     assert set(paths) == {"trend_donchian_eth_4h", "trend_donchian_sol_4h"}  # 2026-11-05 operator min-size baseline (eth_prop/sol_prop pulled earlier)
+    assert set(sim.resolve_book("velotrade_1")[0]) == set(paths)
     for leg, p in prov.items():
         assert (REPO / p["trades_file"]).exists(), leg
     # the resolver REPORTS drift; the CLI refuses on it. Pin that the field exists and is boolean.
@@ -106,7 +107,8 @@ def test_book_resolver_matches_current_config():
 
 def test_retired_breakout_1_book_name_still_resolves_to_breakout_2():
     paths, _ = sim.resolve_book("breakout_1")
-    assert set(paths) == set(sim.resolve_book("breakout_2")[0]) == {"trend_donchian_eth_4h", "trend_donchian_sol_4h"}  # 2026-11-05 baseline
+    # breakout_2 is on ice (2026-11-12); both retired names alias the live tradeify_1 book, same legs, same population.
+    assert set(paths) == set(sim.resolve_book("breakout_2")[0]) == set(sim.resolve_book("tradeify_1")[0]) == {"trend_donchian_eth_4h", "trend_donchian_sol_4h"}
 
 
 def test_stale_book_is_refused(monkeypatch):

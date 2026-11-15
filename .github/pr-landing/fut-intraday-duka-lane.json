@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Tier-1 research tooling plus two queue units. R5 cannot vouch for research/queue/RQ-20261112-09d2-04.yaml: it is git-mv'd from blocked/ with status done, a run.command and a grading block (FAIL 0/3) beside its local result, and the guard reads a non-stamp edit on a unit with a result as unvouchable. Its decision_rule is byte-identical to the copy #25203 registered. Everything else self-lands under R5 (scripts/research, scripts/backtest_ict_scalp.py, scripts/ops/dukascopy_instruments.py, tests, results; 78fc-13 is stamp-only). So the manager merges. Revert: git revert.",
+  "why": "FUT-INTRADAY-DUKA-LANE: dukascopy 5m/15m harness, session-flat overlay + per-contract cost arm, opt-in extended stage0 (no new gates), 78fc-13 unblocked, and RQ-20261112-09d2-04 landed with its FAIL verdict."
+}

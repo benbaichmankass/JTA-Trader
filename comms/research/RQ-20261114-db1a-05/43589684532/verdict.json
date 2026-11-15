@@ -1,0 +1,1556 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "n": 2804,
+  "population": "18 rostered crypto pullback/trend legs (demo floor + real money); arms L2 / L25 / L2T vs A config-exact inside the harness; record 2025-11-13..2026-11-12 and prior 2024-11-13..2025-11-12; full cost stack",
+  "primary_arm": "L2",
+  "pooled": {
+    "L2": {
+      "arm": "L2",
+      "A_record": -91.7119,
+      "X_record": -121.9608,
+      "A_prior": 110.7596,
+      "X_prior": 91.8269,
+      "delta_record": -30.2489,
+      "delta_prior": -18.9327,
+      "verdict": "fail",
+      "legs_passing": []
+    },
+    "L25": {
+      "arm": "L25",
+      "A_record": -91.7119,
+      "X_record": -129.2528,
+      "A_prior": 110.7596,
+      "X_prior": 87.8921,
+      "delta_record": -37.5409,
+      "delta_prior": -22.8675,
+      "verdict": "fail",
+      "legs_passing": []
+    },
+    "L2T": {
+      "arm": "L2T",
+      "A_record": -91.7119,
+      "X_record": -100.8965,
+      "A_prior": 110.7596,
+      "X_prior": 112.3478,
+      "delta_record": -9.1846,
+      "delta_prior": 1.5882,
+      "verdict": "fail",
+      "legs_passing": []
+    }
+  },
+  "graded_legs": 18,
+  "note": "L2 pooled d_rec -30.2489R d_pre -18.9327R (fail), per-leg passes []; L25 pooled d_rec -37.5409R d_pre -22.8675R (fail), per-leg passes []; L2T pooled d_rec -9.1846R d_pre 1.5882R (fail), per-leg passes []",
+  "legs": [
+    {
+      "leg": "eth_pullback_2h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 161,
+      "A": {
+        "record": {
+          "net_r": 1.3857,
+          "n": 83
+        },
+        "prior": {
+          "net_r": 16.3602,
+          "n": 78
+        }
+      },
+      "arms": {
+        "L2": {
+          "verdict": "fail",
+          "record": {
+            "net_r": 4.0104,
+            "n": 84,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": true,
+            "delta_vs_A": 2.6247
+          },
+          "prior": {
+            "net_r": 16.4065,
+            "n": 78,
+            "holds": true,
+            "delta_vs_A": 0.0463
+          }
+        },
+        "L25": {
+          "verdict": "fail",
+          "record": {
+            "net_r": 0.2913,
+            "n": 86,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -1.0944
+          },
+          "prior": {
+            "net_r": 14.6627,
+            "n": 78,
+            "holds": false,
+            "delta_vs_A": -1.6975
+          }
+        },
+        "L2T": {
+          "verdict": "fail",
+          "record": {
+            "net_r": 1.3857,
+            "n": 83,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": 0.0
+          },
+          "prior": {
+            "net_r": 16.3602,
+            "n": 78,
+            "holds": false,
+            "delta_vs_A": 0.0
+          }
+        }
+      },
+      "arms_passing": [],
+      "note": "A rec 1.3857 / pre 16.3602; L2 d_rec 2.6247 d_pre 0.0463 (fail); L25 d_rec -1.0944 d_pre -1.6975 (fail); L2T d_rec 0.0 d_pre 0.0 (fail)"
+    },
+    {
+      "leg": "eth_pullback_prop_2h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 152,
+      "A": {
+        "record": {
+          "net_r": -6.5744,
+          "n": 81
+        },
+        "prior": {
+          "net_r": 7.319,
+          "n": 71
+        }
+      },
+      "arms": {
+        "L2": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -6.2797,
+            "n": 81,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": true,
+            "delta_vs_A": 0.2947
+          },
+          "prior": {
+            "net_r": 6.6636,
+            "n": 72,
+            "holds": false,
+            "delta_vs_A": -0.6554
+          }
+        },
+        "L25": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -6.3897,
+            "n": 81,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": true,
+            "delta_vs_A": 0.1847
+          },
+          "prior": {
+            "net_r": 7.319,
+            "n": 71,
+            "holds": false,
+            "delta_vs_A": 0.0
+          }
+        },
+        "L2T": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -6.5744,
+            "n": 81,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": 0.0
+          },
+          "prior": {
+            "net_r": 6.6384,
+            "n": 72,
+            "holds": false,
+            "delta_vs_A": -0.6806
+          }
+        }
+      },
+      "arms_passing": [],
+      "note": "A rec -6.5744 / pre 7.319; L2 d_rec 0.2947 d_pre -0.6554 (fail); L25 d_rec 0.1847 d_pre 0.0 (fail); L2T d_rec 0.0 d_pre -0.6806 (fail)"
+    },
+    {
+      "leg": "htf_pullback_trend_2h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 188,
+      "A": {
+        "record": {
+          "net_r": -23.3731,
+          "n": 105
+        },
+        "prior": {
+          "net_r": 2.9423,
+          "n": 83
+        }
+      },
+      "arms": {
+        "L2": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -24.2409,
+            "n": 105,
+            "folds_positive": 0,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -0.8678
+          },
+          "prior": {
+            "net_r": 3.2528,
+            "n": 83,
+            "holds": true,
+            "delta_vs_A": 0.3105
+          }
+        },
+        "L25": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -23.3731,
+            "n": 105,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": 0.0
+          },
+          "prior": {
+            "net_r": 5.727,
+            "n": 84,
+            "holds": true,
+            "delta_vs_A": 2.7847
+          }
+        },
+        "L2T": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -24.5786,
+            "n": 105,
+            "folds_positive": 0,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -1.2055
+          },
+          "prior": {
+            "net_r": 2.9423,
+            "n": 83,
+            "holds": false,
+            "delta_vs_A": 0.0
+          }
+        }
+      },
+      "arms_passing": [],
+      "note": "A rec -23.3731 / pre 2.9423; L2 d_rec -0.8678 d_pre 0.3105 (fail); L25 d_rec 0.0 d_pre 2.7847 (fail); L2T d_rec -1.2055 d_pre 0.0 (fail)"
+    },
+    {
+      "leg": "sol_pullback_2h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 60,
+      "A": {
+        "record": {
+          "net_r": 3.1859,
+          "n": 34
+        },
+        "prior": {
+          "net_r": -6.7948,
+          "n": 26
+        }
+      },
+      "arms": {
+        "L2": {
+          "verdict": "fail",
+          "record": {
+            "net_r": 0.4362,
+            "n": 36,
+            "folds_positive": 3,
+            "n_folds": 4,
+            "stage0": true,
+            "beats_A": false,
+            "delta_vs_A": -2.7497
+          },
+          "prior": {
+            "net_r": -6.7948,
+            "n": 26,
+            "holds": false,
+            "delta_vs_A": 0.0
+          }
+        },
+        "L25": {
+          "verdict": "fail",
+          "record": {
+            "net_r": 3.1859,
+            "n": 34,
+            "folds_positive": 3,
+            "n_folds": 4,
+            "stage0": true,
+            "beats_A": false,
+            "delta_vs_A": 0.0
+          },
+          "prior": {
+            "net_r": -6.7948,
+            "n": 26,
+            "holds": false,
+            "delta_vs_A": 0.0
+          }
+        },
+        "L2T": {
+          "verdict": "fail",
+          "record": {
+            "net_r": 1.8426,
+            "n": 34,
+            "folds_positive": 3,
+            "n_folds": 4,
+            "stage0": true,
+            "beats_A": false,
+            "delta_vs_A": -1.3433
+          },
+          "prior": {
+            "net_r": -6.7948,
+            "n": 26,
+            "holds": false,
+            "delta_vs_A": 0.0
+          }
+        }
+      },
+      "arms_passing": [],
+      "note": "A rec 3.1859 / pre -6.7948; L2 d_rec -2.7497 d_pre 0.0 (fail); L25 d_rec 0.0 d_pre 0.0 (fail); L2T d_rec -1.3433 d_pre 0.0 (fail)"
+    },
+    {
+      "leg": "xrp_pullback_2h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 117,
+      "A": {
+        "record": {
+          "net_r": 9.9193,
+          "n": 52
+        },
+        "prior": {
+          "net_r": 2.3083,
+          "n": 65
+        }
+      },
+      "arms": {
+        "L2": {
+          "verdict": "fail",
+          "record": {
+            "net_r": 3.3125,
+            "n": 54,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -6.6068
+          },
+          "prior": {
+            "net_r": 1.5534,
+            "n": 67,
+            "holds": false,
+            "delta_vs_A": -0.7549
+          }
+        },
+        "L25": {
+          "verdict": "fail",
+          "record": {
+            "net_r": 7.7835,
+            "n": 54,
+            "folds_positive": 3,
+            "n_folds": 4,
+            "stage0": true,
+            "beats_A": false,
+            "delta_vs_A": -2.1358
+          },
+          "prior": {
+            "net_r": 0.6451,
+            "n": 66,
+            "holds": false,
+            "delta_vs_A": -1.6632
+          }
+        },
+        "L2T": {
+          "verdict": "fail",
+          "record": {
+            "net_r": 7.616,
+            "n": 52,
+            "folds_positive": 3,
+            "n_folds": 4,
+            "stage0": true,
+            "beats_A": false,
+            "delta_vs_A": -2.3033
+          },
+          "prior": {
+            "net_r": 1.2992,
+            "n": 66,
+            "holds": false,
+            "delta_vs_A": -1.0091
+          }
+        }
+      },
+      "arms_passing": [],
+      "note": "A rec 9.9193 / pre 2.3083; L2 d_rec -6.6068 d_pre -0.7549 (fail); L25 d_rec -2.1358 d_pre -1.6632 (fail); L2T d_rec -2.3033 d_pre -1.0091 (fail)"
+    },
+    {
+      "leg": "ada_pullback_2h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 122,
+      "A": {
+        "record": {
+          "net_r": 23.9633,
+          "n": 68
+        },
+        "prior": {
+          "net_r": -0.2969,
+          "n": 54
+        }
+      },
+      "arms": {
+        "L2": {
+          "verdict": "fail",
+          "record": {
+            "net_r": 11.5965,
+            "n": 76,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -12.3668
+          },
+          "prior": {
+            "net_r": -4.5863,
+            "n": 59,
+            "holds": false,
+            "delta_vs_A": -4.2894
+          }
+        },
+        "L25": {
+          "verdict": "fail",
+          "record": {
+            "net_r": 12.598,
+            "n": 74,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -11.3653
+          },
+          "prior": {
+            "net_r": 0.6537,
+            "n": 57,
+            "holds": true,
+            "delta_vs_A": 0.9506
+          }
+        },
+        "L2T": {
+          "verdict": "fail",
+          "record": {
+            "net_r": 21.885,
+            "n": 68,
+            "folds_positive": 3,
+            "n_folds": 4,
+            "stage0": true,
+            "beats_A": false,
+            "delta_vs_A": -2.0783
+          },
+          "prior": {
+            "net_r": -1.8469,
+            "n": 54,
+            "holds": false,
+            "delta_vs_A": -1.55
+          }
+        }
+      },
+      "arms_passing": [],
+      "note": "A rec 23.9633 / pre -0.2969; L2 d_rec -12.3668 d_pre -4.2894 (fail); L25 d_rec -11.3653 d_pre 0.9506 (fail); L2T d_rec -2.0783 d_pre -1.55 (fail)"
+    },
+    {
+      "leg": "trend_donchian",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 191,
+      "A": {
+        "record": {
+          "net_r": -31.9728,
+          "n": 102
+        },
+        "prior": {
+          "net_r": 5.1018,
+          "n": 89
+        }
+      },
+      "arms": {
+        "L2": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -35.3354,
+            "n": 113,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -3.3626
+          },
+          "prior": {
+            "net_r": -2.9613,
+            "n": 98,
+            "holds": false,
+            "delta_vs_A": -8.0631
+          }
+        },
+        "L25": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -39.1598,
+            "n": 112,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -7.187
+          },
+          "prior": {
+            "net_r": -7.8771,
+            "n": 99,
+            "holds": false,
+            "delta_vs_A": -12.9789
+          }
+        },
+        "L2T": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -31.9728,
+            "n": 102,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": 0.0
+          },
+          "prior": {
+            "net_r": 5.1018,
+            "n": 89,
+            "holds": false,
+            "delta_vs_A": 0.0
+          }
+        }
+      },
+      "arms_passing": [],
+      "note": "A rec -31.9728 / pre 5.1018; L2 d_rec -3.3626 d_pre -8.0631 (fail); L25 d_rec -7.187 d_pre -12.9789 (fail); L2T d_rec 0.0 d_pre 0.0 (fail)"
+    },
+    {
+      "leg": "trend_donchian_1h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 354,
+      "A": {
+        "record": {
+          "net_r": -19.6552,
+          "n": 183
+        },
+        "prior": {
+          "net_r": -7.8577,
+          "n": 171
+        }
+      },
+      "arms": {
+        "L2": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -24.9084,
+            "n": 198,
+            "folds_positive": 0,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -5.2532
+          },
+          "prior": {
+            "net_r": -18.0802,
+            "n": 184,
+            "holds": false,
+            "delta_vs_A": -10.2225
+          }
+        },
+        "L25": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -21.7042,
+            "n": 195,
+            "folds_positive": 0,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -2.049
+          },
+          "prior": {
+            "net_r": -16.2734,
+            "n": 180,
+            "holds": false,
+            "delta_vs_A": -8.4157
+          }
+        },
+        "L2T": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -19.6552,
+            "n": 183,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": 0.0
+          },
+          "prior": {
+            "net_r": -7.3168,
+            "n": 171,
+            "holds": false,
+            "delta_vs_A": 0.5409
+          }
+        }
+      },
+      "arms_passing": [],
+      "note": "A rec -19.6552 / pre -7.8577; L2 d_rec -5.2532 d_pre -10.2225 (fail); L25 d_rec -2.049 d_pre -8.4157 (fail); L2T d_rec 0.0 d_pre 0.5409 (fail)"
+    },
+    {
+      "leg": "trend_donchian_ada_4h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 114,
+      "A": {
+        "record": {
+          "net_r": -3.3545,
+          "n": 55
+        },
+        "prior": {
+          "net_r": 13.443,
+          "n": 59
+        }
+      },
+      "arms": {
+        "L2": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -6.8123,
+            "n": 56,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -3.4578
+          },
+          "prior": {
+            "net_r": 13.5567,
+            "n": 60,
+            "holds": true,
+            "delta_vs_A": 0.1137
+          }
+        },
+        "L25": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -8.0635,
+            "n": 56,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -4.709
+          },
+          "prior": {
+            "net_r": 10.7934,
+            "n": 60,
+            "holds": false,
+            "delta_vs_A": -2.6496
+          }
+        },
+        "L2T": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -3.3545,
+            "n": 55,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": 0.0
+          },
+          "prior": {
+            "net_r": 16.138,
+            "n": 59,
+            "holds": true,
+            "delta_vs_A": 2.695
+          }
+        }
+      },
+      "arms_passing": [],
+      "note": "A rec -3.3545 / pre 13.443; L2 d_rec -3.4578 d_pre 0.1137 (fail); L25 d_rec -4.709 d_pre -2.6496 (fail); L2T d_rec 0.0 d_pre 2.695 (fail)"
+    },
+    {
+      "leg": "trend_donchian_avax_4h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 112,
+      "A": {
+        "record": {
+          "net_r": -16.1778,
+          "n": 57
+        },
+        "prior": {
+          "net_r": 26.0921,
+          "n": 55
+        }
+      },
+      "arms": {
+        "L2": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -16.4639,
+            "n": 58,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -0.2861
+          },
+          "prior": {
+            "net_r": 28.0199,
+            "n": 55,
+            "holds": true,
+            "delta_vs_A": 1.9278
+          }
+        },
+        "L25": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -18.99,
+            "n": 57,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -2.8122
+          },
+          "prior": {
+            "net_r": 26.0921,
+            "n": 55,
+            "holds": false,
+            "delta_vs_A": 0.0
+          }
+        },
+        "L2T": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -16.1778,
+            "n": 57,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": 0.0
+          },
+          "prior": {
+            "net_r": 28.0199,
+            "n": 55,
+            "holds": true,
+            "delta_vs_A": 1.9278
+          }
+        }
+      },
+      "arms_passing": [],
+      "note": "A rec -16.1778 / pre 26.0921; L2 d_rec -0.2861 d_pre 1.9278 (fail); L25 d_rec -2.8122 d_pre 0.0 (fail); L2T d_rec 0.0 d_pre 1.9278 (fail)"
+    },
+    {
+      "leg": "trend_donchian_eth",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 328,
+      "A": {
+        "record": {
+          "net_r": -6.9431,
+          "n": 162
+        },
+        "prior": {
+          "net_r": 6.9329,
+          "n": 166
+        }
+      },
+      "arms": {
+        "L2": {
+          "verdict": "fail",
+          "record": {
+            "net_r": 2.3584,
+            "n": 163,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": true,
+            "delta_vs_A": 9.3015
+          },
+          "prior": {
+            "net_r": -3.303,
+            "n": 177,
+            "holds": false,
+            "delta_vs_A": -10.2359
+          }
+        },
+        "L25": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -6.9694,
+            "n": 164,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -0.0263
+          },
+          "prior": {
+            "net_r": 14.8396,
+            "n": 170,
+            "holds": true,
+            "delta_vs_A": 7.9067
+          }
+        },
+        "L2T": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -6.9431,
+            "n": 162,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": 0.0
+          },
+          "prior": {
+            "net_r": 5.4627,
+            "n": 169,
+            "holds": false,
+            "delta_vs_A": -1.4702
+          }
+        }
+      },
+      "arms_passing": [],
+      "note": "A rec -6.9431 / pre 6.9329; L2 d_rec 9.3015 d_pre -10.2359 (fail); L25 d_rec -0.0263 d_pre 7.9067 (fail); L2T d_rec 0.0 d_pre -1.4702 (fail)"
+    },
+    {
+      "leg": "trend_donchian_eth_4h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 96,
+      "A": {
+        "record": {
+          "net_r": -15.2931,
+          "n": 54
+        },
+        "prior": {
+          "net_r": 22.3695,
+          "n": 42
+        }
+      },
+      "arms": {
+        "L2": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -15.7628,
+            "n": 54,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -0.4697
+          },
+          "prior": {
+            "net_r": 23.4222,
+            "n": 43,
+            "holds": true,
+            "delta_vs_A": 1.0527
+          }
+        },
+        "L25": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -13.8721,
+            "n": 54,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": true,
+            "delta_vs_A": 1.421
+          },
+          "prior": {
+            "net_r": 22.1842,
+            "n": 43,
+            "holds": false,
+            "delta_vs_A": -0.1853
+          }
+        },
+        "L2T": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -16.9354,
+            "n": 54,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -1.6423
+          },
+          "prior": {
+            "net_r": 19.5643,
+            "n": 43,
+            "holds": false,
+            "delta_vs_A": -2.8052
+          }
+        }
+      },
+      "arms_passing": [],
+      "note": "A rec -15.2931 / pre 22.3695; L2 d_rec -0.4697 d_pre 1.0527 (fail); L25 d_rec 1.421 d_pre -0.1853 (fail); L2T d_rec -1.6423 d_pre -2.8052 (fail)"
+    },
+    {
+      "leg": "trend_donchian_eth_prop",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 349,
+      "A": {
+        "record": {
+          "net_r": -9.6104,
+          "n": 166
+        },
+        "prior": {
+          "net_r": -4.5233,
+          "n": 183
+        }
+      },
+      "arms": {
+        "L2": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -13.1724,
+            "n": 166,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -3.562
+          },
+          "prior": {
+            "net_r": -5.3134,
+            "n": 183,
+            "holds": false,
+            "delta_vs_A": -0.7901
+          }
+        },
+        "L25": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -9.0417,
+            "n": 166,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": true,
+            "delta_vs_A": 0.5687
+          },
+          "prior": {
+            "net_r": -5.4083,
+            "n": 183,
+            "holds": false,
+            "delta_vs_A": -0.885
+          }
+        },
+        "L2T": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -9.6104,
+            "n": 166,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": 0.0
+          },
+          "prior": {
+            "net_r": -4.2952,
+            "n": 183,
+            "holds": false,
+            "delta_vs_A": 0.2281
+          }
+        }
+      },
+      "arms_passing": [],
+      "note": "A rec -9.6104 / pre -4.5233; L2 d_rec -3.562 d_pre -0.7901 (fail); L25 d_rec 0.5687 d_pre -0.885 (fail); L2T d_rec 0.0 d_pre 0.2281 (fail)"
+    },
+    {
+      "leg": "trend_donchian_sol",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 163,
+      "A": {
+        "record": {
+          "net_r": -2.9131,
+          "n": 80
+        },
+        "prior": {
+          "net_r": 3.2661,
+          "n": 83
+        }
+      },
+      "arms": {
+        "L2": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -3.911,
+            "n": 81,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -0.9979
+          },
+          "prior": {
+            "net_r": 2.7565,
+            "n": 85,
+            "holds": false,
+            "delta_vs_A": -0.5096
+          }
+        },
+        "L25": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -3.9069,
+            "n": 83,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -0.9938
+          },
+          "prior": {
+            "net_r": -5.8438,
+            "n": 87,
+            "holds": false,
+            "delta_vs_A": -9.1099
+          }
+        },
+        "L2T": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -3.0638,
+            "n": 81,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -0.1507
+          },
+          "prior": {
+            "net_r": 3.2661,
+            "n": 83,
+            "holds": false,
+            "delta_vs_A": 0.0
+          }
+        }
+      },
+      "arms_passing": [],
+      "note": "A rec -2.9131 / pre 3.2661; L2 d_rec -0.9979 d_pre -0.5096 (fail); L25 d_rec -0.9938 d_pre -9.1099 (fail); L2T d_rec -0.1507 d_pre 0.0 (fail)"
+    },
+    {
+      "leg": "trend_donchian_sol_4h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 74,
+      "A": {
+        "record": {
+          "net_r": -4.918,
+          "n": 34
+        },
+        "prior": {
+          "net_r": 22.106,
+          "n": 40
+        }
+      },
+      "arms": {
+        "L2": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -5.3535,
+            "n": 39,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -0.4355
+          },
+          "prior": {
+            "net_r": 30.2069,
+            "n": 45,
+            "holds": true,
+            "delta_vs_A": 8.1009
+          }
+        },
+        "L25": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -9.5889,
+            "n": 39,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -4.6709
+          },
+          "prior": {
+            "net_r": 27.0177,
+            "n": 42,
+            "holds": true,
+            "delta_vs_A": 4.9117
+          }
+        },
+        "L2T": {
+          "verdict": "fail",
+          "record": {
+            "net_r": -4.8261,
+            "n": 34,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": true,
+            "delta_vs_A": 0.0919
+          },
+          "prior": {
+            "net_r": 25.1229,
+            "n": 44,
+            "holds": true,
+            "delta_vs_A": 3.0169
+          }
+        }
+      },
+      "arms_passing": [],
+      "note": "A rec -4.918 / pre 22.106; L2 d_rec -0.4355 d_pre 8.1009 (fail); L25 d_rec -4.6709 d_pre 4.9117 (fail); L2T d_rec 0.0919 d_pre 3.0169 (fail)"
+    },
+    {
+      "leg": "trend_donchian_sol_prop",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 169,
+      "A": {
+        "record": {
+          "net_r": 4.9694,
+          "n": 81
+        },
+        "prior": {
+          "net_r": -3.0027,
+          "n": 88
+        }
+      },
+      "arms": {
+        "L2": {
+          "verdict": "fail",
+          "record": {
+            "net_r": 2.7922,
+            "n": 82,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -2.1772
+          },
+          "prior": {
+            "net_r": 0.8952,
+            "n": 88,
+            "holds": true,
+            "delta_vs_A": 3.8979
+          }
+        },
+        "L25": {
+          "verdict": "fail",
+          "record": {
+            "net_r": 1.959,
+            "n": 84,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -3.0104
+          },
+          "prior": {
+            "net_r": -4.8388,
+            "n": 89,
+            "holds": false,
+            "delta_vs_A": -1.8361
+          }
+        },
+        "L2T": {
+          "verdict": "fail",
+          "record": {
+            "net_r": 4.4163,
+            "n": 82,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": -0.5531
+          },
+          "prior": {
+            "net_r": -3.0027,
+            "n": 88,
+            "holds": false,
+            "delta_vs_A": 0.0
+          }
+        }
+      },
+      "arms_passing": [],
+      "note": "A rec 4.9694 / pre -3.0027; L2 d_rec -2.1772 d_pre 3.8979 (fail); L25 d_rec -3.0104 d_pre -1.8361 (fail); L2T d_rec -0.5531 d_pre 0.0 (fail)"
+    },
+    {
+      "leg": "trend_donchian_xrp_4h",
+      "verdict": "indeterminate",
+      "read_state": "measured",
+      "n": 27,
+      "A": {
+        "record": {
+          "net_r": 0.734,
+          "n": 16
+        },
+        "prior": {
+          "net_r": 2.805,
+          "n": 11
+        }
+      },
+      "arms": {
+        "L2": {
+          "verdict": "indeterminate",
+          "record": {
+            "net_r": 0.734,
+            "n": 16,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": 0.0
+          },
+          "prior": {
+            "net_r": 3.7432,
+            "n": 11,
+            "holds": true,
+            "delta_vs_A": 0.9382
+          },
+          "note": "under the n floor 30"
+        },
+        "L25": {
+          "verdict": "indeterminate",
+          "record": {
+            "net_r": 1.0728,
+            "n": 16,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": true,
+            "delta_vs_A": 0.3388
+          },
+          "prior": {
+            "net_r": 2.805,
+            "n": 11,
+            "holds": false,
+            "delta_vs_A": 0.0
+          },
+          "note": "under the n floor 30"
+        },
+        "L2T": {
+          "verdict": "indeterminate",
+          "record": {
+            "net_r": 0.734,
+            "n": 16,
+            "folds_positive": 1,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": 0.0
+          },
+          "prior": {
+            "net_r": 3.2994,
+            "n": 11,
+            "holds": true,
+            "delta_vs_A": 0.4944
+          },
+          "note": "under the n floor 30"
+        }
+      },
+      "arms_passing": [],
+      "note": "A rec 0.734 / pre 2.805; L2 d_rec 0.0 d_pre 0.9382 (indeterminate); L25 d_rec 0.3388 d_pre 0.0 (indeterminate); L2T d_rec 0.0 d_pre 0.4944 (indeterminate)"
+    },
+    {
+      "leg": "trend_donchian_xrp_adx25",
+      "verdict": "indeterminate",
+      "read_state": "measured",
+      "n": 27,
+      "A": {
+        "record": {
+          "net_r": 4.916,
+          "n": 16
+        },
+        "prior": {
+          "net_r": 2.1888,
+          "n": 11
+        }
+      },
+      "arms": {
+        "L2": {
+          "verdict": "indeterminate",
+          "record": {
+            "net_r": 5.0393,
+            "n": 16,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": true,
+            "delta_vs_A": 0.1233
+          },
+          "prior": {
+            "net_r": 2.389,
+            "n": 11,
+            "holds": true,
+            "delta_vs_A": 0.2002
+          },
+          "note": "under the n floor 30"
+        },
+        "L25": {
+          "verdict": "indeterminate",
+          "record": {
+            "net_r": 4.916,
+            "n": 16,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": 0.0
+          },
+          "prior": {
+            "net_r": 2.1888,
+            "n": 11,
+            "holds": false,
+            "delta_vs_A": 0.0
+          },
+          "note": "under the n floor 30"
+        },
+        "L2T": {
+          "verdict": "indeterminate",
+          "record": {
+            "net_r": 4.916,
+            "n": 16,
+            "folds_positive": 2,
+            "n_folds": 4,
+            "stage0": false,
+            "beats_A": false,
+            "delta_vs_A": 0.0
+          },
+          "prior": {
+            "net_r": 2.389,
+            "n": 11,
+            "holds": true,
+            "delta_vs_A": 0.2002
+          },
+          "note": "under the n floor 30"
+        }
+      },
+      "arms_passing": [],
+      "note": "A rec 4.916 / pre 2.1888; L2 d_rec 0.1233 d_pre 0.2002 (indeterminate); L25 d_rec 0.0 d_pre 0.0 (indeterminate); L2T d_rec 0.0 d_pre 0.2002 (indeterminate)"
+    }
+  ],
+  "research_unit": "RQ-20261114-db1a-05",
+  "rule": "RULE-PROFIT-LOCK-CONDITIONAL-20261114",
+  "records": [
+    {
+      "leg": "POOLED:L2_minus_A",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 2804,
+      "population": "18 rostered crypto pullback/trend legs (demo floor + real money); arms L2 / L25 / L2T vs A config-exact inside the harness; record 2025-11-13..2026-11-12 and prior 2024-11-13..2025-11-12; full cost stack",
+      "note": "d_rec -30.2489R d_pre -18.9327R (PRIMARY: the unit verdict)"
+    },
+    {
+      "leg": "POOLED:L25_minus_A",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 2804,
+      "population": "18 rostered crypto pullback/trend legs (demo floor + real money); arms L2 / L25 / L2T vs A config-exact inside the harness; record 2025-11-13..2026-11-12 and prior 2024-11-13..2025-11-12; full cost stack",
+      "note": "d_rec -37.5409R d_pre -22.8675R (secondary record)"
+    },
+    {
+      "leg": "POOLED:L2T_minus_A",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 2804,
+      "population": "18 rostered crypto pullback/trend legs (demo floor + real money); arms L2 / L25 / L2T vs A config-exact inside the harness; record 2025-11-13..2026-11-12 and prior 2024-11-13..2025-11-12; full cost stack",
+      "note": "d_rec -9.1846R d_pre 1.5882R (secondary record)"
+    },
+    {
+      "leg": "eth_pullback_2h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 161,
+      "population": "eth_pullback_2h: arms L2/L25/L2T vs A, record + prior windows",
+      "note": "A rec 1.3857 / pre 16.3602; L2 d_rec 2.6247 d_pre 0.0463 (fail); L25 d_rec -1.0944 d_pre -1.6975 (fail); L2T d_rec 0.0 d_pre 0.0 (fail)"
+    },
+    {
+      "leg": "eth_pullback_prop_2h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 152,
+      "population": "eth_pullback_prop_2h: arms L2/L25/L2T vs A, record + prior windows",
+      "note": "A rec -6.5744 / pre 7.319; L2 d_rec 0.2947 d_pre -0.6554 (fail); L25 d_rec 0.1847 d_pre 0.0 (fail); L2T d_rec 0.0 d_pre -0.6806 (fail)"
+    },
+    {
+      "leg": "htf_pullback_trend_2h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 188,
+      "population": "htf_pullback_trend_2h: arms L2/L25/L2T vs A, record + prior windows",
+      "note": "A rec -23.3731 / pre 2.9423; L2 d_rec -0.8678 d_pre 0.3105 (fail); L25 d_rec 0.0 d_pre 2.7847 (fail); L2T d_rec -1.2055 d_pre 0.0 (fail)"
+    },
+    {
+      "leg": "sol_pullback_2h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 60,
+      "population": "sol_pullback_2h: arms L2/L25/L2T vs A, record + prior windows",
+      "note": "A rec 3.1859 / pre -6.7948; L2 d_rec -2.7497 d_pre 0.0 (fail); L25 d_rec 0.0 d_pre 0.0 (fail); L2T d_rec -1.3433 d_pre 0.0 (fail)"
+    },
+    {
+      "leg": "xrp_pullback_2h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 117,
+      "population": "xrp_pullback_2h: arms L2/L25/L2T vs A, record + prior windows",
+      "note": "A rec 9.9193 / pre 2.3083; L2 d_rec -6.6068 d_pre -0.7549 (fail); L25 d_rec -2.1358 d_pre -1.6632 (fail); L2T d_rec -2.3033 d_pre -1.0091 (fail)"
+    },
+    {
+      "leg": "ada_pullback_2h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 122,
+      "population": "ada_pullback_2h: arms L2/L25/L2T vs A, record + prior windows",
+      "note": "A rec 23.9633 / pre -0.2969; L2 d_rec -12.3668 d_pre -4.2894 (fail); L25 d_rec -11.3653 d_pre 0.9506 (fail); L2T d_rec -2.0783 d_pre -1.55 (fail)"
+    },
+    {
+      "leg": "trend_donchian",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 191,
+      "population": "trend_donchian: arms L2/L25/L2T vs A, record + prior windows",
+      "note": "A rec -31.9728 / pre 5.1018; L2 d_rec -3.3626 d_pre -8.0631 (fail); L25 d_rec -7.187 d_pre -12.9789 (fail); L2T d_rec 0.0 d_pre 0.0 (fail)"
+    },
+    {
+      "leg": "trend_donchian_1h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 354,
+      "population": "trend_donchian_1h: arms L2/L25/L2T vs A, record + prior windows",
+      "note": "A rec -19.6552 / pre -7.8577; L2 d_rec -5.2532 d_pre -10.2225 (fail); L25 d_rec -2.049 d_pre -8.4157 (fail); L2T d_rec 0.0 d_pre 0.5409 (fail)"
+    },
+    {
+      "leg": "trend_donchian_ada_4h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 114,
+      "population": "trend_donchian_ada_4h: arms L2/L25/L2T vs A, record + prior windows",
+      "note": "A rec -3.3545 / pre 13.443; L2 d_rec -3.4578 d_pre 0.1137 (fail); L25 d_rec -4.709 d_pre -2.6496 (fail); L2T d_rec 0.0 d_pre 2.695 (fail)"
+    },
+    {
+      "leg": "trend_donchian_avax_4h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 112,
+      "population": "trend_donchian_avax_4h: arms L2/L25/L2T vs A, record + prior windows",
+      "note": "A rec -16.1778 / pre 26.0921; L2 d_rec -0.2861 d_pre 1.9278 (fail); L25 d_rec -2.8122 d_pre 0.0 (fail); L2T d_rec 0.0 d_pre 1.9278 (fail)"
+    },
+    {
+      "leg": "trend_donchian_eth",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 328,
+      "population": "trend_donchian_eth: arms L2/L25/L2T vs A, record + prior windows",
+      "note": "A rec -6.9431 / pre 6.9329; L2 d_rec 9.3015 d_pre -10.2359 (fail); L25 d_rec -0.0263 d_pre 7.9067 (fail); L2T d_rec 0.0 d_pre -1.4702 (fail)"
+    },
+    {
+      "leg": "trend_donchian_eth_4h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 96,
+      "population": "trend_donchian_eth_4h: arms L2/L25/L2T vs A, record + prior windows",
+      "note": "A rec -15.2931 / pre 22.3695; L2 d_rec -0.4697 d_pre 1.0527 (fail); L25 d_rec 1.421 d_pre -0.1853 (fail); L2T d_rec -1.6423 d_pre -2.8052 (fail)"
+    },
+    {
+      "leg": "trend_donchian_eth_prop",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 349,
+      "population": "trend_donchian_eth_prop: arms L2/L25/L2T vs A, record + prior windows",
+      "note": "A rec -9.6104 / pre -4.5233; L2 d_rec -3.562 d_pre -0.7901 (fail); L25 d_rec 0.5687 d_pre -0.885 (fail); L2T d_rec 0.0 d_pre 0.2281 (fail)"
+    },
+    {
+      "leg": "trend_donchian_sol",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 163,
+      "population": "trend_donchian_sol: arms L2/L25/L2T vs A, record + prior windows",
+      "note": "A rec -2.9131 / pre 3.2661; L2 d_rec -0.9979 d_pre -0.5096 (fail); L25 d_rec -0.9938 d_pre -9.1099 (fail); L2T d_rec -0.1507 d_pre 0.0 (fail)"
+    },
+    {
+      "leg": "trend_donchian_sol_4h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 74,
+      "population": "trend_donchian_sol_4h: arms L2/L25/L2T vs A, record + prior windows",
+      "note": "A rec -4.918 / pre 22.106; L2 d_rec -0.4355 d_pre 8.1009 (fail); L25 d_rec -4.6709 d_pre 4.9117 (fail); L2T d_rec 0.0919 d_pre 3.0169 (fail)"
+    },
+    {
+      "leg": "trend_donchian_sol_prop",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 169,
+      "population": "trend_donchian_sol_prop: arms L2/L25/L2T vs A, record + prior windows",
+      "note": "A rec 4.9694 / pre -3.0027; L2 d_rec -2.1772 d_pre 3.8979 (fail); L25 d_rec -3.0104 d_pre -1.8361 (fail); L2T d_rec -0.5531 d_pre 0.0 (fail)"
+    },
+    {
+      "leg": "trend_donchian_xrp_4h",
+      "verdict": "indeterminate",
+      "read_state": "measured",
+      "n": 27,
+      "population": "trend_donchian_xrp_4h: arms L2/L25/L2T vs A, record + prior windows",
+      "note": "A rec 0.734 / pre 2.805; L2 d_rec 0.0 d_pre 0.9382 (indeterminate); L25 d_rec 0.3388 d_pre 0.0 (indeterminate); L2T d_rec 0.0 d_pre 0.4944 (indeterminate)"
+    },
+    {
+      "leg": "trend_donchian_xrp_adx25",
+      "verdict": "indeterminate",
+      "read_state": "measured",
+      "n": 27,
+      "population": "trend_donchian_xrp_adx25: arms L2/L25/L2T vs A, record + prior windows",
+      "note": "A rec 4.916 / pre 2.1888; L2 d_rec 0.1233 d_pre 0.2002 (indeterminate); L25 d_rec 0.0 d_pre 0.0 (indeterminate); L2T d_rec 0.0 d_pre 0.2002 (indeterminate)"
+    }
+  ]
+}

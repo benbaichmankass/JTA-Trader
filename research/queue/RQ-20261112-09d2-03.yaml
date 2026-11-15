@@ -1,0 +1,85 @@
+# Hand-authored 2026-11-12 by lane TRADEIFY-FUTURES-FRONTIER (Tier 1), dispatched by Manager Session 2026-11-11a. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261112-09d2-03
+title: 'Tradeify futures ML: does a gbdt meta-label filter over the session-flat ORB candidates on MES / MNQ / MGC raise net R per trade on a frozen 2025-26 holdout, at Tradeify costs?'
+status: done
+cadence: once
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-PROP
+programme: P5
+kind: experiment
+origin: new_hypothesis
+question: Trained only on 2019-2024 candidates, does a HistGradientBoosting classifier (8 pre-bar features -- opening-range width / ATR20,
+  overnight gap / ATR20, breakout minute, weekday, direction, ATR20 / price, instrument, range length; target net R > 0) that keeps
+  candidates scoring above the training-set median raise holdout net R per trade over taking every candidate, net of Tradeify costs?
+why_this_matters: 'Operator 2026-11-12: "or if we can build an ML that can do that". This is the smallest question whose answer changes an
+  order: the model either selects better session-flat trades on these instruments at these costs, or it does not. It pools all 6 cells so
+  it can rescue cells that fail RQ-20261112-09d2-01 on their own.'
+lever_manifest:
+  variables:
+    features: [or_width_atr, gap_atr, breakout_min, dow, dir, atr_pct, inst, or_min]
+  fixed: {model: sklearn HistGradientBoostingClassifier(max_iter=200, learning_rate=0.05, max_depth=3, random_state=0), threshold: median of the training-set scores, discovery: expanding walk-forward scoring 2021..2024, holdout: one model trained on 2019-2024 scoring 2025-01..2026-10}
+  hypothesised_effect: range width, gap and breakout time separate follow-through days from fade days
+power:
+  expected_n: 2400
+  min_detectable_effect: 0.08
+  effect_units: R per trade uplift
+  sd: 1.2
+  design: paired bootstrap, kept vs all on the same holdout trades
+  alpha: 0.05
+  power: 0.8
+  basis: INFERRED -- ~6 cells x ~420 holdout candidates; ~half kept.
+  feasibility:
+    source: dukascopy
+    accrual_basis: Replays a public corpus; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261112-09d2-03
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'scripts/research/tradeify_futures_fit.py --stage ml: on the 2025-01-01..2026-10-31 holdout, mean net R of kept candidates
+    minus mean net R of all candidates; 95% paired-bootstrap CI (5000 resamples, seed 0).'
+  rule: 'PASS iff kept n >= 60 AND mean net R(kept) > mean net R(all) AND the uplift CI lower bound > 0 AND total net R(kept) > 0. FAIL if
+    kept n >= 60 and any clause fails. INDETERMINATE if kept n < 60. A PASS means a model-gated leg goes through RQ-20261112-09d2-02 next
+    (a new unit), never straight to an account. Not changed after any result.'
+  what_it_does_not_do: Registers no model, serves nothing, promotes nothing; places no order.
+practice_precedent: 'M9 + M2 + M6 (docs/reference/trading-and-model-practice-principles.md); meta-labelling (Lopez de Prado 2018, ch. 3): a secondary model sizes or filters a primary rule''s signals; purged by
+  time (train strictly before score).'
+intervention_controls:
+  not_applicable: an offline model evaluation; nothing is applied
+ml_consumer:
+  not_applicable: 'The consumer leg does not exist yet, so it cannot be on a mode: live roster. It would be a session-flat ORB leg on a Tradeify futures account that has not been bought (docs/research/tradeify-futures-frontier-2026-11-12.md section 5). Decision it would change: whether the operator buys a Tradeify futures account and which leg it runs. A PASS goes through the survival rule of RQ-20261112-09d2-02 in a new unit and a held Tier-3 roster PR. Not a false keyword hit; the guard has no pending-account state.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  basis: Estimate; the first run replaces it.
+  why_runner: CPU, public corpus.
+value:
+  usd_at_stake_per_month: 1500
+  confidence: 0.08
+  bucket: ai_trader
+  basis: as RQ-20261112-09d2-01; an estimate, not a measurement
+run:
+  command: [python3, scripts/research/tradeify_futures_fit.py, --stage, ml, --unit, RQ-20261112-09d2-03, --out, '{out_dir}']
+  timeout_minutes: 60
+  inputs: {research_unit: RQ-20261112-09d2-03}
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- TRADEIFY-FUTURES-FRONTIER
+- RQ-20261112-09d2-01
+what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+grading:
+  verdict: fail
+  decision_rule_id: RULE-RQ-20261112-09d2-03
+  graded_at: '2026-11-12'
+  grader: session_01AFoLuLwRU7eg9KzpMcxWu (lane TRADEIFY-FUTURES-FRONTIER), by hand under the registered rule
+  evidence:
+  - research/results/RQ-20261112-09d2-03/local-20261112.jsonl
+  - comms/research/RQ-20261112-09d2-03/local-20261112/verdict.json
+  reason: 'RULE-RQ-20261112-09d2-03 FAIL. On the holdout, kept n=1437 averaged -0.0008R against +0.0130R for all n=2725; the uplift CI lower bound is -0.052. In walk-forward scoring of 2021-2024, kept beat all every year, and the frozen holdout did not repeat it. FAIL closes this exact configuration (features, gbdt, median threshold), not the family.'

@@ -73,6 +73,22 @@ from typing import Any, Optional
 REPO = Path(__file__).resolve().parents[2]
 RECEIPT_PATH = "docs/claude/work/RESEARCH-LOSS-RECEIPT.json"
 RESULT_ACTION = "./.github/actions/research-result"
+# A run that can NEVER land (it died before producing a result, so no artifact holds one) is closed by a recorded
+# disposition, not by waiting for the lookback to age it out. Shape: {"<run_id>": {"disposition": ..., "reason": ...,
+# "ref": ...}}. Disposed runs are COUNTED in the population line, never dropped silently, and a run only counts as
+# disposed when its entry names a non-empty reason (RESEARCH-LOSS-M20-UNLANDED, 2026-11-12).
+DISPOSITIONS_PATH = "docs/claude/work/RESEARCH-LOSS-DISPOSITIONS.json"
+
+
+def load_dispositions(root: Path = REPO) -> dict:
+    try:
+        raw = json.loads((root / DISPOSITIONS_PATH).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(raw, dict):
+        return {}
+    return {str(k): v for k, v in raw.items()
+            if isinstance(v, dict) and str(v.get("reason") or "").strip()}
 
 #: Branch families that carry research output. A PR outside these is still
 #: caught if its diff touches RESEARCH_PATHS — this list only saves API calls.
@@ -261,6 +277,8 @@ def q_unlanded(repo: str, now: datetime, lookback_days: int, ref: str) -> dict:
         raise CouldNotRead(f"could not list research/results on {ref}")
     since = now - timedelta(days=lookback_days)
     runs_seen, by_design, pending, lost = 0, 0, [], []
+    disposed = 0
+    dispositions = load_dispositions()
     open_heads = {p["head"]["ref"] for p in _paged("pulls?state=open", repo, None)}
     for wf in wfs:
         runs = _paged(f"actions/workflows/{wf}/runs?status=completed"
@@ -272,6 +290,9 @@ def q_unlanded(repo: str, now: datetime, lookback_days: int, ref: str) -> dict:
             runs_seen += 1
             rid = str(run["id"])
             if rid in landed:
+                continue
+            if rid in dispositions:
+                disposed += 1
                 continue
             jobs = _api(f"actions/runs/{rid}/jobs?per_page=100", repo).get("jobs", [])
             rj = [j for j in jobs if j.get("name", "").startswith("research_result")]
@@ -289,7 +310,8 @@ def q_unlanded(repo: str, now: datetime, lookback_days: int, ref: str) -> dict:
             "population": (f"{runs_seen} completed run(s) of {len(wfs)} workflow(s) "
                            f"calling {RESULT_ACTION} since {since:%Y-%m-%d} "
                            f"({', '.join(wfs)}); {by_design} produced no result by "
-                           f"design (skipped); {len(landed)} result file(s) on {ref}"),
+                           f"design (skipped); {disposed} closed by a recorded disposition "
+                           f"({DISPOSITIONS_PATH}); {len(landed)} result file(s) on {ref}"),
             "pending_merge": pending, "lost": lost,
             "findings": lost + pending}
 

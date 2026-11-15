@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 2: changes the web-api snapshot builder (src/runtime/**) and runs a one-off data-mutation on trade_chart_snapshots.db (derived sidecar, never the journal). Manager GO 2026-11-13 02:45Z to BUILD it as a held PR; the manager merges. Do not self-land.",
+  "why": "CLOSED-TRADE-SNAPSHOT-FUTURES-CANDLES: one-off, idempotent re-queue of Alpaca-symbol built-partial trade snapshots stored with candles unavailable (pre-#25565), so they rebuild through the existing 1-per-10s Alpaca since-read; plus a named error for unparseable trade times (trade:6131)."
+}

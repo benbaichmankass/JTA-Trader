@@ -110,6 +110,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from scripts.ops import live_replay_parity_ml as MLP  # noqa: E402 -- the ML legs' replay (row ML-LIVE-PARITY-ML-LEGS)
+from scripts.ops.live_replay_parity_ml import ML_LEGS, ML_UNITS  # noqa: E402
+
 SCHEMA_VERSION = 1
 
 #: Real-money rosters (CLAUDE.md § promotion ladder, Stage 2 + the prop book).
@@ -314,16 +317,20 @@ def resolve_legs(accounts_doc: dict, strategies_doc: dict, *,
                 syms = cfg.get("symbols") or []
                 builder = getattr(ssb, f"{name}_signal_builder", None)
                 unit = getattr(builder, "monitor_unit", None) if builder else None
+                if unit is None and name in ML_LEGS:   # ml_entry's builder declares no monitor_unit: the leg is its own unit
+                    unit = name
                 leg = Leg(name=name, symbol=str(syms[0]) if syms else None,
                           timeframe=str(cfg.get("timeframe") or ""),
                           unit=unit, decision_bar=str(cfg.get("decision_bar") or "forming").lower(),
                           execution=execution, accounts=[], real_money=False, cfg=dict(cfg))
                 if builder is None:
                     leg.skip_reason = f"no builder {name}_signal_builder in strategy_signal_builders"
-                elif unit not in SUPPORTED_UNITS:
+                elif unit not in SUPPORTED_UNITS and unit not in ML_UNITS:
                     leg.skip_reason = f"unit {unit!r} not supported by the replay"
                 elif not leg.symbol:
                     leg.skip_reason = "no symbols: in strategies.yaml"
+                elif unit in ML_UNITS:
+                    leg.features = {}   # the ML replay (live_replay_parity_ml.py) has no wrapper gates to detect
                 else:
                     leg.features = _builder_features(builder)
                 by_leg[name] = leg
@@ -454,7 +461,10 @@ class Fetcher:
     def get(self, path: str, params: dict) -> Any:
         q = urllib.parse.urlencode({k: v for k, v in params.items() if v is not None})
         req = urllib.request.Request(f"{self.base}{path}?{q}",
-                                     headers={"Authorization": f"Bearer {self.token}"})
+                                     headers={"Authorization": f"Bearer {self.token}",
+                                              # a cloud environment holding a network secret for the host rewrites Authorization
+                                              # (WSD-S1-PROXY-AUTH-COLLISION); the server reads this header first
+                                              "X-Diag-Token": self.token})
         last: Exception | None = None
         for attempt in range(4):
             self.requests += 1
@@ -487,6 +497,24 @@ class Fetcher:
                 return {"rows": rows, "error": None}
             offset += page
 
+    def pool_snapshots(self, since: float, until: float, max_n: int = 60) -> dict:
+        """The archived ml_entry_eq* pool snapshots whose decision close is in [since - 1 day, until]. ``snapshots`` is
+        ``None`` (never ``{}``) when the archive could not be read; ``present`` False = the route / archive does not exist."""
+        d = self.get("/api/diag/ml_pool_snapshots", {"limit": 200})
+        if d.get("read_state") != "looked" or d.get("snapshots") is None:
+            return {"snapshots": None, "error": d.get("error") or f"read_state={d.get('read_state')}", "present": d.get("present")}
+        idx = [r for r in d["snapshots"] if r.get("bar_close")
+               and since - 86400 <= (to_epoch(r["bar_close"]) or 0) <= until][:max_n]
+        out: dict = {}
+        for r in idx:
+            one = self.get("/api/diag/ml_pool_snapshots", {"bar": r["bar"]})
+            if one.get("read_state") != "looked":
+                return {"snapshots": None, "error": f"snapshot {r['bar']}: {one.get('error') or one.get('read_state')}",
+                        "present": True, "index_count": d.get("total_in_archive")}
+            if one.get("snapshot"):
+                out[r["bar"]] = one["snapshot"]
+        return {"snapshots": out, "error": None, "present": d.get("present"), "index_count": d.get("total_in_archive")}
+
     def allocator(self, symbol: str) -> dict:
         """The per-symbol election record (``/api/bot/allocator/soak``, newest-first, <= 500
         rows): every tick with >= 2 actionable candidates, its candidates and the executed winner."""
@@ -510,6 +538,33 @@ class Fetcher:
                 "note": f"stopped after {max_pages} pages"}
 
 
+def _fetch_ml(f: Any, legs: list[Leg], b: dict, since: float, until: float) -> None:
+    """The ML legs' extra inputs: ml_entry's 1h frames (own symbols + the artifact's reference perps, from the bot's own
+    candles) and the archived pool snapshots for ml_entry_eq*. A failed fetch is recorded as an error, never as empty."""
+    mls = [lg for lg in legs if not lg.skip_reason and lg.unit in ML_UNITS]
+    b["audit_until_epoch"] = to_epoch(b.get("audit_until"))
+    if any(lg.unit == "ml_entry" for lg in mls):
+        try:
+            from src.units.strategies import ml_entry as ME
+            ref = list(ME.load_model()["meta"]["xs_reference"])
+        except Exception as exc:  # noqa: BLE001
+            b["ml_candles"] = {}
+            b["errors"].append(f"ml_entry artifact unreadable: {exc}")
+            ref = []
+        own = [str(x) for lg in mls if lg.unit == "ml_entry" for x in (lg.cfg.get("symbols") or [])]
+        b["ml_candles"] = {}
+        for sym in sorted(set(ref) | {x for x in own if x.endswith("USDT")}):
+            try:
+                b["ml_candles"][sym] = f.candles(sym, "1h")
+            except Exception as exc:  # noqa: BLE001
+                b["ml_candles"][sym] = {"candles": [], "error": f"fetch_failed: {exc}"}
+    if any(lg.unit == "ml_entry_eq" for lg in mls):
+        try:
+            b["ml_pool_snapshots"] = f.pool_snapshots(since, until)
+        except Exception as exc:  # noqa: BLE001
+            b["ml_pool_snapshots"] = {"snapshots": None, "error": f"fetch_failed: {exc}"}
+
+
 def fetch_bundle(f: Fetcher, legs: list[Leg], since: float, until: float) -> dict:
     """Everything the analysis needs, in one JSON-able dict."""
     b: dict = {"fetched_at": iso(datetime.now(timezone.utc).timestamp()),
@@ -518,7 +573,7 @@ def fetch_bundle(f: Fetcher, legs: list[Leg], since: float, until: float) -> dic
                "allocator": {}, "errors": []}
     need = set()
     for lg in legs:
-        if lg.skip_reason:
+        if lg.skip_reason or lg.unit in ML_UNITS:
             continue
         need.add((lg.symbol, lg.timeframe))
         need.add((lg.symbol, FINE_INTERVAL))
@@ -539,7 +594,8 @@ def fetch_bundle(f: Fetcher, legs: list[Leg], since: float, until: float) -> dic
         except Exception as exc:  # noqa: BLE001
             b["signals"][lg.name] = {"rows": [], "error": f"fetch_failed: {exc}"}
     # the per-symbol election: a leg that LOST it has no package by design (PI-20261111-LRP-C5F97202)
-    for sym in sorted({lg.symbol for lg in legs if not lg.skip_reason}):
+    _fetch_ml(f, legs, b, since, until)
+    for sym in sorted({lg.symbol for lg in legs if not lg.skip_reason and lg.unit not in ML_UNITS}):
         try:
             b["allocator"][sym] = f.allocator(sym) if hasattr(f, "allocator") else \
                 {"rows": [], "error": "fetcher_has_no_allocator_read"}
@@ -876,6 +932,9 @@ def analyse_leg(leg: Leg, bundle: dict, since: float, until: float, *,
         b_end = b0 + tf_s
         pre_join = leg_live_from is not None and b0 < leg_live_from
         status = None
+        # PARITY-CONTROLS-1114: could THIS bar be judged lost_bar at all? The planted_defect control may only plant a
+        # lost bar where the verdict is not withheld (a pre-join bar, a closed US-equity session, the audit cap).
+        lost_observable = False
         kinds: list[str] = []
         signal_evals: list[EvalRow] = []
         fresh = float(leg.cfg.get("decision_bar_fresh_seconds") or 360)
@@ -889,8 +948,9 @@ def analyse_leg(leg: Leg, bundle: dict, since: float, until: float, *,
             evs = evals_between(b_end, b_end + fresh + 120)
             if i + 1 >= len(tf_rows):
                 continue
-            if not evs and not pre_join and not (
-                    audit_until is not None and b_end + fresh + 120 > audit_until):
+            lost_observable = not pre_join and not (
+                audit_until is not None and b_end + fresh + 120 > audit_until)
+            if not evs and lost_observable:
                 kinds.append("lost_bar")
                 divs.append({"class": "lost_bar", "bar": iso(b0),
                              "detail": f"no {leg.name}_eval in the {fresh:.0f}s window after close"})
@@ -939,6 +999,7 @@ def analyse_leg(leg: Leg, bundle: dict, since: float, until: float, *,
                 bar_rows.append({"bar": iso(b0), "status": "not_comparable",
                                  "why": "before the 15m candle reach"})
                 continue
+            lost_observable = bool(traded) and not pre_join
             if traded and not evs and not pre_join:
                 kinds.append("lost_bar")
                 divs.append({"class": "lost_bar", "bar": iso(b0),
@@ -1064,7 +1125,7 @@ def analyse_leg(leg: Leg, bundle: dict, since: float, until: float, *,
         else:
             status = "matched_no_signal"
         bar_rows.append({"bar": iso(b0), "status": status, "evals": len(evs),
-                         "signal_evals": len(signal_evals),
+                         "signal_evals": len(signal_evals), "lost_bar_observable": lost_observable,
                          **({"classes": sorted(set(kinds))} if kinds else {}),
                          **({"downstream": down} if down else {})})
     by_class = {k: sum(1 for d in divs if d["class"] == k) for k in DIVERGENCE_CLASSES}
@@ -1268,7 +1329,7 @@ def historical_positive(results: list[dict], bundle: dict) -> dict:
     checked = []
     for p in rows:
         r = by_leg.get(p.get("strategy_name"))
-        if not r or r["state"] != "checked":
+        if not r or r["state"] != "checked" or r.get("ml_replay"):   # the ML legs carry their own controls (ml_controls)
             continue
         ct = to_epoch(p.get("created_at"))
         bar = _bar_of(r, ct)
@@ -1295,6 +1356,7 @@ def historical_positive(results: list[dict], bundle: dict) -> dict:
             anchors.append({**a, "state": "matched" if bar["status"] == "matched_signal" else "FAILED",
                             "bar_status": bar["status"]})
     n_ok = sum(1 for c in checked if c["matched"])
+    unmatched = [c for c in checked if not c["matched"]]
     n_down = sum(1 for c in checked if c.get("downstream_class"))
     a_fail = [a for a in anchors if a["state"] == "FAILED"]
     a_ok = [a for a in anchors if a["state"] == "matched"]
@@ -1306,7 +1368,10 @@ def historical_positive(results: list[dict], bundle: dict) -> dict:
         state = "fail"
     return {"state": state, "packages_checked": len(checked), "packages_matched": n_ok,
             "packages_matched_signal_downstream_divergent": n_down,
-            "packages": checked[:40], "anchors": anchors}
+            # every UNMATCHED package first, then matched ones up to 40 (PARITY-CONTROLS-1114: the 2026-11-14 run
+            # failed on 1 of 166 and the truncated list did not name it)
+            "packages": unmatched + [c for c in checked if c["matched"]][:max(0, 40 - len(unmatched))],
+            "packages_unmatched": len(unmatched), "anchors": anchors}
 
 
 def _bar_of(r: dict | None, t: float | None) -> dict | None:
@@ -1378,7 +1443,10 @@ def planted_defect(legs: list[Leg], results: list[dict], bundle: dict,
         r = by_leg.get(lg.name)
         if not r or r["state"] != "checked" or lg.decision_bar != "forming":
             continue
-        quiet = [b for b in r["bars"] if b["status"] == "matched_no_signal" and b.get("evals")]
+        # only a bar whose lost_bar verdict is NOT withheld (PARITY-CONTROLS-1114: run 2026-11-14 planted
+        # slv_trend_1h's 2026-11-09T14:00Z bar, a Sunday before the leg's 11-12 roster join, and read it as a fail)
+        quiet = [b for b in r["bars"] if b["status"] == "matched_no_signal" and b.get("evals")
+                 and b.get("lost_bar_observable")]
         if not quiet:
             continue
         b0 = to_epoch(quiet[0]["bar"])
@@ -1421,9 +1489,23 @@ def planted_defect(legs: list[Leg], results: list[dict], bundle: dict,
 
 # ── the run ──────────────────────────────────────────────────────────────────
 
+def _ml_controls(legs: list[Leg], results: list[dict], bundle: dict, since: float, until: float) -> dict:
+    """Planted-defect + clean-roundtrip controls for the ML legs. ``could_not_check`` when no ML leg was checked (then the
+    leg itself is could_not_check too, and the run is not green)."""
+    ml = [lg for lg in legs if lg.unit in ML_UNITS]
+    if not ml:
+        return {"state": "could_not_check", "reason": "no ML leg on the covered rosters"}
+    try:
+        c = MLP.ml_planted_defect(ml, results, bundle, since, until)
+    except Exception as exc:  # noqa: BLE001 -- a control that crashed proved nothing: said so, not skipped
+        return {"state": "could_not_check", "reason": f"control raised {type(exc).__name__}: {exc}"}
+    return {"state": MLP.control_state(c), **c}
+
+
 def run(bundle: dict, legs: list[Leg], since: float, until: float, *,
         roster: dict | None = None) -> dict:
-    results = [analyse_leg(lg, bundle, since, until) for lg in legs]
+    results = [MLP.analyse(lg, bundle, since, until) if lg.unit in ML_UNITS else analyse_leg(lg, bundle, since, until)
+               for lg in legs]
     for r in results:
         r.pop("_divs", None)
     real = [r for r in results if r["real_money"]]
@@ -1433,6 +1515,7 @@ def run(bundle: dict, legs: list[Leg], since: float, until: float, *,
     divs_all = sum(r["divergences"] or 0 for r in results if r["state"] == "checked")
     controls = {
         "planted_defect": planted_defect(legs, results, bundle, since, until),
+        **({"ml_controls": _ml_controls(legs, results, bundle, since, until)} if any(lg.unit in ML_UNITS for lg in legs) else {}),
         "historical_positive": historical_positive(results, bundle),
         "liveness": liveness(bundle, since),
     }
@@ -1623,6 +1706,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--days", type=float, default=7.0)
     ap.add_argument("--until", help="ISO end of window (default: now, floored to 15m)")
     ap.add_argument("--no-paper", action="store_true")
+    ap.add_argument("--only", help="comma-separated leg names: replay just these (iteration; the daily run covers all)")
     ap.add_argument("--out", help="directory for latest.json / latest.md / <date>.json")
     ap.add_argument("--summary-line", metavar="LATEST_JSON")
     ap.add_argument("--file-pipeline", metavar="STORE",
@@ -1641,6 +1725,9 @@ def main(argv: list[str] | None = None) -> int:
     accounts_doc = _load_yaml(REPO_ROOT / ACCOUNTS_PATH)
     legs = resolve_legs(accounts_doc, _load_yaml(REPO_ROOT / "config/strategies.yaml"),
                         include_paper=not args.no_paper)
+    if args.only:
+        _only = {x.strip() for x in args.only.split(",") if x.strip()}
+        legs = [lg for lg in legs if lg.name in _only]
     if args.bundle:
         bundle = json.loads(Path(args.bundle).read_text(encoding="utf-8"))
         until = to_epoch(args.until) or to_epoch(bundle["until"])

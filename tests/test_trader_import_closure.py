@@ -150,3 +150,22 @@ def test_deploy_closure_fails_safe(tmp_path):
     assert tic.deploy_closure(tmp_path)[0] is None                    # empty = unreadable
     (tmp_path / "config" / "trader_import_closure.txt").write_text("src/main.py\n")
     assert tic.deploy_closure(tmp_path)[0] == {"src/main.py"}
+
+
+def test_gate_decision_records_do_not_restart_the_trader():
+    """#26135 (2026-11-14): a new comms/gates/gate_decisions_*.json forced a trader restart. Its only reader is
+    src/runtime/gate_registry.py (web-api / scripts), outside the trader's closure, so the trader gate skips it."""
+    closure = {"src/main.py"}
+    assert tic.decide(["comms/gates/gate_decisions_2026-11-14.json"], closure)[0] == tic.SKIP
+    assert tic.decide(["comms/gates/gate_inventory.json", "comms/gates/hit_probes.json"], closure)[0] == tic.SKIP
+    # still RESTART when it rides with a trader file, and other comms/ data stays runtime
+    assert tic.decide(["comms/gates/gate_decisions_2026-11-14.json", "src/main.py"], closure)[0] == tic.RESTART
+    assert tic.decide(["comms/prop_tickets/x.json"], closure)[0] == tic.RESTART
+
+
+def test_gate_registry_is_not_in_the_trader_closure():
+    """The exemption above rests on this: the trader never imports the one module that reads comms/gates/."""
+    root = Path(__file__).resolve().parents[1]
+    committed = {ln.strip() for ln in (root / "config" / "trader_import_closure.txt").read_text().splitlines()
+                 if ln.strip() and not ln.startswith("#")}
+    assert "src/runtime/gate_registry.py" not in committed

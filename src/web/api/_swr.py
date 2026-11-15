@@ -159,6 +159,22 @@ class SWRCache:
         value = await asyncio.shield(task)
         return value, 0.0, BUILT
 
+    async def arefresh(self, key: Hashable, build: Callable[[], Awaitable[Any]]) -> Any:
+        """Build a NEW value and wait for it, sharing the single-flight with ``aget``.
+
+        Unlike ``aget``, it never returns the stale value: an owner that must keep the snapshot
+        younger than its own cadence (the SSE broadcaster's keep-warm) needs the rebuild itself, not
+        the stale return plus a background build that finishes later. When a build for ``key`` is
+        already in flight (a REST read's foreground build or a background refresh), this joins it, so
+        the two never build at once. A failed build raises; the previous value is kept.
+        """
+        task = self._async_inflight.get(key)
+        if task is None:
+            task = asyncio.ensure_future(self._abuild(key, build))
+            self._async_inflight[key] = task
+            task.add_done_callback(self._make_bg_done(key))
+        return await asyncio.shield(task)
+
     async def _abuild(self, key: Hashable, build: Callable[[], Awaitable[Any]]) -> Any:
         value = await build()
         self._store(key, value)

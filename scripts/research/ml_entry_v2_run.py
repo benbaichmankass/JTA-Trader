@@ -33,7 +33,7 @@ def run(*args: str) -> None:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 3 or argv[0] not in ("ablation", "forward", "recipe", "labels", "ensemble", "levers", "timeframe"):
+    if len(argv) != 3 or argv[0] not in ("ablation", "ablation_trend", "forward", "recipe", "labels", "ensemble", "levers", "timeframe"):
         print(__doc__)
         return 2
     mode, unit, out = argv[0], argv[1], Path(argv[2])
@@ -81,13 +81,16 @@ def main(argv: list[str]) -> int:
     run(vs, "--out", str(octd), "--streams", "klines12d,premiumd", "--start", "2026-10-01", "--end", "2026-10-31", "--workers", "16")
     run(vs, "--out", str(octd), "--streams", "funding", "--start", "2026-10", "--end", "2026-10", "--workers", "16")
     run(v2, "build-table", "--streams", str(streams), "--oct-dir", str(octd), "--out", str(work))
-    if mode == "ablation":
-        procs = [subprocess.Popen([sys.executable, v2, "arm", "--arm", a, "--out", str(work), "--n-jobs", "2"]) for a in ARMS]
+    if mode in ("ablation", "ablation_trend"):
+        arms = ARMS if mode == "ablation" else ["A", "A2", "T"]   # ablation_trend (TREND-ALIGNMENT-FEATURE step 5): baseline + seed-noise + the F7 trend-align family only
+        procs = [subprocess.Popen([sys.executable, v2, "arm", "--arm", a, "--out", str(work), "--n-jobs", "2"]) for a in arms]
         if any(p.wait() for p in procs):
             return 1
         run(v2, "combine", "--out", str(work))
         for f in list(work.glob("ablation.json")) + list(work.glob("arm_*.json")):
             shutil.copy(f, out / f.name)
+        if mode == "ablation_trend":
+            write_ablation_trend_verdict(unit, out)
     else:
         abl = os.environ.get("ABLATION_JSON")
         if not abl:
@@ -105,6 +108,33 @@ def main(argv: list[str]) -> int:
 _WIN, _LOSS = {"win"}, {"no_win", "does_not_reproduce"}
 _TF = {"beats_1h": "pass", "reproduces": "pass", "viable_not_better": "no_action_warranted", "not_viable": "fail",
        "does_not_reproduce": "fail", "indeterminate": "indeterminate", "smoke_not_judged": "indeterminate"}
+
+
+def write_ablation_trend_verdict(unit: str, out: Path) -> bool:
+    """TREND-ALIGNMENT-FEATURE step 5: map the F7 arm's combine verdict (admit/reject/indeterminate) to the unit's E5
+    verdict. admit -> pass (the trend-align family adds >= +0.010 R per decision over the noise floor, 6/8 folds,
+    >= 40 percent coverage, on the DEV folds); reject -> fail; indeterminate (coverage) -> indeterminate. The admission
+    rule is ml_entry_v2.combine's, registered before any run. DEV FOLDS ONLY; no sealed window is read."""
+    import json
+    ab = out / "ablation.json"
+    if not ab.exists():
+        return False
+    d = json.loads(ab.read_text())
+    arm = (d.get("arms") or {}).get("T")
+    if not isinstance(arm, dict) or arm.get("verdict") not in ("admit", "reject", "indeterminate"):
+        return False
+    v = {"admit": "pass", "reject": "fail", "indeterminate": "indeterminate"}[arm["verdict"]]
+    (out / "verdict.json").write_text(json.dumps({
+        "verdict": v, "read_state": "measured",
+        "population": f"{unit}: F7 trend-align family vs baseline A (+ seed-noise A2), pooled ENTRY recipe, DEV FOLDS ONLY; "
+                      f"n={arm.get('n')} decisions, dev_coverage={arm.get('dev_coverage')}",
+        "n": arm.get("n"),
+        "measurement": {"rule": d.get("rule"), "baseline_A": d.get("baseline_A"),
+                        "noise_floor_abs_A_minus_A2": d.get("noise_floor_abs_A_minus_A2"), "T": arm},
+        "note": "mechanical map of ml_entry_v2.combine's admission verdict for the F7 arm (admit->pass, reject->fail, "
+                "indeterminate->indeterminate); directional trend features, the pooled model chooses its own side",
+    }, indent=2) + "\n")
+    return True
 
 
 def write_verdict(unit: str, out: Path) -> bool:
@@ -161,6 +191,6 @@ def write_verdict(unit: str, out: Path) -> bool:
 
 if __name__ == "__main__":
     rc = main(sys.argv[1:])
-    if rc == 0 and len(sys.argv) == 4:
+    if rc == 0 and len(sys.argv) == 4 and sys.argv[1] != "ablation_trend":
         write_verdict(sys.argv[2], Path(sys.argv[3]))
     sys.exit(rc)

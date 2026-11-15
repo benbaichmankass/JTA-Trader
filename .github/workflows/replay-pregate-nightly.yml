@@ -199,7 +199,7 @@ jobs:
           if [ "$EVENT" = "workflow_dispatch" ]; then
             [ -n "${DISPATCH_REF:-}" ] && REF="${DISPATCH_REF}"
             MODELS="${DISPATCH_MODELS:-}"
-          elif [ "$EVENT" = "issues" ]; then
+          elif [ "$EVENT" = "repository_dispatch" ]; then
             body_ref="$(printf '%s' "${ISSUE_BODY:-}" | awk -F': *' '/^ref:/{print $2; exit}')"
             body_models="$(printf '%s' "${ISSUE_BODY:-}" | awk -F': *' '/^models:/{print $2; exit}')"
             [ -n "${body_ref}" ] && REF="${body_ref}"

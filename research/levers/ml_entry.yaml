@@ -5,7 +5,6 @@ kind: strategy_leg
 status: production
 books:
 - alpaca_paper
-- breakout_2
 - bybit_2
 - bybit_portfolio
 - tradeify_1
@@ -17,7 +16,53 @@ baseline:
   fidelity: faithful
   rule_verdict: pass
 attribution:
-  read_state: no_trades
+  read_state: measured
+  n: 907
+  net_r: 33.679
+  gross_r: 0.0
+  cost_r: 0.0
+  cost_share_of_gross: null
+  verdict_hint: gross edge survives cost
+  entry_quality:
+    mean_mfe_r: null
+    share_mfe_ge_1r: null
+    n_with_mfe: 0
+  exit_capture:
+    median_net_over_mfe_winners: null
+    n_winners: 357
+    losers_that_reached_1r_mfe: 0
+  by_year:
+    ? ''
+    : n: 907
+      net_r: 33.679
+      gross_r: 0.0
+  by_direction:
+    long:
+      n: 311
+      net_r: 28.729
+      gross_r: 0.0
+    short:
+      n: 596
+      net_r: 4.95
+      gross_r: 0.0
+  by_exit_reason:
+    sl:
+      n: 523
+      net_r: -398.934
+      gross_r: 0.0
+    time:
+      n: 204
+      net_r: 110.503
+      gross_r: 0.0
+    tp:
+      n: 180
+      net_r: 322.11
+      gross_r: 0.0
+  by_adx_at_entry:
+    unknown:
+      n: 907
+      net_r: 33.679
+      gross_r: 0.0
 manifest:
   entry: untested
   exit: untested

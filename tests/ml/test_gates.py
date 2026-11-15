@@ -391,10 +391,11 @@ def test_regime_profile_threshold_values():
     th = regime_classifier_thresholds()
     assert th.min_trades == REGIME_MIN_LIVE_TRADES
     assert th.require_beats_baseline is False
-    # WS-1 de-soak (2026-07-26): the fixed shadow-soak calendar gate is
-    # advisory for a regime head (default profile keeps it required).
+    # Stage step RETIRED (operator, chat 2026-11-12, verbatim: "There is nothing in
+    # between proving edge on back testing and real money. Absolutely no steps."):
+    # the shadow-soak gate is reported, never required, in EVERY profile.
     assert th.require_shadow_soak is False
-    assert GateThresholds().require_shadow_soak is True
+    assert GateThresholds().require_shadow_soak is False
     # safety gates are untouched; the soak is mechanical (1 clean prediction)
     assert th.shadow_clean_predictions_needed == 1
     assert not hasattr(th, "shadow_soak_days")
@@ -469,7 +470,10 @@ def test_regime_profile_ready_on_small_live_floor():
     bb = next(r for r in report.results if r.name == "beats_baseline")
     assert bb.required is False  # oos_edge carries the beats-baseline role
     ss = next(r for r in report.results if r.name == "sample_sufficiency")
-    assert ss.status == "pass" and ss.threshold == float(REGIME_MIN_LIVE_TRADES)
+    # Stage step RETIRED (operator, chat 2026-11-12, verbatim: "There is nothing in
+    # between proving edge on back testing and real money. Absolutely no steps."):
+    # sample sufficiency reads the OFFLINE eval n, not live trades.
+    assert ss.status == "pass" and ss.threshold == float(GateThresholds().min_eval)
 
 
 def test_regime_recent_shadow_entry_still_ready_soak_advisory():
@@ -503,9 +507,11 @@ def test_regime_recent_shadow_entry_still_ready_soak_advisory():
     assert report.ready, report.to_dict()["blocking"]
 
 
-def test_default_profile_recent_shadow_entry_blocks():
-    # The same model with no clean scored shadow prediction IS blocked under
-    # the decision-model profile: shadow_soak stays required there.
+def test_default_profile_recent_shadow_entry_does_not_block():
+    # Stage step RETIRED (operator, chat 2026-11-12, verbatim: "There is nothing in
+    # between proving edge on back testing and real money. Absolutely no steps."):
+    # zero clean shadow predictions is REPORTED (fail) but no longer blocks —
+    # promotion is decided on offline evidence alone.
     recent = datetime.now(timezone.utc) - timedelta(days=1)
     entry = _entry(
         metrics={"macro_f1": 0.70, "f1_a": 0.73, "f1_b": 0.68, "n_eval": 5000},
@@ -522,8 +528,8 @@ def test_default_profile_recent_shadow_entry_blocks():
         shadow_clean_count=0,
     )
     soak = next(r for r in report.results if r.name == "shadow_soak")
-    assert soak.status == "fail" and soak.required is True
-    assert not report.ready
+    assert soak.status == "fail" and soak.required is False
+    assert "shadow_soak" not in {r.name for r in report.blocking}
 
 
 def test_no_required_calendar_edge_gate_under_regime_profile():
@@ -563,10 +569,12 @@ def test_no_required_calendar_edge_gate_under_regime_profile():
     assert "oos_edge" in required
 
 
-def test_default_profile_blocks_same_thin_model():
-    # The identical thin-live-trade regime head is NOT ready under the
-    # decision-model profile: it fails the 200-trade floor and the required
-    # live beats_baseline.
+def test_default_profile_thin_live_flow_does_not_block():
+    # Stage step RETIRED (operator, chat 2026-11-12, verbatim: "There is nothing in
+    # between proving edge on back testing and real money. Absolutely no steps."):
+    # thin LIVE flow no longer blocks under the decision-model profile either —
+    # the 200-live-trade floor and live beats_baseline were promotion steps.
+    # Readiness here still needs the offline cost-net record (none on this fake).
     entry = _entry(
         metrics={"macro_f1": 0.66, "f1_range": 0.73, "f1_volatile": 0.48, "n_eval": 8760},
         runs=_runs("macro_f1", [0.66, 0.66, 0.66]),
@@ -576,10 +584,10 @@ def test_default_profile_blocks_same_thin_model():
         entry, attribution=_thin_live_attr(),
         drift={"overall_verdict": "no_change"}, oos_edge=_good_oos_edge(),
     )  # default thresholds
-    assert not report.ready
     blocking = {r.name for r in report.blocking}
-    assert "sample_sufficiency" in blocking
-    assert "beats_baseline" in blocking
+    assert "sample_sufficiency" not in blocking
+    assert "beats_baseline" not in blocking
+    assert "live_agreement" not in blocking
 
 
 # --- Live regime-discrimination gate (RG4, option A, 2026-06-26) -----------
@@ -629,13 +637,19 @@ def test_regime_profile_swaps_live_track_record_gates():
     # live_regime_discrimination ADVISORY (not required), and the
     # serving-mechanics pair (live_parity + labels_accruing) required.
     # Default profile: live_agreement required; everything new not required.
+    # Stage step RETIRED (operator, chat 2026-11-12, verbatim: "There is nothing in
+    # between proving edge on back testing and real money. Absolutely no steps."):
+    # no LIVE gate is required in any profile; all are reported.
     reg = regime_classifier_thresholds()
     assert reg.require_live_agreement is False
     assert reg.require_live_regime_discrimination is False
-    assert reg.require_live_parity is True
-    assert reg.require_labels_accruing is True
+    assert reg.require_live_parity is False
+    assert reg.require_labels_accruing is False
+    assert reg.require_drift_clean is False
     d = GateThresholds()
-    assert d.require_live_agreement is True
+    assert d.require_live_agreement is False
+    assert d.require_beats_baseline is False
+    assert d.require_drift_clean is False
     assert d.require_live_regime_discrimination is False
     assert d.require_live_parity is False
     assert d.require_labels_accruing is False
@@ -689,10 +703,11 @@ def test_regime_low_live_regime_auc_reported_but_not_blocking():
     assert "live_agreement" not in blocking
 
 
-def test_regime_blocks_without_mechanics_evidence():
-    # M25 reframe (2026-07-19): the regime profile blocks on the REQUIRED
-    # serving-mechanics gates when no evidence was computed — never a silent
-    # pass on missing mechanics proof.
+def test_regime_ready_without_mechanics_evidence():
+    # Stage step RETIRED (operator, chat 2026-11-12, verbatim: "There is nothing in
+    # between proving edge on back testing and real money. Absolutely no steps."):
+    # missing serving-mechanics evidence is REPORTED as insufficient_data (never
+    # a silent pass) but does not block: a model never served has no live rows.
     entry = _entry(
         metrics={"macro_f1": 0.66, "f1_range": 0.73, "f1_volatile": 0.48, "n_eval": 8760},
         runs=_runs("macro_f1", [0.66, 0.66, 0.66]),
@@ -704,10 +719,12 @@ def test_regime_blocks_without_mechanics_evidence():
         oos_edge=_good_oos_edge(), live_regime_auc=0.72,
         thresholds=regime_classifier_thresholds(),
     )
-    assert not report.ready
     blocking = {r.name for r in report.blocking}
-    assert "live_parity" in blocking
-    assert "labels_accruing" in blocking
+    assert "live_parity" not in blocking
+    assert "labels_accruing" not in blocking
+    lp = next(r for r in report.results if r.name == "live_parity")
+    assert lp.status == "insufficient_data" and lp.required is False
+    assert report.ready, report.to_dict()["blocking"]
 
 
 # --- Serving-mechanics gates (M25 gate reframe, operator-approved 2026-07-19,
@@ -728,7 +745,7 @@ from ml.promotion.live_parity import (  # noqa: E402
 def test_live_parity_pass():
     r = _gate_live_parity(_good_parity(), regime_classifier_thresholds())
     assert r.status == "pass"
-    assert r.required is True
+    assert r.required is False  # stage step retired 2026-11-12: monitoring only
     assert r.value == 0.0
 
 
@@ -810,7 +827,7 @@ def test_live_parity_none_is_insufficient():
 def test_labels_accruing_pass():
     r = _gate_labels_accruing(_good_labels(), regime_classifier_thresholds())
     assert r.status == "pass"
-    assert r.required is True
+    assert r.required is False  # stage step retired 2026-11-12: monitoring only
 
 
 def test_labels_accruing_fail_with_fraction_in_detail():

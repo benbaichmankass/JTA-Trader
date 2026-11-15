@@ -1,0 +1,90 @@
+{
+  "unit": "RQ-20261112-a7e8-02",
+  "run_id": "43389005203",
+  "commit_sha": "39377cbfa8bc675c634dc91327b7665dd0a57e80",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/43389005203",
+  "timeout_minutes": 240,
+  "runner": {
+    "cpu_model": "Intel(R) Xeon(R) 6973P-C",
+    "cpu_simd": [
+      "amx_tile",
+      "avx",
+      "avx2",
+      "avx512_vnni",
+      "avx512bw",
+      "avx512f",
+      "avx512vl",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1019-azure",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261101.186.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "1929f80302b5",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/harness_stage0.py",
+        "--family",
+        "fade",
+        "--symbols",
+        "SPY,QQQ,IWM,DIA,TLT,IEF,GLD,SLV,GDX",
+        "--timeframe",
+        "1d",
+        "--days",
+        "2500",
+        "--start",
+        "2020-06-01",
+        "--end",
+        "2026-11-11",
+        "--arm",
+        "B=",
+        "--arm",
+        "D5=donchian=5",
+        "--folds",
+        "6",
+        "--fold-majority",
+        "4",
+        "--n-floor",
+        "20",
+        "--pooled-n-floor",
+        "39",
+        "--breadth-frac",
+        "0.5",
+        "--rule-id",
+        "RULE-RQ20261112a7e802",
+        "--data-dir",
+        "comms/research/RQ-20261112-a7e8-02/43389005203/data",
+        "--out",
+        "comms/research/RQ-20261112-a7e8-02/43389005203"
+      ],
+      "log": "comms/research/RQ-20261112-a7e8-02/43389005203/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 18.9
+    }
+  ],
+  "all_ok": true
+}
