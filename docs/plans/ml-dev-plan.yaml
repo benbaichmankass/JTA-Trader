@@ -457,6 +457,7 @@ lines:
   levers_tried:
     - {lever: structure exit vs fixed 2/3 ATR, ref: ML-ENTRY-EQ-STRUCTURE-RETEST, verdict: done}
     - {lever: 5-seed ensemble, ref: ML-ENTRY-EQ-STRUCT-LIVE, verdict: landed_unproven}
+    - {lever: HTF counter-trend split on the graded ensemble (skip longs against a strong daily downtrend), ref: RQ-20261112-8d20-02, verdict: 'INDETERMINATE by rule (research/results/RQ-20261112-8d20-02/43692034676.jsonl): CT40 cell n 16 < 40, underpowered as the unit expected; no change. Scored the COMMITTED graded ensemble (sha_match true, 0afc4994), so ML-ENTRY-EQ-REPRO-DRIFT is observed fixed. All-trades read n 221, +0.296 R, date-clustered t 1.40.'}
   levers_ahead:
     - lever: head-to-head vs ml_entry_eq on the same decision bars
       ref: 'RQ-20261112-ef4c-09 (PR #25242)'
@@ -945,6 +946,7 @@ lines:
     - {lever: BTC head B4, ref: ML-EXITHEAD-VALUE, verdict: 'fail -0.0141 R/trade n 1041 (QUOTED)'}
     - {lever: out-of-family value, ref: RQ-20261101-78fc-03, verdict: fail}
     - {lever: volume composition, ref: RQ-20261112-0bc8-02, verdict: fail}
+    - {lever: 'pooled donchian-4h exit head (eth/sol/xrp/ada/avax_4h discovery, eth_4h held-out primary)', ref: RQ-20261115-a474-03, verdict: 'FAIL by rule (research/results/RQ-20261115-a474-03/43698788477.jsonl): B selected on the pooled discovery (843 trades, 14 usable folds, mean OOS AUC 0.613 -- the head ranks, but no arm beats B: best age8_below_half_r_tau_0.1 152.4 vs B 170.7 R walk-forward, 5 of 14 folds >= B, needs 10). eth_4h held-out B reproduces e4a1-01 (13.97 R, n 76). Closes for the donchian-4h family.'}
   levers_ahead:
     - lever: 'exit-now v0 on ml_entry: the Labrador-1b first-passage model values hold vs close at each 4h check-in, TP fixed'
       ref: RQ-20261114-1ae8-01 (ML-PRIMARY 2026-11-15; RULE-RQ20261114-1ae8-01-EXIT-NOW-V0, two windows, non-inferiority -0.02 R)
@@ -962,7 +964,7 @@ lines:
       baseline: as above
       pass: as above
       fail: as above
-  next_weeks: {W47: '1ae8-01 INDETERMINATE (graded 11-15, no gain); eth_4h pooled variant RQ-20261115-a474-03 registered (11-15)', W48: 'run + grade a474-03', W49: none, W50: none}
+  next_weeks: {W47: '1ae8-01 INDETERMINATE (no gain); a474-03 pooled donchian-4h head FAIL (11-15, B selected, AUC 0.613 but no arm beats B net of cost); only the desk-label variant (PI-20261029-IHFQDB3W-0004) is left', W48: 'desk-label variant: author or retire', W49: none, W50: none}
   exhaustion: the eth_4h variant and the desk-label variant FAIL; with today's FAILs the head's feature set then has no lever left.
   owner: AM-ML
   plan_items: [ML-X3, ML-X4, ML-N4]
