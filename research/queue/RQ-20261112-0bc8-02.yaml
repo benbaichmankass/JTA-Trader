@@ -2,13 +2,22 @@ id: RQ-20261112-0bc8-02
 title: 'Volume composition -> EXIT head (feature add): does adding the size/count surprise (ss, sn) to exit-head-donchian-1h-v1''s recipe
   improve its out-of-sample replayed R per trade over the champion recipe AND over a plain-volume control? (trend_donchian BTC/ETH/SOL 1h,
   walk-forward, one cost stack)'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-DATA
 theme: ml_health
 priority: 2
 kind: experiment
+iteration:
+  subject: ml-exit-head-donchian-1h
+  subject_kind: ml_model
+  from_result: RQ-20261101-78fc-03
+  verdict_read: fail
+  diagnosis: 'RQ-20261101-78fc-03 graded FAIL 2026-11-12: on ETH trend_donchian 1h the head replayed OOS dR/trade -0.0612 (trade-clustered 95% CI LB -0.1954, n_oos 605), after BTC FAIL (-0.0141, n 1041) and SOL FAIL (-0.0246 IS). The head loses on all three symbols out of sample or in sample, so the failure is not symbol-specific; the feature-family lever has not been searched, and this unit tests it.'
+  hypothesis: a size/count volume-composition surprise carries exit information the champion feature set lacks
+  attempt: 2
+  due_by: '2026-11-26'
 question: 'Operator 2026-11-12 07:46Z (planning page p3, verbatim choice "Also test it in the exit head now"), the second arm of the
   RQ-20261111-f5c8-02 PASS consequence (row VOLUME-COMPOSITION-RESEARCH; regime-vol arm = RQ-20261112-0bc8-01). f5c8-02 found a SIZE-led
   volume surprise precedes a calmer next 4h bar (held-out partial rank IC -0.069, t -8.19, 27 months); a calmer next bar is exit-relevant.
@@ -91,7 +100,8 @@ routing:
     Binance Vision (RQ-20261101-78fc-03 fetched its candles there).
   basis: 'ESTIMATE: 78fc-03 (one leg, one head) and RQ-20260927-002 ran the same walk-forward at ~2.5 GB; this is 3 legs x 3 heads.'
 run:
-  workflow: trainer-vm-diag (issue label trainer-vm-diag-request)
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 300
   command:
   - python3
   - scripts/research/volcomp_exit_head_bakeoff.py
@@ -111,9 +121,7 @@ run:
   - '{out_dir}/verdict.json'
   inputs:
     research_unit: RQ-20261112-0bc8-02
-  note: 'One relay dispatch, as 78fc-03: a temporary git worktree of the committed harness, 1h candles for BTC/ETH/SOL via the trainer
-    resolver (BACKTEST_DATA_PATH), rows from the trainer-resident rows.jsonl; the RESULT_JSON block in the relay comment and the --json
-    file are landed under research/results/.'
+  note: 'Retargeted 2026-11-13 (lane FRONTIER-RESEARCH for AM-ML, PI-20261113-6YRT1RMK-0001): run.workflow named the prose "trainer-vm-diag (issue label ...)" relay, which the dispatcher can never fire. research-script-run-trainer.yml runs this SAME command under script_run.py on the trainer checkout (cwd /home/ubuntu/ict-trading-bot), where datasets-out/exit_head/1h/donchian/rows.jsonl is resident and the harness resolves 1h candles itself; the verdict lands through the standard artifact -> collector -> E5 path. Command, rule and thresholds unchanged.'
 ml_consumer:
   book: demo_floor
   consumer: src/runtime/exit_head_apply.py
@@ -136,6 +144,17 @@ related:
 - scripts/research/exit_head_walkforward_multifold.py
 - scripts/ml/train_exit_head.py
 - scripts/ml/exit_head_replay.py
+last_dispatched_at: '2026-11-13T13:03:17+00:00'
 grading:
   auto: true
+  confirmatory_run: 1
   decision_rule_id: RULE-VOLCOMP-EXITHEAD-01
+  evidence:
+  - research/results/RQ-20261112-0bc8-02/43430377344.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-11-13'
+  grader: scripts/research/queue_grade.py
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

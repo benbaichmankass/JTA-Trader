@@ -29,7 +29,7 @@ WHAT IT DOES (read-only; never the live tick path, never an order)
     ⚠️ The research runner holds the shared PAPER key pair, the same pair alpaca_paper's live fetch uses, so this pass shares that
     key's data rate limit for its duration. That is the load a 173-symbol roster would add, measured, not simulated.
 
-    python3 scripts/research/alpaca_baseline_affordability.py run --equity 194.52 --equity-as-of 2026-11-06T01:00:13Z --out OUT
+    python3 scripts/research/alpaca_baseline_affordability.py run --equity <alpaca_live equity, in memory only> --equity-as-of <ISO ts> --out OUT
     python3 scripts/research/alpaca_baseline_affordability.py --self-test
 """
 from __future__ import annotations
@@ -180,8 +180,9 @@ def run(a) -> int:
     load = pass_pull_load(syms)
     complete = afford["n_no_bars"] < len(syms) and load["http_calls"] > 0
     meas = {"population": {"source": str(POOL_FILE.relative_to(REPO)), "sha256": sha, "n": len(syms)},
-            "account": ACCOUNT, "equity_usd": a.equity, "equity_as_of": a.equity_as_of, "equity_source": a.equity_source,
-            "risk_pct": risk_pct, "budget_usd": round(risk_pct * a.equity, 4),
+            "account": ACCOUNT, "equity_as_of": a.equity_as_of, "equity_source": a.equity_source,
+            # the balance itself and budget_usd (= risk_pct x equity) are NEVER written: the record is committed to a public repo
+            "risk_pct": risk_pct,
             "one_share_rule": f"close <= equity AND {ATR_STOP_MULT} x ATR14(1h RTH) <= {ROUND_UP_MULT} x budget",
             "upper_bound_note": "at full confidence; RiskManager._confidence_scalar can only lower the budget, so fewer may size",
             "affordability": afford, "pull_load": load, "elapsed_s": round(time.time() - t0)}
@@ -189,11 +190,11 @@ def run(a) -> int:
     # producer_failed: "verdict.json malformed: n must be present"). n = the population measured.
     v = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured" if complete else "producer_failed",
          "verdict": "pass" if complete else "not_applicable", "n": len(syms) if complete else None,
-         "note": (f"affordable {afford['n_affordable']}/{len(syms)} at equity ${a.equity} (as of {a.equity_as_of}); "
+         "note": (f"affordable {afford['n_affordable']}/{len(syms)} at the {ACCOUNT} balance (as of {a.equity_as_of}); "
                   f"pull {load['n_symbols']} syms in {load['wall_seconds']}s, 429s={load['n_429']}, p95 {load['latency_s']['p95']}s"),
          "decision_rule": {"id": RULE_ID, "rule": "PASS IF both passes complete (a measurement; no edge claim)."},
          "population": f"RQ-20261104-a41f-01 pooled ETF population, {len(syms)} symbols (pool file sha256 {sha[:12]}); "
-                       f"alpaca_live equity ${a.equity} as of {a.equity_as_of}",
+                       f"alpaca_live balance as of {a.equity_as_of}",
          "measurement": meas, "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
     (out / "verdict.json").write_text(json.dumps(v, indent=1, default=str) + "\n")
     (out / "measurement.json").write_text(json.dumps(meas, indent=1, default=str) + "\n")
@@ -216,11 +217,11 @@ def self_test() -> int:
     ck("ATR on a flat series is 0", wilder_atr([1.0] * 20, [1.0] * 20, [1.0] * 20) == 0.0)
     ck("ATR needs n+1 bars", wilder_atr([1.0] * 14, [1.0] * 14, [1.0] * 14) is None)
     ck("ATR of a constant 1.0 range is 1.0", abs(wilder_atr([2.0] * 30, [1.0] * 30, [1.5] * 30) - 1.0) < 1e-12)
-    eq, rp = 194.52, 0.02          # budget 3.8904; 1.5x = 5.8356
-    ck("cash-bound refuses", judge(200.0, 0.1, eq, rp)["reason"] == "cash")
-    ck("stop risk over 1.5x budget refuses", judge(50.0, 3.0, eq, rp)["reason"] == "stop_risk_over_1.5x_budget")
+    eq, rp = 200.0, 0.02          # synthetic fixture (never a real balance): budget 4.0; 1.5x = 6.0
+    ck("cash-bound refuses", judge(250.0, 0.1, eq, rp)["reason"] == "cash")
+    ck("stop risk over 1.5x budget refuses", judge(50.0, 3.5, eq, rp)["reason"] == "stop_risk_over_1.5x_budget")
     ck("cheap, tight stop is affordable", judge(50.0, 1.0, eq, rp)["affordable"] is True)
-    ck("boundary 2xATR == 1.5x budget is affordable", judge(50.0, 5.8356 / 2, eq, rp)["affordable"] is True)
+    ck("boundary 2xATR == 1.5x budget is affordable", judge(50.0, 6.0 / 2, eq, rp)["affordable"] is True)
     ck("no bars is unknown, never False", judge(None, None, eq, rp)["affordable"] is None)
     syms, sha = _pool()
     ck("population is the a41f 173", len(syms) == 173 and len(sha) == 64)

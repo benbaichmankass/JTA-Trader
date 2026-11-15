@@ -19,7 +19,7 @@ def test_committed_plan_has_no_orphan_items():
     # An ORPHAN is a plan item whose row/unit is gone -- the exact way a plan item gets forgotten.
     # (STALE / CLOSED-OPEN move with ordinary work and are reported by the loop, not failed in CI.)
     plan = m.load_plan()
-    res = m.analyse(plan, m.rows())
+    res = m.analyse(plan, m.rows(allow_export=True))  # CI has no store access: the export is explicit
     orphans = [r["id"] + "->" + str(r["ref"]) for r in res if "ORPHAN" in r["flags"]]
     assert not orphans, orphans
 
@@ -70,3 +70,22 @@ def test_family_none_marks_a_process_item_without_counting_or_flagging_it():
     findings, table = m.diversity(plan, {})
     assert not [f for f in findings if f.startswith(("UNKNOWN-FAMILY", "NOTE"))], findings
     assert sum(f["open_units"] for f in table.values()) == 1  # `none` is not counted toward any family
+
+
+def test_store_disagreement_resolves_to_store_and_unreachable_is_could_not_look(tmp_path):
+    d = tmp_path / "docs/claude/work/checklist"
+    d.mkdir(parents=True)
+    (d / "_header.json").write_text('{"frozen_into_work_store": "2026-11-01", "items": null}')
+    (d / "ML-X.json").write_text('{"id": "ML-X", "state": "in_flight"}')  # stale export
+    assert m.rows(tmp_path, fetch=lambda r: [{"id": "ML-X", "state": "queued"}])["ML-X"]["state"] == "queued"
+
+    def down(_r):
+        raise OSError("down")
+
+    import pytest
+
+    with pytest.raises(m.RowsUnreadable):
+        m.rows(tmp_path, fetch=down)
+    # clean control: an unfrozen register reads its files
+    (d / "_header.json").write_text('{"items": null}')
+    assert m.rows(tmp_path)["ML-X"]["state"] == "in_flight"

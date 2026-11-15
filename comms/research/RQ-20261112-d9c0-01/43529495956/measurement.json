@@ -1,0 +1,227 @@
+{
+  "verdict": "fail",
+  "note": "reproduction of booster 0afc49948a41671a: refit sha 483d86b3bde12e36 DOES NOT MATCH; n=224 mean net R 0.3003272280493255 (n MISMATCH, mean MISMATCH); reproduces=False; no holdout read claimed",
+  "stats": {
+    "n": 224,
+    "mean_net_r": 0.3003272280493255,
+    "mean_gross_r": 0.35335298285343164,
+    "mean_cost_r": 0.05302575480410608,
+    "n_symbols": 119,
+    "se": 0.07506141741313586
+  },
+  "bar": {
+    "n_tries": 1,
+    "alpha_one_sided": 0.025,
+    "ci_level": 0.95,
+    "ci_z": 1.96,
+    "ci_lo_percentile": 2.5,
+    "point_t_min": 0.0,
+    "method": "Sidak-corrected CI (alpha_N = 1-(1-0.025)^(1/N), one-sided) for CI bars; Bailey-Lopez de Prado expected max of N null t-stats for point bars"
+  },
+  "ledger_record": null,
+  "booster_sha256": "483d86b3bde12e36d8e26fa9017449a5ec3909f3108b859ae1b48d3ed9b2a5a8",
+  "train_rows": 368758,
+  "config": "B",
+  "tau": 0.25,
+  "dev_oof_mean": 0.11219889534237544,
+  "decision_rows_before_session_gate": 108888,
+  "decision_rows": 57170,
+  "by_month": {
+    "2025-07": {
+      "n": 3,
+      "mean_net_r": -1.2539
+    },
+    "2025-08": {
+      "n": 13,
+      "mean_net_r": 0.3764
+    },
+    "2025-10": {
+      "n": 7,
+      "mean_net_r": 0.9587
+    },
+    "2025-11": {
+      "n": 13,
+      "mean_net_r": 0.2802
+    },
+    "2025-12": {
+      "n": 8,
+      "mean_net_r": -0.6443
+    },
+    "2026-01": {
+      "n": 13,
+      "mean_net_r": -0.4891
+    },
+    "2026-02": {
+      "n": 8,
+      "mean_net_r": 0.5984
+    },
+    "2026-03": {
+      "n": 98,
+      "mean_net_r": 0.4891
+    },
+    "2026-04": {
+      "n": 53,
+      "mean_net_r": 0.1617
+    },
+    "2026-08": {
+      "n": 3,
+      "mean_net_r": 1.4646
+    },
+    "2026-09": {
+      "n": 5,
+      "mean_net_r": 0.3237
+    }
+  },
+  "month_clustered_se_reported": 0.21798641052222703,
+  "by_symbol_top": {
+    "EZU": {
+      "count": 6,
+      "mean": -0.7364
+    },
+    "DIA": {
+      "count": 4,
+      "mean": 0.1009
+    },
+    "DGRO": {
+      "count": 4,
+      "mean": -0.0467
+    },
+    "KBE": {
+      "count": 4,
+      "mean": -0.3953
+    },
+    "KRE": {
+      "count": 4,
+      "mean": -0.1311
+    },
+    "IEFA": {
+      "count": 4,
+      "mean": 0.6353
+    },
+    "SCZ": {
+      "count": 4,
+      "mean": 1.0123
+    },
+    "VGK": {
+      "count": 4,
+      "mean": 0.9345
+    },
+    "VIG": {
+      "count": 4,
+      "mean": -0.0174
+    },
+    "IBB": {
+      "count": 3,
+      "mean": -0.1697
+    }
+  },
+  "window": {
+    "train_end": "2025-06-30",
+    "start": "2025-07-15",
+    "end": "2026-10-31",
+    "embargo_days": 14
+  },
+  "dev": {
+    "grid": {
+      "B|0.25": {
+        "config": "B",
+        "tau": 0.25,
+        "n": 1669,
+        "mean_net_r": 0.11219889534237544,
+        "mean_gross_r": 0.1724757629826343,
+        "mean_cost_r": 0.06027686764025892,
+        "n_symbols": 156,
+        "se": 0.029557119830018498,
+        "by_fold": {
+          "0": {
+            "n": 564,
+            "mean_net_r": 0.1443
+          },
+          "1": {
+            "n": 445,
+            "mean_net_r": 0.2912
+          },
+          "2": {
+            "n": 301,
+            "mean_net_r": -0.1263
+          },
+          "3": {
+            "n": 180,
+            "mean_net_r": -0.3186
+          },
+          "4": {
+            "n": 179,
+            "mean_net_r": 0.4005
+          }
+        }
+      }
+    },
+    "n_selection_draws": 1,
+    "selection_rule": "max pooled dev out-of-fold mean net R over (config, tau) subject to >= 300 OOF trades",
+    "selected": {
+      "key": "B|0.25",
+      "config": "B",
+      "tau": 0.25,
+      "n": 1669,
+      "mean_net_r": 0.11219889534237544,
+      "mean_gross_r": 0.1724757629826343,
+      "mean_cost_r": 0.06027686764025892,
+      "n_symbols": 156,
+      "se": 0.029557119830018498,
+      "by_fold": {
+        "0": {
+          "n": 564,
+          "mean_net_r": 0.1443
+        },
+        "1": {
+          "n": 445,
+          "mean_net_r": 0.2912
+        },
+        "2": {
+          "n": 301,
+          "mean_net_r": -0.1263
+        },
+        "3": {
+          "n": 180,
+          "mean_net_r": -0.3186
+        },
+        "4": {
+          "n": 179,
+          "mean_net_r": 0.4005
+        }
+      }
+    },
+    "dev_rows": 378249
+  },
+  "structure_exit": "pivot=5;sl_only",
+  "reproduction": {
+    "expect_sha": "0afc49948a41671a",
+    "booster_sha256": "483d86b3bde12e36d8e26fa9017449a5ec3909f3108b859ae1b48d3ed9b2a5a8",
+    "sha_match": false,
+    "expect_n": "207",
+    "n_match": false,
+    "expect_mean": "0.4922070639835765",
+    "mean_match": false,
+    "ledger_claimed": false,
+    "reproduces": false
+  },
+  "trades_jsonl": {
+    "path": "comms/research/RQ-20261112-d9c0-01/43529495956/ml_entry_eq_struct__trades.jsonl",
+    "rows": 224,
+    "sum_net_r": 67.27329908304891
+  },
+  "pool": {
+    "n_assets_active_tradable": 13507,
+    "n_etf_candidates": 5784,
+    "n_pool": 172,
+    "n_excluded_no_dev_bars": 3726,
+    "n_excluded_illiquid": 1886,
+    "assets_sha256": "19019a8a810ed3afd82a659b3222ca859b1d3a70dc37758bfaa9efdf524a4267",
+    "etf_file_sha256": "c254ce745936468a17d0501df33d53067d7d4893b367944e5148c9a310f68d2f",
+    "pool_rule_sha256": "e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2",
+    "key_kind": "paper"
+  },
+  "n_pool": 172,
+  "alpaca_calls": 10985,
+  "runtime_s": 6514.5
+}

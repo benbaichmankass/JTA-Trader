@@ -914,8 +914,15 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   eq(await ev("__ex.deniedSel('#slrow [data-danger]')"), "deny_glyph", "denylist: the SL row's ⓧ (cancels the stop) refused");
   eq(await ev("__ex.deniedSel('#chd .x')"), "deny_glyph", "denylist: the child row's ✕ (closes the position) refused");
   eq(await ev("__ex.deniedSel('#grp .x')"), "deny_glyph", "denylist: the group row's ✕ refused");
-  eq([await ev("__ex.safeClickSel('#pd > button')"), await ev("__ex.safeClickSel('#slrow [data-danger]')"), await ev("__ex.safeClickSel('#chd .x')"), await ev("window.__danger")],
-    ["deny_close_position", "deny_glyph", "deny_glyph", 0], "denylist: safeClick refuses all three, nothing clicked");
+  // AM-PHONE-SHEET-DENYLIST-RECHECK: REMOVE (operator 2026-11-12, decisions page, Gates tab; record
+  // comms/gates/gate_decisions_2026-11-12.json). The classifier above still names each control (a report), but
+  // safeClick no longer refuses: all three are clicked and each would-be hit is recorded in dangerObs(). A fresh page,
+  // so the clicks do not change the page the rest of this check reads.
+  const shx = await onHost(sheetPage());
+  eq([await shx.evaluate("__ex.safeClickSel('#pd > button')"), await shx.evaluate("__ex.safeClickSel('#slrow [data-danger]')"), await shx.evaluate("__ex.safeClickSel('#chd .x')"), await shx.evaluate("window.__danger")],
+    ["clicked", "clicked", "clicked", 3], "denylist removed: safeClick clicks all three (no refusal)");
+  eq((await shx.evaluate("__ex.dangerObs()")).map(function (o) { return o.hit; }), ["deny_close_position", "deny_glyph", "deny_glyph"],
+    "denylist removed: each classified control is reported in dangerObs()");
   const dn = await onHost(`<!doctype html><html><body><button id=a aria-label="Cancel order"><svg></svg></button><button id=b title="Close"></button><button id=c><svg><title>remove</title></svg></button><button id=d class="btn-close-icon"></button><button id=e>Confirm</button><button id=f aria-label="Edit">✎</button></body></html>`);
   eq(await dn.evaluate("['#a','#b','#c','#d','#e','#f'].map(function(s){return __ex.deniedSel(s)})"), ["deny_word", "deny_word", "deny_word", "deny_word", "", ""], "denylist: cancel/close/remove words in aria, title, svg title and class are refused; Confirm and Edit are not");
   // INTENT-BOUND (operator 2026-11-09, no forbidden actions): the same controls are clicked when the caller DECLARES the
@@ -1031,13 +1038,16 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   const rcv = (await tq.evaluate("__ex.domDiff()")).ev;
   eq([nq.ok, rcv.length > 0, rcv.some((x) => /^click:\S+ w\d+ tr1$/.test(x)), rcv.some((x) => /^pdown:mouse w\d+ tr1$/.test(x))], [true, true, true, true], "native: domDiff.ev records the received events (type:pointerType w<size> tr<trusted>)");
   eq(await tq.evaluate("__ex.sheetInfo('ETHUSD').open"), true, "native: the passive record never blocks the trusted tap");
-  // a point covered by another element (an overlay, a row ✕ drawn over the cell) is refused, never touched
+  // AM-PHONE-SHEET-DENYLIST-RECHECK: REMOVE (operator 2026-11-12). A point the elementFromPoint re-check cannot confirm
+  // (an overlay, a row ✕ drawn over the cell) is no longer refused: the target is returned ok with unconfirmed and its
+  // geometry (numbers only, fits the 40-char scrub), so the touch goes ahead and the miss is reported.
   const cv = await onHost(sheetPage().replace("</body>", "<div id=ov style='position:fixed;left:0;top:0;width:100%;height:100%'></div></body>"));
   let cvr = await cv.evaluate("__ex.sheetTarget('ETHUSD','child',false)");
-  eq([cvr.why, /^p\d+_\d+ v\d+x\d+ r-?\d+_-?\d+_\d+x\d+$/.test(cvr.g1), /^vv\d+x\d+\/\d+_\d+s[\d.]+ e\d+ sc\d+ dpr[\d.]+/.test(cvr.g2), cvr.g1.length <= 40 && cvr.g2.length <= 40],
-    ["covered", true, true, true], "native: a covered point is refused, with its geometry (numbers only, fits the 40-char scrub)");
+  eq([cvr.ok, cvr.unconfirmed, /^p\d+_\d+ v\d+x\d+ r-?\d+_-?\d+_\d+x\d+$/.test(cvr.g1), /^vv\d+x\d+\/\d+_\d+s[\d.]+ e\d+ sc\d+ dpr[\d.]+/.test(cvr.g2), cvr.g1.length <= 40 && cvr.g2.length <= 40],
+    [true, "covered", true, true, true], "native: a covered point is touched (unconfirmed), with its geometry reported");
   const dz = await onHost(sheetPage().replace('<div id=chm>ETH <span>5x</span></div>', '<div id=chm style="position:relative">ETH <span>5x</span><i aria-label="Close" style="position:absolute;left:0;top:0;right:0;bottom:0"></i></div>'));
-  eq(/^(point_)?deny_/.test((await dz.evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why), true, "native: a close control under the point is refused");
+  const dzr = await dz.evaluate("__ex.sheetTarget('ETHUSD','child',false)");
+  eq([dzr.ok, (await dz.evaluate("__ex.dangerObs()")).length > 0], [true, true], "native: a close control under the point is no longer refused; it is reported in dangerObs()");
   eq((await (await onHost(sheetPage({noChild: true}))).evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why, "none", "native: no child row -> none (the amend path reads none as no position only with group none too)");
   // 2026-10-17 (1b.253 08:03Z/12:03Z: the Market cell got a TRUSTED finger touch, click:touch tr1, and no sheet opened):
   // the cell was wrong, not the touch. Here the Market cell keeps its own click (stopPropagation, as a market link
@@ -1085,7 +1095,7 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   eq([await kp.evaluate("__ex.sheetInfo('ETHUSD').open"), await kp.evaluate("window.__mkt || 0"), await kp.evaluate("window.__danger")], [true, 0, 0], "1b.263 fixture: that touch reaches the row and opens the sheet; the Market link is never touched; nothing denied");
   const kq = await onHost(k5.replace("left:-80px;width:50px", "left:-120px;width:120px"));
   const kqr = (await kq.evaluate("[__ex.sheetTarget('ETHUSD','child_entry',true), __ex.sheetTarget('ETHUSD','child_entry',false)]"))[1];
-  eq([kqr.ok, kqr.why, /^vis -?\d+_-?\d+_\d+x\d+$/.test(kqr.g3 || ""), kqr.g1.length <= 40 && (kqr.g3 || "").length <= 40], [false, "covered", true, true], "1b.263 fixture: a FULLY covered cell is refused with its geometry incl. the visible part (g3)");
+  eq([kqr.ok, kqr.unconfirmed, /^vis -?\d+_-?\d+_\d+x\d+$/.test(kqr.g3 || ""), kqr.g1.length <= 40 && (kqr.g3 || "").length <= 40], [true, "covered", true, true], "1b.263 fixture: a FULLY covered cell is touched (unconfirmed, AM-PHONE-SHEET-DENYLIST-RECHECK removed) with its geometry incl. the visible part (g3)");
   await rowOpens.evaluate("__ex.domMark()");
   eq((await rowOpens.evaluate("__ex.domDiff()")).hd, ["no_react"], "targets: a page without React props says so (no_react), never an empty map read as 'no handler'");
   // finding (a): the EXPANDED child row carries the side as text; childShape measures it and positionsRead reads it
@@ -1143,7 +1153,7 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   // TEST-TRADE CLOSE (MD-EXEC-DEV-TEST-TRADES): the sheet's "Close position" is clickable ONLY when armed for that symbol
   const tc = await onHost(sheetPage().replace('<div id=sheet style="display:none">', '<div id=sheet>'));
   eq(await tc.evaluate("__ex.sheetClosePosition('ETHUSD')"), "not_armed", "test close: unarmed -> refused, nothing clicked");
-  eq(await tc.evaluate("__ex.deniedSel('#pd [data-danger]')"), "deny_close_position", "test close: every other path still refuses Close position");
+  eq(await tc.evaluate("__ex.deniedSel('#pd [data-danger]')"), "deny_close_position", "test close: the classifier still names Close position (a report since 2026-11-12, AM-PHONE-SHEET-DENYLIST-RECHECK removed)");
   await tc.evaluate("__ex.allowClose('SOLUSD')");
   eq([await tc.evaluate("__ex.sheetClosePosition('ETHUSD')"), await tc.evaluate("window.__danger")], ["not_armed", 0], "test close: an arm for another symbol never fires, and is spent");
   await tc.evaluate("__ex.allowClose('ETHUSD')");

@@ -64,6 +64,45 @@ def describe_threads() -> str:
     return " || ".join(out)
 
 
+def describe_other_holders(db_path: Optional[str] = None, *, proc_root: str = "/proc") -> str:
+    """Other processes that have the journal (or its -wal/-shm) open NOW, as "pid:comm:cmdline" (Linux /proc scan).
+
+    DB-LOCK-HOLDERS-DESK-BUILD (2026-11-14): 2 of 7 lock dumps on 11-13 showed NO in-process holder and no desk
+    build, so the holder was another process and the log could not name it. A process with the file open is a
+    candidate, not proof of the holder; the list is the denominator to correlate with. Never raises."""
+    import os
+
+    try:
+        if db_path is None:
+            from src.utils.paths import trade_journal_db_path
+            db_path = str(trade_journal_db_path())
+        real = os.path.realpath(db_path)
+        targets = {real, real + "-wal", real + "-shm"}
+        me = os.getpid()
+        out = []
+        for pid in os.listdir(proc_root):
+            if not pid.isdigit() or int(pid) == me:
+                continue
+            fd_dir = os.path.join(proc_root, pid, "fd")
+            try:
+                hit = any(os.path.realpath(os.path.join(fd_dir, fd)) in targets for fd in os.listdir(fd_dir))
+            except OSError:
+                continue
+            if not hit:
+                continue
+            try:
+                with open(os.path.join(proc_root, pid, "cmdline"), "rb") as fh:
+                    cmd = fh.read().replace(b"\0", b" ").decode("utf-8", "replace").strip()[:120]
+                with open(os.path.join(proc_root, pid, "comm"), "r", encoding="utf-8") as fh:
+                    comm = fh.read().strip()
+            except OSError:
+                cmd, comm = "?", "?"
+            out.append(f"{pid}:{comm}:{cmd}")
+        return " || ".join(out) if out else "none"
+    except Exception as exc:  # noqa: BLE001 -- diagnostics must never add a failure
+        return f"could_not_look ({type(exc).__name__})"
+
+
 def log_lock_context(where: str, exc: BaseException, *, now: Optional[float] = None) -> bool:
     """If *exc* is a lock error and the rate limit allows, log every thread's stack. Returns True when it logged.
 
@@ -78,8 +117,9 @@ def log_lock_context(where: str, exc: BaseException, *, now: Optional[float] = N
                 return False
             _last_report = t
         logger.warning("db_lock_diag: %s hit 'database is locked' at %s; in-process thread stacks NOW (a holder is "
-                       "still inside its transaction, so look for a [db]/[net] thread that is not the waiter): %s",
-                       where, threading.current_thread().name, describe_threads())
+                       "still inside its transaction, so look for a [db]/[net] thread that is not the waiter): %s "
+                       "#### other processes with the journal open: %s",
+                       where, threading.current_thread().name, describe_threads(), describe_other_holders())
         return True
     except Exception:  # noqa: BLE001 -- diagnostics must never add a failure
         return False

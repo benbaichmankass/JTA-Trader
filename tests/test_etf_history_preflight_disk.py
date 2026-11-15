@@ -88,8 +88,12 @@ def test_issue_triggered_workflows_use_labeled_with_label_name_check():
         text = (WF / name).read_text()
         wf = yaml.safe_load(text)
         on = wf.get("on", wf.get(True))
-        assert on["issues"]["types"] == ["labeled"], name
-        assert f"github.event.label.name == '{label}'" in text, name
+        # Issue fan-out phase 2 (PI-20261112-FANOUT2-0001): the issue event reaches these
+        # workflows through issue-router.yml as one repository_dispatch per ADDED label, so
+        # `labeled` (never `opened`, #22406) is now the dispatch type `labeled:<label>`.
+        assert "issues" not in on, f"{name}: should be routed, not on raw issue events"
+        assert on["repository_dispatch"]["types"] == [f"labeled:{label}"], name
+        assert f"github.event.client_payload.label.name == '{label}'" in text, name
 
 
 def test_options_snapshot_installs_pyyaml_and_probe_fails_loudly():

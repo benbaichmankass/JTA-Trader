@@ -184,7 +184,8 @@ def _day_loss(account_id: str, now: datetime) -> Dict[str, Any]:
         st = switch_for_account(account_id, cfg).status()
         loss, limit = st.get("loss_usd"), st.get("limit_usd")
         frac = (float(loss) / float(limit)) if loss is not None and limit not in (None, 0) else None
-        return {"loss_usd": loss, "limit_usd": limit, "fraction": frac, "day": st.get("day"), "tripped": st.get("tripped")}
+        return {"loss_usd": loss, "limit_usd": limit, "fraction": frac, "day": st.get("day"), "tripped": st.get("tripped"),
+                "read_state": st.get("read_state")}
     except Exception as exc:  # noqa: BLE001 — unreadable = could not look, which refuses below
         return {"loss_usd": None, "limit_usd": None, "fraction": None, "error": f"{type(exc).__name__}: {str(exc)[:80]}"}
 
@@ -230,7 +231,13 @@ def check_bounds(account_id: str, symbol: str, *, now: Optional[datetime] = None
     dl = _day_loss(acct, now)
     out["day_loss"] = dl
     frac_max = float(b.get("day_loss_fraction_max") or 0.5)
-    if dl.get("fraction") is None:
+    if dl.get("fraction") is None and dl.get("read_state") == "awaiting_day_start":
+        # The day just reset and today's first equity reading has not landed
+        # (DD-SWITCH-OVERRIDE, 2026-11-12). A label, never a refusal: only the
+        # armed switch past its threshold blocks new entries (operator 2026-10-09;
+        # no new gates, 2026-10-29). Recorded, then the check carries on.
+        out["day_loss_label"] = "awaiting_day_start"
+    elif dl.get("fraction") is None:
         out["refusals"].append("day_loss_unreadable: the daily-DD switch has no readable loss/limit for today "
                                "(a null is not 0; never a test trade blind)")
     elif dl["fraction"] >= frac_max or dl.get("tripped"):

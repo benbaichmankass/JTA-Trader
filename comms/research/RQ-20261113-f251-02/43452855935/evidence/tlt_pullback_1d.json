@@ -1,0 +1,154 @@
+{
+  "schema_version": 2,
+  "strategy": "tlt_pullback_1d",
+  "symbol": "TLT",
+  "timeframe": "1d",
+  "config_fingerprint": "sha256:49a29ebd9a0ca04ac20cefb9c10e6db4",
+  "basis": "harness_timefolds",
+  "coverage_state": "measured",
+  "fidelity": "faithful",
+  "omitted_levers": [],
+  "net_r_oos": -6.9567,
+  "expectancy_r_oos": -0.1546,
+  "n_trades_oos": 45,
+  "folds": 8,
+  "fold_detail": [
+    {
+      "fold": 1,
+      "trades": 5,
+      "net_r": -1.8697,
+      "expectancy_r": -0.3739,
+      "start": "2021-06-01 00:00:00+00:00",
+      "end": "2022-01-24 00:00:00+00:00"
+    },
+    {
+      "fold": 2,
+      "trades": 5,
+      "net_r": 3.1812,
+      "expectancy_r": 0.6362,
+      "start": "2022-03-04 00:00:00+00:00",
+      "end": "2022-08-31 00:00:00+00:00"
+    },
+    {
+      "fold": 3,
+      "trades": 5,
+      "net_r": -1.1805,
+      "expectancy_r": -0.2361,
+      "start": "2022-09-29 00:00:00+00:00",
+      "end": "2023-03-06 00:00:00+00:00"
+    },
+    {
+      "fold": 4,
+      "trades": 5,
+      "net_r": 3.1315,
+      "expectancy_r": 0.6263,
+      "start": "2023-03-14 00:00:00+00:00",
+      "end": "2023-10-10 00:00:00+00:00"
+    },
+    {
+      "fold": 5,
+      "trades": 5,
+      "net_r": -0.5978,
+      "expectancy_r": -0.1196,
+      "start": "2024-01-03 00:00:00+00:00",
+      "end": "2024-04-30 00:00:00+00:00"
+    },
+    {
+      "fold": 6,
+      "trades": 5,
+      "net_r": -0.0397,
+      "expectancy_r": -0.0079,
+      "start": "2024-05-09 00:00:00+00:00",
+      "end": "2024-09-23 00:00:00+00:00"
+    },
+    {
+      "fold": 7,
+      "trades": 5,
+      "net_r": -4.6523,
+      "expectancy_r": -0.9305,
+      "start": "2024-10-31 00:00:00+00:00",
+      "end": "2025-03-06 00:00:00+00:00"
+    },
+    {
+      "fold": 8,
+      "trades": 10,
+      "net_r": -4.9294,
+      "expectancy_r": -0.4929,
+      "start": "2025-04-28 00:00:00+00:00",
+      "end": "2026-11-04 00:00:00+00:00"
+    }
+  ],
+  "folds_positive": 2,
+  "window_days": 2301,
+  "fee_bps_roundtrip": 0.0,
+  "path_stats": {
+    "series_location": "source_run (the per-trade rows, in order, with net_r)",
+    "n": 45,
+    "max_drawdown_r": 11.2304,
+    "max_drawdown_at_trade": 45,
+    "final_equity_r": -6.9567,
+    "max_equity_r": 4.2737,
+    "worst_trade_r": -1.0284,
+    "best_trade_r": 3.4793,
+    "worst_day_r": -1.0284,
+    "worst_day_date": "2026-03-06",
+    "trades_without_exit_time": 0,
+    "ordering": "by entry_time ascending; pooled ACROSS folds, so this is the full-window path, not a per-fold one",
+    "not_a_verdict": "Descriptive only. No bar is applied here -- the prop bar is B6's to register, and it must be registered before these numbers are read."
+  },
+  "cost_stack": {
+    "fees": 0.0,
+    "slippage": 5.0,
+    "funding": 0.0,
+    "unit": "bps_roundtrip (funding: bps per funding window)",
+    "source": "comms/research/RQ-20261113-f251-02/43452855935/evidence_runs/tlt_pullback_1d__bt.json"
+  },
+  "net_r_oos_fee_only": -6.1263,
+  "decision_rule": {
+    "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
+    "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
+    "registered_at": "2026-09-22T05:34:08Z",
+    "verdict": "fail"
+  },
+  "param_selection_provenance": "not_established",
+  "generated_at": "2026-11-13T15:30:46.289806+00:00",
+  "generated_by": "scripts/ops/build_strategy_evidence.py",
+  "source_run": "comms/research/RQ-20261113-f251-02/43452855935/evidence_runs/tlt_pullback_1d__trades.jsonl",
+  "error": null,
+  "harness": "pullback",
+  "reproduce": {
+    "window_days": 2301,
+    "window_days_source": "--data-csv span",
+    "folds": 8,
+    "data_start": "2020-07-27 00:00:00+00:00",
+    "data_end": "2026-11-13 00:00:00+00:00",
+    "git_sha": "ec82624b99188dd9e695aa4e669cc2da70510247",
+    "argv": [
+      "python3",
+      "scripts/ops/build_strategy_evidence.py",
+      "--strategy",
+      "tlt_pullback_1d",
+      "--days",
+      "2301",
+      "--folds",
+      "8",
+      "--window-start",
+      "2020-07-27 00:00:00+00:00",
+      "--window-end",
+      "2026-11-13 00:00:00+00:00",
+      "--data-csv",
+      "/tmp/forming_regen_ih50_d69/tlt_pullback_1d__data.csv",
+      "--minutes-1m-csv",
+      "/tmp/forming_regen_ih50_d69/eq1d__TLT__2009-11-20__2026-11-15/TLT_1m.csv",
+      "--decision-session",
+      "us_equity"
+    ],
+    "inputs": {
+      "data_csv": "/tmp/forming_regen_ih50_d69/tlt_pullback_1d__data.csv",
+      "minutes_1m_csv": "/tmp/forming_regen_ih50_d69/eq1d__TLT__2009-11-20__2026-11-15/TLT_1m.csv",
+      "decision_session": "us_equity",
+      "decision_bar_modelled": "forming"
+    }
+  },
+  "venue_bracket_arm": null
+}

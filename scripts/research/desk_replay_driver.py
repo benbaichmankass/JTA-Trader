@@ -838,8 +838,9 @@ def cmd_selfcheck(a: argparse.Namespace) -> int:
     n_tr = sum(len(legs[n].trades) for n in population)
     pop = (f"{len(population)} real-money non-prop 2h/4h legs ({', '.join(population)}); {n_tr} committed Stage-0 trades "
            f"(comms/strategy_evidence/<leg>.json -> source_run); registered population {REGISTERED_N_TRADES}")
-    recs = [{"leg": n, "population": f"{n}: {d['trades']} trades, {d['replayed']} replayed", "n": d["replayed"],
-             "verdict": res["verdict"], "read_state": "measured" if d["replayed"] else "no_data"}
+    recs = [{"leg": n, "population": f"{n}: {d['trades']} trades, {d['replayed']} replayed", "n": d["replayed"] or None,
+             "verdict": res["verdict"] if d["replayed"] else "not_applicable",
+             "read_state": "measured" if d["replayed"] else "no_data"}
             for n, d in res["per_leg"].items()]
     _write_verdict(Path(a.out), res, pop, n_tr, res, f"{res['note']} | {pnote}", recs)
     print(json.dumps({"verdict": res["verdict"], "clauses": {k: v["ok"] for k, v in res["clauses"].items()},
@@ -903,7 +904,14 @@ def cmd_score(a: argparse.Namespace) -> int:
     pop = (f"{a.role} role, {res['n_obs']} judged decision points of {res['n_packets']} packets "
            f"(first closed bar with running high >= +1.0 R) over {', '.join(population)}")
     notes = "; ".join(res["reasons"]) or "all registered clauses met"
-    recs = [{"leg": r["leg"], "population": f"{r['leg']} {a.role}", "n": r["n_obs"], "verdict": "not_applicable",
+    # A leg below its floor is no_data, and research_result requires n null for it (AUD-20261019-RESEARCH-SLO-RED:
+    # n=15 here got runs 40710666532 / 40733370814 refused); the count stays visible in the population text.
+    recs = [{"leg": r["leg"],
+             "population": f"{r['leg']} {a.role}" if r["state"] == "measured"
+             else f"{r['leg']} {a.role} ({r['n_obs']} observation(s), below the floor)",
+             "n": r["n_obs"] if r["state"] == "measured" else None,
+             # a measured row carries the run's verdict (research_result refuses measured + not_applicable)
+             "verdict": res["verdict"] if r["state"] == "measured" else "not_applicable",
              "read_state": "measured" if r["state"] == "measured" else "no_data",
              "mean_dR": r["mean_dR"], "ci95": r["ci"]} for r in res["per_leg"]]
     _write_verdict(Path(a.out), res, pop, res["n_obs"], res, f"{notes} | {pnote}", recs or None)

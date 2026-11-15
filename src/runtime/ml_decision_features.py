@@ -53,6 +53,26 @@ def features_symbol(df: pd.DataFrame) -> pd.DataFrame:
     return f
 
 
+def regrid_hourly(df: pd.DataFrame) -> pd.DataFrame:
+    """A 24/7 perp's bars on a complete hourly grid, so a data hole becomes NaN bars instead of a seam (row
+    ML-ENTRY-SERVING-HOLE-GUARD; the serving twin of ``scripts/research/ml_decision_entry.regrid_hourly``, the
+    ``build_table(hole_safe=True)`` step). Without it the positional rolling features (ret_k, vol_ratio, vol_z,
+    range_pos, atr_pct) silently span the hole: MEASURED in research, one 2026-10-28 hole moved a 14-day grade from
+    -0.2127 to -0.1316. A row whose windows touch a NaN bar is non-finite, so ``decision_row`` returns None for that
+    symbol on that tick (``feature_row_unformable``) -- a per-tick skip, never a halt -- and the symbol trades again
+    once its windows have cleared the hole. A CONTIGUOUS frame is returned AS IS (the same object), so every
+    hole-free decision is byte-identical to the pre-guard build. Used on the equal-timestamp (perp) path only: an
+    equity frame on the as-of path has legitimate session gaps and is never regridded."""
+    if df is None or len(df) < 2:
+        return df
+    ts = df["ts"]
+    if ts.is_monotonic_increasing and not ts.duplicated().any() and (ts.iloc[-1] - ts.iloc[0]) == pd.Timedelta(hours=len(df) - 1):
+        return df
+    d = df.drop_duplicates("ts", keep="last").sort_values("ts")
+    full = pd.date_range(d["ts"].iloc[0], d["ts"].iloc[-1], freq="1h")
+    return d.set_index("ts").reindex(full).rename_axis("ts").reset_index()
+
+
 def atr_last(df: pd.DataFrame, n: int = ATR_N) -> float:
     """ATR14 (simple mean of true range) at the last bar, as the harness labels it."""
     h, lo, c = (df[k].astype(float) for k in ("high", "low", "close"))
@@ -74,12 +94,12 @@ def _same_ts_row(symbol: str, frames: Mapping[str, pd.DataFrame], anchor: str = 
     if own is None or len(own) < MIN_BARS:
         return None
     t = own["ts"].iloc[-1]
-    fo = features_symbol(own).iloc[-1]
+    fo = features_symbol(regrid_hourly(own)).iloc[-1]
     r24, v24 = {}, {}
     for s, fr in frames.items():
         if fr is None or len(fr) < 25 or fr["ts"].iloc[-1] != t:
             continue
-        ff = features_symbol(fr.iloc[-200:].reset_index(drop=True)).iloc[-1]
+        ff = features_symbol(regrid_hourly(fr.iloc[-200:].reset_index(drop=True))).iloc[-1]
         r24[s], v24[s] = ff["ret24_raw"], ff["vol24"]
     if anchor not in r24 or symbol not in r24:
         return None

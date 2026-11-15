@@ -1,0 +1,238 @@
+{
+  "run": "RESEARCH-OPS-20261113-1545",
+  "finished_at": "2026-11-13T16:20:00Z",
+  "by": "session_01AFoLuLs9enz3u3SX5incoP",
+  "floor": 74,
+  "floor_basis": "computed_floor(fired_24h 93)",
+  "idle_backends": [
+    "github_runner_data",
+    "kaggle",
+    "kaggle_cpu",
+    "trainer"
+  ],
+  "needs_review_triaged": 5,
+  "needs_review_left": 98,
+  "throughput": {
+    "runnable_before": 73,
+    "runnable_after": 75,
+    "queued": 298,
+    "fired_24h": 93,
+    "results_landed_24h": 488,
+    "hours_since_last_dispatch": 0.4,
+    "idle_alarm": false
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok (last dispatch 0.4 h ago)",
+    "collector": "ok",
+    "stranded_stamp_prs": [],
+    "incident": null,
+    "watchdog": "newest rows are resolved; no open escalation",
+    "workflow_runs": "read_state tree_only: GitHub Actions run list not read; receipt and git log used"
+  },
+  "results_read": {
+    "pass": 2,
+    "fail": 0,
+    "indeterminate": 0,
+    "units": [
+      "RQ-20261113-1751-01",
+      "RQ-20261113-1751-02"
+    ]
+  },
+  "unlocked": [],
+  "retired": [],
+  "levers_filed": [
+    {
+      "lever": "producer verdict contract (5 producer_failed units) and template family None",
+      "ref": "PI-20261113-SX5INCOP-0001"
+    }
+  ],
+  "units_authored": [
+    "RQ-20261113-f090-01",
+    "RQ-20261113-f090-02"
+  ],
+  "followups_filed": [
+    "PI-20261113-SX5INCOP-0001",
+    "Tier-3 lead note on PROMOTE-1H-SURVIVORS-20261104"
+  ],
+  "authoring": {
+    "queue_depth": null,
+    "nodes_drafted": 0,
+    "skipped_on_purpose": true,
+    "reason": "budget spent on the iteration loop; no programme node drafted"
+  },
+  "iteration": {
+    "results_attributed": {
+      "count": 2,
+      "of": 2,
+      "note": "read RQ-20261113-1751-01 and -02 rows by hand (arms, folds, n, holdout); lever_map --backfill refreshed 8 lever-map files; the 20 unread e35 rows older than 2026-11-13 were not opened"
+    },
+    "map_entries_added": "8 lever-map files refreshed by backfill (entry count not measured)",
+    "next_tests_from_map": 2,
+    "lever_coverage": {
+      "strategy_leg": {
+        "note": "see iteration_orphans.py --levers; not re-counted"
+      }
+    },
+    "orphans_before": {
+      "strategy_leg": 4,
+      "ml_model": 0,
+      "ltr_class": 1
+    },
+    "orphans_after": {
+      "strategy_leg": 2,
+      "ml_model": 0,
+      "ltr_class": 1
+    },
+    "orphans_named_left": [
+      "claude_desk",
+      "e4_oi_shock_1h",
+      "ltr-close"
+    ],
+    "results_iterated": [
+      {
+        "result": "RQ-20261113-1751-01",
+        "verdict": "pass",
+        "subject": "tlt_pullback_1h",
+        "next": "RQ-20261113-f090-01",
+        "attempt": 2
+      },
+      {
+        "result": "RQ-20261113-1751-02",
+        "verdict": "pass",
+        "subject": "qqq_pullback_1h",
+        "next": "RQ-20261113-f090-02",
+        "attempt": 4
+      }
+    ],
+    "advanced": 2,
+    "survivors": [],
+    "survivor_note": "two PASS confirmations read; neither counts as a survivor until its next unit and the real-TP test clear",
+    "overdue": [
+      "turtle_soup",
+      "ml-brackets",
+      "ml-setup-metalabel-p2pool",
+      "ml-holdbias-exit",
+      "ltr-tighten-sl"
+    ],
+    "retired_by_review": []
+  },
+  "prior_calls_scorecard": [
+    {
+      "call": "RQ-20261113-1751-01 lands a measured row by 2026-11-16",
+      "p": 0.6,
+      "check_rerun": "ls research/results/RQ-20261113-1751-01",
+      "outcome": "hit",
+      "action_happened": true
+    },
+    {
+      "call": "qqq_pullback_1h and tlt_pullback_1h stay at 0 orphans on the next pass",
+      "p": 0.8,
+      "check_rerun": "python3 scripts/research/iteration_orphans.py | grep -E 'orphan.*(qqq|tlt)_pullback_1h'",
+      "outcome": "miss",
+      "action_happened": true
+    }
+  ],
+  "checks": {
+    "packet_as_of": "2026-11-13T15:44:21Z",
+    "since": "2026-11-13T09:30:00Z",
+    "runnable_by_track": {
+      "TRADING": 54,
+      "MODEL": 18,
+      "INFRA": 1
+    },
+    "graded_by_window": "not copied",
+    "fails_without_next": 4,
+    "followups": "not copied",
+    "needs_review": 103,
+    "could_not_look": [
+      "GitHub Actions run list",
+      "graded_by_window and followups blocks of the packet"
+    ]
+  },
+  "analysis": {
+    "rows_opened": [
+      "RQ-20261113-1751-01",
+      "RQ-20261113-1751-02"
+    ],
+    "trading": {
+      "meaning": [
+        "tlt_pullback_1h short-only: net +13.80 R n 65 on 2018-06..2020-06, folds +2.60 and +11.20, fee-only +19.77, so the direction lever shown by the 2025-26 map (short +4.11, long -3.88) holds on a window the map never saw; so the long side stays a cost loser, not a regime accident. Denominator: one arm chosen from 2 directions.",
+        "qqq_pullback_1h: S1 long-only chosen from 4 arms on discovery (+36.14 R, n 92, 3/4 folds) and read once on held-back +11.56 R n 38; the adx filter arms were worse (F1 2/4 folds, F2 +11.59 R), so adx_min is flat-to-negative for this leg and the next untested family is exits. The hold-back was already read by 203c-03, so this is correlated evidence."
+      ],
+      "fail_diagnoses": [
+        {
+          "cluster": "fails_without_next (4 units: 018, 73de-09, 0bc8-02, a7e8-04)",
+          "hypotheses": [
+            "noise",
+            "test design",
+            "idea wrong"
+          ],
+          "test": "not opened this pass",
+          "survivor": "not determined",
+          "next": "handoff"
+        }
+      ],
+      "next_tests": [
+        {
+          "id_or_node": "RQ-20261113-f090-01",
+          "decision_changed": "whether tlt short-only gets an adx floor before any promotion proposal",
+          "on_pass": "LEAD note for the manager",
+          "on_fail": "keep S1 short-only unfiltered; test exits next",
+          "premortem": "holdout span overlaps the 2025-26 map reading, so only the F arms are virgin"
+        },
+        {
+          "id_or_node": "RQ-20261113-f090-02",
+          "decision_changed": "whether qqq S1 needs a different trail multiplier",
+          "on_pass": "LEAD note",
+          "on_fail": "exit family flat; try pullback_frac",
+          "premortem": "S1 is read a third time on the same holdout"
+        }
+      ]
+    },
+    "model": {
+      "meaning": [],
+      "fail_diagnoses": [],
+      "next_tests": []
+    },
+    "cross_track": [],
+    "surprises": [
+      "three results were marked producer_failed 'malformed' though verdict.json parses: the producers use read_state/verdict tokens outside the script_run.py contract"
+    ]
+  },
+  "calls": [
+    {
+      "call": "RQ-20261113-f090-01 and -02 land measured rows by 2026-11-16",
+      "p": 0.6,
+      "check": {
+        "command": "ls research/results/RQ-20261113-f090-01 research/results/RQ-20261113-f090-02",
+        "rule": "both dirs exist with read_state measured",
+        "resolves_when": "2026-11-16"
+      }
+    },
+    {
+      "call": "qqq and tlt pullback_1h are orphans again once the f090 units are done and no successor is queued",
+      "p": 0.7,
+      "check": {
+        "command": "python3 scripts/research/iteration_orphans.py | grep -E 'orphan.*(qqq|tlt)_pullback_1h'",
+        "rule": "non-empty output after both units are done",
+        "resolves_when": "2026-11-16"
+      }
+    }
+  ],
+  "not_run": [
+    "authoring from programme nodes (drafted 0; iteration loop used the budget)"
+  ],
+  "limits": [
+    "GitHub Actions run list not read (tree-only)",
+    "pytest not run",
+    "the 4 fails_without_next clusters and the other unread e35 rows were not opened"
+  ],
+  "handoff": [
+    "manager: Tier-3 LEAD note on PROMOTE-1H-SURVIVORS-20261104 for qqq S1 and tlt short-only; promotion still needs the real-TP test",
+    "manager: orphans claude_desk (strategy_leg), e4_oi_shock_1h (strategy_leg, fail), ltr-close (ltr_class) have no iteration unit; overdue iterations turtle_soup, ml-brackets, ml-setup-metalabel-p2pool, ml-holdbias-exit, ltr-tighten-sl",
+    "SLO red: grade_latency_p90_d 6 d (<= 2), theme_share_min_ratio 0.14 (>= 0.5); blocked_over_age 0 (ok); thresholds untouched",
+    "UNGRADED: RQ-20261112-3c8f-01, -02, RQ-20261112-cd01-01",
+    "fails_without_next: RQ-20261030-018, RQ-20261110-73de-09, RQ-20261112-0bc8-02, RQ-20261112-a7e8-04",
+    "PI-20261113-SX5INCOP-0001 owns the 5 producer_failed units (next_rq_id.py --fetch hung for 120 s; ids minted without --fetch)"
+  ]
+}

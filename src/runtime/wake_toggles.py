@@ -49,6 +49,15 @@ _RATE_S = 3600.0
 _logged: Dict[str, float] = {}
 
 
+def _service_headers() -> dict:
+    """``Authorization: Bearer $DASHBOARD_API_TOKEN`` when the token is in the
+    environment, else nothing: the read-only service credential the site gate
+    accepts on GET/HEAD once ``SITE_AUTH_ENFORCE`` is on (UI-OAUTH-SIGNIN; ignored
+    while it is off). Only ever sent to this project's own API."""
+    tok = os.environ.get("DASHBOARD_API_TOKEN", "").strip()
+    return {"Authorization": f"Bearer {tok}"} if tok else {}
+
+
 def _state_dir() -> Path:
     from src.utils.paths import runtime_state_dir
     return Path(runtime_state_dir())
@@ -102,7 +111,8 @@ def read_local(path: Optional[Path] = None) -> Dict[str, Any]:
 
 def read_remote(url: str = REMOTE_URL, timeout: float = 8.0) -> Dict[str, Any]:
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "wake-toggles-client", "Accept": "application/json"})
+        req = urllib.request.Request(url, headers={"User-Agent": "wake-toggles-client", "Accept": "application/json",
+                                                   **_service_headers()})
         with urllib.request.urlopen(req, timeout=timeout) as r:  # noqa: S310 - fixed https URL
             doc = json.loads(r.read())
         t = doc.get("toggles") if isinstance(doc, dict) else None

@@ -232,6 +232,20 @@ def _leg_source(name: str, tpl: Dict[str, Any], facts: Dict[str, Any]) -> List[D
         for leg, info in legs.items():
             if leg in sweepable:
                 out.append({"leg": leg, **info})
+    elif name == "live_roster_legs_m20_sweepable":
+        # THE M20 SWEEP HAS A SCOPE TOO (RESEARCH-LOSS-M20-UNLANDED). `live_roster_legs` fed every roster leg to
+        # m20-exit-lever-sweep.yml, whose `plan` job refuses a leg `classify` cannot route ("legs with no family/
+        # harness"): the run died in `plan`, the dispatcher had already stamped the unit, and the unit never
+        # re-fired. MEASURED 2026-11-12 over the 10 unlanded runs: 7 were exactly this (ml_entry_eq 42256673587,
+        # ml_entry_v2 41978235919, ml_entry 41970551893, turtle_soup 41195608647, e4_oi_shock_1h 41187215930,
+        # fade_breakout_4h 40994427469, claude_desk 40978648245). The sweep's OWN `classify` is the one scope, so a
+        # leg it would refuse is never generated -- the same rule as `live_roster_legs_e35_sweepable` above.
+        import sys
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from m20_fleet_exit_sweep import classify as _m20_classify
+        for leg, info in legs.items():
+            if _m20_classify(leg) is not None:
+                out.append({"leg": leg, **info})
     elif name == "live_roster_legs_ablatable":
         # roster legs whose harness family exit_lever_ablation can route (regime_debt_matrix.classify): the structured
         # walk-forward is a config-exact arm sweep, so a leg it cannot route has no design here (orb / chop_scalp: see
