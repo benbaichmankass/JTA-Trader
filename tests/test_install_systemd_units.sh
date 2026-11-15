@@ -258,6 +258,30 @@ run_test_webapi_rewrite_writes_receipt() {
     rm -rf "$tmp"
 }
 
+# ---------------------------------------------------------------------------
+# 10. WEB-API-STOP-SIGKILL-90S: a drop-in uvicorn ExecStart without
+#     --timeout-graceful-shutdown gains it (once); the empty ExecStart= reset line
+#     and an unrelated ExecStart are untouched; a re-run changes nothing.
+# ---------------------------------------------------------------------------
+run_test_webapi_dropin_gains_graceful_timeout() {
+    local tmp; tmp=$(setup_temp_systemd)
+    mkdir -p "$tmp/systemd/ict-web-api.service.d"
+    local conf="$tmp/systemd/ict-web-api.service.d/venv.conf"
+    printf '[Service]\nExecStart=\nExecStart=/opt/venv/bin/python -m uvicorn src.web.api.main:app --host 127.0.0.1 --port 8001\n' > "$conf"
+    local other="$tmp/systemd/ict-web-api.service.d/other.conf"
+    printf '[Service]\nExecStartPre=/bin/true\n' > "$other"
+    REPO_DIR="$tmp" SYSTEMD_DIR="$tmp/systemd" SYSTEMD_RECEIPT="$tmp/state/r.tsv" \
+        bash "$tmp/install.sh" >/dev/null 2>&1 || true
+    assert_eq "drop-in uvicorn line gains the flag" \
+        "$(grep -c -- 'uvicorn src.web.api.main:app --host 127.0.0.1 --port 8001 --timeout-graceful-shutdown 5$' "$conf")" 1
+    assert_eq "ExecStart= reset line untouched" "$(grep -c '^ExecStart=$' "$conf")" 1
+    assert_eq "unrelated drop-in untouched" "$(cat "$other")" "$(printf '[Service]\nExecStartPre=/bin/true')"
+    REPO_DIR="$tmp" SYSTEMD_DIR="$tmp/systemd" SYSTEMD_RECEIPT="$tmp/state/r.tsv" \
+        bash "$tmp/install.sh" >/dev/null 2>&1 || true
+    assert_eq "re-run adds the flag only once" "$(grep -o -- '--timeout-graceful-shutdown' "$conf" | wc -l | tr -d ' ')" 1
+    rm -rf "$tmp"
+}
+
 run_test_missing_role_file_is_silent
 run_test_masked_unit_is_skipped
 run_test_fresh
@@ -267,6 +291,7 @@ run_test_template_skipped
 run_test_git_sync_loads_env
 run_test_onfailure_dropins
 run_test_webapi_rewrite_writes_receipt
+run_test_webapi_dropin_gains_graceful_timeout
 
 echo
 echo "=== install_systemd_units summary: $PASS passed, $FAIL failed ==="
