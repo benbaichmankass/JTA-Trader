@@ -82,9 +82,14 @@ def run(out: Path, cache: Path, reader: str, ledger: Optional[Path]) -> int:
         fixed = {"vol24_cut_t0": vol_cut, "k_cost_x_atr": k_cost, "gate": GATE, "tau": float(art["tau"]),
                  "dev_rows": int(len(dev)), "artifact": "ml/served/ml_decision_entry_v1/model.json"}
         # ---- the claim comes BEFORE any held-out outcome is touched
-        kw = {"train_end": TRAIN_END}
-        claim = (holdout_lock.claim_read(MODEL_ID, WINDOW[0], WINDOW[1], UNIT, reader, ledger, **kw) if ledger
-                 else holdout_lock.claim_read(MODEL_ID, WINDOW[0], WINDOW[1], UNIT, reader, **kw))
+        # The runner does not carry the repo ledger back (run 43703425338's claim was lost that way), so the default claim is made
+        # against a COPY inside ``out``; the lane appends that line to comms/research/holdout_reads.jsonl (ml_decision_manage pattern).
+        if ledger is None:
+            import shutil
+            ledger = out / "holdout_reads.jsonl"
+            if not ledger.exists() and holdout_lock.LEDGER.exists():
+                shutil.copy(holdout_lock.LEDGER, ledger)
+        claim = holdout_lock.claim_read(MODEL_ID, WINDOW[0], WINDOW[1], UNIT, reader, ledger, train_end=TRAIN_END)
         (out / "holdout_claim.json").write_text(json.dumps(claim, indent=1))
         test = tab[(tab.ts >= hs) & (tab.ts < pd.Timestamp(HOLD_END_EXCL, tz="UTC"))].reset_index(drop=True)
         bl = lgb.Booster(model_str=art["booster_txt"]["long"])

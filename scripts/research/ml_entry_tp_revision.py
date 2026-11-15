@@ -658,13 +658,36 @@ def summarize_delta(trades: pd.DataFrame, base: list, pol: list, rng) -> dict:
     return res
 
 
-def verdict(h: dict) -> tuple[str, str]:
+def verdict(h: dict, bar: dict | None = None) -> tuple[str, str]:
+    """``bar`` = the holdout ledger's deflated bar for this read (HOLDOUT-DEFLATED-REUSE, operator 2026-11-05). On the 1st read
+    of the family on the window it is exactly the original rule (mean delta >= 0); the N-th read needs mean delta >=
+    point_t_min x SE, with SE taken from the reported bootstrap CI95 (width / 3.92)."""
+    import holdout_lock as HL
     n, ns, nm, d = h["n"], h["n_symbols"], h["n_trades_moved"], h["mean_delta_per_trade"]
     if n < N_FLOOR or ns < SYMBOL_FLOOR or nm < MOVED_FLOOR:
         return "indeterminate", f"held-out trades={n} (floor {N_FLOOR}) symbols={ns} (floor {SYMBOL_FLOOR}) moved={nm} (floor {MOVED_FLOOR})"
-    if d >= 0:
-        return "pass", f"held-out mean delta net R per trade {d:+.4f} >= 0 at n={n}, {ns} symbols, {nm} moved"
-    return "fail", f"held-out mean delta net R per trade {d:+.4f} < 0 at n={n}, {ns} symbols, {nm} moved"
+    ci = h.get("bootstrap_ci95_delta_by_trade_reported") or [None, None]
+    se = (ci[1] - ci[0]) / 3.92 if None not in ci else None
+    t_min = (bar or HL.bar_for(1))["point_t_min"]
+    if HL.point_ok(d, se, bar):
+        return "pass", f"held-out mean delta net R per trade {d:+.4f} clears the deflated point bar (t_min {t_min}) at n={n}, {ns} symbols, {nm} moved"
+    return "fail", f"held-out mean delta net R per trade {d:+.4f} misses the deflated point bar (t_min {t_min}, se {se}) at n={n}, {ns} symbols, {nm} moved"
+
+
+def claim_read(out: Path, unit: str, reader: str) -> dict:
+    """Record this read of the forward window in the holdout ledger BEFORE any forward outcome is touched and return its
+    deflated bar (HOLDOUT-DEFLATED-REUSE; replaces the old one-read marker). The runner does not carry the repo ledger back, so
+    the claim is made against a COPY inside ``out`` (it lands with the result); the lane appends that line to
+    comms/research/holdout_reads.jsonl (the ml_decision_manage.claim_read pattern)."""
+    import shutil
+
+    import holdout_lock as HL
+    led = out / "holdout_reads.jsonl"
+    if not led.exists() and HL.LEDGER.exists():
+        shutil.copy(HL.LEDGER, led)
+    train_end = str((pd.Timestamp(FWD_START) - pd.Timedelta(days=1)).date())   # the TP model fits on dev rows before FWD_START
+    return HL.claim_read(model_id=f"TPREV-{unit}", start=FWD_START, end=FWD_END, unit=unit, reader=reader, ledger=led,
+                         train_end=train_end, family="TPREV")
 
 
 # ------------------------------------------------------------------------------------------------ run
@@ -843,14 +866,13 @@ def run(args) -> int:
     print(json.dumps({k: dev[k] for k in ("dev_by_margin", "margin_star", "best_static_level")}), flush=True)
     if args.dev_only:
         return 0
-    marker = out / "FORWARD_READ"
-    if marker.exists():
-        raise SystemExit("the forward window has already been read once (ML-BAR-ONE-READ); refusing a second read")
-    marker.write_text(time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()) + "\n")
+    claim = claim_read(out, args.unit or UNIT, getattr(args, "reader", None) or "research-script-run")
+    (out / "holdout_claim.json").write_text(json.dumps(claim, indent=1) + "\n")
     h = forward_stage(cache, out, dev)
-    v, why = verdict(h)
+    v, why = verdict(h, claim["bar"])
     summary = {"schema": SCHEMA, "unit": args.unit or UNIT, "verdict": v, "why": why, "git_sha": E._git_sha(),
-               "variants_read_on_window": 1, "config": {k: globals()[k] for k in (
+               "variants_read_on_window": claim["variants_on_window"], "n_tries": claim["n_tries"],
+               "holdout_bar": claim["bar"], "config": {k: globals()[k] for k in (
                    "GRID", "BASE_TP", "CHECKINS", "MIN_GAP_ATR", "VENUE_CAP_PCT", "MARGINS", "TRAIN_FRAC", "TRAIN_MAX_ROWS",
                    "FWD_START", "FWD_END", "TP_FOLDS", "N_FLOOR", "SYMBOL_FLOOR", "MOVED_FLOOR", "RANDOM_DRAWS", "SEED",
                    "TP_LGB", "TP_FEATURES")}, "dev": dev, "heldout": h, "elapsed_s": round(time.time() - t0)}
@@ -945,6 +967,22 @@ def _self_test() -> None:
     p[8] = 1.0                                                                          # reach all 8 levels, no stop
     assert pv0_choose(p, np.zeros(N_CLASS), 1, 100.0, 1.0, 100.0, 0.0) == len(GRID) - 1
     assert pv0_choose(p, np.zeros(N_CLASS), 1, 100.0, 1.0, 100.0, 10.0) == GRID.index(3.0)
+    # holdout ledger (HOLDOUT-DEFLATED-REUSE): the 1st read is exactly the original rule, the N-th is deflated; claims go to a copy
+    import tempfile
+
+    import holdout_lock as HL
+    hv = {"n": 1000, "n_symbols": 20, "n_trades_moved": 100, "mean_delta_per_trade": 0.01,
+          "bootstrap_ci95_delta_by_trade_reported": [-0.0096, 0.0296]}       # se = 0.01
+    assert verdict(hv, HL.bar_for(1))[0] == "pass"
+    assert verdict(hv, HL.bar_for(12))[0] == "fail"                           # 0.01 < 1.66 x 0.01
+    assert verdict({**hv, "mean_delta_per_trade": -0.001}, HL.bar_for(1))[0] == "fail"
+    assert verdict({**hv, "n": 10}, HL.bar_for(1))[0] == "indeterminate"
+    with tempfile.TemporaryDirectory() as td:
+        before = HL.LEDGER.read_text() if HL.LEDGER.exists() else None
+        c1 = claim_read(Path(td), "RQ-SELFTEST", "self-test")
+        c2 = claim_read(Path(td), "RQ-SELFTEST", "self-test")
+        assert c2["n_tries"] == c1["n_tries"] + 1 and c1["family"] == "TPREV"
+        assert (HL.LEDGER.read_text() if HL.LEDGER.exists() else None) == before   # the repo ledger is never written
     print("self-test ok")
 
 
@@ -1484,6 +1522,7 @@ def main(argv=None) -> int:
     ap.add_argument("--cache", default="/tmp/ml_decision_klines")
     ap.add_argument("--out", default="/tmp/ml_entry_tp_revision_out")
     ap.add_argument("--unit", default=UNIT)
+    ap.add_argument("--reader", default="research-script-run (claimed on the runner before any forward outcome)")
     ap.add_argument("--dev-only", action="store_true", help="stop before the one read of the forward window")
     ap.add_argument("--self-test", action="store_true")
     ap.add_argument("--dev-json", default="comms/research/RQ-20261101-383f-01/local-20261101T1030Z/dev.json")
