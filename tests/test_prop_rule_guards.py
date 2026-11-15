@@ -124,12 +124,13 @@ def test_executor_daily_floor_uses_account_size_basis():
     # day start 10,200: floor 9,900 (not 9,894). Equity 9,930, ticket risk $30
     # → after-stops 9,900 <= 9,900 + $5 margin: refused on the Tradeify floor,
     # which the balance-based floor (9,894 + 5) would have let through.
+    # GATE-PROP-RISK-CUSHION: MAKE REPORT-ONLY (operator 2026-11-12): the daily-loss finding is reported
     v = _guards(30_000, _cfg(), ds=10_200.0, equity=9_930.0)
     assert v.checks["daily_floor"] == pytest.approx(9_900.0)
-    assert any(r.startswith("daily loss:") for r in v.reasons)
+    assert any(r.startswith("daily loss:") for r in v.breach_reports)
     legacy = _guards(30_000, _cfg(daily_loss_amount_basis=None), ds=10_200.0, equity=9_930.0)
     assert legacy.checks["daily_floor"] == pytest.approx(9_894.0)
-    assert not any(r.startswith("daily loss:") for r in legacy.reasons)
+    assert not any(r.startswith("daily loss:") for r in legacy.breach_reports)
 
 
 def test_prop_day_rolls_at_22_utc():

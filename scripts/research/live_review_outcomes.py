@@ -43,6 +43,9 @@ METHOD
   priced against EACH ROW'S OWN SYMBOL's candles (``candles`` may be a ``{symbol: frame}`` map; one CSV for every row
   would replay ADA trades on SOL prices). The pool is the leg's whole Stage-0 population, R-normalised, because the
   model is pooled; ``--symbol`` restricts it to one symbol and the cell's ``n`` says what that costs.
+* ``--condition state`` (LTR-GRADER-COVERAGE, 2026-11-15): the CURRENT state -- ``pullback`` when ``open_r < peak_r``,
+  ``peak`` only for a trade at its peak. The packet uses it, so HOLD for a losing trade is no longer priced from the
+  near-unconditional entry population; where history holds too few such trades the cell reads ``insufficient_n``.
 * ``--close`` prices CLOSE NOW: the whole position banked at ``open_r`` on the review bar, paying fee + slippage +
   funding to that bar (``partial_close`` with fraction 1.0, named ``close``).
 * ``--corpus`` overrides the Stage-0 evidence record's ``source_run`` (e.g. the full-history harness
@@ -479,6 +482,17 @@ def _candles_for(candles: Any, t: Dict[str, Any]) -> Optional[pd.DataFrame]:
     return candles
 
 
+def resolve_condition(condition: str, open_r: float, peak_r: float) -> str:
+    """``state`` (LTR-GRADER-COVERAGE adverse-state gap, 2026-11-15): condition on the trade's CURRENT state. A trade below
+    its peak is in the ``pullback`` state (reached ``peak_r``, now back at ``open_r``); only a trade AT its peak is the
+    ``peak`` state. ``peak`` alone prices HOLD for a trade at -0.79R from every trade that ever reached its small peak
+    (measured: trend_donchian_xrp_4h short, open_r -0.79 / peak_r 0.2 -> hold +0.34R on n 35 under ``peak``; 4 comparable
+    trades, insufficient_n, under the current state)."""
+    if condition != "state":
+        return condition
+    return "pullback" if open_r < peak_r else "peak"
+
+
 def build_table(trades: List[Dict[str, Any]], candles: Any, *, side: Optional[str],
                 open_r: float, peak_r: float, bars_held: Optional[int], atr_stop_mult: float,
                 tighten: List[str], n_floor: int = N_FLOOR, bars_slack: Optional[float] = None,
@@ -489,6 +503,8 @@ def build_table(trades: List[Dict[str, Any]], candles: Any, *, side: Optional[st
                 move_tp: Optional[List[float]] = None, close: bool = False,
                 symbol: Optional[str] = None, stop_r: Optional[float] = None) -> Dict[str, Any]:
     """``candles``: one frame (single-symbol leg) or ``{symbol: frame}`` (pooled leg); None = could not look."""
+    condition_asked = condition
+    condition = resolve_condition(condition, open_r, peak_r)
     atr_over_r = 1.0 / atr_stop_mult
     pop = {"corpus_trades": len(trades), "side_filter": side, "side_excluded": 0, "no_candles": 0,
            "never_reached_peak": 0, "beyond_bars_slack": 0, "comparable": 0,
@@ -532,7 +548,8 @@ def build_table(trades: List[Dict[str, Any]], candles: Any, *, side: Optional[st
     hold_cell = cell_stats(hold, peak_r, n_floor)
     out: Dict[str, Any] = {
         "state": {"side": side, "open_r": open_r, "peak_r": peak_r, "bars_held": bars_held,
-                  "atr_stop_mult": atr_stop_mult, "condition": condition, "dist_to_stop_atr": dist_stop_atr,
+                  "atr_stop_mult": atr_stop_mult, "condition": condition, "condition_asked": condition_asked,
+                  "dist_to_stop_atr": dist_stop_atr,
                   "dist_to_target_atr": dist_target_atr},
         "population": pop, "n_floor": n_floor,
         "bounds_r": {"auto_apply": auto_bound, "shadow": shadow_bound},
@@ -630,7 +647,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--corpus", help="per-trade JSONL (repo-relative or absolute), or 'auto' = the leg's committed full-history "
                     "corpus (comms/strategy_evidence/ltr_corpus/) else the evidence record's source_run; "
                     "default = the evidence record's source_run")
-    ap.add_argument("--condition", choices=("peak", "pullback"), default="peak")
+    ap.add_argument("--condition", choices=("peak", "pullback", "state"), default="peak",
+                    help="state = pullback when open_r < peak_r (the trade is below its peak), else peak")
     ap.add_argument("--partial", type=float, action="append", help="fraction in (0,1) banked at --open-r; repeatable")
     ap.add_argument("--move-tp", type=float, action="append", help="new TP in R (> --open-r); repeatable")
     ap.add_argument("--close", action="store_true", help="also price CLOSE NOW (everything banked at --open-r)")
@@ -640,6 +658,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--auto-bound-r", type=float, default=AUTO_BOUND_R)
     ap.add_argument("--shadow-bound-r", type=float, default=SHADOW_BOUND_R)
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--out", help="also write the table JSON here (a reviewer commits it next to its row as "
+                                  "comms/live_review/tables/<review_id>.json and names it in outcome_table_source; "
+                                  "the dispatcher reads the table at the row's commit)")
     a = ap.parse_args(argv)
     trades, src = load_trades(a.leg, corpus=a.corpus)
     cpath: Any = a.candles
@@ -678,6 +699,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     man = REPO / LTR_CORPUS_DIR / f"{a.leg}__corpus.json"
     if str(src).startswith(LTR_CORPUS_DIR) and man.is_file():
         res["corpus_note"] = json.loads(man.read_text()).get("note")   # what this corpus does NOT model, stated
+    if a.out:
+        out = Path(a.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(res, indent=2, default=str) + "\n")
     print(json.dumps(res, indent=2) if a.json else render_text(res))
     return 0
 

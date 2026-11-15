@@ -1,0 +1,172 @@
+{
+ "schema": "prop_ml_leg/1",
+ "profile": "bv",
+ "smoke": false,
+ "rehearsal": false,
+ "bar_hours": 4,
+ "taus": [
+  0.3,
+  0.35,
+  0.4,
+  0.45,
+  0.5
+ ],
+ "horizon_bars": 12,
+ "arms_run": [
+  "F0",
+  "F0+OI"
+ ],
+ "arms_unavailable": [
+  "F0+F1",
+  "F0+F1+F2",
+  "F0+F1+F2+F3"
+ ],
+ "require_positive_sum": true,
+ "arm_denominator_registered": 10,
+ "arms_graded": 10,
+ "discovery_table": [
+  {
+   "arm": "F0",
+   "tau": 0.3,
+   "n": 806,
+   "sum_net_r": -65.913,
+   "folds_with_trades": 7,
+   "folds_positive": 1,
+   "eligible": false
+  },
+  {
+   "arm": "F0",
+   "tau": 0.35,
+   "n": 475,
+   "sum_net_r": -45.323,
+   "folds_with_trades": 7,
+   "folds_positive": 1,
+   "eligible": false
+  },
+  {
+   "arm": "F0",
+   "tau": 0.4,
+   "n": 208,
+   "sum_net_r": 0.677,
+   "folds_with_trades": 7,
+   "folds_positive": 5,
+   "eligible": true
+  },
+  {
+   "arm": "F0",
+   "tau": 0.45,
+   "n": 79,
+   "sum_net_r": 2.774,
+   "folds_with_trades": 6,
+   "folds_positive": 3,
+   "eligible": false
+  },
+  {
+   "arm": "F0",
+   "tau": 0.5,
+   "n": 36,
+   "sum_net_r": 1.809,
+   "folds_with_trades": 3,
+   "folds_positive": 2,
+   "eligible": false
+  },
+  {
+   "arm": "F0+OI",
+   "tau": 0.3,
+   "n": 772,
+   "sum_net_r": -77.383,
+   "folds_with_trades": 7,
+   "folds_positive": 2,
+   "eligible": false
+  },
+  {
+   "arm": "F0+OI",
+   "tau": 0.35,
+   "n": 440,
+   "sum_net_r": -53.867,
+   "folds_with_trades": 7,
+   "folds_positive": 1,
+   "eligible": false
+  },
+  {
+   "arm": "F0+OI",
+   "tau": 0.4,
+   "n": 198,
+   "sum_net_r": -6.671,
+   "folds_with_trades": 7,
+   "folds_positive": 3,
+   "eligible": false
+  },
+  {
+   "arm": "F0+OI",
+   "tau": 0.45,
+   "n": 79,
+   "sum_net_r": 9.647,
+   "folds_with_trades": 6,
+   "folds_positive": 4,
+   "eligible": false
+  },
+  {
+   "arm": "F0+OI",
+   "tau": 0.5,
+   "n": 38,
+   "sum_net_r": 10.841,
+   "folds_with_trades": 5,
+   "folds_positive": 4,
+   "eligible": false
+  }
+ ],
+ "folds": 12,
+ "data_rows": 20730,
+ "elapsed_s": 147,
+ "selected": {
+  "arm": "F0",
+  "tau": 0.4,
+  "discovery_sum_net_r": 0.677,
+  "discovery_n": 208
+ },
+ "holdout_claim": {
+  "model_id": "PROPML-bv-4h-F0-tau0.4",
+  "family": "PROPML-bv",
+  "start": "2025-01-01",
+  "end": "2025-09-30",
+  "train_end": "2024-12-31",
+  "unit": "43521666560",
+  "reader": "prop_ml_leg.py run",
+  "read_at": "2026-11-13T22:48:09Z",
+  "backfilled": false,
+  "symbols": [
+   "ETHUSDT",
+   "SOLUSDT"
+  ],
+  "variants_on_window": 1,
+  "n_tries": 1,
+  "bar": {
+   "n_tries": 1,
+   "alpha_one_sided": 0.025,
+   "ci_level": 0.95,
+   "ci_z": 1.96,
+   "ci_lo_percentile": 2.5,
+   "point_t_min": 0.0,
+   "method": "Sidak-corrected CI (alpha_N = 1-(1-0.025)^(1/N), one-sided) for CI bars; Bailey-Lopez de Prado expected max of N null t-stats for point bars"
+  },
+  "next_bar": {
+   "n_tries": 2,
+   "alpha_one_sided": 0.012579,
+   "ci_level": 0.974842,
+   "ci_z": 2.239,
+   "ci_lo_percentile": 1.2579,
+   "point_t_min": 0.5198,
+   "method": "Sidak-corrected CI (alpha_N = 1-(1-0.025)^(1/N), one-sided) for CI bars; Bailey-Lopez de Prado expected max of N null t-stats for point bars"
+  }
+ },
+ "heldout": {
+  "n": 30,
+  "mean_net_r": 0.015548433333333363
+ },
+ "verdict": "INDETERMINATE",
+ "read_state": "measured",
+ "reason": "n_below_floor",
+ "n_heldout": 30,
+ "floor": 150
+}

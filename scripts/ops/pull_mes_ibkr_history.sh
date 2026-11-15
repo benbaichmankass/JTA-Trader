@@ -280,5 +280,32 @@ for tf in $MES_TIMEFRAMES; do
   rm -f "/tmp/ibkr_mes_${tf}_$$.out" "/tmp/ibkr_mes_${tf}_$$.err"
 done
 
+# SPAN SUMMARY (2026-11-12, FUT-CME-INTRADAY-HIST): for every per-contract shard
+# on disk, emit one `contract_span` line per contract (first/last bar, rows) into
+# this log, so the depth IB actually serves is readable via
+# `diag log_file?name=ibkr_mes_pull` without shell access. Read-only, stdlib, and
+# best-effort: a failure here never changes the exit code.
+if [ -d "${IBKR_OUT}/market_raw_percontract" ]; then
+  "$PY" - "${IBKR_OUT}/market_raw_percontract" "$(iso_now)" >>"$PULL_LOG_PATH" 2>/dev/null <<'PYSPAN' || true
+import glob, json, os, sys
+root, now = sys.argv[1], sys.argv[2]
+for path in sorted(glob.glob(os.path.join(root, "*", "*", "*", "data.jsonl"))):
+    sym, tf, ver = path.split(os.sep)[-4:-1]
+    spans = {}
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            try:
+                r = json.loads(line)
+            except ValueError:
+                continue
+            c, ts = r.get("contract", ""), r.get("ts", "")
+            s = spans.setdefault(c, [ts, ts, 0])
+            s[0], s[1], s[2] = min(s[0], ts), max(s[1], ts), s[2] + 1
+    for c, (first, last, n) in sorted(spans.items()):
+        print(json.dumps({"ts": now, "status": "contract_span", "symbol": sym, "timeframe": tf,
+                          "version": ver, "contract": c, "first_ts": first, "last_ts": last, "rows": n}))
+PYSPAN
+fi
+
 emit "$(printf '{"ts":"%s","status":"pull_end","any_ok":%d,"out":"%s"}' "$(iso_now)" "$any_ok" "$IBKR_OUT")"
 [ "$any_ok" -eq 1 ] && exit 0 || exit 1

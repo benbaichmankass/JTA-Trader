@@ -1,12 +1,27 @@
 """Writer-side rotation for signal_audit / position_read_state_soak (VM-DISK-GROWTH-20261102)."""
 import gzip
 import json
+import types
 
 from src.utils import jsonl_rotate as jr
 
 
+class _InlineThread:
+    """Runs the rotation's gzip synchronously. The real background thread raced this test's own
+    clean-up gzip on the same `.gz.tmp` under CPU contention (UnicodeDecodeError on gzip bytes on CI,
+    #25216 run 43254089052 attempt 2; reproduced locally 8 times in 1,800 runs across 6 parallel
+    processes, 0 in 400 serial runs), and could outlive the test (tmp dir "not empty")."""
+
+    def __init__(self, target=None, args=(), kwargs=None, daemon=None):
+        self._target, self._args, self._kwargs = target, args, kwargs or {}
+
+    def start(self):
+        self._target(*self._args, **self._kwargs)
+
+
 def test_rotates_at_cap_gzips_and_keeps_every_row(tmp_path, monkeypatch):
     monkeypatch.setenv(jr.ENV_MAX_MB, "0.001")  # ~1 KiB
+    monkeypatch.setattr(jr, "threading", types.SimpleNamespace(Thread=_InlineThread))  # this module only
     p = tmp_path / "signal_audit.jsonl"
     n = iter(range(1000))
     monkeypatch.setattr(jr, "_stamp", lambda: f"2026-11-02T{next(n):06d}Z")

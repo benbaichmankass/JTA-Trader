@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "LR-20261114T1600Z-pkg-d8838f396234477c, the first non-hold review row since END-ADVICE-ONLY (#25988), was refused evidence_not_committed. The packet could not price a prop-only package; the lane ran live_review_outcomes.py itself and quoted n=54, wrote evidence_source table with outcome_table_source null, and committed no table, because the brief said outcome_table_source = packet table_path or null and the tool only printed. Fix: live_review_outcomes.py --out writes the same JSON (smoke: trend_donchian_eth_4h short at the row's state reproduces the row's numbers, read_state measured, n=54). SKILL.md Step 2 and REVIEWER-BRIEF.md section 3 say a self-priced table is written with --out to comms/live_review/tables/<review_id>.json, committed in the same push as the row and named in outcome_table_source; a reviewer that cannot commit tables makes a judgement call. No check changed; docs and a research tool only. Revert: git revert."
+}

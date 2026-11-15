@@ -17,11 +17,13 @@ TOKEN = "svc-token"
 
 POSTS = [
     "/api/bot/alerts",
+    "/api/bot/devices/register",
     "/api/bot/wake-toggles",
     "/api/bot/work/decision",
     "/api/bot/work/items",
     "/api/bot/work/items/SOME-ID/note",
     "/api/bot/live-review/rows",
+    "/api/bot/ops/actions",
 ]
 
 
@@ -73,3 +75,16 @@ def test_every_carved_route_fails_closed_when_its_token_is_unset(client, monkeyp
     monkeypatch.delenv("WORK_STORE_TOKEN", raising=False)
     r = client.post(path, json={}, headers={"Authorization": "Bearer anything"})
     assert r.status_code in (401, 503), (path, r.status_code)
+
+
+def test_ops_job_get_reaches_its_router_and_fails_closed_there(client, monkeypatch, tmp_path):
+    """MANAGER-VM-DIRECT-OPS GET carve-out: the gate lets the job read through to the router's own
+    X-Work-Store-Token check, which refuses without it and serves with it."""
+    monkeypatch.setenv("OPS_CHANNEL_DIR", str(tmp_path / "ops"))
+    path = "/api/bot/ops/jobs/OPS-20261112T060000Z-sync-now-000000"
+    r = client.get(path)
+    assert not _gate_401(r) and r.status_code == 401, (r.status_code, r.text)
+    r = client.get(path, headers={"X-Work-Store-Token": TOKEN})
+    assert r.status_code == 404, (r.status_code, r.text)   # reached the router, authenticated, no such job
+    monkeypatch.delenv("WORK_STORE_TOKEN")
+    assert client.get(path, headers={"X-Work-Store-Token": TOKEN}).status_code == 503

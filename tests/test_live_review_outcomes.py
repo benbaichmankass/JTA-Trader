@@ -317,3 +317,25 @@ def test_explicit_r_level_at_or_below_the_current_stop_is_invalid_not_priced():
                         atr_stop_mult=2.0, tighten=["r:1.0"], stop_r=1.5)
     o = [x for x in t["options"] if x["action"] == "tighten"][0]
     assert o["state"] == "invalid_level" and o["reason"] == "stop_level_not_above_current_stop"
+
+
+# ---- LTR-GRADER-COVERAGE adverse-state gap: --condition state -------------------------------------------
+
+def test_state_condition_resolves_to_pullback_below_the_peak_and_peak_at_it():
+    assert lro.resolve_condition("state", -0.79, 0.2) == "pullback"
+    assert lro.resolve_condition("state", 2.0, 4.0) == "pullback"
+    assert lro.resolve_condition("state", 4.0, 4.0) == "peak"
+    assert lro.resolve_condition("peak", -0.79, 0.2) == "peak"        # explicit choices are untouched
+
+
+def test_state_condition_matches_pullback_table_and_records_what_was_asked():
+    kw = dict(side="short", open_r=2.0, peak_r=4.0, bars_held=None, atr_stop_mult=2.0, n_floor=1, tighten=[])
+    st = lro.build_table([_short(-0.5, 3, 4.0)], _candles(BARS), condition="state", **kw)
+    pb = lro.build_table([_short(-0.5, 3, 4.0)], _candles(BARS), condition="pullback", **kw)
+    assert st["options"] == pb["options"] and st["population"] == pb["population"]
+    assert st["state"]["condition"] == "pullback" and st["state"]["condition_asked"] == "state"
+
+
+def test_packet_prices_from_the_current_state():
+    src = (Path(__file__).resolve().parents[1] / "scripts" / "ops" / "live_review_packet.py").read_text()
+    assert '"--condition", "state"' in src

@@ -24,7 +24,7 @@ slos:
   # Thresholds are placeholders for the operator to set at planning: survivors_per_month >= 1 is "at least one
   # held-out edge pass a month"; trials_per_survivor <= 500 is "a hit rate no worse than 1 in 500".
   survivors_per_month:
-    what: "survivors = graded registered-rule PASSes on HELD-OUT data with an EDGE claim (operator 2026-11-04) whose graded result landed in the last 30 d, distinct (a holdout re-run whose parent discovery is counted is not counted again); held-out class from structured unit fields only. The ledger proxy (Stage-0 AND DSR>0.95 AND BHY>0) is shown in the evidence, not alerted on"
+    what: "survivors = graded registered-rule PASSes on HELD-OUT data with an EDGE claim (operator 2026-11-04) whose graded result landed in the last 30 d, EXCLUDING a pass whose grading.confirmation is present and not 'confirmed' (its own held-out read failed: not_replicated / underpowered; ML deep audit 2026-11-12 s2.2), distinct (a holdout re-run whose parent discovery is counted is not counted again); held-out class from structured unit fields only. Evidence (report-only, no gate) splits by_subject new / lever / revalidation / unknown (evidence_class.subject, or the m20 lever family) and prints converted = survivors cited under config/ or comms/strategy_evidence/ (reached a roster or config change). The ledger proxy (Stage-0 AND DSR>0.95 AND BHY>0) is shown in the evidence, not alerted on"
     op: min
     threshold: 1
   trials_per_survivor:

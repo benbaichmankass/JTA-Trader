@@ -53,7 +53,7 @@ were read **2026-09-08 between 12:16Z and 12:30Z**.
    signalled **twice** since routing and both were refused `dry_run_no_order_placed`
    while every declared gate read `live`. Already filed; I eliminated two candidate
    causes (the `account_state.yaml` override is absent for this account;
-   credentials resolve — the venue reads ACTIVE, $200.22, not blocked) and narrowed
+   credentials resolve — the venue reads ACTIVE, [balance removed], not blocked) and narrowed
    a third.
 8. **Verdict on every leg currently routed to a real-money account:
    `insufficient_n`.** The largest convictable sample on a live-routed leg is
@@ -425,7 +425,7 @@ mine.
 **This is already filed** as `BL-20260906-ALPACA-LIVE-FOLDS-DRY-RUN-WHILE-ACCOUNTS-YAML-AND-THE-STRATEGY-BOTH-DECLARE-LIVE` (high, Tier-2). I did not duplicate it — I **eliminated two of its candidate causes and narrowed a third**:
 
 - **The documented third gate is NOT it.** `coordinator.py:1322` consults `account_state_dry_run()`, an override that can force an account dry regardless of `accounts.yaml` and is **not surfaced on `/api/bot/config`**. It was my leading hypothesis. Refuted: `config/account_state.yaml` declares only `bybit_1` and `bybit_2`, so for `alpaca_live` the accessor returns `None` and the branch is a no-op.
-- **Credentials are NOT it.** `/api/diag/broker_account_status?account_id=alpaca_live` (read 13:08:36Z): status **ACTIVE**, `trading_blocked: false`, `account_blocked: false`, buying_power **$200.22**, `error: null`. So the `configured=False` path is out.
+- **Credentials are NOT it.** `/api/diag/broker_account_status?account_id=alpaca_live` (read 13:08:36Z): status **ACTIVE**, `trading_blocked: false`, `account_blocked: false`, buying_power **[balance removed]**, `error: null`. So the `configured=False` path is out.
 - **The stale-config branch now has to explain something awkward.** `load_accounts` is stateless per-call, so if the process held pre-routing config, `tlt_pullback_1h` would not have been in the roster and **no package would carry `account_id=alpaca_live` at all**. Two do. The roster was current; a stale-config story now needs the roster fresh and the mode stale, out of one file read by one call.
 
 ⚠️ **What remains, and I did not test it:** the `dry_run` **parameter** passed into `multi_account_execute` (`coordinator.py:1314` — `if dry_run is not None: effective_dry = bool(dry_run)`), which overrides both declared gates. That needs a read of the running process, which the existing row's resolution criteria already asks for.

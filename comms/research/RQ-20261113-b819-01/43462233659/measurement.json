@@ -1,0 +1,145 @@
+{
+  "primary": {
+    "cells": {
+      "ict_scalp_5m": [
+        "chop/volatile/long",
+        "chop/volatile/short",
+        "trending/volatile/long",
+        "trending/volatile/short"
+      ],
+      "squeeze_breakout_4h": [
+        "trending/calm/short"
+      ],
+      "trend_donchian": [
+        "chop/calm/long",
+        "transitional/calm/long",
+        "trending/volatile/long"
+      ]
+    },
+    "legs": {
+      "trend_donchian": {
+        "trades": 301,
+        "dropped": 181,
+        "added_r": -1.0528
+      },
+      "squeeze_breakout_4h": {
+        "trades": 81,
+        "dropped": 13,
+        "added_r": 2.4482
+      },
+      "ict_scalp_5m": {
+        "trades": 530,
+        "dropped": 56,
+        "added_r": 5.5136
+      }
+    },
+    "trades_total": 912,
+    "dropped_n": 250,
+    "added_r": 6.909,
+    "min_dropped": 25,
+    "folds": 6,
+    "draws": 5000,
+    "seed": 20261112,
+    "fold_added_r": [
+      -13.2411,
+      -12.5522,
+      17.0744,
+      4.5893,
+      3.8288,
+      7.2098
+    ],
+    "fold_wins": 4,
+    "control_p": 0.5521,
+    "verdict": "fail"
+  },
+  "since": {
+    "cells": {
+      "ict_scalp_5m": [
+        "chop/volatile/long",
+        "chop/volatile/short",
+        "trending/volatile/long",
+        "trending/volatile/short"
+      ],
+      "squeeze_breakout_4h": [
+        "trending/calm/short"
+      ],
+      "trend_donchian": [
+        "chop/calm/long",
+        "transitional/calm/long",
+        "trending/volatile/long"
+      ]
+    },
+    "legs": {
+      "trend_donchian": {
+        "trades": 32,
+        "dropped": 20,
+        "added_r": 9.7642
+      },
+      "squeeze_breakout_4h": {
+        "trades": 8,
+        "dropped": 0,
+        "added_r": 0
+      },
+      "ict_scalp_5m": {
+        "trades": 48,
+        "dropped": 2,
+        "added_r": -0.3546
+      }
+    },
+    "trades_total": 88,
+    "dropped_n": 22,
+    "added_r": 9.4096,
+    "min_dropped": 25,
+    "folds": 6,
+    "draws": 5000,
+    "seed": 20261112,
+    "fold_added_r": [
+      3.7435,
+      3.9114,
+      -0.8124,
+      -1.1526,
+      2.4161,
+      1.3036
+    ],
+    "fold_wins": 4,
+    "control_p": 0.3805,
+    "verdict": "indeterminate_underpowered"
+  },
+  "since_date": "2026-07-01",
+  "legs": [
+    {
+      "strategy": "trend_donchian",
+      "symbol": "BTCUSDT",
+      "timeframe": "1h",
+      "harness": "trend",
+      "fidelity": "approximate",
+      "omitted_levers": [
+        "decision_bar",
+        "exit_head_action",
+        "exit_head_model",
+        "exit_head_threshold"
+      ],
+      "tagged": "comms/research/RQ-20261113-b819-01/43462233659/legs/trend_donchian__tagged.jsonl"
+    },
+    {
+      "strategy": "squeeze_breakout_4h",
+      "symbol": "BTCUSDT",
+      "timeframe": "4h",
+      "harness": "squeeze",
+      "fidelity": "faithful",
+      "omitted_levers": [],
+      "tagged": "comms/research/RQ-20261113-b819-01/43462233659/legs/squeeze_breakout_4h__tagged.jsonl"
+    },
+    {
+      "strategy": "ict_scalp_5m",
+      "symbol": "BTCUSDT",
+      "timeframe": "5m",
+      "harness": "ict_scalp",
+      "fidelity": "faithful",
+      "omitted_levers": [],
+      "tagged": "comms/research/RQ-20261113-b819-01/43462233659/legs/ict_scalp_5m__tagged.jsonl"
+    }
+  ],
+  "rule_reason": "primary fail (added_r <= 0, fold_wins < 4 or control_p > 0.05) on a window biased toward the cells",
+  "min_since_dropped": 25
+}

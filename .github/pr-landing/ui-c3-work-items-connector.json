@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "UI-CONSOLE-ARTIFACT step C3: the console connector's work_items tool stops being a stub and reads the live work store (GET /api/bot/work/items, WORK-STORE S1, live since 2026-11-05). Views recent/due/open/state plus one item's event log; 10 s cache so a 30 s page watch shows a session write within 45 s. Read-only GETs, no gate, no order path, no trader-VM change.",
+  "hold_text": "Tier-2 only because the new code runs in a service (jta-console-connector on the trainer VM). The manager merges, then dispatches trainer-console-connector-install (operator-approved for this service, row UI-CONSOLE-CONNECTOR) to restart the connector, and checks that the work_items tool returns read_state=read through claude.ai."
+}

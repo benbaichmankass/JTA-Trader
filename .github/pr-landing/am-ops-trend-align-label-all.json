@@ -1,0 +1,6 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Row TREND-ALIGN-LABEL-ALL (manager ask 22:07Z, from the operator ~22:03Z: 'extend the labeling so that we're at least tracking it'). LABEL ONLY: stamps meta.trend_align (TREND-ALIGN-V1, #25723) on every actionable package. Covers the 36 regime-stamping builders and the ml_entry/ml_entry_v2 legs with a computed label. The ml_entry_eq* legs get an explicit null (snapshot-scored, no candle frame). intent_from_signal gives any unstamped path an explicit 'not_stamped_by_builder' null. Adds a read-only split route GET /api/bot/performance/trend-align. Nothing reads the label to decide, size or bracket (a test refuses any src/ reader outside the producers and the route); the package is identical apart from meta.trend_align (tested). Touches the trader import closure (strategy_signal_builders, intents), so it is a trader restart: merge in a restart batch. Revert: git revert."
+}

@@ -51,3 +51,28 @@ def test_guard_passes_and_self_tests():
         r = subprocess.run([sys.executable, "scripts/ci/check_ml_registry_consistency.py", *args],
                            cwd=REPO, capture_output=True, text=True)
         assert r.returncode == 0, r.stdout + r.stderr
+
+
+# ---- ML-REGISTRY-SERVED-MODELS-NO-STAGE (2026-11-12) ------------------------------------------------------------
+# The 8 served/inventory ids the UI-SPA lane found with target_deployment_stage null next to a LIVE/SHADOW bucket.
+SERVED_8 = TRADING | {"ml-decision-entry-v1r20261106", "ml-entry-tp-revision-v1", "overlay-td-v1",
+                      "exit-head-donchian-1h-v1"}
+
+
+def test_served_models_carry_stage_and_headline_metric(feed):
+    by_id = {r["model_id"]: r for r in feed["rows"]}
+    for mid in SERVED_8:
+        r = by_id[mid]
+        assert r["target_deployment_stage"], mid
+        assert r["stage_read_state"] == "declared" and r["stage_source"] == "ml/served/SERVED_MODELS.yaml", mid
+        hm = r["headline_metric"]
+        assert hm and hm["provenance"] == "MEASURED" and hm["source"] and hm["n"], mid
+
+
+def test_undeclared_inventory_row_renders_dash_not_a_guess():
+    from src.runtime import ml_serving_inventory as inv
+
+    row = {"model_id": "not-declared-v1"}
+    inv.apply_served_declaration(row, {})
+    assert row["target_deployment_stage"] is None and row["headline_metric"] is None
+    assert row["stage_read_state"] == "undeclared"

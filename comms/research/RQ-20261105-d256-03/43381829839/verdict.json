@@ -1,0 +1,67 @@
+{
+  "verdict": "indeterminate",
+  "read_state": "measured",
+  "population": "faithful (trail_decay simulated) vs approximate re-run of each record's own harness over its own window: trend_donchian_sol_4h",
+  "n": 116,
+  "note": "trend_donchian_sol_4h=indeterminate",
+  "records": [
+    {
+      "leg": "trend_donchian_sol_4h",
+      "rule_id": "RULE-RQ1011-001-FAITHFUL-STAGE0",
+      "record_fidelity": "approximate",
+      "record_omitted_levers": [],
+      "record_n": 116,
+      "record_net_r_oos": 36.8572,
+      "window": [
+        "2023-10-29 00:00:00+00:00",
+        "2026-10-27 20:00:00+00:00"
+      ],
+      "bars": 6570,
+      "arms": {
+        "approximate": {
+          "n": 116,
+          "net_r": 36.8569,
+          "net_r_fee_only": 40.6007,
+          "cost_stack": {
+            "fees": 11.0,
+            "slippage": 3.0,
+            "funding": 1.0
+          },
+          "still_omitted": [
+            "decision_bar"
+          ],
+          "by_outcome": {
+            "take_profit": 41,
+            "stop": 65,
+            "trail_stop": 10
+          }
+        },
+        "faithful": {
+          "n": 116,
+          "net_r": 36.8569,
+          "net_r_fee_only": 40.6007,
+          "cost_stack": {
+            "fees": 11.0,
+            "slippage": 3.0,
+            "funding": 1.0
+          },
+          "still_omitted": [
+            "decision_bar"
+          ],
+          "by_outcome": {
+            "take_profit": 41,
+            "stop": 65,
+            "trail_stop": 10
+          }
+        }
+      },
+      "control_reproduces_record": true,
+      "delta_r": 0.0,
+      "verdict": "indeterminate",
+      "read_state": "measured",
+      "note": "faithful arm still omits ['decision_bar'] \u2014 not faithful, not graded",
+      "n": 116,
+      "population": "trend_donchian_sol_4h: faithful-arm re-run of the record's own harness over its own window ['2023-10-29 00:00:00+00:00', '2026-10-27 20:00:00+00:00'], 116 trades"
+    }
+  ]
+}

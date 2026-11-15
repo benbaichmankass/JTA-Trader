@@ -7,7 +7,8 @@ Input is ``GET /api/bot/pnl/broker-truth`` (record ``stale`` + the ``live`` bloc
 fed by the hourly-refreshed transaction-log store). Read-only.
 
 Per-record verdict, never collapsed:
-  fresh          record within the stale threshold
+  fresh          record within the stale threshold, OR its ``current`` block
+                 (hand record + live API, every gap closed) is measured and fresh
   declared_gap   hand record is old BUT it declares the part no producer can
                  refresh (reason recorded) AND the live API block is measured and
                  not silent -- graded, shown, NOT a finding (a permanent alarm
@@ -37,6 +38,13 @@ def grade_record(rec: Dict[str, Any]) -> Dict[str, Any]:
         return {**out, "verdict": "could_not_look", "why": "record age unreadable (no/garbled as_of)"}
     if not rec["stale"]:
         return {**out, "verdict": "fresh", "why": "within threshold"}
+    cur = rec.get("current") if isinstance(rec.get("current"), dict) else None
+    if cur and cur.get("state") == "measured" and cur.get("stale") is False:
+        # Hand record + live API since it, every declared gap closed
+        # (LEDGER-REFRESH 2026-11-12): the figure IS current; its age is the
+        # newest API row's, not the hand record's.
+        return {**out, "as_of": cur.get("as_of"), "age_days": cur.get("as_of_age_days"),
+                "verdict": "fresh", "why": "hand record + live API folded (current.state=measured)"}
     gaps = rec.get("declared_gaps") or []
     live_ok = bool(live) and live.get("state") == "measured_api"
     if gaps and live_ok:

@@ -1,0 +1,2423 @@
+{
+  "as_of": "2026-11-15T03:51:25.373970+00:00",
+  "by_disposition": {
+    "healthy": 4,
+    "insufficient-data": 42,
+    "kill": 0,
+    "tweak": 1
+  },
+  "cost_fidelity_read_state": "measured",
+  "execution_map_read_state": "measured",
+  "legs": [
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "entry_mean": 5.53,
+        "exit_mean": 0.387,
+        "modelled_bps": 3.0,
+        "n": 3,
+        "n_entry": 3,
+        "n_exit": 5,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "insufficient_n",
+        "why": "entry n=3, exit n=5; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "wait for a signal; re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 1,
+        "intent_episodes": 0,
+        "intents": 0,
+        "received": 1,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "ict_scalp_avax_5m",
+          "trend_donchian_avax_4h"
+        ],
+        "state": "no_intents",
+        "strategy": "avax_pullback_2h",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "no_intents: the strategy produced zero actionable signals this window \u2014 nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either",
+      "strategy": "avax_pullback_2h"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "entry_mean": -15.948,
+        "exit_mean": 1.195,
+        "modelled_bps": null,
+        "n": 7,
+        "n_entry": 9,
+        "n_exit": 7,
+        "stage": "S1",
+        "threshold_bps": null,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "insufficient_n",
+        "why": "entry n=9, exit n=7; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "wait for a signal; re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 0,
+        "intents": 0,
+        "received": 3,
+        "same_symbol_live_contenders": [
+          "avax_pullback_2h",
+          "e4_oi_shock_1h",
+          "eth_pullback_2h",
+          "eth_pullback_prop_2h",
+          "fade_breakout_4h",
+          "fvg_range_15m",
+          "htf_pullback_trend_2h",
+          "ict_scalp_5m",
+          "ict_scalp_avax_5m",
+          "ict_scalp_eth_15m",
+          "ict_scalp_sol_15m",
+          "ict_scalp_sol_5m",
+          "ict_scalp_xrp_15m",
+          "ict_scalp_xrp_5m",
+          "ml_entry_v2",
+          "sol_pullback_2h",
+          "squeeze_breakout_4h",
+          "trend_donchian",
+          "trend_donchian_1h",
+          "trend_donchian_ada_4h",
+          "trend_donchian_avax_4h",
+          "trend_donchian_eth",
+          "trend_donchian_eth_4h",
+          "trend_donchian_eth_prop",
+          "trend_donchian_sol",
+          "trend_donchian_sol_4h",
+          "turtle_soup",
+          "xrp_pullback_2h"
+        ],
+        "state": "no_intents",
+        "strategy": "claude_desk",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "no_intents: the strategy produced zero actionable signals this window \u2014 nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either",
+      "strategy": "claude_desk"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "ci95": [
+          -1.662,
+          37.392
+        ],
+        "entry_mean": 3.273,
+        "exit_mean": 9.947,
+        "modelled_bps": null,
+        "n": 23,
+        "n_entry": 27,
+        "n_exit": 23,
+        "roundtrip_mean": 13.22,
+        "stage": "S1",
+        "threshold_bps": null,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "no_record"
+      },
+      "disposition": "tweak",
+      "eta": null,
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 4,
+        "intent_episodes": 18,
+        "intents": 20,
+        "received": 15,
+        "same_symbol_live_contenders": [
+          "avax_pullback_2h",
+          "claude_desk",
+          "eth_pullback_2h",
+          "eth_pullback_prop_2h",
+          "fade_breakout_4h",
+          "fvg_range_15m",
+          "htf_pullback_trend_2h",
+          "ict_scalp_5m",
+          "ict_scalp_avax_5m",
+          "ict_scalp_eth_15m",
+          "ict_scalp_sol_15m",
+          "ict_scalp_sol_5m",
+          "ict_scalp_xrp_15m",
+          "ict_scalp_xrp_5m",
+          "ml_entry_v2",
+          "sol_pullback_2h",
+          "squeeze_breakout_4h",
+          "trend_donchian",
+          "trend_donchian_1h",
+          "trend_donchian_ada_4h",
+          "trend_donchian_avax_4h",
+          "trend_donchian_eth",
+          "trend_donchian_eth_4h",
+          "trend_donchian_eth_prop",
+          "trend_donchian_sol",
+          "trend_donchian_sol_4h",
+          "turtle_soup",
+          "xrp_pullback_2h"
+        ],
+        "state": "flowing",
+        "strategy": "e4_oi_shock_1h",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "flowing, but no Stage-0 evidence record exists for this leg at all, so cost fidelity cannot be graded. HYPOTHESIS: author comms/strategy_evidence/<leg>.json so this leg's cost assumption becomes checkable.",
+      "strategy": "e4_oi_shock_1h"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "entry_mean": -0.625,
+        "exit_mean": 2.932,
+        "modelled_bps": 3.0,
+        "n": 7,
+        "n_entry": 15,
+        "n_exit": 7,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "insufficient_n",
+        "why": "entry n=15, exit n=7; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "next scheduled run",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": null,
+        "intents": null,
+        "received": 2,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "eth_pullback_prop_2h",
+          "ict_scalp_eth_15m",
+          "ml_entry_v2",
+          "trend_donchian_eth",
+          "trend_donchian_eth_4h",
+          "trend_donchian_eth_prop"
+        ],
+        "state": "unreadable",
+        "strategy": "eth_pullback_2h",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "mechanics read_state=unreadable (could not query intents and/or received source this run) \u2014 we did not look, not 'nothing happened'",
+      "strategy": "eth_pullback_2h"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "entry_mean": 1.777,
+        "exit_mean": 0.127,
+        "modelled_bps": 3.0,
+        "n": 4,
+        "n_entry": 5,
+        "n_exit": 4,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "insufficient_n",
+        "why": "entry n=5, exit n=4; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "next scheduled run",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": null,
+        "intents": null,
+        "received": 2,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "eth_pullback_2h",
+          "ict_scalp_eth_15m",
+          "ml_entry_v2",
+          "trend_donchian_eth",
+          "trend_donchian_eth_4h",
+          "trend_donchian_eth_prop"
+        ],
+        "state": "unreadable",
+        "strategy": "eth_pullback_prop_2h",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "mechanics read_state=unreadable (could not query intents and/or received source this run) \u2014 we did not look, not 'nothing happened'",
+      "strategy": "eth_pullback_prop_2h"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "exit_mean": 0.008,
+        "modelled_bps": 3.0,
+        "n": 0,
+        "n_entry": 0,
+        "n_exit": 1,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "insufficient_n",
+        "why": "entry n=0, exit n=1; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "next scheduled run",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": null,
+        "intents": null,
+        "received": 0,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "fvg_range_15m",
+          "htf_pullback_trend_2h",
+          "ict_scalp_5m",
+          "ml_entry_v2",
+          "squeeze_breakout_4h",
+          "trend_donchian",
+          "trend_donchian_1h",
+          "turtle_soup"
+        ],
+        "state": "unreadable",
+        "strategy": "fade_breakout_4h",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "mechanics read_state=unreadable (could not query intents and/or received source this run) \u2014 we did not look, not 'nothing happened'",
+      "strategy": "fade_breakout_4h"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "modelled_bps": 3.0,
+        "n": 0,
+        "n_entry": 0,
+        "n_exit": 0,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "venue": null,
+        "verdict": "insufficient_n",
+        "why": "entry n=0, exit n=0; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 1,
+        "intents": 12,
+        "received": 0,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "fade_breakout_4h",
+          "htf_pullback_trend_2h",
+          "ict_scalp_5m",
+          "ml_entry_v2",
+          "squeeze_breakout_4h",
+          "trend_donchian",
+          "trend_donchian_1h",
+          "turtle_soup"
+        ],
+        "state": "starved",
+        "strategy": "fvg_range_15m",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": "a per-tick account-election read (e.g. the conviction_arbitration/arbitration_fanout_soak log, or a live dispatch trace) showing this leg either winning at least once, or never winning across a large contested-tick sample",
+      "reason": "starved (12 intent(s), 0 received, no open position) but contends its symbol on this SAME account against live sibling(s) ['claude_desk', 'e4_oi_shock_1h', 'fade_breakout_4h', 'htf_pullback_trend_2h', 'ict_scalp_5m', 'ml_entry_v2', 'squeeze_breakout_4h', 'trend_donchian', 'trend_donchian_1h', 'turtle_soup'] \u2014 src/runtime/intents.py elects only ONE strategy per (account, symbol) per tick, so losing that election every time produces this exact shape without the leg ever being mechanically dead. Cannot be graded kill without a live per-tick election trace.",
+      "strategy": "fvg_range_15m"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "entry_mean": -0.099,
+        "exit_mean": 0.157,
+        "modelled_bps": 3.0,
+        "n": 1,
+        "n_entry": 1,
+        "n_exit": 3,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "insufficient_n",
+        "why": "entry n=1, exit n=3; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 11,
+        "intents": 130,
+        "received": 0,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "fade_breakout_4h",
+          "fvg_range_15m",
+          "ict_scalp_5m",
+          "ml_entry_v2",
+          "squeeze_breakout_4h",
+          "trend_donchian",
+          "trend_donchian_1h",
+          "turtle_soup"
+        ],
+        "state": "starved",
+        "strategy": "htf_pullback_trend_2h",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": "a per-tick account-election read (e.g. the conviction_arbitration/arbitration_fanout_soak log, or a live dispatch trace) showing this leg either winning at least once, or never winning across a large contested-tick sample",
+      "reason": "starved (130 intent(s), 0 received, no open position) but contends its symbol on this SAME account against live sibling(s) ['claude_desk', 'e4_oi_shock_1h', 'fade_breakout_4h', 'fvg_range_15m', 'ict_scalp_5m', 'ml_entry_v2', 'squeeze_breakout_4h', 'trend_donchian', 'trend_donchian_1h', 'turtle_soup'] \u2014 src/runtime/intents.py elects only ONE strategy per (account, symbol) per tick, so losing that election every time produces this exact shape without the leg ever being mechanically dead. Cannot be graded kill without a live per-tick election trace.",
+      "strategy": "htf_pullback_trend_2h"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "ci95": [
+          -1.35,
+          2.997
+        ],
+        "entry_mean": 0.171,
+        "exit_mean": 0.626,
+        "modelled_bps": 3.0,
+        "n": 10,
+        "n_entry": 20,
+        "n_exit": 10,
+        "record_overcharges": true,
+        "roundtrip_mean": 0.797,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "consistent"
+      },
+      "disposition": "insufficient-data",
+      "eta": "wait for a signal; re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 2,
+        "intent_episodes": 0,
+        "intents": 0,
+        "received": 1,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "fade_breakout_4h",
+          "fvg_range_15m",
+          "htf_pullback_trend_2h",
+          "ml_entry_v2",
+          "squeeze_breakout_4h",
+          "trend_donchian",
+          "trend_donchian_1h",
+          "turtle_soup"
+        ],
+        "state": "no_intents",
+        "strategy": "ict_scalp_5m",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "no_intents: the strategy produced zero actionable signals this window \u2014 nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either",
+      "strategy": "ict_scalp_5m"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "ci95": [
+          -2.408,
+          2.54
+        ],
+        "entry_mean": -0.455,
+        "exit_mean": 0.45,
+        "modelled_bps": 3.0,
+        "n": 63,
+        "n_entry": 75,
+        "n_exit": 63,
+        "record_overcharges": true,
+        "roundtrip_mean": -0.005,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "consistent"
+      },
+      "disposition": "healthy",
+      "eta": null,
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 13,
+        "intent_episodes": 11,
+        "intents": 16,
+        "received": 2,
+        "same_symbol_live_contenders": [
+          "avax_pullback_2h",
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "trend_donchian_avax_4h"
+        ],
+        "state": "flowing",
+        "strategy": "ict_scalp_avax_5m",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "flowing (intents=16, received=2); cost fidelity consistent (n=63, roundtrip_mean=-0.005bps vs modelled 3.0bps)",
+      "strategy": "ict_scalp_avax_5m"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "entry_mean": 0.82,
+        "exit_mean": -7.043,
+        "modelled_bps": 3.0,
+        "n": 9,
+        "n_entry": 28,
+        "n_exit": 9,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "insufficient_n",
+        "why": "entry n=28, exit n=9; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "wait for a signal; re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 1,
+        "intent_episodes": 0,
+        "intents": 0,
+        "received": 1,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "eth_pullback_2h",
+          "eth_pullback_prop_2h",
+          "ml_entry_v2",
+          "trend_donchian_eth",
+          "trend_donchian_eth_4h",
+          "trend_donchian_eth_prop"
+        ],
+        "state": "no_intents",
+        "strategy": "ict_scalp_eth_15m",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "no_intents: the strategy produced zero actionable signals this window \u2014 nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either",
+      "strategy": "ict_scalp_eth_15m"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "ci95": [
+          -3.212,
+          3.842
+        ],
+        "entry_mean": -0.263,
+        "exit_mean": 0.66,
+        "modelled_bps": 3.0,
+        "n": 18,
+        "n_entry": 29,
+        "n_exit": 18,
+        "record_overcharges": false,
+        "roundtrip_mean": 0.397,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "consistent"
+      },
+      "disposition": "healthy",
+      "eta": null,
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 3,
+        "intents": 29,
+        "received": 3,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "ict_scalp_sol_5m",
+          "ml_entry_v2",
+          "sol_pullback_2h",
+          "trend_donchian_sol",
+          "trend_donchian_sol_4h"
+        ],
+        "state": "flowing",
+        "strategy": "ict_scalp_sol_15m",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "flowing (intents=29, received=3); cost fidelity consistent (n=18, roundtrip_mean=0.397bps vs modelled 3.0bps)",
+      "strategy": "ict_scalp_sol_15m"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "ci95": [
+          -3.481,
+          0.236
+        ],
+        "entry_mean": -1.781,
+        "exit_mean": 0.108,
+        "modelled_bps": 3.0,
+        "n": 29,
+        "n_entry": 52,
+        "n_exit": 29,
+        "record_overcharges": true,
+        "roundtrip_mean": -1.673,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "consistent"
+      },
+      "disposition": "healthy",
+      "eta": null,
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 8,
+        "intent_episodes": 9,
+        "intents": 18,
+        "received": 2,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "ict_scalp_sol_15m",
+          "ml_entry_v2",
+          "sol_pullback_2h",
+          "trend_donchian_sol",
+          "trend_donchian_sol_4h"
+        ],
+        "state": "flowing",
+        "strategy": "ict_scalp_sol_5m",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "flowing (intents=18, received=2); cost fidelity consistent (n=29, roundtrip_mean=-1.673bps vs modelled 3.0bps)",
+      "strategy": "ict_scalp_sol_5m"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "ci95": [
+          -4.176,
+          0.754
+        ],
+        "entry_mean": -0.97,
+        "exit_mean": -0.772,
+        "modelled_bps": 3.0,
+        "n": 16,
+        "n_entry": 31,
+        "n_exit": 16,
+        "record_overcharges": true,
+        "roundtrip_mean": -1.742,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "consistent"
+      },
+      "disposition": "healthy",
+      "eta": null,
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 3,
+        "intent_episodes": 3,
+        "intents": 26,
+        "received": 1,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "ict_scalp_xrp_5m",
+          "ml_entry_v2",
+          "xrp_pullback_2h"
+        ],
+        "state": "flowing",
+        "strategy": "ict_scalp_xrp_15m",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "flowing (intents=26, received=1); cost fidelity consistent (n=16, roundtrip_mean=-1.742bps vs modelled 3.0bps)",
+      "strategy": "ict_scalp_xrp_15m"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "ci95": [
+          -1.047,
+          5.611
+        ],
+        "entry_mean": 0.601,
+        "exit_mean": 1.482,
+        "modelled_bps": 3.0,
+        "n": 24,
+        "n_entry": 27,
+        "n_exit": 24,
+        "roundtrip_mean": 2.083,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "inconclusive"
+      },
+      "disposition": "insufficient-data",
+      "eta": "re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 2,
+        "intent_episodes": 3,
+        "intents": 3,
+        "received": 0,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "ict_scalp_xrp_15m",
+          "ml_entry_v2",
+          "xrp_pullback_2h"
+        ],
+        "state": "starved",
+        "strategy": "ict_scalp_xrp_5m",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": "a per-tick account-election read (e.g. the conviction_arbitration/arbitration_fanout_soak log, or a live dispatch trace) showing this leg either winning at least once, or never winning across a large contested-tick sample",
+      "reason": "starved (3 intent(s), 0 received, no open position) but contends its symbol on this SAME account against live sibling(s) ['claude_desk', 'e4_oi_shock_1h', 'ict_scalp_xrp_15m', 'ml_entry_v2', 'xrp_pullback_2h'] \u2014 src/runtime/intents.py elects only ONE strategy per (account, symbol) per tick, so losing that election every time produces this exact shape without the leg ever being mechanically dead. Cannot be graded kill without a live per-tick election trace.",
+      "strategy": "ict_scalp_xrp_5m"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "entry_mean": -7.771,
+        "exit_mean": -1.092,
+        "modelled_bps": null,
+        "n": 5,
+        "n_entry": 8,
+        "n_exit": 5,
+        "stage": "S1",
+        "threshold_bps": null,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "insufficient_n",
+        "why": "entry n=8, exit n=5; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": true,
+        "held_back": 3,
+        "intent_episodes": 5,
+        "intents": 9,
+        "received": 6,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "eth_pullback_2h",
+          "eth_pullback_prop_2h",
+          "fade_breakout_4h",
+          "fvg_range_15m",
+          "htf_pullback_trend_2h",
+          "ict_scalp_5m",
+          "ict_scalp_eth_15m",
+          "ict_scalp_sol_15m",
+          "ict_scalp_sol_5m",
+          "ict_scalp_xrp_15m",
+          "ict_scalp_xrp_5m",
+          "sol_pullback_2h",
+          "squeeze_breakout_4h",
+          "trend_donchian",
+          "trend_donchian_1h",
+          "trend_donchian_ada_4h",
+          "trend_donchian_eth",
+          "trend_donchian_eth_4h",
+          "trend_donchian_eth_prop",
+          "trend_donchian_sol",
+          "trend_donchian_sol_4h",
+          "turtle_soup",
+          "xrp_pullback_2h"
+        ],
+        "state": "flowing",
+        "strategy": "ml_entry_v2",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": "needs 2 more entry fill(s) and 5 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=8, exit=5); no fill-rate basis to date an ETA from this run alone \u2014 re-check next scheduled pass",
+      "reason": "flowing; cost fidelity insufficient_n (entry n=8, exit n=5; need >= 10 each)",
+      "strategy": "ml_entry_v2"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "entry_mean": 0.388,
+        "exit_mean": -1.764,
+        "modelled_bps": 3.0,
+        "n": 4,
+        "n_entry": 6,
+        "n_exit": 4,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "insufficient_n",
+        "why": "entry n=6, exit n=4; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 15,
+        "intent_episodes": 14,
+        "intents": 349,
+        "received": 2,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "ict_scalp_sol_15m",
+          "ict_scalp_sol_5m",
+          "ml_entry_v2",
+          "trend_donchian_sol",
+          "trend_donchian_sol_4h"
+        ],
+        "state": "flowing",
+        "strategy": "sol_pullback_2h",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": "needs 4 more entry fill(s) and 6 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=6, exit=4); no fill-rate basis to date an ETA from this run alone \u2014 re-check next scheduled pass",
+      "reason": "flowing; cost fidelity insufficient_n (entry n=6, exit n=4; need >= 10 each)",
+      "strategy": "sol_pullback_2h"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "entry_mean": -2.399,
+        "exit_mean": 7.32,
+        "modelled_bps": 3.0,
+        "n": 1,
+        "n_entry": 3,
+        "n_exit": 1,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "insufficient_n",
+        "why": "entry n=3, exit n=1; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "wait for a signal; re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 0,
+        "intents": 0,
+        "received": 0,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "fade_breakout_4h",
+          "fvg_range_15m",
+          "htf_pullback_trend_2h",
+          "ict_scalp_5m",
+          "ml_entry_v2",
+          "trend_donchian",
+          "trend_donchian_1h",
+          "turtle_soup"
+        ],
+        "state": "no_intents",
+        "strategy": "squeeze_breakout_4h",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "no_intents: the strategy produced zero actionable signals this window \u2014 nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either",
+      "strategy": "squeeze_breakout_4h"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "entry_mean": -1.509,
+        "exit_mean": 1.672,
+        "modelled_bps": 3.0,
+        "n": 5,
+        "n_entry": 7,
+        "n_exit": 5,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "insufficient_n",
+        "why": "entry n=7, exit n=5; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "wait for a signal; re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 0,
+        "intents": 0,
+        "received": 0,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "fade_breakout_4h",
+          "fvg_range_15m",
+          "htf_pullback_trend_2h",
+          "ict_scalp_5m",
+          "ml_entry_v2",
+          "squeeze_breakout_4h",
+          "trend_donchian_1h",
+          "turtle_soup"
+        ],
+        "state": "no_intents",
+        "strategy": "trend_donchian",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "no_intents: the strategy produced zero actionable signals this window \u2014 nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either",
+      "strategy": "trend_donchian"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "entry_mean": 1.17,
+        "exit_mean": 0.523,
+        "modelled_bps": 3.0,
+        "n": 6,
+        "n_entry": 8,
+        "n_exit": 6,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "insufficient_n",
+        "why": "entry n=8, exit n=6; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 29,
+        "intents": 535,
+        "received": 4,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "fade_breakout_4h",
+          "fvg_range_15m",
+          "htf_pullback_trend_2h",
+          "ict_scalp_5m",
+          "ml_entry_v2",
+          "squeeze_breakout_4h",
+          "trend_donchian",
+          "turtle_soup"
+        ],
+        "state": "flowing",
+        "strategy": "trend_donchian_1h",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": "needs 2 more entry fill(s) and 4 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=8, exit=6); no fill-rate basis to date an ETA from this run alone \u2014 re-check next scheduled pass",
+      "reason": "flowing; cost fidelity insufficient_n (entry n=8, exit n=6; need >= 10 each)",
+      "strategy": "trend_donchian_1h"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "entry_mean": -2.148,
+        "exit_mean": -0.201,
+        "modelled_bps": 3.0,
+        "n": 3,
+        "n_entry": 12,
+        "n_exit": 3,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "insufficient_n",
+        "why": "entry n=12, exit n=3; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": true,
+        "held_back": 0,
+        "intent_episodes": 4,
+        "intents": 281,
+        "received": 4,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "ml_entry_v2"
+        ],
+        "state": "flowing",
+        "strategy": "trend_donchian_ada_4h",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": "needs 0 more entry fill(s) and 7 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=12, exit=3); no fill-rate basis to date an ETA from this run alone \u2014 re-check next scheduled pass",
+      "reason": "flowing; cost fidelity insufficient_n (entry n=12, exit n=3; need >= 10 each)",
+      "strategy": "trend_donchian_ada_4h"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "entry_mean": 1.548,
+        "exit_mean": -0.831,
+        "modelled_bps": 3.0,
+        "n": 6,
+        "n_entry": 18,
+        "n_exit": 6,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "insufficient_n",
+        "why": "entry n=18, exit n=6; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": true,
+        "held_back": 0,
+        "intent_episodes": 5,
+        "intents": 289,
+        "received": 4,
+        "same_symbol_live_contenders": [
+          "avax_pullback_2h",
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "ict_scalp_avax_5m"
+        ],
+        "state": "flowing",
+        "strategy": "trend_donchian_avax_4h",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": "needs 0 more entry fill(s) and 4 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=18, exit=6); no fill-rate basis to date an ETA from this run alone \u2014 re-check next scheduled pass",
+      "reason": "flowing; cost fidelity insufficient_n (entry n=18, exit n=6; need >= 10 each)",
+      "strategy": "trend_donchian_avax_4h"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "ci95": [
+          1.135,
+          50.799
+        ],
+        "entry_mean": 6.78,
+        "exit_mean": 13.277,
+        "modelled_bps": 3.0,
+        "n": 15,
+        "n_entry": 29,
+        "n_exit": 15,
+        "roundtrip_mean": 20.057,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "inconclusive"
+      },
+      "disposition": "insufficient-data",
+      "eta": "re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 7,
+        "intents": 90,
+        "received": 3,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "eth_pullback_2h",
+          "eth_pullback_prop_2h",
+          "ict_scalp_eth_15m",
+          "ml_entry_v2",
+          "trend_donchian_eth_4h",
+          "trend_donchian_eth_prop"
+        ],
+        "state": "flowing",
+        "strategy": "trend_donchian_eth",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": "more fills on both sides than currently measured (n=15); no fixed floor for this state",
+      "reason": "flowing; cost fidelity inconclusive: CI95 [1.135, 50.799] straddles the 5.0bps threshold over n=15 \u2014 more fills would resolve it",
+      "strategy": "trend_donchian_eth"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "entry_mean": 5.431,
+        "exit_mean": 0.9,
+        "modelled_bps": 3.0,
+        "n": 5,
+        "n_entry": 13,
+        "n_exit": 5,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "insufficient_n",
+        "why": "entry n=13, exit n=5; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": true,
+        "held_back": 0,
+        "intent_episodes": 4,
+        "intents": 56,
+        "received": 3,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "eth_pullback_2h",
+          "eth_pullback_prop_2h",
+          "ict_scalp_eth_15m",
+          "ml_entry_v2",
+          "trend_donchian_eth",
+          "trend_donchian_eth_prop"
+        ],
+        "state": "flowing",
+        "strategy": "trend_donchian_eth_4h",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": "needs 0 more entry fill(s) and 5 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=13, exit=5); no fill-rate basis to date an ETA from this run alone \u2014 re-check next scheduled pass",
+      "reason": "flowing; cost fidelity insufficient_n (entry n=13, exit n=5; need >= 10 each)",
+      "strategy": "trend_donchian_eth_4h"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "ci95": [
+          -22.386,
+          5.68
+        ],
+        "entry_mean": 0.677,
+        "exit_mean": -6.428,
+        "modelled_bps": 3.0,
+        "n": 13,
+        "n_entry": 14,
+        "n_exit": 13,
+        "roundtrip_mean": -5.751,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "inconclusive"
+      },
+      "disposition": "insufficient-data",
+      "eta": "re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 1,
+        "intent_episodes": 6,
+        "intents": 6,
+        "received": 4,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "eth_pullback_2h",
+          "eth_pullback_prop_2h",
+          "ict_scalp_eth_15m",
+          "ml_entry_v2",
+          "trend_donchian_eth",
+          "trend_donchian_eth_4h"
+        ],
+        "state": "flowing",
+        "strategy": "trend_donchian_eth_prop",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": "more fills on both sides than currently measured (n=13); no fixed floor for this state",
+      "reason": "flowing; cost fidelity inconclusive: CI95 [-22.386, 5.68] straddles the 5.0bps threshold over n=13 \u2014 more fills would resolve it",
+      "strategy": "trend_donchian_eth_prop"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "entry_mean": -5.438,
+        "exit_mean": 0.696,
+        "modelled_bps": 3.0,
+        "n": 5,
+        "n_entry": 11,
+        "n_exit": 5,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "insufficient_n",
+        "why": "entry n=11, exit n=5; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "wait for a signal; re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 0,
+        "intents": 0,
+        "received": 0,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "ict_scalp_sol_15m",
+          "ict_scalp_sol_5m",
+          "ml_entry_v2",
+          "sol_pullback_2h",
+          "trend_donchian_sol_4h"
+        ],
+        "state": "no_intents",
+        "strategy": "trend_donchian_sol",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "no_intents: the strategy produced zero actionable signals this window \u2014 nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either",
+      "strategy": "trend_donchian_sol"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "entry_mean": -0.369,
+        "exit_mean": 211.394,
+        "modelled_bps": 3.0,
+        "n": 4,
+        "n_entry": 14,
+        "n_exit": 4,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "insufficient_n",
+        "why": "entry n=14, exit n=4; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 3,
+        "intents": 59,
+        "received": 4,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "ict_scalp_sol_15m",
+          "ict_scalp_sol_5m",
+          "ml_entry_v2",
+          "sol_pullback_2h",
+          "trend_donchian_sol"
+        ],
+        "state": "flowing",
+        "strategy": "trend_donchian_sol_4h",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": "needs 0 more entry fill(s) and 6 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=14, exit=4); no fill-rate basis to date an ETA from this run alone \u2014 re-check next scheduled pass",
+      "reason": "flowing; cost fidelity insufficient_n (entry n=14, exit n=4; need >= 10 each)",
+      "strategy": "trend_donchian_sol_4h"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "modelled_bps": null,
+        "n": 0,
+        "n_entry": 0,
+        "n_exit": 0,
+        "stage": "S1",
+        "threshold_bps": null,
+        "venue": null,
+        "verdict": "insufficient_n",
+        "why": "entry n=0, exit n=0; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "wait for a signal; re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 0,
+        "intents": 0,
+        "received": 0,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "fade_breakout_4h",
+          "fvg_range_15m",
+          "htf_pullback_trend_2h",
+          "ict_scalp_5m",
+          "ml_entry_v2",
+          "squeeze_breakout_4h",
+          "trend_donchian",
+          "trend_donchian_1h"
+        ],
+        "state": "no_intents",
+        "strategy": "turtle_soup",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "no_intents: the strategy produced zero actionable signals this window \u2014 nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either",
+      "strategy": "turtle_soup"
+    },
+    {
+      "account_id": "bybit_1",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "basis": "simulator",
+        "entry_mean": 2.015,
+        "exit_mean": -0.052,
+        "modelled_bps": 3.0,
+        "n": 7,
+        "n_entry": 15,
+        "n_exit": 7,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "bybit_perps",
+        "verdict": "insufficient_n",
+        "why": "entry n=15, exit n=7; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "bybit_1",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 6,
+        "intents": 7,
+        "received": 2,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "e4_oi_shock_1h",
+          "ict_scalp_xrp_15m",
+          "ict_scalp_xrp_5m",
+          "ml_entry_v2"
+        ],
+        "state": "flowing",
+        "strategy": "xrp_pullback_2h",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": "needs 0 more entry fill(s) and 3 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=15, exit=7); no fill-rate basis to date an ETA from this run alone \u2014 re-check next scheduled pass",
+      "reason": "flowing; cost fidelity insufficient_n (entry n=15, exit n=7; need >= 10 each)",
+      "strategy": "xrp_pullback_2h"
+    },
+    {
+      "account_id": "alpaca_paper",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "basis": "simulator",
+        "modelled_bps": null,
+        "n": 0,
+        "n_entry": 0,
+        "n_exit": 0,
+        "stage": "S1",
+        "threshold_bps": null,
+        "venue": null,
+        "verdict": "insufficient_n",
+        "why": "entry n=0, exit n=0; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "wait for a signal; re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 0,
+        "intents": 0,
+        "received": 0,
+        "same_symbol_live_contenders": [
+          "iwm_trend_long_1d",
+          "ml_entry",
+          "ml_entry_eq",
+          "qqq_pullback_1h",
+          "qqq_trend_long_1d",
+          "spy_pullback_1h",
+          "spy_trend_long_1d",
+          "tlt_pullback_1d"
+        ],
+        "state": "no_intents",
+        "strategy": "claude_desk",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "no_intents: the strategy produced zero actionable signals this window \u2014 nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either",
+      "strategy": "claude_desk"
+    },
+    {
+      "account_id": "alpaca_paper",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "basis": "simulator",
+        "entry_mean": -17.24,
+        "exit_mean": 64.524,
+        "modelled_bps": 5.0,
+        "n": 3,
+        "n_entry": 4,
+        "n_exit": 3,
+        "stage": "S1",
+        "threshold_bps": 7.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "alpaca_equities",
+        "verdict": "insufficient_n",
+        "why": "entry n=4, exit n=3; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "next scheduled run",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "has_open_position": true,
+        "held_back": 0,
+        "intent_episodes": null,
+        "intents": null,
+        "received": 1,
+        "same_symbol_live_contenders": [
+          "ml_entry",
+          "ml_entry_eq"
+        ],
+        "state": "unreadable",
+        "strategy": "gdx_pullback_1d",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "mechanics read_state=unreadable (could not query intents and/or received source this run) \u2014 we did not look, not 'nothing happened'",
+      "strategy": "gdx_pullback_1d"
+    },
+    {
+      "account_id": "alpaca_paper",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "basis": "simulator",
+        "entry_mean": 7.884,
+        "exit_mean": 68.541,
+        "modelled_bps": 5.0,
+        "n": 2,
+        "n_entry": 3,
+        "n_exit": 2,
+        "stage": "S1",
+        "threshold_bps": 7.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "alpaca_equities",
+        "verdict": "insufficient_n",
+        "why": "entry n=3, exit n=2; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "has_open_position": true,
+        "held_back": 0,
+        "intent_episodes": 1,
+        "intents": 765,
+        "received": 1,
+        "same_symbol_live_contenders": [
+          "ml_entry"
+        ],
+        "state": "flowing",
+        "strategy": "iaum_pullback_1d",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": "needs 7 more entry fill(s) and 8 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=3, exit=2); no fill-rate basis to date an ETA from this run alone \u2014 re-check next scheduled pass",
+      "reason": "flowing; cost fidelity insufficient_n (entry n=3, exit n=2; need >= 10 each)",
+      "strategy": "iaum_pullback_1d"
+    },
+    {
+      "account_id": "alpaca_paper",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "basis": "simulator",
+        "entry_mean": 2.654,
+        "exit_mean": 18.649,
+        "modelled_bps": 5.0,
+        "n": 1,
+        "n_entry": 1,
+        "n_exit": 2,
+        "stage": "S1",
+        "threshold_bps": 7.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "alpaca_equities",
+        "verdict": "insufficient_n",
+        "why": "entry n=1, exit n=2; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "wait for a signal; re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 0,
+        "intents": 0,
+        "received": 0,
+        "same_symbol_live_contenders": [
+          "ml_entry",
+          "ml_entry_eq"
+        ],
+        "state": "no_intents",
+        "strategy": "ief_pullback_1d",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "no_intents: the strategy produced zero actionable signals this window \u2014 nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either",
+      "strategy": "ief_pullback_1d"
+    },
+    {
+      "account_id": "alpaca_paper",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "basis": "simulator",
+        "exit_mean": 0.018,
+        "modelled_bps": 5.0,
+        "n": 0,
+        "n_entry": 0,
+        "n_exit": 1,
+        "stage": "S1",
+        "threshold_bps": 7.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "alpaca_equities",
+        "verdict": "insufficient_n",
+        "why": "entry n=0, exit n=1; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "wait for a signal; re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 0,
+        "intents": 0,
+        "received": 0,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "ml_entry",
+          "ml_entry_eq"
+        ],
+        "state": "no_intents",
+        "strategy": "iwm_trend_long_1d",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "no_intents: the strategy produced zero actionable signals this window \u2014 nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either",
+      "strategy": "iwm_trend_long_1d"
+    },
+    {
+      "account_id": "alpaca_paper",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "basis": "simulator",
+        "entry_mean": 8.791,
+        "exit_mean": 10.006,
+        "modelled_bps": 3.0,
+        "n": 7,
+        "n_entry": 12,
+        "n_exit": 7,
+        "stage": "S1",
+        "threshold_bps": 5.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "alpaca_equities",
+        "verdict": "insufficient_n",
+        "why": "entry n=12, exit n=7; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "has_open_position": false,
+        "held_back": 5,
+        "intent_episodes": 21,
+        "intents": 49,
+        "received": 6,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "gdx_pullback_1d",
+          "iaum_pullback_1d",
+          "ief_pullback_1d",
+          "iwm_trend_long_1d",
+          "ml_entry_eq",
+          "qld_trend_long_1d",
+          "qqq_pullback_1h",
+          "qqq_trend_long_1d",
+          "scha_trend_long_1d",
+          "slv_pullback_1d",
+          "splg_trend_long_1d",
+          "spy_pullback_1h",
+          "spy_trend_long_1d",
+          "tlt_pullback_1d",
+          "tqqq_trend_long_1d",
+          "uso_trend_1h"
+        ],
+        "state": "flowing",
+        "strategy": "ml_entry",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": "needs 0 more entry fill(s) and 3 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=12, exit=7); no fill-rate basis to date an ETA from this run alone \u2014 re-check next scheduled pass",
+      "reason": "flowing; cost fidelity insufficient_n (entry n=12, exit n=7; need >= 10 each)",
+      "strategy": "ml_entry"
+    },
+    {
+      "account_id": "alpaca_paper",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "basis": "simulator",
+        "entry_mean": 9.392,
+        "exit_mean": 41.941,
+        "modelled_bps": null,
+        "n": 2,
+        "n_entry": 2,
+        "n_exit": 2,
+        "stage": "S1",
+        "threshold_bps": null,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "alpaca_equities",
+        "verdict": "insufficient_n",
+        "why": "entry n=2, exit n=2; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 1,
+        "intents": 4,
+        "received": 2,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "gdx_pullback_1d",
+          "ief_pullback_1d",
+          "iwm_trend_long_1d",
+          "ml_entry",
+          "qld_trend_long_1d",
+          "qqq_pullback_1h",
+          "qqq_trend_long_1d",
+          "slv_pullback_1d",
+          "spy_pullback_1h",
+          "spy_trend_long_1d",
+          "tlt_pullback_1d",
+          "tqqq_trend_long_1d",
+          "uso_trend_1h"
+        ],
+        "state": "flowing",
+        "strategy": "ml_entry_eq",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": "needs 8 more entry fill(s) and 8 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=2, exit=2); no fill-rate basis to date an ETA from this run alone \u2014 re-check next scheduled pass",
+      "reason": "flowing; cost fidelity insufficient_n (entry n=2, exit n=2; need >= 10 each)",
+      "strategy": "ml_entry_eq"
+    },
+    {
+      "account_id": "alpaca_paper",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "basis": "simulator",
+        "entry_mean": 0.758,
+        "exit_mean": 0.64,
+        "modelled_bps": 5.0,
+        "n": 1,
+        "n_entry": 2,
+        "n_exit": 1,
+        "stage": "S1",
+        "threshold_bps": 7.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "alpaca_equities",
+        "verdict": "insufficient_n",
+        "why": "entry n=2, exit n=1; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "wait for a signal; re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 0,
+        "intents": 0,
+        "received": 0,
+        "same_symbol_live_contenders": [
+          "ml_entry",
+          "ml_entry_eq"
+        ],
+        "state": "no_intents",
+        "strategy": "qld_trend_long_1d",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "no_intents: the strategy produced zero actionable signals this window \u2014 nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either",
+      "strategy": "qld_trend_long_1d"
+    },
+    {
+      "account_id": "alpaca_paper",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "basis": "simulator",
+        "entry_mean": -1.522,
+        "exit_mean": -0.278,
+        "modelled_bps": 5.0,
+        "n": 5,
+        "n_entry": 9,
+        "n_exit": 5,
+        "stage": "S1",
+        "threshold_bps": 7.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "alpaca_equities",
+        "verdict": "insufficient_n",
+        "why": "entry n=9, exit n=5; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "has_open_position": true,
+        "held_back": 0,
+        "intent_episodes": 20,
+        "intents": 373,
+        "received": 2,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "ml_entry",
+          "ml_entry_eq",
+          "qqq_trend_long_1d"
+        ],
+        "state": "flowing",
+        "strategy": "qqq_pullback_1h",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": "needs 1 more entry fill(s) and 5 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=9, exit=5); no fill-rate basis to date an ETA from this run alone \u2014 re-check next scheduled pass",
+      "reason": "flowing; cost fidelity insufficient_n (entry n=9, exit n=5; need >= 10 each)",
+      "strategy": "qqq_pullback_1h"
+    },
+    {
+      "account_id": "alpaca_paper",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "basis": "simulator",
+        "entry_mean": -1.702,
+        "modelled_bps": 5.0,
+        "n": 0,
+        "n_entry": 1,
+        "n_exit": 0,
+        "stage": "S1",
+        "threshold_bps": 7.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "alpaca_equities",
+        "verdict": "insufficient_n",
+        "why": "entry n=1, exit n=0; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "wait for a signal; re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 0,
+        "intents": 0,
+        "received": 0,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "ml_entry",
+          "ml_entry_eq",
+          "qqq_pullback_1h"
+        ],
+        "state": "no_intents",
+        "strategy": "qqq_trend_long_1d",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "no_intents: the strategy produced zero actionable signals this window \u2014 nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either",
+      "strategy": "qqq_trend_long_1d"
+    },
+    {
+      "account_id": "alpaca_paper",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "basis": "simulator",
+        "entry_mean": 9.732,
+        "exit_mean": 0.785,
+        "modelled_bps": 5.0,
+        "n": 2,
+        "n_entry": 2,
+        "n_exit": 2,
+        "stage": "S1",
+        "threshold_bps": 7.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "alpaca_equities",
+        "verdict": "insufficient_n",
+        "why": "entry n=2, exit n=2; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "wait for a signal; re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 0,
+        "intents": 0,
+        "received": 0,
+        "same_symbol_live_contenders": [
+          "ml_entry"
+        ],
+        "state": "no_intents",
+        "strategy": "scha_trend_long_1d",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "no_intents: the strategy produced zero actionable signals this window \u2014 nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either",
+      "strategy": "scha_trend_long_1d"
+    },
+    {
+      "account_id": "alpaca_paper",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "basis": "simulator",
+        "entry_mean": -14.71,
+        "exit_mean": 2.903,
+        "modelled_bps": 5.0,
+        "n": 1,
+        "n_entry": 2,
+        "n_exit": 1,
+        "stage": "S1",
+        "threshold_bps": 7.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "alpaca_equities",
+        "verdict": "insufficient_n",
+        "why": "entry n=2, exit n=1; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "wait for a signal; re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 0,
+        "intents": 0,
+        "received": 0,
+        "same_symbol_live_contenders": [
+          "ml_entry",
+          "ml_entry_eq"
+        ],
+        "state": "no_intents",
+        "strategy": "slv_pullback_1d",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "no_intents: the strategy produced zero actionable signals this window \u2014 nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either",
+      "strategy": "slv_pullback_1d"
+    },
+    {
+      "account_id": "alpaca_paper",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "basis": "simulator",
+        "modelled_bps": null,
+        "n": 0,
+        "n_entry": 0,
+        "n_exit": 0,
+        "stage": "S1",
+        "threshold_bps": null,
+        "venue": null,
+        "verdict": "insufficient_n",
+        "why": "entry n=0, exit n=0; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "wait for a signal; re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 0,
+        "intents": 0,
+        "received": 0,
+        "same_symbol_live_contenders": [
+          "ml_entry"
+        ],
+        "state": "no_intents",
+        "strategy": "splg_trend_long_1d",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "no_intents: the strategy produced zero actionable signals this window \u2014 nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either",
+      "strategy": "splg_trend_long_1d"
+    },
+    {
+      "account_id": "alpaca_paper",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "basis": "simulator",
+        "entry_mean": -2.974,
+        "exit_mean": -0.084,
+        "modelled_bps": 5.0,
+        "n": 1,
+        "n_entry": 1,
+        "n_exit": 1,
+        "stage": "S1",
+        "threshold_bps": 7.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "alpaca_equities",
+        "verdict": "insufficient_n",
+        "why": "entry n=1, exit n=1; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 11,
+        "intents": 226,
+        "received": 0,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "ml_entry",
+          "ml_entry_eq",
+          "spy_trend_long_1d"
+        ],
+        "state": "starved",
+        "strategy": "spy_pullback_1h",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": "a per-tick account-election read (e.g. the conviction_arbitration/arbitration_fanout_soak log, or a live dispatch trace) showing this leg either winning at least once, or never winning across a large contested-tick sample",
+      "reason": "starved (226 intent(s), 0 received, no open position) but contends its symbol on this SAME account against live sibling(s) ['claude_desk', 'ml_entry', 'ml_entry_eq', 'spy_trend_long_1d'] \u2014 src/runtime/intents.py elects only ONE strategy per (account, symbol) per tick, so losing that election every time produces this exact shape without the leg ever being mechanically dead. Cannot be graded kill without a live per-tick election trace.",
+      "strategy": "spy_pullback_1h"
+    },
+    {
+      "account_id": "alpaca_paper",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "basis": "simulator",
+        "exit_mean": -0.343,
+        "modelled_bps": 5.0,
+        "n": 0,
+        "n_entry": 0,
+        "n_exit": 1,
+        "stage": "S1",
+        "threshold_bps": 7.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "alpaca_equities",
+        "verdict": "insufficient_n",
+        "why": "entry n=0, exit n=1; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "wait for a signal; re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 0,
+        "intents": 0,
+        "received": 0,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "ml_entry",
+          "ml_entry_eq",
+          "spy_pullback_1h"
+        ],
+        "state": "no_intents",
+        "strategy": "spy_trend_long_1d",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "no_intents: the strategy produced zero actionable signals this window \u2014 nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either",
+      "strategy": "spy_trend_long_1d"
+    },
+    {
+      "account_id": "alpaca_paper",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "basis": "simulator",
+        "entry_mean": 17.785,
+        "exit_mean": 17.247,
+        "modelled_bps": 5.0,
+        "n": 3,
+        "n_entry": 4,
+        "n_exit": 3,
+        "stage": "S1",
+        "threshold_bps": 7.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "alpaca_equities",
+        "verdict": "insufficient_n",
+        "why": "entry n=4, exit n=3; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 3,
+        "intents": 83,
+        "received": 1,
+        "same_symbol_live_contenders": [
+          "claude_desk",
+          "ml_entry",
+          "ml_entry_eq"
+        ],
+        "state": "flowing",
+        "strategy": "tlt_pullback_1d",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": "needs 6 more entry fill(s) and 7 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=4, exit=3); no fill-rate basis to date an ETA from this run alone \u2014 re-check next scheduled pass",
+      "reason": "flowing; cost fidelity insufficient_n (entry n=4, exit n=3; need >= 10 each)",
+      "strategy": "tlt_pullback_1d"
+    },
+    {
+      "account_id": "alpaca_paper",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "basis": "simulator",
+        "entry_mean": -13.201,
+        "exit_mean": 2.067,
+        "modelled_bps": 5.0,
+        "n": 1,
+        "n_entry": 1,
+        "n_exit": 1,
+        "stage": "S1",
+        "threshold_bps": 7.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "alpaca_equities",
+        "verdict": "insufficient_n",
+        "why": "entry n=1, exit n=1; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "wait for a signal; re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "has_open_position": false,
+        "held_back": 0,
+        "intent_episodes": 0,
+        "intents": 0,
+        "received": 0,
+        "same_symbol_live_contenders": [
+          "ml_entry",
+          "ml_entry_eq"
+        ],
+        "state": "no_intents",
+        "strategy": "tqqq_trend_long_1d",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": null,
+      "reason": "no_intents: the strategy produced zero actionable signals this window \u2014 nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either",
+      "strategy": "tqqq_trend_long_1d"
+    },
+    {
+      "account_id": "alpaca_paper",
+      "cost_fidelity": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "basis": "simulator",
+        "entry_mean": 3.941,
+        "exit_mean": 91.74,
+        "modelled_bps": 5.0,
+        "n": 4,
+        "n_entry": 9,
+        "n_exit": 4,
+        "stage": "S1",
+        "threshold_bps": 7.0,
+        "touched_split": {
+          "n_touched_trades": 0
+        },
+        "venue": "alpaca_equities",
+        "verdict": "insufficient_n",
+        "why": "entry n=9, exit n=4; need >= 10 each"
+      },
+      "disposition": "insufficient-data",
+      "eta": "re-check next scheduled pass",
+      "execution": "live",
+      "mechanics": {
+        "account_class": "paper",
+        "account_id": "alpaca_paper",
+        "has_open_position": true,
+        "held_back": 5,
+        "intent_episodes": 3,
+        "intents": 102,
+        "received": 1,
+        "same_symbol_live_contenders": [
+          "ml_entry",
+          "ml_entry_eq"
+        ],
+        "state": "flowing",
+        "strategy": "uso_trend_1h",
+        "unmapped": null,
+        "unmapped_statuses": []
+      },
+      "n_needed": "needs 1 more entry fill(s) and 6 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=9, exit=4); no fill-rate basis to date an ETA from this run alone \u2014 re-check next scheduled pass",
+      "reason": "flowing; cost fidelity insufficient_n (entry n=9, exit n=4; need >= 10 each)",
+      "strategy": "uso_trend_1h"
+    }
+  ],
+  "mechanics_read_state": "measured",
+  "population": {
+    "by_account": {
+      "alpaca_paper": 18,
+      "bybit_1": 29
+    },
+    "description": "every (account, strategy) leg on the Stage-1 soak accounts ('bybit_1', 'alpaca_paper'), counted live from config/accounts.yaml",
+    "n": 47
+  },
+  "question": "R5: per Stage-1 soak leg, are mechanics flowing and is cost fidelity consistent with what its Stage-0 record assumed? (NOT expectancy \u2014 Stage 1 never decides edge.)",
+  "shadow_packages": {
+    "by_strategy": {
+      "vwap": {
+        "last_created_at": null,
+        "n": 0
+      }
+    },
+    "read_state": "measured",
+    "window_fully_covered": true,
+    "window_hours": 168
+  },
+  "window_hours": 168
+}

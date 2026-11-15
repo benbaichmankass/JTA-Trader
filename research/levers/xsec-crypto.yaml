@@ -18,8 +18,8 @@ manifest:
   entry: underpowered
   exit: untested
   filter: untested
-  regime_gating: untested
-  timeframe: untested
+  regime_gating: underpowered
+  timeframe: underpowered
   symbol_set: underpowered
   direction: underpowered
   session: untested
@@ -28,6 +28,7 @@ levers: {}
 title: Weekly cross-sectional crypto momentum, top-20 liquid perps
 units:
 - RQ-20261101-58e4-02
+- RQ-20261101-d1f3-02
 doctrine: 'operator 2026-11-01 14:00-14:09Z: nothing that failed is closed; attribute first; next tests are one-factor/ablation chosen from this
   map; retire only when every lever family has been tested at power, net of cost, with no effect'
 verdict_so_far: 'fail: primary X1 net Sharpe 1.33, halves 2.13 / 0.26, DSR(N=10) 0.87 (< 0.95); ex-2021 Sharpe 0.65, DSR 0.33; clause fail'
@@ -152,6 +153,37 @@ levers_tested:
       stress_sharpe: 1.091
   shape: small (1.33 vs 1.17)
   tested_at_power: false
+- family: regime_gating
+  varied: regime gate R1/R2 vs X1 (attempt 2)
+  response:
+    delta_sharpe:
+      R1: -0.196
+      R2: 0.165
+    verdict: fail
+    note: no arm clears the registered rule at N_cum=17
+  shape: noisy
+  tested_at_power: false
+  unit: RQ-20261101-d1f3-02
+- family: timeframe
+  varied: rebalance frequency F1/F2 (attempt 2)
+  response:
+    delta_sharpe:
+      F1: 0.042
+      F2: -0.899
+    verdict: fail
+  shape: noisy
+  tested_at_power: false
+  unit: RQ-20261101-d1f3-02
+- family: symbol_set
+  varied: universe size U1/U2 (attempt 2)
+  response:
+    delta_sharpe:
+      U1: -0.42
+      U2: -0.551
+    verdict: fail
+  shape: flat
+  tested_at_power: false
+  unit: RQ-20261101-d1f3-02
 lever_families_untested:
 - regime gate (disable in reversal / high-dispersion-collapse regimes)
 - universe size (top-10 / top-40) and liquidity floor

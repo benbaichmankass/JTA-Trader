@@ -1,0 +1,100 @@
+{
+  "generated_at": "2026-11-13T16:24:55.401799+00:00",
+  "tool": "scripts/research/ml_vol_label_replay.py",
+  "dataset": "datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl",
+  "symbol": "BTCUSDT",
+  "head": {
+    "model_id": "btc-regime-15m-lgbm-fc-pcv-v2",
+    "symbol": "BTCUSDT",
+    "timeframe": "15m",
+    "stage": "advisory",
+    "resolution": "explicit_model_id"
+  },
+  "threshold": 0.5,
+  "threshold_source": "ML_VOL_VERDICT_THRESHOLD (live resolver)",
+  "rows_in": 175272,
+  "rows_missing_ts": 0,
+  "labelled": 175272,
+  "counts": {
+    "calm": 162130,
+    "volatile": 13142,
+    "unknown": 0
+  },
+  "volatile_pct": 7.5,
+  "ts_first": "2021-11-13T04:45:00Z",
+  "ts_last": "2026-11-12T22:30:00Z",
+  "scoring": {
+    "path": "batched",
+    "batch_verified": true,
+    "batch_check_rows": 33,
+    "batch_max_abs_delta": 0.0
+  },
+  "feature_audit": {
+    "ok": true,
+    "rows_total": 175272,
+    "rows_checked": 5008,
+    "sample_stride": 35,
+    "feature_columns": [
+      "vol_bucket",
+      "rolling_log_return_vol",
+      "log_return",
+      "log_return_lag_1",
+      "log_return_lag_2",
+      "hour_of_day",
+      "dayofweek",
+      "fc_ret_med",
+      "fc_range_rel",
+      "fc_up_prob",
+      "fc_skew",
+      "fc_q10_rel",
+      "fc_q90_rel"
+    ],
+    "missing_or_null_by_column": {},
+    "unseen_categorical_values": {},
+    "vol_bucket_parity": {
+      "status": "checked",
+      "compared": 5008,
+      "mismatches": 0,
+      "mismatch_pct": 0.0,
+      "vol_feature_column": "rolling_log_return_vol",
+      "frozen_edges": [
+        0.0014340357895909395,
+        0.0023516939396440767
+      ],
+      "frozen_labels": [
+        "vol_b0",
+        "vol_b1",
+        "vol_b2"
+      ],
+      "examples": []
+    },
+    "ran": true
+  },
+  "vol_bucket": {
+    "mode": "live",
+    "recomputed_from_frozen_edges": true,
+    "rows": 175272,
+    "differed_from_dataset_value": 0,
+    "differed_pct": 0.0,
+    "uncomputable": 0,
+    "note": "vol_bucket was DERIVED from the head's frozen edges via the live bucket_for_vol, exactly as feature_row_for_predictor does. A non-zero 'differed' count means this dataset build's stored vol_bucket used different quantile edges than the head froze \u2014 which is why trusting the stored column would have mis-scored."
+  },
+  "p_volatile_distribution": {
+    "n": 175272,
+    "min": 0.000188,
+    "p05": 0.001102,
+    "p25": 0.005953,
+    "median": 0.026853,
+    "p75": 0.134426,
+    "p95": 0.609502,
+    "max": 0.989853,
+    "mean": 0.120079,
+    "distinct_values": 99840
+  },
+  "fidelity": {
+    "in_sample": true,
+    "in_sample_note": "The production artifact is fit on the full history, so labels for bars inside its training window come from a model that saw them. Weaker than in-sample backtest bias (this is a market-state label, not a performance prediction) but real.",
+    "serve_path_note": "Live builds the feature row from live candles via feature_row_for_predictor; this reads the offline builder's row. Designed to agree (S-MLOPT-S17) but not the same code path \u2014 run `verify` against live audit rows before grading.",
+    "live_verified": false
+  }
+}
