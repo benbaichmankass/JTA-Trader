@@ -299,6 +299,89 @@ def _unpair_measured_not_applicable(rec: Dict[str, Any]) -> Dict[str, Any]:
     return rec
 
 
+_NON_MEASURED = ("no_data", "producer_failed", "not_attempted")
+
+
+def _void_nonmeasured_verdict(rec: Dict[str, Any], root: Path = _REPO) -> Dict[str, Any]:
+    """research_result.validate REFUSES a verdict other than `not_applicable` on a record (or fanned-out row) whose
+    read_state says nothing was measured. On such a row the producer's verdict word is, by the result contract, not a
+    statement about the world, so replacing it with `not_applicable` changes no claim: read_state, n, population and the
+    measurement are left exactly as written (a defect in any of THOSE still refuses). Producers that wrote the pair:
+    leg_corpus_s1 (producer_failed + indeterminate, RQ-20261105-025 run 42101993187) and stage0_capital_day_census
+    (no_data + no_action_warranted, every RQ-20261014-470a-11 run); both are fixed at source, this lands their committed
+    orphans. RESEARCH-PRODUCER-ROW-DEFECTS, 2026-11-13. Rows are rewritten to a temp file; the committed file is untouched."""
+    out = dict(rec)
+    if str(out.get("read_state")) in _NON_MEASURED and str(out.get("verdict")) not in ("", "not_applicable"):
+        out["note"] = (f"verdict {out.get('verdict')!r} voided to not_applicable by the collector (read_state "
+                       f"{out.get('read_state')} measured nothing). " + str(out.get("note") or ""))
+        out["verdict"] = "not_applicable"
+    rf = str(out.get("records_file") or "")
+    path = Path(rf) if rf and Path(rf).is_absolute() else (root / rf if rf else None)
+    if path is not None and path.is_file():
+        try:
+            rows = [json.loads(ln) for ln in path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        except ValueError:
+            return out
+        if any(isinstance(r, dict) and str(r.get("read_state")) in _NON_MEASURED
+               and str(r.get("verdict")) not in ("", "not_applicable") for r in rows):
+            import tempfile
+            fixed = []
+            for r in rows:
+                if isinstance(r, dict) and str(r.get("read_state")) in _NON_MEASURED \
+                        and str(r.get("verdict")) not in ("", "not_applicable"):
+                    r = {**r, "verdict": "not_applicable",
+                         "note": f"verdict {r.get('verdict')!r} voided to not_applicable by the collector "
+                                 f"(read_state {r.get('read_state')} measured nothing). " + str(r.get("note") or "")}
+                fixed.append(r)
+            tmp = Path(tempfile.mkdtemp()) / "records.jsonl"
+            tmp.write_text("".join(json.dumps(r) + "\n" for r in fixed), encoding="utf-8")
+            out["records_file"] = str(tmp)
+    return out
+
+
+#: research_result.NON_MEASURED: a row in one of these states must carry `population.n: null`.
+_NON_MEASURED_ROW_STATES = ("no_data", "producer_failed", "not_attempted", "could_not_look")
+
+
+def _null_unmeasured_row_n(root: Path, rec: Dict[str, Any]) -> Dict[str, Any]:
+    """research_result.validate REFUSES a per-row record whose read_state is non-measured but whose `n` is a number.
+    desk_replay_driver / desk_gen_replay_driver wrote exactly that for a leg BELOW its sample floor (read_state no_data,
+    n = the few observations it had: 15 / 8) and, in desk_replay_driver, measured per-leg rows with verdict not_applicable,
+    so the whole run was refused every cycle and its unit sat stamped with no
+    result (RQ-20261026-bf56-02/-03, -e535-03; AUD-20261019-RESEARCH-SLO-RED 2026-11-12). Land the row as what it is:
+    n null, the observed count kept in its population text. Nothing else changes; the producers are fixed in the same PR."""
+    rf = str(rec.get("records_file") or "")
+    path = (root / rf) if rf and not Path(rf).is_absolute() else Path(rf) if rf else None
+    if path is None or not path.is_file():
+        return rec
+    try:
+        rows = [json.loads(ln) for ln in path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    except (OSError, ValueError):
+        return rec
+    run_verdict = str(rec.get("verdict") or "")
+    bad = [r for r in rows if isinstance(r, dict) and (
+        (str(r.get("read_state")) in _NON_MEASURED_ROW_STATES and r.get("n") is not None)
+        or (str(r.get("read_state")) == "measured" and str(r.get("verdict")) == "not_applicable"
+            and run_verdict not in ("", "not_applicable")))]
+    if not bad:
+        return rec
+    import tempfile
+    out = []
+    for r in rows:
+        if r in bad and str(r.get("read_state")) == "measured":
+            # desk_replay_driver's per-leg rows were measured + not_applicable; desk_gen_replay_driver gives a measured
+            # per-leg row the RUN's verdict, which is what the contract asks for -- do the same.
+            r = {**r, "verdict": run_verdict}
+        elif r in bad:
+            r = {**r, "n": None,
+                 "population": f"{r.get('population') or r.get('leg') or 'row'} ({r['n']} observation(s), below the "
+                               f"floor: {r.get('read_state')}, n withheld)"}
+        out.append(r)
+    tmp = Path(tempfile.mkdtemp()) / "records.jsonl"
+    tmp.write_text("".join(json.dumps(r) + "\n" for r in out), encoding="utf-8")
+    return {**rec, "records_file": str(tmp)}
+
+
 def emit_record(root: Path, rec: Dict[str, Any], *, run: Dict[str, Any], repo_slug: str) -> Optional[str]:
     """Write the E5 record through research_result.py; returns its repo path."""
     run_id = str(run["databaseId"])
@@ -306,7 +389,7 @@ def emit_record(root: Path, rec: Dict[str, Any], *, run: Dict[str, Any], repo_sl
            "--workflow", str(run.get("_workflow_name") or WORKFLOW_NAME), "--run-id", run_id, "--run-attempt", "1",
            "--run-url", str(run.get("url") or f"https://github.com/{repo_slug}/actions/runs/{run_id}"),
            "--commit-sha", str(run.get("headSha") or "")]
-    rec = _unpair_measured_not_applicable(_scalar_n(rec))
+    rec = _void_nonmeasured_verdict(_null_unmeasured_row_n(root, _unpair_measured_not_applicable(_scalar_n(rec))), root)
     for k in _EMIT_FIELDS:
         cmd += [f"--{k.replace('_', '-')}", str(rec.get(k, "") if rec.get(k) is not None else "null" if k == "n" else "")]
     if root != _REPO:
@@ -379,6 +462,29 @@ def recollect_orphans(root: Path, *, repo_slug: str) -> List[Dict[str, Any]]:
     return done
 
 
+def merge_holdout_claims(root: Path, dest: Path) -> int:
+    """Merge a landed run's holdout claims into the repo ledger (row HOLDOUT-LEDGER-RUNNER-CLAIMS, 2026-11-15).
+
+    Sources: ``holdout_claims.jsonl`` (written by script_run.execute from the lines the run appended to its checkout's
+    ledger) and any ``holdout_reads.jsonl`` copy a reader wrote under its out dir. De-duplicated against the ledger by
+    holdout_lock.claim_key, so a copy that also carries main's older rows adds only the run's own claims. The ledger is
+    under comms/research/, so the dispatcher's batch bundles it with the run. Returns the number of rows added."""
+    sources = sorted(dest.rglob("holdout_claims.jsonl")) + sorted(dest.rglob("holdout_reads.jsonl"))
+    if not sources:
+        return 0
+    sys.path.insert(0, str(root / "scripts" / "research"))
+    try:
+        import holdout_lock  # noqa: E402  (research tooling module, not a package)
+    finally:
+        sys.path.pop(0)
+    ledger = root / "comms" / "research" / "holdout_reads.jsonl"
+    added = holdout_lock.merge_claims(sources, ledger)
+    for row in added:
+        print(f"holdout claim landed from {dest.name}: {row.get('model_id')} {row.get('start')}..{row.get('end')} "
+              f"n_tries={row.get('n_tries')}")
+    return len(added)
+
+
 def collect(root: Path, *, repo_slug: str, runs: Optional[List[Dict[str, Any]]] = None,
             artifacts_for=run_artifacts, downloader=download, dry_run: bool = False,
             pending: Optional[set] = None) -> Dict[str, Any]:
@@ -434,6 +540,9 @@ def collect(root: Path, *, repo_slug: str, runs: Optional[List[Dict[str, Any]]] 
         except (OSError, ValueError) as exc:
             out["lost"].append({"run_id": run_id, "unit": unit, "why": f"record-inputs.json unreadable: {exc}"})
             continue
+        claims = merge_holdout_claims(root, dest)
+        if claims:
+            out.setdefault("holdout_claims", []).append({"run_id": run_id, "unit": unit, "added": claims})
         record = emit_record(root, rec, run=run, repo_slug=repo_slug)
         if not record:
             out["lost"].append({"run_id": run_id, "unit": unit, "why": "record emit refused (see ::error above)"})

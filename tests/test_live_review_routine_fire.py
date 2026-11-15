@@ -72,7 +72,7 @@ def test_batches_every_due_package_into_one_fire(paths):
     assert url == "https://api.anthropic.com/v1/claude_code/routines/trig_TEST/fire"
     assert headers["Authorization"] == "Bearer sk-ant-oat01-TESTONLY"
     assert headers["anthropic-version"] == rf.ANTHROPIC_VERSION
-    doc = json.loads(body["text"])
+    doc = rf.payload_doc(body["text"])
     assert len(doc["entries"]) == 3
     assert set(doc["packets"]) == {"pkg-0000000000000001", "pkg-0000000000000002"}
     assert all(e["routine_fire"]["state"] == "fired" for e in es)
@@ -102,7 +102,7 @@ def test_entry_without_evidence_on_branch_is_not_fired(paths):
     out = _fire(es, poster, paths)
     assert out["not_fired_no_evidence"] == ["pkg-0000000000000001|adverse_r|-0.5R"]
     assert es[0]["routine_fire"]["state"] == "not_fired_no_evidence"
-    assert len(json.loads(poster.calls[0][1]["text"])["entries"]) == 1
+    assert len(rf.payload_doc(poster.calls[0][1]["text"])["entries"]) == 1
 
 
 def test_429_falls_back_flags_once_and_backs_off(paths):
@@ -157,7 +157,7 @@ def test_text_stays_under_the_cap(paths):
     bundles = {e["order_package_id"]: {"packet": big, "packet_sha": "a" * 64} for e in es}
     text = rf.build_text(es, bundles, T0)
     assert len(text) <= rf.MAX_TEXT_CHARS
-    doc = json.loads(text)
+    doc = rf.payload_doc(text)
     assert len(doc["packets"]) == 1 and len(doc["packet_omitted"]) == 1
 
 
@@ -178,3 +178,19 @@ def test_render_tells_the_manager_not_to_dispatch_fired_entries():
     # the marker still carries both keys, so the Actions poller's dedupe sees them as posted
     m = w.parse_markers([{"body": body}])[0]
     assert {w._key(e) for e in m["entries"]} == {w._key(e1), w._key(e2)}
+
+
+def test_fire_text_leads_with_the_repo_bootstrap_and_keeps_the_json_verbatim(paths):
+    """LTR-ROUTINE-REVIEWERS-NO-ROWS (2026-11-13): routine sessions start with no repo; the text must tell them to
+    add_repo + clone first, and the due-event JSON after it must be byte-identical to the pre-bootstrap document."""
+    es = [_entry("pkg-0000000000000001")]
+    bundles = {"pkg-0000000000000001": {"packet": {"review_id": "LR-x"}, "packet_sha": "a" * 64}}
+    text = rf.build_text(es, bundles, T0)
+    assert text.startswith("STEP 0: call add_repo(owner=benbaichmankass, repo=JTA-Trader, access=push)")
+    assert "live-review/rows" in text.split("\n\n", 1)[0] and "say so" in text.split("\n\n", 1)[0]
+    head, body = text.split("\n\n", 1)
+    assert head == rf.BOOTSTRAP
+    doc = json.loads(body)
+    assert doc["kind"] == "ltr-routine-fire" and doc["entries"][0]["order_package_id"] == "pkg-0000000000000001"
+    assert body == json.dumps(doc, sort_keys=True, separators=(",", ":"), default=str)
+    assert rf.payload_doc(text) == doc

@@ -208,3 +208,83 @@ def test_post_without_a_session_records_nothing(tree):
     r = c.post("/api/bot/gates/G-GONE/decision", json={"decision": "remove"})
     assert r.status_code in (401, 403, 500, 503)
     assert _rows(db)["G-GONE"]["operator_decision"] == "undecided"
+
+
+def test_no_write_lock_is_held_during_the_slow_scans_or_alerts(tree, monkeypatch):
+    """Measured live 2026-11-12: the first deploy ran the file/git scans inside the write transaction (~7 s) and the
+    trader's signal_audit dual-write hit 'database is locked'. A second connection must be able to WRITE (timeout 0)
+    while every slow step runs."""
+    import sqlite3 as _sq
+    root, db, _ = tree
+    gr.refresh(db, root)          # seed once, so the next refresh has decided rows (git scan runs) and drift (alerts)
+    c = gr.connect(db)
+    c.execute("UPDATE gate_registry SET alerted_at = NULL")   # force the alert path again
+    c.commit()
+    c.close()
+    seen = []
+
+    def probe_write(label):
+        other = _sq.connect(db, timeout=0)
+        try:
+            other.execute("BEGIN IMMEDIATE")
+            other.execute("CREATE TABLE IF NOT EXISTS _lock_probe (x INTEGER)")
+            other.execute("INSERT INTO _lock_probe VALUES (1)")
+            other.commit()
+            seen.append((label, "free"))
+        except _sq.OperationalError as exc:
+            seen.append((label, f"LOCKED: {exc}"))
+        finally:
+            other.close()
+
+    real_flags, real_guards, real_commits = gr.scan_env_flags, gr.scan_ci_guards, gr.scan_implementation_commits
+
+    def flags(r):
+        probe_write("env-flag scan")
+        return real_flags(r)
+
+    def guards(r):
+        probe_write("ci-guard scan")
+        return real_guards(r)
+
+    def commits(r, ids, since):
+        probe_write("git log scan")
+        return real_commits(r, ids, since)
+
+    def alert(text):
+        probe_write("alert send")
+        return True
+
+    monkeypatch.setattr(gr, "scan_env_flags", flags)
+    monkeypatch.setattr(gr, "scan_ci_guards", guards)
+    monkeypatch.setattr(gr, "scan_implementation_commits", commits)
+    monkeypatch.setattr(gr, "_alert", alert)
+    gr.refresh(db, root)
+    labels = {lbl for lbl, _ in seen}
+    assert {"env-flag scan", "ci-guard scan", "git log scan", "alert send"} <= labels, seen
+    assert all(state == "free" for _, state in seen), seen
+
+
+def test_attention_rank_and_recommended_decision():
+    """UI-WQ-GATES-ALIGN: the route ranks and maps, so the SPA does neither."""
+    assert gr.attention_rank({"real_money": 1, "authorization_class": "NONE"}) == 1
+    assert gr.attention_rank({"real_money": 1, "authorization_class": "VERBATIM"}) == 2
+    assert gr.attention_rank({"real_money": 0, "authorization_class": "NONE"}) == 3
+    assert gr.attention_rank({"real_money": None}) == 3
+    base = {"id": "X", "real_money": 1, "authorization_class": "NONE"}
+    assert gr.row_to_api({**base, "recommendation": "KEEP"})["recommended_decision"] == "keep"
+    assert gr.row_to_api({**base, "recommendation": "MAKE-REPORT-ONLY"})["recommended_decision"] == "report_only"
+    assert gr.row_to_api({**base, "recommendation": "REMOVE"})["recommended_decision"] == "remove"
+    assert gr.row_to_api({**base, "recommendation": "OPERATOR-PREFERENCE"})["recommended_decision"] is None
+    assert gr.row_to_api({**base, "recommendation": None})["recommended_decision"] is None
+    assert gr.row_to_api(base)["attention_rank"] == 1
+
+
+def test_api_attention_sort(client):
+    c, _tree = client
+    body = c.get("/api/bot/gates?sort=attention").json()
+    ranks = [g["attention_rank"] for g in body["gates"]]
+    assert ranks == sorted(ranks) and body["sort"] == "attention"
+    counts = body["counts"]["by_attention_rank"]
+    assert sum(counts.values()) == body["population"]["total"]
+    assert c.get("/api/bot/gates").json()["sort"] == "default"
+    assert c.get("/api/bot/gates?sort=bogus").status_code == 400

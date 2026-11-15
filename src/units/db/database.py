@@ -383,7 +383,9 @@ def _migrate_add_protection_repair(cursor: sqlite3.Cursor) -> bool:
                                          *anchor at first observation* rule.
     * ``protection_repair_last_at``      ISO of the most recent one.
     * ``protection_repair_last_kind``    WHICH mechanism: ``naked_rearm`` ·
-                                         ``partial_topup`` · ``reassert``.
+                                         ``partial_topup`` · ``reassert`` ·
+                                         ``partial_tp_replace`` (Alpaca: our partially
+                                         filled target replaced by a fresh OCO).
     * ``protection_repair_last_verified`` what we CHECKED afterwards, sharing
                                          ``order_monitor._reassert_applied_state``'s
                                          vocabulary rather than inventing a
@@ -414,6 +416,36 @@ def _migrate_add_protection_repair(cursor: sqlite3.Cursor) -> bool:
     cursor.execute("ALTER TABLE trades ADD COLUMN protection_repair_last_kind TEXT")
     cursor.execute(
         "ALTER TABLE trades ADD COLUMN protection_repair_last_verified TEXT")
+    return True
+
+
+def _migrate_add_pnl_basis(cursor: sqlite3.Cursor) -> bool:
+    """Add the P&L basis columns to ``trades`` if absent (PNL-GROSS-VS-VENUE-6817).
+
+    Operator decision 2026-11-12 (decisions page w11, "Store the venue's always, it
+    is the single source of truth and if we have a gap we need to understand why"):
+    ``pnl`` holds the VENUE's net closed P&L wherever the venue serves one, and our
+    own figure sits beside it.
+
+    * ``pnl_basis``    -- what ``pnl`` is: ``venue_net`` (the venue's own realised
+                          P&L record, net of its fees/funding), ``venue_fills_net``
+                          (no per-trade venue P&L exists, e.g. Alpaca; computed from
+                          the venue's fills net of their fees), or NULL (not yet
+                          classified; readers keep their old interpretation).
+    * ``pnl_computed`` -- our independent figure: gross from the journal's entry and
+                          exit times qty, minus the row's own cost columns.
+    * ``pnl_gap_usd``  -- ``pnl - pnl_computed`` when both exist; a gap above the
+                          stated tolerance is a diagnosis item, never reconciled away.
+
+    Idempotent: returns True only on the run that actually adds the columns.
+    """
+    cursor.execute("PRAGMA table_info(trades)")
+    columns = {row[1] for row in cursor.fetchall()}
+    if "pnl_basis" in columns:
+        return False
+    cursor.execute("ALTER TABLE trades ADD COLUMN pnl_basis TEXT")
+    cursor.execute("ALTER TABLE trades ADD COLUMN pnl_computed REAL")
+    cursor.execute("ALTER TABLE trades ADD COLUMN pnl_gap_usd REAL")
     return True
 
 
@@ -572,6 +604,7 @@ class Database:
         _migrate_add_broker_order_id(cursor)
         _migrate_add_tpsl_leg_ids(cursor)
         _migrate_add_protection_repair(cursor)
+        _migrate_add_pnl_basis(cursor)
         # NOTE: ``_migrate_add_telemetry_terminal`` is deliberately NOT called
         # here — this block migrates ``trades``, and ``position_telemetry`` is
         # not created until further down. It runs immediately after that DDL.
@@ -1196,7 +1229,7 @@ class Database:
     #: warning rather than stored verbatim — a typo written through would make
     #: ``WHERE ... last_kind = 'reassert'`` miss the row silently, which is
     #: worse than a label that announces itself.
-    PROTECTION_REPAIR_KINDS = ("naked_rearm", "partial_topup", "reassert")
+    PROTECTION_REPAIR_KINDS = ("naked_rearm", "partial_topup", "reassert", "partial_tp_replace")
 
     #: What we CHECKED after the repair. Shares
     #: ``order_monitor._reassert_applied_state``'s vocabulary deliberately —
@@ -1353,7 +1386,7 @@ class Database:
             cur = conn.execute(
                 "SELECT symbol, direction, pnl, pnl_percent, exit_reason, "
                 "strategy_name, account_id, is_backtest, is_demo, account_class, "
-                "order_package_id "
+                "order_package_id, entry_price, exit_price, position_size "
                 "FROM trades WHERE id = ?",
                 (trade_id,),
             )
@@ -1368,14 +1401,40 @@ class Database:
         # consumer can tag the message [paper] / [live].
         if row["is_backtest"]:
             return
+        pnl, pnl_pct, pnl_estimated = row["pnl"], row["pnl_percent"], False
+        if pnl is None:
+            # Most flat-finalise paths (e.g. order_monitor._netting_close_from_own_leg) close the row and
+            # leave pnl to the later PnL sweep, so the alert read NULL and printed "PnL —" (trade 7003,
+            # bybit_portfolio ADA TP 2026-11-14 13:04Z; the journal got 2711.994 a pass later). The alert
+            # shows a gross local estimate, labelled est; the journal row is not touched here.
+            try:
+                # Inline (not src.runtime.local_pnl: that module reaches src.runtime.market_data, which
+                # the units layer may not import -- .importlinter). Same formula as
+                # local_pnl.compute_realized_pnl / compute_pnl_percent.
+                from src.core.profile_loader import contract_value_usd_for
+                entry, exit_, qty = (float(row["entry_price"]), float(row["exit_price"]),
+                                     float(row["position_size"]))
+                side = str(row["direction"] or "").lower()
+                if qty > 0 and entry > 0 and side in ("long", "buy", "short", "sell"):
+                    try:
+                        cvu = float(contract_value_usd_for(str(row["symbol"] or ""))) or 1.0
+                    except Exception:  # noqa: BLE001  # allow-silent: crypto-perp default
+                        cvu = 1.0
+                    sign = 1.0 if side in ("long", "buy") else -1.0
+                    pnl = round((exit_ - entry) * qty * cvu * sign, 6)
+                    pnl_pct = round(pnl / (entry * qty * cvu) * 100.0, 4)
+                    pnl_estimated = True
+            except Exception:  # noqa: BLE001  # allow-silent: an estimate failure leaves the alert at "PnL —"
+                pass
         notify_trade_event(
             TRADE_CLOSED,
             {
                 "trade_id": trade_id,
                 "symbol": row["symbol"],
                 "direction": row["direction"],
-                "pnl": row["pnl"],
-                "pnl_percent": row["pnl_percent"],
+                "pnl": pnl,
+                "pnl_percent": pnl_pct,
+                "pnl_estimated": pnl_estimated,
                 "exit_reason": row["exit_reason"],
                 "strategy": row["strategy_name"],
                 "account": row["account_id"],

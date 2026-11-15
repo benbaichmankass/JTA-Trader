@@ -1,0 +1,6 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Row DIAG-EXCHANGE-POSITIONS-SLOW. /api/diag/exchange_positions (all accounts) read accounts one after another (4-7 s each), so it passed the proxy's 30 s limit and every all-accounts caller got HTTP 502. Measured 2026-11-14 20:05-20:09Z; this broke mirror-orphan-watch runs 38 and 39 (worked around in #26119). The fix reads non-IB accounts in parallel on a new multi-worker lane (run_account_read_parallel). IB accounts stay on the single-worker run_account_read lane (BL-20260706-IBCONCURRENCY). Each account gets a deadline (deadline_s default 8, clamped 1..25) and a read_state (ok / timed_out / error), plus elapsed_s. One slow account never fails or stalls the call. Read-only route; places nothing. 4 new tests fail on the old code: parallel, IB lane, timeout isolation, deadline clamp. The 33 existing route and executor tests pass. Both files are in config/trader_import_closure.txt, so this is a trader restart: merge in a restart batch. Revert: git revert."
+}

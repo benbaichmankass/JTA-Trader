@@ -1353,6 +1353,16 @@ accounts:
       # UNHOMED entry that would follow are a Tier-3 FIELD change, proposed to AM-TRADING, not made here. Also: no checklist
       # row PROMOTE-TLT-1H-REAL-MONEY exists on main (2026-11-12); this comment and that CI entry cite it anyway.
       - qqq_pullback_1h
+      # 2026-11-13 B38CQPVI-0001 (Tier-3, PAPER; Manager Session 2026-11-13a; operator 2026-11-11 decision doc verbatim
+      # "Put qqq and tlt on the paper floor now"; OPERATING-PLAN § 2 "Stage 1 is the DEMO FLOOR": every TESTING leg trades on
+      # its floor, only a retirement record removes one, a FAIL record does not). tlt_pullback_1h + spy_pullback_1h are
+      # TESTING (enabled, on no book) and share TLT / SPY with a 1d leg + ml_entry_eq on this non-slice account: the splits
+      # are the refreshed records comms/same_symbol_allocation/{tlt,spy}-alpaca_paper.json. tlt_pullback_1h's real-money
+      # promotion (if it lands) MOVES it off this line. ROLLBACK: delete these two lines and restore both records' 2-leg form.
+      # tlt_pullback_1h REMOVED 2026-11-14 (TLT-1H-PROMOTE, operator popup "Promote long-only 3.5R (Recommended)"): promoted to
+      # alpaca_live + alpaca_portfolio, and production is not general paper (OPERATING-PLAN § 2 "Three strategy statuses");
+      # comms/same_symbol_allocation/tlt-alpaca_paper.json is refreshed without it. ROLLBACK with alpaca_live's line.
+      - spy_pullback_1h
       # 2026-10-27 DESK-PAPER-ACCOUNTS (Tier-3, PAPER; operator verbatim, chat ~15:58Z: "I do want to have the desk
       # live on the other paper accounts as well, so Alpaca and IB."): the Claude desk leg, scoped to
       # strategies.yaml::claude_desk.account_symbols.alpaca_paper (SPY, QQQ, IWM, GLD, TLT). This account has no slice
@@ -1443,7 +1453,10 @@ accounts:
     # 2026-11-12 SLV-1H-PROMOTE (Tier 3; OPERATOR chat ~10:32Z, relayed by Manager Session 2026-11-11a / AM-TRADING, verbatim "I answer that I do want to promote silver."): slv_trend_1h mirrors alpaca_live
     # (superset rule). THIS book trades its SHORT side too (no side_filter, shorting enabled); alpaca_live is a long-only cash book and refuses
     # shorts. ROLLBACK with alpaca_live's line.
-    strategies: [tqqq_trend_long_1d, ml_entry_eq_struct, slv_trend_1h]   # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3; OPERATOR popup ~11:10Z, relayed by Manager Session 2026-11-06a, verbatim "Probe with tqqq_trend_long (Recommended)"):
+    # 2026-11-14 TLT-1H-PROMOTE (Tier 3; OPERATOR popup ~16:28Z, relayed by Manager Session 2026-11-13a, verbatim "Promote long-only 3.5R (Recommended)"):
+    # tlt_pullback_1h mirrors alpaca_live (superset rule). Long only by its own config (side_filter: long), so this book trades the same side as
+    # live. TLT is split with ml_entry_eq_struct by comms/same_symbol_allocation/tlt-alpaca_live-alpaca_portfolio.json. ROLLBACK with alpaca_live's line.
+    strategies: [tqqq_trend_long_1d, ml_entry_eq_struct, slv_trend_1h, tlt_pullback_1h]   # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3; OPERATOR popup ~11:10Z, relayed by Manager Session 2026-11-06a, verbatim "Probe with tqqq_trend_long (Recommended)"):
                                        # MECHANICS-ONLY EXCEPTION (kind=mechanics), NOT an edge bet and NOT a promotion (no committed DSR/trial-ledger record for tqqq_trend_long_1d; PROD-LEGS-DSR-DECISION did not measure it). Mirror of alpaca_live (superset rule: alpaca_portfolio carries every alpaca_live leg).
                                        # Purpose: ONE real-money GTC-bracket trade on alpaca_live (entry booked at the venue fill once #23777 lands, bracket at
                                        # the broker, venue exit, correct close reason, graded). REMOVE after that ONE trade closes and is graded: set this back
@@ -1581,7 +1594,15 @@ accounts:
     # selected on discovery, holdout +33.37 R n 108, contamination disclosed); the record above is regenerated at that config (+39.09 R n 73,
     # 4/4). Also decided 2026-11-04 ~22:05Z (operator popup, verbatim "Reopen, promote if it clears (Recommended)").
     # ROLLBACK: delete `slv_trend_1h` here AND on alpaca_portfolio, and restore `- slv_trend_1h` on alpaca_paper.
-    strategies: [tqqq_trend_long_1d, ml_entry_eq_struct, slv_trend_1h]   # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3; OPERATOR popup ~11:10Z, relayed by Manager Session 2026-11-06a, verbatim "Probe with tqqq_trend_long (Recommended)"):
+    # 2026-11-14 TLT-1H-PROMOTE (Tier 3; OPERATOR popup ~16:28Z, relayed by Manager Session 2026-11-13a, verbatim "Promote long-only 3.5R (Recommended)"):
+    # tlt_pullback_1h on REAL MONEY + its mirror, LONG ONLY with a 3.5 R predictive TP (strategies.yaml: side_filter long, tp_r 3.5, tp_intent
+    # r_multiple). Evidence: comms/strategy_evidence/tlt_pullback_1h.json regenerated faithful at that config (Alpaca iex forming replay) +
+    # RQ-20261114-db1a-10 arm L35 (+8.17 R n 75, 4/4 folds, t 0.72; rule registered before the run) + holdout RQ-20261113-f090-01 + K* RQ-20261112-5ab1-01.
+    # Caveats stated to the operator: t 0.72 is not distinguishable from zero; long-only is a regime-dependent in-sample read; the short-carry add-on
+    # is ESTIMATED. TLT split with ml_entry_eq_struct: comms/same_symbol_allocation/tlt-alpaca_live-alpaca_portfolio.json.
+    # ROLLBACK: delete `tlt_pullback_1h` here AND on alpaca_portfolio, restore `- tlt_pullback_1h` on alpaca_paper (and its allocation record), and
+    # revert the strategies.yaml block.
+    strategies: [tqqq_trend_long_1d, ml_entry_eq_struct, slv_trend_1h, tlt_pullback_1h]   # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3; OPERATOR popup ~11:10Z, relayed by Manager Session 2026-11-06a, verbatim "Probe with tqqq_trend_long (Recommended)"):
                                        # MECHANICS-ONLY EXCEPTION (kind=mechanics), NOT an edge bet and NOT a promotion (no committed DSR/trial-ledger record for tqqq_trend_long_1d; PROD-LEGS-DSR-DECISION did not measure it). Long-only via side_filter; existing risk_pct sizing; no new knob.
                                        # Purpose: ONE real-money GTC-bracket trade on alpaca_live (entry booked at the venue fill once #23777 lands, bracket at
                                        # the broker, venue exit, correct close reason, graded). REMOVE after that ONE trade closes and is graded: set this back
@@ -1627,7 +1648,7 @@ accounts:
                                        # single-trade exposure at risk_pct 0.02 is 4.70x MEDIAN
                                        # (entry/risk_distance median 234.9 over the 33 long packages),
                                        # i.e. the sizer asks for ~11x the account and the 0.9 cash
-                                       # wall clamps it to 2 shares (~$165 of a $200.10 book). Realised
+                                       # wall clamps it to 2 shares (~$165 of a [balance removed] book). Realised
                                        # risk at the declared stop is therefore ~$0.75, NOT the $4.00
                                        # the 2% implies. Do not "fix" the apparent mismatch by raising
                                        # risk_pct — the reachable set is IDENTICAL at 2% and 5% because
@@ -1712,7 +1733,7 @@ accounts:
       # rarely taken.
       #
       # RISK: $0.89-$3.90 per trade at the declared stop = 0.4-1.9% of the
-      # $200.22 equity read 2026-09-10 — the min and max across all 407 observed
+      # [balance removed] equity read 2026-09-10 — the min and max across all 407 observed
       # setups, not a central estimate. The structural ceiling is UNCHANGED at
       # the round-up bound `1.5 x $4.0044 = $6.01` (3.0% of that equity), an
       # arithmetic property of the sizer rather than a measurement; no Option A
@@ -1848,11 +1869,15 @@ accounts:
       # by running THIS config through RiskManager.position_size at $200 equity
       # (prices + ATR14 stop proxies from yfinance-lane-proof), the reachable
       # set is IDENTICAL at 2% and at 5%:
-      #   reachable : TLT IEF SLV USO IAUM GDX
-      #   refused   : SPY $745.01 · QQQ $688.87 · GLD $371.52 · IWM $303.03
-      #               — all CASH-bound (one share exceeds the whole account),
-      #               so no risk setting reaches them. Only funding, a cheaper
-      #               proxy, or a fractional-capable venue does.
+      #   [2026-08-25 SNAPSHOT — STALE BY CONSTRUCTION, DO NOT QUOTE AS CURRENT]
+      #   reachable then : TLT IEF SLV USO IAUM GDX
+      #   refused then   : SPY QQQ GLD IWM — CASH-bound (one share exceeded the
+      #               whole account), so no risk setting reached them.
+      #   ⚠️ REACHABILITY IS NOT A CONSTANT: it moves with price, stop distance,
+      #   balance and the roster. READ IT ON DEMAND, never from this comment:
+      #     python3 scripts/ops/account_reachable_set.py --account alpaca_live
+      #   (runs RiskManager.position_size at the live balance + live prices;
+      #   row SMALL-ACCOUNT-RISK, BL-20260910 option a).
       #
       # ⚠️ DO NOT REPEAT THE CLAIM THAT 5% "ADDS GDX" — it is false and was
       # asserted here for one commit. GDX ($74.59, ~$5.28/share stop) was

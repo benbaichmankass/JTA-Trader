@@ -416,3 +416,103 @@ def test_a_label_written_before_any_build_carries_no_timing(tmp_path):
     lab = [json.loads(x) for x in (logs / "trigger_labels.jsonl").read_text().splitlines()]
     nc = [x for x in lab if x["disposition"] == "could_not_commit"]
     assert len(nc) == 1 and "build_wall_s" not in nc[0] and "stages" not in nc[0]
+
+
+# ---- DESK-BUILD-DETACHED: a systemctl client killed by a signal is a DETACHED build, not a failed one ----------------
+
+def _signal_killed(monkeypatch, tmp_path, returncode=-15, stderr=""):
+    import subprocess
+    monkeypatch.setattr(det, "_jobs_dir", lambda: tmp_path / "jobs")
+    monkeypatch.setattr(det.subprocess, "run",
+                        lambda cmd, **kw: subprocess.CompletedProcess(cmd, returncode, "", stderr))
+
+
+def test_a_systemctl_client_killed_by_a_signal_is_detached_not_failed(tmp_path, monkeypatch):
+    _signal_killed(monkeypatch, tmp_path)
+    stage, why = det.build_packet(_F, CFG, "")
+    assert stage is None and why.startswith(det.DETACHED) and "exit -15" in why and det.LAST_PATH == "unit"
+
+
+def test_a_missing_result_with_a_nonzero_exit_is_also_detached_but_no_sudo_still_falls_back(tmp_path, monkeypatch):
+    _signal_killed(monkeypatch, tmp_path, returncode=1, stderr="Job for ict-desk-build@x.service failed.")
+    _, why = det.build_packet(_F, CFG, "")
+    assert why.startswith(det.DETACHED)
+    _signal_killed(monkeypatch, tmp_path, returncode=1, stderr="sudo: a password is required")
+    import subprocess
+
+    def run(cmd, **kw):  # sudo refused -> the in-process path then runs (and times out in this fake)
+        if cmd[0] == "sudo":
+            return subprocess.CompletedProcess(cmd, 1, "", "sudo: a password is required")
+        raise subprocess.TimeoutExpired(cmd, 1)
+    monkeypatch.setattr(det.subprocess, "run", run)
+    _, why2 = det.build_packet(_F, CFG, "")
+    assert why2.startswith("TimeoutExpired") and det.LAST_PATH == "inproc"
+
+
+def _fire_once(tmp_path, build_fn, now=NOW):
+    logs = tmp_path / "logs"
+    res = det.run_once(cfg=CFG, now_fn=lambda: now, bars_fn=lambda s, tf, n: {"AVAXUSDT": bars(last={"open": 100.0, "high": 104.0, "low": 99.8, "close": 103.9})},
+                       auth_fn=lambda: "tok", fetch=lambda url, auth: (404, None), http=_Http(), pr_fn=lambda: 7,
+                       build_fn=build_fn, commit_fn=lambda *a, **k: ("c" * 40, None), calendar_fn=None,
+                       logs=logs, receipt=tmp_path / "r.json")
+    return res, logs
+
+
+def test_a_detached_build_keeps_the_mark_writes_no_failure_label_and_does_not_mark_the_firing_handled(tmp_path):
+    res, logs = _fire_once(tmp_path, lambda f, c, t: (None, det.DETACHED + "no result.json yet (systemctl exit -15: )"))
+    assert res["state"] == "build_detached" and "exit -15" in res["reason"]
+    assert (logs / det.INFLIGHT).exists()  # the next pass can adopt
+    lab = logs / "trigger_labels.jsonl"
+    assert not lab.exists() or "could_not_build" not in lab.read_text()
+    sp = logs / "trigger_state.json"  # absent is fine: nothing was written, so the firing is NOT marked handled
+    assert res["fired"] not in ((json.loads(sp.read_text()).get("seen_keys") or []) if sp.exists() else [])
+
+
+def test_end_to_end_a_pass_killed_with_the_trader_is_adopted_and_posted_by_the_next_pass(tmp_path, monkeypatch):
+    import shutil
+    _signal_killed(monkeypatch, tmp_path)  # pass 1: the systemctl client dies with the trader, no result yet
+    res1, logs = _fire_once(tmp_path, det.build_packet)
+    assert res1["state"] == "build_detached"
+    mark = json.loads((logs / det.INFLIGHT).read_text())
+    assert mark["job"]
+    # the unit (own cgroup) survived and finished: its stage + result.json are on disk
+    st, _ = _stage(tmp_path)
+    job = tmp_path / "jobs" / mark["job"]
+    shutil.copytree(st, job / "stage", dirs_exist_ok=True)
+    (job / "result.json").write_text(json.dumps({"state": "ok", "stages": []}))
+    http = _Http()
+    res2 = det.run_once(cfg=CFG, now_fn=lambda: NOW + timedelta(seconds=90), bars_fn=lambda s, tf, n: {"AVAXUSDT": bars()},
+                        auth_fn=lambda: "tok", fetch=lambda url, auth: (404, None), http=http, pr_fn=lambda: 7,
+                        build_fn=lambda *a: (None, "must not rebuild"), commit_fn=lambda *a, **k: ("c" * 40, None),
+                        calendar_fn=None, logs=logs, receipt=tmp_path / "r.json")
+    assert res2["state"] == "posted" and res2["adopted_job"] == mark["job"] and len(http.posts) == 1
+    assert not (logs / det.INFLIGHT).exists()
+
+
+def _mark(tmp_path, monkeypatch, *, age_s, job="j7"):
+    monkeypatch.setattr(det, "_jobs_dir", lambda: tmp_path / "jobs")
+    (tmp_path / "jobs" / job).mkdir(parents=True)
+    logs = tmp_path / "logs"
+    logs.mkdir(exist_ok=True)
+    fired = {"kind": "atr_burst", "symbol": "AVAXUSDT", "bar": "b", "key": "k7", "detail": {}}
+    (logs / det.INFLIGHT).write_text(json.dumps({"started_at": (NOW - timedelta(seconds=age_s)).isoformat(),
+                                                 "fired": fired, "job": job}))
+    return logs
+
+
+def test_a_young_detached_build_with_no_result_yet_is_waited_on_not_duplicated(tmp_path, monkeypatch):
+    logs = _mark(tmp_path, monkeypatch, age_s=300)
+    built = []
+    res = det.run_once(cfg=CFG, now_fn=lambda: NOW, bars_fn=lambda s, tf, n: {"AVAXUSDT": bars(last={"open": 100.0, "high": 104.0, "low": 99.8, "close": 103.9})},
+                       auth_fn=lambda: "tok", fetch=lambda url, auth: (404, None), http=_Http(), pr_fn=lambda: 7,
+                       build_fn=lambda *a: built.append(1) or (None, "x"), commit_fn=lambda *a, **k: ("c" * 40, None),
+                       calendar_fn=None, logs=logs, receipt=tmp_path / "r.json")
+    assert res["state"] == "build_pending" and res["job"] == "j7" and built == []  # one build at a time
+    assert (logs / det.INFLIGHT).exists() and not (logs / "trigger_labels.jsonl").exists()
+
+
+def test_a_detached_build_past_its_unit_lifetime_with_no_result_is_labelled_interrupted(tmp_path, monkeypatch):
+    logs = _mark(tmp_path, monkeypatch, age_s=det.DETACHED_WAIT_S + 60)
+    det._reconcile_inflight(logs, logs / "l.jsonl", NOW)
+    lab = json.loads((logs / "l.jsonl").read_text())
+    assert lab["disposition"] == "interrupted" and "passed its lifetime" in lab["reason"] and not (logs / det.INFLIGHT).exists()

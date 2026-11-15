@@ -233,6 +233,7 @@ def test_rows_watcher_offers_only_for_rows_it_did_not_execute(tmp_path, monkeypa
                now_fn=lambda: NOW, logs=tmp_path, alert=lambda t: True, offer=_offer_fn)
     lines = [json.loads(x) for x in (tmp_path / "rows_watch.jsonl").read_text().splitlines()]
     by = {ln["review_id"]: ln for ln in lines}
-    assert by[close_ask["review_id"]]["verdict"] == "advice_only"
+    # operator_ask: never dispatched, still offered (verdict not_dispatchable since advice-only ended 2026-11-14)
+    assert by[close_ask["review_id"]]["verdict"] == "not_dispatchable"
     assert by[close_ask["review_id"]]["approval"] == {"state": "offered", "token": "t"}
     assert "approval" not in by[held["review_id"]]

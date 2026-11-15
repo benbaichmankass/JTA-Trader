@@ -64,6 +64,10 @@ KINDS = ("atr_burst", "momentum_burst", "liquidity_sweep", "level_break", "near_
 #: could_not_build receipt says WHICH stage was slow, not only that one timed out (DESK-TRIGGER-SCAN-TIMEOUT).
 LAST_STAGES: List[Dict[str, Any]] = []
 INFLIGHT = "inflight.json"
+#: build_packet's `why` starts with this when the isolated build may STILL BE RUNNING (the `systemctl start` client was
+#: killed with the trader, or never reported): not a failure, so no could_not_build label and the in-flight mark stays
+#: for the next pass to adopt (DESK-BUILD-DETACHED, 2026-11-12: every -15 was the client dying with a trader restart).
+DETACHED = "detached:"
 #: "unit" (own cgroup) | "inproc" (fallback) for the last build; the in-flight mark path the running pass owns.
 LAST_PATH: Optional[str] = None
 CURRENT_INFLIGHT: Optional[Path] = None
@@ -323,13 +327,15 @@ def _run_isolated(job_id: str, job_dir: Path, stages: List[Tuple[str, List[str]]
         r = subprocess.run(["sudo", "-n", "systemctl", "start", f"ict-desk-build@{job_id}.service"],
                            capture_output=True, text=True, timeout=2 * dpw.BUILD_TIMEOUT_S + 60)
     except subprocess.TimeoutExpired:
-        return None, "desk-build unit: systemctl start exceeded 2 stages + 60 s (unit RuntimeMaxSec bounds it)"
+        return None, DETACHED + "systemctl start exceeded 2 stages + 60 s (the unit's RuntimeMaxSec bounds it)"
     res = _read_json(job_dir / "result.json")
     if res is None:
         err = (r.stderr or r.stdout or "").strip()
         if r.returncode != 0 and any(k in err.lower() for k in ("not found", "password", "not allowed", "no tty", "sudo:")):
-            return None
-        return None, f"desk-build unit: no result.json (systemctl exit {r.returncode}: {err[-120:]})"
+            return None  # isolation unavailable here: the caller falls back to the in-process run
+        # The client was killed by a signal (a deploy restart SIGTERMs the trader's cgroup, `systemctl start` with it)
+        # or reported nothing. The unit is a separate cgroup and may still be running: DETACHED, not failed.
+        return None, DETACHED + f"no result.json yet (systemctl exit {r.returncode}: {err[-120:]})"
     LAST_STAGES.clear()
     LAST_STAGES.extend({k: v for k, v in st.items() if k != "tail"} for st in res.get("stages") or [])
     bad = next((st for st in res.get("stages") or [] if st.get("outcome") != "exit 0"), None)
@@ -471,13 +477,17 @@ def run_once(*, cfg: Optional[Dict[str, Any]] = None, now_fn: Callable[[], datet
     tf = str(cfg.get("timeframe", "5m"))
     auth = auth_fn()
     adopt = _reconcile_inflight(d, labels_path, now, cfg, list(state.get("seen_keys") or []))
+    if adopt is not None and adopt[0] == "pending":
+        # A detached build is still running in its own unit. One build at a time is the existing invariant (the _LOCK):
+        # do not start a second one on top of it, and do not wait on it past its own lifetime (_reconcile_inflight).
+        return done("build_pending", job=adopt[1], age_s=adopt[2])
     if adopt is not None:  # a finished survivor build: land it instead of detecting afresh this pass
-        chosen = adopt[0]
-        rec["adopted_job"] = adopt[2]
+        chosen, adopt_stage, adopt_job = adopt[1], adopt[2], adopt[3]
+        rec["adopted_job"] = adopt_job
         if not auth:
-            label("could_not_commit", packet_id=None, reason="no_credential_in_git_extraheader", adopted_job=adopt[2])
+            label("could_not_commit", packet_id=None, reason="no_credential_in_git_extraheader", adopted_job=adopt_job)
             return done("could_not_commit", fired=chosen["key"])
-        return land(adopt[1], adopted_job=adopt[2])
+        return land(adopt_stage, adopted_job=adopt_job)
     bars = bars_fn(symbols, tf, int(cfg.get("candles", 120)))
     hourly = fetch_hourly_packet(auth, fetch)
     firings: List[Dict[str, Any]] = []
@@ -512,6 +522,10 @@ def run_once(*, cfg: Optional[Dict[str, Any]] = None, now_fn: Callable[[], datet
     t_build = time.monotonic()
     stage, why = build_fn(chosen, cfg, text if code == 200 and isinstance(text, str) else "")
     rec["build_wall_s"], rec["stages"], rec["isolation"] = round(time.monotonic() - t_build, 1), list(LAST_STAGES), LAST_PATH
+    if stage is None and why and why.startswith(DETACHED):
+        # The build may still be running in its own unit: keep the in-flight mark (job id inside) so the NEXT pass adopts
+        # a finished survivor, and write no could_not_build label and do not mark the firing handled.
+        return done("build_detached", fired=chosen["key"], reason=why)
     try:
         (d / INFLIGHT).unlink()
     except OSError:
@@ -524,6 +538,9 @@ def run_once(*, cfg: Optional[Dict[str, Any]] = None, now_fn: Callable[[], datet
 
 #: A survivor's packet is adopted only while its bar is still current: at most this many bars after the bar closed.
 ADOPT_MAX_BARS = 3
+#: A detached build's unit lives at most its RuntimeMaxSec (2 stages x BUILD_TIMEOUT_S + slack); past that with no result
+#: it is gone, and the pass is labelled `interrupted`.
+DETACHED_WAIT_S = 2 * dpw.BUILD_TIMEOUT_S + 60
 
 
 def _adoptable(mark: Dict[str, Any], surv: Optional[Dict[str, Any]], now: datetime, cfg: Dict[str, Any],
@@ -550,31 +567,35 @@ def _adoptable(mark: Dict[str, Any], surv: Optional[Dict[str, Any]], now: dateti
 
 
 def _reconcile_inflight(d: Path, labels_path: Path, now: datetime, cfg: Optional[Dict[str, Any]] = None,
-                        seen: Optional[List[str]] = None) -> Optional[Tuple[Dict[str, Any], Path, str]]:
-    """A pass that started a build and never reached its label was cut off (a deploy restart SIGTERMs the trader's
-    cgroup). Before this it left NO record. If its build ran in its own unit and FINISHED a complete packet for a
-    still-current bar, return (fired, stage, job) so the caller commits + posts it (DESK-BUILD-SURVIVOR-ADOPT); else
-    label it `interrupted`, once, with the survivor's result when there is one."""
+                        seen: Optional[List[str]] = None) -> Optional[Tuple]:
+    """A pass that started a build and did not reach its label was cut off, or its build is DETACHED (running in its own
+    unit). Returns ("adopt", fired, stage, job) when the survivor FINISHED a complete packet for a still-current bar, so
+    the caller commits + posts it (DESK-BUILD-SURVIVOR-ADOPT); ("pending", job, age_s) when the unit has not finished yet
+    and is still within its own lifetime (the mark STAYS; the caller starts no second build); None otherwise, after
+    labelling the pass `interrupted` once, with the survivor's result when there is one."""
     p = d / INFLIGHT
     mark = _read_json(p)
     if not mark:
         return None
+    started = _parse(mark.get("started_at"))
+    age = (now - started).total_seconds() if started else None
+    surv = _read_json(_jobs_dir() / str(mark["job"]) / "result.json") if mark.get("job") else None
+    if mark.get("job") and surv is None and age is not None and age < DETACHED_WAIT_S:
+        return ("pending", str(mark["job"]), round(age, 1))  # not finished, not yet past its RuntimeMaxSec: leave the mark
     try:
         p.unlink()
     except OSError:
         pass
-    surv = _read_json(_jobs_dir() / str(mark["job"]) / "result.json") if mark.get("job") else None
     stage = _adoptable(mark, surv, now, cfg or {}, list(seen or []))
     if stage is not None:
-        return mark["fired"], stage, str(mark["job"])
-    started = _parse(mark.get("started_at"))
+        return ("adopt", mark["fired"], stage, str(mark["job"]))
     why = ("build outlived the trader and finished (" + str(surv.get("state")) + "), but its packet could not be adopted "
            "(unfinished, incomplete, already handled, or its bar is no longer current)"
-           if surv else "build never finished: process ended mid-build (restart/kill)")
+           if surv else "build never finished: process ended mid-build (restart/kill), or its unit passed its lifetime")
     _append(labels_path, {"at": mark.get("started_at"), "fired": mark.get("fired"), "disposition": "interrupted",
                           "packet_id": None, "reason": why, "survivor": surv,
                           "noticed_at": now.isoformat(),
-                          "after_s": round((now - started).total_seconds(), 1) if started else None})
+                          "after_s": round(age, 1) if age is not None else None})
     return None
 
 

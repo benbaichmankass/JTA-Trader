@@ -8,8 +8,9 @@ conviction blend (`src/runtime/conviction.py`) consumes.
 **Per-model stage is respected** (operator clarification 2026-06-16): the
 per-model 7-stage ladder is unchanged; each model's *stage* decides which
 conviction it feeds — `shadow` → the observed conviction (no influence),
-`advisory`+ → also the influencing conviction. Pass ``influencing_only=True``
-to build the advisory+-only view.
+`advisory`+ → also the influencing conviction. The advisory+-only view is built by
+passing ``influencing_scores(model_scores)`` (the filter happens before construction;
+there is no flag).
 
 Calibrators (fit offline by ``scripts/ml/fit_confidence_calibrators.py``) are
 loaded read-only from a JSON artifact; absent → raw scores pass through a sane
@@ -37,6 +38,21 @@ INFLUENCE_STAGES = frozenset({"advisory", "limited_live", "live_approved"})
 
 # Default calibrators artifact (written by fit_confidence_calibrators.py).
 _DEFAULT_CAL_PATH = "artifacts/calibration/calibrators.json"
+
+
+def influencing_scores(model_scores: dict[str, dict] | None) -> dict[str, dict]:
+    """The subset of ``model_scores`` whose stage may influence an order (``INFLUENCE_STAGES``).
+
+    ML-SHADOW-NO-ORDER-HANDLE (operator 2026-11-12: "handled through structuring the functionality
+    correctly, not with a gate"): the order-path conviction block is BUILT from this subset, so a
+    shadow-stage score is never an input to anything a sizing or allocation function reads. There is
+    no flag: the filter is the construction.
+    """
+    out: dict[str, dict] = {}
+    for model_id, rec in (model_scores or {}).items():
+        if isinstance(rec, dict) and rec.get("stage") in INFLUENCE_STAGES:
+            out[model_id] = rec
+    return out
 
 
 def classify_head(model_id: str) -> str | None:
@@ -86,7 +102,6 @@ def build_conviction_inputs(
     model_scores: dict[str, dict] | None,
     *,
     calibrators: dict[str, Calibrator] | None = None,
-    influencing_only: bool = False,
     direction: str | None = None,
     regime_alignment: dict[str, dict[str, Calibrator]] | None = None,
 ) -> tuple[dict[str, float], dict[str, Any]]:
@@ -133,8 +148,6 @@ def build_conviction_inputs(
         if slot is None:
             continue
         stage = rec.get("stage")
-        if influencing_only and stage not in INFLUENCE_STAGES:
-            continue
         c = cal.get(model_id)
         score = rec.get("score")
         # c_reg gets its OWN calibrator family: a regime-alignment calibrator

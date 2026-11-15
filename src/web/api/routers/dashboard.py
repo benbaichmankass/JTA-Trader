@@ -976,9 +976,9 @@ async def _build_positions(effective_include: bool) -> list[dict[str, Any]]:
             options_block = None
         out.append({
             "id": str(r[0]),
-            # Additive: null when no package can be tied to this trade.
-            "orderPackageId": (str(r[13]) if len(r) > 13 and r[13] is not None
-                               else None),
+            # The order package this leg belongs to (UI-SPA-BACKEND-ROUTES + POSITIONS-API-ORDER-PACKAGE-ID): siblings
+            # on other books share it, so a consumer matches them exactly. null when no package can be tied to it.
+            "orderPackageId": (str(r[13]) if len(r) > 13 and r[13] else None),
             "account": r[1],
             "symbol": r[2],
             "side": _normalise_side(r[3]),

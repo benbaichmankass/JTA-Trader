@@ -222,6 +222,16 @@ if [ -d "${_WEBAPI_DROPIN_DIR}" ]; then
             record_receipt "${_webapi_conf}"
             changed=1
         fi
+        # WEB-API-STOP-SIGKILL-90S (2026-11-15): the base unit's uvicorn line carries
+        # --timeout-graceful-shutdown 5, but a drop-in ExecStart wins over it. Append
+        # the flag to a drop-in uvicorn ExecStart that lacks it; nothing else changes.
+        # Idempotent: a line that already has the flag is left alone.
+        if grep -E '^ExecStart=.*uvicorn src\.web\.api\.main:app' "${_webapi_conf}" | grep -qv -- '--timeout-graceful-shutdown'; then
+            echo ">>> install_systemd_units: ${_webapi_conf}: uvicorn += --timeout-graceful-shutdown 5 (WEB-API-STOP-SIGKILL-90S)"
+            "${SUDO[@]}" sed -i -E '/^ExecStart=.*uvicorn src\.web\.api\.main:app/ { /--timeout-graceful-shutdown/! s/[[:space:]]*$/ --timeout-graceful-shutdown 5/ }' "${_webapi_conf}"
+            record_receipt "${_webapi_conf}"
+            changed=1
+        fi
     done
 fi
 
@@ -772,6 +782,9 @@ if [ "$_VM_ROLE" != "gateway" ] && [ -f deploy/ict-ops-runner.path ]; then
         :  # already enabled + watching
     else
         echo ">>> install_systemd_units: enable --now ict-ops-runner.path (ops channel queue watch)"
+        # OPS-RUNNER-START-LIMIT: a path whose runner hit the start limit sits failed until reset; clear both so the
+        # enable below re-arms the watch (and drains whatever queued meanwhile). Tolerant: a no-op on a healthy box.
+        "${SUDO[@]}" systemctl reset-failed ict-ops-runner.service ict-ops-runner.path >/dev/null 2>&1 || true
         if ! "${SUDO[@]}" systemctl enable --now ict-ops-runner.path 2>&1; then
             echo ">>> install_systemd_units: WARN could not enable ict-ops-runner.path"
         fi

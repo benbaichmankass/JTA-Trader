@@ -1,0 +1,170 @@
+# Hand-authored 2026-11-13 by an orphan-iteration lane (Tier 1, session_01AFoLuMfGoUaVmVtfzXaKEK). ITERATION unit for the orphan subject ml_entry_eq,
+# authored from a written diagnosis of RQ-20261105-e9a1-02's own result row. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261113-6d44-02
+title: 'ITERATION 1 of ml_entry_eq (pass, unconfirmed): does capping entries to the top 3 scores per decision bar remove the clustered losses
+  without cutting the mean? DEV walk-forward only (config B, tau 0.20, fixed 2/3 bracket)'
+status: done
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+kind: experiment
+origin: iteration
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted; inference on
+  clustered (decision-date) standard errors when many decisions share one market move, the standard cross-sectional correction (Petersen 2009,
+  https://doi.org/10.1093/rfs/hhn053).'
+levers:
+- name: max_entries_per_decision_bar
+  values: [0 (uncapped, the graded model), 3 (primary), 5 (reported, non-gating)]
+  hypothesised_effect: the top-3 cap keeps the dev mean and raises the decision-date clustered t by >= 0.5
+question: 'The equity-native ENTRY model behind ml_entry_eq (config B, tau 0.20, restricted LONG, SL 2 / TP 3 ATR14, 24-bar stop) passed its
+  confirm read only on the point estimate (RQ-20261105-e9a1-02: +0.0392 R per decision, n=858, iid t 0.93, month-clustered SE 0.143 so t 0.27).
+  On the DEV walk-forward (dates <= 2025-06-30, the same 5 purged folds, no confirming row loaded; holdout_lock rule 1: unclaimed), refit config B
+  as the graded dev stage did and take decisions at tau 0.20 three ways: uncapped; at most the 3 highest scores per decision timestamp
+  (`--max-per-bar 0,3,5`, primary cap 3); cap 5 reported. Does the cap keep the mean and raise the decision-date clustered t?'
+why_this_matters: 'ml_entry_eq is a TESTING leg on alpaca_paper with no live iteration (scripts/research/iteration_orphans.py, 2026-11-13). Operator
+  2026-11-01: "if the data doesn''t pass, it goes back into research for improvments and testing". Its pass rests on one month; if the losses are
+  correlated pile-ups, a per-bar cap is a cheap, servable fix; if not, the cap is closed and the next lever is a market-regime filter.'
+iteration:
+  subject: ml_entry_eq
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261105-e9a1-02/42143223941.jsonl (RULE-RQ20261105-e9a1-02-ENTRY-EQUITY-CONFIRM, graded pass, N=1)
+  verdict_read: pass_unconfirmed
+  diagnosis: 'e9a1-02 row (confirm 2025-07-15..2026-10-31, 147 symbols): mean net +0.0392 = gross 0.0899 minus cost 0.0507 at n=858, iid t 0.93,
+    month-clustered t 0.27; dev OOF was +0.1067 (n=3896), so about 63% of the dev edge did not carry. The sum is carried by ONE month: 2025-10 made
+    +1.29 R on 53 decisions; without it the mean is -0.043 (sum 33.66 R minus 68.57 R over 805 decisions). 2026-03 alone holds 300 of the 858
+    decisions (35%) at -0.24 R; without it the mean is +0.190. Only 8 of 16 months are positive. Dev shows the same shape: fold 3 (2024-07..12)
+    -0.276 on 699 decisions. Most likely cause: the restricted-long model fires on many correlated ETFs at the same decision bar when a pool-wide
+    move hits its features, so one market bet is counted hundreds of times and decides the result (the 2026-03 pile-up). Competing hypotheses:
+    (1) regime, not concurrency: the model loses in a market state whatever the count, and a cap only shrinks n (then the next lever is a regime
+    filter); (2) the fixed 2/3 bracket: the structure-exit retrain on the same features read +0.26 in 2026-03 (RQ-20261106-98e3-01), so the exit,
+    not the entries, may drive the bad months.'
+  hypothesis: capping entries to the 3 highest scores per decision bar removes the correlated pile-ups, so the dev mean does not fall and the
+    decision-date clustered t rises by at least 0.5
+  attempt: 1
+  due_by: '2026-11-20'
+  map_entries:
+  - research/levers/ml_entry_eq.yaml
+evidence_class:
+  holdout: none
+  claim: edge
+population: 'The 173-ETF Alpaca liquidity pool (POOL_RULE of ml_entry_alpaca_score.py, rebuilt at run time), config B (15 own + 6 cross-sectional
+  features), restricted LONG at tau 0.20, purged expanding walk-forward OOF decisions on dates 2023-01-01..2025-06-30 (5 folds), session-gated,
+  entry next RTH open.'
+power:
+  expected_n: 3896
+  min_detectable_effect: 0.04
+  effect_units: metric
+  sd: 1.26
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED: the uncapped dev arm is n=3896, mean +0.1067, iid SE 0.0202 (RQ-20261105-e9a1-01 run 42166322024, B|0.2), so the per-decision
+    SD is 0.0202 x sqrt(3896) = 1.26 R. INFERRED: the cap-3 arm is a subset of roughly half to two thirds of those rows (n about 2,000-2,600;
+    unmeasured), SE about 0.025-0.028, so the mean clause (capped >= uncapped) can detect a drop of about 0.04 R or more at 80% power; the clustered
+    t clause has no measured dev baseline (the dev stage did not report one) and is computed for both arms in the same run. Below 300 capped
+    decisions is INDETERMINATE.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Alpaca 1h ETF history 2021-01..2025-06 through the runner's read-only market-data key; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261113-6d44-02-EQ-CAP
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  baseline: 'The UNCAPPED arm: config B at tau 0.20 on the same refits, folds and rows (it must reproduce the graded dev B|0.2, n=3896, +0.1067;
+    a mismatch is stated in the grading note), NET OF THE FULL COST STACK of the harness: fee 0 + slippage 5 bps (PROVISIONAL, resolve_cost_policy
+    SPY) + regulatory 0.5 bps round trip; no funding or borrow applies to an unlevered cash ETF long held <= 24 bars.'
+  statistic: 'scripts/research/ml_entry_equity.py dev --configs B --taus 0.2 --max-per-bar 0,3,5 --cap-grade "B|0.2|3": per arm n, mean gross,
+    cost and net R, iid SE, per-fold n and mean, decision-date clustered t (t of the per-UTC-date sum of net R, day_cluster_t) and n_days;
+    cap 5 reported beside it.'
+  rule: 'INDETERMINATE iff the cap-3 arm has fewer than 300 dev OOF decisions or either arm''s clustered t is undefined (< 3 dates). PASS iff ALL
+    of: (a) cap-3 mean net R >= uncapped mean net R; (b) cap-3 decision-date clustered t >= uncapped clustered t + 0.5; (c) the cap-3 mean is > 0
+    in >= 4 of the 5 dev folds. FAIL otherwise. Graded by cap_verdict in the harness (CAP_T_MARGIN 0.5). Cap 5 is reported and never gates; the
+    selection draw count of the run is stated beside the result. Thresholds are not changed after any result.'
+  pass_action: 'author the confirm unit: the cap-3 model refit on rows <= 2025-06-30 scored ONCE on a window no ENTRY-EQ claim has used (bars from
+    2026-11-01, the FWD_START of the harness), claimed in HOLDOUT-LOCK, with its own pre-registered rule; record the lever in
+    research/levers/ml_entry_eq.yaml.'
+  fail_action: 'record the cap as a failed lever in research/levers/ml_entry_eq.yaml and author the next iteration from competing hypothesis (1),
+    a point-in-time market-regime filter on the dev folds.'
+  what_it_does_not_do: Changes no config, roster, served artifact or tau; places no order. Loads no confirming row (dates > 2025-06-30) and claims
+    no holdout read. A PASS is a dev result, not a promotion; it earns the confirm unit.
+  min_n: 300 cap-3 dev OOF decisions
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.15
+  basis: 'stand-in: ml_entry_eq is a paper leg; a fix that confirms is the path to an equity ENTRY on real money. Not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 80
+  why_runner: Alpaca market data through the runner's read-only key and LightGBM on CPU; no trainer-resident data.
+  basis: 'MEASURED: the e9a1-02 confirm run took 4,440 s (runtime_s) including the pool fetch; this dev run fits ONE config over 5 folds.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_equity.py
+  - dev
+  - --cache
+  - /tmp/ml_entry_equity
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --configs
+  - B
+  - --taus
+  - '0.2'
+  - --max-per-bar
+  - 0,3,5
+  - --cap-grade
+  - B|0.2|3
+  - --rule-id
+  - RULE-RQ20261113-6d44-02-EQ-CAP
+  - --registered-at
+  - '2026-11-13'
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261113-6d44-02
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: whether the ml_entry_eq model gets a per-decision-bar entry cap in its next candidate; no change from this unit
+  legs:
+  - ml_entry_eq
+  book: demo_floor
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261105-e9a1-02
+- RQ-20261105-e9a1-01
+- RQ-20261106-98e3-01
+- RQ-20261112-ef4c-09
+- ML-ENTRY-EQUITY-NATIVE
+holdout_ledger: 'No holdout read. The confirm window 2025-07-15..2026-10-31 carries 3 ENTRY-EQ claims (comms/research/holdout_reads.jsonl) and is
+  NOT loaded: the dev stage builds its table to TRAIN_END 2025-06-30 only (holdout_lock rule 1: training-period walk-forward reads are unlimited and
+  unclaimed).'
+what_it_does_not_do: Changes no config, roster or served artifact; places no order; reads no confirming or forward window.
+intervention_controls:
+  not_applicable: an offline entry-filter test on dev folds; no in-trade intervention is tested
+last_dispatched_at: '2026-11-14T03:43:04+00:00'
+grading:
+  attested: RULE-RQ20261113-6d44-02-EQ-CAP
+  auto: true
+  decision_rule_id: RULE-RQ20261113-6d44-02-EQ-CAP
+  evidence:
+  - research/results/RQ-20261113-6d44-02/43553076726.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
