@@ -154,3 +154,33 @@ def test_the_result_json_detail_wins_over_bare_lines():
                      indent=2) + "\n"
     assert d.apply_refusal_line(out) == "mandate MD-X does not scope pkg-1 / close"
     assert d.apply_refusal_line("") is None
+
+
+# ------------------------------------------------------------------ the watcher logs the full output tail
+
+def test_the_watcher_keeps_the_non_marker_output_tail():
+    from src.runtime import live_review_rows_watch as w
+    out = ">>> live-review-apply: LR-x -> ...\nevidence 'x.json' is not a file in the checkout\n{\n  \"exit\": 2\n}\n"
+    tail = w.output_tail(out, "Traceback: boom\n")
+    assert "evidence 'x.json' is not a file in the checkout" in tail and "[stderr] Traceback: boom" in tail
+    assert not any(ln.startswith(">>>") for ln in tail)
+    assert len(w.output_tail("\n".join(f"l{i}" for i in range(100)))) == w.OUT_TAIL_LINES
+
+
+def test_a_dispatched_row_logs_its_out_tail(tmp_path, monkeypatch):
+    """The receipt line for a dispatched row carries the dispatcher's out_tail, so an exit 2 names its reason."""
+    import json as _json
+    from datetime import datetime, timezone
+    from src.runtime import live_review_rows_watch as w
+    from tests.test_live_review_rows_watch import FakeGit, row
+    monkeypatch.setattr(rows_lib, "ADVICE_ONLY_ACTIONS", ())
+
+    def dispatch(rid, ref):
+        return {"exit": 2, "verdict": "dispatched", "detail": None, "lines": [">>> refused"],
+                "out_tail": ["evidence 'x.json' is not a file in the checkout"]}
+    t0 = datetime(2026, 10, 26, 12, 0, tzinfo=timezone.utc)
+    w.run_pass(git=FakeGit([]), dispatch=dispatch, now_fn=lambda: t0, logs=tmp_path)
+    w.run_pass(git=FakeGit([row("LR-new")]), dispatch=dispatch, now_fn=lambda: t0, logs=tmp_path,
+               alert=lambda text: True)
+    recs = [_json.loads(x) for x in (tmp_path / "rows_watch.jsonl").read_text().splitlines()]
+    assert recs[-1]["out_tail"] == ["evidence 'x.json' is not a file in the checkout"]
