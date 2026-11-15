@@ -623,8 +623,20 @@ def programme_tier(entry: Dict[str, Any], cfg: Dict[str, Any]) -> int:
     len(list) for every unit outside it. PROGRAMME PRIORITY (operator 2026-10-18, ~06:20Z): P1 active trade
     management and P2 AI trader rank first on every backend, above other themes and programmes."""
     order = [str(x) for x in (cfg.get("value", {}).get("programme_priority") or [])]
-    prog = programme_of(entry)
+    prog = effective_programme(entry, cfg)
     return order.index(prog) if prog and prog in order else len(order)
+
+
+def effective_programme(entry: Dict[str, Any], cfg: Dict[str, Any]) -> str:
+    """`programme_of`, else the programme the unit's value bucket maps to (`value.bucket_programme`)."""
+    prog = programme_of(entry)
+    if not prog:
+        # RESEARCH-QUEUE-ML-STARVATION (lane ML-PRIMARY, 2026-11-15): an untagged unit inherits the programme its value
+        # BUCKET maps to (`value.bucket_programme`, e.g. ai_trader -> P2). MEASURED 2026-11-14 ~22:05Z: ML / ai_trader
+        # units carry no programme_node, so they ranked on the money score behind 44 template refills while the runner
+        # sat at 4/4, and RQ-20261112-8d20-02 waited ~65 h for a slot. Ordering only; nothing is refused.
+        prog = str((cfg.get("value", {}).get("bucket_programme") or {}).get(cr.bucket_of(entry, cfg), "") or "")
+    return prog
 
 
 def fair_order(jobs: List[Any], now: datetime, themes_doc: Dict[str, Any],
@@ -702,7 +714,7 @@ def fair_order(jobs: List[Any], now: datetime, themes_doc: Dict[str, Any],
                 r["starved"] = waited > starve
                 r["waited_h"] = round(waited.total_seconds() / 3600.0, 1)
                 r["refill"] = is_refill(x.raw)
-                r["programme"] = programme_of(x.raw)
+                r["programme"] = effective_programme(x.raw, cfg)
                 r["programme_tier"] = programme_tier(x.raw, cfg)
                 x.raw["_rank"] = r
                 # Programme priority first (operator 2026-10-18: P1, P2), then asked before refill inside a theme
