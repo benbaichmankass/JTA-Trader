@@ -374,6 +374,7 @@ lines:
     - {lever: 'market-residual training target (move minus beta x BTC), 13 monthly refits vs RAW target + shuffled-market placebo', ref: RQ-20261112-4654-01 (FRONTIER-Q-RESID-ENTRY), verdict: 'fail (graded 11-14): paired resid-raw -0.0662 over k 13 windows, CI95 [-0.196, +0.064]; placebo-raw -0.0009; pooled n raw/resid/placebo 10,888/15,092/19,454 (research/results/RQ-20261112-4654-01/43483024281.jsonl). Residual target closes for crypto entry.'}
     - {lever: 'selectivity (score cap, tau, regime abstention on BTC ret24 / vol24 terciles, side drop), dev folds, 3 seeds', ref: RQ-20261101-b602-01, verdict: 'pass, ONE dev candidate (hand-graded 11-15 by ML-PRIMARY-2 from b602_result.json, identical in 3 runs): C_vol24_abstain_t0 (skip the lowest vol24 tercile) +0.0133 R/decision over base (threshold 0.0117), 6/8 folds, 4/4 years, min fold n 2,098; all other arms no_win. Candidate only, for the ONE combined held-out read (ML-BAR-ONE-READ) with cost gate 0.06 (b606-01 PASS, hand-graded 11-15); bracket 2/4 is NOT a candidate (b601-01 FAIL). The held-out year may be re-read on the deflated bar with n_tries recorded (HOLDOUT-DEFLATED-REUSE, operator 2026-11-05).'}
     - {lever: 'ridge vs LightGBM, same features + target (ML-F32)', ref: RQ-20261112-4654-09, verdict: 'fail (paired ridge-raw -0.1001, CI95 [-0.254, +0.053], k 10, n 851; research/results/RQ-20261112-4654-09/43462223910.jsonl)'}
+    - {lever: 'ML-BAR-ONE-READ: frozen v1 + both dev candidates (vol24 low-tercile abstention + cost gate 0.06) on the held-out year, deflated bar (read 12)', ref: RQ-20261115-a474-04, verdict: 'FAIL by rule (research/results/RQ-20261115-a474-04/43703425338.jsonl): VG -0.0386 R/decision (n 5,324, se 0.0143) vs v1 as served +0.0073 (n 11,240); V alone -0.0110 (n 6,985), G alone -0.0336 (n 5,636). The filters abstained far more on the held-out year than on dev (V 51 percent vs a 33 percent dev tercile, G 64 percent): the held-out year is lower-vol than dev, and the abstained rows were the profitable ones. Both dev candidates close for v1.'}
   levers_ahead:
     - lever: diagnose the served -0.13 R window (drift vs regime vs cost)
       ref: CRYPTO-ENTRY-RETRAIN-UNIT
@@ -401,7 +402,7 @@ lines:
       pass: Tier-3 widening packet (a real-money widening needs its own population test - operator 2026-11-04)
       fail: per-account symbol map is replaced by the recorded result; bybit_2 keeps the tested 5
   next_weeks:
-    W47: 'RESID-ENTRY graded FAIL (4654-01); b602-01 hand-graded PASS with one dev candidate (vol24 low-tercile abstention); regime-as-feature dropped (btc_ret24 / btc_vol24 / breadth_up24 are already ENTRY features); b606-01 PASS (gate_0.06), b601-01 FAIL (no bracket cell); next: register ML-BAR-ONE-READ (vol24-abstain t0 + cost gate 0.06 on frozen v1) on the held-out year, deflated bar with n_tries, rule first'
+    W47: 'RESID-ENTRY FAIL (4654-01); b602/b606 dev candidates PASS but the combined held-out read a474-04 FAIL (11-15, VG -0.039 vs base +0.007); every ranked ENTRY lever tried so far has failed its held-out read; next: population test (filter registered first) and the weekly forward grade as the demotion read'
     W48: 'combined held-out read under ML-LEVER-PLAN if any lever passed dev folds; weekly forward grade continues'
     W49: 'population test (filter registered first)'
     W50: 'review the forward grade series as the demotion read'
@@ -795,6 +796,7 @@ lines:
       - {record: docs/plans/ML-ROADMAP-MECE-2026-11.md § 4, provenance: QUOTED}
   levers_tried:
     - {lever: VOI census (Stage-0 solo streams, 5 crypto real-money/prop pairs, two windows), ref: RQ-20261114-82fd-02, verdict: 'PASS (research/results/RQ-20261114-82fd-02/43661153472.jsonl): material concurrency on ALL 5 pairs in both windows -- share of trades overlapping another leg 27-54 percent (ADA 54/51, SOL-bybit_2 33/33, XRP 27/37, ETH-prop 27/31, SOL-prop 42/41 percent prior/record), many opposite-direction overlaps (ADA 35+66 prior). The aggregator ceiling is NOT small: build AGG-HARNESS + the A0..A4 rule arms.'}
+    - {lever: 'AGG-HARNESS rule arms A0 today''s rule vs A1 1/N, A2 best-single, A3 forecast combination, A4 matched random (5 census pairs, two windows)', ref: RQ-20261115-a474-02, verdict: 'FAIL by rule (research/results/RQ-20261115-a474-02/43692033044.jsonl): no arm beats A0 in both windows. Prior year net R A0 16.4 / A1 15.5 / A2 37.3 / A3 31.6 (A4 p95 56.4); record year A0 38.9 / A1 26.3 / A2 30.4 / A3 30.7 (A4 p95 68.3). Disclosed: A0 gives the XRP pair''s whole budget to the first leg by name on a same-bar tie (the equal-split fix did not land in #26237); bound <= ~1 R on one pair vs A0''s 8.2 R record-year lead, verdict unchanged. D5 stays the slices/election rule; no learned aggregator.'}
   levers_ahead:
     - lever: VOI census (Stage-0 concurrent same-symbol trades on the 5 crypto real-money pairs, two windows)
       ref: 'RQ-20261114-82fd-02 (ML-PRIMARY; RULE-RQ20261114-82fd-02-D5-VOI; folds PI-20261104-BCZDXJNR-0002 TODO 1)'
@@ -811,7 +813,7 @@ lines:
       baseline: today's slices, 1/N, best-single, net of cost
       pass: Tier-3 allocation change
       fail: slices stay
-  next_weeks: {W47: '82fd-02 PASS (11-15) -> AGG-HARNESS built (scripts/research/d5_aggregator_arms.py) + RQ-20261115-a474-02 registered (11-15); grade on landing', W48: 'a474-02 PASS -> register learned arm A5 vs the passing rule arm; FAIL -> rule-exhausted', W49: none, W50: none}
+  next_weeks: {W47: 'a474-02 FAIL (11-15): no rule arm beats today''s slices/election rule in both windows; the learned aggregator is not built', W48: none, W49: none, W50: none}
   exhaustion: the census shows concurrency too rare to move net P&L (threshold set in its own registration).
   owner: AM-ML
   plan_items: []
