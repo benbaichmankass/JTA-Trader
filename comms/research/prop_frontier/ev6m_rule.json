@@ -1,0 +1,44 @@
+{
+ "rule_id": "RULE-PROP-FRONTIER-EV6M-20261112",
+ "registered_at": "2026-11-12",
+ "registered_by": "lane PROP-FRONTIER-RESEARCH (session_01AFoLuKEZCj8H39D6uc5yt4)",
+ "registered_before_run": "This file is committed and pushed before scripts/research/prop_frontier_ev6m.py is run for the first time; the run's verdict.json names this file.",
+ "question": "For a prop plan that passes the device-free automation filter (docs/research/prop-frontier-2026-11-12.md section 2) and has at least one fitting Stage-0-PASS leg, is the 6-month expected net USD per purchase positive, above the zero-edge null, on a book whose edge is distinguishable from zero?",
+ "scope": {
+  "firms_screened": ["velotrade"],
+  "why_only_velotrade": "The only firm that (a) passes the hard filter on first-party text, (b) lists instruments our Stage-0-PASS legs trade (SPY, QQQ, IWM, gold, silver, WTI; 1P velotrade.com/blog/velotrade-review, fetched 2026-11-12), (c) allows overnight and weekend holds, which every fitting leg needs (shortest p10 hold 6 h), and (d) has a drawdown shape prop_ev_sim.py can model (static). Blue Guardian passes (a) via MT5-EA-on-VPS but its 6% trailing drawdown cannot be simulated by prop_ev_sim.py (raises on non-static) -> not_attempted, recorded with a clears_when.",
+  "plans": "Velotrade CLASSIC 1-Step $5k and PRO 1-Step $5k (the two rulesets in config/prop_rulesets; CLASSIC 2-Step has no two-phase support in the simulator -> not_attempted)."
+ },
+ "rulesets": ["velotrade_classic_1step", "velotrade_pro_1step"],
+ "books": {
+  "VELO_ALL": ["spy_trend_long_1d", "qqq_trend_long_1d", "qqq_pullback_1h", "iwm_trend_long_1d", "gld_pullback_1d", "gld_pullback_1h", "slv_trend_1h", "slv_pullback_1d", "uso_trend_1h"],
+  "VELO_1H": ["gld_pullback_1h", "slv_trend_1h", "qqq_pullback_1h", "uso_trend_1h"],
+  "VELO_1D": ["spy_trend_long_1d", "qqq_trend_long_1d", "iwm_trend_long_1d", "gld_pullback_1d", "slv_pullback_1d"]
+ },
+ "book_selection": "Every leg in config/strategies.yaml whose comms/strategy_evidence/<leg>.json decision_rule verdict is 'pass' (re-read 2026-11-12) AND whose underlying Velotrade lists first-party. One leg per (underlying, strategy family): iaum_pullback_1d and mgc_pullback_1d duplicate gld_pullback_1d's gold-pullback-1d family and are excluded; tqqq/qld/gdx/tlt/ief/scha underlyings are not listed by Velotrade; mes_trend_long_1d's record verdict is 'fail'; spy_pullback_1h and tlt_pullback_1h fail.",
+ "primary_book": "VELO_ALL",
+ "sim": {
+  "engine": "scripts/research/prop_ev_sim.py (path mode)",
+  "horizon_days": 182,
+  "seeds": [1, 2, 3],
+  "lives": 1000,
+  "risk_pct_primary": 0.005,
+  "risk_pct_sensitivity": [0.01],
+  "sizing": "start",
+  "dd_switch_frac": 0.8,
+  "lev_cap": 5,
+  "funded_start": "fresh",
+  "window_start": "2025-06-01"
+ },
+ "costs": {
+  "commission_bps_rt": 6.0,
+  "slippage_bps_rt": 3.0,
+  "swap_daily": 0.0005,
+  "swap_model": "dxtrade",
+  "source": "Velotrade 1P velotrade.com/blog/velotrade-review (fetched 2026-11-12): commission 0.03% per side on index ETFs and stocks (0.01% on commodities: charging 0.03% on gold/silver/WTI legs is deliberately conservative); 'An overnight fee of 0.05% of the notional value applies to positions still open at 00:30 UTC on crypto, indices, commodities and single stocks, including weekends.' Slippage 3 bps RT as in RQ-20261112-09d2-06."
+ },
+ "predicate": "BUYABLE iff, for the primary book at the primary risk on that ruleset: min over seeds of ev_net_usd_per_life > 0 AND mean over seeds > the mean zero-edge-null EV (same ledgers re-centred to mean net R 0 under the same costs) AND the book's pooled net-R 95% CI lower bound (prop_gate.edge_ci, z 1.96) > 0. Every other book and the 1% risk arm are descriptive only and cannot make a plan buyable.",
+ "proxy_caveat": "Ledgers are on the ETF the leg was measured on (GLD for gold, SLV for silver, USO for WTI); the Velotrade CFD on the same underlying is a proxy transfer. A BUYABLE verdict would still need the leg's own Stage-0 re-run on the CFD price series before any money moves.",
+ "on_pass": "Buy-point condition in the memo's section 6 becomes live; operator decides the purchase.",
+ "on_fail": "No purchase. The memo names the iteration that could change the answer (more trades per 6 months, lower overnight cost) as a pipeline item."
+}

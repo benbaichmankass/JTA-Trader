@@ -62,7 +62,7 @@ arithmetic over the table.
 > `risk_pct 0.02` via the round-up relaxation ($74.59 price / $5.28 stop).
 > MEASURED 2026-09-10
 > by running `RiskManager.position_size` over **all 59** of `gdx_pullback_1d`'s
-> observed long setups since 2026-06-01 at the live balance ($200.22,
+> observed long setups since 2026-06-01 at the live balance ([balance removed],
 > `risk_pct 0.02`): **0 of 59 size.** GDX is **$99.43** with a **7.665** median
 > stop against a **$6.0066** ceiling. Nothing in the code changed.
 >

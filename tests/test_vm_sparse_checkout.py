@@ -112,8 +112,11 @@ def test_patterns_file_is_versioned_and_scoped():
     lines = [ln.strip() for ln in PATTERNS.read_text().splitlines()
              if ln.strip() and not ln.startswith("#")]
     assert lines[0] == "/*", "first pattern must include everything"
+    # LTR-GRADER-COVERAGE (b), 2026-11-14: the generated block may RE-INCLUDE exact committed candle files under
+    # comms/research (tests/test_ltr_candle_allowlist.py pins them: each exists and is a .csv). Nothing else may.
     for ln in lines[1:]:
-        assert ln.startswith("!/comms/research/"), f"exclusion escapes comms/research: {ln}"
+        assert ln.startswith("!/comms/research/") or (ln.startswith("/comms/research/") and ln.endswith(".csv")
+                                                      and "*" not in ln), f"pattern escapes comms/research: {ln}"
 
 
 def test_sparse_sync_removes_caches_keeps_runtime_and_is_idempotent(world):

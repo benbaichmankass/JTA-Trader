@@ -198,6 +198,14 @@ no action touches a trade that already exited, CLOSE/BE/TRAIL availability, no-o
 
 - **Re-scope (operator override, 2026-11-05 ~17:08Z, verbatim: "Why does it need to wait for November? That's not the workflow - we iterate in the data we have till we find what works, we don't wait for new months of data").** The single confirming read of a frozen config is NOT the 2026-11 month. `--stage xs` reads the first 100 USDT-M perps OUTSIDE the 60-perp training pool over their whole history (`RQ-20261105-c692-13` for the c692-12 config, `-14` for the c692-11 config), claimed once each via `holdout_lock` with the symbol list; ENTRY = the pool-trained final fit, MANAGE heads = the pool dev trades, margin and actions frozen. It is a cross-sectional holdout (dates overlap training), so it is correlated evidence by regime and is reported by era. PASS needs pooled delta > 0, CI95 lower > 0 and delta > 0 in the 2022-01..2025-09 and 2025-10+ eras. November data is extra monitoring, never a gate.
 
+## 4b. MANAGE lever M1: signal-reversal CLOSE (registered 2026-11-12, lane ML-DECISION-MODELS, before any run)
+
+Unit `RQ-20261112-0be0-01`, harness `scripts/research/ml_decision_manage_reverse.py` (reuses 4a's base trades, simulator, cost stack,
+bootstrap and holdout claim). At each 4h check-in the frozen ENTRY model is re-scored at that bar (the same walk-forward OOS / final-fit
+predictions that opened the trades); the trade CLOSES at the next bar open under one of three rules (`own_le0`, `opp_gt_tau`, `either`),
+chosen on the 8 dev folds. No new learned parameter. Held-out = 2025-10-01..2026-09-30, the 6th MANAGE read on that window, graded at the
+ledger's deflated bar (99.16% lower bound > 0). Gates this adds or changes: none.
+
 ## 5. If none passes — the levers, in order
 
 (1) horizon (4 h / 72 h) and decision cadence; (2) the label's bracket (BRACKETS composed); (3) the feature block

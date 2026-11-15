@@ -157,7 +157,7 @@ fractional shares**. A $400 instrument buys **zero** shares whatever its
 compat-matrix verdict — and *a `ROUTE` verdict is neither a track record nor
 affordability*; it scores a bootstrapped R-ledger and never runs this wall.
 
-**Inputs, stated:** equity **$200.22** (read 2026-09-10) · `_MARGIN_SAFETY_BUFFER
+**Inputs, stated:** equity **[balance removed]** (read 2026-09-10) · `_MARGIN_SAFETY_BUFFER
 = 0.9` · leverage **1.0** · `risk_pct = 0.02` ⇒ risk budget **$4.0044** (an
 *upper* bound — `confidence_scalar` only shrinks it) and **max notional
 $180.20**.

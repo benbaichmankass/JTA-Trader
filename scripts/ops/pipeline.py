@@ -158,7 +158,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:  # so `src.runtime.work_read` (WSD-S4) resolves when run as a script
@@ -589,6 +589,32 @@ def version_of(item_id: str, store: Path = STORE) -> str | None:
     return read_log(store).sources.get(item_id)
 
 
+def _unblock_contract(item: dict, prior: dict | None) -> None:
+    """UNBLOCK-WATCH (operator 2026-11-12): an item waiting on an event carries a structured ``due_when.conditions``
+    list (grammar: ``src/runtime/unblock_conditions.py``) + an owner, not prose only.
+    GATE (decision: 2026-11-12 operator popup "Yes: refuse it (Recommended)"): REFUSES a NEW event item, or an update
+    that CHANGES ``due_when``, whose block has no machine-checkable condition and no explicit ``manual:<text>``, while
+    ``config/unblock_watch.yaml::refuse_unconditioned`` is true (the same precedent as the due_when refusal above). An
+    untouched legacy item only warns; closing (done/killed) is never refused. Remove: set refuse_unconditioned: false."""
+    try:
+        from src.runtime import unblock_conditions as uc  # noqa: PLC0415
+        blk = uc.pipeline_block(item)
+        if blk is None:
+            return
+        probs = uc.problems(blk)
+    except Exception:  # noqa: BLE001  # allow-silent: the contract check is advisory; a failure must not block a write
+        return
+    if not probs:
+        return
+    msg = (f"pipeline: id {item.get('id')!r} waits on an event without a full structured block: {'; '.join(probs)}. "
+           "Add due_when.conditions, e.g. [\"pr_merged:123\"] (kinds: pr_merged pr_closed deployed row_state "
+           "unit_result operator_answer date data_n; manual:<text> last).")
+    changed = prior is None or (prior.get("due_when") or {}) != (item.get("due_when") or {})
+    if changed and uc.refusable(blk) and uc.refuse_unconditioned():
+        raise PipelineError(msg)
+    print(msg, file=sys.stderr)
+
+
 def append(item: dict, store: Path = STORE, *, intent: str,
            based_on: str | None = None) -> dict:
     """Validate, then write one NEW record file. Never rewrites history.
@@ -651,6 +677,7 @@ def append(item: dict, store: Path = STORE, *, intent: str,
     else:
         prior = read_log(store).items.get(item["id"])
 
+    _unblock_contract(item, prior if intent == "update" else None)
     if intent == "new" and prior is not None:
         raise PipelineError(
             f"id {item['id']!r} already exists (state={prior.get('state')!r}, "
@@ -730,7 +757,15 @@ def _session_tag(session_ref: str) -> str:
     return slug[-8:] if slug else "UNSCOPED"
 
 
-def mint_id(session_ref: str, *, today: date | None = None, store: Path = STORE) -> str:
+def _live_store_ids() -> list[str]:
+    """Every item id in the LIVE work store, read over its API (scripts/ops/work.py). Raises on any failure."""
+    from src.runtime import work_read as _wr
+    w = _wr._work_cli()
+    return [i["id"] for i in w._all_items(None)]
+
+
+def mint_id(session_ref: str, *, today: date | None = None, store: Path = STORE,
+            live_ids: Callable[[], Iterable[str]] | None = None) -> str:
     """Allocate a NEW pipeline id that no OTHER concurrent session can also
     pick, by scoping the counter to the CALLING session rather than to a
     shared "next free number".
@@ -769,7 +804,24 @@ def mint_id(session_ref: str, *, today: date | None = None, store: Path = STORE)
     tag = _session_tag(session_ref)
     date_str = _today(today).strftime("%Y%m%d")
     prefix = f"PI-{date_str}-{tag}-"
-    existing = read_log(store).items
+    existing = set(read_log(store).items)
+    # 2026-11-14 (manager, PI-20261114-TFZXAKEK-0001 re-issued): after the WSD-S4 freeze a session
+    # with no local work_store.db reads the FROZEN export files here, which lag the live store, so the
+    # counter re-issued an id the store already held (append() refused it, safely). When the canonical
+    # store is frozen and not local, also ask the LIVE store; if it cannot be read, refuse LOUDLY rather
+    # than mint from a stale export.
+    from src.runtime import work_read as _wr
+    in_test = (live_ids is None and bool(os.environ.get("PYTEST_CURRENT_TEST"))
+               and not os.environ.get("WORK_STORE_URL"))   # tests never reach the live API (work_read._work_cli)
+    if (not in_test and _wr.is_canonical(store, _wr.PIPELINE_STORE) and _wr.frozen(_wr.REPO)
+            and _wr.local_store() is None):
+        try:
+            existing |= set((live_ids or _live_store_ids)())
+        except Exception as exc:  # noqa: BLE001 -- the message is the payload
+            raise PipelineError(
+                "mint_id: the canonical store is frozen and this checkout has no work_store.db, so the "
+                f"local export is stale, and the live store could not be read ({type(exc).__name__}: {exc}). "
+                "Refusing to mint from the stale export; retry (the API often 502s), or mint on the VM.") from exc
     used = [
         int(item_id[len(prefix):])
         for item_id in existing
@@ -1007,6 +1059,36 @@ def due_bucket(item: dict, today: date | None = None) -> str | None:
 
 def due(items: Iterable[dict], today: date | None = None) -> list[dict]:
     return [i for i in items if is_due(i, today)]
+
+
+# ── VM change ledger fold-backs (VM-CHANGE-LEDGER, operator 2026-11-12 "Build it") ─────────────────────────────
+# A direct change on the VM (src/runtime/ops_actions.py ledger) whose `durable_in_repo` is still `pending` is due
+# work: lasting config must be re-expressed in the repo's deploy files, or marked not_needed with a reason. The
+# ledger IS the record (the ops jobs store, extended); this function only computes due-ness over it, in the same
+# pipeline-item shape `due()` returns, so the brief surfaces it as a due item. No second register, nothing stored.
+
+def vm_ledger_due(view: dict | None) -> list[dict]:
+    """Pipeline-shaped DUE items for every ledger entry with ``fold_due`` (pending and older than the ledger's
+    ``fold_due_after_h``). ``view`` is ``ops_actions.ledger_view()``; None / unreadable -> []. The caller renders
+    the read_state, so an unread ledger is never shown as "nothing due"."""
+    if not isinstance(view, dict) or view.get("read_state") != "measured":
+        return []
+    out = []
+    for e in view.get("entries") or []:
+        if not e.get("fold_due"):
+            continue
+        out.append({
+            "id": f"VMLEDGER-{e.get('job_id')}",
+            "what": f"VM change awaiting fold-back to the repo: {e.get('summary') or e.get('action')}",
+            "state": "routed", "routed_to": "VM-CHANGE-LEDGER",
+            "origin": {"kind": "deploy", "ref": e.get("job_id"),
+                       "rerun": "GET /api/bot/ops/ledger?pending=1"},
+            "due_when": {"kind": "observation",
+                         "clears_when": "ledger-fold sets durable_in_repo to folded (with the PR/path) or not_needed"},
+            "next_action": "dispatch_lane",   # a fold-back is lane work (NEXT_ACTIONS); the brief prints `fold_back`
+            "age_h": e.get("age_h"), "session": e.get("session"), "touched": e.get("touched") or [],
+        })
+    return out
 
 
 def unrouted(items: Iterable[dict], today: date | None = None) -> list[dict]:
@@ -1895,7 +1977,11 @@ def main(argv: list[str] | None = None) -> int:
         print(v if v else "")
         return 0 if v else 1
     if args.mint_id:
-        print(mint_id(args.mint_id, store=store))
+        try:
+            print(mint_id(args.mint_id, store=store))
+        except PipelineError as exc:
+            print(f"pipeline: refused -- {exc}", file=sys.stderr)
+            return 1
         return 0
     if args.check:
         return _check(store)

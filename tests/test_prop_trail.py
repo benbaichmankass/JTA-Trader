@@ -565,3 +565,27 @@ def test_a_corrupt_feed_amends_nothing_sl_or_tp_and_alerts_once(tmp_path):
     assert len(first.alerts) == 1 and pt.IMPLAUSIBLE_FEED in first.alerts[0] and second.alerts == []
     good = run(a, api, "live", tmp_path)                              # a sane feed: trailing resumes
     assert a.calls and not good.alerts
+
+
+def test_a_corrupt_feed_still_applies_an_approved_sl_floor(tmp_path):
+    # PROP-FLOOR-ON-BAD-FEED: the 2026-11-12 shape, a floor approved on the ticket while the feed carries a
+    # corrupt bar. The floor reads no candles, so it steps (bounded, tighten-only, quote-guarded) anyway.
+    class FloorApi(Api):
+        def all_tickets(self, account_id):
+            return [{"ticket_id": "t1", "strategy": "trend_donchian_sol_prop", "entry": 100, "sl": 95,
+                     "signal_time": T0.isoformat(), "sl_floor": 103.0}]
+    a, api = Adapter([pos()], guard=False), FloorApi()
+    bad = bars([(110, 30, 109)], forming=(109, 108, 108.5))
+    res = run(a, api, "live", tmp_path, c=bad)
+    assert a.calls and a.calls[0][1] > 95.0 and a.calls[0][1] <= 103.0   # tightened toward the floor, never past
+    assert any(pt.IMPLAUSIBLE_FEED in x for x in res.alerts)            # the bad feed is still flagged
+
+
+def test_a_corrupt_feed_ignores_a_floor_that_would_loosen(tmp_path):
+    class LooseApi(Api):
+        def all_tickets(self, account_id):
+            return [{"ticket_id": "t1", "strategy": "trend_donchian_sol_prop", "entry": 100, "sl": 95,
+                     "signal_time": T0.isoformat(), "sl_floor": 90.0}]
+    a = Adapter([pos()], guard=False)
+    run(a, LooseApi(), "live", tmp_path, c=bars([(110, 30, 109)], forming=(109, 108, 108.5)))
+    assert a.calls == []

@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "Manager dispatch for lane GATE-CI-LANDING (acting with operator authority): \"it changes what can merge, so AM-DEVOPS merges it.\" Change itself is the operator's 2026-11-12 decision SYSTEM-ACTION-CONCURRENCY-LANES: MAKE REPORT-ONLY (system-actions.yml / system_action_route.py: every action gets its own concurrency group; overlap reported in the route job and the outcome comment). Declared Tier 2 because it changes how VM-mutation runs are scheduled. Revert: git revert.",
+  "why": "Stop system-actions queueing and dropping runs behind one shared lane; report overlapping runs instead (operator decision 2026-11-12)."
+}

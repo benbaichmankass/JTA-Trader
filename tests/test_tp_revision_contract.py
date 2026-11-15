@@ -265,3 +265,40 @@ def test_adapter_capability_flags_match_the_paths():
     from src.prop.platform.dxtrade import rollout_tighten_mismatch
     bad = rollout_tighten_mismatch("long", 95.0, 110.0, 96.0, 107.5, {"bid": 109, "ask": 109.1})
     assert any("take profit unchanged" in b for b in bad)
+
+
+# ── PROP-VELO-SOL-TP-DIVERGE: "sl_only" keeps the structure exit off the prop TP ──────────────────────────
+def _fake_structure_tp(calls):
+    def f(*a, **k):
+        calls.append(1)
+        return tr.TpRevision(tp=104.0, rule="structure_exit", reason="structure_exit: level 104 (+4.00R)",
+                             clamped=False, detail={})
+    return f
+
+
+def test_prop_sl_only_structure_never_moves_the_tp_and_the_declared_rule_keeps_it(tmp_path, fixed_rule, monkeypatch):
+    calls: list = []
+    monkeypatch.setattr(pt, "_structure_tp_revision", _fake_structure_tp(calls))
+    a, api = TpAdapter([_pos()]), Api()
+    _run(a, api, "live", tmp_path, {**SOL, **fixed_rule, "structure_exit": "pivot=5;sl_only"})
+    assert calls == []                                               # the structure TP is never consulted
+    assert [tp for _sl, tp, _arm in a.calls if tp is not None] == [107.5]   # the declared rule's target
+
+
+def test_prop_sl_only_without_a_runnable_rule_leaves_the_resting_tp(tmp_path, monkeypatch):
+    calls: list = []
+    monkeypatch.setattr(pt, "_structure_tp_revision", _fake_structure_tp(calls))
+    a, api = TpAdapter([_pos()]), Api()
+    # ml_entry's shape: a rule the prop path cannot run (not in RULES) + an sl_only structure exit
+    _run(a, api, "live", tmp_path, {**SOL, "tp_revision": {"rule": "ml_first_passage", "extend_only": True},
+                                    "structure_exit": "pivot=5;sl_only"})
+    assert calls == [] and all(tp is None for _sl, tp, _arm in a.calls)
+    assert a.positions[0].take_profit == 130.0
+
+
+def test_prop_full_structure_exit_still_owns_the_tp(tmp_path, monkeypatch):
+    calls: list = []
+    monkeypatch.setattr(pt, "_structure_tp_revision", _fake_structure_tp(calls))
+    a, api = TpAdapter([_pos()]), Api()
+    _run(a, api, "live", tmp_path, {**SOL, "structure_exit": "pivot=5"})
+    assert calls and [tp for _sl, tp, _arm in a.calls if tp is not None] == [104.0]

@@ -32,6 +32,7 @@ class _Pkg:
             meta = {}
             if conviction is not None:
                 meta["conviction"] = {"conviction": conviction}
+                meta["conviction_influencing"] = {"conviction": conviction}
         self.meta = meta
 
 

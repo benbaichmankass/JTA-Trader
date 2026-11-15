@@ -69,3 +69,11 @@ def test_unexplained_and_population():
 def test_journal_row_shape():
     row = {"id": 9, "account_id": "bybit_1", "strategy": "ada", "symbol": "S", "direction": "long"}
     assert _v(sm.classify([row], {"bybit_1": ["ada"]}), 9)["side"] == "buy"
+
+
+def test_api_positions_row_package_id_is_read():
+    """POSITIONS-API-ORDER-PACKAGE-ID: an /api/bot/positions row (orderPackageId) matches exactly, like a journal row."""
+    def api(i, acct, pkg):
+        return {"id": i, "account": acct, "pattern": "ada", "symbol": "ADAUSDT", "side": "sell", "orderPackageId": pkg}
+    res = sm.classify([api(1, "bybit_1", "A"), api(2, "bybit_2", "A")], PROMOTED)
+    assert _v(res, 1)["verdict"] == sm.CLOSE_DUPLICATE and _v(res, 1)["match"] == sm.MEASURED

@@ -1,5 +1,5 @@
 ---
-description: Run the autonomous ML lifecycle review — trainer health, per-model status, promotion/demotion recommendations against the 3-stage ladder (candidate→shadow→advisory), and experiment proposals.
+description: Run the autonomous ML lifecycle review — trainer health, per-model status, promotion/demotion recommendations (offline evidence → advisory directly; advisory → shadow on demotion; no stage step), and experiment proposals.
 argument-hint: "[optional free-form hint, e.g. 'focus on btc-regime models']"
 ---
 
@@ -36,14 +36,17 @@ prediction stream and its joined realized-trade outcomes, grades
 trainer-center health (`trainer_service`, `trainer_datasets`,
 `trainer_registry`, `trainer_models`), emits a per-model status line
 for **every** model in `python -m ml list-models`, identifies
-promotion / demotion candidates against the 3-stage ladder (candidate→shadow→advisory), proposes
+promotion / demotion candidates (offline evidence → advisory directly; no shadow step), proposes
 AI experiments to expand coverage, drains
 open rows in
 `docs/claude/work/PIPELINE.jsonl` (the archived review backlog is retired), and posts a one-line update to
 the Claude channel.
 
-Promotion past `shadow` is **Tier-3** — proposed only. The operator
-decides.
+Promotion to `advisory` is **Tier-3**, decided on committed offline
+evidence with **no shadow step** (operator, 2026-11-12: *"There is nothing in
+between proving edge on back testing and real money. Absolutely no steps."*)
+— data-backed per canonical § "Data-backed Tier-2/3 decisions". This command
+proposes; it does not run `promote-stage`.
 
 ## What it produces
 

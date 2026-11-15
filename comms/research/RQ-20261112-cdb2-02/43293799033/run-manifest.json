@@ -1,0 +1,87 @@
+{
+  "unit": "RQ-20261112-cdb2-02",
+  "run_id": "43293799033",
+  "commit_sha": "f2488a4794109abd8bae3794160fdeb17e763400",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/43293799033",
+  "timeout_minutes": 120,
+  "runner": {
+    "cpu_model": "AMD EPYC 7763 64-Core Processor",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1019-azure",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261101.186.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "d5aeef1fabd2",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_lever_ablation.py",
+        "--leg",
+        "slv_trend_1h",
+        "--arm",
+        "A=tp_r=6.0",
+        "--arm",
+        "S_open=tp_r=6.0;--skip-hours=13,14",
+        "--arm",
+        "S_close=tp_r=6.0;--skip-hours=19,20",
+        "--arm",
+        "S_both=tp_r=6.0;--skip-hours=13,14,19,20",
+        "--arm",
+        "S_flat20=tp_r=6.0;--flat-at-utc=20:00",
+        "--days",
+        "2200",
+        "--start",
+        "2019-01-01",
+        "--end",
+        "2026-10-31 23:59",
+        "--non-crypto-source",
+        "dukascopy",
+        "--grade",
+        "sweep",
+        "--baseline",
+        "A",
+        "--delta-r",
+        "8.0",
+        "--folds",
+        "4",
+        "--fold-majority",
+        "3",
+        "--n-floor",
+        "100",
+        "--out",
+        "comms/research/RQ-20261112-cdb2-02/43293799033"
+      ],
+      "log": "comms/research/RQ-20261112-cdb2-02/43293799033/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 9.4
+    }
+  ],
+  "all_ok": true
+}

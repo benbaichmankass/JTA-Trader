@@ -445,11 +445,14 @@ def _ib_breaker_report(fetcher) -> dict:
             name = "armed"
         else:
             name = "disabled"
-        return {"ib_breaker": {
+        out = {
             "state": name,
             "tripped": bool(state.get("tripped")),
             "skipped": int(state.get("skipped") or 0),
-        }}
+        }
+        if state.get("pre_trip"):  # present only when the breaker PRE-tripped
+            out["pre_trip"] = str(state["pre_trip"])
+        return {"ib_breaker": out}
     except Exception:  # noqa: BLE001
         return {}
 
@@ -467,6 +470,32 @@ def _ib_queue_timeout_seconds() -> float:
         return float(_IB_FETCH_QUEUE_TIMEOUT_S)
     except Exception:  # noqa: BLE001
         return 29.0
+
+
+def _ib_link_down(client) -> Optional[str]:
+    """Why the IB client already reports it cannot answer, or None (EXIT-EVAL-IB-OUTAGE-STALL).
+
+    * ``IBKR connectivity lost (Error 1100)`` -- the gateway lost IBKR's servers
+      while our socket stays up, so a fetch waits out its full queue timeout
+      (measured 2026-11-13 05:17:53Z: 29.0 s, then a 69 s exit-eval interval).
+    * ``the IB socket is disconnected`` -- a handle exists but reads disconnected.
+
+    Computed fresh on every call from the client's own state, so it CLEARS by
+    itself the moment 1101/1102 arrives or the client reconnects. Anything it
+    cannot read (no client, a stand-in, an exception) is None: an unknown state
+    never pre-trips. Never raises.
+    """
+    try:
+        ibc = getattr(client, "_client", None)
+        if ibc is None:
+            return None
+        if getattr(ibc, "ibkr_link_lost", False) is True:
+            return "IBKR connectivity lost (Error 1100)"
+        if getattr(ibc, "_ib", None) is not None and getattr(ibc, "connected", True) is False:
+            return "the IB socket is disconnected"
+    except Exception:  # noqa: BLE001
+        return None
+    return None
 
 
 def ib_breaker_armed() -> bool:
@@ -805,15 +834,34 @@ def _build_monitor_ohlcv_fetcher(settings: dict):
         if ib_routed:
             _breaker["armed"] = armed
 
+        # PRE-TRIP (EXIT-EVAL-IB-OUTAGE-STALL, 2026-11-13): the client ALREADY
+        # reports it cannot answer (Error 1100, or a disconnected socket), so this
+        # fetch would only wait out the queue timeout and return None. Trip before
+        # paying that wait. Same breaker, same rollback, same per-pass scope, same
+        # candles=None (could not look, retried next pass); non-IB packages are
+        # untouched because `ib_routed` is False for them.
+        if armed and ib_routed and not _breaker["tripped"]:
+            why = _ib_link_down(client)
+            if why:
+                _breaker["tripped"] = True
+                _breaker["pre_trip"] = why
+                logger.warning(
+                    "monitor: IB breaker PRE-TRIPPED on %s/%s — %s, so IB-routed "
+                    "fetches this pass are skipped instead of each waiting up to "
+                    "%.1fs. Clears when connectivity returns (1101/1102) or the "
+                    "client reconnects. Rollback: EXIT_LOOP_IB_BREAKER_DISABLED.",
+                    symbol, timeframe, why, _ib_queue_timeout_seconds(),
+                )
+
         if armed and ib_routed and _breaker["tripped"]:
             _breaker["skipped"] += 1
             logger.warning(
                 "monitor: IB breaker OPEN — skipping %s/%s this pass "
-                "(the pinned IB queue already timed out once; this package "
-                "gets the candles=None it would have got in %.1fs). "
-                "Retried next pass. Skipped so far this pass: %d.",
-                symbol, timeframe, _ib_queue_timeout_seconds(),
-                _breaker["skipped"],
+                "(%s; this package gets the candles=None it would have got in "
+                "%.1fs). Retried next pass. Skipped so far this pass: %d.",
+                symbol, timeframe,
+                _breaker.get("pre_trip") or "the pinned IB queue already timed out once",
+                _ib_queue_timeout_seconds(), _breaker["skipped"],
             )
             return None
 

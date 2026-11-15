@@ -32,6 +32,11 @@ FAMILIES = {
     "F6": ["f6_bars_since_session_open", "f6_last_session_gap_atr", "f6_gap_seen168"],
     "F5": ["f5_skew24", "f5_kurt24", "f5_semivar_ratio24", "f5_park24", "f5_er24", "f5_since_hi168", "f5_since_lo168",
            "f5_dist_hi168_atr", "f5_dist_lo168_atr", "f5_how", "f5_hrs_to_funding"],
+    # F7 trend alignment (row TREND-ALIGNMENT-FEATURE step 5): the TREND-ALIGN-V1 directional state on the decision
+    # (1h) bar and the completed-1d bar. The pooled model chooses its own side (ml_decision_entry fits net_long and
+    # net_short), so these are the SIGNED/DIRECTIONAL trend features, not a with/counter label (which needs a side).
+    "F7": ["f7_adx", "f7_dmi_diff", "f7_trend_up", "f7_trend_dn", "f7_adx_d1", "f7_dmi_diff_d1",
+           "f7_trend_up_d1", "f7_trend_dn_d1", "f7_agree_up", "f7_agree_dn", "f7_present"],
 }
 
 
@@ -160,13 +165,65 @@ def f6(k: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+# F7 constants mirror the regime detector / TREND-ALIGN-V1 (asserted equal in the self-test).
+_F7_ADX_MIN = 25.0
+
+
+def _wilder_dmi(h: pd.Series, lo: pd.Series, c: pd.Series, period: int = 14) -> pd.DataFrame:
+    """Wilder +DI / -DI / ADX (percent) via the ONE research formula (scripts/research/trend_alignment.dmi, which the
+    regime detector's wilder_adx is pinned equal to). Index-aligned to the inputs."""
+    import trend_alignment as _ta
+    df = pd.DataFrame({"high": h, "low": lo, "close": c})
+    return _ta.dmi(df, period)[["pdi", "mdi", "adx"]]
+
+
+def _trend_flags(d: pd.DataFrame) -> pd.DataFrame:
+    """SIGNED trend state from a DMI frame: adx, (pdi-mdi)/100, up/down flags (adx>=25 and the DI sign)."""
+    diff = (d["pdi"] - d["mdi"]) / 100.0
+    strong = d["adx"] >= _F7_ADX_MIN
+    up = (strong & (d["pdi"] > d["mdi"])).astype(float)
+    dn = (strong & (d["mdi"] > d["pdi"])).astype(float)
+    return pd.DataFrame({"adx": d["adx"] / 100.0, "diff": diff, "up": up, "dn": dn}, index=d.index)
+
+
+def f7(k: pd.DataFrame) -> pd.DataFrame:
+    """Trend-alignment directional features (TREND-ALIGN-V1) for the decision 1h bar and the completed-1d bar.
+
+    LEAKAGE: the 1h DMI at ts uses bars with ts <= the decision bar (closed at ts+1h), as every family does. The 1d
+    terms use only bars whose 1d close_time <= ts (strictly completed days) -- the partial current day is never read,
+    so removing any 1h row after ts+1h leaves f7 at ts unchanged (self-test truncation invariance)."""
+    h, lo, c = k["high"].astype(float), k["low"].astype(float), k["close"].astype(float)
+    hr = _trend_flags(_wilder_dmi(h, lo, c))
+    out = pd.DataFrame({"ts": k["ts"]})
+    out["f7_adx"], out["f7_dmi_diff"] = hr["adx"].to_numpy(), hr["diff"].to_numpy()
+    out["f7_trend_up"], out["f7_trend_dn"] = hr["up"].to_numpy(), hr["dn"].to_numpy()
+    # 1d: resample the 1h frame to completed UTC days, DMI there, then as-of each ts to the last day CLOSED (<= ts).
+    idx = pd.DatetimeIndex(k["ts"])
+    g = pd.DataFrame({"high": h.to_numpy(), "low": lo.to_numpy(), "close": c.to_numpy()}, index=idx)
+    day = g.resample("1D", label="left", closed="left").agg({"high": "max", "low": "min", "close": "last"}).dropna()
+    if len(day) >= 2:
+        dd = _trend_flags(_wilder_dmi(day["high"], day["low"], day["close"]))
+        dd = dd.set_index(day.index + pd.Timedelta(days=1))          # a day's bar is usable only after it CLOSES (next 00:00)
+        aligned = dd.reindex(idx, method="ffill")
+    else:
+        aligned = pd.DataFrame(index=idx, columns=["adx", "diff", "up", "dn"], dtype=float)
+    out["f7_adx_d1"], out["f7_dmi_diff_d1"] = aligned["adx"].to_numpy(), aligned["diff"].to_numpy()
+    out["f7_trend_up_d1"], out["f7_trend_dn_d1"] = aligned["up"].to_numpy(), aligned["dn"].to_numpy()
+    au = (out["f7_trend_up"].to_numpy() == 1) & (aligned["up"].to_numpy() == 1)
+    ad = (out["f7_trend_dn"].to_numpy() == 1) & (aligned["dn"].to_numpy() == 1)
+    out["f7_agree_up"] = au.astype(float)
+    out["f7_agree_dn"] = ad.astype(float)
+    out["f7_present"] = out["f7_adx"].notna().astype(float)
+    return out
+
+
 def symbol_frame(k12: pd.DataFrame, prem: pd.DataFrame | None, fund: pd.DataFrame | None, met: pd.DataFrame | None) -> pd.DataFrame:
     k = k12.copy()
     k["ts"] = _ts(k["open_time"])
     k = k.sort_values("ts").drop_duplicates("ts").reset_index(drop=True)
     for c in ("open", "high", "low", "close", "volume", "quote_volume", "count", "taker_buy_volume"):
         k[c] = k[c].astype(float)
-    parts = [f1(k), f2(k, prem, fund), f3(k, met), f5(k), f6(k)]
+    parts = [f1(k), f2(k, prem, fund), f3(k, met), f5(k), f6(k), f7(k)]
     out = parts[0]
     for p in parts[1:]:
         out = out.merge(p, on="ts", how="left")
@@ -230,8 +287,14 @@ def _synthetic(n=900, seed=1):
 def self_test() -> None:
     k, prem, fund, met = _synthetic()
     full = symbol_frame(k, prem, fund, met)
-    cols = [c for fam in ("F1", "F2", "F3", "F5", "F6") for c in FAMILIES[fam]]
+    cols = [c for fam in ("F1", "F2", "F3", "F5", "F6", "F7") for c in FAMILIES[fam]]
     assert all(c in full.columns for c in cols), [c for c in cols if c not in full.columns]
+    # F7 DMI equals the regime detector's Wilder ADX (one formula).
+    from src.runtime.regime import detector as _det
+    _kd = pd.DataFrame({"high": k["high"].astype(float), "low": k["low"].astype(float), "close": k["close"].astype(float)})
+    _mine = _wilder_dmi(_kd["high"], _kd["low"], _kd["close"])["adx"].to_numpy()
+    _ref = _det.wilder_adx(_kd).to_numpy()
+    assert np.allclose(_mine, _ref, atol=1e-6, equal_nan=True), "F7 ADX != detector.wilder_adx"
     # truncation invariance: removing every input after bar t's close must not change the features at t
     for t in (400, 600, 850):
         close_ms = int(k["open_time"].iloc[t]) + 3_600_000
