@@ -1,0 +1,108 @@
+# Hand-authored 2026-11-15 by lane ML-PRIMARY-2 (session_01AFoLuHnp85DHQ4PWMQy8LM), plan line MLP-D3-FOXHOUND-1, ML-BAR-ONE-READ.
+# Decision rule registered BEFORE the read (only the reader's synthetic --self-test has run; no held-out outcome touched).
+# Gates this adds or changes: none.
+id: RQ-20261115-a474-04
+title: 'ML-BAR-ONE-READ, ENTRY v1 (served, frozen): on the held-out year, does applying BOTH dev-fold lever candidates (vol24
+  low-tercile abstention + cost-per-R gate 0.06) keep a mean net R per decision that clears the deflated bar AND is no worse
+  than v1 as served?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+question: 'Three ENTRY dev-fold lever units were hand-graded 2026-11-15 (PR #26252): b602-01 PASS (C_vol24_abstain_t0: +0.0133
+  R/decision over base, 6/8 folds, 4/4 years), b606-01 PASS (gate_0.06: +0.0115..+0.0124, 6/8 folds, 3/4 years), b601-01 FAIL
+  (bracket). Their rules route every winner into ONE combined held-out read. This is that read, on the model that actually
+  serves: the frozen v1 artifact (ml/served/ml_decision_entry_v1, trained to 2025-09-22), unchanged, on its frozen-60 population
+  over the held-out year 2025-10-01..2026-09-30, with both filters applied (VG), against v1 as served (base).'
+why_this_matters: 'ml_entry trades real money (bybit_2 + bybit_portfolio) and three prop books. Both candidates are pure
+  abstention rules (no refit), so a PASS is a cheap Tier-3 serving change (two thresholds on the served artifact); a FAIL closes
+  both dev candidates for v1.'
+power:
+  expected_n: 6000
+  min_detectable_effect: 0.02
+  effect_units: R_per_decision
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: c692-01 held-out year carried ~11k served decisions on the frozen-60; VG abstains roughly 40-50 percent on
+    dev (vol tercile + gate overlap), so ~6k decisions remain. The deflated point bar is 1.66 x SE (12th ENTRY read of the window).'
+  feasibility:
+    source: none
+    accrual_basis: 'Replays public Binance Vision 1h klines through 2026-09-30; nothing accrues.'
+evidence_class:
+  holdout: holdout_span
+  claim: edge
+ml_consumer:
+  consumer: ml/served/ml_decision_entry_v1/model.json
+  decision: 'whether ml_entry serving adds the two abstention filters (vol24 below its dev 1/3 quantile; estimated cost per R above 0.06) on the real-money and prop books'
+  legs:
+  - ml_entry
+  book: money
+run:
+  command:
+  - python3
+  - scripts/research/ml_entry_v1_filters_read.py
+  - --out
+  - '{out_dir}'
+  - --cache
+  - /tmp/ml_decision_klines
+  timeout_minutes: 240
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261115-a474-04
+decision_rule:
+  id: RULE-RQ20261115-a474-04-ENTRY-V1-FILTERS
+  registered_at: '2026-11-15'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_v1_filters_read.py. Table = ml_decision_entry.build_table over ml_decision_entry.universe()
+    (the frozen-60). FIXED ON DEV ROWS ONLY (ts < 2025-10-01), before the claim: vol24 cut = 1/3 quantile of dev vol24 (label-free);
+    k = median over dev rows of mean(cost_long, cost_short) x atr_pct; estimated cost per R = k / atr_pct. CLAIM: holdout_lock.claim_read
+    (model ENTRY-v1-frozen-vol24abstain-gate006, window 2025-10-01..2026-09-30, train_end 2025-09-22) BEFORE any held-out outcome;
+    its returned bar grades the read (deflated: expected n_tries 12, point_t_min ~1.66). The served artifact''s long/short regressors
+    score the held-out rows unchanged; a filtered bar is set to abstain (frees the symbol), then ml_decision_entry.policy at the
+    artifact tau (0.10). Arms base / V (vol only) / G (gate only) / VG (both); net R at the table''s full cost stack
+    (ml_decision_entry._cost_r: fee + slippage + funding). Reported, not graded: V, G, abstain shares, traded-five slice,
+    by-month, by-side, exit reasons.'
+  rule: 'Multiple-testing disclosure: the 12th ENTRY-family read overlapping this held-out year (11 prior in
+    comms/research/holdout_reads.jsonl); the bar is deflated accordingly. The two filters were selected on dev folds only (b602-01,
+    b606-01). PASS iff ALL on VG: (a) n >= 300 decisions and >= 10 symbols (ml_decision_entry N_FLOOR / SYMBOL_FLOOR); (b) mean net
+    R clears the deflated point bar of the claim (holdout_lock.point_ok: mean >= point_t_min x SE); (c) mean net R >= base mean net R
+    on the same window. INDETERMINATE iff (a) fails. FAIL otherwise. Thresholds are not changed after any result.'
+  proposal_mapping: 'pass -> a HELD Tier-3 serving proposal for ml_entry (the two abstention thresholds, values from fixed_on_dev,
+    on the served artifact; real-money and prop books), via the manager, disclosing the dev selection and this read. fail ->
+    both dev candidates close for v1; MLP-D3-FOXHOUND-1 continues on the population test and the forward grade.
+    indeterminate -> reported; no serving change.'
+  what_it_does_not_do: 'Refits nothing, changes no config or served artifact, places no order. Grades VG only; V and G alone are
+    reported and never promoted from this unit. The cutoffs are recomputed on this table''s dev rows (label-free), not copied from
+    the levers table the dev runs used.'
+  min_n: 300 held-out decisions
+compute: cpu_long
+practice_precedent: 'docs/reference/trading-and-model-practice-principles.md M13 (deflated holdout re-reads, n_tries recorded);
+  the parent design RQ-20261101-b609-01 (combined stack read, same three conditions a/b/c).'
+follow_up: 'ML-PRIMARY-2 grades on landing, updates MLP-D3-FOXHOUND-1, reports to the manager; a PASS drafts the held Tier-3 PR.'
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 500
+  confidence: 0.25
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 90
+  why_runner: Keyless public Binance Vision 1h archives; inference with the committed booster; CPU only.
+  basis: 'INFERRED from the D5 census and 8d20 runs that build the same ml_decision_entry table on the runner.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261101-b602-01
+- RQ-20261101-b606-01
+- RQ-20261101-b601-01
+- RQ-20261101-b609-01
+- ML-LEVER-PLAN
+last_dispatched_at: null
