@@ -77,7 +77,7 @@ python3 scripts/ops/checklist.py set  A3 prs='[123,456]' blocked_on='[]'     # v
 python3 scripts/ops/checklist.py note A3 "what is true about this row"        # --append to add to it
 python3 scripts/ops/checklist.py archive-lane A3                              # lane -> lane_history, lane = null
 python3 scripts/ops/checklist.py queue --limit 10                             # the ranked runnable queue
-python3 scripts/ops/checklist.py header last_review '{"report_id": "...", "reviewed_at": "..."}'   # rare: the header is shared
+python3 scripts/ops/checklist.py header last_review '{"report_id": "...", "reviewed_at": "..."}'   # writes the work store (not _header.json); read: work.py --via direct header get last_review
 ```
 
 ⚠️ **Process, not gates (operator, 2026-11-01, binding; lane `CHECKLIST-OWNER-DUE`).** The manager owns every row and does not assign owners
@@ -135,7 +135,7 @@ The review routine IS the periodic check; its prompt names `GET /api/bot/work/re
    ONE disposition this run: the next research-ops slot is told to author it first (name the subjects in its prompt), a topic lane is
    dispatched for it, or the family-review path is opened (`research/family_reviews/`). Put the counts per kind in the brief's
    "what is running"; an orphan carried past two reviews is a dispatch failure of the manager, not of research-ops.
-5. **Record the review**: `checklist.py header last_review '{report_id, reviewed_at, by, counts: {dispatched, closed, decided, carried}}'`, push.
+5. **Record the review**: `checklist.py header last_review '{report_id, reviewed_at, by, counts: {dispatched, closed, decided, carried}}'` (writes the work store; read back with `work.py --via direct header get last_review`), push.
 6. **Roadmap hook**: `roadmap_map.py --report`, work its findings (§ "The roadmap loop").
 
 **Prep always runs, and the scratch pad feeds it (operator, 2026-10-21, binding)** — the daily-review prep happens whether or not the

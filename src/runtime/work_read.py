@@ -179,6 +179,23 @@ class RemoteStore:
     def get(self, item_id: str) -> dict | None:
         return _get_item(item_id)
 
+    def meta_get(self, key: str) -> dict | None:
+        """One register-header key over ``GET /api/bot/work/meta/<key>`` (WSD-S4-READERS-FLIP), or None when
+        the store holds no such key (404): the header file's value, kept as history, then shows through."""
+        import urllib.parse
+        w = _work_cli()
+        try:
+            meta_api = getattr(w, "META_API", "/api/bot/work/meta")
+            st, p, _ = w.http("GET", f"{meta_api}/{urllib.parse.quote(key, safe='')}", timeout=30.0)
+        except w.WorkError as exc:
+            raise WorkReadError(f"could_not_look: work store API not reached for meta {key!r}: {exc}") from None
+        if st == 404:
+            return None
+        if st != 200:
+            raise WorkReadError(f"could_not_look: work store API answered HTTP {st} for meta {key!r}")
+        m = p.get("meta") if isinstance(p, dict) else None
+        return m if isinstance(m, dict) else None
+
 
 def read_source() -> str:
     """``auto`` resolves to ``export`` under pytest (never the live API from a test), else ``api``."""
@@ -347,6 +364,34 @@ def _put(item: dict, by: str) -> dict:
         return w.send(w.make_op("set", item["id"], {"fields": diff}, by, None), "auto", None)
     except w.WorkError as exc:
         raise WorkWriteError(f"work store refused {item['id']!r}: {exc}") from None
+
+
+def put_header(key: str, value, by: str | None = None) -> dict:
+    """A store-backed register-header key (``last_review``): in-process on the VM, else the API."""
+    by = by or os.environ.get("CLAUDE_SESSION_ID") or os.environ.get("GITHUB_WORKFLOW_REF") or WRITER
+    store = local_store()
+    if store is not None:
+        from src.runtime import work_store as ws
+        try:
+            return store.meta_set(key, value, by=by)
+        except ws.WorkStoreError as exc:
+            raise WorkWriteError(f"work store refused header {key!r}: {exc}") from None
+    w = _work_cli()
+    try:
+        return w.send(w.make_op("meta", key, {"value": value}, by, None), "auto", None)
+    except w.WorkError as exc:
+        raise WorkWriteError(f"work store refused header {key!r}: {exc}") from None
+
+
+def header_overlay(store, keys) -> dict:
+    """{key: value} for each of ``keys`` the store holds (a key it lacks is absent: the file's
+    value, kept as history, shows through)."""
+    out = {}
+    for k in keys:
+        m = store.meta_get(k)
+        if m is not None:
+            out[k] = m["value"]
+    return out
 
 
 def put_row(row: dict) -> dict:
