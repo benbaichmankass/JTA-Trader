@@ -1,0 +1,166 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261115T0632Z-pkg-ec406687dc6d449f",
+ "reviewed_at": "2026-11-15T06:34:59Z",
+ "order_package_id": "pkg-ec406687dc6d449f",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "tradeify_1",
+  "velotrade_1",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "conflicting_exposure",
+  "level": "SOLUSDT#4dc1783b43",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-15T06:32:56Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 4,
+  "giveback_r": 0.3794,
+  "open_r": -0.1195,
+  "peak_provenance": "estimated",
+  "peak_r": 0.2599,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 67.78285714285714,
+  "tp": 76.62571428571428
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 3,
+  "giveback_r": 0.3794,
+  "open_r": -0.1195,
+  "peak_r": 0.2599,
+  "r_to_stop": 0.8805,
+  "r_to_target": 1.7614
+ },
+ "mechanics": {
+  "evidence": "velotrade_1: venue TP 76.16 != package TP 76.62571428571428",
+  "verdict": "mismatch"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 228,
+   "mean_r": 0.4453,
+   "sd_r": 1.1469,
+   "worst_r": -1.1269,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 228,
+   "mean_r": 0.328,
+   "sd_r": 0.6288,
+   "worst_r": -1.3467,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 228,
+   "mean_r": 0.3559,
+   "sd_r": 0.7893,
+   "worst_r": -1.3467,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 228,
+   "mean_r": 0.3997,
+   "sd_r": 0.923,
+   "worst_r": -1.3467,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 228,
+   "mean_r": -0.1809,
+   "sd_r": 0.0239,
+   "worst_r": -0.2753,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261115T0632Z-pkg-ec406687dc6d449f.json",
+ "recommendation": {
+  "action": "flag_mechanics",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "mechanics",
+  "confidence": "measured",
+  "evidence_source": "none",
+  "judgement_confidence": null,
+  "reason": "Packet still shows the MEASURED velotrade_1 TP mismatch (terminal TP 76.16 vs package 76.6257), so the action stays flag_mechanics / operator_ask and no exit judgement is made on the mismatched trade. Conflict question (SOL long vs claude_desk SOL short): were it to be judged, KEEP BOTH on timeframe separation: closing this long costs R, ml_entry SOL close n=228 mean -0.2138 R vs hold +0.4453 R, and the claude_desk short has no Stage-0 evidence (evidence_missing). Operator owns the TP check (filed by the manager).",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "mechanics: velotrade_1 venue TP 76.16 != package TP 76.62571428571428 (copied from packet.mechanics.evidence)",
+  "conflicting_exposure: SOLUSDT#4dc1783b43 vs claude_desk short; keep-both leaning, judgement withheld on the mismatch",
+  "opposing legs are not priceable from Stage-0 history: trend_donchian_eth_4h (+3.09 R open, table n=14 < floor 20), trend_donchian_ada_4h (-0.13 R, n=16 < floor 20), eth_pullback_2h / _prop_2h (could_not_price), claude_desk (evidence_missing); so the keep-vs-close call rests on the packaged leg own table plus judgement",
+  "bias: table tightens flattered by stop-at-price fills; live peak_r is a lower bound",
+  "missing: funding (no diag route); regime cells null"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "no action: flag_mechanics changes nothing to apply; bybit_orders: SL 67.78 / TP 76.63, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches "
+  },
+  {
+   "account_id": "tradeify_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "no action: flag_mechanics changes nothing to apply; apply paths close, move_tp, reduce, tighten (live_review_apply.py); positions read: 1 open"
+  },
+  {
+   "account_id": "velotrade_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "no action: flag_mechanics changes nothing to apply; apply paths close, move_tp, reduce, tighten (live_review_apply.py); positions read: 1 open"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "no action: flag_mechanics changes nothing to apply; bybit_orders: SL 67.78 / TP 76.63, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches "
+  }
+ ],
+ "disposition": {
+  "route": "operator_ask",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuLdsgiDQfznNR9gjS4",
+ "prompt_sha": null,
+ "skill_sha": "5a57e63eeaad712ed1fdeb76279c123c9dfddf86",
+ "packet_defects": [],
+ "packet_sha": "7b36830e68a7dc11f3983da1e4e84e7d7ce08ba2c689f62c80ebaaf5655e5017"
+}

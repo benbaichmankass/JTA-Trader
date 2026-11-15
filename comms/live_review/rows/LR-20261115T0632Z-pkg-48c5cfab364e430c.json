@@ -1,0 +1,141 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261115T0632Z-pkg-48c5cfab364e430c",
+ "reviewed_at": "2026-11-15T06:34:59Z",
+ "order_package_id": "pkg-48c5cfab364e430c",
+ "trade_id": null,
+ "leg": "trend_donchian_eth_4h",
+ "accounts": [
+  "tradeify_1",
+  "velotrade_1"
+ ],
+ "trigger": {
+  "event": "conflicting_exposure",
+  "level": "ETHUSDT#df48730f98",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-15T06:32:58Z",
+ "state": {
+  "atr_now_over_entry": 1.124,
+  "bars_held": 0,
+  "giveback_r": 0.0,
+  "open_r": -0.604,
+  "peak_provenance": "estimated",
+  "peak_r": -0.604,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1850.50464286,
+  "tp": 1593.43652
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.124,
+  "bars_since_peak": null,
+  "giveback_r": 0.0,
+  "open_r": -0.604,
+  "peak_r": -0.604,
+  "r_to_stop": 0.396,
+  "r_to_target": 2.739
+ },
+ "mechanics": {
+  "evidence": "order_packages status=emitted close_reason=prop_ticket_emitted; package sl 1850.50464286 / tp 1593.43652 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 201,
+   "mean_r": 0.2551,
+   "sd_r": 1.9042,
+   "worst_r": -1.1431,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 201,
+   "mean_r": -0.6572,
+   "sd_r": 0.0242,
+   "worst_r": -0.7509,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261115T0632Z-pkg-48c5cfab364e430c.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "suggestive",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.58,
+  "reason": "Conflict question (prop ETH short 4h vs ml_entry long 1h and ml_entry_v2 long 1h): KEEP BOTH on timeframe separation. Pricing: closing THIS short costs R, trend_donchian_eth_4h close n=201 mean -0.6572 R vs hold +0.2551 R (0.91 R given up net of cost); the long legs are 1h ML trades whose own tables favour hold (ml_entry ETH hold +0.3844 vs close -0.3199, n=238), so neither side has evidence for a close. Continues the 06:27Z hold: forecast carried (invalidation 1850.50 not touched, p_target 0.28). open_r -0.604 is ESTIMATED from the last 4h close; the 5m mark implies about -0.31 R.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "prop: open_r ESTIMATED from prop ticket + last closed 4h bar close (LTR-PROP-PACKET-OPEN_R gap)",
+  "tighten cells invalid_level at the packet open_r; table not evidence for a tighten",
+  "conflicting_exposure: ETHUSDT#df48730f98 keep both, timeframe separation",
+  "schema: packet peak_provenance prop_ticket_mark recorded as estimated; features_at_review.prop_ticket_state object omitted (schema number|null)",
+  "opposing legs are not priceable from Stage-0 history: trend_donchian_eth_4h (+3.09 R open, table n=14 < floor 20), trend_donchian_ada_4h (-0.13 R, n=16 < floor 20), eth_pullback_2h / _prop_2h (could_not_price), claude_desk (evidence_missing); so the keep-vs-close call rests on the packaged leg own table plus judgement",
+  "bias: table tightens flattered by stop-at-price fills; live peak_r is a lower bound",
+  "missing: funding (no diag route); regime cells null"
+ ],
+ "account_reads": [
+  {
+   "account_id": "tradeify_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "no action: hold changes nothing to apply; apply paths close, move_tp, reduce, tighten (live_review_apply.py); positions read: 1 open"
+  },
+  {
+   "account_id": "velotrade_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "no action: hold changes nothing to apply; apply paths close, move_tp, reduce, tighten (live_review_apply.py); positions read: 1 open"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuLdsgiDQfznNR9gjS4",
+ "prompt_sha": null,
+ "skill_sha": "5a57e63eeaad712ed1fdeb76279c123c9dfddf86",
+ "packet_defects": [],
+ "packet_sha": "c827a39aaefc1feb2d6692b01e8a81a4bab7e9cb562eaabb8812557fda5a561b",
+ "forecast": {
+  "thesis": "Carried from my 06:27Z row: ETH 4h/1d downtrend (ADX 59/31); the 4h bounce high 1833.43 stayed under the 1850.50 stop and the 1875.78 lower high; expect the retest to fail toward 1593, though continuation is the minority path (p_giveback_gt_half 0.59).",
+  "direction": "with_trade",
+  "target_px": 1593.43652,
+  "p_target": 0.28,
+  "invalidation_px": 1850.50464286,
+  "horizon_bars": 12,
+  "timeframe": "4h",
+  "evidence": [
+   "06:27Z forecast carried, invalidation not touched",
+   "htf 1d trending ADX 30.68",
+   "priced_options: hold n=201 +0.2551, close -0.6572"
+  ]
+ }
+}
