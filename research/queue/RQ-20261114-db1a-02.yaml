@@ -952,14 +952,16 @@ follow_up: 'On the verdict a session reports to the manager: Part A (common or n
   2-D (trend, vol) walk-forward unit with trainer vol labels. FAIL -> per-leg dispositions go to the manager (retirement proposals to the operator first this week).'
 last_dispatched_at: '2026-11-14T05:35:15+00:00'
 grading:
-  attested: RULE-DFR-COMMON-LOSS-REGIME-20261114
-  auto: true
+  auto: false
+  graded_at: '2026-11-15'
+  grader: session RESEARCH-OPS-20261115-1447 (triage)
+  verdict: fail
+  note: 'Rule applied verbatim. PART A (common loss, its own record) PASS: 12/15 legs net_r<0 on the record
+    window (need 10), pooled -142.3R. PART B (the unit verdict) FAIL: most-negative cell chop/long record
+    -75.4R n229, prior +25.6R n220, walk-forward reads stable_drag only on the record side; the prior-window
+    and fold clauses fail. Configuration closed: ADX-bucket (regime,direction) cell gate on 15 crypto
+    legs; family regime_gating stays open (RQ-20261114-db1a-03/-04 test the HTF-SMA200 long gate instead).'
   decision_rule_id: RULE-DFR-COMMON-LOSS-REGIME-20261114
   evidence:
   - research/results/RQ-20261114-db1a-02/43562273934.jsonl
-  graded_at: '2026-11-14'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'verdicts not unanimous-mechanical: [''fail'', ''pass'']'
   rows: 2
-  verdict: null
