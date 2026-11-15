@@ -192,3 +192,22 @@ def test_priority_rank_is_validated_and_queue_orders_runnable_rows_by_it(tmp_pat
     assert _cli(repo, "queue") == 0
     out = capsys.readouterr().out
     assert out.index("Q-FIRST") < out.index("Q-LATE") and "runnable" in out
+
+
+def test_queue_honours_the_operators_queue_pos_inside_a_rank_class():
+    """Reorder (POST /api/bot/work/reorder) sets ``queue_pos``; dispatch order must follow it."""
+    from src.runtime import checklist_store as cs
+
+    def row(i, rank, seq, pos=None):
+        r = {"id": i, "state": "queued", "priority_rank": rank, "_seq": seq}
+        if pos is not None:
+            r["queue_pos"] = pos
+        return r
+    rows = [row("A", 2, 1), row("B", 2, 2), row("C", 2, 3), row("R", 1, 9), row("N", None, 0)]
+    assert [r["id"] for r in cs.queue({"items": rows})] == ["R", "A", "B", "C", "N"]       # unmoved: as before
+    rows[2] = row("C", 2, 3, pos=0.5)                                                       # C moved above A
+    assert [r["id"] for r in cs.queue({"items": rows})] == ["R", "C", "A", "B", "N"]
+    rows[0] = row("A", 2, 1, pos=3.5)                                                       # A moved below B... C
+    assert [r["id"] for r in cs.queue({"items": rows})] == ["R", "C", "B", "A", "N"]
+    rows[4] = row("N", None, 0, pos=0.1)                                                    # class still outranks pos
+    assert cs.queue({"items": rows})[-1]["id"] == "N"

@@ -17,6 +17,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.runtime import checklist_store
+
 CLOSED = ("done", "dropped", "killed", "retired", "archived")
 _NO_SEQ = 1_000_000.0   # a row with no register order sorts after every sequenced row; ties break on id
 
@@ -29,32 +31,19 @@ class ReorderError(Exception):
         self.status, self.code, self.detail, self.extra = status, code, detail, extra
 
 
-def _get(row: dict, key: str) -> Any:
-    """A key from a checklist-shaped row (top level) or a store item (``extra``)."""
-    if key in row:
-        return row[key]
-    ex = row.get("extra")
-    return ex.get(key) if isinstance(ex, dict) else None
-
-
-def _num(v: Any) -> float | None:
-    return float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else None
-
-
 def rank_of(row: dict) -> float | None:
-    r = _num(row.get("priority_rank"))
-    return r if r is not None and r > 0 else None
+    return checklist_store.order_rank(row)
 
 
 def position(row: dict) -> float:
-    q, seq = _num(_get(row, "queue_pos")), _num(_get(row, "_seq"))
-    return q if q is not None else (seq if seq is not None else _NO_SEQ)
+    return checklist_store.order_position(row, _NO_SEQ)
 
 
 def display_key(row: dict) -> tuple:
-    """The one order every list (``/work/snapshot``, the reorder neighbours) uses."""
-    r = rank_of(row)
-    return (r is None, r or 0.0, position(row), str(row.get("id") or ""))
+    """The one order every list (``/work/snapshot``, the reorder neighbours) uses: the shared
+    ``checklist_store.order_key`` (same as dispatch) with the row id as the last tiebreak."""
+    unranked, rank, _pos = checklist_store.order_key(row)
+    return (unranked, rank, position(row), str(row.get("id") or ""))
 
 
 def _open_builds(store) -> list[dict]:

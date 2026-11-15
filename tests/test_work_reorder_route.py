@@ -212,3 +212,26 @@ def test_snapshot_lists_sort_by_the_same_key(db):
     body = c.get("/api/bot/work/snapshot").json()
     assert [r["id"] for r in body["next"]] == ["Q2", "Q1", "Q3"]                    # a move shows on the card
     assert body["next"][0]["queuePos"] is not None
+
+
+def test_dispatch_queue_and_overview_order_agree():
+    """One key: ``checklist_store.queue`` (dispatch) and ``work_reorder.display_key`` (Overview)."""
+    import random
+
+    from src.runtime import checklist_store as cs
+    from src.web.api.work_reorder import display_key
+    rnd = random.Random(3)
+    rows = []
+    for i in range(60):
+        r = {"id": f"R{i:02d}", "state": "queued", "_seq": i + 1}
+        if rnd.random() < 0.7:
+            r["priority_rank"] = rnd.choice([1, 2, 2, 3])
+        if rnd.random() < 0.4:
+            r["queue_pos"] = round(rnd.uniform(0, 70), 3)
+        rows.append(r)
+    dispatch = [r["id"] for r in cs.queue({"items": rows})]
+    overview = [r["id"] for r in sorted(rows, key=display_key)]
+    assert dispatch == overview
+    # a work-store item (fields under ``extra``) sorts the same as the checklist row it projects to
+    item = {"id": "X", "priority_rank": 2, "extra": {"_seq": 5, "queue_pos": 1.5}}
+    assert display_key(item)[:3] == display_key({"id": "X", "priority_rank": 2, "_seq": 5, "queue_pos": 1.5})[:3]

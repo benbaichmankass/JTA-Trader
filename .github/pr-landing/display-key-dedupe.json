@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "One shared sort key: checklist_store.order_key (rank, queue_pos else _seq) is used by checklist_store.queue (dispatch) and by src/web/api/work_reorder.display_key (Overview reorder); the duplicate copy in work_reorder is removed. Behaviour unchanged (test pins dispatch order == overview order over random rows). Includes #26282's commit f2e1b4a7b so CI stands alone; its diff shrinks to the dedupe once #26282 merges. trader_import_closure decide = RESTART (src/runtime/checklist_store.py is trader-loaded), so it is not Tier 1: land in the same restart window as #26282.",
+  "hold_text": "Merge after (or together with) #26282 in the next trader-restart window. No behaviour change beyond #26282."
+}
