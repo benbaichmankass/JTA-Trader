@@ -108,8 +108,10 @@ def test_declared_be_floor_is_reported(mod, base):
 def test_be_floor_changes_outcomes_when_armed(mod, base):
     """The lever must actually do something, or the sweep measured nothing."""
     df = _candles()
-    assert mod.run_backtest(df.copy(), **base, be_floor_r=0.5) != \
-        mod.run_backtest(df.copy(), **base)
+    outcome = lambda s: {k: v for k, v in s.items() if k != "params"}  # noqa: E731
+    # Outcomes, not the summary: the params echo alone would make an inert arm differ.
+    assert outcome(mod.run_backtest(df.copy(), **base, be_floor_r=0.5)) != \
+        outcome(mod.run_backtest(df.copy(), **base))
 
 
 # --- the invariant: it may only ever TIGHTEN ------------------------------ #
@@ -247,3 +249,26 @@ def test_floor_arms_at_the_declared_threshold_not_always():
     control = TREND.run_backtest(df.copy(), **base)
     assert unarmable["net_total_r"] == control["net_total_r"], (
         "a floor beyond any observed excursion must be inert")
+
+
+# --- composition with the structure exit (PI-20261114-TFZXAKEK-0001) ------ #
+
+@pytest.mark.parametrize("mod,base", [HARNESSES[0], HARNESSES[1]])
+def test_be_floor_still_fires_under_a_structure_exit(mod, base):
+    """A --structure-exit leg must not silently swallow the floor.
+
+    The pullback harness's ratchet ended with `trail = _trail_prev` whenever a
+    structure exit was set, discarding the floor computed that bar, so a
+    be_floor_r arm on such a leg returned the baseline byte-for-byte
+    (RQ-20261110-73de-04 C1: delta 0.0R) and was recorded as a lever reading.
+    The trend harness already applied the floor after the override; both must.
+    """
+    df = _candles()
+    sx = dict(base, structure_exit="pivot=5")
+    with_sx = mod.run_backtest(df.copy(), **sx)
+    assert with_sx["total_trades"] > 0, "fixture must trade under the structure exit"
+    floored = mod.run_backtest(df.copy(), **sx, be_floor_r=0.5)
+    # Compare OUTCOMES, not the whole summary: the params echo alone carries
+    # `be_floor_r` and would make an inert arm look different.
+    outcome = lambda s: {k: v for k, v in s.items() if k != "params"}  # noqa: E731
+    assert outcome(floored) != outcome(with_sx), "the floor was swallowed by the structure exit"

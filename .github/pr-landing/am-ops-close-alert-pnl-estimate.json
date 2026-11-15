@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Close alert shows a labelled gross estimate when the row has no pnl yet. Trade 7003 (bybit_portfolio ADA TP, 2026-11-14 13:04Z): order_monitor._netting_close_from_own_leg closes the row and leaves pnl to the PnL sweep (as every flat-finalise path does); _fire_trade_closed_event read the row at close and the alert printed 'PnL —'. The journal was fine (pnl 2711.994 local_compute a pass later, broker fee 28.56). Database._fire_trade_closed_event now computes local_pnl.compute_realized_pnl from entry/exit/size when pnl is NULL and the message appends 'est'. Journal rows are not written. Trader-imported file: restarts the trader, batch it. Revert: git revert.",
+  "why": "The mirror close alert (Stage-2 demotion signal) printed 'PnL —' for a measured close."
+}

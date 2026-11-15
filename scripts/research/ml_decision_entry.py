@@ -277,14 +277,17 @@ def regrid_hourly(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_table(cache: Path, symbols: list[str], xs_symbols: list[str] | None = None,
-                recost_inputs: bool = False, hole_safe: bool = False) -> pd.DataFrame:
+                recost_inputs: bool = False, hole_safe: bool = True) -> pd.DataFrame:
     """``xs_symbols`` None: cross-sectional context over ``symbols`` (the c692-01 recipe, unchanged). Given: context is
     computed against that fixed REFERENCE set for every row, so a row's inputs do not depend on which other symbols are
-    in the table (the c692-04 training-universe arms)."""
+    in the table (the c692-04 training-universe arms).
+    ``hole_safe`` (default True since ML-ENTRY-HOLE-SAFE-ADOPT, 2026-11-12): bars are regridded hourly so a data hole is NaN
+    bars, never a seam in the positional rolling features; rows touching it are dropped, not refused. ``False`` reproduces the
+    legacy build. Hourly crypto only: equity sessions are legitimately non-contiguous, never pass it there."""
     rows, feats = [], {}
     for sym in symbols:
         df = pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True)
-        if hole_safe:   # default off: every committed table/grade keeps its byte-identical build
+        if hole_safe:   # default ON (ML-ENTRY-HOLE-SAFE-ADOPT); hole_safe=False reproduces a pre-2026-11-12 table byte-for-byte
             df = regrid_hourly(df)
         f = features_symbol(df)
         feats[sym] = f

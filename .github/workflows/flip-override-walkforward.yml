@@ -90,7 +90,7 @@ jobs:
           EV: ${{ github.event_name }}
         run: |
           set -euo pipefail
-          if [ "$EV" = "issues" ]; then
+          if [ "$EV" = "repository_dispatch" ]; then
             get() { printf '%s' "$ISSUE_BODY" | grep -iE "^$1:" | head -1 | cut -d: -f2- | xargs || true; }
             ROSTERS=$(get rosters); POLICIES=$(get policies); THR=$(get confgap_threshold)
             AGE=$(get confgap_min_age_hours); SYM=$(get symbol)

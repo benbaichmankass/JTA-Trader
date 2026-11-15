@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from src.runtime import ops_actions as ops
+from src.web.api import work_store_rotation as wsr
 
 ROOT = Path(__file__).resolve().parents[2]
 T0 = datetime(2026, 11, 12, 6, 0, 0, tzinfo=timezone.utc)
@@ -209,19 +210,19 @@ def test_stage_token_rotation_copies_current_to_prev_and_never_prints_it(tmp_pat
     env = tmp_path / ".env"
     env.write_text("A=1\nWORK_STORE_TOKEN=s3cret-value\nB=2\n")
     env.chmod(0o600)
-    res = ops.stage_token_rotation(env, now=T0)
+    res = wsr.stage(env, now=T0)
     text = env.read_text()
     assert res["exit"] == 0 and "WORK_STORE_TOKEN_PREV=s3cret-value" in text and "WORK_STORE_TOKEN=s3cret-value" in text
     assert "WORK_STORE_TOKEN_PREV_UNTIL=2026-11-15T06:00:00Z" in text and "A=1" in text and "B=2" in text
     assert "s3cret" not in json.dumps(res) and (env.stat().st_mode & 0o777) == 0o600
-    assert ops.stage_token_rotation(env, now=T0)["exit"] == 0   # idempotent
+    assert wsr.stage(env, now=T0)["exit"] == 0   # idempotent
     assert env.read_text().count("WORK_STORE_TOKEN_PREV=") == 1
 
 
 def test_stage_refuses_without_a_current_token(tmp_path):
     env = tmp_path / ".env"
     env.write_text("A=1\n")
-    assert ops.stage_token_rotation(env, now=T0)["exit"] == 2
+    assert wsr.stage(env, now=T0)["exit"] == 2
 
 
 def test_dual_accept_honours_prev_only_until_its_expiry(monkeypatch):

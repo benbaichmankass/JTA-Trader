@@ -164,3 +164,43 @@ def test_pullback_both_default_passes_long(monkeypatch):
         monkeypatch, "sol_pullback_2h", "SOLUSDT", "long", {})
     assert sig["side"] == "buy"
     assert sig["meta"].get("reason") != "long_suppressed_short_only"
+
+
+# ── tlt_pullback_1h (2026-11-14 real-money promotion, long only) ────────────
+def _wire_tlt_pullback_1h(monkeypatch, direction, cfg_extra):
+    cfg = {"enabled": True, "timeframe": "1h", "symbols": ["TLT"], **cfg_extra}
+    import src.units.strategies as units
+    monkeypatch.setattr(units, "load_strategy_config",
+                        lambda *a, **k: {"tlt_pullback_1h": cfg}, raising=False)
+    frame = pd.DataFrame(
+        {"open": [1.0], "high": [1.0], "low": [1.0], "close": [1.0],
+         "ts": pd.date_range("2024-01-02 15:00", periods=1, freq="1h", tz="UTC")})
+    monkeypatch.setattr(ssb, "_fetch_session_frame", lambda *a, **k: (frame, None))
+    import src.units.strategies.htf_pullback_trend_2h as unit
+    monkeypatch.setattr(unit, "order_package",
+                        lambda *a, **k: _fake_pkg(direction), raising=False)
+    import src.runtime.market_hours as mh
+    monkeypatch.setattr(mh, "is_market_open", lambda *a, **k: True, raising=False)
+    monkeypatch.setattr(ssb, "_build_killzone_exchange", lambda settings: None)
+    monkeypatch.setattr(ssb, "_publish_liquidity_state", lambda *a, **k: None)
+    monkeypatch.setattr(ssb, "_emit_shadow_preds", lambda *a, **k: None)
+    monkeypatch.setattr(ssb, "_stamp_regime_on_meta", lambda *a, **k: None)
+    return ssb.tlt_pullback_1h_signal_builder({"SYMBOL": "TLT"})
+
+
+def test_tlt_pullback_1h_long_only_suppresses_short(monkeypatch):
+    # the promoted config (side_filter: long) must never emit a sell: before 2026-11-14 the builder ignored the key.
+    sig = _wire_tlt_pullback_1h(monkeypatch, "short", {"side_filter": "long"})
+    assert sig["side"] == "none"
+    assert sig["meta"].get("reason") == "short_suppressed_long_only"
+
+
+def test_tlt_pullback_1h_long_only_passes_long(monkeypatch):
+    sig = _wire_tlt_pullback_1h(monkeypatch, "long", {"side_filter": "long"})
+    assert sig["side"] == "buy"
+
+
+def test_tlt_pullback_1h_no_key_is_two_sided(monkeypatch):
+    # no side_filter -> byte-identical to the pre-2026-11-14 builder: a short still passes.
+    sig = _wire_tlt_pullback_1h(monkeypatch, "short", {})
+    assert sig["side"] == "sell"

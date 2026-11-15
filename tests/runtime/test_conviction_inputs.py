@@ -10,6 +10,7 @@ import pytest
 import src.runtime.conviction_inputs as ci
 from ml.calibration.calibrators import PlattCalibrator
 from src.runtime.conviction_inputs import (
+    influencing_scores,
     INFLUENCE_STAGES,
     build_conviction_inputs,
     classify_head,
@@ -175,7 +176,7 @@ def test_multiple_heads_same_slot_averaged():
     assert len(prov["c_wr"]) == 2
 
 
-def test_influencing_only_filters_shadow_stage():
+def test_influencing_scores_filters_shadow_stage_before_construction():
     scores = {
         "trade-outcome-winrate-baseline-v0": {"stage": "shadow", "score": 0.9},
         "setup-quality-baseline-v0": {"stage": "advisory", "score": 1.5},
@@ -184,7 +185,7 @@ def test_influencing_only_filters_shadow_stage():
     obs, _ = build_conviction_inputs("x", 0.5, scores)
     assert "c_wr" in obs and "c_setup" in obs
     # influencing view: only advisory+ heads (strategy c_strat is always live)
-    inf, _ = build_conviction_inputs("x", 0.5, scores, influencing_only=True)
+    inf, _ = build_conviction_inputs("x", 0.5, influencing_scores(scores))
     assert "c_wr" not in inf            # shadow head excluded
     assert "c_setup" in inf             # advisory head kept
     assert "c_strat" in inf

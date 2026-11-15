@@ -1,0 +1,64 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "n": 272,
+  "accounts": {
+    "breakout_2": {
+      "verdict": "fail",
+      "ev_A": 38.91,
+      "ev_B": 45.68,
+      "p_breach_A": 0.5016,
+      "p_breach_B": 0.5166,
+      "ev_ok": true,
+      "breach_ok": false
+    },
+    "tradeify_1": {
+      "verdict": "pass",
+      "ev_A": 119.56,
+      "ev_B": 130.63,
+      "p_breach_A": 0.3366,
+      "p_breach_B": 0.3362,
+      "ev_ok": true,
+      "breach_ok": true
+    },
+    "velotrade_1": {
+      "verdict": "pass",
+      "ev_A": 76.11,
+      "ev_B": 87.83,
+      "p_breach_A": 0.264,
+      "p_breach_B": 0.2618,
+      "ev_ok": true,
+      "breach_ok": true
+    }
+  },
+  "note": "breakout_2 fail ev 38.91->45.68 breach 0.5016->0.5166; tradeify_1 pass ev 119.56->130.63 breach 0.3366->0.3362; velotrade_1 pass ev 76.11->87.83 breach 0.264->0.2618",
+  "research_unit": "RQ-20261114-db1a-09",
+  "rule": "RULE-ETH4H-TP4-PROPEV-NONINF-20261114",
+  "population": "trend_donchian_eth_4h: ledgers A=A__trades.jsonl (n 136) and B=T4__trades.jsonl (n 136); prop_ev_sim path mode, seeds [1, 2, 3, 4, 5], 1000 lives, 2026-11-06 retest cells ('cur' cost arm), accounts ['breakout_2', 'tradeify_1', 'velotrade_1']",
+  "records": [
+    {
+      "leg": "trend_donchian_eth_4h:breakout_2",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 272,
+      "population": "trend_donchian_eth_4h: ledgers A=A__trades.jsonl (n 136) and B=T4__trades.jsonl (n 136); prop_ev_sim path mode, seeds [1, 2, 3, 4, 5], 1000 lives, 2026-11-06 retest cells ('cur' cost arm), accounts ['breakout_2', 'tradeify_1', 'velotrade_1']",
+      "note": "{\"verdict\": \"fail\", \"ev_A\": 38.91, \"ev_B\": 45.68, \"p_breach_A\": 0.5016, \"p_breach_B\": 0.5166, \"ev_ok\": true, \"breach_ok\": false}"
+    },
+    {
+      "leg": "trend_donchian_eth_4h:tradeify_1",
+      "verdict": "pass",
+      "read_state": "measured",
+      "n": 272,
+      "population": "trend_donchian_eth_4h: ledgers A=A__trades.jsonl (n 136) and B=T4__trades.jsonl (n 136); prop_ev_sim path mode, seeds [1, 2, 3, 4, 5], 1000 lives, 2026-11-06 retest cells ('cur' cost arm), accounts ['breakout_2', 'tradeify_1', 'velotrade_1']",
+      "note": "{\"verdict\": \"pass\", \"ev_A\": 119.56, \"ev_B\": 130.63, \"p_breach_A\": 0.3366, \"p_breach_B\": 0.3362, \"ev_ok\": true, \"breach_ok\": true}"
+    },
+    {
+      "leg": "trend_donchian_eth_4h:velotrade_1",
+      "verdict": "pass",
+      "read_state": "measured",
+      "n": 272,
+      "population": "trend_donchian_eth_4h: ledgers A=A__trades.jsonl (n 136) and B=T4__trades.jsonl (n 136); prop_ev_sim path mode, seeds [1, 2, 3, 4, 5], 1000 lives, 2026-11-06 retest cells ('cur' cost arm), accounts ['breakout_2', 'tradeify_1', 'velotrade_1']",
+      "note": "{\"verdict\": \"pass\", \"ev_A\": 76.11, \"ev_B\": 87.83, \"p_breach_A\": 0.264, \"p_breach_B\": 0.2618, \"ev_ok\": true, \"breach_ok\": true}"
+    }
+  ]
+}

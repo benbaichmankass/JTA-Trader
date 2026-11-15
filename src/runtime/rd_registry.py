@@ -302,6 +302,7 @@ def build_registry(root: Path, *, now: datetime | None = None, catalog: dict | N
     read_state["research_catalog"] = {"state": "ok" if units and not cat.get("readErrors") else
                                       ("partial" if units else "unreadable"),
                                       "n": len(units) if units else None, "read_errors": len(cat.get("readErrors") or [])}
+    counts_state = {"ok": "read", "partial": "partial"}.get(read_state["research_catalog"]["state"], "unreadable")
     docs = load_queue_docs(root)
     for uid, u in list(units.items()):
         d = docs.get(uid)
@@ -434,7 +435,11 @@ def build_registry(root: Path, *, now: datetime | None = None, catalog: dict | N
             "programme": programme or None,
             "stage": stage, "stage_label": STAGE_LABEL[stage], "stage_reason": reason,
             "latest_result": _result(latest),
-            "counts": _counts(us) if us else {"units": 0, "passed": 0, "failed": 0, "indeterminate": 0, "open": 0, "blocked": 0},
+            # UI-WQ-RD-ROUTE: counts come from the research catalog. If it could not be read, every count is
+            # null (we could not look), never 0; `partial` = some unit files unreadable, so counts may undercount.
+            "counts": (None if counts_state == "unreadable" else
+                       _counts(us) if us else {"units": 0, "passed": 0, "failed": 0, "indeterminate": 0, "open": 0, "blocked": 0}),
+            "counts_read_state": counts_state,
             "open_units": [u["id"] for u in us if u["status"] in OPEN][:5] or None,
             "survivors": survivors_of(us, docs, surv_tools),
             "next_step": next_step, "owner_rows": owner or None,
@@ -606,7 +611,10 @@ def build_registry(root: Path, *, now: datetime | None = None, catalog: dict | N
         e = slots.setdefault(sl, {"ideas": 0, "units": 0, "models_production": 0, "models_testing_book": 0,
                                   "survivors": 0 if surv_tools[0] else None})
         e["ideas"] += 1
-        e["units"] += i["counts"]["units"]
+        if e["units"] is not None and i["counts"] is not None:
+            e["units"] += i["counts"]["units"]
+        else:
+            e["units"] = None
         e["models_production"] += int(i["kind"] == "ml_model" and i["stage"] == "production")
         e["models_testing_book"] += int(i["kind"] == "ml_model" and i["stage"] == "testing_book")
         if e["survivors"] is not None and i["survivors"]:
@@ -694,6 +702,9 @@ def cross_check(doc: dict, root: Path) -> list[str]:
             want = sum(1 for r in rows if str(r.get("bucket") or "").upper() in ("LIVE", "SHADOW"))
             if want != len(regs):
                 out.append(f"registry LIVE+SHADOW {want} != LIVE/SHADOW ml_model ideas {len(regs)}")
+    if any(i.get("counts") is None for i in doc["ideas"]):
+        out.append("idea counts are null (research catalog unreadable); unit arithmetic not checked")
+        return out
     shown = sum(i["counts"]["units"] for i in doc["ideas"])
     if shown != u["attributed"]:
         out.append(f"units shown on ideas {shown} != attributed {u['attributed']} (an attributed unit is hidden or doubled)")

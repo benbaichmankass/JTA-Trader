@@ -79,8 +79,10 @@ def _refresh_and(fn):
 @router.get("/api/bot/gates")
 async def list_gates(category: str | None = None, decision: str | None = None,
                      state: str | None = None, real_money: str | None = None,
-                     decided_since: str | None = None) -> Any:
+                     decided_since: str | None = None, sort: str | None = None) -> Any:
     _ensure_bg()
+    if sort and sort not in gate_registry.SORTS:
+        raise HTTPException(status_code=400, detail=f"sort must be one of {list(gate_registry.SORTS)}")
     if decision and decision not in gate_registry.DECISIONS:
         raise HTTPException(status_code=400, detail=f"decision must be one of {list(gate_registry.DECISIONS)}")
     if state and state not in gate_registry.STATE_FILTERS:
@@ -91,7 +93,7 @@ async def list_gates(category: str | None = None, decision: str | None = None,
         result, refresh, refresh_error = await run_in_threadpool(
             _refresh_and, lambda c: gate_registry.list_gates(
                 c, category=category, decision=decision, state=state, real_money=real_money,
-                decided_since=decided_since))
+                decided_since=decided_since, sort=sort))
     except Exception as exc:  # noqa: BLE001  # allow-silent: logged at ERROR; 503 readState=unreadable, gates=null (never an empty list)
         logger.error("gate_registry read failed: %s", exc)
         return JSONResponse(status_code=503, content={
@@ -105,7 +107,7 @@ async def list_gates(category: str | None = None, decision: str | None = None,
     return {"readState": "read", "as_of": _as_of(), **result,
             "refresh": refresh or {"at": None, "head_sha": None, "read_state": "never", "error": None},
             "filters": {"category": category, "decision": decision, "state": state,
-                        "real_money": real_money, "decided_since": decided_since}}
+                        "real_money": real_money, "decided_since": decided_since, "sort": sort}}
 
 
 @router.get("/api/bot/gates/{gate_id}")

@@ -1,7 +1,7 @@
 id: RQ-20261112-4654-05
 title: 'STRUCTURE-EXIT ITERATION 1 (SL-only): on trend_donchian_1h, does the structure STOP with the leg''s declared capped TP (live pivot=5;sl_only semantic,
   no structure TP) beat the leg as declared (structure off) net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -124,3 +124,17 @@ related:
 - RQ-20261105-5e05-01
 population: trend_donchian_1h (BTCUSDT 1h, the leg as declared) 2020-07-01..2026-10-15 on public Binance candles via the canonical trend harness; a lever
   comparison on one leg, not a promotion read.
+last_dispatched_at: '2026-11-13T02:52:46+00:00'
+grading:
+  attested: RULE-RQ20261112-4654-05-STRUCTURE-SL-ONLY
+  auto: true
+  decision_rule_id: RULE-RQ20261112-4654-05-STRUCTURE-SL-ONLY
+  evidence:
+  - research/results/RQ-20261112-4654-05/43355190087.jsonl
+  graded_at: '2026-11-13'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -109,3 +109,13 @@ intervention_controls:
   bootstrap_group: trade
 ml_consumer:
   not_applicable: a close rule driven by the live ENTRY model's own re-score; no new learner is fit; the consumer would be the ml_entry leg's exit
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261112-0be0-01-REVCLOSE
+  evidence:
+  - research/results/RQ-20261112-0be0-01/local-20261112T1002Z.jsonl
+  graded_at: '2026-11-13'
+  grader: session RESEARCH-OPS-20261113-0250
+  reason: 'row measured: rule opp_gt_tau delta vs hold-to-bracket -0.0070 R/trade, deflated CI99.16 [-0.0135, -0.0007] does not clear 0 at n=10641; configuration closed, lever family stays open'
+  rows: 1
+  verdict: fail

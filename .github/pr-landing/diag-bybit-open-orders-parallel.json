@@ -1,0 +1,6 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Row DIAG-BYBIT-OPEN-ORDERS-SLOW. GET /api/diag/bybit_open_orders read the Bybit accounts one after another through the single-worker account lane. MEASURED 2026-11-15: one account ~6 s; the all-accounts call 30.7 s -> 502 at the proxy, then 21.2 s. The live-review packet's venue-order read timed out 2/2 tonight, so mechanics could not read venue SL/TP for a real-money ADAUSDT package. Bybit accounts are now read concurrently on run_account_read_parallel (the lane #26163 added for exchange_positions), each bounded by deadline_s (default 15, clamped 1..25, under the proxy's 30 s). A slow account answers read_state 'timed_out' with result null (could-not-look, never 'nothing resting'); elapsed_s per account; deadline_s echoed. Read-only diag route: no order path, no writes, no new gate. web-api only (src/web/api/routers/diag.py), no trader restart. Revert: git revert."
+}

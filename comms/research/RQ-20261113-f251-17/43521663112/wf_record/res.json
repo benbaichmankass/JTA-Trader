@@ -1,0 +1,150 @@
+{
+  "strategy": "trend_donchian_1h",
+  "regime": "chop",
+  "folds": 4,
+  "days": 800,
+  "cell": "chop",
+  "symbol": "BTCUSDT",
+  "timeframe": "1h",
+  "harness": "trend",
+  "feed": {
+    "source": "binance",
+    "ticker": "BTCUSDT",
+    "interval": "60",
+    "resample": "1h"
+  },
+  "window": {
+    "start": "2025-11-01T00:00:00",
+    "end": "2026-10-31T23:00:00",
+    "rows": 8760
+  },
+  "decision_bar": "forming",
+  "fidelity": "faithful",
+  "omitted_levers": [],
+  "walkforward": {
+    "label": "trend_donchian_1h:chop",
+    "sources": [
+      "comms/research/RQ-20261113-f251-17/43521663112/wf_record/trend_donchian_1h__wf_chop.jsonl"
+    ],
+    "total_trades": 66,
+    "folds": 4,
+    "window": {
+      "start": "2025-11-11",
+      "end": "2026-10-20"
+    },
+    "by_fold": [
+      {
+        "trades": 17,
+        "long_n": 11,
+        "long_r": -8.9461,
+        "short_n": 6,
+        "short_r": 0.6377,
+        "net_r": -8.3084,
+        "fold": 1,
+        "from": "2025-11-11",
+        "to": "2026-02-12"
+      },
+      {
+        "trades": 16,
+        "long_n": 6,
+        "long_r": -3.0397,
+        "short_n": 10,
+        "short_r": 5.3945,
+        "net_r": 2.3548,
+        "fold": 2,
+        "from": "2026-02-13",
+        "to": "2026-04-24"
+      },
+      {
+        "trades": 17,
+        "long_n": 8,
+        "long_r": -4.1672,
+        "short_n": 9,
+        "short_r": 4.984,
+        "net_r": 0.8168,
+        "fold": 3,
+        "from": "2026-05-09",
+        "to": "2026-08-23"
+      },
+      {
+        "trades": 16,
+        "long_n": 8,
+        "long_r": 3.6526,
+        "short_n": 8,
+        "short_r": -2.8506,
+        "net_r": 0.802,
+        "fold": 4,
+        "from": "2026-08-28",
+        "to": "2026-10-20"
+      }
+    ],
+    "pooled": {
+      "trades": 66,
+      "long_n": 33,
+      "long_r": -12.5004,
+      "short_n": 33,
+      "short_r": 8.1656,
+      "net_r": -4.3348
+    },
+    "verdict": {
+      "long_folds_negative": 3,
+      "short_folds_positive": 3,
+      "of_folds": 4,
+      "stable_drag": true,
+      "stable_edge": true
+    }
+  },
+  "cell_verdict": {
+    "target_regime": "chop",
+    "target_vol": null,
+    "cell": "chop",
+    "regime_trades": 66,
+    "long_trades": 33,
+    "short_trades": 33,
+    "fold_panel": [
+      3,
+      4,
+      5
+    ],
+    "per_fold_count": {
+      "3": {
+        "short_folds_negative": 1,
+        "long_folds_negative": 2,
+        "of_folds": 3,
+        "short_populated_folds": 3,
+        "long_populated_folds": 3,
+        "short_majority_negative": false,
+        "long_majority_negative": true
+      },
+      "4": {
+        "short_folds_negative": 1,
+        "long_folds_negative": 3,
+        "of_folds": 4,
+        "short_populated_folds": 4,
+        "long_populated_folds": 4,
+        "short_majority_negative": false,
+        "long_majority_negative": true
+      },
+      "5": {
+        "short_folds_negative": 2,
+        "long_folds_negative": 4,
+        "of_folds": 5,
+        "short_populated_folds": 5,
+        "long_populated_folds": 5,
+        "short_majority_negative": false,
+        "long_majority_negative": true
+      }
+    },
+    "pooled_short_r": 8.1656,
+    "pooled_long_r": -12.5004,
+    "min_direction_trades": 10,
+    "long_insufficient_n": false,
+    "short_insufficient_n": false,
+    "long_verdict": "stable_drag",
+    "short_verdict": "no_stable_drag",
+    "short_stable_drag": false,
+    "long_stable_drag": true,
+    "short_fold_sensitive": false,
+    "long_fold_sensitive": false
+  }
+}

@@ -374,3 +374,12 @@ def test_prop_brackets_partial_when_no_amendments_record():
               "reported_at": OPEN, "amendments": None}
     b = tcs.brackets(tcs.prop_trade(opener, None, None), None, "1h")
     assert "no_amendments_record" in b["partial_reasons"] and b["read_state"] == "partial"
+
+
+def test_advice_only_marker_follows_the_row_date():
+    """Advice-only ended 2026-11-14 (operator directive): a row reviewed before keeps its advice_only marker, a row
+    reviewed after that was not applied is not mislabelled advice_only."""
+    before = {"review_id": "LR-b", "reviewed_at": "2026-11-13T10:00:00Z", "recommendation": {"action": "close"}}
+    after = {"review_id": "LR-a", "reviewed_at": "2026-11-14T12:00:00Z", "recommendation": {"action": "close"}}
+    assert tcs.review_disposition(before, "a", set())[0] == "advice_only"
+    assert tcs.review_disposition(after, "a", set())[0] != "advice_only"

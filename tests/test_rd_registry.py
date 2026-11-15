@@ -192,3 +192,40 @@ def test_survivors_reuse_research_slo_definitions(tmp_path):
     s = doc["summary"]
     assert s["survivors"]["per_track"]["ML"] == 1
     assert s["ml_per_slot"]["slots"]["D2"]["ideas"] == 1               # Collie-9 carries slot D2
+
+
+def test_counts_are_null_with_read_state_when_the_catalog_is_unreadable(tmp_path):
+    """UI-WQ-RD-ROUTE: a count we could not read is null + counts_read_state, never 0."""
+    ok = rdr.build_registry(tmp_path, now=NOW, catalog=_tree(tmp_path))
+    assert all(i["counts_read_state"] == "read" and i["counts"] is not None for i in ok["ideas"])
+    bad = rdr.build_registry(tmp_path, now=NOW, catalog={"units": [], "readErrors": [{"path": "x", "error": "y"}],
+                                                         "roadmapAvailable": False})
+    assert bad["read_state"]["research_catalog"]["state"] == "unreadable"
+    assert bad["ideas"], "strategy legs still render from config"
+    assert all(i["counts"] is None and i["counts_read_state"] == "unreadable" for i in bad["ideas"])
+    assert all(e["units"] is None for e in bad["summary"]["ml_per_slot"]["slots"].values())
+    assert rdr.cross_check(bad, tmp_path) == [
+        "idea counts are null (research catalog unreadable); unit arithmetic not checked"]
+    partial = rdr.build_registry(tmp_path, now=NOW, catalog={**_tree(tmp_path), "readErrors": [{"path": "x", "error": "y"}]})
+    assert all(i["counts_read_state"] == "partial" and i["counts"] is not None for i in partial["ideas"])
+
+
+def test_route_changed_window_is_server_side(monkeypatch, tmp_path):
+    from fastapi.testclient import TestClient
+
+    from src.web.api.main import app
+    from src.web.api.routers import research_catalog as router_mod
+    doc = rdr.build_registry(tmp_path, now=NOW, catalog=_tree(tmp_path))
+    acts = sorted(i["last_activity"] for i in doc["ideas"] if i["last_activity"])
+    assert acts, "the planted tree has activity"
+    monkeypatch.setattr(router_mod, "_registry", lambda: {**doc, "servedFrom": "built"})
+    router_mod._SWR_REG.clear()
+    c = TestClient(app)
+    everything = c.get("/api/bot/research/registry", params={"since": "2000-01-01"}).json()["changed"]
+    assert everything["count"] == len(acts) and everything["since"] == "2000-01-01T00:00:00Z"
+    last = acts[-1]
+    newest = c.get("/api/bot/research/registry", params={"since": last.rstrip("Z"), "track": "ML"}).json()["changed"]
+    assert newest["count"] == sum(1 for a in acts if a >= last)  # whole registry, not the filtered ideas
+    assert c.get("/api/bot/research/registry", params={"since": "2026-13-40"}).status_code == 400
+    assert c.get("/api/bot/research/registry", params={"since": "yesterday"}).status_code == 422
+    assert "default window: 7 days" in c.get("/api/bot/research/registry").json()["changed"]["basis"]

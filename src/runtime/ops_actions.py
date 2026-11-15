@@ -59,7 +59,7 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 
@@ -490,8 +490,8 @@ REGISTRY: Dict[str, OpsAction] = {a.name: a for a in (
               "appends one status record (folded / not_needed / pending) for a ledger entry; never edits one"),
     OpsAction("stage-token-rotation", 2, "the ops token rotation, VM side (VM-CHANGE-LEDGER 4b)",
               _v_none, "run_stage_token_rotation", 180,
-              "copies the current WORK_STORE_TOKEN to WORK_STORE_TOKEN_PREV (accepted until "
-              "WORK_STORE_TOKEN_PREV_UNTIL, +72 h), restarts ict-web-api; prints fingerprints only",
+              "src/web/api/work_store_rotation.stage: the current work-store token becomes the dual-accepted "
+              "previous one for 72 h, then restarts ict-web-api; prints fingerprints only",
               ledger="always"),
 )}
 
@@ -781,9 +781,10 @@ def _derived_change(job: Dict[str, Any]) -> Dict[str, Any]:
         return {"summary": f"live-review row {row.get('review_id')} queued for the trader",
                 "touched": [f"review:{row.get('review_id')}"], "revert": "a new review row"}
     if a == "stage-token-rotation":
-        return {"summary": "WORK_STORE_TOKEN_PREV staged (dual-accept) and ict-web-api restarted",
-                "touched": ["env:shared:WORK_STORE_TOKEN_PREV", "env:shared:WORK_STORE_TOKEN_PREV_UNTIL"],
-                "revert": "nothing to revert: the previous token stops being accepted at WORK_STORE_TOKEN_PREV_UNTIL"}
+        from src.web.api import work_store_rotation as wsr
+        return {"summary": "previous work-store token staged (dual-accept) and ict-web-api restarted",
+                "touched": [f"env:shared:{k}" for k in wsr.STAGED_KEYS],
+                "revert": "nothing to revert: the previous token stops being accepted when its window ends"}
     if a == "exec":
         cmd = str(p.get("cmd") or "")
         return {"summary": f"exec: {cmd[:300]}", "touched": [],
@@ -1031,52 +1032,12 @@ def run_ledger_fold(job: Dict[str, Any], *, root: Optional[Path] = None) -> Dict
 
 run_ledger_fold.wants_root = True  # type: ignore[attr-defined]
 
-#: The ops token's rotation window (VM-CHANGE-LEDGER 4b): how long the previous token stays accepted.
-TOKEN_PREV_WINDOW_H = 72
-
-
-def _fingerprint(v: str) -> str:
-    import hashlib
-    return hashlib.sha256(v.encode()).hexdigest()[:8] if v else "-"
-
-
-def _upsert_env(text: str, key: str, value: str) -> str:
-    lines, done = text.splitlines(), False
-    for i, ln in enumerate(lines):
-        if ln.startswith(f"{key}="):
-            lines[i], done = f"{key}={value}", True
-    if not done:
-        lines.append(f"{key}={value}")
-    return "\n".join(lines) + "\n"
-
-
-def stage_token_rotation(env_path: Path, *, now: Optional[datetime] = None) -> Dict[str, Any]:
-    """Copy WORK_STORE_TOKEN to WORK_STORE_TOKEN_PREV with an expiry, in place (mode kept). Prints fingerprints,
-    never values. The new token then arrives as WORK_STORE_TOKEN by the sync-vm-secrets workflow."""
-    now = now or _now()
-    text = env_path.read_text()
-    cur = None
-    for ln in text.splitlines():
-        if ln.startswith("WORK_STORE_TOKEN="):
-            cur = ln.split("=", 1)[1].strip().strip('"').strip("'")
-    if not cur:
-        return {"exit": 2, "detail": f"refused: no WORK_STORE_TOKEN in {env_path.name}; nothing to stage"}
-    until = _iso(now + timedelta(hours=TOKEN_PREV_WINDOW_H))
-    new = _upsert_env(_upsert_env(text, "WORK_STORE_TOKEN_PREV", cur), "WORK_STORE_TOKEN_PREV_UNTIL", until)
-    mode = env_path.stat().st_mode & 0o777
-    backup = env_path.with_name(f"{env_path.name}.bak.{now.strftime('%Y%m%dT%H%M%SZ')}")
-    backup.write_text(text)
-    os.chmod(backup, mode)
-    tmp = env_path.with_name(f".{env_path.name}.{os.getpid()}.tmp")
-    tmp.write_text(new)
-    os.chmod(tmp, mode)
-    os.replace(tmp, env_path)
-    return {"exit": 0, "prev_fingerprint": _fingerprint(cur), "prev_until": until, "backup": backup.name,
-            "detail": f"WORK_STORE_TOKEN_PREV staged (fp {_fingerprint(cur)}), accepted until {until}"}
-
-
 def run_stage_token_rotation(job: Dict[str, Any]) -> Dict[str, Any]:
-    res = stage_token_rotation(ENV_FILE_PATHS["shared"])
+    """The web API owns its credential's key names (src/web/api/work_store_rotation.py); this runner only calls it,
+    so no trader-side module names the key (tests/test_sync_vm_secrets_restart_scope.py)."""
+    from src.web.api import work_store_rotation as wsr
+
+    res = wsr.stage(ENV_FILE_PATHS["shared"])
     if res.get("exit") != 0:
         return res
     rs = _script([*_sudo(), "systemctl", "restart", "ict-web-api.service"], {}, 120)

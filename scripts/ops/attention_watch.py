@@ -804,6 +804,14 @@ def _row_line_ranges(lines: list[str]) -> dict[str, tuple[int, int]]:
     return out
 
 
+def _checklist_frozen() -> bool:
+    try:
+        from src.runtime import work_read  # noqa: PLC0415
+        return work_read.frozen(REPO_ROOT)
+    except Exception:  # noqa: BLE001 -- unreadable header reads as not frozen (the pre-freeze path)
+        return False
+
+
 def probe_inflight(now: datetime, shallow: bool | None) -> dict:
     """In_flight rows whose checklist text has not changed in INFLIGHT_STALE_DAYS.
 
@@ -819,9 +827,34 @@ def probe_inflight(now: datetime, shallow: bool | None) -> dict:
     except (OSError, ValueError) as exc:
         return {"status": UNKNOWN, "detail": f"checklist unreadable: {exc}", "rows": []}
     inflight = [r for r in d.get("items", []) if r.get("state") == "in_flight"]
-    if shallow:
+    if shallow and not (text_lines == [] and _checklist_frozen()):  # the frozen path reads no git history
         return {"status": UNKNOWN, "detail": f"{len(inflight)} in_flight rows; clone is "
                 "shallow so row age cannot be read", "rows": []}
+    if text_lines == [] and _checklist_frozen():
+        # WSD-S4 FREEZE: a row write goes to work_store.db and the row FILE (the export) is never committed
+        # again, so its last commit dates every row to the freeze -- 2026-11-13's brief named
+        # ML-SHADOW-NEVER-ORDERS "15d" while the store showed it written 2026-11-12. After the freeze the row's
+        # own updated_at (set by every store write; the rows here are read from the store) is the activity.
+        stale = []
+        unreadable = 0
+        for r in inflight:
+            try:
+                ts = datetime.fromisoformat(str(r.get("updated_at")).replace("Z", "+00:00"))
+            except ValueError:
+                unreadable += 1
+                continue
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+            age = (now - ts).total_seconds() / 86400
+            if age >= INFLIGHT_STALE_DAYS:
+                stale.append({"id": r.get("id"), "days": round(age, 1), "lane": r.get("lane")})
+        stale.sort(key=lambda x: -x["days"])
+        return {"status": BREACHED if stale else OK, "rows": stale,
+                "detail": f"{len(stale)} of {len(inflight)} in_flight rows untouched "
+                          f">= {INFLIGHT_STALE_DAYS}d (row updated_at; checklist frozen)"
+                          + (f"; {unreadable} with no readable updated_at" if unreadable else "")
+                          + (": " + ", ".join(f"{s['id']} {s['days']:.0f}d" for s in stale[:6])
+                             if stale else "")}
     if not text_lines:  # per-row store: a row's activity is the last commit on ITS file
         stale = []
         for r in inflight:

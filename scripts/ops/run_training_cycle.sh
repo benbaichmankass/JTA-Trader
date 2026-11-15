@@ -171,6 +171,35 @@ fi
 if [ -z "${TRAINING_MANIFESTS:-}" ]; then
   # Default: every YAML under ml/configs/. Sorted for deterministic order.
   mapfile -t TRAINING_MANIFEST_LIST < <(find ml/configs -maxdepth 1 -type f -name '*.yaml' | sort)
+  # Regime-head de-prioritisation (2026-11-12, Tier 2, manager 23:03Z approved; row ML-D2-CONSUMER-TEST).
+  # RQ-20261112-bcd2-01 FAILED (research/results/RQ-20261112-bcd2-01/43304656810.jsonl): the D2 regime gate
+  # dropped 91/195 SOL TD trades, -11.69 R, p 0.815 vs matched-random, and ETH/XRP TD legs have no head. So the
+  # `*regime*` manifests (ml/configs/*regime*.yaml) train LAST in the cycle (every other manifest gets the
+  # memory/time first) and on every REGIME_HEAD_CYCLE_EVERY_N_DAYS-th UTC day only (default 3, under the
+  # staleness threshold of the post-cycle scan). Nothing is dropped: dataset builds above are untouched (data
+  # collection + freshness keep running), no manifest is removed, the registry keeps every head, and the days a
+  # head is skipped are logged as `regime_heads_deprioritised`. Revert: set REGIME_HEAD_CYCLE_EVERY_N_DAYS=1
+  # (trains every night, still last) or revert this block. Applies to the default glob only; an explicit
+  # TRAINING_MANIFESTS list is trained as given.
+  _regime_n="${REGIME_HEAD_CYCLE_EVERY_N_DAYS:-3}"
+  case "$_regime_n" in ''|*[!0-9]*|0) _regime_n=3 ;; esac
+  _head_list=()
+  _regime_list=()
+  for _m in "${TRAINING_MANIFEST_LIST[@]}"; do
+    case "$(basename "$_m")" in
+      *regime*) _regime_list+=("$_m") ;;
+      *) _head_list+=("$_m") ;;
+    esac
+  done
+  if [ "${#_regime_list[@]}" -gt 0 ]; then
+    if [ "$(( 10#$(date -u +%j) % _regime_n ))" = "0" ]; then
+      TRAINING_MANIFEST_LIST=("${_head_list[@]}" "${_regime_list[@]}")
+      emit "$(printf '{"ts":"%s","status":"regime_heads_ordered_last","regime_manifests":%d,"every_n_days":%d}' "$(iso_now)" "${#_regime_list[@]}" "$_regime_n")"
+    else
+      TRAINING_MANIFEST_LIST=("${_head_list[@]}")
+      emit "$(printf '{"ts":"%s","status":"regime_heads_deprioritised","skipped_manifests":%d,"every_n_days":%d,"detail":"regime heads train every Nth UTC day; datasets still rebuilt"}' "$(iso_now)" "${#_regime_list[@]}" "$_regime_n")"
+    fi
+  fi
   # Opt-in nightly rotation (MB-20260709): with TRAINING_MANIFEST_ROTATE=1, train
   # every other manifest by UTC day-parity so the torch-heavy heads (TCN, SSL-MAE)
   # and the LightGBM fleet alternate nights — halving a single cycle's cumulative
