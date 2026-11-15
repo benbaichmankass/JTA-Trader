@@ -41,7 +41,7 @@
 #   plan_items    the ml-plan-items.yaml ids this line absorbs (the reader flags an open item no line absorbs)
 #   proposed_disposition  optional; a kill/retire PROPOSAL with reason + data. Applying it is the manager's / operator's act.
 schema: 1
-updated: '2026-11-14'
+updated: '2026-11-15'
 as_of_main: 5a0bd82b9
 review_days: 7
 weeks: {W47: '2026-11-16', W48: '2026-11-23', W49: '2026-11-30', W50: '2026-12-07'}
@@ -790,7 +790,8 @@ lines:
     summary: Value of information first -- the refusal/concurrency census decides whether any build is worth it.
     evidence:
       - {record: docs/plans/ML-ROADMAP-MECE-2026-11.md § 4, provenance: QUOTED}
-  levers_tried: []
+  levers_tried:
+    - {lever: VOI census (Stage-0 solo streams, 5 crypto real-money/prop pairs, two windows), ref: RQ-20261114-82fd-02, verdict: 'PASS (research/results/RQ-20261114-82fd-02/43661153472.jsonl): material concurrency on ALL 5 pairs in both windows -- share of trades overlapping another leg 27-54 percent (ADA 54/51, SOL-bybit_2 33/33, XRP 27/37, ETH-prop 27/31, SOL-prop 42/41 percent prior/record), many opposite-direction overlaps (ADA 35+66 prior). The aggregator ceiling is NOT small: build AGG-HARNESS + the A0..A4 rule arms.'}
   levers_ahead:
     - lever: VOI census (Stage-0 concurrent same-symbol trades on the 5 crypto real-money pairs, two windows)
       ref: 'RQ-20261114-82fd-02 (ML-PRIMARY; RULE-RQ20261114-82fd-02-D5-VOI; folds PI-20261104-BCZDXJNR-0002 TODO 1)'
@@ -802,7 +803,7 @@ lines:
       baseline: today's slices, 1/N, best-single, net of cost
       pass: Tier-3 allocation change
       fail: slices stay
-  next_weeks: {W47: 'grade 82fd-02 (authored + dispatched 11-14); PASS -> A0..A4 rule-arm unit', W48: 'harness only if material concurrency', W49: none, W50: none}
+  next_weeks: {W47: '82fd-02 PASS (11-15) -> build AGG-HARNESS (same-symbol multi-leg replay incl. ml_entry) + register the A0..A4 rule-arm unit RQ-20261115-a474-02 (id reserved)', W48: 'harness only if material concurrency', W49: none, W50: none}
   exhaustion: the census shows concurrency too rare to move net P&L (threshold set in its own registration).
   owner: AM-ML
   plan_items: []
@@ -821,6 +822,7 @@ lines:
       - {record: docs/plans/ML-ROADMAP-MECE-2026-11.md § 3 D6, provenance: QUOTED}
   levers_tried:
     - {lever: brackets as predictions (doctrine), ref: BRACKETS-AS-PREDICTIONS, verdict: done}
+    - {lever: 'Pointer v0: entry-time TP from the first-passage model vs fixed 3 ATR, ml_entry trades', ref: RQ-20261114-82fd-01, verdict: 'FAIL by rule (research/results/RQ-20261114-82fd-01/43661151535.jsonl): record year policy -0.0036 R/trade, delta -0.0109 CI95 [-0.046, +0.025], n 11,240; prior year delta +0.0061 CI95 [-0.035, +0.048], n 15,233; the policy put 6,544 of 11,240 record-year trades at 6 ATR. HARNESS DEFECT disclosed: m* selection read NaN for 3 of 4 margins (walks into 2022 archive holes) and max() returned 0.0; fixed, disclosed re-run RQ-20261115-a474-01 (veto window to 07:00Z). The FAIL stands.'}
   levers_ahead:
     - lever: Pointer v0 -- the tp-revision recipe extended with check-in 0, one static entry-time TP per ml_entry trade
       ref: RQ-20261114-82fd-01 (ML-PRIMARY 2026-11-14; RULE-RQ20261114-82fd-01-POINTER-V0, two windows, non-inferiority -0.02 R)
@@ -837,7 +839,7 @@ lines:
       baseline: the leg's fixed bracket
       pass: as above
       fail: as above
-  next_weeks: {W47: 'grade 82fd-01 (authored + dispatched 11-14); PASS -> held Tier-3 PR', W48: 'drive RQ-20261009-900 if 82fd-01 FAILs', W50: 'ML-FS-BRACKETS-HOLD (ranked LATER @11-30)'}
+  next_weeks: {W47: '82fd-01 FAIL (graded 11-15); defect-corrected re-run a474-01; if it FAILs, RQ-20261009-900 (move-extent head) is next', W48: 'drive RQ-20261009-900 if 82fd-01 FAILs', W50: 'ML-FS-BRACKETS-HOLD (ranked LATER @11-30)'}
   exhaustion: Pointer v0 and the predict head FAIL on their registered reads.
   owner: ML-PRIMARY
   plan_items: [ML-X1, ML-X2]
@@ -939,6 +941,7 @@ lines:
       ref: RQ-20261114-1ae8-01 (ML-PRIMARY 2026-11-15; RULE-RQ20261114-1ae8-01-EXIT-NOW-V0, two windows, non-inferiority -0.02 R)
       baseline: hold to the fixed 2/3 ATR bracket on the same ml_entry trades, net of the full cost stack, prior + record year
       pass: held Tier-3 exit-now proposal for ml_entry (real-money D8 model)
+      graded: 'INDETERMINATE by rule (research/results/RQ-20261114-1ae8-01/43661155486.jsonl): delta prior -0.0017 CI95 [-0.016, +0.013] n 13,243; record -0.0038 CI95 [-0.016, +0.008] n 9,939; non-inferior within -0.02 but mean < 0 -> exit-now adds nothing on ml_entry. Not starved (CI width 0.03 < 0.08). The line moves to the eth_4h variant.'
       fail: exit-now on ml_entry closes; the eth_4h variant below is next
     - lever: variant for trend_donchian_eth_4h
       ref: PI-20261104-NHN7JV7U-0001
@@ -950,7 +953,7 @@ lines:
       baseline: as above
       pass: as above
       fail: as above
-  next_weeks: {W47: 'grade 1ae8-01 (authored + dispatched 11-15); author the eth_4h variant iff it FAILs', W48: run, W49: grade, W50: none}
+  next_weeks: {W47: '1ae8-01 INDETERMINATE (graded 11-15, no gain); author the eth_4h variant', W48: run, W49: grade, W50: none}
   exhaustion: the eth_4h variant and the desk-label variant FAIL; with today's FAILs the head's feature set then has no lever left.
   owner: AM-ML
   plan_items: [ML-X3, ML-X4, ML-N4]
@@ -1480,10 +1483,10 @@ infra_queue:
 # declared power, on two windows (record year + the year before). A fee-only corpus never counts. A PASS -> a HELD Tier-3 PR.
 # =====================================================================================================================
 slot_baselines:
-  - {slot: D6, line: MLP-D6-POINTER, unit: 'RQ-20261114-82fd-01 Pointer v0 (entry-time TP) vs fixed 3 ATR TP on ml_entry trades', status: queued}
-  - {slot: D5, line: MLP-D5-MASTIFF, unit: 'RQ-20261114-82fd-02 VOI census; then rule arms A0 slices / A1 1/N netting / A2 best-single', status: queued}
+  - {slot: D6, line: MLP-D6-POINTER, unit: 'RQ-20261114-82fd-01 Pointer v0 vs fixed 3 ATR TP on ml_entry trades', status: 'FAIL (11-15); defect-corrected re-run RQ-20261115-a474-01 queued'}
+  - {slot: D5, line: MLP-D5-MASTIFF, unit: 'RQ-20261114-82fd-02 VOI census; then rule arms A0 slices / A1 1/N netting / A2 best-single', status: 'census PASS (11-15); AGG-HARNESS + rule arms next (RQ-20261115-a474-02 reserved)'}
   - {slot: D3, line: MLP-D3-FOXHOUND-1, unit: 'served-window diagnosis + cost-per-R selector (CRYPTO-ENTRY-RETRAIN-UNIT, ML-DECISION-LABEL-VOL-CONFOUND)', status: in_flight (due 11-15)}
-  - {slot: D8, line: MLP-D8-LABRADOR-2, unit: 'RQ-20261114-1ae8-01 exit-now v0 on ml_entry vs hold-to-bracket', status: queued}
+  - {slot: D8, line: MLP-D8-LABRADOR-2, unit: 'RQ-20261114-1ae8-01 exit-now v0 on ml_entry vs hold-to-bracket', status: 'INDETERMINATE (11-15, no gain); eth_4h exit-head variant next'}
   - {slot: D9, line: MLP-D9-WHIPPET, unit: 'maker-first vs taker fill replay', status: next}
   - {slot: D10, line: MLP-D10-BASSET, unit: 'grade-vs-CUSUM early decay', status: later}
 

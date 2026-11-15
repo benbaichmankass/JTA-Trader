@@ -1291,13 +1291,21 @@ def pointer_v0(args) -> int:
             lv_by_m[m] = levels_at(m)
             ks = [k for k in trades.index[sel_mask.to_numpy()] if k in lv_by_m[m]]
             pol = pv0_score(trades.loc[ks], bars, lv_by_m[m])
-            by_margin[str(m)] = {"n": len(ks), "mean_delta": float((pol - base_all[ks]).mean()),
-                                 "n_moved": int(sum(lv_by_m[m][k] != q0 for k in ks))}
+            d_sel = pol - base_all[ks]
+            fin = np.isfinite(d_sel)            # a walk into an archive hole (NaN bars) is dropped from BOTH arms, counted
+            by_margin[str(m)] = {"n": int(fin.sum()), "n_dropped_nonfinite": int((~fin).sum()),
+                                 "mean_delta": float(d_sel[fin].mean()) if fin.any() else None,
+                                 "n_moved": int(sum(lv_by_m[m][k] != q0 for k, f in zip(ks, fin) if f))}
             print("margin", m, by_margin[str(m)], f"t={time.time()-t0:.0f}s", flush=True)
-        m_star = max(MARGINS, key=lambda m: (by_margin[str(m)]["mean_delta"], m))
+        # 82fd-01 defect (2026-11-15): NaN means made max() ill-defined and it returned m=0.0. Only finite means compete.
+        finite_m = [m for m in MARGINS if by_margin[str(m)]["mean_delta"] is not None]
+        m_star = max(finite_m, key=lambda m: (by_margin[str(m)]["mean_delta"], m))
         lv = lv_by_m[m_star]
         ks_sel = list(trades.index[sel_mask.to_numpy()])
-        st = {q: float(pv0_score(trades.loc[ks_sel], bars, {k: q for k in ks_sel}).mean()) for q in range(len(GRID))}
+        st = {}
+        for q in range(len(GRID)):
+            v = pv0_score(trades.loc[ks_sel], bars, {k: q for k in ks_sel})
+            st[q] = float(np.nanmean(v)) if np.isfinite(v).any() else float("-inf")
         q_static = max(st, key=lambda q: (st[q], -abs(GRID[q] - BASE_TP)))     # chosen outside both read windows
         rng = np.random.default_rng(SEED)
         wins = {}
@@ -1312,7 +1320,13 @@ def pointer_v0(args) -> int:
             rnd = [pv0_score(sub, bars, {k: (int(rng.choice(others)) if rng.random() < rate else q0) for k in ks})
                    for _ in range(PV0_RANDOM_DRAWS)]
             static = pv0_score(sub, bars, {k: q_static for k in ks})
-            wins[name] = pv0_window(name, sub, pol, base_all[ks], moved, rnd, static, rng)
+            fin = np.isfinite(pol) & np.isfinite(base_all[ks]) & np.isfinite(static)
+            for r_ in rnd:
+                fin &= np.isfinite(r_)
+            sub, pol, moved, static = sub[fin], pol[fin], moved[fin], static[fin]
+            rnd = [r_[fin] for r_ in rnd]
+            wins[name] = pv0_window(name, sub, pol, base_all[ks][fin], moved, rnd, static, rng)
+            wins[name]["n_dropped_nonfinite"] = int((~fin).sum())
             wins[name]["level_mix"] = {str(GRID[q]): int(sum(lv[k] == q for k in ks)) for q in range(len(GRID))}
             print(json.dumps({k: v for k, v in wins[name].items() if k != "level_mix"}, default=str), flush=True)
         clauses = [w["clause"] for w in wins.values()]
