@@ -49,6 +49,8 @@ import datetime as dt
 import json
 import os
 import sys
+import time
+import urllib.error
 import urllib.request
 from typing import Optional
 
@@ -282,16 +284,39 @@ def decide_dedupe(schedule_expr: str, me: dict, runs: list[dict]) -> dict:
 
 
 # ── GitHub API ──────────────────────────────────────────────────────────────
+#: Bounded retry for a transient GitHub API failure (run 43598757422, 2026-11-14 13:14Z: one 502 Bad
+#: Gateway crashed the whole keep pass and paged the operator channel). 5xx, 429 and network errors are
+#: retried; any other 4xx is a real answer and raises at once.
+API_ATTEMPTS = 3
+API_BACKOFF_S = (2.0, 5.0)
+_sleep = time.sleep
+
+
+def _retryable(exc: BaseException) -> bool:
+    if isinstance(exc, urllib.error.HTTPError):
+        return exc.code >= 500 or exc.code == 429
+    return isinstance(exc, (urllib.error.URLError, TimeoutError, ConnectionError))
+
+
 def _api(path: str, method: str = "GET", body: Optional[dict] = None):
     tok = os.environ["GH_TOKEN"]
-    req = urllib.request.Request(
-        f"https://api.github.com/repos/{REPO}{path}", method=method,
-        data=None if body is None else json.dumps(body).encode(),
-        headers={"Authorization": f"Bearer {tok}",
-                 "Accept": "application/vnd.github+json"})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        raw = r.read()
-        return json.loads(raw) if raw else None
+    for attempt in range(API_ATTEMPTS):
+        req = urllib.request.Request(
+            f"https://api.github.com/repos/{REPO}{path}", method=method,
+            data=None if body is None else json.dumps(body).encode(),
+            headers={"Authorization": f"Bearer {tok}",
+                     "Accept": "application/vnd.github+json"})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                raw = r.read()
+                return json.loads(raw) if raw else None
+        except Exception as exc:  # noqa: BLE001 -- classified just below
+            if not _retryable(exc) or attempt == API_ATTEMPTS - 1:
+                raise
+            wait = API_BACKOFF_S[min(attempt, len(API_BACKOFF_S) - 1)]
+            print(f"schedule-keeper: {method} {path} failed ({exc}); retry {attempt + 1}/"
+                  f"{API_ATTEMPTS - 1} in {wait:.0f}s", file=sys.stderr)
+            _sleep(wait)
 
 
 def _runs(workflow: str) -> list[dict]:
@@ -304,13 +329,26 @@ def _runs(workflow: str) -> list[dict]:
 def cmd_keep(args) -> int:
     now = dt.datetime.now(UTC)
     rows, stale = [], []
+    could_not_look = []
     for wf, spec in TARGETS.items():
         crons = workflow_crons(f".github/workflows/{wf}")
-        d = decide_keep(crons, _runs(wf), now, spec["stale_hours"], spec.get("starved_min"))
+        try:
+            runs = _runs(wf)
+        except Exception as exc:  # noqa: BLE001 -- no halting: this one target is skipped, the pass goes on
+            could_not_look.append(f"{wf} ({exc})")
+            print(f"::warning::schedule-keeper could_not_look {wf}: run list unreadable after "
+                  f"{API_ATTEMPTS} attempts ({exc}); skipped this pass, the next pass retries")
+            continue
+        d = decide_keep(crons, runs, now, spec["stale_hours"], spec.get("starved_min"))
         d["workflow"] = wf
         if d["dispatch"] and not args.dry_run:
-            _api(f"/actions/workflows/{wf}/dispatches", "POST", {"ref": "main"})
-            d["dispatched"] = True
+            try:
+                _api(f"/actions/workflows/{wf}/dispatches", "POST", {"ref": "main"})
+                d["dispatched"] = True
+            except Exception as exc:  # noqa: BLE001
+                d["dispatch_error"] = str(exc)
+                could_not_look.append(f"{wf} dispatch ({exc})")
+                print(f"::warning::schedule-keeper could not dispatch {wf} ({exc}); the next pass retries")
         if d["stale"]:
             stale.append(f"{wf} (last completed run: {d['last_completed'] or 'none'})")
         rows.append(d)
@@ -321,11 +359,15 @@ def cmd_keep(args) -> int:
         with open(gh_out, "a") as f:
             f.write(f"stale={'true' if stale else 'false'}\n")
             f.write(f"summary={summary}\n")
+            f.write(f"could_not_look={'; '.join(could_not_look)}\n")
     for r in rows:
-        tag = "DISPATCHED" if r.get("dispatched") else ("would dispatch" if r["dispatch"] else "ok")
+        tag = ("DISPATCHED" if r.get("dispatched") else "DISPATCH FAILED" if r.get("dispatch_error")
+               else ("would dispatch" if r["dispatch"] else "ok"))
         print(f"{r['workflow']}: slot {r['slot']} ({r['slot_age_min']} min ago), "
               f"{r['runs_since_slot']} run(s) since -> {tag}; last completed "
               f"{r['last_completed_age_h']}h ago{' STALE' if r['stale'] else ''}")
+    for c in could_not_look:
+        print(f"could_not_look: {c}")
     return 0
 
 

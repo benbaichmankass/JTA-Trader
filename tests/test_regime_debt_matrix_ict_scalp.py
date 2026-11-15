@@ -153,7 +153,7 @@ def test_scalp_branch_is_checked_last():
     assert rdm.classify(hybrid) == "fvg_range"
 
 
-def test_every_enabled_leg_now_routes_except_turtle_soup():
+def test_every_enabled_leg_routes_except_the_non_harness_legs():
     """The population, not one leg. E25 left 9 of 52 enabled legs unrouted and
     8 of those 9 were this family; closing it must leave exactly one."""
     legs = {n: c for n, c in _live_legs().items()
@@ -176,8 +176,11 @@ def test_every_enabled_leg_now_routes_except_turtle_soup():
     # 56 -> 57 on 2026-11-01: ml_entry_v2 (bybit_1 testing leg), unrouted for the same reason as ml_entry.
     # 57 -> 58 on 2026-11-06: ml_entry_eq (ML-ENTRY-ALL-ACCOUNTS, #23715), unrouted for the same reason as ml_entry.
     # 58 -> 59 on 2026-11-08: ml_entry_eq_struct (ML-ENTRY-EQ-STRUCT-LIVE), unrouted for the same reason as ml_entry_eq.
+    # 2026-11-13 (build gap b, #25743): turtle_soup now ROUTES (scripts/backtest_turtle_soup.py), so it leaves the
+    # unrouted list; every leg still unrouted is one with no harness-family params by design.
     assert len(legs) == 59
-    assert unrouted == ["claude_desk", "e4_oi_shock_1h", "ml_entry", "ml_entry_eq", "ml_entry_eq_struct", "ml_entry_v2", "turtle_soup"]
+    assert unrouted == ["claude_desk", "e4_oi_shock_1h", "ml_entry", "ml_entry_eq", "ml_entry_eq_struct", "ml_entry_v2"]
+    assert rdm.classify(legs["turtle_soup"]) == "turtle_soup"
 
 
 # --------------------------------------------------------------------------

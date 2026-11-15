@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "TEST-PARITY-ML-ORDER-DEP (manager priority 18:42Z). Root cause: tests/test_ml_decision_shadow.py::_models() returned the module-CACHED dicts from ml_entry.load_model() / ml_entry_v2.load_model(); two tests rebind m['meta'] with a 10-symbol xs_reference, which rewrote the cache for the rest of the xdist worker. tests/test_live_replay_parity_ml.py builds its bundle from that cache and then refused every bar reference_symbols:10<40 -> could_not_check, i.e. the 5 failures that have turned main's pytest-run red intermittently (whenever loadfile put both files on one worker). Reproduced: the two files in one process -> 5 failed; the fix (_models returns shallow copies) -> 38 passed. A regression test pins it and fails on the old _models. No skip, no quarantine, no production code touched. Revert: git revert."
+}

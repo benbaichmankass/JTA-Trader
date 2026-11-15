@@ -1,0 +1,6 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Row PROP-VELO-SOL-TP-DIVERGE (rank 2). ml_entry declares structure_exit \"pivot=5;sl_only\": the structure exit moves ONLY the stop, and the ml_first_passage tp_revision stays the TP's one owner (operator option B, 2026-11-03). The exchange monitor honours sl_only (structure_exit_live.replay drops the TP), but prop_trail._tp_step ignored the flag and ran the structure TP. At 04:08:26Z it amended velotrade_1's SOL TP from 76.626 to 76.16 (structure_exit: level 76.16, +1.37R) on pkg-ec406687dc6d449f, while bybit_2 and its mirror kept the package's 76.6257. The fix: an sl_only declaration no longer reaches the structure TP path in prop_trail. Tests: the sl_only + rule case uses the rule's TP and never consults the structure TP; sl_only + an unrunnable rule leaves the resting TP; full pivot=5 still owns the TP (the first two fail on main). Scope: the only structure TP amend on velotrade_1 or tradeify_1 since 11-08 is this one (journal grep trail_tp_amend); tradeify's adapter cannot amend a TP. trader_import_closure decide: RESTART (prop_trail is in the closure); the prop executor timer picks it up on its next run after git-sync. This does NOT restore the 76.16 TP: that is a separate meta.tp_target pin via live_review_apply move_tp. Revert: git revert."
+}

@@ -713,6 +713,14 @@ class IBClient:
         # touching the socket, so a wedged gateway can't stall the loop.
         self._breaker_open_until: float = 0.0
         self._breaker_fail_count: int = 0
+        # IBKR-link state (EXIT-EVAL-IB-OUTAGE-STALL, 2026-11-13). Error 1100 means
+        # the GATEWAY lost IBKR's servers while OUR socket stays up (isConnected()
+        # still reads True), so every request hangs to its own timeout. Set on
+        # 1100; cleared on 1101/1102 (connectivity restored) and on every fresh
+        # connect. A read-only SIGNAL: nothing in this class refuses a call on it.
+        # The exit loop's per-pass IB breaker (src/main.py) reads it to skip IB
+        # fetches that would only wait out their queue timeout.
+        self._ibkr_link_lost_since: Optional[float] = None
         # Set True only once the post-connect account/portfolio warm-up
         # (BL-20260706-IBWARMUP) has actually landed real data for the
         # CURRENT underlying ``ib`` object. Reset to False whenever a fresh
@@ -845,6 +853,9 @@ class IBClient:
                 ) from exc
             self._ib = ib
             fresh_connect = True
+            # A new session starts with the link up; watch this handle's events.
+            self._ibkr_link_lost_since = None
+            self._attach_link_watch(ib)
             # Fresh handle (new socket or first-ever connect) — its wrapper
             # caches are empty, so the warm-up below must run again, and any
             # probe verdict we were carrying described the PREVIOUS handle.
@@ -1454,6 +1465,39 @@ class IBClient:
         if self._loop is None or self._loop.is_closed():
             self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
+
+    def _attach_link_watch(self, ib: Any) -> None:
+        """Track IBKR connectivity from ``ib.errorEvent`` (1100 lost; 1101/1102 restored).
+
+        Never raises: a handle without an ``errorEvent`` (a test stand-in) simply
+        leaves the state at "not lost", which never pre-trips anything."""
+        event = getattr(ib, "errorEvent", None)
+        if event is None:
+            return
+
+        def _on_link_event(reqId: Any = None, errorCode: Any = None, *_a: Any, **_kw: Any) -> None:
+            try:
+                code = int(errorCode)
+            except (TypeError, ValueError):
+                return
+            if code == 1100:
+                if self._ibkr_link_lost_since is None:
+                    self._ibkr_link_lost_since = time.monotonic()
+            elif code in (1101, 1102):
+                self._ibkr_link_lost_since = None
+
+        try:
+            ib.errorEvent += _on_link_event
+        except Exception:  # noqa: BLE001
+            pass
+
+    @property
+    def ibkr_link_lost(self) -> bool:
+        """True between an Error 1100 and the next 1101/1102 or fresh connect.
+
+        Outside ``_usage_lock`` for the same reason as ``connected``: a plain
+        attribute read must never block behind a broker call."""
+        return self._ibkr_link_lost_since is not None
 
     @staticmethod
     def _is_connected(ib: Any) -> bool:

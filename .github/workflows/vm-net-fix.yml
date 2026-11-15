@@ -1,8 +1,16 @@
 name: vm-net-fix
 
-# Tier-2 mutating action: open the dashboard API port (TCP/8001) on the
-# trading-bot VM's local firewall, then verify external reachability.
+# Tier-2 mutating action: open ONE named TCP port on the trading-bot VM's
+# local firewall, then verify external reachability.
 #
+# SEC-8001-FOLLOWUPS (operator decisions page m3, 2026-11-12): ict-web-api binds
+# 127.0.0.1:8001 and Caddy's HTTPS front (443, with 80 for the ACME challenge) is
+# the one public way in. This workflow therefore OPENS NOTHING BY DEFAULT: the
+# port must be named (workflow_dispatch input `port`, or a `port: NNN` line in the
+# vm-net-fix-request issue body), and 8001 is REFUSED outright, so no run can undo
+# the lockdown. Pinned by tests/test_vm_net_fix_workflow.py.
+#
+# History (pre-lockdown):
 # Diagnoses + fixes the class of outage tracked in #537 / #542 / #545:
 #   - bot service is healthy (uvicorn bound to 0.0.0.0:8001)
 #   - dashboard sees every /api/bot/* call as httpStatus=0 (timeout)
@@ -30,9 +38,8 @@ on:
   workflow_dispatch:
     inputs:
       port:
-        description: "Port to open (default 8001)"
-        required: false
-        default: "8001"
+        description: "Port to open (required; no default; 8001 is refused, SEC-8001 m3)"
+        required: true
       reason:
         description: "Why this action is being run (audit trail)"
         required: true
@@ -61,7 +68,7 @@ jobs:
     env:
       VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
       VM_SSH_USER: ${{ vars.VM_SSH_USER || 'ubuntu' }}
-      DASHBOARD_PORT: ${{ inputs.port || '8001' }}
+      DASHBOARD_PORT: ${{ inputs.port }}
     steps:
       - name: Require VM host secrets (fail closed)
         env:
@@ -70,22 +77,31 @@ jobs:
           fail=0
           [ -n "${NEED_VM_SSH_HOST}" ] || { echo "::error::secret VM_SSH_HOST not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
           exit "$fail"
-      - name: Resolve target port (issue-body 'port:' line overrides)
+      - name: Resolve target port (named explicitly; 8001 refused)
+        id: resolve
         env:
           ISSUE_BODY: ${{ github.event.client_payload.issue.body }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
-          # workflow_dispatch supplies inputs.port (job-env default). The issue
-          # path has no inputs, so parse an optional `port: NNN` line from the
-          # body (e.g. to open 443 for the Caddy HTTPS front), else keep 8001.
-          port="${DASHBOARD_PORT}"
-          if [ "${{ github.event_name }}" = "issues" ]; then
-            parsed=$(printf '%s' "${ISSUE_BODY:-}" | grep -ioE '^[[:space:]]*port:[[:space:]]*[0-9]+' | head -1 | grep -oE '[0-9]+' || true)
-            if [ -n "${parsed}" ]; then port="${parsed}"; fi
+          # workflow_dispatch supplies inputs.port (required, no default). The
+          # issue path arrives as repository_dispatch (issue-router.yml) with no
+          # inputs, so it takes a `port: NNN` line from the issue body. There is
+          # NO fallback port: a run that names none opens nothing.
+          port="${DASHBOARD_PORT:-}"
+          if [ "${EVENT_NAME}" = "repository_dispatch" ]; then
+            port=$(printf '%s' "${ISSUE_BODY:-}" | grep -ioE '^[[:space:]]*port:[[:space:]]*[0-9]+' | head -1 | grep -oE '[0-9]+' || true)
           fi
-          if ! printf '%s' "${port}" | grep -qE '^[0-9]+$' || [ "${port}" -lt 1 ] || [ "${port}" -gt 65535 ]; then
+          if [ -z "${port}" ]; then
+            echo "::error::no port named (workflow_dispatch input 'port', or a 'port: NNN' line in the issue body); this workflow opens nothing by default"; exit 1
+          fi
+          if ! printf '%s' "${port}" | grep -qE '^[0-9]{1,5}$' || [ "${port}" -lt 1 ] || [ "${port}" -gt 65535 ]; then
             echo "::error::invalid port '${port}'"; exit 1
           fi
+          if [ "$((10#${port}))" -eq 8001 ]; then
+            echo "::error::refusing to open 8001: ict-web-api binds 127.0.0.1 and is reached only through Caddy's HTTPS front (SEC-8001-LOCKDOWN, operator decisions page m3, 2026-11-12)"; exit 1
+          fi
+          port="$((10#${port}))"
           echo "DASHBOARD_PORT=${port}" >> "$GITHUB_ENV"
           echo "Resolved target port: ${port}"
 
@@ -132,8 +148,9 @@ jobs:
           # Port comes from the runner as $1 (resolved by the "Resolve target
           # port" step from inputs.port or the issue body). The heredoc is
           # single-quoted, so it can't interpolate $DASHBOARD_PORT directly —
-          # it's passed as a positional arg instead. Default 8001 for safety.
-          PORT="${1:-8001}"
+          # it's passed as a positional arg instead. No default: the resolve
+          # step refuses a run without a port (and refuses 8001).
+          PORT="${1:?port not passed}"
           PUBLIC_IP="${2:?live VM address (VM_SSH_HOST secret) not passed}"
 
           echo "===== ufw (idempotent allow) ====="
@@ -250,7 +267,7 @@ jobs:
             const ok = postRc === '0';
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const verdict = ok
-              ? 'SUCCESS — port 8001 is now reachable from the public internet.'
+              ? `SUCCESS — port ${process.env.DASHBOARD_PORT} is now reachable from the public internet.`
               : 'NOT YET — VM-local firewall opens applied but external probe still failing. If the VM-self loopback-via-public-IP test ALSO times out, the block is in Oracle Cloud Security List (only fixable in the Oracle console).';
             const body = [
               `**vm-net-fix** ${ok ? 'SUCCESS' : 'INCOMPLETE'}. Run: ${runUrl}`,

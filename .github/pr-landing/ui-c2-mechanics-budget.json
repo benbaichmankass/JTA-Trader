@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Fixes main red since #25398: system_catalog's default reply grew to 48,960 B (> REPLY_BUDGET 40,000) with per-leg mechanics_proven. The per-leg detail moves behind mechanics=true (legs only, 27,624 B); the default call reads nothing live again (37,952 B). Budget unchanged.",
+  "hold_text": "Tier 2 (trainer connector). The manager merges, then dispatches trainer-console-connector-install. After deploy: system_catalog {signals_limit:10} <= 40,000 B with no per-leg mechanics; {signals_limit:1, mechanics:true} returns legs only with mechanics read_state read; the console Ladder chips still render (the page sends mechanics:true)."
+}

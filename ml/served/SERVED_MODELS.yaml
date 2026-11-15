@@ -1,0 +1,122 @@
+# Served-model registry facts (row ML-REGISTRY-SERVED-MODELS-NO-STAGE, lane ML-SERVING-HYGIENE, 2026-11-12).
+#
+# WHAT THIS IS: the source of truth for the registry STAGE and the HEADLINE METRIC of every model a config consumer
+# serves directly from the repo (ml/served, ml/candidates, ml/overlay) or from the trainer mirror's exit_head dir, i.e.
+# the rows /api/bot/ml/registry adds from src/runtime/ml_serving_inventory.py. None of these ids is a trainer
+# registry.jsonl row, so before this file they rendered target_deployment_stage null next to a LIVE / SHADOW bucket.
+# The route reads this file; it decides nothing and gates nothing (no runtime reader takes a decision from it).
+#
+# STAGE: the ladder value (candidate -> shadow -> advisory) the model is ALREADY operating at by config. Every model
+# below changes an order on at least one consumer (strategies.yaml `execution: live` on a rostered account), which is
+# the influence stage, so each is `advisory`. A served model is never labelled `shadow`: shadow means "logged,
+# decisions unchanged" (I7, ML-SHADOW-NEVER-ORDERS). The paper/real-money split is `stage_from_config`
+# (testing / live), which the route keeps beside it. Labels only: no test or guard refuses an edit to this file.
+#
+# HEADLINE METRIC: copied from the committed record named in `source` (fields copied, not re-derived); `value` null
+# when the record states only a verdict. provenance MEASURED = a graded run's number. When a record is regenerated,
+# update the entry here in the same PR.
+models:
+  ml-decision-entry-v1:
+    stage: advisory
+    stage_basis: "config id of ml_entry (strategies.yaml model:), executes live on bybit_2 (real money) + paper/prop; ml/served/ENTRY_SERVED.json currently serves the refit ml-decision-entry-v1r20261106 under this id"
+    headline_metric:
+      name: heldout_mean_net_r_per_trade
+      value: 0.0371
+      n: 907
+      window: "2025-10-01..2026-09-29"
+      population: "c692-01 frozen model (tau 0.1) held-out decisions on BTC/ETH/XRP/ADA/SOL, live exit (SL-only structure stop + extend-only TP), net of fee 11 + slip 3 bps + funding 1 bps/8h"
+      verdict: pass
+      rule: RULE-RQ20261103-5E04-01-ML-SLONLY
+      provenance: MEASURED
+      source: comms/strategy_evidence/ml_entry.json
+  ml-decision-entry-v1r20261106:
+    stage: advisory
+    stage_basis: "the artifact ml/served/ENTRY_SERVED.json points at; serves every ml_entry consumer"
+    headline_metric:
+      name: promotion_grade_mean_net_r_per_trade
+      value: 0.0018
+      n: 281
+      window: "2026-10-23..2026-11-05"
+      population: "candidate refit vs served on the 14-day grade window (served -0.0918 R, n 342)"
+      verdict: pass
+      rule: RULE-ENTRY-PROMOTE-20261106
+      provenance: MEASURED
+      source: comms/research/ml_entry_grade/42250040398/verdict_amended_2.json
+  ml-decision-entry-v2:
+    stage: advisory
+    stage_basis: "model of ml_entry_v2, executes live on bybit_1 (paper, testing)"
+    headline_metric:
+      name: w1_mean_net_r_per_trade
+      value: -0.1161
+      n: 320
+      window: "W1 forward read"
+      population: "ml-decision-entry-v2 stack S3_R2_gate_24, the one W1 read"
+      verdict: fail
+      rule: RQ-20261101-b609-01
+      provenance: MEASURED
+      source: comms/research/RQ-20261101-b609-01/local-20261101T2000Z/result.json
+  ml-entry-eq-v1:
+    stage: advisory
+    stage_basis: "model of ml_entry_eq, executes live on alpaca_paper (testing)"
+    headline_metric:
+      name: confirm_mean_net_r_per_trade
+      value: 0.0392
+      n: 858
+      window: "2025-07-15..2026-10-31"
+      population: "equity-native ENTRY (B, tau 0.2) restricted-LONG on the 173-ETF Alpaca pool, net of the Alpaca cost stack"
+      verdict: pass
+      rule: RULE-RQ20261105-e9a1-02-ENTRY-EQUITY-CONFIRM
+      provenance: MEASURED
+      source: research/results/RQ-20261105-e9a1-02/42143223941.jsonl
+  ml-entry-eq-struct-ens5-v1:
+    stage: advisory
+    stage_basis: "model of ml_entry_eq_struct, executes live on alpaca_live (real money) + alpaca_portfolio"
+    headline_metric:
+      name: confirm_mean_net_r_per_trade
+      value: 0.4922
+      n: 207
+      window: "2025-07-15..2026-10-31"
+      population: "RQ-20261107-98e3-06 confirming read, restricted-LONG 5-seed structure ensemble (tau 0.25), 173-ETF pool"
+      verdict: pass
+      rule: RQ-20261107-98e3-06
+      provenance: MEASURED
+      source: comms/strategy_evidence/ml_entry_eq_struct.json
+  ml-entry-tp-revision-v1:
+    stage: advisory
+    stage_basis: "ml_entry tp_revision rule ml_first_passage (extend-only) moves the live TP on every ml_entry consumer"
+    headline_metric:
+      name: mean_delta_net_r_per_trade_vs_fixed_tp
+      value: 0.0008
+      n: 907
+      window: "2025-10-01..2026-09-30"
+      population: "EXTEND-ONLY (the live policy) on the c692-06 served ENTRY trades, BTC/ETH/XRP/ADA/SOL, 314 trades moved, 0 pull-ins; the registered two-way read RQ-20261101-383f-01 (n 868, Oct 2026, +0.0081, PASS) is research/results/RQ-20261101-383f-01/local-20261101T1030Z.jsonl"
+      verdict: null
+      rule: null
+      provenance: MEASURED
+      source: comms/research/RQ-20261101-383f-01/evidence_extend_only_c692-06_population.json
+  overlay-td-v1:
+    stage: advisory
+    stage_basis: "config/overlay_policy.yaml: mode reduce on trend_donchian_xrp_4h + trend_donchian_eth_prop (annotate on eth_4h, sol_prop)"
+    headline_metric:
+      name: noninferiority_verdict
+      value: null
+      n: 1830
+      window: "2020-07-01..2026-10-15"
+      population: "TD gate legs' CPCV out-of-sample Stage-0 trades (eth_4h, xrp_4h, eth_prop, sol_prop); the record states checks, not a number"
+      verdict: pass
+      rule: RULE-ML-OVERLAY-NONINFERIOR-V2
+      provenance: MEASURED
+      source: comms/research/RQ-20261029-5785-02/40869516819/verdict.json
+  exit-head-donchian-1h-v1:
+    stage: advisory
+    stage_basis: "the artifact's own stage field is what exit_head_apply gates on (advisory); close applied on trend_donchian_eth/_sol, annotate on trend_donchian"
+    headline_metric:
+      name: oos_recovered_r_per_trade
+      value: -0.0141
+      n: 1041
+      window: "2022-10-29..2026-07-10 (3 folds)"
+      population: "trend_donchian BTCUSDT 1h walk-forward OOS replay, net of the venue cost stack (fails the B4 KEEP rule; trend_donchian set to annotate 2026-10-29)"
+      verdict: fail
+      rule: RULE-RQ0927-002-EXIT-HEAD-OOS-MULTIFOLD
+      provenance: MEASURED
+      source: research/results/RQ-20260927-002/36302273043.jsonl

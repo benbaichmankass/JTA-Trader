@@ -1,0 +1,139 @@
+id: RQ-20261112-4654-06
+title: 'Cross-sectionally demeaned (ranking-form) target for the crypto ENTRY recipe: does training on each perp''s net R minus the cross-section mean at
+  that timestamp beat training on the raw net R, graded on the trades each would take at actual net R? (13 monthly refits over 2025-10..2026-09)'
+status: done
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+kind: experiment
+origin: new_hypothesis
+practice_precedent: 'https://arxiv.org/abs/2512.08124 (long-only crypto portfolio by ranking assets; PRIMARY abstract read 2026-11-12): ranking the cross-section
+  rather than forecasting each asset alone. Secondary: arXiv 2606.27670 CryptoGAT (cross-asset model beats per-asset temporal models; summary only). Demeaning
+  the target at each timestamp is the regression form of a ranking objective and is market-neutral by construction; this is the first test of it on our
+  ENTRY recipe. Sibling of RQ-20261112-4654-01 (BTC-beta residual), the weak form of the same idea.'
+levers:
+- name: target_definition
+  values:
+  - raw net R
+  - net R minus the cross-sectional mean net R of the same side at the same timestamp
+  hypothesised_effect: the demeaned target raises held-out net R per decision by >= +0.06 vs raw
+- name: selection_policy
+  values:
+  - E.policy at the served tau, applied to each arm's own prediction
+  hypothesised_effect: 'fixed, not swept (declared): for the demeaned arm tau reads as predicted excess over the cross-section, so its trade count may differ
+    from RAW; a top-k-per-timestamp policy is a later unit'
+question: 'RQ-20261108-98e3-23 read SIDE-DRIVER on the served ENTRY replay: the model prices the common crypto factor. RQ-20261112-4654-01 tests removing
+  a BTC-beta component from the target. This unit tests the strong form: refit the SAME recipe (ml_decision_entry FEATURES, LGB_PARAMS, E.purge_train, served
+  tau) at each of 13 monthly origins over the frozen v1''s held-out year in two arms -- RAW (targets net_long/net_short) and XSDEMEAN (targets net_side
+  minus the mean of net_side over all universe perps at the same ts) -- and grade both on the decisions each takes at the ACTUAL net R of an outright bracket
+  trade (canonical cost stack). Does XSDEMEAN beat RAW?'
+why_this_matters: Foxhound-1 (D3 ml_entry) trades bybit_2 (real money), its mirror and three prop books; held-out edge +0.037 R/decision (n=907). A target
+  that only carries relative order uses the whole 48-60 perp cross-section and cannot price the market factor; if it lifts per-decision edge it is a refit
+  at zero model cost (same learner, same serving path). A FAIL alongside a 4654-01 FAIL closes the target lever for this recipe.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+power:
+  expected_n: 13
+  min_detectable_effect: 0.06
+  effect_units: metric
+  sd: 0.074
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE (QUOTED, not re-derived here): as RQ-20261112-4654-01 -- frontier-scan-2026-11-11 K1 gives a paired window sd of 0.074 R/decision for
+    two refits of this recipe over the same 13 x 28-day windows, se = 0.0205, 80%-power MDE at alpha 0.05 two-sided ~0.063 R. Registered effect +0.06. Fewer
+    than 10 windows with n >= 30 per arm is INDETERMINATE. The window sd is re-measured (paired_extra_vs_raw.xsdemean.sd); if > 0.10 the design was underpowered
+    and the grading note says so.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Binance USD-M 1h history 2021..2026-09 already published; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261112-4654-06-XSDEMEAN-TARGET
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  baseline: 'RAW: the same recipe refit on the raw net-R target at the same origins, same rows (BTCUSDT excluded, as 4654-01), same tau, same cost stack.
+    Net of the full cost stack.'
+  statistic: 'scripts/research/ml_entry_residual.py run --arms raw,xsdemean: per 28-day window, mean actual net R per taken decision for each arm (E.policy,
+    served tau); d_w = XSDEMEAN - RAW over windows where both took >= 30 decisions; mean, sd and 95% t-interval of d_w (paired_extra_vs_raw.xsdemean); pooled
+    means and n.'
+  rule: 'decide_vs_raw: PASS iff >= 10 paired windows AND mean d >= +0.06 R/decision AND the 95% t-CI lower bound > 0 AND XSDEMEAN pooled n >= 300. FAIL
+    iff >= 10 paired windows AND mean d <= 0. INDETERMINATE otherwise. Net of the full cost stack (fee + slippage + funding via ml_decision_entry._cost_r).
+    No placebo arm: demeaning uses no outside series to permute (declared). Thresholds are not changed after any result.'
+  pass_action: 'a Tier-3 proposal note on row ML-ENTRY-FINETUNE: candidate manifest for a demeaned-target ENTRY refit, plus the next unit (the same target
+    on the full held-out-year promotion design with the prop survival gate) and a top-k-per-timestamp policy arm.'
+  fail_action: record FAIL for this exact configuration (same-side cross-sectional mean, the v1 recipe, served tau); close FRONTIER-Q-XSEC-RANK-ENTRY for
+    the regression form; a LightGBM lambdarank objective is then justified only if 4654-01 passed.
+  what_it_does_not_do: Changes no served model, tau, roster or config. Trades stay outright (not a market-neutral book). One seed per refit. BTCUSDT excluded.
+    The window was read before by 98e3-26 and 4654-01 (declared). A PASS is not a promotion; it earns the promotion-design unit.
+  min_n: 10 paired windows with >= 30 decisions per arm; 300 pooled XSDEMEAN decisions
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.12
+  basis: 'stand-in: Foxhound-1 trades bybit_2 + 3 prop books; a +0.06 R/decision lift at ~40 decisions/month on bybit_2 is the scale; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 80
+  why_runner: Binance public klines plus 26 LightGBM refits; no trainer-resident data.
+  basis: 'ESTIMATE: RQ-20261108-98e3-26 (13 refits + fetch) ran ~40 min on research-script-run; this is 2x the fits.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_residual.py
+  - run
+  - --arms
+  - raw,xsdemean
+  - --cache
+  - /tmp/ml_entry_klines
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --run-date
+  - '2026-11-13'
+  - --rule-id
+  - RULE-RQ20261112-4654-06-XSDEMEAN-TARGET
+  - --registered-at
+  - '2026-11-13'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261112-4654-06
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: whether Foxhound-1 (ml_decision_entry) is refit on a cross-sectionally demeaned target; no change from this unit
+  legs:
+  - ml_entry
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261108-98e3-23
+- RQ-20261112-4654-01
+- FRONTIER-Q-XSEC-RANK-ENTRY
+- ML-ENTRY-FINETUNE
+population: The ml_decision_entry universe (Binance USD-M perps in the bp2 manifest, BTCUSDT excluded), both sides at the served tau over 2025-10-01..2026-09-30
+  in 13 x 28-day windows; a recipe comparison, not a promotion read.
+last_dispatched_at: '2026-11-13T19:28:10+00:00'
+grading:
+  attested: RULE-RQ20261112-4654-06-XSDEMEAN-TARGET
+  auto: true
+  decision_rule_id: RULE-RQ20261112-4654-06-XSDEMEAN-TARGET
+  evidence:
+  - research/results/RQ-20261112-4654-06/43492531169.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

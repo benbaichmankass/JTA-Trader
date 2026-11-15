@@ -1,7 +1,7 @@
 # Hand-authored 2026-11-01 by lane ML-FEATURE-INFRA (Tier 1). Decision rule registered BEFORE any run. Gates: none.
 id: RQ-20261101-fs02-01
 title: 'ENTRY v2 on the expanded feature set: the pooled 60-perp recipe of c692-01 with the feature families ADMITTED by RQ-20261101-fs01-01, fit on all data through 2026-09-30, read ONCE on the forward window 2026-10-01..2026-10-31 -- does held-out mean net R per decision stay >= 0?'
-status: blocked
+status: retired
 cadence: once
 theme: ml_health
 priority: 1
@@ -88,3 +88,4 @@ ml_consumer:
   - ada_pullback_2h
   - trend_donchian_sol_prop
   book: money
+retired_reason: '2026-11-13 ML overnight lane (AM-ML 00:15Z, row ML-FS-BRACKETS-HOLD item 4): RETIRED without a run. Its single read was the forward window W1 (2026-10-01..10-31) of the ENTRY v2 feature-set model; W1 was spent by RQ-20261101-b609-01 (v2 stack FAIL, -0.1161 R/decision, n 320 vs v1 reference -0.0405) and v2 then read negative again on a fresh window in RQ-20261101-b610-01 (-0.0443, n 948; ''v2 does not generalise'', row ML-LEVER-PLAN), so there is no unread W1 and no v2 feature set left to read on it. Its blockers (fs01-01 ablation record, ml_entry_v2.py forward subcommand, HOLDOUT-LOCK) no longer matter. Owner row ML-FS-ENTRY-V2 (owner manager) is done. Re-author only if a new feature set is fixed by a dev ablation AND an unread forward window exists.'

@@ -1,0 +1,168 @@
+# Hand-authored 2026-11-12 by lane SLV-ITERATION (am:TRADING), on AM-TRADING's 19:49Z relay of the manager's 19:37Z decision
+# ("your FIRST unit is C1, the config that passed the holdout"). Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261112-cdb2-06
+title: 'SLV-ITERATION C1 vs LIVE (tp_r 6.0, the promotion PR''s value): does slv_trend_1h with atr_stop_mult 1.0 (C1, the arm RQ-20261103-5a03-02
+  selected and confirmed) beat the declared 1.5 at tp_r 6, on 2019-01..2025-04-22 bars C1 was never selected on?'
+status: done
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-LADDER
+kind: experiment
+question: 'slv_trend_1h went live with its CURRENT params (atr_stop_mult 1.5). Its 2026-11-03 holdout re-run (RQ-20261103-5a03-02) selected C1
+  = atr_stop_mult 1.0 from 5 configurations on discovery 2025-04-23..2026-04-30 and confirmed it on the held-back span (n 26, +18.28 R, read once,
+  at tp_r 50), so the PASS belongs to C1, not to the live config. On SLV CFD 1h bars over 2019-01-01..2025-04-22, which precede C1''s discovery
+  window, at tp_r 6, net of the full cost stack: does C1 replace A?'
+why_this_matters: 'Manager decision 2026-11-12 19:37Z (relayed by AM-TRADING): the leg trades its current params, and the first iteration unit
+  is C1 vs those params. tp_r 6.0 is the take-profit PR #25267 ships (the TP doctrine refuses the 50 R sentinel on real money). Sibling unit RQ-20261112-cdb2-07
+  reads the same pair at the other tp_r.'
+iteration:
+  subject: slv_trend_1h
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261103-5a03-02/41631539488.jsonl
+  verdict_read: pass_other_arm_selected
+  diagnosis: 'Holdout PASS with C1 selected (not A): the declared configuration is unconfirmed by that unit, and the live leg runs A. Prior stop-lever
+    evidence is mixed: C1 vs A +25.56 R, 4/4 folds on 2025-04..2026-10 (5a03-02, in-sample for C1); atr_stop_mult 1.125 vs 1.5 +7.80 R but maxDD
+    39.4 vs 22.9 R on 2023-12..2026-11 (RQ-20261106-010, FAIL). Stated before the run: the maxDD clause is likely to decide this.'
+  hypothesis: at tp_r 6, C1 out-earns A on a span C1 was not selected on, in >= 3 of 4 folds, without a materially deeper drawdown
+  attempt: 1
+  due_by: '2026-11-19'
+  design:
+    control: A (declared, atr_stop_mult 1.5, tp_r 6)
+    kind: two-arm replace test
+    levers:
+      slv_trend_1h: exit
+    lever_basis:
+      slv_trend_1h: holdout_selected_other_arm
+    why_this_lever:
+      slv_trend_1h: RQ-20261103-5a03-02 confirmed C1 (atr_stop_mult 1.0), not the live 1.5
+    arms:
+      slv_trend_1h:
+      - - A
+        - tp_r=6.0
+      - - C1
+        - tp_r=6.0;atr_stop_mult=1.0
+  multiple_testing:
+    arms_counted: 2
+    variants_vs_control: 1
+    correction: none (one candidate per unit); the pair is read at two tp_r values in two units, reported side by side, never best-of
+    note: C1 was itself selected from 5 on 2025-04..2026-04; this window precedes that, so it is a fresh read for the selection
+design: structured
+levers_declared:
+- exit
+power:
+  expected_n: 300
+  min_detectable_effect: 0.48
+  effect_units: r_per_trade
+  sd: 2.94
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: ~300 trades per arm on SLV CFD 1h over ~6.3 years (RQ-20261112-5ab1-03 T6 cadence: n 438 over 2018-06..2026-10). sd ~2.94
+    R/trade from the SLV-EVIDENCE-RECONCILE figures. MDE for either arm''s own mean, two-sided alpha 0.05, power 0.8: 2.80 x 2.94 / sqrt(300)
+    = 0.475 -> 0.48 (gate floor ~294 <= 300). The two arms trade different sets, so the comparison is graded by the replace rule (net R, folds,
+    drawdown), not by a paired significance test. Floor 100.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public Dukascopy candles over a pinned window; nothing accrues.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+decision_rule:
+  id: RULE-RQ-20261112-cdb2-06
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --grade replace on slv_trend_1h, Dukascopy SLV CFD 1h (INSTRUMENT_ETF_CFD_US_SLV_US_USD),
+    window 2019-01-01..2025-04-22 23:59, one continuous harness pass per arm, net of the full cost stack the harness resolves for an Alpaca equity
+    (fee 0 + 5.0 bps RT slippage + 0 funding). Arms: A = tp_r 6 with every other key as declared (atr_stop_mult 1.5); C1 = the same with atr_stop_mult
+    1.0. Per arm: n, net R, maxDD; 4 equal calendar folds by entry time; folds where net_r(C1) >= net_r(A).'
+  rule: INDETERMINATE IF n(A) < 100 or the producer failed. PASS (C1 replaces A) IF net_r(C1) > net_r(A) AND C1 >= A in >= 3 of 4 folds AND maxDD(C1)
+    <= 1.10 x maxDD(A). FAIL otherwise (A stands). Thresholds are not changed after any result.
+  on_pass: Report to AM-TRADING as the evidence for a Tier-3 proposal to set atr_stop_mult 1.0 on slv_trend_1h (with the sibling unit's reading
+    beside it). This lane edits no config.
+  on_fail: 'Report to AM-TRADING: the live atr_stop_mult 1.5 stands on this span; C1''s holdout PASS does not carry to pre-2025 data.'
+  what_it_does_not_do: 'Edits no config, roster or record; places no order. Not a fresh span for A: atr_stop_mult 1.5 was chosen by the 2026-08-26
+    E35 run on ~2021-08..2026-08, which overlaps this window, so A has an in-sample advantage here. That biases the test AGAINST C1. Bars: the
+    SLV CFD, a proxy for the ETF tape. The cost stack''s 5 bps slippage is a placeholder.'
+intervention_controls:
+  not_applicable: a config-exact harness comparison of two parameter settings on history, not an in-trade action
+practice_precedent: 'M2, M10 (docs/reference/trading-and-model-practice-principles.md): a selected configuration re-read on a span it was not
+  selected on, net of cost, rule registered before the run.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 45
+  why_runner: Fetches keyless public Dukascopy candles for a pinned window; reads no trainer data; CPU only.
+  basis: 2 harness passes over one ~6-year 1h fetch; estimate from RQ-20261112-5ab1-03.
+value:
+  usd_at_stake_per_month: 300
+  confidence: 0.3
+  bucket: structural
+  basis: 'stand-in: the stop setting of a leg trading real money; not a P&L measurement.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - slv_trend_1h
+  - --arm
+  - A=tp_r=6.0
+  - --arm
+  - C1=tp_r=6.0;atr_stop_mult=1.0
+  - --days
+  - '2200'
+  - --start
+  - '2019-01-01'
+  - --end
+  - 2025-04-22 23:59
+  - --non-crypto-source
+  - dukascopy
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0'
+  - --dd-tol-frac
+  - '0.10'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '100'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261112-cdb2-06
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261103-5a03-02
+- RQ-20261112-cdb2-07
+- RQ-20261106-010
+- RQ-20261112-cdb2-01
+- SLV-ITERATION
+last_dispatched_at: '2026-11-12T20:18:00+00:00'
+grading:
+  attested: RULE-RQ-20261112-cdb2-06
+  auto: true
+  decision_rule_id: RULE-RQ-20261112-cdb2-06
+  evidence:
+  - research/results/RQ-20261112-cdb2-06/43299111558.jsonl
+  graded_at: '2026-11-12'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

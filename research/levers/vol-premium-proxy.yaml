@@ -23,13 +23,14 @@ manifest:
   regime_gating: untested
   timeframe: untested
   symbol_set: untested
-  direction: untested
+  direction: underpowered
   session: untested
   sizing_vs_cost: untested
 levers: {}
 title: 'Implied-vs-forecast volatility: variance-swap proxy from CBOE vol indices on SPY QQQ IWM GLD USO SLV, 2008-07..2024-06'
 units:
 - RQ-20261101-58e4-07
+- RQ-20261101-d1f3-06
 doctrine: 'operator 2026-11-01 14:00-14:09Z: nothing that failed is closed; attribute first; next tests are one-factor/ablation chosen from this
   map; retire only when every lever family has been tested at power, net of cost, with no effect'
 verdict_so_far: 'fail: best V2 net Sharpe 0.506 but stress -0.007, DSR(N=8) 0.67, 9 of 15 years positive, long-variance side negative'
@@ -140,6 +141,16 @@ levers_tested:
       stress_sharpe: -0.212
   shape: threshold 2pt raises Sharpe (0.31 -> 0.51), fewer trades
   tested_at_power: false
+- family: direction
+  varied: always-short variance, with/without trailing-IV tail gate (attempt 2)
+  response:
+    selected: S2
+    passes_rule: false
+    verdict: fail
+    note: S2 0.981 failed only the deflated-Sharpe test (62e3-05 diagnosis)
+  shape: single_point
+  tested_at_power: false
+  unit: RQ-20261101-d1f3-06
 lever_families_untested:
 - 'PRICED test on real option chains: source verified reachable keyless on 2026-11-01 - DoltHub post-no-preference/options (option_chain with
   bid, ask, vol, delta..., EOD, 2019-02 to now; volatility_history). The proxy cannot show whether ATM straddle bid/ask, skew and gamma/theta

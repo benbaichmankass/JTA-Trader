@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Fixes three defects in my trend_alignment.py corpus driver that invalidated RQ-20261113-63af-01 run 43412558732 (fail, 1/52 legs cleared): ml_entry's corpus names the entry instant decision_ts (907 trades read no_entry_time); 1d legs fetched a ~730-day 1h Yahoo base (tqqq 113/136 insufficient_history); the pooled ml_entry corpus (5 symbols) was labelled on BTC bars only. Re-arms the unit (rearmed_at + last_dispatched_at null, rule/window/command unchanged); rearmed_at is not a stamp field, so R5 cannot vouch and AM-ML merges. Revert: git revert.",
+  "why": "Make the trend-alignment corpus verdict a valid read."
+}

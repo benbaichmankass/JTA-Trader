@@ -899,6 +899,15 @@ def intent_from_signal(
     # _stamp_regime_on_meta. Absent on builders not yet wired / test paths →
     # None, and the 2-D policy evaluator falls through to permissive.
     vol_regime_value = meta.get("vol_regime")
+    # TREND-ALIGN-LABEL-ALL (label only, never read by any decision): every actionable package carries meta.trend_align.
+    # A builder that did not stamp one gets an explicit null label naming that, so a coverage gap reads "—" with a cause,
+    # never as a silently missing key. No candle work here; the builders own the computation.
+    if "trend_align" not in meta:
+        try:
+            from src.runtime.trend_alignment import unlabelled as _ta_unlabelled
+            meta["trend_align"] = _ta_unlabelled("not_stamped_by_builder", side)
+        except Exception:  # noqa: BLE001 -- observability-only, never break intent building
+            pass
     return StrategyIntent(
         strategy=str(strategy_name),
         symbol=str(signal.get("symbol") or "BTCUSDT"),

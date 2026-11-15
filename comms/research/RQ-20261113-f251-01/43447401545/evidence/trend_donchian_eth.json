@@ -1,0 +1,124 @@
+{
+  "schema_version": 2,
+  "strategy": "trend_donchian_eth",
+  "symbol": "ETHUSDT",
+  "timeframe": "1h",
+  "config_fingerprint": "sha256:e1ff0c49f2fd8117be4ec4be88b18e37",
+  "basis": "harness_timefolds",
+  "coverage_state": "measured",
+  "fidelity": "approximate",
+  "omitted_levers": [
+    "exit_head_action",
+    "exit_head_model",
+    "exit_head_threshold"
+  ],
+  "net_r_oos": -7.0929,
+  "expectancy_r_oos": -0.0438,
+  "n_trades_oos": 162,
+  "folds": 4,
+  "fold_detail": [
+    {
+      "fold": 1,
+      "trades": 40,
+      "net_r": 1.3138,
+      "expectancy_r": 0.0328,
+      "start": "2025-11-21 07:00:00+00:00",
+      "end": "2026-02-06 00:00:00+00:00"
+    },
+    {
+      "fold": 2,
+      "trades": 40,
+      "net_r": -7.5224,
+      "expectancy_r": -0.1881,
+      "start": "2026-02-06 16:00:00+00:00",
+      "end": "2026-05-10 15:00:00+00:00"
+    },
+    {
+      "fold": 3,
+      "trades": 40,
+      "net_r": 5.5876,
+      "expectancy_r": 0.1397,
+      "start": "2026-05-14 14:00:00+00:00",
+      "end": "2026-08-19 12:00:00+00:00"
+    },
+    {
+      "fold": 4,
+      "trades": 42,
+      "net_r": -6.4719,
+      "expectancy_r": -0.1541,
+      "start": "2026-08-19 20:00:00+00:00",
+      "end": "2026-11-12 11:00:00+00:00"
+    }
+  ],
+  "folds_positive": 2,
+  "window_days": 365,
+  "fee_bps_roundtrip": 11.0,
+  "path_stats": {
+    "series_location": "source_run (the per-trade rows, in order, with net_r)",
+    "n": 162,
+    "max_drawdown_r": 22.9191,
+    "max_drawdown_at_trade": 144,
+    "final_equity_r": -7.0929,
+    "max_equity_r": 7.0987,
+    "worst_trade_r": -1.2519,
+    "best_trade_r": 9.6068,
+    "worst_day_r": -2.2009,
+    "worst_day_date": "2026-07-05",
+    "trades_without_exit_time": 0,
+    "ordering": "by entry_time ascending; pooled ACROSS folds, so this is the full-window path, not a per-fold one",
+    "not_a_verdict": "Descriptive only. No bar is applied here -- the prop bar is B6's to register, and it must be registered before these numbers are read."
+  },
+  "cost_stack": {
+    "fees": 11.0,
+    "slippage": 3.0,
+    "funding": 1.0,
+    "unit": "bps_roundtrip (funding: bps per funding window)",
+    "source": "comms/research/RQ-20261113-f251-01/43447401545/evidence_runs/trend_donchian_eth__bt.json"
+  },
+  "net_r_oos_fee_only": -1.4788,
+  "decision_rule": {
+    "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
+    "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
+    "registered_at": "2026-09-22T05:34:08Z",
+    "verdict": "fail"
+  },
+  "param_selection_provenance": "not_established",
+  "generated_at": "2026-11-13T14:59:12.144443+00:00",
+  "generated_by": "scripts/ops/build_strategy_evidence.py",
+  "source_run": "comms/research/RQ-20261113-f251-01/43447401545/evidence_runs/trend_donchian_eth__trades.jsonl",
+  "error": null,
+  "harness": "trend",
+  "reproduce": {
+    "window_days": 365,
+    "window_days_source": "--data-csv span",
+    "folds": 4,
+    "data_start": "2025-11-13 00:00:00+00:00",
+    "data_end": "2026-11-12 23:00:00+00:00",
+    "git_sha": "8cffce56ab294bcf7f06347f68d60181ce5a70b1",
+    "argv": [
+      "python3",
+      "scripts/ops/build_strategy_evidence.py",
+      "--strategy",
+      "trend_donchian_eth",
+      "--days",
+      "365",
+      "--folds",
+      "4",
+      "--window-start",
+      "2025-11-13 00:00:00+00:00",
+      "--window-end",
+      "2026-11-12 23:00:00+00:00",
+      "--data-csv",
+      "/tmp/forming_regen_e5eo1z5s/trend_donchian_eth__data.csv",
+      "--minutes-1m-csv",
+      "/tmp/forming_regen_e5eo1z5s/ETHUSDT__2025-11-11__2026-11-14__1m.csv"
+    ],
+    "inputs": {
+      "data_csv": "/tmp/forming_regen_e5eo1z5s/trend_donchian_eth__data.csv",
+      "minutes_1m_csv": "/tmp/forming_regen_e5eo1z5s/ETHUSDT__2025-11-11__2026-11-14__1m.csv",
+      "decision_session": null,
+      "decision_bar_modelled": "forming"
+    }
+  },
+  "venue_bracket_arm": null
+}
