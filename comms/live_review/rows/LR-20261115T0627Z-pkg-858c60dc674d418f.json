@@ -1,0 +1,182 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261115T0627Z-pkg-858c60dc674d418f",
+ "reviewed_at": "2026-11-15T06:29:37Z",
+ "order_package_id": "pkg-858c60dc674d418f",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "tradeify_1",
+  "velotrade_1",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-15T04:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-15T06:27:11Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 4,
+  "giveback_r": 0.4887,
+  "open_r": -0.2592,
+  "peak_provenance": "estimated",
+  "peak_r": 0.2296,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1732.5228571428572,
+  "tp": 1946.2657142857142
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 3,
+  "giveback_r": 0.4887,
+  "open_r": -0.2592,
+  "peak_r": 0.2296,
+  "r_to_stop": 0.7408,
+  "r_to_target": 1.8637
+ },
+ "mechanics": {
+  "evidence": "package sl 1732.5228571428572 / tp 1946.2657142857142 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 238,
+   "mean_r": 0.3844,
+   "sd_r": 1.1599,
+   "worst_r": -1.1269,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 238,
+   "mean_r": 0.2867,
+   "sd_r": 0.6373,
+   "worst_r": -1.3467,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 238,
+   "mean_r": 0.3054,
+   "sd_r": 0.8019,
+   "worst_r": -1.3467,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 238,
+   "mean_r": 0.3379,
+   "sd_r": 0.94,
+   "worst_r": -1.3467,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 238,
+   "mean_r": -0.3199,
+   "sd_r": 0.024,
+   "worst_r": -0.415,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261115T0627Z-pkg-858c60dc674d418f.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "suggestive",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.6,
+  "reason": "HOLD beats every priced option (n=238: hold +0.3844 R, atr:1.0 tighten +0.2867 with worst -1.3467 vs hold -1.1269, close -0.3199). No tail tie-break (tighten worst is worse, not better). conflicting_exposure: ETH is also held short on bybit_1 (eth_pullback_2h/_prop_2h, trend_donchian_eth_4h) and on the prop book; different legs and timeframes, a net hedge across books rather than one thesis, so I keep both (timeframe separation) and do not close this long. The long is -0.26 R after 4 bars, stop 1732.5 is 1.7 ATR below price.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "correlated: 5 real-money bybit_2 ml_entry longs (BTC/ETH/SOL/XRP/ADA) plus ml_entry_v2 ETH and e4_oi_shock XRP longs are one crypto-beta bet against a 4h downtrend (ADX 59-63); account-level concentration, not a package exit",
+  "missing: funding (no diag route); regime cells null (vol edges unreachable read-only); atr_now_over_entry null",
+  "bias: table tightens flattered by stop-at-price fills; live peak_r is a lower bound",
+  "live-vs-backtest: ml_entry realMoney CONSISTENT (live -4.41 R over 27 trades, pct 18.4); mirror CONSISTENT (live -3.74 R, pct 21.6)",
+  "prior reviews: context.previous_review null, but 04:07-04:15Z direct-POSTed hold rows exist on the VM only (not visible to the packet or the due route; see report)",
+  "conflicting_exposure: ETHUSDT held both ways across the books (this long vs ETH 2h/4h shorts); keep both, timeframe separation"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "no action: hold changes nothing to apply; bybit_orders: SL 1732.52 / TP 1946.27, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reac"
+  },
+  {
+   "account_id": "tradeify_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "no action: hold changes nothing to apply; apply paths close, move_tp, reduce, tighten (live_review_apply.py); positions read: 1 open"
+  },
+  {
+   "account_id": "velotrade_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "no action: hold changes nothing to apply; apply paths close, move_tp, reduce, tighten (live_review_apply.py); positions read: 1 open"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "no action: hold changes nothing to apply; bybit_orders: SL 1732.52 / TP 1946.27, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reac"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuLdsgiDQfznNR9gjS4",
+ "prompt_sha": null,
+ "skill_sha": "5a57e63eeaad712ed1fdeb76279c123c9dfddf86",
+ "packet_defects": [],
+ "packet_sha": "f20f13aee70269b0a958171bbf33028ea4b30b8a487c1abe9ce0b729c5a4bdd9",
+ "forecast": {
+  "thesis": "ETH held the 1h higher low near 1798-1809 after the 1709 flush and the 4h bar closed back at 1818; the ML long targets a mean-reversion bounce, but 4h ADX 59 is down-trend so continuation to the 1946 TP is below even odds.",
+  "direction": "with_trade",
+  "target_px": 1946.2657142857142,
+  "p_target": 0.35,
+  "invalidation_px": 1732.5228571428572,
+  "horizon_bars": 12,
+  "timeframe": "1h",
+  "evidence": [
+   "priced_options: hold n=238 mean +0.3844",
+   "chart.swings: 1h high 1833, lows 1709/1727",
+   "htf 4h trending ADX 59.2",
+   "book: ETH shorts eth_pullback_2h +0.21R, trend_donchian_eth_4h +3.14R"
+  ]
+ }
+}

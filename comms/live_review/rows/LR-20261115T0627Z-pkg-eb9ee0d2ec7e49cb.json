@@ -1,0 +1,168 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261115T0627Z-pkg-eb9ee0d2ec7e49cb",
+ "reviewed_at": "2026-11-15T06:29:37Z",
+ "order_package_id": "pkg-eb9ee0d2ec7e49cb",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-15T04:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-15T06:27:11Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 4,
+  "giveback_r": 0.2962,
+  "open_r": -0.0808,
+  "peak_provenance": "estimated",
+  "peak_r": 0.2154,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.1426714285714286,
+  "tp": 0.16249285714285716
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 3,
+  "giveback_r": 0.2962,
+  "open_r": -0.0808,
+  "peak_r": 0.2154,
+  "r_to_stop": 0.9192,
+  "r_to_target": 1.749
+ },
+ "mechanics": {
+  "evidence": "package sl 0.1426714285714286 / tp 0.16249285714285716 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 242,
+   "mean_r": 0.3626,
+   "sd_r": 1.1628,
+   "worst_r": -1.1269,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 242,
+   "mean_r": 0.2663,
+   "sd_r": 0.6405,
+   "worst_r": -1.3467,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 242,
+   "mean_r": 0.2828,
+   "sd_r": 0.8062,
+   "worst_r": -1.3467,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 242,
+   "mean_r": 0.3188,
+   "sd_r": 0.944,
+   "worst_r": -1.3467,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 242,
+   "mean_r": -0.1412,
+   "sd_r": 0.0238,
+   "worst_r": -0.2366,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261115T0627Z-pkg-eb9ee0d2ec7e49cb.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "suggestive",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.6,
+  "reason": "HOLD beats every priced option (n=242: hold +0.3626 R, atr:1.0 tighten +0.2663 with worst -1.3467 vs hold -1.1269, close -0.1412). No tail tie-break. conflicting_exposure: trend_donchian_ada_4h ADA short (-0.106 R, bybit_1) is the opposite side on a 4h timeframe; different leg and book, so keep both (timeframe separation) rather than close the long. Only -0.08 R after 4 bars; stop 0.14267 is 2.0 ATR below price.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "correlated: 5 real-money bybit_2 ml_entry longs (BTC/ETH/SOL/XRP/ADA) plus ml_entry_v2 ETH and e4_oi_shock XRP longs are one crypto-beta bet against a 4h downtrend (ADX 59-63); account-level concentration, not a package exit",
+  "missing: funding (no diag route); regime cells null (vol edges unreachable read-only); atr_now_over_entry null",
+  "bias: table tightens flattered by stop-at-price fills; live peak_r is a lower bound",
+  "live-vs-backtest: ml_entry realMoney CONSISTENT (live -4.41 R over 27 trades, pct 18.4); mirror CONSISTENT (live -3.74 R, pct 21.6)",
+  "prior reviews: context.previous_review null, but 04:07-04:15Z direct-POSTed hold rows exist on the VM only (not visible to the packet or the due route; see report)",
+  "conflicting_exposure: ADAUSDT held both ways (this ml_entry long vs trend_donchian_ada_4h short); keep both, timeframe separation"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "no action: hold changes nothing to apply; bybit_orders: SL 0.1427 / TP 0.1625, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reache"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "no action: hold changes nothing to apply; bybit_orders: SL 0.1427 / TP 0.1625, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reache"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuLdsgiDQfznNR9gjS4",
+ "prompt_sha": null,
+ "skill_sha": "5a57e63eeaad712ed1fdeb76279c123c9dfddf86",
+ "packet_defects": [],
+ "packet_sha": "825be196c82a932294c9bfb8f0c23af2cbf42c99f5ef7d3439ad8364a29ba319",
+ "forecast": {
+  "thesis": "ADA 1h is holding the 0.1497 area above the 0.1424 flush low; the ML long targets a bounce but the 4h trend is down (ADX 42) and the 0.1625 TP needs a 3.5 ATR rally, so the target is the minority path.",
+  "direction": "with_trade",
+  "target_px": 0.16249285714285716,
+  "p_target": 0.38,
+  "invalidation_px": 0.1426714285714286,
+  "horizon_bars": 12,
+  "timeframe": "1h",
+  "evidence": [
+   "priced_options: hold n=242 mean +0.3626",
+   "chart.swings: lows 0.1424, 0.1431; high 0.1517",
+   "htf 4h trending ADX 41.95",
+   "book: trend_donchian_ada_4h short -0.106R"
+  ]
+ }
+}
