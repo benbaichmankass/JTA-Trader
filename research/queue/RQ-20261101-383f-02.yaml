@@ -1,7 +1,7 @@
 # Hand-authored 2026-11-01 by lane ML-ENTRY-TP-REVISION (Tier 1), dispatched by Manager Session 2026-11-01a (session_01AFoLuJ1apgy8sfngu4WyNH).
 # Filed 2026-11-01 from the RQ-20261101-383f-01 result (pull-ins lost on dev and forward). Rule registered BEFORE any run. Gates: none.
 id: RQ-20261101-383f-02
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -144,3 +144,16 @@ amendments:
     extend-only policy live (it already is, operator 2026-11-01 "Extend-only, now"); a FAIL is routed to ML-ENTRY-TP-REVISION as an evidence
     record against the live extend-only TP, Tier-3, the manager''s.'
 last_dispatched_at: '2026-11-15T14:26:12+00:00'
+grading:
+  attested: RULE-RQ20261101-383f-02-ML-ENTRY-TP-EXTEND-ONLY
+  auto: true
+  decision_rule_id: RULE-RQ20261101-383f-02-ML-ENTRY-TP-EXTEND-ONLY
+  evidence:
+  - research/results/RQ-20261101-383f-02/43724363250.jsonl
+  graded_at: '2026-11-15'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
