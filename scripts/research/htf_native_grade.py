@@ -116,6 +116,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--n-floor", type=int, default=30)
     ap.add_argument("--n-floor-leg", action="append", default=[], metavar="LEG=N")
     ap.add_argument("--fold-majority", type=int, default=3)
+    ap.add_argument("--unit", default=UNIT, help="research unit id stamped on verdict.json (default: the db1a-04 unit)")
+    ap.add_argument("--rule", default=RULE, help="decision rule id stamped on verdict.json")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
@@ -127,7 +129,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     legs = [leg_grade(leg, read_arms(out / f"rec_{leg}"), read_arms(out / f"pre_{leg}"), floors.get(leg, a.n_floor),
                       a.fold_majority) for leg in a.leg]
     v = grade_unit(legs)
-    v.update({"research_unit": UNIT, "rule": RULE,
+    v.update({"research_unit": a.unit, "rule": a.rule,
               "records": [{"leg": "POOLED:H_minus_A", "verdict": v["verdict"], "read_state": v["read_state"], "n": v["n"],
                            "population": v["population"], "note": v.get("note")}]
               + [{"leg": g["leg"], "verdict": g["verdict"], "read_state": g["read_state"], "n": g["n"],
