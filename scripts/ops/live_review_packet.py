@@ -1132,6 +1132,60 @@ def previous_review_block(r: dict) -> dict:
             "forecast": fc if isinstance(fc, dict) and fc else None, "reason": reason}
 
 
+PROP_STATE_PROVENANCE = "prop_ticket_mark"
+
+
+def prop_ticket_state(view: dict, meta: dict, direction: Optional[str], bars: List[dict],
+                      sl: Optional[float], tp: Optional[float]) -> Tuple[Optional[dict], Optional[str]]:
+    """State for a package open ONLY through prop tickets (row LTR-PROP-PACKET-OPEN-R).
+
+    The prop executor, not the trader's exit loop, runs these positions, so there is no position_telemetry row and no
+    /api/bot/positions r-block, and every prop packet read ``state.open_r: null`` (priced_options could_not_price). The
+    inputs exist: the FILLED prop ticket (entry, side, open time), the declared signal-time risk
+    (``r_provenance.declared_initial_risk``, the same 1R ``conflicting_exposure.open_r`` uses, else |ticket entry -
+    ticket stop|), and the closed bars this packet already fetched. The mark is the LAST CLOSED bar's close, so the state
+    is ESTIMATED (provenance ``prop_ticket_mark``), never MEASURED. Returns ``(state, None)`` or ``(None, why)``."""
+    tickets = [t for t in view.get("tickets") or [] if str(t.get("status") or "").lower() == "filled"]
+    if not tickets:
+        return None, "no filled prop ticket for this package"
+    t = sorted(tickets, key=lambda x: str(x.get("created_at") or ""))[0]
+    side = str(direction or t.get("direction") or "").lower()
+    sign = 1.0 if side in ("long", "buy") else -1.0 if side in ("short", "sell") else None
+    entry = _f(t.get("fill_price")) or _f(t.get("entry"))
+    t_sl = _f(t.get("sl"))
+    try:
+        from src.runtime.r_provenance import declared_initial_risk
+        risk = declared_initial_risk(meta)
+    except Exception:  # noqa: BLE001  # allow-silent: falls back to the ticket's own entry-to-stop distance, labelled below
+        risk = None
+    risk_basis = "declared_initial_risk"
+    if risk is None and entry is not None and t_sl is not None and abs(entry - t_sl) > 0:
+        risk, risk_basis = abs(entry - t_sl), "ticket_entry_to_stop"
+    if sign is None or entry is None or not risk:
+        return None, "prop ticket lacks side/entry/stop, or no declared initial risk"
+    opened = _ts(t.get("created_at"))
+    if not bars or opened is None:
+        return None, "no closed candles (or no ticket open time) to mark the prop position against"
+    held = [c for c in bars if c["time"] >= opened - 1]
+    mark = bars[-1]["close"]
+    open_r = round((mark - entry) * sign / risk, 3)
+    if held:
+        best = max(c["high"] for c in held) if sign > 0 else min(c["low"] for c in held)
+        peak_r = round(max((best - entry) * sign / risk, open_r), 3)
+    else:
+        peak_r = open_r
+    cur_sl = sl if sl is not None else t_sl
+    cur_tp = tp if tp is not None else _f(t.get("tp"))
+    return {
+        "open_r": open_r, "peak_r": peak_r, "giveback_r": round(peak_r - open_r, 3), "bars_held": len(held),
+        "r_to_stop": None if cur_sl is None else round((mark - cur_sl) * sign / risk, 3),
+        "r_to_target": None if cur_tp is None else round((cur_tp - mark) * sign / risk, 3),
+        "mark": mark, "entry": entry, "risk_per_unit": risk, "risk_basis": risk_basis,
+        "ticket_id": t.get("ticket_id"), "account_id": t.get("account_id"),
+        "provenance": PROP_STATE_PROVENANCE, "measurement": "estimated",
+    }, None
+
+
 def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = False,
                  cfg: Optional[Dict[str, dict]] = None, price: bool = True,
                  tables_out: Optional[Dict[str, dict]] = None) -> dict:
@@ -1172,8 +1226,6 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
         return _f(tel.get(k_tel)) if tel.get(k_tel) is not None else _f(pos_r.get(k_pos))
     open_r, peak_r, giveback = tv("open_r", "openR"), tv("peak_r", "peakR"), tv("giveback_r", "givebackR")
     bars_held = tel.get("bars_held") if tel.get("bars_held") is not None else pos_r.get("barsHeld")
-    if open_r is None:
-        miss("state.open_r", "no position_telemetry row for this package (telemetry covers the donchian/pullback family) and no /api/bot/positions row")
     provenance = tel.get("peak_provenance") or pos_r.get("peakProvenance") or "unverified"
 
     # --- candles: ATR now / trend now
@@ -1195,6 +1247,21 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
     else:
         miss("regime.atr_now_over_entry", "package timeframe not recorded in meta")
         miss("regime.trend_now", "package timeframe not recorded in meta")
+    # --- prop-only packages: no telemetry row exists, so derive the state from the filled ticket + a closed-bar mark
+    prop_st: Optional[dict] = None
+    r_to_stop_v, r_to_target_v = tv("r_to_stop", "rToStop"), tv("r_to_target", "rToTarget")
+    if open_r is None and view.get("tickets"):
+        prop_st, prop_why = prop_ticket_state(view, meta, direction, bars, sl, tp)
+        if prop_st is not None:
+            open_r, peak_r, giveback = prop_st["open_r"], prop_st["peak_r"], prop_st["giveback_r"]
+            bars_held, provenance = prop_st["bars_held"], PROP_STATE_PROVENANCE
+            r_to_stop_v, r_to_target_v = prop_st["r_to_stop"], prop_st["r_to_target"]
+            miss("state.open_r", f"ESTIMATED from prop ticket {prop_st['ticket_id']} + last closed {tf} bar close "
+                                 f"(risk basis {prop_st['risk_basis']}); not a venue mark")
+        else:
+            miss("state.open_r", f"no position_telemetry/positions row, and the prop-ticket derivation failed: {prop_why}")
+    elif open_r is None:
+        miss("state.open_r", "no position_telemetry row for this package (telemetry covers the donchian/pullback family) and no /api/bot/positions row")
     miss("regime.vol_now", "calm/volatile buckets use frozen edges held only in the VM model registry; not reachable read-only from a session")
     ent_t, ent_v = meta.get("regime"), meta.get("vol_regime")
     cell_entry = f"{ent_t}/{ent_v}" if ent_t in ("trending", "transitional", "chop") and ent_v in ("calm", "volatile") else None
@@ -1208,7 +1275,7 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
     review_id = f"LR-{now.strftime('%Y%m%dT%H%MZ')}-{pkg}"
     priced = why = None
     if price and direction:
-        r_to_stop = tv("r_to_stop", "rToStop")
+        r_to_stop = r_to_stop_v
         stop_r = (open_r - r_to_stop) if (open_r is not None and r_to_stop is not None) else None
         priced, why = _price(leg, direction, {"open_r": open_r, "peak_r": peak_r, "bars_held": bars_held, "stop_r": stop_r},
                              atr_stop_mult_of(meta), review_id, write_tables, tables_out)
@@ -1266,7 +1333,8 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
         **({"desk_handoff": handoff} if handoff is not None else {}),
         "features_at_review": {"atr_now_over_entry": atr_ratio, "bars_since_peak": tel.get("bars_since_peak") if tel else pos_r.get("barsSincePeak"),
                                "giveback_r": giveback, "open_r": open_r, "peak_r": peak_r,
-                               "r_to_stop": tv("r_to_stop", "rToStop"), "r_to_target": tv("r_to_target", "rToTarget")},
+                               "r_to_stop": r_to_stop_v, "r_to_target": r_to_target_v,
+                               **({"prop_ticket_state": prop_st} if prop_st is not None else {})},
         "generator": s.get("generator") or {"state": "not_checked"},
         "info_cutoff_at": cutoff,
         "leg": leg,
