@@ -30,6 +30,9 @@ power:
   feasibility:
     source: none
     accrual_basis: The clean span accrues in calendar time; on/after not_before the run replays public candles; nothing else accrues.
+evidence_class:  # EVIDENCE-CLASS-BACKFILL 2026-11-11, rule E1 (scripts/research/backfill_evidence_class.py)
+  holdout: holdout_window
+  claim: edge
 decision_rule:
   id: RULE-RQ-20261106-5b7a-01
   statistic: 'scripts/research/exit_lever_ablation.py --grade holdout on ada_pullback_2h, window 2020-07-01 .. 2027-04-15 23:59, every arm ONE

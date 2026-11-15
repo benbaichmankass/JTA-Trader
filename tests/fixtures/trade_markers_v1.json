@@ -1,0 +1,89 @@
+{
+  "_comment": "Wire-shape fixture for GET /api/bot/trades/{trade_id}/markers?interval=1h (open-trade decision markers, parent UI-REDESIGN-2026-11). Same entry/entry_signal/brackets/decisions blocks as the closed-trade snapshot, computed live per request, no candles (the live card already streams them). Illustrative values.",
+  "as_of": "2026-11-12T10:00:00+00:00",
+  "trade_id": 7002,
+  "prop_fill_id": null,
+  "order_package_id": "pkg-0000000000000002",
+  "account_id": "bybit_2",
+  "symbol": "ETHUSDT",
+  "direction": "long",
+  "status": "open",
+  "interval": "1h",
+  "read_state": "partial",
+  "partial_reasons": [
+    "tp_history_unrecorded"
+  ],
+  "entry": {
+    "ts": "2026-11-12T03:00:00+00:00",
+    "bar_ts": "2026-11-12T03:00:00+00:00",
+    "price": 2050.0,
+    "provenance": "MEASURED"
+  },
+  "entry_signal": {
+    "state": "measured",
+    "decision_bar": "2026-11-12T02:00:00+00:00",
+    "bar_ts": "2026-11-12T02:00:00+00:00",
+    "timeframe": "1h",
+    "model_id": "ml-decision-entry-v1r20261106",
+    "confidence": 1.0,
+    "p_long": 0.2,
+    "p_short": -0.01,
+    "tp_intent": "predictive",
+    "tp_basis": "3 x ATR14 first-passage target",
+    "contributing_strategies": [
+      "ml_entry"
+    ],
+    "features": {
+      "rsi14": 0.41
+    },
+    "model_scores": null
+  },
+  "brackets": {
+    "read_state": "partial",
+    "partial_reasons": [],
+    "tp_history": "unrecorded",
+    "levels": [
+      {
+        "kind": "sl",
+        "price": 2030.41,
+        "from_ts": "2026-11-12T03:00:00+00:00",
+        "to_ts": null,
+        "source": "open",
+        "detail": "",
+        "provenance": "MEASURED"
+      },
+      {
+        "kind": "tp",
+        "price": 2093.32,
+        "from_ts": "2026-11-12T03:00:00+00:00",
+        "to_ts": null,
+        "source": "open",
+        "detail": "",
+        "provenance": "MEASURED"
+      }
+    ],
+    "updates": []
+  },
+  "decisions": {
+    "read_state": "measured",
+    "sources": {
+      "reviews": "read",
+      "receipts": "read"
+    },
+    "markers": [
+      {
+        "kind": "ltr_review",
+        "id": "LR-20261112T0811Z-pkg-0000000000000002",
+        "ts": "2026-11-12T08:20:00+00:00",
+        "bar_ts": "2026-11-12T08:00:00+00:00",
+        "action": "hold",
+        "level": null,
+        "confidence": 0.55,
+        "summary": "hold: chop between 2040 and 2060",
+        "route": "none",
+        "disposition": "no_action",
+        "account_read": "no_action"
+      }
+    ]
+  }
+}

@@ -3,7 +3,7 @@
 # only while `queue_replenish.py --verify` reproduces it byte-for-byte from the template.
 id: RQ-20261029-014
 title: 'M20 exit-lever sweep: claude_desk (generated, monthly)'
-status: queued
+status: retired
 cadence: monthly
 kind: experiment
 theme: live_strategy
@@ -31,6 +31,9 @@ power:
   feasibility:
     source: none
     accrual_basis: Runs on whatever history the trainer holds for the leg; nothing waits.
+evidence_class:  # EVIDENCE-CLASS-BACKFILL 2026-11-11, rule T1 (scripts/research/backfill_evidence_class.py)
+  holdout: holdout_window
+  claim: edge
 decision_rule:
   id: RULE-EXIT-REFINEMENT-P2-GATE
   statistic: 'Per cell: IS and OOS delta net_R and delta maxDD vs the base book; base OOS trade count.'
@@ -68,3 +71,4 @@ generated:
     symbol: BTCUSDT
     timeframe: ''
 last_dispatched_at: '2026-10-30T00:16:18+00:00'
+retired_reason: '2026-11-12 RESEARCH-LOSS-M20-UNLANDED: unroutable leg -- m20_fleet_exit_sweep.classify("claude_desk") is None (no family/harness), so the sweep''s plan job refuses it. Run 40978648245 died in `plan` with "legs with no family/harness: [claude_desk]" and never reached a sweep; the unit was stamped and could not re-fire. The same refusal recurs on every dispatch. Template m20-exit-lever now draws from live_roster_legs_m20_sweepable, so no replacement unit is generated. Re-entry: give the leg a harness family in m20_fleet_exit_sweep.FAMILY_HARNESS.'

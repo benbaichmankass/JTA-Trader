@@ -16,7 +16,7 @@ Subcommands:
   shadow-drift                — window-over-window drift report for one model_id (WS8-PART-3)
   backfill-shadow-predictions — retroactive-decision replay of every historical trade (2026-05-19)
   model-attribution           — per-model live attribution: shadow scores vs realized outcomes (go-live)
-  gate-check <id>             — computed shadow→advisory promotion gates (go/no-go packet; go-live)
+  gate-check <id>             — computed promotion gates into advisory (offline evidence; no shadow step)
   stage-guard                 — propose promote/demote/hold for every model (read-only; go-live)
   promotion-readiness         — sweep the whole registry + render the operator's promote/hold/demote report (S-MLOPT-S18)
   drift-retrain               — ADWIN-scan each deployed head's shadow scores + propose drift-triggered retrains (S-MLOPT-S16)
@@ -705,7 +705,8 @@ def _cmd_promotion_readiness(args: argparse.Namespace) -> int:
 
 def _cmd_stage_guard(args: argparse.Namespace) -> int:
     # Evaluate every model: propose promote / demote / hold. Read-only —
-    # the operator runs `promote-stage` to act on a proposal.
+    # `promote-stage` acts on a proposal (data-backed Tier-3; no shadow step
+    # since 2026-11-12, ML-STAGE-RETIRE).
     from .promotion.stage_guard import run_stage_guard
 
     proposals = run_stage_guard(
@@ -950,7 +951,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p_gate = sub.add_parser(
         "gate-check",
         help=(
-            "computed shadow→advisory promotion gates for one model "
+            "computed promotion gates into advisory (offline evidence; no shadow step) for one model "
             "(go/no-go evidence packet). Reports only; never promotes."
         ),
     )
@@ -1066,7 +1067,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "S-MLOPT-S18: sweep the whole registry and write the operator's "
             "promote/hold/demote report (JSON + Markdown). Reports only — "
-            "never auto-promotes; the shadow→advisory flip stays Tier-3."
+            "never auto-promotes; promotion is decided on offline evidence, no shadow step."
         ),
     )
     p_ready.add_argument("--registry-root", default="./ml/registry-store")
@@ -1083,7 +1084,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--datasets-root", default=None,
         help=(
             "datasets-out root (trainer VM). When set, computes the offline "
-            "OOS-edge gate for every shadow-stage model so promote proposals "
+            "OOS-edge gate for every pre-production (candidate or shadow) model so promote proposals "
             "carry champion-challenger evidence."
         ),
     )
@@ -1109,7 +1110,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "stage-guard",
         help=(
             "evaluate every model and propose promote / demote / hold. "
-            "Read-only — the operator runs promote-stage to act."
+            "Read-only — promote-stage acts on a proposal (no shadow step)."
         ),
     )
     p_guard.add_argument("--registry-root", default="./ml/registry-store")
@@ -1126,7 +1127,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--datasets-root", default=None,
         help=(
             "datasets-out root (trainer VM). When set, computes the offline "
-            "OOS-edge gate for every shadow-stage model so promote proposals "
+            "OOS-edge gate for every pre-production (candidate or shadow) model so promote proposals "
             "carry champion-challenger evidence."
         ),
     )

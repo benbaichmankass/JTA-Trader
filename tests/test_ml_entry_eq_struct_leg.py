@@ -52,17 +52,17 @@ def test_sha_is_verified_at_load(tmp_path):
 
 
 def test_struct_package_carries_structure_exit_and_the_scored_bracket(monkeypatch):
-    monkeypatch.setattr(L, "score", lambda row, model: 0.5)
+    monkeypatch.setattr(L, "score_rows", lambda rows, model: [0.5] * len(rows))
     pkg = L.order_package({"symbol": "E0", **CFG}, _snap(), L.load_model(ART))
     assert pkg["meta"]["structure_exit"] == "pivot=5;sl_only" and pkg["meta"]["tau"] == 0.25
     assert pkg["sl"] == 98.0 and pkg["tp"] == 103.0 and pkg["meta"]["max_hold_min"] == 24 * 60
-    monkeypatch.setattr(L, "score", lambda row, model: 0.22)          # above the fixed-bracket tau 0.20, below this artifact's 0.25
+    monkeypatch.setattr(L, "score_rows", lambda rows, model: [0.22] * len(rows))          # above the fixed-bracket tau 0.20, below this artifact's 0.25
     with pytest.raises(ValueError, match="below_tau"):
         L.order_package({"symbol": "E0", **CFG}, _snap(), L.load_model(ART))
 
 
 def test_fixed_bracket_leg_is_unchanged(monkeypatch):
-    monkeypatch.setattr(L, "score", lambda row, model: 0.5)
+    monkeypatch.setattr(L, "score_rows", lambda rows, model: [0.5] * len(rows))
     pkg = L.order_package({"symbol": "E0", "session": None}, _snap())
     assert "structure_exit" not in pkg["meta"] and pkg["meta"]["tau"] == 0.2
     assert L.artifact_path({}) == L.ARTIFACT and L.artifact_path(CFG) == REPO / CFG["artifact"]
@@ -120,6 +120,6 @@ def test_builder_emits_a_buy_with_the_structure_exit(tmp_path, monkeypatch):
     while not F.is_decision_close(now):
         now -= pd.Timedelta(hours=1)
     F.write_snapshot(tmp_path / "s.json", _snap(now.isoformat()))
-    monkeypatch.setattr(L, "score", lambda row, model: 0.5)
+    monkeypatch.setattr(L, "score_rows", lambda rows, model: [0.5] * len(rows))
     sig = B.ml_entry_eq_struct_signal_builder({"SYMBOL": "E0"})
     assert sig["side"] == "buy" and sig["meta"]["structure_exit"] == "pivot=5;sl_only" and sig["meta"]["strategy_name"] == "ml_entry_eq_struct"

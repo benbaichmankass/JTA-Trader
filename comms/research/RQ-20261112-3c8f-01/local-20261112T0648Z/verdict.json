@@ -1,0 +1,1411 @@
+{
+ "schema_version": 1,
+ "research_unit": "RQ-20261112-3c8f-01",
+ "read_state": "measured",
+ "verdict": "fail",
+ "note": "FAIL: L: net_r/trade 0.0579 beats the baseline's 0.0133 by 0.0446 < the 0.05 materiality bar",
+ "n": 2031,
+ "decision_rule": {
+  "id": "RULE-RQ202611123c8f01",
+  "registered_at": "2026-11-12",
+  "registered_before_run": true
+ },
+ "population": {
+  "n": 2031,
+  "description": "frozen IBS arms C/L on XLB,XLE,XLF,XLI,XLK,XLP,XLU,XLV,XLY 1d 2020-06-01..2026-11-11, yfinance, fee 0 + slippage 5 bps rt, no funding"
+ },
+ "measurement": {
+  "unit": "RULE-RQ202611123c8f01",
+  "harness": "scripts/research/ibs_reversion_stage0.py",
+  "verdict": "fail",
+  "read_state": "measured",
+  "note": "FAIL: L: net_r/trade 0.0579 beats the baseline's 0.0133 by 0.0446 < the 0.05 materiality bar",
+  "population": {
+   "symbols": [
+    "XLB",
+    "XLE",
+    "XLF",
+    "XLI",
+    "XLK",
+    "XLP",
+    "XLU",
+    "XLV",
+    "XLY"
+   ],
+   "timeframe": "1d",
+   "start": "2020-06-01",
+   "end": "2026-11-11"
+  },
+  "thresholds": {
+   "n_floor": 39,
+   "pooled_n_floor": 39,
+   "folds": 6,
+   "fold_majority": 4,
+   "breadth_frac": 0.5,
+   "min_powered_cells": 2,
+   "baseline": "C",
+   "delta_r_per_trade": 0.05
+  },
+  "arms": {
+   "C": {
+    "cfg": {
+     "side": "long",
+     "ibs_lo": 1.01,
+     "ibs_hi": 0.8,
+     "trend_filter": 0,
+     "max_hold": 3,
+     "stop_atr": 2.0
+    },
+    "cells": {
+     "XLB": {
+      "state": "measured",
+      "n": 513,
+      "net_r": 4.5536,
+      "net_r_per_trade": 0.0089,
+      "gross_r": 12.9282,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2020-06-01 00:00:00+00:00",
+        "end": "2021-06-28 08:00:00+00:00",
+        "trades": 82,
+        "net_r": 5.1973
+       },
+       {
+        "fold": 2,
+        "start": "2021-06-28 08:00:00+00:00",
+        "end": "2022-07-25 16:00:00+00:00",
+        "trades": 86,
+        "net_r": -4.207
+       },
+       {
+        "fold": 3,
+        "start": "2022-07-25 16:00:00+00:00",
+        "end": "2023-08-22 00:00:00+00:00",
+        "trades": 86,
+        "net_r": -0.5521
+       },
+       {
+        "fold": 4,
+        "start": "2023-08-22 00:00:00+00:00",
+        "end": "2024-09-17 08:00:00+00:00",
+        "trades": 90,
+        "net_r": 3.1833
+       },
+       {
+        "fold": 5,
+        "start": "2024-09-17 08:00:00+00:00",
+        "end": "2025-10-14 16:00:00+00:00",
+        "trades": 85,
+        "net_r": -1.1365
+       },
+       {
+        "fold": 6,
+        "start": "2025-10-14 16:00:00+00:00",
+        "end": "2026-11-11 00:00:00+00:00",
+        "trades": 84,
+        "net_r": 2.0685
+       }
+      ],
+      "folds_pos": 3,
+      "t_one_sided_p": 0.3508324490962851,
+      "mean_bars_held": 2.135,
+      "by_outcome": {
+       "ibs_exit": 319,
+       "max_hold": 143,
+       "stop": 47,
+       "stop_gap": 4
+      },
+      "series_cut": null,
+      "grade": "fail"
+     },
+     "XLE": {
+      "state": "measured",
+      "n": 508,
+      "net_r": 16.4513,
+      "net_r_per_trade": 0.0324,
+      "gross_r": 22.2282,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2020-06-01 00:00:00+00:00",
+        "end": "2021-06-28 08:00:00+00:00",
+        "trades": 84,
+        "net_r": 4.4107
+       },
+       {
+        "fold": 2,
+        "start": "2021-06-28 08:00:00+00:00",
+        "end": "2022-07-25 16:00:00+00:00",
+        "trades": 88,
+        "net_r": 3.212
+       },
+       {
+        "fold": 3,
+        "start": "2022-07-25 16:00:00+00:00",
+        "end": "2023-08-22 00:00:00+00:00",
+        "trades": 84,
+        "net_r": 0.3259
+       },
+       {
+        "fold": 4,
+        "start": "2023-08-22 00:00:00+00:00",
+        "end": "2024-09-17 08:00:00+00:00",
+        "trades": 84,
+        "net_r": 4.979
+       },
+       {
+        "fold": 5,
+        "start": "2024-09-17 08:00:00+00:00",
+        "end": "2025-10-14 16:00:00+00:00",
+        "trades": 85,
+        "net_r": -4.7494
+       },
+       {
+        "fold": 6,
+        "start": "2025-10-14 16:00:00+00:00",
+        "end": "2026-11-11 00:00:00+00:00",
+        "trades": 83,
+        "net_r": 8.2729
+       }
+      ],
+      "folds_pos": 5,
+      "t_one_sided_p": 0.07724490349028262,
+      "mean_bars_held": 2.163,
+      "by_outcome": {
+       "ibs_exit": 320,
+       "max_hold": 142,
+       "stop": 41,
+       "stop_gap": 5
+      },
+      "series_cut": null,
+      "grade": "pass"
+     },
+     "XLF": {
+      "state": "measured",
+      "n": 526,
+      "net_r": 20.4811,
+      "net_r_per_trade": 0.0389,
+      "gross_r": 29.4983,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2020-06-01 00:00:00+00:00",
+        "end": "2021-06-28 08:00:00+00:00",
+        "trades": 86,
+        "net_r": 7.8131
+       },
+       {
+        "fold": 2,
+        "start": "2021-06-28 08:00:00+00:00",
+        "end": "2022-07-25 16:00:00+00:00",
+        "trades": 85,
+        "net_r": -6.9644
+       },
+       {
+        "fold": 3,
+        "start": "2022-07-25 16:00:00+00:00",
+        "end": "2023-08-22 00:00:00+00:00",
+        "trades": 89,
+        "net_r": -1.5554
+       },
+       {
+        "fold": 4,
+        "start": "2023-08-22 00:00:00+00:00",
+        "end": "2024-09-17 08:00:00+00:00",
+        "trades": 94,
+        "net_r": 10.1719
+       },
+       {
+        "fold": 5,
+        "start": "2024-09-17 08:00:00+00:00",
+        "end": "2025-10-14 16:00:00+00:00",
+        "trades": 86,
+        "net_r": 8.1483
+       },
+       {
+        "fold": 6,
+        "start": "2025-10-14 16:00:00+00:00",
+        "end": "2026-11-11 00:00:00+00:00",
+        "trades": 86,
+        "net_r": 2.8676
+       }
+      ],
+      "folds_pos": 4,
+      "t_one_sided_p": 0.04800969770399066,
+      "mean_bars_held": 2.057,
+      "by_outcome": {
+       "ibs_exit": 337,
+       "max_hold": 136,
+       "stop": 44,
+       "stop_gap": 9
+      },
+      "series_cut": null,
+      "grade": "pass"
+     },
+     "XLI": {
+      "state": "measured",
+      "n": 515,
+      "net_r": 5.8236,
+      "net_r_per_trade": 0.0113,
+      "gross_r": 14.9424,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2020-06-01 00:00:00+00:00",
+        "end": "2021-06-28 08:00:00+00:00",
+        "trades": 83,
+        "net_r": 8.894
+       },
+       {
+        "fold": 2,
+        "start": "2021-06-28 08:00:00+00:00",
+        "end": "2022-07-25 16:00:00+00:00",
+        "trades": 87,
+        "net_r": -4.8929
+       },
+       {
+        "fold": 3,
+        "start": "2022-07-25 16:00:00+00:00",
+        "end": "2023-08-22 00:00:00+00:00",
+        "trades": 86,
+        "net_r": 2.2234
+       },
+       {
+        "fold": 4,
+        "start": "2023-08-22 00:00:00+00:00",
+        "end": "2024-09-17 08:00:00+00:00",
+        "trades": 90,
+        "net_r": 1.9089
+       },
+       {
+        "fold": 5,
+        "start": "2024-09-17 08:00:00+00:00",
+        "end": "2025-10-14 16:00:00+00:00",
+        "trades": 86,
+        "net_r": -1.4964
+       },
+       {
+        "fold": 6,
+        "start": "2025-10-14 16:00:00+00:00",
+        "end": "2026-11-11 00:00:00+00:00",
+        "trades": 83,
+        "net_r": -0.8133
+       }
+      ],
+      "folds_pos": 3,
+      "t_one_sided_p": 0.3101599087077888,
+      "mean_bars_held": 2.122,
+      "by_outcome": {
+       "ibs_exit": 323,
+       "max_hold": 140,
+       "stop": 44,
+       "stop_gap": 8
+      },
+      "series_cut": null,
+      "grade": "fail"
+     },
+     "XLK": {
+      "state": "measured",
+      "n": 531,
+      "net_r": 3.1415,
+      "net_r_per_trade": 0.0059,
+      "gross_r": 10.5365,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2020-06-01 00:00:00+00:00",
+        "end": "2021-06-28 08:00:00+00:00",
+        "trades": 87,
+        "net_r": 1.8883
+       },
+       {
+        "fold": 2,
+        "start": "2021-06-28 08:00:00+00:00",
+        "end": "2022-07-25 16:00:00+00:00",
+        "trades": 89,
+        "net_r": -6.121
+       },
+       {
+        "fold": 3,
+        "start": "2022-07-25 16:00:00+00:00",
+        "end": "2023-08-22 00:00:00+00:00",
+        "trades": 89,
+        "net_r": 2.355
+       },
+       {
+        "fold": 4,
+        "start": "2023-08-22 00:00:00+00:00",
+        "end": "2024-09-17 08:00:00+00:00",
+        "trades": 90,
+        "net_r": 2.4389
+       },
+       {
+        "fold": 5,
+        "start": "2024-09-17 08:00:00+00:00",
+        "end": "2025-10-14 16:00:00+00:00",
+        "trades": 89,
+        "net_r": 2.7671
+       },
+       {
+        "fold": 6,
+        "start": "2025-10-14 16:00:00+00:00",
+        "end": "2026-11-11 00:00:00+00:00",
+        "trades": 87,
+        "net_r": -0.187
+       }
+      ],
+      "folds_pos": 4,
+      "t_one_sided_p": 0.40159238342903775,
+      "mean_bars_held": 2.028,
+      "by_outcome": {
+       "ibs_exit": 349,
+       "max_hold": 114,
+       "stop": 56,
+       "stop_gap": 12
+      },
+      "series_cut": null,
+      "grade": "pass"
+     },
+     "XLP": {
+      "state": "measured",
+      "n": 504,
+      "net_r": 1.7515,
+      "net_r_per_trade": 0.0035,
+      "gross_r": 12.8336,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2020-06-01 00:00:00+00:00",
+        "end": "2021-06-28 08:00:00+00:00",
+        "trades": 80,
+        "net_r": 4.0468
+       },
+       {
+        "fold": 2,
+        "start": "2021-06-28 08:00:00+00:00",
+        "end": "2022-07-25 16:00:00+00:00",
+        "trades": 86,
+        "net_r": -0.6747
+       },
+       {
+        "fold": 3,
+        "start": "2022-07-25 16:00:00+00:00",
+        "end": "2023-08-22 00:00:00+00:00",
+        "trades": 82,
+        "net_r": -4.1045
+       },
+       {
+        "fold": 4,
+        "start": "2023-08-22 00:00:00+00:00",
+        "end": "2024-09-17 08:00:00+00:00",
+        "trades": 90,
+        "net_r": 4.3696
+       },
+       {
+        "fold": 5,
+        "start": "2024-09-17 08:00:00+00:00",
+        "end": "2025-10-14 16:00:00+00:00",
+        "trades": 81,
+        "net_r": -4.6996
+       },
+       {
+        "fold": 6,
+        "start": "2025-10-14 16:00:00+00:00",
+        "end": "2026-11-11 00:00:00+00:00",
+        "trades": 85,
+        "net_r": 2.8139
+       }
+      ],
+      "folds_pos": 3,
+      "t_one_sided_p": 0.43752511862156884,
+      "mean_bars_held": 2.19,
+      "by_outcome": {
+       "ibs_exit": 295,
+       "max_hold": 166,
+       "stop": 37,
+       "stop_gap": 6
+      },
+      "series_cut": null,
+      "grade": "fail"
+     },
+     "XLU": {
+      "state": "measured",
+      "n": 506,
+      "net_r": 3.1869,
+      "net_r_per_trade": 0.0063,
+      "gross_r": 11.4205,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2020-06-01 00:00:00+00:00",
+        "end": "2021-06-28 08:00:00+00:00",
+        "trades": 80,
+        "net_r": -1.0559
+       },
+       {
+        "fold": 2,
+        "start": "2021-06-28 08:00:00+00:00",
+        "end": "2022-07-25 16:00:00+00:00",
+        "trades": 85,
+        "net_r": -1.0805
+       },
+       {
+        "fold": 3,
+        "start": "2022-07-25 16:00:00+00:00",
+        "end": "2023-08-22 00:00:00+00:00",
+        "trades": 80,
+        "net_r": -3.7364
+       },
+       {
+        "fold": 4,
+        "start": "2023-08-22 00:00:00+00:00",
+        "end": "2024-09-17 08:00:00+00:00",
+        "trades": 90,
+        "net_r": 8.7868
+       },
+       {
+        "fold": 5,
+        "start": "2024-09-17 08:00:00+00:00",
+        "end": "2025-10-14 16:00:00+00:00",
+        "trades": 87,
+        "net_r": 4.309
+       },
+       {
+        "fold": 6,
+        "start": "2025-10-14 16:00:00+00:00",
+        "end": "2026-11-11 00:00:00+00:00",
+        "trades": 84,
+        "net_r": -4.0361
+       }
+      ],
+      "folds_pos": 2,
+      "t_one_sided_p": 0.3900508862978073,
+      "mean_bars_held": 2.178,
+      "by_outcome": {
+       "ibs_exit": 294,
+       "max_hold": 163,
+       "stop": 48,
+       "stop_gap": 1
+      },
+      "series_cut": null,
+      "grade": "fail"
+     },
+     "XLV": {
+      "state": "measured",
+      "n": 504,
+      "net_r": -3.3811,
+      "net_r_per_trade": -0.0067,
+      "gross_r": 6.5483,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2020-06-01 00:00:00+00:00",
+        "end": "2021-06-28 08:00:00+00:00",
+        "trades": 84,
+        "net_r": 4.0444
+       },
+       {
+        "fold": 2,
+        "start": "2021-06-28 08:00:00+00:00",
+        "end": "2022-07-25 16:00:00+00:00",
+        "trades": 85,
+        "net_r": -7.3946
+       },
+       {
+        "fold": 3,
+        "start": "2022-07-25 16:00:00+00:00",
+        "end": "2023-08-22 00:00:00+00:00",
+        "trades": 84,
+        "net_r": 0.2012
+       },
+       {
+        "fold": 4,
+        "start": "2023-08-22 00:00:00+00:00",
+        "end": "2024-09-17 08:00:00+00:00",
+        "trades": 85,
+        "net_r": 1.0943
+       },
+       {
+        "fold": 5,
+        "start": "2024-09-17 08:00:00+00:00",
+        "end": "2025-10-14 16:00:00+00:00",
+        "trades": 82,
+        "net_r": -3.2818
+       },
+       {
+        "fold": 6,
+        "start": "2025-10-14 16:00:00+00:00",
+        "end": "2026-11-11 00:00:00+00:00",
+        "trades": 84,
+        "net_r": 1.9552
+       }
+      ],
+      "folds_pos": 4,
+      "t_one_sided_p": 0.6138329251728039,
+      "mean_bars_held": 2.19,
+      "by_outcome": {
+       "ibs_exit": 297,
+       "max_hold": 154,
+       "stop": 49,
+       "stop_gap": 4
+      },
+      "series_cut": null,
+      "grade": "fail"
+     },
+     "XLY": {
+      "state": "measured",
+      "n": 527,
+      "net_r": 9.5851,
+      "net_r_per_trade": 0.0182,
+      "gross_r": 17.4431,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2020-06-01 00:00:00+00:00",
+        "end": "2021-06-28 08:00:00+00:00",
+        "trades": 90,
+        "net_r": 10.5123
+       },
+       {
+        "fold": 2,
+        "start": "2021-06-28 08:00:00+00:00",
+        "end": "2022-07-25 16:00:00+00:00",
+        "trades": 90,
+        "net_r": 1.0269
+       },
+       {
+        "fold": 3,
+        "start": "2022-07-25 16:00:00+00:00",
+        "end": "2023-08-22 00:00:00+00:00",
+        "trades": 86,
+        "net_r": 1.3002
+       },
+       {
+        "fold": 4,
+        "start": "2023-08-22 00:00:00+00:00",
+        "end": "2024-09-17 08:00:00+00:00",
+        "trades": 87,
+        "net_r": 3.6263
+       },
+       {
+        "fold": 5,
+        "start": "2024-09-17 08:00:00+00:00",
+        "end": "2025-10-14 16:00:00+00:00",
+        "trades": 89,
+        "net_r": -0.2745
+       },
+       {
+        "fold": 6,
+        "start": "2025-10-14 16:00:00+00:00",
+        "end": "2026-11-11 00:00:00+00:00",
+        "trades": 85,
+        "net_r": -6.6061
+       }
+      ],
+      "folds_pos": 4,
+      "t_one_sided_p": 0.2184627239195463,
+      "mean_bars_held": 2.051,
+      "by_outcome": {
+       "ibs_exit": 346,
+       "max_hold": 125,
+       "stop": 45,
+       "stop_gap": 11
+      },
+      "series_cut": null,
+      "grade": "pass"
+     }
+    },
+    "pooled": {
+     "n": 4634,
+     "net_r": 61.5936,
+     "folds": [
+      {
+       "fold": 1,
+       "start": "2020-06-01 00:00:00+00:00",
+       "end": "2021-06-28 08:00:00+00:00",
+       "trades": 756,
+       "net_r": 45.751
+      },
+      {
+       "fold": 2,
+       "start": "2021-06-28 08:00:00+00:00",
+       "end": "2022-07-25 16:00:00+00:00",
+       "trades": 781,
+       "net_r": -27.096
+      },
+      {
+       "fold": 3,
+       "start": "2022-07-25 16:00:00+00:00",
+       "end": "2023-08-22 00:00:00+00:00",
+       "trades": 766,
+       "net_r": -3.5426
+      },
+      {
+       "fold": 4,
+       "start": "2023-08-22 00:00:00+00:00",
+       "end": "2024-09-17 08:00:00+00:00",
+       "trades": 800,
+       "net_r": 40.5591
+      },
+      {
+       "fold": 5,
+       "start": "2024-09-17 08:00:00+00:00",
+       "end": "2025-10-14 16:00:00+00:00",
+       "trades": 770,
+       "net_r": -0.4137
+      },
+      {
+       "fold": 6,
+       "start": "2025-10-14 16:00:00+00:00",
+       "end": "2026-11-11 00:00:00+00:00",
+       "trades": 761,
+       "net_r": 6.3357
+      }
+     ],
+     "folds_pos": 3,
+     "net_r_per_trade": 0.0133,
+     "t_one_sided_p": 0.041560394024855785,
+     "max_drawdown_r_sequential": 48.5617
+    },
+    "holm_survivors": [],
+    "grade": {
+     "verdict": "fail",
+     "cells_pass": 4,
+     "need": 5,
+     "delta_r_per_trade_vs_baseline": null,
+     "why": "pooled net_r <= 0 or folds short"
+    }
+   },
+   "L": {
+    "cfg": {
+     "side": "long",
+     "ibs_lo": 0.2,
+     "ibs_hi": 0.8,
+     "trend_filter": 0,
+     "max_hold": 3,
+     "stop_atr": 2.0
+    },
+    "cells": {
+     "XLB": {
+      "state": "measured",
+      "n": 240,
+      "net_r": 18.2097,
+      "net_r_per_trade": 0.0759,
+      "gross_r": 22.0847,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2020-06-01 00:00:00+00:00",
+        "end": "2021-06-28 08:00:00+00:00",
+        "trades": 43,
+        "net_r": 4.4695
+       },
+       {
+        "fold": 2,
+        "start": "2021-06-28 08:00:00+00:00",
+        "end": "2022-07-25 16:00:00+00:00",
+        "trades": 41,
+        "net_r": -2.3628
+       },
+       {
+        "fold": 3,
+        "start": "2022-07-25 16:00:00+00:00",
+        "end": "2023-08-22 00:00:00+00:00",
+        "trades": 43,
+        "net_r": 3.7225
+       },
+       {
+        "fold": 4,
+        "start": "2023-08-22 00:00:00+00:00",
+        "end": "2024-09-17 08:00:00+00:00",
+        "trades": 34,
+        "net_r": 2.7337
+       },
+       {
+        "fold": 5,
+        "start": "2024-09-17 08:00:00+00:00",
+        "end": "2025-10-14 16:00:00+00:00",
+        "trades": 42,
+        "net_r": 5.0141
+       },
+       {
+        "fold": 6,
+        "start": "2025-10-14 16:00:00+00:00",
+        "end": "2026-11-11 00:00:00+00:00",
+        "trades": 37,
+        "net_r": 4.6326
+       }
+      ],
+      "folds_pos": 5,
+      "t_one_sided_p": 0.020322825677896752,
+      "mean_bars_held": 2.35,
+      "by_outcome": {
+       "ibs_exit": 135,
+       "max_hold": 82,
+       "stop": 21,
+       "stop_gap": 2
+      },
+      "series_cut": null,
+      "grade": "pass"
+     },
+     "XLE": {
+      "state": "measured",
+      "n": 214,
+      "net_r": 4.0937,
+      "net_r_per_trade": 0.0191,
+      "gross_r": 6.5118,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2020-06-01 00:00:00+00:00",
+        "end": "2021-06-28 08:00:00+00:00",
+        "trades": 44,
+        "net_r": 4.6096
+       },
+       {
+        "fold": 2,
+        "start": "2021-06-28 08:00:00+00:00",
+        "end": "2022-07-25 16:00:00+00:00",
+        "trades": 32,
+        "net_r": -1.2706
+       },
+       {
+        "fold": 3,
+        "start": "2022-07-25 16:00:00+00:00",
+        "end": "2023-08-22 00:00:00+00:00",
+        "trades": 36,
+        "net_r": 5.4906
+       },
+       {
+        "fold": 4,
+        "start": "2023-08-22 00:00:00+00:00",
+        "end": "2024-09-17 08:00:00+00:00",
+        "trades": 36,
+        "net_r": -2.9951
+       },
+       {
+        "fold": 5,
+        "start": "2024-09-17 08:00:00+00:00",
+        "end": "2025-10-14 16:00:00+00:00",
+        "trades": 32,
+        "net_r": -2.8171
+       },
+       {
+        "fold": 6,
+        "start": "2025-10-14 16:00:00+00:00",
+        "end": "2026-11-11 00:00:00+00:00",
+        "trades": 34,
+        "net_r": 1.0763
+       }
+      ],
+      "folds_pos": 3,
+      "t_one_sided_p": 0.3126574715292192,
+      "mean_bars_held": 2.5,
+      "by_outcome": {
+       "ibs_exit": 108,
+       "max_hold": 84,
+       "stop": 18,
+       "stop_gap": 4
+      },
+      "series_cut": null,
+      "grade": "fail"
+     },
+     "XLF": {
+      "state": "measured",
+      "n": 229,
+      "net_r": 28.4026,
+      "net_r_per_trade": 0.124,
+      "gross_r": 32.2364,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2020-06-01 00:00:00+00:00",
+        "end": "2021-06-28 08:00:00+00:00",
+        "trades": 38,
+        "net_r": 7.4606
+       },
+       {
+        "fold": 2,
+        "start": "2021-06-28 08:00:00+00:00",
+        "end": "2022-07-25 16:00:00+00:00",
+        "trades": 38,
+        "net_r": 0.6912
+       },
+       {
+        "fold": 3,
+        "start": "2022-07-25 16:00:00+00:00",
+        "end": "2023-08-22 00:00:00+00:00",
+        "trades": 41,
+        "net_r": 3.5207
+       },
+       {
+        "fold": 4,
+        "start": "2023-08-22 00:00:00+00:00",
+        "end": "2024-09-17 08:00:00+00:00",
+        "trades": 31,
+        "net_r": 4.002
+       },
+       {
+        "fold": 5,
+        "start": "2024-09-17 08:00:00+00:00",
+        "end": "2025-10-14 16:00:00+00:00",
+        "trades": 40,
+        "net_r": 6.2536
+       },
+       {
+        "fold": 6,
+        "start": "2025-10-14 16:00:00+00:00",
+        "end": "2026-11-11 00:00:00+00:00",
+        "trades": 41,
+        "net_r": 6.4744
+       }
+      ],
+      "folds_pos": 6,
+      "t_one_sided_p": 0.0002830637769405098,
+      "mean_bars_held": 2.341,
+      "by_outcome": {
+       "ibs_exit": 142,
+       "max_hold": 69,
+       "stop": 15,
+       "stop_gap": 3
+      },
+      "series_cut": null,
+      "grade": "pass"
+     },
+     "XLI": {
+      "state": "measured",
+      "n": 221,
+      "net_r": 19.9833,
+      "net_r_per_trade": 0.0904,
+      "gross_r": 23.8671,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2020-06-01 00:00:00+00:00",
+        "end": "2021-06-28 08:00:00+00:00",
+        "trades": 41,
+        "net_r": 7.6688
+       },
+       {
+        "fold": 2,
+        "start": "2021-06-28 08:00:00+00:00",
+        "end": "2022-07-25 16:00:00+00:00",
+        "trades": 35,
+        "net_r": -6.7133
+       },
+       {
+        "fold": 3,
+        "start": "2022-07-25 16:00:00+00:00",
+        "end": "2023-08-22 00:00:00+00:00",
+        "trades": 42,
+        "net_r": 5.9805
+       },
+       {
+        "fold": 4,
+        "start": "2023-08-22 00:00:00+00:00",
+        "end": "2024-09-17 08:00:00+00:00",
+        "trades": 31,
+        "net_r": 2.7361
+       },
+       {
+        "fold": 5,
+        "start": "2024-09-17 08:00:00+00:00",
+        "end": "2025-10-14 16:00:00+00:00",
+        "trades": 36,
+        "net_r": 1.2865
+       },
+       {
+        "fold": 6,
+        "start": "2025-10-14 16:00:00+00:00",
+        "end": "2026-11-11 00:00:00+00:00",
+        "trades": 36,
+        "net_r": 9.0246
+       }
+      ],
+      "folds_pos": 5,
+      "t_one_sided_p": 0.010725319397145175,
+      "mean_bars_held": 2.321,
+      "by_outcome": {
+       "ibs_exit": 134,
+       "max_hold": 63,
+       "stop": 19,
+       "stop_gap": 5
+      },
+      "series_cut": null,
+      "grade": "pass"
+     },
+     "XLK": {
+      "state": "measured",
+      "n": 226,
+      "net_r": 13.4108,
+      "net_r_per_trade": 0.0593,
+      "gross_r": 16.4457,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2020-06-01 00:00:00+00:00",
+        "end": "2021-06-28 08:00:00+00:00",
+        "trades": 42,
+        "net_r": 5.1367
+       },
+       {
+        "fold": 2,
+        "start": "2021-06-28 08:00:00+00:00",
+        "end": "2022-07-25 16:00:00+00:00",
+        "trades": 41,
+        "net_r": -1.4332
+       },
+       {
+        "fold": 3,
+        "start": "2022-07-25 16:00:00+00:00",
+        "end": "2023-08-22 00:00:00+00:00",
+        "trades": 44,
+        "net_r": 7.3433
+       },
+       {
+        "fold": 4,
+        "start": "2023-08-22 00:00:00+00:00",
+        "end": "2024-09-17 08:00:00+00:00",
+        "trades": 41,
+        "net_r": 4.85
+       },
+       {
+        "fold": 5,
+        "start": "2024-09-17 08:00:00+00:00",
+        "end": "2025-10-14 16:00:00+00:00",
+        "trades": 32,
+        "net_r": -0.2035
+       },
+       {
+        "fold": 6,
+        "start": "2025-10-14 16:00:00+00:00",
+        "end": "2026-11-11 00:00:00+00:00",
+        "trades": 26,
+        "net_r": -2.2826
+       }
+      ],
+      "folds_pos": 3,
+      "t_one_sided_p": 0.06865650797410044,
+      "mean_bars_held": 2.217,
+      "by_outcome": {
+       "ibs_exit": 135,
+       "max_hold": 64,
+       "stop": 23,
+       "stop_gap": 4
+      },
+      "series_cut": null,
+      "grade": "fail"
+     },
+     "XLP": {
+      "state": "measured",
+      "n": 226,
+      "net_r": 8.8662,
+      "net_r_per_trade": 0.0392,
+      "gross_r": 13.7925,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2020-06-01 00:00:00+00:00",
+        "end": "2021-06-28 08:00:00+00:00",
+        "trades": 32,
+        "net_r": 2.1397
+       },
+       {
+        "fold": 2,
+        "start": "2021-06-28 08:00:00+00:00",
+        "end": "2022-07-25 16:00:00+00:00",
+        "trades": 32,
+        "net_r": -2.0234
+       },
+       {
+        "fold": 3,
+        "start": "2022-07-25 16:00:00+00:00",
+        "end": "2023-08-22 00:00:00+00:00",
+        "trades": 40,
+        "net_r": 1.2916
+       },
+       {
+        "fold": 4,
+        "start": "2023-08-22 00:00:00+00:00",
+        "end": "2024-09-17 08:00:00+00:00",
+        "trades": 38,
+        "net_r": 3.0398
+       },
+       {
+        "fold": 5,
+        "start": "2024-09-17 08:00:00+00:00",
+        "end": "2025-10-14 16:00:00+00:00",
+        "trades": 40,
+        "net_r": 1.3308
+       },
+       {
+        "fold": 6,
+        "start": "2025-10-14 16:00:00+00:00",
+        "end": "2026-11-11 00:00:00+00:00",
+        "trades": 44,
+        "net_r": 3.0876
+       }
+      ],
+      "folds_pos": 5,
+      "t_one_sided_p": 0.14896858416038622,
+      "mean_bars_held": 2.451,
+      "by_outcome": {
+       "ibs_exit": 114,
+       "max_hold": 91,
+       "stop": 19,
+       "stop_gap": 2
+      },
+      "series_cut": null,
+      "grade": "pass"
+     },
+     "XLU": {
+      "state": "measured",
+      "n": 219,
+      "net_r": -3.5838,
+      "net_r_per_trade": -0.0164,
+      "gross_r": -0.0212,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2020-06-01 00:00:00+00:00",
+        "end": "2021-06-28 08:00:00+00:00",
+        "trades": 33,
+        "net_r": 0.3702
+       },
+       {
+        "fold": 2,
+        "start": "2021-06-28 08:00:00+00:00",
+        "end": "2022-07-25 16:00:00+00:00",
+        "trades": 34,
+        "net_r": -3.4335
+       },
+       {
+        "fold": 3,
+        "start": "2022-07-25 16:00:00+00:00",
+        "end": "2023-08-22 00:00:00+00:00",
+        "trades": 38,
+        "net_r": -0.7582
+       },
+       {
+        "fold": 4,
+        "start": "2023-08-22 00:00:00+00:00",
+        "end": "2024-09-17 08:00:00+00:00",
+        "trades": 37,
+        "net_r": 2.2564
+       },
+       {
+        "fold": 5,
+        "start": "2024-09-17 08:00:00+00:00",
+        "end": "2025-10-14 16:00:00+00:00",
+        "trades": 34,
+        "net_r": 0.0646
+       },
+       {
+        "fold": 6,
+        "start": "2025-10-14 16:00:00+00:00",
+        "end": "2026-11-11 00:00:00+00:00",
+        "trades": 43,
+        "net_r": -2.0831
+       }
+      ],
+      "folds_pos": 3,
+      "t_one_sided_p": 0.6708674254616174,
+      "mean_bars_held": 2.507,
+      "by_outcome": {
+       "ibs_exit": 100,
+       "max_hold": 98,
+       "stop": 20,
+       "stop_gap": 1
+      },
+      "series_cut": null,
+      "grade": "fail"
+     },
+     "XLV": {
+      "state": "measured",
+      "n": 229,
+      "net_r": 14.1219,
+      "net_r_per_trade": 0.0617,
+      "gross_r": 18.573,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2020-06-01 00:00:00+00:00",
+        "end": "2021-06-28 08:00:00+00:00",
+        "trades": 34,
+        "net_r": 2.114
+       },
+       {
+        "fold": 2,
+        "start": "2021-06-28 08:00:00+00:00",
+        "end": "2022-07-25 16:00:00+00:00",
+        "trades": 36,
+        "net_r": -1.715
+       },
+       {
+        "fold": 3,
+        "start": "2022-07-25 16:00:00+00:00",
+        "end": "2023-08-22 00:00:00+00:00",
+        "trades": 44,
+        "net_r": 7.8231
+       },
+       {
+        "fold": 4,
+        "start": "2023-08-22 00:00:00+00:00",
+        "end": "2024-09-17 08:00:00+00:00",
+        "trades": 31,
+        "net_r": 2.4667
+       },
+       {
+        "fold": 5,
+        "start": "2024-09-17 08:00:00+00:00",
+        "end": "2025-10-14 16:00:00+00:00",
+        "trades": 43,
+        "net_r": 0.5129
+       },
+       {
+        "fold": 6,
+        "start": "2025-10-14 16:00:00+00:00",
+        "end": "2026-11-11 00:00:00+00:00",
+        "trades": 41,
+        "net_r": 2.9202
+       }
+      ],
+      "folds_pos": 5,
+      "t_one_sided_p": 0.04502888622775242,
+      "mean_bars_held": 2.393,
+      "by_outcome": {
+       "ibs_exit": 128,
+       "max_hold": 79,
+       "stop": 20,
+       "stop_gap": 2
+      },
+      "series_cut": null,
+      "grade": "pass"
+     },
+     "XLY": {
+      "state": "measured",
+      "n": 227,
+      "net_r": 14.0288,
+      "net_r_per_trade": 0.0618,
+      "gross_r": 17.2282,
+      "cost_bps_roundtrip": {
+       "fee": 0.0,
+       "slippage": 5.0,
+       "funding": 0.0
+      },
+      "folds": [
+       {
+        "fold": 1,
+        "start": "2020-06-01 00:00:00+00:00",
+        "end": "2021-06-28 08:00:00+00:00",
+        "trades": 38,
+        "net_r": 5.7768
+       },
+       {
+        "fold": 2,
+        "start": "2021-06-28 08:00:00+00:00",
+        "end": "2022-07-25 16:00:00+00:00",
+        "trades": 41,
+        "net_r": -6.1565
+       },
+       {
+        "fold": 3,
+        "start": "2022-07-25 16:00:00+00:00",
+        "end": "2023-08-22 00:00:00+00:00",
+        "trades": 43,
+        "net_r": 6.63
+       },
+       {
+        "fold": 4,
+        "start": "2023-08-22 00:00:00+00:00",
+        "end": "2024-09-17 08:00:00+00:00",
+        "trades": 36,
+        "net_r": 2.4933
+       },
+       {
+        "fold": 5,
+        "start": "2024-09-17 08:00:00+00:00",
+        "end": "2025-10-14 16:00:00+00:00",
+        "trades": 35,
+        "net_r": 2.6549
+       },
+       {
+        "fold": 6,
+        "start": "2025-10-14 16:00:00+00:00",
+        "end": "2026-11-11 00:00:00+00:00",
+        "trades": 34,
+        "net_r": 2.6303
+       }
+      ],
+      "folds_pos": 5,
+      "t_one_sided_p": 0.057987887773022107,
+      "mean_bars_held": 2.282,
+      "by_outcome": {
+       "ibs_exit": 138,
+       "max_hold": 62,
+       "stop": 19,
+       "stop_gap": 8
+      },
+      "series_cut": null,
+      "grade": "pass"
+     }
+    },
+    "pooled": {
+     "n": 2031,
+     "net_r": 117.5329,
+     "folds": [
+      {
+       "fold": 1,
+       "start": "2020-06-01 00:00:00+00:00",
+       "end": "2021-06-28 08:00:00+00:00",
+       "trades": 345,
+       "net_r": 39.7459
+      },
+      {
+       "fold": 2,
+       "start": "2021-06-28 08:00:00+00:00",
+       "end": "2022-07-25 16:00:00+00:00",
+       "trades": 330,
+       "net_r": -24.417
+      },
+      {
+       "fold": 3,
+       "start": "2022-07-25 16:00:00+00:00",
+       "end": "2023-08-22 00:00:00+00:00",
+       "trades": 371,
+       "net_r": 41.044
+      },
+      {
+       "fold": 4,
+       "start": "2023-08-22 00:00:00+00:00",
+       "end": "2024-09-17 08:00:00+00:00",
+       "trades": 315,
+       "net_r": 21.583
+      },
+      {
+       "fold": 5,
+       "start": "2024-09-17 08:00:00+00:00",
+       "end": "2025-10-14 16:00:00+00:00",
+       "trades": 334,
+       "net_r": 14.0966
+      },
+      {
+       "fold": 6,
+       "start": "2025-10-14 16:00:00+00:00",
+       "end": "2026-11-11 00:00:00+00:00",
+       "trades": 336,
+       "net_r": 25.4804
+      }
+     ],
+     "folds_pos": 5,
+     "net_r_per_trade": 0.0579,
+     "t_one_sided_p": 2.3451374648688955e-06,
+     "max_drawdown_r_sequential": 32.8522
+    },
+    "holm_survivors": [
+     "XLF"
+    ],
+    "grade": {
+     "verdict": "fail",
+     "cells_pass": 6,
+     "need": 5,
+     "delta_r_per_trade_vs_baseline": 0.0446,
+     "why": "net_r/trade 0.0579 beats the baseline's 0.0133 by 0.0446 < the 0.05 materiality bar"
+    }
+   }
+  }
+ },
+ "local_overlay_disclosure": "Run on origin/main c06ea9f9 PLUS a LOCAL overlay of ml/datasets/adapters/yf_symbols.py = PR #25135's diff (blob 0b299593: pass-through entries DIA, XLB, XLF, XLI, XLP, XLU, XLV, XLY), because #25135 is held for the operator (file is in the trader import closure) and without it the registered basket is refused. Manager instruction 06:25Z: 'run locally with a local ticker override and disclose it'. All 9 cells measured; no series cut.",
+ "joint_reading": "JOINT (registered in both units): 3c8f-01 FAIL and 3c8f-02 FAIL -> IBS arm L at these parameters is CLOSED for US ETFs. Nothing is re-run with other thresholds under these ids. The IBS meta-label draft (branch claude/ml-lane-p4-ibs-meta-label-draft) is therefore not authored.",
+ "generated_at": "2026-11-12T06:47:16Z",
+ "produced_by": {
+  "tool": "python3 scripts/research/ibs_reversion_stage0.py",
+  "where": "local (ML standing lane p4 session container)"
+ }
+}

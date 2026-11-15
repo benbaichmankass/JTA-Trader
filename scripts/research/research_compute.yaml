@@ -141,13 +141,22 @@ limits:
   # RESEARCH-FLOW 2026-11-02 (manager 21:25Z): research may fire while at most 1 infra run is queued and defers at 2 or more
   # (was: defer at 1, which deferred every fire on cycle 41521258380). --max-repo-queued still bounds the whole pool.
   infra_yield_at: 2
+  # INFRA STARVATION FLOOR (manager 2026-11-12 22:33Z): nothing dispatched this long -> the infra-yield block is lifted for ONE
+  # fire/cycle (the top-scored unit), whatever infra is queued (dispatch_queue.starvation_override). 0 disables. MEASURED
+  # 2026-11-12: the yield deferred every fire 17:43Z..22:33Z (0 units, ~5 h) -- a halt shape (Prime Directive 7).
+  infra_starvation_hours: 2.0
+  # RESEARCH-DISPATCH-STALL-1112: an infra run QUEUED longer than this is stuck, not waiting -- it no longer counts toward
+  # infra_yield_at (dispatch_queue.INFRA_STUCK_HOURS). 2026-11-11 frozen 3-6 h infra runs deferred every fire for 5 h+.
+  infra_stuck_hours: 1.0
+  # RESEARCH-DISPATCH-STALL-1112 (manager 2026-11-12): a research run QUEUED longer than this holds no runner -- it no longer counts
+  # toward max_total_inflight (dispatch_queue.RESEARCH_STUCK_HOURS); in_progress research runs always count.
+  research_stuck_hours: 1.0
   # THE ONE OWNER of "which workflows are money-path ops" (B13). Any workflow reading vars.INFRA_RUNS_ON must be here
   # (runner-admin infra-runner-* aside); no research-* workflow may read it. Report: scripts/ci/check_infra_workflows_single_owner.py
   infra_workflows:
     - system-actions
     - system-actions-cancel-guard
     - deploy-candidate
-    - phone-executor-apk
     - trainer-vm-diag
     - trainer-diag-relay
     - arm-candidate-diag
@@ -205,6 +214,11 @@ value:
   # dispatch plan, so [P1, P2] does not delay them and the order is left as is. If P1 programme-tagged units come due and push the ENTRY
   # tests down, change this list to [P2, P1]. Revisit at Thursday planning, 2026-11-05.
   programme_priority: [P1, P2]
+  # 2026-11-15 (lane ML-PRIMARY, row RESEARCH-QUEUE-ML-STARVATION; operator 2026-11-14 ~22:10Z, verbatim "ML research is the TOP
+  # priority"): an UNTAGGED unit inherits the programme its value bucket maps to, so every ai_trader-bucket unit ranks as P2 (above
+  # every non-programme unit and template refill; P1 keeps its place; a starved unit still goes first). Ordering only: nothing is
+  # refused. MEASURED before: RQ-20261112-8d20-02 (ai_trader) waited ~65 h behind 44 refills with the runner at 4/4.
+  bucket_programme: {ai_trader: P2}
   default_confidence: 0.3
   priority_usd: {1: 300, 2: 100, 3: 30}     # stand-ins when a unit carries no value block; derived from priority only
   hand_written_boost: 1.25

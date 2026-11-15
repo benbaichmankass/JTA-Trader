@@ -31,6 +31,8 @@
 #     the script output for operator follow-up.
 #   - the running ict-trader-live.service (no restart required)
 set -euo pipefail
+# read-only SQL without the sqlite3 CLI (not installed on the VM): scripts/ops/db_read.py
+_DBR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/db_read.py"
 
 SCRIPT_NAME="backfill_orphan_pnl"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -56,7 +58,7 @@ if [ ! -f "${DB_PATH}" ]; then
 fi
 
 # Pre-snapshot: count of rows the helper considers candidates.
-pre_count="$(sqlite3 "${DB_PATH}" \
+pre_count="$(python3 "${_DBR}" "${DB_PATH}" \
     "SELECT COUNT(*) FROM trades \
      WHERE status='orphaned' \
        AND exit_reason='stuck_strategy_watchdog' \
@@ -88,7 +90,7 @@ set -e
 # Post-snapshot: how many orphan rows remain. Non-zero means Bybit
 # couldn't provide the close fill for some rows (likely 7-day
 # window expired or qty filter mismatched).
-post_count="$(sqlite3 "${DB_PATH}" \
+post_count="$(python3 "${_DBR}" "${DB_PATH}" \
     "SELECT COUNT(*) FROM trades \
      WHERE status='orphaned' \
        AND exit_reason='stuck_strategy_watchdog' \

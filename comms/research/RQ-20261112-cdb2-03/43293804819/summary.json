@@ -1,0 +1,515 @@
+{
+  "leg": "slv_trend_1h",
+  "grade": {
+    "verdict": "pass",
+    "label": "reachable_lever_beats_removed",
+    "best": "D32",
+    "baseline": "A",
+    "candidates": {
+      "D16": {
+        "delta_net_r": -13.6301,
+        "delta_max_drawdown_r": 5.1689,
+        "fold_wins": 2,
+        "passes": false
+      },
+      "D20": {
+        "delta_net_r": -10.8107,
+        "delta_max_drawdown_r": 4.3139,
+        "fold_wins": 2,
+        "passes": false
+      },
+      "D32": {
+        "delta_net_r": 12.9166,
+        "delta_max_drawdown_r": -9.0586,
+        "fold_wins": 3,
+        "passes": true
+      },
+      "D40": {
+        "delta_net_r": -7.6969,
+        "delta_max_drawdown_r": -3.0015,
+        "fold_wins": 2,
+        "passes": false
+      }
+    },
+    "delta_r_bar": 8.0,
+    "fold_majority": 3,
+    "n_floor": 100,
+    "control": null,
+    "why": "D32 beats the removed-lever baseline by 12.9166 R with no worse drawdown and >= 3/4 fold wins: a Tier-3 proposal to declare it (not done here)"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0,
+      "n": 307,
+      "net_r": 73.7812,
+      "net_r_fee_only": 88.502,
+      "max_drawdown_r": 29.8148,
+      "by_outcome": {
+        "stop": 181,
+        "take_profit": 44,
+        "trail_stop": 82
+      },
+      "mean_bars_held": 16.664,
+      "net_r_per_capital_day": 0.3461,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 24,
+        "atr_stop_mult": 1.5,
+        "trail_mult": 4.0,
+        "min_confidence": 0.3
+      },
+      "data_start": "2020-11-03 14:00:00+00:00",
+      "data_end": "2026-10-30 19:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2020-11-03 14:00:00+00:00",
+          "end": "2022-05-04 16:29:45+00:00",
+          "trades": 81,
+          "net_r": 1.1539
+        },
+        {
+          "fold": 2,
+          "start": "2022-05-04 16:29:45+00:00",
+          "end": "2023-11-02 18:59:30+00:00",
+          "trades": 71,
+          "net_r": 32.5981
+        },
+        {
+          "fold": 3,
+          "start": "2023-11-02 18:59:30+00:00",
+          "end": "2025-05-02 21:29:15+00:00",
+          "trades": 73,
+          "net_r": -0.3341
+        },
+        {
+          "fold": 4,
+          "start": "2025-05-02 21:29:15+00:00",
+          "end": "2026-10-31 23:59:00+00:00",
+          "trades": 82,
+          "net_r": 40.3632
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "24",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SLV",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.3",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261112-cdb2-03/43293804819/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261112-cdb2-03/43293804819/arms/A__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "6.0",
+        "--start",
+        "2019-01-01",
+        "--end",
+        "2026-10-31 23:59"
+      ]
+    },
+    "D16": {
+      "reach_ge_6r": 0.0,
+      "n": 354,
+      "net_r": 60.1511,
+      "net_r_fee_only": 77.2525,
+      "max_drawdown_r": 34.9837,
+      "by_outcome": {
+        "stop": 214,
+        "take_profit": 48,
+        "trail_stop": 92
+      },
+      "mean_bars_held": 15.712,
+      "net_r_per_capital_day": 0.2596,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 16,
+        "atr_stop_mult": 1.5,
+        "trail_mult": 4.0,
+        "min_confidence": 0.3
+      },
+      "data_start": "2020-11-03 14:00:00+00:00",
+      "data_end": "2026-10-30 19:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2020-11-03 14:00:00+00:00",
+          "end": "2022-05-04 16:29:45+00:00",
+          "trades": 90,
+          "net_r": 2.3507
+        },
+        {
+          "fold": 2,
+          "start": "2022-05-04 16:29:45+00:00",
+          "end": "2023-11-02 18:59:30+00:00",
+          "trades": 85,
+          "net_r": 24.5781
+        },
+        {
+          "fold": 3,
+          "start": "2023-11-02 18:59:30+00:00",
+          "end": "2025-05-02 21:29:15+00:00",
+          "trades": 84,
+          "net_r": -14.5308
+        },
+        {
+          "fold": 4,
+          "start": "2025-05-02 21:29:15+00:00",
+          "end": "2026-10-31 23:59:00+00:00",
+          "trades": 95,
+          "net_r": 47.753
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "16",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SLV",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.3",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261112-cdb2-03/43293804819/arms/D16__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261112-cdb2-03/43293804819/arms/D16__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "6.0",
+        "--start",
+        "2019-01-01",
+        "--end",
+        "2026-10-31 23:59"
+      ]
+    },
+    "D20": {
+      "reach_ge_6r": 0.0,
+      "n": 335,
+      "net_r": 62.9705,
+      "net_r_fee_only": 79.0303,
+      "max_drawdown_r": 34.1287,
+      "by_outcome": {
+        "stop": 202,
+        "take_profit": 46,
+        "trail_stop": 87
+      },
+      "mean_bars_held": 16.212,
+      "net_r_per_capital_day": 0.2783,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 1.5,
+        "trail_mult": 4.0,
+        "min_confidence": 0.3
+      },
+      "data_start": "2020-11-03 14:00:00+00:00",
+      "data_end": "2026-10-30 19:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2020-11-03 14:00:00+00:00",
+          "end": "2022-05-04 16:29:45+00:00",
+          "trades": 86,
+          "net_r": 2.9407
+        },
+        {
+          "fold": 2,
+          "start": "2022-05-04 16:29:45+00:00",
+          "end": "2023-11-02 18:59:30+00:00",
+          "trades": 80,
+          "net_r": 24.7715
+        },
+        {
+          "fold": 3,
+          "start": "2023-11-02 18:59:30+00:00",
+          "end": "2025-05-02 21:29:15+00:00",
+          "trades": 81,
+          "net_r": -8.34
+        },
+        {
+          "fold": 4,
+          "start": "2025-05-02 21:29:15+00:00",
+          "end": "2026-10-31 23:59:00+00:00",
+          "trades": 88,
+          "net_r": 43.5982
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SLV",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.3",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261112-cdb2-03/43293804819/arms/D20__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261112-cdb2-03/43293804819/arms/D20__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "6.0",
+        "--start",
+        "2019-01-01",
+        "--end",
+        "2026-10-31 23:59"
+      ]
+    },
+    "D32": {
+      "reach_ge_6r": 0.0,
+      "n": 273,
+      "net_r": 86.6978,
+      "net_r_fee_only": 99.6876,
+      "max_drawdown_r": 20.7562,
+      "by_outcome": {
+        "stop": 157,
+        "take_profit": 42,
+        "trail_stop": 74
+      },
+      "mean_bars_held": 17.447,
+      "net_r_per_capital_day": 0.4369,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 32,
+        "atr_stop_mult": 1.5,
+        "trail_mult": 4.0,
+        "min_confidence": 0.3
+      },
+      "data_start": "2020-11-03 14:00:00+00:00",
+      "data_end": "2026-10-30 19:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2020-11-03 14:00:00+00:00",
+          "end": "2022-05-04 16:29:45+00:00",
+          "trades": 71,
+          "net_r": 2.6746
+        },
+        {
+          "fold": 2,
+          "start": "2022-05-04 16:29:45+00:00",
+          "end": "2023-11-02 18:59:30+00:00",
+          "trades": 63,
+          "net_r": 36.5598
+        },
+        {
+          "fold": 3,
+          "start": "2023-11-02 18:59:30+00:00",
+          "end": "2025-05-02 21:29:15+00:00",
+          "trades": 65,
+          "net_r": 7.7301
+        },
+        {
+          "fold": 4,
+          "start": "2025-05-02 21:29:15+00:00",
+          "end": "2026-10-31 23:59:00+00:00",
+          "trades": 74,
+          "net_r": 39.7337
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "32",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SLV",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.3",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261112-cdb2-03/43293804819/arms/D32__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261112-cdb2-03/43293804819/arms/D32__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "6.0",
+        "--start",
+        "2019-01-01",
+        "--end",
+        "2026-10-31 23:59"
+      ]
+    },
+    "D40": {
+      "reach_ge_6r": 0.0,
+      "n": 259,
+      "net_r": 66.0843,
+      "net_r_fee_only": 78.4412,
+      "max_drawdown_r": 26.8133,
+      "by_outcome": {
+        "stop": 155,
+        "take_profit": 37,
+        "trail_stop": 67
+      },
+      "mean_bars_held": 16.915,
+      "net_r_per_capital_day": 0.362,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 40,
+        "atr_stop_mult": 1.5,
+        "trail_mult": 4.0,
+        "min_confidence": 0.3
+      },
+      "data_start": "2020-11-03 14:00:00+00:00",
+      "data_end": "2026-10-30 19:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2020-11-03 14:00:00+00:00",
+          "end": "2022-05-04 16:29:45+00:00",
+          "trades": 66,
+          "net_r": -2.6198
+        },
+        {
+          "fold": 2,
+          "start": "2022-05-04 16:29:45+00:00",
+          "end": "2023-11-02 18:59:30+00:00",
+          "trades": 61,
+          "net_r": 22.1648
+        },
+        {
+          "fold": 3,
+          "start": "2023-11-02 18:59:30+00:00",
+          "end": "2025-05-02 21:29:15+00:00",
+          "trades": 64,
+          "net_r": 1.7665
+        },
+        {
+          "fold": 4,
+          "start": "2025-05-02 21:29:15+00:00",
+          "end": "2026-10-31 23:59:00+00:00",
+          "trades": 68,
+          "net_r": 44.7725
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "40",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SLV",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.3",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261112-cdb2-03/43293804819/arms/D40__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261112-cdb2-03/43293804819/arms/D40__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "6.0",
+        "--start",
+        "2019-01-01",
+        "--end",
+        "2026-10-31 23:59"
+      ]
+    }
+  },
+  "window": {
+    "start": "2019-01-01",
+    "end": "2026-10-31 23:59",
+    "fetch_days": 2200,
+    "feed": {
+      "source": "dukascopy",
+      "ticker": "SLV",
+      "interval": "60m",
+      "resample": "1h"
+    },
+    "fold_edges": [
+      "2020-11-03 14:00:00+00:00",
+      "2022-05-04 16:29:45+00:00",
+      "2023-11-02 18:59:30+00:00",
+      "2025-05-02 21:29:15+00:00",
+      "2026-10-31 23:59:00+00:00"
+    ]
+  }
+}

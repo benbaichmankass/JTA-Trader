@@ -34,7 +34,11 @@ def test_closed_key_is_declared_and_inert_to_the_harness(leg):
     argv, faithful, omitted = _cmd(leg, cfg)
     argv0, faithful0, omitted0 = _cmd(leg, without)
     assert argv == argv0
-    assert (faithful, omitted) == (faithful0, omitted0) == (True, [])
+    assert (faithful, omitted) == (True, [])
+    # Since #25228 an ABSENT decision_bar is the runtime default (forming), an omitted
+    # lever: dropping the key is no longer a no-op for the grade, which is why the
+    # declared `closed` is what keeps these legs `faithful`.
+    assert (faithful0, omitted0) == (False, ["decision_bar"])
 
 
 @pytest.mark.parametrize("leg", LEGS)

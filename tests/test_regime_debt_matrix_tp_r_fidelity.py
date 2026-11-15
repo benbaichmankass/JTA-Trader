@@ -70,7 +70,8 @@ def _build(cfg: dict, harness: str):
 def _trend(**over) -> dict:
     base = {"model": "donchian", "symbols": ["QQQ"], "timeframe": "1d",
             "donchian": 20, "atr_period": 14, "atr_stop_mult": 2.5,
-            "trail_mult": 5.0, "min_confidence": 0.0, "long_only": True}
+            "trail_mult": 5.0, "min_confidence": 0.0, "long_only": True,
+            "decision_bar": "closed"}  # absent == forming == omitted (EVIDENCE-DECISION-BAR-DEFAULT)
     base.update(over)
     return base
 
@@ -79,7 +80,7 @@ def _pullback(**over) -> dict:
     base = {"model": "pullback", "symbols": ["GLD"], "timeframe": "1h",
             "trend_lookback": 40, "pullback_lookback": 10, "pullback_frac": 0.5,
             "atr_period": 14, "atr_stop_mult": 2.5, "trail_mult": 5.0,
-            "min_confidence": 0.0}
+            "min_confidence": 0.0, "decision_bar": "closed"}
     base.update(over)
     return base
 

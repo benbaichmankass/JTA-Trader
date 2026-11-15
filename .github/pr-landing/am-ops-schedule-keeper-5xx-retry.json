@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Manager ask: schedule-keeper run 43598757422 (2026-11-14 13:14Z) died on one GitHub 502 in _api (via _runs) and paged the operator channel as a high RUN failure; the runs either side were fine. No-halting: _api now retries 5xx/429/network errors up to 3 attempts (2 s, 5 s backoff; a real 4xx raises at once), and cmd_keep skips only the unreadable target with a could_not_look line (plus a could_not_look GITHUB_OUTPUT) instead of crashing the pass. A failed dispatch is likewise contained per target. A target that stays unreadable still goes STALE and pages through the existing stale path. Tests: tests/test_schedule_keeper.py (3 new). Tooling only. Revert: git revert."
+}

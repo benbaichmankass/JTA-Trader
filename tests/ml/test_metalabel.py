@@ -40,7 +40,7 @@ def test_live_holdout_requires_both_populations():
 
 
 def test_metalabel_manifest_is_valid():
-    path = Path("ml/configs/setup-candidates-metalabel-v1.yaml")
+    path = Path("ml/configs/retired/setup-candidates-metalabel-v1.yaml")
     m = TrainingManifest.from_yaml(path)
     assert m.model_id == "setup-candidates-metalabel-v1"
     assert m.dataset.family == "setup_candidates"

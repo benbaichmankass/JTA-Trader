@@ -394,6 +394,18 @@ def _supersede_meta(meta: Any) -> Optional[Dict[str, Any]]:
     return cand if isinstance(cand, dict) else None
 
 
+def _tp_target_meta(meta: Any) -> Optional[float]:
+    """``prop_tickets.meta.tp_target.level`` (PROP-BRACKET-APPLY), None when absent or unreadable (never 0)."""
+    from src.runtime.live_review_intent import tp_target_from
+    return tp_target_from(meta)
+
+
+def _close_request_meta(meta: Any) -> Optional[Dict[str, Any]]:
+    """``prop_tickets.meta.close_request`` (CAP-PROP-VM-CLOSE), None when absent or unreadable."""
+    from src.prop.vm_close import close_request_from
+    return close_request_from(meta)
+
+
 def _sl_floor_meta(meta: Any) -> Optional[float]:
     """``prop_tickets.meta.sl_floor.level`` (LTR-6R), None when absent or unreadable (never 0)."""
     from src.runtime.live_review_intent import sl_floor_from
@@ -535,6 +547,10 @@ def list_outbound_tickets(
             "direction": op.get("direction") or tk.get("direction"),
             "entry": op.get("entry") if op.get("entry") is not None else tk.get("entry"),
             "sl": op.get("sl") if op.get("sl") is not None else tk.get("sl"),
+            # PROP-TICKET-STOP-TEXT-MISMATCH: `sl` above is the package's CURRENT stop (it moves with
+            # structure/trail amends, e.g. 2022.06 -> 2030.41 31 s after open); the ticket TEXT's Stop
+            # line is the stop AS EMITTED. `ticket_sl` is that emitted stop, so the two are comparable.
+            "ticket_sl": tk.get("sl"),
             "tp": op.get("tp") if op.get("tp") is not None else tk.get("tp"),
             "qty": tk.get("qty"),
             "risk_usd": tk.get("risk_usd"),
@@ -558,6 +574,12 @@ def list_outbound_tickets(
             # LTR-6R: the live-review stop floor this account approved for the ticket (``meta.sl_floor``);
             # the VM executor's trail tightens to it and never plans looser. None = no floor.
             "sl_floor": _sl_floor_meta(tk.get("meta")),
+            # PROP-BRACKET-APPLY: the TP the system asked this ticket to rest at; the VM executor's trail applies it
+            # through its own amend code. None = no pin.
+            "tp_target": _tp_target_meta(tk.get("meta")),
+            # CAP-PROP-VM-CLOSE: the close / partial-close the system asked this ticket's executor to carry out
+            # ({id, fraction, ...}; fraction None = the whole position). None = no request.
+            "close_request": _close_request_meta(tk.get("meta")),
         }
 
     for r in op_rows:
@@ -787,6 +809,40 @@ def list_fills(
             (*params, int(limit)),
         ).fetchall()
         return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def get_fill(fill_id: int) -> Optional[Dict[str, Any]]:
+    """One ``prop_fills`` row by id, or None."""
+    if not tables_present():
+        return None
+    conn = _connect(read_only=True)
+    try:
+        row = conn.execute("SELECT * FROM prop_fills WHERE id = ?", (int(fill_id),)).fetchone()
+        return dict(row) if row is not None else None
+    finally:
+        conn.close()
+
+
+def get_opening_fill(
+    account_id: Optional[str], ticket_id: Optional[str] = None, external_order_id: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    """The OPENING row (``status`` open/filled, lowest id) of one trade, or None. Used to carry an opener's stop/target
+    onto a closing row whose opener is outside the page the caller read (PROP-UI-BRACKETS-CLOSED)."""
+    if not account_id or not (ticket_id or external_order_id) or not tables_present():
+        return None
+    conn = _connect(read_only=True)
+    try:
+        for col, val in (("external_order_id", external_order_id), ("ticket_id", ticket_id)):
+            if not val:
+                continue
+            row = conn.execute(
+                f"SELECT * FROM prop_fills WHERE account_id = ? AND {col} = ? "
+                "AND lower(status) IN ('open','filled') ORDER BY id ASC LIMIT 1", (account_id, str(val))).fetchone()
+            if row is not None:
+                return dict(row)
+        return None
     finally:
         conn.close()
 

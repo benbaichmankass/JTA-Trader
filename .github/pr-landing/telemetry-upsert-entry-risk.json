@@ -1,0 +1,6 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Row TELEMETRY-UPSERT-ENTRY-RISK-COLUMNS, follow-up to ENTRY-FILL-OPEN-R-BASIS (#26203, observed 05:16Z). position_telemetry's upsert set entry/risk_per_unit on INSERT only, so rows opened before #26203 kept the PLAN entry/risk (trade 7260: 0.1506 / 0.00792857) beside a fill-based open_r. The DO UPDATE now sets entry/risk_per_unit from the record, COALESCEd so a record without them never wipes them. For a row that never re-bases it is a no-op (the plan values are stable). Telemetry columns only: no exit lever, SL/TP or bracket reads them from this table. Test: a plan-basis row moves to the fill once the writeback lands, and a later null-entry record keeps the values (fails on main, passes here). trader_import_closure decide: RESTART, so a restart batch. Revert: git revert."
+}

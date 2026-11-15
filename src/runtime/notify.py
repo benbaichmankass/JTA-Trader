@@ -33,6 +33,24 @@ def send_telegram_direct(
     what is returned or what is raised. See ``_send_telegram_direct`` for the
     transport contract.
     """
+    # TELEGRAM-TRIM phase 3 (operator popup 2026-11-10 "Only me; you if unfixed"): an ALERT about testing-paper
+    # accounts only goes to the manager (recorded suppressed, priority high -> alerts_ledger.wakes_manager) and
+    # reaches Telegram ONCE, flagged, only if it is still firing after the manager's window. Returns True
+    # ("handled") on a suppression so no queue drainer retries it. Fails open: any error sends.
+    try:
+        from src.runtime import telegram_policy as _tp
+
+        _route = _tp.paper_alert_route(kind, message, channel or _channel_for_token(bot_token))
+        if _route == _tp.PAPER_ALERT_MANAGER:
+            _tp.record_suppressed(kind or "unclassified", message, reason="paper_alert_to_manager",
+                                  channel=channel or _channel_for_token(bot_token), priority="high")
+            return True
+        if _route == _tp.PAPER_ALERT_ESCALATE:
+            _mins = float(((_tp.load_policy().get("paper_alerts") or {}).get("escalate_after_minutes")) or 120)
+            message = _tp.escalation_text(message, _mins)
+            priority = "high"
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("notify: paper-alert routing failed (%s) — sending", exc)
     delivered = "raised"
     try:
         result = _send_telegram_direct(

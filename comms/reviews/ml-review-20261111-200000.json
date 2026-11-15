@@ -1,0 +1,531 @@
+{
+ "request_id": "ml-review-20261111-200000",
+ "reviewed_at": "2026-11-11T20:00:00Z",
+ "reviewer": "ML-FRONTIER-PREP-20261111",
+ "window_start": "2026-11-04T20:00:00Z",
+ "window_end": "2026-11-11T20:00:00Z",
+ "overall_assessment": "investigate",
+ "overall_assessment_reason": "Real-money ENTRY edge not established (held-out year mean +0.0085 R/decision, t~0.24; replay -0.13 R, SIDE-DRIVER); the trainer stage-guard proposes demoting the advisory BTC-15m head; all regime heads drifted together; C7(b) and C10 could_not_look.",
+ "prior_calls_scorecard": {
+  "grades": [
+   {
+    "call": "ML-20261104-1",
+    "grade": "hit",
+    "evidence": "ml/served/ml_decision_entry_v1 train_end 2025-09-22; the actually-served v1r20261106 train_end 2026-10-14; both < 2026-10-28"
+   },
+   {
+    "call": "ML-20261104-2",
+    "grade": "unresolved",
+    "evidence": "no trainer per-day read; baselines degenerate 8 cycles; volatile share 41.2% -> 44.9%"
+   },
+   {
+    "call": "ML-20261104-3",
+    "grade": "hit",
+    "evidence": "38/38 ml_bakeoff records since 11-04T20Z regime(25)/direction(13)"
+   },
+   {
+    "call": "ML-20261104-4",
+    "grade": "unresolved",
+    "evidence": "n=12 < 30"
+   },
+   {
+    "call": "ML-20261104-5",
+    "grade": "miss",
+    "evidence": "yz-v1 KS 0.182 moderate; fc-pcv-v2 KS 0.236 significant: both moved (as did SOL-15m, MES-5m, fc-pcv-v1)"
+   },
+   {
+    "call": "ML-20261104-6",
+    "grade": "hit",
+    "evidence": "research/queue/blocked/RQ-20261101-78fc-04.yaml still present"
+   }
+  ],
+  "hit": 3,
+  "miss": 1,
+  "unresolved": 2,
+  "void": 0,
+  "brier": "INDETERMINATE (<10 resolved)"
+ },
+ "scoreboard": {
+  "source": "GET /api/bot/performance (lifetime; since= ignored by the route, so 90d/30d/7d could_not_look)",
+  "real_money_and_prop": {
+   "n": 487,
+   "net_r": -152.12,
+   "exp_r": -0.312,
+   "pf": 0.632
+  },
+  "mirror": {
+   "n": 168,
+   "net_r": -32.6,
+   "exp_r": -0.194,
+   "pf": 0.626
+  },
+  "paper": {
+   "n": 1786,
+   "net_r": -144.25,
+   "exp_r": -0.081,
+   "pf": 0.909
+  },
+  "sceptical_quant": {
+   "ml_entry": "no: held-out year mean +0.0085 R/decision over 13 windows (sd 0.127, t~0.24, 98e3-26); replay -0.13 R n=317 (98e3-23); DSR not_computed",
+   "ml_entry_eq_struct": "plausible, unproven: one confirm window +0.49 R n=207 (98e3-06); DSR not_computed; no live unit",
+   "overlay-td-v1": "no standalone record read this run; trimmed legs on DSR probation"
+  }
+ },
+ "checks": {
+  "C1": {
+   "state": "finding",
+   "population": "98 registry rows + 8 served inventory rows; the last cycle",
+   "reading": "pull #24903 (run 43082654333): timer active; cycle 11-11 01:53Z rc0 trained 67 skipped 6 (3 enforced) failed 0; 0 manifest_oom_red_flag; builds rc0; stage-guard 97 hold / 1 DEMOTE btc-regime-15m-lgbm-fc-pcv-v2 (advisory); 4 lifecycle_red_flag serve_parity x3 on BTC-5m shadow heads; REGISTRY-STAGES-CHANGED same gap as 11-04 (ML-REGISTRY-LADDER-GAPS)"
+  },
+  "C2": {
+   "state": "finding",
+   "population": "73 manifests; served ENTRY artifacts",
+   "reading": "TRAINING-STALENESS 5 stale / 2 never; served ENTRY refit train_end 2026-10-14, data_through 2026-11-05; MES label share drifting. 3 manifests built 0 rows (exit-policy-v1, mes-execution-quality, setup-candidates-metalabel-paper-v1)."
+  },
+  "C3": {
+   "state": "finding",
+   "population": "82 live-mode (account, leg) pairs; 6 real money; 9 prop",
+   "reading": "24/82; real money 4/6; prop 6/9; SOL-15m + MES-5m live regime heads change 0; 2 BTC cell pairs INFERRED (REGIME_ML_VERDICT_MODE unreadable)"
+  },
+  "C4": {
+   "state": "finding",
+   "population": "ML-PROGRAMME section 7 sources since 2026-11-04",
+   "reading": "H1-H5 ok; H6 0 registry stage changes; H7 only via served artifacts; first broken hop H6->H7 (registry); ML-LEARNING-LEDGER queued"
+  },
+  "C5": {
+   "state": "finding",
+   "population": "shadow/advisory heads gate-checked",
+   "reading": "19/23 gate-checks readable (4 truncated -> #24938); ready:true on btc-15m v2, fc-pcv-v1, yz-v1 (INFERRED parity pass), sol-15m fc-pcv-v1, eth selfonly ctrl; drift_clean fails on 8; BTC-5m serve_parity lifecycle red flag; no parity check on served ENTRY artifacts"
+  },
+  "C6": {
+   "state": "finding",
+   "population": "cost-gated heads; same-replay results",
+   "reading": "advisory packets #24947: btc fc-pcv-v2 ready false (drift_clean KS 0.226 + beats_baseline max-proba artefact only; live_parity 24/24, live regime AUC 0.690, oos_edge +0.254); sol-15m + mes-5m ready true; cost_net not applicable on all three. ENTRY 98e3-23/25/26 on one replay + cost stack, none decision-grade; Foxhound-1r has no cost-gate packet."
+  },
+  "C7": {
+   "state": "finding",
+   "population": "3 advisory + nearest shadow heads",
+   "reading": "KS: fc-pcv-v2 0.236 significant (was 0.029); SOL-15m 0.102 moderate; MES-5m 0.110 moderate; fc-pcv-v1 0.156 moderate; yz-v1 0.182 moderate. Common input shift. Plan-only scan (#24938): rc 0, 46 rows, 0 drifted, 0 persistent; KS moves are watch. (b) could_not_look: no instrument (LIVE-DECAY-MONITOR)."
+  },
+  "C8": {
+   "state": "finding",
+   "population": "registry 106; 24 family-tagged open items; 38 ml_bakeoff records",
+   "reading": "gbdt 77/106 manifests; gbdt 14/24 open items (58%); question concentration 38/38 regime/direction (3rd week at 100%)"
+  },
+  "C9": {
+   "state": "finding",
+   "population": "447 records / 307 units since 2026-11-04T20Z; 38 ml_bakeoff records / 27 units",
+   "reading": "ml_bakeoff regime 6P/10F/7I/2NA, direction 0P/10F/1I/2NA; outside ml_bakeoff: 98e3-06 PASS, 98e3-22 FAIL, c692-12 dev PASS then c692-13/14/15 FAIL, c692-03 FAIL, e4a1-01 FAIL, fd68/d256 FAIL|INDET, b621..b626 FAIL|INDET"
+  },
+  "C10": {
+   "state": "could_not_look",
+   "population": "6 production legs",
+   "reading": "ml_entry not_computed; ml_entry_eq_struct not_computed, NO LIVE UNIT"
+  }
+ },
+ "headline": {
+  "ml_changes_legs": "24/82",
+  "real_money": "4/6",
+  "prop": "6/9",
+  "first_broken_hop": "H6->H7 (registry models)"
+ },
+ "weekly_progress_lines": {
+  "data_coverage": "could_not_look (no instrument)",
+  "feature_count": "live 20 vs admitted 20",
+  "retrain_freshness_days": {
+   "train_end": 28,
+   "data_through": 6
+  },
+  "retrain_freshness_state": "AMBER",
+  "live_vs_heldout": "n=12 ml_entry closes on bybit_2 since 11-01; mean pnl% +0.12; longs 0/3, shorts 6/9; held-out +0.0073 R/decision"
+ },
+ "analysis": {
+  "questions": [
+   {
+    "q": "Is the live ENTRY model pricing market direction rather than asset selection?",
+    "hypotheses": [
+     "H1 common-factor bet (side flips with tape)",
+     "H2 real skill + bad draw (noise)",
+     "H3 serve-time drift (untestable: no parity check)"
+    ],
+    "verdict": "H1 favoured by side split (-0.90 vs +0.017) and year-window sd 0.127 vs mean 0.0085; NOT TESTED -> P2",
+    "rejected": "demote on replay (wrong signal); another learner on the same target (fs01)"
+   },
+   {
+    "q": "Why is ML research capacity still on heads that change nothing?",
+    "hypotheses": [
+     "(i) iteration loop authors levers where levers exist",
+     "(ii) order-changing units blocked on builds"
+    ],
+    "verdict": "(ii) is the root; both fit",
+    "rejected": "a rule refusing regime units (new gate)"
+   },
+   {
+    "q": "Is trade-management ML dead?",
+    "hypotheses": [
+     "R1-state features insufficient",
+     "no exploitable action value"
+    ],
+    "verdict": "5th null on R1 state; hindsight ceiling 0.86 R/trade says value exists; path-state iteration 78fc-04 blocked on TMBENCH-QTM1B-BUILD",
+    "rejected": "another variant on R1 state"
+   },
+   {
+    "q": "What does all-heads drift mean?",
+    "hypotheses": [
+     "common regime-mix input shift",
+     "per-head defect"
+    ],
+    "verdict": "common shift (5 heads, 3 symbols, 2 timeframes, same week); labelled macro-F1 held 0.582",
+    "rejected": "DRIFT-REMEDIATE rows on first-time drift"
+   }
+  ],
+  "surprises": [
+   "Foxhound-4 (real money) invisible to the iteration census",
+   "/api/bot/performance ignores since=",
+   "7/12 real-money ml_entry closes carry closeReason 'other'"
+  ]
+ },
+ "calls": [
+  {
+   "id": "ML-20261111-1",
+   "claim": "If K1 (market-residual ENTRY target) is registered and run at the proposed design, it PASSES (>= +0.06 R/decision paired over 13 windows, CI lower > 0, placebo fails).",
+   "p": 0.15,
+   "impact": "real-money ENTRY on bybit_2 + 5 books",
+   "decision": "P2 proposed",
+   "tier": "1",
+   "check": {
+    "command": "research/results/<K1 unit>/*.jsonl verdict",
+    "rule": "hit if pass; miss if fail or indeterminate at the registered design",
+    "resolves_when": "K1 unit graded; void if not registered by 2026-12-02"
+   },
+   "ending": "proposal P2 (not queued, per dispatch)"
+  },
+  {
+   "id": "ML-20261111-2",
+   "claim": "The next served-ENTRY replay grade (the same grader as run 42473814600, on ml_decision_entry_v1r20261106) reads mean net R <= 0 over its window.",
+   "p": 0.6,
+   "impact": "real-money ENTRY",
+   "decision": "P1 proposed (mirror demotion read)",
+   "tier": "1",
+   "check": {
+    "command": "the latest research/results record of the served-ENTRY replay grade, generated after 2026-11-11",
+    "rule": "hit if pool mean_net_r <= 0; miss if > 0",
+    "resolves_when": "the next replay grade record"
+   },
+   "ending": "PI-20261104-DGUBH8UA-0002 (re-read 11-11)"
+  },
+  {
+   "id": "ML-20261111-3",
+   "claim": "Of the ml_bakeoff result records generated 2026-11-11..11-18, >= 70% still target regime_label or direction_label.",
+   "p": 0.75,
+   "impact": "research capacity",
+   "decision": "P4 proposed",
+   "tier": "1",
+   "check": {
+    "command": "research/results/*/*.jsonl with generated_at in [2026-11-11T20:00Z, 2026-11-18T20:00Z) whose unit has ml_bakeoff; share with target in {regime_label,direction_label}",
+    "rule": "hit if >= 0.70; miss if < 0.50",
+    "resolves_when": "2026-11-18 ml-review"
+   },
+   "ending": "no action, because P4 (accept ML-CONSOLIDATION wave 1) is the manager's call; this tracks it"
+  },
+  {
+   "id": "ML-20261111-4",
+   "claim": "The BTC-15m advisory head's drift is transient regime-mix: its KS reads <= moderate (< 0.20) at the next weekly read, and its labelled macro-F1 stays >= 0.57.",
+   "p": 0.55,
+   "impact": "advisory BTC head (2 demo cell pairs)",
+   "decision": "watch (first-time drift)",
+   "tier": "1",
+   "check": {
+    "command": "GET /api/bot/shadow/drift?model_id=btc-regime-15m-lgbm-fc-pcv-v2; GET /api/bot/ml/registry runs[-1].metrics.macro_f1",
+    "rule": "hit if ks < 0.20 and macro_f1 >= 0.57; miss if ks >= 0.20 or macro_f1 < 0.57",
+    "resolves_when": "2026-11-18 ml-review"
+   },
+   "ending": "no action, because first-time drift is watch (skill C7)"
+  },
+  {
+   "id": "ML-20261111-5",
+   "claim": "FRONTIER-LEVER-TABULAR and FRONTIER-LEVER-TSFM-TIMESTRAL are both still queued at the 2026-11-18 scan.",
+   "p": 0.6,
+   "impact": "frontier capacity hygiene",
+   "decision": "P6 raised to the manager",
+   "tier": "1",
+   "check": {
+    "command": "python3 scripts/ops/work.py get FRONTIER-LEVER-TABULAR; ... FRONTIER-LEVER-TSFM-TIMESTRAL (state)",
+    "rule": "hit if both queued; miss if either is done/dropped/in_flight",
+    "resolves_when": "2026-11-18 frontier scan"
+   },
+   "ending": "handoff to manager"
+  },
+  {
+   "id": "ML-20261111-6",
+   "claim": "iteration_orphans.py still reports >= 7 overdue ml_model subjects at the next review.",
+   "p": 0.7,
+   "impact": "ML iteration loop (trade management, conviction, exit head)",
+   "decision": "P5 proposed",
+   "tier": "1",
+   "check": {
+    "command": "python3 scripts/research/iteration_orphans.py | grep 'ml_model:'",
+    "rule": "hit if overdue >= 7; miss if overdue <= 5",
+    "resolves_when": "2026-11-18 ml-review"
+   },
+   "ending": "handoff to manager (P5)"
+  },
+  {
+   "id": "ML-20261111-7",
+   "claim": "The trainer stage-guard no longer proposes demoting btc-regime-15m-lgbm-fc-pcv-v2 at the next weekly read (transient).",
+   "p": 0.5,
+   "impact": "advisory BTC-15m head (<= 2 demo cell pairs)",
+   "decision": "P8: hold, refinement row",
+   "tier": "3 (proposal)",
+   "check": {
+    "command": "trainer: .venv/bin/python -m ml stage-guard --db data/trade_journal.db | summary.demote",
+    "rule": "hit if btc-regime-15m-lgbm-fc-pcv-v2 not in summary.demote; miss if still listed",
+    "resolves_when": "2026-11-18 ml-review trainer pull"
+   },
+   "ending": "[refinement] pipeline row (P8)"
+  },
+  {
+   "id": "ML-20261104-4-carry",
+   "claim": "Live ENTRY (ml_entry, bybit_2) mean realised pnl% per closed trade is <= 0 once n >= 30.",
+   "p": 0.55,
+   "impact": "real-money ENTRY",
+   "decision": "carried from 11-04",
+   "tier": "1",
+   "check": {
+    "command": "GET /api/bot/trades/closed?account_id=bybit_2&since=2026-11-01T00:00:00 pattern==ml_entry; mean realizedPnlPct",
+    "rule": "hit if mean <= 0 at n >= 30; miss if > 0",
+    "resolves_when": "n >= 30"
+   },
+   "ending": "PI-20261104-DGUBH8UA-0002"
+  }
+ ],
+ "trainer_findings": [
+  "stage-guard DEMOTE btc-regime-15m-lgbm-fc-pcv-v2 (advisory): reason drift-only (#24947)",
+  "serve_parity lifecycle_red_flag x4 (BTC-5m shadow heads)",
+  "0 OOM red flags",
+  "3 manifests built 0 rows",
+  "5 stale / 2 never-trained manifests"
+ ],
+ "model_status": [
+  {
+   "model_id": "ml-decision-entry-v1r20261106",
+   "alias": "Foxhound-1 (refit)",
+   "stage": "served (live)",
+   "legs_changed": "ml_entry on bybit_2, bybit_portfolio, alpaca_paper, breakout_2, tradeify_1, velotrade_1",
+   "decision_value": "held-out +0.0073 R/decision; replay -0.13 R"
+  },
+  {
+   "model_id": "ml-entry-eq-struct-ens5-v1",
+   "alias": "Foxhound-4",
+   "stage": "served (live)",
+   "legs_changed": "ml_entry_eq_struct on alpaca_live, alpaca_portfolio",
+   "decision_value": "confirm +0.49 R/decision n=207"
+  },
+  {
+   "model_id": "ml-entry-tp-revision-v1",
+   "alias": "Labrador-1b",
+   "stage": "served (live)",
+   "legs_changed": "TP of ml_entry (6 books)",
+   "decision_value": "not re-read this run"
+  },
+  {
+   "model_id": "overlay-td-v1",
+   "alias": "Beagle-1",
+   "stage": "served (live)",
+   "legs_changed": "9 TD pairs incl. bybit_2 xrp_4h + sol_prop",
+   "decision_value": "not re-read this run"
+  },
+  {
+   "model_id": "btc-regime-15m-lgbm-fc-pcv-v2",
+   "alias": "Collie-5a",
+   "stage": "advisory",
+   "legs_changed": "bybit_1 ict_scalp_5m + squeeze_breakout_4h cells (INFERRED, env unreadable)",
+   "drift": "KS 0.236 significant (first time)"
+  },
+  {
+   "model_id": "sol-regime-15m-lgbm-fc-pcv-v2",
+   "alias": "Collie-5b",
+   "stage": "advisory",
+   "legs_changed": "0",
+   "drift": "KS 0.102 moderate"
+  },
+  {
+   "model_id": "mes-regime-5m-lgbm-v2",
+   "alias": "Chihuahua-1d",
+   "stage": "advisory",
+   "legs_changed": "0",
+   "drift": "KS 0.110 moderate"
+  },
+  {
+   "model_id": "ml-decision-entry-v2",
+   "alias": "Foxhound-2",
+   "stage": "testing",
+   "legs_changed": "bybit_1 ml_entry_v2"
+  },
+  {
+   "model_id": "ml-entry-eq-v1",
+   "alias": "Foxhound-3",
+   "stage": "testing",
+   "legs_changed": "alpaca_paper ml_entry_eq"
+  },
+  {
+   "model_id": "exit-head-donchian-1h-v1",
+   "alias": "Labrador-2",
+   "stage": "testing",
+   "legs_changed": "bybit_1 trend_donchian(_eth,_sol)"
+  }
+ ],
+ "model_status_summary": "106 registry/inventory rows: advisory 3, shadow 20, candidate 74, research_only 1 (98 registry) + 8 served; gbdt 77; candidate-only and shadow regime heads change no order (ML-CONSOLIDATION #24897 proposes 72 retirements).",
+ "promotion_recommendations": [],
+ "promotion_note": "No promote or demote. P1 asks for the mirror demotion read on ml_entry (Tier-3 read). Trainer stage-guard DEMOTE on btc-regime-15m-lgbm-fc-pcv-v2, reason drift verdict significant only (#24947) -> P8 soft-off proposal; recommendation HOLD one weekly read.",
+ "experiments_proposed": [
+  {
+   "id": "P1",
+   "track": "MODEL (Tier-3 read)",
+   "what": "Stage-2 demotion read for ml_entry: bybit_portfolio mirror net-of-cost window + computed DSR"
+  },
+  {
+   "id": "P2",
+   "track": "MODEL",
+   "what": "K1 market-residual target for ENTRY (13 paired windows, >= +0.06 R, placebo)"
+  },
+  {
+   "id": "P3",
+   "track": "MODEL",
+   "what": "Foxhound-4 iteration subject + live unit (filed PI-20261111-TX7TX2ZN-0001)"
+  },
+  {
+   "id": "P4",
+   "track": "MODEL",
+   "what": "accept ML-CONSOLIDATION wave 1; retire regime iteration subjects by record"
+  },
+  {
+   "id": "P5",
+   "track": "MODEL",
+   "what": "dispatch TMBENCH-QTM1B-BUILD then ML-EXIT-ACTIONGRID-LABELS (unblock 78fc-04/05)"
+  },
+  {
+   "id": "P6",
+   "track": "MODEL",
+   "what": "lever rows: kill TABULAR + TSFM-TIMESTRAL; dispatch HARNESS-COSTS; manager decides LEADLAG"
+  },
+  {
+   "id": "P7",
+   "track": "TRADING -> /performance-review",
+   "what": "ml_entry closeReason 'other' 7/12 on bybit_2; longs 0/3"
+  },
+  {
+   "id": "P8",
+   "track": "MODEL (Tier-3, operator)",
+   "what": "btc-regime-15m-lgbm-fc-pcv-v2 stage-guard demote -> soft-off proposal + [refinement] row; recommend HOLD one weekly read"
+  }
+ ],
+ "backlog_drain": [
+  {
+   "id": "PI-20261104-DGUBH8UA-0001",
+   "disposition": "kept_open",
+   "reread": "work.py observe 2026-11-11"
+  },
+  {
+   "id": "PI-20261104-DGUBH8UA-0002",
+   "disposition": "kept_open",
+   "reread": "work.py observe 2026-11-11"
+  },
+  {
+   "id": "PI-20261104-DGUBH8UA-0003",
+   "disposition": "kept_open",
+   "reread": "work.py observe 2026-11-11"
+  },
+  {
+   "id": "PI-20261028-GNVUF1ES-0001",
+   "disposition": "kept_open",
+   "reread": "work.py observe 2026-11-11"
+  },
+  {
+   "id": "PI-20261028-GNVUF1ES-0002",
+   "disposition": "kept_open",
+   "reread": "work.py observe 2026-11-11"
+  },
+  {
+   "id": "PI-20261014-MVBJLVJ3-0001",
+   "disposition": "kept_open",
+   "reread": "work.py observe 2026-11-11"
+  },
+  {
+   "id": "PI-20261013-CAZHXZNE-0001",
+   "disposition": "kept_open",
+   "reread": "work.py observe 2026-11-11"
+  },
+  {
+   "id": "MB-20260712-SHADOW-LOG-HISTORY",
+   "disposition": "kept_open",
+   "reread": "work.py observe 2026-11-11"
+  },
+  {
+   "id": "PI-20260927-3WM5HADW-0004",
+   "disposition": "kept_open",
+   "reread": "live drift payload (max-proba scale)"
+  },
+  {
+   "id": "PI-20260927-3WM5HADW-0005",
+   "disposition": "kept_open",
+   "reread": "trainer #24903"
+  },
+  {
+   "id": "PI-20260929-UAOAYGBB-0001",
+   "disposition": "kept_open",
+   "reread": "trainer #24903"
+  },
+  {
+   "id": "MB-20260719-PROMOREADY-OOSEDGE-OOM",
+   "disposition": "kept_open",
+   "reread": "trainer #24903"
+  },
+  {
+   "id": "PI-20261009-01FXMMUG-0001",
+   "disposition": "kept_open",
+   "reread": "--plumbing"
+  },
+  {
+   "id": "BL-20260911-THE-DRIFT-GATE (drift_clean)",
+   "disposition": "kept_open",
+   "reread": "trainer #24903"
+  },
+  {
+   "id": "PI-20261004-AHCVAAF5-0002",
+   "disposition": "kept_open",
+   "reread": "not re-read"
+  },
+  {
+   "id": "PI-20261015-SBAQDDVQ-0001",
+   "disposition": "kept_open",
+   "reread": "not re-read"
+  }
+ ],
+ "backlog_coverage": {
+  "open_at_start": 16,
+  "triaged": 16,
+  "resolved": 0,
+  "fixed_now": 0,
+  "closed_stale": 0,
+  "kept_open": 16,
+  "count_untriaged": 0
+ },
+ "anomalies": [
+  "all 5 regime heads drifted together (first time for the advisory BTC head)",
+  "/api/bot/performance since= no-op",
+  "Foxhound-4 not an iteration subject"
+ ],
+ "recommended_action": "Manager: put P1 (ml_entry mirror demotion read + DSR) and P5 (TMBENCH-QTM1B-BUILD) to Thursday planning; decide P4 (ML-CONSOLIDATION wave 1) and P6 (lever rows).",
+ "operator_attention_required": true,
+ "claude_channel_ping": "/ml-review: ML changes 24/82 legs (real money 4/6); chain: H6->H7 broken; 8 proposals; calls hit/miss 3/1; trainer=ok rc0, stage-guard demote BTC-15m advisory.",
+ "sources": [
+  "docs/reviews/2026-11-11-weekly-walkthrough.md",
+  "comms/ml-plan/20261111T2000Z-ML-FRONTIER-PREP.json",
+  "docs/research/frontier-scan-2026-11-11.md",
+  "issue #24903 (trainer-vm-diag run 43082654333)",
+  "research/results/RQ-20261108-98e3-23",
+  "research/results/RQ-20261108-98e3-26",
+  "docs/plans/ML-CONSOLIDATION-2026-11-11.md"
+ ]
+}

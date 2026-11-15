@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 2 (close path / DB writeback on the live trader's monitor tick, alpaca_live real money included). New per-tick sweep _sweep_alpaca_close_from_broker_leg reads the row's own Alpaca parent order (/v2/orders/{broker_order_id}?nested=true, read-only, <=6 reads/tick) and, when exactly one exit-side bracket leg filled the whole position, sets exit_reason sl/tp, exit_price = leg filled_avg_price, closed_at = leg filled_at, pnl from that price; stamps broker_leg_fill (MEASURED). Anything else keeps today's inference. MEASURED basis: trades 7011/7012 stop legs filled 14:33:31Z/14:33:39Z, journal closed 14:36:00Z by the snapshot reconciler. The manager lands it. Revert: git revert.",
+  "why": "ALPACA-CLOSE-BROKER-TRUTH: Alpaca closes carry the broker's filled-leg reason, price and time instead of exchange_flat_reconciled / price_vs_pkg_bracket."
+}

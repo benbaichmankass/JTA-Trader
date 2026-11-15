@@ -29,6 +29,8 @@
 #     (each is REFUSED, and nothing is written if ANY id is bad)
 #   - the running ict-trader-live.service (no restart required)
 set -euo pipefail
+# read-only SQL without the sqlite3 CLI (not installed on the VM): scripts/ops/db_read.py
+_DBR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/db_read.py"
 
 SCRIPT_NAME="mark_operator_flattened"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -78,7 +80,7 @@ python3 "${PY_SCRIPT}" --self-test
 
 echo
 echo "===== BEFORE (the rows as they stand) ====="
-sqlite3 -header -column "${DB_PATH}" \
+python3 "${_DBR}" --table "${DB_PATH}" \
     "SELECT id, account_id, symbol, status, exit_reason, pnl \
      FROM trades WHERE id IN (${TRADE_IDS});" || true
 
@@ -97,7 +99,7 @@ set -e
 
 echo
 echo "===== AFTER ====="
-sqlite3 -header -column "${DB_PATH}" \
+python3 "${_DBR}" --table "${DB_PATH}" \
     "SELECT id, account_id, symbol, status, exit_reason, pnl \
      FROM trades WHERE id IN (${TRADE_IDS});" || true
 

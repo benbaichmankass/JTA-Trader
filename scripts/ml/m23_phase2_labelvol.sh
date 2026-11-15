@@ -260,7 +260,7 @@ PY
 
 log "STEP 3: build pooled dataset $SC_V_WON (won) + train p2pool-v1 + gate"
 build_pool "$SC_V_WON"
-python3 -m ml train ml/configs/setup-candidates-metalabel-p2pool-v1.yaml \
+python3 -m ml train ml/configs/retired/setup-candidates-metalabel-p2pool-v1.yaml \
   --datasets-root datasets-out --no-register > /tmp/m23p2_train_won.out 2>>"$RESULT" \
   || log "WARN: p2pool-v1 train returned nonzero"
 gate_won
@@ -269,7 +269,7 @@ log "STEP 4: R-aware leg — rebuild $SC_V_C1 per tau, train p2pool-c1-v1, EV-ga
 for tau in 0.5 0.75; do
   log "  tau=$tau: rebuild $SC_V_C1 + train + EV gate"
   build_pool "$SC_V_C1" "r_label_threshold=$tau"
-  python3 -m ml train ml/configs/setup-candidates-metalabel-p2pool-c1-v1.yaml \
+  python3 -m ml train ml/configs/retired/setup-candidates-metalabel-p2pool-c1-v1.yaml \
     --datasets-root datasets-out --no-register > "/tmp/m23p2_train_c1_${tau}.out" 2>>"$RESULT" \
     || log "  WARN: c1 tau=$tau train returned nonzero"
   state="$(ls -t ml/experiments-runs/setup-candidates-metalabel-p2pool-c1-v1/*/model_state.json 2>/dev/null | head -1)"

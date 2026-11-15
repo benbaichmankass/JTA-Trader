@@ -363,6 +363,11 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
         "read:PHONE-BREAKOUT-NEW-LAYOUT-lane-authored-it-2026-11-07-from-operator-decision",
         "Phone executor anomaly: capture, diagnose-first causes, exec.js-only vs APK ship path, verification",
     ),
+    "docs/runbooks/phone-executor-action-coverage.md": (
+        "live",
+        "read:PHONE-SELF-DIAGNOSE-lane-authored-it-2026-11-11-from-live-bot-reads",
+        "Phone executor: action coverage (proof or blocker per venue action), lane diagnosis routes, one-APK bundle",
+    ),
     "docs/runbooks/jta-trader-rename.md": (
         "live",
         "read:RENAME-lane-authored-it-2026-10-28-from-operator-decision",
@@ -587,6 +592,33 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
         "read:BREAKOUT-TERMS-READ-authored-it-this-session-terms-read-record",
         "the 2026-10-08 read of Breakout's FAQ Center terms; goes historical "
         "when the Evaluation Agreement / Program Rules are read at source",
+    ),
+    # Prop columns re-read from the code on main (ca16a2781b) by lane AM-TRADING C2,
+    # 2026-11-12, which read the file in full and checked each prop cell against
+    # live_review_apply.ACTION_PATHS, platform/dxtrade.py and platform/dxtrade_api.py,
+    # and the open/merged state of #25016/#25230/#25272/#25295 on GitHub. The
+    # non-prop columns are carried from 2026-11-11 and the doc says so in its header.
+    "docs/reference/account-capability-matrix.md": (
+        "live",
+        "read:AM-TRADING-C2-prop-columns-reread-from-code-2026-11-12",
+        "prop columns re-read from code at ca16a2781b; non-prop columns carried "
+        "from f0b9698bbf; re-read when #25230/#25272/#25295 merge",
+    ),
+    # Authored by lane PIPELINE-MAP 2026-11-14 at the operator's request: every cited path
+    # checked to exist on main; numbers live only in its generated block
+    # (scripts/ops/pipeline_map_numbers.py), re-run weekly by doc-freshness.
+    "docs/reference/trading-pipeline-map.md": (
+        "live",
+        "read:PIPELINE-MAP-authored-paths-checked-on-main-2026-11-14",
+        "GENERATED snapshot of the pipeline map (src/runtime/pipeline_map.py); the Work tab "
+        "builds it live; doc-freshness refreshes the snapshot weekly",
+    ),
+    # The hand-written half of the generated map (manager design change 2026-11-14: generate from
+    # sources of truth). src/runtime/pipeline_map.py checks its cited paths on every build.
+    "docs/reference/trading-pipeline-map.skeleton.md": (
+        "live",
+        "read:PIPELINE-MAP-skeleton-paths-checked-by-generator-2026-11-14",
+        "hand-written skeleton of the generated pipeline map; edit this, never the snapshot",
     ),
 }
 

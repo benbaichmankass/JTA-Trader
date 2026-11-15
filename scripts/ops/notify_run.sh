@@ -70,7 +70,7 @@ if [ "${action}" = "send-ping" ]; then
 fi
 
 case "${action}" in
-    status-check|disk-usage-report|list-listening-ports|gateway-logs|gateway-forensics|gateway-disk-report|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|generate-strategy-review-packets|send-prop-test-ping|phone-dry-test|phone-drill|grade-closed-trades|net-r-regrade|get-env)
+    status-check|disk-usage-report|vm-cpu-sample|list-listening-ports|gateway-logs|gateway-forensics|security-posture-report|gateway-disk-report|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|generate-strategy-review-packets|send-prop-test-ping|phone-dry-test|phone-drill|grade-closed-trades|net-r-regrade|get-env)
         tier=1
         if [ "${exit_code}" -eq 0 ]; then
             result="ok"
@@ -184,7 +184,7 @@ case "${action}" in
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;
-    backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|cap-vm-logs|purge-phone-captures|gateway-disk-cleanup|set-journal-trade-qty|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|vm-sparse-bootstrap|fix-prop-mislinked-close|repair-prop-fill-direction|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|rotate-account-keys|init-diag-token|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm)
+    backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|cap-vm-logs|purge-phone-captures|close-api-port|gateway-disk-cleanup|set-journal-trade-qty|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|vm-sparse-bootstrap|fix-prop-mislinked-close|repair-prop-fill-direction|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|rotate-account-keys|init-diag-token|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm)
         tier=2
         case "${exit_code}" in
             0) result="ok"; priority="normal" ;;
@@ -197,6 +197,16 @@ case "${action}" in
         tier=2
         case "${exit_code}" in
             0) result="ok — ticket expired (or dry-run plan printed; see run log)"; priority="normal" ;;
+            3) result="refused — nothing written (see run log for the reason)"; priority="high" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
+    prop-report-open)
+        # Journals ONE prop ticket as an OPEN position (filled) (PHONE-LIVE-ACCOUNT-FEED 2026-11-11).
+        # Exit 3 is a guarded REFUSAL, nothing written; exit 4 = ticket not filled after the write.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok — ticket filled, open fill journaled (or dry-run plan printed; see run log)"; priority="normal" ;;
             3) result="refused — nothing written (see run log for the reason)"; priority="high" ;;
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac
@@ -490,6 +500,17 @@ case "${action}" in
             2) result="refused (no cap, bad range, overlap/gap with a judged batch, or the stopping rule is met) — nothing built, nothing spent"; priority="high" ;;
             3) result="ENVIRONMENT (no API key / packets step failed / judge failed) — see the run; any spend is in the ledger"; priority="high" ;;
             4) result="judged, but intake could not run — the ledger shows the spend; re-dispatch the same inputs"; priority="high" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
+    amend-prop-bracket)
+        # 2026-11-11 (PROP-BRACKET-APPLY): record a TP/SL request on a VM-prop ticket; the account's executor applies
+        # it. Dry-run unless apply:true.
+        tier=2
+        case "${exit_code}" in
+            0) result="request recorded (or dry-run ok) — the executor applies it next cycle; check the fills amendments"; priority="normal" ;;
+            5) result="refused (account cannot amend / ticket not live / wrong side / looser stop) — nothing written"; priority="high" ;;
+            1) result="the ticket write failed or did not read back — nothing applied"; priority="high" ;;
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;

@@ -1,0 +1,9 @@
+# Registry demotions for the 2026-11-11 ML retirement (operator, Thursday-planning a2 "Accept as proposed").
+# One model id per line. scripts/ops/ml_registry_retire_demote.sh demotes each one still at `shadow` to
+# `candidate`, the lowest stage (the registry has no "archived" stage). Every other model in waves 1 and 2
+# MEASURED already at candidate on 2026-11-12 (GET /api/bot/ml/registry?limit=200: 71 candidate,
+# 1 research_only = candidate alias, these 4 shadow), so nothing else needs a registry write.
+btc-regime-15m-lgbm-fc-pcv-v1
+sol-regime-15m-lgbm-fc-pcv-v1
+btc-regime-5m-lgbm-yz-v1
+execution-quality-baseline-v0

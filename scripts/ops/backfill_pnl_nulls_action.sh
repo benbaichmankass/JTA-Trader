@@ -24,6 +24,8 @@
 #   - any column other than pnl + pnl_percent
 #   - the running ict-trader-live.service (no restart required)
 set -euo pipefail
+# read-only SQL without the sqlite3 CLI (not installed on the VM): scripts/ops/db_read.py
+_DBR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/db_read.py"
 
 SCRIPT_NAME="backfill_pnl_nulls"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -49,7 +51,7 @@ if [ ! -f "${DB_PATH}" ]; then
 fi
 
 # Pre-snapshot: count of rows the helper considers candidates.
-pre_count="$(sqlite3 "${DB_PATH}" \
+pre_count="$(python3 "${_DBR}" "${DB_PATH}" \
     "SELECT COUNT(*) FROM trades \
      WHERE status='closed' \
        AND pnl IS NULL \
@@ -81,7 +83,7 @@ set -e
 
 # Post-snapshot: how many candidates remain (should be 0 unless rows
 # were skipped for degenerate inputs).
-post_count="$(sqlite3 "${DB_PATH}" \
+post_count="$(python3 "${_DBR}" "${DB_PATH}" \
     "SELECT COUNT(*) FROM trades \
      WHERE status='closed' \
        AND pnl IS NULL \

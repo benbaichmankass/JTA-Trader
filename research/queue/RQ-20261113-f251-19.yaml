@@ -1,0 +1,240 @@
+id: RQ-20261113-f251-19
+title: 'htf_pullback_trend_2h exit lever: a real take-profit at 4R (tp_target_r 4) vs the fictional tp_r 50 on the forming bar, with a confirmation window'
+status: done
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+question: 'htf_pullback_trend_2h fails RULE-D1 on the forming bar (f251-01: -23.37R over n 105). Two forming levers failed: adx_min 20/25/30 (f251-10) and long-only
+  (f251-15). Its live bracket carries tp_r 50, the fictional take-profit the TP doctrine flags; on the CLOSED bar tp_target_r 4 read +10.07R over n 465 (RQ-20261110-73de-08,
+  2020-07..2026-10). On the forming bar over 2025-11-13..2026-11-12: does tp_target_r 4 pass Stage 0, beat the baseline, and hold on the equal-length window before
+  it, net of the full cost stack?'
+why_this_matters: 'Demo-floor leg; DEMO-FLOOR-ITER 3rd lever (manager GO 2026-11-14 00:22Z, after the corrected census on #25883). A real predictive TP is also the
+  TP-doctrine fix for this leg (tp_r 50 is non-compliant), so a PASS would carry both an edge proposal and the doctrine fix. Exit-side: entries and n are unchanged.'
+power:
+  expected_n: 105
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: MEASURED baseline n 105 (f251-01); a TP lever changes exits, not entries.
+  sd: null
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window (the leg's own record window); nothing accrues; Binance / Binance-vision 1m covers it at run time.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+run:
+  commands:
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - htf_pullback_trend_2h
+    - --arm
+    - A=
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2025-11-13T00:00:00'
+    - --end
+    - '2026-11-12T22:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '30'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/arm_A'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - htf_pullback_trend_2h
+    - --arm
+    - A=
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2024-11-13T00:00:00'
+    - --end
+    - '2025-11-12T22:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '1'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/pre_A'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - htf_pullback_trend_2h
+    - --arm
+    - T4=--tp-target-r=4
+    - --grade
+    - stage0
+    - --baseline
+    - T4
+    - --start
+    - '2025-11-13T00:00:00'
+    - --end
+    - '2026-11-12T22:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '30'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/arm_T4'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - htf_pullback_trend_2h
+    - --arm
+    - T4=--tp-target-r=4
+    - --grade
+    - stage0
+    - --baseline
+    - T4
+    - --start
+    - '2024-11-13T00:00:00'
+    - --end
+    - '2025-11-12T22:00:00'
+    - --days
+    - '800'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '1'
+    - --delta-r
+    - '0'
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/pre_T4'
+  - - python3
+    - scripts/research/timeframe_lever_grade.py
+    - --out
+    - '{out_dir}'
+    - --leg
+    - htf_pullback_trend_2h
+    - --baseline-tf
+    - A
+    - --family
+    - exit
+    - --prefix
+    - arm_
+    - --confirm-prefix
+    - pre_
+    - --tf
+    - A
+    - --tf
+    - T4
+  timeout_minutes: 300
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261113-f251-19
+decision_rule:
+  id: RULE-DFI3-HTF-TPTARGET4-20261114
+  registered_at: '2026-11-14'
+  registered_before_run: true
+  statistic: exit_lever_ablation --grade stage0 --forming-1m-fetch, one run per arm per window; timeframe_lever_grade.py --family exit --confirm-prefix pre_.
+  rule: 'AM-ML multiple-testing guard (2026-11-13 18:50Z): successive levers on one window fork the paths, so this rule NAMES the leg''s prior lever attempts on the
+    record window and ALSO requires the pass to hold on the equal-length window before the record window, which no diagnosis or lever pick read. No fold bar is relaxed
+    from the leg''s first DEMO-FLOOR-ITER unit. Prior lever attempts on this window: RQ-20261113-f251-01 (forming baseline, -23.37R), RQ-20261113-f251-10 (adx_min
+    20/25/30 -- FAIL), RQ-20261113-f251-15 (long-only, -12.88R, 1/4 folds -- FAIL). ONE arm, ONE value (tp_target_r 4), chosen from the closed-bar map (RQ-20261110-73de-08)
+    before this run; the confirmation window was read by f251-15''s baseline only, never by a lever pick. PASS iff the candidate passes its own Stage 0 on the record
+    window (net_r > 0, n >= 30, >= 3/4 folds positive) AND beats the baseline arm''s net_r there, AND on the confirmation window 2024-11-13..2025-11-12 (the equal-length
+    window BEFORE the record window, read by no diagnosis or lever pick) its net_r is > 0 and above the baseline arm''s. FAIL iff graded and either clause fails.
+    INDETERMINATE otherwise (a run wrote no verdict, the baseline did not run, the candidate under its n floor on the record window). Arms, windows, folds and floors
+    are fixed now.'
+  what_it_does_not_do: Changes no config, roster, order or evidence record. A PASS is a data-backed Tier-3 proposal routed to the manager (tp_target_r 4 in place
+    of tp_r 50; it is also the TP-doctrine fix); a FAIL is recorded on the lever map and the next candidate (pullback_frac 0.625, then vol_skip_below 0.2) waits on
+    the manager.
+  baseline: htf_pullback_trend_2h config-exact, forming, both sides, re-run in this unit on both windows.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: a demo-floor (Stage-1 paper) leg failing RULE-D1 on its forming record; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+ml_consumer:
+  not_applicable: 'Not an ML unit: a harness lever test on a rule-based leg.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: htf_pullback_trend_2h
+  subject_kind: strategy_leg
+  from_result: RQ-20261113-f251-15
+  verdict_read: fail
+  diagnosis: 'f251-01 forming ledger: gross -14.2R, 29 winners with median net/MFE capture 0.35, take_profit exits 6 (+14.2R) vs trail_stop 70 (-11.3R): with tp_r
+    50 the TP almost never binds and winners are given back to the trail. Closed bar 2020-07..2026-10: tp_target_r 3/4/6 = +2.8/+10.1/+10.0R over n ~465 (RQ-20261110-73de-08).'
+  hypothesis: A real 4R target banks the winners the trail currently gives back, turning the forming record positive and holding on the prior year.
+  search: 'Corrected census on research/levers/htf_pullback_trend_2h.yaml (2026-11-14): filter and direction TESTED forming (FAIL); exit tp_target_r is a closed-bar
+    responder never run forming -> chosen by the manager (a, of a/b/c).'
+  attempt: 3
+  due_by: '2026-11-21'
+  levers:
+  - exit
+  lever_arms:
+  - family: exit
+    param: tp_target_r
+    values:
+    - 4.0
+    baseline_value: null
+  map_entries:
+  - research/levers/htf_pullback_trend_2h.yaml
+related:
+- RQ-20261113-f251-10
+- RQ-20261113-f251-15
+- RQ-20261110-73de-08
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): ONE lever chosen from the leg''s own R diagnosis (scripts/research/leg_r_diagnosis.py),
+  rule registered before the run against the leg''s own record, net of the full cost stack, graded once on its fixed window.'
+follow_up: On the verdict a session appends the test to research/levers/htf_pullback_trend_2h.yaml (lever_map.py --append) and updates the census. PASS -> Tier-3
+  proposal to the manager. FAIL -> the manager picks between pullback_frac 0.625 and vol_skip_below 0.2.
+last_dispatched_at: '2026-11-14T01:04:22+00:00'
+grading:
+  attested: RULE-DFI3-HTF-TPTARGET4-20261114
+  auto: true
+  decision_rule_id: RULE-DFI3-HTF-TPTARGET4-20261114
+  evidence:
+  - research/results/RQ-20261113-f251-19/43538341953.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

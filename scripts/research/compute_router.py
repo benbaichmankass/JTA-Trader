@@ -148,6 +148,10 @@ def manifest_dataset_path(manifest_id: str) -> str:
     """datasets-out/<family>/<symbol>/<tf>/<version>/data.jsonl for ml/configs/<manifest_id>.yaml ('' when unreadable)."""
     import yaml  # noqa: PLC0415
     p = _REPO / "ml" / "configs" / f"{manifest_id}.yaml"
+    if not p.is_file():
+        # A retired manifest (ml/configs/retired/, 2026-11-11 ML-RETIRE-WAVES) still resolves, so a finished unit that
+        # trained it keeps a derivable dataset path; retirement only takes it out of the daily cycle.
+        p = _REPO / "ml" / "configs" / "retired" / f"{manifest_id}.yaml"
     if "/" in manifest_id or ".." in manifest_id or not p.is_file():
         return ""
     ds = (yaml.safe_load(p.read_text(encoding="utf-8")) or {}).get("dataset") or {}

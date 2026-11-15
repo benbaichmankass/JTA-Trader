@@ -1,0 +1,131 @@
+# Hand-authored 2026-11-14 by lane ML-PRIMARY (session_01AFoLuKuu4bMh6SG5oyAC9h), plan line MLP-D6-POINTER, row TP-PREDICT-HEAD.
+# DEFECT-CORRECTED RE-RUN of RQ-20261114-82fd-01 (graded FAIL; that verdict STANDS and is not re-graded). Registered 2026-11-15
+# after 82fd-01's result was read, so this is disclosed as a re-test, not a fresh test. Gates this adds or changes: none.
+id: RQ-20261115-a474-01
+title: 'D6 Pointer v0 DEFECT-CORRECTED RE-RUN of 82fd-01: does an entry-time TP chosen by the first-passage ML model (the TP-revision recipe extended with the
+  decision bar) beat or match the fixed 3 ATR TP on ml_entry''s own trades, net of the full cost stack, on the record year
+  AND the year before?'
+status: queued
+not_before: '2026-11-15T07:00:00+00:00'   # a manager veto window: this is a disclosed second look at 82fd-01
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+question: 'D6 (bracket at entry) has no model at any stage; ml_entry trades a fixed 2 ATR SL / 3 ATR TP. The served
+  TP-revision model (Labrador-1b, ml_entry_tp_revision_v1) moves the TP IN-TRADE from the first 4h check-in. Pointer v0
+  asks the entry-time question: the same LightGBM 18-class first-passage recipe (TP grid 1..6 ATR x stop hit), trained
+  walk-forward on candidate positions at check-ins {0, 4, 8, 12, 16, 20} (the 1b set plus the decision bar), scored ONCE at
+  the decision bar of each ml_entry trade; the policy places a STATIC TP at the valid grid level with the highest expected
+  net R if it beats 3 ATR by more than a margin m, else 3 ATR. Same trades, same SL, no in-trade move, same cost stack.'
+why_this_matters: 'The TP doctrine wants a real predictive TP at entry on every leg; ml_entry is real money on bybit_2 /
+  bybit_portfolio and the prop books. If a predicted entry TP is at least non-inferior and not losing, it is the first D6
+  model and a held Tier-3 bracket proposal for ml_entry; if it fails, the entry-time form closes and the move-extent head
+  (RQ-20261009-900) is the next D6 lever. The 1b dev read found the best STATIC level chosen on dev = 3.0 ATR (no static
+  gain), so any gain here must come from per-trade prediction, not from a better constant.'
+power:
+  expected_n: 1800
+  min_detectable_effect: 0.04
+  effect_units: R_per_trade
+  sd: 0.6
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, not measured: c692-06 held-out year carried n=907 trades on the bybit_2 five; the pooled 60-perp
+    served-policy population per year is larger (the harness reports the realised n per window). Paired per-trade delta
+    sd ~0.6 R is ASSUMED (only moved trades differ; unmoved trades have delta 0). Declared power clause in the rule: a
+    window whose day-clustered CI95 of the delta is wider than 0.08 R reads INDETERMINATE (underpowered), never PASS.'
+  feasibility:
+    source: none
+    accrual_basis: 'Replays public Binance Vision 1h klines through 2026-09-30; nothing accrues.'
+evidence_class:
+  holdout: walk_forward_oos
+  claim: stage0_bracket_at_entry
+ml_consumer:
+  consumer: TP-PREDICT-HEAD
+  decision: 'where ml_entry places its take-profit at entry (fixed 3 ATR today) on its real-money and prop books'
+  legs: [ml_entry]
+  book: money
+run:
+  command:
+  - python3
+  - scripts/research/ml_entry_tp_revision.py
+  - pointer-v0
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  - --cache
+  - /tmp/ml_decision_klines
+  timeout_minutes: 330
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261115-a474-01
+decision_rule:
+  id: RULE-RQ20261115-a474-01-POINTER-V0-DEFECT-RERUN
+  registered_at: '2026-11-15'
+  registered_before_run: true
+  statistic: 'Population: every ml_entry served-policy trade of the pooled replay (c692-01 walk-forward fold trades
+    2022-01..2025-09 at the served tau + the served artifact on 2025-10-01..2026-09-30, out of sample), each held to a
+    STATIC bracket (2 ATR SL, TP at the chosen level), net of ml_decision_entry._cost_r (fee 11 bps + execution_costs
+    slippage + funding; the BTCUSDT policy is applied to every symbol, as the passing 1b harness does). The TP model is
+    refit per TP fold (2022, 2023, 2024, 2025-01..09, 2025-10..2026-09), trained only on candidate rows ending a 7-day
+    embargo + 25 h before the fold. Margin m* is chosen from {0, 0.02, 0.05, 0.10} on trades dated 2022-01-01..2024-09-30
+    only (before both read windows). Per window: delta = policy net R - fixed 3 ATR net R per trade, mean and
+    day-clustered bootstrap CI95 (5000 draws); policy mean net R and its CI95; n, symbols, n moved (level != 3 ATR); a
+    matched-random-level control at the same move rate (reported). The bybit_2 five (BTC/ETH/XRP/ADA/SOL) are reported,
+    never graded (population rule 2026-11-04).'
+  rule: 'Windows: PRIOR = 2024-10-01..2025-09-30, RECORD = 2025-10-01..2026-09-30 (by decision bar). Per window: PASS
+    iff policy mean net R >= 0 AND mean delta >= 0 AND delta CI95 lower >= -0.02 R AND delta CI95 width <= 0.08 R AND
+    n >= 300 AND symbols >= 10 AND moved >= 30. FAIL iff policy mean net R < 0, OR the delta CI95 upper < 0, OR (mean
+    delta < 0 AND CI95 lower < -0.02). Otherwise INDETERMINATE (including any floor missed). Unit verdict: PASS iff
+    BOTH windows PASS; FAIL iff EITHER window FAILs; else INDETERMINATE. Thresholds, windows, margins and the recipe are
+    fixed now and not changed after any result.'
+  proposal_mapping: 'pass -> HELD Tier-3 PR: ml_entry entry TP from the Pointer v0 artifact (export + serve path, TP
+    doctrine compliance, per-account read), manager reviews; real money per CLAUDE.md "Data-backed Tier-2/3 decisions".
+    fail -> Pointer v0 closes; the move-extent head RQ-20261009-900 is the next D6 lever (FAIL stays FAIL, no re-grade).
+    indeterminate -> the named starved clause becomes the next unit (a wider population or a longer window), not a
+    re-read of this one.'
+  what_it_does_not_do: 'Moves no TP in-trade (that is Labrador-1b, D7), changes no SL, serves nothing, places no order,
+    changes no config. Reads no window after 2026-09-30. The record-year window was read by earlier ml_entry units (the
+    entry model''s held-out year); this is the first read of an ENTRY-TIME TP policy on it. Per-symbol cost policy is not
+    per-symbol (BTCUSDT slippage/funding everywhere), stated as a limitation.'
+  min_n: 300 trades per window
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 500
+  confidence: 0.2
+intervention_controls:
+  bootstrap_group: day
+  hold_to_bracket: 'the fixed 3 ATR TP ml_entry trades today (the baseline every delta is taken against; walker parity with the label asserted)'
+  matched_random:
+    draws: 100
+  best_static:
+    grid: [1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0]
+    excludes_test_folds: true
+practice_precedent: 'RQ-20261101-383f-01 (Labrador-1b, the same first-passage recipe, harness and cost stack; PASSED its
+  forward read +0.0081 R/trade n=868) and docs/plans/ML-ROADMAP-MECE-2026-11.md § 3 D6 (Pointer v0 = the TP model scored
+  at bar 0, proposal P5/P6); M4, M5 (pre-registered rule, out-of-sample grade).'
+follow_up: 'ML-PRIMARY grades on landing and updates MLP-D6-POINTER in docs/plans/ml-dev-plan.yaml; PASS -> held Tier-3 PR
+  reported to the manager with number + head sha.'
+defect_disclosure: 'RQ-20261114-82fd-01 (run 43661151535) graded FAIL (record year policy -0.0036 R, delta -0.011). Its
+  registered procedure picks m* = argmax of the selection-window mean delta, but three of the four margins averaged to NaN (walks
+  of a non-3-ATR bracket into the 2022 archive holes return NaN), Python max() over NaN keys returned m=0.0, and the best-static
+  control read nan at 4/5/6 ATR. The harness now drops a non-finite paired trade from BOTH arms (counted as
+  n_dropped_nonfinite) and picks m* over finite means only. This unit re-runs the SAME rule, windows, thresholds and recipe with
+  that fix. It was registered after 82fd-01''s numbers were read; it can PASS only on its own registered rule, and the manager
+  may veto it as a second look. 82fd-01 stays FAIL in every record.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 120
+  why_runner: Keyless public Binance Vision archives; GBDT on CPU (GitHub runner).
+  basis: 'INFERRED from a 3-symbol local smoke of the same subcommand (~1 min) scaled to the 60-perp universe with 5 TP refits; the c692 table build dominates.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+last_dispatched_at: '2026-11-15T07:02:26+00:00'

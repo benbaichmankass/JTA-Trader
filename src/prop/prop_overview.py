@@ -154,6 +154,78 @@ def annotate_trade_state(fills: List[Dict[str, Any]]) -> int:
     return len(open_rows)
 
 
+def _amendment_list(raw: Any) -> Optional[List[Any]]:
+    """``prop_fills.amendments`` (a JSON string) -> list, or None when the column is NULL/blank.
+
+    None means "no record" -- it is never folded into ``[]`` (an empty list would read "looked, nothing moved").
+    Unreadable text is kept verbatim as one entry, as ``prop_journal.amend_fill_levels`` does."""
+    if raw is None or raw == "":
+        return None
+    if isinstance(raw, list):
+        return raw
+    try:
+        val = json.loads(raw)
+    except (ValueError, TypeError):
+        return [{"unparseable_amendments": str(raw)}]
+    return val if isinstance(val, list) else [val]
+
+
+def _num(v: Any) -> Optional[float]:
+    return float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+
+
+def attach_trade_brackets(fills: List[Dict[str, Any]], opener_lookup=None) -> None:
+    """PROP-UI-BRACKETS-CLOSED: give every trade row a ``bracket`` block, in place (run AFTER :func:`annotate_trade_state`).
+
+    MEASURED 2026-11-11 against the live journal: the stop/target of a closed prop trade live on its OPENING row
+    (``status: open``, ``sl``/``tp`` = the level in force at close, ``amendments`` = the moves); the CLOSING row carries
+    ``sl``/``tp`` NULL for tradeify_1 14/14 and velotrade_1 14/14 (breakout_2 5/17). A trade log read off the closing
+    rows therefore showed no brackets. ``bracket`` joins them:
+
+    * ``final_sl`` / ``final_tp`` -- the opening row's levels (they are the last level in force: ``amend_fill_levels``
+      writes sl/tp on that row); the row's own level when the opener is not reachable; ``None`` when neither has one.
+    * ``entry_sl`` / ``entry_tp`` -- the level BEFORE the first amendment (``sl_before``/``tp_before`` of ``amendments[0]``),
+      else the final level (nothing moved -- only said when ``amendments`` is a real list, else ``None``-safe below).
+    * ``amendments`` -- parsed list, or ``None`` when the column is NULL (no record -- not ``[]``).
+    * ``read_state`` -- ``measured`` (both levels), ``partial`` (one), ``no_record`` (neither). ``source_fill_id`` names the row
+      the levels came from. ``opener_lookup(account_id, ticket_id, external_order_id) -> row | None`` finds an opener that is
+      outside the page; without it an unmatched closing row degrades to its own levels.
+    Rows that are not trades (``trade_state`` None: placed/skipped) get no block."""
+    openers: Dict[tuple, Dict[str, Any]] = {}
+    for f in sorted(fills, key=lambda r: r.get("id") or 0):
+        if str(f.get("status", "")).lower() in _OPEN:
+            for k in (_key(f), (f.get("account_id"), "tkt", str(f["ticket_id"])) if f.get("ticket_id") else None):
+                if k and k not in openers:
+                    openers[k] = f
+    for f in fills:
+        if f.get("trade_state") not in ("open", "closed"):
+            continue
+        src = f
+        if str(f.get("status", "")).lower() in _CLOSED:
+            tk = (f.get("account_id"), "tkt", str(f["ticket_id"])) if f.get("ticket_id") else None
+            src = openers.get(_key(f)) or openers.get(tk)
+            if src is None and opener_lookup is not None:
+                try:
+                    src = opener_lookup(f.get("account_id"), f.get("ticket_id"), f.get("external_order_id"))
+                except Exception:  # noqa: BLE001  # allow-silent: a failed opener read degrades to the row's own levels
+                    logger.warning("prop_overview: opener lookup failed for fill %s", f.get("id"), exc_info=True)
+                    src = None
+            src = src or f
+        amend = _amendment_list(src.get("amendments"))
+        final_sl = _num(src.get("sl")) if _num(src.get("sl")) is not None else _num(f.get("sl"))
+        final_tp = _num(src.get("tp")) if _num(src.get("tp")) is not None else _num(f.get("tp"))
+        first = amend[0] if amend and isinstance(amend[0], dict) else None
+        entry_sl = _num(first.get("sl_before")) if first and _num(first.get("sl_before")) is not None else (
+            final_sl if amend is not None else None)
+        entry_tp = _num(first.get("tp_before")) if first and _num(first.get("tp_before")) is not None else (
+            final_tp if amend is not None else None)
+        n = (final_sl is not None) + (final_tp is not None)
+        f["bracket"] = {"final_sl": final_sl, "final_tp": final_tp, "entry_sl": entry_sl, "entry_tp": entry_tp,
+                        "amendments": amend, "n_amendments": None if amend is None else len(amend),
+                        "source_fill_id": src.get("id"),
+                        "read_state": "measured" if n == 2 else "partial" if n == 1 else "no_record"}
+
+
 def _is_phone_account(account_id: str) -> bool:
     """True for a phone-executed account. An unreadable config answers True: when we cannot tell, the journal
     must not vouch for flat (None is the honest outcome)."""

@@ -22,6 +22,8 @@
 #   - any column outside trades.notes / order_packages.{signal_logic,meta}
 #   - the running ict-trader-live.service (no restart required)
 set -euo pipefail
+# read-only SQL without the sqlite3 CLI (not installed on the VM): scripts/ops/db_read.py
+_DBR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/db_read.py"
 
 SCRIPT_NAME="repair_malformed_notes"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -68,7 +70,7 @@ TRADE_JOURNAL_DB="${DB_PATH}" python3 "${PY_SCRIPT}" ${APPLY_FLAG}
 exit_code=$?
 set -e
 
-remaining="$(sqlite3 "${DB_PATH}" \
+remaining="$(python3 "${_DBR}" "${DB_PATH}" \
     "SELECT COUNT(*) FROM trades \
      WHERE notes IS NOT NULL AND notes != '' AND json_valid(notes)=0;" 2>/dev/null || echo "?")"
 log "Post-run malformed trades.notes count (json_valid=0): ${remaining}"

@@ -476,14 +476,12 @@ def test_daily_dd_switch_blocks_new_pairs(tmp_path, monkeypatch):
 
 
 def test_real_config_gld_gdx_entry_uses_the_registered_params():
+    # M22 retired by record 2026-11-11 (operator, Thursday-planning b3, verbatim "Retire it"): the live
+    # config carries `pairs: []`, so the GLD/GDX entry no longer exists. Pin the retirement instead; the
+    # registered params stay readable in the commented record in config/pairs.yaml.
     cfg = px._load_pairs_config("config/pairs.yaml")
-    p = next(x for x in cfg["pairs"] if x["name"] == "pairs_gld_gdx")
-    assert p["account_id"] == "alpaca_paper"
-    params = px._params_from_cfg(p)
-    assert (params.lookback, params.entry_z, params.exit_z, params.stop_z,
-            params.max_hold_bars, params.hedge_beta) == (20, 2.0, 0.5, 2.0, 20, "one")
-    assert p["timeframe"] == "1d" and p["cooldown_bars"] == 1
-    assert p["leg_tp"] == "spread_target"
+    assert (cfg.get("pairs") or []) == []
+    assert "pairs_gld_gdx" in open("config/pairs.yaml", encoding="utf-8").read()
 
 
 # ── AlpacaClient reads added for the session venue ─────────────────────────

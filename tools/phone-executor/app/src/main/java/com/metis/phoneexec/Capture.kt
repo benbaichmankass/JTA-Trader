@@ -78,6 +78,23 @@ object Capture {
         return (if (x.length < 2) "step_$x" else x).take(40)
     }
 
+    /** Luma standard deviation (0..255) of packed ARGB pixels. A uniform frame (an all-white or all-black draw: the
+     *  off-screen WebView draw that rendered nothing) reads ~0; a real terminal page reads well above [BLANK_STD].
+     *  Pure (CaptureTest). PHONE-SELF-DIAGNOSE: every image says whether it is blank, so a lane never has to ask. */
+    fun lumaStd(px: IntArray): Double {
+        if (px.isEmpty()) return 0.0
+        var sum = 0.0; var sq = 0.0
+        for (c in px) {
+            val y = 0.299 * ((c shr 16) and 0xFF) + 0.587 * ((c shr 8) and 0xFF) + 0.114 * (c and 0xFF)
+            sum += y; sq += y * y
+        }
+        val m = sum / px.size
+        return Math.sqrt(maxOf(0.0, sq / px.size - m * m))
+    }
+    const val BLANK_STD = 4.0
+    /** The last image's luma std, read by [step] right after [bitmap] (same coroutine, main thread). -1 = not measured. */
+    @Volatile var lastStd = -1.0
+
     /** The page draw for one step: the WebView drawn to an ARGB bitmap, scaled to MAX_W wide, the redaction boxes
      *  painted, JPEG-encoded. [redact] is the snapshot's rect list in CSS px of a [vw]-wide viewport. Null when the
      *  view has no size (never attached) or anything fails. Main thread (it touches the view). */
@@ -89,6 +106,14 @@ object Capture {
             web.draw(Canvas(full))
             val scale = if (w > MAX_W) MAX_W.toDouble() / w else 1.0
             val bmp = if (scale < 1.0) Bitmap.createScaledBitmap(full, (w * scale).toInt().coerceAtLeast(1), (h * scale).toInt().coerceAtLeast(1), true) else full
+            // measured BEFORE the redaction boxes are painted: black boxes on a blank draw would read as content
+            lastStd = try {
+                val sw = bmp.width.coerceAtMost(96); val sh = bmp.height.coerceAtMost(192)
+                val small = Bitmap.createScaledBitmap(bmp, sw, sh, false)
+                val px = IntArray(sw * sh); small.getPixels(px, 0, sw, 0, 0, sw, sh)
+                if (small !== bmp) small.recycle()
+                lumaStd(px)
+            } catch (e: Throwable) { -1.0 }
             if (redact != null && redact.length() > 0 && vw > 0) {
                 val kk = bmp.width.toDouble() / vw   // CSS px -> bitmap px
                 val c = Canvas(bmp); val paint = Paint().apply { color = Color.BLACK; style = Paint.Style.FILL }
@@ -122,12 +147,20 @@ object Capture {
         // FAIL CLOSED: the redaction boxes come from the snapshot of the SAME page. No snapshot = no redaction list = no image
         // (an unredacted bitmap would show balances); the DOM-less step is still posted as evidence.
         if (allowBitmap && snap != null) {
+            lastStd = -1.0
             val jpg = bitmap(p.web, snap?.optJSONArray("redact"), snap?.optDouble("vw", 0.0) ?: 0.0)
             if (jpg != null) {
                 val b64 = withContext(Dispatchers.Default) { Base64.encodeToString(jpg, Base64.NO_WRAP) }
                 body.put("png_b64", b64).put("png_type", "image/jpeg")
+                if (lastStd >= 0) body.put("img_std", Math.round(lastStd * 10) / 10.0)
             }
         }
+        body.put("img_why", when {
+            body.has("png_b64") -> "drawn"
+            !allowBitmap -> "credential_screen"
+            snap == null -> "no_snapshot"
+            else -> "draw_failed:" + lastError.take(40)
+        })
         val r = api.capture(body)
         val stored = r?.optBoolean("ok") == true
         if (stored) { run.posted += 1; posted += 1 } else { run.failed += 1; lastError = "post:" + (r?.optString("why")?.ifEmpty { "http " + r.optInt("http") } ?: "unreachable") }

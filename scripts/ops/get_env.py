@@ -374,6 +374,11 @@ ALLOWED_KEYS: tuple[str, ...] = (
     # --- Presence-only (fingerprinted, never printed) ---
     "DASHBOARD_API_TOKEN",
     "DIAG_READ_TOKEN",
+    # TRADE-ACTION-DIRECT-PATH phase 3: the live-review routine fire (src/runtime/live_review_routine_fire.py).
+    # Both fingerprint-only: the token by name; the id via ROUTINE in SECRET_NAME (it is not usable without the
+    # token, but nothing about the routine needs to be on a public issue).
+    "LIVE_REVIEW_ROUTINE_TOKEN",
+    "LIVE_REVIEW_ROUTINE_ID",
 )
 
 #: Units whose process environment may be read. Bounded for the same reason the
@@ -389,7 +394,7 @@ ALLOWED_UNITS: tuple[str, ...] = (
 #: the name, not the value, so a secret can never leak by being unrecognised.
 SECRET_NAME = re.compile(
     r"(TOKEN|SECRET|PASSWORD|PASSWD|APIKEY|API_KEY|_KEY$|^KEY_|PRIVATE|"
-    r"CREDENTIAL|WEBHOOK|DSN)",
+    r"CREDENTIAL|WEBHOOK|DSN|ROUTINE)",
     re.IGNORECASE,
 )
 

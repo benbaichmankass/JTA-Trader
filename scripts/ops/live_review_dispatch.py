@@ -139,8 +139,28 @@ PINNED_BRANCHES = ("main", "live-review/rows")
 # Seams (monkeypatched in tests)
 # --------------------------------------------------------------------------
 
+#: TRADE-ACTION-DIRECT-PATH phase 2: VM-local roots searched BEFORE git (``--local-root``): the direct-rows tree
+#: (``POST /api/bot/live-review/rows``) and the wake poster's local evidence copy. Each holds files at their repo
+#: paths. Empty = the git-only behaviour every existing path uses.
+LOCAL_ROOTS: List[Path] = []
+
+
+def _local_text(path: str) -> Optional[str]:
+    if ".." in path or path.startswith("/"):
+        return None
+    for root in LOCAL_ROOTS:
+        try:
+            return (root / path).read_text()
+        except OSError:
+            continue
+    return None
+
+
 def _committed_text(path: str, ref: str = "HEAD") -> Optional[str]:
-    """``path`` as committed at ``ref``; None when git cannot show it."""
+    """``path`` from a ``--local-root`` (when given), else as committed at ``ref``; None when neither has it."""
+    local = _local_text(path) if LOCAL_ROOTS else None
+    if local is not None:
+        return local
     try:
         r = subprocess.run(["git", "-C", _REPO_ROOT, "show", f"{ref}:{path}"],
                            capture_output=True, text=True, timeout=30)
@@ -523,6 +543,14 @@ def dispatch(review_id: str, *, apply: bool, state: Optional[Dict[str, Any]] = N
     evidence = evidence_path(row)
     ev_text = _committed_text(evidence, at) if evidence else None
     plan, refusal = check_row(row, ev_text)
+    if refusal == "evidence_not_committed" and row.get("outcome_table_source") and ev_text is None:
+        # The row NAMES its table but the table is not at this ref yet (pushed in a later commit than the row).
+        # That is "could not look", not a verdict on the row: exit 3, so rows_watch retries it at the newer tip
+        # for RETRY_WINDOW_S and the same check runs once the table lands (LR-20261114T1600Z-pkg-d8838f..., a
+        # self-priced table row, was refused for good). A row naming no table at all is still refused here.
+        out.update(verdict="could_not_look", detail=f"evidence_not_yet_at_ref:{row.get('outcome_table_source')}",
+                   exit=EXIT_UNREADABLE)
+        return out
     if plan is not None and auto_id:
         plan["mandate"] = auto_id                   # the apply re-checks the grant and enforces its bounds
     if refusal:
@@ -561,7 +589,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--review-id", required=True, help="the committed review row's review_id (LR-…)")
     ap.add_argument("--apply", action="store_true", help="execute; without it the apply runs --dry-run")
     ap.add_argument("--ref", help="pinned 40-hex commit on main or live-review/rows to read the row at")
+    ap.add_argument("--local-root", action="append", default=[],
+                    help="(direct path) a VM-local tree searched before git for the row and its evidence")
     a = ap.parse_args(argv)
+    LOCAL_ROOTS[:] = [Path(r) for r in a.local_root]
     res = dispatch(a.review_id, apply=a.apply, ref=a.ref)
     for line in res.get("accounts") or []:
         print(line)

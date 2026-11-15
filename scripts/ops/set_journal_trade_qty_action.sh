@@ -6,6 +6,8 @@
 # derived. The prior value goes in notes.qty_writeback AND in the audit record below. No full-journal backup:
 # the write is one guarded row UPDATE whose prior value is recorded, and the journal is 2 GB (disk pressure).
 set -euo pipefail
+# read-only SQL without the sqlite3 CLI (not installed on the VM): scripts/ops/db_read.py
+_DBR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/db_read.py"
 
 SCRIPT_NAME="set_journal_trade_qty"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -41,7 +43,7 @@ echo "===== PRECONDITION: set_journal_trade_qty.py --self-test ====="
 python3 "${PY_SCRIPT}" --self-test
 
 echo "===== BEFORE ====="
-sqlite3 -header -column "${DB_PATH}" \
+python3 "${_DBR}" --table "${DB_PATH}" \
     "SELECT id, account_id, symbol, status, direction, position_size FROM trades WHERE id = ${TRADE_ID};" || true
 
 ARGS=(--trade-id "${TRADE_ID}" --account "${ACCT}" --symbol "${SYM}" --expect-qty "${EXPECT_QTY}" \
@@ -56,7 +58,7 @@ exit_code=$?
 set -e
 
 echo "===== AFTER ====="
-sqlite3 -header -column "${DB_PATH}" \
+python3 "${_DBR}" --table "${DB_PATH}" \
     "SELECT id, account_id, symbol, status, direction, position_size FROM trades WHERE id = ${TRADE_ID};" || true
 
 if [ "${exit_code}" -ne 0 ]; then

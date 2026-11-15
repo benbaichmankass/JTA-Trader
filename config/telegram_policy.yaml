@@ -48,6 +48,19 @@ recurring_off:
 # Dropped: 📋 the daily ranked summary, 🔎 research-unit reads (research-ops' job, not the
 # operator's), and the "🟢 No new actionable items" line.
 digest_event_drop_prefixes: ["📋", "🔎"]
+# TELEGRAM-TRIM phase 3 (operator popup 2026-11-10 "Keep b, trim c (Recommended)"): soak-state messages are
+# Stage-1 testing-paper noise; dropped from the digest unless they name a non-testing-paper account.
+digest_paper_soak_prefixes: ["🧪"]
+
+# C. PAPER-ACCOUNT ALERTS (TELEGRAM-TRIM phase 3, operator popup 2026-11-10 ~09:45Z "Only me; you if unfixed
+#    (Recommended)"): an alert naming ONLY testing-paper accounts wakes the MANAGER (ledger row
+#    suppressed_by_policy, priority high) instead of pinging the operator; if the same alert is still firing
+#    escalate_after_minutes later, the operator gets it ONCE as a red flag. Real-money, prop and portfolio-mirror
+#    accounts are untouched. src/runtime/telegram_policy.py::paper_alert_route; ROLLBACK: route: send.
+paper_alerts:
+  route: manager_then_escalate
+  escalate_after_minutes: 120
+  reset_after_hours: 24
 
 # B. TRADES channel: ONE ping per ORDER-PACKAGE event (open / close / update), classed from
 #    config/accounts.yaml (`account_class`, `paper_role`) — never from account names.

@@ -210,6 +210,69 @@ levers:
       best_delta_r_per_trade: -0.0159
       fold_stability: 0.25
       reading: every tested value is worse than the baseline
+    be_floor_r:
+      tests:
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: C1
+        unit: RQ-20261110-73de-21
+        window: 2018-03-01..2026-10-15
+        n: 77
+        net_r: 16.4966
+        baseline_n: 72
+        baseline_net_r: 13.7538
+        delta_net_r: 2.7428
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 6.0865
+        verdict: fail
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: 0.0381
+      fold_stability: 0.75
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
+    bank_at_r:
+      tests:
+      - value: '1.5'
+        baseline_value: 'off'
+        arm: C2
+        unit: RQ-20261110-73de-21
+        window: 2018-03-01..2026-10-15
+        n: 72
+        net_r: 9.8112
+        baseline_n: 72
+        baseline_net_r: 13.7538
+        delta_net_r: -3.9426
+        folds_ge_baseline: 0/4
+        max_drawdown_r: 7.2105
+        verdict: fail
+        joint_change: true
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: -0.0548
+      fold_stability: 0.0
+      reading: every tested value is worse than the baseline
+    bank_frac:
+      tests:
+      - value: '0.5'
+        baseline_value: 'off'
+        arm: C2
+        unit: RQ-20261110-73de-21
+        window: 2018-03-01..2026-10-15
+        n: 72
+        net_r: 9.8112
+        baseline_n: 72
+        baseline_net_r: 13.7538
+        delta_net_r: -3.9426
+        folds_ge_baseline: 0/4
+        max_drawdown_r: 7.2105
+        verdict: fail
+        joint_change: true
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: -0.0548
+      fold_stability: 0.0
+      reading: every tested value is worse than the baseline
     tp_target_r:
       tests:
       - value: '3'
@@ -449,6 +512,27 @@ levers:
       best_delta_r_per_trade: 0.0107
       fold_stability: 0.583
       reading: no response at the tested values
+    cooldown_bars:
+      tests:
+      - value: '4'
+        baseline_value: 'off'
+        arm: C3
+        unit: RQ-20261110-73de-21
+        window: 2018-03-01..2026-10-15
+        n: 64
+        net_r: 8.396
+        baseline_n: 72
+        baseline_net_r: 13.7538
+        delta_net_r: -5.3578
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 7.6783
+        verdict: fail
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: -0.0744
+      fold_stability: 0.5
+      reading: every tested value is worse than the baseline
     adx_max:
       tests:
       - value: '40'
@@ -564,10 +648,24 @@ levers:
         max_drawdown_r: 7.2105
         verdict: pass
         joint_change: false
-      shape: single_point
-      points: 1
+      - value: pivot=5
+        baseline_value: 'off'
+        arm: C4
+        unit: RQ-20261110-73de-21
+        window: 2018-03-01..2026-10-15
+        n: 72
+        net_r: -2.6945
+        baseline_n: 72
+        baseline_net_r: 13.7538
+        delta_net_r: -16.4483
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 6.2051
+        verdict: fail
+        joint_change: false
+      shape: noisy
+      points: 2
       best_delta_r_per_trade: 0.2958
-      fold_stability: 0.667
+      fold_stability: 0.458
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
     momentum_stale_bars:
       tests:

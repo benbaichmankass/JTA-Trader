@@ -3,7 +3,8 @@
 subject: spy_pullback_1h
 kind: strategy_leg
 status: testing
-books: []
+books:
+- alpaca_paper
 baseline:
   record: comms/strategy_evidence/spy_pullback_1h.json
   net_r: -8.5535
@@ -73,11 +74,54 @@ manifest:
   regime_gating: untested
   timeframe: untested
   symbol_set: untested
-  direction: untested
+  direction: tested
   session: untested
   sizing_vs_cost: untested
 levers:
+  direction:
+    side_filter:
+      tests:
+      - value: long
+        baseline_value: 'off'
+        arm: S1
+        unit: RQ-20261111-203c-01
+        window: 2020-07-01..2026-10-15
+        n: 152
+        net_r: 68.818
+        baseline_n: 253
+        baseline_net_r: 57.4634
+        delta_net_r: 11.3546
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 17.2876
+        verdict: fail
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: 0.0449
+      fold_stability: 0.5
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
   exit:
+    be_floor_r:
+      tests:
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: C1
+        unit: RQ-20261111-203c-01
+        window: 2020-07-01..2026-10-15
+        n: 323
+        net_r: 52.0953
+        baseline_n: 253
+        baseline_net_r: 57.4634
+        delta_net_r: -5.3681
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 24.9311
+        verdict: fail
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: -0.0212
+      fold_stability: 0.5
+      reading: every tested value is worse than the baseline
     atr_stop_mult:
       tests:
       - value: '2.5'
@@ -120,4 +164,26 @@ levers:
       points: 1
       best_delta_r_per_trade: -0.1158
       fold_stability: 0.167
+      reading: every tested value is worse than the baseline
+  other:
+    structure_exit:
+      tests:
+      - value: pivot=5
+        baseline_value: 'off'
+        arm: C4
+        unit: RQ-20261111-203c-01
+        window: 2020-07-01..2026-10-15
+        n: 416
+        net_r: -30.2057
+        baseline_n: 253
+        baseline_net_r: 57.4634
+        delta_net_r: -87.6691
+        folds_ge_baseline: 0/4
+        max_drawdown_r: 38.4678
+        verdict: fail
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: -0.3465
+      fold_stability: 0.0
       reading: every tested value is worse than the baseline

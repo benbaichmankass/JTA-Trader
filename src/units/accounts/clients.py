@@ -325,6 +325,7 @@ def _bybit_closed_pnl_lookup(
     opened_at_ms: Optional[int] = None,
     allow_wide_fallback: bool = False,
     allow_partial_aggregate: bool = False,
+    own_order_ids: Any = (),
 ) -> Optional[Dict[str, Any]]:
     """Find the Bybit V5 closed-pnl record matching a trade we know
     closed via broker-side SL/TP or external flatten.
@@ -427,6 +428,16 @@ def _bybit_closed_pnl_lookup(
         return None
 
     side_str = str(side or "").lower()
+    # VENUE-PNL-ORDERID-MATCH (2026-11-14): the trade's OWN bracket leg is an exact key. A record whose
+    # ``orderId`` is the row's sl/tp order closed THIS trade, whatever its ``avgEntryPrice`` says: on a
+    # netting position that is the POSITION's average entry (bybit_1 7054: 1.0319 vs the row's 1.058), which
+    # the 10 bps entry filter below would refuse forever. Tried before every heuristic; the side must agree.
+    own = {str(o) for o in (own_order_ids or ()) if o}
+    if own:
+        for rec in records:
+            rec_side = str(rec.get("side") or "").lower()
+            if str(rec.get("orderId") or "") in own and not (side_str and rec_side and rec_side != side_str):
+                return rec
     candidates: list = []
     # ``pool`` = records passing EVERYTHING EXCEPT the single-record qty match
     # (side + close-after-open + entry-price). It's the candidate set for the
@@ -792,6 +803,7 @@ def account_closed_pnl_for_trade(
     qty: Optional[float] = None,
     entry_price: Optional[float] = None,
     reduce_leg: bool = False,
+    own_order_ids: Any = (),
 ) -> Optional[Dict[str, Any]]:
     """Look up Bybit V5 closed-pnl for the position that opened with
     *direction* on *symbol* at ``opened_at_ms`` and closed before
@@ -847,6 +859,12 @@ def account_closed_pnl_for_trade(
         unreliable ``side`` / ``entry_price`` disambiguators. Normal
         trades leave it ``False`` and keep the strict #1411 / #1419
         contract.
+      * ``own_order_ids`` — the row's own bracket legs (``sl_order_id`` /
+        ``tp_order_id``). An exact key, tried first: on Bybit a closed-pnl
+        record whose ``orderId`` is one of them; on a fills venue (Bybit
+        demo, Alpaca) the ONE order that closed the trade when the
+        cumulative fills read refuses on a netted position
+        (VENUE-PNL-ORDERID-MATCH, bybit_1 trade 7054).
 
     Currently only ``bybit`` (``linear`` / ``inverse``) is wired.
     Spot accounts have no closed-pnl endpoint — they return
@@ -942,8 +960,8 @@ def account_closed_pnl_for_trade(
         # distinction `classify_pnl` grades: `pnl_source` describes the
         # arithmetic, `exit_price_source` describes the evidence.
         try:
-            from src.runtime.fills_pnl import exit_from_fills
-            return exit_from_fills(
+            from src.runtime.fills_pnl import exit_from_fills, exit_from_one_order_fills
+            got = exit_from_fills(
                 account_id=str(account.get("account_id") or ""),
                 symbol=symbol,
                 direction=direction,
@@ -952,6 +970,20 @@ def account_closed_pnl_for_trade(
                 qty=qty,
                 require_realized=False,
             )
+            if got is None and any(own_order_ids or ()):
+                # The cumulative read refuses when a same-side sibling's fills land in the window (a netted
+                # position). The trade's own bracket order is the exact key (VENUE-PNL-ORDERID-MATCH, 7054).
+                got = exit_from_one_order_fills(
+                    account_id=str(account.get("account_id") or ""),
+                    symbol=symbol,
+                    direction=direction,
+                    opened_at_ms=int(opened_at_ms),
+                    closed_at_ms=int(closed_at_ms) if closed_at_ms else int(
+                        datetime.now(timezone.utc).timestamp() * 1000),
+                    qty=qty,
+                    own_order_ids=tuple(own_order_ids),
+                )
+            return got
         except Exception as exc:  # noqa: BLE001 — a store read never breaks a tick
             logger.warning(
                 "account_closed_pnl_for_trade(demo account=%s symbol=%s): %s",
@@ -1017,6 +1049,7 @@ def account_closed_pnl_for_trade(
             # BL-20260608-DEMOPNL); reduce legs match on qty+window only and
             # must not aggregate across sides.
             allow_partial_aggregate=(not reduce_leg),
+            own_order_ids=own_order_ids,
         )
     except Exception as exc:  # noqa: BLE001
         aid = account.get("account_id") or "unknown"

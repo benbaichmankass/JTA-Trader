@@ -46,7 +46,7 @@ def _p2pool_cfg() -> dict:
     """The p2pool manifest's trainer config (features, categoricals)."""
     yaml = pytest.importorskip("yaml")
     m = yaml.safe_load(
-        (REPO / "ml/configs/setup-candidates-metalabel-p2pool-v1.yaml").read_text())
+        (REPO / "ml/configs/retired/setup-candidates-metalabel-p2pool-v1.yaml").read_text())
     return dict(m["trainer_config"])
 
 

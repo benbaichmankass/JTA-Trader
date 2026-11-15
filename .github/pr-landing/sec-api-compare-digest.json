@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Token comparisons in src/web/api/routers/prop.py (_require_write_token) and devices.py (_check_admin_token) use hmac.compare_digest instead of !=. Same accept/refuse behaviour, no timing signal. Operator OK relayed by the manager 2026-11-11 22:20Z, popup verbatim 'Yes, all four (Recommended)'. Web-api change, restarts on deploy. No gate added.",
+  "hold_text": "Tier-2: manager merges and deploys ict-web-api. Post-merge check: POST /api/bot/prop/report with the right bearer still succeeds (the prop executor tick keeps reporting) and a wrong bearer gets 401."
+}

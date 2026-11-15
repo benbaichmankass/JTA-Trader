@@ -95,10 +95,10 @@ def test_a_real_money_account_in_dry_run_is_still_risk_bearing():
 @pytest.mark.parametrize("account", ["alpaca_live", "bybit_2", "breakout_1"])
 def test_adding_a_leg_to_a_real_money_roster_is_caught(account, tmp_path):
     """The edit the OLD guard cannot see: no `mode:` / `execution:` line moves."""
-    head = _with_leg(account, "tlt_pullback_1h")
+    head = _with_leg(account, "ict_scalp_5m")
     found = G.promotions(REAL_ACCOUNTS, head)
     assert [(f["kind"], f["leg"], f["account"]) for f in found] == [
-        ("roster_add", "tlt_pullback_1h", account)]
+        ("roster_add", "ict_scalp_5m", account)]
     findings = G.grade(found, REAL_STRATEGIES, EVIDENCE)
     assert len(findings) == 1, "a leg with no passing record must produce a finding"
     # ⚠️ THIS ASSERTION READ `C3 FAIL and C4 FAIL` UNTIL 2026-09-22 AND THE TEST
@@ -117,6 +117,10 @@ def test_adding_a_leg_to_a_real_money_roster_is_caught(account, tmp_path):
     # fails C4 and stopped being a valid fixture. The fixture is now `tlt_pullback_1h`
     # (record net_r_oos -6.7285 over n=94, verdict 'fail', on no real-money roster) --
     # the same property, a leg whose record is still a robust fail.
+    # 2026-11-12 (PROMOTE-TLT-1H-REAL-MONEY, PR #25191): tlt_pullback_1h's record was rebuilt faithful (it had
+    # omitted the trail-decay levers) and now grades net_r_oos +0.2321 over n=101, verdict 'pass', so it stopped
+    # being a valid fixture the same way. The fixture is now `ict_scalp_5m` (record net_r_oos -42.456 over n=146,
+    # verdict 'fail', fidelity faithful, on no risk-bearing roster).
     #
     # So both clauses stay pinned, in their CURRENT states rather than loosened
     # to "something failed". C3 PASS is asserted deliberately: if the corpus
@@ -127,7 +131,7 @@ def test_adding_a_leg_to_a_real_money_roster_is_caught(account, tmp_path):
         "C3 regressed: this leg's record lost its cost_stack. R7 (PR #12720) "
         "gave every enabled leg one; a FAIL here means the corpus went backwards.")
     assert "C4 FAIL" in findings[0], (
-        "C4 is the clause that must still refuse this add -- tlt_pullback_1h's "
+        "C4 is the clause that must still refuse this add -- ict_scalp_5m's "
         "record carries verdict='fail'. A PASS here means either the record or "
         "the rule moved, and the roster bar just got weaker.")
 
@@ -342,7 +346,37 @@ def test_c5_baseline_is_exactly_the_approximate_risk_bearing_slots():
 
     # FIDELITY_OPERATOR_WAIVER (operator 2026-11-05 'Both now, waive both') is held to the SAME exactness:
     # a waiver line cannot outlive its approximate record, and no approximate slot exists outside the two dicts.
-    assert approximate_slots(EVIDENCE) == set(G.FIDELITY_BASELINE) | set(G.FIDELITY_OPERATOR_WAIVER)
+    # FIDELITY_PENDING_REMEASURE (manager OK 2026-11-13) is held to the same exactness, and each entry
+    # must still be inside its expiry date: on expiry this assertion goes red by itself.
+    import datetime as _dt
+    for slot, (row, expires) in G.FIDELITY_PENDING_REMEASURE.items():
+        assert _dt.date.today() <= _dt.date.fromisoformat(expires), (
+            f"{slot} pending re-measure ({row}) EXPIRED {expires}: land the faithful record or ask the manager")
+    assert approximate_slots(EVIDENCE) == (set(G.FIDELITY_BASELINE) | set(G.FIDELITY_OPERATOR_WAIVER)
+                                           | set(G.FIDELITY_PENDING_REMEASURE))
+
+
+def test_pending_remeasure_is_exactly_the_one_approved_entry():
+    """Manager OK 2026-11-13 allowed exactly ONE entry (EQ-FORMING-BAR-REPLAY); it was deleted the same
+    day when RQ-20261113-1449-01 regenerated the tqqq record faithful. The dict is now EMPTY, and any new
+    slot needs a manager OK, so it cannot grow silently."""
+    assert G.FIDELITY_PENDING_REMEASURE == {}
+
+
+def test_pending_remeasure_never_passes_c5():
+    """The pending class changes NO verdict: C5 stays fail-closed for a promotion of the pending
+    slot itself (on its real committed record and on a planted approximate one), and for any
+    other slot."""
+    if not G.FIDELITY_PENDING_REMEASURE:
+        pytest.skip("FIDELITY_PENDING_REMEASURE is empty: no pending slot to hold to fail-closed C5")
+    (acct, leg), _ = next(iter(G.FIDELITY_PENDING_REMEASURE.items()))
+    real = json.loads((EVIDENCE / f"{leg}.json").read_text(encoding="utf-8"))
+    assert real["fidelity"] == "approximate", "the pending slot's record must read approximate honestly"
+    for rec in (real, {**real, "fidelity": "approximate"}):
+        c5 = dict((c, ok) for c, ok, _ in G.clause_verdicts(rec, acct, leg))["C5"]
+        assert c5 is False, "a pending re-measure must never pass C5"
+        assert dict((c, ok) for c, ok, _ in G.clause_verdicts(rec))["C5"] is False
+        assert dict((c, ok) for c, ok, _ in G.clause_verdicts(rec, "bybit_2", leg))["C5"] is False
 
 
 # --------------------------------------------------------------------------
@@ -384,10 +418,27 @@ def test_population_census_is_computable_and_reports_its_denominator():
 REAL_PAIRS = (REPO / "config/pairs.yaml").read_text(encoding="utf-8")
 
 
+def _base_pairs() -> str:
+    """The real pairs config, plus a synthetic shadow `pairs_sol_eth` when the real one carries no pairs.
+
+    The M22 sleeve was retired by record 2026-11-11 (operator, Thursday-planning b3: `pairs: []`), but the guard's
+    per-pair-override routing must stay tested, so the repoint fixtures below start from this base. The synthetic
+    pair copies the retired entry's shape and inherits the top-level account (no `account_id`)."""
+    data = yaml.safe_load(REAL_PAIRS) or {}
+    if not data.get("pairs"):
+        data["pairs"] = [{"name": "pairs_sol_eth", "symbol_a": "SOLUSDT", "symbol_b": "ETHUSDT",
+                          "execution": "shadow", "timeframe": "1h", "lookback": 15, "entry_z": 2.0,
+                          "exit_z": 0.5, "stop_z": 2.0, "max_hold_bars": 20, "hedge_beta": "rolling"}]
+    return yaml.safe_dump(data)
+
+
+BASE_PAIRS = _base_pairs()
+
+
 def _pairs_with_override(pair_name: str, account: str, execution: str | None = None) -> str:
-    data = yaml.safe_load(REAL_PAIRS)
+    data = yaml.safe_load(BASE_PAIRS)
     hit = [p for p in data["pairs"] if p.get("name") == pair_name]
-    assert hit, f"{pair_name} must exist in the real config/pairs.yaml"
+    assert hit, f"{pair_name} must exist in the base pairs config"
     hit[0]["account_id"] = account
     if execution is not None:
         hit[0]["execution"] = execution
@@ -405,7 +456,7 @@ def test_per_pair_account_override_onto_real_money_is_caught():
     (operator "Fix + shadow", PAIRS-R-SCALE) no Bybit pair is live in the real
     config, and a shadow pair places nothing wherever it points."""
     head = _pairs_with_override("pairs_sol_eth", "bybit_2", execution="live")
-    found = G.promotions(REAL_ACCOUNTS, REAL_ACCOUNTS, REAL_PAIRS, head)
+    found = G.promotions(REAL_ACCOUNTS, REAL_ACCOUNTS, BASE_PAIRS, head)
     assert [(f["kind"], f["leg"], f["account"]) for f in found] == [
         ("pairs_repoint", "pairs_sol_eth", "bybit_2")]
     # and it is REFUSED: no pairs leg carries a committed evidence record today
@@ -416,4 +467,4 @@ def test_per_pair_account_override_onto_real_money_is_caught():
 
 def test_per_pair_override_onto_paper_is_free():
     head = _pairs_with_override("pairs_sol_eth", "bybit_1")
-    assert G.promotions(REAL_ACCOUNTS, REAL_ACCOUNTS, REAL_PAIRS, head) == []
+    assert G.promotions(REAL_ACCOUNTS, REAL_ACCOUNTS, BASE_PAIRS, head) == []

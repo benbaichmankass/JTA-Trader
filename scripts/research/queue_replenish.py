@@ -68,7 +68,7 @@ TEMPLATES = Path("research/templates")
 # is "landing machinery" (check_pr_landing R12) and would force a human read of every such change.
 # A template may still override with its own `roadmap:` field.
 FAMILY_ROADMAP = {"e35-bracket": ["M20"], "m20-exit-lever": ["M20"], "macro-valuation": ["M28"],
-                  "prop-fit-breakout": ["L-PROP"], "roster-walkforward": ["L-LADDER"], "leg-corpus-s1": ["L-ML-LIVE"]}
+                  "prop-fit-breakout": ["L-PROP"], "roster-walkforward": ["L-LADDER"], "live-decay": ["L-LADDER"], "leg-corpus-s1": ["L-ML-LIVE"]}
 QUEUE = Path("research/queue")
 DEFAULT_TARGET = 25
 _PLACEHOLDER = re.compile(r"\{([a-z_]+)\}")
@@ -232,6 +232,20 @@ def _leg_source(name: str, tpl: Dict[str, Any], facts: Dict[str, Any]) -> List[D
         for leg, info in legs.items():
             if leg in sweepable:
                 out.append({"leg": leg, **info})
+    elif name == "live_roster_legs_m20_sweepable":
+        # THE M20 SWEEP HAS A SCOPE TOO (RESEARCH-LOSS-M20-UNLANDED). `live_roster_legs` fed every roster leg to
+        # m20-exit-lever-sweep.yml, whose `plan` job refuses a leg `classify` cannot route ("legs with no family/
+        # harness"): the run died in `plan`, the dispatcher had already stamped the unit, and the unit never
+        # re-fired. MEASURED 2026-11-12 over the 10 unlanded runs: 7 were exactly this (ml_entry_eq 42256673587,
+        # ml_entry_v2 41978235919, ml_entry 41970551893, turtle_soup 41195608647, e4_oi_shock_1h 41187215930,
+        # fade_breakout_4h 40994427469, claude_desk 40978648245). The sweep's OWN `classify` is the one scope, so a
+        # leg it would refuse is never generated -- the same rule as `live_roster_legs_e35_sweepable` above.
+        import sys
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from m20_fleet_exit_sweep import classify as _m20_classify
+        for leg, info in legs.items():
+            if _m20_classify(leg) is not None:
+                out.append({"leg": leg, **info})
     elif name == "live_roster_legs_ablatable":
         # roster legs whose harness family exit_lever_ablation can route (regime_debt_matrix.classify): the structured
         # walk-forward is a config-exact arm sweep, so a leg it cannot route has no design here (orb / chop_scalp: see
@@ -242,6 +256,16 @@ def _leg_source(name: str, tpl: Dict[str, Any], facts: Dict[str, Any]) -> List[D
             fam = classify(cfg)
             if fam:
                 out.append({"leg": leg, **info, "harness": fam})
+    elif name == "live_decay_legs":
+        # LIVE-DECAY-MONITOR: every Stage-2 roster leg that has a committed Stage-0 per-trade series AND a readable live
+        # series (scripts/research/live_decay_cusum.coverage re-parses config each call). Legs that cannot be monitored
+        # (no Stage-0 series, prop-only with no public live route) are NOT minted -- a unit that can only say "could not look"
+        # is noise -- and are listed by `live_decay_cusum.py --coverage` and filed in the pipeline.
+        from scripts.research.live_decay_cusum import coverage
+        for row in coverage(Path(facts["root"])):
+            leg = row["leg"]
+            if row["monitorable"] and leg in legs:
+                out.append({"leg": leg, **legs[leg]})
     elif name == "money_leg_families":
         # one point per FAMILY that has a money leg right now (ML-LINE-S1-CORPUS): the producer re-resolves
         # the family's legs from config at run time, so a roster change never needs a new unit.
@@ -419,6 +443,10 @@ def render(tpl: Dict[str, Any], tpl_path: str, tpl_sha: str, params: Dict[str, A
     if tpl.get("ml_consumer"):
         # research-queue-ml-consumer-guard (PLANNING.md § 1c): an ML template names its consumer
         unit["ml_consumer"] = _fill(tpl["ml_consumer"], p)
+    if tpl.get("evidence_class"):
+        # EVIDENCE-CLASS-BACKFILL (2026-11-11): what kind of evidence a PASS is (holdout x claim), read by
+        # scripts/research/research_slo.py::classify_evidence for heldout_registered_passes_30d. Optional; no guard requires it.
+        unit["evidence_class"] = _fill(tpl["evidence_class"], p)
     unit["question"] = _fill(tpl["question"], p)
     unit["why_this_matters"] = _fill(tpl.get("why_this_matters", ""), p)
     power = _fill(tpl["power"], p)

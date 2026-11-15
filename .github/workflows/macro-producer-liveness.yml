@@ -49,8 +49,8 @@ on:
   schedule:
     - cron: "0 12 * * *"
   workflow_dispatch:
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [macro-producer-liveness-now]
 
 permissions:
   contents: read
@@ -65,10 +65,10 @@ jobs:
     if: |
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       (github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'macro-producer-liveness-now'))
+      (github.event_name == 'repository_dispatch' &&
+       (github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'macro-producer-liveness-now'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -273,7 +273,7 @@ jobs:
             }
 
       - name: Reply to trigger issue (issue-driven path)
-        if: github.event_name == 'issues'
+        if: github.event_name == 'repository_dispatch'
         uses: actions/github-script@v7
         env:
           VERDICT_SUMMARY: ${{ steps.check.outputs.summary }}
@@ -286,12 +286,12 @@ jobs:
             const emoji = stale ? '🚨' : '✅';
             await github.rest.issues.createComment({
               owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               body: `${emoji} **macro-producer-liveness** ran.\n\n${summary}\n\nRun: ${runUrl}`,
             });
             await github.rest.issues.update({
               owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number),
               state: 'closed', state_reason: stale ? 'not_planned' : 'completed',
             });
 

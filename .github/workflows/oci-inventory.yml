@@ -85,8 +85,8 @@ on:
         default: "false"
         type: choice
         options: ["false", "true"]
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [oci-inventory]
 
 permissions:
   contents: read
@@ -101,10 +101,10 @@ jobs:
     if: |
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       (github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'oci-inventory'))
+      (github.event_name == 'repository_dispatch' &&
+       (github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'oci-inventory'))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -250,7 +250,7 @@ jobs:
           MODE: ${{ inputs.mode || 'report' }}
           RC: ${{ steps.run.outputs.rc }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          ISSUE: ${{ github.event.issue.number }}
+          ISSUE: ${{ github.event.client_payload.issue.number }}
         run: |
           set -uo pipefail
           {

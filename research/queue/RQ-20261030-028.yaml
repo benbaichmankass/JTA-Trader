@@ -31,6 +31,9 @@ power:
   feasibility:
     source: none
     accrual_basis: Runs on whatever history the trainer holds for the leg; nothing waits.
+evidence_class:  # EVIDENCE-CLASS-BACKFILL 2026-11-11, rule T1 (scripts/research/backfill_evidence_class.py)
+  holdout: holdout_window
+  claim: edge
 decision_rule:
   id: RULE-EXIT-REFINEMENT-P2-GATE
   statistic: 'Per cell: IS and OOS delta net_R and delta maxDD vs the base book; base OOS trade count.'
@@ -75,7 +78,7 @@ grading:
   discovery: confirmed
   evidence:
   - research/results/RQ-20261030-028/41134410807.jsonl
-  graded_at: '2026-11-11'
+  graded_at: '2026-11-12'
   grader: scripts/research/queue_grade.py
   holdout:
     base_trades: 83

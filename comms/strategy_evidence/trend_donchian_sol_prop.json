@@ -4,62 +4,62 @@
   "symbol": "SOLUSDT",
   "timeframe": "1h",
   "config_fingerprint": "sha256:9898f734d4474751bd35f5f7180f14e6",
-  "basis": "harness_timefolds",
+  "basis": "decision_bar_replay_timefolds",
   "coverage_state": "measured",
   "fidelity": "faithful",
   "omitted_levers": [],
-  "net_r_oos": 52.3713,
-  "expectancy_r_oos": 0.1378,
-  "n_trades_oos": 380,
+  "net_r_oos": 49.8124,
+  "expectancy_r_oos": 0.0926,
+  "n_trades_oos": 538,
   "folds": 4,
   "fold_detail": [
     {
       "fold": 1,
-      "trades": 95,
-      "net_r": 28.0852,
-      "expectancy_r": 0.2956,
+      "trades": 134,
+      "net_r": 21.587,
+      "expectancy_r": 0.1611,
       "start": "2020-11-28 13:00:00+00:00",
-      "end": "2022-03-30 14:00:00+00:00"
+      "end": "2022-03-18 17:00:00+00:00"
     },
     {
       "fold": 2,
-      "trades": 95,
-      "net_r": 11.8948,
-      "expectancy_r": 0.1252,
-      "start": "2022-04-12 11:00:00+00:00",
-      "end": "2023-10-23 22:00:00+00:00"
+      "trades": 134,
+      "net_r": 7.6374,
+      "expectancy_r": 0.057,
+      "start": "2022-03-19 14:00:00+00:00",
+      "end": "2023-10-13 20:00:00+00:00"
     },
     {
       "fold": 3,
-      "trades": 95,
-      "net_r": 13.0291,
-      "expectancy_r": 0.1371,
-      "start": "2023-10-25 12:00:00+00:00",
-      "end": "2025-05-08 09:00:00+00:00"
+      "trades": 134,
+      "net_r": 11.964,
+      "expectancy_r": 0.0893,
+      "start": "2023-10-16 05:00:00+00:00",
+      "end": "2025-04-09 17:00:00+00:00"
     },
     {
       "fold": 4,
-      "trades": 95,
-      "net_r": -0.6378,
-      "expectancy_r": -0.0067,
-      "start": "2025-05-09 10:00:00+00:00",
+      "trades": 136,
+      "net_r": 8.624,
+      "expectancy_r": 0.0634,
+      "start": "2025-04-11 06:00:00+00:00",
       "end": "2026-11-04 14:00:00+00:00"
     }
   ],
-  "folds_positive": 3,
+  "folds_positive": 4,
   "window_days": 2170,
   "fee_bps_roundtrip": 11.0,
   "path_stats": {
     "series_location": "source_run (the per-trade rows, in order, with net_r)",
-    "n": 380,
-    "max_drawdown_r": 12.433,
-    "max_drawdown_at_trade": 300,
-    "final_equity_r": 52.3713,
-    "max_equity_r": 58.4599,
-    "worst_trade_r": -1.1523,
-    "best_trade_r": 4.916,
-    "worst_day_r": -1.1523,
-    "worst_day_date": "2025-12-28",
+    "n": 538,
+    "max_drawdown_r": 19.6732,
+    "max_drawdown_at_trade": 264,
+    "final_equity_r": 49.8124,
+    "max_equity_r": 58.5158,
+    "worst_trade_r": -1.1406,
+    "best_trade_r": 5.8672,
+    "worst_day_r": -2.0683,
+    "worst_day_date": "2021-10-31",
     "trades_without_exit_time": 0,
     "ordering": "by entry_time ascending; pooled ACROSS folds, so this is the full-window path, not a per-fold one",
     "not_a_verdict": "Descriptive only. No bar is applied here -- the prop bar is B6's to register, and it must be registered before these numbers are read."
@@ -69,9 +69,9 @@
     "slippage": 3.0,
     "funding": 1.0,
     "unit": "bps_roundtrip (funding: bps per funding window)",
-    "source": "comms/strategy_evidence/runs/2026-11-06/trend_donchian_sol_prop__bt.json"
+    "source": "comms/strategy_evidence/runs/2026-11-12-forming/trend_donchian_sol_prop__bt.json"
   },
-  "net_r_oos_fee_only": 60.1761,
+  "net_r_oos_fee_only": 60.535,
   "decision_rule": {
     "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
     "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
@@ -79,9 +79,9 @@
     "verdict": "pass"
   },
   "param_selection_provenance": "not_established",
-  "generated_at": "2026-11-06T19:25:23.908663+00:00",
-  "generated_by": "scripts/ops/build_strategy_evidence.py",
-  "source_run": "comms/strategy_evidence/runs/2026-11-06/trend_donchian_sol_prop__trades.jsonl",
+  "generated_at": "2026-11-12T10:48:57.255842+00:00",
+  "generated_by": "scripts/ops/rebase_evidence_decision_bar.py",
+  "source_run": "comms/strategy_evidence/runs/2026-11-12-forming/trend_donchian_sol_prop__trades.jsonl",
   "error": null,
   "harness": "trend",
   "reproduce": {
@@ -160,5 +160,12 @@
     },
     "source_run": "comms/research/RQ-20261016-077e-05/repro-20261106/verdict.json",
     "provenance": "Reproduction 2026-11-06 (lane SOAK-BACKLOG-REVIEW, operator popup 'Yes, rebuild and promote (Recommended)' via Manager 2026-11-06a) of RQ-20261016-077e-05's pre-registered holdout protocol, unchanged (same arms, window, boundary rule, selection rule), after the leg was set to the configuration that unit CONFIRMED (research/results/RQ-20261016-077e-05/39002166184.jsonl). Differences: the full cost stack is today's (Bybit fee 11.0 bps rt after the 2026-10-28 recost, vs 7.5 at the original run), and arm A now IS the confirmed configuration, so selection picked A. The held-back span is the one the original unit read once; this re-grade at a higher cost is not a new selection."
-  }
+  },
+  "decision_bar": "forming",
+  "decision_bar_note": "Evidence measured on the bar the leg TRADES (forming), per the operator's 2026-10-22 'match the bar' decision (checklist DECISION-BAR-MATCH). Trades are the forming arm of EVIDENCE-FORMING-ARMS-REALMONEY (forming_bar_pooled_regrade.leg_run, Binance USD-M 1m proxy, full cost stack) restricted to the superseded record's own window.",
+  "fold_basis": "equal_count (build_strategy_evidence.time_folds)",
+  "data_start": "2020-11-27 00:00:00+00:00",
+  "data_end": "2026-11-05 23:00:00+00:00",
+  "research_unit": "EVIDENCE-FORMING-ARMS-REALMONEY",
+  "supersedes": "git:comms/strategy_evidence/trend_donchian_sol_prop.json@2026-11-06T19:25:23.908663+00:00"
 }

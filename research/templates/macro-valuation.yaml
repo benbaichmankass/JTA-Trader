@@ -43,6 +43,10 @@ power:
   feasibility:
     source: none
     accrual_basis: FRED is read on demand; nothing accrues.
+# EVIDENCE-CLASS-BACKFILL 2026-11-11: what a PASS from this family is (a deterministic backfill freshness check, not a test).
+evidence_class:
+  holdout: none
+  claim: other
 decision_rule:
   id: "RULE-TPL-MACRO-VALUATION-BACKFILL-COMPLETE"
   statistic: >-

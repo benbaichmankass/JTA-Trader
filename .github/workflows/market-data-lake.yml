@@ -39,8 +39,8 @@ on:
         default: "refresh"
   schedule:
     - cron: "41 3 * * *"
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [market-data-lake-request]
   pull_request:
     paths:
       - ".github/workflows/market-data-lake.yml"
@@ -83,9 +83,9 @@ jobs:
       !cancelled() && needs.dedupe.outputs.skip != 'true' &&
       (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' ||
        (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
-       (github.event_name == 'issues' &&
-        (github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') &&
-        contains(github.event.issue.labels.*.name, 'market-data-lake-request')))
+       (github.event_name == 'repository_dispatch' &&
+        (github.event.client_payload.issue.user.login == github.repository_owner || github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+        contains(github.event.client_payload.issue.labels.*.name, 'market-data-lake-request')))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -97,13 +97,13 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
           INPUT_MODE: ${{ inputs.mode }}
-          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_BODY: ${{ github.event.client_payload.issue.body }}
         run: |
           set -euo pipefail
           m="refresh"
           if [ "$EVENT" = "workflow_dispatch" ]; then m="${INPUT_MODE:-refresh}"; fi
           if [ "$EVENT" = "pull_request" ]; then m="preflight"; fi
-          if [ "$EVENT" = "issues" ]; then
+          if [ "$EVENT" = "repository_dispatch" ]; then
             m="$(printf '%s\n' "$ISSUE_BODY" | sed -n 's/^mode:[[:space:]]*\([a-z]*\).*/\1/p' | head -1)"; m="${m:-refresh}"
           fi
           case "$m" in refresh|backfill|preflight) ;; *) echo "::error::bad mode '$m'"; exit 1;; esac
@@ -139,7 +139,7 @@ jobs:
     if: >-
       !cancelled() && needs.dedupe.outputs.skip != 'true' && needs.preflight.result == 'success' &&
       needs.preflight.outputs.mode != 'preflight' &&
-      (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'market-data-lake-request')))
+      (github.event_name != 'repository_dispatch' || ((github.event.client_payload.issue.user.login == github.repository_owner || github.event.client_payload.issue.user.login == 'github-actions[bot]') && contains(github.event.client_payload.issue.labels.*.name, 'market-data-lake-request')))
     runs-on: ubuntu-latest
     timeout-minutes: 330
     strategy:
@@ -259,7 +259,7 @@ jobs:
     if: >-
       !cancelled() && needs.dedupe.outputs.skip != 'true' && needs.preflight.result == 'success' &&
       needs.preflight.outputs.mode != 'preflight' &&
-      (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'market-data-lake-request')))
+      (github.event_name != 'repository_dispatch' || ((github.event.client_payload.issue.user.login == github.repository_owner || github.event.client_payload.issue.user.login == 'github-actions[bot]') && contains(github.event.client_payload.issue.labels.*.name, 'market-data-lake-request')))
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -280,6 +280,11 @@ jobs:
         run: python3 -u scripts/data_lake/free_sources.py cboe --out lake
       - name: Daily futures fronts (Yahoo, research use, private store)
         run: python3 -u scripts/data_lake/free_sources.py futures --out lake
+      - name: Hyperliquid perps + trade[XYZ] builder markets (public info API; accrues - the API keeps ~5000 bars)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          MODE: ${{ needs.preflight.outputs.mode }}
+        run: python3 -u scripts/data_lake/free_sources.py hyperliquid --out lake $([ "$MODE" = "backfill" ] && echo --full)
       - name: Pull the option-snapshot store from the trainer (read only; ETF bars are published by ETF-HISTORY-PIPELINE itself)
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
@@ -303,7 +308,7 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           rc=0
-          for p in universe fx macro futures options us_equity; do
+          for p in universe fx macro futures options us_equity crypto/hyperliquid; do
             if [ -d "lake/$p" ]; then python3 scripts/data_lake/hf_publish.py upload --dir lake --prefix "$p" --note "run ${{ github.run_id }}" || rc=1; fi
           done
           exit "$rc"
@@ -322,7 +327,7 @@ jobs:
     if: >-
       !cancelled() && needs.dedupe.outputs.skip != 'true' && needs.preflight.result == 'success' &&
       needs.preflight.outputs.mode != 'preflight' &&
-      (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'market-data-lake-request')))
+      (github.event_name != 'repository_dispatch' || ((github.event.client_payload.issue.user.login == github.repository_owner || github.event.client_payload.issue.user.login == 'github-actions[bot]') && contains(github.event.client_payload.issue.labels.*.name, 'market-data-lake-request')))
     runs-on: ubuntu-latest
     timeout-minutes: 300
     steps:
@@ -400,7 +405,7 @@ jobs:
     if: >-
       !cancelled() && needs.dedupe.outputs.skip != 'true' && needs.preflight.result == 'success' &&
       needs.preflight.outputs.mode != 'preflight' &&
-      (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'market-data-lake-request')))
+      (github.event_name != 'repository_dispatch' || ((github.event.client_payload.issue.user.login == github.repository_owner || github.event.client_payload.issue.user.login == 'github-actions[bot]') && contains(github.event.client_payload.issue.labels.*.name, 'market-data-lake-request')))
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -451,7 +456,7 @@ jobs:
     if: >-
       !cancelled() && needs.dedupe.outputs.skip != 'true' && needs.preflight.result == 'success' &&
       needs.preflight.outputs.mode != 'preflight' &&
-      (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'market-data-lake-request')))
+      (github.event_name != 'repository_dispatch' || ((github.event.client_payload.issue.user.login == github.repository_owner || github.event.client_payload.issue.user.login == 'github-actions[bot]') && contains(github.event.client_payload.issue.labels.*.name, 'market-data-lake-request')))
     runs-on: ubuntu-latest
     timeout-minutes: 110   # commit-to-main verify-merged waits up to 80 min (tests/test_commit_to_main_callers.py)
     permissions:
@@ -513,7 +518,7 @@ jobs:
             record in the HF dataset health/latest.json). Data-only.
           branch-prefix: automation/market-data-lake
       - name: Comment the depth table on the issue
-        if: always() && github.event_name == 'issues'
+        if: always() && github.event_name == 'repository_dispatch'
         uses: actions/github-script@v7
         env:
           CRYPTO: ${{ needs.crypto.result }}
@@ -525,8 +530,8 @@ jobs:
             let body = `market-data-lake crypto=${process.env.CRYPTO} other=${process.env.OTHER} equities=${process.env.EQ} run=${context.runId}\n\n`;
             if (fs.existsSync('depth.md')) body += fs.readFileSync('depth.md', 'utf8').slice(0, 50000);
             if (fs.existsSync('health.txt')) body += '\n\nhealth: ' + fs.readFileSync('health.txt', 'utf8').slice(0, 8000);
-            await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
-            await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, state: 'closed' });
+            await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), body });
+            await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), state: 'closed' });
       - name: Red run on a failed capture job (the health record carries the per-series detail)
         if: always() && (needs.crypto.result == 'failure' || needs.other.result == 'failure' || needs.equities.result == 'failure')
         run: |

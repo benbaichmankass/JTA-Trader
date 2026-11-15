@@ -8,6 +8,15 @@
 
 ## A. Standing alert subscriptions: wake-marker recipes
 
+> **Lane repository = `source_url` at creation (operator, 2026-11-12, binding).** A lane gets ONLY the repository named in
+> `create_session(source_url=...)`; a session's repositories are fixed when it starts. Work in another repo (the SPA
+> `ict-trader-dashboard`, the phone app `ict-trader-android`) is dispatched as a lane whose `source_url` IS that repo, or handed to a
+> standing multi-repo lane the operator started (tag `repos:3`, e.g. lane UI-SPA). **Never try `add_repo` mid-session as the route**:
+> the auto-mode classifier refuses it ("Access Added As A Means", 2026-11-11 and 2026-11-12), and a lane that cannot reach its repo
+> must NOT close quietly: its blocker goes to the operator the same turn, and the manager re-dispatches the work the same day.
+> Failure this rule closes: 2026-11-11/12 the UI lane merged only backend halves, the SPA halves sat unbuilt and the standing UI lane
+> was not re-dispatched (operator: "I don't understand why that lane went silent").
+
 ## Standing alert subscriptions (operator, 2026-10-13, binding)
 
 Full recipes (the exact `create_session` arguments, marker fields and receipts for every wake kind below): pre-diet § "Standing alert

@@ -45,6 +45,9 @@ power:
     accrual_basis: >-
       Re-measurement on freshly fetched Binance Vision daily candles over a pinned window; nothing accrues. The window is
       bounded by the USD-M listing dates (BTC 2019-09, ETH 2019-11, XRP/ADA 2020-01, SOL/AVAX 2020-09), not by any calendar.
+evidence_class:  # EVIDENCE-CLASS-BACKFILL 2026-11-11, rule H1 (scripts/research/backfill_evidence_class.py)
+  holdout: in_sample
+  claim: edge
 decision_rule:
   id: RULE-P7-A2-DAILY-DONCHIAN
   registered_at: '2026-10-18'

@@ -7,8 +7,8 @@ name: oci-capacity-report
 
 on:
   workflow_dispatch:
-  issues:
-    types: [opened]
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [oci-capacity-report]
 
 permissions:
   contents: read
@@ -22,10 +22,10 @@ jobs:
   report:
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       (github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'oci-capacity-report'))
+      (github.event_name == 'repository_dispatch' &&
+       (github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.client_payload.issue.labels.*.name, 'oci-capacity-report'))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -51,7 +51,7 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
-          ISSUE: ${{ github.event.issue.number }}
+          ISSUE: ${{ github.event.client_payload.issue.number }}
         run: |
           {
             printf '## oci-capacity-report\n\n%s\n\n' "$(cat /tmp/oci/rc.txt 2>/dev/null || echo 'rc=unknown')"

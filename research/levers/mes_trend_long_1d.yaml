@@ -57,7 +57,7 @@ attribution:
       gross_r: -0.796
 manifest:
   entry: tested
-  exit: untested
+  exit: tested
   filter: untested
   regime_gating: untested
   timeframe: untested
@@ -102,3 +102,74 @@ levers:
       best_delta_r_per_trade: 0.0006
       fold_stability: 0.5
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+  exit:
+    atr_stop_mult:
+      tests:
+      - value: '3.125'
+        baseline_value: '2.5'
+        arm: atr_stop_mult_hi
+        unit: RQ-20261106-022
+        window: 2020-11-02..2026-11-06
+        n: 24
+        net_r: 4.6634
+        baseline_n: 24
+        baseline_net_r: 6.0244
+        delta_net_r: -1.361
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 2.3796
+        verdict: indeterminate
+        joint_change: false
+      - value: '1.875'
+        baseline_value: '2.5'
+        arm: atr_stop_mult_lo
+        unit: RQ-20261106-022
+        window: 2020-11-02..2026-11-06
+        n: 26
+        net_r: 6.4426
+        baseline_n: 24
+        baseline_net_r: 6.0244
+        delta_net_r: 0.4182
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 3.3364
+        verdict: indeterminate
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: 0.0174
+      fold_stability: 0.5
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+    tp_r:
+      tests:
+      - value: '62.5'
+        baseline_value: '50.0'
+        arm: tp_r_hi
+        unit: RQ-20261106-022
+        window: 2020-11-02..2026-11-06
+        n: 24
+        net_r: 6.0244
+        baseline_n: 24
+        baseline_net_r: 6.0244
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 2.916
+        verdict: indeterminate
+        joint_change: false
+      - value: '37.5'
+        baseline_value: '50.0'
+        arm: tp_r_lo
+        unit: RQ-20261106-022
+        window: 2020-11-02..2026-11-06
+        n: 24
+        net_r: 6.0244
+        baseline_n: 24
+        baseline_net_r: 6.0244
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 2.916
+        verdict: indeterminate
+        joint_change: false
+      shape: flat
+      points: 2
+      best_delta_r_per_trade: 0.0
+      fold_stability: 1.0
+      reading: no response at the tested values

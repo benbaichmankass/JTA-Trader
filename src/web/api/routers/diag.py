@@ -19,6 +19,7 @@ Failure modes:
 """
 from __future__ import annotations
 
+import asyncio
 import functools
 import hmac
 import json
@@ -39,7 +40,11 @@ from src.runtime.exit_loop_health import (
     STATE_FILE_NAME as EXIT_LOOP_HEALTH_STATE_FILE,
 )
 from src.utils.paths import repo_root, runtime_logs_dir, trade_journal_db_path
-from src.web.api._account_read_executor import run_account_read
+from src.web.api._account_read_executor import (
+    is_ib_account,
+    run_account_read,
+    run_account_read_parallel,
+)
 from src.web.runtime_status import _resolve_git_sha
 
 logger = logging.getLogger(__name__)
@@ -274,6 +279,16 @@ _CANONICAL_UNITS: tuple[str, ...] = (
     # from the published mirror. Queryable so a session can confirm it is firing.
     "ict-trainer-disk-alarm.service",
     "ict-trainer-disk-alarm.timer",
+    # SEC-DETECTORS D1 (2026-11-11): SSH login watch. Queryable so a session can
+    # confirm it is firing and read what it counted.
+    "ict-security-watch.service",
+    "ict-security-watch.timer",
+    # MANAGER-VM-DIRECT-OPS (2026-11-12): the direct ops channel's runner and
+    # its queue watch. Queryable so a session can confirm the path unit is
+    # watching and read the runner's journal when a job reads
+    # runner_not_picking_up.
+    "ict-ops-runner.service",
+    "ict-ops-runner.path",
     # MI-83 (2026-09-02). The hourly work digest, moved off GitHub Actions
     # cron onto the VM's own clock: work-digest.yml declares `20 * * * *` and
     # fired 5 times in a day at :19/:10/:33/:47 over its complete run history.
@@ -425,6 +440,10 @@ _TARGET_EXTENSION_SOAK_LOG = runtime_logs_dir() / "target_extension_soak.jsonl"
 # unreadable on the one surface a relay-bound session can reach, which is the
 # defect #8778 shipped with `exit_loop_health`.
 _PROTECTION_REASSERT_SOAK_LOG = runtime_logs_dir() / "protection_reassert_soak.jsonl"
+# ALPACA-PARTIAL-TP-STOP-GAP: every step of replacing our own partially filled Alpaca target
+# (detect -> cancel -> post_cancel_read -> oco | fallback_stop), with the order ids
+# (src.runtime.order_monitor._alpaca_partial_tp_log_path).
+_ALPACA_PARTIAL_TP_LOG = runtime_logs_dir() / "alpaca_partial_tp_replace.jsonl"
 _STRAY_OCA_SOAK_LOG = runtime_logs_dir() / "stray_oca_soak.jsonl"
 # MI-150 — the ict_scalp exit-head consumer's staged soak. Allowlisted in the
 # SAME commit that ships the writer: an env-gated path whose only observation
@@ -590,6 +609,10 @@ _ATTENTION_WATCH_RECEIPT = (
     Path(repo_root()) / "runtime_logs" / "attention_watch_receipt.json"
 )
 
+# UNBLOCK-WATCH (2026-11-12). The blocked-item evaluator's receipt: counts per status, alerts planned/appended.
+# Rides ict-work-digest (scripts/ops/unblock_watch.py::tick), anchored to repo_root() like the attention receipt.
+_UNBLOCK_WATCH_RECEIPT = Path(repo_root()) / "runtime_logs" / "unblock_watch_receipt.json"
+
 # LTR-1B B2b (2026-10-26). The live trader's in-process ltr-wake poster's
 # receipt: posted / could_not_post (+ http_code) / already_posted / nothing_due
 # / due_could_not_look, so "did not post" and "could not post" are readable
@@ -638,6 +661,9 @@ _DESK_WATCH_STATUS = Path(repo_root()) / "runtime_logs" / "live_review" / "desk_
 _DIRECTED_ACTIONS_LOG = Path(repo_root()) / "runtime_logs" / "directed_actions" / "receipts.jsonl"
 _DIRECTED_ACTIONS_STATUS = Path(repo_root()) / "runtime_logs" / "directed_actions" / "pass_status.json"
 _DIRECTED_ACTIONS_WATCH_STATUS = Path(repo_root()) / "runtime_logs" / "directed_actions" / "watch_status.json"
+# TRADE-ACTION-DIRECT-PATH phase 1: every Telegram Approve/Reject ask and decision.
+_TRADE_APPROVALS_LOG = Path(repo_root()) / "runtime_logs" / "trade_approvals" / "journal.jsonl"
+_TRADE_APPROVALS_PENDING = Path(repo_root()) / "runtime_logs" / "trade_approvals" / "pending.json"
 # DESK-PAPER-ACCOUNTS (2026-10-27): the claude_desk leg's own ledger -- one line per accepted proposal that ended
 # without a package (expired_unfilled, e.g. waiting on a closed ETF/CME market; a refused bracket). Written by
 # src/units/strategies/claude_desk.py::record (ledger_path()).
@@ -656,6 +682,10 @@ _LTR_FIRST_PROOF = Path(repo_root()) / "runtime_logs" / "ltr_first_proof.json"
 # one line per package per closed bar, for per-trigger grading. Same anchor as the
 # writer (src.runtime.live_review_wake_post.prescreen_log_path).
 _LTR_PRESCREEN_LOG = Path(repo_root()) / "runtime_logs" / "live_review" / "prescreen.jsonl"
+# TRADE-ACTION-DIRECT-PATH phase 3: every live-review routine fire (fired / rate_limited / could_not_fire /
+# rate_limited_backoff), with the session id and due -> fire latency. Same anchor as the writer
+# (src.runtime.live_review_routine_fire.fires_log_path). Carries no part of the token.
+_LTR_FIRES_LOG = Path(repo_root()) / "runtime_logs" / "live_review" / "fires.jsonl"
 
 # TRAIL-OBSERVABILITY (2026-10-07, PI-20261006-KX6ZKFNA-0003). The prop trail's
 # former pause latch (`modify_rollout.json`; retired by NO-HALT 2026-10-09, so
@@ -688,6 +718,8 @@ _LOG_FILES: dict[str, Path] = {
     "telegram_settings": _TELEGRAM_SETTINGS,
     # WORK-SYSTEM. "Did the attention watch run, and what did it send?"
     "attention_watch_receipt": _ATTENTION_WATCH_RECEIPT,
+    # UNBLOCK-WATCH: did the evaluator run, what cleared, what did it alert.
+    "unblock_watch_receipt": _UNBLOCK_WATCH_RECEIPT,
     # LTR-1B B2b: did the VM post the ltr-wake comment, and if not, why.
     "ltr_wake_post_receipt": _LTR_WAKE_POST_RECEIPT,
     # DESK-6B: did the packet landing post the desk-wake, and if not, why.
@@ -698,6 +730,7 @@ _LOG_FILES: dict[str, Path] = {
     # LTR C1: did the VM apply a rows-branch row, with what verdict and latency.
     "live_review_rows_watch": _LTR_ROWS_WATCH_LOG,
     "ltr_prescreen": _LTR_PRESCREEN_LOG,
+    "live_review_fires": _LTR_FIRES_LOG,
     "live_review_rows_watch_status": _LTR_ROWS_WATCH_STATUS,
     # DESK-4-INTAKE: what happened to each desk decision row on the VM, and why.
     "desk_intake": _DESK_INTAKE_LOG,
@@ -707,6 +740,8 @@ _LOG_FILES: dict[str, Path] = {
     "directed_actions": _DIRECTED_ACTIONS_LOG,
     "directed_actions_status": _DIRECTED_ACTIONS_STATUS,
     "directed_actions_watch_status": _DIRECTED_ACTIONS_WATCH_STATUS,
+    "trade_approvals": _TRADE_APPROVALS_LOG,
+    "trade_approvals_pending": _TRADE_APPROVALS_PENDING,
     "desk_leg": _DESK_LEG_LEDGER,
     "oi_feed_status": _OI_FEED_STATUS,
     "e4_decisions": _E4_DECISIONS_LOG,
@@ -784,6 +819,7 @@ _LOG_FILES: dict[str, Path] = {
     "overlay_shadow": _OVERLAY_SHADOW_LOG,
     "target_extension_soak": _TARGET_EXTENSION_SOAK_LOG,
     "protection_reassert_soak": _PROTECTION_REASSERT_SOAK_LOG,
+    "alpaca_partial_tp_replace": _ALPACA_PARTIAL_TP_LOG,
     "stray_oca_soak": _STRAY_OCA_SOAK_LOG,
     "ict_scalp_exit_head_soak": _ICT_SCALP_EXIT_HEAD_SOAK_LOG,
     "bybit_coverage_soak": _BYBIT_COVERAGE_SOAK_LOG,
@@ -1415,6 +1451,20 @@ def _require_diag_token(request: Request) -> None:
     # the session's Authorization header (measured: 401 from a fresh ICT-env session
     # whose DIAG_READ_TOKEN fingerprint matched the VM's), so sessions send it here.
     # When present it alone decides, so the two carriers can never disagree silently.
+    # DIAG-DIRECT-READ (operator 2026-11-12: "you need to be able to read the logs of all the VMs and apps
+    # directly, without going through git"): the work-store credential the session proxy injects on every
+    # request to this host also opens the read-only diag routes. It already authorizes the ops channel's
+    # Tier-2 actions (routers/ops_channel.py), so a read is strictly narrower. Checked first; when that
+    # header is present it alone decides.
+    ws_tok = request.headers.get("X-Work-Store-Token")
+    if ws_tok is not None:
+        from src.web.api.routers.work_items import work_store_token_ok  # rotation dual-accept (VM-CHANGE-LEDGER)
+        if work_store_token_ok(ws_tok):
+            return
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"error": "invalid_token"},
+        )
     header_tok = request.headers.get(DIAG_TOKEN_HEADER)
     if header_tok is not None:
         if not header_tok.strip() or not hmac.compare_digest(header_tok.strip(), expected):
@@ -2593,9 +2643,9 @@ def get_journalctl(
 _NON_RUNTIME_PATHS_RE = re.compile(
     r"^(docs/|tests/|\.claude/|\.github/|[^/]+\.md$|research/|runtime_logs/"
     r"|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/"
-    r"|comms/(desk|live_review|live_parity|cloud|prop_survival|claude_judgments|reviews|ops|ci|ml-plan|news_alpha|strategy_reviews|reports|data_lake)/"
+    r"|comms/(desk|live_review|live_parity|cloud|prop_survival|claude_judgments|reviews|ops|ci|ml-plan|news_alpha|strategy_reviews|reports|data_lake|backups)/"
     r"|comms/claude_strategy_scores\.jsonl$"
-    r"|tools/phone-executor/|tools/phone-probe/|deploy/trainer/)"
+    r"|tools/phone-executor/|tools/phone-probe/|deploy/trainer/|\.gitignore$|\.gitattributes$)"
 )
 # ...except these scripts/research modules, which the web-api's brief imports
 # in-process (OA-16(d), PI-20261004-GCFA5DOR-0010). They stay runtime. Mirrors
@@ -2711,6 +2761,73 @@ def _deployed_sha_by_unit() -> dict[str, str | None]:
     return out
 
 
+_UNIT_CONFIG_PROPS = ("FragmentPath", "DropInPaths", "ActiveEnterTimestamp", "NeedDaemonReload")
+
+
+def _parse_systemd_ts(value: str) -> datetime | None:
+    """``Thu 2026-11-12 10:20:54 UTC`` -> aware datetime; None when empty/unparseable."""
+    parts = (value or "").split()
+    # Only UTC is parsed (the VMs run UTC); another zone is "could not look", never a guess.
+    if len(parts) != 4 or parts[3] != "UTC":
+        return None
+    try:
+        return datetime.strptime(f"{parts[1]} {parts[2]}", "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def _unit_config_pending(units: list[str],
+                         show: Any = None,
+                         mtime: Any = None) -> dict[str, bool | None]:
+    """DEPLOY-UNIT-RESTART-DETECT: per unit, True when its INSTALLED unit file or a
+    drop-in is newer than the running process (or systemd says a daemon-reload is
+    pending), i.e. the process runs a launch config it never loaded.
+
+    MEASURED 2026-11-12 (#25185): web-api restarted at 10:08:33 on the OLD unit,
+    install_systemd_units rewrote it later, and ``restart_pending`` read False
+    because running sha == checkout sha. The sha diff cannot see this; the unit
+    file's mtime against ``ActiveEnterTimestamp`` can. Three-way, never collapsed:
+    None = could not look (no systemctl, unparseable start time, unreadable file).
+    """
+    show = show or _systemctl_show
+    mtime = mtime or (lambda path: os.stat(path).st_mtime)
+    shown = show(units, _UNIT_CONFIG_PROPS)
+    out: dict[str, bool | None] = {}
+    for unit in units:
+        props = shown.get(unit)
+        if not props:
+            out[unit] = None
+            continue
+        if props.get("NeedDaemonReload", "").lower() == "yes":
+            out[unit] = True
+            continue
+        started = _parse_systemd_ts(props.get("ActiveEnterTimestamp", ""))
+        paths = [p for p in [props.get("FragmentPath", "")] + props.get("DropInPaths", "").split() if p]
+        if started is None or not paths:
+            out[unit] = None
+            continue
+        try:
+            newest = max(mtime(p) for p in paths)
+        except OSError:
+            out[unit] = None
+            continue
+        # systemd timestamps are whole seconds: a file written in the same second
+        # as the start is not counted as newer.
+        out[unit] = newest >= started.timestamp() + 1
+    return out
+
+
+def _either_pending(code: bool | None, config: bool | None) -> bool | None:
+    """The code verdict, escalated to True when the launch config says pending.
+
+    A config check that could not look (``None``, e.g. no systemctl) never
+    downgrades a known code verdict -- it is reported on its own in
+    ``unit_config_pending_by_unit`` -- so the per-unit flag keeps its meaning."""
+    if config is True:
+        return True
+    return code
+
+
 @router.get("/version")
 def get_version(request: Request) -> dict[str, Any]:
     """Diagnostic — git SHA + captured timestamp of the running web-api
@@ -2731,6 +2848,7 @@ def get_version(request: Request) -> dict[str, Any]:
     restart_pending = _restart_pending(_RUNNING_GIT_SHA, on_disk)
     trader_sha = _trader_running_sha()
     trader_pending = _trader_restart_pending(trader_sha, on_disk)
+    unit_cfg = _unit_config_pending([WEB_API_UNIT, TRADER_UNIT])
     return {
         # The sha the RUNNING process was loaded from -- captured once at
         # import. This is what the field name and this endpoint's whole
@@ -2749,10 +2867,14 @@ def get_version(request: Request) -> dict[str, Any]:
         # older sha whose loaded code is identical, so the trader has its own
         # running sha and its own pending flag. Same three-way None.
         "trader_git_sha": trader_sha,
+        # A unit is pending when its CODE differs (sha diff above) OR its installed
+        # launch config (unit file / drop-in) is newer than the running process
+        # (DEPLOY-UNIT-RESTART-DETECT; the cause is in unit_config_pending_by_unit).
         "restart_pending_by_unit": {
-            WEB_API_UNIT: restart_pending,
-            TRADER_UNIT: trader_pending,
+            WEB_API_UNIT: _either_pending(restart_pending, unit_cfg.get(WEB_API_UNIT)),
+            TRADER_UNIT: _either_pending(trader_pending, unit_cfg.get(TRADER_UNIT)),
         },
+        "unit_config_pending_by_unit": unit_cfg,
         "deployed_sha_by_unit": _deployed_sha_by_unit(),
         "captured_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -3038,6 +3160,7 @@ async def get_exchange_positions(
     request: Request,
     account_id: str | None = None,
     symbol: str | None = None,
+    deadline_s: float = 8.0,
 ) -> dict[str, Any]:
     """Read-only **exchange-side** open positions per account — the BROKER's
     truth, not the journal.
@@ -3082,6 +3205,20 @@ async def get_exchange_positions(
     ``requested_symbol`` is echoed so a reader can prove the parameter was
     honoured. Still places, modifies and cancels nothing.
 
+    **Parallel, with a per-account deadline** (row DIAG-EXCHANGE-POSITIONS-SLOW,
+    2026-11-14). Accounts used to be read one after another, and the all-accounts
+    form passed the proxy's 30 s upstream limit (HTTP 502 for every caller). Now
+    non-IB accounts are read side by side on ``run_account_read_parallel``. IB
+    accounts stay on the single-worker ``run_account_read`` lane
+    (BL-20260706-IBCONCURRENCY), concurrently with the rest. Each account gets
+    ``deadline_s`` (default 8, clamped 1..25), and each row carries
+    ``read_state``:
+      * ``ok``: read answered (positions may still be ``null`` = could-not-read
+        by the venue helper);
+      * ``timed_out``: no answer within the deadline (positions ``null``);
+      * ``error``: the read raised (``error`` names it).
+    ``elapsed_s`` is per account. One slow account never fails or stalls the call.
+
     Tier 1 — read-only, token-gated, best-effort per account.
     """
     _require_diag_token(request)
@@ -3097,21 +3234,31 @@ async def get_exchange_positions(
         ) from exc
 
     accounts = _diag_accounts("get_exchange_positions", list_accounts, account_id)
+    try:
+        deadline = min(max(float(deadline_s), 1.0), 25.0)
+    except (TypeError, ValueError):
+        deadline = 8.0
 
-    out: list[dict[str, Any]] = []
-    for acc in accounts:
+    async def _read(acc: Any, fn: Any, *args: Any) -> Any:
+        # Offloaded (BL-20260706-IBCONCURRENCY): IB on the single-worker lane,
+        # everything else on the parallel lane. Never call the helper directly.
+        runner = run_account_read if is_ib_account(acc) else run_account_read_parallel
+        return await asyncio.wait_for(runner(fn, acc, *args), timeout=deadline)
+
+    async def _one(acc: Any) -> dict[str, Any]:
         aid = (acc or {}).get("account_id")
-        if account_id and aid != account_id:
-            continue
+        t0 = time.monotonic()
         positions: Any = None
         err: str | None = None
+        read_state = "ok"
         try:
-            # Offloaded — see the docstring above + _account_read_executor
-            # module docstring (BL-20260706-IBCONCURRENCY): a direct call
-            # here would drive ib_insync's own event loop on top of
-            # uvicorn's already-running one under concurrent requests.
-            positions = await run_account_read(account_open_positions, acc)
-        except Exception as exc:  # noqa: BLE001  # allow-silent: per-account error surfaced in the row (error + positions=null), logged; one account must not fail the call
+            positions = await _read(acc, account_open_positions)
+        except asyncio.TimeoutError:
+            read_state = "timed_out"
+            err = f"timed_out after {deadline:g}s"
+            logger.warning("get_exchange_positions: %s timed out after %ss", aid, deadline)
+        except Exception as exc:  # noqa: BLE001  # allow-silent: per-account error surfaced in the row (read_state error + positions=null), logged; one account must not fail the call
+            read_state = "error"
             err = f"{type(exc).__name__}: {exc}"
             logger.warning("get_exchange_positions: %s raised %s", aid, exc)
         row: dict[str, Any] = {
@@ -3129,8 +3276,11 @@ async def get_exchange_positions(
             books_err: str | None = None
             if is_bybit:
                 try:
-                    books = await run_account_read(
-                        account_bybit_symbol_books, acc, want_symbol)
+                    books = await _read(acc, account_bybit_symbol_books, want_symbol)
+                except asyncio.TimeoutError:
+                    books_err = f"timed_out after {deadline:g}s"
+                    logger.warning(
+                        "get_exchange_positions: %s symbol read %s timed out", aid, want_symbol)
                 except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced in the row (symbol_read=could_not_look + error), logged
                     books_err = f"{type(exc).__name__}: {exc}"
                     logger.warning(
@@ -3151,11 +3301,18 @@ async def get_exchange_positions(
         row["positions"] = positions
         row["count"] = len(positions) if isinstance(positions, list) else None
         row["error"] = err
-        out.append(row)
+        row["read_state"] = read_state
+        row["elapsed_s"] = round(time.monotonic() - t0, 3)
+        return row
+
+    wanted = [acc for acc in accounts
+              if not account_id or (acc or {}).get("account_id") == account_id]
+    out: list[dict[str, Any]] = list(await asyncio.gather(*(_one(acc) for acc in wanted)))
     return {
         "captured_at": datetime.now(timezone.utc).isoformat(),
         "requested_account_id": account_id,
         "requested_symbol": want_symbol,
+        "deadline_s": deadline,
         "accounts": out,
     }
 
@@ -4227,6 +4384,57 @@ def get_live_review_due(request: Request) -> dict[str, Any]:
     return live_review_due(mark_fn=last_mark_price)
 
 
+def _ml_pool_snapshot_dir() -> Path:
+    """Where the ml_entry_eq* pool snapshots live (``ML_ENTRY_EQ_SNAPSHOT`` overrides the live file, as in the refresher; the archive sits beside it)."""
+    env = os.environ.get("ML_ENTRY_EQ_SNAPSHOT")
+    if env:
+        return Path(env).parent
+    from src.utils.paths import data_dir
+    return Path(data_dir()) / "ml_entry_eq"
+
+
+_ML_POOL_BAR_RE = re.compile(r"^\d{8}T\d{4}Z$")
+
+
+@router.get("/ml_pool_snapshots")
+def get_ml_pool_snapshots(request: Request, bar: str | None = None, limit: int = 40) -> dict[str, Any]:
+    """The ARCHIVED ml_entry_eq* pool snapshots (row ML-LIVE-PARITY-ML-LEGS), the input the live-vs-replay parity job re-scores.
+
+    No ``bar``: the index, newest first -- ``{bar, bytes, bar_close, built_at, covered, pool_size}`` per ``history/<bar>.json`` (``limit`` <= 200).
+    ``bar=20261111T1900Z``: that one snapshot, verbatim. ``read_state`` is ``looked`` / ``could_not_look``; ``snapshots`` is ``null`` -- not ``[]`` --
+    when the directory could not be read, and ``present: false`` says the archive does not exist (yet). Pure file read, no socket, no order path. Tier 1.
+    """
+    _require_diag_token(request)
+    hist = _ml_pool_snapshot_dir() / "history"
+    if bar is not None:
+        if not _ML_POOL_BAR_RE.match(bar):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error": "bad_bar", "want": "YYYYMMDDTHHMMZ"})
+        f = hist / f"{bar}.json"
+        try:
+            return {"read_state": "looked", "bar": bar, "snapshot": json.loads(f.read_text(encoding="utf-8"))}
+        except FileNotFoundError:
+            return {"read_state": "looked", "bar": bar, "snapshot": None, "present": False}
+        except (OSError, ValueError) as exc:
+            return {"read_state": "could_not_look", "bar": bar, "snapshot": None, "error": f"{type(exc).__name__}: {exc}"}
+    n = _clamp(limit, 40, 200)
+    if not hist.is_dir():
+        return {"read_state": "looked", "present": False, "snapshots": [], "count": 0}
+    try:
+        files = sorted(hist.glob("*.json"), reverse=True)
+    except OSError as exc:
+        return {"read_state": "could_not_look", "present": None, "snapshots": None, "error": f"{type(exc).__name__}: {exc}"}
+    rows: list[dict[str, Any]] = []
+    for f in files[:n]:
+        row: dict[str, Any] = {"bar": f.stem, "bytes": f.stat().st_size}
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+            row.update({k: d.get(k) for k in ("bar_close", "built_at", "covered", "pool_size")})
+        except (OSError, ValueError) as exc:
+            row["error"] = f"{type(exc).__name__}: {exc}"
+        rows.append(row)
+    return {"read_state": "looked", "present": True, "snapshots": rows, "count": len(rows), "total_in_archive": len(files)}
+
+
 @router.get("/tick_cost")
 def get_tick_cost(request: Request) -> dict[str, Any]:
     """Per-tick wall-clock cost of the trader's hook chain (2026-08-09).
@@ -4262,6 +4470,7 @@ def get_tick_cost(request: Request) -> dict[str, Any]:
 async def get_bybit_open_orders(
     request: Request,
     account_id: str | None = None,
+    deadline_s: float = 15.0,
 ) -> dict[str, Any]:
     """Read-only **Bybit resting orders + position-level protection**.
 
@@ -4305,6 +4514,14 @@ async def get_bybit_open_orders(
     axis is that row's criterion 4 -- a Tier-2/3 change to the ENFORCING path,
     and deliberately not proposed here.
 
+    **Parallel, with a per-account deadline** (row DIAG-BYBIT-OPEN-ORDERS-SLOW, 2026-11-15). The accounts were read
+    one after another through the single-worker account lane: one account answers in ~6 s, the all-accounts call took
+    21-31 s and 502'd at the proxy, and the live-review packet's venue-order read failed (``timed_out_after_connect``
+    2/2 on 2026-11-15) for real-money packages. Bybit accounts are now read side by side on
+    ``run_account_read_parallel`` (the DIAG-EXCHANGE-POSITIONS-SLOW lane), each bounded by ``deadline_s`` (default 15,
+    clamped 1..25, under the proxy's 30 s). A slow account reads ``read_state: "timed_out"`` with ``result`` null;
+    ``elapsed_s`` is per account. Values of ``read_state`` other than ``orders_read`` mean could-not-look.
+
     Tier 1 -- read-only, token-gated, best-effort per account.
     """
     _require_diag_token(request)
@@ -4319,23 +4536,31 @@ async def get_bybit_open_orders(
         ) from exc
 
     accounts = _diag_accounts("get_bybit_open_orders", list_accounts, account_id)
+    try:
+        deadline = min(max(float(deadline_s), 1.0), 25.0)
+    except (TypeError, ValueError):
+        deadline = 15.0
 
-    out: list[dict[str, Any]] = []
-    for acc in accounts:
+    async def _one(acc: Any) -> dict[str, Any]:
         aid = (acc or {}).get("account_id")
-        if account_id and aid != account_id:
-            continue
         is_bybit = ((acc or {}).get("exchange") or "unknown").lower() == "bybit"
         result: Any = None
         err: str | None = None
+        timed_out = False
+        t0 = time.monotonic()
         if is_bybit:
             try:
-                result = await run_account_read(account_bybit_open_orders, acc)
+                result = await asyncio.wait_for(run_account_read_parallel(account_bybit_open_orders, acc),
+                                                timeout=deadline)
+            except asyncio.TimeoutError:
+                timed_out = True
+                err = f"timed_out after {deadline:g}s"
+                logger.warning("get_bybit_open_orders: %s timed out after %ss", aid, deadline)
             except Exception as exc:  # noqa: BLE001  # allow-silent: per-account error surfaced in the row (error + result=null), logged; one account must not fail the call
                 err = f"{type(exc).__name__}: {exc}"
                 logger.warning("get_bybit_open_orders: %s raised %s", aid, exc)
         ok = isinstance(result, dict)
-        out.append({
+        return {
             "account_id": aid,
             "exchange": (acc or {}).get("exchange"),
             "mode": (acc or {}).get("mode"),
@@ -4343,16 +4568,22 @@ async def get_bybit_open_orders(
             "read_state": (
                 "not_bybit" if not is_bybit
                 else "orders_read" if ok
+                else "timed_out" if timed_out
                 else "could_not_look"
             ),
-            "result": result,
+            "result": result if ok else None,
             "position_count": (len(result.get("positions") or []) if ok else None),
             "order_count": (len(result.get("orders") or []) if ok else None),
+            "elapsed_s": round(time.monotonic() - t0, 3) if is_bybit else None,
             "error": err,
-        })
+        }
+
+    wanted = [acc for acc in accounts if not account_id or (acc or {}).get("account_id") == account_id]
+    out: list[dict[str, Any]] = list(await asyncio.gather(*(_one(acc) for acc in wanted)))
     return {
         "captured_at": datetime.now(timezone.utc).isoformat(),
         "requested_account_id": account_id,
+        "deadline_s": deadline,
         "count": len(out),
         "accounts": out,
     }

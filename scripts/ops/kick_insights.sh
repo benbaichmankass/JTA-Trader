@@ -18,6 +18,8 @@
 #   action: kick-insights
 #   reason: <text>
 set -euo pipefail
+# read-only SQL without the sqlite3 CLI (not installed on the VM): scripts/ops/db_read.py
+_DBR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/db_read.py"
 
 SCRIPT_NAME="kick_insights"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -47,7 +49,7 @@ journalctl -u "${UNIT}" -n 80 --no-pager 2>&1 | sed 's/^/  /' || true
 echo ""
 echo "=== KICK-INSIGHTS — 5 most recent usage rows ==="
 if [ -f "${DB_PATH}" ]; then
-    sqlite3 "file:${DB_PATH}?mode=ro" -readonly -header -column \
+    python3 "${_DBR}" --table "${DB_PATH}" \
         "SELECT id, ts, endpoint, model_id, status,
                 input_tokens, output_tokens,
                 printf('%.4f', estimated_cost_usd) AS cost_usd
@@ -58,7 +60,7 @@ fi
 echo ""
 echo "=== KICK-INSIGHTS — 5 most recent history rows ==="
 if [ -f "${DB_PATH}" ]; then
-    sqlite3 "file:${DB_PATH}?mode=ro" -readonly -header -column \
+    python3 "${_DBR}" --table "${DB_PATH}" \
         "SELECT id, generated_at, endpoint, strategy_name, model_id, grade
          FROM insights_history
          ORDER BY id DESC LIMIT 5" 2>&1 | sed 's/^/  /'

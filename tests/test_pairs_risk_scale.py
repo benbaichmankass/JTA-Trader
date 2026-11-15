@@ -391,4 +391,6 @@ def test_every_session_venue_pair_in_config_sizes_on_the_fixed_beta_r_unit():
         if pv.is_session_venue(acct):
             session_pairs.append(pair["name"])
             assert str(pair.get("hedge_beta", "rolling")) == "one", pair["name"]
+    if not (pairs_cfg.get("pairs") or []):
+        pytest.skip("M22 pairs sleeve retired by record 2026-11-11 (pairs: []); nothing to size")
     assert session_pairs, "probe found no session-venue pair; the check would be vacuous"

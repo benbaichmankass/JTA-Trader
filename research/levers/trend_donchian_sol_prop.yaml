@@ -4,83 +4,84 @@ subject: trend_donchian_sol_prop
 kind: strategy_leg
 status: production
 books:
-- bybit_1
+- bybit_2
+- bybit_portfolio
 baseline:
   record: comms/strategy_evidence/trend_donchian_sol_prop.json
-  net_r: 48.0322
-  n: 395
+  net_r: 49.8124
+  n: 538
   fidelity: faithful
   rule_verdict: pass
 attribution:
   read_state: measured
-  n: 395
-  net_r: 48.032
-  gross_r: 69.811
-  cost_r: 21.779
-  cost_share_of_gross: 0.312
+  n: 538
+  net_r: 49.812
+  gross_r: 80.692
+  cost_r: 30.879
+  cost_share_of_gross: 0.383
   verdict_hint: gross edge survives cost
   entry_quality:
-    mean_mfe_r: 1.19
-    share_mfe_ge_1r: 0.486
-    n_with_mfe: 395
+    mean_mfe_r: 1.23
+    share_mfe_ge_1r: 0.496
+    n_with_mfe: 538
   exit_capture:
-    median_net_over_mfe_winners: 0.515
-    n_winners: 159
-    losers_that_reached_1r_mfe: 49
+    median_net_over_mfe_winners: 1.001
+    n_winners: 191
+    losers_that_reached_1r_mfe: 96
   by_year:
     '2020':
-      n: 6
-      net_r: 2.533
-      gross_r: 2.771
+      n: 7
+      net_r: 3.291
+      gross_r: 3.619
     '2021':
-      n: 76
-      net_r: 20.198
-      gross_r: 22.624
+      n: 115
+      net_r: 15.078
+      gross_r: 18.859
     '2022':
-      n: 58
-      net_r: 1.832
-      gross_r: 4.821
+      n: 69
+      net_r: 14.044
+      gross_r: 17.826
     '2023':
-      n: 74
-      net_r: 17.121
-      gross_r: 20.993
+      n: 102
+      net_r: 13.935
+      gross_r: 19.632
     '2024':
-      n: 62
-      net_r: 3.016
-      gross_r: 6.571
+      n: 86
+      net_r: -7.644
+      gross_r: -2.425
     '2025':
-      n: 67
-      net_r: 3.458
-      gross_r: 8.017
+      n: 91
+      net_r: 3.799
+      gross_r: 9.768
     '2026':
-      n: 52
-      net_r: -0.125
-      gross_r: 4.014
+      n: 68
+      net_r: 7.31
+      gross_r: 13.413
   by_direction:
     long:
-      n: 395
-      net_r: 48.032
-      gross_r: 69.811
+      n: 538
+      net_r: 49.812
+      gross_r: 80.692
   by_exit_reason:
     stop:
-      n: 105
-      net_r: -110.34
-      gross_r: -105.0
+      n: 233
+      net_r: -244.711
+      gross_r: -233.0
     take_profit:
-      n: 70
-      net_r: 163.086
-      gross_r: 166.095
+      n: 117
+      net_r: 288.301
+      gross_r: 293.842
     trail_stop:
-      n: 220
-      net_r: -4.714
-      gross_r: 8.716
+      n: 188
+      net_r: 6.223
+      gross_r: 19.85
   by_adx_at_entry:
     unknown:
-      n: 395
-      net_r: 48.032
-      gross_r: 69.811
+      n: 538
+      net_r: 49.812
+      gross_r: 80.692
 manifest:
-  entry: untested
+  entry: tested
   exit: tested
   filter: tested
   regime_gating: untested
@@ -90,6 +91,77 @@ manifest:
   session: tested
   sizing_vs_cost: untested
 levers:
+  entry:
+    donchian:
+      tests:
+      - value: '25'
+        baseline_value: '20'
+        arm: donchian_hi
+        unit: RQ-20261106-032
+        window: 2021-11-02..2026-11-05
+        n: 267
+        net_r: 16.8625
+        baseline_n: 305
+        baseline_net_r: 28.9053
+        delta_net_r: -12.0428
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 11.3123
+        verdict: fail
+        joint_change: false
+      - value: '15'
+        baseline_value: '20'
+        arm: donchian_lo
+        unit: RQ-20261106-032
+        window: 2021-11-02..2026-11-05
+        n: 336
+        net_r: 20.2498
+        baseline_n: 305
+        baseline_net_r: 28.9053
+        delta_net_r: -8.6555
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 13.2552
+        verdict: fail
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: -0.0284
+      fold_stability: 0.25
+      reading: every tested value is worse than the baseline
+    min_confidence:
+      tests:
+      - value: '1.0'
+        baseline_value: '0.8'
+        arm: min_confidence_hi
+        unit: RQ-20261106-032
+        window: 2021-11-02..2026-11-05
+        n: 234
+        net_r: 29.0746
+        baseline_n: 305
+        baseline_net_r: 28.9053
+        delta_net_r: 0.1693
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 12.9888
+        verdict: fail
+        joint_change: false
+      - value: '0.6'
+        baseline_value: '0.8'
+        arm: min_confidence_lo
+        unit: RQ-20261106-032
+        window: 2021-11-02..2026-11-05
+        n: 385
+        net_r: 21.2086
+        baseline_n: 305
+        baseline_net_r: 28.9053
+        delta_net_r: -7.6967
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 15.1608
+        verdict: fail
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: 0.0006
+      fold_stability: 0.25
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
   exit:
     tp_target_r:
       tests:
@@ -2046,10 +2118,24 @@ levers:
         max_drawdown_r: 12.3722
         verdict: fail
         joint_change: false
+      - value: '3.0'
+        baseline_value: '6.0'
+        arm: T3
+        unit: RQ-20261107-47b6-10
+        window: 2021-09-24..2023-09-23
+        n: 118
+        net_r: 16.219
+        baseline_n: 117
+        baseline_net_r: 15.3948
+        delta_net_r: 0.8242
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 9.0949
+        verdict: fail
+        joint_change: false
       shape: noisy
-      points: 6
+      points: 7
       best_delta_r_per_trade: 0.0223
-      fold_stability: 0.347
+      fold_stability: 0.369
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
     tp_revision:
       tests:
@@ -2207,10 +2293,24 @@ levers:
         max_drawdown_r: 9.9592
         verdict: fail
         joint_change: false
+      - value: '120'
+        baseline_value: 'off'
+        arm: GTD120
+        unit: RQ-20261107-47b6-12
+        window: 2021-09-24..2023-09-23
+        n: 117
+        net_r: 15.3717
+        baseline_n: 117
+        baseline_net_r: 15.3948
+        delta_net_r: -0.0231
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 9.0949
+        verdict: fail
+        joint_change: false
       shape: flat
-      points: 3
+      points: 4
       best_delta_r_per_trade: 0.0111
-      fold_stability: 0.833
+      fold_stability: 0.812
       reading: no response at the tested values
     trail_decay_stall_bars:
       tests:
@@ -3321,3 +3421,63 @@ levers:
       best_delta_r_per_trade: -0.034
       fold_stability: 0.417
       reading: every tested value is worse than the baseline
+levers_tested:
+- family: 'exit (conditional profit lock: stop to entry + (k-1)R once MFE >= kR)'
+  varied: arm A config-exact vs L2 (k 2), L25 (k 2.5), L2T (k 2 armed only with the TP within 0.5R), record 2025-11-13..2026-11-12 + year before,
+    live decision bar, full cost stack
+  response:
+    verdict: fail
+    unit_verdict: fail
+    run: '43589684532'
+    rule: RULE-PROFIT-LOCK-CONDITIONAL-20261114
+    arms: L2 --be-floor-r 2 --be-floor-lock-r 1 (primary); L25 --be-floor-r 2.5 --be-floor-lock-r 1.5; L2T L2 + --be-floor-tp-within-r 0.5
+    A:
+      record_net_r: 4.9694
+      record_n: 81
+      prior_net_r: -3.0027
+      prior_n: 88
+    L2:
+      verdict: fail
+      record_net_r: 2.7922
+      record_n: 82
+      record_folds_positive: 2
+      delta_record: -2.1772
+      prior_net_r: 0.8952
+      delta_prior: 3.8979
+    L25:
+      verdict: fail
+      record_net_r: 1.959
+      record_n: 84
+      record_folds_positive: 2
+      delta_record: -3.0104
+      prior_net_r: -4.8388
+      delta_prior: -1.8361
+    L2T:
+      verdict: fail
+      record_net_r: 4.4163
+      record_n: 82
+      record_folds_positive: 2
+      delta_record: -0.5531
+      prior_net_r: -3.0027
+      delta_prior: 0.0
+    pooled:
+      L2:
+        delta_record: -30.2489
+        delta_prior: -18.9327
+        verdict: fail
+      L25:
+        delta_record: -37.5409
+        delta_prior: -22.8675
+        verdict: fail
+      L2T:
+        delta_record: -9.1846
+        delta_prior: 1.5882
+        verdict: fail
+    reading: 'unit FAIL: an MFE-armed lock gives back more R than it saves, pooled over 18 crypto legs on both windows (L2 -30.25R record / -18.93R
+      year before); the TP-gated variant is near-neutral (-9.18R / +1.59R); no per-leg pass on any arm'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-05
+  lever_family: exit
+units:
+- RQ-20261114-db1a-05

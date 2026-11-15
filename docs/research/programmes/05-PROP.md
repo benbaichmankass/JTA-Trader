@@ -2,6 +2,32 @@
 
 > **Doc status:** `unknown` · category `evidence` · last verified `2026-10-16` · registered in [`../../DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · lane `P5-PROP-PROGRAMME` (manager dispatch, weekly planning 2026-10-14) · map: [`RESEARCH-MAP.md`](RESEARCH-MAP.md) · roadmap `L-PROP` · **Tier-1 document: it proposes tests; every roster, sizing or switch change it leads to is Tier-3 with an evidence record.**
 
+## Programme review 2026-11-11 (lane PROGRAMME-REVIEW-20261111) — TRADING track
+
+Population: units with a result row generated 2026-11-04T19:30Z..2026-11-11T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`; 2,183 units read, 0 unreadable; 455 result rows): **311 units with rows** — 72 pass, 134 fail, 42 indeterminate, 5 no_action_warranted, 1 not_applicable, 57 with no unit verdict yet (28 ungraded). 119 carry a programme field (P1 38, P2 50, P3 14, P4 2, P5 9, P6 6, P7 0); **192 do not** (live_strategy 110, new_strategy_prop 37, ml_health 31, infra 11, timeframes 2, none 1) and are assigned below by what they ask. Every PASS is a discovery until its confirmation passes; batch denominators are from the packet's `batches`.
+
+**P5 in the window:** 9 programmed units (1 pass, 6 fail, 2 ungraded) plus 37 unprogrammed `new_strategy_prop` (the prop ML lines d256/fd68, the new-data family reads 98e3-31..-38, the 73de prop exits).
+
+**What was learned (beliefs, with evidence)**
+- **Prop-specific ML entries do not beat the baseline legs on any data family tried.** d256-01/-02 and fd68-01/-02/-04/-06 FAIL; fd68-03/-05 (4h and 8h bars) are INDETERMINATE on n. The new-data families on Breakout/Velotrade and Tradeify: open interest / long-short / taker flow (98e3-31/-32), funding basis (-34/-35) and book depth (-37/-38) are **0 of 6**. The builder and census units behind them PASSED (98e3-28/-29/-30/-36), so the data exists and is point-in-time. The signal does not show. Belief: on ETH/SOL at these horizons, positioning and microstructure features carry no entry edge over price at the prop cost stack.
+- **A fixed tp_r 3 on the prop Donchians fails 2 of 2 on the base symbols and 2 of 3 twins** (47b6-09/-10/-13/-15; LINK passed, -14). GTD120 failed 2 of 2 (47b6-11/-12). This repeats the P1 finding that a fixed TP caps the trend legs' tail.
+- **eth_pullback_prop_2h loses its structure exit on the same evidence as the real-money eth leg** (5e05-10 PASS).
+
+**Failed first tests — diagnosis.** ML prop: *idea*, now across three new data families plus price, two firms and three bar sizes. That is close to exhaustion for the ENTRY lever on these two symbols, but no family review exists, so nothing is retired. The next step is a family-review record (`research/family_reviews/`, policy v3) by the prop lane, not more variants. Fixed TP on prop: *design* (same as P1). Use the moving target.
+
+**Answered / unlocked / retired.** Answered: "does oi_flow / basis / book depth lift a prop ML entry" (no, 0 of 6). Retired: none. The prop ML ENTRY family goes to a family review, with the 4h/8h indeterminates as its only open cells.
+
+**Next 3–4 weeks**
+
+| node / unit | decision it changes | on PASS | on FAIL | cost | pre-mortem |
+|---|---|---|---|---|---|
+| Prop ML ENTRY family review (prop lane) | whether the prop ML ENTRY line keeps receiving units | the open 4h/8h cells get one powered read | the review record (research/family_reviews/) decides; until then only the tested configurations are closed | review | the review finds an untested label (firm DD path), which reopens it |
+| P5-RG1025-trend-pooled (authoring queue) | whether the trend lever pools across 1h/2h/4h prop legs | pooled confirm | configuration closed | runner | n_B < 18k |
+| P5-Q2-SIZING-BRK-pass | the breakout_2 sizing proposal | Tier-3 sizing PR | keep 0.5% | proposal | the rung-2 indeterminate never resolves |
+| P5-MLV-GATE-* (standing) | gate any ENTRY variant that passes Stage 0 | — | — | standing | nothing passes Stage 0 to gate |
+
+**Feeds.** P5 → P2: the 0-of-6 data-family result is a MODEL-track negative. Do not re-spend direction/entry heads on those families without a new consumer. P1 ↔ P5: the structure-OFF and TP findings carry over.
+
 ## Programme review 2026-11-04 (lane PROGRAMME-REVIEW-20261104) — TRADING track
 
 Population: units with a result row generated 2026-10-28T19:41Z..2026-11-04T19:41Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,932 units read, 0 unreadable, 662 result rows): **447 units with rows** — 107 pass, 210 fail, 25 indeterminate, 11 no_action_warranted, 94 with no unit verdict yet (76 ungraded + 18 needs_review/null). 302 carry a programme field (P1 53, P2 54, P3 95, P4 24, P5 48, P6 18, P7 10), 145 do not (live_strategy 70, new_strategy_prop 32, infra 13, ml_health 13, timeframes 6, macro 5, regime 5, none 1) — assigned below by what they ask. Every PASS is a discovery until its confirmation passes.
