@@ -169,6 +169,34 @@ def _committed_text(path: str, ref: str = "HEAD") -> Optional[str]:
     return r.stdout if r.returncode == 0 else None
 
 
+#: LTR-DIRECT-EVIDENCE-SOURCE (2026-11-15): the rows branch as fetched for a direct row's outcome table.
+ROWS_BRANCH = "live-review/rows"
+ROWS_BRANCH_REF = f"refs/live-review/{ROWS_BRANCH}"
+
+
+def _rows_branch_text(path: str) -> Tuple[Optional[str], str]:
+    """(text, source) for ``path`` at the tip of ``live-review/rows``, freshly fetched; (None, reason) otherwise.
+
+    A DIRECT row (``POST /api/bot/live-review/rows``) carries no pinned ref, so its outcome table was looked up only
+    in the --local-root trees and at HEAD. A table the reviewer rebuilt and committed to the rows branch was never
+    found, and the row sat at ``evidence_not_yet_at_ref`` (exit 3) until its retry window ran out (reviewer 0920,
+    LR-20261115T1129Z-pkg-858c60dc674d418f / -pkg-ec406687dc6d449f). The pinned-ref route already reads evidence
+    from this branch (``PINNED_BRANCHES``), so this grants no new trust; ``source`` names the exact commit read.
+    """
+    if ".." in path or path.startswith("/"):
+        return None, "unsafe_path"
+    rc, err = _git("fetch", "--quiet", "origin", f"+refs/heads/{ROWS_BRANCH}:{ROWS_BRANCH_REF}")
+    if rc != 0:
+        return None, f"fetch_failed:{err[:120]}"
+    rc, sha = _git("rev-parse", "--verify", ROWS_BRANCH_REF)
+    if rc != 0:
+        return None, "rows_branch_unresolved"
+    rc, text = _git("show", f"{sha}:{path}")
+    if rc != 0:
+        return None, f"not_on_rows_branch@{sha[:12]}"
+    return text + ("\n" if not text.endswith("\n") else ""), f"{ROWS_BRANCH}@{sha}"
+
+
 def _git(*args: str, timeout: int = 60) -> Tuple[int, str]:
     try:
         r = subprocess.run(["git", "-C", _REPO_ROOT, *args], capture_output=True, text=True,
@@ -575,6 +603,11 @@ def dispatch(review_id: str, *, apply: bool, state: Optional[Dict[str, Any]] = N
         return out
     evidence = evidence_path(row)
     ev_text = _committed_text(evidence, at) if evidence else None
+    if evidence and ev_text is None and LOCAL_ROOTS and not ref:
+        # A direct row whose table is in neither local root nor HEAD: the reviewer committed it to the rows branch
+        # (LTR-DIRECT-EVIDENCE-SOURCE). Read it there; the materialize step below copies it into the checkout.
+        ev_text, ev_source = _rows_branch_text(evidence)
+        out["evidence_source"] = ev_source
     plan, refusal = check_row(row, ev_text)
     if refusal == "evidence_not_committed" and row.get("outcome_table_source") and ev_text is None:
         # The row NAMES its table but the table is not at this ref yet (pushed in a later commit than the row).
