@@ -830,6 +830,8 @@ lines:
   levers_tried:
     - {lever: brackets as predictions (doctrine), ref: BRACKETS-AS-PREDICTIONS, verdict: done}
     - {lever: 'Pointer v0: entry-time TP from the first-passage model vs fixed 3 ATR, ml_entry trades', ref: RQ-20261114-82fd-01, verdict: 'FAIL by rule (research/results/RQ-20261114-82fd-01/43661151535.jsonl): record year policy -0.0036 R/trade, delta -0.0109 CI95 [-0.046, +0.025], n 11,240; prior year delta +0.0061 CI95 [-0.035, +0.048], n 15,233; the policy put 6,544 of 11,240 record-year trades at 6 ATR. HARNESS DEFECT disclosed: m* selection read NaN for 3 of 4 margins (walks into 2022 archive holes) and max() returned 0.0; fixed, disclosed re-run RQ-20261115-a474-01 (veto window to 07:00Z). The FAIL stands.'}
+    - {lever: 'Pointer v0, defect-corrected re-run (disclosed 2nd test of 82fd-01)', ref: RQ-20261115-a474-01, verdict: 'FAIL by rule (run 43688146403, landing in batch PR #26261): record year policy -0.0023 R/trade, delta -0.0096 CI95 [-0.043, +0.024], n 11,240; prior year INDETERMINATE delta +0.0050 CI95 [-0.033, +0.045], n 15,233; m*=0.02. Pointer v0 closes.'}
+    - {lever: move-extent predict head step 1 (entry-time MFE-quantile head vs naive TP baselines), ref: RQ-20261009-900, verdict: 'FAIL (graded 2026-11-13, research/results/RQ-20261009-900/43381824145.jsonl): HONEST_NEGATIVE per stratum -- S1 bybit_2 donchian 4h indeterminate (eval n 74 < 88), S2 bybit_2 pullback 2h not_sharper, S3 prop donchian 1h not_sharper. Step 2 (901) not reached.'}
   levers_ahead:
     - lever: Pointer v0 -- the tp-revision recipe extended with check-in 0, one static entry-time TP per ml_entry trade
       ref: RQ-20261114-82fd-01 (ML-PRIMARY 2026-11-14; RULE-RQ20261114-82fd-01-POINTER-V0, two windows, non-inferiority -0.02 R)
@@ -846,7 +848,7 @@ lines:
       baseline: the leg's fixed bracket
       pass: as above
       fail: as above
-  next_weeks: {W47: '82fd-01 FAIL (graded 11-15); defect-corrected re-run a474-01; if it FAILs, RQ-20261009-900 (move-extent head) is next', W48: 'drive RQ-20261009-900 if 82fd-01 FAILs', W50: 'ML-FS-BRACKETS-HOLD (ranked LATER @11-30)'}
+  next_weeks: {W47: 'a474-01 FAIL (11-15) and RQ-20261009-900 FAIL (11-13): Pointer v0 and the move-extent head are both closed; exhaustion clause MET for those two levers', W48: none, W50: 'ML-FS-BRACKETS-HOLD (ranked LATER @11-30) is the only D6 lever left'}
   exhaustion: Pointer v0 and the predict head FAIL on their registered reads.
   owner: ML-PRIMARY
   plan_items: [ML-X1, ML-X2]
