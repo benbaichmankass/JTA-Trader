@@ -11,7 +11,9 @@ gate, the restricted-long take rule); nothing is re-implemented.
 
 REPRODUCTION CHECK (gating the read). The refit's booster sha256 (concatenated texts, the confirm stage's rule) must start with the
 graded run's 0afc49948a41671a (ml/candidates/ml_entry_eq_v3_struct_ens5/model.json::confirm_booster_sha256_expected). On a mismatch
-the unit writes read_state measured, verdict indeterminate, "the graded model did not reproduce", and does NOT read the cells.
+the unit writes read_state not_attempted, verdict indeterminate, "the graded model did not reproduce", and does NOT read the cells.
+(Until 2026-11-15 this path wrote read_state measured with n null, which research_result.py rightly refuses: run 43646720569
+was LOST at landing, collect_runner_results lost=1.)
 
 DAILY CONTEXT (point in time). Daily bars = the RTH 1h bars of each session, grouped by the America/New_York date of the bar close.
 A decision on day d sees only sessions with date < d. Indicators: Wilder DMI/ADX14, EMA20 vs EMA50 (robustness, reported).
@@ -183,7 +185,9 @@ def run(a) -> int:
                            f"regulatory {Q.S.REGULATORY_BPS} bps; split by the DAILY DMI/ADX14 of the last session before the decision day"),
             "produced_by": {"tool": "python3 scripts/research/ml_entry_eq_htf_split.py", "where": a.where}}
     if not sha.startswith(EXPECT_SHA):
-        row = {**base, "verdict": "indeterminate", "n": None,
+        # The cells were NOT read: this is not a measurement. read_state measured with n null is inadmissible
+        # (research_result.py: measured requires an integer population.n), so say not_attempted.
+        row = {**base, "read_state": "not_attempted", "verdict": "indeterminate", "n": None,
                "note": f"the graded model did not reproduce: refit sha {sha[:16]} != {EXPECT_SHA}; cells NOT read",
                "measurement": {"booster_sha256": sha, "expected": EXPECT_SHA, "train_rows": n_train, "holdout_claim": claim}}
     else:
