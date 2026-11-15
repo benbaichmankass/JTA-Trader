@@ -90,6 +90,18 @@ FUNDING_WINDOW_HOURS = execution_costs.FUNDING_WINDOW_HOURS
 LIMIT_MAKER_FEE_BPS = 2.0
 LIMIT_TAKER_FEE_BPS = 5.5
 
+# PER-CONTRACT COST ARM (FUT-INTRADAY-DUKA-LANE, 2026-11-12; RQ-20261112-09d2-04). A CME micro is
+# charged a FIXED $ commission per round turn plus N ticks of slippage on every market or stop fill,
+# not a bps share of notional. None = off (the bps model above, byte-identical). When set it
+# REPLACES the bps fee/slippage/funding stack (a dated future pays no perp funding). R cost per trade:
+#   fee_r      = commission_usd_rt / (risk_pts * point_value)       (one contract; the $-per-R ratio
+#                                                                    is the same at any whole size)
+#   slippage_r = slip_ticks * tick_size * fills_with_slip / risk_pts
+# fills_with_slip = entry (1 for a market entry, 0 for a limit) + exit (0 for a take-profit limit,
+# 1 for a stop / timeout / session-flat / lever close). Same convention as
+# scripts/research/tradeify_futures_fit.py (slip_ticks = 1 + (0 if take_profit else 1)).
+CONTRACT_COST: Optional[Dict[str, float]] = None
+
 
 @dataclass
 class Trade:
@@ -299,6 +311,47 @@ def _load_yaml_params(name: str = DEFAULT_CFG_KEY) -> Dict[str, Any]:
     return cfg
 
 
+def session_flat_marks(df: pd.DataFrame, flat_et: str,
+                       reopen_et: str = "18:00") -> tuple:
+    """(flat_bar, no_entry) boolean arrays for a session-flat account (Tradeify futures, 2026-11-12).
+
+    ``flat_bar[j]``  bar j is the LAST bar whose CLOSE (timestamp + bar length, read in
+                     America/New_York) is at or before ``flat_et`` on that bar's ET date, i.e. the
+                     next bar closes after the cutoff (or a data gap/weekend jumps over it). An open
+                     position is closed at that bar's close. On 15m bars with ``16:35`` that is the
+                     16:30 close; on 5m bars the 16:35 close.
+    ``no_entry[i]``  a signal on bar i is not taken: i is itself a flat bar (it would be flattened at
+                     its own fill price), or its close falls in [flat_et, reopen_et) ET, the window
+                     the account may not hold a position (CME reopens 18:00 ET).
+
+    Bar length is MEASURED (median spacing), never read from a label. Timestamps are taken as UTC
+    when naive (the dukascopy / binance lanes write UTC)."""
+    import numpy as np
+    n = len(df)
+    if "timestamp" not in df.columns:
+        raise ValueError("--session-flat-et needs a `timestamp` column")
+    ts = pd.to_datetime(df["timestamp"], utc=True)
+    step = ts.diff().median()
+    if not isinstance(step, pd.Timedelta) or step <= pd.Timedelta(0):
+        raise ValueError("--session-flat-et: could not measure the bar length from the frame")
+    close_et = (ts + step).dt.tz_convert("America/New_York")
+    fh, fm = (int(x) for x in flat_et.split(":"))
+    rh, rm = (int(x) for x in reopen_et.split(":"))
+    mins = (close_et.dt.hour * 60 + close_et.dt.minute).to_numpy()
+    flat_min, reopen_min = fh * 60 + fm, rh * 60 + rm
+    day = close_et.dt.normalize()
+    cutoff = day + pd.Timedelta(minutes=flat_min)
+    before = (close_et <= cutoff).to_numpy()
+    nxt_close = close_et.shift(-1)
+    nxt_after = ((nxt_close > cutoff) | nxt_close.isna()).to_numpy()
+    flat_bar = before & nxt_after
+    if n:
+        flat_bar[n - 1] = False   # the frame's last bar is not a session event
+    in_window = (mins >= flat_min) & (mins < reopen_min)
+    no_entry = flat_bar | in_window
+    return np.asarray(flat_bar, dtype=bool), np.asarray(no_entry, dtype=bool)
+
+
 def _simulate_exit(
     df: pd.DataFrame,
     *,
@@ -320,6 +373,7 @@ def _simulate_exit(
     tp_tracker: Optional[Any] = None,
     tp_thesis_fn: Optional[Any] = None,
     tp_atr: Optional[Any] = None,
+    flat_bar: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Walk forward from start_idx checking SL/TP hits against bar
     extremes. Assumes intra-bar SL/TP fills are at the level (no slippage).
@@ -416,6 +470,14 @@ def _simulate_exit(
                 return {"outcome": "tp_hit", "exit_index": j, "exit_price": tp,
                         "mfe_price": best, "mae_price": worst, "banked": banked,
                         "banked_index": banked_index}
+        # SESSION-FLAT overlay (--session-flat-et; None = off, byte-identical): the bar's own
+        # stop/target tests ran first (stop-first preserved); if neither fired and this is the
+        # last bar before the account's cutoff, close at this bar's close.
+        if flat_bar is not None and flat_bar[j]:
+            return {"outcome": "session_flat", "exit_index": j,
+                    "exit_price": float(df["close"].iloc[j]),
+                    "mfe_price": best, "mae_price": worst, "banked": banked,
+                    "banked_index": banked_index}
         # M20 exit levers (giveback / stale) — fire at bar CLOSE, and only when
         # neither the stop NOR the TP hit this bar (the SL/TP checks above return
         # first, so stop-first ordering is preserved exactly). Mirrors the
@@ -619,6 +681,7 @@ def run_backtest(
     taker_fee_bps: float = LIMIT_TAKER_FEE_BPS,
     tp_geometry: Optional[_tpg.TPGeometrySpec] = None,
     adx_max: Optional[float] = None,
+    session_flat_et: Optional[str] = None,
 ) -> Dict[str, Any]:
     tp_geom = tp_geometry or _tpg.TPGeometrySpec()
     _refused = _tpg.refusal(tp_geom, has_target=not no_tp)
@@ -636,8 +699,11 @@ def run_backtest(
     # scan — the scan was O(n * htf_rows), which is hours on a 6yr 5m feed.
     htf_close_arr = htf_ema_arr = None
     if htf_df is not None and "timestamp" in df.columns and len(htf_df):
+        # The left key is normalised to UTC like _build_htf_series' right key: a feed whose CSV
+        # carries NAIVE timestamps (the dukascopy lane writes "2026-08-14 00:00:00", UTC by
+        # contract) otherwise raised "incompatible merge keys" (FUT-INTRADAY-DUKA-LANE, 2026-11-12).
         aligned = pd.merge_asof(
-            df[["timestamp"]].reset_index(drop=True),
+            pd.DataFrame({"timestamp": pd.to_datetime(df["timestamp"], utc=True)}),
             htf_df[["timestamp", "htf_close", "htf_ema"]],
             on="timestamp", direction="backward",
         )
@@ -666,9 +732,15 @@ def run_backtest(
     ) + 10
     window_size = max(window_size, warmup_bars)
 
+    flat_bar = no_entry = None
+    if session_flat_et:
+        flat_bar, no_entry = session_flat_marks(df, session_flat_et)
+
     next_eligible_idx = warmup_bars
     for i in range(warmup_bars, n - 1):
         if i < next_eligible_idx:
+            continue
+        if no_entry is not None and no_entry[i]:
             continue
         lo = max(0, i + 1 - window_size)
         window = df.iloc[lo : i + 1]
@@ -797,6 +869,7 @@ def run_backtest(
             bank_at_r=bank_at_r,
             first_bar_no_tp=(entry_mode == "limit"),
             tp_tracker=_tpt, tp_thesis_fn=_thesis_fn, tp_atr=tp_atr_arr,
+            flat_bar=flat_bar,
         )
         exit_price = float(result["exit_price"])
         if direction == "long":
@@ -997,6 +1070,13 @@ def run_backtest(
         summary["tp_geometry"] = _tpg.summarize_geometry([
             {**_tpg_row(t), "outcome": t.outcome} for t in trades])
         summary["tp_geometry"]["params"] = tp_geom.params()
+    if session_flat_et:
+        summary["session_flat"] = {
+            "flat_et": session_flat_et, "reopen_et": "18:00",
+            "n_session_flat_exits": sum(1 for t in trades if t.outcome == "session_flat"),
+            "rule": "close at the last bar whose close <= flat_et ET (after its own SL/TP test); "
+                    "no entry on that bar or on a bar closing in [flat_et, 18:00) ET",
+        }
     if entry_mode == "limit":
         # The denominators a limit verdict is read over. `net_total_r` is over FILLED
         # trades only; a book that fills 40% of its signals and wins on those is not the
@@ -1051,6 +1131,8 @@ def _cost_breakdown(t: Trade) -> Dict[str, float]:
     if not t.exit_price or t.risk <= 0:
         return {"fee_r": 0.0, "slippage_r": 0.0, "funding_r": 0.0,
                 "total_cost_r": 0.0, "funding_windows": 0.0}
+    if CONTRACT_COST is not None:
+        return contract_cost_r(t, CONTRACT_COST)
     fee_bps = FEE_BPS_ROUNDTRIP
     slip_bps = SLIPPAGE_BPS_ROUNDTRIP
     if t.meta.get("limit_entry"):
@@ -1066,6 +1148,15 @@ def _cost_breakdown(t: Trade) -> Dict[str, float]:
         funding_bps_per_window=FUNDING_BPS_PER_WINDOW,
         funding_window_hours=FUNDING_WINDOW_HOURS,
     )
+
+
+def contract_cost_r(t: Trade, cc: Dict[str, float]) -> Dict[str, float]:
+    """Per-contract R cost of one trade (see CONTRACT_COST). Pure."""
+    fills = (0 if t.meta.get("limit_entry") else 1) + (0 if t.outcome == "tp_hit" else 1)
+    fee_r = float(cc["commission_usd_rt"]) / (t.risk * float(cc["point_value"]))
+    slip_r = float(cc["slip_ticks_per_fill"]) * float(cc["tick_size"]) * fills / t.risk
+    return {"fee_r": fee_r, "slippage_r": slip_r, "funding_r": 0.0,
+            "total_cost_r": fee_r + slip_r, "funding_windows": 0.0}
 
 
 def _fee_only_r(t: Trade) -> float:
@@ -1090,6 +1181,10 @@ def _summarize(
         "slippage_bps_roundtrip": SLIPPAGE_BPS_ROUNDTRIP,
         "funding_bps_per_window": FUNDING_BPS_PER_WINDOW,
     }
+    if CONTRACT_COST is not None:
+        # The bps figures above are NOT applied in this mode; say so rather than echo them as if they were.
+        cost_cfg = {"fee_bps_roundtrip": None, "slippage_bps_roundtrip": None, "funding_bps_per_window": 0.0,
+                    "cost_model": "per_contract", "contract_cost": dict(CONTRACT_COST)}
     # M20 partial-TP ladder settings in effect, echoed on every summary for the
     # same reason cost_cfg is: a sweep cell's JSON must state WHICH lever
     # produced its r_multiple, never leave the reader to infer it from a tag.
@@ -1485,6 +1580,19 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--giveback-r", type=float, default=1.0, metavar="R",
                    help="Once armed, exit when >= this many R has been surrendered "
                         "from the peak (default 1.0).")
+    p.add_argument("--session-flat-et", default=None, metavar="HH:MM",
+                   help="session-flat account overlay (default off): close any open position at the last "
+                        "bar closing at/before HH:MM America/New_York and take no entry from then to 18:00 ET "
+                        "(Tradeify futures: 16:35, 5 min inside the 16:45 hard flat)")
+    p.add_argument("--contract-cost-usd-rt", type=float, default=None, metavar="USD",
+                   help="per-contract cost arm (default off): $ commission per round turn per contract; needs "
+                        "--point-value and --tick-size; REPLACES the bps fee/slippage/funding stack")
+    p.add_argument("--point-value", type=float, default=None, metavar="USD",
+                   help="per-contract arm: $ per 1.0 price point per contract (MES 5, MNQ 2, MGC 10)")
+    p.add_argument("--tick-size", type=float, default=None, metavar="PTS",
+                   help="per-contract arm: tick size in price points (MES/MNQ 0.25, MGC 0.10)")
+    p.add_argument("--slip-ticks-per-fill", type=float, default=1.0, metavar="N",
+                   help="per-contract arm: ticks of slippage on every market or stop fill (default 1)")
     p.add_argument("--entry-mode", choices=("market", "limit"), default="market",
                    help="Entry model (default market = byte-identical to before this flag). "
                         "`limit` = RQ-20260930-502: a post-only limit at the signal bar close "
@@ -1517,8 +1625,26 @@ _spec.loader.exec_module(_backtest_data_source)  # noqa: E402
 
 def main(argv: List[str]) -> int:
     global FEE_BPS_ROUNDTRIP, SLIPPAGE_BPS_ROUNDTRIP, FUNDING_BPS_PER_WINDOW, FUNDING_WINDOW_HOURS
+    global CONTRACT_COST
     p = build_parser()
     args = p.parse_args(argv[1:])
+    if args.contract_cost_usd_rt is not None:
+        if not args.point_value or not args.tick_size or args.point_value <= 0 or args.tick_size <= 0:
+            print("ERROR: --contract-cost-usd-rt needs a positive --point-value and --tick-size", file=sys.stderr)
+            return 2
+        CONTRACT_COST = {"commission_usd_rt": float(args.contract_cost_usd_rt),
+                         "point_value": float(args.point_value), "tick_size": float(args.tick_size),
+                         "slip_ticks_per_fill": float(args.slip_ticks_per_fill)}
+    elif args.point_value is not None or args.tick_size is not None:
+        print("ERROR: --point-value / --tick-size only apply with --contract-cost-usd-rt", file=sys.stderr)
+        return 2
+    if args.session_flat_et is not None:
+        try:
+            _h, _m = (int(x) for x in args.session_flat_et.split(":"))
+            assert 0 <= _h < 24 and 0 <= _m < 60
+        except Exception:  # noqa: BLE001  # allow-silent: not silent -- refused with exit 2
+            print(f"ERROR: --session-flat-et must be HH:MM, got {args.session_flat_et!r}", file=sys.stderr)
+            return 2
     # --- data-source resolution (BL-20260912-FIFTEEN-MORE-HARNESSES...) ---
     # --data/--symbol default to None so a bare invocation REFUSES rather
     # than silently reaching the 5,001-row BTC fixture (docs/claude/work/
@@ -1627,6 +1753,7 @@ def main(argv: List[str]) -> int:
         maker_fee_bps=float(args.maker_fee_bps),
         taker_fee_bps=float(args.taker_fee_bps),
         tp_geometry=args.tp_geometry,
+        session_flat_et=args.session_flat_et,
     )
 
     try:

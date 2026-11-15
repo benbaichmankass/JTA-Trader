@@ -114,3 +114,55 @@ def test_phone_refuses_a_loosen_and_an_outstanding_slot_still_records_the_floor(
     busy = lra._exec_phone({"row": {"ticket_id": "B2", "account_id": "breakout_2"}}, 2520.0, _intent())
     assert busy["result"] == lra.X_REFUSED and busy["floor_recorded"] is True
     assert lri.sl_floor_from(prop_journal.get_ticket("B2")["meta"]) == pytest.approx(2520.0)
+
+
+# ------------------------------------------- venue stop + live package (PHONE-LIVE-ACCOUNT-FEED)
+
+def _status(account, positions, *, state="read", prov="MEASURED"):
+    raw = {"kind": "account_status", "account_id": account, "positions_state": state,
+           "positions_provenance": prov, "positions": positions}
+    prop_journal.insert_account_status({"account_id": account, "balance": 1.0, "raw": raw})
+
+
+def _pos(sl, sym="ETHUSDT", d="short"):
+    return {"symbol": sym, "venue_symbol": "ETHUSD", "direction": d, "qty": 0.5, "entry": 2500.0, "sl": sl}
+
+
+def test_venue_stop_reads_the_measured_resting_stop_including_a_hand_move():
+    _ticket("H1", "tradeify_1")
+    _status("tradeify_1", [_pos(2510.0)])                       # the operator moved 2550 -> 2510 by hand
+    assert lra.venue_prop_stop("tradeify_1", "ETHUSDT", "short") == pytest.approx(2510.0)
+    assert lra.venue_prop_stop("tradeify_1", "ETHUSDT", "long") is None
+    leg = [g for g in lra.gather_legs(_NoTrades(), {"order_package_id": "pkg-P", "direction": "short"})
+           if g["kind"] == "ticket"][0]
+    assert leg["leg_sl"] == pytest.approx(2510.0) and leg["venue_sl"] == pytest.approx(2510.0)
+
+
+def test_venue_stop_is_not_used_when_unmeasured_stale_or_ambiguous():
+    _ticket("H2", "velotrade_1")
+    _status("velotrade_1", [_pos(2510.0)], prov="ESTIMATED")
+    assert lra.venue_prop_stop("velotrade_1", "ETHUSDT", "short") is None
+    _status("velotrade_1", [_pos(2510.0)], state="no_table")
+    assert lra.venue_prop_stop("velotrade_1", "ETHUSDT", "short") is None
+    _status("velotrade_1", [_pos(2510.0)])
+    later = datetime.now(timezone.utc) + timedelta(seconds=lra.VENUE_STOP_MAX_AGE_S + 60)
+    assert lra.venue_prop_stop("velotrade_1", "ETHUSDT", "short", now=later) is None
+    _status("velotrade_1", [_pos(2510.0), _pos(2520.0)])          # two venue positions: cannot attribute
+    assert lra.venue_prop_stop("velotrade_1", "ETHUSDT", "short") is None
+    _status("velotrade_1", [_pos(2510.0)])
+    _ticket("H3", "velotrade_1")                                   # two live tickets on one netted position
+    assert lra.venue_prop_stop("velotrade_1", "ETHUSDT", "short") is None
+
+
+def test_an_emitted_package_is_live_only_while_a_ticket_is_placed_or_filled():
+    pkg = {"order_package_id": "pkg-P", "status": "emitted"}
+    assert lra.package_live_state(pkg) == lra.PKG_NOT_LIVE
+    _ticket("E1", "tradeify_1", status="closed")
+    assert lra.package_live_state(pkg) == lra.PKG_NOT_LIVE
+    _ticket("E2", "tradeify_1", status="filled")
+    assert lra.package_live_state(pkg) == lra.PKG_LIVE
+
+
+class _NoTrades:
+    def get_trades(self, filters=None):
+        return []

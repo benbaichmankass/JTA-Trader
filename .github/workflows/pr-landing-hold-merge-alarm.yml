@@ -75,6 +75,9 @@ jobs:
           # system-actions never ran and no alarm was ever delivered (PI-20261112-BOTPING-0001; #25058 #25061
           # #25062 #25065 created 0 runs). Falls back to GITHUB_TOKEN only if the secret is unset.
           PING_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          # HOLD-ALARM-PING-DIRECT: the direct ops channel's credential (the same secret other workflows
+          # already use for the work store). The ping goes there first; a system-actions issue is the fallback.
+          WORK_STORE_TOKEN: ${{ secrets.WORK_STORE_TOKEN }}
           REPO: ${{ github.repository }}
           COMMITS_JSON: ${{ toJSON(github.event.commits) }}
         run: |
@@ -153,6 +156,26 @@ jobs:
 
             if [ "$rc" -eq 2 ]; then
               ping_msg=$(echo "$out" | tail -n1)
+              # HOLD-ALARM-PING-DIRECT (option b, manager 2026-11-12): send the ping through the direct ops channel
+              # (POST /api/bot/ops/actions send-ping, Tier 1, one Telegram message, no mutation) instead of opening a
+              # system-actions issue, which costs a runner and fans out issue-triggered workflows. 202 = queued in the
+              # ops jobs store, which runs it when the runner is up. Anything else (no token, refused, host down)
+              # falls back to the issue path below, so the alarm is never dropped.
+              direct="no"
+              if [ -n "${WORK_STORE_TOKEN:-}" ]; then
+                body=$(python3 -c 'import json,sys; print(json.dumps({"action": "send-ping", "session": "pr-landing-hold-merge-alarm", "reason": "JC-CA-04 hold-merge alarm", "params": {"message": sys.argv[1], "priority": "high", "target": "claude"}}))' \
+                  "${ping_msg} (pr-landing-hold-merge-alarm, run ${{ github.run_id }})")
+                code=$(curl -sS -o /tmp/ping-${pr_number}.json -w '%{http_code}' --max-time 30 -X POST \
+                  -H "X-Work-Store-Token: ${WORK_STORE_TOKEN}" -H 'Content-Type: application/json' \
+                  --data "$body" "https://ict-bot.duckdns.org/api/bot/ops/actions" || echo "000")
+                if [ "$code" = "202" ] || [ "$code" = "200" ]; then
+                  direct="yes"
+                  echo "hold-merge alarm for PR #${pr_number} sent via the direct ops channel (HTTP ${code})"
+                else
+                  echo "::warning::direct ops channel did not accept the ping (HTTP ${code}); falling back to a system-actions issue"
+                fi
+              fi
+              [ "$direct" = "yes" ] && continue
               GH_TOKEN="${PING_TOKEN:-$GH_TOKEN}" gh issue create --label system-action \
                 --title "send-ping: PR #${pr_number} hold-merge alarm (JC-CA-04)" \
                 --body "$(printf 'action: send-ping\npriority: high\nmessage: %s (pr-landing-hold-merge-alarm, run %s)\nreason: JC-CA-04 A09-hold-merge-unenforced -- tier 2/3 landing:hold PR merged with no recorded human approval' "$ping_msg" "${{ github.run_id }}")"

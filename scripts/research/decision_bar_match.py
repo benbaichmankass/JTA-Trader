@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: manual-only - session-local research harness for RQ-20261022-4de5-01/-02 (unit run.workflow: none — session-local); re-run per the unit result block
+# wiring: research-script-run - RQ-20261113-* (FORMING-VS-CLOSED-ETH4H-SOL4H) dispatches it; RQ-20261022-4de5-01/-02 ran it session-local
 """Decision-bar MATCH: which bar should a leg decide on, and does its evidence describe that bar?
 
 RQ-20261022-4de5-01 / RULE-RQ-20261022-4de5-01 (checklist DECISION-BAR-MATCH). Also builds the
@@ -30,6 +30,16 @@ THE RULE (registered in the unit BEFORE the run; this module only applies it):
 
 Edits no config, roster or record; places no order. Writes <out>/verdict.json and
 <out>/arms/<leg>[__tp<x>]__{A_closed,B_forming}__trades.jsonl.
+
+E5 (row FORMING-VS-CLOSED-ETH4H-SOL4H, 2026-11-13). ``verdict.json`` also carries the E5 result fields the
+research-script-run collector reads (``verdict``/``read_state``/``population``/``n`` + one ``records`` row per leg run),
+DERIVED from the grades above -- the grading is unchanged. Per leg: ``pass`` = propose decision_bar: closed, which holds
+exactly when the tool's verdict is SWITCH_TO_CLOSED (closed better, or no material difference, AND closed passes RULE-D1
+on the record window); ``fail`` = no closed proposal (FORMING_BETTER, or a tie / closed-better where closed fails RULE-D1:
+the tool's KEEP_FORMING_REBASE_RECORD or DEMOTE_CANDIDATE, reported as-is); ``indeterminate`` = the leg could not be
+graded. Unit: indeterminate if any leg is; else pass if every leg passes; else fail (each leg's own call is in
+``records``). Amended before any run (row FORMING-VS-CLOSED-ETH4H-SOL4H note, AM-ML 2026-11-13 14:53Z). ``--rule`` names
+the unit's rule id (default the 2026-10-22 one).
 """
 from __future__ import annotations
 
@@ -192,16 +202,63 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
     return _write_verdict(out_dir, args, results, partial=False)
 
 
+def e5_fields(results: Dict[str, Any], *, partial: bool) -> Dict[str, Any]:
+    """The E5 result fields, derived from each leg run's ``grade`` (pure; the grading itself is untouched)."""
+    records = []
+    for key in sorted(results):
+        r = results[key]
+        g = r.get("grade") or {}
+        better, verdict = g.get("better"), g.get("verdict")
+        if verdict in (None, "INDETERMINATE"):
+            v, rs, n = "indeterminate", "producer_failed", None
+        else:
+            v = "pass" if verdict == "SWITCH_TO_CLOSED" else "fail"
+            rs = "measured"
+            n = (r.get("A_closed") or {}).get("n", 0) + (r.get("B_forming") or {}).get("n", 0)
+        d1 = g.get("rule_d1_record_window") or {}
+        records.append({
+            "leg": key, "verdict": v, "read_state": rs, "n": n,
+            "population": (f"{key}: closed vs forming decision bar, Binance USD-M 1m proxy, full cost stack, "
+                           f"improvement folds over {g.get('window')}, RULE-D1 on the record window {d1.get('window')}"),
+            "better": better, "match_verdict": verdict, "reason": g.get("reason"),
+            "folds_closed": g.get("folds_closed"), "folds_forming": g.get("folds_forming"),
+            "folds_tie": g.get("folds_tie"), "delta_r_full": g.get("delta_r_full"),
+            "closed": {k: (r.get("A_closed") or {}).get(k) for k in ("n", "net_r")},
+            "forming": {k: (r.get("B_forming") or {}).get(k) for k in ("n", "net_r")},
+            "rule_d1_record_window": {"closed": d1.get("closed"), "forming": d1.get("forming")},
+            "note": (f"better={better}, verdict={verdict}: "
+                     + ("propose decision_bar: closed (Tier 3, through AM-ML to the manager)" if v == "pass"
+                        else "forming materially better -> keep forming; entry-hold fix to AM-OPS"
+                        if better == "FORMING_BETTER"
+                        else f"no closed proposal: closed fails RULE-D1 on the record window; tool verdict {verdict} "
+                             f"reported as-is" if v == "fail" else "not graded")),
+        })
+    measured = [x for x in records if x["read_state"] == "measured"]
+    if partial or not records:
+        top, rs, why = "not_applicable", "producer_failed", "the run did not complete (partial verdict.json)"
+    elif len(measured) < len(records):
+        top, rs, why = "indeterminate", "measured", "a leg could not be graded"
+    elif all(x["verdict"] == "pass" for x in measured):
+        top, rs, why = "pass", "measured", "every leg: propose decision_bar: closed (verdict SWITCH_TO_CLOSED)"
+    else:
+        top, rs, why = "fail", "measured", ("no closed proposal on: "
+                                            + ", ".join(f"{x['leg']} ({x['match_verdict']})" for x in measured
+                                                        if x["verdict"] == "fail"))
+    return {"verdict": top, "read_state": rs, "n": sum(x["n"] for x in measured) if measured else None,
+            "note": why, "records": records}
+
+
 def _write_verdict(out_dir: Path, args: argparse.Namespace, results: Dict[str, Any], *,
                    partial: bool) -> Dict[str, Any]:
     out = {
-        "unit": args.research_unit, "rule": RULE, "params": dict(PARAMS),
+        "unit": args.research_unit, "rule": getattr(args, "rule", None) or RULE, "params": dict(PARAMS),
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "data_source": DATA_SOURCE, "window_end_pin": args.end,
         "population": (f"{len(results)} leg runs ({', '.join(sorted(results))}); every (account, leg) "
                        f"routing under legs[].routings; arms config-exact to config/strategies.yaml "
                        f"(a __tp<x> run overrides tp_r only); entries on bars with a 200-bar live frame"),
         "complete": not partial, "legs": results,
+        **e5_fields(results, partial=partial),
     }
     (out_dir / "verdict.json").write_text(json.dumps(out, indent=1, default=str) + "\n", encoding="utf-8")
     return out
@@ -218,6 +275,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--end", default=None, help="pin the window end (UTC, e.g. '2026-10-20 23:59')")
     ap.add_argument("--research-unit", default=UNIT)
+    ap.add_argument("--rule", default=RULE, help="the unit's decision-rule id, recorded in verdict.json")
     args = ap.parse_args(argv)
     out = run(args)
     print(json.dumps({k: r["grade"]["verdict"] for k, r in out["legs"].items()}))

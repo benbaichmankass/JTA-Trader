@@ -182,6 +182,14 @@ def _candidates(conn: sqlite3.Connection, ids: Optional[List[int]]) -> List[Dict
          "'stuck_strategy_watchdog', 'netting_attributed') ORDER BY id")
     return [dict(r) for r in conn.execute(q).fetchall()]
 
+def _take_backup():
+    """The shared pre-APPLY backup with per-tag retention (scripts/ops/journal_backup.py)."""
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    from scripts.ops.journal_backup import take_backup
+    return take_backup
+
 
 def run(db_path: str, fills_db: str, *, apply: bool, ids: Optional[List[int]] = None) -> int:
     def fills_conn():
@@ -217,15 +225,8 @@ def run(db_path: str, fills_db: str, *, apply: bool, ids: Optional[List[int]] = 
         return 0
     if not plans:
         return 0
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    backup = f"{db_path}.bak-own-fill-exits-{stamp}"
-    src = sqlite3.connect(db_path)
-    dst = sqlite3.connect(backup)
-    try:
-        src.backup(dst)
-    finally:
-        dst.close()
-        src.close()
+    # Pre-APPLY copy; keeps only the newest per tag (scripts/ops/journal_backup.py).
+    backup = _take_backup()(db_path, "own-fill-exits", method="online", stamp_style="iso", read_only=False)
     print(f"backup: {backup}")
     written = 0
     conn = sqlite3.connect(db_path)

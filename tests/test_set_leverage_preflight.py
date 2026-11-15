@@ -158,3 +158,31 @@ def test_preflight_absorbs_pybit_110043_exception(monkeypatch, fake_account, fak
     assert any(
         "already set (retCode=110043, idempotent)" in m for m in msgs
     ), msgs
+
+
+def test_preflight_skips_symbols_bybit_linear_cannot_list(monkeypatch, fake_account, fake_strategies_cfg, caplog):
+    """HEALTH-20261104-LEVERAGE-PREFLIGHT-EQUITY: ml_entry / claude_desk put equity + futures symbols in a Bybit
+    linear account's roster union; the preflight sent each to Bybit ('symbol invalid' x68 per boot)."""
+    import logging
+    from src import main as main_mod
+
+    fake_http = MagicMock()
+    fake_http.set_leverage.return_value = {"retCode": 0, "retMsg": "OK"}
+    monkeypatch.setattr("src.units.accounts.load_accounts", lambda: [fake_account], raising=False)
+    monkeypatch.setattr("src.units.accounts.clients.bybit_client_for", lambda cfg: fake_http, raising=True)
+    monkeypatch.setattr("src.units.strategies.load_strategy_config", lambda: fake_strategies_cfg, raising=False)
+    monkeypatch.setattr(main_mod, "_symbols_for_account",
+                        lambda account, cfg: ["BTCUSDT", "SPY", "MES", "ETHPERP", "TLT", "SOLUSDC"], raising=True)
+    with caplog.at_level(logging.INFO):
+        main_mod._apply_per_account_leverage()
+    sent = [c.kwargs["symbol"] for c in fake_http.set_leverage.call_args_list]
+    assert sent == ["BTCUSDT", "ETHPERP", "SOLUSDC"]
+    assert any("skipped 3 non-Bybit-linear" in r.getMessage() for r in caplog.records)
+    assert not any("rejected" in r.getMessage() for r in caplog.records)
+
+
+@pytest.mark.parametrize("sym, ok", [("BTCUSDT", True), ("1000PEPEUSDT", True), ("ETHPERP", True), ("SOLUSDC", True),
+                                     ("SPY", False), ("MES", False), ("USDT", False), ("BTC/USDT", False), ("", False)])
+def test_is_bybit_linear_symbol(sym, ok):
+    from src import main as main_mod
+    assert main_mod._is_bybit_linear_symbol(sym) is ok

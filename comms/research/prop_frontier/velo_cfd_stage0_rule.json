@@ -1,0 +1,144 @@
+{
+ "rule_id": "RULE-VELO-CFD-STAGE0-20261112",
+ "pipeline_item": "PI-20261112-D6UC5YT4-0001 (VELO-CFD-STAGE0)",
+ "registered_at": "2026-11-12",
+ "registered_by": "lane PROP-FRONTIER-RESEARCH (session_01AFoLuKEZCj8H39D6uc5yt4), dispatched by AM-TRADING 2026-11-12 13:33Z",
+ "registered_before_run": "Committed and pushed before scripts/research/velo_cfd_stage0.py first runs and before any Dukascopy history for the window is fetched by this lane.",
+ "question": "Do the four legs that carry the RULE-PROP-FRONTIER-EV6M-20261112 pass keep a net edge on the CFD underlying's own price series (spot silver, WTI, spot gold) at Velotrade's cost stack, and does the 6-month EV pass survive on those ledgers with each leg dropped in turn?",
+ "population": {
+  "legs": {
+   "slv_trend_1h": {
+    "cfd_underlying": "INSTRUMENT_FX_METALS_XAG_USD",
+    "config_fingerprint": "sha256:8d50ba1b7f1e6ed0ccd1a8487cbaf3b4",
+    "timeframe": "1h",
+    "config": {
+     "model": null,
+     "enabled": true,
+     "execution": "live",
+     "timeframe": "1h",
+     "symbols": [
+      "SLV"
+     ],
+     "donchian": 24,
+     "atr_period": 14,
+     "atr_stop_mult": 1.5,
+     "trail_mult": 4.0,
+     "tp_r": 50.0,
+     "min_confidence": 0.3
+    }
+   },
+   "uso_trend_1h": {
+    "cfd_underlying": "INSTRUMENT_CMD_ENERGY_E_LIGHT",
+    "config_fingerprint": "sha256:d67fb28ac7e86c79cbc4c09df4a240ea",
+    "timeframe": "1h",
+    "config": {
+     "model": null,
+     "enabled": true,
+     "execution": "live",
+     "long_only": true,
+     "timeframe": "1h",
+     "symbols": [
+      "USO"
+     ],
+     "donchian": 24,
+     "atr_period": 14,
+     "atr_stop_mult": 2.0,
+     "trail_mult": 4.0,
+     "giveback_min_mfe_r": 1.0,
+     "giveback_r": 1.0,
+     "tp_r": 4.0,
+     "min_confidence": 0.0
+    }
+   },
+   "gld_pullback_1h": {
+    "cfd_underlying": "INSTRUMENT_FX_METALS_XAU_USD",
+    "config_fingerprint": "sha256:8ccb6cfc0db574ec472e3c1becb8df97",
+    "timeframe": "1h",
+    "config": {
+     "model": null,
+     "enabled": false,
+     "execution": "live",
+     "timeframe": "1h",
+     "symbols": [
+      "GLD"
+     ],
+     "trend_lookback": 60,
+     "pullback_lookback": 12,
+     "pullback_frac": 0.5,
+     "atr_period": 14,
+     "atr_stop_mult": 1.5,
+     "trail_mult": 4.0,
+     "stale_exit_bars": 24,
+     "stale_exit_below_r": 1000000000.0,
+     "tp_r": 6.0,
+     "min_confidence": 0.0
+    }
+   },
+   "gld_pullback_1d": {
+    "cfd_underlying": "INSTRUMENT_FX_METALS_XAU_USD",
+    "config_fingerprint": "sha256:80ad59961bd1016b5fcd0b196b316928",
+    "timeframe": "1d",
+    "config": {
+     "model": null,
+     "enabled": true,
+     "execution": "live",
+     "timeframe": "1d",
+     "symbols": [
+      "GLD"
+     ],
+     "trend_lookback": 40,
+     "pullback_lookback": 15,
+     "pullback_frac": 0.618,
+     "atr_period": 14,
+     "atr_stop_mult": 2.0,
+     "trail_mult": 4.0,
+     "trail_decay_stall_bars": 10,
+     "trail_decay_tight_mult": 2.0,
+     "tp_r": 3.5,
+     "min_confidence": 0.0
+    }
+   }
+  },
+  "why_these": "The commodity legs of VELO_ALL. Their pooled net R is the only part of that book with a CI clear of zero ([+0.096, +0.681], n=218); the equity-ETF legs were net negative at Velotrade costs.",
+  "data": "Dukascopy 1h BID bars via scripts/ops/fetch_dukascopy_ohlcv.py (dukascopy-python==4.0.1), filtered to the US cash session with --rth-only so the bar grid matches the ETF feed each leg was measured on; 1d legs resample those RTH bars. Window 2019-01-01..2026-10-31 (UTC). Leg parameters are taken unchanged from config/strategies.yaml (fingerprints above): nothing is fitted to this series.",
+  "harness": "scripts/research/regime_debt_matrix.build_harness_cmd (the same argv the Stage-0 evidence producer builds), --fee-bps-roundtrip 0; the run's gross_r per trade is re-costed below."
+ },
+ "costs": {
+  "per_leg_basis": {
+   "slv_trend_1h": {
+    "commission_bps_rt": 2.0,
+    "slippage_bps_rt": 3.0,
+    "spread_bps_rt": 5.0,
+    "overnight_fee": "0.05% of notional per 00:30 UTC rollover held, weekends included (prop_ev_sim swap_model dxtrade, swap_daily 0.0005)"
+   },
+   "uso_trend_1h": {
+    "commission_bps_rt": 2.0,
+    "slippage_bps_rt": 3.0,
+    "spread_bps_rt": 5.0,
+    "overnight_fee": "0.05% of notional per 00:30 UTC rollover held, weekends included (prop_ev_sim swap_model dxtrade, swap_daily 0.0005)"
+   },
+   "gld_pullback_1h": {
+    "commission_bps_rt": 2.0,
+    "slippage_bps_rt": 3.0,
+    "spread_bps_rt": 3.0,
+    "overnight_fee": "0.05% of notional per 00:30 UTC rollover held, weekends included (prop_ev_sim swap_model dxtrade, swap_daily 0.0005)"
+   },
+   "gld_pullback_1d": {
+    "commission_bps_rt": 2.0,
+    "slippage_bps_rt": 3.0,
+    "spread_bps_rt": 3.0,
+    "overnight_fee": "0.05% of notional per 00:30 UTC rollover held, weekends included (prop_ev_sim swap_model dxtrade, swap_daily 0.0005)"
+   }
+  },
+  "sources": "Velotrade 1P velotrade.com/blog/velotrade-review fetched 2026-11-12: commission 0.01% per side on commodities, no spread markup, overnight fee 0.05% of notional at 00:30 UTC incl. weekends. The spread line is an ASSUMPTION (the bars are bid-only and Velotrade's raw quoted spread was not read): 3 bps RT gold, 5 bps RT silver and WTI. Slippage 3 bps RT as in RQ-20261112-09d2-06."
+ },
+ "per_leg_predicate": "PASS iff ALL: n >= 30 trades in the window; pooled net R > 0; at least 60% of calendar years with >= 1 trade have net R > 0; the per-trade net-R mean's lower bound at z = 2.241 (one-sided 0.05 Bonferroni over 4 legs) > 0. Otherwise FAIL (or INDETERMINATE if the harness/fetch failed: we could not look).",
+ "book_predicate": "On the PASS legs only (if >= 1): re-run RULE-PROP-FRONTIER-EV6M-20261112's engine and predicate (prop_ev_sim path mode, 182 d, 3 seeds x 1000 lives, risk 0.5% of start, dd switch 0.8, lev cap 5, Velotrade CLASSIC 1-Step and PRO 1-Step) on these spot ledgers clipped to window_start 2019-01-01, costs as above (spread folded into slippage). BUYABLE iff the full surviving book passes the EV6M predicate AND, DROP-ONE SENSITIVITY (named up front), for every leg L in a book of >= 2 legs, the book without L still has worst-seed EV > 0 and mean EV > its zero-edge null. A book of 1 leg passes on the EV6M predicate alone and is reported as single-leg.",
+ "on_pass": "Buy-point condition 1 of docs/research/prop-frontier-2026-11-12.md section 6 is met for the PASS legs; conditions 2 (VELO-INSTR-READ) and 4 (per-leg prop_survival SUPERSET) remain.",
+ "on_fail": "No Velotrade CFD purchase on this book. The memo records which legs failed and why (cost vs gross edge).",
+ "known_limits": [
+  "slv_trend_1h declares tp_r: 50.0, which the TP doctrine counts as non-compliant (check_tp_doctrine.py); a prop routing would need a real TP. Measured as configured.",
+  "Spot gold/silver/WTI are proxies for Velotrade's CFD prices; WTI spot vs a rolled CFD differs on roll.",
+  "RTH-only bars ignore overnight price action for signals, exactly as the ETF legs do; positions still hold overnight and pay the overnight fee."
+ ]
+}

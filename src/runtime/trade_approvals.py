@@ -60,6 +60,10 @@ ACTION_MAP = {"close": "close", "partial_close": "partial_close", "move_tp": "mo
 BUTTON_MECHANICS = ("match", "could_not_look")
 
 PENDING, APPROVED, REJECTED, EXPIRED, REFUSED = "pending", "approved", "rejected", "expired", "refused"
+#: MANAGER-VM-DIRECT-OPS: an ask for a Tier-2 job of the direct ops channel (src/runtime/ops_actions.py) rides
+#: the SAME store, buttons, expiry and decide() state machine; on approve/reject decide() hands the outcome to
+#: ops_actions.on_approval instead of writing a directed record.
+OPS_KIND = "ops_job"
 
 
 def _root() -> Path:
@@ -187,6 +191,8 @@ def keyboard(token: str) -> Dict[str, Any]:
 
 
 def _action_text(ask: Dict[str, Any]) -> str:
+    if ask.get("kind") == OPS_KIND:
+        return f"run ops action {ask.get('ops_action')}"
     a = ask["directed"]["action"]
     lvl, fr = ask["directed"].get("level"), ask["directed"].get("fraction")
     if a == "close":
@@ -307,6 +313,66 @@ def offer(row: Dict[str, Any], *, vm_verdict: Optional[str] = None, send: Option
 
 # ─────────────────────────────────────────────────────────────────────────── deciding
 
+def render_ops(ask: Dict[str, Any]) -> str:
+    params = json.dumps(ask.get("params") or {}, default=str, separators=(", ", ": "))
+    params = params if len(params) <= 600 else params[:600] + "…"
+    reason = " ".join(str(ask.get("reason") or "").split())[:420]
+    return "\n".join([f"🛠 Ops action needs your OK (Tier {ask.get('tier')}): {ask.get('ops_action')}",
+                      f"params: {params}", f"why: {reason}", f"asked by: {ask.get('session')}",
+                      f"job {ask.get('job_id')} · expires {str(ask.get('expires_at'))[11:16]}Z",
+                      "Approve runs it now on the VM, through the system's own scripts and checks."])
+
+
+def offer_ops(job: Dict[str, Any], *, send: Optional[Sender] = None,
+              fallback: Callable[[str], bool] = _fallback_alert, now: Optional[datetime] = None,
+              root: Optional[Path] = None) -> Dict[str, Any]:
+    """ONE Approve / Reject ask for a Tier-2 ops-channel job (MANAGER-VM-DIRECT-OPS). Same store, ``tapv`` buttons,
+    operator-chat check, expiry and :func:`decide` as a trade ask; idempotent per job_id. Never raises."""
+    try:
+        r, t = root or _root(), now or _now()
+        key = f"ops:{job['job_id']}"
+        with _locked(r) as store:
+            if key in store["by_review"]:
+                tok = store["by_review"][key]
+                return {"state": "already_offered", "token": tok,
+                        "expires_at": (store["asks"].get(tok) or {}).get("expires_at")}
+            token = secrets.token_hex(TOKEN_HEX // 2)
+            ask = {"token": token, "kind": OPS_KIND, "review_id": key, "job_id": job["job_id"],
+                   "ops_action": job.get("action"), "tier": job.get("tier"), "params": job.get("params"),
+                   "reason": job.get("reason"), "session": job.get("session"), "symbol": "ops channel",
+                   "created_at": _iso(t), "expires_at": _iso(t + timedelta(minutes=expiry_minutes())),
+                   "state": PENDING}
+            store["asks"][token] = ask
+            store["by_review"][key] = token
+        text = render_ops(ask)
+        sent = False
+        try:
+            sent = bool((send or _default_sender)(text, keyboard(token)))
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("trade_approvals: ops send failed: %s", exc)
+        fell_back = False if sent else bool(fallback(text))
+        _journal(r, {"event": "offered", "at": _iso(t), "token": token, "review_id": key, "kind": OPS_KIND,
+                     "job_id": job["job_id"], "sent": sent, "fallback_alert": fell_back,
+                     "expires_at": ask["expires_at"]})
+        return {"state": "offered", "token": token, "sent": sent, "fallback_alert": fell_back,
+                "expires_at": ask["expires_at"]}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("trade_approvals: offer_ops failed", exc_info=True)
+        return {"state": "error", "detail": f"{type(exc).__name__}: {exc}"[:200]}
+
+
+def _ops_decided(ask: Dict[str, Any], choice: str, source: str, now: datetime) -> Tuple[bool, str]:
+    """Hand an ops ask's decision to the ops channel (it queues or closes the job). Never raises."""
+    try:
+        from src.runtime import ops_actions
+        quote = (f"Approved via {source} button: ops action {ask.get('ops_action')} "
+                 f"(ops job {ask.get('job_id')}, ask {ask.get('token')})")
+        return ops_actions.on_approval(str(ask.get("job_id")), choice, quote=quote, source=source, now=now)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("trade_approvals: ops hand-off failed", exc_info=True)
+        return False, f"ops hand-off failed: {type(exc).__name__}: {exc}"[:200]
+
+
 def _write_spool(record: Dict[str, Any], root: Path) -> Path:
     d = spool_root(root) / da.RECORDS_DIR
     d.mkdir(parents=True, exist_ok=True)
@@ -361,7 +427,19 @@ def decide(token: str, choice: str, *, authorised: bool, source: str = "telegram
         elif choice == "reject":
             ask.update(state=REJECTED, decided_at=_iso(t), decided_via=source)
             ev["outcome"] = REJECTED
+            if ask.get("kind") == OPS_KIND:
+                _ops_decided(ask, "reject", source, t)
             reply = f"✖ Rejected: {_action_text(ask)} on {ask.get('symbol') or ask.get('leg')}. Nothing was executed."
+        elif ask.get("kind") == OPS_KIND:
+            ok, detail = _ops_decided(ask, "approve", source, t)
+            if ok:
+                ask.update(state=APPROVED, decided_at=_iso(t), decided_via=source)
+                ev.update(outcome=APPROVED, job_id=ask.get("job_id"))
+                reply = f"✅ Approved: {ask.get('ops_action')} ({ask.get('job_id')}) is queued on the VM."
+            else:
+                ask.update(state=REFUSED, decided_at=_iso(t), decided_via=source, refused=[detail])
+                ev.update(outcome=REFUSED, detail=[detail])
+                reply = f"⚠️ Not run: {detail}"
         else:
             record = build_record(ask, source=source, now=t)
             probs = da.problems(record, path=da.record_path(record["id"]))

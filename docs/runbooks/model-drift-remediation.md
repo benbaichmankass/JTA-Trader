@@ -2,6 +2,8 @@
 
 > **Doc status:** `unknown` · category `lookup` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../docs/DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
 
+> ⚠️ **SUPERSEDED IN PART, 2026-11-12 (lane ML-STAGE-RETIRE).** The operator retired the ML stage step, chat 2026-11-12 ~16:35Z, verbatim: *"you're going to retire the step from the ML. Everything goes through the new flow, back testing, live money, and then if it gets demoted, it soaks to still generate data while we iterate on it. That is the only acceptable flow. There is nothing in between proving edge on back testing and real money. Absolutely no steps."* Any text below that calls `shadow → advisory` a gate, step, soak or operator decision on the way to real money is **history, not instruction**: a model with committed offline evidence (`ml.promotion.gates`) goes to `advisory` directly; `shadow` holds only data collection and demoted models in iteration. Current rule: [`docs/CLAUDE-RULES-CANONICAL.md`](../CLAUDE-RULES-CANONICAL.md) § "Promotion evidence — offline edge, live mechanics".
+
 **When the daily promotion-readiness report proposes a DEMOTE for a live
 (`advisory`) model — or any model flags drift — do NOT reflexively demote.**
 Understand → fix → verify. A demote is an *interim safety net while the fix

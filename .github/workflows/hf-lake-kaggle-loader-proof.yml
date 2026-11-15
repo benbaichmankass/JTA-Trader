@@ -1,0 +1,166 @@
+name: hf-lake-kaggle-loader-proof
+
+# PROOF for row HF-LAKE-KAGGLE-LOADER (lane session_01AFoLuM5Fv57XChsZxmu9Mc): ml.datasets.lake reads the FROZEN months of the lake from the
+# private Kaggle mirror metis-market-lake-p000..p010 and only the hot tail from HF. This runs the loader, as it stands on this ref, in
+#   (1) a Kaggle CPU kernel with internet OFF that mounts all 11 mirror datasets and calls lake.symbols('crypto','um_perp','1h') (1h is
+#       derived on read from the 1m mirror), a hash-verified 1h window, a streaming read, and a hot-tail window that must report
+#       could_not_look rather than an empty frame;
+#   (2) the GitHub runner: downloads one mirror member (BTCUSDT 2023.parquet) as a single file (the kaggle CLI route that works; whole-dataset DownloadDataset
+#       404s for private datasets, row ML-DATA-RUNNER-FETCH) and loads them through the same loader. That is the observation row
+#       ML-DATA-OFF-TRAINER owes for "a GitHub-runner download of the private Kaggle export".
+#
+# NOTHING IS DELETED OR WRITTEN: read-only against Kaggle and HF (HF is not contacted). The HF delete is a separate, operator-gated step that
+# waits for this proof.
+#
+# no-durable-result: proof run; computes no research verdict. Its durable output is the result artifact, recorded on the row.
+#
+# GATES THIS ADDS OR CHANGES: none. Read-only data-path check; no order path, no config the trader reads, no execution flag.
+# Secrets: KAGGLE_API_TOKEN (existing Actions secret), masked, username scrubbed from every uploaded file. No Anthropic API spend.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/hf-lake-kaggle-loader-proof.yml"
+      - "ml/datasets/lake.py"
+      - "ml/datasets/lake_mirror.py"
+      - "scripts/data_lake/kaggle_pilot_kernel/kernel_loader_proof.py"
+      - "scripts/data_lake/kaggle_pilot_kernel/make_loader_bundle.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hf-lake-kaggle-loader-proof-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --quiet "kaggle>=2.0" six pandas pyarrow pyyaml pytest
+      - name: Loader tests (planted / clean pairs)
+        run: python -m pytest -q tests/test_lake_mirror.py
+      - name: (1) Kaggle CPU kernel, internet off, mounts the 11 mirror datasets and loads the lake through ml.datasets.lake
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(python - <<'PY'
+          from kaggle.api.kaggle_api_extended import KaggleApi
+          a = KaggleApi(); a.authenticate()
+          print(a.config_values.get("username", ""))
+          PY
+          )
+          echo "::add-mask::$USERNAME"
+          echo "$USERNAME" > /tmp/username
+          scrub() { sed "s|$USERNAME|<user>|g"; }
+          mkdir -p /tmp/k
+          python3 scripts/data_lake/kaggle_pilot_kernel/make_loader_bundle.py --out /tmp/k
+          python3 - "$USERNAME" <<'PY'
+          import json, sys
+          u = sys.argv[1]
+          slug = "metis-market-lake-loader-proof"
+          json.dump({"id": f"{u}/{slug}", "title": slug, "code_file": "kernel_loader_proof.py", "language": "python",
+                     "kernel_type": "script", "is_private": "true", "enable_gpu": "false", "enable_tpu": "false", "enable_internet": "false",
+                     "dataset_sources": [f"{u}/metis-market-lake-p{i:03d}" for i in range(11)],
+                     "competition_sources": [], "kernel_sources": [], "model_sources": []},
+                    open("/tmp/k/kernel-metadata.json", "w"), indent=1)
+          PY
+          T0=$(date +%s)
+          timeout 300 kaggle kernels push -p /tmp/k 2>&1 | scrub | tee /tmp/push.txt
+          grep -qi "error\|fail" /tmp/push.txt && { echo "::error::kernel push failed"; exit 1; }
+          deadline=$(( $(date +%s) + 6000 ))
+          while :; do
+            s=$(timeout 90 kaggle kernels status "$USERNAME/metis-market-lake-loader-proof" 2>&1 | scrub); echo "$(date -u +%H:%M:%S) $s" | tail -1
+            case "$s" in *COMPLETE*|*ERROR*|*CANCEL*) break;; esac
+            [ "$(date +%s)" -gt "$deadline" ] && { echo "::error::kernel timed out"; exit 1; }
+            sleep 45
+          done
+          T1=$(date +%s)
+          mkdir -p kout && timeout 300 kaggle kernels output "$USERNAME/metis-market-lake-loader-proof" -p kout 2>&1 | scrub | tail -3
+          echo "{\"kernel_seconds\": $((T1-T0))}" > /tmp/kernel-timing.json
+          [ -f kout/result.json ] || { echo "::error::no result.json from the kernel"; exit 1; }
+          scrub < kout/result.json > /tmp/kernel.json
+          python3 -c "import json;d=json.load(open('/tmp/kernel.json'));print(json.dumps({k:v for k,v in d.items() if k!='trace'}, indent=1)[:3500]);print(d.get('trace',''))"
+          python3 -c "import json,sys;sys.exit(0 if json.load(open('/tmp/kernel.json')).get('ok') else 1)"
+      - name: (2) Runner downloads a mirror member (single-file route) and loads it through the loader
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(cat /tmp/username); echo "::add-mask::$USERNAME"
+          python3 - "$USERNAME" <<'PY' | tee /tmp/runner.json
+          import json, os, subprocess, sys
+          user = sys.argv[1]
+          # BTCUSDT um_perp 1m for closed year 2023 is ONE yearly member (YYYY.parquet) in p001 or p002 (the 1m klines are split by symbol across them)
+          want = "crypto/um_perp/1m/BTCUSDT/2023.parquet"
+          found = None
+          for slug in ("metis-market-lake-p001", "metis-market-lake-p002"):
+              d = f"/tmp/mir/{slug}"
+              os.makedirs(d, exist_ok=True)
+              subprocess.run(["kaggle", "datasets", "download", "-d", f"{user}/{slug}", "-f", "MANIFEST.json", "-p", d, "--unzip"], capture_output=True, text=True)
+              man = json.load(open(os.path.join(d, "MANIFEST.json")))
+              for f in man["files"]:
+                  for m in f.get("members", []):
+                      if m["path"] == want:
+                          found = (slug, d, f["path"][:-4], m)
+              if found:
+                  break
+          assert found, f"{want} not found in the p001/p002 manifests"
+          slug, d, shard, m = found
+          rel = f"{shard}/{m['path']}"
+          dst = os.path.join(d, shard, os.path.dirname(m["path"]))
+          os.makedirs(dst, exist_ok=True)
+          r = subprocess.run(["kaggle", "datasets", "download", "-d", f"{user}/{slug}", "-f", rel, "-p", dst, "--unzip"], capture_output=True, text=True)
+          # the CLI may save the file under its basename, its relative path, or a subfolder (documented in kaggle-cold-lake-copy.yml's sample step,
+          # run 42158580079): find it by name and size wherever it landed, move it to <dataset>/<shard>/<member path>. The loader still verifies
+          # its SHA-256 against MANIFEST.json, so a wrong file cannot pass.
+          expect = os.path.join(d, shard, m["path"])
+          where = None
+          for root, _dirs, files in os.walk(d):
+              for name in files:
+                  q = os.path.join(root, name)
+                  if name == os.path.basename(m["path"]) and os.path.getsize(q) == m["bytes"]:
+                      where = os.path.relpath(q, d)
+                      if os.path.abspath(q) != os.path.abspath(expect):
+                          os.makedirs(os.path.dirname(expect), exist_ok=True)
+                          os.replace(q, expect)
+          present = os.path.isfile(expect)
+          os.environ["LAKE_MIRROR_DIR"] = os.path.dirname(d)
+          os.environ["HF_HUB_OFFLINE"] = "1"
+          sys.path.insert(0, ".")
+          from ml.datasets import lake
+          try:
+              df = lake.load("crypto", "um_perp", "1h", ["BTCUSDT"], start="2023-01-01", end="2023-04-01")
+          except lake.LakeReadError as e:   # explicit could_not_look: print what the step saw, then fail
+              print(json.dumps({"ok": False, "dataset": slug, "member": m["path"], "download_rc": r.returncode, "cli_saved_at": where,
+                                "present": present, "download_output": (r.stdout + r.stderr)[-300:], "read": e.state}).replace(user, "<user>"))
+              sys.exit(1)
+          rd = df.attrs["lake_read"]
+          ok = bool(present and len(df) == 90 * 24 and df["complete"].all() and rd["from_kaggle_mirror"] == 1 and rd["n_could_not_look"] == 0)
+          print(json.dumps({"ok": ok, "dataset": slug, "member": m["path"], "member_bytes": m.get("bytes"), "download_rc": r.returncode,
+                            "cli_saved_at": where, "present": present, "rows": int(len(df)), "read": rd}).replace(user, "<user>"))
+          sys.exit(0 if ok else 1)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hf-lake-kaggle-loader-proof
+          path: |
+            /tmp/kernel.json
+            /tmp/kernel-timing.json
+            /tmp/runner.json
+          retention-days: 30
+      - name: Summary
+        if: always()
+        run: |
+          { echo '### hf-lake-kaggle-loader-proof'; for f in /tmp/kernel.json /tmp/runner.json; do echo; echo "\`$f\`"; echo '```'; python3 -c "import json;d=json.load(open('$f'));d.pop('trace',None);print(json.dumps(d)[:1800])" 2>&1 || echo missing; echo '```'; done; } >> "$GITHUB_STEP_SUMMARY"

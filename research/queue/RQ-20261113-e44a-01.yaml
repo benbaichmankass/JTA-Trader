@@ -1,0 +1,74 @@
+# Hand-authored 2026-11-13 by AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx), ranked #2 by Manager Session 2026-11-11a (06:51Z:
+# "eth_4h: queue the prop EV/survival re-run at tp_r 4"). Decision rule registered BEFORE any cell of this unit ran; the rule
+# itself is the already-registered RULE-P5-GATE-BRK-PER-LEG-V3, applied unchanged. Gates this adds or changes: none.
+id: RQ-20261113-e44a-01
+title: 'Prop superset for the eth_4h TP fix: does trend_donchian_eth_4h at tp_r 4 (the T4 arm that passed RQ-20261028-a7c3-04)
+  clear RULE-P5-GATE-BRK-PER-LEG-V3 on breakout_2, tradeify_1 and velotrade_1?'
+status: done
+cadence: once
+roadmap:
+- L-PROP
+- M20
+theme: live_strategy
+priority: 1
+kind: experiment
+programme: P5
+origin: follow_up
+practice_precedent: 'Prop legs clear a SUPERSET of the real-money bar (operator 2026-10-15; comms/prop_survival/README.md); the
+  prop gate is ONE implementation (scripts/research/prop_gate.py, v2 + v3 edge clause) and the cell protocol is the one that
+  produced comms/prop_survival/trend_donchian_eth_4h.json (docs/research/prop-replacement-2026-10-30/run_cells.sh).'
+question: 'RQ-20261028-a7c3-04 passed T4 (tp_r 4.0) on trend_donchian_eth_4h (net 110.91 vs 110.13 R, n 277), which would make the
+  leg TP-doctrine compliant on entry_tp. The leg trades on three prop books (tradeify_1, velotrade_1 live; breakout_2 on ice), so a
+  roster change needs the prop EV/survival gate re-run at tp_r 4 first. On the record''s 3y window (entry 2023-10-13 .. 2026-10-11
+  20:00) and its trailing 365d slice, priced on the current-stack cost arm, does the T4 ledger clear RULE-P5-GATE-BRK-PER-LEG-V3
+  on each prop account?'
+why_this_matters: 'Without this the eth_4h TP fix (row RM-AM-ETH4H-ENTRYTP, Tier 3) cannot reach a prop roster; the current record
+  (comms/prop_survival/trend_donchian_eth_4h.json) is V3 FAIL_EDGE at the declared 50R sentinel and the leg sits on prop under the
+  operator''s 2026-11-05 min-size baseline exception.'
+population:
+  ledgers: 'comms/research/RQ-20261028-a7c3-04/40826186111/arms/{A,T4}__trades.jsonl sliced to entry_time in [2023-10-13,
+    2026-10-11 20:00] (3y, n 132 each) and entry_time >= 2025-10-11 20:00 (365d). A = the leg as declared (50R sentinel) from the
+    SAME harness run, the paired same-run baseline. NOTE: the old record''s ledger (docs/research/prop-replacement-2026-10-30/
+    ledgers/eth4h_3y.jsonl, gap-fixed harness) matches A on n (132) and side split (73 long / 59 short) but differs in gross_r on
+    23 trades (sum 48.12 vs 65.46 R), so T4 is compared to A, never to the old record.'
+  accounts: [breakout_2, tradeify_1, velotrade_1]
+  cost_arm: cur (commission 11 bps rt, slippage 3 bps rt, swap 0.0003/day prorated; prop_gate.CUR)
+power:
+  expected_n: 132
+  min_detectable_effect: 0.25
+  effect_units: R per trade (edge CI lower bound > 0)
+  sd: 1.9
+  design: 5 seeds x 1000 lives per cell, path mode; edge CI over the ledger's trades
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED from the old record: edge +0.284 R, CI95 [-0.068, +0.637] at n 132 (half-width 0.35 R) - an edge near 0.3 R is at
+    the edge of detectability; the 365d slice (n ~51) is below the rule''s n floor 88 and grades INDETERMINATE by construction.'
+  feasibility:
+    source: committed ledgers (no fetch)
+    accrual_basis: replays committed trades; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261113e44a01-ETH4H-TP4-PROP-V3
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  statistic: 'docs/research/prop-eth4h-tp4-2026-11-13/run_cells.sh (the 2026-10-30 cell protocol: prop_ev_sim --costs breakout,
+    --funded-start fresh, --sizing start, account risk_pct 0.0035 / 0.005 / 0.005, lev cap 5, dd-switch-frac 0.8, path mode,
+    1000 lives, seeds 1-5) for legs {eth4hA, eth4hT4} x windows {3y, 365d} x the 3 accounts x arm cur; then
+    prop_gate.aggregate_v2 (v2: n >= 88, median and worst breach B below the account ceiling, median and worst EV > 0) and
+    prop_gate.grade_v3 with prop_gate.edge_ci(prop_gate.ledger_net_r(ledger, account, "cur")) (edge 95% CI lower bound > 0, z 1.96).'
+  rule: 'Per account, the PRIMARY cell is (eth4hT4, 3y, cur). The unit PASSES iff the primary cell is V3 PASS on ALL THREE accounts.
+    FAIL_EDGE iff v2 passes on all three but the edge CI lower bound is <= 0. FAIL otherwise. The 365d cells are reported and graded
+    nothing beyond the rule''s own INDETERMINATE (n < 88); a primary PASS whose 365d EV sign flips is flagged CONTESTED, which maps to
+    DE-RISK, not to an add (RULE-P5-GATE-BRK-PER-LEG-V2 text). The A cells are reported as the paired same-run baseline and graded
+    nothing. Not changed after any result.'
+  what_it_does_not_do: 'Writes no comms/prop_survival record by itself (a PASS lets the Tier-3 PR update that record); changes no
+    config, roster or tp_r; places no order.'
+run:
+  workflow: session-local
+  note: 'Run SESSION-LOCAL by AM-OPS: the cells read only committed ledgers. Driver, ledgers, cells and verdict.json under
+    docs/research/prop-eth4h-tp4-2026-11-13/.'
+  inputs:
+    research_unit: RQ-20261113-e44a-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1

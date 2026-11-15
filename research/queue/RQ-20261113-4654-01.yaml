@@ -1,0 +1,139 @@
+id: RQ-20261113-4654-01
+title: 'tqqq_trend_long_1d donchian=20 confirmation on an IN-HAND symbol holdout: the config-exact TQQQ twin on SPY (2010-06-01..2026-10-22, the be01-02
+  window), donchian 20 vs the shipped 30, net of the full cost stack'
+status: queued
+cadence: monthly
+kind: experiment
+theme: live_strategy
+priority: 1
+roadmap:
+- L-LADDER
+question: 'RQ-20261023-be01-02 selected C3 (donchian=20) as best of 5 arms on TQQQ discovery and PASSed it on the TQQQ held-back span (n=34, +3.20 R), so
+  TQQQ''s own history is spent for C3. RQ-20261103-5a03-03 tried a FORWARD read and was retired 2026-11-13 (empty window; waiting for new bars is retired
+  by RESEARCH-NO-WAIT). This re-registration reads C3 ONCE on an in-hand series it has never seen: the config-exact twin of tqqq_trend_long_1d (every config
+  field unchanged, symbols[0] -> SPY via exit_lever_ablation --symbol) over the same 2010-06-01..2026-10-22 window. SPY tracks a DIFFERENT index (S&P 500
+  vs TQQQ''s Nasdaq-100), so the selection noise that picked C3 on TQQQ does not carry over the way it would on QQQ/QLD. Does donchian=20 beat the shipped
+  donchian=30 on it?'
+why_this_matters: tqqq_trend_long_1d is already PRODUCTION (alpaca_live + alpaca_portfolio; scripts/ops/strategy_status.py 2026-11-13) on donchian=30. be01-02's
+  C3 (donchian=20) is the only evidence for changing that parameter, and it is unconfirmed (best-of-5 on one series). A forward read waits ~3 years for
+  25 trades; an in-hand symbol holdout answers now.
+power:
+  expected_n: 100
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, not measured: TQQQ twin trades about 8 per year on TQQQ (be01-02 held-back 34 over ~4.1 y), so ~130 over 16 y; SPY trends with lower
+    vol, so expect a similar count (the harness reports n). The registered n floor is 25. Said before any run.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window 2010-06-01..2026-10-22; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261113-4654-01-TQQQ-D20-SPY-TWIN
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --grade sweep, baseline A (donchian=30) vs D20 (donchian=20) on the SPY twin of tqqq_trend_long_1d,
+    2010-06-01..2026-10-22, 4 folds: net_r(D20) - net_r(A), maxDD(D20) vs maxDD(A), fold wins of D20 over A; D20''s absolute net_r and n reported.'
+  rule: 'The harness''s registered sweep grade, unchanged: PASS IFF net_r(D20) - net_r(A) >= 0 AND maxDD(D20) <= maxDD(A) AND D20 beats A in >= 3 of 4 folds.
+    FAIL if D20 does not (closes donchian=20 on this leg''s config, never the family). INDETERMINATE if n(A) < 25. The bar, the arm value, the window and
+    the symbol are fixed now and not changed after any result. ON PASS: the record is the confirmation behind ONE data-backed Tier-3 proposal to change
+    tqqq_trend_long_1d donchian 30 -> 20 on its production books (manager merges under the data-backed rule; this unit changes nothing). ON FAIL: donchian=20
+    is not confirmed off TQQQ; the leg keeps donchian=30.'
+  what_it_does_not_do: 'Changes no config, roster or order. One symbol (SPY), one arm vs the shipped config. Not a TQQQ read: TQQQ''s own history is spent
+    for C3 (be01-02). A 2024-07-01 reservation is mentioned in 5a03-03''s text but I found none in scripts/research/holdout_lock.py, comms/research/holdout_reads.jsonl
+    (33 rows, none on SPY/QQQ/QLD/SPLG), the operating plan or row HOLDOUT-LOCK, so the be01-02 window is used as is (declared).'
+  baseline: 'A = the shipped tqqq_trend_long_1d config (donchian=30) on the same SPY twin, same window, same harness cost stack (exit_lever_ablation''s
+    leg harness: fee + slippage; daily long-only ETF, no funding).'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.35
+  basis: 'stand-in: a testing leg one confirmation from alpaca_live + alpaca_portfolio; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data.
+  basis: One keyless candle fetch of the window and one harness pass per arm; same shape as RQ-20261022-326f-05 and RQ-20261023-a1f3-11 (estimate, not measured).
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - tqqq_trend_long_1d
+  - --symbol
+  - SPY
+  - --arm
+  - A=
+  - --arm
+  - D20=donchian=20
+  - --days
+  - '6200'
+  - --start
+  - '2010-06-01'
+  - --end
+  - 2026-10-22 23:59
+  - --grade
+  - sweep
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '25'
+  - --research-unit
+  - RQ-20261113-4654-01
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261113-4654-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: tqqq_trend_long_1d
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261023-be01-02/40033387353.jsonl
+  verdict_read: pass_unconfirmed
+  diagnosis: be01-02 PASSed with C3 (donchian=20) selected as best of 5 arms on TQQQ discovery and read on the TQQQ held-back span; best-of-arms selection
+    on one series means C3 is unconfirmed. The forward re-read (5a03-03) could not run (empty window). The confirmation needs an unread series with the
+    identical config.
+  hypothesis: donchian=20, fixed in advance, beats the shipped donchian=30 on an unread index with the identical config, net of the full cost stack
+  attempt: 2
+  due_by: '2026-11-20'
+  map_entries:
+  - research/levers/tqqq_trend_long_1d.yaml
+related:
+- RQ-20261023-be01-02
+- RQ-20261103-5a03-03
+- MD-PROMOTE-S1-S2
+- PI-20261113-6YRT1RMK-0001
+- comms/strategy_evidence/tqqq_trend_long_1d.json
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): variants registered before the run, counted, and confirmed ONCE
+  on a span they were not selected on, net of cost; same protocol as RQ-20261023-be01-02.'
+last_dispatched_at: '2026-11-13T04:57:04+00:00'
+grading:
+  attested: RULE-RQ20261113-4654-01-TQQQ-D20-SPY-TWIN
+  auto: true
+  decision_rule_id: RULE-RQ20261113-4654-01-TQQQ-D20-SPY-TWIN
+  evidence:
+  - research/results/RQ-20261113-4654-01/43368810094.jsonl
+  graded_at: '2026-11-13'
+  grader: scripts/research/queue_grade.py
+  latest: true
+  needs_review: false
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

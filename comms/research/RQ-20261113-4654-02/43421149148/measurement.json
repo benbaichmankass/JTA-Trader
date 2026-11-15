@@ -1,0 +1,413 @@
+{
+  "engine": "scripts/research/ml_bakeoff.py",
+  "metric": "macro_f1",
+  "higher_is_better": true,
+  "metric_caveats": [],
+  "delta_sign": "positive = learner better than reference",
+  "baseline": "lightgbm",
+  "controls": [
+    "prior"
+  ],
+  "candidates": [
+    "gru"
+  ],
+  "arm_status": {
+    "prior": "ok",
+    "lightgbm": "ok",
+    "gru": "ok"
+  },
+  "groups": {
+    "BTCUSDT": {
+      "n_rows": 60000,
+      "classes": [
+        "range",
+        "volatile"
+      ],
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.49263617785920655,
+                0.48361184823925984,
+                0.49470138255316165,
+                0.49653870358716173,
+                0.49699594802291464
+              ],
+              "n_test_rows": 36000
+            }
+          }
+        },
+        "lightgbm": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "parkinson_vol",
+            "garman_klass_vol",
+            "rogers_satchell_vol",
+            "yang_zhang_vol"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.5314446298990021,
+                0.5345910012124839,
+                0.5246406449177348,
+                0.5103690854573342,
+                0.5303983228511531
+              ],
+              "n_test_rows": 36000
+            }
+          }
+        },
+        "gru": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "parkinson_vol",
+            "garman_klass_vol",
+            "rogers_satchell_vol",
+            "yang_zhang_vol"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.5008690226837204,
+                0.4944268898225633,
+                0.5205865764241399,
+                0.5089786756453423,
+                0.49699594802291464
+              ],
+              "n_test_rows": 36000
+            }
+          }
+        }
+      }
+    },
+    "SOLUSDT": {
+      "n_rows": 60000,
+      "classes": [
+        "range",
+        "volatile"
+      ],
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.4695741859437159,
+                0.4628068342908304,
+                0.48383396659258726,
+                0.48424068767908307,
+                0.48816378758797185
+              ],
+              "n_test_rows": 36000
+            }
+          }
+        },
+        "lightgbm": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "parkinson_vol",
+            "garman_klass_vol",
+            "rogers_satchell_vol",
+            "yang_zhang_vol"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.5899207162145159,
+                0.6088960128230816,
+                0.5869990212085389,
+                0.6098851278029426,
+                0.5471912677524542
+              ],
+              "n_test_rows": 36000
+            }
+          }
+        },
+        "gru": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "parkinson_vol",
+            "garman_klass_vol",
+            "rogers_satchell_vol",
+            "yang_zhang_vol"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.5817406559700713,
+                0.6394794396604837,
+                0.6223411496576894,
+                0.5851252456986821,
+                0.5382897428058053
+              ],
+              "n_test_rows": 36000
+            }
+          }
+        }
+      }
+    }
+  },
+  "deltas": {
+    "BTCUSDT": {
+      "cv": {
+        "prior": {
+          "lightgbm": {
+            "n_folds": 5,
+            "mean": -0.03339192481520072,
+            "ci95": [
+              -0.050200190026719785,
+              -0.01658365960368166
+            ],
+            "sign_consistent": true,
+            "boot": {
+              "n_rows": 36000,
+              "mean": -0.03980054102675923,
+              "ci95": [
+                -0.059611646886673836,
+                -0.017294951524757633
+              ],
+              "sd": 0.010442852327465186,
+              "block_rows": 96,
+              "n_boot": 1000,
+              "seed": 0
+            }
+          },
+          "prior": {
+            "n_folds": 5,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false,
+            "boot": {
+              "n_rows": 36000,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sd": 0.0,
+              "block_rows": 96,
+              "n_boot": 1000,
+              "seed": 0
+            }
+          }
+        },
+        "gru": {
+          "lightgbm": {
+            "n_folds": 5,
+            "mean": -0.021917314347805528,
+            "ci95": [
+              -0.04412763577952673,
+              0.0002930070839156744
+            ],
+            "sign_consistent": true,
+            "boot": {
+              "n_rows": 36000,
+              "mean": -0.027399736210986125,
+              "ci95": [
+                -0.04526355202199006,
+                -0.006093249277325911
+              ],
+              "sd": 0.009909276393519054,
+              "block_rows": 96,
+              "n_boot": 1000,
+              "seed": 0
+            }
+          },
+          "prior": {
+            "n_folds": 5,
+            "mean": 0.011474610467395197,
+            "ci95": [
+              -0.00015824722704357516,
+              0.02310746816183397
+            ],
+            "sign_consistent": false,
+            "boot": {
+              "n_rows": 36000,
+              "mean": 0.012400804815773103,
+              "ci95": [
+                0.004714719013481268,
+                0.02115367196083361
+              ],
+              "sd": 0.0042341523501572215,
+              "block_rows": 96,
+              "n_boot": 1000,
+              "seed": 0
+            }
+          }
+        }
+      }
+    },
+    "SOLUSDT": {
+      "cv": {
+        "prior": {
+          "lightgbm": {
+            "n_folds": 5,
+            "mean": -0.11085453674146892,
+            "ci95": [
+              -0.1515373404660567,
+              -0.07017173301688112
+            ],
+            "sign_consistent": true,
+            "boot": {
+              "n_rows": 36000,
+              "mean": -0.12132641419685147,
+              "ci95": [
+                -0.15252031915730777,
+                -0.08826264612532131
+              ],
+              "sd": 0.015933478299757386,
+              "block_rows": 96,
+              "n_boot": 1000,
+              "seed": 0
+            }
+          },
+          "prior": {
+            "n_folds": 5,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false,
+            "boot": {
+              "n_rows": 36000,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sd": 0.0,
+              "block_rows": 96,
+              "n_boot": 1000,
+              "seed": 0
+            }
+          }
+        },
+        "gru": {
+          "lightgbm": {
+            "n_folds": 5,
+            "mean": 0.004816817598239731,
+            "ci95": [
+              -0.028190777734424848,
+              0.03782441293090431
+            ],
+            "sign_consistent": false,
+            "boot": {
+              "n_rows": 36000,
+              "mean": 0.012655043592130544,
+              "ci95": [
+                -0.003972181223050244,
+                0.029020958088738093
+              ],
+              "sd": 0.00863111396126794,
+              "block_rows": 96,
+              "n_boot": 1000,
+              "seed": 0
+            }
+          },
+          "prior": {
+            "n_folds": 5,
+            "mean": 0.11567135433970865,
+            "ci95": [
+              0.057541620678684964,
+              0.17380108800073235
+            ],
+            "sign_consistent": true,
+            "boot": {
+              "n_rows": 36000,
+              "mean": 0.13398145778898202,
+              "ci95": [
+                0.09798882744471753,
+                0.16724457150101665
+              ],
+              "sd": 0.017800196219818078,
+              "block_rows": 96,
+              "n_boot": 1000,
+              "seed": 0
+            }
+          }
+        }
+      }
+    }
+  },
+  "rule_evaluation": {
+    "verdict": "indeterminate",
+    "why": "between the pass bar and the fail floor",
+    "candidates": {
+      "gru": {
+        "evaluated": true,
+        "passes_all": false,
+        "clauses": []
+      }
+    }
+  },
+  "headline_checks": [],
+  "licences": {
+    "prior": {
+      "kind": "prior",
+      "licence": "n/a",
+      "research_only": false,
+      "weights": ""
+    },
+    "lightgbm": {
+      "kind": "lightgbm",
+      "licence": "MIT",
+      "research_only": false,
+      "weights": ""
+    },
+    "gru": {
+      "kind": "torch_gru",
+      "licence": "BSD-3-Clause (torch)",
+      "research_only": false,
+      "weights": ""
+    }
+  },
+  "n_folds_cv_min_over_groups": 5,
+  "seconds": 479.4
+}

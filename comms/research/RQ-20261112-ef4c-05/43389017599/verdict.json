@@ -1,0 +1,131 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "n": 1777,
+  "population": "1 group(s) ['MES_1d']; baseline prior; candidates ['lgbm']; metric logloss; n = baseline OOS test rows summed over groups; cv folds per group >= 5",
+  "note": "candidate(s) ['lgbm'] meet every pass_if clause",
+  "measurement": {
+    "engine": "scripts/research/ml_bakeoff.py",
+    "metric": "logloss",
+    "higher_is_better": false,
+    "metric_caveats": [],
+    "delta_sign": "positive = learner better than reference",
+    "baseline": "prior",
+    "controls": [],
+    "candidates": [
+      "lgbm"
+    ],
+    "arm_status": {
+      "prior": "ok",
+      "lgbm": "ok"
+    },
+    "groups": {
+      "MES_1d": {
+        "n_rows": 2961,
+        "classes": [
+          "range",
+          "volatile"
+        ],
+        "arms": {
+          "prior": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.7779379489243891,
+                  0.747182271007444,
+                  0.7203778046624184,
+                  0.6936092041571816,
+                  0.6943782676490828
+                ],
+                "n_test_rows": 1777
+              }
+            }
+          },
+          "lgbm": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.5853226300414986,
+                  0.5171014495773159,
+                  0.733230306740506,
+                  0.6927888525789163,
+                  0.7538088040687579
+                ],
+                "n_test_rows": 1777
+              }
+            }
+          }
+        }
+      }
+    },
+    "deltas": {
+      "MES_1d": {
+        "cv": {
+          "lgbm": {
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.07024669067870423,
+              "ci95": [
+                -0.0928804634997519,
+                0.23337384485716037
+              ],
+              "sign_consistent": false
+            }
+          }
+        }
+      }
+    },
+    "rule_evaluation": {
+      "verdict": "pass",
+      "why": "candidate(s) ['lgbm'] meet every pass_if clause",
+      "passing": [
+        "lgbm"
+      ],
+      "candidates": {
+        "lgbm": {
+          "evaluated": true,
+          "passes_all": true,
+          "clauses": [
+            {
+              "holds": true,
+              "what": "['MES_1d'] >= 0.002 vs prior/cv"
+            }
+          ]
+        }
+      }
+    },
+    "headline_checks": [],
+    "licences": {
+      "prior": {
+        "kind": "prior",
+        "licence": "n/a",
+        "research_only": false,
+        "weights": ""
+      },
+      "lgbm": {
+        "kind": "lightgbm",
+        "licence": "MIT",
+        "research_only": false,
+        "weights": ""
+      }
+    },
+    "n_folds_cv_min_over_groups": 5,
+    "seconds": 4.3
+  }
+}

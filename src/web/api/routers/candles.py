@@ -12,10 +12,9 @@ Best-effort: any connector/fetch failure (e.g. MES when the IB account has no
 its yfinance source. Results are cached briefly so repeated dashboard polls
 don't hammer the exchange. Tier 1 — no auth, no secrets in the response.
 
-Env dependency: the Bybit path honours ``BYBIT_TESTNET`` (default *true* in the
-market-data builder). The ``ict-web-api`` unit must carry ``BYBIT_TESTNET=false``
-(+ the Bybit creds) to return mainnet candles — otherwise the fetch is empty and
-the dashboard falls back to yfinance.
+Env dependency: the Bybit path honours ``BYBIT_TESTNET`` (unset = MAINNET in the
+market-data builder since PROP-CANDLE-FEED-FIX, 2026-11-12; only an explicit
+``true`` reads testnet). The ``ict-web-api`` unit carries ``BYBIT_TESTNET=false``.
 """
 from __future__ import annotations
 

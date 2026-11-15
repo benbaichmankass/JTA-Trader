@@ -31,6 +31,9 @@ THE UNIT BLOCK (``ml_bakeoff:`` in the unit YAML — registered BEFORE the run, 
         group_col: symbol             # optional (single-frame multi-group)
         holdout_after: '2025-09-01'   # optional extra window ("holdout") graded by the same rule
       cv: {folds: 5, embargo_rows: 96, min_train_frac: 0.4}    # purged expanding walk-forward
+      # optional: cv.row_bootstrap: {block_rows: 96, n_boot: 1000, seed: 0} -- a paired moving-block bootstrap of the
+      # POOLED out-of-sample metric delta (row level, not fold level); a rule clause reads it with ``stat: boot_ci_low``
+      # or ``stat: boot_mean`` (FRONTIER-Q-GRU-RESOLVABLE / ML-F29). Absent = every output byte-identical to before.
       baseline: incumbent             # name in learners
       controls: [har_rv_control]      # names in learners (reported + usable as `vs` in the rule)
       candidates: [chronos2, ...]     # names in learners (the arms under test)
@@ -731,19 +734,27 @@ def run_group(df, spec: Dict[str, Any], learner_specs: Dict[str, Dict[str, Any]]
         X = np.column_stack([cols[c] for c in names]) if names else np.zeros((len(df), 0))
         fit = LEARNERS[ls["kind"]][0]
         arm: Dict[str, Any] = {"status": "ok", "features": names, "windows": {}}
+        keep = bool(cv.get("row_bootstrap"))
         try:
             for wname, wf in windows.items():
-                vals, ntest = [], 0
+                vals, ntest, oos = [], 0, []
                 for tr, te in wf:
                     out = fit(X[tr], y_all[tr], X[te], k, dict(ls.get("params") or {}))
                     vals.append(compute_metric(metric, y_all[te], out, classes))
                     ntest += len(te)
+                    if keep:
+                        oos.append((te, np.asarray(out)))
                 arm["windows"][wname] = {"fold_metric": vals, "n_test_rows": ntest}
+                if keep:   # in-memory only (popped before the verdict is written): the rows behind the row bootstrap
+                    arm["windows"][wname]["_oos"] = (np.concatenate([t for t, _ in oos]) if oos else np.zeros(0, int),
+                                                     np.concatenate([o for _, o in oos]) if oos else np.zeros(0))
         except Unavailable as e:
             arm = {"status": "unavailable", "reason": str(e)}
         except Exception as e:  # allow-silent: one arm breaking is contained and recorded as status=error + reason in the result
             arm = {"status": "error", "reason": f"{type(e).__name__}: {e}"}
         res["arms"][name] = arm
+    if cv.get("row_bootstrap"):
+        res["_y"], res["_classes"] = y_all, classes
     return res
 
 
@@ -761,6 +772,56 @@ def paired_delta(a: List[float], b: List[float]) -> Dict[str, Any]:
     t = _T95[n - 2] if n - 1 <= len(_T95) else 1.96
     return {"n_folds": n, "mean": mean, "ci95": [mean - t * se, mean + t * se],
             "sign_consistent": bool(np.all(d > 0) or np.all(d < 0))}
+
+
+def block_bootstrap_delta(y: np.ndarray, out_a: np.ndarray, out_b: np.ndarray, metric: str, classes: List[Any],
+                          sign: float, block_rows: int, n_boot: int, seed: int) -> Dict[str, Any]:
+    """Paired moving-block bootstrap of the POOLED metric delta sign x (metric(a) - metric(b)) on the SAME rows.
+    Rows are in out-of-sample time order; circular blocks of ``block_rows`` keep the serial dependence of
+    overlapping labels inside a block. Percentile 95% interval."""
+    n = len(y)
+    if n < 2 * max(1, block_rows):
+        return {"n_rows": int(n), "mean": None, "ci95": None, "note": "too few rows for the block length"}
+    point = sign * (compute_metric(metric, y, out_a, classes) - compute_metric(metric, y, out_b, classes))
+    rng = np.random.default_rng(seed)
+    nb = int(math.ceil(n / block_rows))
+    reps = np.empty(n_boot)
+    for i in range(n_boot):
+        starts = rng.integers(0, n, nb)
+        idx = ((starts[:, None] + np.arange(block_rows)[None, :]) % n).ravel()[:n]
+        reps[i] = sign * (compute_metric(metric, y[idx], out_a[idx], classes)
+                          - compute_metric(metric, y[idx], out_b[idx], classes))
+    lo, hi = np.nanpercentile(reps, [2.5, 97.5])
+    return {"n_rows": int(n), "mean": float(point), "ci95": [float(lo), float(hi)], "sd": float(np.nanstd(reps, ddof=1)),
+            "block_rows": int(block_rows), "n_boot": int(n_boot), "seed": int(seed)}
+
+
+def _attach_bootstrap(deltas: Dict[str, Any], groups: Dict[str, Any], metric: str, better_high: bool,
+                      cfg: Dict[str, Any]) -> None:
+    """Adds ``boot`` to each deltas[group][window][learner][ref] whose two arms scored the SAME test rows."""
+    sign = 1.0 if better_high else -1.0
+    for g, by_w in deltas.items():
+        gr = groups[g]
+        for w, by_l in by_w.items():
+            for lname, by_r in by_l.items():
+                for r, d in by_r.items():
+                    la = ((gr["arms"].get(lname) or {}).get("windows") or {}).get(w, {}).get("_oos")
+                    ra = ((gr["arms"].get(r) or {}).get("windows") or {}).get(w, {}).get("_oos")
+                    if la is None or ra is None or len(la[0]) != len(ra[0]) or not np.array_equal(la[0], ra[0]):
+                        d["boot"] = {"mean": None, "ci95": None, "note": "arms did not score identical rows"}
+                        continue
+                    d["boot"] = block_bootstrap_delta(gr["_y"][la[0]], la[1], ra[1], metric, gr["_classes"], sign,
+                                                      int(cfg.get("block_rows", 96)), int(cfg.get("n_boot", 1000)),
+                                                      int(cfg.get("seed", 0)))
+
+
+def _strip_private(groups: Dict[str, Any]) -> None:
+    for gr in groups.values():
+        gr.pop("_y", None)
+        gr.pop("_classes", None)
+        for arm in gr.get("arms", {}).values():
+            for wd in (arm.get("windows") or {}).values():
+                wd.pop("_oos", None)
 
 
 def build_deltas(groups: Dict[str, Any], names: List[str], refs: List[str], windows: List[str],
@@ -785,6 +846,22 @@ def build_deltas(groups: Dict[str, Any], names: List[str], refs: List[str], wind
 _OPS = {">=": lambda a, b: a >= b, ">": lambda a, b: a > b, "<=": lambda a, b: a <= b, "<": lambda a, b: a < b}
 
 
+def _clause_value(cl: Dict[str, Any], d: Optional[Dict[str, Any]]) -> Optional[float]:
+    """The number a clause compares: the fold-level paired mean (default, unchanged), or with ``stat`` the row-level
+    block bootstrap's point delta (``boot_mean``) or 95% lower bound (``boot_ci_low``)."""
+    if not d:
+        return None
+    stat = cl.get("stat", "mean")
+    if stat == "mean":
+        return d.get("mean")
+    b = d.get("boot") or {}
+    if stat == "boot_mean":
+        return b.get("mean")
+    if stat == "boot_ci_low":
+        return (b.get("ci95") or [None])[0]
+    raise ValueError(f"unknown clause stat {stat!r}")
+
+
 def _clause_holds(cl: Dict[str, Any], cand: str, deltas: Dict[str, Any], baseline: str) -> Tuple[bool, str]:
     ref = baseline if cl["vs"] == "baseline" else cl["vs"]
     win = cl.get("window", "cv")
@@ -792,10 +869,10 @@ def _clause_holds(cl: Dict[str, Any], cand: str, deltas: Dict[str, Any], baselin
     glist = [groups] if isinstance(groups, str) and groups != "any" else (groups if isinstance(groups, list) else None)
 
     def one(g: str) -> Optional[bool]:
-        d = deltas.get(g, {}).get(win, {}).get(cand, {}).get(ref)
-        if not d or d.get("mean") is None:
+        d = _clause_value(cl, deltas.get(g, {}).get(win, {}).get(cand, {}).get(ref))
+        if d is None:
             return None
-        return _OPS[cl["op"]](d["mean"], float(cl["value"]))
+        return _OPS[cl["op"]](d, float(cl["value"]))
     if glist is None:   # any group
         vals = [one(g) for g in deltas]
         return any(v is True for v in vals), f"any group {cl['op']} {cl['value']} vs {ref}/{win}"
@@ -809,7 +886,7 @@ def _clause_evaluable(cl: Dict[str, Any], cand: str, deltas: Dict[str, Any], bas
     win = cl.get("window", "cv")
     groups = cl.get("group", "any")
     glist = list(deltas) if groups == "any" else ([groups] if isinstance(groups, str) else list(groups or []))
-    return bool(glist) and all((deltas.get(g, {}).get(win, {}).get(cand, {}).get(ref) or {}).get("mean") is not None
+    return bool(glist) and all(_clause_value(cl, deltas.get(g, {}).get(win, {}).get(cand, {}).get(ref)) is not None
                                for g in glist)
 
 
@@ -910,6 +987,9 @@ def run_spec(spec: Dict[str, Any], *, unit: str = "(inline)") -> Dict[str, Any]:
     windows = ["cv"] + (["holdout"] if spec["dataset"].get("holdout_after") else [])
     refs = [baseline, *controls]
     deltas = build_deltas(groups, [n for n in learners if n != baseline], refs, windows, better_high)
+    if (spec.get("cv") or {}).get("row_bootstrap"):
+        _attach_bootstrap(deltas, groups, metric, better_high, spec["cv"]["row_bootstrap"])
+    _strip_private(groups)
     folds_seen = min((len((gr["arms"][baseline].get("windows") or {}).get("cv", {}).get("fold_metric") or [])
                       for gr in groups.values()), default=0)
     rule = spec.get("rule") or {}
@@ -989,6 +1069,24 @@ def _self_test() -> int:
     dl["ALL"]["holdout"]["c"]["prior"] = {"n_folds": 1, "mean": -0.01}
     assert evaluate_rule({"pass_if": floor, "fail_if_no_candidate_reaches": floor}, dl, ["c"], "prior",
                          {"c": "ok"}, 3, 5)["verdict"] == "fail"
+    # row bootstrap (FRONTIER-Q-GRU-RESOLVABLE): opt-in; absent = byte-identical; present = a CI the rule can read
+    assert all("boot" not in d for g in v["measurement"]["deltas"].values() for w in g.values()
+               for lv in w.values() for d in lv.values())
+    sb = json.loads(json.dumps(spec))
+    sb["cv"]["row_bootstrap"] = {"block_rows": 20, "n_boot": 200, "seed": 1}
+    sb["rule"]["pass_if"] = [{"group": ["A", "B"], "vs": "baseline", "op": ">", "value": 0.0, "stat": "boot_ci_low"}]
+    vb = run_spec(sb, unit="selftest-boot")
+    bd = vb["measurement"]["deltas"]["A"]["cv"]["logit"]["prior"]["boot"]
+    assert bd["ci95"][0] <= bd["mean"] <= bd["ci95"][1] and bd["n_rows"] > 0, bd
+    assert vb["measurement"]["deltas"]["A"]["cv"]["logit"]["prior"]["mean"] == \
+        v["measurement"]["deltas"]["A"]["cv"]["logit"]["prior"]["mean"]          # fold-level stat untouched
+    assert vb["verdict"] == "pass", vb["note"]                                      # signal 2.0: logit beats the prior
+    json.dumps(vb)                                                                  # no arrays leak into the verdict
+    # identical-row guard and the null case: a learner against itself has a zero delta and a CI around 0
+    y = np.array([0, 1, 2] * 50)
+    o = np.eye(3)[y] * 0.8 + 0.1
+    z = block_bootstrap_delta(y, o, o, "macro_f1", [0, 1, 2], 1.0, 10, 100, 0)
+    assert z["mean"] == 0.0 and z["ci95"] == [0.0, 0.0], z
     print("ml_bakeoff self-test OK:", v["verdict"], v["note"][:80])
     return 0
 

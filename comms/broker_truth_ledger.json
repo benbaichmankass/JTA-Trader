@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "_comment": "Authoritative per-account lifetime realized PnL (broker wallet-truth) for accounts whose live per-row journal pnl can't be trusted. Written by a reviewed scripts/ops/reconcile_netting_pnl.py --emit-ledger run from an operator-provided Bybit UM export. Surfaced read-only at GET /api/bot/pnl/broker-truth. Aggregates only (no positions/balances/keys) — same public class as the existing /performance realized surface. NOT a money-DB row rewrite: the journal per-row pnl is left as-is; this records the account-level truth next to it. See docs/audits/bybit2-broker-reconciliation-2026-07-13.md.",
+  "_comment": "Authoritative per-account lifetime realized PnL (broker wallet-truth) for accounts whose live per-row journal pnl can't be trusted. Written by a reviewed scripts/ops/reconcile_netting_pnl.py --emit-ledger run from an operator-provided Bybit UM export. Surfaced read-only at GET /api/bot/pnl/broker-truth. Aggregates only (no positions/balances/keys) \u2014 same public class as the existing /performance realized surface. NOT a money-DB row rewrite: the journal per-row pnl is left as-is; this records the account-level truth next to it. See docs/audits/bybit2-broker-reconciliation-2026-07-13.md.",
   "accounts": [
     {
       "account_id": "bybit_2",
@@ -21,8 +21,12 @@
           "sub_account": "SUB",
           "amount_usd": -261.01,
           "frozen_as_of": "2026-07-13",
-          "reason": "No API read path: the live API credentials belong to the MAIN sub-account only (measured 2026-08-31: API reproduces MAIN -1.52 to the cent over the ledger window and returns zero SUB rows). SUB history exists only in the operator's UM CSV export. Anything the account did in SUB after frozen_as_of is unobservable here.",
-          "refresh": "live block (API, MAIN) refreshes hourly via the transaction-log puller; the SUB component stays frozen until an operator export or a sub-account-credential lane exists"
+          "reason": "The live API key belongs to the sub-account the bot trades (MAIN), not SUB. SUB history exists only in the operator's 2026-07-13 UM CSV export. It is CLOSED (see closed_evidence), so it is added to the live API figure in `current`, not refreshed.",
+          "refresh": "none needed: closed component. MAIN refreshes hourly via the transaction-log puller and is folded into `current` by src/runtime/broker_truth.current_wallet_truth.",
+          "closed": true,
+          "closed_evidence": "LEDGER-REFRESH 2026-11-12: the SUB period was the bot trading on a different key (~2026-05-10..2026-06-28). The current key's transaction log (pulled hourly) has no rows 2026-05-01..2026-06-28 and rows on every trading day from 2026-06-29; over 2026-04-15..07-13 it reproduces this record's MAIN -1.52 to the cent. Every bybit_2 journal day with a fill since 2026-06-29 (90 of 90, in the newest 4000 journal rows) has a fee-bearing TRADE row under the current key. The trader and the puller use the same key env. So SUB -261.01 is a finished historical component. Not observable by this key: manual activity in SUB after 2026-06-28.",
+          "closed_component": true,
+          "key_identity": "Read 2026-11-12 via /api/diag/broker_account_status (Bybit /v5/user/query-api, read-only): userID present, parentUid empty/0, which is Bybit's encoding for a MASTER key, so the key is the master UID (inferred: the route folds '0' and an unpopulated field to one null). Bybit serves /v5/account/transaction-log only for the key's own UID, so even a master key cannot pull SUB's history; SUB is covered as a closed component, not a pull."
         }
       ]
     }

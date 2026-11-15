@@ -1,0 +1,137 @@
+{
+  "schema": "ml_entry_tp_revision/exit_now_v0/1",
+  "unit": "RQ-20261114-1ae8-01",
+  "verdict": "indeterminate",
+  "m_star": 0.1,
+  "best_static_timestop": {
+    "checkin": 20,
+    "by_checkin_on_select": {
+      "4": 0.11565471312134712,
+      "8": 0.12363257414294551,
+      "12": 0.12550831322282674,
+      "16": 0.1296704392027899,
+      "20": 0.13471117908481817
+    }
+  },
+  "margin_select": {
+    "window": [
+      "2022-01-01",
+      "2024-10-01"
+    ],
+    "by_margin": {
+      "0.0": {
+        "n": 49157,
+        "mean_delta": -0.0023796274092975837,
+        "n_closed": 27007
+      },
+      "0.02": {
+        "n": 49157,
+        "mean_delta": -0.0018279843887517963,
+        "n_closed": 23985
+      },
+      "0.05": {
+        "n": 49157,
+        "mean_delta": 2.7331595332227756e-05,
+        "n_closed": 19418
+      },
+      "0.1": {
+        "n": 49157,
+        "mean_delta": 0.001173503814391643,
+        "n_closed": 12474
+      }
+    }
+  },
+  "tp_folds": [
+    {
+      "test_start": "2022-01-01",
+      "n_train": 121573,
+      "n_checkins": 81522
+    },
+    {
+      "test_start": "2023-01-01",
+      "n_train": 208519,
+      "n_checkins": 70979
+    },
+    {
+      "test_start": "2024-01-01",
+      "n_train": 297374,
+      "n_checkins": 56893
+    },
+    {
+      "test_start": "2025-01-01",
+      "n_train": 383882,
+      "n_checkins": 39048
+    },
+    {
+      "test_start": "2025-10-01",
+      "n_train": 446871,
+      "n_checkins": 39722
+    }
+  ],
+  "windows": {
+    "prior_year": {
+      "window": "prior_year",
+      "n": 13243,
+      "n_symbols": 59,
+      "n_moved": 2794,
+      "baseline_mean_net_r": 0.22343816167307662,
+      "policy_mean_net_r": 0.2217112531186261,
+      "policy_ci95_day_clustered": [
+        0.1445848956404831,
+        0.29823640985522354
+      ],
+      "mean_delta": -0.0017269085544504602,
+      "delta_ci95_day_clustered": [
+        -0.01590214707745223,
+        0.013209888186097911
+      ],
+      "mean_delta_moved": -0.008185200424691277,
+      "control_matched_random": {
+        "draws": 100,
+        "mean_delta_p50": -0.007639514767173214,
+        "policy_delta_pctile_vs_random": 0.99
+      },
+      "control_best_static_delta": -0.004048537777186336,
+      "real_money_5_reported": {
+        "n": 958,
+        "baseline": 0.13993230199300813,
+        "policy": 0.1552451159553101
+      },
+      "clause": "indeterminate",
+      "why": "between the pass bar and the fail floor, or underpowered"
+    },
+    "record_year": {
+      "window": "record_year",
+      "n": 9939,
+      "n_symbols": 53,
+      "n_moved": 1900,
+      "baseline_mean_net_r": 0.1464598759246141,
+      "policy_mean_net_r": 0.1426203862458274,
+      "policy_ci95_day_clustered": [
+        0.06221015209908798,
+        0.21743365837582773
+      ],
+      "mean_delta": -0.003839489678786673,
+      "delta_ci95_day_clustered": [
+        -0.015644985072587016,
+        0.007739456207796098
+      ],
+      "mean_delta_moved": -0.020084572588137235,
+      "control_matched_random": {
+        "draws": 100,
+        "mean_delta_p50": -0.0010190927592215056,
+        "policy_delta_pctile_vs_random": 0.17
+      },
+      "control_best_static_delta": 0.006571763306412125,
+      "real_money_5_reported": {
+        "n": 804,
+        "baseline": 0.16776669686981838,
+        "policy": 0.16797760039563334
+      },
+      "clause": "indeterminate",
+      "why": "between the pass bar and the fail floor, or underpowered"
+    }
+  },
+  "note_moved": "n_moved = trades closed early by the policy",
+  "runtime_s": 1262
+}

@@ -457,6 +457,61 @@ def test_bars_before_a_legs_join_are_not_lost_bars():
     assert lost and all(P.to_epoch(d["bar"]) >= UNTIL - 2 * TF_S for d in lost)
 
 
+def test_lost_bar_plant_skips_a_pre_join_bar_and_still_proves_the_check():
+    """PARITY-CONTROLS-1114: the planted_defect control planted slv_trend_1h's 2026-11-09T14:00Z bar, before the leg's
+    2026-11-12 roster join, where the lost_bar verdict is withheld by design, and so reported a fail. The plant must
+    pick a bar whose verdict is observable, and each bar says whether it is."""
+    leg = _leg()
+    rows, _ = _consistent_evals(leg)
+    leg.roster_from = {"bybit_2": UNTIL - 3 * TF_S}
+    b = _bundle(rows)
+    doc = P.run(b, [leg], SINCE, UNTIL)
+    lost = [p for p in doc["controls"]["planted_defect"]["plants"] if p["plant"] == "lost_bar"]
+    assert lost and all(p["flagged"] is True for p in lost), lost     # unfixed: the pre-join bar, flagged False
+    assert all(P.to_epoch(p["bar"]) >= UNTIL - 3 * TF_S for p in lost)
+    res = P.analyse_leg(leg, b, SINCE, UNTIL)
+    obs = {x["bar"]: x["lost_bar_observable"] for x in res["bars"] if "lost_bar_observable" in x}
+    assert obs and any(obs.values()) and not all(obs.values())
+    assert all(v is False for k, v in obs.items() if P.to_epoch(k) < UNTIL - 3 * TF_S + P.ROSTER_DEPLOY_GRACE_S)
+
+
+def _closed_rows(skip_bar=None, also_decide=False):
+    """One closed-mode eval per bar, 60 s after its close; ``skip_bar`` gets a
+    closed_bar_skip audit row instead (optionally followed by a decision)."""
+    rows = []
+    for b in range(SINCE - TF_S, UNTIL, TF_S):
+        t = b + TF_S + 60
+        base = {"event": "trend_donchian_eth_4h_eval", "strategy": "trend_donchian_eth_4h",
+                "logged_at_utc": P.iso(t), "side": "none", "reason": "x", "adx_14": None}
+        if b == skip_bar:
+            rows.append({**base, "reason": "closed_bar_stale_skipped",
+                         "closed_bar_skip": True, "bar_open_ts": b})
+            if also_decide:
+                rows.append({**base, "logged_at_utc": P.iso(t + 120)})
+            continue
+        rows.append(base)
+    return rows
+
+
+def test_closed_bar_skip_row_is_its_own_class_not_missed_or_lost():
+    """PI-20261111-LRP-C5F97202: a bar live left undecided (and said so) is
+    ``closed_bar_skip`` — not a missed_signal, not a lost_bar."""
+    import dataclasses
+    leg = dataclasses.replace(_leg(), decision_bar="closed")
+    b0 = START + (N_BARS - 6) * TF_S
+    bundle = _bundle(_closed_rows(skip_bar=b0))
+    bundle["audit_until"] = P.iso(UNTIL + P.EVAL_TAIL_S)
+    res = P.analyse_leg(leg, bundle, SINCE, UNTIL)
+    at_b0 = [d for d in res["divergence_detail"] if d["bar"] == P.iso(b0)]
+    assert [d["class"] for d in at_b0] == ["closed_bar_skip"], at_b0
+    assert at_b0[0]["live"]["reason"] == "closed_bar_stale_skipped"
+    # control: a decision after the skip row (unconfirmed -> decided) is not a skip
+    bundle = _bundle(_closed_rows(skip_bar=b0, also_decide=True))
+    bundle["audit_until"] = P.iso(UNTIL + P.EVAL_TAIL_S)
+    res = P.analyse_leg(leg, bundle, SINCE, UNTIL)
+    assert not any(d["class"] == "closed_bar_skip" for d in res["divergence_detail"])
+
+
 def test_a_lost_election_is_a_named_outcome_not_dropped_no_package():
     """PI-20261111-LRP-C5F97202 (ADA 2026-11-09 04:03Z): ada_pullback_2h short lost ADAUSDT's
     per-symbol election to ml_entry long (allocator soak row); parity read it as a silent
@@ -484,3 +539,15 @@ def test_a_lost_election_is_a_named_outcome_not_dropped_no_package():
     # control: a failed allocator read never reads as "lost the election"
     b["allocator"] = {"ETHUSDT": {"rows": [], "error": "fetch_failed: x"}}
     assert P.analyse_leg(leg, b, SINCE, UNTIL)["by_class"]["dropped_no_package"] > 0
+
+
+def test_historical_positive_lists_every_unmatched_package_first():
+    """PARITY-CONTROLS-1114: 165/166 matched and the 40-row list did not name the one that failed."""
+    res = {"leg": "L", "state": "checked", "timeframe": "1h", "decision_bar": "forming",
+           "bars": [{"bar": P.iso(SINCE + 3600 * i), "status": "matched_signal" if i else "divergent",
+                     "signal_evals": 0} for i in range(60)]}
+    pk = [{"order_package_id": f"p{i}", "strategy_name": "L", "created_at": P.iso(SINCE + 3600 * i + 60)}
+          for i in range(60)]
+    out = P.historical_positive([res], {"order_packages": {"rows": pk[1:] + pk[:1]}})
+    assert out["state"] == "fail" and out["packages_unmatched"] == 1
+    assert out["packages"][0]["package"] == "p0" and len(out["packages"]) == 40

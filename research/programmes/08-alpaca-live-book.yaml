@@ -8,7 +8,7 @@
 # make sure we have a plan for finding something better."
 #
 # The incumbent is Foxhound-4 (ml_entry_eq_struct, ml-entry-eq-struct-ens5-v1); tqqq_trend_long_1d also sits on alpaca_live. Every
-# candidate here -- a Foxhound-4 lever or a challenger leg -- is scored on THE BOOK THE ACCOUNT CAN HOLD ($194.52 cash, long only, whole
+# candidate here -- a Foxhound-4 lever or a challenger leg -- is scored on THE BOOK THE ACCOUNT CAN HOLD ([balance removed] cash, long only, whole
 # shares, one slot, T+1, the live sizer) by scripts/research/alpaca_live_book.py, net of the full cost stack. Units registered directly
 # (they dispatch on merge): RQ-20261111-207f-01..04. The nodes below are what follows each verdict, plus the questions the plan holds
 # that no unit asks yet. Iteration subject: ml-entry-eq-struct (scripts/research/iteration_subjects.yaml; research/levers/ml-entry-eq-struct.yaml).
@@ -47,7 +47,7 @@ nodes:
     after:
     - {unit: RQ-20261111-207f-01, verdict: fail}
     needs_authoring: >-
-      207f-01 FAILED: the dev edge does not survive the $194.52 cash book. Read the refusal mix first. If unaffordable_whole_share
+      207f-01 FAILED: the dev edge does not survive the [balance removed] cash book. Read the refusal mix first. If unaffordable_whole_share
       dominates, author ONE unit: the same recipe re-scored on the AFFORDABLE sub-pool only (ETFs whose 1-share price <= 0.9 x cash at
       each decision, a causal filter) vs the full pool, on the live book. If slot_busy / unsettled_t1 dominate, the lever is selection
       (already registered as 207f-02 top-1) -- author nothing new, read 207f-02. Either way, tell the manager in one line that the
@@ -160,7 +160,7 @@ nodes:
     roadmap: [L-LADDER]
     value: {usd_at_stake_per_month: 30, confidence: 0.15}
     needs_authoring: >-
-      SCOPING, not a strategy test: can alpaca_live trade options at all, and would any defined-risk structure fit $194.52? Step 1 is
+      SCOPING, not a strategy test: can alpaca_live trade options at all, and would any defined-risk structure fit [balance removed]? Step 1 is
       a read (UNVERIFIED today: /api/diag/broker_account_status does not expose options_approved_level / options_trading_level):
       add the two fields to the diag read (Tier 1) or read GET /v2/account once via the diag relay. Only if the account is approved:
       author a scoping unit -- which long call / put or debit-spread structures on the pool cost <= 0.9 x cash per contract, and what
