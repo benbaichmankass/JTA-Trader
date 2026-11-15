@@ -1029,7 +1029,11 @@ def enqueue_all_accounts_failed_dispatch(
         # a failure (operator directive 2026-07-15), and remains covered via
         # `is_expected_dispatch_skip` inside that predicate.
         def _is_hold(err: str) -> bool:
-            return is_policy_hold(err)
+            # slice_budget_exhausted: the risk layer declined on purpose (the
+            # account's slice budget is used up), so in a mixed round it is
+            # labelled a hold, not a failure (operator 2026-11-15). Kept local
+            # so dead_leg's is_policy_hold vocabulary is unchanged.
+            return is_policy_hold(err) or "slice_budget_exhausted" in err
 
         genuine = [r for r in results if not _is_hold(str(r.get("error") or ""))]
         held = [r for r in results if _is_hold(str(r.get("error") or ""))]
