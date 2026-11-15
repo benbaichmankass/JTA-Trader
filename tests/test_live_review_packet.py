@@ -132,9 +132,9 @@ def test_eth_prop_closed_package_with_open_prop_position_is_a_mismatch():
         {"kind": "heartbeat", "reason": "amend prop-manual-2e786ef17c05a6 REFUSED: sheet volume 0.4 = ticket qty 0.* (sheet close: escape)"}]}
     trail = {"amend_id": "prop-manual-2e786ef17c05#a6", "amend_status": "refused", "fails": 6,
              "last_plan_action": "exit", "last_plan_why": "trail crossed"}
-    tickets = {"tickets": [{"order_package_id": ETH, "account_id": "breakout_2", "status": "filled", "close_reason": "sl_cross", "phone_trail": trail},
-                           {"order_package_id": ETH, "account_id": "tradeify_1", "status": "closed", "close_reason": "sl_cross", "phone_trail": None},
-                           {"order_package_id": ETH, "account_id": "velotrade_1", "status": "closed", "close_reason": "sl_cross", "phone_trail": None}]}
+    tickets = {"tickets": [{"order_package_id": ETH, "ticket_id": "T-b2", "account_id": "breakout_2", "status": "filled", "close_reason": "sl_cross", "phone_trail": trail},
+                           {"order_package_id": ETH, "ticket_id": "T-t1", "account_id": "tradeify_1", "status": "closed", "close_reason": "sl_cross", "phone_trail": None},
+                           {"order_package_id": ETH, "ticket_id": "T-v1", "account_id": "velotrade_1", "status": "closed", "close_reason": "sl_cross", "phone_trail": None}]}
     s = _snap(prop_tickets=tickets, **{"prop_status:breakout_2": status})
     s.packages[ETH] = _pkg(g, "ETHUSDT", "short", status="closed",
                            meta={"regime": "chop", "vol_regime": "calm", "timeframe": "4h"})
@@ -849,6 +849,25 @@ def test_a_synthetic_prop_ticket_row_is_not_an_account(monkeypatch):
     accts = L._accounts_for(L._package_view(s, pkg), {"bybit_1": {"exchange": "bybit", "account_class": "paper"}})
     assert [a["account_id"] for a in accts] == ["bybit_1", "tradeify_1"]       # the real ticket stays; no None entry
     assert all(a["account_id"] for a in accts)
+
+
+def test_a_real_prop_ticket_stamped_source_order_package_is_still_an_account():
+    """MEASURED 2026-11-15: /api/bot/prop/tickets stamps source "order_package" on REAL tickets too (90/100 rows had a
+    ticket_id, an account_id AND that source). The old source filter dropped them all: LR-20261115T0401Z (pkg-48c5cfab,
+    filled on velotrade_1 + tradeify_1) had account_bounds [] and open_r null. Only a null ticket_id/account_id is synthetic."""
+    pkg = "pkg-48c5cfab364e430c"
+    s = L.Snapshot()
+    s.packages[pkg] = {"order_package_id": pkg, "status": "emitted", "direction": "short"}
+    s.reads["prop_tickets"] = {"tickets": [
+        {"order_package_id": pkg, "ticket_id": "prop-manual-a98ef880f712", "account_id": "velotrade_1",
+         "status": "filled", "source": "order_package"},
+        {"order_package_id": pkg, "ticket_id": "prop-manual-7b974b559759", "account_id": "tradeify_1",
+         "status": "filled", "source": "order_package"},
+        {"order_package_id": pkg, "ticket_id": None, "account_id": None, "status": "open", "source": "order_package"}]}
+    view = L._package_view(s, pkg)
+    assert sorted(t["account_id"] for t in view["tickets"]) == ["tradeify_1", "velotrade_1"]
+    accts = L._accounts_for(view, {})
+    assert sorted(a["account_id"] for a in accts) == ["tradeify_1", "velotrade_1"] and all(a["account_id"] for a in accts)
 
 
 def test_price_returns_a_named_state_when_the_outcomes_stdout_is_not_json(monkeypatch):
