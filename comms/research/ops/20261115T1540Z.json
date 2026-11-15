@@ -36,7 +36,7 @@
    "RQ-20261114-db1a-08/-10/-11/-14 (PASS, manager-owned tlt/qqq/eth_4h promotion evidence, not re-read for a decision)",
    "RQ-20261106-011, RQ-20261105-024 (sweep PASS, discovery unconfirmed, confirm_unit already set by the grader)"
   ],
-  "note": "checks packet since 2026-11-14T14:57Z: 68 units with rows (pass 20, fail 32, indeterminate 9, ungraded 3), by track TRADING 25 fail / 6 pass, MODEL 6 fail / 5 pass, INFRA 9 pass / 1 fail. Rows opened for 11 units only."
+  "note": "checks packet since 2026-11-14T14:57Z: 68 units with rows (pass 20, fail 32, indeterminate 9, ungraded 3), by track TRADING 25 fail / 6 pass, MODEL 6 fail / 5 pass, INFRA 9 pass / 1 fail. Rows opened for 5 units (db1a-02/-04/-05/-09/-13); the 6 other PASS units were read by their grading block and verdict only, not row by row."
  },
  "unlocked": [],
  "retired": [],
@@ -131,7 +131,7 @@
    "meaning": [
     "eth_4h tp_r 4 prop non-inferiority (db1a-09, -13): T4 EV is higher in every cell (+9% to +44%) but breach probability is higher by 0.004-0.015 on breakout_2 and one of the two re-registered firms, so the registered no-margin rule FAILs twice (3 of 5 account cells pass). So the TP-doctrine compliance change cannot ship under the registered prop superset without a Tier-3 waiver of the breach clause.",
     "SMA200 long gate inside the harness (db1a-04): pooled H-A +85.3R on the record year but -0.63R on the year before, no leg passes. So the gate removes a down-trend year's losses and does nothing in the other year: regime-conditional drag removal, not edge; it cannot be adopted on two windows that disagree.",
-    "Conditional profit lock k=2 (db1a-05): -30.2R record, -18.9R prior vs config-exact, both windows negative. So locking at +1R after +2R open costs R on crypto pullback/trend; the lever responds monotonically wrong, which is information for the exit lever map.",
+    "Conditional profit lock k=2 (db1a-05): -30.2R record, -18.9R prior vs config-exact, both windows negative. So locking at +1R after +2R open costs R on crypto pullback/trend; only the primary arm L2 decides the unit; whether the lever is wrong-signed across k is not shown by one arm (L25/L2T rows not read here).",
     "ADX-bucket cell (db1a-02): common loss is real (12/15 legs negative, pooled -142R) but the worst cell (chop/long) is +25.6R on the prior window. So the record-year loss is a year effect common to the legs, not a chop-regime effect; this points to a trend-direction (HTF) condition, the same finding db1a-04 supports on one window only."
    ],
    "fail_diagnoses": [
