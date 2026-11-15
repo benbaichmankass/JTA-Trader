@@ -10,7 +10,8 @@ whether any rule beats what the account does today by enough to justify a learne
 
 Arms (weight w in [0, 1] fixed at entry; a trade contributes w * net_r):
   A0  TODAY'S RULE, per the pair's accounts (config/accounts.yaml::position_model):
-        slices   -- same-side: w = 1 - (sum of open weights), refused below MIN_W; an OPPOSITE open slice refuses the
+        slices   -- same-side: w = 1 - (sum of open weights), split equally among same-tick same-side contenders
+                    (live equal_split_last_resort), refused below MIN_W; an OPPOSITE open slice refuses the
                     entry (slice_allocation.yaml `opposite_slice_one_way_book`). Stops are not trailed in the replay,
                     so an open slice holds its full weight until exit (conservative for A0: live trailing frees budget).
         election -- one package per (account, symbol): w = 1 when nothing is open, else refused.
@@ -50,30 +51,45 @@ Trade = dict[str, Any]   # {entry_ts, exit_ts, side (+1/-1), net_r, leg}
 
 
 # ── pure allocation ────────────────────────────────────────────────────────────────────────────────────────────
-def allocate(trades: list[Trade], weight: Callable[[Trade, list[tuple[Trade, float]]], float]) -> list[tuple[Trade, float]]:
-    """Walk trades by entry time; `weight(t, open)` returns w given the still-open (trade, w) list. Touching edges
-    (exit == next entry) do not overlap. Returns [(trade, w)] for every trade (w may be 0)."""
+def allocate(trades: list[Trade], weight: Callable[[Trade, list[tuple[Trade, float]], list[Trade]], float]
+             ) -> list[tuple[Trade, float]]:
+    """Walk trades by entry time; `weight(t, open, ties)` returns w given the still-open (trade, w) list and the trades
+    entering on the SAME timestamp (`ties`, t included, ordered by leg). Tie-mates do not consume each other's budget
+    unless the rule says so. Touching edges (exit == next entry) do not overlap. Returns [(trade, w)] for every trade."""
     out: list[tuple[Trade, float]] = []
     open_: list[tuple[Trade, float]] = []
-    for t in sorted(trades, key=lambda x: (x["entry_ts"], x["leg"])):
-        open_ = [(o, w) for o, w in open_ if o["exit_ts"] > t["entry_ts"]]
-        w = float(weight(t, open_))
-        w = w if w >= MIN_W else 0.0
-        out.append((t, w))
-        if w > 0:
-            open_.append((t, w))
+    ordered = sorted(trades, key=lambda x: (x["entry_ts"], x["leg"]))
+    i = 0
+    while i < len(ordered):
+        ts = ordered[i]["entry_ts"]
+        ties = [t for t in ordered[i:] if t["entry_ts"] == ts]
+        i += len(ties)
+        open_ = [(o, w) for o, w in open_ if o["exit_ts"] > ts]
+        got = []
+        for t in ties:
+            w = float(weight(t, open_, ties))
+            got.append((t, w if w >= MIN_W else 0.0))
+        out += got
+        open_ += [(t, w) for t, w in got if w > 0]
     return out
 
 
-def w_slices(t: Trade, open_: list[tuple[Trade, float]]) -> float:
+def w_slices(t: Trade, open_: list[tuple[Trade, float]], ties: list[Trade]) -> float:
+    """Same-side slices share what is left of the budget; same-tick same-side contenders split it equally (the
+    live `equal_split_last_resort`, the conviction score not being replayed); an opposite open slice refuses the
+    entry, and on a same-tick two-sided tie the side of the first leg (by name) holds the one-way book."""
     if any(o["side"] != t["side"] for o, _ in open_):
         return 0.0
-    return max(0.0, 1.0 - sum(w for _, w in open_))
+    if not open_ and ties[0]["side"] != t["side"]:
+        return 0.0
+    n_same = sum(1 for x in ties if x["side"] == t["side"])
+    return max(0.0, 1.0 - sum(w for _, w in open_)) / n_same
 
 
-def w_election(t: Trade, open_: list[tuple[Trade, float]]) -> float:
-    """One package per (account, symbol): the trade's own side does not matter, any open package refuses it."""
-    return 0.0 if any(o is not t for o, _ in open_) else 1.0
+def w_election(t: Trade, open_: list[tuple[Trade, float]], ties: list[Trade]) -> float:
+    """One package per (account, symbol): any open package refuses the entry; on a same-tick tie the first leg (by
+    name) is elected."""
+    return 0.0 if open_ or ties[0] is not t else 1.0
 
 
 def leg_stats(trades: list[Trade]) -> dict[str, dict[str, float]]:
@@ -250,9 +266,12 @@ def _self_test() -> None:
     assert [w for _, w in sl] == [1.0, 0.0, 0.0, 1.0], sl          # full first slice blocks; opposite refused
     el = allocate(x, w_election)
     assert [w for _, w in el] == [1.0, 0.0, 0.0, 1.0], el           # touching edge (exit 10 == entry 10) is free
-    half = allocate([tr("a", 0, 10, 1, 1.0), tr("b", 1, 3, 1, 1.0)], lambda t, o: 0.5 if not o else w_slices(t, o))
+    half = allocate([tr("a", 0, 10, 1, 1.0), tr("b", 1, 3, 1, 1.0)], lambda t, o, k: 0.5 if not o else w_slices(t, o, k))
     assert [w for _, w in half] == [0.5, 0.5], half
-    assert allocate([tr("a", 0, 10, 1, 1.0), tr("b", 1, 3, 1, 1.0)], lambda t, o: 0.97 if not o else w_slices(t, o))[1][1] == 0.0
+    assert allocate([tr("a", 0, 10, 1, 1.0), tr("b", 1, 3, 1, 1.0)], lambda t, o, k: 0.97 if not o else w_slices(t, o, k))[1][1] == 0.0
+    tie = [tr("a", 0, 10, 1, 1.0), tr("b", 0, 12, 1, 1.0), tr("c", 0, 5, -1, 1.0)]
+    assert [w for _, w in allocate(tie, w_slices)] == [0.5, 0.5, 0.0]        # equal split; opposite refused
+    assert [w for _, w in allocate(tie, w_election)] == [1.0, 0.0, 0.0]      # first leg elected
     st = {"a": {"net_r": 5.0, "mean_r": 0.5}, "b": {"net_r": -1.0, "mean_r": -0.1}}
     assert static_weights(["a", "b"], st, "A2") == {"a": 1.0, "b": 0.0}
     assert static_weights(["a", "b"], st, "A3") == {"a": 1.0, "b": 0.0}

@@ -75,8 +75,8 @@ decision_rule:
   statistic: 'Per arm and window (PRIOR 2024-10-01..2025-09-30, RECORD 2025-10-01..2026-09-30, by entry time): net R =
     sum over the 5 pairs of w x net_r (w fixed at entry, budget 1.0 per pair, so R per capital-day = net R / (5 x
     days)); max_dd = max drawdown of the combined equity (pairs summed, ordered by exit). A0 slices: same-side w = 1 -
-    open weights, opposite open slice refuses, w < 0.05 not opened, stops not trailed; A0 election: one open package per
-    pair. A1 w = 1/N, opposite allowed, no netting fee credit. A2 w = 1 for the leg with the highest net R on the OTHER
+    open weights, split equally among same-tick same-side contenders, opposite open slice refuses, w < 0.05 not
+    opened, stops not trailed; A0 election: one open package per pair (same-tick tie: first leg by name). A1 w = 1/N, opposite allowed, no netting fee credit. A2 w = 1 for the leg with the highest net R on the OTHER
     window. A3 w_leg = positive part of the leg''s mean net R on the OTHER window, normalised (equal when none positive).
     A4: each trade kept with p = A0 exposure / n trades, w = 1, 1000 seeded draws -> p95. Rule legs at the full cost
     stack (resolve_run_costs, require_full_costs); ml_entry net R from its own cost stack (BTCUSDT slippage/funding for
