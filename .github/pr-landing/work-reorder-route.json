@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "WORK-REORDER-ROUTE: new POST /api/bot/work/reorder behind require_session (Tier 2, SPA write path): swaps priority_rank with the neighbour in ONE work-store transaction (new WorkStore.reorder; _update's body extracted to _update_in_tx, behaviour unchanged, 86 work-store tests pass). Also GET /work/snapshot openNow/waitingOnOperator sort by rank (nulls last), and PIPELINE-MAP-V2 backend fixes (unique element ids, filled states, additive groups + ?grouped=true). No order path, no new gate, CORS unchanged. trader_import_closure decide = RESTART because src/runtime/work_store.py is in the trader closure.",
+  "hold_text": "Tier 2 operator-write route on ict-web-api; needs one operator OK (and accepts the ict-trader-live restart the closure gate requires). After deploy: a signed-in SPA POST /api/bot/work/reorder {id, direction} returns 200 and GET /api/bot/work/snapshot shows the new order; an OPTIONS preflight with authorization,content-type is 200."
+}
