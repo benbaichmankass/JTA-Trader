@@ -217,6 +217,15 @@ else
     exit 1
 fi
 
+if [ "${SERVICE}" = "ict-trader-live.service" ]; then
+    # TRADER-RESTART-CHURN (2026-11-12): the two set-env trader restarts that day
+    # (15:17Z, 15:21Z) booted with intent=None, so the restart ping could not name
+    # the cause. Same marker restart_bot.sh writes (src/runtime/restart_cause.py
+    # consumes it). Best-effort; never blocks the restart.
+    printf '{"cause": "manual", "by": "set-env %s", "at": %s}\n' "${KEY}" "$(date +%s)" \
+        > "${REPO_DIR}/runtime_logs/trader_restart_intent.json" 2>&- || true
+fi
+
 log "Restarting ${SERVICE} to pick up the new env..."
 "${SYSTEMCTL[@]}" restart "${SERVICE}"
 

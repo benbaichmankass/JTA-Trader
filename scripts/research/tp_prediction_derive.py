@@ -347,6 +347,18 @@ def replay_uncapped(leg: str, cfg: dict, data_dir: Path, out: Path, start: str, 
     return {"ok": True, "emit": str(emit), "cmd": [Path(cmd[1]).name] + cmd[2:]}
 
 
+def parse_cfg_set(items: List[str]) -> Dict[str, Any]:
+    """``["side_filter=long", "trail_mult=4.0"]`` -> ``{"side_filter": "long", "trail_mult": 4.0}`` (YAML-parsed)."""
+    import yaml
+    out: Dict[str, Any] = {}
+    for it in items:
+        k, sep, v = it.partition("=")
+        if not sep or not k.strip():
+            raise ValueError(f"--cfg-set {it!r} must be KEY=VAL")
+        out[k.strip()] = yaml.safe_load(v)
+    return out
+
+
 def _read_jsonl(p: Path) -> List[Dict[str, Any]]:
     return [json.loads(x) for x in p.read_text().splitlines() if x.strip()]
 
@@ -416,6 +428,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--pool", action="store_true", help="grade the legs as ONE pooled family")
     ap.add_argument("--data-dir", default=None)
     ap.add_argument("--from-emits", default=None, help="SMOKE/TEST: dir of UNCAPPED <leg>.jsonl emits")
+    ap.add_argument("--cfg-set", action="append", default=[], metavar="KEY=VAL",
+                    help="override one config key on every --legs leg before the replay (YAML-parsed value), e.g. "
+                         "side_filter=long; for a candidate configuration that is not yet in config/strategies.yaml "
+                         "(qqq_pullback_1h T1, 2026-11-14). The overrides are stamped into the verdict's population.")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
@@ -441,6 +457,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         write(dict(verdict="not_applicable", read_state="producer_failed", n=None,
                    population=f"legs not in config/strategies.yaml: {missing}"))
         return 0
+    try:
+        overrides = parse_cfg_set(a.cfg_set)
+    except ValueError as exc:
+        ap.error(str(exc))
+    if overrides:
+        strategies = {k: ({**v, **overrides} if k in legs else v) for k, v in strategies.items()}
     end_d = (datetime.fromisoformat(a.end).date() if a.end
              else datetime.now(timezone.utc).date() - timedelta(days=1))
     start_d = end_d - timedelta(days=a.days)
@@ -462,6 +484,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                    population=f"leg replay failed, NEVER MEASURED: {failed}"))
         return 0
     v = assemble(legs, emits, strategies, conditioned=a.conditioned, pooled=a.pool, window=window)
+    if overrides:
+        v["cfg_overrides"] = overrides
+        v["population"] = f"{v.get('population')} [CANDIDATE config: overrides {overrides} on {legs}, not the declared config]"
     write(v)
     print(json.dumps({k: v.get(k) for k in ("verdict", "read_state", "n", "population")}, indent=1))
     return 0
@@ -489,6 +514,13 @@ def self_test() -> int:
         ok += bool(cond)
         if not cond:
             print(f"  FAIL {label}")
+    chk("cfg-set parses KEY=VAL with YAML values",
+        parse_cfg_set(["side_filter=long", "trail_mult=4.0"]) == {"side_filter": "long", "trail_mult": 4.0})
+    try:
+        parse_cfg_set(["nokey"])
+        chk("cfg-set refuses a token without '='", False)
+    except ValueError:
+        chk("cfg-set refuses a token without '='", True)
 
     # 1. counterfactual arithmetic
     row = {"mfe": 3.0, "net": -1.05, "cost": -0.05, "cap_r": 9.9}

@@ -212,7 +212,11 @@ _ID_RE = re.compile(r"^RQ-\d{8}-(?:[0-9]{3}|[0-9a-f]{4}-[0-9]{2})$")
 _CADENCES = ("once", "daily", "weekly", "monthly")
 _LOG = logging.getLogger(__name__)
 
-_DESIGNS = ("one_sample", "two_sample")
+#: ``paired`` is a one-sample test on the per-pair differences (arm minus
+#: baseline on the same trades/bars), so its floor is the one-sample floor with
+#: ``sd`` read as the sd of the DIFFERENCES. 34 committed units declared it
+#: before it was accepted here; every queued one was refused as `blocked_power`.
+_DESIGNS = ("one_sample", "two_sample", "paired")
 _STATUSES = ("queued", "running", "done", "blocked", "retired")
 
 #: Two-sided normal quantiles. Only the pairs the gate actually offers are

@@ -1,0 +1,6 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Manager 2026-11-13 07:09Z (LTR-ROUTINE-REVIEWERS-NO-ROWS, option c): routine-fired live reviewers start with no repository and land no rows. src/runtime/live_review_routine_fire.build_text now prefixes the fire text with a plain STEP 0 bootstrap (add_repo push + clone + follow the live-trade-review skill + land the row on live-review/rows; say so if it fails), a blank line, then the due-event JSON byte-identical to before; payload_doc() reads it back; the text budget subtracts the block so the 65,536-char cap holds. Harmless if the routine already attaches the repo. Tests: tests/test_live_review_routine_fire.py (new bootstrap/verbatim test; existing readers use payload_doc). Runtime file on the trader's live-review wake path, so Tier 2: the manager merges. Revert: git revert."
+}

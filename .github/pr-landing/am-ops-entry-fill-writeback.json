@@ -1,0 +1,6 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Row ENTRY-FILL-WRITEBACK. Manager decision 2026-11-15 00:51Z: option (a), overwrite entry_price with the fill and keep the plan in notes.package_entry, matching the live Alpaca precedent. Every journal row now carries entry_price_source (fill | plan + reason), stamped at insert. A new off-order-path order_monitor sweep reads each OPEN Bybit row marked fill_pending_writeback: it takes its ENTRY ORDER's own avgPrice by orderId (clients.account_order_status) and rewrites entry_price. A DB field update only: no order, bracket, SL/TP or slice is touched. A fill that cannot be isolated (not found, no avgPrice, filled qty not the row's qty) is NOT written; the row keeps the plan with the reason. No history backfill: closed rows and rows without the marker are never read. Every condition is pinned in tests/test_entry_fill_writeback.py (13 tests). Touches the trader import closure (execute.py, order_monitor.py, json_notes.py): merge in a restart batch. Revert: git revert."
+}

@@ -24,3 +24,58 @@ manifest:
   session: untested
   sizing_vs_cost: untested
 levers: {}
+levers_tested:
+- family: timeframe
+  varied: timeframe 15m (live) vs 1h / 4h, same harness, window 2024-10-05..2026-10-04, full cost stack
+  response:
+    verdict: fail
+    run: '43471211017'
+    baseline:
+      tf: 15m
+      n: 215
+      net_r: -81.8145
+      folds_positive: 0/6
+    arms:
+    - tf: 1h
+      n: 146
+      net_r: -31.9847
+      folds_positive: 2/6
+      max_drawdown_r: 44.3907
+    - tf: 4h
+      n: 76
+      net_r: -3.3916
+      folds_positive: 1/6
+      max_drawdown_r: 11.919
+    reading: 'loss shrinks monotonically with bar length (cost per R falls as the stop widens) but no timeframe has an edge: 4h -3.39R, 1/6 folds'
+  shape: monotone
+  tested_at_power: true
+  unit: RQ-20261113-f251-04
+  lever_family: timeframe
+- family: symbol_set
+  varied: live 15m setup config-exact on BTCUSDT vs ETHUSDT / SOLUSDT twins, window 2024-10-05..2026-10-04, confirmation window 2022-10-05..2024-10-04,
+    full cost stack
+  response:
+    verdict: fail
+    run: '43510468202'
+    baseline:
+      symbol: BTCUSDT
+      n: 215
+      net_r: -81.8145
+      folds_positive: 0/6
+    arms:
+    - symbol: ETHUSDT
+      n: 467
+      net_r: -102.5183
+      folds_positive: 1/6
+    - symbol: SOLUSDT
+      n: 531
+      net_r: -214.8816
+      folds_positive: 0/6
+    reading: 'the setup loses MORE on ETH and SOL than on BTC: no symbol carries an edge for this 15m sweep-and-reversal'
+  shape: monotone
+  tested_at_power: true
+  unit: RQ-20261113-f251-12
+  lever_family: symbol_set
+units:
+- RQ-20261113-f251-04
+- RQ-20261113-f251-12

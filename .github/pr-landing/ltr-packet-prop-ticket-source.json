@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Read-path fix in scripts/ops/live_review_packet.py (the live-review packet generator; pure reads, no venue/DB/config writes). The synthetic-ticket filter keyed on source == 'order_package', but /api/bot/prop/tickets stamps that source on REAL tickets too (2026-11-15 read: 90/100 rows had ticket_id + account_id + that source). Every prop-only packet therefore had no account rows (mechanics could_not_look) and the prop open-R derivation (#26164) never ran (LR-20261115T0401Z pkg-48c5cfab: open_r null). Now the filter keys on a null ticket_id/account_id, which is what marks a synthetic row. A live rebuild of that packet gives open_r -0.604 ESTIMATED, both prop accounts, mechanics match, options priced."
+}

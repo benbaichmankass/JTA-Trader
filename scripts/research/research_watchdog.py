@@ -205,10 +205,36 @@ def window_position(windows: Optional[list], now: datetime) -> Optional[Dict[str
     return {"inside": False, "since_open_min": None, "until_close_min": None, "next_open": f"{nxt // 60:02d}:{nxt % 60:02d}Z"}
 
 
+def due_since(util_dir: Path, backend: str) -> Optional[datetime]:
+    """When work became due for `backend`, read from the dispatcher's own per-cycle utilization records
+    (comms/research/utilization/<run_id>.json, written by dispatch_queue --utilization-dir): walking back from the newest
+    record, the generated_at of the OLDEST record in the unbroken run with backends.<b>.due_waiting > 0. None when the
+    newest record shows nothing due, a record is unreadable, or there are none -- then check_backend behaves as before.
+    WHY (AM-ML 2026-11-12, lane ML overnight item 2b): the 22:54Z escalation read 'trainer idle 462 min' though nothing
+    was due for it until 18:11Z; the backend was blocked ~4.5 h, not 7.7 h. The idle clock must start when work is due."""
+    try:
+        recs = []
+        for f in Path(util_dir).glob("*.json"):
+            d = json.loads(f.read_text(encoding="utf-8"))
+            b = (d.get("backends") or {}).get(backend) or {}
+            ts = _ts(d.get("generated_at"))
+            if ts is None or b.get("read_state") != "measured" or b.get("due_waiting") is None:
+                continue
+            recs.append((ts, int(b["due_waiting"])))
+    except (OSError, ValueError, TypeError):
+        return None
+    since = None
+    for ts, due in sorted(recs, reverse=True):
+        if due <= 0:
+            break
+        since = ts
+    return since
+
+
 def check_backend(name: str, runnable_for: Optional[int], runs: Optional[list], now: datetime, th: dict,
                   quota: Optional[dict] = None, max_concurrent: Optional[int] = None,
                   windows: Optional[list] = None, min_need_minutes: Optional[float] = None,
-                  due_later: int = 0) -> Dict[str, Any]:
+                  due_later: int = 0, due_since: Any = None) -> Dict[str, Any]:
     """`runnable_for` is the count DUE NOW (queue_facts `by_backend_due_now`); `due_later` the units that only the
     refill's look-ahead horizon counts -- reported, never alarmed on."""
     chk, lim = f"backend:{name}", float(th["backend_idle_minutes"])
@@ -241,6 +267,15 @@ def check_backend(name: str, runnable_for: Optional[int], runs: Optional[list], 
         return verdict(chk, OK, f"{len(act)} run(s) queued/in progress", evidence=ev)
     if ages and min(ages) <= lim:
         return verdict(chk, OK, f"last run started {min(ages):.0f} min ago (limit {lim:g})", evidence=ev)
+    # The idle clock starts when work became due here (dispatcher utilization records), never before it: idle while
+    # nothing was due is correct, so `ages` (minutes since the last start) is capped by minutes since work came due.
+    due_min = _age_min(due_since.isoformat() if isinstance(due_since, datetime) else due_since, now) if due_since else None
+    if due_min is not None:
+        ev.update(due_since=str(due_since), minutes_since_due=round(due_min, 1))
+        if due_min <= lim:
+            return verdict(chk, OK, f"work due here only since {due_min:.0f} min ago (limit {lim:g}; idle before that was "
+                           "correct)", evidence=ev)
+        ages = [min(min(ages), due_min)] if ages else [due_min]
     # A windowed backend (the trainer: ML-DATA-OFF-TRAINER) releases units only into its idle windows, so idleness
     # OUTSIDE a window is the design working, not an incident; inside one the idle limit runs from the window's opening.
     pos = window_position(windows, now)
@@ -609,6 +644,8 @@ def queue_facts(root: Path, now: datetime, *, pending_fn: Optional[Callable] = N
                 "backend_max_concurrent": {n: b.get("max_concurrent") for n, b in cfg["backends"].items()},
                 "backend_windows": {n: (b.get("queue") or {}).get("windows_utc") for n, b in cfg["backends"].items()},
                 "backend_min_need_minutes": min_need,
+                "backend_due_since": {n: (lambda d: d.isoformat() if d else None)(due_since(root / "comms" / "research" / "utilization", n))
+                                      for n in cfg["backends"]},
                 "router_style_due_not_counted_by_dispatchable": uncounted,
                 "kaggle_floor_hours": float((cfg["backends"].get("kaggle", {}).get("quota") or {}).get("floor_hours") or 0)}
     except Exception as exc:  # allow-silent: printed to stderr, and the None return becomes a could_not_look verdict, never an ok
@@ -653,7 +690,8 @@ def evaluate(probe: Any, cfg: dict, now: datetime, facts: Optional[dict]) -> Lis
                                  (facts.get("backend_max_concurrent") or {}).get(be) if facts else None,
                                  (facts.get("backend_windows") or {}).get(be) if facts else None,
                                  (facts.get("backend_min_need_minutes") or {}).get(be) if facts else None,
-                                 due_later=max(0, (_h or 0) - (_now_n or 0))))
+                                 due_later=max(0, (_h or 0) - (_now_n or 0)),
+                                 due_since=(facts.get("backend_due_since") or {}).get(be) if facts else None))
     out.append(check_collector(probe.collector_status(float(th["collector_window_hours"]), now), th))
     prs = probe.open_prs()
     out.append(check_stamps(prs, now, th))

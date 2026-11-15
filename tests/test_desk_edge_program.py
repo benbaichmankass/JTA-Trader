@@ -314,3 +314,28 @@ def test_metrics_rows_are_usable_only_after_their_window(tmp_path):
     t0 = int(datetime(2026, 6, 1, tzinfo=timezone.utc).timestamp())
     assert int(m["t"][0]) == t0 + di.METRICS_WINDOW_S
     assert np.isnan(di._at(m, t0 + 60, "taker")) and di._at(m, t0 + 300, "taker") == pytest.approx(0.9)
+
+
+def test_universe_verdict_carries_population_and_n_script_run_requires(tmp_path):
+    """Run 43580685219 measured `fail` but script_run recorded producer_failed: verdict.json had no population / n."""
+    for arm, nsym in (("W", 24), ("R", 18)):
+        ev = tmp_path / f"ev-{arm}"
+        ev.mkdir()
+        ceil = {"instrument_valid": True,
+                "population": {"universe": arm, "symbols": [f"S{i}" for i in range(nsym)], "cutoffs": 10,
+                               "test_actions": 100, "window": ["a", "b"]},
+                "tier_P+": {"evals": {"ridge": {"n": 40 if arm == "W" else 30, "paired_diff_vs_random": 0.1,
+                                                "S3_ci_corrected": [-0.1, 0.3]}},
+                            "fold_S3": {"ridge": {"2": 0.1, "3": -0.1, "4": 0.2}}}}
+        (ev / "ceiling.json").write_text(json.dumps(ceil))
+    out = tmp_path / "out"
+    rc = ce.cmd_universe_verdict(type("A", (), {"arms": f"W={tmp_path / 'ev-W'},R={tmp_path / 'ev-R'}", "out": str(out)})())
+    v = json.loads((out / "verdict.json").read_text())
+    assert rc == 0 and v["verdict"] == "fail" and v["read_state"] == "measured"
+    assert "arm W: 24 symbols" in v["population"] and "arm R: 18 symbols" in v["population"]
+    assert v["n"] == 30
+    # an arm that could not be read: n is null (not measured), population still names what was looked at
+    (tmp_path / "ev-R" / "ceiling.json").unlink()
+    ce.cmd_universe_verdict(type("A", (), {"arms": f"W={tmp_path / 'ev-W'},R={tmp_path / 'ev-R'}", "out": str(out)})())
+    v = json.loads((out / "verdict.json").read_text())
+    assert v["read_state"] == "could_not_check" and v["n"] is None and v["population"].strip()

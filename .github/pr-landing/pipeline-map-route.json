@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "Manager dispatch for lane PIPELINE-MAP (relaying the operator's 2026-11-14 request, then the 21:56Z design change 'generate from sources of truth'): 'Read path = Tier 1, but it restarts the web-api, not the trader ... Mark the PR a hold for the manager's merge.' Adds src/runtime/pipeline_map.py (the generator: a hand-written skeleton + blocks built from accounts.yaml, strategies.yaml, strategy_status, evidence records, the performance aggregate, SERVED_MODELS.yaml, mandates.yaml, live_trade_review.yaml, deploy/*.service, trader_import_closure.txt, the TP guard; plus drift checks) and GET /api/bot/work/pipeline-map, which builds it live with a 10-min cache and falls back to the committed snapshot. trader_import_closure.py decide over the diff vs the merge-base -> SKIP; the deploy restarts ict-web-api only. Stacked on #26142. Revert: git revert.",
+  "why": "Serve the trading pipeline map to the dashboard's Work tab (ict-trader-dashboard #270)."
+}

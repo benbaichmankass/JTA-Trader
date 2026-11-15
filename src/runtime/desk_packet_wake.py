@@ -47,7 +47,7 @@ import logging
 import os
 import subprocess
 import sys
-import tempfile
+import shutil
 import threading
 import time
 import urllib.error
@@ -76,6 +76,9 @@ BUILD_AFTER_MIN = 1
 #: Build/commit attempts per bar before the VM stops trying and leaves it to the fallback workflow.
 MAX_ATTEMPTS = 3
 BUILD_TIMEOUT_S = 420
+DETACHED = "detached:"
+#: A detached build older than this has no live unit left (2 stages + margin; the unit RuntimeMaxSec is 900 s).
+DETACHED_WAIT_S = 2 * BUILD_TIMEOUT_S + 60
 BUILDER = ROOT / "scripts" / "ops" / "desk_scan_packet.py"
 PUBLISHER = ROOT / "scripts" / "ops" / "desk_branch.py"
 LOCAL_API = "http://127.0.0.1:8001"
@@ -168,16 +171,105 @@ def recorded_packet_ids(text: str) -> set:
     return out
 
 
-def build_packet(now: datetime, decisions_text: str) -> Tuple[Optional[Path], Optional[str]]:
-    """Run the workflow's own builder + publisher. (stage dir, None) or (None, why). Never raises."""
+def _desk_dir() -> Path:
+    return receipt_path().parent / "desk"
+
+
+def _read_json(p: Path) -> Optional[Dict[str, Any]]:
     try:
-        tmp = Path(tempfile.mkdtemp(prefix="desk-packet-"))
+        d = json.loads(p.read_text())
+        return d if isinstance(d, dict) else None
+    except (OSError, ValueError):
+        return None
+
+
+def _run_unit(job_id: str, job_dir: Path, stages: list, env_overlay: Dict[str, str],
+              stage: Path) -> Optional[Tuple[Optional[Path], Optional[str]]]:
+    """Run the stages in ``ict-desk-build@<job>.service`` (own cgroup: a trader restart cannot kill it).
+    (stage, None) | (None, why) | None when isolation is unavailable (unit not installed / no sudo) -> in-process fallback.
+    A `systemctl start` client killed with the trader is DETACHED, not failed: the unit keeps running and
+    ``_adopt_mark`` picks the result up on a later pass. Same contract as desk_event_trigger._run_isolated."""
+    (job_dir / "job.json").write_text(json.dumps({"env": env_overlay, "stages": [
+        {"name": n, "argv": a, "timeout_s": BUILD_TIMEOUT_S} for n, a in stages]}))
+    try:
+        r = subprocess.run(["sudo", "-n", "systemctl", "start", f"ict-desk-build@{job_id}.service"],
+                           capture_output=True, text=True, timeout=2 * BUILD_TIMEOUT_S + 60)
+    except subprocess.TimeoutExpired:
+        return None, DETACHED + "systemctl start exceeded 2 stages + 60 s (the unit's RuntimeMaxSec bounds it)"
+    return _unit_result(job_dir, stage, r)
+
+
+def _unit_result(job_dir: Path, stage: Path, r: Any = None) -> Tuple[Optional[Path], Optional[str]]:
+    res = _read_json(job_dir / "result.json")
+    if res is None:
+        err = ((getattr(r, "stderr", "") or getattr(r, "stdout", "") or "")).strip()
+        rc = getattr(r, "returncode", None)
+        if r is not None and rc != 0 and any(k in err.lower() for k in ("not found", "password", "not allowed", "no tty", "sudo:")):
+            return None  # type: ignore[return-value]  # isolation unavailable here
+        return None, DETACHED + f"no result.json yet (systemctl exit {rc}: {err[-120:]})"
+    bad = next((st for st in res.get("stages") or [] if st.get("outcome") != "exit 0"), None)
+    if res.get("state") == "ok" and bad is None:
+        return stage, None
+    if bad and bad.get("outcome") == "timeout":
+        return None, f"TimeoutExpired: {bad['stage']} exceeded {BUILD_TIMEOUT_S}s (isolated unit, {bad.get('wall_s')}s)"
+    if bad:
+        return None, f"{bad['stage']} {bad.get('outcome')}: {bad.get('tail', '')}"
+    return None, f"desk-build unit: {res.get('error') or res.get('state')}"
+
+
+def _adopt_mark(bar_key: str, now: datetime) -> Optional[Tuple[str, Any]]:
+    """A hourly build whose client died with the trader leaves ``wake_inflight.json``. For THIS bar: ('stage', Path)
+    when its unit finished ok, ('pending', age_s) while it may still run, else the mark is cleared and the caller builds."""
+    mp = _desk_dir() / "wake_inflight.json"
+    mark = _read_json(mp)
+    if not mark:
+        return None
+    job_dir = _desk_dir() / "jobs" / str(mark.get("job", ""))
+    age = time.time() - float(mark.get("started_at") or 0)
+    res = _read_json(job_dir / "result.json")
+    if mark.get("bar") != bar_key:
+        mp.unlink(missing_ok=True)
+        return None
+    if res is None:
+        if age < DETACHED_WAIT_S:
+            return "pending", round(age)
+        mp.unlink(missing_ok=True)
+        return None
+    mp.unlink(missing_ok=True)
+    stage, _why = _unit_result(job_dir, job_dir / "stage")
+    return ("stage", stage) if stage is not None and (stage / POINTER_PATH).exists() else None
+
+
+def build_packet(now: datetime, decisions_text: str) -> Tuple[Optional[Path], Optional[str]]:
+    """Run the workflow's own builder + publisher. (stage dir, None) or (None, why). Never raises.
+    In its own systemd unit when it can (survives a trader restart), else in-process as before."""
+    try:
+        try:  # job dirs are pruned about 1 h after their last write (the trigger path does the same)
+            for j in (_desk_dir() / "jobs").iterdir():
+                if j.is_dir() and time.time() - j.stat().st_mtime > 3600.0:
+                    shutil.rmtree(j, ignore_errors=True)
+        except OSError:
+            pass
+        job_id = f"hourly-{int(time.time())}-{os.getpid()}"
+        tmp = _desk_dir() / "jobs" / job_id
+        tmp.mkdir(parents=True, exist_ok=True)
         dec = tmp / "decisions.jsonl"
         dec.write_text(decisions_text)
-        env = dict(os.environ, LIVE_REVIEW_PUBLIC_BASE=os.environ.get("LIVE_REVIEW_PUBLIC_BASE", LOCAL_API))
+        base = os.environ.get("LIVE_REVIEW_PUBLIC_BASE", LOCAL_API)
+        env = dict(os.environ, LIVE_REVIEW_PUBLIC_BASE=base)
         scan, stage = tmp / "scan.json", tmp / "stage"
-        for cmd in ([sys.executable, str(BUILDER), "--timeframe", "1h", "--decisions", str(dec), "--out", str(scan)],
-                    [sys.executable, str(PUBLISHER), "publish", "--packet", str(scan), "--stage", str(stage)]):
+        stages = [("builder", [sys.executable, str(BUILDER), "--timeframe", "1h", "--decisions", str(dec), "--out", str(scan)]),
+                  ("publisher", [sys.executable, str(PUBLISHER), "publish", "--packet", str(scan), "--stage", str(stage)])]
+        mark = _desk_dir() / "wake_inflight.json"
+        mark.write_text(json.dumps({"bar": now.replace(minute=0, second=0, microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                    "job": job_id, "started_at": time.time()}))
+        iso = _run_unit(job_id, tmp, stages, {"LIVE_REVIEW_PUBLIC_BASE": base}, stage)
+        if iso is not None:
+            if not (iso[1] or "").startswith(DETACHED):
+                mark.unlink(missing_ok=True)  # finished (ok or failed): nothing left to adopt
+            return iso
+        mark.unlink(missing_ok=True)
+        for _name, cmd in stages:
             r = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True, timeout=BUILD_TIMEOUT_S)
             if r.returncode != 0:
                 return None, f"{Path(cmd[1]).name} exit {r.returncode}: {(r.stderr or r.stdout).strip()[-160:]}"
@@ -281,7 +373,18 @@ def run_once(fetch: Fetch = _get,
         rec.update(attempts=_attempts[bar_key], bar=bar_key)
         if not auth:
             return done("could_not_commit", http_code=None, reason="no_credential_in_git_extraheader")
-        stage, why = build_fn(now, text)
+        adopted = _adopt_mark(bar_key, now)
+        if adopted and adopted[0] == "pending":
+            _attempts[bar_key] -= 1  # waiting on a live unit is not an attempt
+            return done("build_pending", age_s=adopted[1])
+        if adopted:
+            stage, why = adopted[1], None
+            rec["adopted"] = True
+        else:
+            stage, why = build_fn(now, text)
+        if stage is None and (why or "").startswith(DETACHED):
+            _attempts[bar_key] -= 1
+            return done("build_detached", reason=why)
         if stage is None:
             return done("could_not_build", reason=why)
         pk_ptr = json.loads((stage / POINTER_PATH).read_text())

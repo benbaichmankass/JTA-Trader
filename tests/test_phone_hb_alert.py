@@ -35,17 +35,21 @@ def test_recovery_sends_one_message_then_rearms():
 def test_run_sends_on_system_target_and_failed_send_keeps_state(tmp_path):
     calls = []
     sp = tmp_path / "s.json"
-    out = h.run(NOW, BAD, sp, lambda body, priority, target: calls.append((priority, target)))
+    # watchdog_open is injected: the default reads the REPO's live research-watchdog incident ledger, so this test
+    # went red the moment a real phone_heartbeat incident was open (2026-11-12 22:54Z escalation). The suppressed
+    # path has its own test (test_watchdog_owned_incident_sends_nothing_alert_or_recovery).
+    no_incident = lambda: False   # noqa: E731
+    out = h.run(NOW, BAD, sp, lambda body, priority, target: calls.append((priority, target)), watchdog_open=no_incident)
     assert calls == [("urgent", "system")] and len(out) == 1 and sp.exists()
 
     sp2 = tmp_path / "s2.json"
     def boom(*a, **k): raise OSError("inbox down")
-    assert h.run(NOW, BAD, sp2, boom) == [] and not sp2.exists()   # retried next run, not latched out
+    assert h.run(NOW, BAD, sp2, boom, watchdog_open=no_incident) == [] and not sp2.exists()   # retried next run, not latched out
 
 
 def test_probe_stale_heartbeat_is_breached_end_to_end():
     old = (NOW - timedelta(minutes=145)).isoformat()
-    p = ps.probe_phone_heartbeat(NOW, lambda _p: ("read", {"phone_heartbeat": {"at": old}}), lambda _a: "live")
+    p = ps.probe_phone_heartbeat(NOW, lambda _p: ("read", {"phone_heartbeat": {"at": old}}), lambda _a: "live", lambda _a: ["s"])
     assert p["status"] == "breached" and p["priority"] == "urgent"
     assert h.plan(p, {}, NOW)[0][0][0] == "urgent"
 

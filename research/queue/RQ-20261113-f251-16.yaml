@@ -1,0 +1,178 @@
+id: RQ-20261113-f251-16
+title: 'tlt_pullback_1d vol-at-entry lever: vol_skip_above_pctl 0.8 vs none on the forming bar (Alpaca 1Day + 1Min)'
+status: done
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+question: 'tlt_pullback_1d fails RULE-D1 on the forming bar (f251-02: -6.96R over n 45); short-only improved it to +4.55R but 3/8 folds (f251-11). vol_skip_above_pctl
+  0.8 passed on the CLOSED bar (RQ-20261017-ae17-19) and is not in config. On the forming bar over 2020-07-27..2026-11-13: does it pass Stage 0 at the SAME 5/8 fold
+  bar and beat the ungated baseline net of the full cost stack?'
+why_this_matters: 'Demo-floor paper leg; DEMO-FLOOR-ITER 2nd lever (AM-ML GO). No confirmation window exists: the record window already starts where the forming regen
+  found Alpaca iex 1Min coverage (data_start 2020-07-27 in run 43452855935, although it fetched from 2009), so the guard is met by its other branch -- the same fold-consistency
+  bar (5/8), not relaxed.'
+power:
+  expected_n: 80
+  min_detectable_effect: 0.5
+  effect_units: sd
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: baseline n 45; the gate keeps ~80%.'
+  sd: null
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window (the leg's own record window); nothing accrues; Binance / Binance-vision 1m covers it at run time.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+run:
+  commands:
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - tlt_pullback_1d
+    - --arm
+    - A=
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2020-07-27'
+    - --end
+    - '2026-11-13'
+    - --days
+    - '2400'
+    - --folds
+    - '8'
+    - --fold-majority
+    - '5'
+    - --n-floor
+    - '20'
+    - --delta-r
+    - '0'
+    - --forming-equity-fetch
+    - --out
+    - '{out_dir}/arm_A'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - tlt_pullback_1d
+    - --arm
+    - V=vol_skip_above_pctl=0.8
+    - --grade
+    - stage0
+    - --baseline
+    - V
+    - --start
+    - '2020-07-27'
+    - --end
+    - '2026-11-13'
+    - --days
+    - '2400'
+    - --folds
+    - '8'
+    - --fold-majority
+    - '5'
+    - --n-floor
+    - '20'
+    - --delta-r
+    - '0'
+    - --forming-equity-fetch
+    - --out
+    - '{out_dir}/arm_V'
+  - - python3
+    - scripts/research/timeframe_lever_grade.py
+    - --out
+    - '{out_dir}'
+    - --leg
+    - tlt_pullback_1d
+    - --baseline-tf
+    - A
+    - --family
+    - filter
+    - --prefix
+    - arm_
+    - --tf
+    - A
+    - --tf
+    - V
+  timeout_minutes: 300
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261113-f251-16
+decision_rule:
+  id: RULE-DFI2-TLT-VOLSKIP-20261113
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  statistic: exit_lever_ablation --grade stage0 --forming-equity-fetch, one run per arm; timeframe_lever_grade.py --family filter.
+  rule: 'AM-ML multiple-testing guard (2026-11-13 18:50Z): successive levers on one window fork the paths, so this rule NAMES the leg''s prior lever attempts on the
+    record window and ALSO requires the pass to hold at the SAME fold-consistency bar (no earlier forming-replayable window: 1Min coverage begins at the record window''s
+    start). No fold bar is relaxed from the leg''s first DEMO-FLOOR-ITER unit. Prior lever attempts on this window: RQ-20261113-f251-02 (forming baseline, -6.96R),
+    RQ-20261113-f251-11 (short-only, +4.55R, 3/8 folds -- FAIL). PASS iff the gated arm passes its own Stage 0 (net_r > 0, n >= 20, >= 5/8 folds positive -- the same
+    bar as f251-11) AND beats the baseline arm''s net_r. FAIL iff graded and not. INDETERMINATE otherwise. Arms, window, folds and floors are fixed now.'
+  what_it_does_not_do: Changes no config, roster, order or evidence record. A PASS is a data-backed Tier-3 proposal routed to the manager via AM-ML (the leg stays
+    on the demo floor until then); a FAIL is recorded on the lever map and the next untested family is picked.
+  baseline: tlt_pullback_1d config-exact, forming, ungated, re-run in this unit.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: a demo-floor (Stage-1 paper) leg failing RULE-D1 on its forming record; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+ml_consumer:
+  not_applicable: 'Not an ML unit: a harness lever test on a rule-based leg.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: tlt_pullback_1d
+  subject_kind: strategy_leg
+  from_result: RQ-20261113-f251-11
+  verdict_read: fail
+  diagnosis: 'f251-02 ledger: gross -6.13R; long -9.30R, short +2.34R; stop -22.40R. f251-11 short-only +4.55R n29 3/8 folds: positive but inconsistent across folds,
+    which points at a regime / volatility gate rather than the side alone.'
+  hypothesis: Skipping hot-tail entries removes the losing regime and clears Stage 0 at the same fold bar.
+  search: 'Lever map: entry pullback_frac, exit (many), filters (adx_max, vol_skip_below, cooldown), direction_filter, momentum_stale, structure_exit TESTED (closed
+    bar); direction TESTED forming (f251-11, FAIL); vol_skip_above on the FORMING bar -> chosen (a closed-bar pass at 0.8/0.9/0.95).'
+  attempt: 2
+  due_by: '2026-11-20'
+  levers:
+  - filter
+  lever_arms:
+  - family: filter
+    param: vol_skip_above_pctl
+    values:
+    - 0.8
+    baseline_value: 0.0
+  map_entries:
+  - research/levers/tlt_pullback_1d.yaml
+related:
+- RQ-20261113-f251-11
+- RQ-20261017-ae17-19
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): ONE lever chosen from the leg''s own R diagnosis (scripts/research/leg_r_diagnosis.py),
+  rule registered before the run against the leg''s own record, net of the full cost stack, graded once on its fixed window.'
+follow_up: 'On the verdict a session appends the test to research/levers/tlt_pullback_1d.yaml (lever_map.py --append). PASS -> Tier-3 proposal to the manager via
+  AM-ML. FAIL -> this is the leg''s 2nd DEMO-FLOOR-ITER lever: write its lever-family census (tested / untested per family) before authoring a 3rd (AM-ML guard).'
+last_dispatched_at: '2026-11-13T22:48:57+00:00'
+grading:
+  attested: RULE-DFI2-TLT-VOLSKIP-20261113
+  auto: true
+  decision_rule_id: RULE-DFI2-TLT-VOLSKIP-20261113
+  evidence:
+  - research/results/RQ-20261113-f251-16/43521659440.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

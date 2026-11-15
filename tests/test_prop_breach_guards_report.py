@@ -10,7 +10,8 @@ breach." breakout_1 is declared ``report``; every other account stays
 that ``report`` softened no longer exist (folded into the account-level
 ``daily_dd_switch``, operator directive), so their report-mode tests were
 removed. Still proven here: the mode parse (``enforce`` is the default and
-the fallback for any typo), dry-run is never softened, and the ticket's "DO NOT PLACE" block
+the fallback for any typo), dry-run is never softened, and (since 2026-11-12, GATE-PROP-RISK-CUSHION
+report-only) no ticket carries a "DO NOT PLACE" block; a ``report`` account keeps its own informational line
 becomes one informational line for a ``report`` account only, and
 "cushion unknown" (could not look) is never softened.
 """
@@ -76,9 +77,10 @@ EXCEEDS = prop_risk_gate.grade_ticket_risk(risk_usd=75.0, distance_to_dd_floor_u
 UNKNOWN = prop_risk_gate.grade_ticket_risk(risk_usd=75.0, status_freshness="stale")
 
 
-def test_caveat_enforce_keeps_do_not_place():
+def test_caveat_enforce_is_a_warning_not_a_no_go():
+    # GATE-PROP-RISK-CUSHION: MAKE REPORT-ONLY (operator 2026-11-12): the "DO NOT PLACE" block is retired.
     blob = "\n".join(prop_risk_gate.caveat_lines(EXCEEDS))
-    assert "DO NOT PLACE" in blob
+    assert "DO NOT PLACE" not in blob and "PLACE AS SHOWN" in blob and "$24.00" in blob and "report-only" in blob
 
 
 def test_caveat_report_is_informational():
@@ -105,7 +107,8 @@ def test_rendered_ticket_uses_the_accounts_mode(monkeypatch):
     report = bt.render_ticket(t, account_id="breakout_1")
     assert "DO NOT PLACE" not in report and "accepted, the account is replaceable" in report
     monkeypatch.setattr(prop_risk_gate, "breach_guards_for", lambda a: "enforce")
-    assert "DO NOT PLACE" in bt.render_ticket(t, account_id="some_other_prop")
+    other = bt.render_ticket(t, account_id="some_other_prop")
+    assert "DO NOT PLACE" not in other and "Reported, not refused" in other   # report-only since 2026-11-12
 
 
 def test_breach_guards_for_reads_the_same_block_as_prop_risk_manager(monkeypatch):

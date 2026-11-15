@@ -366,6 +366,14 @@ class DXtradeApiAdapter(PropPlatformAdapter):
         snap = AccountSnapshot(balance=_f(m.get("balance")), equity=_f(m.get("equity")),
                                unrealized=_f(m.get("openPl")), margin_used=_f(m.get("margin")),
                                available=_f(m.get("availableFunds")))
+        # VELOTRADE-STATUS-SNAPSHOT-UNREADABLE: velotrade_1's metrics carry no openPl
+        # (20 of 20 reads, 2026-11-12), so every read with an open position graded
+        # unrealized_unreported. On DXtrade equity = balance + open P&L: on tradeify_1,
+        # which does send openPl, (equity - balance) == openPl on 38 of 38 reads
+        # (2026-11-12). Derive it only from two READ fields, and say so.
+        if snap.unrealized is None and snap.balance is not None and snap.equity is not None:
+            snap.unrealized = round(snap.equity - snap.balance, 2)
+            snap.derived.append("unrealized=equity-balance")
         snap.unparsed = [k for k, v in (("balance", snap.balance), ("equity", snap.equity),
                                         ("unrealized", snap.unrealized)) if v is None]
         snap.unparsed.append("realized_today")   # not a REST metrics field: "could not look"
