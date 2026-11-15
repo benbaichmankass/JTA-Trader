@@ -1,0 +1,148 @@
+# Hand-authored 2026-11-15 by lane ML-PRIMARY-2 (session_01AFoLuHnp85DHQ4PWMQy8LM), plan line MLP-D8-LABRADOR-2; closes
+# pipeline item PI-20261104-NHN7JV7U-0001 (the variant RQ-20261104-e4a1-01 queued on its FAIL). Decision rule registered BEFORE
+# the pooled head was trained or scored (only the driver's synthetic --self-test has run). Gates this adds or changes: none.
+id: RQ-20261115-a474-03
+title: 'Exit head VARIANT, pooled donchian-4h family: selected on the POOLED discovery span of trend_donchian_eth/sol/xrp/ada/avax_4h
+  (each at its own declared exit), does the head beat trend_donchian_eth_4h''s CURRENT declared exit on its held-out span, net of the
+  full cost stack, and beat a matched random truncation?'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: ml_health
+priority: 1
+kind: experiment
+practice_precedent: 'T1 (matched random-intervention control) + T3 (net of the full cost stack); docs/research/M20-exit-head-PROGRAM.md
+  E1/E1.5 (pooling by family) and .claude/skills/exit-refinement/SKILL.md P3/P4; the parent design RQ-20261104-e4a1-01.'
+question: 'RQ-20261104-e4a1-01 FAILED only its matched random-truncation control (selected age8_below_half_r tau 0.2: held-out 15.45
+  vs B 13.97 R, n 76; control median 19.34 / p95 29.14) on an underpowered discovery (2 usable 50-trade folds, mean OOS AUC 0.573).
+  The variant pools DISCOVERY across the donchian-4h family (trend_donchian_eth_4h, _sol_4h, _xrp_4h, _ada_4h, _avax_4h; each leg''s
+  own config-exact baseline arm, own E0 rows and own cost stack; trend_donchian_xrp_adx25 is left out because it takes the same
+  entries as _xrp_4h and would double-count them), selects ONE arm on the pooled walk-forward, and reads trend_donchian_eth_4h''s
+  held-out span once against the same six clauses.'
+why_this_matters: 'trend_donchian_eth_4h is a real-money / prop leg whose remaining exit question is WHEN to leave (c6f1-04: the
+  measured-move revision already supersedes any entry TP). A pooled head is the M20 programme''s standard answer to a thin single-leg
+  discovery; if it fails too, the D8 head on this family closes (MLP-D8-LABRADOR-2 exhaustion, with the desk-label variant left).'
+power:
+  expected_n: 76
+  min_detectable_effect: 0.32
+  effect_units: sd
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED for the primary read: e4a1-01''s held-out span held 76 eth_4h trades at this boundary (same boundary here). The
+    variant raises DISCOVERY power (5 legs pooled, ~5x the discovery trades), not the held-out n; the held-out read stays thin and
+    the control clause is the binding bar.'
+  sd: null
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window 2020-07-01 .. 2026-11-03; public candles fetched at run time; nothing accrues.
+evidence_class:
+  holdout: holdout_span
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261115-a474-03-POOLED-EXITHEAD
+  registered_at: '2026-11-15'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_head_holdout.py --legs trend_donchian_eth_4h,trend_donchian_sol_4h,trend_donchian_xrp_4h,
+    trend_donchian_ada_4h,trend_donchian_avax_4h --primary-leg trend_donchian_eth_4h, window 2020-07-01 .. 2026-11-03 23:59, tf 4h.
+    Per leg, exactly e4a1-01 steps (a) baseline B config-exact via exit_lever_ablation.py, (b) E0 rows, (e) cost model with the
+    1e-3 R self-check against that leg''s emitted costs (a leg failing it, or failing to build, is could_not_look and excluded from
+    the pool, never zero). BOUNDARY 2025-04-03 15:00:00+00:00 (e4a1-01''s, registered) applied as a CALENDAR split to every leg:
+    DISCOVERY = trades whose entry AND exit precede it, HELD-OUT = trades entered on/after it. (d) the same 19 head arms and the
+    hard comparators stale_8_0 / giveback_1_1. (f) the discovery walk-forward runs on the POOLED discovery trades (fold_blocks,
+    trades mode, 50-trade blocks, 7-day embargo, train_model unchanged). (g) one model on all pooled discovery rows purged 7 days
+    before the boundary; every arm replayed once on each leg''s held-out trades. (h) control per leg: 2000 draws (seed 20261104 +
+    leg index in sorted order) truncating that leg''s k = the selected arm''s truncations, each at a uniform random in-trade bar.
+    Reported, not graded: per-leg held-out tables, clauses and controls for the four non-primary legs, AUCs, giveback.'
+  rule: 'Multiple-testing disclosure: this is the SECOND exit-head read of trend_donchian_eth_4h''s held-out span at this boundary
+    (e4a1-01 FAIL stands). INDETERMINATE iff the primary leg could not be measured, fewer than 2 usable pooled discovery folds, or
+    the selected arm never fires on the primary leg''s held-out span. ELIGIBLE / SELECTED exactly as e4a1-01 (pooled walk-forward
+    net R > B''s, folds >= B in >= ceil(2/3 x usable), >= 1 truncation, mean discovery OOS AUC > 0.55; best eligible by summed net
+    R; none -> B selected -> FAIL). PASS iff ALL on trend_donchian_eth_4h''s held-out span: (1) selected is a head arm; (2) n >= 25;
+    (3) net R >= B''s; (4) net R >= the better of stale_8_0 / giveback_1_1; (5) max DD <= 1.35 x B''s; (6) net R > the control''s
+    95th percentile. FAIL otherwise. The non-primary legs never change the verdict. Thresholds are not changed after any result.
+    PASS -> the same Tier-3 path as e4a1-01 (E2 shadow scoring first, then E3 declare on trend_donchian_eth_4h; proposal via the
+    manager, both reads disclosed). FAIL -> the pooled head closes for the donchian-4h family on this feature set; the desk-label
+    variant (PI-20261029-IHFQDB3W-0004) is the last lever on MLP-D8-LABRADOR-2.'
+  what_it_does_not_do: 'Edits no config, places no order, publishes no model. Grades only trend_donchian_eth_4h; a non-primary leg
+    that looks good here needs its own registered unit. The held-out span is independent of the head selection but was viewed once
+    by e4a1-01''s selected arm.'
+ml_consumer:
+  consumer: src/runtime/exit_head_shadow.py
+  decision: close an open trend_donchian_eth_4h position before its declared exit when the pooled head fires (exit_head_model / exit_head_threshold / exit_head_action on the leg, Tier-3)
+  legs:
+  - trend_donchian_eth_4h
+  book: money
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.15
+  basis: 'stand-in: exit quality of a real-money/prop leg; the parent head beat B but not random, hence low confidence.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 120
+  why_runner: Fetches keyless public candles for a pinned window; LightGBM on ~15-20k pooled rows; reads no trainer data.
+  basis: 'INFERRED: e4a1-01 ran one leg in ~20 min (baseline + T4 arm + E0 + small fits); five legs plus a larger pooled fit.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/exit_head_holdout.py
+  - --legs
+  - trend_donchian_eth_4h,trend_donchian_sol_4h,trend_donchian_xrp_4h,trend_donchian_ada_4h,trend_donchian_avax_4h
+  - --primary-leg
+  - trend_donchian_eth_4h
+  - --unit
+  - RQ-20261115-a474-03
+  - --days
+  - '2350'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-11-03 23:59
+  - --boundary
+  - '2025-04-03 15:00:00+00:00'
+  - --tf
+  - 4h
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261115-a474-03
+  note: Needs lightgbm on the runner (research-script-run.yml installs lightgbm 4.6.0).
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: trend_donchian_eth_4h
+  subject_kind: strategy_leg
+  from_result: RQ-20261104-e4a1-01
+  verdict_read: fail
+  diagnosis: 'e4a1-01: the selected head beat B and the hard comparators on the held-out span but not random truncation; discovery
+    had 2 usable folds (AUC 0.573), so selection was noisy.'
+  hypothesis: Pooling the donchian-4h family's discovery trades selects a head arm that beats random truncation on eth_4h's held-out span.
+  search: 'Fixed: the 19 arms of e4a1-01, five donchian-4h legs pooled for discovery, eth_4h primary.'
+  attempt: 2
+  due_by: '2026-11-22'
+  levers:
+  - exit
+  lever_arms:
+  - family: exit
+    param: exit_head_pooled_family
+    values:
+    - donchian_4h
+    baseline_value: none
+  map_entries:
+  - research/levers/trend_donchian_eth_4h.yaml
+related:
+- RQ-20261104-e4a1-01
+- PI-20261104-NHN7JV7U-0001
+- MLP-D8-LABRADOR-2
+follow_up: 'ML-PRIMARY-2 grades on landing, updates MLP-D8-LABRADOR-2 and closes PI-20261104-NHN7JV7U-0001, reports to the manager.'
+last_dispatched_at: null
