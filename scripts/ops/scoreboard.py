@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sqlite3
 import subprocess
 import sys
@@ -436,7 +437,10 @@ def rows_from_diag() -> list[dict]:
 
 def _http_json(path: str) -> Any:
     import urllib.request  # noqa: PLC0415
-    with urllib.request.urlopen(f"https://ict-bot.duckdns.org/api/bot/{path}", timeout=60) as r:  # noqa: S310
+    tok = os.environ.get("DASHBOARD_API_TOKEN", "").strip()   # UI-OAUTH-SIGNIN: GET service bearer
+    req = urllib.request.Request(f"https://ict-bot.duckdns.org/api/bot/{path}",
+                                 headers={"Authorization": f"Bearer {tok}"} if tok else {})
+    with urllib.request.urlopen(req, timeout=60) as r:  # noqa: S310
         return json.load(r)
 
 

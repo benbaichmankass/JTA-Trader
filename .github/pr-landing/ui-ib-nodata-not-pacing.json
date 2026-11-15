@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 2: a fix to the IB historical read in src/exchange/ib_connector.py (web-api's read-only IB client only; the trader's get_ohlcv path is untouched). Follow-up to #25607; the manager merges.",
+  "why": "CLOSED-TRADE-SNAPSHOT-FUTURES-CANDLES: IB error 162 'HMDS query returned no data' is an empty answer for an expired month, not pacing; #25607 treated it as pacing, backing off 600 s and leaving the trade re-queued forever."
+}

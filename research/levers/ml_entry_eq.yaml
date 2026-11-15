@@ -6,59 +6,14 @@ status: testing
 books:
 - alpaca_paper
 baseline:
-  record: comms/strategy_evidence/ml_entry.json
-  net_r: 33.6787
-  n: 907
-  fidelity: faithful
+  record: research/results/RQ-20261105-e9a1-02/42143223941.jsonl
+  net_r: null
+  n: 858
+  fidelity: result_record
   rule_verdict: pass
+  note: confirm mean net R +0.0392 (se 0.0423, deflated point bar t_min 0.0, N=1) at n=858; dev OOF mean +0.1067
 attribution:
-  read_state: measured
-  n: 907
-  net_r: 33.679
-  gross_r: 0.0
-  cost_r: 0.0
-  cost_share_of_gross: null
-  verdict_hint: gross edge survives cost
-  entry_quality:
-    mean_mfe_r: null
-    share_mfe_ge_1r: null
-    n_with_mfe: 0
-  exit_capture:
-    median_net_over_mfe_winners: null
-    n_winners: 357
-    losers_that_reached_1r_mfe: 0
-  by_year:
-    ? ''
-    : n: 907
-      net_r: 33.679
-      gross_r: 0.0
-  by_direction:
-    long:
-      n: 311
-      net_r: 28.729
-      gross_r: 0.0
-    short:
-      n: 596
-      net_r: 4.95
-      gross_r: 0.0
-  by_exit_reason:
-    sl:
-      n: 523
-      net_r: -398.934
-      gross_r: 0.0
-    time:
-      n: 204
-      net_r: 110.503
-      gross_r: 0.0
-    tp:
-      n: 180
-      net_r: 322.11
-      gross_r: 0.0
-  by_adx_at_entry:
-    unknown:
-      n: 907
-      net_r: 33.679
-      gross_r: 0.0
+  read_state: no_record
 manifest:
   entry: untested
   exit: untested

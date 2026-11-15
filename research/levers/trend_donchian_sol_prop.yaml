@@ -3421,3 +3421,63 @@ levers:
       best_delta_r_per_trade: -0.034
       fold_stability: 0.417
       reading: every tested value is worse than the baseline
+levers_tested:
+- family: 'exit (conditional profit lock: stop to entry + (k-1)R once MFE >= kR)'
+  varied: arm A config-exact vs L2 (k 2), L25 (k 2.5), L2T (k 2 armed only with the TP within 0.5R), record 2025-11-13..2026-11-12 + year before,
+    live decision bar, full cost stack
+  response:
+    verdict: fail
+    unit_verdict: fail
+    run: '43589684532'
+    rule: RULE-PROFIT-LOCK-CONDITIONAL-20261114
+    arms: L2 --be-floor-r 2 --be-floor-lock-r 1 (primary); L25 --be-floor-r 2.5 --be-floor-lock-r 1.5; L2T L2 + --be-floor-tp-within-r 0.5
+    A:
+      record_net_r: 4.9694
+      record_n: 81
+      prior_net_r: -3.0027
+      prior_n: 88
+    L2:
+      verdict: fail
+      record_net_r: 2.7922
+      record_n: 82
+      record_folds_positive: 2
+      delta_record: -2.1772
+      prior_net_r: 0.8952
+      delta_prior: 3.8979
+    L25:
+      verdict: fail
+      record_net_r: 1.959
+      record_n: 84
+      record_folds_positive: 2
+      delta_record: -3.0104
+      prior_net_r: -4.8388
+      delta_prior: -1.8361
+    L2T:
+      verdict: fail
+      record_net_r: 4.4163
+      record_n: 82
+      record_folds_positive: 2
+      delta_record: -0.5531
+      prior_net_r: -3.0027
+      delta_prior: 0.0
+    pooled:
+      L2:
+        delta_record: -30.2489
+        delta_prior: -18.9327
+        verdict: fail
+      L25:
+        delta_record: -37.5409
+        delta_prior: -22.8675
+        verdict: fail
+      L2T:
+        delta_record: -9.1846
+        delta_prior: 1.5882
+        verdict: fail
+    reading: 'unit FAIL: an MFE-armed lock gives back more R than it saves, pooled over 18 crypto legs on both windows (L2 -30.25R record / -18.93R
+      year before); the TP-gated variant is near-neutral (-9.18R / +1.59R); no per-leg pass on any arm'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-05
+  lever_family: exit
+units:
+- RQ-20261114-db1a-05

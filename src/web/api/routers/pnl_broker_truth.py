@@ -34,9 +34,11 @@ def get_broker_truth(account_id: Optional[str] = Query(default=None)) -> dict[st
     ``stale`` are computed at read time against this ledger's own ``as_of`` —
     it has no scheduled refresh, so its age is the only signal a caller gets
     that ``realized_usd`` may no longer reflect the account. Each account also
-    carries ``live`` (hourly-refreshed API wallet truth SINCE the record's
-    ``window_end``, credentials' own sub-account only, never summed into
-    ``realized_usd``) and ``declared_gaps`` (what no producer can refresh).
+    carries ``live`` (hourly-refreshed API wallet truth from the day after the
+    record's inclusive ``window_end``, credentials' own sub-account only),
+    ``current`` (hand record + live, ``state: measured`` only when every
+    declared gap is ``closed``; else ``incomplete`` with ``realized_usd: null``)
+    and ``declared_gaps``. ``realized_usd`` itself stays the hand record.
     """
     try:
         from src.runtime import broker_truth
@@ -46,18 +48,13 @@ def get_broker_truth(account_id: Optional[str] = Query(default=None)) -> dict[st
 
     try:
         out = broker_truth.summarize_broker_truth(account_id=account_id)
-        # Live block: the hand ledger above is a frozen record; this is the
-        # hourly-refreshed API view beside it (LEDGER-REFRESH). Never summed.
-        from datetime import datetime, timezone
-
+        # Live block: hourly-refreshed API wallet truth from the day AFTER the
+        # hand record's inclusive window_end, and `current` = hand + live when
+        # every declared gap is closed (LEDGER-REFRESH, 2026-11-12).
         for rec in out.get("accounts", []):
-            since_ms = None
-            try:
-                since_ms = int(datetime.fromisoformat(
-                    str(rec.get("window_end") or rec.get("as_of"))).replace(tzinfo=timezone.utc).timestamp() * 1000)
-            except (TypeError, ValueError):
-                pass
-            rec["live"] = broker_truth.live_wallet_block(rec["account_id"], since_ms=since_ms)
+            rec["live"] = broker_truth.live_wallet_block(
+                rec["account_id"], since_ms=broker_truth.live_since_ms(rec))
+            rec["current"] = broker_truth.current_wallet_truth(rec, rec["live"])
         return out
     except Exception as exc:  # allow-silent: read endpoint must never 5xx — logs + empty envelope
         logger.warning("broker_truth: summarize failed: %s", exc)

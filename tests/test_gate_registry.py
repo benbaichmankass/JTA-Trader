@@ -262,3 +262,29 @@ def test_no_write_lock_is_held_during_the_slow_scans_or_alerts(tree, monkeypatch
     labels = {lbl for lbl, _ in seen}
     assert {"env-flag scan", "ci-guard scan", "git log scan", "alert send"} <= labels, seen
     assert all(state == "free" for _, state in seen), seen
+
+
+def test_attention_rank_and_recommended_decision():
+    """UI-WQ-GATES-ALIGN: the route ranks and maps, so the SPA does neither."""
+    assert gr.attention_rank({"real_money": 1, "authorization_class": "NONE"}) == 1
+    assert gr.attention_rank({"real_money": 1, "authorization_class": "VERBATIM"}) == 2
+    assert gr.attention_rank({"real_money": 0, "authorization_class": "NONE"}) == 3
+    assert gr.attention_rank({"real_money": None}) == 3
+    base = {"id": "X", "real_money": 1, "authorization_class": "NONE"}
+    assert gr.row_to_api({**base, "recommendation": "KEEP"})["recommended_decision"] == "keep"
+    assert gr.row_to_api({**base, "recommendation": "MAKE-REPORT-ONLY"})["recommended_decision"] == "report_only"
+    assert gr.row_to_api({**base, "recommendation": "REMOVE"})["recommended_decision"] == "remove"
+    assert gr.row_to_api({**base, "recommendation": "OPERATOR-PREFERENCE"})["recommended_decision"] is None
+    assert gr.row_to_api({**base, "recommendation": None})["recommended_decision"] is None
+    assert gr.row_to_api(base)["attention_rank"] == 1
+
+
+def test_api_attention_sort(client):
+    c, _tree = client
+    body = c.get("/api/bot/gates?sort=attention").json()
+    ranks = [g["attention_rank"] for g in body["gates"]]
+    assert ranks == sorted(ranks) and body["sort"] == "attention"
+    counts = body["counts"]["by_attention_rank"]
+    assert sum(counts.values()) == body["population"]["total"]
+    assert c.get("/api/bot/gates").json()["sort"] == "default"
+    assert c.get("/api/bot/gates?sort=bogus").status_code == 400

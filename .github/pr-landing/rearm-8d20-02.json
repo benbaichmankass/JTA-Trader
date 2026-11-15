@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "research/queue/RQ-20261112-8d20-02.yaml: adds rearmed_at 2026-11-15T02:30Z (#26184 merge time) and clears the stamp. #26184 nulled the stamp so the unit would re-run on the fixed producer (scores the committed 0afc4994 ensemble), but the dispatcher's stamp_lost repair re-stamped it at 02:20:24 from the pre-fix row 43646720569 (#26187), so the unit is parked as 'cadence=once and it ran'. rearmed_at is the dated re-arm _is_due honours; only rows predating the fix are discounted. No rule/threshold line changes. R5 cannot vouch rearmed_at, so the manager merges. Revert: git revert.",
+  "why": "Get the equity HTF counter-trend split (ML-ENTRY-EQ-REPRO-DRIFT follow-through) actually measured on the graded model."
+}

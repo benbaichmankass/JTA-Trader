@@ -1,6 +1,6 @@
 id: RQ-20261111-203c-04
 title: 'HOLDOUT-SELECTED regime gate on ief_pullback_1d (real money, alpaca_live): vol skip / ADX max / be-floor, net of cost'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-REGIME
@@ -127,3 +127,17 @@ iteration:
   attempt: 1
   due_by: '2026-11-18'
 last_dispatched_at: '2026-11-12T18:11:16+00:00'
+grading:
+  attested: RULE-RQ20261111203c04-REGIME
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261111203c04-REGIME
+  evidence:
+  - research/results/RQ-20261111-203c-04/43277435281.jsonl
+  graded_at: '2026-11-13'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

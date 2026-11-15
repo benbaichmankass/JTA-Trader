@@ -431,3 +431,33 @@ def test_dispatcher_pending_uses_open_stamp_prs_and_in_flight_runs():
     got = w.dispatcher_pending(units, NOW, stamp_fn=lambda: {"A": "PR #1"}, runs_fn=lambda: {"B": NOW})
     assert "A" in got and "C" not in got
     assert w.dispatcher_pending(units, NOW, stamp_fn=lambda: None, runs_fn=lambda: None) == set()
+
+
+# AM-ML 2026-11-12 (ML overnight item 2b): the idle clock starts when work became due, never before it.
+def _util(tmp, run_id, minutes_ago, due, backend="trainer", read_state="measured"):
+    (tmp / f"{run_id}.json").write_text(json.dumps({
+        "generated_at": (NOW - timedelta(minutes=minutes_ago)).isoformat(),
+        "backends": {backend: {"read_state": read_state, "due_waiting": due}}}))
+
+
+def test_due_since_is_the_oldest_record_of_the_unbroken_due_run(tmp_path):
+    for rid, ago, due in ((1, 400, 0), (2, 300, 0), (3, 230, 4), (4, 120, 4), (5, 20, 4)):
+        _util(tmp_path, rid, ago, due)
+    assert w.due_since(tmp_path, "trainer") == NOW - timedelta(minutes=230)
+    _util(tmp_path, 6, 5, 0)                                  # newest says nothing due -> no due clock
+    assert w.due_since(tmp_path, "trainer") is None
+    assert w.due_since(tmp_path / "absent", "trainer") is None
+    (tmp_path / "bad.json").write_text("{")
+    assert w.due_since(tmp_path, "trainer") is None          # unreadable -> behave as before, never guess
+
+
+def test_backend_idle_clock_is_capped_by_minutes_since_due():
+    lim = float(TH["backend_idle_minutes"])
+    old_start = [run(1, 462)]                                  # last start 462 min ago (the 2026-11-12 escalation shape)
+    assert w.check_backend("trainer", 4, old_start, NOW, TH)["state"] == w.BAD          # unchanged without the clock
+    recent = (NOW - timedelta(minutes=max(1.0, lim - 5))).isoformat()
+    v = w.check_backend("trainer", 4, old_start, NOW, TH, due_since=recent)
+    assert v["state"] == w.OK and "due here only since" in v["detail"]
+    far = (NOW - timedelta(minutes=lim + 100)).isoformat()
+    v = w.check_backend("trainer", 4, old_start, NOW, TH, due_since=far)
+    assert v["state"] == w.BAD and f"{lim + 100:.0f} min" in v["detail"]                # reports time since due, not 462

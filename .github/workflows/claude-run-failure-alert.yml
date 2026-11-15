@@ -320,6 +320,18 @@ jobs:
        ((github.event.workflow_run.event == 'schedule' ||
          github.event.workflow_run.event == 'workflow_dispatch') &&
         github.event.workflow_run.head_branch == 'main'))
+    # BURST CAP (CI-ALERT-STORM, 2026-11-12): at most ONE running + ONE pending alert per WATCHED workflow.
+    # MEASURED 2026-11-12 22:21-23:43Z: 100 listener runs in 82 min (70 skipped, 26 cancelled, 2 success),
+    # and ~23:30Z 65 queued at once inside a 468-run backlog. Each failed/cancelled watched run needs a
+    # runner to decide whether to page, so cancelling watched runs to relieve the queue CREATED more queued
+    # alert runs. With this group a burst of N dead runs of one workflow collapses to the newest pending one
+    # (it reads that workflow's latest state, which is what an operator needs). It is JOB-level on purpose:
+    # skipped jobs (watched run succeeded, the job `if:` above is false) never enter the group, so a
+    # success can never cancel a pending real alert. cancel-in-progress is false so a ping already
+    # being sent is never killed.
+    concurrency:
+      group: run-failure-alert-${{ github.event.workflow_run.workflow_id }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

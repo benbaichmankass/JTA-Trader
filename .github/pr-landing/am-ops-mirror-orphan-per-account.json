@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Manager ask 20:07Z (alert '[RUN failure] mirror-orphan-watch'). Runs 38 (11-13 21:35Z) and 39 (11-14 20:03Z) both failed at the read step: the all-accounts /api/diag/exchange_positions walks every account in sequence on one worker (4-7 s each, MEASURED per account) and now passes the proxy's ~30 s upstream limit (10 s client timeout in the run; a 90 s client gets 502 at ~30 s). Not a trader regression: the web-api route, not order_monitor. The watch now reads only the mirror pairs from mandate_resolver.MIRROR_OF, one account per request at 25 s each, then merges. A failed account read is left out, which the checker already reports as an unreadable pair (exit 1), so could-not-look is never folded into 'no orphans'. Dry-run of the new step at 20:1xZ: 4/4 reads, check OK. Workflow guards (failure-swallow, catalog, vm-literals) pass. Revert: git revert."
+}

@@ -3,61 +3,66 @@
 subject: tlt_pullback_1h
 kind: strategy_leg
 status: testing
-books: []
+books:
+- alpaca_paper
 baseline:
   record: comms/strategy_evidence/tlt_pullback_1h.json
-  net_r: -6.7285
-  n: 94
-  fidelity: approximate
-  rule_verdict: fail
+  net_r: 4.0263
+  n: 149
+  fidelity: faithful
+  rule_verdict: pass
 attribution:
   read_state: measured
-  n: 94
-  net_r: -6.729
-  gross_r: 2.655
-  cost_r: 9.383
-  cost_share_of_gross: 3.534
-  verdict_hint: cost erases a gross edge
+  n: 149
+  net_r: 4.026
+  gross_r: 20.914
+  cost_r: 16.888
+  cost_share_of_gross: 0.807
+  verdict_hint: gross edge survives cost
   entry_quality:
-    mean_mfe_r: 1.403
-    share_mfe_ge_1r: 0.489
-    n_with_mfe: 94
+    mean_mfe_r: 1.267
+    share_mfe_ge_1r: 0.47
+    n_with_mfe: 149
   exit_capture:
-    median_net_over_mfe_winners: 0.41
-    n_winners: 36
-    losers_that_reached_1r_mfe: 10
+    median_net_over_mfe_winners: 0.489
+    n_winners: 60
+    losers_that_reached_1r_mfe: 13
   by_year:
     '2025':
-      n: 48
-      net_r: -12.211
-      gross_r: -7.504
+      n: 58
+      net_r: -11.854
+      gross_r: -5.228
     '2026':
-      n: 46
-      net_r: 5.482
-      gross_r: 10.159
+      n: 91
+      net_r: 15.88
+      gross_r: 26.142
   by_direction:
     long:
-      n: 40
-      net_r: -5.507
-      gross_r: -1.606
+      n: 72
+      net_r: 5.357
+      gross_r: 13.665
     short:
-      n: 54
-      net_r: -1.222
-      gross_r: 4.261
+      n: 77
+      net_r: -1.33
+      gross_r: 7.249
   by_exit_reason:
     stop:
-      n: 38
-      net_r: -41.979
-      gross_r: -38.0
+      n: 42
+      net_r: -47.221
+      gross_r: -42.0
+    timeout:
+      n: 1
+      net_r: -0.318
+      gross_r: -0.211
     trail_stop:
-      n: 56
-      net_r: 35.25
-      gross_r: 40.655
+      n: 106
+      net_r: 51.565
+      gross_r: 63.125
   by_adx_at_entry:
     unknown:
-      n: 94
-      net_r: -6.729
-      gross_r: 2.655
+      n: 149
+      net_r: 4.026
+      gross_r: 20.914
 manifest:
   entry: tested
   exit: tested
@@ -177,3 +182,31 @@ levers:
       best_delta_r_per_trade: -0.0577
       fold_stability: 0.0
       reading: every tested value is worse than the baseline
+levers_tested:
+- family: exit (entry tp_r 3.5 K*) + direction (side_filter long), live-faithful corpus
+  varied: A config-exact vs K35 (tp_r 3.5, both sides, + conservative short borrow/dividend add-on) vs pre-registered L35 (tp_r 3.5, long only),
+    Alpaca iex 1Hour+1Min forming 2025-06-02..2026-11-11, control reproduced the committed record
+  response:
+    verdict: pass
+    proposal_arm: L35
+    A:
+      net_r: 4.0263
+      n: 149
+      net_r_adj: -1.5199
+    K35:
+      net_r: 7.3799
+      n: 152
+      net_r_adj: 2.1509
+    L35:
+      net_r: 8.1699
+      n: 75
+      t: 0.72
+      folds_positive: 4
+    reading: 'PASS, proposal arm L35 (long only, tp_r 3.5): +8.17R n75, 4/4 calendar folds, t 0.72 (not distinguishable from zero); prior config
+      -1.52R after the ESTIMATED short-carry add-on. Operator approved real-money promotion of L35 2026-11-14 (held PR #26094).'
+  shape: single_point
+  tested_at_power: true
+  unit: RQ-20261114-db1a-10
+  lever_family: exit
+units:
+- RQ-20261114-db1a-10

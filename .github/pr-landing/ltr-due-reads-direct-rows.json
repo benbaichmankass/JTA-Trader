@@ -1,0 +1,6 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Row LTR-DIRECT-ROWS-INVISIBLE (rank 2). REVIEWER-BRIEF § 4a makes the direct POST (POST /api/bot/live-review/rows -> runtime_logs/live_review/direct/comms/live_review/rows/<id>.json) the primary submit, but live_review_due.read_reviews_merged read only main reviews.jsonl + the live-review/rows branch, so every direct review still read 'never reviewed'/due and the packet's context.previous_review (same reader) was null -> duplicate reviewers. New read_direct_rows() reads the VM direct tree (local, no network; absent/could_not_look explicit, bad files counted) and read_reviews_merged merges it after the branch, deduped by review_id; live_review_due reports direct_state / direct_rows_added. The reviewer brief is unchanged. Tests: a direct-only review suppresses re-wake like a branch row; dedupe across main/branch/direct; a failed direct read keeps main+branch; the tree reader skips bad files (3 new tests fail on main). trader_import_closure decide: RESTART. Revert: git revert."
+}

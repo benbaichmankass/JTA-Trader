@@ -908,3 +908,7 @@ levers:
       best_delta_r_per_trade: 0.1227
       fold_stability: 0.667
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
+manifest_notes:
+  inert_arms_2026_11_14: 'RQ-20261110-73de-02 arm C1 (be_floor_r 1.0, closed bar) is INERT, not a lever reading: it ran with --structure-exit pivot=5, and scripts/backtest_pullback.py
+    discarded the break-even floor whenever a structure exit was set (PI-20261114-TFZXAKEK-0001, fixed in #25887). The generated levers.exit.be_floor_r entry ("no
+    response at the tested values", delta 0.0R) therefore means UNTESTED, not flat. Read be_floor_r on this leg as untested until a run on the fixed harness.'

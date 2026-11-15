@@ -158,7 +158,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:  # so `src.runtime.work_read` (WSD-S4) resolves when run as a script
@@ -757,7 +757,15 @@ def _session_tag(session_ref: str) -> str:
     return slug[-8:] if slug else "UNSCOPED"
 
 
-def mint_id(session_ref: str, *, today: date | None = None, store: Path = STORE) -> str:
+def _live_store_ids() -> list[str]:
+    """Every item id in the LIVE work store, read over its API (scripts/ops/work.py). Raises on any failure."""
+    from src.runtime import work_read as _wr
+    w = _wr._work_cli()
+    return [i["id"] for i in w._all_items(None)]
+
+
+def mint_id(session_ref: str, *, today: date | None = None, store: Path = STORE,
+            live_ids: Callable[[], Iterable[str]] | None = None) -> str:
     """Allocate a NEW pipeline id that no OTHER concurrent session can also
     pick, by scoping the counter to the CALLING session rather than to a
     shared "next free number".
@@ -796,7 +804,24 @@ def mint_id(session_ref: str, *, today: date | None = None, store: Path = STORE)
     tag = _session_tag(session_ref)
     date_str = _today(today).strftime("%Y%m%d")
     prefix = f"PI-{date_str}-{tag}-"
-    existing = read_log(store).items
+    existing = set(read_log(store).items)
+    # 2026-11-14 (manager, PI-20261114-TFZXAKEK-0001 re-issued): after the WSD-S4 freeze a session
+    # with no local work_store.db reads the FROZEN export files here, which lag the live store, so the
+    # counter re-issued an id the store already held (append() refused it, safely). When the canonical
+    # store is frozen and not local, also ask the LIVE store; if it cannot be read, refuse LOUDLY rather
+    # than mint from a stale export.
+    from src.runtime import work_read as _wr
+    in_test = (live_ids is None and bool(os.environ.get("PYTEST_CURRENT_TEST"))
+               and not os.environ.get("WORK_STORE_URL"))   # tests never reach the live API (work_read._work_cli)
+    if (not in_test and _wr.is_canonical(store, _wr.PIPELINE_STORE) and _wr.frozen(_wr.REPO)
+            and _wr.local_store() is None):
+        try:
+            existing |= set((live_ids or _live_store_ids)())
+        except Exception as exc:  # noqa: BLE001 -- the message is the payload
+            raise PipelineError(
+                "mint_id: the canonical store is frozen and this checkout has no work_store.db, so the "
+                f"local export is stale, and the live store could not be read ({type(exc).__name__}: {exc}). "
+                "Refusing to mint from the stale export; retry (the API often 502s), or mint on the VM.") from exc
     used = [
         int(item_id[len(prefix):])
         for item_id in existing
@@ -1907,6 +1932,13 @@ def _check(store: Path) -> int:
     return 0
 
 
+def _read_state() -> dict:
+    """What this run actually read (HEALTH-20261111-EXPORT-READS-STALE): the live store (VM db or
+    the API) or, only when asked for, the frozen export with its newest record."""
+    from src.runtime import work_read as _wr
+    return _wr.read_state()
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--self-test", action="store_true")
@@ -1952,11 +1984,20 @@ def main(argv: list[str] | None = None) -> int:
         print(v if v else "")
         return 0 if v else 1
     if args.mint_id:
-        print(mint_id(args.mint_id, store=store))
+        try:
+            print(mint_id(args.mint_id, store=store))
+        except PipelineError as exc:
+            print(f"pipeline: refused -- {exc}", file=sys.stderr)
+            return 1
         return 0
     if args.check:
         return _check(store)
-    res = read_log(store)
+    from src.runtime import work_read as _wr
+    try:
+        res = read_log(store)
+    except _wr.WorkReadError as exc:  # off-VM and the live store unreachable: say so, never the export
+        print(json.dumps({"read_state": "could_not_look", "error": str(exc)}, indent=2))
+        return 2
     if args.gate:
         sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
         from src.runtime import checklist_store
@@ -1968,10 +2009,11 @@ def main(argv: list[str] | None = None) -> int:
         qdir = Path(__file__).resolve().parents[2] / "research" / "queue"
         g = gate_set(res.items.values(), rows,
                      unit_exists=lambda u: (qdir / f"{u}.yaml").exists())
+        g["read_state"] = _read_state()
         print(json.dumps(g, indent=2, sort_keys=True))
         return 0 if res.healthy else 1
     if args.stats:
-        print(json.dumps(stats(res), indent=2, sort_keys=True))
+        print(json.dumps({**stats(res), "read_state": _read_state()}, indent=2, sort_keys=True))
         return 0 if res.healthy else 1
     print("\n".join(render_section_0(res, limit=None if args.all else SECTION0_CAP)))
     return 0 if res.healthy else 1

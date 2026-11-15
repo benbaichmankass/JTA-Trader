@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tier-1 tooling: scripts/ops/decisions_page_build.py rebuilds the manager's decisions-page collections (workplan p0..pN chunks, lanestatus/current, rdreg rp0..rpN slim registry, plans/current) as JSON files for an ArtifactData batch write. The previous builders lived in a manager scratchpad and were lost with that container (manager ask 2026-11-15 05:11Z). Pure reads: committed repo files + public /api/bot/work/items; no secrets, account ids or balances; read failures named in read_state. Shapes verified against the live collections: workplan 350/350 rows, identical ids and buckets; plans 43 lines + 13 frontier; rdreg 359 ideas matching the old slim except a null fold count the old one printed as 'None/None'. No new guard, no runtime path."
+}

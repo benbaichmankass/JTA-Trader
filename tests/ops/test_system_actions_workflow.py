@@ -66,6 +66,8 @@ EXPECTED_ACTIONS = {
     "security-posture-report": "security_posture_report.sh",
     "gateway-disk-report": "gateway_disk_report.sh",
     "gateway-disk-cleanup": "gateway_disk_cleanup.sh",
+    # SEC-HOST-CHANGES-1112 (operator 2026-11-12 m4): runner-side host security changes.
+    "host-security-change": "host_security_change.sh",
     "inspect-closed-pnl": "inspect_closed_pnl_action.sh",
     "bybit-account-audit": "bybit_account_audit_action.sh",
     # Read-only broker-truth audit of Bybit protective-bracket COVERAGE
@@ -434,6 +436,7 @@ EXPECTED_ACTIONS = {
 
 TIER_2_ACTIONS = {
     "pull-and-deploy",
+    "host-security-change",
     "restart-bot-service",
     "stop-bot-service",
     "start-bot-service",
@@ -1245,3 +1248,25 @@ def test_security_posture_gateway_ssh_is_quiet():
     seg = text[text.index('elif [ "${ACTION}" = "security-posture-report" ]'):]
     seg = seg[: seg.index("action-output.txt")]
     assert "LogLevel=ERROR" in seg
+
+
+def test_host_security_change_never_prints_key_material_and_defaults_to_dry_run():
+    """SEC-HOST-CHANGES-1112: output goes to a PUBLIC issue. The orchestrator
+    prints fingerprints only (ssh-keygen -l), masks addresses, defaults to a dry
+    run, keeps the pre-change master open for the fresh-login test, and keeps TCP
+    forwarding on the trader (the gateway is reached through it)."""
+    text = (OPS_DIR / "host_security_change.sh").read_text()
+    assert 'DRY=1 ;;' in text and '""|false) DRY=1' in text
+    # private keys only ever go to gh secret set on stdin or to files, never to stdout
+    for bad in ('cat "${nk}"', 'cat "${KEY}"', 'cat "${lk}"', 'echo "${LEGACY_KEY_VALUE}"'):
+        assert bad not in text
+    assert "ControlPath=none" in text and "ControlMaster=yes" in text
+    assert "AllowTcpForwarding yes" in text
+    assert "MaxAuthTries 3" in text and "X11Forwarding no" in text and "AllowAgentForwarding no" in text
+    for t in ("ssh-harden-revert", "fail2ban-revert", "keys-runner-revert",
+              "keys-trainer-revert", "keys-retire-legacy-revert"):
+        assert f"  {t})" in text, f"revert target {t} missing"
+    wf = WORKFLOW.read_text()
+    seg = wf[wf.index('if [ "${ACTION}" = "host-security-change" ]; then'):]
+    seg = seg[:seg.index("\n          fi\n")]
+    assert "host_security_change.sh > action-output.txt" in seg

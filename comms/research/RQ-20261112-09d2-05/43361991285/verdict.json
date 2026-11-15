@@ -1,0 +1,167 @@
+{
+ "research_unit": "RQ-20261112-09d2-05",
+ "generated_at": "2026-11-13T03:57:08+00:00",
+ "produced_by": "scripts/research/tradeify_futures_fit.py --source ibkr",
+ "stage": "stage0",
+ "population": {
+  "MNQ_OR15": 231
+ },
+ "data": "IB reqHistoricalData TRADES, real CME contracts, per-session volume roll (load_ibkr_percontract)",
+ "data_provenance": {
+  "MNQ": {
+   "path": "data/ibkr_datasets/market_raw_percontract/MNQ/5m/v020/data.jsonl",
+   "bars_raw": 519902,
+   "bars_continuous": 65478,
+   "first_ts": "2025-12-10 05:00:00+00:00",
+   "last_ts": "2026-11-11 23:55:00+00:00",
+   "contracts_served": {
+    "20241220": {
+     "first_ts": "2023-09-22 03:20:00+00:00",
+     "last_ts": "2024-12-20 21:55:00+00:00",
+     "bars": 61096
+    },
+    "20250321": {
+     "first_ts": "2024-01-02 15:30:00+00:00",
+     "last_ts": "2025-03-21 20:55:00+00:00",
+     "bars": 55293
+    },
+    "20250620": {
+     "first_ts": "2024-03-20 23:45:00+00:00",
+     "last_ts": "2025-06-20 20:55:00+00:00",
+     "bars": 52317
+    },
+    "20250919": {
+     "first_ts": "2024-07-03 16:30:00+00:00",
+     "last_ts": "2025-09-19 20:55:00+00:00",
+     "bars": 55383
+    },
+    "20251219": {
+     "first_ts": "2024-10-09 16:05:00+00:00",
+     "last_ts": "2025-12-19 21:55:00+00:00",
+     "bars": 58347
+    },
+    "20260320": {
+     "first_ts": "2025-01-14 06:30:00+00:00",
+     "last_ts": "2026-03-20 20:55:00+00:00",
+     "bars": 55079
+    },
+    "20260618": {
+     "first_ts": "2025-06-20 12:30:00+00:00",
+     "last_ts": "2026-06-18 20:55:00+00:00",
+     "bars": 53115
+    },
+    "20260918": {
+     "first_ts": "2025-10-15 15:50:00+00:00",
+     "last_ts": "2026-09-18 20:55:00+00:00",
+     "bars": 52103
+    },
+    "20261218": {
+     "first_ts": "2025-11-14 15:45:00+00:00",
+     "last_ts": "2026-11-11 23:55:00+00:00",
+     "bars": 48603
+    },
+    "20270319": {
+     "first_ts": "2026-01-27 16:15:00+00:00",
+     "last_ts": "2026-11-11 23:55:00+00:00",
+     "bars": 28566
+    }
+   },
+   "roll_calendar": [
+    {
+     "from_session": "2025-12-10",
+     "contract": "20260320"
+    },
+    {
+     "from_session": "2026-03-16",
+     "contract": "20260618"
+    },
+    {
+     "from_session": "2026-06-14",
+     "contract": "20260918"
+    },
+    {
+     "from_session": "2026-09-15",
+     "contract": "20261218"
+    }
+   ],
+   "roll_rule": "per ET session, max-volume contract, monotonic; no back-adjustment",
+   "front_days": 100,
+   "sessions_dropped_not_front": 301,
+   "first_session_kept": "2025-12-10"
+  }
+ },
+ "cells": {
+  "MNQ_OR15": {
+   "window": {
+    "sessions": 231,
+    "discovery": [
+     "2025-12-10",
+     "2026-08-20"
+    ],
+    "holdout": [
+     "2026-08-21",
+     "2026-11-11"
+    ],
+    "fold_bounds": {
+     "F1": [
+      "2025-12-10",
+      "2026-01-23"
+     ],
+     "F2": [
+      "2026-01-26",
+      "2026-03-06"
+     ],
+     "F3": [
+      "2026-03-09",
+      "2026-04-17"
+     ],
+     "F4": [
+      "2026-04-20",
+      "2026-05-29"
+     ],
+     "F5": [
+      "2026-06-01",
+      "2026-07-13"
+     ],
+     "F6": [
+      "2026-07-14",
+      "2026-08-20"
+     ]
+    }
+   },
+   "n_disc": 173,
+   "net_r_disc": 0.705,
+   "folds": {
+    "F1": 1.412,
+    "F2": 9.389,
+    "F3": 7.049,
+    "F4": -5.799,
+    "F5": -12.693,
+    "F6": 1.346
+   },
+   "folds_positive": 4,
+   "edge_ci_disc": {
+    "n": 173,
+    "mean": 0.00407,
+    "se": 0.07988,
+    "lo": -0.20666,
+    "hi": 0.21481,
+    "z": 2.638
+   },
+   "n_hold": 58,
+   "net_r_hold": -13.287,
+   "mean_r_hold": -0.22909,
+   "gross_r_disc": 2.268,
+   "cost_r_disc": 1.563,
+   "median_risk_usd_1c": 322.82,
+   "by_reason": {
+    "stop": 93,
+    "take_profit": 24,
+    "session_flat": 114
+   },
+   "verdict": "fail"
+  }
+ },
+ "verdict": "fail",
+ "read_state": "complete"
+}

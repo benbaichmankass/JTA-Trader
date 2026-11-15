@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Companion to the Tier-1 tip pre-scrub (row BALANCE-TIP-PRESCRUB). Comment, docstring and one user-facing help-string edits only, in three runtime modules (Tier 2 by path: src/prop/prop_reconcile.py, src/prop/screenshot_parse.py, src/runtime/silent_refusal_alert.py) and config/accounts.yaml (Tier 3 by path: two comment lines, no key changes). Held for the manager's merge (AM-DEVOPS). No logic changes. Operator decision: no account balance of any kind in the public repo.",
+  "why": "Removes balance literals quoted in comments, a docstring and an example in a help message, so the account-balance history purge leaves the tip tree identical. Verified: config/accounts.yaml parses to the same document as origin/main; the three modules compile; the prop and mandate tests pass."
+}

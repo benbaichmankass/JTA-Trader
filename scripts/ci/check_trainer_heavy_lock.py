@@ -75,6 +75,10 @@ HEAVY_ENTRYPOINTS = [
 # `.fit(`/`lgb.train(` it belongs above, and the reason recorded here is what
 # makes that reviewable.
 DECLARED_LIGHT = {
+    "scripts/research/ml_entry_v1_filters_read.py":
+        "ML-BAR-ONE-READ (RQ-20261115-a474-04): inference only -- loads the committed served ENTRY v1 boosters and scores one "
+        "held-out year of public Binance Vision 1h rows (no training); minutes of CPU on a GitHub runner, never needs_vm_data, "
+        "never routed to the trainer.",
     "scripts/research/tradeify_futures_fit.py":
         "TRADEIFY-FUTURES-FRONTIER (units RQ-20261112-09d2-01..03): an ORB backtest, a survival Monte-Carlo and one scikit-learn "
         "HistGradientBoosting meta-label fit on ~11.6k ledger rows of public Dukascopy 5m proxies; minutes of CPU in a lane container or "
@@ -127,6 +131,12 @@ DECLARED_LIGHT = {
         "FRONTIER-Q-RESID-ENTRY market-residual target harness: same data and route as ml_decision_entry.py (unit "
         "RQ-20261112-4654-01, compute cpu_long, research-script-run.yml github_runner); fits LightGBM on public Binance Vision "
         "klines, never needs_vm_data, never routed to the trainer.",
+    "scripts/research/ml_entry_maker_replay.py":
+        "ML-DECISION-MODELS maker-entry replay: scores the committed frozen ENTRY v1 booster (no fit) on public Binance Vision klines "
+        "(unit RQ-20261112-1c4e-01, compute cpu_long, github_runner or a lane container); never routed to the trainer.",
+    "scripts/research/ml_entry_cost_levers.py":
+        "ML-LEVER-PLAN ENTRY cost levers (units RQ-20261112-4654-02/-03): same data and route as ml_decision_entry.py, LightGBM refits on "
+        "public Binance Vision klines on a GitHub runner (compute cpu_long, github_runner); never needs_vm_data, never routed to the trainer.",
     "scripts/research/compute_smoke.py":
         "RESEARCH-ROUTER plumbing smoke: one 4096x4096 fp16 matmul loop (GPU, on a Kaggle kernel) or one "
         "1024x1024 fp32 numpy loop (CPU, on a runner) for a few seconds. It is never routed to the trainer "

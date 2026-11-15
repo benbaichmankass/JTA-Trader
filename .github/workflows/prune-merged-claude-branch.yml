@@ -105,7 +105,7 @@ jobs:
         run: |
           set -euo pipefail
           field() { printf '%s\n' "${ISSUE_BODY:-}" | sed -n "s/^[[:space:]]*$1:[[:space:]]*//p" | head -1; }
-          if [ "$EVENT" = "issues" ]; then
+          if [ "$EVENT" = "repository_dispatch" ]; then
             BRANCH="$(field branch)"; APPLY="$(field apply)"
             FORCE="$(field force)";   REASON="$(field reason)"
           else

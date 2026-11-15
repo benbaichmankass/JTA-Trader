@@ -1,0 +1,120 @@
+# Hand-authored 2026-11-13 by lane session_01AFoLuJZ69XcyrjnD8na8ao (row TREND-ALIGNMENT-FEATURE, step 4; operator ask relayed by
+# the manager 06:50Z via AM-ML). Decision rule registered and pushed BEFORE any outcome was read under TREND-ALIGN-V1.
+# Gates this adds or changes: none.
+id: RQ-20261113-63af-01
+title: 'Trend alignment (TREND-ALIGN-V1): per leg, do Stage-0 trades taken WITH the prevailing trend earn more net R than trades taken AGAINST
+  it, net of the full cost stack?'
+status: done
+cadence: once
+roadmap:
+- L-PROGRAMMES
+theme: live_strategy
+priority: 2
+kind: experiment
+question: 'The operator asked (2026-11-13, relayed 06:50Z) to track, beyond long vs short, whether each trade goes with or against the prevailing
+  trend, and see whether strategies trade better one way or the other. Label every trade in each leg''s committed Stage-0 corpus (the
+  __trades.jsonl its evidence record comms/strategy_evidence/<leg>.json names as source_run) with TREND-ALIGN-V1
+  (docs/research/trend-alignment-framework-2026-11-13.md, registered 2026-11-13): the LEG-timeframe label is PRIMARY (with_trend /
+  counter_trend / neutral / missing), D1 is reported. Compare mean net R per trade (the corpus''s own net_r: fee + slippage + funding, the
+  harness cost stack) between with_trend and counter_trend, per leg.'
+why_this_matters: 'If a leg''s counter-trend entries lose net of cost while its with-trend entries pay, an alignment filter is a candidate lever
+  for that leg (a separate Tier-3 proposal with its own holdout test); if no leg shows a difference, alignment is not a lever on these legs under
+  this definition, and step 5 (ML feature ablation) is the remaining use.'
+evidence_class:
+  holdout: none
+  claim: description_of_backtest_edge_by_slice
+power:
+  expected_n: 60
+  min_detectable_effect: 0.3
+  effect_units: R
+  sd: 1.0
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, not measured: Stage-0 corpora hold roughly 50-900 trades per leg (e35 / evidence n_trades_oos); with ~25-35 percent of trades
+    in each directional label and sd ~1 R, a leg with ~60 trades per arm resolves a 0.5 R difference at 80 percent power, ~0.3 R needs ~175 per arm.
+    The per-arm floor below is the binding gate; legs under it grade INDETERMINATE, never FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: Re-labels committed Stage-0 trade files; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261113-63af-01-TREND-ALIGN
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  statistic: 'Per leg L with a committed Stage-0 trades file and a LEG timeframe in config/strategies.yaml (re-parsed at run time): n_with,
+    n_counter, mean net R per trade in each arm, the difference D = mean(with) - mean(counter), and its 95% bootstrap CI (10,000 resamples of
+    trades within each arm, seed 20261113). Neutral and missing trades are counted and reported, never pooled into an arm. Across legs, the CI
+    is Holm-corrected for the number of legs that clear the per-arm floor (family-wise alpha 0.05). D1 labels and the journal backfill
+    (comms/research/trend_alignment/backfill-2026-11-13/, realized live/paper R) are REPORTED, never gating.'
+  rule: 'Per leg: INDETERMINATE if n_with < 30 or n_counter < 30. Otherwise ALIGNMENT_MATTERS if the Holm-corrected CI of D excludes 0
+    (sign recorded: with > counter, or counter > with); NO_DIFFERENCE if it includes 0. Unit verdict: pass if at least one leg is
+    ALIGNMENT_MATTERS; fail if every leg that clears the floor is NO_DIFFERENCE and at least one leg clears it; indeterminate if no leg clears
+    the floor. A pass is a DISCOVERY per leg (in-sample on each leg''s Stage-0 window), never a gate: any filter needs its own holdout test.'
+  proposal_mapping: 'pass -> per passing leg, a separate queue unit testing the alignment filter on an untouched holdout (M13) before any Tier-3
+    proposal; plus step 5 (ML feature ablation, its own unit). fail -> alignment is recorded as not a lever on these legs under TREND-ALIGN-V1;
+    step 5 still runs. indeterminate -> no change.'
+  what_it_does_not_do: 'Changes no config, filters nothing, places no order. Describes Stage-0 backtest trades only (a live or paper book never
+    establishes edge). One definition of trend (TREND-ALIGN-V1); a null does not refute alignment under another definition.'
+  min_n: 30 trades per arm per leg
+practice_precedent: 'M4 (rule registered before the run), M6 (net of the full cost stack), M12 (multiple comparisons: Holm across legs) in
+  docs/reference/trading-and-model-practice-principles.md; trading with the higher-timeframe trend is a standard multi-timeframe practice.'
+compute: cpu_light
+value:
+  bucket: information
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: a per-leg slice filter candidate; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  why_runner: Committed corpora + public Binance Vision / Yahoo candles; CPU only.
+  basis: 'INFERRED from the step-2 backfill (2,629 trades, candles for ~40 symbol/timeframe pairs, a few minutes once candles are cached).'
+cleared_blocker:
+  kind: work_item
+  ref: TREND-ALIGNMENT-FEATURE
+  what: 'the per-leg corpus driver: `trend_alignment.py corpus` (built on label_trade), labels every leg''s committed Stage-0
+    __trades.jsonl, bootstrap CI of D=mean(with)-mean(counter) within arm (seed 20261113, 10,000 resamples), Holm across
+    legs clearing 30/arm, writes verdict.json per this rule.'
+  cleared_by: 'this PR adds the corpus subcommand with a --self-test planting a with>counter leg and a no-difference leg, and git-moves this
+    unit from research/queue/blocked/ to research/queue/ with run.workflow research-script-run.yml (rule unchanged).'
+run:
+  command:
+  - python3
+  - scripts/research/trend_alignment.py
+  - corpus
+  - --out
+  - '{out_dir}'
+  - --cache
+  - '{out_dir}/cache'
+  timeout_minutes: 120
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261113-63af-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- TREND-ALIGNMENT-FEATURE
+- docs/research/trend-alignment-framework-2026-11-13.md
+- RQ-20261112-8d20-01
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
+last_dispatched_at: '2026-11-13T13:03:17+00:00'
+rearmed_at: '2026-11-13T12:55:00+00:00'
+rearm_reason: 'Run 43412558732 (verdict fail, 1/52 legs cleared the floor) was produced by two corpus-driver defects fixed in the same PR as this re-arm: (1) ml_entry__trades.jsonl names the entry instant decision_ts, so all 907 ml_entry trades read no_entry_time; (2) 1d legs fetched a 1h Yahoo base capped at ~730 days, so multi-year 1d corpora read insufficient_history (tqqq 113/136). A third fix labels a pooled corpus per trade symbol (ml_entry spans 5 symbols). RULE, window and command UNCHANGED.'
+grading:
+  attested: RULE-RQ20261113-63af-01-TREND-ALIGN
+  auto: true
+  decision_rule_id: RULE-RQ20261113-63af-01-TREND-ALIGN
+  evidence:
+  - research/results/RQ-20261113-63af-01/43412558732.jsonl
+  - research/results/RQ-20261113-63af-01/43430363297.jsonl
+  graded_at: '2026-11-13'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

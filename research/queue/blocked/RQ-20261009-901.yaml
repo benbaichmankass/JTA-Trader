@@ -1,6 +1,7 @@
 id: RQ-20261009-901
 title: 'TP doctrine, predict-head step 2: net of the full cost stack, does a head-chosen per-trade take-profit beat the best naive TP policy out of sample on the strata step 1 passed? -- blocked on step 1 and on the TP-overlay replay lever'
-status: blocked
+status: retired
+retired_reason: 'moot by its own requires_result (research-ops 2026-11-13 0850Z): step 1 RQ-20261009-900 landed read_state measured, rule_verdict HONEST_NEGATIVE (S1 indeterminate eval n 74 < 88; S2 and S3 not sharper), so the required verdict pass can no longer be met. CONFIGURATION closed (step 2 on this feature set and these strata); the TP-PREDICT-HEAD idea stays open, no family review filed. Next test for the sharper-head question is the step-1 near-miss on S3 prop_donchian_1h (0.55: 1/5, 0.65: 3/5, 0.75: 4/5 quantiles beat all four baselines: improves with train size), handed to the TP-PREDICT-GRADER lane as a larger-train re-registration, not authored here.'
 cadence: once
 theme: live_strategy
 priority: 1
@@ -137,8 +138,8 @@ related:
 - scripts/research/target_reachability_report.py
 last_dispatched_at: null
 blocked_review:
-  by: RESEARCH-OPS-20261111-2049
+  by: RESEARCH-OPS-20261113-0250
   disposition: kept
   due_by: '2026-11-25'
-  reviewed: '2026-11-11'
-  note: 'kept: requires RQ-20261009-900 pass, whose only open lever is TP-PREDICT-GRADER; the tp-policy-overlay replay lever is separately open. Re-dated with 900 (handoff names the unowned grader).'
+  reviewed: '2026-11-13'
+  note: 'kept: requires RQ-20261009-900 pass (lever TP-PREDICT-GRADER) and the tp-policy-overlay replay lever, both owned on the TP-PREDICT-GRADER row (the overlay lever to be filed by the grader lane when step 1 passes). Re-dated 2026-11-25 with 900.'

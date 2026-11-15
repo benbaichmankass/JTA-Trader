@@ -2706,6 +2706,20 @@ def _log_trade_to_journal(
                 notes_payload["entry_price_source"] = str(
                     _vf.get("source") or "venue_fill")
                 notes_payload["package_entry"] = float(pkg.entry)
+        # ENTRY-FILL-WRITEBACK (manager decision 2026-11-15, option a): every row says where entry_price came from.
+        # A row that did not get a venue fill above books the PLAN, labelled so, with the reason. A live Bybit entry
+        # is marked fill_pending_writeback: order_monitor._sweep_entry_fill_writeback reads that entry order's own
+        # avgPrice by orderId off the order path and rewrites entry_price (DB field only, no bracket side effects).
+        if "entry_price_source" not in notes_payload:
+            _ex = str((account_cfg or {}).get("exchange") or "bybit").lower()
+            notes_payload["entry_price_source"] = "plan"
+            notes_payload["entry_price_source_reason"] = (
+                "dry_run" if is_dry
+                else "fill_pending_writeback" if (status == "open" and _ex == "bybit" and trade_id
+                                                  and not intent_reduce)
+                else "no_venue_fill_read" if status == "open"
+                else f"status_{status}"
+            )
         trade_row_id = db.insert_trade({
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "symbol": pkg.symbol,

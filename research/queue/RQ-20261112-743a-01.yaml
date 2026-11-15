@@ -1,0 +1,76 @@
+id: RQ-20261112-743a-01
+title: 'Small-TF cost-breakeven census (M27): per (symbol, tf 1m/5m/15m, hold) the gross edge a small-TF entry must earn to clear fee + slippage + funding, versus the best learner lift already measured on the same symbols and window, under measured and upper-bound cost recipes (maker entry, maker TP exit, wider TP, longer hold)'
+status: done
+cadence: once
+roadmap:
+- M27
+theme: live_strategy
+priority: 2
+kind: experiment
+question: 'On six Binance USD-M perps (ADA, AVAX, BTC, ETH, SOL, XRP), 1m klines 2025-11-01..2026-09-15, for tf in {1m, 5m, 15m}, hold caps of 5-240 minutes (the holds the committed ceiling-1m record measured), stop 1.0 or 2.0 x ATR14(tf), TP 1.0 / 1.5 / 3.0 x stop, does ANY (tf, hold, stop, TP) cell exist in which the best learner lift already measured on that symbol set (comms/research/desk_edge/ceiling-1m/verdict.json, gbdt/taker S3) clears the round-trip cost stack with room, in at least 4 of 6 symbols, under a MEASURED cost scenario (taker 12.3 bps; repo stack 10.5; post-only entry with taker fallback = taker minus the measured 2.03 bps saving of RQ-20261027-a3f1-01)? Upper-bound recipes (maker TP exit, both sides maker) are computed and reported but never graded.'
+why_this_matters: 'Row SMALL-TF-ML-RESEARCH (M27). The pooled small-TF ENTRY pipeline already ran and lost: RQ-20261101-b621-01 / b622-01 (15m) FAIL, b623-01 / b624-01 (5m) INDETERMINATE only on the n floor and economically negative (b623-01 run 42175819399: ungated seed-mean net R per decision -0.071 at tau 0.10, 2 of 8 folds positive). The committed 1m ceiling record already shows best-learner S1 below 0 at EVERY hold 5-480 min even under the maker upper bound. READING: at 1m-15m the COST STACK, not the model, binds. Before training another small-TF learner the lane needs the size of the gap per (symbol, tf, hold), the cost at which the best learner would break even, and which recipe (if any) closes it, so the next unit is chosen from a number: author a cell ML entry/filter unit if a cell clears, otherwise the cost lever (maker-fill model for entries and TP exits).'
+power:
+  expected_n: 432
+  min_detectable_effect: 1.0
+  effect_units: bps
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'DESCRIPTIVE census, not a hypothesis test: the required side is arithmetic over ~470k 1m bars per symbol (rows per cell 0.1M-0.9M random entries, autocorrelated; reported, not tested) and the achieved side is a committed measurement with its own family-corrected CI (35 weeks, 42-way family). n here = 432 cells (6 symbols x 72 cells). The rule compares two bps numbers with a 25% room factor registered below; no p-value is claimed.'
+  feasibility:
+    source: none
+    accrual_basis: 'Replays public Binance Vision monthly 1m klines for pinned months 2025-11..2026-09 (HTTP 200 checked 2026-11-12); nothing accrues.'
+evidence_class:
+  holdout: dev_only
+  claim: cost_arithmetic
+decision_rule:
+  id: RULE-SMALLTF-COST-CENSUS-01
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'Per cell (symbol, tf, hold H, k, m) and scenario: REQUIRED_bps = scenario round-trip cost in bps of notional (+ funding 1.0 bps per 8 h on the cell mean hold), computed by scripts/research/smalltf_cost_census.py from a random-entry bracket simulation (entry at next-bar open, stop k x ATR14(tf), TP m x stop, time cap H, same-bar stop+TP -> stop). ACHIEVED_lo_bps / ACHIEVED_point_bps = the ceiling-1m record''s gbdt/taker S3 corrected-CI lower bound / point at hold H, times that record''s stop width in bps (12.3 + funding over mean_cost_r_taker), times the symbol''s hold-H move sd over the median-symbol sd. Scenarios: MEASURED = taker_measured (12.3), repo_stack (10.5), makerF_measured (12.3 - 2.03). UPPER BOUND (reported, never graded) = makerF_tpmaker_ub, maker_entry_ub (9.0), both_maker_ub (4.0).'
+  rule: 'CLEARS_WITH_ROOM(cell, scenario) iff ACHIEVED_lo_bps >= 1.25 x REQUIRED_bps. CLEARS_POINT iff ACHIEVED_point_bps >= REQUIRED_bps. PASS IF for some (tf, H, k, m) and some MEASURED scenario at least 4 of the 6 symbols are CLEARS_WITH_ROOM. FAIL IF for NO (tf, H, k, m) and NO MEASURED scenario do 4 or more symbols reach CLEARS_POINT (not even the optimistic selected-point reading clears). INDETERMINATE otherwise (point clears in >= 4 symbols but the lower bound with room does not). Also reported, not graded: per hold the break-even round-trip cost in bps (ACHIEVED_point_bps) against the scenarios, the required hit-rate lift cost_R/(m+1), and the upper-bound-scenario clearings (they name the lever). Constants (1.25 room, breadth 4 of 6, scenario set, grid, window) are not changed after any result.'
+  min_n: 6 symbols loaded with >= 400k 1m bars each; cost_R formula check against src/runtime/execution_costs.roundtrip_cost_r within 1e-6 R on 2000 sampled trades; otherwise INDETERMINATE (instrument invalid).
+  what_it_does_not_do: 'Selects, trains and promotes nothing; not a promotion case; changes no config. The ACHIEVED side is ONE learner family (ridge/logit/GBDT on desk features, best-of-three, DEV window, selected: its point is optimistic, its lower bound conservative) pooled over symbols and rescaled per symbol by move size (an assumption: lift proportional to move size); a FAIL closes only "this learner ceiling clears measured cost at these holds", not small-TF ML or other information (order book, flow). The maker saving is from hourly random-direction entries on 6 symbols over 40 days with the PUBLISHED, UNVERIFIED 2.0 bps maker fee; the upper-bound scenarios assume fills on touch with no queue or adverse selection and are not evidence a recipe works. The 432-cell grid is not a deflation-corrected selection: a PASS would be a discovery needing a confirmation on a disjoint in-hand window (pre-dev history or another venue), not a promotion.'
+  proposal_mapping: 'PASS -> author a pre-registered ML entry/filter unit for the clearing (tf, H, k, m) cell(s), VWAP / breakout / scalp setup, baseline = the net-negative HTF-ON ict_scalp leg (RQ-20260928-001), on a disjoint in-hand window. FAIL -> no small-TF cell clears under measured costs; the next unit is the cost lever (a maker-fill model for entries AND resting TP exits at 1m-5m, with the break-even cost from this census as its bar), not another entry learner. INDETERMINATE -> read which clause missed and register the narrower cell unit.'
+practice_precedent: 'M4 (rule and analysis plan registered before the run), M6 (compare with a simple baseline: here the cost), M13 (no holdout is consumed: no model is fit). Cost-aware scalping practice: required hit rate / edge per trade from fee + spread over a stop distance (in-repo precedent: scripts/research/desk_edge_levers.py cost_over_sd, RQ-20261027-fe57-02).'
+ml_consumer:
+  book: demo_floor
+  consumer: src/units/strategies/ict_scalp.py
+  decision: 'whether a small-TF (1m-15m) ML entry/filter unit is authored for a cell, or the cost lever (maker-fill model) is built first; no live order is changed'
+  legs: [ict_scalp_5m]
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  basis: 'stand-in, not a measurement: decides whether M27 small-TF ML units are authored or the cost lever is built first.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 40
+  why_runner: 'Fetches keyless public Binance Vision 1m klines (6 symbols x 11 months, ~130 MB zipped); reads no trainer data.'
+  basis: 'ESTIMATE; replaced by the measured wall time when run locally by the lane.'
+run:
+  command: ['python3', 'scripts/research/smalltf_cost_census.py', 'run', '--cache', '{out_dir}/cache', '--out', '{out_dir}']
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261112-743a-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related: ['research/queue/RQ-20261027-fe57-02.yaml', 'research/queue/RQ-20261027-a3f1-01.yaml', 'research/queue/RQ-20261101-b623-01.yaml', 'research/queue/RQ-20260928-001.yaml', 'comms/research/desk_edge/ceiling-1m/verdict.json', 'scripts/research/smalltf_cost_census.py']
+last_dispatched_at: '2026-11-12T10:54:00Z'
+grading:
+  attested: RULE-SMALLTF-COST-CENSUS-01
+  auto: false
+  decision_rule_id: RULE-SMALLTF-COST-CENSUS-01
+  graded_at: '2026-11-12'
+  grader: lane SMALL-TF-ML-RESEARCH (the harness's own verdict under the registered constants)
+  verdict: fail
+  evidence:
+  - research/results/RQ-20261112-743a-01/local-2026-11-12.jsonl
+  - comms/research/smalltf_cost_census/census_summary.json
+  note: 'FAIL clause: no (tf, hold, k, m) cell reaches CLEARS_POINT in even one symbol under taker 12.3, repo 10.5 or maker-entry-F 10.3 bps (rule needed 4 of 6). Configuration closed: the desk-feature GBDT ceiling at 5-240 min holds; the small-TF family and the cost lever stay open; next test = the maker-exit fill model unit named in the row note.'
