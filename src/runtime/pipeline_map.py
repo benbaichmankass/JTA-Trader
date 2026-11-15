@@ -374,7 +374,7 @@ def build(root: Path = REPO, *, live: dict[str, Any] | None = None, live_state: 
 # Operator, 2026-11-15: a straight vertical spine, technical elements LEFT, trading elements RIGHT,
 # iteration loops on the side, every element openable. Steps, their text and the loops are PARSED from
 # the same skeleton; the trading elements come from the same sources of truth as the markdown.
-_STEP = re.compile(r"^## (\d+) · (.+)$", re.M)
+_STEP = re.compile(r"^## (\d+) · (.+)$", re.MULTILINE)
 _NODE = re.compile(r'\b([A-Z])\["(\d+) · ')
 _LOOP = re.compile(r'^\s*([A-Z]) -\. "([^"]+)" \.-> ([A-Z])\s*$')
 _BOLD = re.compile(r"\*\*([^*]+?)\*\*:?\s*")
