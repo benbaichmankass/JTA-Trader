@@ -37,10 +37,10 @@ on:
     # BACKSTOP for the self-dispatch chain below: a backfill that stalled (no progress) or whose chain broke is retried here, so the
     # pipeline keeps trying without a manager. A finished backfill makes this a cheap no-op (every series is fresh -> skipped).
     - cron: "37 */6 * * *"
-  issues:
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
     # `labeled` (not `opened`): a label added after creation, or re-added, must also trigger; creating an issue WITH the label
     # fires `labeled` too. Under `opened` alone a late/re-added label (#22406) could never start a run.
-    types: [labeled]
+    types: [labeled:etf-history-request]
 
 permissions:
   contents: read
@@ -63,10 +63,10 @@ jobs:
       group: etf-history-pipeline
       cancel-in-progress: false
     if: >-
-      github.event_name != 'issues' ||
-      ((github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       github.event.label.name == 'etf-history-request')
+      github.event_name != 'repository_dispatch' ||
+      ((github.event.client_payload.issue.user.login == github.repository_owner ||
+        github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
+       github.event.client_payload.label.name == 'etf-history-request')
     runs-on: ubuntu-latest
     timeout-minutes: 210
     steps:
@@ -75,14 +75,14 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
           INPUT_MODE: ${{ inputs.mode }}
-          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_BODY: ${{ github.event.client_payload.issue.body }}
           SCHEDULE: ${{ github.event.schedule }}
         run: |
           set -euo pipefail
           m="refresh"
           if [ "$EVENT" = "workflow_dispatch" ]; then m="${INPUT_MODE:-refresh}"; fi
           if [ "$EVENT" = "schedule" ] && [ "$SCHEDULE" = "37 */6 * * *" ]; then m="backfill"; fi
-          if [ "$EVENT" = "issues" ]; then
+          if [ "$EVENT" = "repository_dispatch" ]; then
             m="$(printf '%s\n' "$ISSUE_BODY" | sed -n 's/^mode:[[:space:]]*\([a-z]*\).*/\1/p' | head -1)"
             m="${m:-refresh}"
           fi
@@ -354,7 +354,7 @@ jobs:
           if gh workflow run etf-history-pipeline.yml -f mode=backfill; then echo "re-dispatched backfill (remaining=${rem})"
           else echo "::warning::could not re-dispatch (the 6-hourly backstop schedule continues it)"; fi
       - name: Comment result on the issue
-        if: always() && github.event_name == 'issues'
+        if: always() && github.event_name == 'repository_dispatch'
         uses: actions/github-script@v7
         env:
           MODE: ${{ steps.mode.outputs.mode }}
@@ -367,8 +367,8 @@ jobs:
             for (const f of ['verify.md', 'probe.json']) {
               if (fs.existsSync(f)) body += '```\n' + fs.readFileSync(f, 'utf8').slice(0, 55000) + '\n```\n';
             }
-            await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
-            await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, state: 'closed' });
+            await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), body });
+            await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: (context.payload.client_payload?.issue?.number ?? context.issue.number), state: 'closed' });
       - name: Red flag on a failed fetch, stale/missing series or low disk (ONE flag; the next run retries)
         if: always() && (steps.fetch.outcome == 'failure' || (steps.verify.outcome == 'failure' && steps.cont.outputs.continuing != '1') || steps.disk.outputs.lowdisk == '1' || steps.disk.outputs.readfail == '1' || steps.fetch.outputs.lowdisk == '1')
         run: |

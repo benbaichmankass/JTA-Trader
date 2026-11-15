@@ -1,0 +1,122 @@
+id: RQ-20261112-ef4c-09
+title: 'D3 equity head-to-head on the SAME decision bars: ml_entry_eq (ENTRY-EQ-v1, tau 0.20, fixed bracket) vs ml_entry_eq_struct (ens5, tau 0.25, pivot=5;sl_only) -- does struct add value over
+  v1 net of the full cost stack?'
+status: done
+cadence: once
+theme: ml_health
+priority: 1
+kind: experiment
+programme: P2
+roadmap:
+- M25
+- L-ML-MECE
+question: 'Operator 2026-11-10 ~07:50Z ("Yes let''s do that"): on the same (symbol, decision-close) bars, with each FROZEN artifact trading under its own live exit, does ml_entry_eq_struct beat
+  ml_entry_eq per decision bar net of cost? Includes the bars where v1 fires and struct does not (first case 2026-11-09 20:00Z: v1 bought IWM and GDX on paper), the consensus arm (both fire),
+  and a same-exit control that values both models'' trades under the struct exit so model and exit are separable. Window: the confirming window both artifacts were graded on (2025-07-15..last
+  complete month), train_end 2025-06-30. Neither artifact is refit or retuned.'
+why_this_matters: 'Settles D3-equity: one live model vs consensus. Struct runs on real money (alpaca_live + mirror), v1 on paper. If struct does not beat v1 per bar, the live leg has no measured
+  advantage and the mirror''s demotion signal is read against it; if v1-only bars carry value, a union/consensus policy gets its own pre-registered test. Live/paper fills are monitoring, not edge
+  evidence: this is an offline replay only.'
+ml_consumer:
+  consumer: src/runtime/ml_pool_scoring.py
+  decision: single model vs consensus for the D3 equity slot (ml_entry_eq vs ml_entry_eq_struct); a result implying demotion of the live struct leg is REPORTED to the manager, never applied by
+    the unit
+  legs:
+  - ml_entry_eq_struct
+  - ml_entry_eq
+  book: money
+power:
+  expected_n: 67
+  min_detectable_effect: 0.33
+  effect_units: metric
+  sd: 1.09
+  design: one_sample
+  alpha: 0.1
+  power: 0.8
+  basis: 'INFERRED, not measured: struct n 207 and v1 n 858 trades on the 15.5-month confirming window (runs 42432561069, e9a1-02); the union of the two trade sets is >= 858 bars, per-trade sd
+    about 1.1 R, so the paired difference needs |mean d| >= about 0.1 R to clear t 1.3 at the union n; bars are clustered by day so effective n is lower. A small true difference will read INDETERMINATE
+    or FAIL; that is reported as underpowered, not as equality.'
+  feasibility:
+    source: none
+    accrual_basis: Forward Alpaca 1h RTH bars accrue ~21 trading days a month; the unit replays them after not_before, so nothing is waited on inside the run.
+decision_rule:
+  id: RULE-RQ20261112ef4c09-EQ-H2H
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_equity.py h2h: per decision bar (symbol, ts) in the UNION of the two models'' trades, d = net R of the struct trade (own exit, 0 if it does not trade) minus
+    net R of the v1 trade (own exit, 0 if it does not trade); mean d with a calendar-day-clustered t. Each model''s trade set uses the registered take() rule (restricted long, one position per
+    symbol) at its own tau.'
+  rule: 'PASS (struct beats v1) IF n_union >= 100 AND mean d > 0 AND day-clustered t >= 1.3 AND struct own mean net R > 0. FAIL IF n_union >= 100 and any of those fails. INDETERMINATE IF n_union
+    < 100. Reported, never gating: v1-only, struct-only and both-fire arm means; same-exit control mean d; the read is counted in the ENTRY-EQ-H2H ledger family. Thresholds are not changed after
+    any result.'
+  what_it_does_not_do: Changes no roster, mode, tau or artifact. A FAIL implies the live struct leg has no per-bar advantage over v1 on this window and is REPORTED to the manager; it demotes nothing.
+    A PASS is a paired offline comparison on a window both artifacts were already graded on, not new edge evidence for either.
+  min_n: n_union >= 100 decision bars
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 60
+  why_runner: Alpaca market data (read-only, paper key) + LightGBM fits; 4 vCPU / 16 GB runner.
+  basis: INFERRED - a41f-01 re-run took 25 min for 173 ETFs of 1h bars; 15 LightGBM fits on ~0.3M rows add ~15-30 min.
+run:
+  command:
+  - python3
+  - scripts/research/ml_entry_equity.py
+  - h2h
+  - --cache
+  - /tmp/ml_entry_equity
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --start
+  - '2025-07-15'
+  - --min-n-union
+  - '100'
+  - --t-min
+  - '1.3'
+  - --rule-id
+  - RULE-RQ20261112ef4c09-EQ-H2H
+  - --registered-at
+  - '2026-11-12'
+  inputs:
+    research_unit: RQ-20261112-ef4c-09
+  timeout_minutes: 240
+  workflow: research-script-run.yml
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.2
+  basis: 'stand-in: the operator goal (an ML decision maker live on the Alpaca book); not a P&L measurement.'
+practice_precedent: 'M6 (docs/reference/trading-and-model-practice-principles.md): champion vs challenger on one replay, one window, one cost stack; paired per-decision difference, clustered by
+  day.'
+intervention_controls:
+  not_applicable: an offline model comparison; no in-trade action or active-management intervention
+related:
+- ML-PROGRAMME-CONSOLIDATION
+- RQ-20261107-98e3-06
+- RQ-20261105-e9a1-02
+- RQ-20261111-207f-01
+- docs/plans/ML-CONSOLIDATION-2026-11-11.md
+last_dispatched_at: '2026-11-13T20:47:42+00:00'
+grading:
+  attested: RULE-RQ20261112ef4c09-EQ-H2H
+  auto: true
+  decision_rule_id: RULE-RQ20261112ef4c09-EQ-H2H
+  evidence:
+  - research/results/RQ-20261112-ef4c-09/43504863685.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

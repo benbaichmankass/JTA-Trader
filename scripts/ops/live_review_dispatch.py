@@ -543,6 +543,14 @@ def dispatch(review_id: str, *, apply: bool, state: Optional[Dict[str, Any]] = N
     evidence = evidence_path(row)
     ev_text = _committed_text(evidence, at) if evidence else None
     plan, refusal = check_row(row, ev_text)
+    if refusal == "evidence_not_committed" and row.get("outcome_table_source") and ev_text is None:
+        # The row NAMES its table but the table is not at this ref yet (pushed in a later commit than the row).
+        # That is "could not look", not a verdict on the row: exit 3, so rows_watch retries it at the newer tip
+        # for RETRY_WINDOW_S and the same check runs once the table lands (LR-20261114T1600Z-pkg-d8838f..., a
+        # self-priced table row, was refused for good). A row naming no table at all is still refused here.
+        out.update(verdict="could_not_look", detail=f"evidence_not_yet_at_ref:{row.get('outcome_table_source')}",
+                   exit=EXIT_UNREADABLE)
+        return out
     if plan is not None and auto_id:
         plan["mandate"] = auto_id                   # the apply re-checks the grant and enforces its bounds
     if refusal:

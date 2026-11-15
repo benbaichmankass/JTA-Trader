@@ -1,0 +1,214 @@
+id: RQ-20261113-f251-05
+title: 'trend_donchian_1h timeframe lever: the 1h leg''s own params on 2h and 4h bars, forming-bar replay, same window -- does a slower bar clear Stage 0?'
+status: done
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+question: 'trend_donchian_1h fails RULE-D1 on the forming bar (f251-01: -10.57R over n 184). Gross is positive (+15.4R) and cost (26.0R) takes it under; its 4h siblings
+  pass. Run with the same params on 2h and 4h bars (forming, Binance 1m) over the record window 2025-11-01..2026-10-31, does a slower bar pass Stage 0 and beat the
+  1h baseline net of the full cost stack?'
+why_this_matters: Demo-floor leg, one iteration from its diagnosis (row DEMO-FLOOR-ITER-20261113). The gross edge exists; the cost per trade at a 1h stop eats it.
+  The timeframe family is untested on its lever map (entry donchian, exit, filter and structure families are tested).
+power:
+  expected_n: 300
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: 1h n 184 (f251-01); 2h ~95, 4h ~50 by bar ratio. At n 50 a one-sample test detects ~0.4 sd at 80% power.'
+  sd: null
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window (the leg's own record window); nothing accrues; Binance / Binance-vision 1m covers it at run time.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+run:
+  commands:
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - trend_donchian_1h
+    - --arm
+    - A=
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2025-11-01T00:00:00'
+    - --end
+    - '2026-10-31T23:00:00'
+    - --days
+    - '400'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '30'
+    - --delta-r
+    - '0'
+    - --timeframe
+    - 1h
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/tf_1h'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - trend_donchian_1h
+    - --arm
+    - A=
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2025-11-01T00:00:00'
+    - --end
+    - '2026-10-31T23:00:00'
+    - --days
+    - '400'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '30'
+    - --delta-r
+    - '0'
+    - --timeframe
+    - 2h
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/tf_2h'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - trend_donchian_1h
+    - --arm
+    - A=
+    - --grade
+    - stage0
+    - --baseline
+    - A
+    - --start
+    - '2025-11-01T00:00:00'
+    - --end
+    - '2026-10-31T23:00:00'
+    - --days
+    - '400'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --n-floor
+    - '30'
+    - --delta-r
+    - '0'
+    - --timeframe
+    - 4h
+    - --forming-1m-fetch
+    - --out
+    - '{out_dir}/tf_4h'
+  - - python3
+    - scripts/research/timeframe_lever_grade.py
+    - --out
+    - '{out_dir}'
+    - --leg
+    - trend_donchian_1h
+    - --baseline-tf
+    - 1h
+    - --family
+    - timeframe
+    - --prefix
+    - tf_
+    - --tf
+    - 1h
+    - --tf
+    - 2h
+    - --tf
+    - 4h
+  timeout_minutes: 180
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261113-f251-05
+decision_rule:
+  id: RULE-DFI-TD1H-TF-20261113
+  registered_at: '2026-11-13'
+  registered_before_run: true
+  statistic: exit_lever_ablation --grade stage0 --forming-1m-fetch per timeframe (config-exact arm; --timeframe overrides only the bar); timeframe_lever_grade.py
+    over the three. Candles are fetched at the native 1h bar and resampled up; the 1m forming replay drives every timeframe.
+  rule: Registered 2026-11-13 on row DEMO-FLOOR-ITER-20261113 before any run of this arm set (no arm was run on this window before registration, except a tooling
+    smoke on 2026-09-01..11-01 -- 1h n30 -3.63R, 2h n16 -2.68R, both forming -- that checked the native-bar fetch + forming argv and does not alter the rule). Each
+    arm runs as its OWN Stage-0 run through exit_lever_ablation --grade stage0 on the same pinned window, feed and full cost stack (fee + slippage + funding from
+    resolve_run_costs); timeframe_lever_grade.py grades them together. PASS iff some candidate passes its own Stage 0 (net_r > 0, n >= 30, >= 3/4 folds positive)
+    AND its net_r exceeds the baseline arm's net_r. FAIL iff every candidate is graded (n >= 30) and none passes both. INDETERMINATE otherwise (a run wrote no verdict,
+    the baseline did not run, a candidate under its n floor). Arms, window, folds and floors are fixed now.
+  what_it_does_not_do: Changes no config, roster, order or evidence record. A PASS is a data-backed Tier-3 proposal routed to the manager via AM-ML (the leg stays
+    on the demo floor until then); a FAIL is recorded on the lever map and the next untested family is picked.
+  baseline: trend_donchian_1h at 1h, forming, re-run in this unit on the same corpus (f251-01 read -10.57R over n 184).
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: a demo-floor (Stage-1 paper) leg failing RULE-D1 on its forming record; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+ml_consumer:
+  not_applicable: 'Not an ML unit: a harness lever test on a rule-based leg.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: trend_donchian_1h
+  subject_kind: strategy_leg
+  from_result: RQ-20261113-f251-01
+  verdict_read: fail
+  diagnosis: 'Gross +15.4R vs cost 26.0R. ADX cells: <20 n75 -16.1R, 20-25 n42 +5.8R, >=25 n67 -0.2R. Long -9.5R, short -1.0R. Exits: stop -98.8R, trail +61.7R; MFE
+    giveback 319R. The 4h siblings (sol_4h, eth_4h) pass on the same family.'
+  hypothesis: On a 2h or 4h bar the stop widens enough that cost per R falls below the gross edge, as it does for the 4h siblings.
+  search: 'Lever map: entry (donchian 40/55) tested; exit (trail_decay, trail_state, be_floor, atr_stop_mult, tp_r) tested; filter (adx_min 25, adx_max, vol_skip_above)
+    tested; structure_exit tested; timeframe UNTESTED -> chosen (cost-share loss with a positive gross). Direction untested, ranked next (long -9.5R).'
+  attempt: 1
+  due_by: '2026-11-20'
+  levers:
+  - timeframe
+  lever_arms:
+  - family: timeframe
+    param: timeframe
+    values:
+    - 2h
+    - 4h
+    baseline_value: 1h
+  map_entries:
+  - research/levers/trend_donchian_1h.yaml
+related:
+- RQ-20261113-f251-01
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): ONE lever chosen from the leg''s own R diagnosis (scripts/research/leg_r_diagnosis.py),
+  rule registered before the run against the leg''s own record, net of the full cost stack, graded once on its fixed window.'
+follow_up: On the verdict a session writes the tests to research/levers/trend_donchian_1h.yaml. PASS -> Tier-3 proposal to the manager via AM-ML; FAIL -> the next
+  untested lever family from the map (row DEMO-FLOOR-ITER-20261113).
+last_dispatched_at: '2026-11-13T18:04:31+00:00'
+grading:
+  attested: RULE-DFI-TD1H-TF-20261113
+  auto: true
+  decision_rule_id: RULE-DFI-TD1H-TF-20261113
+  evidence:
+  - research/results/RQ-20261113-f251-05/43479076292.jsonl
+  graded_at: '2026-11-13'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 3 row(s), all measured, all fail
+  rows: 3
+  verdict: fail

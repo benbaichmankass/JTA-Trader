@@ -1063,14 +1063,17 @@ def grade_v2(results: Dict[str, Any]) -> Tuple[str, str]:
 # sol_prop pulled from breakout_2 2026-10-29 (Tier-3, V2 prop gate); re-add it here with the roster.
 # eth_prop pulled from breakout_2 2026-11-05 (Tier-3, operator, row PROP-PULL-ETHPROP; RQ-20261031-422a-01 FAIL):
 # 2026-11-05 ~21:05Z (Tier-3, operator "Baseline at min size (Rec.)"): the min-size BASELINE book, eth_4h + sol_4h.
-BOOKS = {"breakout_2": ("trend_donchian_eth_4h", "trend_donchian_sol_4h")}
+# 2026-11-12: breakout_2 is ON ICE (operator; roster emptied, #25306). The same two baseline legs run on the live
+# prop books, so those are the books now; evidence is per leg, so a --book breakout_* run scores the identical population.
+BOOKS = {"tradeify_1": ("trend_donchian_eth_4h", "trend_donchian_sol_4h"),
+         "velotrade_1": ("trend_donchian_eth_4h", "trend_donchian_sol_4h")}
 # Roster legs this tool does NOT simulate (no <leg>__bt.json / __trades.jsonl pair behind the evidence record's cost_stack.source). 2026-11-08
 # ML-ENTRY-PROP-BASELINE (operator chat ~23:35Z): ml_entry runs on the prop books under comms/prop_survival/ml_entry.json (own prop gate record, FAIL, operator_exception).
 UNSIMULATED_ROSTER_LEGS = frozenset({"ml_entry"})
 # `--book breakout_1` is still named by queued research units (RQ-20260928-015). The legs'
 # evidence records are per-leg, not per-account, so the retired book scores identically on
 # breakout_2's roster; the alias keeps those units runnable.
-BOOK_ALIASES = {"breakout_1": "breakout_2"}
+BOOK_ALIASES = {"breakout_1": "tradeify_1", "breakout_2": "tradeify_1"}  # breakout_2 on ice 2026-11-12; same legs
 
 
 def resolve_book(book: str) -> Tuple[Dict[str, Path], Dict[str, Any]]:

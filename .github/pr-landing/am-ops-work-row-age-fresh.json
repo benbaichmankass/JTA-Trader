@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Work-store write path (src/runtime/work_store.py _update): an item imported from a checklist row gets its extra.updated_at/updated_by moved with every write, so the row readers stop serving ages days too old. No order, risk or trading path. Merged under the operator's 2026-11-12 'Merge + deploy on green' grant (docs/plans/operator-grant-merge-deploy-on-green-2026-11-12.md).",
+  "why": "WORK-ROW-AGE-STALE: MANAGER-VM-DIRECT-OPS read updated 2026-11-05 on /api/bot/work/checklist while the store item was written 2026-11-12. A read-side override was tried and rejected: it breaks the store-equals-files shape proof and the export rollback round-trip (tests/test_work_store_readers_flip.py)."
+}

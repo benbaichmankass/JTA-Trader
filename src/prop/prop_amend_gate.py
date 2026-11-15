@@ -13,7 +13,8 @@ the FIRM's rules on top (desk design § 3.2), and this module is that layer:
   ``could_not_look``, never an approve.
 * **The firm's leverage cap** (``limits.leverage_caps``, ``prop_rule_guards``) on an action that
   adds SIZE.
-* **A human's stop is never fought** on the phone account: a ``human_hold`` on the ticket refuses.
+* ~~A human's stop is never fought~~: REMOVED 2026-11-12 (operator decision AM-PROP-HUMAN-HOLD); a
+  ``human_hold`` is logged, never refused.
 
 Actions that only REDUCE risk -- a tighten, a close, a reduce, a TP move -- are never refused for
 the DD cushion: the operator's daily-DD rule is "keep open, block new", and a cushion that is
@@ -29,17 +30,20 @@ never halts; a refusal is for this action on this account only.
 """
 from __future__ import annotations
 
+import logging
 from typing import Any, Callable, Mapping, Optional
 
 from src.prop import prop_risk_gate as _gate
 from src.prop import prop_rule_guards as _guards
 from src.runtime import live_review_intent as lri
 
+_log = logging.getLogger(__name__)
+
 #: + ":<binding limit>" -- the added risk is at or past what is left to the firm's limit.
 R_DD_HEADROOM = "prop_dd_headroom"
 #: + ":<symbol>" -- the size after the add breaches the firm's declared leverage cap.
 R_LEVERAGE = "prop_leverage_cap"
-#: A human moved the stop on the phone account; the review does not fight it.
+#: Retired as a refusal 2026-11-12 (AM-PROP-HUMAN-HOLD: REMOVE); name kept for readers of old rows.
 R_HUMAN_HOLD = "prop_human_hold"
 #: could-not-look reasons (prefixed ``could_not_look:``).
 CNL_CUSHION = "prop_dd_cushion"
@@ -97,9 +101,14 @@ def decide_prop(base: lri.AmendVerdict, intent: lri.LiveReviewIntent, view: lri.
     def cnl(what: str) -> lri.AmendVerdict:
         return lri.AmendVerdict(aid, lri.V_COULD_NOT_LOOK, None, f"{lri.R_COULD_NOT_LOOK}:{what}")
 
+    # Gate decision: operator 2026-11-12 decisions page, Gates tab — AM-PROP-HUMAN-HOLD: REMOVE.
+    # Record: comms/gates/gate_decisions_2026-11-12.json (branch gate-decisions a040d7aa0d).
+    # A ``human_hold`` on the ticket is no longer a refusal; it is logged and the amend proceeds
+    # through the remaining checks (base verdict, the firm's DD cushion / leverage layer).
     hold = (view.extra or {}).get("human_hold")
     if hold:
-        return refuse(R_HUMAN_HOLD)
+        _log.info("prop_amend_gate: %s carries human_hold=%r; not refused (AM-PROP-HUMAN-HOLD removed "
+                  "2026-11-12), action=%s", aid, hold, intent.action)
     if not adds_risk(intent):
         return base
 
