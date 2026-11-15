@@ -6819,6 +6819,42 @@ class DXtradeAdapter(PropPlatformAdapter):
                 pass
         return out
 
+    def select_workspace(self, page: Any, *, name: str = "My Trading Account") -> Dict[str, Any]:
+        """Re-select the workspace tab ``name`` (PROP-TRADEIFY-WORKSPACE-SWITCHED, 2026-11-15:
+        after a 45 s page-load timeout the tradeify_1 terminal came back on "Trading Dashboard",
+        so the watchlist and the positions table -- both on "My Trading Account" -- read missing
+        and every executor read failed with LookupError).
+
+        ONE click on the tab's NAME span (``_switch_workspace``), never its close / delete control.
+        Refused unless one-click reads OFF and exactly one tab carries ``name``; a no-op when it is
+        already current. Verified click-free: the tab reads current AND the watchlist reads back."""
+        out: Dict[str, Any] = {"selected": False, "already_current": False, "refused": None, "clicks": []}
+        oc = self.read_one_click(page)
+        out["one_click"] = {k: oc.get(k) for k in ("state", "via")}
+        if oc.get("state") != "off":
+            out["refused"] = f"one-click not confirmed OFF ({oc.get('state')})"
+            return out
+        tabs = self._workspaces(page)
+        out["workspaces_before"] = [{"name": t.get("name"), "current": bool(t.get("current"))} for t in tabs]
+        matches = [t for t in tabs if t.get("name") == name]
+        if len(matches) != 1:
+            out["refused"] = f"{len(matches)} workspace tabs named {name!r} (need exactly 1)"
+            return out
+        if matches[0].get("current"):
+            out["already_current"] = True
+        else:
+            if not self._switch_workspace(page, matches[0]["index"]):
+                out["refused"] = "the workspace tab click did not land"
+                return out
+            out["clicks"].append(f"workspace:{name}")
+            after = self._workspaces(page)
+            out["workspaces_after"] = [{"name": t.get("name"), "current": bool(t.get("current"))} for t in after]
+            out["selected"] = any(t.get("name") == name and t.get("current") for t in after)
+        wl = self.watchlist_symbols(page)
+        out["watchlist_after"] = wl
+        out["watchlist_ok"] = bool(wl.get("readable"))
+        return out
+
     def add_watchlist_widget(self, page: Any, *, expect_workspace: str = "My Trading Account",
                              settle_ms: int = 800, ready_ms: int = 6_000) -> Dict[str, Any]:
         """Add the Watchlist widget to ``expect_workspace`` (TRADEIFY-GOLIVE
