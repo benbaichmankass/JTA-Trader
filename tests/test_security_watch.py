@@ -231,3 +231,5 @@ def test_sent_alerts_are_loud_and_idempotent():
     assert out.startswith("\U0001F6A8\U0001F510 SECURITY ALERT")
     assert out.endswith("[RED FLAG] ssh_keys file CHANGED on host: x")
     assert sw.loud(out) == out
+    info = "[INFO] security watch on host: SSH baseline recorded from the last 24 h: 1 logins"
+    assert sw.loud(info) == info          # a routine baseline line never gets the siren
