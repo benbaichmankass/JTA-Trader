@@ -104,7 +104,7 @@ def groups(accounts_text: str, strategies_text: str) -> Dict[Key, List[str]]:
                 continue
             if leg in EXCLUSIVE_HOLD_LEGS and name not in SLICE_SUPPORT_ACCOUNTS:
                 continue
-            for sym in leg_symbols(strat.get(leg), name):
+            for sym in leg_symbols(strat.get(leg), name, leg=str(leg)):
                 out[(name, str(sym))].append(leg)
     return {k: sorted(set(v)) for k, v in sorted(out.items()) if len(set(v)) >= 2}
 
