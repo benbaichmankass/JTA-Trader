@@ -189,15 +189,25 @@ def rank_problem(value) -> str | None:
 
 def queue(data: dict) -> list[dict]:
     """The runnable queue in dispatch order: ``queued`` rows with nothing in ``blocked_on``,
-    by ``priority_rank`` (unranked last), then register order. ``data`` is ``load()``'s shape."""
+    by ``priority_rank`` (unranked last), then ``queue_pos`` (the operator's reorder; else ``_seq``),
+    then register order. ``data`` is ``load()``'s shape."""
     rows = [r for r in (data.get("items") or [])
             if isinstance(r, dict) and r.get("state") == "queued" and not r.get("blocked_on")]
     order = {id(r): n for n, r in enumerate(rows)}
 
+    def num(v):
+        return float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+
     def key(r):
+        # (rank class, position within the class, register order): the SAME key as the Overview's
+        # ``src/web/api/work_reorder.display_key``. ``queue_pos`` is the operator's reorder (set by
+        # POST /api/bot/work/reorder); a row never moved falls back to its register order ``_seq``.
         rank = r.get(RANK)
         ranked = rank_problem(rank) is None and rank is not None
-        return (0 if ranked else 1, rank if ranked else 0, order[id(r)])
+        q, seq = num(r.get("queue_pos")), num(r.get("_seq"))
+        pos = q if q is not None else seq
+        return (0 if ranked else 1, rank if ranked else 0, pos if pos is not None else float("inf"),
+                order[id(r)])
     return sorted(rows, key=key)
 
 
