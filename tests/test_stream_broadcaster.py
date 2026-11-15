@@ -275,3 +275,58 @@ async def test_refresh_single_flight_with_rest_read(monkeypatch):
     rows = await rest
     await b._pos_refresh_task
     assert len(builds) == 1 and rows[0]["id"] == "1"
+
+
+async def _max_age_under_slow_build(monkeypatch, refresher, build_s: float, seconds: int = 120) -> float:
+    """Drive the broadcaster's keep-warm for ``seconds`` with one client, a build that takes ``build_s``
+    of (fake) clock time, and return the largest snapshot age seen after the first build landed."""
+    import asyncio
+
+    from src.web.api import _swr
+    from src.web.api.routers import dashboard
+    t = [0.0]
+
+    async def slow_build(include):
+        start = t[0]
+        while t[0] < start + build_s:
+            await asyncio.sleep(0)
+        return [_pos("1", 1.0)]
+    cache = _swr.SWRCache(name="positions-age", fresh_s=1.0, stale_s=120.0, clock=lambda: t[0])
+    monkeypatch.setattr(dashboard, "_build_positions", slow_build)
+    monkeypatch.setattr(dashboard, "_POSITIONS_SWR", cache)
+    b = S.Broadcaster(clock=lambda: t[0], pnl_snapshot=lambda: (None, float("inf")), pos_refresh=refresher)
+    b.clients.add(asyncio.Queue())
+    worst = 0.0
+    for _ in range(seconds):
+        t[0] += 1.0
+        await b.maybe_refresh_positions()
+        for _ in range(20):
+            await asyncio.sleep(0)
+        _, age = cache.peek(True)
+        if age != float("inf"):
+            worst = max(worst, age)
+    return worst
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("build_s", [8.0, 22.0])
+async def test_keep_warm_age_bounded_by_max_of_interval_and_build(monkeypatch, build_s):
+    """#25271 follow-up. The keep-warm AWAITS the rebuild (``arefresh``), so the snapshot is at most
+    max(POS_REFRESH_EVERY_S, build) + ~1 s old. Live after #25271 (2026-11-12 13:47Z) the old path,
+    which took ``aget``'s stale return, sampled 36.9 / 10.4 / 25.8 / 2.7 s, with background builds
+    taking ~15-20 s under load."""
+    worst = await _max_age_under_slow_build(monkeypatch, S._default_pos_refresh, build_s)
+    assert worst <= max(S.POS_REFRESH_EVERY_S, build_s) + 2.0, worst
+
+
+@pytest.mark.asyncio
+async def test_old_stale_return_path_exceeds_that_bound_when_builds_are_slow(monkeypatch):
+    """Contrast: refreshing through the route's ``aget`` (the #25271 behaviour) lets a slow build start
+    up to a whole interval late, so the age reaches build + interval. This is the gap the fix closes."""
+    from src.web.api.routers import dashboard
+
+    async def old_refresh():
+        return await dashboard.get_positions(include_paper=True, include_demo=False, response=None)
+    build_s = 22.0
+    worst = await _max_age_under_slow_build(monkeypatch, old_refresh, build_s)
+    assert worst > max(S.POS_REFRESH_EVERY_S, build_s) + 2.0, worst

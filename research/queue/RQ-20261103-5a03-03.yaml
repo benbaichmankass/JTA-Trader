@@ -1,7 +1,8 @@
 id: RQ-20261103-5a03-03
 title: 'FORWARD CONFIRMATION, tqqq_trend_long_1d with donchian=20 FIXED (no arm selection): on bars from 2026-11-03 (a window no arm has read),
   does the C3 configuration selected by RQ-20261023-be01-02 hold net-positive net of the full cost stack?'
-status: queued
+status: retired
+retired_reason: 'RESEARCH-OPS-20261113-0250: a FORWARD window (bars from 2026-11-03) with --end 2026-11-02 is an empty window (exit_lever_ablation fold_edges ValueError, producer_failed 2026-11-12); it also waits for new months, which RESEARCH-NO-WAIT (operator 2026-11-05) retired as a design (class A). Configuration retired, NOT the tqqq_trend_long_1d donchian family: the d20 confirmation is re-registered on an in-hand window under PI-20261113-6YRT1RMK-0001 item 2.'
 cadence: monthly
 kind: experiment
 theme: live_strategy
@@ -119,7 +120,7 @@ grading:
   - research/results/RQ-20261103-5a03-03/41631542890.jsonl
   graded_at: '2026-11-12'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  needs_review: false
+  reason: 'retired: producer_failed on an empty forward window; see retired_reason'
   rows: 1
   verdict: null

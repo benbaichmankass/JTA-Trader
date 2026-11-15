@@ -82,3 +82,64 @@ def test_ledger_declares_bybit2_gap():
     s = bt.summarize_broker_truth(now=NOW)
     rec = next(a for a in s["accounts"] if a["account_id"] == "bybit_2")
     assert rec["declared_gaps"] and rec["declared_gaps"][0]["sub_account"] == "SUB"
+
+
+# --- LEDGER-REFRESH 2026-11-12: hand record + live API folded into `current` ---
+
+def test_live_since_is_day_after_inclusive_window_end():
+    ms = bt.live_since_ms({"window_end": "2026-07-13"})
+    assert ms == int(datetime(2026, 7, 14, tzinfo=timezone.utc).timestamp() * 1000)
+    assert bt.live_since_ms({}) is None and bt.live_since_ms({"window_end": "junk"}) is None
+
+
+def test_current_sums_only_when_every_gap_closed():
+    live = {"state": "measured_api", "realized_usd_since": -101.69, "latest_row_at": "2026-10-10T09:00:00+00:00"}
+    rec = {"realized_usd": -262.52, "window_end": "2026-07-13",
+           "declared_gaps": [{"sub_account": "SUB", "closed": True}]}
+    cur = bt.current_wallet_truth(rec, live, now=NOW)
+    assert cur["state"] == "measured" and cur["realized_usd"] == -364.21
+    assert cur["as_of_age_days"] == 0 and cur["stale"] is False and cur["closed_components"] == ["SUB"]
+    # an OPEN gap: no figure, never the hand number passed off as current
+    rec_open = {**rec, "declared_gaps": [{"sub_account": "SUB"}]}
+    o = bt.current_wallet_truth(rec_open, live, now=NOW)
+    assert o["state"] == "incomplete" and o["realized_usd"] is None and "SUB" in o["reason"]
+    # live not measured: no figure
+    for st in ("unreadable", "not_pulled", "silent"):
+        n = bt.current_wallet_truth(rec, {"state": st, "realized_usd_since": None}, now=NOW)
+        assert n["state"] == "incomplete" and n["realized_usd"] is None
+    assert bt.current_wallet_truth({"realized_usd": None}, live, now=NOW)["state"] == "incomplete"
+
+
+def test_journal_trust_uses_current_when_measured(tmp_path):
+    import json
+    p = tmp_path / "l.json"
+    p.write_text(json.dumps({"accounts": [{"account_id": "a", "realized_usd": -10.0, "as_of": "2026-07-13",
+                                           "window_end": "2026-07-13", "source": "x",
+                                           "declared_gaps": [{"sub_account": "S", "closed": True}]}]}))
+    m = bt.journal_trust_map(p, now=NOW, lister=lambda *a, **k: [_row(1, -2.0, 3)])
+    assert m["read_state"] == "read"
+    assert bt.journal_trust_map(tmp_path / "missing.json", now=NOW)["read_state"] == "absent"
+    (tmp_path / "bad.json").write_text("{not json")
+    assert bt.journal_trust_map(tmp_path / "bad.json", now=NOW)["read_state"] == "unreadable"
+    v = bt.journal_trust_for("a", m)
+    assert v["state"] == bt.TRUST_KNOWN_DIVERGENT and v["realized_usd"] == -12.0 and v["stale"] is False
+    # store unreadable -> falls back to the hand record, still flagged stale
+    def boom(*a, **k):
+        raise RuntimeError("db")
+    v2 = bt.journal_trust_for("a", bt.journal_trust_map(p, now=NOW, lister=boom))
+    assert v2["realized_usd"] == -10.0 and v2["stale"] is True
+    assert v2["figure"] == "hand_record" and v2["current_state"] == "incomplete" and v2["current_reason"]
+    assert v["figure"] == "current" and v["current_state"] == "measured"
+
+
+def test_grader_fresh_when_current_measured():
+    rec = {"account_id": "a", "stale": True, "as_of_age_days": 122,
+           "current": {"state": "measured", "stale": False, "as_of": "2026-11-12T08:00:00+00:00", "as_of_age_days": 0}}
+    g = fresh.grade({"accounts": [rec]})
+    assert g["rc"] == 0 and g["records"][0]["verdict"] == "fresh"
+
+
+def test_committed_ledger_sub_gap_is_closed_with_evidence():
+    rec = next(a for a in bt.summarize_broker_truth(now=NOW)["accounts"] if a["account_id"] == "bybit_2")
+    g = rec["declared_gaps"][0]
+    assert g["closed"] is True and "2026-06-29" in g["closed_evidence"]

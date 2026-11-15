@@ -54,9 +54,25 @@ def file_name(key: FeedKey) -> str:
 
 
 # ── which feeds are needed ──────────────────────────────────────────────────────────────────────────────
+_STRATEGIES_CACHE: Dict[Tuple[str, int, int], Dict[str, Any]] = {}
+
+
 def _strategies() -> Dict[str, Any]:
+    """The `strategies:` map of config/strategies.yaml, parsed once per file VERSION (path, mtime_ns, size).
+
+    The dispatcher plans every queue unit and `covers()` calls this per unit: re-parsing the (large) YAML 549 times was
+    ~97% of a single-unit dry run's 71 s (PI RQ-DISPATCHER-ONLY-FULL-SCAN, cProfile 2026-11-12). Keyed on the file's
+    stat so an edited file is re-read; callers only read the result."""
     import yaml  # noqa: PLC0415
-    return (yaml.safe_load((_REPO / "config" / "strategies.yaml").read_text(encoding="utf-8")) or {}).get("strategies") or {}
+    path = _REPO / "config" / "strategies.yaml"
+    st = path.stat()
+    key = (str(path), st.st_mtime_ns, st.st_size)
+    hit = _STRATEGIES_CACHE.get(key)
+    if hit is None:
+        hit = (yaml.safe_load(path.read_text(encoding="utf-8")) or {}).get("strategies") or {}
+        _STRATEGIES_CACHE.clear()
+        _STRATEGIES_CACHE[key] = hit
+    return hit
 
 
 def _opt(cmd: List[str], flag: str) -> Optional[str]:

@@ -271,3 +271,20 @@ def test_programme_of_reads_the_node_field_or_the_generated_family():
     assert dq.programme_of({}) == ""
     assert dq.programme_tier({"generated": {"family": "programme:P1"}}, CFG) == 0
     assert dq.programme_tier({}, CFG) == len(CFG["value"]["programme_priority"])
+
+
+def test_an_untagged_ai_trader_unit_inherits_p2_and_outranks_template_refills():
+    # RESEARCH-QUEUE-ML-STARVATION (2026-11-15): value.bucket_programme maps the ai_trader bucket to P2, so an ML unit with no
+    # programme_node ranks ahead of richer template refills (MEASURED 11-14: 8d20-02 waited ~65 h behind 44 refills).
+    assert CFG["value"]["bucket_programme"]["ai_trader"] == "P2"
+    ml = job(1, "regime", value={"bucket": "ai_trader", "usd_at_stake_per_month": 50, "confidence": 0.1},
+             routing={"est_minutes": 150})
+    refills = [job(10 + k, "live_strategy", value={"bucket": "own_losses", "usd_at_stake_per_month": 300, "confidence": 0.3},
+                   routing={"est_minutes": 60}, generated={"family": "e35-bracket", "key": f"k{k}"}) for k in range(5)]
+    order = ranked(dq.fair_order(refills + [ml], NOW, TH, CFG))
+    assert order[0] is ml and ml.raw["_rank"]["pick"] == "programme:P2" and ml.raw["_rank"]["programme_tier"] == 1
+    assert ml.raw["_rank"]["rank_value"] < refills[0].raw["_rank"]["rank_value"]   # it wins on priority, not on score
+    # a P1 unit still goes first, and an untagged non-ai_trader unit is unchanged (outside the list)
+    p1 = prog_unit(2, "P1", usd=20)
+    order = ranked(dq.fair_order(refills + [ml, p1], NOW, TH, CFG))
+    assert [order[0], order[1]] == [p1, ml] and refills[0].raw["_rank"]["programme_tier"] == 2

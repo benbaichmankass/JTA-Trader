@@ -11,7 +11,9 @@ gate, the restricted-long take rule); nothing is re-implemented.
 
 REPRODUCTION CHECK (gating the read). The refit's booster sha256 (concatenated texts, the confirm stage's rule) must start with the
 graded run's 0afc49948a41671a (ml/candidates/ml_entry_eq_v3_struct_ens5/model.json::confirm_booster_sha256_expected). On a mismatch
-the unit writes read_state measured, verdict indeterminate, "the graded model did not reproduce", and does NOT read the cells.
+the unit writes read_state not_attempted, verdict indeterminate, "the graded model did not reproduce", and does NOT read the cells.
+(Until 2026-11-15 this path wrote read_state measured with n null, which research_result.py rightly refuses: run 43646720569
+was LOST at landing, collect_runner_results lost=1.)
 
 DAILY CONTEXT (point in time). Daily bars = the RTH 1h bars of each session, grouped by the America/New_York date of the bar close.
 A decision on day d sees only sessions with date < d. Indicators: Wilder DMI/ADX14, EMA20 vs EMA50 (robustness, reported).
@@ -139,7 +141,25 @@ def judge(g: dict) -> dict:
                                       "not a losing slice by the registered rule"}
 
 
+def score_pinned(tab: pd.DataFrame, path: str = Q.H2H_STRUCT) -> tuple[pd.DataFrame, str, int]:
+    """Score with the COMMITTED graded ensemble (ml/candidates/ml_entry_eq_v3_struct_ens5/model.json): its five booster texts
+    ARE the graded model, sha256 of their concatenation = 0afc49948a41671a... (row ML-ENTRY-EQ-REPRO-DRIFT, ML-PRIMARY
+    2026-11-15). A refit from a fresh Alpaca fetch no longer reproduces it (the training window gained one row: 368,757 ->
+    368,758), so refitting made every sha-gated read INDETERMINATE although the model itself is on disk. Nothing is refit;
+    only the confirming-window features come from the fresh fetch."""
+    art = json.loads((REPO / path).read_text())
+    bt = art["booster_txt"]["long"]
+    sha = hashlib.sha256("".join(bt if isinstance(bt, list) else [bt]).encode()).hexdigest()
+    feats, tau, predict, _mid = Q._artifact_scorer(path)
+    assert feats == Q.CONFIGS[CONFIG]["features"] and abs(tau - TAU) < 1e-12, (path, tau)
+    hs, he = pd.Timestamp(START, tz="UTC"), pd.Timestamp(END, tz="UTC") + pd.Timedelta(days=1)
+    test = tab[(tab.ts >= hs) & (tab.ts < he)].dropna(subset=feats + ["net_long"])
+    test = test[Q.session_mask(test.ts)]
+    return Q.taken_trades(test, predict(test), TAU), sha, int(art["train_rows"])
+
+
 def score(tab: pd.DataFrame) -> tuple[pd.DataFrame, str, int]:
+    """REFIT path (kept for --refit: a reproducibility check, not the default since ML-ENTRY-EQ-REPRO-DRIFT)."""
     feats = Q.CONFIGS[CONFIG]["features"]
     params = {**Q.CONFIGS[CONFIG]["params"], "_ens_seeds": SEEDS}
     te = pd.Timestamp(Q.TRAIN_END, tz="UTC") + pd.Timedelta(days=1)
@@ -174,7 +194,7 @@ def run(a) -> int:
             shutil.copy(HL.LEDGER, ledger)
         claim = HL.claim_read("ENTRY-EQ-v3-STRUCT-ENS5-htf-split", START, END, a.unit, "lane ML standing p3 (research-script-run)",
                               ledger=ledger, symbols=pool, train_end=Q.TRAIN_END, family=Q.FAMILY)
-    taken, sha, n_train = score(tab)
+    taken, sha, n_train = score(tab) if getattr(a, "refit", False) else score_pinned(tab)
     base = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured",
             "decision_rule": {"id": RULE_ID, "registered_at": "2026-11-12", "registered_before_run": True},
             "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -183,7 +203,9 @@ def run(a) -> int:
                            f"regulatory {Q.S.REGULATORY_BPS} bps; split by the DAILY DMI/ADX14 of the last session before the decision day"),
             "produced_by": {"tool": "python3 scripts/research/ml_entry_eq_htf_split.py", "where": a.where}}
     if not sha.startswith(EXPECT_SHA):
-        row = {**base, "verdict": "indeterminate", "n": None,
+        # The cells were NOT read: this is not a measurement. read_state measured with n null is inadmissible
+        # (research_result.py: measured requires an integer population.n), so say not_attempted.
+        row = {**base, "read_state": "not_attempted", "verdict": "indeterminate", "n": None,
                "note": f"the graded model did not reproduce: refit sha {sha[:16]} != {EXPECT_SHA}; cells NOT read",
                "measurement": {"booster_sha256": sha, "expected": EXPECT_SHA, "train_rows": n_train, "holdout_claim": claim}}
     else:
@@ -227,6 +249,10 @@ def self_test() -> int:
     assert s["n"] == 50 and s["n_date_clusters"] == 40
     g = {"against_gt40": {"n": 10, "mean_net_r": -1.0}, "with_gt40": {"n": 10, "mean_net_r": 0.0}}
     assert judge(g)["verdict"] == "indeterminate"
+    art = json.loads((REPO / Q.H2H_STRUCT).read_text())       # the committed artifact IS the graded model (offline check)
+    _bt = art["booster_txt"]["long"]
+    assert hashlib.sha256("".join(_bt if isinstance(_bt, list) else [_bt]).encode()).hexdigest().startswith(EXPECT_SHA)
+    assert art["features"] == Q.CONFIGS[CONFIG]["features"] and abs(float(art["tau"]) - TAU) < 1e-12
     print("self-test ok")
     return 0
 
@@ -239,6 +265,7 @@ def main(argv=None) -> int:
     ap.add_argument("--unit", default="RQ-20261112-8d20-02")
     ap.add_argument("--where", default="local")
     ap.add_argument("--no-ledger", action="store_true")
+    ap.add_argument("--refit", action="store_true", help="refit the ensemble instead of scoring the committed graded artifact")
     a = ap.parse_args(argv)
     if a.self_test:
         return self_test()

@@ -1,0 +1,6 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "VENUE-KLINE-RATE-LIMIT. Market-data path (src/exchange/bybit_connector.py): a Bybit 10006 blanked EVERY get_ohlcv in the trader for a flat 15 s, while the first bybit_10006_context lines (#25825) show this process makes only 1-6 Bybit calls in the 5 s before a 10006. Now the first 10006 cools down 3 s; each further 10006 starting within 60 s of the last doubles it, capped at the old 15 s, so a sustained wall still backs off fully. Still process-wide, still no sleep, pacing or retry: only the length of the None window changes. HELD until the manager reads the cross-process call count around a bar close (the per-IP budget may be spent by another process; a shorter cooldown must not draw more 10006s). 5 new tests (4 fail with the old flat 15 s); 203 tests over the 13 files that import bybit_connector pass. Manager merges; revert = git revert."
+}

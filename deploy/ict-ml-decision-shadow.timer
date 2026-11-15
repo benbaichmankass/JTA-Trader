@@ -1,8 +1,11 @@
 # ============================================
 # ICT ML DECISION SHADOW TIMER (operator 2026-11-01 ~22:30Z: "We should have it logging decisions more frequently and
 # on smaller timeframes as well")
-# Fires the OBSERVE-ONLY ML ENTRY scoring pass every 15 minutes, 50 s after each 15m boundary so the venue has closed
-# the bar. Each pass scores every Bybit-listed reference symbol under ml_entry (v1) and ml_entry_v2 and appends to
+# Fires the OBSERVE-ONLY ML ENTRY scoring pass every 15 minutes, 3 min 20 s after each 15m boundary: after the venue
+# has closed the bar AND after the live trader's bar-close kline burst. It used to fire at +50 s, inside that burst;
+# Bybit answers retCode 10006 per IP, so both processes lost fetches (row VENUE-KLINE-RATE-LIMIT: 2026-11-11T14:59Z ..
+# 2026-11-12T09:30Z every trader 10006 fell between +5 s and +78 s; 406 of 430 shadow fetch_failed rows 2026-11-02..12
+# were on :00 bars). The bar scored is unchanged (boundary() floors to the same 15m close). Each pass scores every Bybit-listed reference symbol under ml_entry (v1) and ml_entry_v2 and appends to
 # runtime_logs/ml_decision_shadow.jsonl. It places no order (src/runtime/ml_decision_shadow.py).
 #
 # Auto-installed + enabled on the trader box by scripts/install_systemd_units.sh (deploy/*.timer glob).
@@ -13,7 +16,7 @@
 Description=Trigger ict-ml-decision-shadow every 15 minutes (observe-only ML ENTRY scoring, all symbols)
 
 [Timer]
-OnCalendar=*-*-* *:00,15,30,45:50
+OnCalendar=*-*-* *:03,18,33,48:20
 AccuracySec=5s
 # No catch-up: a missed boundary is logged as missing, never back-filled with a later bar's data.
 Persistent=false

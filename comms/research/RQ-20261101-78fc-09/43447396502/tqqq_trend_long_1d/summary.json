@@ -1,0 +1,526 @@
+{
+  "leg": "tqqq_trend_long_1d",
+  "grade": {
+    "verdict": "fail",
+    "label": "no_candidate_passes",
+    "passing": [],
+    "rule": {
+      "id": "RULE-AM-RISK-ADJUSTED-V1",
+      "registered_at": "2026-10-29",
+      "doctrine": "docs/ARCHITECTURE-CANONICAL.md \u00a7 Active management, clause 4",
+      "max_r_cost_per_trade": 0.05,
+      "min_dd_cut_pct": 0.15,
+      "min_cvar5_cut_pct": 0.15,
+      "cvar_tail": 0.05,
+      "cvar_basis": "book_iso_week_of_exit",
+      "folds": 6,
+      "fold_majority": 4,
+      "fold_min_risk_cut_pct": 0.0,
+      "n_floor": 39,
+      "random_control": "required",
+      "min_control_beat_frac": 0.95,
+      "measurement_of_record": "book_usd_sim_per_account (row BOOK-SIM-REAL-SIZER)",
+      "reported_measurements": [
+        "giveback_r_mean_p95 (peak MFE R - realised net R, per trade)",
+        "net_pnl_pct_per_account_and_book (net of the full cost stack)",
+        "net_pnl_usd_per_account_and_book (only from a book_usd_sim; never committed from a per-trade translation, and balances are never committed to this public repo)"
+      ]
+    },
+    "baseline": "H",
+    "baseline_book": {
+      "n": 136,
+      "net_r": 24.9578,
+      "max_drawdown_r": 5.8137,
+      "cvar5_week_r": -1.133871,
+      "cvar5_trade_r": -1.133871,
+      "weeks": 136,
+      "giveback": {
+        "n_measured": 136,
+        "n_missing_mfe": 0,
+        "mean_r": 0.536281,
+        "p95_r": 1.6067
+      }
+    },
+    "measurement_basis": "per_trade_r_screen",
+    "graduation_eligible": false,
+    "candidates": {
+      "T": {
+        "book": {
+          "n": 137,
+          "net_r": 23.3317,
+          "max_drawdown_r": 5.7136,
+          "cvar5_week_r": -1.133871,
+          "cvar5_trade_r": -1.133871,
+          "weeks": 137,
+          "giveback": {
+            "n_measured": 137,
+            "n_missing_mfe": 0,
+            "mean_r": 0.548652,
+            "p95_r": 1.6064
+          }
+        },
+        "lever_fired": true,
+        "r_cost_per_trade": 0.011957,
+        "dd_cut_pct": 0.017218,
+        "cvar5_cut_pct": 0.0,
+        "pnl_by_account": null,
+        "risk_metrics_passing": [],
+        "folds": [
+          {
+            "fold": 1,
+            "n_baseline": 19,
+            "n_candidate": 20,
+            "r_cost": 0.117468,
+            "cuts": {
+              "dd": 0.0,
+              "cvar5": 0.0
+            },
+            "holds": false
+          },
+          {
+            "fold": 2,
+            "n_baseline": 21,
+            "n_candidate": 21,
+            "r_cost": -0.08699,
+            "cuts": {
+              "dd": 0.108001,
+              "cvar5": 0.0
+            },
+            "holds": false
+          },
+          {
+            "fold": 3,
+            "n_baseline": 24,
+            "n_candidate": 24,
+            "r_cost": 0.021563,
+            "cuts": {
+              "dd": 0.081292,
+              "cvar5": 0.0
+            },
+            "holds": false
+          },
+          {
+            "fold": 4,
+            "n_baseline": 28,
+            "n_candidate": 28,
+            "r_cost": 0.0,
+            "cuts": {
+              "dd": 0.0,
+              "cvar5": 0.0
+            },
+            "holds": false
+          },
+          {
+            "fold": 5,
+            "n_baseline": 21,
+            "n_candidate": 21,
+            "r_cost": 0.0,
+            "cuts": {
+              "dd": 0.0,
+              "cvar5": 0.0
+            },
+            "holds": false
+          },
+          {
+            "fold": 6,
+            "n_baseline": 23,
+            "n_candidate": 23,
+            "r_cost": 0.030587,
+            "cuts": {
+              "dd": -0.167337,
+              "cvar5": -0.000198
+            },
+            "holds": false
+          }
+        ],
+        "folds_held": 0,
+        "n_folds": 6,
+        "clauses": {
+          "R1_cost": true,
+          "R2_risk_cut": false,
+          "R3_folds": false,
+          "R4_control": false
+        },
+        "controls": {
+          "C": {
+            "book": {
+              "n": 137,
+              "net_r": 22.7557,
+              "max_drawdown_r": 5.7136,
+              "cvar5_week_r": -1.133871,
+              "cvar5_trade_r": -1.133871,
+              "weeks": 137,
+              "giveback": {
+                "n_measured": 137,
+                "n_missing_mfe": 0,
+                "mean_r": 0.552411,
+                "p95_r": 1.6065
+              }
+            },
+            "cuts": {
+              "dd": 0.017218,
+              "cvar5": 0.0
+            },
+            "beats": false,
+            "pnl_by_account": null
+          }
+        },
+        "verdict": "fail",
+        "label": "fails_R2_R3"
+      }
+    },
+    "why": "every candidate fails a necessary clause (R1 cost, R2 risk cut, R3 folds or R4 control)"
+  },
+  "arms": {
+    "H": {
+      "reach_ge_6r": 0.0,
+      "n": 136,
+      "net_r": 24.9585,
+      "net_r_fee_only": 25.7515,
+      "max_drawdown_r": 5.8137,
+      "by_outcome": {
+        "take_profit": 76,
+        "stop": 38,
+        "trail_stop": 22
+      },
+      "mean_bars_held": 13.059,
+      "net_r_per_capital_day": 0.0141,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2010-02-11 00:00:00+00:00",
+      "data_end": "2026-11-13 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2010-02-11 00:00:00+00:00",
+          "end": "2012-11-26 20:00:00+00:00",
+          "trades": 19,
+          "net_r": 4.5544
+        },
+        {
+          "fold": 2,
+          "start": "2012-11-26 20:00:00+00:00",
+          "end": "2015-09-12 16:00:00+00:00",
+          "trades": 21,
+          "net_r": 0.351
+        },
+        {
+          "fold": 3,
+          "start": "2015-09-12 16:00:00+00:00",
+          "end": "2018-06-28 12:00:00+00:00",
+          "trades": 24,
+          "net_r": 3.8005
+        },
+        {
+          "fold": 4,
+          "start": "2018-06-28 12:00:00+00:00",
+          "end": "2021-04-13 08:00:00+00:00",
+          "trades": 28,
+          "net_r": 9.178
+        },
+        {
+          "fold": 5,
+          "start": "2021-04-13 08:00:00+00:00",
+          "end": "2024-01-28 04:00:00+00:00",
+          "trades": 21,
+          "net_r": 8.6911
+        },
+        {
+          "fold": 6,
+          "start": "2024-01-28 04:00:00+00:00",
+          "end": "2026-11-13 00:00:00+00:00",
+          "trades": 23,
+          "net_r": -1.6172
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "TQQQ",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261101-78fc-09/43447396502/tqqq_trend_long_1d/arms/H__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261101-78fc-09/43447396502/tqqq_trend_long_1d/arms/H__bt.json",
+        "--long-only",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "1.5"
+      ]
+    },
+    "T": {
+      "reach_ge_6r": 0.0,
+      "n": 137,
+      "net_r": 23.3322,
+      "net_r_fee_only": 24.1315,
+      "max_drawdown_r": 5.7136,
+      "by_outcome": {
+        "trail_stop": 29,
+        "stop": 38,
+        "take_profit": 70
+      },
+      "mean_bars_held": 12.715,
+      "net_r_per_capital_day": 0.0134,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0,
+        "cell_tighten_min_r": 1.0,
+        "cell_tighten_room_atr": 1.0,
+        "cell_tighten_mode": "first",
+        "cell_tighten_random_p": 0.5,
+        "cell_tighten_seed": 0
+      },
+      "data_start": "2010-02-11 00:00:00+00:00",
+      "data_end": "2026-11-13 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2010-02-11 00:00:00+00:00",
+          "end": "2012-11-26 20:00:00+00:00",
+          "trades": 20,
+          "net_r": 2.3225
+        },
+        {
+          "fold": 2,
+          "start": "2012-11-26 20:00:00+00:00",
+          "end": "2015-09-12 16:00:00+00:00",
+          "trades": 21,
+          "net_r": 2.1778
+        },
+        {
+          "fold": 3,
+          "start": "2015-09-12 16:00:00+00:00",
+          "end": "2018-06-28 12:00:00+00:00",
+          "trades": 24,
+          "net_r": 3.283
+        },
+        {
+          "fold": 4,
+          "start": "2018-06-28 12:00:00+00:00",
+          "end": "2021-04-13 08:00:00+00:00",
+          "trades": 28,
+          "net_r": 9.178
+        },
+        {
+          "fold": 5,
+          "start": "2021-04-13 08:00:00+00:00",
+          "end": "2024-01-28 04:00:00+00:00",
+          "trades": 21,
+          "net_r": 8.6911
+        },
+        {
+          "fold": 6,
+          "start": "2024-01-28 04:00:00+00:00",
+          "end": "2026-11-13 00:00:00+00:00",
+          "trades": 23,
+          "net_r": -2.3207
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "TQQQ",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261101-78fc-09/43447396502/tqqq_trend_long_1d/arms/T__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261101-78fc-09/43447396502/tqqq_trend_long_1d/arms/T__bt.json",
+        "--long-only",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "1.5",
+        "--cell-tighten-min-r",
+        "1.0",
+        "--cell-tighten-room-atr",
+        "1.0"
+      ]
+    },
+    "C": {
+      "reach_ge_6r": 0.0,
+      "n": 137,
+      "net_r": 22.7563,
+      "net_r_fee_only": 23.5563,
+      "max_drawdown_r": 5.7136,
+      "by_outcome": {
+        "trail_stop": 28,
+        "stop": 38,
+        "take_profit": 71
+      },
+      "mean_bars_held": 12.788,
+      "net_r_per_capital_day": 0.013,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0,
+        "cell_tighten_min_r": 1.0,
+        "cell_tighten_room_atr": 1.0,
+        "cell_tighten_mode": "random",
+        "cell_tighten_random_p": 0.5,
+        "cell_tighten_seed": 20261113
+      },
+      "data_start": "2010-02-11 00:00:00+00:00",
+      "data_end": "2026-11-13 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2010-02-11 00:00:00+00:00",
+          "end": "2012-11-26 20:00:00+00:00",
+          "trades": 20,
+          "net_r": 2.3225
+        },
+        {
+          "fold": 2,
+          "start": "2012-11-26 20:00:00+00:00",
+          "end": "2015-09-12 16:00:00+00:00",
+          "trades": 21,
+          "net_r": 0.8779
+        },
+        {
+          "fold": 3,
+          "start": "2015-09-12 16:00:00+00:00",
+          "end": "2018-06-28 12:00:00+00:00",
+          "trades": 24,
+          "net_r": 4.0069
+        },
+        {
+          "fold": 4,
+          "start": "2018-06-28 12:00:00+00:00",
+          "end": "2021-04-13 08:00:00+00:00",
+          "trades": 28,
+          "net_r": 9.178
+        },
+        {
+          "fold": 5,
+          "start": "2021-04-13 08:00:00+00:00",
+          "end": "2024-01-28 04:00:00+00:00",
+          "trades": 21,
+          "net_r": 8.6911
+        },
+        {
+          "fold": 6,
+          "start": "2024-01-28 04:00:00+00:00",
+          "end": "2026-11-13 00:00:00+00:00",
+          "trades": 23,
+          "net_r": -2.3207
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "TQQQ",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261101-78fc-09/43447396502/tqqq_trend_long_1d/arms/C__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261101-78fc-09/43447396502/tqqq_trend_long_1d/arms/C__bt.json",
+        "--long-only",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "1.5",
+        "--cell-tighten-min-r",
+        "1.0",
+        "--cell-tighten-room-atr",
+        "1.0",
+        "--cell-tighten-mode",
+        "random",
+        "--cell-tighten-random-p",
+        "0.5",
+        "--cell-tighten-seed",
+        "20261113"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": null,
+    "fetch_days": 6200,
+    "feed": {
+      "source": "yahoo",
+      "ticker": "TQQQ",
+      "interval": "1d",
+      "resample": "1d"
+    },
+    "fold_edges": [
+      "2010-02-11 00:00:00+00:00",
+      "2012-11-26 20:00:00+00:00",
+      "2015-09-12 16:00:00+00:00",
+      "2018-06-28 12:00:00+00:00",
+      "2021-04-13 08:00:00+00:00",
+      "2024-01-28 04:00:00+00:00",
+      "2026-11-13 00:00:00+00:00"
+    ]
+  }
+}

@@ -99,7 +99,12 @@ def test_journal_books_venue_fill_as_entry(tmp_path, monkeypatch):
 def test_journal_without_fill_keeps_package_entry(tmp_path, monkeypatch):
     row = _journal_row(tmp_path, monkeypatch, dict(_BRACKET))
     assert row["entry_price"] == 43.48
-    assert "entry_price_source" not in json.loads(row["notes"])
+    # ENTRY-FILL-WRITEBACK (manager decision 2026-11-15, condition 3): every row now SAYS where entry_price came from.
+    # Without a venue fill the plan is still booked, labelled "plan" with the reason (it used to carry no label at all).
+    notes = json.loads(row["notes"])
+    assert notes["entry_price_source"] == "plan"
+    assert notes["entry_price_source_reason"] == "no_venue_fill_read"
+    assert "package_entry" not in notes
 
 
 def test_rejection_row_never_uses_fill(tmp_path, monkeypatch):

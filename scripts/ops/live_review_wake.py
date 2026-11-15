@@ -18,7 +18,7 @@ channel is an Actions poller (no new VM credential): every ~5 min
    ``scripts/research/research_watchdog.py``);
 4. posts ONE comment for everything newly due. The manager is subscribed to the
    PR, so the comment wakes it; it dispatches one LIVE-REVIEW lane per package
-   (``.claude/skills/manager/SKILL.md`` § "Live-review wake").
+   (``docs/plans/manager-runbooks.md`` § A, the ``ltr-wake`` recipe).
 
 ``daily_floor`` never wakes: it is a time floor, not a market event, and the
 hourly routine (the backstop) already covers it.
@@ -434,12 +434,12 @@ def render(p: Dict[str, Any], now: datetime, run_url: str,
             head = (f"**LTR wake: {len(p['entries'])} live-review event(s) newly due** on {cls} packages. "
                     "Every reviewer was ALREADY STARTED by the routine API trigger (session ids below). "
                     "Manager: do NOT dispatch; this comment is the dedupe record "
-                    "(`.claude/skills/manager/SKILL.md` § Live-review wake).")
+                    "(`docs/plans/manager-runbooks.md` § A, `ltr-wake` recipe).")
         else:
             head = (f"**LTR wake: {len(p['entries'])} live-review event(s) newly due** on {cls} "
                     "packages. Manager: dispatch ONE Sonnet LIVE-REVIEW lane per package "
                     + (f"NOT marked as started by the routine ({n_fired} were) " if n_fired else "")
-                    + "(`.claude/skills/manager/SKILL.md` § Live-review wake).")
+                    + "(`docs/plans/manager-runbooks.md` § A, `ltr-wake` recipe).")
         lines = [f"- `{e['order_package_id']}` {e['leg']} {e['symbol']} on {', '.join(map(str, e['accounts']))}: "
                  f"**{e['event']}** @ {e['level']} — {e['why']} (due_at {e['due_at']})"
                  + (f"; evidence on `{ROWS_BRANCH}`: **{e['evidence_state']}**"

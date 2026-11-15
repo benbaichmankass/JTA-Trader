@@ -1,0 +1,6 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "ALPACA-AMEND-REPLACE-RACE (manager 2026-11-13 21:03Z). Order path (src/units/accounts/alpaca_amend.py tighten, which execute._alpaca_modify_with_readback uses for every Alpaca trail amend). Alpaca's PATCH replace is asynchronous: it returns the NEW order id while the OLD leg still reads as resting for a few seconds, and the single immediate read-back called real amends apply_failed (alpaca_paper SLV 7114 at 17:00:18Z and 21:00:20Z; the next tick read the new level both times), raising a high alert and leaving the DB stop stale for a tick. Now, only when the read-back shows the old leg still resting after a PATCH that returned a different new id, it re-reads every 0.5 s for up to 5 s before judging; every other outcome is judged at once, and a replace that never lands is still apply_failed. Trade-off: up to 5 s of bounded wait in the amend path, only while a replace is pending (2 cases in 2 days). 4 new tests (the key one fails with the window at 0); 51 tests over the 4 files that import alpaca_amend pass. Manager merges; revert = git revert."
+}

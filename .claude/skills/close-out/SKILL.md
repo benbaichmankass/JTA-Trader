@@ -57,6 +57,7 @@ container costs the work.
 - **Red CI on a PR you opened is not done.** Fix it, or establish it is not
   yours and say so in one comment on that PR.
 - **An open PR you own is not done.** Merge it or state the blocker.
+- **Abandoning a PR means removing its `.github/pr-automerge-requests/<slug>.txt` from the branch**, not only closing it: `claude-pr-automerge` otherwise opens a fresh PR from the branch and lands it (2026-11-13: closed #25578 came back as #25583 and auto-merged).
 - A merged PR is the only form of work that cannot be lost.
 
 ### 3. Every row you touched has a TRUE state
@@ -71,6 +72,7 @@ container costs the work.
   If that observation can be produced on demand and cheaply, produce it now
   (canonical § "Validate early when it is cheap").
 - `killed` needs a reason. So does `dropped`.
+- **Blocked/waiting = a structured `clears_when` condition + owner, never prose only** (operator, 2026-11-12, row `UNBLOCK-WATCH`; gates this adds or changes: none). Every `blocked_on` edge, research `blocked:` block or event pipeline item you leave waiting names a reason, an owner and a machine-checkable condition (`pr_merged:<n>`, `deployed:<#pr|sha>`, `row_state:<ID>=<state>`, `unit_result:<RQ>`, `operator_answer:<qid>`, `date:<iso>`, `data_n:<query>>=<k>`; `manual:<text>` last). `python3 scripts/ops/unblock_watch.py` shows what it reads.
 
 ### 4. Every finding is fixed, filed, or flagged — and *filed* means the pipeline
 
