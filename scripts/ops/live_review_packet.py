@@ -1032,6 +1032,9 @@ def _price(leg: str, side: str, tel: dict, atr_mult: Optional[float], review_id:
            # the leg's committed full-history corpus (comms/strategy_evidence/ltr_corpus/) when it has one, else
            # the evidence record's source_run; the packet records which one priced it (corpus_source)
            "--corpus", "auto",
+           # price from the trade's CURRENT state (reached peak_r, now at open_r), not the near-unconditional entry
+           # population (LTR-GRADER-COVERAGE adverse-state gap, 2026-11-15)
+           "--condition", "state",
            # CLOSE NOW priced beside hold / tighten (row ML-ENTRY-LTR-OUTCOME-TABLE: "prices hold/tighten/close")
            "--close"]
     if tel.get("bars_held") is not None:
