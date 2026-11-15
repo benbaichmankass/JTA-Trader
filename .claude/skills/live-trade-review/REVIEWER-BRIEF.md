@@ -356,6 +356,8 @@ On a non-`ok` packet, the row repeats the defects: `packet_defects: [{"field", "
 
 ## 4a. The submit: the direct POST first (TRADE-ACTION-DIRECT-PATH, operator 2026-11-12)
 
+> ⚠️ **2026-11-15 (manager, incident LTR-APPLY-EXIT2): until PR #26258 lands, any recommendation other than `hold` / `no_recommendation` must be submitted via the § 4 branch path. The direct route cannot apply trade actions** (both direct closes on 2026-11-15 were refused with exit 2 before any account, silently). A `hold` / `no_recommendation` row may still go direct. Remove this note when LTR-APPLY-EXIT2 lands.
+
 **Submit your row straight to the live VM**: `POST https://ict-bot.duckdns.org/api/bot/live-review/rows` with the row as the JSON body (`Content-Type: application/json`). The session's environment proxy injects the credential; you add no token, and you never print one. The VM runs the SAME checks as a branch row (every mandate clause, per-account `RiskManager`, both brackets, read-back) within ~2 s. Route added by #25045 (merged 2026-11-12 03:39Z).
 
 - **`201`** `{"state": "accepted", "receipt": "/api/bot/live-review/rows/<review_id>"}` → done. `GET` the receipt once after ~5 s and put its `state` in your report (`handled` / `pending`). **Do NOT also write the branch file** (§ 4): the direct row is the decision.
