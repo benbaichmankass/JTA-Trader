@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-15T19:30:00Z",
- "bar_close": "2026-11-15T19:35:00Z",
- "built_at": "2026-11-15T19:35:30Z",
+ "bar": "2026-11-15T19:35:00Z",
+ "bar_close": "2026-11-15T19:40:00Z",
+ "built_at": "2026-11-15T19:40:27Z",
  "closed": false,
  "order_package_id": "pkg-2fa377cbb5d1425c",
  "packet": {
@@ -9,18 +9,10 @@
    {
     "account_class": "paper",
     "account_id": "bybit_1",
-    "apply_paths": [
-     "close",
-     "move_tp",
-     "reduce",
-     "tighten",
-     "widen_sl"
-    ],
-    "evidence": "bybit_orders: SL 73.4 / TP 67.5, position True, matched by order_id, 2 sibling package(s) on SOLUSDT; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
-    "own_position": true,
+    "evidence": "bybit_orders read failed: diag bybit_open_orders: exit 3 (ict-bot.duckdns.org -> answered_502. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP ",
     "read": null,
     "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
-    "read_if_amend": "would_apply"
+    "read_if_amend": "unknown"
    }
   ],
   "assembled_by": "generator scripts/ops/live_review_packet.py",
@@ -55,142 +47,136 @@
   "context_v3": {
    "book": [
     [
-     "MGC",
-     "short",
-     "mgc_pullback_1d",
-     2.8
+     null,
+     null,
+     null,
+     null
     ],
     [
-     "QQQ",
-     "long",
-     "qqq_pullback_1h",
-     0.157
+     null,
+     null,
+     null,
+     null
     ],
     [
-     "AVAXUSDT",
-     "short",
-     "trend_donchian_avax_4h",
-     -0.352
+     null,
+     null,
+     null,
+     null
     ],
     [
-     "SLV",
-     "short",
-     "slv_trend_1h",
-     1.88
+     null,
+     null,
+     null,
+     null
     ],
     [
-     "AVAXUSDT",
-     "short",
-     "avax_pullback_2h",
-     -0.0068
+     null,
+     null,
+     null,
+     null
     ],
     [
-     "SOLUSDT",
-     "long",
-     "ict_scalp_sol_15m",
-     -0.0811
+     null,
+     null,
+     null,
+     null
     ],
     [
-     "SOLUSDT",
-     "long",
-     "ml_entry_v2",
-     0.602
+     null,
+     null,
+     null,
+     null
     ],
     [
-     "XRPUSDT",
-     "long",
-     "e4_oi_shock_1h",
-     -0.353
+     null,
+     null,
+     null,
+     null
     ],
     [
      "ETHUSDT",
      "short",
      "trend_donchian_eth_4h",
-     2.49
+     null
     ],
     [
-     "ADAUSDT",
-     "short",
-     "trend_donchian_ada_4h",
-     -0.58
+     null,
+     null,
+     null,
+     null
     ],
     [
-     "BTCUSDT",
-     "short",
-     "e4_oi_shock_1h",
-     0.239
+     null,
+     null,
+     null,
+     null
     ],
     [
      "ADAUSDT",
      "short",
      "ada_pullback_2h",
-     -0.181
+     null
     ],
     [
-     "MHG",
-     "short",
-     "mhg_pullback_1d",
-     1.59
+     null,
+     null,
+     null,
+     null
     ],
     [
-     "BTCUSDT",
-     "long",
-     "ml_entry_v2",
-     0.446
+     null,
+     null,
+     null,
+     null
     ],
     [
-     "ETHUSDT",
-     "short",
-     "eth_pullback_2h",
-     -0.0735
+     null,
+     null,
+     null,
+     null
     ],
     [
-     "SLV",
-     "short",
-     "slv_trend_1h",
-     0.752
+     null,
+     null,
+     null,
+     null
     ],
     [
-     "XRPUSDT",
-     "long",
-     "ict_scalp_xrp_15m",
-     -0.292
+     null,
+     null,
+     null,
+     null
     ],
     [
-     "GLD",
-     "short",
-     "gld_pullback_1d",
-     1.06
+     null,
+     null,
+     null,
+     null
     ],
     [
-     "IAUM",
-     "short",
-     "iaum_pullback_1d",
-     1.15
+     null,
+     null,
+     null,
+     null
     ],
     [
-     "USO",
-     "long",
-     "uso_trend_1h",
-     0.09
+     null,
+     null,
+     null,
+     null
     ],
     [
-     "GDX",
-     "short",
-     "gdx_pullback_1d",
-     0.695
+     null,
+     null,
+     null,
+     null
     ],
     [
-     "ETHUSDT",
-     "long",
-     "ml_entry_v2",
-     0.868
-    ],
-    [
-     "ETHUSDT",
-     "short",
-     "eth_pullback_prop_2h",
-     -0.0785
+     null,
+     null,
+     null,
+     null
     ]
    ],
    "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
@@ -562,16 +548,36 @@
    "r_to_target": null
   },
   "generator": {
-   "head": "3e9e4cd9be",
+   "head": "dbd9c38f8f",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-15T19:35:54Z",
+  "info_cutoff_at": "2026-11-15T19:40:41Z",
   "leg": "claude_desk",
   "mechanics": {
-   "evidence": "bybit_1: SOLUSDT is NETTED across 3 open packages on this account (per side) (this one + pkg-4072f8c16bb743b4, pkg-41cd0e67eb9f48c1); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
-   "verdict": "match"
+   "evidence": "bybit_1: SOLUSDT is NETTED across 3 open packages on this account (per side) (this one + pkg-4072f8c16bb743b4, pkg-41cd0e67eb9f48c1); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone; 1 account(s) could not be read",
+   "verdict": "could_not_look"
   },
   "missing_inputs": [
+   {
+    "field": "read:telemetry",
+    "reason": "diag position_telemetry?limit=300: exit 3 (ict-bot.duckdns.org -> answered_502. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web"
+   },
+   {
+    "field": "read:positions",
+    "reason": "<urlopen error [Errno 111] Connection refused>"
+   },
+   {
+    "field": "read:prop_tickets",
+    "reason": "<urlopen error [Errno 111] Connection refused>"
+   },
+   {
+    "field": "read:bybit_orders",
+    "reason": "diag bybit_open_orders: exit 3 (ict-bot.duckdns.org -> answered_502. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP "
+   },
+   {
+    "field": "read:alpaca_orders",
+    "reason": "diag alpaca_open_orders: exit 3 (ict-bot.duckdns.org -> answered_502. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP"
+   },
    {
     "field": "regime.atr_now_over_entry",
     "reason": "candles unavailable or meta.atr (ATR at entry) not recorded"
@@ -609,11 +615,17 @@
     {
      "count": 1,
      "denominator": 1,
+     "field": "mechanics",
+     "reason": "venue_read_unreachable"
+    },
+    {
+     "count": 1,
+     "denominator": 1,
      "field": "state.open_r",
      "reason": "context_null:state.open_r"
     }
    ],
-   "status": "degraded"
+   "status": "could_not_look"
   },
   "packet_version": 3,
   "priced_options": null,
@@ -625,25 +637,18 @@
    "cell_now": null,
    "trend_now": "trending"
   },
-  "review_id": "LR-20261115T1935Z-pkg-2fa377cbb5d1425c",
+  "review_id": "LR-20261115T1940Z-pkg-2fa377cbb5d1425c",
   "short_hold": {
-   "atr": 0.2271428571428556,
-   "bar": "2026-11-15T19:30:00Z",
-   "bar_close": "2026-11-15T19:35:00Z",
+   "atr": 0.20642857142857046,
+   "bar": "2026-11-15T19:35:00Z",
+   "bar_close": "2026-11-15T19:40:00Z",
    "entry": 71.19,
-   "mark": 71.72,
-   "minutes_held": 167.6,
-   "open_r_at_mark": -0.2398,
+   "mark": 71.68,
+   "minutes_held": 172.5,
+   "open_r_at_mark": -0.2217,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 71.09,
-     "high": 71.1,
-     "low": 70.83,
-     "open": 70.91,
-     "t": "2026-11-15T18:35:00Z"
-    },
     {
      "close": 70.97,
      "high": 71.12,
@@ -720,6 +725,13 @@
      "low": 71.63,
      "open": 71.65,
      "t": "2026-11-15T19:30:00Z"
+    },
+    {
+     "close": 71.68,
+     "high": 71.73,
+     "low": 71.59,
+     "open": 71.72,
+     "t": "2026-11-15T19:35:00Z"
     }
    ],
    "risk_per_unit": null,
@@ -738,25 +750,18 @@
    "tp": 67.5
   }
  },
- "packet_sha": "9996c7f47e22e4d9d48236038c0c4b3f438f4abbaf19fab73704834c03c217c3",
+ "packet_sha": "619e186707fb62b0497bdd4028b4e3fd8263339f324cf05908330322f7f86bdb",
  "short_hold": {
-  "atr": 0.2271428571428556,
-  "bar": "2026-11-15T19:30:00Z",
-  "bar_close": "2026-11-15T19:35:00Z",
+  "atr": 0.20642857142857046,
+  "bar": "2026-11-15T19:35:00Z",
+  "bar_close": "2026-11-15T19:40:00Z",
   "entry": 71.19,
-  "mark": 71.72,
-  "minutes_held": 167.6,
-  "open_r_at_mark": -0.2398,
+  "mark": 71.68,
+  "minutes_held": 172.5,
+  "open_r_at_mark": -0.2217,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 71.09,
-    "high": 71.1,
-    "low": 70.83,
-    "open": 70.91,
-    "t": "2026-11-15T18:35:00Z"
-   },
    {
     "close": 70.97,
     "high": 71.12,
@@ -833,6 +838,13 @@
     "low": 71.63,
     "open": 71.65,
     "t": "2026-11-15T19:30:00Z"
+   },
+   {
+    "close": 71.68,
+    "high": 71.73,
+    "low": 71.59,
+    "open": 71.72,
+    "t": "2026-11-15T19:35:00Z"
    }
   ],
   "risk_per_unit": null,
