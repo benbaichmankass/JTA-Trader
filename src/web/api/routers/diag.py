@@ -4470,6 +4470,7 @@ def get_tick_cost(request: Request) -> dict[str, Any]:
 async def get_bybit_open_orders(
     request: Request,
     account_id: str | None = None,
+    deadline_s: float = 15.0,
 ) -> dict[str, Any]:
     """Read-only **Bybit resting orders + position-level protection**.
 
@@ -4513,6 +4514,14 @@ async def get_bybit_open_orders(
     axis is that row's criterion 4 -- a Tier-2/3 change to the ENFORCING path,
     and deliberately not proposed here.
 
+    **Parallel, with a per-account deadline** (row DIAG-BYBIT-OPEN-ORDERS-SLOW, 2026-11-15). The accounts were read
+    one after another through the single-worker account lane: one account answers in ~6 s, the all-accounts call took
+    21-31 s and 502'd at the proxy, and the live-review packet's venue-order read failed (``timed_out_after_connect``
+    2/2 on 2026-11-15) for real-money packages. Bybit accounts are now read side by side on
+    ``run_account_read_parallel`` (the DIAG-EXCHANGE-POSITIONS-SLOW lane), each bounded by ``deadline_s`` (default 15,
+    clamped 1..25, under the proxy's 30 s). A slow account reads ``read_state: "timed_out"`` with ``result`` null;
+    ``elapsed_s`` is per account. Values of ``read_state`` other than ``orders_read`` mean could-not-look.
+
     Tier 1 -- read-only, token-gated, best-effort per account.
     """
     _require_diag_token(request)
@@ -4527,23 +4536,31 @@ async def get_bybit_open_orders(
         ) from exc
 
     accounts = _diag_accounts("get_bybit_open_orders", list_accounts, account_id)
+    try:
+        deadline = min(max(float(deadline_s), 1.0), 25.0)
+    except (TypeError, ValueError):
+        deadline = 15.0
 
-    out: list[dict[str, Any]] = []
-    for acc in accounts:
+    async def _one(acc: Any) -> dict[str, Any]:
         aid = (acc or {}).get("account_id")
-        if account_id and aid != account_id:
-            continue
         is_bybit = ((acc or {}).get("exchange") or "unknown").lower() == "bybit"
         result: Any = None
         err: str | None = None
+        timed_out = False
+        t0 = time.monotonic()
         if is_bybit:
             try:
-                result = await run_account_read(account_bybit_open_orders, acc)
+                result = await asyncio.wait_for(run_account_read_parallel(account_bybit_open_orders, acc),
+                                                timeout=deadline)
+            except asyncio.TimeoutError:
+                timed_out = True
+                err = f"timed_out after {deadline:g}s"
+                logger.warning("get_bybit_open_orders: %s timed out after %ss", aid, deadline)
             except Exception as exc:  # noqa: BLE001  # allow-silent: per-account error surfaced in the row (error + result=null), logged; one account must not fail the call
                 err = f"{type(exc).__name__}: {exc}"
                 logger.warning("get_bybit_open_orders: %s raised %s", aid, exc)
         ok = isinstance(result, dict)
-        out.append({
+        return {
             "account_id": aid,
             "exchange": (acc or {}).get("exchange"),
             "mode": (acc or {}).get("mode"),
@@ -4551,16 +4568,22 @@ async def get_bybit_open_orders(
             "read_state": (
                 "not_bybit" if not is_bybit
                 else "orders_read" if ok
+                else "timed_out" if timed_out
                 else "could_not_look"
             ),
-            "result": result,
+            "result": result if ok else None,
             "position_count": (len(result.get("positions") or []) if ok else None),
             "order_count": (len(result.get("orders") or []) if ok else None),
+            "elapsed_s": round(time.monotonic() - t0, 3) if is_bybit else None,
             "error": err,
-        })
+        }
+
+    wanted = [acc for acc in accounts if not account_id or (acc or {}).get("account_id") == account_id]
+    out: list[dict[str, Any]] = list(await asyncio.gather(*(_one(acc) for acc in wanted)))
     return {
         "captured_at": datetime.now(timezone.utc).isoformat(),
         "requested_account_id": account_id,
+        "deadline_s": deadline,
         "count": len(out),
         "accounts": out,
     }
