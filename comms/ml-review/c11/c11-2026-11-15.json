@@ -1,0 +1,53 @@
+{
+ "schema": "ml_review_c11/1",
+ "check": "C11 real-money overlay demotion CUSUM (Beagle-1, overlay-td-v1)",
+ "read_at_utc": "2026-11-15T15:35Z",
+ "reader": "ML-PRIMARY-3 (session_01AFoLuMkZYvbttnmb2gtVcA), out-of-cycle first run",
+ "inputs": {
+  "shadow": "diag log_file?name=overlay_shadow (116 rows, from 2026-10-29T20:46Z, complete, not truncated)",
+  "trades": "diag journal?table=trades&limit=1000 (the last 1000 trade rows, 2026-10-02..2026-11-15; 501 closed with resolved pnl)"
+ },
+ "join": {
+  "n_shadow": 116,
+  "n_closed_trades": 501,
+  "n_joined": 23,
+  "n_unmatched_trades": 478,
+  "n_ambiguous_dropped": 0,
+  "basis": "order_package_id (fallback window 10 min)"
+ },
+ "cusum": {
+  "bybit_portfolio": {
+   "state": "ok",
+   "n_reduced": 1,
+   "reduced_win_rate": 0.0,
+   "S": 0.0,
+   "S_peak": 0.0,
+   "H": 2.0,
+   "alarm_at_reduced_trade": null,
+   "p0": 0.325,
+   "p1": 0.378,
+   "account": "bybit_portfolio",
+   "evidence": "comms/research/RQ-20261029-5785-02/local-v2-20261029/verdict.json",
+   "action": null
+  },
+  "bybit_2": {
+   "state": "ok",
+   "n_reduced": 1,
+   "reduced_win_rate": 0.0,
+   "S": 0.0,
+   "S_peak": 0.0,
+   "H": 2.0,
+   "alarm_at_reduced_trade": null,
+   "p0": 0.325,
+   "p1": 0.378,
+   "account": "bybit_2",
+   "evidence": "comms/research/RQ-20261029-5785-02/local-v2-20261029/verdict.json",
+   "action": null
+  }
+ },
+ "read_state": "measured",
+ "finding": "no alarm on either real-money reduce account; n_reduced 1 each (trend_donchian_xrp_4h, 2026-11-15, a loss), S 0.0 vs H 2.0. n=1 is no evidence either way; the read is now computable and recurs weekly as /ml-review C11.",
+ "notes": [
+  "the joined row field net_r holds net_pnl_usd when net_r_for_trade cannot compute R (by design in the join; only the sign feeds the CUSUM); a misleading field name, not a verdict defect"
+ ]
+}
