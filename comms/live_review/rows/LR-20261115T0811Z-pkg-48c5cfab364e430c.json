@@ -1,0 +1,153 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261115T0811Z-pkg-48c5cfab364e430c",
+ "reviewed_at": "2026-11-15T08:17:15Z",
+ "order_package_id": "pkg-48c5cfab364e430c",
+ "trade_id": null,
+ "leg": "trend_donchian_eth_4h",
+ "accounts": [
+  "tradeify_1",
+  "velotrade_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-15T08:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-15T08:11:48Z",
+ "state": {
+  "atr_now_over_entry": 1.171,
+  "bars_held": 1,
+  "giveback_r": 0.111,
+  "open_r": -0.154,
+  "peak_provenance": "estimated",
+  "peak_r": -0.043,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1850.50464286,
+  "tp": 1593.43652
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.171,
+  "bars_since_peak": null,
+  "giveback_r": 0.111,
+  "open_r": -0.154,
+  "peak_r": -0.043,
+  "r_to_stop": 0.846,
+  "r_to_target": 2.29
+ },
+ "mechanics": {
+  "evidence": "order_packages status=emitted close_reason=prop_ticket_emitted; package sl 1850.50464286 / tp 1593.43652 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 102,
+   "mean_r": -0.2497,
+   "sd_r": 1.6296,
+   "worst_r": -1.1431,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 102,
+   "mean_r": -0.4448,
+   "sd_r": 0.3096,
+   "worst_r": -0.9181,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 102,
+   "mean_r": -0.2094,
+   "sd_r": 0.0258,
+   "worst_r": -0.324,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261115T0811Z-pkg-48c5cfab364e430c.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "suggestive",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "Previous 06:32Z forecast HELD: invalidation 1850.50 untouched (bar highs 1833.43 then 1822.99), price went with the trade (4h close 1818.02 -> 1781.17), target 1593.44 not yet touched, 1 of 12 4h bars used; carried, p_target 0.28 -> 0.30 (R:R 2.14 breaks even at 0.32). The packet table is now state-conditioned (n=102, short, open_r -0.154, peak -0.043): hold mean -0.2497 R (sd 1.63) vs close -0.2094 R (sd 0.03) is a TIE (gap 0.04 R, SE of the difference ~0.16 R) and close's worst-case gain is +0.82 R, under the 1 R tail tie-break bar, so the table does not decide it. Judgement: stop 1850.50 sits above the 1833.43 and 1875.78 lower highs on a 4h ADX 60 / 1d ADX 31 downtrend, so HOLD already expresses the view; closing pays -0.06 R certain cost to give up the trend tail. The only valid tighten (atr:1.0, -0.71 R) costs -0.20 R EV and sits 0.71 ATR from price, inside the 1 ATR noise floor. ETH conflict (long ml_entry / ml_entry_v2 vs this short): keep both on timeframe separation, unchanged since 06:32Z.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "repo_lane_fallback: VM poster could_not_build (TimeoutExpired, 08:00:33Z wake); packet built by this lane from origin/main 7f4adea056 (generator.state current), table by live_review_outcomes.py --condition state --close",
+  "prop: open_r ESTIMATED from prop ticket mark = last closed 4h bar close 1781.17 (tradeify 5m unrealized -1.50 USD on 0.12 ETH implies ~1781.0, consistent); not a venue mark",
+  "mechanics read directly: tradeify_1 venue ETHUSD short 0.12 SL 1850.505 TP 1593.437; velotrade_1 SL 1850.5 TP 1593.44; both equal package 1850.50464286 / 1593.43652 within tick; both brackets present, prop TP is a real predictive TP, not the venue cap (the bybit_1 cap move at 06:34Z did not touch these legs)",
+  "firm DD distance now READABLE on prop/status rule_distance (08:11-08:13Z): tradeify_1 floor distance 196.91 USD (158.x after open risk), velotrade_1 320.28 USD (296.70 after open risk); this leg's stop loss is 9.84 / 9.79 USD; daily-loss distance null (realized_today unreported). packet account_bounds still carries none of it",
+  "tighten cells: atr:1.5 and atr:2.0 invalid_level; atr:1.0 measured -0.4448 R n=102 but stop 1826.7 is 0.71 ATR from price (< min_buffer 1 ATR)",
+  "bias: table tightens flattered by stop-at-price fills; live peak_r is a lower bound; 26 of the corpus trades mfe_replay_mismatch excluded, 7 no_candles",
+  "book: 12 other open shorts incl. SOL/AVAX/ADA/SLV/GLD/MHG/ETH x3 and longs ml_entry ETH -0.356 R, ml_entry_v2 ETH +0.259 R; ETH conflict ETHUSDT#df48730f98 standing",
+  "missing: funding (no diag route); regime cells null; regime.vol_now frozen edges not reachable",
+  "schema: packet peak_provenance prop_ticket_mark recorded as estimated; features_at_review.prop_ticket_state object omitted (schema number|null)"
+ ],
+ "account_reads": [
+  {
+   "account_id": "tradeify_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "no action: hold changes nothing to apply; apply paths close, move_tp, reduce, tighten (live_review_apply.py); positions read: 1 open ETH short, SL/TP equal package"
+  },
+  {
+   "account_id": "velotrade_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "no action: hold changes nothing to apply; apply paths close, move_tp, reduce, tighten (live_review_apply.py); positions read: 1 open ETH short, SL/TP equal package"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuN3VmQ2AcT7XFyEDLf",
+ "prompt_sha": null,
+ "skill_sha": "9091cee7fbb5ed4adf073c3a37178317780a1dbc",
+ "packet_defects": [],
+ "packet_sha": "2edf367cb071b52b5ae7125bea4be47c878a4d7f9d8e9565f11841d93148fe45",
+ "forecast": {
+  "thesis": "Carried from the 06:32Z row: ETH 4h (ADX 60) and 1d (ADX 31) are in a downtrend; the bounce highs 1833.43 and 1822.99 stayed under the 1850.50 stop and the 1875.78 lower high, so expect the retest to fail toward 1593.44. Continuation against the trade is the minority path.",
+  "direction": "with_trade",
+  "target_px": 1593.43652,
+  "p_target": 0.3,
+  "invalidation_px": 1850.50464286,
+  "horizon_bars": 12,
+  "timeframe": "4h",
+  "evidence": [
+   "context.previous_review: 06:32Z forecast, invalidation untouched, price with trade",
+   "chart.swings lows 1875.78 / highs 1822.99 since_entry",
+   "chart.htf 1d trending ADX 30.68",
+   "priced_options: hold n=102 -0.2497, close -0.2094 (tie)"
+  ]
+ }
+}
